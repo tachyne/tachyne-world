@@ -92,3 +92,15 @@ func TestSleepClearsWeather(t *testing.T) {
 		t.Fatal("sleeping through the night must clear the storm")
 	}
 }
+
+// TestRainGameEventIDs pins the begin/end rain ids to the client's decompiled
+// ClientboundGameEventPacket.Type table (START_RAINING=1, STOP_RAINING=2 in
+// BOTH 1.21.5 and 26.2). They were inverted for the engine's whole life —
+// clients rendered clear skies during rain (while the engine, correctly,
+// shielded the undead from the daylight burn) and rain after it ended.
+func TestRainGameEventIDs(t *testing.T) {
+	if gameEventBeginRain != 1 || gameEventEndRain != 2 {
+		t.Fatalf("rain game events drifted from the client enum: begin=%d end=%d (want 1/2)",
+			gameEventBeginRain, gameEventEndRain)
+	}
+}

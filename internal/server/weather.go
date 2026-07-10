@@ -15,8 +15,14 @@ import (
 // undead from burning at dawn (updateHostiles checks h.raining).
 
 const (
-	gameEventEndRain      = 1
-	gameEventBeginRain    = 2
+	// Values are the client's ClientboundGameEventPacket.Type table (decompiled
+	// 1.21.5 AND 26.2 — identical): START_RAINING=1, STOP_RAINING=2. These were
+	// INVERTED here for the engine's whole life (end=1/begin=2, wiki-derived):
+	// clients rendered clear skies during rain — while the engine, correctly,
+	// shielded the undead from daylight burn — and rendered rain once it ended.
+	// Found live: "zombies walking around at 09:00" under an invisibly-rainy sky.
+	gameEventBeginRain    = 1 // START_RAINING
+	gameEventEndRain      = 2 // STOP_RAINING
 	gameEventRainLevel    = 7
 	gameEventThunderLevel = 8
 
