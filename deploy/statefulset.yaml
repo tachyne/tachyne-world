@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tachyne-world
+  namespace: tachyne
+  labels:
+    app.kubernetes.io/name: tachyne
+    app.kubernetes.io/component: world
+    app.kubernetes.io/part-of: tachyne
+spec:
+  serviceName: tachyne-world-hl
+  replicas: 2 # == topology shards (west SID 0 / east SID 1); keep in lockstep
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tachyne
+      app.kubernetes.io/component: world
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tachyne
+        app.kubernetes.io/component: world
+        app.kubernetes.io/part-of: tachyne
+    spec:
+      containers:
+        - name: world
+          image: github.com/tachyne/tachyne-world:latest
+          imagePullPolicy: Always
+          # Sharded: SID from POD_NAME ordinal; peer mesh to neighbours via the
+          # headless per-pod DNS; finite world per region. EARTH MODE: the Cape
+          # Peninsula at 1:1 (see deploy/topology.yaml for the region map).
+          # Spawn in the CITY BOWL (Gardens, -33.9330 18.4130 -> block -647,1447)
+          # facing the default south — looking straight up at Table Mountain's
+          # face, which climbs from y~150 to y~293 two kilometres ahead.
+          args: ["-seed", "1", "-gamemode", "creative", "-attach", ":25500", "-ops", "<op1>,<op2>", "-nats", "nats://tachyne-nats.tachyne.svc.cluster.local:4222", "-valkey", "tachyne-cache.tachyne.svc.cluster.local:6379", "-topology", "/etc/tachyne/topology.json", "-peer-addr", ":25501", "-peer-pattern", "tachyne-world-%d.tachyne-world-hl.tachyne.svc.cluster.local:25501", "-debug-borders", "-earth", "capetown", "-earth-vscale", "4.5", "-spawn", "-647,1447"]
+          env:
+            - name: POD_NAME # the trailing ordinal is this world pod's SID (unused by the server yet)
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ATTACH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: tachyne-attach-token
+                  key: token
+          ports:
+            - containerPort: 25500
+              name: attach
+            - containerPort: 25501
+              name: peer
+          readinessProbe:
+            tcpSocket:
+              port: attach
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: attach
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: data
+              mountPath: /var/world
+            - name: topology
+              mountPath: /etc/tachyne
+              readOnly: true
+      volumes:
+        - name: topology
+          configMap:
+            name: tachyne-world-topology
+      imagePullSecrets:
+        - name: forgejo-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi

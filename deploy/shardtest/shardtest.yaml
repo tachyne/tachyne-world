@@ -1,0 +1,105 @@
+# Two-pod sharding testbed for the tachyne cluster — ISOLATED from the live world.
+#
+# PREREQUISITES (the sharding code is not deployable until these are done):
+#   1. Push tachyne-common; remove the local `replace` in tachyne-world +
+#      tachyne-gw-java-770 go.mod and pin the new common sha; push both.
+#   2. CI builds the images:  tachyne-world:<sha>  and  tachyne-gw-java-770:<sha>.
+#      Set them below (or use :latest off the sharding build).
+#
+# Then:  kubectl --kubeconfig ~/.kube/tachyne.yaml -n tachyne apply -f shardtest.yaml
+# The live tachyne-world StatefulSet is untouched (different names, in-memory
+# worlds, no shared PVC).
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: shardtest-topology, namespace: tachyne }
+data:
+  topology.json: |
+    {"version":1,"regions":[
+      {"sid":0,"min_cx":-16,"min_cz":-8,"w":16,"h":16},
+      {"sid":1,"min_cx":0,"min_cz":-8,"w":16,"h":16}
+    ]}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: shardtest-world, namespace: tachyne }
+spec:
+  clusterIP: None # headless → per-pod DNS: shardtest-world-{0,1}.shardtest-world.tachyne.svc
+  selector: { app: shardtest-world }
+  ports:
+    - { name: attach, port: 25500 }
+    - { name: peer, port: 25501 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: shardtest-world, namespace: tachyne }
+spec:
+  serviceName: shardtest-world
+  replicas: 2 # == topology shards; keep in lockstep
+  selector: { matchLabels: { app: shardtest-world } }
+  template:
+    metadata: { labels: { app: shardtest-world } }
+    spec:
+      imagePullSecrets: [{ name: forgejo-pull }]
+      containers:
+        - name: world
+          image: github.com/tachyne/tachyne-world:568bcae # sharding build
+          args:
+            - "-attach"
+            - ":25500"
+            - "-peer-addr"
+            - ":25501"
+            - "-peer-pattern"
+            - "shardtest-world-%d.shardtest-world.tachyne.svc:25501"
+            - "-topology"
+            - "/etc/tachyne/topology.json"
+            - "-debug-borders"
+            - "-seed"
+            - "42" # same seed on both → continuous terrain across the seam
+            - "-world"
+            - "" # in-memory, throwaway (no PVC — this is a testbed)
+            - "-spawn"
+            - "-128,80,0" # spawn in the WEST tile (SID 0), west of the x=0 seam
+          env:
+            - name: POD_NAME # the engine derives SID from the trailing ordinal
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: ATTACH_TOKEN
+              valueFrom: { secretKeyRef: { name: tachyne-attach-token, key: token } }
+          ports:
+            - { name: attach, containerPort: 25500 }
+            - { name: peer, containerPort: 25501 }
+          volumeMounts:
+            - { name: topology, mountPath: /etc/tachyne, readOnly: true }
+      volumes:
+        - name: topology
+          configMap: { name: shardtest-topology }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: shardtest-gw, namespace: tachyne }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: shardtest-gw } }
+  template:
+    metadata: { labels: { app: shardtest-gw } }
+    spec:
+      imagePullSecrets: [{ name: forgejo-pull }]
+      containers:
+        - name: gw
+          image: github.com/tachyne/tachyne-gw-java-770:e9fa376 # sharding build
+          env:
+            - { name: TACHYNE_LISTEN, value: ":25565" }
+            - { name: TACHYNE_BACKEND, value: "shardtest-world-0.shardtest-world.tachyne.svc:25500" } # login → west pod
+            - { name: TACHYNE_WORLD_PATTERN, value: "shardtest-world-%d.shardtest-world.tachyne.svc:25500" } # resume dial
+            - name: TACHYNE_ATTACH_TOKEN
+              valueFrom: { secretKeyRef: { name: tachyne-attach-token, key: token } }
+            # TACHYNE_ACCESS_URL intentionally unset → open (dev testbed only)
+          ports: [{ containerPort: 25565 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: shardtest-gw, namespace: tachyne }
+spec:
+  type: NodePort # reach a real client at <node-ip>:30565 (isolated from the live :25565 ingress)
+  selector: { app: shardtest-gw }
+  ports:
+    - { port: 25565, targetPort: 25565, nodePort: 30565 }

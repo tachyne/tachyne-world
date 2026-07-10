@@ -1,0 +1,10 @@
+# Keep the build context lean — none of this is needed to compile the engine.
+.git
+deploy
+.forgejo
+docs
+reference
+README.md
+CLAUDE.md
+*.gob
+chunks

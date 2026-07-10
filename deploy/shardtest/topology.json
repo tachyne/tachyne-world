@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "regions": [
+    { "sid": 0, "min_cx": -16, "min_cz": -8, "w": 16, "h": 16 },
+    { "sid": 1, "min_cx": 0, "min_cz": -8, "w": 16, "h": 16 }
+  ]
+}

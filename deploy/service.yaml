@@ -1,0 +1,20 @@
+# Headless service governing the StatefulSet (stable per-pod DNS for
+# gateways: tachyne-world-0.tachyne-world-hl.tachyne.svc:25565).
+apiVersion: v1
+kind: Service
+metadata:
+  name: tachyne-world-hl
+  namespace: tachyne
+  labels:
+    app.kubernetes.io/name: tachyne
+    app.kubernetes.io/component: world
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: tachyne
+    app.kubernetes.io/component: world
+  ports:
+    - name: attach
+      port: 25500
+    - name: peer
+      port: 25501

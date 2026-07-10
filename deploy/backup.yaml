@@ -1,0 +1,48 @@
+# Nightly world backup: tars /var/world (minus the regenerable chunk cache)
+# onto a second PVC, keeping the last 7. Both PVCs are RWO local-path on the
+# same node, so the concurrent mount is fine.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tachyne-world-backup
+  namespace: tachyne
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources: {requests: {storage: 5Gi}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tachyne-world-backup
+  namespace: tachyne
+spec:
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: busybox:1.36
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  ts=$(date +%Y%m%d-%H%M%S)
+                  tar czf /backup/world-$ts.tgz -C /var/world --exclude=chunks .
+                  ls -t /backup/world-*.tgz | tail -n +8 | xargs -r rm -f
+                  echo "backup done: world-$ts.tgz ($(ls -lh /backup/world-$ts.tgz | awk '{print $5}'))"
+              volumeMounts:
+                - {name: world, mountPath: /var/world, readOnly: true}
+                - {name: backup, mountPath: /backup}
+              securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}, runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+          volumes:
+            - name: world
+              persistentVolumeClaim: {claimName: data-tachyne-world-0}
+            - name: backup
+              persistentVolumeClaim: {claimName: tachyne-world-backup}

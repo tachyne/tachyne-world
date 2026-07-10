@@ -1,0 +1,31 @@
+# Shard region map: GREATER CAPE TOWN at 1:1 horizontal scale (earth mode,
+# Copernicus GLO-30; see internal/worldgen/earth.go and scripts/gen_earthdem.py).
+# Block (0,0) = Cape Town city centre (-33.92, 18.42); +x east, +z south;
+# 1 block = 1 m. The world covers lon [18.25, 19.00] x lat [-33.55, -34.40]:
+# Bloubergstrand + Robben Island in the north, Cape Point in the south, and
+# east across the Cape Flats to Stellenbosch/Somerset West. ~69 x 95 km,
+# inset two chunks from the DEM edge.
+#
+#   shard 0 (north): city bowl, Table Mountain, the Flats, Blouberg, Stellenbosch
+#   shard 1 (south): deep peninsula, Chapman's Peak, Cape Point, Strand coast
+#   seam at chunk z=1250 (block z=20,000 = ~34.10 S — the Muizenberg line)
+#
+# Keep replicas in deploy/statefulset.yaml == number of shards here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tachyne-world-topology
+  namespace: tachyne
+  labels:
+    app.kubernetes.io/name: tachyne
+    app.kubernetes.io/component: world
+    app.kubernetes.io/part-of: tachyne
+data:
+  topology.json: |
+    {
+      "version": 3,
+      "regions": [
+        { "sid": 0, "min_cx": -980, "min_cz": -2573, "w": 4326, "h": 3823 },
+        { "sid": 1, "min_cx": -980, "min_cz": 1250, "w": 4326, "h": 2087 }
+      ]
+    }

@@ -1,0 +1,40 @@
+# tachyne-cache: cluster-wide generated-chunk cache. Pure cache — terrain is
+# deterministic by (seed, GenVersion), so no persistence: a restart just
+# means regeneration on miss. Becomes shared across world pods at sharding.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tachyne-cache
+  namespace: tachyne
+  labels: {app.kubernetes.io/name: tachyne, app.kubernetes.io/component: cache, app.kubernetes.io/part-of: tachyne}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: tachyne, app.kubernetes.io/component: cache}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: tachyne, app.kubernetes.io/component: cache, app.kubernetes.io/part-of: tachyne}
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8-alpine
+          args: ["--maxmemory", "400mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+          ports: [{containerPort: 6379, name: valkey}]
+          readinessProbe: {tcpSocket: {port: valkey}, initialDelaySeconds: 2, periodSeconds: 10}
+          livenessProbe: {tcpSocket: {port: valkey}, initialDelaySeconds: 10, periodSeconds: 30}
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}, readOnlyRootFilesystem: false, runAsNonRoot: true, runAsUser: 999, runAsGroup: 999}
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tachyne-cache
+  namespace: tachyne
+  labels: {app.kubernetes.io/name: tachyne, app.kubernetes.io/component: cache}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: tachyne, app.kubernetes.io/component: cache}
+  ports: [{name: valkey, port: 6379, targetPort: valkey}]
