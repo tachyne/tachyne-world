@@ -68,11 +68,11 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 
 // generateEndChunk fills a chunk in End mode.
 func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
-	ch := &Chunk{}
+	ch := NewChunk(g.sections)
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
-			for s := 0; s < SectionCount; s++ {
+			for s := 0; s < len(ch.Sections); s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
 					ch.Sections[s][(ly*16+lz)*16+lx] = g.endBlock(wx, wy, wz)
@@ -80,7 +80,7 @@ func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
 			}
 		}
 	}
-	for s := 0; s < SectionCount; s++ {
+	for s := 0; s < len(ch.Sections); s++ {
 		ch.Biomes[s] = "minecraft:the_end"
 	}
 	ch.computeHeightmap()

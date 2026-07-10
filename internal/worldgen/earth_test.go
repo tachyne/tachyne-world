@@ -98,3 +98,44 @@ func TestEarthCapeTown(t *testing.T) {
 		}
 	}
 }
+
+// TestTallWorldTrueScale: with the ceiling raised and vscale 1, the landmarks
+// stand at their REAL elevations — the tall-world project's whole point.
+// Table Mountain's summit plateau must be ~1,050-1,090 blocks up, not 285.
+func TestTallWorldTrueScale(t *testing.T) {
+	dem, err := LoadEarthDEM("capetown", 1.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := NewGenerator(1)
+	g.SetCeiling(1664)
+	g.SetEarth(dem)
+	if g.SectionCount() != (1664+64)/16 {
+		t.Fatalf("sections = %d", g.SectionCount())
+	}
+	cases := []struct {
+		name     string
+		lat, lon float64
+		lo, hi   int
+	}{
+		{"Table Mountain plateau", -33.9575, 18.4034, SeaLevel + 950, SeaLevel + 1100},
+		{"Signal Hill", -33.9166, 18.4062, SeaLevel + 250, SeaLevel + 330},
+		{"City centre", -33.9180, 18.4232, SeaLevel + 1, SeaLevel + 40},
+	}
+	for _, c := range cases {
+		wx, wz := dem.LatLonToBlock(c.lat, c.lon)
+		h := g.Height(wx, wz)
+		if h < c.lo || h > c.hi {
+			t.Errorf("%s: height %d not in [%d, %d]", c.name, h, c.lo, c.hi)
+		}
+	}
+	// A generated summit chunk must actually carry blocks above y=320.
+	wx, wz := dem.LatLonToBlock(-33.9575, 18.4034)
+	ch := g.GenerateChunk(int32(wx>>4), int32(wz>>4))
+	if len(ch.Sections) != g.SectionCount() {
+		t.Fatalf("chunk has %d sections, want %d", len(ch.Sections), g.SectionCount())
+	}
+	if ch.MaxHeight() <= 320 {
+		t.Fatalf("summit chunk tops out at %d — nothing above the vanilla ceiling", ch.MaxHeight())
+	}
+}

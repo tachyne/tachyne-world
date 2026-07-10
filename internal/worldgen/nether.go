@@ -77,12 +77,12 @@ func (g *Generator) netherBlock(x, y, z int) uint32 {
 
 // generateNetherChunk fills a chunk in nether mode.
 func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
-	ch := &Chunk{}
+	ch := NewChunk(g.sections)
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
 			prev := uint32(Bedrock)
-			for s := 0; s < SectionCount; s++ {
+			for s := 0; s < len(ch.Sections); s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
 					b := g.netherBlock(wx, wy, wz)
@@ -96,7 +96,7 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 			}
 		}
 	}
-	for s := 0; s < SectionCount; s++ {
+	for s := 0; s < len(ch.Sections); s++ {
 		ch.Biomes[s] = "minecraft:nether_wastes"
 	}
 	ch.computeHeightmap()

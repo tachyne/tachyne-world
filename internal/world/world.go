@@ -15,12 +15,27 @@ import (
 
 type chunkPos = [2]int32
 
-// genCacheCap bounds the generated-chunk cache. Terrain generation (with
-// lighting reading a 3×3 neighbourhood) is the join bottleneck, so we memoise
-// the deterministic, pre-edit generator output. Each chunk is ~0.4 MB, so this
-// cap trades ~400 MB of RAM for not regenerating the same chunk ~9× while
-// streaming. Tune up for more players / larger view distances.
-const genCacheCap = 1024
+// genCacheBudget bounds the generated-chunk cache BY MEMORY, not count.
+// Terrain generation (with lighting reading a 3×3 neighbourhood) is the join
+// bottleneck, so we memoise the deterministic, pre-edit generator output —
+// but a vanilla-height chunk is ~0.4 MB while a tall (earth true-scale, 108
+// sections) one is ~1.8 MB, so a fixed count of 1024 would balloon from
+// ~400 MB to ~1.8 GB and swap the box (it did). cacheCap() derives the entry
+// count from the world's actual chunk size.
+const (
+	genCacheBudget = 400 << 20 // ~400 MB of cached generator output
+	genCacheMin    = 128       // floor: lighting reads 3×3, keep a useful window
+)
+
+// cacheCap is the LRU entry limit for this world's chunk size.
+func (w *World) cacheCap() int {
+	bytesPerChunk := w.Sections() * 4096 * 4
+	n := genCacheBudget / bytesPerChunk
+	if n < genCacheMin {
+		n = genCacheMin
+	}
+	return n
+}
 
 // cacheEntry is a generated chunk plus its node in the LRU list.
 type cacheEntry struct {
@@ -71,9 +86,28 @@ func (w *World) SetEarth(name string, vscale float64) (*worldgen.EarthDEM, error
 		return nil, err
 	}
 	w.gen.SetEarth(dem)
-	w.dimTag = fmt.Sprintf("E.%s.%g.", name, vscale)
+	// Prepend (don't overwrite): a tall world's "H<sections>." tag composes
+	// with the earth tag so every (region, vscale, height) keys distinctly.
+	w.dimTag = fmt.Sprintf("E.%s.%g.%s", name, vscale, w.dimTag)
 	return dem, nil
 }
+
+// SetCeiling raises the world's top build limit (tall worlds — earth mode at
+// true vertical scale). Must be called at boot, before any chunk is generated.
+// The chunk-cache key gains an "H<sections>." prefix so tall chunks never
+// collide with vanilla-height ones.
+func (w *World) SetCeiling(maxY int) {
+	w.gen.SetCeiling(maxY)
+	if s := w.gen.SectionCount(); s != worldgen.SectionCount {
+		w.dimTag = fmt.Sprintf("H%d.%s", s, w.dimTag)
+	}
+}
+
+// Sections is the world's column height in 16-block sections.
+func (w *World) Sections() int { return w.gen.SectionCount() }
+
+// Ceiling is the world's exclusive top build limit (world Y).
+func (w *World) Ceiling() int { return w.gen.Ceiling() }
 
 // NewEnd builds the End world for a seed (End generator, no sky light).
 func NewEnd(seed int64, store Store) (*World, error) {
@@ -210,7 +244,7 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	var ch *worldgen.Chunk
 	if w.chunkCache != nil {
 		if data, ok := w.chunkCache.Get(w.cacheKey(cx, cz)); ok {
-			ch = decodeChunk(data)
+			ch = decodeChunk(data, w.Sections())
 		}
 	}
 	if ch == nil {
@@ -229,7 +263,7 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 		return e.ch
 	}
 	w.cache[key] = cacheEntry{ch: ch, elem: w.lru.PushFront(key)}
-	for len(w.cache) > genCacheCap {
+	for len(w.cache) > w.cacheCap() {
 		oldest := w.lru.Back()
 		if oldest == nil {
 			break
@@ -353,7 +387,7 @@ func (w *World) Walkable(x, z int) bool {
 		// Cavern worlds have no sea level or trees: a column is walkable when
 		// its mob floor is a real standable surface that isn't a lava bath.
 		y := w.MobFeet(x, z)
-		if !inBounds(y) || worldgen.IsLava(w.Block(x, y, z)) || worldgen.IsLava(w.Block(x, y-1, z)) {
+		if !w.inBounds(y) || worldgen.IsLava(w.Block(x, y, z)) || worldgen.IsLava(w.Block(x, y-1, z)) {
 			return false
 		}
 		return w.mobStandable(x, y-1, z)
@@ -365,7 +399,7 @@ func (w *World) Walkable(x, z int) bool {
 	// AT the feet (fluids aren't standable, so MobFeet bottoms out on the
 	// seabed with water above), beaches have air at the feet and sand below.
 	y := w.MobFeet(x, z)
-	if !inBounds(y) || worldgen.IsWater(w.Block(x, y, z)) || worldgen.IsWater(w.Block(x, y-1, z)) {
+	if !w.inBounds(y) || worldgen.IsWater(w.Block(x, y, z)) || worldgen.IsWater(w.Block(x, y-1, z)) {
 		return false
 	}
 	return !w.gen.TreeAt(x, z)
@@ -376,7 +410,7 @@ func (w *World) Walkable(x, z int) bool {
 // hold a mob up; pass-through blocks (air, fluids, plants, torches, rails, signs,
 // redstone) do not. Reads through the edit overlay.
 func (w *World) standable(x, y, z int) bool {
-	if !inBounds(y) {
+	if !w.inBounds(y) {
 		return false
 	}
 	return worldgen.Collides(w.Block(x, y, z))
@@ -389,7 +423,7 @@ func (w *World) standable(x, y, z int) bool {
 // surface either way.
 func (w *World) SurfaceFeet(x, z int) int {
 	y := w.gen.Height(x, z) // start at the generated surface, then correct for edits
-	for inBounds(y) && w.standable(x, y, z) {
+	for w.inBounds(y) && w.standable(x, y, z) {
 		y++ // blocks were placed here — climb above them
 	}
 	for y > worldgen.MinY && !w.standable(x, y-1, z) {
@@ -441,7 +475,7 @@ func (w *World) ClosedWoodenDoorFeet(x, z int) bool {
 // on top of one — placing a fence on a mob leaves it at the fence's base, free to
 // walk out, instead of teleporting it onto the fence where it would be stuck.
 func (w *World) mobStandable(x, y, z int) bool {
-	if !inBounds(y) {
+	if !w.inBounds(y) {
 		return false
 	}
 	s := w.Block(x, y, z)
@@ -453,13 +487,13 @@ func (w *World) mobStandable(x, y, z int) bool {
 // for mob seating + step tests so a mob is never lifted onto a fence.
 func (w *World) MobFeet(x, z int) int {
 	y := w.gen.Height(x, z)
-	limit := worldgen.MinY + worldgen.SectionCount*16
+	limit := w.Ceiling()
 	if w.noSky {
 		// Cavern worlds: a solid start must never climb out through the
 		// ceiling shell — that parks mobs floating in the void above it.
 		limit = y + 8
 	}
-	for inBounds(y) && y < limit && w.mobStandable(x, y, z) {
+	for w.inBounds(y) && y < limit && w.mobStandable(x, y, z) {
 		y++
 	}
 	for y > worldgen.MinY && !w.mobStandable(x, y-1, z) {
@@ -481,8 +515,8 @@ func (w *World) Spawnable(x, z int) bool {
 	return !worldgen.Collides(w.Block(x, feet, z)) && !worldgen.Collides(w.Block(x, feet+1, z))
 }
 
-func inBounds(y int) bool {
-	return y >= worldgen.MinY && y < worldgen.MinY+worldgen.SectionCount*16
+func (w *World) inBounds(y int) bool {
+	return y >= worldgen.MinY && y < w.Ceiling()
 }
 
 // localIndex packs an in-chunk (lx, y, lz) into a single index.
@@ -501,7 +535,7 @@ func chunkOf(x, z int) (cx, cz, lx, lz int) {
 
 // SetBlock records a persistent edit at a world coordinate.
 func (w *World) SetBlock(x, y, z int, state uint32) {
-	if !inBounds(y) {
+	if !w.inBounds(y) {
 		return
 	}
 	cx, cz, lx, lz := chunkOf(x, z)
@@ -536,7 +570,7 @@ func (w *World) Block(x, y, z int) uint32 {
 // ticker, which reads thousands of blocks per tick. Unlike Block it sees feature
 // decoration (it reads the assembled chunk), which is what growth wants.
 func (w *World) At(x, y, z int) uint32 {
-	if !inBounds(y) {
+	if !w.inBounds(y) {
 		return worldgen.Air
 	}
 	cx, cz, lx, lz := chunkOf(x, z)

@@ -97,8 +97,13 @@ func TestSkyLightDeepIsDark(t *testing.T) {
 func TestSkyLightDeterministic(t *testing.T) {
 	a := New(7).Light(2, -3)
 	b := New(7).Light(2, -3)
-	if *a != *b {
-		t.Fatal("sky light is not reproducible for the same seed/chunk")
+	if len(a.Sky) != len(b.Sky) {
+		t.Fatal("light data section counts differ")
+	}
+	for s := range a.Sky {
+		if a.Sky[s] != b.Sky[s] || a.Block[s] != b.Block[s] {
+			t.Fatal("sky light is not reproducible for the same seed/chunk")
+		}
 	}
 }
 

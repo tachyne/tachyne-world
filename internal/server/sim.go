@@ -21,8 +21,8 @@ var (
 	allNeighbors   = [6]blockPos{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}
 )
 
-func inWorldY(y int) bool {
-	return y >= worldgen.MinY && y < worldgen.MinY+worldgen.SectionCount*16
+func (h *hub) inWorldY(y int) bool {
+	return y >= worldgen.MinY && y < h.world.Ceiling()
 }
 
 // schedule queues a block update `delay` ticks from now.
@@ -60,7 +60,7 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 }
 
 func (h *hub) processUpdate(players map[int32]*tracked, pos blockPos) {
-	if !inWorldY(pos.y) {
+	if !h.inWorldY(pos.y) {
 		return
 	}
 	state := h.world.Block(pos.x, pos.y, pos.z)
@@ -101,7 +101,7 @@ func (h *hub) broadcastBlock(players map[int32]*tracked, x, y, z int, state uint
 // replaceable, then reschedules so it keeps falling and the block above re-checks.
 func (h *hub) updateFalling(players map[int32]*tracked, pos blockPos, state uint32) {
 	below := blockPos{pos.x, pos.y - 1, pos.z}
-	if !inWorldY(below.y) {
+	if !h.inWorldY(below.y) {
 		return
 	}
 	if worldgen.IsReplaceable(h.world.Block(below.x, below.y, below.z)) {
@@ -155,13 +155,13 @@ func (h *hub) updateFluid(players map[int32]*tracked, pos blockPos, state uint32
 
 	// Flow straight down. Lava reaching water below forms stone (spreadTo DOWN).
 	below := blockPos{pos.x, pos.y - 1, pos.z}
-	if !water && inWorldY(below.y) && worldgen.IsWater(h.world.Block(below.x, below.y, below.z)) {
+	if !water && h.inWorldY(below.y) && worldgen.IsWater(h.world.Block(below.x, below.y, below.z)) {
 		h.setBlock(players, below, worldgen.Stone)
 		h.fizz(players, below)
 		h.scheduleAround(below, delay)
 		return
 	}
-	canFall := inWorldY(below.y) && worldgen.IsReplaceable(h.world.Block(below.x, below.y, below.z))
+	canFall := h.inWorldY(below.y) && worldgen.IsReplaceable(h.world.Block(below.x, below.y, below.z))
 	if canFall {
 		h.setBlock(players, below, base+8)
 		h.schedule(below, delay)
@@ -282,7 +282,7 @@ func (h *hub) slopeDist(pos blockPos, depth, findDist, from int) int {
 // fluidHole reports whether fluid at pos could fall (the cell below is open).
 func (h *hub) fluidHole(pos blockPos) bool {
 	b := pos.y - 1
-	return inWorldY(b) && worldgen.IsReplaceable(h.world.Block(pos.x, b, pos.z))
+	return h.inWorldY(b) && worldgen.IsReplaceable(h.world.Block(pos.x, b, pos.z))
 }
 
 // fluidSupported reports whether a flowing/falling cell still has a path to a

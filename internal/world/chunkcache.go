@@ -84,9 +84,11 @@ func encodeChunk(ch *worldgen.Chunk) []byte {
 	return buf
 }
 
-// decodeChunk rebuilds a chunk, returning nil on ANY malformed input (the
-// caller treats that as a miss and regenerates).
-func decodeChunk(data []byte) *worldgen.Chunk {
+// decodeChunk rebuilds a chunk of the given section count, returning nil on
+// ANY malformed input (the caller treats that as a miss and regenerates). The
+// cache key carries the world height ("H<sections>." prefix), so an entry
+// always matches the count it was encoded with.
+func decodeChunk(data []byte, sections int) *worldgen.Chunk {
 	if len(data) < 1 || data[0] != chunkMagic {
 		return nil
 	}
@@ -99,7 +101,7 @@ func decodeChunk(data []byte) *worldgen.Chunk {
 		pos += n
 		return v, true
 	}
-	ch := &worldgen.Chunk{}
+	ch := worldgen.NewChunk(sections)
 	for s := range ch.Sections {
 		sec := &ch.Sections[s]
 		filled := 0

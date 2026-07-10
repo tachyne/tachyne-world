@@ -16,6 +16,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -169,7 +170,11 @@ func session(c net.Conn, cfg Config) {
 		}
 	}
 
-	welcome := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: proto.Sections}
+	sections := proto.Sections
+	if cfg.World != nil {
+		sections = cfg.World.Sections() // tall worlds report their real height
+	}
+	welcome := proto.Welcome{Spawn: cfg.Spawn, Time: cfg.Time(), MinY: proto.MinY, Sections: sections}
 	var remote Remote
 	// Welcome MUST be the session's first frame (gateways refuse otherwise),
 	// but Join emits frames synchronously (command tree, abilities) and its
@@ -255,7 +260,18 @@ func session(c net.Conn, cfg Config) {
 		}
 		return cfg.World
 	}
-	for range 4 {
+	// Build-pool width scales with cores: 4 was sized for vanilla-height
+	// chunks, but a tall (earth true-scale) chunk carries 4.5× the blocks, so
+	// generation+encode per chunk costs that much more. Generation is a pure
+	// function and lighting takes its own locks, so widening is safe.
+	workers := runtime.GOMAXPROCS(0)
+	if workers < 4 {
+		workers = 4
+	}
+	if workers > 16 {
+		workers = 16
+	}
+	for range workers {
 		go func() {
 			for cc := range wants {
 				var bes []byte
@@ -414,25 +430,31 @@ func session(c net.Conn, cfg Config) {
 	}
 }
 
-// buildChunk renders one chunk column into a domain Chunk frame.
+// buildChunk renders one chunk column into a domain Chunk frame. The frame
+// carries the world's own section count — a tall earth overworld coexists
+// with a vanilla-height nether.
 func buildChunk(w *world.World, dim, cx, cz int32, bes []byte) ([]byte, error) {
 	ch := w.Chunk(cx, cz)
 	light := w.Light(cx, cz)
 
+	sections := w.Sections()
+	blocks := sections * 4096
 	body := &proto.ChunkBody{
-		BlockStates: make([]uint32, proto.BlocksPerCh),
+		BlockStates: make([]uint32, blocks),
 		Heightmap:   make([]int16, 256),
-		SkyLight:    make([]uint8, proto.BlocksPerCh),
-		BlockLight:  make([]uint8, proto.BlocksPerCh),
+		SkyLight:    make([]uint8, blocks),
+		BlockLight:  make([]uint8, blocks),
 	}
-	for s := range proto.Sections {
+	for s := 0; s < sections; s++ {
 		copy(body.BlockStates[s*4096:], ch.Sections[s][:])
 		copy(body.SkyLight[s*4096:], light.Sky[s][:])
 		copy(body.BlockLight[s*4096:], light.Block[s][:])
 	}
 	copy(body.Heightmap, ch.Heightmap[:])
 
-	payload, err := proto.EncodeChunk(proto.ChunkHeader{CX: cx, CZ: cz, Dim: dim, Biomes: ch.Biomes[:], BEs: bes}, body)
+	payload, err := proto.EncodeChunk(proto.ChunkHeader{
+		CX: cx, CZ: cz, Dim: dim, Biomes: ch.Biomes[:], Sections: sections, BEs: bes,
+	}, body)
 	if err != nil {
 		return nil, err
 	}

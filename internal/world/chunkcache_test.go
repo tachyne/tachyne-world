@@ -18,23 +18,23 @@ func TestChunkCodecRoundTrip(t *testing.T) {
 	if len(data) > 64*1024 {
 		t.Fatalf("encoded chunk unexpectedly large: %d bytes", len(data))
 	}
-	got := decodeChunk(data)
+	got := decodeChunk(data, len(ch.Sections))
 	if got == nil {
 		t.Fatal("decode failed on freshly encoded chunk")
 	}
-	if *got != *ch {
+	if !got.Equal(ch) {
 		t.Fatal("decoded chunk differs from the original")
 	}
 	t.Logf("encoded size: %d bytes (raw sections are ~400 KB)", len(data))
 }
 
 func TestChunkDecodeRejectsGarbage(t *testing.T) {
-	if decodeChunk(nil) != nil || decodeChunk([]byte{0x00}) != nil {
+	if decodeChunk(nil, worldgen.SectionCount) != nil || decodeChunk([]byte{0x00}, worldgen.SectionCount) != nil {
 		t.Fatal("bad magic must be rejected")
 	}
 	ch := worldgen.NewGenerator(1).GenerateChunk(0, 0)
 	data := encodeChunk(ch)
-	if decodeChunk(data[:len(data)/2]) != nil {
+	if decodeChunk(data[:len(data)/2], len(ch.Sections)) != nil {
 		t.Fatal("truncated data must be rejected")
 	}
 }
@@ -59,7 +59,7 @@ func TestDirCachePersistsChunksAcrossWorlds(t *testing.T) {
 	if data == nil {
 		t.Fatal("chunk was not written to the cache within 1s")
 	}
-	dec0 := decodeChunk(data)
+	dec0 := decodeChunk(data, worldgen.SectionCount)
 	if dec0 == nil {
 		t.Fatal("cached chunk failed to decode")
 	}
@@ -90,7 +90,7 @@ func TestCorruptCacheEntryRegenerates(t *testing.T) {
 	w.SetChunkCache(cache)
 	ch := w.generated(2, 2)
 	want := worldgen.NewGenerator(7).GenerateChunk(2, 2)
-	if *ch != *want {
+	if !ch.Equal(want) {
 		t.Fatal("corrupt cache entry must fall back to clean generation")
 	}
 }
@@ -180,7 +180,7 @@ func TestValkeyCacheRoundTrip(t *testing.T) {
 	if !ok {
 		t.Fatal("stored key must hit")
 	}
-	if dec := decodeChunk(got); dec == nil || *dec != *ch {
+	if dec := decodeChunk(got, len(ch.Sections)); dec == nil || !dec.Equal(ch) {
 		t.Fatal("chunk did not survive the valkey round-trip")
 	}
 }

@@ -34,6 +34,7 @@ func main() {
 	peerPattern := flag.String("peer-pattern", "tachyne-world-%d.tachyne-world.tachyne.svc:25501", "dial address for neighbour shards (%d = sid)")
 	earth := flag.String("earth", "", "EARTH MODE: overworld terrain from an embedded real elevation model, e.g. capetown (empty = procedural noise)")
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
+	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	flag.Parse()
 
 	if *addr != "" {
@@ -43,6 +44,7 @@ func main() {
 	srv.Seed = *seed
 	srv.EarthName = *earth
 	srv.EarthVScale = *earthVScale
+	srv.Ceiling = *ceiling
 	srv.AttachAddr = *attachAddr
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
 	srv.WorldFile = *worldFile

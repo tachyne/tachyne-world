@@ -58,7 +58,7 @@ func (g *Generator) placeOres(ch *Chunk, cx, cz int32) {
 				case 1:
 					lz = clampInt(lz+rng.Intn(3)-1, 0, 15)
 				default:
-					y = clampInt(y+rng.Intn(3)-1, MinY+1, MinY+SectionCount*16-1)
+					y = clampInt(y+rng.Intn(3)-1, MinY+1, MinY+len(ch.Sections)*16-1)
 				}
 			}
 		}

@@ -122,8 +122,10 @@ func (d *EarthDEM) sample(lat, lon float64) float64 {
 
 // heightAt maps a block column to its surface height. Land (elevation ≥ 1 m)
 // rises from just above sea level by the vertical scale; the sea (the DSM
-// reads ~0 m over water) gets a flat v1 seabed.
-func (d *EarthDEM) heightAt(wx, wz int) int {
+// reads ~0 m over water) gets a flat v1 seabed. ceiling is the world's
+// exclusive top build limit — summits taller than the world clip flat there
+// (pick vscale/ceiling together so the region's peaks fit; see docs/EARTH.md).
+func (d *EarthDEM) heightAt(wx, wz, ceiling int) int {
 	lat := d.RefLat - (float64(wz)+0.5)/d.mLat
 	lon := d.RefLon + (float64(wx)+0.5)/d.mLon
 	m := d.sample(lat, lon)
@@ -131,7 +133,7 @@ func (d *EarthDEM) heightAt(wx, wz int) int {
 		return SeaLevel - seabedDepth
 	}
 	h := SeaLevel + int(math.Round(m/d.vscale))
-	return clampInt(h, SeaLevel+1, MinY+SectionCount*16-2)
+	return clampInt(h, SeaLevel+1, ceiling-2)
 }
 
 // BlockToLatLon reports the geographic position of a block column — for spawn

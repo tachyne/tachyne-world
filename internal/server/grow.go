@@ -81,7 +81,7 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 }
 
 func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
-	for s := 0; s < worldgen.SectionCount; s++ {
+	for s := 0; s < h.world.Sections(); s++ {
 		baseY := worldgen.MinY + s*16
 		for i := 0; i < randomTickSpeed; i++ {
 			x := cx*16 + h.rng.Intn(16)
@@ -255,7 +255,7 @@ func (h *hub) logNearby(x, y, z int) bool {
 // skyLit reports whether a column is open to the sky above (a daylight proxy for
 // the light≥9 growth requirement — ignores torches and night).
 func (h *hub) skyLit(x, y, z int) bool {
-	for ay := y + 1; inWorldY(ay); ay++ {
+	for ay := y + 1; h.inWorldY(ay); ay++ {
 		if worldgen.SkyOpacity(h.world.At(x, ay, z)) >= worldgen.Opaque {
 			return false
 		}

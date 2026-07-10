@@ -222,7 +222,7 @@ func setSectionBlock(ch *Chunk, lx, y, lz int, state uint32, overwrite bool) {
 	if lx < 0 || lx >= 16 || lz < 0 || lz >= 16 {
 		return
 	}
-	if y < MinY || y >= MinY+SectionCount*16 {
+	if y < MinY || y >= MinY+len(ch.Sections)*16 {
 		return
 	}
 	sec := (y - MinY) / 16

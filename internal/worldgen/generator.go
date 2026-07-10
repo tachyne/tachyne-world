@@ -4,8 +4,11 @@ import "math"
 
 const (
 	MinY         = -64
-	SectionCount = 24 // 384 blocks / 16
+	SectionCount = 24 // default: 384 blocks / 16 (vanilla-height world)
 	SeaLevel     = 63
+	// MaxSectionCount bounds a configurable-height world: Java dimension
+	// heights top out at y=2032 and MinY is fixed, so (2032+64)/16.
+	MaxSectionCount = 131
 )
 
 // Generator turns a world seed into terrain. Each field is an independent noise
@@ -33,10 +36,37 @@ type Generator struct {
 	// real valleys, and carving real mountains would falsify them). All other
 	// systems derive from Height() and work unchanged.
 	earth *EarthDEM
+
+	// sections is the world's column height in 16-block sections (the ceiling
+	// is MinY + sections*16). Defaults to SectionCount (the vanilla-height
+	// world); earth mode raises it (SetCeiling) so real mountains fit at true
+	// vertical scale. Nether/End generators are never raised.
+	sections int
 }
+
+// SetCeiling raises the world ceiling to maxY (exclusive top build limit,
+// rounded up to a section boundary). Must be called at boot, before any chunk
+// is generated.
+func (g *Generator) SetCeiling(maxY int) {
+	s := (maxY - MinY + 15) / 16
+	if s < SectionCount {
+		s = SectionCount
+	}
+	if s > MaxSectionCount {
+		s = MaxSectionCount
+	}
+	g.sections = s
+}
+
+// SectionCount is the world's column height in 16-block sections.
+func (g *Generator) SectionCount() int { return g.sections }
+
+// Ceiling is the exclusive top build limit (world Y).
+func (g *Generator) Ceiling() int { return MinY + g.sections*16 }
 
 func NewGenerator(seed int64) *Generator {
 	return &Generator{
+		sections:  SectionCount,
 		seed:      seed,
 		continent: NewPerlin(seed ^ 0x1),
 		hills:     NewPerlin(seed ^ 0x2),
@@ -123,9 +153,31 @@ func (g *Generator) carve(b uint32, wx, wy, wz, colH int) uint32 {
 // both the lighting engine (capping the flood fill to just above the surface)
 // and the chunk packet's heightmap field.
 type Chunk struct {
-	Sections  [SectionCount][4096]uint32
-	Biomes    [SectionCount]string
+	Sections  [][4096]uint32
+	Biomes    []string
 	Heightmap [256]int16
+}
+
+// NewChunk allocates an empty (all-air) chunk column of the given height.
+func NewChunk(sections int) *Chunk {
+	return &Chunk{
+		Sections: make([][4096]uint32, sections),
+		Biomes:   make([]string, sections),
+	}
+}
+
+// Equal reports whether two chunks have identical contents (tests; Chunk
+// holds slices, so struct comparison no longer works).
+func (ch *Chunk) Equal(o *Chunk) bool {
+	if len(ch.Sections) != len(o.Sections) || ch.Heightmap != o.Heightmap {
+		return false
+	}
+	for i := range ch.Sections {
+		if ch.Sections[i] != o.Sections[i] || ch.Biomes[i] != o.Biomes[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // computeHeightmap fills Heightmap from the (decorated) section data.
@@ -134,7 +186,7 @@ func (ch *Chunk) computeHeightmap() {
 		for lz := 0; lz < 16; lz++ {
 			h := int16(MinY - 1)
 		scan:
-			for s := SectionCount - 1; s >= 0; s-- {
+			for s := len(ch.Sections) - 1; s >= 0; s-- {
 				for ly := 15; ly >= 0; ly-- {
 					if ch.Sections[s][(ly*16+lz)*16+lx] != Air {
 						h = int16(MinY + s*16 + ly)
@@ -176,7 +228,7 @@ func (g *Generator) Height(wx, wz int) int {
 // the real elevation model — the single seam every terrain consumer shares.
 func (g *Generator) landHeight(wx, wz int) int {
 	if g.earth != nil {
-		return g.earth.heightAt(wx, wz)
+		return g.earth.heightAt(wx, wz, g.Ceiling())
 	}
 	x, z := float64(wx), float64(wz)
 	// fBm output is compressed to ~±0.4, so stretch the regional fields to use a
@@ -377,10 +429,9 @@ func (g *Generator) supportSurface(ch *Chunk, cx, cz int32) {
 // arch, an overhang) is never wrongly deleted — false negatives (a rare border
 // floater) are preferred to eating real terrain.
 func removeFloatingFragments(ch *Chunk) {
-	const (
-		vol      = SectionCount * 16 * 16 * 16 // 24*16 * 16 * 16
-		seedTopY = 40                          // blocks above MinY that are always solid ground
-	)
+	const seedTopY = 40 // blocks above MinY that are always solid ground
+	height := len(ch.Sections) * 16
+	vol := height * 16 * 16
 	solid := func(b uint32) bool { return b != Air && b != Water && b != Lava }
 	get := func(lx, dy, lz int) uint32 { // dy = y - MinY
 		return ch.Sections[dy/16][(dy%16*16+lz)*16+lx]
@@ -390,7 +441,7 @@ func removeFloatingFragments(ch *Chunk) {
 	visited := make([]bool, vol)
 	stack := make([]int32, 0, 4096)
 	push := func(lx, dy, lz int) {
-		if lx < 0 || lx > 15 || lz < 0 || lz > 15 || dy < 0 || dy >= SectionCount*16 {
+		if lx < 0 || lx > 15 || lz < 0 || lz > 15 || dy < 0 || dy >= height {
 			return
 		}
 		i := idx(lx, dy, lz)
@@ -409,7 +460,7 @@ func removeFloatingFragments(ch *Chunk) {
 			}
 		}
 	}
-	for dy := 0; dy < SectionCount*16; dy++ {
+	for dy := 0; dy < height; dy++ {
 		for e := 0; e < 16; e++ {
 			push(0, dy, e)
 			push(15, dy, e)
@@ -432,7 +483,7 @@ func removeFloatingFragments(ch *Chunk) {
 		push(lx, dy-1, lz)
 	}
 	// Carve away every solid block the flood never reached.
-	for dy := 0; dy < SectionCount*16; dy++ {
+	for dy := 0; dy < height; dy++ {
 		for lz := 0; lz < 16; lz++ {
 			for lx := 0; lx < 16; lx++ {
 				if b := get(lx, dy, lz); solid(b) && !visited[idx(lx, dy, lz)] {
@@ -451,12 +502,12 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	if g.end {
 		return g.generateEndChunk(cx, cz)
 	}
-	ch := &Chunk{}
+	ch := NewChunk(g.sections)
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
 			col := g.columnAt(wx, wz)
-			for s := 0; s < SectionCount; s++ {
+			for s := 0; s < g.sections; s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
 					ch.Sections[s][(ly*16+lz)*16+lx] = g.carve(col.block(wy), wx, wy, wz, col.h)
@@ -476,7 +527,7 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	cxw, czw := int(cx)*16+8, int(cz)*16+8
 	surface := g.resolveBiome(cxw, czw)
 	surfaceH := g.Height(cxw, czw)
-	for s := 0; s < SectionCount; s++ {
+	for s := 0; s < g.sections; s++ {
 		cy := MinY + s*16 + 8
 		if cy < surfaceH-24 && cy < SeaLevel {
 			ch.Biomes[s] = g.caveBiome(cxw, czw, cy)
@@ -516,7 +567,7 @@ func (g *Generator) SurfaceY(wx, wz int) float64 {
 // BlockAt returns the generated block state at a single world coordinate
 // (terrain + caves, but not feature decoration).
 func (g *Generator) BlockAt(x, y, z int) uint32 {
-	if y < MinY || y >= MinY+SectionCount*16 {
+	if y < MinY || y >= MinY+g.sections*16 {
 		return Air
 	}
 	if g.nether {

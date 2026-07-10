@@ -33,7 +33,7 @@ func TestFeaturesAppear(t *testing.T) {
 func TestFeaturesDeterministic(t *testing.T) {
 	a := NewGenerator(7).GenerateChunk(2, 3)
 	b := NewGenerator(7).GenerateChunk(2, 3)
-	if *a != *b {
+	if !a.Equal(b) {
 		t.Fatal("decorated chunk is not reproducible")
 	}
 }

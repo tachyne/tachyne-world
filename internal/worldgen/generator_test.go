@@ -6,10 +6,10 @@ import "testing"
 func TestDeterministic(t *testing.T) {
 	a := NewGenerator(42).GenerateChunk(3, -7)
 	b := NewGenerator(42).GenerateChunk(3, -7)
-	if *a != *b {
+	if !a.Equal(b) {
 		t.Fatal("same seed produced different chunks")
 	}
-	if c := NewGenerator(43).GenerateChunk(3, -7); *a == *c {
+	if c := NewGenerator(43).GenerateChunk(3, -7); a.Equal(c) {
 		t.Error("different seeds produced identical chunks")
 	}
 }

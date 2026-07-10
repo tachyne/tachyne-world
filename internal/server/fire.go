@@ -275,7 +275,7 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 // air. resilience is the vanilla denominator (250 vertical / 300 horizontal;
 // lower = catches easier). Priming any TNT it eats.
 func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience, srcAge int) {
-	if !inWorldY(pos.y) {
+	if !h.inWorldY(pos.y) {
 		return
 	}
 	state := h.world.Block(pos.x, pos.y, pos.z)

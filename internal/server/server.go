@@ -108,6 +108,14 @@ type Server struct {
 	EarthName   string
 	EarthVScale float64
 
+	// Ceiling raises the OVERWORLD's top build limit (0 = vanilla 320). Tall
+	// worlds exist for earth mode at true vertical scale: pick Ceiling and
+	// EarthVScale together so the region's summits fit (e.g. Cape Town's
+	// 1,587 m Hottentots-Holland at vscale 1 wants -ceiling 1664). Nether and
+	// End stay vanilla height; Bedrock clients see the world clamped at 320
+	// (platform limit).
+	Ceiling int
+
 	// WorldFile, if set, persists block edits to that file so they survive
 	// restarts (empty = in-memory only). Swap the store for a DB later.
 	WorldFile string
@@ -211,6 +219,13 @@ func (s *Server) Serve() error {
 			go s.autosave()
 		} else {
 			s.world = world.New(s.Seed)
+		}
+		// Tall world: raise the overworld ceiling before anything generates
+		// (and before the chunk cache attaches — the height-tagged cache keys
+		// must be in force from the first chunk).
+		if s.Ceiling > 0 {
+			s.world.SetCeiling(s.Ceiling)
+			log.Printf("tall world: overworld ceiling y=%d (%d sections)", s.world.Ceiling(), s.world.Sections())
 		}
 		// Earth mode: real-DEM terrain for the OVERWORLD (nether/end stay
 		// procedural). Set before the chunk cache so the earth-tagged cache

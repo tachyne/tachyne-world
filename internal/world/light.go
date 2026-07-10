@@ -25,14 +25,11 @@ import "tachyne/internal/worldgen"
 // these into the nibble arrays of a Chunk Data packet. Sky light comes from the
 // open sky; block light comes from emitters (torches, lava, glowstone, …).
 type LightData struct {
-	Sky   [worldgen.SectionCount][4096]uint8
-	Block [worldgen.SectionCount][4096]uint8
+	Sky   [][4096]uint8
+	Block [][4096]uint8
 }
 
-const (
-	regionW = 48                         // 3 chunks wide: centre + a one-chunk ring
-	worldH  = worldgen.SectionCount * 16 // 384
-)
+const regionW = 48 // 3 chunks wide: centre + a one-chunk ring
 
 // ri indexes a region buffer at (rx, rz, yi); yi is height above the world floor.
 func ri(rx, rz, yi int) int { return (yi*regionW+rz)*regionW + rx }
@@ -91,7 +88,7 @@ func propagate(op, level []uint8, queue []int32, effTop int) {
 // mob spawning to keep hostiles out of torch-lit areas. It computes the block's
 // chunk light, so call it sparingly (e.g. once per spawn attempt), not per tick.
 func (w *World) BlockLightAt(x, y, z int) uint8 {
-	if y < worldgen.MinY || y >= worldgen.MinY+worldH {
+	if y < worldgen.MinY || y >= w.Ceiling() {
 		return 0
 	}
 	cx, cz := floorDiv(x, 16), floorDiv(z, 16)
@@ -145,8 +142,8 @@ func (w *World) Light(cx, cz int32) *LightData {
 		}
 	}
 	effTop := maxY - worldgen.MinY + 2 // one open-air layer above the tallest block
-	if effTop > worldH {
-		effTop = worldH
+	if h := w.Ceiling() - worldgen.MinY; effTop > h {
+		effTop = h
 	}
 	if effTop < 1 {
 		effTop = 1
@@ -196,8 +193,12 @@ func (w *World) Light(cx, cz int32) *LightData {
 
 	// Extract the centre chunk (region columns 16..31) into section arrays. Cells
 	// at or above effTop weren't computed: open sky (sky 15, block 0).
-	out := &LightData{}
-	for s := 0; s < worldgen.SectionCount; s++ {
+	sections := w.Sections()
+	out := &LightData{
+		Sky:   make([][4096]uint8, sections),
+		Block: make([][4096]uint8, sections),
+	}
+	for s := 0; s < sections; s++ {
 		for ly := 0; ly < 16; ly++ {
 			yi := s*16 + ly
 			for lz := 0; lz < 16; lz++ {
