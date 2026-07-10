@@ -16,6 +16,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
@@ -78,7 +79,10 @@ const timeInterval = 5 * time.Second
 // maxRadius clamps a Want radius. Raised 8→32 for earth mode: real-terrain
 // vistas (Table Mountain from the city bowl) need distance; 65² chunks stream
 // progressively through the 4-worker build pool, and the LRU + Valkey caches
-// absorb the churn. The gateways' viewCap must match.
+// absorb the churn. This is the HARD ceiling — the gateways' honored render
+// distance (gwsession Config.ViewCap, default 12, env TACHYNE_VIEW_CAP)
+// stays at or below it; raise a deployment's cap only where the vistas are
+// worth ~(2r+1)² chunks per client.
 const maxRadius = 32
 
 // Serve accepts gateway sessions until ln closes.
@@ -236,7 +240,11 @@ func session(c net.Conn, cfg Config) {
 	// Chunk streaming: Want requests queue coordinates; a small worker pool
 	// builds chunk frames (generation + lighting are the expensive bits) and
 	// the sent-set ensures each chunk goes once per session.
-	wants := make(chan [3]int32, 1024) // {dim, cx, cz}
+	// Sized to hold a full max-radius window so one Want never silently drops
+	// chunks (the drop-and-retry below stays as a backstop for pathological
+	// Want bursts — a dropped chunk is only re-requested on the NEXT Want, so
+	// a stationary player would otherwise keep a hole in the world).
+	wants := make(chan [3]int32, (2*maxRadius+1)*(2*maxRadius+1)+64) // {dim, cx, cz}
 	defer close(wants)
 	sent := map[[3]int32]bool{}
 	worldFor := func(dim int32) *world.World {
@@ -291,6 +299,14 @@ func session(c net.Conn, cfg Config) {
 					delete(sent, cc)
 				}
 			}
+			// Collect the not-yet-sent window, then enqueue NEAREST-FIRST:
+			// the chunk under the player must build before the horizon —
+			// the client sits on "Loading terrain" until its own chunk
+			// arrives, and outward fill matches how terrain actually
+			// becomes visible. (A raster sweep here once queued the player's
+			// chunk ~half a 65×65 window deep: tens of seconds of loading
+			// screen at earth-mode radii.)
+			var queue [][3]int32
 			for cx := w.CX - w.Radius; cx <= w.CX+w.Radius; cx++ {
 				for cz := w.CZ - w.Radius; cz <= w.CZ+w.Radius; cz++ {
 					if cfg.Owned != nil && !cfg.Owned(w.Dim, cx, cz) {
@@ -298,13 +314,17 @@ func session(c net.Conn, cfg Config) {
 					}
 					cc := [3]int32{w.Dim, cx, cz}
 					if w.Force || !sent[cc] { // Force re-queues even if already sent (/refresh)
-						sent[cc] = true
-						select {
-						case wants <- cc:
-						default: // backlog full; the next Want retries
-							delete(sent, cc)
-						}
+						queue = append(queue, cc)
 					}
+				}
+			}
+			nearestFirst(queue, w.CX, w.CZ)
+			for _, cc := range queue {
+				sent[cc] = true
+				select {
+				case wants <- cc:
+				default: // backlog full; the next Want retries
+					delete(sent, cc)
 				}
 			}
 		case proto.MsgMove:
@@ -455,6 +475,19 @@ func abs32(v int32) int32 {
 		return -v
 	}
 	return v
+}
+
+// nearestFirst orders a chunk-coordinate queue by squared distance from the
+// Want center so the build pool serves the player's own chunk first and fills
+// outward. Ties keep their raster order (stable sort) for determinism.
+func nearestFirst(queue [][3]int32, cx, cz int32) {
+	dist2 := func(cc [3]int32) int64 {
+		dx, dz := int64(cc[1]-cx), int64(cc[2]-cz)
+		return dx*dx + dz*dz
+	}
+	sort.SliceStable(queue, func(i, j int) bool {
+		return dist2(queue[i]) < dist2(queue[j])
+	})
 }
 
 // actTo decodes an action frame into a fresh value of proto's type and hands

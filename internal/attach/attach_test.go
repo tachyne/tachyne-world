@@ -200,3 +200,32 @@ func TestWelcomeIsFirstFrame(t *testing.T) {
 		}
 	}
 }
+
+// TestNearestFirst pins the chunk-streaming order: the Want center chunk must
+// be first (it releases the client's "Loading terrain" screen) and distance
+// from the center must never decrease along the queue.
+func TestNearestFirst(t *testing.T) {
+	const r, cx, cz = 5, 100, -40
+	var queue [][3]int32
+	for x := int32(cx - r); x <= cx+r; x++ {
+		for z := int32(cz - r); z <= cz+r; z++ {
+			queue = append(queue, [3]int32{0, x, z})
+		}
+	}
+	nearestFirst(queue, cx, cz)
+	if queue[0] != [3]int32{0, cx, cz} {
+		t.Fatalf("first queued chunk = %v, want the center {0,%d,%d}", queue[0], cx, cz)
+	}
+	prev := int64(-1)
+	for i, cc := range queue {
+		dx, dz := int64(cc[1]-cx), int64(cc[2]-cz)
+		d := dx*dx + dz*dz
+		if d < prev {
+			t.Fatalf("queue[%d]=%v is nearer (d²=%d) than its predecessor (d²=%d)", i, cc, d, prev)
+		}
+		prev = d
+	}
+	if len(queue) != (2*r+1)*(2*r+1) {
+		t.Fatalf("queue length %d, want %d", len(queue), (2*r+1)*(2*r+1))
+	}
+}
