@@ -23,14 +23,23 @@ type chunkPos = [2]int32
 // ~400 MB to ~1.8 GB and swap the box (it did). cacheCap() derives the entry
 // count from the world's actual chunk size.
 const (
-	genCacheBudget = 400 << 20 // ~400 MB of cached generator output
-	genCacheMin    = 128       // floor: lighting reads 3×3, keep a useful window
+	genCacheBudget      = 256 << 20 // main-world cached generator output
+	genCacheBudgetMinor = 64 << 20  // nether/End: toured rarely, cheap to regen
+	genCacheMin         = 128       // floor: lighting reads 3×3, keep a useful window
 )
 
-// cacheCap is the LRU entry limit for this world's chunk size.
+// cacheCap is the LRU entry limit for this world's chunk size. The budget is
+// PER WORLD — the engine runs three (overworld/nether/End), so the sum must
+// fit the pod's memory limit with GC headroom: a portal transit fills two
+// caches at once and 3×400 MB OOM-killed the 1Gi world pod the first time a
+// player toured the nether.
 func (w *World) cacheCap() int {
+	budget := genCacheBudget
+	if w.noSky { // nether/End
+		budget = genCacheBudgetMinor
+	}
 	bytesPerChunk := w.Sections() * 4096 * 4
-	n := genCacheBudget / bytesPerChunk
+	n := budget / bytesPerChunk
 	if n < genCacheMin {
 		n = genCacheMin
 	}
