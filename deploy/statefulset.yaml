@@ -9,7 +9,12 @@ metadata:
     app.kubernetes.io/part-of: tachyne
 spec:
   serviceName: tachyne-world-hl
-  replicas: 2 # == topology shards (west SID 0 / east SID 1); keep in lockstep
+  # DEFAULT: one pod = one full, unconstrained, procedurally generated world.
+  # For the SHARDED world (N pods each owning a region of one world, seamless
+  # handover), set replicas == the number of regions in topology.yaml and add
+  # the sharding args below. For EARTH MODE (real terrain), see the variant
+  # args below and docs/EARTH.md.
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: tachyne
@@ -23,15 +28,18 @@ spec:
     spec:
       containers:
         - name: world
-          image: github.com/tachyne/tachyne-world:latest
+          image: ghcr.io/tachyne/tachyne-world:latest
           imagePullPolicy: Always
-          # Sharded: SID from POD_NAME ordinal; peer mesh to neighbours via the
-          # headless per-pod DNS; finite world per region. EARTH MODE: the Cape
-          # Peninsula at 1:1 (see deploy/topology.yaml for the region map).
-          # Spawn in the CITY BOWL (Gardens, -33.9330 18.4130 -> block -647,1447)
-          # facing the default south — looking straight up at Table Mountain's
-          # face, which climbs from y~150 to y~293 two kilometres ahead.
-          args: ["-seed", "1", "-gamemode", "creative", "-attach", ":25500", "-ops", "<op1>,<op2>", "-nats", "nats://tachyne-nats.tachyne.svc.cluster.local:4222", "-valkey", "tachyne-cache.tachyne.svc.cluster.local:6379", "-topology", "/etc/tachyne/topology.json", "-peer-addr", ":25501", "-peer-pattern", "tachyne-world-%d.tachyne-world-hl.tachyne.svc.cluster.local:25501", "-debug-borders", "-earth", "capetown", "-earth-vscale", "4.5", "-spawn", "-647,1447"]
+          # The full classic world — no sharding, no earth mode, no boundaries.
+          args: ["-seed", "1", "-gamemode", "survival", "-attach", ":25500", "-ops", "<op1>,<op2>", "-nats", "nats://tachyne-nats.tachyne.svc.cluster.local:4222", "-valkey", "tachyne-cache.tachyne.svc.cluster.local:6379"]
+          # SHARDED variant (replicas == regions in topology.yaml; see
+          # docs/SHARDING-BUILD.md) — add:
+          #   "-topology", "/etc/tachyne/topology.json",
+          #   "-peer-addr", ":25501",
+          #   "-peer-pattern", "tachyne-world-%d.tachyne-world-hl.tachyne.svc.cluster.local:25501"
+          # EARTH MODE variant (real terrain — greater Cape Town at 1:1; see
+          # docs/EARTH.md) — add:
+          #   "-earth", "capetown", "-earth-vscale", "4.5", "-spawn", "-647,1447", "-gamemode", "creative"
           env:
             - name: POD_NAME # the trailing ordinal is this world pod's SID (unused by the server yet)
               valueFrom:
@@ -74,13 +82,14 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/world
-            - name: topology
-              mountPath: /etc/tachyne
-              readOnly: true
-      volumes:
-        - name: topology
-          configMap:
-            name: tachyne-world-topology
+            # SHARDED variant — also mount the region map (deploy/topology.yaml):
+            #- name: topology
+            #  mountPath: /etc/tachyne
+            #  readOnly: true
+      #volumes: # SHARDED variant
+      #  - name: topology
+      #    configMap:
+      #      name: tachyne-world-topology
       imagePullSecrets:
         - name: forgejo-pull
       securityContext:
