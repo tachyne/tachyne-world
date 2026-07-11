@@ -45,7 +45,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Structures | 🟡 | Villages, dungeons, mineshafts, strongholds, ruins; no ocean monuments, mansions, temples, shipwrecks, outposts, ancient cities or trial chambers. |
 | Vehicles | 🟡 | Boats (all woods), minecarts with auto-shaping rails; no chest/hopper/TNT carts, vehicles don't survive restarts. |
 | Statistics | ✅ | The vanilla Statistics screen: blocks mined, items crafted/used, mobs killed, play time, distances and more, persisted per player. A few counters pending (damage dealt/taken, jumps). |
-| Scoreboard, maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Scoreboard & teams | ✅ | /scoreboard objectives (incl. auto criteria: deaths, kills, health) on sidebar/list/below-name, /team with colors, prefixes and name-tag rules; persists with the world. |
+| Maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
@@ -273,6 +274,14 @@ multi-pod plan).
   online mode returns it is gateway work; the code is in git history
   pre-`c15e1e4`.)
 
+**Scoreboard & teams**
+- Full op-driven scoreboard: objectives with dummy or automatic criteria
+  (deaths, kill counts, health as a live hearts gauge), shown on the sidebar,
+  player list or below name tags; per-player scores with set/add/remove/reset
+- Teams with display names, colors (name tags recolor for everyone), prefixes/
+  suffixes, friendly-fire and visibility/collision rules; joining a team moves
+  you out of the old one, and the whole board persists with the world
+
 **Multiplayer & authority**
 - Central 20-TPS hub goroutine owns all state; connections are I/O-only
 - The server validates everything a client claims: creative-slot conjuring,
@@ -280,7 +289,7 @@ multi-pod plan).
   cap, fly detection, noclip — all rubber-banded), mining speed (fast-break
   cheats revert), and chunk streaming follows only the validated position;
   suffocation damage backs it all up
-- Chat + commands: `/give /kill /xp /summon /effect /weather /difficulty
+- Chat + commands: `/scoreboard /team /give /kill /xp /summon /effect /weather /difficulty
   /gamerule /time /tp /gamemode /list /say` — with client-side tab-completion
   (the brigadier command tree is sent on join); difficulty scales mob damage
   (peaceful clears hostiles), gamerules (keepInventory, doDaylightCycle,
