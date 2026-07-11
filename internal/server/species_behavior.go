@@ -36,9 +36,9 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 // spring so it neither sinks into the ground nor drifts to the sky.
 func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	w := h.worldFor(m.dim)
-	// Don't fly through solid walls: only take the horizontal step if the
-	// destination column's air is clear at flight height.
-	ground := float64(w.SurfaceFeet(fnx, fnz))
+	// Hover relative to the floor at the mob's OWN level (a cave bat hovers
+	// over the cave floor, not the mountain top far above it).
+	ground := float64(w.MobFeetFrom(fnx, fnz, int(math.Floor(m.y))))
 	want := ground + m.hover
 	if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
 		want = m.ty + m.hover*0.3
@@ -49,8 +49,12 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 		ang := h.rng.Float64() * 2 * math.Pi
 		m.vx, m.vz = math.Cos(ang)*m.speed, math.Sin(ang)*m.speed
 	}
-	// Vertical spring toward the desired altitude.
-	m.y += math.Max(-m.speed, math.Min(m.speed, (want-m.y)*0.1))
+	// Vertical spring toward the desired altitude — but never into a ceiling
+	// (the unchecked spring carried cave bats up through solid rock).
+	ny := m.y + math.Max(-m.speed, math.Min(m.speed, (want-m.y)*0.1))
+	if !worldgen.Collides(w.At(int(math.Floor(m.x)), int(math.Floor(ny)), int(math.Floor(m.z)))) {
+		m.y = ny
+	}
 }
 
 // mobRanged is the shared ranged-attack gate: cools down, finds a huntable

@@ -194,6 +194,63 @@ func TestSpawnPositionRules(t *testing.T) {
 	}
 }
 
+// TestCaveMobsStayUnderground: the live bug from the first cluster deploy —
+// mob physics re-seated every walker at the COLUMN SURFACE each tick and
+// sprang fliers toward surface+hover, so cave-spawned zombies and bats
+// teleported up into daylight. Seating must be relative to the mob's own
+// height: a mob in a sealed cavity stays on its cave floor.
+func TestCaveMobsStayUnderground(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{1: pl}
+	// Carve a sealed 5×3×5 cavity deep underground with a stone floor/ceiling.
+	for x := 8; x <= 12; x++ {
+		for z := 8; z <= 12; z++ {
+			h.world.SetBlock(x, 9, z, worldgen.Stone) // floor
+			for y := 10; y <= 12; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+			h.world.SetBlock(x, 13, z, worldgen.Stone) // ceiling
+		}
+	}
+	zom := h.spawnHostileY(players, entityZombie, 10.5, 10, 10.5)
+	bat := h.spawnMob(players, entityBat, 10.5, 11, 10.5)
+	h.applySpecies(players, bat)
+	for i := 0; i < 200; i++ { // 10 seconds of mob updates
+		h.updateMobs(players)
+	}
+	if zom.y > 13 {
+		t.Fatalf("cave zombie was hoisted to the surface: y=%v", zom.y)
+	}
+	if bat.y > 13 {
+		t.Fatalf("cave bat flew up through the rock: y=%v", bat.y)
+	}
+	if zom.y < 9 || bat.y < 9 {
+		t.Fatalf("cave mobs fell through the floor: zombie=%v bat=%v", zom.y, bat.y)
+	}
+}
+
+// TestSurfaceSeatingUnchanged: the height-relative seating must not change
+// surface behavior — digging under a mob still drops it, placing under it
+// still lifts it.
+func TestSurfaceSeatingUnchanged(t *testing.T) {
+	w := world.New(1)
+	surf := w.MobFeet(20, 20)
+	if got := w.MobFeetFrom(20, 20, surf); got != surf {
+		t.Fatalf("surface mob re-seats at %d, want %d", got, surf)
+	}
+	w.SetBlock(20, surf, 20, worldgen.Stone) // block placed at its feet
+	if got := w.MobFeetFrom(20, 20, surf); got != surf+1 {
+		t.Fatalf("placed block must lift the mob: %d, want %d", got, surf+1)
+	}
+	w.SetBlock(20, surf, 20, worldgen.Air)
+	w.SetBlock(20, surf-1, 20, worldgen.Air) // dig out the floor
+	if got := w.MobFeetFrom(20, 20, surf); got >= surf {
+		t.Fatalf("digging the floor must drop the mob: %d (was %d)", got, surf)
+	}
+}
+
 // TestNaturalSpawnFillsCaves: with a player parked at midnight, the spawner
 // must produce underground monsters within a simulated night — the
 // cave-population mechanic the old surface-only spawner lacked entirely —

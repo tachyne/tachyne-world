@@ -277,7 +277,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// than one block. The step is measured against the edit-aware surface,
 			// so mobs climb onto placed blocks and refuse cliffs/walls. When
 			// blocked, commit to a fresh random heading for a while to escape.
-			step := h.worldFor(m.dim).MobFeet(fnx, fnz) - int(math.Floor(m.y))
+			// Step height is measured at the mob's own level (MobFeetFrom), not
+			// the column surface — a cave zombie steps along the cave floor, and
+			// the cave wall reads as an impossible step instead of "the surface
+			// is 30 up". Surface mobs get the same answer as before.
+			step := h.worldFor(m.dim).MobFeetFrom(fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
 			// A fence/wall/fence-gate is only one block of "step" but 1.5 blocks of
 			// collision, so a land mob can't climb over it — treat it as a wall.
 			// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)
@@ -305,12 +309,14 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.vx, m.vz = math.Cos(ang)*m.speed, math.Sin(ang)*m.speed
 				m.reroute = 15 + h.rng.Intn(15)
 			}
-			// Seat the feet on the real (edit-aware) surface every tick, so digging
+			// Seat the feet on the real (edit-aware) floor every tick, so digging
 			// the block under a mob drops it and a placed block lifts it — but never
-			// onto a fence (MobFeet excludes fence-tops, so placing a fence on a mob
-			// doesn't teleport it up onto the fence and strand it).
+			// onto a fence (the floor scan excludes fence-tops, so placing a fence
+			// on a mob doesn't teleport it up onto the fence and strand it). The
+			// floor is found from the mob's own height, NOT the column surface —
+			// seating against the surface teleported every cave mob into daylight.
 			oldY := m.y
-			m.y = float64(h.worldFor(m.dim).MobFeet(int(math.Floor(m.x)), int(math.Floor(m.z))))
+			m.y = float64(h.worldFor(m.dim).MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))
 			if fell := oldY - m.y; fell > mobSafeFall { // the ground dropped out under it
 				h.mobFall(players, m, fell)
 			}

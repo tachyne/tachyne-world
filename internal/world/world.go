@@ -526,6 +526,25 @@ func (w *World) MobFeet(x, z int) int {
 	return y
 }
 
+// MobFeetFrom is MobFeet relative to a mob's CURRENT height instead of the
+// column surface: climb out if a block was placed into the mob (bounded — a
+// buried mob stays put rather than teleporting out through a mountain), then
+// descend to the nearest floor below. This is what lets cave mobs exist:
+// seating against MobFeet hoisted every underground mob to the surface.
+func (w *World) MobFeetFrom(x, z, yHint int) int {
+	y := yHint
+	for climbed := 0; w.inBounds(y) && w.mobStandable(x, y, z); climbed++ {
+		if climbed >= 8 {
+			return yHint // fully buried — stay (suffocation is the caller's business)
+		}
+		y++
+	}
+	for y > worldgen.MinY && !w.mobStandable(x, y-1, z) {
+		y--
+	}
+	return y
+}
+
 // Spawnable reports whether a mob may spawn standing in this column: dry land with
 // clear body space over a legal floor — never on or inside a fence/wall/gate or
 // under an overhang. Edit-overlay aware, so player-built hazards are rejected.
