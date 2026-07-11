@@ -208,6 +208,18 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		}
 		return
 	}
+	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && s.modes.get(p.name) == gmSurvival {
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
+		return
+	}
+	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && s.modes.get(p.name) == gmSurvival {
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
+		return
+	}
 	info, hasInfo := worldgen.OrientInfo(defState)
 	placed := true
 	switch {

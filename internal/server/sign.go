@@ -105,15 +105,17 @@ func faceName(dir int32) string {
 
 func facingAxisX(f string) bool { return f == "west" || f == "east" }
 
-// placeSign places a sign item as a standing sign (top face clicked; 16-way
-// rotation faces the player) or a wall sign (side face). Vanilla's
-// StandingAndWallBlockItem selection, simplified to the clicked face.
-func (s *Server) placeSign(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32) bool {
+// placeStandingOrWall places a sign-family item (signs, banners, mob heads)
+// as its standing block (top face clicked; 16-way rotation faces the player,
+// vanilla StandingAndWallBlockItem) or its wall variant (side face).
+// needSupport gates the solid-block-below rule: signs and banners require
+// it, heads float (vanilla SkullBlock has no survival rule).
+func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32, needSupport bool) bool {
 	w := s.worldFor(p)
 	var state uint32
 	switch {
 	case dir == 1: // standing on the ground
-		if !worldgen.IsSolidFull(w.Block(tx, ty-1, tz)) {
+		if needSupport && !worldgen.IsSolidFull(w.Block(tx, ty-1, tz)) {
 			s.abortPlace(p, tx, ty, tz, seq)
 			return false
 		}
@@ -131,11 +133,19 @@ func (s *Server) placeSign(p *player, standingDef, wallDef uint32, tx, ty, tz in
 			return false
 		}
 		state = worldgen.SetProperty(info, wallDef, "facing", faceName(dir))
-	default: // clicked a bottom face — a sign can't hang
+	default: // clicked a bottom face — these blocks can't hang
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
 	s.putBlock(p, tx, ty, tz, state, true, seq)
+	return true
+}
+
+// placeSign places a sign item and opens the edit GUI on success.
+func (s *Server) placeSign(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32) bool {
+	if !s.placeStandingOrWall(p, standingDef, wallDef, tx, ty, tz, dir, seq, true) {
+		return false
+	}
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim})
 	return true
 }
