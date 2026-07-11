@@ -386,7 +386,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	inWater := worldgen.IsWater(w.At(fx, feet, fz)) || worldgen.IsWater(w.At(fx, feet+1, fz))
-	rainedOn := t.dim == 0 && h.raining && h.skyExposedColumn(fx, fz) // no rain under the nether's roof
+	rainedOn := t.dim == 0 && h.raining && h.skyExposedAt(fx, feet, fz) // from the player's height — caves and roofs block rain
 	if inWater || rainedOn {
 		t.fireSecs = 0
 	} else {

@@ -231,6 +231,49 @@ func TestCaveMobsStayUnderground(t *testing.T) {
 	}
 }
 
+// TestCaveZombieDoesNotBurn: Wesley's second live catch — the daylight burn
+// checked sky exposure from the COLUMN SURFACE, so a cave zombie ignited at
+// noon through thirty blocks of stone. Exposure now scans from the mob's own
+// height; a surface control zombie must still catch fire.
+func TestCaveZombieDoesNotBurn(t *testing.T) {
+	h := newHub(world.New(1))
+	h.rules.DoMobSpawning = false // isolate the two hand-placed zombies
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	h.dayTime.Store(6000) // noon
+
+	// Sealed cavity deep underground.
+	for x := 8; x <= 12; x++ {
+		for z := 8; z <= 12; z++ {
+			h.world.SetBlock(x, 9, z, worldgen.Stone)
+			for y := 10; y <= 12; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+			h.world.SetBlock(x, 13, z, worldgen.Stone)
+		}
+	}
+	cave := h.spawnHostileY(players, entityZombie, 10.5, 10, 10.5)
+	cave.burnDelay = 0
+	// Control: a zombie on a dry, open-sky pillar (the generated column near
+	// spawn is ocean — a submerged zombie is correctly doused, not a control).
+	h.world.SetBlock(30, 99, 30, worldgen.Stone)
+	h.world.SetBlock(30, 100, 30, worldgen.Air)
+	h.world.SetBlock(30, 101, 30, worldgen.Air)
+	open := h.spawnHostileY(players, entityZombie, 30.5, 100, 30.5)
+	open.burnDelay = 0
+
+	for i := 0; i < 3; i++ {
+		h.updateHostiles(players)
+		h.mobEnvironment(players)
+	}
+	if cave.burning {
+		t.Fatal("a cave zombie must not burn at noon (rock blocks the sky)")
+	}
+	if !open.burning {
+		t.Fatal("the open-sky control zombie must catch fire at noon")
+	}
+}
+
 // TestSurfaceSeatingUnchanged: the height-relative seating must not change
 // surface behavior — digging under a mob still drops it, placing under it
 // still lifts it.

@@ -4,7 +4,6 @@ import (
 	"math"
 	"strings"
 
-	"tachyne/internal/world"
 	"tachyne/internal/worldgen"
 )
 
@@ -43,10 +42,15 @@ var categoryCap = [catCount]int{70, 10, 15, 5, 20}
 var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64}
 
 const (
-	spawnChunkArea    = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
-	creatureSpawnMod  = 400     // persistent categories spawn every 400 ticks
-	maxSpawnCluster   = 4       // vanilla Mob.getMaxSpawnClusterSize default
-	spawnAttemptBatch = 64      // one position attempt per tick per this many loaded chunks
+	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
+	creatureSpawnMod = 400     // persistent categories spawn every 400 ticks
+	maxSpawnCluster  = 4       // vanilla Mob.getMaxSpawnClusterSize default
+	// Vanilla attempts one position per loaded chunk per tick; we sample at
+	// one per 8 chunks per tick per category. Most attempts die instantly
+	// (random Y lands inside rock), so a higher rate is what makes cave
+	// density feel vanilla — affordable now that chunk light is cached in
+	// the world (the first live tuning at 1/64 left caves near-empty).
+	spawnAttemptBatch = 8
 )
 
 // spawnerEntry is vanilla MobSpawnSettings.SpawnerData: a weighted species
@@ -221,9 +225,6 @@ func (h *hub) spawnAttempt(players map[int32]*tracked, cat int, chunks [][2]int3
 		return
 	}
 	pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
-
-	// One light computation per attempt chunk, shared across the pack.
-	lightCache := map[[2]int]*world.LightData{}
 	spawned := 0
 	for i := 0; i < pack; i++ {
 		x += h.rng.Intn(6) - h.rng.Intn(6)
@@ -238,7 +239,7 @@ func (h *hub) spawnAttempt(players map[int32]*tracked, cat int, chunks [][2]int3
 		if !h.spawnPositionOK(cat, x, y, z) {
 			continue
 		}
-		sky, block := h.lightAtCached(lightCache, x, y, z)
+		sky, block := h.world.LightAt(x, y, z) // cached in world, invalidated by edits
 		if !h.spawnRulesOK(cat, sd.etype, x, y, z, sky, block) {
 			continue
 		}
@@ -342,24 +343,6 @@ func (h *hub) spawnPositionOK(cat, x, y, z int) bool {
 	}
 	below := h.world.At(x, y-1, z)
 	return worldgen.Collides(below) && !worldgen.IsThinFloor(below)
-}
-
-// lightAtCached reads (sky, block) light with one chunk light computation per
-// attempt chunk (the flood fill is the expensive part of a spawn attempt).
-func (h *hub) lightAtCached(cache map[[2]int]*world.LightData, x, y, z int) (uint8, uint8) {
-	if y < worldgen.MinY || y >= h.world.Ceiling() {
-		return 0, 0
-	}
-	cx, cz := chunkFloor(float64(x)), chunkFloor(float64(z))
-	ld := cache[[2]int{cx, cz}]
-	if ld == nil {
-		ld = h.world.Light(int32(cx), int32(cz))
-		cache[[2]int{cx, cz}] = ld
-	}
-	lx, lz := x-cx*16, z-cz*16
-	sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
-	i := (ly*16+lz)*16 + lx
-	return ld.Sky[sec][i], ld.Block[sec][i]
 }
 
 // skyDarken is how much the sky's contribution to brightness is reduced by

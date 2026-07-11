@@ -65,6 +65,14 @@ type World struct {
 	cache map[chunkPos]cacheEntry
 	lru   *list.List // front = most recently used; values are chunkPos
 
+	// Computed chunk light, LRU'd like the generator output but INVALIDATED
+	// by edits (light is a pure function of terrain + edits). Natural mob
+	// spawning reads light on every attempt; without this cache each read
+	// was a fresh 3×3 flood fill.
+	lightMu    sync.Mutex
+	lightCache map[chunkPos]lightCacheEntry
+	lightLRU   *list.List
+
 	store  Store       // nil = in-memory only (no persistence)
 	noSky  bool        // nether/End: sky light is zero everywhere
 	dimTag string      // chunk-cache key prefix for non-overworld dims
@@ -76,11 +84,13 @@ type World struct {
 
 func New(seed int64) *World {
 	return &World{
-		gen:   worldgen.NewGenerator(seed),
-		seed:  seed,
-		edits: make(map[chunkPos]map[int]uint32),
-		cache: make(map[chunkPos]cacheEntry),
-		lru:   list.New(),
+		gen:        worldgen.NewGenerator(seed),
+		seed:       seed,
+		edits:      make(map[chunkPos]map[int]uint32),
+		cache:      make(map[chunkPos]cacheEntry),
+		lru:        list.New(),
+		lightCache: make(map[chunkPos]lightCacheEntry),
+		lightLRU:   list.New(),
 	}
 }
 
@@ -594,6 +604,7 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	m[idx] = state
 	w.mu.Unlock()
 	w.dirty.Store(true)
+	w.invalidateLight(x, z) // cached chunk light is stale for this 3×3
 }
 
 // Block returns the block state at a world coordinate: an edit if one exists,

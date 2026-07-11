@@ -137,3 +137,23 @@ func TestBlockLightAt(t *testing.T) {
 		t.Fatalf("block light far from any emitter should be 0, got %d", got)
 	}
 }
+
+// TestLightCacheInvalidation: chunk light is cached until an edit in the 3×3
+// neighbourhood invalidates it — a placed torch must be visible to the next
+// light read (mob spawning trusts this for its torch-protection rule).
+func TestLightCacheInvalidation(t *testing.T) {
+	w := New(1)
+	surf := w.SurfaceFeet(40, 40)
+	// Prime the cache with a read, then place a glowing block.
+	if _, b := w.LightAt(40, surf, 40); b != 0 {
+		t.Fatalf("unlit surface block light = %d, want 0", b)
+	}
+	w.SetBlock(40, surf, 40, worldgen.BlockID("glowstone"))
+	if _, b := w.LightAt(40, surf+1, 40); b == 0 {
+		t.Fatal("placed glowstone invisible to cached light — invalidation broken")
+	}
+	// Repeat reads serve from cache and stay correct.
+	if _, b := w.LightAt(40, surf+1, 40); b == 0 {
+		t.Fatal("cached re-read lost the glowstone light")
+	}
+}

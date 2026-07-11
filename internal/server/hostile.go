@@ -491,10 +491,28 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 	}
 }
 
-// skyExposed reports whether open sky sits above the mob (nothing opaque within a
-// few blocks over its head) — the daylight-burn test.
+// skyExposed reports whether open sky sits above the mob — the daylight-burn
+// and rained-on test. Checked from the MOB'S OWN HEIGHT: a cave mob has rock
+// between it and the sky and a penned mob has its roof, even though the
+// column above the surface is open. (The old surface-based scan set cave
+// zombies on fire through thirty blocks of stone.)
 func (h *hub) skyExposed(m *mob) bool {
-	return h.skyExposedColumn(int(math.Floor(m.x)), int(math.Floor(m.z)))
+	return h.skyExposedAt(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)))
+}
+
+// skyExposedAt scans from a body's height to just above the column surface —
+// any opaque cell in between (cave roof, built roof, overhang) blocks the sky.
+func (h *hub) skyExposedAt(x, y, z int) bool {
+	top := h.world.SurfaceFeet(x, z)
+	if y > top {
+		top = y
+	}
+	for yy := y; yy < top+6; yy++ {
+		if worldgen.SkyOpacity(h.world.At(x, yy, z)) == worldgen.Opaque {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *hub) skyExposedColumn(x, z int) bool {

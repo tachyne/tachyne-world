@@ -1,6 +1,10 @@
 package world
 
-import "tachyne/internal/worldgen"
+import (
+	"container/list"
+
+	"tachyne/internal/worldgen"
+)
 
 // Sky-light propagation. The client does not compute lighting itself, so the
 // server ships a light level (0–15) for every block. This replaces the old
@@ -108,7 +112,73 @@ func (w *World) LightAt(x, y, z int) (uint8, uint8) {
 	return ld.Sky[sec][i], ld.Block[sec][i]
 }
 
+// lightCacheEntry is a computed chunk's light plus its LRU node.
+type lightCacheEntry struct {
+	ld   *LightData
+	elem *list.Element
+}
+
+// lightCacheCap: byte-budgeted like the generator cache (a chunk's light is
+// Sections×4096×2 bytes ≈ 0.2 MB at vanilla height). 48 MB ≈ 225 chunks —
+// more than one player's tracked window, so steady-state spawning and chunk
+// sends hit the cache.
+func (w *World) lightCacheCap() int {
+	n := (48 << 20) / (w.Sections() * 4096 * 2)
+	if n < 64 {
+		n = 64
+	}
+	return n
+}
+
+// invalidateLight drops cached light for the chunk containing (x,z) and its
+// neighbours (light floods across chunk borders from a 3×3 read).
+func (w *World) invalidateLight(x, z int) {
+	cx, cz, _, _ := chunkOf(x, z)
+	w.lightMu.Lock()
+	for dz := int32(-1); dz <= 1; dz++ {
+		for dx := int32(-1); dx <= 1; dx++ {
+			key := chunkPos{int32(cx) + dx, int32(cz) + dz}
+			if e, ok := w.lightCache[key]; ok {
+				w.lightLRU.Remove(e.elem)
+				delete(w.lightCache, key)
+			}
+		}
+	}
+	w.lightMu.Unlock()
+}
+
+// Light returns the chunk's computed light, cached until an edit invalidates
+// it (light is a pure function of terrain + edits).
 func (w *World) Light(cx, cz int32) *LightData {
+	key := chunkPos{cx, cz}
+	w.lightMu.Lock()
+	if e, ok := w.lightCache[key]; ok {
+		w.lightLRU.MoveToFront(e.elem)
+		w.lightMu.Unlock()
+		return e.ld
+	}
+	w.lightMu.Unlock()
+
+	ld := w.computeLight(cx, cz) // flood outside the lock (concurrent builders)
+
+	w.lightMu.Lock()
+	defer w.lightMu.Unlock()
+	if e, ok := w.lightCache[key]; ok { // lost a race; keep the existing entry
+		return e.ld
+	}
+	w.lightCache[key] = lightCacheEntry{ld: ld, elem: w.lightLRU.PushFront(key)}
+	for len(w.lightCache) > w.lightCacheCap() {
+		oldest := w.lightLRU.Back()
+		if oldest == nil {
+			break
+		}
+		w.lightLRU.Remove(oldest)
+		delete(w.lightCache, oldest.Value.(chunkPos))
+	}
+	return ld
+}
+
+func (w *World) computeLight(cx, cz int32) *LightData {
 	// Assemble the 3×3 neighbourhood: the shared cached generator output plus a
 	// small snapshot of each chunk's edits. Reading the cached chunks directly
 	// (instead of a full edited copy per neighbour) avoids nine ~0.4 MB copies
