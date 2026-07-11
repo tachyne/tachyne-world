@@ -41,6 +41,7 @@ type evPlacePainting struct {
 	x, y, z int
 	dir     int32
 	slot    int32
+	variant string // creative-menu preset ("" = vanilla random largest fit)
 }
 
 func (evPlacePainting) isHubEvent() {}
@@ -110,6 +111,17 @@ func (h *hub) onPlacePainting(players map[int32]*tracked, e evPlacePainting) {
 	if t == nil || e.dir < 2 || e.dir > 5 {
 		return
 	}
+	if e.variant != "" { // a creative preset places exactly that variant
+		for _, v := range paintingVariants {
+			if v.Name == e.variant {
+				if h.paintingFits(t.dim, e.x, e.y, e.z, e.dir, v.W, v.H) {
+					h.spawnPainting(players, t, e, v)
+				}
+				return
+			}
+		}
+		return // unknown preset — place nothing rather than something random
+	}
 	var fits []paintingVariant
 	best := 0
 	for _, v := range paintingVariants {
@@ -127,7 +139,11 @@ func (h *hub) onPlacePainting(players map[int32]*tracked, e evPlacePainting) {
 	if len(fits) == 0 {
 		return
 	}
-	v := fits[h.rng.Intn(len(fits))]
+	h.spawnPainting(players, t, e, fits[h.rng.Intn(len(fits))])
+}
+
+// spawnPainting registers and broadcasts one placed painting.
+func (h *hub) spawnPainting(players map[int32]*tracked, t *tracked, e evPlacePainting, v paintingVariant) {
 	pt := &painting{eid: h.allocEID(), x: e.x, y: e.y, z: e.z, dim: t.dim,
 		dir: e.dir, variant: v.Name, w: v.W, h: v.H}
 	h.paintings[pt.eid] = pt

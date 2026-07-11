@@ -41,8 +41,11 @@ type player struct {
 
 	hmu    sync.Mutex // guards hotbar (the hub mirrors the survival inventory in)
 	hotbar [9]int32   // item id per hotbar slot (0 = empty)
-	held   int        // selected hotbar slot, 0..8 (connection-owned)
-	hudOn  bool       // action-bar HUD preference (this goroutine's copy)
+	// hotbarPaint carries the painting/variant component of a creative-menu
+	// painting preset per hotbar slot ("" = plain painting → random fit).
+	hotbarPaint [9]string
+	held        int  // selected hotbar slot, 0..8 (connection-owned)
+	hudOn       bool // action-bar HUD preference (this goroutine's copy)
 
 	hubX, hubZ atomic.Uint64 // hub-VALIDATED position (float bits) — chunk-stream gate
 	digStartAt uint64        // tick the current survival dig began
@@ -137,5 +140,23 @@ func (p *player) setHotbarSlot(slot int, item int32) {
 	}
 	p.hmu.Lock()
 	p.hotbar[slot] = item
+	p.hotbarPaint[slot] = "" // any plain write clears a creative painting preset
 	p.hmu.Unlock()
+}
+
+// setHotbarPaint records the painting preset carried by a creative slot set.
+func (p *player) setHotbarPaint(slot int, variant string) {
+	if slot < 0 || slot > 8 {
+		return
+	}
+	p.hmu.Lock()
+	p.hotbarPaint[slot] = variant
+	p.hmu.Unlock()
+}
+
+// heldPaintVariant is the preset on the selected hotbar slot ("" = none).
+func (p *player) heldPaintVariant() string {
+	p.hmu.Lock()
+	defer p.hmu.Unlock()
+	return p.hotbarPaint[p.held]
 }

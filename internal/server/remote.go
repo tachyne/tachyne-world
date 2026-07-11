@@ -157,7 +157,7 @@ func (r *remotePlayer) Action(v any) {
 		if r.s.modes.get(p.name) != gmCreative {
 			return
 		}
-		r.s.applyCreativeSlot(p, int16(e.Slot), e.Item.ID, int(e.Item.Count))
+		r.s.applyCreativeSlot(p, int16(e.Slot), e.Item.ID, int(e.Item.Count), e.PaintingVariant)
 	}
 }
 

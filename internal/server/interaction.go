@@ -190,7 +190,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	}
 	if p.heldItem() == itemPainting { // paintings hang on walls (side faces only)
 		if dir >= 2 && dir <= 5 {
-			s.hub.post(evPlacePainting{eid: p.eid, x: tx, y: ty, z: tz, dir: dir, slot: int32(p.held)})
+			s.hub.post(evPlacePainting{eid: p.eid, x: tx, y: ty, z: tz, dir: dir,
+				slot: int32(p.held), variant: p.heldPaintVariant()})
 		}
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
@@ -511,9 +512,10 @@ func (p *player) handleHeldItem(data []byte) {
 
 // applyCreativeSlot records a creative-set slot — shared by the TCP parse
 // above and the typed CreativeSlot action from gateways.
-func (s *Server) applyCreativeSlot(p *player, slot int16, itemID int32, count int) {
+func (s *Server) applyCreativeSlot(p *player, slot int16, itemID int32, count int, paintVariant string) {
 	if slot >= 36 && slot <= 44 { // hotbar window slots
 		p.setHotbarSlot(int(slot-36), itemID)
+		p.setHotbarPaint(int(slot-36), paintVariant)
 	}
 	// Write through to the hub's authoritative inventory: modes SHARE one
 	// inventory (vanilla), so a block picked in creative must survive server
