@@ -630,15 +630,28 @@ func oppositeFacing(f string) string {
 }
 
 // Rods orient to the face they were placed against, unlike the look-based
-// piston family.
+// piston family. The set covers the whole vanilla RodBlock family: the end
+// rod plus all eight lightning-rod oxidation/waxing variants.
 var (
-	lightningRodMin = worldgen.BlockBase("lightning_rod")
-	endRodMin       = worldgen.BlockBase("end_rod")
+	endRodMin = worldgen.BlockBase("end_rod")
+
+	rodBases = func() map[uint32]bool {
+		m := map[uint32]bool{endRodMin: true}
+		for _, n := range []string{
+			"lightning_rod", "exposed_lightning_rod", "weathered_lightning_rod",
+			"oxidized_lightning_rod", "waxed_lightning_rod",
+			"waxed_exposed_lightning_rod", "waxed_weathered_lightning_rod",
+			"waxed_oxidized_lightning_rod",
+		} {
+			m[worldgen.BlockBase(n)] = true
+		}
+		return m
+	}()
 )
 
 func isRodState(state uint32) bool {
 	info, ok := worldgen.InfoForState(state)
-	return ok && (info.Min == lightningRodMin || info.Min == endRodMin)
+	return ok && rodBases[info.Min]
 }
 
 func isEndRod(state uint32) bool {

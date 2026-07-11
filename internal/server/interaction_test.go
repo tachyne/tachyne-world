@@ -104,6 +104,16 @@ func TestRodOrientation(t *testing.T) {
 	if f := worldgen.GetProperty(rodInfo, got, "facing"); f != "up" {
 		t.Errorf("lightning rod ignores look: facing %s, want up", f)
 	}
+	// the whole oxidation/waxing family behaves the same (the live bug:
+	// waxed rods went through the look-based path and lay down)
+	for _, n := range []string{"waxed_lightning_rod", "oxidized_lightning_rod", "waxed_exposed_lightning_rod"} {
+		v := worldgen.BlockID(n)
+		vi, _ := worldgen.InfoForState(v)
+		got := orientState(v, 1, 0, 90, 0, stone)
+		if f := worldgen.GetProperty(vi, got, "facing"); f != "up" {
+			t.Errorf("%s on top face: facing %s, want up", n, f)
+		}
+	}
 	endRod := worldgen.BlockID("end_rod")
 	erInfo, _ := worldgen.InfoForState(endRod)
 	upRod := worldgen.SetProperty(erInfo, endRod, "facing", "up")
