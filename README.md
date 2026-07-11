@@ -44,7 +44,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Redstone | 🟡 | Dust, torches, repeaters, comparators, observers, pistons, plates, dispensers/hoppers — a solid tier 1; no quasi-connectivity, repeater locking, or sculk. |
 | Structures | 🟡 | Villages, dungeons, mineshafts, strongholds, ruins; no ocean monuments, mansions, temples, shipwrecks, outposts, ancient cities or trial chambers. |
 | Vehicles | 🟡 | Boats (all woods), minecarts with auto-shaping rails; no chest/hopper/TNT carts, vehicles don't survive restarts. |
-| Statistics, scoreboard, maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Statistics | ✅ | The vanilla Statistics screen: blocks mined, items crafted/used, mobs killed, play time, distances and more, persisted per player. A few counters pending (damage dealt/taken, jumps). |
+| Scoreboard, maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
