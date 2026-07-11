@@ -283,6 +283,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 						h.advance(players, shooter, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
 						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
 						h.incCustom(shooter, "mob_kills", 1)
+						h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
 					}
 				}
 			}

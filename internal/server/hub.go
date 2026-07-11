@@ -306,8 +306,11 @@ type hub struct {
 	advs       *advStore        // advancement grant persistence (nil = in-memory only)
 	statstore  *statsStore      // statistics persistence (nil = in-memory only)
 	rbstore    *recipeBookStore // recipe-book persistence (nil = in-memory only)
-	containers *containerStore  // furnace/chest content persistence (nil = in-memory only)
-	spawns     *spawnStore      // per-player bed respawn points (nil = world spawn only)
+	sb         *scoreboardState // the world scoreboard (objectives/scores/teams)
+	sbstore    *sbStore         // its persistence (flushed when sbDirty)
+	sbDirty    bool
+	containers *containerStore // furnace/chest content persistence (nil = in-memory only)
+	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
 
 	mobs   map[int32]*mob         // server-controlled entities (living world)
 	items  map[int32]*itemEntity  // dropped-item entities (block drops)
@@ -406,8 +409,11 @@ func (h *hub) worldFor(dim int) *world.World {
 }
 
 func newHub(w *world.World) *hub {
+	sb, sbst := newScoreboard("") // in-memory board; server.Run swaps in the persisted one
 	h := &hub{
 		world:         w,
+		sb:            sb,
+		sbstore:       sbst,
 		events:        make(chan hubEvent, 256),
 		pending:       map[uint64][]blockPos{},
 		handoffs:      map[string]*handoff{},
@@ -645,6 +651,10 @@ func (h *hub) run() {
 						h.rbstore.record(t.p.name, t)
 					}
 					h.rbstore.flush()
+				}
+				if h.sbDirty {
+					h.sbDirty = false
+					h.sbstore.flush(h.sb)
 				}
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
@@ -885,6 +895,10 @@ func (h *hub) run() {
 						h.spawnXPOrb(players, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 					}
 				}
+			case evScoreboardCmd:
+				h.cmdScoreboard(players, e)
+			case evTeamCmd:
+				h.cmdTeam(players, e)
 			case evRecipeSettings:
 				if t := players[e.eid]; t != nil && e.book >= 0 && e.book < 4 {
 					t.rbSettings.Open[e.book] = e.open
@@ -1169,6 +1183,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		nt.rbKnown, nt.rbHighlight = map[int32]bool{}, map[int32]bool{}
 	}
 	h.recipeSendInitial(nt)
+	h.sbSendAll(nt)
 
 	// (The newcomer's initial world clock is sent reliably in handlePlay, as part
 	// of the join stream, so it isn't dropped in the join packet flood.)

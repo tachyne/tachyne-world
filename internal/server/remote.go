@@ -256,6 +256,14 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgStats, ev)
 	case attachproto.RecipeSettings:
 		send(attachproto.MsgRecipeSettings, ev)
+	case attachproto.Objective:
+		send(attachproto.MsgObjective, ev)
+	case attachproto.DisplaySlot:
+		send(attachproto.MsgDisplaySlot, ev)
+	case attachproto.Score:
+		send(attachproto.MsgScore, ev)
+	case attachproto.Team:
+		send(attachproto.MsgTeam, ev)
 	case attachproto.BossBar:
 		send(attachproto.MsgBossBar, ev)
 	case attachproto.Time:

@@ -87,6 +87,18 @@ func (s *Server) handleCommand(p *player, cmd string) {
 
 	case "weather":
 		s.cmdWeather(p, fields[1:])
+	case "scoreboard":
+		if !s.isOp(p.name) {
+			p.tell("You don't have permission to use the scoreboard.")
+			return
+		}
+		s.hub.post(evScoreboardCmd{p: p, args: fields[1:]})
+	case "team":
+		if !s.isOp(p.name) {
+			p.tell("You don't have permission to manage teams.")
+			return
+		}
+		s.hub.post(evTeamCmd{p: p, args: fields[1:]})
 	case "effect":
 		s.cmdEffect(p, fields[1:])
 	case "give":

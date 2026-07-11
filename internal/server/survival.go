@@ -298,6 +298,7 @@ func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
 		t.health = 0
 		t.dead = true
 		h.incCustom(t, "deaths", 1)
+		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f)", t.p.name, t.x, t.y, t.z)
 		if !h.rules.KeepInventory { // gamerule: keepInventory skips the stake
 			h.dropInventory(players, t)

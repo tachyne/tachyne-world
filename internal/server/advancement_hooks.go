@@ -141,6 +141,9 @@ func (h *hub) advTick(players map[int32]*tracked) {
 			h.advance(players, t, "inventory_changed", advMatch{inv: ids})
 			h.recipeUnlocks(t, ids)
 		}
+		// health objectives are a gauge (vanilla read-only criteria): poll at
+		// 1 Hz; sbSetScore suppresses unchanged values.
+		h.sbCriteria(players, "health", t.p.name, int32(t.health+t.absorption+0.5), true)
 		if t.dim == 0 { // the visit-every-biome list is overworld-only
 			if biome := h.worldFor(t.dim).BiomeAt(int(t.x), int(t.z)); biome != "" {
 				h.advance(players, t, "location", advMatch{biome: biome})

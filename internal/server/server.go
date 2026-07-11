@@ -128,6 +128,7 @@ type Server struct {
 	AdvancementFile string // persists advancement grants (empty = in-memory only)
 	StatsFile       string // persists statistics counters (empty = in-memory only)
 	RecipeBookFile  string // persists recipe-book unlocks/settings (empty = in-memory only)
+	ScoreboardFile  string // persists the scoreboard (empty = in-memory only)
 	ContainerFile   string // persists furnace/chest contents (empty = in-memory only)
 	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
 	Ops             map[string]bool
@@ -315,6 +316,7 @@ func (s *Server) Serve() error {
 		s.hub.advs = newAdvStore(s.AdvancementFile)
 		s.hub.statstore = newStatsStore(s.StatsFile)
 		s.hub.rbstore = newRecipeBookStore(s.RecipeBookFile)
+		s.hub.sb, s.hub.sbstore = newScoreboard(s.ScoreboardFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.

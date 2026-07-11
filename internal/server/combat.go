@@ -209,6 +209,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[om.etype]})
 					h.incStat(t, attachproto.StatKilled, int32(om.etype), 1)
 					h.incCustom(t, "mob_kills", 1)
+					h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 				}
 			}
 			h.playSound(players, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
@@ -243,6 +244,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
 			h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
 			h.incCustom(t, "mob_kills", 1)
+			h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 		}
 		return
 	}

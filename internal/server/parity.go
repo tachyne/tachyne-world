@@ -26,7 +26,7 @@ var commandNames = []string{
 	"ban", "difficulty", "effect", "end", "gamemode", "gamerule", "give",
 	"gm", "help", "hud", "kill", "list", "nether", "pardon", "refresh",
 	"rescue", "say", "summon", "teleport", "time", "tp", "weather",
-	"where", "whitelist", "xp",
+	"scoreboard", "team", "where", "whitelist", "xp",
 }
 
 // commandTreeBody is the static Commands packet body: node 0 = root, node 1 =
