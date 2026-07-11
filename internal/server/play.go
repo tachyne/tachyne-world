@@ -25,8 +25,11 @@ const (
 // appendBlockEntities lists a chunk's block entities (beds, chests, signs, …) so
 // the client's block-entity renderer draws them; without this they show only their
 // wireframe outline after the chunk (re)loads. Each entry is packed-XZ + Y + type +
-// NBT; empty data (a single TAG_End 0x00) is enough for rendering.
-func appendBlockEntities(b []byte, w *world.World, cx, cz int32) []byte {
+// NBT; empty data (a single TAG_End 0x00) is enough for rendering, except signs,
+// whose text rides the chunk as their vanilla update tag. Called from the attach
+// layer's parallel chunk builders — the sign store is mutex-guarded for exactly
+// this reader.
+func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore) []byte {
 	edits := w.EditedBlocks(cx, cz)
 	var buf []byte
 	n := int32(0)
@@ -38,9 +41,18 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32) []byte {
 		buf = append(buf, byte((e.LX&15)<<4|(e.LZ&15))) // packed XZ
 		buf = protocol.AppendI16(buf, int16(e.Y))
 		buf = protocol.AppendVarInt(buf, typ)
-		buf = append(buf, 0x00) // NBT: TAG_End — no data (renderer needs only type+pos)
+		if _, isSign := signKind(e.State); isSign && signs != nil {
+			sd, _ := signs.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = blank sign
+			buf = protocol.AppendSignNBT(buf, signSideNBT(sd.Front), signSideNBT(sd.Back), sd.Waxed)
+		} else {
+			buf = append(buf, 0x00) // NBT: TAG_End — no data (renderer needs only type+pos)
+		}
 		n++
 	}
 	b = protocol.AppendVarInt(b, n)
 	return append(b, buf...)
+}
+
+func signSideNBT(s signSide) protocol.SignSideNBT {
+	return protocol.SignSideNBT{Lines: s.Lines, Color: s.Color, Glow: s.Glow}
 }

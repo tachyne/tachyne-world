@@ -14,7 +14,7 @@ import json, urllib.request, os
 
 URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "block_states_gen.go")
-ORIENT = {"axis", "facing", "half", "type"}
+ORIENT = {"axis", "facing", "half", "type", "rotation"}  # rotation: signs/banners/heads (16-way)
 CONNECT = {"north", "east", "south", "west"}  # fences/panes/bars/walls connections
 
 blocks = json.load(urllib.request.urlopen(URL))

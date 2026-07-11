@@ -400,6 +400,8 @@ func session(c net.Conn, cfg Config) {
 			actTo(remote, payload, proto.RecipeSettingChange{})
 		case proto.MsgRecipeSeen:
 			actTo(remote, payload, proto.RecipeSeen{})
+		case proto.MsgSignUpdate:
+			actTo(remote, payload, proto.SignUpdate{})
 		case proto.MsgCreativeSlot:
 			actTo(remote, payload, proto.CreativeSlot{})
 		case proto.MsgVehicleMove: // gw→w: the rider steering its vehicle

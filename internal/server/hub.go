@@ -312,6 +312,9 @@ type hub struct {
 	containers *containerStore // furnace/chest content persistence (nil = in-memory only)
 	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
 
+	signs       *signStore       // sign text (the store is the live owner — chunk builders read it)
+	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
+
 	mobs   map[int32]*mob         // server-controlled entities (living world)
 	items  map[int32]*itemEntity  // dropped-item entities (block drops)
 	arrows map[int32]*arrowEntity // in-flight/stuck projectiles (skeleton shots)
@@ -414,6 +417,8 @@ func newHub(w *world.World) *hub {
 		world:         w,
 		sb:            sb,
 		sbstore:       sbst,
+		signs:         newSignStore(""), // in-memory; server.Run swaps in the persisted one
+		signMayEdit:   map[string]int32{},
 		events:        make(chan hubEvent, 256),
 		pending:       map[uint64][]blockPos{},
 		handoffs:      map[string]*handoff{},
@@ -656,6 +661,7 @@ func (h *hub) run() {
 					h.sbDirty = false
 					h.sbstore.flush(h.sb)
 				}
+				h.signs.flushIfDirty()
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
@@ -899,6 +905,12 @@ func (h *hub) run() {
 				h.cmdScoreboard(players, e)
 			case evTeamCmd:
 				h.cmdTeam(players, e)
+			case evSignPlaced:
+				h.onSignPlaced(players, e)
+			case evUseSign:
+				h.onUseSign(players, e)
+			case evSignUpdate:
+				h.onSignUpdate(players, e)
 			case evRecipeSettings:
 				if t := players[e.eid]; t != nil && e.book >= 0 && e.book < 4 {
 					t.rbSettings.Open[e.book] = e.open
@@ -1142,6 +1154,7 @@ func (h *hub) run() {
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.flush()
 				}
+				h.signs.flushIfDirty()
 				close(e.done)
 			}
 		}
@@ -1323,6 +1336,11 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 		h.advs.save(p.name, t.adv)
 	}
 	h.incCustom(t, "leave_game", 1)
+	for k, eid := range h.signMayEdit { // release any sign edit lock they held
+		if eid == p.eid {
+			delete(h.signMayEdit, k)
+		}
+	}
 	if h.statstore != nil {
 		h.statstore.save(p.name, t.stats)
 	}
@@ -1373,6 +1391,10 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		}
 	}
 	h.cascadeOrphanPortals(players, e.dim, blockPos{e.x, e.y, e.z}) // works in every dim
+	if _, isSign := signKind(e.state); !isSign {                    // a sign was broken or overwritten
+		h.signs.remove(e.dim, e.x, e.y, e.z)
+		delete(h.signMayEdit, signKey(e.dim, e.x, e.y, e.z))
+	}
 	if e.dim != 0 {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}

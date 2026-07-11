@@ -196,6 +196,18 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
+	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
+		return
+	}
+	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
+		return
+	}
 	info, hasInfo := worldgen.OrientInfo(defState)
 	placed := true
 	switch {
@@ -322,6 +334,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 	if isButton(state) || isLever(state) || isRepeater(state) ||
 		isComparator(state) || isDaylight(state) { // redstone controls
 		s.hub.post(evUseRedstone{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if _, isSign := signKind(state); isSign { // edit the sign / apply dye, ink, wax
+		s.hub.post(evUseSign{eid: p.eid, x: x, y: y, z: z, item: p.heldItem(), slot: int32(p.held)})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

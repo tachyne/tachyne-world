@@ -46,7 +46,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Vehicles | 🟡 | Boats (all woods), minecarts with auto-shaping rails; no chest/hopper/TNT carts, vehicles don't survive restarts. |
 | Statistics | ✅ | The vanilla Statistics screen: blocks mined, items crafted/used, mobs killed, play time, distances and more, persisted per player. A few counters pending (damage dealt/taken, jumps). |
 | Scoreboard & teams | ✅ | /scoreboard objectives (incl. auto criteria: deaths, kills, health) on sidebar/list/below-name, /team with colors, prefixes and name-tag rules; persists with the world. |
-| Maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Signs | ✅ | All wood types as standing/wall/hanging/wall-hanging signs with the vanilla edit GUI, both text sides, dyes, glow ink, waxing; text persists with the world and rides chunk loads. |
+| Maps, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
@@ -281,6 +282,17 @@ multi-pod plan).
 - Teams with display names, colors (name tags recolor for everyone), prefixes/
   suffixes, friendly-fire and visibility/collision rules; joining a team moves
   you out of the old one, and the whole board persists with the world
+
+**Signs**
+- Every wood type as standing (16-way rotation), wall, ceiling-hanging
+  (attached under chains/non-full blocks) and wall-hanging signs; the edit
+  GUI opens on placement and on right-click, per vanilla's single-editor rule
+- Both text sides independently editable (walk around the sign to edit the
+  back), with dye colors, glow ink / regular ink, and honeycomb waxing to
+  lock the text; §-format codes are stripped server-side like vanilla
+- Text rides the chunk packet's block-entity data on load and live
+  `block_entity_data` updates on edit, and persists with the world
+  (`signs.json`)
 
 **Multiplayer & authority**
 - Central 20-TPS hub goroutine owns all state; connections are I/O-only

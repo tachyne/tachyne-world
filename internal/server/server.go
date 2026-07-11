@@ -129,6 +129,7 @@ type Server struct {
 	StatsFile       string // persists statistics counters (empty = in-memory only)
 	RecipeBookFile  string // persists recipe-book unlocks/settings (empty = in-memory only)
 	ScoreboardFile  string // persists the scoreboard (empty = in-memory only)
+	SignFile        string // persists sign text (empty = in-memory only)
 	ContainerFile   string // persists furnace/chest contents (empty = in-memory only)
 	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
 	Ops             map[string]bool
@@ -317,6 +318,7 @@ func (s *Server) Serve() error {
 		s.hub.statstore = newStatsStore(s.StatsFile)
 		s.hub.rbstore = newRecipeBookStore(s.RecipeBookFile)
 		s.hub.sb, s.hub.sbstore = newScoreboard(s.ScoreboardFile)
+		s.hub.signs = newSignStore(s.SignFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
@@ -377,7 +379,14 @@ func (s *Server) Serve() error {
 			Resume: s.ResumeRemote,
 			Owned:  func(dim, cx, cz int32) bool { return s.hub.serveChunk(cx, cz) }, // stream neighbour border chunks too (seamless overlap)
 			BlockEntities: func(w *world.World, cx, cz int32) []byte {
-				return appendBlockEntities(nil, w, cx, cz)
+				dim := 0
+				switch w {
+				case s.nether:
+					dim = 1
+				case s.end:
+					dim = 2
+				}
+				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs)
 			},
 			Worlds: func(dim int32) *world.World {
 				switch dim {

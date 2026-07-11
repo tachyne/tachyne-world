@@ -151,6 +151,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evRecipeSettings{eid: p.eid, book: e.Book, open: e.Open, filter: e.Filter})
 	case attachproto.RecipeSeen:
 		h.post(evRecipeSeen{eid: p.eid, id: e.ID})
+	case attachproto.SignUpdate:
+		h.post(evSignUpdate{eid: p.eid, x: int(e.X), y: int(e.Y), z: int(e.Z), front: e.Front, lines: e.Lines})
 	case attachproto.CreativeSlot:
 		if r.s.modes.get(p.name) != gmCreative {
 			return
@@ -264,6 +266,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgScore, ev)
 	case attachproto.Team:
 		send(attachproto.MsgTeam, ev)
+	case attachproto.SignText:
+		send(attachproto.MsgSignText, ev)
+	case attachproto.SignEditor:
+		send(attachproto.MsgSignEditor, ev)
 	case attachproto.BossBar:
 		send(attachproto.MsgBossBar, ev)
 	case attachproto.Time:
