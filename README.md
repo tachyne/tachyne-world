@@ -33,7 +33,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Area | Status | Notes |
 |---|---|---|
 | Terrain, biomes, caves, lighting | ✅ | Original generator: the full overworld biome set, rivers, cave biomes, real sky+block light. Deliberately *not* seed-compatible with vanilla worldgen. |
-| Mining, crafting, smelting, containers | ✅ | ~1,570 recipes, furnaces, chests, hoppers/droppers/dispensers; blast furnace, smoker and campfire cooking missing. |
+| Mining, crafting, smelting, containers | ✅ | ~1,570 recipes with vanilla recipe-book progression (recipes unlock as you gather ingredients, with the toast), furnaces, chests, hoppers/droppers/dispensers; blast furnace, smoker and campfire cooking missing. |
 | Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, TNT; crossbows, tridents and the mace missing. |
 | Mobs | ✅ | The complete vanilla living roster with vanilla attributes, biome-aware spawning, breeding/taming/riding; a few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
 | Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
@@ -109,6 +109,11 @@ multi-pod plan).
   costs; the grindstone strips enchantments and refunds XP
 
 **Progression**
+- **Recipe book**: vanilla unlock progression — a fresh player's book starts
+  empty and recipes reveal themselves as you first obtain their ingredients,
+  with the "new recipes unlocked" toast and the badge; clicking an entry
+  auto-fills the crafting grid from your inventory; book tabs' open/filter
+  state and your unlocks persist across sessions
 - **Advancements**: the complete vanilla advancement tree (story, nether, end,
   adventure, husbandry — 125 advancements) with vanilla semantics end to end:
   the tree reveals itself as you progress (earned advancements plus a two-step
