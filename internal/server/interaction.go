@@ -163,6 +163,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz
+	if cs := s.worldFor(p).Block(x, y, z); worldgen.IsReplaceable(cs) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
+		tx, ty, tz = x, y, z // vanilla replacingClickedOnBlock: fill the clicked cell (grass, snow, fluids)
+	}
 
 	if p.heldItem() == itemFlintSteel { // light a fire / prime TNT
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
@@ -194,6 +197,19 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if !ok || p.heldItem() == 0 {
 		// Nothing placeable in hand — clear any client-side ghost and ack.
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
+	if ts := s.worldFor(p).Block(tx, ty, tz); !worldgen.IsReplaceable(ts) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
+		// vanilla BlockItem.canPlace: never overwrite an occupied cell (a
+		// candle placed at a stair's open half must not eat the stair);
+		// fluids stay replaceable — building into the ocean must keep working
+		s.abortPlace(p, tx, ty, tz, seq)
+		return
+	}
+	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
+		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
@@ -347,6 +363,9 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 		isComparator(state) || isDaylight(state) { // redstone controls
 		s.hub.post(evUseRedstone{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if s.usePot(p, x, y, z, state, seq) { // flower pot: pot / un-pot a plant
 		return true
 	}
 	if _, isSign := signKind(state); isSign { // edit the sign / apply dye, ink, wax

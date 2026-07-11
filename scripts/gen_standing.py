@@ -49,6 +49,22 @@ lines += [
 ]
 for d, w, name in heads:
     lines.append(f"\t{d}: {w}, // {name}")
+lines += [
+    "}",
+    "",
+    "// pottedPlantState maps a plant ITEM name to its potted block's default",
+    "// state (right-clicking a flower pot with the item swaps the pot for it).",
+    "var pottedPlantState = map[string]uint32{",
+]
+# potted_X block <- item X, except the azaleas (block azalea_bush, item azalea)
+item_for = {"azalea_bush": "azalea", "flowering_azalea_bush": "flowering_azalea"}
+for n in sorted(blocks):
+    short = n.removeprefix("minecraft:")
+    if not short.startswith("potted_"):
+        continue
+    plant = short.removeprefix("potted_")
+    item = item_for.get(plant, plant)
+    lines.append(f'\t"{item}": {default(n)}, // {short}')
 lines += ["}", ""]
 with open(OUT, "w") as f:
     f.write("\n".join(lines))

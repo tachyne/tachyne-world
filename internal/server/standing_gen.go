@@ -34,3 +34,45 @@ var headWallVariant = map[uint32]uint32{
 	10769: 10786, // wither_skeleton_skull
 	10809: 10826, // zombie_head
 }
+
+// pottedPlantState maps a plant ITEM name to its potted block's default
+// state (right-clicking a flower pot with the item swaps the pot for it).
+var pottedPlantState = map[string]uint32{
+	"acacia_sapling":     10434, // potted_acacia_sapling
+	"allium":             10443, // potted_allium
+	"azalea":             29378, // potted_azalea_bush
+	"azure_bluet":        10444, // potted_azure_bluet
+	"bamboo":             15089, // potted_bamboo
+	"birch_sapling":      10432, // potted_birch_sapling
+	"blue_orchid":        10442, // potted_blue_orchid
+	"brown_mushroom":     10454, // potted_brown_mushroom
+	"cactus":             10456, // potted_cactus
+	"cherry_sapling":     10435, // potted_cherry_sapling
+	"closed_eyeblossom":  29669, // potted_closed_eyeblossom
+	"cornflower":         10450, // potted_cornflower
+	"crimson_fungus":     21624, // potted_crimson_fungus
+	"crimson_roots":      21626, // potted_crimson_roots
+	"dandelion":          10440, // potted_dandelion
+	"dark_oak_sapling":   10436, // potted_dark_oak_sapling
+	"dead_bush":          10455, // potted_dead_bush
+	"fern":               10439, // potted_fern
+	"flowering_azalea":   29379, // potted_flowering_azalea_bush
+	"jungle_sapling":     10433, // potted_jungle_sapling
+	"lily_of_the_valley": 10451, // potted_lily_of_the_valley
+	"mangrove_propagule": 10438, // potted_mangrove_propagule
+	"oak_sapling":        10430, // potted_oak_sapling
+	"open_eyeblossom":    29668, // potted_open_eyeblossom
+	"orange_tulip":       10446, // potted_orange_tulip
+	"oxeye_daisy":        10449, // potted_oxeye_daisy
+	"pale_oak_sapling":   10437, // potted_pale_oak_sapling
+	"pink_tulip":         10448, // potted_pink_tulip
+	"poppy":              10441, // potted_poppy
+	"red_mushroom":       10453, // potted_red_mushroom
+	"red_tulip":          10445, // potted_red_tulip
+	"spruce_sapling":     10431, // potted_spruce_sapling
+	"torchflower":        10429, // potted_torchflower
+	"warped_fungus":      21625, // potted_warped_fungus
+	"warped_roots":       21627, // potted_warped_roots
+	"white_tulip":        10447, // potted_white_tulip
+	"wither_rose":        10452, // potted_wither_rose
+}
