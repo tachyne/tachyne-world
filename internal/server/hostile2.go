@@ -250,7 +250,10 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 	h.damage(players, t, pearlDamage)
 }
 
-const itemCarvedPumpkin = 345 // wearing one fools endermen (vanilla disguise)
+// itemCarvedPumpkin resolves from the generated registry (a hardcoded 345
+// drifted to spruce_fence in the 1.21.11 id migration — the enderman
+// disguise silently stopped working).
+var itemCarvedPumpkin = int32(itemByName["carved_pumpkin"])
 
 // staredAt implements EnderMan.isBeingStaredBy (vanilla behavior): a survival player
 // within follow range whose view vector points at the enderman's eyes —

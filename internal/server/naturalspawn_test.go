@@ -328,3 +328,17 @@ func TestNaturalSpawnFillsCaves(t *testing.T) {
 		t.Fatal("the full-column Y roll must populate caves, not just the surface")
 	}
 }
+
+// TestResolvedItemConstants: item ids referenced by name must resolve — the
+// hardcoded predecessors survived the 1.21.11 id migration as the wrong
+// items (bow 841 became the goggle-icon ghast harness in every skeleton's
+// hand; carved pumpkin 345 became spruce_fence and the enderman disguise
+// silently stopped working).
+func TestResolvedItemConstants(t *testing.T) {
+	if itemBow == 0 || itemBow != int32(itemByName["bow"]) {
+		t.Fatalf("itemBow = %d, want itemByName[bow] = %d", itemBow, itemByName["bow"])
+	}
+	if itemCarvedPumpkin == 0 || itemCarvedPumpkin != int32(itemByName["carved_pumpkin"]) {
+		t.Fatalf("itemCarvedPumpkin = %d, want %d", itemCarvedPumpkin, itemByName["carved_pumpkin"])
+	}
+}

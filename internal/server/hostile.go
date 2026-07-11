@@ -329,7 +329,10 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	m.attackCD = attackCooldown
 }
 
-const itemBow = 841
+// itemBow resolves from the generated canonical registry — a hardcoded 841
+// survived the 1.21.5→1.21.11 item id migration and became light_blue_harness
+// (the happy-ghast goggles), which every skeleton then proudly held.
+var itemBow = int32(itemByName["bow"])
 
 // skeletonEquip builds the set_equipment putting a bow in a skeleton's hand.
 func skeletonEquip(eid int32) attachproto.Equipment {
