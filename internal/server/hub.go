@@ -180,8 +180,9 @@ const (
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
 	p              *player
-	adv            advState // advancement grants (advID → criterion → millis)
-	migrating      string   // non-empty (migID) while a handover to a neighbour is in flight
+	adv            advState        // advancement grants (advID → criterion → millis)
+	advVisible     map[string]bool // nodes revealed to the client (vanilla frontier)
+	migrating      string          // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
 	dim            int    // 0 overworld, 1 nether

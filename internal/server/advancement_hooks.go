@@ -25,33 +25,61 @@ var advEntityName = func() map[int]string {
 }()
 
 // advance evaluates every criterion behind trigger against the match payload,
-// grants what fires, streams the progress delta to the player, and on a
-// completed advancement announces + pays the XP reward. Cheap when nothing
-// matches — trigger sites call it unconditionally.
+// grants what fires, reveals newly visible tree nodes, streams progress
+// deltas, and on a completed advancement announces + pays the XP reward.
+// Cheap when nothing matches — trigger sites call it unconditionally.
 func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m advMatch) {
 	if t == nil || t.adv == nil {
 		return
 	}
+	var granted []*advNode
+	var completed []*advNode
 	for _, ref := range advByTrigger[trigger] {
 		if !m.criterion(ref.crit) {
 			continue
 		}
-		fresh, completed := t.adv.grant(ref.node, ref.crit.name)
+		fresh, nowDone := t.adv.grant(ref.node, ref.crit.name)
 		if !fresh {
 			continue
 		}
-		// Copy the criteria map into the frame: the session goroutine marshals
-		// it later, while the hub keeps mutating the live state.
-		done := make(map[string]int64, len(t.adv[ref.node.id]))
-		for k, v := range t.adv[ref.node.id] {
-			done[k] = v
+		granted = append(granted, ref.node)
+		if nowDone {
+			completed = append(completed, ref.node)
 		}
-		t.p.trySendEv(attachproto.AdvProgress{Entries: []attachproto.AdvProgressEntry{
-			{ID: ref.node.id, Done: done}}})
-		if !completed {
-			continue
+	}
+	if len(granted) == 0 {
+		return
+	}
+	// Reveal what the grants made visible (frontier growth, earned hidden
+	// nodes) BEFORE any progress for them — the client needs the node first.
+	vis := t.adv.visible()
+	if added := visibleTree(vis, t.advVisible); len(added.Nodes) > 0 {
+		t.p.trySendEv(added)
+		var p attachproto.AdvProgress
+		for _, an := range added.Nodes {
+			if st := t.adv[an.ID]; len(st) > 0 && !containsNode(granted, an.ID) {
+				p.Entries = append(p.Entries, attachproto.AdvProgressEntry{
+					ID: an.ID, Done: copyDone(st)})
+			}
 		}
-		if d := ref.node.display; d != nil && d.announceChat {
+		if len(p.Entries) > 0 {
+			t.p.trySendEv(p)
+		}
+	}
+	t.advVisible = vis
+	var p attachproto.AdvProgress
+	for _, n := range granted {
+		if !vis[n.id] {
+			continue // progress on an invisible node stays server-side (vanilla)
+		}
+		p.Entries = append(p.Entries, attachproto.AdvProgressEntry{
+			ID: n.id, Done: copyDone(t.adv[n.id])})
+	}
+	if len(p.Entries) > 0 {
+		t.p.trySendEv(p)
+	}
+	for _, n := range completed {
+		if d := n.display; d != nil && d.announceChat {
 			verb := "has made the advancement"
 			switch d.frame {
 			case 1:
@@ -61,10 +89,29 @@ func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m 
 			}
 			h.broadcastChat(players, fmt.Sprintf("%s %s [%s]", t.p.name, verb, d.titleEN))
 		}
-		if ref.node.xp > 0 {
-			h.addXP(t, int(ref.node.xp))
+		if n.xp > 0 {
+			h.addXP(t, int(n.xp))
 		}
 	}
+}
+
+// copyDone snapshots a criteria map for a frame: the session goroutine
+// marshals it later, while the hub keeps mutating the live state.
+func copyDone(m map[string]int64) map[string]int64 {
+	out := make(map[string]int64, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
+}
+
+func containsNode(ns []*advNode, id string) bool {
+	for _, n := range ns {
+		if n.id == id {
+			return true
+		}
+	}
+	return false
 }
 
 // advTick runs at 1 Hz beside survivalTick: the two polled trigger families —
@@ -101,19 +148,21 @@ func (h *hub) advTick(players map[int32]*tracked) {
 	}
 }
 
-// advSendAll ships the static tree + the player's full snapshot (join, and
-// again after a shard crossing so the new pod's gateway session can re-init).
+// advSendAll ships the player's VISIBLE tree + their progress snapshot (join,
+// and again after a shard crossing so the new pod's gateway can re-init).
+// Vanilla visibility: an empty state means an empty advancement screen.
 func (h *hub) advSendAll(t *tracked) {
-	t.p.sendEv(advTreeFrame)
+	t.advVisible = t.adv.visible()
+	t.p.sendEv(visibleTree(t.advVisible, nil))
 	snap := t.adv.snapshot()
-	// deep-copy the maps for the same session-marshal race reason as advance()
-	for i, e := range snap.Entries {
-		done := make(map[string]int64, len(e.Done))
-		for k, v := range e.Done {
-			done[k] = v
+	entries := snap.Entries[:0]
+	for _, e := range snap.Entries {
+		if t.advVisible[e.ID] {
+			e.Done = copyDone(e.Done) // session-marshal race, as in advance()
+			entries = append(entries, e)
 		}
-		snap.Entries[i].Done = done
 	}
+	snap.Entries = entries
 	t.p.sendEv(snap)
 }
 

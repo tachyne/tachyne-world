@@ -15,13 +15,16 @@ import (
 )
 
 // drainAdvFrames pulls everything queued on the player's out channel and
-// returns the advancement progress frames (other events are ignored).
-func drainAdvFrames(pl *tracked) (frames []attachproto.AdvProgress) {
+// returns the advancement progress + tree-reveal frames (others ignored).
+func drainAdvFrames(pl *tracked) (frames []attachproto.AdvProgress, trees []attachproto.AdvTree) {
 	for {
 		select {
 		case pkt := <-pl.p.out:
-			if p, ok := pkt.ev.(attachproto.AdvProgress); ok {
-				frames = append(frames, p)
+			switch v := pkt.ev.(type) {
+			case attachproto.AdvProgress:
+				frames = append(frames, v)
+			case attachproto.AdvTree:
+				trees = append(trees, v)
 			}
 		default:
 			return
@@ -51,15 +54,32 @@ func TestAdvanceEatAndInventory(t *testing.T) {
 	if !pl.adv.done(advByID["minecraft:story/mine_stone"]) {
 		t.Fatalf("cobblestone should complete Stone Age: %+v", pl.adv)
 	}
-	// completion emitted at least one progress frame
-	if len(drainAdvFrames(pl)) == 0 {
+	// completion emitted progress frames AND revealed the frontier around the
+	// newly-done nodes (vanilla visibility: nothing was visible before)
+	frames, trees := drainAdvFrames(pl)
+	if len(frames) == 0 {
 		t.Fatal("no progress frames queued")
+	}
+	if len(trees) == 0 {
+		t.Fatal("no tree-reveal frames queued")
+	}
+	revealed := map[string]bool{}
+	for _, tr := range trees {
+		for _, n := range tr.Nodes {
+			revealed[n.ID] = true
+		}
+	}
+	if !revealed["minecraft:story/mine_stone"] || !revealed["minecraft:story/root"] {
+		t.Fatalf("story frontier not revealed: %v", revealed)
+	}
+	if revealed["minecraft:adventure/voluntary_exile"] {
+		t.Fatal("hidden node leaked in reveal")
 	}
 
 	// idempotent: another tick grants nothing new
 	h.advTick(players)
-	if n := len(drainAdvFrames(pl)); n != 0 {
-		t.Fatalf("re-tick re-granted: %d frames", n)
+	if f2, t2 := drainAdvFrames(pl); len(f2) != 0 || len(t2) != 0 {
+		t.Fatalf("re-tick re-granted: %d frames %d trees", len(f2), len(t2))
 	}
 }
 

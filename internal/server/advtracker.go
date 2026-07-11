@@ -57,30 +57,24 @@ var advBlockRanges = func() map[*advCriterion][2]uint32 {
 	return m
 }()
 
-// advTreeFrame is the static MsgAdvTree payload, built once — the tree is the
-// same for every player and every join.
-var advTreeFrame = func() attach.AdvTree {
-	t := attach.AdvTree{Nodes: make([]attach.AdvNode, 0, len(advTable))}
-	for i := range advTable {
-		n := &advTable[i]
-		an := attach.AdvNode{ID: n.id, Parent: n.parent, Reqs: n.reqs}
-		if d := n.display; d != nil {
-			an.HasDisplay = true
-			an.Title = d.title
-			an.Desc = d.desc
-			an.Icon = attach.ItemStack{ID: d.icon, Count: 1}
-			an.Frame = int32(d.frame)
-			an.Background = d.background
-			an.ShowToast = d.showToast
-			an.Announce = d.announceChat
-			an.Hidden = d.hidden
-			an.X = d.x
-			an.Y = d.y
-		}
-		t.Nodes = append(t.Nodes, an)
+// advTreeNode converts a table node to its attach-frame form.
+func advTreeNode(n *advNode) attach.AdvNode {
+	an := attach.AdvNode{ID: n.id, Parent: n.parent, Reqs: n.reqs}
+	if d := n.display; d != nil {
+		an.HasDisplay = true
+		an.Title = d.title
+		an.Desc = d.desc
+		an.Icon = attach.ItemStack{ID: d.icon, Count: 1}
+		an.Frame = int32(d.frame)
+		an.Background = d.background
+		an.ShowToast = d.showToast
+		an.Announce = d.announceChat
+		an.Hidden = d.hidden
+		an.X = d.x
+		an.Y = d.y
 	}
-	return t
-}()
+	return an
+}
 
 // advState is one player's grant state.
 type advState map[string]map[string]int64
@@ -198,4 +192,113 @@ func containsAny(have []int32, want []int32) bool {
 		}
 	}
 	return false
+}
+
+// --- visibility (the vanilla server's rule) ---
+//
+// Vanilla never ships the whole tree: a node is sent iff it (or a descendant)
+// is done, or a done node sits within VISIBILITY_DEPTH(2) ancestors with no
+// hidden-unearned/undisplayed node closer. Everything else stays unsent — the
+// tree reveals itself as a frontier around progress, and hidden advancements
+// appear only once earned. Shipping the full tree instead draws connector
+// lines into invisible hidden nodes on the client ("lines to nothing").
+
+// advChildren / advRoots index the tree shape once (children sorted by id).
+var advChildren, advRoots = func() (map[string][]*advNode, []*advNode) {
+	kids := map[string][]*advNode{}
+	var roots []*advNode
+	for i := range advTable {
+		n := &advTable[i]
+		if n.parent == "" {
+			roots = append(roots, n)
+		} else {
+			kids[n.parent] = append(kids[n.parent], n)
+		}
+	}
+	sort.Slice(roots, func(i, j int) bool { return roots[i].id < roots[j].id })
+	for _, v := range kids {
+		sort.Slice(v, func(i, j int) bool { return v[i].id < v[j].id })
+	}
+	return kids, roots
+}()
+
+const advVisibilityDepth = 2
+
+type advVisRule int8
+
+const (
+	advVisShow advVisRule = iota
+	advVisHide
+	advVisNoChange
+)
+
+func advRuleFor(n *advNode, done bool) advVisRule {
+	switch {
+	case n.display == nil:
+		return advVisHide
+	case done:
+		return advVisShow
+	case n.display.hidden:
+		return advVisHide
+	}
+	return advVisNoChange
+}
+
+// visible computes the player's visible-node set — a faithful port of the
+// vanilla evaluator: DFS with an ancestor-rule stack; an unfinished subtree
+// is visible when the nearest decisive rule within self+2 ancestors is SHOW.
+func (s advState) visible() map[string]bool {
+	out := make(map[string]bool, 32)
+	stack := []advVisRule{advVisNoChange, advVisNoChange, advVisNoChange}
+	var walk func(n *advNode) bool
+	walk = func(n *advNode) bool {
+		selfDone := s.done(n)
+		stack = append(stack, advRuleFor(n, selfDone))
+		anyDone := selfDone
+		for _, c := range advChildren[n.id] {
+			anyDone = walk(c) || anyDone
+		}
+		vis := anyDone
+		if !vis {
+			for i := 0; i <= advVisibilityDepth; i++ {
+				switch stack[len(stack)-1-i] {
+				case advVisShow:
+					vis = true
+				case advVisHide:
+					vis = false
+				default:
+					continue
+				}
+				break
+			}
+		}
+		stack = stack[:len(stack)-1]
+		if vis {
+			out[n.id] = true
+		}
+		return anyDone
+	}
+	for _, r := range advRoots {
+		walk(r)
+	}
+	return out
+}
+
+// visibleTree assembles the AdvTree frame for a visible-node set, in
+// parent-before-child order.
+func visibleTree(vis map[string]bool, skip map[string]bool) attach.AdvTree {
+	t := attach.AdvTree{}
+	var walk func(n *advNode)
+	walk = func(n *advNode) {
+		if vis[n.id] && !skip[n.id] {
+			t.Nodes = append(t.Nodes, advTreeNode(n))
+		}
+		for _, c := range advChildren[n.id] {
+			walk(c)
+		}
+	}
+	for _, r := range advRoots {
+		walk(r)
+	}
+	return t
 }

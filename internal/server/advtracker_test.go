@@ -116,3 +116,50 @@ func TestAdvMatch(t *testing.T) {
 		}
 	}
 }
+
+// TestAdvVisibility ports the vanilla evaluator's semantics: nothing visible
+// on an empty state; done nodes reveal a 2-deep frontier; hidden nodes stay
+// invisible until earned, even under a done parent.
+func TestAdvVisibility(t *testing.T) {
+	s := advState{}
+	if v := s.visible(); len(v) != 0 {
+		t.Fatalf("fresh state should see nothing, got %d", len(v))
+	}
+
+	// complete story/root → root + children + grandchildren visible, depth-3 not
+	s.grant(advByID["minecraft:story/root"], "crafting_table")
+	v := s.visible()
+	for _, want := range []string{"minecraft:story/root", "minecraft:story/mine_stone",
+		"minecraft:story/upgrade_tools"} {
+		if !v[want] {
+			t.Errorf("%s should be visible", want)
+		}
+	}
+	if v["minecraft:story/smelt_iron"] { // depth 3 from the done root
+		t.Error("smelt_iron should still be beyond the frontier")
+	}
+	if v["minecraft:nether/root"] {
+		t.Error("untouched tab leaked")
+	}
+
+	// hidden stays invisible under a done parent until earned
+	s2 := advState{}
+	ka := advByID["minecraft:adventure/kill_a_mob"] // voluntary_exile's parent
+	for _, g := range ka.reqs {
+		s2.grant(ka, g[0])
+	}
+	if !s2.done(ka) {
+		t.Fatal("kill_a_mob should be done")
+	}
+	v2 := s2.visible()
+	if !v2["minecraft:adventure/kill_a_mob"] {
+		t.Fatal("done node invisible")
+	}
+	if v2["minecraft:adventure/voluntary_exile"] {
+		t.Error("hidden voluntary_exile leaked before being earned")
+	}
+	s2.grant(advByID["minecraft:adventure/voluntary_exile"], "voluntary_exile")
+	if !s2.visible()["minecraft:adventure/voluntary_exile"] {
+		t.Error("earned hidden node should be visible")
+	}
+}
