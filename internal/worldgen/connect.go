@@ -30,6 +30,17 @@ func IsHorizontalConnector(info BlockInfo) bool {
 		isBoolProp(info, "south") && isBoolProp(info, "west")
 }
 
+// IsWallConnector reports whether a block is a wall: its sides are the
+// three-valued none/low/tall enum (plus an "up" center-post boolean).
+func IsWallConnector(info BlockInfo) bool {
+	for _, p := range info.Props {
+		if p.Name == "north" {
+			return len(p.Vals) == 3 && p.Vals[0] == "none"
+		}
+	}
+	return false
+}
+
 func isBoolProp(info BlockInfo, name string) bool {
 	for _, p := range info.Props {
 		if p.Name == name {

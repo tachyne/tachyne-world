@@ -98,9 +98,9 @@ func (s *Server) handleDig(p *player, data []byte) {
 			s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 		}
 	}
-	s.breakPairedHalf(p, x, y, z, broken) // remove the other half of a door/bed
-	s.updateConnectNeighbors(x, y, z)     // adjacent fences lose their connection here
-	s.breakUnsupportedAbove(x, y, z)      // grass/flowers pop off when their dirt is mined
+	s.breakPairedHalf(p, x, y, z, broken)                   // remove the other half of a door/bed
+	s.updateConnectNeighbors(s.worldFor(p), p.dim, x, y, z) // adjacent fences/walls re-evaluate here
+	s.breakUnsupportedAbove(x, y, z)                        // grass/flowers pop off when their dirt is mined
 }
 
 // breakPairedHalf removes the matching half of a two-block block (door, bed, tall
@@ -217,12 +217,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		placed = s.placeBed(p, info, defState, tx, ty, tz, p.yaw, seq)
 	default:
 		state := orientState(defState, dir, cursorY, p.yaw, p.pitch)
-		state = s.connectState(tx, ty, tz, state) // fence/pane/bars connect to neighbours
+		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(tx, ty, tz, state, p.yaw)
 		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
-		s.updateConnectNeighbors(tx, ty, tz) // neighbours connect back to the new block
+		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
 	}
 	if placed && s.modes.get(p.name) == gmSurvival { // survival uses up one of the stack
 		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})

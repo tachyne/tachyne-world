@@ -19,6 +19,13 @@ import (
 	"tachyne/internal/worldgen"
 )
 
+// dyeColors are the 16 vanilla DyeColor names.
+var dyeColors = []string{
+	"white", "orange", "magenta", "light_blue", "yellow", "lime",
+	"pink", "gray", "light_gray", "cyan", "purple", "blue",
+	"brown", "green", "red", "black",
+}
+
 var (
 	itemInkSac     = itemByName["ink_sac"]
 	itemGlowInkSac = itemByName["glow_ink_sac"]
@@ -26,11 +33,7 @@ var (
 	// dyeColorByItem maps the 16 dye items to their DyeColor name.
 	dyeColorByItem = func() map[int32]string {
 		m := map[int32]string{}
-		for _, c := range []string{
-			"white", "orange", "magenta", "light_blue", "yellow", "lime",
-			"pink", "gray", "light_gray", "cyan", "purple", "blue",
-			"brown", "green", "red", "black",
-		} {
+		for _, c := range dyeColors {
 			if id, ok := itemByName[c+"_dye"]; ok {
 				m[id] = c
 			}
