@@ -49,15 +49,10 @@ const (
 	knockbackV = 0.275 // upward component
 	velUnit    = 8000  // Set Entity Velocity unit: 1/8000 block per tick
 
-	// Night spawning + daylight burn.
-	// Vanilla mob cap (MobCategory.MONSTER): 70 per 17×17 loaded chunks,
-	// scaled by the chunks players actually have streamed.
-	monsterCapPerChunk = 70
-	spawnMinDist       = 24 // vanilla: never within 24 blocks of a player…
-	spawnMaxDist       = 80 // …out to the streamed radius (vanilla: any loaded
-	//                        chunk ≤128; ours spawn where players will meet them)
-	burnDamagePerSec = 1 // vanilla fire: 1 HP/s — 20s of visible burning
-	burnStaggerMax   = 8 // seconds of per-mob random ignition delay at dawn:
+	// Daylight burn (natural spawning lives in spawn.go now).
+	spawnMinDist     = 24 // vanilla: mobs never spawn within 24 blocks of a player
+	burnDamagePerSec = 1  // vanilla fire: 1 HP/s — 20s of visible burning
+	burnStaggerMax   = 8  // seconds of per-mob random ignition delay at dawn:
 	//                          real dawn light ramps up, so the horde catches
 	//                          fire (and dies) spread out, not on one tick
 	dayStart   = 23000 // dawn: hostiles start burning (ticks into the MC day)
@@ -425,57 +420,17 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 	return m
 }
 
-// rollHostileType picks a species for a night spawn (vanilla-ish weighting).
-func (h *hub) rollHostileType() int {
-	switch r := h.rng.Intn(100); {
-	case r < 45:
-		return entityZombie
-	case r < 70:
-		return entitySkeleton
-	case r < 88:
-		return entitySpider
-	}
-	return entityCreeper
-}
-
-// updateHostiles runs once per second: spawn zombies at night near players (up to
-// a cap) and burn sky-exposed hostiles in daylight so the night's horde clears at
-// dawn. Attacks + chasing happen at the faster mob-update cadence, not here.
+// updateHostiles runs once per second: despawn far mobs, burn sky-exposed
+// hostiles in daylight so the night's horde clears at dawn, and roll the rare
+// night phantom. Natural SPAWNING happens per tick in spawn.go; attacks +
+// chasing happen at the faster mob-update cadence, not here.
 func (h *hub) updateHostiles(players map[int32]*tracked) {
 	h.updateNetherMobs(players)
 	if len(players) == 0 {
 		return
 	}
 	day := h.dayTime.Load() % dayLength
-	// Vanilla despawn rules (vanilla Mob.checkDespawn; hostiles only —
-	// CREATURE-category animals are persistent and never despawn): instant
-	// beyond 128 blocks of every same-dimension player; beyond 32 blocks an
-	// idle clock runs and past 600 ticks each tick has a 1/800 chance —
-	// ≈2.5%/s, our sweep is 1 Hz so Intn(40); within 32 the clock resets.
-	for _, m := range h.mobs {
-		if !m.hostile || m.dying > 0 || m == h.dragon {
-			continue
-		}
-		best := math.Inf(1)
-		for _, t := range players {
-			if t.dim != m.dim {
-				continue
-			}
-			if d := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d < best {
-				best = d
-			}
-		}
-		switch {
-		case best > 128*128: // includes "no player in this dimension"
-			h.removeMob(players, m)
-		case best > 32*32:
-			if m.idleSecs++; m.idleSecs > 30 && h.rng.Intn(40) == 0 {
-				h.removeMob(players, m)
-			}
-		default:
-			m.idleSecs = 0
-		}
-	}
+	h.despawnSweep(players)                 // vanilla checkDespawn for every non-persistent category
 	if h.rules.Difficulty == diffPeaceful { // peaceful: hostiles never linger
 		for _, m := range h.mobs {
 			if m.hostile && m.dying == 0 {
@@ -517,16 +472,15 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 			}
 		}
 	}
-	// Night spawning: one PACK attempt per second near a random player, under
-	// the vanilla mob cap.
+	// A rare phantom swoops in at night (vanilla: the sleepless-player harrier;
+	// ours is a low-odds overhead spawn — phantoms are a custom spawner in
+	// vanilla too, not part of the biome pools).
 	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful {
 		return
 	}
 	if day < nightStart || day >= dayStart {
 		return
 	}
-	// A rare phantom swoops in at night (vanilla: the sleepless-player harrier;
-	// ours is a low-odds overhead spawn).
 	if h.rng.Intn(30) == 0 {
 		for _, t := range players {
 			if t.dim == 0 && t.gamemode == gmSurvival && !t.dead {
@@ -534,70 +488,6 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 				break
 			}
 		}
-	}
-	// Vanilla cap (NaturalSpawner): MONSTER 70 × spawnableChunks / 17² —
-	// spawnableChunks = the union of chunks the overworld players actually
-	// have streamed (vanilla counts a 17×17 window per player; ours is the
-	// per-player view radius, so one radius-6 player caps at 70×169/289 ≈ 40).
-	chunks := map[[2]int32]bool{}
-	hostiles := 0
-	for _, t := range players {
-		if t.dim != 0 {
-			continue
-		}
-		r := t.p.radius()
-		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
-		for x := cx - r; x <= cx+r; x++ {
-			for z := cz - r; z <= cz+r; z++ {
-				chunks[[2]int32{x, z}] = true
-			}
-		}
-	}
-	for _, m := range h.mobs {
-		if m.hostile && m.dim == 0 {
-			hostiles++
-		}
-	}
-	mobCap := monsterCapPerChunk * len(chunks) / 289
-	if hostiles >= mobCap {
-		return
-	}
-	var pick *tracked
-	for _, t := range players { // any player; map order is effectively random
-		if t.dim == 0 {
-			pick = t
-			break
-		}
-	}
-	if pick == nil {
-		return
-	}
-	ang := h.rng.Float64() * 2 * math.Pi
-	dist := spawnMinDist + h.rng.Intn(spawnMaxDist-spawnMinDist)
-	sx := int(pick.x) + int(math.Cos(ang)*float64(dist))
-	sz := int(pick.z) + int(math.Sin(ang)*float64(dist))
-	if !h.ownedBlock(sx, sz) {
-		return // don't spawn outside this pod's region
-	}
-	// Vanilla spawns in packs of up to 4 of one species around the point.
-	etype := h.rollHostileFor(sx, sz)
-	pack := 1 + h.rng.Intn(4)
-	for i := 0; i < pack && hostiles < mobCap; i++ {
-		px, pz := sx, sz
-		if i > 0 { // pack-mates scatter a few blocks off the anchor
-			px += h.rng.Intn(9) - 4
-			pz += h.rng.Intn(9) - 4
-		}
-		if !h.world.Spawnable(px, pz) {
-			continue
-		}
-		// Hostiles only spawn in the dark (vanilla: light level 0). Sky light
-		// is night everywhere now, so torch light is what keeps a room safe.
-		if h.world.BlockLightAt(px, h.world.MobFeet(px, pz), pz) > 0 {
-			continue
-		}
-		h.spawnHostile(players, etype, px, pz)
-		hostiles++
 	}
 }
 

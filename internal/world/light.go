@@ -88,14 +88,24 @@ func propagate(op, level []uint8, queue []int32, effTop int) {
 // mob spawning to keep hostiles out of torch-lit areas. It computes the block's
 // chunk light, so call it sparingly (e.g. once per spawn attempt), not per tick.
 func (w *World) BlockLightAt(x, y, z int) uint8 {
+	_, b := w.LightAt(x, y, z)
+	return b
+}
+
+// LightAt returns (sky, block) light at a world coordinate from one chunk
+// light computation. Like BlockLightAt, computing the chunk's light is the
+// expensive part — callers doing several lookups in one chunk should use
+// Light() directly and index it themselves.
+func (w *World) LightAt(x, y, z int) (uint8, uint8) {
 	if y < worldgen.MinY || y >= w.Ceiling() {
-		return 0
+		return 0, 0
 	}
 	cx, cz := floorDiv(x, 16), floorDiv(z, 16)
 	ld := w.Light(int32(cx), int32(cz))
 	lx, lz := x-cx*16, z-cz*16
 	sec, ly := (y-worldgen.MinY)/16, (y-worldgen.MinY)%16
-	return ld.Block[sec][(ly*16+lz)*16+lx]
+	i := (ly*16+lz)*16 + lx
+	return ld.Sky[sec][i], ld.Block[sec][i]
 }
 
 func (w *World) Light(cx, cz int32) *LightData {

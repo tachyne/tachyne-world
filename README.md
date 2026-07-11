@@ -35,7 +35,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Terrain, biomes, caves, lighting | ✅ | Original generator: the full overworld biome set, rivers, cave biomes, real sky+block light. Deliberately *not* seed-compatible with vanilla worldgen. |
 | Mining, crafting, smelting, containers | ✅ | ~1,570 recipes with vanilla recipe-book progression (recipes unlock as you gather ingredients, with the toast), furnaces, chests, hoppers/droppers/dispensers; blast furnace, smoker and campfire cooking missing. |
 | Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, TNT; crossbows, tridents and the mace missing. |
-| Mobs | ✅ | The complete vanilla living roster with vanilla attributes, biome-aware spawning, breeding/taming/riding; a few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
+| Mobs | ✅ | The complete vanilla living roster with vanilla attributes, breeding/taming/riding, and vanilla natural spawning: per-category caps scaled by loaded chunks, spawns at any height (caves populate day and night), vanilla light rules (torch light blocks spawns, storms darken the sky enough for daytime monsters), per-biome weighted pools and pack sizes, distance-based despawning. A few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
 | Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
 | **Advancements** | ✅ | The full vanilla advancement tree with vanilla reveal rules, toasts, chat announces and XP rewards. Criteria whose mechanics don't exist yet (fishing, structures, crossbows…) show but can't be earned — about a third. |
 | Enchanting / anvil / brewing | 🟡 | Real table + bookshelf power, anvil merge/repair/rename, grindstone; curated enchantment pool (not all 40+), no splash/lingering potions or redstone/glowstone modifiers. |
@@ -155,8 +155,16 @@ multi-pod plan).
   wither boss. Each carries its real health/speed/armor/follow-range, melee
   or projectile attack, loot table, XP value and sounds; mapped onto shared
   archetypes (swim/fly/walk locomotion, skittish flight, neutral-pack
-  retaliation, ranged kiting). Biome-aware natural spawning stocks the
-  countryside, seas and Nether; all are `/summon`-able by name.
+  retaliation, ranged kiting). Natural spawning is the vanilla model: every
+  loaded chunk rolls spawn attempts at a random height through the whole
+  column — caves fill with monsters around the clock while the surface only
+  spawns them in darkness (or under a thunderstorm's darkened sky); torch
+  light is absolute protection; per-category mob caps (monster/creature/
+  ambient/water) scale with loaded chunks; species come from per-biome
+  weighted pools with vanilla pack sizes (husks in deserts, strays in the
+  snow, drowned in oceans and rivers, slime chunks below y40 on the vanilla
+  chunk seed); the far-away despawn distances match vanilla per category.
+  All are `/summon`-able by name.
 - Signature behaviors from source: cave-spider/bee poison bites (normal+hard
   only), wither-skeleton wither, wolf/bee packs that turn on an attacker
   together, ghast/breeze/shulker/wither projectiles, the guardian charge-beam,

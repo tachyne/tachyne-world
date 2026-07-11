@@ -112,15 +112,17 @@ func TestHappyGhastSpawnsPassiveFlyer(t *testing.T) {
 	}
 }
 
-func TestRollHostileTypeCoversAllSpecies(t *testing.T) {
+func TestMonsterPoolCoversCoreSpecies(t *testing.T) {
 	h := newHub(world.New(1))
 	seen := map[int]bool{}
-	for i := 0; i < 1000; i++ {
-		seen[h.rollHostileType()] = true
+	for i := 0; i < 2000; i++ {
+		if sd, ok := h.rollSpawner(monsterPoolDefault); ok {
+			seen[sd.etype] = true
+		}
 	}
-	for _, et := range []int{entityZombie, entitySkeleton, entitySpider, entityCreeper} {
+	for _, et := range []int{entityZombie, entitySkeleton, entitySpider, entityCreeper, entitySlime, entityEnderman, entityWitch} {
 		if !seen[et] {
-			t.Fatalf("spawn table never produced entity type %d", et)
+			t.Fatalf("monster pool never produced entity type %d", et)
 		}
 	}
 }

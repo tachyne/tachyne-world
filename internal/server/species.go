@@ -2,9 +2,6 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"math"
-
-	"tachyne/internal/worldgen"
 )
 
 // The full creature roster. Every remaining 1.21.5 living species is defined
@@ -480,58 +477,8 @@ func (h *hub) speciesLoot(d *speciesDef) []drop {
 	return out
 }
 
-// waterSpawn stocks the seas: a small school of water mobs in an ocean column
-// near a player, under the passive cap (vanilla WATER_AMBIENT/WATER_CREATURE).
-func (h *hub) waterSpawn(players map[int32]*tracked) {
-	if len(players) == 0 || !h.rules.DoMobSpawning {
-		return
-	}
-	passives := 0
-	for _, m := range h.mobs {
-		if !m.hostile {
-			passives++
-		}
-	}
-	if passives >= passiveCap {
-		return
-	}
-	var pick *tracked
-	for _, t := range players {
-		if t.dim == 0 {
-			pick = t
-			break
-		}
-	}
-	if pick == nil {
-		return
-	}
-	ang := h.rng.Float64() * 2 * math.Pi
-	dist := spawnMinDist + h.rng.Intn(spawnMaxDist-spawnMinDist)
-	cx := int(pick.x) + int(math.Cos(ang)*float64(dist))
-	cz := int(pick.z) + int(math.Sin(ang)*float64(dist))
-	if !h.ownedBlock(cx, cz) {
-		return // don't spawn outside this pod's region
-	}
-	if h.world.IsLand(cx, cz) {
-		return // not ocean — no water to spawn in
-	}
-	// Spawn a couple of blocks below sea level, where there's water above and
-	// below (a real body, not a one-deep puddle).
-	y := worldgen.SeaLevel - 1 - h.rng.Intn(3)
-	if !worldgen.IsWater(h.world.At(cx, y, cz)) || !worldgen.IsWater(h.world.At(cx, y+1, cz)) {
-		return
-	}
-	species := []int{entitySquid, entityCod, entitySalmon, entityDolphin,
-		entityTropicalFish, entityGlowSquid, entityNautilus}[h.rng.Intn(7)]
-	for i := 0; i < 2+h.rng.Intn(3); i++ {
-		sx := cx + h.rng.Intn(5) - 2
-		sz := cz + h.rng.Intn(5) - 2
-		if !worldgen.IsWater(h.world.At(sx, y, sz)) {
-			continue
-		}
-		h.spawnSpecies(players, species, 0, float64(sx)+0.5, float64(y)+0.5, float64(sz)+0.5)
-	}
-}
+// (waterSpawn retired 2026-07-11: aquatic mobs spawn via the vanilla
+// NaturalSpawner port in spawn.go — water_creature/water_ambient categories.)
 
 // spawnPhantom drops a phantom into the night sky above a player (vanilla
 // phantoms harry players who haven't slept — we simplify to a rare night

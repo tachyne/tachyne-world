@@ -26,7 +26,10 @@ const (
 // or as an absolute resync).
 func waitFor(t *testing.T, p *player, id int32, what string) {
 	t.Helper()
-	deadline := time.After(2 * time.Second)
+	// Generous deadline: these tests leak their hub goroutines (run() has no
+	// stop), so under -race with -count>1 the accumulated tick load made a
+	// 2-second deadline flaky long before it means anything is wrong.
+	deadline := time.After(10 * time.Second)
 	for {
 		select {
 		case pkt := <-p.out:
@@ -61,6 +64,10 @@ func waitFor(t *testing.T, p *player, id int32, what string) {
 func TestHubMultiplayer(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
+	// Player-relay assertions only: without this, natural spawning fills the
+	// seed-1 ocean with mobs whose movement events flood the undrained test
+	// queues until trySendEv drops the packets this test waits for.
+	h.rules.DoMobSpawning = false
 	go h.run()
 
 	p1 := newPlayer(h.allocEID(), "alice", [16]byte{1})
@@ -92,6 +99,7 @@ func TestHubMultiplayer(t *testing.T) {
 // the editor (who already predicted it).
 func TestHubBlockBroadcast(t *testing.T) {
 	h := newHub(world.New(1))
+	h.rules.DoMobSpawning = false // see TestHubMultiplayer: keep mob noise out
 	go h.run()
 
 	editor := newPlayer(h.allocEID(), "editor", [16]byte{1})

@@ -630,9 +630,9 @@ func (h *hub) run() {
 				h.updateCopperGolems(players) // oxidation → statue
 			}
 			if age%passiveSpawnEvery == 0 {
-				h.wildSpawn(players)  // keep the countryside stocked with animals
-				h.waterSpawn(players) // squid/fish/dolphins in the seas
+				h.herdTopUp(players) // the chunk-gen herd analog (spawn.go)
 			}
+			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
 			h.updateBolts(players)   // despawn finished lightning flashes
 			h.updateTNT(players)     // primed charges burn their fuses

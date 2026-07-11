@@ -2,7 +2,6 @@ package server
 
 import (
 	"math"
-	"strings"
 
 	"github.com/tachyne/tachyne-common/protocol"
 )
@@ -33,8 +32,7 @@ const (
 
 	woolRegrowIn = 40 // sheared sheep: 1-in-N chance per second to regrow (~40 s)
 
-	passiveCap        = 40  // world population target for passive mobs
-	passiveSpawnEvery = 600 // ticks between wild-spawn attempts (30 s)
+	passiveSpawnEvery = 600 // ticks between herd top-up attempts (30 s, spawn.go)
 )
 
 var (
@@ -196,59 +194,6 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 	}
 }
 
-// wildSpawn tops up the passive population: small groups on grass near a
-// player, up to the world cap (the boot herds only cover spawn).
-func (h *hub) wildSpawn(players map[int32]*tracked) {
-	if len(players) == 0 || !h.rules.DoMobSpawning {
-		return
-	}
-	passives := 0
-	for _, m := range h.mobs {
-		if !m.hostile {
-			passives++
-		}
-	}
-	if passives >= passiveCap {
-		return
-	}
-	var pick *tracked
-	for _, t := range players {
-		pick = t
-		break
-	}
-	ang := h.rng.Float64() * 2 * math.Pi
-	dist := spawnMinDist + h.rng.Intn(spawnMaxDist-spawnMinDist)
-	cx := int(pick.x) + int(math.Cos(ang)*float64(dist))
-	cz := int(pick.z) + int(math.Sin(ang)*float64(dist))
-	if !h.ownedBlock(cx, cz) {
-		return // don't spawn outside this pod's region
-	}
-	if !h.spawnableAnimal(cx, cz) {
-		return
-	}
-	species := h.biomeAnimal(cx, cz)
-	occupied := map[[2]int]bool{}
-	for i := 0; i < 2+h.rng.Intn(3); i++ { // a family of 2-4
-		x, z := h.spreadSpawn(cx, cz, occupied)
-		h.spawnAnimal(players, species, x, z)
-	}
-}
-
-// biomeAnimal picks a passive species appropriate to the column's biome
-// (vanilla's per-biome spawn lists, condensed): the common farm four everywhere,
-// plus biome signatures — rabbits/nothing exotic in deserts, polar bears and
-// wolves in the snow, goats on the peaks, horses/donkeys on the plains.
-func (h *hub) biomeAnimal(x, z int) int {
-	base := []int{entityCow, entityChicken, entityPig, entitySheep}[h.rng.Intn(4)]
-	switch b := h.world.BiomeAt(x, z); {
-	case isColdBiome(b):
-		return []int{entityPolarBear, entityWolf, entityRabbit, entityFox, base}[h.rng.Intn(5)]
-	case isDesertBiome(b):
-		return []int{entityRabbit, entityCamel, base}[h.rng.Intn(3)]
-	case strings.Contains(b, "windswept") || strings.Contains(b, "slopes") || strings.Contains(b, "peak"):
-		return []int{entityGoat, entityLlama, base}[h.rng.Intn(3)]
-	case strings.Contains(b, "plains"):
-		return []int{entityHorse, entityDonkey, entityWolf, base, base}[h.rng.Intn(5)]
-	}
-	return base
-}
+// (wildSpawn/biomeAnimal retired 2026-07-11: natural spawning is the vanilla
+// NaturalSpawner port in spawn.go; the low-rate herd top-up near players is
+// herdTopUp there, drawing from the same per-biome creature pools.)

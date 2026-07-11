@@ -1,0 +1,230 @@
+package server
+
+import (
+	"testing"
+
+	"tachyne/internal/world"
+	"tachyne/internal/worldgen"
+)
+
+// TestSlimeChunkOracle pins isSlimeChunk to java.util.Random ground truth:
+// the listed chunks are exactly the slime chunks in [-3,3]² for two seeds
+// (generated with a real JVM from the vanilla seedSlimeChunk formula).
+func TestSlimeChunkOracle(t *testing.T) {
+	slime := map[[3]int64]bool{
+		{1, -3, -3}: true, {1, -3, 0}: true, {1, -2, 2}: true, {1, 0, 3}: true, {1, 2, -1}: true,
+		{4506419895, -2, -1}: true, {4506419895, -1, 0}: true, {4506419895, 1, -2}: true,
+	}
+	for _, seed := range []int64{1, 4506419895} {
+		for x := int32(-3); x <= 3; x++ {
+			for z := int32(-3); z <= 3; z++ {
+				want := slime[[3]int64{seed, int64(x), int64(z)}]
+				if got := isSlimeChunk(seed, x, z); got != want {
+					t.Errorf("seed %d chunk %d,%d: slime=%v want %v", seed, x, z, got, want)
+				}
+			}
+		}
+	}
+}
+
+// TestSkyDarken: vanilla's SKY_LIGHT_LEVEL curve — clear noon 0, night 11,
+// and storms darken the daytime sky (the daytime-storm-spawn mechanic).
+func TestSkyDarken(t *testing.T) {
+	h := newHub(world.New(1))
+	h.dayTime.Store(6000) // noon
+	if d := h.skyDarken(); d != 0 {
+		t.Fatalf("noon skyDarken = %d, want 0", d)
+	}
+	h.dayTime.Store(18000) // midnight
+	if d := h.skyDarken(); d != 11 {
+		t.Fatalf("midnight skyDarken = %d, want 11", d)
+	}
+	h.dayTime.Store(6000)
+	h.rainLevel, h.thunderLevel = 1, 1 // full thunderstorm at noon
+	if d := h.skyDarken(); d < 5 {
+		t.Fatalf("storm noon skyDarken = %d, want >= 5", d)
+	}
+}
+
+// TestDarkEnoughToSpawn: caves (sky 0, block 0) always pass; a torch (block
+// light) is absolute protection; the noon surface never passes; the noon
+// surface UNDER A THUNDERSTORM sometimes does (vanilla storm spawns).
+func TestDarkEnoughToSpawn(t *testing.T) {
+	h := newHub(world.New(1))
+	h.dayTime.Store(6000)
+	for i := 0; i < 200; i++ {
+		if !h.darkEnoughToSpawn(0, 0) {
+			t.Fatal("a pitch-dark cave must always allow monster spawns")
+		}
+		if h.darkEnoughToSpawn(0, 1) {
+			t.Fatal("any block light must block monster spawns (overworld limit 0)")
+		}
+		if h.darkEnoughToSpawn(15, 0) {
+			t.Fatal("the noon surface must never spawn monsters")
+		}
+	}
+	// midnight surface: passes sometimes (sky gate ≈17/32 × brightness roll)
+	h.dayTime.Store(18000)
+	hits := 0
+	for i := 0; i < 2000; i++ {
+		if h.darkEnoughToSpawn(15, 0) {
+			hits++
+		}
+	}
+	if hits == 0 {
+		t.Fatal("the midnight surface must allow some monster spawns")
+	}
+	// noon under a full thunderstorm: the capped sky term lets some through
+	h.dayTime.Store(6000)
+	h.rainLevel, h.thunderLevel = 1, 1
+	h.raining, h.thundering = true, true
+	hits = 0
+	for i := 0; i < 2000; i++ {
+		if h.darkEnoughToSpawn(15, 0) {
+			hits++
+		}
+	}
+	if hits == 0 {
+		t.Fatal("a daytime thunderstorm must allow some surface monster spawns")
+	}
+}
+
+// TestSpawnCategoriesAndDespawn: category classification and the vanilla
+// despawn distances (fish at 64, monsters/ambient at 128, creatures never).
+func TestSpawnCategoriesAndDespawn(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.z = 0.5, 0.5
+	players := map[int32]*tracked{1: pl}
+
+	cow := h.spawnMob(players, entityCow, 40, 64, 0.5)
+	bat := h.spawnMob(players, entityBat, 40, 64, 0.5)
+	fish := h.spawnMob(players, entityCod, 40, 64, 0.5)
+	zom := h.spawnHostileY(players, entityZombie, 40, 64, 0.5)
+	if mobSpawnCategory(cow) != catCreature || mobSpawnCategory(bat) != catAmbient ||
+		mobSpawnCategory(fish) != catWaterAmbient || mobSpawnCategory(zom) != catMonster {
+		t.Fatal("category classification wrong")
+	}
+
+	// 40 blocks out: nothing hard-despawns (fish limit is 64, monster 128)
+	h.despawnSweep(players)
+	if _, ok := h.mobs[fish.eid]; !ok {
+		t.Fatal("a fish at 40 blocks must stay")
+	}
+	// 70 blocks: past the water-ambient 64 → the fish goes, the zombie stays
+	for _, m := range []*mob{cow, bat, fish, zom} {
+		m.x = 70
+	}
+	h.despawnSweep(players)
+	if _, alive := h.mobs[fish.eid]; alive {
+		t.Fatal("water-ambient mobs hard-despawn beyond 64 blocks")
+	}
+	if _, alive := h.mobs[zom.eid]; !alive {
+		t.Fatal("monsters stay inside 128 blocks")
+	}
+	// 200 blocks: monster and bat go, the creature is persistent forever
+	for _, m := range []*mob{cow, bat, zom} {
+		m.x = 200
+	}
+	h.despawnSweep(players)
+	if _, alive := h.mobs[zom.eid]; alive {
+		t.Fatal("monsters hard-despawn beyond 128 blocks")
+	}
+	if _, alive := h.mobs[bat.eid]; alive {
+		t.Fatal("ambient mobs hard-despawn beyond 128 blocks")
+	}
+	if _, alive := h.mobs[cow.eid]; !alive {
+		t.Fatal("creatures are persistent and never despawn")
+	}
+}
+
+// TestSpawnPools: biome routing (husk desert, stray snow, drowned oceans)
+// and sane vanilla pack ranges.
+func TestSpawnPools(t *testing.T) {
+	h := newHub(world.New(1))
+	has := func(pool []spawnerEntry, etype int) bool {
+		for _, e := range pool {
+			if e.etype == etype {
+				return true
+			}
+		}
+		return false
+	}
+	if !has(h.spawnPool(catMonster, 0, 64, 0), entityZombie) && !has(h.spawnPool(catMonster, 0, 64, 0), entityDrowned) {
+		t.Fatal("the monster pool must have a zombie-family entry")
+	}
+	if !has(monsterPoolDesert, entityHusk) || has(monsterPoolDesert, entityStray) {
+		t.Fatal("desert pool: husks yes, strays no")
+	}
+	if !has(monsterPoolSnowy, entityStray) {
+		t.Fatal("snowy pool must have strays")
+	}
+	if !has(monsterPoolOcean, entityDrowned) || has(monsterPoolOcean, entityZombie) {
+		t.Fatal("ocean pool: drowned replace zombies (vanilla)")
+	}
+	for _, pool := range [][]spawnerEntry{monsterPoolDefault, creaturePoolDefault, ambientPool} {
+		for _, e := range pool {
+			if e.min < 1 || e.max < e.min {
+				t.Fatalf("bad pack range for etype %d: %d..%d", e.etype, e.min, e.max)
+			}
+		}
+	}
+	// glow squid pool only below the cave-water depth
+	if p := h.spawnPool(catWaterCreature, 0, 20, 0); !has(p, entityGlowSquid) {
+		t.Fatal("deep water creature pool must be glow squid")
+	}
+}
+
+// TestSpawnPositionRules: land mobs need solid ground and clear body space;
+// water mobs need water.
+func TestSpawnPositionRules(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.SetBlock(10, 99, 10, worldgen.Stone)
+	h.world.SetBlock(10, 100, 10, worldgen.Air)
+	h.world.SetBlock(10, 101, 10, worldgen.Air)
+	if !h.spawnPositionOK(catMonster, 10, 100, 10) {
+		t.Fatal("solid ground + two clear cells must be spawnable")
+	}
+	h.world.SetBlock(10, 101, 10, worldgen.Stone) // block at head height
+	if h.spawnPositionOK(catMonster, 10, 100, 10) {
+		t.Fatal("a mob-height obstruction must reject the position")
+	}
+	if h.spawnPositionOK(catWaterCreature, 10, 100, 10) {
+		t.Fatal("water categories need water")
+	}
+}
+
+// TestNaturalSpawnFillsCaves: with a player parked at midnight, the spawner
+// must produce underground monsters within a simulated night — the
+// cave-population mechanic the old surface-only spawner lacked entirely —
+// and never exceed the scaled category cap.
+func TestNaturalSpawnFillsCaves(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{1: pl}
+	h.dayTime.Store(18000)      // midnight: surface and caves both eligible
+	for i := 0; i < 1200; i++ { // one simulated minute
+		h.tick.Store(uint64(i))
+		h.naturalSpawn(players)
+	}
+	monsters, below := 0, 0
+	for _, m := range h.mobs {
+		if m.hostile {
+			monsters++
+			if m.y < 50 { // well under the seed-1 surface near spawn — a cave spawn
+				below++
+			}
+		}
+	}
+	if monsters == 0 {
+		t.Fatal("a night of attempts must spawn monsters")
+	}
+	capN := categoryCap[catMonster] * (13 * 13) / spawnChunkArea // radius-6 window
+	if monsters > capN {
+		t.Fatalf("monster count %d exceeded the scaled cap %d", monsters, capN)
+	}
+	if below == 0 {
+		t.Fatal("the full-column Y roll must populate caves, not just the surface")
+	}
+}

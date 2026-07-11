@@ -51,51 +51,6 @@ func isColdBiome(b string) bool {
 func isDesertBiome(b string) bool { return strings.Contains(b, "desert") }
 func isSwampBiome(b string) bool  { return strings.Contains(b, "swamp") }
 
-// rollHostileFor picks a night-spawn species for a column, swapping in the
-// biome variants (desert husks, snowy strays, shoreline drowned, swamp
-// slimes/witches) over the base table.
-func (h *hub) rollHostileFor(x, z int) int {
-	base := h.rollHostileType()
-	biome := h.world.BiomeAt(x, z)
-	switch {
-	case isDesertBiome(biome) && base == entityZombie:
-		return entityHusk
-	case isColdBiome(biome) && base == entitySkeleton:
-		return entityStray
-	case isSwampBiome(biome):
-		switch h.rng.Intn(4) {
-		case 0:
-			return entitySlime
-		case 1:
-			return entityWitch
-		}
-	case base == entityZombie && h.nearWater(x, z):
-		return entityDrowned // shoreline zombies rise from the water
-	}
-	// A rare enderman anywhere at night (vanilla: uncommon overworld spawn).
-	if h.rng.Intn(20) == 0 {
-		return entityEnderman
-	}
-	// Occasional zombie variants + cave-dwellers (vanilla overworld night pool).
-	switch {
-	case base == entityZombie && h.rng.Intn(20) == 0:
-		return entityZombieVillager
-	case base == entitySpider && h.rng.Intn(6) == 0:
-		return entityCaveSpider
-	}
-	return base
-}
-
-// nearWater reports whether any neighbouring column is water surface.
-func (h *hub) nearWater(x, z int) bool {
-	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
-		if !h.world.IsLand(x+d[0], z+d[1]) {
-			return true
-		}
-	}
-	return false
-}
-
 // configureHostile2 applies pack-2 species quirks after spawnHostile's base
 // setup. Returns false for species it doesn't know.
 func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
