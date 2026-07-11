@@ -216,7 +216,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	case hasInfo && isBed(info): // beds: place foot + head
 		placed = s.placeBed(p, info, defState, tx, ty, tz, p.yaw, seq)
 	default:
-		state := orientState(defState, dir, cursorY, p.yaw, p.pitch)
+		state := orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(tx, ty, tz, state, p.yaw)
@@ -515,7 +515,7 @@ func blockFaceOffset(dir int32) (dx, dy, dz int) {
 // given how they placed it: logs take the clicked face's axis, slabs/stairs take
 // a top/bottom half from the cursor, and facing blocks point sensibly. Blocks
 // with no orientation property (most blocks) are returned unchanged.
-func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32) uint32 {
+func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, clicked uint32) uint32 {
 	info, ok := worldgen.OrientInfo(defaultState)
 	if !ok {
 		return defaultState
@@ -530,6 +530,19 @@ func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32) ui
 		case "half": // stairs, trapdoors
 			state = worldgen.SetProperty(info, state, "half", topOrBottom(dir, cursorY))
 		case "facing":
+			if isRodState(defaultState) {
+				// Rods point out of the clicked face (vanilla RodBlock); an end
+				// rod placed on the tip of a same-facing end rod extends it
+				// tip-to-tip instead (vanilla EndRodBlock).
+				f := faceDirName(dir)
+				if isEndRod(defaultState) && isEndRod(clicked) {
+					if ci, ok := worldgen.InfoForState(clicked); ok && worldgen.GetProperty(ci, clicked, "facing") == f {
+						f = oppositeFace6(f)
+					}
+				}
+				state = worldgen.SetProperty(info, state, "facing", f)
+				break
+			}
 			// Stairs (have a half) ascend toward the player's look; other facing
 			// blocks (furnaces, pumpkins) put their front toward the player.
 			f := playerFacing(yaw)
@@ -614,4 +627,42 @@ func oppositeFacing(f string) string {
 	default:
 		return "west"
 	}
+}
+
+// Rods orient to the face they were placed against, unlike the look-based
+// piston family.
+var (
+	lightningRodMin = worldgen.BlockBase("lightning_rod")
+	endRodMin       = worldgen.BlockBase("end_rod")
+)
+
+func isRodState(state uint32) bool {
+	info, ok := worldgen.InfoForState(state)
+	return ok && (info.Min == lightningRodMin || info.Min == endRodMin)
+}
+
+func isEndRod(state uint32) bool {
+	info, ok := worldgen.InfoForState(state)
+	return ok && info.Min == endRodMin
+}
+
+// faceDirName maps a clicked face to its direction name, all six faces.
+func faceDirName(dir int32) string {
+	switch dir {
+	case 0:
+		return "down"
+	case 1:
+		return "up"
+	}
+	return faceName(dir)
+}
+
+func oppositeFace6(f string) string {
+	switch f {
+	case "up":
+		return "down"
+	case "down":
+		return "up"
+	}
+	return oppositeFacing(f)
 }

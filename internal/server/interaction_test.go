@@ -81,8 +81,38 @@ func TestOrientState(t *testing.T) {
 		{"non-orientable unchanged", stone, 4, 0, 0, stone},
 	}
 	for _, c := range cases {
-		if got := orientState(c.state, c.dir, c.cursorY, c.yaw, 0); got != c.want {
+		if got := orientState(c.state, c.dir, c.cursorY, c.yaw, 0, stone); got != c.want {
 			t.Errorf("%s: orientState = %d, want %d", c.name, got, c.want)
 		}
+	}
+}
+
+// TestRodOrientation: rods take the clicked face (vanilla RodBlock), and an
+// end rod on the tip of a same-facing end rod extends it tip-to-tip.
+func TestRodOrientation(t *testing.T) {
+	rod := worldgen.BlockID("lightning_rod")
+	rodInfo, _ := worldgen.InfoForState(rod)
+	stone := worldgen.BlockBase("stone")
+	for dir, want := range map[int32]string{0: "down", 1: "up", 2: "north", 5: "east"} {
+		got := orientState(rod, dir, 0, 0, 0, stone)
+		if f := worldgen.GetProperty(rodInfo, got, "facing"); f != want {
+			t.Errorf("lightning rod on face %d: facing %s, want %s", dir, f, want)
+		}
+	}
+	// look direction must NOT matter
+	got := orientState(rod, 1, 0, 90, 70, stone)
+	if f := worldgen.GetProperty(rodInfo, got, "facing"); f != "up" {
+		t.Errorf("lightning rod ignores look: facing %s, want up", f)
+	}
+	endRod := worldgen.BlockID("end_rod")
+	erInfo, _ := worldgen.InfoForState(endRod)
+	upRod := worldgen.SetProperty(erInfo, endRod, "facing", "up")
+	got = orientState(endRod, 1, 0, 0, 0, upRod) // clicked the tip of an up rod
+	if f := worldgen.GetProperty(erInfo, got, "facing"); f != "down" {
+		t.Errorf("end rod tip-to-tip: facing %s, want down", f)
+	}
+	got = orientState(endRod, 1, 0, 0, 0, stone)
+	if f := worldgen.GetProperty(erInfo, got, "facing"); f != "up" {
+		t.Errorf("end rod on stone: facing %s, want up", f)
 	}
 }
