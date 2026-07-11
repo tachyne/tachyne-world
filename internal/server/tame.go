@@ -70,6 +70,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	m.aggro = petFollowStart
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petFlagsMeta(m.eid, true, false)))
+	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
 	return true
 }
 

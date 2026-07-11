@@ -276,6 +276,11 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			}
 			if m.health <= 0 {
 				h.killMob(players, m)
+				if a.playerShot {
+					if shooter := players[a.shooter]; shooter != nil {
+						h.advance(players, shooter, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+					}
+				}
 			}
 		}
 		return true

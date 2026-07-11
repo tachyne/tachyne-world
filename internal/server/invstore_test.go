@@ -18,7 +18,7 @@ func TestEatRestoresFood(t *testing.T) {
 	pl := testTracked()
 	pl.food = 10
 	pl.inv.slots[0] = invStack{item: itemByName["apple"], count: 2} // 2 apples (4 hunger each)
-	h.eat(pl, 0)
+	h.eat(nil, pl, 0)
 	if pl.food != 14 {
 		t.Errorf("eating an apple should restore 4 hunger: food=%d", pl.food)
 	}
@@ -26,7 +26,7 @@ func TestEatRestoresFood(t *testing.T) {
 		t.Errorf("eating should consume one apple: count=%d", pl.inv.slots[0].count)
 	}
 	pl.food = maxFood // already full → can't eat
-	h.eat(pl, 0)
+	h.eat(nil, pl, 0)
 	if pl.inv.slots[0].count != 1 {
 		t.Errorf("should not eat when full: count=%d", pl.inv.slots[0].count)
 	}

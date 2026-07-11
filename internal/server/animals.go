@@ -118,6 +118,7 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.sendSlot(t, t.p.heldSlot())
 	}
 	m.loveTicks = loveTicks
+	m.lovedBy = t.p.eid
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, statusInLove))
 	h.playSound(players, "minecraft:entity.generic.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
@@ -182,6 +183,13 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			baby.baby, baby.growLeft = true, growUpTicks
 			h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
+			breeder := players[m.lovedBy]
+			if breeder == nil {
+				breeder = players[o.lovedBy]
+			}
+			if breeder != nil {
+				h.advance(players, breeder, "bred_animals", advMatch{entity: advEntityName[m.etype]})
+			}
 			break
 		}
 	}

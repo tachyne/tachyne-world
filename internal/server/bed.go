@@ -79,6 +79,7 @@ func (h *hub) setSleeping(players map[int32]*tracked, t *tracked, pos blockPos) 
 	for _, o := range players {
 		o.p.trySendEv(metaEv(body))
 	}
+	h.advance(players, t, "slept_in_bed", advMatch{})
 }
 
 // wakePlayer stands a sleeper back up (no-op for the awake). Safe with a nil

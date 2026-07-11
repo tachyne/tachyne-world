@@ -206,6 +206,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				om.hurt(float64(sweep))
 				if om.health <= 0 {
 					h.killMob(players, om)
+					h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[om.etype]})
 				}
 			}
 			h.playSound(players, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
@@ -236,6 +237,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			t.p.trySendEv(chatEv("Bad Omen"))
 		}
 		h.killMob(players, m)
+		if t != nil {
+			h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+		}
 		return
 	}
 	// Hurt flash. A passive mob bolts away in panic; a hostile one shrugs the hit

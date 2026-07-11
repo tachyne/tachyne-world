@@ -107,6 +107,14 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 		h.playSound(players, "minecraft:block.brewing_stand.brew", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 		h.refreshBinViewers(players, pos)
+		for _, t := range players {
+			// vanilla fires brewed_potion on taking the potion; the taker is
+			// anonymous in our generic window path, so credit the players
+			// standing at the open stand when the brew completes.
+			if t.winID != 0 && t.winPos == pos {
+				h.advance(players, t, "brewed_potion", advMatch{})
+			}
+		}
 	}
 }
 

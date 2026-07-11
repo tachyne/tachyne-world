@@ -316,6 +316,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		return
 	}
 	h.damage(players, t, t.armorReduce(dmg))
+	if t.dead { // the bite was fatal: adventure/root's killed_by_something
+		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
+	}
 	h.wearArmor(players, t, dmg)
 	h.knockback(t, m.x, m.z)
 	// Species that envenom or wither on a bite (cave spider, bee, wither skeleton).

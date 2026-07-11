@@ -56,6 +56,7 @@ type mob struct {
 	baby          bool        // ageable: half-size, grows up, no drops/XP
 	growLeft      int         // ticks until a baby matures
 	loveTicks     int         // courting window after love-food (hearts)
+	lovedBy       int32       // who fed the love-food (advancement credit)
 	breedCD       int         // ticks before this parent may breed again
 	stroll        int         // wander spell: updates left walking before the next rest
 	sheared       bool        // sheep: fleece off (regrows by grazing)

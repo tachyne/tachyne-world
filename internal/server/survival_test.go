@@ -226,7 +226,7 @@ func TestEatReleaseCancels(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		h.tick.Add(1)
 	}
-	h.stopEating(pl) // early release
+	h.stopEating(nil, pl) // early release
 	if pl.food != 10 || pl.inv.slots[0].count != 1 || pl.eatingSlot != -1 {
 		t.Fatalf("early release must cancel: food=%d count=%d", pl.food, pl.inv.slots[0].count)
 	}
@@ -235,7 +235,7 @@ func TestEatReleaseCancels(t *testing.T) {
 	for i := 0; i < eatNearlyDone; i++ {
 		h.tick.Add(1)
 	}
-	h.stopEating(pl) // released right at the finish — counts as eaten
+	h.stopEating(nil, pl) // released right at the finish — counts as eaten
 	if pl.food <= 10 || pl.inv.slots[0].count != 0 {
 		t.Fatalf("near-complete release should apply: food=%d count=%d", pl.food, pl.inv.slots[0].count)
 	}

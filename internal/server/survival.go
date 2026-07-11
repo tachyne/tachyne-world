@@ -398,7 +398,7 @@ func (h *hub) startEating(t *tracked, slot int) {
 // stopEating handles a release_use_item or hotbar switch: cancel the hold — or
 // apply it when it was effectively finished (the client's own 32-tick timer can
 // race ours by a packet).
-func (h *hub) stopEating(t *tracked) {
+func (h *hub) stopEating(players map[int32]*tracked, t *tracked) {
 	if t.eatingSlot < 0 {
 		return
 	}
@@ -406,7 +406,7 @@ func (h *hub) stopEating(t *tracked) {
 	elapsed := h.tick.Load() - t.eatingAt
 	t.eatingSlot = -1
 	if elapsed >= eatNearlyDone {
-		h.eat(t, slot)
+		h.eat(players, t, slot)
 	}
 }
 
@@ -424,7 +424,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 		if now-t.eatingAt >= eatDuration {
 			slot := t.eatingSlot
 			t.eatingSlot = -1
-			h.eat(t, slot)
+			h.eat(players, t, slot)
 		}
 	}
 }
@@ -432,7 +432,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 // eat consumes one food item from the player's held hotbar slot and restores
 // hunger + saturation. Survival only, and only when not already full. Reached
 // via the eat-hold state machine above (use_item starts, eatDuration applies).
-func (h *hub) eat(t *tracked, slot int) {
+func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	if t.gamemode != gmSurvival || t.dead || t.inv == nil || slot < 0 || slot >= invSize {
 		return
 	}
@@ -446,6 +446,7 @@ func (h *hub) eat(t *tracked, slot int) {
 	if !ok || s.count == 0 || t.food >= maxFood {
 		return
 	}
+	h.advance(players, t, "consume_item", advMatch{item: s.item})
 	t.food = min(maxFood, t.food+pts)
 	h.eatSpecial(nil, t, s.item) // golden apples carry regen/fire-res
 	// Saturation gained per the food's value, capped at the new food level (vanilla).

@@ -180,7 +180,8 @@ const (
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
 	p              *player
-	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
+	adv            advState // advancement grants (advID → criterion → millis)
+	migrating      string   // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
 	dim            int    // 0 overworld, 1 nether
@@ -297,6 +298,7 @@ type hub struct {
 	hud        []HudWidget     // action-bar HUD widgets (nil = HUD off)
 	bus        bus             // out-of-process plugin bus (nopBus = disabled)
 	invs       *invStore       // survival inventory persistence (nil = in-memory only)
+	advs       *advStore       // advancement grant persistence (nil = in-memory only)
 	containers *containerStore // furnace/chest content persistence (nil = in-memory only)
 	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
 
@@ -607,6 +609,7 @@ func (h *hub) run() {
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
+				h.advTick(players) // polled advancement criteria (inventory, biome)
 			}
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)
 				if h.invs != nil {
@@ -614,6 +617,12 @@ func (h *hub) run() {
 						h.invs.record(t.p.name, t)
 					}
 					h.invs.flush()
+				}
+				if h.advs != nil {
+					for _, t := range players {
+						h.advs.record(t.p.name, t.adv)
+					}
+					h.advs.flush()
 				}
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
@@ -660,6 +669,11 @@ func (h *hub) run() {
 				h.onBlock(players, e)
 				h.checkWitherBuild(players, e.dim, e.x, e.y, e.z, e.state)
 				h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state)
+				if e.state != 0 && e.broken == 0 {
+					if t := players[e.by]; t != nil {
+						h.advance(players, t, "placed_block", advMatch{blockState: e.state})
+					}
+				}
 			case evPortalLinked:
 				h.portalLinks[e.from] = e.to
 				h.portalLinks[e.to] = e.from
@@ -667,6 +681,7 @@ func (h *hub) run() {
 			case evDim:
 				if t := players[e.eid]; t != nil {
 					h.onDimSwitch(players, t, e)
+					h.advance(players, t, "changed_dimension", advMatch{dim: int32(e.dim)})
 				}
 			case evChat:
 				body := chatEv(e.text)
@@ -881,7 +896,7 @@ func (h *hub) run() {
 				}
 			case evStopEat:
 				if t := players[e.eid]; t != nil {
-					h.stopEating(t)
+					h.stopEating(players, t)
 					h.lowerShield(t) // release / hotbar switch also drops a shield
 					if e.fire {      // release_use_item looses a drawn bow…
 						h.releaseDraw(players, t)
@@ -1097,6 +1112,12 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		h.sendHealth(nt)
 		h.sendInventory(nt)
 	}
+	if h.advs != nil { // advancement state + the tree (a resume reloads this pod's store)
+		nt.adv = h.advs.load(e.p.name)
+	} else {
+		nt.adv = advState{}
+	}
+	h.advSendAll(nt)
 
 	// (The newcomer's initial world clock is sent reliably in handlePlay, as part
 	// of the join stream, so it isn't dropped in the join packet flood.)
@@ -1224,6 +1245,9 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	}
 	if h.invs != nil { // persist the survival loadout on disconnect
 		h.invs.save(p.name, t)
+	}
+	if h.advs != nil {
+		h.advs.save(p.name, t.adv)
 	}
 	for _, v := range h.vehicles { // a leaver stands up first
 		if v.rider == p.eid {

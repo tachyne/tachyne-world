@@ -244,6 +244,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgEntityRemove, ev)
 	case attachproto.Chat:
 		send(attachproto.MsgChat, ev)
+	case attachproto.AdvTree:
+		send(attachproto.MsgAdvTree, ev)
+	case attachproto.AdvProgress:
+		send(attachproto.MsgAdvProgress, ev)
 	case attachproto.BossBar:
 		send(attachproto.MsgBossBar, ev)
 	case attachproto.Time:
