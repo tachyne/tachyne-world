@@ -189,6 +189,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			}
 			if breeder != nil {
 				h.advance(players, breeder, "bred_animals", advMatch{entity: advEntityName[m.etype]})
+				h.incCustom(breeder, "animals_bred", 1)
 			}
 			break
 		}

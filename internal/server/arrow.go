@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"tachyne/internal/worldgen"
 )
 
@@ -279,6 +281,8 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				if a.playerShot {
 					if shooter := players[a.shooter]; shooter != nil {
 						h.advance(players, shooter, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
+						h.incCustom(shooter, "mob_kills", 1)
 					}
 				}
 			}

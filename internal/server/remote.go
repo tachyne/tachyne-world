@@ -147,6 +147,8 @@ func (r *remotePlayer) Action(v any) {
 		}
 	case attachproto.RespawnReq:
 		h.post(evRespawn{eid: p.eid})
+	case attachproto.StatsReq:
+		h.post(evStatsReq{eid: p.eid})
 	case attachproto.CreativeSlot:
 		if r.s.modes.get(p.name) != gmCreative {
 			return
@@ -248,6 +250,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgAdvTree, ev)
 	case attachproto.AdvProgress:
 		send(attachproto.MsgAdvProgress, ev)
+	case attachproto.Stats:
+		send(attachproto.MsgStats, ev)
 	case attachproto.BossBar:
 		send(attachproto.MsgBossBar, ev)
 	case attachproto.Time:

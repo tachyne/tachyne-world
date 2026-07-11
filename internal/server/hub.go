@@ -180,9 +180,10 @@ const (
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
 	p              *player
-	adv            advState        // advancement grants (advID → criterion → millis)
-	advVisible     map[string]bool // nodes revealed to the client (vanilla frontier)
-	migrating      string          // non-empty (migID) while a handover to a neighbour is in flight
+	adv            advState          // advancement grants (advID → criterion → millis)
+	advVisible     map[string]bool   // nodes revealed to the client (vanilla frontier)
+	stats          map[statKey]int32 // statistics counters (canonical 774 keys)
+	migrating      string            // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
 	dim            int    // 0 overworld, 1 nether
@@ -300,6 +301,7 @@ type hub struct {
 	bus        bus             // out-of-process plugin bus (nopBus = disabled)
 	invs       *invStore       // survival inventory persistence (nil = in-memory only)
 	advs       *advStore       // advancement grant persistence (nil = in-memory only)
+	statstore  *statsStore     // statistics persistence (nil = in-memory only)
 	containers *containerStore // furnace/chest content persistence (nil = in-memory only)
 	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
 
@@ -611,6 +613,9 @@ func (h *hub) run() {
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players) // polled advancement criteria (inventory, biome)
+				for _, t := range players {
+					h.incCustom(t, "play_time", survivalTickN)
+				}
 			}
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)
 				if h.invs != nil {
@@ -624,6 +629,12 @@ func (h *hub) run() {
 						h.advs.record(t.p.name, t.adv)
 					}
 					h.advs.flush()
+				}
+				if h.statstore != nil {
+					for _, t := range players {
+						h.statstore.record(t.p.name, t.stats)
+					}
+					h.statstore.flush()
 				}
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
@@ -670,9 +681,14 @@ func (h *hub) run() {
 				h.onBlock(players, e)
 				h.checkWitherBuild(players, e.dim, e.x, e.y, e.z, e.state)
 				h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state)
-				if e.state != 0 && e.broken == 0 {
-					if t := players[e.by]; t != nil {
+				if t := players[e.by]; t != nil {
+					if e.state != 0 && e.broken == 0 {
 						h.advance(players, t, "placed_block", advMatch{blockState: e.state})
+					}
+					if e.broken != 0 {
+						if reg, ok := statBlockReg(e.broken); ok {
+							h.incStat(t, attachproto.StatMined, reg, 1)
+						}
 					}
 				}
 			case evPortalLinked:
@@ -859,6 +875,10 @@ func (h *hub) run() {
 						h.spawnXPOrb(players, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 					}
 				}
+			case evStatsReq:
+				if t := players[e.eid]; t != nil {
+					t.p.trySendEv(statsSnapshot(t))
+				}
 			case evRespawn:
 				if t := players[e.eid]; t != nil {
 					h.respawn(t)
@@ -969,6 +989,7 @@ func (h *hub) run() {
 			case evTossHeld:
 				if t := players[e.eid]; t != nil && t.gamemode == gmSurvival {
 					h.tossHeld(players, t, e.slot, e.all)
+					h.incCustom(t, "drop", 1)
 				}
 			case evCreativeSlot:
 				// Modes share ONE inventory (vanilla): creative slot sets write
@@ -997,6 +1018,7 @@ func (h *hub) run() {
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
 					h.openChest(t, e.x, e.y, e.z)
+					h.incCustom(t, "open_chest", 1)
 				}
 			case evOpenBin:
 				if t := players[e.eid]; t != nil {
@@ -1119,6 +1141,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		nt.adv = advState{}
 	}
 	h.advSendAll(nt)
+	if h.statstore != nil {
+		nt.stats = h.statstore.load(e.p.name)
+	}
 
 	// (The newcomer's initial world clock is sent reliably in handlePlay, as part
 	// of the join stream, so it isn't dropped in the join packet flood.)
@@ -1202,7 +1227,14 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	if !h.validateMove(t, e) {
 		return // impossible move — not applied, client rubber-banded back
 	}
-	h.onFallAndExhaust(players, t, e) // fall damage + walking hunger (reads pre-move position)
+	h.onFallAndExhaust(players, t, e)                      // fall damage + walking hunger (reads pre-move position)
+	if d := math.Hypot(e.x-t.x, e.z-t.z); d > 0 && d < 8 { // cm, teleports excluded
+		name := "walk_one_cm"
+		if e.sprinting {
+			name = "sprint_one_cm"
+		}
+		h.incCustom(t, name, int32(d*100))
+	}
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
 	h.wakeIfAway(players, t) // walking off ends a bed sleep
@@ -1249,6 +1281,10 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	}
 	if h.advs != nil {
 		h.advs.save(p.name, t.adv)
+	}
+	h.incCustom(t, "leave_game", 1)
+	if h.statstore != nil {
+		h.statstore.save(p.name, t.stats)
 	}
 	for _, v := range h.vehicles { // a leaver stands up first
 		if v.rider == p.eid {

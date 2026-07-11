@@ -57,6 +57,7 @@ func main() {
 	srv.PlayerDataFile = "players.json"
 	srv.InventoryFile = "inventories.json"
 	srv.AdvancementFile = "advancements.json"
+	srv.StatsFile = "stats.json"
 	srv.ContainerFile = "containers.json"
 	srv.SpawnPointFile = "spawns.json"
 	if m, ok := server.ParseGamemode(*gamemode); ok {

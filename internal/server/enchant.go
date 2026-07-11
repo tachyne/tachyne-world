@@ -222,6 +222,7 @@ func (h *hub) handleEnchant(players map[int32]*tracked, t *tracked, button int32
 	h.rollEnchOptions(t) // now enchanted → all rows switch off
 	h.playSound(players, "minecraft:block.enchantment_table.use", sndBlock, t.x, t.y, t.z, 1, 1)
 	h.advance(players, t, "enchanted_item", advMatch{})
+	h.incCustom(t, "enchant_item", 1)
 	h.bus.publish("enchant", map[string]any{"name": t.p.name, "item": item.item, "ench": int(opt.id), "lvl": int(opt.lvl)})
 }
 

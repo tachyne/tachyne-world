@@ -297,6 +297,7 @@ func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true
+		h.incCustom(t, "deaths", 1)
 		log.Printf("%q died at (%.0f,%.0f,%.0f)", t.p.name, t.x, t.y, t.z)
 		if !h.rules.KeepInventory { // gamerule: keepInventory skips the stake
 			h.dropInventory(players, t)
@@ -447,6 +448,7 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 		return
 	}
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
+	h.incStat(t, attachproto.StatUsed, s.item, 1)
 	t.food = min(maxFood, t.food+pts)
 	h.eatSpecial(nil, t, s.item) // golden apples carry regen/fire-res
 	// Saturation gained per the food's value, capped at the new food level (vanilla).

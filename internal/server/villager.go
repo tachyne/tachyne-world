@@ -249,6 +249,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 		h.playSound(players, "minecraft:entity.villager.yes", sndNeutral, m.x, m.y, m.z, 0.7, 1)
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
+	h.incCustom(t, "traded_with_villager", 1)
 	h.sendCursor(t)
 	h.sendTradeWindow(t)
 }

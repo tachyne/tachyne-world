@@ -32,13 +32,27 @@ TARGETS = {
 }
 VIA = "https://raw.githubusercontent.com/ViaVersion/Mappings/main/mappings/mapping-{}.json"
 
-# registry Go const name -> (minecraft-data file, ViaVersion key, kind)
+# registry Go const name -> (minecraft-data file, ViaVersion key, kind, report key)
+# A report key switches the source to local vanilla datagen reports
+# (~/vanilla/reports/<version>/registries.json — protocol-ordered, authoritative;
+# regenerate with `java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar
+# --reports`). Used for registries the community datasets don't carry.
 REGISTRIES = [
-    ("RegBlockState", "blocks", "blockstates", "stateRange"),
-    ("RegEntity", "entities", "entities", "flat"),
-    ("RegItem", "items", "items", "flat"),
-    ("RegBiome", "biomes", None, "flat"),  # ViaVersion mappings carry no biomes
+    ("RegBlockState", "blocks", "blockstates", "stateRange", None),
+    ("RegEntity", "entities", "entities", "flat", None),
+    ("RegItem", "items", "items", "flat", None),
+    ("RegBiome", "biomes", None, "flat", None),  # ViaVersion mappings carry no biomes
+    # award_stats key registries (see render770/stats.go):
+    ("RegBlock", None, None, "flat", "minecraft:block"),
+    ("RegCustomStat", None, None, "flat", "minecraft:custom_stat"),
 ]
+REPORTS = os.path.expanduser("~/vanilla/reports/{}/registries.json")
+
+
+def fetch_report(ver, key):
+    with open(REPORTS.format(ver)) as f:
+        r = json.load(f)
+    return [{"name": k, "id": v["protocol_id"]} for k, v in r[key]["entries"].items()]
 
 
 def fetch(ver, name):
@@ -126,11 +140,14 @@ def rle(deltas):
 
 # registry const -> version -> ranges
 data = {}
-for const, mdfile, viakey, kind in REGISTRIES:
-    canon = fetch(CANON, mdfile)
+for const, mdfile, viakey, kind, reportkey in REGISTRIES:
+    canon = fetch_report(CANON, reportkey) if reportkey else fetch(CANON, mdfile)
     per = {}
     for ver, (dir, source) in sorted(TARGETS.items()):
-        version = normalize(dir, source, mdfile, viakey, kind)
+        if reportkey:
+            version = fetch_report(dir, reportkey)
+        else:
+            version = normalize(dir, source, mdfile, viakey, kind)
         if version is None:
             per[ver] = []
             continue
@@ -147,7 +164,7 @@ L = [
     "// IDSpace identifiers for multi-version ID translation.",
     "const (",
 ]
-for i, (const, _, _, _) in enumerate(REGISTRIES):
+for i, (const, _, _, _, _) in enumerate(REGISTRIES):
     L.append(f"\t{const} IDSpace = {i}")
 L += [
     "\tnumRegistries = " + str(len(REGISTRIES)),
@@ -157,7 +174,7 @@ L += [
     "// 1.21.11(774) -> client version). Sorted by Min for binary search.",
     "var translationTables = map[IDSpace]map[int32][]idRange{",
 ]
-for const, _, _, _ in REGISTRIES:
+for const, _, _, _, _ in REGISTRIES:
     L.append(f"\t{const}: {{")
     for ver in sorted(data[const]):
         ranges = data[const][ver]

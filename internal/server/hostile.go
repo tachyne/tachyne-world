@@ -318,6 +318,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	h.damage(players, t, t.armorReduce(dmg))
 	if t.dead { // the bite was fatal: adventure/root's killed_by_something
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
+		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)
 	}
 	h.wearArmor(players, t, dmg)
 	h.knockback(t, m.x, m.z)

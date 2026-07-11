@@ -392,6 +392,10 @@ func session(c net.Conn, cfg Config) {
 			if remote != nil {
 				remote.Action(proto.RespawnReq{})
 			}
+		case proto.MsgStatsReq:
+			if remote != nil {
+				remote.Action(proto.StatsReq{})
+			}
 		case proto.MsgCreativeSlot:
 			actTo(remote, payload, proto.CreativeSlot{})
 		case proto.MsgVehicleMove: // gw→w: the rider steering its vehicle
