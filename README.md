@@ -23,6 +23,35 @@ A Minecraft **Java Edition** server written from scratch in pure Go. No Paper,
 no JVM, no protocol libraries — world generation, lighting, and the whole game
 simulation are original code with zero runtime dependencies.
 
+## What to expect (vanilla parity at a glance)
+
+tachyne's goal is **full vanilla feature parity**, and it is not there yet.
+This table is the honest summary for anyone deciding whether to run it; the
+detailed inventory follows in [What works today](#what-works-today).
+✅ solid · 🟡 works with gaps · ❌ not yet.
+
+| Area | Status | Notes |
+|---|---|---|
+| Terrain, biomes, caves, lighting | ✅ | Original generator: the full overworld biome set, rivers, cave biomes, real sky+block light. Deliberately *not* seed-compatible with vanilla worldgen. |
+| Mining, crafting, smelting, containers | ✅ | ~1,570 recipes, furnaces, chests, hoppers/droppers/dispensers; blast furnace, smoker and campfire cooking missing. |
+| Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, TNT; crossbows, tridents and the mace missing. |
+| Mobs | ✅ | The complete vanilla living roster with vanilla attributes, biome-aware spawning, breeding/taming/riding; a few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
+| Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
+| **Advancements** | ✅ | The full vanilla advancement tree with vanilla reveal rules, toasts, chat announces and XP rewards. Criteria whose mechanics don't exist yet (fishing, structures, crossbows…) show but can't be earned — about a third. |
+| Enchanting / anvil / brewing | 🟡 | Real table + bookshelf power, anvil merge/repair/rename, grindstone; curated enchantment pool (not all 40+), no splash/lingering potions or redstone/glowstone modifiers. |
+| Villages & trading | 🟡 | Generated villages, villager schedules/pathfinding, iron golem, merchant screen trading; 3 professions with static prices (no leveling/restocks/gossip). |
+| The Nether / The End | 🟡 | Both dimensions with portals, nether mobs, brewing ingredients, the full dragon fight + elytra; no fortresses, bastions, end cities or outer islands yet. |
+| Redstone | 🟡 | Dust, torches, repeaters, comparators, observers, pistons, plates, dispensers/hoppers — a solid tier 1; no quasi-connectivity, repeater locking, or sculk. |
+| Structures | 🟡 | Villages, dungeons, mineshafts, strongholds, ruins; no ocean monuments, mansions, temples, shipwrecks, outposts, ancient cities or trial chambers. |
+| Vehicles | 🟡 | Boats (all woods), minecarts with auto-shaping rails; no chest/hopper/TNT carts, vehicles don't survive restarts. |
+| Statistics, scoreboard, maps, signs, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
+
+Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
+share one world (1.21.9–26.1 are currently rejected at login), and **Bedrock**
+(latest release) joins through its own gateway with Bedrock-specific limits —
+see each gateway's README.
+
 This repo is the **world engine** of the *tachyne* cluster: it speaks **no
 Minecraft wire format at all** ("worlds are versionless"). It emits typed
 domain events over the **attach protocol** (`-attach :25500`); per-protocol
@@ -77,6 +106,18 @@ multi-pod plan).
 - **Anvil + grindstone**: merge enchantments (books included, equal levels
   combine upward), repair from a sacrifice, rename items — for enforced level
   costs; the grindstone strips enchantments and refunds XP
+
+**Progression**
+- **Advancements**: the complete vanilla advancement tree (story, nether, end,
+  adventure, husbandry — 125 advancements) with vanilla semantics end to end:
+  the tree reveals itself as you progress (earned advancements plus a two-step
+  frontier; hidden ones appear only once earned), toasts pop, completions
+  announce in chat with the vanilla task/goal/challenge phrasing, challenge
+  XP rewards pay out, and progress persists per player. Criteria fire from
+  live gameplay — items obtained, mobs killed, biomes visited, dimensions
+  entered, animals bred/tamed, trades, enchants, brews, sleep. Criteria whose
+  mechanics aren't built yet (fishing, structure visits, crossbows…) are
+  visible but unobtainable until those land.
 
 **Combat**
 - 1.9-style attack cooldown (spam-clicks scaled to a fifth), jump crits at
