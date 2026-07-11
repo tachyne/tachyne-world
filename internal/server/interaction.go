@@ -188,6 +188,13 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		}
 		return
 	}
+	if p.heldItem() == itemPainting { // paintings hang on walls (side faces only)
+		if dir >= 2 && dir <= 5 {
+			s.hub.post(evPlacePainting{eid: p.eid, x: tx, y: ty, z: tz, dir: dir, slot: int32(p.held)})
+		}
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	if _, isVeh := vehicleItems[p.heldItem()]; isVeh {
 		s.hub.post(evPlaceVehicle{eid: p.eid, item: p.heldItem(), x: x, y: y, z: z, slot: int32(p.held)})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)

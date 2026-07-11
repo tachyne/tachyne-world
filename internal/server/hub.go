@@ -346,6 +346,7 @@ type hub struct {
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
 	vehicles     map[int32]*vehicle  // minecarts + boats
+	paintings    map[int32]*painting // placed hanging paintings (persisted with containers)
 	detectorsOn  map[blockPos]bool   // detector rails currently pressed
 	spawnerNext  map[blockPos]uint64 // dungeon spawner cooldowns
 	patrolNextAt uint64              // world tick the next pillager-patrol attempt is due
@@ -445,6 +446,7 @@ func newHub(w *world.World) *hub {
 		fireAge:       map[blockPos]int{},
 		bins:          map[blockPos]*bin{},
 		vehicles:      map[int32]*vehicle{},
+		paintings:     map[int32]*painting{},
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -494,6 +496,7 @@ func (h *hub) run() {
 		h.chests = h.containers.loadChests()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
+		h.paintings = h.containers.loadPaintings(h.allocEID)
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
 				h.schedule(pos, hopperCadence)
@@ -667,6 +670,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
+					h.containers.recordPaintings(h.paintings)
 					h.containers.flush()
 				}
 			}
@@ -986,6 +990,10 @@ func (h *hub) run() {
 				if h.hitCrystal(players, e.target) {
 					break
 				}
+				if pt := h.paintings[e.target]; pt != nil {
+					h.breakPainting(players, pt, players[e.attacker])
+					break
+				}
 				if v := h.vehicles[e.target]; v != nil {
 					h.breakVehicle(players, v)
 				} else {
@@ -995,6 +1003,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.placeVehicle(players, t, e)
 				}
+			case evPlacePainting:
+				h.onPlacePainting(players, e)
 			case evVehicleMove:
 				if t := players[e.eid]; t != nil {
 					if !h.applyGhastMove(players, t, e) && // piloted happy ghast first…
@@ -1152,6 +1162,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
+					h.containers.recordPaintings(h.paintings)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
@@ -1228,6 +1239,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	}
 
 	h.sendVehiclesTo(nt)
+	h.sendPaintingsTo(nt)
 	// Show the newcomer every mob already in their dimension.
 	for _, m := range h.mobs {
 		if m.dim != nt.dim {
@@ -1395,6 +1407,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		h.signs.remove(e.dim, e.x, e.y, e.z)
 		delete(h.signMayEdit, signKey(e.dim, e.x, e.y, e.z))
 	}
+	h.paintingsOnBlockChange(players, e.dim, e.x, e.y, e.z)
 	if e.dim != 0 {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}

@@ -30,10 +30,20 @@ type savedItem struct {
 }
 
 type containerFile struct {
-	Furnaces map[string]savedFurnace `json:"furnaces,omitempty"`
-	Chests   map[string][][5]int32   `json:"chests,omitempty"` // (slot,item,count,dmg,ench) — sparse; old 4-column rows load with ench 0
-	Bins     map[string]savedBin     `json:"bins,omitempty"`   // dispenser/dropper/hopper
-	Items    []savedItem             `json:"items,omitempty"`  // dropped item entities
+	Furnaces  map[string]savedFurnace `json:"furnaces,omitempty"`
+	Chests    map[string][][5]int32   `json:"chests,omitempty"` // (slot,item,count,dmg,ench) — sparse; old 4-column rows load with ench 0
+	Bins      map[string]savedBin     `json:"bins,omitempty"`   // dispenser/dropper/hopper
+	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
+	Paintings []savedPainting         `json:"paintings,omitempty"`
+}
+
+type savedPainting struct {
+	Dim     int    `json:"dim,omitempty"`
+	X       int    `json:"x"`
+	Y       int    `json:"y"`
+	Z       int    `json:"z"`
+	Dir     int32  `json:"dir"`
+	Variant string `json:"variant"`
 }
 
 type savedBin struct {
@@ -246,4 +256,34 @@ func (s *containerStore) flush() {
 	if os.WriteFile(tmp, data, 0o644) == nil {
 		os.Rename(tmp, path)
 	}
+}
+
+// recordPaintings snapshots the live paintings for the next flush.
+func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Paintings = s.m.Paintings[:0]
+	for _, pt := range paintings {
+		s.m.Paintings = append(s.m.Paintings, savedPainting{
+			Dim: pt.dim, X: pt.x, Y: pt.y, Z: pt.z, Dir: pt.dir, Variant: pt.variant})
+	}
+}
+
+// loadPaintings reconstructs placed paintings; sizes come from the variant
+// table and entity ids are re-allocated by the caller.
+func (s *containerStore) loadPaintings(alloc func() int32) map[int32]*painting {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]*painting{}
+	for _, sp := range s.m.Paintings {
+		for _, v := range paintingVariants {
+			if v.Name == sp.Variant {
+				eid := alloc()
+				out[eid] = &painting{eid: eid, x: sp.X, y: sp.Y, z: sp.Z,
+					dim: sp.Dim, dir: sp.Dir, variant: v.Name, w: v.W, h: v.H}
+				break
+			}
+		}
+	}
+	return out
 }

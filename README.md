@@ -47,7 +47,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Statistics | ✅ | The vanilla Statistics screen: blocks mined, items crafted/used, mobs killed, play time, distances and more, persisted per player. A few counters pending (damage dealt/taken, jumps). |
 | Scoreboard & teams | ✅ | /scoreboard objectives (incl. auto criteria: deaths, kills, health) on sidebar/list/below-name, /team with colors, prefixes and name-tag rules; persists with the world. |
 | Signs | ✅ | All wood types as standing/wall/hanging/wall-hanging signs with the vanilla edit GUI, both text sides, dyes, glow ink, waxing; text persists with the world and rides chunk loads. |
-| Maps, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Paintings | ✅ | All 47 placeable variants with vanilla selection (largest that fits, random among ties), pop on punch or lost support, persist with the world. Item frames are next. |
+| Maps, item frames, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
