@@ -189,3 +189,18 @@ func TestHeightmapTracksEdits(t *testing.T) {
 		t.Fatalf("heightmap after digging surface = %d, want < %d", got, base)
 	}
 }
+
+// TestMobFeetOnCarpet: a carpet must not raise a mob's standing level a full
+// block (the enderman-hovering-over-carpet bug).
+func TestMobFeetOnCarpet(t *testing.T) {
+	w := New(1)
+	base := w.MobFeet(0, 0)
+	w.SetBlock(0, base, 0, worldgen.BlockID("red_carpet"))
+	if got := w.MobFeet(0, 0); got != base {
+		t.Fatalf("feet on carpet = %d, want %d (the carpet cell)", got, base)
+	}
+	w.SetBlock(0, base, 0, worldgen.BlockID("stone"))
+	if got := w.MobFeet(0, 0); got != base+1 {
+		t.Fatalf("feet on stone = %d, want %d", got, base+1)
+	}
+}

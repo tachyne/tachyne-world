@@ -95,3 +95,30 @@ func SkyOpacity(state uint32) int {
 	// stairs/beds/plants correctly let light through instead of blocking it.
 	return LightFilter(state)
 }
+
+// thinFloors are blocks with a near-flat collision box (carpets): they
+// collide, but a mob standing "on" one stands at the cell's floor level, not
+// a full block up. (Vanilla stands 1/16 above the floor; on the engine's
+// integer grid the cell itself is the closest honest answer — 1/16 low
+// beats a full block of hover.)
+var thinFloors = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	names := []string{"moss_carpet", "pale_moss_carpet"}
+	for _, c := range []string{
+		"white", "orange", "magenta", "light_blue", "yellow", "lime",
+		"pink", "gray", "light_gray", "cyan", "purple", "blue",
+		"brown", "green", "red", "black",
+	} {
+		names = append(names, c+"_carpet")
+	}
+	for _, n := range names {
+		lo, hi := BlockRange(n)
+		for s := lo; s <= hi; s++ {
+			m[s] = true
+		}
+	}
+	return m
+}()
+
+// IsThinFloor reports whether a block is a carpet-like flat cover.
+func IsThinFloor(state uint32) bool { return thinFloors[state] }

@@ -488,7 +488,8 @@ func (w *World) mobStandable(x, y, z int) bool {
 		return false
 	}
 	s := w.Block(x, y, z)
-	return worldgen.Collides(s) && !worldgen.IsTallCollision(s) && !worldgen.IsDoor(s)
+	return worldgen.Collides(s) && !worldgen.IsTallCollision(s) && !worldgen.IsDoor(s) &&
+		!worldgen.IsThinFloor(s) // a carpet is not a floor a block high — mobs stand at its cell
 }
 
 // MobFeet is SurfaceFeet for a walking mob: the resting y one above the highest
