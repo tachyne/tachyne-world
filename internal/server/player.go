@@ -139,8 +139,13 @@ func (p *player) setHotbarSlot(slot int, item int32) {
 		return
 	}
 	p.hmu.Lock()
+	if p.hotbar[slot] != item {
+		// a DIFFERENT item clears a creative painting preset; same-item
+		// writes keep it — the hub's inventory mirror re-asserts the slot
+		// right after the creative set and must not wipe the preset
+		p.hotbarPaint[slot] = ""
+	}
 	p.hotbar[slot] = item
-	p.hotbarPaint[slot] = "" // any plain write clears a creative painting preset
 	p.hmu.Unlock()
 }
 
