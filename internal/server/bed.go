@@ -170,8 +170,8 @@ func (h *hub) updateSleep(players map[int32]*tracked) {
 	}
 	dt := h.dayTime.Load()
 	h.dayTime.Store((dt/dayLengthTicks + 1) * dayLengthTicks) // next sunrise
-	if h.raining {                                            // vanilla: sleeping resets the weather with the clock
-		h.startWeather(players, false, false)
+	if h.raining {                                            // vanilla: sleeping through the night resets the weather cycle
+		h.resetWeatherCycle()
 	}
 	body := timeEv(h.tick.Load(), h.dayTime.Load())
 	morning := chatEv("Good morning — the night was slept away")

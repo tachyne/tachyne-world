@@ -233,6 +233,20 @@ func (w *World) MigrateEdits(remap func(state uint32) uint32) (int, error) {
 	return n, w.Save()
 }
 
+// ForEachEdit visits every persisted block edit (world coordinates + state).
+// Used at boot to rebuild derived indexes (e.g. the lightning-rod set) that
+// are otherwise only maintained incrementally as blocks change.
+func (w *World) ForEachEdit(fn func(x, y, z int, state uint32)) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	for key, blocks := range w.edits {
+		for idx, state := range blocks {
+			lx, y, lz := splitIndex(idx)
+			fn(int(key[0])*16+lx, y, int(key[1])*16+lz, state)
+		}
+	}
+}
+
 // generated returns the cached, pre-edit generator output for a chunk, building
 // and caching it on a miss. The returned chunk is shared and must NOT be mutated
 // by callers — apply edits onto a copy (see Chunk) or read through an overlay.

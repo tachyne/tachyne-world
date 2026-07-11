@@ -330,6 +330,13 @@ func (s *Server) Serve() error {
 		s.hub.spawns = newSpawnStore(s.SpawnPointFile)
 		s.hub.rulesPath = "settings.json"
 		s.hub.loadRules()
+		// Rebuild the lightning-rod POI set from the persisted edits, so rods
+		// placed before a restart keep attracting storms.
+		s.hub.world.ForEachEdit(func(x, y, z int, state uint32) {
+			if isLightningRodState(state) {
+				s.hub.rods[blockPos{x, y, z}] = struct{}{}
+			}
+		})
 		if s.LLMAddr != "" {
 			s.hub.llm = newLLMClient(s.LLMAddr, s.LLMModel)
 			log.Printf("LLM NPCs enabled: %s (model %q)", s.LLMAddr, s.LLMModel)

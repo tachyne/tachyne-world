@@ -13,7 +13,6 @@ package server
 
 import (
 	"encoding/binary"
-	"log"
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -112,7 +111,6 @@ func (h *hub) onPlacePainting(players map[int32]*tracked, e evPlacePainting) {
 	if t == nil || e.dir < 2 || e.dir > 5 {
 		return
 	}
-	log.Printf("painting place: eid=%d preset=%q at %d,%d,%d dir=%d", e.eid, e.variant, e.x, e.y, e.z, e.dir)
 	if e.variant != "" { // a creative preset places exactly that variant
 		for _, v := range paintingVariants {
 			if v.Name == e.variant {

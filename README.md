@@ -170,9 +170,13 @@ multi-pod plan).
   TCP load tester — pre-`c15e1e4` in git history)
 
 **Feel**
-- Weather: rain and thunderstorms on vanilla cycles, real lightning strikes
-  (flash + thunder + damage), rain shields the undead at dawn, sleeping
-  clears the storm, /weather for ops
+- Weather: the vanilla two-timer cycle (independent rain and thunder spells —
+  a thunderstorm is their rare overlap), levels that fade in/out, state that
+  survives restarts; lightning at vanilla odds prefers lightning rods within
+  128 blocks, then sky-exposed creatures, starts fires on normal+, and can
+  drop a skeleton trap horse; no rain or bolts over deserts or snowfields;
+  rain shields the undead at dawn, sleeping resets the cycle,
+  `/weather <clear|rain|thunder> [duration]` + `doWeatherCycle` for ops
 - Sounds throughout — mob growls/hurt/death, combat, explosions (with the
   real boom + mushroom cloud), XP dings, level-ups, chests, enchanting —
   sent inline-by-name so they work identically on every client version

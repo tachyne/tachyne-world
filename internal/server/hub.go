@@ -363,11 +363,20 @@ type hub struct {
 	villageDone  map[blockPos]bool  // villages populated this session
 	outpostDone  map[blockPos]bool  // pillager outposts populated this session
 
-	// Weather (hub-goroutine-only): the rain/thunder cycle + live lightning.
-	raining     bool
-	thundering  bool
-	weatherLeft int // ticks until the current spell flips
-	bolts       []bolt
+	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
+	// raining/thundering are the level-derived gameplay booleans the rest of
+	// the engine reads; the flags/timers/levels are the cycle's internals.
+	raining      bool
+	thundering   bool
+	rainFlag     bool // vanilla WeatherData.raining (the timer's target)
+	thunderFlag  bool // vanilla WeatherData.thundering
+	clearTime    int  // /weather clear window (suppresses both spells)
+	rainTime     int  // ticks left in the current rain spell or delay
+	thunderTime  int  // ticks left in the current thunder spell or delay
+	rainLevel    float32
+	thunderLevel float32
+	rods         map[blockPos]struct{} // lightning-rod POIs (overworld)
+	bolts        []bolt
 
 	// Each herd has its own goal the cows in it travel toward, so a herd moves as
 	// one group. Goals roam slowly over land. A mob's herd index points in here.
@@ -457,8 +466,9 @@ func newHub(w *world.World) *hub {
 		crystals:      map[int32]*crystal{},
 		villageDone:   map[blockPos]bool{},
 		outpostDone:   map[blockPos]bool{},
-		// First rain rolls in after the minimum clear spell (10 min).
-		weatherLeft: clearMinTicks,
+		rods:          map[blockPos]struct{}{},
+		// Weather timers start at zero: the first tick rolls fresh vanilla
+		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
 	return h
@@ -616,7 +626,6 @@ func (h *hub) run() {
 				}
 				h.updateBrewing(players)
 				h.mobAmbience(players)        // idle groans/moos near players
-				h.updateWeather(players)      // rain/thunder cycle + lightning strikes
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
 			}
@@ -624,8 +633,9 @@ func (h *hub) run() {
 				h.wildSpawn(players)  // keep the countryside stocked with animals
 				h.waterSpawn(players) // squid/fish/dolphins in the seas
 			}
-			h.updateBolts(players) // despawn finished lightning flashes
-			h.updateTNT(players)   // primed charges burn their fuses
+			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
+			h.updateBolts(players)   // despawn finished lightning flashes
+			h.updateTNT(players)     // primed charges burn their fuses
 			h.updatePlates(players)
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
@@ -673,6 +683,7 @@ func (h *hub) run() {
 					h.containers.recordPaintings(h.paintings)
 					h.containers.flush()
 				}
+				h.saveRules() // weather timers ride settings.json (tiny file)
 			}
 
 			if len(h.hud) > 0 && age%hudRefresh == 0 {
@@ -839,7 +850,7 @@ func (h *hub) run() {
 			case evSetRule:
 				h.applyRule(players, e)
 			case evSetWeather:
-				h.startWeather(players, e.rain, e.thunder)
+				h.applyWeatherCommand(e)
 			case evSetHud:
 				if t := players[e.eid]; t != nil {
 					t.hudOn = e.on
@@ -1275,7 +1286,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		e.p.trySendEv(entAdd(o.eid, entityXPOrb, o.uuid, o.x, o.y, o.z, 0, 0))
 	}
 
-	if h.raining { // late joiners start under the same sky
+	if h.rainLevel > 0 { // late joiners start under the same sky
 		h.sendWeather(nt)
 	}
 	h.bus.publish("player_join", map[string]any{"name": e.p.name, "x": e.x, "y": e.y, "z": e.z})
@@ -1411,6 +1422,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	if e.dim != 0 {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}
+	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state) // lightning-rod POI set
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.

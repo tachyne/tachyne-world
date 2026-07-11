@@ -20,18 +20,22 @@ const (
 	diffHard     = 3
 )
 
-// worldRules is the persisted difficulty + gamerule state (hub-owned).
+// worldRules is the persisted difficulty + gamerule state (hub-owned). The
+// weather block is the vanilla WeatherData saved-data fields, snapshotted on
+// every save so the cycle survives a restart mid-storm.
 type worldRules struct {
-	Difficulty     int  `json:"difficulty"`
-	KeepInventory  bool `json:"keepInventory"`
-	DoDaylight     bool `json:"doDaylightCycle"`
-	DoMobSpawning  bool `json:"doMobSpawning"`
-	MobGriefing    bool `json:"mobGriefing"`
-	DragonDefeated bool `json:"dragonDefeated,omitempty"` // the End's fight is won
+	Difficulty     int          `json:"difficulty"`
+	KeepInventory  bool         `json:"keepInventory"`
+	DoDaylight     bool         `json:"doDaylightCycle"`
+	DoMobSpawning  bool         `json:"doMobSpawning"`
+	MobGriefing    bool         `json:"mobGriefing"`
+	DoWeather      bool         `json:"doWeatherCycle"`
+	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
+	Weather        *weatherSave `json:"weather,omitempty"`
 }
 
 func defaultRules() worldRules {
-	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true, MobGriefing: true}
+	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true, MobGriefing: true, DoWeather: true}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -160,11 +164,11 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 		return
 	}
 	if len(args) != 2 || (args[1] != "true" && args[1] != "false") {
-		p.tell("Gamerules: keepInventory doDaylightCycle doMobSpawning mobGriefing — /gamerule <rule> <true|false>")
+		p.tell("Gamerules: keepInventory doDaylightCycle doMobSpawning mobGriefing doWeatherCycle — /gamerule <rule> <true|false>")
 		return
 	}
 	switch args[0] {
-	case "keepInventory", "doDaylightCycle", "doMobSpawning", "mobGriefing":
+	case "keepInventory", "doDaylightCycle", "doMobSpawning", "mobGriefing", "doWeatherCycle":
 	default:
 		p.tell("Unknown gamerule: " + args[0])
 		return
@@ -225,6 +229,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.DoMobSpawning = e.on
 	case "mobGriefing":
 		h.rules.MobGriefing = e.on
+	case "doWeatherCycle":
+		h.rules.DoWeather = e.on
 	}
 	h.saveRules()
 }
@@ -238,11 +244,27 @@ func (h *hub) loadRules() {
 		json.Unmarshal(data, &h.rules)
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
+	if ws := h.rules.Weather; ws != nil {
+		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime
+		h.rainFlag, h.thunderFlag = ws.Raining, ws.Thundering
+		// vanilla prepareWeather: a restored storm resumes at full level (no
+		// fade-in replay for a sky that was already down-pouring).
+		if ws.Raining {
+			h.rainLevel, h.raining = 1, true
+			if ws.Thundering {
+				h.thunderLevel, h.thundering = 1, true
+			}
+		}
+	}
 }
 
 func (h *hub) saveRules() {
 	if h.rulesPath == "" {
 		return
+	}
+	h.rules.Weather = &weatherSave{
+		ClearTime: h.clearTime, RainTime: h.rainTime, ThunderTime: h.thunderTime,
+		Raining: h.rainFlag, Thundering: h.thunderFlag,
 	}
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	os.WriteFile(h.rulesPath, data, 0o644)
