@@ -34,6 +34,9 @@ func (s *Server) connectState(w *world.World, x, y, z int, state uint32) uint32 
 	if worldgen.IsWallConnector(info) {
 		return wallState(w, x, y, z, info, state)
 	}
+	if _, ok := stairInfo(state); ok {
+		return stairShape(w, x, y, z, info, state)
+	}
 	if !worldgen.IsHorizontalConnector(info) {
 		return state
 	}
@@ -93,10 +96,14 @@ func (s *Server) updateConnectNeighbors(w *world.World, dim, x, y, z int) {
 		if !ok {
 			continue
 		}
+		isStair := false
+		if _, ok := stairInfo(cur); ok {
+			isStair = true
+		}
 		switch {
 		case worldgen.IsWallConnector(info):
 			s.refreshWallColumn(w, dim, nx, y, nz)
-		case worldgen.IsHorizontalConnector(info):
+		case worldgen.IsHorizontalConnector(info), isStair:
 			if ns := s.connectState(w, nx, y, nz, cur); ns != cur {
 				w.SetBlock(nx, y, nz, ns)
 				s.hub.post(evBlock{x: nx, y: y, z: nz, dim: dim, state: ns, by: 0})
