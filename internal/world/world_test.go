@@ -169,3 +169,23 @@ func TestMigrateEdits(t *testing.T) {
 		t.Errorf("reloaded migrated block = %d, want 999 (not persisted)", got)
 	}
 }
+
+// TestHeightmapTracksEdits: the chunk heightmap must include the edit
+// overlay — the client gates precipitation on it (rain through built roofs).
+func TestHeightmapTracksEdits(t *testing.T) {
+	w := New(1)
+	base := w.Chunk(0, 0).Heightmap[0] // column lx=0,lz=0
+	w.SetBlock(0, 200, 0, 1)           // build a roof block high above terrain
+	if got := w.Chunk(0, 0).Heightmap[0]; got != 200 {
+		t.Fatalf("heightmap after build = %d, want 200 (terrain was %d)", got, base)
+	}
+	w.SetBlock(0, 200, 0, worldgen.Air) // tear it down again
+	if got := w.Chunk(0, 0).Heightmap[0]; got != base {
+		t.Fatalf("heightmap after removal = %d, want terrain %d", got, base)
+	}
+	// digging the natural surface must LOWER the column
+	w.SetBlock(0, int(base), 0, worldgen.Air)
+	if got := w.Chunk(0, 0).Heightmap[0]; got >= base {
+		t.Fatalf("heightmap after digging surface = %d, want < %d", got, base)
+	}
+}

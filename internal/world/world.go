@@ -607,13 +607,23 @@ func (w *World) Chunk(cx, cz int32) *worldgen.Chunk {
 	*ch = *base // copy the generated terrain so edits don't touch the cache
 
 	w.mu.RLock()
+	var touched [256]bool
+	edited := false
 	for idx, state := range w.edits[chunkPos{cx, cz}] {
 		lx, y, lz := splitIndex(idx)
 		sec := (y - worldgen.MinY) / 16
 		ly := (y - worldgen.MinY) % 16
 		ch.Sections[sec][(ly*16+lz)*16+lx] = state
+		touched[lz*16+lx] = true
+		edited = true
 	}
 	w.mu.RUnlock()
+	if edited {
+		// keep the client-facing heightmap honest about player builds — the
+		// client gates precipitation rendering on it, so without this rain
+		// and snow fall through built roofs on freshly loaded chunks
+		ch.RecomputeHeightmapColumns(&touched)
+	}
 	return ch
 }
 

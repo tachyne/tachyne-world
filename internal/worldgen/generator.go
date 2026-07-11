@@ -184,17 +184,32 @@ func (ch *Chunk) Equal(o *Chunk) bool {
 func (ch *Chunk) computeHeightmap() {
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
-			h := int16(MinY - 1)
-		scan:
-			for s := len(ch.Sections) - 1; s >= 0; s-- {
-				for ly := 15; ly >= 0; ly-- {
-					if ch.Sections[s][(ly*16+lz)*16+lx] != Air {
-						h = int16(MinY + s*16 + ly)
-						break scan
-					}
-				}
+			ch.Heightmap[lz*16+lx] = ch.columnHeight(lx, lz)
+		}
+	}
+}
+
+// columnHeight scans one column top-down for its highest non-air block.
+func (ch *Chunk) columnHeight(lx, lz int) int16 {
+	for s := len(ch.Sections) - 1; s >= 0; s-- {
+		for ly := 15; ly >= 0; ly-- {
+			if ch.Sections[s][(ly*16+lz)*16+lx] != Air {
+				return int16(MinY + s*16 + ly)
 			}
-			ch.Heightmap[lz*16+lx] = h
+		}
+	}
+	return int16(MinY - 1)
+}
+
+// RecomputeHeightmapColumns rescans the marked columns (indexed lz*16+lx) —
+// used after the edit overlay changes a column, so the client-facing
+// heightmap reflects player builds (the client gates precipitation
+// rendering on it: without this, rain and snow fall through built roofs on
+// freshly loaded chunks).
+func (ch *Chunk) RecomputeHeightmapColumns(cols *[256]bool) {
+	for i, touched := range cols {
+		if touched {
+			ch.Heightmap[i] = ch.columnHeight(i&15, i>>4)
 		}
 	}
 }
