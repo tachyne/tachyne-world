@@ -396,6 +396,10 @@ func session(c net.Conn, cfg Config) {
 			if remote != nil {
 				remote.Action(proto.StatsReq{})
 			}
+		case proto.MsgRecipeSettingChange:
+			actTo(remote, payload, proto.RecipeSettingChange{})
+		case proto.MsgRecipeSeen:
+			actTo(remote, payload, proto.RecipeSeen{})
 		case proto.MsgCreativeSlot:
 			actTo(remote, payload, proto.CreativeSlot{})
 		case proto.MsgVehicleMove: // gw→w: the rider steering its vehicle

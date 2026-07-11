@@ -1,12 +1,11 @@
 package server
 
-import (
-	"sync"
+import ()
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
-)
-
-// Recipe book sync: on join the client gets every crafting recipe as a display
+// Recipe book: clicking a book entry sends craft_recipe_request; display ids
+// are canonical recipe indices (shaped first, then shapeless). Which entries
+// the client KNOWS is per-player progression — see recipebook_progress.go.
+// (Legacy note: on join the client used to get every recipe as a display
 // entry (recipe_book_add 0x43), so the green book actually lists what can be
 // made instead of sitting empty. Clicking a book entry sends
 // craft_recipe_request (0x25) with our display id; the hub then auto-fills the
@@ -24,28 +23,6 @@ const (
 
 	recipeCategoryMisc = 3 // crafting_misc book tab (cosmetic placement)
 )
-
-// recipeBookEvent is the full canonical recipe list, built once (it's identical
-// for every player) from the generated recipe tables.
-var recipeBookEvent = sync.OnceValue(func() attachproto.RecipeBook {
-	rb := attachproto.RecipeBook{
-		Shaped:    make([]attachproto.ShapedRecipe, 0, len(shapedRecipes)),
-		Shapeless: make([]attachproto.ShapelessRecipe, 0, len(shapelessRecipes)),
-	}
-	for i := range shapedRecipes {
-		r := &shapedRecipes[i]
-		rb.Shaped = append(rb.Shaped, attachproto.ShapedRecipe{
-			W: int32(r.W), H: int32(r.H), Cells: r.Cells, Result: r.Result, Count: int32(r.Count),
-		})
-	}
-	for i := range shapelessRecipes {
-		r := &shapelessRecipes[i]
-		rb.Shapeless = append(rb.Shapeless, attachproto.ShapelessRecipe{
-			Ingredients: r.Ingredients, Result: r.Result, Count: int32(r.Count),
-		})
-	}
-	return rb
-})
 
 // evCraftRequest is a click on a recipe-book entry: fill the grid with its
 // ingredients from the inventory.

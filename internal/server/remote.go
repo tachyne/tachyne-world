@@ -30,7 +30,6 @@ func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payl
 	// and the mode's abilities (creative flight).
 	r.emitEvNow(attachproto.CommandTree{Data: commandTreeBody})
 	r.emitEvNow(abilitiesFor(mode))
-	r.emitEvNow(recipeBookEvent()) // fill the green crafting book (gateway renders per version)
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, gamemode: mode})
 	return r, nil
 }
@@ -69,7 +68,6 @@ func (s *Server) ResumeRemote(name string, uuid [16]byte, token string, emit fun
 	mode := int(ps.Gamemode)
 	r.emitEvNow(attachproto.CommandTree{Data: commandTreeBody})
 	r.emitEvNow(abilitiesFor(mode))
-	r.emitEvNow(recipeBookEvent())
 	psCopy := ps
 	s.hub.post(evJoin{p: p, x: ps.X, y: ps.Y, z: ps.Z, yaw: ps.Yaw, pitch: ps.Pitch, dim: int(ps.Dim), gamemode: mode, resume: &psCopy})
 	return r, nil
@@ -149,6 +147,10 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evRespawn{eid: p.eid})
 	case attachproto.StatsReq:
 		h.post(evStatsReq{eid: p.eid})
+	case attachproto.RecipeSettingChange:
+		h.post(evRecipeSettings{eid: p.eid, book: e.Book, open: e.Open, filter: e.Filter})
+	case attachproto.RecipeSeen:
+		h.post(evRecipeSeen{eid: p.eid, id: e.ID})
 	case attachproto.CreativeSlot:
 		if r.s.modes.get(p.name) != gmCreative {
 			return
@@ -252,6 +254,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgAdvProgress, ev)
 	case attachproto.Stats:
 		send(attachproto.MsgStats, ev)
+	case attachproto.RecipeSettings:
+		send(attachproto.MsgRecipeSettings, ev)
 	case attachproto.BossBar:
 		send(attachproto.MsgBossBar, ev)
 	case attachproto.Time:

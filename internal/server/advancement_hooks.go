@@ -139,6 +139,7 @@ func (h *hub) advTick(players map[int32]*tracked) {
 				ids = append(ids, t.offhand.item)
 			}
 			h.advance(players, t, "inventory_changed", advMatch{inv: ids})
+			h.recipeUnlocks(t, ids)
 		}
 		if t.dim == 0 { // the visit-every-biome list is overworld-only
 			if biome := h.worldFor(t.dim).BiomeAt(int(t.x), int(t.z)); biome != "" {
