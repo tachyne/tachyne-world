@@ -5,7 +5,7 @@ import (
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Experience: orbs drop from player-killed mobs and mined ore, drift into a

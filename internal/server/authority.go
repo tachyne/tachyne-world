@@ -4,7 +4,7 @@ import (
 	"math"
 	"sync/atomic"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The last of the client-trust gaps (AUTHORITY, the standing rule):

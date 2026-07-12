@@ -1,10 +1,10 @@
 package server
 
 import (
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestNetherWorldIsDistinct(t *testing.T) {

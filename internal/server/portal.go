@@ -4,8 +4,8 @@ import (
 	"log"
 	"sync/atomic"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Nether portals. Flint & steel on an obsidian frame lights it: the frame is

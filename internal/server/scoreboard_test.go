@@ -5,7 +5,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func drainSB(pl *tracked) (objs []attachproto.Objective, scores []attachproto.Score, teams []attachproto.Team, slots []attachproto.DisplaySlot) {

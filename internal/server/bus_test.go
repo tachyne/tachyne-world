@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"tachyne/internal/world"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // waitDayTime polls for an async day-time set to land (settime goes through

@@ -21,8 +21,8 @@ package server
 import (
 	"github.com/tachyne/tachyne-common/protocol"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // paneBases holds the Min state of every IronBarsBlock-family block (iron

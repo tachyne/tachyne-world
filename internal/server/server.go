@@ -4,7 +4,7 @@
 package server
 
 import (
-	"tachyne/internal/attach"
+	"github.com/tachyne/tachyne-world/internal/attach"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // idSpaceVersion marks which block-state id space the persisted edits use. Bump

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // ridingSetup spawns a player and a fresh mob of etype next to it.

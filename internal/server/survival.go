@@ -6,7 +6,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Survival mechanics: health, hunger, damage (fall/void/starve), regeneration,

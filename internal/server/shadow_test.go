@@ -6,7 +6,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/handover"
 	"github.com/tachyne/tachyne-common/shard"
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func axisCases(t *testing.T) {

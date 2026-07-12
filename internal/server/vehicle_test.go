@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func vehSetup(t *testing.T) (*hub, *tracked, map[int32]*tracked, int, int, int) {

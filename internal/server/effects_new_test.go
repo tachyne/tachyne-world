@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func survPlayer(h *hub) *tracked {

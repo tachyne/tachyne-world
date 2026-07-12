@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 
 	proto "github.com/tachyne/tachyne-common/attach"
 )

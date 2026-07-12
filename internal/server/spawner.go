@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Live dungeon spawners + loot chests. Dungeons are pure functions of the
 // seed (worldgen.DungeonIn), so the hub needs no block scan: every 2 seconds

@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Survival inventory + item pickup. A survival player has a 36-slot inventory

@@ -6,7 +6,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/shard"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Movement authority: the client streams Set Player Position packets and the

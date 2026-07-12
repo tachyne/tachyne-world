@@ -2,7 +2,7 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Anvil + grindstone. The anvil combines: sacrifice an identical item or an

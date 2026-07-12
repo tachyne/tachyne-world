@@ -6,7 +6,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Arrow projectiles — fired by skeletons (and later, players with bows). The

@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // The plugin host implements the tachyne/plugin facade interfaces over the

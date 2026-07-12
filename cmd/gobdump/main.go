@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func main() {

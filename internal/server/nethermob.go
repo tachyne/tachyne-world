@@ -3,7 +3,7 @@ package server
 import (
 	"math"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Nether mobs: zombified piglins (neutral until hit), magma cubes (slime

@@ -3,7 +3,7 @@ package server
 import (
 	"math"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Locomotion modes + signature ranged attacks for the roster species. Walkers

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 func init() { plugin.Register(&Example{}) }

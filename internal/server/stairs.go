@@ -9,8 +9,8 @@ package server
 // horizontal neighbour changes, like vanilla updateShape.
 
 import (
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // stairInfo classifies a state as a stair: the only family with facing +

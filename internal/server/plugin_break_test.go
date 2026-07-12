@@ -6,9 +6,9 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // digBody/placeBody encode serverbound action bodies exactly the way

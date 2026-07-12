@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func writeFileForTest(path, content string) error {

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 type chunkPos = [2]int32

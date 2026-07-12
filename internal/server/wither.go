@@ -3,8 +3,8 @@ package server
 import (
 	"math"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The wither boss. Built the vanilla way — a T of soul sand topped with three

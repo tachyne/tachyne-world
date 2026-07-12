@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // Admin commands + world settings: /give /kill /summon /xp, the difficulty

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Beds: right-clicking a bed always sets the player's respawn point; at night

@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Brewing: nether wart farming, water bottles, the brewing stand, and
 // drinkable potions. Potions are potion items carrying a server-side type

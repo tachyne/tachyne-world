@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func bowSetup() (*hub, *tracked, map[int32]*tracked) {

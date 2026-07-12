@@ -368,7 +368,7 @@ A minimal plugin:
 ```go
 package myplugin
 
-import "tachyne/plugin"
+import "github.com/tachyne/tachyne-world/plugin"
 
 func init() { plugin.Register(&MyPlugin{}) }
 
@@ -404,10 +404,13 @@ func (p *MyPlugin) Enable(ctx plugin.Context) error {
 }
 ```
 
-Enable it with a blank import in `cmd/server/plugins.go` and rebuild:
+Enable it with a blank import in `cmd/server/plugins.go` and rebuild — or,
+for plugins living in their own modules, assemble a custom binary with
+**tachyne-build** (no fork needed):
 
-```go
-import _ "tachyne/plugins/myplugin"
+```bash
+go install github.com/tachyne/tachyne-world/cmd/tachyne-build@latest
+tachyne-build --with github.com/you/yourplugin -o my-world
 ```
 
 Operators configure each plugin under `-plugindir` (default `plugins/`, next

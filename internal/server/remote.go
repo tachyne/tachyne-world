@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"tachyne/internal/attach"
+	"github.com/tachyne/tachyne-world/internal/attach"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"

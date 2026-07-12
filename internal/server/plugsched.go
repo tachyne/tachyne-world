@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // pluginSched runs plugin-scheduled functions on the hub goroutine, bucketed

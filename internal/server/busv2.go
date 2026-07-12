@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // The bus event protocol: the plugin event catalog, published as JSON.

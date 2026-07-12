@@ -5,5 +5,5 @@ package main
 // server binary selects its plugin set — the Caddy/Dragonfly model. Plugins
 // stay inert unless configured; see docs/PLUGINS.md.
 import (
-	_ "tachyne/plugins/example"
+	_ "github.com/tachyne/tachyne-world/plugins/example"
 )

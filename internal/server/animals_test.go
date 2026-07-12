@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // TestRosterSpeciesBreed: the new species breed on their table love-food, not

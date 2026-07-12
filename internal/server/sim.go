@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // World simulation: falling blocks and fluid flow, driven by the hub's tick loop.
 // Each changed block schedules re-evaluations of itself and its neighbours; the

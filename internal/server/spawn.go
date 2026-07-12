@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Natural mob spawning — a port of vanilla NaturalSpawner. The old system

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func TestChunkCodecRoundTrip(t *testing.T) {

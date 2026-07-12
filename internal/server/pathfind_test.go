@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // gridPather is a tiny test walkability surface: a flat plane at feet-y=64 with

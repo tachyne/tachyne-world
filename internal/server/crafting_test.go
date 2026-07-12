@@ -3,8 +3,8 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Item ids used in tests (minecraft-data 1.21.5).

@@ -4,7 +4,7 @@ import (
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // Mob combat: a player attacks a mob with the Interact Entity packet; the hub

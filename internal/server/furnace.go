@@ -4,7 +4,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Furnaces: right-click opens the furnace menu; the hub owns per-position

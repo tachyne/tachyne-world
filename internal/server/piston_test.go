@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // pistonEast builds a piston state facing east (extended=false).

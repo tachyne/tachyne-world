@@ -3,7 +3,7 @@ package world
 import (
 	"container/list"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Sky-light propagation. The client does not compute lighting itself, so the

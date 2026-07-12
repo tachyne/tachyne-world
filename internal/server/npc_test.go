@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestExtractJSON(t *testing.T) {

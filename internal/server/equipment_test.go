@@ -6,7 +6,7 @@ import (
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-common/render770"
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestEquipmentPacketShape(t *testing.T) {

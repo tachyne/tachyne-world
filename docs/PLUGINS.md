@@ -18,7 +18,7 @@ action inside the tick (protection, combat tuning) belongs in-process. See
 ```go
 package myplugin
 
-import "tachyne/plugin"
+import "github.com/tachyne/tachyne-world/plugin"
 
 func init() { plugin.Register(&MyPlugin{}) }
 
@@ -49,12 +49,30 @@ func (p *MyPlugin) Disable() {}
 Select it into the binary with a blank import in `cmd/server/plugins.go`:
 
 ```go
-import _ "tachyne/plugins/myplugin"
+import _ "github.com/tachyne/tachyne-world/plugins/myplugin"
 ```
 
-and rebuild. For now plugins live in this repo under `plugins/` (the module
-path isn't fetchable externally); a builder tool that assembles a server
-binary from external plugin modules is planned.
+and rebuild — that's the whole story for in-repo plugins.
+
+**External plugins** are their own Go modules that import
+`github.com/tachyne/tachyne-world/plugin` and register from `init()`.
+Assemble a server binary containing them with **tachyne-build**
+(the xcaddy model):
+
+```bash
+go install github.com/tachyne/tachyne-world/cmd/tachyne-build@latest
+
+tachyne-build --with github.com/you/yourplugin            # fetch latest
+tachyne-build --with github.com/you/yourplugin@v1.2.0 \
+              --with github.com/other/plugin=../checkout \
+              --world <engine version> -o my-world
+```
+
+`--with module[@version][=local-dir]` is repeatable; `=local-dir` points at
+a checkout for plugins in development, and `--world =path` does the same
+for the engine itself. The output binary is the engine plus exactly the
+plugins you listed (the in-repo example plugin ships only in the stock
+`cmd/server` binary). Requires the Go toolchain.
 
 Per-plugin files live under `-plugindir` (default `plugins/`, next to
 `settings.json`):

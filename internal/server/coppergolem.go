@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 const metaIndexCopperWeather = 16 // copper golem WEATHERING_COPPER_STATE index

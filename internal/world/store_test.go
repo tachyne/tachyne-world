@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // TestPersistenceRoundTrip: edits saved by one world are visible to a new world

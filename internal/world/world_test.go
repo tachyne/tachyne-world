@@ -3,7 +3,7 @@ package world
 import (
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // TestEditOverlay: a SetBlock persists, is visible via Block, and appears in the

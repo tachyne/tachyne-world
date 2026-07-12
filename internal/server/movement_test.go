@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // Hacked-client movement simulations: the hub must reject every physically

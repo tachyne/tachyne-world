@@ -5,7 +5,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // TestPaintingPlacement: on a big wall the largest placeable variant wins

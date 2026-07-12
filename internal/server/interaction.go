@@ -3,13 +3,13 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"io"
 	"math"
-	"tachyne/internal/world"
 
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // handleDig processes a Player Action: on a block break it records the edit,

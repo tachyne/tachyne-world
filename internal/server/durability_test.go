@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 var tWoodPick = itemByName["wooden_pickaxe"] // 59 durability, from items_meta_gen

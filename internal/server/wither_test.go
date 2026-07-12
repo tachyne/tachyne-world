@@ -3,8 +3,8 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // buildWitherFrame lays the soul-sand T + three skulls (row along X) centred at

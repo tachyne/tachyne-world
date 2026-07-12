@@ -1,7 +1,7 @@
 package server
 
 import (
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"testing"
 )
 

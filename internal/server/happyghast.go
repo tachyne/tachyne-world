@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // The happy ghast growth chain (1.21.6 "Chase the Skies"). A placed dried_ghast
 // block hydrates while it sits in water or is rained on; once fully hydrated it

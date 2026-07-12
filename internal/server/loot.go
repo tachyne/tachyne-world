@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Block drop tables — what a broken or destroyed block yields as item entities,
 // with vanilla probabilities. Rolled on the hub goroutine (uses h.rng). This is

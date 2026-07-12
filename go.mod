@@ -1,4 +1,4 @@
-module tachyne
+module github.com/tachyne/tachyne-world
 
 go 1.26
 

@@ -5,7 +5,7 @@ import (
 	"log"
 	"math"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The ender dragon fight. The dragon is a hub-driven flyer (it skips the

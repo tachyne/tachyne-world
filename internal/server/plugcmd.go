@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // Plugin command dispatch. handleCommand runs on the SESSION goroutine; a

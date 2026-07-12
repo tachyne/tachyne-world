@@ -5,7 +5,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"math"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Vehicles: minecarts and boats. Riding is client-simulated (like vanilla):

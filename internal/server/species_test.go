@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // Species wiring: each night-mob type gets the right behavior/health/day rules.

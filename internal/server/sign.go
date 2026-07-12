@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // dyeColors are the 16 vanilla DyeColor names.

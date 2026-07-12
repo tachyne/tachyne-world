@@ -1,11 +1,11 @@
 package server
 
 import (
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"math"
-	"tachyne/internal/worldgen"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestHostileChasesTarget(t *testing.T) {

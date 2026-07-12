@@ -2,7 +2,7 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Chests: right-click opens a generic_9x3 window over 27 slots of hub-owned

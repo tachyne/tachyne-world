@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 
-	"tachyne/internal/worldgen"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // Mobs are server-controlled entities — the foundation for the living world

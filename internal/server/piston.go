@@ -1,7 +1,7 @@
 package server
 
 import (
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Pistons (tier 1c). Powered pistons push up to 12 movable blocks one cell

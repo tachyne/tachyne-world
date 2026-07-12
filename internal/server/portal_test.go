@@ -3,8 +3,8 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // buildFrame erects a standard 4x5 obsidian frame (2x3 interior) at (x,y,z)

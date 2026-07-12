@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-common/shard"
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestHubOwnership(t *testing.T) {

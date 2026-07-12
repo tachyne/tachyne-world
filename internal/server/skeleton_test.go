@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestSkeletonShootsAndArrowHits(t *testing.T) {

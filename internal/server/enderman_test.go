@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // TestEndermanStareAggro: looking straight at an enderman's eyes provokes it

@@ -3,9 +3,9 @@ package server
 import (
 	"bytes"
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"math"
 	"sort"
-	"tachyne/internal/worldgen"
 )
 
 // Crafting: server-side container clicks + recipe matching, for the player's

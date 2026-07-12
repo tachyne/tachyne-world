@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Random-tick growth — the "living world" simulation. Vanilla picks a few random
 // blocks per chunk-section per tick and ticks whatever is there; growable blocks

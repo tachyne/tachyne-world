@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // ChunkCache persists generated (pre-edit) chunks so terrain isn't re-derived

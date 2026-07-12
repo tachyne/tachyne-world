@@ -7,7 +7,7 @@ package server
 
 import (
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 const (

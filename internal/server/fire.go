@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Fire + TNT. Flint & steel lights fire blocks (which hurt, set players

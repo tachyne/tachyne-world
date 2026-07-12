@@ -6,8 +6,8 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/handover"
 	"github.com/tachyne/tachyne-common/protocol"
-	"tachyne/internal/worldgen"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // Clientbound play packets used for hostile combat feedback.

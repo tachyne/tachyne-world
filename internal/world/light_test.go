@@ -3,7 +3,7 @@ package world
 import (
 	"testing"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // chunkBlock reads a center-chunk block state at in-chunk (lx, y, lz).

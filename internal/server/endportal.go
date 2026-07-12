@@ -3,7 +3,7 @@ package server
 import (
 	"math"
 
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The end portal: eyes of ender locate the stronghold and fill its frame

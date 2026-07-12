@@ -7,8 +7,8 @@ import (
 	"time"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"tachyne/internal/world"
-	"tachyne/plugin"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/plugin"
 )
 
 // pluginTestHub is the shared setup: a quiet hub (no natural spawning) with

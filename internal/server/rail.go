@@ -1,6 +1,6 @@
 package server
 
-import "tachyne/internal/worldgen"
+import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // Rails (tier: vehicles). Plain rails bend into corners and slopes; powered/
 // detector/activator rails only run straight or ascending. Shapes are

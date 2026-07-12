@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // TestZombieBitesIdlePlayer reproduces the oracle combat experiment: a zombie

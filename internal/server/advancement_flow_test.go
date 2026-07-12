@@ -11,7 +11,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // drainAdvFrames pulls everything queued on the player's out channel and

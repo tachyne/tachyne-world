@@ -1,7 +1,7 @@
 package server
 
 import (
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Redstone tier 1b: repeaters, comparators, observers, pressure plates and

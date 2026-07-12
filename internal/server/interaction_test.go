@@ -2,10 +2,10 @@ package server
 
 import (
 	"encoding/binary"
-	"tachyne/internal/worldgen"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"testing"
 
-	"tachyne/internal/world"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestBlockFaceOffset(t *testing.T) {
