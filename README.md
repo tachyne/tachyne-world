@@ -450,11 +450,11 @@ tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
 `daemons/webmap` (a live web map of the world) is the shipped example, and
 the `busplugin` package is the Go kit. Running under `-config`, the manager
 takes live `install`/`uninstall`/`restart`/`list` commands over the bus —
-in game that's the op-only `/daemon` command — so plugins hot-install,
+in game that's the op-only `/plugin` command — so plugins hot-install,
 hot-remove, and hot-reload while the server runs. Discovery comes from the
-[plugin registry](https://github.com/tachyne/tachyne-registry) (`/daemon search`,
-install by name, out-of-date flags), and on sharded worlds `/daemon`
-spans the whole fleet — including `/daemon upgrade <name>`, a progressive
+[plugin registry](https://github.com/tachyne/tachyne-registry) (`/plugin search`,
+install by name, out-of-date flags), and on sharded worlds `/plugin`
+spans the whole fleet — including `/plugin upgrade <name>`, a progressive
 shard-by-shard rollout that verifies health before each step. Daemons
 observe and command in any language; only tick-veto hooks (protection,
 combat tuning) need the compiled-in plugin API above.

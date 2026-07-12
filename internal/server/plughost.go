@@ -92,7 +92,6 @@ func (s *Server) pluginsSummary() []string {
 		}
 		out = append(out, fmt.Sprintf("  %s [%s]", pl.Name(), state))
 	}
-	out = append(out, "Daemon plugins: /daemon list")
 	return out
 }
 

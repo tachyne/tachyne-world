@@ -232,22 +232,20 @@ In `-config` mode the manager is **live**: it listens on the bus for
 daemons hot-install and hot-remove while everything runs, and the set
 persists back to `daemons.json` across manager restarts. `restart` rebuilds
 first, so an unpinned daemon picks up its latest code — that's the
-hot-reload path. In game, ops drive the same control plane with
-**`/daemon`**:
+hot-reload path. In game, ops drive everything with the one **`/plugin`**
+command (op-only):
 
 ```
-/daemon list                     fleet inventory, OUTDATED flags per shard
-/daemon search <query>           search the registries
-/daemon info <name>              a plugin's registry card
-/daemon rate <name> <1-5>        rate it (per shard host)
-/daemon install <name|module>    install fleet-wide (registry names resolve)
-/daemon uninstall <name>
-/daemon restart <name>
-/daemon upgrade <name>           progressive shard-by-shard rollout
+/plugin list                     compiled-in set + fleet daemon inventory,
+                                 OUTDATED flags per shard
+/plugin search <query>           search the registries
+/plugin info <name>              a plugin's registry card
+/plugin rate <name> <1-5>        rate it (per shard host)
+/plugin install <name|module>    install fleet-wide (registry names resolve)
+/plugin uninstall <name>
+/plugin restart <name>
+/plugin upgrade <name>           progressive shard-by-shard rollout
 ```
-
-`/plugins` (also op-only) lists the plugins compiled into the running
-server binary.
 
 The first daemon in the tree is **`daemons/webmap`**: a live web map
 (players in real time from movement events, mobs via the query, weather/
@@ -268,19 +266,19 @@ submitting the module path. Point managers at one or more registries
 (`-registry` / `TACHYNE_REGISTRY`, comma-separated, merged like package
 sources — running your own is one binary), and:
 
-- `/daemon search <query>` finds plugins in game;
-- `/daemon install <name>` resolves a registry name to its module;
+- `/plugin search <query>` finds plugins in game;
+- `/plugin install <name>` resolves a registry name to its module;
 - installs ping the registry's counters;
 - `list` compares each daemon's built version against the registry's
   latest and flags stale shards.
 
 ### Fleets
 
-Every shard's manager shares the bus, so `/daemon` speaks to the whole
+Every shard's manager shares the bus, so `/plugin` speaks to the whole
 fleet: managers identify themselves (`-name`, default `POD_NAME`), plain
 `mc.daemon.<op>` is a fleet broadcast, `mc.daemon.at.<manager>.<op>`
 targets one shard, and `list` scatter-gathers the full inventory with
-out-of-date flags per shard. **`/daemon upgrade <name>` is the progressive
+out-of-date flags per shard. **`/plugin upgrade <name>` is the progressive
 rollout**: one shard at a time — rebuild at latest, boot, verify the daemon
 reports healthy — and any failure stops the roll with the remaining shards
 untouched.

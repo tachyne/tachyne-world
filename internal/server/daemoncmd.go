@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-// /daemon — in-game control of the tachyne-daemon fleet over the bus. Every
-// shard's manager answers the same subjects (plain op = fleet broadcast,
-// at.<manager>.<op> = one shard), so these commands span the whole fleet.
-// The engine forwards and prints; it never builds or runs daemon code
-// itself. Op-only: installing a daemon executes fetched code on manager
-// hosts.
+// /plugin — the one in-game plugin command (op-only). Daemon operations
+// forward over the bus to every shard's tachyne-daemon manager (plain op =
+// fleet broadcast, at.<manager>.<op> = one shard); registry operations ride
+// the same path. The engine forwards and prints; it never builds or runs
+// daemon code itself.
 //
-//	/daemon list                       fleet inventory (flags OUTDATED shards)
-//	/daemon search <query>             search the configured plugin registries
-//	/daemon info <name>                one plugin's registry card
-//	/daemon rate <name> <1-5>          rate a plugin (per shard host)
-//	/daemon install <module|name> …    install everywhere (registry names resolve)
-//	/daemon uninstall <name>           remove everywhere
-//	/daemon restart <name>             restart everywhere
-//	/daemon upgrade <name>             PROGRESSIVE fleet upgrade: one shard at
+//	/plugin list                       compiled-in set + fleet daemon
+//	                                   inventory (flags OUTDATED shards)
+//	/plugin search <query>             search the configured plugin registries
+//	/plugin info <name>                one plugin's registry card
+//	/plugin rate <name> <1-5>          rate a plugin (per shard host)
+//	/plugin install <module|name> …    install everywhere (registry names resolve)
+//	/plugin uninstall <name>           remove everywhere
+//	/plugin restart <name>             restart everywhere
+//	/plugin upgrade <name>             PROGRESSIVE fleet upgrade: one shard at
 //	                                   a time, verified healthy before the next
 const fleetWindow = 2 * time.Second
 
@@ -66,35 +66,38 @@ func parseReplies(raws []json.RawMessage) []managerReply {
 	return out
 }
 
-func (s *Server) cmdDaemon(p *player, args []string) {
+func (s *Server) cmdPlugin(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
 	if len(args) == 0 {
-		p.tell("Usage: /daemon <list|search <q>|info <name>|rate <name> <1-5>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
+		p.tell("Usage: /plugin <list|search <q>|info <name>|rate <name> <1-5>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
 		return
 	}
 	switch args[0] {
 	case "list":
+		for _, line := range s.pluginsSummary() {
+			p.tell(line)
+		}
 		s.daemonList(p)
 	case "search":
 		s.daemonSearch(p, strings.Join(args[1:], " "))
 	case "info":
 		if len(args) != 2 {
-			p.tell("Usage: /daemon info <name>")
+			p.tell("Usage: /plugin info <name>")
 			return
 		}
 		s.daemonInfo(p, args[1])
 	case "rate":
 		if len(args) != 3 {
-			p.tell("Usage: /daemon rate <name> <1-5>")
+			p.tell("Usage: /plugin rate <name> <1-5>")
 			return
 		}
 		s.daemonRate(p, args[1], args[2])
 	case "install":
 		if len(args) < 2 {
-			p.tell("Usage: /daemon install <module|name> [args…]")
+			p.tell("Usage: /plugin install <module|name> [args…]")
 			return
 		}
 		module, version := args[1], ""
@@ -110,18 +113,18 @@ func (s *Server) cmdDaemon(p *player, args []string) {
 		s.daemonFleetOp(p, "install", payload)
 	case "uninstall", "restart":
 		if len(args) != 2 {
-			p.tell(fmt.Sprintf("Usage: /daemon %s <name>", args[0]))
+			p.tell(fmt.Sprintf("Usage: /plugin %s <name>", args[0]))
 			return
 		}
 		s.daemonFleetOp(p, args[0], map[string]any{"name": args[1]})
 	case "upgrade":
 		if len(args) != 2 {
-			p.tell("Usage: /daemon upgrade <name>  (progressive: one shard at a time)")
+			p.tell("Usage: /plugin upgrade <name>  (progressive: one shard at a time)")
 			return
 		}
 		go s.daemonProgressiveUpgrade(p, args[1]) // multi-shard walk — off the session loop
 	default:
-		p.tell("Usage: /daemon <list|search|info|rate|install|uninstall|restart|upgrade>")
+		p.tell("Usage: /plugin <list|search|info|rate|install|uninstall|restart|upgrade>")
 	}
 }
 
@@ -162,7 +165,7 @@ func (s *Server) daemonList(p *player) {
 		}
 	}
 	if stale > 0 {
-		p.tell(fmt.Sprintf("%d of %d daemons outdated — /daemon upgrade <name> rolls the fleet progressively.", stale, total))
+		p.tell(fmt.Sprintf("%d of %d daemons outdated — /plugin upgrade <name> rolls the fleet progressively.", stale, total))
 	}
 }
 
@@ -210,7 +213,7 @@ func (s *Server) daemonInfo(p *player, name string) {
 	p.tell(fmt.Sprintf("  module %s", pl.Module))
 	p.tell(fmt.Sprintf("  latest %s · %d installs · %.1f★ (%d ratings)",
 		pl.Latest, pl.Installs, pl.Rating, pl.Ratings))
-	p.tell(fmt.Sprintf("  install: /daemon install %s", pl.Name))
+	p.tell(fmt.Sprintf("  install: /plugin install %s", pl.Name))
 }
 
 // daemonRate submits a rating through the manager (one rating per shard
@@ -219,7 +222,7 @@ func (s *Server) daemonRate(p *player, name, starsArg string) {
 	stars := 0
 	fmt.Sscanf(starsArg, "%d", &stars)
 	if stars < 1 || stars > 5 {
-		p.tell("Usage: /daemon rate <name> <1-5>")
+		p.tell("Usage: /plugin rate <name> <1-5>")
 		return
 	}
 	raw, err := s.hub.bus.request("mc.daemon.rate", map[string]any{"name": name, "stars": stars})
