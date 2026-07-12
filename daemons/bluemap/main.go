@@ -66,7 +66,7 @@ func main() {
 		"overworld edit file; nether.gob/end.gob are read from the same directory")
 	seed := flag.Int64("seed", int64(envInt("TACHYNE_SEED", 0)), "world seed (must match the server's)")
 	dataDir := flag.String("data", envOr("BLUEMAP_DATA", "bluemap-data"), "working directory (jar, configs, tiles, JRE)")
-	addr := flag.String("addr", envOr("BLUEMAP_ADDR", ":8123"), "map webserver address")
+	addr := flag.String("addr", envOr("BLUEMAP_ADDR", ":8124"), "map webserver address")
 	radius := flag.Int("radius", envInt("BLUEMAP_RADIUS", 24), "chunk radius exported around -center (plus all edited chunks)")
 	center := flag.String("center", envOr("BLUEMAP_CENTER", "0,0"), "block x,z at the centre of the export window")
 	dims := flag.String("dims", envOr("BLUEMAP_DIMS", "overworld,nether,end"), "dimensions to render")

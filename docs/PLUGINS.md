@@ -278,7 +278,7 @@ bus daemons it must see the server's world files (`-world`, plus the
 seed via `-seed`); it also needs `-accept-download` — BlueMap renders
 with Mojang's own textures and the operator must accept Mojang's EULA
 for that download. Every flag has an env fallback (`BLUEMAP_WORLD`,
-`TACHYNE_SEED`, `BLUEMAP_ADDR` `:8123`, `BLUEMAP_RADIUS`,
+`TACHYNE_SEED`, `BLUEMAP_ADDR` `:8124`, `BLUEMAP_RADIUS`,
 `BLUEMAP_INTERVAL`, `BLUEMAP_ACCEPT_DOWNLOAD`, …) so a manager pod can
 configure it fleet-wide. The same exporter is available standalone as
 `cmd/anvil-export` for one-off conversions.
