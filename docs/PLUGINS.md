@@ -74,6 +74,12 @@ for the engine itself. The output binary is the engine plus exactly the
 plugins you listed (the in-repo example plugin ships only in the stock
 `cmd/server` binary). Requires the Go toolchain.
 
+One go.mod rule for plugin authors: your module must `require` a real
+engine version — run `go get github.com/tachyne/tachyne-world@latest` in
+your plugin directory. `replace` directives in your own go.mod don't apply
+inside the build workspace (that's how Go modules work); for the local dev
+loop use `--with yourmodule=.` instead.
+
 Per-plugin files live under `-plugindir` (default `plugins/`, next to
 `settings.json`):
 
