@@ -142,16 +142,26 @@ func main() {
 				continue
 			}
 			sub := map[string]string{"overworld": "", "nether": "DIM-1", "end": "DIM1"}[id]
+			last := 0
 			n, err := anvil.Export(w, anvil.Options{
 				Dir: savePath, SubDir: sub,
 				CenterX: int32(cx >> 4), CenterZ: int32(cz >> 4),
 				Radius:    int32(*radius),
 				Timestamp: uint32(time.Now().Unix()),
 				State:     st,
+				Progress: func(done, total int) {
+					if done-last >= 2000 {
+						log.Printf("%s: %d/%d chunks", id, done, total)
+						last = done
+					}
+				},
 			})
 			if err != nil {
 				log.Printf("%s: export: %v", id, err)
 				continue
+			}
+			if err := st.Save(statePath); err != nil { // per-dim: survive restarts mid-first-export
+				log.Printf("export state: %v", err)
 			}
 			total += n
 			if id == "overworld" {
@@ -161,9 +171,6 @@ func main() {
 					log.Printf("level.dat: %v", err)
 				}
 			}
-		}
-		if err := st.Save(statePath); err != nil {
-			log.Printf("export state: %v", err)
 		}
 		log.Printf("export: %d chunks changed in %s", total, time.Since(start).Round(time.Millisecond))
 	}
