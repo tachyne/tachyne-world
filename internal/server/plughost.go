@@ -70,6 +70,32 @@ func (s *Server) enablePlugins() error {
 	return nil
 }
 
+// pluginsSummary lists the compiled-in plugin set for /plugins: enabled
+// ones from the host, plus registered-but-disabled stragglers. Session-safe:
+// the host and its enabled set are immutable once the hub runs.
+func (s *Server) pluginsSummary() []string {
+	registered := plugin.Registered()
+	if len(registered) == 0 {
+		return []string{"No plugins compiled into this server."}
+	}
+	enabled := map[string]bool{}
+	if s.hub.plugHost != nil {
+		for _, ep := range s.hub.plugHost.enabled {
+			enabled[ep.p.Name()] = true
+		}
+	}
+	out := []string{fmt.Sprintf("Compiled-in plugins (%d):", len(registered))}
+	for _, pl := range registered {
+		state := "enabled"
+		if !enabled[pl.Name()] {
+			state = "disabled by config"
+		}
+		out = append(out, fmt.Sprintf("  %s [%s]", pl.Name(), state))
+	}
+	out = append(out, "Daemon plugins: /daemon list")
+	return out
+}
+
 // pluginDataDir is where per-plugin config + data folders live (cwd-relative
 // like settings.json; the world PVC picks it up automatically).
 func (s *Server) pluginDataDir() string {

@@ -92,6 +92,40 @@ func TestDaemonFleetCommand(t *testing.T) {
 		t.Fatal("search row missing")
 	}
 
+	// info renders the registry card; rate confirms.
+	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}
+	s.handleCommand(p, "daemon info webmap")
+	if stub.subject != "mc.daemon.info" {
+		t.Fatalf("subject %q", stub.subject)
+	}
+	if !waitChatLine(p, "webmap (daemon) — live map") {
+		t.Fatal("info card missing")
+	}
+	stub.replies = []string{`{"ok":true,"manager":"shard-0"}`}
+	s.handleCommand(p, "daemon rate webmap 5")
+	if stub.subject != "mc.daemon.rate" {
+		t.Fatalf("subject %q", stub.subject)
+	}
+	var rate map[string]any
+	json.Unmarshal(stub.payload, &rate)
+	if rate["stars"].(float64) != 5 {
+		t.Fatalf("rate payload %s", stub.payload)
+	}
+	if !waitChatLine(p, "Rated webmap 5★.") {
+		t.Fatal("rate ack missing")
+	}
+	s.handleCommand(p, "daemon rate webmap 9")
+	if !waitChatLine(p, "Usage: /daemon rate <name> <1-5>") {
+		t.Fatal("bad stars not rejected")
+	}
+
+	// /plugins lists the compiled-in set (op-gated separately).
+	s.handleCommand(p, "plugins")
+	if !waitChatLine(p, "No plugins compiled into this server.") &&
+		!waitChatLine(p, "Daemon plugins: /daemon list") {
+		t.Fatal("/plugins output missing")
+	}
+
 	// A manager error surfaces per shard.
 	stub.replies = []string{`{"ok":false,"manager":"shard-1","error":"no daemon \"ghost\""}`}
 	s.handleCommand(p, "daemon uninstall ghost")

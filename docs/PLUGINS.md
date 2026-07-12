@@ -236,11 +236,18 @@ hot-reload path. In game, ops drive the same control plane with
 **`/daemon`**:
 
 ```
-/daemon list
-/daemon install github.com/you/yourdaemon@v1.0.0 [args…]
-/daemon uninstall yourdaemon
-/daemon restart yourdaemon
+/daemon list                     fleet inventory, OUTDATED flags per shard
+/daemon search <query>           search the registries
+/daemon info <name>              a plugin's registry card
+/daemon rate <name> <1-5>        rate it (per shard host)
+/daemon install <name|module>    install fleet-wide (registry names resolve)
+/daemon uninstall <name>
+/daemon restart <name>
+/daemon upgrade <name>           progressive shard-by-shard rollout
 ```
+
+`/plugins` (also op-only) lists the plugins compiled into the running
+server binary.
 
 The first daemon in the tree is **`daemons/webmap`**: a live web map
 (players in real time from movement events, mobs via the query, weather/

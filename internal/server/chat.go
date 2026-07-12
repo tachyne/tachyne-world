@@ -47,6 +47,14 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.hub.post(evList{p: p})
 	case "daemon":
 		s.cmdDaemon(p, fields[1:])
+	case "plugins":
+		if !s.isOp(p.name) {
+			p.tell("You don't have permission.")
+			return
+		}
+		for _, line := range s.pluginsSummary() {
+			p.tell(line)
+		}
 	case "time":
 		s.cmdTime(p, fields[1:])
 	case "tp", "teleport":

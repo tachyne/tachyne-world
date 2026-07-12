@@ -17,6 +17,8 @@ import (
 //
 //	/daemon list                       fleet inventory (flags OUTDATED shards)
 //	/daemon search <query>             search the configured plugin registries
+//	/daemon info <name>                one plugin's registry card
+//	/daemon rate <name> <1-5>          rate a plugin (per shard host)
 //	/daemon install <module|name> …    install everywhere (registry names resolve)
 //	/daemon uninstall <name>           remove everywhere
 //	/daemon restart <name>             restart everywhere
@@ -70,7 +72,7 @@ func (s *Server) cmdDaemon(p *player, args []string) {
 		return
 	}
 	if len(args) == 0 {
-		p.tell("Usage: /daemon <list|search <q>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
+		p.tell("Usage: /daemon <list|search <q>|info <name>|rate <name> <1-5>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
 		return
 	}
 	switch args[0] {
@@ -78,6 +80,18 @@ func (s *Server) cmdDaemon(p *player, args []string) {
 		s.daemonList(p)
 	case "search":
 		s.daemonSearch(p, strings.Join(args[1:], " "))
+	case "info":
+		if len(args) != 2 {
+			p.tell("Usage: /daemon info <name>")
+			return
+		}
+		s.daemonInfo(p, args[1])
+	case "rate":
+		if len(args) != 3 {
+			p.tell("Usage: /daemon rate <name> <1-5>")
+			return
+		}
+		s.daemonRate(p, args[1], args[2])
 	case "install":
 		if len(args) < 2 {
 			p.tell("Usage: /daemon install <module|name> [args…]")
@@ -107,7 +121,7 @@ func (s *Server) cmdDaemon(p *player, args []string) {
 		}
 		go s.daemonProgressiveUpgrade(p, args[1]) // multi-shard walk — off the session loop
 	default:
-		p.tell("Usage: /daemon <list|search|install|uninstall|restart|upgrade>")
+		p.tell("Usage: /daemon <list|search|info|rate|install|uninstall|restart|upgrade>")
 	}
 }
 
@@ -177,6 +191,48 @@ func (s *Server) daemonSearch(p *player, q string) {
 		p.tell(fmt.Sprintf("%s (%s) %s — %s [%d installs, %.1f★×%d]",
 			pl.Name, pl.Type, pl.Latest, pl.Description, pl.Installs, pl.Rating, pl.Ratings))
 	}
+}
+
+// daemonInfo shows one plugin's full registry card.
+func (s *Server) daemonInfo(p *player, name string) {
+	raw, err := s.hub.bus.request("mc.daemon.info", map[string]any{"name": name})
+	if err != nil {
+		p.tell("Daemon managers unreachable: " + err.Error())
+		return
+	}
+	var r managerReply
+	if json.Unmarshal(raw, &r) != nil || !r.OK || len(r.Plugins) == 0 {
+		p.tell("Info failed: " + r.Error)
+		return
+	}
+	pl := r.Plugins[0]
+	p.tell(fmt.Sprintf("%s (%s) — %s", pl.Name, pl.Type, pl.Description))
+	p.tell(fmt.Sprintf("  module %s", pl.Module))
+	p.tell(fmt.Sprintf("  latest %s · %d installs · %.1f★ (%d ratings)",
+		pl.Latest, pl.Installs, pl.Rating, pl.Ratings))
+	p.tell(fmt.Sprintf("  install: /daemon install %s", pl.Name))
+}
+
+// daemonRate submits a rating through the manager (one rating per shard
+// host — re-rating replaces).
+func (s *Server) daemonRate(p *player, name, starsArg string) {
+	stars := 0
+	fmt.Sscanf(starsArg, "%d", &stars)
+	if stars < 1 || stars > 5 {
+		p.tell("Usage: /daemon rate <name> <1-5>")
+		return
+	}
+	raw, err := s.hub.bus.request("mc.daemon.rate", map[string]any{"name": name, "stars": stars})
+	if err != nil {
+		p.tell("Daemon managers unreachable: " + err.Error())
+		return
+	}
+	var r managerReply
+	if json.Unmarshal(raw, &r) != nil || !r.OK {
+		p.tell("Rating failed: " + r.Error)
+		return
+	}
+	p.tell(fmt.Sprintf("Rated %s %d★.", name, stars))
 }
 
 // daemonFleetOp broadcasts a mutating op and reports per-manager outcomes.

@@ -370,6 +370,35 @@ func (m *manager) serveControl(nc *nats.Conn) error {
 				}
 			case "list":
 				reply(msg, map[string]any{"daemons": m.list()}, nil)
+			case "info":
+				var a struct {
+					Name string `json:"name"`
+				}
+				if json.Unmarshal(msg.Data, &a) != nil || a.Name == "" {
+					reply(msg, nil, fmt.Errorf("info requires name"))
+					return
+				}
+				l, err := m.reg.info(a.Name)
+				if err != nil {
+					reply(msg, nil, err)
+					return
+				}
+				reply(msg, map[string]any{"plugins": []any{l}}, nil)
+			case "rate":
+				var a struct {
+					Name  string `json:"name"`
+					Stars int    `json:"stars"`
+				}
+				if json.Unmarshal(msg.Data, &a) != nil || a.Name == "" || a.Stars < 1 || a.Stars > 5 {
+					reply(msg, nil, fmt.Errorf("rate requires name and stars 1..5"))
+					return
+				}
+				module, err := m.reg.resolve(a.Name)
+				if err != nil {
+					reply(msg, nil, err)
+					return
+				}
+				reply(msg, nil, m.reg.rate(module, a.Stars))
 			case "search":
 				var a struct {
 					Q string `json:"q"`

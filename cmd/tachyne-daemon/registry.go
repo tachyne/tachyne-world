@@ -114,6 +114,42 @@ func (rc *registryClient) latest(module string) string {
 	return ""
 }
 
+// rate posts a rating to the first registry that accepts it. Note: the
+// rating is attributed to the manager host's address, so a whole shard (or
+// cluster behind one egress) counts as one rater — good enough for v1.
+func (rc *registryClient) rate(module string, stars int) error {
+	body := []byte(fmt.Sprintf(`{"stars":%d}`, stars))
+	var lastErr error = fmt.Errorf("no registry configured")
+	for _, base := range rc.urls {
+		res, err := rc.http.Post(base+"/v1/plugins/"+module+"/rate", "application/json", bytes.NewReader(body))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		res.Body.Close()
+		if res.StatusCode == 200 {
+			return nil
+		}
+		lastErr = fmt.Errorf("%s: %s", base, res.Status)
+	}
+	return lastErr
+}
+
+// info fetches a listing by module path or bare registry name.
+func (rc *registryClient) info(nameOrModule string) (*listing, error) {
+	module, err := rc.resolve(nameOrModule)
+	if err != nil {
+		return nil, err
+	}
+	for _, base := range rc.urls {
+		var l listing
+		if err := rc.getJSON(base+"/v1/plugins/"+module, &l); err == nil {
+			return &l, nil
+		}
+	}
+	return nil, fmt.Errorf("%s not listed in the configured registries", module)
+}
+
 // pingInstalled bumps the install counter (fire and forget).
 func (rc *registryClient) pingInstalled(module string) {
 	for _, base := range rc.urls {

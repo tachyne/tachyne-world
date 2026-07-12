@@ -25,7 +25,7 @@ const (
 var commandNames = []string{
 	"ban", "daemon", "difficulty", "effect", "end", "gamemode", "gamerule", "give",
 	"gm", "help", "hud", "kill", "list", "nether", "pardon", "refresh",
-	"rescue", "say", "summon", "teleport", "time", "tp", "weather",
+	"plugins", "rescue", "say", "summon", "teleport", "time", "tp", "weather",
 	"scoreboard", "team", "where", "whitelist", "xp",
 }
 
