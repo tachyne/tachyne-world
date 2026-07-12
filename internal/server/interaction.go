@@ -49,6 +49,12 @@ func (s *Server) handleDig(p *player, data []byte) {
 	broken := s.worldFor(p).Block(x, y, z)
 	mode := s.modes.get(p.name)
 
+	// A punched note block plays its note (vanilla attack) — and the dig
+	// proceeds normally on top of it.
+	if status == digStartBreak && isNoteBlock(broken) {
+		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z})
+	}
+
 	// Mining time: creative breaks instantly on Start; survival/adventure break on
 	// Finish, which the client sends only after the per-block dig time (driven by
 	// the block's hardness) elapses. Acting on the wrong phase per-mode either
@@ -394,6 +400,16 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 	}
 	if isDispenser(state) || isDropper(state) || isHopper(state) || isBrewStand(state) {
 		s.hub.post(evOpenBin{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if isNoteBlock(state) {
+		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z, tune: true})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if isJukebox(state) {
+		s.hub.post(evUseJukebox{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

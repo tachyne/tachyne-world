@@ -101,6 +101,7 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // scatter as item drops and the state is forgotten. Anyone still viewing it
 // gets a resync on their next click (stale window id path).
 func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState uint32) {
+	h.spillJukebox(players, x, y, z, newState)
 	pos := blockPos{x, y, z}
 	spill := func(slots []invStack) {
 		for _, st := range slots {

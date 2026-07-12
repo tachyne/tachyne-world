@@ -369,17 +369,18 @@ type hub struct {
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
-	vehicles     map[int32]*vehicle   // minecarts + boats
-	paintings    map[int32]*painting  // placed hanging paintings (persisted with containers)
-	itemFrames   map[int32]*itemFrame // placed item frames (persisted with containers)
-	detectorsOn  map[blockPos]bool    // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64  // dungeon spawner cooldowns
-	patrolNextAt uint64               // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid   // active village raids by centre
-	brewProg     map[blockPos]int     // brewing stand progress (ticks)
-	portalLinks  map[dimPos]dimPos    // sticky portal pairs (both directions)
-	bossSeen     map[[2]int32]bool    // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors    map[blockPos]uint64  // wooden doors a villager opened → tick opened (auto-close)
+	vehicles     map[int32]*vehicle    // minecarts + boats
+	paintings    map[int32]*painting   // placed hanging paintings (persisted with containers)
+	itemFrames   map[int32]*itemFrame  // placed item frames (persisted with containers)
+	jukeboxes    map[blockPos]*jukebox // discs + playback clocks (persisted with containers)
+	detectorsOn  map[blockPos]bool     // detector rails currently pressed
+	spawnerNext  map[blockPos]uint64   // dungeon spawner cooldowns
+	patrolNextAt uint64                // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid    // active village raids by centre
+	brewProg     map[blockPos]int      // brewing stand progress (ticks)
+	portalLinks  map[dimPos]dimPos     // sticky portal pairs (both directions)
+	bossSeen     map[[2]int32]bool     // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors    map[blockPos]uint64   // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon       *mob               // the ender dragon (nil = none / defeated)
 	crystals     map[int32]*crystal // end crystals by eid
@@ -482,6 +483,7 @@ func newHub(w *world.World) *hub {
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
+		jukeboxes:     map[blockPos]*jukebox{},
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -536,6 +538,7 @@ func (h *hub) run() {
 		h.restoreItems(h.containers.loadItems())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
+		h.jukeboxes = h.containers.loadJukeboxes()
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
 				h.schedule(pos, hopperCadence)
@@ -601,6 +604,9 @@ func (h *hub) run() {
 				for _, t := range players {
 					t.p.trySendEv(body)
 				}
+			}
+			if age%20 == 0 {
+				h.jukeboxTick(players) // end songs whose length elapsed
 			}
 			h.psched.run(age)          // plugin-scheduled tasks see the previous tick's world
 			h.runUpdates(players, age) // falling blocks, fluid flow
@@ -721,6 +727,7 @@ func (h *hub) run() {
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
+					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1071,6 +1078,10 @@ func (h *hub) run() {
 				h.onPlacePainting(players, e)
 			case evPlaceFrame:
 				h.onPlaceFrame(players, e)
+			case evNoteBlock:
+				h.onNoteBlock(players, e)
+			case evUseJukebox:
+				h.onUseJukebox(players, e)
 			case evVehicleMove:
 				if t := players[e.eid]; t != nil {
 					if !h.applyGhastMove(players, t, e) && // piloted happy ghast first…
@@ -1234,6 +1245,7 @@ func (h *hub) run() {
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
+					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()

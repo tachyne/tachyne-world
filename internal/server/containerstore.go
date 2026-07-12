@@ -36,6 +36,7 @@ type containerFile struct {
 	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
 	Paintings []savedPainting         `json:"paintings,omitempty"`
 	Frames    []savedFrame            `json:"frames,omitempty"`
+	Jukeboxes map[string][5]int32     `json:"jukeboxes,omitempty"`
 }
 
 type savedPainting struct {
@@ -281,6 +282,29 @@ func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
 		s.m.Paintings = append(s.m.Paintings, savedPainting{
 			Dim: pt.dim, X: pt.x, Y: pt.y, Z: pt.z, Dir: pt.dir, Variant: pt.variant})
 	}
+}
+
+// recordJukeboxes snapshots jukebox discs (playback clocks reset on boot).
+func (s *containerStore) recordJukeboxes(jbs map[blockPos]*jukebox) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Jukeboxes = map[string][5]int32{}
+	for pos, jb := range jbs {
+		s.m.Jukeboxes[posKey(pos)] = packStack(jb.disc)
+	}
+}
+
+// loadJukeboxes restores held discs (not playing until re-inserted).
+func (s *containerStore) loadJukeboxes() map[blockPos]*jukebox {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]*jukebox{}
+	for key, row := range s.m.Jukeboxes {
+		if pos, ok := parsePosKey(key); ok {
+			out[pos] = &jukebox{disc: unpackStack(row)}
+		}
+	}
+	return out
 }
 
 // recordFrames snapshots the live item frames for the next flush.

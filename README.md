@@ -51,7 +51,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | **Plugins** | ✅ | In-process Go plugin API: Bukkit-style events (priority ladder, cancellable/mutable), weather/time/gamerule/creature-stat mutations, custom commands with tab-completion, tick scheduler, per-plugin config + storage — see `docs/PLUGINS.md`. Out-of-process NATS bus for any-language observers. |
 | Filled maps | ✅ | Craft an empty map and it draws the world vanilla-style as you explore (terrain colors, depth-shaded water, slope shading), with live player markers. Cloning (map + empty maps) and zoom-out (map + 8 paper) work in the crafting grid; maps persist with the world. Banner markers and the cartography table are still to come. |
 | Item frames | ✅ | Regular + glow frames on any block face: insert any item (8-step rotation on click), two-stage punch (item pops first, then the frame), support-loss drops, persist with the world. A framed map renders and pins the green frame marker on that map. |
-| Jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Note blocks & jukebox | ✅ | Note blocks with the full instrument set (block-below picks the instrument, mob heads above imitate), vanilla pitch/particles, right-click tunes and a punch plays; muffled under solid blocks. Jukeboxes take all music discs, play/stop for everyone nearby, eject on click, drop the disc when broken, and persist. Redstone triggering awaits redstone tier 2. |
+| Beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
