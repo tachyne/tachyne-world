@@ -201,6 +201,41 @@ request-reply you get `{"ok":true[,"data":…]}` or `{"ok":false,"error":…}`:
 `mobs` (`{dim?}` filter), `block` (`{x,y,z,dim?}` → state), `world` (age,
 day time, weather, difficulty, counts).
 
+### Daemon plugins
+
+A daemon plugin is a standalone program that attaches to the bus — no
+compiling into the core, hot add/remove, crash-isolated, any language. In Go
+the `busplugin` package is the kit:
+
+```go
+c, _ := busplugin.ConnectEnv() // NATS_URL
+busplugin.On(c, "player_join", func(e plugin.PlayerJoinEvent) {
+    c.Command("say", map[string]any{"text": "Welcome, " + e.Name + "!"})
+})
+```
+
+Distribution is the Go model itself — the module path is the repository.
+**tachyne-daemon** pulls a daemon's source, builds it locally, boots it as
+its own process with `NATS_URL` injected, and supervises it (restart with
+backoff, prefixed logs):
+
+```bash
+go install github.com/tachyne/tachyne-world/cmd/tachyne-daemon@latest
+
+tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
+tachyne-daemon run github.com/you/yourdaemon@v1.0.0 -- --your-flags
+tachyne-daemon -config daemons.json          # supervise a whole set
+```
+
+The first daemon in the tree is **`daemons/webmap`**: a live web map
+(players in real time from movement events, mobs via the query, weather/
+time in the corner) at `:8100`. It's the template — state primed by
+queries, kept fresh by events, zero engine involvement.
+
+Pick the tier by what the plugin does: daemons for everything that
+observes and commands (maps, bridges, economies, bots); compiled-in
+plugins only for tick-veto hooks (protection, combat tuning).
+
 Bus mutations run through the same code paths as plugin facades, so
 in-process plugin events fire for them too — a bus `spawn` is observed (and
 cancellable) by an in-process `MobSpawnEvent` handler, and shows up on

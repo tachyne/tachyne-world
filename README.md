@@ -435,14 +435,22 @@ join greeting + visit counter, depth protection, scheduled announcements,
 compiled into the default binary but inert until configured. Full API
 reference, the event table, and the threading contract: **`docs/PLUGINS.md`**.
 
-For out-of-process integrations (any language), the NATS bus (`-nats`)
-publishes **the same event catalog as JSON** on `mc.event.<name>` and
-accepts a facade-parity command set on `mc.cmd.*` (weather, time, gamerules,
-give, teleport, named mob spawning with stat overrides, plus request-reply
-queries for players/mobs/blocks/world state) — observe-and-command only;
-vetoing an action inside the tick requires an in-process plugin. Planned
-next: a builder tool that assembles a server binary from external plugin
-modules without forking this repo.
+**Daemon plugins** run beside the server instead of inside it: standalone
+programs attached to the NATS bus (`-nats`), which publishes the same event
+catalog as JSON on `mc.event.<name>` and accepts commands + request-reply
+queries on `mc.cmd.*`. Distribution is the Go model — a daemon's module
+path is its repository, and `tachyne-daemon` pulls, builds, boots, and
+supervises it in one command:
+
+```bash
+go install github.com/tachyne/tachyne-world/cmd/tachyne-daemon@latest
+tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
+```
+
+`daemons/webmap` (a live web map of the world) is the shipped example, and
+the `busplugin` package is the Go kit. Daemons observe and command in any
+language; only tick-veto hooks (protection, combat tuning) need the
+compiled-in plugin API above.
 
 ## Layout
 
