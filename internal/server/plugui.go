@@ -190,29 +190,31 @@ func (h *hub) fetchPluginUI(eid, winID int32, seq int, query string) {
 			fail = "daemon managers unreachable: " + err.Error()
 		}
 
-		// Registry search (bare open searches nothing; a query adds results).
-		if query != "" {
-			if raw, err := h.bus.request("mc.plugin.search", map[string]any{"q": query}); err == nil {
-				var r managerReply
-				if jsonUnmarshal(raw, &r) && r.OK {
-					installed := map[string]bool{}
-					for _, e := range entries {
+		// Registry catalog: ALWAYS shown — a bare open lists everything
+		// available (query "" matches all), so an uninstalled plugin stays
+		// one click from reinstall; a query narrows the results.
+		if raw, err := h.bus.request("mc.plugin.search", map[string]any{"q": query}); err == nil {
+			var r managerReply
+			if jsonUnmarshal(raw, &r) && r.OK {
+				installed := map[string]bool{}
+				for _, e := range entries {
+					if e.module != "" {
 						installed[e.module] = true
 					}
-					for _, pl := range r.Plugins {
-						if installed[pl.Module] {
-							continue // already shown as an installed row
-						}
-						entries = append(entries, plugUIEntry{name: pl.Name, module: pl.Module,
-							typ: pl.Type, desc: pl.Description, latest: pl.Latest,
-							installs: pl.Installs, rating: pl.Rating, ratings: pl.Ratings})
-					}
-				} else {
-					fail = "search failed: " + r.Error
 				}
-			} else {
-				fail = "search failed: " + err.Error()
+				for _, pl := range r.Plugins {
+					if installed[pl.Module] {
+						continue // already shown as an installed row
+					}
+					entries = append(entries, plugUIEntry{name: pl.Name, module: pl.Module,
+						typ: pl.Type, desc: pl.Description, latest: pl.Latest,
+						installs: pl.Installs, rating: pl.Rating, ratings: pl.Ratings})
+				}
+			} else if query != "" {
+				fail = "search failed: " + r.Error
 			}
+		} else if query != "" {
+			fail = "search failed: " + err.Error()
 		}
 
 		h.post(evPluginUIFill{eid: eid, winID: winID, seq: seq, entries: entries, fail: fail})
@@ -281,11 +283,11 @@ func (h *hub) sendPluginMain(t *tracked) {
 
 	slots[45] = uiStack(uiItemRefresh, 1, "Refresh", []string{"re-gather the fleet + registry"})
 	actions[45] = plugUIAction{kind: "refresh"}
-	hint := "Search: /plugin ui <query>"
+	hint := "Showing installed + all available plugins"
 	if ui.query != "" {
-		hint = "Searching: " + ui.query
+		hint = "Filtering: " + ui.query
 	}
-	slots[53] = uiStack(uiItemHint, 1, hint, []string{"results appear alongside installed plugins"})
+	slots[53] = uiStack(uiItemHint, 1, hint, []string{"narrow with /plugin ui <query>"})
 
 	h.sendPluginWindow(t, slots)
 	ui.actions = actions

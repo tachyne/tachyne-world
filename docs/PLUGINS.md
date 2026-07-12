@@ -235,8 +235,9 @@ first, so an unpinned daemon picks up its latest code — that's the
 hot-reload path. In game, ops drive everything with the one **`/plugin`**
 command (op-only). Bare **`/plugin`** opens the **plugin browser** — a
 chest-style UI where every plugin is a labelled item: installed plugins and
-fleet daemons (with OUTDATED badges) on the main page, `/plugin ui <query>`
-adds registry search results, and clicking an entry opens its card with
+fleet daemons (with OUTDATED badges), and the whole registry catalog of
+available plugins on the main page (`/plugin ui <query>` narrows it), and
+clicking an entry opens its card with
 install / progressive-upgrade / uninstall / rate-★ actions. The same
 operations exist as subcommands:
 

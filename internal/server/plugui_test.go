@@ -95,7 +95,7 @@ func TestPluginUIBrowseAndAct(t *testing.T) {
 	if len(opens) != 1 || opens[0].Menu != menuGeneric9x6 || opens[0].Title != "Plugins" {
 		t.Fatalf("opens %+v", opens)
 	}
-	if stub.subject() != "mc.plugin.list" {
+	if stub.subject() != "mc.plugin.search" { // list then catalog — search is last
 		t.Fatalf("fetch subject %q", stub.subject())
 	}
 	final := fills[len(fills)-1]
