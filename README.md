@@ -354,6 +354,91 @@ scorecard: `docs/MECHANICS.md`. (The `cmd/swarm` load tester and
 layer — git history pre-`c15e1e4`; a load tester returns as an attach-protocol
 tool when needed.)
 
+## Plugins
+
+tachyne has a first-class plugin API. Plugins are ordinary Go packages
+**compiled into the server binary** — the model Go servers converged on
+(Caddy, CoreDNS, Dragonfly): no jar loading, no interpreter, full type
+safety. If you've written Bukkit/Paper plugins the shape will feel familiar:
+event listeners with a priority ladder and cancellation, commands, a tick
+scheduler, and per-plugin config + storage.
+
+A minimal plugin:
+
+```go
+package myplugin
+
+import "tachyne/plugin"
+
+func init() { plugin.Register(&MyPlugin{}) }
+
+type MyPlugin struct{}
+
+func (p *MyPlugin) Name() string { return "myplugin" }
+func (p *MyPlugin) Disable()     {}
+
+func (p *MyPlugin) Enable(ctx plugin.Context) error {
+    srv := ctx.Server()
+
+    // Cancel block breaks below y=40 by non-ops (region protection).
+    plugin.On(ctx.Events(), plugin.Normal, true, func(e *plugin.BlockBreakEvent) {
+        if e.Y < 40 && !srv.IsOp(e.Name) {
+            e.SetCancelled(true)
+        }
+    })
+
+    // Double every zombie's melee damage as it spawns (creature stats).
+    plugin.On(ctx.Events(), plugin.Normal, true, func(e *plugin.MobSpawnEvent) {
+        if e.TypeName == "zombie" {
+            if m, ok := srv.Mob(e.EID); ok {
+                m.SetMeleeDamage(m.MeleeDamage() * 2)
+            }
+        }
+    })
+
+    // A command: /storm starts a thunderstorm.
+    return ctx.RegisterCommand(plugin.Command{
+        Name: "storm", OpOnly: true, Help: "start a thunderstorm",
+        Run: func(c plugin.CommandContext) { c.Server().SetWeather("thunder", -1) },
+    })
+}
+```
+
+Enable it with a blank import in `cmd/server/plugins.go` and rebuild:
+
+```go
+import _ "tachyne/plugins/myplugin"
+```
+
+Operators configure each plugin under `-plugindir` (default `plugins/`, next
+to `settings.json`): `plugins/<name>/config.json` is read by `ctx.Config`
+(the reserved key `"enabled": false` turns a compiled-in plugin off), and
+`plugins/<name>/data.json` is the plugin's persistent KV store, flushed with
+world saves.
+
+What you can hook today: player join/quit/chat/commands/movement, block
+break/place (veto or swap the placed block), melee damage in both directions
+(mutate the amount), mob spawns (cancel, or grab the new mob and change its
+max health / speed / damage), mob deaths (rewrite drops and XP), weather and
+time changes, gamerules. Plus mutations for all of the above, `/help` +
+tab-completion integration for your commands, and `NextTick/After/Every`
+scheduling. The one rule: handlers run on the engine's tick goroutine —
+never block in one; from your own goroutines, `Scheduler().NextTick` is the
+way back in.
+
+The shipped **`plugins/example`** exercises the whole surface (configurable
+join greeting + visit counter, depth protection, scheduled announcements,
+`/storm`, `/sun`, `/buff`) and is the recommended starting template — it's
+compiled into the default binary but inert until configured. Full API
+reference, the event table, and the threading contract: **`docs/PLUGINS.md`**.
+
+For out-of-process integrations (any language), the NATS bus (`-nats`)
+publishes game events on `mc.event.*` and accepts commands on `mc.cmd.*` —
+observe-and-command only; vetoing an action inside the tick requires an
+in-process plugin. Planned next: the bus carrying this same event catalog as
+JSON, and a builder tool that assembles a server binary from external plugin
+modules without forking this repo.
+
 ## Layout
 
 `internal/worldgen` (terrain math, leaf) → `internal/world` (mutable world +
