@@ -21,9 +21,24 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	if len(fields) == 0 {
 		return
 	}
+	// Plugins first: a PlayerCommandEvent listener may cancel or rewrite the
+	// line, and a plugin-registered command consumes it. Unhandled (possibly
+	// rewritten) lines fall through to the switch below.
+	if v := s.pluginCommand(p, cmd, fields[0]); v.handled {
+		return
+	} else if v.line != cmd {
+		fields = strings.Fields(v.line)
+		if len(fields) == 0 {
+			return
+		}
+	}
 	switch fields[0] {
 	case "help":
-		p.tell("Commands: /help /say <msg> /list /time <day|night|noon|midnight|N> /tp <x> <y> <z> /weather <clear|rain|thunder> /effect /give /kill /xp /summon /difficulty /gamerule /gamemode <mode> [player] /hud [on|off]")
+		help := "Commands: /help /say <msg> /list /time <day|night|noon|midnight|N> /tp <x> <y> <z> /weather <clear|rain|thunder> /effect /give /kill /xp /summon /difficulty /gamerule /gamemode <mode> [player] /hud [on|off]"
+		if s.hub.plugHost != nil {
+			help += s.hub.plugHost.pluginHelp()
+		}
+		p.tell(help)
 	case "say":
 		if len(fields) > 1 {
 			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})
@@ -169,7 +184,7 @@ func (s *Server) cmdTime(p *player, args []string) {
 		}
 		t = uint64(n)
 	}
-	s.hub.dayTime.Store(t)
+	s.hub.post(evSetTime{t: t}) // through the hub so the plugin TimeSetEvent fires
 	p.tell(fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
 }
 

@@ -27,6 +27,28 @@ var behaviors = map[string]Behavior{
 	"hostile": hostileBehavior{},
 }
 
+// applyBehavior swaps a mob's steering primitive by registry name — one body
+// shared by the evSetBehavior case (bus) and the plugin Mob.SetBehavior
+// facade. Plugin stat overrides survive the swap.
+func (h *hub) applyBehavior(m *mob, name string) bool {
+	b := behaviors[name]
+	if b == nil {
+		return false
+	}
+	m.behavior = b
+	if _, ok := b.(herdBehavior); ok {
+		m.herd = h.herdNear(m.x, m.z)
+	}
+	_, m.hostile = b.(hostileBehavior)
+	if m.hostile {
+		m.speed = speedFor(m.etype)
+		if m.ovrSpeed > 0 {
+			m.speed = m.ovrSpeed
+		}
+	}
+	return true
+}
+
 // idleBehavior stands still.
 type idleBehavior struct{}
 

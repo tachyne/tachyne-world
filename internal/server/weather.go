@@ -9,6 +9,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"tachyne/internal/worldgen"
+	"tachyne/plugin"
 )
 
 // Weather: a port of the vanilla server's weather cycle (ServerLevel
@@ -86,11 +87,14 @@ func (h *hub) updateWeather(players map[int32]*tracked) {
 			h.clearTime--
 			h.thunderTime = boolTicks(h.thunderFlag)
 			h.rainTime = boolTicks(h.rainFlag)
-			h.thunderFlag, h.rainFlag = false, false
+			h.setThunderFlag(false)
+			h.setRainFlag(false)
 		} else {
 			if h.thunderTime > 0 {
+				// A plugin-cancelled flip leaves the timer at 0, so the
+				// else-branches roll a fresh spell/delay next tick.
 				if h.thunderTime--; h.thunderTime == 0 {
-					h.thunderFlag = !h.thunderFlag
+					h.setThunderFlag(!h.thunderFlag)
 				}
 			} else if h.thunderFlag {
 				h.thunderTime = h.uniformTicks(thunderDurationMin, thunderDurationMax)
@@ -99,7 +103,7 @@ func (h *hub) updateWeather(players map[int32]*tracked) {
 			}
 			if h.rainTime > 0 {
 				if h.rainTime--; h.rainTime == 0 {
-					h.rainFlag = !h.rainFlag
+					h.setRainFlag(!h.rainFlag)
 				}
 			} else if h.rainFlag {
 				h.rainTime = h.uniformTicks(rainDurationMin, rainDurationMax)
@@ -180,9 +184,36 @@ func (h *hub) sendWeather(t *tracked) {
 // timers with the flags off, so the storm ends and fresh delays roll next
 // tick (the sky fades clear over the ramp's five seconds).
 func (h *hub) resetWeatherCycle() {
-	h.rainFlag, h.rainTime = false, 0
-	h.thunderFlag, h.thunderTime = false, 0
+	h.setRainFlag(false)
+	h.setThunderFlag(false)
+	h.rainTime, h.thunderTime = 0, 0
 	h.saveRules()
+}
+
+// setRainFlag proposes a rain-state flip to plugin handlers and reports
+// whether it was applied (an unchanged value is a silent no-op). Hub
+// goroutine only.
+func (h *hub) setRainFlag(v bool) bool {
+	if v == h.rainFlag {
+		return true
+	}
+	if !h.plugins.Fire(&plugin.WeatherChangeEvent{Raining: v}) {
+		return false
+	}
+	h.rainFlag = v
+	return true
+}
+
+// setThunderFlag is setRainFlag's thunder twin.
+func (h *hub) setThunderFlag(v bool) bool {
+	if v == h.thunderFlag {
+		return true
+	}
+	if !h.plugins.Fire(&plugin.ThunderChangeEvent{Thundering: v}) {
+		return false
+	}
+	h.thunderFlag = v
+	return true
 }
 
 // setWeatherParameters ports MinecraftServer.setWeatherParameters — the
@@ -190,7 +221,8 @@ func (h *hub) resetWeatherCycle() {
 func (h *hub) setWeatherParameters(clearTime, weatherTime int, rain, thunder bool) {
 	h.clearTime = clearTime
 	h.rainTime, h.thunderTime = weatherTime, weatherTime
-	h.rainFlag, h.thunderFlag = rain, thunder
+	h.setRainFlag(rain)
+	h.setThunderFlag(thunder)
 	h.saveRules()
 }
 

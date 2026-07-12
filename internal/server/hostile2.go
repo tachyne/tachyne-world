@@ -157,7 +157,12 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 			s = h.spawnHostile(players, m.etype, int(m.x)+h.rng.Intn(3)-1, int(m.z)+h.rng.Intn(3)-1)
 		} else { // nether magma cubes split in place, in their own world
 			s = h.spawnMobIn(players, m.etype, m.dim, m.x+float64(h.rng.Intn(3)-1), m.y, m.z+float64(h.rng.Intn(3)-1))
-			s.hostile, s.behavior = true, Behavior(hostileBehavior{})
+			if s != nil {
+				s.hostile, s.behavior = true, Behavior(hostileBehavior{})
+			}
+		}
+		if s == nil {
+			continue // plugin-cancelled split half
 		}
 		s.size = m.size / 2
 		s.health = s.size * s.size

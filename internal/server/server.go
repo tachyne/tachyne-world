@@ -134,6 +134,10 @@ type Server struct {
 	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
 	Ops             map[string]bool
 
+	// PluginDataDir is where compiled-in plugins keep per-plugin config +
+	// data folders (default "plugins", cwd-relative like settings.json).
+	PluginDataDir string
+
 	// LLM-driven NPCs: OpenAI-compatible endpoint (e.g. LM Studio) + model.
 	// Empty LLMAddr disables NPCs.
 	LLMAddr  string
@@ -180,6 +184,18 @@ type Server struct {
 	end   *world.World // the third dimension (End island)
 	hub   *hub
 	modes *modeStore
+
+	// commandTree is the tab-completion tree including plugin commands,
+	// built once after the plugin enable phase (nil = static built-ins only).
+	commandTree []byte
+}
+
+// commandTreeBytes picks the completion tree sessions send at join.
+func (s *Server) commandTreeBytes() []byte {
+	if s.commandTree != nil {
+		return s.commandTree
+	}
+	return commandTreeBody
 }
 
 // isOp reports whether a player name may run privileged commands.
@@ -367,6 +383,12 @@ func (s *Server) Serve() error {
 			mesh.dial(nb)
 			log.Printf("peer mesh: sid=%d listening %s, neighbours=%v", s.SID, s.PeerAddr, nb)
 		}
+		// Enable compiled-in plugins (registered via blank imports in
+		// cmd/server) before the tick loop starts, so Enable-time listener
+		// and command registration never races a live hub.
+		if err := s.enablePlugins(); err != nil {
+			return err
+		}
 		go s.hub.run()
 	}
 	// Domain attach listener for tachyne gateways ("worlds are versionless":
@@ -488,6 +510,17 @@ func (s *Server) autosave() {
 // the write can't race the tick loop; a short timeout keeps shutdown prompt if
 // the hub is wedged.
 func (s *Server) Save() error {
+	if s.hub != nil && s.hub.plugHost != nil {
+		// Plugin Disable hooks run first (on the hub goroutine), so anything
+		// they write in their stores rides the same shutdown flush.
+		done := make(chan struct{})
+		s.hub.post(evDisablePlugins{done: done})
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			log.Printf("plugin disable timed out; continuing shutdown")
+		}
+	}
 	if s.hub != nil {
 		done := make(chan struct{})
 		s.hub.post(evSaveState{done: done})

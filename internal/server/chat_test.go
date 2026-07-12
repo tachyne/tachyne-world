@@ -41,12 +41,13 @@ func TestGamemodeMapping(t *testing.T) {
 
 func TestCommandTime(t *testing.T) {
 	s := &Server{hub: newHub(world.New(1))}
+	s.hub.rules.DoMobSpawning = false
+	s.hub.rules.DoDaylight = false // hold the clock still so the poll target is exact
+	go s.hub.run()                 // /time routes through the hub (plugin TimeSetEvent)
 	p := newPlayer(1, "tester", [16]byte{})
 
 	s.handleCommand(p, "time night")
-	if got := s.hub.dayTime.Load(); got != 13000 {
-		t.Errorf("after /time night, dayTime = %d, want 13000", got)
-	}
+	waitDayTime(t, s.hub, 13000)
 	// The player should have received a confirmation system-chat packet.
 	select {
 	case pkt := <-p.out:

@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"tachyne/plugin"
 )
 
 // Admin commands + world settings: /give /kill /summon /xp, the difficulty
@@ -233,6 +235,7 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.DoWeather = e.on
 	}
 	h.saveRules()
+	h.plugins.Fire(&plugin.GameruleChangeEvent{Rule: e.rule, On: e.on, Num: e.num})
 }
 
 // loadRules / saveRules persist the world settings as plain JSON.

@@ -71,6 +71,9 @@ func (h *hub) spawnWitherFrom(players map[int32]*tracked, dim, cx, topY, cz int,
 	h.setBlock(players, blockPos{cx, topY - 2, cz}, worldgen.Air) // stem
 
 	m := h.spawnSpecies(players, entityWither, dim, float64(cx)+0.5, float64(topY-2), float64(cz)+0.5)
+	if m == nil {
+		return
+	}
 	m.health = witherHealth
 	m.spawnInvuln = witherSpawnCharge
 	h.playSoundDim(players, dim, "minecraft:entity.wither.spawn", sndHostile, m.x, m.y, m.z, 4, 1)

@@ -35,12 +35,18 @@ var commandNames = []string{
 // (brigadier trees are DAGs; vanilla shares nodes via redirects the same way).
 var commandTreeBody = buildCommandTree()
 
-func buildCommandTree() []byte {
-	b := protocol.AppendVarInt(nil, int32(2+len(commandNames)))
+// buildCommandTree composes the tree for the built-ins plus any extra
+// (plugin-registered) names — all sharing the one greedy-arg node.
+func buildCommandTree(extra ...string) []byte {
+	names := commandNames
+	if len(extra) > 0 {
+		names = append(append([]string{}, commandNames...), extra...)
+	}
+	b := protocol.AppendVarInt(nil, int32(2+len(names)))
 	// node 0: root (type 0), children = every literal
 	b = protocol.AppendU8(b, 0x00)
-	b = protocol.AppendVarInt(b, int32(len(commandNames)))
-	for i := range commandNames {
+	b = protocol.AppendVarInt(b, int32(len(names)))
+	for i := range names {
 		b = protocol.AppendVarInt(b, int32(2+i))
 	}
 	// node 1: argument "args" (type 2 | executable 0x04), greedy string
@@ -50,7 +56,7 @@ func buildCommandTree() []byte {
 	b = protocol.AppendVarInt(b, parserBrigadierString)
 	b = protocol.AppendVarInt(b, stringPropGreedy)
 	// nodes 2..: literals (type 1 | executable 0x04), child = node 1
-	for _, name := range commandNames {
+	for _, name := range names {
 		b = protocol.AppendU8(b, 0x05)
 		b = protocol.AppendVarInt(b, 1)
 		b = protocol.AppendVarInt(b, 1)

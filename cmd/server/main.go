@@ -35,6 +35,7 @@ func main() {
 	earth := flag.String("earth", "", "EARTH MODE: overworld terrain from an embedded real elevation model, e.g. capetown (empty = procedural noise)")
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
+	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	flag.Parse()
 
 	if *addr != "" {
@@ -63,6 +64,7 @@ func main() {
 	srv.SignFile = "signs.json"
 	srv.ContainerFile = "containers.json"
 	srv.SpawnPointFile = "spawns.json"
+	srv.PluginDataDir = *pluginDir
 	if m, ok := server.ParseGamemode(*gamemode); ok {
 		srv.DefaultGamemode = m
 	} else {

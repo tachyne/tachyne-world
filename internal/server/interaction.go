@@ -9,6 +9,7 @@ import (
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"tachyne/internal/worldgen"
+	"tachyne/plugin"
 )
 
 // handleDig processes a Player Action: on a block break it records the edit,
@@ -85,6 +86,15 @@ func (s *Server) handleDig(p *player, data []byte) {
 			}
 		}
 	default: // adventure / spectator cannot break blocks
+		s.sendBlockChange(p, x, y, z, broken, seq)
+		return
+	}
+
+	// Plugin veto point: every authority check passed, nothing applied yet.
+	// A cancel reverts the digger's client prediction — the same idiom as the
+	// unbreakable/fast-break rejections above.
+	if !s.hub.fireSync(&plugin.BlockBreakEvent{EID: p.eid, Name: p.name, Dim: p.dim,
+		X: x, Y: y, Z: z, State: broken}) {
 		s.sendBlockChange(p, x, y, z, broken, seq)
 		return
 	}
@@ -214,6 +224,18 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.abortPlace(p, tx, ty, tz, seq)
 		return
 	}
+	// Plugin veto/mutation point: target cell + proposed default state are
+	// resolved, nothing applied. Fires once per action (multi-cell placements
+	// like doors and beds place both halves under this one event); a mutated
+	// State swaps what gets placed.
+	pev := &plugin.BlockPlaceEvent{EID: p.eid, Name: p.name, Dim: p.dim,
+		X: tx, Y: ty, Z: tz, State: defState}
+	if !s.hub.fireSync(pev) {
+		s.abortPlace(p, tx, ty, tz, seq)
+		return
+	}
+	defState = pev.State
+
 	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
 		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})

@@ -7,6 +7,7 @@ import (
 	"github.com/tachyne/tachyne-common/handover"
 	"github.com/tachyne/tachyne-common/protocol"
 	"tachyne/internal/worldgen"
+	"tachyne/plugin"
 )
 
 // Clientbound play packets used for hostile combat feedback.
@@ -187,6 +188,9 @@ func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *trac
 			continue // vanilla: reinforcements never appear within 7 blocks
 		}
 		r := h.spawnHostile(players, m.etype, sx, sz)
+		if r == nil {
+			return // plugin-cancelled spawn
+		}
 		r.reinf = math.Max(0, m.reinf-0.05)
 		if attacker != nil {
 			r.hasTarget, r.tx, r.tz = true, attacker.x, attacker.z
@@ -299,10 +303,20 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
 		return
 	}
+	dmg := hostileMelee(m) * h.diffMult()
+	// Plugin damage event (mob → player), before the swing so a cancel makes
+	// the whole bite invisible.
+	if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
+		dev := &plugin.EntityDamageByEntityEvent{AttackerEID: m.eid, VictimEID: t.p.eid,
+			VictimIsPlayer: true, Damage: float64(dmg)}
+		if !h.plugins.Fire(dev) {
+			return
+		}
+		dmg = float32(dev.Damage)
+	}
 	// Swing the arm so the bite is visible (not just "walking into you"), deal the
 	// hit, and knock the player back — which also unglues them so they can retaliate.
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
-	dmg := hostileMelee(m) * h.diffMult()
 	// A raised shield facing the attacker catches the whole bite (damage +
 	// on-hit venom), but the knockback still lands.
 	if h.shieldBlocks(t, m.x, m.z) {
@@ -395,6 +409,9 @@ func (h *hub) spawnHostile(players map[int32]*tracked, etype, x, z int) *mob {
 // spawners put mobs underground, not on the surface).
 func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float64) *mob {
 	m := h.spawnMob(players, etype, x, y, z)
+	if m == nil {
+		return nil // plugin-cancelled spawn
+	}
 	m.hostile, m.behavior = true, Behavior(hostileBehavior{}) // speed from speedFor
 	switch etype {
 	case entityZombie, entitySkeleton:

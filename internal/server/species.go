@@ -381,6 +381,9 @@ func (d *speciesDef) stepSpeed() float64 {
 // applySpecies configures a freshly spawned mob from its table row: stance +
 // behavior from the archetype, movement mode flags, equipment, follow range.
 func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
+	if m == nil {
+		return // plugin-cancelled spawn upstream
+	}
 	d := speciesOf(m.etype)
 	if d == nil {
 		return
@@ -424,6 +427,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 // dimension — the one entry point natural spawning, /summon and breeding use.
 func (h *hub) spawnSpecies(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {
 	m := h.spawnMobIn(players, etype, dim, x, y, z)
+	if m == nil {
+		return nil // plugin-cancelled spawn
+	}
 	h.applySpecies(players, m)
 	return m
 }
@@ -488,6 +494,9 @@ func (h *hub) spawnPhantom(players map[int32]*tracked, t *tracked) {
 	x := t.x + float64(h.rng.Intn(21)-10)
 	z := t.z + float64(h.rng.Intn(21)-10)
 	m := h.spawnSpecies(players, entityPhantom, t.dim, x, y, z)
+	if m == nil {
+		return
+	}
 	m.hasTarget, m.tx, m.tz, m.ty = true, t.x, t.z, t.y
 }
 

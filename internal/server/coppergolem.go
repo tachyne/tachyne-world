@@ -186,6 +186,9 @@ func (h *hub) checkCopperGolemBuild(players map[int32]*tracked, dim, x, y, z int
 	h.setBlock(players, blockPos{x, y, z}, worldgen.Air) // pumpkin consumed; golem spawns here
 	h.setBlock(players, blockPos{x, y - 1, z}, chest)    // copper block -> copper chest
 	m := h.spawnSpecies(players, entityCopperGolem, 0, float64(x)+0.5, float64(y)+0.05, float64(z)+0.5)
+	if m == nil {
+		return
+	}
 	m.yaw, m.syaw = 0, 0 // vanilla snapTo yaw 0
 	h.playSound(players, "minecraft:block.copper.place", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
 }

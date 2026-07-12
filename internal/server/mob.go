@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"tachyne/internal/worldgen"
+	"tachyne/plugin"
 )
 
 // Mobs are server-controlled entities — the foundation for the living world
@@ -52,6 +53,7 @@ type mob struct {
 	fuse          int         // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger         int         // spider: mob-updates it stays hostile in daylight after a hit
 	hitByPlayer   bool        // a player has hit it — its death pays XP (vanilla rule)
+	lastAttacker  int32       // eid of the last entity that hurt it (plugin death event)
 	looting       int         // killer's Looting level (stamped per hit, used at drop time)
 	baby          bool        // ageable: half-size, grows up, no drops/XP
 	growLeft      int         // ticks until a baby matures
@@ -118,6 +120,9 @@ type mob struct {
 	tradeXP       int         // trade experience toward the next tier
 	offers        []mobOffer  // this villager's unlocked trades (+ per-offer uses)
 	home          blockPos    // villager house / golem well — the anchor to drift back to
+	maxHealth     int         // effective MAX_HEALTH cap (species default; plugins may raise it)
+	ovrSpeed      float64     // >0: plugin speed override — survives behavior-driven speed resets
+	ovrDamage     float64     // >0: plugin melee-damage override (hostileMelee honors it)
 	uuid          [16]byte
 	x, y, z       float64
 	yaw           float32
@@ -129,17 +134,44 @@ type mob struct {
 
 // spawnMob creates a server-controlled entity and shows it to nearby players.
 // It defaults to neutral wander; callers (or the bus) assign a group behavior.
+// Returns nil when a plugin MobSpawnEvent handler cancels the spawn.
 func (h *hub) spawnMob(players map[int32]*tracked, etype int, x, y, z float64) *mob {
 	return h.spawnMobIn(players, etype, 0, x, y, z)
 }
 
-// spawnMobIn spawns into an explicit dimension (nether mobs).
+// spawnMobIn spawns into an explicit dimension (nether mobs). The reported
+// cause is h.spawnCause, whose zero value is SpawnNatural — command/bus entry
+// points scope it with withSpawnCause so deep helpers report correctly.
 func (h *hub) spawnMobIn(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {
+	return h.spawnMobCause(players, etype, dim, x, y, z, h.spawnCause)
+}
+
+// withSpawnCause runs fn with the given spawn reason in force (hub goroutine
+// only — this is a plain field, not a lock).
+func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
+	old := h.spawnCause
+	h.spawnCause = c
+	fn()
+	h.spawnCause = old
+}
+
+// spawnMobCause is the single spawn choke point, carrying the plugin-visible
+// spawn reason. The mob is registered BEFORE the event fires so a handler can
+// fetch its handle and adjust stats; a cancel unregisters it silently.
+func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), maxHealth: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
+	if plugin.Has[*plugin.MobSpawnEvent](h.plugins) {
+		ev := &plugin.MobSpawnEvent{EID: eid, Type: etype, TypeName: entityNameByID[etype],
+			X: x, Y: y, Z: z, Dim: dim, Reason: cause}
+		if !h.plugins.Fire(ev) {
+			delete(h.mobs, eid)
+			return nil
+		}
+	}
 	h.toNearbyEv(players, dim, x, z, entAdd(eid, etype, m.uuid, x, y, z, 0, 0))
 	h.bus.publish("mob_spawn", map[string]any{"eid": eid, "type": etype, "x": x, "y": y, "z": z})
 	return m

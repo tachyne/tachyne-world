@@ -15,6 +15,7 @@ import (
 	"github.com/tachyne/tachyne-common/shard"
 	"tachyne/internal/world"
 	"tachyne/internal/worldgen"
+	"tachyne/plugin"
 )
 
 // The hub is the central authority: one goroutine owns the player registry and
@@ -79,8 +80,16 @@ type evBlock struct {
 	broken  uint32 // when a dig destroyed a block: its old state (0 = not a break) —
 	//                drives world_event 2001 (break particles + sound) for OTHERS
 }
-type evChat struct{ text string } // broadcast a system message to everyone
+
+// evChat broadcasts chat. from != nil marks real player chat (raw text, no
+// name prefix yet — the hub formats it AFTER the plugin chat event so a
+// mutated message is honored); from == nil is a system line sent verbatim.
+type evChat struct {
+	from *player
+	text string
+}
 type evList struct{ p *player }   // send the online-player list to one player
+type evSetTime struct{ t uint64 } // explicit day-time set (command/bus) — fires the plugin event
 type evSetGamemode struct {       // apply a game-mode change to a named player
 	name string
 	mode int
@@ -135,6 +144,7 @@ type evStopEat struct {                  // release_use_item / hotbar switch: en
 
 func (evJoin) isHubEvent()        {}
 func (evMove) isHubEvent()        {}
+func (evSetTime) isHubEvent()     {}
 func (evLeave) isHubEvent()       {}
 func (evBlock) isHubEvent()       {}
 func (evChat) isHubEvent()        {}
@@ -300,8 +310,19 @@ type hub struct {
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
 	pending map[uint64][]blockPos
 
-	hud        []HudWidget      // action-bar HUD widgets (nil = HUD off)
-	bus        bus              // out-of-process plugin bus (nopBus = disabled)
+	hud []HudWidget // action-bar HUD widgets (nil = HUD off)
+	bus bus         // out-of-process plugin bus (nopBus = disabled)
+
+	// In-process plugin system (plughost.go). plugins is always non-nil so
+	// emission sites never nil-check; playersRef is run()'s registry map,
+	// exposed for facade methods (hub-goroutine-only reads); plugHost is nil
+	// when no plugins are compiled in.
+	plugins    *plugin.Dispatcher
+	playersRef map[int32]*tracked
+	psched     *pluginSched
+	plugHost   *pluginHost
+	spawnCause plugin.SpawnReason // in-force MobSpawnEvent reason (zero = SpawnNatural)
+
 	invs       *invStore        // survival inventory persistence (nil = in-memory only)
 	advs       *advStore        // advancement grant persistence (nil = in-memory only)
 	statstore  *statsStore      // statistics persistence (nil = in-memory only)
@@ -471,6 +492,8 @@ func newHub(w *world.World) *hub {
 		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
+	h.plugins = plugin.NewDispatcher()
+	h.psched = newPluginSched(h)
 	return h
 }
 
@@ -518,6 +541,7 @@ func (h *hub) run() {
 	defer ticker.Stop()
 
 	players := map[int32]*tracked{}
+	h.playersRef = players // created once, never reassigned — facades read it on this goroutine
 
 	// Seed a few clustered herds on dry land near world spawn (so there's life to
 	// see on join). Each herd gets its own roaming goal at its centre, and its
@@ -533,8 +557,9 @@ func (h *hub) run() {
 		herdSize := 3 + h.rng.Intn(3) // 3..5 cows — a family, not a stampede
 		for i := 0; i < herdSize; i++ {
 			x, z := h.spreadSpawn(hx, hz, occupied)
-			m := h.spawnMob(players, entityCow, float64(x), float64(h.world.SurfaceFeet(x, z)), float64(z))
-			m.behavior, m.herd = herdBehavior{}, hi
+			if m := h.spawnMob(players, entityCow, float64(x), float64(h.world.SurfaceFeet(x, z)), float64(z)); m != nil {
+				m.behavior, m.herd = herdBehavior{}, hi
+			}
 		}
 	}
 
@@ -571,6 +596,7 @@ func (h *hub) run() {
 					t.p.trySendEv(body)
 				}
 			}
+			h.psched.run(age)          // plugin-scheduled tasks see the previous tick's world
 			h.runUpdates(players, age) // falling blocks, fluid flow
 			h.updateFurnaces(players)  // smelting progress + lit state + viewer sync
 			h.runRandomTicks(players)  // growth: crops, cane, cactus, saplings, grass, leaves
@@ -684,6 +710,9 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
+				if h.plugHost != nil {
+					h.plugHost.flushStores()
+				}
 			}
 
 			if len(h.hud) > 0 && age%hudRefresh == 0 {
@@ -742,13 +771,30 @@ func (h *hub) run() {
 					h.advance(players, t, "changed_dimension", advMatch{dim: int32(e.dim)})
 				}
 			case evChat:
-				body := chatEv(e.text)
-				for _, t := range players {
-					t.p.trySendEv(body)
+				if e.from == nil {
+					h.roomChat(players, e.text)
+					break
 				}
-				log.Printf("chat: %s", e.text)
-				h.npcsHear(e.text) // so NPCs can hear and remember the room
-				h.bus.publish("chat", map[string]any{"text": e.text})
+				msg := e.text
+				if plugin.Has[*plugin.PlayerChatEvent](h.plugins) {
+					cev := &plugin.PlayerChatEvent{EID: e.from.eid, Name: e.from.name, Message: msg}
+					if !h.plugins.Fire(cev) {
+						break // cancelled: no broadcast, no NPCs, no bus
+					}
+					msg = cev.Message
+				}
+				h.roomChat(players, fmt.Sprintf("<%s> %s", e.from.name, msg))
+			case evSetTime:
+				h.setDayTime(e.t)
+			case evCommand:
+				e.reply <- h.runPluginCommand(e.p, e.line)
+			case evPluginSync:
+				e.reply <- h.plugins.Fire(e.ev)
+			case evDisablePlugins:
+				if h.plugHost != nil {
+					h.plugHost.disableAll()
+				}
+				close(e.done)
 			case evList:
 				names := make([]string, 0, len(players))
 				for _, t := range players {
@@ -792,15 +838,8 @@ func (h *hub) run() {
 				}
 			case evGive:
 				for _, t := range players {
-					if t.p.name == e.target && t.inv != nil {
-						st := invStack{item: e.item, count: e.count}
-						changed, left := t.inv.addStack(st)
-						for _, sl := range changed {
-							h.sendSlot(t, sl)
-						}
-						if left > 0 {
-							h.spawnItem(players, e.item, left, t.x, t.y, t.z)
-						}
+					if t.p.name == e.target {
+						h.giveTo(players, t, e.item, e.count)
 					}
 				}
 			case evKill:
@@ -821,21 +860,26 @@ func (h *hub) run() {
 			case evEndRefresh:
 				h.onEndRefresh(players, e.eid)
 			case evSummon:
-				switch {
-				case e.dim != 0: // summon into the operator's own dimension
-					m := h.spawnMobIn(players, e.etype, e.dim, float64(e.x)+0.5, e.y, float64(e.z)+0.5)
-					if d := speciesOf(e.etype); d != nil {
-						h.applySpecies(players, m) // roster species: proper stance
-					} else {
-						m.hostile, m.behavior = true, idleBehavior{}
+				h.withSpawnCause(plugin.SpawnCommand, func() {
+					switch {
+					case e.dim != 0: // summon into the operator's own dimension
+						m := h.spawnMobIn(players, e.etype, e.dim, float64(e.x)+0.5, e.y, float64(e.z)+0.5)
+						if m == nil {
+							break // plugin-cancelled
+						}
+						if d := speciesOf(e.etype); d != nil {
+							h.applySpecies(players, m) // roster species: proper stance
+						} else {
+							m.hostile, m.behavior = true, idleBehavior{}
+						}
+					case e.etype == entityCow || e.etype == entityChicken || e.etype == entityPig || e.etype == entitySheep:
+						h.spawnAnimal(players, e.etype, e.x, e.z)
+					case isRosterPassive(e.etype):
+						h.spawnAnimal(players, e.etype, e.x, e.z) // wolves/horses/fish/… spawn peaceful
+					default:
+						h.spawnHostile(players, e.etype, e.x, e.z)
 					}
-				case e.etype == entityCow || e.etype == entityChicken || e.etype == entityPig || e.etype == entitySheep:
-					h.spawnAnimal(players, e.etype, e.x, e.z)
-				case isRosterPassive(e.etype):
-					h.spawnAnimal(players, e.etype, e.x, e.z) // wolves/horses/fish/… spawn peaceful
-				default:
-					h.spawnHostile(players, e.etype, e.x, e.z)
-				}
+				})
 			case evUseRedstone:
 				pos := blockPos{e.x, e.y, e.z}
 				st := h.world.At(e.x, e.y, e.z)
@@ -856,37 +900,30 @@ func (h *hub) run() {
 					t.hudOn = e.on
 				}
 			case evSetBlock:
-				h.world.SetBlock(e.x, e.y, e.z, e.state)
-				h.broadcastBlock(players, e.x, e.y, e.z, e.state)
-				h.scheduleAround(blockPos{e.x, e.y, e.z}, 1)
-				h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": "bus"})
+				h.setBlockLive(players, 0, e.x, e.y, e.z, e.state)
 			case evSpawnMob:
 				y := e.y
 				if y == 0 { // convenience: 0 means "snap to the surface"
 					y = float64(h.world.SurfaceFeet(int(math.Floor(e.x)), int(math.Floor(e.z))))
 				}
-				m := h.spawnMob(players, e.etype, e.x, y, e.z)
-				if b := behaviors[e.behavior]; b != nil {
-					m.behavior = b
-				}
-				if _, ok := m.behavior.(herdBehavior); ok {
-					m.herd = h.herdNear(e.x, e.z)
-				}
-				if _, ok := m.behavior.(hostileBehavior); ok {
-					m.hostile = true // speed from speedFor
-				}
-			case evSetBehavior:
-				if m := h.mobs[e.eid]; m != nil {
+				h.withSpawnCause(plugin.SpawnBus, func() {
+					m := h.spawnMob(players, e.etype, e.x, y, e.z)
+					if m == nil {
+						return // plugin-cancelled
+					}
 					if b := behaviors[e.behavior]; b != nil {
 						m.behavior = b
-						if _, ok := b.(herdBehavior); ok {
-							m.herd = h.herdNear(m.x, m.z)
-						}
-						_, m.hostile = b.(hostileBehavior)
-						if m.hostile {
-							m.speed = speedFor(m.etype)
-						}
 					}
+					if _, ok := m.behavior.(herdBehavior); ok {
+						m.herd = h.herdNear(e.x, e.z)
+					}
+					if _, ok := m.behavior.(hostileBehavior); ok {
+						m.hostile = true // speed from speedFor
+					}
+				})
+			case evSetBehavior:
+				if m := h.mobs[e.eid]; m != nil {
+					h.applyBehavior(m, e.behavior)
 				}
 			case evDrop:
 				if !worldgen.HarvestableBy(e.state, e.held) {
@@ -1177,6 +1214,9 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
+				if h.plugHost != nil {
+					h.plugHost.flushStores()
+				}
 				close(e.done)
 			}
 		}
@@ -1290,6 +1330,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		h.sendWeather(nt)
 	}
 	h.bus.publish("player_join", map[string]any{"name": e.p.name, "x": e.x, "y": e.y, "z": e.z})
+	h.plugins.Fire(&plugin.PlayerJoinEvent{EID: e.p.eid, Name: e.p.name, X: e.x, Y: e.y, Z: e.z, Dim: nt.dim})
 }
 
 // onMove relays motion to everyone else as an EntityMove event (absolute) plus
@@ -1303,6 +1344,7 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	if !h.validateMove(t, e) {
 		return // impossible move — not applied, client rubber-banded back
 	}
+	fromX, fromY, fromZ := t.x, t.y, t.z                   // pre-move position (plugin move event)
 	h.onFallAndExhaust(players, t, e)                      // fall damage + walking hunger (reads pre-move position)
 	if d := math.Hypot(e.x-t.x, e.z-t.z); d > 0 && d < 8 { // cm, teleports excluded
 		name := "walk_one_cm"
@@ -1339,6 +1381,10 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		other.p.trySendEv(head)
 	}
 	h.bus.publish("player_move", map[string]any{"name": t.p.name, "x": t.x, "y": t.y, "z": t.z, "yaw": t.yaw})
+	if plugin.Has[*plugin.PlayerMoveEvent](h.plugins) { // hot path: never build the event unheard
+		h.plugins.Fire(&plugin.PlayerMoveEvent{EID: e.eid, Name: t.p.name,
+			FromX: fromX, FromY: fromY, FromZ: fromZ, ToX: t.x, ToY: t.y, ToZ: t.z, Dim: t.dim})
+	}
 }
 
 // onLeave removes the player and tells everyone else to despawn them.
@@ -1394,6 +1440,7 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	}
 	h.shadowGoneAll(p.eid) // retract any cross-seam shadow of the leaver
 	h.bus.publish("player_leave", map[string]any{"name": p.name})
+	h.plugins.Fire(&plugin.PlayerQuitEvent{EID: p.eid, Name: p.name})
 }
 
 // onBlock relays an applied edit to every other player tracking that chunk, so
@@ -1433,6 +1480,73 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 
 // chunkFloor maps a world coordinate to its chunk index (floors toward -inf).
 func chunkFloor(v float64) int { return int(math.Floor(v / 16)) }
+
+// --- shared mutation helpers -----------------------------------------------
+//
+// One implementation each for a mutation reachable two ways: an evXxx case
+// (posted by sessions/bus) and a plugin facade method (already on the hub
+// goroutine, calling directly).
+
+// roomChat sends a chat line to everyone, and lets NPCs + the bus hear it —
+// the full chat sink, unlike raid.go's quiet broadcastChat announcement.
+func (h *hub) roomChat(players map[int32]*tracked, text string) {
+	body := chatEv(text)
+	for _, t := range players {
+		t.p.trySendEv(body)
+	}
+	log.Printf("chat: %s", text)
+	h.npcsHear(text) // so NPCs can hear and remember the room
+	h.bus.publish("chat", map[string]any{"text": text})
+}
+
+// giveTo adds items to a player's inventory, spilling the remainder at their
+// feet (the /give behavior).
+func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count int) {
+	if t.inv == nil {
+		return
+	}
+	st := invStack{item: item, count: count}
+	changed, left := t.inv.addStack(st)
+	for _, sl := range changed {
+		h.sendSlot(t, sl)
+	}
+	if left > 0 {
+		h.spawnItem(players, item, left, t.x, t.y, t.z)
+	}
+}
+
+// setBlockLive applies a world-driven block change (bus/plugin): set,
+// broadcast to the dimension's viewers, and schedule simulation (overworld
+// only — block sim is v1 overworld-only, like onBlock).
+func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	h.worldFor(dim).SetBlock(x, y, z, state)
+	bcx, bcz := chunkFloor(float64(x)), chunkFloor(float64(z))
+	body := blockSetEv(x, y, z, state)
+	for _, t := range players {
+		if t.dim != dim {
+			continue
+		}
+		if abs(chunkFloor(t.x)-bcx) <= viewRadius && abs(chunkFloor(t.z)-bcz) <= viewRadius {
+			t.p.trySendEv(body)
+		}
+	}
+	if dim == 0 {
+		h.rodIndexOnBlockChange(x, y, z, state)
+		h.scheduleAround(blockPos{x, y, z}, 1)
+	}
+	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
+}
+
+// setDayTime sets the day clock explicitly (command, bus, plugin) and fires
+// the plugin TimeSetEvent — the natural per-tick advance never comes here.
+// Hub goroutine only (handlers run inline).
+func (h *hub) setDayTime(v uint64) {
+	old := h.dayTime.Load()
+	h.dayTime.Store(v)
+	if old != v {
+		h.plugins.Fire(&plugin.TimeSetEvent{Old: old, New: v})
+	}
+}
 
 // --- entity domain events -------------------------------------------------
 //

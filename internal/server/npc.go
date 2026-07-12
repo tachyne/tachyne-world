@@ -79,6 +79,9 @@ func (npcBehavior) steer(h *hub, m *mob) (float64, float64) {
 func (h *hub) spawnNPC(players map[int32]*tracked, name, persona string, x, z float64) *npc {
 	y := float64(h.world.SurfaceFeet(int(math.Floor(x)), int(math.Floor(z))))
 	m := h.spawnMob(players, entityVillager, x, y, z)
+	if m == nil {
+		return nil // plugin-cancelled spawn
+	}
 	m.behavior = npcBehavior{}
 	m.usesDoors = true // LLM villagers open wooden doors they walk up to
 	n := &npc{eid: m.eid, name: name, persona: persona, mob: m, memory: loadNPCMemory(name)}

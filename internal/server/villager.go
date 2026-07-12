@@ -47,6 +47,9 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 				for i, house := range v.Houses {
 					m := h.spawnMob(players, entityVillager,
 						float64(house.X)+0.5, float64(house.Y), float64(house.Z)+2.5)
+					if m == nil {
+						continue // plugin-cancelled spawn
+					}
 					// Villager MOVEMENT_SPEED attr is 0.5 with ~0.6 goal
 					// modifiers (vanilla 1.21.5) — brisker than livestock.
 					m.speed = 0.135
@@ -63,6 +66,9 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 				}
 				g := h.spawnMob(players, entityIronGolem,
 					float64(v.X)+2.5, float64(v.Y), float64(v.Z)+2.5)
+				if g == nil {
+					continue // plugin-cancelled spawn
+				}
 				g.health = 100
 				g.noKB = true // KNOCKBACK_RESISTANCE 1.0 (vanilla 1.21.5)
 				g.behavior = golemBehavior{}

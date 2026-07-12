@@ -48,6 +48,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Scoreboard & teams | ✅ | /scoreboard objectives (incl. auto criteria: deaths, kills, health) on sidebar/list/below-name, /team with colors, prefixes and name-tag rules; persists with the world. |
 | Signs | ✅ | All wood types as standing/wall/hanging/wall-hanging signs with the vanilla edit GUI, both text sides, dyes, glow ink, waxing; text persists with the world and rides chunk loads. |
 | Paintings | ✅ | All 47 placeable variants with vanilla selection (largest that fits, random among ties), pop on punch or lost support, persist with the world. Item frames are next. |
+| **Plugins** | ✅ | In-process Go plugin API: Bukkit-style events (priority ladder, cancellable/mutable), weather/time/gamerule/creature-stat mutations, custom commands with tab-completion, tick scheduler, per-plugin config + storage — see `docs/PLUGINS.md`. Out-of-process NATS bus for any-language observers. |
 | Maps, item frames, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
@@ -359,7 +360,9 @@ tool when needed.)
 persistence + light) → `internal/server` (hub tick loop + all gameplay; no
 wire) → `internal/attach` (serves the domain attach protocol to gateways).
 The Minecraft wire format lives in the separate **`tachyne-common`** module
-(`protocol/` + `render770/`), consumed by the gateway repos. See `CLAUDE.md`
+(`protocol/` + `render770/`), consumed by the gateway repos. `plugin/` is the
+public plugin API (compiled-in Go plugins; `plugins/` holds them — see
+`docs/PLUGINS.md`). See `CLAUDE.md`
 for the deep architecture notes and `docs/MECHANICS.md` for the
 vanilla-vs-ours tuning scorecard.
 

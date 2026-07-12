@@ -28,7 +28,7 @@ func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payl
 	mode := s.modes.get(name)
 	// Join-time extras the TCP path sends in handlePlay: tab-completion tree
 	// and the mode's abilities (creative flight).
-	r.emitEvNow(attachproto.CommandTree{Data: commandTreeBody})
+	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
 	r.emitEvNow(abilitiesFor(mode))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, gamemode: mode})
 	return r, nil
@@ -66,14 +66,16 @@ func (s *Server) ResumeRemote(name string, uuid [16]byte, token string, emit fun
 	r := &remotePlayer{s: s, p: p, emit: emit, x: ps.X, y: ps.Y, z: ps.Z, gm: ps.Gamemode}
 	go r.decodeLoop()
 	mode := int(ps.Gamemode)
-	r.emitEvNow(attachproto.CommandTree{Data: commandTreeBody})
+	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
 	r.emitEvNow(abilitiesFor(mode))
 	psCopy := ps
 	s.hub.post(evJoin{p: p, x: ps.X, y: ps.Y, z: ps.Z, yaw: ps.Yaw, pitch: ps.Pitch, dim: int(ps.Dim), gamemode: mode, resume: &psCopy})
 	return r, nil
 }
 func (r *remotePlayer) Chat(text string) {
-	r.s.hub.post(evChat{text: fmt.Sprintf("<%s> %s", r.p.name, text)})
+	// Raw text + sender: the hub formats "<name> …" after the plugin chat
+	// event, so handlers can rewrite or cancel the message.
+	r.s.hub.post(evChat{from: r.p, text: text})
 }
 func (r *remotePlayer) Command(cmd string) { r.s.handleCommand(r.p, cmd) }
 

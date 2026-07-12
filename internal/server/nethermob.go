@@ -90,6 +90,9 @@ func (h *hub) updateNetherMobs(players map[int32]*tracked) {
 
 // configureNetherMob applies species quirks (mirrors configureHostile2).
 func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
+	if m == nil {
+		return // plugin-cancelled spawn
+	}
 	switch m.etype {
 	case entityZombifiedPiglin:
 		m.hostile, m.neutral = true, true        // armed but peaceful until hit

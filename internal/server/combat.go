@@ -4,6 +4,7 @@ import (
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"tachyne/plugin"
 )
 
 // Mob combat: a player attacks a mob with the Interact Entity packet; the hub
@@ -96,6 +97,9 @@ func mobHealth(etype int) int {
 // hostileMelee is a hostile mob's bite damage (skeletons shoot, creepers
 // explode — neither reaches here).
 func hostileMelee(m *mob) float32 {
+	if m.ovrDamage > 0 { // plugin attribute override wins over every species rule
+		return float32(m.ovrDamage)
+	}
 	switch m.etype {
 	case entitySpider:
 		return spiderDamage
@@ -169,6 +173,21 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	dmgF := base * charge
 	if crit {
 		dmgF *= 1.5
+	}
+	dmg := int(math.Max(1, math.Round(dmgF)))
+
+	// Plugin damage event: fires with the final amount, before any effect
+	// (sound, knockback, hurt) — a cancel makes the swing a complete no-op.
+	if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
+		dev := &plugin.EntityDamageByEntityEvent{AttackerEID: attacker, VictimEID: target,
+			AttackerIsPlayer: t != nil, Damage: float64(dmg)}
+		if !h.plugins.Fire(dev) {
+			return
+		}
+		dmg = int(math.Max(0, math.Round(dev.Damage)))
+	}
+
+	if crit {
 		h.spawnParticles(players, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
 		h.playSound(players, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
 	} else if charge >= 0.9 {
@@ -176,7 +195,6 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	} else {
 		h.playSound(players, "minecraft:entity.player.attack.weak", sndPlayer, m.x, m.y, m.z, 1, 1)
 	}
-	dmg := int(math.Max(1, math.Round(dmgF)))
 
 	// Real knockback: shove the mob away from the attacker (server physics —
 	// the impulse rides out uncapped for a few updates). Sprinting hits harder.
@@ -217,6 +235,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 
 	m.hitByPlayer = true // its death now pays XP (vanilla: player-caused only)
+	m.lastAttacker = attacker
 	if t != nil {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
@@ -303,12 +322,16 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	}
 	if m.etype == entitySlime || m.etype == entityMagmaCube {
 		h.splitSlime(players, m) // halves pop out
-		if m.size <= 1 {         // only the smallest drops slimeballs
-			h.spawnItemIn(players, m.dim, itemSlimeball, h.rng.Intn(3), m.x, m.y, m.z)
-		}
+	}
+
+	// Roll everything the death yields FIRST, so the plugin death event can
+	// mutate the drop list and XP before anything hits the ground.
+	var drops []plugin.ItemStack
+	if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 {
+		drops = append(drops, plugin.ItemStack{Item: itemSlimeball, Count: h.rng.Intn(3)})
 	}
 	if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
-		h.spawnItemIn(players, m.dim, itemByName["white_banner"], 1, m.x, m.y, m.z)
+		drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
 	}
 	if !m.baby { // babies drop nothing (vanilla)
 		loot := h.mobLoot(m)
@@ -319,11 +342,24 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			if m.looting > 0 { // Looting: up to +level per roll (vanilla)
 				d.count += h.rng.Intn(m.looting + 1)
 			}
-			h.spawnItemIn(players, m.dim, d.item, d.count, m.x, m.y, m.z)
+			drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
 		}
 	}
+	xp := 0
 	if m.hitByPlayer && !m.baby { // burn/blast/baby deaths pay nothing
-		h.spawnXPOrbIn(players, m.dim, xpForMob(m, h.rng.Intn), m.x, m.y, m.z)
+		xp = xpForMob(m, h.rng.Intn)
+	}
+	if plugin.Has[*plugin.MobDeathEvent](h.plugins) {
+		dev := &plugin.MobDeathEvent{EID: m.eid, Type: m.etype, TypeName: entityNameByID[m.etype],
+			X: m.x, Y: m.y, Z: m.z, Dim: m.dim, KillerEID: m.lastAttacker, Drops: drops, XP: xp}
+		h.plugins.Fire(dev)
+		drops, xp = dev.Drops, dev.XP
+	}
+	for _, d := range drops {
+		h.spawnItemIn(players, m.dim, d.Item, d.Count, m.x, m.y, m.z) // no-ops on count 0
+	}
+	if xp > 0 {
+		h.spawnXPOrbIn(players, m.dim, xp, m.x, m.y, m.z)
 	}
 	h.bus.publish("mob_death", map[string]any{"eid": m.eid, "type": m.etype, "x": m.x, "y": m.y, "z": m.z})
 }

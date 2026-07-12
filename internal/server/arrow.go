@@ -157,8 +157,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					}
 					if a.egg && h.rng.Intn(8) == 0 { // the classic egg-machine gamble
 						chick := h.spawnAnimal(players, entityChicken, int(a.x), int(a.z))
-						chick.baby, chick.growLeft = true, growUpTicks
-						h.toNearbyEv(players, 0, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
+						if chick != nil {
+							chick.baby, chick.growLeft = true, growUpTicks
+							h.toNearbyEv(players, 0, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
+						}
 					}
 					break
 				}

@@ -72,6 +72,9 @@ func loveFood(etype int) int32 {
 // mobHealth) and species quirks (chickens dawdle, sheep pick a fleece).
 func (h *hub) spawnAnimal(players map[int32]*tracked, etype, x, z int) *mob {
 	m := h.spawnMob(players, etype, float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
+	if m == nil {
+		return nil // plugin-cancelled spawn
+	}
 	if etype == entityChicken { // speed comes from speedFor (attr 0.25, like pigs)
 		m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin)
 	}
@@ -178,8 +181,10 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			m.loveTicks, o.loveTicks = 0, 0
 			m.breedCD, o.breedCD = breedCooldown, breedCooldown
 			baby := h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
-			baby.baby, baby.growLeft = true, growUpTicks
-			h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
+			if baby != nil { // a plugin may cancel the birth; the parents still cool down
+				baby.baby, baby.growLeft = true, growUpTicks
+				h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
+			}
 			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
 			breeder := players[m.lovedBy]
 			if breeder == nil {

@@ -75,6 +75,9 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, x, y, z int, state uint
 func (h *hub) hatchGhastling(players map[int32]*tracked, x, y, z int, state uint32) {
 	h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
 	m := h.spawnSpecies(players, entityHappyGhast, 0, float64(x)+0.5, float64(y), float64(z)+0.5)
+	if m == nil {
+		return
+	}
 	m.baby, m.growLeft = true, growUpTicks
 	if info, ok := worldgen.InfoForState(state); ok {
 		m.yaw = facingYaw(worldgen.GetProperty(info, state, "facing"))

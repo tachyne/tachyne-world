@@ -40,7 +40,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) string {
 			Time uint64 `json:"time"`
 		}
 		json.Unmarshal(args, &a)
-		h.dayTime.Store(a.Time)
+		h.post(evSetTime{t: a.Time}) // through the hub so the plugin TimeSetEvent fires
 	case "setblock":
 		var a struct {
 			X     int    `json:"x"`
