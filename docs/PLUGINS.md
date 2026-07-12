@@ -233,7 +233,12 @@ daemons hot-install and hot-remove while everything runs, and the set
 persists back to `daemons.json` across manager restarts. `restart` rebuilds
 first, so an unpinned daemon picks up its latest code — that's the
 hot-reload path. In game, ops drive everything with the one **`/plugin`**
-command (op-only):
+command (op-only). Bare **`/plugin`** opens the **plugin browser** — a
+chest-style UI where every plugin is a labelled item: installed plugins and
+fleet daemons (with OUTDATED badges) on the main page, `/plugin ui <query>`
+adds registry search results, and clicking an entry opens its card with
+install / progressive-upgrade / uninstall / rate-★ actions. The same
+operations exist as subcommands:
 
 ```
 /plugin list                     compiled-in set + fleet daemon inventory,

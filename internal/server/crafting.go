@@ -285,6 +285,10 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		h.resyncWindow(t) // clicked a window we no longer consider open
 		return
 	}
+	if t.winKind == winPlugin { // the plugin browser: read-only, clicks are actions
+		h.pluginUIClick(players, t, e)
+		return
+	}
 
 	// Slot 0 is the crafting result only in windows that HAVE a result slot —
 	// in a furnace/chest it's ordinary storage.

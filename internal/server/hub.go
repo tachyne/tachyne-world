@@ -176,8 +176,9 @@ const (
 	winEnchant
 	winAnvil
 	winGrind
-	winBin   // dispenser/dropper/hopper (h.bins)
-	winTrade // villager merchant screen
+	winBin    // dispenser/dropper/hopper (h.bins)
+	winTrade  // villager merchant screen
+	winPlugin // the server-owned plugin browser (plugui.go)
 )
 
 // tracked is the hub's authoritative record for a connected player. Position is
@@ -248,6 +249,8 @@ type tracked struct {
 	winPos  blockPos    // the furnace/chest block this window views
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	offhand invStack
+
+	plugUI *plugUIState // plugin-browser window state (nil until first opened)
 
 	// Enchanting table view (winEnchant): the two table slots + rolled offers.
 	enchSlots [2]invStack // 0 = the item, 1 = lapis
@@ -782,6 +785,12 @@ func (h *hub) run() {
 				h.setDayTime(e.t)
 			case evCommand:
 				e.reply <- h.runPluginCommand(e.p, e.line)
+			case evOpenPluginUI:
+				if t := players[e.eid]; t != nil {
+					h.openPluginUI(t, e.query)
+				}
+			case evPluginUIFill:
+				h.applyPluginUIFill(players, e)
 			case evPluginSync:
 				e.reply <- h.plugins.Fire(e.ev)
 			case evDisablePlugins:

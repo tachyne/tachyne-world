@@ -71,8 +71,16 @@ func (s *Server) cmdPlugin(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
-	if len(args) == 0 {
-		p.tell("Usage: /plugin <list|search <q>|info <name>|rate <name> <1-5>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
+	if len(args) == 0 { // bare /plugin opens the in-game browser
+		s.hub.post(evOpenPluginUI{eid: p.eid})
+		return
+	}
+	switch args[0] {
+	case "ui": // /plugin ui [query] — the browser, optionally pre-searched
+		s.hub.post(evOpenPluginUI{eid: p.eid, query: strings.Join(args[1:], " ")})
+		return
+	case "help":
+		p.tell("Usage: /plugin [ui <query>] <list|search <q>|info <name>|rate <name> <1-5>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
 		return
 	}
 	switch args[0] {
@@ -122,7 +130,7 @@ func (s *Server) cmdPlugin(p *player, args []string) {
 			p.tell("Usage: /plugin upgrade <name>  (progressive: one shard at a time)")
 			return
 		}
-		go s.daemonProgressiveUpgrade(p, args[1]) // multi-shard walk — off the session loop
+		go s.hub.daemonProgressiveUpgrade(p, args[1]) // multi-shard walk — off the session loop
 	default:
 		p.tell("Usage: /plugin <list|search|info|rate|install|uninstall|restart|upgrade>")
 	}
@@ -263,10 +271,10 @@ func (s *Server) daemonFleetOp(p *player, op string, payload map[string]any) {
 // at a time: upgrade (rebuild@latest + boot), verify the daemon reports
 // running, then move on; any failure stops the roll so a bad release never
 // takes the whole fleet down. Runs off the session goroutine.
-func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
+func (h *hub) daemonProgressiveUpgrade(p *player, name string) {
 	tell := func(f string, a ...any) { p.trySendEv(chatEv(fmt.Sprintf(f, a...))) }
 
-	raws, err := s.hub.bus.requestMany("mc.plugin.list", map[string]any{}, fleetWindow)
+	raws, err := h.bus.requestMany("mc.plugin.list", map[string]any{}, fleetWindow)
 	if err != nil {
 		tell("Daemon managers unreachable: %v", err)
 		return
@@ -287,7 +295,7 @@ func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 
 	for i, mgr := range managers {
 		tell("[%d/%d] %s: upgrading…", i+1, len(managers), mgr)
-		raw, err := s.hub.bus.request("mc.plugin.at."+mgr+".upgrade", map[string]any{"name": name})
+		raw, err := h.bus.request("mc.plugin.at."+mgr+".upgrade", map[string]any{"name": name})
 		if err != nil {
 			tell("[%d/%d] %s: unreachable (%v) — roll STOPPED, %d shard(s) untouched.",
 				i+1, len(managers), mgr, err, len(managers)-i-1)
@@ -299,7 +307,7 @@ func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 				i+1, len(managers), mgr, r.Error, len(managers)-i-1)
 			return
 		}
-		if !s.daemonHealthy(mgr, name, 30*time.Second) {
+		if !h.daemonHealthy(mgr, name, 30*time.Second) {
 			tell("[%d/%d] %s: %s did not come back healthy — roll STOPPED, %d shard(s) untouched.",
 				i+1, len(managers), mgr, name, len(managers)-i-1)
 			return
@@ -310,10 +318,10 @@ func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 }
 
 // daemonHealthy polls one manager until the daemon reports running.
-func (s *Server) daemonHealthy(mgr, name string, within time.Duration) bool {
+func (h *hub) daemonHealthy(mgr, name string, within time.Duration) bool {
 	deadline := time.Now().Add(within)
 	for time.Now().Before(deadline) {
-		raw, err := s.hub.bus.request("mc.plugin.at."+mgr+".list", map[string]any{})
+		raw, err := h.bus.request("mc.plugin.at."+mgr+".list", map[string]any{})
 		if err == nil {
 			var r managerReply
 			if json.Unmarshal(raw, &r) == nil {

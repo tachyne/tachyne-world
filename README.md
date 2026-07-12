@@ -450,7 +450,7 @@ tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 `daemons/webmap` (a live web map of the world) is the shipped example, and
 the `busplugin` package is the Go kit. Running under `-config`, the manager
 takes live `install`/`uninstall`/`restart`/`list` commands over the bus —
-in game that's the op-only `/plugin` command — so plugins hot-install,
+in game that's the op-only `/plugin` command — bare `/plugin` opens a chest-style plugin browser (labelled items, click to install/upgrade/rate) — so plugins hot-install,
 hot-remove, and hot-reload while the server runs. Discovery comes from the
 [plugin registry](https://github.com/tachyne/tachyne-registry) (`/plugin search`,
 install by name, out-of-date flags), and on sharded worlds `/plugin`

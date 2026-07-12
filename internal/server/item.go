@@ -133,6 +133,7 @@ const (
 	componentEnchantments = 10
 	componentStoredEnch   = 34 // books; remapped per version by the chain
 	componentCustomName   = 5  // anvil renames (NBT text); remapped per version
+	componentLore         = 8  // plugin-UI item lore (list of NBT texts); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack

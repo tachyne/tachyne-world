@@ -2,28 +2,52 @@ package server
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 )
 
-// stubDaemonBus answers /daemon round trips with canned manager replies —
-// one reply per fake shard for scatter-gather ops.
+// stubDaemonBus answers /plugin round trips with canned manager replies —
+// one reply per fake shard for scatter-gather ops. Mutex-guarded: UI ops
+// call it from their own goroutines while tests poll.
 type stubDaemonBus struct {
 	nopBus
-	subject string
-	payload []byte
-	replies []string // one JSON reply per fake manager
+	mu       sync.Mutex
+	lastSubj string
+	lastBody []byte
+	replies  []string // one JSON reply per fake manager
+}
+
+func (b *stubDaemonBus) subject() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.lastSubj
+}
+
+func (b *stubDaemonBus) payload() []byte {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.lastBody
+}
+
+func (b *stubDaemonBus) record(subject string, data any) {
+	raw, _ := json.Marshal(data)
+	b.mu.Lock()
+	b.lastSubj, b.lastBody = subject, raw
+	b.mu.Unlock()
 }
 
 func (b *stubDaemonBus) request(subject string, data any) (json.RawMessage, error) {
-	b.subject = subject
-	b.payload, _ = json.Marshal(data)
+	b.record(subject, data)
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	return json.RawMessage(b.replies[0]), nil
 }
 
 func (b *stubDaemonBus) requestMany(subject string, data any, _ time.Duration) ([]json.RawMessage, error) {
-	b.subject = subject
-	b.payload, _ = json.Marshal(data)
+	b.record(subject, data)
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	out := make([]json.RawMessage, len(b.replies))
 	for i, r := range b.replies {
 		out[i] = json.RawMessage(r)
@@ -41,7 +65,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	if !waitChatLine(p, "You don't have permission.") {
 		t.Fatal("non-op /plugin not refused")
 	}
-	if stub.subject != "" {
+	if stub.subject() != "" {
 		t.Fatal("non-op /plugin reached the bus")
 	}
 	s.Ops[p.name] = true
@@ -49,21 +73,21 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// install by registry NAME → {"name": ...}; by module path → {"module": ...}.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0"}`, `{"ok":true,"manager":"shard-1"}`}
 	s.handleCommand(p, "plugin install webmap")
-	if stub.subject != "mc.plugin.install" {
-		t.Fatalf("subject %q", stub.subject)
+	if stub.subject() != "mc.plugin.install" {
+		t.Fatalf("subject %q", stub.subject())
 	}
 	var inst map[string]any
-	json.Unmarshal(stub.payload, &inst)
+	json.Unmarshal(stub.payload(), &inst)
 	if inst["name"] != "webmap" || inst["module"] != nil {
-		t.Fatalf("install payload %s", stub.payload)
+		t.Fatalf("install payload %s", stub.payload())
 	}
 	if !waitChatLine(p, "[shard-0] install: done") || !waitChatLine(p, "[shard-1] install: done") {
 		t.Fatal("per-manager install acks missing")
 	}
 	s.handleCommand(p, "plugin install github.com/x/mapd@v1.2.0")
-	json.Unmarshal(stub.payload, &inst)
+	json.Unmarshal(stub.payload(), &inst)
 	if inst["module"] != "github.com/x/mapd" || inst["version"] != "v1.2.0" {
-		t.Fatalf("module install payload %s", stub.payload)
+		t.Fatalf("module install payload %s", stub.payload())
 	}
 
 	// Fleet list: manager sections + the OUTDATED flag + the summary hint.
@@ -85,8 +109,8 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// search formats registry rows.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}
 	s.handleCommand(p, "plugin search map")
-	if stub.subject != "mc.plugin.search" {
-		t.Fatalf("subject %q", stub.subject)
+	if stub.subject() != "mc.plugin.search" {
+		t.Fatalf("subject %q", stub.subject())
 	}
 	if !waitChatLine(p, "webmap (daemon) v1.1.0 — live map [7 installs, 4.5★×2]") {
 		t.Fatal("search row missing")
@@ -95,21 +119,21 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// info renders the registry card; rate confirms.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}
 	s.handleCommand(p, "plugin info webmap")
-	if stub.subject != "mc.plugin.info" {
-		t.Fatalf("subject %q", stub.subject)
+	if stub.subject() != "mc.plugin.info" {
+		t.Fatalf("subject %q", stub.subject())
 	}
 	if !waitChatLine(p, "webmap (daemon) — live map") {
 		t.Fatal("info card missing")
 	}
 	stub.replies = []string{`{"ok":true,"manager":"shard-0"}`}
 	s.handleCommand(p, "plugin rate webmap 5")
-	if stub.subject != "mc.plugin.rate" {
-		t.Fatalf("subject %q", stub.subject)
+	if stub.subject() != "mc.plugin.rate" {
+		t.Fatalf("subject %q", stub.subject())
 	}
 	var rate map[string]any
-	json.Unmarshal(stub.payload, &rate)
+	json.Unmarshal(stub.payload(), &rate)
 	if rate["stars"].(float64) != 5 {
-		t.Fatalf("rate payload %s", stub.payload)
+		t.Fatalf("rate payload %s", stub.payload())
 	}
 	if !waitChatLine(p, "Rated webmap 5★.") {
 		t.Fatal("rate ack missing")
