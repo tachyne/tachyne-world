@@ -131,6 +131,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("export state: %v", err)
 	}
+	// A previous export means there's already a map worth serving: boot
+	// BlueMap's webserver first and refresh behind it, so restarts and
+	// upgrades don't take the site down for the length of a full re-export.
+	haveSave := fileExists(filepath.Join(savePath, "level.dat"))
+
 	export := func() {
 		start := time.Now()
 		total := 0
@@ -174,7 +179,9 @@ func main() {
 		}
 		log.Printf("export: %d chunks changed in %s", total, time.Since(start).Round(time.Millisecond))
 	}
-	export()
+	if !haveSave {
+		export() // first boot: nothing to serve until the world is exported
+	}
 
 	// The bus is optional: without it the map still renders, just without
 	// live players and the op announcement.
@@ -209,6 +216,9 @@ func main() {
 		go func() { procDone <- proc.Wait() }()
 	}
 	startBlueMap()
+	if haveSave {
+		export() // refresh behind the already-serving webserver
+	}
 
 	tick := time.NewTicker(*interval)
 	defer tick.Stop()

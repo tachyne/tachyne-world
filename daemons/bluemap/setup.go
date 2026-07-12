@@ -19,6 +19,11 @@ import (
 // with BLUEMAP_VERSION). 5.x requires a Java 25 runtime.
 const bluemapVersion = "5.22"
 
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // download fetches url to path via a temp file (no partial artifacts).
 func download(url, path string) error {
 	log.Printf("downloading %s", url)
