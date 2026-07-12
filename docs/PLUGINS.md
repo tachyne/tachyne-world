@@ -145,9 +145,14 @@ is a plugin. Three surfaces:
 
 **Events** — every event in the table above publishes on
 `mc.event.<name>` (`mc.event.block_break`, `mc.event.mob_death`, …) with the
-event struct itself as the JSON payload — same names, same fields as the
-in-process API. Cancelled events are not published (the action didn't
-happen). A few engine events without a catalog equivalent yet publish ad-hoc
+event struct itself as the JSON payload. All wire fields are
+lowercase/snake_case, e.g. on `mc.event.mob_spawn`:
+
+```json
+{"eid":15,"type":150,"type_name":"zombie","x":10.5,"y":61,"z":10.5,"dim":0,"reason":"bus"}
+```
+
+Cancelled events are not published (the action didn't happen). A few engine events without a catalog equivalent yet publish ad-hoc
 payloads on the same namespace (`block_change`, `item_drop`, `explosion`,
 `lightning`, `enchant`, `npc_say`, and the raw `chat` line); they'll migrate
 into the catalog as it grows.

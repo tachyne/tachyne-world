@@ -8,8 +8,8 @@ package plugin
 // ItemStack is an item id + count pair. Item ids are canonical registry
 // ids; resolve names with Server.ItemByName — never hardcode numbers.
 type ItemStack struct {
-	Item  int32
-	Count int
+	Item  int32 `json:"item"`
+	Count int   `json:"count"`
 }
 
 // SpawnOpts optionally overrides a plugin-spawned mob's behavior and

@@ -149,8 +149,8 @@ func TestBusEventBridge(t *testing.T) {
 	for {
 		if raw, ok := rec.get("player_join"); ok {
 			var ev struct {
-				EID  int32  `json:"EID"`
-				Name string `json:"Name"`
+				EID  int32  `json:"eid"`
+				Name string `json:"name"`
 			}
 			if err := json.Unmarshal(raw, &ev); err != nil || ev.Name != "alice" || ev.EID != p1.eid {
 				t.Fatalf("player_join payload %s (err %v)", raw, err)
@@ -176,7 +176,9 @@ func TestBusEventBridge(t *testing.T) {
 	deadline = time.Now().Add(10 * time.Second)
 	for {
 		if raw, ok := rec.get("player_chat"); ok {
-			var ev struct{ Message string }
+			var ev struct {
+				Message string `json:"message"`
+			}
 			json.Unmarshal(raw, &ev)
 			if ev.Message != "audible" {
 				t.Fatalf("player_chat payload %s", raw)
