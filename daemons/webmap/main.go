@@ -35,10 +35,36 @@ type state struct {
 	players map[int32]*entity
 	mobs    map[int32]*entity
 	world   map[string]any
+
+	// downSince dedups poll-failure logging: the engine restarting mid-poll
+	// is routine (rolling deploys), so log the outage once and the recovery
+	// once instead of one line per 2-second poll.
+	downSince time.Time
+}
+
+// pollFailed/pollOK bracket an outage in the log.
+func (st *state) pollFailed(err error) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if st.downSince.IsZero() {
+		st.downSince = time.Now()
+		log.Printf("engine queries failing (%v) — serving last known state until it returns", err)
+	}
+}
+
+func (st *state) pollOK() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if !st.downSince.IsZero() {
+		log.Printf("engine back after %s", time.Since(st.downSince).Round(time.Second))
+		st.downSince = time.Time{}
+	}
 }
 
 func main() {
-	log.SetFlags(0)
+	// Daemons keep timestamps: their logs are read next to the engine's when
+	// correlating incidents (a bare "query failed" line is useless at 3am).
+	log.SetFlags(log.LstdFlags)
 	addr := flag.String("addr", ":8100", "HTTP listen address")
 	flag.Parse()
 
@@ -116,9 +142,10 @@ func (st *state) refreshPlayers(c *busplugin.Conn) {
 		} `json:"players"`
 	}
 	if err := c.Request("players", nil, &out); err != nil {
-		log.Printf("players query: %v", err)
+		st.pollFailed(err)
 		return
 	}
+	st.pollOK()
 	st.mu.Lock()
 	st.players = map[int32]*entity{}
 	for _, p := range out.Players {
@@ -139,9 +166,10 @@ func (st *state) refreshMobs(c *busplugin.Conn) {
 		} `json:"mobs"`
 	}
 	if err := c.Request("mobs", nil, &out); err != nil {
-		log.Printf("mobs query: %v", err)
+		st.pollFailed(err)
 		return
 	}
+	st.pollOK()
 	st.mu.Lock()
 	st.mobs = map[int32]*entity{}
 	for _, m := range out.Mobs {
