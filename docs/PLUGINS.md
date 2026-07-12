@@ -215,12 +215,12 @@ busplugin.On(c, "player_join", func(e plugin.PlayerJoinEvent) {
 ```
 
 Distribution is the Go model itself — the module path is the repository.
-**tachyne-plugin-manager** pulls a daemon's source, builds it locally, boots it as
+**[tachyne-plugin-manager](https://github.com/tachyne/tachyne-plugin-manager)** pulls a daemon's source, builds it locally, boots it as
 its own process with `NATS_URL` injected, and supervises it (restart with
 backoff, prefixed logs):
 
 ```bash
-go install github.com/tachyne/tachyne-world/cmd/tachyne-plugin-manager@latest
+go install github.com/tachyne/tachyne-plugin-manager@latest
 
 tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 tachyne-plugin-manager run github.com/you/yourdaemon@v1.0.0 -- --your-flags

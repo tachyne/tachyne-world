@@ -443,7 +443,7 @@ path is its repository, and `tachyne-plugin-manager` pulls, builds, boots, and
 supervises it in one command:
 
 ```bash
-go install github.com/tachyne/tachyne-world/cmd/tachyne-plugin-manager@latest
+go install github.com/tachyne/tachyne-plugin-manager@latest
 tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 ```
 
