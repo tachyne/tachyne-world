@@ -433,10 +433,12 @@ compiled into the default binary but inert until configured. Full API
 reference, the event table, and the threading contract: **`docs/PLUGINS.md`**.
 
 For out-of-process integrations (any language), the NATS bus (`-nats`)
-publishes game events on `mc.event.*` and accepts commands on `mc.cmd.*` —
-observe-and-command only; vetoing an action inside the tick requires an
-in-process plugin. Planned next: the bus carrying this same event catalog as
-JSON, and a builder tool that assembles a server binary from external plugin
+publishes **the same event catalog as JSON** on `mc.event.v2.<name>` and
+accepts a facade-parity command set on `mc.cmd.*` (weather, time, gamerules,
+give, teleport, named mob spawning with stat overrides, plus request-reply
+queries for players/mobs/blocks/world state) — observe-and-command only;
+vetoing an action inside the tick requires an in-process plugin. Planned
+next: a builder tool that assembles a server binary from external plugin
 modules without forking this repo.
 
 ## Layout

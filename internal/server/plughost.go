@@ -385,19 +385,8 @@ func (p playerHandle) Give(item int32, count int) {
 }
 
 func (p playerHandle) Teleport(x, y, z float64) {
-	t := p.t()
-	if t == nil {
-		return
-	}
-	h := p.ph.h
-	t.x, t.y, t.z = x, y, z
-	t.p.trySendEv(teleportEv(x, y, z, t.yaw, t.pitch))
-	move := entMove(p.eid, x, y, z, t.yaw, t.pitch, true)
-	for eid, other := range h.playersRef {
-		if eid == p.eid || other.dim != t.dim {
-			continue
-		}
-		other.p.trySendEv(move)
+	if t := p.t(); t != nil {
+		p.ph.h.teleportPlayer(p.ph.h.playersRef, t, x, y, z)
 	}
 }
 

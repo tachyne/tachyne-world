@@ -364,6 +364,10 @@ func (s *Server) Serve() error {
 				log.Printf("NATS bus disabled: %v (server continues without it)", err)
 			} else {
 				s.hub.bus = nb
+				// v2: mirror the plugin event catalog onto mc.event.v2.*
+				// (busv2.go). Registered only when a real bus exists, so
+				// hot sites like PlayerMove stay cold otherwise.
+				s.hub.registerBusBridge()
 			}
 		}
 		// World↔world peer mesh: warm links to neighbour shards for handover +

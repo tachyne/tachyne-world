@@ -29,17 +29,30 @@ func newNatsBus(h *hub, url string) (*natsBus, error) {
 		return nil, err
 	}
 
-	// Plugins send commands to mc.cmd.<name>; reply if they used request-reply.
+	// Plugins send commands to mc.cmd.<name>; reply if they used
+	// request-reply. Each message gets its own goroutine because queries
+	// block briefly on the hub (runOnHub) — a slow query must not stall the
+	// whole command stream.
 	if _, err := nc.Subscribe("mc.cmd.>", func(msg *nats.Msg) {
-		cmd := strings.TrimPrefix(msg.Subject, "mc.cmd.")
-		errStr := executeCommand(h, cmd, msg.Data)
-		if msg.Reply != "" {
-			if errStr == "" {
-				msg.Respond([]byte(`{"ok":true}`))
-			} else {
-				msg.Respond([]byte(fmt.Sprintf(`{"ok":false,"error":%q}`, errStr)))
+		go func() {
+			cmd := strings.TrimPrefix(msg.Subject, "mc.cmd.")
+			data, errStr := executeCommand(h, cmd, msg.Data)
+			if msg.Reply == "" {
+				return
 			}
-		}
+			switch {
+			case errStr != "":
+				msg.Respond([]byte(fmt.Sprintf(`{"ok":false,"error":%q}`, errStr)))
+			case data != nil:
+				if body, err := json.Marshal(map[string]any{"ok": true, "data": data}); err == nil {
+					msg.Respond(body)
+				} else {
+					msg.Respond([]byte(`{"ok":false,"error":"unmarshalable reply"}`))
+				}
+			default:
+				msg.Respond([]byte(`{"ok":true}`))
+			}
+		}()
 	}); err != nil {
 		nc.Close()
 		return nil, err

@@ -7,12 +7,11 @@ ordinary Go packages **compiled into the server binary** — the model Go
 servers converged on (Caddy, CoreDNS, Dragonfly): no `.so` loading, no
 embedded interpreter, full type safety, zero dispatch overhead when idle.
 
-A second, out-of-process tier already exists — the NATS bus (`-nats`)
-publishes `mc.event.*` and accepts `mc.cmd.*` from external processes in any
-language. The bus is observe + async-mutate only; anything that needs to
-**veto or rewrite** an action inside the tick (protection, combat tuning)
-belongs in-process. A richer bus protocol carrying this same event catalog as
-JSON is planned; the event structs are scalar-only on purpose so they map 1:1.
+A second, out-of-process tier ships alongside it — the NATS bus (`-nats`):
+external processes in any language observe events and send commands. The bus
+is observe + async-mutate only; anything that needs to **veto or rewrite** an
+action inside the tick (protection, combat tuning) belongs in-process. See
+[The bus (out-of-process plugins)](#the-bus-out-of-process-plugins) below.
 
 ## Writing a plugin
 
@@ -138,6 +137,43 @@ cancel or rewrite the line.
 Tasks run at the top of the tick, in scheduling order, and see the world as
 the previous tick left it. The scheduler is the one API safe to call from any
 goroutine.
+
+## The bus (out-of-process plugins)
+
+With `-nats nats://…` the engine is a NATS client; any process on the broker
+is a plugin. Three surfaces:
+
+**Events (v2)** — every event in the table above publishes on
+`mc.event.v2.<name>` (`mc.event.v2.block_break`, `mc.event.v2.mob_death`, …)
+with the event struct itself as the JSON payload — same names, same fields as
+the in-process API. Cancelled events are not published (the action didn't
+happen). The legacy `mc.event.<topic>` subjects (ad-hoc payloads) remain for
+compatibility but new consumers should subscribe `mc.event.v2.>`.
+
+**Commands** — publish (or request) `mc.cmd.<name>` with JSON args; with
+request-reply you get `{"ok":true[,"data":…]}` or `{"ok":false,"error":…}`:
+
+| Command | Args | Effect |
+|---|---|---|
+| `say` | `{text}` | broadcast a chat line |
+| `settime` | `{time}` | set the day clock |
+| `weather` | `{kind: clear\|rain\|thunder, duration?}` | set the weather (duration in ticks; omit for a natural-length spell) |
+| `gamerule` | `{rule, on}` / `{rule: "difficulty", num}` | set a gamerule / difficulty |
+| `give` | `{player, item, count?}` | give items (item by **name**, e.g. `"bow"`) |
+| `teleport` | `{player, x, y, z}` | move a player |
+| `setblock` | `{x, y, z, state}` | set a block (broadcast + simulated) |
+| `spawn2` | `{type, x, z, y?, dim?, behavior?, max_health?, speed?, damage?}` | spawn by entity name with stat overrides; replies `{data:{eid}}` |
+| `mobset` | `{eid, max_health?, health?, speed?, damage?, behavior?}` | mutate a live mob |
+| `spawn` / `behavior` | *(legacy)* | numeric-type spawn / behavior swap |
+
+**Queries** (request-reply): `players` (name/eid/position/gamemode/health),
+`mobs` (`{dim?}` filter), `block` (`{x,y,z,dim?}` → state), `world` (age,
+day time, weather, difficulty, counts).
+
+Bus mutations run through the same code paths as plugin facades, so
+in-process plugin events fire for them too — a bus `spawn2` is observed (and
+cancellable) by an in-process `MobSpawnEvent` handler, and shows up on
+`mc.event.v2.mob_spawn` with reason `bus`.
 
 ## The example plugin
 

@@ -1537,6 +1537,20 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
 }
 
+// teleportPlayer moves a player server-side (plugin/bus): position sync to
+// the mover, absolute entity move to everyone else in the dimension.
+func (h *hub) teleportPlayer(players map[int32]*tracked, t *tracked, x, y, z float64) {
+	t.x, t.y, t.z = x, y, z
+	t.p.trySendEv(teleportEv(x, y, z, t.yaw, t.pitch))
+	move := entMove(t.p.eid, x, y, z, t.yaw, t.pitch, true)
+	for eid, other := range players {
+		if eid == t.p.eid || other.dim != t.dim {
+			continue
+		}
+		other.p.trySendEv(move)
+	}
+}
+
 // setDayTime sets the day clock explicitly (command, bus, plugin) and fires
 // the plugin TimeSetEvent — the natural per-tick advance never comes here.
 // Hub goroutine only (handlers run inline).
