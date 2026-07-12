@@ -45,6 +45,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		}
 	case "list":
 		s.hub.post(evList{p: p})
+	case "daemon":
+		s.cmdDaemon(p, fields[1:])
 	case "time":
 		s.cmdTime(p, fields[1:])
 	case "tp", "teleport":

@@ -224,7 +224,22 @@ go install github.com/tachyne/tachyne-world/cmd/tachyne-daemon@latest
 
 tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
 tachyne-daemon run github.com/you/yourdaemon@v1.0.0 -- --your-flags
-tachyne-daemon -config daemons.json          # supervise a whole set
+tachyne-daemon -config daemons.json          # the managed set
+```
+
+In `-config` mode the manager is **live**: it listens on the bus for
+`mc.daemon.install / uninstall / restart / list` (request-reply), so
+daemons hot-install and hot-remove while everything runs, and the set
+persists back to `daemons.json` across manager restarts. `restart` rebuilds
+first, so an unpinned daemon picks up its latest code — that's the
+hot-reload path. In game, ops drive the same control plane with
+**`/daemon`**:
+
+```
+/daemon list
+/daemon install github.com/you/yourdaemon@v1.0.0 [args…]
+/daemon uninstall yourdaemon
+/daemon restart yourdaemon
 ```
 
 The first daemon in the tree is **`daemons/webmap`**: a live web map

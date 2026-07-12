@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -210,6 +211,10 @@ func (b *recordingBus) publish(topic string, data any) {
 	}
 	b.topics[topic] = raw
 	b.mu.Unlock()
+}
+
+func (b *recordingBus) request(string, any) (json.RawMessage, error) {
+	return nil, fmt.Errorf("recordingBus: no request support")
 }
 
 func (b *recordingBus) get(topic string) ([]byte, bool) {

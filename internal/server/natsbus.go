@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/nats-io/nats.go"
 )
@@ -69,4 +70,17 @@ func (b *natsBus) publish(topic string, data any) {
 		return
 	}
 	b.nc.Publish("mc.event."+topic, payload)
+}
+
+// request is a raw-subject round trip (the /daemon command → manager).
+func (b *natsBus) request(subject string, data any) (json.RawMessage, error) {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	msg, err := b.nc.Request(subject, payload, 3*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	return msg.Data, nil
 }

@@ -12,14 +12,20 @@ import (
 //
 // bus is the seam between the hub and the backend. The hub only emits events;
 // the backend decides delivery and feeds commands back through executeCommand.
+// request is for engine-initiated round trips to other bus citizens (the
+// /daemon command talking to the tachyne-daemon manager).
 type bus interface {
 	publish(topic string, data any)
+	request(subject string, data any) (json.RawMessage, error)
 }
 
 // nopBus is the disabled default, so the hub never has to nil-check.
 type nopBus struct{}
 
 func (nopBus) publish(string, any) {}
+func (nopBus) request(string, any) (json.RawMessage, error) {
+	return nil, fmt.Errorf("no bus configured (-nats)")
+}
 
 // executeCommand runs a bus command against the world, returning optional
 // reply data and "" on success. Everything routes through the hub so

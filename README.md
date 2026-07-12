@@ -448,9 +448,12 @@ tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
 ```
 
 `daemons/webmap` (a live web map of the world) is the shipped example, and
-the `busplugin` package is the Go kit. Daemons observe and command in any
-language; only tick-veto hooks (protection, combat tuning) need the
-compiled-in plugin API above.
+the `busplugin` package is the Go kit. Running under `-config`, the manager
+takes live `install`/`uninstall`/`restart`/`list` commands over the bus —
+in game that's the op-only `/daemon` command — so plugins hot-install,
+hot-remove, and hot-reload while the server runs. Daemons observe and
+command in any language; only tick-veto hooks (protection, combat tuning)
+need the compiled-in plugin API above.
 
 ## Layout
 
