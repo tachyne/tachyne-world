@@ -35,6 +35,7 @@ type containerFile struct {
 	Bins      map[string]savedBin     `json:"bins,omitempty"`   // dispenser/dropper/hopper
 	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
 	Paintings []savedPainting         `json:"paintings,omitempty"`
+	Frames    []savedFrame            `json:"frames,omitempty"`
 }
 
 type savedPainting struct {
@@ -44,6 +45,19 @@ type savedPainting struct {
 	Z       int    `json:"z"`
 	Dir     int32  `json:"dir"`
 	Variant string `json:"variant"`
+}
+
+// savedFrame is one placed item frame; Item is the packed stack row
+// (item,count,dmg,ench,mapID — same shape as inventory slots).
+type savedFrame struct {
+	Dim  int      `json:"dim,omitempty"`
+	X    int      `json:"x"`
+	Y    int      `json:"y"`
+	Z    int      `json:"z"`
+	Dir  int32    `json:"dir"`
+	Glow bool     `json:"glow,omitempty"`
+	Rot  int      `json:"rot,omitempty"`
+	Item [5]int32 `json:"item"`
 }
 
 type savedBin struct {
@@ -267,6 +281,32 @@ func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
 		s.m.Paintings = append(s.m.Paintings, savedPainting{
 			Dim: pt.dim, X: pt.x, Y: pt.y, Z: pt.z, Dir: pt.dir, Variant: pt.variant})
 	}
+}
+
+// recordFrames snapshots the live item frames for the next flush.
+func (s *containerStore) recordFrames(frames map[int32]*itemFrame) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Frames = s.m.Frames[:0]
+	for _, f := range frames {
+		s.m.Frames = append(s.m.Frames, savedFrame{
+			Dim: f.dim, X: f.x, Y: f.y, Z: f.z, Dir: f.dir, Glow: f.glow,
+			Rot: f.rot, Item: packStack(f.held)})
+	}
+}
+
+// loadFrames reconstructs placed item frames; entity ids are re-allocated
+// by the caller.
+func (s *containerStore) loadFrames(alloc func() int32) map[int32]*itemFrame {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]*itemFrame{}
+	for _, sf := range s.m.Frames {
+		eid := alloc()
+		out[eid] = &itemFrame{eid: eid, x: sf.X, y: sf.Y, z: sf.Z, dim: sf.Dim,
+			dir: sf.Dir, glow: sf.Glow, rot: sf.Rot, held: unpackStack(sf.Item)}
+	}
+	return out
 }
 
 // loadPaintings reconstructs placed paintings; sizes come from the variant

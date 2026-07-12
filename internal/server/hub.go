@@ -369,16 +369,17 @@ type hub struct {
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
-	vehicles     map[int32]*vehicle  // minecarts + boats
-	paintings    map[int32]*painting // placed hanging paintings (persisted with containers)
-	detectorsOn  map[blockPos]bool   // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64 // dungeon spawner cooldowns
-	patrolNextAt uint64              // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid  // active village raids by centre
-	brewProg     map[blockPos]int    // brewing stand progress (ticks)
-	portalLinks  map[dimPos]dimPos   // sticky portal pairs (both directions)
-	bossSeen     map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors    map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
+	vehicles     map[int32]*vehicle   // minecarts + boats
+	paintings    map[int32]*painting  // placed hanging paintings (persisted with containers)
+	itemFrames   map[int32]*itemFrame // placed item frames (persisted with containers)
+	detectorsOn  map[blockPos]bool    // detector rails currently pressed
+	spawnerNext  map[blockPos]uint64  // dungeon spawner cooldowns
+	patrolNextAt uint64               // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid   // active village raids by centre
+	brewProg     map[blockPos]int     // brewing stand progress (ticks)
+	portalLinks  map[dimPos]dimPos    // sticky portal pairs (both directions)
+	bossSeen     map[[2]int32]bool    // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors    map[blockPos]uint64  // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon       *mob               // the ender dragon (nil = none / defeated)
 	crystals     map[int32]*crystal // end crystals by eid
@@ -480,6 +481,7 @@ func newHub(w *world.World) *hub {
 		bins:          map[blockPos]*bin{},
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
+		itemFrames:    map[int32]*itemFrame{},
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -533,6 +535,7 @@ func (h *hub) run() {
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
+		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
 				h.schedule(pos, hopperCadence)
@@ -610,6 +613,9 @@ func (h *hub) run() {
 			}
 			h.updateArrows(players) // every tick: arrows are fast enough to tunnel otherwise
 			h.mapsTick(players)     // held filled maps: color scan + holder updates
+			if age%10 == 0 {
+				h.mapFramesTick(players) // framed maps: viewers get patches + markers
+			}
 			if h.debugBorders && age%10 == 0 {
 				h.emitDebugBorders(players) // dev: crit-particle wall along region seams
 			}
@@ -714,6 +720,7 @@ func (h *hub) run() {
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
+					h.containers.recordFrames(h.itemFrames)
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1047,6 +1054,10 @@ func (h *hub) run() {
 					h.breakPainting(players, pt, players[e.attacker])
 					break
 				}
+				if f := h.itemFrames[e.target]; f != nil {
+					h.hitFrame(players, players[e.attacker], f)
+					break
+				}
 				if v := h.vehicles[e.target]; v != nil {
 					h.breakVehicle(players, v)
 				} else {
@@ -1058,6 +1069,8 @@ func (h *hub) run() {
 				}
 			case evPlacePainting:
 				h.onPlacePainting(players, e)
+			case evPlaceFrame:
+				h.onPlaceFrame(players, e)
 			case evVehicleMove:
 				if t := players[e.eid]; t != nil {
 					if !h.applyGhastMove(players, t, e) && // piloted happy ghast first…
@@ -1073,6 +1086,10 @@ func (h *hub) run() {
 				}
 			case evInteractMob:
 				if t := players[e.eid]; t != nil {
+					if f := h.itemFrames[e.target]; f != nil {
+						h.interactFrame(players, t, f)
+						break
+					}
 					if v := h.vehicles[e.target]; v != nil {
 						h.mountVehicle(players, t, v)
 						break
@@ -1216,6 +1233,7 @@ func (h *hub) run() {
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
+					h.containers.recordFrames(h.itemFrames)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
@@ -1299,6 +1317,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 
 	h.sendVehiclesTo(nt)
 	h.sendPaintingsTo(nt)
+	h.sendFramesTo(nt)
 	// Show the newcomer every mob already in their dimension.
 	for _, m := range h.mobs {
 		if m.dim != nt.dim {
@@ -1471,6 +1490,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		delete(h.signMayEdit, signKey(e.dim, e.x, e.y, e.z))
 	}
 	h.paintingsOnBlockChange(players, e.dim, e.x, e.y, e.z)
+	h.framesOnBlockChange(players, e.dim, e.x, e.y, e.z)
 	if e.dim != 0 {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}

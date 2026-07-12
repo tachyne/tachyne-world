@@ -40,6 +40,7 @@ const (
 // verified against the per-version registry reports).
 const (
 	decorPlayer       = 0
+	decorFrame        = 1
 	decorPlayerOffMap = 6
 )
 
@@ -296,6 +297,24 @@ func (h *hub) mapDecorations(md *mapData, players map[int32]*tracked) []attachpr
 				X:    clampMapByte(xd), Z: clampMapByte(zd),
 			})
 		}
+	}
+	// Item frames holding this map pin the green FRAME marker, rotated by
+	// the frame's facing (vanilla: direction 2D value × 90°).
+	for _, f := range h.itemFrames {
+		if f.held.item != itemFilledMap || f.held.mapID != md.ID || f.dim != md.Dim {
+			continue
+		}
+		xd := (float64(f.x) + 0.5 - float64(md.CenterX)) / float64(scale)
+		zd := (float64(f.z) + 0.5 - float64(md.CenterZ)) / float64(scale)
+		if xd < -63 || xd > 63 || zd < -63 || zd > 63 {
+			continue
+		}
+		yaw := float64(frame2D(f.dir) * 90)
+		out = append(out, attachproto.MapDecoration{
+			Type: decorFrame,
+			X:    int8(xd*2 + 0.5), Z: int8(zd*2 + 0.5),
+			Rot: uint8(int((yaw+8)*16/360)) & 15,
+		})
 	}
 	return out
 }

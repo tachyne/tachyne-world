@@ -206,6 +206,14 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
+	if p.heldItem() == itemItemFrame || p.heldItem() == itemGlowItemFrame {
+		if dir >= 0 && dir <= 5 { // frames mount on any face, floor and ceiling too
+			s.hub.post(evPlaceFrame{eid: p.eid, x: tx, y: ty, z: tz, dir: dir,
+				slot: int32(p.held), glow: p.heldItem() == itemGlowItemFrame})
+		}
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	if _, isVeh := vehicleItems[p.heldItem()]; isVeh {
 		s.hub.post(evPlaceVehicle{eid: p.eid, item: p.heldItem(), x: x, y: y, z: z, slot: int32(p.held)})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
