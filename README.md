@@ -49,7 +49,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Signs | ✅ | All wood types as standing/wall/hanging/wall-hanging signs with the vanilla edit GUI, both text sides, dyes, glow ink, waxing; text persists with the world and rides chunk loads. |
 | Paintings | ✅ | All 47 placeable variants with vanilla selection (largest that fits, random among ties), pop on punch or lost support, persist with the world. Item frames are next. |
 | **Plugins** | ✅ | In-process Go plugin API: Bukkit-style events (priority ladder, cancellable/mutable), weather/time/gamerule/creature-stat mutations, custom commands with tab-completion, tick scheduler, per-plugin config + storage — see `docs/PLUGINS.md`. Out-of-process NATS bus for any-language observers. |
-| Maps, item frames, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Filled maps | ✅ | Craft an empty map and it draws the world vanilla-style as you explore (terrain colors, depth-shaded water, slope shading), with live player markers. Cloning (map + empty maps) and zoom-out (map + 8 paper) work in the crafting grid; maps persist with the world. Banner/frame markers and the cartography table are still to come. |
+| Item frames, jukebox, beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients

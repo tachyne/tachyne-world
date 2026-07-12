@@ -101,16 +101,16 @@ func TestMigrateItemIDs(t *testing.T) {
 	}
 	// inventory
 	inv := &invStore{m: map[string]*savedInv{"Steve": {}}}
-	inv.m["Steve"].Slots[0] = [4]int32{840, 5, 0, 0} // apple
-	inv.m["Steve"].Slots[1] = [4]int32{0, 0, 0, 0}   // empty
-	inv.m["Steve"].Armor[0] = [4]int32{840, 1, 3, 0}
+	inv.m["Steve"].Slots[0] = [5]int32{840, 5, 0, 0, 0} // apple
+	inv.m["Steve"].Slots[1] = [5]int32{0, 0, 0, 0, 0}   // empty
+	inv.m["Steve"].Armor[0] = [5]int32{840, 1, 3, 0, 0}
 	if n := inv.migrateItemIDs(remap); n != 2 {
 		t.Fatalf("inv migrate n=%d, want 2", n)
 	}
-	if got := inv.m["Steve"].Slots[0]; got != [4]int32{893, 5, 0, 0} {
+	if got := inv.m["Steve"].Slots[0]; got != [5]int32{893, 5, 0, 0, 0} {
 		t.Errorf("slot0 = %v, want [893 5 0 0]", got)
 	}
-	if got := inv.m["Steve"].Armor[0]; got != [4]int32{893, 1, 3, 0} {
+	if got := inv.m["Steve"].Armor[0]; got != [5]int32{893, 1, 3, 0, 0} {
 		t.Errorf("armor0 = %v, want [893 1 3 0]", got)
 	}
 	// container: chest row (slot,item,count,dmg,ench) + furnace slot (item,count,dmg)

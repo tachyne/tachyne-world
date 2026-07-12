@@ -115,6 +115,7 @@ type evDrop struct { // a destroyed block's loot — roll its drop table and spa
 	by      int32  // breaker's entity id (0 = the world itself) — pays mining XP
 }
 type evRespawn struct{ eid int32 } // player clicked Respawn after dying
+type evUseMap struct{ eid int32 }  // player right-clicked an empty map
 type evEat struct {
 	eid  int32
 	slot int
@@ -153,6 +154,7 @@ func (evSetBehavior) isHubEvent() {}
 func (evDrop) isHubEvent()        {}
 func (evRespawn) isHubEvent()     {}
 func (evEat) isHubEvent()         {}
+func (evUseMap) isHubEvent()      {}
 func (evAttack) isHubEvent()      {}
 func (evNPCDecision) isHubEvent() {}
 func (evConsume) isHubEvent()     {}
@@ -334,6 +336,7 @@ type hub struct {
 	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
 
 	signs       *signStore       // sign text (the store is the live owner — chunk builders read it)
+	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
 	mobs   map[int32]*mob         // server-controlled entities (living world)
@@ -606,6 +609,7 @@ func (h *hub) run() {
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 			}
 			h.updateArrows(players) // every tick: arrows are fast enough to tunnel otherwise
+			h.mapsTick(players)     // held filled maps: color scan + holder updates
 			if h.debugBorders && age%10 == 0 {
 				h.emitDebugBorders(players) // dev: crit-particle wall along region seams
 			}
@@ -701,6 +705,9 @@ func (h *hub) run() {
 					h.sbstore.flush(h.sb)
 				}
 				h.signs.flushIfDirty()
+				if h.maps != nil {
+					h.maps.flushIfDirty()
+				}
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
@@ -1006,6 +1013,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.startEating(t, e.slot)
 				}
+			case evUseMap:
+				if t := players[e.eid]; t != nil {
+					h.mapCreateFilled(players, t)
+				}
 			case evStopEat:
 				if t := players[e.eid]; t != nil {
 					h.stopEating(players, t)
@@ -1208,6 +1219,9 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
+				if h.maps != nil {
+					h.maps.flushIfDirty()
+				}
 				if h.plugHost != nil {
 					h.plugHost.flushStores()
 				}

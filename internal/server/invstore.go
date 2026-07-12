@@ -18,13 +18,14 @@ type invStore struct {
 	m    map[string]*savedInv
 }
 
-// savedInv is one player's persisted loadout, each slot an (item,count,dmg)
-// triple. Older files stored a bare 36-slot array per player — UnmarshalJSON
-// migrates those on load (armor/offhand default empty).
+// savedInv is one player's persisted loadout, each slot an
+// (item,count,dmg,ench,mapID) row. Older files stored 4-column rows (or a
+// bare 36-slot array) — shorter JSON arrays zero-fill the new column, so
+// they migrate on load.
 type savedInv struct {
-	Slots    [invSize][4]int32 `json:"slots"`
-	Armor    [4][4]int32       `json:"armor"`
-	Offhand  [4]int32          `json:"offhand"`
+	Slots    [invSize][5]int32 `json:"slots"`
+	Armor    [4][5]int32       `json:"armor"`
+	Offhand  [5]int32          `json:"offhand"`
 	XPLevel  int32             `json:"xp_level,omitempty"`
 	XPPoints int32             `json:"xp_points,omitempty"`
 }
@@ -47,12 +48,12 @@ func newInvStore(path string) *invStore {
 	return s
 }
 
-func packStack(st invStack) [4]int32 {
-	return [4]int32{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench)}
+func packStack(st invStack) [5]int32 {
+	return [5]int32{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
 }
 
-func unpackStack(r [4]int32) invStack {
-	return invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3])}
+func unpackStack(r [5]int32) invStack {
+	return invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3]), mapID: r[4]}
 }
 
 // loadInto fills the player's inventory, armor and offhand from their saved

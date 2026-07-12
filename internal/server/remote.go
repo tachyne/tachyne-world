@@ -97,6 +97,8 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evThrowPearl{eid: p.eid})
 		case itemEnderEye:
 			h.post(evThrowEye{eid: p.eid})
+		case itemEmptyMap:
+			h.post(evUseMap{eid: p.eid})
 		default:
 			h.post(evEat{eid: p.eid, slot: p.held})
 		}
@@ -274,6 +276,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgScore, ev)
 	case attachproto.Team:
 		send(attachproto.MsgTeam, ev)
+	case attachproto.MapData:
+		send(attachproto.MsgMapData, ev)
 	case attachproto.SignText:
 		send(attachproto.MsgSignText, ev)
 	case attachproto.SignEditor:

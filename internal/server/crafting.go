@@ -318,6 +318,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	dmgOf := map[int32]int{}
 	enchOf := map[int32][2]enchApply{} // enchantments ride along like wear does
 	nameOf := map[int32]string{}       // …and anvil names
+	mapOf := map[int32]int32{}         // …and filled-map identities
 	tally := func(st invStack, sign int) {
 		if st.item != 0 && st.count > 0 {
 			loss[st.item] += sign * st.count
@@ -329,6 +330,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			}
 			if st.name != "" {
 				nameOf[st.item] = st.name
+			}
+			if st.mapID != 0 {
+				mapOf[st.item] = st.mapID
 			}
 		}
 	}
@@ -389,6 +393,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if n, ok := nameOf[ch.st.item]; ok && ch.st.item != 0 {
 			ptr.name = n
 		}
+		if m, ok := mapOf[ch.st.item]; ok && ch.st.item != 0 {
+			ptr.mapID = m
+		}
 		if hot >= 0 {
 			t.p.setHotbarSlot(hot, ch.st.item)
 		}
@@ -416,9 +423,12 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	if n, ok := nameOf[t.cursor.item]; ok && t.cursor.item != 0 {
 		t.cursor.name = n
 	}
+	if m, ok := mapOf[t.cursor.item]; ok && t.cursor.item != 0 {
+		t.cursor.mapID = m
+	}
 	for item, n := range loss {
 		if n > 0 {
-			h.tossItem(players, t, item, n, dmgOf[item], enchOf[item])
+			h.tossItem(players, t, invStack{item: item, count: n, dmg: dmgOf[item], ench: enchOf[item], mapID: mapOf[item]})
 		}
 	}
 	if gridTouched {
@@ -439,14 +449,15 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 
 // tossItem spawns a thrown item entity a step in front of the player, with an
 // extended pickup delay so it isn't instantly re-collected by the thrower.
-func (h *hub) tossItem(players map[int32]*tracked, t *tracked, item int32, count, dmg int, ench [2]enchApply) {
+func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 	yaw := float64(t.yaw) * math.Pi / 180
 	tx := t.x - math.Sin(yaw)*1.5
 	tz := t.z + math.Cos(yaw)*1.5
-	if it := h.spawnItem(players, item, count, tx, t.y+1, tz); it != nil {
+	if it := h.spawnItem(players, st.item, st.count, tx, t.y+1, tz); it != nil {
 		it.noPickupUntil = it.born + 40 // ~2s before pickup (vanilla toss delay)
-		it.dmg = dmg
-		it.ench = ench
+		it.dmg = st.dmg
+		it.ench = st.ench
+		it.mapID = st.mapID
 	}
 }
 
@@ -464,12 +475,12 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 	if all {
 		n = s.count
 	}
-	item, dmg, ench := s.item, s.dmg, s.ench
+	st := invStack{item: s.item, count: n, dmg: s.dmg, ench: s.ench, mapID: s.mapID}
 	if s.count -= n; s.count == 0 {
 		*s = invStack{}
 	}
 	h.sendSlot(t, slot)
-	h.tossItem(players, t, item, n, dmg, ench)
+	h.tossItem(players, t, st)
 }
 
 // takeCraftResult performs a click on the result slot: match the grid, hand the
@@ -478,16 +489,22 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32) {
 	w := gridSize(t)
 	grid := t.craft[:w*w]
-	item, count := matchRecipe(grid, w)
-	if item == 0 {
+	res, kind := h.craftResult(grid, w)
+	if res.item == 0 {
 		h.sendCraftResult(t) // clicked an empty/stale result — just resync it
 		return
 	}
+	if kind == mapCraftZoom {
+		// The zoomed map is born at take time (the preview shows the source).
+		src := h.maps.get(res.mapID)
+		res.mapID = h.maps.derive(src, src.Scale+1, false).ID
+	}
+	item, count := res.item, res.count
 
 	switch {
 	case mode == 1: // shift-click: craft one straight into the inventory
 		h.incStat(t, attachproto.StatCrafted, item, int32(count))
-		changed, leftover := t.inv.add(item, count)
+		changed, leftover := t.inv.addStack(res)
 		for _, slot := range changed {
 			h.sendSlot(t, slot)
 		}
@@ -495,9 +512,9 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 			h.spawnItem(players, item, leftover, t.x, t.y, t.z)
 		}
 	case t.cursor.item == 0:
-		t.cursor = invStack{item: item, count: count}
+		t.cursor = res
 		h.incStat(t, attachproto.StatCrafted, item, int32(count))
-	case t.cursor.item == item && t.cursor.count+count <= stackCap(item):
+	case t.cursor.item == item && t.cursor.mapID == res.mapID && t.cursor.count+count <= stackCap(item):
 		t.cursor.count += count
 		h.incStat(t, attachproto.StatCrafted, item, int32(count))
 	default: // cursor holds something else — vanilla refuses the take
@@ -657,8 +674,8 @@ func (h *hub) sendWinSlot(t *tracked, slot int16, st invStack) {
 // sendCraftResult recomputes the active grid's recipe result and syncs slot 0.
 func (h *hub) sendCraftResult(t *tracked) {
 	w := gridSize(t)
-	item, count := matchRecipe(t.craft[:w*w], w)
-	h.sendWinSlot(t, 0, invStack{item: item, count: count})
+	res, _ := h.craftResult(t.craft[:w*w], w)
+	h.sendWinSlot(t, 0, res)
 }
 
 // sendCursor syncs the stack carried on the player's mouse cursor.
@@ -671,8 +688,8 @@ func (h *hub) sendCursor(t *tracked) {
 func (h *hub) sendCraftWindow(t *tracked) {
 	t.inv.stateId++
 	slots := make([]attachproto.ItemStack, 0, 46)
-	item, count := matchRecipe(t.craft[:9], 3)
-	slots = append(slots, stackNumEv(item, count))
+	res, _ := h.craftResult(t.craft[:9], 3)
+	slots = append(slots, stackEv(res))
 	for i := 0; i < 9; i++ {
 		slots = append(slots, stackEv(t.craft[i]))
 	}

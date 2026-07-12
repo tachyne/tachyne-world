@@ -68,6 +68,7 @@ func Main() {
 	srv.RecipeBookFile = "recipebook.json"
 	srv.ScoreboardFile = "scoreboard.json"
 	srv.SignFile = "signs.json"
+	srv.MapFile = "maps.json"
 	srv.ContainerFile = "containers.json"
 	srv.SpawnPointFile = "spawns.json"
 	srv.PluginDataDir = *pluginDir

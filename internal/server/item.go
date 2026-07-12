@@ -36,6 +36,7 @@ type itemEntity struct {
 	count         int
 	dmg           int          // durability damage carried by the dropped stack
 	ench          [2]enchApply // enchantments carried by the dropped stack
+	mapID         int32        // filled_map identity carried by the dropped stack
 	born          uint64       // world tick spawned (for despawn)
 	noPickupUntil uint64       // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -104,7 +105,8 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 		}
 		for oid, other := range h.items {
 			if oid == eid || other.item != it.item || other.dmg != 0 || it.dmg != 0 ||
-				other.ench != it.ench || it.count+other.count > stackCap(it.item) {
+				other.ench != it.ench || other.mapID != it.mapID ||
+				it.count+other.count > stackCap(it.item) {
 				continue
 			}
 			dx, dy, dz := other.x-it.x, other.y-it.y, other.z-it.z
@@ -134,6 +136,7 @@ const (
 	componentStoredEnch   = 34 // books; remapped per version by the chain
 	componentCustomName   = 5  // anvil renames (NBT text); remapped per version
 	componentLore         = 8  // plugin-UI item lore (list of NBT texts); remapped per version
+	componentMapID        = 37 // filled_map's map number; remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -190,11 +193,18 @@ func stackComponents(st invStack) []byte {
 	if st.name != "" {
 		comps++
 	}
+	if st.mapID != 0 {
+		comps++
+	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
 	if st.dmg > 0 {
 		b = protocol.AppendVarInt(b, componentDamage)
 		b = protocol.AppendVarInt(b, int32(st.dmg))
+	}
+	if st.mapID != 0 {
+		b = protocol.AppendVarInt(b, componentMapID)
+		b = protocol.AppendVarInt(b, st.mapID)
 	}
 	if enchN > 0 {
 		// Books carry STORED enchantments (what the anvil applies); everything

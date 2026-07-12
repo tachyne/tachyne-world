@@ -31,6 +31,7 @@ type invStack struct {
 	ench   [2]enchApply // up to two enchantments (zero slots = none); comparable
 	name   string       // anvil rename ("" = none) — in-session only (not persisted yet)
 	potion int8         // brewed potion type (potWater..): drives drink effects + label
+	mapID  int32        // filled_map: which map this stack shows (0 = none)
 }
 
 // enchanted reports whether the stack carries any enchantment.
@@ -115,7 +116,7 @@ func (inv *inventory) add(item int32, count int) (changed []int, leftover int) {
 // don't stack anyway), so it takes its own empty slot; plain stacks go
 // through the normal merge path.
 func (inv *inventory) addStack(st invStack) (changed []int, leftover int) {
-	if st.dmg == 0 && !st.enchanted() && st.name == "" {
+	if st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 {
 		return inv.add(st.item, st.count)
 	}
 	for i := range inv.slots {
@@ -150,7 +151,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			if math.Abs(it.x-t.x) > 1 || math.Abs(it.z-t.z) > 1 || math.Abs(it.y-t.y) > 1.5 {
 				continue
 			}
-			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench})
+			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID})
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground
