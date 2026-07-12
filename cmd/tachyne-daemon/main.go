@@ -110,6 +110,9 @@ func main() {
 			spec.Module = spec.Module[:i]
 		}
 		spec.Args = flag.Args()[2:]
+		if len(spec.Args) > 0 && spec.Args[0] == "--" { // the conventional separator is ours, not the daemon's
+			spec.Args = spec.Args[1:]
+		}
 		specs = []daemonSpec{spec}
 	default:
 		log.Fatal("usage: tachyne-daemon run <module[@version] | ./localdir> [-- args...]   or   tachyne-daemon -config daemons.json")
