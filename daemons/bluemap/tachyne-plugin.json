@@ -1,0 +1,6 @@
+{
+  "name": "bluemap",
+  "type": "daemon",
+  "description": "Full 3D web map rendered by BlueMap: exports the world to the vanilla format on a timer, supervises the BlueMap renderer/webserver, live player markers from the bus.",
+  "tags": ["map", "web", "3d", "bluemap"]
+}

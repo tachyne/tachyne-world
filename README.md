@@ -448,7 +448,13 @@ tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 ```
 
 `daemons/webmap` (a live web map of the world) is the shipped example, and
-the `busplugin` package is the Go kit. Running under `-config`, the manager
+the `busplugin` package is the Go kit. `daemons/bluemap` renders a full
+**3D web map** with [BlueMap](https://bluemap.bluecolored.de/): the daemon
+exports the world to the vanilla Anvil format on a timer (incrementally —
+only changed chunks re-render), runs the BlueMap renderer + webserver, and
+feeds it live player markers from the bus. The exporter is also a
+standalone tool (`cmd/anvil-export`) if you just want your tachyne world
+as a vanilla save. Running under `-config`, the manager
 takes live `install`/`uninstall`/`restart`/`list` commands over the bus —
 in game that's the op-only `/plugin` command — bare `/plugin` opens a chest-style plugin browser (labelled items, click to install/upgrade/rate) — so plugins hot-install,
 hot-remove, and hot-reload while the server runs. Discovery comes from the
