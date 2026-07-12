@@ -217,6 +217,10 @@ func (b *recordingBus) request(string, any) (json.RawMessage, error) {
 	return nil, fmt.Errorf("recordingBus: no request support")
 }
 
+func (b *recordingBus) requestMany(string, any, time.Duration) ([]json.RawMessage, error) {
+	return nil, fmt.Errorf("recordingBus: no request support")
+}
+
 func (b *recordingBus) get(topic string) ([]byte, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

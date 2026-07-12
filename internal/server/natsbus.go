@@ -72,6 +72,35 @@ func (b *natsBus) publish(topic string, data any) {
 	b.nc.Publish("mc.event."+topic, payload)
 }
 
+// requestMany publishes once and gathers every reply arriving inside the
+// window — one reply per fleet manager.
+func (b *natsBus) requestMany(subject string, data any, window time.Duration) ([]json.RawMessage, error) {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	inbox := nats.NewInbox()
+	ch := make(chan *nats.Msg, 64)
+	sub, err := b.nc.ChanSubscribe(inbox, ch)
+	if err != nil {
+		return nil, err
+	}
+	defer sub.Unsubscribe()
+	if err := b.nc.PublishRequest(subject, inbox, payload); err != nil {
+		return nil, err
+	}
+	var out []json.RawMessage
+	deadline := time.After(window)
+	for {
+		select {
+		case msg := <-ch:
+			out = append(out, json.RawMessage(msg.Data))
+		case <-deadline:
+			return out, nil
+		}
+	}
+}
+
 // request is a raw-subject round trip (the /daemon command → manager).
 func (b *natsBus) request(subject string, data any) (json.RawMessage, error) {
 	payload, err := json.Marshal(data)

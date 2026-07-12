@@ -60,6 +60,7 @@ type managed struct {
 	spec     daemonSpec
 	quit     chan struct{}
 	done     chan struct{}
+	builtVer string     // module version baked into the binary (go version -m)
 	mu       sync.Mutex // guards status/restarts (written by the supervise loop)
 	status   string
 	restarts int
@@ -71,6 +72,8 @@ type manager struct {
 	cache     string
 	natsURL   string
 	statePath string // persisted daemon set ("" = one-off run, no persistence)
+	name      string // fleet identity (POD_NAME/hostname) for targeted ops
+	reg       *registryClient
 }
 
 func main() {
@@ -78,6 +81,8 @@ func main() {
 	natsURL := flag.String("nats", "", "bus address handed to daemons as NATS_URL (default: current NATS_URL env, else nats://localhost:4222)")
 	config := flag.String("config", "", "daemons.json holding the managed set (rewritten by install/uninstall)")
 	cacheDir := flag.String("cache", defaultCache(), "built-binary cache directory")
+	name := flag.String("name", "", "this manager's fleet name (default: POD_NAME, else hostname) — targeted ops address mc.daemon.at.<name>.<op>")
+	registryURLs := flag.String("registry", "", "comma-separated tachyne plugin registry URLs (default: TACHYNE_REGISTRY env) for name resolution, search, and out-of-date checks")
 	flag.Parse()
 
 	url := *natsURL
@@ -90,7 +95,16 @@ func main() {
 	if err := os.MkdirAll(*cacheDir, 0o755); err != nil {
 		log.Fatal(err)
 	}
-	m := &manager{daemons: map[string]*managed{}, cache: *cacheDir, natsURL: url}
+	mgrName := *name
+	if mgrName == "" {
+		mgrName = os.Getenv("POD_NAME")
+	}
+	if mgrName == "" {
+		mgrName, _ = os.Hostname()
+	}
+	mgrName = strings.ReplaceAll(mgrName, ".", "-") // dots are NATS subject separators
+	m := &manager{daemons: map[string]*managed{}, cache: *cacheDir, natsURL: url,
+		name: mgrName, reg: newRegistryClient(*registryURLs)}
 
 	var specs []daemonSpec
 	switch {
@@ -133,7 +147,7 @@ func main() {
 			if err := m.serveControl(nc); err != nil {
 				log.Printf("bus control unavailable: %v", err)
 			} else {
-				log.Printf("bus control on mc.daemon.{install,uninstall,restart,list}")
+				log.Printf("manager %q: bus control on mc.daemon.<op> (fleet) and mc.daemon.at.%s.<op> (targeted)", m.name, m.name)
 			}
 		}
 	}
@@ -168,12 +182,16 @@ func (m *manager) install(s daemonSpec) error {
 	if err != nil {
 		return err
 	}
-	d := &managed{spec: s, quit: make(chan struct{}), done: make(chan struct{}), status: "starting"}
+	d := &managed{spec: s, quit: make(chan struct{}), done: make(chan struct{}), status: "starting",
+		builtVer: builtVersion(bin)}
 	m.mu.Lock()
 	m.daemons[name] = d
 	m.mu.Unlock()
 	go m.supervise(d, bin)
 	m.persist()
+	if !strings.HasPrefix(s.Module, ".") && !strings.HasPrefix(s.Module, "/") && m.reg.enabled() {
+		go m.reg.pingInstalled(s.Module) // best-effort install count
+	}
 	return nil
 }
 
@@ -209,22 +227,49 @@ func (m *manager) restart(name string) error {
 }
 
 type listRow struct {
+	Manager  string `json:"manager"`
 	Name     string `json:"name"`
 	Module   string `json:"module"`
-	Version  string `json:"version,omitempty"`
+	Version  string `json:"version,omitempty"` // pinned spec version
+	Built    string `json:"built,omitempty"`   // module version actually running
+	Latest   string `json:"latest,omitempty"`  // registry's newest ("" = unlisted/no registry)
+	Outdated bool   `json:"outdated"`
 	Status   string `json:"status"`
 	Restarts int    `json:"restarts"`
 }
 
 func (m *manager) list() []listRow {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	rows := make([]listRow, 0, len(m.daemons))
+	type snap struct {
+		name string
+		d    *managed
+	}
+	snaps := make([]snap, 0, len(m.daemons))
 	for name, d := range m.daemons {
+		snaps = append(snaps, snap{name, d})
+	}
+	m.mu.Unlock()
+	rows := make([]listRow, 0, len(snaps))
+	for _, s := range snaps {
+		d := s.d
 		d.mu.Lock()
-		rows = append(rows, listRow{Name: name, Module: d.spec.Module,
-			Version: d.spec.Version, Status: d.status, Restarts: d.restarts})
+		row := listRow{Manager: m.name, Name: s.name, Module: d.spec.Module,
+			Version: d.spec.Version, Built: d.builtVer, Status: d.status, Restarts: d.restarts}
 		d.mu.Unlock()
+		if m.reg.enabled() && !strings.HasPrefix(row.Module, ".") && !strings.HasPrefix(row.Module, "/") {
+			if latest := m.reg.latest(row.Module); latest != "" {
+				row.Latest = latest
+				// Out of date when the pin (or the built pseudo-version)
+				// doesn't match the registry's newest.
+				current := row.Version
+				if current == "" {
+					current = row.Built
+				}
+				row.Outdated = current != "" && current != latest &&
+					!strings.Contains(current, strings.TrimPrefix(latest, "v"))
+			}
+		}
+		rows = append(rows, row)
 	}
 	return rows
 }
@@ -249,38 +294,67 @@ func (m *manager) persist() {
 	}
 }
 
-// serveControl answers mc.daemon.* requests. Handlers run in their own
-// goroutines: installs compile and must not stall the subscription.
+// serveControl answers the fleet control plane. Plain mc.daemon.<op> is a
+// BROADCAST — every manager on the bus executes it (fleet-wide install);
+// mc.daemon.at.<name>.<op> targets one manager. Every reply carries this
+// manager's name so scatter-gather callers can attribute answers. Handlers
+// run in their own goroutines: installs compile and must not stall the
+// subscription.
 func (m *manager) serveControl(nc *nats.Conn) error {
-	reply := func(msg *nats.Msg, data any, err error) {
+	reply := func(msg *nats.Msg, data map[string]any, err error) {
 		if msg.Reply == "" {
 			return
 		}
 		if err != nil {
-			msg.Respond([]byte(fmt.Sprintf(`{"ok":false,"error":%q}`, err.Error())))
+			body, _ := json.Marshal(map[string]any{"ok": false, "manager": m.name, "error": err.Error()})
+			msg.Respond(body)
 			return
 		}
 		if data == nil {
-			msg.Respond([]byte(`{"ok":true}`))
-			return
+			data = map[string]any{}
 		}
-		if body, e := json.Marshal(map[string]any{"ok": true, "data": data}); e == nil {
+		data["ok"] = true
+		data["manager"] = m.name
+		if body, e := json.Marshal(data); e == nil {
 			msg.Respond(body)
 		}
 	}
 	_, err := nc.Subscribe("mc.daemon.>", func(msg *nats.Msg) {
 		go func() {
 			op := strings.TrimPrefix(msg.Subject, "mc.daemon.")
+			if rest, targeted := strings.CutPrefix(op, "at."); targeted {
+				target, opAt, ok := strings.Cut(rest, ".")
+				if !ok {
+					return
+				}
+				if target != m.name {
+					return // addressed to another shard's manager
+				}
+				op = opAt
+			}
 			switch op {
 			case "install":
 				var s daemonSpec
-				if json.Unmarshal(msg.Data, &s) != nil || s.Module == "" {
-					reply(msg, nil, fmt.Errorf("install requires module[,version,args,env]"))
+				var req struct {
+					daemonSpec
+					ByName string `json:"name"`
+				}
+				if json.Unmarshal(msg.Data, &req) != nil || (req.Module == "" && req.ByName == "") {
+					reply(msg, nil, fmt.Errorf("install requires module or name"))
 					return
+				}
+				s = req.daemonSpec
+				if s.Module == "" { // registry name → module path
+					module, err := m.reg.resolve(req.ByName)
+					if err != nil {
+						reply(msg, nil, err)
+						return
+					}
+					s.Module = module
 				}
 				log.Printf("[control] install %s@%s", s.Module, orLatest(s.Version))
 				reply(msg, nil, m.install(s))
-			case "uninstall", "restart":
+			case "uninstall", "restart", "upgrade":
 				var a struct {
 					Name string `json:"name"`
 				}
@@ -291,11 +365,21 @@ func (m *manager) serveControl(nc *nats.Conn) error {
 				log.Printf("[control] %s %s", op, a.Name)
 				if op == "uninstall" {
 					reply(msg, nil, m.uninstall(a.Name))
-				} else {
+				} else { // restart and upgrade are the same op: rebuild + boot
 					reply(msg, nil, m.restart(a.Name))
 				}
 			case "list":
 				reply(msg, map[string]any{"daemons": m.list()}, nil)
+			case "search":
+				var a struct {
+					Q string `json:"q"`
+				}
+				json.Unmarshal(msg.Data, &a)
+				if !m.reg.enabled() {
+					reply(msg, nil, fmt.Errorf("no registry configured on manager %q", m.name))
+					return
+				}
+				reply(msg, map[string]any{"plugins": m.reg.search(a.Q)}, nil)
 			default:
 				reply(msg, nil, fmt.Errorf("unknown daemon op %q", op))
 			}

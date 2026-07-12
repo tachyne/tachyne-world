@@ -251,6 +251,33 @@ Pick the tier by what the plugin does: daemons for everything that
 observes and commands (maps, bridges, economies, bots); compiled-in
 plugins only for tick-veto hooks (protection, combat tuning).
 
+### The plugin registry
+
+Discovery lives in the [tachyne registry](https://github.com/tachyne/registry):
+a REST index over git-hosted plugins (search, latest version, freshness,
+ratings, install counts) that **indexes, never hosts** — listing a plugin
+means putting a `tachyne-plugin.json` manifest beside your main package and
+submitting the module path. Point managers at one or more registries
+(`-registry` / `TACHYNE_REGISTRY`, comma-separated, merged like package
+sources — running your own is one binary), and:
+
+- `/daemon search <query>` finds plugins in game;
+- `/daemon install <name>` resolves a registry name to its module;
+- installs ping the registry's counters;
+- `list` compares each daemon's built version against the registry's
+  latest and flags stale shards.
+
+### Fleets
+
+Every shard's manager shares the bus, so `/daemon` speaks to the whole
+fleet: managers identify themselves (`-name`, default `POD_NAME`), plain
+`mc.daemon.<op>` is a fleet broadcast, `mc.daemon.at.<manager>.<op>`
+targets one shard, and `list` scatter-gathers the full inventory with
+out-of-date flags per shard. **`/daemon upgrade <name>` is the progressive
+rollout**: one shard at a time — rebuild at latest, boot, verify the daemon
+reports healthy — and any failure stops the roll with the remaining shards
+untouched.
+
 Bus mutations run through the same code paths as plugin facades, so
 in-process plugin events fire for them too — a bus `spawn` is observed (and
 cancellable) by an in-process `MobSpawnEvent` handler, and shows up on

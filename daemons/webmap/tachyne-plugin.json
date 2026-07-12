@@ -1,0 +1,6 @@
+{
+  "name": "webmap",
+  "type": "daemon",
+  "description": "Live web map of the running world: players in real time, mobs, weather and time.",
+  "tags": ["map", "web", "observability"]
+}

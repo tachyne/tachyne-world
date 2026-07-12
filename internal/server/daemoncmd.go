@@ -3,94 +3,269 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
+	"time"
 )
 
-// /daemon — in-game control of the tachyne-daemon manager over the bus.
-// The engine forwards to mc.daemon.* (request-reply) and prints the answer;
-// it never builds or runs daemon code itself. Op-only: installing a daemon
-// executes fetched code on the manager's host.
+// /daemon — in-game control of the tachyne-daemon fleet over the bus. Every
+// shard's manager answers the same subjects (plain op = fleet broadcast,
+// at.<manager>.<op> = one shard), so these commands span the whole fleet.
+// The engine forwards and prints; it never builds or runs daemon code
+// itself. Op-only: installing a daemon executes fetched code on manager
+// hosts.
 //
-//	/daemon list
-//	/daemon install <module[@version]> [args…]
-//	/daemon uninstall <name>
-//	/daemon restart <name>       (unpinned daemons rebuild = hot-reload)
+//	/daemon list                       fleet inventory (flags OUTDATED shards)
+//	/daemon search <query>             search the configured plugin registries
+//	/daemon install <module|name> …    install everywhere (registry names resolve)
+//	/daemon uninstall <name>           remove everywhere
+//	/daemon restart <name>             restart everywhere
+//	/daemon upgrade <name>             PROGRESSIVE fleet upgrade: one shard at
+//	                                   a time, verified healthy before the next
+const fleetWindow = 2 * time.Second
+
+// managerReply is the common envelope every manager reply carries.
+type managerReply struct {
+	OK      bool   `json:"ok"`
+	Manager string `json:"manager"`
+	Error   string `json:"error"`
+	Daemons []struct {
+		Manager  string `json:"manager"`
+		Name     string `json:"name"`
+		Module   string `json:"module"`
+		Version  string `json:"version"`
+		Built    string `json:"built"`
+		Latest   string `json:"latest"`
+		Outdated bool   `json:"outdated"`
+		Status   string `json:"status"`
+		Restarts int    `json:"restarts"`
+	} `json:"daemons"`
+	Plugins []struct {
+		Module      string  `json:"module"`
+		Name        string  `json:"name"`
+		Type        string  `json:"type"`
+		Description string  `json:"description"`
+		Latest      string  `json:"latest"`
+		Installs    int     `json:"installs"`
+		Rating      float64 `json:"rating"`
+		Ratings     int     `json:"ratings"`
+	} `json:"plugins"`
+}
+
+func parseReplies(raws []json.RawMessage) []managerReply {
+	out := make([]managerReply, 0, len(raws))
+	for _, raw := range raws {
+		var r managerReply
+		if json.Unmarshal(raw, &r) == nil {
+			out = append(out, r)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Manager < out[j].Manager })
+	return out
+}
+
 func (s *Server) cmdDaemon(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
 	if len(args) == 0 {
-		p.tell("Usage: /daemon <list|install <module[@ver]> [args…]|uninstall <name>|restart <name>>")
+		p.tell("Usage: /daemon <list|search <q>|install <module|name> [args…]|uninstall <name>|restart <name>|upgrade <name>>")
 		return
 	}
-	var (
-		op      = args[0]
-		payload any
-	)
-	switch op {
+	switch args[0] {
 	case "list":
-		payload = map[string]any{}
+		s.daemonList(p)
+	case "search":
+		s.daemonSearch(p, strings.Join(args[1:], " "))
 	case "install":
 		if len(args) < 2 {
-			p.tell("Usage: /daemon install <module[@version]> [args…]")
+			p.tell("Usage: /daemon install <module|name> [args…]")
 			return
 		}
 		module, version := args[1], ""
 		if i := strings.Index(module, "@"); i >= 0 {
 			module, version = module[:i], module[i+1:]
 		}
-		payload = map[string]any{"module": module, "version": version, "args": args[2:]}
+		payload := map[string]any{"args": args[2:], "version": version}
+		if strings.Contains(module, "/") {
+			payload["module"] = module
+		} else {
+			payload["name"] = module // registry name — managers resolve it
+		}
+		s.daemonFleetOp(p, "install", payload)
 	case "uninstall", "restart":
 		if len(args) != 2 {
-			p.tell(fmt.Sprintf("Usage: /daemon %s <name>", op))
+			p.tell(fmt.Sprintf("Usage: /daemon %s <name>", args[0]))
 			return
 		}
-		payload = map[string]any{"name": args[1]}
-	default:
-		p.tell("Usage: /daemon <list|install|uninstall|restart>")
-		return
-	}
-
-	raw, err := s.hub.bus.request("mc.daemon."+op, payload)
-	if err != nil {
-		p.tell("Daemon manager unreachable: " + err.Error())
-		return
-	}
-	var r struct {
-		OK    bool   `json:"ok"`
-		Error string `json:"error"`
-		Data  struct {
-			Daemons []struct {
-				Name     string `json:"name"`
-				Module   string `json:"module"`
-				Version  string `json:"version"`
-				Status   string `json:"status"`
-				Restarts int    `json:"restarts"`
-			} `json:"daemons"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &r); err != nil {
-		p.tell("Daemon manager replied garbage: " + err.Error())
-		return
-	}
-	if !r.OK {
-		p.tell("Daemon manager: " + r.Error)
-		return
-	}
-	if op != "list" {
-		p.tell(fmt.Sprintf("Daemon %s: done.", op))
-		return
-	}
-	if len(r.Data.Daemons) == 0 {
-		p.tell("No daemons installed.")
-		return
-	}
-	for _, d := range r.Data.Daemons {
-		v := d.Version
-		if v == "" {
-			v = "latest"
+		s.daemonFleetOp(p, args[0], map[string]any{"name": args[1]})
+	case "upgrade":
+		if len(args) != 2 {
+			p.tell("Usage: /daemon upgrade <name>  (progressive: one shard at a time)")
+			return
 		}
-		p.tell(fmt.Sprintf("%s — %s@%s [%s, %d restarts]", d.Name, d.Module, v, d.Status, d.Restarts))
+		go s.daemonProgressiveUpgrade(p, args[1]) // multi-shard walk — off the session loop
+	default:
+		p.tell("Usage: /daemon <list|search|install|uninstall|restart|upgrade>")
 	}
+}
+
+// daemonList gathers the whole fleet's inventory.
+func (s *Server) daemonList(p *player) {
+	raws, err := s.hub.bus.requestMany("mc.daemon.list", map[string]any{}, fleetWindow)
+	if err != nil {
+		p.tell("Daemon managers unreachable: " + err.Error())
+		return
+	}
+	replies := parseReplies(raws)
+	if len(replies) == 0 {
+		p.tell("No daemon managers on the bus.")
+		return
+	}
+	total, stale := 0, 0
+	for _, r := range replies {
+		if len(r.Daemons) == 0 {
+			p.tell(fmt.Sprintf("[%s] no daemons", r.Manager))
+			continue
+		}
+		for _, d := range r.Daemons {
+			total++
+			cur := d.Version
+			if cur == "" {
+				cur = d.Built
+			}
+			if cur == "" {
+				cur = "latest"
+			}
+			line := fmt.Sprintf("[%s] %s — %s@%s [%s, %d restarts]",
+				r.Manager, d.Name, d.Module, cur, d.Status, d.Restarts)
+			if d.Outdated {
+				stale++
+				line += fmt.Sprintf(" *** OUTDATED (latest %s)", d.Latest)
+			}
+			p.tell(line)
+		}
+	}
+	if stale > 0 {
+		p.tell(fmt.Sprintf("%d of %d daemons outdated — /daemon upgrade <name> rolls the fleet progressively.", stale, total))
+	}
+}
+
+// daemonSearch asks one manager to query the registries (all managers see
+// the same registries — a single reply suffices).
+func (s *Server) daemonSearch(p *player, q string) {
+	raw, err := s.hub.bus.request("mc.daemon.search", map[string]any{"q": q})
+	if err != nil {
+		p.tell("Daemon managers unreachable: " + err.Error())
+		return
+	}
+	var r managerReply
+	if json.Unmarshal(raw, &r) != nil || !r.OK {
+		p.tell("Search failed: " + r.Error)
+		return
+	}
+	if len(r.Plugins) == 0 {
+		p.tell("No plugins found for " + q)
+		return
+	}
+	for i, pl := range r.Plugins {
+		if i == 8 {
+			p.tell(fmt.Sprintf("…and %d more.", len(r.Plugins)-8))
+			break
+		}
+		p.tell(fmt.Sprintf("%s (%s) %s — %s [%d installs, %.1f★×%d]",
+			pl.Name, pl.Type, pl.Latest, pl.Description, pl.Installs, pl.Rating, pl.Ratings))
+	}
+}
+
+// daemonFleetOp broadcasts a mutating op and reports per-manager outcomes.
+func (s *Server) daemonFleetOp(p *player, op string, payload map[string]any) {
+	raws, err := s.hub.bus.requestMany("mc.daemon."+op, payload, fleetWindow)
+	if err != nil {
+		p.tell("Daemon managers unreachable: " + err.Error())
+		return
+	}
+	replies := parseReplies(raws)
+	if len(replies) == 0 {
+		p.tell("No daemon managers on the bus.")
+		return
+	}
+	for _, r := range replies {
+		if r.OK {
+			p.tell(fmt.Sprintf("[%s] %s: done", r.Manager, op))
+		} else {
+			p.tell(fmt.Sprintf("[%s] %s: %s", r.Manager, op, r.Error))
+		}
+	}
+}
+
+// daemonProgressiveUpgrade rolls one daemon across the fleet, one manager
+// at a time: upgrade (rebuild@latest + boot), verify the daemon reports
+// running, then move on; any failure stops the roll so a bad release never
+// takes the whole fleet down. Runs off the session goroutine.
+func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
+	tell := func(f string, a ...any) { p.trySendEv(chatEv(fmt.Sprintf(f, a...))) }
+
+	raws, err := s.hub.bus.requestMany("mc.daemon.list", map[string]any{}, fleetWindow)
+	if err != nil {
+		tell("Daemon managers unreachable: %v", err)
+		return
+	}
+	var managers []string
+	for _, r := range parseReplies(raws) {
+		for _, d := range r.Daemons {
+			if d.Name == name {
+				managers = append(managers, r.Manager)
+			}
+		}
+	}
+	if len(managers) == 0 {
+		tell("No shard runs a daemon named %q.", name)
+		return
+	}
+	tell("Rolling %s across %d shard(s): %s", name, len(managers), strings.Join(managers, ", "))
+
+	for i, mgr := range managers {
+		tell("[%d/%d] %s: upgrading…", i+1, len(managers), mgr)
+		raw, err := s.hub.bus.request("mc.daemon.at."+mgr+".upgrade", map[string]any{"name": name})
+		if err != nil {
+			tell("[%d/%d] %s: unreachable (%v) — roll STOPPED, %d shard(s) untouched.",
+				i+1, len(managers), mgr, err, len(managers)-i-1)
+			return
+		}
+		var r managerReply
+		if json.Unmarshal(raw, &r) != nil || !r.OK {
+			tell("[%d/%d] %s: %s — roll STOPPED, %d shard(s) untouched.",
+				i+1, len(managers), mgr, r.Error, len(managers)-i-1)
+			return
+		}
+		if !s.daemonHealthy(mgr, name, 30*time.Second) {
+			tell("[%d/%d] %s: %s did not come back healthy — roll STOPPED, %d shard(s) untouched.",
+				i+1, len(managers), mgr, name, len(managers)-i-1)
+			return
+		}
+		tell("[%d/%d] %s: healthy.", i+1, len(managers), mgr)
+	}
+	tell("Fleet upgrade of %s complete (%d shard(s)).", name, len(managers))
+}
+
+// daemonHealthy polls one manager until the daemon reports running.
+func (s *Server) daemonHealthy(mgr, name string, within time.Duration) bool {
+	deadline := time.Now().Add(within)
+	for time.Now().Before(deadline) {
+		raw, err := s.hub.bus.request("mc.daemon.at."+mgr+".list", map[string]any{})
+		if err == nil {
+			var r managerReply
+			if json.Unmarshal(raw, &r) == nil {
+				for _, d := range r.Daemons {
+					if d.Name == name && d.Status == "running" {
+						return true
+					}
+				}
+			}
+		}
+		time.Sleep(time.Second)
+	}
+	return false
 }

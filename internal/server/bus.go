@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // The plugin bus is an OPTIONAL out-of-process extension point: external programs
@@ -17,6 +18,10 @@ import (
 type bus interface {
 	publish(topic string, data any)
 	request(subject string, data any) (json.RawMessage, error)
+	// requestMany is scatter-gather: publish once, collect every reply
+	// that arrives inside the window (fleet ops — one reply per shard
+	// manager).
+	requestMany(subject string, data any, window time.Duration) ([]json.RawMessage, error)
 }
 
 // nopBus is the disabled default, so the hub never has to nil-check.
@@ -24,6 +29,9 @@ type nopBus struct{}
 
 func (nopBus) publish(string, any) {}
 func (nopBus) request(string, any) (json.RawMessage, error) {
+	return nil, fmt.Errorf("no bus configured (-nats)")
+}
+func (nopBus) requestMany(string, any, time.Duration) ([]json.RawMessage, error) {
 	return nil, fmt.Errorf("no bus configured (-nats)")
 }
 
