@@ -439,12 +439,12 @@ reference, the event table, and the threading contract: **`docs/PLUGINS.md`**.
 programs attached to the NATS bus (`-nats`), which publishes the same event
 catalog as JSON on `mc.event.<name>` and accepts commands + request-reply
 queries on `mc.cmd.*`. Distribution is the Go model — a daemon's module
-path is its repository, and `tachyne-daemon` pulls, builds, boots, and
+path is its repository, and `tachyne-plugin-manager` pulls, builds, boots, and
 supervises it in one command:
 
 ```bash
-go install github.com/tachyne/tachyne-world/cmd/tachyne-daemon@latest
-tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
+go install github.com/tachyne/tachyne-world/cmd/tachyne-plugin-manager@latest
+tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 ```
 
 `daemons/webmap` (a live web map of the world) is the shipped example, and

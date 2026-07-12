@@ -14,7 +14,7 @@ import (
 // bus is the seam between the hub and the backend. The hub only emits events;
 // the backend decides delivery and feeds commands back through executeCommand.
 // request is for engine-initiated round trips to other bus citizens (the
-// /daemon command talking to the tachyne-daemon manager).
+// /plugin command talking to the plugin manager).
 type bus interface {
 	publish(topic string, data any)
 	request(subject string, data any) (json.RawMessage, error)

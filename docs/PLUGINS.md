@@ -215,20 +215,20 @@ busplugin.On(c, "player_join", func(e plugin.PlayerJoinEvent) {
 ```
 
 Distribution is the Go model itself — the module path is the repository.
-**tachyne-daemon** pulls a daemon's source, builds it locally, boots it as
+**tachyne-plugin-manager** pulls a daemon's source, builds it locally, boots it as
 its own process with `NATS_URL` injected, and supervises it (restart with
 backoff, prefixed logs):
 
 ```bash
-go install github.com/tachyne/tachyne-world/cmd/tachyne-daemon@latest
+go install github.com/tachyne/tachyne-world/cmd/tachyne-plugin-manager@latest
 
-tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
-tachyne-daemon run github.com/you/yourdaemon@v1.0.0 -- --your-flags
-tachyne-daemon -config daemons.json          # the managed set
+tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
+tachyne-plugin-manager run github.com/you/yourdaemon@v1.0.0 -- --your-flags
+tachyne-plugin-manager -config daemons.json          # the managed set
 ```
 
 In `-config` mode the manager is **live**: it listens on the bus for
-`mc.daemon.install / uninstall / restart / list` (request-reply), so
+`mc.plugin.install / uninstall / restart / list` (request-reply), so
 daemons hot-install and hot-remove while everything runs, and the set
 persists back to `daemons.json` across manager restarts. `restart` rebuilds
 first, so an unpinned daemon picks up its latest code — that's the
@@ -276,7 +276,7 @@ sources — running your own is one binary), and:
 
 Every shard's manager shares the bus, so `/plugin` speaks to the whole
 fleet: managers identify themselves (`-name`, default `POD_NAME`), plain
-`mc.daemon.<op>` is a fleet broadcast, `mc.daemon.at.<manager>.<op>`
+`mc.plugin.<op>` is a fleet broadcast, `mc.plugin.at.<manager>.<op>`
 targets one shard, and `list` scatter-gathers the full inventory with
 out-of-date flags per shard. **`/plugin upgrade <name>` is the progressive
 rollout**: one shard at a time — rebuild at latest, boot, verify the daemon

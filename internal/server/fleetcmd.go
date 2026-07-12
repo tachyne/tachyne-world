@@ -9,7 +9,7 @@ import (
 )
 
 // /plugin — the one in-game plugin command (op-only). Daemon operations
-// forward over the bus to every shard's tachyne-daemon manager (plain op =
+// forward over the bus to every shard's tachyne-plugin-manager manager (plain op =
 // fleet broadcast, at.<manager>.<op> = one shard); registry operations ride
 // the same path. The engine forwards and prints; it never builds or runs
 // daemon code itself.
@@ -130,7 +130,7 @@ func (s *Server) cmdPlugin(p *player, args []string) {
 
 // daemonList gathers the whole fleet's inventory.
 func (s *Server) daemonList(p *player) {
-	raws, err := s.hub.bus.requestMany("mc.daemon.list", map[string]any{}, fleetWindow)
+	raws, err := s.hub.bus.requestMany("mc.plugin.list", map[string]any{}, fleetWindow)
 	if err != nil {
 		p.tell("Daemon managers unreachable: " + err.Error())
 		return
@@ -172,7 +172,7 @@ func (s *Server) daemonList(p *player) {
 // daemonSearch asks one manager to query the registries (all managers see
 // the same registries — a single reply suffices).
 func (s *Server) daemonSearch(p *player, q string) {
-	raw, err := s.hub.bus.request("mc.daemon.search", map[string]any{"q": q})
+	raw, err := s.hub.bus.request("mc.plugin.search", map[string]any{"q": q})
 	if err != nil {
 		p.tell("Daemon managers unreachable: " + err.Error())
 		return
@@ -198,7 +198,7 @@ func (s *Server) daemonSearch(p *player, q string) {
 
 // daemonInfo shows one plugin's full registry card.
 func (s *Server) daemonInfo(p *player, name string) {
-	raw, err := s.hub.bus.request("mc.daemon.info", map[string]any{"name": name})
+	raw, err := s.hub.bus.request("mc.plugin.info", map[string]any{"name": name})
 	if err != nil {
 		p.tell("Daemon managers unreachable: " + err.Error())
 		return
@@ -225,7 +225,7 @@ func (s *Server) daemonRate(p *player, name, starsArg string) {
 		p.tell("Usage: /plugin rate <name> <1-5>")
 		return
 	}
-	raw, err := s.hub.bus.request("mc.daemon.rate", map[string]any{"name": name, "stars": stars})
+	raw, err := s.hub.bus.request("mc.plugin.rate", map[string]any{"name": name, "stars": stars})
 	if err != nil {
 		p.tell("Daemon managers unreachable: " + err.Error())
 		return
@@ -240,7 +240,7 @@ func (s *Server) daemonRate(p *player, name, starsArg string) {
 
 // daemonFleetOp broadcasts a mutating op and reports per-manager outcomes.
 func (s *Server) daemonFleetOp(p *player, op string, payload map[string]any) {
-	raws, err := s.hub.bus.requestMany("mc.daemon."+op, payload, fleetWindow)
+	raws, err := s.hub.bus.requestMany("mc.plugin."+op, payload, fleetWindow)
 	if err != nil {
 		p.tell("Daemon managers unreachable: " + err.Error())
 		return
@@ -266,7 +266,7 @@ func (s *Server) daemonFleetOp(p *player, op string, payload map[string]any) {
 func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 	tell := func(f string, a ...any) { p.trySendEv(chatEv(fmt.Sprintf(f, a...))) }
 
-	raws, err := s.hub.bus.requestMany("mc.daemon.list", map[string]any{}, fleetWindow)
+	raws, err := s.hub.bus.requestMany("mc.plugin.list", map[string]any{}, fleetWindow)
 	if err != nil {
 		tell("Daemon managers unreachable: %v", err)
 		return
@@ -287,7 +287,7 @@ func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 
 	for i, mgr := range managers {
 		tell("[%d/%d] %s: upgrading…", i+1, len(managers), mgr)
-		raw, err := s.hub.bus.request("mc.daemon.at."+mgr+".upgrade", map[string]any{"name": name})
+		raw, err := s.hub.bus.request("mc.plugin.at."+mgr+".upgrade", map[string]any{"name": name})
 		if err != nil {
 			tell("[%d/%d] %s: unreachable (%v) — roll STOPPED, %d shard(s) untouched.",
 				i+1, len(managers), mgr, err, len(managers)-i-1)
@@ -313,7 +313,7 @@ func (s *Server) daemonProgressiveUpgrade(p *player, name string) {
 func (s *Server) daemonHealthy(mgr, name string, within time.Duration) bool {
 	deadline := time.Now().Add(within)
 	for time.Now().Before(deadline) {
-		raw, err := s.hub.bus.request("mc.daemon.at."+mgr+".list", map[string]any{})
+		raw, err := s.hub.bus.request("mc.plugin.at."+mgr+".list", map[string]any{})
 		if err == nil {
 			var r managerReply
 			if json.Unmarshal(raw, &r) == nil {

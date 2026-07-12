@@ -3,7 +3,7 @@
 // mobs refreshed by the mobs query. No engine changes, no compilation into
 // the core; run it beside any tachyne server:
 //
-//	tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap
+//	tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap
 //
 // or by hand: NATS_URL=nats://… webmap -addr :8100, then open the page.
 package main

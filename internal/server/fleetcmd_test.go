@@ -49,7 +49,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// install by registry NAME → {"name": ...}; by module path → {"module": ...}.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0"}`, `{"ok":true,"manager":"shard-1"}`}
 	s.handleCommand(p, "plugin install webmap")
-	if stub.subject != "mc.daemon.install" {
+	if stub.subject != "mc.plugin.install" {
 		t.Fatalf("subject %q", stub.subject)
 	}
 	var inst map[string]any
@@ -85,7 +85,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// search formats registry rows.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}
 	s.handleCommand(p, "plugin search map")
-	if stub.subject != "mc.daemon.search" {
+	if stub.subject != "mc.plugin.search" {
 		t.Fatalf("subject %q", stub.subject)
 	}
 	if !waitChatLine(p, "webmap (daemon) v1.1.0 — live map [7 installs, 4.5★×2]") {
@@ -95,7 +95,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// info renders the registry card; rate confirms.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}
 	s.handleCommand(p, "plugin info webmap")
-	if stub.subject != "mc.daemon.info" {
+	if stub.subject != "mc.plugin.info" {
 		t.Fatalf("subject %q", stub.subject)
 	}
 	if !waitChatLine(p, "webmap (daemon) — live map") {
@@ -103,7 +103,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	}
 	stub.replies = []string{`{"ok":true,"manager":"shard-0"}`}
 	s.handleCommand(p, "plugin rate webmap 5")
-	if stub.subject != "mc.daemon.rate" {
+	if stub.subject != "mc.plugin.rate" {
 		t.Fatalf("subject %q", stub.subject)
 	}
 	var rate map[string]any

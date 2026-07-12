@@ -1,24 +1,25 @@
-// tachyne-daemon is the go-get model applied to running plugins: give it a
-// daemon plugin's module path and it pulls the source, builds it locally,
-// boots it as its own process attached to the server's bus, and supervises
-// it (restart with backoff, prefixed logs). The engine itself never loads or
+// tachyne-plugin-manager is the plugin manager: the go-get model applied
+// to running plugins. Give it a daemon plugin's module path and it pulls
+// the source, builds it locally, boots it as its own process attached to
+// the server's bus, and supervises it (restart with backoff, prefixed
+// logs) — plus the fleet control plane the in-game /plugin command drives. The engine itself never loads or
 // builds code — daemons live beside it, crash-isolated, hot add/remove.
 //
 // One-off:
 //
-//	tachyne-daemon run github.com/tachyne/tachyne-world/daemons/webmap [-- args...]
-//	tachyne-daemon run ./daemons/webmap            (local directory dev loop)
+//	tachyne-plugin-manager run github.com/tachyne/tachyne-world/daemons/webmap [-- args...]
+//	tachyne-plugin-manager run ./daemons/webmap            (local directory dev loop)
 //
 // Managed (install/uninstall/reload while everything runs):
 //
-//	tachyne-daemon -config daemons.json
+//	tachyne-plugin-manager -config daemons.json
 //
 // loads the set from daemons.json, then listens on the bus for control:
 //
-//	mc.daemon.install   {"module": "...", "version": "v1.2.0", "args": [...]}
-//	mc.daemon.uninstall {"name": "webmap"}
-//	mc.daemon.restart   {"name": "webmap"}     (rebuilds — @latest hot-reloads)
-//	mc.daemon.list
+//	mc.plugin.install   {"module": "...", "version": "v1.2.0", "args": [...]}
+//	mc.plugin.uninstall {"name": "webmap"}
+//	mc.plugin.restart   {"name": "webmap"}     (rebuilds — @latest hot-reloads)
+//	mc.plugin.list
 //
 // all request-reply with the usual {"ok","data","error"} envelope, so they
 // work from any bus client — including the engine's op-only /daemon chat
@@ -81,7 +82,7 @@ func main() {
 	natsURL := flag.String("nats", "", "bus address handed to daemons as NATS_URL (default: current NATS_URL env, else nats://localhost:4222)")
 	config := flag.String("config", "", "daemons.json holding the managed set (rewritten by install/uninstall)")
 	cacheDir := flag.String("cache", defaultCache(), "built-binary cache directory")
-	name := flag.String("name", "", "this manager's fleet name (default: POD_NAME, else hostname) — targeted ops address mc.daemon.at.<name>.<op>")
+	name := flag.String("name", "", "this manager's fleet name (default: POD_NAME, else hostname) — targeted ops address mc.plugin.at.<name>.<op>")
 	registryURLs := flag.String("registry", "", "comma-separated tachyne plugin registry URLs (default: TACHYNE_REGISTRY env) for name resolution, search, and out-of-date checks")
 	flag.Parse()
 
@@ -129,7 +130,7 @@ func main() {
 		}
 		specs = []daemonSpec{spec}
 	default:
-		log.Fatal("usage: tachyne-daemon run <module[@version] | ./localdir> [-- args...]   or   tachyne-daemon -config daemons.json")
+		log.Fatal("usage: tachyne-plugin-manager run <module[@version] | ./localdir> [-- args...]   or   tachyne-plugin-manager -config daemons.json")
 	}
 
 	for _, s := range specs {
@@ -140,14 +141,14 @@ func main() {
 
 	// Bus control plane: managed mode only (a one-off `run` stays plain).
 	if m.statePath != "" {
-		if nc, err := nats.Connect(url, nats.Name("tachyne-daemon"), nats.MaxReconnects(-1)); err != nil {
+		if nc, err := nats.Connect(url, nats.Name("tachyne-plugin-manager"), nats.MaxReconnects(-1)); err != nil {
 			log.Printf("bus control unavailable (%v) — running without install/uninstall", err)
 		} else {
 			defer nc.Close()
 			if err := m.serveControl(nc); err != nil {
 				log.Printf("bus control unavailable: %v", err)
 			} else {
-				log.Printf("manager %q: bus control on mc.daemon.<op> (fleet) and mc.daemon.at.%s.<op> (targeted)", m.name, m.name)
+				log.Printf("manager %q: bus control on mc.plugin.<op> (fleet) and mc.plugin.at.%s.<op> (targeted)", m.name, m.name)
 			}
 		}
 	}
@@ -294,9 +295,9 @@ func (m *manager) persist() {
 	}
 }
 
-// serveControl answers the fleet control plane. Plain mc.daemon.<op> is a
+// serveControl answers the fleet control plane. Plain mc.plugin.<op> is a
 // BROADCAST — every manager on the bus executes it (fleet-wide install);
-// mc.daemon.at.<name>.<op> targets one manager. Every reply carries this
+// mc.plugin.at.<name>.<op> targets one manager. Every reply carries this
 // manager's name so scatter-gather callers can attribute answers. Handlers
 // run in their own goroutines: installs compile and must not stall the
 // subscription.
@@ -319,9 +320,9 @@ func (m *manager) serveControl(nc *nats.Conn) error {
 			msg.Respond(body)
 		}
 	}
-	_, err := nc.Subscribe("mc.daemon.>", func(msg *nats.Msg) {
+	_, err := nc.Subscribe("mc.plugin.>", func(msg *nats.Msg) {
 		go func() {
-			op := strings.TrimPrefix(msg.Subject, "mc.daemon.")
+			op := strings.TrimPrefix(msg.Subject, "mc.plugin.")
 			if rest, targeted := strings.CutPrefix(op, "at."); targeted {
 				target, opAt, ok := strings.Cut(rest, ".")
 				if !ok {
@@ -553,7 +554,7 @@ func (w *lineWriter) Write(p []byte) (int, error) {
 
 func defaultCache() string {
 	if dir, err := os.UserCacheDir(); err == nil {
-		return filepath.Join(dir, "tachyne-daemon")
+		return filepath.Join(dir, "tachyne-plugin-manager")
 	}
-	return ".tachyne-daemon-cache"
+	return ".tachyne-plugin-manager-cache"
 }

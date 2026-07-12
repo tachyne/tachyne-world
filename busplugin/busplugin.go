@@ -15,8 +15,8 @@
 //
 // Event payloads are the plugin package's event structs (snake_case JSON on
 // the wire); commands and queries are documented in docs/PLUGINS.md. Run a
-// daemon by hand, or let cmd/tachyne-daemon pull, build, and supervise it
-// from its module path — the go-get model for running plugins.
+// daemon by hand, or let cmd/tachyne-plugin-manager pull, build, and
+// supervise it from its module path — the go-get model for running plugins.
 //
 // Daemons observe and command; they cannot veto actions inside the tick —
 // that is what compiled-in plugins (tachyne-build) are for.
@@ -46,8 +46,8 @@ func Connect(url string) (*Conn, error) {
 	return &Conn{nc: nc}, nil
 }
 
-// ConnectEnv dials NATS_URL (the address tachyne-daemon injects), falling
-// back to the local default.
+// ConnectEnv dials NATS_URL (the address the plugin manager injects),
+// falling back to the local default.
 func ConnectEnv() (*Conn, error) {
 	url := os.Getenv("NATS_URL")
 	if url == "" {
