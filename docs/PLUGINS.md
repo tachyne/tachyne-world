@@ -253,7 +253,7 @@ plugins only for tick-veto hooks (protection, combat tuning).
 
 ### The plugin registry
 
-Discovery lives in the [tachyne registry](https://github.com/tachyne/registry):
+Discovery lives in the [tachyne registry](https://github.com/tachyne/tachyne-registry):
 a REST index over git-hosted plugins (search, latest version, freshness,
 ratings, install counts) that **indexes, never hosts** — listing a plugin
 means putting a `tachyne-plugin.json` manifest beside your main package and

@@ -452,7 +452,7 @@ the `busplugin` package is the Go kit. Running under `-config`, the manager
 takes live `install`/`uninstall`/`restart`/`list` commands over the bus —
 in game that's the op-only `/daemon` command — so plugins hot-install,
 hot-remove, and hot-reload while the server runs. Discovery comes from the
-[plugin registry](https://github.com/tachyne/registry) (`/daemon search`,
+[plugin registry](https://github.com/tachyne/tachyne-registry) (`/daemon search`,
 install by name, out-of-date flags), and on sharded worlds `/daemon`
 spans the whole fleet — including `/daemon upgrade <name>`, a progressive
 shard-by-shard rollout that verifies health before each step. Daemons
