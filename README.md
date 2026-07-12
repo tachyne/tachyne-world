@@ -433,7 +433,7 @@ compiled into the default binary but inert until configured. Full API
 reference, the event table, and the threading contract: **`docs/PLUGINS.md`**.
 
 For out-of-process integrations (any language), the NATS bus (`-nats`)
-publishes **the same event catalog as JSON** on `mc.event.v2.<name>` and
+publishes **the same event catalog as JSON** on `mc.event.<name>` and
 accepts a facade-parity command set on `mc.cmd.*` (weather, time, gamerules,
 give, teleport, named mob spawning with stat overrides, plus request-reply
 queries for players/mobs/blocks/world state) — observe-and-command only;

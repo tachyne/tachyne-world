@@ -173,7 +173,6 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 		}
 	}
 	h.toNearbyEv(players, dim, x, z, entAdd(eid, etype, m.uuid, x, y, z, 0, 0))
-	h.bus.publish("mob_spawn", map[string]any{"eid": eid, "type": etype, "x": x, "y": y, "z": z})
 	return m
 }
 

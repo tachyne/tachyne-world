@@ -47,8 +47,8 @@ func TestExecuteCommand(t *testing.T) {
 	}
 }
 
-// TestBusV2Commands exercises the facade-parity command set.
-func TestBusV2Commands(t *testing.T) {
+// TestBusCommands exercises the facade-parity command set.
+func TestBusCommands(t *testing.T) {
 	h := newHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	go h.run()
@@ -79,10 +79,10 @@ func TestBusV2Commands(t *testing.T) {
 		t.Error("unknown item should error")
 	}
 
-	// spawn2: named entity with stat overrides, replies with the eid.
-	data, e := executeCommand(h, "spawn2", json.RawMessage(`{"type":"zombie","x":0.5,"y":80,"z":0.5,"damage":21,"max_health":60}`))
+	// spawn: named entity with stat overrides, replies with the eid.
+	data, e := executeCommand(h, "spawn", json.RawMessage(`{"type":"zombie","x":0.5,"y":80,"z":0.5,"damage":21,"max_health":60}`))
 	if e != "" {
-		t.Fatalf("spawn2: %s", e)
+		t.Fatalf("spawn: %s", e)
 	}
 	eid := data.(map[string]any)["eid"].(int32)
 	var dmg float32
@@ -93,9 +93,9 @@ func TestBusV2Commands(t *testing.T) {
 		}
 	})
 	if dmg != 21 || maxHP != 60 {
-		t.Fatalf("spawn2 overrides: dmg=%v maxHP=%d", dmg, maxHP)
+		t.Fatalf("spawn overrides: dmg=%v maxHP=%d", dmg, maxHP)
 	}
-	if _, e := executeCommand(h, "spawn2", json.RawMessage(`{"type":"gremlin","x":0,"z":0}`)); e == "" {
+	if _, e := executeCommand(h, "spawn", json.RawMessage(`{"type":"gremlin","x":0,"z":0}`)); e == "" {
 		t.Error("unknown entity should error")
 	}
 
@@ -132,9 +132,9 @@ func TestBusV2Commands(t *testing.T) {
 	}
 }
 
-// TestBusV2EventBridge: with the bridge registered, plugin events publish as
-// JSON on v2 subjects; cancelled events don't.
-func TestBusV2EventBridge(t *testing.T) {
+// TestBusEventBridge: with the bridge registered, plugin events publish as
+// JSON on mc.event.<name>; cancelled events don't.
+func TestBusEventBridge(t *testing.T) {
 	h := newHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	rec := &recordingBus{}
@@ -147,18 +147,18 @@ func TestBusV2EventBridge(t *testing.T) {
 	h.post(evJoin{p: p1, x: 0.5, y: 80, z: 0.5})
 	deadline := time.Now().Add(10 * time.Second)
 	for {
-		if raw, ok := rec.get("v2.player_join"); ok {
+		if raw, ok := rec.get("player_join"); ok {
 			var ev struct {
 				EID  int32  `json:"EID"`
 				Name string `json:"Name"`
 			}
 			if err := json.Unmarshal(raw, &ev); err != nil || ev.Name != "alice" || ev.EID != p1.eid {
-				t.Fatalf("v2.player_join payload %s (err %v)", raw, err)
+				t.Fatalf("player_join payload %s (err %v)", raw, err)
 			}
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("v2.player_join never published")
+			t.Fatal("player_join never published")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -168,23 +168,23 @@ func TestBusV2EventBridge(t *testing.T) {
 	off := plugin.On(h.plugins, plugin.Normal, false, pcancel)
 	h.post(evChat{from: p1, text: "silenced"})
 	h.runOnHub(func() {}) // barrier: the chat event was processed
-	if _, ok := rec.get("v2.player_chat"); ok {
-		t.Fatal("cancelled chat leaked onto the v2 bus")
+	if _, ok := rec.get("player_chat"); ok {
+		t.Fatal("cancelled chat leaked onto the bus")
 	}
 	off()
 	h.post(evChat{from: p1, text: "audible"})
 	deadline = time.Now().Add(10 * time.Second)
 	for {
-		if raw, ok := rec.get("v2.player_chat"); ok {
+		if raw, ok := rec.get("player_chat"); ok {
 			var ev struct{ Message string }
 			json.Unmarshal(raw, &ev)
 			if ev.Message != "audible" {
-				t.Fatalf("v2.player_chat payload %s", raw)
+				t.Fatalf("player_chat payload %s", raw)
 			}
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("v2.player_chat never published")
+			t.Fatal("player_chat never published")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

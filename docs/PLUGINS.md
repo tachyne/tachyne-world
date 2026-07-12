@@ -143,12 +143,14 @@ goroutine.
 With `-nats nats://…` the engine is a NATS client; any process on the broker
 is a plugin. Three surfaces:
 
-**Events (v2)** — every event in the table above publishes on
-`mc.event.v2.<name>` (`mc.event.v2.block_break`, `mc.event.v2.mob_death`, …)
-with the event struct itself as the JSON payload — same names, same fields as
-the in-process API. Cancelled events are not published (the action didn't
-happen). The legacy `mc.event.<topic>` subjects (ad-hoc payloads) remain for
-compatibility but new consumers should subscribe `mc.event.v2.>`.
+**Events** — every event in the table above publishes on
+`mc.event.<name>` (`mc.event.block_break`, `mc.event.mob_death`, …) with the
+event struct itself as the JSON payload — same names, same fields as the
+in-process API. Cancelled events are not published (the action didn't
+happen). A few engine events without a catalog equivalent yet publish ad-hoc
+payloads on the same namespace (`block_change`, `item_drop`, `explosion`,
+`lightning`, `enchant`, `npc_say`, and the raw `chat` line); they'll migrate
+into the catalog as it grows.
 
 **Commands** — publish (or request) `mc.cmd.<name>` with JSON args; with
 request-reply you get `{"ok":true[,"data":…]}` or `{"ok":false,"error":…}`:
@@ -162,18 +164,18 @@ request-reply you get `{"ok":true[,"data":…]}` or `{"ok":false,"error":…}`:
 | `give` | `{player, item, count?}` | give items (item by **name**, e.g. `"bow"`) |
 | `teleport` | `{player, x, y, z}` | move a player |
 | `setblock` | `{x, y, z, state}` | set a block (broadcast + simulated) |
-| `spawn2` | `{type, x, z, y?, dim?, behavior?, max_health?, speed?, damage?}` | spawn by entity name with stat overrides; replies `{data:{eid}}` |
+| `spawn` | `{type, x, z, y?, dim?, behavior?, max_health?, speed?, damage?}` | spawn by entity name with stat overrides; replies `{data:{eid}}` |
 | `mobset` | `{eid, max_health?, health?, speed?, damage?, behavior?}` | mutate a live mob |
-| `spawn` / `behavior` | *(legacy)* | numeric-type spawn / behavior swap |
+| `behavior` | `{eid, behavior}` | swap a mob's AI behavior |
 
 **Queries** (request-reply): `players` (name/eid/position/gamemode/health),
 `mobs` (`{dim?}` filter), `block` (`{x,y,z,dim?}` → state), `world` (age,
 day time, weather, difficulty, counts).
 
 Bus mutations run through the same code paths as plugin facades, so
-in-process plugin events fire for them too — a bus `spawn2` is observed (and
+in-process plugin events fire for them too — a bus `spawn` is observed (and
 cancellable) by an in-process `MobSpawnEvent` handler, and shows up on
-`mc.event.v2.mob_spawn` with reason `bus`.
+`mc.event.mob_spawn` with reason `bus`.
 
 ## The example plugin
 

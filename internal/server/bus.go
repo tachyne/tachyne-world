@@ -55,23 +55,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		}
 		h.post(evSetBlock{x: a.X, y: a.Y, z: a.Z, state: a.State})
 	case "spawn":
-		var a struct {
-			Type     int     `json:"type"`
-			X        float64 `json:"x"`
-			Y        float64 `json:"y"` // 0 = snap to the surface
-			Z        float64 `json:"z"`
-			Behavior string  `json:"behavior"`
-		}
-		if json.Unmarshal(args, &a) != nil {
-			return nil, "spawn requires type,x,z[,y,behavior]"
-		}
-		if a.Behavior == "" {
-			a.Behavior = "wander"
-		}
-		if _, ok := behaviors[a.Behavior]; !ok {
-			return nil, fmt.Sprintf("unknown behavior %q", a.Behavior)
-		}
-		h.post(evSpawnMob{etype: a.Type, x: a.X, y: a.Y, z: a.Z, behavior: a.Behavior})
+		return busCmdSpawn(h, args)
 	case "behavior":
 		var a struct {
 			EID      int32  `json:"eid"`
@@ -85,7 +69,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		}
 		h.post(evSetBehavior{eid: a.EID, behavior: a.Behavior})
 
-	// v2 commands (busv2.go): facade parity.
+	// Facade-parity commands (busv2.go).
 	case "weather":
 		return busCmdWeather(h, args)
 	case "gamerule":
@@ -94,12 +78,10 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		return busCmdGive(h, args)
 	case "teleport":
 		return busCmdTeleport(h, args)
-	case "spawn2":
-		return busCmdSpawn2(h, args)
 	case "mobset":
 		return busCmdMobSet(h, args)
 
-	// v2 queries (request-reply).
+	// Queries (request-reply).
 	case "players":
 		return busQueryPlayers(h)
 	case "mobs":

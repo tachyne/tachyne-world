@@ -8,19 +8,21 @@ import (
 	"tachyne/plugin"
 )
 
-// Bus protocol v2: the plugin event catalog, published as JSON.
+// The bus event protocol: the plugin event catalog, published as JSON.
 //
-// v1 subjects (mc.event.chat, mc.event.player_move, …) publish hand-rolled
-// ad-hoc maps and stay for compatibility. v2 mirrors every in-process plugin
-// event onto "mc.event.v2.<EventName()>" with the event struct itself as the
-// payload — the same names, fields and semantics docs/PLUGINS.md documents,
-// so an external observer and an in-process plugin read the same vocabulary.
-// Cancelled events are NOT published (the action didn't happen). Observe
-// only: the bus deliberately has no synchronous veto hooks — anything that
-// must cancel or rewrite an action belongs in-process.
+// Every in-process plugin event mirrors onto "mc.event.<EventName()>" with
+// the event struct itself as the payload — the same names, fields and
+// semantics docs/PLUGINS.md documents, so an external observer and an
+// in-process plugin read the same vocabulary. Cancelled events are NOT
+// published (the action didn't happen). A handful of engine events without
+// a catalog equivalent yet (block_change, item_drop, explosion, lightning,
+// enchant, npc_say) publish ad-hoc payloads on the same namespace and will
+// migrate into the catalog as it grows. Observe only: the bus deliberately
+// has no synchronous veto hooks — anything that must cancel or rewrite an
+// action belongs in-process.
 
-// registerBusBridge subscribes the v2 mirror for every event. Called only
-// when a real bus backend is configured, so idle installs pay nothing.
+// registerBusBridge subscribes the event mirror. Called only when a real
+// bus backend is configured, so idle installs pay nothing.
 func (h *hub) registerBusBridge() {
 	bridgeEv[*plugin.PlayerJoinEvent](h)
 	bridgeEv[*plugin.PlayerQuitEvent](h)
@@ -42,7 +44,7 @@ func (h *hub) registerBusBridge() {
 // events (ignoreCancelled) — observers see final outcomes only.
 func bridgeEv[T plugin.Event](h *hub) {
 	plugin.On(h.plugins, plugin.Monitor, true, func(ev T) {
-		h.bus.publish("v2."+ev.EventName(), ev)
+		h.bus.publish(ev.EventName(), ev)
 	})
 }
 
@@ -138,7 +140,7 @@ func busCmdTeleport(h *hub, args json.RawMessage) (any, string) {
 	return nil, ""
 }
 
-func busCmdSpawn2(h *hub, args json.RawMessage) (any, string) {
+func busCmdSpawn(h *hub, args json.RawMessage) (any, string) {
 	a := struct {
 		Type      string  `json:"type"` // entity name, e.g. "zombie"
 		Dim       int     `json:"dim"`
@@ -151,7 +153,7 @@ func busCmdSpawn2(h *hub, args json.RawMessage) (any, string) {
 		Damage    float64 `json:"damage"`
 	}{}
 	if json.Unmarshal(args, &a) != nil || a.Type == "" {
-		return nil, "spawn2 requires type (entity name), x, z [,y,dim,behavior,max_health,speed,damage]"
+		return nil, "spawn requires type (entity name), x, z [,y,dim,behavior,max_health,speed,damage]"
 	}
 	etype, ok := entityByName[a.Type]
 	if !ok {

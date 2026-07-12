@@ -361,7 +361,6 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	if xp > 0 {
 		h.spawnXPOrbIn(players, m.dim, xp, m.x, m.y, m.z)
 	}
-	h.bus.publish("mob_death", map[string]any{"eid": m.eid, "type": m.etype, "x": m.x, "y": m.y, "z": m.z})
 }
 
 // entityStatus builds Entity Status (0x1e): an i32 entity id + a status byte.

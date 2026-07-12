@@ -103,11 +103,6 @@ type evSetBlock struct { // a bus-driven block change (apply + broadcast + simul
 	x, y, z int
 	state   uint32
 }
-type evSpawnMob struct { // a bus-driven mob spawn with a chosen behavior
-	etype    int
-	x, y, z  float64
-	behavior string
-}
 type evSetBehavior struct { // a bus-driven behavior change on an existing mob
 	eid      int32
 	behavior string
@@ -152,7 +147,6 @@ func (evList) isHubEvent()        {}
 func (evSetGamemode) isHubEvent() {}
 func (evSetHud) isHubEvent()      {}
 func (evSetBlock) isHubEvent()    {}
-func (evSpawnMob) isHubEvent()    {}
 func (evSetBehavior) isHubEvent() {}
 func (evDrop) isHubEvent()        {}
 func (evRespawn) isHubEvent()     {}
@@ -901,26 +895,6 @@ func (h *hub) run() {
 				}
 			case evSetBlock:
 				h.setBlockLive(players, 0, e.x, e.y, e.z, e.state)
-			case evSpawnMob:
-				y := e.y
-				if y == 0 { // convenience: 0 means "snap to the surface"
-					y = float64(h.world.SurfaceFeet(int(math.Floor(e.x)), int(math.Floor(e.z))))
-				}
-				h.withSpawnCause(plugin.SpawnBus, func() {
-					m := h.spawnMob(players, e.etype, e.x, y, e.z)
-					if m == nil {
-						return // plugin-cancelled
-					}
-					if b := behaviors[e.behavior]; b != nil {
-						m.behavior = b
-					}
-					if _, ok := m.behavior.(herdBehavior); ok {
-						m.herd = h.herdNear(e.x, e.z)
-					}
-					if _, ok := m.behavior.(hostileBehavior); ok {
-						m.hostile = true // speed from speedFor
-					}
-				})
 			case evSetBehavior:
 				if m := h.mobs[e.eid]; m != nil {
 					h.applyBehavior(m, e.behavior)
@@ -1329,7 +1303,6 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	if h.rainLevel > 0 { // late joiners start under the same sky
 		h.sendWeather(nt)
 	}
-	h.bus.publish("player_join", map[string]any{"name": e.p.name, "x": e.x, "y": e.y, "z": e.z})
 	h.plugins.Fire(&plugin.PlayerJoinEvent{EID: e.p.eid, Name: e.p.name, X: e.x, Y: e.y, Z: e.z, Dim: nt.dim})
 }
 
@@ -1380,7 +1353,6 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		other.p.trySendEv(move)
 		other.p.trySendEv(head)
 	}
-	h.bus.publish("player_move", map[string]any{"name": t.p.name, "x": t.x, "y": t.y, "z": t.z, "yaw": t.yaw})
 	if plugin.Has[*plugin.PlayerMoveEvent](h.plugins) { // hot path: never build the event unheard
 		h.plugins.Fire(&plugin.PlayerMoveEvent{EID: e.eid, Name: t.p.name,
 			FromX: fromX, FromY: fromY, FromZ: fromZ, ToX: t.x, ToY: t.y, ToZ: t.z, Dim: t.dim})
@@ -1439,7 +1411,6 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 		t.p.trySendEv(entGone(p.eid))
 	}
 	h.shadowGoneAll(p.eid) // retract any cross-seam shadow of the leaver
-	h.bus.publish("player_leave", map[string]any{"name": p.name})
 	h.plugins.Fire(&plugin.PlayerQuitEvent{EID: p.eid, Name: p.name})
 }
 
