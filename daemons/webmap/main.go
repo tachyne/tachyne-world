@@ -127,6 +127,7 @@ func main() {
 	})
 
 	log.Printf("webmap on %s", *addr)
+	c.Announce("webmap", "Live web map is up — open http://<server-host>"+*addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 

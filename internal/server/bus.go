@@ -51,6 +51,18 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 			return nil, "say requires a text arg"
 		}
 		h.post(evChat{text: a.Text})
+	case "announce":
+		// A plugin's note to the OPERATORS (not the room): "[name] text" to
+		// every online op; the plugin manager records it for /plugin too.
+		var a struct {
+			Name string `json:"name"`
+			Text string `json:"text"`
+		}
+		json.Unmarshal(args, &a)
+		if a.Name == "" || a.Text == "" {
+			return nil, "announce requires name,text"
+		}
+		h.post(evAnnounce{name: a.Name, text: a.Text})
 	case "settime":
 		var a struct {
 			Time uint64 `json:"time"`

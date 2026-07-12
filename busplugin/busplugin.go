@@ -90,6 +90,14 @@ func (c *Conn) OnRaw(event string, fn func(event string, payload []byte)) (func(
 	return func() { sub.Unsubscribe() }, nil
 }
 
+// Announce tells the server's operators something worth knowing — call it
+// once at startup with whatever an op needs to use the plugin (the webmap
+// announces its URL). Online ops see it in chat; the plugin manager
+// remembers the latest note per daemon so /plugin shows it later too.
+func (c *Conn) Announce(pluginName, text string) error {
+	return c.Command("announce", map[string]any{"name": pluginName, "text": text})
+}
+
 // Command sends a fire-and-forget command (mc.cmd.<name>).
 func (c *Conn) Command(name string, args any) error {
 	raw, err := json.Marshal(args)

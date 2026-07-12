@@ -209,10 +209,17 @@ the `busplugin` package is the kit:
 
 ```go
 c, _ := busplugin.ConnectEnv() // NATS_URL
+c.Announce("myplugin", "ready — dashboard on http://<server-host>:9000")
 busplugin.On(c, "player_join", func(e plugin.PlayerJoinEvent) {
     c.Command("say", map[string]any{"text": "Welcome, " + e.Name + "!"})
 })
 ```
+
+`Announce` is the plugin's note to the operators: online ops see it in
+chat the moment the daemon starts (the webmap announces its URL), and the
+manager remembers the latest note per daemon so `/plugin` shows it under
+the entry — in the list output and the browser lore — for ops who join
+later.
 
 Distribution is the Go model itself — the module path is the repository.
 **[tachyne-plugin-manager](https://github.com/tachyne/tachyne-plugin-manager)** pulls a daemon's source, builds it locally, boots it as

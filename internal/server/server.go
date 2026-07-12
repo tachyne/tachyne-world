@@ -345,6 +345,7 @@ func (s *Server) Serve() error {
 		}
 		s.hub.spawns = newSpawnStore(s.SpawnPointFile)
 		s.hub.rulesPath = "settings.json"
+		s.hub.opsRef = s.Ops // read-only after this point (announce targeting)
 		s.hub.loadRules()
 		// Rebuild the lightning-rod POI set from the persisted edits, so rods
 		// placed before a restart keep attracting storms.

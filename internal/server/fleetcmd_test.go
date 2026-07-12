@@ -93,7 +93,7 @@ func TestDaemonFleetCommand(t *testing.T) {
 	// Fleet list: manager sections + the OUTDATED flag + the summary hint.
 	stub.replies = []string{
 		`{"ok":true,"manager":"shard-0","daemons":[{"manager":"shard-0","name":"webmap","module":"github.com/x/mapd","built":"v1.0.0","latest":"v1.1.0","outdated":true,"status":"running","restarts":0}]}`,
-		`{"ok":true,"manager":"shard-1","daemons":[{"manager":"shard-1","name":"webmap","module":"github.com/x/mapd","built":"v1.1.0","latest":"v1.1.0","status":"running","restarts":1}]}`,
+		`{"ok":true,"manager":"shard-1","daemons":[{"manager":"shard-1","name":"webmap","module":"github.com/x/mapd","built":"v1.1.0","latest":"v1.1.0","status":"running","restarts":1,"note":"map on :8100"}]}`,
 	}
 	s.handleCommand(p, "plugin list")
 	if !waitChatLine(p, "[shard-0] webmap — github.com/x/mapd@v1.0.0 [running, 0 restarts] *** OUTDATED (latest v1.1.0)") {
@@ -102,9 +102,13 @@ func TestDaemonFleetCommand(t *testing.T) {
 	if !waitChatLine(p, "[shard-1] webmap — github.com/x/mapd@v1.1.0 [running, 1 restarts]") {
 		t.Fatal("current row missing")
 	}
+	if !waitChatLine(p, "    ↳ map on :8100") {
+		t.Fatal("note line missing")
+	}
 	if !waitChatLine(p, "1 of 2 daemons outdated — /plugin upgrade <name> rolls the fleet progressively.") {
 		t.Fatal("stale summary missing")
 	}
+	// (the note line rides between the rows — spot-check it was emitted)
 
 	// search formats registry rows.
 	stub.replies = []string{`{"ok":true,"manager":"shard-0","plugins":[{"module":"github.com/x/mapd","name":"webmap","type":"daemon","description":"live map","latest":"v1.1.0","installs":7,"rating":4.5,"ratings":2}]}`}

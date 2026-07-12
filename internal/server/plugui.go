@@ -32,6 +32,7 @@ const (
 // registry search result (fields filled as known).
 type plugUIEntry struct {
 	name, module, desc string
+	note               string // the daemon's latest announce (URL etc)
 	typ                string // "plugin" (compiled) | "daemon"
 	manager            string // fleet manager running it ("" = not installed)
 	current, latest    string
@@ -182,7 +183,7 @@ func (h *hub) fetchPluginUI(eid, winID int32, seq int, query string) {
 						cur = d.Built
 					}
 					entries = append(entries, plugUIEntry{name: d.Name, module: d.Module,
-						typ: "daemon", manager: r.Manager, current: cur, latest: d.Latest,
+						typ: "daemon", manager: r.Manager, current: cur, latest: d.Latest, note: d.Note,
 						status: d.Status, restarts: d.Restarts, outdated: d.Outdated, installed: true})
 				}
 			}
@@ -352,6 +353,9 @@ func uiEntryItem(en plugUIEntry) (int32, string, []string) {
 	case en.installed:
 		item = uiItemDaemon
 		lore = append(lore, fmt.Sprintf("[%s] %s, %d restarts", en.manager, en.status, en.restarts))
+		if en.note != "" {
+			lore = append(lore, en.note)
+		}
 		if en.current != "" {
 			lore = append(lore, "running "+shortVer(en.current))
 		}

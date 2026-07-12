@@ -88,9 +88,10 @@ type evChat struct {
 	from *player
 	text string
 }
-type evList struct{ p *player }   // send the online-player list to one player
-type evSetTime struct{ t uint64 } // explicit day-time set (command/bus) — fires the plugin event
-type evSetGamemode struct {       // apply a game-mode change to a named player
+type evList struct{ p *player }             // send the online-player list to one player
+type evSetTime struct{ t uint64 }           // explicit day-time set (command/bus) — fires the plugin event
+type evAnnounce struct{ name, text string } // a plugin's note, relayed to online ops
+type evSetGamemode struct {                 // apply a game-mode change to a named player
 	name string
 	mode int
 	by   string // who initiated it ("" or self = no "operator changed" notice)
@@ -140,6 +141,7 @@ type evStopEat struct {                  // release_use_item / hotbar switch: en
 func (evJoin) isHubEvent()        {}
 func (evMove) isHubEvent()        {}
 func (evSetTime) isHubEvent()     {}
+func (evAnnounce) isHubEvent()    {}
 func (evLeave) isHubEvent()       {}
 func (evBlock) isHubEvent()       {}
 func (evChat) isHubEvent()        {}
@@ -319,6 +321,7 @@ type hub struct {
 	psched     *pluginSched
 	plugHost   *pluginHost
 	spawnCause plugin.SpawnReason // in-force MobSpawnEvent reason (zero = SpawnNatural)
+	opsRef     map[string]bool    // Server.Ops, read-only after Serve (announce targeting)
 
 	invs       *invStore        // survival inventory persistence (nil = in-memory only)
 	advs       *advStore        // advancement grant persistence (nil = in-memory only)
@@ -783,6 +786,14 @@ func (h *hub) run() {
 				h.roomChat(players, fmt.Sprintf("<%s> %s", e.from.name, msg))
 			case evSetTime:
 				h.setDayTime(e.t)
+			case evAnnounce:
+				line := chatEv("[" + e.name + "] " + e.text)
+				for _, t := range players {
+					if h.opsRef[t.p.name] {
+						t.p.trySendEv(line)
+					}
+				}
+				log.Printf("plugin announce [%s] %s", e.name, e.text)
 			case evCommand:
 				e.reply <- h.runPluginCommand(e.p, e.line)
 			case evOpenPluginUI:

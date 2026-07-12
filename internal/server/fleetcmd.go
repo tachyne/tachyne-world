@@ -41,6 +41,7 @@ type managerReply struct {
 		Outdated bool   `json:"outdated"`
 		Status   string `json:"status"`
 		Restarts int    `json:"restarts"`
+		Note     string `json:"note"`
 	} `json:"daemons"`
 	Plugins []struct {
 		Module      string  `json:"module"`
@@ -170,6 +171,9 @@ func (s *Server) daemonList(p *player) {
 				line += fmt.Sprintf(" *** OUTDATED (latest %s)", d.Latest)
 			}
 			p.tell(line)
+			if d.Note != "" {
+				p.tell("    ↳ " + d.Note)
+			}
 		}
 	}
 	if stale > 0 {
