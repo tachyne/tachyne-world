@@ -136,10 +136,13 @@ func TestPluginUIBrowseAndAct(t *testing.T) {
 		tr := h.playersRef[p.eid]
 		h.pluginUIClick(h.playersRef, tr, evClick{eid: p.eid, windowID: tr.winID, slot: 33})
 	})
+	// The uninstall op fires on the bus then reopens the UI, whose refresh
+	// records "list"/"search" — so poll the append-only history, not the
+	// (transient) last subject, or the reopen races us to overwrite it.
 	deadline := time.Now().Add(10 * time.Second)
-	for stub.subject() != "mc.plugin.uninstall" {
+	for !stub.sawSubject("mc.plugin.uninstall") {
 		if time.Now().After(deadline) {
-			t.Fatalf("uninstall never hit the bus (last subject %q)", stub.subject())
+			t.Fatalf("uninstall never hit the bus (subjects seen %v)", stub.subjects())
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

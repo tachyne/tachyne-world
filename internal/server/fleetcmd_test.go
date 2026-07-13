@@ -15,6 +15,7 @@ type stubDaemonBus struct {
 	mu       sync.Mutex
 	lastSubj string
 	lastBody []byte
+	seen     []string // every subject recorded, in order
 	replies  []string // one JSON reply per fake manager
 }
 
@@ -22,6 +23,29 @@ func (b *stubDaemonBus) subject() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.lastSubj
+}
+
+// sawSubject reports whether a subject was EVER recorded. Unlike subject(),
+// which only holds the most recent value and can be overwritten by a
+// follow-up round trip (e.g. an op that reopens the UI), this is append-only
+// and so is stable to poll for an async op that fires-and-refreshes.
+func (b *stubDaemonBus) sawSubject(s string) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, v := range b.seen {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// subjects returns a copy of the recorded history under lock (safe to read
+// while op goroutines are still appending).
+func (b *stubDaemonBus) subjects() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return append([]string(nil), b.seen...)
 }
 
 func (b *stubDaemonBus) payload() []byte {
@@ -34,6 +58,7 @@ func (b *stubDaemonBus) record(subject string, data any) {
 	raw, _ := json.Marshal(data)
 	b.mu.Lock()
 	b.lastSubj, b.lastBody = subject, raw
+	b.seen = append(b.seen, subject)
 	b.mu.Unlock()
 }
 
