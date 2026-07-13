@@ -371,19 +371,21 @@ type hub struct {
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
-	vehicles     map[int32]*vehicle    // minecarts + boats
-	paintings    map[int32]*painting   // placed hanging paintings (persisted with containers)
-	itemFrames   map[int32]*itemFrame  // placed item frames (persisted with containers)
-	jukeboxes    map[blockPos]*jukebox // discs + playback clocks (persisted with containers)
-	beacons      map[blockPos]*beacon  // placed beacons (chosen powers persisted with containers)
-	detectorsOn  map[blockPos]bool     // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64   // dungeon spawner cooldowns
-	patrolNextAt uint64                // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid    // active village raids by centre
-	brewProg     map[blockPos]int      // brewing stand progress (ticks)
-	portalLinks  map[dimPos]dimPos     // sticky portal pairs (both directions)
-	bossSeen     map[[2]int32]bool     // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors    map[blockPos]uint64   // wooden doors a villager opened → tick opened (auto-close)
+	vehicles     map[int32]*vehicle     // minecarts + boats
+	paintings    map[int32]*painting    // placed hanging paintings (persisted with containers)
+	itemFrames   map[int32]*itemFrame   // placed item frames (persisted with containers)
+	jukeboxes    map[blockPos]*jukebox  // discs + playback clocks (persisted with containers)
+	beacons      map[blockPos]*beacon   // placed beacons (chosen powers persisted with containers)
+	campfires    map[blockPos]*campfire // live cook state (item view in cfStore)
+	cfStore      *campfireStore         // campfires.json + the chunk builders' read view
+	detectorsOn  map[blockPos]bool      // detector rails currently pressed
+	spawnerNext  map[blockPos]uint64    // dungeon spawner cooldowns
+	patrolNextAt uint64                 // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid     // active village raids by centre
+	brewProg     map[blockPos]int       // brewing stand progress (ticks)
+	portalLinks  map[dimPos]dimPos      // sticky portal pairs (both directions)
+	bossSeen     map[[2]int32]bool      // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors    map[blockPos]uint64    // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon       *mob               // the ender dragon (nil = none / defeated)
 	crystals     map[int32]*crystal // end crystals by eid
@@ -488,6 +490,8 @@ func newHub(w *world.World) *hub {
 		itemFrames:    map[int32]*itemFrame{},
 		jukeboxes:     map[blockPos]*jukebox{},
 		beacons:       map[blockPos]*beacon{},
+		campfires:     map[blockPos]*campfire{},
+		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -544,7 +548,8 @@ func (h *hub) run() {
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
-		for pos := range h.bins {           // restart hoppers' self-scheduling chains
+		h.loadCampfires()
+		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
 				h.schedule(pos, hopperCadence)
 			}
@@ -616,6 +621,7 @@ func (h *hub) run() {
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
 			}
+			h.campfireTick(players)    // per-tick cook progress (vanilla cookTick)
 			h.psched.run(age)          // plugin-scheduled tasks see the previous tick's world
 			h.runUpdates(players, age) // falling blocks, fluid flow
 			h.updateFurnaces(players)  // smelting progress + lit state + viewer sync
@@ -725,6 +731,7 @@ func (h *hub) run() {
 					h.sbstore.flush(h.sb)
 				}
 				h.signs.flushIfDirty()
+				h.cfStore.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
@@ -1159,6 +1166,14 @@ func (h *hub) run() {
 			case evOpenFurnace:
 				if t := players[e.eid]; t != nil {
 					h.openFurnace(t, e.x, e.y, e.z)
+					switch kind, _ := furnaceKindOf(h.worldFor(t.dim).At(e.x, e.y, e.z)); kind {
+					case cookBlast:
+						h.incCustom(t, "interact_with_blast_furnace", 1)
+					case cookSmoker:
+						h.incCustom(t, "interact_with_smoker", 1)
+					default:
+						h.incCustom(t, "interact_with_furnace", 1)
+					}
 				}
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
@@ -1191,6 +1206,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.onSetBeacon(players, t, e.primary, e.secondary)
 				}
+			case evCampfireAdd:
+				h.onCampfireAdd(players, e)
 			case evRename:
 				if t := players[e.eid]; t != nil && t.winKind == winAnvil {
 					t.renameTo = e.name
@@ -1273,6 +1290,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
+				h.cfStore.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}

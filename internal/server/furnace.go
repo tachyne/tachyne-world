@@ -16,6 +16,8 @@ import (
 
 const (
 	menuFurnace = 14 // minecraft:furnace menu id (same through 26.2)
+	menuBlast   = 10 // minecraft:blast_furnace
+	menuSmoker  = 22 // minecraft:smoker
 
 	furnaceInput  = 0
 	furnaceFuel   = 1
@@ -31,9 +33,62 @@ const (
 var (
 	furnaceStateMin = worldgen.BlockBase("furnace") // furnace block states: facing (4) x lit (2)
 	furnaceStateMax = worldgen.BlockBase("furnace") + 7
+	blastStateMin   = worldgen.BlockBase("blast_furnace") // same facing x lit layout
+	blastStateMax   = worldgen.BlockBase("blast_furnace") + 7
+	smokerStateMin  = worldgen.BlockBase("smoker")
+	smokerStateMax  = worldgen.BlockBase("smoker") + 7
 )
 
+// The three cooker kinds share the furnace menu shape and tick; they differ
+// in recipe table, menu id, and fuel economy (the specialists burn fuel at
+// double rate — vanilla halves the burn duration).
+const (
+	cookFurnace int8 = iota
+	cookBlast
+	cookSmoker
+)
+
+// isCookerBlock reports whether a state is any furnace-family block.
+func isCookerBlock(s uint32) bool { _, ok := furnaceKindOf(s); return ok }
+
+// furnaceKindOf classifies a block state as one of the cooker family.
+func furnaceKindOf(state uint32) (int8, bool) {
+	switch {
+	case state >= furnaceStateMin && state <= furnaceStateMax:
+		return cookFurnace, true
+	case state >= blastStateMin && state <= blastStateMax:
+		return cookBlast, true
+	case state >= smokerStateMin && state <= smokerStateMax:
+		return cookSmoker, true
+	}
+	return 0, false
+}
+
+// cookerRecipe resolves an input item against the kind's recipe table.
+func cookerRecipe(kind int8, item int32) (cookEntry, bool) {
+	switch kind {
+	case cookBlast:
+		e, ok := blastResult[item]
+		return e, ok
+	case cookSmoker:
+		e, ok := smokeResult[item]
+		return e, ok
+	}
+	e, ok := smeltResult[item]
+	return e, ok
+}
+
+// cookerFuelTicks is one fuel item's burn time in this cooker.
+func cookerFuelTicks(kind int8, item int32) int {
+	t := fuelTicks[item]
+	if kind != cookFurnace {
+		t /= 2 // blast furnace + smoker halve the burn duration (vanilla)
+	}
+	return t
+}
+
 type furnace struct {
+	kind     int8        // cookFurnace/cookBlast/cookSmoker (derived from the block)
 	slots    [3]invStack // input, fuel, output
 	burnLeft int         // ticks of current fuel remaining
 	burnMax  int         // total ticks of the current fuel (for the flame bar)
@@ -60,11 +115,13 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
 	pos := blockPos{x, y, z}
+	kind, _ := furnaceKindOf(h.worldFor(t.dim).At(x, y, z))
 	f := h.furnaces[pos]
 	if f == nil {
 		f = &furnace{cookMax: 200}
 		h.furnaces[pos] = f
 	}
+	f.kind = kind
 	h.nextWin++
 	if h.nextWin > 100 {
 		h.nextWin = 1
@@ -73,7 +130,14 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	f.viewer = t.p.eid
 	f.lastBars = [4]int{-1, -1, -1, -1} // force a full bar sync to the new window
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuFurnace), Title: "Furnace"})
+	menu, title := int32(menuFurnace), "Furnace"
+	switch kind {
+	case cookBlast:
+		menu, title = menuBlast, "Blast Furnace"
+	case cookSmoker:
+		menu, title = menuSmoker, "Smoker"
+	}
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: menu, Title: title})
 	h.sendFurnaceWindow(t, f)
 }
 
@@ -84,7 +148,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 		wasLit := f.burnLeft > 0
 		changedSlots := false
 
-		out, canSmelt := smeltResult[f.slots[furnaceInput].item]
+		out, canSmelt := cookerRecipe(f.kind, f.slots[furnaceInput].item)
 		canCook := canSmelt && f.slots[furnaceInput].count > 0 &&
 			(f.slots[furnaceOutput].item == 0 ||
 				(f.slots[furnaceOutput].item == out.Out && f.slots[furnaceOutput].count < stackCap(out.Out)))
@@ -94,7 +158,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 		}
 		// Ignite new fuel only when there's something to cook (vanilla).
 		if f.burnLeft == 0 && canCook {
-			if ticks := fuelTicks[f.slots[furnaceFuel].item]; ticks > 0 && f.slots[furnaceFuel].count > 0 {
+			if ticks := cookerFuelTicks(f.kind, f.slots[furnaceFuel].item); ticks > 0 && f.slots[furnaceFuel].count > 0 {
 				f.burnLeft, f.burnMax = ticks, ticks
 				if f.slots[furnaceFuel].count--; f.slots[furnaceFuel].count == 0 {
 					f.slots[furnaceFuel].item = 0
@@ -164,13 +228,24 @@ func (h *hub) reconcileFurnaceBlocks() {
 	out, relit := 0, 0
 	for _, c := range h.world.EditedChunks() {
 		for _, e := range h.world.EditedBlocks(c[0], c[1]) {
-			if e.State < furnaceStateMin || e.State > furnaceStateMax {
+			kind, ok := furnaceKindOf(e.State)
+			if !ok {
 				continue
+			}
+			base := furnaceStateMin
+			switch kind {
+			case cookBlast:
+				base = blastStateMin
+			case cookSmoker:
+				base = smokerStateMin
 			}
 			wx, wz := int(c[0])*16+e.LX, int(c[1])*16+e.LZ
 			f := h.furnaces[blockPos{wx, e.Y, wz}]
+			if f != nil {
+				f.kind = kind // persisted furnaces re-learn their block's kind
+			}
 			burning := f != nil && f.burnLeft > 0
-			if lit := (e.State-furnaceStateMin)%2 == 0; lit != burning {
+			if lit := (e.State-base)%2 == 0; lit != burning {
 				if burning {
 					h.world.SetBlock(wx, e.Y, wz, e.State-1) // same facing, lit=true
 					relit++

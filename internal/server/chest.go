@@ -102,6 +102,7 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // gets a resync on their next click (stale window id path).
 func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState uint32) {
 	h.spillJukebox(players, x, y, z, newState)
+	h.spillCampfire(players, x, y, z, newState)
 	pos := blockPos{x, y, z}
 	spill := func(slots []invStack) {
 		for _, st := range slots {
@@ -117,9 +118,11 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 		spill(c.slots[:])
 		delete(h.chests, pos)
 	}
-	if f := h.furnaces[pos]; f != nil && (newState < furnaceStateMin || newState > furnaceStateMax) {
-		spill(f.slots[:])
-		delete(h.furnaces, pos)
+	if f := h.furnaces[pos]; f != nil {
+		if _, still := furnaceKindOf(newState); !still {
+			spill(f.slots[:])
+			delete(h.furnaces, pos)
+		}
 	}
 	if b := h.bins[pos]; b != nil && !isDispenser(newState) && !isDropper(newState) &&
 		!isHopper(newState) && !isBrewStand(newState) {

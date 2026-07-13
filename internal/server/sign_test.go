@@ -144,12 +144,12 @@ func TestSignChunkNBT(t *testing.T) {
 	w.SetBlock(0, 70, 0, oakSignRot0)
 	store := newSignStore("")
 	store.set(0, 0, 70, 0, signData{Front: signSide{Lines: [4]string{"hi", "", "", ""}, Color: "red"}})
-	b := appendBlockEntities(nil, w, 0, 0, 0, store)
+	b := appendBlockEntities(nil, w, 0, 0, 0, store, nil)
 	if !bytes.Contains(b, []byte("front_text")) || !bytes.Contains(b, []byte("hi")) || !bytes.Contains(b, []byte("red")) {
 		t.Fatalf("sign NBT missing from chunk section: %x", b)
 	}
 	// an unknown sign (no store entry) still gets a well-formed blank tag
-	b2 := appendBlockEntities(nil, w, 0, 0, 0, newSignStore(""))
+	b2 := appendBlockEntities(nil, w, 0, 0, 0, newSignStore(""), nil)
 	if !bytes.Contains(b2, []byte("is_waxed")) {
 		t.Fatalf("blank sign tag malformed: %x", b2)
 	}

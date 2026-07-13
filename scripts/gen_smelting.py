@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
-"""Generate internal/server/smelting_gen.go: furnace recipes + fuel burn times.
+"""Generate internal/server/smelting_gen.go: cooker recipes + fuel burn times.
 
-Smelting recipes come from the mcmeta 1.21.5 datapack (recipe/*.json with
-type minecraft:smelting). Ingredients may be item names or #tags; tags resolve
-transitively via the datapack's tags/item/*.json. Names map to network ids via
-minecraft-data items.json. Result counts are always 1 for smelting; per-recipe
-cook time is kept (default 200 ticks).
+Recipes come from the vanilla 1.21.11 server jar's datapack (recipe/*.json) —
+four cooker types: minecraft:smelting (furnace), minecraft:blasting (blast
+furnace), minecraft:smoking (smoker), minecraft:campfire_cooking (campfire).
+Ingredients may be item names or #tags; tags resolve transitively via the
+jar's tags/item/*.json. Result counts are always 1; per-recipe cook time is
+kept (defaults 200/100/100/600 ticks).
 
-Fuel burn times are vanilla constants (AbstractFurnaceBlockEntity); the common
-set is emitted by name so the ids stay generated.
+Fuel burn times are vanilla constants (the furnace block entity's fuel map);
+the common set is emitted by name so the ids stay generated.
 
-Run outside the sandbox (needs network):  python3 scripts/gen_smelting.py
+Run: python3 scripts/gen_smelting.py [path-to-server.jar]
+(needs network only for the minecraft-data items.json id map)
 """
-import io, json, tarfile, urllib.request, os, subprocess
+import io, json, sys, urllib.request, os, subprocess, zipfile
 
 ITEMS = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/items.json"
-TARBALL = "https://github.com/misode/mcmeta/archive/refs/tags/1.21.5-data-json.tar.gz"
+JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "smelting_gen.go")
 
 item_id = {i["name"]: i["id"] for i in json.load(urllib.request.urlopen(ITEMS))}
 
-# One tarball download instead of ~1000 raw fetches.
-print("downloading mcmeta datapack…")
-tar = tarfile.open(fileobj=io.BytesIO(urllib.request.urlopen(TARBALL, timeout=120).read()), mode="r:gz")
+# The bundler jar nests the real server jar.
+outer = zipfile.ZipFile(JAR)
+inner_name = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
+z = zipfile.ZipFile(io.BytesIO(outer.read(inner_name[0]))) if inner_name else outer
+
 recipes, tags = {}, {}
-for member in tar.getmembers():
-    parts = member.name.split("/", 1)
-    if len(parts) < 2:
-        continue
-    path = parts[1]
+for path in z.namelist():
     if path.startswith("data/minecraft/recipe/") and path.endswith(".json"):
-        recipes[path] = json.load(tar.extractfile(member))
+        recipes[path] = json.loads(z.read(path))
     elif path.startswith("data/minecraft/tags/item/") and path.endswith(".json"):
         key = path.removeprefix("data/minecraft/tags/item/").removesuffix(".json")
-        tags[key] = json.load(tar.extractfile(member))
+        tags[key] = json.loads(z.read(path))
 
 tag_cache = {}
 
@@ -58,26 +58,34 @@ def resolve_tag(name, depth=0):
     return out
 
 
-rows = []  # (input id, result id, cook ticks)
+COOKERS = [  # (recipe type, go map name, default cook ticks, doc)
+    ("minecraft:smelting", "smeltResult", 200, "furnace"),
+    ("minecraft:blasting", "blastResult", 100, "blast furnace"),
+    ("minecraft:smoking", "smokeResult", 100, "smoker"),
+    ("minecraft:campfire_cooking", "campfireResult", 600, "campfire"),
+]
+tables = {t: [] for t, _, _, _ in COOKERS}
 for path, r in sorted(recipes.items()):
-    if r.get("type") != "minecraft:smelting":
-        continue
-    result = r["result"]["id"].removeprefix("minecraft:")
-    if result not in item_id:
-        continue
-    cook = r.get("cookingtime", 200)
-    ing = r["ingredient"]
-    ings = [ing] if isinstance(ing, str) else ing
-    names = []
-    for i in ings:
-        if i.startswith("#"):
-            names += resolve_tag(i)
-        else:
-            names.append(i.removeprefix("minecraft:"))
-    for n in names:
-        if n in item_id:
-            rows.append((item_id[n], item_id[result], cook))
-rows.sort()
+    for rtype, _, default, _ in COOKERS:
+        if r.get("type") != rtype:
+            continue
+        result = r["result"]["id"].removeprefix("minecraft:")
+        if result not in item_id:
+            continue
+        cook = r.get("cookingtime", default)
+        ing = r["ingredient"]
+        ings = [ing] if isinstance(ing, str) else ing
+        names = []
+        for i in ings:
+            if i.startswith("#"):
+                names += resolve_tag(i)
+            else:
+                names.append(i.removeprefix("minecraft:"))
+        for n in names:
+            if n in item_id:
+                tables[rtype].append((item_id[n], item_id[result], cook))
+for rows in tables.values():
+    rows.sort()
 
 # Vanilla fuel burn times (ticks), by item name family.
 FUELS = {"coal": 1600, "charcoal": 1600, "coal_block": 16000, "blaze_rod": 2400,
@@ -96,16 +104,22 @@ L = [
     "",
     "package server",
     "",
-    "// smeltResult maps a furnace input item to its smelted output + cook ticks.",
-    "var smeltResult = map[int32]struct {",
+    "// cookEntry is one cooker recipe: output item + cook time in ticks.",
+    "type cookEntry struct {",
     "\tOut  int32",
     "\tCook int",
-    "}{",
-]
-for inp, out, cook in rows:
-    L.append(f"\t{inp}: {{{out}, {cook}}},")
-L += [
     "}",
+]
+for rtype, goname, _, doc in COOKERS:
+    L += [
+        "",
+        f"// {goname} maps a {doc} input item to its cooked output + cook ticks.",
+        f"var {goname} = map[int32]cookEntry{{",
+    ]
+    for inp, out, cook in tables[rtype]:
+        L.append(f"\t{inp}: {{{out}, {cook}}},")
+    L.append("}")
+L += [
     "",
     "// fuelTicks maps a fuel item to how long one of it burns (ticks).",
     "var fuelTicks = map[int32]int{",
@@ -116,4 +130,4 @@ L += ["}", ""]
 with open(OUT, "w") as f:
     f.write("\n".join(L))
 subprocess.run(["gofmt", "-w", OUT], check=True)
-print(f"wrote {OUT}: {len(rows)} smelting inputs, {len(fuel_rows)} fuels")
+print(f"wrote {OUT}: " + ", ".join(f"{len(tables[t])} {d}" for t, _, _, d in COOKERS) + f", {len(fuel_rows)} fuels")

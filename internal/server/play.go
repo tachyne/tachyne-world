@@ -29,7 +29,7 @@ const (
 // whose text rides the chunk as their vanilla update tag. Called from the attach
 // layer's parallel chunk builders — the sign store is mutex-guarded for exactly
 // this reader.
-func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore) []byte {
+func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore, campfires *campfireStore) []byte {
 	edits := w.EditedBlocks(cx, cz)
 	var buf []byte
 	n := int32(0)
@@ -44,6 +44,9 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs 
 		if _, isSign := signKind(e.State); isSign && signs != nil {
 			sd, _ := signs.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = blank sign
 			buf = protocol.AppendSignNBT(buf, signSideNBT(sd.Front), signSideNBT(sd.Back), sd.Waxed)
+		} else if isCampfireBlock(e.State) && campfires != nil && dim == 0 {
+			ci, _ := campfires.get(int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = empty fire
+			buf = protocol.AppendCampfireNBT(buf, ci.Items)
 		} else {
 			buf = append(buf, 0x00) // NBT: TAG_End — no data (renderer needs only type+pos)
 		}

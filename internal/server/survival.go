@@ -201,6 +201,17 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 			return
 		}
 	}
+	// Lit campfires burn whoever stands in them (vanilla 1 HP, soul 2).
+	if s := h.worldFor(t.dim).At(fx, feet, fz); isCampfireBlock(s) && boolProp(s, "lit") &&
+		t.hasEffect(effFireRes) == 0 {
+		dmg := float32(1)
+		if isSoulCampfire(s) {
+			dmg = 2
+		}
+		if h.damage(players, t, dmg); t.dead {
+			return
+		}
+	}
 	// Cactus: contact with an adjacent cactus at feet or body height.
 	if h.touchingCactus(t.dim, fx, feet, fz) {
 		h.damage(players, t, cactusDamagePerSec)

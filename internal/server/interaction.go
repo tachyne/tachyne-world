@@ -368,7 +368,7 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 		s.sendBlockChange(p, x, y, z, state, seq) // ack the interaction sequence
 		return true
 	}
-	if state >= furnaceStateMin && state <= furnaceStateMax { // open the furnace
+	if _, isCooker := furnaceKindOf(state); isCooker { // furnace / blast furnace / smoker
 		s.hub.post(evOpenFurnace{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
@@ -402,6 +402,14 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 		s.hub.post(evOpenBeacon{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
+	}
+	if isCampfireBlock(state) {
+		if _, cookable := campfireResult[p.heldItem()]; cookable && boolProp(state, "lit") {
+			s.hub.post(evCampfireAdd{eid: p.eid, x: x, y: y, z: z})
+			s.sendBlockChange(p, x, y, z, state, seq)
+			return true
+		}
+		return false // no menu — other clicks fall through (e.g. placing against it)
 	}
 	if isEndFrame(state) && p.heldItem() == itemEnderEye {
 		s.hub.post(evInsertEye{eid: p.eid, x: x, y: y, z: z})

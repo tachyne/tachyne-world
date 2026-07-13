@@ -33,7 +33,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Area | Status | Notes |
 |---|---|---|
 | Terrain, biomes, caves, lighting | ✅ | Original generator: the full overworld biome set, rivers, cave biomes, real sky+block light. Deliberately *not* seed-compatible with vanilla worldgen. |
-| Mining, crafting, smelting, containers | ✅ | ~1,570 recipes with vanilla recipe-book progression (recipes unlock as you gather ingredients, with the toast), furnaces, chests, hoppers/droppers/dispensers; blast furnace, smoker and campfire cooking missing. |
+| Mining, crafting, smelting, containers | ✅ | ~1,570 recipes with vanilla recipe-book progression (recipes unlock as you gather ingredients, with the toast), furnaces, blast furnaces (ores at double speed), smokers (food), campfire cooking (four slots, food pops off the fire), chests, hoppers/droppers/dispensers. |
 | Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, TNT; crossbows, tridents and the mace missing. |
 | Mobs | ✅ | The complete vanilla living roster with vanilla attributes, breeding/taming/riding, and vanilla natural spawning: per-category caps scaled by loaded chunks, spawns at any height (caves populate day and night), vanilla light rules (torch light blocks spawns, storms darken the sky enough for daytime monsters), per-biome weighted pools and pack sizes, distance-based despawning. A few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
 | Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
@@ -98,7 +98,9 @@ multi-pod plan).
 **Survival**
 - Health, hunger, saturation/exhaustion, fall/drown/lava/cactus/void damage,
   eating with the vanilla chew timer, death drops + bed respawn points
-- Full inventory + 2×2/3×3 crafting, furnaces (fuel + smelting, persisted),
+- Full inventory + 2×2/3×3 crafting, furnaces + blast furnaces + smokers
+  (fuel + per-recipe cook times, persisted), campfire cooking (lit-fire slots
+  render the food, standing on one burns you),
   chests (27 slots, persisted), beds (sleep skips night with the vanilla fade)
 - Tool durability + functional armor (damage reduction, visible on others)
 - **XP**: orbs from player kills, coal/diamond mining and smelting (paid when

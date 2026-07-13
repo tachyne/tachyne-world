@@ -72,7 +72,7 @@ func pistonImmovable(s uint32) bool {
 		isPistonHead(s) ||
 		(isPistonBase(s) && boolProp(s, "extended")) ||
 		isChestBlock(s) ||
-		(s >= furnaceStateMin && s <= furnaceStateMax) ||
+		isCookerBlock(s) ||
 		s == enchTableState || // enchanting table
 		(s >= anvilStateMin && s <= anvilStateMax) ||
 		(s >= grindstoneStateMin && s <= grindstoneStateMax)
