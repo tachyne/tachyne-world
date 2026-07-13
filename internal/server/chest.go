@@ -50,8 +50,20 @@ type evOpenChest struct {
 
 func (evOpenChest) isHubEvent() {}
 
-// openChest opens the chest window at a block position for a player.
+// openChest opens the chest window at a block position for a player. A chest
+// that is half of a pair opens the combined Large Chest instead.
 func (h *hub) openChest(t *tracked, x, y, z int) {
+	state := h.world.At(x, y, z)
+	if left, right, paired := h.chestPairPositions(x, y, z, state); paired {
+		h.openDoubleChest(t, left, right)
+		return
+	}
+	// Self-heal chests placed before pairing existed: two adjacent singles on a
+	// connect side become a pair on first open. Contents are untouched.
+	if left, right, ok := h.formChestPair(x, y, z, state); ok {
+		h.openDoubleChest(t, left, right)
+		return
+	}
 	defer t.p.trySendEv(soundEv("minecraft:block.chest.open", sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.5, 1))
 	if t.inv == nil {
 		return
@@ -120,9 +132,13 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 			}
 		}
 	}
-	if c := h.chests[pos]; c != nil && !isChestBlock(newState) {
-		spill(c.slots[:])
-		delete(h.chests, pos)
+	if !isChestBlock(newState) {
+		// A removed chest half releases its partner back to a single chest.
+		h.unpairChestNeighbors(players, x, y, z)
+		if c := h.chests[pos]; c != nil {
+			spill(c.slots[:])
+			delete(h.chests, pos)
+		}
 	}
 	if f := h.furnaces[pos]; f != nil {
 		if _, still := furnaceKindOf(newState); !still {

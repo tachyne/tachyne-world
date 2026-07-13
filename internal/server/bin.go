@@ -374,7 +374,16 @@ func (h *hub) containerSignal(pos blockPos) int {
 // refreshBinViewers resyncs any player looking at a container we just mutated.
 func (h *hub) refreshBinViewers(players map[int32]*tracked, pos blockPos) {
 	for _, t := range players {
-		if t.winID == 0 || t.winPos != pos {
+		if t.winID == 0 {
+			continue
+		}
+		if t.winKind == winDoubleChest {
+			if t.winPos == pos || t.winPos2 == pos {
+				h.sendDoubleChestWindow(t)
+			}
+			continue
+		}
+		if t.winPos != pos {
 			continue
 		}
 		switch t.winKind {

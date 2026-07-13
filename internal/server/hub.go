@@ -180,6 +180,7 @@ const (
 	winCraft
 	winFurnace
 	winChest
+	winDoubleChest // large chest: two adjacent chest halves as one 54-slot menu
 	winEnchant
 	winAnvil
 	winGrind
@@ -261,6 +262,7 @@ type tracked struct {
 	winID   int32       // open window id; 0 = player inventory
 	winKind winKind     // what the open window views (winPlayer while winID == 0)
 	winPos  blockPos    // the furnace/chest block this window views
+	winPos2 blockPos    // the RIGHT half of an open double chest (winPos = LEFT)
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	offhand invStack
 

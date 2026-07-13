@@ -315,6 +315,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 				state = worldgen.SetProperty(info, state, "waterlogged", "true")
 			}
 		}
+		if isChestBlock(state) { // pair with an adjacent single chest → double chest
+			state = s.pairChestOnPlace(p, tx, ty, tz, state)
+		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
 	}

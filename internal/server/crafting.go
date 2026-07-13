@@ -199,6 +199,22 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-54], int(slot - 54)
 		}
 		return nil, -1
+	case winDoubleChest: // generic_9x6: 0-26 LEFT, 27-53 RIGHT, 54-80 main, 81-89 hotbar
+		switch {
+		case slot >= 0 && slot <= 26:
+			if c := h.chests[t.winPos]; c != nil {
+				return &c.slots[slot], -1
+			}
+		case slot >= 27 && slot <= 53:
+			if c := h.chests[t.winPos2]; c != nil {
+				return &c.slots[slot-27], -1
+			}
+		case slot >= 54 && slot <= 80:
+			return &t.inv.slots[slot-45], -1
+		case slot >= 81 && slot <= 89:
+			return &t.inv.slots[slot-81], int(slot - 81)
+		}
+		return nil, -1
 	case winCraft:
 		switch {
 		case slot >= 1 && slot <= 9:
@@ -667,7 +683,7 @@ func (h *hub) openCraftingTable(t *tracked) {
 func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
 	h.reclaimAnvil(players, t)
 	h.reclaimTrade(players, t)
-	if t.winKind == winChest {
+	if t.winKind == winChest || t.winKind == winDoubleChest {
 		h.playSound(players, "minecraft:block.chest.close", sndBlock,
 			float64(t.winPos.x)+0.5, float64(t.winPos.y), float64(t.winPos.z)+0.5, 0.5, 1)
 	}
@@ -733,6 +749,8 @@ func (h *hub) resyncWindow(t *tracked) {
 		if c := h.chests[t.winPos]; c != nil {
 			h.sendChestWindow(t, c)
 		}
+	case winDoubleChest:
+		h.sendDoubleChestWindow(t)
 	case winBin:
 		if c := h.bins[t.winPos]; c != nil {
 			h.sendBinWindow(t, c)
