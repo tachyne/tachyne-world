@@ -183,6 +183,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		tx, ty, tz = x, y, z // vanilla replacingClickedOnBlock: fill the clicked cell (grass, snow, fluids)
 	}
 
+	if int32(p.heldItem()) == itemArmorStand { // spawn the stand at the target cell
+		s.hub.post(evPlaceStand{eid: p.eid, x: tx, y: ty, z: tz, yaw: p.yaw})
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	if p.heldItem() == itemFlintSteel { // light a fire / prime TNT
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
 		return

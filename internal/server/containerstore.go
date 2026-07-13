@@ -41,6 +41,7 @@ type containerFile struct {
 	Frames    []savedFrame            `json:"frames,omitempty"`
 	Jukeboxes map[string][12]int32    `json:"jukeboxes,omitempty"`
 	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
+	Stands    []savedStand            `json:"stands,omitempty"`  // placed armor stands
 }
 
 type savedPainting struct {
@@ -76,6 +77,45 @@ type savedFurnace struct {
 	BurnMax  int         `json:"burnMax,omitempty"`
 	Cook     int         `json:"cook,omitempty"`
 	CookMax  int         `json:"cookMax,omitempty"`
+}
+
+// savedStand is one placed armor stand (equipment rows = the stack pack).
+type savedStand struct {
+	Dim   int          `json:"dim,omitempty"`
+	X     float64      `json:"x"`
+	Y     float64      `json:"y"`
+	Z     float64      `json:"z"`
+	Yaw   float32      `json:"yaw"`
+	Equip [6][12]int32 `json:"equip"`
+}
+
+// recordStands snapshots placed armor stands for the next flush.
+func (s *containerStore) recordStands(stands map[int32]*armorStand) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Stands = s.m.Stands[:0]
+	for _, st := range stands {
+		sv := savedStand{Dim: st.dim, X: st.x, Y: st.y, Z: st.z, Yaw: st.yaw}
+		for i, e := range st.equip {
+			sv.Equip[i] = packStack(e)
+		}
+		s.m.Stands = append(s.m.Stands, sv)
+	}
+}
+
+// loadStands rebuilds placed armor stands (fresh eids).
+func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]*armorStand{}
+	for _, sv := range s.m.Stands {
+		st := &armorStand{eid: alloc(), dim: sv.Dim, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw}
+		for i, r := range sv.Equip {
+			st.equip[i] = unpackStack(r)
+		}
+		out[st.eid] = st
+	}
+	return out
 }
 
 func posKey(p blockPos) string { return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z) }

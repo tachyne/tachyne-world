@@ -384,6 +384,7 @@ type hub struct {
 	vehicles     map[int32]*vehicle     // minecarts + boats
 	paintings    map[int32]*painting    // placed hanging paintings (persisted with containers)
 	itemFrames   map[int32]*itemFrame   // placed item frames (persisted with containers)
+	armorStands  map[int32]*armorStand  // placed armor stands (persisted with containers)
 	jukeboxes    map[blockPos]*jukebox  // discs + playback clocks (persisted with containers)
 	beacons      map[blockPos]*beacon   // placed beacons (chosen powers persisted with containers)
 	campfires    map[blockPos]*campfire // live cook state (item view in cfStore)
@@ -508,6 +509,7 @@ func newHub(w *world.World) *hub {
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
+		armorStands:   map[int32]*armorStand{},
 		jukeboxes:     map[blockPos]*jukebox{},
 		beacons:       map[blockPos]*beacon{},
 		campfires:     map[blockPos]*campfire{},
@@ -567,6 +569,7 @@ func (h *hub) run() {
 		h.restoreItems(h.containers.loadItems())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
+		h.armorStands = h.containers.loadStands(h.allocEID)
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
 		h.loadCampfires()
@@ -766,6 +769,7 @@ func (h *hub) run() {
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.recordBeacons(h.beacons)
+					h.containers.recordStands(h.armorStands)
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1099,6 +1103,10 @@ func (h *hub) run() {
 					h.breakPainting(players, pt, players[e.attacker])
 					break
 				}
+				if st := h.armorStands[e.target]; st != nil {
+					h.hitStand(players, players[e.attacker], st)
+					break
+				}
 				if f := h.itemFrames[e.target]; f != nil {
 					h.hitFrame(players, players[e.attacker], f)
 					break
@@ -1135,6 +1143,10 @@ func (h *hub) run() {
 				}
 			case evInteractMob:
 				if t := players[e.eid]; t != nil {
+					if st := h.armorStands[e.target]; st != nil {
+						h.interactStand(players, t, st)
+						break
+					}
 					if f := h.itemFrames[e.target]; f != nil {
 						h.interactFrame(players, t, f)
 						break
@@ -1230,6 +1242,8 @@ func (h *hub) run() {
 					h.openLoom(t)
 					h.incCustom(t, "interact_with_loom", 1)
 				}
+			case evPlaceStand:
+				h.onPlaceStand(players, e)
 			case evOpenSmith:
 				if t := players[e.eid]; t != nil {
 					h.openSmithing(t, e.x, e.y, e.z)
@@ -1332,6 +1346,7 @@ func (h *hub) run() {
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.recordBeacons(h.beacons)
+					h.containers.recordStands(h.armorStands)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
@@ -1418,6 +1433,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendVehiclesTo(nt)
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
+	h.sendStandsTo(nt)
 	// Show the newcomer every mob already in their dimension.
 	for _, m := range h.mobs {
 		if m.dim != nt.dim {
