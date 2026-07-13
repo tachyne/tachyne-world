@@ -98,6 +98,10 @@ func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
 
 func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 	state := h.world.At(x, y, z)
+	if worldgen.IsLava(state) {
+		h.lavaIgnite(players, x, y, z)
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, x, y, z, state, caneMin)
@@ -270,4 +274,50 @@ func (h *hub) skyLit(x, y, z int) bool {
 // opaqueAbove reports whether the block directly above blocks light (smothers grass).
 func (h *hub) opaqueAbove(x, y, z int) bool {
 	return worldgen.SkyOpacity(h.world.At(x, y+1, z)) >= worldgen.Opaque
+}
+
+// lavaIgnite is the vanilla LavaFluid.randomTick fire-starter: an overworld
+// lava block randomly sets fire to a nearby flammable block (using the
+// flammability table as the ignitedByLava proxy). Gated by doFireTick.
+func (h *hub) lavaIgnite(players map[int32]*tracked, x, y, z int) {
+	if !h.rules.DoFireTick {
+		return
+	}
+	flammableNear := func(px, py, pz int) bool {
+		for _, d := range allNeighbors {
+			if ig, _ := worldgen.Flammability(h.world.At(px+d.x, py+d.y, pz+d.z)); ig > 0 {
+				return true
+			}
+		}
+		return false
+	}
+	if passes := h.rng.Intn(3); passes > 0 {
+		cx, cy, cz := x, y, z
+		for i := 0; i < passes; i++ {
+			cx += h.rng.Intn(3) - 1
+			cy++
+			cz += h.rng.Intn(3) - 1
+			if !h.inWorldY(cy) {
+				return
+			}
+			s := h.world.At(cx, cy, cz)
+			if s == worldgen.Air && flammableNear(cx, cy, cz) {
+				h.igniteFire(players, blockPos{cx, cy, cz}, 0)
+				return
+			}
+			if worldgen.IsSolidFull(s) {
+				return
+			}
+		}
+		return
+	}
+	// passes == 0: ignite the air directly above a flammable block nearby.
+	for i := 0; i < 3; i++ {
+		ax, az := x+h.rng.Intn(3)-1, z+h.rng.Intn(3)-1
+		if h.inWorldY(y+1) && h.world.At(ax, y, az) != worldgen.Air {
+			if ig, _ := worldgen.Flammability(h.world.At(ax, y, az)); ig > 0 && h.world.At(ax, y+1, az) == worldgen.Air {
+				h.igniteFire(players, blockPos{ax, y + 1, az}, 0)
+			}
+		}
+	}
 }
