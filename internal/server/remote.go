@@ -99,6 +99,8 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evThrowEye{eid: p.eid})
 		case itemEmptyMap:
 			h.post(evUseMap{eid: p.eid})
+		case itemWrittenBook, itemWritableBook:
+			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
 		default:
 			h.post(evEat{eid: p.eid, slot: p.held})
 		}
@@ -136,6 +138,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evEnchant{eid: p.eid, button: e.Button})
 	case attachproto.SetBeacon:
 		h.post(evSetBeacon{eid: p.eid, primary: e.Primary, secondary: e.Secondary})
+	case attachproto.EditBook:
+		h.post(evEditBook{eid: p.eid, slot: e.Slot, pages: e.Pages, title: e.Title, hasTitle: e.HasTitle})
 	case attachproto.PlayerAction:
 		switch e.Action { // 0 sneak, 1 unsneak, 2 leave bed, 3/4 sprint
 		case 0:

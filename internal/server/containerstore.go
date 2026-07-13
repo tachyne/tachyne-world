@@ -30,16 +30,17 @@ type savedItem struct {
 	MapID int32    `json:"map_id,omitempty"`
 	Pats  [6]int32 `json:"pats,omitempty"` // banner layers, patPlus1<<8|color
 	Trim  int32    `json:"trim,omitempty"` // (mat+1)<<8|(pat+1)
+	Book  int32    `json:"book,omitempty"` // book id
 }
 
 type containerFile struct {
 	Furnaces  map[string]savedFurnace `json:"furnaces,omitempty"`
-	Chests    map[string][][13]int32  `json:"chests,omitempty"` // (slot + the 12-col stack pack) — sparse; old shorter rows zero-fill
+	Chests    map[string][][14]int32  `json:"chests,omitempty"` // (slot + the 12-col stack pack) — sparse; old shorter rows zero-fill
 	Bins      map[string]savedBin     `json:"bins,omitempty"`   // dispenser/dropper/hopper
 	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
 	Paintings []savedPainting         `json:"paintings,omitempty"`
 	Frames    []savedFrame            `json:"frames,omitempty"`
-	Jukeboxes map[string][12]int32    `json:"jukeboxes,omitempty"`
+	Jukeboxes map[string][13]int32    `json:"jukeboxes,omitempty"`
 	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands    []savedStand            `json:"stands,omitempty"`  // placed armor stands
 }
@@ -63,12 +64,12 @@ type savedFrame struct {
 	Dir  int32     `json:"dir"`
 	Glow bool      `json:"glow,omitempty"`
 	Rot  int       `json:"rot,omitempty"`
-	Item [12]int32 `json:"item"`
+	Item [13]int32 `json:"item"`
 }
 
 type savedBin struct {
 	Size  int         `json:"size"`
-	Slots [][13]int32 `json:"slots,omitempty"` // (slot + the 12-col stack pack)
+	Slots [][14]int32 `json:"slots,omitempty"` // (slot + the 12-col stack pack)
 }
 
 type savedFurnace struct {
@@ -86,7 +87,7 @@ type savedStand struct {
 	Y     float64      `json:"y"`
 	Z     float64      `json:"z"`
 	Yaw   float32      `json:"yaw"`
-	Equip [6][12]int32 `json:"equip"`
+	Equip [6][13]int32 `json:"equip"`
 }
 
 // recordStands snapshots placed armor stands for the next flush.
@@ -121,8 +122,8 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 func posKey(p blockPos) string { return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z) }
 
 // slotRow packs a slot index + stack into a sparse container row.
-func slotRow(i int, st invStack) [13]int32 {
-	var r [13]int32
+func slotRow(i int, st invStack) [14]int32 {
+	var r [14]int32
 	r[0] = int32(i)
 	p := packStack(st)
 	copy(r[1:], p[:])
@@ -130,8 +131,8 @@ func slotRow(i int, st invStack) [13]int32 {
 }
 
 // rowStack unpacks a sparse container row (index, stack).
-func rowStack(r [13]int32) (int, invStack) {
-	var p [12]int32
+func rowStack(r [14]int32) (int, invStack) {
+	var p [13]int32
 	copy(p[:], r[1:])
 	return int(r[0]), unpackStack(p)
 }
@@ -251,9 +252,9 @@ func (s *containerStore) recordBins(bins map[blockPos]*bin) {
 
 // recordChests replaces the in-memory chest snapshot (no write).
 func (s *containerStore) recordChests(chests map[blockPos]*chest) {
-	snap := map[string][][13]int32{}
+	snap := map[string][][14]int32{}
 	for pos, c := range chests {
-		var rows [][13]int32
+		var rows [][14]int32
 		for i, st := range c.slots {
 			if st.item != 0 && st.count > 0 {
 				rows = append(rows, slotRow(i, st))
@@ -348,7 +349,7 @@ func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
 func (s *containerStore) recordJukeboxes(jbs map[blockPos]*jukebox) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m.Jukeboxes = map[string][12]int32{}
+	s.m.Jukeboxes = map[string][13]int32{}
 	for pos, jb := range jbs {
 		s.m.Jukeboxes[posKey(pos)] = packStack(jb.disc)
 	}

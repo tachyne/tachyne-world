@@ -101,21 +101,21 @@ func TestMigrateItemIDs(t *testing.T) {
 	}
 	// inventory
 	inv := &invStore{m: map[string]*savedInv{"Steve": {}}}
-	inv.m["Steve"].Slots[0] = [12]int32{840, 5} // apple
-	inv.m["Steve"].Slots[1] = [12]int32{}       // empty
-	inv.m["Steve"].Armor[0] = [12]int32{840, 1, 3}
+	inv.m["Steve"].Slots[0] = [13]int32{840, 5} // apple
+	inv.m["Steve"].Slots[1] = [13]int32{}       // empty
+	inv.m["Steve"].Armor[0] = [13]int32{840, 1, 3}
 	if n := inv.migrateItemIDs(remap); n != 2 {
 		t.Fatalf("inv migrate n=%d, want 2", n)
 	}
-	if got := inv.m["Steve"].Slots[0]; got != [12]int32{893, 5} {
+	if got := inv.m["Steve"].Slots[0]; got != [13]int32{893, 5} {
 		t.Errorf("slot0 = %v, want [893 5 0 0]", got)
 	}
-	if got := inv.m["Steve"].Armor[0]; got != [12]int32{893, 1, 3} {
+	if got := inv.m["Steve"].Armor[0]; got != [13]int32{893, 1, 3} {
 		t.Errorf("armor0 = %v, want [893 1 3 0]", got)
 	}
 	// container: chest row (slot,item,count,dmg,ench) + furnace slot (item,count,dmg)
 	cs := &containerStore{}
-	cs.m.Chests = map[string][][13]int32{"0,0,0": {{0, 840, 3}}}
+	cs.m.Chests = map[string][][14]int32{"0,0,0": {{0, 840, 3}}}
 	cs.m.Furnaces = map[string]savedFurnace{"1,1,1": {Slots: [3][3]int32{{840, 1, 0}, {}, {}}}}
 	if n := cs.migrateItemIDs(remap); n != 2 {
 		t.Fatalf("container migrate n=%d, want 2", n)

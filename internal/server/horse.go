@@ -187,6 +187,7 @@ func (h *hub) spillHorse(players map[int32]*tracked, m *mob) {
 			it.dmg, it.ench, it.mapID = st.dmg, st.ench, st.mapID
 			it.pats = st.pats
 			it.trimMat, it.trimPat = st.trimMat, st.trimPat
+			it.bookID = st.bookID
 		}
 	}
 	drop(m.saddleSt)

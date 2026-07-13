@@ -39,6 +39,9 @@ type invStack struct {
 	pats [6]bannerLayer
 	// Armor trim (smithing): registry id + 1 each, 0 = untrimmed.
 	trimMat, trimPat int8
+	// Book identity (0 = none): pages/title live in the hub's bookStore,
+	// composed into the content component at send time (the map model).
+	bookID int32
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).
@@ -60,7 +63,8 @@ func (st invStack) patCount() int {
 // sameExtras reports whether two stacks match on the components that gate
 // stacking (patterns + trim; ids/counts checked by callers).
 func (st invStack) sameExtras(o invStack) bool {
-	return st.pats == o.pats && st.trimMat == o.trimMat && st.trimPat == o.trimPat
+	return st.pats == o.pats && st.trimMat == o.trimMat && st.trimPat == o.trimPat &&
+		st.bookID == o.bookID
 }
 
 // enchanted reports whether the stack carries any enchantment.
@@ -182,7 +186,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 				continue
 			}
 			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
-				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat})
+				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID})
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground

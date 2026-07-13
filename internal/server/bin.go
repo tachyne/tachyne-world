@@ -285,7 +285,7 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool 
 			continue
 		}
 		st := invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
-			mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat}
+			mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID}
 		if left := binInsert(c.slots, st); left < st.count {
 			if left == 0 {
 				delete(h.items, eid)

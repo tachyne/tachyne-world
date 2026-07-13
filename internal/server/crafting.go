@@ -368,6 +368,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	mapOf := map[int32]int32{}           // …and filled-map identities
 	patsOf := map[int32][6]bannerLayer{} // …and banner layers
 	trimOf := map[int32][2]int8{}        // …and armor trims
+	bookOf := map[int32]int32{}          // …and book identities
 	tally := func(st invStack, sign int) {
 		if st.item != 0 && st.count > 0 {
 			loss[st.item] += sign * st.count
@@ -388,6 +389,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			}
 			if st.trimMat != 0 || st.trimPat != 0 {
 				trimOf[st.item] = [2]int8{st.trimMat, st.trimPat}
+			}
+			if st.bookID != 0 {
+				bookOf[st.item] = st.bookID
 			}
 		}
 	}
@@ -457,6 +461,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if tr, ok := trimOf[ch.st.item]; ok && ch.st.item != 0 {
 			ptr.trimMat, ptr.trimPat = tr[0], tr[1]
 		}
+		if bid, ok := bookOf[ch.st.item]; ok && ch.st.item != 0 {
+			ptr.bookID = bid
+		}
 		if hot >= 0 {
 			t.p.setHotbarSlot(hot, ch.st.item)
 		}
@@ -502,11 +509,14 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	if tr, ok := trimOf[t.cursor.item]; ok && t.cursor.item != 0 {
 		t.cursor.trimMat, t.cursor.trimPat = tr[0], tr[1]
 	}
+	if bid, ok := bookOf[t.cursor.item]; ok && t.cursor.item != 0 {
+		t.cursor.bookID = bid
+	}
 	for item, n := range loss {
 		if n > 0 {
 			tr := trimOf[item]
 			h.tossItem(players, t, invStack{item: item, count: n, dmg: dmgOf[item], ench: enchOf[item],
-				mapID: mapOf[item], pats: patsOf[item], trimMat: tr[0], trimPat: tr[1]})
+				mapID: mapOf[item], pats: patsOf[item], trimMat: tr[0], trimPat: tr[1], bookID: bookOf[item]})
 		}
 	}
 	if gridTouched {
@@ -550,6 +560,7 @@ func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 		it.mapID = st.mapID
 		it.pats = st.pats
 		it.trimMat, it.trimPat = st.trimMat, st.trimPat
+		it.bookID = st.bookID
 	}
 }
 
@@ -568,7 +579,7 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 		n = s.count
 	}
 	st := invStack{item: s.item, count: n, dmg: s.dmg, ench: s.ench, mapID: s.mapID,
-		pats: s.pats, trimMat: s.trimMat, trimPat: s.trimPat}
+		pats: s.pats, trimMat: s.trimMat, trimPat: s.trimPat, bookID: s.bookID}
 	if s.count -= n; s.count == 0 {
 		*s = invStack{}
 	}

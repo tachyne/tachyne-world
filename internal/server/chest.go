@@ -113,6 +113,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 					it.mapID = st.mapID
 					it.pats = st.pats
 					it.trimMat, it.trimPat = st.trimMat, st.trimPat
+					it.bookID = st.bookID
 				}
 			}
 		}

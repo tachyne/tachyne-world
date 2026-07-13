@@ -390,6 +390,7 @@ type hub struct {
 	campfires    map[blockPos]*campfire // live cook state (item view in cfStore)
 	cfStore      *campfireStore         // campfires.json + the chunk builders' read view
 	banners      *bannerStore           // banners.json + the chunk builders' read view
+	books        *bookStore             // books.json (contents by book id, the map model)
 	detectorsOn  map[blockPos]bool      // detector rails currently pressed
 	spawnerNext  map[blockPos]uint64    // dungeon spawner cooldowns
 	patrolNextAt uint64                 // world tick the next pillager-patrol attempt is due
@@ -438,7 +439,7 @@ func (h *hub) snapshotItems() []savedItem {
 	for _, it := range h.items {
 		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
 			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
-			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat)}
+			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID}
 		for i, l := range it.pats {
 			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
 		}
@@ -458,6 +459,7 @@ func (h *hub) restoreItems(saved []savedItem) {
 				it.pats[i] = bannerLayer{patPlus1: int16(p >> 8), color: int8(p & 0xff)}
 			}
 			it.trimMat, it.trimPat = int8(si.Trim>>8), int8(si.Trim&0xff)
+			it.bookID = si.Book
 		}
 	}
 }
@@ -480,6 +482,7 @@ func newHub(w *world.World) *hub {
 		sb:            sb,
 		sbstore:       sbst,
 		signs:         newSignStore(""), // in-memory; server.Run swaps in the persisted one
+		books:         newBookStore(""), // in-memory; server.Run swaps in the persisted one
 		signMayEdit:   map[string]int32{},
 		events:        make(chan hubEvent, 256),
 		pending:       map[uint64][]blockPos{},
@@ -515,23 +518,25 @@ func newHub(w *world.World) *hub {
 		campfires:     map[blockPos]*campfire{},
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
-		detectorsOn:   map[blockPos]bool{},
-		spawnerNext:   map[blockPos]uint64{},
-		raids:         map[blockPos]*raid{},
-		brewProg:      map[blockPos]int{},
-		portalLinks:   map[dimPos]dimPos{},
-		bossSeen:      map[[2]int32]bool{},
-		openDoors:     map[blockPos]uint64{},
-		crystals:      map[int32]*crystal{},
-		villageDone:   map[blockPos]bool{},
-		outpostDone:   map[blockPos]bool{},
-		rods:          map[blockPos]struct{}{},
+
+		detectorsOn: map[blockPos]bool{},
+		spawnerNext: map[blockPos]uint64{},
+		raids:       map[blockPos]*raid{},
+		brewProg:    map[blockPos]int{},
+		portalLinks: map[dimPos]dimPos{},
+		bossSeen:    map[[2]int32]bool{},
+		openDoors:   map[blockPos]uint64{},
+		crystals:    map[int32]*crystal{},
+		villageDone: map[blockPos]bool{},
+		outpostDone: map[blockPos]bool{},
+		rods:        map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
 		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
 	h.plugins = plugin.NewDispatcher()
 	h.psched = newPluginSched(h)
+	globalBooks.Store(h.books) // free-function component composition (see book.go)
 	return h
 }
 
@@ -757,6 +762,7 @@ func (h *hub) run() {
 				h.signs.flushIfDirty()
 				h.cfStore.flushIfDirty()
 				h.banners.flushIfDirty()
+				h.books.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
@@ -1242,6 +1248,10 @@ func (h *hub) run() {
 					h.openLoom(t)
 					h.incCustom(t, "interact_with_loom", 1)
 				}
+			case evEditBook:
+				if t := players[e.eid]; t != nil {
+					h.onEditBook(t, e)
+				}
 			case evPlaceStand:
 				h.onPlaceStand(players, e)
 			case evOpenSmith:
@@ -1352,6 +1362,7 @@ func (h *hub) run() {
 				h.signs.flushIfDirty()
 				h.cfStore.flushIfDirty()
 				h.banners.flushIfDirty()
+				h.books.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}

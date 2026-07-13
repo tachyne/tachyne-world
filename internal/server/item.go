@@ -40,6 +40,7 @@ type itemEntity struct {
 	pats          [6]bannerLayer // banner pattern layers carried by the dropped stack
 	trimMat       int8           // armor trim carried by the dropped stack (+1 enc)
 	trimPat       int8
+	bookID        int32  // book identity carried by the dropped stack
 	born          uint64 // world tick spawned (for despawn)
 	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -110,6 +111,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 			if oid == eid || other.item != it.item || other.dmg != 0 || it.dmg != 0 ||
 				other.ench != it.ench || other.mapID != it.mapID ||
 				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
+				other.bookID != it.bookID ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}
@@ -209,6 +211,15 @@ func stackComponents(st invStack) []byte {
 	if st.trimMat != 0 || st.trimPat != 0 {
 		comps++
 	}
+	var bookBytes []byte
+	if st.bookID != 0 {
+		if bs := globalBooks.Load(); bs != nil {
+			if bk, ok := bs.get(st.bookID); ok {
+				bookBytes = bookComponentBytes(st.item, bk)
+				comps++
+			}
+		}
+	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
 	if st.dmg > 0 {
@@ -255,6 +266,7 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, int32(st.trimMat))
 		b = protocol.AppendVarInt(b, int32(st.trimPat))
 	}
+	b = append(b, bookBytes...) // writable/written book content (see book.go)
 	return b
 }
 
