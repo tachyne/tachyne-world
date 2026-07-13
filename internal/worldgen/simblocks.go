@@ -14,6 +14,7 @@ var (
 
 	concretePowderLo = blockBase("white_concrete_powder") // white..black concrete powder (16 states)
 	concretePowderHi = blockBase("black_concrete_powder")
+	concreteLo       = blockBase("white_concrete") // aligned 1:1 with the powders
 )
 
 // IsFalling reports whether a block is affected by gravity (sand, gravel, …).
@@ -90,4 +91,25 @@ func IsWoodenDoor(state uint32) bool {
 		return false
 	}
 	return true
+}
+
+// IsConcretePowder reports whether a state is one of the 16 concrete powders.
+func IsConcretePowder(state uint32) bool {
+	return state >= concretePowderLo && state <= concretePowderHi
+}
+
+// ConcreteFor maps a concrete-powder state to its solidified concrete (same
+// color index; the two blocks are contiguous 16-block runs).
+func ConcreteFor(powder uint32) uint32 {
+	return concreteLo + (powder - concretePowderLo)
+}
+
+// IsWaterlogged reports whether a block state carries waterlogged=true — its
+// cell holds a water source that stays behind when the block is broken.
+func IsWaterlogged(state uint32) bool {
+	info, ok := InfoForState(state)
+	if !ok || !info.HasProperty("waterlogged") {
+		return false
+	}
+	return GetProperty(info, state, "waterlogged") == "true"
 }

@@ -105,9 +105,13 @@ func (s *Server) handleDig(p *player, data []byte) {
 		return
 	}
 
-	s.worldFor(p).SetBlock(x, y, z, worldgen.Air)
-	s.sendBlockChange(p, x, y, z, worldgen.Air, seq)
-	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: worldgen.Air, by: p.eid, broken: broken})
+	after := worldgen.Air
+	if worldgen.IsWaterlogged(broken) { // the water source stays when the block goes
+		after = worldgen.WaterBase
+	}
+	s.worldFor(p).SetBlock(x, y, z, after)
+	s.sendBlockChange(p, x, y, z, after, seq)
+	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: after, by: p.eid, broken: broken})
 	if mode == gmSurvival { // survival drops loot (tool-gated); creative drops nothing
 		s.hub.post(evDrop{x: x, y: y, z: z, state: broken, held: uint16(p.heldItem()), by: p.eid})
 		if worldgen.Hardness(broken) > 0 { // real blocks wear the tool (vanilla)
@@ -295,10 +299,16 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	case hasInfo && isBed(info): // beds: place foot + head
 		placed = s.placeBed(p, info, defState, tx, ty, tz, p.yaw, seq)
 	default:
+		intoWater := worldgen.IsWater(s.worldFor(p).Block(tx, ty, tz)) // waterlog when placed into water
 		state := orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(tx, ty, tz, state, p.yaw)
+		}
+		if intoWater { // SimpleWaterloggedBlock: the block keeps the water
+			if info, ok := worldgen.InfoForState(state); ok && info.HasProperty("waterlogged") {
+				state = worldgen.SetProperty(info, state, "waterlogged", "true")
+			}
 		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block

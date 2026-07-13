@@ -65,6 +65,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, pos blockPos) {
 	}
 	state := h.world.Block(pos.x, pos.y, pos.z)
 	switch {
+	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(pos):
+		h.setBlock(players, pos, worldgen.ConcreteFor(state))
 	case worldgen.IsFalling(state):
 		h.updateFalling(players, pos, state)
 	case worldgen.IsFluid(state):
@@ -109,7 +111,23 @@ func (h *hub) updateFalling(players map[int32]*tracked, pos blockPos, state uint
 		h.setBlock(players, below, state)
 		h.schedule(below, fallDelay)     // keep falling
 		h.scheduleAround(pos, fallDelay) // a block resting on it loses support
+		return
 	}
+	// Landed: concrete powder touching water turns to concrete (ConcretePowderBlock).
+	if worldgen.IsConcretePowder(state) && h.powderTouchesWater(pos) {
+		h.setBlock(players, pos, worldgen.ConcreteFor(state))
+	}
+}
+
+// powderTouchesWater reports whether water sits on any non-down side of a
+// concrete-powder cell (vanilla ConcretePowderBlock.touchesLiquid).
+func (h *hub) powderTouchesWater(pos blockPos) bool {
+	for _, d := range lavaContactDirs { // up + 4 horizontals
+		if worldgen.IsWater(h.world.Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
+			return true
+		}
+	}
+	return false
 }
 
 // updateFluid spreads or recedes a fluid cell. Levels: base+0 source, base+1..7
@@ -141,6 +159,27 @@ func (h *hub) updateFluid(players map[int32]*tracked, pos blockPos, state uint32
 			n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
 			if worldgen.IsLava(h.world.Block(n.x, n.y, n.z)) {
 				h.schedule(n, 1)
+			}
+		}
+	}
+
+	// Infinite source formation (FlowingFluid.getNewLiquid): a flowing WATER
+	// cell with >=2 source neighbours over solid ground (or another source)
+	// becomes a source itself — the classic 2x2 infinite water. Water only;
+	// vanilla lava needs the lavaSourceConversion gamerule (off by default).
+	if water && level >= 1 && level < 8 {
+		sources := 0
+		for _, d := range horizNeighbors {
+			if h.world.Block(pos.x+d.x, pos.y, pos.z+d.z) == base { // level 0 = source
+				sources++
+			}
+		}
+		if sources >= 2 {
+			bs := h.world.Block(pos.x, pos.y-1, pos.z)
+			if worldgen.IsSolidFull(bs) || bs == base {
+				h.setBlock(players, pos, base) // promote to a source
+				h.scheduleAround(pos, delay)
+				return
 			}
 		}
 	}
