@@ -108,6 +108,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 	if h.tickStem(players, x, y, z, state) {
 		return
 	}
+	if h.farmlandRandomTick(players, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, x, y, z, state, caneMin)

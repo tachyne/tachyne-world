@@ -282,7 +282,14 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 		if t.hasEffect(effSlowFalling) > 0 || h.inWater(t.dim, e.x, e.y, e.z) {
 			return
 		}
-		if dist := t.peakY - e.y; dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
+		dist := t.peakY - e.y
+		// Trampling farmland happens on any hard landing — before the fall-damage
+		// grace and regardless of the FallDamage gamerule (FarmBlock.fallOn). The
+		// soil is the block just under the player's feet.
+		if dist > 0 {
+			h.tramplePlayer(players, t, int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)), dist)
+		}
+		if dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
 			h.damage(players, t, float32(math.Floor(dist-3)))
 		}
 	}
