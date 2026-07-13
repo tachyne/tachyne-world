@@ -244,6 +244,19 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-30], int(slot - 30)
 		}
 		return nil, -1
+	case winLoom, winSmith: // 0-2 inputs, 3 result (server-owned), 4-30 main, 31-39 hotbar
+		switch {
+		case slot >= 0 && slot <= 2:
+			if t.winKind == winSmith { // smithing: 0 template, 1 base, 2 addition
+				return []*invStack{&t.extraSlot, &t.anvil[0], &t.anvil[1]}[slot], -1
+			}
+			return []*invStack{&t.anvil[0], &t.anvil[1], &t.extraSlot}[slot], -1
+		case slot >= 4 && slot <= 30:
+			return &t.inv.slots[slot+5], -1
+		case slot >= 31 && slot <= 39:
+			return &t.inv.slots[slot-31], int(slot - 31)
+		}
+		return nil, -1
 	case winStonecut: // 0 input, 1 result (server-owned), 2-28 main, 29-37 hotbar
 		switch {
 		case slot == 0:
@@ -325,6 +338,14 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		h.takeStonecutResult(players, t)
 		return
 	}
+	if e.slot == 3 && t.winKind == winLoom { // the loom's result slot
+		h.takeLoomResult(players, t)
+		return
+	}
+	if e.slot == 3 && t.winKind == winSmith { // the smithing table's result slot
+		h.takeSmithResult(players, t)
+		return
+	}
 	if e.slot == 2 && t.winKind == winTrade {
 		h.takeTradeResult(players, t)
 		return
@@ -340,9 +361,11 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	// isn't a thing a vanilla client does.)
 	loss := map[int32]int{}
 	dmgOf := map[int32]int{}
-	enchOf := map[int32][2]enchApply{} // enchantments ride along like wear does
-	nameOf := map[int32]string{}       // …and anvil names
-	mapOf := map[int32]int32{}         // …and filled-map identities
+	enchOf := map[int32][2]enchApply{}   // enchantments ride along like wear does
+	nameOf := map[int32]string{}         // …and anvil names
+	mapOf := map[int32]int32{}           // …and filled-map identities
+	patsOf := map[int32][6]bannerLayer{} // …and banner layers
+	trimOf := map[int32][2]int8{}        // …and armor trims
 	tally := func(st invStack, sign int) {
 		if st.item != 0 && st.count > 0 {
 			loss[st.item] += sign * st.count
@@ -357,6 +380,12 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			}
 			if st.mapID != 0 {
 				mapOf[st.item] = st.mapID
+			}
+			if st.patCount() > 0 {
+				patsOf[st.item] = st.pats
+			}
+			if st.trimMat != 0 || st.trimPat != 0 {
+				trimOf[st.item] = [2]int8{st.trimMat, st.trimPat}
 			}
 		}
 	}
@@ -420,6 +449,12 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if m, ok := mapOf[ch.st.item]; ok && ch.st.item != 0 {
 			ptr.mapID = m
 		}
+		if p, ok := patsOf[ch.st.item]; ok && ch.st.item != 0 {
+			ptr.pats = p
+		}
+		if tr, ok := trimOf[ch.st.item]; ok && ch.st.item != 0 {
+			ptr.trimMat, ptr.trimPat = tr[0], tr[1]
+		}
 		if hot >= 0 {
 			t.p.setHotbarSlot(hot, ch.st.item)
 		}
@@ -435,6 +470,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		}
 		if t.winKind == winStonecut && ch.slot == 0 {
 			enchTouched = true // input changed — refresh the recipe list
+		}
+		if (t.winKind == winLoom || t.winKind == winSmith) && ch.slot <= 2 {
+			enchTouched = true // inputs changed — refresh list/result
 		}
 		if t.winKind == winTrade && ch.slot <= 1 {
 			enchTouched = true // trade inputs changed — recompute the result
@@ -453,9 +491,17 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	if m, ok := mapOf[t.cursor.item]; ok && t.cursor.item != 0 {
 		t.cursor.mapID = m
 	}
+	if p, ok := patsOf[t.cursor.item]; ok && t.cursor.item != 0 {
+		t.cursor.pats = p
+	}
+	if tr, ok := trimOf[t.cursor.item]; ok && t.cursor.item != 0 {
+		t.cursor.trimMat, t.cursor.trimPat = tr[0], tr[1]
+	}
 	for item, n := range loss {
 		if n > 0 {
-			h.tossItem(players, t, invStack{item: item, count: n, dmg: dmgOf[item], ench: enchOf[item], mapID: mapOf[item]})
+			tr := trimOf[item]
+			h.tossItem(players, t, invStack{item: item, count: n, dmg: dmgOf[item], ench: enchOf[item],
+				mapID: mapOf[item], pats: patsOf[item], trimMat: tr[0], trimPat: tr[1]})
 		}
 	}
 	if gridTouched {
@@ -470,6 +516,11 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		case winStonecut:
 			t.stoneSel = -1 // vanilla: a changed input resets the selection
 			h.sendStonecutWindow(t)
+		case winLoom:
+			t.stoneSel = -1
+			h.sendLoomWindow(t)
+		case winSmith:
+			h.sendSmithWindow(t)
 		case winTrade:
 			h.sendTradeWindow(t)
 		}
@@ -488,6 +539,8 @@ func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 		it.dmg = st.dmg
 		it.ench = st.ench
 		it.mapID = st.mapID
+		it.pats = st.pats
+		it.trimMat, it.trimPat = st.trimMat, st.trimPat
 	}
 }
 
@@ -505,7 +558,8 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 	if all {
 		n = s.count
 	}
-	st := invStack{item: s.item, count: n, dmg: s.dmg, ench: s.ench, mapID: s.mapID}
+	st := invStack{item: s.item, count: n, dmg: s.dmg, ench: s.ench, mapID: s.mapID,
+		pats: s.pats, trimMat: s.trimMat, trimPat: s.trimPat}
 	if s.count -= n; s.count == 0 {
 		*s = invStack{}
 	}
@@ -669,6 +723,10 @@ func (h *hub) resyncWindow(t *tracked) {
 		h.sendBeaconWindow(t)
 	case winStonecut:
 		h.sendStonecutWindow(t)
+	case winLoom:
+		h.sendLoomWindow(t)
+	case winSmith:
+		h.sendSmithWindow(t)
 	case winCraft:
 		h.sendCraftWindow(t)
 	default:

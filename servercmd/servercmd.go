@@ -69,6 +69,7 @@ func Main() {
 	srv.ScoreboardFile = "scoreboard.json"
 	srv.SignFile = "signs.json"
 	srv.CampfireFile = "campfires.json"
+	srv.BannerFile = "banners.json"
 	srv.MapFile = "maps.json"
 	srv.ContainerFile = "containers.json"
 	srv.SpawnPointFile = "spawns.json"

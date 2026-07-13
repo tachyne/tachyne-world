@@ -131,6 +131,7 @@ type Server struct {
 	ScoreboardFile  string // persists the scoreboard (empty = in-memory only)
 	SignFile        string // persists sign text (empty = in-memory only)
 	CampfireFile    string // persists campfire contents (empty = in-memory only)
+	BannerFile      string // persists placed-banner patterns (empty = in-memory only)
 	MapFile         string // persists filled maps (empty = in-memory only)
 	ContainerFile   string // persists furnace/chest contents (empty = in-memory only)
 	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
@@ -338,6 +339,7 @@ func (s *Server) Serve() error {
 		s.hub.sb, s.hub.sbstore = newScoreboard(s.ScoreboardFile)
 		s.hub.signs = newSignStore(s.SignFile)
 		s.hub.cfStore = newCampfireStore(s.CampfireFile)
+		s.hub.banners = newBannerStore(s.BannerFile)
 		s.hub.maps = newMapStore(s.MapFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		// One-time ITEM id-space migration for persisted inventories + containers
@@ -427,7 +429,7 @@ func (s *Server) Serve() error {
 				case s.end:
 					dim = 2
 				}
-				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore)
+				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners)
 			},
 			Worlds: func(dim int32) *world.World {
 				switch dim {

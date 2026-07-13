@@ -241,11 +241,13 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
 	h.sendTwoSlotWindow(t)
 }
 
-// reclaimAnvil folds the input slots back on close/leave.
+// reclaimAnvil folds the input slots (and the loom/smithing third slot)
+// back on close/leave.
 func (h *hub) reclaimAnvil(players map[int32]*tracked, t *tracked) {
-	for i := range t.anvil {
-		st := t.anvil[i]
-		t.anvil[i] = invStack{}
+	slots := []*invStack{&t.anvil[0], &t.anvil[1], &t.extraSlot}
+	for i := range slots {
+		st := *slots[i]
+		*slots[i] = invStack{}
 		if st.item == 0 || st.count == 0 {
 			continue
 		}
@@ -257,6 +259,8 @@ func (h *hub) reclaimAnvil(players map[int32]*tracked, t *tracked) {
 			st.count = leftover
 			if it := h.spawnItem(players, st.item, st.count, t.x, t.y, t.z); it != nil {
 				it.dmg, it.ench, it.mapID = st.dmg, st.ench, st.mapID
+				it.pats = st.pats
+				it.trimMat, it.trimPat = st.trimMat, st.trimPat
 			}
 		}
 	}

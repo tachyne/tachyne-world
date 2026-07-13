@@ -183,6 +183,8 @@ const (
 	winCarto    // cartography table (shares the two-slot machinery)
 	winBeacon   // beacon menu (payment slot in t.anvil[0] + three properties)
 	winStonecut // stonecutter (input in t.anvil[0], indexed recipe buttons)
+	winLoom     // loom (banner/dye in t.anvil, pattern item in t.extraSlot)
+	winSmith    // smithing table (template in t.extraSlot, base/addition in t.anvil)
 	winBin      // dispenser/dropper/hopper (h.bins)
 	winTrade    // villager merchant screen
 	winPlugin   // the server-owned plugin browser (plugui.go)
@@ -267,7 +269,8 @@ type tracked struct {
 	anvil     [2]invStack
 	trade     [2]invStack // merchant input slots
 	tradeSel  int         // selected offer row
-	stoneSel  int         // stonecutter: selected recipe row (-1 = none)
+	stoneSel  int         // stonecutter/loom: selected row (-1 = none)
+	extraSlot invStack    // third menu input (loom pattern item / smithing template)
 	tradeWith int32       // villager eid the open trade screen belongs to
 	renameTo  string
 }
@@ -380,6 +383,7 @@ type hub struct {
 	beacons      map[blockPos]*beacon   // placed beacons (chosen powers persisted with containers)
 	campfires    map[blockPos]*campfire // live cook state (item view in cfStore)
 	cfStore      *campfireStore         // campfires.json + the chunk builders' read view
+	banners      *bannerStore           // banners.json + the chunk builders' read view
 	detectorsOn  map[blockPos]bool      // detector rails currently pressed
 	spawnerNext  map[blockPos]uint64    // dungeon spawner cooldowns
 	patrolNextAt uint64                 // world tick the next pillager-patrol attempt is due
@@ -426,8 +430,13 @@ type herd struct {
 func (h *hub) snapshotItems() []savedItem {
 	out := make([]savedItem, 0, len(h.items))
 	for _, it := range h.items {
-		out = append(out, savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
-			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench)})
+		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
+			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
+			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat)}
+		for i, l := range it.pats {
+			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
+		}
+		out = append(out, si)
 	}
 	return out
 }
@@ -438,7 +447,11 @@ func (h *hub) restoreItems(saved []savedItem) {
 	none := map[int32]*tracked{}
 	for _, si := range saved {
 		if it := h.spawnItemIn(none, si.Dim, si.Item, si.Count, si.X, si.Y, si.Z); it != nil {
-			it.dmg, it.ench = si.Dmg, unpackEnch(si.Ench)
+			it.dmg, it.ench, it.mapID = si.Dmg, unpackEnch(si.Ench), si.MapID
+			for i, p := range si.Pats {
+				it.pats[i] = bannerLayer{patPlus1: int16(p >> 8), color: int8(p & 0xff)}
+			}
+			it.trimMat, it.trimPat = int8(si.Trim>>8), int8(si.Trim&0xff)
 		}
 	}
 }
@@ -494,6 +507,7 @@ func newHub(w *world.World) *hub {
 		beacons:       map[blockPos]*beacon{},
 		campfires:     map[blockPos]*campfire{},
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
+		banners:       newBannerStore(""),
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -734,6 +748,7 @@ func (h *hub) run() {
 				}
 				h.signs.flushIfDirty()
 				h.cfStore.flushIfDirty()
+				h.banners.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
@@ -1204,6 +1219,16 @@ func (h *hub) run() {
 					h.openStonecutter(t)
 					h.incCustom(t, "interact_with_stonecutter", 1)
 				}
+			case evOpenLoom:
+				if t := players[e.eid]; t != nil {
+					h.openLoom(t)
+					h.incCustom(t, "interact_with_loom", 1)
+				}
+			case evOpenSmith:
+				if t := players[e.eid]; t != nil {
+					h.openSmithing(t, e.x, e.y, e.z)
+					h.incCustom(t, "interact_with_smithing_table", 1)
+				}
 			case evOpenBeacon:
 				if t := players[e.eid]; t != nil {
 					h.openBeacon(t, e.x, e.y, e.z)
@@ -1231,9 +1256,12 @@ func (h *hub) run() {
 				}
 			case evEnchant: // container_button_click: enchant option or stonecutter row
 				if t := players[e.eid]; t != nil {
-					if t.winKind == winStonecut {
+					switch t.winKind {
+					case winStonecut:
 						h.stonecutSelect(t, e.button)
-					} else {
+					case winLoom:
+						h.loomSelect(t, e.button)
+					default:
 						h.handleEnchant(players, t, e.button)
 					}
 				}
@@ -1302,6 +1330,7 @@ func (h *hub) run() {
 				}
 				h.signs.flushIfDirty()
 				h.cfStore.flushIfDirty()
+				h.banners.flushIfDirty()
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
@@ -1561,6 +1590,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	}
 	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state) // lightning-rod POI set
 	h.beaconsOnBlockChange(players, e.x, e.y, e.z, e.state)
+	h.bannersOnBlockChange(players, e.x, e.y, e.z, e.state, e.by)
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.

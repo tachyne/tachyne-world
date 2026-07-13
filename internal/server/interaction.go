@@ -403,6 +403,16 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if state >= loomStateMin && state <= loomStateMax {
+		s.hub.post(evOpenLoom{eid: p.eid})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if state == smithingTableState {
+		s.hub.post(evOpenSmith{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if state == beaconState {
 		s.hub.post(evOpenBeacon{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)

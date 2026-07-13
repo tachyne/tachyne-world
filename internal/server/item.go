@@ -34,11 +34,14 @@ type itemEntity struct {
 	x, y, z       float64
 	item          int32
 	count         int
-	dmg           int          // durability damage carried by the dropped stack
-	ench          [2]enchApply // enchantments carried by the dropped stack
-	mapID         int32        // filled_map identity carried by the dropped stack
-	born          uint64       // world tick spawned (for despawn)
-	noPickupUntil uint64       // absolute tick pickup unlocks (tosses get a longer hold;
+	dmg           int            // durability damage carried by the dropped stack
+	ench          [2]enchApply   // enchantments carried by the dropped stack
+	mapID         int32          // filled_map identity carried by the dropped stack
+	pats          [6]bannerLayer // banner pattern layers carried by the dropped stack
+	trimMat       int8           // armor trim carried by the dropped stack (+1 enc)
+	trimPat       int8
+	born          uint64 // world tick spawned (for despawn)
+	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
 	//                      underflows the unsigned despawn age and vanishes the item)
 }
@@ -106,6 +109,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 		for oid, other := range h.items {
 			if oid == eid || other.item != it.item || other.dmg != 0 || it.dmg != 0 ||
 				other.ench != it.ench || other.mapID != it.mapID ||
+				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}
@@ -137,6 +141,8 @@ const (
 	componentCustomName   = 5  // anvil renames (NBT text); remapped per version
 	componentLore         = 8  // plugin-UI item lore (list of NBT texts); remapped per version
 	componentMapID        = 37 // filled_map's map number; remapped per version
+	componentTrim         = 47 // armor trim (material + pattern holders); remapped per version
+	componentBannerPats   = 63 // banner pattern layers; remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -196,6 +202,13 @@ func stackComponents(st invStack) []byte {
 	if st.mapID != 0 {
 		comps++
 	}
+	patN := int32(st.patCount())
+	if patN > 0 {
+		comps++
+	}
+	if st.trimMat != 0 || st.trimPat != 0 {
+		comps++
+	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
 	if st.dmg > 0 {
@@ -225,6 +238,22 @@ func stackComponents(st invStack) []byte {
 	if st.name != "" {
 		b = protocol.AppendVarInt(b, componentCustomName)
 		b = append(b, chatNBT(st.name)...)
+	}
+	if patN > 0 {
+		// banner_patterns: layer count + (pattern holder = id+1, dye) pairs —
+		// exactly the stored form.
+		b = protocol.AppendVarInt(b, componentBannerPats)
+		b = protocol.AppendVarInt(b, patN)
+		for _, l := range st.pats[:patN] {
+			b = protocol.AppendVarInt(b, int32(l.patPlus1))
+			b = protocol.AppendVarInt(b, int32(l.color))
+		}
+	}
+	if st.trimMat != 0 || st.trimPat != 0 {
+		// trim: material + pattern holders (stored +1-encoded, = holder refs).
+		b = protocol.AppendVarInt(b, componentTrim)
+		b = protocol.AppendVarInt(b, int32(st.trimMat))
+		b = protocol.AppendVarInt(b, int32(st.trimPat))
 	}
 	return b
 }

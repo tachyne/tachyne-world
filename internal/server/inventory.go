@@ -32,6 +32,35 @@ type invStack struct {
 	name   string       // anvil rename ("" = none) — in-session only (not persisted yet)
 	potion int8         // brewed potion type (potWater..): drives drink effects + label
 	mapID  int32        // filled_map: which map this stack shows (0 = none)
+
+	// Banner pattern layers (loom): patPlus1 is the banner_pattern registry
+	// id + 1 (0 = empty layer, layers fill from index 0); color is the dye
+	// enum. Fixed-size so invStack stays comparable.
+	pats [6]bannerLayer
+	// Armor trim (smithing): registry id + 1 each, 0 = untrimmed.
+	trimMat, trimPat int8
+}
+
+// bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).
+type bannerLayer struct {
+	patPlus1 int16
+	color    int8
+}
+
+// patCount is the number of applied banner layers.
+func (st invStack) patCount() int {
+	for i, l := range st.pats {
+		if l.patPlus1 == 0 {
+			return i
+		}
+	}
+	return len(st.pats)
+}
+
+// sameExtras reports whether two stacks match on the components that gate
+// stacking (patterns + trim; ids/counts checked by callers).
+func (st invStack) sameExtras(o invStack) bool {
+	return st.pats == o.pats && st.trimMat == o.trimMat && st.trimPat == o.trimPat
 }
 
 // enchanted reports whether the stack carries any enchantment.
@@ -116,7 +145,8 @@ func (inv *inventory) add(item int32, count int) (changed []int, leftover int) {
 // don't stack anyway), so it takes its own empty slot; plain stacks go
 // through the normal merge path.
 func (inv *inventory) addStack(st invStack) (changed []int, leftover int) {
-	if st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 {
+	if st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 &&
+		st.sameExtras(invStack{}) {
 		return inv.add(st.item, st.count)
 	}
 	for i := range inv.slots {
@@ -151,7 +181,8 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			if math.Abs(it.x-t.x) > 1 || math.Abs(it.z-t.z) > 1 || math.Abs(it.y-t.y) > 1.5 {
 				continue
 			}
-			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID})
+			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
+				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat})
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground

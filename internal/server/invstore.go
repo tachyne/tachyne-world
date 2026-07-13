@@ -23,11 +23,11 @@ type invStore struct {
 // bare 36-slot array) — shorter JSON arrays zero-fill the new column, so
 // they migrate on load.
 type savedInv struct {
-	Slots    [invSize][5]int32 `json:"slots"`
-	Armor    [4][5]int32       `json:"armor"`
-	Offhand  [5]int32          `json:"offhand"`
-	XPLevel  int32             `json:"xp_level,omitempty"`
-	XPPoints int32             `json:"xp_points,omitempty"`
+	Slots    [invSize][12]int32 `json:"slots"`
+	Armor    [4][12]int32       `json:"armor"`
+	Offhand  [12]int32          `json:"offhand"`
+	XPLevel  int32              `json:"xp_level,omitempty"`
+	XPPoints int32              `json:"xp_points,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -48,12 +48,27 @@ func newInvStore(path string) *invStore {
 	return s
 }
 
-func packStack(st invStack) [5]int32 {
-	return [5]int32{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
+// Stack rows: [item, count, dmg, enchPack, mapID, 6 banner layers
+// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1))]. Old shorter rows
+// zero-fill on JSON decode.
+func packStack(st invStack) [12]int32 {
+	r := [12]int32{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
+	for i, l := range st.pats {
+		r[5+i] = int32(l.patPlus1)<<8 | int32(l.color)
+	}
+	if st.trimMat != 0 || st.trimPat != 0 {
+		r[11] = int32(st.trimMat)<<8 | int32(st.trimPat)
+	}
+	return r
 }
 
-func unpackStack(r [5]int32) invStack {
-	return invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3]), mapID: r[4]}
+func unpackStack(r [12]int32) invStack {
+	st := invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3]), mapID: r[4]}
+	for i := 0; i < 6; i++ {
+		st.pats[i] = bannerLayer{patPlus1: int16(r[5+i] >> 8), color: int8(r[5+i] & 0xff)}
+	}
+	st.trimMat, st.trimPat = int8(r[11]>>8), int8(r[11]&0xff)
+	return st
 }
 
 // loadInto fills the player's inventory, armor and offhand from their saved

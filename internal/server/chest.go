@@ -110,6 +110,9 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 				if it := h.spawnItem(players, st.item, st.count, float64(x)+0.5, float64(y), float64(z)+0.5); it != nil {
 					it.dmg = st.dmg
 					it.ench = st.ench
+					it.mapID = st.mapID
+					it.pats = st.pats
+					it.trimMat, it.trimPat = st.trimMat, st.trimPat
 				}
 			}
 		}

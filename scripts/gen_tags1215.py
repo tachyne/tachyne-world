@@ -12,11 +12,36 @@ Source: misode/mcmeta tag 1.21.5-summary, registries/data.min.json (the
 `tag/<registry>` keys are the tag manifests). Stdlib only; needs network —
 run OUTSIDE the sandbox:  python3 scripts/gen_tags1215.py
 """
+import io
 import json
+import os
 import urllib.request
+import zipfile
 
 URL = "https://raw.githubusercontent.com/misode/mcmeta/1.21.5-summary/registries/data.min.json"
 OUT = "../tachyne-common/protocol/tags1215_gen.go"
+JAR = os.path.expanduser("~/vanilla/server-1.21.5.jar")
+
+# Registries whose tags carry REAL contents even for legacy clients: the
+# loom's client-side pattern list is computed from the banner_pattern tags,
+# so empty tags would leave the menu blank. Contents come from the 1.21.5
+# jar's datapack; entry order is preserved (it drives the loom row order).
+CONTENT_REGISTRIES = {"banner_pattern"}
+
+
+def jar_tag_contents(registry):
+    """tag name -> ordered entry list, from the 1.21.5 server jar datapack."""
+    outer = zipfile.ZipFile(JAR)
+    inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
+    z = zipfile.ZipFile(io.BytesIO(outer.read(inner[0]))) if inner else outer
+    prefix = f"data/minecraft/tags/{registry}/"
+    out = {}
+    for path in z.namelist():
+        if path.startswith(prefix) and path.endswith(".json"):
+            name = path.removeprefix(prefix).removesuffix(".json")
+            vals = json.loads(z.read(path))["values"]
+            out[name] = [v["id"] if isinstance(v, dict) else v for v in vals]
+    return out
 
 # Datapack-only registries: absent at the client's config-time tag resolution,
 # so sending them throws "Missing registry" (same class as tags26xSkip).
@@ -34,14 +59,22 @@ lines = [
     "package protocol",
     "",
     "// tags1215Data is every vanilla 1.21.5 tag NAME by registry (contents",
-    "// intentionally empty — presence is what registry freeze validates).",
+    "// intentionally empty — presence is what registry freeze validates —",
+    "// except CONTENT_REGISTRIES, whose real memberships clients consume).",
     "var tags1215Data = []tagReg26x{",
 ]
 for key in sorted(k for k in data if k.startswith("tag/") and k not in SKIP):
     registry = "minecraft:" + key[len("tag/"):]
+    reg_short = key[len("tag/"):]
+    contents = jar_tag_contents(reg_short) if reg_short in CONTENT_REGISTRIES else {}
     lines.append(f'\t{{registry: "{registry}", tags: []tag26x{{')
     for name in data[key]:
-        lines.append(f'\t\t{{name: "minecraft:{name}"}},')
+        vals = contents.get(name)
+        if vals:
+            entries = ", ".join(f'"minecraft:{v.removeprefix("minecraft:")}"' for v in vals)
+            lines.append(f'\t\t{{name: "minecraft:{name}", entries: []string{{{entries}}}}},')
+        else:
+            lines.append(f'\t\t{{name: "minecraft:{name}"}},')
     lines.append("\t}},")
 lines += ["}", ""]
 
