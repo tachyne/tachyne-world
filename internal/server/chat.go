@@ -34,11 +34,23 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say <msg> /list /time <day|night|noon|midnight|N> /tp <x> <y> <z> /weather <clear|rain|thunder> /effect /give /kill /xp /summon /difficulty /gamerule /gamemode <mode> [player] /hud [on|off]"
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud"
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
 		}
 		p.tell(help)
+	case "msg", "tell", "w":
+		s.cmdMsg(p, fields[1:])
+	case "kick":
+		s.cmdKick(p, fields[1:])
+	case "clear":
+		s.cmdClear(p, fields[1:])
+	case "spawnpoint":
+		s.cmdSpawnpoint(p, fields[1:])
+	case "playsound":
+		s.cmdPlaysound(p, fields[1:])
+	case "particle":
+		s.cmdParticle(p, fields[1:])
 	case "say":
 		if len(fields) > 1 {
 			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})

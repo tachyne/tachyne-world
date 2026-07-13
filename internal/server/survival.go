@@ -73,6 +73,9 @@ func (h *hub) fastRegen(players map[int32]*tracked) {
 		if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 			continue
 		}
+		if !h.rules.NaturalRegen {
+			continue // gamerule naturalRegeneration=false: only potions heal
+		}
 		if t.food == maxFood && t.saturation > 0 && t.health < maxHealth {
 			f := float32(math.Min(float64(t.saturation), 6))
 			heal := f / 6
@@ -174,7 +177,9 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if worldgen.IsWater(h.worldFor(t.dim).At(fx, eyeY, fz)) && t.hasEffect(effWaterBreathing) == 0 {
 		if t.air -= airDrainPerSec; t.air <= 0 {
 			t.air = 0
-			h.damage(players, t, drownDamagePerSec)
+			if h.rules.DrownDamage {
+				h.damage(players, t, drownDamagePerSec)
+			}
 		}
 	} else if t.air < maxAir {
 		t.air = min(maxAir, t.air+airRefillPerSec)
@@ -195,7 +200,8 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	// Fire blocks: contact damage + a shorter afterburn.
-	if isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz)) {
+	if h.rules.FireDamage &&
+		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, fireContactSecs)
 		if h.damage(players, t, fireDamagePerSec); t.dead {
 			return
@@ -203,7 +209,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	}
 	// Lit campfires burn whoever stands in them (vanilla 1 HP, soul 2).
 	if s := h.worldFor(t.dim).At(fx, feet, fz); isCampfireBlock(s) && boolProp(s, "lit") &&
-		t.hasEffect(effFireRes) == 0 {
+		t.hasEffect(effFireRes) == 0 && h.rules.FireDamage {
 		dmg := float32(1)
 		if isSoulCampfire(s) {
 			dmg = 2
@@ -276,7 +282,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 		if t.hasEffect(effSlowFalling) > 0 || h.inWater(t.dim, e.x, e.y, e.z) {
 			return
 		}
-		if dist := t.peakY - e.y; dist > 3 { // 3-block grace, then 1 dmg/block
+		if dist := t.peakY - e.y; dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
 			h.damage(players, t, float32(math.Floor(dist-3)))
 		}
 	}
@@ -311,11 +317,20 @@ func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
 		h.incCustom(t, "deaths", 1)
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f)", t.p.name, t.x, t.y, t.z)
+		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
+			body := chatEv(t.p.name + " died")
+			for _, o := range players {
+				o.p.trySendEv(body)
+			}
+		}
 		if !h.rules.KeepInventory { // gamerule: keepInventory skips the stake
 			h.dropInventory(players, t)
 			h.dropDeathXP(players, t) // 7×level as an orb at the death spot, bar zeroed
 		}
 		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: "You died"})
+		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
+			h.post(evRespawn{eid: t.p.eid})
+		}
 		h.playSound(players, "minecraft:entity.player.death", sndPlayer, t.x, t.y, t.z, 1, 1)
 	} else {
 		t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})

@@ -197,6 +197,9 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Reschedule next tick (vanilla getFireTickDelay: 30 + rand(10)).
 	h.schedule(pos, uint64(30+h.rng.Intn(10)))
+	if !h.rules.DoFireTick {
+		return // gamerule doFireTick=false: fire neither spreads nor burns out
+	}
 
 	below := h.world.Block(pos.x, pos.y-1, pos.z)
 	infiniburn := below == worldgen.Netherrack // eternal fire on netherrack

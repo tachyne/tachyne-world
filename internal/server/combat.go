@@ -327,23 +327,26 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 
 	// Roll everything the death yields FIRST, so the plugin death event can
 	// mutate the drop list and XP before anything hits the ground.
+	// Gamerule doMobLoot=false silences the roll entirely.
 	var drops []plugin.ItemStack
-	if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 {
-		drops = append(drops, plugin.ItemStack{Item: itemSlimeball, Count: h.rng.Intn(3)})
-	}
-	if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
-		drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
-	}
-	if !m.baby { // babies drop nothing (vanilla)
-		loot := h.mobLoot(m)
-		if m.etype == entitySheep && m.sheared {
-			loot = loot[1:] // no wool off a sheared sheep
+	if h.rules.DoMobLoot { // gamerule doMobLoot=false silences the roll
+		if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 {
+			drops = append(drops, plugin.ItemStack{Item: itemSlimeball, Count: h.rng.Intn(3)})
 		}
-		for _, d := range loot {
-			if m.looting > 0 { // Looting: up to +level per roll (vanilla)
-				d.count += h.rng.Intn(m.looting + 1)
+		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
+			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
+		}
+		if !m.baby { // babies drop nothing (vanilla)
+			loot := h.mobLoot(m)
+			if m.etype == entitySheep && m.sheared {
+				loot = loot[1:] // no wool off a sheared sheep
 			}
-			drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
+			for _, d := range loot {
+				if m.looting > 0 { // Looting: up to +level per roll (vanilla)
+					d.count += h.rng.Intn(m.looting + 1)
+				}
+				drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
+			}
 		}
 	}
 	xp := 0

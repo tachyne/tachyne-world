@@ -998,6 +998,9 @@ func (h *hub) run() {
 					h.applyBehavior(m, e.behavior)
 				}
 			case evDrop:
+				if !h.rules.DoTileDrops {
+					break // gamerule doTileDrops=false: blocks break dry
+				}
 				if !worldgen.HarvestableBy(e.state, e.held) {
 					break // wrong tool (e.g. stone by hand) — no drops, vanilla parity
 				}
@@ -1261,6 +1264,19 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.onEditBook(t, e)
 				}
+			case evWhisper:
+				h.onWhisper(players, e)
+			case evKick:
+				h.onKick(players, e)
+			case evClearInv:
+				h.onClearInv(players, e)
+			case evSetSpawnpoint:
+				h.onSetSpawnpoint(players, e)
+			case evPlaysound:
+				h.onPlaysound(players, e)
+			case evParticleCmd:
+				h.toNearbyEv(players, 0, e.x, e.z, attachproto.Particles{
+					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
 			case evUseLectern:
 				h.onUseLectern(players, e)
 			case evUseShelf:

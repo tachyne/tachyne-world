@@ -171,7 +171,7 @@ func (r *remotePlayer) Action(v any) {
 	}
 }
 
-func (r *remotePlayer) Leave() { r.s.hub.post(evLeave{p: r.p}); close(r.p.quit) }
+func (r *remotePlayer) Leave() { r.s.hub.post(evLeave{p: r.p}); r.p.disconnect() }
 func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) {
 	r.p.x, r.p.y, r.p.z = x, y, z
 	// The session player's look direction feeds placement orientation

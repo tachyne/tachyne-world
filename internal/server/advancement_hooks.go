@@ -79,7 +79,7 @@ func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m 
 		t.p.trySendEv(p)
 	}
 	for _, n := range completed {
-		if d := n.display; d != nil && d.announceChat {
+		if d := n.display; d != nil && d.announceChat && h.rules.AnnounceAdv {
 			verb := "has made the advancement"
 			switch d.frame {
 			case 1:

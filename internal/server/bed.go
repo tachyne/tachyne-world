@@ -159,7 +159,11 @@ const sleepSkipTicks = 100
 // sleepSkipTicks, the clock jumps to sunrise and everyone stands up.
 func (h *hub) updateSleep(players map[int32]*tracked) {
 	slept, eligible := sleepCount(players)
-	if eligible == 0 || slept < eligible {
+	need := (eligible*h.rules.SleepPercent + 99) / 100 // gamerule playersSleepingPercentage
+	if h.rules.SleepPercent > 100 {
+		need = eligible + 1 // vanilla: >100 makes sleeping never skip
+	}
+	if eligible == 0 || slept < need || slept == 0 {
 		return
 	}
 	now := h.tick.Load()

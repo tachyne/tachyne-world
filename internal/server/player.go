@@ -56,8 +56,9 @@ type player struct {
 	// atomic because config/play readers and streamChunks may differ.
 	viewDist atomic.Int32
 
-	out  chan outPkt   // outbound packets; the writer goroutine owns the socket
-	quit chan struct{} // closed when the connection is tearing down
+	out      chan outPkt   // outbound packets; the writer goroutine owns the socket
+	quit     chan struct{} // closed when the connection is tearing down
+	quitOnce sync.Once     // quit closes exactly once (session teardown OR /kick)
 }
 
 // outPkt is one typed domain event queued for the session pump (remote.go's
@@ -165,3 +166,7 @@ func (p *player) heldPaintVariant() string {
 	defer p.hmu.Unlock()
 	return p.hotbarPaint[p.held]
 }
+
+// disconnect tears the session down (used by /kick); safe alongside the
+// normal leave path — quit closes exactly once.
+func (p *player) disconnect() { p.quitOnce.Do(func() { close(p.quit) }) }

@@ -32,12 +32,28 @@ type worldRules struct {
 	DoMobSpawning  bool         `json:"doMobSpawning"`
 	MobGriefing    bool         `json:"mobGriefing"`
 	DoWeather      bool         `json:"doWeatherCycle"`
+	DoFireTick     bool         `json:"doFireTick"`
+	DoTileDrops    bool         `json:"doTileDrops"`
+	DoMobLoot      bool         `json:"doMobLoot"`
+	NaturalRegen   bool         `json:"naturalRegeneration"`
+	FallDamage     bool         `json:"fallDamage"`
+	DrownDamage    bool         `json:"drowningDamage"`
+	FireDamage     bool         `json:"fireDamage"`
+	AnnounceAdv    bool         `json:"announceAdvancements"`
+	ShowDeathMsgs  bool         `json:"showDeathMessages"`
+	ImmediateResp  bool         `json:"doImmediateRespawn"`
+	RandomTicks    int          `json:"randomTickSpeed"`
+	SleepPercent   int          `json:"playersSleepingPercentage"`
 	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
 	Weather        *weatherSave `json:"weather,omitempty"`
 }
 
 func defaultRules() worldRules {
-	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true, MobGriefing: true, DoWeather: true}
+	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true,
+		MobGriefing: true, DoWeather: true, DoFireTick: true, DoTileDrops: true,
+		DoMobLoot: true, NaturalRegen: true, FallDamage: true, DrownDamage: true,
+		FireDamage: true, AnnounceAdv: true, ShowDeathMsgs: true,
+		RandomTicks: 3, SleepPercent: 100}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -165,17 +181,31 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
-	if len(args) != 2 || (args[1] != "true" && args[1] != "false") {
-		p.tell("Gamerules: keepInventory doDaylightCycle doMobSpawning mobGriefing doWeatherCycle — /gamerule <rule> <true|false>")
+	if len(args) != 2 {
+		p.tell("Gamerules: keepInventory doDaylightCycle doMobSpawning mobGriefing doWeatherCycle doFireTick doTileDrops doMobLoot naturalRegeneration fallDamage drowningDamage fireDamage announceAdvancements showDeathMessages doImmediateRespawn randomTickSpeed playersSleepingPercentage")
 		return
 	}
 	switch args[0] {
-	case "keepInventory", "doDaylightCycle", "doMobSpawning", "mobGriefing", "doWeatherCycle":
+	case "keepInventory", "doDaylightCycle", "doMobSpawning", "mobGriefing", "doWeatherCycle",
+		"doFireTick", "doTileDrops", "doMobLoot", "naturalRegeneration", "fallDamage",
+		"drowningDamage", "fireDamage", "announceAdvancements", "showDeathMessages",
+		"doImmediateRespawn":
+		if args[1] != "true" && args[1] != "false" {
+			p.tell("/gamerule " + args[0] + " <true|false>")
+			return
+		}
+		s.hub.post(evSetRule{rule: args[0], on: args[1] == "true"})
+	case "randomTickSpeed", "playersSleepingPercentage":
+		n, err := strconv.Atoi(args[1])
+		if err != nil || n < 0 || n > 1000 {
+			p.tell("/gamerule " + args[0] + " <0-1000>")
+			return
+		}
+		s.hub.post(evSetRule{rule: args[0], num: n})
 	default:
 		p.tell("Unknown gamerule: " + args[0])
 		return
 	}
-	s.hub.post(evSetRule{rule: args[0], on: args[1] == "true"})
 	p.tell(fmt.Sprintf("Gamerule %s = %s", args[0], args[1]))
 }
 
@@ -233,6 +263,30 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.MobGriefing = e.on
 	case "doWeatherCycle":
 		h.rules.DoWeather = e.on
+	case "doFireTick":
+		h.rules.DoFireTick = e.on
+	case "doTileDrops":
+		h.rules.DoTileDrops = e.on
+	case "doMobLoot":
+		h.rules.DoMobLoot = e.on
+	case "naturalRegeneration":
+		h.rules.NaturalRegen = e.on
+	case "fallDamage":
+		h.rules.FallDamage = e.on
+	case "drowningDamage":
+		h.rules.DrownDamage = e.on
+	case "fireDamage":
+		h.rules.FireDamage = e.on
+	case "announceAdvancements":
+		h.rules.AnnounceAdv = e.on
+	case "showDeathMessages":
+		h.rules.ShowDeathMsgs = e.on
+	case "doImmediateRespawn":
+		h.rules.ImmediateResp = e.on
+	case "randomTickSpeed":
+		h.rules.RandomTicks = e.num
+	case "playersSleepingPercentage":
+		h.rules.SleepPercent = e.num
 	}
 	h.saveRules()
 	h.plugins.Fire(&plugin.GameruleChangeEvent{Rule: e.rule, On: e.on, Num: e.num})

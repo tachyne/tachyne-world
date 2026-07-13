@@ -83,7 +83,11 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
 	for s := 0; s < h.world.Sections(); s++ {
 		baseY := worldgen.MinY + s*16
-		for i := 0; i < randomTickSpeed; i++ {
+		speed := randomTickSpeed
+		if h.rules.RandomTicks >= 0 {
+			speed = h.rules.RandomTicks // gamerule randomTickSpeed (0 = growth off)
+		}
+		for i := 0; i < speed; i++ {
 			x := cx*16 + h.rng.Intn(16)
 			y := baseY + h.rng.Intn(16)
 			z := cz*16 + h.rng.Intn(16)

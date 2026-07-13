@@ -23,10 +23,11 @@ const (
 // The tree is advisory — it buys client-side tab-completion and un-reddened
 // input; execution still validates ops and arguments server-side.
 var commandNames = []string{
-	"ban", "difficulty", "effect", "end", "gamemode", "gamerule", "give",
-	"gm", "help", "hud", "kill", "list", "nether", "pardon", "refresh",
-	"plugin", "rescue", "say", "summon", "teleport", "time", "tp", "weather",
-	"scoreboard", "team", "where", "whitelist", "xp",
+	"ban", "clear", "difficulty", "effect", "end", "gamemode", "gamerule",
+	"give", "gm", "help", "hud", "kick", "kill", "list", "msg", "nether",
+	"pardon", "particle", "playsound", "plugin", "refresh", "rescue", "say",
+	"scoreboard", "spawnpoint", "summon", "team", "teleport", "tell", "time",
+	"tp", "w", "weather", "where", "whitelist", "xp",
 }
 
 // commandTreeBody is the static Commands packet body: node 0 = root, node 1 =
