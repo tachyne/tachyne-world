@@ -111,6 +111,12 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 	if h.farmlandRandomTick(players, x, y, z, state) {
 		return
 	}
+	if h.tickCocoa(players, x, y, z, state) {
+		return
+	}
+	if h.tickBerry(players, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, x, y, z, state, caneMin)
@@ -399,6 +405,48 @@ var (
 // (north=0, south=1, west=2, east=3).
 var stemFacing = map[blockPos]uint32{
 	{0, 0, -1}: 0, {0, 0, 1}: 1, {-1, 0, 0}: 2, {1, 0, 0}: 3,
+}
+
+var (
+	cocoaBase = worldgen.BlockBase("cocoa")            // facing×age, age 0..2
+	berryBase = worldgen.BlockBase("sweet_berry_bush") // age 0..3
+)
+
+// tickCocoa ripens a cocoa pod one age stage (0→2) at 1-in-5 odds, preserving
+// its facing (CocoaBlock.randomTick). Returns whether it handled the block.
+func (h *hub) tickCocoa(players map[int32]*tracked, x, y, z int, state uint32) bool {
+	if state < cocoaBase || state > cocoaBase+11 {
+		return false
+	}
+	if h.rng.Intn(5) != 0 { // vanilla nextInt(5)==0
+		return true
+	}
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return true
+	}
+	age := worldgen.GetProperty(info, state, "age")
+	if age == "0" || age == "1" { // age<2: advance one stage, facing untouched
+		next := "1"
+		if age == "1" {
+			next = "2"
+		}
+		h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", next))
+	}
+	return true
+}
+
+// tickBerry ripens a sweet berry bush one age stage (0→3) at 1-in-5 odds when
+// the bush is lit (SweetBerryBushBlock.randomTick — brightness≥9 ≈ sky-lit).
+// Returns whether it handled the block.
+func (h *hub) tickBerry(players map[int32]*tracked, x, y, z int, state uint32) bool {
+	if state < berryBase || state > berryBase+3 {
+		return false
+	}
+	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.skyLit(x, y, z) {
+		h.setBlock(players, blockPos{x, y, z}, state+1)
+	}
+	return true
 }
 
 // tickStem grows a melon/pumpkin stem: it ages to 7, then spawns its fruit in

@@ -81,6 +81,25 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 			return true // vanilla consumes the meal either way
 		}
 	}
+	// Cocoa: advance one age stage, capped at 2 (CocoaBlock is bonemealable).
+	if state >= cocoaBase && state <= cocoaBase+11 {
+		if info, ok := worldgen.InfoForState(state); ok {
+			switch worldgen.GetProperty(info, state, "age") {
+			case "0":
+				h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "1"))
+				return true
+			case "1":
+				h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "2"))
+				return true
+			}
+		}
+		return false // already ripe
+	}
+	// Sweet berry bush: advance one age stage, capped at 3.
+	if state >= berryBase && state < berryBase+3 {
+		h.setBlock(players, blockPos{x, y, z}, state+1)
+		return true
+	}
 	// Grass block: scatter short grass + flowers nearby (GrassBlock.performBonemeal).
 	if state == worldgen.GrassBlock {
 		return h.bonemealGrass(players, dim, x, y, z)
