@@ -81,6 +81,9 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 }
 
 func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
+	if h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled
+		h.precipTick(players, cx, cz)
+	}
 	for s := 0; s < h.world.Sections(); s++ {
 		baseY := worldgen.MinY + s*16
 		speed := randomTickSpeed
@@ -319,5 +322,60 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, x, y, z int) {
 				h.igniteFire(players, blockPos{ax, y + 1, az}, 0)
 			}
 		}
+	}
+}
+
+var (
+	snowLayer1 = worldgen.BlockBase("snow") // 1-layer snow (base state = 1 layer)
+	iceBlock   = worldgen.BlockBase("ice")
+)
+
+// precipTick freezes exposed water to ice and accumulates snow layers in cold
+// biomes, a port of ServerLevel.tickPrecipitation restricted to one sampled
+// column. Ice forms whenever a snowy column's surface water is exposed at an
+// edge; snow only while it is actually snowing (raining in a cold biome).
+func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
+	x := cx*16 + h.rng.Intn(16)
+	z := cz*16 + h.rng.Intn(16)
+	// Find the topmost non-air near the surface (water sits above the terrain).
+	start := worldgen.SeaLevel + 4
+	if g := h.world.GroundY(x, z); g > start {
+		start = g
+	}
+	topY, top := 0, uint32(0)
+	for y := start; y >= h.world.GroundY(x, z)-1 && h.inWorldY(y); y-- {
+		if s := h.world.At(x, y, z); s != worldgen.Air {
+			topY, top = y, s
+			break
+		}
+	}
+	if top == 0 {
+		return
+	}
+	if worldgen.PrecipitationAt(h.world.BiomeAt(x, z), topY) != worldgen.PrecipSnow {
+		return // not cold enough to snow/freeze here
+	}
+	if !h.skyExposedColumn(x, z) {
+		return // sheltered columns don't freeze or accumulate
+	}
+	// Freeze: an exposed water SOURCE with a non-water edge neighbour becomes
+	// ice (vanilla freezes edges first, so open water stays liquid).
+	if top == worldgen.WaterBase {
+		edge := false
+		for _, d := range horizNeighbors {
+			if !worldgen.IsWater(h.world.At(x+d.x, topY, z+d.z)) {
+				edge = true
+				break
+			}
+		}
+		if edge {
+			h.setBlock(players, blockPos{x, topY, z}, iceBlock)
+		}
+		return
+	}
+	// Snow: while snowing, lay a snow layer on a solid, snow-free surface.
+	if h.raining && worldgen.IsSolidFull(top) && top != iceBlock &&
+		h.world.At(x, topY+1, z) == worldgen.Air {
+		h.setBlock(players, blockPos{x, topY + 1, z}, snowLayer1)
 	}
 }
