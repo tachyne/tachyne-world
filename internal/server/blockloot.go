@@ -18,6 +18,9 @@ import (
 //go:embed lootdata/blocks.json
 var blockLootJSON []byte
 
+//go:embed lootdata/entities.json
+var entityLootJSON []byte
+
 type lootNP struct {
 	T   string  `json:"t"`
 	V   float64 `json:"v"`
@@ -38,6 +41,13 @@ type lootCond struct {
 	Tag     string            `json:"tag"`
 	Term    *lootCond         `json:"term"`
 	Terms   []lootCond        `json:"terms"`
+	// entity conditions
+	Who        string  `json:"who"`
+	OnFire     bool    `json:"on_fire"`
+	EType      string  `json:"etype"`
+	BaseChance float64 `json:"base_chance"`
+	LinearBase float64 `json:"linear_base"`
+	PerLevel   float64 `json:"per_level"`
 }
 
 type lootFn struct {
@@ -51,6 +61,7 @@ type lootFn struct {
 	Mult    int     `json:"mult"`
 	Extra   int     `json:"extra"`
 	Prob    float64 `json:"prob"`
+	Limit   int     `json:"limit"`
 }
 
 type lootEntry struct {
@@ -79,11 +90,41 @@ type lootRow struct {
 }
 
 var blockLoot []lootRow
+var entityLoot map[int32]lootTable
 
 func init() {
 	if err := json.Unmarshal(blockLootJSON, &blockLoot); err != nil {
 		panic("blockloot: " + err.Error())
 	}
+	raw := map[string]lootTable{}
+	if err := json.Unmarshal(entityLootJSON, &raw); err != nil {
+		panic("entityloot: " + err.Error())
+	}
+	entityLoot = make(map[int32]lootTable, len(raw))
+	for k, v := range raw {
+		var id int32
+		for _, c := range k {
+			id = id*10 + (c - '0')
+		}
+		entityLoot[id] = v
+	}
+}
+
+// lootForEntity finds the baked table for an entity type id, or nil.
+func lootForEntity(etype int32) *lootTable {
+	if t, ok := entityLoot[etype]; ok {
+		return &t
+	}
+	return nil
+}
+
+// evalEntityLoot rolls a mob's baked death table; nil if it has none.
+func (h *hub) evalEntityLoot(etype int32, ctx lootCtx) ([]drop, bool) {
+	tbl := lootForEntity(etype)
+	if tbl == nil {
+		return nil, false
+	}
+	return h.evalTable(tbl, ctx), true
 }
 
 // lootFor finds the baked table for a block state, or nil.
@@ -104,6 +145,11 @@ type lootCtx struct {
 	explosion float64 // 0 = not an explosion (no decay/survives roll)
 	rng       func(int) int
 	randf     func() float64
+
+	// Entity-death context (unused for block loot).
+	looting        int
+	killedByPlayer bool
+	onFire         bool // the dying mob burned to death → cooked-meat smelt
 }
 
 // evalBlockLoot rolls the baked table; returns nil if the block has none.
@@ -112,6 +158,11 @@ func (h *hub) evalBlockLoot(ctx lootCtx) []drop {
 	if tbl == nil {
 		return nil
 	}
+	return h.evalTable(tbl, ctx)
+}
+
+// evalTable rolls every pool of a table under the context.
+func (h *hub) evalTable(tbl *lootTable, ctx lootCtx) []drop {
 	var out []drop
 	for pi := range tbl.Pools {
 		p := &tbl.Pools[pi]
@@ -184,7 +235,13 @@ func (c *lootCtx) emit(e *lootEntry, poolFns []lootFn) (int32, int, bool) {
 	}
 	apply(e.Functions)
 	apply(poolFns)
-	return e.ID, count, true
+	id := e.ID
+	if c.onFire && (hasSmelt(e.Functions) || hasSmelt(poolFns)) {
+		if r, ok := smeltResult[id]; ok {
+			id = r.Out
+		}
+	}
+	return id, count, true
 }
 
 func (c *lootCtx) applyFn(f *lootFn, count int) int {
@@ -216,6 +273,16 @@ func (c *lootCtx) applyFn(f *lootFn, count int) int {
 			}
 			return count
 		}
+	case "looting":
+		if c.looting > 0 {
+			n := int(float64(c.looting)*c.np(f.NP) + 0.5) // round
+			count += n
+			if f.Limit > 0 && count > f.Limit {
+				count = f.Limit
+			}
+		}
+	case "smelt":
+		// handled in emit (needs the item id); no-op here
 	case "limit":
 		if f.Min != nil && count < *f.Min {
 			count = *f.Min
@@ -235,6 +302,15 @@ func (c *lootCtx) applyFn(f *lootFn, count int) int {
 		}
 	}
 	return count
+}
+
+func hasSmelt(fns []lootFn) bool {
+	for i := range fns {
+		if fns[i].F == "smelt" {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *lootCtx) condsPass(cs []lootCond) bool {
@@ -286,6 +362,28 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 			return c.tool == int32(itemByName["shears"]) && cd.Tag == "shears"
 		}
 		return false
+	case "killed_by_player":
+		return c.killedByPlayer
+	case "ench_chance":
+		lvl := 0
+		if cd.Ench == "looting" {
+			lvl = c.looting
+		}
+		chance := cd.BaseChance
+		if lvl > 0 {
+			chance = cd.LinearBase + cd.PerLevel*float64(lvl-1)
+		}
+		return c.randf() < chance
+	case "entity":
+		// v1: only "this" predicates (the dying mob) are evaluated; attacker/
+		// direct_attacker type checks conservatively fail (rare music-disc path).
+		if cd.Who != "this" {
+			return false
+		}
+		if cd.OnFire && !c.onFire {
+			return false
+		}
+		return true
 	case "not":
 		return !c.cond(cd.Term)
 	case "any":

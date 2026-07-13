@@ -337,15 +337,28 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
 		}
 		if !m.baby { // babies drop nothing (vanilla)
-			loot := h.mobLoot(m)
-			if m.etype == entitySheep && m.sheared {
-				loot = loot[1:] // no wool off a sheared sheep
-			}
-			for _, d := range loot {
-				if m.looting > 0 { // Looting: up to +level per roll (vanilla)
-					d.count += h.rng.Intn(m.looting + 1)
+			// Data-driven entity table (looting, killed-by-player, cooked-on-fire)
+			// when one is baked; else the legacy mobLoot roll.
+			if ds, ok := h.evalEntityLoot(int32(m.etype), lootCtx{
+				looting: m.looting, killedByPlayer: m.hitByPlayer, onFire: m.burning,
+				rng: h.rng.Intn, randf: h.rng.Float64}); ok {
+				if m.etype == entitySheep && m.sheared {
+					ds = nil // no wool off a sheared sheep (handled outside the table)
 				}
-				drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
+				for _, d := range ds {
+					drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
+				}
+			} else {
+				loot := h.mobLoot(m)
+				if m.etype == entitySheep && m.sheared {
+					loot = loot[1:]
+				}
+				for _, d := range loot {
+					if m.looting > 0 { // Looting: up to +level per roll (vanilla)
+						d.count += h.rng.Intn(m.looting + 1)
+					}
+					drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
+				}
 			}
 		}
 	}

@@ -72,3 +72,58 @@ func TestBlockLootTables(t *testing.T) {
 		}
 	}
 }
+
+func TestEntityLootTables(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	r := rand.New(rand.NewSource(2))
+	zombie := int32(entityByName["zombie"])
+	rotten := int32(itemByName["rotten_flesh"])
+
+	if lootForEntity(zombie) == nil {
+		t.Fatal("zombie has no baked entity table")
+	}
+	// A zombie drops rotten flesh; Looting raises the average.
+	base, loot := 0, 0
+	n := 4000
+	for i := 0; i < n; i++ {
+		for _, d := range mustEntity(t, h, zombie, lootCtx{rng: r.Intn, randf: r.Float64}) {
+			if d.item == rotten {
+				base += d.count
+			}
+		}
+		for _, d := range mustEntity(t, h, zombie, lootCtx{looting: 3, rng: r.Intn, randf: r.Float64}) {
+			if d.item == rotten {
+				loot += d.count
+			}
+		}
+	}
+	if float64(loot)/float64(n) <= float64(base)/float64(n) {
+		t.Errorf("Looting didn't raise rotten-flesh yield: base %.2f looting %.2f",
+			float64(base)/float64(n), float64(loot)/float64(n))
+	}
+
+	// A cow that died on fire yields cooked beef (furnace_smelt).
+	cow := int32(entityByName["cow"])
+	if lootForEntity(cow) != nil {
+		cooked := int32(itemByName["cooked_beef"])
+		sawCooked := false
+		for i := 0; i < 50; i++ {
+			for _, d := range mustEntity(t, h, cow, lootCtx{onFire: true, rng: r.Intn, randf: r.Float64}) {
+				if d.item == cooked {
+					sawCooked = true
+				}
+			}
+		}
+		if !sawCooked {
+			t.Error("burning cow never dropped cooked beef")
+		}
+	}
+}
+
+func mustEntity(t *testing.T, h *hub, etype int32, ctx lootCtx) []drop {
+	ds, ok := h.evalEntityLoot(etype, ctx)
+	if !ok {
+		t.Fatalf("no entity table for %d", etype)
+	}
+	return ds
+}
