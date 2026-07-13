@@ -141,6 +141,12 @@ def distill(trigger, cond, tags):
             d["biome"] = biome
         else:
             d["unmatchable"] = True  # structure visits etc.
+    elif t == "construct_beacon":
+        lv = c.get("level", {})
+        if isinstance(lv, dict):
+            d["minLevel"] = int(lv.get("min", 0))
+        else:
+            d["minLevel"] = int(lv)
     elif t in ("slept_in_bed", "villager_trade", "enchanted_item",
                "brewed_potion", "cured_zombie_villager"):
         pass  # condition-free (or engine matches unconditionally)
@@ -372,6 +378,8 @@ def main():
                 f.append(f"biome: {gstr(c['biome'])}")
             if "dim" in c:
                 f.append(f"dim: {c['dim']}, hasDim: true")
+            if c.get("minLevel"):
+                f.append(f"minLevel: {c['minLevel']}")
             if c.get("items"):
                 sets = []
                 for p in c["items"]:

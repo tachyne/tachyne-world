@@ -144,6 +144,7 @@ type advMatch struct {
 	blockState uint32  // placed block state (matched against advBlockRanges)
 	biome      string  // location biome name
 	dim        int32   // changed_dimension destination
+	level      int     // construct_beacon pyramid tier
 }
 
 func (m advMatch) criterion(c *advCriterion) bool {
@@ -169,6 +170,8 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		return !c.hasDim || c.dim == m.dim
 	case "location":
 		return c.biome == m.biome
+	case "construct_beacon":
+		return m.level >= c.minLevel
 	case "slept_in_bed", "villager_trade", "enchanted_item", "brewed_potion",
 		"cured_zombie_villager":
 		return true

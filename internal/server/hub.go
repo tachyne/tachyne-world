@@ -181,6 +181,7 @@ const (
 	winAnvil
 	winGrind
 	winCarto  // cartography table (shares the two-slot machinery)
+	winBeacon // beacon menu (payment slot in t.anvil[0] + three properties)
 	winBin    // dispenser/dropper/hopper (h.bins)
 	winTrade  // villager merchant screen
 	winPlugin // the server-owned plugin browser (plugui.go)
@@ -374,6 +375,7 @@ type hub struct {
 	paintings    map[int32]*painting   // placed hanging paintings (persisted with containers)
 	itemFrames   map[int32]*itemFrame  // placed item frames (persisted with containers)
 	jukeboxes    map[blockPos]*jukebox // discs + playback clocks (persisted with containers)
+	beacons      map[blockPos]*beacon  // placed beacons (chosen powers persisted with containers)
 	detectorsOn  map[blockPos]bool     // detector rails currently pressed
 	spawnerNext  map[blockPos]uint64   // dungeon spawner cooldowns
 	patrolNextAt uint64                // world tick the next pillager-patrol attempt is due
@@ -485,6 +487,7 @@ func newHub(w *world.World) *hub {
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		jukeboxes:     map[blockPos]*jukebox{},
+		beacons:       map[blockPos]*beacon{},
 		detectorsOn:   map[blockPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
@@ -540,7 +543,8 @@ func (h *hub) run() {
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.jukeboxes = h.containers.loadJukeboxes()
-		for pos := range h.bins { // restart hoppers' self-scheduling chains
+		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
+		for pos := range h.bins {           // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
 				h.schedule(pos, hopperCadence)
 			}
@@ -608,6 +612,9 @@ func (h *hub) run() {
 			}
 			if age%20 == 0 {
 				h.jukeboxTick(players) // end songs whose length elapsed
+			}
+			if age%80 == 0 {
+				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
 			}
 			h.psched.run(age)          // plugin-scheduled tasks see the previous tick's world
 			h.runUpdates(players, age) // falling blocks, fluid flow
@@ -729,6 +736,7 @@ func (h *hub) run() {
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
+					h.containers.recordBeacons(h.beacons)
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1174,6 +1182,15 @@ func (h *hub) run() {
 					h.openCartography(t)
 					h.incCustom(t, "interact_with_cartography_table", 1)
 				}
+			case evOpenBeacon:
+				if t := players[e.eid]; t != nil {
+					h.openBeacon(t, e.x, e.y, e.z)
+					h.incCustom(t, "interact_with_beacon", 1)
+				}
+			case evSetBeacon:
+				if t := players[e.eid]; t != nil {
+					h.onSetBeacon(players, t, e.primary, e.secondary)
+				}
 			case evRename:
 				if t := players[e.eid]; t != nil && t.winKind == winAnvil {
 					t.renameTo = e.name
@@ -1252,6 +1269,7 @@ func (h *hub) run() {
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
+					h.containers.recordBeacons(h.beacons)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
@@ -1513,6 +1531,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}
 	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state) // lightning-rod POI set
+	h.beaconsOnBlockChange(players, e.x, e.y, e.z, e.state)
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.
@@ -1575,6 +1594,7 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	}
 	if dim == 0 {
 		h.rodIndexOnBlockChange(x, y, z, state)
+		h.beaconsOnBlockChange(players, x, y, z, state)
 		h.scheduleAround(blockPos{x, y, z}, 1)
 	}
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})

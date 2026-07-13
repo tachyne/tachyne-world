@@ -134,6 +134,8 @@ func (r *remotePlayer) Action(v any) {
 		}
 	case attachproto.Enchant:
 		h.post(evEnchant{eid: p.eid, button: e.Button})
+	case attachproto.SetBeacon:
+		h.post(evSetBeacon{eid: p.eid, primary: e.Primary, secondary: e.Secondary})
 	case attachproto.PlayerAction:
 		switch e.Action { // 0 sneak, 1 unsneak, 2 leave bed, 3/4 sprint
 		case 0:

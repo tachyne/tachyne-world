@@ -18,6 +18,7 @@ import (
 const (
 	effSpeed          = 0
 	effSlowness       = 1
+	effHaste          = 2
 	effStrength       = 4
 	effInstantHealth  = 5
 	effInstantDamage  = 6
@@ -49,7 +50,7 @@ type activeEffect struct {
 
 // effectNames maps /effect arguments to ids.
 var effectNames = map[string]int32{
-	"speed": effSpeed, "slowness": effSlowness, "strength": effStrength,
+	"speed": effSpeed, "slowness": effSlowness, "haste": effHaste, "strength": effStrength,
 	"instant_health": effInstantHealth, "instant_damage": effInstantDamage,
 	"jump_boost": effJumpBoost, "regeneration": effRegen,
 	"fire_resistance": effFireRes, "night_vision": effNightVision,

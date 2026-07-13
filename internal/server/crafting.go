@@ -244,6 +244,16 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-30], int(slot - 30)
 		}
 		return nil, -1
+	case winBeacon: // beacon menu = 0 payment, 1-27 main, 28-36 hotbar
+		switch {
+		case slot == 0:
+			return &t.anvil[0], -1
+		case slot >= 1 && slot <= 27:
+			return &t.inv.slots[slot+8], -1
+		case slot >= 28 && slot <= 36:
+			return &t.inv.slots[slot-28], int(slot - 28)
+		}
+		return nil, -1
 	case winEnchant: // enchantment menu = 0 item, 1 lapis, 2-28 main, 29-37 hotbar
 		switch {
 		case slot >= 0 && slot <= 1:
@@ -635,6 +645,8 @@ func (h *hub) resyncWindow(t *tracked) {
 		}
 	case winTrade:
 		h.sendTradeWindow(t)
+	case winBeacon:
+		h.sendBeaconWindow(t)
 	case winCraft:
 		h.sendCraftWindow(t)
 	default:

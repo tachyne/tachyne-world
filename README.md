@@ -52,7 +52,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Filled maps | ✅ | Craft an empty map and it draws the world vanilla-style as you explore (terrain colors, depth-shaded water, slope shading), with live player markers. Cloning (map + empty maps) and zoom-out (map + 8 paper) work in the crafting grid, and the cartography table zooms, clones, and locks maps; maps persist with the world. Banner markers are still to come. |
 | Item frames | ✅ | Regular + glow frames on any block face: insert any item (8-step rotation on click), two-stage punch (item pops first, then the frame), support-loss drops, persist with the world. A framed map renders and pins the green frame marker on that map. |
 | Note blocks & jukebox | ✅ | Note blocks with the full instrument set (block-below picks the instrument, mob heads above imitate), vanilla pitch/particles, right-click tunes and a punch plays; muffled under solid blocks. Jukeboxes take all music discs, play/stop for everyone nearby, eject on click, drop the disc when broken, and persist. Redstone triggering awaits redstone tier 2. |
-| Beacon, fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Beacon | ✅ | Vanilla pyramid tiers (1–4 layers of iron/gold/diamond/emerald/netherite), the beam needs an open sky column (glass passes), the menu takes a payment item and a power choice (tier-gated: speed/haste → resistance/jump boost → strength → regeneration or level II), and effects pulse to everyone in range every 4 seconds. Powers persist with the world. |
+| Fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
@@ -117,6 +118,9 @@ multi-pod plan).
 - **Cartography table**: zoom a map out with paper (up to the vanilla scale
   cap), lock it with a glass pane (a frozen copy that stops updating), or
   duplicate it with an empty map (copies share the same live picture)
+- **Beacon**: vanilla pyramid detection with all four tiers, sky-column
+  check, the payment menu with tier-gated powers, area effects on the
+  vanilla 80-tick cadence, and the client-rendered beam
 
 **Progression**
 - **Recipe book**: vanilla unlock progression — a fresh player's book starts

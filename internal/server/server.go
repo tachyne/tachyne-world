@@ -355,6 +355,9 @@ func (s *Server) Serve() error {
 			if isLightningRodState(state) {
 				s.hub.rods[blockPos{x, y, z}] = struct{}{}
 			}
+			if state == beaconState { // beacons rebuild from edits; powers re-attach from containers
+				s.hub.beacons[blockPos{x, y, z}] = &beacon{}
+			}
 		})
 		if s.LLMAddr != "" {
 			s.hub.llm = newLLMClient(s.LLMAddr, s.LLMModel)

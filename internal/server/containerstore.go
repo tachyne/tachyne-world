@@ -37,6 +37,7 @@ type containerFile struct {
 	Paintings []savedPainting         `json:"paintings,omitempty"`
 	Frames    []savedFrame            `json:"frames,omitempty"`
 	Jukeboxes map[string][5]int32     `json:"jukeboxes,omitempty"`
+	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 }
 
 type savedPainting struct {
@@ -305,6 +306,31 @@ func (s *containerStore) loadJukeboxes() map[blockPos]*jukebox {
 		}
 	}
 	return out
+}
+
+// recordBeacons snapshots each beacon's chosen powers (menu encoding:
+// mob_effect id + 1, 0 = none). The pyramid tier is recomputed live.
+func (s *containerStore) recordBeacons(bs map[blockPos]*beacon) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Beacons = map[string][2]int32{}
+	for pos, b := range bs {
+		s.m.Beacons[posKey(pos)] = [2]int32{b.primary, b.secondary}
+	}
+}
+
+// loadBeacons re-attaches saved powers to the beacons already rebuilt from
+// the world edits (a saved row without a live beacon is a stale ghost).
+func (s *containerStore) loadBeacons(bs map[blockPos]*beacon) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, row := range s.m.Beacons {
+		if pos, ok := parsePosKey(key); ok {
+			if b := bs[pos]; b != nil {
+				b.primary, b.secondary = row[0], row[1]
+			}
+		}
+	}
 }
 
 // recordFrames snapshots the live item frames for the next flush.

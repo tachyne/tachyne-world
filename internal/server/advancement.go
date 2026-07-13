@@ -32,12 +32,13 @@ type advCriterion struct {
 	name    string
 	trigger string // short trigger name (no namespace)
 
-	entity string    // player_killed_entity / entity_killed_player / bred_animals / tame_animal ("" = any)
-	items  [][]int32 // inventory_changed (all predicate sets must be present) / consume_item (items[0])
-	block  string    // placed_block
-	biome  string    // location biome visit
-	dim    int32     // changed_dimension target (0/1/2)
-	hasDim bool
+	entity   string    // player_killed_entity / entity_killed_player / bred_animals / tame_animal ("" = any)
+	items    [][]int32 // inventory_changed (all predicate sets must be present) / consume_item (items[0])
+	block    string    // placed_block
+	biome    string    // location biome visit
+	dim      int32     // changed_dimension target (0/1/2)
+	hasDim   bool
+	minLevel int // construct_beacon minimum pyramid tier
 
 	unmatchable bool // trigger/conditions the engine can't observe yet
 }
