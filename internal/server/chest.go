@@ -103,6 +103,8 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState uint32) {
 	h.spillJukebox(players, x, y, z, newState)
 	h.spillCampfire(players, x, y, z, newState)
+	h.spillLectern(players, x, y, z, newState)
+	h.spillShelf(players, x, y, z, newState)
 	pos := blockPos{x, y, z}
 	spill := func(slots []invStack) {
 		for _, st := range slots {

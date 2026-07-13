@@ -43,6 +43,14 @@ type containerFile struct {
 	Jukeboxes map[string][13]int32    `json:"jukeboxes,omitempty"`
 	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands    []savedStand            `json:"stands,omitempty"`  // placed armor stands
+	Lecterns  map[string]savedLectern `json:"lecterns,omitempty"`
+	Shelves   map[string][6][13]int32 `json:"shelves,omitempty"` // chiseled bookshelves
+}
+
+// savedLectern is one lectern's book + open page.
+type savedLectern struct {
+	Item [13]int32 `json:"item"`
+	Page int       `json:"page,omitempty"`
 }
 
 type savedPainting struct {
@@ -88,6 +96,58 @@ type savedStand struct {
 	Z     float64      `json:"z"`
 	Yaw   float32      `json:"yaw"`
 	Equip [6][13]int32 `json:"equip"`
+}
+
+// recordLecterns / loadLecterns persist lectern books + pages.
+func (s *containerStore) recordLecterns(ls map[blockPos]*lectern) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Lecterns = map[string]savedLectern{}
+	for pos, l := range ls {
+		s.m.Lecterns[posKey(pos)] = savedLectern{Item: packStack(l.book), Page: l.page}
+	}
+}
+
+func (s *containerStore) loadLecterns() map[blockPos]*lectern {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]*lectern{}
+	for k, sv := range s.m.Lecterns {
+		if pos, ok := parsePosKey(k); ok {
+			out[pos] = &lectern{book: unpackStack(sv.Item), page: sv.Page}
+		}
+	}
+	return out
+}
+
+// recordShelves / loadShelves persist chiseled bookshelves.
+func (s *containerStore) recordShelves(m map[blockPos]*[6]invStack) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Shelves = map[string][6][13]int32{}
+	for pos, shelf := range m {
+		var rows [6][13]int32
+		for i, st := range shelf {
+			rows[i] = packStack(st)
+		}
+		s.m.Shelves[posKey(pos)] = rows
+	}
+}
+
+func (s *containerStore) loadShelves() map[blockPos]*[6]invStack {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]*[6]invStack{}
+	for k, rows := range s.m.Shelves {
+		if pos, ok := parsePosKey(k); ok {
+			var shelf [6]invStack
+			for i, r := range rows {
+				shelf[i] = unpackStack(r)
+			}
+			out[pos] = &shelf
+		}
+	}
+	return out
 }
 
 // recordStands snapshots placed armor stands for the next flush.

@@ -189,6 +189,7 @@ const (
 	winLoom     // loom (banner/dye in t.anvil, pattern item in t.extraSlot)
 	winSmith    // smithing table (template in t.extraSlot, base/addition in t.anvil)
 	winHorse    // mount inventory (slots live on the mob; see horseSlotPtr)
+	winLectern  // lectern reader (one read-only slot + the page property)
 	winBin      // dispenser/dropper/hopper (h.bins)
 	winTrade    // villager merchant screen
 	winPlugin   // the server-owned plugin browser (plugui.go)
@@ -381,24 +382,26 @@ type hub struct {
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
-	vehicles     map[int32]*vehicle     // minecarts + boats
-	paintings    map[int32]*painting    // placed hanging paintings (persisted with containers)
-	itemFrames   map[int32]*itemFrame   // placed item frames (persisted with containers)
-	armorStands  map[int32]*armorStand  // placed armor stands (persisted with containers)
-	jukeboxes    map[blockPos]*jukebox  // discs + playback clocks (persisted with containers)
-	beacons      map[blockPos]*beacon   // placed beacons (chosen powers persisted with containers)
-	campfires    map[blockPos]*campfire // live cook state (item view in cfStore)
-	cfStore      *campfireStore         // campfires.json + the chunk builders' read view
-	banners      *bannerStore           // banners.json + the chunk builders' read view
-	books        *bookStore             // books.json (contents by book id, the map model)
-	detectorsOn  map[blockPos]bool      // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64    // dungeon spawner cooldowns
-	patrolNextAt uint64                 // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid     // active village raids by centre
-	brewProg     map[blockPos]int       // brewing stand progress (ticks)
-	portalLinks  map[dimPos]dimPos      // sticky portal pairs (both directions)
-	bossSeen     map[[2]int32]bool      // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors    map[blockPos]uint64    // wooden doors a villager opened → tick opened (auto-close)
+	vehicles     map[int32]*vehicle        // minecarts + boats
+	paintings    map[int32]*painting       // placed hanging paintings (persisted with containers)
+	itemFrames   map[int32]*itemFrame      // placed item frames (persisted with containers)
+	armorStands  map[int32]*armorStand     // placed armor stands (persisted with containers)
+	jukeboxes    map[blockPos]*jukebox     // discs + playback clocks (persisted with containers)
+	beacons      map[blockPos]*beacon      // placed beacons (chosen powers persisted with containers)
+	campfires    map[blockPos]*campfire    // live cook state (item view in cfStore)
+	cfStore      *campfireStore            // campfires.json + the chunk builders' read view
+	banners      *bannerStore              // banners.json + the chunk builders' read view
+	books        *bookStore                // books.json (contents by book id, the map model)
+	lecterns     map[blockPos]*lectern     // held books + open pages (persisted with containers)
+	bookshelves  map[blockPos]*[6]invStack // chiseled shelves (persisted with containers)
+	detectorsOn  map[blockPos]bool         // detector rails currently pressed
+	spawnerNext  map[blockPos]uint64       // dungeon spawner cooldowns
+	patrolNextAt uint64                    // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid        // active village raids by centre
+	brewProg     map[blockPos]int          // brewing stand progress (ticks)
+	portalLinks  map[dimPos]dimPos         // sticky portal pairs (both directions)
+	bossSeen     map[[2]int32]bool         // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors    map[blockPos]uint64       // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon       *mob               // the ender dragon (nil = none / defeated)
 	crystals     map[int32]*crystal // end crystals by eid
@@ -513,6 +516,8 @@ func newHub(w *world.World) *hub {
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
+		lecterns:      map[blockPos]*lectern{},
+		bookshelves:   map[blockPos]*[6]invStack{},
 		jukeboxes:     map[blockPos]*jukebox{},
 		beacons:       map[blockPos]*beacon{},
 		campfires:     map[blockPos]*campfire{},
@@ -577,6 +582,8 @@ func (h *hub) run() {
 		h.armorStands = h.containers.loadStands(h.allocEID)
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
+		h.lecterns = h.containers.loadLecterns()
+		h.bookshelves = h.containers.loadShelves()
 		h.loadCampfires()
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
@@ -776,6 +783,8 @@ func (h *hub) run() {
 					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordLecterns(h.lecterns)
+					h.containers.recordShelves(h.bookshelves)
 					h.containers.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1252,6 +1261,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.onEditBook(t, e)
 				}
+			case evUseLectern:
+				h.onUseLectern(players, e)
+			case evUseShelf:
+				h.onUseShelf(players, e)
 			case evPlaceStand:
 				h.onPlaceStand(players, e)
 			case evOpenSmith:
@@ -1291,6 +1304,8 @@ func (h *hub) run() {
 						h.stonecutSelect(t, e.button)
 					case winLoom:
 						h.loomSelect(t, e.button)
+					case winLectern:
+						h.lecternButton(players, t, e.button)
 					default:
 						h.handleEnchant(players, t, e.button)
 					}
@@ -1357,6 +1372,8 @@ func (h *hub) run() {
 					h.containers.recordJukeboxes(h.jukeboxes)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
+					h.containers.recordLecterns(h.lecterns)
+					h.containers.recordShelves(h.bookshelves)
 					h.containers.flush()
 				}
 				h.signs.flushIfDirty()

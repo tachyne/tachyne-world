@@ -161,7 +161,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if _, err := io.ReadFull(br, cur[:]); err != nil {
 		return
 	}
+	cursorX := math.Float32frombits(binary.BigEndian.Uint32(cur[0:4]))
 	cursorY := math.Float32frombits(binary.BigEndian.Uint32(cur[4:8]))
+	cursorZ := math.Float32frombits(binary.BigEndian.Uint32(cur[8:12]))
 	br.Seek(2, io.SeekCurrent)        // insideBlock + worldBorderHit bools
 	seq, _ := protocol.ReadVarInt(br) // prediction sequence
 
@@ -173,7 +175,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	// Right-clicking an interactive block (door/gate/trapdoor) operates it instead
 	// of placing — unless the player is sneaking.
-	if !p.sneaking && s.tryUseBlock(p, x, y, z, seq) {
+	if !p.sneaking && s.tryUseBlock(p, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
 		return
 	}
 
@@ -366,7 +368,7 @@ func (s *Server) abortPlace(p *player, x, y, z int, seq int32) {
 // tryUseBlock operates the clicked block if it's interactive (has an "open" state:
 // doors, fence gates, trapdoors). Returns whether it handled the click. Doors are
 // two-tall, so both halves toggle together.
-func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
+func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, cy, cz float32) bool {
 	state := s.worldFor(p).Block(x, y, z)
 	if state == craftingTableState { // open the 3x3 crafting window
 		s.hub.post(evOpenCraft{eid: p.eid})
@@ -420,6 +422,21 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 	}
 	if state == beaconState {
 		s.hub.post(evOpenBeacon{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if isLectern(state) {
+		held := p.heldItem()
+		hasBook := boolProp(state, "has_book")
+		if hasBook || isLecternBook(int32(held)) {
+			s.hub.post(evUseLectern{eid: p.eid, x: x, y: y, z: z})
+			s.sendBlockChange(p, x, y, z, state, seq)
+			return true
+		}
+		return false
+	}
+	if isBookshelf(state) {
+		s.hub.post(evUseShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
