@@ -1010,8 +1010,15 @@ func (h *hub) run() {
 					silk = held.enchLvl(enchSilkTouch)
 					fortune = held.enchLvl(enchFortune)
 				}
-				if item, ok := silkTouchDrop[e.state]; ok && silk > 0 {
-					// Silk Touch: the block itself, no ore XP (vanilla).
+				// Data-driven loot: the baked vanilla table drives silk/Fortune/
+				// probabilities exactly. Blocks without a baked table fall back
+				// to the legacy silk map + rollDrops path.
+				if ds := h.evalBlockLoot(lootCtx{state: e.state, tool: int32(e.held),
+					silk: silk > 0, fortune: fortune, rng: h.rng.Intn, randf: h.rng.Float64}); ds != nil {
+					for _, d := range ds {
+						h.spawnBlockDrop(players, d.item, d.count, e.x, e.y, e.z)
+					}
+				} else if item, ok := silkTouchDrop[e.state]; ok && silk > 0 {
 					h.spawnBlockDrop(players, item, 1, e.x, e.y, e.z)
 				} else {
 					for _, d := range h.rollDrops(e.state) {
