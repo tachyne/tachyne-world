@@ -105,6 +105,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 		h.lavaIgnite(players, x, y, z)
 		return
 	}
+	if h.tickStem(players, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, x, y, z, state, caneMin)
@@ -378,4 +381,56 @@ func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
 		h.world.At(x, topY+1, z) == worldgen.Air {
 		h.setBlock(players, blockPos{x, topY + 1, z}, snowLayer1)
 	}
+}
+
+var (
+	melonStemBase       = worldgen.BlockBase("melon_stem")            // age 0..7
+	pumpkinStemBase     = worldgen.BlockBase("pumpkin_stem")          // age 0..7
+	attachedMelonBase   = worldgen.BlockBase("attached_melon_stem")   // facing N/S/W/E
+	attachedPumpkinBase = worldgen.BlockBase("attached_pumpkin_stem") //
+	melonBlock          = worldgen.BlockBase("melon")
+	pumpkinBlock        = worldgen.BlockBase("pumpkin")
+)
+
+// stemFacing maps a horizontal delta to the attached-stem facing index
+// (north=0, south=1, west=2, east=3).
+var stemFacing = map[blockPos]uint32{
+	{0, 0, -1}: 0, {0, 0, 1}: 1, {-1, 0, 0}: 2, {1, 0, 0}: 3,
+}
+
+// tickStem grows a melon/pumpkin stem: it ages to 7, then spawns its fruit in
+// an adjacent free cell over tillable ground and turns into an attached stem
+// (StemBlock.randomTick). Returns whether it handled the block.
+func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bool {
+	var stemBase, attachedBase, fruit uint32
+	switch {
+	case state >= melonStemBase && state <= melonStemBase+7:
+		stemBase, attachedBase, fruit = melonStemBase, attachedMelonBase, melonBlock
+	case state >= pumpkinStemBase && state <= pumpkinStemBase+7:
+		stemBase, attachedBase, fruit = pumpkinStemBase, attachedPumpkinBase, pumpkinBlock
+	default:
+		return false
+	}
+	if !h.skyLit(x, y, z) {
+		return true
+	}
+	age := int(state - stemBase)
+	if age < 7 {
+		h.setBlock(players, blockPos{x, y, z}, stemBase+uint32(age+1))
+		return true
+	}
+	// Mature: try to fruit in a random horizontal neighbour.
+	d := horizNeighbors[h.rng.Intn(4)]
+	fx, fz := x+d.x, z+d.z
+	if h.world.At(fx, y, fz) != worldgen.Air {
+		return true // occupied — no room this tick
+	}
+	below := h.world.At(fx, y-1, fz)
+	if below != worldgen.Dirt && below != worldgen.GrassBlock &&
+		!(below >= farmlandMin && below <= farmlandMin+7) {
+		return true // fruit needs tillable/dirt/grass ground
+	}
+	h.setBlock(players, blockPos{fx, y, fz}, fruit)
+	h.setBlock(players, blockPos{x, y, z}, attachedBase+stemFacing[d]) // attach toward the fruit
+	return true
 }

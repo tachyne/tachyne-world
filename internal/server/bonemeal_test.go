@@ -81,3 +81,42 @@ func contains(xs []uint32, v uint32) bool {
 	}
 	return false
 }
+
+func TestStemGrowth(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		// A mature melon stem over grass, with an open lit neighbour, fruits.
+		x, y, z := 40, 71, 0
+		w.SetBlock(x, y-1, z, worldgen.Dirt) // stem sits on dirt
+		for _, d := range horizNeighbors {   // clear + ground the neighbours
+			w.SetBlock(x+d.x, y-1, z+d.z, worldgen.GrassBlock)
+			w.SetBlock(x+d.x, y, z+d.z, worldgen.Air)
+			w.SetBlock(x+d.x, y+5, z+d.z, worldgen.Air) // sky light
+		}
+		w.SetBlock(x, y+5, z, worldgen.Air)
+		fruited := false
+		for i := 0; i < 200 && !fruited; i++ {
+			w.SetBlock(x, y, z, melonStemBase+7) // reset to mature each try
+			h.tickStem(h.playersRef, x, y, z, melonStemBase+7)
+			for _, d := range horizNeighbors {
+				if w.At(x+d.x, y, z+d.z) == melonBlock {
+					fruited = true
+					// The stem attached toward the fruit.
+					if s := w.At(x, y, z); s < attachedMelonBase || s > attachedMelonBase+3 {
+						t.Errorf("stem didn't attach: %d", s)
+					}
+				}
+			}
+		}
+		if !fruited {
+			t.Error("mature melon stem never fruited")
+		}
+		// Below max age, it just advances.
+		w.SetBlock(x, y, z, melonStemBase+2)
+		h.tickStem(h.playersRef, x, y, z, melonStemBase+2)
+		if w.At(x, y, z) != melonStemBase+3 {
+			t.Errorf("stem age = %d, want +3", w.At(x, y, z)-melonStemBase)
+		}
+	})
+}
