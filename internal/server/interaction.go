@@ -194,6 +194,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
+	if int32(p.heldItem()) == itemBoneMeal { // grow the clicked block
+		s.hub.post(evBoneMeal{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
+		return
+	}
 	if p.heldItem() == itemFlintSteel { // light a fire / prime TNT
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
 		return

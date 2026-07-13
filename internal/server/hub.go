@@ -1284,6 +1284,8 @@ func (h *hub) run() {
 			case evParticleCmd:
 				h.toNearbyEv(players, 0, e.x, e.z, attachproto.Particles{
 					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
+			case evBoneMeal:
+				h.onBoneMeal(players, e)
 			case evUseLectern:
 				h.onUseLectern(players, e)
 			case evUseShelf:

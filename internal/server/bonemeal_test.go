@@ -1,0 +1,83 @@
+package server
+
+import (
+	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
+
+func TestBoneMeal(t *testing.T) {
+	_, h, p := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.gamemode = gmSurvival
+		tr.inv.slots[0] = invStack{item: itemBoneMeal, count: 3}
+
+		// Crops age up 2–5 stages, capped.
+		wheat := worldgen.BlockBase("wheat")
+		w.SetBlock(5, 70, 0, wheat) // age 0
+		grew := false
+		for i := 0; i < 20 && !grew; i++ {
+			tr.inv.slots[0] = invStack{item: itemBoneMeal, count: 3}
+			w.SetBlock(5, 70, 0, wheat)
+			h.onBoneMeal(h.playersRef, evBoneMeal{eid: p.eid, x: 5, y: 70, z: 0, slot: 0})
+			if s := w.At(5, 70, 0); s > wheat {
+				grew = true
+				if s-wheat < 2 { // at least +2
+					t.Errorf("crop grew by %d, want >=2", s-wheat)
+				}
+			}
+		}
+		if !grew {
+			t.Error("bone meal never advanced the crop")
+		}
+		// It consumed a bone meal.
+		if tr.inv.slots[0].count != 2 {
+			t.Errorf("bone meal count %d, want 2", tr.inv.slots[0].count)
+		}
+
+		// A mature crop is not advanced (returns false, no consume).
+		for _, r := range cropRanges {
+			if inRange(wheat, r) {
+				w.SetBlock(6, 70, 0, r[1]) // mature
+				tr.inv.slots[0] = invStack{item: itemBoneMeal, count: 5}
+				h.onBoneMeal(h.playersRef, evBoneMeal{eid: p.eid, x: 6, y: 70, z: 0, slot: 0})
+				if w.At(6, 70, 0) != r[1] || tr.inv.slots[0].count != 5 {
+					t.Error("bone meal wasted on a mature crop")
+				}
+				break
+			}
+		}
+
+		// Grass block scatters short grass / flowers around.
+		for dx := -3; dx <= 3; dx++ {
+			for dz := -3; dz <= 3; dz++ {
+				w.SetBlock(20+dx, 70, dz, worldgen.GrassBlock)
+				w.SetBlock(20+dx, 71, dz, worldgen.Air)
+			}
+		}
+		tr.inv.slots[0] = invStack{item: itemBoneMeal, count: 5}
+		h.onBoneMeal(h.playersRef, evBoneMeal{eid: p.eid, x: 20, y: 70, z: 0, slot: 0})
+		scattered := 0
+		for dx := -3; dx <= 3; dx++ {
+			for dz := -3; dz <= 3; dz++ {
+				if s := w.At(20+dx, 71, dz); s == worldgen.ShortGrass || contains(bmFlowerBlocks, s) {
+					scattered++
+				}
+			}
+		}
+		if scattered == 0 {
+			t.Error("bone meal on grass scattered nothing")
+		}
+	})
+}
+
+func contains(xs []uint32, v uint32) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
