@@ -180,11 +180,12 @@ const (
 	winEnchant
 	winAnvil
 	winGrind
-	winCarto  // cartography table (shares the two-slot machinery)
-	winBeacon // beacon menu (payment slot in t.anvil[0] + three properties)
-	winBin    // dispenser/dropper/hopper (h.bins)
-	winTrade  // villager merchant screen
-	winPlugin // the server-owned plugin browser (plugui.go)
+	winCarto    // cartography table (shares the two-slot machinery)
+	winBeacon   // beacon menu (payment slot in t.anvil[0] + three properties)
+	winStonecut // stonecutter (input in t.anvil[0], indexed recipe buttons)
+	winBin      // dispenser/dropper/hopper (h.bins)
+	winTrade    // villager merchant screen
+	winPlugin   // the server-owned plugin browser (plugui.go)
 )
 
 // tracked is the hub's authoritative record for a connected player. Position is
@@ -266,6 +267,7 @@ type tracked struct {
 	anvil     [2]invStack
 	trade     [2]invStack // merchant input slots
 	tradeSel  int         // selected offer row
+	stoneSel  int         // stonecutter: selected recipe row (-1 = none)
 	tradeWith int32       // villager eid the open trade screen belongs to
 	renameTo  string
 }
@@ -1197,6 +1199,11 @@ func (h *hub) run() {
 					h.openCartography(t)
 					h.incCustom(t, "interact_with_cartography_table", 1)
 				}
+			case evOpenStonecut:
+				if t := players[e.eid]; t != nil {
+					h.openStonecutter(t)
+					h.incCustom(t, "interact_with_stonecutter", 1)
+				}
 			case evOpenBeacon:
 				if t := players[e.eid]; t != nil {
 					h.openBeacon(t, e.x, e.y, e.z)
@@ -1222,9 +1229,13 @@ func (h *hub) run() {
 					t.tradeSel = int(e.slot)
 					h.sendTradeWindow(t)
 				}
-			case evEnchant:
+			case evEnchant: // container_button_click: enchant option or stonecutter row
 				if t := players[e.eid]; t != nil {
-					h.handleEnchant(players, t, e.button)
+					if t.winKind == winStonecut {
+						h.stonecutSelect(t, e.button)
+					} else {
+						h.handleEnchant(players, t, e.button)
+					}
 				}
 			case evUseBed:
 				if t := players[e.eid]; t != nil {

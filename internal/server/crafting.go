@@ -244,6 +244,16 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-30], int(slot - 30)
 		}
 		return nil, -1
+	case winStonecut: // 0 input, 1 result (server-owned), 2-28 main, 29-37 hotbar
+		switch {
+		case slot == 0:
+			return &t.anvil[0], -1
+		case slot >= 2 && slot <= 28:
+			return &t.inv.slots[slot+7], -1
+		case slot >= 29 && slot <= 37:
+			return &t.inv.slots[slot-29], int(slot - 29)
+		}
+		return nil, -1
 	case winBeacon: // beacon menu = 0 payment, 1-27 main, 28-36 hotbar
 		switch {
 		case slot == 0:
@@ -309,6 +319,10 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	// Anvil/grindstone/cartography slot 2 is their server-owned result.
 	if e.slot == 2 && (t.winKind == winAnvil || t.winKind == winGrind || t.winKind == winCarto) {
 		h.takeTwoSlotResult(players, t)
+		return
+	}
+	if e.slot == 1 && t.winKind == winStonecut { // the stonecutter's result slot
+		h.takeStonecutResult(players, t)
 		return
 	}
 	if e.slot == 2 && t.winKind == winTrade {
@@ -419,6 +433,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if (t.winKind == winAnvil || t.winKind == winGrind || t.winKind == winCarto) && ch.slot <= 1 {
 			enchTouched = true // inputs changed — recompute the result
 		}
+		if t.winKind == winStonecut && ch.slot == 0 {
+			enchTouched = true // input changed — refresh the recipe list
+		}
 		if t.winKind == winTrade && ch.slot <= 1 {
 			enchTouched = true // trade inputs changed — recompute the result
 		}
@@ -450,6 +467,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			h.rollEnchOptions(t)
 		case winAnvil, winGrind, winCarto:
 			h.sendTwoSlotWindow(t)
+		case winStonecut:
+			t.stoneSel = -1 // vanilla: a changed input resets the selection
+			h.sendStonecutWindow(t)
 		case winTrade:
 			h.sendTradeWindow(t)
 		}
@@ -647,6 +667,8 @@ func (h *hub) resyncWindow(t *tracked) {
 		h.sendTradeWindow(t)
 	case winBeacon:
 		h.sendBeaconWindow(t)
+	case winStonecut:
+		h.sendStonecutWindow(t)
 	case winCraft:
 		h.sendCraftWindow(t)
 	default:

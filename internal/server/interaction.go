@@ -398,6 +398,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32) bool {
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if state >= stonecutterMin && state <= stonecutterMax {
+		s.hub.post(evOpenStonecut{eid: p.eid})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if state == beaconState {
 		s.hub.post(evOpenBeacon{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
