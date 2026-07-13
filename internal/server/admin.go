@@ -44,6 +44,7 @@ type worldRules struct {
 	ImmediateResp  bool         `json:"doImmediateRespawn"`
 	RandomTicks    int          `json:"randomTickSpeed"`
 	SleepPercent   int          `json:"playersSleepingPercentage"`
+	LocatorBar     bool         `json:"locatorBar"`
 	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
 	Weather        *weatherSave `json:"weather,omitempty"`
 }
@@ -53,7 +54,7 @@ func defaultRules() worldRules {
 		MobGriefing: true, DoWeather: true, DoFireTick: true, DoTileDrops: true,
 		DoMobLoot: true, NaturalRegen: true, FallDamage: true, DrownDamage: true,
 		FireDamage: true, AnnounceAdv: true, ShowDeathMsgs: true,
-		RandomTicks: 3, SleepPercent: 100}
+		RandomTicks: 3, SleepPercent: 100, LocatorBar: true}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -189,7 +190,7 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 	case "keepInventory", "doDaylightCycle", "doMobSpawning", "mobGriefing", "doWeatherCycle",
 		"doFireTick", "doTileDrops", "doMobLoot", "naturalRegeneration", "fallDamage",
 		"drowningDamage", "fireDamage", "announceAdvancements", "showDeathMessages",
-		"doImmediateRespawn":
+		"doImmediateRespawn", "locatorBar":
 		if args[1] != "true" && args[1] != "false" {
 			p.tell("/gamerule " + args[0] + " <true|false>")
 			return
@@ -287,6 +288,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.RandomTicks = e.num
 	case "playersSleepingPercentage":
 		h.rules.SleepPercent = e.num
+	case "locatorBar":
+		h.rules.LocatorBar = e.on
 	}
 	h.saveRules()
 	h.plugins.Fire(&plugin.GameruleChangeEvent{Rule: e.rule, On: e.on, Num: e.num})

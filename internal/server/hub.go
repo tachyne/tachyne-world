@@ -1478,6 +1478,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
 	h.sendStandsTo(nt)
+	h.waypointOnJoin(players, nt)
 	// Show the newcomer every mob already in their dimension.
 	for _, m := range h.mobs {
 		if m.dim != nt.dim {
@@ -1539,6 +1540,7 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		}
 		h.incCustom(t, name, int32(d*100))
 	}
+	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
 	h.wakeIfAway(players, t) // walking off ends a bed sleep
@@ -1566,6 +1568,7 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		other.p.trySendEv(move)
 		other.p.trySendEv(head)
 	}
+	h.waypointOnMove(players, t, wpMoved)
 	if plugin.Has[*plugin.PlayerMoveEvent](h.plugins) { // hot path: never build the event unheard
 		h.plugins.Fire(&plugin.PlayerMoveEvent{EID: e.eid, Name: t.p.name,
 			FromX: fromX, FromY: fromY, FromZ: fromZ, ToX: t.x, ToY: t.y, ToZ: t.z, Dim: t.dim})
@@ -1619,6 +1622,7 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	delete(players, p.eid) // (if the leaver was the last one awake, the tick
 	//                        loop's updateSleep turns the night on its own)
 	rm := infoGone(p.uuid)
+	h.waypointOnLeave(players, p)
 	for _, t := range players {
 		t.p.trySendEv(rm)
 		t.p.trySendEv(entGone(p.eid))

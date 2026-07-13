@@ -7,6 +7,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/tachyne/tachyne-world/internal/attach"
 
@@ -356,5 +357,26 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgRecipeBook, ev)
 	case attachproto.Resync:
 		send(attachproto.MsgResync, ev)
+	case attachproto.CampfireItems:
+		send(attachproto.MsgCampfireItems, ev)
+	case attachproto.BannerPatterns:
+		send(attachproto.MsgBannerPatterns, ev)
+	case attachproto.HorseScreen:
+		send(attachproto.MsgHorseScreen, ev)
+	case attachproto.OpenBook:
+		send(attachproto.MsgOpenBook, ev)
+	case attachproto.Waypoint:
+		send(attachproto.MsgWaypoint, ev)
+	default:
+		// A domain frame with no dispatch case would drop SILENTLY, so this is
+		// a hard error in tests/dev: the emitEv switch must list every w→gw
+		// frame the engine emits (four of today's features hit this gap).
+		emitUnhandled(ev)
 	}
+}
+
+// emitUnhandled records a frame type with no emitEv case. It never drops
+// quietly: dev builds log it (a missing case = an invisible feature).
+func emitUnhandled(ev any) {
+	log.Printf("emitEv: BUG — no attach frame for %T (dropped)", ev)
 }

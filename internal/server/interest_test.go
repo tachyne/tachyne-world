@@ -23,7 +23,8 @@ func drain(p *player) int {
 // to one far outside the view radius — the O(n²) fan-out fix.
 func TestMoveRelayIsInterestManaged(t *testing.T) {
 	h := newHub(world.New(1))
-	h.tick.Store(100) // a live clock: at tick 0 the movement budget has no bank yet
+	h.tick.Store(100)          // a live clock: at tick 0 the movement budget has no bank yet
+	h.rules.LocatorBar = false // this test is about entity-move interest, not the all-dim locator bar
 	players := map[int32]*tracked{}
 
 	mover := &tracked{p: newPlayer(1, "mover", [16]byte{}), x: 0, z: 0}
