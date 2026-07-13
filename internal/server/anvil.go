@@ -102,6 +102,8 @@ func (h *hub) twoSlotResult(t *tracked) (invStack, int) {
 		return anvilResult(t.anvil[0], t.anvil[1], t.renameTo)
 	case winGrind:
 		return grindResult(t.anvil[0], t.anvil[1])
+	case winCarto:
+		return h.cartoResult(t.anvil[0], t.anvil[1]), 0
 	}
 	return invStack{}, 0
 }
@@ -206,6 +208,10 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
 		h.sendTwoSlotWindow(t)
 		return
 	}
+	if t.winKind == winCarto { // cartography: mint the derived map, consume one of each
+		h.takeCartoResult(players, t, res)
+		return
+	}
 	if t.winKind == winAnvil {
 		if t.gamemode != gmCreative && t.xpLevel < cost {
 			h.sendTwoSlotWindow(t) // AUTHORITY: can't afford — resync, don't apply
@@ -250,7 +256,7 @@ func (h *hub) reclaimAnvil(players map[int32]*tracked, t *tracked) {
 		if leftover > 0 && players != nil {
 			st.count = leftover
 			if it := h.spawnItem(players, st.item, st.count, t.x, t.y, t.z); it != nil {
-				it.dmg, it.ench = st.dmg, st.ench
+				it.dmg, it.ench, it.mapID = st.dmg, st.ench, st.mapID
 			}
 		}
 	}

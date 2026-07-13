@@ -234,7 +234,7 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-30], int(slot - 30)
 		}
 		return nil, -1
-	case winAnvil, winGrind: // 0,1 inputs, 2 result (server-owned), 3-29 main, 30-38 hotbar
+	case winAnvil, winGrind, winCarto: // 0,1 inputs, 2 result (server-owned), 3-29 main, 30-38 hotbar
 		switch {
 		case slot >= 0 && slot <= 1:
 			return &t.anvil[slot], -1
@@ -296,8 +296,8 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		h.takeCraftResult(players, t, e.mode)
 		return
 	}
-	// Anvil/grindstone slot 2 is their server-owned result.
-	if e.slot == 2 && (t.winKind == winAnvil || t.winKind == winGrind) {
+	// Anvil/grindstone/cartography slot 2 is their server-owned result.
+	if e.slot == 2 && (t.winKind == winAnvil || t.winKind == winGrind || t.winKind == winCarto) {
 		h.takeTwoSlotResult(players, t)
 		return
 	}
@@ -406,7 +406,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if t.winKind == winEnchant && ch.slot <= 1 {
 			enchTouched = true // item or lapis changed — reroll the offers
 		}
-		if (t.winKind == winAnvil || t.winKind == winGrind) && ch.slot <= 1 {
+		if (t.winKind == winAnvil || t.winKind == winGrind || t.winKind == winCarto) && ch.slot <= 1 {
 			enchTouched = true // inputs changed — recompute the result
 		}
 		if t.winKind == winTrade && ch.slot <= 1 {
@@ -438,7 +438,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		switch t.winKind {
 		case winEnchant:
 			h.rollEnchOptions(t)
-		case winAnvil, winGrind:
+		case winAnvil, winGrind, winCarto:
 			h.sendTwoSlotWindow(t)
 		case winTrade:
 			h.sendTradeWindow(t)
@@ -602,6 +602,7 @@ func (h *hub) reclaimCraft(players map[int32]*tracked, t *tracked) {
 			if it := h.spawnItem(players, st.item, leftover, t.x, t.y, t.z); it != nil {
 				it.dmg = st.dmg
 				it.ench = st.ench
+				it.mapID = st.mapID
 			}
 			leftover = 0
 		}

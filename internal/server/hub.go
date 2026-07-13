@@ -180,6 +180,7 @@ const (
 	winEnchant
 	winAnvil
 	winGrind
+	winCarto  // cartography table (shares the two-slot machinery)
 	winBin    // dispenser/dropper/hopper (h.bins)
 	winTrade  // villager merchant screen
 	winPlugin // the server-owned plugin browser (plugui.go)
@@ -1167,6 +1168,11 @@ func (h *hub) run() {
 			case evOpenGrind:
 				if t := players[e.eid]; t != nil {
 					h.openGrindstone(t)
+				}
+			case evOpenCarto:
+				if t := players[e.eid]; t != nil {
+					h.openCartography(t)
+					h.incCustom(t, "interact_with_cartography_table", 1)
 				}
 			case evRename:
 				if t := players[e.eid]; t != nil && t.winKind == winAnvil {
