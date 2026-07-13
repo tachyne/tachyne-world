@@ -311,6 +311,7 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 // once the death animation has played out).
 func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
+	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 	if m.etype == entityWither {

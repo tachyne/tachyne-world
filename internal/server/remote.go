@@ -106,7 +106,7 @@ func (r *remotePlayer) Action(v any) {
 		if e.Attack {
 			h.post(evAttack{attacker: p.eid, target: e.Target})
 		} else {
-			h.post(evInteractMob{eid: p.eid, target: e.Target})
+			h.post(evInteractMob{eid: p.eid, target: e.Target, sneak: p.sneaking})
 		}
 	case attachproto.VehicleMove:
 		h.post(evVehicleMove{eid: p.eid, x: e.X, y: e.Y, z: e.Z, yaw: e.Yaw})

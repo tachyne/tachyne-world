@@ -121,7 +121,10 @@ type evEat struct {
 	slot int
 }                                              // player right-clicked food in a hotbar slot
 type evAttack struct{ attacker, target int32 } // player melee-hit an entity
-type evInteractMob struct{ eid, target int32 } // right-clicked a mob (feed/shear)
+type evInteractMob struct {                    // right-clicked a mob (feed/shear/mount screen)
+	eid, target int32
+	sneak       bool
+}
 
 func (evInteractMob) isHubEvent() {}
 
@@ -185,6 +188,7 @@ const (
 	winStonecut // stonecutter (input in t.anvil[0], indexed recipe buttons)
 	winLoom     // loom (banner/dye in t.anvil, pattern item in t.extraSlot)
 	winSmith    // smithing table (template in t.extraSlot, base/addition in t.anvil)
+	winHorse    // mount inventory (slots live on the mob; see horseSlotPtr)
 	winBin      // dispenser/dropper/hopper (h.bins)
 	winTrade    // villager merchant screen
 	winPlugin   // the server-owned plugin browser (plugui.go)
@@ -271,6 +275,7 @@ type tracked struct {
 	tradeSel  int         // selected offer row
 	stoneSel  int         // stonecutter/loom: selected row (-1 = none)
 	extraSlot invStack    // third menu input (loom pattern item / smithing template)
+	horseEID  int32       // the mount whose window is open (winHorse)
 	tradeWith int32       // villager eid the open trade screen belongs to
 	renameTo  string
 }
@@ -1145,7 +1150,8 @@ func (h *hub) run() {
 					}
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
-						_ = h.tryHappyGhast(players, t, m) || h.tryCopperGolem(players, t, m) || h.tryMount(players, t, m) ||
+						_ = h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
+							h.tryCopperGolem(players, t, m) || h.tryMount(players, t, m) ||
 							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m)
 					}
 				}

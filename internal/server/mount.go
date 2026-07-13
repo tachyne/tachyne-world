@@ -47,10 +47,15 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 			return false // an unsaddled mount ignores an empty hand
 		}
 		m.saddled = true
+		m.saddleSt = invStack{item: itemSaddle, count: 1}
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))
+		if horseFamily(m.etype) {
+			h.horseEquipSync(players, m) // 1.21.5+: the saddle is an equipment slot
+		} else {
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))
+		}
 		h.playSound(players, "minecraft:entity.horse.saddle", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}

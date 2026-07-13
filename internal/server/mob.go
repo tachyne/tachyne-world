@@ -85,6 +85,11 @@ type mob struct {
 	sortHasGoal   bool        // copper golem: sortGoal is valid
 	sortCD        int         // copper golem: ticks until the next transport
 	saddled       bool        // a saddle is on: this mob can be mounted
+	saddleSt      invStack    // the saddle item (horse family; saddled mirrors it)
+	armorSt       invStack    // body armor / llama carpet
+	chested       bool        // donkey/mule/llama carrying a chest
+	chest         []invStack  // chest contents (columns×3)
+	strength      int8        // llama: chest columns (1-5)
 	tamed         bool        // wolf/cat/parrot tamed to an owner
 	sitting       bool        // tamed pet told to stay (right-click toggle)
 	spawnInvuln   int         // wither: ticks of spawn-charge invulnerability left

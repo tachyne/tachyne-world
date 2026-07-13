@@ -257,6 +257,8 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-31], int(slot - 31)
 		}
 		return nil, -1
+	case winHorse: // 0 saddle, 1 body, 2.. chest grid, then player inventory
+		return h.horseSlotPtr(t, slot)
 	case winStonecut: // 0 input, 1 result (server-owned), 2-28 main, 29-37 hotbar
 		switch {
 		case slot == 0:
@@ -474,6 +476,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if (t.winKind == winLoom || t.winKind == winSmith) && ch.slot <= 2 {
 			enchTouched = true // inputs changed — refresh list/result
 		}
+		if t.winKind == winHorse && ch.slot <= 1 {
+			enchTouched = true // saddle/armor changed — resync the mount's look
+		}
 		if t.winKind == winTrade && ch.slot <= 1 {
 			enchTouched = true // trade inputs changed — recompute the result
 		}
@@ -521,6 +526,10 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			h.sendLoomWindow(t)
 		case winSmith:
 			h.sendSmithWindow(t)
+		case winHorse:
+			if m := h.mobs[t.horseEID]; m != nil {
+				h.horseEquipSync(players, m)
+			}
 		case winTrade:
 			h.sendTradeWindow(t)
 		}
@@ -727,6 +736,10 @@ func (h *hub) resyncWindow(t *tracked) {
 		h.sendLoomWindow(t)
 	case winSmith:
 		h.sendSmithWindow(t)
+	case winHorse:
+		if m := h.mobs[t.horseEID]; m != nil {
+			h.sendHorseWindow(t, m)
+		}
 	case winCraft:
 		h.sendCraftWindow(t)
 	default:
