@@ -118,6 +118,8 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 		menu, title = menuHopper, "Item Hopper"
 	case isBrewStand(state):
 		menu, title = menuBrewing, "Brewing Stand"
+	case isCrafter(state):
+		title = "Crafter"
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)

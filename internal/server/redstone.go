@@ -207,6 +207,9 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		h.updateTarget(players, pos, state)
 	case isTripwireHook(state):
 		h.calcHook(players, pos, state) // re-evaluate its line (attached/powered)
+	case isCrafter(state):
+		h.updateCrafter(players, pos, state) // craft on a rising edge
+
 	case isNoteBlock(state):
 		// Play once on the rising edge of redstone power (NoteBlockBlock).
 		powered := h.inputPower(x, y, z, false) > 0

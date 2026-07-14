@@ -147,7 +147,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 		}
 	}
 	if b := h.bins[pos]; b != nil && !isDispenser(newState) && !isDropper(newState) &&
-		!isHopper(newState) && !isBrewStand(newState) {
+		!isHopper(newState) && !isBrewStand(newState) && !isCrafter(newState) {
 		spill(b.slots)
 		delete(h.bins, pos)
 	}

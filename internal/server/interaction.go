@@ -474,7 +474,7 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
-	if isDispenser(state) || isDropper(state) || isHopper(state) || isBrewStand(state) {
+	if isDispenser(state) || isDropper(state) || isHopper(state) || isBrewStand(state) || isCrafter(state) {
 		s.hub.post(evOpenBin{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
