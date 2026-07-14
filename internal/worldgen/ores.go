@@ -27,7 +27,19 @@ var (
 	DeepslateRedstoneOre = blockBase("deepslate_redstone_ore") + 1
 	LapisOre             = blockBase("lapis_ore")
 	DeepslateLapisOre    = blockBase("deepslate_lapis_ore")
+	EmeraldOre           = blockBase("emerald_ore")
+	DeepslateEmeraldOre  = blockBase("deepslate_emerald_ore")
 )
+
+// mountainBiomes are where emerald ore generates (vanilla adds ore_emerald only
+// to the mountain-family biomes).
+var mountainBiomes = map[string]bool{
+	"minecraft:windswept_hills": true, "minecraft:windswept_forest": true,
+	"minecraft:windswept_gravelly_hills": true, "minecraft:meadow": true,
+	"minecraft:grove": true, "minecraft:snowy_slopes": true,
+	"minecraft:frozen_peaks": true, "minecraft:jagged_peaks": true,
+	"minecraft:stony_peaks": true, "minecraft:cherry_grove": true,
+}
 
 // oreSpec is one ore type's distribution: veins per chunk, blocks per vein, and
 // the world-y band it spawns in. shape biases the y roll.
@@ -35,21 +47,26 @@ type oreSpec struct {
 	stone, deepslate uint32
 	attempts, size   int
 	minY, maxY       int
-	shape            int // 0 uniform, 1 triangular (peak mid-band), 2 ramp-to-bottom
+	shape            int             // 0 uniform, 1 triangular (peak mid-band), 2 ramp-to-bottom
+	biomes           map[string]bool // nil = any biome; else only these (emerald)
 }
 
 // Bands/counts/sizes are the vanilla 1.21 ore placed_features (above_bottom
 // anchors resolved against MinY=-64; trapezoid ≈ our triangular shape 1).
 var oreSpecs = []oreSpec{
-	{CoalOre, DeepslateCoalOre, 14, 10, 0, 110, 0},
-	{CopperOre, DeepslateCopperOre, 8, 8, -16, 80, 1},
-	{IronOre, DeepslateIronOre, 10, 7, -56, 64, 1},
-	{GoldOre, DeepslateGoldOre, 4, 6, -60, 28, 0},
-	{DiamondOre, DeepslateDiamondOre, 5, 5, -60, 12, 2},
-	{RedstoneOre, DeepslateRedstoneOre, 4, 8, -64, 15, 0}, // ore_redstone: uniform -64..15
-	{RedstoneOre, DeepslateRedstoneOre, 8, 8, -96, 32, 1}, // ore_redstone_lower: trapezoid, peak ~-32
-	{LapisOre, DeepslateLapisOre, 2, 7, -32, 32, 1},       // ore_lapis: trapezoid, peak 0
-	{LapisOre, DeepslateLapisOre, 4, 7, -64, 64, 0},       // ore_lapis_buried: uniform -64..64
+	{CoalOre, DeepslateCoalOre, 14, 10, 0, 110, 0, nil},
+	{CopperOre, DeepslateCopperOre, 8, 8, -16, 80, 1, nil},
+	{IronOre, DeepslateIronOre, 10, 7, -56, 64, 1, nil},
+	{GoldOre, DeepslateGoldOre, 4, 6, -60, 28, 0, nil},
+	{DiamondOre, DeepslateDiamondOre, 5, 5, -60, 12, 2, nil},
+	{RedstoneOre, DeepslateRedstoneOre, 4, 8, -64, 15, 0, nil}, // ore_redstone: uniform -64..15
+	{RedstoneOre, DeepslateRedstoneOre, 8, 8, -96, 32, 1, nil}, // ore_redstone_lower: trapezoid, peak ~-32
+	{LapisOre, DeepslateLapisOre, 2, 7, -32, 32, 1, nil},       // ore_lapis: trapezoid, peak 0
+	{LapisOre, DeepslateLapisOre, 4, 7, -64, 64, 0, nil},       // ore_lapis_buried: uniform -64..64
+	// ore_emerald: mountains only, many attempts at single blocks over a tall
+	// trapezoid — most land in air above the surface and place nothing (vanilla
+	// sparsity). Range trimmed to the in-world portion.
+	{EmeraldOre, DeepslateEmeraldOre, 100, 1, -16, 256, 1, mountainBiomes},
 }
 
 // placeOres stamps this chunk's ore veins. Deterministic: the RNG derives from
@@ -58,6 +75,11 @@ var oreSpecs = []oreSpec{
 func (g *Generator) placeOres(ch *Chunk, cx, cz int32) {
 	rng := rand.New(rand.NewSource(oreSeed(g.seed, cx, cz)))
 	for _, spec := range oreSpecs {
+		// Biome-gated ores (emerald) generate only where the chunk sits in an
+		// eligible biome; sampled once at the chunk centre.
+		if spec.biomes != nil && !spec.biomes[g.resolveBiome(int(cx)*16+8, int(cz)*16+8).Name] {
+			continue
+		}
 		for a := 0; a < spec.attempts; a++ {
 			lx, lz := rng.Intn(16), rng.Intn(16)
 			// Clamp the origin: bands that dip below the world floor (redstone's

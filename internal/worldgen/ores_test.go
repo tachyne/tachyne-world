@@ -102,6 +102,39 @@ func TestRedstoneLapisGeneration(t *testing.T) {
 	t.Logf("redstone=%d (deep %d) lapis=%d (mid %d)", redstone, redstoneDeep, lapis, lapisMid)
 }
 
+// TestEmeraldMountainsOnly: emerald ore only appears in chunks whose biome is
+// a mountain biome, and it does appear where mountains exist.
+func TestEmeraldMountainsOnly(t *testing.T) {
+	g := NewGenerator(1)
+	mountainChunks, emeraldTotal, emeraldOffMountain := 0, 0, 0
+	for cx := int32(-20); cx <= 20; cx++ {
+		for cz := int32(-20); cz <= 20; cz++ {
+			isMtn := mountainBiomes[g.resolveBiome(int(cx)*16+8, int(cz)*16+8).Name]
+			if isMtn {
+				mountainChunks++
+			}
+			ch := g.GenerateChunk(cx, cz)
+			for sec := range ch.Sections {
+				for _, s := range ch.Sections[sec] {
+					if s == EmeraldOre || s == DeepslateEmeraldOre {
+						emeraldTotal++
+						if !isMtn {
+							emeraldOffMountain++
+						}
+					}
+				}
+			}
+		}
+	}
+	if emeraldOffMountain != 0 {
+		t.Errorf("%d emerald ore blocks generated outside mountain chunks", emeraldOffMountain)
+	}
+	if mountainChunks > 0 && emeraldTotal == 0 {
+		t.Errorf("%d mountain chunks but no emerald generated", mountainChunks)
+	}
+	t.Logf("mountain chunks=%d emerald=%d", mountainChunks, emeraldTotal)
+}
+
 // TestOreDepthVariants: ore below the deepslate transition must use the
 // deepslate variant (it replaced deepslate, not stone), and vice versa.
 func TestOreDepthVariants(t *testing.T) {
