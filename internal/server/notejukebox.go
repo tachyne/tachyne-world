@@ -33,6 +33,19 @@ func withNote(state uint32, note int) uint32 {
 	return noteBlockBase + off - uint32(noteOf(state)*2) + uint32(note*2)
 }
 
+// notePowered reads the note block's powered bit (the low bit; booleans list
+// true first, so an even offset is powered=true).
+func notePowered(state uint32) bool { return (state-noteBlockBase)%2 == 0 }
+
+// noteWithPowered sets the powered bit, preserving instrument + note.
+func noteWithPowered(state uint32, p bool) uint32 {
+	b := state - (state-noteBlockBase)%2
+	if p {
+		return b
+	}
+	return b + 1
+}
+
 // noteInstrumentSounds maps the generated instrument indexes (harp = 0) to
 // their sound events. Mob-head instruments use the imitate set.
 var noteInstrumentSounds = map[string]string{

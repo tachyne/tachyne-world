@@ -203,6 +203,15 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	switch {
 	case isTarget(state):
 		h.updateTarget(players, pos, state)
+	case isNoteBlock(state):
+		// Play once on the rising edge of redstone power (NoteBlockBlock).
+		powered := h.inputPower(x, y, z, false) > 0
+		if powered != notePowered(state) {
+			if powered {
+				h.playNoteBlock(players, 0, x, y, z, state)
+			}
+			h.setBlock(players, pos, noteWithPowered(state, powered))
+		}
 	case isWire(state):
 		want := h.inputPower(x, y, z, true)
 		if wirePower(state) != want {
