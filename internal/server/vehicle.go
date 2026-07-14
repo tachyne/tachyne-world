@@ -88,24 +88,21 @@ func (evPlaceVehicle) isHubEvent() {}
 func (evVehicleMove) isHubEvent()  {}
 func (evDismount) isHubEvent()     {}
 
-// placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
-func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
-	etype, ok := vehicleItems[e.item]
-	if !ok {
-		return
-	}
-	x, y, z := float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5
-	ground := h.world.At(e.x, e.y, e.z)
+// spawnVehicleAt places a cart on a rail / a boat on-or-above water at a block
+// cell (player-independent core, also used by dispensers). Returns whether it
+// spawned.
+func (h *hub) spawnVehicleAt(players map[int32]*tracked, etype, bx, by, bz int) bool {
+	x, y, z := float64(bx)+0.5, float64(by), float64(bz)+0.5
+	ground := h.world.At(bx, by, bz)
 	if etype == entityMinecart {
 		if !isAnyRail(ground) {
-			return // carts only go on rails
+			return false // carts only go on rails
 		}
 		y += 0.1
 	} else {
-		if !worldgen.IsWater(ground) { // clicked a shore block: try the cell above
-			if !worldgen.IsWater(h.world.At(e.x, e.y+1, e.z)) &&
-				h.world.At(e.x, e.y+1, e.z) != worldgen.Air {
-				return
+		if !worldgen.IsWater(ground) { // shore block: try the cell above
+			if !worldgen.IsWater(h.world.At(bx, by+1, bz)) && h.world.At(bx, by+1, bz) != worldgen.Air {
+				return false
 			}
 			y += 1
 		}
@@ -114,6 +111,15 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 	binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, 0, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
+	return true
+}
+
+// placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
+func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
+	etype, ok := vehicleItems[e.item]
+	if !ok || !h.spawnVehicleAt(players, etype, e.x, e.y, e.z) {
+		return
+	}
 	if t.gamemode == gmSurvival && t.inv != nil && e.slot >= 0 && e.slot < 9 {
 		if sl := &t.inv.slots[e.slot]; sl.count > 0 {
 			sl.count--

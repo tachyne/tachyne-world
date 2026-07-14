@@ -231,6 +231,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	item := st.item
 	dispense := isDispenser(state)
 	eggEnt, isEgg := spawnEggEntity[item]
+	vehEt, isVeh := vehicleItems[item]
 	took := true
 	switch {
 	case dispense && item == itemArrowAmmo:
@@ -275,6 +276,14 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 					*st = invStack{} // worn out
 				}
 				break
+			}
+		}
+	case dispense && isVeh:
+		// Place a boat/minecart in the cell ahead (rail for carts, water for
+		// boats); if it can't be placed, toss the item like the default.
+		if !h.spawnVehicleAt(players, vehEt, front.x, front.y, front.z) {
+			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+				it.dmg, it.ench = st.dmg, st.ench
 			}
 		}
 	case dispense && item == int32(itemHoneycomb):

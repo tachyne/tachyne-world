@@ -122,5 +122,21 @@ func TestDispenserBehaviors(t *testing.T) {
 		if s.count != 2 {
 			t.Errorf("honeycomb: count %d, want 2 (one used)", s.count)
 		}
+
+		// Minecart → placed on a rail ahead.
+		w.SetBlock(front.x, front.y, front.z, worldgen.BlockBase("rail"))
+		vBefore := len(h.vehicles)
+		fire(int32(itemByName["minecart"]), 0)
+		if len(h.vehicles) != vBefore+1 {
+			t.Errorf("minecart: vehicles %d, want %d", len(h.vehicles), vBefore+1)
+		}
+
+		// Boat → placed on water ahead.
+		w.SetBlock(front.x, front.y, front.z, worldgen.WaterBase)
+		vBefore = len(h.vehicles)
+		fire(int32(itemByName["oak_boat"]), 0)
+		if len(h.vehicles) != vBefore+1 {
+			t.Errorf("boat: vehicles %d, want %d", len(h.vehicles), vBefore+1)
+		}
 	})
 }
