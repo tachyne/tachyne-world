@@ -28,6 +28,7 @@ const (
 	effFireRes        = 11
 	effWaterBreathing = 12
 	effNightVision    = 15
+	effHunger         = 16
 	effWeakness       = 17
 	effPoison         = 18
 	effWither         = 19

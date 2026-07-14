@@ -51,6 +51,7 @@ type arrowEntity struct {
 	fire       bool    // blaze fireball: sets its target burning
 	wither     int     // wither skull: seconds of wither effect on a hit
 	weaken     int     // parched arrow: seconds of weakness effect on a hit
+	slow       int     // stray arrow: seconds of slowness effect on a hit
 	explode    int     // ghast/wither fireball: explosion power on impact (0 = none)
 	knock      float64 // wind charge: pure knockback impulse, no damage
 }
@@ -78,6 +79,9 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	a.shooter, a.dmg = m.eid, arrowDamage
 	if m.etype == entityParched {
 		a.weaken = parchedWeaknessSecs // vanilla Parched: WEAKNESS, 600 ticks
+	}
+	if m.etype == entityStray {
+		a.slow = 30 // vanilla Stray: an arrow of SLOWNESS, 600 ticks
 	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
 }
@@ -234,6 +238,9 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			}
 			if a.weaken > 0 {
 				h.applyEffect(players, t, effWeakness, 0, a.weaken)
+			}
+			if a.slow > 0 {
+				h.applyEffect(players, t, effSlowness, 0, a.slow)
 			}
 			if a.fire {
 				h.setBurning(players, t, 5)

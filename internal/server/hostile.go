@@ -340,6 +340,13 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 			h.applyEffect(players, t, effWither, 0, d.wither)
 		}
 	}
+	// A husk's bite inflicts Hunger (vanilla Husk: 140 ticks × effective
+	// difficulty, ≈7 s per level; peaceful never reaches melee).
+	if m.etype == entityHusk {
+		if secs := 7 * int(h.rules.Difficulty); secs > 0 {
+			h.applyEffect(players, t, effHunger, 0, secs)
+		}
+	}
 	m.attackCD = attackCooldown
 }
 
