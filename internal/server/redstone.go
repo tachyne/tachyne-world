@@ -143,6 +143,8 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 		}
 	case isDaylight(s):
 		return daylightPower(s)
+	case isTarget(s):
+		return targetPower(s) // energised target emits to every side
 	case isDetectorRail(s) && railPowered(s):
 		return 15
 	}
@@ -199,6 +201,8 @@ func (h *hub) supportPowered(sx, sy, sz, tx, ty, tz int) bool {
 func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uint32) {
 	x, y, z := pos.x, pos.y, pos.z
 	switch {
+	case isTarget(state):
+		h.updateTarget(players, pos, state)
 	case isWire(state):
 		want := h.inputPower(x, y, z, true)
 		if wirePower(state) != want {

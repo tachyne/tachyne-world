@@ -377,6 +377,7 @@ type hub struct {
 
 	pressedAt map[blockPos]uint64 // button-press ticks (for the unpress timer)
 	rsDue     map[blockPos]uint64 // repeater flip due-ticks
+	targetDue map[blockPos]uint64 // target-block signal reset ticks
 	obsPulse  map[blockPos]uint64 // observer pulse start ticks
 	obsSeen   map[blockPos]uint32 // observer last-seen watched state
 	compOut   map[blockPos]int    // comparator output levels (vanilla block entity)
@@ -508,6 +509,7 @@ func newHub(w *world.World) *hub {
 		rules:         defaultRules(),
 		pressedAt:     map[blockPos]uint64{},
 		rsDue:         map[blockPos]uint64{},
+		targetDue:     map[blockPos]uint64{},
 		obsPulse:      map[blockPos]uint64{},
 		obsSeen:       map[blockPos]uint32{},
 		compOut:       map[blockPos]int{},
