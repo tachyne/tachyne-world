@@ -202,6 +202,11 @@ func (h *hub) supportPowered(sx, sy, sz, tx, ty, tz int) bool {
 // updateRedstone is the scheduled step for any redstone-ish cell.
 func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uint32) {
 	x, y, z := pos.x, pos.y, pos.z
+	// Quasi-connectivity relay: a redstone update at this cell re-evaluates a
+	// piston directly below, which reads power through this block (Java QC).
+	if pb := (blockPos{x, y - 1, z}); !isPistonBase(state) && isPistonBase(h.world.At(pb.x, pb.y, pb.z)) {
+		h.schedule(pb, 1)
+	}
 	switch {
 	case isTarget(state):
 		h.updateTarget(players, pos, state)

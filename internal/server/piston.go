@@ -98,6 +98,20 @@ func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint3
 			break
 		}
 	}
+	// Quasi-connectivity (Java): the piston also fires when the block directly
+	// above it is powered from any side but below (getNeighborSignal step 3).
+	if !powered {
+		ax, ay, az := pos.x, pos.y+1, pos.z
+		for _, d := range rsNeighbors {
+			if d[0] == 0 && d[1] == -1 && d[2] == 0 {
+				continue // skip DOWN (that's the piston itself)
+			}
+			if h.emitPower(ax+d[0], ay+d[1], az+d[2], ax, ay, az) > 0 {
+				powered = true
+				break
+			}
+		}
+	}
 	extended := boolProp(state, "extended")
 	if powered && !extended {
 		h.extendPiston(players, pos, state, dx, dy, dz)
