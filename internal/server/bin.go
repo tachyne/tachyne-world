@@ -336,7 +336,11 @@ func (h *hub) updateHopper(players map[int32]*tracked, pos blockPos, state uint3
 // entities sitting above or inside the hopper cell.
 func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool {
 	above := blockPos{pos.x, pos.y + 1, pos.z}
-	if src := h.containerSlots(above); src != nil {
+	src := h.containerSlots(above)
+	if f := h.furnaces[above]; f != nil {
+		src = f.slots[2:3] // a hopper below a furnace draws ONLY the output slot
+	}
+	if src != nil {
 		for i := range src {
 			s := &src[i]
 			if s.item == 0 || s.count == 0 {
@@ -387,17 +391,23 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 	if dst == nil {
 		return false
 	}
-	if f := h.furnaces[target]; f != nil {
+	f := h.furnaces[target]
+	toFuel := false
+	if f != nil {
 		if dy < 0 {
 			dst = f.slots[0:1] // top: smelt input
 		} else {
 			dst = f.slots[1:2] // side: fuel
+			toFuel = true
 		}
 	}
 	for i := range c.slots {
 		s := &c.slots[i]
 		if s.item == 0 || s.count == 0 {
 			continue
+		}
+		if toFuel && cookerFuelTicks(f.kind, s.item) <= 0 {
+			continue // the fuel slot only accepts burnable items (vanilla canPlaceItem)
 		}
 		one := *s
 		one.count = 1
