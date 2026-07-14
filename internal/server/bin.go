@@ -1,10 +1,28 @@
 package server
 
 import (
+	"strings"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
+
+// spawnEggEntity maps each *_spawn_egg item to the entity it spawns
+// (SpawnEggItem.getType), so a dispenser can spawn the mob it faces.
+var spawnEggEntity = func() map[int32]int {
+	m := map[int32]int{}
+	for name, id := range itemByName {
+		base, ok := strings.CutSuffix(name, "_spawn_egg")
+		if !ok {
+			continue
+		}
+		if et, ok := entityByName[base]; ok {
+			m[int32(id)] = et
+		}
+	}
+	return m
+}()
 
 // Bins: the shared container behind dispensers, droppers (9 slots,
 // generic_3x3) and hoppers (5 slots). Dispensers/droppers eject on a rising
@@ -200,6 +218,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	front := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 	item := st.item
 	dispense := isDispenser(state)
+	eggEnt, isEgg := spawnEggEntity[item]
 	took := true
 	switch {
 	case dispense && item == itemArrowAmmo:
@@ -229,6 +248,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 				it.dmg, it.ench = st.dmg, st.ench
 			}
 		}
+	case dispense && isEgg:
+		// Spawn the egg's mob in the block ahead (facing offset so it clears
+		// the dispenser); vanilla consumes the egg whether or not it takes.
+		h.spawnMob(players, eggEnt, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
 		bs, bok := protocol.BlockForItem(item)
 		if ts := h.world.At(front.x, front.y, front.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {

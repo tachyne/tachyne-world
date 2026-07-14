@@ -81,5 +81,16 @@ func TestDispenserBehaviors(t *testing.T) {
 		if s.count != 2 {
 			t.Errorf("bone meal: count %d, want 2 (one used)", s.count)
 		}
+
+		// Spawn egg → spawns its mob ahead, consuming one.
+		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
+		mobsBefore := len(h.mobs)
+		s = fire(int32(itemByName["zombie_spawn_egg"]), 0)
+		if len(h.mobs) != mobsBefore+1 {
+			t.Errorf("zombie spawn egg: mob count %d, want %d", len(h.mobs), mobsBefore+1)
+		}
+		if s.count != 2 {
+			t.Errorf("spawn egg: count %d, want 2 (one used)", s.count)
+		}
 	})
 }
