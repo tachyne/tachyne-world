@@ -88,3 +88,35 @@ func TestDrownedTridentThrow(t *testing.T) {
 		}
 	}
 }
+
+func TestZombieDrownedConversion(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+
+	// Conversion chain: husk → zombie → drowned.
+	if waterConvert[entityHusk] != entityZombie || waterConvert[entityZombie] != entityDrowned {
+		t.Fatalf("conversion map wrong: %v", waterConvert)
+	}
+
+	z := h.spawnHostile(players, entityZombie, 0, 0)
+	old := z.eid
+	z.health = 5
+	h.convertMob(players, z, entityDrowned)
+	if _, ok := h.mobs[old]; ok {
+		t.Error("original zombie not removed on conversion")
+	}
+	found := false
+	for _, m := range h.mobs {
+		if m.etype == entityDrowned {
+			found = true
+			if m.health > 5 {
+				t.Errorf("conversion healed the mob to %d (was 5)", m.health)
+			}
+		}
+	}
+	if !found {
+		t.Error("no drowned present after conversion")
+	}
+}

@@ -140,9 +140,15 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 		}
 
 		// Drowning: a land mob whose eye level (head) is underwater past maxAir.
+		// Zombies/husks don't drown — they convert (husk→zombie→drowned).
 		if worldgen.IsWater(head) && !waterBreathers[m.etype] {
 			m.submerged++
-			if m.submerged > maxAir/20 { // maxAir is in ticks; /20 = seconds
+			if target, ok := waterConvert[m.etype]; ok {
+				if m.submerged >= drownConvertSecs {
+					h.convertMob(players, m, target)
+					continue // the old entity is gone
+				}
+			} else if m.submerged > maxAir/20 { // maxAir is in ticks; /20 = seconds
 				h.hurtMob(players, m, drownDmgPerSec)
 			}
 		} else {
