@@ -80,6 +80,16 @@ type bin struct {
 	slots []invStack
 }
 
+// mobInBlock reports whether a mob's bounding box overlaps the single-block
+// cube at p (the dispenser's front cell) — the AABB(blockPos) test vanilla's
+// shears dispense uses.
+func mobInBlock(m *mob, p blockPos) bool {
+	const hw = 0.45 // most animals are ~0.9 wide
+	return m.x+hw > float64(p.x) && m.x-hw < float64(p.x)+1 &&
+		m.z+hw > float64(p.z) && m.z-hw < float64(p.z)+1 &&
+		m.y < float64(p.y)+1 && m.y+1.3 > float64(p.y)
+}
+
 func binSizeFor(state uint32) int {
 	if isHopper(state) || isBrewStand(state) {
 		return 5
@@ -252,6 +262,19 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// Spawn the egg's mob in the block ahead (facing offset so it clears
 		// the dispenser); vanilla consumes the egg whether or not it takes.
 		h.spawnMob(players, eggEnt, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
+	case dispense && item == int32(itemShears):
+		// Shear the first shearable mob overlapping the block ahead
+		// (ShearsDispenseItemBehavior); the tool wears rather than ejects.
+		took = false
+		for _, m := range h.mobs {
+			if m.dim == 0 && mobInBlock(m, front) && h.shearMob(players, m) {
+				st.dmg++
+				if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
+					*st = invStack{} // worn out
+				}
+				break
+			}
+		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
 		bs, bok := protocol.BlockForItem(item)
 		if ts := h.world.At(front.x, front.y, front.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {

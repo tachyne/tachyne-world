@@ -92,5 +92,20 @@ func TestDispenserBehaviors(t *testing.T) {
 		if s.count != 2 {
 			t.Errorf("spawn egg: count %d, want 2 (one used)", s.count)
 		}
+
+		// Shears → shear an adult sheep standing in the block ahead; the tool
+		// wears rather than being consumed.
+		sheep := h.spawnMob(h.playersRef, entitySheep, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
+		if sheep == nil {
+			t.Fatal("could not spawn test sheep")
+		}
+		sheep.sheared, sheep.baby = false, false
+		s = fire(int32(itemShears), 0)
+		if !sheep.sheared {
+			t.Error("shears did not shear the sheep in front")
+		}
+		if s.count != 3 || s.dmg != 1 {
+			t.Errorf("shears: count %d dmg %d, want 3/1 (worn, not consumed)", s.count, s.dmg)
+		}
 	})
 }

@@ -125,15 +125,24 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 	return true
 }
 
-// shearSheep handles shears on an unsheared adult sheep: wool pops off.
-func (h *hub) shearSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if m.etype != entitySheep || m.sheared || m.baby || heldStack(t).item != itemShears {
+// shearMob shears an unsheared adult sheep — the player-independent core (also
+// used by the dispenser). Returns whether wool actually popped.
+func (h *hub) shearMob(players map[int32]*tracked, m *mob) bool {
+	if m.etype != entitySheep || m.sheared || m.baby {
 		return false
 	}
 	m.sheared = true
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m.eid, true)))
 	h.spawnItem(players, itemWhiteWool, 1+h.rng.Intn(3), m.x, m.y, m.z)
 	h.playSound(players, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
+	return true
+}
+
+// shearSheep handles a player using shears on an unsheared adult sheep.
+func (h *hub) shearSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
+	if heldStack(t).item != itemShears || !h.shearMob(players, m) {
+		return false
+	}
 	if t.gamemode == gmSurvival {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
