@@ -64,3 +64,27 @@ func TestStrayArrowSlowness(t *testing.T) {
 		}
 	}
 }
+
+func TestDrownedTridentThrow(t *testing.T) {
+	h := newHub(world.New(1))
+	h.rules.Difficulty = diffNormal
+	pl := testTracked()
+	pl.gamemode = gmSurvival
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+
+	d := h.spawnHostile(players, entityDrowned, 0, 0)
+	d.x, d.y, d.z = 8.0, 64, 0.5
+	d.trident = true
+	d.attackCD = 0
+	before := len(h.arrows)
+	h.drownedThrow(players, d)
+	if len(h.arrows) != before+1 {
+		t.Fatal("armed drowned threw no trident")
+	}
+	for _, a := range h.arrows {
+		if a.dmg != 9 {
+			t.Errorf("trident damage %d, want 9", a.dmg)
+		}
+	}
+}

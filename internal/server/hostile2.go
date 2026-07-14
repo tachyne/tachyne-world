@@ -72,6 +72,11 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 			m.armor = 2
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
+			if !m.baby && h.rng.Float64() < 0.15 { // vanilla: some drowned carry a trident
+				m.trident = true
+				m.behavior = rangedBehavior{} // kite like a skeleton while armed
+				h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
+			}
 		}
 	case entitySlime:
 		m.size = 4

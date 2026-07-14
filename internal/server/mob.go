@@ -84,6 +84,7 @@ type mob struct {
 	sortGoal      blockPos    // copper golem: the container it's walking to
 	sortHasGoal   bool        // copper golem: sortGoal is valid
 	sortCD        int         // copper golem: ticks until the next transport
+	trident       bool        // drowned: armed with a trident (throws it at range)
 	saddled       bool        // a saddle is on: this mob can be mounted
 	saddleSt      invStack    // the saddle item (horse family; saddled mirrors it)
 	armorSt       invStack    // body armor / llama carpet
@@ -412,6 +413,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.creeperFuse(players, m) // fuse + swell + bang
 			case entityWitch:
 				h.witchThrow(players, m) // splash potions from a distance
+			case entityDrowned:
+				if m.trident {
+					h.drownedThrow(players, m) // ranged: hurl a trident
+				} else {
+					h.mobMelee(players, m)
+				}
 			default:
 				h.mobMelee(players, m) // bite a player in reach (on cooldown)
 			}
