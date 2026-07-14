@@ -131,9 +131,34 @@ func obsDelta(s uint32) (int, int, int) {
 	return dx, 0, dz
 }
 
+// repeaterLocked reports whether a powered diode (repeater/comparator) on
+// either side faces into this repeater — a locked repeater freezes its output
+// (vanilla DiodeBlock.isLocked / getAlternateSignal).
+func (h *hub) repeaterLocked(pos blockPos, state uint32) bool {
+	dx, dz := facingDelta(stateFacing(state))
+	for _, s := range [2][2]int{{dz, -dx}, {-dz, dx}} { // the two perpendicular sides
+		np := blockPos{pos.x + s[0], pos.y, pos.z + s[1]}
+		ns := h.world.At(np.x, np.y, np.z)
+		// emitPower already checks the diode faces this cell and outputs > 0.
+		if (isRepeater(ns) || isComparator(ns)) && h.emitPower(np.x, np.y, np.z, pos.x, pos.y, pos.z) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // updateRepeater: reads the cell behind (facing side), flips `powered` after
 // the configured delay, emits 15 out the front. rsDue holds the pending flip.
+// A locked repeater (a powered diode facing its side) holds its output.
 func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uint32) {
+	if locked := h.repeaterLocked(pos, state); locked != boolProp(state, "locked") {
+		state = setBoolProp(state, "locked", locked)
+		h.setBlock(players, pos, state)
+	}
+	if boolProp(state, "locked") {
+		delete(h.rsDue, pos) // frozen: cancel any pending flip, hold current output
+		return
+	}
 	dx, dz := facingDelta(stateFacing(state))
 	in := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z) > 0
 	cur := boolProp(state, "powered")
