@@ -38,8 +38,9 @@ type copperRange struct {
 }
 
 var (
-	copperRanges       []copperRange // sorted by lo, for binary search
-	copperLo, copperHi uint32        // coarse bounds for a cheap reject
+	copperRanges       []copperRange         // sorted by lo, for binary search
+	copperLo, copperHi uint32                // coarse bounds for a cheap reject
+	waxedByBase        = map[uint32]uint32{} // unwaxed block base → waxed base
 )
 
 // safeRange looks up a block's state range without letting an unknown name
@@ -76,6 +77,9 @@ func init() {
 			if stage < 3 {
 				next = los[stage+1]
 			}
+			if wl, _, wok := safeRange("waxed_" + name); wok { // honeycomb target
+				waxedByBase[lo] = wl
+			}
 			copperRanges = append(copperRanges, copperRange{lo: lo, hi: hi, stage: stage, nextBase: next})
 			if copperLo == 0 || lo < copperLo {
 				copperLo = lo
@@ -98,6 +102,21 @@ func copperOf(state uint32) (copperRange, bool) {
 		return copperRanges[i], true
 	}
 	return copperRange{}, false
+}
+
+// waxedCopper returns the waxed form of a copper state (HoneycombItem.getWaxed),
+// preserving oxidation stage and orientation, or ok=false if it isn't waxable
+// copper (already waxed, or not copper).
+func waxedCopper(state uint32) (uint32, bool) {
+	cr, ok := copperOf(state)
+	if !ok {
+		return 0, false
+	}
+	wl, ok := waxedByBase[cr.lo]
+	if !ok {
+		return 0, false
+	}
+	return wl + (state - cr.lo), true
 }
 
 // tickCopper runs one ChangeOverTimeBlock.changeOverTime on a copper block.

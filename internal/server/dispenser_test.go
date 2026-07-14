@@ -107,5 +107,20 @@ func TestDispenserBehaviors(t *testing.T) {
 		if s.count != 3 || s.dmg != 1 {
 			t.Errorf("shears: count %d dmg %d, want 3/1 (worn, not consumed)", s.count, s.dmg)
 		}
+
+		// Honeycomb → waxes the copper block ahead, consuming one.
+		copper := worldgen.BlockBase("copper_block")
+		waxed, ok := waxedCopper(copper)
+		if !ok {
+			t.Fatal("copper_block has no waxed form")
+		}
+		w.SetBlock(front.x, front.y, front.z, copper)
+		s = fire(int32(itemHoneycomb), 0)
+		if w.At(front.x, front.y, front.z) != waxed {
+			t.Errorf("honeycomb did not wax the copper ahead (got %d, want %d)", w.At(front.x, front.y, front.z), waxed)
+		}
+		if s.count != 2 {
+			t.Errorf("honeycomb: count %d, want 2 (one used)", s.count)
+		}
 	})
 }

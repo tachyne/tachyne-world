@@ -275,6 +275,13 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 				break
 			}
 		}
+	case dispense && item == int32(itemHoneycomb):
+		// Wax the copper block ahead (HoneycombItem.getWaxed); otherwise toss.
+		if ws, ok := waxedCopper(h.world.At(front.x, front.y, front.z)); ok {
+			h.setBlock(players, front, ws)
+		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			it.dmg, it.ench = st.dmg, st.ench
+		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
 		bs, bok := protocol.BlockForItem(item)
 		if ts := h.world.At(front.x, front.y, front.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {
