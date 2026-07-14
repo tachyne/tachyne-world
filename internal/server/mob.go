@@ -85,6 +85,8 @@ type mob struct {
 	sortHasGoal   bool        // copper golem: sortGoal is valid
 	sortCD        int         // copper golem: ticks until the next transport
 	trident       bool        // drowned: armed with a trident (throws it at range)
+	canPickup     bool        // may pick up dropped gear (spawn-time roll)
+	gear          [4]invStack // worn armor by slot (0 head,1 chest,2 legs,3 feet)
 	saddled       bool        // a saddle is on: this mob can be mounted
 	saddleSt      invStack    // the saddle item (horse family; saddled mirrors it)
 	armorSt       invStack    // body armor / llama carpet

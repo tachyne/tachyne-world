@@ -303,7 +303,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
 		return
 	}
-	dmg := hostileMelee(m) * h.diffMult()
+	dmg := (hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()
 	// Plugin damage event (mob → player), before the swing so a cancel makes
 	// the whole bite invisible.
 	if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
@@ -444,6 +444,7 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 			h.applySpecies(players, m) // …else a roster species from the table
 		}
 	}
+	h.rollCanPickup(m) // some hostiles spawn able to grab dropped gear
 	return m
 }
 

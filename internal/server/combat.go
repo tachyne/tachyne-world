@@ -336,6 +336,15 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
 			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
 		}
+		// Picked-up gear drops in full (vanilla drops equipped loot at 100%).
+		if m.held != 0 {
+			drops = append(drops, plugin.ItemStack{Item: m.held, Count: 1})
+		}
+		for _, g := range m.gear {
+			if g.item != 0 {
+				drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
+			}
+		}
 		if !m.baby { // babies drop nothing (vanilla)
 			// Data-driven entity table (looting, killed-by-player, cooked-on-fire)
 			// when one is baked; else the legacy mobLoot roll.

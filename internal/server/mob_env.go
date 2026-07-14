@@ -139,6 +139,8 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
 		}
 
+		h.mobPickupScan(players, m) // grab a dropped weapon/armour piece nearby
+
 		// Drowning: a land mob whose eye level (head) is underwater past maxAir.
 		// Zombies/husks don't drown — they convert (husk→zombie→drowned).
 		if worldgen.IsWater(head) && !waterBreathers[m.etype] {
