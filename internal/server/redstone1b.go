@@ -186,8 +186,17 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state uint32) {
 	dx, dz := facingDelta(stateFacing(state))
 	rear := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z)
-	if sig := h.containerSignal(blockPos{pos.x + dx, pos.y, pos.z + dz}); sig > rear {
-		rear = sig // comparators measure container fullness through their back
+	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
+	if sig := h.containerSignal(back); sig >= 0 {
+		if sig > rear {
+			rear = sig // comparators measure container fullness through their back
+		}
+	} else if worldgen.IsSolidFull(h.world.At(back.x, back.y, back.z)) {
+		// A solid block behind is transparent to the read: measure the container
+		// one cell further (vanilla comparator-through-block).
+		if sig := h.containerSignal(blockPos{back.x + dx, back.y, back.z + dz}); sig > rear {
+			rear = sig
+		}
 	}
 	sdx, sdz := facingDelta(leftOf(stateFacing(state)))
 	side := h.emitPower(pos.x+sdx, pos.y, pos.z+sdz, pos.x, pos.y, pos.z)
