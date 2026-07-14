@@ -3,6 +3,8 @@ package server
 import (
 	"sync"
 	"sync/atomic"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // skinProperty is the game-profile textures blob (skins), carried into the
@@ -59,6 +61,16 @@ type player struct {
 	out      chan outPkt   // outbound packets; the writer goroutine owns the socket
 	quit     chan struct{} // closed when the connection is tearing down
 	quitOnce sync.Once     // quit closes exactly once (session teardown OR /kick)
+
+	// crit is the reliable overflow for one-shot lifecycle frames (entity/player
+	// add + remove). These MUST NOT be dropped — a lost removal leaves a frozen
+	// "ghost" the client renders forever; a lost add leaves an invisible entity.
+	// When `out` is full we park them here instead of dropping; the pump drains
+	// crit directly (see decodeLoop), never through the bounded `out` channel, so
+	// delivery never blocks the hub goroutine.
+	crit     []outPkt
+	critMu   sync.Mutex
+	critWake chan struct{} // buffered(1): nudges the pump to drain crit
 }
 
 // outPkt is one typed domain event queued for the session pump (remote.go's
@@ -69,12 +81,13 @@ type outPkt struct {
 
 func newPlayer(eid int32, name string, uuid [16]byte) *player {
 	p := &player{
-		eid:   eid,
-		name:  name,
-		uuid:  uuid,
-		hudOn: true,
-		out:   make(chan outPkt, 256),
-		quit:  make(chan struct{}),
+		eid:      eid,
+		name:     name,
+		uuid:     uuid,
+		hudOn:    true,
+		out:      make(chan outPkt, 256),
+		quit:     make(chan struct{}),
+		critWake: make(chan struct{}, 1),
 	}
 	p.pendingDim.Store(-1)
 	p.viewDist.Store(viewRadius)
@@ -97,10 +110,35 @@ func (p *player) radius() int32 {
 // client_information in either the config or play state).
 func (p *player) setViewDist(d int32) { p.viewDist.Store(d) }
 
+// critCap bounds the reliable overflow. A client this far behind on lifecycle
+// frames is hopelessly stalled (vanilla disconnects a slow client too); we drop
+// the session rather than grow crit without bound.
+const critCap = 8192
+
+// isLifecycleFrame reports whether ev is a one-shot entity/player add-or-remove
+// frame that must be delivered reliably and in order. Dropping one desyncs the
+// client permanently: a lost removal leaves a frozen "ghost" the client renders
+// forever, a lost add leaves an invisible entity. Position/metadata frames are
+// deliberately NOT in this set — they're safe to drop, since the next absolute
+// update re-syncs against what the viewer actually rendered.
+func isLifecycleFrame(ev any) bool {
+	switch ev.(type) {
+	case attachproto.EntityAdd, attachproto.EntityRemove,
+		attachproto.PlayerInfo, attachproto.PlayerGone:
+		return true
+	}
+	return false
+}
+
 // sendEv queues a domain event, BLOCKING until there is room. Called from a
 // player's own handler paths, so back-pressure only ever stalls that one
-// session, never the hub.
+// session, never the hub. Lifecycle frames divert to the reliable overflow so
+// they neither block nor drop even when this runs on the hub goroutine.
 func (p *player) sendEv(ev any) {
+	if isLifecycleFrame(ev) {
+		p.sendEvReliable(ev)
+		return
+	}
 	select {
 	case p.out <- outPkt{ev: ev}:
 	case <-p.quit:
@@ -112,11 +150,72 @@ func (p *player) sendEv(ev any) {
 // the viewer-side renderer computes relative moves against what it actually
 // rendered, so a dropped move event never desyncs — the next one just carries
 // a bigger delta (or resyncs absolutely if it grew past the i16 range).
+// Lifecycle frames are the exception (see isLifecycleFrame): they must not drop,
+// so they divert to the reliable overflow.
 func (p *player) trySendEv(ev any) {
+	if isLifecycleFrame(ev) {
+		p.sendEvReliable(ev)
+		return
+	}
 	select {
 	case p.out <- outPkt{ev: ev}:
 	default:
 	}
+}
+
+// sendEvReliable queues a lifecycle frame for guaranteed, in-order delivery.
+// While the overflow is empty it uses the normal `out` channel (so a spawn stays
+// FIFO with the metadata frames that follow it); once `out` fills, the frame —
+// and every later lifecycle frame until the overflow clears — parks in `crit`,
+// which the pump drains at lower priority than `out` (so temporal order across
+// the two streams is preserved). Never blocks the caller, so it is safe on the
+// hub goroutine. A session past critCap is hopelessly behind and is disconnected
+// rather than growing crit without bound.
+func (p *player) sendEvReliable(ev any) {
+	p.critMu.Lock()
+	if len(p.crit) > 0 { // overflow already active — stay in crit to keep FIFO
+		if len(p.crit) >= critCap {
+			p.critMu.Unlock()
+			p.disconnect()
+			return
+		}
+		p.crit = append(p.crit, outPkt{ev: ev})
+		p.critMu.Unlock()
+		p.wakeCrit()
+		return
+	}
+	p.critMu.Unlock()
+	select { // fast path: overflow empty, ride the normal queue
+	case p.out <- outPkt{ev: ev}:
+		return
+	default:
+	}
+	p.critMu.Lock() // out is full — begin the overflow
+	if len(p.crit) >= critCap {
+		p.critMu.Unlock()
+		p.disconnect()
+		return
+	}
+	p.crit = append(p.crit, outPkt{ev: ev})
+	p.critMu.Unlock()
+	p.wakeCrit()
+}
+
+// wakeCrit nudges the pump to drain the overflow (buffered, so it never blocks).
+func (p *player) wakeCrit() {
+	select {
+	case p.critWake <- struct{}{}:
+	default:
+	}
+}
+
+// takeCrit atomically drains the reliable overflow for the pump.
+func (p *player) takeCrit() []outPkt {
+	p.critMu.Lock()
+	batch := p.crit
+	p.crit = nil
+	p.critMu.Unlock()
+	return batch
 }
 
 // heldItem returns the item id in the player's selected hotbar slot.

@@ -225,12 +225,33 @@ func (r *remotePlayer) decodeLoop() {
 			r.emit(typ, payload)
 		}
 	}
+	drainCrit := func() {
+		for _, pkt := range r.p.takeCrit() {
+			if pkt.ev != nil {
+				r.emitEv(pkt.ev, send)
+			}
+		}
+	}
 	for {
+		// `out` has priority: lifecycle frames only overflow into `crit` after
+		// `out` was full, so they are always temporally later — drain `out` to
+		// empty before touching `crit` to keep global order.
 		select {
 		case pkt := <-r.p.out:
 			if pkt.ev != nil {
 				r.emitEv(pkt.ev, send)
 			}
+			continue
+		default:
+		}
+		drainCrit()
+		select {
+		case pkt := <-r.p.out:
+			if pkt.ev != nil {
+				r.emitEv(pkt.ev, send)
+			}
+		case <-r.p.critWake:
+			// loop; drainCrit at the top of the next iteration handles it
 		case <-r.p.quit:
 			return
 		}
