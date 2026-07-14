@@ -58,6 +58,50 @@ func TestOresDeterministic(t *testing.T) {
 	}
 }
 
+// TestRedstoneLapisGeneration confirms the newly added ores appear in their
+// vanilla bands and that redstone generates in its UNLIT state.
+func TestRedstoneLapisGeneration(t *testing.T) {
+	g := NewGenerator(1)
+	litRedstone := blockBase("redstone_ore")
+	litDeepRedstone := blockBase("deepslate_redstone_ore")
+	var redstone, redstoneDeep, lapis, lapisMid, lit int
+	for cx := int32(0); cx < 24; cx++ {
+		for cz := int32(0); cz < 24; cz++ {
+			ch := g.GenerateChunk(cx, cz)
+			for sec := range ch.Sections {
+				baseY := MinY + sec*16
+				for idx, s := range ch.Sections[sec] {
+					y := baseY + idx/256
+					switch s {
+					case RedstoneOre, DeepslateRedstoneOre:
+						redstone++
+						if y < -32 {
+							redstoneDeep++
+						}
+					case litRedstone, litDeepRedstone:
+						lit++ // the lit state must never be generated
+					case LapisOre, DeepslateLapisOre:
+						lapis++
+						if y >= -32 && y <= 32 {
+							lapisMid++
+						}
+					}
+				}
+			}
+		}
+	}
+	if redstone == 0 || redstoneDeep == 0 {
+		t.Errorf("redstone ore missing/shallow: total %d, deep %d", redstone, redstoneDeep)
+	}
+	if lit != 0 {
+		t.Errorf("%d LIT redstone ore blocks generated (should all be unlit)", lit)
+	}
+	if lapis == 0 || lapisMid == 0 {
+		t.Errorf("lapis ore missing: total %d, in core band %d", lapis, lapisMid)
+	}
+	t.Logf("redstone=%d (deep %d) lapis=%d (mid %d)", redstone, redstoneDeep, lapis, lapisMid)
+}
+
 // TestOreDepthVariants: ore below the deepslate transition must use the
 // deepslate variant (it replaced deepslate, not stone), and vice versa.
 func TestOreDepthVariants(t *testing.T) {

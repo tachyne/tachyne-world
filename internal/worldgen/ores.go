@@ -21,6 +21,12 @@ var (
 	DeepslateGoldOre    = blockBase("deepslate_gold_ore")
 	DiamondOre          = blockBase("diamond_ore")
 	DeepslateDiamondOre = blockBase("deepslate_diamond_ore")
+	// Redstone ore carries a `lit` property; generate the UNLIT/default state
+	// (lit=false is the base+1 id — Minecraft orders booleans true-then-false).
+	RedstoneOre          = blockBase("redstone_ore") + 1
+	DeepslateRedstoneOre = blockBase("deepslate_redstone_ore") + 1
+	LapisOre             = blockBase("lapis_ore")
+	DeepslateLapisOre    = blockBase("deepslate_lapis_ore")
 )
 
 // oreSpec is one ore type's distribution: veins per chunk, blocks per vein, and
@@ -32,12 +38,18 @@ type oreSpec struct {
 	shape            int // 0 uniform, 1 triangular (peak mid-band), 2 ramp-to-bottom
 }
 
+// Bands/counts/sizes are the vanilla 1.21 ore placed_features (above_bottom
+// anchors resolved against MinY=-64; trapezoid ≈ our triangular shape 1).
 var oreSpecs = []oreSpec{
 	{CoalOre, DeepslateCoalOre, 14, 10, 0, 110, 0},
 	{CopperOre, DeepslateCopperOre, 8, 8, -16, 80, 1},
 	{IronOre, DeepslateIronOre, 10, 7, -56, 64, 1},
 	{GoldOre, DeepslateGoldOre, 4, 6, -60, 28, 0},
 	{DiamondOre, DeepslateDiamondOre, 5, 5, -60, 12, 2},
+	{RedstoneOre, DeepslateRedstoneOre, 4, 8, -64, 15, 0}, // ore_redstone: uniform -64..15
+	{RedstoneOre, DeepslateRedstoneOre, 8, 8, -96, 32, 1}, // ore_redstone_lower: trapezoid, peak ~-32
+	{LapisOre, DeepslateLapisOre, 2, 7, -32, 32, 1},       // ore_lapis: trapezoid, peak 0
+	{LapisOre, DeepslateLapisOre, 4, 7, -64, 64, 0},       // ore_lapis_buried: uniform -64..64
 }
 
 // placeOres stamps this chunk's ore veins. Deterministic: the RNG derives from
@@ -48,7 +60,10 @@ func (g *Generator) placeOres(ch *Chunk, cx, cz int32) {
 	for _, spec := range oreSpecs {
 		for a := 0; a < spec.attempts; a++ {
 			lx, lz := rng.Intn(16), rng.Intn(16)
-			y := rollY(rng, spec)
+			// Clamp the origin: bands that dip below the world floor (redstone's
+			// trapezoid reaches -96) just concentrate near bedrock, as vanilla's
+			// below-floor samples effectively do.
+			y := clampInt(rollY(rng, spec), MinY+1, MinY+len(ch.Sections)*16-1)
 			for i := 0; i < spec.size; i++ {
 				setOre(ch, lx, y, lz, spec)
 				// Random-walk one step, staying inside the chunk column bounds.
