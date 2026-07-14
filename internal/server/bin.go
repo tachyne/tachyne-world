@@ -25,9 +25,10 @@ var (
 )
 
 var (
-	itemBucket    = itemByName["bucket"]
-	itemBucketH2O = itemByName["water_bucket"]
-	itemBucketLav = itemByName["lava_bucket"]
+	itemBucket     = itemByName["bucket"]
+	itemBucketH2O  = itemByName["water_bucket"]
+	itemBucketLav  = itemByName["lava_bucket"]
+	itemFireCharge = int32(itemByName["fire_charge"])
 )
 
 func isHopper(s uint32) bool { return s >= hopperMin && s <= hopperMax }
@@ -195,20 +196,43 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	}
 	dx, dy, dz := pistonDelta(state) // same 6-way facing math
 	fx, fy, fz := float64(pos.x)+0.5+float64(dx)*0.7, float64(pos.y)+0.5+float64(dy)*0.7, float64(pos.z)+0.5+float64(dz)*0.7
+	vx, vy, vz := float64(dx)*1.1, float64(dy)*1.1+0.05, float64(dz)*1.1 // dispenser projectile power 1.1
+	front := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 	item := st.item
 	dispense := isDispenser(state)
 	took := true
 	switch {
 	case dispense && item == itemArrowAmmo:
-		a := h.launchArrow(players, fx, fy, fz, float64(dx)*1.1, float64(dy)*1.1+0.05, float64(dz)*1.1)
+		a := h.launchArrow(players, fx, fy, fz, vx, vy, vz)
 		a.dmg, a.playerShot = arrowDamage, true // hits mobs; retrievable when stuck
+	case dispense && item == itemSnowball:
+		h.launchProjectileIn(players, entitySnowball, 0, fx, fy, fz, vx, vy, vz).breaks = true
+	case dispense && item == itemEgg:
+		h.launchProjectileIn(players, entityEggProj, 0, fx, fy, fz, vx, vy, vz).breaks = true
+	case dispense && item == itemFireCharge:
+		h.launchProjectileIn(players, entitySmallFireball, 0, fx, fy, fz, vx, vy, vz)
 	case dispense && item == itemTNTBlock:
-		h.primeTNT(players, pos.x+dx, pos.y+dy, pos.z+dz, tntFuseTicks)
+		h.primeTNT(players, front.x, front.y, front.z, tntFuseTicks)
+	case dispense && item == itemFlintSteel:
+		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+			h.igniteFire(players, front, 0) // light a fire in the cell ahead
+		}
+		took = false // vanilla damages the tool instead of consuming it
+		st.dmg++
+		if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
+			*st = invStack{} // worn out
+		}
+	case dispense && item == itemBoneMeal:
+		if !h.applyBoneMeal(players, 0, front.x, front.y, front.z, h.world.At(front.x, front.y, front.z)) {
+			// nothing growable ahead → fall back to tossing the meal out
+			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+				it.dmg, it.ench = st.dmg, st.ench
+			}
+		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
-		target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 		bs, bok := protocol.BlockForItem(item)
-		if ts := h.world.At(target.x, target.y, target.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {
-			h.setBlock(players, target, bs)
+		if ts := h.world.At(front.x, front.y, front.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {
+			h.setBlock(players, front, bs)
 			st.item = itemBucket // the bucket empties in place
 			st.count, took = 1, false
 		} else {
