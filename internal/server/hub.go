@@ -382,6 +382,7 @@ type hub struct {
 	obsSeen   map[blockPos]uint32 // observer last-seen watched state
 	compOut   map[blockPos]int    // comparator output levels (vanilla block entity)
 	platesOn  map[blockPos]bool   // currently pressed pressure plates
+	wiresOn   map[blockPos]bool   // currently pressed tripwire strings
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
 
@@ -514,6 +515,7 @@ func newHub(w *world.World) *hub {
 		obsSeen:       map[blockPos]uint32{},
 		compOut:       map[blockPos]int{},
 		platesOn:      map[blockPos]bool{},
+		wiresOn:       map[blockPos]bool{},
 		fireAge:       map[blockPos]int{},
 		bins:          map[blockPos]*bin{},
 		vehicles:      map[int32]*vehicle{},
@@ -733,6 +735,7 @@ func (h *hub) run() {
 			h.updateBolts(players)   // despawn finished lightning flashes
 			h.updateTNT(players)     // primed charges burn their fuses
 			h.updatePlates(players)
+			h.updateTripwires(players)
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act

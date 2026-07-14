@@ -145,6 +145,8 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 		return daylightPower(s)
 	case isTarget(s):
 		return targetPower(s) // energised target emits to every side
+	case isTripwireHook(s) && boolProp(s, "powered"):
+		return 15 // a tripped hook powers every side
 	case isDetectorRail(s) && railPowered(s):
 		return 15
 	}
@@ -203,6 +205,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	switch {
 	case isTarget(state):
 		h.updateTarget(players, pos, state)
+	case isTripwireHook(state):
+		h.calcHook(players, pos, state) // re-evaluate its line (attached/powered)
 	case isNoteBlock(state):
 		// Play once on the rising edge of redstone power (NoteBlockBlock).
 		powered := h.inputPower(x, y, z, false) > 0

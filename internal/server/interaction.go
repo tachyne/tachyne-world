@@ -242,6 +242,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	defState, ok := protocol.BlockForItem(p.heldItem())
+	if p.heldItem() == int32(itemString) { // string laid on a surface becomes tripwire
+		defState, ok = tripwireDefaultState(), true
+	}
 	if !ok || p.heldItem() == 0 {
 		// Nothing placeable in hand — clear any client-side ghost and ack.
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
