@@ -42,6 +42,7 @@ func Main() {
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
+	spawner := flag.String("spawner", "tachyne", "natural-spawn model: tachyne (cheaper 1/8 sampler + herd top-up) or vanilla (exact NaturalSpawner: per-chunk rate + chunk-generation herds)")
 	flag.Parse()
 
 	if *addr != "" {
@@ -56,6 +57,14 @@ func Main() {
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
 	srv.WorldFile = *worldFile
 	srv.DisableHUD = !*hud
+	switch *spawner {
+	case "tachyne":
+		srv.VanillaSpawner = false
+	case "vanilla":
+		srv.VanillaSpawner = true
+	default:
+		log.Fatalf("invalid -spawner %q (want tachyne or vanilla)", *spawner)
+	}
 	srv.NatsAddr = *natsURL
 	srv.ChunkCacheDir = *chunkDir
 	srv.ValkeyAddr = *valkey

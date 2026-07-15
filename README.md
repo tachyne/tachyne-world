@@ -192,7 +192,11 @@ multi-pod plan).
   weighted pools with vanilla pack sizes (husks in deserts, strays in the
   snow, drowned in oceans and rivers, slime chunks below y40 on the vanilla
   chunk seed); the far-away despawn distances match vanilla per category.
-  All are `/summon`-able by name.
+  All are `/summon`-able by name. Two spawners are selectable with `-spawner`:
+  the default `tachyne` sampler (a cheaper 1-in-8-chunks rate paired with a
+  herd top-up, tuned to feel right at lower hub cost) or `vanilla` — the exact
+  NaturalSpawner: one attempt per chunk per tick, the three-group pack loop,
+  the full distance gates, and one-time chunk-generation herds as land loads.
 - Signature behaviors from source: cave-spider/bee poison bites (normal+hard
   only), wither-skeleton wither, wolf/bee packs that turn on an attacker
   together, ghast/breeze/shulker/wither projectiles, the guardian charge-beam,
@@ -368,7 +372,8 @@ shared secret, empty = refuse all), `-seed`, `-world world.gob` (edit
 persistence), `-gamemode survival` (default for new players),
 `-ops Name1,Name2`, `-valkey localhost:6379` (chunk cache; falls back to
 `-chunkdir chunks`), `-nats nats://localhost:4222` (plugin bus),
-`-llm http://…/v1` (NPCs), `-spawn x,y,z`, `-hud=false`.
+`-llm http://…/v1` (NPCs), `-spawn x,y,z`, `-hud=false`,
+`-spawner tachyne|vanilla` (natural-spawn model; default tachyne).
 
 Vanilla parity: a real vanilla 1.21.5 server ran beside tachyne as an oracle
 (RCON via `scripts/oracle_rcon.py`), with Mojang's datagen dumps checked into

@@ -43,7 +43,7 @@ func TestCommandTime(t *testing.T) {
 	s := &Server{hub: newHub(world.New(1))}
 	s.hub.rules.DoMobSpawning = false
 	s.hub.rules.DoDaylight = false // hold the clock still so the poll target is exact
-	go s.hub.run()                 // /time routes through the hub (plugin TimeSetEvent)
+	startHub(t, s.hub)             // /time routes through the hub (plugin TimeSetEvent)
 	p := newPlayer(1, "tester", [16]byte{})
 
 	s.handleCommand(p, "time night")

@@ -303,6 +303,7 @@ type hub struct {
 	nether     *world.World // second dimension (nil in bare tests → worldFor falls back)
 	end        *world.World // third dimension
 	events     chan hubEvent
+	stop       chan struct{} // closed to end run(); production never closes it, tests do (t.Cleanup)
 	eidCounter int64         // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick       atomic.Uint64 // world age (ticks); atomic so connections can read it
 	dayTime    atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
@@ -329,6 +330,12 @@ type hub struct {
 	// point inside this shard's own region so a death never lands you off-shard.
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
 	hasWorldSpawn                         bool
+
+	// vanillaSpawner selects the exact-vanilla NaturalSpawner (spawnvanilla.go)
+	// over the default tachyne sampler; seededChunks records which chunks have
+	// received their one-time chunk-generation herd this pod lifetime.
+	vanillaSpawner bool
+	seededChunks   map[[2]int32]bool
 
 	// pendingResume holds migrated player state waiting for the gateway to
 	// reconnect with Hello{Purpose:"resume", token}. Written on the hub goroutine
@@ -507,6 +514,7 @@ func newHub(w *world.World) *hub {
 		books:         newBookStore(""), // in-memory; server.Run swaps in the persisted one
 		signMayEdit:   map[string]int32{},
 		events:        make(chan hubEvent, 256),
+		stop:          make(chan struct{}),
 		pending:       map[uint64][]blockPos{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
@@ -742,8 +750,8 @@ func (h *hub) run() {
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
 			}
-			if age%passiveSpawnEvery == 0 {
-				h.herdTopUp(players) // the chunk-gen herd analog (spawn.go)
+			if age%passiveSpawnEvery == 0 && !h.vanillaSpawner {
+				h.herdTopUp(players) // the chunk-gen herd analog (tachyne spawner only)
 			}
 			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
@@ -833,6 +841,9 @@ func (h *hub) run() {
 					t.p.trySendEv(actionBarEv(renderHud(h.hud, v)))
 				}
 			}
+
+		case <-h.stop:
+			return // test teardown closes h.stop so run() goroutines don't leak (production never does)
 
 		case ev := <-h.events:
 			switch e := ev.(type) {

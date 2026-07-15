@@ -29,7 +29,7 @@ func TestExecuteCommand(t *testing.T) {
 	h := newHub(world.New(1))
 	h.rules.DoMobSpawning = false
 	h.rules.DoDaylight = false // hold the clock still so the settime poll target is exact
-	go h.run()
+	startHub(t, h)
 
 	if _, e := executeCommand(h, "settime", json.RawMessage(`{"time":13000}`)); e != "" {
 		t.Fatalf("settime: %s", e)
@@ -52,7 +52,7 @@ func TestExecuteCommand(t *testing.T) {
 func TestBusCommands(t *testing.T) {
 	h := newHub(world.New(1))
 	h.rules.DoMobSpawning = false
-	go h.run()
+	startHub(t, h)
 
 	// weather + gamerule are async posts; poll their effects.
 	if _, e := executeCommand(h, "weather", json.RawMessage(`{"kind":"thunder","duration":200}`)); e != "" {
@@ -141,7 +141,7 @@ func TestBusEventBridge(t *testing.T) {
 	rec := &recordingBus{}
 	h.bus = rec
 	h.registerBusBridge()
-	go h.run()
+	startHub(t, h)
 
 	// A join publishes v2.player_join with the struct fields.
 	p1 := newPlayer(h.allocEID(), "alice", [16]byte{1})

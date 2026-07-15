@@ -150,6 +150,10 @@ type Server struct {
 	// DisableHUD turns off the action-bar HUD (time/coords/etc.) for all players.
 	DisableHUD bool
 
+	// VanillaSpawner selects the exact-vanilla NaturalSpawner (per-chunk rate +
+	// chunk-generation herds) instead of the default tachyne sampler.
+	VanillaSpawner bool
+
 	// AttachAddr, if set, serves the tachyne domain attach protocol there
 	// (gateway sessions); AttachToken is the shared secret gateways present.
 	AttachAddr  string
@@ -333,6 +337,7 @@ func (s *Server) Serve() error {
 		if s.DisableHUD {
 			s.hub.hud = nil
 		}
+		s.hub.vanillaSpawner = s.VanillaSpawner
 		s.hub.invs = newInvStore(s.InventoryFile)
 		s.hub.advs = newAdvStore(s.AdvancementFile)
 		s.hub.statstore = newStatsStore(s.StatsFile)

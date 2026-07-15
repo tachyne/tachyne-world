@@ -19,7 +19,7 @@ func pluginTestHub(t *testing.T) (*hub, srvFacade) {
 	h.rules.DoMobSpawning = false // keep mob noise out (see TestHubMultiplayer)
 	host := &pluginHost{h: h, s: New(), cmds: map[string]*plugin.Command{}}
 	h.plugHost = host
-	go h.run()
+	startHub(t, h)
 	return h, srvFacade{host}
 }
 

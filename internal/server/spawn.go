@@ -187,6 +187,20 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 		counts[mobSpawnCategory(m)]++
 	}
 
+	// Two selectable spawners (admin: -spawner). Vanilla mode is the exact
+	// NaturalSpawner (one attempt per chunk per tick + chunk-generation herds);
+	// the default tachyne mode is the cheaper 1/8 sampler paired with herdTopUp.
+	if h.vanillaSpawner {
+		h.spawnVanilla(players, chunks, chunkSet, &counts)
+		return
+	}
+	h.spawnTachyne(players, chunks, &counts)
+}
+
+// spawnTachyne is the default sampler: one position attempt per spawnAttemptBatch
+// chunks per tick per category — cheaper than vanilla's per-chunk rate, tuned to
+// converge on the same caps (see natural-spawn tuning notes).
+func (h *hub) spawnTachyne(players map[int32]*tracked, chunks [][2]int32, counts *[catCount]int) {
 	spawnPersistent := h.tick.Load()%creatureSpawnMod == 0
 	attempts := (len(chunks) + spawnAttemptBatch - 1) / spawnAttemptBatch
 	for cat := 0; cat < catCount; cat++ {

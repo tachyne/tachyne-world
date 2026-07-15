@@ -20,6 +20,16 @@ const (
 	playClientEntityHead    = 0x4c
 )
 
+// startHub runs a hub's tick loop for the duration of a test and stops it at
+// cleanup. Leaked run() goroutines used to pile up across the suite and starve
+// later tests' hubs past onHub's deadline — a load-timing flake (TestTripwire
+// et al.). Every test that starts the hub should go through here.
+func startHub(t *testing.T, h *hub) {
+	t.Helper()
+	go h.run()
+	t.Cleanup(func() { close(h.stop) })
+}
+
 // waitFor drains a player's outbound queue until it sees packet id, or fails.
 // Domain events match under their family's canonical packet id (an EntityMove
 // counts as playClientEntityMoveRot whether a renderer would emit it relative
@@ -68,7 +78,7 @@ func TestHubMultiplayer(t *testing.T) {
 	// seed-1 ocean with mobs whose movement events flood the undrained test
 	// queues until trySendEv drops the packets this test waits for.
 	h.rules.DoMobSpawning = false
-	go h.run()
+	startHub(t, h)
 
 	p1 := newPlayer(h.allocEID(), "alice", [16]byte{1})
 	p2 := newPlayer(h.allocEID(), "bob", [16]byte{2})
@@ -100,7 +110,7 @@ func TestHubMultiplayer(t *testing.T) {
 func TestHubBlockBroadcast(t *testing.T) {
 	h := newHub(world.New(1))
 	h.rules.DoMobSpawning = false // see TestHubMultiplayer: keep mob noise out
-	go h.run()
+	startHub(t, h)
 
 	editor := newPlayer(h.allocEID(), "editor", [16]byte{1})
 	viewer := newPlayer(h.allocEID(), "viewer", [16]byte{2})
