@@ -40,6 +40,7 @@ const (
 	//                      diagonal sprint-fly costs ~1.15/tick. 1.0 (base-fly only)
 	//                      slowly drained the bank and hitched every few seconds; 1.5
 	//                      clears sprint-fly + vertical + latency bunching with margin.
+	spinPerTick    = 4.0  // riptide auto-spin-attack: brief high-speed travel (trident.go)
 	budgetCapTicks = 30   // burst headroom: up to 1.5 s of allowance banked while idle
 	teleportCap    = 12.0 // single-event displacement no legitimate packet gap can cover
 	floatLimit     = 80   // ticks floating before the snap-down (vanilla's kick threshold)
@@ -79,6 +80,9 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	}
 	if t.gamemode == gmCreative {
 		perTick = flyPerTick
+	}
+	if now < t.spinUntil && perTick < spinPerTick {
+		perTick = spinPerTick // riptide launch: fast travel until the spin-attack ends
 	}
 	if lvl := t.hasEffect(effSpeed); lvl > 0 {
 		perTick *= 1 + 0.2*float64(lvl) // vanilla: +20% speed per level

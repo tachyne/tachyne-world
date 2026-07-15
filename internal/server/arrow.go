@@ -57,7 +57,12 @@ type arrowEntity struct {
 
 	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
 	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
-	noPickup bool           // multishot side bolts: fly + hit, but never retrievable (vanilla)
+	noPickup bool           // multishot side bolts / creative tridents: fly + hit, never retrievable
+
+	loyalty     int      // thrown-trident loyalty: >0 flies back to the thrower instead of sticking
+	impaling    int      // thrown-trident impaling: bonus damage to targets in water or rain
+	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
+	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
 }
 
 // spawnArrow fires an arrow exactly like vanilla's performRangedAttack
@@ -114,18 +119,35 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	return a
 }
 
+// retrieveProjectile restores a stuck projectile to a survival player's
+// inventory: a thrown trident hands back its exact stack (enchantments intact),
+// everything else hands back a plain arrow.
+func (h *hub) retrieveProjectile(t *tracked, a *arrowEntity) (changed []int, left int) {
+	if a.pickupStack.item != 0 {
+		return t.inv.addStack(a.pickupStack)
+	}
+	return t.inv.add(itemArrowAmmo, 1)
+}
+
 // updateArrows integrates every arrow one tick: move, collide, hit, expire.
 // Runs every tick (arrows are fast; a 2-tick cadence would tunnel walls).
 func (h *hub) updateArrows(players map[int32]*tracked) {
 	now := h.tick.Load()
 	for eid, a := range h.arrows {
+		if a.returning { // a loyal trident flying home — no collisions, steers to its owner
+			if h.updateReturningTrident(players, a) {
+				delete(h.arrows, eid)
+				h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+			}
+			continue
+		}
 		if now-a.born >= arrowLifeTicks {
 			delete(h.arrows, eid)
 			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
 			continue
 		}
 		if a.stuck {
-			if a.playerShot && !a.noPickup { // stuck player arrows are retrievable ammo
+			if a.playerShot && !a.noPickup { // stuck player projectiles are retrievable
 				for _, t := range players {
 					if t.gamemode != gmSurvival || t.dead || t.inv == nil {
 						continue
@@ -133,7 +155,8 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					if math.Abs(a.x-t.x) > 1 || math.Abs(a.z-t.z) > 1 || math.Abs(a.y-t.y) > 1.5 {
 						continue
 					}
-					if changed, left := t.inv.add(itemArrowAmmo, 1); left == 0 {
+					changed, left := h.retrieveProjectile(t, a)
+					if left == 0 {
 						for _, sl := range changed {
 							h.sendSlot(t, sl)
 						}
@@ -177,7 +200,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						h.hitTarget(players, bp, bs, px, py, pz, true) // arrows hold 20 ticks
 					}
 				}
-				a.stuck = true // freeze just short of the face it struck
+				if a.loyalty > 0 { // a loyal trident bounces off the wall and flies home
+					a.returning = true
+				} else {
+					a.stuck = true // freeze just short of the face it struck
+				}
 				h.playSound(players, "minecraft:entity.arrow.hit", sndNeutral, a.x, a.y, a.z, 1, 1.2)
 				break
 			}
@@ -186,6 +213,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		if hit {
 			if a.explode > 0 { // ghast/wither fireball detonates on impact
 				h.explodeAt(players, a.x, a.y, a.z, a.explode+2, a.explode*4)
+			}
+			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing
+				a.returning = true
+				continue
 			}
 			delete(h.arrows, eid)
 			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
@@ -293,7 +324,11 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if hurt, _, _ := mobSounds(m.etype); hurt != "" {
 				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 			}
-			m.hurt(float64(a.dmg))
+			dmg := a.dmg
+			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
+				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
+			}
+			m.hurt(float64(dmg))
 			if a.playerShot { // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
 			}

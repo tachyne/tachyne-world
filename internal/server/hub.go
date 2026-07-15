@@ -233,7 +233,13 @@ type tracked struct {
 	xbowLoaded bool
 	xbowMulti  bool
 	xbowPierce int
-	fireSecs   int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
+
+	// Trident: tridentAt is the tick a throw-charge began (0 = not charging);
+	// spinUntil is the tick a riptide auto-spin-attack ends (movement authority
+	// grants fast travel until then so the launch isn't rubber-banded).
+	tridentAt uint64
+	spinUntil uint64
+	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
 	health      float32
@@ -1118,17 +1124,23 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.stopEating(players, t)
 					h.lowerShield(t) // release / hotbar switch also drops a shield
-					if e.fire {      // release_use_item looses a drawn bow / finishes a crossbow load…
+					if e.fire {      // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
 						h.releaseDraw(players, t)
 						h.finishXbowCharge(players, t)
+						h.finishTridentThrow(players, t)
 					} else { // …a hotbar switch cancels an in-progress draw/charge (a loaded crossbow stays loaded)
 						t.drawingAt = 0
 						t.xbowAt = 0
+						t.tridentAt = 0
 					}
 				}
 			case evXbowUse:
 				if t := players[e.eid]; t != nil {
 					h.useXbow(players, t)
+				}
+			case evTridentUse:
+				if t := players[e.eid]; t != nil {
+					h.startTridentCharge(t)
 				}
 			case evBowStart:
 				if t := players[e.eid]; t != nil {

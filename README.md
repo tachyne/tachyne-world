@@ -34,7 +34,7 @@ detailed inventory follows in [What works today](#what-works-today).
 |---|---|---|
 | Terrain, biomes, caves, lighting | ✅ | Original generator: the full overworld biome set, rivers, cave biomes, real sky+block light. Deliberately *not* seed-compatible with vanilla worldgen. |
 | Mining, crafting, smelting, containers | ✅ | ~1,570 recipes with vanilla recipe-book progression (recipes unlock as you gather ingredients, with the toast), furnaces, blast furnaces (ores at double speed), smokers (food), campfire cooking (four slots, food pops off the fire), chests, hoppers/droppers/dispensers; stonecutter with the full vanilla recipe list. |
-| Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, crossbows (quick_charge/multishot/piercing), TNT; tridents and the mace missing. |
+| Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, crossbows (quick_charge/multishot/piercing), tridents (loyalty/riptide/impaling), TNT; the mace and trident channeling missing. |
 | Mobs | ✅ | The complete vanilla living roster with vanilla attributes, breeding/taming/riding, and vanilla natural spawning: per-category caps scaled by loaded chunks, spawns at any height (caves populate day and night), vanilla light rules (torch light blocks spawns, storms darken the sky enough for daytime monsters), per-biome weighted pools and pack sizes, distance-based despawning. A few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
 | Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
 | **Advancements** | ✅ | The full vanilla advancement tree with vanilla reveal rules, toasts, chat announces and XP rewards. Criteria whose mechanics don't exist yet (fishing, structures, crossbows…) show but can't be earned — about a third. |
@@ -160,6 +160,9 @@ multi-pod plan).
 - Crossbows: hold to charge (quick_charge shortens it), stays loaded until
   you fire, then looses a fixed-power bolt; multishot fires three at once and
   piercing punches a bolt through several mobs
+- Tridents: charge-held throw that sticks and is retrievable; loyalty flies it
+  back to your hand, riptide launches you through water or rain, and impaling
+  hits wet targets harder — enchantments survive the round trip
 
 **Mobs**
 - Farm animals — cows, chickens (eggs, and thrown eggs hatch chicks), pigs,
