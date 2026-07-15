@@ -19,10 +19,13 @@ const (
 	menuEnchantment = 13 // minecraft:enchantment menu network id (crafting 12 / furnace 14)
 
 	// Enchantment network ids (our declared order — see registries_gen.go).
-	enchEfficiency = 8
-	enchProtection = 27
-	enchSharpness  = 32
-	enchUnbreaking = 39
+	enchEfficiency  = 8
+	enchProtection  = 27
+	enchSharpness   = 32
+	enchUnbreaking  = 39
+	enchMultishot   = 23 // crossbow: fire three bolts in a spread
+	enchPiercing    = 24 // crossbow: bolts pass through up to level+1 entities
+	enchQuickCharge = 29 // crossbow: -0.25s charge time per level
 
 	maxBookshelves = 15 // vanilla: power caps at 15 shelves
 )

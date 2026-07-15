@@ -90,6 +90,8 @@ func (r *remotePlayer) Action(v any) {
 		switch p.heldItem() {
 		case itemBow:
 			h.post(evBowStart{eid: p.eid})
+		case itemCrossbow:
+			h.post(evXbowUse{eid: p.eid})
 		case itemShield:
 			h.post(evBlockStart{eid: p.eid})
 		case itemSnowball, itemEgg:

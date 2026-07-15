@@ -54,6 +54,10 @@ type arrowEntity struct {
 	slow       int     // stray arrow: seconds of slowness effect on a hit
 	explode    int     // ghast/wither fireball: explosion power on impact (0 = none)
 	knock      float64 // wind charge: pure knockback impulse, no damage
+
+	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
+	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
+	noPickup bool           // multishot side bolts: fly + hit, but never retrievable (vanilla)
 }
 
 // spawnArrow fires an arrow exactly like vanilla's performRangedAttack
@@ -121,7 +125,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			continue
 		}
 		if a.stuck {
-			if a.playerShot { // stuck player arrows are retrievable ammo
+			if a.playerShot && !a.noPickup { // stuck player arrows are retrievable ammo
 				for _, t := range players {
 					if t.gamemode != gmSurvival || t.dead || t.inv == nil {
 						continue
@@ -262,6 +266,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if ddx*ddx+ddz*ddz > arrowHitRadius*arrowHitRadius || py < m.y-0.1 || py > m.y+2 {
 			continue
 		}
+		if a.hitMobs != nil && a.hitMobs[m.eid] {
+			continue // piercing bolt already struck this mob — pass through
+		}
 		if m.etype == entityEnderman {
 			// Vanilla EnderMan.hurtServer: projectiles NEVER land — the
 			// enderman teleports out from under them, taking no damage.
@@ -300,6 +307,15 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 						h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
 					}
 				}
+			}
+		}
+		// A piercing bolt records the mob and keeps flying until its pierces run
+		// out; every other arrow stops on the first mob it strikes.
+		if a.hitMobs != nil {
+			a.hitMobs[m.eid] = true
+			if a.pierce > 0 {
+				a.pierce--
+				return false
 			}
 		}
 		return true

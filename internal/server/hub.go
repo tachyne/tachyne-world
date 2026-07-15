@@ -224,7 +224,16 @@ type tracked struct {
 	lastAttack    uint64 // tick of the last melee swing (attack-cooldown scaling)
 	drawingAt     uint64 // tick a bow draw began (0 = not drawing)
 	blockingSince uint64 // tick a shield was raised (0 = not blocking)
-	fireSecs      int    // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
+
+	// Crossbow (two-phase: charge → loaded → fire). xbowAt is the tick a charge
+	// began (0 = not charging); once the charge completes the shot is latched in
+	// xbowLoaded and fired on the next use, baking in the multishot/piercing the
+	// crossbow carried at load time (vanilla stores these on the item stack).
+	xbowAt     uint64
+	xbowLoaded bool
+	xbowMulti  bool
+	xbowPierce int
+	fireSecs   int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
 	health      float32
@@ -1109,11 +1118,17 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.stopEating(players, t)
 					h.lowerShield(t) // release / hotbar switch also drops a shield
-					if e.fire {      // release_use_item looses a drawn bow…
+					if e.fire {      // release_use_item looses a drawn bow / finishes a crossbow load…
 						h.releaseDraw(players, t)
-					} else { // …a hotbar switch just lowers it
+						h.finishXbowCharge(players, t)
+					} else { // …a hotbar switch cancels an in-progress draw/charge (a loaded crossbow stays loaded)
 						t.drawingAt = 0
+						t.xbowAt = 0
 					}
+				}
+			case evXbowUse:
+				if t := players[e.eid]; t != nil {
+					h.useXbow(players, t)
 				}
 			case evBowStart:
 				if t := players[e.eid]; t != nil {
