@@ -116,6 +116,10 @@ type Server struct {
 	// (platform limit).
 	Ceiling int
 
+	// MobFile, if set, persists live mobs (entities) to that JSON file so herds,
+	// farm animals and tamed pets survive a restart ("" = in-memory only).
+	MobFile string
+
 	// WorldFile, if set, persists block edits to that file so they survive
 	// restarts (empty = in-memory only). Swap the store for a DB later.
 	WorldFile string
@@ -350,6 +354,7 @@ func (s *Server) Serve() error {
 		globalBooks.Store(s.hub.books)
 		s.hub.maps = newMapStore(s.MapFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
+		s.hub.mobstore = newMobStore(s.MobFile)
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
 		if s.WorldFile != "" {

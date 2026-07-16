@@ -97,6 +97,7 @@ type mob struct {
 	sitting       bool        // tamed pet told to stay (right-click toggle)
 	spawnInvuln   int         // wither: ticks of spawn-charge invulnerability left
 	owner         int32       // owner player eid (0 = wild); pets follow this player
+	ownerUUID     [16]byte    // owner's stable identity (persisted; owner eid is re-resolved on join)
 	path          []pathPoint // A* route toward the current goal (nil = steer straight)
 	pathIdx       int         // index of the next waypoint to walk to
 	pathGoal      [2]int      // block goal the current path was computed for
@@ -172,7 +173,7 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
-	if plugin.Has[*plugin.MobSpawnEvent](h.plugins) {
+	if !h.reloading && plugin.Has[*plugin.MobSpawnEvent](h.plugins) {
 		ev := &plugin.MobSpawnEvent{EID: eid, Type: etype, TypeName: entityNameByID[etype],
 			X: x, Y: y, Z: z, Dim: dim, Reason: cause}
 		if !h.plugins.Fire(ev) {

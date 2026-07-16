@@ -337,6 +337,11 @@ type hub struct {
 	vanillaSpawner bool
 	seededChunks   map[[2]int32]bool
 
+	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
+	// it suppresses MobSpawnEvent (these entities already existed — they are being
+	// restored, not spawned) while still reusing the normal spawn setup paths.
+	reloading bool
+
 	// pendingResume holds migrated player state waiting for the gateway to
 	// reconnect with Hello{Purpose:"resume", token}. Written on the hub goroutine
 	// (applyMigration) and claimed on attach-session goroutines (ResumeRemote),
@@ -371,6 +376,7 @@ type hub struct {
 	sbDirty    bool
 	containers *containerStore // furnace/chest content persistence (nil = in-memory only)
 	spawns     *spawnStore     // per-player bed respawn points (nil = world spawn only)
+	mobstore   *mobStore       // live-mob persistence across restarts (nil = in-memory only)
 
 	signs       *signStore       // sign text (the store is the live owner — chunk builders read it)
 	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
@@ -620,6 +626,7 @@ func (h *hub) run() {
 			}
 		}
 	}
+	h.loadMobs() // restore persisted entities before the first tick / any join
 	h.reconcileFurnaceBlocks()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
@@ -816,6 +823,10 @@ func (h *hub) run() {
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves)
 					h.containers.flush()
+				}
+				if h.mobstore != nil {
+					h.mobstore.recordMobs(h.mobs, h.persistMob)
+					h.mobstore.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
 				if h.plugHost != nil {
@@ -1446,6 +1457,10 @@ func (h *hub) run() {
 					h.containers.recordShelves(h.bookshelves)
 					h.containers.flush()
 				}
+				if h.mobstore != nil {
+					h.mobstore.recordMobs(h.mobs, h.persistMob)
+					h.mobstore.flush()
+				}
 				h.signs.flushIfDirty()
 				h.cfStore.flushIfDirty()
 				h.banners.flushIfDirty()
@@ -1571,6 +1586,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	if h.rainLevel > 0 { // late joiners start under the same sky
 		h.sendWeather(nt)
 	}
+	h.resolvePetOwners(nt) // re-link this player to any restored pets they own
 	h.plugins.Fire(&plugin.PlayerJoinEvent{EID: e.p.eid, Name: e.p.name, X: e.x, Y: e.y, Z: e.z, Dim: nt.dim})
 }
 

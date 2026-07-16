@@ -82,6 +82,7 @@ func Main() {
 	srv.BookFile = "books.json"
 	srv.MapFile = "maps.json"
 	srv.ContainerFile = "containers.json"
+	srv.MobFile = "mobs.json"
 	srv.SpawnPointFile = "spawns.json"
 	srv.PluginDataDir = *pluginDir
 	if m, ok := server.ParseGamemode(*gamemode); ok {
