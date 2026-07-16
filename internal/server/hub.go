@@ -337,6 +337,13 @@ type hub struct {
 	vanillaSpawner bool
 	seededChunks   map[[2]int32]bool
 
+	// Per-chunk mob load/unload (mobstore.go). activeChunks are the chunks whose
+	// mobs are live in h.mobs; chunkOutAt records when a live chunk left every
+	// player's range, so its mobs unload only after a grace window (no border
+	// thrash). Mobs load/unload with their chunk, bounding the live set.
+	activeChunks map[[2]int32]bool
+	chunkOutAt   map[[2]int32]uint64
+
 	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
 	// it suppresses MobSpawnEvent (these entities already existed — they are being
 	// restored, not spawned) while still reusing the normal spawn setup paths.
@@ -626,7 +633,6 @@ func (h *hub) run() {
 			}
 		}
 	}
-	h.loadMobs() // restore persisted entities before the first tick / any join
 	h.reconcileFurnaceBlocks()
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
@@ -825,7 +831,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
-					h.mobstore.recordMobs(h.mobs, h.persistMob)
+					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
@@ -1458,7 +1464,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
-					h.mobstore.recordMobs(h.mobs, h.persistMob)
+					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}
 				h.signs.flushIfDirty()

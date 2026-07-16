@@ -7,8 +7,9 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
-// TestMobPersistRoundTrip: mobs written to mobs.json come back with their
-// per-instance state (age, health, tamed owner, gear) intact on a fresh hub.
+// TestMobPersistRoundTrip: mobs bucketed to mobs.json come back with their
+// per-instance state (age, health, tamed owner, gear) intact on a fresh hub
+// when their chunk is reloaded.
 func TestMobPersistRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mobs.json")
 	players := map[int32]*tracked{}
@@ -20,7 +21,7 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	h.applySpecies(players, cow)
 	cow.health, cow.baby, cow.growLeft = 7, true, 500
 
-	wolf := h.spawnMob(players, entityWolf, 20.5, 70, 20.5)
+	wolf := h.spawnMob(players, entityWolf, 11.5, 70, 12.5)
 	h.applySpecies(players, wolf)
 	wolf.tamed, wolf.sitting = true, true
 	wolf.ownerUUID = [16]byte{1, 2, 3, 4}
@@ -29,16 +30,20 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	helmet := itemByName["iron_helmet"]
 	zombie.gear[0] = invStack{item: helmet, count: 1}
 
-	h.mobstore.recordMobs(h.mobs, h.persistMob)
+	// Their chunks are "loaded"; snapshot the live set and flush.
+	active := map[[2]int32]bool{{0, 0}: true, {1, 1}: true}
+	h.activeChunks = active
+	h.mobstore.bucketLive(h.mobs, h.persistMob, active)
 	h.mobstore.flush()
 
-	// A fresh hub loads them back.
+	// A fresh hub reloads them when those chunks enter range.
 	h2 := newHub(world.New(1))
 	h2.mobstore = newMobStore(path)
-	h2.loadMobs()
+	chunkSet := map[[2]int32]bool{{0, 0}: true, {1, 1}: true}
+	h2.reconcileMobChunks(players, chunkSet)
 
 	if len(h2.mobs) != 3 {
-		t.Fatalf("restored %d mobs, want 3", len(h2.mobs))
+		t.Fatalf("reloaded %d mobs, want 3", len(h2.mobs))
 	}
 	var gotCow, gotWolf, gotZombie *mob
 	for _, m := range h2.mobs {
@@ -63,11 +68,55 @@ func TestMobPersistRoundTrip(t *testing.T) {
 	if gotZombie == nil || !gotZombie.hostile || gotZombie.gear[0].item != helmet {
 		t.Fatalf("hostile zombie / gear lost: %+v", gotZombie)
 	}
-	// Fresh eids were minted (not the persisted ones).
-	for _, m := range h2.mobs {
-		if m.eid == 0 {
-			t.Fatal("loaded mob has no eid")
+}
+
+// TestMobUnloadReload: a mob whose chunk leaves range unloads after the grace
+// window (saved to the store, dropped from the live set) and reloads on return.
+func TestMobUnloadReload(t *testing.T) {
+	h := newHub(world.New(1))
+	h.mobstore = newMobStore(filepath.Join(t.TempDir(), "mobs.json"))
+	players := map[int32]*tracked{}
+	h.tick.Store(1000)
+
+	cow := h.spawnMob(players, entityCow, 85.5, 70, 85.5) // chunk (5,5)
+	cid := cow.eid
+	inRange := map[[2]int32]bool{{5, 5}: true}
+
+	h.reconcileMobChunks(players, inRange) // (5,5) becomes active, cow stays live
+	if _, ok := h.mobs[cid]; !ok {
+		t.Fatal("an in-range mob must stay live")
+	}
+
+	// Chunk leaves range: within the grace window the mob is retained.
+	empty := map[[2]int32]bool{}
+	h.reconcileMobChunks(players, empty)
+	if _, ok := h.mobs[cid]; !ok {
+		t.Fatal("a just-departed chunk keeps its mobs during the grace window")
+	}
+
+	// Past the grace window it unloads: gone from the live set, parked in the store.
+	h.tick.Store(1000 + mobUnloadGrace)
+	h.reconcileMobChunks(players, empty)
+	if _, ok := h.mobs[cid]; ok {
+		t.Fatal("past the grace window the mob should unload")
+	}
+	if !h.mobstore.has(5, 5) {
+		t.Fatal("an unloaded mob must be saved to its chunk bucket")
+	}
+
+	// Returning to the chunk reloads it.
+	h.reconcileMobChunks(players, inRange)
+	got := 0
+	for _, m := range h.mobs {
+		if m.etype == entityCow {
+			got++
 		}
+	}
+	if got != 1 {
+		t.Fatalf("returning to the chunk should reload exactly one cow, got %d", got)
+	}
+	if h.mobstore.has(5, 5) {
+		t.Fatal("reloading a chunk must clear its saved bucket")
 	}
 }
 
@@ -89,7 +138,7 @@ func TestPersistMobFilter(t *testing.T) {
 		t.Fatal("a dying mob must not persist")
 	}
 	if h.persistMob(villager) {
-		t.Fatal("villagers are deferred — must not persist in v1")
+		t.Fatal("villagers are deferred — must not persist")
 	}
 	if h.persistMob(wither) {
 		t.Fatal("bosses must not persist")
@@ -104,17 +153,16 @@ func TestPetOwnerResolvesOnJoin(t *testing.T) {
 	pet := h.spawnMob(map[int32]*tracked{}, entityWolf, 5.5, 70, 5.5)
 	pet.tamed, pet.ownerUUID = true, uuid
 
-	t2 := &tracked{p: newPlayer(h.allocEID(), "owner", uuid)}
-	h.resolvePetOwners(t2)
-	if pet.owner != t2.p.eid {
-		t.Fatalf("pet owner not re-resolved: owner=%d want %d", pet.owner, t2.p.eid)
+	owner := &tracked{p: newPlayer(h.allocEID(), "owner", uuid)}
+	h.resolvePetOwners(owner)
+	if pet.owner != owner.p.eid {
+		t.Fatalf("pet owner not re-resolved: owner=%d want %d", pet.owner, owner.p.eid)
 	}
 
-	// A different player must not adopt the pet.
-	other := &tracked{p: newPlayer(h.allocEID(), "stranger", [16]byte{5, 5, 5})}
+	stranger := &tracked{p: newPlayer(h.allocEID(), "stranger", [16]byte{5, 5, 5})}
 	pet2 := h.spawnMob(map[int32]*tracked{}, entityCat, 6.5, 70, 6.5)
 	pet2.tamed, pet2.ownerUUID = true, uuid
-	h.resolvePetOwners(other)
+	h.resolvePetOwners(stranger)
 	if pet2.owner != 0 {
 		t.Fatal("a non-owner must not adopt a restored pet")
 	}

@@ -179,6 +179,10 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 		chunks = append(chunks, c)
 	}
 
+	// Load/unload mobs with their chunks before counting or spawning, so caps see
+	// the reloaded herds and freed-up room from unloaded ones.
+	h.reconcileMobChunks(players, chunkSet)
+
 	var counts [catCount]int
 	for _, m := range h.mobs {
 		if m.dim != 0 || m.dying > 0 || h.spawnExempt(m) {

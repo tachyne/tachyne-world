@@ -1,15 +1,12 @@
 package server
 
-import (
-	"encoding/hex"
-	"log"
-)
+import "encoding/hex"
 
-// Boot-time reconstruction of persisted mobs (see mobstore.go). Runs once at the
-// top of hub.run(), before the tick loop and before any player joins, so the
-// restored mobs are simply present when players stream in.
+// Mob reconstruction from persistence (see mobstore.go + mobchunks.go). Mobs load
+// and unload with their chunk, so reloadMob is driven by reconcileMobChunks as
+// chunks enter range — there is no boot-time bulk restore.
 
-// persistMob reports whether a live mob should be written to mobs.json. v1 keeps
+// persistMob reports whether a live mob should be written to mobs.json. It keeps
 // every non-dying mob this pod owns except villagers (trade state deferred) and
 // the bosses; LLM NPCs live in a separate registry and are never in h.mobs.
 func (h *hub) persistMob(m *mob) bool {
@@ -23,40 +20,17 @@ func (h *hub) persistMob(m *mob) bool {
 	return h.ownedAt(m.x, m.z)
 }
 
-// loadMobs reconstructs every persisted mob into h.mobs. The reloading guard
-// suppresses MobSpawnEvent (these are restorations, not fresh spawns).
-func (h *hub) loadMobs() {
-	if h.mobstore == nil {
-		return
-	}
-	if h.seededChunks == nil {
-		h.seededChunks = map[[2]int32]bool{} // so restored herds mark their chunks seeded
-	}
-	h.reloading = true
-	n := 0
-	for _, sm := range h.mobstore.saved() {
-		if h.reloadMob(&sm) != nil {
-			n++
-		}
-	}
-	h.reloading = false
-	if n > 0 {
-		log.Printf("restored %d mobs from persistence", n)
-	}
-}
-
 // reloadMob rebuilds one mob: route through the normal spawn setup (so behaviour,
 // stance and species statics are correct) with no players present, then overwrite
 // the persisted per-instance state on top.
-func (h *hub) reloadMob(sm *savedMob) *mob {
-	empty := map[int32]*tracked{}
+func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	x, y, z := sm.X, sm.Y, sm.Z
 	var m *mob
 	if sm.Hostile {
-		m = h.spawnHostileY(empty, sm.Etype, x, y, z) // hostile stance + per-species quirks
+		m = h.spawnHostileY(players, sm.Etype, x, y, z) // hostile stance + per-species quirks
 	} else {
-		m = h.spawnMob(empty, sm.Etype, x, y, z)
-		h.applySpecies(empty, m) // roster stance/quirks (no-op for the legacy animals)
+		m = h.spawnMob(players, sm.Etype, x, y, z)
+		h.applySpecies(players, m) // roster stance/quirks (no-op for the legacy animals)
 	}
 	if m == nil {
 		return nil // plugin-cancelled or unknown species

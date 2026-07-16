@@ -4,21 +4,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"strconv"
 	"sync"
 )
 
-// Mob persistence: live mobs are snapshotted to mobs.json on the same autosave
-// + SIGTERM cadence as containers/inventories, and reconstructed at boot so
-// entities survive a pod restart (herds, farm animals, tamed pets) instead of
-// vanishing. Only per-instance mutable state is stored — everything static
-// (species speed, base health, sounds, archetype/behaviour) is re-derived from
-// etype on load via the normal spawn paths.
+// Mob persistence: live mobs are saved to mobs.json and reconstructed at boot so
+// entities survive a pod restart. v2 keys the store BY CHUNK and loads/unloads
+// mobs with their chunk (vanilla's chunk-entity model): a mob whose chunk leaves
+// every player's range is written to its chunk bucket and dropped from the live
+// set, and reloaded when the chunk comes back — so the live, ticking set stays
+// bounded by the loaded area instead of growing with everything ever explored.
 //
-// v1 scope: all non-dying, pod-owned mobs EXCEPT villagers (their trade state
-// is deferred), the ender dragon and the wither (bosses), and LLM NPCs (a
-// separate registry). Persisted eids are meaningless across boots — a fresh eid
-// is minted on load, the uuid is re-derived from it, and a pet's owner is stored
-// by player UUID and re-resolved to a live eid when that player joins.
+// Only per-instance mutable state is stored; everything static (species speed,
+// base health, sounds, archetype/behaviour) re-derives from etype on load.
+//
+// v1 scope carried forward: all non-dying, pod-owned mobs EXCEPT villagers
+// (trade state deferred), the ender dragon and wither (bosses), and LLM NPCs
+// (a separate registry). Persisted eids are meaningless across boots — a fresh
+// eid is minted on load, the uuid re-derived, and a pet's owner is stored by
+// player UUID and re-resolved to a live eid when that player joins.
 
 type mobStore struct {
 	mu   sync.Mutex
@@ -27,6 +31,10 @@ type mobStore struct {
 }
 
 type mobFile struct {
+	// Chunks buckets saved mobs by "cx,cz". A loaded chunk has NO entry here
+	// (its mobs are live); an unloaded chunk holds the mobs waiting to reload.
+	Chunks map[string][]savedMob `json:"chunks,omitempty"`
+	// Mobs is the v1 flat format — read once and migrated into Chunks on load.
 	Mobs []savedMob `json:"mobs,omitempty"`
 }
 
@@ -78,6 +86,10 @@ type savedMob struct {
 	OvrDamage float64 `json:"ovd,omitempty"`
 }
 
+func mobChunkKey(cx, cz int32) string {
+	return strconv.Itoa(int(cx)) + "," + strconv.Itoa(int(cz))
+}
+
 func newMobStore(path string) *mobStore {
 	s := &mobStore{path: path}
 	if path != "" {
@@ -85,29 +97,77 @@ func newMobStore(path string) *mobStore {
 			json.Unmarshal(data, &s.m)
 		}
 	}
+	if s.m.Chunks == nil {
+		s.m.Chunks = map[string][]savedMob{}
+	}
+	// Migrate the v1 flat list into per-chunk buckets by saved position.
+	for _, sm := range s.m.Mobs {
+		k := mobChunkKey(int32(chunkFloor(sm.X)), int32(chunkFloor(sm.Z)))
+		s.m.Chunks[k] = append(s.m.Chunks[k], sm)
+	}
+	s.m.Mobs = nil
 	return s
 }
 
-// recordMobs snapshots the live mobs a predicate keeps into the in-memory
-// document (no disk write — flush does that).
-func (s *mobStore) recordMobs(mobs map[int32]*mob, keep func(*mob) bool) {
+// take returns and removes a chunk's saved mobs (called when the chunk reloads).
+func (s *mobStore) take(cx, cz int32) []savedMob {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m.Mobs = s.m.Mobs[:0]
-	for _, m := range mobs {
-		if keep(m) {
-			s.m.Mobs = append(s.m.Mobs, toSavedMob(m))
-		}
-	}
+	k := mobChunkKey(cx, cz)
+	mobs := s.m.Chunks[k]
+	delete(s.m.Chunks, k)
+	return mobs
 }
 
-// saved returns the loaded rows for reconstruction (copied under the lock).
-func (s *mobStore) saved() []savedMob {
+// has reports whether a chunk currently holds saved (unloaded) mobs.
+func (s *mobStore) has(cx, cz int32) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make([]savedMob, len(s.m.Mobs))
-	copy(out, s.m.Mobs)
-	return out
+	return len(s.m.Chunks[mobChunkKey(cx, cz)]) > 0
+}
+
+// stash writes a chunk's saved mobs (called when the chunk unloads); an empty
+// slice clears the bucket.
+func (s *mobStore) stash(cx, cz int32, mobs []savedMob) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.m.Chunks == nil {
+		s.m.Chunks = map[string][]savedMob{}
+	}
+	k := mobChunkKey(cx, cz)
+	if len(mobs) == 0 {
+		delete(s.m.Chunks, k)
+		return
+	}
+	s.m.Chunks[k] = mobs
+}
+
+// bucketLive snapshots the currently-live mobs into their chunk buckets (the
+// autosave / shutdown crash-window save). Chunks in `active` that hold no live
+// mob are cleared, so a loaded-then-emptied chunk never resurrects dead mobs;
+// unloaded chunks (not in `active`) keep the buckets stash() already wrote.
+func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active map[[2]int32]bool) {
+	live := map[string][]savedMob{}
+	for _, m := range mobs {
+		if keep(m) {
+			k := mobChunkKey(int32(chunkFloor(m.x)), int32(chunkFloor(m.z)))
+			live[k] = append(live[k], toSavedMob(m))
+		}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.m.Chunks == nil {
+		s.m.Chunks = map[string][]savedMob{}
+	}
+	for k, v := range live {
+		s.m.Chunks[k] = v
+	}
+	for c := range active {
+		k := mobChunkKey(c[0], c[1])
+		if _, ok := live[k]; !ok {
+			delete(s.m.Chunks, k)
+		}
+	}
 }
 
 // flush atomically writes the document (temp + rename), like every other store.
