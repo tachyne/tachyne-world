@@ -29,6 +29,7 @@ var meleeDamage = itemIntMap(map[string]int{
 	"wooden_axe": 7, "golden_axe": 7, "stone_axe": 9, "copper_axe": 9, "iron_axe": 9, "diamond_axe": 9, "netherite_axe": 10,
 	"wooden_pickaxe": 2, "golden_pickaxe": 2, "stone_pickaxe": 3, "copper_pickaxe": 3, "iron_pickaxe": 4, "diamond_pickaxe": 5, "netherite_pickaxe": 6,
 	"wooden_shovel": 2, "golden_shovel": 2, "stone_shovel": 3, "copper_shovel": 3, "iron_shovel": 4, "diamond_shovel": 5, "netherite_shovel": 6,
+	"mace": 6, // vanilla: +5 attack-damage modifier over the player's base 1
 })
 
 // itemIntMap / itemFloatMap resolve name-keyed tables to id-keyed (version-independent).
@@ -139,6 +140,8 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	base := float64(fistDamage)
 	charge, crit := 1.0, false
+	smash, fall := false, 0.0 // mace smash attack + its fall distance
+	var breachFrac float64
 	t := players[attacker]
 	if t != nil {
 		held := t.p.heldItem()
@@ -165,12 +168,20 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		if charge >= 0.9 && t.airborne && t.y < t.peakY && !t.sprinting {
 			crit = true
 		}
+		// Mace smash: falling past the threshold adds fall-distance bonus damage
+		// (density scales it), and breach lets the hit ignore some armour.
+		if smash, fall = maceSmashing(t); smash {
+			breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
+		}
 		if t.gamemode == gmSurvival {
 			t.exhaustion += attackExhaustion // vanilla: attacking burns food
 			h.applyToolWear(t, t.p.heldSlot(), 1)
 		}
 	}
 	dmgF := base * charge
+	if smash { // vanilla adds the fall bonus after the cooldown scale, before the crit ×1.5
+		dmgF += maceFallBonus(fall) + 0.5*float64(heldStack(t).enchLvl(enchDensity))*fall
+	}
 	if crit {
 		dmgF *= 1.5
 	}
@@ -239,7 +250,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if t != nil {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
-	m.hurt(float64(dmg))                  // through base armor (zombie family has 2)
+	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
+	if smash {                             // shockwave, fall-damage negation, wind_burst launch
+		h.smashEffects(players, t, m, fall)
+	}
 	h.zombieReinforce(players, m, t)      // hard mode: a hurt zombie may call for backup
 	if m.etype == entityZombifiedPiglin { // vanilla: one hit angers the pack
 		for _, o := range h.mobs {
@@ -494,6 +508,8 @@ func attackPeriod(item int32) int {
 	case itemByName["wooden_shovel"], itemByName["stone_shovel"], itemByName["iron_shovel"],
 		itemByName["golden_shovel"], itemByName["diamond_shovel"], itemByName["netherite_shovel"]:
 		return 20
+	case itemByName["mace"]: // attack speed 0.6 (heavy, slow) → ceil(20/0.6 − 0.5)
+		return 33
 	case itemByName["wooden_hoe"], itemByName["golden_hoe"]: // attack speed 1.0
 		return 20
 	case itemByName["stone_hoe"]: // 2.0

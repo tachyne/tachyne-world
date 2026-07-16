@@ -460,13 +460,22 @@ func speedFor(etype int) float64 {
 // 5-damage sword kills an armor-2 zombie in 5 hits at 4.92/hit, not 4).
 // Armor-bypassing damage (fire ticks, daylight burn) must NOT route through
 // here — subtract from health directly.
-func (m *mob) hurt(dmg float64) {
+func (m *mob) hurt(dmg float64) { m.hurtBreach(dmg, 0) }
+
+// hurtBreach is hurt with a breach fraction subtracted from the armor's
+// effectiveness (the mace's Breach enchant: −0.15 per level). breachFrac 0 is
+// the normal path.
+func (m *mob) hurtBreach(dmg, breachFrac float64) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
 	if m.armor > 0 {
 		reduced := math.Min(20, math.Max(m.armor-dmg/2, m.armor*0.2))
-		dmg *= 1 - reduced/25
+		frac := reduced / 25
+		if breachFrac > 0 {
+			frac = math.Max(0, frac-breachFrac) // Breach lets the hit ignore some armor
+		}
+		dmg *= 1 - frac
 	}
 	dmg += m.dmgFrac
 	whole := math.Floor(dmg)
