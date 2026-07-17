@@ -132,12 +132,14 @@ func enchMaxLvl(id int8) int8 {
 	switch id {
 	case enchProtection:
 		return 4
-	case enchUnbreaking, enchFortune, enchLooting:
+	case enchUnbreaking, enchFortune, enchLooting, enchLure, enchLuckOfTheSea:
 		return 3
-	case enchSilkTouch:
+	case enchPunch:
+		return 2
+	case enchSilkTouch, enchMending, enchFlame, enchInfinity:
 		return 1
 	}
-	return 5 // sharpness, efficiency
+	return 5 // sharpness, efficiency, power
 }
 
 // countBookshelves scans the vanilla 5×5 ring (two high) around the table.

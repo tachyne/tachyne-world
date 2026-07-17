@@ -167,3 +167,29 @@ func TestChestFillDeterministicAndScattered(t *testing.T) {
 		t.Fatal("different positions should differ")
 	}
 }
+
+func TestLootEnchantCapsRespectVanilla(t *testing.T) {
+	// enchMaxLvl must cap the enchants loot can roll at their real vanilla
+	// maxima — an over-capped Mending V / Flame III used to slip through.
+	caps := map[int8]int8{
+		enchMending: 1, enchFlame: 1, enchInfinity: 1, enchPunch: 2,
+		enchLure: 3, enchLuckOfTheSea: 3, enchPower: 5,
+	}
+	for id, want := range caps {
+		if got := enchMaxLvl(id); got != want {
+			t.Errorf("enchMaxLvl(%d) = %d, want %d", id, got, want)
+		}
+	}
+	// A bow drawn from treasure must never exceed those caps over many rolls.
+	h := newHub(world.New(1))
+	for seed := int64(0); seed < 200; seed++ {
+		ctx := seededCtx(seed)
+		fn := lootFn{F: "ench_levels", NP: &lootNP{T: "const", V: 30}}
+		st := ctx.applyChestFn(h, &fn, invStack{item: itemBow, count: 1})
+		for _, e := range st.ench {
+			if e.lvl > 0 && e.lvl > enchMaxLvl(e.id) {
+				t.Fatalf("bow enchant id %d rolled level %d over cap %d", e.id, e.lvl, enchMaxLvl(e.id))
+			}
+		}
+	}
+}
