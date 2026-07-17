@@ -1145,6 +1145,18 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.fillBottle(t, e.slot)
 				}
+			case evBucketEmpty:
+				if t := players[e.eid]; t != nil {
+					h.bucketEmpty(players, t, e.slot, e.x, e.y, e.z)
+				}
+			case evBucketFill:
+				if t := players[e.eid]; t != nil {
+					h.bucketFill(players, t, e.slot)
+				}
+			case evCauldron:
+				if t := players[e.eid]; t != nil {
+					h.useCauldron(players, t, e.slot, e.x, e.y, e.z)
+				}
 			case evEat:
 				if t := players[e.eid]; t != nil {
 					h.startEating(t, e.slot)

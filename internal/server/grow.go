@@ -367,7 +367,14 @@ func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
 	if top == 0 {
 		return
 	}
-	if worldgen.PrecipitationAt(h.world.BiomeAt(x, z), topY) != worldgen.PrecipSnow {
+	snowing := worldgen.PrecipitationAt(h.world.BiomeAt(x, z), topY) == worldgen.PrecipSnow
+	if _, _, isCauldron := cauldronOf(top); isCauldron {
+		if h.raining && h.skyExposedColumn(x, z) {
+			h.cauldronPrecip(players, blockPos{x, topY, z}, top, snowing)
+		}
+		return
+	}
+	if !snowing {
 		return // not cold enough to snow/freeze here
 	}
 	if !h.skyExposedColumn(x, z) {

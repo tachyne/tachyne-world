@@ -203,6 +203,16 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
 		return
 	}
+	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav { // pour into the target cell
+		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz})
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
+	if p.heldItem() == itemBucket { // scoop: the hub walks the look ray to a source
+		s.hub.post(evBucketFill{eid: p.eid, slot: int32(p.held)})
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	if p.heldItem() == itemGlassBottle && (worldgen.IsWater(s.worldFor(p).At(x, y, z)) ||
 		worldgen.IsWater(s.worldFor(p).At(tx, ty, tz))) {
 		s.hub.post(evFillBottle{eid: p.eid, slot: int32(p.held)})
@@ -391,6 +401,11 @@ func (s *Server) abortPlace(p *player, x, y, z int, seq int32) {
 // two-tall, so both halves toggle together.
 func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, cy, cz float32) bool {
 	state := s.worldFor(p).Block(x, y, z)
+	if _, _, isCauldron := cauldronOf(state); isCauldron { // bucket/bottle/wash interactions
+		s.hub.post(evCauldron{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if state == craftingTableState { // open the 3x3 crafting window
 		s.hub.post(evOpenCraft{eid: p.eid})
 		s.sendBlockChange(p, x, y, z, state, seq) // ack the interaction sequence

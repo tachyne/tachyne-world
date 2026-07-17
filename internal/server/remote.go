@@ -96,6 +96,8 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evTridentUse{eid: p.eid})
 		case itemFishingRod:
 			h.post(evFishUse{eid: p.eid})
+		case itemBucket: // aiming at a fluid: the client sends plain use_item
+			h.post(evBucketFill{eid: p.eid, slot: int32(p.held)})
 		case itemShield:
 			h.post(evBlockStart{eid: p.eid})
 		case itemSnowball, itemEgg:
