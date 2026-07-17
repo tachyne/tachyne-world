@@ -152,6 +152,16 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, chunkSet map[[2]in
 		if h.seededChunks[c] {
 			continue
 		}
+		// A chunk with persisted mobs parked in the store was already populated
+		// in a prior session — mark it seeded WITHOUT laying a second herd.
+		// seededChunks is in-memory and resets on restart; without this guard the
+		// one-time generation herd is re-laid on top of the reloaded persisted
+		// herd (reconcileMobChunks reloads it a few chunks per tick, so seeding
+		// races ahead of the reload), doubling animals on every restart.
+		if h.mobstore != nil && h.mobstore.has(c[0], c[1]) {
+			h.seededChunks[c] = true
+			continue
+		}
 		h.seededChunks[c] = true
 		budget--
 		h.seedChunkAnimals(players, c, counts)
