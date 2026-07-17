@@ -44,7 +44,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Fluids | ✅ | Water and lava flow with vanilla slope-seeking spread and recede; lava meets water as obsidian/cobblestone/stone; infinite water sources form from a 2×2; concrete powder sets to concrete on water contact; blocks placed into water waterlog (and release it when broken). Buckets scoop sources and pour them back (water boils off in the nether); cauldrons hold water, lava and powder snow — bucket and bottle transfer, banner washing, and slow rain/snow fill under open sky. |
 | Growth | 🟡 | Crops, saplings→trees, sugar cane/cactus/bamboo, grass spread and leaf decay grow on the random tick; bone meal advances crops, grows saplings, and scatters grass and flowers; melon and pumpkin stems grow fruit. Mushrooms and per-species tree shapes still to come. |
 | Redstone | 🟡 | Dust, torches, repeaters, comparators, observers, pistons, plates, dispensers/hoppers — a solid tier 1; no quasi-connectivity, repeater locking, or sculk. |
-| Structures | 🟡 | Villages, dungeons, mineshafts, strongholds, ruins; no ocean monuments, mansions, temples, shipwrecks, outposts, ancient cities or trial chambers. |
+| Structures | 🟡 | Villages (with per-profession loot chests), dungeons, mineshafts, strongholds, ruins, desert temples, ruined portals, pillager outposts. Structure chests fill from the real vanilla loot tables — weighted, with enchanted gear — deterministically per chest. No ocean monuments, mansions, shipwrecks, ancient cities or trial chambers yet. |
 | Vehicles | 🟡 | Boats (all woods), minecarts with auto-shaping rails; no chest/hopper/TNT carts, vehicles don't survive restarts. |
 | Statistics | ✅ | The vanilla Statistics screen: blocks mined, items crafted/used, mobs killed, play time, distances and more, persisted per player. A few counters pending (damage dealt/taken, jumps). |
 | Scoreboard & teams | ✅ | /scoreboard objectives (incl. auto criteria: deaths, kills, health) on sidebar/list/below-name, /team with colors, prefixes and name-tag rules; persists with the world. |
@@ -302,10 +302,14 @@ multi-pod plan).
 
 **World structures**
 - Surface lakes (water, occasionally lava), buried dungeons — cobblestone
-  spawner rooms with live mob spawners and deterministic loot chests —
-  mineshaft networks (plank corridors, fence supports, cobwebs, rails) and
-  crumbling surface ruins; all pure functions of the seed, so chunks agree
-  without shared state
+  spawner rooms with live mob spawners and loot chests — mineshaft networks
+  (plank corridors, fence supports, cobwebs, rails) and crumbling surface
+  ruins; all pure functions of the seed, so chunks agree without shared state
+- Structure chests fill on first open from the real vanilla loot tables
+  (dungeon, desert temple, ruined portal, pillager outpost, and per-profession
+  village-house chests) — weighted entries, enchanted books and gear, scattered
+  across the chest the way vanilla does, and deterministic per chest so a chest
+  always holds the same haul
 
 **Vehicles**
 - Rails with auto-shaping (corners, slopes; powered/detector/activator

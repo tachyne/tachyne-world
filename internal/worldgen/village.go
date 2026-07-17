@@ -229,9 +229,27 @@ func (g *Generator) furnishHouse(baseX, baseZ int, ch *Chunk, h House) {
 	// Bed against the west interior wall: foot at dz=+1, head at dz=0 (faces north).
 	put(-1, h.Y, 1, BedFootNorth)
 	put(-1, h.Y, 0, BedHeadNorth)
-	// Workstation in the opposite corner.
-	ws := workstations[int(hash01(g.seed, h.X, h.Z, 0x7B)*float64(len(workstations)))%len(workstations)]
-	put(1, h.Y, -1, ws)
+	// Workstation in one corner, a loot chest in the free corner.
+	put(1, h.Y, -1, g.HouseWorkstation(h))
+	put(-1, h.Y, -1, ChestNorth)
+}
+
+// houseWorkstationIdx is the deterministic workstation slot for a house — the
+// single source of truth for both furnishing and the loot-table lookup.
+func (g *Generator) houseWorkstationIdx(h House) int {
+	return int(hash01(g.seed, h.X, h.Z, 0x7B)*float64(len(workstations))) % len(workstations)
+}
+
+// HouseWorkstation is the workstation block a house is furnished with (used by
+// the server to pick that house's chest loot table).
+func (g *Generator) HouseWorkstation(h House) uint32 {
+	return workstations[g.houseWorkstationIdx(h)]
+}
+
+// HouseChest is the world position of a house's loot chest (the free interior
+// corner, opposite the bed).
+func (g *Generator) HouseChest(h House) (x, y, z int) {
+	return h.X - 1, h.Y, h.Z - 1
 }
 
 // stampPath: an L-shaped dirt path from the well to a house door.

@@ -71,7 +71,7 @@ func TestDungeonChestLoot(t *testing.T) {
 		t.Skip("no dungeon near origin for this seed")
 	}
 	c := &chest{}
-	h.dungeonLoot(blockPos{d.ChestX, d.Y, d.ChestZ}, c)
+	h.fillStructureChest(blockPos{d.ChestX, d.Y, d.ChestZ}, c)
 	items := 0
 	for _, st := range c.slots {
 		if st.item != 0 {
@@ -83,13 +83,13 @@ func TestDungeonChestLoot(t *testing.T) {
 	}
 	// Deterministic: same chest fills the same way.
 	c2 := &chest{}
-	h.dungeonLoot(blockPos{d.ChestX, d.Y, d.ChestZ}, c2)
+	h.fillStructureChest(blockPos{d.ChestX, d.Y, d.ChestZ}, c2)
 	if c.slots != c2.slots {
 		t.Fatal("loot must be deterministic per chest")
 	}
 	// A non-dungeon position stays empty.
 	c3 := &chest{}
-	h.dungeonLoot(blockPos{d.ChestX + 1, d.Y, d.ChestZ}, c3)
+	h.fillStructureChest(blockPos{d.ChestX + 1, d.Y, d.ChestZ}, c3)
 	for _, st := range c3.slots {
 		if st.item != 0 {
 			t.Fatal("ordinary chests must not get dungeon loot")

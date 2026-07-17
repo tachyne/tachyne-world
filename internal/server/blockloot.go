@@ -70,10 +70,17 @@ type lootEntry struct {
 	Conditions []lootCond  `json:"conditions"`
 	Functions  []lootFn    `json:"functions"`
 	Children   []lootEntry `json:"children"`
+	// Chest-table extras (absent from block/entity data → zero, so those paths
+	// are unaffected). W/Q are the vanilla entry weight/quality; Ref names a
+	// nested loot table for a "ref" entry.
+	W   int    `json:"w,omitempty"`
+	Q   int    `json:"q,omitempty"`
+	Ref string `json:"ref,omitempty"`
 }
 
 type lootPool struct {
 	Rolls      lootNP      `json:"rolls"`
+	Bonus      *lootNP     `json:"bonus,omitempty"` // chest tables: bonus_rolls × luck
 	Conditions []lootCond  `json:"conditions"`
 	Functions  []lootFn    `json:"functions"`
 	Entries    []lootEntry `json:"entries"`
@@ -150,6 +157,10 @@ type lootCtx struct {
 	looting        int
 	killedByPlayer bool
 	onFire         bool // the dying mob burned to death → cooked-meat smelt
+
+	// Chest-loot context (unused for block/entity loot): the opener's luck
+	// shifts weighted-entry selection. Always 0 today (no luck attribute).
+	luck float64
 }
 
 // evalBlockLoot rolls the baked table; returns nil if the block has none.

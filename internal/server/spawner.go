@@ -73,43 +73,5 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 	}
 }
 
-// dungeonLoot deterministically fills a first-opened dungeon chest.
-func (h *hub) dungeonLoot(pos blockPos, c *chest) {
-	d := h.world.Gen().DungeonIn(pos.x, pos.z)
-	if !d.Exists || pos.x != d.ChestX || pos.y != d.Y || pos.z != d.ChestZ {
-		return
-	}
-	roll := func(name string, min, span, slot int, salt uint64) {
-		id, ok := itemByName[name]
-		if !ok {
-			return
-		}
-		n := min + int(hash01ServerSeed(h.world.Seed(), pos.x+slot, pos.z, salt)*float64(span+1))
-		if n > 0 {
-			c.slots[slot] = invStack{item: id, count: n}
-		}
-	}
-	roll("iron_ingot", 1, 3, 3, 0x10)
-	roll("bread", 1, 2, 7, 0x11)
-	roll("gunpowder", 0, 4, 11, 0x12)
-	roll("redstone", 0, 6, 14, 0x13)
-	roll("string", 0, 3, 17, 0x14)
-	roll("bone", 1, 3, 21, 0x15)
-	if hash01ServerSeed(h.world.Seed(), pos.x, pos.z, 0x16) < 0.15 {
-		roll("golden_apple", 1, 0, 13, 0x17)
-	}
-	if hash01ServerSeed(h.world.Seed(), pos.x, pos.z, 0x18) < 0.25 {
-		roll("saddle", 1, 0, 5, 0x19)
-	}
-}
-
-// hash01ServerSeed mirrors worldgen's deterministic hash for loot rolls.
-func hash01ServerSeed(seed int64, x, z int, salt uint64) float64 {
-	h := uint64(seed) + salt
-	h ^= uint64(int64(x)) * 0x9e3779b97f4a7c15
-	h = (h ^ (h >> 30)) * 0xbf58476d1ce4e5b9
-	h ^= uint64(int64(z)) * 0xc2b2ae3d27d4eb4f
-	h = (h ^ (h >> 27)) * 0x94d049bb133111eb
-	h ^= h >> 31
-	return float64(h>>11) / float64(uint64(1)<<53)
-}
+// (Structure chest loot is now data-driven — see structloot.go/chestloot.go.
+// The old hand-rolled dungeonLoot + hash01ServerSeed lived here.)

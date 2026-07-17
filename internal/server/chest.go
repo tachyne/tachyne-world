@@ -74,10 +74,7 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	c := h.chests[pos]
 	if c == nil {
 		c = &chest{}
-		h.dungeonLoot(pos, c) // a generated structure chest fills on first open
-		h.desertTempleLoot(pos, c)
-		h.ruinedPortalLoot(pos, c)
-		h.pillagerOutpostLoot(pos, c)
+		h.fillStructureChest(pos, c) // a generated structure chest fills on first open
 		h.chests[pos] = c
 	}
 	h.nextWin++

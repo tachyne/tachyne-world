@@ -134,10 +134,7 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	for _, pos := range [2]blockPos{left, right} {
 		if h.chests[pos] == nil {
 			c := &chest{}
-			h.dungeonLoot(pos, c)
-			h.desertTempleLoot(pos, c)
-			h.ruinedPortalLoot(pos, c)
-			h.pillagerOutpostLoot(pos, c)
+			h.fillStructureChest(pos, c)
 			h.chests[pos] = c
 		}
 	}
