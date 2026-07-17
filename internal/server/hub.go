@@ -393,7 +393,9 @@ type hub struct {
 	items  map[int32]*itemEntity  // dropped-item entities (block drops)
 	arrows map[int32]*arrowEntity // in-flight/stuck projectiles (skeleton shots)
 	orbs   map[int32]*xpOrb       // experience orbs awaiting pickup
-	rng    *rand.Rand             // hub-goroutine-only randomness (mob behaviour, drops)
+
+	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
+	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
 
 	nextWin  int32                 // last container window id handed out (cycles 1..100)
 	furnaces map[blockPos]*furnace // active furnace states (hub-goroutine-only)
@@ -539,6 +541,7 @@ func newHub(w *world.World) *hub {
 		items:         map[int32]*itemEntity{},
 		arrows:        map[int32]*arrowEntity{},
 		orbs:          map[int32]*xpOrb{},
+		bobbers:       map[int32]*bobberEntity{},
 		npcs:          map[int32]*npc{},
 		furnaces:      map[blockPos]*furnace{},
 		chests:        map[blockPos]*chest{},
@@ -709,8 +712,9 @@ func (h *hub) run() {
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 			}
-			h.updateArrows(players) // every tick: arrows are fast enough to tunnel otherwise
-			h.mapsTick(players)     // held filled maps: color scan + holder updates
+			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
+			h.updateBobbers(players) // fishing bobbers: flight, bobbing, the catch timers
+			h.mapsTick(players)      // held filled maps: color scan + holder updates
 			if age%10 == 0 {
 				h.mapFramesTick(players) // framed maps: viewers get patches + markers
 			}
@@ -1165,6 +1169,10 @@ func (h *hub) run() {
 			case evXbowUse:
 				if t := players[e.eid]; t != nil {
 					h.useXbow(players, t)
+				}
+			case evFishUse:
+				if t := players[e.eid]; t != nil {
+					h.useRod(players, t)
 				}
 			case evTridentUse:
 				if t := players[e.eid]; t != nil {

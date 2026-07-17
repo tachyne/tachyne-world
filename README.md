@@ -37,7 +37,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Combat | ✅ | 1.9 cooldown model, crits, sweep, knockback, shields, bows, crossbows (quick_charge/multishot/piercing), tridents (loyalty/riptide/impaling), the mace (smash attack + density/breach/wind_burst), TNT; trident channeling missing. |
 | Mobs | ✅ | The complete vanilla living roster with vanilla attributes, breeding/taming/riding, and vanilla natural spawning: per-category caps scaled by loaded chunks, spawns at any height (caves populate day and night), vanilla light rules (torch light blocks spawns, storms darken the sky enough for daytime monsters), per-biome weighted pools and pack sizes, distance-based despawning. Mobs persist across restarts (`mobs.json`) — herds, farm animals with their gear and age, and tamed pets survive a reboot; villagers and bosses are not saved yet. A few behaviors simplified (no enderman block-carrying, spider wall-climb, drowned swimming). |
 | Survival loop | ✅ | Hunger/saturation, XP with the vanilla curve, death/respawn, beds, status effects (a few missing: absorption, night vision, levitation). |
-| **Advancements** | ✅ | The full vanilla advancement tree with vanilla reveal rules, toasts, chat announces and XP rewards. Criteria whose mechanics don't exist yet (fishing, structures, crossbows…) show but can't be earned — about a third. |
+| **Advancements** | ✅ | The full vanilla advancement tree with vanilla reveal rules, toasts, chat announces and XP rewards. Criteria whose mechanics don't exist yet (structure visits, some item predicates…) show but can't be earned — about a quarter. |
 | Enchanting / anvil / brewing | 🟡 | Real table + bookshelf power, anvil merge/repair/rename, grindstone; curated enchantment pool (not all 40+), no splash/lingering potions or redstone/glowstone modifiers. |
 | Villages & trading | 🟡 | Generated villages, villager schedules/pathfinding, iron golem, merchant screen trading; 3 professions with static prices (no leveling/restocks/gossip). |
 | The Nether / The End | 🟡 | Both dimensions with portals, nether mobs, brewing ingredients, the full dragon fight + elytra; no fortresses, bastions, end cities or outer islands yet. |
@@ -62,7 +62,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Beacon | ✅ | Vanilla pyramid tiers (1–4 layers of iron/gold/diamond/emerald/netherite), the beam needs an open sky column (glass passes), the menu takes a payment item and a power choice (tier-gated: speed/haste → resistance/jump boost → strength → regeneration or level II), and effects pulse to everyone in range every 4 seconds. Powers persist with the world. |
 | Locator bar | ✅ | 26.2 clients see other players as direction markers on the locator bar (the world's positions ride a new engine frame the gateway renders only for 1.21.6+ clients; the locatorBar gamerule toggles it). |
 | Commands & gamerules | 🟡 | ~35 commands including /msg /tell /kick /clear /spawnpoint /playsound /particle plus the world admin set; 18 gamerules wired to real systems (keepInventory, doDaylightCycle, doMobSpawning, mobGriefing, doWeatherCycle, doFireTick, doTileDrops, doMobLoot, naturalRegeneration, fall/drowning/fire damage, announceAdvancements, showDeathMessages, doImmediateRespawn, randomTickSpeed, playersSleepingPercentage, locatorBar). |
-| Fishing, raids | ❌ | On the parity roadmap, roughly in that order. |
+| Fishing | ✅ | The vanilla bobber (cast physics, bobbing, the wait → wake → nibble sequence with rain/sky modifiers), the fish/junk/treasure loot pools at vanilla weights, Lure and Luck of the Sea, the open-water treasure rule, rod durability, XP per catch — and reeling a hooked mob yanks it toward you. |
+| Raids | ❌ | On the parity roadmap. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
@@ -147,7 +148,7 @@ multi-pod plan).
   XP rewards pay out, and progress persists per player. Criteria fire from
   live gameplay — items obtained, mobs killed, biomes visited, dimensions
   entered, animals bred/tamed, trades, enchants, brews, sleep. Criteria whose
-  mechanics aren't built yet (fishing, structure visits, crossbows…) are
+  mechanics aren't built yet (structure visits, some item predicates…) are
   visible but unobtainable until those land.
 
 **Combat**

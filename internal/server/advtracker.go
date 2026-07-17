@@ -156,7 +156,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 			}
 		}
 		return true
-	case "consume_item":
+	case "consume_item", "fishing_rod_hooked":
 		if len(c.items) == 0 {
 			return true
 		}

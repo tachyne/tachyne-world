@@ -23,6 +23,9 @@ const (
 	particleCrit             = 5
 	particleExplosionEmitter = 21
 	particlePoof             = 56
+	particleBubble           = 3  // stable across every served version
+	particleFishing          = 30 // the bobber wake (31 on 773+, 38 on 776)
+	particleSplash           = 67 // (68 on 773+, 70 on 775, 77 on 776)
 
 	worldEventBlockBreak = 2001
 	particleNote         = 55 // canonical 770 particle id (remapped per client)

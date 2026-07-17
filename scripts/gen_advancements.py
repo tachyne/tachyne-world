@@ -111,6 +111,9 @@ def distill(trigger, cond, tags):
     elif t == "consume_item":
         p = items_pred(c.get("item", {}), tags)
         d["items"] = [p] if p else []
+    elif t == "fishing_rod_hooked":
+        p = items_pred(c.get("item", {}), tags)  # the caught item
+        d["items"] = [p] if p else []
     elif t == "placed_block":
         blocks = [strip_ns(l["block"]) for l in c.get("location", [])
                   if isinstance(l, dict) and "block" in l]
