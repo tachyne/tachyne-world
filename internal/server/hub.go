@@ -835,6 +835,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
+					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}
@@ -1472,6 +1473,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
+					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}

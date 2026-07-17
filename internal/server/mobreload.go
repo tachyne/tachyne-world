@@ -7,14 +7,17 @@ import "encoding/hex"
 // chunks enter range — there is no boot-time bulk restore.
 
 // persistMob reports whether a live mob should be written to mobs.json. It keeps
-// every non-dying mob this pod owns except villagers (trade state deferred) and
-// the bosses; LLM NPCs live in a separate registry and are never in h.mobs.
+// every non-dying mob this pod owns except the bosses and LLM NPCs (villager-
+// bodied, but their identity lives in the npc registry + memory files — they
+// stay resident and are respawned by their own system).
 func (h *hub) persistMob(m *mob) bool {
 	if m == nil || m.dying > 0 || m == h.dragon {
 		return false
 	}
-	switch m.etype {
-	case entityVillager, entityWither:
+	if m.etype == entityWither {
+		return false
+	}
+	if _, isNPC := h.npcs[m.eid]; isNPC {
 		return false
 	}
 	return h.ownedAt(m.x, m.z)
@@ -76,6 +79,28 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		}
 	}
 	m.ovrSpeed, m.ovrDamage = sm.OvrSpeed, sm.OvrDamage
+	m.home, m.bed, m.work, m.meet = unpackPos(sm.Home), unpackPos(sm.Bed), unpackPos(sm.Work), unpackPos(sm.Meet)
+	switch m.etype {
+	case entityVillager:
+		// The village-population stance (updateVillages) — spawnMob alone
+		// leaves a villager as a generic grazer.
+		m.behavior, m.usesDoors, m.speed = villagerBehavior{}, true, 0.135
+		m.profession = sm.Profession % len(professionNames)
+		if m.profession < 0 {
+			m.profession = 0
+		}
+		m.tradeLevel = max(1, sm.TradeLevel)
+		m.tradeXP = sm.TradeXP
+		m.offers = nil
+		for _, o := range sm.Offers {
+			m.offers = append(m.offers, unpackOffer(o))
+		}
+		if len(m.offers) == 0 { // pre-v2.1 row (or a fresh one): deal tier-1 stock
+			h.unlockTier(m, 1)
+		}
+	case entityIronGolem:
+		m.behavior, m.noKB = golemBehavior{}, true // village-guardian stance
+	}
 	m.x, m.y, m.z, m.sx, m.sy, m.sz = x, y, z, x, y, z // seat the broadcast baseline at the load position
 	// Mark the restored mob's chunk seeded so the vanilla spawner does not lay a
 	// second chunk-generation herd on top of it.

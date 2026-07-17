@@ -355,6 +355,9 @@ func (s *Server) Serve() error {
 		s.hub.maps = newMapStore(s.MapFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		s.hub.mobstore = newMobStore(s.MobFile)
+		for _, w := range s.hub.mobstore.villages() {
+			s.hub.villageDone[unpackPos(w)] = true // populated villages stay populated
+		}
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
 		if s.WorldFile != "" {

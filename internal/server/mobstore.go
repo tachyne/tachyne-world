@@ -18,11 +18,14 @@ import (
 // Only per-instance mutable state is stored; everything static (species speed,
 // base health, sounds, archetype/behaviour) re-derives from etype on load.
 //
-// v1 scope carried forward: all non-dying, pod-owned mobs EXCEPT villagers
-// (trade state deferred), the ender dragon and wither (bosses), and LLM NPCs
-// (a separate registry). Persisted eids are meaningless across boots — a fresh
-// eid is minted on load, the uuid re-derived, and a pet's owner is stored by
-// player UUID and re-resolved to a live eid when that player joins.
+// Scope: all non-dying, pod-owned mobs EXCEPT the bosses (ender dragon,
+// wither) and LLM NPCs (villager-bodied, but owned by the npc registry).
+// Villagers persist as of v2.1 — profession, merchant tier/XP and their
+// exact offer list (with per-offer uses) ride along, plus schedule anchors;
+// populated villages are marked so a restart never double-populates.
+// Persisted eids are meaningless across boots — a fresh eid is minted on
+// load, the uuid re-derived, and a pet's owner is stored by player UUID and
+// re-resolved to a live eid when that player joins.
 
 type mobStore struct {
 	mu   sync.Mutex
@@ -36,6 +39,9 @@ type mobFile struct {
 	Chunks map[string][]savedMob `json:"chunks,omitempty"`
 	// Mobs is the v1 flat format — read once and migrated into Chunks on load.
 	Mobs []savedMob `json:"mobs,omitempty"`
+	// Villages lists the wells of villages already populated, so a restart
+	// does not spawn a second population on top of the reloaded one.
+	Villages [][3]int `json:"villages,omitempty"`
 }
 
 // savedMob is the flattened, scalar/packed twin of *mob (cf. savedStand). Item
@@ -84,7 +90,38 @@ type savedMob struct {
 	OwnerUUID string  `json:"owner,omitempty"`
 	OvrSpeed  float64 `json:"ovs,omitempty"`
 	OvrDamage float64 `json:"ovd,omitempty"`
+
+	// Villager merchant identity (v2.1). Offers are saved as FULL trades, not
+	// table indices — the live unlock rotation keys off the eid, which is
+	// reminted every load, so re-rolling would shuffle a villager's stock.
+	Profession int          `json:"prof,omitempty"`
+	TradeLevel int          `json:"tlvl,omitempty"`
+	TradeXP    int          `json:"txp,omitempty"`
+	Offers     []savedOffer `json:"offers,omitempty"`
+
+	// Anchors: villager schedule sites + the golem/villager home.
+	Home [3]int `json:"home,omitempty"`
+	Bed  [3]int `json:"bed,omitempty"`
+	Work [3]int `json:"work,omitempty"`
+	Meet [3]int `json:"meet,omitempty"`
 }
+
+// savedOffer is one merchant offer flattened:
+// {inItem, inCount, outItem, outCount, maxUses, xp, uses}.
+type savedOffer [7]int32
+
+func packOffer(o mobOffer) savedOffer {
+	t := o.trade
+	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses}
+}
+
+func unpackOffer(s savedOffer) mobOffer {
+	return mobOffer{trade: vTrade{inItem: s[0], inCount: s[1], outItem: s[2],
+		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6]}
+}
+
+func packPos(p blockPos) [3]int   { return [3]int{p.x, p.y, p.z} }
+func unpackPos(a [3]int) blockPos { return blockPos{a[0], a[1], a[2]} }
 
 func mobChunkKey(cx, cz int32) string {
 	return strconv.Itoa(int(cx)) + "," + strconv.Itoa(int(cz))
@@ -170,6 +207,24 @@ func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active 
 	}
 }
 
+// recordVillages snapshots the populated-village set for the next flush.
+func (s *mobStore) recordVillages(done map[blockPos]bool) {
+	vs := make([][3]int, 0, len(done))
+	for w := range done {
+		vs = append(vs, packPos(w))
+	}
+	s.mu.Lock()
+	s.m.Villages = vs
+	s.mu.Unlock()
+}
+
+// villages returns the persisted populated-village wells (boot restore).
+func (s *mobStore) villages() [][3]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Villages
+}
+
 // flush atomically writes the document (temp + rename), like every other store.
 func (s *mobStore) flush() {
 	s.mu.Lock()
@@ -208,5 +263,10 @@ func toSavedMob(m *mob) savedMob {
 	if m.tamed {
 		sm.OwnerUUID = hex.EncodeToString(m.ownerUUID[:])
 	}
+	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
+	for _, o := range m.offers {
+		sm.Offers = append(sm.Offers, packOffer(o))
+	}
+	sm.Home, sm.Bed, sm.Work, sm.Meet = packPos(m.home), packPos(m.bed), packPos(m.work), packPos(m.meet)
 	return sm
 }

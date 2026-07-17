@@ -137,8 +137,8 @@ func TestPersistMobFilter(t *testing.T) {
 	if h.persistMob(dying) {
 		t.Fatal("a dying mob must not persist")
 	}
-	if h.persistMob(villager) {
-		t.Fatal("villagers are deferred — must not persist")
+	if !h.persistMob(villager) {
+		t.Fatal("villagers persist as of v2.1")
 	}
 	if h.persistMob(wither) {
 		t.Fatal("bosses must not persist")
@@ -165,5 +165,127 @@ func TestPetOwnerResolvesOnJoin(t *testing.T) {
 	h.resolvePetOwners(stranger)
 	if pet2.owner != 0 {
 		t.Fatal("a non-owner must not adopt a restored pet")
+	}
+}
+
+// TestVillagerPersistRoundTrip: a leveled merchant comes back with its
+// profession, tier, XP, exact offer list (with uses) and schedule anchors —
+// and with the villager stance (behavior/doors/speed) reapplied.
+func TestVillagerPersistRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mobs.json")
+	players := map[int32]*tracked{}
+
+	h := newHub(world.New(1))
+	h.mobstore = newMobStore(path)
+	v := h.spawnMob(players, entityVillager, 10.5, 70, 10.5)
+	h.initVillagerTrades(v, 4) // librarian
+	h.awardTradeXP(v, 15)      // novice → apprentice, unlocks tier-2 stock
+	v.offers[0].uses = 3
+	wantOffers := append([]mobOffer(nil), v.offers...)
+	v.home, v.bed, v.work, v.meet = blockPos{10, 70, 10}, blockPos{9, 70, 10}, blockPos{11, 70, 9}, blockPos{40, 70, 40}
+
+	active := map[[2]int32]bool{{0, 0}: true}
+	h.activeChunks = active
+	h.mobstore.bucketLive(h.mobs, h.persistMob, active)
+	h.mobstore.flush()
+
+	h2 := newHub(world.New(1))
+	h2.mobstore = newMobStore(path)
+	h2.reconcileMobChunks(players, map[[2]int32]bool{{0, 0}: true})
+
+	var got *mob
+	for _, m := range h2.mobs {
+		if m.etype == entityVillager {
+			got = m
+		}
+	}
+	if got == nil {
+		t.Fatal("villager did not reload")
+	}
+	if got.profession != 4 || got.tradeLevel != 2 || got.tradeXP != 15 {
+		t.Fatalf("merchant identity lost: prof=%d tier=%d xp=%d", got.profession, got.tradeLevel, got.tradeXP)
+	}
+	if len(got.offers) != len(wantOffers) {
+		t.Fatalf("offer count changed: %d, want %d", len(got.offers), len(wantOffers))
+	}
+	for i := range wantOffers {
+		if got.offers[i] != wantOffers[i] {
+			t.Fatalf("offer %d changed: %+v, want %+v", i, got.offers[i], wantOffers[i])
+		}
+	}
+	if _, ok := got.behavior.(villagerBehavior); !ok {
+		t.Fatalf("villager stance lost: behavior=%T", got.behavior)
+	}
+	if !got.usesDoors || got.speed != 0.135 {
+		t.Fatalf("villager movement lost: doors=%v speed=%v", got.usesDoors, got.speed)
+	}
+	if got.bed != (blockPos{9, 70, 10}) || got.work != (blockPos{11, 70, 9}) || got.meet != (blockPos{40, 70, 40}) {
+		t.Fatalf("schedule anchors lost: bed=%v work=%v meet=%v", got.bed, got.work, got.meet)
+	}
+}
+
+// TestPreV21VillagerRowGetsStock: a saved villager row with no offers (or a
+// villager never dealt stock) reloads with tier-1 trades instead of an empty
+// merchant screen.
+func TestPreV21VillagerRowGetsStock(t *testing.T) {
+	players := map[int32]*tracked{}
+	h := newHub(world.New(1))
+	sm := savedMob{Etype: entityVillager, X: 10.5, Y: 70, Z: 10.5, Health: 20, Profession: 2}
+	m := h.reloadMob(players, &sm)
+	if m == nil {
+		t.Fatal("villager did not reload")
+	}
+	if m.tradeLevel != 1 || len(m.offers) == 0 {
+		t.Fatalf("legacy villager should deal tier-1 stock: tier=%d offers=%d", m.tradeLevel, len(m.offers))
+	}
+}
+
+// TestGolemReloadKeepsGuardianStance: a reloaded iron golem is still the
+// village guardian (behavior + knockback immunity + home anchor).
+func TestGolemReloadKeepsGuardianStance(t *testing.T) {
+	players := map[int32]*tracked{}
+	h := newHub(world.New(1))
+	sm := savedMob{Etype: entityIronGolem, X: 10.5, Y: 70, Z: 10.5, Health: 80, Home: [3]int{12, 70, 12}}
+	m := h.reloadMob(players, &sm)
+	if m == nil {
+		t.Fatal("golem did not reload")
+	}
+	if _, ok := m.behavior.(golemBehavior); !ok {
+		t.Fatalf("guardian stance lost: behavior=%T", m.behavior)
+	}
+	if !m.noKB || m.home != (blockPos{12, 70, 12}) {
+		t.Fatalf("golem attributes lost: noKB=%v home=%v", m.noKB, m.home)
+	}
+}
+
+// TestNPCMobNotPersisted: an LLM NPC's villager body must never enter
+// mobs.json — the npc registry owns it.
+func TestNPCMobNotPersisted(t *testing.T) {
+	players := map[int32]*tracked{}
+	h := newHub(world.New(1))
+	n := h.spawnNPC(players, "Testy", "a test persona", 10.5, 10.5)
+	if n == nil {
+		t.Fatal("npc spawn failed")
+	}
+	if h.persistMob(n.mob) {
+		t.Fatal("NPC-backed mob must not persist")
+	}
+	v := h.spawnMob(players, entityVillager, 12.5, 70, 12.5)
+	if !h.persistMob(v) {
+		t.Fatal("an ordinary villager must persist now")
+	}
+}
+
+// TestVillageMarkersPersist: populated villages survive a store round trip so
+// a restart does not spawn a second population.
+func TestVillageMarkersPersist(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mobs.json")
+	s := newMobStore(path)
+	s.recordVillages(map[blockPos]bool{{100, 64, -200}: true})
+	s.flush()
+	s2 := newMobStore(path)
+	vs := s2.villages()
+	if len(vs) != 1 || unpackPos(vs[0]) != (blockPos{100, 64, -200}) {
+		t.Fatalf("village markers lost: %v", vs)
 	}
 }
