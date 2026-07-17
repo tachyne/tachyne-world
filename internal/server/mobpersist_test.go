@@ -289,3 +289,78 @@ func TestVillageMarkersPersist(t *testing.T) {
 		t.Fatalf("village markers lost: %v", vs)
 	}
 }
+
+// TestCullAnimals verifies the one-time density cull: species capped per chunk,
+// cows thinned to a fraction of chunks, pets and villagers always kept.
+func TestCullAnimals(t *testing.T) {
+	s := newMobStore("")
+	// A dense chunk: 20 cows, 2 sheep, a tamed wolf, a villager.
+	var dense []savedMob
+	for i := 0; i < 20; i++ {
+		dense = append(dense, savedMob{Etype: entityCow, X: float64(i), Y: 70, Z: 0})
+	}
+	dense = append(dense,
+		savedMob{Etype: entitySheep, X: 1, Y: 70, Z: 1},
+		savedMob{Etype: entitySheep, X: 2, Y: 70, Z: 1},
+		savedMob{Etype: entityWolf, X: 3, Y: 70, Z: 1, Tamed: true, OwnerUUID: "abcd"},
+		savedMob{Etype: entityVillager, X: 4, Y: 70, Z: 1},
+	)
+	// Fill several chunks with cows so coverage-thinning has something to thin.
+	s.m.Chunks = map[string][]savedMob{}
+	for cx := 0; cx < 10; cx++ {
+		key := mobChunkKey(int32(cx), 0)
+		var b []savedMob
+		for i := 0; i < 8; i++ {
+			b = append(b, savedMob{Etype: entityCow, X: float64(cx*16 + i), Y: 70, Z: 0})
+		}
+		s.m.Chunks[key] = b
+	}
+	s.m.Chunks[mobChunkKey(0, 0)] = dense // overwrite chunk 0 with the mixed dense one
+
+	before, after := s.cullAnimals(4, 5)
+	if after >= before {
+		t.Fatalf("cull should reduce mobs: %d -> %d", before, after)
+	}
+
+	// Chunk 0 keeps cows (0%5==0): ≤4 cows, both sheep, the pet, the villager.
+	c0 := s.m.Chunks[mobChunkKey(0, 0)]
+	cows, sheep, wolf, vill := 0, 0, 0, 0
+	for _, m := range c0 {
+		switch m.Etype {
+		case entityCow:
+			cows++
+		case entitySheep:
+			sheep++
+		case entityWolf:
+			wolf++
+		case entityVillager:
+			vill++
+		}
+	}
+	if cows != 4 {
+		t.Fatalf("dense chunk should cap cows at 4, got %d", cows)
+	}
+	if sheep != 2 || wolf != 1 || vill != 1 {
+		t.Fatalf("cull must keep sheep(2)/pet(1)/villager(1), got %d/%d/%d", sheep, wolf, vill)
+	}
+
+	// Cow coverage thinned: not every chunk still has cows.
+	chunksWithCows := 0
+	for _, b := range s.m.Chunks {
+		for _, m := range b {
+			if m.Etype == entityCow {
+				chunksWithCows++
+				break
+			}
+		}
+	}
+	if chunksWithCows >= 10 {
+		t.Fatalf("cow coverage should thin below 10 chunks, still %d", chunksWithCows)
+	}
+
+	// Idempotent: a second pass changes nothing more.
+	b2, a2 := s.cullAnimals(4, 5)
+	if b2 != a2 {
+		t.Fatalf("second cull pass should be a no-op, %d -> %d", b2, a2)
+	}
+}

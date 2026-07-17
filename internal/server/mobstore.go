@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -223,6 +224,59 @@ func (s *mobStore) villages() [][3]int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Villages
+}
+
+// cullAnimals is a one-time maintenance pass (behind -cull-animals): in every
+// chunk bucket it caps each species to capN and, for cows (the species the
+// pre-fix herd-doubling multiplied), keeps them in only ~1/cowMod of chunks —
+// bringing density back toward vanilla. Tamed mobs and villagers are always
+// kept. Returns the total persisted-mob count before and after. Idempotent:
+// re-running on an already-culled store is a no-op.
+func (s *mobStore) cullAnimals(capN, cowMod int) (before, after int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, bucket := range s.m.Chunks {
+		before += len(bucket)
+		keepCows := true
+		if cowMod > 1 {
+			if cx, cz, ok := parseChunkKey(key); ok {
+				keepCows = (((cx*31+cz)%cowMod)+cowMod)%cowMod == 0
+			}
+		}
+		out := bucket[:0:0]
+		perSpecies := map[int]int{}
+		for _, m := range bucket {
+			if m.Tamed || m.Etype == entityVillager {
+				out = append(out, m) // never cull pets or merchants
+				continue
+			}
+			if m.Etype == entityCow && !keepCows {
+				continue // this chunk keeps no cows (coverage thinning)
+			}
+			perSpecies[m.Etype]++
+			if perSpecies[m.Etype] <= capN {
+				out = append(out, m)
+			}
+		}
+		after += len(out)
+		if len(out) == 0 {
+			delete(s.m.Chunks, key)
+		} else {
+			s.m.Chunks[key] = out
+		}
+	}
+	return before, after
+}
+
+// parseChunkKey splits a "cx,cz" bucket key back into ints.
+func parseChunkKey(key string) (cx, cz int, ok bool) {
+	comma := strings.IndexByte(key, ',')
+	if comma < 0 {
+		return 0, 0, false
+	}
+	x, err1 := strconv.Atoi(key[:comma])
+	z, err2 := strconv.Atoi(key[comma+1:])
+	return x, z, err1 == nil && err2 == nil
 }
 
 // flush atomically writes the document (temp + rename), like every other store.

@@ -120,6 +120,12 @@ type Server struct {
 	// farm animals and tamed pets survive a restart ("" = in-memory only).
 	MobFile string
 
+	// CullAnimals, if > 0, runs a ONE-TIME maintenance pass at boot that caps
+	// each species to this many per chunk in the persisted mob store and thins
+	// overgrown cow coverage, preserving tamed mobs and villagers. Used once to
+	// undo the pre-fix generation-herd doubling; leave 0 in normal operation.
+	CullAnimals int
+
 	// WorldFile, if set, persists block edits to that file so they survive
 	// restarts (empty = in-memory only). Swap the store for a DB later.
 	WorldFile string
@@ -355,6 +361,12 @@ func (s *Server) Serve() error {
 		s.hub.maps = newMapStore(s.MapFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		s.hub.mobstore = newMobStore(s.MobFile)
+		if s.CullAnimals > 0 {
+			before, after := s.hub.mobstore.cullAnimals(s.CullAnimals, 5)
+			s.hub.mobstore.flush()
+			log.Printf("cull-animals: capped to %d/chunk + cow-thinned, persisted mobs %d -> %d",
+				s.CullAnimals, before, after)
+		}
 		for _, w := range s.hub.mobstore.villages() {
 			s.hub.villageDone[unpackPos(w)] = true // populated villages stay populated
 		}
