@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -212,11 +211,16 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	if c == nil {
 		return
 	}
+	// Vanilla getRandomSlot: a uniformly random non-empty slot (reservoir
+	// sampling), not the first one — so a dispenser empties unpredictably.
 	var st *invStack
+	seen := 0
 	for i := range c.slots {
 		if c.slots[i].item != 0 && c.slots[i].count > 0 {
-			st = &c.slots[i]
-			break
+			seen++
+			if h.rng.Intn(seen) == 0 {
+				st = &c.slots[i]
+			}
 		}
 	}
 	if st == nil {
@@ -230,6 +234,23 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	front := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 	item := st.item
 	dispense := isDispenser(state)
+
+	// Dropper facing a container inserts one item instead of tossing it
+	// (vanilla DropperBlock): the redstone-driven item pipe.
+	if !dispense {
+		if dst := h.containerSlots(front); dst != nil {
+			if binInsert(dst, invStack{item: item, count: 1}) == 0 {
+				if st.count--; st.count <= 0 {
+					*st = invStack{}
+				}
+				h.refreshBinViewers(players, front) // update anyone viewing the target
+			}
+			h.playSound(players, "minecraft:block.dispenser.dispense", sndBlock,
+				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
+			h.refreshBinViewers(players, pos)
+			return
+		}
+	}
 	eggEnt, isEgg := spawnEggEntity[item]
 	vehEt, isVeh := vehicleItems[item]
 	took := true
@@ -294,13 +315,37 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
-		bs, bok := protocol.BlockForItem(item)
-		if ts := h.world.At(front.x, front.y, front.z); bok && (ts == worldgen.Air || worldgen.IsReplaceable(ts)) {
-			h.setBlock(players, front, bs)
-			st.item = itemBucket // the bucket empties in place
-			st.count, took = 1, false
-		} else {
-			took = false
+		// Pour the bucket's fluid into the cell ahead (buckets are no longer
+		// placeable items — the engine owns fluid placement since #56).
+		fluid := uint32(worldgen.WaterBase)
+		if item == itemBucketLav {
+			fluid = worldgen.LavaBase
+		}
+		took = false
+		if ts := h.world.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+			h.setBlock(players, front, fluid)
+			st.item = itemBucket // filled bucket (stack size 1) empties in place
+		}
+	case dispense && item == itemBucket:
+		// Scoop a fluid source in the cell ahead into an empty bucket.
+		took = false
+		var filled int32
+		switch h.world.At(front.x, front.y, front.z) {
+		case worldgen.WaterBase:
+			filled = itemBucketH2O
+		case worldgen.LavaBase:
+			filled = itemBucketLav
+		}
+		if filled != 0 {
+			h.setBlock(players, front, worldgen.Air)
+			if st.count <= 1 {
+				*st = invStack{item: filled, count: 1}
+			} else { // empty buckets stack — the filled one finds its own slot
+				st.count--
+				if binInsert(c.slots, invStack{item: filled, count: 1}) > 0 {
+					h.spawnItem(players, filled, 1, fx, fy, fz)
+				}
+			}
 		}
 	default: // dropper (or a dispenser with a plain item): toss it out
 		if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
