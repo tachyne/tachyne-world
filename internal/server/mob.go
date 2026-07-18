@@ -65,6 +65,8 @@ type mob struct {
 	eggIn         int         // chicken: ticks until the next egg
 	size          int         // slime: 4/2/1 (splits in half on death)
 	neutral       bool        // enderman: peaceful until hit (anger flips it hostile)
+	sonicCD       int         // warden: mob-updates until the next sonic boom
+	digClock      int         // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter    blockPos    // raider: the raid this mob belongs to (zero = not a raider)
 	noKB          bool        // KNOCKBACK_RESISTANCE 1.0 (iron golem): never shoved
@@ -410,6 +412,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.witherShoot(players, m) // ranged: wither skulls
 			case entityShulker:
 				h.shulkerShoot(players, m) // ranged: homing bullets (ours: straight)
+			case entityWarden:
+				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:
 				h.guardianBeam(players, m) // charge-up beam
 			case entityCreeper:

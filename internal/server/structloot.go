@@ -34,6 +34,9 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	if p := g.OutpostIn(pos.x, pos.z); p.Exists && pos.x == p.ChestX && pos.y == p.ChestY && pos.z == p.ChestZ {
 		return "chests/pillager_outpost", true
 	}
+	if a := g.AncientCityIn(pos.x, pos.z); a.Exists && pos.x == a.ChestX && pos.y == a.ChestY && pos.z == a.ChestZ {
+		return "chests/ancient_city", true
+	}
 	if v := g.VillageIn(pos.x, pos.z); v.Exists {
 		for _, house := range v.Houses {
 			if cx, cy, cz := g.HouseChest(house); pos.x == cx && pos.y == cy && pos.z == cz {
