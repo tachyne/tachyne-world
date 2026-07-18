@@ -31,8 +31,12 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	if p := g.RuinedPortalIn(pos.x, pos.z); p.Exists && pos.x == p.ChestX && pos.y == p.ChestY && pos.z == p.ChestZ {
 		return "chests/ruined_portal", true
 	}
-	if p := g.OutpostIn(pos.x, pos.z); p.Exists && pos.x == p.ChestX && pos.y == p.ChestY && pos.z == p.ChestZ {
-		return "chests/pillager_outpost", true
+	if p := g.OutpostIn(pos.x, pos.z); p.Exists {
+		for _, c := range g.OutpostChests(p) {
+			if pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {
+				return "chests/pillager_outpost", true
+			}
+		}
 	}
 	if a := g.AncientCityIn(pos.x, pos.z); a.Exists && pos.x == a.ChestX && pos.y == a.ChestY && pos.z == a.ChestZ {
 		return "chests/ancient_city", true

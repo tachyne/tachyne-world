@@ -1,28 +1,22 @@
 package worldgen
 
-// Pillager outpost — the dark-oak watchtower, reimplemented from the 1.21.5
-// pillager_outpost jigsaw feature (facts: dimensions, dark-oak/cobblestone
-// palette, an upper loot chest, and the ominous banner on top). We build a
-// single procedural watchtower rather than the full jigsaw (tents/cages/targets
-// omitted). The server populates it with a captain + pillager squad on approach
-// (see updateOutposts) and fills the chest on first open. Outposts sit on dry
-// land and keep clear of villages, mirroring vanilla's shared structure set.
+// Pillager outpost — now assembled from the REAL vanilla pillager_outpost jigsaw
+// templates (base_plate → watchtower + feature plates/tents/cages/targets) via
+// the jigsaw assembler, so the layout is the exact vanilla structure. The server
+// still garrisons a captain + pillager squad on approach (see updateOutposts).
+// Outposts sit on dry land and keep clear of villages, mirroring vanilla's
+// shared structure set.
 
 const (
 	outpostCell = 400 // one outpost per ~400-block cell (when the roll + siting pass)
 )
 
-var (
-	DarkOakPlanks = blockBase("dark_oak_planks")     // dark_oak_planks
-	DarkOakFence  = blockBase("dark_oak_fence") + 31 // dark_oak_fence (default: no connections)
-	WhiteBanner   = blockBase("white_banner")        // white_banner rotation=0 (stands in for the ominous banner)
-)
-
-// PillagerOutpost is a dark-oak watchtower with an upper loot chest.
+// PillagerOutpost marks a placed outpost site. The watchtower + feature plates
+// are assembled from the real vanilla jigsaw templates (see AssembleOutpost);
+// X,Y,Z is the site centre at the surface (the server garrisons pillagers here).
 type PillagerOutpost struct {
-	X, Y, Z                int // tower base centre, at the surface
-	ChestX, ChestY, ChestZ int
-	Exists                 bool
+	X, Y, Z int
+	Exists  bool
 }
 
 // OutpostIn returns the outpost whose cell contains (wx,wz), if the roll passes
@@ -47,9 +41,7 @@ func (g *Generator) OutpostIn(wx, wz int) PillagerOutpost {
 			}
 		}
 	}
-	p := PillagerOutpost{X: x, Y: y, Z: z, Exists: true}
-	p.ChestX, p.ChestY, p.ChestZ = x+1, y+13, z+1 // on the cabin floor up top
-	return p
+	return PillagerOutpost{X: x, Y: y, Z: z, Exists: true}
 }
 
 func (g *Generator) stampOutposts(ch *Chunk, cx, cz int32) {
@@ -59,86 +51,29 @@ func (g *Generator) stampOutposts(ch *Chunk, cx, cz int32) {
 		if !p.Exists {
 			continue
 		}
-		g.stampOutpost(ch, baseX, baseZ, p)
+		g.StampPieces(ch, cx, cz, g.AssembleOutpost(p))
 	}
 }
 
-// stampOutpost writes the parts of the watchtower that fall inside this chunk:
-// a 7×7 cobblestone footing, four dark-oak corner posts, two plank floors, an
-// overhanging 9×9 platform with a fence railing, a roofed cabin, an upper loot
-// chest, and the ominous banner on the roof.
-func (g *Generator) stampOutpost(ch *Chunk, baseX, baseZ int, p PillagerOutpost) {
-	const (
-		base = 3 // 7×7 foundation half-width
-		plat = 4 // 9×9 top platform half-width
-		cab  = 2 // 5×5 cabin half-width
-	)
-	top := p.Y + 12 // platform floor level
+// AssembleOutpost builds the outpost's jigsaw pieces (deterministic per site):
+// the base plate centred on the site at the surface, then the watchtower + the
+// feature plates the assembler attaches. Same result for every chunk the outpost
+// touches, so the pieces align.
+func (g *Generator) AssembleOutpost(p PillagerOutpost) []PlacedPiece {
+	rng := newJigsawRNG(g.seed, p.X, p.Z)
+	// base_plate is 16 wide; centre it on the site, foundation one below surface.
+	return g.AssembleJigsaw("pillager_outpost/base_plates", p.X-8, p.Y-1, p.Z-8, rng, 7)
+}
 
-	for lx := 0; lx < 16; lx++ {
-		for lz := 0; lz < 16; lz++ {
-			wx, wz := baseX+lx, baseZ+lz
-			dx, dz := wx-p.X, wz-p.Z
-			adx, adz := abs(dx), abs(dz)
-			corner := adx == base && adz == base
-
-			// Foundation slab, with cobblestone legs dropped at the corners so
-			// the tower stands level on a slope.
-			if adx <= base && adz <= base {
-				setSectionBlock(ch, lx, p.Y, lz, Cobblestone, true)
-				if corner {
-					for wy := p.Y - 1; wy >= p.Y-4; wy-- {
-						setSectionBlock(ch, lx, wy, lz, Cobblestone, true)
-					}
-				}
-			}
-
-			// Corner posts, plank floors, hollow interior between them.
-			if adx <= base && adz <= base {
-				for wy := p.Y + 1; wy < top; wy++ {
-					switch {
-					case wy == p.Y+4 || wy == p.Y+8: // interior floors
-						setSectionBlock(ch, lx, wy, lz, DarkOakPlanks, true)
-					case corner:
-						setSectionBlock(ch, lx, wy, lz, DarkOakLog, true)
-					default:
-						setSectionBlock(ch, lx, wy, lz, Air, true)
-					}
-				}
-			}
-
-			// Overhanging platform + fence railing around its edge.
-			if adx <= plat && adz <= plat {
-				setSectionBlock(ch, lx, top, lz, DarkOakPlanks, true)
-				if adx == plat || adz == plat {
-					setSectionBlock(ch, lx, top+1, lz, DarkOakFence, true)
-				}
-			}
-
-			// Cabin: 5×5 plank walls (doorway on the +Z face) and a flat roof.
-			if adx <= cab && adz <= cab {
-				wall := adx == cab || adz == cab
-				for wy := top + 1; wy <= top+3; wy++ {
-					switch {
-					case wall && dz == cab && dx == 0 && wy <= top+2: // doorway gap
-						setSectionBlock(ch, lx, wy, lz, Air, true)
-					case wall:
-						setSectionBlock(ch, lx, wy, lz, DarkOakPlanks, true)
-					default:
-						setSectionBlock(ch, lx, wy, lz, Air, true)
-					}
-				}
-				setSectionBlock(ch, lx, top+4, lz, DarkOakPlanks, true) // roof
-			}
-
-			// Loot chest inside the cabin, banner on the roof, an interior torch.
-			if wx == p.ChestX && wz == p.ChestZ {
-				setSectionBlock(ch, lx, p.ChestY, lz, ChestNorth, true)
-			}
-			if dx == 0 && dz == 0 {
-				setSectionBlock(ch, lx, top+5, lz, WhiteBanner, true) // ominous banner
-				setSectionBlock(ch, lx, p.Y+9, lz, Torch, true)       // interior light
-			}
+// OutpostChests returns the world positions of an outpost's loot chests (for
+// loot routing), by assembling it and rotating each piece's chest cells.
+func (g *Generator) OutpostChests(p PillagerOutpost) [][3]int {
+	var out [][3]int
+	for _, pc := range g.AssembleOutpost(p) {
+		for _, c := range pc.Tmpl.Chests {
+			rx, ry, rz := pc.Tmpl.rotatePos(c[0], c[1], c[2], pc.Rot)
+			out = append(out, [3]int{pc.OX + rx, pc.OY + ry, pc.OZ + rz})
 		}
 	}
+	return out
 }

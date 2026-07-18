@@ -35,10 +35,15 @@ func TestOutpostQuery(t *testing.T) {
 			}
 		}
 	}
-	// Chest rides on the cabin floor (Y+13), inside the 5×5 cabin footprint.
-	if p.ChestY != p.Y+13 || abs(p.ChestX-p.X) > 2 || abs(p.ChestZ-p.Z) > 2 {
-		t.Fatalf("chest %d,%d,%d not on the cabin floor of tower %d,%d,%d",
-			p.ChestX, p.ChestY, p.ChestZ, p.X, p.Y, p.Z)
+	// The outpost assembles from real templates and yields a watchtower chest,
+	// above the surface and near the site centre.
+	chests := g.OutpostChests(p)
+	if len(chests) == 0 {
+		t.Fatal("assembled outpost has no loot chest")
+	}
+	c := chests[0]
+	if c[1] <= p.Y || abs(c[0]-p.X) > 24 || abs(c[2]-p.Z) > 24 {
+		t.Fatalf("chest %v not in the watchtower above site %d,%d,%d", c, p.X, p.Y, p.Z)
 	}
 }
 
@@ -70,12 +75,15 @@ func TestOutpostStamps(t *testing.T) {
 	if !found {
 		t.Skip("no outpost within scan range for this seed")
 	}
-	// A dark-oak corner post one block above the footing (not a floor level).
-	if b := blockAt(g, p.X+3, p.Y+1, p.Z+3); b != DarkOakLog {
-		t.Fatalf("corner post at (%d,%d,%d) = %d, want dark_oak_log %d", p.X+3, p.Y+1, p.Z+3, b, DarkOakLog)
+	// The outpost assembles from real templates; its watchtower chest must land
+	// as an actual chest block in the generated world.
+	chests := g.OutpostChests(p)
+	if len(chests) == 0 {
+		t.Fatal("assembled outpost has no chest")
 	}
-	// The loot chest up in the cabin.
-	if b := blockAt(g, p.ChestX, p.ChestY, p.ChestZ); b != ChestNorth {
-		t.Fatalf("outpost chest at (%d,%d,%d) = %d, want chest %d", p.ChestX, p.ChestY, p.ChestZ, b, ChestNorth)
+	c := chests[0]
+	lo, hi := BlockRange("chest")
+	if b := blockAt(g, c[0], c[1], c[2]); b < lo || b > hi {
+		t.Fatalf("outpost chest at %v = %d, want a chest state in [%d,%d]", c, b, lo, hi)
 	}
 }
