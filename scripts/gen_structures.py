@@ -27,6 +27,7 @@ TEMPLATES = [
 # pillager outpost (small); ancient_city / trial_chambers / village follow.
 POOL_ROOTS = [
     "pillager_outpost/base_plates",
+    "village/plains/town_centers",
 ]
 
 
