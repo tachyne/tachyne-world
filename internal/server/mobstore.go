@@ -29,9 +29,10 @@ import (
 // re-resolved to a live eid when that player joins.
 
 type mobStore struct {
-	mu   sync.Mutex
-	path string
-	m    mobFile
+	mu     sync.Mutex
+	path   string
+	m      mobFile
+	seeded map[[2]int32]bool // chunks already given their one-time chunk-generation herd
 }
 
 type mobFile struct {
@@ -43,6 +44,11 @@ type mobFile struct {
 	// Villages lists the wells of villages already populated, so a restart
 	// does not spawn a second population on top of the reloaded one.
 	Villages [][3]int `json:"villages,omitempty"`
+	// Seeded is the permanent set of chunks that have already received their
+	// one-time vanilla chunk-generation herd. Persisted (was in-memory, reset
+	// every restart) so a rollout never re-lays herds on a chunk whose animals
+	// have since died or wandered — the unbounded-accumulation source.
+	Seeded [][2]int32 `json:"seeded,omitempty"`
 }
 
 // savedMob is the flattened, scalar/packed twin of *mob (cf. savedStand). Item
@@ -144,7 +150,81 @@ func newMobStore(path string) *mobStore {
 		s.m.Chunks[k] = append(s.m.Chunks[k], sm)
 	}
 	s.m.Mobs = nil
+	s.seeded = make(map[[2]int32]bool, len(s.m.Seeded))
+	for _, c := range s.m.Seeded {
+		s.seeded[c] = true
+	}
 	return s
+}
+
+// seededSet returns a copy of the persisted seeded-chunk set for the hub to own
+// (boot restore — the hub then marks + persists new ones through recordSeeded).
+func (s *mobStore) seededSet() map[[2]int32]bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[[2]int32]bool, len(s.seeded))
+	for k := range s.seeded {
+		out[k] = true
+	}
+	return out
+}
+
+// recordSeeded folds the hub's live seeded set into the persisted one (union,
+// never shrinks — a chunk seeded once stays seeded forever). Called before flush.
+func (s *mobStore) recordSeeded(set map[[2]int32]bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seeded == nil {
+		s.seeded = map[[2]int32]bool{}
+	}
+	for k := range set {
+		s.seeded[k] = true
+	}
+}
+
+// wipeWild is a one-time maintenance pass (behind -wipe-wild) that removes ALL
+// naturally-spawned mobs — wild passives and hostiles — keeping only the
+// village-tied and player-owned set (villagers, iron/snow golems, wandering
+// traders, tamed pets). Every currently-populated chunk is marked permanently
+// seeded so the vanilla chunk-generation pass never re-lays a herd there,
+// leaving repopulation to the capped per-tick natural spawner alone. Returns the
+// persisted-mob count before/after.
+func (s *mobStore) wipeWild() (before, after int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seeded == nil {
+		s.seeded = map[[2]int32]bool{}
+	}
+	for key, bucket := range s.m.Chunks {
+		before += len(bucket)
+		if cx, cz, ok := parseChunkKey(key); ok {
+			s.seeded[[2]int32{int32(cx), int32(cz)}] = true // populated once — never re-seed
+		}
+		out := bucket[:0:0]
+		for _, m := range bucket {
+			if keepMob(m) {
+				out = append(out, m)
+			}
+		}
+		after += len(out)
+		if len(out) == 0 {
+			delete(s.m.Chunks, key)
+		} else {
+			s.m.Chunks[key] = out
+		}
+	}
+	return before, after
+}
+
+// keepMob reports whether a saved mob survives the wild wipe: the village-tied
+// and player-owned set (mirrors hub.spawnExempt — the vanilla persistence /
+// MISC category that never despawns).
+func keepMob(m savedMob) bool {
+	switch m.Etype {
+	case entityVillager, entityIronGolem, entitySnowGolem, entityWanderingTrader:
+		return true
+	}
+	return m.Tamed
 }
 
 // take returns and removes a chunk's saved mobs (called when the chunk reloads).
@@ -314,6 +394,10 @@ func parseChunkKey(key string) (cx, cz int, ok bool) {
 // flush atomically writes the document (temp + rename), like every other store.
 func (s *mobStore) flush() {
 	s.mu.Lock()
+	s.m.Seeded = s.m.Seeded[:0]
+	for k := range s.seeded {
+		s.m.Seeded = append(s.m.Seeded, k)
+	}
 	data, _ := json.MarshalIndent(s.m, "", "  ")
 	path := s.path
 	s.mu.Unlock()

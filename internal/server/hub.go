@@ -870,6 +870,7 @@ func (h *hub) run() {
 				}
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}
@@ -1525,6 +1526,7 @@ func (h *hub) run() {
 				}
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
 				}

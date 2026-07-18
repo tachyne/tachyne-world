@@ -131,6 +131,13 @@ type Server struct {
 	// that point (protecting a nearby castle). Set once, then clear.
 	CleanupVillage string
 
+	// WipeWild, if set, runs a ONE-TIME pass at boot that removes every
+	// naturally-spawned mob (wild passives + hostiles) from the persisted store,
+	// keeping only village-tied and tamed mobs, and marks every populated chunk
+	// permanently seeded so the vanilla chunk-generation herds never re-lay.
+	// Used once to undo runaway accumulation; leave false in normal operation.
+	WipeWild bool
+
 	// WorldFile, if set, persists block edits to that file so they survive
 	// restarts (empty = in-memory only). Swap the store for a DB later.
 	WorldFile string
@@ -366,12 +373,21 @@ func (s *Server) Serve() error {
 		s.hub.maps = newMapStore(s.MapFile)
 		s.hub.containers = newContainerStore(s.ContainerFile)
 		s.hub.mobstore = newMobStore(s.MobFile)
+		if s.WipeWild {
+			before, after := s.hub.mobstore.wipeWild()
+			s.hub.mobstore.flush()
+			log.Printf("wipe-wild: removed all wild mobs (kept village-tied + tamed), persisted mobs %d -> %d",
+				before, after)
+		}
 		if s.CullAnimals > 0 {
 			before, after := s.hub.mobstore.cullAnimals(s.CullAnimals, 5)
 			s.hub.mobstore.flush()
 			log.Printf("cull-animals: capped to %d/chunk + cow-thinned, persisted mobs %d -> %d",
 				s.CullAnimals, before, after)
 		}
+		// Load the persisted seeded-chunk set so the vanilla chunk-generation herds
+		// fire once per chunk EVER (not once per restart) — the accumulation fix.
+		s.hub.seededChunks = s.hub.mobstore.seededSet()
 		if s.CleanupVillage != "" {
 			var cvx, cvz int
 			if _, err := fmt.Sscanf(s.CleanupVillage, "%d,%d", &cvx, &cvz); err == nil {

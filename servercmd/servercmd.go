@@ -45,6 +45,7 @@ func Main() {
 	spawner := flag.String("spawner", "tachyne", "natural-spawn model: tachyne (cheaper 1/8 sampler + herd top-up) or vanilla (exact NaturalSpawner: per-chunk rate + chunk-generation herds)")
 	cleanupVillage := flag.String("cleanup-village", "", "ONE-TIME: remove a suppressed village's stranded mobs + crop/door debris near x,z (empty = off)")
 	cullAnimals := flag.Int("cull-animals", 0, "ONE-TIME maintenance: cap each species to N per chunk in the saved mobs and thin overgrown cows (0 = off). Run once to undo pre-fix herd doubling, then remove.")
+	wipeWild := flag.Bool("wipe-wild", false, "ONE-TIME maintenance: remove ALL wild mobs (passives + hostiles) from the saved store, keep village-tied + tamed, and mark populated chunks permanently seeded. Run once to undo runaway accumulation, then remove.")
 	flag.Parse()
 
 	if *addr != "" {
@@ -86,6 +87,7 @@ func Main() {
 	srv.ContainerFile = "containers.json"
 	srv.MobFile = "mobs.json"
 	srv.CullAnimals = *cullAnimals
+	srv.WipeWild = *wipeWild
 	srv.CleanupVillage = *cleanupVillage
 	srv.SpawnPointFile = "spawns.json"
 	srv.PluginDataDir = *pluginDir
