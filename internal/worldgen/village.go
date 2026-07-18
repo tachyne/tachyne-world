@@ -90,27 +90,12 @@ func (g *Generator) VillageIn(wx, wz int) Village {
 	if hi-lo > villageFlat || lo <= SeaLevel+1 {
 		return Village{}
 	}
-	v := Village{X: cx, Z: cz, Y: g.Height(cx, cz), Exists: true}
-	n := 4 + int(hash01(g.seed, ox, oz, 0x73)*4) // 4..7 houses
-	for i := 0; i < n; i++ {
-		// Ring placement: fixed angles with jitter keep houses apart.
-		ang := (float64(i) + hash01(g.seed, ox+i, oz, 0x74)*0.5) / float64(n)
-		dist := 14 + hash01(g.seed, ox, oz+i, 0x75)*14
-		hx := cx + int(dist*cos01(ang))
-		hz := cz + int(dist*sin01(ang))
-		v.Houses = append(v.Houses, House{X: hx, Z: hz, Y: g.Height(hx, hz), Half: 2})
-	}
-	f := 1 + int(hash01(g.seed, ox, oz, 0x76)*2) // 1..2 farms
-	for i := 0; i < f; i++ {
-		ang := (float64(i)+0.5)/float64(f) + hash01(g.seed, ox-i, oz, 0x77)*0.2
-		fx := cx + int(24*cos01(ang))
-		fz := cz + int(24*sin01(ang))
-		v.Farms = append(v.Farms, House{X: fx, Z: fz, Y: g.Height(fx, fz), Half: 3})
-	}
-	return v
+	// Site only — the buildings, beds, job-sites and bell come from the real
+	// vanilla templates via AssembleVillage (village_jigsaw.go).
+	return Village{X: cx, Z: cz, Y: g.Height(cx, cz), Exists: true}
 }
 
-// stampVillages writes the pieces of nearby villages inside this chunk.
+// stampVillages stamps the real vanilla village pieces overlapping this chunk.
 func (g *Generator) stampVillages(ch *Chunk, cx, cz int32) {
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	for ddx := -1; ddx <= 1; ddx++ {
@@ -119,14 +104,7 @@ func (g *Generator) stampVillages(ch *Chunk, cx, cz int32) {
 			if !v.Exists {
 				continue
 			}
-			g.stampWell(ch, baseX, baseZ, v)
-			for _, h := range v.Houses {
-				g.stampHouse(ch, baseX, baseZ, h)
-				g.stampPath(ch, baseX, baseZ, v, h)
-			}
-			for _, f := range v.Farms {
-				g.stampFarm(ch, baseX, baseZ, f)
-			}
+			g.StampPieces(ch, cx, cz, g.AssembleVillage(v))
 		}
 	}
 }

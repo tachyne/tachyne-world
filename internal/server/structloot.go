@@ -59,9 +59,9 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 		return "chests/igloo_chest", true
 	}
 	if v := g.VillageIn(pos.x, pos.z); v.Exists {
-		for _, house := range v.Houses {
-			if cx, cy, cz := g.HouseChest(house); pos.x == cx && pos.y == cy && pos.z == cz {
-				return villageChestTable(g.HouseWorkstation(house)), true
+		for _, c := range g.VillageChests(v) {
+			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+				return c.Table, true
 			}
 		}
 	}

@@ -73,6 +73,14 @@ def parse_nbt(raw):
     return payload(r, t)
 
 
+# Village job-site block → tachyne profession index (matches professionNames).
+JOBSITE_PROF = {
+    "composter": 0, "barrel": 1, "loom": 2, "fletching_table": 3, "lectern": 4,
+    "cartography_table": 5, "brewing_stand": 6, "blast_furnace": 7, "grindstone": 8,
+    "smithing_table": 9, "stonecutter": 10, "smoker": 11, "cauldron": 12,
+}
+
+
 def bake(inner, name):
     d = parse_nbt(inner.read("data/minecraft/structure/%s.nbt" % name))
     palette = []
@@ -85,9 +93,20 @@ def bake(inner, name):
     chests = []
     spawners = []
     jigsaws = []
+    beds = []      # bed HEAD positions → one villager home each
+    jobsites = []  # [x,y,z,profession] job-site blocks → villager professions
+    bells = []     # meeting-point bell positions
     for b in d["blocks"]:
         x, y, z = b["pos"]
         blocks.append([x, y, z, b["state"]])
+        pname = palette[b["state"]]["name"].split(":", 1)[-1]
+        props = palette[b["state"]].get("props", {})
+        if pname.endswith("_bed") and props.get("part") == "head":
+            beds.append([x, y, z])
+        elif pname in JOBSITE_PROF:
+            jobsites.append([x, y, z, JOBSITE_PROF[pname]])
+        elif pname == "bell":
+            bells.append([x, y, z])
         nbt = b.get("nbt")
         if not nbt:
             continue
@@ -116,6 +135,12 @@ def bake(inner, name):
         t["spawners"] = spawners
     if jigsaws:
         t["jigsaws"] = jigsaws
+    if beds:
+        t["beds"] = beds
+    if jobsites:
+        t["jobsites"] = jobsites
+    if bells:
+        t["bells"] = bells
     return t
 
 

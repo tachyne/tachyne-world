@@ -38,8 +38,9 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 			golems++
 		}
 	}
-	if villagers != len(v.Houses) || golems != 1 {
-		t.Fatalf("want %d villagers + 1 golem, got %d + %d", len(v.Houses), villagers, golems)
+	wantVillagers := len(w.Gen().VillageBeds(v)) // one villager per bed
+	if villagers != wantVillagers || golems != 1 {
+		t.Fatalf("want %d villagers + 1 golem, got %d + %d", wantVillagers, villagers, golems)
 	}
 	// Second pass: no duplicates.
 	before := len(h.mobs)

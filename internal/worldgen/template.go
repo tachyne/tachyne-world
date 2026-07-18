@@ -43,9 +43,13 @@ type jigsawBlock struct {
 type Template struct {
 	Size     [3]int         `json:"size"`
 	Palette  []paletteEntry `json:"palette"`
-	Blocks   [][4]int       `json:"blocks"` // x,y,z,paletteIdx
-	Chests   [][3]int       `json:"chests"` // template-local chest positions
+	Blocks   [][4]int       `json:"blocks"`   // x,y,z,paletteIdx
+	Chests   [][3]int       `json:"chests"`   // template-local chest positions
+	Beds     [][3]int       `json:"beds"`     // bed HEAD cells → one villager home each
+	JobSites [][4]int       `json:"jobsites"` // x,y,z,profession
+	Bells    [][3]int       `json:"bells"`
 	Jigsaws  []jigsawBlock  `json:"jigsaws"`
+	name     string         // the template's location key (set at init; for loot inference)
 	resolved [4][]uint32
 }
 
@@ -74,7 +78,8 @@ func init() {
 		return
 	}
 	templates, pools = data.Templates, data.Pools
-	for _, t := range templates {
+	for name, t := range templates {
+		t.name = name
 		for rot := 0; rot < 4; rot++ {
 			t.resolved[rot] = make([]uint32, len(t.Palette))
 			for i, p := range t.Palette {

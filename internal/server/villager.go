@@ -44,28 +44,32 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					continue
 				}
 				h.villageDone[well] = true
-				for i, house := range v.Houses {
+				// The economy is built from the real vanilla village pieces: one
+				// villager per BED, its profession claimed from the nearest JOB-SITE
+				// block, the town-centre BELL as the shared meeting point.
+				jobs := gen.VillageJobSites(v)
+				meet := blockPos{v.X, v.Y, v.Z}
+				if bells := gen.VillageBells(v); len(bells) > 0 {
+					meet = blockPos{bells[0][0], bells[0][1], bells[0][2]}
+				}
+				for _, bed := range gen.VillageBeds(v) {
 					m := h.spawnMob(players, entityVillager,
-						float64(house.X)+0.5, float64(house.Y), float64(house.Z)+2.5)
+						float64(bed[0])+0.5, float64(bed[1]), float64(bed[2])+0.5)
 					if m == nil {
 						continue // plugin-cancelled spawn
 					}
-					// Villager MOVEMENT_SPEED attr is 0.5 with ~0.6 goal
-					// modifiers (vanilla 1.21.5) — brisker than livestock.
-					m.speed = 0.135
-					h.initVillagerTrades(m, i)
-					m.home = blockPos{house.X, house.Y, house.Z}
+					m.speed = 0.135 // villager MOVEMENT_SPEED (vanilla 1.21.5)
+					prof, work := nearestJobSite(bed, jobs)
+					h.initVillagerTrades(m, prof)
+					m.home = blockPos{bed[0], bed[1], bed[2]}
+					m.bed = blockPos{bed[0], bed[1], bed[2]}
+					m.work = work
+					m.meet = meet
 					m.behavior = villagerBehavior{} // path home/around + open doors
 					m.usesDoors = true
-					// Schedule anchors from the deterministic furniture layout
-					// (furnishHouse): bed head at dx=-1, workstation at dx=+1,dz=-1,
-					// and the village bell as the shared midday meeting point.
-					m.bed = blockPos{house.X - 1, house.Y, house.Z}
-					m.work = blockPos{house.X + 1, house.Y, house.Z - 1}
-					m.meet = blockPos{v.X + 2, v.Y, v.Z}
 				}
 				g := h.spawnMob(players, entityIronGolem,
-					float64(v.X)+2.5, float64(v.Y), float64(v.Z)+2.5)
+					float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+2.5)
 				if g == nil {
 					continue // plugin-cancelled spawn
 				}
@@ -76,6 +80,20 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 			}
 		}
 	}
+}
+
+// nearestJobSite returns the profession index + work position of the job-site
+// block nearest a villager's bed (a village with no job sites leaves it a farmer
+// working at its bed).
+func nearestJobSite(bed [3]int, jobs [][4]int) (int, blockPos) {
+	prof, work, best := 0, blockPos{bed[0], bed[1], bed[2]}, 1<<30
+	for _, j := range jobs {
+		dx, dy, dz := j[0]-bed[0], j[1]-bed[1], j[2]-bed[2]
+		if d := dx*dx + dy*dy + dz*dz; d < best {
+			best, prof, work = d, j[3], blockPos{j[0], j[1], j[2]}
+		}
+	}
+	return prof, work
 }
 
 // golemBehavior walks the village guardian toward the nearest hostile, or
