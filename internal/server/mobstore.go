@@ -226,21 +226,22 @@ func (s *mobStore) villages() [][3]int {
 	return s.m.Villages
 }
 
-// cullAnimals is a one-time maintenance pass (behind -cull-animals): in every
-// chunk bucket it caps each species to capN and, for cows (the species the
-// pre-fix herd-doubling multiplied), keeps them in only ~1/cowMod of chunks —
-// bringing density back toward vanilla. Tamed mobs and villagers are always
-// kept. Returns the total persisted-mob count before and after. Idempotent:
-// re-running on an already-culled store is a no-op.
-func (s *mobStore) cullAnimals(capN, cowMod int) (before, after int) {
+// cullAnimals is a one-time maintenance pass (behind -cull-animals) to undo the
+// pre-fix herd-doubling, which multiplied EVERY persisted species and spread
+// them across many chunks. It keeps wild mobs in only ~1/coverMod of chunks
+// (coverage thinning — the doubling's wide spread is the real problem), and
+// caps each species to capN in the chunks it keeps. Tamed mobs and villagers
+// are always kept, everywhere. Returns the persisted-mob count before/after.
+// Idempotent: re-running on an already-culled store makes no further change.
+func (s *mobStore) cullAnimals(capN, coverMod int) (before, after int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for key, bucket := range s.m.Chunks {
 		before += len(bucket)
-		keepCows := true
-		if cowMod > 1 {
+		keep := true
+		if coverMod > 1 {
 			if cx, cz, ok := parseChunkKey(key); ok {
-				keepCows = (((cx*31+cz)%cowMod)+cowMod)%cowMod == 0
+				keep = (((cx*31+cz)%coverMod)+coverMod)%coverMod == 0
 			}
 		}
 		out := bucket[:0:0]
@@ -250,8 +251,8 @@ func (s *mobStore) cullAnimals(capN, cowMod int) (before, after int) {
 				out = append(out, m) // never cull pets or merchants
 				continue
 			}
-			if m.Etype == entityCow && !keepCows {
-				continue // this chunk keeps no cows (coverage thinning)
+			if !keep {
+				continue // a thinned chunk keeps no wild mobs
 			}
 			perSpecies[m.Etype]++
 			if perSpecies[m.Etype] <= capN {
