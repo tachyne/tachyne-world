@@ -802,6 +802,7 @@ func (h *hub) run() {
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
 			if age%40 == 0 {
 				h.registerSculkChunks(players) // discover worldgen (deep_dark) sculk near players
+				h.populateMonuments(players)   // seed elder guardians when a player reaches a monument
 			}
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {

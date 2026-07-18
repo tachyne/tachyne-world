@@ -37,6 +37,16 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	if a := g.AncientCityIn(pos.x, pos.z); a.Exists && pos.x == a.ChestX && pos.y == a.ChestY && pos.z == a.ChestZ {
 		return "chests/ancient_city", true
 	}
+	if s := g.ShipwreckIn(pos.x, pos.z); s.Exists {
+		for i := 0; i < s.N; i++ {
+			if c := s.Chests[i]; pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {
+				return []string{"chests/shipwreck_supply", "chests/shipwreck_treasure", "chests/shipwreck_map"}[c[3]], true
+			}
+		}
+	}
+	if b := g.BuriedTreasureIn(pos.x, pos.z); b.Exists && pos.x == b.X && pos.y == b.Y && pos.z == b.Z {
+		return "chests/buried_treasure", true
+	}
 	if v := g.VillageIn(pos.x, pos.z); v.Exists {
 		for _, house := range v.Houses {
 			if cx, cy, cz := g.HouseChest(house); pos.x == cx && pos.y == cy && pos.z == cz {

@@ -415,6 +415,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			case entityWarden:
 				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:
+				h.guardianTick(players, m) // beam attack (+ elder mining-fatigue aura)
+			case entityGuardian, entityElderGuardian:
 				h.guardianBeam(players, m) // charge-up beam
 			case entityCreeper:
 				h.creeperFuse(players, m) // fuse + swell + bang
