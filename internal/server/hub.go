@@ -421,7 +421,19 @@ type hub struct {
 	platesOn  map[blockPos]bool   // currently pressed pressure plates
 	wiresOn   map[blockPos]bool   // currently pressed tripwire strings
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
-	bins      map[blockPos]*bin   // dispenser/dropper/hopper storage
+
+	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
+	// current on block change; the rest is per-block runtime state.
+	sculkList  map[blockPos]bool         // sensor + shrieker listener positions
+	catalysts  map[blockPos]bool         // sculk catalyst positions
+	sculkVib   map[blockPos]sculkPending // one in-flight vibration per listener
+	sculkDue   map[blockPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
+	sculkFreq  map[blockPos]int          // sensor last-vibration frequency (comparator out)
+	sculkWarn  map[blockPos]int          // shrieker warning level toward a Warden
+	sculkStep  map[int32]uint64          // per-player STEP-event throttle (next-allowed tick)
+	sculkLastX map[int32]float64         // per-player last X, for step-movement detection
+	sculkLastZ map[int32]float64         // per-player last Z
+	bins       map[blockPos]*bin         // dispenser/dropper/hopper storage
 
 	vehicles     map[int32]*vehicle        // minecarts + boats
 	paintings    map[int32]*painting       // placed hanging paintings (persisted with containers)
@@ -556,6 +568,15 @@ func newHub(w *world.World) *hub {
 		platesOn:      map[blockPos]bool{},
 		wiresOn:       map[blockPos]bool{},
 		fireAge:       map[blockPos]int{},
+		sculkList:     map[blockPos]bool{},
+		catalysts:     map[blockPos]bool{},
+		sculkVib:      map[blockPos]sculkPending{},
+		sculkDue:      map[blockPos]uint64{},
+		sculkFreq:     map[blockPos]int{},
+		sculkWarn:     map[blockPos]int{},
+		sculkStep:     map[int32]uint64{},
+		sculkLastX:    map[int32]float64{},
+		sculkLastZ:    map[int32]float64{},
 		bins:          map[blockPos]*bin{},
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
@@ -776,6 +797,7 @@ func (h *hub) run() {
 			h.updateTNT(players)     // primed charges burn their fuses
 			h.updatePlates(players)
 			h.updateTripwires(players)
+			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
@@ -1767,7 +1789,14 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	if e.dim != 0 {
 		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
 	}
-	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state) // lightning-rod POI set
+	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state)   // lightning-rod POI set
+	h.sculkIndexOnBlockChange(e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
+	// A player edit is a vibration: a break (broken != 0) or a place.
+	if e.broken != 0 {
+		h.gameEvent(freqBlockDestroy, e.x, e.y, e.z, e.by)
+	} else if e.state != worldgen.Air {
+		h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
+	}
 	h.beaconsOnBlockChange(players, e.x, e.y, e.z, e.state)
 	h.bannersOnBlockChange(players, e.x, e.y, e.z, e.state, e.by)
 	// A player edit can trigger simulation: the block itself (a placed falling

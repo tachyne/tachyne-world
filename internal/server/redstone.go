@@ -149,6 +149,8 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 		return 15 // a tripped hook powers every side
 	case isDetectorRail(s) && railPowered(s):
 		return 15
+	case isAnySensor(s):
+		return sensorPower(s) // active sculk sensor emits its distance-scaled power to all sides
 	}
 	return 0
 }

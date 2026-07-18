@@ -398,6 +398,12 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	for _, d := range drops {
 		h.spawnItemIn(players, m.dim, d.Item, d.Count, m.x, m.y, m.z) // no-ops on count 0
 	}
+	// A death is a frequency-15 vibration; a nearby sculk catalyst consumes the
+	// XP into a bloom instead of dropping orbs.
+	h.gameEvent(freqEntityDie, floorInt(m.x), floorInt(m.y), floorInt(m.z), m.eid)
+	if xp > 0 && h.catalystConsume(players, m, xp) {
+		return
+	}
 	if xp > 0 {
 		h.spawnXPOrbIn(players, m.dim, xp, m.x, m.y, m.z)
 	}

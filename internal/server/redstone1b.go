@@ -218,6 +218,12 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 		if worldgen.CopperBulbLit(bs) && rear < 15 {
 			rear = 15 // lit copper bulb: full analog signal (unlit = 0)
 		}
+	} else if isAnySensor(bs) {
+		if sensorPhase(bs) == sculkPhaseActive { // active sensor: comparator reads the frequency
+			if f := h.sculkFreq[back]; f > rear {
+				rear = f
+			}
+		}
 	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).

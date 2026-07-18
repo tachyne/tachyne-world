@@ -390,6 +390,7 @@ func (s *Server) Serve() error {
 			if state == beaconState { // beacons rebuild from edits; powers re-attach from containers
 				s.hub.beacons[blockPos{x, y, z}] = &beacon{}
 			}
+			s.hub.sculkIndexOnBlockChange(x, y, z, state) // sculk listener/catalyst POI sets
 		})
 		if s.LLMAddr != "" {
 			s.hub.llm = newLLMClient(s.LLMAddr, s.LLMModel)
