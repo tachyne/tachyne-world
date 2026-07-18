@@ -47,6 +47,9 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	if b := g.BuriedTreasureIn(pos.x, pos.z); b.Exists && pos.x == b.X && pos.y == b.Y && pos.z == b.Z {
 		return "chests/buried_treasure", true
 	}
+	if ig := g.IglooIn(pos.x, pos.z); ig.Exists && ig.Basement && pos.x == ig.ChestX && pos.y == ig.ChestY && pos.z == ig.ChestZ {
+		return "chests/igloo_chest", true
+	}
 	if v := g.VillageIn(pos.x, pos.z); v.Exists {
 		for _, house := range v.Houses {
 			if cx, cy, cz := g.HouseChest(house); pos.x == cx && pos.y == cy && pos.z == cz {
