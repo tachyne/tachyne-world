@@ -552,6 +552,7 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 		}
 	}
 
+	g.placeSculk(ch, cx, cz) // deep_dark cave floors → sculk (needs the biome array above)
 	ch.computeHeightmap()
 	return ch
 }

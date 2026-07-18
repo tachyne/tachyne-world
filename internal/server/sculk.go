@@ -158,6 +158,53 @@ func (h *hub) sculkIndexOnBlockChange(x, y, z int, state uint32) {
 	}
 }
 
+// registerSculkChunks discovers WORLDGEN-placed sculk (deep_dark) near players
+// and registers it in the listener/catalyst POI sets. Generated terrain is not
+// in the edit overlay, so the block-change index never sees it; this scan is the
+// only way a naturally-generated sensor or shrieker starts working. Each chunk is
+// scanned once; a bounded few per call keep the hub responsive. Player-placed
+// sculk still registers via sculkIndexOnBlockChange (block-change events).
+func (h *hub) registerSculkChunks(players map[int32]*tracked) {
+	scanned := 0
+	for _, t := range players {
+		if t.dim != 0 {
+			continue
+		}
+		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
+		for dx := int32(-2); dx <= 2 && scanned < 4; dx++ {
+			for dz := int32(-2); dz <= 2 && scanned < 4; dz++ {
+				key := [2]int32{cx + dx, cz + dz}
+				if h.sculkScanned[key] {
+					continue
+				}
+				h.sculkScanned[key] = true
+				scanned++
+				h.scanChunkSculk(key[0], key[1])
+			}
+		}
+	}
+}
+
+// scanChunkSculk reads a chunk's deep-dark Y band, registering any sculk listener
+// or catalyst it finds (cheap: the sections are already cached for a nearby
+// player, and the band is the only depth where deep_dark sculk generates).
+func (h *hub) scanChunkSculk(cx, cz int32) {
+	bx, bz := int(cx)*16, int(cz)*16
+	for lx := 0; lx < 16; lx++ {
+		for lz := 0; lz < 16; lz++ {
+			for wy := -64; wy <= -16; wy++ {
+				x, z := bx+lx, bz+lz
+				s := h.world.At(x, wy, z)
+				if isSculkListener(s) {
+					h.sculkList[blockPos{x, wy, z}] = true
+				} else if isCatalyst(s) {
+					h.catalysts[blockPos{x, wy, z}] = true
+				}
+			}
+		}
+	}
+}
+
 // sculkPending is a vibration scheduled to reach a listener at tick `due`.
 type sculkPending struct {
 	due  uint64

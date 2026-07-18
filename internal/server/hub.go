@@ -424,16 +424,17 @@ type hub struct {
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
-	sculkList  map[blockPos]bool         // sensor + shrieker listener positions
-	catalysts  map[blockPos]bool         // sculk catalyst positions
-	sculkVib   map[blockPos]sculkPending // one in-flight vibration per listener
-	sculkDue   map[blockPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
-	sculkFreq  map[blockPos]int          // sensor last-vibration frequency (comparator out)
-	sculkWarn  map[blockPos]int          // shrieker warning level toward a Warden
-	sculkStep  map[int32]uint64          // per-player STEP-event throttle (next-allowed tick)
-	sculkLastX map[int32]float64         // per-player last X, for step-movement detection
-	sculkLastZ map[int32]float64         // per-player last Z
-	bins       map[blockPos]*bin         // dispenser/dropper/hopper storage
+	sculkList    map[blockPos]bool         // sensor + shrieker listener positions
+	catalysts    map[blockPos]bool         // sculk catalyst positions
+	sculkVib     map[blockPos]sculkPending // one in-flight vibration per listener
+	sculkDue     map[blockPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
+	sculkFreq    map[blockPos]int          // sensor last-vibration frequency (comparator out)
+	sculkWarn    map[blockPos]int          // shrieker warning level toward a Warden
+	sculkStep    map[int32]uint64          // per-player STEP-event throttle (next-allowed tick)
+	sculkLastX   map[int32]float64         // per-player last X, for step-movement detection
+	sculkLastZ   map[int32]float64         // per-player last Z
+	sculkScanned map[[2]int32]bool         // chunks already scanned for worldgen sculk listeners
+	bins         map[blockPos]*bin         // dispenser/dropper/hopper storage
 
 	vehicles     map[int32]*vehicle        // minecarts + boats
 	paintings    map[int32]*painting       // placed hanging paintings (persisted with containers)
@@ -577,6 +578,7 @@ func newHub(w *world.World) *hub {
 		sculkStep:     map[int32]uint64{},
 		sculkLastX:    map[int32]float64{},
 		sculkLastZ:    map[int32]float64{},
+		sculkScanned:  map[[2]int32]bool{},
 		bins:          map[blockPos]*bin{},
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
@@ -798,6 +800,9 @@ func (h *hub) run() {
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
+			if age%40 == 0 {
+				h.registerSculkChunks(players) // discover worldgen (deep_dark) sculk near players
+			}
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
