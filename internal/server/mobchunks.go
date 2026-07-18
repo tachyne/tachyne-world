@@ -91,11 +91,14 @@ func (h *hub) reconcileMobChunks(players map[int32]*tracked, chunkSet map[[2]int
 		}
 	}
 	for _, c := range evict {
-		saved := byChunk[c]
-		if prev := h.mobstore.take(c[0], c[1]); len(prev) > 0 {
-			saved = append(prev, saved...) // merge with anything already parked there
-		}
-		h.mobstore.stash(c[0], c[1], saved)
+		// The live mobs ARE the authoritative state of the evicting chunk —
+		// stash them directly (overwrite). Do NOT merge with the existing
+		// bucket: the 600-tick autosave (bucketLive) writes active chunks' live
+		// mobs into the store, so merging that snapshot back in doubles the herd
+		// on every autosave-then-unload cycle, growing exponentially as players
+		// roam. An active chunk emptied its bucket on reload, so anything there
+		// now is only that stale autosave copy of these same mobs.
+		h.mobstore.stash(c[0], c[1], byChunk[c])
 		delete(h.activeChunks, c)
 		delete(h.chunkOutAt, c)
 	}
