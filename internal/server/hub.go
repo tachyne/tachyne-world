@@ -922,13 +922,12 @@ func (h *hub) run() {
 					}
 					msg = cev.Message
 				}
-				// [name] rather than the vanilla <name>: some 26.2 clients apply a
-				// secure-chat heuristic to system messages matching the "<name>
-				// message" player-chat pattern and HIDE other players' unsigned
-				// ones (we can't sign — offline). The [name] form isn't caught, so
-				// every client shows it. (Restoring <name> cleanly needs the
-				// disguised_chat packet — a follow-up.)
-				h.roomChat(players, fmt.Sprintf("[%s] %s", e.from.name, msg))
+				// Player chat carries a Sender so the gateway renders it as
+				// profileless_chat — the client decorates it "<name> msg" (the
+				// vanilla look) yet does NOT apply the secure-chat heuristic that
+				// hides "<name>"-pattern SYSTEM messages from other players on an
+				// offline server. (System lines below keep plain system_chat.)
+				h.roomChatFrom(players, e.from.name, msg)
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:
@@ -1798,6 +1797,23 @@ func (h *hub) roomChat(players map[int32]*tracked, text string) {
 	log.Printf("chat: %s", text)
 	h.npcsHear(text) // so NPCs can hear and remember the room
 	h.bus.publish("chat", map[string]any{"text": text})
+}
+
+// roomChatFrom broadcasts a PLAYER chat line. The frame carries Sender, so the
+// gateway renders profileless_chat and the client shows "<sender> msg" (vanilla
+// look) without the secure-chat heuristic hiding it. NPCs, the log, and the bus
+// see the attributed "<sender> msg" form (the Sender field only shapes the wire
+// packet). Chat lines are reliable frames (isLifecycleFrame), so trySendEv here
+// diverts to the crit overflow rather than dropping under back-pressure.
+func (h *hub) roomChatFrom(players map[int32]*tracked, sender, msg string) {
+	body := attachproto.Chat{Text: msg, Sender: sender}
+	for _, t := range players {
+		t.p.trySendEv(body)
+	}
+	attributed := fmt.Sprintf("<%s> %s", sender, msg)
+	log.Printf("chat: %s", attributed)
+	h.npcsHear(attributed) // so NPCs can hear and remember the room
+	h.bus.publish("chat", map[string]any{"text": attributed, "sender": sender, "message": msg})
 }
 
 // giveTo adds items to a player's inventory, spilling the remainder at their

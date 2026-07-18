@@ -397,13 +397,19 @@ func TestPluginJoinQuitChatEvents(t *testing.T) {
 		select {
 		case pkt := <-p1.out:
 			if c, ok := pkt.ev.(attachproto.Chat); ok && !c.ActionBar {
-				lines = append(lines, c.Text)
+				// Player chat carries Sender (rendered "<sender> msg" on the wire);
+				// system lines have an empty Sender. Reconstruct for the assertion.
+				if c.Sender != "" {
+					lines = append(lines, "<"+c.Sender+"> "+c.Text)
+				} else {
+					lines = append(lines, c.Text)
+				}
 			}
 		case <-deadline:
 			t.Fatalf("waiting for chat lines, got %q", lines)
 		}
 	}
-	if lines[0] != "[alice] hello!" || lines[1] != "[system] weather" {
+	if lines[0] != "<alice> hello!" || lines[1] != "[system] weather" {
 		t.Fatalf("chat lines = %q (cancel/mutate/ordering broken)", lines)
 	}
 
