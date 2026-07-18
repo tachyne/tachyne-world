@@ -226,6 +226,37 @@ func (s *mobStore) villages() [][3]int {
 	return s.m.Villages
 }
 
+// removeNear deletes persisted mobs of the given types within radius r of
+// (wx,wz) — used to clear a removed structure's stranded mobs. Returns the count.
+func (s *mobStore) removeNear(wx, wz, r int, etypes ...int) int {
+	want := map[int]bool{}
+	for _, e := range etypes {
+		want[e] = true
+	}
+	r2 := float64(r * r)
+	removed := 0
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, bucket := range s.m.Chunks {
+		out := bucket[:0:0]
+		for _, m := range bucket {
+			if want[m.Etype] {
+				if dx, dz := m.X-float64(wx), m.Z-float64(wz); dx*dx+dz*dz <= r2 {
+					removed++
+					continue
+				}
+			}
+			out = append(out, m)
+		}
+		if len(out) == 0 {
+			delete(s.m.Chunks, key)
+		} else {
+			s.m.Chunks[key] = out
+		}
+	}
+	return removed
+}
+
 // cullAnimals is a one-time maintenance pass (behind -cull-animals) to undo the
 // pre-fix herd-doubling, which multiplied EVERY persisted species and spread
 // them across many chunks. It keeps wild mobs in only ~1/coverMod of chunks

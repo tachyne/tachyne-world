@@ -587,6 +587,25 @@ func chunkOf(x, z int) (cx, cz, lx, lz int) {
 }
 
 // SetBlock records a persistent edit at a world coordinate.
+// RevertEdit deletes the edit at (x,y,z) so the block falls back to whatever
+// generation now produces (used to clean structure debris a since-removed
+// generator left as edits). No-op if there is no edit there.
+func (w *World) RevertEdit(x, y, z int) {
+	if !w.inBounds(y) {
+		return
+	}
+	cx, cz, lx, lz := chunkOf(x, z)
+	key := chunkPos{int32(cx), int32(cz)}
+	idx := localIndex(lx, y, lz)
+	w.mu.Lock()
+	if m := w.edits[key]; m != nil {
+		delete(m, idx)
+	}
+	w.mu.Unlock()
+	w.dirty.Store(true)
+	w.invalidateLight(x, z)
+}
+
 func (w *World) SetBlock(x, y, z int, state uint32) {
 	if !w.inBounds(y) {
 		return

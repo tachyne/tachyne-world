@@ -43,6 +43,7 @@ func Main() {
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	spawner := flag.String("spawner", "tachyne", "natural-spawn model: tachyne (cheaper 1/8 sampler + herd top-up) or vanilla (exact NaturalSpawner: per-chunk rate + chunk-generation herds)")
+	cleanupVillage := flag.String("cleanup-village", "", "ONE-TIME: remove a suppressed village's stranded mobs + crop/door debris near x,z (empty = off)")
 	cullAnimals := flag.Int("cull-animals", 0, "ONE-TIME maintenance: cap each species to N per chunk in the saved mobs and thin overgrown cows (0 = off). Run once to undo pre-fix herd doubling, then remove.")
 	flag.Parse()
 
@@ -85,6 +86,7 @@ func Main() {
 	srv.ContainerFile = "containers.json"
 	srv.MobFile = "mobs.json"
 	srv.CullAnimals = *cullAnimals
+	srv.CleanupVillage = *cleanupVillage
 	srv.SpawnPointFile = "spawns.json"
 	srv.PluginDataDir = *pluginDir
 	if m, ok := server.ParseGamemode(*gamemode); ok {

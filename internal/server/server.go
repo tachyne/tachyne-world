@@ -126,6 +126,11 @@ type Server struct {
 	// undo the pre-fix generation-herd doubling; leave 0 in normal operation.
 	CullAnimals int
 
+	// CleanupVillage, if non-empty ("x,z"), runs a ONE-TIME pass at boot that
+	// removes a suppressed village's stranded mobs + crop/door debris edits near
+	// that point (protecting a nearby castle). Set once, then clear.
+	CleanupVillage string
+
 	// WorldFile, if set, persists block edits to that file so they survive
 	// restarts (empty = in-memory only). Swap the store for a DB later.
 	WorldFile string
@@ -366,6 +371,14 @@ func (s *Server) Serve() error {
 			s.hub.mobstore.flush()
 			log.Printf("cull-animals: capped to %d/chunk + cow-thinned, persisted mobs %d -> %d",
 				s.CullAnimals, before, after)
+		}
+		if s.CleanupVillage != "" {
+			var cvx, cvz int
+			if _, err := fmt.Sscanf(s.CleanupVillage, "%d,%d", &cvx, &cvz); err == nil {
+				s.cleanupSpawnVillage(cvx, cvz)
+			} else {
+				log.Printf("cleanup-village: bad coords %q (want x,z)", s.CleanupVillage)
+			}
 		}
 		for _, w := range s.hub.mobstore.villages() {
 			s.hub.villageDone[unpackPos(w)] = true // populated villages stay populated

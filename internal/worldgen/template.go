@@ -133,6 +133,17 @@ func rotateProp(name, val string, rot int) (string, string) {
 				return name, order[(i+rot)%4]
 			}
 		}
+	case "north", "east", "south", "west":
+		// Connection booleans (panes/fences/walls/iron bars/redstone): the
+		// PROPERTY NAME rotates — a north connection becomes east at 90° CW, etc.
+		// Each source direction maps to a distinct target, so applying all four
+		// in any order yields the correct rotated shape.
+		order := []string{"north", "east", "south", "west"}
+		for i, d := range order {
+			if d == name {
+				return order[(i+rot)&3], val
+			}
+		}
 	case "axis":
 		if rot%2 == 1 {
 			if val == "x" {

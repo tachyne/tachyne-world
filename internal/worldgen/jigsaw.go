@@ -85,6 +85,18 @@ type queued struct {
 // min corner at (sx,sy,sz). Deterministic given the prng. Returns every placed
 // piece (for stamping + chest routing).
 func (g *Generator) AssembleJigsaw(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int) []PlacedPiece {
+	return g.assembleJigsaw(startPool, sx, sy, sz, prng, maxDepth, false)
+}
+
+// AssembleJigsawTerrain is AssembleJigsaw with terrain matching: every piece is
+// draped onto the local surface (each piece's Y follows the ground) instead of
+// stacking rigidly at the start Y. Used for villages, whose streets/houses
+// conform to the terrain in vanilla.
+func (g *Generator) AssembleJigsawTerrain(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int) []PlacedPiece {
+	return g.assembleJigsaw(startPool, sx, sy, sz, prng, maxDepth, true)
+}
+
+func (g *Generator) assembleJigsaw(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int, terrain bool) []PlacedPiece {
 	sp := pools[startPool]
 	if sp == nil || len(sp.Elements) == 0 {
 		return nil
@@ -94,6 +106,9 @@ func (g *Generator) AssembleJigsaw(startPool string, sx, sy, sz int, prng *jigsa
 		return nil
 	}
 	sw, sh, sd := start.rotatedSize(0)
+	if terrain {
+		sy = g.Height(sx+sw/2, sz+sd/2) - 1
+	}
 	pieces := []*PlacedPiece{{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0,
 		x1: sx + sw, y1: sy + sh, z1: sz + sd}}
 
@@ -137,6 +152,9 @@ func (g *Generator) AssembleJigsaw(startPool string, sx, sy, sz int, prng *jigsa
 					crx, cry, crz := cand.rotatePos(cj.Pos[0], cj.Pos[1], cj.Pos[2], rot)
 					ox, oy, oz := tx-crx, ty-cry, tz-crz
 					cw, chh, cdd := cand.rotatedSize(rot)
+					if terrain {
+						oy = g.Height(ox+cw/2, oz+cdd/2) - 1 // drape onto the local surface
+					}
 					nx1, ny1, nz1 := ox+cw, oy+chh, oz+cdd
 					clash := false
 					for _, p := range pieces {

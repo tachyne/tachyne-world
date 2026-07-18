@@ -36,7 +36,7 @@ func (g *Generator) AssembleVillage(v Village) []PlacedPiece {
 		return p
 	}
 	rng := newJigsawRNG(g.seed, v.X, v.Z)
-	p = g.AssembleJigsaw("village/plains/town_centers", v.X, v.Y-1, v.Z, rng, 6)
+	p = g.AssembleJigsawTerrain("village/plains/town_centers", v.X, v.Y-1, v.Z, rng, 6)
 	villMu.Lock()
 	villCache[k] = p
 	villMu.Unlock()
