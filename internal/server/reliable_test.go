@@ -67,3 +67,23 @@ func TestReliableFastPath(t *testing.T) {
 		t.Fatalf("lifecycle frame not queued on out: out=%d", len(p.out))
 	}
 }
+
+// TestChatLinesReliable guards the "backpressured player loses all chat" bug:
+// a chat LINE must divert to the reliable overflow under back-pressure (a lost
+// message never self-heals), while the HUD action-bar overlay may still drop.
+func TestChatLinesReliable(t *testing.T) {
+	p := newPlayer(3, "z", [16]byte{})
+	for i := 0; i < cap(p.out); i++ { // saturate out
+		p.out <- outPkt{ev: attachproto.EntityMove{}}
+	}
+	// The HUD action bar (ActionBar) may drop.
+	p.trySendEv(attachproto.Chat{Text: "hud", ActionBar: true})
+	if len(p.crit) != 0 {
+		t.Fatalf("action-bar chat leaked into the reliable overflow: crit=%d", len(p.crit))
+	}
+	// A chat line must survive — parked in crit, never dropped.
+	p.trySendEv(attachproto.Chat{Text: "<a> hello"})
+	if len(p.crit) != 1 {
+		t.Fatalf("chat line dropped instead of parked: crit=%d", len(p.crit))
+	}
+}

@@ -122,10 +122,17 @@ const critCap = 8192
 // deliberately NOT in this set — they're safe to drop, since the next absolute
 // update re-syncs against what the viewer actually rendered.
 func isLifecycleFrame(ev any) bool {
-	switch ev.(type) {
+	switch e := ev.(type) {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerGone:
 		return true
+	case attachproto.Chat:
+		// A chat LINE must not be dropped — a lost message is gone forever
+		// (unlike entity moves, which self-heal on the next absolute resync). The
+		// HUD action-bar overlay (ActionBar) may still drop: it re-sends every
+		// tick. Without this, a back-pressured session (e.g. a heavy admin view)
+		// silently loses ALL room chat while reliable command replies get through.
+		return !e.ActionBar
 	}
 	return false
 }
