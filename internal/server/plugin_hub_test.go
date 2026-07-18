@@ -403,7 +403,7 @@ func TestPluginJoinQuitChatEvents(t *testing.T) {
 			t.Fatalf("waiting for chat lines, got %q", lines)
 		}
 	}
-	if lines[0] != "<alice> hello!" || lines[1] != "[system] weather" {
+	if lines[0] != "[alice] hello!" || lines[1] != "[system] weather" {
 		t.Fatalf("chat lines = %q (cancel/mutate/ordering broken)", lines)
 	}
 

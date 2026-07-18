@@ -922,7 +922,13 @@ func (h *hub) run() {
 					}
 					msg = cev.Message
 				}
-				h.roomChat(players, fmt.Sprintf("<%s> %s", e.from.name, msg))
+				// [name] rather than the vanilla <name>: some 26.2 clients apply a
+				// secure-chat heuristic to system messages matching the "<name>
+				// message" player-chat pattern and HIDE other players' unsigned
+				// ones (we can't sign — offline). The [name] form isn't caught, so
+				// every client shows it. (Restoring <name> cleanly needs the
+				// disguised_chat packet — a follow-up.)
+				h.roomChat(players, fmt.Sprintf("[%s] %s", e.from.name, msg))
 			case evSetTime:
 				h.setDayTime(e.t)
 			case evAnnounce:
