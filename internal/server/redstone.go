@@ -248,6 +248,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.setBlock(players, pos, torchWithLit(state, !powered))
 			h.scheduleAround(pos, 1)
 		}
+	case worldgen.IsCopperBulb(state):
+		h.updateCopperBulb(players, pos, state)
 	case isLamp(state):
 		want := h.inputPower(x, y, z, false) > 0
 		if (state == lampOn) != want {

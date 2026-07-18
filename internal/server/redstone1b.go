@@ -180,6 +180,28 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 	}
 }
 
+// updateCopperBulb latches like vanilla CopperBulbBlock: on the RISING edge of
+// redstone power it toggles `lit` (a T flip-flop), while `powered` always tracks
+// the input. Light emission and comparator output both follow `lit`.
+func (h *hub) updateCopperBulb(players map[int32]*tracked, pos blockPos, state uint32) {
+	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
+	if powered == worldgen.CopperBulbPowered(state) {
+		return
+	}
+	lit := worldgen.CopperBulbLit(state)
+	if powered { // rising edge (was unpowered): flip the bulb
+		lit = !lit
+		snd := "minecraft:block.copper_bulb.turn_off"
+		if lit {
+			snd = "minecraft:block.copper_bulb.turn_on"
+		}
+		h.playSound(players, snd, sndBlock,
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
+	}
+	h.setBlock(players, pos, worldgen.CopperBulbSet(state, lit, powered))
+	h.scheduleAround(pos, 1) // relight + let an adjacent comparator re-read
+}
+
 // updateComparator: output = rear if rear >= strongest side (compare mode),
 // or rear - strongest side (subtract). The level lives in h.compOut (vanilla
 // keeps it in a block entity).
@@ -187,11 +209,16 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	dx, dz := facingDelta(stateFacing(state))
 	rear := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z)
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
+	bs := h.world.At(back.x, back.y, back.z)
 	if sig := h.containerSignal(back); sig >= 0 {
 		if sig > rear {
 			rear = sig // comparators measure container fullness through their back
 		}
-	} else if worldgen.IsSolidFull(h.world.At(back.x, back.y, back.z)) {
+	} else if worldgen.IsCopperBulb(bs) {
+		if worldgen.CopperBulbLit(bs) && rear < 15 {
+			rear = 15 // lit copper bulb: full analog signal (unlit = 0)
+		}
+	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).
 		if sig := h.containerSignal(blockPos{back.x + dx, back.y, back.z + dz}); sig > rear {

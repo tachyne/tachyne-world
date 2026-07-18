@@ -102,6 +102,52 @@ func TestObserverPulsesOnChange(t *testing.T) {
 	}
 }
 
+func TestCopperBulbTogglesOnRisingEdge(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	bulb := worldgen.BlockBase("copper_bulb") + 3 // default: unlit, unpowered
+	w.SetBlock(x+1, y, z, bulb)
+	on := func() {
+		w.SetBlock(x, y, z, worldgen.BlockBase("redstone_block"))
+		h.scheduleAround(blockPos{x, y, z}, 1)
+		stepTicks(h, players, 4)
+	}
+	off := func() {
+		w.SetBlock(x, y, z, worldgen.Stone)
+		h.scheduleAround(blockPos{x, y, z}, 1)
+		stepTicks(h, players, 4)
+	}
+	bs := func() uint32 { return w.At(x+1, y, z) }
+
+	on() // first rising edge → lit, powered latched
+	if !worldgen.CopperBulbLit(bs()) || !worldgen.CopperBulbPowered(bs()) {
+		t.Fatalf("first rising edge should light + latch powered: state=%d", bs())
+	}
+	off() // power gone: lit HOLDS, powered clears
+	if !worldgen.CopperBulbLit(bs()) || worldgen.CopperBulbPowered(bs()) {
+		t.Fatalf("removing power must hold lit but drop powered: state=%d", bs())
+	}
+	on() // second rising edge → toggles lit OFF
+	if worldgen.CopperBulbLit(bs()) || !worldgen.CopperBulbPowered(bs()) {
+		t.Fatalf("second rising edge should turn the bulb off: state=%d", bs())
+	}
+}
+
+func TestComparatorReadsCopperBulb(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	// Lit copper bulb behind a comparator (facing=west → rear at west, like
+	// TestComparatorModes); output wire to the east.
+	w.SetBlock(x, y, z, worldgen.CopperBulbSet(worldgen.BlockBase("copper_bulb"), true, false))
+	info, _ := worldgen.InfoForState(worldgen.BlockBase("comparator") + 1)
+	comp := worldgen.SetProperty(info, worldgen.BlockBase("comparator")+1, "facing", "west")
+	w.SetBlock(x+1, y, z, comp)
+	w.SetBlock(x+2, y, z, worldgen.BlockBase("redstone_wire")+1160)
+	h.scheduleAround(blockPos{x + 1, y, z}, 1)
+	stepTicks(h, players, 6)
+	if p := wirePower(w.At(x+2, y, z)); p != 15 {
+		t.Fatalf("comparator behind a lit copper bulb should output 15, wire=%d", p)
+	}
+}
+
 func TestPlatePressAndRelease(t *testing.T) {
 	h, w, _, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, stonePlateOff)

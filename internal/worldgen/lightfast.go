@@ -30,6 +30,16 @@ func init() {
 			lightEmissionTab[s] = r.lvl
 		}
 	}
+	// Copper bulbs emit by STATE (lit) — a shape the generated per-block ranges
+	// can't carry. Patch their lit states in (copperBulbLines is built in
+	// copperbulb.go, which sorts before this file so its init runs first).
+	for _, l := range copperBulbLines {
+		for off := uint32(0); off < 4; off++ {
+			if s := l.base + off; int(s) < len(lightEmissionTab) {
+				lightEmissionTab[s] = copperBulbEmission(s)
+			}
+		}
+	}
 }
 
 // LightFilterFast is LightFilter as a flat table lookup (identical results).
