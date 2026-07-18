@@ -8,6 +8,11 @@ const (
 	villageCell = 384
 	villageOdds = 0.85 // most cells roll a village (they were far too rare to ever find)
 	villageFlat = 14   // max height spread across the site — houses terrace on the slope
+
+	// Protected spawn zone: Legion's castle is here and the migrated (larger)
+	// jigsaw village would crowd it, so no village generates within this radius.
+	villGuardX, villGuardZ = 33, -95
+	villGuardR2            = 256 * 256
 )
 
 var (
@@ -76,6 +81,11 @@ func (g *Generator) VillageIn(wx, wz int) Village {
 	}
 	cx := ox + villageCell/4 + int(hash01(g.seed, ox, oz, 0x71)*float64(villageCell/2))
 	cz := oz + villageCell/4 + int(hash01(g.seed, ox, oz, 0x72)*float64(villageCell/2))
+	// Protected zone: no village near the spawn area / Legion's castle, where the
+	// migrated (larger) jigsaw village would crowd an established player build.
+	if dx, dz := cx-villGuardX, cz-villGuardZ; dx*dx+dz*dz < villGuardR2 {
+		return Village{}
+	}
 	// Flatness + dry-land gate: sample the site.
 	lo, hi := 1<<30, -(1 << 30)
 	for _, d := range [][2]int{{0, 0}, {24, 0}, {-24, 0}, {0, 24}, {0, -24}, {16, 16}, {-16, -16}} {
