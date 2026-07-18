@@ -28,6 +28,7 @@ TEMPLATES = [
 POOL_ROOTS = [
     "pillager_outpost/base_plates",
     "village/plains/town_centers",
+    "ancient_city/city_center",
 ]
 
 
@@ -163,16 +164,20 @@ def collect(inner):
             pool = load_pool(inner, pn)
         except KeyError:
             continue
-        pools[pn] = pool
+        kept = []
         for el in pool["elements"]:
             loc = el["location"]
-            if loc in templates:
-                continue
-            t = bake(inner, loc)
-            templates[loc] = t
-            for j in t.get("jigsaws", []):
-                if j["pool"] and j["pool"] != "empty":
-                    pool_queue.append(j["pool"])
+            if loc not in templates:
+                try:
+                    templates[loc] = bake(inner, loc)
+                except KeyError:
+                    continue  # pool references a template absent from this version — drop it
+                for j in templates[loc].get("jigsaws", []):
+                    if j["pool"] and j["pool"] != "empty":
+                        pool_queue.append(j["pool"])
+            kept.append(el)
+        pool["elements"] = kept
+        pools[pn] = pool
     return pools, templates
 
 

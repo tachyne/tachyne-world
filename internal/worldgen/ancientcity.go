@@ -1,96 +1,87 @@
 package worldgen
 
-// Ancient City — a rare deep_dark chamber: a deepslate-brick vault with
-// reinforced-deepslate corner pillars and central dais, a sculk-carpeted floor
-// studded with can-summon shriekers and a catalyst, soul lanterns, and a loot
-// chest routed to the vanilla chests/ancient_city table. A faithful-feel
-// stand-in for the vanilla jigsaw megastructure (no template pieces here), gated
-// to where the deep_dark biome actually generates so it fits its surroundings.
+import "sync"
+
+// Ancient City — now assembled from the REAL vanilla ancient_city jigsaw
+// templates (city_center → walls, structures, sculk floors and ~26 loot
+// chests), replacing the hand-built vault. Sited where the deep_dark biome
+// generates; the server's sculk scan picks up the can-summon shriekers so the
+// Warden loop still triggers. The city is large, so the assembly is cached per
+// site (it is otherwise re-run for every chunk it touches).
 
 const (
-	ancientCityCell   = 512  // one candidate per 512-block cell
-	ancientCityOdds   = 0.55 // of qualifying (deep_dark) cells
-	ancientCityRadius = 8    // half-footprint → a 17×17 vault
-	ancientCityY      = -48  // deep in the deep-dark band
+	ancientCityCell = 512  // one candidate per 512-block cell
+	ancientCityOdds = 0.55 // of qualifying (deep_dark) cells
+	ancientCityY    = -51  // start depth: deep in tachyne's deep_dark band; the city rises from here
 )
 
-// AncientCity is a placed vault (or the zero value when a cell has none).
+// AncientCity is a placed city site (or the zero value).
 type AncientCity struct {
-	X, Y, Z        int
-	ChestX, ChestY int
-	ChestZ         int
-	Exists         bool
+	X, Y, Z int
+	Exists  bool
 }
 
-// AncientCityIn returns the vault owning the cell that contains (wx,wz), if any.
-// Deterministic: existence, position, and layout are pure functions of the cell.
+// AncientCityIn returns the city owning (wx,wz)'s cell, where deep_dark lives.
 func (g *Generator) AncientCityIn(wx, wz int) AncientCity {
 	ox, oz := cellOrigin(wx, ancientCityCell), cellOrigin(wz, ancientCityCell)
 	if hash01(g.seed, ox, oz, 0xAC00) >= ancientCityOdds {
 		return AncientCity{}
 	}
-	x := ox + 96 + int(hash01(g.seed, ox, oz, 0xAC01)*float64(ancientCityCell-192))
-	z := oz + 96 + int(hash01(g.seed, ox, oz, 0xAC02)*float64(ancientCityCell-192))
+	x := ox + 128 + int(hash01(g.seed, ox, oz, 0xAC01)*float64(ancientCityCell-256))
+	z := oz + 128 + int(hash01(g.seed, ox, oz, 0xAC02)*float64(ancientCityCell-256))
 	if g.caveBiome(x, z, ancientCityY) != "minecraft:deep_dark" {
-		return AncientCity{} // only where deep_dark actually lives
+		return AncientCity{} // only where deep_dark actually generates
 	}
-	return AncientCity{
-		X: x, Y: ancientCityY, Z: z,
-		ChestX: x + 3, ChestY: ancientCityY + 1, ChestZ: z,
-		Exists: true,
-	}
+	return AncientCity{X: x, Y: ancientCityY, Z: z, Exists: true}
 }
 
-// stampAncientCity stamps the portion of the vault (if any) that overlaps this
-// chunk. The 96-block cell margin keeps a vault well clear of cell borders, so
-// only the chunk-centre's own cell can own it.
+type acKey struct {
+	seed int64
+	x, z int
+}
+
+var (
+	acCache = map[acKey][]PlacedPiece{}
+	acMu    sync.Mutex
+)
+
+// AssembleAncientCity assembles (and caches) the city's jigsaw pieces from the
+// city_center start pool. Deterministic per site.
+func (g *Generator) AssembleAncientCity(a AncientCity) []PlacedPiece {
+	k := acKey{g.seed, a.X, a.Z}
+	acMu.Lock()
+	p, ok := acCache[k]
+	acMu.Unlock()
+	if ok {
+		return p
+	}
+	rng := newJigsawRNG(g.seed, a.X, a.Z)
+	p = g.AssembleJigsaw("ancient_city/city_center", a.X, a.Y, a.Z, rng, 7)
+	acMu.Lock()
+	acCache[k] = p
+	acMu.Unlock()
+	return p
+}
+
+// stampAncientCity stamps the city pieces overlapping this chunk. The 128-block
+// cell margin keeps a city clear of cell borders, so the chunk-centre cell owns
+// it.
 func (g *Generator) stampAncientCity(ch *Chunk, cx, cz int32) {
-	baseX, baseZ := int(cx)*16, int(cz)*16
-	c := g.AncientCityIn(baseX+8, baseZ+8)
-	if !c.Exists {
+	a := g.AncientCityIn(int(cx)*16+8, int(cz)*16+8)
+	if !a.Exists {
 		return
 	}
-	brick := blockBase("deepslate_bricks")
-	tiles := blockBase("deepslate_tiles")
-	reinf := blockBase("reinforced_deepslate")
-	lantern := blockBase("soul_lantern")
-	R := ancientCityRadius
-	for lx := 0; lx < 16; lx++ {
-		for lz := 0; lz < 16; lz++ {
-			wx, wz := baseX+lx, baseZ+lz
-			dx, dz := wx-c.X, wz-c.Z
-			if dx < -R || dx > R || dz < -R || dz > R {
-				continue
-			}
-			edge := dx == -R || dx == R || dz == -R || dz == R
-			for wy := c.Y - 1; wy <= c.Y+6; wy++ {
-				switch {
-				case wy == c.Y-1, wy == c.Y+6, edge: // foundation, ceiling, walls
-					chSet(ch, lx, wy, lz, brick)
-				case wy == c.Y: // floor: sculk carpet checker-boarded with tiles
-					if (dx+dz)&1 == 0 {
-						chSet(ch, lx, wy, lz, wgSculk)
-					} else {
-						chSet(ch, lx, wy, lz, tiles)
-					}
-				default: // hollow the interior
-					chSet(ch, lx, wy, lz, Air)
-				}
-			}
-			switch {
-			case (dx == R-1 || dx == -(R-1)) && (dz == R-1 || dz == -(R-1)): // corner pillars
-				for wy := c.Y; wy <= c.Y+5; wy++ {
-					chSet(ch, lx, wy, lz, reinf)
-				}
-				chSet(ch, lx, c.Y+5, lz, lantern)
-			case dx == 0 && dz == 0: // central dais + catalyst
-				chSet(ch, lx, c.Y, lz, reinf)
-				chSet(ch, lx, c.Y+1, lz, wgSculkCatalyst+1)
-			case wx == c.ChestX && wz == c.ChestZ: // loot chest
-				chSet(ch, lx, c.Y+1, lz, ChestNorth)
-			case !edge && sculk01(g.seed, wx, c.Y, wz, 0xAC10) < 0.04: // scattered shriekers
-				chSet(ch, lx, c.Y+1, lz, wgSculkShrieker+3) // can_summon → Warden path
-			}
+	g.StampPieces(ch, cx, cz, g.AssembleAncientCity(a))
+}
+
+// AncientCityChests returns the world positions of the city's loot chests.
+func (g *Generator) AncientCityChests(a AncientCity) [][3]int {
+	var out [][3]int
+	for _, pc := range g.AssembleAncientCity(a) {
+		for _, c := range pc.Tmpl.Chests {
+			rx, ry, rz := pc.Tmpl.rotatePos(c[0], c[1], c[2], pc.Rot)
+			out = append(out, [3]int{pc.OX + rx, pc.OY + ry, pc.OZ + rz})
 		}
 	}
+	return out
 }

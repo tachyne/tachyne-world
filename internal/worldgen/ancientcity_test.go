@@ -17,25 +17,32 @@ func TestAncientCityGenerates(t *testing.T) {
 	if !city.Exists {
 		t.Skip("no ancient city in the sampled region (deep_dark gating)")
 	}
-	// Generate the chunk holding the city centre and check for its signature blocks.
-	cx, cz := int32(city.X>>4), int32(city.Z>>4)
-	ch := g.GenerateChunk(cx, cz)
+	// The city spans many chunks (real jigsaw templates); scan its footprint for
+	// the signature reinforced-deepslate frame + loot chests.
 	reinf := blockBase("reinforced_deepslate")
-	sculk, reinfN, chests := 0, 0, 0
-	for s := range ch.Sections {
-		for _, b := range ch.Sections[s] {
-			switch {
-			case b == wgSculk:
-				sculk++
-			case b == reinf:
-				reinfN++
-			case b == ChestNorth:
-				chests++
+	lo, hi := BlockRange("chest")
+	reinfN, chestN := 0, 0
+	pcx, pcz := int32(city.X>>4), int32(city.Z>>4)
+	for cx := pcx - 4; cx <= pcx+4; cx++ {
+		for cz := pcz - 4; cz <= pcz+4; cz++ {
+			ch := g.GenerateChunk(cx, cz)
+			for s := range ch.Sections {
+				for _, b := range ch.Sections[s] {
+					if b == reinf {
+						reinfN++
+					} else if b >= lo && b <= hi {
+						chestN++
+					}
+				}
 			}
 		}
 	}
-	t.Logf("city at %d,%d,%d: sculk=%d reinforced=%d chests=%d", city.X, city.Y, city.Z, sculk, reinfN, chests)
-	if reinfN == 0 || sculk == 0 {
-		t.Fatal("ancient city chunk should contain reinforced deepslate + sculk")
+	t.Logf("city at %d,%d,%d: reinforced=%d chests=%d (routed=%d)",
+		city.X, city.Y, city.Z, reinfN, chestN, len(g.AncientCityChests(city)))
+	if reinfN == 0 {
+		t.Fatal("ancient city should stamp its reinforced-deepslate frame from the templates")
+	}
+	if len(g.AncientCityChests(city)) == 0 {
+		t.Fatal("ancient city should carry loot chests")
 	}
 }

@@ -38,8 +38,12 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
-	if a := g.AncientCityIn(pos.x, pos.z); a.Exists && pos.x == a.ChestX && pos.y == a.ChestY && pos.z == a.ChestZ {
-		return "chests/ancient_city", true
+	if a := g.AncientCityIn(pos.x, pos.z); a.Exists {
+		for _, c := range g.AncientCityChests(a) {
+			if pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {
+				return "chests/ancient_city", true
+			}
+		}
 	}
 	if s := g.ShipwreckIn(pos.x, pos.z); s.Exists {
 		for i := 0; i < s.N; i++ {
