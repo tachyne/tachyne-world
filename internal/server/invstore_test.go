@@ -127,3 +127,39 @@ func TestMigrateItemIDs(t *testing.T) {
 		t.Errorf("furnace item = %d, want 893", cs.m.Furnaces["1,1,1"].Slots[0][0])
 	}
 }
+
+// TestSavedPositionRoundTrip: a recorded player's last position comes back via
+// savedPos; new players and legacy (no-position) entries return ok=false so the
+// caller falls back to world spawn.
+func TestSavedPositionRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inventories.json")
+	s := newInvStore(path)
+
+	tr := testTracked()
+	tr.x, tr.y, tr.z = 123.5, 72, -840.25
+	tr.yaw, tr.pitch = 90, -12
+	tr.dim = 0
+	s.save("wanderer", tr) // record + flush
+
+	// New player → no saved position.
+	if _, _, _, _, _, _, ok := s.savedPos("stranger"); ok {
+		t.Fatal("a player who never played should have no saved position")
+	}
+
+	// Reload from disk and confirm the position survives.
+	s2 := newInvStore(path)
+	x, y, z, yaw, pitch, dim, ok := s2.savedPos("wanderer")
+	if !ok {
+		t.Fatal("a recorded player's position should reload")
+	}
+	if x != 123.5 || y != 72 || z != -840.25 || yaw != 90 || pitch != -12 || dim != 0 {
+		t.Fatalf("position round-trip lost data: (%v,%v,%v) yaw=%v pitch=%v dim=%v", x, y, z, yaw, pitch, dim)
+	}
+
+	// A legacy entry with no position (HasPos false) → ok=false.
+	s2.m["legacy"] = &savedInv{}
+	if _, _, _, _, _, _, ok := s2.savedPos("legacy"); ok {
+		t.Fatal("a legacy entry without a position must fall back to world spawn")
+	}
+}

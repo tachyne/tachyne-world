@@ -28,6 +28,17 @@ type savedInv struct {
 	Offhand  [13]int32          `json:"offhand"`
 	XPLevel  int32              `json:"xp_level,omitempty"`
 	XPPoints int32              `json:"xp_points,omitempty"`
+
+	// Last position (restored on login, vanilla-style: you log back in where
+	// you logged out). HasPos distinguishes a real saved position from a legacy
+	// entry or a brand-new player (both → world spawn).
+	X      float64 `json:"x,omitempty"`
+	Y      float64 `json:"y,omitempty"`
+	Z      float64 `json:"z,omitempty"`
+	Yaw    float32 `json:"yaw,omitempty"`
+	Pitch  float32 `json:"pitch,omitempty"`
+	Dim    int32   `json:"dim,omitempty"`
+	HasPos bool    `json:"has_pos,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -92,13 +103,25 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 }
 
+// savedPos returns a player's last saved position (ok=false for a new player
+// or a legacy entry without one). Safe to call off the hub goroutine.
+func (s *invStore) savedPos(name string) (x, y, z float64, yaw, pitch float32, dim int32, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if sv, has := s.m[name]; has && sv.HasPos {
+		return sv.X, sv.Y, sv.Z, sv.Yaw, sv.Pitch, sv.Dim, true
+	}
+	return 0, 0, 0, 0, 0, 0, false
+}
+
 // record updates name's in-memory snapshot from the live loadout (no write).
 func (s *invStore) record(name string, t *tracked) {
 	if t.inv == nil {
 		return
 	}
 	snap := &savedInv{Offhand: packStack(t.offhand),
-		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints)}
+		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints),
+		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	for i, st := range t.inv.slots {
 		snap.Slots[i] = packStack(st)
 	}

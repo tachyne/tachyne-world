@@ -23,7 +23,17 @@ func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payl
 	if s.SpawnSet {
 		x, y, z = s.SpawnX, s.SpawnY, s.SpawnZ
 	}
-	p.x, p.y, p.z = x, y, z
+	var yaw, pitch float32
+	// Vanilla logs a returning player back in where they logged out. Restore
+	// their last OVERWORLD position; a new player, or one who logged out in the
+	// nether/end (a fresh join into another dimension needs the dimension-switch
+	// machinery), uses world spawn instead. Bed/anchor is a DEATH concern.
+	if s.hub.invs != nil {
+		if px, py, pz, pyaw, ppitch, pdim, ok := s.hub.invs.savedPos(name); ok && pdim == 0 {
+			x, y, z, yaw, pitch = px, py, pz, pyaw, ppitch
+		}
+	}
+	p.x, p.y, p.z, p.yaw, p.pitch = x, y, z, yaw, pitch
 	r := &remotePlayer{s: s, p: p, emit: emit, x: x, y: y, z: z, gm: -1}
 	go r.decodeLoop()
 	mode := s.modes.get(name)
@@ -31,7 +41,7 @@ func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payl
 	// and the mode's abilities (creative flight).
 	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
 	r.emitEvNow(abilitiesFor(mode))
-	s.hub.post(evJoin{p: p, x: x, y: y, z: z, gamemode: mode})
+	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
 	return r, nil
 }
 

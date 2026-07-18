@@ -809,6 +809,12 @@ func (h *hub) run() {
 					}
 					h.rbstore.flush()
 				}
+				if h.invs != nil { // snapshot online loadouts + positions (crash resilience)
+					for _, t := range players {
+						h.invs.record(t.p.name, t)
+					}
+					h.invs.flush()
+				}
 				if h.sbDirty {
 					h.sbDirty = false
 					h.sbstore.flush(h.sb)
