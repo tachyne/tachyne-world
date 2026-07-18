@@ -23,6 +23,21 @@ type paletteEntry struct {
 	Props map[string]string `json:"props,omitempty"`
 }
 
+// jigsawBlock is a connection point on a template piece (see JigsawBlock in the
+// vanilla source): Front/Top orientation, the Pool to draw the connecting piece
+// from, the Name this block advertises, the Target name it must connect to, and
+// the Final state that replaces it once placed.
+type jigsawBlock struct {
+	Pos    [3]int `json:"pos"`
+	Front  string `json:"front"`
+	Top    string `json:"top"`
+	Joint  string `json:"joint"`
+	Name   string `json:"name"`
+	Pool   string `json:"pool"`
+	Target string `json:"target"`
+	Final  string `json:"final"`
+}
+
 // Template is one parsed structure piece. resolved[rot][paletteIdx] is the
 // tachyne state to place for that palette entry at that rotation (or tmplSkip).
 type Template struct {
@@ -30,24 +45,42 @@ type Template struct {
 	Palette  []paletteEntry `json:"palette"`
 	Blocks   [][4]int       `json:"blocks"` // x,y,z,paletteIdx
 	Chests   [][3]int       `json:"chests"` // template-local chest positions
+	Jigsaws  []jigsawBlock  `json:"jigsaws"`
 	resolved [4][]uint32
 }
 
-var templates map[string]*Template
+type poolElement struct {
+	Location   string `json:"location"`
+	Weight     int    `json:"weight"`
+	Projection string `json:"projection"`
+}
+type templatePool struct {
+	Elements []poolElement `json:"elements"`
+	Fallback string        `json:"fallback"`
+}
+
+var (
+	templates map[string]*Template
+	pools     map[string]*templatePool
+)
 
 func init() {
-	if err := json.Unmarshal(structuresJSON, &templates); err != nil {
+	var data struct {
+		Templates map[string]*Template     `json:"templates"`
+		Pools     map[string]*templatePool `json:"pools"`
+	}
+	if err := json.Unmarshal(structuresJSON, &data); err != nil {
 		log.Printf("structure templates: %v", err)
 		return
 	}
-	for name, t := range templates {
+	templates, pools = data.Templates, data.Pools
+	for _, t := range templates {
 		for rot := 0; rot < 4; rot++ {
 			t.resolved[rot] = make([]uint32, len(t.Palette))
 			for i, p := range t.Palette {
 				t.resolved[rot][i] = resolveState(p, rot)
 			}
 		}
-		_ = name
 	}
 }
 

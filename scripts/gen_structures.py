@@ -15,11 +15,18 @@ import zipfile, io, gzip, os, struct, json
 JAR = os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "structdata", "structures.json")
 
-# Curated set to bake (Phase 1: igloos — the simplest real templates).
+# Standalone templates to bake (non-jigsaw, placed by code).
 TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
+]
+
+# Jigsaw structures to bake: their template pools (+ every template the pools
+# reference, collected transitively). Phase 2 proves the assembler on the
+# pillager outpost (small); ancient_city / trial_chambers / village follow.
+POOL_ROOTS = [
+    "pillager_outpost/base_plates",
 ]
 
 
@@ -75,6 +82,7 @@ def bake(inner, name):
     blocks = []
     chests = []
     spawners = []
+    jigsaws = []
     for b in d["blocks"]:
         x, y, z = b["pos"]
         blocks.append([x, y, z, b["state"]])
@@ -83,33 +91,101 @@ def bake(inner, name):
             continue
         bid = nbt.get("id", "")
         if bid == "minecraft:chest":
-            # The loot table is assigned per-structure in Go (vanilla sets it in
-            # piece code, not the template); record the position only.
             chests.append([x, y, z])
         elif bid == "minecraft:mob_spawner":
-            ent = ""
             sd = nbt.get("SpawnData", {}).get("entity", {})
-            if isinstance(sd, dict):
-                ent = sd.get("id", "")
-            spawners.append([x, y, z, ent])
-    return {
-        "size": d["size"],
-        "palette": palette,
-        "blocks": blocks,
-        "chests": chests,
-        "spawners": spawners,
-    }
+            spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])
+        elif bid == "minecraft:jigsaw":
+            # orientation "{front}_{top}" (FrontAndTop); front/top are directions.
+            orient = palette[b["state"]].get("props", {}).get("orientation", "north_up")
+            front, top = orient.split("_", 1)
+            jigsaws.append({
+                "pos": [x, y, z], "front": front, "top": top,
+                "joint": nbt.get("joint", "rollable"),
+                "name": nbt.get("name", "").split(":", 1)[-1],
+                "pool": nbt.get("pool", "empty").split(":", 1)[-1],
+                "target": nbt.get("target", "").split(":", 1)[-1],
+                "final": nbt.get("final_state", "minecraft:air"),
+            })
+    t = {"size": d["size"], "palette": palette, "blocks": blocks}
+    if chests:
+        t["chests"] = chests
+    if spawners:
+        t["spawners"] = spawners
+    if jigsaws:
+        t["jigsaws"] = jigsaws
+    return t
+
+
+def elem_location(el):
+    """Resolve a pool element to its base template location (or None for
+    feature/empty elements). list_pool_element → its first real location."""
+    et = el.get("element_type", "")
+    if et in ("minecraft:legacy_single_pool_element", "minecraft:single_pool_element"):
+        return el.get("location")
+    if et == "minecraft:list_pool_element":
+        for s in el.get("elements", []):
+            loc = elem_location(s)
+            if loc:
+                return loc
+    return None
+
+
+def load_pool(inner, name):
+    """Parse a template_pool JSON → {elements:[{location,weight,projection}], fallback}."""
+    j = json.loads(inner.read("data/minecraft/worldgen/template_pool/%s.json" % name))
+    out = {"elements": [], "fallback": j.get("fallback", "minecraft:empty").split(":", 1)[-1]}
+    for e in j.get("elements", []):
+        el = e["element"]
+        loc = elem_location(el)
+        if not loc:  # feature/empty pool elements — skip for now
+            continue
+        out["elements"].append({
+            "location": loc.split(":", 1)[-1],
+            "weight": e.get("weight", 1),
+            "projection": el.get("projection", "rigid"),
+        })
+    return out
+
+
+def collect(inner):
+    """Bake POOL_ROOTS: their pools + every template reachable through jigsaws."""
+    pools, templates = {}, {}
+    pool_queue = list(POOL_ROOTS)
+    seen_pools = set()
+    while pool_queue:
+        pn = pool_queue.pop()
+        if pn in seen_pools or pn == "empty":
+            continue
+        seen_pools.add(pn)
+        try:
+            pool = load_pool(inner, pn)
+        except KeyError:
+            continue
+        pools[pn] = pool
+        for el in pool["elements"]:
+            loc = el["location"]
+            if loc in templates:
+                continue
+            t = bake(inner, loc)
+            templates[loc] = t
+            for j in t.get("jigsaws", []):
+                if j["pool"] and j["pool"] != "empty":
+                    pool_queue.append(j["pool"])
+    return pools, templates
 
 
 def main():
     outer = zipfile.ZipFile(JAR)
     inner = zipfile.ZipFile(io.BytesIO(outer.read("META-INF/versions/1.21.11/server-1.21.11.jar")))
     out = {name: bake(inner, name) for name in TEMPLATES}
+    pools, jig_templates = collect(inner)
+    out.update(jig_templates)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump(out, f, separators=(",", ":"))
+        json.dump({"templates": out, "pools": pools}, f, separators=(",", ":"))
     total = sum(len(t["blocks"]) for t in out.values())
-    print("baked %d templates, %d blocks -> %s" % (len(out), total, os.path.relpath(OUT)))
+    print("baked %d templates (%d blocks), %d pools -> %s" % (len(out), total, len(pools), os.path.relpath(OUT)))
 
 
 if __name__ == "__main__":
