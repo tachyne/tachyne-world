@@ -24,11 +24,19 @@ SHIPWRECK = ["shipwreck/%s%s" % (v, d) for v in (
 ) for d in ("", "_degraded")]
 RUINED_PORTAL = ["ruined_portal/portal_%d" % i for i in range(1, 11)] + \
     ["ruined_portal/giant_portal_%d" % i for i in range(1, 4)]
+import zipfile as _zf, io as _io, os as _os
+def _mansion_names():
+    jar=_os.path.expanduser("~/vanilla/server-1.21.11.jar")
+    z=_zf.ZipFile(jar); inner=[n for n in z.namelist() if n.endswith("server-1.21.11.jar") and "versions" in n]
+    zz=_zf.ZipFile(_io.BytesIO(z.read(inner[0]))) if inner else z
+    return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
+                  if "/structure/woodland_mansion/" in n and n.endswith(".nbt"))
+MANSION = _mansion_names()
 TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-] + SHIPWRECK + RUINED_PORTAL
+] + SHIPWRECK + RUINED_PORTAL + MANSION
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).
@@ -36,6 +44,10 @@ MARKER_LOOT = {
     "supply_chest": "chests/shipwreck_supply",
     "map_chest": "chests/shipwreck_map",
     "treasure_chest": "chests/shipwreck_treasure",
+    "ChestWest": "chests/woodland_mansion",
+    "ChestEast": "chests/woodland_mansion",
+    "ChestSouth": "chests/woodland_mansion",
+    "ChestNorth": "chests/woodland_mansion",
 }
 
 # Jigsaw structures to bake: their template pools (+ every template the pools
@@ -154,6 +166,11 @@ def bake(inner, name):
                 chestloot.append(lt.split(":", 1)[-1])
             else:
                 chestloot.append(MARKER_LOOT.get(markers.get((x, y + 1, z), ""), ""))
+        elif bid == "minecraft:structure_block" and nbt.get("metadata", "").startswith("Chest"):
+            # Woodland mansion: a "Chest*" DATA marker BECOMES a chest at its own
+            # position (vanilla handleDataMarker), with the mansion loot table.
+            chests.append([x, y, z])
+            chestloot.append(MARKER_LOOT.get(nbt["metadata"], "chests/woodland_mansion"))
         elif bid == "minecraft:mob_spawner":
             sd = nbt.get("SpawnData", {}).get("entity", {})
             spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])

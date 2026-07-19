@@ -161,6 +161,125 @@ func rotateProp(name, val string, rot int) (string, string) {
 	return name, val
 }
 
+// Mirror modes (vanilla Mirror), applied BEFORE rotation.
+const (
+	mirNone = 0
+	mirLR   = 1 // LEFT_RIGHT: flips the Z axis (north↔south)
+	mirFB   = 2 // FRONT_BACK: flips the X axis (east↔west)
+)
+
+// transformPos applies vanilla's template transform (mirror then rotation about
+// the origin, StructureTemplate.transform with pivot 0,0,0) to a local position.
+// The result can be negative — the placer's anchor positions account for that.
+func transformPos(x, y, z, rot, mir int) (int, int, int) {
+	switch mir {
+	case mirLR:
+		z = -z
+	case mirFB:
+		x = -x
+	}
+	switch rot & 3 {
+	case 1: // CLOCKWISE_90
+		return -z, y, x
+	case 2: // CLOCKWISE_180
+		return -x, y, -z
+	case 3: // COUNTERCLOCKWISE_90
+		return z, y, -x
+	}
+	return x, y, z
+}
+
+// mirrorProp reflects a directional property (facing/connection/axis) for a
+// mirror, BEFORE rotation. LEFT_RIGHT flips north↔south, FRONT_BACK flips
+// east↔west. (Stair shape, door hinge and sign rotation mirroring are not
+// handled — a minor cosmetic gap in mirrored rooms.)
+func mirrorProp(name, val string, mir int) (string, string) {
+	if mir == mirNone {
+		return name, val
+	}
+	switch name {
+	case "facing":
+		switch mir {
+		case mirLR:
+			if val == "north" {
+				return name, "south"
+			} else if val == "south" {
+				return name, "north"
+			}
+		case mirFB:
+			if val == "east" {
+				return name, "west"
+			} else if val == "west" {
+				return name, "east"
+			}
+		}
+	case "north", "south":
+		if mir == mirLR {
+			if name == "north" {
+				return "south", val
+			}
+			return "north", val
+		}
+	case "east", "west":
+		if mir == mirFB {
+			if name == "east" {
+				return "west", val
+			}
+			return "east", val
+		}
+	}
+	return name, val
+}
+
+// resolveStateM resolves a palette entry with mirror THEN rotation (vanilla
+// state.mirror(mir).rotate(rot)).
+func resolveStateM(p paletteEntry, rot, mir int) uint32 {
+	name := trimNS(p.Name)
+	switch name {
+	case "structure_void", "structure_block", "jigsaw":
+		return tmplSkip
+	}
+	base := safeBase(name)
+	if base == tmplSkip {
+		return tmplSkip
+	}
+	info, ok := InfoForState(base)
+	if !ok || len(p.Props) == 0 {
+		return base
+	}
+	state := base
+	for k, v := range p.Props {
+		k1, v1 := mirrorProp(k, v, mir)
+		k2, v2 := rotateProp(k1, v1, rot)
+		if info.HasProperty(k2) {
+			state = SetProperty(info, state, k2, v2)
+		}
+	}
+	return state
+}
+
+// StampAt places a template so its transformed origin sits at world (px,py,pz),
+// under rotation `rot` and mirror `mir` (vanilla pivot-0 transform). Returns the
+// world positions of its chests. Only the portion in this chunk is written.
+func (t *Template) StampAt(ch *Chunk, cx, cz int32, px, py, pz, rot, mir int) [][3]int {
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	for _, b := range t.Blocks {
+		state := resolveStateM(t.Palette[b[3]], rot, mir)
+		if state == tmplSkip {
+			continue
+		}
+		tx, ty, tz := transformPos(b[0], b[1], b[2], rot, mir)
+		wx, wy, wz := px+tx, py+ty, pz+tz
+		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
+	}
+	var chests [][3]int
+	for _, c := range t.Chests {
+		tx, ty, tz := transformPos(c[0], c[1], c[2], rot, mir)
+		chests = append(chests, [3]int{px + tx, py + ty, pz + tz})
+	}
+	return chests
+}
+
 // rotatePos rotates a template-local position clockwise by `rot` quarter turns,
 // keeping it within the (rotated) bounding box.
 func (t *Template) rotatePos(x, y, z, rot int) (int, int, int) {
