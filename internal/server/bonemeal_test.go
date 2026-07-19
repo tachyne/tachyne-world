@@ -96,7 +96,7 @@ func TestStemGrowth(t *testing.T) {
 		}
 		w.SetBlock(x, y+5, z, worldgen.Air)
 		fruited := false
-		for i := 0; i < 200 && !fruited; i++ {
+		for i := 0; i < 2000 && !fruited; i++ { // growth is now probability-gated
 			w.SetBlock(x, y, z, melonStemBase+7) // reset to mature each try
 			h.tickStem(h.playersRef, x, y, z, melonStemBase+7)
 			for _, d := range horizNeighbors {
@@ -112,11 +112,18 @@ func TestStemGrowth(t *testing.T) {
 		if !fruited {
 			t.Error("mature melon stem never fruited")
 		}
-		// Below max age, it just advances.
-		w.SetBlock(x, y, z, melonStemBase+2)
-		h.tickStem(h.playersRef, x, y, z, melonStemBase+2)
-		if w.At(x, y, z) != melonStemBase+3 {
-			t.Errorf("stem age = %d, want +3", w.At(x, y, z)-melonStemBase)
+		// Below max age it advances one stage — now gated by the vanilla
+		// growth-speed probability, so loop until it fires.
+		grew := false
+		for i := 0; i < 2000 && !grew; i++ {
+			w.SetBlock(x, y, z, melonStemBase+2)
+			h.tickStem(h.playersRef, x, y, z, melonStemBase+2)
+			if w.At(x, y, z) == melonStemBase+3 {
+				grew = true
+			}
+		}
+		if !grew {
+			t.Error("stem never advanced past age 2 under the growth gate")
 		}
 	})
 }

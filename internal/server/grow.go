@@ -167,11 +167,50 @@ func (h *hub) tickStackPlant(players map[int32]*tracked, x, y, z int, state uint
 	}
 }
 
-// tickCrop advances a staged crop one stage if it's immature and sky-lit.
+// cropGrowthSpeed ports CropBlock.getGrowthSpeed: base 1.0, plus a farmland
+// bonus under the crop (dry +1, moist +3; the eight diagonal/orthogonal cells
+// weighted ÷4), then halved when the same crop flanks it on both axes (or on a
+// diagonal) — the "planted in rows grows faster" rule. `r` is this crop's state
+// range so a same-type neighbour of any age counts.
+func (h *hub) cropGrowthSpeed(x, y, z int, r [2]uint32) float64 {
+	f := 1.0
+	for i := -1; i <= 1; i++ {
+		for j := -1; j <= 1; j++ {
+			g := 0.0
+			if s := h.world.At(x+i, y-1, z+j); s >= farmlandMin && s <= farmlandMin+7 {
+				g = 1.0
+				if s > farmlandMin { // moisture > 0
+					g = 3.0
+				}
+			}
+			if i != 0 || j != 0 {
+				g /= 4.0
+			}
+			f += g
+		}
+	}
+	sameNS := inRange(h.world.At(x, y, z-1), r) || inRange(h.world.At(x, y, z+1), r)
+	sameEW := inRange(h.world.At(x-1, y, z), r) || inRange(h.world.At(x+1, y, z), r)
+	if sameNS && sameEW {
+		f /= 2.0
+	} else if inRange(h.world.At(x-1, y, z-1), r) || inRange(h.world.At(x+1, y, z-1), r) ||
+		inRange(h.world.At(x-1, y, z+1), r) || inRange(h.world.At(x+1, y, z+1), r) {
+		f /= 2.0
+	}
+	return f
+}
+
+// cropGrows rolls the vanilla growth gate: random.nextInt((int)(25/speed)+1)==0.
+func (h *hub) cropGrows(x, y, z int, r [2]uint32) bool {
+	return h.rng.Intn(int(25.0/h.cropGrowthSpeed(x, y, z, r))+1) == 0
+}
+
+// tickCrop advances a staged crop one stage if it's immature and sky-lit, gated
+// by the vanilla growth-speed probability (was: advanced every random tick).
 func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bool {
 	for _, r := range cropRanges {
 		if inRange(state, r) {
-			if state < r[1] && h.skyLit(x, y, z) {
+			if state < r[1] && h.skyLit(x, y, z) && h.cropGrows(x, y, z, r) {
 				h.setBlock(players, blockPos{x, y, z}, state+1)
 			}
 			return true
@@ -473,6 +512,11 @@ func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bo
 		return false
 	}
 	if !h.skyLit(x, y, z) {
+		return true
+	}
+	// Vanilla StemBlock.randomTick gates both the age-advance and the fruiting on
+	// the same growth-speed probability (was: grew every random tick).
+	if !h.cropGrows(x, y, z, [2]uint32{stemBase, stemBase + 7}) {
 		return true
 	}
 	age := int(state - stemBase)
