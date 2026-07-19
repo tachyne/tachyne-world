@@ -252,9 +252,12 @@ func (h *hub) spawnAttempt(players map[int32]*tracked, cat int, chunks [][2]int3
 		}
 		if d := h.nearestPlayerSq(players, float64(x)+0.5, float64(y), float64(z)+0.5); d <= 576 ||
 			(categoryDespawnDist[cat] > 0 && d > float64(categoryDespawnDist[cat]*categoryDespawnDist[cat])) {
-			continue // vanilla: never within 24 blocks, never where it would instantly despawn
+			continue // vanilla: never within 24 blocks of a player, never where it would instantly despawn
 		}
-		if !h.spawnPositionOK(cat, x, y, z) {
+		if h.nearWorldSpawn(x, y, z) {
+			continue // vanilla: never within 24 blocks of world spawn
+		}
+		if !h.spawnPositionOK(cat, sd.etype, x, y, z) {
 			continue
 		}
 		sky, block := h.world.LightAt(x, y, z) // cached in world, invalidated by edits
@@ -349,8 +352,14 @@ func (h *hub) rollSpawner(pool []spawnerEntry) (spawnerEntry, bool) {
 
 // spawnPositionOK is vanilla SpawnPlacements.isSpawnPositionOk: solid ground
 // with two clear cells for land categories, open water for aquatic ones.
-func (h *hub) spawnPositionOK(cat, x, y, z int) bool {
+func (h *hub) spawnPositionOK(cat, etype, x, y, z int) bool {
 	at := h.world.At(x, y, z)
+	// Drowned use vanilla's IN_WATER placement even though they are monsters:
+	// water at the anchor with a non-solid block above (SpawnPlacementType
+	// IN_WATER = fluid is water && block above is not a redstone conductor).
+	if etype == entityDrowned {
+		return worldgen.IsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
+	}
 	switch cat {
 	case catWaterCreature, catWaterAmbient:
 		return worldgen.IsWater(at) && worldgen.IsWater(h.world.At(x, y+1, z))
@@ -389,14 +398,18 @@ func (h *hub) skyDarken() int {
 	return 15 - int(level)
 }
 
-// rawBrightness is vanilla getMaxLocalRawBrightness: the larger of block
-// light and the time/weather-adjusted sky light (optionally capped).
-func (h *hub) rawBrightness(sky, block uint8, skyCap int) int {
-	s := int(sky)
-	if skyCap >= 0 && s > skyCap {
-		s = skyCap
+// rawBrightness is vanilla getRawBrightness(pos, amount): the larger of block
+// light and (stored sky light − amount). `darken` is that amount — the number
+// of levels subtracted from the raw sky value: pass -1 for the time/weather
+// skyDarken (the normal getMaxLocalRawBrightness), 0 for the true raw value
+// (animal spawn check), or a fixed amount like 10 (the thunderstorm rule,
+// which REPLACES skyDarken rather than capping the sky).
+func (h *hub) rawBrightness(sky, block uint8, darken int) int {
+	if darken < 0 {
+		darken = h.skyDarken()
 	}
-	if s -= h.skyDarken(); s < 0 {
+	s := int(sky) - darken
+	if s < 0 {
 		s = 0
 	}
 	return max(s, int(block))
@@ -414,11 +427,11 @@ func (h *hub) darkEnoughToSpawn(sky, block uint8) bool {
 	if block > 0 {
 		return false
 	}
-	skyCap := -1
+	darken := -1 // normal: time/weather skyDarken
 	if h.thundering {
-		skyCap = 10
+		darken = 10 // vanilla getMaxLocalRawBrightness(pos, 10): a fixed −10, not a cap
 	}
-	return h.rawBrightness(sky, block, skyCap) <= h.rng.Intn(8)
+	return h.rawBrightness(sky, block, darken) <= h.rng.Intn(8)
 }
 
 // spawnRulesOK is the per-category/per-species spawn rule check (vanilla
@@ -434,8 +447,19 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 			return h.slimeSpawnOK(x, y, z)
 		case entityHusk, entityStray: // vanilla: these need direct sky above
 			return sky == 15
-		case entityDrowned: // vanilla: rivers any depth, oceans only well below the surface
-			return isRiverBiome(h.world.BiomeAt(x, z)) || y < worldgen.SeaLevel-5
+		case entityDrowned:
+			// vanilla Drowned.checkDrownedSpawnRules: needs water in the block
+			// below the anchor, then a rarity roll — 1/15 in river biomes
+			// (#is_river = the MORE_FREQUENT_DROWNED_SPAWNS tag), else 1/40 and
+			// only well below sea level (isDeepEnoughToSpawn). Water AT the anchor
+			// and darkness are already enforced by placement + darkEnoughToSpawn.
+			if !worldgen.IsWater(h.world.At(x, y-1, z)) {
+				return false
+			}
+			if isRiverBiome(h.world.BiomeAt(x, z)) {
+				return h.rng.Intn(15) == 0
+			}
+			return h.rng.Intn(40) == 0 && y < worldgen.SeaLevel-5
 		}
 		return true
 	case catCreature: // vanilla Animal.checkAnimalSpawnRules: grass + light > 8
@@ -444,7 +468,10 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 		default:
 			return false
 		}
-		return h.rawBrightness(sky, block, -1) > 8
+		// vanilla Animal.isBrightEnoughToSpawn: getRawBrightness(pos, 0) > 8 — the
+		// TRUE raw light with no time-of-day darkening, so a sky-lit surface (15)
+		// permits animal spawns day or night.
+		return h.rawBrightness(sky, block, 0) > 8
 	case catAmbient: // vanilla Bat.checkBatSpawnRules
 		return y < h.world.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
 			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4)

@@ -65,16 +65,19 @@ func TestVanillaSpawnerModeIsolation(t *testing.T) {
 // TestNearWorldSpawnExclusion: the 24-block no-spawn ring around world spawn.
 func TestNearWorldSpawnExclusion(t *testing.T) {
 	h := newHub(world.New(1))
-	if h.nearWorldSpawn(0, 0) {
+	if h.nearWorldSpawn(0, 0, 0) {
 		t.Fatal("with no world spawn set there is no exclusion")
 	}
 	h.hasWorldSpawn = true
-	h.worldSpawnX, h.worldSpawnZ = 100, 100
-	if !h.nearWorldSpawn(105, 100) {
+	h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ = 100, 64, 100
+	if !h.nearWorldSpawn(105, 64, 100) {
 		t.Fatal("a point within 24 of world spawn must be excluded")
 	}
-	if h.nearWorldSpawn(130, 100) {
-		t.Fatal("a point beyond 24 of world spawn must be allowed")
+	if h.nearWorldSpawn(130, 64, 100) {
+		t.Fatal("a point beyond 24 (horizontally) of world spawn must be allowed")
+	}
+	if h.nearWorldSpawn(100, 100, 100) {
+		t.Fatal("a point 36 blocks BELOW world spawn must be allowed (3D distance)")
 	}
 }
 

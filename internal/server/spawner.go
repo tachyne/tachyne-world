@@ -13,6 +13,7 @@ const (
 	spawnerMobCap    = 6   // nearby same-dungeon hostiles before it pauses
 	spawnerMinDelay  = 200 // ticks between spawns (vanilla 200-800)
 	spawnerDelaySpan = 600
+	spawnerCount     = 4 // vanilla BaseSpawner DEFAULT_SPAWN_COUNT: 4 attempts/cycle
 )
 
 var dungeonMobs = [3]int{entityZombie, entitySkeleton, entitySpider}
@@ -61,7 +62,7 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 					continue
 				}
 				etype := dungeonMobs[d.Mob%3]
-				for i := 0; i < 1+h.rng.Intn(2); i++ {
+				for i := 0; i < spawnerCount; i++ { // vanilla: 4 spawn attempts per cycle
 					sx := float64(d.X-d.W) + h.rng.Float64()*float64(2*d.W) + 0.5
 					sz := float64(d.Z-d.D) + h.rng.Float64()*float64(2*d.D) + 0.5
 					h.spawnHostileY(players, etype, sx, float64(d.Y), sz)

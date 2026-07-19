@@ -92,7 +92,7 @@ func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, cou
 				continue
 			}
 			d := h.nearestPlayerSq(players, float64(x)+0.5, float64(ay), float64(z)+0.5)
-			if d <= float64(spawnMinDist*spawnMinDist) || h.nearWorldSpawn(x, z) {
+			if d <= float64(spawnMinDist*spawnMinDist) || h.nearWorldSpawn(x, ay, z) {
 				continue // never within 24 of a player, nor 24 of world spawn
 			}
 			if r := categorySpawnRange[cat]; r > 0 && d > float64(r*r) {
@@ -107,7 +107,7 @@ func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, cou
 				groupSize = sd.min + h.rng.Intn(sd.max-sd.min+1) // reset to the biome pack size
 				picked = true
 			}
-			if !h.spawnPositionOK(cat, x, ay, z) {
+			if !h.spawnPositionOK(cat, sd.etype, x, ay, z) {
 				continue
 			}
 			sky, block := h.world.LightAt(x, ay, z)
@@ -126,14 +126,18 @@ func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, cou
 	}
 }
 
-// nearWorldSpawn reports whether (x,z) is within the spawn-point exclusion
-// radius (vanilla forbids natural spawns within 24 blocks of world spawn).
-func (h *hub) nearWorldSpawn(x, z int) bool {
+// nearWorldSpawn reports whether (x,y,z) is within the spawn-point exclusion
+// radius (vanilla forbids natural spawns within 24 blocks of world spawn). The
+// vanilla test is full 3D — respawnData.pos().closerToCenterThan(Vec3(x+0.5,
+// y, z+0.5), 24) — so a deep-cave column directly under spawn is still allowed.
+func (h *hub) nearWorldSpawn(x, y, z int) bool {
 	if !h.hasWorldSpawn {
 		return false
 	}
-	dx, dz := float64(x)+0.5-h.worldSpawnX, float64(z)+0.5-h.worldSpawnZ
-	return dx*dx+dz*dz < spawnPointExclusion*spawnPointExclusion
+	dx := float64(x) + 0.5 - h.worldSpawnX
+	dy := float64(y) - h.worldSpawnY
+	dz := float64(z) + 0.5 - h.worldSpawnZ
+	return dx*dx+dy*dy+dz*dz < spawnPointExclusion*spawnPointExclusion
 }
 
 // seedChunkGeneration runs NaturalSpawner.spawnMobsForChunkGeneration once for

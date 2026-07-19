@@ -182,14 +182,14 @@ func TestSpawnPositionRules(t *testing.T) {
 	h.world.SetBlock(10, 99, 10, worldgen.Stone)
 	h.world.SetBlock(10, 100, 10, worldgen.Air)
 	h.world.SetBlock(10, 101, 10, worldgen.Air)
-	if !h.spawnPositionOK(catMonster, 10, 100, 10) {
+	if !h.spawnPositionOK(catMonster, entityZombie, 10, 100, 10) {
 		t.Fatal("solid ground + two clear cells must be spawnable")
 	}
 	h.world.SetBlock(10, 101, 10, worldgen.Stone) // block at head height
-	if h.spawnPositionOK(catMonster, 10, 100, 10) {
+	if h.spawnPositionOK(catMonster, entityZombie, 10, 100, 10) {
 		t.Fatal("a mob-height obstruction must reject the position")
 	}
-	if h.spawnPositionOK(catWaterCreature, 10, 100, 10) {
+	if h.spawnPositionOK(catWaterCreature, entitySquid, 10, 100, 10) {
 		t.Fatal("water categories need water")
 	}
 }
