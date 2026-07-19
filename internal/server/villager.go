@@ -68,17 +68,61 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					m.behavior = villagerBehavior{} // path home/around + open doors
 					m.usesDoors = true
 				}
-				g := h.spawnMob(players, entityIronGolem,
-					float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+2.5)
-				if g == nil {
-					continue // plugin-cancelled spawn
-				}
-				g.health = 100
-				g.noKB = true // KNOCKBACK_RESISTANCE 1.0 (vanilla 1.21.5)
-				g.behavior = golemBehavior{}
-				g.home = well
+				// The golem is NOT spawned here unconditionally — vanilla spawns
+				// one only once ≥5 villagers "agree", and re-spawns as the village
+				// grows or its golem dies. updateVillageGolems drives that census.
 			}
 		}
+	}
+}
+
+const (
+	golemVillagersToAgree = 5    // vanilla Villager.spawnGolemIfNeeded villagersNeededToAgree
+	golemNearRange        = 24.0 // an existing golem this close counts as "the village has one"
+	golemRespawnDelay     = 1200 // ticks before a village re-agrees after losing/lacking a golem
+)
+
+// updateVillageGolems is vanilla Villager.spawnGolemIfNeeded, hoisted to the
+// village scale: a meeting point (bell) with at least 5 living villagers and no
+// nearby iron golem grows one, then waits out a cooldown before agreeing again.
+// This replaces the old one-golem-per-village-forever spawn: hamlets under the
+// quorum get none, large villages re-spawn a golem after theirs dies.
+func (h *hub) updateVillageGolems(players map[int32]*tracked) {
+	// Census villagers by their shared meeting point.
+	census := map[blockPos]int{}
+	for _, m := range h.mobs {
+		if m.etype == entityVillager && m.meet != (blockPos{}) && !m.baby {
+			census[m.meet]++
+		}
+	}
+	for meet, n := range census {
+		if n < golemVillagersToAgree {
+			continue
+		}
+		if now := h.tick.Load(); now < h.villageGolem[meet] {
+			continue // cooling down since the last spawn/agreement
+		}
+		golemNear := false
+		for _, g := range h.mobs {
+			if g.etype == entityIronGolem && g.dim == 0 &&
+				dist3(g.x, g.y, g.z, float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+0.5) < golemNearRange {
+				golemNear = true
+				break
+			}
+		}
+		if golemNear {
+			continue
+		}
+		g := h.spawnMob(players, entityIronGolem,
+			float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+2.5)
+		if g == nil {
+			continue // plugin-cancelled spawn
+		}
+		g.health = 100
+		g.noKB = true // KNOCKBACK_RESISTANCE 1.0 (vanilla 1.21.5)
+		g.behavior = golemBehavior{}
+		g.home = meet
+		h.villageGolem[meet] = h.tick.Load() + golemRespawnDelay
 	}
 }
 
@@ -145,11 +189,66 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 			h.mobKnockVelocity(players, o)
 		}
 		h.playSound(players, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
-		o.hurt(8) // golem punches respect the target's armor
+		// vanilla IronGolem.doHurtTarget: ATTACK_DAMAGE 15 → 15/2 + nextInt(15)
+		// = 7.5–21.5 per punch. Golem punches respect the target's armor.
+		o.hurt(7.5 + float64(h.rng.Intn(15)))
 		if o.health <= 0 {
 			h.killMob(players, o)
 		}
 		return
+	}
+}
+
+// gossipTradeMax is the TRADING gossip cap (vanilla GossipType.TRADING.max),
+// and gossipTradePerTrade the +2 each completed trade adds.
+const (
+	gossipTradeMax      = 25
+	gossipTradePerTrade = 2
+)
+
+// addTradeGossip credits a completed trade toward a player's reputation with
+// this villager (vanilla onReputationEventFrom TRADE → gossips.add TRADING 2,
+// capped at the type max). Reputation lowers the offer's special price.
+func (h *hub) addTradeGossip(m *mob, name string) {
+	if m.gossip == nil {
+		m.gossip = map[string]int{}
+	}
+	if v := m.gossip[name] + gossipTradePerTrade; v < gossipTradeMax {
+		m.gossip[name] = v
+	} else {
+		m.gossip[name] = gossipTradeMax
+	}
+}
+
+// updateSpecialPrices is vanilla Villager.updateSpecialPrices: recompute each
+// offer's special-price delta for the player opening the merchant screen — a
+// reputation discount (−floor(reputation · priceMultiplier)) plus a Hero of the
+// Village discount (−max(1, floor((0.3 + 0.0625·amp) · baseCost))).
+func (h *hub) updateSpecialPrices(t *tracked, m *mob) {
+	rep := m.gossip[t.p.name] // 0 if absent
+	heroAmp := t.hasEffect(effHeroOfVillage)
+	for i := range m.offers {
+		o := &m.offers[i]
+		o.specialPrice = 0
+		if rep != 0 {
+			o.specialPrice -= int32(math.Floor(float64(rep) * tradePriceMultiplier))
+		}
+		if heroAmp > 0 { // hasEffect returns amp+1 (1-based)
+			d := 0.3 + 0.0625*float64(heroAmp-1)
+			n3 := int(math.Floor(d * float64(o.trade.inCount)))
+			if n3 < 1 {
+				n3 = 1
+			}
+			o.specialPrice -= int32(n3)
+		}
+	}
+}
+
+// clearSpecialPrices resets the per-viewer special-price deltas when the
+// merchant screen closes (vanilla resets specialPriceDiff on stopTrading).
+func clearSpecialPrices(m *mob) {
+	for i := range m.offers {
+		m.offers[i].specialPrice = 0
 	}
 }
 
@@ -160,6 +259,7 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
+	h.updateSpecialPrices(t, m) // reputation + Hero discounts for this viewer
 	h.nextWin++
 	if h.nextWin > 100 {
 		h.nextWin = 1
@@ -177,8 +277,12 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 func (h *hub) sendTradeList(t *tracked, m *mob) {
 	b := protocol.AppendVarInt(nil, t.winID)
 	b = protocol.AppendVarInt(b, int32(len(m.offers)))
-	for _, o := range m.offers {
+	for i := range m.offers {
+		o := &m.offers[i]
 		tr := o.trade
+		// The client derives the DISPLAYED cost from the base ItemCost plus the
+		// special-price/multiplier/demand fields (matching costCount), so send
+		// the BASE count here, not the adjusted one.
 		b = protocol.AppendVarInt(b, tr.inItem) // ItemCost: id + count + no components
 		b = protocol.AppendVarInt(b, tr.inCount)
 		b = protocol.AppendVarInt(b, 0)
@@ -188,9 +292,9 @@ func (h *hub) sendTradeList(t *tracked, m *mob) {
 		b = protocol.AppendI32(b, o.uses)
 		b = protocol.AppendI32(b, tr.maxUses)
 		b = protocol.AppendI32(b, tr.xp)
-		b = protocol.AppendI32(b, 0)    // special price
-		b = protocol.AppendF32(b, 0.05) // price multiplier
-		b = protocol.AppendI32(b, 0)    // demand
+		b = protocol.AppendI32(b, o.specialPrice) // reputation + Hero delta
+		b = protocol.AppendF32(b, float32(tradePriceMultiplier))
+		b = protocol.AppendI32(b, o.demand)
 	}
 	b = protocol.AppendVarInt(b, int32(m.tradeLevel))
 	b = protocol.AppendVarInt(b, int32(m.tradeXP))
@@ -233,7 +337,7 @@ func (h *hub) tradeResult(t *tracked) (invStack, *mobOffer) {
 			have += in.count
 		}
 	}
-	if have < int(o.trade.inCount) {
+	if have < o.costCount() { // demand/reputation/Hero-adjusted price
 		return invStack{}, nil
 	}
 	return invStack{item: o.trade.outItem, count: int(o.trade.outCount)}, o
@@ -247,7 +351,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 		h.sendTradeWindow(t)
 		return
 	}
-	need := int(o.trade.inCount)
+	need := o.costCount() // charge the demand/reputation/Hero-adjusted price
 	for i := range t.trade {
 		if need == 0 {
 			break
@@ -269,7 +373,9 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 	o.uses++ // toward this offer's lock
 	if m := h.mobs[t.tradeWith]; m != nil {
 		h.awardTradeXP(m, o.trade.xp) // may promote the villager + unlock trades
-		h.sendTradeList(t, m)         // refresh uses/level (and any new offers)
+		h.addTradeGossip(m, t.p.name) // build reputation → cheaper future offers
+		h.updateSpecialPrices(t, m)   // reflect the new reputation immediately
+		h.sendTradeList(t, m)         // refresh uses/level/price (and any new offers)
 		h.playSound(players, "minecraft:entity.villager.yes", sndNeutral, m.x, m.y, m.z, 0.7, 1)
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
@@ -293,6 +399,9 @@ func (h *hub) reclaimTrade(players map[int32]*tracked, t *tracked) {
 		if leftover > 0 && players != nil {
 			h.spawnItem(players, st.item, leftover, t.x, t.y, t.z)
 		}
+	}
+	if m := h.mobs[t.tradeWith]; m != nil {
+		clearSpecialPrices(m) // vanilla resets specialPriceDiff on stopTrading
 	}
 	t.tradeWith = 0
 }

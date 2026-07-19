@@ -117,17 +117,20 @@ type savedMob struct {
 }
 
 // savedOffer is one merchant offer flattened:
-// {inItem, inCount, outItem, outCount, maxUses, xp, uses}.
-type savedOffer [7]int32
+// {inItem, inCount, outItem, outCount, maxUses, xp, uses, demand}. The trailing
+// demand was added later; older 7-element saves unmarshal with demand=0 (a JSON
+// array shorter than the Go array leaves the extra slot zero), so the format is
+// backward-compatible.
+type savedOffer [8]int32
 
 func packOffer(o mobOffer) savedOffer {
 	t := o.trade
-	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses}
+	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses, o.demand}
 }
 
 func unpackOffer(s savedOffer) mobOffer {
 	return mobOffer{trade: vTrade{inItem: s[0], inCount: s[1], outItem: s[2],
-		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6]}
+		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6], demand: s[7]}
 }
 
 func packPos(p blockPos) [3]int   { return [3]int{p.x, p.y, p.z} }

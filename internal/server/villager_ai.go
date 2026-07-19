@@ -56,6 +56,13 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	switch villagerSegment(h.dayTime.Load()) {
 	case vsWork:
 		if m.work != (blockPos{}) {
+			// Vanilla WorkAtPoi: standing at the job-site POI restocks used
+			// offers (gated by allowedToRestock to ≤2/day, ≥2400 ticks apart) —
+			// this is the day's second restock a heavily-traded villager gets.
+			if needsRestock(m) && dist3(m.x, m.y, m.z,
+				float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5) < 2 {
+				h.restockOffers(m)
+			}
 			return h.pathSteer(m, float64(m.work.x)+0.5, float64(m.work.z)+0.5)
 		}
 	case vsGather:
@@ -92,8 +99,9 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 		if night {
 			return true // still asleep
 		}
-		m.sleeping = false // dawn — wake up
-		h.restockOffers(m) // a night's rest restocks the day's trades
+		m.sleeping = false  // dawn — wake up
+		m.restocksToday = 0 // vanilla resets the daily restock counter each morning
+		h.restockOffers(m)  // a night's rest restocks the day's trades (restock #1)
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(wakeMetadata(m.eid)))
 		return false
 	}

@@ -336,6 +336,12 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 // once the death animation has played out).
 func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
+	if m.mount != 0 { // a mob rider died — detach it from its vehicle's view
+		if v := h.mobs[m.mount]; v != nil {
+			v.mobRider = 0
+			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+		}
+	}
 	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it

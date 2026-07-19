@@ -458,13 +458,14 @@ type hub struct {
 	bossSeen     map[[2]int32]bool         // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors    map[blockPos]uint64       // wooden doors a villager opened → tick opened (auto-close)
 
-	dragon       *mob               // the ender dragon (nil = none / defeated)
-	crystals     map[int32]*crystal // end crystals by eid
-	dragonNextAt uint64             // next waypoint/swoop decision tick
-	dragonSwoop  *tracked           // current dive target (nil = circling)
-	villageDone  map[blockPos]bool  // villages populated this session
-	mansionDone  map[[2]int32]bool  // woodland mansions populated with illagers (persisted)
-	outpostDone  map[blockPos]bool  // pillager outposts populated this session
+	dragon       *mob                // the ender dragon (nil = none / defeated)
+	crystals     map[int32]*crystal  // end crystals by eid
+	dragonNextAt uint64              // next waypoint/swoop decision tick
+	dragonSwoop  *tracked            // current dive target (nil = circling)
+	villageDone  map[blockPos]bool   // villages populated this session
+	villageGolem map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
+	mansionDone  map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
+	outpostDone  map[blockPos]bool   // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
 	// raining/thundering are the level-derived gameplay booleans the rest of
@@ -594,19 +595,20 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn: map[blockPos]bool{},
-		spawnerNext: map[blockPos]uint64{},
-		raids:       map[blockPos]*raid{},
-		brewProg:    map[blockPos]int{},
-		brewFuel:    map[blockPos]int{},
-		portalLinks: map[dimPos]dimPos{},
-		bossSeen:    map[[2]int32]bool{},
-		openDoors:   map[blockPos]uint64{},
-		crystals:    map[int32]*crystal{},
-		villageDone: map[blockPos]bool{},
-		mansionDone: map[[2]int32]bool{},
-		outpostDone: map[blockPos]bool{},
-		rods:        map[blockPos]struct{}{},
+		detectorsOn:  map[blockPos]bool{},
+		spawnerNext:  map[blockPos]uint64{},
+		raids:        map[blockPos]*raid{},
+		brewProg:     map[blockPos]int{},
+		brewFuel:     map[blockPos]int{},
+		portalLinks:  map[dimPos]dimPos{},
+		bossSeen:     map[[2]int32]bool{},
+		openDoors:    map[blockPos]uint64{},
+		crystals:     map[int32]*crystal{},
+		villageDone:  map[blockPos]bool{},
+		villageGolem: map[blockPos]uint64{},
+		mansionDone:  map[[2]int32]bool{},
+		outpostDone:  map[blockPos]bool{},
+		rods:         map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
 		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
@@ -777,10 +779,11 @@ func (h *hub) run() {
 				for _, t := range players {
 					h.checkRaidTrigger(players, t) // Bad Omen + village → start a raid
 				}
-				h.mobEnvironment(players) // mob lava/fire/drowning/afterburn (after daylight ignites)
-				h.updateSpawners(players) // dungeon spawner rooms
-				h.updateVillages(players) // populate villages on approach
-				h.updateOutposts(players) // populate pillager outposts on approach
+				h.mobEnvironment(players)      // mob lava/fire/drowning/afterburn (after daylight ignites)
+				h.updateSpawners(players)      // dungeon spawner rooms
+				h.updateVillages(players)      // populate villages on approach
+				h.updateVillageGolems(players) // census-driven iron golem spawns
+				h.updateOutposts(players)      // populate pillager outposts on approach
 				h.updatePortalDwell(players)
 				h.updateEndPortalContact(players)
 				h.updateDragon(players)

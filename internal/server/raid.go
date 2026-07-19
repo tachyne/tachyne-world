@@ -76,6 +76,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 		return
 	}
 	for etype, counts := range raiderWaves {
+		ravagerN := 0 // successful ravagers this wave (first one gets the evoker rider)
 		for i := 0; i < counts[r.wave]; i++ {
 			ang := h.rng.Float64() * 2 * math.Pi
 			d := 8 + h.rng.Float64()*raidSpawnRadius
@@ -92,8 +93,40 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			m.raidCenter = r.center
 			r.alive[m.eid] = true
 			r.waveSpawned++
+			// Vanilla Raid.spawnGroup mounts a rider on each ravager on the
+			// higher waves: a pillager on wave 5, an evoker (first ravager) or
+			// vindicator (the rest) on wave 7+.
+			if etype == entityRavager {
+				if rt := raidRiderType(r.wave, ravagerN); rt != 0 {
+					if rd := h.spawnHostileY(players, rt, m.x, m.y, m.z); rd != nil {
+						rd.raidCenter = r.center
+						rd.mount, m.mobRider = m.eid, rd.eid
+						r.alive[rd.eid] = true
+						r.waveSpawned++
+						h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, rd.eid))
+					}
+				}
+				ravagerN++
+			}
 		}
 	}
+}
+
+// raidRiderType picks the raider that mounts a ravager on a given wave, matching
+// vanilla Raid.spawnGroup (getNumGroups NORMAL=5, HARD=7): a pillager on wave 5,
+// and on wave 7+ an evoker on the first ravager, a vindicator on the rest.
+// 0 = no rider.
+func raidRiderType(wave, ravagerIdx int) int {
+	switch {
+	case wave == 5:
+		return entityPillager
+	case wave >= 7:
+		if ravagerIdx == 0 {
+			return entityEvoker
+		}
+		return entityVindicator
+	}
+	return 0
 }
 
 // updateRaids (1 Hz) refreshes the bar, spawns the next wave when the current is
@@ -120,6 +153,14 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 		if aliveN == 0 { // wave cleared
 			if r.wave >= r.numGroups {
 				h.broadcastChat(players, "Victory! The raid has been defeated.")
+				// vanilla: everyone who helped (in the raid area) earns Hero of
+				// the Village — 48000 ticks (40 min), which discounts villager
+				// trades via updateSpecialPrices.
+				for _, t := range players {
+					if t.dim == 0 && dist3(t.x, t.y, t.z, float64(center.x), float64(center.y), float64(center.z)) <= raidBarRange {
+						h.applyEffect(players, t, effHeroOfVillage, 0, 2400)
+					}
+				}
 				h.endRaid(players, r)
 				delete(h.raids, center)
 			} else {

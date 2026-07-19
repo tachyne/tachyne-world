@@ -29,6 +29,7 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
 	players := map[int32]*tracked{1: pl}
 	h.updateVillages(players)
+	h.updateVillageGolems(players) // golems now spawn via the ≥5-villager census
 	villagers, golems := 0, 0
 	for _, m := range h.mobs {
 		switch m.etype {
@@ -39,8 +40,13 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 		}
 	}
 	wantVillagers := len(w.Gen().VillageBeds(v)) // one villager per bed
-	if villagers != wantVillagers || golems != 1 {
-		t.Fatalf("want %d villagers + 1 golem, got %d + %d", wantVillagers, villagers, golems)
+	// The golem appears only if the village met the vanilla 5-villager quorum.
+	wantGolems := 0
+	if wantVillagers >= golemVillagersToAgree {
+		wantGolems = 1
+	}
+	if villagers != wantVillagers || golems != wantGolems {
+		t.Fatalf("want %d villagers + %d golem, got %d + %d", wantVillagers, wantGolems, villagers, golems)
 	}
 	// Second pass: no duplicates.
 	before := len(h.mobs)

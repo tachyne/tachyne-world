@@ -14,6 +14,7 @@ import (
 const (
 	ghastMaxRiders  = 4
 	ghastRideHeight = 2.0 // rider offset above the ghast origin (chunk-stream only)
+	mountRideHeight = 1.9 // mob-on-mob rider offset (raid ravager riders)
 )
 
 // harnessColors are the 16 dye variants, in registry order (matches the
