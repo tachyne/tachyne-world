@@ -90,6 +90,15 @@ func isWaveFloor(state uint32) bool {
 	return worldgen.IsSolidFull(state) && !worldgen.IsFluid(state) && !worldgen.IsLeaves(state)
 }
 
+// isWavePassable reports whether the wave can occupy this cell above the ground:
+// air or ANY non-solid decoration (grass, ferns, every flower, dead bushes, …) —
+// things water floods over. Only solid blocks and fluids block it. Using this
+// (not a short whitelist of plants) is what keeps a flowery/grassy shore from
+// leaving a dry gap on every decorated column.
+func isWavePassable(state uint32) bool {
+	return !worldgen.IsSolidFull(state) && !worldgen.IsFluid(state)
+}
+
 // waveBump is the swell shape over one cycle, in [0,1]: a quick wash-IN (a
 // half-cosine rise over the first waveRiseFrac of the active window), a gentler
 // roll-BACK (a half-cosine fall over the remainder), then 0 for the rest of the
@@ -113,10 +122,10 @@ func waveBump(t uint64) float64 {
 func (h *hub) beachSheet(x, z int) (int, bool) {
 	for y := waveBandHigh - 1; y >= waveBandLow-1; y-- {
 		b := h.world.Block(x, y, z)
-		if worldgen.IsReplaceable(b) {
-			continue // air or a short plant — keep descending to the ground
+		if isWavePassable(b) {
+			continue // air or a plant/decoration — keep descending to the ground
 		}
-		if isWaveFloor(b) && worldgen.IsReplaceable(h.world.Block(x, y+1, z)) {
+		if isWaveFloor(b) && isWavePassable(h.world.Block(x, y+1, z)) {
 			return y + 1, true // solid ground with air/plants above → the sheet cell
 		}
 		return 0, false // topmost solid in the band isn't washable ground
