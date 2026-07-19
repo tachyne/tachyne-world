@@ -226,8 +226,10 @@ multi-pod plan).
   water rolls in from the ocean, washes up the beach slope, and recedes back
   out — pulsed swells (a quick wash-in, a gentler roll-back, then a pause before
   the next) with a gently scalloped waterline, rendered as flowing water that
-  thins to a soft sloped film at its edges. It climbs a beach one block at a time
-  (never scaling a 2-block step). It is a pure client overlay — the water is
+  thins to a soft sloped film at its edges and spills over each step of the beach
+  as falling water. It climbs a beach one block at a time (never scaling a 2-block
+  step) and animates along the whole visible shoreline. It is a pure client
+  overlay — the water is
   shown to nearby players but never written to the world (no persistence, no
   fluid simulation, no collision), so it can't touch the vanilla water model or
   the save. Off by default because it departs from vanilla on purpose

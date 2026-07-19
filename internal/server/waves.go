@@ -38,6 +38,12 @@ import (
 // toward the thin/air sides and animates the flow, so the wave has rounded,
 // moving edges instead of flat cubes. It stays a pure overlay — no world writes.
 //
+// OVER THE EDGE: where the beach steps up a tier, the air cell above the lower
+// wet cell is filled with FALLING water, bridging the vertical face so the wave
+// runs surface → edge → surface up the step and drains back down it, rather than
+// two disconnected flat sheets. The scan spans the full broadcast range, so the
+// whole visible length of the coast waves, not just a patch around the player.
+//
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
 // bare, so waves arrive in distinct pulses rather than a continuous churn.
@@ -45,13 +51,13 @@ import (
 // per column scallops the waterline, so the wet edge isn't a dead-straight line.
 
 const (
-	waveReach     = 3.0  // blocks the crest climbs above sea level at the swell's peak
-	wavePeriod    = 110  // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
-	waveActive    = 62   // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
-	waveRiseFrac  = 0.40 // fraction of the swell spent washing IN (the rest is a gentler roll-back)
-	waveJitterAmp = 0.6  // blocks of static, non-travelling unevenness in the waterline
-	waveScanR     = 16   // horizontal scan radius (blocks) around each player
-	waveCadence   = 4    // step every 4 ticks (5 Hz) — smooth enough for water
+	waveReach     = 3.0             // blocks the crest climbs above sea level at the swell's peak
+	wavePeriod    = 110             // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
+	waveActive    = 62              // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
+	waveRiseFrac  = 0.40            // fraction of the swell spent washing IN (the rest is a gentler roll-back)
+	waveJitterAmp = 0.6             // blocks of static, non-travelling unevenness in the waterline
+	waveScanR     = viewRadius * 16 // scan the full broadcast range so the whole VISIBLE coast waves
+	waveCadence   = 4               // step every 4 ticks (5 Hz) — smooth enough for water
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
@@ -211,26 +217,41 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			}
 		}
 
-		// Assign each wet cell a water level: full where the crest is deep above
-		// it, thinning at the frontier, and forced to a flowing level along any
-		// edge bordering dry ground so the client slopes it instead of drawing a
-		// cube face. Bordering the ocean is not an edge — the water is continuous.
+		// Assign each wet cell a water level, and bridge steps with falling water.
+		// Level: full where the crest is deep above the cell, thinning at the
+		// frontier, and forced to a flowing level along any edge bordering dry
+		// ground (bordering the ocean is not an edge — the water is continuous).
+		// Step riser: where a wet cell has a neighbour ONE tier higher, fill the
+		// air cell directly above it with falling water, so the wave runs surface
+		// → edge → surface up the step (and drains back down it) instead of two
+		// disconnected flat sheets.
 		isOcean := func(x, z int) bool {
 			return worldgen.IsWater(h.world.Block(x, worldgen.SeaLevel-1, z))
 		}
 		for k := range wet {
 			sheet := beach[k]
 			lvl := waterLevelForDepth(crestAt(k[0], k[1], t) - float64(sheet))
+			edge, stepUp := false, false
 			for _, d := range waveHoriz {
 				n := [2]int{k[0] + d[0], k[1] + d[1]}
-				if !wet[n] && !isOcean(n[0], n[1]) { // borders dry ground → soften
-					if lvl < waveEdgeLevel {
-						lvl = waveEdgeLevel
+				if wet[n] {
+					if beach[n] == sheet+1 {
+						stepUp = true // a neighbour one tier higher → bridge the riser
 					}
-					break
+				} else if !isOcean(n[0], n[1]) {
+					edge = true // borders dry ground → soften this face
 				}
 			}
+			if edge && lvl < waveEdgeLevel {
+				lvl = waveEdgeLevel
+			}
 			out[blockPos{k[0], sheet, k[1]}] = worldgen.WaterBase + uint32(lvl)
+			if stepUp {
+				riser := blockPos{k[0], sheet + 1, k[1]}
+				if h.world.Block(riser.x, riser.y, riser.z) == worldgen.Air {
+					out[riser] = worldgen.WaterBase + 8 // falling water down the step face
+				}
+			}
 		}
 	}
 	return out
