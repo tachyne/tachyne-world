@@ -16,11 +16,25 @@ JAR = os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "structdata", "structures.json")
 
 # Standalone templates to bake (non-jigsaw, placed by code).
+SHIPWRECK = ["shipwreck/%s%s" % (v, d) for v in (
+    "with_mast", "sideways_full", "rightsideup_full",
+    "rightsideup_fronthalf", "rightsideup_backhalf",
+    "sideways_fronthalf", "sideways_backhalf",
+    "upsidedown_full", "upsidedown_fronthalf", "upsidedown_backhalf",
+) for d in ("", "_degraded")]
 TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-]
+] + SHIPWRECK
+
+# structure_block DATA-marker metadata → the vanilla loot table for the chest
+# one block below it (shipwreck supply/map/treasure chests).
+MARKER_LOOT = {
+    "supply_chest": "chests/shipwreck_supply",
+    "map_chest": "chests/shipwreck_map",
+    "treasure_chest": "chests/shipwreck_treasure",
+}
 
 # Jigsaw structures to bake: their template pools (+ every template the pools
 # reference, collected transitively). Phase 2 proves the assembler on the
@@ -88,14 +102,27 @@ JOBSITE_PROF = {
 
 def bake(inner, name):
     d = parse_nbt(inner.read("data/minecraft/structure/%s.nbt" % name))
+    # A template carries either one "palette" or several random-variant "palettes"
+    # (degraded block swaps); take the first — the degraded forms are separate
+    # templates, so palette[0] is the canonical set.
+    pal_src = d.get("palette") or d["palettes"][0]
     palette = []
-    for p in d["palette"]:
+    for p in pal_src:
         entry = {"name": p["Name"]}
         if "Properties" in p:
             entry["props"] = p["Properties"]
         palette.append(entry)
+    # structure_block DATA markers set the loot table of the chest ONE BELOW them
+    # (vanilla handleDataMarker on blockPos.below): "supply_chest"/"map_chest"/
+    # "treasure_chest" → the shipwreck tables.
+    markers = {}
+    for b in d["blocks"]:
+        nbt = b.get("nbt")
+        if nbt and nbt.get("id") == "minecraft:structure_block" and nbt.get("metadata"):
+            markers[tuple(b["pos"])] = nbt["metadata"]
     blocks = []
     chests = []
+    chestloot = []
     spawners = []
     jigsaws = []
     beds = []      # bed HEAD positions → one villager home each
@@ -118,6 +145,8 @@ def bake(inner, name):
         bid = nbt.get("id", "")
         if bid == "minecraft:chest":
             chests.append([x, y, z])
+            marker = markers.get((x, y + 1, z), "")
+            chestloot.append(MARKER_LOOT.get(marker, ""))
         elif bid == "minecraft:mob_spawner":
             sd = nbt.get("SpawnData", {}).get("entity", {})
             spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])
@@ -136,6 +165,8 @@ def bake(inner, name):
     t = {"size": d["size"], "palette": palette, "blocks": blocks}
     if chests:
         t["chests"] = chests
+        if any(chestloot):
+            t["chestloot"] = chestloot
     if spawners:
         t["spawners"] = spawners
     if jigsaws:

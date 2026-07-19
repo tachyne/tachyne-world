@@ -1,27 +1,47 @@
 package worldgen
 
-// Shipwrecks and buried treasure. A compact plank hull rests on the ocean floor
-// with supply/treasure/map chests; buried treasure is a single chest sunk under
-// a beach. Faithful-feel stand-ins (not template ports); loot routes to the real
-// vanilla tables in the server (structloot.go).
+// Shipwrecks and buried treasure. The wreck is stamped from a REAL vanilla
+// shipwreck template (one of the 20 rightsideup/sideways/upsidedown ± mast ±
+// degraded variants) at a random rotation, resting on the ocean floor with its
+// supply/map/treasure chests carrying the template's own loot markers. Buried
+// treasure is a single chest sunk under a beach (vanilla has no template for
+// it — it is literally one chest). Loot routes to the real vanilla tables in
+// the server (structloot.go).
 
 const (
 	shipwreckCell = 320
 	shipwreckOdds = 0.5
 	buriedCell    = 288
 	buriedOdds    = 0.5
-
-	shipLen  = 9 // along X
-	shipWide = 4 // along Z
-	shipTall = 3
 )
 
-// Shipwreck is a placed wreck (or the zero value). Chests holds up to 3 chest
-// cells as {x,y,z,kind} with kind 0=supply 1=treasure 2=map.
+// shipwreckTemplates are the ocean wreck variants (all 20 baked forms).
+var shipwreckTemplates = []string{
+	"shipwreck/with_mast", "shipwreck/with_mast_degraded",
+	"shipwreck/sideways_full", "shipwreck/sideways_full_degraded",
+	"shipwreck/sideways_fronthalf", "shipwreck/sideways_fronthalf_degraded",
+	"shipwreck/sideways_backhalf", "shipwreck/sideways_backhalf_degraded",
+	"shipwreck/rightsideup_full", "shipwreck/rightsideup_full_degraded",
+	"shipwreck/rightsideup_fronthalf", "shipwreck/rightsideup_fronthalf_degraded",
+	"shipwreck/rightsideup_backhalf", "shipwreck/rightsideup_backhalf_degraded",
+	"shipwreck/upsidedown_full", "shipwreck/upsidedown_full_degraded",
+	"shipwreck/upsidedown_fronthalf", "shipwreck/upsidedown_fronthalf_degraded",
+	"shipwreck/upsidedown_backhalf", "shipwreck/upsidedown_backhalf_degraded",
+}
+
+// ShipChest is a placed wreck chest with the loot table its template marker set.
+type ShipChest struct {
+	X, Y, Z int
+	Table   string
+}
+
+// Shipwreck is a placed wreck (or the zero value): a template name + rotation
+// stamped with its min corner at (X,Y,Z) on the ocean floor.
 type Shipwreck struct {
-	X, Y, Z int // min-corner origin; Y is the seafloor surface it rests on
-	Chests  [3][4]int
-	N       int
+	X, Y, Z int // min-corner origin; Y is the seafloor it rests on
+	Tmpl    string
+	Rot     int
+	Chests  []ShipChest
 	Exists  bool
 }
 
@@ -38,17 +58,25 @@ func (g *Generator) ShipwreckIn(wx, wz int) Shipwreck {
 	if floor >= SeaLevel-2 || floor < 35 { // must sit under a few blocks of water
 		return Shipwreck{}
 	}
-	s := Shipwreck{X: x, Y: floor, Z: z, Exists: true}
-	// Three chests down the centreline at deck level.
-	cz := z + shipWide/2
-	for i, cx := range []int{x + 1, x + shipLen/2, x + shipLen - 2} {
-		s.Chests[i] = [4]int{cx, floor + 2, cz, i}
+	name := shipwreckTemplates[int(hash01(g.seed, ox, oz, 0x5A03)*float64(len(shipwreckTemplates)))]
+	t := TemplateByName(name)
+	if t == nil {
+		return Shipwreck{}
 	}
-	s.N = 3
+	rot := int(hash01(g.seed, ox, oz, 0x5A04)*4) & 3
+	s := Shipwreck{X: x, Y: floor, Z: z, Tmpl: name, Rot: rot, Exists: true}
+	for i, c := range t.Chests {
+		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		tbl := "chests/shipwreck_supply"
+		if i < len(t.ChestLoot) && t.ChestLoot[i] != "" {
+			tbl = t.ChestLoot[i]
+		}
+		s.Chests = append(s.Chests, ShipChest{x + rx, floor + ry, z + rz, tbl})
+	}
 	return s
 }
 
-// stampShipwreck stamps the hull portion overlapping this chunk.
+// stampShipwreck stamps the wreck template overlapping this chunk.
 func (g *Generator) stampShipwreck(ch *Chunk, cx, cz int32) {
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	// A wreck can straddle chunk borders; the 32-block cell margin keeps it in
@@ -57,36 +85,8 @@ func (g *Generator) stampShipwreck(ch *Chunk, cx, cz int32) {
 	if !s.Exists {
 		return
 	}
-	planks := OakPlanks
-	log := blockBase("oak_log")
-	for dx := 0; dx < shipLen; dx++ {
-		for dz := 0; dz < shipWide; dz++ {
-			wx, wz := s.X+dx, s.Z+dz
-			lx, lz := wx-baseX, wz-baseZ
-			edge := dx == 0 || dx == shipLen-1 || dz == 0 || dz == shipWide-1
-			for dy := 1; dy <= shipTall; dy++ {
-				wy := s.Y + dy
-				switch {
-				case dy == 1: // hull bottom
-					setSectionBlock(ch, lx, wy, lz, planks, true)
-				case edge: // side/end walls
-					setSectionBlock(ch, lx, wy, lz, planks, true)
-				default: // hollow the cabin (swim-through)
-					setSectionBlock(ch, lx, wy, lz, Air, true)
-				}
-			}
-		}
-	}
-	// A short mast amidships, rooted on the hull bottom so it isn't culled as a
-	// floating fragment.
-	mx, mz := s.X+shipLen/2, s.Z+shipWide/2
-	for dy := 1; dy <= shipTall+3; dy++ {
-		setSectionBlock(ch, mx-baseX, s.Y+dy, mz-baseZ, log, true)
-	}
-	// Chests on the deck floor.
-	for i := 0; i < s.N; i++ {
-		c := s.Chests[i]
-		setSectionBlock(ch, c[0]-baseX, c[1], c[2]-baseZ, ChestNorth, true)
+	if t := TemplateByName(s.Tmpl); t != nil {
+		t.StampTemplate(ch, cx, cz, s.X, s.Y, s.Z, s.Rot)
 	}
 }
 

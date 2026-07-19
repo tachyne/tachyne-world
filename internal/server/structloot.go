@@ -53,9 +53,9 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 		}
 	}
 	if s := g.ShipwreckIn(pos.x, pos.z); s.Exists {
-		for i := 0; i < s.N; i++ {
-			if c := s.Chests[i]; pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {
-				return []string{"chests/shipwreck_supply", "chests/shipwreck_treasure", "chests/shipwreck_map"}[c[3]], true
+		for _, c := range s.Chests {
+			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+				return c.Table, true
 			}
 		}
 	}

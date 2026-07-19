@@ -41,16 +41,17 @@ type jigsawBlock struct {
 // Template is one parsed structure piece. resolved[rot][paletteIdx] is the
 // tachyne state to place for that palette entry at that rotation (or tmplSkip).
 type Template struct {
-	Size     [3]int         `json:"size"`
-	Palette  []paletteEntry `json:"palette"`
-	Blocks   [][4]int       `json:"blocks"`   // x,y,z,paletteIdx
-	Chests   [][3]int       `json:"chests"`   // template-local chest positions
-	Beds     [][3]int       `json:"beds"`     // bed HEAD cells → one villager home each
-	JobSites [][4]int       `json:"jobsites"` // x,y,z,profession
-	Bells    [][3]int       `json:"bells"`
-	Jigsaws  []jigsawBlock  `json:"jigsaws"`
-	name     string         // the template's location key (set at init; for loot inference)
-	resolved [4][]uint32
+	Size      [3]int         `json:"size"`
+	Palette   []paletteEntry `json:"palette"`
+	Blocks    [][4]int       `json:"blocks"`    // x,y,z,paletteIdx
+	Chests    [][3]int       `json:"chests"`    // template-local chest positions
+	ChestLoot []string       `json:"chestloot"` // per-chest loot table (aligned with Chests; "" = assigned by code)
+	Beds      [][3]int       `json:"beds"`      // bed HEAD cells → one villager home each
+	JobSites  [][4]int       `json:"jobsites"`  // x,y,z,profession
+	Bells     [][3]int       `json:"bells"`
+	Jigsaws   []jigsawBlock  `json:"jigsaws"`
+	name      string         // the template's location key (set at init; for loot inference)
+	resolved  [4][]uint32
 }
 
 type poolElement struct {
