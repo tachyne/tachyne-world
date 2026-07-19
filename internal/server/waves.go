@@ -37,12 +37,11 @@ import (
 // any edge that borders dry ground. The client then slopes the surface down
 // toward the thin/air sides and animates the flow, so the wave has rounded,
 // moving edges instead of flat cubes. It stays a pure overlay — no world writes.
+// The water always sits ON TOP of the beach surface (no falling-water risers down
+// step faces — those left overlay water stranded on the client).
 //
-// OVER THE EDGE: where the beach steps up a tier, the air cell above the lower
-// wet cell is filled with FALLING water, bridging the vertical face so the wave
-// runs surface → edge → surface up the step and drains back down it, rather than
-// two disconnected flat sheets. The scan spans almost the whole broadcast range,
-// so the visible length of the coast waves, not just a patch around the player.
+// FULL COAST: the scan spans the whole broadcast range, so the entire visible
+// length of the coast waves, not just a patch around the player.
 //
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
@@ -53,19 +52,23 @@ import (
 // ripples rather than speckles). It only bites near the frontier — interior cells
 // sit well below the crest and stay wet regardless — and the pause fully drains.
 //
-// CLEANUP: the scan is kept one chunk SMALLER than the broadcast range, so when a
-// cell leaves a moving player's scan its air-restore still reaches them (a cell
-// exactly at the broadcast edge would be culled the instant the player stepped
-// forward, stranding wave water as a trail behind them).
+// CLEANUP: a receding/left-behind cell is restored with a broadcast radius one
+// ring WIDER than the paint, so a cell leaving a moving player's scan is still
+// cleared even though the player has stepped a chunk past it — no stranded trail.
 
 const (
-	waveReach     = 3.0                   // blocks the crest climbs above sea level at the swell's peak
-	wavePeriod    = 110                   // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
-	waveActive    = 62                    // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
-	waveRiseFrac  = 0.40                  // fraction of the swell spent washing IN (the rest is a gentler roll-back)
-	waveJitterAmp = 0.6                   // blocks of static, non-travelling unevenness in the waterline
-	waveScanR     = (viewRadius - 1) * 16 // one chunk inside the broadcast range: covers the visible coast, and trailing cells still get their restore as a player moves
-	waveCadence   = 4                     // step every 4 ticks (5 Hz) — smooth enough for water
+	waveReach     = 3.0             // blocks the crest climbs above sea level at the swell's peak
+	wavePeriod    = 110             // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
+	waveActive    = 62              // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
+	waveRiseFrac  = 0.40            // fraction of the swell spent washing IN (the rest is a gentler roll-back)
+	waveJitterAmp = 0.6             // blocks of static, non-travelling unevenness in the waterline
+	waveScanR     = viewRadius * 16 // scan the full broadcast range so the whole VISIBLE coast waves
+	waveCadence   = 4               // step every 4 ticks (5 Hz) — smooth enough for water
+
+	// A left/receding cell is restored with a broadcast radius this many chunks
+	// WIDER than the paint (viewRadius), so a cell that leaves a moving player's
+	// scan is still cleared once the player has stepped a chunk or two past it.
+	waveRestoreRadius = viewRadius + 2
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
@@ -227,56 +230,59 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			}
 		}
 
-		// Assign each wet cell a water level, and bridge steps with falling water.
-		// Level: full where the crest is deep above the cell, thinning at the
-		// frontier, and forced to a flowing level along any edge bordering dry
-		// ground (bordering the ocean is not an edge — the water is continuous).
-		// Step riser: where a wet cell has a neighbour ONE tier higher, fill the
-		// air cell directly above it with falling water, so the wave runs surface
-		// → edge → surface up the step (and drains back down it) instead of two
-		// disconnected flat sheets.
+		// Assign each wet cell a water level: full where the crest is deep above
+		// the cell, thinning at the frontier, and forced to a flowing level along
+		// any edge bordering dry ground so the client slopes it instead of drawing
+		// a cube face. Bordering the ocean is not an edge — the water is continuous.
+		// The water sits ON the surface only (no risers down step faces).
 		isOcean := func(x, z int) bool {
 			return worldgen.IsWater(h.world.Block(x, worldgen.SeaLevel-1, z))
 		}
 		for k := range wet {
 			sheet := beach[k]
 			lvl := waterLevelForDepth(crestAt(k[0], k[1], t) - float64(sheet))
-			edge, stepUp := false, false
 			for _, d := range waveHoriz {
 				n := [2]int{k[0] + d[0], k[1] + d[1]}
-				if wet[n] {
-					if beach[n] == sheet+1 {
-						stepUp = true // a neighbour one tier higher → bridge the riser
+				if !wet[n] && !isOcean(n[0], n[1]) { // borders dry ground → soften
+					if lvl < waveEdgeLevel {
+						lvl = waveEdgeLevel
 					}
-				} else if !isOcean(n[0], n[1]) {
-					edge = true // borders dry ground → soften this face
+					break
 				}
-			}
-			if edge && lvl < waveEdgeLevel {
-				lvl = waveEdgeLevel
 			}
 			out[blockPos{k[0], sheet, k[1]}] = worldgen.WaterBase + uint32(lvl)
-			if stepUp {
-				riser := blockPos{k[0], sheet + 1, k[1]}
-				if h.world.Block(riser.x, riser.y, riser.z) == worldgen.Air {
-					out[riser] = worldgen.WaterBase + 8 // falling water down the step face
-				}
-			}
 		}
 	}
 	return out
 }
 
+// broadcastWaveBlock sends a wave overlay block to overworld players within
+// `radius` chunks. Restores use a wider radius than paints so a cell that leaves
+// a moving player's scan is still cleared (see waveRestoreRadius).
+func (h *hub) broadcastWaveBlock(players map[int32]*tracked, x, y, z int, state uint32, radius int) {
+	bcx, bcz := chunkFloor(float64(x)), chunkFloor(float64(z))
+	body := blockSetEv(x, y, z, state)
+	for _, t := range players {
+		if t.dim != 0 {
+			continue
+		}
+		if abs(chunkFloor(t.x)-bcx) <= radius && abs(chunkFloor(t.z)-bcz) <= radius {
+			t.p.trySendEv(body)
+		}
+	}
+}
+
 // updateWaves advances the overlay one step: paint newly-wet cells with water
-// and restore cells the wave has left, broadcasting to nearby viewers only. The
-// world is never modified — a restore re-sends whatever the world actually
-// holds there (air, or a block a player placed on the beach meanwhile).
+// and restore cells the wave has left. The world is never modified — a restore
+// re-sends whatever the world actually holds there (air, or a block a player
+// placed on the beach meanwhile). Restores use a wider radius than paints so
+// nothing is stranded behind a moving player.
 func (h *hub) updateWaves(players map[int32]*tracked, t uint64) {
 	target := h.waveTargets(players, t)
 	// Roll back: cells that were wet but no longer are → restore the real block.
 	for p := range h.waveWet {
 		if _, ok := target[p]; !ok {
-			h.broadcastBlock(players, p.x, p.y, p.z, h.world.Block(p.x, p.y, p.z))
+			h.broadcastWaveBlock(players, p.x, p.y, p.z, h.world.Block(p.x, p.y, p.z), waveRestoreRadius)
 			delete(h.waveWet, p)
 		}
 	}
@@ -284,7 +290,7 @@ func (h *hub) updateWaves(players map[int32]*tracked, t uint64) {
 	// (the level shifts as the crest rises and falls). Overlay only — no world edit.
 	for p, st := range target {
 		if cur, ok := h.waveWet[p]; !ok || cur != st {
-			h.broadcastBlock(players, p.x, p.y, p.z, st)
+			h.broadcastWaveBlock(players, p.x, p.y, p.z, st, viewRadius)
 			h.waveWet[p] = st
 		}
 	}
