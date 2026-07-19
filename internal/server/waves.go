@@ -30,7 +30,7 @@ import (
 // per column scallops the waterline, so the wet edge isn't a dead-straight line.
 
 const (
-	waveReach     = 4.8  // blocks the crest climbs above sea level at the swell's peak
+	waveReach     = 4.0  // blocks the crest climbs above sea level at the swell's peak
 	wavePeriod    = 110  // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
 	waveActive    = 62   // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
 	waveRiseFrac  = 0.40 // fraction of the swell spent washing IN (the rest is a gentler roll-back)
@@ -40,8 +40,10 @@ const (
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
+	// The band height sets how far up the beach a wave climbs; +2 = a 2-block
+	// travel height (shore edge 63 up to 65), never higher.
 	waveBandLow  = worldgen.SeaLevel     // 63: lowest sheet cell (shore edge)
-	waveBandHigh = worldgen.SeaLevel + 3 // 66: highest the wash climbs
+	waveBandHigh = worldgen.SeaLevel + 2 // 65: highest the wash climbs (2 blocks up)
 )
 
 // beachFloor is the set of block states a wave washes over. Built once from
