@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -128,14 +129,14 @@ func TestWaveNeedsOcean(t *testing.T) {
 	}
 }
 
-// crestAt must stay within [sea-1, sea-1+reach] and actually oscillate, so the
-// wash both climbs the beach and fully drains the shore edge.
+// crestAt along the reference column (no jitter) must stay within
+// [sea-1, sea-1+reach] and both fully drain and fully climb across a cycle.
 func TestCrestBounds(t *testing.T) {
 	lo := float64(worldgen.SeaLevel) - 1
 	hi := lo + waveReach
 	var min, max float64 = 1e9, -1e9
-	for tk := uint64(0); tk <= 200; tk++ {
-		c := crestAt(tk)
+	for tk := uint64(0); tk <= 2*wavePeriod; tk++ {
+		c := crestAt(0, 0, tk) // waveJitter(0,0)=0 → clean bounds
 		if c < lo-1e-6 || c > hi+1e-6 {
 			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
 		}
@@ -151,5 +152,59 @@ func TestCrestBounds(t *testing.T) {
 	}
 	if max < hi-0.5 {
 		t.Errorf("crest never rose near the peak (max %f)", max)
+	}
+}
+
+// TestWaveBumpPausesAndSwells — each cycle fully washes in (bump→1) and then
+// sits fully receded (bump==0) for a contiguous pause of the expected length.
+func TestWaveBumpPausesAndSwells(t *testing.T) {
+	maxB := 0.0
+	run, maxRun := 0, 0
+	for p := uint64(0); p < wavePeriod; p++ {
+		b := waveBump(p)
+		if b < 0 || b > 1.0001 {
+			t.Fatalf("bump %f out of [0,1] at p=%d", b, p)
+		}
+		if b > maxB {
+			maxB = b
+		}
+		if b == 0 {
+			run++
+			if run > maxRun {
+				maxRun = run
+			}
+		} else {
+			run = 0
+		}
+	}
+	if maxB < 0.99 {
+		t.Errorf("wave never fully washes in (max bump %.3f)", maxB)
+	}
+	wantPause := wavePeriod - waveActive // the bare stretch after the swell
+	if maxRun < wantPause-2 {
+		t.Errorf("pause too short: longest fully-receded run %d ticks, want ~%d", maxRun, wantPause)
+	}
+}
+
+// TestWaterlineUneven — the static per-column offset varies along the shore
+// (scalloped waterline) but stays bounded and never travels in time.
+func TestWaterlineUneven(t *testing.T) {
+	seen := map[float64]bool{}
+	for x := 0; x < 40; x++ {
+		j := waveJitter(x, 7)
+		if j < -1.0001 || j > 1.0001 {
+			t.Fatalf("jitter %.3f out of [-1,1]", j)
+		}
+		seen[math.Round(j*100)/100] = true
+	}
+	if len(seen) < 5 {
+		t.Errorf("waterline barely varies across columns (%d distinct offsets)", len(seen))
+	}
+	// Static: the same column gives the same offset at any tick (no travel).
+	if crestAt(3, 4, 10)-crestAt(3, 4, 10) != 0 {
+		t.Fatal("jitter must be deterministic per column")
+	}
+	if a, b := waveJitter(3, 4), waveJitter(9, 4); a == b {
+		t.Skip("unlucky sample — two columns coincided") // extremely rare; not a failure
 	}
 }

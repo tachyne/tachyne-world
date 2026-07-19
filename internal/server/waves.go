@@ -16,20 +16,27 @@ import (
 // must be enabled separately; it also makes it impossible to corrupt the save,
 // since the server world is never touched.
 //
-// The wave is a rising/falling CREST HEIGHT, uniform across the coast. As the
-// crest rises, the waterline sweeps UP the beach slope — water rolling IN from
-// the ocean toward the land, wetting progressively higher (further-inland)
-// cells; as it falls, the wet band recedes back down to the waterline, rolling
-// back out into the ocean. The motion is thus perpendicular to the shore (set
-// by the beach's own slope), NOT a crest travelling along the coast. Cells
-// higher up the beach only wet near the crest's peak; the shore edge wets and
-// fully drains each cycle, so the water genuinely rolls in and back out.
+// The wave is a rising/falling CREST HEIGHT, near-uniform across the coast. As
+// the crest rises, the waterline sweeps UP the beach slope — water rolling IN
+// from the ocean toward the land, wetting progressively higher (further-inland)
+// cells; as it falls, the wet band recedes back to the waterline, rolling out
+// into the ocean. The motion is perpendicular to the shore (set by the beach's
+// own slope), NOT a crest travelling along the coast.
+//
+// Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
+// wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
+// bare, so waves arrive in distinct pulses rather than a continuous churn.
+// (2) UNEVENNESS: a small STATIC (time-independent, so non-travelling) offset
+// per column scallops the waterline, so the wet edge isn't a dead-straight line.
 
 const (
-	waveReach   = 4.5  // blocks the crest climbs above sea level at its peak
-	waveOmega   = 0.10 // temporal frequency (rad/tick): period ~63 ticks ≈ 3.1 s
-	waveScanR   = 16   // horizontal scan radius (blocks) around each player
-	waveCadence = 4    // step every 4 ticks (5 Hz) — smooth enough for water
+	waveReach     = 4.8  // blocks the crest climbs above sea level at the swell's peak
+	wavePeriod    = 110  // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
+	waveActive    = 62   // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
+	waveRiseFrac  = 0.40 // fraction of the swell spent washing IN (the rest is a gentler roll-back)
+	waveJitterAmp = 0.6  // blocks of static, non-travelling unevenness in the waterline
+	waveScanR     = 16   // horizontal scan radius (blocks) around each player
+	waveCadence   = 4    // step every 4 ticks (5 Hz) — smooth enough for water
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
@@ -45,12 +52,36 @@ var beachFloor = map[uint32]bool{
 	worldgen.BlockBase("red_sand"): true,
 }
 
-// crestAt is the wave's water height at tick t: sea level plus a swell that
-// rises and falls in time, uniform along the coast. A beach column's sheet cell
-// is wet when its y is at or below this value, so a rising crest wets higher
-// (further-inland) cells and a falling crest drains them back toward the ocean.
-func crestAt(t uint64) float64 {
-	return float64(worldgen.SeaLevel) - 1 + waveReach*(0.5+0.5*math.Sin(float64(t)*waveOmega))
+// waveBump is the swell shape over one cycle, in [0,1]: a quick wash-IN (a
+// half-cosine rise over the first waveRiseFrac of the active window), a gentler
+// roll-BACK (a half-cosine fall over the remainder), then 0 for the rest of the
+// period — the PAUSE where the beach sits bare before the next wave.
+func waveBump(t uint64) float64 {
+	p := int(t % wavePeriod)
+	if p >= waveActive {
+		return 0 // the pause: fully receded
+	}
+	u := float64(p) / float64(waveActive) // 0..1 across the active swell
+	if u < waveRiseFrac {
+		return 0.5 - 0.5*math.Cos(math.Pi*u/waveRiseFrac) // wash IN: 0 → 1
+	}
+	return 0.5 + 0.5*math.Cos(math.Pi*(u-waveRiseFrac)/(1-waveRiseFrac)) // roll BACK: 1 → 0
+}
+
+// waveJitter is a small STATIC (no t → non-travelling) per-column offset in
+// [-1,1] built from two incommensurate sines, so the waterline is scalloped
+// rather than a straight line but never drifts along the shore.
+func waveJitter(x, z int) float64 {
+	fx, fz := float64(x), float64(z)
+	return 0.5 * (math.Sin(fx*0.7+fz*0.31) + math.Sin(fx*0.23-fz*0.53))
+}
+
+// crestAt is the wave's water height over column (x,z) at tick t: sea level
+// plus the swell (waveBump) plus the static waterline unevenness. A beach
+// column's sheet cell is wet when its y is at or below this value, so a rising
+// crest wets higher (further-inland) cells and a falling crest drains them.
+func crestAt(x, z int, t uint64) float64 {
+	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t) + waveJitterAmp*waveJitter(x, z)
 }
 
 // beachSheet finds the air cell just above beach sand/gravel in the sea-level
@@ -94,7 +125,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 				if !ok {
 					continue
 				}
-				if float64(sheet) <= crestAt(t) {
+				if float64(sheet) <= crestAt(x, z, t) {
 					cand = append(cand, blockPos{x, sheet, z})
 				}
 			}
