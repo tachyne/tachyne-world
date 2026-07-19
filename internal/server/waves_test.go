@@ -289,7 +289,7 @@ func TestWaveFrontIsGradualOnFlat(t *testing.T) {
 		}
 	}
 	near := blockPos{cx, sl, cz}    // shore distance 1
-	far := blockPos{cx + 4, sl, cz} // shore distance 5 (within waveMaxReach at the peak)
+	far := blockPos{cx + 4, sl, cz} // shore distance 5 (reached at the peak of this region's front)
 	pl := riderAt(1, float64(cx)+0.5, float64(sl)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
 
