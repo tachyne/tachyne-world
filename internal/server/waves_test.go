@@ -207,14 +207,14 @@ func TestWaveNeedsOcean(t *testing.T) {
 	}
 }
 
-// crestAt (uniform) must stay within [sea-1, sea-1+reach] and both fully drain
-// and fully climb across a cycle.
+// crestAt along the reference column (no jitter) must stay within
+// [sea-1, sea-1+reach] and both fully drain and fully climb across a cycle.
 func TestCrestBounds(t *testing.T) {
 	lo := float64(worldgen.SeaLevel) - 1
 	hi := lo + waveReach
 	var min, max float64 = 1e9, -1e9
 	for tk := uint64(0); tk <= 2*wavePeriod; tk++ {
-		c := crestAt(tk)
+		c := crestAt(0, 0, tk) // waveJitter(0,0)=0 → clean bounds
 		if c < lo-1e-6 || c > hi+1e-6 {
 			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
 		}

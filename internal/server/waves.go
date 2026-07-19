@@ -41,26 +41,31 @@ import (
 // OVER THE EDGE: where the beach steps up a tier, the air cell above the lower
 // wet cell is filled with FALLING water, bridging the vertical face so the wave
 // runs surface → edge → surface up the step and drains back down it, rather than
-// two disconnected flat sheets. The scan spans the full broadcast range, so the
-// whole visible length of the coast waves, not just a patch around the player.
+// two disconnected flat sheets. The scan spans almost the whole broadcast range,
+// so the visible length of the coast waves, not just a patch around the player.
 //
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
 // bare, so waves arrive in distinct pulses rather than a continuous churn.
-// (2) UNEVENNESS: the crest is UNIFORM across the coast for deciding which cells
-// are wet, so the sheet is solid (no per-column holes) and recedes together (no
-// stranded remnants). The waterline still looks uneven because it follows the
-// beach's own height contour; a small static per-column jitter varies only the
-// water LEVEL (surface thickness), never which cells are wet.
+// (2) UNEVENNESS: a small STATIC (time-independent, so non-travelling) per-column
+// offset scallops the crest, so the leading waterline is a smooth wavy line, not
+// a dead-straight edge (adjacent columns share nearly the same offset, so it
+// ripples rather than speckles). It only bites near the frontier — interior cells
+// sit well below the crest and stay wet regardless — and the pause fully drains.
+//
+// CLEANUP: the scan is kept one chunk SMALLER than the broadcast range, so when a
+// cell leaves a moving player's scan its air-restore still reaches them (a cell
+// exactly at the broadcast edge would be culled the instant the player stepped
+// forward, stranding wave water as a trail behind them).
 
 const (
-	waveReach     = 3.0             // blocks the crest climbs above sea level at the swell's peak
-	wavePeriod    = 110             // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
-	waveActive    = 62              // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
-	waveRiseFrac  = 0.40            // fraction of the swell spent washing IN (the rest is a gentler roll-back)
-	waveJitterAmp = 0.6             // blocks of static, non-travelling unevenness in the waterline
-	waveScanR     = viewRadius * 16 // scan the full broadcast range so the whole VISIBLE coast waves
-	waveCadence   = 4               // step every 4 ticks (5 Hz) — smooth enough for water
+	waveReach     = 3.0                   // blocks the crest climbs above sea level at the swell's peak
+	wavePeriod    = 110                   // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
+	waveActive    = 62                    // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
+	waveRiseFrac  = 0.40                  // fraction of the swell spent washing IN (the rest is a gentler roll-back)
+	waveJitterAmp = 0.6                   // blocks of static, non-travelling unevenness in the waterline
+	waveScanR     = (viewRadius - 1) * 16 // one chunk inside the broadcast range: covers the visible coast, and trailing cells still get their restore as a player moves
+	waveCadence   = 4                     // step every 4 ticks (5 Hz) — smooth enough for water
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
@@ -95,20 +100,21 @@ func waveBump(t uint64) float64 {
 }
 
 // waveJitter is a small STATIC (no t → non-travelling) per-column offset in
-// [-1,1] built from two incommensurate sines. It varies only the water LEVEL
-// (surface thickness) along the shore for a bit of shimmer — never which cells
-// are wet — so it can't punch holes in the sheet or strand cells on recede.
+// [-1,1] built from two incommensurate sines, so the crest ripples smoothly
+// along the shore (adjacent columns share nearly the same value) rather than
+// drifting or speckling.
 func waveJitter(x, z int) float64 {
 	fx, fz := float64(x), float64(z)
 	return 0.5 * (math.Sin(fx*0.7+fz*0.31) + math.Sin(fx*0.23-fz*0.53))
 }
 
-// crestAt is the wave's water height at tick t: sea level plus the swell. It is
-// UNIFORM across the coast, so a beach cell is wet whenever its sheet is at or
-// below it — a solid sheet that recedes together. The waterline's unevenness
-// comes from the beach's own height contour, not from perturbing the crest.
-func crestAt(t uint64) float64 {
-	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t)
+// crestAt is the wave's water height over column (x,z) at tick t: sea level plus
+// the swell plus the static waterline ripple. A beach cell is wet when its sheet
+// is at or below this, so a rising crest wets higher (further-inland) cells and a
+// falling crest drains them; the ripple only scallops the frontier, and the pause
+// (swell 0) drops the crest below every sheet so the beach fully clears.
+func crestAt(x, z int, t uint64) float64 {
+	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t) + waveJitterAmp*waveJitter(x, z)
 }
 
 // beachSheet finds the air cell just above beach sand/gravel in the sea-level
@@ -167,7 +173,6 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			continue // overworld coast only — skip other dims and mountain players
 		}
 		px, pz := int(math.Floor(pl.x)), int(math.Floor(pl.z))
-		crest := crestAt(t) // uniform across the coast → solid sheet, clean recede
 
 		// Every beach cell (air over sea-level sand/gravel) in range, by column.
 		beach := map[[2]int]int{}
@@ -196,7 +201,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 				return
 			}
 			sheet, ok := beach[k]
-			if !ok || sheet > fromSheet+1 || float64(sheet) > crest {
+			if !ok || sheet > fromSheet+1 || float64(sheet) > crestAt(x, z, t) {
 				return
 			}
 			wet[k] = true
@@ -235,8 +240,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 		}
 		for k := range wet {
 			sheet := beach[k]
-			// Depth drives thickness; the static jitter only shimmers the surface.
-			lvl := waterLevelForDepth(crest - float64(sheet) + waveJitterAmp*waveJitter(k[0], k[1]))
+			lvl := waterLevelForDepth(crestAt(k[0], k[1], t) - float64(sheet))
 			edge, stepUp := false, false
 			for _, d := range waveHoriz {
 				n := [2]int{k[0] + d[0], k[1] + d[1]}
