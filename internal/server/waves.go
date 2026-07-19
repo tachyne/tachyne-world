@@ -23,6 +23,12 @@ import (
 // into the ocean. The motion is perpendicular to the shore (set by the beach's
 // own slope), NOT a crest travelling along the coast.
 //
+// The wet set is a FLOOD-FILL from the shoreline, not a pure height test: water
+// starts at beach cells beside the ocean and may step to a neighbour only if
+// that cell is at most ONE block higher (and within the crest this tick). So it
+// climbs a gentle slope one block at a time but CANNOT scale a 2-block riser —
+// a cliff at the coast stays dry on top instead of water teleporting onto it.
+//
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
 // bare, so waves arrive in distinct pulses rather than a continuous churn.
@@ -104,10 +110,14 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 	return 0, false // all air through the band → no beach here
 }
 
-// waveTargets scans the shoreline near every player and returns the cells that
-// should show wave-water this tick. A column only counts when real ocean water
-// is somewhere in view, so inland sand flats never sprout waves. Read-only —
-// touches no world state.
+// waveHoriz are the four horizontal steps the flood-fill spreads across.
+var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+
+// waveTargets flood-fills the wave from the shoreline near every player and
+// returns the cells that should show wave-water this tick. Water seeds at beach
+// cells beside the ocean and climbs inland one block at a time (never up a
+// 2-block step), bounded by the crest. Inland sand with no shoreline never
+// seeds, so it never waves. Read-only — touches no world state.
 func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]struct{} {
 	out := map[blockPos]struct{}{}
 	for _, pl := range players {
@@ -115,28 +125,58 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 			continue // overworld coast only — skip other dims and mountain players
 		}
 		px, pz := int(math.Floor(pl.x)), int(math.Floor(pl.z))
-		var cand []blockPos
-		ocean := false
+
+		// Every beach cell (air over sea-level sand/gravel) in range, by column.
+		beach := map[[2]int]int{}
 		for dx := -waveScanR; dx <= waveScanR; dx++ {
 			for dz := -waveScanR; dz <= waveScanR; dz++ {
 				x, z := px+dx, pz+dz
-				if !ocean && worldgen.IsWater(h.world.Block(x, worldgen.SeaLevel-1, z)) {
-					ocean = true
-				}
-				sheet, ok := h.beachSheet(x, z)
-				if !ok {
-					continue
-				}
-				if float64(sheet) <= crestAt(x, z, t) {
-					cand = append(cand, blockPos{x, sheet, z})
+				if sheet, ok := h.beachSheet(x, z); ok {
+					beach[[2]int{x, z}] = sheet
 				}
 			}
 		}
-		if !ocean {
-			continue // no shoreline in view — don't wet inland sand
+		if len(beach) == 0 {
+			continue
 		}
-		for _, p := range cand {
-			out[p] = struct{}{}
+
+		// Flood-fill: reach a beach cell only if it is at most ONE block higher
+		// than where the water comes from (the ocean acts as a virtual wet cell
+		// at sheet SeaLevel) and its sheet is at or below the crest this tick.
+		wet := map[[2]int]bool{}
+		var queue [][2]int
+		reach := func(x, z, fromSheet int) {
+			k := [2]int{x, z}
+			if wet[k] {
+				return
+			}
+			sheet, ok := beach[k]
+			if !ok || sheet > fromSheet+1 || float64(sheet) > crestAt(x, z, t) {
+				return
+			}
+			wet[k] = true
+			queue = append(queue, k)
+		}
+		// Seeds: beach cells with an ocean neighbour (ocean = virtual sheet SeaLevel).
+		for k := range beach {
+			for _, d := range waveHoriz {
+				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
+					reach(k[0], k[1], worldgen.SeaLevel)
+					break
+				}
+			}
+		}
+		// Grow inland, one-block steps only.
+		for len(queue) > 0 {
+			cur := queue[0]
+			queue = queue[1:]
+			cs := beach[cur]
+			for _, d := range waveHoriz {
+				reach(cur[0]+d[0], cur[1]+d[1], cs)
+			}
+		}
+		for k := range wet {
+			out[blockPos{k[0], beach[k], k[1]}] = struct{}{}
 		}
 	}
 	return out

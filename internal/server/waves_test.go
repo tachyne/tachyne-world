@@ -12,34 +12,38 @@ import (
 // the edit overlay at sea level and assert the wave washes up, rolls back, ties
 // itself to real ocean, and NEVER writes to the world (it is a client overlay).
 
-// buildBeach lays a deterministic shoreline near a column: an ocean strip (real
-// water at sea level) beside a beach that slopes up away from the water, so its
-// sheet cells span the whole wash band. Returns the beach sheet cells by height.
+// buildBeach lays a deterministic shoreline: an ocean strip DIRECTLY beside a
+// beach that slopes up one block per column (so the flood-fill can climb it a
+// step at a time), spanning the whole wash band. The shore cell (sheet
+// SeaLevel) sits right next to ocean at x=cx-1. Returns the sheet cells by
+// height.
 func buildBeach(w *world.World, cx, cz int) map[int]blockPos {
 	sl := worldgen.SeaLevel // 63
-	// Clear the sea-level band to air across the whole area first.
-	for x := cx - 6; x <= cx+6; x++ {
+	// Clear the band to air across the area first.
+	for x := cx - 4; x <= cx+4; x++ {
 		for z := cz - 3; z <= cz+3; z++ {
-			for y := sl - 1; y <= waveBandHigh+1; y++ {
+			for y := sl - 4; y <= waveBandHigh+1; y++ {
 				w.SetBlock(x, y, z, worldgen.Air)
 			}
 		}
 	}
-	// Ocean: real source water filling the sea-level column on the low side.
-	for x := cx - 6; x <= cx-2; x++ {
+	// Ocean directly left of the beach: source water up to y=sl-1 (62).
+	for x := cx - 3; x <= cx-1; x++ {
 		for z := cz - 3; z <= cz+3; z++ {
 			for y := sl - 4; y <= sl-1; y++ {
 				w.SetBlock(x, y, z, worldgen.Water)
 			}
 		}
 	}
-	// Beach: sand steps climbing from the waterline (sheet 63) up the shore
-	// (sheet 66), one step per column, with air above each so beachSheet finds it.
+	// Beach: a smooth one-block-per-column slope. Column cx has its sand top at
+	// sl-1 (sheet 63, beside the ocean); each column climbs one more block.
 	sheets := map[int]blockPos{}
 	for i, sheet := 0, sl; sheet <= waveBandHigh; i, sheet = i+1, sheet+1 {
-		x := cx + i // cx, cx+1, cx+2, cx+3 → sheet 63,64,65,66
+		x := cx + i
 		for z := cz - 3; z <= cz+3; z++ {
-			w.SetBlock(x, sheet-1, z, worldgen.Sand) // sand block; sheet = the air above
+			for y := sl - 4; y <= sheet-1; y++ { // solid sand up to the floor
+				w.SetBlock(x, y, z, worldgen.Sand)
+			}
 		}
 		sheets[sheet] = blockPos{x, sheet, cz}
 	}
@@ -99,6 +103,48 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 			if got := h.world.Block(p.x, p.y, p.z); got != worldgen.Air {
 				t.Fatalf("wave wrote block %d into the world at %v (must be a client overlay only)", got, p)
 			}
+		}
+	}
+}
+
+// TestWaveCannotClimbTwoBlockStep — a 2-block riser at the coast must stay dry
+// on top: the wave climbs one block at a time and can't scale it, even when the
+// crest peaks above the cliff top.
+func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
+	h := newHub(world.New(1))
+	h.waves = true
+	sl := worldgen.SeaLevel
+	cx, cz := 800, 800
+	for x := cx - 4; x <= cx+4; x++ { // clear
+		for z := cz - 3; z <= cz+3; z++ {
+			for y := sl - 4; y <= waveBandHigh+1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	for x := cx - 3; x <= cx-1; x++ { // ocean directly left
+		for z := cz - 3; z <= cz+3; z++ {
+			for y := sl - 4; y <= sl-1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Water)
+			}
+		}
+	}
+	// A sheer 2-block cliff: sand top at sl+1 (sheet sl+2) right beside the
+	// ocean, with NO intermediate one-block step — nothing for the wave to seed.
+	for x := cx; x <= cx+2; x++ {
+		for z := cz - 3; z <= cz+3; z++ {
+			for y := sl - 4; y <= sl+1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Sand)
+			}
+		}
+	}
+	cliff := blockPos{cx, sl + 2, cz}
+	pl := riderAt(1, float64(cx)+0.5, float64(sl)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+
+	for tk := uint64(0); tk <= wavePeriod; tk++ {
+		if _, ok := h.waveTargets(players, tk)[cliff]; ok {
+			t.Fatalf("wave climbed a 2-block cliff at tick %d — it may only step up one block", tk)
 		}
 	}
 }
