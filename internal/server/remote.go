@@ -157,6 +157,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evEnchant{eid: p.eid, button: e.Button})
 	case attachproto.SetBeacon:
 		h.post(evSetBeacon{eid: p.eid, primary: e.Primary, secondary: e.Secondary})
+	case attachproto.SlotState:
+		h.post(evSlotState{eid: p.eid, slot: e.Slot, enable: e.State})
 	case attachproto.EditBook:
 		h.post(evEditBook{eid: p.eid, slot: e.Slot, pages: e.Pages, title: e.Title, hasTitle: e.HasTitle})
 	case attachproto.PlayerAction:

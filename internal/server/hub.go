@@ -194,6 +194,7 @@ const (
 	winBin      // dispenser/dropper/hopper (h.bins)
 	winTrade    // villager merchant screen
 	winPlugin   // the server-owned plugin browser (plugui.go)
+	winCrafter  // auto-crafter (h.bins grid + a result-preview slot + disabled toggles)
 )
 
 // tracked is the hub's authoritative record for a connected player. Position is
@@ -1439,6 +1440,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.onSetBeacon(players, t, e.primary, e.secondary)
 				}
+			case evSlotState:
+				h.onSlotState(players, e)
 			case evCampfireAdd:
 				h.onCampfireAdd(players, e)
 			case evRename:

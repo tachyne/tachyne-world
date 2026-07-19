@@ -240,6 +240,20 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-n-27], int(slot - n - 27)
 		}
 		return nil, -1
+	case winCrafter: // crafter_3x3: 0-8 grid, 9 result (server-owned), 10-36 main, 37-45 hotbar
+		c := h.bins[t.winPos]
+		if c == nil {
+			return nil, -1
+		}
+		switch {
+		case slot >= 0 && slot <= 8:
+			return &c.slots[slot], -1
+		case slot >= 10 && slot <= 36:
+			return &t.inv.slots[slot-1], -1
+		case slot >= 37 && slot <= 45:
+			return &t.inv.slots[slot-37], int(slot - 37)
+		}
+		return nil, -1 // slot 9 = the non-interactive result preview
 	case winTrade: // same 3-slot shape as the anvil
 		switch {
 		case slot >= 0 && slot <= 1:
@@ -439,10 +453,24 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		}
 	}
 
+	// Crafter: a disabled grid slot refuses any item (vanilla CrafterSlot.mayPlace
+	// returns false) — reject the whole click and restore the server's view.
+	if t.winKind == winCrafter {
+		if c := h.bins[t.winPos]; c != nil {
+			for _, ch := range e.changed {
+				if ch.slot >= 0 && ch.slot <= 8 && c.disabled[ch.slot] && ch.st.item != 0 {
+					h.resyncWindow(t)
+					h.sendCursor(t)
+					return
+				}
+			}
+		}
+	}
+
 	tally(t.cursor, +1)
 	tally(e.cursor, -1)
 
-	gridTouched, enchTouched := false, false
+	gridTouched, enchTouched, crafterTouched := false, false, false
 	for _, ch := range e.changed {
 		ptr, hot := h.winSlotPtr(t, ch.slot)
 		if ptr == nil {
@@ -505,6 +533,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		if t.winKind == winTrade && ch.slot <= 1 {
 			enchTouched = true // trade inputs changed — recompute the result
 		}
+		if t.winKind == winCrafter && ch.slot >= 0 && ch.slot <= 8 {
+			crafterTouched = true // grid changed — refresh the result preview
+		}
 	}
 	t.cursor = e.cursor
 	if d, ok := dmgOf[t.cursor.item]; ok && t.cursor.item != 0 {
@@ -537,6 +568,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	}
 	if gridTouched {
 		h.sendCraftResult(t)
+	}
+	if crafterTouched {
+		h.refreshCrafterResult(players, t.winPos) // live result-preview slot
 	}
 	if enchTouched {
 		switch t.winKind {

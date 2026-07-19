@@ -388,6 +388,8 @@ func session(c net.Conn, cfg Config) {
 			actTo(remote, payload, proto.Enchant{})
 		case proto.MsgSetBeacon:
 			actTo(remote, payload, proto.SetBeacon{})
+		case proto.MsgSlotState:
+			actTo(remote, payload, proto.SlotState{})
 		case proto.MsgEditBook:
 			actTo(remote, payload, proto.EditBook{})
 		case proto.MsgPlayerAction:

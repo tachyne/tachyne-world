@@ -76,7 +76,8 @@ func hopperDelta(s uint32) (int, int, int) {
 
 // bin is the storage for one dispenser/dropper/hopper block.
 type bin struct {
-	slots []invStack
+	slots    []invStack
+	disabled [9]bool // crafter only: grid slots toggled off (hoppers skip; recipe holes)
 }
 
 // mobInBlock reports whether a mob's bounding box overlaps the single-block
@@ -109,6 +110,10 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 		return
 	}
 	state := h.world.At(x, y, z)
+	if isCrafter(state) {
+		h.openCrafter(t, x, y, z) // its own menu: result preview + disabled slots
+		return
+	}
 	menu, title := int32(menuGeneric3x3), "Dispenser"
 	switch {
 	case isDropper(state):
@@ -117,8 +122,6 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 		menu, title = menuHopper, "Item Hopper"
 	case isBrewStand(state):
 		menu, title = menuBrewing, "Brewing Stand"
-	case isCrafter(state):
-		title = "Crafter"
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
@@ -457,6 +460,7 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 			toFuel = true
 		}
 	}
+	cb := h.crafterBinAt(target) // non-nil → fill via the disabled-aware rule
 	for i := range c.slots {
 		s := &c.slots[i]
 		if s.item == 0 || s.count == 0 {
@@ -467,7 +471,13 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 		}
 		one := *s
 		one.count = 1
-		if binInsert(dst, one) == 0 {
+		placed := false
+		if cb != nil {
+			placed = crafterInsert(cb, one) == 0
+		} else {
+			placed = binInsert(dst, one) == 0
+		}
+		if placed {
 			s.count--
 			if s.count <= 0 {
 				*s = invStack{}
@@ -497,6 +507,9 @@ func (h *hub) containerSlots(pos blockPos) []invStack {
 // containerSignal is the comparator's read of a container: 0 when empty, else
 // 1 + floor(14 × average slot fullness). Returns -1 for non-containers.
 func (h *hub) containerSignal(pos blockPos) int {
+	if cb := h.crafterBinAt(pos); cb != nil {
+		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
+	}
 	slots := h.containerSlots(pos)
 	if slots == nil {
 		return -1
@@ -533,6 +546,10 @@ func (h *hub) refreshBinViewers(players map[int32]*tracked, pos blockPos) {
 		case winBin:
 			if c := h.bins[pos]; c != nil {
 				h.sendBinWindow(t, c)
+			}
+		case winCrafter:
+			if c := h.bins[pos]; c != nil {
+				h.sendCrafterWindow(t, c)
 			}
 		case winChest:
 			if c := h.chests[pos]; c != nil {

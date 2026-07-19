@@ -76,8 +76,9 @@ type savedFrame struct {
 }
 
 type savedBin struct {
-	Size  int         `json:"size"`
-	Slots [][14]int32 `json:"slots,omitempty"` // (slot + the 12-col stack pack)
+	Size     int         `json:"size"`
+	Slots    [][14]int32 `json:"slots,omitempty"`    // (slot + the 12-col stack pack)
+	Disabled uint16      `json:"disabled,omitempty"` // crafter: bitmask of disabled grid slots
 }
 
 type savedFurnace struct {
@@ -288,6 +289,9 @@ func (s *containerStore) loadBins() map[blockPos]*bin {
 				b.slots[i] = st
 			}
 		}
+		for i := 0; i < 9; i++ { // crafter disabled-slot mask
+			b.disabled[i] = saved.Disabled&(1<<uint(i)) != 0
+		}
 		out[pos] = b
 	}
 	return out
@@ -301,6 +305,11 @@ func (s *containerStore) recordBins(bins map[blockPos]*bin) {
 		for i, st := range b.slots {
 			if st.item != 0 && st.count > 0 {
 				sb.Slots = append(sb.Slots, slotRow(i, st))
+			}
+		}
+		for i := 0; i < 9; i++ { // crafter disabled-slot mask
+			if b.disabled[i] {
+				sb.Disabled |= 1 << uint(i)
 			}
 		}
 		snap[posKey(pos)] = sb
