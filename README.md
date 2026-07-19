@@ -223,8 +223,9 @@ multi-pod plan).
   rain shields the undead at dawn, sleeping resets the cycle,
   `/weather <clear|rain|thunder> [duration]` + `doWeatherCycle` for ops
 - Beach waves (`-waves`, **opt-in, deliberately non-vanilla**): a thin sheet of
-  water washes up the sand from the shoreline and rolls back into the ocean, as
-  a travelling crest along the coast. It is a pure client overlay — the water is
+  water rolls in from the ocean, washes up the beach slope, and recedes back
+  out — a rising/falling swell whose waterline sweeps up the sand and back. It
+  is a pure client overlay — the water is
   shown to nearby players but never written to the world (no persistence, no
   fluid simulation, no collision), so it can't touch the vanilla water model or
   the save. Off by default because it departs from vanilla on purpose

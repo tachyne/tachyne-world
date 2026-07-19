@@ -16,17 +16,18 @@ import (
 // must be enabled separately; it also makes it impossible to corrupt the save,
 // since the server world is never touched.
 //
-// The wave is a moving CREST HEIGHT. For every beach column near a player (the
-// air cell directly above sea-level sand/gravel), the sheet cell shows water
-// while the crest — a sine travelling diagonally along the shore, rising and
-// falling in time — sits at or above it. Cells higher up the beach only wet at
-// the crest's peak; the shore edge wets and fully drains each cycle, so the
-// water genuinely rolls in and back out rather than pulsing in place.
+// The wave is a rising/falling CREST HEIGHT, uniform across the coast. As the
+// crest rises, the waterline sweeps UP the beach slope — water rolling IN from
+// the ocean toward the land, wetting progressively higher (further-inland)
+// cells; as it falls, the wet band recedes back down to the waterline, rolling
+// back out into the ocean. The motion is thus perpendicular to the shore (set
+// by the beach's own slope), NOT a crest travelling along the coast. Cells
+// higher up the beach only wet near the crest's peak; the shore edge wets and
+// fully drains each cycle, so the water genuinely rolls in and back out.
 
 const (
 	waveReach   = 4.5  // blocks the crest climbs above sea level at its peak
 	waveOmega   = 0.10 // temporal frequency (rad/tick): period ~63 ticks ≈ 3.1 s
-	waveKappa   = 0.20 // spatial frequency (rad/block): a crest travelling the shore
 	waveScanR   = 16   // horizontal scan radius (blocks) around each player
 	waveCadence = 4    // step every 4 ticks (5 Hz) — smooth enough for water
 
@@ -44,12 +45,12 @@ var beachFloor = map[uint32]bool{
 	worldgen.BlockBase("red_sand"): true,
 }
 
-// crestAt is the wave's water height over column (x,z) at tick t: sea level
-// plus a travelling sine that climbs up to waveReach. A column's sheet cell is
-// wet when its y is at or below this value.
-func crestAt(x, z int, t uint64) float64 {
-	phase := float64(t)*waveOmega - float64(x+z)*waveKappa
-	return float64(worldgen.SeaLevel) - 1 + waveReach*(0.5+0.5*math.Sin(phase))
+// crestAt is the wave's water height at tick t: sea level plus a swell that
+// rises and falls in time, uniform along the coast. A beach column's sheet cell
+// is wet when its y is at or below this value, so a rising crest wets higher
+// (further-inland) cells and a falling crest drains them back toward the ocean.
+func crestAt(t uint64) float64 {
+	return float64(worldgen.SeaLevel) - 1 + waveReach*(0.5+0.5*math.Sin(float64(t)*waveOmega))
 }
 
 // beachSheet finds the air cell just above beach sand/gravel in the sea-level
@@ -93,7 +94,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 				if !ok {
 					continue
 				}
-				if float64(sheet) <= crestAt(x, z, t) {
+				if float64(sheet) <= crestAt(t) {
 					cand = append(cand, blockPos{x, sheet, z})
 				}
 			}

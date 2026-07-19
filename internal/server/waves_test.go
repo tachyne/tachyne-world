@@ -135,7 +135,7 @@ func TestCrestBounds(t *testing.T) {
 	hi := lo + waveReach
 	var min, max float64 = 1e9, -1e9
 	for tk := uint64(0); tk <= 200; tk++ {
-		c := crestAt(0, 0, tk)
+		c := crestAt(tk)
 		if c < lo-1e-6 || c > hi+1e-6 {
 			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
 		}
