@@ -31,6 +31,13 @@ import (
 // teleporting onto it. Combined with the 2-tier band, a wave reaches at most
 // the shore tier plus one step inland.
 //
+// SOFT EDGES: each wet cell is rendered as FLOWING water whose level tracks how
+// deep the crest sits above it — a full/source body near the sea thinning to a
+// shallow film at the advancing frontier, and forced to a flowing level along
+// any edge that borders dry ground. The client then slopes the surface down
+// toward the thin/air sides and animates the flow, so the wave has rounded,
+// moving edges instead of flat cubes. It stays a pure overlay — no world writes.
+//
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
 // bare, so waves arrive in distinct pulses rather than a continuous churn.
@@ -115,13 +122,36 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 // waveHoriz are the four horizontal steps the flood-fill spreads across.
 var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 
+// waveEdgeLevel is the thinnest-but-still-substantial flowing level forced on a
+// wave cell that borders dry ground, so its edge slopes rather than standing as
+// a full cube face. Water levels: 0 = source (full), 1..7 = flowing (1 tallest,
+// 7 a 1/8 film); the client renders flowing levels shorter and sloped.
+const waveEdgeLevel = 3
+
+// waterLevelForDepth maps how far the crest sits above a cell (d, in blocks) to
+// a water level: a full source body where it's deep, thinning to a shallow film
+// at the frontier the crest has only just reached.
+func waterLevelForDepth(d float64) int {
+	switch {
+	case d >= 0.80:
+		return 0 // source: a full block of water
+	case d >= 0.55:
+		return 2
+	case d >= 0.30:
+		return 4
+	default:
+		return 6 // a thin film at the very edge of the wash
+	}
+}
+
 // waveTargets flood-fills the wave from the shoreline near every player and
-// returns the cells that should show wave-water this tick. Water seeds at beach
-// cells beside the ocean and climbs inland one block at a time (never up a
+// returns the cells that should show wave-water this tick, each mapped to the
+// water STATE (source or a flowing level) that softens its edges. Water seeds at
+// beach cells beside the ocean and climbs inland one block at a time (never up a
 // 2-block step), bounded by the crest. Inland sand with no shoreline never
 // seeds, so it never waves. Read-only — touches no world state.
-func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]struct{} {
-	out := map[blockPos]struct{}{}
+func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uint32 {
+	out := map[blockPos]uint32{}
 	for _, pl := range players {
 		if pl.dim != 0 || pl.y > float64(waveBandHigh+waveScanR) {
 			continue // overworld coast only — skip other dims and mountain players
@@ -180,8 +210,27 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 				reach(cur[0]+d[0], cur[1]+d[1], cs)
 			}
 		}
+
+		// Assign each wet cell a water level: full where the crest is deep above
+		// it, thinning at the frontier, and forced to a flowing level along any
+		// edge bordering dry ground so the client slopes it instead of drawing a
+		// cube face. Bordering the ocean is not an edge — the water is continuous.
+		isOcean := func(x, z int) bool {
+			return worldgen.IsWater(h.world.Block(x, worldgen.SeaLevel-1, z))
+		}
 		for k := range wet {
-			out[blockPos{k[0], beach[k], k[1]}] = struct{}{}
+			sheet := beach[k]
+			lvl := waterLevelForDepth(crestAt(k[0], k[1], t) - float64(sheet))
+			for _, d := range waveHoriz {
+				n := [2]int{k[0] + d[0], k[1] + d[1]}
+				if !wet[n] && !isOcean(n[0], n[1]) { // borders dry ground → soften
+					if lvl < waveEdgeLevel {
+						lvl = waveEdgeLevel
+					}
+					break
+				}
+			}
+			out[blockPos{k[0], sheet, k[1]}] = worldgen.WaterBase + uint32(lvl)
 		}
 	}
 	return out
@@ -200,11 +249,12 @@ func (h *hub) updateWaves(players map[int32]*tracked, t uint64) {
 			delete(h.waveWet, p)
 		}
 	}
-	// Wash up: newly-wet cells → water (broadcast overlay, not a world edit).
-	for p := range target {
-		if _, ok := h.waveWet[p]; !ok {
-			h.broadcastBlock(players, p.x, p.y, p.z, worldgen.Water)
-			h.waveWet[p] = struct{}{}
+	// Wash up / re-level: send a cell whose water state is new or has changed
+	// (the level shifts as the crest rises and falls). Overlay only — no world edit.
+	for p, st := range target {
+		if cur, ok := h.waveWet[p]; !ok || cur != st {
+			h.broadcastBlock(players, p.x, p.y, p.z, st)
+			h.waveWet[p] = st
 		}
 	}
 }

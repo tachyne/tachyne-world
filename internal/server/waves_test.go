@@ -150,6 +150,37 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 	}
 }
 
+// TestWaveEdgesAreFlowing — wave cells carry real water states and at least
+// some are FLOWING (non-source) levels, so the edges slope/soften on the client
+// rather than every cell being a full source cube.
+func TestWaveEdgesAreFlowing(t *testing.T) {
+	h := newHub(world.New(1))
+	h.waves = true
+	cx, cz := 1000, 1000
+	buildBeach(h.world, cx, cz)
+	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+
+	sawWater, sawFlowing := false, false
+	for tk := uint64(0); tk <= wavePeriod; tk++ {
+		for _, st := range h.waveTargets(players, tk) {
+			if !worldgen.IsWater(st) {
+				t.Fatalf("wave cell state %d is not water", st)
+			}
+			sawWater = true
+			if st != worldgen.WaterBase { // a flowing level, not source
+				sawFlowing = true
+			}
+		}
+	}
+	if !sawWater {
+		t.Fatal("no wave water produced")
+	}
+	if !sawFlowing {
+		t.Error("wave never used a flowing level — edges stay hard cubes")
+	}
+}
+
 func TestWaveNeedsOcean(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true

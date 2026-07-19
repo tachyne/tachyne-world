@@ -341,10 +341,11 @@ type hub struct {
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
 	// sheet of water washes up the beach and rolls back. It is a pure client
 	// overlay — wave water is broadcast to viewers but NEVER written to the world
-	// — so it can't touch the save or the fluid model. waveWet is the set of
-	// cells currently shown as wave-water, so a receding wave can restore them.
+	// — so it can't touch the save or the fluid model. waveWet maps each cell
+	// currently shown as wave-water to the water STATE painted there, so a
+	// receding wave restores it and a re-level only resends on a real change.
 	waves   bool
-	waveWet map[blockPos]struct{}
+	waveWet map[blockPos]uint32
 
 	// Per-chunk mob load/unload (mobstore.go). activeChunks are the chunks whose
 	// mobs are live in h.mobs; chunkOutAt records when a live chunk left every
@@ -557,7 +558,7 @@ func newHub(w *world.World) *hub {
 		events:        make(chan hubEvent, 256),
 		stop:          make(chan struct{}),
 		pending:       map[uint64][]blockPos{},
-		waveWet:       map[blockPos]struct{}{},
+		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
 		shadowOut:     map[int32]map[int32]bool{},
