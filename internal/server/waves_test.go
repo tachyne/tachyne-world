@@ -106,10 +106,9 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 	}
 }
 
-// TestWaveCannotClimbTwoBlockStep — a 2-block ledge right at the water's edge
-// must stay dry on top: seeding is strict (only one block above the ocean
-// surface), so the wave never jumps straight onto a coastal ledge (even though
-// inland it may climb 2-block bumps).
+// TestWaveCannotClimbTwoBlockStep — a 2-block ledge at the coast must stay dry
+// on top: the reachability flood-fill climbs one block per step and the ocean
+// seeds only the shore tier, so it can't scale it.
 func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true

@@ -16,22 +16,22 @@ import (
 // must be enabled separately; it also makes it impossible to corrupt the save,
 // since the server world is never touched.
 //
-// The wave is an advancing/retreating FRONT measured as SHORE DISTANCE from the
-// ocean. A BFS gives every shore cell its distance (steps from the water); each
-// connected beach region's front `reach` grows from 0 up to that region's OWN
-// full extent as the swell rises and shrinks back to 0 as it falls, and a cell
-// is wet while its distance ≤ reach. So the wave reaches exactly as far as that
-// beach's sand extends (up to the second step) — not a fixed distance — and the
-// waterline sweeps IN and RETREATS smoothly in BOTH directions, even across a
-// FLAT (a vertical crest would instead pop the whole same-height area on/off).
+// The wave is an advancing/retreating FRONT measured as STRAIGHT-LINE distance
+// from the ocean (a distance transform), NOT path distance. Each connected beach
+// region's front `reach` grows from 0 up to that region's own furthest cell as
+// the swell rises and shrinks back as it falls; a cell is wet while its distance
+// ≤ reach. Straight-line distance is what keeps the waterline SOLID: a cell
+// tucked behind a small rise still wets the instant the front reaches its spot,
+// instead of waiting on a long go-around PATH and leaving a dry gap (which is
+// what path distance did — visible as scattered dry sand once the wave reached
+// far enough to have detours). It sweeps IN and RETREATS smoothly both ways,
+// even across a flat.
 //
-// Seeding at the water's edge is STRICT — a shore cell may be only ONE block
-// above the ocean surface, so the wave never jumps straight onto a 2-block ledge
-// at the coast. Inland the wash may climb up to TWO blocks per step, so it flows
-// over the raised sand bumps/steps that height noise leaves (no dry single-column
-// speckle) but still can't scale a 3-block face. The wide band + per-region
-// shore-distance + beach ground bound the extent: where the sand runs out or
-// rises too steeply, the region stops.
+// WHICH cells may be wet is a separate flood-fill: from the shore tier, one block
+// higher per step (so it climbs a gentle slope but not a 2-block riser, and the
+// ocean can't seed onto a 2-block coastal ledge), within the 2-tier band. That
+// keeps the wave to the shore's first two steps; the straight-line front only
+// governs how far along it is.
 //
 // SMOOTH THIN SHEET: every wet cell is rendered as a FLOWING level graded by how
 // far BEHIND the front it sits — thin at the leading/receding edge, ramping
@@ -76,11 +76,10 @@ const (
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
-	// The band is wide enough that the wash FOLLOWS the beach up through height
-	// noise instead of leaving every slightly-raised column as a dry speckle; the
-	// per-region shore-distance is what actually bounds how far it goes.
+	// The band height caps how many water tiers a wave climbs: [63,64] = at most
+	// TWO tiers (the shore edge 63 and one step up to 64), never higher.
 	waveBandLow  = worldgen.SeaLevel     // 63: lowest sheet cell (shore edge)
-	waveBandHigh = worldgen.SeaLevel + 4 // 67: follow the sand up through noise/steps
+	waveBandHigh = worldgen.SeaLevel + 1 // 64: highest tier the wash reaches
 )
 
 // isWaveFloor reports whether a wave washes over this block: any full solid
@@ -136,8 +135,12 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 	return 0, false // nothing but air/plants through the band → no ground here
 }
 
-// waveHoriz are the four horizontal steps the flood-fill spreads across.
-var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+// waveHoriz are the four horizontal steps the reachability flood-fill spreads
+// across; wave8 adds the diagonals for the straight-line distance transform.
+var (
+	waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+	wave8     = [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
+)
 
 // waterLevelForDepth maps a cell's "depth" behind the wave front (d, in blocks)
 // to a flowing water level: a thin film at the leading/receding edge, ramping to
@@ -187,59 +190,94 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			continue
 		}
 
-		// BFS the shore-DISTANCE of every reachable beach cell (steps from the
-		// ocean). Water may step to a neighbour only if it is at most ONE block
-		// higher (so it can't scale a 2-block riser), and the ocean seeds only the
-		// shore tier (SeaLevel-1 surface → sheet 63). Pruned at waveReachCap. The
-		// 2-tier band (beachSheet) is what actually stops it — where the sand rises
-		// past the second step, or the sand ends, the cells stop being beach.
-		dist := map[[2]int]int{}
+		// WHICH cells may be wet: flood-fill from the shore tier, ≤1 block higher
+		// per step (climbs a gentle slope, not a 2-block riser; the ocean can't
+		// seed onto a 2-block coastal ledge). This is reachability only — the front
+		// timing comes from the straight-line distance below.
+		reachable := map[[2]int]bool{}
 		var queue [][2]int
-		visit := func(x, z, fromSheet, climb, d int) {
+		visit := func(x, z, fromSheet int) {
 			k := [2]int{x, z}
-			if _, ok := dist[k]; ok || d > waveReachCap {
+			if reachable[k] {
 				return
 			}
 			sheet, ok := beach[k]
-			if !ok || sheet > fromSheet+climb {
+			if !ok || sheet > fromSheet+1 {
 				return
 			}
-			dist[k] = d
+			reachable[k] = true
 			queue = append(queue, k)
 		}
-		// Seeds: shore cells beside the ocean, distance 1. Seeding is STRICT — a
-		// cell may only be one block above the ocean surface, so the wave never
-		// jumps straight onto a 2-block ledge at the water's edge.
 		for k := range beach {
 			for _, d := range waveHoriz {
 				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
-					visit(k[0], k[1], worldgen.SeaLevel-1, 1, 1)
+					visit(k[0], k[1], worldgen.SeaLevel-1)
 					break
 				}
 			}
 		}
-		// Grow inland, counting distance. Inland the wash may climb up to TWO
-		// blocks per step, so it flows over the raised sand bumps/steps that height
-		// noise leaves — no dry single-column speckle — but still can't scale a
-		// 3-block face.
 		for len(queue) > 0 {
 			cur := queue[0]
 			queue = queue[1:]
-			cs, cd := beach[cur], dist[cur]
+			cs := beach[cur]
 			for _, d := range waveHoriz {
-				visit(cur[0]+d[0], cur[1]+d[1], cs, 2, cd+1)
+				visit(cur[0]+d[0], cur[1]+d[1], cs)
 			}
 		}
+		if len(reachable) == 0 {
+			continue
+		}
 
-		// Label connected beach regions and find how far EACH one extends (its max
-		// shore-distance = where its 2-tier sand runs out). The front for a region
-		// is its OWN extent × the swell, so the wave reaches as far as that beach's
-		// second step allows — not a fixed distance — and still recedes gradually
-		// across whatever length that is.
+		// Straight-line distance to the nearest ocean for every column in range: an
+		// 8-direction distance transform (≈ Chebyshev distance). Because it ignores
+		// the sand's ups and downs, the front is a smooth ring — no cell is skipped
+		// for being behind a little rise (the path-distance gap).
+		size := 2*waveScanR + 1
+		sd := make([]int16, size*size)
+		for i := range sd {
+			sd[i] = -1
+		}
+		var sq [][2]int
+		for dx := -waveScanR; dx <= waveScanR; dx++ {
+			for dz := -waveScanR; dz <= waveScanR; dz++ {
+				if worldgen.IsWater(h.world.Block(px+dx, worldgen.SeaLevel-1, pz+dz)) {
+					sd[(dx+waveScanR)*size+(dz+waveScanR)] = 0
+					sq = append(sq, [2]int{dx, dz})
+				}
+			}
+		}
+		for head := 0; head < len(sq); head++ {
+			c := sq[head]
+			cd := sd[(c[0]+waveScanR)*size+(c[1]+waveScanR)]
+			if int(cd) >= waveReachCap {
+				continue
+			}
+			for _, d := range wave8 {
+				nx, nz := c[0]+d[0], c[1]+d[1]
+				if nx < -waveScanR || nx > waveScanR || nz < -waveScanR || nz > waveScanR {
+					continue
+				}
+				i := (nx+waveScanR)*size + (nz + waveScanR)
+				if sd[i] == -1 {
+					sd[i] = cd + 1
+					sq = append(sq, [2]int{nx, nz})
+				}
+			}
+		}
+		sdistOf := func(k [2]int) int {
+			if v := sd[(k[0]-px+waveScanR)*size+(k[1]-pz+waveScanR)]; v >= 0 {
+				return int(v)
+			}
+			return waveReachCap + 1 // no ocean within reach — never wet
+		}
+
+		// Label connected beach regions and find each one's furthest cell (its own
+		// extent). The front = extent × swell, so the wave reaches as far as that
+		// beach goes and recedes gradually across it.
 		comp := map[[2]int]int{}
 		var compMax []int
 		var stack [][2]int
-		for start := range dist {
+		for start := range reachable {
 			if _, ok := comp[start]; ok {
 				continue
 			}
@@ -249,12 +287,12 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			for len(stack) > 0 {
 				c := stack[len(stack)-1]
 				stack = stack[:len(stack)-1]
-				if dist[c] > mx {
-					mx = dist[c]
+				if s := sdistOf(c); s > mx {
+					mx = s
 				}
 				for _, d := range waveHoriz {
 					n := [2]int{c[0] + d[0], c[1] + d[1]}
-					if _, in := dist[n]; in {
+					if reachable[n] {
 						if _, done := comp[n]; !done {
 							comp[n] = cid
 							stack = append(stack, n)
@@ -265,19 +303,16 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			compMax = append(compMax, mx)
 		}
 
-		// Wet every cell within its region's current front. Level grades by how far
-		// BEHIND the front a cell sits: thin at the leading/receding edge, fuller
-		// toward the sea, capped to flowing (never source). Surface only, no risers.
-		for k, d := range dist {
-			reach := float64(compMax[comp[k]]) * bump
-			if d > int(reach+0.5) {
+		// Wet every reachable cell within its region's straight-line front. Level
+		// grades by how far behind the front the cell sits: thin at the leading/
+		// receding edge, fuller toward the sea, capped to flowing (never source).
+		for k := range reachable {
+			thr := int(float64(compMax[comp[k]])*bump + 0.5)
+			s := sdistOf(k)
+			if s > thr {
 				continue
 			}
-			hd := reach - float64(d)
-			if hd < 0 {
-				hd = 0
-			}
-			out[blockPos{k[0], beach[k], k[1]}] = worldgen.WaterBase + uint32(waterLevelForDepth(hd*0.5))
+			out[blockPos{k[0], beach[k], k[1]}] = worldgen.WaterBase + uint32(waterLevelForDepth(float64(thr-s)*0.5))
 		}
 	}
 	return out
