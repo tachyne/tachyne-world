@@ -176,6 +176,11 @@ type Server struct {
 	// chunk-generation herds) instead of the default tachyne sampler.
 	VanillaSpawner bool
 
+	// Waves enables the NON-VANILLA cosmetic beach-wave overlay (a client-only
+	// water sheet washing up the shore and rolling back). Off by default — it
+	// deliberately departs from vanilla water behaviour, hence the opt-in.
+	Waves bool
+
 	// AttachAddr, if set, serves the tachyne domain attach protocol there
 	// (gateway sessions); AttachToken is the shared secret gateways present.
 	AttachAddr  string
@@ -360,6 +365,7 @@ func (s *Server) Serve() error {
 			s.hub.hud = nil
 		}
 		s.hub.vanillaSpawner = s.VanillaSpawner
+		s.hub.waves = s.Waves
 		s.hub.invs = newInvStore(s.InventoryFile)
 		s.hub.advs = newAdvStore(s.AdvancementFile)
 		s.hub.statstore = newStatsStore(s.StatsFile)

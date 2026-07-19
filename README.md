@@ -222,6 +222,12 @@ multi-pod plan).
   drop a skeleton trap horse; no rain or bolts over deserts or snowfields;
   rain shields the undead at dawn, sleeping resets the cycle,
   `/weather <clear|rain|thunder> [duration]` + `doWeatherCycle` for ops
+- Beach waves (`-waves`, **opt-in, deliberately non-vanilla**): a thin sheet of
+  water washes up the sand from the shoreline and rolls back into the ocean, as
+  a travelling crest along the coast. It is a pure client overlay — the water is
+  shown to nearby players but never written to the world (no persistence, no
+  fluid simulation, no collision), so it can't touch the vanilla water model or
+  the save. Off by default because it departs from vanilla on purpose
 - Sounds throughout — mob growls/hurt/death, combat, explosions (with the
   real boom + mushroom cloud), XP dings, level-ups, chests, enchanting —
   sent inline-by-name so they work identically on every client version
@@ -382,7 +388,8 @@ persistence), `-gamemode survival` (default for new players),
 `-ops Name1,Name2`, `-valkey localhost:6379` (chunk cache; falls back to
 `-chunkdir chunks`), `-nats nats://localhost:4222` (plugin bus),
 `-llm http://…/v1` (NPCs), `-spawn x,y,z`, `-hud=false`,
-`-spawner tachyne|vanilla` (natural-spawn model; default tachyne).
+`-spawner tachyne|vanilla` (natural-spawn model; default tachyne),
+`-waves` (opt-in cosmetic beach waves; off by default — see below).
 
 Vanilla parity: a real vanilla 1.21.5 server ran beside tachyne as an oracle
 (RCON via `scripts/oracle_rcon.py`), with Mojang's datagen dumps checked into

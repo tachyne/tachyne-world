@@ -338,6 +338,14 @@ type hub struct {
 	vanillaSpawner bool
 	seededChunks   map[[2]int32]bool
 
+	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
+	// sheet of water washes up the beach and rolls back. It is a pure client
+	// overlay — wave water is broadcast to viewers but NEVER written to the world
+	// — so it can't touch the save or the fluid model. waveWet is the set of
+	// cells currently shown as wave-water, so a receding wave can restore them.
+	waves   bool
+	waveWet map[blockPos]struct{}
+
 	// Per-chunk mob load/unload (mobstore.go). activeChunks are the chunks whose
 	// mobs are live in h.mobs; chunkOutAt records when a live chunk left every
 	// player's range, so its mobs unload only after a grace window (no border
@@ -549,6 +557,7 @@ func newHub(w *world.World) *hub {
 		events:        make(chan hubEvent, 256),
 		stop:          make(chan struct{}),
 		pending:       map[uint64][]blockPos{},
+		waveWet:       map[blockPos]struct{}{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
 		shadowOut:     map[int32]map[int32]bool{},
@@ -807,6 +816,9 @@ func (h *hub) run() {
 			}
 			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
+			if h.waves && age%waveCadence == 0 {
+				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
+			}
 			h.updateBolts(players)   // despawn finished lightning flashes
 			h.updateTNT(players)     // primed charges burn their fuses
 			h.updatePlates(players)

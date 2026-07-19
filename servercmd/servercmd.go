@@ -43,6 +43,7 @@ func Main() {
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	spawner := flag.String("spawner", "tachyne", "natural-spawn model: tachyne (cheaper 1/8 sampler + herd top-up) or vanilla (exact NaturalSpawner: per-chunk rate + chunk-generation herds)")
+	waves := flag.Bool("waves", false, "NON-VANILLA eye-candy: a cosmetic water sheet washes up beaches near the shore and rolls back (client-only overlay, never written to the world)")
 	cleanupVillage := flag.String("cleanup-village", "", "ONE-TIME: remove a suppressed village's stranded mobs + crop/door debris near x,z (empty = off)")
 	cullAnimals := flag.Int("cull-animals", 0, "ONE-TIME maintenance: cap each species to N per chunk in the saved mobs and thin overgrown cows (0 = off). Run once to undo pre-fix herd doubling, then remove.")
 	wipeWild := flag.Bool("wipe-wild", false, "ONE-TIME maintenance: remove ALL wild mobs (passives + hostiles) from the saved store, keep village-tied + tamed, and mark populated chunks permanently seeded. Run once to undo runaway accumulation, then remove.")
@@ -68,6 +69,7 @@ func Main() {
 	default:
 		log.Fatalf("invalid -spawner %q (want tachyne or vanilla)", *spawner)
 	}
+	srv.Waves = *waves
 	srv.NatsAddr = *natsURL
 	srv.ChunkCacheDir = *chunkDir
 	srv.ValkeyAddr = *valkey
