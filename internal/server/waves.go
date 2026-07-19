@@ -80,17 +80,15 @@ const (
 	waveBandHigh = worldgen.SeaLevel + 1 // 64: highest tier the wash reaches
 )
 
-// waveFloor is the set of BEACH ground a wave washes over: sand (incl. red) and
-// gravel. Restricting to beach material means the wash stops where the beach
-// sand ends (it won't run on over a grass/dirt field behind the shore).
-var waveFloor = map[uint32]bool{
-	worldgen.Sand:                  true,
-	worldgen.Gravel:                true,
-	worldgen.BlockBase("red_sand"): true,
+// isWaveFloor reports whether a wave washes over this block: any full solid
+// ground surface (sand, gravel, dirt, grass, stone, clay, …), NOT just sand — so
+// the wash is CONTINUOUS along a real shore instead of covering only sand columns
+// and leaving the dirt/grass/rock ones between them as dry gaps (which also block
+// the flood-fill past them). Fluids and leaves are excluded. The 2-tier band + the
+// per-region reach still bound how far/high it goes.
+func isWaveFloor(state uint32) bool {
+	return worldgen.IsSolidFull(state) && !worldgen.IsFluid(state) && !worldgen.IsLeaves(state)
 }
-
-// isWaveFloor reports whether a wave washes over this block (beach sand/gravel).
-func isWaveFloor(state uint32) bool { return waveFloor[state] }
 
 // waveBump is the swell shape over one cycle, in [0,1]: a quick wash-IN (a
 // half-cosine rise over the first waveRiseFrac of the active window), a gentler
