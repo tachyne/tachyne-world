@@ -25,11 +25,13 @@ import (
 // waterline sweeps IN and RETREATS smoothly in BOTH directions, even across a
 // FLAT (a vertical crest would instead pop the whole same-height area on/off).
 //
-// The BFS steps to a neighbour only if it is at most ONE block higher, so the
-// wave climbs a gentle slope but CANNOT scale a 2-block riser — a cliff at the
-// coast stays dry on top. The ocean seeds only the shore tier (a 2-block ledge
-// can't seed). The 2-tier band + beach-sand material bound the extent: the sand
-// running out, or rising past the second step, is what stops each region.
+// Seeding at the water's edge is STRICT — a shore cell may be only ONE block
+// above the ocean surface, so the wave never jumps straight onto a 2-block ledge
+// at the coast. Inland the wash may climb up to TWO blocks per step, so it flows
+// over the raised sand bumps/steps that height noise leaves (no dry single-column
+// speckle) but still can't scale a 3-block face. The wide band + per-region
+// shore-distance + beach ground bound the extent: where the sand runs out or
+// rises too steeply, the region stops.
 //
 // SMOOTH THIN SHEET: every wet cell is rendered as a FLOWING level graded by how
 // far BEHIND the front it sits — thin at the leading/receding edge, ramping
@@ -74,10 +76,11 @@ const (
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
-	// The band height caps how many water tiers a wave climbs: [63,64] = at most
-	// TWO tiers (the shore edge 63 and one step up to 64), never higher.
+	// The band is wide enough that the wash FOLLOWS the beach up through height
+	// noise instead of leaving every slightly-raised column as a dry speckle; the
+	// per-region shore-distance is what actually bounds how far it goes.
 	waveBandLow  = worldgen.SeaLevel     // 63: lowest sheet cell (shore edge)
-	waveBandHigh = worldgen.SeaLevel + 1 // 64: highest tier the wash reaches
+	waveBandHigh = worldgen.SeaLevel + 4 // 67: follow the sand up through noise/steps
 )
 
 // isWaveFloor reports whether a wave washes over this block: any full solid
@@ -192,32 +195,39 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 		// past the second step, or the sand ends, the cells stop being beach.
 		dist := map[[2]int]int{}
 		var queue [][2]int
-		visit := func(x, z, fromSheet, d int) {
+		visit := func(x, z, fromSheet, climb, d int) {
 			k := [2]int{x, z}
 			if _, ok := dist[k]; ok || d > waveReachCap {
 				return
 			}
 			sheet, ok := beach[k]
-			if !ok || sheet > fromSheet+1 {
+			if !ok || sheet > fromSheet+climb {
 				return
 			}
 			dist[k] = d
 			queue = append(queue, k)
 		}
-		for k := range beach { // seeds: shore cells beside the ocean, distance 1
+		// Seeds: shore cells beside the ocean, distance 1. Seeding is STRICT — a
+		// cell may only be one block above the ocean surface, so the wave never
+		// jumps straight onto a 2-block ledge at the water's edge.
+		for k := range beach {
 			for _, d := range waveHoriz {
 				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
-					visit(k[0], k[1], worldgen.SeaLevel-1, 1)
+					visit(k[0], k[1], worldgen.SeaLevel-1, 1, 1)
 					break
 				}
 			}
 		}
-		for len(queue) > 0 { // grow inland, one-block steps only, counting distance
+		// Grow inland, counting distance. Inland the wash may climb up to TWO
+		// blocks per step, so it flows over the raised sand bumps/steps that height
+		// noise leaves — no dry single-column speckle — but still can't scale a
+		// 3-block face.
+		for len(queue) > 0 {
 			cur := queue[0]
 			queue = queue[1:]
 			cs, cd := beach[cur], dist[cur]
 			for _, d := range waveHoriz {
-				visit(cur[0]+d[0], cur[1]+d[1], cs, cd+1)
+				visit(cur[0]+d[0], cur[1]+d[1], cs, 2, cd+1)
 			}
 		}
 

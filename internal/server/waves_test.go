@@ -106,9 +106,10 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 	}
 }
 
-// TestWaveCannotClimbTwoBlockStep — a 2-block riser at the coast must stay dry
-// on top: the wave climbs one block at a time and can't scale it, even when the
-// crest peaks above the cliff top.
+// TestWaveCannotClimbTwoBlockStep — a 2-block ledge right at the water's edge
+// must stay dry on top: seeding is strict (only one block above the ocean
+// surface), so the wave never jumps straight onto a coastal ledge (even though
+// inland it may climb 2-block bumps).
 func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
