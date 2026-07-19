@@ -47,8 +47,11 @@ import (
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
 // bare, so waves arrive in distinct pulses rather than a continuous churn.
-// (2) UNEVENNESS: a small STATIC (time-independent, so non-travelling) offset
-// per column scallops the waterline, so the wet edge isn't a dead-straight line.
+// (2) UNEVENNESS: the crest is UNIFORM across the coast for deciding which cells
+// are wet, so the sheet is solid (no per-column holes) and recedes together (no
+// stranded remnants). The waterline still looks uneven because it follows the
+// beach's own height contour; a small static per-column jitter varies only the
+// water LEVEL (surface thickness), never which cells are wet.
 
 const (
 	waveReach     = 3.0             // blocks the crest climbs above sea level at the swell's peak
@@ -92,19 +95,20 @@ func waveBump(t uint64) float64 {
 }
 
 // waveJitter is a small STATIC (no t → non-travelling) per-column offset in
-// [-1,1] built from two incommensurate sines, so the waterline is scalloped
-// rather than a straight line but never drifts along the shore.
+// [-1,1] built from two incommensurate sines. It varies only the water LEVEL
+// (surface thickness) along the shore for a bit of shimmer — never which cells
+// are wet — so it can't punch holes in the sheet or strand cells on recede.
 func waveJitter(x, z int) float64 {
 	fx, fz := float64(x), float64(z)
 	return 0.5 * (math.Sin(fx*0.7+fz*0.31) + math.Sin(fx*0.23-fz*0.53))
 }
 
-// crestAt is the wave's water height over column (x,z) at tick t: sea level
-// plus the swell (waveBump) plus the static waterline unevenness. A beach
-// column's sheet cell is wet when its y is at or below this value, so a rising
-// crest wets higher (further-inland) cells and a falling crest drains them.
-func crestAt(x, z int, t uint64) float64 {
-	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t) + waveJitterAmp*waveJitter(x, z)
+// crestAt is the wave's water height at tick t: sea level plus the swell. It is
+// UNIFORM across the coast, so a beach cell is wet whenever its sheet is at or
+// below it — a solid sheet that recedes together. The waterline's unevenness
+// comes from the beach's own height contour, not from perturbing the crest.
+func crestAt(t uint64) float64 {
+	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t)
 }
 
 // beachSheet finds the air cell just above beach sand/gravel in the sea-level
@@ -163,6 +167,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			continue // overworld coast only — skip other dims and mountain players
 		}
 		px, pz := int(math.Floor(pl.x)), int(math.Floor(pl.z))
+		crest := crestAt(t) // uniform across the coast → solid sheet, clean recede
 
 		// Every beach cell (air over sea-level sand/gravel) in range, by column.
 		beach := map[[2]int]int{}
@@ -191,7 +196,7 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 				return
 			}
 			sheet, ok := beach[k]
-			if !ok || sheet > fromSheet+1 || float64(sheet) > crestAt(x, z, t) {
+			if !ok || sheet > fromSheet+1 || float64(sheet) > crest {
 				return
 			}
 			wet[k] = true
@@ -230,7 +235,8 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 		}
 		for k := range wet {
 			sheet := beach[k]
-			lvl := waterLevelForDepth(crestAt(k[0], k[1], t) - float64(sheet))
+			// Depth drives thickness; the static jitter only shimmers the surface.
+			lvl := waterLevelForDepth(crest - float64(sheet) + waveJitterAmp*waveJitter(k[0], k[1]))
 			edge, stepUp := false, false
 			for _, d := range waveHoriz {
 				n := [2]int{k[0] + d[0], k[1] + d[1]}

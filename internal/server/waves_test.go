@@ -207,14 +207,14 @@ func TestWaveNeedsOcean(t *testing.T) {
 	}
 }
 
-// crestAt along the reference column (no jitter) must stay within
-// [sea-1, sea-1+reach] and both fully drain and fully climb across a cycle.
+// crestAt (uniform) must stay within [sea-1, sea-1+reach] and both fully drain
+// and fully climb across a cycle.
 func TestCrestBounds(t *testing.T) {
 	lo := float64(worldgen.SeaLevel) - 1
 	hi := lo + waveReach
 	var min, max float64 = 1e9, -1e9
 	for tk := uint64(0); tk <= 2*wavePeriod; tk++ {
-		c := crestAt(0, 0, tk) // waveJitter(0,0)=0 → clean bounds
+		c := crestAt(tk)
 		if c < lo-1e-6 || c > hi+1e-6 {
 			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
 		}
@@ -264,8 +264,8 @@ func TestWaveBumpPausesAndSwells(t *testing.T) {
 	}
 }
 
-// TestWaterlineUneven — the static per-column offset varies along the shore
-// (scalloped waterline) but stays bounded and never travels in time.
+// TestWaterlineUneven — the static per-column level jitter varies along the
+// shore but stays bounded in [-1,1] and never travels in time.
 func TestWaterlineUneven(t *testing.T) {
 	seen := map[float64]bool{}
 	for x := 0; x < 40; x++ {
@@ -276,13 +276,35 @@ func TestWaterlineUneven(t *testing.T) {
 		seen[math.Round(j*100)/100] = true
 	}
 	if len(seen) < 5 {
-		t.Errorf("waterline barely varies across columns (%d distinct offsets)", len(seen))
+		t.Errorf("surface jitter barely varies across columns (%d distinct offsets)", len(seen))
 	}
-	// Static: the same column gives the same offset at any tick (no travel).
-	if crestAt(3, 4, 10)-crestAt(3, 4, 10) != 0 {
+	// Static and deterministic: same column, same offset — no travel in time.
+	if waveJitter(3, 4) != waveJitter(3, 4) {
 		t.Fatal("jitter must be deterministic per column")
 	}
-	if a, b := waveJitter(3, 4), waveJitter(9, 4); a == b {
-		t.Skip("unlucky sample — two columns coincided") // extremely rare; not a failure
+}
+
+// TestWaveRecedesFully — a receding wave leaves NO cells behind: once the crest
+// drops below the shore tier (the pause), every wave cell is gone.
+func TestWaveRecedesFully(t *testing.T) {
+	h := newHub(world.New(1))
+	h.waves = true
+	cx, cz := 1400, 1400
+	buildBeach(h.world, cx, cz)
+	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+	// Find a pause tick (bump 0 → crest below every sheet) and assert emptiness.
+	pausedEmpty := false
+	for tk := uint64(0); tk <= wavePeriod; tk++ {
+		if waveBump(tk) == 0 {
+			if len(h.waveTargets(players, tk)) == 0 {
+				pausedEmpty = true
+			} else {
+				t.Fatalf("wave cells remain during the pause at tick %d — water left behind", tk)
+			}
+		}
+	}
+	if !pausedEmpty {
+		t.Fatal("never observed a pause tick")
 	}
 }
