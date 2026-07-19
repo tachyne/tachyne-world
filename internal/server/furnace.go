@@ -80,11 +80,11 @@ func cookerRecipe(kind int8, item int32) (cookEntry, bool) {
 
 // cookerFuelTicks is one fuel item's burn time in this cooker.
 func cookerFuelTicks(kind int8, item int32) int {
-	t := fuelTicks[item]
-	if kind != cookFurnace {
-		t /= 2 // blast furnace + smoker halve the burn duration (vanilla)
-	}
-	return t
+	// A fuel item burns for the same duration in every furnace type (vanilla
+	// getBurnDuration ignores the block); the 2× speed of blast furnaces/smokers
+	// comes ENTIRELY from their 100-tick cook time, so a fuel smelts twice as
+	// many items there — it must NOT also be halved.
+	return fuelTicks[item]
 }
 
 type furnace struct {

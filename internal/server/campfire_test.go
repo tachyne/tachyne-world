@@ -28,9 +28,11 @@ func TestCookerTables(t *testing.T) {
 	if e, ok := cookerRecipe(cookFurnace, beef); !ok || e.Cook != 200 {
 		t.Errorf("furnace beef: %+v %v", e, ok)
 	}
-	// The specialists burn fuel at double rate.
+	// A fuel item burns the same duration in every furnace type (vanilla
+	// getBurnDuration is block-independent); the specialists' 2x speed is the
+	// 100-tick cook time, so a fuel smelts twice as many items there.
 	coal := int32(itemByName["coal"])
-	if cookerFuelTicks(cookFurnace, coal) != 1600 || cookerFuelTicks(cookBlast, coal) != 800 {
+	if cookerFuelTicks(cookFurnace, coal) != 1600 || cookerFuelTicks(cookBlast, coal) != 1600 {
 		t.Errorf("fuel: furnace %d blast %d", cookerFuelTicks(cookFurnace, coal), cookerFuelTicks(cookBlast, coal))
 	}
 	// Campfire recipes cook at 600.

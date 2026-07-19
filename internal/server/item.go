@@ -115,8 +115,11 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}
+			// Vanilla merges within the item's bbox inflated 0.5 horizontally,
+			// 0 vertically — a flat horizontal AABB (~0.75 wide, ~0.25 tall), not
+			// a 1.0 sphere: items on different shelves/levels don't merge.
 			dx, dy, dz := other.x-it.x, other.y-it.y, other.z-it.z
-			if dx*dx+dy*dy+dz*dz > 1 {
+			if math.Abs(dx) > 0.75 || math.Abs(dz) > 0.75 || math.Abs(dy) > 0.25 {
 				continue
 			}
 			it.count += other.count // absorb the newer into this one
