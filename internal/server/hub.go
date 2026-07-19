@@ -453,6 +453,7 @@ type hub struct {
 	patrolNextAt uint64                    // world tick the next pillager-patrol attempt is due
 	raids        map[blockPos]*raid        // active village raids by centre
 	brewProg     map[blockPos]int          // brewing stand progress (ticks)
+	brewFuel     map[blockPos]int          // brewing stand fuel charges (1 blaze powder = 20)
 	portalLinks  map[dimPos]dimPos         // sticky portal pairs (both directions)
 	bossSeen     map[[2]int32]bool         // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors    map[blockPos]uint64       // wooden doors a villager opened → tick opened (auto-close)
@@ -597,6 +598,7 @@ func newHub(w *world.World) *hub {
 		spawnerNext: map[blockPos]uint64{},
 		raids:       map[blockPos]*raid{},
 		brewProg:    map[blockPos]int{},
+		brewFuel:    map[blockPos]int{},
 		portalLinks: map[dimPos]dimPos{},
 		bossSeen:    map[[2]int32]bool{},
 		openDoors:   map[blockPos]uint64{},

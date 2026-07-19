@@ -108,6 +108,10 @@ func (h *hub) twoSlotResult(t *tracked) (invStack, int) {
 	return invStack{}, 0
 }
 
+// anvilMaxCost is vanilla's "Too Expensive!" threshold: a survival player cannot
+// take a result whose level cost is >= 40 (AnvilMenu).
+const anvilMaxCost = 40
+
 // anvilResult applies the vanilla-shaped rules: rename, merge enchantments
 // from an identical item or an enchanted book (equal levels bump one, capped),
 // and repair from an identical sacrifice (combined remaining + 12% of max).
@@ -155,6 +159,19 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 	if res == a {
 		return invStack{}, 0 // nothing would change
 	}
+	// Vanilla prior-work penalty (AnvilMenu): the accumulated repair cost of both
+	// inputs is added to the level cost, and the result's own repair cost grows
+	// to 2·max(inputs)+1 — so each successive anvil use costs more.
+	prior := a.repairCost
+	rc := a.repairCost
+	if b.item != 0 && b.count > 0 {
+		prior += b.repairCost
+		if b.repairCost > rc {
+			rc = b.repairCost
+		}
+	}
+	cost += prior
+	res.repairCost = rc*2 + 1
 	if cost < 1 {
 		cost = 1
 	}
@@ -213,6 +230,10 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	if t.winKind == winAnvil {
+		if t.gamemode != gmCreative && cost >= anvilMaxCost {
+			h.sendTwoSlotWindow(t) // "Too Expensive!" — vanilla blocks >=40 in survival
+			return
+		}
 		if t.gamemode != gmCreative && t.xpLevel < cost {
 			h.sendTwoSlotWindow(t) // AUTHORITY: can't afford — resync, don't apply
 			return

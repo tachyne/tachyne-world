@@ -86,6 +86,12 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 			delete(h.brewProg, pos)
 			continue
 		}
+		// Fuel gate: a blaze powder grants 20 brews (vanilla FUEL_USES). Need a
+		// remaining charge, or a powder in the fuel slot to burn for a new one.
+		if h.brewFuel[pos] <= 0 && (b.slots[4].item != itemBlazePowder || b.slots[4].count == 0) {
+			delete(h.brewProg, pos)
+			continue
+		}
 		h.brewProg[pos] += survivalTickN
 		if h.brewProg[pos] < brewTicks {
 			continue
@@ -100,10 +106,15 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 		if b.slots[3].count <= 0 {
 			b.slots[3] = invStack{}
 		}
-		b.slots[4].count--
-		if b.slots[4].count <= 0 {
-			b.slots[4] = invStack{}
+		// Burn one fuel charge; refill from a blaze powder (20 charges) when empty.
+		if h.brewFuel[pos] <= 0 {
+			b.slots[4].count--
+			if b.slots[4].count <= 0 {
+				b.slots[4] = invStack{}
+			}
+			h.brewFuel[pos] = 20
 		}
+		h.brewFuel[pos]--
 		h.playSound(players, "minecraft:block.brewing_stand.brew", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 		h.refreshBinViewers(players, pos)
@@ -121,7 +132,7 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 // brewResult: what the current stand contents brew into (ok=false → idle).
 func brewResult(b *bin) (int8, bool) {
 	ing := b.slots[3]
-	if ing.item == 0 || b.slots[4].item != itemBlazePowder || b.slots[4].count == 0 {
+	if ing.item == 0 { // fuel is checked separately in updateBrewing (20 uses/powder)
 		return 0, false
 	}
 	// All bottles present must agree on the input potion stage.
