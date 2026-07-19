@@ -66,11 +66,33 @@ type House struct {
 
 // Village is the exported layout for one cell.
 type Village struct {
-	X, Z   int // well centre
-	Y      int
-	Houses []House
-	Farms  []House // reuse the box shape: X,Z centre + Half
-	Exists bool
+	X, Z    int // well centre
+	Y       int
+	Variant string // biome variant: plains | desert | savanna | snowy | taiga
+	Houses  []House
+	Farms   []House // reuse the box shape: X,Z centre + Half
+	Exists  bool
+}
+
+// villageVariant maps a site biome to its vanilla village style. Village
+// placement stays flatness/dry-gated (not biome-gated) as tachyne always has;
+// this only picks which template set stamps, so a desert biome gets a sandstone
+// village instead of oak cottages. Anything without a village style falls back
+// to plains (vanilla's default and the widest template set).
+func villageVariant(biome string) string {
+	switch biome {
+	case "minecraft:desert":
+		return "desert"
+	case "minecraft:savanna", "minecraft:savanna_plateau":
+		return "savanna"
+	case "minecraft:snowy_plains", "minecraft:ice_spikes", "minecraft:snowy_slopes":
+		return "snowy"
+	case "minecraft:taiga", "minecraft:snowy_taiga",
+		"minecraft:old_growth_pine_taiga", "minecraft:old_growth_spruce_taiga":
+		return "taiga"
+	default:
+		return "plains"
+	}
 }
 
 // VillageIn rolls the village for the cell containing (wx,wz).
@@ -101,8 +123,10 @@ func (g *Generator) VillageIn(wx, wz int) Village {
 		return Village{}
 	}
 	// Site only — the buildings, beds, job-sites and bell come from the real
-	// vanilla templates via AssembleVillage (village_jigsaw.go).
-	return Village{X: cx, Z: cz, Y: g.Height(cx, cz), Exists: true}
+	// vanilla templates via AssembleVillage (village_jigsaw.go). The variant
+	// (biome style) is fixed by the biome at the well.
+	return Village{X: cx, Z: cz, Y: g.Height(cx, cz),
+		Variant: villageVariant(g.BiomeName(cx, cz)), Exists: true}
 }
 
 // stampVillages stamps the real vanilla village pieces overlapping this chunk.

@@ -28,6 +28,10 @@ TEMPLATES = [
 POOL_ROOTS = [
     "pillager_outpost/base_plates",
     "village/plains/town_centers",
+    "village/desert/town_centers",
+    "village/savanna/town_centers",
+    "village/snowy/town_centers",
+    "village/taiga/town_centers",
     "ancient_city/city_center",
 ]
 

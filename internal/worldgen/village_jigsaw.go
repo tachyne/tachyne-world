@@ -25,8 +25,8 @@ var (
 	villMu    sync.Mutex
 )
 
-// AssembleVillage assembles (and caches) a village's jigsaw pieces from the
-// plains town-centre start pool. Deterministic per site.
+// AssembleVillage assembles (and caches) a village's jigsaw pieces from its
+// biome variant's town-centre start pool. Deterministic per site.
 func (g *Generator) AssembleVillage(v Village) []PlacedPiece {
 	k := villKey{g.seed, v.X, v.Z}
 	villMu.Lock()
@@ -35,8 +35,12 @@ func (g *Generator) AssembleVillage(v Village) []PlacedPiece {
 	if ok {
 		return p
 	}
+	variant := v.Variant
+	if variant == "" {
+		variant = "plains"
+	}
 	rng := newJigsawRNG(g.seed, v.X, v.Z)
-	p = g.AssembleJigsawTerrain("village/plains/town_centers", v.X, v.Y-1, v.Z, rng, 6)
+	p = g.AssembleJigsawTerrain("village/"+variant+"/town_centers", v.X, v.Y-1, v.Z, rng, 6)
 	villMu.Lock()
 	villCache[k] = p
 	villMu.Unlock()
@@ -100,10 +104,14 @@ type VillageChest struct {
 // back to the plains house table.
 func (g *Generator) VillageChests(v Village) []VillageChest {
 	var out []VillageChest
+	variant := v.Variant
+	if variant == "" {
+		variant = "plains"
+	}
 	pieces := g.AssembleVillage(v)
 	for i := range pieces {
 		p := &pieces[i]
-		tbl := villageTableForPiece(p.Tmpl.name)
+		tbl := villageTableForPiece(p.Tmpl.name, variant)
 		for _, c := range p.Tmpl.Chests {
 			w := wp(p, c[0], c[1], c[2])
 			out = append(out, VillageChest{w[0], w[1], w[2], tbl})
@@ -113,17 +121,18 @@ func (g *Generator) VillageChests(v Village) []VillageChest {
 }
 
 // villageTableForPiece maps a house template name to its vanilla chest table.
-func villageTableForPiece(name string) string {
+// Profession chests share one table across biomes; a plain house chest uses the
+// biome-specific "<variant>_house" table (vanilla village_desert_house, …).
+func villageTableForPiece(name, variant string) string {
 	for kw, prof := range map[string]string{
 		"armorer": "armorer", "butcher": "butcher", "cartographer": "cartographer",
 		"fisher": "fisher", "fletcher": "fletcher", "mason": "mason",
 		"shepherd": "shepherd", "tannery": "tannery", "temple": "temple",
 		"tool_smith": "toolsmith", "toolsmith": "toolsmith", "weaponsmith": "weaponsmith",
-		"library": "plains_house", "farm": "plains_house",
 	} {
 		if strings.Contains(name, kw) {
 			return "chests/village/village_" + prof
 		}
 	}
-	return "chests/village/village_plains_house"
+	return "chests/village/village_" + variant + "_house"
 }
