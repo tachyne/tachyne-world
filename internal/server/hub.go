@@ -393,6 +393,7 @@ type hub struct {
 	mobs   map[int32]*mob         // server-controlled entities (living world)
 	items  map[int32]*itemEntity  // dropped-item entities (block drops)
 	arrows map[int32]*arrowEntity // in-flight/stuck projectiles (skeleton shots)
+	clouds map[int32]*effectCloud // lingering-potion area-effect clouds
 	orbs   map[int32]*xpOrb       // experience orbs awaiting pickup
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
@@ -557,6 +558,7 @@ func newHub(w *world.World) *hub {
 		mobs:          map[int32]*mob{},
 		items:         map[int32]*itemEntity{},
 		arrows:        map[int32]*arrowEntity{},
+		clouds:        map[int32]*effectCloud{},
 		orbs:          map[int32]*xpOrb{},
 		bobbers:       map[int32]*bobberEntity{},
 		npcs:          map[int32]*npc{},
@@ -743,6 +745,7 @@ func (h *hub) run() {
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 			}
 			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
+			h.updateClouds(players)  // lingering-potion clouds: dose, shrink, expire
 			h.updateBobbers(players) // fishing bobbers: flight, bobbing, the catch timers
 			h.mapsTick(players)      // held filled maps: color scan + holder updates
 			if age%10 == 0 {
@@ -1253,6 +1256,10 @@ func (h *hub) run() {
 			case evThrow:
 				if t := players[e.eid]; t != nil {
 					h.throwProjectile(players, t, e.item)
+				}
+			case evThrowPotion:
+				if t := players[e.eid]; t != nil {
+					h.throwSplashPotion(players, t, e.slot)
 				}
 			case evAttack:
 				if h.hitCrystal(players, e.target) {

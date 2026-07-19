@@ -26,13 +26,15 @@ var (
 )
 
 var (
-	itemNetherWart  = itemByName["nether_wart"]
-	itemGlassBottle = itemByName["glass_bottle"]
-	itemPotion      = itemByName["potion"]
-	itemBlazePowder = itemByName["blaze_powder"]
-	itemGlisterMel  = itemByName["glistering_melon_slice"]
-	itemSugarBrew   = itemByName["sugar"]
-	itemGoldCarrot  = itemByName["golden_carrot"]
+	itemNetherWart   = itemByName["nether_wart"]
+	itemGlassBottle  = itemByName["glass_bottle"]
+	itemPotion       = itemByName["potion"]
+	itemSplashPotion = itemByName["splash_potion"]
+	itemLingerPotion = itemByName["lingering_potion"]
+	itemBlazePowder  = itemByName["blaze_powder"]
+	itemGlisterMel   = itemByName["glistering_melon_slice"]
+	itemSugarBrew    = itemByName["sugar"]
+	itemGoldCarrot   = itemByName["golden_carrot"]
 )
 
 // Potion types (invStack.potion).
@@ -165,26 +167,42 @@ func brewResult(b *bin) (int8, bool) {
 	return 0, false
 }
 
+// potEffect is one effect a potion carries: effect id, 0-based amplifier, and
+// the base duration in seconds (0 = an instant effect like Healing).
+type potEffect struct {
+	id   int32
+	amp  int
+	secs int
+}
+
+// potionEffects is the single source of truth for what each potion kind does —
+// shared by drink, splash, and lingering so their tunings never drift.
+func potionEffects(kind int8) []potEffect {
+	switch kind {
+	case potSwiftness:
+		return []potEffect{{effSpeed, 0, 180}}
+	case potStrength:
+		return []potEffect{{effStrength, 0, 180}}
+	case potHealing:
+		return []potEffect{{effInstantHealth, 0, 0}}
+	case potPoison:
+		return []potEffect{{effPoison, 0, 45}}
+	case potFireRes:
+		return []potEffect{{effFireRes, 0, 180}}
+	case potNightVision:
+		return []potEffect{{effNightVision, 0, 180}}
+	}
+	return nil
+}
+
 // drinkPotion applies a potion's effect and hands back the glass bottle.
 func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 	s := &t.inv.slots[slot]
 	p := s.potion
 	*s = invStack{item: itemGlassBottle, count: 1}
 	h.sendSlot(t, slot)
-	switch p {
-	case potSwiftness:
-		h.applyEffect(players, t, effSpeed, 0, 180)
-	case potStrength:
-		h.applyEffect(players, t, effStrength, 0, 180)
-	case potHealing:
-		t.health = min(maxHealth, t.health+4)
-		h.sendHealth(t)
-	case potPoison:
-		h.applyEffect(players, t, effPoison, 0, 45)
-	case potFireRes:
-		h.applyEffect(players, t, effFireRes, 0, 180)
-	case potNightVision:
-		h.applyEffect(players, t, effNightVision, 0, 180)
+	for _, e := range potionEffects(p) {
+		h.applyEffect(players, t, e.id, e.amp, e.secs) // instant effects apply at secs 0
 	}
 	h.playSound(players, "minecraft:entity.generic.drink", sndPlayer, t.x, t.y, t.z, 0.6, 1)
 }

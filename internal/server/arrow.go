@@ -48,6 +48,9 @@ type arrowEntity struct {
 	egg        bool    // an egg: 1-in-8 chance to hatch a chick where it lands
 	pearl      bool    // an ender pearl: teleports its thrower where it lands
 	poison     bool    // witch splash: poisons the player it hits
+	splash     bool    // a thrown potion: shatters on any impact into an AoE (see splashPotion)
+	potion     int8    // the potion kind a splash/lingering projectile carries
+	lingering  bool    // a lingering potion: leaves an effect cloud instead of an instant splash
 	fire       bool    // blaze fireball: sets its target burning
 	wither     int     // wither skull: seconds of wither effect on a hit
 	weaken     int     // parched arrow: seconds of weakness effect on a hit
@@ -212,6 +215,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			a.x, a.y, a.z = px, py, pz
 		}
 		if hit {
+			if a.splash { // a thrown potion shatters into its area-of-effect
+				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)
+			}
 			if a.explode > 0 { // ghast/wither fireball detonates on impact
 				h.explodeAt(players, a.x, a.y, a.z, a.explode+2, a.explode*4)
 			}

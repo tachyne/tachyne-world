@@ -31,6 +31,13 @@ type evThrow struct {
 	item int32
 }
 
+type evThrowPotion struct {
+	eid  int32
+	slot int
+}
+
+func (evThrowPotion) isHubEvent() {}
+
 func (evBowStart) isHubEvent() {}
 func (evThrow) isHubEvent()    {}
 

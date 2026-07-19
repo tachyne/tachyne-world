@@ -281,6 +281,12 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
 		// throws, launched out of the face.
 		h.launchProjectileIn(players, entityWindCharge, 0, fx, fy, fz, vx, vy, vz)
+	case dispense && (item == itemSplashPotion || item == itemLingerPotion):
+		// Thrown-potion projectile: shatters into a splash / lingering cloud
+		// carrying this stack's potion kind.
+		a := h.launchProjectileIn(players, entitySplashProj, 0, fx, fy, fz, vx, vy, vz)
+		a.splash, a.breaks, a.potion = true, true, st.potion
+		a.lingering = item == itemLingerPotion
 	case dispense && item == itemPotion && st.potion == potWater:
 		// Vanilla POTION behaviour: a WATER bottle onto a CONVERTABLE_TO_MUD block
 		// (dirt / coarse dirt / rooted dirt) turns it to mud and empties the
