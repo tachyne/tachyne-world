@@ -206,32 +206,6 @@ func TestWaveNeedsOcean(t *testing.T) {
 	}
 }
 
-// crestAt (uniform) must stay within [sea-1, sea-1+reach] and both fully drain
-// and fully climb across a cycle.
-func TestCrestBounds(t *testing.T) {
-	lo := float64(worldgen.SeaLevel) - 1
-	hi := lo + waveReach
-	var min, max float64 = 1e9, -1e9
-	for tk := uint64(0); tk <= 2*wavePeriod; tk++ {
-		c := crestAt(tk)
-		if c < lo-1e-6 || c > hi+1e-6 {
-			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
-		}
-		if c < min {
-			min = c
-		}
-		if c > max {
-			max = c
-		}
-	}
-	if min > lo+0.5 {
-		t.Errorf("crest never dropped near the trough (min %f)", min)
-	}
-	if max < hi-0.5 {
-		t.Errorf("crest never rose near the peak (max %f)", max)
-	}
-}
-
 // TestWaveBumpPausesAndSwells — each cycle fully washes in (bump→1) and then
 // sits fully receded (bump==0) for a contiguous pause of the expected length.
 func TestWaveBumpPausesAndSwells(t *testing.T) {
@@ -281,6 +255,64 @@ func TestWaveWaterIsThin(t *testing.T) {
 				t.Fatalf("wave cell state %d is not water", st)
 			}
 		}
+	}
+}
+
+// TestWaveFrontIsGradualOnFlat — on a flat shore (all one height) the wave is a
+// moving front by distance, not a whole area popping on/off: there is a moment
+// where a near cell is wet while a farther one is dry (the front sits between
+// them), and the front never inverts (far wet while near dry).
+func TestWaveFrontIsGradualOnFlat(t *testing.T) {
+	h := newHub(world.New(1))
+	h.waves = true
+	sl := worldgen.SeaLevel
+	cx, cz := 1800, 1800
+	for x := cx - 2; x <= cx+9; x++ { // clear the band
+		for z := cz - 2; z <= cz+2; z++ {
+			for y := sl - 4; y <= waveBandHigh+1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	for x := cx - 2; x <= cx-1; x++ { // ocean on the low side
+		for z := cz - 2; z <= cz+2; z++ {
+			for y := sl - 4; y <= sl-1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Water)
+			}
+		}
+	}
+	for x := cx; x <= cx+8; x++ { // a long FLAT sand strip: every column sheet == sl
+		for z := cz - 2; z <= cz+2; z++ {
+			for y := sl - 4; y <= sl-1; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Sand)
+			}
+		}
+	}
+	near := blockPos{cx, sl, cz}    // shore distance 1
+	far := blockPos{cx + 4, sl, cz} // shore distance 5 (within waveMaxReach at the peak)
+	pl := riderAt(1, float64(cx)+0.5, float64(sl)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+
+	sawFarWet, sawPartial := false, false
+	for tk := uint64(0); tk <= wavePeriod; tk++ {
+		tg := h.waveTargets(players, tk)
+		_, nearWet := tg[near]
+		_, farWet := tg[far]
+		if farWet {
+			sawFarWet = true
+		}
+		if nearWet && !farWet {
+			sawPartial = true // front is between them → gradual, not all-or-nothing
+		}
+		if farWet && !nearWet {
+			t.Fatalf("front inverted at tick %d — far wet while near dry", tk)
+		}
+	}
+	if !sawFarWet {
+		t.Error("the front never reached the far cell at the peak")
+	}
+	if !sawPartial {
+		t.Error("front never sat between near and far — recede/advance not gradual on a flat")
 	}
 }
 

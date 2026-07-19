@@ -16,40 +16,38 @@ import (
 // must be enabled separately; it also makes it impossible to corrupt the save,
 // since the server world is never touched.
 //
-// The wave is a rising/falling CREST HEIGHT, near-uniform across the coast. As
-// the crest rises, the waterline sweeps UP the beach slope — water rolling IN
-// from the ocean toward the land, wetting progressively higher (further-inland)
-// cells; as it falls, the wet band recedes back to the waterline, rolling out
-// into the ocean. The motion is perpendicular to the shore (set by the beach's
-// own slope), NOT a crest travelling along the coast.
+// The wave is an advancing/retreating FRONT measured as SHORE DISTANCE from the
+// ocean. A BFS gives every shore cell its distance (steps from the water); the
+// front `reach` grows from 0 up to waveMaxReach as the swell rises and shrinks
+// back to 0 as it falls, and a cell is wet while its distance ≤ reach. So the
+// waterline sweeps IN from the ocean and RETREATS back to it, moving smoothly in
+// BOTH directions — even across a FLAT, where a vertical crest would instead pop
+// the whole same-height area on and off at once (draining too fast at the end).
 //
-// The wet set is a FLOOD-FILL from the shoreline, not a pure height test: water
-// starts at beach cells one step above the ocean's surface and may step to a
-// neighbour only if that cell is at most ONE block higher (and within the crest
-// this tick). So it climbs a gentle slope one block at a time but CANNOT scale
-// a 2-block riser — a cliff at the coast stays dry on top instead of water
-// teleporting onto it. Combined with the 2-tier band, a wave reaches at most
-// the shore tier plus one step inland.
+// The BFS steps to a neighbour only if it is at most ONE block higher, so the
+// wave climbs a gentle slope but CANNOT scale a 2-block riser — a cliff at the
+// coast stays dry on top. The ocean seeds only the shore tier (a 2-block ledge
+// can't seed). Combined with the 2-tier band, a wave reaches at most the shore
+// tier plus one step up — the front just governs how far along that it is.
 //
 // SMOOTH THIN SHEET: every wet cell is rendered as a FLOWING level graded by how
-// deep the crest sits above it — thin at the frontier the crest just reached,
-// ramping fuller toward the sea. This makes the wave FADE in and out gradually
-// (rather than a whole layer popping on/off) and its surface RAMP up the shore
-// (the fuller lower tier meets the thinner upper tier without a hard full-block
-// step). It is capped to flowing levels (never a full source cube), so it stays
-// a low sheet and the client slopes every cell at its air edges + animates the
-// flow. Water sits ON TOP of the beach surface only (no falling-water risers down
-// step faces — those left overlay water stranded on the client). Pure overlay —
-// no world writes.
+// far BEHIND the front it sits — thin at the leading/receding edge, ramping
+// fuller toward the sea. So the wave FADES in and out gradually and its surface
+// RAMPS up the shore (the fuller lower tier meets the thinner upper tier without
+// a hard full-block step). Capped to flowing levels (never a full source cube),
+// so it stays a low sheet and the client slopes every cell at its air edges +
+// animates the flow. Water sits ON TOP of the beach surface only (no falling-
+// water risers down step faces — those left overlay water stranded on the
+// client). Pure overlay — no world writes.
 //
 // FULL COAST: the scan spans the whole broadcast range, so the entire visible
 // length of the coast waves, not just a patch around the player.
 //
 // RHYTHM: each cycle is one swell — a quick wash-in and a gentler roll-back —
 // followed by a PAUSE where the beach sits bare, so waves arrive in distinct
-// pulses rather than a continuous churn. The crest is UNIFORM across the coast
-// (no per-column jitter), so the waterline is consistent and gap-free; its
-// natural bend comes from following the beach's own height contour.
+// pulses rather than a continuous churn. The front is the same across the coast
+// (waveMaxReach × the swell), so the waterline is consistent and gap-free; its
+// bend comes naturally from the shore's own shape (the distance field).
 //
 // CLEANUP: a receding/left-behind cell is restored with a broadcast radius one
 // ring WIDER than the paint, so a cell leaving a moving player's scan is still
@@ -61,7 +59,7 @@ import (
 // (the "water left behind" bug). Reliable restores can never be dropped.
 
 const (
-	waveReach    = 3.0             // blocks the crest climbs above sea level at the swell's peak
+	waveMaxReach = 6.0             // blocks the wave FRONT reaches inland from the ocean at the swell's peak (shore-distance, capped by the 2-tier band)
 	wavePeriod   = 110             // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
 	waveActive   = 62              // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
 	waveRiseFrac = 0.40            // fraction of the swell spent washing IN (the rest is a gentler roll-back)
@@ -106,16 +104,6 @@ func waveBump(t uint64) float64 {
 	return 0.5 + 0.5*math.Cos(math.Pi*(u-waveRiseFrac)/(1-waveRiseFrac)) // roll BACK: 1 → 0
 }
 
-// crestAt is the wave's water height at tick t: sea level plus the swell. It is
-// UNIFORM across the coast, so a beach cell is wet whenever its sheet is at or
-// below it — a solid, connected sheet with a CONSISTENT waterline (no per-column
-// holes or ragged edge). The waterline still bends naturally because it follows
-// the beach's own height contour. The pause (swell 0) drops it below every sheet
-// so the beach fully clears.
-func crestAt(t uint64) float64 {
-	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t)
-}
-
 // beachSheet finds the air cell just above solid shore ground in the sea-level
 // band of a column, if there is one. It scans DOWN from the top of the band, so
 // a cliff or overhang above the shore correctly disqualifies the column, and it
@@ -137,14 +125,11 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 // waveHoriz are the four horizontal steps the flood-fill spreads across.
 var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 
-// waterLevelForDepth maps how far the crest sits above a cell (d, in blocks) to
-// a flowing water level: a thin film at the frontier the crest has only just
-// reached, ramping to nearly full toward the sea where the crest is well
-// overhead. Water level 0 = source (full 8/8), 1..7 = flowing (1 = 7/8 … 7 =
-// 1/8). It is CAPPED to flowing levels (never source), so every cell slopes at
-// its edges and — crucially — the surface RAMPS smoothly as the crest rises and
-// falls, and the fuller lower tier meets the thinner upper tier without a hard
-// full-block step.
+// waterLevelForDepth maps a cell's "depth" behind the wave front (d, in blocks)
+// to a flowing water level: a thin film at the leading/receding edge, ramping to
+// nearly full toward the sea. Water level 0 = source (full 8/8), 1..7 = flowing
+// (1 = 7/8 … 7 = 1/8). CAPPED to flowing levels (never source), so every cell
+// slopes at its edges and the surface RAMPS smoothly rather than stepping.
 func waterLevelForDepth(d float64) int {
 	lvl := 7 - int(d*6+0.5) // d≈0 → 7 (1/8 film) … d≈1 → 1 (7/8)
 	if lvl < 1 {
@@ -169,9 +154,12 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			continue // overworld coast only — skip other dims and mountain players
 		}
 		px, pz := int(math.Floor(pl.x)), int(math.Floor(pl.z))
-		crest := crestAt(t) // uniform across the coast → solid sheet, consistent waterline
+		reach := waveMaxReach * waveBump(t) // how far inland the wave front is right now
+		if reach < 1 {
+			continue // the pause (or barely started) — nothing washes this tick
+		}
 
-		// Every beach cell (air over sea-level sand/gravel) in range, by column.
+		// Every beach cell (air/plants over sea-level ground) in range, by column.
 		beach := map[[2]int]int{}
 		for dx := -waveScanR; dx <= waveScanR; dx++ {
 			for dz := -waveScanR; dz <= waveScanR; dz++ {
@@ -185,54 +173,55 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			continue
 		}
 
-		// Flood-fill: reach a beach cell only if it is at most ONE block higher
-		// than where the water comes from and its sheet is at or below the crest
-		// this tick. The ocean acts as a virtual wet cell at its own surface
-		// (SeaLevel-1), so only the shore tier (63) seeds directly — a ledge two
-		// blocks above the water can't seed, only be reached via a 63 neighbour.
-		wet := map[[2]int]bool{}
+		// BFS the shore-DISTANCE of every reachable beach cell (steps from the
+		// ocean). Water may step to a neighbour only if it is at most ONE block
+		// higher (so it can't scale a 2-block riser), and the ocean acts as a wet
+		// cell at its own surface (SeaLevel-1) so only the shore tier (63) seeds —
+		// a ledge two blocks above the water can only be reached via a 63 neighbour.
+		// Pruned at waveMaxReach: beyond it the wave never reaches.
+		dist := map[[2]int]int{}
 		var queue [][2]int
-		reach := func(x, z, fromSheet int) {
+		visit := func(x, z, fromSheet, d int) {
 			k := [2]int{x, z}
-			if wet[k] {
+			if _, ok := dist[k]; ok || float64(d) > waveMaxReach {
 				return
 			}
 			sheet, ok := beach[k]
-			if !ok || sheet > fromSheet+1 || float64(sheet) > crest {
+			if !ok || sheet > fromSheet+1 {
 				return
 			}
-			wet[k] = true
+			dist[k] = d
 			queue = append(queue, k)
 		}
-		// Seeds: beach cells with an ocean neighbour (ocean = virtual sheet at its
-		// surface, SeaLevel-1, so only the 63 shore tier seeds).
-		for k := range beach {
+		for k := range beach { // seeds: shore cells beside the ocean, distance 1
 			for _, d := range waveHoriz {
 				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
-					reach(k[0], k[1], worldgen.SeaLevel-1)
+					visit(k[0], k[1], worldgen.SeaLevel-1, 1)
 					break
 				}
 			}
 		}
-		// Grow inland, one-block steps only.
-		for len(queue) > 0 {
+		for len(queue) > 0 { // grow inland, one-block steps only, counting distance
 			cur := queue[0]
 			queue = queue[1:]
-			cs := beach[cur]
+			cs, cd := beach[cur], dist[cur]
 			for _, d := range waveHoriz {
-				reach(cur[0]+d[0], cur[1]+d[1], cs)
+				visit(cur[0]+d[0], cur[1]+d[1], cs, cd+1)
 			}
 		}
 
-		// Assign each wet cell a depth-graded flowing level: thin at the frontier,
-		// ramping fuller toward the sea, so the surface ramps smoothly up the shore
-		// (no hard full-block step per tier) and fades in/out gradually. Every cell
-		// is flowing (never source), so the client slopes it at its air edges — no
-		// explicit edge handling needed. Water sits ON the surface only (no risers).
-		for k := range wet {
-			sheet := beach[k]
-			lvl := waterLevelForDepth(crest - float64(sheet))
-			out[blockPos{k[0], sheet, k[1]}] = worldgen.WaterBase + uint32(lvl)
+		// Wet every cell within the current front (distance ≤ reach). The front
+		// advances inland as the swell rises and RETREATS toward the ocean as it
+		// falls, so the waterline moves smoothly in both directions — even across a
+		// flat, where a uniform vertical crest would instead pop the whole area on
+		// and off at once. Level is graded by how far BEHIND the front a cell sits:
+		// thin at the leading/receding edge, ramping fuller toward the sea, capped
+		// to flowing (never source). Water sits ON the surface only (no risers).
+		for k, d := range dist {
+			if float64(d) > reach {
+				continue
+			}
+			out[blockPos{k[0], beach[k], k[1]}] = worldgen.WaterBase + uint32(waterLevelForDepth((reach-float64(d))*0.5))
 		}
 	}
 	return out
