@@ -43,6 +43,7 @@ var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64}
 
 const (
 	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
+	spawnDistChunks  = 8       // vanilla SPAWN_DISTANCE_CHUNK: the spawn ring is ±8 chunks
 	creatureSpawnMod = 400     // persistent categories spawn every 400 ticks
 	maxSpawnCluster  = 4       // vanilla Mob.getMaxSpawnClusterSize default
 	// Vanilla attempts one position per loaded chunk per tick; we sample at
@@ -155,8 +156,13 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	if !h.rules.DoMobSpawning || len(players) == 0 {
 		return
 	}
-	// Spawnable chunks + the players list once per tick.
+	// Spawnable chunks + the players list once per tick. chunkSet is the view
+	// window (mob load/unload + gen-herd seeding); spawnRing is the vanilla
+	// SPAWN_DISTANCE_CHUNK=8 ring around each player — its size is the mob-cap
+	// denominator (vanilla NaturalSpawner.SpawnState.spawnableChunkCount), so
+	// one player's 17×17=289 spawn ring yields exactly maxInstancesPerChunk.
 	chunkSet := map[[2]int32]bool{}
+	spawnRing := map[[2]int32]bool{}
 	overworld := 0
 	for _, t := range players {
 		if t.dim != 0 {
@@ -168,6 +174,10 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 		for x := cx - r; x <= cx+r; x++ {
 			for z := cz - r; z <= cz+r; z++ {
 				chunkSet[[2]int32{x, z}] = true
+				if x >= cx-spawnDistChunks && x <= cx+spawnDistChunks &&
+					z >= cz-spawnDistChunks && z <= cz+spawnDistChunks {
+					spawnRing[[2]int32{x, z}] = true
+				}
 			}
 		}
 	}
@@ -195,16 +205,41 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	// NaturalSpawner (one attempt per chunk per tick + chunk-generation herds);
 	// the default tachyne mode is the cheaper 1/8 sampler paired with herdTopUp.
 	if h.vanillaSpawner {
-		h.spawnVanilla(players, chunks, chunkSet, &counts)
+		h.spawnVanilla(players, chunks, chunkSet, len(spawnRing), &counts)
 		return
 	}
-	h.spawnTachyne(players, chunks, &counts)
+	h.spawnTachyne(players, chunks, len(spawnRing), &counts)
+}
+
+// spawnCap is vanilla NaturalSpawner.canSpawnForCategoryGlobal: the per-category
+// ceiling on loaded non-persistent mobs, maxInstancesPerChunk × spawnable-chunk
+// count / 289 (one player's 17×17 spawn ring → exactly maxInstancesPerChunk).
+func spawnCap(cat, spawnRingSize int) int {
+	return categoryCap[cat] * spawnRingSize / spawnChunkArea
+}
+
+// overworldSpawnRing counts the distinct chunks inside the vanilla ±8 spawn ring
+// of every overworld player — the spawnable-chunk count feeding spawnCap.
+func (h *hub) overworldSpawnRing(players map[int32]*tracked) int {
+	ring := map[[2]int32]bool{}
+	for _, t := range players {
+		if t.dim != 0 {
+			continue
+		}
+		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
+		for x := cx - spawnDistChunks; x <= cx+spawnDistChunks; x++ {
+			for z := cz - spawnDistChunks; z <= cz+spawnDistChunks; z++ {
+				ring[[2]int32{x, z}] = true
+			}
+		}
+	}
+	return len(ring)
 }
 
 // spawnTachyne is the default sampler: one position attempt per spawnAttemptBatch
 // chunks per tick per category — cheaper than vanilla's per-chunk rate, tuned to
 // converge on the same caps (see natural-spawn tuning notes).
-func (h *hub) spawnTachyne(players map[int32]*tracked, chunks [][2]int32, counts *[catCount]int) {
+func (h *hub) spawnTachyne(players map[int32]*tracked, chunks [][2]int32, spawnRingSize int, counts *[catCount]int) {
 	spawnPersistent := h.tick.Load()%creatureSpawnMod == 0
 	attempts := (len(chunks) + spawnAttemptBatch - 1) / spawnAttemptBatch
 	for cat := 0; cat < catCount; cat++ {
@@ -214,7 +249,7 @@ func (h *hub) spawnTachyne(players map[int32]*tracked, chunks [][2]int32, counts
 		if cat == catCreature && !spawnPersistent {
 			continue // vanilla: persistent-category spawns only every 400 ticks
 		}
-		cap := categoryCap[cat] * len(chunks) / spawnChunkArea
+		cap := spawnCap(cat, spawnRingSize)
 		for a := 0; a < attempts && counts[cat] < cap; a++ {
 			h.spawnAttempt(players, cat, chunks, &counts[cat], cap)
 		}
@@ -616,16 +651,22 @@ func (h *hub) herdTopUp(players map[int32]*tracked) {
 	if pick == nil {
 		return
 	}
-	near := 0
+	// Respect the vanilla global creature cap: count every loaded wild creature
+	// and the spawn ring the players cover, and never top up past it. Without
+	// this gate herdTopUp was an uncapped animal source — the runaway that
+	// filled the overworld with cows/sheep. (It stays as a sparse-area filler
+	// only while the population is genuinely below the vanilla ceiling.)
+	total, near := 0, 0
 	for _, m := range h.mobs {
 		if m.dim != 0 || m.dying > 0 || h.spawnExempt(m) || mobSpawnCategory(m) != catCreature {
 			continue
 		}
+		total++
 		if (m.x-pick.x)*(m.x-pick.x)+(m.z-pick.z)*(m.z-pick.z) < 96*96 {
 			near++
 		}
 	}
-	if near >= 8 {
+	if near >= 8 || total >= spawnCap(catCreature, h.overworldSpawnRing(players)) {
 		return
 	}
 	ang := h.rng.Float64() * 2 * math.Pi

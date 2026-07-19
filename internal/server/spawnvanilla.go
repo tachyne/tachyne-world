@@ -29,14 +29,14 @@ const (
 var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64}
 
 // spawnVanilla runs the exact-vanilla path for one tick.
-func (h *hub) spawnVanilla(players map[int32]*tracked, chunks [][2]int32, chunkSet map[[2]int32]bool, counts *[catCount]int) {
-	h.seedChunkGeneration(players, chunkSet, counts) // one-time herds as land loads
-	h.spawnVanillaTick(players, chunks, counts)      // per-tick NaturalSpawner
+func (h *hub) spawnVanilla(players map[int32]*tracked, chunks [][2]int32, chunkSet map[[2]int32]bool, spawnRingSize int, counts *[catCount]int) {
+	h.seedChunkGeneration(players, chunkSet, counts)           // one-time herds as land loads
+	h.spawnVanillaTick(players, chunks, spawnRingSize, counts) // per-tick NaturalSpawner
 }
 
 // spawnVanillaTick is NaturalSpawner.spawnForChunk: filter categories by the
 // global cap + persistent gate once, then one position attempt per chunk.
-func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, counts *[catCount]int) {
+func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, spawnRingSize int, counts *[catCount]int) {
 	spawnPersistent := h.tick.Load()%creatureSpawnMod == 0
 	var caps [catCount]int
 	var active [catCount]bool
@@ -47,7 +47,7 @@ func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, co
 		if cat == catCreature && !spawnPersistent {
 			continue // persistent category only every 400 ticks
 		}
-		caps[cat] = categoryCap[cat] * len(chunks) / spawnChunkArea
+		caps[cat] = spawnCap(cat, spawnRingSize)
 		active[cat] = counts[cat] < caps[cat] // global cap gate (canSpawnForCategoryGlobal)
 	}
 	for _, c := range chunks {
