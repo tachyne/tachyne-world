@@ -1,7 +1,6 @@
 package server
 
 import (
-	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -207,14 +206,14 @@ func TestWaveNeedsOcean(t *testing.T) {
 	}
 }
 
-// crestAt along the reference column (no jitter) must stay within
-// [sea-1, sea-1+reach] and both fully drain and fully climb across a cycle.
+// crestAt (uniform) must stay within [sea-1, sea-1+reach] and both fully drain
+// and fully climb across a cycle.
 func TestCrestBounds(t *testing.T) {
 	lo := float64(worldgen.SeaLevel) - 1
 	hi := lo + waveReach
 	var min, max float64 = 1e9, -1e9
 	for tk := uint64(0); tk <= 2*wavePeriod; tk++ {
-		c := crestAt(0, 0, tk) // waveJitter(0,0)=0 → clean bounds
+		c := crestAt(tk)
 		if c < lo-1e-6 || c > hi+1e-6 {
 			t.Fatalf("crest %f out of band [%f,%f]", c, lo, hi)
 		}
@@ -264,23 +263,24 @@ func TestWaveBumpPausesAndSwells(t *testing.T) {
 	}
 }
 
-// TestWaterlineUneven — the static per-column level jitter varies along the
-// shore but stays bounded in [-1,1] and never travels in time.
-func TestWaterlineUneven(t *testing.T) {
-	seen := map[float64]bool{}
-	for x := 0; x < 40; x++ {
-		j := waveJitter(x, 7)
-		if j < -1.0001 || j > 1.0001 {
-			t.Fatalf("jitter %.3f out of [-1,1]", j)
+// TestWaveWaterIsThin — no wave cell is a full source cube; the sheet is a
+// shallow flowing film (levels 1..7) so it reads as a low, consistent wash.
+func TestWaveWaterIsThin(t *testing.T) {
+	h := newHub(world.New(1))
+	h.waves = true
+	cx, cz := 1600, 1600
+	buildBeach(h.world, cx, cz)
+	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+	for tk := uint64(0); tk <= wavePeriod; tk++ {
+		for _, st := range h.waveTargets(players, tk) {
+			if st == worldgen.WaterBase {
+				t.Fatalf("wave cell is a full source block at tick %d — should be a thin flowing level", tk)
+			}
+			if !worldgen.IsWater(st) {
+				t.Fatalf("wave cell state %d is not water", st)
+			}
 		}
-		seen[math.Round(j*100)/100] = true
-	}
-	if len(seen) < 5 {
-		t.Errorf("surface jitter barely varies across columns (%d distinct offsets)", len(seen))
-	}
-	// Static and deterministic: same column, same offset — no travel in time.
-	if waveJitter(3, 4) != waveJitter(3, 4) {
-		t.Fatal("jitter must be deterministic per column")
 	}
 }
 
