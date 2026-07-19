@@ -534,8 +534,11 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.placeOres(ch, cx, cz)      // after carving: veins only in surviving stone
 	g.placeGeodes(ch, cx, cz)    // amethyst geodes (may straddle chunk borders)
 	g.decorate(ch, cx, cz)
+	removeFloatingFragments(ch) // delete terrain a cave severed from the ground —
+	//                               BEFORE structures, so it never culls a structure's
+	//                               legitimately-floating parts (monument arches/lanterns,
+	//                               ruined-portal fragments, ship masts).
 	g.stampStructures(ch, cx, cz) // lakes/dungeons/mineshafts/ruins overwrite
-	removeFloatingFragments(ch)   // delete terrain a cave severed from the ground
 
 	// One biome per section, sampled at the section's centre column. Sections
 	// well below the surface take an underground biome (dripstone/lush/deep_dark)
