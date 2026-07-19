@@ -56,6 +56,13 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if mn := g.MansionIn(pos.x, pos.z); mn.Exists {
+		for _, c := range g.MansionChests(mn) {
+			if pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {
+				return "chests/woodland_mansion", true
+			}
+		}
+	}
 	if s := g.ShipwreckIn(pos.x, pos.z); s.Exists {
 		for _, c := range s.Chests {
 			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
