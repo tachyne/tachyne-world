@@ -139,6 +139,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		}
 	}
 	base := float64(fistDamage)
+	sharpBonus := 0.0 // enchantment damage (Sharpness): added AFTER crit, not multiplied
 	charge, crit := 1.0, false
 	smash, fall := false, 0.0 // mace smash attack + its fall distance
 	var breachFrac float64
@@ -149,7 +150,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			base = float64(d) // a crafted weapon hits harder than a fist
 		}
 		if lvl := heldStack(t).enchLvl(enchSharpness); lvl > 0 {
-			base += float64(lvl) // sharpness: vanilla ~0.5+0.5×lvl, rounded up
+			sharpBonus = 0.5*float64(lvl) + 0.5 // vanilla: 1.0 + 0.5·(lvl-1); I=+1, V=+3
 		}
 		base += 3 * float64(t.hasEffect(effStrength)) // vanilla: +3/level
 		base -= 4 * float64(t.hasEffect(effWeakness)) // vanilla: -4/level
@@ -164,8 +165,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			charge = 0.2 + 0.8*c*c
 		}
 		t.lastAttack = now
-		// Critical: a full-charge hit while falling (jump-crit), ×1.5.
-		if charge >= 0.9 && t.airborne && t.y < t.peakY && !t.sprinting {
+		// Critical: full-charge, falling, not sprinting, not in water, not blind
+		// (vanilla Player.attack crit gate). ×1.5 on the base+strength portion.
+		if charge >= 0.9 && t.airborne && t.y < t.peakY && !t.sprinting &&
+			!h.inWater(t.dim, t.x, t.y, t.z) && t.hasEffect(effBlindness) == 0 {
 			crit = true
 		}
 		// Mace smash: falling past the threshold adds fall-distance bonus damage
@@ -185,6 +188,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if crit {
 		dmgF *= 1.5
 	}
+	dmgF += sharpBonus * charge // Sharpness: cooldown-scaled, added after crit (vanilla)
 	dmg := int(math.Max(1, math.Round(dmgF)))
 
 	// Plugin damage event: fires with the final amount, before any effect
@@ -212,18 +216,25 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if t != nil {
 		if kdx, kdz := m.x-t.x, m.z-t.z; (kdx != 0 || kdz != 0) && !m.noKB {
 			d := math.Hypot(kdx, kdz)
-			power := 0.5
+			// Vanilla: base hurt-knockback 0.4, +0.5 sprint, +0.5 per Knockback level.
+			power := 0.4
 			if t.sprinting {
-				power = 1.0
+				power += 0.5
 			}
+			power += 0.5 * float64(heldStack(t).enchLvl(enchKnockback))
 			m.vx, m.vz = kdx/d*power, kdz/d*power
 			m.kb, m.reroute = 3, 0
 			h.mobKnockVelocity(players, m)
 		}
-		// Sweep: a full-charge grounded sword swing clips everything beside the
-		// target for 1 + sharpness (vanilla sweeping edge, sans the enchant).
-		if _, sword := swordPeriod[t.p.heldItem()]; sword && charge >= 0.9 && !crit && t.onGround {
-			sweep := 1 + heldStack(t).enchLvl(enchSharpness)
+		// Sweep: a full-charge, grounded, non-sprinting sword swing clips
+		// everything beside the target. Vanilla damage = 1 + sweepingEdgeRatio·
+		// base (ratio = lvl/(lvl+1)); without Sweeping Edge it is a flat 1.
+		if _, sword := swordPeriod[t.p.heldItem()]; sword && charge >= 0.9 && !crit && t.onGround && !t.sprinting {
+			sweepDmg := 1.0
+			if se := heldStack(t).enchLvl(enchSweepingEdge); se > 0 {
+				sweepDmg += float64(se) / float64(se+1) * base
+			}
+			sweep := int(math.Max(1, math.Round(sweepDmg)))
 			for _, om := range h.mobs {
 				if om == m || om.dying > 0 {
 					continue

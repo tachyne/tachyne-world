@@ -26,6 +26,7 @@ const (
 	effRegen          = 9
 	effResistance     = 10
 	effFireRes        = 11
+	effBlindness      = 14
 	effWaterBreathing = 12
 	effNightVision    = 15
 	effHunger         = 16

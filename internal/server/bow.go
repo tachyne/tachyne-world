@@ -90,15 +90,21 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 		h.applyToolWear(t, t.p.heldSlot(), 1) // bows wear one per shot
 	}
 	v := bowMaxSpeed * power
-	// AbstractArrow: damage = ceil(speed × baseDamage 2); a full-power draw is
-	// critical and adds random.nextInt(damage/2 + 2) — a RANGE, not a flat +1.
-	dmg := int(math.Ceil(2 * v))
+	// AbstractArrow: damage = ceil(speed × baseDamage); Power adds 0.5·lvl+0.5 to
+	// the base (before ×speed). A full-power draw is critical and adds
+	// random.nextInt(damage/2 + 2) — a RANGE, not a flat +1.
+	arrowBase := 2.0
+	if pl := heldStack(t).enchLvl(enchPower); pl > 0 {
+		arrowBase += 0.5*float64(pl) + 0.5
+	}
+	dmg := int(math.Ceil(arrowBase * v))
 	if power >= 1 {
 		dmg += h.rng.Intn(dmg/2 + 2)
 	}
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
 	a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
+	a.punch = heldStack(t).enchLvl(enchPunch) // Punch: extra hit knockback
 	a.playerShot = true
 	h.playSound(players, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
 }

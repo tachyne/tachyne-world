@@ -54,6 +54,7 @@ type arrowEntity struct {
 	slow       int     // stray arrow: seconds of slowness effect on a hit
 	explode    int     // ghast/wither fireball: explosion power on impact (0 = none)
 	knock      float64 // wind charge: pure knockback impulse, no damage
+	punch      int     // bow Punch enchant: +0.6/level extra hit knockback
 
 	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
 	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
@@ -309,7 +310,8 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if a.dmg > 0 {
 			m.hitByPlayer = true
 			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && !m.noKB { // ride the arrow's momentum
-				m.vx, m.vz, m.kb, m.reroute = a.vx/d*0.5, a.vz/d*0.5, 3, 0
+				kbp := 0.5 + 0.6*float64(a.punch) // Punch adds 0.6/level
+				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
 				h.mobKnockVelocity(players, m)
 			}
 			if m.retaliates && a.playerShot {

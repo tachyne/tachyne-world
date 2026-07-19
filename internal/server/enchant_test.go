@@ -89,8 +89,9 @@ func TestSharpnessAddsMeleeDamage(t *testing.T) {
 	m := &mob{eid: 2, etype: entityZombie, hostile: true, health: zombieHealth, x: 1.5, y: 70, z: 0.5}
 	h.mobs[2] = m
 	h.attackMob(players, 1, 2)
-	if want := zombieHealth - (7 + 3); m.health != want {
-		t.Fatalf("sharpness 3 sword should deal 10: health %d, want %d", m.health, want)
+	// Diamond sword base 7 + Sharpness III (vanilla 0.5·3+0.5 = 2.0), no crit → 9.
+	if want := zombieHealth - (7 + 2); m.health != want {
+		t.Fatalf("sharpness 3 sword should deal 9: health %d, want %d", m.health, want)
 	}
 }
 
