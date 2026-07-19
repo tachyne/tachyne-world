@@ -85,12 +85,13 @@ const (
 	waveBandHigh = worldgen.SeaLevel + 1 // 64: highest tier the wash reaches
 )
 
-// beachFloor is the set of block states a wave washes over. Built once from
-// names (BlockBase is a pure lookup) so red-sand desert beaches count too.
-var beachFloor = map[uint32]bool{
-	worldgen.Sand:                  true,
-	worldgen.Gravel:                true,
-	worldgen.BlockBase("red_sand"): true,
+// isWaveFloor reports whether a wave washes over this block: any full solid
+// ground surface (sand, gravel, dirt, grass, stone, clay, …), NOT just sand — so
+// the wash is CONTINUOUS along a real shore instead of covering only sand columns
+// and leaving the dirt/grass/rock ones between them as dry gaps. Fluids and
+// leaves are excluded.
+func isWaveFloor(state uint32) bool {
+	return worldgen.IsSolidFull(state) && !worldgen.IsFluid(state) && !worldgen.IsLeaves(state)
 }
 
 // waveBump is the swell shape over one cycle, in [0,1]: a quick wash-IN (a
@@ -119,22 +120,22 @@ func crestAt(t uint64) float64 {
 	return float64(worldgen.SeaLevel) - 1 + waveReach*waveBump(t)
 }
 
-// beachSheet finds the air cell just above beach sand/gravel in the sea-level
+// beachSheet finds the air cell just above solid shore ground in the sea-level
 // band of a column, if there is one. It scans DOWN from the top of the band, so
-// a cliff or overhang above the beach correctly disqualifies the column, and it
+// a cliff or overhang above the shore correctly disqualifies the column, and it
 // ignores deep terrain entirely (cheaper than a full surface probe). Read-only.
 func (h *hub) beachSheet(x, z int) (int, bool) {
 	for y := waveBandHigh - 1; y >= waveBandLow-1; y-- {
 		b := h.world.Block(x, y, z)
-		if b == worldgen.Air {
-			continue // keep descending to the topmost solid
+		if worldgen.IsReplaceable(b) {
+			continue // air or a short plant — keep descending to the ground
 		}
-		if beachFloor[b] && h.world.Block(x, y+1, z) == worldgen.Air {
-			return y + 1, true // beach block with air above → the sheet cell
+		if isWaveFloor(b) && worldgen.IsReplaceable(h.world.Block(x, y+1, z)) {
+			return y + 1, true // solid ground with air/plants above → the sheet cell
 		}
-		return 0, false // topmost solid in the band isn't a beach surface
+		return 0, false // topmost solid in the band isn't washable ground
 	}
-	return 0, false // all air through the band → no beach here
+	return 0, false // nothing but air/plants through the band → no ground here
 }
 
 // waveHoriz are the four horizontal steps the flood-fill spreads across.
