@@ -106,17 +106,16 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 	}
 }
 
-// TestWaveCannotClimbTwoBlockStep — a 2-block ledge at the coast must stay dry
-// on top: the reachability flood-fill climbs one block per step and the ocean
-// seeds only the shore tier, so it can't scale it.
-func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
+// TestWaveCappedAtTwoTiers — the wash covers the shore tier and one step up, but
+// the 2-tier band stops it climbing to a THIRD tier however high the beach rises.
+func TestWaveCappedAtTwoTiers(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
 	cx, cz := 800, 800
 	for x := cx - 4; x <= cx+4; x++ { // clear
 		for z := cz - 3; z <= cz+3; z++ {
-			for y := sl - 4; y <= waveBandHigh+1; y++ {
+			for y := sl - 4; y <= sl+5; y++ {
 				h.world.SetBlock(x, y, z, worldgen.Air)
 			}
 		}
@@ -128,23 +127,22 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 			}
 		}
 	}
-	// A 2-block ledge at the coast: sand top at sl (sheet sl+1), which is two
-	// blocks above the ocean surface (sl-1), with NO one-block shore tier beside
-	// it. The wave can only step up one block, so it can never seed or reach it.
-	for x := cx; x <= cx+2; x++ {
+	// A staircase rising one block per column: sand tops 62/63/64 → sheets 63
+	// (tier 1), 64 (tier 2), 65 (tier 3 — above the band).
+	for i, top := 0, sl-1; i < 3; i, top = i+1, top+1 {
 		for z := cz - 3; z <= cz+3; z++ {
-			for y := sl - 4; y <= sl; y++ {
-				h.world.SetBlock(x, y, z, worldgen.Sand)
+			for y := sl - 4; y <= top; y++ {
+				h.world.SetBlock(cx+i, y, z, worldgen.Sand)
 			}
 		}
 	}
-	cliff := blockPos{cx, sl + 1, cz}
+	third := blockPos{cx + 2, sl + 2, cz} // sheet sl+2 = the third tier
 	pl := riderAt(1, float64(cx)+0.5, float64(sl)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
 
 	for tk := uint64(0); tk <= wavePeriod; tk++ {
-		if _, ok := h.waveTargets(players, tk)[cliff]; ok {
-			t.Fatalf("wave climbed a 2-block cliff at tick %d — it may only step up one block", tk)
+		if _, ok := h.waveTargets(players, tk)[third]; ok {
+			t.Fatalf("wave reached a third tier at tick %d — the band caps it at two", tk)
 		}
 	}
 }
