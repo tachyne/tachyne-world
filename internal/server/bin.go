@@ -42,10 +42,14 @@ var (
 )
 
 var (
-	itemBucket     = itemByName["bucket"]
-	itemBucketH2O  = itemByName["water_bucket"]
-	itemBucketLav  = itemByName["lava_bucket"]
-	itemFireCharge = int32(itemByName["fire_charge"])
+	itemBucket       = itemByName["bucket"]
+	itemBucketH2O    = itemByName["water_bucket"]
+	itemBucketLav    = itemByName["lava_bucket"]
+	itemFireCharge   = int32(itemByName["fire_charge"])
+	itemWindCharge   = itemByName["wind_charge"]
+	itemWitherSkull  = itemByName["wither_skeleton_skull"]
+	witherSkullBlock = worldgen.BlockBase("wither_skeleton_skull")
+	rootedDirtBlock  = worldgen.BlockBase("rooted_dirt")
 )
 
 func isHopper(s uint32) bool { return s >= hopperMin && s <= hopperMax }
@@ -208,6 +212,12 @@ func (h *hub) updateBinTrigger(players map[int32]*tracked, pos blockPos, state u
 	}
 }
 
+// convertableToMud is the vanilla #convertable_to_mud block tag — the blocks a
+// dispensed water bottle turns to mud.
+func convertableToMud(s uint32) bool {
+	return s == worldgen.Dirt || s == worldgen.CoarseDirt || s == rootedDirtBlock
+}
+
 // ejectFromBin fires/drops the first non-empty slot's item out of the face.
 func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint32) {
 	c := h.bins[pos]
@@ -267,6 +277,73 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		h.launchProjectileIn(players, entityEggProj, 0, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && item == itemFireCharge:
 		h.launchProjectileIn(players, entitySmallFireball, 0, fx, fy, fz, vx, vy, vz)
+	case dispense && item == itemWindCharge:
+		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
+		// throws, launched out of the face.
+		h.launchProjectileIn(players, entityWindCharge, 0, fx, fy, fz, vx, vy, vz)
+	case dispense && item == itemPotion && st.potion == potWater:
+		// Vanilla POTION behaviour: a WATER bottle onto a CONVERTABLE_TO_MUD block
+		// (dirt / coarse dirt / rooted dirt) turns it to mud and empties the
+		// bottle to glass; anything else falls back to the default toss.
+		if convertableToMud(h.world.At(front.x, front.y, front.z)) {
+			h.setBlock(players, front, worldgen.Mud)
+			h.spawnParticles(players, particleSplash, float64(front.x)+0.5, float64(front.y)+1, float64(front.z)+0.5, 0.3, 0.1, 5)
+			h.playSound(players, "minecraft:item.bottle.empty", sndBlock,
+				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+			*st = invStack{item: itemGlassBottle, count: 1}
+			took = false
+		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			it.dmg, it.ench = st.dmg, st.ench
+		}
+	case dispense && item == itemGlassBottle:
+		// Vanilla GLASS_BOTTLE behaviour: fill from a water source ahead → water
+		// bottle (the source is not drained). Otherwise toss like the default.
+		if worldgen.IsWater(h.world.At(front.x, front.y, front.z)) {
+			took = false
+			wb := potionStack(potWater)
+			if st.count <= 1 {
+				*st = wb
+			} else {
+				st.count--
+				if binInsert(c.slots, wb) > 0 {
+					h.spawnItem(players, itemGlassBottle, 1, fx, fy, fz) // no room: refund a bottle
+				}
+			}
+		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			it.dmg, it.ench = st.dmg, st.ench
+		}
+	case dispense && item == itemWitherSkull:
+		// Vanilla WITHER_SKELETON_SKULL behaviour (a dedicated behaviour that
+		// overrides the default equip-a-wearable): place the skull in the empty
+		// cell ahead and try to raise a wither; if the cell is blocked, fail
+		// (skull kept, like OptionalDispenseItemBehavior).
+		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+			h.setBlock(players, front, witherSkullBlock)
+			h.checkWitherBuild(players, 0, front.x, front.y, front.z, witherSkullBlock)
+		} else {
+			took = false
+		}
+	case dispense && standSlotFor(item) >= 0:
+		// Vanilla EquipmentDispenseItemBehavior: dress a wearable onto an armor
+		// stand in the cell ahead whose matching slot is free; else toss it.
+		slot := standSlotFor(item)
+		equipped := false
+		for _, sd := range h.armorStands {
+			if sd.dim == 0 && sd.equip[slot].item == 0 &&
+				floorInt(sd.x) == front.x && floorInt(sd.y) == front.y && floorInt(sd.z) == front.z {
+				piece := *st
+				piece.count = 1
+				sd.equip[slot] = piece
+				h.toNearbyEv(players, 0, sd.x, sd.z, h.standEquipEv(sd))
+				equipped = true
+				break
+			}
+		}
+		if !equipped {
+			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+				it.dmg, it.ench = st.dmg, st.ench
+			}
+		}
 	case dispense && item == itemTNTBlock:
 		h.primeTNT(players, front.x, front.y, front.z, tntFuseTicks)
 	case dispense && item == itemFlintSteel:
