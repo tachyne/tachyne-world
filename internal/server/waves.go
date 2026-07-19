@@ -24,10 +24,12 @@ import (
 // own slope), NOT a crest travelling along the coast.
 //
 // The wet set is a FLOOD-FILL from the shoreline, not a pure height test: water
-// starts at beach cells beside the ocean and may step to a neighbour only if
-// that cell is at most ONE block higher (and within the crest this tick). So it
-// climbs a gentle slope one block at a time but CANNOT scale a 2-block riser —
-// a cliff at the coast stays dry on top instead of water teleporting onto it.
+// starts at beach cells one step above the ocean's surface and may step to a
+// neighbour only if that cell is at most ONE block higher (and within the crest
+// this tick). So it climbs a gentle slope one block at a time but CANNOT scale
+// a 2-block riser — a cliff at the coast stays dry on top instead of water
+// teleporting onto it. Combined with the 2-tier band, a wave reaches at most
+// the shore tier plus one step inland.
 //
 // Two refinements give it life. (1) RHYTHM: each cycle is one swell — a quick
 // wash-in and a gentler roll-back — followed by a PAUSE where the beach sits
@@ -36,7 +38,7 @@ import (
 // per column scallops the waterline, so the wet edge isn't a dead-straight line.
 
 const (
-	waveReach     = 4.0  // blocks the crest climbs above sea level at the swell's peak
+	waveReach     = 3.0  // blocks the crest climbs above sea level at the swell's peak
 	wavePeriod    = 110  // ticks per full cycle (the swell plus the pause) ≈ 5.5 s
 	waveActive    = 62   // ticks of actual in-out motion; the rest (48 ≈ 2.4 s) is the pause
 	waveRiseFrac  = 0.40 // fraction of the swell spent washing IN (the rest is a gentler roll-back)
@@ -46,10 +48,10 @@ const (
 
 	// The sheet cell (the air over the beach block) lives in this vertical band
 	// around sea level. Sand at y ∈ [low-1, high-1] → sheet at y+1 ∈ [low, high].
-	// The band height sets how far up the beach a wave climbs; +2 = a 2-block
-	// travel height (shore edge 63 up to 65), never higher.
+	// The band height caps how many water tiers a wave climbs: [63,64] = at most
+	// TWO tiers (the shore edge 63 and one step up to 64), never higher.
 	waveBandLow  = worldgen.SeaLevel     // 63: lowest sheet cell (shore edge)
-	waveBandHigh = worldgen.SeaLevel + 2 // 65: highest the wash climbs (2 blocks up)
+	waveBandHigh = worldgen.SeaLevel + 1 // 64: highest tier the wash reaches
 )
 
 // beachFloor is the set of block states a wave washes over. Built once from
@@ -102,10 +104,10 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 		if b == worldgen.Air {
 			continue // keep descending to the topmost solid
 		}
-		if beachFloor[b] {
-			return y + 1, true // beach block, with air above it → sheet cell
+		if beachFloor[b] && h.world.Block(x, y+1, z) == worldgen.Air {
+			return y + 1, true // beach block with air above → the sheet cell
 		}
-		return 0, false // topmost solid in the band isn't beach material
+		return 0, false // topmost solid in the band isn't a beach surface
 	}
 	return 0, false // all air through the band → no beach here
 }
@@ -141,8 +143,10 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 		}
 
 		// Flood-fill: reach a beach cell only if it is at most ONE block higher
-		// than where the water comes from (the ocean acts as a virtual wet cell
-		// at sheet SeaLevel) and its sheet is at or below the crest this tick.
+		// than where the water comes from and its sheet is at or below the crest
+		// this tick. The ocean acts as a virtual wet cell at its own surface
+		// (SeaLevel-1), so only the shore tier (63) seeds directly — a ledge two
+		// blocks above the water can't seed, only be reached via a 63 neighbour.
 		wet := map[[2]int]bool{}
 		var queue [][2]int
 		reach := func(x, z, fromSheet int) {
@@ -157,11 +161,12 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]str
 			wet[k] = true
 			queue = append(queue, k)
 		}
-		// Seeds: beach cells with an ocean neighbour (ocean = virtual sheet SeaLevel).
+		// Seeds: beach cells with an ocean neighbour (ocean = virtual sheet at its
+		// surface, SeaLevel-1, so only the 63 shore tier seeds).
 		for k := range beach {
 			for _, d := range waveHoriz {
 				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
-					reach(k[0], k[1], worldgen.SeaLevel)
+					reach(k[0], k[1], worldgen.SeaLevel-1)
 					break
 				}
 			}

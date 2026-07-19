@@ -129,16 +129,17 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 			}
 		}
 	}
-	// A sheer 2-block cliff: sand top at sl+1 (sheet sl+2) right beside the
-	// ocean, with NO intermediate one-block step — nothing for the wave to seed.
+	// A 2-block ledge at the coast: sand top at sl (sheet sl+1), which is two
+	// blocks above the ocean surface (sl-1), with NO one-block shore tier beside
+	// it. The wave can only step up one block, so it can never seed or reach it.
 	for x := cx; x <= cx+2; x++ {
 		for z := cz - 3; z <= cz+3; z++ {
-			for y := sl - 4; y <= sl+1; y++ {
+			for y := sl - 4; y <= sl; y++ {
 				h.world.SetBlock(x, y, z, worldgen.Sand)
 			}
 		}
 	}
-	cliff := blockPos{cx, sl + 2, cz}
+	cliff := blockPos{cx, sl + 1, cz}
 	pl := riderAt(1, float64(cx)+0.5, float64(sl)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
 
