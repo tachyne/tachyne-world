@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func TestDesertTempleChestLoots(t *testing.T) {
@@ -45,38 +46,39 @@ func TestVillageHouseChestLoot(t *testing.T) {
 	w := world.New(7)
 	h := newHub(w)
 	g := w.Gen()
-	// Find a village near origin.
+	// Find a village with a chest near origin (chests come from the real jigsaw
+	// templates now — VillageChests).
 	var found bool
-	var house struct{ X, Y, Z int }
-	var table string
+	var chestPos worldgen.VillageChest
 	for cx := 0; cx < 30000 && !found; cx += 512 {
 		for cz := 0; cz < 30000; cz += 512 {
 			vl := g.VillageIn(cx, cz)
-			if !vl.Exists || len(vl.Houses) == 0 {
+			if !vl.Exists {
 				continue
 			}
-			ho := vl.Houses[0]
-			hx, hy, hz := g.HouseChest(ho)
-			house.X, house.Y, house.Z = hx, hy, hz
-			table = villageChestTable(g.HouseWorkstation(ho))
+			cs := g.VillageChests(vl)
+			if len(cs) == 0 {
+				continue
+			}
+			chestPos = cs[0]
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Skip("no village in range for this seed")
+		t.Skip("no village chest in range for this seed")
 	}
-	// structureChestTable must recognize the house chest and return a village table.
-	name, ok := h.structureChestTable(blockPos{house.X, house.Y, house.Z})
+	// structureChestTable must recognize the chest and return its village table.
+	name, ok := h.structureChestTable(blockPos{chestPos.X, chestPos.Y, chestPos.Z})
 	if !ok {
-		t.Fatalf("house chest at (%d,%d,%d) not recognized", house.X, house.Y, house.Z)
+		t.Fatalf("village chest at (%d,%d,%d) not recognized", chestPos.X, chestPos.Y, chestPos.Z)
 	}
-	if name != table {
-		t.Fatalf("house chest table %q, want %q", name, table)
+	if name != chestPos.Table {
+		t.Fatalf("village chest table %q, want %q", name, chestPos.Table)
 	}
 	// And it fills with loot.
 	c := &chest{}
-	h.fillStructureChest(blockPos{house.X, house.Y, house.Z}, c)
+	h.fillStructureChest(blockPos{chestPos.X, chestPos.Y, chestPos.Z}, c)
 	items := 0
 	for _, s := range c.slots {
 		if s.item != 0 {

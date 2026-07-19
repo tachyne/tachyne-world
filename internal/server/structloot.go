@@ -78,28 +78,3 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	}
 	return "", false
 }
-
-// villageChestTable maps a house's workstation block to its vanilla chest loot
-// table; a house with no dedicated profession table falls back to the plains
-// house table.
-func villageChestTable(workstation uint32) string {
-	if name, ok := villageTableByWorkstation[workstation]; ok {
-		return name
-	}
-	return "chests/village/village_plains_house"
-}
-
-// villageTableByWorkstation is keyed by the worldgen workstation state ids
-// (worldgen/village.go workstations table).
-var villageTableByWorkstation = map[uint32]string{
-	19432: "chests/village/village_fisher",       // barrel
-	19459: "chests/village/village_cartographer", // cartography_table
-	19489: "chests/village/village_toolsmith",    // smithing_table
-	19460: "chests/village/village_fletcher",     // fletching_table
-	19427: "chests/village/village_shepherd",     // loom
-	19490: "chests/village/village_mason",        // stonecutter
-	19465: "chests/village/village_weaponsmith",  // grindstone
-	19452: "chests/village/village_armorer",      // blast_furnace
-	19444: "chests/village/village_butcher",      // smoker
-	8181:  "chests/village/village_temple",       // brewing_stand (cleric)
-}
