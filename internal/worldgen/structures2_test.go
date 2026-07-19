@@ -53,8 +53,14 @@ func TestRuinedPortalStamps(t *testing.T) {
 	if !p.Exists {
 		t.Fatalf("crying obsidian at (%d,%d) but RuinedPortalIn empty", x, z)
 	}
-	// The found block must lie within the portal's frame footprint.
-	if x < p.X || x > p.X+3 || z != p.Z {
-		t.Fatalf("crying obsidian (%d,%d) outside portal frame at (%d,%d)", x, z, p.X, p.Z)
+	// The found block must lie within the (rotated) template footprint.
+	t0 := TemplateByName(p.Tmpl)
+	sx, sz := t0.Size[0], t0.Size[2]
+	if p.Rot&1 == 1 {
+		sx, sz = sz, sx
+	}
+	if x < p.X-1 || x > p.X+sx || z < p.Z-1 || z > p.Z+sz {
+		t.Fatalf("crying obsidian (%d,%d) outside portal %q footprint at (%d,%d) size %dx%d",
+			x, z, p.Tmpl, p.X, p.Z, sx, sz)
 	}
 }

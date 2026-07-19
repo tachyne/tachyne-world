@@ -120,12 +120,29 @@ func (g *Generator) stampDesertTemples(ch *Chunk, cx, cz int32) {
 
 // ---- ruined portal ------------------------------------------------------------
 
-// RuinedPortal is a broken obsidian portal frame on a scorched netherrack patch
-// with a loot chest.
+// RuinedPortal is a broken portal placed from a REAL vanilla ruined_portal
+// template (10 standard + 3 giant variants), rotated, with the vanilla
+// BlockRotProcessor decay (integrity) applied at stamp time and its own loot
+// chest.
 type RuinedPortal struct {
-	X, Y, Z                int // frame base (bottom-left of the standing frame)
-	ChestX, ChestY, ChestZ int
-	Exists                 bool
+	X, Y, Z   int // template min corner (Y = surface it settles on)
+	Tmpl      string
+	Rot       int
+	Integrity float64
+	Chests    [][3]int
+	Exists    bool
+}
+
+// ruinedPortalTemplates: the standard portals are common; the giant portals are
+// the rare (~5 %) big variant, matching vanilla's weighting.
+var ruinedPortalStd = []string{
+	"ruined_portal/portal_1", "ruined_portal/portal_2", "ruined_portal/portal_3",
+	"ruined_portal/portal_4", "ruined_portal/portal_5", "ruined_portal/portal_6",
+	"ruined_portal/portal_7", "ruined_portal/portal_8", "ruined_portal/portal_9",
+	"ruined_portal/portal_10",
+}
+var ruinedPortalGiant = []string{
+	"ruined_portal/giant_portal_1", "ruined_portal/giant_portal_2", "ruined_portal/giant_portal_3",
 }
 
 func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
@@ -139,8 +156,23 @@ func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
 	if y <= SeaLevel { // not underwater
 		return RuinedPortal{}
 	}
-	p := RuinedPortal{X: x, Y: y, Z: z, Exists: true}
-	p.ChestX, p.ChestY, p.ChestZ = x+3, y, z
+	name := ruinedPortalStd[int(hash01(g.seed, ox, oz, 0x9F04)*float64(len(ruinedPortalStd)))]
+	if hash01(g.seed, ox, oz, 0x9F05) < 0.05 { // rare giant portal
+		name = ruinedPortalGiant[int(hash01(g.seed, ox, oz, 0x9F06)*float64(len(ruinedPortalGiant)))]
+	}
+	t := TemplateByName(name)
+	if t == nil {
+		return RuinedPortal{}
+	}
+	rot := int(hash01(g.seed, ox, oz, 0x9F07)*4) & 3
+	// Vanilla mossiness → integrity in roughly [0.7, 0.9]: a moderately broken
+	// frame, not obliterated.
+	integ := 0.7 + hash01(g.seed, ox, oz, 0x9F08)*0.2
+	p := RuinedPortal{X: x, Y: y - 1, Z: z, Tmpl: name, Rot: rot, Integrity: integ, Exists: true}
+	for _, c := range t.Chests {
+		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		p.Chests = append(p.Chests, [3]int{p.X + rx, p.Y + ry, p.Z + rz})
+	}
 	return p
 }
 
@@ -151,39 +183,8 @@ func (g *Generator) stampRuinedPortals(ch *Chunk, cx, cz int32) {
 		if !p.Exists {
 			continue
 		}
-		for lx := 0; lx < 16; lx++ {
-			for lz := 0; lz < 16; lz++ {
-				wx, wz := baseX+lx, baseZ+lz
-				fx, fz := wx-p.X, wz-p.Z // frame is 4 wide along X, in the plane z==0
-				// Scorched netherrack apron under and around the frame.
-				if fz == 0 && fx >= -1 && fx <= 4 {
-					setSectionBlock(ch, lx, p.Y-1, lz, Netherrack, true)
-				}
-				if fz == 0 && fx >= 0 && fx <= 3 { // the 4-wide × 5-tall frame
-					for fy := 0; fy <= 4; fy++ {
-						edge := fx == 0 || fx == 3 || fy == 0 || fy == 4
-						if !edge {
-							continue // portal interior stays open
-						}
-						// ~1 in 4 frame blocks are broken away (ruined look).
-						if hash01(g.seed, wx*7+fy, wz*13, 0x9F10) < 0.25 {
-							continue
-						}
-						b := Obsidian
-						if hash01(g.seed, wx+fy, wz, 0x9F11) < 0.3 {
-							b = CryingObsidian
-						}
-						setSectionBlock(ch, lx, p.Y+fy, lz, b, true)
-					}
-				}
-				// A block of gold ore-block and the loot chest beside the portal.
-				if wx == p.X+2 && wz == p.Z-1 {
-					setSectionBlock(ch, lx, p.Y, lz, GoldBlock, true)
-				}
-				if wx == p.ChestX && wz == p.ChestZ {
-					setSectionBlock(ch, lx, p.ChestY, lz, ChestNorth, true)
-				}
-			}
+		if t := TemplateByName(p.Tmpl); t != nil {
+			t.StampTemplateRot(ch, cx, cz, p.X, p.Y, p.Z, p.Rot, g.seed, p.Integrity)
 		}
 	}
 }

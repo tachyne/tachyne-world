@@ -198,6 +198,37 @@ func (t *Template) StampTemplate(ch *Chunk, cx, cz int32, ox, oy, oz, rot int) [
 	return chests
 }
 
+// StampTemplateRot is StampTemplate with the vanilla ruined-structure decay:
+// each block is dropped with probability (1-integrity) — the BlockRotProcessor's
+// "ruined" incompleteness — except the chest (loot must stay reachable), and
+// obsidian occasionally weeps (BlockAgeProcessor). Deterministic per rotSeed.
+func (t *Template) StampTemplateRot(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rotSeed int64, integrity float64) [][3]int {
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	for _, b := range t.Blocks {
+		state := t.resolved[rot&3][b[3]]
+		if state == tmplSkip {
+			continue
+		}
+		name := trimNS(t.Palette[b[3]].Name)
+		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], rot)
+		wx, wy, wz := ox+rx, oy+ry, oz+rz
+		if name != "chest" && name != "air" && integrity < 1 &&
+			hash01(rotSeed, wx, wz*8192+wy, 0x2074) >= integrity {
+			continue // rotted away
+		}
+		if name == "obsidian" && hash01(rotSeed, wx*3, (wz*8192+wy)*5, 0x2075) < 0.15 {
+			state = CryingObsidian // aged
+		}
+		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
+	}
+	var chests [][3]int
+	for _, c := range t.Chests {
+		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		chests = append(chests, [3]int{ox + rx, oy + ry, oz + rz})
+	}
+	return chests
+}
+
 func trimNS(name string) string {
 	if len(name) > 10 && name[:10] == "minecraft:" {
 		return name[10:]

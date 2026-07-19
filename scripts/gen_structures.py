@@ -22,11 +22,13 @@ SHIPWRECK = ["shipwreck/%s%s" % (v, d) for v in (
     "sideways_fronthalf", "sideways_backhalf",
     "upsidedown_full", "upsidedown_fronthalf", "upsidedown_backhalf",
 ) for d in ("", "_degraded")]
+RUINED_PORTAL = ["ruined_portal/portal_%d" % i for i in range(1, 11)] + \
+    ["ruined_portal/giant_portal_%d" % i for i in range(1, 4)]
 TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-] + SHIPWRECK
+] + SHIPWRECK + RUINED_PORTAL
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).
@@ -145,8 +147,13 @@ def bake(inner, name):
         bid = nbt.get("id", "")
         if bid == "minecraft:chest":
             chests.append([x, y, z])
-            marker = markers.get((x, y + 1, z), "")
-            chestloot.append(MARKER_LOOT.get(marker, ""))
+            # Loot table: the chest's own LootTable (ruined portal), else the
+            # DATA marker one above it (shipwreck supply/map/treasure).
+            lt = nbt.get("LootTable", "")
+            if lt:
+                chestloot.append(lt.split(":", 1)[-1])
+            else:
+                chestloot.append(MARKER_LOOT.get(markers.get((x, y + 1, z), ""), ""))
         elif bid == "minecraft:mob_spawner":
             sd = nbt.get("SpawnData", {}).get("entity", {})
             spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])
