@@ -59,7 +59,7 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 func (h *hub) wardenSonicBoom(players map[int32]*tracked, m *mob, t *tracked) {
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.warden.sonic_boom", sndHostile, m.x, m.y, m.z, 3, 1)
-	h.damage(players, t, wardenSonicDmg) // no armorReduce, no shield check — it pierces
+	h.damageExh(players, t, wardenSonicDmg, 0) // sonic_boom: pierces armour/shield, no exhaustion
 	h.knockback(t, m.x, m.z)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})

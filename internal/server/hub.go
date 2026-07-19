@@ -765,6 +765,7 @@ func (h *hub) run() {
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
 				}
 			}
+			h.updateEffects(players) // status effects at 20 Hz (vanilla per-effect cadence)
 			if age%10 == 0 {
 				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
 			}

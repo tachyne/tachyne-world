@@ -232,7 +232,7 @@ func TestEatReleaseCancels(t *testing.T) {
 	}
 
 	h.startEating(pl, 0)
-	for i := 0; i < eatNearlyDone; i++ {
+	for i := 0; i < eatNearlyTicks(pl.inv.slots[0].item); i++ {
 		h.tick.Add(1)
 	}
 	h.stopEating(nil, pl) // released right at the finish — counts as eaten

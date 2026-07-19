@@ -52,7 +52,9 @@ func playerStateOf(t *tracked, name string, uuid [16]byte) ho.PlayerState {
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	for _, id := range ids {
 		e := t.effects[id]
-		ps.Effects = append(ps.Effects, ho.EffectState{ID: id, Amp: int32(e.amp), Left: int32(e.left)})
+		// EffectState.Left is SECONDS (documented contract); activeEffect.left
+		// is TICKS. Round up so a sub-second remainder never truncates to 0.
+		ps.Effects = append(ps.Effects, ho.EffectState{ID: id, Amp: int32(e.amp), Left: int32((e.left + 19) / 20)})
 	}
 	return ps
 }
@@ -84,6 +86,6 @@ func (t *tracked) applyPlayerState(ps ho.PlayerState) {
 	t.offhand = unpackStack(ps.Offhand)
 	t.effects = map[int32]*activeEffect{}
 	for _, e := range ps.Effects {
-		t.effects[e.ID] = &activeEffect{amp: int(e.Amp), left: int(e.Left)}
+		t.effects[e.ID] = &activeEffect{amp: int(e.Amp), left: int(e.Left) * 20} // seconds → ticks
 	}
 }

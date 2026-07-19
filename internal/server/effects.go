@@ -44,7 +44,9 @@ var (
 	itemEnchGoldenApple = itemByName["enchanted_golden_apple"]
 )
 
-// activeEffect is one running effect: amplifier 0-based, seconds remaining.
+// activeEffect is one running effect: amplifier 0-based, TICKS remaining (the
+// vanilla MobEffectInstance.duration — ticked down and consulted at 20 Hz so
+// the regen/poison/wither application cadence is exact; see updateEffects).
 type activeEffect struct {
 	amp  int
 	left int
@@ -81,7 +83,7 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 		h.sendHealth(t)
 		return
 	case effInstantDamage:
-		h.damage(players, t, float32(6*(int(1)<<amp)))
+		h.damageExh(players, t, float32(6*(int(1)<<amp)), 0) // magic: no exhaustion
 		return
 	case effAbsorption:
 		// Vanilla: the buffer is 4 HP per level, granted immediately.
@@ -90,10 +92,10 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	if t.effects == nil {
 		t.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > secs)) {
+	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > secs*20)) {
 		return // a stronger/longer instance is already running (vanilla)
 	}
-	t.effects[id] = &activeEffect{amp: amp, left: secs}
+	t.effects[id] = &activeEffect{amp: amp, left: secs * 20}
 	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
 }
 
@@ -113,34 +115,57 @@ func (h *hub) clearEffects(t *tracked) {
 	}
 }
 
-// tickEffects runs at 1 Hz inside the survival step.
-func (h *hub) tickEffects(players map[int32]*tracked, t *tracked) {
-	for id, e := range t.effects {
-		switch id {
-		case effRegen:
-			// Vanilla: 1 HP per 50>>amp ticks — at 1 Hz, level I lands every
-			// 3rd second, level II+ every second.
-			if e.amp >= 1 || e.left%3 == 0 {
-				if t.health < maxHealth {
+// updateEffects ticks every survival player's status effects once per game
+// tick (20 Hz) and applies the periodic ones on vanilla's exact per-effect
+// cadence. It runs from the hub loop, NOT the 1 Hz survival step, because the
+// intervals are sub-second (Regeneration 50>>amp ticks, Poison 25>>amp,
+// Wither 40>>amp) and cannot be represented at 1 Hz.
+func (h *hub) updateEffects(players map[int32]*tracked) {
+	for _, t := range players {
+		if t.gamemode != gmSurvival || t.dead || t.health <= 0 || len(t.effects) == 0 {
+			continue
+		}
+		for id, e := range t.effects {
+			switch id {
+			case effRegen:
+				// RegenerationMobEffect: heal 1 HP every 50>>amp ticks.
+				if applyEffectTickNow(e.left, 50, e.amp) && t.health < maxHealth {
 					t.health = float32(math.Min(maxHealth, float64(t.health)+1))
 					h.sendHealth(t)
 				}
+			case effPoison:
+				// PoisonMobEffect: 1 HP every 25>>amp ticks, never lethal
+				// (stops at half a heart).
+				if applyEffectTickNow(e.left, 25, e.amp) && t.health > 1 {
+					t.health--
+					h.sendHealth(t)
+					t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
+				}
+			case effWither:
+				// WitherMobEffect: 1 HP every 40>>amp ticks — like poison but CAN
+				// kill; the `wither` damage type costs no hunger exhaustion.
+				if applyEffectTickNow(e.left, 40, e.amp) {
+					h.damageExh(players, t, 1, 0)
+				}
 			}
-		case effPoison:
-			// Vanilla: 1 HP per 25>>amp ticks, never lethal (stops at half a heart).
-			if t.health > 1 {
-				t.health--
-				h.sendHealth(t)
-				t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
+			if t.dead { // a wither tick may have killed — stop touching effects
+				break
 			}
-		case effWither:
-			// Vanilla: 1 HP per 40>>amp ticks — like poison but CAN kill.
-			h.damage(players, t, 1)
-		}
-		if e.left--; e.left <= 0 {
-			h.removeEffect(t, id)
+			if e.left--; e.left <= 0 {
+				h.removeEffect(t, id)
+			}
 		}
 	}
+}
+
+// applyEffectTickNow ports MobEffect.shouldApplyEffectTickThisTick: a periodic
+// effect fires this tick when its remaining duration is a multiple of
+// (base>>amp) ticks; a zero interval (very high amplifier) fires every tick.
+func applyEffectTickNow(left, base, amp int) bool {
+	if i := base >> amp; i > 0 {
+		return left%i == 0
+	}
+	return true
 }
 
 // eatSpecial applies the food-item side effects beyond hunger (golden apples).

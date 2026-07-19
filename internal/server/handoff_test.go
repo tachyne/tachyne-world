@@ -56,7 +56,7 @@ func TestPlayerHandoverAcrossSeam(t *testing.T) {
 	src := &tracked{
 		p: p, dim: 0, x: -16, y: 71, z: 0, yaw: 90,
 		gamemode: gmSurvival, health: 18.5, food: 17, inv: &inventory{},
-		effects: map[int32]*activeEffect{effSpeed: {amp: 1, left: 30}},
+		effects: map[int32]*activeEffect{effSpeed: {amp: 1, left: 600}}, // 30 s in ticks
 	}
 	src.inv.slots[0] = invStack{item: 278, count: 1, dmg: 5}
 	playersA[eid] = src
@@ -97,7 +97,7 @@ func TestPlayerHandoverAcrossSeam(t *testing.T) {
 	if dst.inv == nil || dst.inv.slots[0] != (invStack{item: 278, count: 1, dmg: 5}) {
 		t.Errorf("inventory not preserved through resume: %+v", dst.inv)
 	}
-	if e := dst.effects[effSpeed]; e == nil || e.amp != 1 || e.left != 30 {
+	if e := dst.effects[effSpeed]; e == nil || e.amp != 1 || e.left != 600 {
 		t.Errorf("effects not preserved through resume: %+v", dst.effects)
 	}
 

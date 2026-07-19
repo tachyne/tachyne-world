@@ -186,11 +186,23 @@ func xpForMob(m *mob, rng func(int) int) int {
 // xpForBlock is mining experience (vanilla: only ores that drop the resource
 // itself pay XP at the pick; iron/gold/copper pay at the furnace instead).
 func xpForBlock(state uint32, rng func(int) int) int {
+	// Vanilla per-ore experience (Blocks.java UniformInt ranges on the ore
+	// block definitions). Redstone ore has a `lit` property, so both its states
+	// (base = lit, base+1 = unlit) must award — a mined ore is often lit.
 	switch state {
 	case worldgen.CoalOre, worldgen.DeepslateCoalOre:
 		return rng(3) // 0-2
-	case worldgen.DiamondOre, worldgen.DeepslateDiamondOre:
+	case worldgen.DiamondOre, worldgen.DeepslateDiamondOre,
+		worldgen.EmeraldOre, worldgen.DeepslateEmeraldOre:
 		return 3 + rng(5) // 3-7
+	case worldgen.LapisOre, worldgen.DeepslateLapisOre,
+		worldgen.NetherQuartzOre:
+		return 2 + rng(4) // 2-5
+	case worldgen.RedstoneOre, worldgen.RedstoneOre - 1,
+		worldgen.DeepslateRedstoneOre, worldgen.DeepslateRedstoneOre - 1:
+		return 1 + rng(5) // 1-5
+	case worldgen.NetherGoldOre:
+		return rng(2) // 0-1
 	}
 	return 0
 }

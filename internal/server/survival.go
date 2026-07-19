@@ -99,7 +99,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 			continue
 		}
 		if t.y < float64(voidBelow) {
-			h.damage(players, t, voidDamagePerSec) // ≈ vanilla 4 HP / 0.5 s = 8 HP/s
+			h.damageExh(players, t, voidDamagePerSec, 0) // out_of_world: no exhaustion
 			continue
 		}
 		if now := h.tick.Load(); now >= t.graceUntil { // portal arrivals get 3s of peace
@@ -116,10 +116,6 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 				continue
 			}
 		}
-		h.tickEffects(players, t) // regen heals, poison bites, timers run out
-		if t.dead {
-			continue
-		}
 		changed := false
 		// (Fast saturation regen moved to fastRegen — vanilla's true 10-tick
 		// cadence, run from the hub loop rather than this 1 Hz step.)
@@ -127,7 +123,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 		// saturation regen is active (full food + sat left) — the final oracle
 		// fight caught us healing 1.5 HP in one tick by running both.
 		fastActive := t.food == maxFood && t.saturation > 0
-		if slow && !fastActive && t.food >= regenFood && t.health < maxHealth && t.health > 0 {
+		if slow && !fastActive && h.rules.NaturalRegen && t.food >= regenFood && t.health < maxHealth && t.health > 0 {
 			t.health = float32(math.Min(maxHealth, float64(t.health)+1))
 			t.exhaustion += regenExhaustion // vanilla: 6.0 exhaustion per HP healed
 			changed = true
@@ -143,7 +139,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 				floor = 0
 			}
 			if t.health > floor {
-				h.damage(players, t, 1) // starve damage: death drops on hard
+				h.damageExh(players, t, 1, 0) // starve: no exhaustion (vanilla)
 				changed = true
 			}
 		}
@@ -178,7 +174,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if t.air -= airDrainPerSec; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
-				h.damage(players, t, drownDamagePerSec)
+				h.damageExh(players, t, drownDamagePerSec, 0) // drown: no exhaustion
 			}
 		}
 	} else if t.air < maxAir {
@@ -290,7 +286,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			h.tramplePlayer(players, t, int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)), dist)
 		}
 		if dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
-			h.damage(players, t, float32(math.Floor(dist-3)))
+			h.damageExh(players, t, float32(math.Floor(dist-3)), 0) // fall: no exhaustion
 		}
 	}
 }
@@ -298,7 +294,20 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 // damage applies harm to a survival player, triggering death at 0 health. On
 // death the player's inventory scatters as item entities (the survival stake), so
 // callers pass the player registry for the drops to be shown to nearby players.
+//
+// It charges the vanilla default hunger exhaustion (0.1) — correct for attacks
+// and hot/sharp contact (mob_attack, player_attack, lava, in_fire, cactus,
+// campfire, explosion, lightning, arrow…). Environmental sources whose vanilla
+// damage type has exhaustion 0.0 (fall, drown, starve, on_fire afterburn,
+// out_of_world/void, in_wall suffocation, magic, wither, sonic_boom, ender_pearl)
+// must call damageExh with 0 so they don't spuriously drain hunger.
 func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
+	h.damageExh(players, t, amount, 0.1)
+}
+
+// damageExh is damage with an explicit food-exhaustion cost (vanilla
+// DamageType.exhaustion). See damage for the default-0.1 path.
+func (h *hub) damageExh(players map[int32]*tracked, t *tracked, amount, exhaustion float32) {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 		return
 	}
@@ -315,8 +324,8 @@ func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
 	if amount <= 0 {
 		return // fully resisted / absorbed — no health lost, no hurt flash
 	}
-	h.wakePlayer(players, t) // pain wakes (and stands the pose back up)
-	t.exhaustion += 0.1      // vanilla: taking damage costs food
+	h.wakePlayer(players, t)   // pain wakes (and stands the pose back up)
+	t.exhaustion += exhaustion // vanilla: per-damage-type food exhaustion
 	t.health -= amount
 	if t.health <= 0 {
 		t.health = 0
@@ -412,10 +421,29 @@ func (h *hub) respawn(t *tracked) {
 	}
 }
 
-const (
-	eatDuration   = 32 // ticks of eat-hold before the food applies (vanilla 1.6s)
-	eatNearlyDone = 30 // a release this close to done counts as finished (packet race)
+const eatDuration = 32 // default ticks of eat-hold before the food applies (vanilla 1.6s)
+
+var (
+	itemDriedKelp   = itemByName["dried_kelp"]
+	itemHoneyBottle = itemByName["honey_bottle"]
 )
+
+// foodEatTicks is a food's consume time (vanilla Consumable consume_seconds ×
+// 20). The default is 32 t (1.6 s); in 1.21.11 only dried kelp (16 t / 0.8 s)
+// and honey bottle (40 t / 2.0 s) deviate.
+func foodEatTicks(item int32) int {
+	switch item {
+	case itemDriedKelp:
+		return 16
+	case itemHoneyBottle:
+		return 40
+	}
+	return eatDuration
+}
+
+// eatNearlyTicks is how close to the finish a release still counts as eaten (a
+// client's own consume timer can race ours by a packet): 2 ticks short.
+func eatNearlyTicks(item int32) int { return foodEatTicks(item) - 2 }
 
 // startEating begins the eat-hold: use_item only STARTS eating; the food
 // applies after eatDuration ticks (updateEating), and an early release or a
@@ -440,7 +468,7 @@ func (h *hub) stopEating(players map[int32]*tracked, t *tracked) {
 	slot := t.eatingSlot
 	elapsed := h.tick.Load() - t.eatingAt
 	t.eatingSlot = -1
-	if elapsed >= eatNearlyDone {
+	if elapsed >= uint64(eatNearlyTicks(t.inv.slots[slot].item)) {
 		h.eat(players, t, slot)
 	}
 }
@@ -456,7 +484,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 			t.eatingSlot = -1
 			continue
 		}
-		if now-t.eatingAt >= eatDuration {
+		if now-t.eatingAt >= uint64(foodEatTicks(t.inv.slots[t.eatingSlot].item)) {
 			slot := t.eatingSlot
 			t.eatingSlot = -1
 			h.eat(players, t, slot)

@@ -18,6 +18,7 @@ var (
 	SoulSand        = blockBase("soul_sand")
 	Glowstone       = blockBase("glowstone")
 	NetherQuartzOre = blockBase("nether_quartz_ore")
+	NetherGoldOre   = blockBase("nether_gold_ore")
 	NetherPortal    = blockBase("nether_portal") // axis=x (6044 = axis z)
 	NetherWart      = blockBase("nether_wart")   // + age 0..3
 	Obsidian        = blockBase("obsidian")

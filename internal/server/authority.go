@@ -46,7 +46,7 @@ func (h *hub) insideSolid(dim int, x, y, z float64) bool {
 func (h *hub) suffocate(players map[int32]*tracked, t *tracked) {
 	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
 	if fullCube(h.worldFor(t.dim).At(fx, int(math.Floor(t.y+1.5)), fz)) {
-		h.damage(players, t, suffocateDamagePerSec)
+		h.damageExh(players, t, suffocateDamagePerSec, 0) // in_wall: no exhaustion
 	}
 }
 

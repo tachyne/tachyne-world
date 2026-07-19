@@ -394,7 +394,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		t.fireSecs = 0
 	} else {
 		t.fireSecs--
-		h.damage(players, t, fireDamagePerSec)
+		h.damageExh(players, t, fireDamagePerSec, 0) // on_fire afterburn: no exhaustion
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.toNearbyEv(players, 0, t.x, t.z, metaEv(fireMetadata(t.p.eid, false)))
