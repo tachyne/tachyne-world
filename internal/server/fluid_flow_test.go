@@ -189,6 +189,34 @@ func TestFallingWaterDoesNotGushOutWallHole(t *testing.T) {
 	})
 }
 
+// TestFlowingWaterSolidifiesPowder — concrete powder several blocks from a source
+// turns to concrete as the water FLOWS over/beside it, not only where it is
+// placed (Legion concrete report).
+func TestFlowingWaterSolidifiesPowder(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		const z = 40
+		y := fluidTestY
+		powder := worldgen.BlockBase("white_concrete_powder")
+		concrete := worldgen.ConcreteFor(powder)
+		// A closed 1-wide channel whose FLOOR is concrete powder (x=1..6); the
+		// source sits over stone at x=0 so the powder only meets FLOWING water.
+		trough(w, 0, 6, z, y)
+		for x := 1; x <= 6; x++ {
+			w.SetBlock(x, y-1, z, powder)
+		}
+		w.SetBlock(0, y, z, worldgen.WaterBase)
+		settleFluid(h, blockPos{0, y, z})
+
+		for x := 1; x <= 6; x++ {
+			if got := h.world.Block(x, y-1, z); got != concrete {
+				t.Fatalf("powder floor at x=%d did not solidify under flowing water: got %d, want concrete %d", x, got, concrete)
+			}
+		}
+	})
+}
+
 // TestFluidRecedesFully — remove a source and every flowing cell it fed dries up,
 // leaving no floating remnants (Legion bug 5).
 func TestFluidRecedesFully(t *testing.T) {

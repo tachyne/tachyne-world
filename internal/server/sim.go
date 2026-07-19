@@ -207,6 +207,9 @@ func (h *hub) updateFluid(players map[int32]*tracked, pos blockPos, state uint32
 	if h.inWorldY(below.y) && worldgen.IsReplaceable(belowB) && !same(belowB) {
 		h.setBlock(players, below, base+8) // falling
 		h.schedule(below, delay)
+		if water {
+			h.wakePowder(below) // flowing water solidifies concrete powder it reaches
+		}
 		// Vanilla only pools sideways over a drop when boxed by 3+ sources.
 		if h.sourceNeighborCount(pos, base) >= 3 {
 			h.spreadSides(players, pos, base, level, dropOff, delay, slopeFind)
@@ -286,6 +289,25 @@ func (h *hub) fluidHoleBelow(pos blockPos, same func(uint32) bool) bool {
 	return same(belowB) || worldgen.IsReplaceable(belowB)
 }
 
+// powderWakeDirs are the cells that may hold concrete powder a fluid at the
+// centre touches: the cell below the fluid and the four horizontal neighbours
+// (powder converts on water above or beside it, never below).
+var powderWakeDirs = [5]blockPos{{0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}
+
+// wakePowder re-checks concrete powder touching a freshly-placed WATER cell so
+// FLOWING water solidifies it, not only hand-placed water. tachyne's sim
+// setBlock doesn't fire neighbour updates the way vanilla's flag-3 setBlock
+// does, so the powder must be woken explicitly (vanilla neighbourChanged →
+// ConcretePowderBlock.touchesLiquid).
+func (h *hub) wakePowder(pos blockPos) {
+	for _, d := range powderWakeDirs {
+		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
+		if worldgen.IsConcretePowder(h.world.Block(n.x, n.y, n.z)) {
+			h.schedule(n, 1)
+		}
+	}
+}
+
 // spreadSides is vanilla FlowingFluid.spreadToSides: place flowing fluid one
 // step weaker in the direction(s) with the shortest slope-distance to a drop
 // (flowDirections). A falling cell spreads at full strength on landing.
@@ -302,10 +324,14 @@ func (h *hub) spreadSides(players map[int32]*tracked, pos blockPos, base uint32,
 		return
 	}
 	out := base + uint32(8-n) // the flowing level to lay down
+	waterFlow := base == worldgen.WaterBase
 	for _, d := range h.flowDirections(pos, slopeFind) {
 		np := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
 		h.setBlock(players, np, out)
 		h.schedule(np, delay)
+		if waterFlow {
+			h.wakePowder(np) // flowing water solidifies concrete powder beside it
+		}
 	}
 }
 
