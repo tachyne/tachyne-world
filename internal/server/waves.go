@@ -31,13 +31,16 @@ import (
 // teleporting onto it. Combined with the 2-tier band, a wave reaches at most
 // the shore tier plus one step inland.
 //
-// THIN SHEET, SOFT EDGES: every wet cell is rendered as a shallow FLOWING level
-// (a uniform ~half-block body, thinned to a feathered edge where it borders dry
-// ground) — never a full source cube, so the wave is a low consistent film, not
-// tall chunks of water. The client slopes the flowing surface toward the thin/air
-// sides and animates it, giving rounded moving edges. The water sits ON TOP of
-// the beach surface only (no falling-water risers down step faces — those left
-// overlay water stranded on the client). It stays a pure overlay — no world writes.
+// SMOOTH THIN SHEET: every wet cell is rendered as a FLOWING level graded by how
+// deep the crest sits above it — thin at the frontier the crest just reached,
+// ramping fuller toward the sea. This makes the wave FADE in and out gradually
+// (rather than a whole layer popping on/off) and its surface RAMP up the shore
+// (the fuller lower tier meets the thinner upper tier without a hard full-block
+// step). It is capped to flowing levels (never a full source cube), so it stays
+// a low sheet and the client slopes every cell at its air edges + animates the
+// flow. Water sits ON TOP of the beach surface only (no falling-water risers down
+// step faces — those left overlay water stranded on the client). Pure overlay —
+// no world writes.
 //
 // FULL COAST: the scan spans the whole broadcast range, so the entire visible
 // length of the coast waves, not just a patch around the player.
@@ -64,13 +67,6 @@ const (
 	waveRiseFrac = 0.40            // fraction of the swell spent washing IN (the rest is a gentler roll-back)
 	waveScanR    = viewRadius * 16 // scan the full broadcast range so the whole VISIBLE coast waves
 	waveCadence  = 4               // step every 4 ticks (5 Hz) — smooth enough for water
-
-	// Wave water is a THIN flowing film, never a source cube: a uniform low body
-	// with a thinner feathered edge. Level 0 = source (full 8/8); 1..7 = flowing
-	// (1 = 7/8 tall … 7 = 1/8). A uniform body level keeps the surface a
-	// CONSISTENT height (no chunky tall/short patchwork).
-	waveBodyLevel = 4 // the wave body: a ~half-block (4/8) film
-	waveEdgeLevel = 6 // thinner (2/8) where it borders dry ground → a soft taper
 
 	// A left/receding cell is restored with a broadcast radius this many chunks
 	// WIDER than the paint (viewRadius), so a cell that leaves a moving player's
@@ -141,6 +137,25 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 // waveHoriz are the four horizontal steps the flood-fill spreads across.
 var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 
+// waterLevelForDepth maps how far the crest sits above a cell (d, in blocks) to
+// a flowing water level: a thin film at the frontier the crest has only just
+// reached, ramping to nearly full toward the sea where the crest is well
+// overhead. Water level 0 = source (full 8/8), 1..7 = flowing (1 = 7/8 … 7 =
+// 1/8). It is CAPPED to flowing levels (never source), so every cell slopes at
+// its edges and — crucially — the surface RAMPS smoothly as the crest rises and
+// falls, and the fuller lower tier meets the thinner upper tier without a hard
+// full-block step.
+func waterLevelForDepth(d float64) int {
+	lvl := 7 - int(d*6+0.5) // d≈0 → 7 (1/8 film) … d≈1 → 1 (7/8)
+	if lvl < 1 {
+		lvl = 1
+	}
+	if lvl > 7 {
+		lvl = 7
+	}
+	return lvl
+}
+
 // waveTargets flood-fills the wave from the shoreline near every player and
 // returns the cells that should show wave-water this tick, each mapped to the
 // water STATE (source or a flowing level) that softens its edges. Water seeds at
@@ -209,25 +224,14 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			}
 		}
 
-		// Assign each wet cell a THIN flowing level: a uniform low body, thinned
-		// to a feathered edge along any side bordering dry ground so the client
-		// slopes it there instead of drawing a cube face. Bordering the ocean is
-		// not an edge — the water is continuous. The water sits ON the surface
-		// only (no source cubes, no risers down step faces), so the sheet is a
-		// consistent low film rather than tall chunks.
-		isOcean := func(x, z int) bool {
-			return worldgen.IsWater(h.world.Block(x, worldgen.SeaLevel-1, z))
-		}
+		// Assign each wet cell a depth-graded flowing level: thin at the frontier,
+		// ramping fuller toward the sea, so the surface ramps smoothly up the shore
+		// (no hard full-block step per tier) and fades in/out gradually. Every cell
+		// is flowing (never source), so the client slopes it at its air edges — no
+		// explicit edge handling needed. Water sits ON the surface only (no risers).
 		for k := range wet {
 			sheet := beach[k]
-			lvl := waveBodyLevel
-			for _, d := range waveHoriz {
-				n := [2]int{k[0] + d[0], k[1] + d[1]}
-				if !wet[n] && !isOcean(n[0], n[1]) { // borders dry ground → feather the edge
-					lvl = waveEdgeLevel
-					break
-				}
-			}
+			lvl := waterLevelForDepth(crest - float64(sheet))
 			out[blockPos{k[0], sheet, k[1]}] = worldgen.WaterBase + uint32(lvl)
 		}
 	}
