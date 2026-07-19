@@ -819,8 +819,8 @@ func (h *hub) run() {
 			if h.waves && age%waveCadence == 0 {
 				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
 			}
-			h.updateBolts(players)   // despawn finished lightning flashes
-			h.updateTNT(players)     // primed charges burn their fuses
+			h.updateBolts(players) // despawn finished lightning flashes
+			h.updateTNT(players)   // primed charges burn their fuses
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
