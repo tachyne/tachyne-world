@@ -54,7 +54,12 @@ import (
 //
 // CLEANUP: a receding/left-behind cell is restored with a broadcast radius one
 // ring WIDER than the paint, so a cell leaving a moving player's scan is still
-// cleared even though the player has stepped a chunk past it — no stranded trail.
+// cleared even though the player has stepped a chunk past it. And critically the
+// RESTORE is sent RELIABLY (sendEvReliable), while paints are best-effort: the
+// player out-queue drops under back-pressure, and the full-coast wave emits a
+// big burst of block updates, so a dropped PAINT is harmless (a missing cell
+// that self-heals next cycle) but a dropped RESTORE would strand water forever
+// (the "water left behind" bug). Reliable restores can never be dropped.
 
 const (
 	waveReach     = 3.0             // blocks the crest climbs above sea level at the swell's peak
@@ -257,9 +262,11 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 }
 
 // broadcastWaveBlock sends a wave overlay block to overworld players within
-// `radius` chunks. Restores use a wider radius than paints so a cell that leaves
-// a moving player's scan is still cleared (see waveRestoreRadius).
-func (h *hub) broadcastWaveBlock(players map[int32]*tracked, x, y, z int, state uint32, radius int) {
+// `radius` chunks. `reliable` routes through the guaranteed overflow (for
+// restores, which must never be dropped); otherwise it is best-effort (paints,
+// which self-heal). Restores also use a wider radius so a cell leaving a moving
+// player's scan is still cleared (see waveRestoreRadius).
+func (h *hub) broadcastWaveBlock(players map[int32]*tracked, x, y, z int, state uint32, radius int, reliable bool) {
 	bcx, bcz := chunkFloor(float64(x)), chunkFloor(float64(z))
 	body := blockSetEv(x, y, z, state)
 	for _, t := range players {
@@ -267,7 +274,11 @@ func (h *hub) broadcastWaveBlock(players map[int32]*tracked, x, y, z int, state 
 			continue
 		}
 		if abs(chunkFloor(t.x)-bcx) <= radius && abs(chunkFloor(t.z)-bcz) <= radius {
-			t.p.trySendEv(body)
+			if reliable {
+				t.p.sendEvReliable(body)
+			} else {
+				t.p.trySendEv(body)
+			}
 		}
 	}
 }
@@ -275,22 +286,24 @@ func (h *hub) broadcastWaveBlock(players map[int32]*tracked, x, y, z int, state 
 // updateWaves advances the overlay one step: paint newly-wet cells with water
 // and restore cells the wave has left. The world is never modified — a restore
 // re-sends whatever the world actually holds there (air, or a block a player
-// placed on the beach meanwhile). Restores use a wider radius than paints so
-// nothing is stranded behind a moving player.
+// placed on the beach meanwhile). Restores go out RELIABLY and one ring wider
+// than paints, so nothing is stranded on recede or behind a moving player.
 func (h *hub) updateWaves(players map[int32]*tracked, t uint64) {
 	target := h.waveTargets(players, t)
-	// Roll back: cells that were wet but no longer are → restore the real block.
+	// Roll back: cells that were wet but no longer are → restore the real block,
+	// RELIABLY (a dropped restore would strand water forever).
 	for p := range h.waveWet {
 		if _, ok := target[p]; !ok {
-			h.broadcastWaveBlock(players, p.x, p.y, p.z, h.world.Block(p.x, p.y, p.z), waveRestoreRadius)
+			h.broadcastWaveBlock(players, p.x, p.y, p.z, h.world.Block(p.x, p.y, p.z), waveRestoreRadius, true)
 			delete(h.waveWet, p)
 		}
 	}
 	// Wash up / re-level: send a cell whose water state is new or has changed
-	// (the level shifts as the crest rises and falls). Overlay only — no world edit.
+	// (the level shifts as the crest rises and falls). Best-effort — a dropped
+	// paint is a harmless missing cell that self-heals on the next pass.
 	for p, st := range target {
 		if cur, ok := h.waveWet[p]; !ok || cur != st {
-			h.broadcastWaveBlock(players, p.x, p.y, p.z, st, viewRadius)
+			h.broadcastWaveBlock(players, p.x, p.y, p.z, st, viewRadius, false)
 			h.waveWet[p] = st
 		}
 	}
