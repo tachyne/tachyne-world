@@ -40,6 +40,7 @@ TEMPLATES = [
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).
+MOB_MARKER = {"Mage": 0, "Warrior": 1, "Group of Allays": 2}
 MARKER_LOOT = {
     "supply_chest": "chests/shipwreck_supply",
     "map_chest": "chests/shipwreck_map",
@@ -137,6 +138,7 @@ def bake(inner, name):
     blocks = []
     chests = []
     chestloot = []
+    mobspawns = []  # [x,y,z,type] illager markers (mansion): 0=evoker 1=vindicator 2=allay
     spawners = []
     jigsaws = []
     beds = []      # bed HEAD positions → one villager home each
@@ -171,6 +173,9 @@ def bake(inner, name):
             # position (vanilla handleDataMarker), with the mansion loot table.
             chests.append([x, y, z])
             chestloot.append(MARKER_LOOT.get(nbt["metadata"], "chests/woodland_mansion"))
+        elif bid == "minecraft:structure_block" and nbt.get("metadata", "") in MOB_MARKER:
+            # Woodland mansion illager markers: the server seeds the mob here.
+            mobspawns.append([x, y, z, MOB_MARKER[nbt["metadata"]]])
         elif bid == "minecraft:mob_spawner":
             sd = nbt.get("SpawnData", {}).get("entity", {})
             spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])
@@ -191,6 +196,8 @@ def bake(inner, name):
         t["chests"] = chests
         if any(chestloot):
             t["chestloot"] = chestloot
+    if mobspawns:
+        t["mobspawns"] = mobspawns
     if spawners:
         t["spawners"] = spawners
     if jigsaws:

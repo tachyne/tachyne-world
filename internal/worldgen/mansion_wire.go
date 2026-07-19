@@ -88,6 +88,29 @@ func (g *Generator) stampMansion(ch *Chunk, cx, cz int32) {
 	}
 }
 
+// MansionMob is a placed illager spawn: X,Y,Z world + Type (0=evoker,
+// 1=vindicator, 2=allay).
+type MansionMob struct {
+	X, Y, Z, Type int
+}
+
+// MansionMobs returns the world positions + types of the mansion's illager
+// spawn markers (the server seeds the mobs when a player approaches).
+func (g *Generator) MansionMobs(m Mansion) []MansionMob {
+	var out []MansionMob
+	for _, pc := range g.AssembleMansion(m) {
+		t := TemplateByName("woodland_mansion/" + pc.tmpl)
+		if t == nil {
+			continue
+		}
+		for _, s := range t.MobSpawns {
+			tx, ty, tz := transformPos(s[0], s[1], s[2], pc.rot, pc.mir)
+			out = append(out, MansionMob{pc.pos[0] + tx, pc.pos[1] + ty, pc.pos[2] + tz, s[3]})
+		}
+	}
+	return out
+}
+
 // MansionChests returns the world positions of the mansion's loot chests.
 func (g *Generator) MansionChests(m Mansion) [][3]int {
 	var out [][3]int

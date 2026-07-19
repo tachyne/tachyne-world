@@ -103,6 +103,39 @@ func (h *hub) populateMonuments(players map[int32]*tracked) {
 	}
 }
 
+// populateMansions seeds a woodland mansion's illagers (evokers, vindicators and
+// a few allays) at the vanilla marker positions the first time a player reaches
+// it. mansionDone is persisted, so a cleared mansion stays cleared across
+// restarts (no evoker/totem farm by re-approaching).
+func (h *hub) populateMansions(players map[int32]*tracked) {
+	g := h.world.Gen()
+	illager := [3]int{entityEvoker, entityVindicator, entityAllay}
+	for _, t := range players {
+		if t.dim != 0 {
+			continue
+		}
+		mn := g.MansionIn(int(t.x), int(t.z))
+		if !mn.Exists {
+			continue
+		}
+		key := [2]int32{int32(mn.X), int32(mn.Z)}
+		if h.mansionDone[key] {
+			continue // already populated (persisted) — stays cleared
+		}
+		dx, dz := t.x-float64(mn.X), t.z-float64(mn.Z)
+		if dx*dx+dz*dz > 80*80 {
+			continue // only once the player is at the mansion (it is large)
+		}
+		h.mansionDone[key] = true
+		for _, s := range g.MansionMobs(mn) {
+			if s.Type < 0 || s.Type > 2 {
+				continue
+			}
+			h.spawnMob(players, illager[s.Type], float64(s.X)+0.5, float64(s.Y), float64(s.Z)+0.5)
+		}
+	}
+}
+
 // countMobNear counts live mobs of a type within radius r (horizontal) of a
 // point in a dimension.
 func (h *hub) countMobNear(etype, dim int, x, z, r float64) int {

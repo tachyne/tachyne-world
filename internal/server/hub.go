@@ -462,6 +462,7 @@ type hub struct {
 	dragonNextAt uint64             // next waypoint/swoop decision tick
 	dragonSwoop  *tracked           // current dive target (nil = circling)
 	villageDone  map[blockPos]bool  // villages populated this session
+	mansionDone  map[[2]int32]bool  // woodland mansions populated with illagers (persisted)
 	outpostDone  map[blockPos]bool  // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
@@ -601,6 +602,7 @@ func newHub(w *world.World) *hub {
 		openDoors:   map[blockPos]uint64{},
 		crystals:    map[int32]*crystal{},
 		villageDone: map[blockPos]bool{},
+		mansionDone: map[[2]int32]bool{},
 		outpostDone: map[blockPos]bool{},
 		rods:        map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
@@ -803,6 +805,7 @@ func (h *hub) run() {
 			if age%40 == 0 {
 				h.registerSculkChunks(players) // discover worldgen (deep_dark) sculk near players
 				h.populateMonuments(players)   // seed elder guardians when a player reaches a monument
+				h.populateMansions(players)    // seed illagers when a player reaches a woodland mansion
 			}
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
@@ -870,6 +873,7 @@ func (h *hub) run() {
 				}
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
@@ -1526,6 +1530,7 @@ func (h *hub) run() {
 				}
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()

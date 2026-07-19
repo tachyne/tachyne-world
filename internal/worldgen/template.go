@@ -46,6 +46,7 @@ type Template struct {
 	Blocks    [][4]int       `json:"blocks"`    // x,y,z,paletteIdx
 	Chests    [][3]int       `json:"chests"`    // template-local chest positions
 	ChestLoot []string       `json:"chestloot"` // per-chest loot table (aligned with Chests; "" = assigned by code)
+	MobSpawns [][4]int       `json:"mobspawns"` // x,y,z,type illager markers (mansion): 0=evoker 1=vindicator 2=allay
 	Beds      [][3]int       `json:"beds"`      // bed HEAD cells → one villager home each
 	JobSites  [][4]int       `json:"jobsites"`  // x,y,z,profession
 	Bells     [][3]int       `json:"bells"`
