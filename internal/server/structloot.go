@@ -45,6 +45,13 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if t := g.TrialChamberIn(pos.x, pos.z); t.Exists {
+		for _, c := range g.TrialChamberChests(t) {
+			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+				return c.Table, true
+			}
+		}
+	}
 	if s := g.ShipwreckIn(pos.x, pos.z); s.Exists {
 		for i := 0; i < s.N; i++ {
 			if c := s.Chests[i]; pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {

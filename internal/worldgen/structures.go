@@ -368,6 +368,7 @@ func (g *Generator) stampStructures(ch *Chunk, cx, cz int32) {
 	g.stampRuinedPortals(ch, cx, cz)
 	g.stampOutposts(ch, cx, cz)
 	g.stampAncientCity(ch, cx, cz)
+	g.stampTrialChambers(ch, cx, cz)
 	g.stampShipwreck(ch, cx, cz)
 	g.stampBuriedTreasure(ch, cx, cz)
 	g.stampMonument(ch, cx, cz)

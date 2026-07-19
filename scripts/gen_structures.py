@@ -33,6 +33,7 @@ POOL_ROOTS = [
     "village/snowy/town_centers",
     "village/taiga/town_centers",
     "ancient_city/city_center",
+    "trial_chambers/chamber/end",
 ]
 
 
