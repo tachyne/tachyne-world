@@ -95,7 +95,7 @@ var (
 
 	// Projectile entity types the new shooters launch.
 	entityLargeFireball = entityID("fireball")       // ghast fireball
-	entityShulkerBullet = entityID("shulker_bullet") // shulker's homing bullet (ours flies straight)
+	entityShulkerBullet = entityID("shulker_bullet") // shulker's homing bullet (curves to its target)
 	entityWindCharge    = entityID("wind_charge")    // breeze wind charge
 	entityWitherSkull   = entityID("wither_skull")
 )

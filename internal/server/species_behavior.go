@@ -123,17 +123,18 @@ func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
 	h.playSoundDim(players, m.dim, "minecraft:entity.wither.shoot", sndHostile, m.x, m.y, m.z, 2, 1)
 }
 
-// shulkerShoot fires a bullet (vanilla homes; ours flies straight and gives
-// its target levitation on a hit isn't modeled — it just stings).
+// shulkerShoot fires a homing bullet at its target: it curves toward the victim
+// each tick (arrow.go homing) and, on a hit, inflicts Levitation like vanilla.
 func (h *hub) shulkerShoot(players map[int32]*tracked, m *mob) {
 	t := h.mobRanged(players, m, 16, 10)
 	if t == nil {
 		return
 	}
 	ux, uy, uz := aimAt(m.x, m.y+0.5, m.z, t.x, t.y+1, t.z)
-	v := 0.8
+	v := shulkerBulletSpeed
 	a := h.launchProjectileIn(players, entityShulkerBullet, m.dim, m.x, m.y+0.5, m.z, ux*v, uy*v, uz*v)
 	a.shooter, a.dmg, a.breaks = m.eid, 4, true
+	a.homing, a.levitate = t.p.eid, 10 // home on the target; LEVITATION 10 s on a hit
 	h.playSound(players, "minecraft:entity.shulker.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 }
 

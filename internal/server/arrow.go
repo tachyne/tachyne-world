@@ -23,6 +23,12 @@ const (
 	arrowLifeTicks = 200  // flying or stuck, gone after 10 s (transient litter)
 	arrowHitRadius = 0.5  // horizontal hit cylinder (player 0.3 + arrow slack)
 
+	// Shulker bullet: a slow homing projectile that curves toward its victim
+	// (vanilla ShulkerBullet steers its motion each tick) rather than flying a
+	// fixed arc, and gives Levitation on a hit.
+	shulkerBulletSpeed = 0.4 // target flight speed, blocks/tick
+	shulkerBulletSteer = 0.2 // how hard it turns toward the target each tick
+
 	parchedWeaknessSecs = 30 // Parched arrows: WEAKNESS 600 ticks (vanilla behavior)
 )
 
@@ -55,6 +61,8 @@ type arrowEntity struct {
 	wither     int     // wither skull: seconds of wither effect on a hit
 	weaken     int     // parched arrow: seconds of weakness effect on a hit
 	slow       int     // stray arrow: seconds of slowness effect on a hit
+	homing     int32   // shulker bullet: eid of the target it curves toward (0 = straight)
+	levitate   int     // shulker bullet: seconds of Levitation applied on a hit
 	explode    int     // ghast/wither fireball: explosion power on impact (0 = none)
 	knock      float64 // wind charge: pure knockback impulse, no damage
 	punch      int     // bow Punch enchant: +0.6/level extra hit knockback
@@ -173,6 +181,20 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			continue
 		}
+		// Shulker bullet: curve toward its live target each tick (it homes on its
+		// victim rather than flying a fixed arc). If the target is gone it keeps
+		// its heading; either way a homing bullet never falls.
+		if a.homing != 0 {
+			if tgt := players[a.homing]; tgt != nil && !tgt.dead && tgt.dim == a.dim {
+				dx, dy, dz := tgt.x-a.x, (tgt.y+1)-a.y, tgt.z-a.z
+				if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > 1e-6 {
+					a.vx += (dx/d*shulkerBulletSpeed - a.vx) * shulkerBulletSteer
+					a.vy += (dy/d*shulkerBulletSpeed - a.vy) * shulkerBulletSteer
+					a.vz += (dz/d*shulkerBulletSpeed - a.vz) * shulkerBulletSteer
+				}
+			}
+		}
+
 		// Sample the step at its midpoint and endpoint: at 1.6 blocks/tick a
 		// single endpoint test can pass clean through a one-block wall.
 		hit := false
@@ -229,7 +251,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
 			continue
 		}
-		if !a.stuck {
+		if !a.stuck && a.homing == 0 { // homing bullets steer themselves, no gravity/drag
 			a.vy -= arrowGravity
 			a.vx, a.vy, a.vz = a.vx*arrowDrag, a.vy*arrowDrag, a.vz*arrowDrag
 		}
@@ -283,6 +305,9 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			}
 			if a.slow > 0 {
 				h.applyEffect(players, t, effSlowness, 0, a.slow)
+			}
+			if a.levitate > 0 { // shulker bullet: LEVITATION I (vanilla 10 s)
+				h.applyEffect(players, t, effLevitation, 0, a.levitate)
 			}
 			if a.fire {
 				h.setBurning(players, t, 5)
