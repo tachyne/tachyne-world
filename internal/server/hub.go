@@ -463,11 +463,19 @@ type hub struct {
 	spawnerNext  map[blockPos]uint64       // dungeon spawner cooldowns
 	patrolNextAt uint64                    // world tick the next pillager-patrol attempt is due
 	raids        map[blockPos]*raid        // active village raids by centre
-	brewProg     map[blockPos]int          // brewing stand progress (ticks)
-	brewFuel     map[blockPos]int          // brewing stand fuel charges (1 blaze powder = 20)
-	portalLinks  map[dimPos]dimPos         // sticky portal pairs (both directions)
-	bossSeen     map[[2]int32]bool         // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors    map[blockPos]uint64       // wooden doors a villager opened → tick opened (auto-close)
+
+	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
+	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
+	// clears all of it so the next dusk rolls afresh.
+	siegeState  int
+	siegeRolled bool
+	siegeLeft   int
+	siegeCenter blockPos
+	brewProg    map[blockPos]int    // brewing stand progress (ticks)
+	brewFuel    map[blockPos]int    // brewing stand fuel charges (1 blaze powder = 20)
+	portalLinks map[dimPos]dimPos   // sticky portal pairs (both directions)
+	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon       *mob                // the ender dragon (nil = none / defeated)
 	crystals     map[int32]*crystal  // end crystals by eid
@@ -786,10 +794,11 @@ func (h *hub) run() {
 				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
 			}
 			if age%survivalTickN == 0 {
-				h.survivalTick(players)   // health regen, hunger, starvation, void
-				h.updateHostiles(players) // night mob spawning + daylight burn
-				h.updatePatrols(players)  // roaming pillager patrols (day 5+, throttled)
-				h.updateRaids(players)    // active village raids: waves, bar, win/timeout
+				h.survivalTick(players)       // health regen, hunger, starvation, void
+				h.updateHostiles(players)     // night mob spawning + daylight burn
+				h.updatePatrols(players)      // roaming pillager patrols (day 5+, throttled)
+				h.updateRaids(players)        // active village raids: waves, bar, win/timeout
+				h.updateVillageSiege(players) // vanilla VillageSiege: a nightly zombie horde
 				for _, t := range players {
 					h.checkRaidTrigger(players, t) // Bad Omen + village → start a raid
 				}
