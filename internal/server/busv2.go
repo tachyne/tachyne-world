@@ -324,6 +324,15 @@ func busQueryWorld(h *hub) (any, string) {
 			"difficulty": h.rules.Difficulty,
 			"players":    len(h.playersRef),
 			"mobs":       len(h.mobs),
+			// World-generation identity, so out-of-process readers (the
+			// tachyne-map renderer) can self-configure over the bus instead of
+			// duplicating the seed as config: seed reproduces terrain, sections
+			// is the column height.
+			"seed":     h.world.Seed(),
+			"sections": h.world.Sections(),
+		}
+		if h.hasWorldSpawn {
+			out["spawn"] = []float64{h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ}
 		}
 	}) {
 		return nil, "hub busy"
