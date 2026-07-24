@@ -22,7 +22,7 @@ func TestDropperEjectsOnRisingEdge(t *testing.T) {
 	lever := setBoolProp(uint32((worldgen.BlockBase("lever") + 9)), "powered", false)
 	w.SetBlock(x, y, z-1, lever)
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
-	stepTicks(h, players, 4)
+	stepTicks(h, players, 8) // rising edge + vanilla's 4-tick dispense delay
 	if h.bins[pos].slots[3].count != 4 {
 		t.Fatalf("one item should eject on the rising edge, left %d", h.bins[pos].slots[3].count)
 	}
@@ -36,9 +36,9 @@ func TestDropperEjectsOnRisingEdge(t *testing.T) {
 	}
 	// Off + on again: one more.
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
-	stepTicks(h, players, 4)
+	stepTicks(h, players, 8)
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
-	stepTicks(h, players, 4)
+	stepTicks(h, players, 8)
 	if h.bins[pos].slots[3].count != 3 {
 		t.Fatalf("second rising edge should eject again, left %d", h.bins[pos].slots[3].count)
 	}
@@ -52,7 +52,7 @@ func TestDispenserShootsArrows(t *testing.T) {
 	h.bins[pos].slots[0] = invStack{item: itemArrowAmmo, count: 2}
 	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
 	h.scheduleAround(pos, 1)
-	stepTicks(h, players, 4)
+	stepTicks(h, players, 6) // rising edge (tick 1) + vanilla's 4-tick dispense delay
 	if h.bins[pos].slots[0].count != 1 {
 		t.Fatalf("arrow should be consumed, left %d", h.bins[pos].slots[0].count)
 	}

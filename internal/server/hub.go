@@ -446,6 +446,7 @@ type hub struct {
 	sculkLastZ   map[int32]float64         // per-player last Z
 	sculkScanned map[[2]int32]bool         // chunks already scanned for worldgen sculk listeners
 	bins         map[blockPos]*bin         // dispenser/dropper/hopper storage
+	binFire      map[blockPos]uint64       // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
 	vehicles     map[int32]*vehicle        // minecarts + boats
 	paintings    map[int32]*painting       // placed hanging paintings (persisted with containers)
@@ -604,6 +605,7 @@ func newHub(w *world.World) *hub {
 		sculkLastZ:    map[int32]float64{},
 		sculkScanned:  map[[2]int32]bool{},
 		bins:          map[blockPos]*bin{},
+		binFire:       map[blockPos]uint64{},
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
@@ -752,11 +754,12 @@ func (h *hub) run() {
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
 			}
-			h.campfireTick(players)    // per-tick cook progress (vanilla cookTick)
-			h.psched.run(age)          // plugin-scheduled tasks see the previous tick's world
-			h.runUpdates(players, age) // falling blocks, fluid flow
-			h.updateFurnaces(players)  // smelting progress + lit state + viewer sync
-			h.runRandomTicks(players)  // growth: crops, cane, cactus, saplings, grass, leaves
+			h.campfireTick(players)     // per-tick cook progress (vanilla cookTick)
+			h.psched.run(age)           // plugin-scheduled tasks see the previous tick's world
+			h.runUpdates(players, age)  // falling blocks, fluid flow
+			h.runBinFires(players, age) // dispenser/dropper ejections due this tick (4-tick delay)
+			h.updateFurnaces(players)   // smelting progress + lit state + viewer sync
+			h.runRandomTicks(players)   // growth: crops, cane, cactus, saplings, grass, leaves
 			if age%mobMoveInterval == 0 {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open

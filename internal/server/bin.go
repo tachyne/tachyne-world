@@ -204,17 +204,47 @@ func binInsert(slots []invStack, st invStack) int {
 	return left
 }
 
-// updateBinTrigger is the dispenser/dropper redstone step: eject one item on
-// the rising edge, tracked by the `triggered` block property.
+// binFireDelay is vanilla DispenserBlock's TICK_DELAY: a dispenser/dropper
+// ejects 4 ticks after its rising redstone edge, not immediately.
+const binFireDelay = 4
+
+// updateBinTrigger is the dispenser/dropper redstone step (vanilla
+// DispenserBlock.neighborChanged): on the rising edge it latches `triggered`
+// and schedules the ejection 4 ticks out; the falling edge just clears the
+// latch. The power test includes quasi-connectivity — a signal at the block
+// directly ABOVE the dispenser counts, the classic QC quirk (BUD-prone, since
+// the dispenser only re-checks when it or a direct neighbour updates).
 func (h *hub) updateBinTrigger(players map[int32]*tracked, pos blockPos, state uint32) {
-	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
+	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0 ||
+		h.inputPower(pos.x, pos.y+1, pos.z, false) > 0
 	triggered := boolProp(state, "triggered")
 	if powered == triggered {
 		return
 	}
 	h.setBlock(players, pos, setBoolProp(state, "triggered", powered))
 	if powered {
-		h.ejectFromBin(players, pos, state)
+		// Vanilla scheduleTick(pos, 4): the dispense fires later, unconditionally
+		// (a pulse shorter than the delay still ejects).
+		h.binFire[pos] = h.tick.Load() + binFireDelay
+	}
+}
+
+// runBinFires ejects from every dispenser/dropper whose scheduled fire tick has
+// come due (vanilla DispenserBlock.tick → dispenseFrom). The fire is
+// unconditional: it does not re-check power, so a sub-4-tick pulse still fires.
+func (h *hub) runBinFires(players map[int32]*tracked, age uint64) {
+	for pos, due := range h.binFire {
+		if due > age {
+			continue
+		}
+		delete(h.binFire, pos)
+		if !h.inWorldY(pos.y) {
+			continue
+		}
+		state := h.world.Block(pos.x, pos.y, pos.z)
+		if isDispenser(state) || isDropper(state) { // still a bin (not broken meanwhile)
+			h.ejectFromBin(players, pos, state)
+		}
 	}
 }
 

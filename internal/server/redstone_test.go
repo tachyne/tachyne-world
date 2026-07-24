@@ -12,6 +12,7 @@ func stepTicks(h *hub, players map[int32]*tracked, n int) {
 	for i := 0; i < n; i++ {
 		age := h.tick.Add(1)
 		h.runUpdates(players, age)
+		h.runBinFires(players, age)
 	}
 }
 
