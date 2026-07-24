@@ -55,7 +55,8 @@ type arrowEntity struct {
 	pearl      bool    // an ender pearl: teleports its thrower where it lands
 	poison     bool    // witch splash: poisons the player it hits
 	splash     bool    // a thrown potion: shatters on any impact into an AoE (see splashPotion)
-	potion     int8    // the potion kind a splash/lingering projectile carries
+	tipped     bool    // a tipped arrow: applies its potion's effects to the player it hits
+	potion     int8    // the potion kind a splash/lingering/tipped projectile carries
 	lingering  bool    // a lingering potion: leaves an effect cloud instead of an instant splash
 	fire       bool    // blaze fireball: sets its target burning
 	wither     int     // wither skull: seconds of wither effect on a hit
@@ -308,6 +309,11 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			}
 			if a.levitate > 0 { // shulker bullet: LEVITATION I (vanilla 10 s)
 				h.applyEffect(players, t, effLevitation, 0, a.levitate)
+			}
+			if a.tipped { // tipped arrow: its brewed potion effects transfer on a hit
+				for _, e := range potionEffects(a.potion) {
+					h.applyEffect(players, t, e.id, e.amp, e.secs)
+				}
 			}
 			if a.fire {
 				h.setBurning(players, t, 5)

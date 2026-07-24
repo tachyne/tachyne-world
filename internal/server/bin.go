@@ -48,7 +48,13 @@ var (
 	itemFireCharge   = int32(itemByName["fire_charge"])
 	itemWindCharge   = itemByName["wind_charge"]
 	itemWitherSkull  = itemByName["wither_skeleton_skull"]
+	itemBlueEgg      = itemByName["blue_egg"]
+	itemBrownEgg     = itemByName["brown_egg"]
+	itemSpectralArr  = itemByName["spectral_arrow"]
+	itemTippedArrow  = itemByName["tipped_arrow"]
+	itemPowderBucket = itemByName["powder_snow_bucket"]
 	witherSkullBlock = worldgen.BlockBase("wither_skeleton_skull")
+	powderSnowBlock  = worldgen.BlockBase("powder_snow")
 	rootedDirtBlock  = worldgen.BlockBase("rooted_dirt")
 )
 
@@ -268,12 +274,21 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	vehEt, isVeh := vehicleItems[item]
 	took := true
 	switch {
-	case dispense && item == itemArrowAmmo:
+	case dispense && (item == itemArrowAmmo || item == itemSpectralArr || item == itemTippedArrow):
+		// Vanilla registerProjectileBehavior: plain, spectral and tipped arrows
+		// all fire as an arrow. A tipped arrow carries its potion's effects onto
+		// a hit; spectral's glow tag has no engine effect, so it flies as a plain
+		// arrow.
 		a := h.launchArrow(players, fx, fy, fz, vx, vy, vz)
 		a.dmg, a.playerShot = arrowDamage, true // hits mobs; retrievable when stuck
+		if item == itemTippedArrow {
+			a.tipped, a.potion = true, st.potion
+		}
 	case dispense && item == itemSnowball:
 		h.launchProjectileIn(players, entitySnowball, 0, fx, fy, fz, vx, vy, vz).breaks = true
-	case dispense && item == itemEgg:
+	case dispense && (item == itemEgg || item == itemBlueEgg || item == itemBrownEgg):
+		// All three egg variants throw as an egg projectile (vanilla registers
+		// BLUE_EGG/BROWN_EGG alongside EGG).
 		h.launchProjectileIn(players, entityEggProj, 0, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && item == itemFireCharge:
 		h.launchProjectileIn(players, entitySmallFireball, 0, fx, fy, fz, vx, vy, vz)
@@ -328,6 +343,27 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 			h.checkWitherBuild(players, 0, front.x, front.y, front.z, witherSkullBlock)
 		} else {
 			took = false
+		}
+	case dispense && item == itemArmorStand:
+		// Vanilla ARMOR_STAND behaviour: spawn a stand on the cell ahead facing
+		// away from the dispenser; if the cell is occupied, toss the item.
+		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+			yaw := float32(0) // toYRot: south=0, west=90, north=180, east=270
+			switch {
+			case dx < 0:
+				yaw = 90
+			case dz < 0:
+				yaw = 180
+			case dx > 0:
+				yaw = 270
+			}
+			sd := &armorStand{eid: h.allocEID(), dim: 0,
+				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw}
+			h.armorStands[sd.eid] = sd
+			h.toNearbyEv(players, 0, sd.x, sd.z, h.standAddEv(sd))
+			h.playSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
+		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && standSlotFor(item) >= 0:
 		// Vanilla EquipmentDispenseItemBehavior: dress a wearable onto an armor
@@ -411,6 +447,14 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		if ts := h.world.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
 			h.setBlock(players, front, fluid)
 			st.item = itemBucket // filled bucket (stack size 1) empties in place
+		}
+	case dispense && item == itemPowderBucket:
+		// Powder snow is a solid block, but the bucket empties like a fluid one:
+		// pour it into the cell ahead and leave an empty bucket in the slot.
+		took = false
+		if ts := h.world.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+			h.setBlock(players, front, powderSnowBlock)
+			st.item = itemBucket
 		}
 	case dispense && item == itemBucket:
 		// Scoop a fluid source in the cell ahead into an empty bucket.
