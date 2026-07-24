@@ -1,6 +1,42 @@
 package worldread
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// TestSetBlockInMemoryOnly pins the contract a live map depends on: an applied
+// block change is visible to the next Chunk read, and NOTHING is written to
+// disk (the engine owns the world files; a reader must never touch them).
+func TestSetBlockInMemoryOnly(t *testing.T) {
+	dir := t.TempDir()
+	gobPath := filepath.Join(dir, "world.gob") // does not exist = no edits
+	r, err := OpenGob(Overworld, 1, gobPath)
+	if err != nil {
+		t.Fatalf("OpenGob: %v", err)
+	}
+
+	// High above terrain, so the column is reliably air.
+	const wx, wy, wz = 5, 200, 5
+	ly := wy - MinY
+	if got := r.Chunk(0, 0).State(wx, ly, wz); got != 0 {
+		t.Fatalf("expected air at y=%d, got state %d", wy, got)
+	}
+
+	const stone = uint32(1)
+	r.SetBlock(wx, wy, wz, stone)
+
+	if got := r.Chunk(0, 0).State(wx, ly, wz); got != stone {
+		t.Errorf("after SetBlock: state = %d, want %d", got, stone)
+	}
+	if name, _ := Decode(stone); name == "minecraft:air" || name == "" {
+		t.Errorf("state %d decoded to %q, expected a real block", stone, name)
+	}
+	if _, err := os.Stat(gobPath); !os.IsNotExist(err) {
+		t.Errorf("SetBlock wrote to disk (%s exists) — a reader must never persist", gobPath)
+	}
+}
 
 func TestOpenReadDecode(t *testing.T) {
 	// Terrain-only (nil store) view of the classic world (seed 1).

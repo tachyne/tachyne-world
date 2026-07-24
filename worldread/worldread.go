@@ -88,6 +88,22 @@ func (r *Reader) Sections() int { return r.w.Sections() }
 // Ceiling is the exclusive top build limit (world-Y).
 func (r *Reader) Ceiling() int { return r.w.Ceiling() }
 
+// SetBlock applies a block change to this reader's own IN-MEMORY view of the
+// world, so a live consumer (the map renderer) can follow the running engine by
+// replaying its block-change events.
+//
+// It never writes to disk. Persistence happens only through the engine's Save
+// path, which a Reader never calls — and a reader opened with a nil store has
+// no store to save to at all. Cached light for the affected 3x3 chunk
+// neighbourhood is dropped, so the next Chunk read reflects the change with
+// correct lighting.
+func (r *Reader) SetBlock(x, y, z int, state uint32) {
+	r.w.SetBlock(x, y, z, state)
+}
+
+// Seed is the world seed this reader generates terrain from.
+func (r *Reader) Seed() int64 { return r.w.Seed() }
+
 // Chunk holds one chunk's render data.
 //
 // Section arrays are indexed YZX ((ly*16 + lz)*16 + lx) and run bottom-up from
