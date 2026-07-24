@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-24
 
 ### Added
+- **A native 3D web map** (new component, `tachyne-map`) — the world rendered in
+  the browser, with no Java anywhere in the pipeline. Blockstates, block models,
+  the texture atlas, and biome colormaps are parsed and meshed in pure Go, with
+  face culling, per-block light, and biome tint baked into the geometry. The
+  viewer streams tiles around the camera and unloads them behind you, so the
+  whole world is explorable with bounded memory. It follows the running server:
+  blocks placed in game appear within about a second, existing builds are read
+  from the engine's edit overlay, and players show as live markers. The engine
+  is never disturbed — the map asks it for the world seed over the bus and
+  reads the world read-only through a new public `worldread` facade.
 - **Enderman block-carry** — endermen pick up holdable blocks from the world and
   set them back down elsewhere, rendered held in their hands (mob-griefing
   gated, and persisted across restarts).
