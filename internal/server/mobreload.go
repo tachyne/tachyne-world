@@ -54,6 +54,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.size = sm.Size
 	}
 	m.anger, m.neutral, m.patrolCaptain = sm.Anger, sm.Neutral, sm.PatrolCaptain
+	m.carriedBlock = sm.CarriedBlk
 	m.oxidation, m.waxed, m.carrying = sm.Oxidation, sm.Waxed, unpackStack(sm.Carrying)
 	m.trident, m.canPickup = sm.Trident, sm.CanPickup
 	for i := range m.gear {

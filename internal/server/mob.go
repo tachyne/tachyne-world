@@ -65,6 +65,7 @@ type mob struct {
 	eggIn           int            // chicken: ticks until the next egg
 	size            int            // slime: 4/2/1 (splits in half on death)
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
+	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)
 	sonicCD         int            // warden: mob-updates until the next sonic boom
 	digClock        int            // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain   bool           // pillager patrol leader (carries the ominous banner)
@@ -415,6 +416,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityIronGolem {
 			h.golemMelee(players, m) // the guardian punches hostiles (not hostile itself)
 		}
+		if m.etype == entityEnderman {
+			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
+		}
 		if m.hostile {
 			switch m.etype {
 			case entitySkeleton, entityStray, entityBogged, entityPillager, entityIllusioner:
@@ -548,6 +552,9 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		}
 		if m.etype == entityCopperGolem && m.oxidation > 0 {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
+		}
+		if m.etype == entityEnderman && m.carriedBlock != 0 {
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
 		}
 		if m.saddled {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))

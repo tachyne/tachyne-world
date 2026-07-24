@@ -75,10 +75,11 @@ type savedMob struct {
 	EggIn     int  `json:"egg,omitempty"`
 	Size      int  `json:"size,omitempty"`
 
-	Hostile       bool `json:"host,omitempty"`
-	Anger         int  `json:"anger,omitempty"`
-	Neutral       bool `json:"neut,omitempty"`
-	PatrolCaptain bool `json:"capt,omitempty"`
+	Hostile       bool   `json:"host,omitempty"`
+	Anger         int    `json:"anger,omitempty"`
+	Neutral       bool   `json:"neut,omitempty"`
+	PatrolCaptain bool   `json:"capt,omitempty"`
+	CarriedBlk    uint32 `json:"eblk,omitempty"` // enderman: held block state
 
 	Oxidation int          `json:"ox,omitempty"`
 	Waxed     bool         `json:"wax,omitempty"`
@@ -442,7 +443,8 @@ func toSavedMob(m *mob) savedMob {
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
 		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
-		Oxidation: m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),
+		CarriedBlk: m.carriedBlock,
+		Oxidation:  m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
