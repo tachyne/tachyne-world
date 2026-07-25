@@ -13,6 +13,11 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-07-25
 
+### Changed
+- **The 3D map no longer looks grainy at a distance.** Block textures are now
+  mipmapped, so terrain far from the camera resolves cleanly instead of
+  shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
+
 ### Added
 - The 3D map now shows **what players have built** (not just generated
   terrain), updates **live** as blocks change, and draws **player and mob
