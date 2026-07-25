@@ -111,6 +111,12 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 	if h.farmlandRandomTick(players, x, y, z, state) {
 		return
 	}
+	if h.tickTorchflower(players, x, y, z, state) {
+		return
+	}
+	if h.tickPitcher(players, x, y, z, state) {
+		return
+	}
 	if h.tickCocoa(players, x, y, z, state) {
 		return
 	}
@@ -200,6 +206,19 @@ func (h *hub) cropGrowthSpeed(x, y, z int, r [2]uint32) float64 {
 	return f
 }
 
+// plantBrightness is vanilla getRawBrightness(pos, darken) at a block: `darken`
+// 0 is the true raw value (what CropBlock/StemBlock/SweetBerryBushBlock use),
+// -1 applies the time-and-weather skyDarken (getMaxLocalRawBrightness, which is
+// what SaplingBlock uses — so saplings, unlike crops, stall at night).
+//
+// This replaced an approximation that required an unobstructed column to the
+// sky, which silently made artificial light useless for growing: a torch-lit
+// indoor or underground farm grows in vanilla and did not here.
+func (h *hub) plantBrightness(x, y, z, darken int) int {
+	sky, block := h.world.LightAt(x, y, z)
+	return h.rawBrightness(sky, block, darken)
+}
+
 // cropGrows rolls the vanilla growth gate: random.nextInt((int)(25/speed)+1)==0.
 func (h *hub) cropGrows(x, y, z int, r [2]uint32) bool {
 	return h.rng.Intn(int(25.0/h.cropGrowthSpeed(x, y, z, r))+1) == 0
@@ -210,7 +229,7 @@ func (h *hub) cropGrows(x, y, z int, r [2]uint32) bool {
 func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bool {
 	for _, r := range cropRanges {
 		if inRange(state, r) {
-			if state < r[1] && h.skyLit(x, y, z) && h.cropGrows(x, y, z, r) {
+			if state < r[1] && h.plantBrightness(x, y, z, 0) >= 9 && h.cropGrows(x, y, z, r) {
 				h.setBlock(players, blockPos{x, y, z}, state+1)
 			}
 			return true
@@ -223,7 +242,10 @@ func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bo
 func (h *hub) tickSapling(players map[int32]*tracked, x, y, z int, state uint32) bool {
 	for _, r := range saplingRanges {
 		if inRange(state, r) {
-			if !h.skyLit(x, y, z) {
+			// getMaxLocalRawBrightness(pos.above()) >= 9 && nextInt(7) == 0.
+			// The 1-in-7 roll was missing, so saplings advanced on every random
+			// tick that passed the light check — about seven times too fast.
+			if h.plantBrightness(x, y+1, z, -1) < 9 || h.rng.Intn(7) != 0 {
 				return true
 			}
 			if state == r[0] {
@@ -315,17 +337,6 @@ func (h *hub) logNearby(x, y, z int) bool {
 		}
 	}
 	return false
-}
-
-// skyLit reports whether a column is open to the sky above (a daylight proxy for
-// the light≥9 growth requirement — ignores torches and night).
-func (h *hub) skyLit(x, y, z int) bool {
-	for ay := y + 1; h.inWorldY(ay); ay++ {
-		if worldgen.SkyOpacity(h.world.At(x, ay, z)) >= worldgen.Opaque {
-			return false
-		}
-	}
-	return true
 }
 
 // opaqueAbove reports whether the block directly above blocks light (smothers grass).
@@ -486,13 +497,13 @@ func (h *hub) tickCocoa(players map[int32]*tracked, x, y, z int, state uint32) b
 }
 
 // tickBerry ripens a sweet berry bush one age stage (0→3) at 1-in-5 odds when
-// the bush is lit (SweetBerryBushBlock.randomTick — brightness≥9 ≈ sky-lit).
+// the bush is lit (SweetBerryBushBlock.randomTick: getRawBrightness(pos.above(), 0) >= 9).
 // Returns whether it handled the block.
 func (h *hub) tickBerry(players map[int32]*tracked, x, y, z int, state uint32) bool {
 	if state < berryBase || state > berryBase+3 {
 		return false
 	}
-	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.skyLit(x, y, z) {
+	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.plantBrightness(x, y+1, z, 0) >= 9 {
 		h.setBlock(players, blockPos{x, y, z}, state+1)
 	}
 	return true
@@ -511,7 +522,7 @@ func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bo
 	default:
 		return false
 	}
-	if !h.skyLit(x, y, z) {
+	if h.plantBrightness(x, y, z, 0) < 9 {
 		return true
 	}
 	// Vanilla StemBlock.randomTick gates both the age-advance and the fruiting on
@@ -537,5 +548,95 @@ func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bo
 	}
 	h.setBlock(players, blockPos{fx, y, fz}, fruit)
 	h.setBlock(players, blockPos{x, y, z}, attachedBase+stemFacing[d]) // attach toward the fruit
+	return true
+}
+
+// Torchflower and pitcher plant growth.
+//
+// Both are staged crops that the generic tickCrop path cannot express: the
+// torchflower's last step REPLACES the crop with a different block, and the
+// pitcher plant becomes two blocks tall partway through. Ported from
+// TorchflowerCropBlock and PitcherCropBlock.
+
+var (
+	torchflowerCropMin, torchflowerCropMax = worldgen.BlockRange("torchflower_crop")
+	pitcherCropMin, pitcherCropMax         = worldgen.BlockRange("pitcher_crop")
+)
+
+// pitcher_crop states run age-major, half-minor with half ordered
+// [upper, lower] — verified against the 1.21.11 blocks report, and pinned by
+// TestPitcherStateLayout. InfoForState/SetProperty cannot help here: they only
+// cover orientable blocks.
+func pitcherUpper(age int) uint32 { return pitcherCropMin + uint32(age)*2 }
+func pitcherLower(age int) uint32 { return pitcherCropMin + uint32(age)*2 + 1 }
+
+// pitcherAgeHalf splits a pitcher_crop state into its age and whether it is the
+// lower half.
+func pitcherAgeHalf(state uint32) (age int, lower bool) {
+	off := state - pitcherCropMin
+	return int(off / 2), off%2 == 1
+}
+
+// pitcherIsDouble mirrors PitcherCropBlock.isDouble: from age 3 the plant
+// occupies two cells.
+func pitcherIsDouble(age int) bool { return age >= 3 }
+
+// tickTorchflower ports TorchflowerCropBlock. Its randomTick calls super only
+// when nextInt(3) != 0, so two random ticks in three do anything at all; and
+// getMaxAge() is 2 even though the AGE property stops at 1, so the final step
+// swaps the crop for the torchflower block.
+func (h *hub) tickTorchflower(players map[int32]*tracked, x, y, z int, state uint32) bool {
+	if state < torchflowerCropMin || state > torchflowerCropMax {
+		return false
+	}
+	if h.rng.Intn(3) == 0 {
+		return true // vanilla skips this tick outright
+	}
+	r := [2]uint32{torchflowerCropMin, torchflowerCropMax}
+	if h.plantBrightness(x, y, z, 0) < 9 || !h.cropGrows(x, y, z, r) {
+		return true
+	}
+	if state < torchflowerCropMax {
+		h.setBlock(players, blockPos{x, y, z}, state+1)
+	} else {
+		// getStateForAge(2) == TORCHFLOWER.defaultBlockState()
+		h.setBlock(players, blockPos{x, y, z}, worldgen.BlockID("torchflower"))
+	}
+	return true
+}
+
+// tickPitcher ports PitcherCropBlock.randomTick + grow. Only the lower half
+// ticks and only while immature (isRandomlyTicking), and once the new age makes
+// the plant double the upper half is written above it.
+func (h *hub) tickPitcher(players map[int32]*tracked, x, y, z int, state uint32) bool {
+	if state < pitcherCropMin || state > pitcherCropMax {
+		return false
+	}
+	age, lower := pitcherAgeHalf(state)
+	if !lower || age >= 4 { // isRandomlyTicking / isMaxAge
+		return true
+	}
+	if !h.cropGrows(x, y, z, [2]uint32{pitcherCropMin, pitcherCropMax}) {
+		return true
+	}
+	newAge := age + 1
+
+	// canGrow: sufficientLight is CropBlock.hasSufficientLight (>= 8, NOT the
+	// >= 9 growth gate), the cell above must be in the world, and once the
+	// plant goes double that cell must be air or already pitcher crop.
+	if h.plantBrightness(x, y, z, 0) < 8 || !h.inWorldY(y+1) {
+		return true
+	}
+	if pitcherIsDouble(newAge) {
+		above := h.world.At(x, y+1, z)
+		if above != worldgen.Air && (above < pitcherCropMin || above > pitcherCropMax) {
+			return true // canGrowInto: air or pitcher_crop only
+		}
+	}
+
+	h.setBlock(players, blockPos{x, y, z}, pitcherLower(newAge))
+	if pitcherIsDouble(newAge) {
+		h.setBlock(players, blockPos{x, y + 1, z}, pitcherUpper(newAge))
+	}
 	return true
 }

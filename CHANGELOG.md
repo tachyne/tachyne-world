@@ -30,7 +30,18 @@ the public history since the project was open-sourced on 2026-07-10.
   so a farm could only be laid out in creative by placing farmland and crop
   blocks directly.
 - **Shovels flatten ground into dirt paths** — grass, dirt, podzol, coarse dirt,
-  mycelium and rooted dirt.
+  mycelium and rooted dirt — and put out a lit campfire.
+- **Pitcher pods and torchflower seeds** can be planted and now actually grow;
+  a pitcher plant becomes two blocks tall as it matures.
+
+### Fixed
+- **Plants grow by light level, not by open sky.** Crops, stems, saplings and
+  berry bushes used to need an unobstructed view of the sky, so torch-lit
+  indoor and underground farms never grew. They now use brightness, as vanilla
+  does, and read it in the right place (above the plant for saplings and berry
+  bushes).
+- **Saplings grew about seven times too fast** — vanilla only advances them on
+  one random tick in seven, and that roll was missing.
 
 ### Fixed
 - **Recent building no longer goes missing from the 3D map.** The map read its

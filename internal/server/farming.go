@@ -137,22 +137,32 @@ func isShovel(item int32) bool {
 	return false
 }
 
-// tryFlatten handles a shovel used on a block, making a dirt path.
+// tryFlatten handles a shovel used on a block: making a dirt path, or dowsing a
+// lit campfire.
 //
-// ShovelItem.useOn returns PASS for the DOWN face before consulting the table,
-// and requires air above — unlike the hoe there is no per-entry exception, every
-// flattenable needs the clear cell.
+// The shape follows ShovelItem.useOn: PASS on the DOWN face before anything
+// else, then the flattenable table (which needs air above — unlike the hoe
+// there is no per-entry exception), and dowsing only as the ELSE branch, which
+// is why a campfire under a solid block still puts out.
 func (s *Server) tryFlatten(p *player, x, y, z int, dir int32, seq int32) bool {
 	if !isShovel(p.heldItem()) || dir == 0 {
 		return false
 	}
-	into, ok := flattenables[s.worldFor(p).Block(x, y, z)]
-	if !ok {
+	state := s.worldFor(p).Block(x, y, z)
+
+	var into uint32
+	switch flat, ok := flattenables[state]; {
+	case ok && worldgen.IsReplaceable(s.worldFor(p).At(x, y+1, z)):
+		into = flat
+	case isCampfireBlock(state) && boolProp(state, "lit"):
+		// CampfireBlock.dowse is only particles and a game event; the caller is
+		// what clears LIT. Laid-out food is left alone — an unlit campfire
+		// simply stops cooking and decays its progress.
+		into = setBoolProp(state, "lit", false)
+	default:
 		return false
 	}
-	if !worldgen.IsReplaceable(s.worldFor(p).At(x, y+1, z)) {
-		return false
-	}
+
 	s.putBlock(p, x, y, z, into, true, seq)
 	if s.modes.get(p.name) == gmSurvival {
 		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
@@ -177,9 +187,10 @@ type cropPlant struct {
 // ItemNameBlockItem registrations, where the item and block names differ on
 // purpose — which is exactly why the generated item->block table misses them.
 //
-// pitcher_pod is deliberately absent: PitcherCropBlock is a DoublePlantBlock
-// needing two cells and a HALF property, so it belongs with the other two-tall
-// placements rather than here.
+// pitcher_pod IS single-cell despite PitcherCropBlock extending
+// DoublePlantBlock: it overrides setPlacedBy to do nothing, suppressing the
+// upper-half placement, and getStateForPlacement returns just the default
+// state. The second cell appears later, when growth reaches age 3.
 func cropForSeed(item int32) (cropPlant, bool) {
 	switch item {
 	case itemByName["wheat_seeds"]:
@@ -196,6 +207,10 @@ func cropForSeed(item int32) (cropPlant, bool) {
 		return cropPlant{block: worldgen.BlockBase("melon_stem")}, true
 	case itemByName["pumpkin_seeds"]:
 		return cropPlant{block: worldgen.BlockBase("pumpkin_stem")}, true
+	case itemByName["pitcher_pod"]:
+		// BlockID, not BlockBase: pitcher_crop's minimum state is age 0 UPPER,
+		// while the default (what gets planted) is age 0 LOWER.
+		return cropPlant{block: worldgen.BlockID("pitcher_crop"), needsLight: true}, true
 	case itemNetherWart:
 		return cropPlant{block: worldgen.BlockBase("nether_wart"), soulSand: true}, true
 	}

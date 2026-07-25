@@ -178,3 +178,44 @@ func TestShovelFlattensThroughHandlePlace(t *testing.T) {
 		t.Errorf("dirt flattened from the DOWN face: %d", got)
 	}
 }
+
+// A shovel on a lit campfire puts it out (ShovelItem.useOn's else branch).
+// Unlike flattening this does NOT require air above, so a campfire in a nook
+// still dowses.
+func TestShovelDowsesCampfire(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+
+	p.setHotbarSlot(0, itemByName["iron_shovel"])
+	p.held = 0
+
+	lit := setBoolProp(worldgen.BlockBase("campfire"), "lit", true)
+	if !boolProp(lit, "lit") {
+		t.Fatal("test setup: campfire state is not lit")
+	}
+
+	// Covered, to prove the air-above rule does not apply to dowsing.
+	x, y, z := 90, 70, 90
+	w.SetBlock(x, y, z, lit)
+	w.SetBlock(x, y+1, z, worldgen.Stone)
+
+	s.handlePlace(p, placeBody(x, y, z, 1))
+
+	got := w.Block(x, y, z)
+	if !isCampfireBlock(got) {
+		t.Fatalf("campfire replaced rather than dowsed: state %d", got)
+	}
+	if boolProp(got, "lit") {
+		t.Error("campfire still lit after a shovel click")
+	}
+
+	// An already-unlit campfire is left alone.
+	x2, y2, z2 := 92, 70, 90
+	unlit := setBoolProp(worldgen.BlockBase("campfire"), "lit", false)
+	w.SetBlock(x2, y2, z2, unlit)
+	w.SetBlock(x2, y2+1, z2, worldgen.Air)
+	s.handlePlace(p, placeBody(x2, y2, z2, 1))
+	if got := w.Block(x2, y2, z2); got != unlit {
+		t.Errorf("unlit campfire changed: %d -> %d", unlit, got)
+	}
+}
