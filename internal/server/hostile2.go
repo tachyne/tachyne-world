@@ -80,8 +80,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		}
 	case entitySlime:
 		m.size = 4
-		m.health = m.size * m.size
-		m.setMoveSpeed(slimeSpeed(m.etype, m.size)) // attr 0.2 + 0.1×size
+		m.applyCubeSize()
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityEnderman:
 		m.neutral = true     // holds its peace until hit
@@ -94,14 +93,29 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	return true
 }
 
-// slimeSpeed derives a slime's per-step speed from vanilla's size-scaled
-// attribute (Slime.setSize: MOVEMENT_SPEED = 0.2 + 0.1×size; magma cubes
-// stay at their flat 0.2 base).
-func slimeSpeed(etype, size int) float64 {
-	if etype == entityMagmaCube {
-		return 0.2 * 0.45
+// slimeSpeed derives a cube's per-step speed from vanilla's size-scaled
+// MOVEMENT_SPEED (AbstractCubeMob.setSize: 0.2 + 0.1×size). Magma cubes take
+// the same formula — their 0.2 in createAttributes is superseded the moment
+// setSize runs, which it always does.
+func slimeSpeed(size int) float64 {
+	return (0.2 + 0.1*float64(size)) * attrToStep
+}
+
+// applyCubeSize derives everything a slime or magma cube's size determines,
+// following AbstractCubeMob.setSize plus the two subclasses' overrides: health
+// is size squared, movement speed scales with size, attack damage IS the size,
+// and a magma cube additionally armours up by 3 per size step.
+//
+// Every place that assigns a size has to call this — which is the point of
+// having it in one function rather than four half-copies.
+func (m *mob) applyCubeSize() {
+	m.setMaxHP(m.size * m.size)
+	m.health = m.maxHP()
+	m.setMoveSpeed(slimeSpeed(m.size))
+	m.setAttackDamage(float64(m.size))
+	if m.etype == entityMagmaCube {
+		m.setBaseArmor(float64(m.size) * 3)
 	}
-	return (0.2 + 0.1*float64(size)) * 0.45
 }
 
 // slimeHop is vanilla SlimeMoveControl adapted to our step model: a slime
@@ -170,8 +184,7 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 			continue // plugin-cancelled split half
 		}
 		s.size = m.size / 2
-		s.health = s.size * s.size
-		s.setMoveSpeed(slimeSpeed(s.etype, s.size))
+		s.applyCubeSize()
 		h.toNearbyEv(players, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
 	}
 }

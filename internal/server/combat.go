@@ -95,26 +95,36 @@ func mobHealth(etype int) int {
 	return cowHealth
 }
 
-// hostileMelee is a hostile mob's bite damage (skeletons shoot, creepers
-// explode — neither reaches here).
-func hostileMelee(m *mob) float32 {
-	if m.ovrDamage > 0 { // plugin attribute override wins over every species rule
-		return float32(m.ovrDamage)
-	}
-	switch m.etype {
+// meleeDamageFor is a species' base ATTACK_DAMAGE, seeded at spawn. Slimes and
+// magma cubes are absent: their damage is their size, set by applyCubeSize.
+func meleeDamageFor(etype int) float64 {
+	switch etype {
 	case entitySpider:
 		return spiderDamage
 	case entityEnderman:
 		return endermanDamage
-	case entitySlime, entityMagmaCube:
-		return float32(m.size) // big 4 / medium 2 / small 1 (vanilla small is 0)
 	case entityZombifiedPiglin:
 		return 5 // gold sword swing
 	}
-	if d := speciesOf(m.etype); d != nil { // roster species: from the table
-		return float32(d.damage)
+	if d := speciesOf(etype); d != nil { // roster species: from the table
+		return float64(d.damage)
 	}
 	return zombieDamage
+}
+
+// hostileMelee is a hostile mob's bite damage (skeletons shoot, creepers
+// explode — neither reaches here). It reads ATTACK_DAMAGE, so a modifier from
+// a weapon, an effect or a plugin lands here without a new special case.
+func hostileMelee(m *mob) float32 {
+	switch m.etype {
+	case entitySlime:
+		if m.size <= 1 {
+			return 0 // AbstractCubeMob.isDealsDamage: a tiny slime cannot hurt you
+		}
+	case entityMagmaCube:
+		return float32(m.attackDamage()) + 2 // MagmaCube.getAttackDamage
+	}
+	return float32(m.attackDamage())
 }
 
 // maxMeleeReach is the server-side sanity cap on a melee hit's distance:

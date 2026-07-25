@@ -53,6 +53,10 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
 	if sm.Size > 0 {
 		m.size = sm.Size
+		m.applyCubeSize() // health/speed/damage/armour all follow a cube's size
+		if sm.Health > 0 {
+			m.health = sm.Health // …but the saved health wins over the full reset
+		}
 	}
 	m.anger, m.neutral, m.patrolCaptain = sm.Anger, sm.Neutral, sm.PatrolCaptain
 	m.carriedBlock = sm.CarriedBlk
@@ -82,6 +86,12 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		}
 	}
 	m.ovrSpeed, m.ovrDamage = sm.OvrSpeed, sm.OvrDamage
+	if m.ovrSpeed > 0 {
+		m.setMoveSpeed(m.ovrSpeed)
+	}
+	if m.ovrDamage > 0 {
+		m.setAttackDamage(m.ovrDamage)
+	}
 	m.home, m.bed, m.work, m.meet = unpackPos(sm.Home), unpackPos(sm.Bed), unpackPos(sm.Work), unpackPos(sm.Meet)
 	switch m.etype {
 	case entityVillager:

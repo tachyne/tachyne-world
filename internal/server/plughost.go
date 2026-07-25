@@ -279,6 +279,7 @@ func (f srvFacade) SpawnMob(dim, etype int, x, y, z float64, opts *plugin.SpawnO
 		}
 		if opts.Damage > 0 {
 			m.ovrDamage = opts.Damage
+			m.setAttackDamage(opts.Damage)
 		}
 	}
 	return mobHandle{f.ph, m.eid}, true
@@ -515,6 +516,7 @@ func (mh mobHandle) MeleeDamage() float64 {
 func (mh mobHandle) SetMeleeDamage(v float64) {
 	if m := mh.m(); m != nil && v > 0 {
 		m.ovrDamage = v
+		m.setAttackDamage(v)
 	}
 }
 

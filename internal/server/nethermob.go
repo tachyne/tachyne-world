@@ -105,8 +105,8 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		if m.size == 3 {
 			m.size = 4
 		}
-		m.health = m.size * m.size
-		m.behavior = Behavior(hostileBehavior{}) // speed from speedFor (attr 0.20)
+		m.applyCubeSize()
+		m.behavior = Behavior(hostileBehavior{})
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityBlaze:
 		m.hostile = true

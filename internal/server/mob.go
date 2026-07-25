@@ -177,9 +177,7 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
-	m.setMaxHP(mobHealth(etype))
-	m.setMoveSpeed(speedFor(etype))
+	m := &mob{attrs: newMobAttributes(etype), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
@@ -679,22 +677,26 @@ func (h *hub) toNearbyEv(players map[int32]*tracked, dim int, x, z float64, ev a
 	}
 }
 
-// newMobAttributes is Mob.createMobAttributes: the per-entity starting point,
-// which is NOT the same as the attribute registry's own defaults. Follow range
-// is the one that bites — the registry default is 32, but a vanilla Mob starts
-// at 16 and only specific species raise it.
-func newMobAttributes() *attribute.Map {
+// newMobAttributes is Mob.createMobAttributes for one species: the per-entity
+// starting point, which is NOT the attribute registry's own defaults. Every one
+// of these differs from the registry — follow range is 32 there but 16 on a
+// vanilla Mob, and taking the registry's movement speed would have mobs
+// crossing eight chunks a second — so the species baseline is the only safe
+// thing to seed with.
+func newMobAttributes(etype int) *attribute.Map {
 	a := attribute.NewMap()
 	a.SetBase(attr.FollowRange, aggroRange)
-	a.SetBase(attr.MovementSpeed, mobSpeed)
+	a.SetBase(attr.MaxHealth, float64(mobHealth(etype)))
+	a.SetBase(attr.MovementSpeed, speedFor(etype))
+	a.SetBase(attr.AttackDamage, meleeDamageFor(etype))
 	return a
 }
 
-// mobAttrs returns the mob's attribute map, creating it if a mob predates the
-// spawn path that seeds one (a reload, or a test building a mob by hand).
+// mobAttrs returns the mob's attribute map, seeding it from the species if the
+// mob skipped the spawn path — a reload, or a test building one by hand.
 func (m *mob) mobAttrs() *attribute.Map {
 	if m.attrs == nil {
-		m.attrs = newMobAttributes()
+		m.attrs = newMobAttributes(m.etype)
 	}
 	return m.attrs
 }
@@ -774,6 +776,13 @@ func (m *mob) setBabySpeed(on bool) {
 	}
 	in.AddModifier(attr.Modifier{Source: babySpeedSource, Amount: 0.5, Op: attr.AddMultipliedBase})
 }
+
+// attackDamage is the mob's ATTACK_DAMAGE base. Species that add a flat bonus
+// on top (the magma cube's +2) do it at the point of use, as vanilla does.
+func (m *mob) attackDamage() float64 { return m.mobAttrs().Value(attr.AttackDamage) }
+
+// setAttackDamage sets the base ATTACK_DAMAGE.
+func (m *mob) setAttackDamage(v float64) { m.mobAttrs().SetBase(attr.AttackDamage, v) }
 
 // refreshBabySpeed re-asserts the baby modifier from the mob's current flag.
 // Only the zombie family carries it in vanilla — baby animals walk at adult

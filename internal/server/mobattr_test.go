@@ -336,3 +336,73 @@ func TestReloadedBabyKeepsItsPace(t *testing.T) {
 		}
 	}
 }
+
+// ATTACK_DAMAGE, and with it the cube family whose every stat is its size.
+
+func TestSpawnSeedsSpeciesAttackDamage(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for _, etype := range []int{entityZombie, entitySpider, entityEnderman, entityZombifiedPiglin} {
+		m := h.spawnHostile(players, etype, 0, 0)
+		if m == nil {
+			t.Fatalf("etype %d: spawn returned nil", etype)
+		}
+		want := meleeDamageFor(etype)
+		if !closeTo(m.attackDamage(), want) {
+			t.Errorf("etype %d attack damage %v, want %v", etype, m.attackDamage(), want)
+		}
+		if got := hostileMelee(m); got != float32(want) {
+			t.Errorf("etype %d melee %v, want %v", etype, got, want)
+		}
+	}
+}
+
+// applyCubeSize is the one place a cube's size decides anything, so all four
+// stats have to move together — and the two species differ in three of them.
+func TestCubeSizeDrivesEveryStat(t *testing.T) {
+	for _, c := range []struct {
+		etype                int
+		size                 int
+		wantHP               int
+		wantMelee, wantArmor float64
+		wantSpeedSize        int
+		what                 string
+	}{
+		{entitySlime, 4, 16, 4, 0, 4, "big slime"},
+		{entitySlime, 2, 4, 2, 0, 2, "medium slime"},
+		{entitySlime, 1, 1, 0, 0, 1, "tiny slime deals no damage"},
+		{entityMagmaCube, 4, 16, 6, 12, 4, "big magma cube: +2 damage, armour 3 per size"},
+		{entityMagmaCube, 1, 1, 3, 3, 1, "tiny magma cube still hurts"},
+	} {
+		m := &mob{etype: c.etype, size: c.size}
+		m.applyCubeSize()
+		if m.maxHP() != c.wantHP {
+			t.Errorf("%s: max health %d, want size squared %d", c.what, m.maxHP(), c.wantHP)
+		}
+		if m.health != c.wantHP {
+			t.Errorf("%s: health %d, want full %d", c.what, m.health, c.wantHP)
+		}
+		if got := float64(hostileMelee(m)); !closeTo(got, c.wantMelee) {
+			t.Errorf("%s: melee %v, want %v", c.what, got, c.wantMelee)
+		}
+		if got := m.armorValue(); !closeTo(got, c.wantArmor) {
+			t.Errorf("%s: armour %v, want %v", c.what, got, c.wantArmor)
+		}
+		if want := slimeSpeed(c.wantSpeedSize); !closeTo(m.moveSpeed(), want) {
+			t.Errorf("%s: speed %v, want %v", c.what, m.moveSpeed(), want)
+		}
+	}
+}
+
+// A magma cube used to move at a flat pace regardless of size: vanilla's
+// createAttributes 0.2 is superseded by setSize, which scales with size.
+func TestMagmaCubeSpeedScalesWithSize(t *testing.T) {
+	small := &mob{etype: entityMagmaCube, size: 1}
+	big := &mob{etype: entityMagmaCube, size: 4}
+	small.applyCubeSize()
+	big.applyCubeSize()
+	if big.moveSpeed() <= small.moveSpeed() {
+		t.Errorf("big magma cube speed %v, want more than the small one's %v",
+			big.moveSpeed(), small.moveSpeed())
+	}
+}

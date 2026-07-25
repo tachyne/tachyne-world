@@ -190,6 +190,7 @@ func busCmdSpawn(h *hub, args json.RawMessage) (any, string) {
 		}
 		if a.Damage > 0 {
 			m.ovrDamage = a.Damage
+			m.setAttackDamage(a.Damage)
 		}
 		eid = m.eid
 	})
@@ -236,6 +237,7 @@ func busCmdMobSet(h *hub, args json.RawMessage) (any, string) {
 		}
 		if a.Damage > 0 {
 			m.ovrDamage = a.Damage
+			m.setAttackDamage(a.Damage)
 		}
 		if a.Behavior != "" && !h.applyBehavior(m, a.Behavior) {
 			errStr = fmt.Sprintf("unknown behavior %q", a.Behavior)
