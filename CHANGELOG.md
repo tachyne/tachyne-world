@@ -13,15 +13,6 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-07-25
 
-### Changed
-- **The 3D map no longer looks grainy at a distance.** Block textures are now
-  mipmapped, so terrain far from the camera resolves cleanly instead of
-  shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
-- **Map markers can be shown and hidden individually.** A panel in the corner
-  of the map lists players, player name labels, and each mob category with its
-  colour and a live count, and clicking one toggles that layer. Name labels are
-  also smaller than before, so they cover less of what a player is building.
-
 ### Added
 - **Farming by hand.** A hoe now tills dirt, grass and dirt paths into farmland
   (and coarse dirt into dirt, rooted dirt into dirt plus hanging roots), and
@@ -33,6 +24,20 @@ the public history since the project was open-sourced on 2026-07-10.
   mycelium and rooted dirt — and put out a lit campfire.
 - **Pitcher pods and torchflower seeds** can be planted and now actually grow;
   a pitcher plant becomes two blocks tall as it matures.
+- The 3D map now shows **what players have built** (not just generated
+  terrain), updates **live** as blocks change, and draws **player and mob
+  markers**. It also covers far more ground at once: skipping the cave walls
+  and deep strata that can't be seen from above cut a chunk's geometry by ~3x
+  and its render time by ~16x, which bought a much larger visible area.
+
+### Changed
+- **The 3D map no longer looks grainy at a distance.** Block textures are now
+  mipmapped, so terrain far from the camera resolves cleanly instead of
+  shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
+- **Map markers can be shown and hidden individually.** A panel in the corner
+  of the map lists players, player name labels, and each mob category with its
+  colour and a live count, and clicking one toggles that layer. Name labels are
+  also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
 - **Plants grow by light level, not by open sky.** Crops, stems, saplings and
@@ -42,8 +47,6 @@ the public history since the project was open-sourced on 2026-07-10.
   bushes).
 - **Saplings grew about seven times too fast** — vanilla only advances them on
   one random tick in seven, and that roll was missing.
-
-### Fixed
 - **Recent building no longer goes missing from the 3D map.** The map read its
   copy of the world before it started listening for changes, so anything built
   in the half-minute before it started was in neither — and stayed missing
@@ -53,13 +56,29 @@ the public history since the project was open-sourced on 2026-07-10.
   the 3D map.** The affected terrain used to vanish while its replacement was
   fetched; it now stays on screen until the new geometry is ready, so only the
   block that actually changed appears to change.
-
-### Added
-- The 3D map now shows **what players have built** (not just generated
-  terrain), updates **live** as blocks change, and draws **player and mob
-  markers**. It also covers far more ground at once: skipping the cave walls
-  and deep strata that can't be seen from above cut a chunk's geometry by ~3x
-  and its render time by ~16x, which bought a much larger visible area.
+- **Saplings grow their own tree.** Acacia, cherry, dark oak, jungle and pale
+  oak saplings never grew at all, and oak, birch and spruce all produced an
+  *oak* tree. Every species now grows itself, using the same shapes the world
+  generator uses for its forests, so a planted spruce matches a wild one. Dark
+  oak and pale oak need four saplings in a square, as in vanilla — a lone one
+  will not grow.
+- **The world simulates each dimension separately.** Block growth and updates
+  only ever ran in the Overworld, and were driven by every player's position
+  regardless of where they actually were — so standing in the Nether grew an
+  Overworld farm at the same coordinates, while nothing in the Nether or the
+  End ticked at all. Farms, fluids and fire now behave the same in every
+  dimension.
+- **Sugar cane and cactus grow again.** Both were matched against block ids
+  from an older Minecraft version, so neither ever grew, and hanging signs
+  could occasionally stack a copy of themselves.
+- **Nether wart grows at the vanilla rate** and now respects the
+  `randomTickSpeed` game rule, including `0`, which previously did not stop it.
+- **Mycelium spreads and reverts to dirt** when covered, which it never did.
+  Grass spreading was corrected at the same time: it now makes four attempts a
+  tick instead of one, can creep down a slope, and needs light to spread.
+- **All copper weathers.** Copper bars, chain, lanterns, lightning rods,
+  chests and golem statues never aged; only nine of the fifteen copper block
+  lines were wired up.
 
 ### Removed
 - **BlueMap and the last JVM.** The Java 3D-map renderer, its bundled runtime,
