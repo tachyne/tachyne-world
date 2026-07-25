@@ -193,6 +193,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickChorus(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickPropagule(players, dim, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)

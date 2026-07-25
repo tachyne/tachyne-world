@@ -93,6 +93,9 @@ var treeShapeBySapling = map[string]TreeShape{
 	"cherry_sapling":   {CherryLog, CherryLeaves, false, 5, 3, false},
 	"dark_oak_sapling": {DarkOakLog, DarkOakLeaves, false, 6, 2, true},
 	"pale_oak_sapling": {PaleOakLog, PaleOakLeaves, false, 6, 2, true},
+	// Mangrove grows from a propagule rather than a sapling block, but it is
+	// the same tree, so it shares the table.
+	"mangrove_propagule": {MangroveLog, MangroveLeaves, false, 5, 3, false},
 }
 
 // TreeShapeForSapling returns the shape a sapling block grows into.

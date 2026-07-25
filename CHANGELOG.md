@@ -40,6 +40,9 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Mangrove propagules ripen and grow.** They age while hanging under
+  mangrove leaves and, once planted, grow a mangrove tree — completing the set,
+  so every tree species in the game can now be grown from what it drops.
 - **Chorus plants grow in the End.** A flower climbs, branches sideways or
   dies off, leaving jointed chorus stems behind it — so chorus fruit is
   farmable rather than limited to what generated with the world.
