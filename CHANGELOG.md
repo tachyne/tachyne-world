@@ -40,6 +40,9 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Chorus plants grow in the End.** A flower climbs, branches sideways or
+  dies off, leaving jointed chorus stems behind it — so chorus fruit is
+  farmable rather than limited to what generated with the world.
 - **Bamboo and mushrooms grow.** Bamboo grows from its tip up to sixteen tall,
   moving its leafy crown up the stalk as it goes, and mushrooms creep across
   dark ground — stopping once five already crowd the area, so a cave floor
