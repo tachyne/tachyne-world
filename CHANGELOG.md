@@ -40,6 +40,10 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Amethyst geodes grow.** Budding amethyst now buds on its faces and
+  advances them small → medium → large → cluster, so a geode is a renewable
+  source rather than a fixed decoration. Buds grown into water stay
+  waterlogged.
 - **Ice and snow melt.** Neither ever did, so a torch beside a frozen pond or
   a lit path through snow changed nothing and cold biomes stayed exactly as
   generated. Melting follows the block light only, as in vanilla — daylight
