@@ -36,8 +36,30 @@ func blockRange(names ...string) [][2]uint32 {
 
 var cropRanges = blockRange("wheat", "carrots", "potatoes", "beetroots")
 
-// saplingRanges: at stage 1 the sapling grows a tree.
-var saplingRanges = blockRange("oak_sapling", "spruce_sapling", "birch_sapling")
+// saplingSpecies pairs each sapling's state range with the tree it grows.
+// Every species vanilla has a sapling for is listed: previously only oak,
+// spruce and birch were matched at all, and all three grew an OAK tree
+// because the grow path hard-coded oak logs and leaves.
+type saplingSpec struct {
+	rng   [2]uint32
+	shape worldgen.TreeShape
+}
+
+var saplingSpecies = func() []saplingSpec {
+	names := []string{"oak_sapling", "spruce_sapling", "birch_sapling",
+		"jungle_sapling", "acacia_sapling", "cherry_sapling",
+		"dark_oak_sapling", "pale_oak_sapling"}
+	out := make([]saplingSpec, 0, len(names))
+	for _, n := range names {
+		shape, ok := worldgen.TreeShapeForSapling(n)
+		if !ok {
+			continue
+		}
+		lo, hi := worldgen.BlockRange(n)
+		out = append(out, saplingSpec{rng: [2]uint32{lo, hi}, shape: shape})
+	}
+	return out
+}()
 
 // leafRanges are the leaf families we generate; the persistent property means
 // player-placed leaves never decay. All species are listed so decay + drops
@@ -238,23 +260,24 @@ func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bo
 	return false
 }
 
-// tickSapling advances a sapling's hidden stage, then grows a tree.
+// tickSapling advances a sapling's hidden stage, then grows its species' tree.
 func (h *hub) tickSapling(players map[int32]*tracked, x, y, z int, state uint32) bool {
-	for _, r := range saplingRanges {
-		if inRange(state, r) {
-			// getMaxLocalRawBrightness(pos.above()) >= 9 && nextInt(7) == 0.
-			// The 1-in-7 roll was missing, so saplings advanced on every random
-			// tick that passed the light check — about seven times too fast.
-			if h.plantBrightness(x, y+1, z, -1) < 9 || h.rng.Intn(7) != 0 {
-				return true
-			}
-			if state == r[0] {
-				h.setBlock(players, blockPos{x, y, z}, state+1) // stage 0 → 1
-			} else {
-				h.growTree(players, x, y, z)
-			}
+	for _, sp := range saplingSpecies {
+		if !inRange(state, sp.rng) {
+			continue
+		}
+		// getMaxLocalRawBrightness(pos.above()) >= 9 && nextInt(7) == 0.
+		// The 1-in-7 roll was missing, so saplings advanced on every random
+		// tick that passed the light check — about seven times too fast.
+		if h.plantBrightness(x, y+1, z, -1) < 9 || h.rng.Intn(7) != 0 {
 			return true
 		}
+		if state == sp.rng[0] {
+			h.setBlock(players, blockPos{x, y, z}, state+1) // stage 0 → 1
+			return true
+		}
+		h.growSapling(players, x, y, z, state, sp)
+		return true
 	}
 	return false
 }
@@ -290,30 +313,94 @@ func (h *hub) tickGrass(players map[int32]*tracked, x, y, z int) {
 	}
 }
 
-// growTree replaces a sapling with a small oak: a 4–6 log trunk and a leaf canopy.
-func (h *hub) growTree(players map[int32]*tracked, x, y, z int) {
-	height := 4 + h.rng.Intn(3)
-	top := y + height
-	for ty := y; ty < top; ty++ {
-		h.setBlock(players, blockPos{x, ty, z}, worldgen.OakLog)
+// growSapling replaces a mature sapling with its species' tree.
+//
+// Dark oak and pale oak are TwoByTwo: vanilla's growers give them a mega
+// feature and NO single-sapling tree, so a lone one never grows. findSquare
+// looks for the 2x2 the way vanilla does — scanning the four offsets that
+// could place this sapling in a square — and the whole square is consumed.
+func (h *hub) growSapling(players map[int32]*tracked, x, y, z int, state uint32, sp saplingSpec) {
+	if sp.shape.TwoByTwo {
+		cx, cz, ok := h.findSaplingSquare(x, z, y, sp.rng)
+		if !ok {
+			return // stays a sapling until a square is completed
+		}
+		for _, c := range [4][2]int{{cx, cz}, {cx + 1, cz}, {cx, cz + 1}, {cx + 1, cz + 1}} {
+			h.setBlock(players, blockPos{c[0], y, c[1]}, worldgen.Air)
+		}
+		h.stampTree(players, cx, y, cz, sp.shape, true)
+		return
 	}
-	leaf := func(ly, r int) {
-		for dx := -r; dx <= r; dx++ {
-			for dz := -r; dz <= r; dz++ {
-				if r == 2 && abs(dx) == 2 && abs(dz) == 2 {
+	h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
+	h.stampTree(players, x, y, z, sp.shape, false)
+}
+
+// findSaplingSquare reports the lower-left corner of a 2x2 block of matching
+// saplings containing (x,z), scanning the same offsets vanilla does.
+func (h *hub) findSaplingSquare(x, z, y int, rng [2]uint32) (int, int, bool) {
+	matches := func(px, pz int) bool { return inRange(h.world.At(px, y, pz), rng) }
+	for dx := 0; dx >= -1; dx-- {
+		for dz := 0; dz >= -1; dz-- {
+			cx, cz := x+dx, z+dz
+			if matches(cx, cz) && matches(cx+1, cz) && matches(cx, cz+1) && matches(cx+1, cz+1) {
+				return cx, cz, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+// stampTree writes a trunk and canopy for one species. `wide` grows the 2x2
+// trunk and broader canopy the mega species need. Leaves only replace air, so
+// a tree never eats a player's build.
+func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.TreeShape, wide bool) {
+	height := s.MinH + h.rng.Intn(s.ExtraH+1)
+	top := y + height
+	trunk := [][2]int{{x, z}}
+	if wide {
+		trunk = [][2]int{{x, z}, {x + 1, z}, {x, z + 1}, {x + 1, z + 1}}
+	}
+	for ty := y; ty < top; ty++ {
+		for _, c := range trunk {
+			h.setBlock(players, blockPos{c[0], ty, c[1]}, s.Log)
+		}
+	}
+
+	// Canopy is centred on the trunk; a 2x2 trunk shifts the centre half a
+	// block, so widen by one on the far side instead of offsetting.
+	leaf := func(ly, r int, trimCorners bool) {
+		hi := r
+		if wide {
+			hi = r + 1
+		}
+		for dx := -r; dx <= hi; dx++ {
+			for dz := -r; dz <= hi; dz++ {
+				if trimCorners && abs(dx) == r && abs(dz) == r {
 					continue // trim canopy corners
 				}
 				px, pz := x+dx, z+dz
 				if h.world.At(px, ly, pz) == worldgen.Air {
-					h.setBlock(players, blockPos{px, ly, pz}, worldgen.OakLeaves)
+					h.setBlock(players, blockPos{px, ly, pz}, s.Leaves)
 				}
 			}
 		}
 	}
-	leaf(top-2, 2)
-	leaf(top-1, 2)
-	leaf(top, 1)
-	leaf(top+1, 1)
+	if s.Conical { // spruce: stacked rings tapering to a point
+		for i, ly := 0, top-4; ly <= top; ly++ {
+			r := 2 - i/2
+			if r < 0 {
+				r = 0
+			}
+			leaf(ly, r, r == 2)
+			i++
+		}
+		h.setBlock(players, blockPos{x, top + 1, z}, s.Leaves)
+		return
+	}
+	leaf(top-2, 2, true)
+	leaf(top-1, 2, true)
+	leaf(top, 1, false)
+	leaf(top+1, 1, true)
 }
 
 // rollLeafDrops spawns a decaying leaf's loot (5% sapling / 2% sticks / 0.5% apple).

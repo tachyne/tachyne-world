@@ -59,6 +59,8 @@ var (
 	MangroveLeaves = blockBase("mangrove_leaves") + 27
 	CherryLog      = blockBase("cherry_log") + 1
 	CherryLeaves   = blockBase("cherry_leaves") + 27
+	PaleOakLog     = blockBase("pale_oak_log") + 1
+	PaleOakLeaves  = blockBase("pale_oak_leaves") + 27
 
 	// Biome flora (single-block placements).
 	TallGrass      = blockBase("tall_grass") + 1 // lower half only (2-block plant)

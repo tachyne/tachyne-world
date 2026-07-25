@@ -72,11 +72,17 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 			return true
 		}
 	}
-	// Saplings: 45% chance to grow the tree (SaplingBlock.advanceTree).
-	for _, r := range saplingRanges {
-		if inRange(state, r) {
+	// Saplings: 45% chance to advance (SaplingBlock.advanceTree). Stage 0 goes
+	// to stage 1; only a stage-1 sapling grows the tree — bone meal took the
+	// tree path straight from stage 0 before, skipping a step.
+	for _, sp := range saplingSpecies {
+		if inRange(state, sp.rng) {
 			if h.rng.Float64() < 0.45 {
-				h.growTree(players, x, y, z)
+				if state == sp.rng[0] {
+					h.setBlock(players, blockPos{x, y, z}, state+1)
+				} else {
+					h.growSapling(players, x, y, z, state, sp)
+				}
 			}
 			return true // vanilla consumes the meal either way
 		}

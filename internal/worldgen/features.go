@@ -68,6 +68,39 @@ func (g *Generator) treeAt(wx, wz int, density float64) bool {
 	return hash01(g.seed, wx, wz, 0x7777) < prob
 }
 
+// TreeShape describes one species' trunk, canopy blocks and silhouette. It is
+// the single source of truth for both worldgen decoration and the live
+// sapling-growth path in the server, so a species can never look one way in a
+// generated forest and another when a player grows it.
+type TreeShape struct {
+	Log, Leaves  uint32
+	Conical      bool // spruce-style tapering rings rather than a rounded ball
+	MinH, ExtraH int
+	// TwoByTwo species have no single-sapling tree at all: vanilla's grower
+	// defines only a mega feature, so four saplings in a square are required.
+	TwoByTwo bool
+}
+
+// treeShapeBySapling keys the shapes by sapling block name. Dark oak and pale
+// oak are deliberately TwoByTwo-only, matching vanilla's growers, which give
+// them a mega feature and no single tree — a lone dark oak sapling never grows.
+var treeShapeBySapling = map[string]TreeShape{
+	"oak_sapling":      {OakLog, OakLeaves, false, 4, 3, false},
+	"birch_sapling":    {BirchLog, BirchLeaves, false, 5, 3, false},
+	"spruce_sapling":   {SpruceLog, SpruceLeaves, true, 6, 4, false},
+	"jungle_sapling":   {JungleLog, JungleLeaves, false, 7, 8, false},
+	"acacia_sapling":   {AcaciaLog, AcaciaLeaves, false, 5, 2, false},
+	"cherry_sapling":   {CherryLog, CherryLeaves, false, 5, 3, false},
+	"dark_oak_sapling": {DarkOakLog, DarkOakLeaves, false, 6, 2, true},
+	"pale_oak_sapling": {PaleOakLog, PaleOakLeaves, false, 6, 2, true},
+}
+
+// TreeShapeForSapling returns the shape a sapling block grows into.
+func TreeShapeForSapling(name string) (TreeShape, bool) {
+	s, ok := treeShapeBySapling[name]
+	return s, ok
+}
+
 // treeStyle maps a treeKind to its trunk/leaf blocks and canopy shape.
 func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) {
 	switch k {
