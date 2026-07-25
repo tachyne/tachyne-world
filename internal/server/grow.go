@@ -172,6 +172,12 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickAmethyst(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickRedstoneOre(players, dim, x, y, z, state) {
+		return
+	}
+	if h.tickNylium(players, dim, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
