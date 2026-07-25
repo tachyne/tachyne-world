@@ -40,6 +40,10 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Bamboo and mushrooms grow.** Bamboo grows from its tip up to sixteen tall,
+  moving its leafy crown up the stalk as it goes, and mushrooms creep across
+  dark ground — stopping once five already crowd the area, so a cave floor
+  never turns solid with them.
 - **Kelp and vines grow.** Kelp climbs through water, twisting vines climb,
   and weeping and cave vines hang downward — none of them did anything before.
   Cave vines occasionally grow a segment carrying glow berries.

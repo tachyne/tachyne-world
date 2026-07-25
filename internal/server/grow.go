@@ -181,6 +181,15 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickGrowingPlant(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickMushroom(players, dim, x, y, z, state) {
+		return
+	}
+	if h.tickBamboo(players, dim, x, y, z, state) {
+		return
+	}
+	if h.tickBambooSapling(players, dim, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
