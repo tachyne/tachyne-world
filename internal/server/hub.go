@@ -798,6 +798,7 @@ func (h *hub) run() {
 			h.updateEating(players) // apply finished eat-holds (32-tick chew)
 			h.updateSleep(players)  // turn the night once everyone's slept ~5s
 			for _, t := range players {
+				t.refreshArmorAttrs() // vanilla updateEquipmentAttributes: worn gear → ARMOR
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push

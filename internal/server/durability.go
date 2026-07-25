@@ -41,16 +41,8 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 //
 //	damage * (1 - min(20, max(points/5, points - damage/(2+toughness/4))) / 25)
 func (t *tracked) armorReduce(dmg float32) float32 {
-	points, tough := 0.0, 0.0
-	for _, a := range t.armor {
-		if a.count == 0 {
-			continue
-		}
-		if p, ok := armorInfo[a.item]; ok {
-			points += float64(p.Points)
-			tough += p.Toughness
-		}
-	}
+	t.refreshArmorAttrs() // pick up a piece equipped since the last tick
+	points, tough := t.armorPoints(), t.armorToughness()
 	d := float64(dmg)
 	if points > 0 {
 		def := math.Min(20, math.Max(points/5, points-d/(2+tough/4)))

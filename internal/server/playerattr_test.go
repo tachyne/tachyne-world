@@ -56,3 +56,49 @@ func TestRegenClampsToRaisedMaxHealth(t *testing.T) {
 		t.Errorf("max health %v after the boost expired, want %v", pl.maxHP(), maxHealth)
 	}
 }
+
+// Worn armour is a modifier on ARMOR/ARMOR_TOUGHNESS, re-derived from the slots
+// each tick the way vanilla's updateEquipmentAttributes does.
+func TestWornArmorFeedsTheAttributes(t *testing.T) {
+	pl := testTracked()
+	if got := pl.armorPoints(); got != 0 {
+		t.Errorf("bare player armour %v, want 0", got)
+	}
+
+	equipSet(t, pl, [4]int{2, 6, 5, 2}, 0) // a full iron set
+	pl.refreshArmorAttrs()
+	if got := pl.armorPoints(); got != 15 {
+		t.Errorf("full iron armour %v, want 15", got)
+	}
+
+	// Stripping the set clears the modifier rather than leaving a residue.
+	pl.armor = [4]invStack{}
+	pl.refreshArmorAttrs()
+	if got := pl.armorPoints(); got != 0 {
+		t.Errorf("armour %v after stripping, want 0", got)
+	}
+}
+
+// The damage formula reads the attribute, so a modifier from somewhere other
+// than a worn piece protects too — which is what the migration buys.
+func TestArmorReduceHonoursAModifier(t *testing.T) {
+	pl := testTracked()
+	before := pl.armorReduce(10)
+	if before != 10 {
+		t.Fatalf("unarmoured 10 damage reduced to %v, want 10", before)
+	}
+
+	pl.playerAttrs().Get(attr.Armor).AddModifier(attr.Modifier{
+		Source: "test:ward", Amount: 10, Op: attr.AddValue,
+	})
+	after := pl.armorReduce(10)
+	if after >= before {
+		t.Errorf("10 damage through 10 armour points is %v, want less than %v", after, before)
+	}
+
+	// And the per-tick equipment refresh must not wipe it — different source.
+	pl.refreshArmorAttrs()
+	if got := pl.armorPoints(); got != 10 {
+		t.Errorf("armour %v after the equipment refresh, want the modifier's 10", got)
+	}
+}
