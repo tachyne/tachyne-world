@@ -21,6 +21,12 @@ the public history since the project was open-sourced on 2026-07-10.
   of the map lists players and each mob category with its colour and a live
   count, and clicking one toggles that layer.
 
+### Fixed
+- **Placing or breaking a block no longer makes the area around you blink on
+  the 3D map.** The affected terrain used to vanish while its replacement was
+  fetched; it now stays on screen until the new geometry is ready, so only the
+  block that actually changed appears to change.
+
 ### Added
 - The 3D map now shows **what players have built** (not just generated
   terrain), updates **live** as blocks change, and draws **player and mob
