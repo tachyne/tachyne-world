@@ -119,7 +119,7 @@ func (h *hub) updateVillageGolems(players map[int32]*tracked) {
 			continue // plugin-cancelled spawn
 		}
 		g.health = 100
-		g.noKB = true // KNOCKBACK_RESISTANCE 1.0 (vanilla 1.21.5)
+		g.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
 		g.behavior = golemBehavior{}
 		g.home = meet
 		h.villageGolem[meet] = h.tick.Load() + golemRespawnDelay

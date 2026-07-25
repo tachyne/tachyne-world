@@ -224,7 +224,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	// Real knockback: shove the mob away from the attacker (server physics —
 	// the impulse rides out uncapped for a few updates). Sprinting hits harder.
 	if t != nil {
-		if kdx, kdz := m.x-t.x, m.z-t.z; (kdx != 0 || kdz != 0) && !m.noKB {
+		if kdx, kdz := m.x-t.x, m.z-t.z; (kdx != 0 || kdz != 0) && m.kbScale() > 0 {
 			d := math.Hypot(kdx, kdz)
 			// Vanilla: base hurt-knockback 0.4, +0.5 sprint, +0.5 per Knockback level.
 			power := 0.4
@@ -232,6 +232,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				power += 0.5
 			}
 			power += 0.5 * float64(heldStack(t).enchLvl(enchKnockback))
+			power *= m.kbScale() // LivingEntity.knockback: power *= 1 − resistance
 			m.vx, m.vz = kdx/d*power, kdz/d*power
 			m.kb, m.reroute = 3, 0
 			h.mobKnockVelocity(players, m)

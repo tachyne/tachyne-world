@@ -136,7 +136,7 @@ type speciesDef struct {
 	arch      archetype
 	retaliate bool    // peaceful until hit, then hunts the attacker (wolf/goat/bee)
 	burns     bool    // undead: daylight sets it on fire
-	noKB      bool    // KNOCKBACK_RESISTANCE ≈1: never shoved (warden/ravager)
+	kbResist  float64 // KNOCKBACK_RESISTANCE 0..1: the fraction of a shove it shrugs off
 	hover     float64 // flyers: preferred altitude above the ground
 	xp        int     // xpReward override (0 = derive from category; xpNone = nothing)
 	held      string  // rendered main-hand item ("iron_axe")
@@ -243,13 +243,13 @@ var speciesTable = map[int]*speciesDef{
 	// be fitted with nautilus_armor — taming/riding is a later slice, like the
 	// happy-ghast harness). MAX_HEALTH 15, ATTACK_DAMAGE 3, KB-resist 0.3
 	// (vanilla AbstractNautilus.createAttributes). Squid on pre-1.21.11.
-	entityNautilus: {name: "nautilus", health: 15, step: 0.10, damage: 3, arch: archWater,
+	entityNautilus: {name: "nautilus", health: 15, step: 0.10, damage: 3, arch: archWater, kbResist: 0.3,
 		drops: []specDrop{{item: "nautilus_shell", rnd: 1}}},
 	// zombie_nautilus (1.21.11): the drowned-analogue hostile nautilus variant.
 	// Same body as the nautilus but hunts (createAttributes + MOVEMENT_SPEED
 	// 1.1). Glow squid on pre-1.21.11.
 	entityZombieNautilus: {name: "zombie_nautilus", health: 15, step: 0.11, damage: 3,
-		arch: archWaterHostile, xp: 5},
+		arch: archWaterHostile, kbResist: 0.3, xp: 5},
 
 	// ── Flyers ───────────────────────────────────────────────────────────
 	entityBat: {name: "bat", health: 6, step: 0.13, arch: archFlyer, hover: 3, xp: xpNone},
@@ -291,9 +291,9 @@ var speciesTable = map[int]*speciesDef{
 	entityBreeze: {name: "breeze", health: 30, speed: 0.63, step: 0.16, follow: 24,
 		arch: archRanged, drops: []specDrop{{item: "breeze_rod", min: 1, rnd: 1}}},
 	entityWarden: {name: "warden", health: 500, speed: 0.30, damage: 30, follow: 24,
-		arch: archHostile, noKB: true, drops: []specDrop{{item: "sculk_catalyst", min: 1}}},
+		arch: archHostile, kbResist: 1, drops: []specDrop{{item: "sculk_catalyst", min: 1}}},
 	entityRavager: {name: "ravager", health: 100, speed: 0.30, damage: 12, follow: 32,
-		arch: archHostile, noKB: true, xp: 20, drops: []specDrop{{item: "saddle", min: 1}}},
+		arch: archHostile, kbResist: 0.75, xp: 20, drops: []specDrop{{item: "saddle", min: 1}}},
 	entityPillager: {name: "pillager", health: 24, speed: 0.35, follow: 32,
 		arch: archRanged, held: "crossbow", drops: []specDrop{{item: "arrow", rnd: 2}}},
 	entityVindicator: {name: "vindicator", health: 24, speed: 0.35, damage: 5, follow: 12,
@@ -323,16 +323,16 @@ var speciesTable = map[int]*speciesDef{
 	entityPiglinBrute: {name: "piglin_brute", health: 50, speed: 0.35, damage: 7,
 		follow: 12, arch: archHostile, xp: 20, held: "golden_axe"}, // ATTACK_DAMAGE 7 (source)
 	entityHoglin: {name: "hoglin", health: 40, speed: 0.30, damage: 6, arch: archHostile,
-		love:  "crimson_fungus",
+		kbResist: 0.6, love: "crimson_fungus",
 		drops: []specDrop{{item: "porkchop", min: 2, rnd: 2}, {item: "leather", rnd: 1}}},
-	entityZoglin: {name: "zoglin", health: 40, speed: 0.30, damage: 6, arch: archHostile,
+	entityZoglin: {name: "zoglin", health: 40, speed: 0.30, damage: 6, arch: archHostile, kbResist: 0.6,
 		drops: []specDrop{{item: "rotten_flesh", min: 1, rnd: 2}}},
 	entityStrider: {name: "strider", health: 20, speed: 0.175, arch: archPassive,
 		love: "warped_fungus", drops: []specDrop{{item: "string", min: 2, rnd: 3}}},
 
 	// ── Bosses (summonable) ──────────────────────────────────────────────
 	entityWither: {name: "wither", health: 300, armor: 4, follow: 40, step: 0.27,
-		arch: archFlyerHostile, hover: 6, noKB: true, xp: 50,
+		arch: archFlyerHostile, hover: 6, xp: 50,
 		drops: []specDrop{{item: "nether_star", min: 1}}},
 }
 
@@ -388,8 +388,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d == nil {
 		return
 	}
-	m.noKB, m.hover = d.noKB, d.hover
+	m.hover = d.hover
 	m.setBaseArmor(d.armor)
+	m.setKBResist(d.kbResist)
 	if d.follow > 0 {
 		m.setFollowRange(d.follow)
 	}

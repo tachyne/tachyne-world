@@ -63,7 +63,7 @@ func (h *hub) smashEffects(players map[int32]*tracked, t *tracked, target *mob, 
 		heavy = 2.0
 	}
 	for _, o := range h.mobs {
-		if o == target || o.dying > 0 || o.noKB || o.dim != t.dim {
+		if o == target || o.dying > 0 || o.kbScale() <= 0 || o.dim != t.dim {
 			continue
 		}
 		dx, dz := o.x-t.x, o.z-t.z
@@ -71,7 +71,7 @@ func (h *hub) smashEffects(players map[int32]*tracked, t *tracked, target *mob, 
 		if dist > maceKnockRadius || dist < 1e-6 {
 			continue
 		}
-		power := (maceKnockRadius - dist) * maceKnockPower * heavy
+		power := (maceKnockRadius - dist) * maceKnockPower * heavy * o.kbScale()
 		o.vx, o.vz, o.kb, o.reroute = dx/dist*power, dz/dist*power, 3, 0
 		h.mobKnockVelocity(players, o)
 	}

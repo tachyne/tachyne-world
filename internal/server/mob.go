@@ -72,7 +72,6 @@ type mob struct {
 	digClock        int            // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain   bool           // pillager patrol leader (carries the ominous banner)
 	raidCenter      blockPos       // raider: the raid this mob belongs to (zero = not a raider)
-	noKB            bool           // KNOCKBACK_RESISTANCE 1.0 (iron golem): never shoved
 	idleSecs        int            // seconds spent >32 blocks from every player (despawn clock)
 	reinf           float64        // zombie SPAWN_REINFORCEMENTS_CHANCE (0 for non-zombies)
 	hopTicks        int            // slime: updates left mid-bound (traveling)
@@ -776,6 +775,19 @@ func (m *mob) setBabySpeed(on bool) {
 	}
 	in.AddModifier(attr.Modifier{Source: babySpeedSource, Amount: 0.5, Op: attr.AddMultipliedBase})
 }
+
+// kbResist is the mob's KNOCKBACK_RESISTANCE: the FRACTION of an incoming
+// shove it shrugs off, 0 (no resistance) through 1 (immovable). Vanilla
+// applies it as power *= 1 - resistance, so the values in between matter —
+// a ravager at 0.75 still slides a little.
+func (m *mob) kbResist() float64 { return m.mobAttrs().Value(attr.KnockbackResistance) }
+
+// setKBResist sets the base KNOCKBACK_RESISTANCE.
+func (m *mob) setKBResist(v float64) { m.mobAttrs().SetBase(attr.KnockbackResistance, v) }
+
+// kbScale is the multiplier an incoming knockback impulse survives — the
+// LivingEntity.knockback / AbstractArrow form, floored at 0.
+func (m *mob) kbScale() float64 { return math.Max(0, 1-m.kbResist()) }
 
 // attackDamage is the mob's ATTACK_DAMAGE base. Species that add a flat bonus
 // on top (the magma cube's +2) do it at the point of use, as vanilla does.

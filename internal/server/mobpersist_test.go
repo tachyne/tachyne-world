@@ -253,8 +253,8 @@ func TestGolemReloadKeepsGuardianStance(t *testing.T) {
 	if _, ok := m.behavior.(golemBehavior); !ok {
 		t.Fatalf("guardian stance lost: behavior=%T", m.behavior)
 	}
-	if !m.noKB || m.home != (blockPos{12, 70, 12}) {
-		t.Fatalf("golem attributes lost: noKB=%v home=%v", m.noKB, m.home)
+	if m.kbResist() != 1 || m.home != (blockPos{12, 70, 12}) {
+		t.Fatalf("golem attributes lost: kbResist=%v home=%v", m.kbResist(), m.home)
 	}
 }
 

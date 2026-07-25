@@ -379,8 +379,8 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 	switch {
 	case b.state == bobberHooked && h.mobs[b.hooked] != nil:
 		m := h.mobs[b.hooked]
-		if !m.noKB { // vanilla pullEntity: velocity += (owner − hook) · 0.1
-			m.vx, m.vz, m.kb, m.reroute = (t.x-m.x)*0.1, (t.z-m.z)*0.1, 3, 0
+		if s := m.kbScale(); s > 0 { // vanilla pullEntity: velocity += (owner − hook) · 0.1
+			m.vx, m.vz, m.kb, m.reroute = (t.x-m.x)*0.1*s, (t.z-m.z)*0.1*s, 3, 0
 			h.mobKnockVelocity(players, m)
 		}
 		wear = 5

@@ -394,6 +394,36 @@ func TestCubeSizeDrivesEveryStat(t *testing.T) {
 	}
 }
 
+// KNOCKBACK_RESISTANCE is a fraction, not a flag: the mobs between 0 and 1
+// were previously rounded to immovable or not, with nothing in between.
+func TestKnockbackResistanceIsFractional(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for _, c := range []struct {
+		etype int
+		want  float64
+		what  string
+	}{
+		{entityWarden, 1, "warden"},
+		{entityRavager, 0.75, "ravager"},
+		{entityHoglin, 0.6, "hoglin"},
+		{entityZoglin, 0.6, "zoglin"},
+		{entityZombie, 0, "zombie"},
+	} {
+		m := h.spawnMobIn(players, c.etype, 0, 0, 70, 0)
+		if m == nil {
+			t.Fatalf("%s: spawn returned nil", c.what)
+		}
+		h.applySpecies(players, m)
+		if got := m.kbResist(); !closeTo(got, c.want) {
+			t.Errorf("%s knockback resistance %v, want %v", c.what, got, c.want)
+		}
+		if got, want := m.kbScale(), 1-c.want; !closeTo(got, want) {
+			t.Errorf("%s keeps %v of a shove, want %v", c.what, got, want)
+		}
+	}
+}
+
 // A magma cube used to move at a flat pace regardless of size: vanilla's
 // createAttributes 0.2 is superseded by setSize, which scales with size.
 func TestMagmaCubeSpeedScalesWithSize(t *testing.T) {

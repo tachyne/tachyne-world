@@ -113,7 +113,8 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			h.unlockTier(m, 1)
 		}
 	case entityIronGolem:
-		m.behavior, m.noKB = golemBehavior{}, true // village-guardian stance
+		m.behavior = golemBehavior{} // village-guardian stance
+		m.setKBResist(1)
 	}
 	m.x, m.y, m.z, m.sx, m.sy, m.sz = x, y, z, x, y, z // seat the broadcast baseline at the load position
 	// Mark the restored mob's chunk seeded so the vanilla spawner does not lay a

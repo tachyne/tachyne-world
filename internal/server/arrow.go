@@ -346,8 +346,8 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		}
 		if a.dmg > 0 {
 			m.hitByPlayer = true
-			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && !m.noKB { // ride the arrow's momentum
-				kbp := 0.5 + 0.6*float64(a.punch) // Punch adds 0.6/level
+			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && m.kbScale() > 0 { // ride the arrow's momentum
+				kbp := (0.5 + 0.6*float64(a.punch)) * m.kbScale() // Punch adds 0.6/level
 				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
 				h.mobKnockVelocity(players, m)
 			}
