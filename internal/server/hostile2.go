@@ -57,8 +57,8 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	switch m.etype {
 	case entityHusk: // desert zombie: immune to daylight
 		m.burns = false
-		m.aggro = 35 // zombie-family FOLLOW_RANGE (vanilla 1.21.5)
-		m.armor = 2  // zombie-family base ARMOR
+		m.setFollowRange(35) // zombie-family FOLLOW_RANGE (vanilla 1.21.5)
+		m.armor = 2          // zombie-family base ARMOR
 		m.reinf = h.rollReinforcements()
 		h.rollZombieBaby(players, m)
 	case entityStray, entityDrowned: // cold skeleton / wet zombie: burn like their cousins
@@ -68,7 +68,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 			m.behavior = rangedBehavior{}
 			h.toNearbyEv(players, m.dim, m.x, m.z, skeletonEquip(m.eid))
 		} else {
-			m.aggro = 35 // drowned are zombies too
+			m.setFollowRange(35) // drowned are zombies too
 			m.armor = 2
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
@@ -84,8 +84,8 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		m.speed = slimeSpeed(m.etype, m.size) // attr 0.2 + 0.1×size
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityEnderman:
-		m.neutral = true // holds its peace until hit
-		m.aggro = 64     // EnderMan FOLLOW_RANGE (vanilla 1.21.5)
+		m.neutral = true     // holds its peace until hit
+		m.setFollowRange(64) // EnderMan FOLLOW_RANGE (vanilla 1.21.5)
 	case entityWitch:
 		m.behavior = rangedBehavior{} // keeps her distance like a skeleton
 	default:
@@ -269,7 +269,7 @@ var itemCarvedPumpkin = int32(itemByName["carved_pumpkin"])
 // within follow range whose view vector points at the enderman's eyes —
 // dot(view, dir) > 1 − 0.025/d — unless they wear a carved pumpkin.
 func (h *hub) staredAt(players map[int32]*tracked, m *mob) bool {
-	reach := m.aggro // endermen carry FOLLOW_RANGE 64
+	reach := m.followRange() // endermen carry FOLLOW_RANGE 64
 	for _, t := range players {
 		if t.dim != m.dim || t.gamemode != gmSurvival || t.dead {
 			continue

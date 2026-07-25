@@ -236,10 +236,7 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	}
 	// FOLLOW_RANGE is per-species in vanilla (vanilla 1.21.5: Mob default
 	// 16, Zombie family 35, Blaze 48, EnderMan 64); +8 hysteresis to de-aggro.
-	reach := m.aggro
-	if reach == 0 {
-		reach = aggroRange
-	}
+	reach := m.followRange()
 	if m.hasTarget {
 		reach += deaggroSlack
 	}
@@ -425,8 +422,8 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 		m.burns = true // the undead burn at dawn
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if etype == entityZombie {
-			m.aggro = 35 // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
-			m.armor = 2  // Zombie base ARMOR attribute (vanilla 1.21.5)
+			m.setFollowRange(35) // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
+			m.armor = 2          // Zombie base ARMOR attribute (vanilla 1.21.5)
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
 		}

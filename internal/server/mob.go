@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/binary"
+	"github.com/tachyne/tachyne-world/internal/attribute"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 	"math"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -122,7 +124,7 @@ type mob struct {
 	held            int32          // rendered main-hand item (0 = empty)
 	ty              float64        // hunted target's feet height (fliers dive to it)
 	speed           float64        // per-step movement cap (grazers slow, hunters faster)
-	aggro           float64        // FOLLOW_RANGE: hunt players within this (0 = default 16)
+	attrs           *attribute.Map // entity attributes (follow range, and more as readers migrate)
 	armor           float64        // base ARMOR attribute (zombie family 2.0; most mobs 0)
 	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int            // mob-updates left before this mob can melee again
@@ -177,7 +179,7 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), maxHealth: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), maxHealth: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
@@ -675,3 +677,30 @@ func (h *hub) toNearbyEv(players map[int32]*tracked, dim int, x, z float64, ev a
 		}
 	}
 }
+
+// newMobAttributes is Mob.createMobAttributes: the per-entity starting point,
+// which is NOT the same as the attribute registry's own defaults. Follow range
+// is the one that bites — the registry default is 32, but a vanilla Mob starts
+// at 16 and only specific species raise it.
+func newMobAttributes() *attribute.Map {
+	a := attribute.NewMap()
+	a.SetBase(attr.FollowRange, aggroRange)
+	return a
+}
+
+// mobAttrs returns the mob's attribute map, creating it if a mob predates the
+// spawn path that seeds one (a reload, or a test building a mob by hand).
+func (m *mob) mobAttrs() *attribute.Map {
+	if m.attrs == nil {
+		m.attrs = newMobAttributes()
+	}
+	return m.attrs
+}
+
+// followRange is the mob's FOLLOW_RANGE: how far it hunts. Backed by the
+// attribute map so equipment, effects and plugins can modify it, rather than
+// being a bare field only the spawn path could set.
+func (m *mob) followRange() float64 { return m.mobAttrs().Value(attr.FollowRange) }
+
+// setFollowRange sets the mob's base FOLLOW_RANGE.
+func (m *mob) setFollowRange(v float64) { m.mobAttrs().SetBase(attr.FollowRange, v) }

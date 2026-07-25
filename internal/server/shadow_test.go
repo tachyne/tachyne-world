@@ -175,7 +175,8 @@ func TestMobAggroOnShadowPlayer(t *testing.T) {
 	hubA.updateShadows(playersA)
 
 	// A zombie on the east pod, 8 blocks east of the seam (within follow range 35).
-	m := &mob{eid: hubB.allocEID(), etype: entityZombie, dim: 0, x: 8, y: 64, z: 0, health: 20, hostile: true, aggro: 35}
+	m := &mob{eid: hubB.allocEID(), etype: entityZombie, dim: 0, x: 8, y: 64, z: 0, health: 20, hostile: true, attrs: newMobAttributes()}
+	m.setFollowRange(35)
 	hubB.mobs[m.eid] = m
 	hubB.acquireTarget(map[int32]*tracked{}, m) // no real players on east — only the shadow
 	if !m.hasTarget || m.tx != -4 || m.tz != 0 {

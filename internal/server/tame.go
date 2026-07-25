@@ -67,7 +67,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
-	m.aggro = petFollowStart
+	m.setFollowRange(petFollowStart)
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petFlagsMeta(m.eid, true, false)))
 	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})

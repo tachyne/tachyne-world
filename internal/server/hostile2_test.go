@@ -57,7 +57,7 @@ func TestEndermanNeutralUntilHitThenBlinks(t *testing.T) {
 		t.Fatal("a hit enderman should have teleported away")
 	}
 	h.acquireTarget(players, m)
-	if !m.hasTarget && dist3(m.x, 0, m.z, pl.x, 0, pl.z) < m.aggro+deaggroSlack {
+	if !m.hasTarget && dist3(m.x, 0, m.z, pl.x, 0, pl.z) < m.followRange()+deaggroSlack {
 		t.Fatal("an angry enderman in range must hunt")
 	}
 }

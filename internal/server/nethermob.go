@@ -97,7 +97,8 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 	case entityZombifiedPiglin:
 		m.hostile, m.neutral = true, true        // armed but peaceful until hit
 		m.behavior = Behavior(hostileBehavior{}) // speed from speedFor (attr 0.23)
-		m.aggro, m.armor = 35, 2                 // zombie-family FOLLOW_RANGE + ARMOR (vanilla behavior)
+		m.setFollowRange(35)                     // zombie-family FOLLOW_RANGE (vanilla behavior)
+		m.armor = 2
 	case entityMagmaCube:
 		m.hostile = true
 		m.size = 1 + h.rng.Intn(3)*1 // 1/2/4-ish
@@ -111,7 +112,7 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		m.hostile = true
 		m.health = blazeHealth
 		m.behavior = Behavior(rangedBehavior{}) // speed from speedFor (attr 0.23)
-		m.aggro = 48                            // Blaze FOLLOW_RANGE (vanilla 1.21.5)
+		m.setFollowRange(48)                    // Blaze FOLLOW_RANGE (vanilla 1.21.5)
 	default:
 		h.applySpecies(players, m) // roster nether species (piglin/hoglin/strider/…)
 	}

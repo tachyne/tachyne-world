@@ -388,7 +388,10 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d == nil {
 		return
 	}
-	m.aggro, m.armor, m.noKB, m.hover = d.follow, d.armor, d.noKB, d.hover
+	m.armor, m.noKB, m.hover = d.armor, d.noKB, d.hover
+	if d.follow > 0 {
+		m.setFollowRange(d.follow)
+	}
 	switch d.arch {
 	case archHostile:
 		m.hostile, m.behavior = true, Behavior(hostileBehavior{})
