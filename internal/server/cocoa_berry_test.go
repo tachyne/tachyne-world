@@ -21,7 +21,7 @@ func TestCocoaGrowth(t *testing.T) {
 		wantFacing := worldgen.GetProperty(info, start, "facing")
 		w.SetBlock(5, 70, 0, start)
 		for i := 0; i < 500 && worldgen.GetProperty(info, w.At(5, 70, 0), "age") != "2"; i++ {
-			h.tickCocoa(h.playersRef, 5, 70, 0, w.At(5, 70, 0))
+			h.tickCocoa(h.playersRef, 0, 5, 70, 0, w.At(5, 70, 0))
 		}
 		final := w.At(5, 70, 0)
 		if a := worldgen.GetProperty(info, final, "age"); a != "2" {
@@ -52,7 +52,7 @@ func TestSweetBerryGrowth(t *testing.T) {
 		}
 		w.SetBlock(5, 120, 0, berryBase) // age 0
 		for i := 0; i < 500 && w.At(5, 120, 0) != berryBase+3; i++ {
-			h.tickBerry(h.playersRef, 5, 120, 0, w.At(5, 120, 0))
+			h.tickBerry(h.playersRef, 0, 5, 120, 0, w.At(5, 120, 0))
 		}
 		if got := w.At(5, 120, 0); got != berryBase+3 {
 			t.Errorf("berry age %d, want 3 (never fully ripened)", got-berryBase)

@@ -48,12 +48,12 @@ func TestCropGrowsUnderArtificialLight(t *testing.T) {
 	base := worldgen.BlockBase("wheat")
 	h.world.SetBlock(x, y, z, base)
 
-	if got := h.plantBrightness(x, y, z, 0); got < 9 {
+	if got := h.plantBrightness(0, x, y, z, 0); got < 9 {
 		t.Fatalf("test setup: brightness %d under the lamp, need >= 9", got)
 	}
 
 	for i := 0; i < 400 && h.world.At(x, y, z) < base+7; i++ {
-		h.tickCrop(players, x, y, z, h.world.At(x, y, z))
+		h.tickCrop(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	if got := h.world.At(x, y, z); got == base {
 		t.Errorf("wheat did not grow under artificial light: state %d", got)
@@ -71,11 +71,11 @@ func TestCropDoesNotGrowInTheDark(t *testing.T) {
 	base := worldgen.BlockBase("wheat")
 	h.world.SetBlock(x, y, z, base)
 
-	if got := h.plantBrightness(x, y, z, 0); got >= 9 {
+	if got := h.plantBrightness(0, x, y, z, 0); got >= 9 {
 		t.Fatalf("test setup: brightness %d in the sealed box, want < 9", got)
 	}
 	for i := 0; i < 400; i++ {
-		h.tickCrop(players, x, y, z, h.world.At(x, y, z))
+		h.tickCrop(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	if got := h.world.At(x, y, z); got != base {
 		t.Errorf("wheat grew in the dark: state %d", got)
@@ -95,7 +95,7 @@ func TestSaplingAdvancesAtVanillaRate(t *testing.T) {
 	for i := 0; i < trials; i++ {
 		x, y, z := 100+i%50, 200, 100+i/50
 		h.world.SetBlock(x, y, z, base)
-		h.tickSapling(players, x, y, z, base)
+		h.tickSapling(players, 0, x, y, z, base)
 		if h.world.At(x, y, z) != base {
 			advanced++
 		}
@@ -118,7 +118,7 @@ func TestTorchflowerGrowsIntoTheFlower(t *testing.T) {
 
 	flower := worldgen.BlockID("torchflower")
 	for i := 0; i < 4000 && h.world.At(x, y, z) != flower; i++ {
-		h.tickTorchflower(players, x, y, z, h.world.At(x, y, z))
+		h.tickTorchflower(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	if got := h.world.At(x, y, z); got != flower {
 		t.Errorf("torchflower crop never became the flower: state %d (want %d)", got, flower)
@@ -169,7 +169,7 @@ func TestPitcherGrowsAnUpperHalf(t *testing.T) {
 	h.world.SetBlock(x, y, z, pitcherLower(0))
 
 	for i := 0; i < 6000 && h.world.At(x, y, z) != pitcherLower(4); i++ {
-		h.tickPitcher(players, x, y, z, h.world.At(x, y, z))
+		h.tickPitcher(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	if got := h.world.At(x, y, z); got != pitcherLower(4) {
 		t.Fatalf("pitcher crop never matured: state %d, want %d", got, pitcherLower(4))
@@ -180,7 +180,7 @@ func TestPitcherGrowsAnUpperHalf(t *testing.T) {
 
 	// The upper half must not tick on its own.
 	before := h.world.At(x, y+1, z)
-	h.tickPitcher(players, x, y+1, z, before)
+	h.tickPitcher(players, 0, x, y+1, z, before)
 	if got := h.world.At(x, y+1, z); got != before {
 		t.Errorf("upper half advanced itself: %d -> %d", before, got)
 	}
@@ -197,7 +197,7 @@ func TestPitcherWillNotGrowIntoASolidBlock(t *testing.T) {
 	h.world.SetBlock(x, y+1, z, worldgen.Stone)
 
 	for i := 0; i < 2000; i++ {
-		h.tickPitcher(players, x, y, z, h.world.At(x, y, z))
+		h.tickPitcher(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	if got := h.world.At(x, y, z); got != pitcherLower(2) {
 		t.Errorf("pitcher grew under a solid block: state %d", got)

@@ -377,7 +377,7 @@ type hub struct {
 
 	// pending block updates bucketed by the tick they're due — the heart of
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
-	pending map[uint64][]blockPos
+	pending map[uint64][]simPos
 
 	hud []HudWidget // action-bar HUD widgets (nil = HUD off)
 	bus bus         // out-of-process plugin bus (nopBus = disabled)
@@ -575,7 +575,7 @@ func newHub(w *world.World) *hub {
 		signMayEdit:   map[string]int32{},
 		events:        make(chan hubEvent, 256),
 		stop:          make(chan struct{}),
-		pending:       map[uint64][]blockPos{},
+		pending:       map[uint64][]simPos{},
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},

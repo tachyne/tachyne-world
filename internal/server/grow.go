@@ -11,10 +11,18 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 const (
 	randomTickSpeed = 3 // blocks ticked per chunk-section per tick (vanilla default)
 	simRadius       = 4 // chunks around each player that random-tick
+)
 
-	// Block-state ID ranges (1.21.5, from minecraft-data blocks.json).
-	caneMin, caneMax     = 5978, 5993 // sugar_cane, age 0..15
-	cactusMin, cactusMax = 5960, 5975 // cactus, age 0..15
+// Sugar cane and cactus state ranges, looked up by NAME.
+//
+// These were hard-coded 1.21.5 ids (cane 5978-5993, cactus 5960-5975). At the
+// canonical 1.21.11 those numbers belong to acacia and cherry HANGING SIGNS, so
+// cane and cactus never grew, and hanging signs were fed to the stack-plant
+// grower — which can stack a copy of the sign above itself. Never hard-code a
+// state id: ids shift every version, names do not.
+var (
+	caneMin, caneMax     = worldgen.BlockRange("sugar_cane")
+	cactusMin, cactusMax = worldgen.BlockRange("cactus")
 )
 
 var (
@@ -81,32 +89,39 @@ func isAnyLeaf(s uint32) bool {
 	return false
 }
 
-// runRandomTicks ticks the loaded chunks around each player.
+// runRandomTicks ticks the loaded chunks around each player, in that player's
+// OWN dimension.
+//
+// This used to ignore the dimension entirely: every player's x/z drove ticks
+// against the overworld, so nothing in the Nether or the End ever ticked, and
+// standing in the Nether grew an overworld farm at the same coordinates.
 func (h *hub) runRandomTicks(players map[int32]*tracked) {
 	if len(players) == 0 {
 		return
 	}
-	seen := map[[2]int]bool{}
+	// seen is keyed by dimension too: the same chunk coordinates in two worlds
+	// are two different chunks.
+	seen := map[[3]int]bool{}
 	for _, t := range players {
 		pcx, pcz := chunkFloor(t.x), chunkFloor(t.z)
 		for dx := -simRadius; dx <= simRadius; dx++ {
 			for dz := -simRadius; dz <= simRadius; dz++ {
-				c := [2]int{pcx + dx, pcz + dz}
+				c := [3]int{t.dim, pcx + dx, pcz + dz}
 				if seen[c] {
 					continue
 				}
 				seen[c] = true
-				h.randomTickChunk(players, c[0], c[1])
+				h.randomTickChunk(players, t.dim, c[1], c[2])
 			}
 		}
 	}
 }
 
-func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
+func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {
 	if h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled
-		h.precipTick(players, cx, cz)
+		h.precipTick(players, dim, cx, cz)
 	}
-	for s := 0; s < h.world.Sections(); s++ {
+	for s := 0; s < h.worldFor(dim).Sections(); s++ {
 		baseY := worldgen.MinY + s*16
 		speed := randomTickSpeed
 		if h.rules.RandomTicks >= 0 {
@@ -116,33 +131,33 @@ func (h *hub) randomTickChunk(players map[int32]*tracked, cx, cz int) {
 			x := cx*16 + h.rng.Intn(16)
 			y := baseY + h.rng.Intn(16)
 			z := cz*16 + h.rng.Intn(16)
-			h.randomTickBlock(players, x, y, z)
+			h.randomTickBlock(players, dim, x, y, z)
 		}
 	}
 }
 
-func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
-	state := h.world.At(x, y, z)
+func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
+	state := h.worldFor(dim).At(x, y, z)
 	if worldgen.IsLava(state) {
-		h.lavaIgnite(players, x, y, z)
+		h.lavaIgnite(players, dim, x, y, z)
 		return
 	}
-	if h.tickStem(players, x, y, z, state) {
+	if h.tickStem(players, dim, x, y, z, state) {
 		return
 	}
 	if h.farmlandRandomTick(players, x, y, z, state) {
 		return
 	}
-	if h.tickTorchflower(players, x, y, z, state) {
+	if h.tickTorchflower(players, dim, x, y, z, state) {
 		return
 	}
-	if h.tickPitcher(players, x, y, z, state) {
+	if h.tickPitcher(players, dim, x, y, z, state) {
 		return
 	}
-	if h.tickCocoa(players, x, y, z, state) {
+	if h.tickCocoa(players, dim, x, y, z, state) {
 		return
 	}
-	if h.tickBerry(players, x, y, z, state) {
+	if h.tickBerry(players, dim, x, y, z, state) {
 		return
 	}
 	if h.tickCopper(players, x, y, z, state) {
@@ -150,34 +165,34 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, x, y, z int) {
 	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
-		h.tickStackPlant(players, x, y, z, state, caneMin)
+		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
 	case inRange(state, [2]uint32{cactusMin, cactusMax}):
-		h.tickStackPlant(players, x, y, z, state, cactusMin)
+		h.tickStackPlant(players, dim, x, y, z, state, cactusMin)
 	case state == worldgen.GrassBlock:
-		h.tickGrass(players, x, y, z)
+		h.tickGrass(players, dim, x, y, z)
 	default:
 		if h.tickDriedGhast(players, x, y, z, state) {
 			return
 		}
-		if h.tickCrop(players, x, y, z, state) {
+		if h.tickCrop(players, dim, x, y, z, state) {
 			return
 		}
-		if h.tickSapling(players, x, y, z, state) {
+		if h.tickSapling(players, dim, x, y, z, state) {
 			return
 		}
-		h.tickLeaf(players, x, y, z, state)
+		h.tickLeaf(players, dim, x, y, z, state)
 	}
 }
 
 // tickStackPlant grows sugar cane / cactus: the top stalk ages each tick, and at
 // age 15 it spawns a new stalk above (up to 3 tall), resetting its own age.
-func (h *hub) tickStackPlant(players map[int32]*tracked, x, y, z int, state uint32, min uint32) {
-	if h.world.At(x, y+1, z) != worldgen.Air {
+func (h *hub) tickStackPlant(players map[int32]*tracked, dim, x, y, z int, state uint32, min uint32) {
+	if h.worldFor(dim).At(x, y+1, z) != worldgen.Air {
 		return // only the top stalk (open above) grows
 	}
 	height := 1
 	for k := 1; k < 3; k++ {
-		if s := h.world.At(x, y-k, z); s >= min && s <= min+15 {
+		if s := h.worldFor(dim).At(x, y-k, z); s >= min && s <= min+15 {
 			height++
 		} else {
 			break
@@ -187,11 +202,11 @@ func (h *hub) tickStackPlant(players map[int32]*tracked, x, y, z int, state uint
 		return
 	}
 	if age := state - min; age >= 15 {
-		h.setBlock(players, blockPos{x, y, z}, min)        // reset this stalk
-		h.setBlock(players, blockPos{x, y + 1, z}, min)    // new stalk above
-		h.scheduleAround(blockPos{x, y + 1, z}, fallDelay) // support/neighbour recheck
+		h.setBlockAt(players, dim, blockPos{x, y, z}, min)        // reset this stalk
+		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, min)    // new stalk above
+		h.scheduleAroundIn(dim, blockPos{x, y + 1, z}, fallDelay) // support/neighbour recheck
 	} else {
-		h.setBlock(players, blockPos{x, y, z}, min+age+1)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, min+age+1)
 	}
 }
 
@@ -200,12 +215,12 @@ func (h *hub) tickStackPlant(players map[int32]*tracked, x, y, z int, state uint
 // weighted ÷4), then halved when the same crop flanks it on both axes (or on a
 // diagonal) — the "planted in rows grows faster" rule. `r` is this crop's state
 // range so a same-type neighbour of any age counts.
-func (h *hub) cropGrowthSpeed(x, y, z int, r [2]uint32) float64 {
+func (h *hub) cropGrowthSpeed(dim, x, y, z int, r [2]uint32) float64 {
 	f := 1.0
 	for i := -1; i <= 1; i++ {
 		for j := -1; j <= 1; j++ {
 			g := 0.0
-			if s := h.world.At(x+i, y-1, z+j); s >= farmlandMin && s <= farmlandMin+7 {
+			if s := h.worldFor(dim).At(x+i, y-1, z+j); s >= farmlandMin && s <= farmlandMin+7 {
 				g = 1.0
 				if s > farmlandMin { // moisture > 0
 					g = 3.0
@@ -217,12 +232,12 @@ func (h *hub) cropGrowthSpeed(x, y, z int, r [2]uint32) float64 {
 			f += g
 		}
 	}
-	sameNS := inRange(h.world.At(x, y, z-1), r) || inRange(h.world.At(x, y, z+1), r)
-	sameEW := inRange(h.world.At(x-1, y, z), r) || inRange(h.world.At(x+1, y, z), r)
+	sameNS := inRange(h.worldFor(dim).At(x, y, z-1), r) || inRange(h.worldFor(dim).At(x, y, z+1), r)
+	sameEW := inRange(h.worldFor(dim).At(x-1, y, z), r) || inRange(h.worldFor(dim).At(x+1, y, z), r)
 	if sameNS && sameEW {
 		f /= 2.0
-	} else if inRange(h.world.At(x-1, y, z-1), r) || inRange(h.world.At(x+1, y, z-1), r) ||
-		inRange(h.world.At(x-1, y, z+1), r) || inRange(h.world.At(x+1, y, z+1), r) {
+	} else if inRange(h.worldFor(dim).At(x-1, y, z-1), r) || inRange(h.worldFor(dim).At(x+1, y, z-1), r) ||
+		inRange(h.worldFor(dim).At(x-1, y, z+1), r) || inRange(h.worldFor(dim).At(x+1, y, z+1), r) {
 		f /= 2.0
 	}
 	return f
@@ -236,23 +251,23 @@ func (h *hub) cropGrowthSpeed(x, y, z int, r [2]uint32) float64 {
 // This replaced an approximation that required an unobstructed column to the
 // sky, which silently made artificial light useless for growing: a torch-lit
 // indoor or underground farm grows in vanilla and did not here.
-func (h *hub) plantBrightness(x, y, z, darken int) int {
-	sky, block := h.world.LightAt(x, y, z)
+func (h *hub) plantBrightness(dim, x, y, z, darken int) int {
+	sky, block := h.worldFor(dim).LightAt(x, y, z)
 	return h.rawBrightness(sky, block, darken)
 }
 
 // cropGrows rolls the vanilla growth gate: random.nextInt((int)(25/speed)+1)==0.
-func (h *hub) cropGrows(x, y, z int, r [2]uint32) bool {
-	return h.rng.Intn(int(25.0/h.cropGrowthSpeed(x, y, z, r))+1) == 0
+func (h *hub) cropGrows(dim, x, y, z int, r [2]uint32) bool {
+	return h.rng.Intn(int(25.0/h.cropGrowthSpeed(dim, x, y, z, r))+1) == 0
 }
 
 // tickCrop advances a staged crop one stage if it's immature and sky-lit, gated
 // by the vanilla growth-speed probability (was: advanced every random tick).
-func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickCrop(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	for _, r := range cropRanges {
 		if inRange(state, r) {
-			if state < r[1] && h.plantBrightness(x, y, z, 0) >= 9 && h.cropGrows(x, y, z, r) {
-				h.setBlock(players, blockPos{x, y, z}, state+1)
+			if state < r[1] && h.plantBrightness(dim, x, y, z, 0) >= 9 && h.cropGrows(dim, x, y, z, r) {
+				h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 			}
 			return true
 		}
@@ -261,7 +276,7 @@ func (h *hub) tickCrop(players map[int32]*tracked, x, y, z int, state uint32) bo
 }
 
 // tickSapling advances a sapling's hidden stage, then grows its species' tree.
-func (h *hub) tickSapling(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickSapling(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	for _, sp := range saplingSpecies {
 		if !inRange(state, sp.rng) {
 			continue
@@ -269,47 +284,47 @@ func (h *hub) tickSapling(players map[int32]*tracked, x, y, z int, state uint32)
 		// getMaxLocalRawBrightness(pos.above()) >= 9 && nextInt(7) == 0.
 		// The 1-in-7 roll was missing, so saplings advanced on every random
 		// tick that passed the light check — about seven times too fast.
-		if h.plantBrightness(x, y+1, z, -1) < 9 || h.rng.Intn(7) != 0 {
+		if h.plantBrightness(dim, x, y+1, z, -1) < 9 || h.rng.Intn(7) != 0 {
 			return true
 		}
 		if state == sp.rng[0] {
-			h.setBlock(players, blockPos{x, y, z}, state+1) // stage 0 → 1
+			h.setBlockAt(players, dim, blockPos{x, y, z}, state+1) // stage 0 → 1
 			return true
 		}
-		h.growSapling(players, x, y, z, state, sp)
+		h.growSapling(players, dim, x, y, z, state, sp)
 		return true
 	}
 	return false
 }
 
 // tickLeaf decays a non-persistent leaf with no log nearby, rolling its drops.
-func (h *hub) tickLeaf(players map[int32]*tracked, x, y, z int, state uint32) {
+func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint32) {
 	for _, r := range leafRanges {
 		if !inRange(state, r) {
 			continue
 		}
 		persistent := ((state-r[0])/2)%2 == 0 // middle property; idx 0 == "true"
-		if persistent || h.logNearby(x, y, z) {
+		if persistent || h.logNearby(dim, x, y, z) {
 			return
 		}
-		h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
-		h.scheduleAround(blockPos{x, y, z}, fallDelay)
-		h.rollLeafDrops(players, x, y, z)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+		h.scheduleAroundIn(dim, blockPos{x, y, z}, fallDelay)
+		h.rollLeafDrops(players, dim, x, y, z)
 		return
 	}
 }
 
 // tickGrass spreads grass to a nearby dirt block, or dies back to dirt if covered.
-func (h *hub) tickGrass(players map[int32]*tracked, x, y, z int) {
-	if h.opaqueAbove(x, y, z) {
-		h.setBlock(players, blockPos{x, y, z}, worldgen.Dirt) // smothered → dirt
+func (h *hub) tickGrass(players map[int32]*tracked, dim, x, y, z int) {
+	if h.opaqueAbove(dim, x, y, z) {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Dirt) // smothered → dirt
 		return
 	}
 	tx := x + h.rng.Intn(3) - 1
 	ty := y + h.rng.Intn(3) - 1
 	tz := z + h.rng.Intn(3) - 1
-	if h.world.At(tx, ty, tz) == worldgen.Dirt && !h.opaqueAbove(tx, ty, tz) {
-		h.setBlock(players, blockPos{tx, ty, tz}, worldgen.GrassBlock)
+	if h.worldFor(dim).At(tx, ty, tz) == worldgen.Dirt && !h.opaqueAbove(dim, tx, ty, tz) {
+		h.setBlockAt(players, dim, blockPos{tx, ty, tz}, worldgen.GrassBlock)
 	}
 }
 
@@ -319,26 +334,26 @@ func (h *hub) tickGrass(players map[int32]*tracked, x, y, z int) {
 // feature and NO single-sapling tree, so a lone one never grows. findSquare
 // looks for the 2x2 the way vanilla does — scanning the four offsets that
 // could place this sapling in a square — and the whole square is consumed.
-func (h *hub) growSapling(players map[int32]*tracked, x, y, z int, state uint32, sp saplingSpec) {
+func (h *hub) growSapling(players map[int32]*tracked, dim, x, y, z int, state uint32, sp saplingSpec) {
 	if sp.shape.TwoByTwo {
-		cx, cz, ok := h.findSaplingSquare(x, z, y, sp.rng)
+		cx, cz, ok := h.findSaplingSquare(dim, x, z, y, sp.rng)
 		if !ok {
 			return // stays a sapling until a square is completed
 		}
 		for _, c := range [4][2]int{{cx, cz}, {cx + 1, cz}, {cx, cz + 1}, {cx + 1, cz + 1}} {
-			h.setBlock(players, blockPos{c[0], y, c[1]}, worldgen.Air)
+			h.setBlockAt(players, dim, blockPos{c[0], y, c[1]}, worldgen.Air)
 		}
-		h.stampTree(players, cx, y, cz, sp.shape, true)
+		h.stampTree(players, dim, cx, y, cz, sp.shape, true)
 		return
 	}
-	h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
-	h.stampTree(players, x, y, z, sp.shape, false)
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	h.stampTree(players, dim, x, y, z, sp.shape, false)
 }
 
 // findSaplingSquare reports the lower-left corner of a 2x2 block of matching
 // saplings containing (x,z), scanning the same offsets vanilla does.
-func (h *hub) findSaplingSquare(x, z, y int, rng [2]uint32) (int, int, bool) {
-	matches := func(px, pz int) bool { return inRange(h.world.At(px, y, pz), rng) }
+func (h *hub) findSaplingSquare(dim, x, z, y int, rng [2]uint32) (int, int, bool) {
+	matches := func(px, pz int) bool { return inRange(h.worldFor(dim).At(px, y, pz), rng) }
 	for dx := 0; dx >= -1; dx-- {
 		for dz := 0; dz >= -1; dz-- {
 			cx, cz := x+dx, z+dz
@@ -353,7 +368,7 @@ func (h *hub) findSaplingSquare(x, z, y int, rng [2]uint32) (int, int, bool) {
 // stampTree writes a trunk and canopy for one species. `wide` grows the 2x2
 // trunk and broader canopy the mega species need. Leaves only replace air, so
 // a tree never eats a player's build.
-func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.TreeShape, wide bool) {
+func (h *hub) stampTree(players map[int32]*tracked, dim, x, y, z int, s worldgen.TreeShape, wide bool) {
 	height := s.MinH + h.rng.Intn(s.ExtraH+1)
 	top := y + height
 	trunk := [][2]int{{x, z}}
@@ -362,7 +377,7 @@ func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.Tree
 	}
 	for ty := y; ty < top; ty++ {
 		for _, c := range trunk {
-			h.setBlock(players, blockPos{c[0], ty, c[1]}, s.Log)
+			h.setBlockAt(players, dim, blockPos{c[0], ty, c[1]}, s.Log)
 		}
 	}
 
@@ -379,8 +394,8 @@ func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.Tree
 					continue // trim canopy corners
 				}
 				px, pz := x+dx, z+dz
-				if h.world.At(px, ly, pz) == worldgen.Air {
-					h.setBlock(players, blockPos{px, ly, pz}, s.Leaves)
+				if h.worldFor(dim).At(px, ly, pz) == worldgen.Air {
+					h.setBlockAt(players, dim, blockPos{px, ly, pz}, s.Leaves)
 				}
 			}
 		}
@@ -394,7 +409,7 @@ func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.Tree
 			leaf(ly, r, r == 2)
 			i++
 		}
-		h.setBlock(players, blockPos{x, top + 1, z}, s.Leaves)
+		h.setBlockAt(players, dim, blockPos{x, top + 1, z}, s.Leaves)
 		return
 	}
 	leaf(top-2, 2, true)
@@ -404,7 +419,7 @@ func (h *hub) stampTree(players map[int32]*tracked, x, y, z int, s worldgen.Tree
 }
 
 // rollLeafDrops spawns a decaying leaf's loot (5% sapling / 2% sticks / 0.5% apple).
-func (h *hub) rollLeafDrops(players map[int32]*tracked, x, y, z int) {
+func (h *hub) rollLeafDrops(players map[int32]*tracked, dim, x, y, z int) {
 	for _, d := range h.leafDrops() {
 		h.spawnBlockDrop(players, d.item, d.count, x, y, z)
 	}
@@ -412,12 +427,12 @@ func (h *hub) rollLeafDrops(players map[int32]*tracked, x, y, z int) {
 
 // logNearby reports whether an oak log sits within 4 blocks (so leaves near a
 // tree survive). Bounded so leaf ticks stay cheap.
-func (h *hub) logNearby(x, y, z int) bool {
+func (h *hub) logNearby(dim, x, y, z int) bool {
 	const r = 4
 	for dy := -r; dy <= r; dy++ {
 		for dx := -r; dx <= r; dx++ {
 			for dz := -r; dz <= r; dz++ {
-				if s := h.world.At(x+dx, y+dy, z+dz); s >= worldgen.BlockBase("oak_log") && s <= worldgen.BlockBase("mangrove_log")+2 { // any log: oak..mangrove (axis x/y/z each)
+				if s := h.worldFor(dim).At(x+dx, y+dy, z+dz); s >= worldgen.BlockBase("oak_log") && s <= worldgen.BlockBase("mangrove_log")+2 { // any log: oak..mangrove (axis x/y/z each)
 					return true
 				}
 			}
@@ -427,20 +442,20 @@ func (h *hub) logNearby(x, y, z int) bool {
 }
 
 // opaqueAbove reports whether the block directly above blocks light (smothers grass).
-func (h *hub) opaqueAbove(x, y, z int) bool {
-	return worldgen.SkyOpacity(h.world.At(x, y+1, z)) >= worldgen.Opaque
+func (h *hub) opaqueAbove(dim, x, y, z int) bool {
+	return worldgen.SkyOpacity(h.worldFor(dim).At(x, y+1, z)) >= worldgen.Opaque
 }
 
 // lavaIgnite is the vanilla LavaFluid.randomTick fire-starter: an overworld
 // lava block randomly sets fire to a nearby flammable block (using the
 // flammability table as the ignitedByLava proxy). Gated by doFireTick.
-func (h *hub) lavaIgnite(players map[int32]*tracked, x, y, z int) {
+func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 	if !h.rules.DoFireTick {
 		return
 	}
 	flammableNear := func(px, py, pz int) bool {
 		for _, d := range allNeighbors {
-			if ig, _ := worldgen.Flammability(h.world.At(px+d.x, py+d.y, pz+d.z)); ig > 0 {
+			if ig, _ := worldgen.Flammability(h.worldFor(dim).At(px+d.x, py+d.y, pz+d.z)); ig > 0 {
 				return true
 			}
 		}
@@ -455,7 +470,7 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, x, y, z int) {
 			if !h.inWorldY(cy) {
 				return
 			}
-			s := h.world.At(cx, cy, cz)
+			s := h.worldFor(dim).At(cx, cy, cz)
 			if s == worldgen.Air && flammableNear(cx, cy, cz) {
 				h.igniteFire(players, blockPos{cx, cy, cz}, 0)
 				return
@@ -469,8 +484,8 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, x, y, z int) {
 	// passes == 0: ignite the air directly above a flammable block nearby.
 	for i := 0; i < 3; i++ {
 		ax, az := x+h.rng.Intn(3)-1, z+h.rng.Intn(3)-1
-		if h.inWorldY(y+1) && h.world.At(ax, y, az) != worldgen.Air {
-			if ig, _ := worldgen.Flammability(h.world.At(ax, y, az)); ig > 0 && h.world.At(ax, y+1, az) == worldgen.Air {
+		if h.inWorldY(y+1) && h.worldFor(dim).At(ax, y, az) != worldgen.Air {
+			if ig, _ := worldgen.Flammability(h.worldFor(dim).At(ax, y, az)); ig > 0 && h.worldFor(dim).At(ax, y+1, az) == worldgen.Air {
 				h.igniteFire(players, blockPos{ax, y + 1, az}, 0)
 			}
 		}
@@ -486,17 +501,17 @@ var (
 // biomes, a port of ServerLevel.tickPrecipitation restricted to one sampled
 // column. Ice forms whenever a snowy column's surface water is exposed at an
 // edge; snow only while it is actually snowing (raining in a cold biome).
-func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
+func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 	x := cx*16 + h.rng.Intn(16)
 	z := cz*16 + h.rng.Intn(16)
 	// Find the topmost non-air near the surface (water sits above the terrain).
 	start := worldgen.SeaLevel + 4
-	if g := h.world.GroundY(x, z); g > start {
+	if g := h.worldFor(dim).GroundY(x, z); g > start {
 		start = g
 	}
 	topY, top := 0, uint32(0)
-	for y := start; y >= h.world.GroundY(x, z)-1 && h.inWorldY(y); y-- {
-		if s := h.world.At(x, y, z); s != worldgen.Air {
+	for y := start; y >= h.worldFor(dim).GroundY(x, z)-1 && h.inWorldY(y); y-- {
+		if s := h.worldFor(dim).At(x, y, z); s != worldgen.Air {
 			topY, top = y, s
 			break
 		}
@@ -504,7 +519,7 @@ func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
 	if top == 0 {
 		return
 	}
-	snowing := worldgen.PrecipitationAt(h.world.BiomeAt(x, z), topY) == worldgen.PrecipSnow
+	snowing := worldgen.PrecipitationAt(h.worldFor(dim).BiomeAt(x, z), topY) == worldgen.PrecipSnow
 	if _, _, isCauldron := cauldronOf(top); isCauldron {
 		if h.raining && h.skyExposedColumn(x, z) {
 			h.cauldronPrecip(players, blockPos{x, topY, z}, top, snowing)
@@ -522,20 +537,20 @@ func (h *hub) precipTick(players map[int32]*tracked, cx, cz int) {
 	if top == worldgen.WaterBase {
 		edge := false
 		for _, d := range horizNeighbors {
-			if !worldgen.IsWater(h.world.At(x+d.x, topY, z+d.z)) {
+			if !worldgen.IsWater(h.worldFor(dim).At(x+d.x, topY, z+d.z)) {
 				edge = true
 				break
 			}
 		}
 		if edge {
-			h.setBlock(players, blockPos{x, topY, z}, iceBlock)
+			h.setBlockAt(players, dim, blockPos{x, topY, z}, iceBlock)
 		}
 		return
 	}
 	// Snow: while snowing, lay a snow layer on a solid, snow-free surface.
 	if h.raining && worldgen.IsSolidFull(top) && top != iceBlock &&
-		h.world.At(x, topY+1, z) == worldgen.Air {
-		h.setBlock(players, blockPos{x, topY + 1, z}, snowLayer1)
+		h.worldFor(dim).At(x, topY+1, z) == worldgen.Air {
+		h.setBlockAt(players, dim, blockPos{x, topY + 1, z}, snowLayer1)
 	}
 }
 
@@ -561,7 +576,7 @@ var (
 
 // tickCocoa ripens a cocoa pod one age stage (0→2) at 1-in-5 odds, preserving
 // its facing (CocoaBlock.randomTick). Returns whether it handled the block.
-func (h *hub) tickCocoa(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickCocoa(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if state < cocoaBase || state > cocoaBase+11 {
 		return false
 	}
@@ -578,7 +593,7 @@ func (h *hub) tickCocoa(players map[int32]*tracked, x, y, z int, state uint32) b
 		if age == "1" {
 			next = "2"
 		}
-		h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", next))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", next))
 	}
 	return true
 }
@@ -586,12 +601,12 @@ func (h *hub) tickCocoa(players map[int32]*tracked, x, y, z int, state uint32) b
 // tickBerry ripens a sweet berry bush one age stage (0→3) at 1-in-5 odds when
 // the bush is lit (SweetBerryBushBlock.randomTick: getRawBrightness(pos.above(), 0) >= 9).
 // Returns whether it handled the block.
-func (h *hub) tickBerry(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickBerry(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if state < berryBase || state > berryBase+3 {
 		return false
 	}
-	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.plantBrightness(x, y+1, z, 0) >= 9 {
-		h.setBlock(players, blockPos{x, y, z}, state+1)
+	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.plantBrightness(dim, x, y+1, z, 0) >= 9 {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 	}
 	return true
 }
@@ -599,7 +614,7 @@ func (h *hub) tickBerry(players map[int32]*tracked, x, y, z int, state uint32) b
 // tickStem grows a melon/pumpkin stem: it ages to 7, then spawns its fruit in
 // an adjacent free cell over tillable ground and turns into an attached stem
 // (StemBlock.randomTick). Returns whether it handled the block.
-func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickStem(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	var stemBase, attachedBase, fruit uint32
 	switch {
 	case state >= melonStemBase && state <= melonStemBase+7:
@@ -609,32 +624,32 @@ func (h *hub) tickStem(players map[int32]*tracked, x, y, z int, state uint32) bo
 	default:
 		return false
 	}
-	if h.plantBrightness(x, y, z, 0) < 9 {
+	if h.plantBrightness(dim, x, y, z, 0) < 9 {
 		return true
 	}
 	// Vanilla StemBlock.randomTick gates both the age-advance and the fruiting on
 	// the same growth-speed probability (was: grew every random tick).
-	if !h.cropGrows(x, y, z, [2]uint32{stemBase, stemBase + 7}) {
+	if !h.cropGrows(dim, x, y, z, [2]uint32{stemBase, stemBase + 7}) {
 		return true
 	}
 	age := int(state - stemBase)
 	if age < 7 {
-		h.setBlock(players, blockPos{x, y, z}, stemBase+uint32(age+1))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, stemBase+uint32(age+1))
 		return true
 	}
 	// Mature: try to fruit in a random horizontal neighbour.
 	d := horizNeighbors[h.rng.Intn(4)]
 	fx, fz := x+d.x, z+d.z
-	if h.world.At(fx, y, fz) != worldgen.Air {
+	if h.worldFor(dim).At(fx, y, fz) != worldgen.Air {
 		return true // occupied — no room this tick
 	}
-	below := h.world.At(fx, y-1, fz)
+	below := h.worldFor(dim).At(fx, y-1, fz)
 	if below != worldgen.Dirt && below != worldgen.GrassBlock &&
 		!(below >= farmlandMin && below <= farmlandMin+7) {
 		return true // fruit needs tillable/dirt/grass ground
 	}
-	h.setBlock(players, blockPos{fx, y, fz}, fruit)
-	h.setBlock(players, blockPos{x, y, z}, attachedBase+stemFacing[d]) // attach toward the fruit
+	h.setBlockAt(players, dim, blockPos{fx, y, fz}, fruit)
+	h.setBlockAt(players, dim, blockPos{x, y, z}, attachedBase+stemFacing[d]) // attach toward the fruit
 	return true
 }
 
@@ -672,7 +687,7 @@ func pitcherIsDouble(age int) bool { return age >= 3 }
 // when nextInt(3) != 0, so two random ticks in three do anything at all; and
 // getMaxAge() is 2 even though the AGE property stops at 1, so the final step
 // swaps the crop for the torchflower block.
-func (h *hub) tickTorchflower(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickTorchflower(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if state < torchflowerCropMin || state > torchflowerCropMax {
 		return false
 	}
@@ -680,14 +695,14 @@ func (h *hub) tickTorchflower(players map[int32]*tracked, x, y, z int, state uin
 		return true // vanilla skips this tick outright
 	}
 	r := [2]uint32{torchflowerCropMin, torchflowerCropMax}
-	if h.plantBrightness(x, y, z, 0) < 9 || !h.cropGrows(x, y, z, r) {
+	if h.plantBrightness(dim, x, y, z, 0) < 9 || !h.cropGrows(dim, x, y, z, r) {
 		return true
 	}
 	if state < torchflowerCropMax {
-		h.setBlock(players, blockPos{x, y, z}, state+1)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 	} else {
 		// getStateForAge(2) == TORCHFLOWER.defaultBlockState()
-		h.setBlock(players, blockPos{x, y, z}, worldgen.BlockID("torchflower"))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.BlockID("torchflower"))
 	}
 	return true
 }
@@ -695,7 +710,7 @@ func (h *hub) tickTorchflower(players map[int32]*tracked, x, y, z int, state uin
 // tickPitcher ports PitcherCropBlock.randomTick + grow. Only the lower half
 // ticks and only while immature (isRandomlyTicking), and once the new age makes
 // the plant double the upper half is written above it.
-func (h *hub) tickPitcher(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickPitcher(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if state < pitcherCropMin || state > pitcherCropMax {
 		return false
 	}
@@ -703,7 +718,7 @@ func (h *hub) tickPitcher(players map[int32]*tracked, x, y, z int, state uint32)
 	if !lower || age >= 4 { // isRandomlyTicking / isMaxAge
 		return true
 	}
-	if !h.cropGrows(x, y, z, [2]uint32{pitcherCropMin, pitcherCropMax}) {
+	if !h.cropGrows(dim, x, y, z, [2]uint32{pitcherCropMin, pitcherCropMax}) {
 		return true
 	}
 	newAge := age + 1
@@ -711,19 +726,19 @@ func (h *hub) tickPitcher(players map[int32]*tracked, x, y, z int, state uint32)
 	// canGrow: sufficientLight is CropBlock.hasSufficientLight (>= 8, NOT the
 	// >= 9 growth gate), the cell above must be in the world, and once the
 	// plant goes double that cell must be air or already pitcher crop.
-	if h.plantBrightness(x, y, z, 0) < 8 || !h.inWorldY(y+1) {
+	if h.plantBrightness(dim, x, y, z, 0) < 8 || !h.inWorldY(y+1) {
 		return true
 	}
 	if pitcherIsDouble(newAge) {
-		above := h.world.At(x, y+1, z)
+		above := h.worldFor(dim).At(x, y+1, z)
 		if above != worldgen.Air && (above < pitcherCropMin || above > pitcherCropMax) {
 			return true // canGrowInto: air or pitcher_crop only
 		}
 	}
 
-	h.setBlock(players, blockPos{x, y, z}, pitcherLower(newAge))
+	h.setBlockAt(players, dim, blockPos{x, y, z}, pitcherLower(newAge))
 	if pitcherIsDouble(newAge) {
-		h.setBlock(players, blockPos{x, y + 1, z}, pitcherUpper(newAge))
+		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, pitcherUpper(newAge))
 	}
 	return true
 }

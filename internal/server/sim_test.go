@@ -83,7 +83,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 70, 50, src)
 		w.SetBlock(51, 70, 50, water) // water beside
-		h.updateFluid(players, blockPos{50, 70, 50}, src)
+		h.updateFluid(players, 0, blockPos{50, 70, 50}, src)
 		if got := w.At(50, 70, 50); got != worldgen.Obsidian {
 			t.Fatalf("source lava beside water = %d, want obsidian %d", got, worldgen.Obsidian)
 		}
@@ -94,7 +94,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 70, 50, flow)
 		w.SetBlock(50, 70, 51, water)
-		h.updateFluid(players, blockPos{50, 70, 50}, flow)
+		h.updateFluid(players, 0, blockPos{50, 70, 50}, flow)
 		if got := w.At(50, 70, 50); got != worldgen.Cobblestone {
 			t.Fatalf("flowing lava beside water = %d, want cobblestone %d", got, worldgen.Cobblestone)
 		}
@@ -105,7 +105,7 @@ func TestLavaWaterInteraction(t *testing.T) {
 		players := map[int32]*tracked{}
 		w.SetBlock(50, 71, 50, src)   // lava above
 		w.SetBlock(50, 70, 50, water) // water below
-		h.updateFluid(players, blockPos{50, 71, 50}, src)
+		h.updateFluid(players, 0, blockPos{50, 71, 50}, src)
 		if got := w.At(50, 70, 50); got != worldgen.Stone {
 			t.Fatalf("water under falling lava = %d, want stone %d", got, worldgen.Stone)
 		}
@@ -127,7 +127,7 @@ func TestFluidSlopeFinding(t *testing.T) {
 		}
 	}
 	w.SetBlock(62, fy, 60, worldgen.Air) // the only drop-off, two blocks east
-	dirs := h.flowDirections(blockPos{60, fy + 1, 60}, 4)
+	dirs := h.flowDirections(0, blockPos{60, fy + 1, 60}, 4)
 	if len(dirs) != 1 || dirs[0] != (blockPos{1, 0, 0}) {
 		t.Fatalf("expected fluid to flow only east toward the hole, got %v", dirs)
 	}

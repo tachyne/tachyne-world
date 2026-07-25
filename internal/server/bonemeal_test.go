@@ -98,7 +98,7 @@ func TestStemGrowth(t *testing.T) {
 		fruited := false
 		for i := 0; i < 2000 && !fruited; i++ { // growth is now probability-gated
 			w.SetBlock(x, y, z, melonStemBase+7) // reset to mature each try
-			h.tickStem(h.playersRef, x, y, z, melonStemBase+7)
+			h.tickStem(h.playersRef, 0, x, y, z, melonStemBase+7)
 			for _, d := range horizNeighbors {
 				if w.At(x+d.x, y, z+d.z) == melonBlock {
 					fruited = true
@@ -117,7 +117,7 @@ func TestStemGrowth(t *testing.T) {
 		grew := false
 		for i := 0; i < 2000 && !grew; i++ {
 			w.SetBlock(x, y, z, melonStemBase+2)
-			h.tickStem(h.playersRef, x, y, z, melonStemBase+2)
+			h.tickStem(h.playersRef, 0, x, y, z, melonStemBase+2)
 			if w.At(x, y, z) == melonStemBase+3 {
 				grew = true
 			}

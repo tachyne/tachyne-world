@@ -19,7 +19,7 @@ func TestLavaIgnition(t *testing.T) {
 		w.SetBlock(31, y+1, 0, worldgen.Air)    // open above the planks
 		lit := false
 		for i := 0; i < 3000 && !lit; i++ {
-			h.lavaIgnite(h.playersRef, 30, y, 0)
+			h.lavaIgnite(h.playersRef, 0, 30, y, 0)
 			for dx := -1; dx <= 2; dx++ {
 				for dy := 0; dy <= 3; dy++ {
 					for dz := -1; dz <= 1; dz++ {

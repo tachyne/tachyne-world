@@ -42,7 +42,7 @@ func TestSnowAndIce(t *testing.T) {
 		}
 		froze := false
 		for i := 0; i < 4000 && !froze; i++ {
-			h.precipTick(h.playersRef, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
+			h.precipTick(h.playersRef, 0, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
 			if w.At(fx, y, fz) == iceBlock {
 				froze = true
 			}

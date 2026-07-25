@@ -22,7 +22,7 @@ func growUntilGone(h *hub, players map[int32]*tracked, x, y, z int, lo, hi uint3
 		if s < lo || s > hi {
 			return true
 		}
-		h.tickSapling(players, x, y, z, s)
+		h.tickSapling(players, 0, x, y, z, s)
 	}
 	return false
 }
@@ -98,7 +98,7 @@ func TestDarkOakNeedsFourSaplings(t *testing.T) {
 		h.world.SetBlock(x, y, z, lo+1) // already stage 1
 
 		for i := 0; i < 4000; i++ {
-			h.tickSapling(players, x, y, z, h.world.At(x, y, z))
+			h.tickSapling(players, 0, x, y, z, h.world.At(x, y, z))
 		}
 		if got := h.world.At(x, y, z); got < lo || got > hi {
 			t.Errorf("%s: a lone sapling grew (state %d); vanilla requires 2x2", name, got)

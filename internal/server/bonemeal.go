@@ -68,7 +68,7 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 			if ns > r[1] {
 				ns = r[1]
 			}
-			h.setBlock(players, blockPos{x, y, z}, ns)
+			h.setBlockAt(players, dim, blockPos{x, y, z}, ns)
 			return true
 		}
 	}
@@ -79,9 +79,9 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 		if inRange(state, sp.rng) {
 			if h.rng.Float64() < 0.45 {
 				if state == sp.rng[0] {
-					h.setBlock(players, blockPos{x, y, z}, state+1)
+					h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 				} else {
-					h.growSapling(players, x, y, z, state, sp)
+					h.growSapling(players, dim, x, y, z, state, sp)
 				}
 			}
 			return true // vanilla consumes the meal either way
@@ -92,10 +92,10 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 		if info, ok := worldgen.InfoForState(state); ok {
 			switch worldgen.GetProperty(info, state, "age") {
 			case "0":
-				h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "1"))
+				h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "1"))
 				return true
 			case "1":
-				h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "2"))
+				h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "age", "2"))
 				return true
 			}
 		}
@@ -103,7 +103,7 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 	}
 	// Sweet berry bush: advance one age stage, capped at 3.
 	if state >= berryBase && state < berryBase+3 {
-		h.setBlock(players, blockPos{x, y, z}, state+1)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 		return true
 	}
 	// Grass block: scatter short grass + flowers nearby (GrassBlock.performBonemeal).
@@ -131,7 +131,7 @@ func (h *hub) bonemealGrass(players map[int32]*tracked, dim, x, y, z int) bool {
 		if h.rng.Intn(10) == 0 { // ~10% a flower, like vanilla
 			block = bmFlowerBlocks[h.rng.Intn(len(bmFlowerBlocks))]
 		}
-		h.setBlock(players, blockPos{px, py, pz}, block)
+		h.setBlockAt(players, dim, blockPos{px, py, pz}, block)
 		placed = true
 	}
 	return placed

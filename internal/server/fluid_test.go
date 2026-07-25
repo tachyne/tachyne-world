@@ -19,7 +19,7 @@ func TestInfiniteWaterSource(t *testing.T) {
 		w.SetBlock(10, y, 0, src)
 		w.SetBlock(12, y, 0, src)
 		w.SetBlock(11, y, 0, worldgen.WaterBase+1) // flowing between two sources
-		h.processUpdate(h.playersRef, blockPos{11, y, 0})
+		h.processUpdate(h.playersRef, 0, blockPos{11, y, 0})
 		if got := w.Block(11, y, 0); got != src {
 			t.Errorf("middle cell = %d, want source %d (infinite water)", got-worldgen.WaterBase, 0)
 		}
@@ -35,7 +35,7 @@ func TestConcretePowderSolidifies(t *testing.T) {
 		w.SetBlock(20, y-1, 0, worldgen.Stone)
 		w.SetBlock(20, y, 0, powder)
 		w.SetBlock(21, y, 0, worldgen.WaterBase) // water beside it
-		h.processUpdate(h.playersRef, blockPos{20, y, 0})
+		h.processUpdate(h.playersRef, 0, blockPos{20, y, 0})
 		want := worldgen.ConcreteFor(powder)
 		if got := w.Block(20, y, 0); got != want {
 			t.Errorf("powder = %d, want concrete %d", got, want)
