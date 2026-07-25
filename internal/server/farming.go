@@ -18,14 +18,19 @@ import (
 // NetherWartBlock.
 
 var (
-	dirtBlock       = worldgen.BlockBase("dirt")
-	grassBlock      = worldgen.BlockBase("grass_block")
-	coarseDirtBlock = worldgen.BlockBase("coarse_dirt")
-	dirtPathBlock   = worldgen.BlockBase("dirt_path")
-	soulSandBlock   = worldgen.BlockBase("soul_sand")
+	dirtBlock  = worldgen.BlockBase("dirt")
+	grassBlock = worldgen.BlockBase("grass_block")
 
 	itemHangingRoots = itemByName["hanging_roots"]
 )
+
+// isBlock reports whether a state belongs to the named block, at ANY of its
+// states. Comparing against BlockBase alone is a trap: a grass block in the
+// world carries snowy=false and so is NOT its block's base state.
+func isBlock(state uint32, name string) bool {
+	lo, hi := worldgen.BlockRange(name)
+	return state >= lo && state <= hi
+}
 
 // tillResult is what a hoe turns a block into.
 //
@@ -38,13 +43,26 @@ type tillResult struct {
 	airAbove bool  // require a clear cell above and a face other than DOWN
 }
 
-// tillables mirrors HoeItem.TILLABLES.
-var tillables = map[uint32]tillResult{
-	grassBlock:      {into: farmlandMin, airAbove: true},
-	dirtPathBlock:   {into: farmlandMin, airAbove: true},
-	dirtBlock:       {into: farmlandMin, airAbove: true},
-	coarseDirtBlock: {into: dirtBlock, airAbove: true},
-	rootedDirtBlock: {into: dirtBlock, drop: itemHangingRoots},
+// tillables mirrors HoeItem.TILLABLES, expanded across every state of each
+// block. Vanilla keys TILLABLES by Block; state ids here are per-state, and
+// grass_block has a `snowy` property, so a base-state-only table would miss
+// ordinary grass — the most common thing anyone hoes.
+var tillables = buildTillables()
+
+func buildTillables() map[uint32]tillResult {
+	m := map[uint32]tillResult{}
+	add := func(name string, res tillResult) {
+		lo, hi := worldgen.BlockRange(name)
+		for st := lo; st <= hi; st++ {
+			m[st] = res
+		}
+	}
+	add("grass_block", tillResult{into: farmlandMin, airAbove: true})
+	add("dirt_path", tillResult{into: farmlandMin, airAbove: true})
+	add("dirt", tillResult{into: farmlandMin, airAbove: true})
+	add("coarse_dirt", tillResult{into: dirtBlock, airAbove: true})
+	add("rooted_dirt", tillResult{into: dirtBlock, drop: itemHangingRoots})
+	return m
 }
 
 // isHoe reports whether the item is one of the six hoes.
@@ -80,6 +98,62 @@ func (s *Server) tryTill(p *player, x, y, z int, dir int32, seq int32) bool {
 		s.hub.post(evPopItem{item: res.drop, count: 1, dim: p.dim,
 			x: float64(x) + 0.5, y: float64(y) + 0.5, z: float64(z) + 0.5})
 	}
+	if s.modes.get(p.name) == gmSurvival {
+		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+	}
+	return true
+}
+
+// flattenables mirrors ShovelItem.FLATTENABLES — a shovel turns these into a
+// dirt path. Expanded per state for the same reason as tillables (grass_block
+// carries `snowy`; podzol and mycelium likewise sit off their base state).
+//
+// Vanilla's ShovelItem.useOn also dowses a lit campfire; that is left to the
+// campfire code and is not part of this table.
+var flattenables = buildFlattenables()
+
+func buildFlattenables() map[uint32]uint32 {
+	m := map[uint32]uint32{}
+	path := worldgen.BlockBase("dirt_path")
+	for _, name := range []string{"grass_block", "dirt", "podzol", "coarse_dirt",
+		"mycelium", "rooted_dirt"} {
+		lo, hi := worldgen.BlockRange(name)
+		for st := lo; st <= hi; st++ {
+			m[st] = path
+		}
+	}
+	return m
+}
+
+// isShovel reports whether the item is one of the shovels. copper_shovel is
+// included because this engine's item table carries it.
+func isShovel(item int32) bool {
+	switch item {
+	case itemByName["wooden_shovel"], itemByName["stone_shovel"], itemByName["iron_shovel"],
+		itemByName["golden_shovel"], itemByName["diamond_shovel"], itemByName["netherite_shovel"],
+		itemByName["copper_shovel"]:
+		return true
+	}
+	return false
+}
+
+// tryFlatten handles a shovel used on a block, making a dirt path.
+//
+// ShovelItem.useOn returns PASS for the DOWN face before consulting the table,
+// and requires air above — unlike the hoe there is no per-entry exception, every
+// flattenable needs the clear cell.
+func (s *Server) tryFlatten(p *player, x, y, z int, dir int32, seq int32) bool {
+	if !isShovel(p.heldItem()) || dir == 0 {
+		return false
+	}
+	into, ok := flattenables[s.worldFor(p).Block(x, y, z)]
+	if !ok {
+		return false
+	}
+	if !worldgen.IsReplaceable(s.worldFor(p).At(x, y+1, z)) {
+		return false
+	}
+	s.putBlock(p, x, y, z, into, true, seq)
 	if s.modes.get(p.name) == gmSurvival {
 		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 	}
@@ -139,7 +213,7 @@ func isFarmland(state uint32) bool {
 func (s *Server) canPlantAt(p *player, c cropPlant, x, y, z int) bool {
 	below := s.worldFor(p).At(x, y-1, z)
 	if c.soulSand {
-		if below != soulSandBlock {
+		if !isBlock(below, "soul_sand") {
 			return false
 		}
 	} else if !isFarmland(below) {

@@ -189,6 +189,10 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if s.tryTill(p, x, y, z, dir, seq) {
 		return
 	}
+	// Likewise a shovel flattening ground into a dirt path (ShovelItem.useOn).
+	if s.tryFlatten(p, x, y, z, dir, seq) {
+		return
+	}
 
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz

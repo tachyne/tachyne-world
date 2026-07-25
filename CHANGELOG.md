@@ -29,6 +29,8 @@ the public history since the project was open-sourced on 2026-07-10.
   seeds, torchflower, and nether wart on soul sand. Previously neither worked,
   so a farm could only be laid out in creative by placing farmland and crop
   blocks directly.
+- **Shovels flatten ground into dirt paths** — grass, dirt, podzol, coarse dirt,
+  mycelium and rooted dirt.
 
 ### Fixed
 - **Recent building no longer goes missing from the 3D map.** The map read its
