@@ -270,7 +270,7 @@ func (f srvFacade) SpawnMob(dim, etype int, x, y, z float64, opts *plugin.SpawnO
 			h.applyBehavior(m, opts.Behavior)
 		}
 		if opts.MaxHealth > 0 {
-			m.maxHealth = opts.MaxHealth
+			m.setMaxHP(opts.MaxHealth)
 			m.health = opts.MaxHealth
 		}
 		if opts.Speed > 0 {
@@ -462,8 +462,8 @@ func (mh mobHandle) SetHealth(v int) {
 	if m == nil {
 		return
 	}
-	if v > m.maxHealth {
-		v = m.maxHealth
+	if v > m.maxHP() {
+		v = m.maxHP()
 	}
 	if v <= 0 {
 		mh.ph.h.killMob(mh.ph.h.playersRef, m)
@@ -474,7 +474,7 @@ func (mh mobHandle) SetHealth(v int) {
 
 func (mh mobHandle) MaxHealth() int {
 	if m := mh.m(); m != nil {
-		return m.maxHealth
+		return m.maxHP()
 	}
 	return 0
 }
@@ -484,7 +484,7 @@ func (mh mobHandle) SetMaxHealth(v int, heal bool) {
 	if m == nil || v <= 0 {
 		return
 	}
-	m.maxHealth = v
+	m.setMaxHP(v)
 	if heal || m.health > v {
 		m.health = v
 	}

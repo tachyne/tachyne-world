@@ -44,7 +44,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.health = sm.Health
 	}
 	if sm.Max > 0 {
-		m.maxHealth = sm.Max
+		m.setMaxHP(sm.Max)
 	}
 	m.dmgFrac = sm.DmgFrac
 	m.baby, m.growLeft = sm.Baby, sm.GrowLeft

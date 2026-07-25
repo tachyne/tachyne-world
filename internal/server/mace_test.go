@@ -15,7 +15,8 @@ func maceSetup(t *testing.T, ench [2]enchApply) (*hub, *tracked, *mob, map[int32
 	pl.peakY, pl.airborne, pl.sprinting = 92, true, true // fell 10 blocks; sprinting → no jump-crit
 	pl.p.setHotbarSlot(0, itemMace)
 	pl.inv.slots[0] = invStack{item: itemMace, count: 1, ench: ench}
-	m := &mob{eid: 9, etype: entityCow, health: 100, maxHealth: 100, x: 0.5, y: 80, z: 5.5}
+	m := &mob{eid: 9, etype: entityCow, health: 100, x: 0.5, y: 80, z: 5.5}
+	m.setMaxHP(100)
 	h.mobs[9] = m
 	return h, pl, m, map[int32]*tracked{1: pl}
 }
@@ -65,8 +66,10 @@ func TestMaceNotFallingIsPlainHit(t *testing.T) {
 }
 
 func TestMaceBreachPiercesArmor(t *testing.T) {
-	plain := &mob{armor: 8, health: 100, maxHealth: 100}
-	breached := &mob{armor: 8, health: 100, maxHealth: 100}
+	plain := &mob{armor: 8, health: 100}
+	breached := &mob{armor: 8, health: 100}
+	plain.setMaxHP(100)
+	breached.setMaxHP(100)
 	plain.hurtBreach(20, 0)
 	breached.hurtBreach(20, 0.30) // Breach II: −0.30 armour effectiveness
 	if breached.health >= plain.health {

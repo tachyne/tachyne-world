@@ -439,7 +439,7 @@ func (s *mobStore) flush() {
 func toSavedMob(m *mob) savedMob {
 	sm := savedMob{
 		Etype: m.etype, Dim: m.dim, X: m.x, Y: m.y, Z: m.z, Yaw: m.yaw,
-		Health: m.health, Max: m.maxHealth, DmgFrac: m.dmgFrac,
+		Health: m.health, Max: m.maxHP(), DmgFrac: m.dmgFrac,
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
 		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,

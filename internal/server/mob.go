@@ -139,16 +139,16 @@ type mob struct {
 	lastRestockTick uint64         // villager: tick of the last restock (2400-tick spacing gate)
 	gossip          map[string]int // villager: per-player TRADING reputation (in-session)
 	home            blockPos       // villager house / golem well — the anchor to drift back to
-	maxHealth       int            // effective MAX_HEALTH cap (species default; plugins may raise it)
-	ovrSpeed        float64        // >0: plugin speed override — survives behavior-driven speed resets
-	ovrDamage       float64        // >0: plugin melee-damage override (hostileMelee honors it)
-	uuid            [16]byte
-	x, y, z         float64
-	yaw             float32
-	syaw            float32 // last broadcast head yaw (only resend on change)
-	vx, vz          float64
-	vy              float64 // vertical velocity (swimmers/fliers only)
-	sx, sy, sz      float64 // last broadcast position (for delta moves)
+
+	ovrSpeed   float64 // >0: plugin speed override — survives behavior-driven speed resets
+	ovrDamage  float64 // >0: plugin melee-damage override (hostileMelee honors it)
+	uuid       [16]byte
+	x, y, z    float64
+	yaw        float32
+	syaw       float32 // last broadcast head yaw (only resend on change)
+	vx, vz     float64
+	vy         float64 // vertical velocity (swimmers/fliers only)
+	sx, sy, sz float64 // last broadcast position (for delta moves)
 }
 
 // spawnMob creates a server-controlled entity and shows it to nearby players.
@@ -179,7 +179,8 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), maxHealth: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m.setMaxHP(mobHealth(etype))
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
@@ -704,3 +705,11 @@ func (m *mob) followRange() float64 { return m.mobAttrs().Value(attr.FollowRange
 
 // setFollowRange sets the mob's base FOLLOW_RANGE.
 func (m *mob) setFollowRange(v float64) { m.mobAttrs().SetBase(attr.FollowRange, v) }
+
+// maxHP is the mob's MAX_HEALTH, as an int because health is tracked in whole
+// hit points. Backed by the attribute map, so a plugin raising it and a future
+// health-boost effect go through the same place.
+func (m *mob) maxHP() int { return int(m.mobAttrs().Value(attr.MaxHealth)) }
+
+// setMaxHP sets the base MAX_HEALTH.
+func (m *mob) setMaxHP(v int) { m.mobAttrs().SetBase(attr.MaxHealth, float64(v)) }

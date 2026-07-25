@@ -181,7 +181,8 @@ func busCmdSpawn(h *hub, args json.RawMessage) (any, string) {
 			h.applyBehavior(m, a.Behavior)
 		}
 		if a.MaxHealth > 0 {
-			m.maxHealth, m.health = a.MaxHealth, a.MaxHealth
+			m.setMaxHP(a.MaxHealth)
+			m.health = a.MaxHealth
 		}
 		if a.Speed > 0 {
 			m.ovrSpeed, m.speed = a.Speed, a.Speed
@@ -220,13 +221,13 @@ func busCmdMobSet(h *hub, args json.RawMessage) (any, string) {
 			return
 		}
 		if a.MaxHealth > 0 {
-			m.maxHealth = a.MaxHealth
+			m.setMaxHP(a.MaxHealth)
 			if m.health > a.MaxHealth {
 				m.health = a.MaxHealth
 			}
 		}
 		if a.Health > 0 {
-			m.health = min(a.Health, m.maxHealth)
+			m.health = min(a.Health, m.maxHP())
 		}
 		if a.Speed > 0 {
 			m.ovrSpeed, m.speed = a.Speed, a.Speed
@@ -291,7 +292,7 @@ func busQueryMobs(h *hub, args json.RawMessage) (any, string) {
 				continue
 			}
 			out = append(out, mrow{EID: eid, Type: entityNameByID[m.etype],
-				X: m.x, Y: m.y, Z: m.z, Dim: m.dim, Health: m.health, Max: m.maxHealth})
+				X: m.x, Y: m.y, Z: m.z, Dim: m.dim, Health: m.health, Max: m.maxHP()})
 		}
 	}) {
 		return nil, "hub busy"

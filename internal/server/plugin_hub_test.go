@@ -169,8 +169,8 @@ func TestPluginSpawnOverlayAndMobHandle(t *testing.T) {
 			t.Error("spawned mob not registered")
 			return
 		}
-		if m.maxHealth != 100 || m.health != 100 {
-			t.Errorf("overlay health: max=%d cur=%d, want 100/100", m.maxHealth, m.health)
+		if m.maxHP() != 100 || m.health != 100 {
+			t.Errorf("overlay health: max=%d cur=%d, want 100/100", m.maxHP(), m.health)
 		}
 		if got := hostileMelee(m); got != 25 {
 			t.Errorf("hostileMelee with override = %v, want 25", got)

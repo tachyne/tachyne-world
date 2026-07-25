@@ -93,3 +93,51 @@ func TestFollowRangeSurvivesMissingMap(t *testing.T) {
 		t.Errorf("after set %v, want 35", got)
 	}
 }
+
+// Max health moved onto the pipeline too. It is persisted and plugin-facing,
+// so these cover both round trips as well as the value itself.
+
+func TestMobMaxHealthMatchesSpecies(t *testing.T) {
+	h := newHub(world.New(1))
+	for _, etype := range []int{entityCow, entityZombie, entityCreeper, entityEnderman} {
+		m := h.spawnMobIn(nil, etype, 0, 0, 70, 0)
+		if m == nil {
+			t.Fatalf("etype %d: spawn returned nil", etype)
+		}
+		if want := mobHealth(etype); m.maxHP() != want {
+			t.Errorf("etype %d max health %d, want %d", etype, m.maxHP(), want)
+		}
+		if m.health != m.maxHP() {
+			t.Errorf("etype %d spawned at %d/%d, want full", etype, m.health, m.maxHP())
+		}
+	}
+}
+
+// A plugin raising max health goes through the attribute, and the value
+// survives a save/reload round trip.
+func TestMaxHealthOverrideSurvivesReload(t *testing.T) {
+	h := newHub(world.New(1))
+	m := h.spawnMobIn(nil, entityCow, 0, 0, 70, 0)
+	if m == nil {
+		t.Fatal("spawn returned nil")
+	}
+	m.setMaxHP(100)
+	if m.maxHP() != 100 {
+		t.Fatalf("max health %d after override, want 100", m.maxHP())
+	}
+
+	// Round trip through the persisted row: the raised value must come back,
+	// since the attribute is now the store rather than a plain field.
+	sm := toSavedMob(m)
+	if sm.Max != 100 {
+		t.Fatalf("saved row carries max %d, want 100", sm.Max)
+	}
+	h2 := newHub(world.New(1))
+	back := h2.reloadMob(nil, &sm)
+	if back == nil {
+		t.Fatal("reload returned nil")
+	}
+	if back.maxHP() != 100 {
+		t.Errorf("reloaded max health %d, want the saved 100", back.maxHP())
+	}
+}

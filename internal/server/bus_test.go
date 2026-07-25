@@ -90,7 +90,7 @@ func TestBusCommands(t *testing.T) {
 	var maxHP int
 	h.runOnHub(func() {
 		if m := h.mobs[eid]; m != nil {
-			dmg, maxHP = hostileMelee(m), m.maxHealth
+			dmg, maxHP = hostileMelee(m), m.maxHP()
 		}
 	})
 	if dmg != 21 || maxHP != 60 {
