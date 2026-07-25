@@ -11,7 +11,7 @@ func TestMobEquipment(t *testing.T) {
 	players := map[int32]*tracked{}
 	z := h.spawnHostile(players, entityZombie, 0, 0)
 	z.x, z.y, z.z = 0.5, 64, 0.5
-	baseArmor := z.armor
+	baseArmor := z.armorValue()
 	sword := int32(itemByName["iron_sword"])
 	helm := int32(itemByName["iron_helmet"])
 	leather := int32(itemByName["leather_helmet"])
@@ -28,8 +28,8 @@ func TestMobEquipment(t *testing.T) {
 	if !h.mobEquipItem(players, z, helm) || z.gear[0].item != helm {
 		t.Fatal("mob did not wear the helmet")
 	}
-	if z.armor <= baseArmor {
-		t.Errorf("armour attribute %.1f not raised from %.1f", z.armor, baseArmor)
+	if z.armorValue() <= baseArmor {
+		t.Errorf("armour attribute %.1f not raised from %.1f", z.armorValue(), baseArmor)
 	}
 
 	// A worse helmet is refused.

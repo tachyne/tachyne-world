@@ -423,7 +423,7 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if etype == entityZombie {
 			m.setFollowRange(35) // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
-			m.armor = 2          // Zombie base ARMOR attribute (vanilla 1.21.5)
+			m.setBaseArmor(2)    // Zombie base ARMOR attribute (vanilla 1.21.5)
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
 		}

@@ -388,7 +388,8 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d == nil {
 		return
 	}
-	m.armor, m.noKB, m.hover = d.armor, d.noKB, d.hover
+	m.noKB, m.hover = d.noKB, d.hover
+	m.setBaseArmor(d.armor)
 	if d.follow > 0 {
 		m.setFollowRange(d.follow)
 	}

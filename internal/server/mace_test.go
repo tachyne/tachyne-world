@@ -66,8 +66,9 @@ func TestMaceNotFallingIsPlainHit(t *testing.T) {
 }
 
 func TestMaceBreachPiercesArmor(t *testing.T) {
-	plain := &mob{armor: 8, health: 100}
-	breached := &mob{armor: 8, health: 100}
+	plain, breached := &mob{health: 100}, &mob{health: 100}
+	plain.setBaseArmor(8)
+	breached.setBaseArmor(8)
 	plain.setMaxHP(100)
 	breached.setMaxHP(100)
 	plain.hurtBreach(20, 0)

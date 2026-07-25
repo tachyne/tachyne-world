@@ -58,7 +58,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	case entityHusk: // desert zombie: immune to daylight
 		m.burns = false
 		m.setFollowRange(35) // zombie-family FOLLOW_RANGE (vanilla 1.21.5)
-		m.armor = 2          // zombie-family base ARMOR
+		m.setBaseArmor(2)    // zombie-family base ARMOR
 		m.reinf = h.rollReinforcements()
 		h.rollZombieBaby(players, m)
 	case entityStray, entityDrowned: // cold skeleton / wet zombie: burn like their cousins
@@ -69,7 +69,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 			h.toNearbyEv(players, m.dim, m.x, m.z, skeletonEquip(m.eid))
 		} else {
 			m.setFollowRange(35) // drowned are zombies too
-			m.armor = 2
+			m.setBaseArmor(2)
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
 			if !m.baby && h.rng.Float64() < 0.15 { // vanilla: some drowned carry a trident

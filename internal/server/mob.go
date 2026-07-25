@@ -125,7 +125,6 @@ type mob struct {
 	ty              float64        // hunted target's feet height (fliers dive to it)
 	speed           float64        // per-step movement cap (grazers slow, hunters faster)
 	attrs           *attribute.Map // entity attributes (follow range, and more as readers migrate)
-	armor           float64        // base ARMOR attribute (zombie family 2.0; most mobs 0)
 	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int            // mob-updates left before this mob can melee again
 	hasTarget       bool           // a player is within aggro range this update
@@ -499,8 +498,8 @@ func (m *mob) hurtBreach(dmg, breachFrac float64) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
-	if m.armor > 0 {
-		reduced := math.Min(20, math.Max(m.armor-dmg/2, m.armor*0.2))
+	if armor := m.armorValue(); armor > 0 {
+		reduced := math.Min(20, math.Max(armor-dmg/2, armor*0.2))
 		frac := reduced / 25
 		if breachFrac > 0 {
 			frac = math.Max(0, frac-breachFrac) // Breach lets the hit ignore some armor
@@ -713,3 +712,33 @@ func (m *mob) maxHP() int { return int(m.mobAttrs().Value(attr.MaxHealth)) }
 
 // setMaxHP sets the base MAX_HEALTH.
 func (m *mob) setMaxHP(v int) { m.mobAttrs().SetBase(attr.MaxHealth, float64(v)) }
+
+// gearArmorSource is the modifier a mob's worn armour contributes to ARMOR.
+// Vanilla does the same thing — equipment is a modifier, not a change to the
+// base — which is what lets the piece be taken off again without arithmetic.
+const gearArmorSource = "equipment:armor"
+
+// armorValue is the mob's ARMOR: its species base plus whatever it is wearing.
+func (m *mob) armorValue() float64 { return m.mobAttrs().Value(attr.Armor) }
+
+// setBaseArmor sets the species' own ARMOR, below any worn piece.
+func (m *mob) setBaseArmor(v float64) { m.mobAttrs().SetBase(attr.Armor, v) }
+
+// refreshGearArmor re-derives the worn-armour modifier from what the mob is
+// actually holding in its gear slots. Recomputing beats adding a delta at each
+// equip: a reloaded mob comes back wearing its saved gear with no equip event
+// to replay, and used to lose the protection entirely.
+func (m *mob) refreshGearArmor() {
+	pts := 0
+	for _, g := range m.gear {
+		if g.item != 0 {
+			pts += armorInfo[g.item].Points
+		}
+	}
+	in := m.mobAttrs().Get(attr.Armor)
+	if pts == 0 {
+		in.RemoveModifier(gearArmorSource)
+		return
+	}
+	in.AddModifier(attr.Modifier{Source: gearArmorSource, Amount: float64(pts), Op: attr.AddValue})
+}

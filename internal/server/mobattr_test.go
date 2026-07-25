@@ -141,3 +141,85 @@ func TestMaxHealthOverrideSurvivesReload(t *testing.T) {
 		t.Errorf("reloaded max health %d, want the saved 100", back.maxHP())
 	}
 }
+
+// ARMOR is the first stat with two contributors: a species base and worn gear
+// on top of it, which is what the modifier layer is for.
+
+func TestZombieFamilyKeepsItsBaseArmor(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for _, etype := range []int{entityZombie, entityHusk, entityDrowned} {
+		m := h.spawnHostile(players, etype, 0, 0)
+		if m == nil {
+			t.Fatalf("etype %d: spawn returned nil", etype)
+		}
+		if got := m.armorValue(); !closeTo(got, 2) {
+			t.Errorf("etype %d armour %v, want the zombie-family base 2", etype, got)
+		}
+	}
+	// A mob with no armour of its own reads 0, not the registry's own default.
+	c := h.spawnMobIn(nil, entityCow, 0, 0, 70, 0)
+	if c == nil {
+		t.Fatal("cow spawn returned nil")
+	}
+	if got := c.armorValue(); !closeTo(got, 0) {
+		t.Errorf("cow armour %v, want 0", got)
+	}
+}
+
+// Worn gear adds to the base, and taking the piece off leaves the base intact —
+// the delta-arithmetic version could only ever add.
+func TestGearArmorLayersOnTheBase(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	z := h.spawnHostile(players, entityZombie, 0, 0)
+	if z == nil {
+		t.Fatal("spawn returned nil")
+	}
+	base := z.armorValue()
+
+	helm := int32(itemByName["iron_helmet"])
+	pts := float64(armorInfo[helm].Points)
+	if pts <= 0 {
+		t.Fatalf("iron helmet has no armour points (%v) — the fixture is wrong", pts)
+	}
+	z.gear[0] = invStack{item: helm, count: 1}
+	z.refreshGearArmor()
+	if got := z.armorValue(); !closeTo(got, base+pts) {
+		t.Errorf("armour %v with a helmet on, want %v", got, base+pts)
+	}
+
+	z.gear[0] = invStack{}
+	z.refreshGearArmor()
+	if got := z.armorValue(); !closeTo(got, base) {
+		t.Errorf("armour %v with the helmet off, want the base %v", got, base)
+	}
+}
+
+// Gear is persisted but the armour bonus was not, so a restart used to leave
+// an armoured mob wearing a helmet that protected it from nothing.
+func TestReloadedGearStillProtects(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	z := h.spawnHostile(players, entityZombie, 0, 0)
+	if z == nil {
+		t.Fatal("spawn returned nil")
+	}
+	helm := int32(itemByName["iron_helmet"])
+	z.gear[0] = invStack{item: helm, count: 1}
+	z.refreshGearArmor()
+	want := z.armorValue()
+
+	sm := toSavedMob(z)
+	h2 := newHub(world.New(1))
+	back := h2.reloadMob(players, &sm)
+	if back == nil {
+		t.Fatal("reload returned nil")
+	}
+	if back.gear[0].item != helm {
+		t.Fatalf("reloaded gear slot holds %d, want the helmet %d", back.gear[0].item, helm)
+	}
+	if got := back.armorValue(); !closeTo(got, want) {
+		t.Errorf("reloaded armour %v, want %v — the saved helmet must still count", got, want)
+	}
+}

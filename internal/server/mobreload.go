@@ -60,6 +60,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	for i := range m.gear {
 		m.gear[i] = unpackStack(sm.Gear[i])
 	}
+	m.refreshGearArmor() // saved gear protects again after a restart — it used not to
 	m.saddled = sm.Saddled
 	m.saddleSt, m.armorSt = unpackStack(sm.SaddleSt), unpackStack(sm.ArmorSt)
 	m.chested, m.strength = sm.Chested, sm.Strength

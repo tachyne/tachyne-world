@@ -99,6 +99,9 @@ func (h *hub) applyMigration(players map[int32]*tracked, from int32, me handover
 			uuid: ms.UUID,
 		}
 		m.behavior = migratedBehavior(m)
+		// Attributes don't ride the handover wire yet, so re-seed the species
+		// max health rather than letting the registry default stand in.
+		m.setMaxHP(mobHealth(m.etype))
 		h.mobs[eid] = m
 		h.toNearbyEv(players, m.dim, m.x, m.z, entAdd(eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
 		// No ack: mob migration is fire-and-forget (a remove+add flicker is fine).

@@ -55,7 +55,8 @@ func TestZombieBitesIdlePlayer(t *testing.T) {
 // dies on the FIFTH hit, not the fourth — the fractional carry is what makes
 // integer HP reproduce vanilla hits-to-kill.
 func TestZombieArmorHitsToKill(t *testing.T) {
-	m := &mob{health: 20, armor: 2}
+	m := &mob{health: 20}
+	m.setBaseArmor(2)
 	for i := 1; i <= 4; i++ {
 		m.hurt(5)
 		if m.health <= 0 {

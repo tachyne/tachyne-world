@@ -71,7 +71,7 @@ func (h *hub) mobEquipItem(players map[int32]*tracked, m *mob, item int32) bool 
 			h.spawnItem(players, cur.item, 1, m.x, m.y, m.z) // shed the old piece
 		}
 		m.gear[ap.Slot] = invStack{item: item, count: 1}
-		m.armor += float64(ap.Points - oldPts) // worn armour feeds the ARMOR attribute (m.hurt)
+		m.refreshGearArmor() // worn armour is a modifier on ARMOR, re-derived from the slots
 		return true
 	}
 	if d, ok := meleeDamage[item]; ok { // a weapon/tool
