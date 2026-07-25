@@ -166,6 +166,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickWart(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickThaw(players, dim, x, y, z, state) {
+		return
+	}
 	switch {
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
@@ -258,6 +261,41 @@ func (h *hub) cropGrowthSpeed(dim, x, y, z int, r [2]uint32) float64 {
 func (h *hub) plantBrightness(dim, x, y, z, darken int) int {
 	sky, block := h.worldFor(dim).LightAt(x, y, z)
 	return h.rawBrightness(sky, block, darken)
+}
+
+// blockLight is getBrightness(LightLayer.BLOCK, pos) — the artificial light
+// alone, ignoring sky. Melting and freezing both use it rather than the
+// combined brightness, which is why daylight never melts ice but a torch does.
+func (h *hub) blockLight(dim, x, y, z int) int {
+	_, block := h.worldFor(dim).LightAt(x, y, z)
+	return int(block)
+}
+
+// tickThaw ports IceBlock.randomTick and SnowLayerBlock.randomTick: both melt
+// when the BLOCK light exceeds 11. Ice becomes water, except where water
+// evaporates (the Nether), where it simply goes.
+func (h *hub) tickThaw(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	isIce := state == iceBlock
+	isSnow := state >= snowLayer1 && state <= snowLayer1+7
+	if !isIce && !isSnow {
+		return false
+	}
+	if h.blockLight(dim, x, y, z) <= 11 {
+		return true
+	}
+	if isSnow {
+		// dropResources: one snowball per layer, then the block goes.
+		h.spawnBlockDrop(players, itemByName["snowball"], int(state-snowLayer1)+1, x, y, z)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+		return true
+	}
+	melted := worldgen.WaterBase
+	if dim != 0 { // water evaporates in the Nether; the End has no water either
+		melted = worldgen.Air
+	}
+	h.setBlockAt(players, dim, blockPos{x, y, z}, melted)
+	h.scheduleAroundIn(dim, blockPos{x, y, z}, waterDelay)
+	return true
 }
 
 // cropGrows rolls the vanilla growth gate: random.nextInt((int)(25/speed)+1)==0.
@@ -569,8 +607,13 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 		return // sheltered columns don't freeze or accumulate
 	}
 	// Freeze: an exposed water SOURCE with a non-water edge neighbour becomes
-	// ice (vanilla freezes edges first, so open water stays liquid).
+	// ice (vanilla freezes edges first, so open water stays liquid). Biome
+	// .shouldFreeze also needs block light < 10, so a torch beside a pond keeps
+	// it liquid — that gate was missing.
 	if top == worldgen.WaterBase {
+		if h.blockLight(dim, x, topY, z) >= 10 {
+			return
+		}
 		edge := false
 		for _, d := range horizNeighbors {
 			if !worldgen.IsWater(h.worldFor(dim).At(x+d.x, topY, z+d.z)) {

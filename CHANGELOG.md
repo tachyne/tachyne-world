@@ -40,6 +40,11 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Ice and snow melt.** Neither ever did, so a torch beside a frozen pond or
+  a lit path through snow changed nothing and cold biomes stayed exactly as
+  generated. Melting follows the block light only, as in vanilla — daylight
+  will not thaw a lake, but a torch will, and snow melting drops snowballs.
+  Freezing now also stops near a light source, which it previously ignored.
 - **Plants grow by light level, not by open sky.** Crops, stems, saplings and
   berry bushes used to need an unobstructed view of the sky, so torch-lit
   indoor and underground farms never grew. They now use brightness, as vanilla
