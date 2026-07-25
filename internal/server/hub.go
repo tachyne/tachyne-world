@@ -114,6 +114,15 @@ type evDrop struct { // a destroyed block's loot — roll its drop table and spa
 	held    uint16 // item id used to break it (0 = hand); gates tool-required drops
 	by      int32  // breaker's entity id (0 = the world itself) — pays mining XP
 }
+type evPopItem struct { // pop a SPECIFIC item into the world (not a loot roll)
+	item    int32
+	count   int
+	dim     int
+	x, y, z float64
+}
+
+func (evPopItem) isHubEvent() {}
+
 type evRespawn struct{ eid int32 } // player clicked Respawn after dying
 type evUseMap struct{ eid int32 }  // player right-clicked an empty map
 type evEat struct {
@@ -1062,6 +1071,8 @@ func (h *hub) run() {
 						h.applyEffect(players, t, e.id, e.amp, e.secs)
 					}
 				}
+			case evPopItem:
+				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:
 				for _, t := range players {
 					if t.p.name == e.target {

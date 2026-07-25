@@ -22,6 +22,14 @@ the public history since the project was open-sourced on 2026-07-10.
   colour and a live count, and clicking one toggles that layer. Name labels are
   also smaller than before, so they cover less of what a player is building.
 
+### Added
+- **Farming by hand.** A hoe now tills dirt, grass and dirt paths into farmland
+  (and coarse dirt into dirt, rooted dirt into dirt plus hanging roots), and
+  seeds can be planted: wheat, carrots, potatoes, beetroot, melon and pumpkin
+  seeds, torchflower, and nether wart on soul sand. Previously neither worked,
+  so a farm could only be laid out in creative by placing farmland and crop
+  blocks directly.
+
 ### Fixed
 - **Recent building no longer goes missing from the 3D map.** The map read its
   copy of the world before it started listening for changes, so anything built

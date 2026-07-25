@@ -183,6 +183,13 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 
+	// A hoe on tillable ground tills it instead of placing anything. Vanilla
+	// runs HoeItem.useOn before BlockItem placement, and a hoe has no block to
+	// place, so this has to come before the item->block lookup below.
+	if s.tryTill(p, x, y, z, dir, seq) {
+		return
+	}
+
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz
 	if cs := s.worldFor(p).Block(x, y, z); worldgen.IsReplaceable(cs) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
@@ -254,6 +261,15 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	defState, ok := protocol.BlockForItem(p.heldItem())
 	if p.heldItem() == int32(itemString) { // string laid on a surface becomes tripwire
 		defState, ok = tripwireDefaultState(), true
+	}
+	if !ok { // planting items are named differently from their block — see farming.go
+		if c, isSeed := cropForSeed(p.heldItem()); isSeed {
+			if !s.canPlantAt(p, c, tx, ty, tz) {
+				s.abortPlace(p, tx, ty, tz, seq)
+				return
+			}
+			defState, ok = c.block, true
+		}
 	}
 	if !ok || p.heldItem() == 0 {
 		// Nothing placeable in hand — clear any client-side ghost and ack.
