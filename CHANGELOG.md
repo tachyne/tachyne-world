@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Attributes are now a real system**, with a public `plugin/attribute`
+  package plugins can compile against: entity stats have base values and
+  modifiers that stack the way vanilla's do, instead of being fixed numbers
+  scattered through the engine. Nothing reads it yet — this is the groundwork
+  that lets equipment, potions and enchantments actually change a stat.
 - **Farming by hand.** A hoe now tills dirt, grass and dirt paths into farmland
   (and coarse dirt into dirt, rooted dirt into dirt plus hanging roots), and
   seeds can be planted: wheat, carrots, potatoes, beetroot, melon and pumpkin
