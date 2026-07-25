@@ -17,8 +17,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Attributes are now a real system**, with a public `plugin/attribute`
   package plugins can compile against: entity stats have base values and
   modifiers that stack the way vanilla's do, instead of being fixed numbers
-  scattered through the engine. Nothing reads it yet — this is the groundwork
-  that lets equipment, potions and enchantments actually change a stat.
+  scattered through the engine. Health, movement speed, armour, armour
+  toughness, attack damage, follow range and knockback resistance all run
+  through it now, for players as well as mobs — so equipment, potions and
+  enchantments finally have somewhere to change a stat.
 - **Farming by hand.** A hoe now tills dirt, grass and dirt paths into farmland
   (and coarse dirt into dirt, rooted dirt into dirt plus hanging roots), and
   seeds can be planted: wheat, carrots, potatoes, beetroot, melon and pumpkin
@@ -45,6 +47,22 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Slimes and magma cubes get their size right.** Both now take their health,
+  pace, damage and armour from their size the way vanilla does: a magma cube
+  used to move at the same speed whether it was tiny or huge, carried no armour
+  at all, and hit for two less than it should, and neither species' health
+  ceiling followed its size. A tiny slime is harmless, as in vanilla, while a
+  tiny magma cube still bites.
+- **Knockback resistance is a fraction rather than all-or-nothing.** Ravagers,
+  hoglins, zoglins and the nautilus family resist part of a shove instead of
+  none of it, and the wither can be knocked back again — vanilla never made it
+  immune.
+- **Armour a mob is wearing still protects it after a restart.** The gear was
+  saved but the protection it gave was not, so a helmeted zombie came back
+  wearing a helmet that did nothing.
+- **Baby zombies keep their speed.** They move at 1.5x like vanilla's, and stay
+  that way through a restart or a change of behaviour — both of which used to
+  quietly reset them to adult pace.
 - **Mangrove propagules ripen and grow.** They age while hanging under
   mangrove leaves and, once planted, grow a mangrove tree — completing the set,
   so every tree species in the game can now be grown from what it drops.
