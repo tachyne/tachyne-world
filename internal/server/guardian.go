@@ -5,7 +5,7 @@ import "math"
 // Guardian + Elder Guardian behaviour, ported from Guardian.GuardianAttackGoal
 // and ElderGuardian: the beam attack (charge then indirect-magic damage that
 // pierces armour, plus the melee) and the elder's periodic Mining Fatigue curse.
-// Numbers are taken from the decompiled 26.2 source.
+// Numbers match vanilla 26.2 behaviour.
 
 const (
 	effMiningFatigue = 3 // mob_effect id

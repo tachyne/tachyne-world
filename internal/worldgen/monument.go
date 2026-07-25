@@ -3,7 +3,7 @@ package worldgen
 // Ocean monument — a faithful port of vanilla OceanMonumentPieces.MonumentBuilding
 // (the 58×58×23 prismarine temple). The shell — the two wings, entrance archways,
 // entrance wall, roof, and the lower/middle/upper interior walls — is transcribed
-// block-for-block from the decompiled coordinates, as is the 7×7 foundation grid
+// block-for-block from the vanilla coordinates, as is the 7×7 foundation grid
 // (rooted to the seafloor) and the surrounding water moat. The interior room
 // detail-maze (RoomDefinition graph) is not reproduced; instead the gold-block
 // treasure is placed hidden in the core, and the elder guardians + patrolling

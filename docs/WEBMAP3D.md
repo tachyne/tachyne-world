@@ -58,7 +58,7 @@ in-memory world**, and `daemons/webmap3d` serves them. This:
 
 ## Licensing
 
-- **BlueMap is MIT** — the opposite of the Mojang decompile. We may read *and*
+- **BlueMap is MIT** — unlike Mojang's own code, we may read *and*
   port its code; the only obligation is preserving BlueColored's copyright +
   MIT notice for any derived portions (a `NOTICE` / `THIRD-PARTY-LICENSES`
   entry). MIT → Apache-2.0 (tachyne's license) is a clean permissive combo.

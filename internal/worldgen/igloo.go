@@ -4,7 +4,7 @@ import "strings"
 
 // Igloos — the first structure placed from REAL vanilla NBT templates
 // (igloo/top + optional basement via igloo/bottom & igloo/middle ladder). The
-// assembly offsets and odds are the decompiled IglooPieces values, so the room
+// assembly offsets and odds match the vanilla generator's values, so the room
 // is byte-for-byte the vanilla layout. Rotation is fixed at 0 for now (pivot-
 // based multi-piece rotation lands with the jigsaw work).
 
