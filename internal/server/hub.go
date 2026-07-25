@@ -13,6 +13,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/handover"
 	"github.com/tachyne/tachyne-common/shard"
+	"github.com/tachyne/tachyne-world/internal/attribute"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
@@ -252,6 +253,7 @@ type tracked struct {
 	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
+	attrs       *attribute.Map // entity attributes (max health, and more as readers migrate)
 	health      float32
 	absorption  float32 // extra damage buffer from the Absorption effect (soaked first)
 	food        int
@@ -1606,7 +1608,7 @@ func (h *hub) run() {
 // onJoin registers the newcomer and exchanges spawn packets with everyone else:
 // the newcomer learns of every existing player and vice-versa.
 func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
-	nt := &tracked{p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
+	nt := &tracked{attrs: newPlayerAttributes(), p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
 	if e.resume != nil {
 		// A migrated player: the handover snapshot is the source of truth (health,
 		// food, effects, inventory, xp) — not a fresh spawn or the on-disk store.

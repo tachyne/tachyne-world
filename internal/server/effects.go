@@ -80,7 +80,7 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	switch id {
 	case effInstantHealth:
 		heal := float32(4 * (int(1) << amp))
-		t.health = float32(math.Min(maxHealth, float64(t.health+heal)))
+		t.health = float32(math.Min(float64(t.maxHP()), float64(t.health+heal)))
 		h.sendHealth(t)
 		return
 	case effInstantDamage:
@@ -130,8 +130,8 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 			switch id {
 			case effRegen:
 				// RegenerationMobEffect: heal 1 HP every 50>>amp ticks.
-				if applyEffectTickNow(e.left, 50, e.amp) && t.health < maxHealth {
-					t.health = float32(math.Min(maxHealth, float64(t.health)+1))
+				if applyEffectTickNow(e.left, 50, e.amp) && t.health < t.maxHP() {
+					t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+1))
 					h.sendHealth(t)
 				}
 			case effPoison:

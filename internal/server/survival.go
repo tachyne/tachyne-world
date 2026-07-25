@@ -48,7 +48,7 @@ const (
 
 // initSurvival sets a freshly tracked player to full health/food.
 func initSurvival(t *tracked) {
-	t.health = maxHealth
+	t.health = t.maxHP()
 	t.absorption = 0
 	t.food = maxFood
 	t.saturation = 5
@@ -76,11 +76,11 @@ func (h *hub) fastRegen(players map[int32]*tracked) {
 		if !h.rules.NaturalRegen {
 			continue // gamerule naturalRegeneration=false: only potions heal
 		}
-		if t.food == maxFood && t.saturation > 0 && t.health < maxHealth {
+		if t.food == maxFood && t.saturation > 0 && t.health < t.maxHP() {
 			f := float32(math.Min(float64(t.saturation), 6))
 			heal := f / 6
-			if t.health+heal > maxHealth {
-				heal = maxHealth - t.health
+			if t.health+heal > t.maxHP() {
+				heal = t.maxHP() - t.health
 			}
 			t.health += heal
 			t.exhaustion += f
@@ -123,8 +123,8 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 		// saturation regen is active (full food + sat left) — the final oracle
 		// fight caught us healing 1.5 HP in one tick by running both.
 		fastActive := t.food == maxFood && t.saturation > 0
-		if slow && !fastActive && h.rules.NaturalRegen && t.food >= regenFood && t.health < maxHealth && t.health > 0 {
-			t.health = float32(math.Min(maxHealth, float64(t.health)+1))
+		if slow && !fastActive && h.rules.NaturalRegen && t.food >= regenFood && t.health < t.maxHP() && t.health > 0 {
+			t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+1))
 			t.exhaustion += regenExhaustion // vanilla: 6.0 exhaustion per HP healed
 			changed = true
 		}

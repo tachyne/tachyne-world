@@ -67,7 +67,7 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 		if e.secs == 0 { // instant (Healing): magnitude scales with proximity
 			if e.id == effInstantHealth {
 				heal := float32(prox) * 4 * float32(int(1)<<e.amp)
-				t.health = float32(math.Min(maxHealth, float64(t.health)+float64(heal)))
+				t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+float64(heal)))
 				h.sendHealth(t)
 			} else {
 				h.applyEffect(players, t, e.id, e.amp, 0)
