@@ -265,23 +265,16 @@ The first daemon in the tree is **`daemons/webmap`**: a live web map
 time in the corner) at `:8100`. It's the template — state primed by
 queries, kept fresh by events, zero engine involvement.
 
-**`daemons/bluemap`** goes further: a full **3D web map** rendered by
-[BlueMap](https://bluemap.bluecolored.de/). tachyne's world format isn't
-vanilla's, so the daemon bridges: it exports the world to the vanilla
-Anvil save format on a timer (`internal/anvil` — the full reverse
-block-state table, real sky/block light, incremental per-chunk timestamps
-so only changed chunks re-render), provisions the BlueMap CLI (downloads
-the release jar, and a Temurin JRE if no Java 25+ is on the host),
-supervises its render+watch+webserver process, and writes live player
-markers from bus queries into BlueMap's live-data endpoint. Unlike pure
-bus daemons it must see the server's world files (`-world`, plus the
-seed via `-seed`); it also needs `-accept-download` — BlueMap renders
-with Mojang's own textures and the operator must accept Mojang's EULA
-for that download. Every flag has an env fallback (`BLUEMAP_WORLD`,
-`TACHYNE_SEED`, `BLUEMAP_ADDR` `:8124`, `BLUEMAP_RADIUS`,
-`BLUEMAP_INTERVAL`, `BLUEMAP_ACCEPT_DOWNLOAD`, …) so a manager pod can
-configure it fleet-wide. The same exporter is available standalone as
-`cmd/anvil-export` for one-off conversions.
+For a full **3D web map**, the bus is consumed from outside the daemon tier
+entirely: [tachyne-map](https://github.com/tachyne/tachyne-map) is its own
+pod that renders the world natively in Go — vanilla block models and
+textures, face culling, baked light and biome tint — with no Java and no
+intermediate save format. It reads the world read-only through the public
+`worldread` package, asks the engine for its seed over this bus, and follows
+`mc.event.block_change` so the map updates live. (It replaced a
+BlueMap-based daemon that exported to the vanilla Anvil format and drove a
+JVM renderer; that exporter survives standalone as `cmd/anvil-export` if you
+want your world as a vanilla Minecraft save.)
 
 Pick the tier by what the plugin does: daemons for everything that
 observes and commands (maps, bridges, economies, bots); compiled-in

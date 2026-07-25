@@ -1,6 +1,6 @@
 // anvil-export writes a tachyne world out in the vanilla Anvil save format
-// (level.dat + region/*.mca) so vanilla-world tooling — most usefully the
-// BlueMap 3D web-map renderer — can consume it.
+// (level.dat + region/*.mca) so vanilla-world tooling — or a vanilla client
+// — can consume it.
 //
 // The engine's world is a pure function of (seed, edits), so the exporter
 // needs only the seed the server runs with and its edit files (world.gob,
@@ -10,7 +10,7 @@
 //	    -radius 32 -dims overworld,nether,end
 //
 // Exports the radius window around -center plus every chunk a player has
-// touched. Point BlueMap's map config at the -out folder.
+// touched. Point any vanilla-save tooling at the -out folder.
 package main
 
 import (

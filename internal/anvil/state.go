@@ -7,7 +7,7 @@ import (
 
 // ExportState remembers, per chunk, a content hash and the timestamp it was
 // last written with, so repeated exports keep old region-header timestamps
-// for unchanged chunks — renderers watching the save (BlueMap -u) then only
+// for unchanged chunks — tooling watching the save then only
 // re-render what actually changed. Keys are "<subdir>:<cx>,<cz>".
 type ExportState struct {
 	Hash  map[string]uint64 `json:"hash"`

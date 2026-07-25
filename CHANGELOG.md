@@ -11,6 +11,22 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-07-25
+
+### Added
+- The 3D map now shows **what players have built** (not just generated
+  terrain), updates **live** as blocks change, and draws **player and mob
+  markers**. It also covers far more ground at once: skipping the cave walls
+  and deep strata that can't be seen from above cut a chunk's geometry by ~3x
+  and its render time by ~16x, which bought a much larger visible area.
+
+### Removed
+- **BlueMap and the last JVM.** The Java 3D-map renderer, its bundled runtime,
+  and the daemon that exported the world to the vanilla Anvil format to feed it
+  are all gone — `tachyne-map` renders natively in Go. tachyne now runs with no
+  Java anywhere. `cmd/anvil-export` remains as a standalone tool for exporting
+  a tachyne world as a vanilla Minecraft save.
+
 ## 2026-07-24
 
 ### Added

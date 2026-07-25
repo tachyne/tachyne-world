@@ -1,6 +1,6 @@
 // Package anvil writes tachyne worlds out in the vanilla Anvil save format
 // (region .mca files + level.dat), so external tools that read vanilla
-// worlds — map renderers like BlueMap, most notably — can consume them.
+// worlds — vanilla clients and map renderers — can consume them.
 //
 // This is DISK NBT (every tag is named, the root compound carries a name),
 // not the nameless-root network NBT the wire layer speaks; the two formats
