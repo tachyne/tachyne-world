@@ -23,6 +23,11 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Recent building no longer goes missing from the 3D map.** The map read its
+  copy of the world before it started listening for changes, so anything built
+  in the half-minute before it started was in neither — and stayed missing
+  until it next restarted. It now subscribes first and asks the engine to flush
+  the world to disk before reading it, so a restart can't lose work.
 - **Placing or breaking a block no longer makes the area around you blink on
   the 3D map.** The affected terrain used to vanish while its replacement was
   fetched; it now stays on screen until the new geometry is ready, so only the
