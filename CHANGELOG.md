@@ -18,8 +18,9 @@ the public history since the project was open-sourced on 2026-07-10.
   mipmapped, so terrain far from the camera resolves cleanly instead of
   shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
 - **Map markers can be shown and hidden individually.** A panel in the corner
-  of the map lists players and each mob category with its colour and a live
-  count, and clicking one toggles that layer.
+  of the map lists players, player name labels, and each mob category with its
+  colour and a live count, and clicking one toggles that layer. Name labels are
+  also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
 - **Placing or breaking a block no longer makes the area around you blink on
