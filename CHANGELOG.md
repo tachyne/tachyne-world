@@ -40,6 +40,9 @@ the public history since the project was open-sourced on 2026-07-10.
   also smaller than before, so they cover less of what a player is building.
 
 ### Fixed
+- **Kelp and vines grow.** Kelp climbs through water, twisting vines climb,
+  and weeping and cave vines hang downward — none of them did anything before.
+  Cave vines occasionally grow a segment carrying glow berries.
 - **Lit redstone ore goes dark again**, instead of staying lit forever once
   something disturbed it, and **nylium reverts to netherrack** when covered.
 - **Amethyst geodes grow.** Budding amethyst now buds on its faces and
