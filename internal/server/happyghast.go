@@ -39,7 +39,7 @@ const driedGhastStepChance = 4
 // dries out otherwise. At full hydration a wet step hatches a ghastling and
 // consumes the block. Returns true if the state was a dried ghast (so
 // randomTickBlock stops).
-func (h *hub) tickDriedGhast(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if !isDriedGhast(state) {
 		return false
 	}
@@ -60,9 +60,9 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, x, y, z int, state uint
 		h.hatchGhastling(players, x, y, z, state)
 	case wet && hyd < 3:
 		h.playSound(players, "minecraft:block.dried_ghast.transition", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
-		h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd+1))))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd+1))))
 	case !wet && hyd > 0:
-		h.setBlock(players, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
 	}
 	return true
 }

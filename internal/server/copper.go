@@ -14,7 +14,7 @@ import (
 // Manhattan distance 4 halts oxidation, while more-oxidized neighbours speed
 // it up (f = (more+1)/(more+same+1), applied squared).
 
-// copperFamilies are the nine oxidizing block lines, each listed
+// copperFamilies are the fifteen oxidizing block lines, each listed
 // unaffected→exposed→weathered→oxidized. The four stages of a line share an
 // identical property layout, so a stage change is a base swap that preserves
 // the in-block state offset (vanilla withPropertiesOf). Waxed variants are
@@ -29,6 +29,13 @@ var copperFamilies = [][4]string{
 	{"copper_trapdoor", "exposed_copper_trapdoor", "weathered_copper_trapdoor", "oxidized_copper_trapdoor"},
 	{"copper_grate", "exposed_copper_grate", "weathered_copper_grate", "oxidized_copper_grate"},
 	{"copper_bulb", "exposed_copper_bulb", "weathered_copper_bulb", "oxidized_copper_bulb"},
+	{"copper_bars", "exposed_copper_bars", "weathered_copper_bars", "oxidized_copper_bars"},
+	{"copper_chain", "exposed_copper_chain", "weathered_copper_chain", "oxidized_copper_chain"},
+	{"copper_lantern", "exposed_copper_lantern", "weathered_copper_lantern", "oxidized_copper_lantern"},
+	{"lightning_rod", "exposed_lightning_rod", "weathered_lightning_rod", "oxidized_lightning_rod"},
+	{"copper_chest", "exposed_copper_chest", "weathered_copper_chest", "oxidized_copper_chest"},
+	{"copper_golem_statue", "exposed_copper_golem_statue", "weathered_copper_golem_statue",
+		"oxidized_copper_golem_statue"},
 }
 
 type copperRange struct {
@@ -121,7 +128,7 @@ func waxedCopper(state uint32) (uint32, bool) {
 
 // tickCopper runs one ChangeOverTimeBlock.changeOverTime on a copper block.
 // Returns whether the block was copper (handled).
-func (h *hub) tickCopper(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	cr, ok := copperOf(state)
 	if !ok {
 		return false
@@ -139,7 +146,7 @@ func (h *hub) tickCopper(players map[int32]*tracked, x, y, z int, state uint32) 
 				if ad+abs(dz) > 4 || (dx == 0 && dy == 0 && dz == 0) {
 					continue
 				}
-				ncr, nok := copperOf(h.world.At(x+dx, y+dy, z+dz))
+				ncr, nok := copperOf(h.worldFor(dim).At(x+dx, y+dy, z+dz))
 				if !nok {
 					continue
 				}
@@ -160,7 +167,7 @@ func (h *hub) tickCopper(players map[int32]*tracked, x, y, z int, state uint32) 
 		chance *= 0.75 // getChanceModifier: slower from unaffected
 	}
 	if h.rng.Float64() < chance {
-		h.setBlock(players, blockPos{x, y, z}, cr.nextBase+(state-cr.lo))
+		h.setBlockAt(players, dim, blockPos{x, y, z}, cr.nextBase+(state-cr.lo))
 	}
 	return true
 }

@@ -145,7 +145,7 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickStem(players, dim, x, y, z, state) {
 		return
 	}
-	if h.farmlandRandomTick(players, x, y, z, state) {
+	if h.farmlandRandomTick(players, dim, x, y, z, state) {
 		return
 	}
 	if h.tickTorchflower(players, dim, x, y, z, state) {
@@ -160,7 +160,10 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickBerry(players, dim, x, y, z, state) {
 		return
 	}
-	if h.tickCopper(players, x, y, z, state) {
+	if h.tickCopper(players, dim, x, y, z, state) {
+		return
+	}
+	if h.tickWart(players, dim, x, y, z, state) {
 		return
 	}
 	switch {
@@ -168,10 +171,11 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
 	case inRange(state, [2]uint32{cactusMin, cactusMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, cactusMin)
-	case state == worldgen.GrassBlock:
-		h.tickGrass(players, dim, x, y, z)
 	default:
-		if h.tickDriedGhast(players, x, y, z, state) {
+		if h.tickSpread(players, dim, x, y, z, state) {
+			return
+		}
+		if h.tickDriedGhast(players, dim, x, y, z, state) {
 			return
 		}
 		if h.tickCrop(players, dim, x, y, z, state) {
@@ -314,18 +318,50 @@ func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint3
 	}
 }
 
-// tickGrass spreads grass to a nearby dirt block, or dies back to dirt if covered.
-func (h *hub) tickGrass(players map[int32]*tracked, dim, x, y, z int) {
+// spreaders are the SpreadingSnowyBlock family: a block that creeps over
+// nearby dirt and reverts to dirt when smothered. Mycelium shares the class
+// with grass in vanilla but was never dispatched here, so it did neither.
+var spreaders = map[uint32]uint32{} // spreading state → the block it reverts to
+
+func init() {
+	spreaders[worldgen.GrassBlock] = worldgen.Dirt
+	lo, hi := worldgen.BlockRange("mycelium")
+	for st := lo; st <= hi; st++ { // mycelium carries `snowy`, like grass
+		spreaders[st] = worldgen.Dirt
+	}
+	glo, ghi := worldgen.BlockRange("grass_block")
+	for st := glo; st <= ghi; st++ {
+		spreaders[st] = worldgen.Dirt
+	}
+}
+
+// tickSpread ports SpreadingSnowyBlock.randomTick.
+//
+// Three things the grass-only version got wrong, all fixed here: vanilla makes
+// FOUR spread attempts per tick (not one), the vertical offset is nextInt(5)-3
+// (-3..+1, so it creeps down slopes) rather than -1..+1, and spreading is
+// gated on brightness >= 9 at the block above.
+func (h *hub) tickSpread(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	base, ok := spreaders[state]
+	if !ok {
+		return false
+	}
 	if h.opaqueAbove(dim, x, y, z) {
-		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Dirt) // smothered → dirt
-		return
+		h.setBlockAt(players, dim, blockPos{x, y, z}, base) // smothered → dirt
+		return true
 	}
-	tx := x + h.rng.Intn(3) - 1
-	ty := y + h.rng.Intn(3) - 1
-	tz := z + h.rng.Intn(3) - 1
-	if h.worldFor(dim).At(tx, ty, tz) == worldgen.Dirt && !h.opaqueAbove(dim, tx, ty, tz) {
-		h.setBlockAt(players, dim, blockPos{tx, ty, tz}, worldgen.GrassBlock)
+	if h.plantBrightness(dim, x, y+1, z, -1) < 9 {
+		return true // alive, but too dark to spread
 	}
+	for i := 0; i < 4; i++ {
+		tx := x + h.rng.Intn(3) - 1
+		ty := y + h.rng.Intn(5) - 3
+		tz := z + h.rng.Intn(3) - 1
+		if h.worldFor(dim).At(tx, ty, tz) == base && !h.opaqueAbove(dim, tx, ty, tz) {
+			h.setBlockAt(players, dim, blockPos{tx, ty, tz}, state)
+		}
+	}
+	return true
 }
 
 // growSapling replaces a mature sapling with its species' tree.

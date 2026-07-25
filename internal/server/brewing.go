@@ -12,9 +12,7 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 const (
 	menuBrewing = 11
 
-	brewTicks    = 400  // vanilla 20s
-	wartGrowMin  = 2400 // 2-6 min per growth stage (overworld farms)
-	wartGrowSpan = 4800
+	brewTicks = 400 // vanilla 20s
 )
 
 var (
@@ -236,13 +234,18 @@ type evFillBottle struct {
 
 func (evFillBottle) isHubEvent() {}
 
-// updateWart is the scheduled growth step (overworld farms only — the block
-// simulation is dimension-0).
-func (h *hub) updateWart(players map[int32]*tracked, pos blockPos, state uint32) {
-	if state < netherWartMax { // age 0-2: grow one stage and rearm
-		h.setBlock(players, pos, state+1)
-		if state+1 < netherWartMax {
-			h.schedule(pos, uint64(wartGrowMin+h.rng.Intn(wartGrowSpan)))
-		}
+// tickWart ports NetherWartBlock.randomTick: age < 3 && nextInt(10) == 0.
+//
+// This used to be a SCHEDULED tick that rearmed itself 2400-7200 ticks out,
+// which ignored the randomTickSpeed gamerule entirely (including 0, which must
+// stop growth dead) and ran about 3x too fast — a block is random-ticked once
+// per ~1365 ticks, so vanilla averages ~13650 ticks a stage against ~4800.
+func (h *hub) tickWart(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	if !isNetherWart(state) {
+		return false
 	}
+	if state < netherWartMax && h.rng.Intn(10) == 0 {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
+	}
+	return true
 }

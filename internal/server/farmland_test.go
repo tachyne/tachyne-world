@@ -33,7 +33,7 @@ func TestFarmland(t *testing.T) {
 		clearBox(w, 5, 100, 5)
 		w.SetBlock(5, 100, 5, farmland) // moisture 0
 		w.SetBlock(7, 100, 5, worldgen.WaterBase)
-		h.farmlandRandomTick(h.playersRef, 5, 100, 5, w.At(5, 100, 5))
+		h.farmlandRandomTick(h.playersRef, 0, 5, 100, 5, w.At(5, 100, 5))
 		if got := w.At(5, 100, 5); got != farmland+7 {
 			t.Errorf("hydrate: moisture state %d, want %d", got-farmland, 7)
 		}
@@ -41,7 +41,7 @@ func TestFarmland(t *testing.T) {
 		// Dehydration: moist soil (moisture 5), no water/rain → 4.
 		clearBox(w, 5, 100, 40)
 		w.SetBlock(5, 100, 40, farmland+5)
-		h.farmlandRandomTick(h.playersRef, 5, 100, 40, w.At(5, 100, 40))
+		h.farmlandRandomTick(h.playersRef, 0, 5, 100, 40, w.At(5, 100, 40))
 		if got := w.At(5, 100, 40); got != farmland+4 {
 			t.Errorf("dehydrate: moisture state %d, want 4", got-farmland)
 		}
@@ -49,7 +49,7 @@ func TestFarmland(t *testing.T) {
 		// Dry-out: bone-dry soil (moisture 0), nothing growing → reverts to dirt.
 		clearBox(w, 5, 100, 80)
 		w.SetBlock(5, 100, 80, farmland) // moisture 0
-		h.farmlandRandomTick(h.playersRef, 5, 100, 80, w.At(5, 100, 80))
+		h.farmlandRandomTick(h.playersRef, 0, 5, 100, 80, w.At(5, 100, 80))
 		if got := w.At(5, 100, 80); got != worldgen.Dirt {
 			t.Errorf("dry-out: block %d, want dirt %d", got, worldgen.Dirt)
 		}
@@ -58,7 +58,7 @@ func TestFarmland(t *testing.T) {
 		clearBox(w, 5, 100, 120)
 		w.SetBlock(5, 100, 120, farmland) // moisture 0
 		w.SetBlock(5, 101, 120, worldgen.BlockBase("wheat"))
-		h.farmlandRandomTick(h.playersRef, 5, 100, 120, w.At(5, 100, 120))
+		h.farmlandRandomTick(h.playersRef, 0, 5, 100, 120, w.At(5, 100, 120))
 		if got := w.At(5, 100, 120); got != farmland {
 			t.Errorf("maintained: block %d, want farmland (unchanged)", got)
 		}

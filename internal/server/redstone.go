@@ -291,8 +291,6 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		h.updateHopper(players, pos, state)
 	case isAnyRail(state):
 		h.updateRail(players, pos, state)
-	case isNetherWart(state):
-		h.updateWart(players, pos, state)
 	case isPortalBlock(state):
 		h.updatePortalBlock(players, pos, state)
 	}

@@ -29,7 +29,7 @@ func maintainsFarmland(state uint32) bool {
 
 // farmlandRandomTick runs one FarmBlock.randomTick: hydrate, dehydrate, or dry
 // out to dirt. Returns whether it handled the block.
-func (h *hub) farmlandRandomTick(players map[int32]*tracked, x, y, z int, state uint32) bool {
+func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if state < farmlandMin || state > farmlandMin+7 {
 		return false
 	}
@@ -37,11 +37,11 @@ func (h *hub) farmlandRandomTick(players map[int32]*tracked, x, y, z int, state 
 	switch {
 	case h.farmlandNearWater(x, y, z) || h.rainingAbove(x, y, z):
 		if n < 7 {
-			h.setBlock(players, blockPos{x, y, z}, farmlandMin+7)
+			h.setBlockAt(players, dim, blockPos{x, y, z}, farmlandMin+7)
 		}
 	case n > 0:
-		h.setBlock(players, blockPos{x, y, z}, farmlandMin+uint32(n-1))
-	case !maintainsFarmland(h.world.At(x, y+1, z)):
+		h.setBlockAt(players, dim, blockPos{x, y, z}, farmlandMin+uint32(n-1))
+	case !maintainsFarmland(h.worldFor(dim).At(x, y+1, z)):
 		h.turnFarmlandToDirt(players, x, y, z)
 	}
 	return true

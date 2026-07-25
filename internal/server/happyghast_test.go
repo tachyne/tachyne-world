@@ -23,7 +23,7 @@ func TestDriedGhastHatchesGhastling(t *testing.T) {
 			hatched = true
 			break
 		}
-		h.tickDriedGhast(players, x, y, z, st)
+		h.tickDriedGhast(players, 0, x, y, z, st)
 	}
 	if !hatched {
 		t.Fatal("dried ghast never hatched despite adjacent water")
@@ -56,7 +56,7 @@ func TestDriedGhastDriesWithoutWater(t *testing.T) {
 	h.world.SetBlock(x, y, z, wet) // hydration 2, dry surroundings
 
 	for i := 0; i < 100 && worldgen.GetProperty(info, h.world.At(x, y, z), "hydration") == "2"; i++ {
-		h.tickDriedGhast(players, x, y, z, h.world.At(x, y, z))
+		h.tickDriedGhast(players, 0, x, y, z, h.world.At(x, y, z))
 	}
 	got := h.world.At(x, y, z)
 	if !isDriedGhast(got) {
