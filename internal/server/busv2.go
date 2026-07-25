@@ -313,6 +313,23 @@ func busQueryBlock(h *hub, args json.RawMessage) (any, string) {
 	return map[string]any{"state": state}, ""
 }
 
+// busCmdSave flushes world edits to disk now and reports the resulting edit
+// count. Autosave already runs on a timer, so this exists for out-of-process
+// readers that BOOTSTRAP from the world file (the tachyne-map renderer): they
+// read a snapshot and then tail mc.event.block_change, and anything built
+// between the last autosave and their subscription is in neither. Asking for a
+// save first — while already subscribed — closes that window.
+//
+// Runs on the caller's goroutine, not the hub's: every bus command gets its
+// own (see natsbus.go), and the world takes its own lock, exactly as the
+// autosave ticker does.
+func busCmdSave(h *hub) (any, string) {
+	if err := h.world.Save(); err != nil {
+		return nil, fmt.Sprintf("save failed: %v", err)
+	}
+	return map[string]any{"edits": h.world.EditCount()}, ""
+}
+
 func busQueryWorld(h *hub) (any, string) {
 	var out map[string]any
 	if !h.runOnHub(func() {

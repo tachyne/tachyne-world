@@ -106,6 +106,8 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		return busCmdTeleport(h, args)
 	case "mobset":
 		return busCmdMobSet(h, args)
+	case "save":
+		return busCmdSave(h)
 
 	// Queries (request-reply).
 	case "players":
