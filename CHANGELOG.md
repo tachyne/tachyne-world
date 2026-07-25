@@ -17,6 +17,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **The 3D map no longer looks grainy at a distance.** Block textures are now
   mipmapped, so terrain far from the camera resolves cleanly instead of
   shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
+- **Map markers can be shown and hidden individually.** A panel in the corner
+  of the map lists players and each mob category with its colour and a live
+  count, and clicking one toggles that layer.
 
 ### Added
 - The 3D map now shows **what players have built** (not just generated
