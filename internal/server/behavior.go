@@ -41,10 +41,11 @@ func (h *hub) applyBehavior(m *mob, name string) bool {
 	}
 	_, m.hostile = b.(hostileBehavior)
 	if m.hostile {
-		m.speed = speedFor(m.etype)
+		sp := speedFor(m.etype)
 		if m.ovrSpeed > 0 {
-			m.speed = m.ovrSpeed
+			sp = m.ovrSpeed
 		}
+		m.setMoveSpeed(sp)
 	}
 	return true
 }

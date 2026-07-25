@@ -223,3 +223,116 @@ func TestReloadedGearStillProtects(t *testing.T) {
 		t.Errorf("reloaded armour %v, want %v — the saved helmet must still count", got, want)
 	}
 }
+
+// MOVEMENT_SPEED is the stat with the most writers, so these pin that the
+// numbers are unchanged and that the baby modifier now behaves like vanilla's.
+
+func TestSpawnSeedsSpeciesSpeed(t *testing.T) {
+	h := newHub(world.New(1))
+	for _, etype := range []int{entityCow, entityZombie, entitySpider, entityEnderman, entityWolf} {
+		m := h.spawnMobIn(nil, etype, 0, 0, 70, 0)
+		if m == nil {
+			t.Fatalf("etype %d: spawn returned nil", etype)
+		}
+		if want := speedFor(etype); !closeTo(m.moveSpeed(), want) {
+			t.Errorf("etype %d speed %v, want %v", etype, m.moveSpeed(), want)
+		}
+	}
+}
+
+// A mob built by hand walks at the grazing default, not the attribute
+// registry's 0.7 — which in per-update blocks would be a mob crossing eight
+// chunks a second.
+func TestHandBuiltMobWalksAtTheGrazingDefault(t *testing.T) {
+	m := &mob{eid: 1, etype: entityCow}
+	if got := m.moveSpeed(); !closeTo(got, mobSpeed) {
+		t.Errorf("speed %v on a map-less mob, want %v", got, mobSpeed)
+	}
+}
+
+// Vanilla's SPEED_MODIFIER_BABY is a multiply-base +0.5, so a baby is exactly
+// 1.5× its species pace.
+func TestBabySpeedIsAModifier(t *testing.T) {
+	h := newHub(world.New(1))
+	m := h.spawnMobIn(nil, entityZombie, 0, 0, 70, 0)
+	if m == nil {
+		t.Fatal("spawn returned nil")
+	}
+	base := m.moveSpeed()
+	m.setBabySpeed(true)
+	if got := m.moveSpeed(); !closeTo(got, base*1.5) {
+		t.Errorf("baby speed %v, want %v", got, base*1.5)
+	}
+	m.setBabySpeed(false)
+	if got := m.moveSpeed(); !closeTo(got, base) {
+		t.Errorf("grown-up speed %v, want the base %v", got, base)
+	}
+}
+
+// The bug the modifier layer removes: a behaviour swap resets the base, and a
+// baby used to lose its 1.5× for good because the multiplier had been baked in.
+func TestBabySpeedSurvivesABehaviorSwap(t *testing.T) {
+	h := newHub(world.New(1))
+	m := h.spawnHostile(map[int32]*tracked{}, entityZombie, 0, 0)
+	if m == nil {
+		t.Fatal("spawn returned nil")
+	}
+	m.baby = true
+	m.setBabySpeed(true)
+	want := m.moveSpeed()
+
+	if !h.applyBehavior(m, "hostile") {
+		t.Fatal("hostile behavior not registered")
+	}
+	if got := m.moveSpeed(); !closeTo(got, want) {
+		t.Errorf("speed %v after the swap, want the baby pace %v", got, want)
+	}
+}
+
+// A plugin override wins over the species pace and survives a behaviour swap,
+// which is what ovrSpeed exists for.
+func TestSpeedOverrideSurvivesABehaviorSwap(t *testing.T) {
+	h := newHub(world.New(1))
+	m := h.spawnHostile(map[int32]*tracked{}, entityZombie, 0, 0)
+	if m == nil {
+		t.Fatal("spawn returned nil")
+	}
+	m.ovrSpeed = 0.5
+	m.setMoveSpeed(0.5)
+	if !h.applyBehavior(m, "hostile") {
+		t.Fatal("hostile behavior not registered")
+	}
+	if got := m.moveSpeed(); !closeTo(got, 0.5) {
+		t.Errorf("speed %v after the swap, want the 0.5 override", got)
+	}
+}
+
+// A saved baby zombie comes back a baby, at baby pace — the spawn path rolls
+// its own 5% baby chance, so the flag and the modifier have to be re-synced.
+func TestReloadedBabyKeepsItsPace(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	z := h.spawnHostile(players, entityZombie, 0, 0)
+	if z == nil {
+		t.Fatal("spawn returned nil")
+	}
+	base := speedFor(entityZombie)
+
+	for _, baby := range []bool{true, false} {
+		z.baby = baby
+		sm := toSavedMob(z)
+		h2 := newHub(world.New(1))
+		h2.reloading = true
+		back := h2.reloadMob(players, &sm)
+		if back == nil {
+			t.Fatal("reload returned nil")
+		}
+		want := base
+		if baby {
+			want = base * 1.5
+		}
+		if got := back.moveSpeed(); !closeTo(got, want) {
+			t.Errorf("reloaded baby=%v at speed %v, want %v", baby, got, want)
+		}
+	}
+}

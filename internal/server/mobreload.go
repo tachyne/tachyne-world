@@ -48,6 +48,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	}
 	m.dmgFrac = sm.DmgFrac
 	m.baby, m.growLeft = sm.Baby, sm.GrowLeft
+	m.refreshBabySpeed() // the spawn roll may have set a different flag
 	m.loveTicks, m.breedCD = sm.LoveTicks, sm.BreedCD
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
 	if sm.Size > 0 {
@@ -86,7 +87,8 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	case entityVillager:
 		// The village-population stance (updateVillages) — spawnMob alone
 		// leaves a villager as a generic grazer.
-		m.behavior, m.usesDoors, m.speed = villagerBehavior{}, true, 0.135
+		m.behavior, m.usesDoors = villagerBehavior{}, true
+		m.setMoveSpeed(0.135)
 		m.profession = sm.Profession % len(professionNames)
 		if m.profession < 0 {
 			m.profession = 0

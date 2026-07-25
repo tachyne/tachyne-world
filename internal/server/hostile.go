@@ -106,9 +106,9 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	}
 	switch {
 	case d < skeletonKite:
-		return -dx / d * m.speed, -dz / d * m.speed // too close — back off
+		return -dx / d * m.moveSpeed(), -dz / d * m.moveSpeed() // too close — back off
 	case d > skeletonHold:
-		return dx / d * m.speed, dz / d * m.speed // close in to bow range
+		return dx / d * m.moveSpeed(), dz / d * m.moveSpeed() // close in to bow range
 	}
 	// In the sweet spot: vanilla RangedBowAttackGoal STRAFES — circle the
 	// target at 0.5× speed, flipping direction ~30% of the time each second.
@@ -119,7 +119,7 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.strafeCW {
 		sx, sz = -sx, -sz
 	}
-	return sx * m.speed * 0.5, sz * m.speed * 0.5
+	return sx * m.moveSpeed() * 0.5, sz * m.moveSpeed() * 0.5
 }
 
 // skeletonShoot fires an arrow at the nearest huntable player, on a cooldown.
@@ -151,7 +151,7 @@ func (h *hub) rollZombieBaby(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.baby = true
-	m.speed *= 1.5
+	m.setBabySpeed(true)
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 }
 

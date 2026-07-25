@@ -123,7 +123,6 @@ type mob struct {
 	hover           float64        // fliers: preferred altitude above the terrain
 	held            int32          // rendered main-hand item (0 = empty)
 	ty              float64        // hunted target's feet height (fliers dive to it)
-	speed           float64        // per-step movement cap (grazers slow, hunters faster)
 	attrs           *attribute.Map // entity attributes (follow range, and more as readers migrate)
 	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int            // mob-updates left before this mob can melee again
@@ -178,8 +177,9 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), speed: speedFor(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{attrs: newMobAttributes(), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	m.setMaxHP(mobHealth(etype))
+	m.setMoveSpeed(speedFor(etype))
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
@@ -276,9 +276,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// vanilla 2.0× speed modifier (chickens flap off at 1.4×),
 			// ignoring herd steering until the panic wears off.
 			m.panic--
-			flee := m.speed * 2
+			flee := m.moveSpeed() * 2
 			if m.etype == entityChicken {
-				flee = m.speed * 1.4
+				flee = m.moveSpeed() * 1.4
 			}
 			dx, dz := m.x-m.fleeX, m.z-m.fleeZ
 			if d := math.Hypot(dx, dz); d > 1e-6 {
@@ -318,8 +318,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			dvx, dvz := m.behavior.steer(h, m)
 			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
 			m.vz = m.vz*0.85 + dvz*0.15
-			if sp := math.Hypot(m.vx, m.vz); sp > m.speed {
-				m.vx, m.vz = m.vx/sp*m.speed, m.vz/sp*m.speed
+			if cap := m.moveSpeed(); math.Hypot(m.vx, m.vz) > cap {
+				sp := math.Hypot(m.vx, m.vz)
+				m.vx, m.vz = m.vx/sp*cap, m.vz/sp*cap
 			}
 		}
 
@@ -368,7 +369,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				continue // stepped into a neighbour shard — handed off, done this tick
 			default:
 				ang := h.rng.Float64() * 2 * math.Pi
-				m.vx, m.vz = math.Cos(ang)*m.speed, math.Sin(ang)*m.speed
+				m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
 				m.reroute = 15 + h.rng.Intn(15)
 			}
 			// Seat the feet on the real (edit-aware) floor every tick, so digging
@@ -685,6 +686,7 @@ func (h *hub) toNearbyEv(players map[int32]*tracked, dim int, x, z float64, ev a
 func newMobAttributes() *attribute.Map {
 	a := attribute.NewMap()
 	a.SetBase(attr.FollowRange, aggroRange)
+	a.SetBase(attr.MovementSpeed, mobSpeed)
 	return a
 }
 
@@ -742,3 +744,39 @@ func (m *mob) refreshGearArmor() {
 	}
 	in.AddModifier(attr.Modifier{Source: gearArmorSource, Amount: float64(pts), Op: attr.AddValue})
 }
+
+// babySpeedSource is vanilla's SPEED_MODIFIER_BABY: babies move at 1.5× on a
+// multiply-base modifier, not by rewriting the base. Keeping it a modifier is
+// what stops a later behaviour swap — which resets the base — from silently
+// turning a baby zombie back into an adult-paced one.
+const babySpeedSource = "baby"
+
+// moveSpeed is the mob's MOVEMENT_SPEED.
+//
+// The unit here is tachyne's per-update step in blocks, NOT vanilla's raw
+// attribute number — the movement integrator runs at 10 updates/s and every
+// speed table in the engine is already calibrated in those units (attrToStep
+// is the conversion where a vanilla figure is the source). Modifiers are
+// unaffected by the choice: vanilla's speed modifiers are proportional
+// (multiply-base or multiply-total), so they mean the same thing in either
+// scale.
+func (m *mob) moveSpeed() float64 { return m.mobAttrs().Value(attr.MovementSpeed) }
+
+// setMoveSpeed sets the base MOVEMENT_SPEED, in per-update blocks.
+func (m *mob) setMoveSpeed(v float64) { m.mobAttrs().SetBase(attr.MovementSpeed, v) }
+
+// setBabySpeed applies or clears the baby speed modifier.
+func (m *mob) setBabySpeed(on bool) {
+	in := m.mobAttrs().Get(attr.MovementSpeed)
+	if !on {
+		in.RemoveModifier(babySpeedSource)
+		return
+	}
+	in.AddModifier(attr.Modifier{Source: babySpeedSource, Amount: 0.5, Op: attr.AddMultipliedBase})
+}
+
+// refreshBabySpeed re-asserts the baby modifier from the mob's current flag.
+// Only the zombie family carries it in vanilla — baby animals walk at adult
+// pace — which is the hostile-and-baby case here. Needed wherever the flag is
+// assigned rather than rolled: a reload, or a drowning conversion.
+func (m *mob) refreshBabySpeed() { m.setBabySpeed(m.baby && m.hostile) }

@@ -81,7 +81,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	case entitySlime:
 		m.size = 4
 		m.health = m.size * m.size
-		m.speed = slimeSpeed(m.etype, m.size) // attr 0.2 + 0.1×size
+		m.setMoveSpeed(slimeSpeed(m.etype, m.size)) // attr 0.2 + 0.1×size
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityEnderman:
 		m.neutral = true     // holds its peace until hit
@@ -134,7 +134,7 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 		dx, dz = math.Cos(ang), math.Sin(ang)
 	}
 	if d := math.Hypot(dx, dz); d > 1e-6 {
-		m.vx, m.vz = dx/d*m.speed, dz/d*m.speed
+		m.vx, m.vz = dx/d*m.moveSpeed(), dz/d*m.moveSpeed()
 	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
 		EID: m.eid, VX: m.vx / mobMoveInterval, VY: 0.42, VZ: m.vz / mobMoveInterval})
@@ -171,7 +171,7 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 		}
 		s.size = m.size / 2
 		s.health = s.size * s.size
-		s.speed = slimeSpeed(s.etype, s.size)
+		s.setMoveSpeed(slimeSpeed(s.etype, s.size))
 		h.toNearbyEv(players, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
 	}
 }

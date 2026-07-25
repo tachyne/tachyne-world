@@ -274,7 +274,8 @@ func (f srvFacade) SpawnMob(dim, etype int, x, y, z float64, opts *plugin.SpawnO
 			m.health = opts.MaxHealth
 		}
 		if opts.Speed > 0 {
-			m.ovrSpeed, m.speed = opts.Speed, opts.Speed
+			m.ovrSpeed = opts.Speed
+			m.setMoveSpeed(opts.Speed)
 		}
 		if opts.Damage > 0 {
 			m.ovrDamage = opts.Damage
@@ -492,14 +493,15 @@ func (mh mobHandle) SetMaxHealth(v int, heal bool) {
 
 func (mh mobHandle) Speed() float64 {
 	if m := mh.m(); m != nil {
-		return m.speed
+		return m.moveSpeed()
 	}
 	return 0
 }
 
 func (mh mobHandle) SetSpeed(v float64) {
 	if m := mh.m(); m != nil && v > 0 {
-		m.ovrSpeed, m.speed = v, v
+		m.ovrSpeed = v
+		m.setMoveSpeed(v)
 	}
 }
 

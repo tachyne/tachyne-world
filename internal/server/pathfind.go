@@ -87,7 +87,7 @@ func straightSteer(m *mob, gx, gz, stop float64) (float64, float64) {
 	if d < stop {
 		return 0, 0
 	}
-	return dx / d * m.speed, dz / d * m.speed
+	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
 }
 
 // pathNode is a heap entry for the open set.

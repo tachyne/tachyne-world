@@ -78,7 +78,8 @@ func TestArrowSticksInTerrainAndExpires(t *testing.T) {
 
 func TestSkeletonKites(t *testing.T) {
 	h := newHub(world.New(1))
-	m := &mob{etype: entitySkeleton, speed: speedFor(entitySkeleton), hasTarget: true, x: 0, z: 0}
+	m := &mob{etype: entitySkeleton, hasTarget: true, x: 0, z: 0}
+	m.setMoveSpeed(speedFor(entitySkeleton))
 
 	m.tx, m.tz = 2, 0 // target too close — back away (negative x)
 	vx, _ := rangedBehavior{}.steer(h, m)
@@ -98,7 +99,7 @@ func TestSkeletonKites(t *testing.T) {
 	if vz == 0 {
 		t.Fatal("in bow range the skeleton must circle its target, not freeze")
 	}
-	if math.Abs(vz) > m.speed*0.5+1e-9 {
+	if math.Abs(vz) > m.moveSpeed()*0.5+1e-9 {
 		t.Fatalf("vanilla strafes at half speed, got %v", vz)
 	}
 }

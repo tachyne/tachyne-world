@@ -26,7 +26,7 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 	}
 	// Small vertical wander so schools don't sit on one plane.
 	if h.rng.Intn(20) == 0 {
-		m.vy = (h.rng.Float64() - 0.5) * m.speed
+		m.vy = (h.rng.Float64() - 0.5) * m.moveSpeed()
 	}
 	m.vy *= 0.8
 }
@@ -47,11 +47,11 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 		m.x, m.z = nx, nz
 	} else {
 		ang := h.rng.Float64() * 2 * math.Pi
-		m.vx, m.vz = math.Cos(ang)*m.speed, math.Sin(ang)*m.speed
+		m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
 	}
 	// Vertical spring toward the desired altitude — but never into a ceiling
 	// (the unchecked spring carried cave bats up through solid rock).
-	ny := m.y + math.Max(-m.speed, math.Min(m.speed, (want-m.y)*0.1))
+	ny := m.y + math.Max(-m.moveSpeed(), math.Min(m.moveSpeed(), (want-m.y)*0.1))
 	if !worldgen.Collides(w.At(int(math.Floor(m.x)), int(math.Floor(ny)), int(math.Floor(m.z)))) {
 		m.y = ny
 	}

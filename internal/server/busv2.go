@@ -185,7 +185,8 @@ func busCmdSpawn(h *hub, args json.RawMessage) (any, string) {
 			m.health = a.MaxHealth
 		}
 		if a.Speed > 0 {
-			m.ovrSpeed, m.speed = a.Speed, a.Speed
+			m.ovrSpeed = a.Speed
+			m.setMoveSpeed(a.Speed)
 		}
 		if a.Damage > 0 {
 			m.ovrDamage = a.Damage
@@ -230,7 +231,8 @@ func busCmdMobSet(h *hub, args json.RawMessage) (any, string) {
 			m.health = min(a.Health, m.maxHP())
 		}
 		if a.Speed > 0 {
-			m.ovrSpeed, m.speed = a.Speed, a.Speed
+			m.ovrSpeed = a.Speed
+			m.setMoveSpeed(a.Speed)
 		}
 		if a.Damage > 0 {
 			m.ovrDamage = a.Damage

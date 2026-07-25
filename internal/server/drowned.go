@@ -31,6 +31,7 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 		return
 	}
 	nm.baby, nm.growLeft = m.baby, m.growLeft
+	nm.refreshBabySpeed()
 	if m.health < nm.health {
 		nm.health = m.health // carry damage across; never heal on conversion
 	}

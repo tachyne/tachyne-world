@@ -10,7 +10,8 @@ import (
 
 func TestHostileChasesTarget(t *testing.T) {
 	h := newHub(world.New(1))
-	m := &mob{speed: speedFor(entityZombie), hasTarget: true, x: 0, z: 0, tx: 10, tz: 0}
+	m := &mob{hasTarget: true, x: 0, z: 0, tx: 10, tz: 0}
+	m.setMoveSpeed(speedFor(entityZombie))
 	vx, vz := hostileBehavior{}.steer(h, m)
 	if vx <= 0 {
 		t.Fatalf("hostile should steer toward its target (+x), got vx=%v", vx)
@@ -26,7 +27,8 @@ func TestZombieBitesPlayer(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players[1] = pl
-	m := &mob{eid: 2, etype: entityZombie, hostile: true, speed: speedFor(entityZombie), x: 0.5, y: 70, z: 1.2}
+	m := &mob{eid: 2, etype: entityZombie, hostile: true, x: 0.5, y: 70, z: 1.2}
+	m.setMoveSpeed(speedFor(entityZombie))
 
 	h.mobMelee(players, m)
 	if want := float32(maxHealth - zombieDamage); pl.health != want {
@@ -233,7 +235,8 @@ func TestNightSpawnsHostiles(t *testing.T) {
 func TestHostileStandoff(t *testing.T) {
 	h := newHub(world.New(1))
 	// Target within standoff distance: the mob should hold, not keep closing.
-	m := &mob{speed: speedFor(entityZombie), hasTarget: true, x: 0, z: 0, tx: 0.5, tz: 0}
+	m := &mob{hasTarget: true, x: 0, z: 0, tx: 0.5, tz: 0}
+	m.setMoveSpeed(speedFor(entityZombie))
 	if vx, vz := (hostileBehavior{}).steer(h, m); vx != 0 || vz != 0 {
 		t.Fatalf("within standoff the hostile should hold position, got (%v,%v)", vx, vz)
 	}

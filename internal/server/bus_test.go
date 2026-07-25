@@ -107,7 +107,7 @@ func TestBusCommands(t *testing.T) {
 	}
 	h.runOnHub(func() {
 		m := h.mobs[eid]
-		if m == nil || m.ovrDamage != 30 || m.speed != 0.4 {
+		if m == nil || m.ovrDamage != 30 || m.moveSpeed() != 0.4 {
 			t.Errorf("mobset not applied: %+v", m)
 		}
 	})

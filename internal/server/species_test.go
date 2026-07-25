@@ -24,7 +24,7 @@ func TestSpawnHostileSpecies(t *testing.T) {
 		t.Fatal("skeleton must kite (rangedBehavior)")
 	}
 	sp := h.spawnHostile(players, entitySpider, 4, 0)
-	if sp.burns || sp.speed != speedFor(entitySpider) || sp.health != spiderHealth {
+	if sp.burns || sp.moveSpeed() != speedFor(entitySpider) || sp.health != spiderHealth {
 		t.Fatalf("spider config wrong: %+v", sp)
 	}
 	c := h.spawnHostile(players, entityCreeper, 6, 0)

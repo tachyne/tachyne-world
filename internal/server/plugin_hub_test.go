@@ -178,8 +178,8 @@ func TestPluginSpawnOverlayAndMobHandle(t *testing.T) {
 		// The speed override must survive a behavior swap (which resets
 		// speed from the species table for hostiles).
 		h.applyBehavior(m, "hostile")
-		if m.speed != 0.5 {
-			t.Errorf("speed after behavior swap = %v, want the 0.5 override", m.speed)
+		if m.moveSpeed() != 0.5 {
+			t.Errorf("speed after behavior swap = %v, want the 0.5 override", m.moveSpeed())
 		}
 		// Handle semantics: SetMaxHealth clamps, Kill invalidates.
 		mh.SetMaxHealth(40, false)

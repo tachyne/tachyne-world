@@ -111,9 +111,10 @@ func TestVillagerSegment(t *testing.T) {
 func TestVillagerScheduleGoals(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
-	m := &mob{etype: entityVillager, speed: 0.135, usesDoors: true, x: 20, z: 20,
+	m := &mob{etype: entityVillager, usesDoors: true, x: 20, z: 20,
 		home: blockPos{20, 70, 20},
 		bed:  blockPos{10, 70, 10}, work: blockPos{30, 70, 30}, meet: blockPos{50, 70, 50}}
+	m.setMoveSpeed(0.135)
 
 	h.dayTime.Store(3000) // work hours
 	villagerBehavior{}.steer(h, m)

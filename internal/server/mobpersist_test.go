@@ -216,8 +216,8 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 	if _, ok := got.behavior.(villagerBehavior); !ok {
 		t.Fatalf("villager stance lost: behavior=%T", got.behavior)
 	}
-	if !got.usesDoors || got.speed != 0.135 {
-		t.Fatalf("villager movement lost: doors=%v speed=%v", got.usesDoors, got.speed)
+	if !got.usesDoors || got.moveSpeed() != 0.135 {
+		t.Fatalf("villager movement lost: doors=%v speed=%v", got.usesDoors, got.moveSpeed())
 	}
 	if got.bed != (blockPos{9, 70, 10}) || got.work != (blockPos{11, 70, 9}) || got.meet != (blockPos{40, 70, 40}) {
 		t.Fatalf("schedule anchors lost: bed=%v work=%v meet=%v", got.bed, got.work, got.meet)

@@ -58,7 +58,7 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					if m == nil {
 						continue // plugin-cancelled spawn
 					}
-					m.speed = 0.135 // villager MOVEMENT_SPEED (vanilla 1.21.5)
+					m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED (vanilla 1.21.5)
 					prof, work := nearestJobSite(bed, jobs)
 					h.initVillagerTrades(m, prof)
 					m.home = blockPos{bed[0], bed[1], bed[2]}
