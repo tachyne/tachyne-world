@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **The world has a border.** Nothing implemented one: no wall, no damage, no
+  warning, no command. There is now a real border with `/worldborder` —
+  `get`, `set`, `add`, `center`, `damage amount|buffer` and
+  `warning distance|time` — persisted with the world settings and shown to
+  every client. Straying past it hurts, scaled by how far out you are and
+  starting only beyond the damage buffer, and the death it causes says so. A
+  border can also be set to move over a number of seconds; the engine stores
+  where it started, where it is going and when it set off, and computes the
+  rest from the clock, so a player joining mid-move sees the tail of the
+  animation rather than a jump.
 - **Phantoms are the price of not sleeping again, and villages have cats.**
   Phantoms were a flat one-in-thirty roll over any player at night, so sleeping
   changed nothing and they were just ambient noise. They now run off an

@@ -44,6 +44,7 @@ const (
 	causeSweetBerry = "sweetBerry" // poked to death by a sweet berry bush
 	causeDragon     = "dragon"     // the fight went badly
 	causeVoid       = "void"       // fell out of the world
+	causeBorder     = "border"     // strayed outside the world border
 	causeWither     = "wither"     // withered away
 	causeThorns     = "thorns"     // killed by the armour of whoever they attacked
 )
@@ -109,6 +110,8 @@ func deathMessage(victim string, c deathCause) string {
 			return victim + " was killed whilst trying to hurt " + by
 		}
 		return victim + " was killed"
+	case causeBorder:
+		return victim + " left the confines of this world"
 	case causeVoid:
 		return victim + " fell out of the world"
 	case causeWither:

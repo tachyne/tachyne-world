@@ -59,6 +59,7 @@ type worldRules struct {
 	PvP            bool         `json:"pvp"`
 	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
 	Weather        *weatherSave `json:"weather,omitempty"`
+	Border         *worldBorder `json:"border,omitempty"`
 }
 
 func defaultRules() worldRules {
@@ -343,6 +344,9 @@ func (h *hub) loadRules() {
 		json.Unmarshal(data, &h.rules)
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
+	if h.rules.Border != nil {
+		h.border = *h.rules.Border
+	}
 	if ws := h.rules.Weather; ws != nil {
 		h.clearTime, h.rainTime, h.thunderTime = ws.ClearTime, ws.RainTime, ws.ThunderTime
 		h.rainFlag, h.thunderFlag = ws.Raining, ws.Thundering
@@ -355,6 +359,12 @@ func (h *hub) loadRules() {
 			}
 		}
 	}
+}
+
+// saveBorder persists the border through the same settings file the rules use.
+func (h *hub) saveBorder() {
+	h.rules.Border = &h.border
+	h.saveRules()
 }
 
 func (h *hub) saveRules() {

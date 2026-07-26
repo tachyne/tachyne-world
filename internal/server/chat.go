@@ -34,7 +34,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud"
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder"
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
 		}
@@ -116,6 +116,12 @@ func (s *Server) handleCommand(p *player, cmd string) {
 
 	case "weather":
 		s.cmdWeather(p, fields[1:])
+	case "worldborder":
+		if !s.isOp(p.name) {
+			p.tell("You don't have permission to change the world border.")
+			return
+		}
+		s.hub.post(evBorderCmd{p: p, args: fields[1:]})
 	case "scoreboard":
 		if !s.isOp(p.name) {
 			p.tell("You don't have permission to use the scoreboard.")

@@ -340,6 +340,7 @@ type hub struct {
 	topo         shard.Map                // region map (for shadow awareness; zero when unsharded)
 	sid          int32                    // this pod's shard id (eid mint lane when sharded)
 	debugBorders bool                     // dev: particle wall along region seams (-debug-borders)
+	border       worldBorder              // the world border (persisted in settings.json)
 	peers        peerSender               // warm world↔world links to neighbours (nil = unsharded)
 	handoffs     map[string]*handoff      // player releases in flight, by migID
 	migSeq       int64                    // monotonic handover id counter
@@ -597,6 +598,7 @@ func newHub(w *world.World) *hub {
 	sb, sbst := newScoreboard("") // in-memory board; server.Run swaps in the persisted one
 	h := &hub{
 		world:         w,
+		border:        defaultBorder(),
 		sb:            sb,
 		sbstore:       sbst,
 		signs:         newSignStore(""), // in-memory; server.Run swaps in the persisted one
@@ -828,6 +830,7 @@ func (h *hub) run() {
 			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
 			h.expireSpyglass(players) // a scope held to its full duration drops
 			h.updateEating(players)   // apply finished eat-holds (32-tick chew)
+			h.borderDamage(players)   // outside the world border hurts (players only)
 			h.updateSleep(players)    // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshArmorAttrs()   // vanilla updateEquipmentAttributes: worn gear → ARMOR
@@ -1259,6 +1262,10 @@ func (h *hub) run() {
 					if xp := xpForBlock(e.state, h.rng.Intn); xp > 0 && silk == 0 {
 						h.spawnXPOrb(players, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 					}
+				}
+			case evBorderCmd:
+				if t := players[e.p.eid]; t != nil {
+					e.p.tell(h.cmdWorldBorder(players, t, e.args))
 				}
 			case evScoreboardCmd:
 				h.cmdScoreboard(players, e)
@@ -1798,6 +1805,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		h.dropShadowSuperseded(e.p.eid)
 	}
 
+	h.sendBorder(nt) // the border, before anything can walk into it
 	h.sendVehiclesTo(nt)
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
