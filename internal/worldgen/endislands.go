@@ -115,3 +115,9 @@ func clampF(v, lo, hi float64) float64 {
 	}
 	return v
 }
+
+// EndOuterColumn is endOuterColumn for callers outside worldgen: the top and
+// bottom of the outer-island column at (x, z), and whether there is one.
+func (g *Generator) EndOuterColumn(x, z int) (top, bottom int, ok bool) {
+	return g.endOuterColumn(x, z)
+}

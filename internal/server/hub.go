@@ -226,6 +226,7 @@ type tracked struct {
 	lastRejectTick uint64 // window anchor for rejectStreak
 	bossBarOn      bool   // dragon bossbar currently shown to this client
 	graceUntil     uint64 // no environmental damage until this tick (portal arrival)
+	gatewayUntil   uint64 // end gateway won't take this player again until this tick
 	onGround       bool
 	sprinting      bool // last reported sprint state (crit/knockback modifiers)
 	gamemode       int
@@ -853,6 +854,7 @@ func (h *hub) run() {
 				h.updateOutposts(players)      // populate pillager outposts on approach
 				h.updatePortalDwell(players)
 				h.updateEndPortalContact(players)
+				h.updateEndGateways(players) // step into a gateway → the outer islands
 				h.updateDragon(players)
 				if age%20 == 0 {
 					h.updateDragonBar(players)

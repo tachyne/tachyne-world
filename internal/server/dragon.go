@@ -194,6 +194,7 @@ func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	h.setBlockIn(players, 2, blockPos{0, cy + 1, 0}, worldgen.DragonEgg)
 	h.spawnXPOrbIn(players, 2, 1500, 2.5, float64(cy+1), 0.5)
 	h.spawnItemIn(players, 2, itemElytra, 1, 3.5, float64(cy+1), 3.5)
+	h.spawnEndGateways(players) // the ring out to the outer islands
 	for _, t := range players {
 		t.p.trySendEv(chatEv("The Ender Dragon has fallen!"))
 	}

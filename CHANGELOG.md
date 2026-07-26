@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **End gateways.** Killing the dragon now raises a ring of twenty gateways
+  around the main island. Step into one and it throws you a thousand blocks out
+  along its own bearing, onto the first outer island in that direction, and
+  leaves a gateway home beside where you land — so the outer End is somewhere
+  you can actually reach and come back from, not just somewhere you can see.
 - **The End has its outer islands.** Past the void ring around the main island
   there was nothing at all — the End was one disc of end stone and empty space
   forever. Now it opens out the way it should: scattered islands stretching
