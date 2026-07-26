@@ -33,7 +33,10 @@ func (h *hub) lowerShield(t *tracked) { t.blockingSince = 0 }
 
 // isBlockingShield reports whether the raised shield is active (past the delay).
 func (t *tracked) isBlockingShield(now uint64) bool {
-	return t.blockingSince != 0 && now-t.blockingSince >= shieldDelay
+	// Written as an addition rather than "now - blockingSince >= delay": these
+	// are unsigned, so a now that trails blockingSince wraps to a colossal
+	// number and reads as "up for ages".
+	return t.blockingSince != 0 && now >= t.blockingSince+shieldDelay
 }
 
 // shieldBlocks reports whether a hit from (srcX,srcZ) is caught by the player's

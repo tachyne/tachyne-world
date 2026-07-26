@@ -45,6 +45,7 @@ const (
 	causeDragon     = "dragon"     // the fight went badly
 	causeVoid       = "void"       // fell out of the world
 	causeWither     = "wither"     // withered away
+	causeThorns     = "thorns"     // killed by the armour of whoever they attacked
 )
 
 // deathMessage renders the message for a death. The "by" form is used when
@@ -103,6 +104,11 @@ func deathMessage(victim string, c deathCause) string {
 			return victim + " was slain by " + by
 		}
 		return victim + " was killed by the dragon"
+	case causeThorns:
+		if by != "" {
+			return victim + " was killed whilst trying to hurt " + by
+		}
+		return victim + " was killed"
 	case causeVoid:
 		return victim + " fell out of the world"
 	case causeWither:

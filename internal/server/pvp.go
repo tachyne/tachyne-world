@@ -80,13 +80,14 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 
 	h.hurtBy(players, v, v.armorReduce(dmg), 0, dmgGeneric, deathCause{key: causePlayer, by: t.p.name})
 	h.wearArmor(players, v, dmg)
-	// Fire Aspect sets the victim alight. (Thorns is NOT wired here: the
-	// existing retaliation helper hurts a MOB attacker, and turning it round
-	// to hurt a player needs the same guards this function has — a job for
-	// when it can be tested rather than a blind adaptation.)
+	// Fire Aspect sets the victim alight.
 	if lvl := heldStack(t).enchLvl(enchFireAspect); lvl > 0 && v.hasEffect(effFireRes) == 0 {
 		v.fireSecs = max(v.fireSecs, 4*lvl)
 	}
+	// …and the victim's Thorns bites back. This sits AFTER the hurt because
+	// vanilla only runs post-attack effects when the blow actually landed —
+	// the shield branch above returns before ever reaching here.
+	h.thornsRetaliatePlayer(players, v, t)
 	h.knockbackPvP(t, v)
 
 	if v.dead {

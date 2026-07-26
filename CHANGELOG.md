@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Thorns bites back in PvP, and reaches the archer.** Thorns only ever
+  retaliated against mobs, so a player in a full enchanted set was no more
+  dangerous to attack than one in rags. It is the victim's armour that carries
+  the enchantment, and it now fires at whoever landed the blow regardless of
+  what they are — including down the flight path of an arrow to the archer who
+  loosed it, which is how it has always worked in vanilla. A blocked blow deals
+  no damage and so draws no retaliation, and the damage it deals is a
+  continuous roll rather than one of five whole numbers.
 - **Death messages say what happened.** Every death read "<name> died",
   whatever killed them — which loses the one thing a death message exists to
   carry. Deaths are now attributed: slain by a player or a named mob, shot by

@@ -119,3 +119,105 @@ func TestPlayerArrowsObeyThePvPRule(t *testing.T) {
 		t.Error("a player's arrow ignored the pvp gamerule")
 	}
 }
+
+// Thorns is the victim's armour biting the ATTACKER, and vanilla hangs it on
+// the victim's equipment without caring whether a mob or a player landed the
+// blow — so it has to fire in PvP exactly as it does against a mob's bite.
+func TestThornsBitesAPlayerAttacker(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b, players := pvpPair(h)
+
+	swing := func() {
+		a.health, b.health = 20, 20
+		a.lastAttack = 0
+		h.attackPlayer(players, a.p.eid, b.p.eid)
+	}
+
+	// An unarmoured victim never hurts the attacker, however many blows land.
+	for i := 0; i < 200; i++ {
+		swing()
+		if a.health < 20 {
+			t.Fatalf("a bare victim retaliated: attacker health=%v", a.health)
+		}
+	}
+
+	for i := range b.armor {
+		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
+			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+	}
+	bit := 0
+	for i := 0; i < 200; i++ {
+		swing()
+		if a.health < 20 {
+			bit++
+		}
+	}
+	if bit == 0 {
+		t.Error("a full Thorns III set never bit a player attacker over 200 blows")
+	}
+
+	// And the death it causes says so, rather than falling back to "died".
+	if got, want := deathMessage("attacker", deathCause{key: causeThorns, by: "victim"}),
+		"attacker was killed whilst trying to hurt victim"; got != want {
+		t.Errorf("thorns death message = %q, want %q", got, want)
+	}
+}
+
+// A blocked blow deals no damage, so vanilla runs no post-attack effects —
+// raising a shield must not hand the attacker a free Thorns hit.
+func TestShieldBlockSuppressesThorns(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b, players := pvpPair(h)
+	for i := range b.armor {
+		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
+			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+	}
+	b.inv.slots[b.p.heldSlot()] = invStack{item: itemByName["shield"], count: 1}
+	b.blockingSince = 1
+	h.tick.Store(uint64(shieldDelay) + 2) // the shield has to be UP long enough
+	// …and facing the attacker: look is (-sin yaw, cos yaw), the attacker lies
+	// at -x from the victim, so the shield needs yaw 90 to point that way.
+	b.yaw = 90
+
+	for i := 0; i < 200; i++ {
+		a.health, b.health = 20, 20
+		a.lastAttack = 0
+		h.attackPlayer(players, a.p.eid, b.p.eid)
+		if b.health < 20 {
+			t.Fatal("the shield did not block — this test would prove nothing")
+		}
+		if a.health < 20 {
+			t.Fatal("a shielded victim's Thorns bit the attacker")
+		}
+	}
+}
+
+// Vanilla runs post-attack effects for an arrow exactly as for a fist, and
+// resolves the attacker to the SHOOTER — so Thorns reaches back down the
+// arrow's flight path to the archer who loosed it.
+func TestThornsReachesTheArcher(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b, players := pvpPair(h)
+	for i := range b.armor {
+		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
+			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+	}
+	a.x, a.z = 30, 30 // right across the field, well out of melee reach
+
+	bit := 0
+	for i := 0; i < 200; i++ {
+		a.health, b.health = 20, 20
+		arrow := &arrowEntity{eid: h.allocEID(), dim: 0, shooter: a.p.eid,
+			dmg: 1, playerShot: true, x: b.x, y: b.y, z: b.z}
+		h.arrowHitsPlayer(players, arrow, b.x, b.y+0.5, b.z)
+		if b.health >= 20 {
+			t.Fatal("the arrow never landed — this test would prove nothing")
+		}
+		if a.health < 20 {
+			bit++
+		}
+	}
+	if bit == 0 {
+		t.Error("Thorns never reached the archer over 200 arrows")
+	}
+}

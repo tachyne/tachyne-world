@@ -315,6 +315,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			h.hurtBy(players, t, t.armorReduce(float32(a.dmg)), 0.1, dmgProjectile, shot)
 			h.wearArmor(players, t, float32(a.dmg))
 			h.knockback(t, a.x, a.z)
+			h.thornsAgainstShooter(players, t, a.shooter)
 			if a.poison {
 				h.applyEffect(players, t, effPoison, 0, 10)
 			}

@@ -16,10 +16,14 @@ const (
 	// FIRE_ASPECT: Ignite(perLevel 4.0) seconds.
 	fireAspectSecsPerLvl = 4
 	// THORNS: a 0.15/level chance, then 1..5 damage and 2 durability.
+	// The damage is a CONTINUOUS roll across [1,5) — vanilla samples a float,
+	// not one of five whole numbers, so 2.7 is as ordinary a Thorns hit as 3.
 	thornsChancePerLvl = 0.15
-	thornsMinDamage    = 1
-	thornsMaxDamage    = 5
+	thornsMinDamage    = 1.0
+	thornsMaxDamage    = 5.0
 	thornsWear         = 2
+	// The thorns damage type's food exhaustion.
+	thornsExhaustion = 0.1
 )
 
 // undeadTypes is #minecraft:undead — what Smite bites. Built once from the
@@ -69,17 +73,23 @@ func (h *hub) applyFireAspect(players map[int32]*tracked, t *tracked, m *mob) {
 	}
 }
 
-// thornsRetaliate is the POST_ATTACK effect Thorns hangs on the VICTIM: when a
-// mob hits an armoured player, each worn piece rolls its own 15%-per-level
-// chance to spit 1-5 damage back and wear itself by 2.
+// thornsHit is one armour piece firing: which slot, and for how much.
+type thornsHit struct {
+	slot int
+	dmg  float64
+}
+
+// thornsRolls is the POST_ATTACK effect Thorns hangs on the VICTIM, resolved
+// down to "which pieces fired". Vanilla hangs it on the victim's equipment and
+// applies it to whoever landed the blow, WITHOUT caring what the attacker is —
+// so the roll is shared and only the delivery differs between a mob attacker
+// and a player one.
 //
 // Vanilla rolls per piece, so a full Thorns set retaliates far more often than
 // a single chestplate — that is the whole appeal, and averaging it into one
 // roll would flatten it.
-func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
-	if m == nil || m.dying > 0 {
-		return
-	}
+func (h *hub) thornsRolls(t *tracked) []thornsHit {
+	var hits []thornsHit
 	for i := range t.armor {
 		lvl := t.armor[i].enchLvl(enchThorns)
 		if lvl == 0 || t.armor[i].count == 0 {
@@ -88,15 +98,64 @@ func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
 		if h.rng.Float64() >= thornsChancePerLvl*float64(lvl) {
 			continue
 		}
-		dmg := thornsMinDamage + h.rng.Intn(thornsMaxDamage-thornsMinDamage+1)
-		m.hurt(float64(dmg))
+		hits = append(hits, thornsHit{slot: i,
+			dmg: thornsMinDamage + h.rng.Float64()*(thornsMaxDamage-thornsMinDamage)})
+	}
+	return hits
+}
+
+// thornsRetaliate spits the rolled damage back at a MOB attacker.
+func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
+	if m == nil || m.dying > 0 {
+		return
+	}
+	for _, hit := range h.thornsRolls(t) {
+		m.hurt(hit.dmg)
 		m.lastAttacker = t.p.eid
 		m.hitByPlayer = true // the kill still pays experience
 		h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
-		h.wearArmorSlot(players, t, i, thornsWear)
+		h.wearArmorSlot(players, t, hit.slot, thornsWear)
 		if m.health <= 0 {
 			h.killMob(players, m)
 			return
 		}
+	}
+}
+
+// thornsRetaliatePlayer spits it back at a PLAYER attacker. The armour still
+// wears even when the damage lands on someone it cannot hurt: vanilla runs the
+// durability cost and the damage as one all_of effect, gated only by the
+// chance roll, so a creative opponent still blunts your chestplate.
+func (h *hub) thornsRetaliatePlayer(players map[int32]*tracked, victim, attacker *tracked) {
+	if attacker == nil || attacker.dead {
+		return
+	}
+	// Every caller today already sits behind the pvp gate, but the gate belongs
+	// with the damage as well: gating one route and leaving another open is how
+	// bows kept working after fists stopped.
+	if attacker != victim && !h.rules.PvP {
+		return
+	}
+	for _, hit := range h.thornsRolls(victim) {
+		dmg := float32(hit.dmg)
+		h.hurtBy(players, attacker, attacker.armorReduce(dmg), thornsExhaustion, dmgGeneric,
+			deathCause{key: causeThorns, by: victim.p.name})
+		h.wearArmor(players, attacker, dmg)
+		h.wearArmorSlot(players, victim, hit.slot, thornsWear)
+		if attacker.dead {
+			return
+		}
+	}
+}
+
+// thornsAgainstShooter fires the victim's Thorns at whoever loosed a
+// projectile. Vanilla runs the same post-attack effects for an arrow as for a
+// fist and resolves the "attacker" to the SHOOTER rather than to the arrow, so
+// an archer takes the spikes from right across the field.
+func (h *hub) thornsAgainstShooter(players map[int32]*tracked, victim *tracked, shooter int32) {
+	if s := players[shooter]; s != nil {
+		h.thornsRetaliatePlayer(players, victim, s)
+	} else if m := h.mobs[shooter]; m != nil {
+		h.thornsRetaliate(players, victim, m)
 	}
 }
