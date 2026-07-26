@@ -62,3 +62,29 @@ func TestPoolAliasesCoverEverySpawnerFamily(t *testing.T) {
 		t.Errorf("ranged %q and slow_ranged %q disagree — they are bound as one group", rk, sk)
 	}
 }
+
+// Every property a template records must survive being stamped. resolveState
+// only applies properties for blocks InfoForState knows, and that table used to
+// hold only ORIENTABLE blocks — so a rail's shape, farmland's moisture, snow
+// layers and a trial spawner's state were all silently dropped, and 43 blocks
+// stamped at their base state instead.
+func TestTemplatePropertiesAreNotDropped(t *testing.T) {
+	lost := map[string]bool{}
+	for _, tm := range templates {
+		for _, p := range tm.Palette {
+			if len(p.Props) == 0 {
+				continue
+			}
+			base := safeBase(trimNS(p.Name))
+			if base == tmplSkip {
+				continue
+			}
+			if _, ok := InfoForState(base); !ok {
+				lost[trimNS(p.Name)] = true
+			}
+		}
+	}
+	for name := range lost {
+		t.Errorf("%s carries template properties that resolveState will drop", name)
+	}
+}

@@ -8,10 +8,10 @@ package worldgen
 
 // InfoForState returns the state layout for the block that owns `state` — any
 // state in its range, not just its default (a neighbouring fence already has its
-// connections set). Scans orientInfo by range; the table is small and this only
+// connections set). Scans blockInfo by range; the table is small and this only
 // runs on placement / neighbour updates.
 func InfoForState(state uint32) (BlockInfo, bool) {
-	for _, info := range orientInfo {
+	for _, info := range blockInfo {
 		size := uint32(1)
 		for _, p := range info.Props {
 			size *= uint32(len(p.Vals))

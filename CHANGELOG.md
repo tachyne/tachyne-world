@@ -76,6 +76,13 @@ the public history since the project was open-sourced on 2026-07-10.
   out of you when you are hit. Only `/effect` reaches those four so far — the
   ominous bottle that grants them is still to come.
 
+### Fixed
+- **Structures stamp their blocks properly.** Anything with a property but no
+  facing was being placed in its default state — so rails in a structure came
+  out straight instead of curved or sloped, snow was always one layer deep, and
+  farmland, leaves, candles, lanterns, brewing stands and a dozen others all
+  lost whatever the builder had set. Forty-three kinds of block were affected.
+
 ### Changed
 - **Haste and Mining Fatigue change how fast you swing.** Both set the attack
   speed, but nothing read it, so a beacon's Haste sped up mining and left

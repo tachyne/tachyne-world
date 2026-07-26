@@ -8,7 +8,7 @@ func TestSetProperty(t *testing.T) {
 	logBase := blockBase("oak_log")
 	log, ok := OrientInfo(oakLog)
 	if !ok {
-		t.Fatal("oak_log not in orientInfo")
+		t.Fatal("oak_log not in blockInfo")
 	}
 	if got := SetProperty(log, oakLog, "axis", "x"); got != logBase {
 		t.Errorf("log axis x = %d, want %d", got, logBase)

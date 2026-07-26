@@ -14,14 +14,17 @@ import json, urllib.request, os
 
 URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "block_states_gen.go")
-ORIENT = {"axis", "facing", "half", "type", "rotation"}  # rotation: signs/banners/heads (16-way)
-CONNECT = {"north", "east", "south", "west"}  # fences/panes/bars/walls connections
+# Every block with ANY state property goes in the table. It used to hold only
+# blocks with a placement ORIENTATION (axis/facing/half/type) or connections,
+# which meant a block with properties but no facing — farmland's moisture, a
+# rail's shape, snow layers, a trial spawner's state — was absent, and
+# resolveState silently dropped those properties when stamping a template.
 
 blocks = json.load(urllib.request.urlopen(URL))
 rows = []
 for b in blocks:
     states = b.get("states", [])
-    if not any(s["name"] in ORIENT or s["name"] in CONNECT for s in states):
+    if not states:
         continue
     props = []
     for s in states:
@@ -55,10 +58,12 @@ lines = [
     "\tProps []BlockProp",
     "}",
     "",
-    "// orientInfo maps a block's default state to its layout, for the blocks that",
-    "// have a placement-orientation property (axis/facing/half/type) or a",
-    "// connection property (north/east/south/west — fences/panes/bars/walls).",
-    "var orientInfo = map[uint32]BlockInfo{",
+    "// blockInfo maps a block's default state to its state layout. EVERY block",
+    "// with properties is here, not only the orientable ones: a rail's shape,",
+    "// farmland's moisture and snow layers all live in properties with no",
+    "// facing, and leaving them out made resolveState drop them when stamping",
+    "// a structure template.",
+    "var blockInfo = map[uint32]BlockInfo{",
 ]
 for default, mn, props in rows:
     ps = ", ".join(f'{{"{n}", []string{govals(v)}}}' for n, v in props)
@@ -68,7 +73,7 @@ lines += [
     "",
     "// OrientInfo returns the state layout for an orientable block's default state.",
     "func OrientInfo(defaultState uint32) (BlockInfo, bool) {",
-    "\tinfo, ok := orientInfo[defaultState]",
+    "\tinfo, ok := blockInfo[defaultState]",
     "\treturn info, ok",
     "}",
     "",
