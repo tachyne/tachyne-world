@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Cows can be milked, and llamas spit.** Two mobs were missing the thing
+  everyone knows them for. A bucket on an adult cow, mooshroom or goat now
+  fills with milk — which strips every status effect and, unlike food, can be
+  drunk on a full stomach, so it is finally the answer to a witch's poison.
+  A bowl on a mooshroom comes back as stew. And a provoked llama spits from
+  twenty blocks rather than biting: the spit is the only damage a llama has
+  ever been able to do, so its melee is gone.
 - **Thorns bites back in PvP, and reaches the archer.** Thorns only ever
   retaliated against mobs, so a player in a full enchanted set was no more
   dangerous to attack than one in rags. It is the victim's armour that carries

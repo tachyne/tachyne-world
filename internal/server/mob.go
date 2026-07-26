@@ -438,6 +438,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.witherShoot(players, m) // ranged: wither skulls
 			case entityShulker:
 				h.shulkerShoot(players, m) // ranged: homing bullets (ours: straight)
+			case entityLlama, entityTraderLlama:
+				h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
 			case entityWarden:
 				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:

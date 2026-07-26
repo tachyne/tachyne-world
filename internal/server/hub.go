@@ -1458,7 +1458,8 @@ func (h *hub) run() {
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
 						_ = h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
-							h.tryCopperGolem(players, t, m) || h.tryMount(players, t, m) ||
+							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
+							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
 							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m)
 					}
 				}

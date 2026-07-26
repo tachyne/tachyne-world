@@ -195,10 +195,12 @@ var speciesTable = map[int]*speciesDef{
 		drops: []specDrop{{item: "bone", rnd: 2}}},
 	entityZombieHorse: {name: "zombie_horse", health: 25, speed: 0.20, arch: archPassive,
 		drops: []specDrop{{item: "rotten_flesh", rnd: 2}}}, // MAX_HEALTH 25 (vanilla ZombieHorse)
-	entityLlama: {name: "llama", health: 19, speed: 0.175, damage: 1,
+	// damage 0 is deliberate: vanilla llamas carry no attack-damage attribute,
+	// so their one point of damage is the SPIT (llama.go), not a bite.
+	entityLlama: {name: "llama", health: 19, speed: 0.175, damage: 0,
 		arch: archPassive, retaliate: true, love: "hay_block",
 		drops: []specDrop{{item: "leather", rnd: 2}}},
-	entityTraderLlama: {name: "trader_llama", health: 19, speed: 0.175, damage: 1,
+	entityTraderLlama: {name: "trader_llama", health: 19, speed: 0.175, damage: 0,
 		arch: archPassive, retaliate: true, soundAs: "llama",
 		drops: []specDrop{{item: "leather", rnd: 2}}},
 	entityTurtle: {name: "turtle", health: 30, speed: 0.25, step: 0.05, arch: archPassive,
