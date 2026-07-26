@@ -137,18 +137,21 @@ def table(t):
     return {"pools": pools}
 
 
-PREFIX = "data/minecraft/loot_table/chests/"
+# chests/ is the bulk of it; spawners/ holds what a trial spawner ejects when
+# its fight is won, which is the only way a trial key enters the world.
+PREFIXES = ["data/minecraft/loot_table/chests/", "data/minecraft/loot_table/spawners/"]
 out, kept, skipped = {}, 0, 0
 for n in sorted(z.namelist()):
-    if not (n.startswith(PREFIX) and n.endswith(".json")):
+    pre = next((p for p in PREFIXES if n.startswith(p)), None)
+    if pre is None or not n.endswith(".json"):
         continue
-    name = n[len(PREFIX):-len(".json")]
+    name = pre[len("data/minecraft/loot_table/"):] + n[len(pre):-len(".json")]
     try:
-        out["chests/" + name] = table(json.loads(z.read(n)))
+        out[name] = table(json.loads(z.read(n)))
         kept += 1
     except Unsupported as ex:
         skipped += 1
-        print(f"  skip chests/{name}: {ex}", file=sys.stderr)
+        print(f"  skip {name}: {ex}", file=sys.stderr)
 
 os.makedirs(OUTDIR, exist_ok=True)
 with open(OUT, "w") as f:

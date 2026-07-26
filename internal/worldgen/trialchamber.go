@@ -131,7 +131,8 @@ func trialChamberTableForPiece(name string) string {
 // the world position the jigsaw put it at.
 type TrialChamberFeature struct {
 	X, Y, Z int
-	Ominous bool // trial spawners: the ominous variant
+	Ominous bool   // trial spawners: the ominous variant
+	Kind    string // trial spawners: which mob, from the piece it came from
 }
 
 // TrialChamberSpawners returns every trial_spawner the chamber placed, and
@@ -160,8 +161,25 @@ func (g *Generator) chamberBlocks(t TrialChamber, name string) []TrialChamberFea
 			out = append(out, TrialChamberFeature{
 				X: pc.OX + rx, Y: pc.OY + ry, Z: pc.OZ + rz,
 				Ominous: p.Props["ominous"] == "true",
+				Kind:    spawnerKindOf(pc.Tmpl.name),
 			})
 		}
 	}
 	return out
+}
+
+// spawnerKindOf reads which mob a trial spawner fights from the piece it came
+// from: the pieces are named trial_chambers/spawner/<family>/<mob>, and that
+// name is the only place the choice is recorded — the block state carries no
+// mob, and the alias that picked the piece is resolved before this runs.
+func spawnerKindOf(piece string) string {
+	const p = "trial_chambers/spawner/"
+	if !strings.HasPrefix(piece, p) {
+		return ""
+	}
+	rest := piece[len(p):]
+	if i := strings.LastIndex(rest, "/"); i >= 0 {
+		return rest[i+1:]
+	}
+	return rest
 }

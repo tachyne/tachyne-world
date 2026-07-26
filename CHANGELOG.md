@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Trial spawners run their fight.** Walk into a chamber room and the spawner
+  lights up, throws waves at you — more of them, and more at once, the more of
+  you there are — and when the last one falls it opens and pays out a reward to
+  everyone who fought, then sleeps for half an hour. The block shows all of it:
+  dark, lit, flaming, shutter open, spent. **Trial keys now exist**, which is
+  what vaults open with.
 - **Trial chambers have their spawners.** They generated the rooms, the
   corridors and the vaults but not a single trial spawner — the room that is
   supposed to be a fight was just an empty room with a reward in it. All four
