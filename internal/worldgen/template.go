@@ -65,21 +65,41 @@ type templatePool struct {
 	Fallback string        `json:"fallback"`
 }
 
+// aliasOption is one way to resolve a group of pool aliases: a weighted choice
+// binding one or more alias names to the real pools they stand for.
+type aliasOption struct {
+	Weight int               `json:"weight"`
+	Bind   map[string]string `json:"bind"`
+}
+
+// aliasEntry is one independent choice in a structure's pool_aliases.
+type aliasEntry struct {
+	Options []aliasOption `json:"options"`
+}
+
 var (
 	templates map[string]*Template
 	pools     map[string]*templatePool
+	// Pool ALIASES per structure. A jigsaw may name a pool that deliberately
+	// does not exist — trial chambers point their spawner connectors at
+	// trial_chambers/spawner/contents/melee and friends — and the structure
+	// binds each alias to a real pool ONCE PER INSTANCE. That is what makes
+	// one chamber consistently zombie-themed and the next husk-themed, and
+	// without it those connectors resolve to nothing at all.
+	poolAliases map[string][]aliasEntry
 )
 
 func init() {
 	var data struct {
 		Templates map[string]*Template     `json:"templates"`
 		Pools     map[string]*templatePool `json:"pools"`
+		Aliases   map[string][]aliasEntry  `json:"aliases"`
 	}
 	if err := json.Unmarshal(structuresJSON, &data); err != nil {
 		log.Printf("structure templates: %v", err)
 		return
 	}
-	templates, pools = data.Templates, data.Pools
+	templates, pools, poolAliases = data.Templates, data.Pools, data.Aliases
 	for name, t := range templates {
 		t.name = name
 		for rot := 0; rot < 4; rot++ {

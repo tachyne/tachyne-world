@@ -61,6 +61,13 @@ var (
 
 // AssembleTrialChamber assembles (and caches) the chamber's jigsaw pieces from
 // the chamber/end start pool. Deterministic per site.
+// trialChamberDepth is the structure's own jigsaw size from
+// worldgen/structure/trial_chambers.json. It was 8 here, which stopped the
+// walk before it reached the spawner CONTENTS hanging off each spawner
+// connector — so chambers grew their corridors and vaults but never the
+// spawners themselves.
+const trialChamberDepth = 20
+
 func (g *Generator) AssembleTrialChamber(t TrialChamber) []PlacedPiece {
 	k := tcKey{g.seed, t.X, t.Z}
 	tcMu.Lock()
@@ -70,7 +77,7 @@ func (g *Generator) AssembleTrialChamber(t TrialChamber) []PlacedPiece {
 		return p
 	}
 	rng := newJigsawRNG(g.seed, t.X, t.Z)
-	p = g.AssembleJigsaw("trial_chambers/chamber/end", t.X, t.Y, t.Z, rng, 8)
+	p = g.AssembleJigsawAliased("trial_chambers", "trial_chambers/chamber/end", t.X, t.Y, t.Z, rng, trialChamberDepth)
 	tcMu.Lock()
 	tcCache[k] = p
 	tcMu.Unlock()

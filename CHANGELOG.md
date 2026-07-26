@@ -11,9 +11,15 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
-## 2026-07-25
+## 2026-07-26
 
 ### Added
+- **Trial chambers have their spawners.** They generated the rooms, the
+  corridors and the vaults but not a single trial spawner — the room that is
+  supposed to be a fight was just an empty room with a reward in it. All four
+  families are there now, and a chamber picks a theme: its melee spawners are
+  all zombies, or all husks, or all spiders, and its two kinds of archer always
+  match. Chunks regenerate from the seed, so existing chambers fill in too.
 - **Conduits.** Build a prismarine frame around one underwater and it grants
   Conduit Power to anyone swimming in range — so you can breathe and see and
   mine down there — and a full frame hunts hostile mobs in the water around it.
@@ -58,6 +64,26 @@ the public history since the project was open-sourced on 2026-07-10.
   cobwebs where you fell, Oozing spills slimes, and Infested bursts silverfish
   out of you when you are hit. Only `/effect` reaches those four so far — the
   ominous bottle that grants them is still to come.
+
+### Changed
+- **Haste and Mining Fatigue change how fast you swing.** Both set the attack
+  speed, but nothing read it, so a beacon's Haste sped up mining and left
+  combat untouched — and the elder guardian's curse was purely cosmetic in a
+  fight.
+- **Falling damage is reduced by the right things.** Armour never softened a
+  fall in vanilla and does not here, but Feather Falling does — previously the
+  protection enchantments were bundled into the armour calculation, so anything
+  that skipped armour skipped them too. Resistance and enchantment protection
+  also now apply in vanilla's order, which is not the same as applying their
+  sum.
+- **Raiding a village takes 30 seconds now.** Walking into a village with Bad
+  Omen no longer drops the raid on your head the same instant: the omen turns
+  into a Raid Omen and the horn sounds half a minute later, at the spot where
+  it turned — the warning window vanilla has given you since 1.21.
+
+## 2026-07-25
+
+### Added
 - **Attributes are now a real system**, with a public `plugin/attribute`
   package plugins can compile against: entity stats have base values and
   modifiers that stack the way vanilla's do, instead of being fixed numbers
@@ -82,20 +108,6 @@ the public history since the project was open-sourced on 2026-07-10.
   and its render time by ~16x, which bought a much larger visible area.
 
 ### Changed
-- **Haste and Mining Fatigue change how fast you swing.** Both set the attack
-  speed, but nothing read it, so a beacon's Haste sped up mining and left
-  combat untouched — and the elder guardian's curse was purely cosmetic in a
-  fight.
-- **Falling damage is reduced by the right things.** Armour never softened a
-  fall in vanilla and does not here, but Feather Falling does — previously the
-  protection enchantments were bundled into the armour calculation, so anything
-  that skipped armour skipped them too. Resistance and enchantment protection
-  also now apply in vanilla's order, which is not the same as applying their
-  sum.
-- **Raiding a village takes 30 seconds now.** Walking into a village with Bad
-  Omen no longer drops the raid on your head the same instant: the omen turns
-  into a Raid Omen and the horn sounds half a minute later, at the spot where
-  it turned — the warning window vanilla has given you since 1.21.
 - **The 3D map no longer looks grainy at a distance.** Block textures are now
   mipmapped, so terrain far from the camera resolves cleanly instead of
   shimmering as you pan. Blocks stay crisp and pixel-sharp up close.

@@ -96,7 +96,49 @@ func (g *Generator) AssembleJigsawTerrain(startPool string, sx, sy, sz int, prng
 	return g.assembleJigsaw(startPool, sx, sy, sz, prng, maxDepth, true)
 }
 
+// resolveAliases picks one binding per alias entry, using the structure's own
+// RNG so the choice is stable for a given chamber and consistent across it —
+// vanilla resolves the whole table once when the structure is laid out, which
+// is why a chamber's ranged and slow_ranged spawners always match.
+func resolveAliases(structure string, prng *jigsawRNG) map[string]string {
+	entries := poolAliases[structure]
+	if len(entries) == 0 {
+		return nil
+	}
+	out := map[string]string{}
+	for _, e := range entries {
+		total := 0
+		for _, o := range e.Options {
+			total += max(1, o.Weight)
+		}
+		if total <= 0 {
+			continue
+		}
+		r := prng.intn(total)
+		for _, o := range e.Options {
+			if r -= max(1, o.Weight); r < 0 {
+				for alias, target := range o.Bind {
+					out[alias] = target
+				}
+				break
+			}
+		}
+	}
+	return out
+}
+
+// AssembleJigsawAliased is AssembleJigsaw for a structure whose jigsaws use
+// pool aliases (see poolAliases). Without the table the aliased jigsaws find no
+// pool and simply place nothing.
+func (g *Generator) AssembleJigsawAliased(structure, startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int) []PlacedPiece {
+	return g.assembleJigsawAliased(startPool, sx, sy, sz, prng, maxDepth, false, resolveAliases(structure, prng))
+}
+
 func (g *Generator) assembleJigsaw(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int, terrain bool) []PlacedPiece {
+	return g.assembleJigsawAliased(startPool, sx, sy, sz, prng, maxDepth, terrain, nil)
+}
+
+func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng *jigsawRNG, maxDepth int, terrain bool, alias map[string]string) []PlacedPiece {
 	sp := pools[startPool]
 	if sp == nil || len(sp.Elements) == 0 {
 		return nil
@@ -123,7 +165,13 @@ func (g *Generator) assembleJigsaw(startPool string, sx, sy, sz int, prng *jigsa
 		if cur.depth >= maxDepth {
 			continue
 		}
-		pool := pools[cur.jig.Pool]
+		name := cur.jig.Pool
+		aliased := false
+		if target, ok := alias[name]; ok {
+			name = target // an aliased jigsaw names a stand-in, not a real pool
+			aliased = true
+		}
+		pool := pools[name]
 		if pool == nil || len(pool.Elements) == 0 {
 			continue
 		}
@@ -160,6 +208,15 @@ func (g *Generator) assembleJigsaw(startPool string, sx, sy, sz int, prng *jigsa
 					for _, p := range pieces {
 						if p == cur.piece {
 							continue // vanilla: a child may overlap the piece it attaches to
+						}
+						// An ALIAS-resolved child is content placed INSIDE the
+						// room its connector belongs to — vanilla gives a
+						// spawner piece the same 3x3 footprint as its connector,
+						// one block taller. Judging it by the ordinary
+						// no-overlap rule rejects every candidate, which is why
+						// chambers grew their connectors and never a spawner.
+						if aliased {
+							continue
 						}
 						bx0, by0, bz0, bx1, by1, bz1 := p.bbox()
 						if overlaps(ox, oy, oz, nx1, ny1, nz1, bx0, by0, bz0, bx1, by1, bz1) {

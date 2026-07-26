@@ -242,10 +242,71 @@ def load_pool(inner, name):
     return out
 
 
+def strip_ns(s):
+    return s.split(":", 1)[-1] if s else s
+
+
+# Structures whose jigsaws use POOL ALIASES. A trial chamber's spawner
+# connectors deliberately name pools that do not exist as files
+# (trial_chambers/spawner/contents/melee and friends); the structure remaps
+# each alias to a real pool ONCE PER INSTANCE, which is what makes one chamber
+# consistently zombie-themed and the next husk-themed. Without this the
+# connectors resolve to nothing and a chamber generates no spawners at all.
+ALIAS_STRUCTURES = ["trial_chambers"]
+
+
+def load_aliases(inner, name):
+    """Parse a structure's pool_aliases into a flat list the Go side can walk.
+
+    Two shapes, both reduced to "pick one option, then apply its bindings":
+      random        -> one alias, weighted targets
+      random_group  -> weighted groups, each binding SEVERAL aliases together
+    A group is what keeps a chamber's ranged and slow_ranged spawners matching.
+    """
+    try:
+        j = json.loads(inner.read("data/minecraft/worldgen/structure/%s.json" % name))
+    except KeyError:
+        return []
+    out = []
+    for entry in j.get("pool_aliases", []):
+        et = strip_ns(entry.get("type", ""))
+        if et == "random":
+            out.append({"options": [
+                {"weight": t.get("weight", 1),
+                 "bind": {strip_ns(entry["alias"]): strip_ns(t["data"])}}
+                for t in entry.get("targets", [])
+            ]})
+        elif et == "random_group":
+            opts = []
+            for g in entry.get("groups", []):
+                bind = {}
+                for d in g.get("data", []):
+                    if strip_ns(d.get("type", "")) == "direct":
+                        bind[strip_ns(d["alias"])] = strip_ns(d["target"])
+                if bind:
+                    opts.append({"weight": g.get("weight", 1), "bind": bind})
+            if opts:
+                out.append({"options": opts})
+        elif et == "direct":
+            out.append({"options": [
+                {"weight": 1, "bind": {strip_ns(entry["alias"]): strip_ns(entry["target"])}}
+            ]})
+    return out
+
+
 def collect(inner):
     """Bake POOL_ROOTS: their pools + every template reachable through jigsaws."""
     pools, templates = {}, {}
     pool_queue = list(POOL_ROOTS)
+    # Alias TARGETS are never reached by walking jigsaws (the jigsaw names the
+    # alias, not the target), so they have to be seeded explicitly or their
+    # templates — the actual spawner pieces — are simply never baked.
+    aliases = {}
+    for sname in ALIAS_STRUCTURES:
+        aliases[sname] = load_aliases(inner, sname)
+        for entry in aliases[sname]:
+            for opt in entry["options"]:
+                pool_queue.extend(opt["bind"].values())
     seen_pools = set()
     while pool_queue:
         pn = pool_queue.pop()
@@ -270,20 +331,22 @@ def collect(inner):
             kept.append(el)
         pool["elements"] = kept
         pools[pn] = pool
-    return pools, templates
+    return pools, templates, aliases
 
 
 def main():
     outer = zipfile.ZipFile(JAR)
     inner = zipfile.ZipFile(io.BytesIO(outer.read("META-INF/versions/1.21.11/server-1.21.11.jar")))
     out = {name: bake(inner, name) for name in TEMPLATES}
-    pools, jig_templates = collect(inner)
+    pools, jig_templates, aliases = collect(inner)
     out.update(jig_templates)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump({"templates": out, "pools": pools}, f, separators=(",", ":"))
+        json.dump({"templates": out, "pools": pools, "aliases": aliases}, f, separators=(",", ":"))
     total = sum(len(t["blocks"]) for t in out.values())
-    print("baked %d templates (%d blocks), %d pools -> %s" % (len(out), total, len(pools), os.path.relpath(OUT)))
+    nal = sum(len(v) for v in aliases.values())
+    print("baked %d templates (%d blocks), %d pools, %d alias entries -> %s" % (
+        len(out), total, len(pools), nal, os.path.relpath(OUT)))
 
 
 if __name__ == "__main__":
