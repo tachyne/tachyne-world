@@ -434,6 +434,8 @@ type hub struct {
 	conduits map[simPos]bool
 	// Trial spawners currently awake, keyed by position.
 	trials map[blockPos]*trialSpawner
+	// Trial-chamber vaults: their pose and who has already claimed each one.
+	vaults map[blockPos]*vaultRecord
 	// Decorated pots: one stack each (vanilla ContainerSingleItem).
 	pots map[simPos]invStack
 	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
@@ -841,6 +843,7 @@ func (h *hub) run() {
 				h.mobEnvironment(players)      // mob lava/fire/drowning/afterburn (after daylight ignites)
 				h.updateSpawners(players)      // dungeon spawner rooms
 				h.updateTrialSpawners(players) // trial-chamber fights
+				h.updateVaults(players)        // …and the vaults they pay you to open
 				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach
 				h.updateVillageGolems(players) // census-driven iron golem spawns
@@ -1457,6 +1460,14 @@ func (h *hub) run() {
 					default:
 						h.incCustom(t, "interact_with_furnace", 1)
 					}
+				}
+			case evUseVault:
+				if t := players[e.eid]; t != nil {
+					h.useVault(players, t, blockPos{e.x, e.y, e.z})
+				}
+			case evUsePot:
+				if t := players[e.eid]; t != nil {
+					h.usePot(players, t, blockPos{e.x, e.y, e.z})
 				}
 			case evOpenEnder:
 				if t := players[e.eid]; t != nil {

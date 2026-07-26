@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Vaults open.** Beat a trial spawner, take the key it drops, and the vault
+  in the room lights up and pays you — once. Each player gets their own single
+  claim from each vault, so a whole group can run the same chamber and everyone
+  is rewarded, and coming back with a second key gets you nothing. Ominous
+  vaults take the ominous key and pay from the better table.
 - **Trial spawners run their fight.** Walk into a chamber room and the spawner
   lights up, throws waves at you — more of them, and more at once, the more of
   you there are — and when the last one falls it opens and pays out a reward to

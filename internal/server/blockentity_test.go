@@ -1,6 +1,9 @@
 package server
 
 import (
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -333,5 +336,35 @@ func TestConduitRegistryTracksPlacement(t *testing.T) {
 	h.noteConduitBlock(0, pos, worldgen.Air)
 	if h.conduits[simPos{dim: 0, pos: pos}] {
 		t.Error("a broken conduit is still remembered")
+	}
+}
+
+// Every hub event posted from the interaction path must have a handler. Two
+// features shipped inert because a wiring edit was silently skipped — the
+// shulker box, then the decorated pot — and in both cases the block-side code
+// was fully tested while the event went nowhere. This walks the source so the
+// next one cannot ship the same way.
+func TestEveryInteractionEventIsHandled(t *testing.T) {
+	posted, err := os.ReadFile("interaction.go")
+	if err != nil {
+		t.Fatalf("read interaction.go: %v", err)
+	}
+	handled, err := os.ReadFile("hub.go")
+	if err != nil {
+		t.Fatalf("read hub.go: %v", err)
+	}
+	seen := map[string]bool{}
+	for _, m := range regexp.MustCompile(`\bev[A-Z][A-Za-z]*\{`).FindAllString(string(posted), -1) {
+		name := strings.TrimSuffix(m, "{")
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		if !strings.Contains(string(handled), "case "+name+":") {
+			t.Errorf("%s is posted by the interaction path but the hub never handles it", name)
+		}
+	}
+	if len(seen) < 5 {
+		t.Errorf("only found %d posted events — the scan is not working", len(seen))
 	}
 }
