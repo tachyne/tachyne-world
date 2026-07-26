@@ -158,3 +158,35 @@ func TestLooseRocketClimbsAndPops(t *testing.T) {
 		t.Fatalf("a rocket should climb: %v → %v", y0, r.y)
 	}
 }
+
+// A spyglass holds a scope until it is released, and drops it after the
+// twenty seconds vanilla allows.
+func TestSpyglassScopeStartsAndEnds(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.inv.slots[0] = invStack{item: itemSpyglass, count: 1}
+	pl.p.setHotbarSlot(0, itemSpyglass)
+	pl.p.held = 0
+
+	h.raiseSpyglass(players, pl)
+	if pl.scopeUntil == 0 {
+		t.Fatal("using a spyglass should start a scope")
+	}
+	h.lowerSpyglass(players, pl)
+	if pl.scopeUntil != 0 {
+		t.Fatal("releasing should end the scope")
+	}
+
+	h.raiseSpyglass(players, pl)
+	h.tick.Store(spyglassUseTicks - 1)
+	h.expireSpyglass(players)
+	if pl.scopeUntil == 0 {
+		t.Fatal("the scope dropped early")
+	}
+	h.tick.Store(spyglassUseTicks)
+	h.expireSpyglass(players)
+	if pl.scopeUntil != 0 {
+		t.Fatal("the scope outlived its duration")
+	}
+}

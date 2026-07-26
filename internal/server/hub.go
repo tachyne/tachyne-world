@@ -228,6 +228,7 @@ type tracked struct {
 	graceUntil     uint64           // no environmental damage until this tick (portal arrival)
 	gatewayUntil   uint64           // end gateway won't take this player again until this tick
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
+	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
 	onGround       bool
 	sprinting      bool // last reported sprint state (crit/knockback modifiers)
 	gamemode       int
@@ -819,11 +820,12 @@ func (h *hub) run() {
 			if age%20 == 0 {
 				h.updateItems(players) // despawn dropped items past their lifetime
 			}
-			h.pickupItems(players)   // collect dropped items into survival inventories
-			h.updateOrbs(players)    // collect experience orbs / expire old ones
-			h.updateRockets(players) // firework rockets climb, boost gliders, pop
-			h.updateEating(players)  // apply finished eat-holds (32-tick chew)
-			h.updateSleep(players)   // turn the night once everyone's slept ~5s
+			h.pickupItems(players)    // collect dropped items into survival inventories
+			h.updateOrbs(players)     // collect experience orbs / expire old ones
+			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
+			h.expireSpyglass(players) // a scope held to its full duration drops
+			h.updateEating(players)   // apply finished eat-holds (32-tick chew)
+			h.updateSleep(players)    // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshArmorAttrs()   // vanilla updateEquipmentAttributes: worn gear → ARMOR
 				t.refreshEnchantAttrs() // …and the attribute effects its enchantments carry
@@ -1316,8 +1318,9 @@ func (h *hub) run() {
 			case evStopEat:
 				if t := players[e.eid]; t != nil {
 					h.stopEating(players, t)
-					h.lowerShield(t) // release / hotbar switch also drops a shield
-					if e.fire {      // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
+					h.lowerShield(t)            // release / hotbar switch also drops a shield
+					h.lowerSpyglass(players, t) // …and takes a spyglass from the eye
+					if e.fire {                 // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
 						h.releaseDraw(players, t)
 						h.finishXbowCharge(players, t)
 						h.finishTridentThrow(players, t)
@@ -1358,6 +1361,10 @@ func (h *hub) run() {
 			case evThrowXPBottle:
 				if t := players[e.eid]; t != nil {
 					h.throwXPBottle(players, t)
+				}
+			case evSpyglass:
+				if t := players[e.eid]; t != nil {
+					h.raiseSpyglass(players, t)
 				}
 			case evUseFirework:
 				if t := players[e.eid]; t != nil {

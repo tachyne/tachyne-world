@@ -24,6 +24,8 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Goat horns sound.** All eight instruments, audible across 256 blocks, with
   vanilla's seven-second hold before you can blow it again. (Nothing drops one
   yet — that is the goat's ram, still to come.)
+- **The spyglass scopes.** Raising one now registers as a scope and sounds the
+  way it should, for both you and anyone watching.
 - **Frogspawn can be placed.** It goes on the surface of water, which no other
   item does, and so had never worked: the client's own aim passes straight
   through water and the server had nothing to place against. It now finds the
