@@ -120,7 +120,8 @@ func (s *Server) handleDig(p *player, data []byte) {
 	}
 	s.breakPairedHalf(p, x, y, z, broken)                   // remove the other half of a door/bed
 	s.updateConnectNeighbors(s.worldFor(p), p.dim, x, y, z) // adjacent fences/walls re-evaluate here
-	s.breakUnsupportedAbove(x, y, z)                        // grass/flowers pop off when their dirt is mined
+	// Unsupported neighbours come down on the hub, off the evBlock above —
+	// every direction, not only the cell directly overhead.
 }
 
 // breakPairedHalf removes the matching half of a two-block block (door, bed, tall
@@ -356,6 +357,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		}
 		if isChestBlock(state) { // pair with an adjacent single chest → double chest
 			state = s.pairChestOnPlace(p, tx, ty, tz, state)
+		}
+		if !supported(s.worldFor(p), blockPos{tx, ty, tz}, state) {
+			// vanilla canSurvive at placement: a rail, torch or flower with
+			// nothing to hold it is refused rather than left floating.
+			s.abortPlace(p, tx, ty, tz, seq)
+			return
 		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block

@@ -13,6 +13,16 @@ func BlockBase(name string) uint32 { return blockBase(name) }
 // BlockID returns a block's DEFAULT state id by name, panicking on an unknown name.
 func BlockID(name string) uint32 { return blockID(name) }
 
+// BlockRangeOK is BlockRange for names that may not exist in this version's
+// registry — content added after the canonical version, or removed before it.
+func BlockRangeOK(name string) (lo, hi uint32, ok bool) {
+	hi, ok = blockStateMax[name]
+	if !ok {
+		return 0, 0, false
+	}
+	return blockBase(name), hi, true
+}
+
 // BlockRange returns a block's [minStateId, maxStateId] by name (panics if unknown).
 func BlockRange(name string) (lo, hi uint32) {
 	hi, ok := blockStateMax[name]

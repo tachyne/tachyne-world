@@ -65,24 +65,6 @@ func connectsTo(self, nb uint32) bool {
 	return worldgen.IsSolidFull(nb)
 }
 
-// breakUnsupportedAbove removes plants stacked directly above (x,y,z) that just
-// lost the block they were resting on — e.g. the grass/flowers on top of a dirt
-// block you mined. Cascades upward so a two-tall plant (tall grass) goes fully.
-func (s *Server) breakUnsupportedAbove(x, y, z int) {
-	for ay := y + 1; ; ay++ {
-		// world.At (not Block) so we see decoration plants — naturally-generated
-		// grass/flowers aren't in the edit overlay, so Block would miss them and
-		// they'd be left floating.
-		above := s.world.At(x, ay, z)
-		if !worldgen.NeedsGroundSupport(above) {
-			break
-		}
-		s.world.SetBlock(x, ay, z, worldgen.Air)
-		s.hub.post(evBlock{x: x, y: ay, z: z, state: worldgen.Air, by: 0})
-		s.hub.post(evDrop{x: x, y: ay, z: z, state: above}) // e.g. grass → 12.5% wheat seeds
-	}
-}
-
 // updateConnectNeighbors re-evaluates the four horizontal neighbours of (x,y,z):
 // any that is a connector recomputes its connections and, if it changed, the new
 // state is persisted and broadcast to everyone (by:0 — no editor to exclude).

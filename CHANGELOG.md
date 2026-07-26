@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Blocks need something to hold them now.** Support was a six-block list
+  checked only in the cell directly above an edit, so mining a wall left its
+  torches, ladders, signs and levers hanging in the air, and a rail or a
+  flower could be placed in mid-air with nothing under it. Every block is now
+  classified by what it needs — a floor, soil, tilled farmland, a wall behind
+  it, a ceiling above, the face it grew on — and that one rule is applied both
+  when you place a block and when anything next to it changes, cascading so a
+  stack comes down together. Deliberately gentle about what counts as a hold:
+  a torch on a fence post and a carpet on a slab stay exactly where they are.
 - **Cake, and the composter.** Both were entirely absent: a cake could be placed
   and never eaten, and a composter was scenery. Cake now feeds you a slice at a
   time and disappears on the seventh, and a candle plants in an untouched one.

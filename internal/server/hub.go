@@ -1009,6 +1009,9 @@ func (h *hub) run() {
 				h.onLeave(players, e.p)
 			case evBlock:
 				h.onBlock(players, e)
+				// Anything around the change that just lost its floor, ceiling
+				// or wall comes down with it.
+				h.dropUnsupported(players, e.dim, blockPos{e.x, e.y, e.z})
 				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				if e.broken == 0 && isShulkerBox(e.state) {
 					// A box placed from a stamped stack takes its contents back.
