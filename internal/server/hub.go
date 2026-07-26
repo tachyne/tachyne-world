@@ -280,10 +280,11 @@ type tracked struct {
 	xpPoints int // points into the current level (bar = points/xpToNext)
 
 	// Movement authority (validateMove) — zero values are correct at join.
-	moveBudget   float64 // banked movement allowance in blocks (accrues per tick)
-	lastMoveTick uint64  // tick of the last vetted move event
-	floatTicks   int     // consecutive ticks unsupported and not descending
-	lastRubber   uint64  // tick of the last correction teleport (throttle)
+	moveBudget         float64 // banked movement allowance in blocks (accrues per tick)
+	lastMoveTick       uint64  // tick of the last vetted move event
+	contactX, contactZ float64 // position at the last contact check (berry bushes hurt only while you move)
+	floatTicks         int     // consecutive ticks unsupported and not descending
+	lastRubber         uint64  // tick of the last correction teleport (throttle)
 
 	// Container state — window 0 unless a crafting table / furnace / chest is open.
 	cursor  invStack    // the stack carried on the mouse cursor
@@ -845,6 +846,7 @@ func (h *hub) run() {
 				h.updateTrialSpawners(players) // trial-chamber fights
 				h.updateVaults(players)        // …and the vaults they pay you to open
 				h.updateBeehives(players)      // bees fill the hives they work
+				h.entityInsideTick(players)    // magma/berry bush/wither rose contact
 				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach
 				h.updateVillageGolems(players) // census-driven iron golem spawns

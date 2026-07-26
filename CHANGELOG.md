@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Magma blocks burn, berry bushes scratch and wither roses wither.** All
+  three were decoration: you could stand on a magma block indefinitely, walk
+  through a berry patch untouched and plant wither roses as a garden feature.
+  They now work on mobs too, so a berry hedge or a magma floor is a real
+  defence. Fire resistance and Frost Walker boots spare you the magma, a bush
+  only catches you while you are moving through it, foxes and bees push through
+  unharmed, and the undead ignore wither roses.
 - **Beehives fill and can be harvested.** Bees working a hive fill it with
   honey, and at full you take it: shears cut three honeycomb, a glass bottle
   draws a honey bottle, and either empties the hive. Rob one without a campfire
