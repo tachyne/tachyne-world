@@ -291,6 +291,12 @@ type tracked struct {
 	winID   int32       // open window id; 0 = player inventory
 	winKind winKind     // what the open window views (winPlayer while winID == 0)
 	winPos  blockPos    // the furnace/chest block this window views
+	// The chest a winChest window is looking at. Indirect because the storage
+	// is not always a block: an ender chest is the player's own, and both hang
+	// the same 27-slot window off it.
+	viewChest *chest
+	// The player's OWN ender-chest storage: the block is just a door onto it.
+	ender   *chest
 	winPos2 blockPos    // the RIGHT half of an open double chest (winPos = LEFT)
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	offhand invStack
@@ -424,6 +430,9 @@ type hub struct {
 	nextWin  int32                 // last container window id handed out (cycles 1..100)
 	furnaces map[blockPos]*furnace // active furnace states (hub-goroutine-only)
 	chests   map[blockPos]*chest   // chest storage (hub-goroutine-only)
+	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
+	boxes     map[int32]*chest
+	nextBoxID int32
 
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
@@ -685,6 +694,7 @@ func (h *hub) run() {
 	if h.containers != nil { // restore furnace/chest contents from the last run
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
+		h.boxes, h.nextBoxID = h.containers.loadBoxes()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
@@ -911,6 +921,7 @@ func (h *hub) run() {
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
+					h.containers.recordBoxes(h.boxes, h.nextBoxID)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
@@ -974,6 +985,14 @@ func (h *hub) run() {
 				h.onLeave(players, e.p)
 			case evBlock:
 				h.onBlock(players, e)
+				if e.broken == 0 && isShulkerBox(e.state) {
+					// A box placed from a stamped stack takes its contents back.
+					// This runs before the evConsume that empties the slot,
+					// because the events channel is FIFO.
+					if t := players[e.by]; t != nil {
+						h.restoreShulkerBox(blockPos{e.x, e.y, e.z}, heldStack(t).boxID)
+					}
+				}
 				h.checkWitherBuild(players, e.dim, e.x, e.y, e.z, e.state)
 				h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state)
 				if t := players[e.by]; t != nil {
@@ -1157,6 +1176,13 @@ func (h *hub) run() {
 				}
 				if !worldgen.HarvestableBy(e.state, e.held) {
 					break // wrong tool (e.g. stone by hand) — no drops, vanilla parity
+				}
+				if isShulkerBox(e.state) {
+					// The box keeps what is inside it: stow the contents under a
+					// boxID and drop an item stamped with it, rather than letting
+					// the ordinary loot path drop a bare box.
+					h.dropShulkerBox(players, e.state, blockPos{e.x, e.y, e.z})
+					break
 				}
 				var silk, fortune int
 				if t := players[e.by]; t != nil {
@@ -1421,6 +1447,10 @@ func (h *hub) run() {
 						h.incCustom(t, "interact_with_furnace", 1)
 					}
 				}
+			case evOpenEnder:
+				if t := players[e.eid]; t != nil {
+					h.openEnderChest(players, t, e.x, e.y, e.z)
+				}
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
 					h.openChest(t, e.x, e.y, e.z)
@@ -1578,6 +1608,7 @@ func (h *hub) run() {
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
+					h.containers.recordBoxes(h.boxes, h.nextBoxID)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)

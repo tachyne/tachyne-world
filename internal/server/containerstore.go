@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -40,17 +41,21 @@ type containerFile struct {
 	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
 	Paintings []savedPainting         `json:"paintings,omitempty"`
 	Frames    []savedFrame            `json:"frames,omitempty"`
-	Jukeboxes map[string][13]int32    `json:"jukeboxes,omitempty"`
+	Jukeboxes map[string]stackRow     `json:"jukeboxes,omitempty"`
 	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands    []savedStand            `json:"stands,omitempty"`  // placed armor stands
 	Lecterns  map[string]savedLectern `json:"lecterns,omitempty"`
-	Shelves   map[string][6][13]int32 `json:"shelves,omitempty"` // chiseled bookshelves
+	Shelves   map[string][6]stackRow  `json:"shelves,omitempty"` // chiseled bookshelves
+	// Shulker-box contents riding a dropped or stored item, keyed by boxID.
+	Boxes map[string][][14]int32 `json:"boxes,omitempty"`
+	// The next boxID to mint, so ids stay unique across restarts.
+	NextBoxID int32 `json:"next_box_id,omitempty"`
 }
 
 // savedLectern is one lectern's book + open page.
 type savedLectern struct {
-	Item [13]int32 `json:"item"`
-	Page int       `json:"page,omitempty"`
+	Item stackRow `json:"item"`
+	Page int      `json:"page,omitempty"`
 }
 
 type savedPainting struct {
@@ -65,14 +70,14 @@ type savedPainting struct {
 // savedFrame is one placed item frame; Item is the packed stack row
 // (item,count,dmg,ench,mapID — same shape as inventory slots).
 type savedFrame struct {
-	Dim  int       `json:"dim,omitempty"`
-	X    int       `json:"x"`
-	Y    int       `json:"y"`
-	Z    int       `json:"z"`
-	Dir  int32     `json:"dir"`
-	Glow bool      `json:"glow,omitempty"`
-	Rot  int       `json:"rot,omitempty"`
-	Item [13]int32 `json:"item"`
+	Dim  int      `json:"dim,omitempty"`
+	X    int      `json:"x"`
+	Y    int      `json:"y"`
+	Z    int      `json:"z"`
+	Dir  int32    `json:"dir"`
+	Glow bool     `json:"glow,omitempty"`
+	Rot  int      `json:"rot,omitempty"`
+	Item stackRow `json:"item"`
 }
 
 type savedBin struct {
@@ -91,12 +96,12 @@ type savedFurnace struct {
 
 // savedStand is one placed armor stand (equipment rows = the stack pack).
 type savedStand struct {
-	Dim   int          `json:"dim,omitempty"`
-	X     float64      `json:"x"`
-	Y     float64      `json:"y"`
-	Z     float64      `json:"z"`
-	Yaw   float32      `json:"yaw"`
-	Equip [6][13]int32 `json:"equip"`
+	Dim   int         `json:"dim,omitempty"`
+	X     float64     `json:"x"`
+	Y     float64     `json:"y"`
+	Z     float64     `json:"z"`
+	Yaw   float32     `json:"yaw"`
+	Equip [6]stackRow `json:"equip"`
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
@@ -125,9 +130,9 @@ func (s *containerStore) loadLecterns() map[blockPos]*lectern {
 func (s *containerStore) recordShelves(m map[blockPos]*[6]invStack) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m.Shelves = map[string][6][13]int32{}
+	s.m.Shelves = map[string][6]stackRow{}
 	for pos, shelf := range m {
-		var rows [6][13]int32
+		var rows [6]stackRow
 		for i, st := range shelf {
 			rows[i] = packStack(st)
 		}
@@ -193,7 +198,7 @@ func slotRow(i int, st invStack) [14]int32 {
 
 // rowStack unpacks a sparse container row (index, stack).
 func rowStack(r [14]int32) (int, invStack) {
-	var p [13]int32
+	var p stackRow
 	copy(p[:], r[1:])
 	return int(r[0]), unpackStack(p)
 }
@@ -418,7 +423,7 @@ func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
 func (s *containerStore) recordJukeboxes(jbs map[blockPos]*jukebox) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m.Jukeboxes = map[string][13]int32{}
+	s.m.Jukeboxes = map[string]stackRow{}
 	for pos, jb := range jbs {
 		s.m.Jukeboxes[posKey(pos)] = packStack(jb.disc)
 	}
@@ -505,4 +510,46 @@ func (s *containerStore) loadPaintings(alloc func() int32) map[int32]*painting {
 		}
 	}
 	return out
+}
+
+// recordBoxes replaces the in-memory shulker-box snapshot (no write). The
+// contents of a box that is currently an ITEM have nowhere else to live —
+// a placed box stores under its position like any chest.
+func (s *containerStore) recordBoxes(boxes map[int32]*chest, next int32) {
+	snap := map[string][][14]int32{}
+	for id, c := range boxes {
+		var rows [][14]int32
+		for i, st := range c.slots {
+			if st.item != 0 && st.count > 0 {
+				rows = append(rows, slotRow(i, st))
+			}
+		}
+		if len(rows) > 0 {
+			snap[strconv.Itoa(int(id))] = rows
+		}
+	}
+	s.mu.Lock()
+	s.m.Boxes, s.m.NextBoxID = snap, next
+	s.mu.Unlock()
+}
+
+// loadBoxes reconstructs shulker-box contents and the id counter.
+func (s *containerStore) loadBoxes() (map[int32]*chest, int32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]*chest{}
+	for k, saved := range s.m.Boxes {
+		id, err := strconv.Atoi(k)
+		if err != nil {
+			continue
+		}
+		c := &chest{}
+		for _, e := range saved {
+			if i, st := rowStack(e); i >= 0 && i < 27 {
+				c.slots[i] = st
+			}
+		}
+		out[int32(id)] = c
+	}
+	return out, s.m.NextBoxID
 }

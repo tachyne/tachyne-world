@@ -55,7 +55,7 @@ type mobFile struct {
 }
 
 // savedMob is the flattened, scalar/packed twin of *mob (cf. savedStand). Item
-// stacks ride through packStack ([13]int32); the owner is a hex UUID string.
+// stacks ride through packStack (stackRow); the owner is a hex UUID string.
 type savedMob struct {
 	Etype   int     `json:"t"`
 	Dim     int     `json:"d,omitempty"`
@@ -81,20 +81,20 @@ type savedMob struct {
 	PatrolCaptain bool   `json:"capt,omitempty"`
 	CarriedBlk    uint32 `json:"eblk,omitempty"` // enderman: held block state
 
-	Oxidation int          `json:"ox,omitempty"`
-	Waxed     bool         `json:"wax,omitempty"`
-	Carrying  [13]int32    `json:"carry,omitempty"`
-	Trident   bool         `json:"tri,omitempty"`
-	CanPickup bool         `json:"pick,omitempty"`
-	Gear      [4][13]int32 `json:"gear,omitempty"`
-	Saddled   bool         `json:"sad,omitempty"`
-	SaddleSt  [13]int32    `json:"sadst,omitempty"`
-	ArmorSt   [13]int32    `json:"armst,omitempty"`
-	Chested   bool         `json:"chd,omitempty"`
-	Chest     [][13]int32  `json:"chest,omitempty"`
-	Strength  int8         `json:"str,omitempty"`
-	Held      int32        `json:"held,omitempty"`
-	Harness   int32        `json:"harn,omitempty"`
+	Oxidation int         `json:"ox,omitempty"`
+	Waxed     bool        `json:"wax,omitempty"`
+	Carrying  stackRow    `json:"carry,omitempty"`
+	Trident   bool        `json:"tri,omitempty"`
+	CanPickup bool        `json:"pick,omitempty"`
+	Gear      [4]stackRow `json:"gear,omitempty"`
+	Saddled   bool        `json:"sad,omitempty"`
+	SaddleSt  stackRow    `json:"sadst,omitempty"`
+	ArmorSt   stackRow    `json:"armst,omitempty"`
+	Chested   bool        `json:"chd,omitempty"`
+	Chest     []stackRow  `json:"chest,omitempty"`
+	Strength  int8        `json:"str,omitempty"`
+	Held      int32       `json:"held,omitempty"`
+	Harness   int32       `json:"harn,omitempty"`
 
 	Tamed     bool    `json:"tame,omitempty"`
 	Sitting   bool    `json:"sit,omitempty"`

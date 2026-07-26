@@ -43,6 +43,10 @@ type invStack struct {
 	// Book identity (0 = none): pages/title live in the hub's bookStore,
 	// composed into the content component at send time (the map model).
 	bookID int32
+	// Shulker-box identity (0 = none): the 27 slots live in the hub's box
+	// store, so a broken box carries its contents as an item. Same indirection
+	// as maps and books, for the same reason — invStack stays comparable.
+	boxID int32
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).
@@ -187,7 +191,8 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 				continue
 			}
 			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
-				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID})
+				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID,
+				boxID: it.boxID})
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground

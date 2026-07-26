@@ -81,7 +81,7 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winPos, t.winKind = h.nextWin, pos, winChest
+	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest"})
 	h.sendChestWindow(t, c)

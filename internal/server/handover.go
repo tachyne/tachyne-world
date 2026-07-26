@@ -36,13 +36,13 @@ func playerStateOf(t *tracked, name string, uuid [16]byte) ho.PlayerState {
 	}
 	if t.inv != nil {
 		for i, st := range t.inv.slots {
-			ps.Slots[i] = packStack(st)
+			ps.Slots[i] = narrowRow(packStack(st))
 		}
 	}
 	for i, st := range t.armor {
-		ps.Armor[i] = packStack(st)
+		ps.Armor[i] = narrowRow(packStack(st))
 	}
-	ps.Offhand = packStack(t.offhand)
+	ps.Offhand = narrowRow(packStack(t.offhand))
 	// Effects in a stable (id-sorted) order — map iteration is random, and the
 	// snapshot must be deterministic for a comparable round-trip.
 	ids := make([]int32, 0, len(t.effects))
@@ -78,14 +78,36 @@ func (t *tracked) applyPlayerState(ps ho.PlayerState) {
 		t.inv = &inventory{}
 	}
 	for i, row := range ps.Slots {
-		t.inv.slots[i] = unpackStack(row)
+		t.inv.slots[i] = unpackStack(widenRow(row))
 	}
 	for i, row := range ps.Armor {
-		t.armor[i] = unpackStack(row)
+		t.armor[i] = unpackStack(widenRow(row))
 	}
-	t.offhand = unpackStack(ps.Offhand)
+	t.offhand = unpackStack(widenRow(ps.Offhand))
 	t.effects = map[int32]*activeEffect{}
 	for _, e := range ps.Effects {
 		t.effects[e.ID] = &activeEffect{amp: int(e.Amp), left: int(e.Left) * 20} // seconds → ticks
 	}
+}
+
+// The handover wire format carries a FIXED 13-column stack row (it lives in
+// tachyne-common, shared with every pod), while the local stackRow grows as
+// components are added. narrowRow/widenRow convert at the seam.
+//
+// Columns past the 13th do not cross: today that is boxID, and a shulker box's
+// contents live in a hub-side store which does not migrate either, so the box
+// would arrive empty. Carrying container contents across a seam is sharding
+// work — noted here so the omission is visible rather than surprising.
+const handoverRowCols = 13
+
+func narrowRow(r stackRow) [handoverRowCols]int32 {
+	var out [handoverRowCols]int32
+	copy(out[:], r[:handoverRowCols])
+	return out
+}
+
+func widenRow(r [handoverRowCols]int32) stackRow {
+	var out stackRow
+	copy(out[:], r[:])
+	return out
 }

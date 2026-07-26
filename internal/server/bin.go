@@ -582,7 +582,8 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool 
 			continue
 		}
 		st := invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
-			mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID}
+			mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID,
+			boxID: it.boxID}
 		if left := binInsert(c.slots, st); left < st.count {
 			if left == 0 {
 				delete(h.items, eid)
@@ -709,8 +710,8 @@ func (h *hub) refreshBinViewers(players map[int32]*tracked, pos blockPos) {
 				h.sendCrafterWindow(t, c)
 			}
 		case winChest:
-			if c := h.chests[pos]; c != nil {
-				h.sendChestWindow(t, c)
+			if c := t.viewChest; c != nil {
+				h.sendChestWindow(t, c) // whatever this window looks at, block or not
 			}
 		case winFurnace:
 			if f := h.furnaces[pos]; f != nil {

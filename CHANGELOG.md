@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Ender chests and shulker boxes.** An ender chest shows the same 27 slots
+  wherever you open it, and they follow you between dimensions and across a
+  logout — the block is only a door onto storage that belongs to you, so nobody
+  else can see what is in yours. Shulker boxes keep what is inside them when
+  broken, which is the whole point of the block: fill one, mine it, carry it,
+  place it, and everything is still there.
 - **Potions work on mobs.** Status effects were a player-only system, so a
   splash potion of Harming did nothing to a cave full of zombies, a tipped
   arrow of Slowness did not slow anything, and no mob could be poisoned,

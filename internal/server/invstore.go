@@ -23,11 +23,13 @@ type invStore struct {
 // bare 36-slot array) — shorter JSON arrays zero-fill the new column, so
 // they migrate on load.
 type savedInv struct {
-	Slots    [invSize][13]int32 `json:"slots"`
-	Armor    [4][13]int32       `json:"armor"`
-	Offhand  [13]int32          `json:"offhand"`
-	XPLevel  int32              `json:"xp_level,omitempty"`
-	XPPoints int32              `json:"xp_points,omitempty"`
+	Slots   [invSize]stackRow `json:"slots"`
+	Armor   [4]stackRow       `json:"armor"`
+	Offhand stackRow          `json:"offhand"`
+	// The player's ender chest travels with them, not with any block.
+	Ender    [27]stackRow `json:"ender,omitempty"`
+	XPLevel  int32        `json:"xp_level,omitempty"`
+	XPPoints int32        `json:"xp_points,omitempty"`
 
 	// Last position (restored on login, vanilla-style: you log back in where
 	// you logged out). HasPos distinguishes a real saved position from a legacy
@@ -59,11 +61,17 @@ func newInvStore(path string) *invStore {
 	return s
 }
 
-// Stack rows: [item, count, dmg, enchPack, mapID, 6 banner layers
-// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID]. Old shorter
-// rows zero-fill on JSON decode.
-func packStack(st invStack) [13]int32 {
-	r := [13]int32{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
+// stackRow is one persisted stack. NAMED so widening it stays a one-line
+// change: every store (inventories, containers, mobs) shares this shape, and a
+// shorter row in an existing file zero-fills on JSON decode, so growing it is
+// backward-compatible by construction.
+//
+// Layout: [item, count, dmg, enchPack, mapID, 6 banner layers
+// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID].
+type stackRow = [14]int32
+
+func packStack(st invStack) stackRow {
+	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
 	for i, l := range st.pats {
 		r[5+i] = int32(l.patPlus1)<<8 | int32(l.color)
 	}
@@ -71,16 +79,18 @@ func packStack(st invStack) [13]int32 {
 		r[11] = int32(st.trimMat)<<8 | int32(st.trimPat)
 	}
 	r[12] = st.bookID
+	r[13] = st.boxID
 	return r
 }
 
-func unpackStack(r [13]int32) invStack {
+func unpackStack(r stackRow) invStack {
 	st := invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3]), mapID: r[4]}
 	for i := 0; i < 6; i++ {
 		st.pats[i] = bannerLayer{patPlus1: int16(r[5+i] >> 8), color: int8(r[5+i] & 0xff)}
 	}
 	st.trimMat, st.trimPat = int8(r[11]>>8), int8(r[11]&0xff)
 	st.bookID = r[12]
+	st.boxID = r[13]
 	return st
 }
 
@@ -100,6 +110,9 @@ func (s *invStore) loadInto(t *tracked, name string) {
 		t.armor[i] = unpackStack(row)
 	}
 	t.offhand = unpackStack(saved.Offhand)
+	for i, row := range saved.Ender {
+		t.enderChest().slots[i] = unpackStack(row)
+	}
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 }
 
@@ -127,6 +140,11 @@ func (s *invStore) record(name string, t *tracked) {
 	}
 	for i, st := range t.armor {
 		snap.Armor[i] = packStack(st)
+	}
+	if t.ender != nil {
+		for i, st := range t.ender.slots {
+			snap.Ender[i] = packStack(st)
+		}
 	}
 	s.mu.Lock()
 	s.m[name] = snap

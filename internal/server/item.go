@@ -41,6 +41,7 @@ type itemEntity struct {
 	trimMat       int8           // armor trim carried by the dropped stack (+1 enc)
 	trimPat       int8
 	bookID        int32  // book identity carried by the dropped stack
+	boxID         int32  // shulker-box identity carried by the dropped stack
 	born          uint64 // world tick spawned (for despawn)
 	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -111,7 +112,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 			if oid == eid || other.item != it.item || other.dmg != 0 || it.dmg != 0 ||
 				other.ench != it.ench || other.mapID != it.mapID ||
 				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
-				other.bookID != it.bookID ||
+				other.bookID != it.bookID || other.boxID != it.boxID ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}

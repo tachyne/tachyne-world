@@ -441,6 +441,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isEnderChest(state) { // the player's own 27 slots, wherever they open it
+		s.hub.post(evOpenEnder{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if state == enchTableState { // open the enchanting table
 		s.hub.post(evOpenEnchant{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)

@@ -189,7 +189,7 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 		}
 		return nil, -1
 	case winChest:
-		c := h.chests[t.winPos]
+		c := t.viewChest
 		switch {
 		case c != nil && slot >= 0 && slot <= 26:
 			return &c.slots[slot], -1
@@ -787,7 +787,7 @@ func (h *hub) resyncWindow(t *tracked) {
 			h.sendFurnaceWindow(t, f)
 		}
 	case winChest:
-		if c := h.chests[t.winPos]; c != nil {
+		if c := t.viewChest; c != nil {
 			h.sendChestWindow(t, c)
 		}
 	case winDoubleChest:
