@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Dripstone lives.** Pointed dripstone was scenery: it never grew, never
+  dripped and never hurt anyone. Stalactites hanging off dripstone stone now
+  lengthen over time or raise a stalagmite from the floor beneath them, water
+  or lava standing above one drips through and fills a cauldron under the tip
+  (so a lava farm works), and landing on a stalagmite is the one fall that
+  hurts MORE than the ground — it counts two and a half blocks further and
+  doubles the damage, including from heights that would otherwise be safe.
 - **Explosions carve real craters.** A blast was a sphere with a cutoff: every
   block inside the radius went, every block outside survived, and a wall of
   obsidian protected nothing beyond its own cell. Explosions now cast vanilla's

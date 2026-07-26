@@ -289,8 +289,21 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 		if dist > 0 {
 			h.tramplePlayer(players, t, int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)), dist)
 		}
-		if dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
-			h.damageOf(players, t, float32(math.Floor(dist-3)), 0, dmgFall) // fall: no exhaustion
+		if h.rules.FallDamage && dist > 0 {
+			// A stalagmite tip is the one block that makes a fall WORSE: it
+			// counts the drop 2.5 blocks longer and doubles what it deals, so
+			// it hurts even from heights that would otherwise be safe.
+			landed := h.worldFor(t.dim).At(int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)))
+			hurt, impaled := stalagmiteFallExtra(landed, dist)
+			if !impaled {
+				if dist <= 3 { // the ordinary three-block grace
+					return
+				}
+				hurt = math.Floor(dist - 3)
+			}
+			if hurt > 0 {
+				h.damageOf(players, t, float32(math.Floor(hurt)), 0, dmgFall) // fall: no exhaustion
+			}
 		}
 	}
 }

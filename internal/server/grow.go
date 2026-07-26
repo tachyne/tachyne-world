@@ -172,6 +172,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickAmethyst(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickDripstone(players, dim, x, y, z, state) {
+		return
+	}
 	if h.tickRedstoneOre(players, dim, x, y, z, state) {
 		return
 	}
