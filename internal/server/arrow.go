@@ -280,6 +280,14 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.playerShot && t.p.eid == a.shooter && now < a.noHitUntil {
 			continue // fresh shots clear their own archer
 		}
+		// A player's shot at another player is PvP, and obeys the same rule
+		// the melee path does — otherwise switching pvp off would stop fists
+		// and leave bows working.
+		if a.playerShot && t.p.eid != a.shooter && !h.rules.PvP {
+			if _, byPlayer := players[a.shooter]; byPlayer {
+				continue
+			}
+		}
 		ddx, ddz := px-t.x, pz-t.z
 		if ddx*ddx+ddz*ddz > arrowHitRadius*arrowHitRadius {
 			continue

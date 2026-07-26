@@ -92,3 +92,30 @@ func TestPvPRespectsArmourAndShields(t *testing.T) {
 		}
 	}
 }
+
+// A player's arrow is PvP too: it hits, and it stops hitting when the rule is
+// off — the melee path and the bow must not disagree.
+func TestPlayerArrowsObeyThePvPRule(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b, players := pvpPair(h)
+	b.y = 180
+
+	shoot := func() {
+		arrow := &arrowEntity{eid: h.allocEID(), dim: 0, shooter: a.p.eid,
+			dmg: 5, playerShot: true, x: b.x, y: b.y, z: b.z}
+		h.arrowHitsPlayer(players, arrow, b.x, b.y+0.5, b.z)
+	}
+
+	b.health = 20
+	shoot()
+	if b.health >= 20 {
+		t.Fatal("a player's arrow should hit another player")
+	}
+
+	h.rules.PvP = false
+	b.health = 20
+	shoot()
+	if b.health < 20 {
+		t.Error("a player's arrow ignored the pvp gamerule")
+	}
+}

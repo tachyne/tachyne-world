@@ -19,7 +19,9 @@ the public history since the project was open-sourced on 2026-07-10.
   without a scratch. PvP now runs the same swing the mobs get (weapon, attack
   cooldown, criticals, mace smash, Knockback, Fire Aspect) through the player
   damage pipeline, so armour, protection enchantments, shields and absorption
-  all apply. Gated on the `pvp` gamerule, which is finally a real rule.
+  all apply. Gated on the `pvp` gamerule, which is finally a real rule — and
+  the rule covers bows too, so turning PvP off no longer stops fists while
+  leaving arrows working.
 - **Coral dies out of water.** Every coral block, plant and fan has a dead
   twin, and coral pulled from a reef and replanted on land stayed brilliantly
   alive forever — which made keeping it wet, and silk touch, pointless. It now
