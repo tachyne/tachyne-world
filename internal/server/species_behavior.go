@@ -147,7 +147,8 @@ func (h *hub) guardianBeam(players map[int32]*tracked, m *mob) {
 		if m.attackCD == 0 && m.hasTarget { // beam completes — apply the hit
 			if t := h.nearestHuntable(players, m.dim, m.x, m.z, 16); t != nil {
 				dmg := hostileMelee(m) * h.diffMult()
-				h.damage(players, t, t.armorReduce(dmg))
+				h.hurtBy(players, t, t.armorReduce(dmg), 0, dmgGeneric,
+					deathCause{key: causeMob, by: mobDisplayName(m.etype)})
 				h.thornsRetaliate(players, t, m)
 				h.wearArmor(players, t, dmg)
 			}

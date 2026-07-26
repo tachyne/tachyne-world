@@ -119,7 +119,8 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 			continue
 		}
 		if dist3(t.x, t.y, t.z, m.x, m.y, m.z) < 4 {
-			h.damage(players, t, t.armorReduce(dragonContact))
+			h.hurtBy(players, t, t.armorReduce(dragonContact), 0, dmgGeneric,
+				deathCause{key: causeDragon, by: "Ender Dragon"})
 			h.knockback(t, m.x, m.z)
 		}
 	}
@@ -163,7 +164,8 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
 	for _, t := range players { // the blast bites anyone on the pillar
 		if t.dim == 2 && !t.dead && t.gamemode == gmSurvival &&
 			dist3(t.x, t.y, t.z, c.x, c.y, c.z) < 5 {
-			h.damage(players, t, t.armorReduce(6))
+			h.hurtBy(players, t, t.armorReduce(6), 0, dmgExplosion,
+				deathCause{key: causeExplosion, by: "an End Crystal"})
 		}
 	}
 	return true
