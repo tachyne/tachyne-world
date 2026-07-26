@@ -46,7 +46,7 @@ var booleanRules = []string{
 	// Added 2026-07-26 — each gates something the engine actually does.
 	"spawn_phantoms", "spawn_patrols", "spawn_wardens", "raids",
 	"tnt_explodes", "water_source_conversion", "lava_source_conversion",
-	"player_movement_check", "elytra_movement_check",
+	"player_movement_check", "elytra_movement_check", "pvp",
 }
 
 // numericRules is the same for the rules that take a number.

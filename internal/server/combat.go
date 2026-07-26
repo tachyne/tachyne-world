@@ -135,26 +135,30 @@ func hostileMelee(m *mob) float32 {
 const maxMeleeReach = 6.0
 
 // attackMob applies a player's melee hit to a mob, killing it at 0 health.
-func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
-	m := h.mobs[target]
-	if m == nil || m.dying > 0 {
-		return // not a mob (player/item), or already dying — ignore
-	}
-	if t := players[attacker]; t != nil {
-		if t.dim != m.dim {
-			return // cross-dimension hits are impossible
-		}
-		dx, dy, dz := t.x-m.x, t.y-m.y, t.z-m.z
-		if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
-			return // hit claimed from across the map — not physically possible
-		}
-	}
+// swing is one melee swing's worked-out numbers, shared by every target a
+// player can hit. Extracted when PvP arrived: the arithmetic is long (weapon
+// base, attributes, cooldown scaling, crit, mace smash, enchantment bonuses)
+// and a second copy of it for players would have drifted from the mob one
+// within a release.
+type swing struct {
+	dmg        int
+	base       float64
+	charge     float64
+	crit       bool
+	smash      bool
+	fall       float64
+	breachFrac float64
+}
+
+// meleeSwing works out what the attacker's swing is worth. familyBonus is the
+// Smite / Bane of Arthropods contribution, which depends on the victim and so
+// is the caller's to supply — against another player it is always zero.
+func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 	base := float64(fistDamage)
 	sharpBonus := 0.0 // enchantment damage (Sharpness): added AFTER crit, not multiplied
 	charge, crit := 1.0, false
 	smash, fall := false, 0.0 // mace smash attack + its fall distance
 	var breachFrac float64
-	t := players[attacker]
 	if t != nil {
 		held := t.p.heldItem()
 		if d, ok := meleeDamage[held]; ok {
@@ -166,7 +170,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		// Smite and Bane of Arthropods are the same effect component as
 		// Sharpness with a condition on the target's family, so they add in
 		// the same place — and only one of them can ever match.
-		sharpBonus += familyMeleeBonus(heldStack(t), m.etype)
+		sharpBonus += familyBonus
 		// The weapon sets the ATTACK_DAMAGE base and everything else — Strength,
 		// Weakness, and whatever else lands on the attribute — is a modifier on
 		// top, exactly as vanilla layers them.
@@ -212,6 +216,37 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	dmgF += sharpBonus * charge // Sharpness: cooldown-scaled, added after crit (vanilla)
 	dmg := int(math.Max(1, math.Round(dmgF)))
+	return swing{dmg: dmg, base: base, charge: charge, crit: crit,
+		smash: smash, fall: fall, breachFrac: breachFrac}
+}
+
+func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
+	m := h.mobs[target]
+	if m == nil || m.dying > 0 {
+		return // not a mob (player/item), or already dying — ignore
+	}
+	if t := players[attacker]; t != nil {
+		if t.dim != m.dim {
+			return // cross-dimension hits are impossible
+		}
+		dx, dy, dz := t.x-m.x, t.y-m.y, t.z-m.z
+		if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+			return // hit claimed from across the map — not physically possible
+		}
+	}
+	t := players[attacker]
+	// A mob-on-mob hit has no attacker player, so there is no held stack to
+	// read a Smite or Bane bonus off — the nil check has to happen HERE, not
+	// inside the swing helper, because heldStack itself dereferences.
+	family := 0.0
+	if t != nil {
+		family = familyMeleeBonus(heldStack(t), m.etype)
+	}
+	sw := h.meleeSwing(t, family)
+	base, charge, crit := sw.base, sw.charge, sw.crit
+	smash, fall, breachFrac := sw.smash, sw.fall, sw.breachFrac
+	dmg := sw.dmg
+	_ = fall
 
 	// Plugin damage event: fires with the final amount, before any effect
 	// (sound, knockback, hurt) — a cancel makes the swing a complete no-op.

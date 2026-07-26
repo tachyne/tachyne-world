@@ -56,6 +56,7 @@ type worldRules struct {
 	LavaSourceCnv  bool         `json:"lavaSourceConversion"`
 	MovementCheck  bool         `json:"playerMovementCheck"`
 	ElytraCheck    bool         `json:"elytraMovementCheck"`
+	PvP            bool         `json:"pvp"`
 	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
 	Weather        *weatherSave `json:"weather,omitempty"`
 }
@@ -68,7 +69,7 @@ func defaultRules() worldRules {
 		RandomTicks: 3, SleepPercent: 100, LocatorBar: true,
 		SpawnPhantoms: true, SpawnPatrols: true, SpawnWardens: true, Raids: true,
 		TNTExplodes: true, WaterSourceCnv: true, LavaSourceCnv: false,
-		MovementCheck: true, ElytraCheck: true}
+		MovementCheck: true, ElytraCheck: true, PvP: true}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -326,6 +327,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.MovementCheck = e.on
 	case "elytra_movement_check":
 		h.rules.ElytraCheck = e.on
+	case "pvp":
+		h.rules.PvP = e.on
 	}
 	h.saveRules()
 	h.plugins.Fire(&plugin.GameruleChangeEvent{Rule: e.rule, On: e.on, Num: e.num})

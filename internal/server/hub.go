@@ -1406,7 +1406,7 @@ func (h *hub) run() {
 				}
 				if v := h.vehicles[e.target]; v != nil {
 					h.breakVehicle(players, v)
-				} else {
+				} else if !h.attackPlayer(players, e.attacker, e.target) {
 					h.attackMob(players, e.attacker, e.target)
 				}
 			case evPlaceVehicle:
