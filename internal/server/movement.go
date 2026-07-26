@@ -52,6 +52,14 @@ const (
 // validateMove vets a client movement event against the tracked (authoritative)
 // position, reporting whether it may be applied. Rejections rubber-band.
 func (h *hub) validateMove(t *tracked, e evMove) bool {
+	// The movement checks are gamerules in vanilla, so a server that wants to
+	// allow a modded client's physics can switch them off.
+	if !h.rules.MovementCheck {
+		return true
+	}
+	if t.gliding() && !h.rules.ElytraCheck {
+		return true
+	}
 	if e.teleport || t.dead || t.gamemode == gmSpectator {
 		return true // server-initiated, or a mode where anything goes
 	}

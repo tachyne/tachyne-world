@@ -383,6 +383,9 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32
 		return
 	}
 	h.sculkWarn[pos] = 0
+	if !h.rules.SpawnWardens {
+		return // gamerule spawn_wardens
+	}
 	if sp := h.wardenSpawnSpot(pos); sp != nil {
 		h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5)
 	}

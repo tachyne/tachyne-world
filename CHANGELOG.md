@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Game rules use their real names, and nine more of them work.** Every rule
+  was still spelled the pre-rename way — `doDaylightCycle` rather than
+  `advance_time` — which meant nothing a player typed from a wiki or another
+  server worked. Both spellings are accepted now, so nothing anyone has
+  memorised breaks, and `/gamerule` lists the canonical ones. New and
+  enforced: `spawn_phantoms`, `spawn_patrols`, `spawn_wardens`, `raids`,
+  `tnt_explodes`, `water_source_conversion`, `lava_source_conversion`,
+  `player_movement_check` and `elytra_movement_check`.
 - **Eyeblossoms open at night**, and shut again at first light, the way the
   pale garden's clock is supposed to work.
 - **A nether portal left standing breeds zombified piglins**, at vanilla's

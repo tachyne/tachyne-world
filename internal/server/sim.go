@@ -290,7 +290,9 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 			maxAmount = amt
 		}
 	}
-	if water && sourceCount >= 2 { // infinite source (RULE_WATER_SOURCE_CONVERSION)
+	// Infinite sources: vanilla gates each fluid on its own conversion rule.
+	// Water converts by default, lava does not (it is an experimental rule).
+	if sourceCount >= 2 && ((water && h.rules.WaterSourceCnv) || (!water && h.rules.LavaSourceCnv)) {
 		if belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z); worldgen.IsSolidFull(belowB) || belowB == base {
 			return base, true
 		}

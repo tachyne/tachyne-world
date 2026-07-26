@@ -22,6 +22,9 @@ const (
 // updatePatrols runs on the 1 Hz survival step; it self-throttles via
 // patrolNextAt so the effective cadence is ~10 min.
 func (h *hub) updatePatrols(players map[int32]*tracked) {
+	if !h.rules.SpawnPatrols {
+		return // gamerule spawn_patrols
+	}
 	age := h.tick.Load()
 	if h.patrolNextAt == 0 { // first arming after boot
 		h.patrolNextAt = age + patrolInterval

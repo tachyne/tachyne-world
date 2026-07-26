@@ -520,6 +520,9 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 	if day < nightStart || day >= dayStart {
 		return
 	}
+	if !h.rules.SpawnPhantoms {
+		return // gamerule spawn_phantoms
+	}
 	if h.rng.Intn(30) == 0 {
 		for _, t := range players {
 			if t.dim == 0 && t.gamemode == gmSurvival && !t.dead {
