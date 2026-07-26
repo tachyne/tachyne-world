@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Eyeblossoms open at night**, and shut again at first light, the way the
+  pale garden's clock is supposed to work.
+- **A nether portal left standing breeds zombified piglins**, at vanilla's
+  difficulty-scaled rate — so a portal in the Nether is a piglin farm again,
+  and peaceful breeds none.
 - **Dripstone lives.** Pointed dripstone was scenery: it never grew, never
   dripped and never hurt anyone. Stalactites hanging off dripstone stone now
   lengthen over time or raise a stalagmite from the floor beneath them, water
