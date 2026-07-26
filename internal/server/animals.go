@@ -91,17 +91,10 @@ func babyMeta(eid int32, baby bool) []byte {
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
-// sheepMeta builds the sheep fleece byte (color 0 = white + sheared bit).
-func sheepMeta(eid int32, sheared bool) []byte {
-	var v byte
-	if sheared {
-		v = 0x10
-	}
-	b := protocol.AppendVarInt(nil, eid)
-	b = protocol.AppendU8(b, metaIndexSheep)
-	b = protocol.AppendVarInt(b, 0) // type: byte
-	b = protocol.AppendU8(b, v)
-	return protocol.AppendU8(b, itemMetaEnd)
+// sheepMeta builds the fleece byte for a sheep, colour included. Kept as a
+// thin wrapper so callers pass the mob rather than remembering the bit layout.
+func sheepMeta(m *mob, sheared bool) []byte {
+	return sheepFleeceMeta(m.eid, m.color, sheared)
 }
 
 // feedAnimal handles a right-click with this species' love-food: consume one
@@ -132,8 +125,8 @@ func (h *hub) shearMob(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	m.sheared = true
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m.eid, true)))
-	h.spawnItem(players, itemWhiteWool, 1+h.rng.Intn(3), m.x, m.y, m.z)
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, true)))
+	h.spawnItem(players, sheepWool(m), 1+h.rng.Intn(3), m.x, m.y, m.z) // its own fleece
 	h.playSound(players, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
@@ -167,7 +160,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		}
 		if m.etype == entitySheep && m.sheared && h.rng.Intn(woolRegrowIn) == 0 {
 			m.sheared = false
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m.eid, false)))
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, false)))
 		}
 		if m.etype == entityChicken && !m.baby {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {

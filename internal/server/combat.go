@@ -480,7 +480,7 @@ func (h *hub) mobLoot(m *mob) []drop {
 	case entityPig:
 		return []drop{{itemPorkchop, 1 + h.rng.Intn(3)}}
 	case entitySheep:
-		return []drop{{itemWhiteWool, 1}, {itemMutton, 1 + h.rng.Intn(2)}}
+		return []drop{{sheepWool(m), 1}, {itemMutton, 1 + h.rng.Intn(2)}} // its own fleece
 	case entityHusk, entityDrowned:
 		return []drop{{itemRottenFlesh, h.rng.Intn(3)}}
 	case entityStray:

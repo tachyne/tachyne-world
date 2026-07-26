@@ -1416,7 +1416,8 @@ func (h *hub) run() {
 					}
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
-						_ = h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
+						_ = h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMount(players, t, m) ||
 							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m)
 					}
@@ -1760,7 +1761,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			e.p.trySendEv(metaEv(babyMeta(m.eid, true)))
 		}
 		if m.sheared {
-			e.p.trySendEv(metaEv(sheepMeta(m.eid, true)))
+			e.p.trySendEv(metaEv(sheepMeta(m, true)))
 		}
 	}
 	h.showShadowsTo(nt) // …and every cross-seam shadow (neighbour entities near the border).

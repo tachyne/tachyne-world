@@ -67,13 +67,15 @@ type savedMob struct {
 	Max     int     `json:"max,omitempty"`
 	DmgFrac float64 `json:"df,omitempty"`
 
-	Baby      bool `json:"baby,omitempty"`
-	GrowLeft  int  `json:"grow,omitempty"`
-	LoveTicks int  `json:"love,omitempty"`
-	BreedCD   int  `json:"bcd,omitempty"`
-	Sheared   bool `json:"shear,omitempty"`
-	EggIn     int  `json:"egg,omitempty"`
-	Size      int  `json:"size,omitempty"`
+	Baby       bool   `json:"baby,omitempty"`
+	GrowLeft   int    `json:"grow,omitempty"`
+	LoveTicks  int    `json:"love,omitempty"`
+	BreedCD    int    `json:"bcd,omitempty"`
+	Sheared    bool   `json:"shear,omitempty"`
+	Color      int8   `json:"color,omitempty"` // sheep fleece colour
+	CustomName string `json:"name,omitempty"`  // name tag; also makes the mob persistent
+	EggIn      int    `json:"egg,omitempty"`
+	Size       int    `json:"size,omitempty"`
 
 	Hostile       bool   `json:"host,omitempty"`
 	Anger         int    `json:"anger,omitempty"`
@@ -442,6 +444,7 @@ func toSavedMob(m *mob) savedMob {
 		Health: m.health, Max: m.maxHP(), DmgFrac: m.dmgFrac,
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
+		Color: m.color, CustomName: m.customName,
 		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
 		CarriedBlk: m.carriedBlock,
 		Oxidation:  m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),

@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Sheep come in colours, and dye works on them.** Every sheep in the world was
+  white — the fleece colour was never actually sent — so a flock was uniform and
+  a dye did nothing to a live sheep. They now spawn with vanilla's spread
+  (mostly white, the greys and browns, pink about one in six hundred), a dye
+  recolours one, and the wool you shear or collect matches the fleece.
+- **Name tags work.** A name tag from an anvil renames the mob you use it on,
+  the name shows above it, and — the part that matters — a named mob never
+  despawns, so a pet or a hard-won villager stays where you left it.
 - **Magma blocks burn, berry bushes scratch and wither roses wither.** All
   three were decoration: you could stand on a magma block indefinitely, walk
   through a berry patch untouched and plant wither roses as a garden feature.

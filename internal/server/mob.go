@@ -64,6 +64,8 @@ type mob struct {
 	breedCD         int            // ticks before this parent may breed again
 	stroll          int            // wander spell: updates left walking before the next rest
 	sheared         bool           // sheep: fleece off (regrows by grazing)
+	color           int8           // sheep: fleece colour (0 white .. 15 black), dyeable
+	customName      string         // name-tagged: shown above the mob, and it never despawns
 	eggIn           int            // chicken: ticks until the next egg
 	size            int            // slime: 4/2/1 (splits in half on death)
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
@@ -178,6 +180,9 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 	eid := h.allocEID()
 	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
+	if etype == entitySheep {
+		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
+	}
 	h.mobs[eid] = m
 
 	if !h.reloading && plugin.Has[*plugin.MobSpawnEvent](h.plugins) {
