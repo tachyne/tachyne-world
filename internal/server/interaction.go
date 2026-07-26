@@ -452,6 +452,14 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.hub.post(evUsePot{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
+	case openVaultSlot:
+		s.hub.post(evUseVault{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	case openHiveHarvest:
+		s.hub.post(evHarvestHive{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
 	}
 	if state == enchTableState { // open the enchanting table
 		s.hub.post(evOpenEnchant{eid: p.eid, x: x, y: y, z: z})

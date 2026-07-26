@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Beehives fill and can be harvested.** Bees working a hive fill it with
+  honey, and at full you take it: shears cut three honeycomb, a glass bottle
+  draws a honey bottle, and either empties the hive. Rob one without a campfire
+  smoking underneath and the bees come after you — which is what the campfire
+  under a hive has always been for. (Bees fill a hive by working near it for
+  now; proper pollination waits on the bee's own behaviour.)
 - **Vaults open.** Beat a trial spawner, take the key it drops, and the vault
   in the room lights up and pays you — once. Each player gets their own single
   claim from each vault, so a whole group can run the same chamber and everyone
@@ -77,6 +83,10 @@ the public history since the project was open-sourced on 2026-07-10.
   ominous bottle that grants them is still to come.
 
 ### Fixed
+- **Vaults and decorated pots actually respond now.** Both shipped earlier today
+  able to do everything except be clicked on — the block-side work was there and
+  the interaction was not wired to it. Same for placed shulker boxes, fixed
+  earlier. There is a test now that checks both ends of that wiring.
 - **Structures stamp their blocks properly.** Anything with a property but no
   facing was being placed in its default state — so rails in a structure came
   out straight instead of curved or sloped, snow was always one layer deep, and

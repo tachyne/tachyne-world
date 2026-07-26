@@ -161,6 +161,8 @@ const (
 	openChestWindow               // the 27-slot chest window over block storage
 	openEnderWindow               // the same window over the PLAYER's own storage
 	openPotSlot                   // a decorated pot's single stack (no menu)
+	openVaultSlot                 // a vault: hand over a trial key, take the reward
+	openHiveHarvest               // a beehive: shears or a bottle, once it is full
 )
 
 // containerOpenFor maps a block state to the container it opens.
@@ -172,6 +174,10 @@ func containerOpenFor(state uint32) containerOpen {
 		return openEnderWindow
 	case isDecoratedPot(state):
 		return openPotSlot
+	case isVault(state):
+		return openVaultSlot
+	case isBeeHome(state):
+		return openHiveHarvest
 	}
 	return openNothing
 }

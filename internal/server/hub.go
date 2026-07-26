@@ -844,6 +844,7 @@ func (h *hub) run() {
 				h.updateSpawners(players)      // dungeon spawner rooms
 				h.updateTrialSpawners(players) // trial-chamber fights
 				h.updateVaults(players)        // …and the vaults they pay you to open
+				h.updateBeehives(players)      // bees fill the hives they work
 				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach
 				h.updateVillageGolems(players) // census-driven iron golem spawns
@@ -1460,6 +1461,10 @@ func (h *hub) run() {
 					default:
 						h.incCustom(t, "interact_with_furnace", 1)
 					}
+				}
+			case evHarvestHive:
+				if t := players[e.eid]; t != nil {
+					h.harvestBeeHome(players, t, blockPos{e.x, e.y, e.z})
 				}
 			case evUseVault:
 				if t := players[e.eid]; t != nil {

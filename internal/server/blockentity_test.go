@@ -2,6 +2,7 @@ package server
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -339,11 +340,68 @@ func TestConduitRegistryTracksPlacement(t *testing.T) {
 	}
 }
 
-// Every hub event posted from the interaction path must have a handler. Two
-// features shipped inert because a wiring edit was silently skipped — the
-// shulker box, then the decorated pot — and in both cases the block-side code
-// was fully tested while the event went nowhere. This walks the source so the
-// next one cannot ship the same way.
+// Block-interaction events must be wired at BOTH ends — posted from the
+// interaction path and handled in the hub loop.
+//
+// Three features shipped inert this way before this test existed: the shulker
+// box could not be opened, the decorated pot ignored clicks, and the vault was
+// handled but never posted. Note that last one: a check in only ONE direction
+// misses half the cases, which is exactly what the first version of this test
+// did. Each time the block-side code was thoroughly tested, because those tests
+// called the handler directly and never went through the event.
+func TestBlockInteractionEventsAreWiredBothWays(t *testing.T) {
+	posted, err := os.ReadFile("interaction.go")
+	if err != nil {
+		t.Fatalf("read interaction.go: %v", err)
+	}
+	hub, err := os.ReadFile("hub.go")
+	if err != nil {
+		t.Fatalf("read hub.go: %v", err)
+	}
+	// The block-interaction events are the ones shaped {eid, x, y, z}. Find
+	// them by their declaration so the list cannot go stale.
+	decl := regexp.MustCompile(`(?s)type (ev[A-Z][A-Za-z]*) struct \{\s*eid\s+int32\s*
+\s*x, y, z int\s*
+\s*\}`)
+	var names []string
+	for _, f := range mustGoFiles(t) {
+		for _, m := range decl.FindAllStringSubmatch(f, -1) {
+			names = append(names, m[1])
+		}
+	}
+	if len(names) < 4 {
+		t.Fatalf("found only %d block-interaction events — the scan is not working", len(names))
+	}
+	for _, n := range names {
+		if !strings.Contains(string(posted), n+"{eid:") {
+			t.Errorf("%s is handled by the hub but the interaction path never posts it", n)
+		}
+		if !strings.Contains(string(hub), "case "+n+":") {
+			t.Errorf("%s is posted by the interaction path but the hub never handles it", n)
+		}
+	}
+}
+
+// mustGoFiles reads every .go file in the package once.
+func mustGoFiles(t *testing.T) []string {
+	t.Helper()
+	names, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("glob: %v", err)
+	}
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		b, err := os.ReadFile(n)
+		if err != nil {
+			t.Fatalf("read %s: %v", n, err)
+		}
+		out = append(out, string(b))
+	}
+	return out
+}
+
+// The original one-directional check, kept because it also covers events that
+// are not block-shaped.
 func TestEveryInteractionEventIsHandled(t *testing.T) {
 	posted, err := os.ReadFile("interaction.go")
 	if err != nil {
@@ -366,5 +424,78 @@ func TestEveryInteractionEventIsHandled(t *testing.T) {
 	}
 	if len(seen) < 5 {
 		t.Errorf("only found %d posted events — the scan is not working", len(seen))
+	}
+}
+
+// A full hive gives honeycomb to shears and honey to a bottle, and empties.
+func TestBeehiveHarvest(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	pos := blockPos{0, 180, 0}
+	w := h.worldFor(0)
+
+	// Not full: nothing happens.
+	w.SetBlock(pos.x, pos.y, pos.z, withHoney(beehiveMin, 3))
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: int32(itemByName["shears"]), count: 1}
+	if h.harvestBeeHome(players, pl, pos) {
+		t.Error("a half-full hive was harvested")
+	}
+
+	// Full + shears: three honeycomb, hive emptied.
+	w.SetBlock(pos.x, pos.y, pos.z, withHoney(beehiveMin, beeMaxHoney))
+	if !h.harvestBeeHome(players, pl, pos) {
+		t.Fatal("shears did not harvest a full hive")
+	}
+	if got := honeyLevel(w.At(pos.x, pos.y, pos.z)); got != 0 {
+		t.Errorf("honey level %d after harvesting, want 0", got)
+	}
+	comb := 0
+	for _, st := range pl.inv.slots {
+		if st.item == int32(itemByName["honeycomb"]) {
+			comb += st.count
+		}
+	}
+	if comb != beeHoneycombYield {
+		t.Errorf("got %d honeycomb, want %d", comb, beeHoneycombYield)
+	}
+
+	// Full + bottle: one honey bottle.
+	w.SetBlock(pos.x, pos.y, pos.z, withHoney(beehiveMin, beeMaxHoney))
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: int32(itemByName["glass_bottle"]), count: 1}
+	if !h.harvestBeeHome(players, pl, pos) {
+		t.Fatal("a bottle did not draw honey")
+	}
+	found := false
+	for _, st := range pl.inv.slots {
+		if st.item == int32(itemByName["honey_bottle"]) {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("no honey bottle was produced")
+	}
+}
+
+// The honey level lives in the low digit of the state, and the facing must
+// survive a harvest — a hive that empties must not turn round.
+func TestBeehiveStateMath(t *testing.T) {
+	for _, base := range []uint32{beehiveMin, beeNestMin} {
+		for facing := uint32(0); facing < 4; facing++ {
+			s := base + facing*(beeMaxHoney+1)
+			for lvl := 0; lvl <= beeMaxHoney; lvl++ {
+				got := withHoney(s, lvl)
+				if honeyLevel(got) != lvl {
+					t.Errorf("level %d round-tripped as %d", lvl, honeyLevel(got))
+				}
+				if (got-base)/(beeMaxHoney+1) != facing {
+					t.Errorf("facing changed: %d -> %d", facing, (got-base)/(beeMaxHoney+1))
+				}
+			}
+		}
+	}
+	if isBeeHome(worldgen.BlockBase("stone")) {
+		t.Error("stone was taken for a hive")
 	}
 }
