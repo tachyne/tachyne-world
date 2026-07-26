@@ -178,8 +178,12 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		// Attack cooldown (1.9 combat): a swing before the weapon recovers is
 		// scaled by 0.2 + 0.8×charge² — spam-clicking does a fifth of the damage.
 		now := h.tick.Load()
-		if dt := now - t.lastAttack; t.lastAttack != 0 && dt < uint64(attackPeriod(held)) {
-			c := float64(dt) / float64(attackPeriod(held))
+		// ATTACK_SPEED scales how fast the weapon recovers, which is what Haste
+		// and Mining Fatigue modify — the effects set the attribute and nothing
+		// read it before, so neither changed a swing.
+		period := t.attackPeriodTicks(attackPeriod(held))
+		if dt := now - t.lastAttack; t.lastAttack != 0 && dt < uint64(period) {
+			c := float64(dt) / float64(period)
 			charge = 0.2 + 0.8*c*c
 		}
 		t.lastAttack = now

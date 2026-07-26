@@ -1,6 +1,8 @@
 package server
 
 import (
+	"math"
+
 	"github.com/tachyne/tachyne-world/internal/attribute"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
@@ -90,4 +92,21 @@ func (t *tracked) luck() float64 { return t.playerAttrs().Value(attr.Luck) }
 // (LivingEntity.decreaseAirSupply), on top of what it does for mining speed.
 func (t *tracked) breathesUnderwater() bool {
 	return t.hasEffect(effWaterBreathing) > 0 || t.hasEffect(effConduitPower) > 0
+}
+
+// attackPeriodTicks scales a weapon's cooldown by ATTACK_SPEED. The attribute
+// is a rate, so a higher value means a SHORTER recovery: Haste (+10%/level)
+// shortens it, Mining Fatigue (−10%/level) drags it out. The registry default
+// is 4.0, which is the unmodified case.
+func (t *tracked) attackPeriodTicks(base int) int {
+	def := attr.Defs[attr.AttackSpeed].Default
+	speed := t.playerAttrs().Value(attr.AttackSpeed)
+	if def <= 0 || speed <= 0 {
+		return base
+	}
+	out := int(math.Round(float64(base) * def / speed))
+	if out < 1 {
+		return 1
+	}
+	return out
 }

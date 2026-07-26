@@ -49,13 +49,18 @@ func waitJoined(t *testing.T, h *hub, name string) {
 // onHub runs fn on the hub goroutine via the plugin scheduler and waits for
 // it — the sanctioned way for tests to touch hub-owned state. fn must not
 // call t.Fatal/t.Skip (Goexit would kill the hub goroutine); t.Error only.
+//
+// The deadline is deliberately far longer than any task needs. It exists to
+// turn a wedged hub into a failure rather than a hang, NOT to assert a
+// latency: a race build runs the whole package an order of magnitude slower,
+// and a tight budget here just turns machine load into a red suite.
 func onHub(t *testing.T, h *hub, fn func()) {
 	t.Helper()
 	done := make(chan struct{})
 	schedFacade{h.psched}.NextTick(func() { fn(); close(done) })
 	select {
 	case <-done:
-	case <-time.After(10 * time.Second):
+	case <-time.After(60 * time.Second):
 		t.Fatal("hub tick task never ran")
 	}
 }

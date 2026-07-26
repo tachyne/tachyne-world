@@ -55,6 +55,52 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 		}
 		h.applyPotionAoE(players, t, effs, 1-d/splashRadius, splashFactor)
 	}
+	// Vanilla doses every LivingEntity in the cloud, not just players — a
+	// splash of Harming is how you clear a cave, and Healing is how you patch
+	// up your horse.
+	for _, m := range h.mobs {
+		if m.dim != dim || m.dying > 0 {
+			continue
+		}
+		d := dist3(m.x, m.y+1, m.z, x, y, z)
+		if d > splashRadius {
+			continue
+		}
+		h.applyPotionAoEMob(players, m, effs, 1-d/splashRadius, splashFactor)
+	}
+}
+
+// applyPotionAoEMob is applyPotionAoE for a mob: timed effects scale with
+// proximity, instant ones scale their magnitude instead.
+func (h *hub) applyPotionAoEMob(players map[int32]*tracked, m *mob, effs []potEffect, prox, factor float64) {
+	if prox < 0 {
+		prox = 0
+	}
+	for _, e := range effs {
+		if e.secs == 0 { // instant: the magnitude is what proximity scales
+			mag := prox * float64(int(1)<<e.amp)
+			switch e.id {
+			case effInstantHealth:
+				if ignoresPoisonAndRegen(m.etype) {
+					h.hurtMobEffect(players, m, 6*mag)
+				} else {
+					h.healMob(m, int(4*mag))
+				}
+			case effInstantDamage:
+				if ignoresPoisonAndRegen(m.etype) {
+					h.healMob(m, int(6*mag))
+				} else {
+					h.hurtMobEffect(players, m, 6*mag)
+				}
+			default:
+				h.applyMobEffect(players, m, e.id, e.amp, 0)
+			}
+			continue
+		}
+		if secs := int(float64(e.secs) * factor * prox); secs >= 1 {
+			h.applyMobEffect(players, m, e.id, e.amp, secs)
+		}
+	}
 }
 
 // applyPotionAoE doses one player with a potion's effects, scaling timed effects

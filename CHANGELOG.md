@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Potions work on mobs.** Status effects were a player-only system, so a
+  splash potion of Harming did nothing to a cave full of zombies, a tipped
+  arrow of Slowness did not slow anything, and no mob could be poisoned,
+  strengthened or healed. Effects now apply to any living thing, with vanilla's
+  quirks intact: poison hurts but never kills, the undead ignore poison and
+  regeneration entirely, and Healing and Harming are the wrong way round on
+  them — a splash of Healing is a weapon against a zombie.
+- **Armour a mob is wearing counts properly.** Mobs pick up dropped gear, and
+  enchanted armour on one now protects it: the protection enchantments apply,
+  and diamond and netherite gear bring their toughness, which was hardcoded to
+  zero so it absorbed no better than leather.
 - **Sixteen missing enchantments, including the whole protection family.** Fire
   Protection, Blast Protection, Projectile Protection and Feather Falling did
   nothing at all before — the specialised armour people actually build for was
@@ -60,6 +71,10 @@ the public history since the project was open-sourced on 2026-07-10.
   and its render time by ~16x, which bought a much larger visible area.
 
 ### Changed
+- **Haste and Mining Fatigue change how fast you swing.** Both set the attack
+  speed, but nothing read it, so a beacon's Haste sped up mining and left
+  combat untouched — and the elder guardian's curse was purely cosmetic in a
+  fight.
 - **Falling damage is reduced by the right things.** Armour never softened a
   fall in vanilla and does not here, but Feather Falling does — previously the
   protection enchantments were bundled into the armour calculation, so anything

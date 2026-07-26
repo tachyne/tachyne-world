@@ -122,7 +122,7 @@ type mob struct {
 	hover           float64        // fliers: preferred altitude above the terrain
 	held            int32          // rendered main-hand item (0 = empty)
 	ty              float64        // hunted target's feet height (fliers dive to it)
-	attrs           *attribute.Map // entity attributes (follow range, and more as readers migrate)
+	living                         // attributes + status effects, shared with players
 	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int            // mob-updates left before this mob can melee again
 	hasTarget       bool           // a player is within aggro range this update
@@ -176,7 +176,7 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{attrs: newMobAttributes(etype), eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	h.mobs[eid] = m
 
@@ -480,30 +480,45 @@ func speedFor(etype int) float64 {
 	return mobSpeed // grazing default (slimes hop; villagers set at spawn)
 }
 
-// hurt applies physical damage through the mob's base armor, using vanilla's
-// exact absorption (CombatRules.getDamageAfterAbsorb, toughness 0:
-// clamp(armor − dmg/2, armor×0.2, 20)/25 of the damage is absorbed) and a
-// fractional carry so integer HP still yields vanilla hits-to-kill (a
-// 5-damage sword kills an armor-2 zombie in 5 hits at 4.92/hit, not 4).
+// hurt applies physical damage through the mob's armor, using vanilla's exact
+// absorption (CombatRules.getDamageAfterAbsorb:
+// clamp(armor − dmg/(2 + toughness/4), armor×0.2, 20)/25 of the damage is
+// absorbed) and a fractional carry so integer HP still yields vanilla
+// hits-to-kill (a 5-damage sword kills an armor-2 zombie in 5 hits at
+// 4.92/hit, not 4).
 // Armor-bypassing damage (fire ticks, daylight burn) must NOT route through
 // here — subtract from health directly.
 func (m *mob) hurt(dmg float64) { m.hurtBreach(dmg, 0) }
 
+// hurtKind is hurt against a named damage kind, so the specialised protection
+// enchantments on a mob's gear guard what they should.
+func (m *mob) hurtKind(dmg float64, kind dmgKind) { m.hurtOf(dmg, 0, kind) }
+
 // hurtBreach is hurt with a breach fraction subtracted from the armor's
 // effectiveness (the mace's Breach enchant: −0.15 per level). breachFrac 0 is
 // the normal path.
-func (m *mob) hurtBreach(dmg, breachFrac float64) {
+func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dmgGeneric) }
+
+// hurtOf is the full form: breach fraction and damage kind.
+func (m *mob) hurtOf(dmg, breachFrac float64, kind dmgKind) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
+	dmg *= m.damageResistance() // the Resistance effect, as on a player
 	if armor := m.armorValue(); armor > 0 {
-		reduced := math.Min(20, math.Max(armor-dmg/2, armor*0.2))
+		// Toughness used to be hardcoded to 0 here, so diamond and netherite
+		// gear on a mob absorbed no better than leather.
+		tough := m.armorToughness()
+		reduced := math.Min(20, math.Max(armor-dmg/(2+tough/4), armor*0.2))
 		frac := reduced / 25
 		if breachFrac > 0 {
 			frac = math.Max(0, frac-breachFrac) // Breach lets the hit ignore some armor
 		}
 		dmg *= 1 - frac
 	}
+	// The protection enchantments on the mob's own gear, same arithmetic as a
+	// player's (vanilla runs this as a second, separate absorption step).
+	dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], kind)))
 	dmg += m.dmgFrac
 	whole := math.Floor(dmg)
 	m.dmgFrac = dmg - whole
@@ -727,24 +742,57 @@ func (m *mob) armorValue() float64 { return m.mobAttrs().Value(attr.Armor) }
 // setBaseArmor sets the species' own ARMOR, below any worn piece.
 func (m *mob) setBaseArmor(v float64) { m.mobAttrs().SetBase(attr.Armor, v) }
 
-// refreshGearArmor re-derives the worn-armour modifier from what the mob is
-// actually holding in its gear slots. Recomputing beats adding a delta at each
-// equip: a reloaded mob comes back wearing its saved gear with no equip event
-// to replay, and used to lose the protection entirely.
+// refreshGearArmor re-derives everything a mob's worn armour contributes:
+// armour points, toughness, and the attribute effects of the enchantments on
+// those pieces. Recomputing beats adding a delta at each equip: a reloaded mob
+// comes back wearing its saved gear with no equip event to replay, and used to
+// lose the protection entirely.
+//
+// This is the mob half of the player's refreshArmorAttrs + refreshEnchantAttrs.
+// Mobs pick up dropped gear, so enchanted armour on a mob is reachable in play
+// and used to count for nothing beyond its raw points.
 func (m *mob) refreshGearArmor() {
-	pts := 0
+	pts, tough := 0.0, 0.0
 	for _, g := range m.gear {
-		if g.item != 0 {
-			pts += armorInfo[g.item].Points
+		if g.item == 0 {
+			continue
+		}
+		if p, ok := armorInfo[g.item]; ok {
+			pts += float64(p.Points)
+			tough += p.Toughness
 		}
 	}
-	in := m.mobAttrs().Get(attr.Armor)
-	if pts == 0 {
-		in.RemoveModifier(gearArmorSource)
-		return
-	}
-	in.AddModifier(attr.Modifier{Source: gearArmorSource, Amount: float64(pts), Op: attr.AddValue})
+	a := m.mobAttrs()
+	setEquip(a.Get(attr.Armor), pts)
+	setEquip(a.Get(attr.ArmorToughness), tough)
+	m.refreshGearEnchants()
 }
+
+// refreshGearEnchants applies the attribute effects of the enchantments on a
+// mob's worn armour, summed across pieces exactly as the player path does.
+func (m *mob) refreshGearEnchants() {
+	a := m.mobAttrs()
+	for id, mods := range enchantAttributes {
+		lvl := 0
+		for _, g := range m.gear {
+			if g.item != 0 {
+				lvl += g.enchLvl(int8(id))
+			}
+		}
+		src := enchantSource(id)
+		for _, mod := range mods {
+			in := a.Get(mod.id)
+			if lvl == 0 {
+				in.RemoveModifier(src)
+				continue
+			}
+			in.AddModifier(attr.Modifier{Source: src, Amount: mod.perLvl * float64(lvl), Op: mod.op})
+		}
+	}
+}
+
+// armorValue and armorToughness are the mob's ARMOR / ARMOR_TOUGHNESS.
+func (m *mob) armorToughness() float64 { return m.mobAttrs().Value(attr.ArmorToughness) }
 
 // babySpeedSource is vanilla's SPEED_MODIFIER_BABY: babies move at 1.5× on a
 // multiply-base modifier, not by rewriting the base. Keeping it a modifier is

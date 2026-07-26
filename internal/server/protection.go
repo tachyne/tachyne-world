@@ -36,8 +36,15 @@ const (
 // absorption second, and some damage (falling) skips the armour but not the
 // enchantment.
 func (t *tracked) enchantProtect(dmg float32, kind dmgKind) float32 {
+	return applyProtection(dmg, protectionPoints(t.armor[:], kind))
+}
+
+// protectionPoints totals the protection an entity's worn pieces give against
+// one kind of damage. Takes the pieces rather than the wearer so mobs — which
+// pick up dropped gear, enchantments and all — go through the same arithmetic.
+func protectionPoints(pieces []invStack, kind dmgKind) int {
 	points := 0
-	for _, a := range t.armor {
+	for _, a := range pieces {
 		if a.count == 0 {
 			continue
 		}
@@ -53,6 +60,11 @@ func (t *tracked) enchantProtect(dmg float32, kind dmgKind) float32 {
 			points += 3 * a.enchLvl(enchFeatherFalling)
 		}
 	}
+	return points
+}
+
+// applyProtection scales damage by protection points, capped at 20 (80%).
+func applyProtection(dmg float32, points int) float32 {
 	if points <= 0 {
 		return dmg
 	}

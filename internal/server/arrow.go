@@ -367,8 +367,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
-			m.hurt(float64(dmg))
-			if a.playerShot { // shot by a living entity → may call reinforcements
+			m.hurtKind(float64(dmg), dmgProjectile)
+			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
+			if a.playerShot {                  // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
 			}
 			if m.health <= 0 {

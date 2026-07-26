@@ -61,10 +61,11 @@ func (h *hub) applyFireAspect(players map[int32]*tracked, t *tracked, m *mob) {
 	if lvl == 0 {
 		return
 	}
-	if secs := fireAspectSecsPerLvl * lvl; secs > m.fireSecs {
-		m.fireSecs = secs
+	before := m.fireSecs
+	m.ignite(fireAspectSecsPerLvl * lvl) // …unless it is fire-resistant
+	if m.fireSecs > before {
 		m.burning = true
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
 }
 

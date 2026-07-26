@@ -56,7 +56,7 @@ func TestPlayerHandoverAcrossSeam(t *testing.T) {
 	src := &tracked{
 		p: p, dim: 0, x: -16, y: 71, z: 0, yaw: 90,
 		gamemode: gmSurvival, health: 18.5, food: 17, inv: &inventory{},
-		effects: map[int32]*activeEffect{effSpeed: {amp: 1, left: 600}}, // 30 s in ticks
+		living: living{effects: map[int32]*activeEffect{effSpeed: {amp: 1, left: 600}}}, // 30 s in ticks
 	}
 	src.inv.slots[0] = invStack{item: 278, count: 1, dmg: 5}
 	playersA[eid] = src

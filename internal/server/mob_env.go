@@ -46,8 +46,13 @@ var fireImmune = map[int]bool{
 	entityGhast: true, entityZoglin: true, entityEnderDragon: true,
 }
 
-// ignite (re)lights a mob's afterburn clock to at least secs seconds.
+// ignite (re)lights a mob's afterburn clock to at least secs seconds. Fire
+// Resistance stops it catching at all, the way it does for a player.
 func (m *mob) ignite(secs int) {
+	if m.resistsFire() {
+		m.fireSecs = 0
+		return
+	}
 	if secs > m.fireSecs {
 		m.fireSecs = secs
 	}

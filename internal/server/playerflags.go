@@ -32,10 +32,17 @@ func playerEntityFlags(t *tracked) byte {
 
 // playerFlagsMeta builds the set_entity_data body for that byte.
 func playerFlagsMeta(t *tracked) []byte {
-	b := protocol.AppendVarInt(nil, t.p.eid)
+	return entityFlagsMeta(t.p.eid, playerEntityFlags(t))
+}
+
+// entityFlagsMeta writes metadata index 0 for any entity. Shared with the mob
+// path, because the byte is the same field for both and both now set more than
+// one bit in it.
+func entityFlagsMeta(eid int32, flags byte) []byte {
+	b := protocol.AppendVarInt(nil, eid)
 	b = protocol.AppendU8(b, 0)     // index 0: shared entity flags
 	b = protocol.AppendVarInt(b, 0) // type 0: byte
-	b = protocol.AppendU8(b, playerEntityFlags(t))
+	b = protocol.AppendU8(b, flags)
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 

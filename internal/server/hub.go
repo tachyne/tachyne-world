@@ -13,7 +13,6 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/handover"
 	"github.com/tachyne/tachyne-common/shard"
-	"github.com/tachyne/tachyne-world/internal/attribute"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
@@ -253,7 +252,7 @@ type tracked struct {
 	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
-	attrs       *attribute.Map // entity attributes (max health, and more as readers migrate)
+	living      // attributes + status effects, shared with mobs
 	health      float32
 	absorption  float32 // extra damage buffer from the Absorption effect (soaked first)
 	food        int
@@ -270,8 +269,6 @@ type tracked struct {
 	sleeping    bool       // in bed, waiting for everyone else (skips night when all sleep)
 	sleepPos    blockPos   // the bed being slept in (drifting away wakes)
 	sleepingAt  uint64     // tick they lay down (night turns after sleepSkipTicks)
-
-	effects map[int32]*activeEffect // active status effects (hub-owned, 1 Hz tick)
 
 	// Raid Omen: where the Bad Omen was converted, and therefore where the
 	// raid lands when the omen's 30-second fuse burns out.
@@ -810,7 +807,8 @@ func (h *hub) run() {
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
 				}
 			}
-			h.updateEffects(players) // status effects at 20 Hz (vanilla per-effect cadence)
+			h.updateEffects(players)    // status effects at 20 Hz (vanilla per-effect cadence)
+			h.updateMobEffects(players) // …and the mobs', on the same cadence
 			if age%10 == 0 {
 				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
 			}
@@ -1617,7 +1615,7 @@ func (h *hub) run() {
 // onJoin registers the newcomer and exchanges spawn packets with everyone else:
 // the newcomer learns of every existing player and vice-versa.
 func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
-	nt := &tracked{attrs: newPlayerAttributes(), p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
+	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
 	if e.resume != nil {
 		// A migrated player: the handover snapshot is the source of truth (health,
 		// food, effects, inventory, xp) — not a fresh spawn or the on-disk store.

@@ -33,12 +33,12 @@ func TestPlayerHandoverRoundTrip(t *testing.T) {
 		xpLevel:    12,
 		xpPoints:   7,
 		inv:        &inventory{},
-		effects: map[int32]*activeEffect{
+		living: living{effects: map[int32]*activeEffect{
 			// left is TICKS; use whole-second multiples so the SECONDS-quantised
 			// handover format round-trips exactly (45 s, 8 s).
 			effSpeed:  {amp: 1, left: 900},
 			effPoison: {amp: 0, left: 160},
-		},
+		}},
 	}
 	orig.inv.slots[0] = invStack{item: 278, count: 1, dmg: 12, ench: [2]enchApply{{id: 3, lvl: 4}}}
 	orig.inv.slots[9] = invStack{item: 1, count: 64}
