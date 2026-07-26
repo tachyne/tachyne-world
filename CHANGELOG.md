@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Sixteen missing status effects.** Health Boost, Luck, Unluck, Saturation,
+  Conduit Power, Dolphin's Grace, Invisibility, Glowing, Nausea, Darkness and
+  Mining Fatigue all work now, and Luck actually shifts what you pull out of
+  the water. The four trial-chamber ominous effects are real mechanics rather
+  than placeholders: Wind Charged bursts a gust when you die, Weaving strings
+  cobwebs where you fell, Oozing spills slimes, and Infested bursts silverfish
+  out of you when you are hit. Only `/effect` reaches those four so far — the
+  ominous bottle that grants them is still to come.
 - **Attributes are now a real system**, with a public `plugin/attribute`
   package plugins can compile against: entity stats have base values and
   modifiers that stack the way vanilla's do, instead of being fixed numbers
@@ -38,6 +46,10 @@ the public history since the project was open-sourced on 2026-07-10.
   and its render time by ~16x, which bought a much larger visible area.
 
 ### Changed
+- **Raiding a village takes 30 seconds now.** Walking into a village with Bad
+  Omen no longer drops the raid on your head the same instant: the omen turns
+  into a Raid Omen and the horn sounds half a minute later, at the spot where
+  it turned — the warning window vanilla has given you since 1.21.
 - **The 3D map no longer looks grainy at a distance.** Block textures are now
   mipmapped, so terrain far from the camera resolves cleanly instead of
   shimmering as you pan. Blocks stay crisp and pixel-sharp up close.
