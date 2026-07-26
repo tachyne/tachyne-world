@@ -33,7 +33,8 @@ const (
 )
 
 var (
-	entityArrow = entityID("arrow") // minecraft:entity_type "arrow" (1.21.5)
+	entityArrow    = entityID("arrow") // minecraft:entity_type "arrow" (1.21.5)
+	entityXPBottle = entityID("experience_bottle")
 )
 
 type arrowEntity struct {
@@ -52,6 +53,7 @@ type arrowEntity struct {
 	playerShot bool    // player-fired: hits mobs, and is retrievable once stuck
 	breaks     bool    // snowball/egg: shatters on impact instead of sticking
 	egg        bool    // an egg: 1-in-8 chance to hatch a chick where it lands
+	xpBottle   bool    // a bottle o' enchanting: shatters into experience orbs
 	pearl      bool    // an ender pearl: teleports its thrower where it lands
 	poison     bool    // witch splash: poisons the player it hits
 	splash     bool    // a thrown potion: shatters on any impact into an AoE (see splashPotion)
@@ -238,6 +240,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			a.x, a.y, a.z = px, py, pz
 		}
 		if hit {
+			if a.xpBottle { // a bottle o' enchanting pays out where it broke
+				h.breakXPBottle(players, a)
+			}
 			if a.splash { // a thrown potion shatters into its area-of-effect
 				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)
 			}

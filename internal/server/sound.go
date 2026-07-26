@@ -13,6 +13,7 @@ import (
 const (
 
 	// Sound categories (soundSource enum, stable across versions).
+	sndAmbient = 1 // ambient source (fireworks)
 	sndRecord  = 2 // records/jukebox source (note blocks + discs)
 	sndBlock   = 4
 	sndHostile = 5

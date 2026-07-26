@@ -262,6 +262,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
+	if p.heldItem() == itemFrogspawn {
+		// Frogspawn is laid on the surface of water, never against a block
+		// face — vanilla's PlaceOnWaterBlockItem passes on useOn entirely.
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	defState, ok := protocol.BlockForItem(p.heldItem())
 	if p.heldItem() == int32(itemString) { // string laid on a surface becomes tripwire
 		defState, ok = tripwireDefaultState(), true

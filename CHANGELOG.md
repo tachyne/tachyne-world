@@ -14,6 +14,20 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Firework rockets fly, and elytra travel finally works.** A rocket was an
+  inert item: you could hold one while gliding and nothing happened, so an
+  elytra could only ever go downhill. Rockets now launch, climb, and pop, and
+  one used in the air drags you toward where you are looking — the boost the
+  whole elytra endgame is built around.
+- **Bottles o' enchanting throw.** They shatter where they land into 3 to 11
+  experience, so stored levels are worth carrying again.
+- **Goat horns sound.** All eight instruments, audible across 256 blocks, with
+  vanilla's seven-second hold before you can blow it again. (Nothing drops one
+  yet — that is the goat's ram, still to come.)
+- **Frogspawn can be placed.** It goes on the surface of water, which no other
+  item does, and so had never worked: the client's own aim passes straight
+  through water and the server had nothing to place against. It now finds the
+  water surface itself.
 - **End gateways.** Killing the dragon now raises a ring of twenty gateways
   around the main island. Step into one and it throws you a thousand blocks out
   along its own bearing, onto the first outer island in that direction, and

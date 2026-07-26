@@ -114,6 +114,14 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evThrow{eid: p.eid, item: p.heldItem()})
 		case itemSplashPotion, itemLingerPotion:
 			h.post(evThrowPotion{eid: p.eid, slot: p.held})
+		case itemXPBottle:
+			h.post(evThrowXPBottle{eid: p.eid})
+		case itemFireworkRocket:
+			h.post(evUseFirework{eid: p.eid})
+		case itemGoatHorn:
+			h.post(evUseHorn{eid: p.eid})
+		case itemFrogspawn: // placed on the water surface, not against a face
+			h.post(evPlaceOnWater{eid: p.eid})
 		case itemEnderPearl:
 			h.post(evThrowPearl{eid: p.eid})
 		case itemEnderEye:

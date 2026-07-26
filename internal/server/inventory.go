@@ -43,6 +43,9 @@ type invStack struct {
 	// Book identity (0 = none): pages/title live in the hub's bookStore,
 	// composed into the content component at send time (the map model).
 	bookID int32
+	// Goat horn: which of the eight instruments this horn sounds (0 = ponder,
+	// which is also what an unset horn plays).
+	instrument int8
 	// Shulker-box identity (0 = none): the 27 slots live in the hub's box
 	// store, so a broken box carries its contents as an item. Same indirection
 	// as maps and books, for the same reason — invStack stays comparable.

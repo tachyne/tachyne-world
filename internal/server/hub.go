@@ -219,14 +219,15 @@ type tracked struct {
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
-	dim            int    // 0 overworld, 1 nether
-	portalTicks    int    // consecutive dwell passes standing in a portal block
-	portalLatch    bool   // just arrived by portal: no re-trigger until they step off
-	rejectStreak   int    // rejections within the rolling window (yields at 40)
-	lastRejectTick uint64 // window anchor for rejectStreak
-	bossBarOn      bool   // dragon bossbar currently shown to this client
-	graceUntil     uint64 // no environmental damage until this tick (portal arrival)
-	gatewayUntil   uint64 // end gateway won't take this player again until this tick
+	dim            int              // 0 overworld, 1 nether
+	portalTicks    int              // consecutive dwell passes standing in a portal block
+	portalLatch    bool             // just arrived by portal: no re-trigger until they step off
+	rejectStreak   int              // rejections within the rolling window (yields at 40)
+	lastRejectTick uint64           // window anchor for rejectStreak
+	bossBarOn      bool             // dragon bossbar currently shown to this client
+	graceUntil     uint64           // no environmental damage until this tick (portal arrival)
+	gatewayUntil   uint64           // end gateway won't take this player again until this tick
+	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	onGround       bool
 	sprinting      bool // last reported sprint state (crit/knockback modifiers)
 	gamemode       int
@@ -420,11 +421,12 @@ type hub struct {
 	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
-	mobs   map[int32]*mob         // server-controlled entities (living world)
-	items  map[int32]*itemEntity  // dropped-item entities (block drops)
-	arrows map[int32]*arrowEntity // in-flight/stuck projectiles (skeleton shots)
-	clouds map[int32]*effectCloud // lingering-potion area-effect clouds
-	orbs   map[int32]*xpOrb       // experience orbs awaiting pickup
+	mobs    map[int32]*mob          // server-controlled entities (living world)
+	items   map[int32]*itemEntity   // dropped-item entities (block drops)
+	arrows  map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
+	clouds  map[int32]*effectCloud  // lingering-potion area-effect clouds
+	orbs    map[int32]*xpOrb        // experience orbs awaiting pickup
+	rockets map[int32]*rocketEntity // firework rockets in the air
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
@@ -611,6 +613,7 @@ func newHub(w *world.World) *hub {
 		arrows:        map[int32]*arrowEntity{},
 		clouds:        map[int32]*effectCloud{},
 		orbs:          map[int32]*xpOrb{},
+		rockets:       map[int32]*rocketEntity{},
 		bobbers:       map[int32]*bobberEntity{},
 		npcs:          map[int32]*npc{},
 		furnaces:      map[blockPos]*furnace{},
@@ -816,10 +819,11 @@ func (h *hub) run() {
 			if age%20 == 0 {
 				h.updateItems(players) // despawn dropped items past their lifetime
 			}
-			h.pickupItems(players)  // collect dropped items into survival inventories
-			h.updateOrbs(players)   // collect experience orbs / expire old ones
-			h.updateEating(players) // apply finished eat-holds (32-tick chew)
-			h.updateSleep(players)  // turn the night once everyone's slept ~5s
+			h.pickupItems(players)   // collect dropped items into survival inventories
+			h.updateOrbs(players)    // collect experience orbs / expire old ones
+			h.updateRockets(players) // firework rockets climb, boost gliders, pop
+			h.updateEating(players)  // apply finished eat-holds (32-tick chew)
+			h.updateSleep(players)   // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshArmorAttrs()   // vanilla updateEquipmentAttributes: worn gear → ARMOR
 				t.refreshEnchantAttrs() // …and the attribute effects its enchantments carry
@@ -1350,6 +1354,22 @@ func (h *hub) run() {
 			case evThrowPotion:
 				if t := players[e.eid]; t != nil {
 					h.throwSplashPotion(players, t, e.slot)
+				}
+			case evThrowXPBottle:
+				if t := players[e.eid]; t != nil {
+					h.throwXPBottle(players, t)
+				}
+			case evUseFirework:
+				if t := players[e.eid]; t != nil {
+					h.useFirework(players, t)
+				}
+			case evUseHorn:
+				if t := players[e.eid]; t != nil {
+					h.tootHorn(players, t)
+				}
+			case evPlaceOnWater:
+				if t := players[e.eid]; t != nil {
+					h.placeFrogspawn(players, t)
 				}
 			case evAttack:
 				if h.hitCrystal(players, e.target) {
