@@ -178,7 +178,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if t.air -= drain; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
-				h.damageExh(players, t, drownDamagePerSec, 0) // drown: no exhaustion
+				h.hurtBy(players, t, drownDamagePerSec, 0, dmgGeneric, deathCause{key: causeDrown}) // drown: no exhaustion
 			}
 		}
 	} else if t.air < maxAir {
@@ -195,7 +195,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if t.hasEffect(effFireRes) == 0 &&
 		(worldgen.IsLava(h.worldFor(t.dim).At(fx, feet, fz)) || worldgen.IsLava(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, lavaFireSecs)
-		if h.damageOf(players, t, lavaDamagePerSec, 0.1, dmgFire); t.dead {
+		if h.hurtBy(players, t, lavaDamagePerSec, 0.1, dmgFire, deathCause{key: causeLava}); t.dead {
 			return
 		}
 	}
@@ -203,7 +203,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if h.rules.FireDamage &&
 		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, fireContactSecs)
-		if h.damageOf(players, t, fireDamagePerSec, 0.1, dmgFire); t.dead {
+		if h.hurtBy(players, t, fireDamagePerSec, 0.1, dmgFire, deathCause{key: causeFire}); t.dead {
 			return
 		}
 	}
@@ -214,13 +214,13 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if isSoulCampfire(s) {
 			dmg = 2
 		}
-		if h.damage(players, t, dmg); t.dead {
+		if h.hurtBy(players, t, dmg, 0, dmgFire, deathCause{key: causeFire}); t.dead {
 			return
 		}
 	}
 	// Cactus: contact with an adjacent cactus at feet or body height.
 	if h.touchingCactus(t.dim, fx, feet, fz) {
-		h.damage(players, t, cactusDamagePerSec)
+		h.hurtBy(players, t, cactusDamagePerSec, 0, dmgGeneric, deathCause{key: causeCactus})
 	}
 }
 
@@ -302,7 +302,11 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 				hurt = math.Floor(dist - 3)
 			}
 			if hurt > 0 {
-				h.damageOf(players, t, float32(math.Floor(hurt)), 0, dmgFall) // fall: no exhaustion
+				cause := deathCause{key: causeFall}
+				if impaled {
+					cause.key = causeStalagmite
+				}
+				h.hurtBy(players, t, float32(math.Floor(hurt)), 0, dmgFall, cause) // fall: no exhaustion
 			}
 		}
 	}
@@ -335,9 +339,19 @@ func (h *hub) damageExh(players map[int32]*tracked, t *tracked, amount, exhausti
 // than guessed at the armour. Everything that does not name a kind is generic,
 // which plain Protection covers and the specialised ones do not.
 func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustion float32, kind dmgKind) {
+	h.hurtBy(players, t, amount, exhaustion, kind, deathCause{})
+}
+
+// hurtBy is damageOf plus the CAUSE, which is what a death message is made of.
+// The cause has to ride with the damage: by the time health reaches zero the
+// thing that dealt it is long gone, so it is recorded as the last thing to
+// hurt this player — which is also why walking out of lava and dying of the
+// burns still credits the lava.
+func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount, exhaustion float32, kind dmgKind, cause deathCause) {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 		return
 	}
+	t.lastCause = cause // the LAST thing to hurt them is what gets the credit
 	// Resistance: -20% per level (MobEffects.DAMAGE_RESISTANCE); level 5 = immune.
 	// Vanilla's getDamageAfterMagicAbsorb applies resistance BEFORE the
 	// enchantment protection, and the order shows: two 20% cuts in a row are
@@ -365,9 +379,10 @@ func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustio
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
-		log.Printf("%q died at (%.0f,%.0f,%.0f)", t.p.name, t.x, t.y, t.z)
+		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
+			deathMessage(t.p.name, t.lastCause))
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
-			body := chatEv(t.p.name + " died")
+			body := chatEv(deathMessage(t.p.name, t.lastCause))
 			for _, o := range players {
 				o.p.trySendEv(body)
 			}
@@ -376,7 +391,7 @@ func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustio
 			h.dropInventory(players, t)
 			h.dropDeathXP(players, t) // 7×level as an orb at the death spot, bar zeroed
 		}
-		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: "You died"})
+		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: deathMessage(t.p.name, t.lastCause)})
 		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
 			h.post(evRespawn{eid: t.p.eid})
 		}
@@ -435,6 +450,7 @@ func (h *hub) dropInventory(players map[int32]*tracked, t *tracked) {
 // respawn resets a dead player and returns them to their bed (world spawn if
 // they never slept or the bed is gone).
 func (h *hub) respawn(t *tracked) {
+	t.lastCause = deathCause{} // a fresh life owes its death to nothing yet
 	if !t.dead {
 		return
 	}

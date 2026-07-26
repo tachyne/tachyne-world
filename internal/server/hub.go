@@ -229,6 +229,7 @@ type tracked struct {
 	gatewayUntil   uint64           // end gateway won't take this player again until this tick
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
+	lastCause      deathCause       // what last hurt them — the death message is made of this
 	onGround       bool
 	sprinting      bool // last reported sprint state (crit/knockback modifiers)
 	gamemode       int

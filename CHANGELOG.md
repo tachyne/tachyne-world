@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Death messages say what happened.** Every death read "<name> died",
+  whatever killed them — which loses the one thing a death message exists to
+  carry. Deaths are now attributed: slain by a player or a named mob, shot by
+  whoever loosed the arrow, fell from a high place, impaled on a stalagmite,
+  tried to swim in lava, drowned, pricked to death, blew up, struck by
+  lightning. The cause travels with the damage rather than being guessed at
+  the end, so walking out of lava and dying of the burns still credits the
+  lava.
 - **Players can fight each other.** Melee aimed at another player fell straight
   through and did nothing — two people could swing at each other indefinitely
   without a scratch. PvP now runs the same swing the mobs get (weapon, attack

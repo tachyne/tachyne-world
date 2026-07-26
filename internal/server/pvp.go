@@ -78,7 +78,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 		return true
 	}
 
-	h.damageOf(players, v, v.armorReduce(dmg), 0, dmgGeneric)
+	h.hurtBy(players, v, v.armorReduce(dmg), 0, dmgGeneric, deathCause{key: causePlayer, by: t.p.name})
 	h.wearArmor(players, v, dmg)
 	// Fire Aspect sets the victim alight. (Thorns is NOT wired here: the
 	// existing retaliation helper hurts a MOB attacker, and turning it round
