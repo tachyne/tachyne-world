@@ -51,9 +51,16 @@ func bridgeEv[T plugin.Event](h *hub) {
 // runOnHub runs fn on the hub goroutine and waits — the bus's query path
 // (NATS handlers run per-message goroutines, so blocking here is safe). The
 // timeout keeps a wedged hub from leaking NATS goroutines forever.
+//
+// fn is delivered as a hub EVENT rather than a scheduled task, which makes this
+// a real barrier: the events channel is FIFO, so everything posted before this
+// call has already been processed when fn runs. Going through the scheduler
+// instead only guaranteed "on the hub goroutine, soon" — a caller that posted
+// an event and then used this to wait for it could be released first and see
+// the state from before.
 func (h *hub) runOnHub(fn func()) bool {
 	done := make(chan struct{})
-	h.psched.schedule(1, 0, func() { fn(); close(done) })
+	h.post(evRunOnHub{fn: func() { fn(); close(done) }})
 	select {
 	case <-done:
 		return true
@@ -61,6 +68,11 @@ func (h *hub) runOnHub(fn func()) bool {
 		return false
 	}
 }
+
+// evRunOnHub carries a closure to the hub goroutine in event order.
+type evRunOnHub struct{ fn func() }
+
+func (evRunOnHub) isHubEvent() {}
 
 // --- v2 command handlers (dispatched from executeCommand) -------------------
 

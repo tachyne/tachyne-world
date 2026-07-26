@@ -171,7 +171,11 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	// Water Breathing holds the breath indefinitely (no drain).
 	old := t.air
 	if worldgen.IsWater(h.worldFor(t.dim).At(fx, eyeY, fz)) && !t.breathesUnderwater() {
-		if t.air -= airDrainPerSec; t.air <= 0 {
+		drain := airDrainPerSec
+		if h.keepsAirThisTick(t) {
+			drain = 0 // Respiration: a 1-in-(bonus+1) chance of losing a breath
+		}
+		if t.air -= drain; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
 				h.damageExh(players, t, drownDamagePerSec, 0) // drown: no exhaustion
@@ -191,7 +195,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if t.hasEffect(effFireRes) == 0 &&
 		(worldgen.IsLava(h.worldFor(t.dim).At(fx, feet, fz)) || worldgen.IsLava(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, lavaFireSecs)
-		if h.damage(players, t, lavaDamagePerSec); t.dead {
+		if h.damageOf(players, t, lavaDamagePerSec, 0.1, dmgFire); t.dead {
 			return
 		}
 	}
@@ -199,7 +203,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if h.rules.FireDamage &&
 		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, fireContactSecs)
-		if h.damage(players, t, fireDamagePerSec); t.dead {
+		if h.damageOf(players, t, fireDamagePerSec, 0.1, dmgFire); t.dead {
 			return
 		}
 	}
@@ -286,7 +290,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			h.tramplePlayer(players, t, int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)), dist)
 		}
 		if dist > 3 && h.rules.FallDamage { // 3-block grace, then 1 dmg/block
-			h.damageExh(players, t, float32(math.Floor(dist-3)), 0) // fall: no exhaustion
+			h.damageOf(players, t, float32(math.Floor(dist-3)), 0, dmgFall) // fall: no exhaustion
 		}
 	}
 }
@@ -308,13 +312,27 @@ func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
 // damageExh is damage with an explicit food-exhaustion cost (vanilla
 // DamageType.exhaustion). See damage for the default-0.1 path.
 func (h *hub) damageExh(players map[int32]*tracked, t *tracked, amount, exhaustion float32) {
+	h.damageOf(players, t, amount, exhaustion, dmgGeneric)
+}
+
+// damageOf is the real damage path, carrying the SORT of damage this is.
+//
+// The kind exists for the protection enchantments, each of which guards one
+// family of damage types — so it has to be threaded from the source rather
+// than guessed at the armour. Everything that does not name a kind is generic,
+// which plain Protection covers and the specialised ones do not.
+func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustion float32, kind dmgKind) {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 		return
 	}
 	// Resistance: -20% per level (MobEffects.DAMAGE_RESISTANCE); level 5 = immune.
+	// Vanilla's getDamageAfterMagicAbsorb applies resistance BEFORE the
+	// enchantment protection, and the order shows: two 20% cuts in a row are
+	// not the same as one 40% cut.
 	if r := t.hasEffect(effResistance); r > 0 {
 		amount *= float32(math.Max(0, float64(25-r*5)) / 25)
 	}
+	amount = t.enchantProtect(amount, kind)
 	// Absorption soaks damage into its buffer before real health (yellow hearts).
 	if t.absorption > 0 && amount > 0 {
 		soak := float32(math.Min(float64(t.absorption), float64(amount)))
@@ -378,6 +396,12 @@ func (h *hub) dropInventory(players map[int32]*tracked, t *tracked) {
 	dropped := false
 	for _, s := range stacks {
 		if s.item == 0 || s.count == 0 {
+			continue
+		}
+		if s.enchLvl(enchVanishingCurse) > 0 {
+			// Curse of Vanishing (PREVENT_EQUIPMENT_DROP): the item is
+			// destroyed with you rather than left on the ground.
+			*s = invStack{}
 			continue
 		}
 		// Small jitter so stacks don't perfectly overlap on one column.

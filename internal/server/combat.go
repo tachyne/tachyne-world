@@ -163,6 +163,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		if lvl := heldStack(t).enchLvl(enchSharpness); lvl > 0 {
 			sharpBonus = 0.5*float64(lvl) + 0.5 // vanilla: 1.0 + 0.5·(lvl-1); I=+1, V=+3
 		}
+		// Smite and Bane of Arthropods are the same effect component as
+		// Sharpness with a condition on the target's family, so they add in
+		// the same place — and only one of them can ever match.
+		sharpBonus += familyMeleeBonus(heldStack(t), m.etype)
 		// The weapon sets the ATTACK_DAMAGE base and everything else — Strength,
 		// Weakness, and whatever else lands on the attribute — is a modifier on
 		// top, exactly as vanilla layers them.
@@ -277,7 +281,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
-	if smash {                             // shockwave, fall-damage negation, wind_burst launch
+	if t != nil {
+		h.applyFireAspect(players, t, m) // Fire Aspect: 4 s alight per level
+	}
+	if smash { // shockwave, fall-damage negation, wind_burst launch
 		h.smashEffects(players, t, m, fall)
 	}
 	h.zombieReinforce(players, m, t)      // hard mode: a hurt zombie may call for backup

@@ -354,6 +354,13 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		h.pluginUIClick(players, t, e)
 		return
 	}
+	// Curse of Binding (PREVENT_ARMOR_CHANGE): the piece will not come off.
+	// Creative is exempt, as in vanilla.
+	if e.slot >= 5 && e.slot <= 8 && t.winID == 0 && t.gamemode != gmCreative &&
+		t.armor[e.slot-5].enchLvl(enchBindingCurse) > 0 {
+		h.resyncWindow(t)
+		return
+	}
 
 	// Slot 0 is the crafting result only in windows that HAVE a result slot —
 	// in a furnace/chest it's ordinary storage.

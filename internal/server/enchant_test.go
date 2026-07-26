@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -28,8 +29,10 @@ func TestEnchantTableRollsAndApplies(t *testing.T) {
 	pl.enchSlots[1] = invStack{item: itemLapisLazuli, count: 10}
 
 	h.rollEnchOptions(pl)
+	swordPool := map[int8]bool{enchSharpness: true, enchSmite: true,
+		enchBaneOfArthropods: true, enchFireAspect: true, enchLooting: true}
 	for i, o := range pl.enchOpts {
-		if o.cost < 1 || (o.id != enchSharpness && o.id != enchLooting) || o.lvl < 1 {
+		if o.cost < 1 || !swordPool[o.id] || o.lvl < 1 {
 			t.Fatalf("option %d not rolled for a sword: %+v", i, o)
 		}
 	}
@@ -97,15 +100,46 @@ func TestSharpnessAddsMeleeDamage(t *testing.T) {
 
 func TestProtectionReducesDamage(t *testing.T) {
 	pl := testTracked()
-	plain := pl.armorReduce(10)
+	// The protection ENCHANTMENTS are a separate step from the armour points
+	// now (vanilla runs armour absorption then magic absorption), so this
+	// exercises enchantProtect rather than armorReduce.
 	for i := range pl.armor {
 		pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1, ench: [2]enchApply{{id: enchProtection, lvl: 4}}}
 	}
-	// Items without armorInfo give no armor points — isolating the EPF path:
-	// 16 EPF = 64% off.
-	prot := pl.armorReduce(10)
-	if prot >= plain*0.4+0.01 {
-		t.Fatalf("protection 4×4 should cut ~64%%: %v → %v", plain, prot)
+	// 4 pieces x level 4 = 16 points = 64% off.
+	if got := pl.enchantProtect(10, dmgGeneric); math.Abs(float64(got)-3.6) > 0.01 {
+		t.Fatalf("protection 4x4 should cut 64%%: 10 -> %v, want 3.6", got)
+	}
+}
+
+// The specialised protections only guard their own damage family, which is the
+// whole reason the damage kind has to travel from the source.
+func TestSpecialisedProtectionOnlyGuardsItsOwnFamily(t *testing.T) {
+	for _, c := range []struct {
+		ench   int8
+		guards dmgKind
+		points float64
+		what   string
+	}{
+		{enchFireProtection, dmgFire, 2, "fire protection"},
+		{enchBlastProtection, dmgExplosion, 2, "blast protection"},
+		{enchProjectileProtection, dmgProjectile, 2, "projectile protection"},
+		{enchFeatherFalling, dmgFall, 3, "feather falling"},
+	} {
+		pl := testTracked()
+		for i := range pl.armor {
+			pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1,
+				ench: [2]enchApply{{id: c.ench, lvl: 4}}}
+		}
+		// 4 pieces x level 4 x points, capped at 20.
+		pts := math.Min(4*4*c.points, 20)
+		want := float32(10 * (1 - pts/25))
+		if got := pl.enchantProtect(10, c.guards); math.Abs(float64(got-want)) > 0.01 {
+			t.Errorf("%s vs its own family: 10 -> %v, want %v", c.what, got, want)
+		}
+		if got := pl.enchantProtect(10, dmgGeneric); math.Abs(float64(got)-10) > 0.01 {
+			t.Errorf("%s guarded generic damage too: 10 -> %v, want 10", c.what, got)
+		}
 	}
 }
 

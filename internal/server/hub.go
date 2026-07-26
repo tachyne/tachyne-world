@@ -803,7 +803,8 @@ func (h *hub) run() {
 			h.updateEating(players) // apply finished eat-holds (32-tick chew)
 			h.updateSleep(players)  // turn the night once everyone's slept ~5s
 			for _, t := range players {
-				t.refreshArmorAttrs() // vanilla updateEquipmentAttributes: worn gear → ARMOR
+				t.refreshArmorAttrs()   // vanilla updateEquipmentAttributes: worn gear → ARMOR
+				t.refreshEnchantAttrs() // …and the attribute effects its enchantments carry
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
@@ -962,6 +963,8 @@ func (h *hub) run() {
 			switch e := ev.(type) {
 			case evJoin:
 				h.onJoin(players, e)
+			case evRunOnHub:
+				e.fn() // a barrier/query from another goroutine, in event order
 			case evMove:
 				if t := players[e.eid]; t != nil {
 					h.onMove(players, t, e)
@@ -1748,6 +1751,10 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
 	h.wakeIfAway(players, t) // walking off ends a bed sleep
+	// The two LOCATION_CHANGED boots enchantments fire from a position change,
+	// which is exactly here.
+	h.frostWalk(players, t)
+	h.refreshSoulSpeed(t)
 
 	// Interest management: relay this move only to players whose loaded-chunk
 	// window overlaps ours. A player N chunks away can't see us, so forwarding

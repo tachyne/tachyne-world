@@ -322,7 +322,8 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		return
 	}
 	h.damage(players, t, t.armorReduce(dmg))
-	if t.dead { // the bite was fatal: adventure/root's killed_by_something
+	h.thornsRetaliate(players, t, m) // armour that bites back
+	if t.dead {                      // the bite was fatal: adventure/root's killed_by_something
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)
 	}
@@ -389,13 +390,26 @@ func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
 // knockback shoves a player away from (fromX,fromZ) via Set Entity Velocity, the
 // same way vanilla knockback is applied — server-sent velocity the client obeys.
 func (h *hub) knockback(t *tracked, fromX, fromZ float64) {
+	h.knockbackScaled(t, fromX, fromZ, 1)
+}
+
+// knockbackScaled is knockback with a fraction of the shove getting through —
+// what Blast Protection's EXPLOSION_KNOCKBACK_RESISTANCE buys.
+func (h *hub) knockbackScaled(t *tracked, fromX, fromZ, scale float64) {
+	if scale <= 0 {
+		return
+	}
 	dx, dz := t.x-fromX, t.z-fromZ
 	d := math.Hypot(dx, dz)
 	if d < 1e-6 {
 		dx, dz, d = 1, 0, 1
 	}
 	t.p.trySendEv(attachproto.Velocity{
-		EID: t.p.eid, VX: dx / d * knockbackH, VY: knockbackV, VZ: dz / d * knockbackH})
+		EID: t.p.eid,
+		VX:  dx / d * knockbackH * scale,
+		VY:  knockbackV * scale,
+		VZ:  dz / d * knockbackH * scale,
+	})
 }
 
 // spawnZombie creates a hostile zombie at a column and returns it.

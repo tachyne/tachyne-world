@@ -169,9 +169,10 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 			continue
 		}
 		dmg := float32(maxDamage) * float32(1-d/rangeF)
-		h.damage(players, t, t.armorReduce(dmg))
+		h.damageOf(players, t, t.armorReduce(dmg), 0.1, dmgExplosion)
 		h.wearArmor(players, t, dmg)
-		h.knockback(t, cx, cz)
+		// Blast Protection braces you against the shove as well as the burn.
+		h.knockbackScaled(t, cx, cz, t.explosionKnockScale())
 	}
 	for _, om := range h.mobs {
 		d := dist3(om.x, om.y, om.z, cx, cy, cz)
@@ -360,7 +361,8 @@ var sixDirs = []blockPos{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}
 
 // setBurning flips a player's flame overlay + afterburn clock.
 func (h *hub) setBurning(players map[int32]*tracked, t *tracked, secs int) {
-	if secs > t.fireSecs {
+	t.refreshEnchantAttrs()                            // a helmet swapped this tick still counts
+	if secs = t.burnSeconds(secs); secs > t.fireSecs { // Fire Protection: −15%/level
 		t.fireSecs = secs
 	}
 	h.broadcastPlayerFlags(players, t)
@@ -392,7 +394,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		t.fireSecs = 0
 	} else {
 		t.fireSecs--
-		h.damageExh(players, t, fireDamagePerSec, 0) // on_fire afterburn: no exhaustion
+		h.damageOf(players, t, fireDamagePerSec, 0, dmgFire) // on_fire afterburn: no exhaustion
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.broadcastPlayerFlags(players, t)

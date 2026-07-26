@@ -19,15 +19,31 @@ const (
 	menuEnchantment = 13 // minecraft:enchantment menu network id (crafting 12 / furnace 14)
 
 	// Enchantment network ids (our declared order — see registries_gen.go).
-	enchEfficiency   = 8
-	enchProtection   = 27
-	enchSharpness    = 32
-	enchKnockback    = 17 // melee: +0.5 block/level extra knockback
-	enchSweepingEdge = 36 // sword sweep: +ratio·baseDamage to the sweep hit
-	enchUnbreaking   = 39
-	enchMultishot    = 23 // crossbow: fire three bolts in a spread
-	enchPiercing     = 24 // crossbow: bolts pass through up to level+1 entities
-	enchQuickCharge  = 29 // crossbow: -0.25s charge time per level
+	enchAquaAffinity         = 0 // head: mining underwater is not slowed
+	enchBaneOfArthropods     = 1 // melee: +2.5/level vs spiders and their kin
+	enchBindingCurse         = 2 // worn armour cannot be taken off
+	enchBlastProtection      = 3 // armour: +2 protection points/level vs explosions
+	enchDepthStrider         = 7 // boots: walk faster in water
+	enchEfficiency           = 8
+	enchFeatherFalling       = 9  // boots: +3 protection points/level vs falling
+	enchFireAspect           = 10 // melee: sets the target alight for 4 s/level
+	enchFireProtection       = 11 // armour: +2 protection points/level vs burning
+	enchFrostWalker          = 14 // boots: freezes the water you walk over
+	enchKnockback            = 17 // melee: +0.5 block/level extra knockback
+	enchMultishot            = 23 // crossbow: fire three bolts in a spread
+	enchPiercing             = 24 // crossbow: bolts pass through up to level+1 entities
+	enchProjectileProtection = 26 // armour: +2 protection points/level vs arrows
+	enchProtection           = 27
+	enchQuickCharge          = 29 // crossbow: -0.25s charge time per level
+	enchRespiration          = 30 // helmet: breath lasts longer underwater
+	enchSharpness            = 32
+	enchSmite                = 34 // melee: +2.5/level vs the undead
+	enchSoulSpeed            = 35 // boots: run over soul sand and soul soil
+	enchSweepingEdge         = 36 // sword sweep: +ratio·baseDamage to the sweep hit
+	enchSwiftSneak           = 37 // leggings: crouch faster
+	enchThorns               = 38 // armour: hurts whoever hits you
+	enchUnbreaking           = 39
+	enchVanishingCurse       = 40 // the item is destroyed rather than dropped on death
 
 	maxBookshelves = 15 // vanilla: power caps at 15 shelves
 )
@@ -95,15 +111,23 @@ func (h *hub) sendEnchantWindow(t *tracked) {
 }
 
 // enchCategory rolls which enchantment an offer carries for an item: swords
-// favor sharpness with a looting chance, tools favor efficiency with fortune
-// and the rare silk touch, armor gets protection, and plain books can roll
-// anything (they become enchanted books). Zero = not table-enchantable.
+// favor sharpness with a chance at its siblings, tools favor efficiency with
+// fortune and the rare silk touch, armor rolls the protection family plus
+// whatever suits the slot, and plain books can roll anything (they become
+// enchanted books). Zero = not table-enchantable.
 func (h *hub) enchCategory(item int32) int8 {
 	r := h.rng.Intn(100)
 	if _, isSword := meleeDamage[item]; isSword {
 		if swordPeriod[item] { // swords proper
-			if r < 75 {
+			switch {
+			case r < 45:
 				return enchSharpness
+			case r < 60:
+				return enchSmite
+			case r < 75:
+				return enchBaneOfArthropods
+			case r < 88:
+				return enchFireAspect
 			}
 			return enchLooting
 		}
@@ -116,12 +140,11 @@ func (h *hub) enchCategory(item int32) int8 {
 		}
 		return enchSilkTouch
 	}
-	if _, ok := armorInfo[item]; ok {
-		return enchProtection
+	if piece, ok := armorInfo[item]; ok {
+		return armorEnchantFor(piece.Slot, r)
 	}
 	if item == itemBook { // books take anything — the anvil applies it later
-		pool := []int8{enchSharpness, enchEfficiency, enchProtection, enchUnbreaking, enchFortune, enchLooting, enchSilkTouch}
-		return pool[h.rng.Intn(len(pool))]
+		return bookEnchantPool[h.rng.Intn(len(bookEnchantPool))]
 	}
 	if _, ok := itemMaxDurability[item]; ok {
 		return enchEfficiency // other durable tools (hoes, shears, …)
@@ -129,19 +152,23 @@ func (h *hub) enchCategory(item int32) int8 {
 	return 0
 }
 
-// enchMaxLvl is the vanilla cap per enchantment.
+// enchMaxLvl is the vanilla cap per enchantment (Enchantment.definition's
+// maxLevel argument).
 func enchMaxLvl(id int8) int8 {
 	switch id {
-	case enchProtection:
+	case enchProtection, enchFireProtection, enchBlastProtection,
+		enchProjectileProtection, enchFeatherFalling:
 		return 4
-	case enchUnbreaking, enchFortune, enchLooting, enchLure, enchLuckOfTheSea:
+	case enchUnbreaking, enchFortune, enchLooting, enchLure, enchLuckOfTheSea,
+		enchRespiration, enchDepthStrider, enchSoulSpeed, enchSwiftSneak, enchThorns:
 		return 3
-	case enchPunch:
+	case enchPunch, enchFireAspect, enchFrostWalker:
 		return 2
-	case enchSilkTouch, enchMending, enchFlame, enchInfinity:
+	case enchSilkTouch, enchMending, enchFlame, enchInfinity,
+		enchAquaAffinity, enchBindingCurse, enchVanishingCurse:
 		return 1
 	}
-	return 5 // sharpness, efficiency, power
+	return 5 // sharpness, smite, bane of arthropods, efficiency, power
 }
 
 // countBookshelves scans the vanilla 5×5 ring (two high) around the table.
@@ -255,4 +282,78 @@ func (h *hub) reclaimEnchant(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	t.enchOpts = [3]enchOption{}
+}
+
+// armorEnchantFor rolls an armour offer. Protection and its three specialised
+// siblings are mutually exclusive in vanilla (#armor_exclusive), so only one
+// can come out of a roll; the slot-specific ones ride alongside because the
+// exclusivity does not cover them.
+func armorEnchantFor(slot, r int) int8 {
+	switch slot {
+	case 0: // helmet
+		switch {
+		case r < 40:
+			return enchProtection
+		case r < 55:
+			return enchFireProtection
+		case r < 70:
+			return enchBlastProtection
+		case r < 80:
+			return enchProjectileProtection
+		case r < 92:
+			return enchRespiration
+		}
+		return enchAquaAffinity
+	case 1: // chestplate
+		switch {
+		case r < 45:
+			return enchProtection
+		case r < 60:
+			return enchFireProtection
+		case r < 75:
+			return enchBlastProtection
+		case r < 88:
+			return enchProjectileProtection
+		}
+		return enchThorns
+	case 2: // leggings
+		switch {
+		case r < 45:
+			return enchProtection
+		case r < 60:
+			return enchFireProtection
+		case r < 75:
+			return enchBlastProtection
+		case r < 90:
+			return enchProjectileProtection
+		}
+		return enchSwiftSneak
+	default: // boots
+		switch {
+		case r < 35:
+			return enchProtection
+		case r < 48:
+			return enchFireProtection
+		case r < 60:
+			return enchBlastProtection
+		case r < 70:
+			return enchProjectileProtection
+		case r < 84:
+			return enchFeatherFalling
+		case r < 92:
+			return enchDepthStrider
+		}
+		return enchFrostWalker
+	}
+}
+
+// bookEnchantPool is what a plain book can roll at the table. Soul Speed and
+// the two curses are absent on purpose: vanilla makes them treasure, reachable
+// only through loot and trades, not through a table.
+var bookEnchantPool = []int8{
+	enchSharpness, enchSmite, enchBaneOfArthropods, enchFireAspect,
+	enchEfficiency, enchFortune, enchSilkTouch, enchLooting, enchUnbreaking,
+	enchProtection, enchFireProtection, enchBlastProtection, enchProjectileProtection,
+	enchFeatherFalling, enchThorns, enchRespiration, enchAquaAffinity,
+	enchDepthStrider, enchFrostWalker, enchSwiftSneak,
 }

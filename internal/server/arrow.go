@@ -292,7 +292,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				h.shieldBlockFX(players, t)
 				return true
 			}
-			h.damage(players, t, t.armorReduce(float32(a.dmg)))
+			h.damageOf(players, t, t.armorReduce(float32(a.dmg)), 0.1, dmgProjectile)
 			h.wearArmor(players, t, float32(a.dmg))
 			h.knockback(t, a.x, a.z)
 			if a.poison {

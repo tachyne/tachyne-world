@@ -7,6 +7,7 @@ import (
 
 	"github.com/tachyne/tachyne-common/shard"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Movement authority: the client streams Set Player Position packets and the
@@ -90,6 +91,11 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	// and an anti-cheat that tightened on a debuff would flag its own victim.
 	if f := t.movementFactor(); f > 1 {
 		perTick *= f
+	}
+	if eff := t.playerAttrs().Value(attr.WaterMovementEfficiency); eff > 0 {
+		// Depth Strider: vanilla applies WATER_MOVEMENT_EFFICIENCY inside the
+		// swimming physics, so the authority only has to make room for it.
+		perTick *= 1 + eff
 	}
 	if t.hasEffect(effDolphinsGrace) > 0 {
 		// Vanilla applies Dolphin's Grace inside the swimming physics rather

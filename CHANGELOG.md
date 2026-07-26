@@ -14,6 +14,20 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Sixteen missing enchantments, including the whole protection family.** Fire
+  Protection, Blast Protection, Projectile Protection and Feather Falling did
+  nothing at all before — the specialised armour people actually build for was
+  decoration. They work now, and each guards what it should: Fire Protection
+  also shortens how long you burn, and Blast Protection braces you against the
+  shove as well as the blast. Also in: Smite and Bane of Arthropods (which bite
+  the undead and the creepy-crawlies respectively), Fire Aspect, Thorns,
+  Respiration, Aqua Affinity, Depth Strider, Swift Sneak, Soul Speed, Frost
+  Walker — which freezes the water you walk over, and the ice thaws behind you
+  the way it should — and both curses: Binding keeps armour on, Vanishing
+  destroys the item when you die instead of dropping it. Only Channeling is
+  still missing; it needs a lightning bolt the engine cannot yet throw.
+  Enchanting tables offer the new ones too, by armour slot: helmets can roll
+  Respiration, boots Feather Falling or Frost Walker, leggings Swift Sneak.
 - **Sixteen missing status effects.** Health Boost, Luck, Unluck, Saturation,
   Conduit Power, Dolphin's Grace, Invisibility, Glowing, Nausea, Darkness and
   Mining Fatigue all work now, and Luck actually shifts what you pull out of
@@ -46,6 +60,12 @@ the public history since the project was open-sourced on 2026-07-10.
   and its render time by ~16x, which bought a much larger visible area.
 
 ### Changed
+- **Falling damage is reduced by the right things.** Armour never softened a
+  fall in vanilla and does not here, but Feather Falling does — previously the
+  protection enchantments were bundled into the armour calculation, so anything
+  that skipped armour skipped them too. Resistance and enchantment protection
+  also now apply in vanilla's order, which is not the same as applying their
+  sum.
 - **Raiding a village takes 30 seconds now.** Walking into a village with Bad
   Omen no longer drops the raid on your head the same instant: the omen turns
   into a Raid Omen and the horn sounds half a minute later, at the spot where

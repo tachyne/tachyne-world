@@ -48,14 +48,10 @@ func (t *tracked) armorReduce(dmg float32) float32 {
 		def := math.Min(20, math.Max(points/5, points-d/(2+tough/4)))
 		d *= 1 - def/25
 	}
-	// Protection: 4% less per EPF point (1/level/piece), capped at 80% (vanilla).
-	epf := 0
-	for _, a := range t.armor {
-		epf += a.enchLvl(enchProtection)
-	}
-	if epf > 0 {
-		d *= 1 - 0.04*float64(min(epf, 20))
-	}
+	// The protection ENCHANTMENTS used to be folded in here. They are a
+	// separate step in vanilla (armour absorption then magic absorption) and
+	// they now run centrally in damageOf, which also reaches the damage that
+	// skips armour but not protection — falling being the obvious one.
 	return float32(d)
 }
 
@@ -88,4 +84,28 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32) {
 		}
 	}
 	h.broadcastEquipment(players, t) // shattered pieces vanish for onlookers too
+}
+
+// wearArmorSlot wears ONE armour piece by a fixed amount — what Thorns costs
+// the piece that retaliated (vanilla ChangeItemDamage(2) on that slot alone,
+// not on the whole set).
+func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int) {
+	a := &t.armor[slot]
+	if a.count == 0 {
+		return
+	}
+	max, ok := itemMaxDurability[a.item]
+	if !ok {
+		return
+	}
+	if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
+		return
+	}
+	if a.dmg += n; a.dmg >= max {
+		*a = invStack{}
+	}
+	if t.winID == 0 {
+		h.sendWinSlot(t, int16(5+slot), *a)
+	}
+	h.broadcastEquipment(players, t)
 }

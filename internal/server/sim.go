@@ -92,6 +92,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	}
 	state := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
 	switch {
+	case h.tickFrostedIce(players, dim, pos, state):
+		// Frost Walker's ice ages itself back to water on its own schedule.
 	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos):
 		h.setBlockAt(players, dim, pos, worldgen.ConcreteFor(state))
 	case worldgen.IsFalling(state):

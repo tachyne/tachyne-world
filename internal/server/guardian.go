@@ -62,6 +62,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
 	h.damage(players, t, magic+t.armorReduce(melee))
+	h.thornsRetaliate(players, t, m)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 	}

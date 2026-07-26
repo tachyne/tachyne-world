@@ -148,6 +148,7 @@ func (h *hub) guardianBeam(players map[int32]*tracked, m *mob) {
 			if t := h.nearestHuntable(players, m.dim, m.x, m.z, 16); t != nil {
 				dmg := hostileMelee(m) * h.diffMult()
 				h.damage(players, t, t.armorReduce(dmg))
+				h.thornsRetaliate(players, t, m)
 				h.wearArmor(players, t, dmg)
 			}
 		}
