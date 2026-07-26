@@ -14,6 +14,9 @@ import (
 func newPlayerAttributes() *attribute.Map {
 	a := attribute.NewMap()
 	a.SetBase(attr.MaxHealth, maxHealth)
+	a.SetBase(attr.MovementSpeed, 0.1) // vanilla's walking base
+	a.SetBase(attr.AttackDamage, 1)    // a bare fist; the held weapon replaces it
+	a.SetBase(attr.Luck, 0)
 	return a
 }
 
@@ -66,3 +69,25 @@ func setEquip(in *attribute.Instance, amount float64) {
 // it. armorToughness is the matching ARMOR_TOUGHNESS.
 func (t *tracked) armorPoints() float64    { return t.playerAttrs().Value(attr.Armor) }
 func (t *tracked) armorToughness() float64 { return t.playerAttrs().Value(attr.ArmorToughness) }
+
+// movementFactor is how much faster or slower than baseline the player moves —
+// MOVEMENT_SPEED over its own base. Speed and Slowness are modifiers on that
+// attribute, so this is the single number the movement code needs rather than
+// a branch per effect.
+func (t *tracked) movementFactor() float64 {
+	in := t.playerAttrs().Get(attr.MovementSpeed)
+	if in.Base() == 0 {
+		return 1
+	}
+	return in.Value() / in.Base()
+}
+
+// luck is the player's LUCK, which shifts weighted loot-table rolls.
+func (t *tracked) luck() float64 { return t.playerAttrs().Value(attr.Luck) }
+
+// breathesUnderwater reports whether the player's drowning clock is suspended.
+// Vanilla treats Conduit Power as Water Breathing for the air supply
+// (LivingEntity.decreaseAirSupply), on top of what it does for mining speed.
+func (t *tracked) breathesUnderwater() bool {
+	return t.hasEffect(effWaterBreathing) > 0 || t.hasEffect(effConduitPower) > 0
+}

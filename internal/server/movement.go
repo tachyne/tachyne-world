@@ -84,8 +84,18 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	if now < t.spinUntil && perTick < spinPerTick {
 		perTick = spinPerTick // riptide launch: fast travel until the spin-attack ends
 	}
-	if lvl := t.hasEffect(effSpeed); lvl > 0 {
-		perTick *= 1 + 0.2*float64(lvl) // vanilla: +20% speed per level
+	// Speed and Slowness are MOVEMENT_SPEED modifiers, so the budget scales by
+	// whatever the attribute says rather than by a per-effect branch. Slowness
+	// only ever widens the allowance here — the client is what actually slows,
+	// and an anti-cheat that tightened on a debuff would flag its own victim.
+	if f := t.movementFactor(); f > 1 {
+		perTick *= f
+	}
+	if t.hasEffect(effDolphinsGrace) > 0 {
+		// Vanilla applies Dolphin's Grace inside the swimming physics rather
+		// than as an attribute, and it is a large boost — the authority just
+		// needs room for it, not a model of it.
+		perTick *= 2
 	}
 	t.moveBudget = math.Min(t.moveBudget+float64(dt)*perTick, budgetCapTicks*perTick)
 

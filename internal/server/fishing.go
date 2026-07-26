@@ -426,8 +426,14 @@ func (h *hub) discardBobber(players map[int32]*tracked, b *bobberEntity) {
 // rollFishingLoot picks the pool (fish 85 / junk 10 / treasure 5, each
 // shifted by quality × luck; treasure only in open water), then the entry.
 // Returns the reward stack and whether it counts as a caught FISH.
+//
+// Luck is the rod's Luck of the Sea PLUS the angler's LUCK attribute, the sum
+// vanilla's FishingHook passes to the loot context — so a Luck potion helps.
 func (h *hub) rollFishingLoot(t *tracked, b *bobberEntity) (invStack, bool) {
-	luck := b.luck
+	luck := b.luck + int(t.luck())
+	if luck < 0 {
+		luck = 0
+	}
 	junkW := max(0, 10-2*luck) // quality -2
 	fishW := max(0, 85-luck)   // quality -1
 	treasureW := 0

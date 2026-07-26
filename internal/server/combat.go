@@ -5,6 +5,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/plugin"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Mob combat: a player attacks a mob with the Interact Entity packet; the hub
@@ -162,8 +163,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		if lvl := heldStack(t).enchLvl(enchSharpness); lvl > 0 {
 			sharpBonus = 0.5*float64(lvl) + 0.5 // vanilla: 1.0 + 0.5·(lvl-1); I=+1, V=+3
 		}
-		base += 3 * float64(t.hasEffect(effStrength)) // vanilla: +3/level
-		base -= 4 * float64(t.hasEffect(effWeakness)) // vanilla: -4/level
+		// The weapon sets the ATTACK_DAMAGE base and everything else — Strength,
+		// Weakness, and whatever else lands on the attribute — is a modifier on
+		// top, exactly as vanilla layers them.
+		t.playerAttrs().SetBase(attr.AttackDamage, base)
+		base = t.playerAttrs().Value(attr.AttackDamage)
 		if base < 0 {
 			base = 0
 		}

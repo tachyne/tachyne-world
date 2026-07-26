@@ -170,7 +170,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	// Drowning: eyes in water deplete the breath supply; empty → 2 HP/s.
 	// Water Breathing holds the breath indefinitely (no drain).
 	old := t.air
-	if worldgen.IsWater(h.worldFor(t.dim).At(fx, eyeY, fz)) && t.hasEffect(effWaterBreathing) == 0 {
+	if worldgen.IsWater(h.worldFor(t.dim).At(fx, eyeY, fz)) && !t.breathesUnderwater() {
 		if t.air -= airDrainPerSec; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
@@ -326,10 +326,12 @@ func (h *hub) damageExh(players map[int32]*tracked, t *tracked, amount, exhausti
 	}
 	h.wakePlayer(players, t)   // pain wakes (and stands the pose back up)
 	t.exhaustion += exhaustion // vanilla: per-damage-type food exhaustion
+	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
 	t.health -= amount
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true
+		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f)", t.p.name, t.x, t.y, t.z)

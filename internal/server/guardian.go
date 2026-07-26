@@ -8,7 +8,6 @@ import "math"
 // Numbers match vanilla 26.2 behaviour.
 
 const (
-	effMiningFatigue = 3 // mob_effect id
 
 	// Guardian.getAttackDuration()==80; the goal's attackTime starts at -10, so a
 	// beam lands ~90 ticks after lock-on. Our mob update runs every 2 ticks.

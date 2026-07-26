@@ -17,6 +17,7 @@ const (
 	raidBarRange        = 64   // players within this see the raid boss bar
 	raidNoPlayerTimeout = 2400 // ticks with nobody near before a raid gives up (2 min)
 	badOmenSecs         = 6000 // Bad Omen lasts long enough to walk to a village
+	raidOmenSecs        = 30   // the fuse between reaching the village and the horn
 )
 
 // raiderWaves[etype][wave 1..7] = how many of that raider spawn in that wave
@@ -234,10 +235,14 @@ func (h *hub) villageNear(x, z, r int) (blockPos, bool) {
 	return blockPos{}, false
 }
 
-// checkRaidTrigger consumes a player's Bad Omen when they reach a village and
-// starts a raid there (Raid trigger).
+// checkRaidTrigger converts a player's Bad Omen into a Raid Omen when they
+// reach a village — BadOmenMobEffect.applyEffectTick. The raid does NOT start
+// here: the Raid Omen is a 30-second fuse, and the horn goes off when it
+// expires (raidOmenExpired), which is the warning window vanilla gives you to
+// get ready or get out.
 func (h *hub) checkRaidTrigger(players map[int32]*tracked, t *tracked) {
-	if t.hasEffect(effBadOmen) == 0 {
+	lvl := t.hasEffect(effBadOmen)
+	if lvl == 0 || h.rules.Difficulty == diffPeaceful {
 		return
 	}
 	center, ok := h.villageNear(int(t.x), int(t.z), 64)
@@ -245,5 +250,16 @@ func (h *hub) checkRaidTrigger(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	h.removeEffect(t, effBadOmen)
-	h.startRaid(players, center)
+	t.raidOmenPos, t.raidOmenSet = center, true
+	h.applyEffect(players, t, effRaidOmen, lvl-1, raidOmenSecs)
+}
+
+// raidOmenExpired starts the raid the Raid Omen was counting down to
+// (RaidOmenMobEffect.applyEffectTick, which fires on the final tick).
+func (h *hub) raidOmenExpired(players map[int32]*tracked, t *tracked) {
+	if !t.raidOmenSet {
+		return
+	}
+	t.raidOmenSet = false
+	h.startRaid(players, t.raidOmenPos)
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Status effects: the framework every potion-shaped mechanic hangs off. The
@@ -15,30 +16,72 @@ import (
 // fire resistance). Effect ids are stable across 770-26.2 (ViaVersion never
 // remaps them), so no chain work is needed.
 
+// The ids are the registry's own order — stable across every version we serve.
 const (
 	effSpeed          = 0
 	effSlowness       = 1
 	effHaste          = 2
+	effMiningFatigue  = 3
 	effStrength       = 4
 	effInstantHealth  = 5
 	effInstantDamage  = 6
 	effJumpBoost      = 7
+	effNausea         = 8
 	effRegen          = 9
 	effResistance     = 10
 	effFireRes        = 11
-	effBlindness      = 14
 	effWaterBreathing = 12
+	effInvisibility   = 13
+	effBlindness      = 14
 	effNightVision    = 15
 	effHunger         = 16
 	effWeakness       = 17
 	effPoison         = 18
 	effWither         = 19
+	effHealthBoost    = 20
 	effAbsorption     = 21
+	effSaturation     = 22
+	effGlowing        = 23
 	effLevitation     = 24
+	effLuck           = 25
+	effUnluck         = 26
 	effSlowFalling    = 27
+	effConduitPower   = 28
+	effDolphinsGrace  = 29
 	effBadOmen        = 30
 	effHeroOfVillage  = 31 // raid-victory reward; discounts villager trades
+	effDarkness       = 32
 )
+
+// effectModifier is one attribute modifier an effect contributes, straight
+// from vanilla's MobEffects declarations. The amount scales with the level:
+// vanilla's AttributeTemplate.create is amount × (amplifier + 1).
+type effectModifier struct {
+	id     attr.ID
+	amount float64
+	op     attr.Op
+}
+
+// effectModifiers is the whole of vanilla's addAttributeModifier set. Effects
+// that only move a number are now nothing BUT this table — no special case in
+// the reader, no per-effect branch in the damage or movement code.
+var effectModifiers = map[int32][]effectModifier{
+	effSpeed:         {{attr.MovementSpeed, 0.2, attr.AddMultipliedTotal}},
+	effSlowness:      {{attr.MovementSpeed, -0.15, attr.AddMultipliedTotal}},
+	effHaste:         {{attr.AttackSpeed, 0.1, attr.AddMultipliedTotal}},
+	effMiningFatigue: {{attr.AttackSpeed, -0.1, attr.AddMultipliedTotal}},
+	effStrength:      {{attr.AttackDamage, 3, attr.AddValue}},
+	effWeakness:      {{attr.AttackDamage, -4, attr.AddValue}},
+	effJumpBoost:     {{attr.SafeFallDistance, 1, attr.AddValue}},
+	effHealthBoost:   {{attr.MaxHealth, 4, attr.AddValue}},
+	effAbsorption:    {{attr.MaxAbsorption, 4, attr.AddValue}},
+	effLuck:          {{attr.Luck, 1, attr.AddValue}},
+	effUnluck:        {{attr.Luck, -1, attr.AddValue}},
+}
+
+// effectSource is the modifier source an effect owns, so applying it twice
+// replaces rather than stacks and expiry removes exactly its own contribution.
+func effectSource(id int32) string { return "effect:" + strconv.Itoa(int(id)) }
 
 var (
 	itemGoldenApple     = itemByName["golden_apple"]
@@ -64,6 +107,15 @@ var effectNames = map[string]int32{
 	"resistance": effResistance, "water_breathing": effWaterBreathing,
 	"absorption": effAbsorption, "slow_falling": effSlowFalling,
 	"bad_omen": effBadOmen, "hero_of_the_village": effHeroOfVillage,
+	"mining_fatigue": effMiningFatigue, "nausea": effNausea,
+	"invisibility": effInvisibility, "blindness": effBlindness,
+	"health_boost": effHealthBoost, "saturation": effSaturation,
+	"glowing": effGlowing, "luck": effLuck, "unluck": effUnluck,
+	"conduit_power": effConduitPower, "dolphins_grace": effDolphinsGrace,
+	"darkness":   effDarkness,
+	"trial_omen": effTrialOmen, "raid_omen": effRaidOmen,
+	"wind_charged": effWindCharged, "weaving": effWeaving,
+	"oozing": effOozing, "infested": effInfested,
 }
 
 // hasEffect returns the 1-based level of an active effect (0 = none).
@@ -86,9 +138,11 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	case effInstantDamage:
 		h.damageExh(players, t, float32(6*(int(1)<<amp)), 0) // magic: no exhaustion
 		return
-	case effAbsorption:
-		// Vanilla: the buffer is 4 HP per level, granted immediately.
-		t.absorption = float32(4 * (amp + 1))
+	case effSaturation:
+		// SaturationMobEffect: 1 food + 2 saturation per level, every tick it
+		// applies — but the whole point is that it fills you instantly, so the
+		// grant tops both up here and applyEffectTick keeps them there.
+		h.feedSaturation(t, amp)
 	}
 	if t.effects == nil {
 		t.effects = map[int32]*activeEffect{}
@@ -97,16 +151,61 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 		return // a stronger/longer instance is already running (vanilla)
 	}
 	t.effects[id] = &activeEffect{amp: amp, left: secs * 20}
+	t.applyEffectModifiers(id, amp)
+	if id == effAbsorption {
+		// The buffer fills to the new ceiling the moment the effect lands.
+		t.absorption = float32(t.playerAttrs().Value(attr.MaxAbsorption))
+	}
+	if id == effInvisibility || id == effGlowing {
+		h.broadcastPlayerFlags(players, t) // other players have to see it too
+	}
 	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
+}
+
+// applyEffectModifiers installs an effect's attribute modifiers at its level,
+// replacing any the same effect already had (vanilla removes then re-adds).
+func (t *tracked) applyEffectModifiers(id int32, amp int) {
+	mods := effectModifiers[id]
+	if len(mods) == 0 {
+		return
+	}
+	src := effectSource(id)
+	a := t.playerAttrs()
+	for _, m := range mods {
+		a.Get(m.id).AddModifier(attr.Modifier{
+			Source: src, Amount: m.amount * float64(amp+1), Op: m.op,
+		})
+	}
 }
 
 // removeEffect ends one effect (expiry or /effect clear).
 func (h *hub) removeEffect(t *tracked, id int32) {
 	delete(t.effects, id)
+	t.playerAttrs().RemoveSource(effectSource(id))
 	if id == effAbsorption {
 		t.absorption = 0 // the yellow hearts vanish when the effect lapses
 	}
+	if id == effHealthBoost && t.health > t.maxHP() {
+		// The extra hearts go with the effect; vanilla leaves you on the ones
+		// you have left rather than healing you into the smaller bar.
+		t.health = t.maxHP()
+		h.sendHealth(t)
+	}
+	if id == effInvisibility || id == effGlowing {
+		h.broadcastPlayerFlags(h.playersRef, t)
+	}
 	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Remove: true})
+}
+
+// feedSaturation is SaturationMobEffect.applyEffectTick: +1 food and +2
+// saturation per level, both clamped to the maximum.
+func (h *hub) feedSaturation(t *tracked, amp int) {
+	if t.food >= maxFood && t.saturation >= float32(maxFood) {
+		return
+	}
+	t.food = min(maxFood, t.food+amp+1)
+	t.saturation = float32(math.Min(float64(t.saturation)+float64(2*(amp+1)), float64(t.food)))
+	h.sendHealth(t)
 }
 
 // clearEffects drops everything (death does this; vanilla too).
@@ -147,6 +246,15 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				// kill; the `wither` damage type costs no hunger exhaustion.
 				if applyEffectTickNow(e.left, 40, e.amp) {
 					h.damageExh(players, t, 1, 0)
+				}
+			case effSaturation:
+				// SaturationMobEffect fires every tick it is active.
+				h.feedSaturation(t, e.amp)
+			case effRaidOmen:
+				// RaidOmenMobEffect fires on its LAST tick, and that is the
+				// raid horn.
+				if e.left == 1 {
+					h.raidOmenExpired(players, t)
 				}
 			}
 			if t.dead { // a wither tick may have killed — stop touching effects

@@ -363,8 +363,7 @@ func (h *hub) setBurning(players map[int32]*tracked, t *tracked, secs int) {
 	if secs > t.fireSecs {
 		t.fireSecs = secs
 	}
-	h.toNearbyEv(players, 0, t.x, t.z, metaEv(fireMetadata(t.p.eid, true)))
-	t.p.trySendEv(metaEv(fireMetadata(t.p.eid, true)))
+	h.broadcastPlayerFlags(players, t)
 }
 
 // tickBurning runs at 1 Hz inside the survival step: afterburn damage, and
@@ -375,8 +374,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 	}
 	if t.hasEffect(effFireRes) > 0 {
 		t.fireSecs = 0 // fire resistance snuffs the burn outright
-		h.toNearbyEv(players, 0, t.x, t.z, metaEv(fireMetadata(t.p.eid, false)))
-		t.p.trySendEv(metaEv(fireMetadata(t.p.eid, false)))
+		h.broadcastPlayerFlags(players, t)
 		return
 	}
 	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
@@ -397,7 +395,6 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		h.damageExh(players, t, fireDamagePerSec, 0) // on_fire afterburn: no exhaustion
 	}
 	if t.fireSecs <= 0 && !t.dead {
-		h.toNearbyEv(players, 0, t.x, t.z, metaEv(fireMetadata(t.p.eid, false)))
-		t.p.trySendEv(metaEv(fireMetadata(t.p.eid, false)))
+		h.broadcastPlayerFlags(players, t)
 	}
 }

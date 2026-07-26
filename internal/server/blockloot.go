@@ -158,8 +158,11 @@ type lootCtx struct {
 	killedByPlayer bool
 	onFire         bool // the dying mob burned to death → cooked-meat smelt
 
-	// Chest-loot context (unused for block/entity loot): the opener's luck
-	// shifts weighted-entry selection. Always 0 today (no luck attribute).
+	// Chest-loot context (unused for block/entity loot): luck shifts
+	// weighted-entry selection. Chest contents here are DETERMINISTIC per
+	// (world seed, position, table) rather than rolled for whoever opens the
+	// chest, so no opener's luck can reach this — the LUCK attribute applies
+	// where the roll does have an owner, which is fishing.
 	luck float64
 }
 

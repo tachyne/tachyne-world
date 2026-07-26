@@ -12,8 +12,6 @@ import (
 // for vibration/scent tracking (a shrieker summons it near whoever roused it).
 // Full anger management, sniffing, and the emerge/dig animations are deferred.
 
-const effDarkness = 32 // mob_effect id (the Warden's dread)
-
 const (
 	wardenDarknessR  = 20.0 // players this close get the Darkness effect
 	wardenSonicR     = 15.0 // sonic-boom range

@@ -273,6 +273,11 @@ type tracked struct {
 
 	effects map[int32]*activeEffect // active status effects (hub-owned, 1 Hz tick)
 
+	// Raid Omen: where the Bad Omen was converted, and therefore where the
+	// raid lands when the omen's 30-second fuse burns out.
+	raidOmenPos blockPos
+	raidOmenSet bool
+
 	// Experience — persisted with the inventory; dying scatters and zeroes it.
 	xpLevel  int
 	xpPoints int // points into the current level (bar = points/xpToNext)
