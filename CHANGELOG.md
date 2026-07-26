@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Cake, and the composter.** Both were entirely absent: a cake could be placed
+  and never eaten, and a composter was scenery. Cake now feeds you a slice at a
+  time and disappears on the seventh, and a candle plants in an untouched one.
+  A composter takes vanilla's full list of plant matter at vanilla's chances,
+  composts a second after it fills, and pays out bone meal.
+- **Comparators can read blocks that aren't containers.** Cake, composter,
+  cauldron, beehive, respawn anchor, end portal frame, detector rail — and a
+  jukebox now reads out WHICH disc is playing (each song has its own signal),
+  not merely that one is. They all resolve through a single reading now, so
+  the next block to gain one is a case rather than a hunt.
 - **Firework rockets fly, and elytra travel finally works.** A rocket was an
   inert item: you could hold one while gliding and nothing happened, so an
   elytra could only ever go downhill. Rockets now launch, climb, and pop, and

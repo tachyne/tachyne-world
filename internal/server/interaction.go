@@ -432,6 +432,16 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if _, isCake := cakeBites(state); isCake { // a bite, or a candle planted in it
+		s.hub.post(evUseCake{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if _, isComposter := composterLevel(state); isComposter { // feed it, or take the bone meal
+		s.hub.post(evUseComposter{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if state == craftingTableState { // open the 3x3 crafting window
 		s.hub.post(evOpenCraft{eid: p.eid})
 		s.sendBlockChange(p, x, y, z, state, seq) // ack the interaction sequence

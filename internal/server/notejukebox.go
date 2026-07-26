@@ -164,17 +164,37 @@ const (
 // jukeboxSongs lists the songs in the registry order the gateways declare
 // to every client (the base set alphabetically, then the appended ones), so
 // the level-event data value is version-independent. Lengths in seconds.
+// comp is the song's comparator_output — a jukebox reads out the SONG, not
+// merely whether it holds a disc, which is what makes each disc distinguishable
+// to redstone.
 var jukeboxSongs = []struct {
 	name string
 	secs int
+	comp int
 }{
-	{"11", 71}, {"13", 178}, {"5", 178}, {"blocks", 345}, {"cat", 185},
-	{"chirp", 185}, {"creator", 176}, {"creator_music_box", 73}, {"far", 174},
-	{"mall", 197}, {"mellohi", 96}, {"otherside", 195}, {"pigstep", 149},
-	{"precipice", 299}, {"relic", 218}, {"stal", 150}, {"strad", 188},
-	{"wait", 238}, {"ward", 251},
+	{"11", 71, 11}, {"13", 178, 1}, {"5", 178, 15}, {"blocks", 345, 3}, {"cat", 185, 2},
+	{"chirp", 185, 4}, {"creator", 176, 12}, {"creator_music_box", 73, 11}, {"far", 174, 5},
+	{"mall", 197, 6}, {"mellohi", 96, 7}, {"otherside", 195, 14}, {"pigstep", 149, 13},
+	{"precipice", 299, 13}, {"relic", 218, 14}, {"stal", 150, 8}, {"strad", 188, 9},
+	{"wait", 238, 12}, {"ward", 251, 10},
 	// Appended for 26.x clients (older clients lack these registry entries).
-	{"bounce", 234}, {"lava_chicken", 134}, {"tears", 175},
+	{"bounce", 234, 6}, {"lava_chicken", 134, 4}, {"tears", 175, 15},
+}
+
+// jukeboxSignal is the comparator read of a playing jukebox: the song's own
+// output value, 1-15.
+func jukeboxSignal(disc int32) int {
+	name := discNames[disc]
+	if !strings.HasPrefix(name, "music_disc_") {
+		return 0
+	}
+	song := strings.TrimPrefix(name, "music_disc_")
+	for _, s := range jukeboxSongs {
+		if s.name == song {
+			return s.comp
+		}
+	}
+	return 0
 }
 
 // discNames reverse-maps music-disc item ids to their names once.

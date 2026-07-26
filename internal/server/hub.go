@@ -1498,6 +1498,14 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.harvestBeeHome(players, t, blockPos{e.x, e.y, e.z})
 				}
+			case evUseCake:
+				if t := players[e.eid]; t != nil {
+					h.eatCake(players, t, blockPos{e.x, e.y, e.z})
+				}
+			case evUseComposter:
+				if t := players[e.eid]; t != nil {
+					h.useComposter(players, t, blockPos{e.x, e.y, e.z})
+				}
 			case evUseVault:
 				if t := players[e.eid]; t != nil {
 					h.useVault(players, t, blockPos{e.x, e.y, e.z})

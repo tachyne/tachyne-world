@@ -210,9 +210,9 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	rear := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z)
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.world.At(back.x, back.y, back.z)
-	if sig := h.containerSignal(back); sig >= 0 {
+	if sig := h.analogSignal(back); sig >= 0 {
 		if sig > rear {
-			rear = sig // comparators measure container fullness through their back
+			rear = sig // container fullness, cake left, composter level, …
 		}
 	} else if worldgen.IsCopperBulb(bs) {
 		if worldgen.CopperBulbLit(bs) && rear < 15 {
@@ -227,7 +227,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).
-		if sig := h.containerSignal(blockPos{back.x + dx, back.y, back.z + dz}); sig > rear {
+		if sig := h.analogSignal(blockPos{back.x + dx, back.y, back.z + dz}); sig > rear {
 			rear = sig
 		}
 	}
