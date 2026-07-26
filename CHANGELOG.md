@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Explosions carve real craters.** A blast was a sphere with a cutoff: every
+  block inside the radius went, every block outside survived, and a wall of
+  obsidian protected nothing beyond its own cell. Explosions now cast vanilla's
+  rays, each worn down by what it passes through — so craters are ragged,
+  obsidian stops a blast dead and shields what is behind it, and a blast punches
+  further through soft ground than through stone. Two bugs surfaced doing it: an
+  explosion in the Nether was blowing a hole in the OVERWORLD at the same
+  coordinates (so was primed TNT), and both now stay where they happened.
+- **Sponges work.** Drop one in water and it drinks up to 64 blocks around it,
+  taking the kelp and seagrass with it, and turns wet.
 - **Blocks need something to hold them now.** Support was a six-block list
   checked only in the cell directly above an edit, so mining a wall left its
   torches, ladders, signs and levers hanging in the air, and a rail or a

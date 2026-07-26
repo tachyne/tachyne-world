@@ -25,7 +25,13 @@ const (
 	tntMaxDamage     = 40
 	metaIndexTNTFuse = 8 // primed-TNT metadata: fuse ticks (VarInt)
 
-	blastResistCap = 100 // blocks at/above this blast resistance survive (obsidian 1200)
+	blastResistCap = 100 // (unused since the ray model — kept for the drop-chance callers)
+
+	// Vanilla's explosion ray cast: a 16x16x16 grid of directions, stepped
+	// 0.3 blocks at a time, each step costing a flat 0.225 of the ray's power.
+	explodeRays  = 16
+	explodeStep  = 0.3
+	explodeDrain = 0.22500001
 )
 
 var (
@@ -52,6 +58,7 @@ func isTNT(state uint32) bool { return state >= tntStateMin && state <= tntState
 // primedTNT is a lit charge counting down to the bang.
 type primedTNT struct {
 	eid     int32
+	dim     int
 	x, y, z float64
 	fuse    int
 }
@@ -86,18 +93,26 @@ func (evPrimeTNT) isHubEvent() {}
 
 // primeTNT swaps a TNT block for the ticking entity.
 func (h *hub) primeTNT(players map[int32]*tracked, x, y, z int, fuse int) {
-	h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
+	h.primeTNTIn(players, 0, x, y, z, fuse)
+}
+
+// primeTNTIn lights TNT in the dimension it actually stands in. The overworld
+// wrapper above is what the redstone and dispenser paths use; a chain reaction
+// inside an explosion has to carry the dimension through, or nether TNT would
+// go off in the overworld.
+func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int) {
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 	eid := h.allocEID()
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
-	h.tnt = append(h.tnt, &primedTNT{eid: eid, x: cx, y: cy, z: cz, fuse: fuse})
-	h.toNearbyEv(players, 0, cx, cz, entAdd(eid, entityTNT, uuid, cx, cy, cz, 0, 0))
+	h.tnt = append(h.tnt, &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz, fuse: fuse})
+	h.toNearbyEv(players, dim, cx, cz, entAdd(eid, entityTNT, uuid, cx, cy, cz, 0, 0))
 	b := protocol.AppendVarInt(nil, eid) // fuse metadata: the client renders the flash timing
 	b = protocol.AppendU8(b, metaIndexTNTFuse)
 	b = protocol.AppendVarInt(b, metaTypeInt)
 	b = protocol.AppendVarInt(b, int32(fuse))
-	h.toNearbyEv(players, 0, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
+	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 	h.playSound(players, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
 }
 
@@ -114,7 +129,7 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 	for _, t := range current {
 		if t.fuse--; t.fuse <= 0 {
 			h.toNearbyEv(players, 0, t.x, t.z, entGone(t.eid))
-			h.explodeAt(players, t.x, t.y+0.5, t.z, tntRadius, tntMaxDamage)
+			h.explodeIn(players, t.dim, t.x, t.y+0.5, t.z, tntRadius, tntMaxDamage)
 		} else {
 			h.tnt = append(h.tnt, t)
 		}
@@ -125,35 +140,73 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 // chain-priming TNT), boom + particle, and falloff damage with knockback for
 // players and mobs. Creepers and TNT both detonate through here.
 func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, maxDamage int) {
-	h.playSound(players, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
+	h.explodeIn(players, 0, cx, cy, cz, radius, maxDamage)
+}
+
+// explodeIn is the explosion, in the dimension it actually happened in.
+//
+// The crater is vanilla's, not a sphere: 1352 rays leave the centre, each with
+// its own randomised power, and each is worn down by what it passes through —
+// (blast resistance + 0.3) x 0.3 per block plus a flat 0.225 per step. That is
+// why a real explosion is ragged, why it stops dead at obsidian and eats
+// through dirt, and why sand and gravel shield what is behind them. A sphere
+// with a resistance cap could not express any of that: every block inside the
+// radius went, every block outside survived, and a wall of obsidian protected
+// nothing beyond its own cell.
+func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius, maxDamage int) {
+	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
-	bx, by, bz := int(math.Floor(cx)), int(math.Floor(cy)), int(math.Floor(cz))
-	for dx := -radius; dx <= radius; dx++ {
-		for dy := -radius; dy <= radius; dy++ {
-			for dz := -radius; dz <= radius; dz++ {
-				if dx*dx+dy*dy+dz*dz > radius*radius {
-					continue
-				}
-				x, y, z := bx+dx, by+dy, bz+dz
-				state := h.world.At(x, y, z)
-				if state == worldgen.Air || state == worldgen.Bedrock ||
-					worldgen.IsWater(state) || worldgen.IsLava(state) ||
-					worldgen.Resistance(state) >= blastResistCap {
-					continue
-				}
-				if isTNT(state) { // chain reaction: light it, don't vaporize it
-					h.primeTNT(players, x, y, z, 10+h.rng.Intn(20))
-					continue
-				}
-				h.world.SetBlock(x, y, z, worldgen.Air)
-				h.broadcastBlock(players, x, y, z, worldgen.Air)
-				h.spillContainer(players, x, y, z, worldgen.Air)
-				h.scheduleAround(blockPos{x, y, z}, 1)
-				if h.rng.Intn(100) < blastDropChance && worldgen.HarvestableBy(state, 0) {
-					for _, d := range h.rollDrops(state) {
-						h.spawnBlockDrop(players, d.item, d.count, x, y, z)
+	w := h.worldFor(dim)
+	if w != nil && radius > 0 {
+		hit := map[blockPos]bool{}
+		for sx := 0; sx < explodeRays; sx++ {
+			for sy := 0; sy < explodeRays; sy++ {
+				for sz := 0; sz < explodeRays; sz++ {
+					// Only the shell of the cube: those are the ray directions.
+					if sx != 0 && sx != explodeRays-1 && sy != 0 && sy != explodeRays-1 &&
+						sz != 0 && sz != explodeRays-1 {
+						continue
 					}
+					dx := float64(sx)/(explodeRays-1)*2 - 1
+					dy := float64(sy)/(explodeRays-1)*2 - 1
+					dz := float64(sz)/(explodeRays-1)*2 - 1
+					l := math.Sqrt(dx*dx + dy*dy + dz*dz)
+					if l == 0 {
+						continue
+					}
+					dx, dy, dz = dx/l*explodeStep, dy/l*explodeStep, dz/l*explodeStep
+					power := float64(radius) * (0.7 + h.rng.Float64()*0.6)
+					px, py, pz := cx, cy, cz
+					for power > 0 {
+						pos := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+						st := w.At(pos.x, pos.y, pos.z)
+						if st != worldgen.Air {
+							power -= (float64(worldgen.Resistance(st)) + 0.3) * 0.3
+						}
+						if power > 0 && st != worldgen.Air && st != worldgen.Bedrock &&
+							!worldgen.IsWater(st) && !worldgen.IsLava(st) {
+							hit[pos] = true
+						}
+						px, py, pz = px+dx, py+dy, pz+dz
+						power -= explodeDrain
+					}
+				}
+			}
+		}
+		for pos := range hit {
+			st := w.At(pos.x, pos.y, pos.z)
+			if isTNT(st) { // chain reaction: light it, don't vaporize it
+				h.primeTNTIn(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20))
+				continue
+			}
+			h.setBlockAt(players, dim, pos, worldgen.Air)
+			h.scheduleIn(dim, pos, 1)
+			// vanilla yields 1/radius of the block's drops.
+			if h.rng.Intn(max(1, radius)) == 0 && worldgen.HarvestableBy(st, 0) {
+				for _, d := range h.rollDrops(st) {
+					h.spawnItemIn(players, dim, d.item, d.count,
+						float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 				}
 			}
 		}
@@ -164,6 +217,9 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 		rangeF = blastRange // no crater, full hurt (mobGriefing off)
 	}
 	for _, t := range players {
+		if t.dim != dim {
+			continue
+		}
 		d := dist3(t.x, t.y, t.z, cx, cy, cz)
 		if d >= rangeF {
 			continue
@@ -175,6 +231,9 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 		h.knockbackScaled(t, cx, cz, t.explosionKnockScale())
 	}
 	for _, om := range h.mobs {
+		if om.dim != dim {
+			continue
+		}
 		d := dist3(om.x, om.y, om.z, cx, cy, cz)
 		if d >= rangeF || om.dying > 0 {
 			continue

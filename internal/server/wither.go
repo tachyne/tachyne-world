@@ -89,7 +89,7 @@ func (h *hub) updateWithers(players map[int32]*tracked) {
 		if m.spawnInvuln > 0 {
 			if m.spawnInvuln--; m.spawnInvuln == 0 {
 				// Charge complete: level the terrain around it and roar free.
-				h.explodeAt(players, m.x, m.y+1, m.z, witherBlastPower, witherBlastPower*4)
+				h.explodeIn(players, m.dim, m.x, m.y+1, m.z, witherBlastPower, witherBlastPower*4)
 				h.playSoundDim(players, m.dim, "minecraft:entity.wither.spawn", sndHostile, m.x, m.y, m.z, 4, 1)
 			}
 		}

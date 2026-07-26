@@ -1012,6 +1012,12 @@ func (h *hub) run() {
 				// Anything around the change that just lost its floor, ceiling
 				// or wall comes down with it.
 				h.dropUnsupported(players, e.dim, blockPos{e.x, e.y, e.z})
+				// A dry sponge placed in water drinks it; so does one whose
+				// neighbourhood just flooded.
+				h.soakSponge(players, e.dim, blockPos{e.x, e.y, e.z})
+				for _, d := range supportNeighbours {
+					h.soakSponge(players, e.dim, blockPos{e.x + d[0], e.y + d[1], e.z + d[2]})
+				}
 				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				if e.broken == 0 && isShulkerBox(e.state) {
 					// A box placed from a stamped stack takes its contents back.
