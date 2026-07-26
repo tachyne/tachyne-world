@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **The End has its outer islands.** Past the void ring around the main island
+  there was nothing at all — the End was one disc of end stone and empty space
+  forever. Now it opens out the way it should: scattered islands stretching
+  outward without limit, thick in the middle and thin at the rim, with real
+  void between them to glide across. This is the ground end cities and gateways
+  need to stand on.
 - **Sheep come in colours, and dye works on them.** Every sheep in the world was
   white — the fleece colour was never actually sent — so a flock was uniform and
   a dye did nothing to a live sheep. They now spawn with vanilla's spread

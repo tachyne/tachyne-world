@@ -49,6 +49,10 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 	}
 	r := float64(x*x + z*z)
 	if r > EndIslandR*EndIslandR {
+		// Beyond the main island: void, until the outer islands begin.
+		if top, bottom, ok := g.endOuterColumn(x, z); ok && y <= top && y >= bottom {
+			return EndStone
+		}
 		return Air
 	}
 	// Island: a lens — thick in the middle, tapering to the rim, with a
