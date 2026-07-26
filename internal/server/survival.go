@@ -378,6 +378,7 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount, exhaustion 
 		t.dead = true
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
+		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
 			deathMessage(t.p.name, t.lastCause))

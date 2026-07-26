@@ -493,20 +493,6 @@ func (h *hub) speciesLoot(d *speciesDef) []drop {
 // (waterSpawn retired 2026-07-11: aquatic mobs spawn via the vanilla
 // NaturalSpawner port in spawn.go — water_creature/water_ambient categories.)
 
-// spawnPhantom drops a phantom into the night sky above a player (vanilla
-// phantoms harry players who haven't slept — we simplify to a rare night
-// spawn overhead).
-func (h *hub) spawnPhantom(players map[int32]*tracked, t *tracked) {
-	y := t.y + 20 + h.rng.Float64()*8
-	x := t.x + float64(h.rng.Intn(21)-10)
-	z := t.z + float64(h.rng.Intn(21)-10)
-	m := h.spawnSpecies(players, entityPhantom, t.dim, x, y, z)
-	if m == nil {
-		return
-	}
-	m.hasTarget, m.tx, m.tz, m.ty = true, t.x, t.z, t.y
-}
-
 // init registers every table species as /summon-able by name.
 func init() {
 	for etype, d := range speciesTable {

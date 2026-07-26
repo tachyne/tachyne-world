@@ -514,14 +514,16 @@ type hub struct {
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
 
-	dragon       *mob                // the ender dragon (nil = none / defeated)
-	crystals     map[int32]*crystal  // end crystals by eid
-	dragonNextAt uint64              // next waypoint/swoop decision tick
-	dragonSwoop  *tracked            // current dive target (nil = circling)
-	villageDone  map[blockPos]bool   // villages populated this session
-	villageGolem map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
-	mansionDone  map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
-	outpostDone  map[blockPos]bool   // pillager outposts populated this session
+	dragon        *mob                // the ender dragon (nil = none / defeated)
+	crystals      map[int32]*crystal  // end crystals by eid
+	dragonNextAt  uint64              // next waypoint/swoop decision tick
+	phantomNextAt uint64              // next insomnia check (vanilla PhantomSpawner cadence)
+	catNextAt     uint64              // next village-cat spawner tick
+	dragonSwoop   *tracked            // current dive target (nil = circling)
+	villageDone   map[blockPos]bool   // villages populated this session
+	villageGolem  map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
+	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
+	outpostDone   map[blockPos]bool   // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
 	// raining/thundering are the level-derived gameplay booleans the rest of
@@ -844,6 +846,7 @@ func (h *hub) run() {
 				h.survivalTick(players)       // health regen, hunger, starvation, void
 				h.updateHostiles(players)     // night mob spawning + daylight burn
 				h.updatePatrols(players)      // roaming pillager patrols (day 5+, throttled)
+				h.catSpawner(players)         // village cats (vanilla CustomSpawner)
 				h.updateRaids(players)        // active village raids: waves, bar, win/timeout
 				h.updateVillageSiege(players) // vanilla VillageSiege: a nightly zombie horde
 				for _, t := range players {
@@ -898,6 +901,12 @@ func (h *hub) run() {
 				h.advTick(players) // polled advancement criteria (inventory, biome)
 				for _, t := range players {
 					h.incCustom(t, "play_time", survivalTickN)
+					// Insomnia: the clock the phantom spawner reads. Vanilla
+					// ticks it for anyone awake, and getting INTO a bed is what
+					// resets it (see setSleeping) — not waking up.
+					if !t.sleeping && !t.dead {
+						h.incCustom(t, "time_since_rest", survivalTickN)
+					}
 				}
 			}
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)

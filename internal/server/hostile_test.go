@@ -216,19 +216,25 @@ func TestNightSpawnsHostiles(t *testing.T) {
 		}
 	}
 
-	// Night: a zombie should appear within a reasonable number of attempts.
+	// Night: a hostile should appear within a reasonable number of attempts.
+	//
+	// This drives naturalSpawn, NOT updateHostiles: natural spawning lives in
+	// spawn.go and updateHostiles only sweeps/burns/rolls insomnia. Aimed at
+	// updateHostiles this test passed for years on the old unconditional
+	// phantom roll alone — it spawned ten phantoms and never a single zombie,
+	// so it proved nothing about the spawner it names.
 	h.dayTime.Store(15000)
 	spawned := false
-	for i := 0; i < 200 && !spawned; i++ {
-		h.updateHostiles(players)
+	for i := 0; i < 400 && !spawned; i++ {
+		h.naturalSpawn(players)
 		for _, m := range h.mobs {
-			if m.hostile {
+			if m.hostile && m.etype != entityPhantom {
 				spawned = true
 			}
 		}
 	}
 	if !spawned {
-		t.Fatal("night spawner produced no hostiles after 200 attempts")
+		t.Fatal("night spawner produced no hostiles after 400 attempts")
 	}
 }
 

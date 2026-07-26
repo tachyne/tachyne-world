@@ -81,6 +81,9 @@ func (h *hub) setSleeping(players map[int32]*tracked, t *tracked, pos blockPos) 
 	}
 	h.advance(players, t, "slept_in_bed", advMatch{})
 	h.incCustom(t, "sleep_in_bed", 1)
+	// Vanilla resets the insomnia clock on GETTING IN, not on waking — lying
+	// down is what buys off the phantoms, even if something wakes you early.
+	h.resetCustom(t, "time_since_rest")
 }
 
 // wakePlayer stands a sleeper back up (no-op for the awake). Safe with a nil

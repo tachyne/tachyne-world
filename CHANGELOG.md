@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Phantoms are the price of not sleeping again, and villages have cats.**
+  Phantoms were a flat one-in-thirty roll over any player at night, so sleeping
+  changed nothing and they were just ambient noise. They now run off an
+  insomnia clock: three days without a bed before they can appear at all, and
+  steadily more likely after that, only under open sky at or above sea level.
+  Climbing into a bed stops the clock — as in vanilla, getting in is what
+  counts, so being woken early still buys the night off. Separately, cats now
+  spawn around villages; nothing had ever spawned one, so the only cats in the
+  world were summoned.
 - **Cows can be milked, and llamas spit.** Two mobs were missing the thing
   everyone knows them for. A bucket on an adult cow, mooshroom or goat now
   fills with milk — which strips every status effect and, unlike food, can be

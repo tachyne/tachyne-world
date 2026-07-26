@@ -66,6 +66,31 @@ func (h *hub) incCustom(t *tracked, name string, n int32) {
 	}
 }
 
+// resetCustom puts a custom stat back to zero. Vanilla's counters are not all
+// monotonic: the "time since" pair are clocks that something restarts.
+func (h *hub) resetCustom(t *tracked, name string) {
+	if t == nil || t.stats == nil {
+		return
+	}
+	if id, ok := customStatID[name]; ok {
+		delete(t.stats, statKey{attachproto.StatCustom, id})
+	}
+}
+
+// customStat reads a custom counter back. The stats map is the source of
+// truth for these — vanilla reads insomnia straight off the same counter the
+// statistics screen shows, so keeping one copy keeps the two honest.
+func customStat(t *tracked, name string) int32 {
+	if t == nil || t.stats == nil {
+		return 0
+	}
+	id, ok := customStatID[name]
+	if !ok {
+		return 0
+	}
+	return t.stats[statKey{attachproto.StatCustom, id}]
+}
+
 // statsSnapshot renders the player's counters as the attach frame, sorted
 // for deterministic output.
 func statsSnapshot(t *tracked) attachproto.Stats {

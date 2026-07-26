@@ -460,9 +460,9 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 }
 
 // updateHostiles runs once per second: despawn far mobs, burn sky-exposed
-// hostiles in daylight so the night's horde clears at dawn, and roll the rare
-// night phantom. Natural SPAWNING happens per tick in spawn.go; attacks +
-// chasing happen at the faster mob-update cadence, not here.
+// hostiles in daylight so the night's horde clears at dawn, and run the
+// insomnia check that summons phantoms. Natural SPAWNING happens per tick in
+// spawn.go; attacks + chasing happen at the faster mob-update cadence.
 func (h *hub) updateHostiles(players map[int32]*tracked) {
 	h.updateNetherMobs(players)
 	if len(players) == 0 {
@@ -511,25 +511,8 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 			}
 		}
 	}
-	// A rare phantom swoops in at night (vanilla: the sleepless-player harrier;
-	// ours is a low-odds overhead spawn — phantoms are a custom spawner in
-	// vanilla too, not part of the biome pools).
-	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful {
-		return
-	}
-	if day < nightStart || day >= dayStart {
-		return
-	}
-	if !h.rules.SpawnPhantoms {
-		return // gamerule spawn_phantoms
-	}
-	if h.rng.Intn(30) == 0 {
-		for _, t := range players {
-			if t.dim == 0 && t.gamemode == gmSurvival && !t.dead {
-				h.spawnPhantom(players, t)
-				break
-			}
-		}
+	if day >= nightStart && day < dayStart {
+		h.phantomSpawner(players)
 	}
 }
 
