@@ -102,6 +102,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
 		h.updateFire(players, pos)
+	case h.tickCoral(players, dim, pos, state):
+		// Coral left out of water bleaches to its dead twin.
 	case h.tickComposter(players, dim, pos, state):
 		// A full composter finishes composting a second after its last item.
 	default:

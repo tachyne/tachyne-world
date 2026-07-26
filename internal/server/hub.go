@@ -1015,6 +1015,7 @@ func (h *hub) run() {
 				// A dry sponge placed in water drinks it; so does one whose
 				// neighbourhood just flooded.
 				h.soakSponge(players, e.dim, blockPos{e.x, e.y, e.z})
+				h.scheduleCoralDeath(e.dim, blockPos{e.x, e.y, e.z})
 				for _, d := range supportNeighbours {
 					h.soakSponge(players, e.dim, blockPos{e.x + d[0], e.y + d[1], e.z + d[2]})
 				}

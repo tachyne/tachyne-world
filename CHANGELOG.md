@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **Coral dies out of water.** Every coral block, plant and fan has a dead
+  twin, and coral pulled from a reef and replanted on land stayed brilliantly
+  alive forever — which made keeping it wet, and silk touch, pointless. It now
+  bleaches a few seconds after the last water beside it goes.
 - **Game rules use their real names, and nine more of them work.** Every rule
   was still spelled the pre-rename way — `doDaylightCycle` rather than
   `advance_time` — which meant nothing a player typed from a wiki or another
