@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-25
 
 ### Added
+- **Conduits.** Build a prismarine frame around one underwater and it grants
+  Conduit Power to anyone swimming in range — so you can breathe and see and
+  mine down there — and a full frame hunts hostile mobs in the water around it.
+- **Decorated pots hold an item.** Right-click to drop a stack in, right-click
+  again to take it back, and breaking the pot spills what was inside.
 - **Ender chests and shulker boxes.** An ender chest shows the same 27 slots
   wherever you open it, and they follow you between dimensions and across a
   logout — the block is only a door onto storage that belongs to you, so nobody

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -50,6 +52,9 @@ type containerFile struct {
 	Boxes map[string][][14]int32 `json:"boxes,omitempty"`
 	// The next boxID to mint, so ids stay unique across restarts.
 	NextBoxID int32 `json:"next_box_id,omitempty"`
+	// Placed conduits as "dim,x,y,z" — they are player-built, so nothing else
+	// can rediscover them after a restart.
+	Conduits []string `json:"conduits,omitempty"`
 }
 
 // savedLectern is one lectern's book + open page.
@@ -552,4 +557,37 @@ func (s *containerStore) loadBoxes() (map[int32]*chest, int32) {
 		out[int32(id)] = c
 	}
 	return out, s.m.NextBoxID
+}
+
+// recordConduits replaces the in-memory conduit snapshot (no write).
+func (s *containerStore) recordConduits(conduits map[simPos]bool) {
+	out := make([]string, 0, len(conduits))
+	for k := range conduits {
+		out = append(out, strconv.Itoa(k.dim)+","+posKey(k.pos))
+	}
+	sort.Strings(out) // stable on disk, so an unchanged world writes an identical file
+	s.mu.Lock()
+	s.m.Conduits = out
+	s.mu.Unlock()
+}
+
+// loadConduits reconstructs the placed-conduit registry.
+func (s *containerStore) loadConduits() map[simPos]bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[simPos]bool{}
+	for _, k := range s.m.Conduits {
+		dim, rest, ok := strings.Cut(k, ",")
+		if !ok {
+			continue
+		}
+		d, err := strconv.Atoi(dim)
+		if err != nil {
+			continue
+		}
+		if pos, ok := parsePosKey(rest); ok {
+			out[simPos{dim: d, pos: pos}] = true
+		}
+	}
+	return out
 }

@@ -436,13 +436,20 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
-	if isChestBlock(state) { // open the chest (wooden/copper/trapped)
+	// Every 27-slot container routes through one decision, so a new one cannot
+	// be added to the storage side and forgotten on the interaction side —
+	// which is exactly how placed shulker boxes shipped unopenable.
+	switch containerOpenFor(state) {
+	case openChestWindow:
 		s.hub.post(evOpenChest{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
-	}
-	if isEnderChest(state) { // the player's own 27 slots, wherever they open it
+	case openEnderWindow:
 		s.hub.post(evOpenEnder{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	case openPotSlot:
+		s.hub.post(evUsePot{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

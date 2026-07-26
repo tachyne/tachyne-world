@@ -163,3 +163,175 @@ func TestShulkerBoxStatesCoverEveryColour(t *testing.T) {
 		t.Error("a plain chest was taken for a shulker box")
 	}
 }
+
+// Every storage block must resolve to the container it opens. This is the test
+// that was missing when placed shulker boxes shipped with working storage and
+// no way to open one: the storage side and the interaction side lived in
+// different files and only one of them knew about the block.
+func TestEveryContainerBlockOpensSomething(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		want containerOpen
+	}{
+		{"chest", openChestWindow},
+		{"trapped_chest", openChestWindow},
+		{"shulker_box", openChestWindow},
+		{"red_shulker_box", openChestWindow},
+		{"black_shulker_box", openChestWindow},
+		{"ender_chest", openEnderWindow},
+		{"decorated_pot", openPotSlot},
+		{"stone", openNothing},
+	} {
+		lo, hi := worldgen.BlockRange(c.name)
+		if lo == 0 && c.name != "stone" {
+			t.Fatalf("%s has no block states", c.name)
+		}
+		for _, s := range []uint32{lo, hi} {
+			if got := containerOpenFor(s); got != c.want {
+				t.Errorf("%s state %d opens %v, want %v", c.name, s, got, c.want)
+			}
+		}
+	}
+}
+
+// A decorated pot holds exactly one stack: put in, take out.
+func TestDecoratedPotHoldsOneStack(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	pos := blockPos{2, 70, 2}
+
+	// Nothing held, nothing inside: the pot does not react.
+	if h.usePot(players, pl, pos) {
+		t.Error("an empty pot reacted to an empty hand")
+	}
+
+	diamonds := invStack{item: itemByName["diamond"], count: 12}
+	pl.inv.slots[pl.p.heldSlot()] = diamonds
+	if !h.usePot(players, pl, pos) {
+		t.Fatal("the pot refused a held stack")
+	}
+	if got := h.pots[simPos{dim: pl.dim, pos: pos}]; got != diamonds {
+		t.Errorf("the pot holds %+v, want %+v", got, diamonds)
+	}
+	if pl.inv.slots[pl.p.heldSlot()].item != 0 {
+		t.Error("the stack was not taken out of the player's hand")
+	}
+
+	// A second stack does not fit while one is inside — it takes the first out.
+	if !h.usePot(players, pl, pos) {
+		t.Fatal("the pot refused to give its contents back")
+	}
+	if _, still := h.pots[simPos{dim: pl.dim, pos: pos}]; still {
+		t.Error("the pot kept its contents after handing them back")
+	}
+	found := false
+	for _, st := range pl.inv.slots {
+		if st.item == diamonds.item && st.count == diamonds.count {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the diamonds did not come back to the inventory")
+	}
+}
+
+// Breaking a pot scatters what is inside.
+func TestDecoratedPotSpillsOnBreak(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pos := blockPos{4, 70, 4}
+	h.pots = map[simPos]invStack{{dim: 0, pos: pos}: {item: itemByName["emerald"], count: 3}}
+
+	h.spillPot(players, 0, pos, worldgen.Air)
+	if len(h.pots) != 0 {
+		t.Error("the pot kept its contents after the block went")
+	}
+	got := 0
+	for _, it := range h.items {
+		if it.item == itemByName["emerald"] {
+			got += it.count
+		}
+	}
+	if got != 3 {
+		t.Errorf("%d emeralds scattered, want 3", got)
+	}
+}
+
+// The conduit frame: vanilla needs 16 blocks on the 5x5x5 rings and water all
+// around the conduit itself.
+func TestConduitNeedsWaterAndAFrame(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.worldFor(0)
+	pos := blockPos{0, 180, 0}
+	w.SetBlock(pos.x, pos.y, pos.z, conduitState)
+
+	// No water, no frame.
+	if got := h.conduitActiveBlocks(0, pos); got != 0 {
+		t.Errorf("a dry conduit counted %d frame blocks, want 0", got)
+	}
+
+	// Water all around it, still no frame.
+	for ox := -1; ox <= 1; ox++ {
+		for oy := -1; oy <= 1; oy++ {
+			for oz := -1; oz <= 1; oz++ {
+				if ox == 0 && oy == 0 && oz == 0 {
+					continue
+				}
+				w.SetBlock(pos.x+ox, pos.y+oy, pos.z+oz, worldgen.WaterBase)
+			}
+		}
+	}
+	if got := h.conduitActiveBlocks(0, pos); got != 0 {
+		t.Errorf("a frameless conduit counted %d, want 0", got)
+	}
+
+	// Build the full frame: every ring position gets prismarine.
+	prismarine := worldgen.BlockBase("prismarine")
+	placed := 0
+	for ox := -2; ox <= 2; ox++ {
+		for oy := -2; oy <= 2; oy++ {
+			for oz := -2; oz <= 2; oz++ {
+				ax, ay, az := abs(ox), abs(oy), abs(oz)
+				if ax <= 1 && ay <= 1 && az <= 1 {
+					continue
+				}
+				onRing := (ox == 0 && (ay == 2 || az == 2)) ||
+					(oy == 0 && (ax == 2 || az == 2)) ||
+					(oz == 0 && (ax == 2 || ay == 2))
+				if !onRing {
+					continue
+				}
+				w.SetBlock(pos.x+ox, pos.y+oy, pos.z+oz, prismarine)
+				placed++
+			}
+		}
+	}
+	got := h.conduitActiveBlocks(0, pos)
+	if got != placed {
+		t.Errorf("counted %d frame blocks, want the %d placed", got, placed)
+	}
+	if got < conduitMinActive {
+		t.Errorf("a full frame is %d blocks, below the %d needed to activate", got, conduitMinActive)
+	}
+	// Breaking the water seal switches it off, however good the frame is.
+	w.SetBlock(pos.x+1, pos.y, pos.z, prismarine)
+	if got := h.conduitActiveBlocks(0, pos); got != 0 {
+		t.Errorf("a conduit walled in on one side counted %d, want 0", got)
+	}
+}
+
+// The conduit registry is what makes them findable without scanning blocks.
+func TestConduitRegistryTracksPlacement(t *testing.T) {
+	h := newHub(world.New(1))
+	pos := blockPos{7, 70, 7}
+	h.noteConduitBlock(0, pos, conduitState)
+	if !h.conduits[simPos{dim: 0, pos: pos}] {
+		t.Fatal("a placed conduit was not remembered")
+	}
+	h.noteConduitBlock(0, pos, worldgen.Air)
+	if h.conduits[simPos{dim: 0, pos: pos}] {
+		t.Error("a broken conduit is still remembered")
+	}
+}

@@ -149,3 +149,29 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 		delete(h.bins, pos)
 	}
 }
+
+// containerOpen names what right-clicking a storage block should open. Having
+// ONE function decide keeps the storage side and the interaction side from
+// drifting apart — the shulker box shipped with working storage and no way to
+// open it because those two lived in different files.
+type containerOpen int
+
+const (
+	openNothing     containerOpen = iota
+	openChestWindow               // the 27-slot chest window over block storage
+	openEnderWindow               // the same window over the PLAYER's own storage
+	openPotSlot                   // a decorated pot's single stack (no menu)
+)
+
+// containerOpenFor maps a block state to the container it opens.
+func containerOpenFor(state uint32) containerOpen {
+	switch {
+	case isChestBlock(state), isShulkerBox(state):
+		return openChestWindow
+	case isEnderChest(state):
+		return openEnderWindow
+	case isDecoratedPot(state):
+		return openPotSlot
+	}
+	return openNothing
+}

@@ -119,3 +119,42 @@ func trialChamberTableForPiece(name string) string {
 		return "chests/trial_chambers/corridor"
 	}
 }
+
+// TrialChamberFeature is one placed block of interest inside a chamber, with
+// the world position the jigsaw put it at.
+type TrialChamberFeature struct {
+	X, Y, Z int
+	Ominous bool // trial spawners: the ominous variant
+}
+
+// TrialChamberSpawners returns every trial_spawner the chamber placed, and
+// TrialChamberVaults every vault. Both walk the assembled pieces the same way
+// TrialChamberChests does — the layout is a pure function of the seed, so the
+// server never has to scan blocks to find them.
+func (g *Generator) TrialChamberSpawners(t TrialChamber) []TrialChamberFeature {
+	return g.chamberBlocks(t, "trial_spawner")
+}
+
+func (g *Generator) TrialChamberVaults(t TrialChamber) []TrialChamberFeature {
+	return g.chamberBlocks(t, "vault")
+}
+
+// chamberBlocks finds every block of one kind across a chamber's pieces,
+// rotating template-local positions into the world the way the stamper does.
+func (g *Generator) chamberBlocks(t TrialChamber, name string) []TrialChamberFeature {
+	var out []TrialChamberFeature
+	for _, pc := range g.AssembleTrialChamber(t) {
+		for _, b := range pc.Tmpl.Blocks {
+			p := pc.Tmpl.Palette[b[3]]
+			if p.Name != "minecraft:"+name && p.Name != name {
+				continue
+			}
+			rx, ry, rz := pc.Tmpl.rotatePos(b[0], b[1], b[2], pc.Rot)
+			out = append(out, TrialChamberFeature{
+				X: pc.OX + rx, Y: pc.OY + ry, Z: pc.OZ + rz,
+				Ominous: p.Props["ominous"] == "true",
+			})
+		}
+	}
+	return out
+}

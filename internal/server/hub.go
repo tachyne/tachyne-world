@@ -430,6 +430,10 @@ type hub struct {
 	nextWin  int32                 // last container window id handed out (cycles 1..100)
 	furnaces map[blockPos]*furnace // active furnace states (hub-goroutine-only)
 	chests   map[blockPos]*chest   // chest storage (hub-goroutine-only)
+	// Every placed conduit, so none has to be found by scanning blocks.
+	conduits map[simPos]bool
+	// Decorated pots: one stack each (vanilla ContainerSingleItem).
+	pots map[simPos]invStack
 	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
 	boxes     map[int32]*chest
 	nextBoxID int32
@@ -695,6 +699,7 @@ func (h *hub) run() {
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
 		h.boxes, h.nextBoxID = h.containers.loadBoxes()
+		h.conduits = h.containers.loadConduits()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
@@ -833,6 +838,7 @@ func (h *hub) run() {
 				}
 				h.mobEnvironment(players)      // mob lava/fire/drowning/afterburn (after daylight ignites)
 				h.updateSpawners(players)      // dungeon spawner rooms
+				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach
 				h.updateVillageGolems(players) // census-driven iron golem spawns
 				h.updateOutposts(players)      // populate pillager outposts on approach
@@ -922,6 +928,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordConduits(h.conduits)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
@@ -985,6 +992,7 @@ func (h *hub) run() {
 				h.onLeave(players, e.p)
 			case evBlock:
 				h.onBlock(players, e)
+				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				if e.broken == 0 && isShulkerBox(e.state) {
 					// A box placed from a stamped stack takes its contents back.
 					// This runs before the evConsume that empties the slot,
@@ -1609,6 +1617,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordConduits(h.conduits)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordPaintings(h.paintings)
