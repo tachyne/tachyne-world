@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-27
 
 ### Added
+- **Sniffer eggs hatch, and chorus plants fall.** An egg dug out of suspicious
+  sand sat on the ground for ever, which made the whole archaeology-to-sniffer
+  chain a dead end; it now cracks twice and opens into a snifflet, with moss
+  underneath halving the wait. And a chorus plant that loses its footing comes
+  down: cut the base of a chorus tree and the rest pops after it, segment by
+  segment, instead of hanging in the air.
 - **Projectiles do something to what they hit, and Flame and Infinity work at
   all.** An arrow through a candle did nothing, amethyst never chimed and a
   decorated pot shrugged off a direct hit; the reactions that did exist were

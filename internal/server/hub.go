@@ -452,8 +452,9 @@ type hub struct {
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
 
-	tnt   []*primedTNT  // lit TNT charges counting down
-	fangs []*evokerFang // conjured evoker fangs waiting to bite
+	tnt         []*primedTNT      // lit TNT charges counting down
+	fangs       []*evokerFang     // conjured evoker fangs waiting to bite
+	snifferEggs map[simPos]uint64 // egg position -> tick its next crack is due
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
 	rulesPath string

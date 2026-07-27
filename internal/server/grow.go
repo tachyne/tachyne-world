@@ -199,6 +199,9 @@ func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
 	if h.tickBambooSapling(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickChorusPlant(players, dim, x, y, z, state) {
+		return
+	}
 	if h.tickChorus(players, dim, x, y, z, state) {
 		return
 	}

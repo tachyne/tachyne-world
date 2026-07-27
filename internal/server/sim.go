@@ -102,6 +102,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
 		h.updateFire(players, pos)
+	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
+		// The egg cracks twice and then opens.
+	case h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state):
+		// A plant segment that lost its footing pops, taking the rest with it.
 	case h.tickCoral(players, dim, pos, state):
 		// Coral left out of water bleaches to its dead twin.
 	case h.tickComposter(players, dim, pos, state):

@@ -152,3 +152,42 @@ func (h *hub) tickChorus(players map[int32]*tracked, dim, x, y, z int, state uin
 	}
 	return true
 }
+
+// chorusPlantSupported is ChorusPlantBlock.canSurvive: a plant segment holds
+// if end stone or another plant is directly beneath it, or if it hangs off a
+// horizontal neighbour that is itself rooted — and, in that second case, only
+// when nothing sits directly above AND below it. That last clause is what
+// stops a chorus tree from being a solid column.
+func (h *hub) chorusPlantSupported(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
+	below := w.At(x, y-1, z)
+	above := w.At(x, y+1, z)
+	sandwiched := above != worldgen.Air && below != worldgen.Air
+
+	for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		n := w.At(x+d[0], y, z+d[1])
+		if !isChorusPlant(n) {
+			continue
+		}
+		if sandwiched {
+			return false
+		}
+		if under := w.At(x+d[0], y-1, z+d[1]); isChorusPlant(under) || under == endStoneBlock {
+			return true
+		}
+	}
+	return isChorusPlant(below) || below == endStoneBlock
+}
+
+// tickChorusPlant breaks an unsupported plant segment. Cutting the base of a
+// chorus tree pops the whole thing, because each broken segment schedules its
+// neighbours and they find themselves unsupported in turn.
+func (h *hub) tickChorusPlant(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	if !isChorusPlant(state) || h.chorusPlantSupported(dim, x, y, z) {
+		return false
+	}
+	pos := blockPos{x, y, z}
+	h.setBlockAt(players, dim, pos, worldgen.Air)
+	h.dropLoose(players, dim, pos, state)
+	return true
+}
