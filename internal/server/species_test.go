@@ -159,8 +159,18 @@ func TestEverySpeciesSummonsAndConfigures(t *testing.T) {
 	players := map[int32]*tracked{}
 	for etype, d := range speciesTable {
 		m := h.spawnSpecies(players, etype, 0, 100, 70, 100)
-		if d.health != 0 && m.health != d.health {
-			t.Errorf("%s: health %d, want %d", d.name, m.health, d.health)
+		// Horses deliberately do NOT take the table's health: vanilla rolls
+		// 15-30 per animal (horseattr.go), which is the whole point of
+		// breeding them. Check the range instead of the table value.
+		switch etype {
+		case entityHorse:
+			if m.health < 15 || m.health > 30 {
+				t.Errorf("%s: rolled health %d, want 15-30", d.name, m.health)
+			}
+		default:
+			if d.health != 0 && m.health != d.health {
+				t.Errorf("%s: health %d, want %d", d.name, m.health, d.health)
+			}
 		}
 		switch d.arch {
 		case archHostile, archRanged, archWaterHostile, archFlyerHostile, archStatic:
