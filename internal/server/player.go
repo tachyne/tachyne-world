@@ -41,8 +41,9 @@ type player struct {
 	sprinting     bool // from Entity Action start/stop-sprint (for hunger exhaustion)
 	sneaking      bool // from Entity Action start/stop-sneak (place against usable blocks)
 
-	hmu    sync.Mutex // guards hotbar (the hub mirrors the survival inventory in)
-	hotbar [9]int32   // item id per hotbar slot (0 = empty)
+	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
+	hmu            sync.Mutex   // guards hotbar (the hub mirrors the survival inventory in)
+	hotbar         [9]int32     // item id per hotbar slot (0 = empty)
 	// hotbarPaint carries the painting/variant component of a creative-menu
 	// painting preset per hotbar slot ("" = plain painting → random fit).
 	hotbarPaint [9]string
@@ -231,6 +232,14 @@ func (p *player) heldItem() int32 {
 	defer p.hmu.Unlock()
 	return p.hotbar[p.held]
 }
+
+// digBonus mirrors the Efficiency speed addend of the held tool onto the
+// SESSION side. The hub owns enchantments, but the fast-break check runs on
+// the session goroutine and would otherwise have to guess — and guessing with
+// a blanket multiplier cannot work, because Efficiency V on a wooden pickaxe
+// is a fourteen-fold speed-up while on netherite it is under four.
+func (p *player) setDigBonus(v int32) { p.digBonusMirror.Store(v) }
+func (p *player) digBonus() int32     { return p.digBonusMirror.Load() }
 
 // heldSlot returns the selected hotbar index (0-8).
 func (p *player) heldSlot() int {

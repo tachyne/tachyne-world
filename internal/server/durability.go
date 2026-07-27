@@ -109,3 +109,57 @@ func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int)
 	}
 	h.broadcastEquipment(players, t)
 }
+
+// mendingRepair spends experience on a damaged Mending item before it ever
+// reaches the player's bar, and returns the experience left over.
+//
+// Mending was in the treasure pools, the fishing pools and the anvil's tables
+// and was wired to nothing — the single most valuable enchantment in the game
+// did not repair anything. Vanilla picks ONE damaged item carrying it at
+// random from the held slots and the armour, mends two points per experience
+// point, and recurses with whatever is left so a single orb can finish one
+// item and start on the next.
+func (h *hub) mendingRepair(t *tracked, xp int) int {
+	if t.inv == nil {
+		return xp
+	}
+	for xp > 0 {
+		s := h.pickMendable(t)
+		if s == nil {
+			return xp
+		}
+		repair := min(xp*mendingPerPoint, s.dmg)
+		s.dmg -= repair
+		// Experience is spent in proportion to what it actually mended, so a
+		// nearly-repaired item does not swallow a whole orb.
+		spent := (repair + mendingPerPoint - 1) / mendingPerPoint
+		if spent <= 0 {
+			return xp
+		}
+		xp -= spent
+	}
+	return xp
+}
+
+// mendingPerPoint is vanilla's exchange rate: two durability per experience.
+const mendingPerPoint = 2
+
+// pickMendable chooses a damaged Mending item at random from the held slots
+// and the worn armour, as vanilla's getRandomItemWith does.
+func (h *hub) pickMendable(t *tracked) *invStack {
+	var found []*invStack
+	for i := range t.inv.slots[:9] {
+		if s := &t.inv.slots[i]; s.count > 0 && s.dmg > 0 && s.enchLvl(enchMending) > 0 {
+			found = append(found, s)
+		}
+	}
+	for i := range t.armor {
+		if s := &t.armor[i]; s.count > 0 && s.dmg > 0 && s.enchLvl(enchMending) > 0 {
+			found = append(found, s)
+		}
+	}
+	if len(found) == 0 {
+		return nil
+	}
+	return found[h.rng.Intn(len(found))]
+}

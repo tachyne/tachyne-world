@@ -133,7 +133,11 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 				continue
 			}
 			lvl := t.xpLevel
-			h.addXP(t, o.value)
+			// Mending first: the orb repairs damaged gear before any of it
+			// reaches the bar, and only the remainder is banked.
+			if left := h.mendingRepair(t, o.value); left > 0 {
+				h.addXP(t, left)
+			}
 			delete(h.orbs, eid)
 			snd, pitch := "minecraft:entity.experience_orb.pickup", 0.8+h.rng.Float32()*0.8
 			if t.xpLevel > lvl {

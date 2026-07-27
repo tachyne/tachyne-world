@@ -48,6 +48,9 @@ func heldStack(t *tracked) invStack {
 
 // broadcastEquipment shows t's current loadout to every other player.
 func (h *hub) broadcastEquipment(players map[int32]*tracked, t *tracked) {
+	// Keep the session-side dig mirror in step with what is actually held —
+	// this is the one place every held-item change funnels through.
+	t.p.setDigBonus(int32(efficiencyBonus(heldStack(t))))
 	body := equipEv(t.p.eid, heldStack(t), t.offhand, t.armor)
 	for _, o := range players {
 		if o != t {

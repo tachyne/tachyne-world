@@ -46,14 +46,14 @@ func TestBuriedHeadSuffocates(t *testing.T) {
 func TestFastBreakCheatReverted(t *testing.T) {
 	// Stone (hardness 1.5) by hand needs ~22 ticks even at 50% tolerance; a
 	// Finish 1 tick after Start is a cheat.
-	if minDigTicks(worldgen.Stone, 0) < 5 {
-		t.Fatalf("stone-by-hand minimum should be many ticks, got %d", minDigTicks(worldgen.Stone, 0))
+	if minDigTicks(worldgen.Stone, 0, 0) < 5 {
+		t.Fatalf("stone-by-hand minimum should be many ticks, got %d", minDigTicks(worldgen.Stone, 0, 0))
 	}
 	// A diamond pick is legitimately fast — the floor scales with the tool.
-	if minDigTicks(worldgen.Stone, itemByName["diamond_pickaxe"]) >= minDigTicks(worldgen.Stone, 0) {
+	if minDigTicks(worldgen.Stone, itemByName["diamond_pickaxe"], 0) >= minDigTicks(worldgen.Stone, 0, 0) {
 		t.Fatal("tools must lower the floor")
 	}
-	if minDigTicks(worldgen.GrassBlock, 0) <= 0 {
+	if minDigTicks(worldgen.GrassBlock, 0, 0) <= 0 {
 		t.Fatal("even dirt has a nonzero floor by hand")
 	}
 }

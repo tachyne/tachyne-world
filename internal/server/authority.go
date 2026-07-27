@@ -65,7 +65,7 @@ var toolSpeed = itemFloatMap(map[string]float64{
 // minDigTicks is the fastest legitimate break time for a block with a held
 // item, scaled by digTolerance. Vanilla: ticks ≈ 30×hardness/speed with the
 // right tool (100× without harvest rights — we use the lenient 30 always).
-func minDigTicks(state uint32, held int32) int {
+func minDigTicks(state uint32, held int32, digBonus int32) int {
 	h := float64(worldgen.Hardness(state))
 	if h <= 0 {
 		return 0
@@ -74,8 +74,29 @@ func minDigTicks(state uint32, held int32) int {
 	if s, ok := toolSpeed[held]; ok {
 		speed = s
 	}
-	speed *= 1 + 1.5 // headroom for Efficiency & haste (not modeled server-side)
+	// Efficiency, modelled rather than guessed at. The old blanket 2.5x
+	// "headroom for Efficiency & haste" was not survivable: Efficiency V adds
+	// 26 to the speed, which on a wooden pickaxe (2) is a FOURTEEN-fold
+	// speed-up. A legitimate enchanted player broke blocks faster than the
+	// check allowed and had every break reverted.
+	if speed > 1 {
+		speed += float64(digBonus)
+	}
+	speed *= hasteHeadroom // Haste II from a beacon is the most anyone can add
 	return int(30 * h / speed * digTolerance)
+}
+
+// hasteHeadroom is vanilla's dig-speed multiplier at Haste II (the strongest a
+// beacon or conduit grants): 1 + (amplifier+1) x 0.2.
+const hasteHeadroom = 1.4
+
+// efficiencyBonus is Efficiency's addition to mining speed: level^2 + 1.
+func efficiencyBonus(st invStack) int {
+	lvl := st.enchLvl(enchEfficiency)
+	if lvl <= 0 {
+		return 0
+	}
+	return lvl*lvl + 1
 }
 
 // --- hub-validated position mirror (chunk-stream gate) ----------------------

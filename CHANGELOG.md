@@ -13,6 +13,18 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-07-27
 
+### Fixed
+- **Mending and Efficiency did nothing, and Efficiency was worse than nothing.**
+  Both sat in the treasure and fishing pools and were wired to no code at all.
+  Mending — the most valuable enchantment in the game — now spends experience
+  on damaged held and worn gear before any of it reaches your bar, two
+  durability per point, picking one item at a time as vanilla does. Efficiency
+  is now modelled by the anti-cheat instead of guessed at: the old blanket
+  allowance assumed enchantments could roughly double mining speed, but
+  Efficiency V adds twenty-six to the speed, which on a wooden pickaxe is a
+  fourteen-fold speed-up — so a legitimately enchanted player was breaking
+  blocks faster than the server permitted and having every break reverted.
+
 ### Added
 - **Sniffer eggs hatch, and chorus plants fall.** An egg dug out of suspicious
   sand sat on the ground for ever, which made the whole archaeology-to-sniffer
