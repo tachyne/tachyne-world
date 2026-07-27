@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-27
 
 ### Added
+- **Projectiles do something to what they hit, and Flame and Infinity work at
+  all.** An arrow through a candle did nothing, amethyst never chimed and a
+  decorated pot shrugged off a direct hit; the reactions that did exist were
+  each wired wherever the flight loop happened to notice them. There is now one
+  place that decides: a burning projectile lights candles and candle cakes,
+  amethyst rings at a random pitch, a decorated pot shatters and spills what it
+  held, and a thrown trident still travelling shears pointed dripstone off the
+  ceiling. Target blocks work in every dimension now rather than the overworld
+  alone. Found on the way: **Flame and Infinity were in the enchantment pools
+  and wired to nothing** — a Flame bow now really does set what it hits alight
+  (and lights those candles), and Infinity really does keep the arrow.
 - **The dragon fight has its shape back.** The ender dragon circled and swooped
   and nothing else: no breath, no fireball, no perching — so it could be beaten
   by standing still and swinging, and a bow was pointless because its head

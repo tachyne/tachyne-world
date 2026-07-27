@@ -225,11 +225,8 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					}
 					break
 				}
-				if bp := (blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}); a.dim == 0 {
-					if bs := h.world.At(bp.x, bp.y, bp.z); isTarget(bs) {
-						h.hitTarget(players, bp, bs, px, py, pz, true) // arrows hold 20 ticks
-					}
-				}
+				bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+				h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
 				if a.loyalty > 0 { // a loyal trident bounces off the wall and flies home
 					a.returning = true
 				} else {

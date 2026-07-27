@@ -90,7 +90,11 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	if power < 0.1 {
 		return // vanilla: too weak to loose
 	}
-	if t.gamemode == gmSurvival {
+	// Infinity: the shot costs no arrow, but the bow still needs one to draw.
+	// (Vanilla exempts tipped arrows; tachyne's consumeArrow takes the first
+	// stack it finds, so the exemption is noted rather than enforced.)
+	infinite := heldStack(t).enchLvl(enchInfinity) > 0
+	if t.gamemode == gmSurvival && !infinite {
 		if !h.consumeArrow(t) {
 			return
 		}
@@ -112,6 +116,14 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
 	a.punch = heldStack(t).enchLvl(enchPunch) // Punch: extra hit knockback
+	// Flame: the arrow burns, which sets what it hits alight AND counts as a
+	// burning projectile for the blocks that care (candles).
+	if heldStack(t).enchLvl(enchFlame) > 0 {
+		a.fire = true
+	}
+	if infinite {
+		a.noPickup = true // an infinite arrow is never retrievable
+	}
 	a.playerShot = true
 	h.playSound(players, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
 }
