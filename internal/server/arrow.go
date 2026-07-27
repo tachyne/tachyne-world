@@ -52,6 +52,7 @@ type arrowEntity struct {
 	noHitUntil uint64  // tick before which the shooter can't hit themselves
 	playerShot bool    // player-fired: hits mobs, and is retrievable once stuck
 	breaks     bool    // snowball/egg: shatters on impact instead of sticking
+	breath     bool    // dragon fireball: bursts into a breath cloud where it lands
 	egg        bool    // an egg: 1-in-8 chance to hatch a chick where it lands
 	xpBottle   bool    // a bottle o' enchanting: shatters into experience orbs
 	pearl      bool    // an ender pearl: teleports its thrower where it lands
@@ -242,6 +243,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		if hit {
 			if a.xpBottle { // a bottle o' enchanting pays out where it broke
 				h.breakXPBottle(players, a)
+			}
+			if a.breath { // a dragon fireball bursts into its breath
+				h.spawnBreathCloud(a.dim, a.x, a.y, a.z)
 			}
 			if a.splash { // a thrown potion shatters into its area-of-effect
 				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)

@@ -20,6 +20,11 @@ const (
 	cloudRadius0 = 3.0  // starting cloud radius
 	cloudReapply = 20   // re-apply the effect to occupants once a second
 	cloudPuff    = 5    // emit the visible cloud particles every N ticks
+
+	// The dragon's breath (AreaEffectCloud in vanilla's sitting-flame phase).
+	breathRadius = 5.0
+	breathTicks  = 200
+	breathDamage = 6 // the instant damage its cloud carries
 )
 
 // effectCloud is one lingering-potion cloud resting on the ground.
@@ -31,6 +36,11 @@ type effectCloud struct {
 	radius    float64
 	ttl       int    // ticks of life left
 	reapplyAt uint64 // next tick it doses whoever stands in it
+	// A dragon's breath is an area-effect cloud too, but not a potion one: it
+	// carries instant damage rather than a brewed effect, and unlike a
+	// lingering potion it does NOT shrink — it sits at full radius for its
+	// whole life, which is what makes perching on the portal so punishing.
+	breath bool
 }
 
 // splashPotion resolves a thrown potion at its impact point.
@@ -126,6 +136,14 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 	}
 }
 
+// spawnBreathCloud lays the dragon's breath: full radius for its whole life,
+// dealing the instant damage vanilla's cloud carries rather than an effect.
+func (h *hub) spawnBreathCloud(dim int, x, y, z float64) {
+	eid := h.allocEID()
+	h.clouds[eid] = &effectCloud{eid: eid, dim: dim, x: x, y: y, z: z,
+		radius: breathRadius, ttl: breathTicks, reapplyAt: h.tick.Load(), breath: true}
+}
+
 // spawnPotionCloud drops a lingering-potion cloud at the impact.
 func (h *hub) spawnPotionCloud(dim int, x, y, z float64, kind int8) {
 	if len(potionEffects(kind)) == 0 {
@@ -145,7 +163,9 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 	now := h.tick.Load()
 	for eid, c := range h.clouds {
 		c.ttl--
-		c.radius -= cloudRadius0 / float64(cloudTicks) // linear shrink to nothing
+		if !c.breath {
+			c.radius -= cloudRadius0 / float64(cloudTicks) // linear shrink to nothing
+		}
 		if c.ttl <= 0 || c.radius <= 0.3 {
 			delete(h.clouds, eid)
 			continue
@@ -162,9 +182,15 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 			if t.dim != c.dim || t.gamemode != gmSurvival || t.dead {
 				continue
 			}
-			if dist3(t.x, t.y+1, t.z, c.x, c.y, c.z) <= c.radius {
-				h.applyPotionAoE(players, t, effs, 1, lingerFactor)
+			if dist3(t.x, t.y+1, t.z, c.x, c.y, c.z) > c.radius {
+				continue
 			}
+			if c.breath {
+				h.hurtBy(players, t, breathDamage, 0, dmgGeneric,
+					deathCause{key: causeDragon, by: "the dragon's breath"})
+				continue
+			}
+			h.applyPotionAoE(players, t, effs, 1, lingerFactor)
 		}
 	}
 }

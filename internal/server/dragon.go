@@ -22,8 +22,9 @@ const (
 )
 
 var (
-	entityEnderDragon = entityID("ender_dragon")
-	entityEndCrystal  = entityID("end_crystal")
+	entityEnderDragon    = entityID("ender_dragon")
+	entityEndCrystal     = entityID("end_crystal")
+	entityDragonFireball = entityID("dragon_fireball")
 
 	itemElytra = itemByName["elytra"]
 )
@@ -84,37 +85,29 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		return
 	}
 	now := h.tick.Load()
-	// Waypoint: circle the ring; every ~12s, swoop at a random End player.
-	if now >= h.dragonNextAt {
-		h.dragonNextAt = now + 240
-		h.dragonSwoop = nil
-		for _, t := range players {
-			if t.dim == 2 && !t.dead && t.gamemode == gmSurvival {
-				h.dragonSwoop = t
-				break
-			}
-		}
-	}
-	var tx, ty, tz float64
-	if h.dragonSwoop != nil && !h.dragonSwoop.dead && h.dragonSwoop.dim == 2 {
-		tx, ty, tz = h.dragonSwoop.x, h.dragonSwoop.y+1, h.dragonSwoop.z
-	} else {
-		ang := float64(now%1200) / 1200 // one lap per minute
-		tx = worldgen.EndPillarRing * 1.2 * cosTurn(ang)
-		tz = worldgen.EndPillarRing * 1.2 * sinTurn(ang)
-		ty = float64(worldgen.EndSurfaceY + 28)
+	// The phase machine picks where it is going and whether it is sitting;
+	// the movement below is unchanged, it just follows a smarter target.
+	tx, ty, tz, sitting := h.updateDragonPhase(players, m)
+	speed := dragonSpeed
+	if sitting {
+		speed = 0 // perched and breathing: it stays put
 	}
 	dx, dy, dz := tx-m.x, ty-m.y, tz-m.z
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-	if d > 1e-6 {
-		step := math.Min(dragonSpeed, d)
+	if d > 1e-6 && speed > 0 {
+		step := math.Min(speed, d)
 		m.x += dx / d * step
 		m.y += dy / d * step
 		m.z += dz / d * step
 		m.yaw = float32(math.Atan2(dz, dx)*180/math.Pi) - 90
 	}
-	// Contact damage to End players in reach.
+	// Contact damage to End players in reach — only while it is flying. A
+	// perched dragon is the fight's one safe window to hit its head, so it
+	// must not still be grinding anyone who stands next to it.
 	for _, t := range players {
+		if sitting {
+			break
+		}
 		if t.dim != 2 || t.dead || t.gamemode != gmSurvival || now < t.graceUntil {
 			continue
 		}

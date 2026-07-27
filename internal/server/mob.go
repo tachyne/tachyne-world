@@ -54,6 +54,10 @@ type mob struct {
 	submerged       int            // consecutive seconds fully underwater (land mobs drown past maxAir)
 	fuse            int            // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int            // spider: mob-updates it stays hostile in daylight after a hit
+	dragonPhase     int            // ender dragon: which phase of the fight it is in
+	dragonPhaseTick int            // ticks spent in the current phase
+	dragonFlames    int            // breaths taken this perch
+	dragonCharge    int            // ticks of fireball aim built up
 	fangNextAt      uint64         // evoker: tick its fang spell comes off cooldown
 	vexNextAt       uint64         // evoker: tick its summon spell comes off cooldown
 	vexLife         int            // summoned vex: ticks left before it expires (0 = unlimited)

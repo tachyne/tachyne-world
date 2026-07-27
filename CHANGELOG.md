@@ -11,9 +11,20 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
-## 2026-07-26
+## 2026-07-27
 
 ### Added
+- **The dragon fight has its shape back.** The ender dragon circled and swooped
+  and nothing else: no breath, no fireball, no perching — so it could be beaten
+  by standing still and swinging, and a bow was pointless because its head
+  never came within reach. It now runs vanilla's phase machine. It circles, and
+  at each lap decides whether to strafe you — closing to line up a fireball
+  that bursts into a cloud of breath where it lands — or to come in and land on
+  the exit portal, where it sits with its head in reach and breathes over the
+  podium to drive you off before climbing away again. The odds of it landing
+  rise as the crystals come down, which is what finally makes destroying them
+  the objective rather than a chore. A perched dragon no longer deals contact
+  damage, so the window it opens is a real one.
 - **The evoker casts.** It spawned, joined raids and dropped its totem without
   ever doing the one thing an evoker does. Both spells are in: fangs erupt from
   the ground — a line walking out toward you at range, two rings around it up
@@ -21,6 +32,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vexes is conjured when there are not already vexes about, each with a limited
   life so an abandoned swarm clears itself. The fangs bite through armour, so a
   full set of diamond is no answer to one.
+
+## 2026-07-26
+
+### Added
 - **The world has a border.** Nothing implemented one: no wall, no damage, no
   warning, no command. There is now a real border with `/worldborder` —
   `get`, `set`, `add`, `center`, `damage amount|buffer` and

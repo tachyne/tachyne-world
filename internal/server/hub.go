@@ -518,10 +518,8 @@ type hub struct {
 
 	dragon        *mob                // the ender dragon (nil = none / defeated)
 	crystals      map[int32]*crystal  // end crystals by eid
-	dragonNextAt  uint64              // next waypoint/swoop decision tick
 	phantomNextAt uint64              // next insomnia check (vanilla PhantomSpawner cadence)
 	catNextAt     uint64              // next village-cat spawner tick
-	dragonSwoop   *tracked            // current dive target (nil = circling)
 	villageDone   map[blockPos]bool   // villages populated this session
 	villageGolem  map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
 	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
