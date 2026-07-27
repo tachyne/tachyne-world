@@ -452,7 +452,8 @@ type hub struct {
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
 
-	tnt []*primedTNT // lit TNT charges counting down
+	tnt   []*primedTNT  // lit TNT charges counting down
+	fangs []*evokerFang // conjured evoker fangs waiting to bite
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
 	rulesPath string
@@ -889,7 +890,9 @@ func (h *hub) run() {
 				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
 			}
 			h.updateBolts(players) // despawn finished lightning flashes
-			h.updateTNT(players)   // primed charges burn their fuses
+			h.updateTNT(players)
+			h.updateFangs(players)   // evoker fangs: bite once, then sink
+			h.updateVexLife(players) // summoned vexes expire   // primed charges burn their fuses
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events

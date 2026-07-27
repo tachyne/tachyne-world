@@ -54,6 +54,9 @@ type mob struct {
 	submerged       int            // consecutive seconds fully underwater (land mobs drown past maxAir)
 	fuse            int            // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int            // spider: mob-updates it stays hostile in daylight after a hit
+	fangNextAt      uint64         // evoker: tick its fang spell comes off cooldown
+	vexNextAt       uint64         // evoker: tick its summon spell comes off cooldown
+	vexLife         int            // summoned vex: ticks left before it expires (0 = unlimited)
 	hitByPlayer     bool           // a player has hit it — its death pays XP (vanilla rule)
 	lastAttacker    int32          // eid of the last entity that hurt it (plugin death event)
 	looting         int            // killer's Looting level (stamped per hit, used at drop time)
@@ -440,6 +443,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.shulkerShoot(players, m) // ranged: homing bullets (ours: straight)
 			case entityLlama, entityTraderLlama:
 				h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
+			case entityEvoker:
+				h.evokerCast(players, m) // fangs + vex summoning
 			case entityWarden:
 				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:

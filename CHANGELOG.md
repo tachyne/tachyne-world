@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-26
 
 ### Added
+- **The evoker casts.** It spawned, joined raids and dropped its totem without
+  ever doing the one thing an evoker does. Both spells are in: fangs erupt from
+  the ground — a line walking out toward you at range, two rings around it up
+  close, each fang biting a moment after it surfaces — and a flight of three
+  vexes is conjured when there are not already vexes about, each with a limited
+  life so an abandoned swarm clears itself. The fangs bite through armour, so a
+  full set of diamond is no answer to one.
 - **The world has a border.** Nothing implemented one: no wall, no damage, no
   warning, no command. There is now a real border with `/worldborder` —
   `get`, `set`, `add`, `center`, `damage amount|buffer` and
