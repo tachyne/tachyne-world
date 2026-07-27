@@ -45,6 +45,10 @@ REGISTRIES = [
     # award_stats key registries (see render770/stats.go):
     ("RegBlock", None, None, "flat", "minecraft:block"),
     ("RegCustomStat", None, None, "flat", "minecraft:custom_stat"),
+    # update_attributes carries attribute registry ids, and the registry grew
+    # between served versions (32 on 770, 35 canonical, 40 on 776) — so the ids
+    # shift and the packet is meaningless to a client without this table.
+    ("RegAttribute", None, None, "flat", "minecraft:attribute"),
 ]
 REPORTS = os.path.expanduser("~/vanilla/reports/{}/registries.json")
 
@@ -106,6 +110,17 @@ def delta_array_flat(canon, version):
     return out
 
 
+def absent_flat(canon, version):
+    """Canonical ids with NO counterpart on the target version.
+
+    A shift range cannot express "this does not exist here": it would map the
+    id onto whatever now occupies that slot, which is a DIFFERENT registry
+    entry. The sender has to drop these instead, so they are emitted
+    separately."""
+    vby = {e["name"] for e in version}
+    return sorted(e["id"] for e in canon if e["name"] not in vby)
+
+
 def delta_array_states(canon, version):
     """blocks.json: each block has min/maxStateId. Every state in a block shifts by
     the same delta = version.min - canon.min. Returns {canon_state: delta}."""
@@ -140,6 +155,7 @@ def rle(deltas):
 
 # registry const -> version -> ranges
 data = {}
+absent = {}
 for const, mdfile, viakey, kind, reportkey in REGISTRIES:
     canon = fetch_report(CANON, reportkey) if reportkey else fetch(CANON, mdfile)
     per = {}
@@ -153,6 +169,11 @@ for const, mdfile, viakey, kind, reportkey in REGISTRIES:
             continue
         deltas = delta_array_states(canon, version) if kind == "stateRange" else delta_array_flat(canon, version)
         per[ver] = rle(deltas)
+        if kind != "stateRange":
+            gone = absent_flat(canon, version)
+            if gone:
+                absent.setdefault(const, {})[ver] = gone
+                print(f"{const} 1.21.11->{ver}: {len(gone)} ids ABSENT (dropped, not shifted)")
         print(f"{const} 1.21.11->{ver}: {len(deltas)} ids shifted -> {len(per[ver])} ranges")
     data[const] = per
 
@@ -182,6 +203,21 @@ for const, _, _, _, _ in REGISTRIES:
             continue
         inner = ", ".join(f"{{{a}, {b}, {d}}}" for a, b, d in ranges)
         L.append(f"\t\t{ver}: {{{inner}}},")
+    L.append("\t},")
+L += ["}", ""]
+
+L += [
+    "// absentIDs[registry][clientProtocol] = canonical IDs that DO NOT EXIST on that",
+    "// version. A shift range cannot say \"missing\" — it would map the id onto",
+    "// whatever occupies the slot there, silently meaning something else — so these",
+    "// must be dropped by the sender instead. Sorted for binary search.",
+    "var absentIDs = map[IDSpace]map[int32][]int32{",
+]
+for const in sorted(absent):
+    L.append(f"\t{const}: {{")
+    for ver in sorted(absent[const]):
+        ids = ", ".join(str(i) for i in absent[const][ver])
+        L.append(f"\t\t{ver}: {{{ids}}},")
     L.append("\t},")
 L += ["}", ""]
 
