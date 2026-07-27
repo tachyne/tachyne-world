@@ -438,6 +438,7 @@ func (h *hub) spawnSpecies(players map[int32]*tracked, etype, dim int, x, y, z f
 		return nil // plugin-cancelled spawn
 	}
 	h.applySpecies(players, m)
+	h.rollHorseAttributes(m) // horses are not clones: health, speed and jump all vary
 	return m
 }
 

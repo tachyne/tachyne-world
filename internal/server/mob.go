@@ -54,6 +54,7 @@ type mob struct {
 	submerged       int            // consecutive seconds fully underwater (land mobs drown past maxAir)
 	fuse            int            // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int            // spider: mob-updates it stays hostile in daylight after a hit
+	jumpStrength    float64        // horse family: how high it jumps (vanilla 0.4-1.0)
 	dragonPhase     int            // ender dragon: which phase of the fight it is in
 	dragonPhaseTick int            // ticks spent in the current phase
 	dragonFlames    int            // breaths taken this perch

@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-27
 
 ### Fixed
+- **Horses are no longer clones.** Every horse had the same 22 health and the
+  same speed, and nothing rolled a jump at all — which quietly removed the
+  point of breeding them. Vanilla randomises three attributes per horse, each
+  the sum of several small rolls so the middle is common and an exceptional
+  animal is rare: health between 15 and 30, speed across a three-fold range,
+  and jump strength between 0.4 and 1.0. Foals now land between their parents,
+  so breeding two good horses tends toward a better one without ever promising
+  it. Skeleton and zombie horses roll only their jump, and donkeys and mules
+  roll nothing — being dependable is their job.
 - **Mending and Efficiency did nothing, and Efficiency was worse than nothing.**
   Both sat in the treasure and fishing pools and were wired to no code at all.
   Mending — the most valuable enchantment in the game — now spends experience

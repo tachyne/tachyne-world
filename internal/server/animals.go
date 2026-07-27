@@ -185,6 +185,9 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			baby := h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
 			if baby != nil { // a plugin may cancel the birth; the parents still cool down
 				baby.baby, baby.growLeft = true, growUpTicks
+				// A foal lands between its parents, which is the whole point of
+				// breeding horses rather than taming whatever wanders past.
+				h.breedHorseAttributes(m, o, baby)
 				h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 			}
 			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
