@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-27
 
 ### Fixed
+- **Older clients could be disconnected by content newer than they are.** The
+  translation layer can shift an id between versions but had no way to say
+  "this does not exist on that client" — so a block, item or entity added after
+  a player's version was sent with its id unchanged. Canonical ids run higher
+  than an older client's registry (items reach 1504 against 1396 entries on
+  1.21.5), so such an id could land past the end of the registry entirely,
+  which a client cannot decode: not a wrong icon, a dropped connection. Items
+  and blocks a client has never heard of now arrive as air, and entities as
+  their nearest sensible stand-in — a happy ghast reads as a ghast rather than
+  vanishing. 26.x players were never affected, since those versions are a
+  superset; this only ever bit 1.21.5-1.21.9.
 - **Horses are no longer clones.** Every horse had the same 22 health and the
   same speed, and nothing rolled a jump at all — which quietly removed the
   point of breeding them. Vanilla randomises three attributes per horse, each
