@@ -51,18 +51,24 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	}
 	m.sonicCD = guardianBeamUpd
 	m.yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
-	magic := float32(1) // indirect-magic base, pierces armour
+	magic := float32(1)
 	if h.rules.Difficulty == diffHard {
 		magic += 2
 	}
 	if elder {
 		magic += 2
 	}
-	melee := hostileMelee(m) * h.diffMult() // doHurtTarget: normal armour-reduced melee
+	melee := hostileMelee(m) * h.diffMult()
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
-	h.hurtBy(players, t, magic+t.armorReduce(melee), 0, dmgGeneric,
-		deathCause{key: causeMob, by: mobDisplayName(m.etype)})
+	// TWO hits, as the attack goal deals them: the beam's indirect_magic, which
+	// armour does not stop, and then an ordinary bite, which it does. Folding
+	// them into one number would have to pick a single answer to that question.
+	cause := deathCause{key: causeMob, by: mobDisplayName(m.etype)}
+	h.hurtBy(players, t, magic, dtIndirectMagic, cause)
+	if !t.dead {
+		h.hurtBy(players, t, melee, dtMobAttack, cause)
+	}
 	h.thornsRetaliate(players, t, m)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})

@@ -126,7 +126,7 @@ func (h *hub) borderDamage(players map[int32]*tracked) {
 			continue
 		}
 		dmg := math.Max(1, math.Floor(-d*b.Damage))
-		h.hurtBy(players, t, float32(dmg), 0, dmgGeneric, deathCause{key: causeBorder})
+		h.hurtBy(players, t, float32(dmg), dtOutsideBorder, deathCause{key: causeBorder})
 	}
 }
 

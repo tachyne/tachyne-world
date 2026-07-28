@@ -1160,7 +1160,7 @@ func (h *hub) run() {
 			case evKill:
 				for _, t := range players {
 					if t.p.name == e.target {
-						h.damage(players, t, 100000)
+						h.damageOf(players, t, 100000, dtGenericKill)
 					}
 				}
 			case evXPLevels:

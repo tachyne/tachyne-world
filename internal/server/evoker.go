@@ -160,9 +160,9 @@ func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
 			continue
 		}
 		if math.Abs(t.x-f.x) <= 0.7 && math.Abs(t.z-f.z) <= 0.7 && math.Abs(t.y-f.y) <= 2 {
-			// No armorReduce: the fangs' damage type bypasses armour, which is
-			// what makes an evoker dangerous to a fully-kitted player.
-			h.hurtBy(players, t, fangDamage, 0.1, dmgGeneric,
+			// indirect_magic bypasses armour, which is what makes an evoker
+			// dangerous to a fully-kitted player. The tag says so, not this call.
+			h.hurtBy(players, t, fangDamage, dtIndirectMagic,
 				deathCause{key: causeMagic, by: mobDisplayName(entityEvoker)})
 		}
 	}

@@ -49,16 +49,16 @@ func TestDeathCauseRidesWithTheDamage(t *testing.T) {
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 
-	h.hurtBy(players, pl, 3, 0, dmgFire, deathCause{key: causeLava})
+	h.hurtBy(players, pl, 3, dtLava, deathCause{key: causeLava})
 	if pl.lastCause.key != causeLava {
 		t.Fatal("the cause did not stick to the player")
 	}
 	// The LAST hit wins, as in vanilla.
-	h.hurtBy(players, pl, 3, 0, dmgGeneric, deathCause{key: causeCactus})
+	h.hurtBy(players, pl, 3, dtCactus, deathCause{key: causeCactus})
 	if pl.lastCause.key != causeCactus {
 		t.Error("an older cause outlived a newer one")
 	}
-	h.hurtBy(players, pl, 100, 0, dmgGeneric, deathCause{key: causePlayer, by: "EdgeZA"})
+	h.hurtBy(players, pl, 100, dtPlayerAttack, deathCause{key: causePlayer, by: "EdgeZA"})
 	if !pl.dead {
 		t.Fatal("the killing blow did not land")
 	}

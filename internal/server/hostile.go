@@ -321,13 +321,12 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		h.knockback(t, m.x, m.z)
 		return
 	}
-	h.hurtBy(players, t, t.armorReduce(dmg), 0, dmgGeneric, deathCause{key: causeMob, by: mobDisplayName(m.etype)})
+	h.hurtBy(players, t, dmg, dtMobAttack, deathCause{key: causeMob, by: mobDisplayName(m.etype)})
 	h.thornsRetaliate(players, t, m) // armour that bites back
 	if t.dead {                      // the bite was fatal: adventure/root's killed_by_something
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)
 	}
-	h.wearArmor(players, t, dmg)
 	h.knockback(t, m.x, m.z)
 	// Species that envenom or wither on a bite (cave spider, bee, wither skeleton).
 	if d := speciesOf(m.etype); d != nil {

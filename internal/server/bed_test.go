@@ -31,7 +31,7 @@ func TestBedClaimsRespawnPoint(t *testing.T) {
 		t.Fatalf("respawn point should be claimed, got %v %v", pos, ok)
 	}
 	// Death now returns to the bed, not world spawn.
-	h.damage(players, pl, 25)
+	h.damageOf(players, pl, 25, dtGeneric)
 	h.respawn(pl)
 	if pl.x != 4.5 || pl.z != 4.5 {
 		t.Fatalf("respawn should return to the bed, got (%v,%v)", pl.x, pl.z)
@@ -42,7 +42,7 @@ func TestRespawnFallsBackWhenBedGone(t *testing.T) {
 	h, players, pl := bedSetup(t)
 	h.handleUseBed(players, pl, blockPos{4, 70, 4})
 	h.world.SetBlock(4, 70, 4, worldgen.Air) // bed destroyed
-	h.damage(players, pl, 25)
+	h.damageOf(players, pl, 25, dtGeneric)
 	h.respawn(pl)
 	if pl.x != 0.5 || pl.z != 0.5 {
 		t.Fatalf("missing bed should fall back to world spawn, got (%v,%v)", pl.x, pl.z)

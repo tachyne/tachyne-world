@@ -186,7 +186,7 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 				continue
 			}
 			if c.breath {
-				h.hurtBy(players, t, breathDamage, 0, dmgGeneric,
+				h.hurtBy(players, t, breathDamage, dtDragonBreath,
 					deathCause{key: causeDragon, by: "the dragon's breath"})
 				continue
 			}

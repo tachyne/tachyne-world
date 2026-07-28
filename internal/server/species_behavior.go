@@ -137,29 +137,3 @@ func (h *hub) shulkerShoot(players map[int32]*tracked, m *mob) {
 	a.homing, a.levitate = t.p.eid, 10 // home on the target; LEVITATION 10 s on a hit
 	h.playSound(players, "minecraft:entity.shulker.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 }
-
-// guardianBeam is the guardian's charge-up laser: it locks on, and after a
-// short wind-up deals the hit directly (vanilla's beam has no travelling
-// projectile — the damage is applied when the beam completes).
-func (h *hub) guardianBeam(players map[int32]*tracked, m *mob) {
-	if m.attackCD > 0 {
-		m.attackCD--
-		if m.attackCD == 0 && m.hasTarget { // beam completes — apply the hit
-			if t := h.nearestHuntable(players, m.dim, m.x, m.z, 16); t != nil {
-				dmg := hostileMelee(m) * h.diffMult()
-				h.hurtBy(players, t, t.armorReduce(dmg), 0, dmgGeneric,
-					deathCause{key: causeMob, by: mobDisplayName(m.etype)})
-				h.thornsRetaliate(players, t, m)
-				h.wearArmor(players, t, dmg)
-			}
-		}
-		return
-	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, 16)
-	if t == nil {
-		return
-	}
-	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
-	m.attackCD = 40 // ~4 s charge (vanilla ATTACK_TIME 80 ticks; ours in updates)
-	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
-}

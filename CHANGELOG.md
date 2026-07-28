@@ -11,6 +11,30 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-07-28
+
+### Fixed
+- **Armour did nothing against lava, fire, cactus, magma, berry bushes or
+  lightning.** Vanilla decides what a hit does to you from the damage type's
+  own tags; tachyne left that decision to each of the twenty-odd places that
+  deal damage, and six of them never asked. Standing in lava in full diamond
+  hurt exactly as much as standing in it naked. The mirror image was true too:
+  the ender dragon's blows and a guardian's bite were softened by armour but
+  never wore it down, so a set could outlast a whole End fight. Armour is now
+  applied in one place, from the damage type, and absorbing a hit and wearing
+  from it are the same decision — they cannot drift apart again.
+- **Protection enchantments now stack where vanilla stacks them.** A ghast's
+  fireball counts as both fire and a projectile, so Fire Protection and
+  Projectile Protection should both guard against it; only one used to.
+- **Resistance no longer blocks `/kill`, and starvation ignores it.** Damage
+  that vanilla marks as bypassing effects, enchantments or resistance now does:
+  Resistance V used to make a player unkillable by command, and the Warden's
+  sonic boom was blunted by armour enchantments it should shrug off.
+- **Hunger cost follows the damage type.** It was a per-call-site argument with
+  a default of 0.1, so a few sources charged for hunger that vanilla does not
+  and vice versa. Being pricked by a cactus or scorched by a campfire now costs
+  what it should.
+
 ## 2026-07-27
 
 ### Fixed

@@ -138,9 +138,8 @@ func (h *hub) thornsRetaliatePlayer(players map[int32]*tracked, victim, attacker
 	}
 	for _, hit := range h.thornsRolls(victim) {
 		dmg := float32(hit.dmg)
-		h.hurtBy(players, attacker, attacker.armorReduce(dmg), thornsExhaustion, dmgGeneric,
+		h.hurtBy(players, attacker, dmg, dtThorns,
 			deathCause{key: causeThorns, by: victim.p.name})
-		h.wearArmor(players, attacker, dmg)
 		h.wearArmorSlot(players, victim, hit.slot, thornsWear)
 		if attacker.dead {
 			return

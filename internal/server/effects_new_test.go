@@ -20,7 +20,7 @@ func TestResistanceReducesDamage(t *testing.T) {
 	players[pl.p.eid] = pl
 	h.applyEffect(players, pl, effResistance, 1, 30) // Resistance II = -40%
 	pl.health = 20
-	h.damage(players, pl, 10)
+	h.damageOf(players, pl, 10, dtGeneric)
 	if pl.health != 14 { // 10 * (25-2*5)/25 = 10*0.6 = 6 taken
 		t.Fatalf("Resistance II: health=%v, want 14 (6 taken)", pl.health)
 	}
@@ -33,11 +33,11 @@ func TestAbsorptionSoaksDamage(t *testing.T) {
 	players[pl.p.eid] = pl
 	h.applyEffect(players, pl, effAbsorption, 0, 120) // 4 HP buffer
 	pl.health = 20
-	h.damage(players, pl, 3) // fully soaked
+	h.damageOf(players, pl, 3, dtGeneric) // fully soaked
 	if pl.health != 20 || pl.absorption != 1 {
 		t.Fatalf("absorption soak: health=%v absorption=%v, want 20/1", pl.health, pl.absorption)
 	}
-	h.damage(players, pl, 5) // 1 soaked, 4 to health
+	h.damageOf(players, pl, 5, dtGeneric) // 1 soaked, 4 to health
 	if pl.health != 16 || pl.absorption != 0 {
 		t.Fatalf("absorption overflow: health=%v absorption=%v, want 16/0", pl.health, pl.absorption)
 	}

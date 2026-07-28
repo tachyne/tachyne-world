@@ -57,12 +57,12 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 				if t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
 					return
 				}
-				h.hurtBy(players, t, magmaDamage, 0.1, dmgFire, deathCause{key: causeFire})
+				h.hurtBy(players, t, magmaDamage, dtHotFloor, deathCause{key: causeFire})
 			case berryBushRipe(s):
 				// Vanilla only scratches you while you are MOVING through the
 				// bush: standing still in one is safe.
 				if movedX >= berryMoveEpsilon || movedZ >= berryMoveEpsilon {
-					h.hurtBy(players, t, berryBushDamage, 0, dmgGeneric, deathCause{key: causeSweetBerry})
+					h.hurtBy(players, t, berryBushDamage, dtSweetBerryBush, deathCause{key: causeSweetBerry})
 				}
 			case isWitherRose(s):
 				if h.rules.Difficulty != diffPeaceful {

@@ -92,26 +92,30 @@ func TestWitherCanKill(t *testing.T) {
 	}
 }
 
-// TestDamageExhaustionPerType — environmental damage types with vanilla
-// exhaustion 0.0 must not drain hunger; attacks/contact charge 0.1.
+// TestDamageExhaustionPerType — hunger cost is a property of the damage TYPE.
+// Falling, drowning and starving are free; being bitten, burnt or pricked is
+// not. The expectations here are written out rather than read from the
+// generated table, so a regenerated table that quietly changed them fails.
 func TestDamageExhaustionPerType(t *testing.T) {
 	h := newHub(world.New(1))
-
-	// Zero-exhaustion sources.
-	for _, amt := range []float32{2, 4} {
+	for _, c := range []struct {
+		dt   dmgType
+		want float32
+	}{
+		{dtFall, 0}, {dtDrown, 0}, {dtStarve, 0}, {dtOnFire, 0},
+		{dtOutOfWorld, 0}, {dtInWall, 0}, {dtMagic, 0}, {dtWither, 0},
+		{dtSonicBoom, 0}, {dtEnderPearl, 0},
+		{dtMobAttack, 0.1}, {dtPlayerAttack, 0.1}, {dtLava, 0.1},
+		{dtInFire, 0.1}, {dtCactus, 0.1}, {dtCampfire, 0.1},
+		{dtExplosion, 0.1}, {dtLightningBolt, 0.1}, {dtArrow, 0.1},
+		{dtSweetBerryBush, 0.1}, {dtHotFloor, 0.1}, {dtThorns, 0.1},
+	} {
 		pl := testTracked()
 		pl.health = maxHealth
-		h.damageExh(nil, pl, amt, 0)
-		if pl.exhaustion != 0 {
-			t.Fatalf("zero-exhaustion damage drained hunger: exhaustion=%v", pl.exhaustion)
+		h.damageOf(nil, pl, 2, c.dt)
+		if got := pl.exhaustion; got < c.want-0.001 || got > c.want+0.001 {
+			t.Errorf("%s: exhaustion = %v, want %v", c.dt.name(), got, c.want)
 		}
-	}
-	// Default attack/contact source: 0.1 per hit.
-	pl := testTracked()
-	pl.health = maxHealth
-	h.damage(nil, pl, 2)
-	if pl.exhaustion < 0.099 || pl.exhaustion > 0.101 {
-		t.Fatalf("attack damage should cost 0.1 exhaustion: %v", pl.exhaustion)
 	}
 }
 

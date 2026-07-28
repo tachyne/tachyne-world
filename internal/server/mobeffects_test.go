@@ -191,7 +191,7 @@ func TestMobGearEnchantmentsCount(t *testing.T) {
 		t.Errorf("oxygen bonus %v from Respiration III on mob gear, want 3", got)
 	}
 	// …and Protection IV on the piece really reduces a hit.
-	if pts := protectionPoints(z.gear[:], dmgGeneric); pts != 4 {
+	if pts := protectionPoints(z.gear[:], dtGeneric); pts != 4 {
 		t.Errorf("protection points %d from one Protection IV piece, want 4", pts)
 	}
 }

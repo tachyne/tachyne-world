@@ -16,15 +16,15 @@ func testTracked() *tracked {
 func TestDamageAndDeath(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := testTracked()
-	h.damage(nil, pl, 5)
+	h.damageOf(nil, pl, 5, dtGeneric)
 	if pl.health != 15 || pl.dead {
 		t.Fatalf("after 5 damage: health=%v dead=%v", pl.health, pl.dead)
 	}
-	h.damage(nil, pl, 25)
+	h.damageOf(nil, pl, 25, dtGeneric)
 	if pl.health != 0 || !pl.dead {
 		t.Fatalf("lethal damage should kill: health=%v dead=%v", pl.health, pl.dead)
 	}
-	h.damage(nil, pl, 5) // no effect once dead
+	h.damageOf(nil, pl, 5, dtGeneric) // no effect once dead
 	if pl.health != 0 {
 		t.Fatalf("dead player took more damage: %v", pl.health)
 	}
@@ -74,7 +74,7 @@ func TestRegenAndStarve(t *testing.T) {
 func TestRespawnResets(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := testTracked()
-	h.damage(nil, pl, 25)
+	h.damageOf(nil, pl, 25, dtGeneric)
 	if !pl.dead {
 		t.Fatal("should be dead")
 	}
@@ -154,7 +154,7 @@ func TestDeathDropsInventory(t *testing.T) {
 	players[1] = pl
 	pl.inv.slots[0] = invStack{item: 1, count: 5}                          // some stone
 	pl.inv.slots[9] = invStack{item: itemByName["wheat_seeds"], count: 12} // and torches
-	h.damage(players, pl, 25)                                              // lethal
+	h.damageOf(players, pl, 25, dtGeneric)                                 // lethal
 	if !pl.dead {
 		t.Fatal("should be dead")
 	}

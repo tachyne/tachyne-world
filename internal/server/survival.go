@@ -99,7 +99,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 			continue
 		}
 		if t.y < float64(voidBelow) {
-			h.damageExh(players, t, voidDamagePerSec, 0) // out_of_world: no exhaustion
+			h.damageOf(players, t, voidDamagePerSec, dtOutOfWorld)
 			continue
 		}
 		if now := h.tick.Load(); now >= t.graceUntil { // portal arrivals get 3s of peace
@@ -139,7 +139,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 				floor = 0
 			}
 			if t.health > floor {
-				h.damageExh(players, t, 1, 0) // starve: no exhaustion (vanilla)
+				h.damageOf(players, t, 1, dtStarve)
 				changed = true
 			}
 		}
@@ -178,7 +178,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if t.air -= drain; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
-				h.hurtBy(players, t, drownDamagePerSec, 0, dmgGeneric, deathCause{key: causeDrown}) // drown: no exhaustion
+				h.hurtBy(players, t, drownDamagePerSec, dtDrown, deathCause{key: causeDrown})
 			}
 		}
 	} else if t.air < maxAir {
@@ -195,7 +195,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if t.hasEffect(effFireRes) == 0 &&
 		(worldgen.IsLava(h.worldFor(t.dim).At(fx, feet, fz)) || worldgen.IsLava(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, lavaFireSecs)
-		if h.hurtBy(players, t, lavaDamagePerSec, 0.1, dmgFire, deathCause{key: causeLava}); t.dead {
+		if h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{key: causeLava}); t.dead {
 			return
 		}
 	}
@@ -203,7 +203,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if h.rules.FireDamage &&
 		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, fireContactSecs)
-		if h.hurtBy(players, t, fireDamagePerSec, 0.1, dmgFire, deathCause{key: causeFire}); t.dead {
+		if h.hurtBy(players, t, fireDamagePerSec, dtInFire, deathCause{key: causeFire}); t.dead {
 			return
 		}
 	}
@@ -214,13 +214,13 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if isSoulCampfire(s) {
 			dmg = 2
 		}
-		if h.hurtBy(players, t, dmg, 0, dmgFire, deathCause{key: causeFire}); t.dead {
+		if h.hurtBy(players, t, dmg, dtCampfire, deathCause{key: causeFire}); t.dead {
 			return
 		}
 	}
 	// Cactus: contact with an adjacent cactus at feet or body height.
 	if h.touchingCactus(t.dim, fx, feet, fz) {
-		h.hurtBy(players, t, cactusDamagePerSec, 0, dmgGeneric, deathCause{key: causeCactus})
+		h.hurtBy(players, t, cactusDamagePerSec, dtCactus, deathCause{key: causeCactus})
 	}
 }
 
@@ -306,40 +306,25 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 				if impaled {
 					cause.key = causeStalagmite
 				}
-				h.hurtBy(players, t, float32(math.Floor(hurt)), 0, dmgFall, cause) // fall: no exhaustion
+				h.hurtBy(players, t, float32(math.Floor(hurt)), dtFall, cause)
 			}
 		}
 	}
 }
 
-// damage applies harm to a survival player, triggering death at 0 health. On
-// death the player's inventory scatters as item entities (the survival stake), so
-// callers pass the player registry for the drops to be shown to nearby players.
+// damageOf applies harm of one damage TYPE to a survival player, triggering
+// death at 0 health. On death the player's inventory scatters as item entities
+// (the survival stake), so callers pass the player registry for the drops to be
+// shown to nearby players.
 //
-// It charges the vanilla default hunger exhaustion (0.1) — correct for attacks
-// and hot/sharp contact (mob_attack, player_attack, lava, in_fire, cactus,
-// campfire, explosion, lightning, arrow…). Environmental sources whose vanilla
-// damage type has exhaustion 0.0 (fall, drown, starve, on_fire afterburn,
-// out_of_world/void, in_wall suffocation, magic, wither, sonic_boom, ender_pearl)
-// must call damageExh with 0 so they don't spuriously drain hunger.
-func (h *hub) damage(players map[int32]*tracked, t *tracked, amount float32) {
-	h.damageExh(players, t, amount, 0.1)
-}
-
-// damageExh is damage with an explicit food-exhaustion cost (vanilla
-// DamageType.exhaustion). See damage for the default-0.1 path.
-func (h *hub) damageExh(players map[int32]*tracked, t *tracked, amount, exhaustion float32) {
-	h.damageOf(players, t, amount, exhaustion, dmgGeneric)
-}
-
-// damageOf is the real damage path, carrying the SORT of damage this is.
-//
-// The kind exists for the protection enchantments, each of which guards one
-// family of damage types — so it has to be threaded from the source rather
-// than guessed at the armour. Everything that does not name a kind is generic,
-// which plain Protection covers and the specialised ones do not.
-func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustion float32, kind dmgKind) {
-	h.hurtBy(players, t, amount, exhaustion, kind, deathCause{})
+// Naming the type is the caller's ONLY job. Everything the type implies —
+// whether armour absorbs the blow and wears from it, whether Resistance and the
+// protection enchantments get a say, what it costs in hunger — is derived from
+// the type's tags in hurtBy. It used to be the call site's job, and the result
+// was that lava, fire, cacti, magma, berry bushes and lightning all ignored
+// armour entirely while the dragon's blows never wore any.
+func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount float32, dt dmgType) {
+	h.hurtBy(players, t, amount, dt, deathCause{})
 }
 
 // hurtBy is damageOf plus the CAUSE, which is what a death message is made of.
@@ -347,19 +332,35 @@ func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount, exhaustio
 // thing that dealt it is long gone, so it is recorded as the last thing to
 // hurt this player — which is also why walking out of lava and dying of the
 // burns still credits the lava.
-func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount, exhaustion float32, kind dmgKind, cause deathCause) {
+//
+// The mitigation order is vanilla's (actuallyHurt): armour absorption first,
+// then magic absorption (Resistance, then the protection enchantments), then
+// the absorption buffer.
+func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause) {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 		return
 	}
 	t.lastCause = cause // the LAST thing to hurt them is what gets the credit
-	// Resistance: -20% per level (MobEffects.DAMAGE_RESISTANCE); level 5 = immune.
-	// Vanilla's getDamageAfterMagicAbsorb applies resistance BEFORE the
-	// enchantment protection, and the order shows: two 20% cuts in a row are
-	// not the same as one 40% cut.
-	if r := t.hasEffect(effResistance); r > 0 {
-		amount *= float32(math.Max(0, float64(25-r*5)) / 25)
+	// Armour absorbs the blow and wears from it under ONE condition, as vanilla
+	// does in getDamageAfterArmorAbsorb — hurtArmor is called there, with the
+	// damage as it stands BEFORE the reduction. Keeping the two together is the
+	// point: split across call sites, three of them wore no armour at all.
+	if !dt.has(tagBypassesArmor) {
+		h.wearArmor(players, t, amount)
+		amount = t.armorReduce(amount)
 	}
-	amount = t.enchantProtect(amount, kind)
+	if !dt.has(tagBypassesEffects) { // starve: no effect or enchantment helps
+		// Resistance: -20% per level (MobEffects.DAMAGE_RESISTANCE); level 5 =
+		// immune. Vanilla's getDamageAfterMagicAbsorb applies resistance BEFORE
+		// the enchantment protection, and the order shows: two 20% cuts in a
+		// row are not the same as one 40% cut.
+		if r := t.hasEffect(effResistance); r > 0 && !dt.has(tagBypassesResistance) {
+			amount *= float32(math.Max(0, float64(25-r*5)) / 25)
+		}
+		if amount > 0 && !dt.has(tagBypassesEnchantments) { // sonic_boom shrugs off protection
+			amount = t.enchantProtect(amount, dt)
+		}
+	}
 	// Absorption soaks damage into its buffer before real health (yellow hearts).
 	if t.absorption > 0 && amount > 0 {
 		soak := float32(math.Min(float64(t.absorption), float64(amount)))
@@ -369,9 +370,9 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount, exhaustion 
 	if amount <= 0 {
 		return // fully resisted / absorbed — no health lost, no hurt flash
 	}
-	h.wakePlayer(players, t)   // pain wakes (and stands the pose back up)
-	t.exhaustion += exhaustion // vanilla: per-damage-type food exhaustion
-	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
+	h.wakePlayer(players, t)        // pain wakes (and stands the pose back up)
+	t.exhaustion += dt.exhaustion() // vanilla: DamageType.exhaustion, per type
+	h.infestOnHurt(players, t)      // Infested: silverfish burst out on being hit
 	t.health -= amount
 	if t.health <= 0 {
 		t.health = 0

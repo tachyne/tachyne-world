@@ -395,7 +395,7 @@ func (p playerHandle) SetHealth(v float32) {
 		return
 	}
 	if v <= 0 {
-		p.ph.h.damage(p.ph.h.playersRef, t, 100000) // the evKill idiom
+		p.ph.h.damageOf(p.ph.h.playersRef, t, 100000, dtGenericKill) // the evKill idiom
 		return
 	}
 	if v > 20 {

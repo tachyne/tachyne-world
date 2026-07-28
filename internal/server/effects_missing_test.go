@@ -195,7 +195,7 @@ func TestOozingSpillsSlimesOnDeath(t *testing.T) {
 	if len(h.mobs) != before {
 		t.Fatal("oozing spawned slimes just for being applied")
 	}
-	h.damage(players, pl, 100)
+	h.damageOf(players, pl, 100, dtGeneric)
 	if !pl.dead {
 		t.Fatal("100 damage should have killed the player")
 	}
@@ -264,7 +264,7 @@ func TestInfestedSpawnsSilverfishOnHurt(t *testing.T) {
 
 	// A 10% roll per hit, so take a lot of small ones and heal back up.
 	for i := 0; i < 400; i++ {
-		h.damage(players, pl, 1)
+		h.damageOf(players, pl, 1, dtGeneric)
 		pl.health, pl.dead = maxHealth, false
 	}
 	fish := 0

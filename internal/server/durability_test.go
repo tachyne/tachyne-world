@@ -159,7 +159,7 @@ func TestPickupAndDeathDropKeepDamage(t *testing.T) {
 	pl.x, pl.y, pl.z = 0.5, h.world.SurfaceY(0, 0), 0.5
 	pl.inv.slots[0] = invStack{item: tWoodPick, count: 1, dmg: 40}
 
-	h.damage(players, pl, 25) // death scatters the inventory
+	h.damageOf(players, pl, 25, dtGeneric) // death scatters the inventory
 	var dropped *itemEntity
 	for _, it := range h.items {
 		dropped = it

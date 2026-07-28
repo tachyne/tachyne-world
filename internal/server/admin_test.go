@@ -36,7 +36,7 @@ func TestKeepInventoryGamerule(t *testing.T) {
 	pl.inv.slots[0] = invStack{item: 35, count: 5}
 	pl.xpLevel = 7
 	h.applyRule(players, evSetRule{rule: "keepInventory", on: true})
-	h.damage(players, pl, 1000)
+	h.damageOf(players, pl, 1000, dtGeneric)
 	if !pl.dead || pl.inv.slots[0].count != 5 || pl.xpLevel != 7 || len(h.items) != 0 {
 		t.Fatalf("keepInventory must skip the death stake: inv=%v lvl=%d items=%d", pl.inv.slots[0], pl.xpLevel, len(h.items))
 	}

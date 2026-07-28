@@ -228,8 +228,7 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 			continue
 		}
 		dmg := float32(maxDamage) * float32(1-d/rangeF)
-		h.hurtBy(players, t, t.armorReduce(dmg), 0.1, dmgExplosion, deathCause{key: causeExplosion})
-		h.wearArmor(players, t, dmg)
+		h.hurtBy(players, t, dmg, dtExplosion, deathCause{key: causeExplosion})
 		// Blast Protection braces you against the shove as well as the burn.
 		h.knockbackScaled(t, cx, cz, t.explosionKnockScale())
 	}
@@ -456,7 +455,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		t.fireSecs = 0
 	} else {
 		t.fireSecs--
-		h.hurtBy(players, t, fireDamagePerSec, 0, dmgFire, deathCause{key: causeFire}) // on_fire afterburn: no exhaustion
+		h.hurtBy(players, t, fireDamagePerSec, dtOnFire, deathCause{key: causeFire}) // the afterburn bypasses armour
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.broadcastPlayerFlags(players, t)

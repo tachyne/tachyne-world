@@ -313,8 +313,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
 			}
-			h.hurtBy(players, t, t.armorReduce(float32(a.dmg)), 0.1, dmgProjectile, shot)
-			h.wearArmor(players, t, float32(a.dmg))
+			h.hurtBy(players, t, float32(a.dmg), dtArrow, shot)
 			h.knockback(t, a.x, a.z)
 			h.thornsAgainstShooter(players, t, a.shooter)
 			if a.poison {
@@ -389,7 +388,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
-			m.hurtKind(float64(dmg), dmgProjectile)
+			m.hurtKind(float64(dmg), dtArrow)  // trident shares arrow's tags exactly
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
 			if a.playerShot {                  // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])

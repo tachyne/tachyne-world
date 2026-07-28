@@ -454,8 +454,6 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:
 				h.guardianTick(players, m) // beam attack (+ elder mining-fatigue aura)
-			case entityGuardian, entityElderGuardian:
-				h.guardianBeam(players, m) // charge-up beam
 			case entityCreeper:
 				h.creeperFuse(players, m) // fuse + swell + bang
 			case entityWitch:
@@ -507,17 +505,17 @@ func speedFor(etype int) float64 {
 // here — subtract from health directly.
 func (m *mob) hurt(dmg float64) { m.hurtBreach(dmg, 0) }
 
-// hurtKind is hurt against a named damage kind, so the specialised protection
+// hurtKind is hurt against a named damage type, so the specialised protection
 // enchantments on a mob's gear guard what they should.
-func (m *mob) hurtKind(dmg float64, kind dmgKind) { m.hurtOf(dmg, 0, kind) }
+func (m *mob) hurtKind(dmg float64, dt dmgType) { m.hurtOf(dmg, 0, dt) }
 
 // hurtBreach is hurt with a breach fraction subtracted from the armor's
 // effectiveness (the mace's Breach enchant: −0.15 per level). breachFrac 0 is
 // the normal path.
-func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dmgGeneric) }
+func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dtPlayerAttack) }
 
-// hurtOf is the full form: breach fraction and damage kind.
-func (m *mob) hurtOf(dmg, breachFrac float64, kind dmgKind) {
+// hurtOf is the full form: breach fraction and damage type.
+func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
@@ -535,7 +533,7 @@ func (m *mob) hurtOf(dmg, breachFrac float64, kind dmgKind) {
 	}
 	// The protection enchantments on the mob's own gear, same arithmetic as a
 	// player's (vanilla runs this as a second, separate absorption step).
-	dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], kind)))
+	dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], dt)))
 	dmg += m.dmgFrac
 	whole := math.Floor(dmg)
 	m.dmgFrac = dmg - whole

@@ -270,7 +270,7 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 	t.x, t.y, t.z = a.x, float64(h.world.DropY(int(a.x), int(math.Ceil(a.y)), int(a.z))), a.z
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 	h.playSound(players, "minecraft:entity.enderman.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
-	h.damageExh(players, t, pearlDamage, 0) // ender_pearl: no exhaustion
+	h.damageOf(players, t, pearlDamage, dtEnderPearl)
 }
 
 // itemCarvedPumpkin resolves from the generated registry (a hardcoded 345

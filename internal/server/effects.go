@@ -136,7 +136,7 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 		h.sendHealth(t)
 		return
 	case effInstantDamage:
-		h.damageExh(players, t, float32(6*(int(1)<<amp)), 0) // magic: no exhaustion
+		h.damageOf(players, t, float32(6*(int(1)<<amp)), dtMagic)
 		return
 	case effSaturation:
 		// SaturationMobEffect: 1 food + 2 saturation per level, every tick it
@@ -243,9 +243,9 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				}
 			case effWither:
 				// WitherMobEffect: 1 HP every 40>>amp ticks — like poison but CAN
-				// kill; the `wither` damage type costs no hunger exhaustion.
+				// kill.
 				if applyEffectTickNow(e.left, 40, e.amp) {
-					h.damageExh(players, t, 1, 0)
+					h.damageOf(players, t, 1, dtWither)
 				}
 			case effSaturation:
 				// SaturationMobEffect fires every tick it is active.

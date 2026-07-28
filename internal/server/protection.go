@@ -12,20 +12,36 @@ import (
 // feather falling — did nothing at all.
 //
 // Vanilla keys each of them on a damage-type TAG, which means the sort of
-// damage has to travel from the source to the armour. dmgKind is exactly the
-// four tags the protection family reads (is_fire, is_explosion, is_projectile,
-// is_fall) and nothing more — a full damage-type registry is a separate job,
-// and guessing the kind at the armour instead of naming it at the source is
-// how you end up protecting against the wrong things.
-type dmgKind uint8
+// damage has to travel from the source to the armour. It does: every hit names
+// its dmgType, and the tag table (damagetags_gen.go) answers what guards it.
+// Guessing at the armour instead of naming it at the source is how you end up
+// protecting against the wrong things.
 
-const (
-	dmgGeneric    dmgKind = iota // anything with no specialised guard: melee, magic, starvation
-	dmgFire                      // in_fire / on_fire / lava / hot_floor
-	dmgExplosion                 // explosion / player_explosion
-	dmgProjectile                // arrow / trident / thrown / fireball
-	dmgFall                      // fall / stalagmite
-)
+// has reports whether this damage type carries a tag.
+func (d dmgType) has(t dmgTag) bool {
+	if int(d) >= len(dmgTypeTags) {
+		return false
+	}
+	return dmgTypeTags[d]&t != 0
+}
+
+// name is the damage type's registry name, for diagnostics.
+func (d dmgType) name() string {
+	if int(d) >= len(dmgTypeNames) {
+		return "unknown"
+	}
+	return dmgTypeNames[d]
+}
+
+// exhaustion is the food cost of being hit by this sort of damage. Vanilla
+// hangs it off the damage type, so a hit that costs hunger cannot be dealt
+// without charging for it.
+func (d dmgType) exhaustion() float32 {
+	if int(d) >= len(dmgTypeExhaustion) {
+		return 0
+	}
+	return dmgTypeExhaustion[d]
+}
 
 // enchantProtect applies vanilla's protection points: each matching
 // enchantment on each worn piece contributes, the total is capped at 20, and
@@ -35,28 +51,38 @@ const (
 // points in armorReduce: vanilla runs armour absorption first and enchantment
 // absorption second, and some damage (falling) skips the armour but not the
 // enchantment.
-func (t *tracked) enchantProtect(dmg float32, kind dmgKind) float32 {
-	return applyProtection(dmg, protectionPoints(t.armor[:], kind))
+func (t *tracked) enchantProtect(dmg float32, dt dmgType) float32 {
+	return applyProtection(dmg, protectionPoints(t.armor[:], dt))
 }
 
 // protectionPoints totals the protection an entity's worn pieces give against
-// one kind of damage. Takes the pieces rather than the wearer so mobs — which
+// one sort of damage. Takes the pieces rather than the wearer so mobs — which
 // pick up dropped gear, enchantments and all — go through the same arithmetic.
-func protectionPoints(pieces []invStack, kind dmgKind) int {
+//
+// Each enchantment tests its OWN tag and they stack, which is why these are
+// independent ifs rather than a switch: a ghast's fireball is both is_fire and
+// is_projectile, so Fire Protection and Projectile Protection both count
+// against it. Nothing protects against damage that bypasses invulnerability.
+func protectionPoints(pieces []invStack, dt dmgType) int {
+	if dt.has(tagBypassesInvulnerability) {
+		return 0
+	}
 	points := 0
 	for _, a := range pieces {
 		if a.count == 0 {
 			continue
 		}
 		points += a.enchLvl(enchProtection) // +1/level against everything
-		switch kind {
-		case dmgFire:
+		if dt.has(tagIsFire) {
 			points += 2 * a.enchLvl(enchFireProtection)
-		case dmgExplosion:
+		}
+		if dt.has(tagIsExplosion) {
 			points += 2 * a.enchLvl(enchBlastProtection)
-		case dmgProjectile:
+		}
+		if dt.has(tagIsProjectile) {
 			points += 2 * a.enchLvl(enchProjectileProtection)
-		case dmgFall:
+		}
+		if dt.has(tagIsFall) {
 			points += 3 * a.enchLvl(enchFeatherFalling)
 		}
 	}

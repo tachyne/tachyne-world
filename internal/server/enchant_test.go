@@ -107,7 +107,7 @@ func TestProtectionReducesDamage(t *testing.T) {
 		pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1, ench: [2]enchApply{{id: enchProtection, lvl: 4}}}
 	}
 	// 4 pieces x level 4 = 16 points = 64% off.
-	if got := pl.enchantProtect(10, dmgGeneric); math.Abs(float64(got)-3.6) > 0.01 {
+	if got := pl.enchantProtect(10, dtGeneric); math.Abs(float64(got)-3.6) > 0.01 {
 		t.Fatalf("protection 4x4 should cut 64%%: 10 -> %v, want 3.6", got)
 	}
 }
@@ -117,14 +117,14 @@ func TestProtectionReducesDamage(t *testing.T) {
 func TestSpecialisedProtectionOnlyGuardsItsOwnFamily(t *testing.T) {
 	for _, c := range []struct {
 		ench   int8
-		guards dmgKind
+		guards dmgType
 		points float64
 		what   string
 	}{
-		{enchFireProtection, dmgFire, 2, "fire protection"},
-		{enchBlastProtection, dmgExplosion, 2, "blast protection"},
-		{enchProjectileProtection, dmgProjectile, 2, "projectile protection"},
-		{enchFeatherFalling, dmgFall, 3, "feather falling"},
+		{enchFireProtection, dtInFire, 2, "fire protection"},
+		{enchBlastProtection, dtExplosion, 2, "blast protection"},
+		{enchProjectileProtection, dtArrow, 2, "projectile protection"},
+		{enchFeatherFalling, dtFall, 3, "feather falling"},
 	} {
 		pl := testTracked()
 		for i := range pl.armor {
@@ -137,7 +137,7 @@ func TestSpecialisedProtectionOnlyGuardsItsOwnFamily(t *testing.T) {
 		if got := pl.enchantProtect(10, c.guards); math.Abs(float64(got-want)) > 0.01 {
 			t.Errorf("%s vs its own family: 10 -> %v, want %v", c.what, got, want)
 		}
-		if got := pl.enchantProtect(10, dmgGeneric); math.Abs(float64(got)-10) > 0.01 {
+		if got := pl.enchantProtect(10, dtGeneric); math.Abs(float64(got)-10) > 0.01 {
 			t.Errorf("%s guarded generic damage too: 10 -> %v, want 10", c.what, got)
 		}
 	}

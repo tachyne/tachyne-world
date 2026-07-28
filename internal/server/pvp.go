@@ -78,8 +78,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 		return true
 	}
 
-	h.hurtBy(players, v, v.armorReduce(dmg), 0, dmgGeneric, deathCause{key: causePlayer, by: t.p.name})
-	h.wearArmor(players, v, dmg)
+	h.hurtBy(players, v, dmg, dtPlayerAttack, deathCause{key: causePlayer, by: t.p.name})
 	// Fire Aspect sets the victim alight.
 	if lvl := heldStack(t).enchLvl(enchFireAspect); lvl > 0 && v.hasEffect(effFireRes) == 0 {
 		v.fireSecs = max(v.fireSecs, 4*lvl)

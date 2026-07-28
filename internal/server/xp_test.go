@@ -56,7 +56,7 @@ func TestOrbPickupAndDeathScatter(t *testing.T) {
 
 	// Death scatters 7×level (capped) at the spot and zeroes the bar.
 	pl.xpLevel, pl.xpPoints = 10, 4
-	h.damage(players, pl, 1000)
+	h.damageOf(players, pl, 1000, dtGeneric)
 	if !pl.dead || pl.xpLevel != 0 || pl.xpPoints != 0 {
 		t.Fatalf("death must zero XP: dead=%v level=%d", pl.dead, pl.xpLevel)
 	}

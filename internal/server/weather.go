@@ -398,7 +398,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 
 	for _, t := range players {
 		if math.Abs(t.x-x) <= 3 && math.Abs(t.z-z) <= 3 && math.Abs(t.y-y) <= 6 {
-			h.hurtBy(players, t, lightningDamage, 0, dmgGeneric, deathCause{key: causeLightning})
+			h.hurtBy(players, t, lightningDamage, dtLightningBolt, deathCause{key: causeLightning})
 		}
 	}
 	for _, m := range h.mobs {
