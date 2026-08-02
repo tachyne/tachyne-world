@@ -4,7 +4,9 @@ import "testing"
 
 // The pale garden is the only biome whose whole identity is its colour, and it
 // was decorating itself with DARK OAK — the biome existed, generated, and grew
-// the wrong tree, which no test noticed because a tree is a tree.
+// the wrong tree, which no test noticed because a tree is a tree. These tests
+// pin every biome's tree kind to the FEATURE it actually resolves to, on the
+// same path stampTree takes.
 
 func TestPaleGardenGrowsPaleOak(t *testing.T) {
 	b, ok := biomeReg["minecraft:pale_garden"]
@@ -14,12 +16,31 @@ func TestPaleGardenGrowsPaleOak(t *testing.T) {
 	if b.Tree != treePaleOak {
 		t.Errorf("pale garden tree kind = %v, want treePaleOak", b.Tree)
 	}
-	log, leaves, _, _, _ := treeStyle(b.Tree)
-	if log != PaleOakLog {
-		t.Errorf("pale garden trunk = %d, want pale oak %d", log, PaleOakLog)
+	pale := TreeFeatures["pale_oak"]
+	for _, wx := range []int{0, 17, 4096, -333} {
+		c := treeFeatureFor(b.Tree, 1, wx, 7)
+		if c == nil {
+			t.Fatalf("pale garden resolves no tree feature at wx=%d", wx)
+		}
+		if c.Log != pale.Log || c.Leaves != pale.Leaves {
+			t.Errorf("pale garden tree at wx=%d has wood %d/%d, want pale oak %d/%d",
+				wx, c.Log, c.Leaves, pale.Log, pale.Leaves)
+		}
 	}
-	if leaves != PaleOakLeaves {
-		t.Errorf("pale garden canopy = %d, want pale oak %d", leaves, PaleOakLeaves)
+}
+
+// One pale oak in ten runs the creaking-heart decorator — the
+// pale_garden_vegetation split. The rest grow bare.
+func TestPaleGardenSeedsCreakingTrees(t *testing.T) {
+	hearts, total := 0, 4000
+	for wx := 0; wx < total; wx++ {
+		c := treeFeatureFor(treePaleOak, 1, wx*31, 55)
+		if c.HeartProb > 0 {
+			hearts++
+		}
+	}
+	if hearts < total/20 || hearts > total/5 {
+		t.Errorf("%d of %d pale oaks carry the heart decorator, want ~1 in 10", hearts, total)
 	}
 }
 
@@ -29,46 +50,76 @@ func TestDarkForestStillGrowsDarkOak(t *testing.T) {
 	if b.Tree != treeDarkOak {
 		t.Errorf("dark forest tree kind = %v, want treeDarkOak", b.Tree)
 	}
-	if log, _, _, _, _ := treeStyle(b.Tree); log != DarkOakLog {
-		t.Errorf("dark forest trunk = %d, want dark oak %d", log, DarkOakLog)
+	if c := treeFeatureFor(b.Tree, 1, 3, 3); c.Log != TreeFeatures["dark_oak"].Log {
+		t.Errorf("dark forest trunk = %d, want dark oak %d", c.Log, TreeFeatures["dark_oak"].Log)
 	}
 }
 
-// Every tree kind resolves to its own wood. The default arm of treeStyle
-// returns oak, so a kind added to the enum and forgotten in the switch grows
-// an oak and looks plausible — which is exactly how pale oak got missed.
-func TestEveryTreeKindHasItsOwnWood(t *testing.T) {
+// Every tree kind resolves to a real feature with its own wood — a kind added
+// to the enum and forgotten in treeFeatureFor's switch resolves to nil and
+// grows nothing, which is exactly the failure this pins.
+func TestEveryTreeKindResolvesItsOwnWood(t *testing.T) {
+	kinds := []treeKind{treeOak, treeBirch, treeSpruce, treeJungle, treeAcacia,
+		treeDarkOak, treeCherry, treeMangrove, treePaleOak, treeSwampOak,
+		treeSpruceOld, treePineOld}
+	woodOf := map[treeKind]uint32{}
+	for _, k := range kinds {
+		c := treeFeatureFor(k, 1, 5, 5)
+		if c == nil {
+			t.Errorf("tree kind %v resolves to no feature", k)
+			continue
+		}
+		woodOf[k] = c.Log
+	}
+	// The distinct-wood rule, minus the deliberate sharers: swamp oaks are
+	// oaks with vines, and the taiga variants are all spruce wood.
+	spruceWood := map[treeKind]bool{treeSpruce: true, treeSpruceOld: true, treePineOld: true}
 	seen := map[uint32]treeKind{}
-	for k := treeOak; k <= treePaleOak; k++ {
-		log, _, _, _, _ := treeStyle(k)
+	for k, log := range woodOf {
+		if k == treeSwampOak || spruceWood[k] {
+			continue
+		}
 		if prev, dup := seen[log]; dup {
 			t.Errorf("tree kinds %v and %v both grow trunk %d", prev, k, log)
 		}
 		seen[log] = k
 	}
+	if woodOf[treeSwampOak] != woodOf[treeOak] {
+		t.Errorf("swamp oaks should grow oak wood, got %d", woodOf[treeSwampOak])
+	}
+	for k := range spruceWood {
+		if woodOf[k] != woodOf[treeSpruce] {
+			t.Errorf("%v should grow spruce wood, got %d", k, woodOf[k])
+		}
+	}
 }
 
-// A generated pale oak and a planted one must be the same tree. The sapling
-// grower has always built dark/pale oak on a 2x2 trunk (TreeShape.TwoByTwo)
-// while the generator wrote a single column, so the two disagreed — and the
-// creaking heart's placement rule, which needs a log with logs on every side,
-// could never be satisfied by a generated tree.
-func TestMegaSpeciesGenerateOnAWideTrunk(t *testing.T) {
-	for _, k := range []treeKind{treeDarkOak, treePaleOak} {
-		if !wideTrunk(k) {
-			t.Errorf("tree kind %v should generate on a 2x2 trunk", k)
-		}
+// Old-growth taigas actually roll their mega trees: vanilla's cascade gives
+// the spruce taiga a third mega spruces, and the pine taiga mostly mega pines.
+func TestOldGrowthTaigasGrowMegaTrees(t *testing.T) {
+	megaSpruce, megaPine := TreeFeatures["mega_spruce"], TreeFeatures["mega_pine"]
+	if megaSpruce == nil || megaPine == nil {
+		t.Fatal("mega features missing from the generated table")
 	}
-	for _, k := range []treeKind{treeOak, treeBirch, treeSpruce, treeJungle, treeAcacia, treeCherry, treeMangrove} {
-		if wideTrunk(k) {
-			t.Errorf("tree kind %v should generate on a single trunk", k)
+	counts := func(k treeKind) (spruces, pines int) {
+		for wx := 0; wx < 3000; wx++ {
+			switch c := treeFeatureFor(k, 1, wx*13, 99); c {
+			case megaSpruce:
+				spruces++
+			case megaPine:
+				pines++
+			}
 		}
+		return
 	}
-	// …and the two tables agree on which species those are.
-	for name, shape := range treeShapeBySapling {
-		wide := shape.Log == DarkOakLog || shape.Log == PaleOakLog
-		if shape.TwoByTwo != wide {
-			t.Errorf("%s: sapling TwoByTwo=%v disagrees with its wood", name, shape.TwoByTwo)
-		}
+	if s, p := counts(treeSpruceOld); s < 700 || p != 0 {
+		t.Errorf("old-growth spruce taiga rolled %d mega spruces, %d mega pines; want ~1000, 0", s, p)
+	}
+	if s, p := counts(treePineOld); s < 30 || s > 200 || p < 700 {
+		t.Errorf("old-growth pine taiga rolled %d mega spruces, %d mega pines; want ~77, ~900", s, p)
+	}
+	// …and the megas are the podzol trees.
+	if !megaSpruce.AlterGround || !megaPine.AlterGround {
+		t.Error("mega spruce/pine should carry the alter_ground decorator")
 	}
 }

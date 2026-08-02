@@ -72,48 +72,6 @@ func (g *Generator) treeAt(wx, wz int, density float64) bool {
 	return hash01(g.seed, wx, wz, 0x7777) < prob
 }
 
-// TreeShape describes one species' trunk, canopy blocks and silhouette. It is
-// the single source of truth for both worldgen decoration and the live
-// sapling-growth path in the server, so a species can never look one way in a
-// generated forest and another when a player grows it.
-type TreeShape struct {
-	Log, Leaves  uint32
-	Conical      bool // spruce-style tapering rings rather than a rounded ball
-	MinH, ExtraH int
-	// TwoByTwo species have no single-sapling tree at all: vanilla's grower
-	// defines only a mega feature, so four saplings in a square are required.
-	TwoByTwo bool
-}
-
-// treeShapeBySapling keys the shapes by sapling block name. Dark oak and pale
-// oak are deliberately TwoByTwo-only, matching vanilla's growers, which give
-// them a mega feature and no single tree — a lone dark oak sapling never grows.
-var treeShapeBySapling = map[string]TreeShape{
-	"oak_sapling":      {OakLog, OakLeaves, false, 4, 3, false},
-	"birch_sapling":    {BirchLog, BirchLeaves, false, 5, 3, false},
-	"spruce_sapling":   {SpruceLog, SpruceLeaves, true, 6, 4, false},
-	"jungle_sapling":   {JungleLog, JungleLeaves, false, 7, 8, false},
-	"acacia_sapling":   {AcaciaLog, AcaciaLeaves, false, 5, 2, false},
-	"cherry_sapling":   {CherryLog, CherryLeaves, false, 5, 3, false},
-	"dark_oak_sapling": {DarkOakLog, DarkOakLeaves, false, 6, 2, true},
-	"pale_oak_sapling": {PaleOakLog, PaleOakLeaves, false, 6, 2, true},
-	// Mangrove grows from a propagule rather than a sapling block, but it is
-	// the same tree, so it shares the table.
-	"mangrove_propagule": {MangroveLog, MangroveLeaves, false, 5, 3, false},
-}
-
-// TreeShapeForSapling returns the shape a sapling block grows into.
-func TreeShapeForSapling(name string) (TreeShape, bool) {
-	s, ok := treeShapeBySapling[name]
-	return s, ok
-}
-
-// wideTrunk are the species vanilla gives a MEGA feature and no single tree —
-// they grow on a 2x2 trunk whether a player planted them or the generator did.
-// The sapling grower has always known this (TreeShape.TwoByTwo); worldgen did
-// not, so a planted pale oak and a generated one were different trees.
-func wideTrunk(k treeKind) bool { return k == treeDarkOak || k == treePaleOak }
-
 // treeFeatureFor maps a biome's tree kind to the vanilla FEATURE it grows.
 // Where vanilla's biome pools mix species — plains scattering the occasional
 // large oak among plain ones, taiga mixing pine with spruce — the mix is drawn
@@ -130,9 +88,34 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 	case treeBirch:
 		name = "birch"
 	case treeSpruce:
-		if hash01(seed, wx, wz, 0x71EF) < 0.33 {
+		// trees_taiga: pine_checked 1/3, default spruce.
+		if hash01(seed, wx, wz, 0x71EF) < 0.33333334 {
 			name = "pine"
 		} else {
+			name = "spruce"
+		}
+	case treeSpruceOld:
+		// trees_old_growth_spruce_taiga: mega_spruce 1/3, then pine 1/3,
+		// default spruce. (The 0.0125 fallen-spruce entry is unported.)
+		switch {
+		case hash01(seed, wx, wz, 0x71F0) < 0.33333334:
+			name = "mega_spruce"
+		case hash01(seed, wx, wz, 0x71F1) < 0.33333334:
+			name = "pine"
+		default:
+			name = "spruce"
+		}
+	case treePineOld:
+		// trees_old_growth_pine_taiga: mega_spruce 1/39, mega_pine 4/13,
+		// pine 1/3, default spruce — the same cascade vanilla rolls.
+		switch {
+		case hash01(seed, wx, wz, 0x71F2) < 0.025641026:
+			name = "mega_spruce"
+		case hash01(seed, wx, wz, 0x71F3) < 0.30769232:
+			name = "mega_pine"
+		case hash01(seed, wx, wz, 0x71F4) < 0.33333334:
+			name = "pine"
+		default:
 			name = "spruce"
 		}
 	case treeJungle:
@@ -142,7 +125,14 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 	case treeDarkOak:
 		name = "dark_oak"
 	case treePaleOak:
-		name = "pale_oak"
+		// pale_garden_vegetation: one pale oak in ten runs the creaking-heart
+		// decorator (and of those, only a tree whose trunk bend folds a log
+		// pocket actually gets a heart — the decorator's own rule).
+		if hash01(seed, wx, wz, 0x71F5) < 0.1 {
+			name = "pale_oak_creaking"
+		} else {
+			name = "pale_oak"
+		}
 	case treeCherry:
 		name = "cherry"
 	case treeMangrove:
@@ -153,30 +143,6 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 		return nil
 	}
 	return TreeFeatures[name]
-}
-
-// treeStyle maps a treeKind to its trunk/leaf blocks and canopy shape.
-func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) {
-	switch k {
-	case treeSpruce:
-		return SpruceLog, SpruceLeaves, true, 6, 4
-	case treeBirch:
-		return BirchLog, BirchLeaves, false, 5, 3
-	case treeJungle:
-		return JungleLog, JungleLeaves, false, 7, 8
-	case treeAcacia:
-		return AcaciaLog, AcaciaLeaves, false, 5, 2
-	case treeDarkOak:
-		return DarkOakLog, DarkOakLeaves, false, 6, 2
-	case treeCherry:
-		return CherryLog, CherryLeaves, false, 5, 3
-	case treeMangrove:
-		return MangroveLog, MangroveLeaves, false, 5, 3
-	case treePaleOak:
-		return PaleOakLog, PaleOakLeaves, false, 6, 2
-	default:
-		return OakLog, OakLeaves, false, 4, 3
-	}
 }
 
 // stampTree grows one vanilla tree rooted at (wx,wz), clipped to this chunk.
@@ -226,7 +192,22 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 	// Height is the first EMPTY cell above the ground — where the trunk
 	// starts — so the tree's own base cell counts as free.
 	free := func(x, y, z int) bool { return y >= g.Height(x, z) }
-	PlaceTree(c, wx, surfaceH, wz, rng, set, free)
+	// read answers real blocks inside this chunk's buffer. Outside it, a
+	// coarse terrain guess is safe by construction: decorator reads gate only
+	// writes to the SAME cell, out-of-chunk writes are clipped anyway, and no
+	// randomness is drawn between a read and its write — the neighbour chunk
+	// redraws the tree and answers its own cells from its own buffer.
+	read := func(x, y, z int) uint32 {
+		lx, lz := x-baseX, z-baseZ
+		if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
+			return sectionBlockAt(ch, lx, y, lz)
+		}
+		if y >= g.Height(x, z) {
+			return Air
+		}
+		return Stone
+	}
+	PlaceTree(c, wx, surfaceH, wz, rng, set, free, read)
 }
 
 // newTreeRNG is the per-tree randomness, derived from the tree's own position

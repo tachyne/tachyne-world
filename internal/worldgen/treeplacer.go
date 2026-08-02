@@ -33,6 +33,13 @@ type TreeSetter func(x, y, z int, state uint32, leaf bool)
 // TreeFeature.validTreePos: air, leaves, or replaceable plants).
 type TreeFree func(x, y, z int) bool
 
+// TreeRead answers what actually stands at a cell. Decorators that inspect
+// the ground — the podzol rule's #dirt check — need real block states, not
+// just free/occupied. Reads and their gated writes are always the SAME cell,
+// so a driver that can only answer for part of the world (the chunk stamper)
+// stays consistent: what it can't read it also won't write.
+type TreeRead func(x, y, z int) uint32
+
 // TrunkKind selects one of vanilla's nine trunk placers.
 type TrunkKind uint8
 
@@ -110,6 +117,12 @@ type TreeConfig struct {
 	TrunkVine     bool    // vines on the trunk sides (jungle)
 	LeaveVineProb float64 // vines hanging off the canopy (jungle, swamp, mangrove)
 	CocoaProb     float64 // cocoa pods on the lower trunk (jungle)
+	HeartProb     float64 // a creaking heart in a fully log-enclosed log (pale oak)
+	AlterGround   bool    // podzol circles at the base (mega spruce/pine)
+	// attached_to_leaves — hanging mangrove propagules under the canopy.
+	PropaguleProb                   float64
+	PropaguleExclXZ, PropaguleExclY int
+	PropaguleEmpty                  int
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -179,7 +192,7 @@ func (c *TreeConfig) maxFreeHeight(x, y, z, maxHeight int, free TreeFree) int {
 // The roll order is TreeFeature.doPlace's and is load-bearing: height, then
 // foliage height, then radius. Changing it changes the distribution of shapes
 // even with identical formulas.
-func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree) bool {
+func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree, read TreeRead) bool {
 	treeHeight := c.treeHeightOf(rng)
 	foliageHeight := c.foliageHeightOf(rng, treeHeight)
 	trunkHeight := treeHeight - foliageHeight
@@ -227,14 +240,57 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
 	}
 	c.seedLeafDistances(logs, leaves, set)
+	// Vanilla's TreeDecorator.Context hands decorators the log and leaf lists
+	// STABLY SORTED by Y; the per-block probability rolls then run bottom-up.
+	sortByY(logList)
+	sortByY(leafList)
 	// Decoration. isAir is the composite both drivers can answer: the cell is
 	// free AND not part of this tree — vanilla's context.isAir sees the
-	// just-placed tree in the world; here the tree knows its own blocks.
+	// just-placed tree in the world; here the tree knows its own blocks, and
+	// tracks what its decorators add (a vine under a leaf must block the
+	// propagule that would hang there, exactly as it does in vanilla's world).
+	deco := map[[3]int]bool{}
 	isAir := func(q [3]int) bool {
-		return free(q[0], q[1], q[2]) && !logs[q] && !leaves[q]
+		return free(q[0], q[1], q[2]) && !logs[q] && !leaves[q] && !deco[q]
 	}
-	c.decorate(rng, y, logList, leafList, isAir, set)
+	decoSet := func(px, py, pz int, st uint32, leaf bool) {
+		deco[[3]int{px, py, pz}] = true
+		set(px, py, pz, st, leaf)
+	}
+	c.decorate(&decoCtx{rng: rng, baseY: y, logs: logs,
+		logList: logList, leafList: leafList, isAir: isAir, read: read, set: decoSet})
 	return true
+}
+
+// sortByY is the TreeDecorator.Context ordering: stable, lowest first.
+func sortByY(list [][3]int) {
+	for i := 1; i < len(list); i++ {
+		for j := i; j > 0 && list[j][1] < list[j-1][1]; j-- {
+			list[j], list[j-1] = list[j-1], list[j]
+		}
+	}
+}
+
+// shuffledCopy is Util.shuffledCopy — a Fisher-Yates over a copy, so the
+// caller's placement-ordered list survives for the next decorator.
+func shuffledCopy(rng TreeRNG, in [][3]int) [][3]int {
+	out := append([][3]int(nil), in...)
+	for i := len(out) - 1; i > 0; i-- {
+		j := rng.Intn(i + 1)
+		out[i], out[j] = out[j], out[i]
+	}
+	return out
+}
+
+// decoCtx is what a decorator sees — vanilla's TreeDecorator.Context.
+type decoCtx struct {
+	rng               TreeRNG
+	baseY             int
+	logs              map[[3]int]bool
+	logList, leafList [][3]int
+	isAir             func([3]int) bool
+	read              TreeRead
+	set               TreeSetter
 }
 
 // Vine states: the base state is every face TRUE, faces ordered east, north,
@@ -247,15 +303,63 @@ const (
 )
 
 // decorate applies the ported tree decorators in vanilla's per-feature order:
-// cocoa, then trunk vines, then hanging vines.
-func (c *TreeConfig) decorate(rng TreeRNG, baseY int, logList, leafList [][3]int, isAir func([3]int) bool, set TreeSetter) {
+// podzol, cocoa, trunk vines, hanging vines, propagules, and last the heart —
+// no 1.21.11 feature orders these against each other differently.
+func (c *TreeConfig) decorate(ctx *decoCtx) {
+	rng := ctx.rng
+	// AlterGroundDecorator (mega spruce/pine): podzol circles around the base.
+	// A 5x5-minus-corners circle sits on each corner of the 2x2 trunk, and
+	// five rolls may add circles on the rim of the surrounding 8x8. Each
+	// column is probed from two above the base down to three below; the first
+	// #dirt block found becomes podzol, and a solid non-dirt block below
+	// ground level stops the probe (a cave roof is not a forest floor). The
+	// ground test is vanilla's Feature.isGrassOrDirt.
+	if c.AlterGround {
+		minY := ctx.logList[0][1]
+		circle := func(cx, cy, cz int) {
+			for dx := -2; dx <= 2; dx++ {
+				for dz := -2; dz <= 2; dz++ {
+					if dx*dx == 4 && dz*dz == 4 {
+						continue
+					}
+					for dy := 2; dy >= -3; dy-- {
+						qx, qy, qz := cx+dx, cy+dy, cz+dz
+						cur := ctx.read(qx, qy, qz)
+						if IsDirtTag(cur) {
+							ctx.set(qx, qy, qz, podzolState, false)
+							break
+						}
+						if cur != Air && dy < 0 {
+							break
+						}
+					}
+				}
+			}
+		}
+		for _, p := range ctx.logList {
+			if p[1] != minY {
+				continue
+			}
+			circle(p[0]-1, p[1], p[2]-1)
+			circle(p[0]+2, p[1], p[2]-1)
+			circle(p[0]-1, p[1], p[2]+2)
+			circle(p[0]+2, p[1], p[2]+2)
+			for i := 0; i < 5; i++ {
+				n := rng.Intn(64)
+				xx, zz := n%8, n/8
+				if xx == 0 || xx == 7 || zz == 0 || zz == 7 {
+					circle(p[0]-3+xx, p[1], p[2]-3+zz)
+				}
+			}
+		}
+	}
 	vineBase := blockBase("vine")
 	cocoaBase := blockBase("cocoa")
 	// CocoaDecorator: one gate roll, then pods on logs within 2 of the base,
 	// each horizontal face at 25%, aged 0-2, the pod FACING its log.
 	if c.CocoaProb > 0 && rng.Float64() < c.CocoaProb {
-		for _, p := range logList {
-			if p[1]-baseY > 2 {
+		for _, p := range ctx.logList {
+			if p[1]-ctx.baseY > 2 {
 				continue
 			}
 			for f, o := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} { // north,south,west,east
@@ -263,23 +367,82 @@ func (c *TreeConfig) decorate(rng TreeRNG, baseY int, logList, leafList [][3]int
 					continue
 				}
 				q := [3]int{p[0] - o[0], p[1], p[2] - o[1]}
-				if isAir(q) {
-					set(q[0], q[1], q[2], cocoaBase+uint32(rng.Intn(3)*4+f), true)
+				if ctx.isAir(q) {
+					ctx.set(q[0], q[1], q[2], cocoaBase+uint32(rng.Intn(3)*4+f), true)
 				}
 			}
 		}
 	}
 	// TrunkVineDecorator: each log side, 2 in 3.
 	if c.TrunkVine {
-		for _, p := range logList {
-			c.vineAt(rng, p, isAir, set, vineBase, func() bool { return rng.Intn(3) > 0 }, 0)
+		for _, p := range ctx.logList {
+			c.vineAt(rng, p, ctx.isAir, ctx.set, vineBase, func() bool { return rng.Intn(3) > 0 }, 0)
 		}
 	}
 	// LeaveVineDecorator: each leaf side at the probability, the vine hanging
 	// up to four blocks down.
 	if c.LeaveVineProb > 0 {
-		for _, p := range leafList {
-			c.vineAt(rng, p, isAir, set, vineBase, func() bool { return rng.Float64() < c.LeaveVineProb }, 4)
+		for _, p := range ctx.leafList {
+			c.vineAt(rng, p, ctx.isAir, ctx.set, vineBase, func() bool { return rng.Float64() < c.LeaveVineProb }, 4)
+		}
+	}
+	// AttachedToLeavesDecorator (mangrove propagules): the leaves in shuffled
+	// order; an already-excluded spot skips WITHOUT drawing, then the
+	// probability roll, then the required-empty rule below the leaf. Each pod
+	// excludes its neighbourhood so they don't clump. Hanging, stage 0, age
+	// uniform 0-4.
+	if c.PropaguleProb > 0 {
+		propaguleBase := blockBase("mangrove_propagule")
+		excluded := map[[3]int]bool{}
+		for _, p := range shuffledCopy(rng, ctx.leafList) {
+			q := [3]int{p[0], p[1] - 1, p[2]}
+			if excluded[q] {
+				continue
+			}
+			if rng.Float64() >= c.PropaguleProb {
+				continue
+			}
+			ok := true
+			for i := 1; i <= c.PropaguleEmpty; i++ {
+				if !ctx.isAir([3]int{p[0], p[1] - i, p[2]}) {
+					ok = false
+					break
+				}
+			}
+			if !ok {
+				continue
+			}
+			for dx := -c.PropaguleExclXZ; dx <= c.PropaguleExclXZ; dx++ {
+				for dy := -c.PropaguleExclY; dy <= c.PropaguleExclY; dy++ {
+					for dz := -c.PropaguleExclXZ; dz <= c.PropaguleExclXZ; dz++ {
+						excluded[[3]int{q[0] + dx, q[1] + dy, q[2] + dz}] = true
+					}
+				}
+			}
+			// hanging propagule: age stride 8, hanging=true is +1.
+			ctx.set(q[0], q[1], q[2], propaguleBase+uint32(rng.Intn(5))*8+1, true)
+		}
+	}
+	// CreakingHeartDecorator: one roll gates the tree, then the logs are
+	// shuffled and the FIRST log with logs on all six faces becomes a
+	// dormant, natural creaking heart. A plain 2x2 trunk has no such cell —
+	// only the dark oak placer's diagonal bend folds two footprints into a
+	// pocket — which is why hearts are rare in vanilla despite probability 1.
+	// The neighbour test uses the tree's OWN logs: reading the world would
+	// tie the chosen cell to whichever chunk happens to be drawing.
+	if c.HeartProb > 0 && rng.Float64() < c.HeartProb {
+		for _, p := range shuffledCopy(rng, ctx.logList) {
+			enclosed := true
+			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+				if !ctx.logs[[3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}] {
+					enclosed = false
+					break
+				}
+			}
+			if enclosed {
+				ctx.set(p[0], p[1], p[2], CreakingHeartDormant, false)
+				break
+			}
 		}
 	}
 }

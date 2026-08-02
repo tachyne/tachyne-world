@@ -46,8 +46,34 @@ var logFamilies = []string{
 	"dark_oak_log", "pale_oak_log", "mangrove_log", "cherry_log",
 }
 
+// IsDirtTag is vanilla's #dirt block tag — the ground the podzol decorator
+// may replace (Feature.isGrassOrDirt tests exactly this tag).
+func IsDirtTag(state uint32) bool {
+	for _, n := range dirtTag {
+		lo, hi := BlockRange(n)
+		if state >= lo && state <= hi {
+			return true
+		}
+	}
+	return false
+}
+
+var dirtTag = []string{
+	"dirt", "grass_block", "podzol", "coarse_dirt", "mycelium", "rooted_dirt",
+	"moss_block", "pale_moss_block", "mud", "muddy_mangrove_roots",
+}
+
+// podzolState is snowy=false — what alter_ground writes.
+var podzolState = blockBase("podzol") + 1
+
+// IsLeaves spans EVERY leaf family — the registry lays them out contiguously
+// from oak to flowering azalea. This used to stop at birch, which silently
+// excluded seven species: their canopies refused the leaf-distance rewrite at
+// generation (the live healer papered over it) and dropped items would not
+// fall through them.
 func IsLeaves(state uint32) bool {
-	return state >= blockBase("oak_leaves") && state <= blockBase("birch_leaves")+27
+	_, hi := BlockRange("flowering_azalea_leaves")
+	return state >= blockBase("oak_leaves") && state <= hi
 }
 
 // IsWater / IsLava report fluid membership; FluidLevel extracts 0..15.

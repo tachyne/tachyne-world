@@ -20,14 +20,16 @@ const (
 	treeNone treeKind = iota
 	treeOak
 	treeBirch
-	treeSpruce   // conical
-	treeJungle   // tall
-	treeAcacia   // sparse, bushy
-	treeDarkOak  // thick, dense
-	treeCherry   // pink canopy
-	treeMangrove // swamp
-	treePaleOak  // the pale garden's own: dark oak's shape, bone-white wood
-	treeSwampOak // swamp oaks: an oak hung with vines
+	treeSpruce    // conical
+	treeJungle    // tall
+	treeAcacia    // sparse, bushy
+	treeDarkOak   // thick, dense
+	treeCherry    // pink canopy
+	treeMangrove  // swamp
+	treePaleOak   // the pale garden's own: dark oak's shape, bone-white wood
+	treeSwampOak  // swamp oaks: an oak hung with vines
+	treeSpruceOld // old-growth spruce taiga: a third of the trees are mega spruces
+	treePineOld   // old-growth pine taiga: mostly mega pines, rare mega spruces
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -76,8 +78,8 @@ var biomeReg = map[string]*Biome{
 	// ── Cold/taiga family ────────────────────────────────────────────────
 	"minecraft:taiga":                   {Top: GrassBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.7, Flora: floraTaiga},
 	"minecraft:snowy_taiga":             {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.4, Flora: floraSnowy},
-	"minecraft:old_growth_pine_taiga":   {Top: Podzol, Sub: Dirt, Tree: treeSpruce, TreeDensity: 2.2, Flora: floraTaiga},
-	"minecraft:old_growth_spruce_taiga": {Top: Podzol, Sub: Dirt, Tree: treeSpruce, TreeDensity: 2.4, Flora: floraTaiga},
+	"minecraft:old_growth_pine_taiga":   {Top: Podzol, Sub: Dirt, Tree: treePineOld, TreeDensity: 2.2, Flora: floraTaiga},
+	"minecraft:old_growth_spruce_taiga": {Top: Podzol, Sub: Dirt, Tree: treeSpruceOld, TreeDensity: 2.4, Flora: floraTaiga},
 	"minecraft:grove":                   {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.2, Flora: floraSnowy},
 
 	// ── Snow/ice ─────────────────────────────────────────────────────────

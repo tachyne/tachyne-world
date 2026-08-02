@@ -14,6 +14,27 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Creaking hearts beat inside wild pale oaks again.** One pale oak in ten
+  now grows with vanilla's creaking-heart rule: a log enclosed by logs on all
+  six faces becomes a dormant heart, which only happens where the trunk's bend
+  folds thick — so hearts are rare finds, exactly as in vanilla, and the pale
+  garden's guardians spawn in newly explored chunks once more.
+- **Mega spruces and pines podzol their ground.** The old-growth taigas now
+  roll vanilla's own odds for their giant 2×2 trees, and each one converts the
+  dirt and grass around its base into the familiar podzol circles — only ever
+  replacing real soil, never stone or air.
+- **Mangroves hang propagules.** Wild and planted mangroves alike now dangle
+  young propagules beneath their canopies at vanilla's rate and spacing; they
+  age on the branch and can be picked, closing the mangrove life cycle.
+
+### Fixed
+- **Seven leaf species were second-class.** An old predicate ended the leaf
+  family at birch, so jungle, acacia, cherry, dark oak, pale oak, mangrove and
+  azalea canopies were treated as solid blocks: dropped items would rest on
+  top of them instead of falling through, and their freshly generated leaves
+  started life marked for decay (kept alive only by the decay healer). All
+  leaf species now behave alike.
+
 - **Jungle trees wear their vines, swamps grow swamp oaks, cocoa grows wild.**
   The tree decorators vanilla dresses a placed tree with: jungle trunks and
   canopies hung with vines at vanilla's odds, one jungle tree in five carrying
