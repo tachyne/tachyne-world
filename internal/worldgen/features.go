@@ -6,10 +6,10 @@ package worldgen
 // part that lands inside it, with no shared state.
 
 // treeMargin is how far outside a chunk a tree can be rooted and still put
-// blocks inside it, so decoration scans that much extra each way. Measured
-// across every feature over 200 seeds — a mega jungle's canopy reaches 8 — not
-// estimated. It was 2, which was right for the radius-2 blobs trees used to be.
-const treeMargin = 8
+// blocks inside it, so decoration scans that much extra each way. Measured,
+// not estimated: a mega jungle's canopy reaches 8, and a fallen jungle log —
+// start offset up to 3, run up to 9 — reaches 11.
+const treeMargin = 12
 
 // decorate adds trees and ground cover to a freshly generated chunk, choosing
 // the tree species and ground flora from each column's biome.
@@ -76,117 +76,240 @@ func (g *Generator) treeAt(wx, wz int, density float64) bool {
 // Where vanilla's biome pools mix species — plains scattering the occasional
 // large oak among plain ones, taiga mixing pine with spruce — the mix is drawn
 // from the tree's own position, so it is stable for a seed.
-func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
-	name := ""
+// featurePick is what one biome position grows — exactly one of the three.
+// A single selector holds every cascade so the hash salts live in one place:
+// a slot that yields a mushroom or a fallen log is the SAME slot the tree
+// path returns nil on.
+type featurePick struct {
+	tree   *TreeConfig
+	mush   int    // mushNone, mushBrown, mushRed
+	fallen string // a FallenTrees key, "" for none
+}
+
+// pickFeature rolls a biome's vegetation cascade for one position, in the
+// JSON entry order, with vanilla's probabilities. Position-derived hashes
+// per slot keep chunk-straddling stamps in agreement.
+func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
+	tree := func(name string) featurePick { return featurePick{tree: TreeFeatures[name]} }
+	fallen := func(name string) featurePick { return featurePick{fallen: name} }
+	roll := func(salt uint64, chance float64) bool { return hash01(seed, wx, wz, salt) < chance }
 	switch k {
 	case treeOak:
-		if hash01(seed, wx, wz, 0x71EE) < 0.1 {
-			name = "fancy_oak"
-		} else {
-			name = "oak"
+		// trees_plains: a THIRD of the trees are large bee oaks.
+		switch {
+		case roll(0x71EE, 0.33333334):
+			return tree("fancy_oak")
+		case roll(0x7206, 0.0125):
+			return fallen("fallen_oak_tree")
+		default:
+			return tree("oak")
+		}
+	case treeMeadow:
+		// trees_meadow: half large bee oaks, half lone super birches.
+		if roll(0x7207, 0.5) {
+			return tree("fancy_oak")
+		}
+		return tree("super_birch_bees")
+	case treeFlowerForest:
+		// trees_flower_forest: the forest mix without the leaf litter.
+		switch {
+		case roll(0x7208, 0.0025):
+			return fallen("fallen_birch_tree")
+		case roll(0x7209, 0.2):
+			return tree("birch")
+		case roll(0x720A, 0.1):
+			return tree("fancy_oak")
+		default:
+			return tree("oak")
 		}
 	case treeBirch:
-		name = "birch"
-	case treeSpruce:
-		// trees_taiga: pine_checked 1/3, default spruce.
-		if hash01(seed, wx, wz, 0x71EF) < 0.33333334 {
-			name = "pine"
-		} else {
-			name = "spruce"
+		// trees_birch: pure birch with the fallen slot.
+		if roll(0x720B, 0.0125) {
+			return fallen("fallen_birch_tree")
 		}
-	case treeSpruceOld:
-		// trees_old_growth_spruce_taiga: mega_spruce 1/3, then pine 1/3,
-		// then the 0.0125 fallen-spruce slot, default spruce. Unported
-		// entries still consume their slot — an EMPTY spot where vanilla
-		// grows the fallen log — so every later entry's rate stays exact.
+		return tree("birch")
+	case treeBirchTall:
+		// old-growth birch forest: the taller super birch, nothing else.
+		return tree("super_birch_bees")
+	case treeSpruce:
+		// trees_taiga: pine a third, the fallen-spruce slot, spruce.
 		switch {
-		case hash01(seed, wx, wz, 0x71F0) < 0.33333334:
-			name = "mega_spruce"
-		case hash01(seed, wx, wz, 0x71F1) < 0.33333334:
-			name = "pine"
-		case hash01(seed, wx, wz, 0x71F8) < 0.0125:
-			return nil // fallen spruce (unported)
+		case roll(0x71EF, 0.33333334):
+			return tree("pine")
+		case roll(0x720C, 0.0125):
+			return fallen("fallen_spruce_tree")
 		default:
-			name = "spruce"
+			return tree("spruce")
+		}
+	case treeGrove:
+		// trees_grove: the taiga mix on snow, without a fallen slot.
+		if roll(0x720D, 0.33333334) {
+			return tree("pine")
+		}
+		return tree("spruce")
+	case treeSpruceOld:
+		// trees_old_growth_spruce_taiga.
+		switch {
+		case roll(0x71F0, 0.33333334):
+			return tree("mega_spruce")
+		case roll(0x71F1, 0.33333334):
+			return tree("pine")
+		case roll(0x71F8, 0.0125):
+			return fallen("fallen_spruce_tree")
+		default:
+			return tree("spruce")
 		}
 	case treePineOld:
-		// trees_old_growth_pine_taiga: mega_spruce 1/39, mega_pine 4/13,
-		// pine 1/3, the fallen-spruce slot, default spruce.
+		// trees_old_growth_pine_taiga.
 		switch {
-		case hash01(seed, wx, wz, 0x71F2) < 0.025641026:
-			name = "mega_spruce"
-		case hash01(seed, wx, wz, 0x71F3) < 0.30769232:
-			name = "mega_pine"
-		case hash01(seed, wx, wz, 0x71F4) < 0.33333334:
-			name = "pine"
-		case hash01(seed, wx, wz, 0x71F9) < 0.0125:
-			return nil // fallen spruce (unported)
+		case roll(0x71F2, 0.025641026):
+			return tree("mega_spruce")
+		case roll(0x71F3, 0.30769232):
+			return tree("mega_pine")
+		case roll(0x71F4, 0.33333334):
+			return tree("pine")
+		case roll(0x71F9, 0.0125):
+			return fallen("fallen_spruce_tree")
 		default:
-			name = "spruce"
+			return tree("spruce")
+		}
+	case treeWindswept:
+		// trees_windswept_hills / _forest: spruce-led with the odd oak.
+		switch {
+		case roll(0x720E, 0.008325):
+			return fallen("fallen_spruce_tree")
+		case roll(0x720F, 0.666):
+			return tree("spruce")
+		case roll(0x7210, 0.1):
+			return tree("fancy_oak")
+		case roll(0x7211, 0.0125):
+			return fallen("fallen_oak_tree")
+		default:
+			return tree("oak")
 		}
 	case treeForest:
-		// trees_birch_and_oak_leaf_litter: the fallen-birch slot, birch 0.2,
-		// large oak 0.1, the fallen-oak slot, default oak — all the litter
-		// variants (their bees twins fold onto them until beehives exist).
+		// trees_birch_and_oak_leaf_litter.
 		switch {
-		case hash01(seed, wx, wz, 0x71FA) < 0.0025:
-			return nil // fallen birch (unported)
-		case hash01(seed, wx, wz, 0x71FB) < 0.2:
-			name = "birch_leaf_litter"
-		case hash01(seed, wx, wz, 0x71FC) < 0.1:
-			name = "fancy_oak_leaf_litter"
-		case hash01(seed, wx, wz, 0x71FD) < 0.0125:
-			return nil // fallen oak (unported)
+		case roll(0x71FA, 0.0025):
+			return fallen("fallen_birch_tree")
+		case roll(0x71FB, 0.2):
+			return tree("birch_leaf_litter")
+		case roll(0x71FC, 0.1):
+			return tree("fancy_oak_leaf_litter")
+		case roll(0x71FD, 0.0125):
+			return fallen("fallen_oak_tree")
 		default:
-			name = "oak_leaf_litter"
+			return tree("oak_leaf_litter")
 		}
 	case treeDarkForest:
-		// dark_forest_vegetation: the two huge-mushroom slots, dark oak
-		// 2/3, the fallen-birch slot, birch 0.2, the fallen-oak slot, large
-		// oak 0.1, default oak — litter variants throughout.
+		// dark_forest_vegetation.
 		switch {
-		case hash01(seed, wx, wz, 0x71FE) < 0.025:
-			return nil // huge brown mushroom — mushroomFor grows it here
-		case hash01(seed, wx, wz, 0x71FF) < 0.05:
-			return nil // huge red mushroom — mushroomFor grows it here
-		case hash01(seed, wx, wz, 0x7200) < 0.6666667:
-			name = "dark_oak_leaf_litter"
-		case hash01(seed, wx, wz, 0x7201) < 0.0025:
-			return nil // fallen birch (unported)
-		case hash01(seed, wx, wz, 0x7202) < 0.2:
-			name = "birch_leaf_litter"
-		case hash01(seed, wx, wz, 0x7203) < 0.0125:
-			return nil // fallen oak (unported)
-		case hash01(seed, wx, wz, 0x7204) < 0.1:
-			name = "fancy_oak_leaf_litter"
+		case roll(0x71FE, 0.025):
+			return featurePick{mush: mushBrown}
+		case roll(0x71FF, 0.05):
+			return featurePick{mush: mushRed}
+		case roll(0x7200, 0.6666667):
+			return tree("dark_oak_leaf_litter")
+		case roll(0x7201, 0.0025):
+			return fallen("fallen_birch_tree")
+		case roll(0x7202, 0.2):
+			return tree("birch_leaf_litter")
+		case roll(0x7203, 0.0125):
+			return fallen("fallen_oak_tree")
+		case roll(0x7204, 0.1):
+			return tree("fancy_oak_leaf_litter")
 		default:
-			name = "oak_leaf_litter"
+			return tree("oak_leaf_litter")
 		}
 	case treeJungle:
-		name = "jungle_tree"
+		// trees_jungle: the bushes and the mega trees, at last.
+		switch {
+		case roll(0x7215, 0.1):
+			return tree("fancy_oak")
+		case roll(0x7216, 0.5):
+			return tree("jungle_bush")
+		case roll(0x7217, 0.33333334):
+			return tree("mega_jungle_tree")
+		case roll(0x7218, 0.0125):
+			return fallen("fallen_jungle_tree")
+		default:
+			return tree("jungle_tree")
+		}
+	case treeSparseJungle:
+		// trees_sparse_jungle: no megas.
+		switch {
+		case roll(0x7219, 0.1):
+			return tree("fancy_oak")
+		case roll(0x721A, 0.5):
+			return tree("jungle_bush")
+		case roll(0x721B, 0.0125):
+			return fallen("fallen_jungle_tree")
+		default:
+			return tree("jungle_tree")
+		}
+	case treeBambooJungle:
+		// bamboo_vegetation: mostly megas, and the default is a grass patch —
+		// the flora layer's business, so the slot grows nothing here.
+		switch {
+		case roll(0x721C, 0.05):
+			return tree("fancy_oak")
+		case roll(0x721D, 0.15):
+			return tree("jungle_bush")
+		case roll(0x721E, 0.7):
+			return tree("mega_jungle_tree")
+		default:
+			return featurePick{}
+		}
 	case treeAcacia:
-		name = "acacia"
+		// trees_savanna (also the windswept savanna): a fifth are oaks.
+		switch {
+		case roll(0x7212, 0.8):
+			return tree("acacia")
+		case roll(0x7213, 0.0125):
+			return fallen("fallen_oak_tree")
+		default:
+			return tree("oak")
+		}
+	case treeWoodedBadlands:
+		// trees_badlands: littered oaks only.
+		if roll(0x7214, 0.0125) {
+			return fallen("fallen_oak_tree")
+		}
+		return tree("oak_leaf_litter")
 	case treeDarkOak:
-		name = "dark_oak"
+		return tree("dark_oak")
 	case treePaleOak:
 		// pale_garden_vegetation: one pale oak in ten runs the creaking-heart
 		// decorator (and of those, only a tree whose trunk bend folds a log
 		// pocket actually gets a heart — the decorator's own rule).
-		if hash01(seed, wx, wz, 0x71F5) < 0.1 {
-			name = "pale_oak_creaking"
-		} else {
-			name = "pale_oak"
+		if roll(0x71F5, 0.1) {
+			return tree("pale_oak_creaking")
 		}
+		return tree("pale_oak")
 	case treeCherry:
-		name = "cherry"
+		return tree("cherry")
 	case treeMangrove:
-		name = "mangrove"
+		// trees_mangrove: the tall variant leads at 85%, as it does live.
+		if roll(0x721F, 0.85) {
+			return tree("tall_mangrove")
+		}
+		return tree("mangrove")
 	case treeSwampOak:
-		name = "swamp_oak"
-	default:
-		return nil
+		return tree("swamp_oak")
+	case treeMushroomFields:
+		// mushroom_island_vegetation: a coin between the colours.
+		if roll(0x7205, 0.5) {
+			return featurePick{mush: mushRed}
+		}
+		return featurePick{mush: mushBrown}
 	}
-	return TreeFeatures[name]
+	return featurePick{}
+}
+
+// treeFeatureFor is the tree half of pickFeature — nil where the slot grows
+// a mushroom, a fallen log, or nothing.
+func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
+	return pickFeature(k, seed, wx, wz).tree
 }
 
 // stampTree grows one vanilla tree rooted at (wx,wz), clipped to this chunk.
@@ -213,9 +336,8 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 // structures overwrite. The sapling grower, which CAN see the world, is the
 // path where growing into a house matters, and it gets the real check.
 func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kind treeKind) {
-	mush := mushroomFor(kind, g.seed, wx, wz)
-	c := treeFeatureFor(kind, g.seed, wx, wz)
-	if c == nil && mush == mushNone {
+	pick := pickFeature(kind, g.seed, wx, wz)
+	if pick.tree == nil && pick.mush == mushNone && pick.fallen == "" {
 		return
 	}
 	rng := newTreeRNG(g.seed, wx, wz)
@@ -286,11 +408,14 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 			}
 		},
 	}
-	if mush != mushNone {
-		PlaceHugeMushroom(mush == mushBrown, wx, surfaceH, wz, rng, drv)
-		return
+	switch {
+	case pick.mush != mushNone:
+		PlaceHugeMushroom(pick.mush == mushBrown, wx, surfaceH, wz, rng, drv)
+	case pick.fallen != "":
+		PlaceFallenTree(FallenTrees[pick.fallen], wx, surfaceH, wz, rng, drv)
+	default:
+		PlaceTree(pick.tree, wx, surfaceH, wz, rng, drv)
 	}
-	PlaceTree(c, wx, surfaceH, wz, rng, drv)
 }
 
 // Huge-mushroom selection: which cascade slots grow one instead of a tree.
@@ -305,21 +430,7 @@ const (
 // exactly one thing — plus the mushroom fields' 50/50 pick
 // (mushroom_island_vegetation's random boolean, red when true).
 func mushroomFor(k treeKind, seed int64, wx, wz int) int {
-	switch k {
-	case treeDarkForest:
-		if hash01(seed, wx, wz, 0x71FE) < 0.025 {
-			return mushBrown
-		}
-		if hash01(seed, wx, wz, 0x71FF) < 0.05 {
-			return mushRed
-		}
-	case treeMushroomFields:
-		if hash01(seed, wx, wz, 0x7205) < 0.5 {
-			return mushRed
-		}
-		return mushBrown
-	}
-	return mushNone
+	return pickFeature(k, seed, wx, wz).mush
 }
 
 // newTreeRNG is the per-tree randomness, derived from the tree's own position

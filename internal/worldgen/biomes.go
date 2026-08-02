@@ -33,6 +33,14 @@ const (
 	treeForest         // forest: oak with a fifth birch and the odd large oak, littered
 	treeDarkForest     // dark forest: the dark-oak-led vegetation cascade, littered
 	treeMushroomFields // mushroom fields: huge mushrooms only, 50/50 red and brown
+	treeMeadow         // meadow: half large bee oaks, half lone super birches
+	treeFlowerForest   // flower forest: the forest mix without the litter
+	treeBirchTall      // old-growth birch forest: super birches
+	treeGrove          // grove: the taiga mix on snow, no fallen logs
+	treeWindswept      // windswept hills/forest: spruce-led with the odd oak
+	treeSparseJungle   // sparse jungle: bushes and jungle trees, no megas
+	treeBambooJungle   // bamboo jungle: mostly mega jungle trees
+	treeWoodedBadlands // wooded badlands: littered oaks only
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -69,11 +77,11 @@ var biomeReg = map[string]*Biome{
 	// ── Temperate/plains family ──────────────────────────────────────────
 	"minecraft:plains":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraPlains},
 	"minecraft:sunflower_plains":        {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraFlower},
-	"minecraft:meadow":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.05, Flora: floraFlower},
+	"minecraft:meadow":                  {Top: GrassBlock, Sub: Dirt, Tree: treeMeadow, TreeDensity: 0.05, Flora: floraFlower},
 	"minecraft:forest":                  {Top: GrassBlock, Sub: Dirt, Tree: treeForest, TreeDensity: 1.6, Flora: floraPlains},
-	"minecraft:flower_forest":           {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 1.2, Flora: floraFlower},
+	"minecraft:flower_forest":           {Top: GrassBlock, Sub: Dirt, Tree: treeFlowerForest, TreeDensity: 1.2, Flora: floraFlower},
 	"minecraft:birch_forest":            {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 1.6, Flora: floraPlains},
-	"minecraft:old_growth_birch_forest": {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 2.0, Flora: floraPlains},
+	"minecraft:old_growth_birch_forest": {Top: GrassBlock, Sub: Dirt, Tree: treeBirchTall, TreeDensity: 2.0, Flora: floraPlains},
 	"minecraft:dark_forest":             {Top: GrassBlock, Sub: Dirt, Tree: treeDarkForest, TreeDensity: 3.0, Flora: floraDarkForest},
 	"minecraft:pale_garden":             {Top: GrassBlock, Sub: Dirt, Tree: treePaleOak, TreeDensity: 2.4, Flora: floraPaleGarden},
 	"minecraft:cherry_grove":            {Top: GrassBlock, Sub: Dirt, Tree: treeCherry, TreeDensity: 1.2, Flora: floraFlower},
@@ -83,21 +91,21 @@ var biomeReg = map[string]*Biome{
 	"minecraft:snowy_taiga":             {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.4, Flora: floraSnowy},
 	"minecraft:old_growth_pine_taiga":   {Top: Podzol, Sub: Dirt, Tree: treePineOld, TreeDensity: 2.2, Flora: floraTaiga},
 	"minecraft:old_growth_spruce_taiga": {Top: Podzol, Sub: Dirt, Tree: treeSpruceOld, TreeDensity: 2.4, Flora: floraTaiga},
-	"minecraft:grove":                   {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.2, Flora: floraSnowy},
+	"minecraft:grove":                   {Top: SnowBlock, Sub: Dirt, Tree: treeGrove, TreeDensity: 1.2, Flora: floraSnowy},
 
 	// ── Snow/ice ─────────────────────────────────────────────────────────
 	"minecraft:snowy_plains": {Top: SnowBlock, Sub: Dirt, Tree: treeNone, Flora: floraSnowy},
 	"minecraft:ice_spikes":   {Top: SnowBlock, Sub: Dirt, Tree: treeNone, Flora: floraNone},
 
 	// ── Mountains/peaks ──────────────────────────────────────────────────
-	"minecraft:snowy_slopes": {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 0.1, Flora: floraSnowy},
+	"minecraft:snowy_slopes": {Top: SnowBlock, Sub: Dirt, Tree: treeNone, Flora: floraSnowy},
 	"minecraft:frozen_peaks": {Top: SnowBlock, Sub: Stone, Tree: treeNone, Flora: floraNone},
 	"minecraft:jagged_peaks": {Top: SnowBlock, Sub: Stone, Tree: treeNone, Flora: floraNone},
 	"minecraft:stony_peaks":  {Top: Stone, Sub: Stone, Tree: treeNone, Flora: floraNone},
 
 	// ── Windswept ────────────────────────────────────────────────────────
-	"minecraft:windswept_hills":          {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraPlains},
-	"minecraft:windswept_forest":         {Top: GrassBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.2, Flora: floraTaiga},
+	"minecraft:windswept_hills":          {Top: GrassBlock, Sub: Dirt, Tree: treeWindswept, TreeDensity: 0.3, Flora: floraPlains},
+	"minecraft:windswept_forest":         {Top: GrassBlock, Sub: Dirt, Tree: treeWindswept, TreeDensity: 1.2, Flora: floraTaiga},
 	"minecraft:windswept_gravelly_hills": {Top: Gravel, Sub: Stone, Tree: treeNone, Flora: floraNone},
 	"minecraft:windswept_savanna":        {Top: GrassBlock, Sub: Dirt, Tree: treeAcacia, TreeDensity: 0.15, Flora: floraSavanna},
 
@@ -106,13 +114,13 @@ var biomeReg = map[string]*Biome{
 	"minecraft:savanna_plateau": {Top: GrassBlock, Sub: Dirt, Tree: treeAcacia, TreeDensity: 0.2, Flora: floraSavanna},
 	"minecraft:desert":          {Top: Sand, Sub: Sandstone, Tree: treeNone, Flora: floraDesert},
 	"minecraft:badlands":        {Top: RedSand, Sub: Terracotta, Tree: treeNone, Flora: floraBadlands},
-	"minecraft:wooded_badlands": {Top: RedSand, Sub: Terracotta, Tree: treeOak, TreeDensity: 0.4, Flora: floraBadlands},
+	"minecraft:wooded_badlands": {Top: RedSand, Sub: Terracotta, Tree: treeWoodedBadlands, TreeDensity: 0.4, Flora: floraBadlands},
 	"minecraft:eroded_badlands": {Top: RedSand, Sub: Terracotta, Tree: treeNone, Flora: floraBadlands},
 
 	// ── Jungle ───────────────────────────────────────────────────────────
 	"minecraft:jungle":        {Top: GrassBlock, Sub: Dirt, Tree: treeJungle, TreeDensity: 3.0, Flora: floraJungle},
-	"minecraft:sparse_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeJungle, TreeDensity: 0.8, Flora: floraJungle},
-	"minecraft:bamboo_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeJungle, TreeDensity: 1.5, Flora: floraJungle},
+	"minecraft:sparse_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeSparseJungle, TreeDensity: 0.8, Flora: floraJungle},
+	"minecraft:bamboo_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeBambooJungle, TreeDensity: 1.5, Flora: floraJungle},
 
 	// ── Wet lowland ──────────────────────────────────────────────────────
 	"minecraft:swamp":          {Top: GrassBlock, Sub: Dirt, Tree: treeSwampOak, TreeDensity: 0.5, Flora: floraSwamp},

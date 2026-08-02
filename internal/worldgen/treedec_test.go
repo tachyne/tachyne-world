@@ -792,3 +792,178 @@ func TestDarkForestMushroomSlotsAgree(t *testing.T) {
 		t.Errorf("mushroom fields: %d red, %d brown — both should appear", red, brown)
 	}
 }
+
+// Fallen trees: an upright stump, and a sideways log run lying ON the ground
+// a couple of blocks away — mushrooms on top, vines on the stumps of species
+// that carry them — refused outright where the ground gaps too wide.
+func TestFallenTreesLieOnTheGround(t *testing.T) {
+	c := FallenTrees["fallen_oak_tree"]
+	if c == nil {
+		t.Fatal("fallen_oak_tree missing from the generated table")
+	}
+	oakLo, oakHi := BlockRange("oak_log")
+	redM, brownM := blockBase("red_mushroom"), blockBase("brown_mushroom")
+	vlo, vhi := BlockRange("vine")
+	place := func(seed int64, ground map[[3]int]uint32) map[[3]int]uint32 {
+		blocks := map[[3]int]uint32{}
+		for p, st := range ground {
+			blocks[p] = st
+		}
+		rng := rand.New(rand.NewSource(seed))
+		PlaceFallenTree(c, 0, 0, 0, rng, TreeDriver{
+			Set: func(x, y, z int, st uint32, leaf bool) { blocks[[3]int{x, y, z}] = st },
+			// The floor sits WELL below the plane so a trench dug into the
+			// ground map reads as the open air it is.
+			Free: func(x, y, z int) bool {
+				if y < -7 {
+					return false
+				}
+				_, occ := blocks[[3]int{x, y, z}]
+				return !occ
+			},
+			Read: func(x, y, z int) uint32 { return blocks[[3]int{x, y, z}] },
+		})
+		return blocks
+	}
+	grass := blockBase("grass_block") + 1
+	plane := func() map[[3]int]uint32 {
+		g := map[[3]int]uint32{}
+		for x := -14; x <= 14; x++ {
+			for z := -14; z <= 14; z++ {
+				g[[3]int{x, -1, z}] = grass
+			}
+		}
+		return g
+	}
+	runs, vines, mushrooms := 0, 0, 0
+	for seed := int64(1); seed <= 40; seed++ {
+		blocks := place(seed, plane())
+		if s := blocks[[3]int{0, 0, 0}]; s != oakLo+1 { // axis=y stump
+			t.Fatalf("seed %d: stump state %d, want upright oak log", seed, s)
+		}
+		var run [][3]int
+		for p, st := range blocks {
+			switch {
+			case st >= oakLo && st <= oakHi && p != [3]int{0, 0, 0}:
+				run = append(run, p)
+				if p[1] != 0 {
+					t.Fatalf("seed %d: fallen log at y=%d, floor level is 0", seed, p[1])
+				}
+				if st == oakLo+1 {
+					t.Fatalf("seed %d: a fallen-run log at %v is upright", seed, p)
+				}
+			case st == redM || st == brownM:
+				mushrooms++
+				below := blocks[[3]int{p[0], p[1] - 1, p[2]}]
+				if below < oakLo || below > oakHi {
+					t.Fatalf("seed %d: a mushroom at %v is not on a log", seed, p)
+				}
+			case st >= vlo && st <= vhi:
+				vines++
+			}
+		}
+		if len(run) > 0 {
+			runs++
+			if len(run) < c.LenMin-2 || len(run) > c.LenMax-2 {
+				t.Fatalf("seed %d: run length %d outside [%d,%d]", seed, len(run), c.LenMin-2, c.LenMax-2)
+			}
+		}
+	}
+	if runs == 0 {
+		t.Error("forty fallen oaks never landed a log run")
+	}
+	if vines == 0 {
+		t.Error("no stump vines on forty fallen oaks (2-in-3 per side)")
+	}
+	if mushrooms == 0 {
+		t.Error("no mushrooms sprouted on forty fallen logs (10% per block)")
+	}
+	// A wide trench MID-RUN refuses via the gap rule: the start still finds
+	// ground (so the start probe passes), but the log would cross more than
+	// two consecutive cells of missing floor. Some seeds' short runs stop
+	// before the trench — the rule shows as SOME refusals, not all.
+	refused := 0
+	for seed := int64(1); seed <= 40; seed++ {
+		g := plane()
+		for d := 4; d <= 12; d++ {
+			delete(g, [3]int{d, -1, 0})
+			delete(g, [3]int{-d, -1, 0})
+			delete(g, [3]int{0, -1, d})
+			delete(g, [3]int{0, -1, -d})
+		}
+		blocks := place(seed, g)
+		count := 0
+		for p, st := range blocks {
+			if st >= oakLo && st <= oakHi && p != [3]int{0, 0, 0} {
+				count++
+			}
+		}
+		if count == 0 {
+			refused++
+		}
+	}
+	if refused == 0 {
+		t.Error("a trenched floor never refused a run — the gap rule is missing")
+	}
+}
+
+// The corrected biome pools roll vanilla's rates: plains lead a third of
+// their trees as large oaks, meadows split half and half with super birches,
+// jungles finally grow their bushes and megas, and worldgen mangroves are
+// mostly the tall variant.
+func TestPoolsRollVanillaRates(t *testing.T) {
+	count := func(k treeKind, total int) map[string]int {
+		out := map[string]int{}
+		byPtr := map[*TreeConfig]string{}
+		for name, c := range TreeFeatures {
+			byPtr[c] = name
+		}
+		for wx := 0; wx < total; wx++ {
+			p := pickFeature(k, 1, wx*29, 13)
+			switch {
+			case p.tree != nil:
+				out[byPtr[p.tree]]++
+			case p.fallen != "":
+				out["fallen:"+p.fallen]++
+			case p.mush != mushNone:
+				out["mushroom"]++
+			default:
+				out["none"]++
+			}
+		}
+		return out
+	}
+	n := 6000
+	plains := count(treeOak, n)
+	if f := plains["fancy_oak"]; f < n/4 || f > n*2/5 {
+		t.Errorf("plains large oaks: %d of %d, want ~1/3", f, n)
+	}
+	meadow := count(treeMeadow, n)
+	if meadow["super_birch_bees"] < n/3 || meadow["fancy_oak"] < n/3 {
+		t.Errorf("meadow split: %v, want ~half and half", meadow)
+	}
+	jungle := count(treeJungle, n)
+	if jungle["jungle_bush"] < n/3 {
+		t.Errorf("jungle bushes: %d of %d, want ~45%%", jungle["jungle_bush"], n)
+	}
+	// The cascade is sequential: the bush entry eats half before mega's
+	// third applies, so megas are an EFFECTIVE 0.9*0.5/3 = 15%.
+	if m := jungle["mega_jungle_tree"]; m < n/9 || m > n/5 {
+		t.Errorf("mega jungle trees: %d of %d, want ~15%%", m, n)
+	}
+	mangrove := count(treeMangrove, n)
+	if mangrove["tall_mangrove"] < n*3/4 {
+		t.Errorf("tall mangroves: %d of %d, want ~85%%", mangrove["tall_mangrove"], n)
+	}
+	bamboo := count(treeBambooJungle, n)
+	if bamboo["mega_jungle_tree"] < n/2 || bamboo["none"] < n/8 {
+		t.Errorf("bamboo jungle: %v, want mega-led with empty grass slots", bamboo)
+	}
+	windswept := count(treeWindswept, n)
+	if windswept["spruce"] < n/2 {
+		t.Errorf("windswept spruces: %d of %d, want ~66%%", windswept["spruce"], n)
+	}
+	if biomeReg["minecraft:snowy_slopes"].Tree != treeNone {
+		t.Error("snowy slopes should grow no trees at all")
+	}
+}

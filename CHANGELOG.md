@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Every biome grows vanilla's own tree mix — and fallen logs lie where
+  trees once stood.** A mechanical audit of every biome's vegetation against
+  vanilla found a dozen drifted pools, all corrected: plains lead a third of
+  their trees as large oaks, meadows split between lone large oaks and tall
+  super birches, jungles finally tower with mega jungle trees over their
+  bushes, windswept hills are spruce-led, savannas mix a fifth oak, wild
+  mangroves are mostly the tall kind, old-growth birch forests grow their
+  taller birches, and snowy slopes go treeless as they should. And the
+  fallen trees are in: mossy-stumped logs lying on the forest floor with
+  mushrooms sprouting along them, at vanilla's rarity, in every biome that
+  has them.
 - **Huge mushrooms tower where they should.** Dark forests grow vanilla's
   huge red and brown mushrooms in the spots reserved for them — the mix of
   trees around them unchanged — and mushroom fields raise them as their only

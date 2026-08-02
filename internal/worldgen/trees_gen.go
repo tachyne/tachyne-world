@@ -52,3 +52,14 @@ var treeAliases = map[string]string{
 	"oak_bees_005":                    "oak",
 	"super_birch_bees_0002":           "super_birch_bees",
 }
+
+// FallenTrees are the fallen-log features: a stump and a sideways run,
+// mushrooms on top at the probability (red 2 : brown 1, asserted at
+// generation), trunk vines on the stumps that carry them.
+var FallenTrees = map[string]*FallenTree{
+	"fallen_birch_tree":       {Log: 142, LenMin: 5, LenMax: 8, MushProb: 0.1},
+	"fallen_jungle_tree":      {Log: 145, LenMin: 4, LenMax: 11, StumpVine: true, MushProb: 0.1},
+	"fallen_oak_tree":         {Log: 136, LenMin: 4, LenMax: 7, StumpVine: true, MushProb: 0.1},
+	"fallen_spruce_tree":      {Log: 139, LenMin: 6, LenMax: 10, MushProb: 0.1},
+	"fallen_super_birch_tree": {Log: 142, LenMin: 5, LenMax: 15, MushProb: 0.1},
+}
