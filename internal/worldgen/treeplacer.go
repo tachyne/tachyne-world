@@ -40,6 +40,21 @@ type TreeFree func(x, y, z int) bool
 // stays consistent: what it can't read it also won't write.
 type TreeRead func(x, y, z int) uint32
 
+// TreeDriver bundles what a driver supplies PlaceTree about the world.
+type TreeDriver struct {
+	Set  TreeSetter
+	Free TreeFree
+	Read TreeRead
+	// DirtGround answers setDirtAt's "is the ground already #dirt" test —
+	// separately from Read, because its answer decides whether the dirt cell
+	// joins the trunk-position list, and THAT feeds decorator geometry and
+	// shuffle sizes. The live driver answers from the real world; the chunk
+	// stamper answers from the TERRAIN MODEL, so every pass over a
+	// chunk-straddling tree records the same list — a buffer read would flip
+	// with a neighbouring tree's decorations and desynchronise the passes.
+	DirtGround func(x, y, z int) bool
+}
+
 // TrunkKind selects one of vanilla's nine trunk placers.
 type TrunkKind uint8
 
@@ -125,6 +140,12 @@ type TreeConfig struct {
 	PropaguleEmpty                  int
 	// pale_moss — a moss patch in the ground and hanging strands (pale oak).
 	PaleMossLeaves, PaleMossTrunk, PaleMossGround float64
+
+	// dirt_provider / force_dirt — what a trunk placer sets the ground to.
+	// Every placer converts the block under the trunk (setDirtAt) unless it
+	// is already in #dirt; force_dirt (azalea's rooted dirt) always writes.
+	DirtState uint32
+	ForceDirt bool
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -194,7 +215,8 @@ func (c *TreeConfig) maxFreeHeight(x, y, z, maxHeight int, free TreeFree) int {
 // The roll order is TreeFeature.doPlace's and is load-bearing: height, then
 // foliage height, then radius. Changing it changes the distribution of shapes
 // even with identical formulas.
-func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree, read TreeRead) bool {
+func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
+	set, free, read := d.Set, d.Free, d.Read
 	treeHeight := c.treeHeightOf(rng)
 	foliageHeight := c.foliageHeightOf(rng, treeHeight)
 	trunkHeight := treeHeight - foliageHeight
@@ -237,7 +259,31 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 		set(px, py, pz, st, leaf)
 	}
 
-	atts := c.placeTrunk(rng, x, y, z, treeHeight, recording, free)
+	// setDirtAt: every trunk placer converts the ground under the trunk to
+	// the feature's dirt (grass becomes plain dirt; azalea forces rooted
+	// dirt). A SUCCESSFUL write joins the trunk-position list — vanilla
+	// writes through the trunk setter — which is what anchors the cocoa
+	// window and the podzol circles at the dirt row; ground that is already
+	// #dirt is left alone and stays OUT of the list, exactly as in vanilla.
+	dirtPos := map[[3]int]bool{}
+	dirt := func(px, py, pz int) {
+		if c.DirtState == 0 {
+			return
+		}
+		if !c.ForceDirt && d.DirtGround(px, py, pz) {
+			return
+		}
+		q := [3]int{px, py, pz}
+		if !logs[q] {
+			logs[q] = true
+			dirtPos[q] = true
+			logList = append(logList, q)
+			delete(leaves, q)
+		}
+		set(px, py, pz, c.DirtState, false)
+	}
+
+	atts := c.placeTrunk(rng, x, y, z, treeHeight, recording, free, dirt)
 	for _, a := range atts {
 		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
 	}
@@ -259,7 +305,7 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 		deco[[3]int{px, py, pz}] = true
 		set(px, py, pz, st, leaf)
 	}
-	c.decorate(&decoCtx{rng: rng, baseY: y, logs: logs,
+	c.decorate(&decoCtx{rng: rng, logs: logs, dirt: dirtPos,
 		logList: logList, leafList: leafList, isAir: isAir, read: read, set: decoSet})
 	return true
 }
@@ -284,11 +330,14 @@ func shuffledCopy(rng TreeRNG, in [][3]int) [][3]int {
 	return out
 }
 
-// decoCtx is what a decorator sees — vanilla's TreeDecorator.Context.
+// decoCtx is what a decorator sees — vanilla's TreeDecorator.Context. The
+// logs map and logList are TRUNK POSITIONS, which include the ground blocks
+// setDirtAt converted (vanilla writes those through the trunk setter); dirt
+// marks which ones they are, for the checks that need a real log.
 type decoCtx struct {
 	rng               TreeRNG
-	baseY             int
 	logs              map[[3]int]bool
+	dirt              map[[3]int]bool
 	logList, leafList [][3]int
 	isAir             func([3]int) bool
 	read              TreeRead
@@ -360,8 +409,11 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 	// CocoaDecorator: one gate roll, then pods on logs within 2 of the base,
 	// each horizontal face at 25%, aged 0-2, the pod FACING its log.
 	if c.CocoaProb > 0 && rng.Float64() < c.CocoaProb {
+		// The window is anchored at the FIRST trunk position's Y — the dirt
+		// row when the placer converted the ground, the base log otherwise.
+		treeY := ctx.logList[0][1]
 		for _, p := range ctx.logList {
-			if p[1]-ctx.baseY > 2 {
+			if p[1]-treeY > 2 {
 				continue
 			}
 			for f, o := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} { // north,south,west,east
@@ -441,7 +493,10 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 		for _, p := range shuffledCopy(rng, ctx.logList) {
 			enclosed := true
 			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
-				if !ctx.logs[[3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}] {
+				q := [3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}
+				// vanilla tests the world for #logs — the converted dirt
+				// under the trunk is a trunk POSITION but not a log.
+				if !ctx.logs[q] || ctx.dirt[q] {
 					enclosed = false
 					break
 				}
@@ -515,7 +570,7 @@ func (c *TreeConfig) seedLeafDistances(logs, leaves map[[3]int]bool, set TreeSet
 
 // ---- trunk placers -----------------------------------------------------------
 
-func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, free TreeFree) []foliageAttachment {
+func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, free TreeFree, dirt func(int, int, int)) []foliageAttachment {
 	// A trunk log stands upright. c.Log is the BASE state, which for a log is
 	// axis=x — placing it raw lays the whole forest on its side, which is
 	// exactly what the first generated table did.
@@ -530,6 +585,21 @@ func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, fre
 		if free(px, py, pz) {
 			set(px, py, pz, axisLog(c.Log, axis), false)
 		}
+	}
+	// setDirtAt first, at every placer's vanilla call site — single-column
+	// placers convert the one block under the trunk, the 2x2 giants convert
+	// four. Mangrove's upwards-branching placer never touches the ground
+	// (vanilla gives that job to its root placer). No randomness is drawn
+	// here, so the shapes are unchanged.
+	switch c.Trunk {
+	case TrunkUpwardsBranching:
+	case TrunkDarkOak, TrunkGiant, TrunkMegaJungle:
+		dirt(x, y-1, z)
+		dirt(x+1, y-1, z)
+		dirt(x, y-1, z+1)
+		dirt(x+1, y-1, z+1)
+	default:
+		dirt(x, y-1, z)
 	}
 	switch c.Trunk {
 	case TrunkStraight:

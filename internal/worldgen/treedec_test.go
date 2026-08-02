@@ -15,8 +15,12 @@ func grownStates(name string, seed int64) map[uint32]int {
 	out := map[uint32]int{}
 	rng := rand.New(rand.NewSource(seed))
 	set := func(x, y, z int, state uint32, leaf bool) { out[state]++ }
-	PlaceTree(c, 0, 0, 0, rng, set, func(x, y, z int) bool { return true },
-		func(x, y, z int) uint32 { return Air })
+	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
+		Set:        set,
+		Free:       func(x, y, z int) bool { return true },
+		Read:       func(x, y, z int) uint32 { return Air },
+		DirtGround: func(x, y, z int) bool { return false },
+	})
 	return out
 }
 
@@ -94,7 +98,10 @@ func grownWorld(name string, seed int64, ground map[[3]int]uint32) map[[3]int]ui
 	}
 	read := func(x, y, z int) uint32 { return blocks[[3]int{x, y, z}] }
 	free := func(x, y, z int) bool { return y >= 0 }
-	PlaceTree(c, 0, 0, 0, rng, set, free, read)
+	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
+		Set: set, Free: free, Read: read,
+		DirtGround: func(x, y, z int) bool { return IsDirtTag(read(x, y, z)) },
+	})
 	return blocks
 }
 
@@ -238,17 +245,20 @@ func TestMegaSprucePodzolsDirtGround(t *testing.T) {
 	if podzols == 0 {
 		t.Error("mega spruces podzoled nothing on a grass floor")
 	}
-	// A stone floor is not in #dirt: no podzol anywhere.
+	// A stone floor is not in #dirt: the only podzol is on the (at most
+	// four) blocks the trunk's own setDirtAt converted — the circles find
+	// nothing else to replace.
 	stone := map[[3]int]uint32{}
 	for x := -12; x <= 12; x++ {
 		for z := -12; z <= 12; z++ {
 			stone[[3]int{x, -1, z}] = Stone
 		}
 	}
+	trunkDirt := map[[3]int]bool{{0, -1, 0}: true, {1, -1, 0}: true, {0, -1, 1}: true, {1, -1, 1}: true}
 	for seed := int64(1); seed <= 10; seed++ {
-		for _, st := range grownWorld("mega_spruce", seed, stone) {
-			if st == podzolState {
-				t.Fatal("podzol placed on a stone floor")
+		for p, st := range grownWorld("mega_spruce", seed, stone) {
+			if st == podzolState && !trunkDirt[p] {
+				t.Fatalf("seed %d: podzol at %v on a stone floor, beyond the trunk's own dirt", seed, p)
 			}
 		}
 	}
@@ -346,5 +356,83 @@ func TestPaleMossPatchRespectsReplaceable(t *testing.T) {
 				t.Fatal("pale moss laid into an obsidian floor")
 			}
 		}
+	}
+}
+
+// Every trunk placer runs setDirtAt beneath it — but the rule only converts
+// ground that is NOT already in #dirt, and grass IS in #dirt: a tree on grass
+// keeps its grass, a tree on stone gets dirt put under it (all four blocks
+// under a 2x2 trunk), and a mangrove — whose ground belongs to its root
+// placer — converts nothing anywhere.
+func TestTrunksSetDirtBeneath(t *testing.T) {
+	grass := blockBase("grass_block") + 1
+	plane := func(b uint32) map[[3]int]uint32 {
+		ground := map[[3]int]uint32{}
+		for x := -12; x <= 12; x++ {
+			for z := -12; z <= 12; z++ {
+				ground[[3]int{x, -1, z}] = b
+			}
+		}
+		return ground
+	}
+	if got := grownWorld("oak", 1, plane(grass))[[3]int{0, -1, 0}]; got != grass {
+		t.Errorf("under an oak on grass: state %d — grass is #dirt and must stay", got)
+	}
+	if got := grownWorld("oak", 1, plane(Stone))[[3]int{0, -1, 0}]; got != Dirt {
+		t.Errorf("under an oak on stone: state %d, want dirt", got)
+	}
+	// The mega spruce dirts all four blocks — and then its own alter_ground
+	// decorator podzols them, dirt being in #dirt. The end state is podzol,
+	// which is vanilla's pipeline exactly (setDirtAt first, circles second).
+	spruce := grownWorld("mega_spruce", 1, plane(Stone))
+	for _, q := range [4][3]int{{0, -1, 0}, {1, -1, 0}, {0, -1, 1}, {1, -1, 1}} {
+		if spruce[q] != podzolState {
+			t.Errorf("under a mega spruce on stone at %v: state %d, want podzol", q, spruce[q])
+		}
+	}
+	if got := grownWorld("mangrove", 1, plane(Stone))[[3]int{0, -1, 0}]; got != Stone {
+		t.Errorf("under a mangrove: state %d — its ground belongs to the root placer", got)
+	}
+}
+
+// The cocoa window is anchored at the FIRST trunk position — the dirt row
+// when the placer actually converted the ground (stone), the base log when
+// the ground was already #dirt (grass). Vanilla measures from
+// logs.getFirst(), and only a WRITTEN dirt block is in that list.
+func TestCocoaWindowAnchorsAtTheDirtRow(t *testing.T) {
+	clo, chi := BlockRange("cocoa")
+	plant := func(groundBlock uint32) (minY, maxY int, any bool) {
+		ground := map[[3]int]uint32{}
+		for x := -10; x <= 10; x++ {
+			for z := -10; z <= 10; z++ {
+				ground[[3]int{x, -1, z}] = groundBlock
+			}
+		}
+		minY, maxY = 99, -99
+		for seed := int64(1); seed <= 80; seed++ {
+			for p, st := range grownWorld("jungle_tree", seed, ground) {
+				if st >= clo && st <= chi {
+					any = true
+					if p[1] < minY {
+						minY = p[1]
+					}
+					if p[1] > maxY {
+						maxY = p[1]
+					}
+				}
+			}
+		}
+		return
+	}
+	if lo, hi, any := plant(Stone); !any {
+		t.Error("no cocoa on eighty jungle trees over stone")
+	} else if lo < -1 || hi > 1 {
+		t.Errorf("cocoa on stone-grown jungles spans y %d..%d, want within [-1,1] (dirt-row anchor)", lo, hi)
+	}
+	grass := blockBase("grass_block") + 1
+	if lo, hi, any := plant(grass); !any {
+		t.Error("no cocoa on eighty jungle trees over grass")
+	} else if lo < 0 || hi > 2 {
+		t.Errorf("cocoa on grass-grown jungles spans y %d..%d, want within [0,2] (base-log anchor)", lo, hi)
 	}
 }

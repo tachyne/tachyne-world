@@ -25,8 +25,12 @@ func growTree(name string, seed int64) (*grown, *TreeConfig) {
 		g.logs[[3]int{x, y, z}] = state
 		delete(g.leaves, [3]int{x, y, z})
 	}
-	PlaceTree(c, 0, 0, 0, rng, set, func(x, y, z int) bool { return true },
-		func(x, y, z int) uint32 { return Air })
+	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
+		Set:        set,
+		Free:       func(x, y, z int) bool { return true },
+		Read:       func(x, y, z int) uint32 { return Air },
+		DirtGround: func(x, y, z int) bool { return false },
+	})
 	return g, c
 }
 

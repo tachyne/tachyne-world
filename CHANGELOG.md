@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Trees prepare their own ground.** Every trunk placer now runs vanilla's
+  ground rule: soil that is not already dirt-like gets dirt set beneath the
+  trunk (a tree grown on stone stands on dirt, a mega spruce converts all
+  four blocks under its 2×2 — and its podzol circles then claim them), while
+  grass and podzol are left exactly as they are, matching vanilla. The
+  converted block also joins the tree's own accounting, which anchors where
+  cocoa pods may sit and where the podzol circles centre — the same
+  bookkeeping vanilla keeps.
 - **The pale garden wears its moss.** Wild pale oaks now grow the way vanilla
   grows them: a patch of pale moss laid into the ground at the tree's foot —
   topped with pale moss carpet that creeps up the trunk, short grass and tall

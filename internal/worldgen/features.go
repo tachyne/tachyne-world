@@ -207,7 +207,22 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 		}
 		return Stone
 	}
-	PlaceTree(c, wx, surfaceH, wz, rng, set, free, read)
+	// The setDirtAt ground test answers from the TERRAIN MODEL, never the
+	// chunk buffer: whether the dirt cell joins the trunk-position list must
+	// be the same in every chunk pass that draws this tree. Air converts,
+	// exactly as vanilla's rule has it.
+	dirtGround := func(x, y, z int) bool {
+		col := g.columnAt(x, z)
+		switch {
+		case y >= col.h:
+			return false
+		case y == col.h-1:
+			return IsDirtTag(col.topBlock())
+		default:
+			return IsDirtTag(col.biome.Sub)
+		}
+	}
+	PlaceTree(c, wx, surfaceH, wz, rng, TreeDriver{Set: set, Free: free, Read: read, DirtGround: dirtGround})
 }
 
 // newTreeRNG is the per-tree randomness, derived from the tree's own position

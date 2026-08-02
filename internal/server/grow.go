@@ -644,10 +644,14 @@ func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, featur
 		}
 		h.setBlockAt(players, dim, blockPos{px, py, pz}, st)
 	}
-	// The live path reads the real world — the podzol decorator's ground
-	// check and its kin see exactly what a vanilla server would.
+	// The live path reads the real world everywhere — the podzol decorator's
+	// ground check, the setDirtAt test and their kin see exactly what a
+	// vanilla server would.
 	read := func(px, py, pz int) uint32 { return w.At(px, py, pz) }
-	return worldgen.PlaceTree(c, x, y, z, h.rng, set, free, read)
+	return worldgen.PlaceTree(c, x, y, z, h.rng, worldgen.TreeDriver{
+		Set: set, Free: free, Read: read,
+		DirtGround: func(px, py, pz int) bool { return worldgen.IsDirtTag(w.At(px, py, pz)) },
+	})
 }
 
 // findSaplingSquare reports the lower-left corner of a 2x2 block of matching
