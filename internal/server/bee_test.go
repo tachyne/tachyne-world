@@ -116,3 +116,22 @@ func TestStingIsABeesLastAct(t *testing.T) {
 		t.Fatalf("a stung-out bee should be dead or dying (health %d)", mm.health)
 	}
 }
+
+// Bees court over any flower — the #bee_food tag — and nothing else.
+func TestBeesCourtOverFlowers(t *testing.T) {
+	h, players, _ := beeWorld(t)
+	m := h.spawnAnimal(players, entityBee, 2020, 2020)
+	t2 := survPlayer(h)
+	players[t2.p.eid] = t2
+	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["wheat"]), count: 1}
+	if h.feedAnimal(players, t2, m) {
+		t.Fatal("a bee courted over wheat")
+	}
+	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["cornflower"]), count: 1}
+	if !h.feedAnimal(players, t2, m) {
+		t.Fatal("a bee refused a cornflower")
+	}
+	if m.loveTicks == 0 {
+		t.Fatal("the courted bee is not in love")
+	}
+}

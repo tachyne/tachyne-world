@@ -101,7 +101,11 @@ func sheepMeta(m *mob, sheared bool) []byte {
 // and start courting (adults only, off cooldown).
 func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 	food := loveFood(m.etype)
-	if food == 0 || heldStack(t).item != food || m.baby || m.loveTicks > 0 || m.breedCD > 0 {
+	courted := food != 0 && heldStack(t).item == food
+	if m.etype == entityBee {
+		courted = isBeeFood(heldStack(t).item) // vanilla #bee_food: any flower
+	}
+	if !courted || m.baby || m.loveTicks > 0 || m.breedCD > 0 {
 		return false
 	}
 	if t.gamemode == gmSurvival {

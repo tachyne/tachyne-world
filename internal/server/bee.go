@@ -392,3 +392,26 @@ func (h *hub) robHive(players map[int32]*tracked, t *tracked, pos blockPos) {
 		h.hivesMark()
 	}
 }
+
+// isBeeFood is the #bee_food item tag — bees court over any flower.
+func isBeeFood(item int32) bool {
+	if item == 0 {
+		return false
+	}
+	for _, n := range beeFoodNames {
+		if item == int32(itemByName[n]) {
+			return true
+		}
+	}
+	return false
+}
+
+var beeFoodNames = []string{
+	"allium", "azure_bluet", "blue_orchid", "cactus_flower", "cherry_leaves",
+	"chorus_flower", "cornflower", "dandelion", "flowering_azalea",
+	"flowering_azalea_leaves", "lilac", "lily_of_the_valley",
+	"mangrove_propagule", "open_eyeblossom", "orange_tulip", "oxeye_daisy",
+	"peony", "pink_petals", "pink_tulip", "pitcher_plant", "poppy",
+	"red_tulip", "rose_bush", "spore_blossom", "sunflower", "torchflower",
+	"white_tulip", "wildflowers", "wither_rose",
+}
