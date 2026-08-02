@@ -452,9 +452,10 @@ type hub struct {
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
 
-	tnt         []*primedTNT      // lit TNT charges counting down
-	fangs       []*evokerFang     // conjured evoker fangs waiting to bite
-	snifferEggs map[simPos]uint64 // egg position -> tick its next crack is due
+	tnt         []*primedTNT           // lit TNT charges counting down
+	fangs       []*evokerFang          // conjured evoker fangs waiting to bite
+	snifferEggs map[simPos]uint64      // egg position -> tick its next crack is due
+	brushes     map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
 	rulesPath string
@@ -892,6 +893,7 @@ func (h *hub) run() {
 			h.updateTNT(players)
 			h.updateFangs(players)   // evoker fangs: bite once, then sink
 			h.updateVexLife(players) // summoned vexes expire   // primed charges burn their fuses
+			h.tickBrushes(players)   // half-brushed suspicious blocks settle back
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
@@ -1599,6 +1601,10 @@ func (h *hub) run() {
 					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
+			case evBrush:
+				if t := players[e.eid]; t != nil {
+					h.brush(players, t, e)
+				}
 			case evUseLectern:
 				h.onUseLectern(players, e)
 			case evUseShelf:

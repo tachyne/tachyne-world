@@ -13,6 +13,16 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-08-02
 
+### Added
+- **Archaeology, and the desert wells to dig it out of.** A brush, two
+  suspicious blocks and six loot tables existed with nothing in the world to
+  point them at. Desert wells now generate in the desert — a vanilla feature
+  that was missing outright — and each buries two caches of suspicious sand
+  under its water. Brushing one works as it should: ten strokes on a cooldown,
+  the dust clearing in stages, the find popping out of the face you were
+  brushing, and the block left as plain sand. Walk away mid-dig and the sand
+  settles back faster than you cleared it.
+
 ### Fixed
 - **Armoured mobs burned as fast as naked ones.** The engine treated all
   environmental damage to a mob as unarmoured on the premise that fire, lava,

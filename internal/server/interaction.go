@@ -215,6 +215,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
 		return
 	}
+	if int32(p.heldItem()) == itemBrush { // sweep a suspicious block
+		s.hub.post(evBrush{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz})
+		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
+		return
+	}
 	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav { // pour into the target cell
 		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
