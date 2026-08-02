@@ -228,8 +228,12 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 			continue
 		}
 		dmg := float32(maxDamage) * float32(1-d/rangeF)
-		h.hurtBy(players, t, dmg, dtExplosion, deathCause{key: causeExplosion})
+		h.hurtFrom(players, t, dmg, dtExplosion, deathCause{key: causeExplosion}, from(cx, cz))
 		// Blast Protection braces you against the shove as well as the burn.
+		// explosion is tagged no_knockback, which looks like a contradiction
+		// and is not: that tag suppresses the ordinary shove a hit gives, and
+		// a blast then applies its own, scaled by distance. Both would be
+		// double-counting.
 		h.knockbackScaled(t, cx, cz, t.explosionKnockScale())
 	}
 	for _, om := range h.mobs {

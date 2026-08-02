@@ -70,24 +70,19 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 		h.playSound(players, "minecraft:entity.player.attack.weak", sndPlayer, v.x, v.y, v.z, 1, 1)
 	}
 
-	// A raised shield facing the attacker eats the hit but not the shove —
-	// the same rule a mob's bite obeys.
-	if h.shieldBlocks(v, t.x, t.z) {
-		h.shieldBlockFX(players, v)
-		h.knockbackPvP(t, v)
+	landed := h.hurtFrom(players, v, dmg, dtPlayerAttack,
+		deathCause{key: causePlayer, by: t.p.name}, from(t.x, t.z))
+	h.knockbackPvP(t, v) // a raised shield eats the hit but not the shove
+	if !landed {
 		return true
 	}
-
-	h.hurtBy(players, v, dmg, dtPlayerAttack, deathCause{key: causePlayer, by: t.p.name})
 	// Fire Aspect sets the victim alight.
 	if lvl := heldStack(t).enchLvl(enchFireAspect); lvl > 0 && v.hasEffect(effFireRes) == 0 {
 		v.fireSecs = max(v.fireSecs, 4*lvl)
 	}
-	// …and the victim's Thorns bites back. This sits AFTER the hurt because
-	// vanilla only runs post-attack effects when the blow actually landed —
-	// the shield branch above returns before ever reaching here.
+	// …and the victim's Thorns bites back. Both sit AFTER the hurt because
+	// vanilla only runs post-attack effects when the blow actually landed.
 	h.thornsRetaliatePlayer(players, v, t)
-	h.knockbackPvP(t, v)
 
 	if v.dead {
 		h.incCustom(t, "player_kills", 1)

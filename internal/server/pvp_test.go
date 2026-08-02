@@ -70,26 +70,38 @@ func TestPvPGuards(t *testing.T) {
 	}
 }
 
-// Armour and a raised shield both blunt the blow, as they do against a mob.
+// A raised shield blunts the blow, but only from the front.
+//
+// The attacker sits at x=0 and the victim at x=1, so the blow comes from -x.
+// The look vector is (-sin yaw, cos yaw): yaw 90 points at -x, into the blow,
+// and yaw -90 points away from it. The previous version of this test used -90
+// and then accepted damage either way, so it could not fail.
 func TestPvPRespectsArmourAndShields(t *testing.T) {
 	h := newHub(world.New(1))
 	a, b, players := pvpPair(h)
 
 	h.attackPlayer(players, a.p.eid, b.p.eid)
 	bare := 20 - b.health
+	if bare <= 0 {
+		t.Fatal("the unshielded blow did no damage — this test would prove nothing")
+	}
 
-	b.health = 20
-	a.lastAttack = 0
-	b.blockingSince = 1
 	h.tick.Store(uint64(shieldDelay) + 2)
-	b.yaw = -90 // facing the attacker's side
+	b.inv.slots[0] = invStack{item: itemShield, count: 1}
+	b.p.held = 0
+
+	b.health, a.lastAttack, b.blockingSince = 20, 0, 1
+	b.yaw = 90 // facing the attacker
 	h.attackPlayer(players, a.p.eid, b.p.eid)
-	if b.health < 20 && bare > 0 {
-		// The shield either caught it entirely or the facing was wrong; only
-		// the first is a pass, so require no damage when it did face the blow.
-		if h.shieldBlocks(b, a.x, a.z) {
-			t.Error("a shield facing the blow should have caught it")
-		}
+	if b.health != 20 {
+		t.Errorf("a shield facing the blow should have caught it: took %v", 20-b.health)
+	}
+
+	b.health, a.lastAttack, b.blockingSince = 20, 0, 1
+	b.yaw = -90 // turned away from it
+	h.attackPlayer(players, a.p.eid, b.p.eid)
+	if b.health == 20 {
+		t.Error("a shield turned away from the blow should not have caught it")
 	}
 }
 

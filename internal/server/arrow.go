@@ -301,11 +301,6 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			return true
 		}
 		if a.dmg > 0 {
-			// A raised shield facing the incoming arrow stops it dead.
-			if h.shieldBlocks(t, a.x, a.z) {
-				h.shieldBlockFX(players, t)
-				return true
-			}
 			// Whoever loosed it gets the credit, player or mob.
 			shot := deathCause{key: causeArrow}
 			if s := players[a.shooter]; s != nil {
@@ -313,8 +308,17 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
 			}
-			h.hurtBy(players, t, float32(a.dmg), dtArrow, shot)
-			h.knockback(t, a.x, a.z)
+			// A piercing bolt goes through a raised shield as though it were
+			// not there, which is what naming no source position means here.
+			src := from(a.x, a.z)
+			if a.pierce > 0 {
+				src = dmgFrom{}
+			}
+			landed := h.hurtFrom(players, t, float32(a.dmg), dtArrow, shot, src)
+			h.knockback(t, a.x, a.z) // the shove lands even off a shield
+			if !landed {
+				return true // caught on the shield: no venom, no thorns, no fire
+			}
 			h.thornsAgainstShooter(players, t, a.shooter)
 			if a.poison {
 				h.applyEffect(players, t, effPoison, 0, 10)

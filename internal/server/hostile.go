@@ -314,20 +314,20 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// Swing the arm so the bite is visible (not just "walking into you"), deal the
 	// hit, and knock the player back — which also unglues them so they can retaliate.
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
-	// A raised shield facing the attacker catches the whole bite (damage +
-	// on-hit venom), but the knockback still lands.
-	if h.shieldBlocks(t, m.x, m.z) {
-		h.shieldBlockFX(players, t)
-		h.knockback(t, m.x, m.z)
+	landed := h.hurtFrom(players, t, dmg, dtMobAttack,
+		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
+	h.knockback(t, m.x, m.z) // a caught bite still shoves them
+	if !landed {
+		// A raised shield facing the attacker catches the whole bite, and with
+		// it everything the bite would have delivered.
+		m.attackCD = attackCooldown
 		return
 	}
-	h.hurtBy(players, t, dmg, dtMobAttack, deathCause{key: causeMob, by: mobDisplayName(m.etype)})
 	h.thornsRetaliate(players, t, m) // armour that bites back
 	if t.dead {                      // the bite was fatal: adventure/root's killed_by_something
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)
 	}
-	h.knockback(t, m.x, m.z)
 	// Species that envenom or wither on a bite (cave spider, bee, wither skeleton).
 	if d := speciesOf(m.etype); d != nil {
 		if secs := d.poisonFor(h.rules.Difficulty); secs > 0 {

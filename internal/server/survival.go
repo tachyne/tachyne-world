@@ -333,14 +333,38 @@ func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount float32, d
 // hurt this player — which is also why walking out of lava and dying of the
 // burns still credits the lava.
 //
-// The mitigation order is vanilla's (actuallyHurt): armour absorption first,
-// then magic absorption (Resistance, then the protection enchantments), then
-// the absorption buffer.
-func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause) {
+// Nothing that reaches here names a source position, so nothing that reaches
+// here can be blocked by a shield — which is right for every environmental
+// hazard and wrong for anything thrown, fired or swung. Those call hurtFrom.
+func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause) bool {
+	return h.hurtFrom(players, t, amount, dt, cause, dmgFrom{})
+}
+
+// hurtFrom is the whole damage path, and src is what a shield is resolved
+// against. It reports whether the hit LANDED — false when a shield ate all of
+// it, which is vanilla's `success` and is what gates a blow's follow-on
+// effects: a bite caught on a shield delivers no venom.
+//
+// The mitigation order is vanilla's: the shield first (before armour, since it
+// decides how much there is to absorb), then the helmet's own share of a
+// falling anvil, then armour absorption, then magic absorption (Resistance,
+// then the protection enchantments), then the absorption buffer.
+func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause, src dmgFrom) bool {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
-		return
+		return false
 	}
 	t.lastCause = cause // the LAST thing to hurt them is what gets the credit
+	blocked := h.shieldBlocked(t, amount, dt, src)
+	if blocked > 0 {
+		h.shieldBlockFX(players, t, blocked)
+		amount -= blocked
+	}
+	// A falling anvil batters the helmet specifically, then a quarter of the
+	// blow is gone before the rest of the armour ever sees it.
+	if dt.has(tagDamagesHelmet) && t.armor[0].count > 0 {
+		h.wearArmorSlot(players, t, 0, helmetWear(amount))
+		amount *= 0.75
+	}
 	// Armour absorbs the blow and wears from it under ONE condition, as vanilla
 	// does in getDamageAfterArmorAbsorb — hurtArmor is called there, with the
 	// damage as it stands BEFORE the reduction. Keeping the two together is the
@@ -368,7 +392,11 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt 
 		amount -= soak
 	}
 	if amount <= 0 {
-		return // fully resisted / absorbed — no health lost, no hurt flash
+		// Nothing got through. The hit still LANDED unless a shield is what
+		// stopped it — vanilla's `!blocked || damage > 0`, and the distinction
+		// is what makes blocking cancel a bite's venom while a lucky roll of
+		// armour and Resistance does not.
+		return blocked <= 0
 	}
 	h.wakePlayer(players, t)        // pain wakes (and stands the pose back up)
 	t.exhaustion += dt.exhaustion() // vanilla: DamageType.exhaustion, per type
@@ -403,6 +431,16 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt 
 		h.playSound(players, "minecraft:entity.player.hurt", sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
 	}
 	h.sendHealth(t)
+	return true
+}
+
+// helmetWear is doHurtEquipment's durability cost — the same max(1, damage/4)
+// the rest of the armour pays, charged to the helmet alone.
+func helmetWear(dmg float32) int {
+	if n := int(dmg) / 4; n > 1 {
+		return n
+	}
+	return 1
 }
 
 // dropInventory scatters every held stack as an item entity at the player's feet

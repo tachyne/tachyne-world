@@ -67,7 +67,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	cause := deathCause{key: causeMob, by: mobDisplayName(m.etype)}
 	h.hurtBy(players, t, magic, dtIndirectMagic, cause)
 	if !t.dead {
-		h.hurtBy(players, t, melee, dtMobAttack, cause)
+		h.hurtFrom(players, t, melee, dtMobAttack, cause, from(m.x, m.z))
 	}
 	h.thornsRetaliate(players, t, m)
 	if t.dead {

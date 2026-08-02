@@ -14,6 +14,18 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-07-28
 
 ### Fixed
+- **A shield blocked three things.** Arrows, a mob's bite and another player's
+  swing — and nothing else in the game. Raising one against an explosion, a
+  ghast's fireball, a wither skull, a thrown potion, a wind charge, llama spit,
+  a bee sting or a mace smash did exactly nothing, though vanilla stops every
+  one of them. Which hits a shield catches now comes from the damage type, so
+  it also correctly declines to help against lava, fire, a cactus or a falling
+  anvil. Blocking cancels what the blow carried, so a bite caught on a shield
+  delivers no venom — while a bite merely soaked to nothing by armour still
+  does. The shield also wears by what it stopped rather than a flat point per
+  hit, shrugging off weak blows for free and paying for heavy ones.
+- **Falling anvils ignored the helmet.** Vanilla batters the helmet in
+  particular and loses a quarter of the blow's force doing it. Neither happened.
 - **Armour did nothing against lava, fire, cactus, magma, berry bushes or
   lightning.** Vanilla decides what a hit does to you from the damage type's
   own tags; tachyne left that decision to each of the twenty-odd places that
