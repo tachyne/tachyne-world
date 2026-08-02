@@ -236,6 +236,8 @@ for name, c in feats.items():
             f["LeaveVineProb"] = dec["probability"]
         elif dt == "cocoa":
             f["CocoaProb"] = dec["probability"]
+        elif dt == "beehive":
+            f["BeehiveProb"] = dec["probability"]
         elif dt == "creaking_heart":
             f["HeartProb"] = dec["probability"]
         elif dt == "place_on_ground":
@@ -338,7 +340,7 @@ ORDER = ["Log", "Leaves", "Leaves2", "Leaves2Chance",
          "SizeUpperLimit", "SizeUpper", "MinClippedHeight",
          "TrunkVine", "LeaveVineProb", "CocoaProb", "HeartProb", "AlterGround",
          "PropaguleProb", "PropaguleExclXZ", "PropaguleExclY", "PropaguleEmpty",
-         "PaleMossLeaves", "PaleMossTrunk", "PaleMossGround",
+         "PaleMossLeaves", "PaleMossTrunk", "PaleMossGround", "BeehiveProb",
          "DirtState", "ForceDirt", "LitterPasses",
          "RootTrunkOffMin", "RootTrunkOffMax", "RootMaxLength", "RootMaxWidth",
          "RootSkewChance", "RootState", "RootMuddyState",

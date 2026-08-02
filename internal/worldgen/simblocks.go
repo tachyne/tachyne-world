@@ -156,3 +156,28 @@ func IsWaterlogged(state uint32) bool {
 	}
 	return GetProperty(info, state, "waterlogged") == "true"
 }
+
+// IsFlower is the #flowers block tag — what a sapling checks for to grow its
+// bee-nest variant, and what bees will forage.
+func IsFlower(state uint32) bool {
+	for _, n := range flowerTag {
+		lo, hi := BlockRange(n)
+		if state >= lo && state <= hi {
+			return true
+		}
+	}
+	return false
+}
+
+var flowerTag = []string{
+	// #small_flowers
+	"dandelion", "open_eyeblossom", "poppy", "blue_orchid", "allium",
+	"azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
+	"oxeye_daisy", "cornflower", "lily_of_the_valley", "wither_rose",
+	"torchflower", "closed_eyeblossom",
+	// the rest of #flowers
+	"sunflower", "lilac", "peony", "rose_bush", "pitcher_plant",
+	"flowering_azalea_leaves", "flowering_azalea", "mangrove_propagule",
+	"cherry_leaves", "pink_petals", "wildflowers", "chorus_flower",
+	"spore_blossom", "cactus_flower",
+}

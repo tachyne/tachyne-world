@@ -58,22 +58,26 @@ type saplingSpec struct {
 	// mega is the 2x2 feature ("" = a square of these grows four singles).
 	// megaSecondary at the same odds — the spruce square's mega pine.
 	mega, megaSecondary string
+	// flowers variants: grown instead when a #flowers block sits within the
+	// 5x5x3 box around the sapling (TreeGrower.hasFlowers) — the tree comes
+	// up carrying a bee nest.
+	flowers, secondaryFlowers string
 }
 
 // saplingSpecies is TreeGrower's table: species, features and odds are
-// vanilla's. The bees variants place the identical tree, so they collapse
-// onto their base feature here just as they do in the generated table.
+// vanilla's, including the flowers-nearby bee variants.
 var saplingSpecies = func() []saplingSpec {
 	rows := []struct {
 		name string
 		sp   saplingSpec
 	}{
-		{"oak_sapling", saplingSpec{single: "oak", secondary: "fancy_oak", secondaryChance: 0.1}},
+		{"oak_sapling", saplingSpec{single: "oak", secondary: "fancy_oak", secondaryChance: 0.1,
+			flowers: "oak_bees_005", secondaryFlowers: "fancy_oak_bees_005"}},
 		{"spruce_sapling", saplingSpec{single: "spruce", mega: "mega_spruce", megaSecondary: "mega_pine", secondaryChance: 0.5}},
-		{"birch_sapling", saplingSpec{single: "birch"}},
+		{"birch_sapling", saplingSpec{single: "birch", flowers: "birch_bees_005"}},
 		{"jungle_sapling", saplingSpec{single: "jungle_tree_no_vine", mega: "mega_jungle_tree"}},
 		{"acacia_sapling", saplingSpec{single: "acacia"}},
-		{"cherry_sapling", saplingSpec{single: "cherry"}},
+		{"cherry_sapling", saplingSpec{single: "cherry", flowers: "cherry_bees_005"}},
 		{"dark_oak_sapling", saplingSpec{mega: "dark_oak"}},
 		// Vanilla's PALE_OAK grower uses the BONEMEAL feature: the bare tree,
 		// no moss and never a heart — those belong to the wild ones.
@@ -607,13 +611,35 @@ func (h *hub) growSapling(players map[int32]*tracked, dim, x, y, z int, state ui
 		}
 	}
 	feature := sp.single
+	flowers := sp.flowers != "" && h.flowersNear(dim, x, y, z)
 	if sp.secondary != "" && h.rng.Float64() < sp.secondaryChance {
 		feature = sp.secondary
+		if flowers && sp.secondaryFlowers != "" {
+			feature = sp.secondaryFlowers
+		}
+	} else if flowers {
+		feature = sp.flowers
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 	if !h.placeLiveTree(players, dim, x, y, z, feature) {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, state)
 	}
+}
+
+// flowersNear is TreeGrower.hasFlowers: any #flowers block within the 5x5x3
+// box around the sapling — what turns the grown tree into its bee variant.
+func (h *hub) flowersNear(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			for dz := -2; dz <= 2; dz++ {
+				if worldgen.IsFlower(w.At(x+dx, y+dy, z+dz)) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // placeLiveTree grows a vanilla tree feature in the LIVE world — the second of

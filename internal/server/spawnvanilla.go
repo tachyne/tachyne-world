@@ -169,6 +169,32 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, chunkSet map[[2]in
 		h.seededChunks[c] = true
 		budget--
 		h.seedChunkAnimals(players, c, counts)
+		h.seedChunkBees(players, c)
+	}
+}
+
+// seedChunkBees hatches the occupants of freshly generated bee nests — the
+// two or three bees vanilla stores inside the block entity. tachyne's bees
+// live in the world (beehive.go's fill rule wants them NEAR the nest), so
+// they appear beside it instead, once per chunk ever on the same seeded gate
+// the generation herds use.
+func (h *hub) seedChunkBees(players map[int32]*tracked, c [2]int32) {
+	bx, bz := int(c[0])*16, int(c[1])*16
+	if !h.ownedBlock(bx, bz) {
+		return
+	}
+	for lx := 0; lx < 16; lx++ {
+		for lz := 0; lz < 16; lz++ {
+			for wy := worldgen.SeaLevel; wy < worldgen.SeaLevel+96; wy++ {
+				s := h.world.At(bx+lx, wy, bz+lz)
+				if s < beeNestMin || s > beeNestMax {
+					continue
+				}
+				for n := 2 + h.rng.Intn(2); n > 0; n-- {
+					h.spawnAnimal(players, entityBee, bx+lx, bz+lz)
+				}
+			}
+		}
 	}
 }
 

@@ -98,16 +98,16 @@ func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
 		// trees_plains: a THIRD of the trees are large bee oaks.
 		switch {
 		case roll(0x71EE, 0.33333334):
-			return tree("fancy_oak")
+			return tree("fancy_oak_bees_005")
 		case roll(0x7206, 0.0125):
 			return fallen("fallen_oak_tree")
 		default:
-			return tree("oak")
+			return tree("oak_bees_005")
 		}
 	case treeMeadow:
 		// trees_meadow: half large bee oaks, half lone super birches.
 		if roll(0x7207, 0.5) {
-			return tree("fancy_oak")
+			return tree("fancy_oak_bees")
 		}
 		return tree("super_birch_bees")
 	case treeFlowerForest:
@@ -116,21 +116,21 @@ func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
 		case roll(0x7208, 0.0025):
 			return fallen("fallen_birch_tree")
 		case roll(0x7209, 0.2):
-			return tree("birch")
+			return tree("birch_bees_002")
 		case roll(0x720A, 0.1):
-			return tree("fancy_oak")
+			return tree("fancy_oak_bees_002")
 		default:
-			return tree("oak")
+			return tree("oak_bees_002")
 		}
 	case treeBirch:
 		// trees_birch: pure birch with the fallen slot.
 		if roll(0x720B, 0.0125) {
 			return fallen("fallen_birch_tree")
 		}
-		return tree("birch")
+		return tree("birch_bees_0002")
 	case treeBirchTall:
 		// old-growth birch forest: the taller super birch, nothing else.
-		return tree("super_birch_bees")
+		return tree("super_birch_bees_0002")
 	case treeSpruce:
 		// trees_taiga: pine a third, the fallen-spruce slot, spruce.
 		switch {
@@ -193,13 +193,13 @@ func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
 		case roll(0x71FA, 0.0025):
 			return fallen("fallen_birch_tree")
 		case roll(0x71FB, 0.2):
-			return tree("birch_leaf_litter")
+			return tree("birch_bees_0002_leaf_litter")
 		case roll(0x71FC, 0.1):
-			return tree("fancy_oak_leaf_litter")
+			return tree("fancy_oak_bees_0002_leaf_litter")
 		case roll(0x71FD, 0.0125):
 			return fallen("fallen_oak_tree")
 		default:
-			return tree("oak_leaf_litter")
+			return tree("oak_bees_0002_leaf_litter")
 		}
 	case treeDarkForest:
 		// dark_forest_vegetation.
@@ -287,7 +287,7 @@ func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
 		}
 		return tree("pale_oak")
 	case treeCherry:
-		return tree("cherry")
+		return tree("cherry_bees_005")
 	case treeMangrove:
 		// trees_mangrove: the tall variant leads at 85%, as it does live.
 		if roll(0x721F, 0.85) {

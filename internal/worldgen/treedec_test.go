@@ -459,11 +459,11 @@ func TestForestRollsBirchAndLargeOaks(t *testing.T) {
 		switch c := treeFeatureFor(treeForest, 1, wx*23, 71); {
 		case c == nil:
 			empty++
-		case c == TreeFeatures["birch_leaf_litter"]:
+		case c == TreeFeatures["birch_bees_0002_leaf_litter"]:
 			birch++
-		case c == TreeFeatures["fancy_oak_leaf_litter"]:
+		case c == TreeFeatures["fancy_oak_bees_0002_leaf_litter"]:
 			fancy++
-		case c == TreeFeatures["oak_leaf_litter"]:
+		case c == TreeFeatures["oak_bees_0002_leaf_litter"]:
 			oak++
 		default:
 			t.Fatalf("forest rolled a foreign tree at wx=%d", wx)
@@ -935,11 +935,11 @@ func TestPoolsRollVanillaRates(t *testing.T) {
 	}
 	n := 6000
 	plains := count(treeOak, n)
-	if f := plains["fancy_oak"]; f < n/4 || f > n*2/5 {
+	if f := plains["fancy_oak_bees_005"]; f < n/4 || f > n*2/5 {
 		t.Errorf("plains large oaks: %d of %d, want ~1/3", f, n)
 	}
 	meadow := count(treeMeadow, n)
-	if meadow["super_birch_bees"] < n/3 || meadow["fancy_oak"] < n/3 {
+	if meadow["super_birch_bees"] < n/3 || meadow["fancy_oak_bees"] < n/3 {
 		t.Errorf("meadow split: %v, want ~half and half", meadow)
 	}
 	jungle := count(treeJungle, n)
@@ -965,5 +965,55 @@ func TestPoolsRollVanillaRates(t *testing.T) {
 	}
 	if biomeReg["minecraft:snowy_slopes"].Tree != treeNone {
 		t.Error("snowy slopes should grow no trees at all")
+	}
+}
+
+// Bee nests hang off the trunk at the canopy's bottom row: south-facing at
+// honey zero, with air in front, at the feature's own probability — one oak
+// in twenty for the plains variant, every meadow large oak, and never on the
+// bare sapling twins.
+func TestBeesTreesHangNests(t *testing.T) {
+	nest := blockBase("bee_nest") + 6 // facing=south, honey_level=0
+	grass := blockBase("grass_block") + 1
+	ground := map[[3]int]uint32{}
+	for x := -14; x <= 14; x++ {
+		for z := -14; z <= 14; z++ {
+			ground[[3]int{x, -1, z}] = grass
+		}
+	}
+	countNests := func(name string, seeds int) int {
+		n := 0
+		for seed := int64(1); seed <= int64(seeds); seed++ {
+			blocks := grownWorld(name, seed, ground)
+			for p, st := range blocks {
+				if st != nest {
+					continue
+				}
+				n++
+				// The nest hangs off a log and faces south into open air.
+				sides := 0
+				for _, o := range [3][3]int{{0, 0, -1}, {-1, 0, 0}, {1, 0, 0}} {
+					if IsLog(blocks[[3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}]) {
+						sides++
+					}
+				}
+				if sides == 0 {
+					t.Fatalf("%s seed %d: nest at %v touches no log", name, seed, p)
+				}
+				if _, occ := blocks[[3]int{p[0], p[1], p[2] + 1}]; occ {
+					t.Fatalf("%s seed %d: nest at %v has no air to the south", name, seed, p)
+				}
+			}
+		}
+		return n
+	}
+	if n := countNests("fancy_oak_bees", 30); n < 20 {
+		t.Errorf("meadow large oaks carried %d nests in 30 — the probability is 1.0", n)
+	}
+	if n := countNests("oak_bees_005", 300); n < 3 || n > 40 {
+		t.Errorf("plains oaks carried %d nests in 300, want ~5%%", n)
+	}
+	if n := countNests("oak", 60); n != 0 {
+		t.Errorf("bare oaks carried %d nests — saplings without flowers must stay bee-free", n)
 	}
 }

@@ -155,6 +155,8 @@ type TreeConfig struct {
 	PropaguleEmpty                  int
 	// pale_moss — a moss patch in the ground and hanging strands (pale oak).
 	PaleMossLeaves, PaleMossTrunk, PaleMossGround float64
+	// beehive — a bee nest hung off the trunk at the canopy's bottom row.
+	BeehiveProb float64
 
 	// dirt_provider / force_dirt — what a trunk placer sets the ground to.
 	// Every placer converts the block under the trunk (setDirtAt) unless it
@@ -634,6 +636,37 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 			}
 			// hanging propagule: age stride 8, hanging=true is +1.
 			ctx.set(q[0], q[1], q[2], propaguleBase+uint32(rng.Intn(5))*8+1, true)
+		}
+	}
+	// BeehiveDecorator: one roll, then a bee nest hung off a trunk side at
+	// the canopy's bottom row — one below the lowest leaf, never below the
+	// row above the base. Candidates are the south/west/east offsets of the
+	// logs at that height (a nest faces SOUTH and needs air in front),
+	// shuffled, first fit wins. The occupants are the server's business: it
+	// seeds bees beside fresh nests when it first meets the chunk.
+	if c.BeehiveProb > 0 && rng.Float64() < c.BeehiveProb {
+		hiveY := 0
+		if len(ctx.leafList) > 0 {
+			hiveY = max(ctx.leafList[0][1]-1, ctx.logList[0][1]+1)
+		} else {
+			hiveY = min(ctx.logList[0][1]+1+rng.Intn(3), ctx.logList[len(ctx.logList)-1][1])
+		}
+		var cands [][3]int
+		for _, p := range ctx.logList {
+			if p[1] != hiveY {
+				continue
+			}
+			cands = append(cands,
+				[3]int{p[0], p[1], p[2] + 1}, // south
+				[3]int{p[0] - 1, p[1], p[2]}, // west
+				[3]int{p[0] + 1, p[1], p[2]}) // east
+		}
+		for _, q := range shuffledCopy(rng, cands) {
+			if ctx.isAir(q) && ctx.isAir([3]int{q[0], q[1], q[2] + 1}) {
+				// facing=south, honey_level=0 — facing strides by six levels.
+				ctx.set(q[0], q[1], q[2], blockBase("bee_nest")+6, false)
+				break
+			}
 		}
 	}
 	// PaleMossDecorator: the ground moss patch and the hanging strands —

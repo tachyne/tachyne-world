@@ -186,3 +186,78 @@ func TestBonemealGrowsHugeMushrooms(t *testing.T) {
 		t.Errorf("a mushroom under a ceiling should survive every refused attempt, cell is %d", h.world.At(x2, y, z))
 	}
 }
+
+// A freshly seeded chunk hatches the occupants of its generated bee nests —
+// two or three bees beside each nest, exactly once (the seeded gate).
+func TestSeededChunksHatchNestBees(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	nest := worldgen.BlockBase("bee_nest") + 6
+	// A nest in chunk (100,100), in the scanned surface band.
+	h.world.SetBlock(1600+4, worldgen.SeaLevel+20, 1600+9, nest)
+	before := 0
+	for _, m := range h.mobs {
+		if m.etype == entityBee {
+			before++
+		}
+	}
+	h.seedChunkBees(players, [2]int32{100, 100})
+	bees := 0
+	for _, m := range h.mobs {
+		if m.etype == entityBee {
+			bees++
+		}
+	}
+	if got := bees - before; got < 2 || got > 3 {
+		t.Fatalf("a seeded nest hatched %d bees, want 2-3", got)
+	}
+}
+
+// A sapling grown beside flowers comes up as the bee variant: the tree
+// carries a nest. Away from flowers it never does.
+func TestSaplingNearFlowersGrowsANest(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	lo, hi := worldgen.BlockRange("birch_sapling")
+	nestLo, nestHi := worldgen.BlockRange("bee_nest")
+	countNest := func(x, y, z int) int {
+		n := 0
+		for dx := -3; dx <= 3; dx++ {
+			for dy := 0; dy < 12; dy++ {
+				for dz := -3; dz <= 3; dz++ {
+					if s := h.world.At(x+dx, y+dy, z+dz); s >= nestLo && s <= nestHi {
+						n++
+					}
+				}
+			}
+		}
+		return n
+	}
+	// With a poppy beside it, some of many grown birches carry a nest (5%).
+	nests := 0
+	for i := 0; i < 120; i++ {
+		x, y, z := 1900+i*20, 200, 900
+		h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+		h.world.SetBlock(x+1, y, z, worldgen.BlockBase("poppy"))
+		h.world.SetBlock(x, y, z, lo)
+		if !growUntilGone(h, players, x, y, z, lo, hi) {
+			t.Fatalf("birch %d never grew", i)
+		}
+		nests += countNest(x, y, z)
+	}
+	if nests == 0 {
+		t.Error("120 birches grown beside a poppy carried no nest (5%% each)")
+	}
+	// Without flowers, never.
+	for i := 0; i < 30; i++ {
+		x, y, z := 1900+i*20, 200, 960
+		h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+		h.world.SetBlock(x, y, z, lo)
+		if !growUntilGone(h, players, x, y, z, lo, hi) {
+			t.Fatalf("flowerless birch %d never grew", i)
+		}
+		if countNest(x, y, z) != 0 {
+			t.Fatal("a birch with no flowers nearby grew a bee nest")
+		}
+	}
+}

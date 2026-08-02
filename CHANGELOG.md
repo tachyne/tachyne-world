@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Bee nests hang in the trees, with bees to match.** Wild trees carry
+  vanilla's bee nests at vanilla's odds — one plains oak in twenty, one
+  forest tree in five hundred, every large oak in a meadow — hung off the
+  trunk at the canopy's base, facing south, with two or three bees hatched
+  beside each fresh nest as the world generates. And vanilla's gardener rule
+  is in: a sapling grown within two blocks of a flower comes up carrying a
+  nest of its own. Harvesting was already live (shears for honeycomb, a
+  bottle for honey, campfire smoke to calm the swarm) — now the wild has
+  hives to find.
 - **Every biome grows vanilla's own tree mix — and fallen logs lie where
   trees once stood.** A mechanical audit of every biome's vegetation against
   vanilla found a dozen drifted pools, all corrected: plains lead a third of
