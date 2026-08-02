@@ -207,7 +207,19 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 	}
 	rng := newTreeRNG(g.seed, wx, wz)
 	set := func(x, y, z int, state uint32, leaf bool) {
-		setSectionBlock(ch, x-baseX, y, z-baseZ, state, !leaf)
+		lx, lz := x-baseX, z-baseZ
+		if leaf {
+			// Leaves take air, and leaves take LEAVES: the distance-seeding
+			// pass rewrites cells this same tree just filled, and a plain
+			// only-into-air rule would silently drop every rewrite.
+			cur := sectionBlockAt(ch, lx, y, lz)
+			if cur != Air && !IsLeaves(cur) {
+				return
+			}
+			setSectionBlock(ch, lx, y, lz, state, true)
+			return
+		}
+		setSectionBlock(ch, lx, y, lz, state, true)
 	}
 	// Height is the first EMPTY cell above the ground — where the trunk
 	// starts — so the tree's own base cell counts as free.
@@ -355,6 +367,20 @@ func setSectionBlock(ch *Chunk, lx, y, lz int, state uint32, overwrite bool) {
 		return
 	}
 	ch.Sections[sec][i] = state
+}
+
+// sectionBlockAt reads a chunk cell, mirroring setSectionBlock's indexing.
+// Out of range reads as air.
+func sectionBlockAt(ch *Chunk, lx, y, lz int) uint32 {
+	if lx < 0 || lx >= 16 || lz < 0 || lz >= 16 {
+		return Air
+	}
+	if y < MinY || y >= MinY+len(ch.Sections)*16 {
+		return Air
+	}
+	sec := (y - MinY) / 16
+	ly := (y - MinY) % 16
+	return ch.Sections[sec][(ly*16+lz)*16+lx]
 }
 
 // hash01 maps (seed, x, z, salt) to a deterministic value in [0,1).

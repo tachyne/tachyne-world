@@ -67,8 +67,16 @@ func TestLeafSurvivesNearLog(t *testing.T) {
 	h.world.SetBlock(x+1, y, z, worldgen.OakLog) // a log right next to it
 	h.world.SetBlock(x, y, z, worldgen.OakLeaves)
 	h.tickLeaf(players, 0, x, y, z, worldgen.OakLeaves)
-	if got := h.world.At(x, y, z); got != worldgen.OakLeaves {
+	// Survival now includes HEALING: the leaf was written at the stale
+	// distance-7 state (as every pre-port canopy was), and the tick corrects
+	// it to its true distance instead of rotting it. Any oak-leaf state is a
+	// survivor; air is the failure.
+	got := h.world.At(x, y, z)
+	if !isAnyLeaf(got) {
 		t.Errorf("leaf next to a log should survive, got %d", got)
+	}
+	if _, d, _, ok := leafInfo(got); !ok || d != 1 {
+		t.Errorf("a leaf touching a log should heal to distance 1, got state %d (distance %d)", got, d)
 	}
 }
 
@@ -96,8 +104,8 @@ func TestSpeciesLeavesSurviveNearTheirLog(t *testing.T) {
 		h.world.SetBlock(x+1, y, z, c.log)
 		h.world.SetBlock(x, y, z, c.leaf)
 		h.tickLeaf(players, 0, x, y, z, c.leaf)
-		if got := h.world.At(x, y, z); got != c.leaf {
-			t.Errorf("%s leaf next to its log decayed (got %d) — logNearby misses %s logs", c.name, got, c.name)
+		if got := h.world.At(x, y, z); !isAnyLeaf(got) {
+			t.Errorf("%s leaf next to its log decayed (got %d)", c.name, got)
 		}
 	}
 }

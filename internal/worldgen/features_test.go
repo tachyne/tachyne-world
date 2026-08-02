@@ -17,14 +17,34 @@ func TestFeaturesAppear(t *testing.T) {
 			}
 		}
 	}
-	for name, id := range map[string]uint32{
-		"oak_log":     OakLog,
-		"oak_leaves":  OakLeaves,
-		"short_grass": ShortGrass,
-	} {
-		if !seen[id] {
-			t.Errorf("expected %s somewhere in the region", name)
+	if !seen[OakLog] {
+		t.Error("expected oak_log somewhere in the region")
+	}
+	if !seen[ShortGrass] {
+		t.Error("expected short_grass somewhere in the region")
+	}
+	// Oak leaves appear — at ANY distance state. The old assertion demanded
+	// the exact distance-7 state, which is now correctly absent: placement
+	// seeds every leaf with its true distance from the trunk, and a healthy
+	// oak's canopy sits entirely within 6. A distance-7 leaf is one about to
+	// decay, so a fresh region must contain leaves and none of them at 7.
+	leafLo, leafHi := BlockRange("oak_leaves")
+	anyLeaf, decaying := false, 0
+	for s := range seen {
+		if s < leafLo || s > leafHi {
+			continue
 		}
+		anyLeaf = true
+		idx := s - leafLo // distance x persistent x waterlogged, waterlogged innermost
+		if idx/4 == 6 && (idx/2)%2 == 1 {
+			decaying++
+		}
+	}
+	if !anyLeaf {
+		t.Error("expected oak_leaves somewhere in the region")
+	}
+	if decaying > 0 {
+		t.Errorf("%d oak-leaf state(s) at distance 7 non-persistent — freshly grown canopies would rot", decaying)
 	}
 }
 

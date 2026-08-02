@@ -87,9 +87,8 @@ var saplingSpecies = func() []saplingSpec {
 }()
 
 // leafRanges are the leaf families we generate; the persistent property means
-// player-placed leaves never decay. All species are listed so decay + drops
-// behave consistently — paired with logNearby knowing every log type, a canopy
-// near its own trunk never wrongly rots.
+// player-placed leaves never decay. All species are listed so the distance
+// rule and the drops behave consistently across every canopy.
 var leafRanges = blockRange("oak_leaves", "spruce_leaves", "birch_leaves",
 	"jungle_leaves", "acacia_leaves", "cherry_leaves", "dark_oak_leaves",
 	"pale_oak_leaves", "mangrove_leaves")
@@ -395,21 +394,140 @@ func (h *hub) tickSapling(players map[int32]*tracked, dim, x, y, z int, state ui
 	return false
 }
 
-// tickLeaf decays a non-persistent leaf with no log nearby, rolling its drops.
-func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+// Leaf decay, ported from LeavesBlock. A leaf carries a DISTANCE property,
+// 1..7: a trunk block counts as 0, every leaf is min(neighbour)+1, and a
+// non-persistent leaf at 7 rots on a random tick. The old rule here scanned a
+// radius-4 box for any log, which is wrong in BOTH directions — a leaf on a
+// 5-long chain of leaves survives in vanilla but sat outside the box, and a
+// leaf floating near a log with no leaf path to it decayed in vanilla but
+// passed the box. Cutting a trunk now sends the recompute out as a wave, and
+// the canopy rots from the cut outward as the distances rise to 7.
+
+// leafInfo unpacks a leaf state: its family base, distance and persistence.
+// The states pack distance x persistent x waterlogged, waterlogged innermost.
+func leafInfo(state uint32) (base uint32, distance int, persistent bool, ok bool) {
 	for _, r := range leafRanges {
-		if !inRange(state, r) {
-			continue
+		if inRange(state, r) {
+			idx := state - r[0]
+			return r[0], int(idx/4) + 1, (idx/2)%2 == 0, true
 		}
-		persistent := ((state-r[0])/2)%2 == 0 // middle property; idx 0 == "true"
-		if persistent || h.logNearby(dim, x, y, z) {
-			return
+	}
+	return 0, 0, false, false
+}
+
+// leafWithDistance rewrites a leaf state's distance, keeping its other bits.
+func leafWithDistance(state uint32, base uint32, d int) uint32 {
+	return base + uint32((d-1)*4) + (state-base)%4
+}
+
+// leafDistanceAt is a block's contribution to its neighbours' distance:
+// vanilla getOptionalDistanceAt. Trunk blocks are 0, a leaf is its own
+// distance, anything else contributes nothing (7 pre-increment).
+func leafDistanceAt(state uint32) int {
+	if isTrunkBlock(state) {
+		return 0
+	}
+	if _, d, _, ok := leafInfo(state); ok {
+		return d
+	}
+	return 7
+}
+
+// isTrunkBlock is vanilla's prevents_nearby_leaf_decay — the LOGS tag: every
+// log, wood, stem and hyphae, stripped or not.
+func isTrunkBlock(state uint32) bool {
+	for _, r := range trunkRanges {
+		if inRange(state, r) {
+			return true
 		}
-		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-		h.scheduleAroundIn(dim, blockPos{x, y, z}, fallDelay)
-		h.rollLeafDrops(players, dim, x, y, z)
+	}
+	return false
+}
+
+var trunkRanges = func() [][2]uint32 {
+	names := []string{}
+	for _, sp := range []string{"oak", "spruce", "birch", "jungle", "acacia",
+		"dark_oak", "pale_oak", "mangrove", "cherry"} {
+		names = append(names, sp+"_log", sp+"_wood", "stripped_"+sp+"_log", "stripped_"+sp+"_wood")
+	}
+	for _, sp := range []string{"crimson", "warped"} {
+		names = append(names, sp+"_stem", sp+"_hyphae", "stripped_"+sp+"_stem", "stripped_"+sp+"_hyphae")
+	}
+	return blockRange(names...)
+}()
+
+// updateLeafDistance is the neighbour-change half: recompute this leaf's
+// distance from its six neighbours and write it if it moved, which schedules
+// the neighbours in turn — the wave.
+func (h *hub) updateLeafDistance(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	base, d, _, ok := leafInfo(state)
+	if !ok {
+		return false
+	}
+	w := h.worldFor(dim)
+	newD := 7
+	for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+		if n := leafDistanceAt(w.At(x+o[0], y+o[1], z+o[2])) + 1; n < newD {
+			newD = n
+		}
+	}
+	if newD != d {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, leafWithDistance(state, base, newD))
+	}
+	return true
+}
+
+// tickLeaf rots a non-persistent leaf whose distance is 7 — after VERIFYING
+// the distance with a bounded search. The verification is not optional
+// caution: every canopy generated before this port carries the distance-7
+// state its stamper wrote, and trusting it would rot every existing tree in
+// the live world on its first random ticks. A stale leaf that turns out to be
+// within reach of a trunk is healed with its true distance instead.
+func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	base, d, persistent, ok := leafInfo(state)
+	if !ok || persistent {
 		return
 	}
+	if d < 7 {
+		return // healthy; decay only ever fires at 7
+	}
+	if trueD := h.leafTrueDistance(dim, x, y, z); trueD < 7 {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, leafWithDistance(state, base, trueD))
+		return
+	}
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	h.scheduleAroundIn(dim, blockPos{x, y, z}, fallDelay)
+	h.rollLeafDrops(players, dim, x, y, z)
+}
+
+// leafTrueDistance walks outward through connected leaves for the nearest
+// trunk block, up to the six steps that matter. Bounded by construction:
+// at most the ball of radius 6 through leaf blocks.
+func (h *hub) leafTrueDistance(dim, x, y, z int) int {
+	w := h.worldFor(dim)
+	seen := map[blockPos]bool{{x, y, z}: true}
+	frontier := []blockPos{{x, y, z}}
+	for d := 1; d <= 6; d++ {
+		var next []blockPos
+		for _, p := range frontier {
+			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+				q := blockPos{p.x + o[0], p.y + o[1], p.z + o[2]}
+				if seen[q] {
+					continue
+				}
+				seen[q] = true
+				s := w.At(q.x, q.y, q.z)
+				if isTrunkBlock(s) {
+					return d
+				}
+				if isAnyLeaf(s) {
+					next = append(next, q)
+				}
+			}
+		}
+		frontier = next
+	}
+	return 7
 }
 
 // spreaders are the SpreadingSnowyBlock family: a block that creeps over
@@ -547,22 +665,6 @@ func (h *hub) rollLeafDrops(players map[int32]*tracked, dim, x, y, z int) {
 	for _, d := range h.leafDrops() {
 		h.spawnBlockDrop(players, d.item, d.count, x, y, z)
 	}
-}
-
-// logNearby reports whether an oak log sits within 4 blocks (so leaves near a
-// tree survive). Bounded so leaf ticks stay cheap.
-func (h *hub) logNearby(dim, x, y, z int) bool {
-	const r = 4
-	for dy := -r; dy <= r; dy++ {
-		for dx := -r; dx <= r; dx++ {
-			for dz := -r; dz <= r; dz++ {
-				if s := h.worldFor(dim).At(x+dx, y+dy, z+dz); s >= worldgen.BlockBase("oak_log") && s <= worldgen.BlockBase("mangrove_log")+2 { // any log: oak..mangrove (axis x/y/z each)
-					return true
-				}
-			}
-		}
-	}
-	return false
 }
 
 // opaqueAbove reports whether the block directly above blocks light (smothers grass).

@@ -190,11 +190,58 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 	}
 	treeHeight = clipped
 
-	atts := c.placeTrunk(rng, x, y, z, treeHeight, set, free)
-	for _, a := range atts {
-		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, set)
+	// Record what this tree places so the leaf distances can be seeded — the
+	// per-tree half of vanilla's updateLeaves. Leaves go in at distance 7 and
+	// are rewritten with their true distance from the trunk, or the decay rule
+	// would rot a freshly grown canopy on its first random ticks.
+	logs := map[[3]int]bool{}
+	leaves := map[[3]int]bool{}
+	recording := func(px, py, pz int, st uint32, leaf bool) {
+		if leaf {
+			if !logs[[3]int{px, py, pz}] {
+				leaves[[3]int{px, py, pz}] = true
+			}
+		} else {
+			logs[[3]int{px, py, pz}] = true
+			delete(leaves, [3]int{px, py, pz})
+		}
+		set(px, py, pz, st, leaf)
 	}
+
+	atts := c.placeTrunk(rng, x, y, z, treeHeight, recording, free)
+	for _, a := range atts {
+		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
+	}
+	c.seedLeafDistances(logs, leaves, set)
 	return true
+}
+
+// seedLeafDistances is TreeFeature.updateLeaves, per tree: a BFS out from the
+// trunk assigning each placed leaf its distance, 1..6; anything further keeps
+// the distance-7 state it was placed with. Leaf states pack distance x
+// persistent x waterlogged with waterlogged innermost, so one distance step is
+// four states.
+func (c *TreeConfig) seedLeafDistances(logs, leaves map[[3]int]bool, set TreeSetter) {
+	frontier := make([][3]int, 0, len(logs))
+	for p := range logs {
+		frontier = append(frontier, p)
+	}
+	seen := map[[3]int]bool{}
+	for d := 1; d <= 6 && len(frontier) > 0; d++ {
+		var next [][3]int
+		for _, p := range frontier {
+			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+				q := [3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}
+				if !leaves[q] || seen[q] {
+					continue
+				}
+				seen[q] = true
+				set(q[0], q[1], q[2], c.Leaves-uint32((7-d)*4), true)
+				next = append(next, q)
+			}
+		}
+		frontier = next
+	}
 }
 
 // ---- trunk placers -----------------------------------------------------------

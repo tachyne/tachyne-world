@@ -96,6 +96,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// Frost Walker's ice ages itself back to water on its own schedule.
 	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos):
 		h.setBlockAt(players, dim, pos, worldgen.ConcreteFor(state))
+	case h.updateLeafDistance(players, dim, pos.x, pos.y, pos.z, state):
+		// A leaf whose neighbourhood changed recomputes its trunk distance;
+		// the write schedules ITS neighbours, so a felled trunk sends the
+		// recompute through the canopy as a wave and the rim rots first.
 	case worldgen.IsFalling(state):
 		h.updateFalling(players, dim, pos, state)
 	case worldgen.IsFluid(state):

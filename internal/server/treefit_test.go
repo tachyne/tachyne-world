@@ -111,18 +111,29 @@ func TestPlantedLeavesCarryTheVanillaState(t *testing.T) {
 	if !growUntilGone(h, players, x, y, z, lo, hi) {
 		t.Fatal("birch never grew")
 	}
-	want := worldgen.TreeFeatures["birch"].Leaves
-	found := false
-	for dy := 0; dy < 12 && !found; dy++ {
-		for dx := -3; dx <= 3 && !found; dx++ {
-			for dz := -3; dz <= 3 && !found; dz++ {
-				if h.world.At(x+dx, y+dy, z+dz) == want {
-					found = true
+	// The canopy carries SEEDED distances: every leaf 1..6, none at the
+	// decaying 7 — which is what the placement BFS exists to guarantee. (This
+	// used to hunt the exact distance-7 state, which is now correctly absent.)
+	lo, hiLeaf := worldgen.BlockRange("birch_leaves")
+	found, decaying := false, 0
+	for dy := 0; dy < 12; dy++ {
+		for dx := -4; dx <= 4; dx++ {
+			for dz := -4; dz <= 4; dz++ {
+				s := h.world.At(x+dx, y+dy, z+dz)
+				if s < lo || s > hiLeaf {
+					continue
+				}
+				found = true
+				if _, d, persistent, ok := leafInfo(s); ok && d == 7 && !persistent {
+					decaying++
 				}
 			}
 		}
 	}
 	if !found {
-		t.Errorf("no birch leaves in the exact vanilla state (%d) around the tree", want)
+		t.Error("no birch leaves around the planted tree")
+	}
+	if decaying > 0 {
+		t.Errorf("%d planted leaves at distance 7 — they would rot on their first ticks", decaying)
 	}
 }

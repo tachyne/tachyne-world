@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Leaves decay the vanilla way.** A leaf now tracks its distance from the
+  nearest trunk, exactly as vanilla does, instead of scanning a box for any
+  log. Fell a tree and the canopy rots from the cut outward in the familiar
+  wave; a leaf bridge up to six long stays alive off a single log, while a
+  leaf floating near a trunk with no connection to it dies. Stripped logs and
+  wood hold a canopy up, so stripping your treehouse's trunk no longer risks
+  its roof. Existing worlds are safe: old canopies carry stale data, and a
+  leaf is only ever rotted after its distance is verified — stale-but-healthy
+  leaves quietly heal instead.
 - **Trees are vanilla's trees.** Every tree was a straight column with a
   rounded blob of leaves; now each species grows from a port of vanilla's own
   trunk and foliage placers, configured with vanilla's own numbers. Acacias
