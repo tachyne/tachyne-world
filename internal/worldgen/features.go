@@ -121,6 +121,8 @@ func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) 
 		return CherryLog, CherryLeaves, false, 5, 3
 	case treeMangrove:
 		return MangroveLog, MangroveLeaves, false, 5, 3
+	case treePaleOak:
+		return PaleOakLog, PaleOakLeaves, false, 6, 2
 	default:
 		return OakLog, OakLeaves, false, 4, 3
 	}
@@ -233,6 +235,18 @@ func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, fl
 			put(ShortGrass)
 		case r < 0.14:
 			put(pick(0x3333, BrownMushroom, RedMushroom))
+		}
+	case floraPaleGarden:
+		// The pale garden's floor, in the proportions the vanilla features
+		// produce: a patchy pale-moss carpet, grass, and the eyeblossoms that
+		// open at night (their day/night switch is already live).
+		switch {
+		case r < 0.14:
+			put(PaleMossCarpet)
+		case r < 0.22:
+			put(ShortGrass)
+		case r < 0.24:
+			put(ClosedEyeblossom)
 		}
 	case floraMushroom:
 		if r < 0.10 {

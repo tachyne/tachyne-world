@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **The pale garden grows pale oak.** The biome generated, in the right places,
+  carpeted in the wrong colour: it was decorating itself with dark oak, which
+  is the one thing a pale garden is not. It now grows its own bone-white wood,
+  over a floor of pale moss and closed eyeblossoms rather than borrowed dark
+  forest grass and mushrooms.
 - **Archaeology, and the desert wells to dig it out of.** A brush, two
   suspicious blocks and six loot tables existed with nothing in the world to
   point them at. Desert wells now generate in the desert — a vanilla feature

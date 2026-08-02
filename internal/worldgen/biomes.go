@@ -26,6 +26,7 @@ const (
 	treeDarkOak  // thick, dense
 	treeCherry   // pink canopy
 	treeMangrove // swamp
+	treePaleOak  // the pale garden's own: dark oak's shape, bone-white wood
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -42,6 +43,7 @@ const (
 	floraSwamp
 	floraSavanna
 	floraDarkForest
+	floraPaleGarden // pale moss, closed eyeblossoms
 	floraMushroom
 	floraSnowy
 )
@@ -67,7 +69,7 @@ var biomeReg = map[string]*Biome{
 	"minecraft:birch_forest":            {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 1.6, Flora: floraPlains},
 	"minecraft:old_growth_birch_forest": {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 2.0, Flora: floraPlains},
 	"minecraft:dark_forest":             {Top: GrassBlock, Sub: Dirt, Tree: treeDarkOak, TreeDensity: 3.0, Flora: floraDarkForest},
-	"minecraft:pale_garden":             {Top: GrassBlock, Sub: Dirt, Tree: treeDarkOak, TreeDensity: 2.4, Flora: floraDarkForest},
+	"minecraft:pale_garden":             {Top: GrassBlock, Sub: Dirt, Tree: treePaleOak, TreeDensity: 2.4, Flora: floraPaleGarden},
 	"minecraft:cherry_grove":            {Top: GrassBlock, Sub: Dirt, Tree: treeCherry, TreeDensity: 1.2, Flora: floraFlower},
 
 	// ── Cold/taiga family ────────────────────────────────────────────────
