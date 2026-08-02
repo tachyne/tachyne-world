@@ -81,13 +81,13 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 				if m.resistsFire() || magmaImmune[m.etype] {
 					return
 				}
-				h.hurtMob(nil, m, magmaDamage)
+				h.hurtMobOf(nil, m, magmaDamage, dtHotFloor)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla).
 				if m.etype == entityFox || m.etype == entityBee {
 					return
 				}
-				h.hurtMob(nil, m, berryBushDamage)
+				h.hurtMobOf(nil, m, berryBushDamage, dtSweetBerryBush)
 			case isWitherRose(s):
 				// The undead are immune to wither, so a rose does not touch them.
 				if h.rules.Difficulty != diffPeaceful && !ignoresPoisonAndRegen(m.etype) {

@@ -111,12 +111,12 @@ func TestArmorWearsAndShatters(t *testing.T) {
 	if max == 0 {
 		t.Fatal("armor must have durability")
 	}
-	h.wearArmor(players, pl, 3) // 3 damage -> max(1, 3/4) = 1 wear per piece
+	h.wearArmor(players, pl, 3, dtMobAttack) // 3 damage -> max(1, 3/4) = 1 wear per piece
 	if pl.armor[0].dmg != 1 || pl.armor[3].dmg != 1 {
 		t.Fatalf("each piece should wear 1, got %d/%d", pl.armor[0].dmg, pl.armor[3].dmg)
 	}
 	pl.armor[0].dmg = max - 1
-	h.wearArmor(players, pl, 3)
+	h.wearArmor(players, pl, 3, dtMobAttack)
 	if pl.armor[0].item != 0 {
 		t.Fatalf("helmet should shatter at max, got %+v", pl.armor[0])
 	}

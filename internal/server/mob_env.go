@@ -58,18 +58,25 @@ func (m *mob) ignite(secs int) {
 	}
 }
 
-// hurtMob applies environmental damage to a mob, shows the hurt flash, and
-// handles death. Fall/fire/lava/drowning BYPASS armor in vanilla, so this
-// decrements health directly (accumulating sub-1 amounts) rather than going
-// through mob.hurt's armor reduction.
-func (h *hub) hurtMob(players map[int32]*tracked, m *mob, dmg float64) {
+// hurtMobOf is the single way a mob takes damage that is not a melee blow:
+// it names the damage TYPE and lets the type decide whether armour, Resistance
+// and the protection enchantments get a say, then shows the hurt flash and
+// handles death.
+//
+// It replaced a hurtMob that wrote to health directly on the premise that
+// "fall/fire/lava/drowning bypass armor in vanilla". Half of that is true.
+// Falling and drowning do; standing in LAVA or FIRE, on magma or in a berry
+// bush does not, so a zombie in full diamond used to burn exactly as fast as a
+// naked one — the same bug the player side had, found by fixing that one.
+func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return
 	}
-	dmg += m.dmgFrac
-	whole := math.Floor(dmg)
-	m.dmgFrac = dmg - whole
-	m.health -= int(whole)
+	before := m.health
+	m.hurtKind(dmg, dt) // armour, resistance and protection, or not, per the tag
+	if m.health == before && m.dmgFrac > 0 {
+		return // soaked into the fractional carry — no flash for a scratch
+	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 	if m.health <= 0 {
 		h.killMob(players, m)
@@ -85,7 +92,7 @@ func (h *hub) mobFall(players map[int32]*tracked, m *mob, fell float64) {
 		return
 	}
 	if dmg := math.Floor(fell - mobSafeFall); dmg >= 1 {
-		h.hurtMob(players, m, dmg)
+		h.hurtMobOf(players, m, dmg, dtFall)
 	}
 }
 
@@ -108,13 +115,13 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 
 		if inLava {
 			m.ignite(lavaAfterburn)
-			h.hurtMob(players, m, lavaDmgPerSec)
+			h.hurtMobOf(players, m, lavaDmgPerSec, dtLava)
 			if m.health <= 0 {
 				continue
 			}
 		} else if inFire {
 			m.ignite(fireAfterburn)
-			h.hurtMob(players, m, fireDamagePerSec)
+			h.hurtMobOf(players, m, fireDamagePerSec, dtInFire)
 			if m.health <= 0 {
 				continue
 			}
@@ -134,7 +141,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			}
 			m.fireSecs--
 			if !inLava && !inFire { // lava/fire already dealt this second's damage
-				h.hurtMob(players, m, burnDamagePerSec)
+				h.hurtMobOf(players, m, burnDamagePerSec, dtOnFire)
 				if m.health <= 0 {
 					continue
 				}
@@ -156,7 +163,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 					continue // the old entity is gone
 				}
 			} else if m.submerged > maxAir/20 { // maxAir is in ticks; /20 = seconds
-				h.hurtMob(players, m, drownDmgPerSec)
+				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 			}
 		} else {
 			m.submerged = 0

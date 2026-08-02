@@ -501,12 +501,18 @@ func speedFor(etype int) float64 {
 // absorbed) and a fractional carry so integer HP still yields vanilla
 // hits-to-kill (a 5-damage sword kills an armor-2 zombie in 5 hits at
 // 4.92/hit, not 4).
-// Armor-bypassing damage (fire ticks, daylight burn) must NOT route through
-// here — subtract from health directly.
+//
+// This is a melee blow. Anything that is not — an environmental hazard, a
+// spell, an effect ticking down — names its damage type through hurtKind or
+// the hub's hurtMobOf, which decide from the type whether armour applies at
+// all. It used to be the caller's job to know, and to skip this function and
+// write to health directly when the answer was no; that convention is what let
+// a mob standing in lava take the full burn through a full set of diamond.
 func (m *mob) hurt(dmg float64) { m.hurtBreach(dmg, 0) }
 
-// hurtKind is hurt against a named damage type, so the specialised protection
-// enchantments on a mob's gear guard what they should.
+// hurtKind is hurt against a named damage type: armour applies only if the type
+// says it does, and the specialised protection enchantments on the mob's gear
+// guard what they should.
 func (m *mob) hurtKind(dmg float64, dt dmgType) { m.hurtOf(dmg, 0, dt) }
 
 // hurtBreach is hurt with a breach fraction subtracted from the armor's
@@ -519,8 +525,10 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
-	dmg *= m.damageResistance() // the Resistance effect, as on a player
-	if armor := m.armorValue(); armor > 0 {
+	if !dt.has(tagBypassesEffects) && !dt.has(tagBypassesResistance) {
+		dmg *= m.damageResistance() // the Resistance effect, as on a player
+	}
+	if armor := m.armorValue(); armor > 0 && !dt.has(tagBypassesArmor) {
 		// Toughness used to be hardcoded to 0 here, so diamond and netherite
 		// gear on a mob absorbed no better than leather.
 		tough := m.armorToughness()
@@ -533,7 +541,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	// The protection enchantments on the mob's own gear, same arithmetic as a
 	// player's (vanilla runs this as a second, separate absorption step).
-	dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], dt)))
+	if !dt.has(tagBypassesEffects) && !dt.has(tagBypassesEnchantments) {
+		dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], dt)))
+	}
 	dmg += m.dmgFrac
 	whole := math.Floor(dmg)
 	m.dmgFrac = dmg - whole

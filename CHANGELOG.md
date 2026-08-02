@@ -11,6 +11,23 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-02
+
+### Fixed
+- **Armoured mobs burned as fast as naked ones.** The engine treated all
+  environmental damage to a mob as unarmoured on the premise that fire, lava,
+  falling and drowning all bypass armour in vanilla. Only half of that is true:
+  falling and drowning do, but standing in lava or fire, on magma or in a sweet
+  berry bush does not — so a zombie in a full set of diamond burned exactly as
+  fast as one in nothing. Mob damage now runs through one path that decides
+  from the damage type, as the player's does.
+- **Evoker fangs went through a mob's armour but not a player's.** The player
+  half of that spell was corrected last week; the mob half, in the same
+  function, was not.
+- **Netherite gear wore out in fire.** Vanilla marks it resistant to fire
+  damage, which is most of the point of a netherite set near lava. It took
+  durability like anything else.
+
 ## 2026-07-28
 
 ### Fixed

@@ -403,7 +403,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	}
 	for _, m := range h.mobs {
 		if m.dying == 0 && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
-			m.hurt(float64(lightningDamage)) // lightning_bolt doesn't bypass armor
+			m.hurtKind(float64(lightningDamage), dtLightningBolt)
 			if m.health <= 0 {
 				h.killMob(players, m)
 			}

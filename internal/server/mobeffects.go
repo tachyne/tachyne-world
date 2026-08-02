@@ -103,17 +103,11 @@ func (h *hub) updateMobEffects(players map[int32]*tracked) {
 	}
 }
 
-// hurtMobEffect deals effect damage, which bypasses armour (magic damage does
-// in vanilla), and kills the mob if it runs out of health.
+// hurtMobEffect deals effect damage. Vanilla deals it as magic, which bypasses
+// armour — so unlike the environmental hazards this really is unarmoured, and
+// naming the type is what says so rather than a comment promising it.
 func (h *hub) hurtMobEffect(players map[int32]*tracked, m *mob, dmg float64) {
-	m.dmgFrac += dmg
-	whole := math.Floor(m.dmgFrac)
-	m.dmgFrac -= whole
-	m.health -= int(whole)
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
-	if m.health <= 0 {
-		h.killMob(players, m)
-	}
+	h.hurtMobOf(players, m, dmg, dtMagic)
 }
 
 // healMob raises a mob's health, capped at its MAX_HEALTH.

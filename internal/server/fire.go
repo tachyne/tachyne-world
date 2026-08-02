@@ -244,7 +244,7 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 		if d >= rangeF || om.dying > 0 {
 			continue
 		}
-		om.hurt(float64(maxDamage) * (1 - d/rangeF)) // explosions respect armor
+		om.hurtKind(float64(maxDamage)*(1-d/rangeF), dtExplosion)
 		if om.health <= 0 {
 			h.killMob(players, om)
 		}

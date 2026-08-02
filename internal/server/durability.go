@@ -55,11 +55,40 @@ func (t *tracked) armorReduce(dmg float32) float32 {
 	return float32(d)
 }
 
+// damageResistantItems are the items carrying vanilla's damage_resistant
+// component, which spares them from wear by a damage type in the tag it names.
+// Every damageable one is netherite, and the tag is is_fire — which is what
+// makes netherite gear survive a lava bath that would eat diamond.
+//
+// The component is declared in code rather than a datapack, so unlike the
+// damage tags it cannot be generated; the list is the sixteen fireResistant()
+// items, minus the ones with no durability to lose.
+var damageResistantItems = func() map[int32]bool {
+	m := map[int32]bool{}
+	for _, n := range []string{
+		"netherite_sword", "netherite_shovel", "netherite_pickaxe",
+		"netherite_axe", "netherite_hoe", "netherite_helmet",
+		"netherite_chestplate", "netherite_leggings", "netherite_boots",
+		"netherite_horse_armor",
+	} {
+		if id, ok := itemByName[n]; ok {
+			m[int32(id)] = true
+		}
+	}
+	return m
+}()
+
+// resistsWear reports whether this item shrugs off wear from this sort of
+// damage — vanilla ItemStack.canBeHurtBy, inverted.
+func resistsWear(item int32, dt dmgType) bool {
+	return damageResistantItems[item] && dt.has(tagIsFire)
+}
+
 // wearArmor wears every equipped piece after a hit (vanilla: max(1, damage/4)
 // durability each), destroying pieces that run out. The armor slots are only
 // visible in window 0, so resync is skipped while a container is open (the
 // next full window refresh covers it).
-func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32) {
+func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32, dt dmgType) {
 	n := int(dmg) / 4
 	if n < 1 {
 		n = 1
@@ -72,6 +101,9 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32) {
 		max, ok := itemMaxDurability[a.item]
 		if !ok {
 			continue
+		}
+		if resistsWear(a.item, dt) {
+			continue // netherite in a fire: the set comes out unmarked
 		}
 		if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
 			continue // unbreaking spared this piece
@@ -89,13 +121,16 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32) {
 // wearArmorSlot wears ONE armour piece by a fixed amount — what Thorns costs
 // the piece that retaliated (vanilla ChangeItemDamage(2) on that slot alone,
 // not on the whole set).
-func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int) {
+func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int, dt dmgType) {
 	a := &t.armor[slot]
 	if a.count == 0 {
 		return
 	}
 	max, ok := itemMaxDurability[a.item]
 	if !ok {
+		return
+	}
+	if resistsWear(a.item, dt) {
 		return
 	}
 	if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {

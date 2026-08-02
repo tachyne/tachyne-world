@@ -171,7 +171,7 @@ func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
 			continue // an evoker never bites its own kind with its own spell
 		}
 		if math.Abs(m.x-f.x) <= 0.7 && math.Abs(m.z-f.z) <= 0.7 && math.Abs(m.y-f.y) <= 2 {
-			m.hurt(float64(fangDamage))
+			m.hurtKind(float64(fangDamage), dtIndirectMagic)
 			if m.health <= 0 {
 				h.killMob(players, m)
 			}

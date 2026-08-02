@@ -362,7 +362,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	// A falling anvil batters the helmet specifically, then a quarter of the
 	// blow is gone before the rest of the armour ever sees it.
 	if dt.has(tagDamagesHelmet) && t.armor[0].count > 0 {
-		h.wearArmorSlot(players, t, 0, helmetWear(amount))
+		h.wearArmorSlot(players, t, 0, helmetWear(amount), dt)
 		amount *= 0.75
 	}
 	// Armour absorbs the blow and wears from it under ONE condition, as vanilla
@@ -370,7 +370,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	// damage as it stands BEFORE the reduction. Keeping the two together is the
 	// point: split across call sites, three of them wore no armour at all.
 	if !dt.has(tagBypassesArmor) {
-		h.wearArmor(players, t, amount)
+		h.wearArmor(players, t, amount, dt)
 		amount = t.armorReduce(amount)
 	}
 	if !dt.has(tagBypassesEffects) { // starve: no effect or enchantment helps
