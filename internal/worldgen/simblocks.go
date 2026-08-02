@@ -29,6 +29,23 @@ func IsFalling(state uint32) bool {
 // IsLeaves reports whether a state is one of the generated leaf families (oak,
 // spruce, birch — contiguous state ranges). Leaves collide, but dropped items
 // must fall THROUGH a canopy or they collect on top of trees out of reach.
+// IsLog reports whether a state is any overworld log — the trunk family the
+// tree placers write.
+func IsLog(state uint32) bool {
+	for _, n := range logFamilies {
+		lo, hi := BlockRange(n)
+		if state >= lo && state <= hi {
+			return true
+		}
+	}
+	return false
+}
+
+var logFamilies = []string{
+	"oak_log", "spruce_log", "birch_log", "jungle_log", "acacia_log",
+	"dark_oak_log", "pale_oak_log", "mangrove_log", "cherry_log",
+}
+
 func IsLeaves(state uint32) bool {
 	return state >= blockBase("oak_leaves") && state <= blockBase("birch_leaves")+27
 }

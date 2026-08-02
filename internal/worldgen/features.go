@@ -5,7 +5,11 @@ package worldgen
 // agree on a tree whose canopy straddles their shared border — each stamps the
 // part that lands inside it, with no shared state.
 
-const treeMargin = 2 // max horizontal reach of a canopy
+// treeMargin is how far outside a chunk a tree can be rooted and still put
+// blocks inside it, so decoration scans that much extra each way. Measured
+// across every feature over 200 seeds — a mega jungle's canopy reaches 8 — not
+// estimated. It was 2, which was right for the radius-2 blobs trees used to be.
+const treeMargin = 8
 
 // decorate adds trees and ground cover to a freshly generated chunk, choosing
 // the tree species and ground flora from each column's biome.
@@ -110,6 +114,45 @@ func TreeShapeForSapling(name string) (TreeShape, bool) {
 // not, so a planted pale oak and a generated one were different trees.
 func wideTrunk(k treeKind) bool { return k == treeDarkOak || k == treePaleOak }
 
+// treeFeatureFor maps a biome's tree kind to the vanilla FEATURE it grows.
+// Where vanilla's biome pools mix species — plains scattering the occasional
+// large oak among plain ones, taiga mixing pine with spruce — the mix is drawn
+// from the tree's own position, so it is stable for a seed.
+func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
+	name := ""
+	switch k {
+	case treeOak:
+		if hash01(seed, wx, wz, 0x71EE) < 0.1 {
+			name = "fancy_oak"
+		} else {
+			name = "oak"
+		}
+	case treeBirch:
+		name = "birch"
+	case treeSpruce:
+		if hash01(seed, wx, wz, 0x71EF) < 0.33 {
+			name = "pine"
+		} else {
+			name = "spruce"
+		}
+	case treeJungle:
+		name = "jungle_tree"
+	case treeAcacia:
+		name = "acacia"
+	case treeDarkOak:
+		name = "dark_oak"
+	case treePaleOak:
+		name = "pale_oak"
+	case treeCherry:
+		name = "cherry"
+	case treeMangrove:
+		name = "mangrove"
+	default:
+		return nil
+	}
+	return TreeFeatures[name]
+}
+
 // treeStyle maps a treeKind to its trunk/leaf blocks and canopy shape.
 func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) {
 	switch k {
@@ -134,64 +177,70 @@ func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) 
 	}
 }
 
-// stampTree writes a species tree (trunk + canopy) rooted at (wx,wz), clipped
-// to this chunk. Leaves only replace air.
+// stampTree grows one vanilla tree rooted at (wx,wz), clipped to this chunk.
+//
+// The shape is PlaceTree's — the real trunk and foliage placers — rather than
+// the trunk-and-blob this used to draw.
+//
+// TWO THINGS MAKE THIS DIFFERENT FROM VANILLA'S DRIVER, both because a chunk
+// generator cannot see the world:
+//
+// The RNG is derived from the tree's own POSITION rather than a stream, so a
+// tree straddling a chunk border draws identically in every chunk that stamps
+// it. Vanilla does not need this — it decorates with the whole neighbourhood
+// available and places each tree once.
+//
+// And "is this cell free" is answered from the TERRAIN MODEL, not the chunk
+// buffer. Asking the buffer gives a different answer either side of a chunk
+// edge (cells outside it read as empty), so the same tree measures as fitting
+// in one chunk and not in its neighbour, and the two passes disagree: one
+// draws a canopy, the other never draws the trunk. The terrain height is the
+// same number from anywhere, so both passes agree.
+//
+// Structures do not enter into it: decorate runs BEFORE stampStructures, and
+// structures overwrite. The sapling grower, which CAN see the world, is the
+// path where growing into a house matters, and it gets the real check.
 func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kind treeKind) {
-	lx0, lz0 := wx-baseX, wz-baseZ
-	log, leaves, conical, minH, extraH := treeStyle(kind)
-	height := minH + int(hash01(g.seed, wx, wz, 0x1111)*float64(extraH+1))
-	trunkTop := surfaceH + height
-
-	trunk := [][2]int{{0, 0}}
-	if wideTrunk(kind) {
-		trunk = [][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}}
-	}
-	for y := surfaceH; y < trunkTop; y++ {
-		for _, c := range trunk {
-			setSectionBlock(ch, lx0+c[0], y, lz0+c[1], log, true)
-		}
-	}
-	// One pale oak in ten grows around a creaking heart, which is how vanilla's
-	// random_selector weights pale_oak_creaking against plain pale_oak.
-	//
-	// The decorator wants a log with logs on all six sides. On a 2x2 trunk only
-	// the INNER faces qualify, so the heart goes in one of the four columns at a
-	// height with trunk above and below — the same condition, reached the same
-	// way vanilla reaches it.
-	if kind == treePaleOak && height >= 4 && hash01(g.seed, wx, wz, 0xC0DE) < 0.1 {
-		heartY := surfaceH + 1 + int(hash01(g.seed, wx, wz, 0xC0DF)*float64(height-2))
-		c := trunk[int(hash01(g.seed, wx, wz, 0xC0E0)*float64(len(trunk)))%len(trunk)]
-		setSectionBlock(ch, lx0+c[0], heartY, lz0+c[1], CreakingHeartDormant, true)
-	}
-
-	leaf := func(y, radius int, trimCorners bool) {
-		for dx := -radius; dx <= radius; dx++ {
-			for dz := -radius; dz <= radius; dz++ {
-				if trimCorners && absInt(dx) == radius && absInt(dz) == radius {
-					continue
-				}
-				setSectionBlock(ch, lx0+dx, y, lz0+dz, leaves, false)
-			}
-		}
-	}
-	if conical { // spruce: stacked rings tapering to a point
-		for i, y := 0, trunkTop-4; y <= trunkTop; y++ {
-			r := 2 - i/2
-			if r < 0 {
-				r = 0
-			}
-			leaf(y, r, r == 2)
-			i++
-		}
-		setSectionBlock(ch, lx0, trunkTop+1, lz0, leaves, false)
+	c := treeFeatureFor(kind, g.seed, wx, wz)
+	if c == nil {
 		return
 	}
-	// Rounded canopy (oak/birch/jungle/dark oak/cherry/acacia/mangrove).
-	leaf(trunkTop-2, 2, true)
-	leaf(trunkTop-1, 2, true)
-	leaf(trunkTop, 1, false)
-	leaf(trunkTop+1, 1, true)
+	rng := newTreeRNG(g.seed, wx, wz)
+	set := func(x, y, z int, state uint32, leaf bool) {
+		setSectionBlock(ch, x-baseX, y, z-baseZ, state, !leaf)
+	}
+	// Height is the first EMPTY cell above the ground — where the trunk
+	// starts — so the tree's own base cell counts as free.
+	free := func(x, y, z int) bool { return y >= g.Height(x, z) }
+	PlaceTree(c, wx, surfaceH, wz, rng, set, free)
 }
+
+// newTreeRNG is the per-tree randomness, derived from the tree's own position
+// so every chunk that overlaps it draws the same tree.
+func newTreeRNG(seed int64, wx, wz int) TreeRNG {
+	return &hashRNG{seed: uint64(seed) ^ uint64(wx)*0x9E3779B97F4A7C15 ^ uint64(wz)*0xC2B2AE3D27D4EB4F}
+}
+
+// hashRNG is a splitmix64, so a tree's draws are reproducible from its position
+// without allocating a full math/rand source per tree.
+type hashRNG struct{ seed uint64 }
+
+func (r *hashRNG) next() uint64 {
+	r.seed += 0x9E3779B97F4A7C15
+	z := r.seed
+	z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+	z = (z ^ (z >> 27)) * 0x94D049BB133111EB
+	return z ^ (z >> 31)
+}
+
+func (r *hashRNG) Intn(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	return int(r.next() % uint64(n))
+}
+
+func (r *hashRNG) Float64() float64 { return float64(r.next()>>11) / (1 << 53) }
 
 // stampGroundCover scatters biome-appropriate flora on a column's surface.
 func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, flora floraKind) {

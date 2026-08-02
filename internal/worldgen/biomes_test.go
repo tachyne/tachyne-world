@@ -133,19 +133,37 @@ func TestNoSkyFloaters(t *testing.T) {
 			}
 		}
 	}
+	// Terrain connects orthogonally; TREE blocks may also connect diagonally.
+	// Vanilla's own trees are not 6-connected — a large oak's limbs are drawn
+	// by walking a line and rounding, so consecutive logs touch corner-to-
+	// corner — but restricting the diagonal steps to log/leaf DESTINATIONS
+	// keeps the terrain invariant intact and still fails a canopy with no
+	// trunk anywhere near it.
+	isTree := func(b uint32) bool { return IsLog(b) || IsLeaves(b) }
 	for len(st) > 0 {
 		c := st[len(st)-1]
 		st = st[:len(st)-1]
-		push(c[0]+1, c[1], c[2])
-		push(c[0]-1, c[1], c[2])
-		push(c[0], c[1], c[2]+1)
-		push(c[0], c[1], c[2]-1)
-		push(c[0], c[1]+1, c[2])
-		push(c[0], c[1]-1, c[2])
+		for dx := -1; dx <= 1; dx++ {
+			for dy := -1; dy <= 1; dy++ {
+				for dz := -1; dz <= 1; dz++ {
+					if dx == 0 && dy == 0 && dz == 0 {
+						continue
+					}
+					ortho := abs(dx)+abs(dy)+abs(dz) == 1
+					if ortho || isTree(at(c[0]+dx, c[1]+dy, c[2]+dz)) {
+						push(c[0]+dx, c[1]+dy, c[2]+dz)
+					}
+				}
+			}
+		}
 	}
+	// Interior only: a block within treeMargin of the region edge can belong
+	// to a tree rooted in a chunk this test never generated, so its trunk
+	// legitimately does not exist here. The margin used to be 2, which was the
+	// old canopy reach; it is the tree margin now for the same reason.
 	floaters := 0
-	for wx := lo + 2; wx < hi-2; wx++ { // interior only (borders can attach outward)
-		for wz := lo + 2; wz < hi-2; wz++ {
+	for wx := lo + treeMargin; wx < hi-treeMargin; wx++ {
+		for wz := lo + treeMargin; wz < hi-treeMargin; wz++ {
 			for y := SeaLevel; y < 200; y++ {
 				if solid(at(wx, y, wz)) && !vis[fi(wx, y, wz)] {
 					floaters++

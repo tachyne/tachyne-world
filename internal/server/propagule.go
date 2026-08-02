@@ -81,11 +81,14 @@ func (h *hub) tickPropagule(players map[int32]*tracked, dim, x, y, z int, state 
 			propaguleState(age, false, 1, propaguleWet(state)))
 		return true
 	}
-	shape, ok := worldgen.TreeShapeForSapling("mangrove_propagule")
-	if !ok {
-		return true
+	// TreeGrower MANGROVE: tall_mangrove at 0.85, mangrove otherwise.
+	feature := "mangrove"
+	if h.rng.Float64() < 0.85 {
+		feature = "tall_mangrove"
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	h.stampTree(players, dim, x, y, z, shape, false)
+	if !h.placeLiveTree(players, dim, x, y, z, feature) {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state)
+	}
 	return true
 }

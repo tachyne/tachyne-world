@@ -14,6 +14,18 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Trees are vanilla's trees.** Every tree was a straight column with a
+  rounded blob of leaves; now each species grows from a port of vanilla's own
+  trunk and foliage placers, configured with vanilla's own numbers. Acacias
+  lean and fork, cherries arc their branches out sideways, mangroves throw
+  limbs as they climb, large oaks scatter foliage clusters and run a branch to
+  each, mega spruces taper. The same code grows a planted sapling and a
+  generated forest, so the two can never drift apart — and saplings follow the
+  vanilla growers' odds: an oak sapling has its one-in-ten chance of a large
+  oak, a 2×2 of spruce grows a mega spruce or pine, dark and pale oak need
+  their four. Trees also measure the room they need before growing, as vanilla
+  does — a sapling under your roof refuses politely instead of punching its
+  canopy through the ceiling.
 - **The creaking haunts the pale garden.** Pale oaks now grow around creaking
   hearts, and after dark a heart sends out the thing it has been keeping. It
   behaves as it should: it freezes solid the moment you look at it and only

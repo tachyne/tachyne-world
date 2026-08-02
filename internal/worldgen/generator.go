@@ -497,11 +497,21 @@ func removeFloatingFragments(ch *Chunk) {
 		push(lx, dy+1, lz)
 		push(lx, dy-1, lz)
 	}
-	// Carve away every solid block the flood never reached.
+	// Carve away every solid block the flood never reached — except tree
+	// blocks. This pass exists to delete TERRAIN the caves severed, and it
+	// pre-dates trees that lean: the real trunk placers step sideways as they
+	// climb, so consecutive logs of an acacia or dark oak touch only at a
+	// corner, and a 6-connected flood reads the upper trunk as debris — it
+	// deleted the trunk and left the canopy, which was seeded by the wall
+	// rule. A tree cannot be cave debris in the first place: decoration stamps
+	// it after carving, onto a surface the carver already had its say on. The
+	// same reasoning already keeps this pass BEFORE stampStructures, so it
+	// never culls a monument arch — trees just moved into the same category.
+	// The cross-chunk floater test still fails a genuinely trunkless canopy.
 	for dy := 0; dy < height; dy++ {
 		for lz := 0; lz < 16; lz++ {
 			for lx := 0; lx < 16; lx++ {
-				if b := get(lx, dy, lz); solid(b) && !visited[idx(lx, dy, lz)] {
+				if b := get(lx, dy, lz); solid(b) && !visited[idx(lx, dy, lz)] && !IsLog(b) && !IsLeaves(b) {
 					ch.Sections[dy/16][(dy%16*16+lz)*16+lx] = Air
 				}
 			}

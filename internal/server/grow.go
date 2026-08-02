@@ -44,27 +44,44 @@ func blockRange(names ...string) [][2]uint32 {
 
 var cropRanges = blockRange("wheat", "carrots", "potatoes", "beetroots")
 
-// saplingSpecies pairs each sapling's state range with the tree it grows.
-// Every species vanilla has a sapling for is listed: previously only oak,
-// spruce and birch were matched at all, and all three grew an OAK tree
-// because the grow path hard-coded oak logs and leaves.
+// saplingSpecies pairs each sapling's state range with its TreeGrower — which
+// vanilla features it grows, single and mega, and at what odds. The trees
+// themselves come from the same PlaceTree the world generator uses, so a
+// planted oak and a generated oak are the same tree by construction.
 type saplingSpec struct {
-	rng   [2]uint32
-	shape worldgen.TreeShape
+	rng [2]uint32
+	// single is the lone-sapling feature ("" = never grows alone: dark and
+	// pale oak are mega-only). secondary is grown instead at secondaryChance —
+	// the plain oak's occasional large oak.
+	single, secondary string
+	secondaryChance   float64
+	// mega is the 2x2 feature ("" = a square of these grows four singles).
+	// megaSecondary at the same odds — the spruce square's mega pine.
+	mega, megaSecondary string
 }
 
+// saplingSpecies is TreeGrower's table: species, features and odds are
+// vanilla's. The bees variants place the identical tree, so they collapse
+// onto their base feature here just as they do in the generated table.
 var saplingSpecies = func() []saplingSpec {
-	names := []string{"oak_sapling", "spruce_sapling", "birch_sapling",
-		"jungle_sapling", "acacia_sapling", "cherry_sapling",
-		"dark_oak_sapling", "pale_oak_sapling"}
-	out := make([]saplingSpec, 0, len(names))
-	for _, n := range names {
-		shape, ok := worldgen.TreeShapeForSapling(n)
-		if !ok {
-			continue
-		}
-		lo, hi := worldgen.BlockRange(n)
-		out = append(out, saplingSpec{rng: [2]uint32{lo, hi}, shape: shape})
+	rows := []struct {
+		name string
+		sp   saplingSpec
+	}{
+		{"oak_sapling", saplingSpec{single: "oak", secondary: "fancy_oak", secondaryChance: 0.1}},
+		{"spruce_sapling", saplingSpec{single: "spruce", mega: "mega_spruce", megaSecondary: "mega_pine", secondaryChance: 0.5}},
+		{"birch_sapling", saplingSpec{single: "birch"}},
+		{"jungle_sapling", saplingSpec{single: "jungle_tree", mega: "mega_jungle_tree"}},
+		{"acacia_sapling", saplingSpec{single: "acacia"}},
+		{"cherry_sapling", saplingSpec{single: "cherry"}},
+		{"dark_oak_sapling", saplingSpec{mega: "dark_oak"}},
+		{"pale_oak_sapling", saplingSpec{mega: "pale_oak"}},
+	}
+	out := make([]saplingSpec, 0, len(rows))
+	for _, r := range rows {
+		lo, hi := worldgen.BlockRange(r.name)
+		r.sp.rng = [2]uint32{lo, hi}
+		out = append(out, r.sp)
 	}
 	return out
 }()
@@ -448,19 +465,66 @@ func (h *hub) tickSpread(players map[int32]*tracked, dim, x, y, z int, state uin
 // looks for the 2x2 the way vanilla does — scanning the four offsets that
 // could place this sapling in a square — and the whole square is consumed.
 func (h *hub) growSapling(players map[int32]*tracked, dim, x, y, z int, state uint32, sp saplingSpec) {
-	if sp.shape.TwoByTwo {
-		cx, cz, ok := h.findSaplingSquare(dim, x, z, y, sp.rng)
-		if !ok {
-			return // stays a sapling until a square is completed
+	if sp.mega != "" {
+		if cx, cz, ok := h.findSaplingSquare(dim, x, z, y, sp.rng); ok {
+			feature := sp.mega
+			if sp.megaSecondary != "" && h.rng.Float64() < sp.secondaryChance {
+				feature = sp.megaSecondary
+			}
+			square := [4][2]int{{cx, cz}, {cx + 1, cz}, {cx, cz + 1}, {cx + 1, cz + 1}}
+			for _, c := range square {
+				h.setBlockAt(players, dim, blockPos{c[0], y, c[1]}, worldgen.Air)
+			}
+			if !h.placeLiveTree(players, dim, cx, y, cz, feature) {
+				for _, c := range square { // no room: the saplings stay planted
+					h.setBlockAt(players, dim, blockPos{c[0], y, c[1]}, state)
+				}
+			}
+			return
 		}
-		for _, c := range [4][2]int{{cx, cz}, {cx + 1, cz}, {cx, cz + 1}, {cx + 1, cz + 1}} {
-			h.setBlockAt(players, dim, blockPos{c[0], y, c[1]}, worldgen.Air)
+		if sp.single == "" {
+			return // dark/pale oak: a lone sapling never grows
 		}
-		h.stampTree(players, dim, cx, y, cz, sp.shape, true)
-		return
+	}
+	feature := sp.single
+	if sp.secondary != "" && h.rng.Float64() < sp.secondaryChance {
+		feature = sp.secondary
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	h.stampTree(players, dim, x, y, z, sp.shape, false)
+	if !h.placeLiveTree(players, dim, x, y, z, feature) {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, state)
+	}
+}
+
+// placeLiveTree grows a vanilla tree feature in the LIVE world — the second of
+// PlaceTree's two drivers, and the one with real blocks to answer with. The
+// fit gate therefore means here exactly what it means in vanilla: a sapling
+// under a roof or against a wall measures the space it needs and refuses,
+// instead of punching its canopy through the building. On refusal the caller
+// puts the sapling back.
+func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, feature string) bool {
+	c, ok := worldgen.TreeFeatures[feature]
+	if !ok {
+		return false
+	}
+	w := h.worldFor(dim)
+	// validTreePos: air, leaves or replaceable plants (vanilla's
+	// replaceable_by_trees includes leaves — a new tree grows up through a
+	// neighbouring canopy); plus logs for the fit gate, as isFree allows.
+	free := func(px, py, pz int) bool {
+		s := w.At(px, py, pz)
+		return s == worldgen.Air || worldgen.IsLeaves(s) || worldgen.IsReplaceable(s) || worldgen.IsLog(s)
+	}
+	set := func(px, py, pz int, st uint32, leaf bool) {
+		if leaf {
+			cur := w.At(px, py, pz)
+			if cur != worldgen.Air && !worldgen.IsLeaves(cur) && !worldgen.IsReplaceable(cur) {
+				return // leaves never eat a solid block — or the trunk just placed
+			}
+		}
+		h.setBlockAt(players, dim, blockPos{px, py, pz}, st)
+	}
+	return worldgen.PlaceTree(c, x, y, z, h.rng, set, free)
 }
 
 // findSaplingSquare reports the lower-left corner of a 2x2 block of matching
@@ -476,59 +540,6 @@ func (h *hub) findSaplingSquare(dim, x, z, y int, rng [2]uint32) (int, int, bool
 		}
 	}
 	return 0, 0, false
-}
-
-// stampTree writes a trunk and canopy for one species. `wide` grows the 2x2
-// trunk and broader canopy the mega species need. Leaves only replace air, so
-// a tree never eats a player's build.
-func (h *hub) stampTree(players map[int32]*tracked, dim, x, y, z int, s worldgen.TreeShape, wide bool) {
-	height := s.MinH + h.rng.Intn(s.ExtraH+1)
-	top := y + height
-	trunk := [][2]int{{x, z}}
-	if wide {
-		trunk = [][2]int{{x, z}, {x + 1, z}, {x, z + 1}, {x + 1, z + 1}}
-	}
-	for ty := y; ty < top; ty++ {
-		for _, c := range trunk {
-			h.setBlockAt(players, dim, blockPos{c[0], ty, c[1]}, s.Log)
-		}
-	}
-
-	// Canopy is centred on the trunk; a 2x2 trunk shifts the centre half a
-	// block, so widen by one on the far side instead of offsetting.
-	leaf := func(ly, r int, trimCorners bool) {
-		hi := r
-		if wide {
-			hi = r + 1
-		}
-		for dx := -r; dx <= hi; dx++ {
-			for dz := -r; dz <= hi; dz++ {
-				if trimCorners && abs(dx) == r && abs(dz) == r {
-					continue // trim canopy corners
-				}
-				px, pz := x+dx, z+dz
-				if h.worldFor(dim).At(px, ly, pz) == worldgen.Air {
-					h.setBlockAt(players, dim, blockPos{px, ly, pz}, s.Leaves)
-				}
-			}
-		}
-	}
-	if s.Conical { // spruce: stacked rings tapering to a point
-		for i, ly := 0, top-4; ly <= top; ly++ {
-			r := 2 - i/2
-			if r < 0 {
-				r = 0
-			}
-			leaf(ly, r, r == 2)
-			i++
-		}
-		h.setBlockAt(players, dim, blockPos{x, top + 1, z}, s.Leaves)
-		return
-	}
-	leaf(top-2, 2, true)
-	leaf(top-1, 2, true)
-	leaf(top, 1, false)
-	leaf(top+1, 1, true)
 }
 
 // rollLeafDrops spawns a decaying leaf's loot (5% sapling / 2% sticks / 0.5% apple).
