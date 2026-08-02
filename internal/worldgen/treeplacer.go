@@ -1,0 +1,477 @@
+package worldgen
+
+import "math"
+
+// Vanilla tree generation — the trunk and foliage placers, ported from the
+// 26.2 tree (TreeFeature, trunkplacers/*, foliageplacers/*) and parameterised
+// from the configured_feature JSONs.
+//
+// Trees used to be hand-rolled silhouettes here: one column of log and a
+// radius-2 blob of leaves, with a `conical` flag for spruce. That is the kind
+// of "close enough" that makes a world feel wrong without anyone being able to
+// say why — and it hid a real bug for months, because the generator built dark
+// oak on one column while the sapling grower built it on four, and nothing
+// noticed since "a tree appeared" satisfied every check.
+//
+// So this is one implementation with two drivers. The chunk stamper and the
+// sapling grower both call PlaceTree; they cannot disagree about what a tree is.
+
+// TreeRNG is the randomness a tree is grown from. The DRAW ORDER matters as
+// much as the formulas: vanilla's shape distribution is a consequence of which
+// call happens when, so the ports below keep the sequence even where a
+// different order would read better.
+type TreeRNG interface {
+	Intn(n int) int
+	Float64() float64
+}
+
+// TreeSetter places one block of a tree. Leaves are placed with leaf=true so a
+// driver can refuse to overwrite anything but air with them.
+type TreeSetter func(x, y, z int, state uint32, leaf bool)
+
+// TreeFree reports whether a cell is free for a tree to grow into (vanilla
+// TreeFeature.validTreePos: air, leaves, or replaceable plants).
+type TreeFree func(x, y, z int) bool
+
+// TrunkKind selects one of vanilla's nine trunk placers.
+type TrunkKind uint8
+
+const (
+	TrunkStraight TrunkKind = iota
+	TrunkForking
+	TrunkDarkOak
+	TrunkGiant
+	TrunkMegaJungle
+	TrunkBending
+	TrunkUpwardsBranching
+	TrunkCherry
+	TrunkFancy
+)
+
+// FoliageKind selects one of vanilla's foliage placers.
+type FoliageKind uint8
+
+const (
+	FoliageBlob FoliageKind = iota
+	FoliageFancy
+	FoliageDarkOak
+	FoliageAcacia
+	FoliageBush
+	FoliageSpruce
+	FoliagePine
+	FoliageMegaPine
+	FoliageMegaJungle
+	FoliageRandomSpread
+	FoliageCherry
+)
+
+// TreeConfig is one configured_feature: the blocks, the two placers, and the
+// numbers the JSON carries for them.
+type TreeConfig struct {
+	Log, Leaves uint32
+
+	Trunk                            TrunkKind
+	BaseHeight, HeightRandA, HeightB int
+
+	Foliage              FoliageKind
+	RadiusMin, RadiusMax int
+	OffsetMin, OffsetMax int
+	FoliageH             int // blob/bush/mega_jungle fixed height
+	FoliageHMin          int // sampled heights (pine/cherry/mega_pine)
+	FoliageHMax          int
+
+	// bending
+	MinHeightForLeaves           int
+	BendLengthMin, BendLengthMax int
+	// upwards_branching (mangrove)
+	BranchProbability                        float64
+	ExtraBranchStepsMin, ExtraBranchStepsMax int
+	ExtraBranchLenMin, ExtraBranchLenMax     int
+	// cherry
+	BranchCountMin, BranchCountMax         int
+	BranchHorizMin, BranchHorizMax         int
+	BranchStartMin, BranchStartMax         int
+	BranchEndMin, BranchEndMax             int
+	HangingLeavesChance, HangingExtChance  float64
+	WideBottomHoleChance, CornerHoleChance float64
+	// spruce
+	TrunkHeightMin, TrunkHeightMax int
+	// random_spread
+	LeafPlacementAttempts int
+}
+
+// foliageAttachment is a point a foliage blob grows from. A trunk placer
+// returns a LIST of them, which is the whole mechanism behind branching trees —
+// each branch end grows its own canopy. tachyne had no equivalent at all, which
+// is why every tree here was a single blob on a stick.
+type foliageAttachment struct {
+	x, y, z      int
+	radiusOffset int
+	doubleTrunk  bool
+}
+
+// sampleInt is vanilla's UniformInt.sample: min + rand(max-min+1).
+func sampleInt(rng TreeRNG, lo, hi int) int {
+	if hi <= lo {
+		return lo
+	}
+	return lo + rng.Intn(hi-lo+1)
+}
+
+// treeHeightOf is TrunkPlacer.getTreeHeight.
+func (c *TreeConfig) treeHeightOf(rng TreeRNG) int {
+	return c.BaseHeight + rng.Intn(c.HeightRandA+1) + rng.Intn(c.HeightB+1)
+}
+
+// PlaceTree grows one tree at (x,y,z), the cell the sapling stood in.
+//
+// The roll order is TreeFeature.doPlace's and is load-bearing: height, then
+// foliage height, then radius. Changing it changes the distribution of shapes
+// even with identical formulas.
+func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree) {
+	treeHeight := c.treeHeightOf(rng)
+	foliageHeight := c.foliageHeightOf(rng, treeHeight)
+	trunkHeight := treeHeight - foliageHeight
+	leafRadius := c.foliageRadiusOf(rng, trunkHeight)
+	offset := sampleInt(rng, c.OffsetMin, c.OffsetMax)
+
+	atts := c.placeTrunk(rng, x, y, z, treeHeight, set, free)
+	for _, a := range atts {
+		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, set)
+	}
+}
+
+// ---- trunk placers -----------------------------------------------------------
+
+func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, free TreeFree) []foliageAttachment {
+	log := func(px, py, pz int) bool {
+		if !free(px, py, pz) {
+			return false
+		}
+		set(px, py, pz, c.Log, false)
+		return true
+	}
+	logAxis := func(px, py, pz int, axis int) {
+		if free(px, py, pz) {
+			set(px, py, pz, axisLog(c.Log, axis), false)
+		}
+	}
+	switch c.Trunk {
+	case TrunkStraight:
+		for i := 0; i < h; i++ {
+			log(x, y+i, z)
+		}
+		return []foliageAttachment{{x, y + h, z, 0, false}}
+
+	case TrunkForking:
+		return c.forkingTrunk(rng, x, y, z, h, log)
+
+	case TrunkDarkOak:
+		return c.darkOakTrunk(rng, x, y, z, h, log, free)
+
+	case TrunkGiant, TrunkMegaJungle:
+		atts := giantTrunk(x, y, z, h, log)
+		if c.Trunk == TrunkMegaJungle {
+			atts = append(atts, megaJungleBranches(rng, x, y, z, h, log)...)
+		}
+		return atts
+
+	case TrunkBending:
+		return c.bendingTrunk(rng, x, y, z, h, log, free)
+
+	case TrunkUpwardsBranching:
+		return c.branchingTrunk(rng, x, y, z, h, log)
+
+	case TrunkCherry:
+		return c.cherryTrunk(rng, x, y, z, h, log, logAxis)
+
+	case TrunkFancy:
+		return c.fancyTrunk(rng, x, y, z, h, set, free)
+	}
+	return nil
+}
+
+// horizontal directions, in vanilla's Direction.Plane.HORIZONTAL order
+// (north, south, west, east) — getRandomDirection indexes this list.
+var horiz = [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
+
+func randHoriz(rng TreeRNG) (int, int) { d := horiz[rng.Intn(4)]; return d[0], d[1] }
+
+// forkingTrunk is acacia: a leaning trunk plus a second limb the other way.
+func (c *TreeConfig) forkingTrunk(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool) []foliageAttachment {
+	var atts []foliageAttachment
+	ldx, ldz := randHoriz(rng)
+	leanHeight := h - rng.Intn(4) - 1
+	leanSteps := 3 - rng.Intn(3)
+	tx, tz := x, z
+	topY, has := 0, false
+	for yo := 0; yo < h; yo++ {
+		if yo >= leanHeight && leanSteps > 0 {
+			tx += ldx
+			tz += ldz
+			leanSteps--
+		}
+		if log(tx, y+yo, tz) {
+			topY, has = y+yo+1, true
+		}
+	}
+	if has {
+		atts = append(atts, foliageAttachment{tx, topY, tz, 1, false})
+	}
+	tx, tz = x, z
+	bdx, bdz := randHoriz(rng)
+	if bdx != ldx || bdz != ldz {
+		start := leanHeight - rng.Intn(2) - 1
+		steps := 1 + rng.Intn(3)
+		topY, has = 0, false
+		for yo := start; yo < h && steps > 0; steps-- {
+			if yo >= 1 {
+				tx += bdx
+				tz += bdz
+				if log(tx, y+yo, tz) {
+					topY, has = y+yo+1, true
+				}
+			}
+			yo++
+		}
+		if has {
+			atts = append(atts, foliageAttachment{tx, topY, tz, 0, false})
+		}
+	}
+	return atts
+}
+
+// darkOakTrunk is the 2x2 leaning trunk with its ring of short branches, shared
+// by dark oak and pale oak.
+func (c *TreeConfig) darkOakTrunk(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool, free TreeFree) []foliageAttachment {
+	var atts []foliageAttachment
+	ldx, ldz := randHoriz(rng)
+	leanHeight := h - rng.Intn(4)
+	leanSteps := 2 - rng.Intn(3)
+	tx, tz := x, z
+	ey := y + h - 1
+	for dy := 0; dy < h; dy++ {
+		if dy >= leanHeight && leanSteps > 0 {
+			tx += ldx
+			tz += ldz
+			leanSteps--
+		}
+		yy := y + dy
+		if free(tx, yy, tz) {
+			log(tx, yy, tz)
+			log(tx+1, yy, tz)
+			log(tx, yy, tz+1)
+			log(tx+1, yy, tz+1)
+		}
+	}
+	atts = append(atts, foliageAttachment{tx, ey, tz, 0, true})
+	for ox := -1; ox <= 2; ox++ {
+		for oz := -1; oz <= 2; oz++ {
+			if (ox < 0 || ox > 1 || oz < 0 || oz > 1) && rng.Intn(3) <= 0 {
+				length := rng.Intn(3) + 2
+				for by := 0; by < length; by++ {
+					log(x+ox, ey-by-1, z+oz)
+				}
+				atts = append(atts, foliageAttachment{x + ox, ey, z + oz, 0, false})
+			}
+		}
+	}
+	return atts
+}
+
+// giantTrunk is the mega spruce/pine 2x2 column; the three extra cells stop one
+// block short of the top.
+func giantTrunk(x, y, z, h int, log func(int, int, int) bool) []foliageAttachment {
+	for hh := 0; hh < h; hh++ {
+		log(x, y+hh, z)
+		if hh < h-1 {
+			log(x+1, y+hh, z)
+			log(x+1, y+hh, z+1)
+			log(x, y+hh, z+1)
+		}
+	}
+	return []foliageAttachment{{x, y + h, z, 0, true}}
+}
+
+// megaJungleBranches are the diagonal limbs the jungle giant throws out.
+func megaJungleBranches(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool) []foliageAttachment {
+	var atts []foliageAttachment
+	for bh := h - 2 - rng.Intn(4); bh > h/2; bh -= 2 + rng.Intn(4) {
+		angle := rng.Float64() * 2 * math.Pi
+		bx, bz := 0, 0
+		for b := 0; b < 5; b++ {
+			bx = int(1.5 + math.Cos(angle)*float64(b))
+			bz = int(1.5 + math.Sin(angle)*float64(b))
+			log(x+bx, y+bh-3+b/2, z+bz)
+		}
+		atts = append(atts, foliageAttachment{x + bx, y + bh, z + bz, -2, false})
+	}
+	return atts
+}
+
+// bendingTrunk is the azalea: it grows up, then leans over and keeps going.
+func (c *TreeConfig) bendingTrunk(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool, free TreeFree) []foliageAttachment {
+	var atts []foliageAttachment
+	dx, dz := randHoriz(rng)
+	logHeight := h - 1
+	px, py, pz := x, y, z
+	for i := 0; i <= logHeight; i++ {
+		if i+1 >= logHeight+rng.Intn(2) {
+			px += dx
+			pz += dz
+		}
+		if free(px, py, pz) {
+			log(px, py, pz)
+		}
+		if i >= c.MinHeightForLeaves {
+			atts = append(atts, foliageAttachment{px, py, pz, 0, false})
+		}
+		py++
+	}
+	bend := sampleInt(rng, c.BendLengthMin, c.BendLengthMax)
+	for i := 0; i <= bend; i++ {
+		if free(px, py, pz) {
+			log(px, py, pz)
+		}
+		atts = append(atts, foliageAttachment{px, py, pz, 0, false})
+		px += dx
+		pz += dz
+	}
+	return atts
+}
+
+// branchingTrunk is the mangrove: every log may throw a sideways branch.
+func (c *TreeConfig) branchingTrunk(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool) []foliageAttachment {
+	var atts []foliageAttachment
+	for hp := 0; hp < h; hp++ {
+		cy := y + hp
+		placed := log(x, cy, z)
+		if placed && hp < h-1 && rng.Float64() < c.BranchProbability {
+			bdx, bdz := randHoriz(rng)
+			blen := sampleInt(rng, c.ExtraBranchLenMin, c.ExtraBranchLenMax)
+			bpos := blen - sampleInt(rng, c.ExtraBranchLenMin, c.ExtraBranchLenMax) - 1
+			if bpos < 0 {
+				bpos = 0
+			}
+			steps := sampleInt(rng, c.ExtraBranchStepsMin, c.ExtraBranchStepsMax)
+			atts = append(atts, c.mangroveBranch(rng, h, log, x, z, cy, bdx, bdz, bpos, steps)...)
+		}
+		if hp == h-1 {
+			atts = append(atts, foliageAttachment{x, cy + 1, z, 0, false})
+		}
+	}
+	return atts
+}
+
+func (c *TreeConfig) mangroveBranch(rng TreeRNG, h int, log func(int, int, int) bool,
+	x, z, currentHeight, bdx, bdz, bpos, steps int) []foliageAttachment {
+	var atts []foliageAttachment
+	along := currentHeight + bpos
+	lx, lz := x, z
+	idx := bpos
+	for idx < h && steps > 0 {
+		if idx >= 1 {
+			ph := currentHeight + idx
+			lx += bdx
+			lz += bdz
+			along = ph
+			if log(lx, ph, lz) {
+				along = ph + 1
+			}
+			atts = append(atts, foliageAttachment{lx, ph, lz, 0, false})
+		}
+		idx++
+		steps--
+	}
+	if along-currentHeight > 1 {
+		atts = append(atts,
+			foliageAttachment{lx, along, lz, 0, false},
+			foliageAttachment{lx, along - 2, lz, 0, false})
+	}
+	return atts
+}
+
+// cherryTrunk grows one to three branches that arc out and up, with the logs
+// along them laid on their side.
+func (c *TreeConfig) cherryTrunk(rng TreeRNG, x, y, z, h int, log func(int, int, int) bool,
+	logAxis func(int, int, int, int)) []foliageAttachment {
+	first := h - 1 + sampleInt(rng, c.BranchStartMin, c.BranchStartMax)
+	if first < 0 {
+		first = 0
+	}
+	second := h - 1 + sampleInt(rng, c.BranchStartMin, c.BranchStartMax-1)
+	if second < 0 {
+		second = 0
+	}
+	if second >= first {
+		second++
+	}
+	count := sampleInt(rng, c.BranchCountMin, c.BranchCountMax)
+	middle := count == 3
+	both := count >= 2
+
+	trunkHeight := first + 1
+	switch {
+	case middle:
+		trunkHeight = h
+	case both:
+		trunkHeight = max(first, second) + 1
+	}
+	for i := 0; i < trunkHeight; i++ {
+		log(x, y+i, z)
+	}
+	var atts []foliageAttachment
+	if middle {
+		atts = append(atts, foliageAttachment{x, y + trunkHeight, z, 0, false})
+	}
+	ddx, ddz := randHoriz(rng)
+	axis := 0 // X
+	if ddz != 0 {
+		axis = 2 // Z
+	}
+	atts = append(atts, c.cherryBranch(rng, x, y, z, h, ddx, ddz, axis, first, first < trunkHeight-1, log, logAxis))
+	if both {
+		atts = append(atts, c.cherryBranch(rng, x, y, z, h, -ddx, -ddz, axis, second, second < trunkHeight-1, log, logAxis))
+	}
+	return atts
+}
+
+func (c *TreeConfig) cherryBranch(rng TreeRNG, x, y, z, h, ddx, ddz, axis, offset int, continuesUp bool,
+	log func(int, int, int) bool, logAxis func(int, int, int, int)) foliageAttachment {
+	lx, ly, lz := x, y+offset, z
+	endOffset := h - 1 + sampleInt(rng, c.BranchEndMin, c.BranchEndMax)
+	extend := continuesUp || endOffset < offset
+	dist := sampleInt(rng, c.BranchHorizMin, c.BranchHorizMax)
+	if extend {
+		dist++
+	}
+	ex, ey, ez := x+ddx*dist, y+endOffset, z+ddz*dist
+	steps := 1
+	if extend {
+		steps = 2
+	}
+	for i := 0; i < steps; i++ {
+		lx += ddx
+		lz += ddz
+		logAxis(lx, ly, lz, axis)
+	}
+	up := 1
+	if ey <= ly {
+		up = -1
+	}
+	for {
+		d := abs(lx-ex) + abs(ly-ey) + abs(lz-ez)
+		if d == 0 {
+			return foliageAttachment{ex, ey + 1, ez, 0, false}
+		}
+		chance := math.Abs(float64(ey-ly)) / float64(d)
+		if rng.Float64() < chance {
+			ly += up
+			log(lx, ly, lz)
+		} else {
+			lx += ddx
+			lz += ddz
+			logAxis(lx, ly, lz, axis)
+		}
+	}
+}
