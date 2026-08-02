@@ -139,7 +139,7 @@ func TestNoSkyFloaters(t *testing.T) {
 	// corner — but restricting the diagonal steps to log/leaf DESTINATIONS
 	// keeps the terrain invariant intact and still fails a canopy with no
 	// trunk anywhere near it.
-	isTree := func(b uint32) bool { return IsLog(b) || IsLeaves(b) }
+	isTree := func(b uint32) bool { return IsLog(b) || IsLeaves(b) || IsMangroveRoots(b) }
 	for len(st) > 0 {
 		c := st[len(st)-1]
 		st = st[:len(st)-1]

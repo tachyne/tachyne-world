@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Mangroves stand on their stilts.** The last missing piece of vanilla's
+  tree machinery is in: mangrove root placement. A mangrove's trunk now
+  rises above where its propagule stood, with roots filling the gap and
+  fanning out beneath it — turning muddy inside mud, waterlogging in water,
+  and carrying the occasional moss carpet on top. A mangrove that cannot
+  root — over a hole, against a wall — refuses to grow and the propagule
+  simply tries again later, exactly as in vanilla.
 - **Azaleas grow into azalea trees.** Bone meal an azalea or flowering azalea
   bush and it has vanilla's 45% chance of growing the azalea tree on the
   spot: a bending oak trunk under a canopy that mixes flowering patches

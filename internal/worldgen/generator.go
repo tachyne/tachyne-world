@@ -511,7 +511,7 @@ func removeFloatingFragments(ch *Chunk) {
 	for dy := 0; dy < height; dy++ {
 		for lz := 0; lz < 16; lz++ {
 			for lx := 0; lx < 16; lx++ {
-				if b := get(lx, dy, lz); solid(b) && !visited[idx(lx, dy, lz)] && !IsLog(b) && !IsLeaves(b) {
+				if b := get(lx, dy, lz); solid(b) && !visited[idx(lx, dy, lz)] && !IsLog(b) && !IsLeaves(b) && !IsMangroveRoots(b) {
 					ch.Sections[dy/16][(dy%16*16+lz)*16+lx] = Air
 				}
 			}

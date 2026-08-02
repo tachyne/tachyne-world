@@ -58,6 +58,12 @@ type TreeDriver struct {
 	// with nothing motion-blocking except leaves at or above it. Leaf litter
 	// only settles on ground open to the sky through at most a canopy.
 	SurfaceTop func(x, z int) int
+	// RootThrough reports #mangrove_roots_can_grow_through beyond what Free
+	// allows — mud, existing roots, moss carpet, vines, propagules, snow.
+	// Like DirtGround, the chunk stamper answers from the terrain model so
+	// the root walk (whose DRAWS follow its reads) is identical in every
+	// pass; the live driver reads the real world.
+	RootThrough func(x, y, z int) bool
 }
 
 // TrunkKind selects one of vanilla's nine trunk placers.
@@ -159,6 +165,16 @@ type TreeConfig struct {
 	// place_on_ground — leaf litter scattered around the base (the forest
 	// and dark-forest tree variants run two passes with different reach).
 	LitterPasses []LitterPass
+
+	// mangrove_root_placer — the trunk stands one to three blocks above the
+	// origin and stilted roots fill and fan out beneath it. A feature has
+	// roots when RootMaxLength is non-zero.
+	RootTrunkOffMin, RootTrunkOffMax int
+	RootMaxLength, RootMaxWidth      int
+	RootSkewChance                   float64
+	RootState, RootMuddyState        uint32
+	AboveRootChance                  float64
+	AboveRootState                   uint32
 }
 
 // LitterPass is one place_on_ground decorator: Tries random cells in the
@@ -253,9 +269,17 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	leafRadius := c.foliageRadiusOf(rng, trunkHeight)
 	offset := sampleInt(rng, c.OffsetMin, c.OffsetMax)
 
-	// The fit check. Most species refuse outright; the ones carrying a
-	// min_clipped_height (the large oak) will settle for a shorter tree.
-	clipped := c.maxFreeHeight(x, y, z, treeHeight, free)
+	// A root placer raises the trunk: the trunk origin sits above the
+	// planted cell and the roots will fill the gap (getTrunkOrigin).
+	ty := y
+	if c.RootMaxLength > 0 {
+		ty = y + sampleInt(rng, c.RootTrunkOffMin, c.RootTrunkOffMax)
+	}
+
+	// The fit check, measured at the TRUNK origin as vanilla measures it.
+	// Most species refuse outright; the ones carrying a min_clipped_height
+	// (the large oak) will settle for a shorter tree.
+	clipped := c.maxFreeHeight(x, ty, z, treeHeight, free)
 	if clipped < treeHeight {
 		if c.MinClippedHeight <= 0 || clipped < c.MinClippedHeight {
 			return false
@@ -272,6 +296,7 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	// order is part of determinism — a map walk would grow different vines on
 	// the same tree every regeneration.
 	logs := map[[3]int]bool{}
+	rootCells := map[[3]int]bool{}
 	// Leaves record their PLACED STATE, not just membership: the azalea mixes
 	// two leaf blocks through one canopy, and the distance-seeding rewrite
 	// must preserve which one landed where.
@@ -280,6 +305,12 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	recording := func(px, py, pz int, st uint32, leaf bool) {
 		q := [3]int{px, py, pz}
 		if leaf {
+			// tryPlaceLeaf refuses cells a tree cannot replace — the roots
+			// placed moments ago are exactly that, and a leaf that was never
+			// placed must not be recorded (a propagule would hang off it).
+			if rootCells[q] {
+				return
+			}
 			if !logs[q] {
 				if _, seen := leaves[q]; !seen {
 					leafList = append(leafList, q)
@@ -318,7 +349,26 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 		set(px, py, pz, c.DirtState, false)
 	}
 
-	atts := c.placeTrunk(rng, x, y, z, treeHeight, recording, free, dirt)
+	// Roots go in BEFORE the trunk, and a walk that cannot complete refuses
+	// the whole tree — vanilla returns false out of doPlace here too.
+	if c.RootMaxLength > 0 {
+		if !c.placeRoots(rng, x, y, z, ty, d, rootCells) {
+			return false
+		}
+	}
+
+	// The mangrove trunk grows THROUGH its own roots and carpets
+	// (#mangrove_logs_can_grow_through) — without this the below-trunk
+	// root's moss carpet blocks the base log and the trunk floats one
+	// higher. Own cells only: chunk-independent, and the common case.
+	trunkFree := free
+	if c.RootMaxLength > 0 {
+		trunkFree = func(px, py, pz int) bool {
+			return free(px, py, pz) || rootCells[[3]int{px, py, pz}]
+		}
+	}
+
+	atts := c.placeTrunk(rng, x, ty, z, treeHeight, recording, trunkFree, dirt)
 	for _, a := range atts {
 		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
 	}
@@ -334,7 +384,7 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	// propagule that would hang there, exactly as it does in vanilla's world).
 	deco := map[[3]int]bool{}
 	isAir := func(q [3]int) bool {
-		if logs[q] || deco[q] {
+		if logs[q] || deco[q] || rootCells[q] {
 			return false
 		}
 		if _, isLeaf := leaves[q]; isLeaf {

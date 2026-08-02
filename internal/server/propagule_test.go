@@ -96,7 +96,13 @@ func TestPlantedPropaguleGrowsAMangrove(t *testing.T) {
 	players := map[int32]*tracked{}
 	x, y, z := 70, 100, 70
 
-	h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+	// A mangrove's roots must FIND ground or the whole tree refuses — a
+	// single floating block is not a swamp, so lay a real floor.
+	for dx := -10; dx <= 10; dx++ {
+		for dz := -10; dz <= 10; dz++ {
+			h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Dirt)
+		}
+	}
 	h.world.SetBlock(x, y, z, propaguleState(4, false, 0, false))
 	for k := 1; k <= 12; k++ {
 		h.world.SetBlock(x, y+k, z, worldgen.Air)
@@ -109,9 +115,22 @@ func TestPlantedPropaguleGrowsAMangrove(t *testing.T) {
 	if isPropagule(got) {
 		t.Fatalf("planted propagule never grew (state %d)", got)
 	}
+	// The trunk stands on STILTS now — one to seven blocks up, with a root
+	// under it — so the propagule's own cell holds air or a root, and the
+	// log is found above.
 	wantLog, _ := worldgen.BlockRange("mangrove_log")
-	if got < wantLog || got > wantLog+2 {
-		t.Errorf("trunk state %d, want mangrove_log (%d..%d)", got, wantLog, wantLog+2)
+	trunkBase := 0
+	for dy := 1; dy <= 8; dy++ {
+		if s := h.world.At(x, y+dy, z); s >= wantLog && s <= wantLog+2 {
+			trunkBase = y + dy
+			break
+		}
+	}
+	if trunkBase == 0 {
+		t.Fatalf("no mangrove log above the grown propagule (cell now %d)", got)
+	}
+	if below := h.world.At(x, trunkBase-1, z); !worldgen.IsMangroveRoots(below) {
+		t.Errorf("under the raised trunk: state %d, want mangrove roots", below)
 	}
 	leafLo, leafHi := worldgen.BlockRange("mangrove_leaves")
 	found := false

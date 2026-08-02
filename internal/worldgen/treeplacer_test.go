@@ -26,11 +26,14 @@ func growTree(name string, seed int64) (*grown, *TreeConfig) {
 		delete(g.leaves, [3]int{x, y, z})
 	}
 	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
-		Set:        set,
-		Free:       func(x, y, z int) bool { return true },
-		Read:       func(x, y, z int) uint32 { return Air },
-		DirtGround: func(x, y, z int) bool { return false },
-		SurfaceTop: func(x, z int) int { return -999 },
+		Set: set,
+		// Open sky above a floor: a mangrove's root walk must find ground or
+		// it refuses the whole tree, exactly as vanilla's does over a void.
+		Free:        func(x, y, z int) bool { return y >= 0 },
+		Read:        func(x, y, z int) uint32 { return Air },
+		DirtGround:  func(x, y, z int) bool { return false },
+		SurfaceTop:  func(x, z int) int { return -999 },
+		RootThrough: func(x, y, z int) bool { return false },
 	})
 	return g, c
 }

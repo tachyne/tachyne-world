@@ -271,6 +271,19 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 		// The terrain's first empty cell IS the heightmap minus trees, and
 		// PlaceTree folds its own logs in. Chunk-independent by construction.
 		SurfaceTop: func(x, z int) int { return g.Height(x, z) },
+		// Root passability from the model, like DirtGround: the walk's draws
+		// follow its reads, so every pass must hear the same answers.
+		RootThrough: func(x, y, z int) bool {
+			col := g.columnAt(x, z)
+			switch {
+			case y >= col.h:
+				return false
+			case y == col.h-1:
+				return IsRootGrowThrough(col.topBlock())
+			default:
+				return IsRootGrowThrough(col.biome.Sub)
+			}
+		},
 	})
 }
 

@@ -16,11 +16,12 @@ func grownStates(name string, seed int64) map[uint32]int {
 	rng := rand.New(rand.NewSource(seed))
 	set := func(x, y, z int, state uint32, leaf bool) { out[state]++ }
 	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
-		Set:        set,
-		Free:       func(x, y, z int) bool { return true },
-		Read:       func(x, y, z int) uint32 { return Air },
-		DirtGround: func(x, y, z int) bool { return false },
-		SurfaceTop: func(x, z int) int { return -999 },
+		Set:         set,
+		Free:        func(x, y, z int) bool { return true },
+		Read:        func(x, y, z int) uint32 { return Air },
+		DirtGround:  func(x, y, z int) bool { return false },
+		SurfaceTop:  func(x, z int) int { return -999 },
+		RootThrough: func(x, y, z int) bool { return false },
 	})
 	return out
 }
@@ -98,11 +99,18 @@ func grownWorld(name string, seed int64, ground map[[3]int]uint32) map[[3]int]ui
 		blocks[q] = state
 	}
 	read := func(x, y, z int) uint32 { return blocks[[3]int{x, y, z}] }
-	free := func(x, y, z int) bool { return y >= 0 }
+	free := func(x, y, z int) bool {
+		if y < 0 {
+			return false
+		}
+		st, occupied := blocks[[3]int{x, y, z}]
+		return !occupied || IsLeaves(st)
+	}
 	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
 		Set: set, Free: free, Read: read,
-		DirtGround: func(x, y, z int) bool { return IsDirtTag(read(x, y, z)) },
-		SurfaceTop: func(x, z int) int { return 0 },
+		DirtGround:  func(x, y, z int) bool { return IsDirtTag(read(x, y, z)) },
+		SurfaceTop:  func(x, z int) int { return 0 },
+		RootThrough: func(x, y, z int) bool { return IsRootGrowThrough(read(x, y, z)) },
 	})
 	return blocks
 }
@@ -583,5 +591,70 @@ func TestAzaleaTreesMixFloweringLeaves(t *testing.T) {
 	}
 	if rootedCount != 40 {
 		t.Errorf("rooted dirt forced under %d of 40 azaleas — force_dirt must ignore #dirt", rootedCount)
+	}
+}
+
+// Mangroves stand on stilts: the trunk rises above the planted cell, roots
+// fill the column and fan out beneath — muddying inside mud, carpeted with
+// moss on top — and a tree whose roots cannot complete refuses entirely.
+func TestMangrovesGrowStiltedRoots(t *testing.T) {
+	c := TreeFeatures["mangrove"]
+	rootDry, rootWet, muddy, carpet := c.RootState, c.RootState-1, c.RootMuddyState, c.AboveRootState
+	mudGround := func() map[[3]int]uint32 {
+		g := map[[3]int]uint32{}
+		for x := -12; x <= 12; x++ {
+			for z := -12; z <= 12; z++ {
+				g[[3]int{x, -1, z}] = Mud
+			}
+		}
+		return g
+	}
+	roots, muddyRoots, carpets, raised := 0, 0, 0, 0
+	for seed := int64(1); seed <= 40; seed++ {
+		blocks := grownWorld("mangrove", seed, mudGround())
+		trunkBase := 99
+		for p, st := range blocks {
+			if p[0] == 0 && p[2] == 0 && IsLog(st) && p[1] < trunkBase {
+				trunkBase = p[1]
+			}
+			switch st {
+			case rootDry, rootWet:
+				roots++
+			case muddy:
+				muddyRoots++
+				if p[1] != -1 {
+					t.Fatalf("seed %d: muddy roots at y=%d, but the mud is at -1", seed, p[1])
+				}
+			case carpet:
+				carpets++
+			}
+		}
+		if trunkBase == 99 {
+			t.Fatalf("seed %d: mangrove grew no trunk", seed)
+		}
+		if trunkBase < c.RootTrunkOffMin || trunkBase > c.RootTrunkOffMax {
+			t.Fatalf("seed %d: trunk base at y=%d, want raised %d..%d", seed, trunkBase, c.RootTrunkOffMin, c.RootTrunkOffMax)
+		}
+		if trunkBase > 0 {
+			raised++
+		}
+		if _, ok := blocks[[3]int{0, trunkBase - 1, 0}]; !ok {
+			t.Fatalf("seed %d: nothing under the raised trunk — the root column is missing", seed)
+		}
+	}
+	if roots == 0 || muddyRoots == 0 || carpets == 0 || raised == 0 {
+		t.Errorf("forty mangroves: %d roots, %d muddy, %d carpets, %d raised — every kind should appear",
+			roots, muddyRoots, carpets, raised)
+	}
+	// A blocked root column refuses the whole tree: with stone directly above
+	// the planted cell, neither the roots nor the fit check let it through.
+	for seed := int64(1); seed <= 20; seed++ {
+		g := mudGround()
+		g[[3]int{0, 1, 0}] = Stone
+		for _, st := range grownWorld("mangrove", seed, g) {
+			if IsLog(st) {
+				t.Fatalf("seed %d: a mangrove grew through a blocked root column", seed)
+			}
+		}
 	}
 }

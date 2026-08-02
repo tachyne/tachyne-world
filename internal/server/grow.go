@@ -663,6 +663,7 @@ func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, featur
 			}
 			return worldgen.MinY
 		},
+		RootThrough: func(px, py, pz int) bool { return worldgen.IsRootGrowThrough(w.At(px, py, pz)) },
 	})
 }
 

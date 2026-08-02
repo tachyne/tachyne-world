@@ -53,9 +53,20 @@ func TestPlantedMangrovesHangPropagules(t *testing.T) {
 	pods := 0
 	for i := 0; i < 12; i++ {
 		x, y, z := 800+i*24, 200, 800
-		h.world.SetBlock(x, y-1, z, worldgen.Dirt)
-		if !h.placeLiveTree(players, 0, x, y, z, "tall_mangrove") {
-			t.Fatalf("mangrove %d refused to grow", i)
+		// Roots must find ground: a floor, not a floating block.
+		for dx := -10; dx <= 10; dx++ {
+			for dz := -10; dz <= 10; dz++ {
+				h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Dirt)
+			}
+		}
+		// A refused root walk is vanilla behaviour (the propagule just tries
+		// again next tick), so retry the way the game would.
+		grown := false
+		for attempt := 0; attempt < 30 && !grown; attempt++ {
+			grown = h.placeLiveTree(players, 0, x, y, z, "tall_mangrove")
+		}
+		if !grown {
+			t.Fatalf("mangrove %d refused thirty growth attempts", i)
 		}
 		for dx := -6; dx <= 6; dx++ {
 			for dy := 0; dy < 18; dy++ {
