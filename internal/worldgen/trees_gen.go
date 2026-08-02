@@ -20,8 +20,9 @@ var TreeFeatures = map[string]*TreeConfig{
 	"mega_pine":           {Log: 139, Leaves: 307, Trunk: TrunkGiant, BaseHeight: 13, HeightRandA: 2, HeightB: 14, Foliage: FoliageMegaPine, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, FoliageHMin: 3, FoliageHMax: 7, SizeLimit: 1, SizeLower: 1, SizeUpper: 2, AlterGround: true},
 	"mega_spruce":         {Log: 139, Leaves: 307, Trunk: TrunkGiant, BaseHeight: 13, HeightRandA: 2, HeightB: 14, Foliage: FoliageMegaPine, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, FoliageHMin: 13, FoliageHMax: 17, SizeLimit: 1, SizeLower: 1, SizeUpper: 2, AlterGround: true},
 	"oak":                 {Log: 136, Leaves: 279, Trunk: TrunkStraight, BaseHeight: 4, HeightRandA: 2, HeightB: 0, Foliage: FoliageBlob, RadiusMin: 2, RadiusMax: 2, OffsetMin: 0, OffsetMax: 0, FoliageH: 3, SizeLimit: 1, SizeLower: 0, SizeUpper: 1},
-	"pale_oak":            {Log: 157, Leaves: 475, Trunk: TrunkDarkOak, BaseHeight: 6, HeightRandA: 2, HeightB: 1, Foliage: FoliageDarkOak, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, SizeThreeLayer: true, SizeLimit: 1, SizeLower: 0, SizeMiddle: 1, SizeUpperLimit: 1, SizeUpper: 2},
-	"pale_oak_creaking":   {Log: 157, Leaves: 475, Trunk: TrunkDarkOak, BaseHeight: 6, HeightRandA: 2, HeightB: 1, Foliage: FoliageDarkOak, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, SizeThreeLayer: true, SizeLimit: 1, SizeLower: 0, SizeMiddle: 1, SizeUpperLimit: 1, SizeUpper: 2, HeartProb: 1.0},
+	"pale_oak":            {Log: 157, Leaves: 475, Trunk: TrunkDarkOak, BaseHeight: 6, HeightRandA: 2, HeightB: 1, Foliage: FoliageDarkOak, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, SizeThreeLayer: true, SizeLimit: 1, SizeLower: 0, SizeMiddle: 1, SizeUpperLimit: 1, SizeUpper: 2, PaleMossLeaves: 0.15, PaleMossTrunk: 0.4, PaleMossGround: 0.8},
+	"pale_oak_bonemeal":   {Log: 157, Leaves: 475, Trunk: TrunkDarkOak, BaseHeight: 6, HeightRandA: 2, HeightB: 1, Foliage: FoliageDarkOak, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, SizeThreeLayer: true, SizeLimit: 1, SizeLower: 0, SizeMiddle: 1, SizeUpperLimit: 1, SizeUpper: 2},
+	"pale_oak_creaking":   {Log: 157, Leaves: 475, Trunk: TrunkDarkOak, BaseHeight: 6, HeightRandA: 2, HeightB: 1, Foliage: FoliageDarkOak, RadiusMin: 0, RadiusMax: 0, OffsetMin: 0, OffsetMax: 0, SizeThreeLayer: true, SizeLimit: 1, SizeLower: 0, SizeMiddle: 1, SizeUpperLimit: 1, SizeUpper: 2, HeartProb: 1.0, PaleMossLeaves: 0.15, PaleMossTrunk: 0.4, PaleMossGround: 0.8},
 	"pine":                {Log: 139, Leaves: 307, Trunk: TrunkStraight, BaseHeight: 6, HeightRandA: 4, HeightB: 0, Foliage: FoliagePine, RadiusMin: 1, RadiusMax: 1, OffsetMin: 1, OffsetMax: 1, FoliageHMin: 3, FoliageHMax: 4, SizeLimit: 2, SizeLower: 0, SizeUpper: 2},
 	"spruce":              {Log: 139, Leaves: 307, Trunk: TrunkStraight, BaseHeight: 5, HeightRandA: 2, HeightB: 1, Foliage: FoliageSpruce, RadiusMin: 2, RadiusMax: 3, OffsetMin: 0, OffsetMax: 2, TrunkHeightMin: 1, TrunkHeightMax: 2, SizeLimit: 2, SizeLower: 0, SizeUpper: 2},
 	"super_birch_bees":    {Log: 142, Leaves: 335, Trunk: TrunkStraight, BaseHeight: 5, HeightRandA: 2, HeightB: 6, Foliage: FoliageBlob, RadiusMin: 2, RadiusMax: 2, OffsetMin: 0, OffsetMax: 0, FoliageH: 3, SizeLimit: 1, SizeLower: 0, SizeUpper: 1},
@@ -48,6 +49,5 @@ var treeAliases = map[string]string{
 	"oak_bees_002":                    "oak",
 	"oak_bees_005":                    "oak",
 	"oak_leaf_litter":                 "oak",
-	"pale_oak_bonemeal":               "pale_oak",
 	"super_birch_bees_0002":           "super_birch_bees",
 }

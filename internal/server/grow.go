@@ -75,7 +75,9 @@ var saplingSpecies = func() []saplingSpec {
 		{"acacia_sapling", saplingSpec{single: "acacia"}},
 		{"cherry_sapling", saplingSpec{single: "cherry"}},
 		{"dark_oak_sapling", saplingSpec{mega: "dark_oak"}},
-		{"pale_oak_sapling", saplingSpec{mega: "pale_oak"}},
+		// Vanilla's PALE_OAK grower uses the BONEMEAL feature: the bare tree,
+		// no moss and never a heart — those belong to the wild ones.
+		{"pale_oak_sapling", saplingSpec{mega: "pale_oak_bonemeal"}},
 	}
 	out := make([]saplingSpec, 0, len(rows))
 	for _, r := range rows {

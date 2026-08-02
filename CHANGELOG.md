@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **The pale garden wears its moss.** Wild pale oaks now grow the way vanilla
+  grows them: a patch of pale moss laid into the ground at the tree's foot —
+  topped with pale moss carpet that creeps up the trunk, short grass and tall
+  grass — and strands of pale hanging moss trailing from the trunk and
+  canopy. A sapling-grown pale oak stays bare, exactly as vanilla's does; the
+  moss belongs to the wild trees.
 - **Creaking hearts beat inside wild pale oaks again.** One pale oak in ten
   now grows with vanilla's creaking-heart rule: a log enclosed by logs on all
   six faces becomes a dormant heart, which only happens where the trunk's bend

@@ -123,6 +123,8 @@ type TreeConfig struct {
 	PropaguleProb                   float64
 	PropaguleExclXZ, PropaguleExclY int
 	PropaguleEmpty                  int
+	// pale_moss — a moss patch in the ground and hanging strands (pale oak).
+	PaleMossLeaves, PaleMossTrunk, PaleMossGround float64
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -422,6 +424,11 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 			// hanging propagule: age stride 8, hanging=true is +1.
 			ctx.set(q[0], q[1], q[2], propaguleBase+uint32(rng.Intn(5))*8+1, true)
 		}
+	}
+	// PaleMossDecorator: the ground moss patch and the hanging strands —
+	// before the heart, as pale_oak_creaking orders them.
+	if c.PaleMossGround > 0 || c.PaleMossTrunk > 0 || c.PaleMossLeaves > 0 {
+		c.paleMoss(ctx)
 	}
 	// CreakingHeartDecorator: one roll gates the tree, then the logs are
 	// shuffled and the FIRST log with logs on all six faces becomes a

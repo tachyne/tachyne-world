@@ -253,3 +253,98 @@ func TestMegaSprucePodzolsDirtGround(t *testing.T) {
 		}
 	}
 }
+
+// Pale oaks wear their moss: a pale-moss patch in the ground at the foot
+// (80% of trees), hanging strands off the trunk and canopy, and carpet or
+// grass scattered on the patch. The bonemeal twin — what a sapling grows —
+// stays bare.
+func TestPaleOaksGrowPaleMoss(t *testing.T) {
+	grass := blockBase("grass_block") + 1
+	ground := map[[3]int]uint32{}
+	for x := -14; x <= 14; x++ {
+		for z := -14; z <= 14; z++ {
+			ground[[3]int{x, -1, z}] = grass
+			ground[[3]int{x, -2, z}] = Dirt
+			ground[[3]int{x, -3, z}] = Stone
+		}
+	}
+	mossBlock := blockBase("pale_moss_block")
+	hangTip, _ := BlockRange("pale_hanging_moss")
+	carpetLo, carpetHi := BlockRange("pale_moss_carpet")
+	shortGrass := blockBase("short_grass")
+	tallLo, tallHi := BlockRange("tall_grass")
+	patches, strands, vegetation := 0, 0, 0
+	for seed := int64(1); seed <= 60; seed++ {
+		blocks := grownWorld("pale_oak", seed, ground)
+		sawPatch := false
+		for p, st := range blocks {
+			switch {
+			case st == mossBlock:
+				sawPatch = true
+				if p[1] != -1 {
+					t.Fatalf("seed %d: moss ground at y=%d, not in the surface", seed, p[1])
+				}
+			case st == hangTip || st == hangTip+1:
+				strands++
+				above := blocks[[3]int{p[0], p[1] + 1, p[2]}]
+				if !IsLog(above) && !IsLeaves(above) && above != hangTip+1 {
+					t.Fatalf("seed %d: hanging moss at %v under %d — not a log, leaf or stem", seed, p, above)
+				}
+				if st == hangTip+1 {
+					below := blocks[[3]int{p[0], p[1] - 1, p[2]}]
+					if below != hangTip && below != hangTip+1 {
+						t.Fatalf("seed %d: a stem at %v has no moss below — a strand without a tip", seed, p)
+					}
+				}
+			case (st >= carpetLo && st <= carpetHi) || st == shortGrass || (st >= tallLo && st <= tallHi):
+				vegetation++
+				if st == tallLo+1 { // half=lower must carry its upper half
+					if blocks[[3]int{p[0], p[1] + 1, p[2]}] != tallLo {
+						t.Fatalf("seed %d: tall grass lower at %v without its upper half", seed, p)
+					}
+				}
+			}
+		}
+		if sawPatch {
+			patches++
+		}
+	}
+	if patches < 30 {
+		t.Errorf("only %d of 60 pale oaks grew a moss patch — the 0.8 ground roll is off", patches)
+	}
+	if strands == 0 {
+		t.Error("no hanging moss on sixty pale oaks")
+	}
+	if vegetation == 0 {
+		t.Error("no carpet or grass on sixty moss patches")
+	}
+	// The sapling-grown twin is bare: no moss, no patch, no heart.
+	for seed := int64(1); seed <= 30; seed++ {
+		for _, st := range grownWorld("pale_oak_bonemeal", seed, ground) {
+			if st == mossBlock || st == hangTip || st == hangTip+1 || st == CreakingHeartDormant {
+				t.Fatalf("pale_oak_bonemeal grew decoration state %d (seed %d)", st, seed)
+			}
+		}
+	}
+}
+
+// The moss patch respects the ground: nothing is placed into a stone floor
+// (stone IS moss-replaceable, so it mosses over), but a floor of obsidian —
+// outside #moss_replaceable — stays untouched.
+func TestPaleMossPatchRespectsReplaceable(t *testing.T) {
+	obsidian := blockBase("obsidian")
+	ground := map[[3]int]uint32{}
+	for x := -14; x <= 14; x++ {
+		for z := -14; z <= 14; z++ {
+			ground[[3]int{x, -1, z}] = obsidian
+		}
+	}
+	mossBlock := blockBase("pale_moss_block")
+	for seed := int64(1); seed <= 20; seed++ {
+		for _, st := range grownWorld("pale_oak", seed, ground) {
+			if st == mossBlock {
+				t.Fatal("pale moss laid into an obsidian floor")
+			}
+		}
+	}
+}
