@@ -69,11 +69,29 @@ def rng_range(v, default=(0, 0)):
     raise SystemExit(f"unhandled int provider: {v}")
 
 
-def block_of(prov):
-    """A simple_state_provider's block name; anything else is unsupported."""
+# name+properties -> state id, from the datagen block report. Vanilla's
+# providers name an EXACT state, not a block: oak leaves are placed at
+# distance=7 persistent=false, and using the block's base state instead gives a
+# state no client renders as ordinary leaves and no decay rule recognises.
+REPORT = os.path.expanduser("~/vanilla/reports/1.21.11/blocks.json")
+report = json.load(open(REPORT))
+
+
+def state_of(prov):
+    """A simple_state_provider's exact state id; None if unsupported."""
     if prov.get("type") != "minecraft:simple_state_provider":
-        return None
-    return prov["state"]["Name"].removeprefix("minecraft:")
+        return None, None
+    st = prov["state"]
+    name = st["Name"].removeprefix("minecraft:")
+    props = st.get("Properties", {})
+    entry = report.get("minecraft:" + name)
+    if entry is None:
+        return name, None
+    for cand in entry["states"]:
+        cp = cand.get("properties", {})
+        if all(cp.get(k) == v for k, v in props.items()):
+            return name, cand["id"]
+    return name, None
 
 
 pre = "data/minecraft/worldgen/configured_feature/"
@@ -86,16 +104,24 @@ for n in sorted(z.namelist()):
         continue
     feats[n[len(pre):-len(".json")]] = d["config"]
 
-# Block name -> id, from the engine's own generated table.
+# Block name -> MIN state id, from the engine's own generated table.
+#
+# blockids_gen.go holds THREE maps (default, base, max) in that order, so a
+# regex over the whole file keeps the LAST match — the MAX state. That silently
+# gave every trunk axis=z and laid the whole forest on its side. Slice out
+# blockStateBase specifically: the placers add the axis themselves, so they need
+# the base, and a log's base state is axis=x.
 src = open(os.path.join(HERE, "..", "internal", "worldgen", "blockids_gen.go")).read()
-base_id = {m.group(1): int(m.group(2)) for m in re.finditer(r'"([a-z0-9_]+)":\s+(\d+),', src)}
+seg = src[src.index("var blockStateBase"):]
+seg = seg[:seg.index("\n}")]
+base_id = {m.group(1): int(m.group(2)) for m in re.finditer(r'"([a-z0-9_]+)":\s+(\d+),', seg)}
 
 rows, skipped = {}, []
 for name, c in feats.items():
-    log = block_of(c["trunk_provider"])
-    leaves = block_of(c["foliage_provider"])
-    if log is None or leaves is None or log not in base_id or leaves not in base_id:
-        skipped.append((name, "non-simple provider" if log is None or leaves is None else "unknown block"))
+    log, _ = state_of(c["trunk_provider"])
+    leaves, leaf_state = state_of(c["foliage_provider"])
+    if log is None or leaves is None or log not in base_id or leaf_state is None:
+        skipped.append((name, "non-simple provider" if log is None or leaves is None else "unresolved state"))
         continue
     tp, fp = c["trunk_placer"], c["foliage_placer"]
     tk = TRUNK.get(tp["type"].removeprefix("minecraft:"))
@@ -107,7 +133,7 @@ for name, c in feats.items():
     rmin, rmax = rng_range(fp.get("radius"))
     omin, omax = rng_range(fp.get("offset"))
     f = {
-        "Log": base_id[log], "Leaves": base_id[leaves],
+        "Log": base_id[log], "Leaves": leaf_state,
         "Trunk": tk, "BaseHeight": tp["base_height"],
         "HeightRandA": tp["height_rand_a"], "HeightB": tp["height_rand_b"],
         "Foliage": fk, "RadiusMin": rmin, "RadiusMax": rmax,
@@ -150,6 +176,19 @@ for name, c in feats.items():
         f["BranchStartMin"], f["BranchStartMax"] = rng_range(tp["branch_start_offset_from_top"])
     if "branch_end_offset_from_top" in tp:
         f["BranchEndMin"], f["BranchEndMax"] = rng_range(tp["branch_end_offset_from_top"])
+
+    # minimum_size — the clearance gate. Without it a tree grows straight
+    # through a roof, so this is not optional decoration.
+    ms = c["minimum_size"]
+    f["SizeLimit"] = ms.get("limit", 0)
+    f["SizeLower"] = ms.get("lower_size", 0)
+    f["SizeUpper"] = ms.get("upper_size", 0)
+    if ms["type"] == "minecraft:three_layers_feature_size":
+        f["SizeThreeLayer"] = "true"
+        f["SizeMiddle"] = ms.get("middle_size", 0)
+        f["SizeUpperLimit"] = ms.get("upper_limit", 0)
+    if "min_clipped_height" in ms:
+        f["MinClippedHeight"] = ms["min_clipped_height"]
     rows[name] = f
 
 # Collapse the decorator-only variants onto the tree they duplicate.
@@ -169,7 +208,9 @@ ORDER = ["Log", "Leaves", "Trunk", "BaseHeight", "HeightRandA", "HeightB",
          "BranchHorizMin", "BranchHorizMax", "BranchStartMin", "BranchStartMax",
          "BranchEndMin", "BranchEndMax", "HangingLeavesChance",
          "HangingExtChance", "WideBottomHoleChance", "CornerHoleChance",
-         "TrunkHeightMin", "TrunkHeightMax", "LeafPlacementAttempts"]
+         "TrunkHeightMin", "TrunkHeightMax", "LeafPlacementAttempts",
+         "SizeThreeLayer", "SizeLimit", "SizeLower", "SizeMiddle",
+         "SizeUpperLimit", "SizeUpper", "MinClippedHeight"]
 
 L = ["// Code generated by scripts/gen_trees.py. DO NOT EDIT.",
      "",

@@ -98,6 +98,12 @@ type TreeConfig struct {
 	TrunkHeightMin, TrunkHeightMax int
 	// random_spread
 	LeafPlacementAttempts int
+
+	// minimum_size — the clearance a tree needs to grow here at all.
+	SizeThreeLayer                        bool
+	SizeLimit, SizeLower                  int
+	SizeMiddle, SizeUpperLimit, SizeUpper int
+	MinClippedHeight                      int
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -123,32 +129,85 @@ func (c *TreeConfig) treeHeightOf(rng TreeRNG) int {
 	return c.BaseHeight + rng.Intn(c.HeightRandA+1) + rng.Intn(c.HeightB+1)
 }
 
-// PlaceTree grows one tree at (x,y,z), the cell the sapling stood in.
+// sizeAtHeight is the clearance a tree needs at one height — vanilla's
+// TwoLayersFeatureSize / ThreeLayersFeatureSize. A trunk needs a column; the
+// canopy needs room to spread.
+func (c *TreeConfig) sizeAtHeight(treeHeight, yo int) int {
+	if yo < c.SizeLimit {
+		return c.SizeLower
+	}
+	if c.SizeThreeLayer {
+		if yo >= treeHeight-c.SizeUpperLimit {
+			return c.SizeUpper
+		}
+		return c.SizeMiddle
+	}
+	return c.SizeUpper
+}
+
+// maxFreeHeight is how tall this tree can grow here before something is in the
+// way — vanilla's getMaxFreeTreeHeight.
+//
+// THIS is what stops a tree growing inside a house, under a low cave roof, or
+// up through a floor. The space is measured BEFORE a single block is placed,
+// and a tree that does not fit is refused outright rather than stamped
+// half-height through somebody's ceiling. A placer decides what a tree looks
+// like; this decides whether there is a tree at all.
+func (c *TreeConfig) maxFreeHeight(x, y, z, maxHeight int, free TreeFree) int {
+	for yo := 0; yo <= maxHeight+1; yo++ {
+		r := c.sizeAtHeight(maxHeight, yo)
+		for dx := -r; dx <= r; dx++ {
+			for dz := -r; dz <= r; dz++ {
+				if !free(x+dx, y+yo, z+dz) {
+					return yo - 2
+				}
+			}
+		}
+	}
+	return maxHeight
+}
+
+// PlaceTree grows one tree at (x,y,z), the cell the sapling stood in, and
+// reports whether one actually grew: a cramped spot grows nothing.
 //
 // The roll order is TreeFeature.doPlace's and is load-bearing: height, then
 // foliage height, then radius. Changing it changes the distribution of shapes
 // even with identical formulas.
-func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree) {
+func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free TreeFree) bool {
 	treeHeight := c.treeHeightOf(rng)
 	foliageHeight := c.foliageHeightOf(rng, treeHeight)
 	trunkHeight := treeHeight - foliageHeight
 	leafRadius := c.foliageRadiusOf(rng, trunkHeight)
 	offset := sampleInt(rng, c.OffsetMin, c.OffsetMax)
 
+	// The fit check. Most species refuse outright; the ones carrying a
+	// min_clipped_height (the large oak) will settle for a shorter tree.
+	clipped := c.maxFreeHeight(x, y, z, treeHeight, free)
+	if clipped < treeHeight {
+		if c.MinClippedHeight <= 0 || clipped < c.MinClippedHeight {
+			return false
+		}
+	}
+	treeHeight = clipped
+
 	atts := c.placeTrunk(rng, x, y, z, treeHeight, set, free)
 	for _, a := range atts {
 		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, set)
 	}
+	return true
 }
 
 // ---- trunk placers -----------------------------------------------------------
 
 func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, free TreeFree) []foliageAttachment {
+	// A trunk log stands upright. c.Log is the BASE state, which for a log is
+	// axis=x — placing it raw lays the whole forest on its side, which is
+	// exactly what the first generated table did.
 	log := func(px, py, pz int) bool {
 		if !free(px, py, pz) {
 			return false
 		}
-		set(px, py, pz, c.Log, false)
+		set(px, py, pz, axisLog(c.Log, 1), false)
 		return true
 	}
 	logAxis := func(px, py, pz int, axis int) {
