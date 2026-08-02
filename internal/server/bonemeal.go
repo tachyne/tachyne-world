@@ -14,8 +14,10 @@ import (
 const particleHappyVillager = 42 // canonical-770 minecraft:happy_villager
 
 var (
-	itemBoneMeal   = int32(itemByName["bone_meal"])
-	bmFlowerBlocks = []uint32{
+	itemBoneMeal         = int32(itemByName["bone_meal"])
+	azaleaBlockState     = worldgen.BlockBase("azalea")
+	floweringAzaleaState = worldgen.BlockBase("flowering_azalea")
+	bmFlowerBlocks       = []uint32{
 		worldgen.BlockBase("dandelion"), worldgen.BlockBase("poppy"),
 		worldgen.BlockBase("azure_bluet"), worldgen.BlockBase("cornflower"),
 		worldgen.BlockBase("oxeye_daisy"),
@@ -86,6 +88,19 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 			}
 			return true // vanilla consumes the meal either way
 		}
+	}
+	// Azalea and flowering azalea: 45% to grow the azalea tree in place
+	// (AzaleaBlock.performBonemeal via the AZALEA grower). The bush is not
+	// replaceable-by-trees, so the grower lifts it out first and puts it
+	// back if the tree refuses the spot.
+	if state == azaleaBlockState || state == floweringAzaleaState {
+		if h.rng.Float64() < 0.45 {
+			h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+			if !h.placeLiveTree(players, dim, x, y, z, "azalea_tree") {
+				h.setBlockAt(players, dim, blockPos{x, y, z}, state)
+			}
+		}
+		return true // consumed either way
 	}
 	// Cocoa: advance one age stage, capped at 2 (CocoaBlock is bonemealable).
 	if state >= cocoaBase && state <= cocoaBase+11 {

@@ -79,3 +79,43 @@ func TestPlantedMangrovesHangPropagules(t *testing.T) {
 		t.Error("twelve planted mangroves hung no propagules")
 	}
 }
+
+// Bone meal on an azalea bush grows the azalea tree in place at 45% — the
+// bush is lifted out for the attempt and restored when the tree refuses.
+func TestBonemealGrowsAzaleaTrees(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	azalea := worldgen.BlockBase("azalea")
+	rooted := worldgen.BlockBase("rooted_dirt")
+	x, y, z := 1200, 200, 800
+	h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+	h.world.SetBlock(x, y, z, azalea)
+	for i := 0; i < 400 && !worldgen.IsLog(h.world.At(x, y, z)); i++ {
+		if !h.applyBoneMeal(players, 0, x, y, z, h.world.At(x, y, z)) {
+			t.Fatal("bone meal on an azalea reported no effect — it must consume either way")
+		}
+	}
+	if !worldgen.IsLog(h.world.At(x, y, z)) {
+		t.Fatal("four hundred bone meals never grew the azalea")
+	}
+	if h.world.At(x, y-1, z) != rooted {
+		t.Errorf("ground under the azalea tree is %d, want forced rooted dirt", h.world.At(x, y-1, z))
+	}
+	azLo, azHi := worldgen.BlockRange("azalea_leaves")
+	flLo, flHi := worldgen.BlockRange("flowering_azalea_leaves")
+	leavesSeen := false
+	for dx := -4; dx <= 4 && !leavesSeen; dx++ {
+		for dy := 0; dy < 10 && !leavesSeen; dy++ {
+			for dz := -4; dz <= 4; dz++ {
+				s := h.world.At(x+dx, y+dy, z+dz)
+				if (s >= azLo && s <= azHi) || (s >= flLo && s <= flHi) {
+					leavesSeen = true
+					break
+				}
+			}
+		}
+	}
+	if !leavesSeen {
+		t.Error("the grown azalea tree has no azalea leaves")
+	}
+}

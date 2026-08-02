@@ -96,6 +96,10 @@ const (
 // numbers the JSON carries for them.
 type TreeConfig struct {
 	Log, Leaves uint32
+	// A weighted foliage provider (azalea's 3:1 flowering mix): each placed
+	// leaf rolls Leaves2 at Leaves2Chance. Zero for the single-leaf species.
+	Leaves2       uint32
+	Leaves2Chance float64
 
 	Trunk                            TrunkKind
 	BaseHeight, HeightRandA, HeightB int
@@ -172,6 +176,16 @@ type foliageAttachment struct {
 	x, y, z      int
 	radiusOffset int
 	doubleTrunk  bool
+}
+
+// leafState draws the state for ONE placed leaf — vanilla's foliage provider
+// runs per block inside tryPlaceLeaf, which is how azaleas mix flowering
+// patches through the canopy rather than being one or the other.
+func (c *TreeConfig) leafState(rng TreeRNG) uint32 {
+	if c.Leaves2 != 0 && rng.Float64() < c.Leaves2Chance {
+		return c.Leaves2
+	}
+	return c.Leaves
 }
 
 // sampleInt is vanilla's UniformInt.sample: min + rand(max-min+1).
@@ -258,14 +272,19 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	// order is part of determinism — a map walk would grow different vines on
 	// the same tree every regeneration.
 	logs := map[[3]int]bool{}
-	leaves := map[[3]int]bool{}
+	// Leaves record their PLACED STATE, not just membership: the azalea mixes
+	// two leaf blocks through one canopy, and the distance-seeding rewrite
+	// must preserve which one landed where.
+	leaves := map[[3]int]uint32{}
 	var logList, leafList [][3]int
 	recording := func(px, py, pz int, st uint32, leaf bool) {
 		q := [3]int{px, py, pz}
 		if leaf {
-			if !logs[q] && !leaves[q] {
-				leaves[q] = true
-				leafList = append(leafList, q)
+			if !logs[q] {
+				if _, seen := leaves[q]; !seen {
+					leafList = append(leafList, q)
+				}
+				leaves[q] = st // the last write is what stands in the world
 			}
 		} else if !logs[q] {
 			logs[q] = true
@@ -315,7 +334,13 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 	// propagule that would hang there, exactly as it does in vanilla's world).
 	deco := map[[3]int]bool{}
 	isAir := func(q [3]int) bool {
-		return free(q[0], q[1], q[2]) && !logs[q] && !leaves[q] && !deco[q]
+		if logs[q] || deco[q] {
+			return false
+		}
+		if _, isLeaf := leaves[q]; isLeaf {
+			return false
+		}
+		return free(q[0], q[1], q[2])
 	}
 	decoSet := func(px, py, pz int, st uint32, leaf bool) {
 		deco[[3]int{px, py, pz}] = true
@@ -629,7 +654,7 @@ func (c *TreeConfig) vineAt(rng TreeRNG, p [3]int, isAir func([3]int) bool, set 
 // the distance-7 state it was placed with. Leaf states pack distance x
 // persistent x waterlogged with waterlogged innermost, so one distance step is
 // four states.
-func (c *TreeConfig) seedLeafDistances(logs, leaves map[[3]int]bool, set TreeSetter) {
+func (c *TreeConfig) seedLeafDistances(logs map[[3]int]bool, leaves map[[3]int]uint32, set TreeSetter) {
 	frontier := make([][3]int, 0, len(logs))
 	for p := range logs {
 		frontier = append(frontier, p)
@@ -640,11 +665,15 @@ func (c *TreeConfig) seedLeafDistances(logs, leaves map[[3]int]bool, set TreeSet
 		for _, p := range frontier {
 			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
 				q := [3]int{p[0] + o[0], p[1] + o[1], p[2] + o[2]}
-				if !leaves[q] || seen[q] {
+				st, isLeaf := leaves[q]
+				if !isLeaf || seen[q] {
 					continue
 				}
 				seen[q] = true
-				set(q[0], q[1], q[2], c.Leaves-uint32((7-d)*4), true)
+				// Rewrite from the state that actually landed there — every
+				// leaf family packs one distance step as four states, and the
+				// azalea's flowering patches must stay flowering.
+				set(q[0], q[1], q[2], st-uint32((7-d)*4), true)
 				next = append(next, q)
 			}
 		}

@@ -537,3 +537,51 @@ func TestLitterTreesScatterLeafLitter(t *testing.T) {
 		}
 	}
 }
+
+// The azalea tree mixes flowering patches through its canopy at one in four
+// — the weighted foliage provider rolls per placed leaf — and the distance
+// seeding preserves which species landed where. Rooted dirt is FORCED under
+// the trunk even on ground that is already #dirt.
+func TestAzaleaTreesMixFloweringLeaves(t *testing.T) {
+	azLo, azHi := BlockRange("azalea_leaves")
+	flLo, flHi := BlockRange("flowering_azalea_leaves")
+	rooted := blockBase("rooted_dirt")
+	grass := blockBase("grass_block") + 1
+	ground := map[[3]int]uint32{}
+	for x := -10; x <= 10; x++ {
+		for z := -10; z <= 10; z++ {
+			ground[[3]int{x, -1, z}] = grass
+		}
+	}
+	plain, flowering, seededFlowering, rootedCount := 0, 0, 0, 0
+	for seed := int64(1); seed <= 40; seed++ {
+		blocks := grownWorld("azalea_tree", seed, ground)
+		if blocks[[3]int{0, -1, 0}] == rooted {
+			rootedCount++
+		}
+		for _, st := range blocks {
+			switch {
+			case st >= azLo && st <= azHi:
+				plain++
+			case st >= flLo && st <= flHi:
+				flowering++
+				if st != flHi { // any state below distance-7 was BFS-seeded
+					seededFlowering++
+				}
+			}
+		}
+	}
+	total := plain + flowering
+	if total == 0 {
+		t.Fatal("forty azalea trees grew no leaves")
+	}
+	if ratio := float64(flowering) / float64(total); ratio < 0.15 || ratio > 0.35 {
+		t.Errorf("flowering fraction %.2f of %d leaves, want ~0.25", ratio, total)
+	}
+	if seededFlowering == 0 {
+		t.Error("no flowering leaf carries a seeded distance — the rewrite repaints them plain")
+	}
+	if rootedCount != 40 {
+		t.Errorf("rooted dirt forced under %d of 40 azaleas — force_dirt must ignore #dirt", rootedCount)
+	}
+}

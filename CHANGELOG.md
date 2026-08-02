@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Azaleas grow into azalea trees.** Bone meal an azalea or flowering azalea
+  bush and it has vanilla's 45% chance of growing the azalea tree on the
+  spot: a bending oak trunk under a canopy that mixes flowering patches
+  through the plain leaves at one in four, standing on forced rooted dirt.
+  If the tree doesn't fit, the bush survives the attempt.
 - **Forests are carpeted in leaf litter, and they finally mix their trees.**
   Oak, birch, dark oak and large oak trees in forests and dark forests now
   scatter vanilla's leaf litter around their base — two passes of it, settling

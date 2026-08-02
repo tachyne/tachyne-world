@@ -149,7 +149,7 @@ func (c *TreeConfig) createFoliage(rng TreeRNG, a foliageAttachment, treeHeight,
 			dx := rng.Intn(leafRadius) - rng.Intn(leafRadius)
 			dy := rng.Intn(foliageHeight) - rng.Intn(foliageHeight)
 			dz := rng.Intn(leafRadius) - rng.Intn(leafRadius)
-			set(a.x+dx, a.y+dy, a.z+dz, c.Leaves, true)
+			set(a.x+dx, a.y+dy, a.z+dz, c.leafState(rng), true)
 		}
 
 	case FoliageCherry:
@@ -179,7 +179,7 @@ func (c *TreeConfig) placeLeavesRow(rng TreeRNG, ox, oy, oz, radius, y int, doub
 			if c.skipSigned(rng, dx, y, dz, radius, doubleTrunk) {
 				continue
 			}
-			set(ox+dx, oy+y, oz+dz, c.Leaves, true)
+			set(ox+dx, oy+y, oz+dz, c.leafState(rng), true)
 		}
 	}
 }
@@ -271,9 +271,9 @@ func (c *TreeConfig) cherryHangingRow(rng TreeRNG, ox, oy, oz, radius, y int, do
 		py := oy + y - 1
 		for i := -radius; i < radius+off; i++ {
 			if abs(px-ox)+abs(py-(oy-1))+abs(pz-oz) < 7 && rng.Float64() <= c.HangingLeavesChance {
-				set(px, py, pz, c.Leaves, true)
+				set(px, py, pz, c.leafState(rng), true)
 				if abs(px-ox)+abs(py-1-(oy-1))+abs(pz-oz) < 7 && rng.Float64() <= c.HangingExtChance {
-					set(px, py-1, pz, c.Leaves, true)
+					set(px, py-1, pz, c.leafState(rng), true)
 				}
 			}
 			px += along[0]

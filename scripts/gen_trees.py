@@ -116,10 +116,34 @@ seg = src[src.index("var blockStateBase"):]
 seg = seg[:seg.index("\n}")]
 base_id = {m.group(1): int(m.group(2)) for m in re.finditer(r'"([a-z0-9_]+)":\s+(\d+),', seg)}
 
+def weighted_leaves(prov):
+    """A two-entry weighted foliage provider (azalea's 3:1 mix), heavier
+    entry first: [(name, state, weight), ...] or None."""
+    if prov.get("type") != "minecraft:weighted_state_provider":
+        return None
+    ents = prov.get("entries", [])
+    if len(ents) != 2:
+        return None
+    ents = sorted(ents, key=lambda e: -e.get("weight", 1))
+    out = []
+    for e in ents:
+        nm, sid = state_of({"type": "minecraft:simple_state_provider", "state": e["data"]})
+        if sid is None:
+            return None
+        out.append((nm, sid, e.get("weight", 1)))
+    return out
+
+
 rows, skipped = {}, []
 for name, c in feats.items():
     log, _ = state_of(c["trunk_provider"])
     leaves, leaf_state = state_of(c["foliage_provider"])
+    leaf2_state, leaf2_chance = None, None
+    if leaves is None or leaf_state is None:
+        mix = weighted_leaves(c["foliage_provider"])
+        if mix is not None:
+            (leaves, leaf_state, w1), (_, leaf2_state, w2) = mix
+            leaf2_chance = w2 / (w1 + w2)
     if log is None or leaves is None or log not in base_id or leaf_state is None:
         skipped.append((name, "non-simple provider" if log is None or leaves is None else "unresolved state"))
         continue
@@ -139,6 +163,9 @@ for name, c in feats.items():
         "Foliage": fk, "RadiusMin": rmin, "RadiusMax": rmax,
         "OffsetMin": omin, "OffsetMax": omax,
     }
+    if leaf2_state is not None:
+        f["Leaves2"] = leaf2_state
+        f["Leaves2Chance"] = leaf2_chance
     if isinstance(fp.get("height"), int):
         f["FoliageH"] = fp["height"]
     elif "height" in fp:
@@ -271,7 +298,8 @@ for name in sorted(rows, key=lambda n: ("bees" in n, n)):
 aliases = {n: canon[json.dumps(rows[n], sort_keys=True)] for n in rows}
 base_rows = {n: r for n, r in rows.items() if aliases[n] == n}
 
-ORDER = ["Log", "Leaves", "Trunk", "BaseHeight", "HeightRandA", "HeightB",
+ORDER = ["Log", "Leaves", "Leaves2", "Leaves2Chance",
+         "Trunk", "BaseHeight", "HeightRandA", "HeightB",
          "Foliage", "RadiusMin", "RadiusMax", "OffsetMin", "OffsetMax",
          "FoliageH", "FoliageHMin", "FoliageHMax", "MinHeightForLeaves",
          "BendLengthMin", "BendLengthMax", "BranchProbability",
