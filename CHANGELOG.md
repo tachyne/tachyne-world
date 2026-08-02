@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Jungle trees wear their vines, swamps grow swamp oaks, cocoa grows wild.**
+  The tree decorators vanilla dresses a placed tree with: jungle trunks and
+  canopies hung with vines at vanilla's odds, one jungle tree in five carrying
+  wild cocoa pods on its lower trunk, swamp oaks draped from the canopy, and
+  mangroves trailing sparser vines. A sapling-grown jungle tree stays bare, as
+  vanilla's does — the vines belong to the wild ones.
 - **Leaves decay the vanilla way.** A leaf now tracks its distance from the
   nearest trunk, exactly as vanilla does, instead of scanning a box for any
   log. Fell a tree and the canopy rots from the cut outward in the familiar

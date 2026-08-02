@@ -27,6 +27,7 @@ const (
 	treeCherry   // pink canopy
 	treeMangrove // swamp
 	treePaleOak  // the pale garden's own: dark oak's shape, bone-white wood
+	treeSwampOak // swamp oaks: an oak hung with vines
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -109,7 +110,7 @@ var biomeReg = map[string]*Biome{
 	"minecraft:bamboo_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeJungle, TreeDensity: 1.5, Flora: floraJungle},
 
 	// ── Wet lowland ──────────────────────────────────────────────────────
-	"minecraft:swamp":           {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.5, Flora: floraSwamp},
+	"minecraft:swamp":           {Top: GrassBlock, Sub: Dirt, Tree: treeSwampOak, TreeDensity: 0.5, Flora: floraSwamp},
 	"minecraft:mangrove_swamp":  {Top: Mud, Sub: Dirt, Tree: treeMangrove, TreeDensity: 1.0, Flora: floraSwamp},
 	"minecraft:mushroom_fields": {Top: Mycelium, Sub: Dirt, Tree: treeNone, Flora: floraMushroom},
 

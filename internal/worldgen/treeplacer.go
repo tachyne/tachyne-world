@@ -104,6 +104,12 @@ type TreeConfig struct {
 	SizeLimit, SizeLower                  int
 	SizeMiddle, SizeUpperLimit, SizeUpper int
 	MinClippedHeight                      int
+
+	// decorators — the dressing vanilla applies after placement. Only the
+	// ones ported so far; a feature with none of these grows bare.
+	TrunkVine     bool    // vines on the trunk sides (jungle)
+	LeaveVineProb float64 // vines hanging off the canopy (jungle, swamp, mangrove)
+	CocoaProb     float64 // cocoa pods on the lower trunk (jungle)
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -194,16 +200,24 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 	// per-tree half of vanilla's updateLeaves. Leaves go in at distance 7 and
 	// are rewritten with their true distance from the trunk, or the decay rule
 	// would rot a freshly grown canopy on its first random ticks.
+	// Ordered as well as set-indexed: the decorators walk the tree's blocks in
+	// PLACEMENT order, and since they draw randomness per block, iteration
+	// order is part of determinism — a map walk would grow different vines on
+	// the same tree every regeneration.
 	logs := map[[3]int]bool{}
 	leaves := map[[3]int]bool{}
+	var logList, leafList [][3]int
 	recording := func(px, py, pz int, st uint32, leaf bool) {
+		q := [3]int{px, py, pz}
 		if leaf {
-			if !logs[[3]int{px, py, pz}] {
-				leaves[[3]int{px, py, pz}] = true
+			if !logs[q] && !leaves[q] {
+				leaves[q] = true
+				leafList = append(leafList, q)
 			}
-		} else {
-			logs[[3]int{px, py, pz}] = true
-			delete(leaves, [3]int{px, py, pz})
+		} else if !logs[q] {
+			logs[q] = true
+			logList = append(logList, q)
+			delete(leaves, q)
 		}
 		set(px, py, pz, st, leaf)
 	}
@@ -213,7 +227,92 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, set TreeSetter, free Tre
 		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
 	}
 	c.seedLeafDistances(logs, leaves, set)
+	// Decoration. isAir is the composite both drivers can answer: the cell is
+	// free AND not part of this tree — vanilla's context.isAir sees the
+	// just-placed tree in the world; here the tree knows its own blocks.
+	isAir := func(q [3]int) bool {
+		return free(q[0], q[1], q[2]) && !logs[q] && !leaves[q]
+	}
+	c.decorate(rng, y, logList, leafList, isAir, set)
 	return true
+}
+
+// Vine states: the base state is every face TRUE, faces ordered east, north,
+// south, up, west — a single-face vine is the base plus the OTHER faces' bits.
+const (
+	vineEast  = 15 // 8+4+2+1
+	vineNorth = 23 // 16+4+2+1
+	vineSouth = 27 // 16+8+2+1
+	vineWest  = 30 // 16+8+4+2
+)
+
+// decorate applies the ported tree decorators in vanilla's per-feature order:
+// cocoa, then trunk vines, then hanging vines.
+func (c *TreeConfig) decorate(rng TreeRNG, baseY int, logList, leafList [][3]int, isAir func([3]int) bool, set TreeSetter) {
+	vineBase := blockBase("vine")
+	cocoaBase := blockBase("cocoa")
+	// CocoaDecorator: one gate roll, then pods on logs within 2 of the base,
+	// each horizontal face at 25%, aged 0-2, the pod FACING its log.
+	if c.CocoaProb > 0 && rng.Float64() < c.CocoaProb {
+		for _, p := range logList {
+			if p[1]-baseY > 2 {
+				continue
+			}
+			for f, o := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} { // north,south,west,east
+				if rng.Float64() > 0.25 {
+					continue
+				}
+				q := [3]int{p[0] - o[0], p[1], p[2] - o[1]}
+				if isAir(q) {
+					set(q[0], q[1], q[2], cocoaBase+uint32(rng.Intn(3)*4+f), true)
+				}
+			}
+		}
+	}
+	// TrunkVineDecorator: each log side, 2 in 3.
+	if c.TrunkVine {
+		for _, p := range logList {
+			c.vineAt(rng, p, isAir, set, vineBase, func() bool { return rng.Intn(3) > 0 }, 0)
+		}
+	}
+	// LeaveVineDecorator: each leaf side at the probability, the vine hanging
+	// up to four blocks down.
+	if c.LeaveVineProb > 0 {
+		for _, p := range leafList {
+			c.vineAt(rng, p, isAir, set, vineBase, func() bool { return rng.Float64() < c.LeaveVineProb }, 4)
+		}
+	}
+}
+
+// vineAt rolls each horizontal side of a block for a vine, hanging it down.
+func (c *TreeConfig) vineAt(rng TreeRNG, p [3]int, isAir func([3]int) bool, set TreeSetter,
+	vineBase uint32, roll func() bool, hang int) {
+	sides := [4]struct {
+		dx, dz int
+		face   uint32
+	}{
+		{-1, 0, vineEast},  // west of the block: the vine clings to its EAST face
+		{1, 0, vineWest},   // east of the block
+		{0, -1, vineSouth}, // north of the block
+		{0, 1, vineNorth},  // south of the block
+	}
+	for _, sd := range sides {
+		if !roll() {
+			continue
+		}
+		q := [3]int{p[0] + sd.dx, p[1], p[2] + sd.dz}
+		if !isAir(q) {
+			continue
+		}
+		set(q[0], q[1], q[2], vineBase+sd.face, true)
+		for i := 0; i < hang; i++ {
+			q = [3]int{q[0], q[1] - 1, q[2]}
+			if !isAir(q) {
+				break
+			}
+			set(q[0], q[1], q[2], vineBase+sd.face, true)
+		}
+	}
 }
 
 // seedLeafDistances is TreeFeature.updateLeaves, per tree: a BFS out from the

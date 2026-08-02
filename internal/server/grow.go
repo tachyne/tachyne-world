@@ -71,7 +71,7 @@ var saplingSpecies = func() []saplingSpec {
 		{"oak_sapling", saplingSpec{single: "oak", secondary: "fancy_oak", secondaryChance: 0.1}},
 		{"spruce_sapling", saplingSpec{single: "spruce", mega: "mega_spruce", megaSecondary: "mega_pine", secondaryChance: 0.5}},
 		{"birch_sapling", saplingSpec{single: "birch"}},
-		{"jungle_sapling", saplingSpec{single: "jungle_tree", mega: "mega_jungle_tree"}},
+		{"jungle_sapling", saplingSpec{single: "jungle_tree_no_vine", mega: "mega_jungle_tree"}},
 		{"acacia_sapling", saplingSpec{single: "acacia"}},
 		{"cherry_sapling", saplingSpec{single: "cherry"}},
 		{"dark_oak_sapling", saplingSpec{mega: "dark_oak"}},

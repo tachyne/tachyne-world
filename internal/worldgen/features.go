@@ -147,6 +147,8 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 		name = "cherry"
 	case treeMangrove:
 		name = "mangrove"
+	case treeSwampOak:
+		name = "swamp_oak"
 	default:
 		return nil
 	}
