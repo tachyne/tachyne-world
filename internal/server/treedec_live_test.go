@@ -130,3 +130,59 @@ func TestBonemealGrowsAzaleaTrees(t *testing.T) {
 		t.Error("the grown azalea tree has no azalea leaves")
 	}
 }
+
+// Bone meal on a small mushroom grows the huge one at 40% — with vanilla's
+// strict space rule: even a ceiling over the column refuses, and the small
+// mushroom survives every refused attempt.
+func TestBonemealGrowsHugeMushrooms(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	red := worldgen.BlockBase("red_mushroom")
+	stemLo, stemHi := worldgen.BlockRange("mushroom_stem")
+	capLo, capHi := worldgen.BlockRange("red_mushroom_block")
+	x, y, z := 1400, 200, 800
+	for dx := -8; dx <= 8; dx++ {
+		for dz := -8; dz <= 8; dz++ {
+			h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Dirt)
+		}
+	}
+	h.world.SetBlock(x, y, z, red)
+	for i := 0; i < 400 && h.world.At(x, y, z) == red; i++ {
+		if !h.applyBoneMeal(players, 0, x, y, z, h.world.At(x, y, z)) {
+			t.Fatal("bone meal on a mushroom reported no effect — it consumes either way")
+		}
+	}
+	if s := h.world.At(x, y, z); s < stemLo || s > stemHi {
+		t.Fatalf("four hundred bone meals never grew the mushroom (cell %d)", s)
+	}
+	capSeen := false
+	for dy := 3; dy <= 13 && !capSeen; dy++ {
+		for dx := -2; dx <= 2; dx++ {
+			for dz := -2; dz <= 2; dz++ {
+				if s := h.world.At(x+dx, y+dy, z+dz); s >= capLo && s <= capHi {
+					capSeen = true
+					break
+				}
+			}
+		}
+	}
+	if !capSeen {
+		t.Error("the huge mushroom has no cap")
+	}
+	// Under a low stone ceiling the column check refuses forever and the
+	// mushroom is restored every time.
+	x2 := x + 40
+	for dx := -8; dx <= 8; dx++ {
+		for dz := -8; dz <= 8; dz++ {
+			h.world.SetBlock(x2+dx, y-1, z+dz, worldgen.Dirt)
+		}
+	}
+	h.world.SetBlock(x2, y, z, red)
+	h.world.SetBlock(x2, y+2, z, worldgen.Stone)
+	for i := 0; i < 60; i++ {
+		h.applyBoneMeal(players, 0, x2, y, z, h.world.At(x2, y, z))
+	}
+	if h.world.At(x2, y, z) != red {
+		t.Errorf("a mushroom under a ceiling should survive every refused attempt, cell is %d", h.world.At(x2, y, z))
+	}
+}

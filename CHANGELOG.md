@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Huge mushrooms tower where they should.** Dark forests grow vanilla's
+  huge red and brown mushrooms in the spots reserved for them — the mix of
+  trees around them unchanged — and mushroom fields raise them as their only
+  "trees", half red and half brown. Bone meal on a small mushroom has
+  vanilla's 40% chance of growing the huge one on the spot, with vanilla's
+  strict space rule: anything in the way, even a leaf-high ceiling, and the
+  little mushroom just stays.
 - **Mangroves stand on their stilts.** The last missing piece of vanilla's
   tree machinery is in: mangrove root placement. A mangrove's trunk now
   rises above where its propagule stood, with roots filling the gap and

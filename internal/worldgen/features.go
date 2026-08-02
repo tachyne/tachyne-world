@@ -146,9 +146,9 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 		// oak 0.1, default oak — litter variants throughout.
 		switch {
 		case hash01(seed, wx, wz, 0x71FE) < 0.025:
-			return nil // huge brown mushroom (unported)
+			return nil // huge brown mushroom — mushroomFor grows it here
 		case hash01(seed, wx, wz, 0x71FF) < 0.05:
-			return nil // huge red mushroom (unported)
+			return nil // huge red mushroom — mushroomFor grows it here
 		case hash01(seed, wx, wz, 0x7200) < 0.6666667:
 			name = "dark_oak_leaf_litter"
 		case hash01(seed, wx, wz, 0x7201) < 0.0025:
@@ -213,8 +213,9 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 // structures overwrite. The sapling grower, which CAN see the world, is the
 // path where growing into a house matters, and it gets the real check.
 func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kind treeKind) {
+	mush := mushroomFor(kind, g.seed, wx, wz)
 	c := treeFeatureFor(kind, g.seed, wx, wz)
-	if c == nil {
+	if c == nil && mush == mushNone {
 		return
 	}
 	rng := newTreeRNG(g.seed, wx, wz)
@@ -266,7 +267,7 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 			return IsDirtTag(col.biome.Sub)
 		}
 	}
-	PlaceTree(c, wx, surfaceH, wz, rng, TreeDriver{
+	drv := TreeDriver{
 		Set: set, Free: free, Read: read, DirtGround: dirtGround,
 		// The terrain's first empty cell IS the heightmap minus trees, and
 		// PlaceTree folds its own logs in. Chunk-independent by construction.
@@ -284,7 +285,41 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 				return IsRootGrowThrough(col.biome.Sub)
 			}
 		},
-	})
+	}
+	if mush != mushNone {
+		PlaceHugeMushroom(mush == mushBrown, wx, surfaceH, wz, rng, drv)
+		return
+	}
+	PlaceTree(c, wx, surfaceH, wz, rng, drv)
+}
+
+// Huge-mushroom selection: which cascade slots grow one instead of a tree.
+const (
+	mushNone = iota
+	mushBrown
+	mushRed
+)
+
+// mushroomFor mirrors the huge-mushroom entries of the biome cascades — the
+// SAME hash salts treeFeatureFor's slots return nil on, so a position grows
+// exactly one thing — plus the mushroom fields' 50/50 pick
+// (mushroom_island_vegetation's random boolean, red when true).
+func mushroomFor(k treeKind, seed int64, wx, wz int) int {
+	switch k {
+	case treeDarkForest:
+		if hash01(seed, wx, wz, 0x71FE) < 0.025 {
+			return mushBrown
+		}
+		if hash01(seed, wx, wz, 0x71FF) < 0.05 {
+			return mushRed
+		}
+	case treeMushroomFields:
+		if hash01(seed, wx, wz, 0x7205) < 0.5 {
+			return mushRed
+		}
+		return mushBrown
+	}
+	return mushNone
 }
 
 // newTreeRNG is the per-tree randomness, derived from the tree's own position

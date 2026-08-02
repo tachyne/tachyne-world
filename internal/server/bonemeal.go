@@ -17,6 +17,8 @@ var (
 	itemBoneMeal         = int32(itemByName["bone_meal"])
 	azaleaBlockState     = worldgen.BlockBase("azalea")
 	floweringAzaleaState = worldgen.BlockBase("flowering_azalea")
+	redMushroomState     = worldgen.BlockBase("red_mushroom")
+	brownMushroomState   = worldgen.BlockBase("brown_mushroom")
 	bmFlowerBlocks       = []uint32{
 		worldgen.BlockBase("dandelion"), worldgen.BlockBase("poppy"),
 		worldgen.BlockBase("azure_bluet"), worldgen.BlockBase("cornflower"),
@@ -88,6 +90,18 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 			}
 			return true // vanilla consumes the meal either way
 		}
+	}
+	// Small mushrooms: 40% to grow the huge mushroom in place
+	// (MushroomBlock.growMushroom lifts the mushroom out for the attempt and
+	// restores it when the feature refuses the spot).
+	if state == redMushroomState || state == brownMushroomState {
+		if h.rng.Float64() < 0.4 {
+			h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+			if !h.growHugeMushroom(players, dim, x, y, z, state == brownMushroomState) {
+				h.setBlockAt(players, dim, blockPos{x, y, z}, state)
+			}
+		}
+		return true // consumed either way
 	}
 	// Azalea and flowering azalea: 45% to grow the azalea tree in place
 	// (AzaleaBlock.performBonemeal via the AZALEA grower). The bush is not

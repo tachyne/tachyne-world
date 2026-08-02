@@ -20,18 +20,19 @@ const (
 	treeNone treeKind = iota
 	treeOak
 	treeBirch
-	treeSpruce     // conical
-	treeJungle     // tall
-	treeAcacia     // sparse, bushy
-	treeDarkOak    // thick, dense
-	treeCherry     // pink canopy
-	treeMangrove   // swamp
-	treePaleOak    // the pale garden's own: dark oak's shape, bone-white wood
-	treeSwampOak   // swamp oaks: an oak hung with vines
-	treeSpruceOld  // old-growth spruce taiga: a third of the trees are mega spruces
-	treePineOld    // old-growth pine taiga: mostly mega pines, rare mega spruces
-	treeForest     // forest: oak with a fifth birch and the odd large oak, littered
-	treeDarkForest // dark forest: the dark-oak-led vegetation cascade, littered
+	treeSpruce         // conical
+	treeJungle         // tall
+	treeAcacia         // sparse, bushy
+	treeDarkOak        // thick, dense
+	treeCherry         // pink canopy
+	treeMangrove       // swamp
+	treePaleOak        // the pale garden's own: dark oak's shape, bone-white wood
+	treeSwampOak       // swamp oaks: an oak hung with vines
+	treeSpruceOld      // old-growth spruce taiga: a third of the trees are mega spruces
+	treePineOld        // old-growth pine taiga: mostly mega pines, rare mega spruces
+	treeForest         // forest: oak with a fifth birch and the odd large oak, littered
+	treeDarkForest     // dark forest: the dark-oak-led vegetation cascade, littered
+	treeMushroomFields // mushroom fields: huge mushrooms only, 50/50 red and brown
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -114,9 +115,11 @@ var biomeReg = map[string]*Biome{
 	"minecraft:bamboo_jungle": {Top: GrassBlock, Sub: Dirt, Tree: treeJungle, TreeDensity: 1.5, Flora: floraJungle},
 
 	// ── Wet lowland ──────────────────────────────────────────────────────
-	"minecraft:swamp":           {Top: GrassBlock, Sub: Dirt, Tree: treeSwampOak, TreeDensity: 0.5, Flora: floraSwamp},
-	"minecraft:mangrove_swamp":  {Top: Mud, Sub: Dirt, Tree: treeMangrove, TreeDensity: 1.0, Flora: floraSwamp},
-	"minecraft:mushroom_fields": {Top: Mycelium, Sub: Dirt, Tree: treeNone, Flora: floraMushroom},
+	"minecraft:swamp":          {Top: GrassBlock, Sub: Dirt, Tree: treeSwampOak, TreeDensity: 0.5, Flora: floraSwamp},
+	"minecraft:mangrove_swamp": {Top: Mud, Sub: Dirt, Tree: treeMangrove, TreeDensity: 1.0, Flora: floraSwamp},
+	// Huge mushrooms stand in for trees; vanilla tries ONE per chunk, and
+	// 0.15 in the tuned density model lands close to that.
+	"minecraft:mushroom_fields": {Top: Mycelium, Sub: Dirt, Tree: treeMushroomFields, TreeDensity: 0.15, Flora: floraMushroom},
 
 	// ── Shores ───────────────────────────────────────────────────────────
 	"minecraft:beach":       {Top: Sand, Sub: Sand, Tree: treeNone, Flora: floraNone},

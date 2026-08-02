@@ -658,3 +658,137 @@ func TestMangrovesGrowStiltedRoots(t *testing.T) {
 		}
 	}
 }
+
+// Huge mushrooms: a stem column capped in face-carrying mushroom blocks —
+// the red a hollow shell over its top four layers, the brown a flat plate —
+// grown only on #dirt ground, and never where the space check refuses.
+func TestHugeMushroomsGrowTheirShapes(t *testing.T) {
+	dirtPlane := func() map[[3]int]uint32 {
+		g := map[[3]int]uint32{}
+		for x := -8; x <= 8; x++ {
+			for z := -8; z <= 8; z++ {
+				g[[3]int{x, -1, z}] = Dirt
+			}
+		}
+		return g
+	}
+	grow := func(brown bool, seed int64, ground map[[3]int]uint32) map[[3]int]uint32 {
+		blocks := map[[3]int]uint32{}
+		for p, st := range ground {
+			blocks[p] = st
+		}
+		rng := rand.New(rand.NewSource(seed))
+		read := func(x, y, z int) uint32 { return blocks[[3]int{x, y, z}] }
+		PlaceHugeMushroom(brown, 0, 0, 0, rng, TreeDriver{
+			Set: func(x, y, z int, st uint32, leaf bool) { blocks[[3]int{x, y, z}] = st },
+			Free: func(x, y, z int) bool {
+				if y < 0 {
+					return false
+				}
+				_, occupied := blocks[[3]int{x, y, z}]
+				return !occupied
+			},
+			Read:       read,
+			DirtGround: func(x, y, z int) bool { return IsDirtTag(read(x, y, z)) },
+		})
+		return blocks
+	}
+	stemLo, stemHi := BlockRange("mushroom_stem")
+	redLo, redHi := BlockRange("red_mushroom_block")
+	brownLo, brownHi := BlockRange("brown_mushroom_block")
+	for seed := int64(1); seed <= 20; seed++ {
+		// Red: stem column, hollow cap around the top, nothing else.
+		blocks := grow(false, seed, dirtPlane())
+		stems, caps, topY := 0, 0, 0
+		for p, st := range blocks {
+			switch {
+			case st >= stemLo && st <= stemHi:
+				stems++
+				if p[0] != 0 || p[2] != 0 {
+					t.Fatalf("seed %d: red stem off-centre at %v", seed, p)
+				}
+			case st >= redLo && st <= redHi:
+				caps++
+				if p[1] > topY {
+					topY = p[1]
+				}
+			}
+		}
+		if stems < 4 || caps == 0 {
+			t.Fatalf("seed %d: red mushroom grew %d stems, %d cap blocks", seed, stems, caps)
+		}
+		if topY != stems { // the cap plate sits at the height, one above the last stem
+			t.Fatalf("seed %d: red cap tops out at %d with %d stems", seed, topY, stems)
+		}
+		// The top-centre cap block pins the face packing exactly: up TRUE,
+		// every side and down FALSE = base + 32+16+8+4+1.
+		if got := blocks[[3]int{0, topY, 0}]; got != redLo+61 {
+			t.Fatalf("seed %d: top-centre cap state %d, want %d — face packing is off", seed, got, redLo+61)
+		}
+		// Brown: the plate is FLAT — every cap block at one height, radius 3,
+		// corners cut.
+		blocks = grow(true, seed, dirtPlane())
+		capY := -99
+		for p, st := range blocks {
+			if st >= brownLo && st <= brownHi {
+				if capY == -99 {
+					capY = p[1]
+				}
+				if p[1] != capY {
+					t.Fatalf("seed %d: brown cap is not flat (%d and %d)", seed, p[1], capY)
+				}
+				if abs(p[0]) == 3 && abs(p[2]) == 3 {
+					t.Fatalf("seed %d: brown cap kept its corner at %v", seed, p)
+				}
+			}
+		}
+		if capY == -99 {
+			t.Fatalf("seed %d: brown mushroom grew no cap", seed)
+		}
+	}
+	// Stone ground refuses outright.
+	stone := map[[3]int]uint32{}
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			stone[[3]int{x, -1, z}] = Stone
+		}
+	}
+	if blocks := grow(false, 1, stone); len(blocks) != len(stone) {
+		t.Error("a huge mushroom grew on stone — the ground rule is #dirt")
+	}
+}
+
+// The dark forest's mushroom slots and its tree cascade agree: wherever
+// mushroomFor claims the spot, treeFeatureFor yields no tree — one thing
+// grows per position, and the slots actually fire at vanilla's ~7.4%.
+func TestDarkForestMushroomSlotsAgree(t *testing.T) {
+	mushrooms := 0
+	total := 4000
+	for wx := 0; wx < total; wx++ {
+		m := mushroomFor(treeDarkForest, 1, wx*31, 17)
+		if m != mushNone {
+			mushrooms++
+			if c := treeFeatureFor(treeDarkForest, 1, wx*31, 17); c != nil {
+				t.Fatalf("wx=%d: both a mushroom and a tree claim the spot", wx)
+			}
+		}
+	}
+	if mushrooms < total/25 || mushrooms > total/8 {
+		t.Errorf("%d of %d dark-forest spots grew mushrooms, want ~7.4%%", mushrooms, total)
+	}
+	// Mushroom fields grow both colours and nothing else.
+	red, brown := 0, 0
+	for wx := 0; wx < 400; wx++ {
+		switch mushroomFor(treeMushroomFields, 1, wx*13, 5) {
+		case mushRed:
+			red++
+		case mushBrown:
+			brown++
+		default:
+			t.Fatal("mushroom fields yielded neither colour")
+		}
+	}
+	if red == 0 || brown == 0 {
+		t.Errorf("mushroom fields: %d red, %d brown — both should appear", red, brown)
+	}
+}

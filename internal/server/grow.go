@@ -667,6 +667,24 @@ func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, featur
 	})
 }
 
+// growHugeMushroom drives PlaceHugeMushroom against the live world with
+// vanilla's STRICT envelope — air or leaves only. A huge mushroom refuses
+// even a blade of grass in its space, where a tree would grow through it.
+func (h *hub) growHugeMushroom(players map[int32]*tracked, dim, x, y, z int, brown bool) bool {
+	w := h.worldFor(dim)
+	return worldgen.PlaceHugeMushroom(brown, x, y, z, h.rng, worldgen.TreeDriver{
+		Set: func(px, py, pz int, st uint32, leaf bool) {
+			h.setBlockAt(players, dim, blockPos{px, py, pz}, st)
+		},
+		Free: func(px, py, pz int) bool {
+			s := w.At(px, py, pz)
+			return s == worldgen.Air || worldgen.IsLeaves(s)
+		},
+		Read:       func(px, py, pz int) uint32 { return w.At(px, py, pz) },
+		DirtGround: func(px, py, pz int) bool { return worldgen.IsDirtTag(w.At(px, py, pz)) },
+	})
+}
+
 // findSaplingSquare reports the lower-left corner of a 2x2 block of matching
 // saplings containing (x,z), scanning the same offsets vanilla does.
 func (h *hub) findSaplingSquare(dim, x, z, y int, rng [2]uint32) (int, int, bool) {
