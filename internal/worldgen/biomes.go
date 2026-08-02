@@ -20,16 +20,18 @@ const (
 	treeNone treeKind = iota
 	treeOak
 	treeBirch
-	treeSpruce    // conical
-	treeJungle    // tall
-	treeAcacia    // sparse, bushy
-	treeDarkOak   // thick, dense
-	treeCherry    // pink canopy
-	treeMangrove  // swamp
-	treePaleOak   // the pale garden's own: dark oak's shape, bone-white wood
-	treeSwampOak  // swamp oaks: an oak hung with vines
-	treeSpruceOld // old-growth spruce taiga: a third of the trees are mega spruces
-	treePineOld   // old-growth pine taiga: mostly mega pines, rare mega spruces
+	treeSpruce     // conical
+	treeJungle     // tall
+	treeAcacia     // sparse, bushy
+	treeDarkOak    // thick, dense
+	treeCherry     // pink canopy
+	treeMangrove   // swamp
+	treePaleOak    // the pale garden's own: dark oak's shape, bone-white wood
+	treeSwampOak   // swamp oaks: an oak hung with vines
+	treeSpruceOld  // old-growth spruce taiga: a third of the trees are mega spruces
+	treePineOld    // old-growth pine taiga: mostly mega pines, rare mega spruces
+	treeForest     // forest: oak with a fifth birch and the odd large oak, littered
+	treeDarkForest // dark forest: the dark-oak-led vegetation cascade, littered
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -67,11 +69,11 @@ var biomeReg = map[string]*Biome{
 	"minecraft:plains":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraPlains},
 	"minecraft:sunflower_plains":        {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraFlower},
 	"minecraft:meadow":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.05, Flora: floraFlower},
-	"minecraft:forest":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 1.6, Flora: floraPlains},
+	"minecraft:forest":                  {Top: GrassBlock, Sub: Dirt, Tree: treeForest, TreeDensity: 1.6, Flora: floraPlains},
 	"minecraft:flower_forest":           {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 1.2, Flora: floraFlower},
 	"minecraft:birch_forest":            {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 1.6, Flora: floraPlains},
 	"minecraft:old_growth_birch_forest": {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 2.0, Flora: floraPlains},
-	"minecraft:dark_forest":             {Top: GrassBlock, Sub: Dirt, Tree: treeDarkOak, TreeDensity: 3.0, Flora: floraDarkForest},
+	"minecraft:dark_forest":             {Top: GrassBlock, Sub: Dirt, Tree: treeDarkForest, TreeDensity: 3.0, Flora: floraDarkForest},
 	"minecraft:pale_garden":             {Top: GrassBlock, Sub: Dirt, Tree: treePaleOak, TreeDensity: 2.4, Flora: floraPaleGarden},
 	"minecraft:cherry_grove":            {Top: GrassBlock, Sub: Dirt, Tree: treeCherry, TreeDensity: 1.2, Flora: floraFlower},
 

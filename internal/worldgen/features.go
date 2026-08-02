@@ -96,18 +96,22 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 		}
 	case treeSpruceOld:
 		// trees_old_growth_spruce_taiga: mega_spruce 1/3, then pine 1/3,
-		// default spruce. (The 0.0125 fallen-spruce entry is unported.)
+		// then the 0.0125 fallen-spruce slot, default spruce. Unported
+		// entries still consume their slot — an EMPTY spot where vanilla
+		// grows the fallen log — so every later entry's rate stays exact.
 		switch {
 		case hash01(seed, wx, wz, 0x71F0) < 0.33333334:
 			name = "mega_spruce"
 		case hash01(seed, wx, wz, 0x71F1) < 0.33333334:
 			name = "pine"
+		case hash01(seed, wx, wz, 0x71F8) < 0.0125:
+			return nil // fallen spruce (unported)
 		default:
 			name = "spruce"
 		}
 	case treePineOld:
 		// trees_old_growth_pine_taiga: mega_spruce 1/39, mega_pine 4/13,
-		// pine 1/3, default spruce — the same cascade vanilla rolls.
+		// pine 1/3, the fallen-spruce slot, default spruce.
 		switch {
 		case hash01(seed, wx, wz, 0x71F2) < 0.025641026:
 			name = "mega_spruce"
@@ -115,8 +119,48 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 			name = "mega_pine"
 		case hash01(seed, wx, wz, 0x71F4) < 0.33333334:
 			name = "pine"
+		case hash01(seed, wx, wz, 0x71F9) < 0.0125:
+			return nil // fallen spruce (unported)
 		default:
 			name = "spruce"
+		}
+	case treeForest:
+		// trees_birch_and_oak_leaf_litter: the fallen-birch slot, birch 0.2,
+		// large oak 0.1, the fallen-oak slot, default oak — all the litter
+		// variants (their bees twins fold onto them until beehives exist).
+		switch {
+		case hash01(seed, wx, wz, 0x71FA) < 0.0025:
+			return nil // fallen birch (unported)
+		case hash01(seed, wx, wz, 0x71FB) < 0.2:
+			name = "birch_leaf_litter"
+		case hash01(seed, wx, wz, 0x71FC) < 0.1:
+			name = "fancy_oak_leaf_litter"
+		case hash01(seed, wx, wz, 0x71FD) < 0.0125:
+			return nil // fallen oak (unported)
+		default:
+			name = "oak_leaf_litter"
+		}
+	case treeDarkForest:
+		// dark_forest_vegetation: the two huge-mushroom slots, dark oak
+		// 2/3, the fallen-birch slot, birch 0.2, the fallen-oak slot, large
+		// oak 0.1, default oak — litter variants throughout.
+		switch {
+		case hash01(seed, wx, wz, 0x71FE) < 0.025:
+			return nil // huge brown mushroom (unported)
+		case hash01(seed, wx, wz, 0x71FF) < 0.05:
+			return nil // huge red mushroom (unported)
+		case hash01(seed, wx, wz, 0x7200) < 0.6666667:
+			name = "dark_oak_leaf_litter"
+		case hash01(seed, wx, wz, 0x7201) < 0.0025:
+			return nil // fallen birch (unported)
+		case hash01(seed, wx, wz, 0x7202) < 0.2:
+			name = "birch_leaf_litter"
+		case hash01(seed, wx, wz, 0x7203) < 0.0125:
+			return nil // fallen oak (unported)
+		case hash01(seed, wx, wz, 0x7204) < 0.1:
+			name = "fancy_oak_leaf_litter"
+		default:
+			name = "oak_leaf_litter"
 		}
 	case treeJungle:
 		name = "jungle_tree"
@@ -222,7 +266,12 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 			return IsDirtTag(col.biome.Sub)
 		}
 	}
-	PlaceTree(c, wx, surfaceH, wz, rng, TreeDriver{Set: set, Free: free, Read: read, DirtGround: dirtGround})
+	PlaceTree(c, wx, surfaceH, wz, rng, TreeDriver{
+		Set: set, Free: free, Read: read, DirtGround: dirtGround,
+		// The terrain's first empty cell IS the heightmap minus trees, and
+		// PlaceTree folds its own logs in. Chunk-independent by construction.
+		SurfaceTop: func(x, z int) int { return g.Height(x, z) },
+	})
 }
 
 // newTreeRNG is the per-tree randomness, derived from the tree's own position

@@ -30,6 +30,7 @@ func growTree(name string, seed int64) (*grown, *TreeConfig) {
 		Free:       func(x, y, z int) bool { return true },
 		Read:       func(x, y, z int) uint32 { return Air },
 		DirtGround: func(x, y, z int) bool { return false },
+		SurfaceTop: func(x, z int) int { return -999 },
 	})
 	return g, c
 }

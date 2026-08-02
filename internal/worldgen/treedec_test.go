@@ -20,6 +20,7 @@ func grownStates(name string, seed int64) map[uint32]int {
 		Free:       func(x, y, z int) bool { return true },
 		Read:       func(x, y, z int) uint32 { return Air },
 		DirtGround: func(x, y, z int) bool { return false },
+		SurfaceTop: func(x, z int) int { return -999 },
 	})
 	return out
 }
@@ -101,6 +102,7 @@ func grownWorld(name string, seed int64, ground map[[3]int]uint32) map[[3]int]ui
 	PlaceTree(c, 0, 0, 0, rng, TreeDriver{
 		Set: set, Free: free, Read: read,
 		DirtGround: func(x, y, z int) bool { return IsDirtTag(read(x, y, z)) },
+		SurfaceTop: func(x, z int) int { return 0 },
 	})
 	return blocks
 }
@@ -434,5 +436,104 @@ func TestCocoaWindowAnchorsAtTheDirtRow(t *testing.T) {
 		t.Error("no cocoa on eighty jungle trees over grass")
 	} else if lo < 0 || hi > 2 {
 		t.Errorf("cocoa on grass-grown jungles spans y %d..%d, want within [0,2] (base-log anchor)", lo, hi)
+	}
+}
+
+// The forest pool rolls vanilla's cascade — a fifth birch, a tenth large
+// oaks, oak for the rest, all litter variants — and never a foreign tree.
+func TestForestRollsBirchAndLargeOaks(t *testing.T) {
+	if biomeReg["minecraft:forest"].Tree != treeForest {
+		t.Fatal("forest biome does not use the forest pool")
+	}
+	birch, fancy, oak, empty := 0, 0, 0, 0
+	total := 4000
+	for wx := 0; wx < total; wx++ {
+		switch c := treeFeatureFor(treeForest, 1, wx*23, 71); {
+		case c == nil:
+			empty++
+		case c == TreeFeatures["birch_leaf_litter"]:
+			birch++
+		case c == TreeFeatures["fancy_oak_leaf_litter"]:
+			fancy++
+		case c == TreeFeatures["oak_leaf_litter"]:
+			oak++
+		default:
+			t.Fatalf("forest rolled a foreign tree at wx=%d", wx)
+		}
+	}
+	if birch < total/8 || birch > total/3 {
+		t.Errorf("birch rolled %d of %d, want ~20%%", birch, total)
+	}
+	if fancy < total/25 || fancy > total/6 {
+		t.Errorf("large oaks rolled %d of %d, want ~8%%", fancy, total)
+	}
+	if oak < total/2 {
+		t.Errorf("oak rolled %d of %d, want ~70%%", oak, total)
+	}
+	if empty > total/20 {
+		t.Errorf("%d empty fallen-tree slots of %d, want ~1.5%%", empty, total)
+	}
+}
+
+// Leaf litter settles around the litter trees: always on solid ground, always
+// in the passes' reach, never floating, and never inside the trunk column —
+// the heightmap rule keeps it out from directly under the tree's own logs.
+func TestLitterTreesScatterLeafLitter(t *testing.T) {
+	llo, lhi := BlockRange("leaf_litter")
+	grass := blockBase("grass_block") + 1
+	ground := map[[3]int]uint32{}
+	for x := -12; x <= 12; x++ {
+		for z := -12; z <= 12; z++ {
+			ground[[3]int{x, -1, z}] = grass
+		}
+	}
+	total := 0
+	for seed := int64(1); seed <= 30; seed++ {
+		blocks := grownWorld("oak_leaf_litter", seed, ground)
+		for p, st := range blocks {
+			if st < llo || st > lhi {
+				continue
+			}
+			total++
+			if p[1] != 0 {
+				t.Fatalf("seed %d: litter at y=%d — the floor is at y=0", seed, p[1])
+			}
+			if !IsSolidFull(blocks[[3]int{p[0], -1, p[2]}]) {
+				t.Fatalf("seed %d: litter floating at %v", seed, p)
+			}
+			if p[0] < -4 || p[0] > 4 || p[2] < -4 || p[2] > 4 {
+				t.Fatalf("seed %d: litter at %v beyond the pass radius", seed, p)
+			}
+			if p[0] == 0 && p[2] == 0 {
+				t.Fatalf("seed %d: litter inside the trunk column", seed)
+			}
+		}
+	}
+	if total == 0 {
+		t.Error("thirty litter oaks scattered no leaf litter")
+	}
+	// The heightmap rule: no litter in a column under one of the tree's own
+	// branch LOGS (a canopy of leaves is fine — MOTION_BLOCKING_NO_LEAVES).
+	// The large oak's limbs are what make this observable.
+	for seed := int64(1); seed <= 30; seed++ {
+		blocks := grownWorld("fancy_oak_leaf_litter", seed, ground)
+		for p, st := range blocks {
+			if st < llo || st > lhi {
+				continue
+			}
+			for yy := p[1] + 1; yy <= p[1]+24; yy++ {
+				if IsLog(blocks[[3]int{p[0], yy, p[2]}]) {
+					t.Fatalf("seed %d: litter at %v under a branch log at y=%d", seed, p, yy)
+				}
+			}
+		}
+	}
+	// The bare oak scatters nothing.
+	for seed := int64(1); seed <= 20; seed++ {
+		for _, st := range grownWorld("oak", seed, ground) {
+			if st >= llo && st <= lhi {
+				t.Fatal("a bare oak scattered leaf litter")
+			}
+		}
 	}
 }

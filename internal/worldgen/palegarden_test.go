@@ -44,14 +44,38 @@ func TestPaleGardenSeedsCreakingTrees(t *testing.T) {
 	}
 }
 
-// The dark forest keeps its own tree — the fix must not have swapped the two.
-func TestDarkForestStillGrowsDarkOak(t *testing.T) {
+// The dark forest rolls vanilla's vegetation cascade: dark oak leads at about
+// three in five, birch and the odd large oak mix in, and the huge-mushroom
+// slots stay EMPTY until mushrooms are ported — never another biome's tree.
+func TestDarkForestRollsItsCascade(t *testing.T) {
 	b := biomeReg["minecraft:dark_forest"]
-	if b.Tree != treeDarkOak {
-		t.Errorf("dark forest tree kind = %v, want treeDarkOak", b.Tree)
+	if b.Tree != treeDarkForest {
+		t.Errorf("dark forest tree kind = %v, want treeDarkForest", b.Tree)
 	}
-	if c := treeFeatureFor(b.Tree, 1, 3, 3); c.Log != TreeFeatures["dark_oak"].Log {
-		t.Errorf("dark forest trunk = %d, want dark oak %d", c.Log, TreeFeatures["dark_oak"].Log)
+	darkOak, birch, other, empty := 0, 0, 0, 0
+	total := 4000
+	for wx := 0; wx < total; wx++ {
+		switch c := treeFeatureFor(treeDarkForest, 1, wx*17, 44); {
+		case c == nil:
+			empty++
+		case c == TreeFeatures["dark_oak_leaf_litter"]:
+			darkOak++
+		case c == TreeFeatures["birch_leaf_litter"]:
+			birch++
+		case c == TreeFeatures["fancy_oak_leaf_litter"] || c == TreeFeatures["oak_leaf_litter"]:
+			other++
+		default:
+			t.Fatalf("dark forest rolled a foreign tree at wx=%d", wx)
+		}
+	}
+	if darkOak < total/2 {
+		t.Errorf("dark oak led only %d of %d rolls, want ~62%%", darkOak, total)
+	}
+	if birch == 0 || other == 0 {
+		t.Errorf("birch (%d) and oak-family (%d) should both appear", birch, other)
+	}
+	if empty == 0 || empty > total/5 {
+		t.Errorf("%d empty mushroom/fallen slots of %d, want ~8%%", empty, total)
 	}
 }
 

@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Forests are carpeted in leaf litter, and they finally mix their trees.**
+  Oak, birch, dark oak and large oak trees in forests and dark forests now
+  scatter vanilla's leaf litter around their base — two passes of it, settling
+  only on solid ground open to the sky through at most a canopy, never under
+  the tree's own branches. And the forests roll vanilla's own species mix
+  while they're at it: a regular forest is about a fifth birch with the odd
+  large oak among its oaks, and a dark forest leads with dark oak but mixes
+  all four — where vanilla would grow a huge mushroom or a fallen log, the
+  spot is left open for now so every other tree's odds stay exactly right.
 - **Trees prepare their own ground.** Every trunk placer now runs vanilla's
   ground rule: soil that is not already dirt-like gets dirt set beneath the
   trunk (a tree grown on stone stands on dirt, a mega spruce converts all

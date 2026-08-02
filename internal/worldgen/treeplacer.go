@@ -53,6 +53,11 @@ type TreeDriver struct {
 	// chunk-straddling tree records the same list — a buffer read would flip
 	// with a neighbouring tree's decorations and desynchronise the passes.
 	DirtGround func(x, y, z int) bool
+	// SurfaceTop is the MOTION_BLOCKING_NO_LEAVES heightmap answer for a
+	// column, MINUS this tree (PlaceTree folds its own logs in): the first Y
+	// with nothing motion-blocking except leaves at or above it. Leaf litter
+	// only settles on ground open to the sky through at most a canopy.
+	SurfaceTop func(x, z int) int
 }
 
 // TrunkKind selects one of vanilla's nine trunk placers.
@@ -146,6 +151,17 @@ type TreeConfig struct {
 	// is already in #dirt; force_dirt (azalea's rooted dirt) always writes.
 	DirtState uint32
 	ForceDirt bool
+
+	// place_on_ground — leaf litter scattered around the base (the forest
+	// and dark-forest tree variants run two passes with different reach).
+	LitterPasses []LitterPass
+}
+
+// LitterPass is one place_on_ground decorator: Tries random cells in the
+// box around the lowest trunk row inflated by Radius/Height, littered with
+// segment counts 1..MaxSeg on a uniformly random facing.
+type LitterPass struct {
+	Tries, Radius, Height, MaxSeg int
 }
 
 // foliageAttachment is a point a foliage blob grows from. A trunk placer
@@ -306,7 +322,8 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 		set(px, py, pz, st, leaf)
 	}
 	c.decorate(&decoCtx{rng: rng, logs: logs, dirt: dirtPos,
-		logList: logList, leafList: leafList, isAir: isAir, read: read, set: decoSet})
+		logList: logList, leafList: leafList, isAir: isAir, read: read, set: decoSet,
+		surfaceTop: d.SurfaceTop})
 	return true
 }
 
@@ -342,6 +359,27 @@ type decoCtx struct {
 	isAir             func([3]int) bool
 	read              TreeRead
 	set               TreeSetter
+	surfaceTop        func(x, z int) int
+	logTop            map[[2]int]int // lazy: per column, first Y above this tree's logs
+}
+
+// heightTop is the MOTION_BLOCKING_NO_LEAVES heightmap for a column: the
+// driver's answer for the world, raised by this tree's own logs.
+func (ctx *decoCtx) heightTop(x, z int) int {
+	if ctx.logTop == nil {
+		ctx.logTop = map[[2]int]int{}
+		for p := range ctx.logs {
+			k := [2]int{p[0], p[2]}
+			if t, ok := ctx.logTop[k]; !ok || p[1]+1 > t {
+				ctx.logTop[k] = p[1] + 1
+			}
+		}
+	}
+	h := ctx.surfaceTop(x, z)
+	if t, ok := ctx.logTop[[2]int{x, z}]; ok && t > h {
+		h = t
+	}
+	return h
 }
 
 // Vine states: the base state is every face TRUE, faces ordered east, north,
@@ -401,6 +439,52 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 				if xx == 0 || xx == 7 || zz == 0 || zz == 7 {
 					circle(p[0]-3+xx, p[1], p[2]-3+zz)
 				}
+			}
+		}
+	}
+	// PlaceOnGroundDecorator: leaf litter scattered around the base. Each
+	// pass throws Tries darts into the box around the lowest trunk row,
+	// inflated by Radius/Height; a dart sticks where the cell above is free
+	// (or a vine), the cell itself is solid ground, and the spot is open to
+	// the sky through at most leaves. The facing and segment count are one
+	// uniform draw over the pass's provider entries, PRE-DRAWN per dart so
+	// the sequence never depends on what the darts hit.
+	if len(c.LitterPasses) > 0 {
+		litterBase := blockBase("leaf_litter")
+		vlo, vhi := BlockRange("vine")
+		minY := ctx.logList[0][1]
+		minX, maxX := ctx.logList[0][0], ctx.logList[0][0]
+		minZ, maxZ := ctx.logList[0][2], ctx.logList[0][2]
+		for _, p := range ctx.logList {
+			if p[1] != minY {
+				continue
+			}
+			minX, maxX = min(minX, p[0]), max(maxX, p[0])
+			minZ, maxZ = min(minZ, p[2]), max(maxZ, p[2])
+		}
+		for _, pass := range c.LitterPasses {
+			x0, x1 := minX-pass.Radius, maxX+pass.Radius
+			y0, y1 := minY-pass.Height, minY+pass.Height
+			z0, z1 := minZ-pass.Radius, maxZ+pass.Radius
+			for i := 0; i < pass.Tries; i++ {
+				x := x0 + rng.Intn(x1-x0+1)
+				y := y0 + rng.Intn(y1-y0+1)
+				z := z0 + rng.Intn(z1-z0+1)
+				pick := rng.Intn(4 * pass.MaxSeg)
+				above := [3]int{x, y + 1, z}
+				if !ctx.isAir(above) {
+					if cur := ctx.read(x, y+1, z); cur < vlo || cur > vhi {
+						continue
+					}
+				}
+				if !IsSolidFull(ctx.read(x, y, z)) {
+					continue
+				}
+				if y+1 < ctx.heightTop(x, z) {
+					continue
+				}
+				// facing x segment_amount, facing outermost (north,south,west,east).
+				ctx.set(x, y+1, z, litterBase+uint32(pick/pass.MaxSeg)*4+uint32(pick%pass.MaxSeg), true)
 			}
 		}
 	}

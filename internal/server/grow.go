@@ -651,6 +651,18 @@ func (h *hub) placeLiveTree(players map[int32]*tracked, dim, x, y, z int, featur
 	return worldgen.PlaceTree(c, x, y, z, h.rng, worldgen.TreeDriver{
 		Set: set, Free: free, Read: read,
 		DirtGround: func(px, py, pz int) bool { return worldgen.IsDirtTag(w.At(px, py, pz)) },
+		// MOTION_BLOCKING_NO_LEAVES by scanning the real column down from the
+		// default world top. Only the litter decorator asks, and no
+		// sapling-grown feature carries litter — this is for completeness.
+		SurfaceTop: func(px, pz int) int {
+			for py := worldgen.MinY + worldgen.SectionCount*16 - 1; py >= worldgen.MinY; py-- {
+				s := w.At(px, py, pz)
+				if s != worldgen.Air && !worldgen.IsLeaves(s) && (worldgen.Collides(s) || worldgen.IsFluid(s)) {
+					return py + 1
+				}
+			}
+			return worldgen.MinY
+		},
 	})
 }
 
