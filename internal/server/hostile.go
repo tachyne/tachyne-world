@@ -328,6 +328,10 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)
 	}
+	// A bee spends its sting: one hit, then sixty seconds to live.
+	if m.etype == entityBee && m.beeStingDie == 0 {
+		m.beeStingDie = beeStingDieSecs
+	}
 	// Species that envenom or wither on a bite (cave spider, bee, wither skeleton).
 	if d := speciesOf(m.etype); d != nil {
 		if secs := d.poisonFor(h.rules.Difficulty); secs > 0 {

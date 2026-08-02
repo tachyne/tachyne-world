@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **Bees live real lives.** A bee forages the nearest flower, hovers it for
+  its nectar, and carries it home; the hive takes it in, and when the bee
+  emerges from its stay the honey level rises — the proximity stand-in is
+  gone, honey comes only from delivered nectar now. Bees head home at
+  nightfall and in the rain, hive occupants survive a server restart, a
+  robbed hive throws its occupants out angry unless campfire smoke keeps
+  them calm, a broken hive spills its bees where it stood — and a sting is
+  the last thing a bee does: one hit, sixty seconds, gone.
 - **Bee nests hang in the trees, with bees to match.** Wild trees carry
   vanilla's bee nests at vanilla's odds — one plains oak in twenty, one
   forest tree in five hundred, every large oak in a meadow — hung off the

@@ -417,6 +417,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if m.etype == entityCopperGolem {
 		m.behavior = copperGolemBehavior{} // walks to containers to sort items
 	}
+	if m.etype == entityBee {
+		m.behavior = beeBehavior{} // flies its flower-and-hive errands
+	}
 	if d.retaliate {
 		m.retaliates = true
 	}

@@ -190,6 +190,7 @@ func (h *hub) seedChunkBees(players map[int32]*tracked, c [2]int32) {
 				if s < beeNestMin || s > beeNestMax {
 					continue
 				}
+				h.registerHive(blockPos{bx + lx, wy, bz + lz})
 				for n := 2 + h.rng.Intn(2); n > 0; n-- {
 					h.spawnAnimal(players, entityBee, bx+lx, bz+lz)
 				}

@@ -362,6 +362,8 @@ type hub struct {
 	// received their one-time chunk-generation herd this pod lifetime.
 	vanillaSpawner bool
 	seededChunks   map[[2]int32]bool
+	hives          map[blockPos][]hiveOccupant // known hives and their occupants
+	hivestore      *hiveStore                  // hives.json persistence
 
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
 	// sheet of water washes up the beach and rolls back. It is a pure client
@@ -862,7 +864,7 @@ func (h *hub) run() {
 				h.updateSpawners(players)      // dungeon spawner rooms
 				h.updateTrialSpawners(players) // trial-chamber fights
 				h.updateVaults(players)        // …and the vaults they pay you to open
-				h.updateBeehives(players)      // bees fill the hives they work
+				h.updateBees(players)          // hive occupants, pollination, honey
 				h.entityInsideTick(players)    // magma/berry bush/wither rose contact
 				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach

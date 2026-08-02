@@ -75,6 +75,14 @@ type mob struct {
 	color           int8           // sheep: fleece colour (0 white .. 15 black), dyeable
 	customName      string         // name-tagged: shown above the mob, and it never despawns
 	eggIn           int            // chicken: ticks until the next egg
+	beeNectar       bool           // bee: carrying nectar home (fills the hive on delivery)
+	beePollinate    int            // bee: seconds left hovering at its flower
+	beeGoal         blockPos       // bee: the flower or hive it flies toward
+	beeGoalKind     int            // bee: beeGoalKindNone/Flower/Hive
+	beeHome         blockPos       // bee: its hive (beeHasHome)
+	beeHasHome      bool           //
+	beeNoEnter      int            // bee: seconds before it may re-enter a hive
+	beeStingDie     int            // bee: seconds left to live after stinging
 	size            int            // slime: 4/2/1 (splits in half on death)
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)

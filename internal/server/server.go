@@ -416,6 +416,8 @@ func (s *Server) Serve() error {
 			}
 		}
 		s.hub.spawns = newSpawnStore(s.SpawnPointFile)
+		s.hub.hivestore = newHiveStore(hivesPathFor(s.SpawnPointFile))
+		s.hub.hivesLoad()
 		s.hub.rulesPath = "settings.json"
 		s.hub.opsRef = s.Ops // read-only after this point (announce targeting)
 		s.hub.loadRules()

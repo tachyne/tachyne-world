@@ -9,11 +9,9 @@ import (
 // way the bees come out angry — unless there is a campfire smoking underneath,
 // which is the whole reason anyone builds one under a hive.
 //
-// SIMPLIFICATION, stated plainly: vanilla fills a hive when a bee that went out
-// for nectar comes home, and tachyne's bee has no hive AI at all — it is a
-// plain flyer. So honey here rises while bees are simply NEAR the hive in fair
-// daylight. The harvest half is vanilla's; the production half is a stand-in
-// until the bee gets its pollination behaviour (#121).
+// The production half lives in bee.go now: bees pollinate flowers, carry the
+// nectar home, and the hive fills as occupants that arrived carrying nectar
+// finish their stay — the harvest half below is unchanged.
 
 const (
 	beeMaxHoney       = 5   // BeehiveBlock.MAX_HONEY_LEVELS
@@ -61,46 +59,6 @@ func withHoney(s uint32, level int) uint32 {
 	return base + facing*(beeMaxHoney+1) + uint32(level)
 }
 
-// updateBeehives fills the hives near players. Runs on the 1 Hz survival step.
-func (h *hub) updateBeehives(players map[int32]*tracked) {
-	if h.raining || !h.dayLight() {
-		return // bees stay in when it rains, and at night
-	}
-	seen := map[blockPos]bool{}
-	for _, m := range h.mobs {
-		if m.etype != entityBee || m.dim != 0 || m.dying > 0 {
-			continue
-		}
-		pos, ok := h.beeHomeNear(m)
-		if !ok || seen[pos] {
-			continue
-		}
-		seen[pos] = true
-		cur := h.world.At(pos.x, pos.y, pos.z)
-		if lvl := honeyLevel(cur); lvl < beeMaxHoney && h.rng.Intn(beeFillChance) == 0 {
-			h.setBlockAt(players, 0, pos, withHoney(cur, lvl+1))
-		}
-	}
-}
-
-// beeHomeNear finds a hive close to a bee — the stand-in for "this bee lives
-// here and has just come home with nectar".
-func (h *hub) beeHomeNear(m *mob) (blockPos, bool) {
-	r := int(beeWorkRange)
-	bx, by, bz := int(m.x), int(m.y), int(m.z)
-	for dy := -r; dy <= r; dy++ {
-		for dx := -r; dx <= r; dx++ {
-			for dz := -r; dz <= r; dz++ {
-				p := blockPos{bx + dx, by + dy, bz + dz}
-				if isBeeHome(h.world.At(p.x, p.y, p.z)) {
-					return p, true
-				}
-			}
-		}
-	}
-	return blockPos{}, false
-}
-
 // harvestBeeHome is the right-click: shears cut honeycomb, a bottle draws
 // honey, and either empties the hive. Reports whether it did anything.
 func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPos) bool {
@@ -140,8 +98,11 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 	h.playSound(players, "minecraft:block.beehive.shear", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 
-	// Robbing a hive turns the bees on you — unless smoke is keeping them calm.
+	// Robbing a hive turns the bees on you — the ones inside come OUT angry —
+	// unless smoke is keeping them calm.
+	h.registerHive(pos)
 	if !h.campfireUnder(pos) {
+		h.robHive(players, t, pos)
 		h.angerBees(players, t, pos)
 	}
 	return true
