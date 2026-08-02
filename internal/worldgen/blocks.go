@@ -65,6 +65,12 @@ var (
 	// (bottom, no walls attached), which is what a scattered patch wants.
 	PaleMossCarpet   = blockBase("pale_moss_carpet")
 	ClosedEyeblossom = blockBase("closed_eyeblossom")
+	// creaking_heart's states run axis(x,y,z) x state(uprooted,dormant,awake)
+	// x natural(true,false). A heart in a trunk is upright, asleep and natural.
+	CreakingHeartBase    = blockBase("creaking_heart")
+	CreakingHeartDormant = blockBase("creaking_heart") + 8  // y, dormant, natural
+	CreakingHeartAwake   = blockBase("creaking_heart") + 10 // y, awake, natural
+	CreakingHeartUproot  = blockBase("creaking_heart") + 6  // y, uprooted, natural
 
 	// Biome flora (single-block placements).
 	TallGrass      = blockBase("tall_grass") + 1 // lower half only (2-block plant)

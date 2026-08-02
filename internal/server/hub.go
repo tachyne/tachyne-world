@@ -452,10 +452,12 @@ type hub struct {
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
 
-	tnt         []*primedTNT           // lit TNT charges counting down
-	fangs       []*evokerFang          // conjured evoker fangs waiting to bite
-	snifferEggs map[simPos]uint64      // egg position -> tick its next crack is due
-	brushes     map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
+	tnt          []*primedTNT            // lit TNT charges counting down
+	fangs        []*evokerFang           // conjured evoker fangs waiting to bite
+	snifferEggs  map[simPos]uint64       // egg position -> tick its next crack is due
+	brushes      map[blockPos]*brushing  // suspicious blocks part-way brushed (not persisted)
+	hearts       map[blockPos]*heartLink // creaking hearts and the creaking each owns
+	heartScanned map[[2]int32]bool       // chunks already searched for worldgen hearts
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
 	rulesPath string
@@ -891,14 +893,17 @@ func (h *hub) run() {
 			}
 			h.updateBolts(players) // despawn finished lightning flashes
 			h.updateTNT(players)
-			h.updateFangs(players)   // evoker fangs: bite once, then sink
-			h.updateVexLife(players) // summoned vexes expire   // primed charges burn their fuses
-			h.tickBrushes(players)   // half-brushed suspicious blocks settle back
+			h.updateFangs(players)     // evoker fangs: bite once, then sink
+			h.updateVexLife(players)   // summoned vexes expire   // primed charges burn their fuses
+			h.tickBrushes(players)     // half-brushed suspicious blocks settle back
+			h.updateHearts(players)    // creaking hearts: wake at dusk, send out a creaking
+			h.updateCreakings(players) // …and the creaking freezes while it is watched
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
 			if age%40 == 0 {
 				h.registerSculkChunks(players) // discover worldgen (deep_dark) sculk near players
+				h.registerHeartChunks(players) // …and worldgen creaking hearts in the pale garden
 				h.populateMonuments(players)   // seed elder guardians when a player reaches a monument
 				h.populateMansions(players)    // seed illagers when a player reaches a woodland mansion
 			}

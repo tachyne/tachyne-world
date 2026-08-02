@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-02
 
 ### Added
+- **The creaking haunts the pale garden.** Pale oaks now grow around creaking
+  hearts, and after dark a heart sends out the thing it has been keeping. It
+  behaves as it should: it freezes solid the moment you look at it and only
+  moves when you don't, your blows land on the heart rather than on it —
+  bleeding resin onto the tree that tells you where to look — and the instant
+  you break that heart, it comes apart. Come morning it does too.
+- **Dark and pale oaks generate on the thick trunk they are supposed to have.**
+  Growing four saplings gave you a proper 2×2 mega tree; the world generator
+  gave the same species a single pole. Both build the same tree now.
 - **The pale garden grows pale oak.** The biome generated, in the right places,
   carpeted in the wrong colour: it was decorating itself with dark oak, which
   is the one thing a pale garden is not. It now grows its own bone-white wood,

@@ -47,3 +47,28 @@ func TestEveryTreeKindHasItsOwnWood(t *testing.T) {
 		seen[log] = k
 	}
 }
+
+// A generated pale oak and a planted one must be the same tree. The sapling
+// grower has always built dark/pale oak on a 2x2 trunk (TreeShape.TwoByTwo)
+// while the generator wrote a single column, so the two disagreed — and the
+// creaking heart's placement rule, which needs a log with logs on every side,
+// could never be satisfied by a generated tree.
+func TestMegaSpeciesGenerateOnAWideTrunk(t *testing.T) {
+	for _, k := range []treeKind{treeDarkOak, treePaleOak} {
+		if !wideTrunk(k) {
+			t.Errorf("tree kind %v should generate on a 2x2 trunk", k)
+		}
+	}
+	for _, k := range []treeKind{treeOak, treeBirch, treeSpruce, treeJungle, treeAcacia, treeCherry, treeMangrove} {
+		if wideTrunk(k) {
+			t.Errorf("tree kind %v should generate on a single trunk", k)
+		}
+	}
+	// …and the two tables agree on which species those are.
+	for name, shape := range treeShapeBySapling {
+		wide := shape.Log == DarkOakLog || shape.Log == PaleOakLog
+		if shape.TwoByTwo != wide {
+			t.Errorf("%s: sapling TwoByTwo=%v disagrees with its wood", name, shape.TwoByTwo)
+		}
+	}
+}

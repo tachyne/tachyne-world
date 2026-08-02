@@ -136,6 +136,9 @@ type mob struct {
 	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int            // mob-updates left before this mob can melee again
 	hasTarget       bool           // a player is within aggro range this update
+	heartBound      bool           // creaking: a standing heart is keeping it alive
+	heartHit        bool           // …and it took a blow the heart must answer for
+	frozen          bool           // creaking: a player is watching, so it cannot move
 	tx, tz          float64        // that target's position (set by acquireTarget)
 	dim             int            // dimension this mob lives in (0 overworld, 1 nether)
 	profession      int            // villager: index into professionNames/villagerTrades
@@ -238,6 +241,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.spawnInvuln > 0 {
 			continue // wither charging its spawn: hold still until updateWithers releases it
+		}
+		if m.frozen {
+			m.vx, m.vz = 0, 0
+			continue // a watched creaking is a statue
 		}
 		if m.tamed { // a pet follows its owner (or sits)
 			if h.petAcquire(players, m) {
@@ -524,6 +531,15 @@ func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dt
 func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
+	}
+	// A creaking with a standing heart cannot be hurt: the blow goes to the
+	// heart instead. Recorded rather than acted on, because this is the mob's
+	// own arithmetic with no hub in reach — the hub answers for it next tick.
+	// Putting the check HERE rather than at the places that swing is the point:
+	// there is no path to a creaking's health that skips this function.
+	if m.heartBound && !dt.has(tagBypassesInvulnerability) {
+		m.heartHit = true
+		return
 	}
 	if !dt.has(tagBypassesEffects) && !dt.has(tagBypassesResistance) {
 		dmg *= m.damageResistance() // the Resistance effect, as on a player

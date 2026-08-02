@@ -104,6 +104,12 @@ func TreeShapeForSapling(name string) (TreeShape, bool) {
 	return s, ok
 }
 
+// wideTrunk are the species vanilla gives a MEGA feature and no single tree —
+// they grow on a 2x2 trunk whether a player planted them or the generator did.
+// The sapling grower has always known this (TreeShape.TwoByTwo); worldgen did
+// not, so a planted pale oak and a generated one were different trees.
+func wideTrunk(k treeKind) bool { return k == treeDarkOak || k == treePaleOak }
+
 // treeStyle maps a treeKind to its trunk/leaf blocks and canopy shape.
 func treeStyle(k treeKind) (log, leaves uint32, conical bool, minH, extraH int) {
 	switch k {
@@ -136,8 +142,26 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 	height := minH + int(hash01(g.seed, wx, wz, 0x1111)*float64(extraH+1))
 	trunkTop := surfaceH + height
 
+	trunk := [][2]int{{0, 0}}
+	if wideTrunk(kind) {
+		trunk = [][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}}
+	}
 	for y := surfaceH; y < trunkTop; y++ {
-		setSectionBlock(ch, lx0, y, lz0, log, true)
+		for _, c := range trunk {
+			setSectionBlock(ch, lx0+c[0], y, lz0+c[1], log, true)
+		}
+	}
+	// One pale oak in ten grows around a creaking heart, which is how vanilla's
+	// random_selector weights pale_oak_creaking against plain pale_oak.
+	//
+	// The decorator wants a log with logs on all six sides. On a 2x2 trunk only
+	// the INNER faces qualify, so the heart goes in one of the four columns at a
+	// height with trunk above and below — the same condition, reached the same
+	// way vanilla reaches it.
+	if kind == treePaleOak && height >= 4 && hash01(g.seed, wx, wz, 0xC0DE) < 0.1 {
+		heartY := surfaceH + 1 + int(hash01(g.seed, wx, wz, 0xC0DF)*float64(height-2))
+		c := trunk[int(hash01(g.seed, wx, wz, 0xC0E0)*float64(len(trunk)))%len(trunk)]
+		setSectionBlock(ch, lx0+c[0], heartY, lz0+c[1], CreakingHeartDormant, true)
 	}
 
 	leaf := func(y, radius int, trimCorners bool) {
