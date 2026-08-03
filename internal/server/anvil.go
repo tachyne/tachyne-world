@@ -283,6 +283,7 @@ func (h *hub) reclaimAnvil(players map[int32]*tracked, t *tracked) {
 				it.pats = st.pats
 				it.trimMat, it.trimPat = st.trimMat, st.trimPat
 				it.bookID = st.bookID
+				it.boxID, it.hiveID = st.boxID, st.hiveID
 			}
 		}
 	}

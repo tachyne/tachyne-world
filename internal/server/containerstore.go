@@ -34,24 +34,29 @@ type savedItem struct {
 	Pats  [6]int32 `json:"pats,omitempty"` // banner layers, patPlus1<<8|color
 	Trim  int32    `json:"trim,omitempty"` // (mat+1)<<8|(pat+1)
 	Book  int32    `json:"book,omitempty"` // book id
+	Box   int32    `json:"box,omitempty"`  // shulker-box contents id
+	Hive  int32    `json:"hive,omitempty"` // carried-hive contents id
 }
 
 type containerFile struct {
-	Furnaces  map[string]savedFurnace `json:"furnaces,omitempty"`
-	Chests    map[string][][14]int32  `json:"chests,omitempty"` // (slot + the 12-col stack pack) — sparse; old shorter rows zero-fill
-	Bins      map[string]savedBin     `json:"bins,omitempty"`   // dispenser/dropper/hopper
-	Items     []savedItem             `json:"items,omitempty"`  // dropped item entities
-	Paintings []savedPainting         `json:"paintings,omitempty"`
-	Frames    []savedFrame            `json:"frames,omitempty"`
-	Jukeboxes map[string]stackRow     `json:"jukeboxes,omitempty"`
-	Beacons   map[string][2]int32     `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
-	Stands    []savedStand            `json:"stands,omitempty"`  // placed armor stands
-	Lecterns  map[string]savedLectern `json:"lecterns,omitempty"`
-	Shelves   map[string][6]stackRow  `json:"shelves,omitempty"` // chiseled bookshelves
+	Furnaces  map[string]savedFurnace   `json:"furnaces,omitempty"`
+	Chests    map[string][]containerRow `json:"chests,omitempty"` // (slot + the stack pack) — sparse; old shorter rows zero-fill
+	Bins      map[string]savedBin       `json:"bins,omitempty"`   // dispenser/dropper/hopper
+	Items     []savedItem               `json:"items,omitempty"`  // dropped item entities
+	Paintings []savedPainting           `json:"paintings,omitempty"`
+	Frames    []savedFrame              `json:"frames,omitempty"`
+	Jukeboxes map[string]stackRow       `json:"jukeboxes,omitempty"`
+	Beacons   map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
+	Stands    []savedStand              `json:"stands,omitempty"`  // placed armor stands
+	Lecterns  map[string]savedLectern   `json:"lecterns,omitempty"`
+	Shelves   map[string][6]stackRow    `json:"shelves,omitempty"` // chiseled bookshelves
 	// Shulker-box contents riding a dropped or stored item, keyed by boxID.
-	Boxes map[string][][14]int32 `json:"boxes,omitempty"`
+	Boxes map[string][]containerRow `json:"boxes,omitempty"`
 	// The next boxID to mint, so ids stay unique across restarts.
 	NextBoxID int32 `json:"next_box_id,omitempty"`
+	// Bees + honey riding a Silk-Touched hive item, keyed by hiveID.
+	HiveItems  map[string]hiveStow `json:"hive_items,omitempty"`
+	NextHiveID int32               `json:"next_hive_id,omitempty"`
 	// Placed conduits as "dim,x,y,z" — they are player-built, so nothing else
 	// can rediscover them after a restart.
 	Conduits []string `json:"conduits,omitempty"`
@@ -86,9 +91,9 @@ type savedFrame struct {
 }
 
 type savedBin struct {
-	Size     int         `json:"size"`
-	Slots    [][14]int32 `json:"slots,omitempty"`    // (slot + the 12-col stack pack)
-	Disabled uint16      `json:"disabled,omitempty"` // crafter: bitmask of disabled grid slots
+	Size     int            `json:"size"`
+	Slots    []containerRow `json:"slots,omitempty"`    // (slot + the stack pack)
+	Disabled uint16         `json:"disabled,omitempty"` // crafter: bitmask of disabled grid slots
 }
 
 type savedFurnace struct {
@@ -192,9 +197,16 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 
 func posKey(p blockPos) string { return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z) }
 
+// containerRow is one sparse container slot: the slot index + the full
+// stackRow pack. NAMED for the same reason as stackRow — widening it is a
+// one-line change, where a [N]int32 literal silently TRUNCATES the copy in
+// slotRow when the stack pack outgrows it (which is how hiveID nearly got
+// dropped from chest rows).
+type containerRow = [1 + len(stackRow{})]int32
+
 // slotRow packs a slot index + stack into a sparse container row.
-func slotRow(i int, st invStack) [14]int32 {
-	var r [14]int32
+func slotRow(i int, st invStack) containerRow {
+	var r containerRow
 	r[0] = int32(i)
 	p := packStack(st)
 	copy(r[1:], p[:])
@@ -202,7 +214,7 @@ func slotRow(i int, st invStack) [14]int32 {
 }
 
 // rowStack unpacks a sparse container row (index, stack).
-func rowStack(r [14]int32) (int, invStack) {
+func rowStack(r containerRow) (int, invStack) {
 	var p stackRow
 	copy(p[:], r[1:])
 	return int(r[0]), unpackStack(p)
@@ -331,9 +343,9 @@ func (s *containerStore) recordBins(bins map[blockPos]*bin) {
 
 // recordChests replaces the in-memory chest snapshot (no write).
 func (s *containerStore) recordChests(chests map[blockPos]*chest) {
-	snap := map[string][][14]int32{}
+	snap := map[string][]containerRow{}
 	for pos, c := range chests {
-		var rows [][14]int32
+		var rows []containerRow
 		for i, st := range c.slots {
 			if st.item != 0 && st.count > 0 {
 				rows = append(rows, slotRow(i, st))
@@ -521,9 +533,9 @@ func (s *containerStore) loadPaintings(alloc func() int32) map[int32]*painting {
 // contents of a box that is currently an ITEM have nowhere else to live —
 // a placed box stores under its position like any chest.
 func (s *containerStore) recordBoxes(boxes map[int32]*chest, next int32) {
-	snap := map[string][][14]int32{}
+	snap := map[string][]containerRow{}
 	for id, c := range boxes {
-		var rows [][14]int32
+		var rows []containerRow
 		for i, st := range c.slots {
 			if st.item != 0 && st.count > 0 {
 				rows = append(rows, slotRow(i, st))
@@ -557,6 +569,31 @@ func (s *containerStore) loadBoxes() (map[int32]*chest, int32) {
 		out[int32(id)] = c
 	}
 	return out, s.m.NextBoxID
+}
+
+// recordHiveItems replaces the in-memory snapshot of Silk-Touched hive items —
+// the bees and honey a broken hive carries until it is placed again.
+func (s *containerStore) recordHiveItems(stows map[int32]hiveStow, next int32) {
+	snap := map[string]hiveStow{}
+	for id, st := range stows {
+		snap[strconv.Itoa(int(id))] = st
+	}
+	s.mu.Lock()
+	s.m.HiveItems, s.m.NextHiveID = snap, next
+	s.mu.Unlock()
+}
+
+// loadHiveItems reconstructs carried-hive contents and the id counter.
+func (s *containerStore) loadHiveItems() (map[int32]hiveStow, int32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[int32]hiveStow{}
+	for k, saved := range s.m.HiveItems {
+		if id, err := strconv.Atoi(k); err == nil {
+			out[int32(id)] = saved
+		}
+	}
+	return out, s.m.NextHiveID
 }
 
 // recordConduits replaces the in-memory conduit snapshot (no write).

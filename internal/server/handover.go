@@ -94,10 +94,11 @@ func (t *tracked) applyPlayerState(ps ho.PlayerState) {
 // tachyne-common, shared with every pod), while the local stackRow grows as
 // components are added. narrowRow/widenRow convert at the seam.
 //
-// Columns past the 13th do not cross: today that is boxID, and a shulker box's
-// contents live in a hub-side store which does not migrate either, so the box
-// would arrive empty. Carrying container contents across a seam is sharding
-// work — noted here so the omission is visible rather than surprising.
+// Columns past the 13th do not cross: today that is boxID and hiveID, whose
+// contents live in hub-side stores which do not migrate either, so the box
+// (or carried hive) would arrive empty. Carrying container contents across a
+// seam is sharding work — noted here so the omission is visible rather than
+// surprising.
 const handoverRowCols = 13
 
 func narrowRow(r stackRow) [handoverRowCols]int32 {

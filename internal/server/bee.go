@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -223,6 +224,25 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	if m.beeNoEnter > 0 {
 		m.beeNoEnter--
 	}
+	h.syncBeeLook(players, m)
+	// The pollen coat at work — even while flying home, and regardless of a
+	// fight: the nectar drips (vanilla aiStep, 5% per tick) and crops below
+	// get a boost until ten have grown this trip.
+	if m.beeNectar && m.beeCropsGrown < beeCropBoostMax {
+		drips := int32(0)
+		for i := 0; i < 20; i++ {
+			if h.rng.Float64() < 0.05 {
+				drips++
+			}
+		}
+		if drips > 0 {
+			h.spawnParticles(players, particleNectar, m.x, m.y+0.4, m.z, 0.3, 0, drips)
+		}
+		if m.beeHasHome && isBeeHome(h.world.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) &&
+			h.rng.Float64() < beeCropBoostProb {
+			h.beeGrowCropsBelow(players, m)
+		}
+	}
 	if m.anger > 0 || m.panic > 0 {
 		m.beeGoalKind = beeGoalKindNone
 		return // fighting or fleeing outranks the errand
@@ -381,15 +401,222 @@ func (h *hub) findFlowerFor(m *mob) (blockPos, bool) {
 // robHive throws every occupant out angry at the robber — the price of
 // harvesting without smoke.
 func (h *hub) robHive(players map[int32]*tracked, t *tracked, pos blockPos) {
+	h.releaseHiveBees(players, pos, t)
+}
+
+// releaseHiveBees empties a hive's occupants into the world: angry at t when a
+// robbery or a bare break sets them off, calm when t is nil — a dispenser's
+// shears or bottle has nobody to blame (BeeReleaseStatus.BEE_RELEASED).
+func (h *hub) releaseHiveBees(players map[int32]*tracked, pos blockPos, t *tracked) {
 	occ := h.hives[pos]
 	for range occ {
-		if m := h.beeOut(players, pos, true); m != nil {
+		if m := h.beeOut(players, pos, t != nil); m != nil && t != nil {
 			h.provoke(m, t)
 		}
 	}
 	if len(occ) > 0 {
 		h.hives[pos] = nil
 		h.hivesMark()
+	}
+}
+
+// The client-visible bee: vanilla syncs a flags byte (bit 2 rolling, bit 4
+// stung, bit 8 nectar — the pollen coat on the texture) and the remaining
+// anger time (>0 = red eyes) as entity metadata. Both are diffed once a
+// second in syncBeeLook, so every code path that changes the state is covered.
+const (
+	metaIndexBeeFlags = 17 // Bee DATA_FLAGS_ID (byte), after AgeableMob's baby(16)
+	metaIndexBeeAnger = 18 // Bee DATA_REMAINING_ANGER_TIME (VarInt)
+	beeFlagStung      = 0x04
+	beeFlagNectar     = 0x08
+)
+
+func beeFlagsMeta(eid int32, flags uint8) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexBeeFlags)
+	b = protocol.AppendVarInt(b, 0) // type: byte
+	b = protocol.AppendU8(b, flags)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+func beeAngerMeta(eid int32, anger int) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexBeeAnger)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(anger))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// syncBeeLook sends the appearance metadata when it changed since last send.
+func (h *hub) syncBeeLook(players map[int32]*tracked, m *mob) {
+	flags := uint8(0)
+	if m.beeStingDie > 0 {
+		flags |= beeFlagStung
+	}
+	if m.beeNectar {
+		flags |= beeFlagNectar
+	}
+	if flags != m.beeSentFlags {
+		m.beeSentFlags = flags
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, flags)))
+	}
+	if angry := m.anger > 0; angry != m.beeSentAngry {
+		m.beeSentAngry = angry
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
+	}
+}
+
+// Crop pollination (BeeGrowCropGoal): a pollen-laden bee with a valid hive
+// boosts #bee_growables it flies over, up to ten crops per trip. The goal is
+// flag-free in vanilla, so it runs concurrently with the flight home.
+const (
+	beeCropBoostMax = 10 // NumCropsGrownSincePollination budget
+	// Vanilla attempts the two-below check once per ~30 active ticks, and the
+	// goal is up ~70% of eligible time (canBeeUse refuses at random 30%):
+	// per second that is 1-(1-0.7/30)^20 ≈ 0.376.
+	beeCropBoostProb = 0.376
+)
+
+// beeGrowCropsBelow ports BeeGrowCropGoal.tick: each of the two cells under
+// the bee advances one stage if it holds a #bee_growables block — crops and
+// stems age, a berry bush ripens, cave vines grow their glow berries. Pitcher
+// crops are in the tag but are not CropBlocks, so vanilla (and this) skips them.
+func (h *hub) beeGrowCropsBelow(players map[int32]*tracked, m *mob) {
+	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	for i := 1; i <= 2; i++ {
+		p := blockPos{bx, by - i, bz}
+		next, ok := beeGrowTarget(h.world.At(p.x, p.y, p.z))
+		if !ok {
+			continue
+		}
+		h.setBlockAt(players, 0, p, next)
+		// Level event 2011: the client shows a green burst over the plant.
+		h.spawnParticles(players, particleHappyVillager,
+			float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 0.5, 0, 15)
+		m.beeCropsGrown++
+	}
+}
+
+var (
+	torchflowerBlock                   = worldgen.BlockBase("torchflower")
+	caveVinesLo, caveVinesHi           = worldgen.BlockRange("cave_vines")
+	caveVinesPlantLo, caveVinesPlantHi = worldgen.BlockRange("cave_vines_plant")
+)
+
+// beeGrowTarget maps a #bee_growables state to its one-stage-grown form.
+func beeGrowTarget(s uint32) (uint32, bool) {
+	for _, r := range cropRanges { // wheat / carrots / potatoes / beetroots
+		if s >= r[0] && s < r[1] {
+			return s + 1, true
+		}
+	}
+	// Torchflower: getMaxAge is 2 though AGE stops at 1, so the step past the
+	// last crop state swaps in the flower itself (TorchflowerCropBlock).
+	if s >= torchflowerCropMin && s < torchflowerCropMax {
+		return s + 1, true
+	}
+	if s == torchflowerCropMax {
+		return torchflowerBlock, true
+	}
+	if (s >= melonStemBase && s < melonStemBase+7) ||
+		(s >= pumpkinStemBase && s < pumpkinStemBase+7) {
+		return s + 1, true
+	}
+	if s >= berryBase && s < berryBase+3 {
+		return s + 1, true
+	}
+	return caveVineBerried(s)
+}
+
+// caveVineBerried returns the berries=true form of a berry-less cave-vine
+// state; berries=true is the first of each pair (see vines.go headAt).
+func caveVineBerried(s uint32) (uint32, bool) {
+	switch {
+	case s >= caveVinesLo && s <= caveVinesHi:
+		if (s-caveVinesLo)%2 == 1 {
+			return s - 1, true
+		}
+	case s >= caveVinesPlantLo && s <= caveVinesPlantHi:
+		if (s-caveVinesPlantLo)%2 == 1 {
+			return s - 1, true
+		}
+	}
+	return s, false
+}
+
+// Silk-Touched hives travel with their bees (BeehiveBlock.playerDestroy +
+// the silk loot path): the occupants and honey level ride the dropped item
+// under a hiveID — the shulker-box indirection — and a later placement
+// restores them. Persisted with the box contents in containers.json.
+
+// hiveStow is what one carried hive item holds.
+type hiveStow struct {
+	Honey int            `json:"honey,omitempty"`
+	Occ   []hiveOccupant `json:"occ,omitempty"`
+}
+
+// stowHiveItem moves a broken hive's occupants + honey level under a fresh
+// hiveID for the dropped item to carry (0 = nothing worth carrying).
+func (h *hub) stowHiveItem(pos blockPos, honey int) int32 {
+	occ := h.hives[pos]
+	delete(h.hives, pos)
+	h.hivesMark()
+	if len(occ) == 0 && honey == 0 {
+		return 0
+	}
+	if h.hiveItems == nil {
+		h.hiveItems = map[int32]hiveStow{}
+	}
+	h.nextHiveID++
+	h.hiveItems[h.nextHiveID] = hiveStow{Honey: honey, Occ: occ}
+	return h.nextHiveID
+}
+
+// dropBeeHome replaces the ordinary loot path for a broken hive or nest:
+// Silk Touch keeps the bees and honey on the dropped item; anything else
+// spills the occupants angry at the breaker — and a bee nest without Silk
+// Touch drops nothing at all (its loot table is silk-only).
+func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, pos blockPos) {
+	t := players[by]
+	item := int32(itemByName["beehive"])
+	if beeHomeBase(state) == beeNestMin {
+		item = int32(itemByName["bee_nest"])
+	}
+	if t != nil && heldStack(t).enchLvl(enchSilkTouch) > 0 {
+		if it := h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
+			it.hiveID = h.stowHiveItem(pos, honeyLevel(state))
+		}
+		return
+	}
+	// EMERGENCY release: the occupants come out after whoever broke their
+	// home, and the neighbours join in.
+	h.releaseHiveBees(players, pos, t)
+	if t != nil {
+		h.angerBees(players, t, pos)
+	}
+	if beeHomeBase(state) != beeNestMin {
+		h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+	}
+}
+
+// restoreBeeHome is the other half: a placed hive takes back the bees and
+// honey its stack carried.
+func (h *hub) restoreBeeHome(players map[int32]*tracked, pos blockPos, hiveID int32) {
+	if hiveID == 0 {
+		return
+	}
+	st, ok := h.hiveItems[hiveID]
+	if !ok {
+		return
+	}
+	delete(h.hiveItems, hiveID)
+	h.registerHive(pos)
+	if len(st.Occ) > 0 {
+		h.hives[pos] = append(h.hives[pos], st.Occ...)
+		h.hivesMark()
+	}
+	if cur := h.world.At(pos.x, pos.y, pos.z); isBeeHome(cur) && st.Honey > 0 {
+		h.setBlockAt(players, 0, pos, withHoney(cur, st.Honey))
 	}
 }
 

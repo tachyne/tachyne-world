@@ -27,6 +27,7 @@ const (
 	particleBubble           = 3  // stable across every served version
 	particleFishing          = 30 // the bobber wake (31 on 773+, 38 on 776)
 	particleSplash           = 67 // (68 on 773+, 70 on 775, 77 on 776)
+	particleNectar           = 79 // falling_nectar (80 on 773+, 82 on 775, 89 on 776)
 
 	worldEventBlockBreak = 2001
 	particleNote         = 55 // canonical 770 particle id (remapped per client)

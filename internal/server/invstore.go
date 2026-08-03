@@ -67,8 +67,8 @@ func newInvStore(path string) *invStore {
 // backward-compatible by construction.
 //
 // Layout: [item, count, dmg, enchPack, mapID, 6 banner layers
-// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID].
-type stackRow = [14]int32
+// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID, hiveID].
+type stackRow = [15]int32
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -80,6 +80,7 @@ func packStack(st invStack) stackRow {
 	}
 	r[12] = st.bookID
 	r[13] = st.boxID
+	r[14] = st.hiveID
 	return r
 }
 
@@ -91,6 +92,7 @@ func unpackStack(r stackRow) invStack {
 	st.trimMat, st.trimPat = int8(r[11]>>8), int8(r[11]&0xff)
 	st.bookID = r[12]
 	st.boxID = r[13]
+	st.hiveID = r[14]
 	return st
 }
 

@@ -71,12 +71,14 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 	}
 	held := heldStack(t)
 	var give invStack
+	sound := "minecraft:block.beehive.shear"
 	switch held.item {
 	case int32(itemByName["shears"]):
 		give = invStack{item: int32(itemByName["honeycomb"]), count: beeHoneycombYield}
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	case int32(itemByName["glass_bottle"]):
 		give = invStack{item: int32(itemByName["honey_bottle"]), count: 1}
+		sound = "minecraft:item.bottle.fill" // vanilla: BOTTLE_FILL, not the shear
 		slot := t.p.heldSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}
@@ -95,7 +97,7 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 		h.spawnItem(players, give.item, left, t.x, t.y, t.z)
 	}
 	h.setBlockAt(players, 0, pos, withHoney(cur, 0))
-	h.playSound(players, "minecraft:block.beehive.shear", sndBlock,
+	h.playSound(players, sound, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 
 	// Robbing a hive turns the bees on you — the ones inside come OUT angry —

@@ -83,6 +83,9 @@ type mob struct {
 	beeHasHome      bool           //
 	beeNoEnter      int            // bee: seconds before it may re-enter a hive
 	beeStingDie     int            // bee: seconds left to live after stinging
+	beeCropsGrown   int8           // bee: crops boosted since its last pollination (cap 10)
+	beeSentFlags    uint8          // bee: last synced flags byte (pollen coat / lost stinger)
+	beeSentAngry    bool           // bee: last synced anger state (red eyes)
 	size            int            // slime: 4/2/1 (splits in half on death)
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)
@@ -619,6 +622,14 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		}
 		if m.etype == entityEnderman && m.carriedBlock != 0 {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
+		}
+		if m.etype == entityBee { // pollen coat / red eyes are one-shot state too
+			if m.beeSentFlags != 0 {
+				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, m.beeSentFlags)))
+			}
+			if m.beeSentAngry {
+				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
+			}
 		}
 		if m.saddled {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))

@@ -450,6 +450,9 @@ type hub struct {
 	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
 	boxes     map[int32]*chest
 	nextBoxID int32
+	// Bees + honey riding a Silk-Touched hive item, keyed by the stack's hiveID.
+	hiveItems  map[int32]hiveStow
+	nextHiveID int32
 
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
@@ -563,7 +566,8 @@ func (h *hub) snapshotItems() []savedItem {
 	for _, it := range h.items {
 		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
 			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
-			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID}
+			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
+			Box: it.boxID, Hive: it.hiveID}
 		for i, l := range it.pats {
 			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
 		}
@@ -584,6 +588,7 @@ func (h *hub) restoreItems(saved []savedItem) {
 			}
 			it.trimMat, it.trimPat = int8(si.Trim>>8), int8(si.Trim&0xff)
 			it.bookID = si.Book
+			it.boxID, it.hiveID = si.Box, si.Hive
 		}
 	}
 }
@@ -719,6 +724,7 @@ func (h *hub) run() {
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
 		h.boxes, h.nextBoxID = h.containers.loadBoxes()
+		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
@@ -969,6 +975,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
@@ -1050,6 +1057,13 @@ func (h *hub) run() {
 					// because the events channel is FIFO.
 					if t := players[e.by]; t != nil {
 						h.restoreShulkerBox(blockPos{e.x, e.y, e.z}, heldStack(t).boxID)
+					}
+				}
+				if e.broken == 0 && isBeeHome(e.state) {
+					// A hive placed from a Silk-Touched stack takes its bees and
+					// honey back (same FIFO reasoning as the box above).
+					if t := players[e.by]; t != nil {
+						h.restoreBeeHome(players, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
 					}
 				}
 				h.checkWitherBuild(players, e.dim, e.x, e.y, e.z, e.state)
@@ -1241,6 +1255,13 @@ func (h *hub) run() {
 					// boxID and drop an item stamped with it, rather than letting
 					// the ordinary loot path drop a bare box.
 					h.dropShulkerBox(players, e.state, blockPos{e.x, e.y, e.z})
+					break
+				}
+				if isBeeHome(e.state) {
+					// Hives write their own break rules: Silk Touch carries the
+					// bees and honey on the item, anything else spills the
+					// occupants angry — and a nest then drops nothing at all.
+					h.dropBeeHome(players, e.by, e.state, blockPos{e.x, e.y, e.z})
 					break
 				}
 				var silk, fortune int
@@ -1719,6 +1740,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())

@@ -11,6 +11,37 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-03
+
+### Added
+- **Bees look and act the part, to the last detail.** A pollen-laden bee now
+  visibly wears its dusted coat and drips falling nectar as it flies, an angry
+  bee shows its red eyes and a spent one its lost stinger — the synced
+  appearance state vanilla clients render, re-asserted for late joiners like
+  every other one-shot look. On the way home a pollen carrier boosts the
+  crops it crosses (wheat and friends, melon and pumpkin stems, sweet berry
+  bushes, cave vines — up to vanilla's ten per trip, with the green burst
+  over each). Dispensers work a full hive exactly as vanilla does: shears cut
+  three honeycomb, a glass bottle draws a honey bottle, and either releases
+  the bees calm — a machine has nobody to blame. And hives move house:
+  broken with Silk Touch, the bees and honey level travel aboard the dropped
+  item — through inventories, chests, hoppers and a restart — and step back
+  in when it is placed; broken bare, the occupants spill out angry at the
+  breaker, and a bee nest then drops nothing at all, exactly vanilla's loot
+  rule.
+
+### Fixed
+- **Bonemeal's green burst showed the wrong particle on newer clients.** The
+  per-version particle translation only covered the ids the engine emitted at
+  the time it was written, so 1.21.9 and 26.x clients rendered the
+  happy-villager burst as an unrelated particle. The table now carries it
+  (and the new falling-nectar drip) across every served version.
+- **Items that carry contents no longer lose them in transit.** A shulker
+  box's identity now survives being tossed from an inventory, spilled from a
+  broken chest, a donkey or a lectern, and a server restart while lying on
+  the ground — paths that previously dropped the link and orphaned the
+  contents. Carried hives ride the same, now-watertight rails.
+
 ## 2026-08-02
 
 ### Added

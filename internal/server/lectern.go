@@ -341,6 +341,7 @@ func (h *hub) spillShelf(players map[int32]*tracked, x, y, z int, newState uint3
 			if it := h.spawnItem(players, st.item, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5); it != nil {
 				it.ench = st.ench
 				it.bookID = st.bookID
+				it.boxID, it.hiveID = st.boxID, st.hiveID
 			}
 		}
 	}

@@ -115,7 +115,7 @@ func TestMigrateItemIDs(t *testing.T) {
 	}
 	// container: chest row (slot,item,count,dmg,ench) + furnace slot (item,count,dmg)
 	cs := &containerStore{}
-	cs.m.Chests = map[string][][14]int32{"0,0,0": {{0, 840, 3}}}
+	cs.m.Chests = map[string][]containerRow{"0,0,0": {{0, 840, 3}}}
 	cs.m.Furnaces = map[string]savedFurnace{"1,1,1": {Slots: [3][3]int32{{840, 1, 0}, {}, {}}}}
 	if n := cs.migrateItemIDs(remap); n != 2 {
 		t.Fatalf("container migrate n=%d, want 2", n)

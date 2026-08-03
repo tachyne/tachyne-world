@@ -42,6 +42,7 @@ type itemEntity struct {
 	trimPat       int8
 	bookID        int32  // book identity carried by the dropped stack
 	boxID         int32  // shulker-box identity carried by the dropped stack
+	hiveID        int32  // carried-hive identity (Silk-Touched hive's bees + honey)
 	born          uint64 // world tick spawned (for despawn)
 	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -113,6 +114,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 				other.ench != it.ench || other.mapID != it.mapID ||
 				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
 				other.bookID != it.bookID || other.boxID != it.boxID ||
+				other.hiveID != it.hiveID ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}

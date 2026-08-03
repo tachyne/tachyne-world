@@ -347,9 +347,24 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && item == itemGlassBottle:
-		// Vanilla GLASS_BOTTLE behaviour: fill from a water source ahead → water
-		// bottle (the source is not drained). Otherwise toss like the default.
-		if worldgen.IsWater(h.world.At(front.x, front.y, front.z)) {
+		// Vanilla GLASS_BOTTLE behaviour: a FULL hive ahead fills the bottle
+		// with honey and releases the bees calm (the hive branch is tried
+		// before water); else fill from a water source → water bottle (the
+		// source is not drained). Otherwise toss like the default.
+		if fs := h.world.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
+			took = false
+			h.releaseHiveBees(players, front, nil)
+			h.setBlock(players, front, withHoney(fs, 0))
+			hb := invStack{item: itemHoneyBottle, count: 1}
+			if st.count <= 1 {
+				*st = hb
+			} else {
+				st.count--
+				if binInsert(c.slots, hb) > 0 {
+					h.spawnItem(players, itemHoneyBottle, 1, fx, fy, fz) // no room: pop the bottle out
+				}
+			}
+		} else if worldgen.IsWater(h.world.At(front.x, front.y, front.z)) {
 			took = false
 			wb := potionStack(potWater)
 			if st.count <= 1 {
@@ -439,16 +454,32 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// the dispenser); vanilla consumes the egg whether or not it takes.
 		h.spawnMob(players, eggEnt, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
 	case dispense && item == int32(itemShears):
-		// Shear the first shearable mob overlapping the block ahead
+		// A full hive ahead is sheared first (tryShearBeehive): three honeycomb
+		// pop out and the bees are released CALM — a dispenser has nobody to
+		// blame. Otherwise shear the first shearable mob overlapping the cell
 		// (ShearsDispenseItemBehavior); the tool wears rather than ejects.
 		took = false
-		for _, m := range h.mobs {
-			if m.dim == 0 && mobInBlock(m, front) && h.shearMob(players, m) {
-				st.dmg++
-				if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
-					*st = invStack{} // worn out
+		sheared := false
+		if fs := h.world.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
+			h.playSound(players, "minecraft:block.beehive.shear", sndBlock,
+				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5, 1, 1)
+			h.spawnItem(players, int32(itemHoneycomb), beeHoneycombYield,
+				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5)
+			h.releaseHiveBees(players, front, nil)
+			h.setBlock(players, front, withHoney(fs, 0))
+			sheared = true
+		} else {
+			for _, m := range h.mobs {
+				if m.dim == 0 && mobInBlock(m, front) && h.shearMob(players, m) {
+					sheared = true
+					break
 				}
-				break
+			}
+		}
+		if sheared {
+			st.dmg++
+			if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
+				*st = invStack{} // worn out
 			}
 		}
 	case dispense && isVeh:
@@ -583,7 +614,7 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool 
 		}
 		st := invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
 			mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID,
-			boxID: it.boxID}
+			boxID: it.boxID, hiveID: it.hiveID}
 		if left := binInsert(c.slots, st); left < st.count {
 			if left == 0 {
 				delete(h.items, eid)

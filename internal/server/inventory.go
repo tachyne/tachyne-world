@@ -50,6 +50,9 @@ type invStack struct {
 	// store, so a broken box carries its contents as an item. Same indirection
 	// as maps and books, for the same reason — invStack stays comparable.
 	boxID int32
+	// Carried-hive identity (0 = none): a Silk-Touched hive's bees + honey
+	// live in the hub's hiveItems store. Same indirection as boxID.
+	hiveID int32
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).
@@ -195,7 +198,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			}
 			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
 				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID,
-				boxID: it.boxID})
+				boxID: it.boxID, hiveID: it.hiveID})
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground
