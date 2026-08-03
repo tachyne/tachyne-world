@@ -68,7 +68,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Locator bar | ✅ | 26.2 clients see other players as direction markers on the locator bar (the world's positions ride a new engine frame the gateway renders only for 1.21.6+ clients; the locatorBar gamerule toggles it). |
 | Commands & gamerules | 🟡 | ~35 commands including /msg /tell /kick /clear /spawnpoint /playsound /particle plus the world admin set; 18 gamerules wired to real systems (keepInventory, doDaylightCycle, doMobSpawning, mobGriefing, doWeatherCycle, doFireTick, doTileDrops, doMobLoot, naturalRegeneration, fall/drowning/fire damage, announceAdvancements, showDeathMessages, doImmediateRespawn, randomTickSpeed, playersSleepingPercentage, locatorBar). |
 | Fishing | ✅ | The vanilla bobber (cast physics, bobbing, the wait → wake → nibble sequence with rain/sky modifiers), the fish/junk/treasure loot pools at vanilla weights, Lure and Luck of the Sea, the open-water treasure rule, rod durability, XP per catch — and reeling a hooked mob yanks it toward you. |
-| Raids | ❌ | On the parity roadmap. |
+| Raids | 🟡 | Killing a pillager-patrol captain grants Bad Omen; carrying it into a village triggers a raid — vanilla's wave tables and per-difficulty wave counts (3/5/7), illager waves with ravagers and evokers, and the raid boss bar. Hero of the Village, the warning bell and raid persistence across restarts are follow-ups. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
