@@ -118,7 +118,7 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 	t.p.setHubPos(e.x, e.z)
 	if moved {
 		m.sx, m.sy, m.sz = e.x, e.y, e.z
-		move := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true)
+		move := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded())
 		cx, cz := chunkFloor(m.x), chunkFloor(m.z)
 		for _, o := range players {
 			if o.p.eid != e.eid && o.dim == m.dim &&

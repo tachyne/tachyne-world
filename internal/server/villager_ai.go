@@ -116,7 +116,7 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 	m.sleeping = true
 	m.x, m.y, m.z = bx, float64(m.bed.y)+bedSurface, bz // snap onto the bed
 	m.sx, m.sy, m.sz = m.x, m.y, m.z
-	h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+	h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, m.bed)))
 	return true
 }

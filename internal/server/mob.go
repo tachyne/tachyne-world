@@ -428,7 +428,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// its own relative deltas.
 		if m.x != m.sx || m.y != m.sy || m.z != m.sz {
 			m.sx, m.sy, m.sz = m.x, m.y, m.z
-			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 		// Facing only when it changed meaningfully (saves packets). BOTH the head
 		// rotation and a zero-delta move ride the same latch: the move carries the
@@ -438,7 +438,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// body yaw all along.
 		if math.Abs(float64(m.yaw-m.syaw)) > 8 {
 			m.syaw = m.yaw
-			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 			h.toNearbyEv(players, m.dim, m.x, m.z, entHead(m.eid, m.yaw))
 		}
 		if m.etype == entityEnderDragon {
@@ -577,6 +577,14 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	m.health -= int(whole)
 }
 
+// grounded reports what the client should believe about this mob's footing.
+// It is not cosmetic: the client animates a flying mob's WINGS only while it
+// thinks the entity is airborne, so reporting a hovering bee, parrot, phantom
+// or ghast as on-ground freezes its wings mid-flight (and misinforms the
+// client's own motion interpolation). Free-flying mobs are never on the
+// ground in this engine — m.flies means exactly "no ground collision".
+func (m *mob) grounded() bool { return !m.flies }
+
 // removeMob silently despawns a mob (no death animation, no loot) — used for
 // out-of-range cleanup, where a loot shower would be wrong.
 func (h *hub) removeMob(players map[int32]*tracked, m *mob) {
@@ -596,7 +604,7 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 			//          clients lose entities to sync_entity_position, so it
 			//          rides relative moves only — nothing to resync here.
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		if m.burning { // one-shot fire flags can be dropped — re-assert while lit
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
 		}

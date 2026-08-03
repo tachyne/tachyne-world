@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-03 (later)
 
 ### Fixed
+- **Flying mobs' wings didn't move.** Every mob's movement told the client it
+  was standing on the ground — including bees, parrots, phantoms, ghasts and
+  every other free-flying mob. Clients animate wings only while they believe
+  an entity is airborne, so a hovering bee drifted past with its wings frozen
+  mid-beat. Flying mobs now report themselves airborne, as they always were.
 - **Breaking a block beside sugar cane, cactus or bamboo destroyed the farm.**
   Those plants stand on their own kind, but the support system only accepted
   soil beneath them, so every segment above the base counted as unsupported —

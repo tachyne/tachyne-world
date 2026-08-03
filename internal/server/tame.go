@@ -94,7 +94,7 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		m.x, m.z = owner.x+1, owner.z
 		m.y = float64(h.worldFor(m.dim).MobFeet(int(math.Floor(m.x)), int(math.Floor(m.z))))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		m.hasTarget = false
 	case d > petFollowStart:
 		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z

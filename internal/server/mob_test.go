@@ -141,3 +141,32 @@ func TestNoAnimalSpawnInsideBuildings(t *testing.T) {
 		t.Fatal("a stone floor must not be animal-spawnable")
 	}
 }
+
+// A flying mob must report itself AIRBORNE on the wire. The client animates a
+// bee's (or parrot's, or phantom's) wings only while it believes the entity is
+// off the ground, so an on_ground=true move freezes the wings mid-flight — the
+// symptom that surfaced this: bees hovering with perfectly still wings.
+func TestFlyingMobsReportAirborne(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for _, tc := range []struct {
+		etype    int
+		grounded bool
+	}{
+		{entityBee, false},     // archFlyer
+		{entityParrot, false},  // archFlyer
+		{entityPhantom, false}, // archFlyerHostile
+		{entityCow, true},      // walks
+		{entityZombie, true},   // walks
+	} {
+		m := h.spawnAnimal(players, tc.etype, 300, 300)
+		if m == nil {
+			if m = h.spawnHostileY(players, tc.etype, 300, 80, 300); m == nil {
+				t.Fatalf("could not spawn %d", tc.etype)
+			}
+		}
+		if got := m.grounded(); got != tc.grounded {
+			t.Errorf("entity %d grounded()=%v, want %v (flies=%v)", tc.etype, got, tc.grounded, m.flies)
+		}
+	}
+}

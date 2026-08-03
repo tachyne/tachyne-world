@@ -203,7 +203,7 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		m.x, m.z = float64(x)+0.5, float64(z)+0.5
 		m.y = float64(h.world.MobFeet(x, z))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		return
 	}
 }

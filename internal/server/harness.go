@@ -148,7 +148,7 @@ func (h *hub) applyGhastMove(players map[int32]*tracked, t *tracked, e evVehicle
 	}
 	if moved {
 		m.sx, m.sy, m.sz = e.x, e.y, e.z
-		move := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true)
+		move := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded())
 		cx, cz := chunkFloor(m.x), chunkFloor(m.z)
 		for _, o := range players {
 			if !riding[o.p.eid] && o.dim == m.dim &&
