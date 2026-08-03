@@ -51,7 +51,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 			return false
 		}
 		m.sitting = !m.sitting
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petFlagsMeta(m.eid, true, m.sitting)))
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 		return true
 	}
 	if heldStack(t).item != food {
@@ -69,7 +69,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
 	m.setFollowRange(petFollowStart)
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petFlagsMeta(m.eid, true, false)))
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
 	return true
 }
@@ -102,6 +102,17 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		m.hasTarget = false // close enough — mill around
 	}
 	return false
+}
+
+// petMeta picks the right taming metadata for the species: ocelots are NOT
+// TamableAnimal in vanilla — their index-17 field is the Boolean TRUSTING
+// (writing the tamable flags BYTE there is a type-mismatch disconnect); every
+// real pet gets the TamableAnimal flags byte.
+func petMeta(m *mob) []byte {
+	if m.etype == entityOcelot {
+		return boolMeta(m.eid, 17, true)
+	}
+	return petFlagsMeta(m.eid, true, m.sitting)
 }
 
 // petFlagsMeta builds the TamableAnimal flags byte (tamed + sitting bits).

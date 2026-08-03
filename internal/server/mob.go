@@ -631,11 +631,15 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
 			}
 		}
-		if m.saddled {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))
+		if m.saddled { // the saddle is an EQUIPMENT slot on every species (1.21.5+)
+			if horseFamily(m.etype) {
+				h.horseEquipSync(players, m) // saddle + body armor together
+			} else {
+				h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
+			}
 		}
 		if m.tamed {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petFlagsMeta(m.eid, true, m.sitting)))
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 		}
 		if m.sleeping { // re-assert the lying pose so a late-joining player sees it
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, m.bed)))

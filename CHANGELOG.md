@@ -11,7 +11,30 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
-## 2026-08-03
+## 2026-08-03 (later)
+
+### Fixed
+- **A pollen-carrying bee could disconnect 26.2 players — and it wasn't just
+  bees.** 26.2 added a synced field to every ageable animal, shifting the
+  indices of each species' own appearance data up by one; the translation
+  layer didn't know, so the bee-look metadata shipped earlier today landed on
+  the wrong field and kicked any 26.2 client that saw a pollen carrier. The
+  per-version translation now shifts ageable-mob metadata for 26.2 clients —
+  bees, sheep wool, and pet sit/tame flags, the last two of which were the
+  same disconnect waiting to happen since they shipped.
+- **Saddles now render the way modern clients expect — on every mount.**
+  Saddles have been an equipment slot since 1.21.5, but pigs and striders
+  were still sent legacy metadata aimed at fields that no longer exist —
+  saddling a pig could disconnect nearby players outright, and a strider's
+  saddle bit landed on its "suffocating" shiver flag. All mounts now carry
+  the saddle in the real equipment slot, as horses already did.
+- **Taming an ocelot could disconnect nearby players.** Ocelots aren't
+  tamable in vanilla — they trust; the tamed-pet flags were being written
+  onto the trust field with the wrong value type. Ocelots now get their
+  proper trust flag.
+- **Bees no longer emit a sound that doesn't exist.** Vanilla bees have no
+  server-side ambient voice (the buzz is the client's own loop), so the
+  engine no longer sends one.
 
 ### Added
 - **Bees look and act the part, to the last detail.** A pollen-laden bee now

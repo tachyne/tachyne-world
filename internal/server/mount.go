@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 )
 
@@ -52,9 +53,9 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 			h.consumeHeld(t)
 		}
 		if horseFamily(m.etype) {
-			h.horseEquipSync(players, m) // 1.21.5+: the saddle is an equipment slot
+			h.horseEquipSync(players, m) // saddle + body armor together
 		} else {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(saddleMeta(m.eid, m.etype)))
+			h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
 		}
 		h.playSound(players, "minecraft:entity.horse.saddle", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
@@ -142,24 +143,17 @@ func (h *hub) consumeHeld(t *tracked) {
 	}
 }
 
-// saddleMeta builds the metadata that shows a saddle on a mount. Horse saddle
-// state is index 17 (bit 0x04 of the horse flags byte); pig/strider carry a
-// dedicated boolean index. Kept minimal — the client renders the saddle.
-func saddleMeta(eid int32, etype int) []byte {
-	// Pigs (index 17) and striders (index 18) use a plain boolean "saddle";
-	// horses pack it into the horse-flags byte at index 17 (bit 0x04).
-	switch etype {
-	case entityPig:
-		return boolMeta(eid, 17, true)
-	case entityStrider:
-		return boolMeta(eid, 18, true)
-	default: // horse family: flags byte, saddled bit
-		b := protocol.AppendVarInt(nil, eid)
-		b = protocol.AppendU8(b, 17)
-		b = protocol.AppendVarInt(b, 0) // type 0: byte
-		b = protocol.AppendU8(b, 0x04)  // is-saddled flag
-		return protocol.AppendU8(b, itemMetaEnd)
-	}
+// saddleEquip shows the saddle on a non-horse mount (pig/strider). Since
+// 1.21.5 the saddle is an EQUIPMENT slot on every species — the per-species
+// metadata indices the old builder wrote no longer exist (a pig's 17 is
+// BOOST_TIME, an int: a bool there is a type-mismatch disconnect, and a
+// strider's 18 is SUFFOCATING).
+func saddleEquip(eid int32) attachproto.Equipment {
+	var e attachproto.Equipment
+	e.EID = eid
+	e.Slots[attachproto.EquipSaddle] = stackEv(invStack{item: itemSaddle, count: 1})
+	e.SendSaddle = true
+	return e
 }
 
 // boolMeta builds a single boolean entity-metadata entry at an index.

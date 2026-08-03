@@ -260,7 +260,10 @@ var speciesTable = map[int]*speciesDef{
 	entityAllay: {name: "allay", health: 20, step: 0.13, arch: archFlyer, hover: 2,
 		xp: xpNone, quiet: true},
 	entityBee: {name: "bee", health: 10, step: 0.13, damage: 2, arch: archFlyer,
-		retaliate: true, hover: 2, love: "dandelion", poison: [2]int{10, 18}},
+		// quiet: vanilla bees have NO server ambient (getAmbientSound is null;
+		// the buzz is the client's own looping sound) — and the derived
+		// "entity.bee.ambient" name does not exist in the sound registry.
+		retaliate: true, hover: 2, love: "dandelion", quiet: true, poison: [2]int{10, 18}},
 	// happy_ghast (1.21.6): a big, gentle passive flyer. Babies (ghastlings)
 	// hatch from a hydrated dried_ghast block and grow up; adults can wear a
 	// harness and carry up to four riders — see harness.go. Renders as a real
