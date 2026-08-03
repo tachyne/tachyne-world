@@ -36,7 +36,7 @@ var compostChance = func() map[int32]float64 {
 			"pale_moss_carpet", "pale_hanging_moss", "pink_petals", "wildflowers",
 			"leaf_litter", "small_dripleaf", "hanging_roots", "mangrove_roots",
 			"torchflower_seeds", "pitcher_pod", "firefly_bush", "bush", "cactus_flower",
-			"dry_short_grass", "dry_tall_grass",
+			"short_dry_grass", "tall_dry_grass",
 		}},
 		{0.5, []string{
 			"dried_kelp_block", "tall_grass", "flowering_azalea_leaves", "cactus",

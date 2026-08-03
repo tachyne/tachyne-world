@@ -217,7 +217,9 @@ func (h *hub) dropDeathXP(players map[int32]*tracked, t *tracked) {
 	if t.xpLevel == 0 && t.xpPoints == 0 {
 		return
 	}
-	h.spawnXPOrb(players, min(deathXPLevel*t.xpLevel, deathXPCap), t.x, t.y, t.z)
+	// In the dimension the player died in — the overworld default dropped a
+	// Nether or End death's XP into a world the player was not in.
+	h.spawnXPOrbIn(players, t.dim, min(deathXPLevel*t.xpLevel, deathXPCap), t.x, t.y, t.z)
 	t.xpLevel, t.xpPoints = 0, 0
 	h.sendExperience(t)
 }

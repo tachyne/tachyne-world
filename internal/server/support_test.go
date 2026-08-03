@@ -191,3 +191,38 @@ func TestSupportDoesNotEatExistingBuilds(t *testing.T) {
 		t.Error("a carpet on a slab should stay")
 	}
 }
+
+// Column plants stand on their own kind. This is a regression guard for a bug
+// that DESTROYED player farms: sugar cane, cactus and bamboo are SupportSoil,
+// but the soil list holds no plants, so every segment above the base read as
+// unsupported — and since dropUnsupported runs on each nearby block edit,
+// breaking any block beside a farm wiped the stack.
+func TestColumnPlantsSurviveANeighbourEdit(t *testing.T) {
+	for _, tc := range []struct{ name, ground string }{
+		{"sugar_cane", "sand"},
+		{"cactus", "sand"},
+		{"bamboo", "dirt"},
+	} {
+		h := newHub(world.New(1))
+		players := map[int32]*tracked{}
+		w := h.worldFor(0)
+		x, y, z := 400, 180, 400
+		w.SetBlock(x, y-1, z, worldgen.BlockBase(tc.ground))
+		plant := worldgen.BlockBase(tc.name)
+		for dy := 0; dy < 3; dy++ {
+			w.SetBlock(x, y+dy, z, plant)
+		}
+		// Something changes next door, level with the MIDDLE segment — the
+		// sweep only reaches a plant it is adjacent to, so this is the edit
+		// that used to eat everything above the base.
+		side := blockPos{x + 1, y + 1, z}
+		w.SetBlock(side.x, side.y, side.z, worldgen.BlockBase("stone"))
+		w.SetBlock(side.x, side.y, side.z, worldgen.Air)
+		h.dropUnsupported(players, 0, side)
+		for dy := 0; dy < 3; dy++ {
+			if got := w.At(x, y+dy, z); got != plant {
+				t.Errorf("%s segment %d destroyed by a neighbouring edit (state %d)", tc.name, dy, got)
+			}
+		}
+	}
+}

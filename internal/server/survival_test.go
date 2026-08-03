@@ -240,3 +240,42 @@ func TestEatReleaseCancels(t *testing.T) {
 		t.Fatalf("near-complete release should apply: food=%d count=%d", pl.food, pl.inv.slots[0].count)
 	}
 }
+
+// Death drops land in the dimension you died in. Both the item scatter and the
+// XP orb used to default to the overworld, so dying in the Nether or the End
+// posted your inventory and levels into a world you weren't in — unreachable
+// loot, and a genuine loss.
+func TestDeathDropsStayInTheDimensionYouDiedIn(t *testing.T) {
+	for _, dim := range []int{1, 2} {
+		h := newHub(world.New(1))
+		players := map[int32]*tracked{}
+		tr := survPlayer(h)
+		players[tr.p.eid] = tr
+		tr.dim = dim
+		tr.x, tr.y, tr.z = 40, 70, 40
+		tr.inv.slots[0] = invStack{item: int32(itemByName["diamond"]), count: 5}
+		tr.xpLevel = 12
+
+		h.dropInventory(players, tr)
+		h.dropDeathXP(players, tr)
+
+		for _, it := range h.items {
+			if it.dim != dim {
+				t.Errorf("dim %d: dropped item landed in dim %d", dim, it.dim)
+			}
+		}
+		if len(h.items) == 0 {
+			t.Errorf("dim %d: nothing dropped", dim)
+		}
+		orbs := 0
+		for _, o := range h.orbs {
+			orbs++
+			if o.dim != dim {
+				t.Errorf("dim %d: xp orb landed in dim %d", dim, o.dim)
+			}
+		}
+		if orbs == 0 {
+			t.Errorf("dim %d: no xp orb dropped", dim)
+		}
+	}
+}

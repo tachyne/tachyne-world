@@ -36,6 +36,51 @@ var plantSoils = func() map[uint32]bool {
 	return out
 }()
 
+// Column plants stand on their own kind. Vanilla's canSurvive for sugar cane
+// and cactus accepts "the block below is this block" before it ever looks at
+// the ground, and #bamboo_plantable_on lists bamboo and bamboo_sapling
+// alongside the soils.
+//
+// Without this a column's SECOND segment reads as unsupported, and because
+// dropUnsupported runs on every nearby block edit, breaking any block beside a
+// cane, cactus or bamboo destroyed the entire stack above its base.
+//
+// NOTE the GROUND rule stays deliberately laxer than vanilla: vanilla also
+// wants water beside the soil under sugar cane and refuses a cactus with a
+// solid neighbour. Enforcing those here would delete every farm built while
+// this engine allowed them, so that tightening is a separate, announced call.
+var (
+	caneStates      = plantStates("sugar_cane")
+	cactusStates    = plantStates("cactus")
+	bambooStates    = plantStates("bamboo")
+	bambooSapStates = plantStates("bamboo_sapling")
+)
+
+// plantStates is a block name's state span; an unknown name yields an empty
+// range that matches nothing.
+func plantStates(name string) stateRange {
+	lo, hi, ok := worldgen.BlockRangeOK(name)
+	if !ok {
+		return stateRange{1, 0}
+	}
+	return stateRange{lo, hi}
+}
+
+func inStates(s uint32, r stateRange) bool { return s >= r.lo && s <= r.hi }
+
+// stacksOnItself reports whether a column plant may stand on the block below.
+func stacksOnItself(state, below uint32) bool {
+	switch {
+	case inStates(state, caneStates):
+		return inStates(below, caneStates)
+	case inStates(state, cactusStates):
+		return inStates(below, cactusStates)
+	case inStates(state, bambooStates), inStates(state, bambooSapStates):
+		return inStates(below, bambooStates) || inStates(below, bambooSapStates)
+	}
+	return false
+}
+
 // supported reports whether the block at pos can stay there. Taken over a
 // world rather than the hub so the placement path — which runs on a session
 // goroutine — can ask the same question the tick loop asks.
@@ -74,7 +119,7 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	case worldgen.SupportFloor:
 		return holdsBlock(below())
 	case worldgen.SupportSoil:
-		return plantSoils[below()]
+		return plantSoils[below()] || stacksOnItself(state, below())
 	case worldgen.SupportFarmland:
 		return isFarmland(below())
 	case worldgen.SupportWall:

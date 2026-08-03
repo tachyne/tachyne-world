@@ -14,6 +14,37 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-03 (later)
 
 ### Fixed
+- **Breaking a block beside sugar cane, cactus or bamboo destroyed the farm.**
+  Those plants stand on their own kind, but the support system only accepted
+  soil beneath them, so every segment above the base counted as unsupported —
+  and because the support sweep runs on each nearby block edit, mining next to
+  a farm wiped the stack above its bottom block. They now stand on themselves,
+  as vanilla has them.
+- **Boats spawned the wrong entity entirely.** The boat table still held
+  pre-retarget ids, so an oak boat arrived as a marker, a spruce boat as a
+  sniffer, a dark oak boat as a creaking, a cherry boat as a cave spider and a
+  mangrove boat as a llama. Boat types are now looked up by name in the
+  canonical registry, and a test pins every wood so a future version bump
+  can't repeat it.
+- **Two composter inputs never composted.** Short and tall dry grass were
+  listed under their internal Java field names rather than their real item
+  ids, so the table silently dropped them.
+- **`/worldborder` was missing from tab-completion** though the command works.
+- **Dying in the Nether or the End scattered your things into the Overworld.**
+  Both the inventory drop and the experience orb defaulted to the overworld
+  instead of the dimension you died in, so a Nether death posted your gear and
+  levels into a world you weren't standing in — unreachable, and gone.
+
+### Changed
+- **The feature matrix got stricter about itself.** A systematic audit of
+  every documented claim against the source moved six areas from complete to
+  in-progress, each with the specific reason: beacons, banners and lecterns
+  are registered only in the Overworld (and a jukebox started in the Nether
+  never stops), trial-chamber vault claims don't survive a restart, and 30 of
+  vanilla's 77 statistics counters are wired. Several rows also understated
+  the engine — the recipe book is 1,678 recipes, not ~1,570, and mount
+  inventories do persist. Nothing about the software changed; the description
+  of it did.
 - **A pollen-carrying bee could disconnect 26.2 players — and it wasn't just
   bees.** 26.2 added a synced field to every ageable animal, shifting the
   indices of each species' own appearance data up by one; the translation

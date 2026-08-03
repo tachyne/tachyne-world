@@ -107,7 +107,43 @@ func TestBoatPlacesOnWater(t *testing.T) {
 	if len(h.vehicles) != 1 {
 		t.Fatal("boat should spawn on water")
 	}
-	if v := firstVehicle(h); v.etype != 84 {
-		t.Fatalf("oak boat entity type, got %d", v.etype)
+	// By NAME from the canonical registry — the literal that used to sit here
+	// (84) was a 1.21.5 ordinal that means "marker" in 1.21.11.
+	if v, want := firstVehicle(h), entityByName["oak_boat"]; v.etype != want {
+		t.Fatalf("oak boat entity type %d (%s), want %d", v.etype, entityNameOf(v.etype), want)
 	}
+}
+
+// Boat entity types come from the canonical registry BY NAME. They were once
+// hardcoded 1.21.5 ordinals, which the 1.21.11 retarget silently invalidated:
+// an oak boat spawned a marker, a spruce boat a sniffer, a mangrove boat a
+// llama. Pin every wood so a future canonical bump can't repeat it.
+func TestBoatEntityIDsTrackTheRegistry(t *testing.T) {
+	for _, wood := range []string{"oak", "spruce", "birch", "jungle", "acacia",
+		"dark_oak", "cherry", "mangrove", "pale_oak", "bamboo"} {
+		item := wood + "_boat"
+		got, ok := boatEntities[item]
+		if !ok {
+			t.Errorf("%s has no boat entity", item)
+			continue
+		}
+		// Bamboo floats a raft; every other wood has a boat of its own name.
+		want := entityByName[wood+"_boat"]
+		if wood == "bamboo" {
+			want = entityByName["bamboo_raft"]
+		}
+		if got != want {
+			t.Errorf("%s spawns entity %d (%s), want %d", item, got, entityNameOf(got), want)
+		}
+	}
+}
+
+// entityNameOf reverses the generated table for readable failures.
+func entityNameOf(id int) string {
+	for n, v := range entityByName {
+		if v == id {
+			return n
+		}
+	}
+	return "?"
 }

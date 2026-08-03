@@ -24,15 +24,26 @@ const (
 )
 
 var (
-	entityMinecart = entityID("minecart") // minecraft:entity_type ordinals (1.21.5)
+	entityMinecart = entityID("minecart")
 )
 
-// boat entity ordinals by item name (1.21.5 split boats per wood type).
-var boatEntities = map[string]int{
-	"oak_boat": 84, "spruce_boat": 119, "birch_boat": 12, "jungle_boat": 71,
-	"acacia_boat": 0, "dark_oak_boat": 31, "cherry_boat": 22, "mangrove_boat": 78,
-	"pale_oak_boat": 89,
-}
+// boatEntities maps each boat ITEM name to its entity type. The ids are looked
+// up by NAME in the generated canonical registry, never written out: hardcoded
+// ordinals silently rot when the canonical version moves (these were 1.21.5
+// numbers against a 1.21.11 registry, so an oak boat spawned a marker, a spruce
+// boat a sniffer and a mangrove boat a llama).
+var boatEntities = func() map[string]int {
+	m := map[string]int{}
+	for _, wood := range []string{"oak", "spruce", "birch", "jungle", "acacia",
+		"dark_oak", "cherry", "mangrove", "pale_oak", "bamboo"} {
+		name := wood + "_boat"
+		if wood == "bamboo" {
+			name = "bamboo_raft" // bamboo floats a raft, not a boat
+		}
+		m[wood+"_boat"] = entityID(name)
+	}
+	return m
+}()
 
 // vehicleItems: item id → entity type, built from the generated name table.
 var vehicleItems = func() map[int32]int {

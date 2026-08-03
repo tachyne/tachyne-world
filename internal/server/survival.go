@@ -475,7 +475,9 @@ func (h *hub) dropInventory(players map[int32]*tracked, t *tracked) {
 		// Small jitter so stacks don't perfectly overlap on one column.
 		jx := t.x + (h.rng.Float64() - 0.5)
 		jz := t.z + (h.rng.Float64() - 0.5)
-		if it := h.spawnItem(players, s.item, s.count, jx, t.y, jz); it != nil {
+		// In the player's OWN dimension: spawnItem defaults to the overworld,
+		// which used to scatter a Nether or End death across the wrong world.
+		if it := h.spawnItemIn(players, t.dim, s.item, s.count, jx, t.y, jz); it != nil {
 			it.dmg = s.dmg // worn tools keep their wear through the death drop
 			it.ench = s.ench
 		}
