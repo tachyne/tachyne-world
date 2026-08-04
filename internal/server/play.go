@@ -44,11 +44,11 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs 
 		if _, isSign := signKind(e.State); isSign && signs != nil {
 			sd, _ := signs.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = blank sign
 			buf = protocol.AppendSignNBT(buf, signSideNBT(sd.Front), signSideNBT(sd.Back), sd.Waxed)
-		} else if isCampfireBlock(e.State) && campfires != nil && dim == 0 {
-			ci, _ := campfires.get(int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = empty fire
+		} else if isCampfireBlock(e.State) && campfires != nil {
+			ci, _ := campfires.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = empty fire
 			buf = protocol.AppendCampfireNBT(buf, ci.Items)
-		} else if isBannerState(e.State) && banners != nil && dim == 0 {
-			ls := banners.get(int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ))
+		} else if isBannerState(e.State) && banners != nil {
+			ls := banners.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ))
 			nb := make([]protocol.BannerLayerNBT, len(ls))
 			for i, l := range ls {
 				nb[i] = protocol.BannerLayerNBT{Pattern: bannerPatternQualified(l.Pattern), Color: l.Color}

@@ -58,11 +58,11 @@ func crafterFront(s uint32) (int, int, int) {
 }
 
 // updateCrafter tracks the redstone edge; a rising edge crafts once.
-func (h *hub) updateCrafter(players map[int32]*tracked, pos blockPos, state uint32) {
+func (h *hub) updateCrafter(players map[int32]*tracked, pos simPos, state uint32) {
 	// A crafting=true state is the animation flag — settle it back to false.
 	if (state-crafterMin)/24 == 0 {
 		state = crafterWithCrafting(state, false)
-		h.setBlock(players, pos, state)
+		h.setBlockAt(players, pos.dim, pos.blockPos, state)
 	}
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
 	if powered == crafterTriggered(state) {
@@ -71,17 +71,17 @@ func (h *hub) updateCrafter(players map[int32]*tracked, pos blockPos, state uint
 	state = crafterWithTriggered(state, powered)
 	if powered {
 		state = crafterWithCrafting(state, true) // brief craft animation
-		h.setBlock(players, pos, state)
+		h.setBlockAt(players, pos.dim, pos.blockPos, state)
 		h.crafterCraft(players, pos, state)
-		h.schedule(pos, 4) // clear the animation shortly after
+		h.scheduleIn(pos.dim, pos.blockPos, 4) // clear the animation shortly after
 		return
 	}
-	h.setBlock(players, pos, state)
+	h.setBlockAt(players, pos.dim, pos.blockPos, state)
 }
 
 // crafterCraft matches the 3×3 grid and, on a hit, consumes one of each
 // ingredient and ejects the result.
-func (h *hub) crafterCraft(players map[int32]*tracked, pos blockPos, state uint32) {
+func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32) {
 	c := h.bins[pos]
 	if c == nil || len(c.slots) < 9 {
 		h.craftFail(players, pos)
@@ -123,7 +123,7 @@ func (evSlotState) isHubEvent() {}
 func (h *hub) openCrafter(t *tracked, x, y, z int) {
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 	c := h.bins[pos]
 	if c == nil {
 		c = &bin{slots: make([]invStack, 9)}
@@ -183,7 +183,7 @@ func (h *hub) sendCrafterData(t *tracked, c *bin) {
 
 // refreshCrafterResult resends the result-preview slot (window slot 9) to every
 // player viewing the crafter at pos, after its grid changed.
-func (h *hub) refreshCrafterResult(players map[int32]*tracked, pos blockPos) {
+func (h *hub) refreshCrafterResult(players map[int32]*tracked, pos simPos) {
 	c := h.bins[pos]
 	if c == nil {
 		return
@@ -228,8 +228,8 @@ func (h *hub) onSlotState(players map[int32]*tracked, e evSlotState) {
 
 // crafterBinAt returns the bin backing a crafter block at pos (nil if the block
 // there is not a crafter) — the disabled mask lives on the bin.
-func (h *hub) crafterBinAt(pos blockPos) *bin {
-	if isCrafter(h.world.At(pos.x, pos.y, pos.z)) {
+func (h *hub) crafterBinAt(pos simPos) *bin {
+	if w := h.worldFor(pos.dim); w != nil && isCrafter(w.At(pos.x, pos.y, pos.z)) {
 		return h.bins[pos]
 	}
 	return nil
@@ -292,28 +292,28 @@ func crafterComparator(c *bin) int {
 	return n
 }
 
-func (h *hub) craftFail(players map[int32]*tracked, pos blockPos) {
+func (h *hub) craftFail(players map[int32]*tracked, pos simPos) {
 	h.playSound(players, "minecraft:block.crafter.fail", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 }
 
 // ejectCrafted pushes the result into the container the crafter faces, or drops
 // it into the world if none accepts it (CrafterBlockEntity output behaviour).
-func (h *hub) ejectCrafted(players map[int32]*tracked, pos blockPos, state uint32, item int32, count int) {
+func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32, item int32, count int) {
 	dx, dy, dz := crafterFront(state)
 	target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-	if dst := h.containerSlots(target); dst != nil {
+	if dst := h.containerSlots(pos.at(target)); dst != nil {
 		var left int
-		if cb := h.crafterBinAt(target); cb != nil {
+		if cb := h.crafterBinAt(pos.at(target)); cb != nil {
 			left = crafterInsert(cb, invStack{item: item, count: count}) // crafter → crafter
 		} else {
 			left = binInsert(dst, invStack{item: item, count: count})
 		}
 		if left == 0 {
-			h.refreshBinViewers(players, target)
+			h.refreshBinViewers(players, pos.at(target))
 			return
 		} else if left < count {
-			h.refreshBinViewers(players, target)
+			h.refreshBinViewers(players, pos.at(target))
 			count = left
 		}
 	}

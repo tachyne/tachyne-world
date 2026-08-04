@@ -119,7 +119,7 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 	if t.inv == nil {
 		return
 	}
-	state := h.world.At(x, y, z)
+	state := h.worldFor(t.dim).At(x, y, z)
 	if isCrafter(state) {
 		h.openCrafter(t, x, y, z) // its own menu: result preview + disabled slots
 		return
@@ -135,7 +135,7 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 	c := h.bins[pos]
 	if c == nil {
 		c = &bin{slots: make([]invStack, binSizeFor(state))}
@@ -214,14 +214,14 @@ const binFireDelay = 4
 // latch. The power test includes quasi-connectivity — a signal at the block
 // directly ABOVE the dispenser counts, the classic QC quirk (BUD-prone, since
 // the dispenser only re-checks when it or a direct neighbour updates).
-func (h *hub) updateBinTrigger(players map[int32]*tracked, pos blockPos, state uint32) {
+func (h *hub) updateBinTrigger(players map[int32]*tracked, pos simPos, state uint32) {
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0 ||
 		h.inputPower(pos.x, pos.y+1, pos.z, false) > 0
 	triggered := boolProp(state, "triggered")
 	if powered == triggered {
 		return
 	}
-	h.setBlock(players, pos, setBoolProp(state, "triggered", powered))
+	h.setBlockAt(players, pos.dim, pos.blockPos, setBoolProp(state, "triggered", powered))
 	if powered {
 		// Vanilla scheduleTick(pos, 4): the dispense fires later, unconditionally
 		// (a pulse shorter than the delay still ejects).
@@ -238,10 +238,14 @@ func (h *hub) runBinFires(players map[int32]*tracked, age uint64) {
 			continue
 		}
 		delete(h.binFire, pos)
-		if !h.inWorldY(pos.y) {
+		if !h.inWorldYIn(pos.dim, pos.y) {
 			continue
 		}
-		state := h.world.Block(pos.x, pos.y, pos.z)
+		w := h.worldFor(pos.dim)
+		if w == nil {
+			continue
+		}
+		state := w.Block(pos.x, pos.y, pos.z)
 		if isDispenser(state) || isDropper(state) { // still a bin (not broken meanwhile)
 			h.ejectFromBin(players, pos, state)
 		}
@@ -255,7 +259,15 @@ func convertableToMud(s uint32) bool {
 }
 
 // ejectFromBin fires/drops the first non-empty slot's item out of the face.
-func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint32) {
+func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32) {
+	// Every block this behaviour table touches is in the dispenser's OWN world.
+	// Redstone only drives dispensers in the overworld today, so this is
+	// belt-and-braces — but it is the difference between a Nether dispenser
+	// being inert and one that quietly edits the overworld.
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return
+	}
 	c := h.bins[pos]
 	if c == nil {
 		return
@@ -287,12 +299,12 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	// Dropper facing a container inserts one item instead of tossing it
 	// (vanilla DropperBlock): the redstone-driven item pipe.
 	if !dispense {
-		if dst := h.containerSlots(front); dst != nil {
+		if dst := h.containerSlots(pos.at(front)); dst != nil {
 			if binInsert(dst, invStack{item: item, count: 1}) == 0 {
 				if st.count--; st.count <= 0 {
 					*st = invStack{}
 				}
-				h.refreshBinViewers(players, front) // update anyone viewing the target
+				h.refreshBinViewers(players, pos.at(front)) // update anyone viewing the target
 			}
 			h.playSound(players, "minecraft:block.dispenser.dispense", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
@@ -336,7 +348,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// Vanilla POTION behaviour: a WATER bottle onto a CONVERTABLE_TO_MUD block
 		// (dirt / coarse dirt / rooted dirt) turns it to mud and empties the
 		// bottle to glass; anything else falls back to the default toss.
-		if convertableToMud(h.world.At(front.x, front.y, front.z)) {
+		if convertableToMud(w.At(front.x, front.y, front.z)) {
 			h.setBlock(players, front, worldgen.Mud)
 			h.spawnParticles(players, particleSplash, float64(front.x)+0.5, float64(front.y)+1, float64(front.z)+0.5, 0.3, 0.1, 5)
 			h.playSound(players, "minecraft:item.bottle.empty", sndBlock,
@@ -351,7 +363,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// with honey and releases the bees calm (the hive branch is tried
 		// before water); else fill from a water source → water bottle (the
 		// source is not drained). Otherwise toss like the default.
-		if fs := h.world.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
+		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
 			took = false
 			h.releaseHiveBees(players, front, nil)
 			h.setBlock(players, front, withHoney(fs, 0))
@@ -364,7 +376,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 					h.spawnItem(players, itemHoneyBottle, 1, fx, fy, fz) // no room: pop the bottle out
 				}
 			}
-		} else if worldgen.IsWater(h.world.At(front.x, front.y, front.z)) {
+		} else if worldgen.IsWater(w.At(front.x, front.y, front.z)) {
 			took = false
 			wb := potionStack(potWater)
 			if st.count <= 1 {
@@ -383,7 +395,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// overrides the default equip-a-wearable): place the skull in the empty
 		// cell ahead and try to raise a wither; if the cell is blocked, fail
 		// (skull kept, like OptionalDispenseItemBehavior).
-		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			h.setBlock(players, front, witherSkullBlock)
 			h.checkWitherBuild(players, 0, front.x, front.y, front.z, witherSkullBlock)
 		} else {
@@ -392,7 +404,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	case dispense && item == itemArmorStand:
 		// Vanilla ARMOR_STAND behaviour: spawn a stand on the cell ahead facing
 		// away from the dispenser; if the cell is occupied, toss the item.
-		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			yaw := float32(0) // toYRot: south=0, west=90, north=180, east=270
 			switch {
 			case dx < 0:
@@ -434,7 +446,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 	case dispense && item == itemTNTBlock:
 		h.primeTNT(players, front.x, front.y, front.z, tntFuseTicks)
 	case dispense && item == itemFlintSteel:
-		if h.world.At(front.x, front.y, front.z) == worldgen.Air {
+		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			h.igniteFire(players, front, 0) // light a fire in the cell ahead
 		}
 		took = false // vanilla damages the tool instead of consuming it
@@ -443,7 +455,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 			*st = invStack{} // worn out
 		}
 	case dispense && item == itemBoneMeal:
-		if !h.applyBoneMeal(players, 0, front.x, front.y, front.z, h.world.At(front.x, front.y, front.z)) {
+		if !h.applyBoneMeal(players, 0, front.x, front.y, front.z, w.At(front.x, front.y, front.z)) {
 			// nothing growable ahead → fall back to tossing the meal out
 			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 				it.dmg, it.ench = st.dmg, st.ench
@@ -460,7 +472,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// (ShearsDispenseItemBehavior); the tool wears rather than ejects.
 		took = false
 		sheared := false
-		if fs := h.world.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
+		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
 			h.playSound(players, "minecraft:block.beehive.shear", sndBlock,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5, 1, 1)
 			h.spawnItem(players, int32(itemHoneycomb), beeHoneycombYield,
@@ -492,7 +504,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		}
 	case dispense && item == int32(itemHoneycomb):
 		// Wax the copper block ahead (HoneycombItem.getWaxed); otherwise toss.
-		if ws, ok := waxedCopper(h.world.At(front.x, front.y, front.z)); ok {
+		if ws, ok := waxedCopper(w.At(front.x, front.y, front.z)); ok {
 			h.setBlock(players, front, ws)
 		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
@@ -505,7 +517,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 			fluid = worldgen.LavaBase
 		}
 		took = false
-		if ts := h.world.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
 			h.setBlock(players, front, fluid)
 			st.item = itemBucket // filled bucket (stack size 1) empties in place
 		}
@@ -513,7 +525,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// Powder snow is a solid block, but the bucket empties like a fluid one:
 		// pour it into the cell ahead and leave an empty bucket in the slot.
 		took = false
-		if ts := h.world.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
 			h.setBlock(players, front, powderSnowBlock)
 			st.item = itemBucket
 		}
@@ -521,7 +533,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 		// Scoop a fluid source in the cell ahead into an empty bucket.
 		took = false
 		var filled int32
-		switch h.world.At(front.x, front.y, front.z) {
+		switch w.At(front.x, front.y, front.z) {
 		case worldgen.WaterBase:
 			filled = itemBucketH2O
 		case worldgen.LavaBase:
@@ -556,11 +568,11 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos blockPos, state uint3
 
 // updateHopper: sync enabled with (inverse) power; move one item on the
 // 8-tick cadence; self-reschedule while the hopper exists.
-func (h *hub) updateHopper(players map[int32]*tracked, pos blockPos, state uint32) {
+func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32) {
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
 	if hopperEnabled(state) == powered { // enabled must be the inverse of powered
 		state = hopperWith(state, !powered)
-		h.setBlock(players, pos, state)
+		h.setBlockAt(players, pos.dim, pos.blockPos, state)
 	}
 	if hopperEnabled(state) {
 		c := h.bins[pos]
@@ -576,15 +588,15 @@ func (h *hub) updateHopper(players map[int32]*tracked, pos blockPos, state uint3
 			h.refreshBinViewers(players, pos)
 		}
 	}
-	h.schedule(pos, hopperCadence)
+	h.scheduleIn(pos.dim, pos.blockPos, hopperCadence)
 }
 
 // hopperPull takes one item from the container above, or sucks up item
 // entities sitting above or inside the hopper cell.
-func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool {
+func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 	above := blockPos{pos.x, pos.y + 1, pos.z}
-	src := h.containerSlots(above)
-	if f := h.furnaces[above]; f != nil {
+	src := h.containerSlots(pos.at(above))
+	if f := h.furnaces[pos.at(above)]; f != nil {
 		src = f.slots[2:3] // a hopper below a furnace draws ONLY the output slot
 	}
 	if src != nil {
@@ -600,7 +612,7 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool 
 				if s.count <= 0 {
 					*s = invStack{}
 				}
-				h.refreshBinViewers(players, above)
+				h.refreshBinViewers(players, pos.at(above))
 				return true
 			}
 		}
@@ -632,14 +644,14 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos blockPos, c *bin) bool 
 
 // hopperPush moves one item into the container the hopper faces. Furnaces
 // take smelt input from above and fuel from the side (vanilla).
-func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32, c *bin) bool {
+func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c *bin) bool {
 	dx, dy, dz := hopperDelta(state)
 	target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-	dst := h.containerSlots(target)
+	dst := h.containerSlots(pos.at(target))
 	if dst == nil {
 		return false
 	}
-	f := h.furnaces[target]
+	f := h.furnaces[pos.at(target)]
 	toFuel := false
 	if f != nil {
 		if dy < 0 {
@@ -649,7 +661,7 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 			toFuel = true
 		}
 	}
-	cb := h.crafterBinAt(target) // non-nil → fill via the disabled-aware rule
+	cb := h.crafterBinAt(pos.at(target)) // non-nil → fill via the disabled-aware rule
 	for i := range c.slots {
 		s := &c.slots[i]
 		if s.item == 0 || s.count == 0 {
@@ -671,7 +683,7 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 			if s.count <= 0 {
 				*s = invStack{}
 			}
-			h.refreshBinViewers(players, target)
+			h.refreshBinViewers(players, pos.at(target))
 			return true
 		}
 	}
@@ -680,7 +692,7 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos blockPos, state uint32,
 
 // containerSlots exposes any container's raw slots at a position (nil if the
 // position holds no known container).
-func (h *hub) containerSlots(pos blockPos) []invStack {
+func (h *hub) containerSlots(pos simPos) []invStack {
 	if c := h.chests[pos]; c != nil {
 		return c.slots[:]
 	}
@@ -695,7 +707,7 @@ func (h *hub) containerSlots(pos blockPos) []invStack {
 
 // containerSignal is the comparator's read of a container: 0 when empty, else
 // 1 + floor(14 × average slot fullness). Returns -1 for non-containers.
-func (h *hub) containerSignal(pos blockPos) int {
+func (h *hub) containerSignal(pos simPos) int {
 	if cb := h.crafterBinAt(pos); cb != nil {
 		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
 	}
@@ -717,7 +729,7 @@ func (h *hub) containerSignal(pos blockPos) int {
 }
 
 // refreshBinViewers resyncs any player looking at a container we just mutated.
-func (h *hub) refreshBinViewers(players map[int32]*tracked, pos blockPos) {
+func (h *hub) refreshBinViewers(players map[int32]*tracked, pos simPos) {
 	for _, t := range players {
 		if t.winID == 0 {
 			continue

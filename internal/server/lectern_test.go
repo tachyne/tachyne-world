@@ -17,7 +17,7 @@ func TestLecternAndShelf(t *testing.T) {
 		id := h.books.create(savedBook{Title: "T", Author: "a", Pages: []string{"1", "2", "3"}})
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: itemWrittenBook, count: 1, bookID: id}
 		h.onUseLectern(h.playersRef, evUseLectern{eid: p.eid, x: bx, y: by, z: bz})
-		lec := h.lecterns[blockPos{bx, by, bz}]
+		lec := h.lecterns[simPos{blockPos: blockPos{bx, by, bz}}]
 		if lec == nil || lec.book.bookID != id || tr.inv.slots[tr.p.heldSlot()].item != 0 {
 			t.Errorf("place book: %+v", lec)
 			return
@@ -41,7 +41,7 @@ func TestLecternAndShelf(t *testing.T) {
 			t.Errorf("jump page %d", lec.page)
 		}
 		h.lecternButton(h.playersRef, tr, lecternButtonTake)
-		if h.lecterns[blockPos{bx, by, bz}] != nil || boolProp(w.At(bx, by, bz), "has_book") {
+		if h.lecterns[simPos{blockPos: blockPos{bx, by, bz}}] != nil || boolProp(w.At(bx, by, bz), "has_book") {
 			t.Error("take failed")
 		}
 		found := false
@@ -64,7 +64,7 @@ func TestLecternAndShelf(t *testing.T) {
 		}
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: int32(itemByName["book"]), count: 2}
 		h.onUseShelf(h.playersRef, evUseShelf{eid: p.eid, x: sx, y: by, z: bz, face: 2, cx: 0.1, cy: 0.8, cz: 0.5})
-		shelf := h.bookshelves[blockPos{sx, by, bz}]
+		shelf := h.bookshelves[simPos{blockPos: blockPos{sx, by, bz}}]
 		if shelf == nil || shelf[2].item == 0 || tr.inv.slots[tr.p.heldSlot()].count != 1 {
 			t.Errorf("insert: %+v", shelf)
 			return
@@ -81,16 +81,16 @@ func TestLecternAndShelf(t *testing.T) {
 
 		// Persistence round trips.
 		cs := newContainerStore("")
-		cs.recordLecterns(map[blockPos]*lectern{{1, 2, 3}: {book: invStack{item: itemWrittenBook, count: 1, bookID: 9}, page: 4}})
+		cs.recordLecterns(map[simPos]*lectern{{blockPos: blockPos{1, 2, 3}}: {book: invStack{item: itemWrittenBook, count: 1, bookID: 9}, page: 4}})
 		ll := cs.loadLecterns()
-		if l := ll[blockPos{1, 2, 3}]; l == nil || l.book.bookID != 9 || l.page != 4 {
+		if l := ll[simPos{blockPos: blockPos{1, 2, 3}}]; l == nil || l.book.bookID != 9 || l.page != 4 {
 			t.Errorf("lectern round trip: %+v", ll)
 		}
 		var sh [6]invStack
 		sh[5] = invStack{item: int32(itemByName["book"]), count: 1}
-		cs.recordShelves(map[blockPos]*[6]invStack{{4, 5, 6}: &sh})
+		cs.recordShelves(map[simPos]*[6]invStack{{blockPos: blockPos{4, 5, 6}}: &sh})
 		ss := cs.loadShelves()
-		if s := ss[blockPos{4, 5, 6}]; s == nil || s[5].item != int32(itemByName["book"]) {
+		if s := ss[simPos{blockPos: blockPos{4, 5, 6}}]; s == nil || s[5].item != int32(itemByName["book"]) {
 			t.Errorf("shelf round trip: %+v", ss)
 		}
 	})

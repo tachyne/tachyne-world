@@ -20,11 +20,15 @@ var (
 // analogSignal is everything a comparator can read at a position: the generic
 // container fullness first, then the per-block readings. -1 means the block
 // says nothing, which is what lets the caller fall through to its other cases.
-func (h *hub) analogSignal(pos blockPos) int {
+func (h *hub) analogSignal(pos simPos) int {
 	if sig := h.containerSignal(pos); sig >= 0 {
 		return sig
 	}
-	st := h.world.At(pos.x, pos.y, pos.z)
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return -1
+	}
+	st := w.At(pos.x, pos.y, pos.z)
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}

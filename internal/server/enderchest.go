@@ -37,7 +37,7 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winPos, t.winKind = h.nextWin, blockPos{x, y, z}, winChest
+	t.winID, t.winPos, t.winKind = h.nextWin, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}, winChest
 	t.viewChest = t.enderChest()
 
 	h.playSound(players, "minecraft:block.ender_chest.open", sndBlock,

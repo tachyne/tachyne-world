@@ -417,7 +417,7 @@ func TestLedgeEndDropLandsBeside(t *testing.T) {
 	}
 	// The end block (12) was just broken: its cell is air, nothing below it.
 	w.SetBlock(12, 90, 10, worldgen.Air)
-	h.spawnBlockDrop(players, 35, 1, 12, 90, 10)
+	h.spawnBlockDrop(players, 0, 35, 1, 12, 90, 10)
 	if len(h.items) != 1 {
 		t.Fatalf("expected one drop, got %d", len(h.items))
 	}
@@ -439,7 +439,7 @@ func TestFloorDropStaysPut(t *testing.T) {
 	players := map[int32]*tracked{}
 	w.SetBlock(20, 80, 20, worldgen.Stone) // support
 	w.SetBlock(20, 81, 20, worldgen.Air)   // the broken cell
-	h.spawnBlockDrop(players, 35, 1, 20, 81, 20)
+	h.spawnBlockDrop(players, 0, 35, 1, 20, 81, 20)
 	for _, it := range h.items {
 		if int(it.x) != 20 || it.y != 81 {
 			t.Fatalf("floor drop should stay in its cell, got (%v,%v,%v)", it.x, it.y, it.z)

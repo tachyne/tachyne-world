@@ -37,7 +37,7 @@ func (h *hub) openSmithing(t *tracked, x, y, z int) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winKind, t.winPos = h.nextWin, winSmith, blockPos{x, y, z}
+	t.winID, t.winKind, t.winPos = h.nextWin, winSmith, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuSmithing), Title: "Smithing Table"})
 	h.sendSmithWindow(t)

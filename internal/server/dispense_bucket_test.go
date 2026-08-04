@@ -30,8 +30,8 @@ func TestDispenserBucketEmpty(t *testing.T) {
 		h.world.SetBlock(front.x, front.y, front.z, worldgen.Air)
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = invStack{item: tc.bucket, count: 1}
-		h.bins[pos] = b
-		h.ejectFromBin(nil, pos, state)
+		h.bins[simPos{blockPos: pos}] = b
+		h.ejectFromBin(nil, simPos{blockPos: pos}, state)
 		if got := h.world.At(front.x, front.y, front.z); got != tc.fluid {
 			t.Fatalf("bucket %d: front block %d, want fluid %d", tc.bucket, got, tc.fluid)
 		}
@@ -49,8 +49,8 @@ func TestDispenserBucketPickup(t *testing.T) {
 	h.world.SetBlock(front.x, front.y, front.z, worldgen.WaterBase)
 	b := &bin{slots: make([]invStack, 9)}
 	b.slots[0] = invStack{item: itemBucket, count: 1}
-	h.bins[pos] = b
-	h.ejectFromBin(nil, pos, state)
+	h.bins[simPos{blockPos: pos}] = b
+	h.ejectFromBin(nil, simPos{blockPos: pos}, state)
 	if h.world.At(front.x, front.y, front.z) != worldgen.Air {
 		t.Fatal("scooping should clear the source ahead")
 	}
@@ -66,11 +66,11 @@ func TestDropperPushesToContainer(t *testing.T) {
 	h.world.SetBlock(pos.x, pos.y, pos.z, state)
 	dropper := &bin{slots: make([]invStack, 9)}
 	dropper.slots[0] = invStack{item: int32(itemByName["stone"]), count: 5}
-	h.bins[pos] = dropper
+	h.bins[simPos{blockPos: pos}] = dropper
 	dst := &chest{}
-	h.chests[front] = dst
+	h.chests[simPos{blockPos: front}] = dst
 
-	h.ejectFromBin(nil, pos, state)
+	h.ejectFromBin(nil, simPos{blockPos: pos}, state)
 	if dropper.slots[0].count != 4 {
 		t.Fatalf("dropper should move exactly one item, count now %d", dropper.slots[0].count)
 	}
@@ -91,9 +91,9 @@ func TestDropperTossesWithoutContainer(t *testing.T) {
 	h.world.SetBlock(front.x, front.y, front.z, worldgen.Air)
 	dropper := &bin{slots: make([]invStack, 9)}
 	dropper.slots[0] = invStack{item: int32(itemByName["stone"]), count: 5}
-	h.bins[pos] = dropper
+	h.bins[simPos{blockPos: pos}] = dropper
 	h.items = map[int32]*itemEntity{}
-	h.ejectFromBin(nil, pos, state)
+	h.ejectFromBin(nil, simPos{blockPos: pos}, state)
 	if len(h.items) != 1 {
 		t.Fatalf("a dropper with no container ahead should toss the item, got %d drops", len(h.items))
 	}
@@ -112,9 +112,9 @@ func TestDispenserRandomSlot(t *testing.T) {
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = invStack{item: stone, count: 1}
 		b.slots[4] = invStack{item: dirt, count: 1}
-		h.bins[pos] = b
+		h.bins[simPos{blockPos: pos}] = b
 		h.items = map[int32]*itemEntity{}
-		h.ejectFromBin(nil, pos, state)
+		h.ejectFromBin(nil, simPos{blockPos: pos}, state)
 		// whichever slot emptied is the one that was picked
 		if b.slots[0].count == 0 {
 			picks[stone]++

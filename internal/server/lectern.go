@@ -64,11 +64,11 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 	if t == nil || t.inv == nil || t.dim != 0 {
 		return
 	}
-	state := h.world.At(e.x, e.y, e.z)
+	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
 	if !isLectern(state) {
 		return
 	}
-	pos := blockPos{e.x, e.y, e.z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}
 	lec := h.lecterns[pos]
 	if lec == nil || lec.book.item == 0 {
 		held := t.inv.slots[t.p.heldSlot()]
@@ -97,7 +97,7 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 }
 
 // openLectern opens the reader menu (one read-only slot + the page property).
-func (h *hub) openLectern(t *tracked, pos blockPos, lec *lectern) {
+func (h *hub) openLectern(t *tracked, pos simPos, lec *lectern) {
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
 	h.reclaimEnchant(nil, t)
@@ -150,7 +150,7 @@ func (h *hub) lecternButton(players map[int32]*tracked, t *tracked, button int32
 		if leftover > 0 {
 			h.tossItem(players, t, book)
 		}
-		state := h.world.At(t.winPos.x, t.winPos.y, t.winPos.z)
+		state := h.worldFor(t.winPos.dim).At(t.winPos.x, t.winPos.y, t.winPos.z)
 		if info, ok := worldgen.InfoForState(state); ok && isLectern(state) {
 			h.setBlockLive(players, t.dim, t.winPos.x, t.winPos.y, t.winPos.z,
 				worldgen.SetProperty(info, state, "has_book", "false"))
@@ -177,18 +177,18 @@ func (h *hub) lecternButton(players map[int32]*tracked, t *tracked, button int32
 }
 
 // spillLectern drops the book when the lectern goes away.
-func (h *hub) spillLectern(players map[int32]*tracked, x, y, z int, newState uint32) {
+func (h *hub) spillLectern(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
 	if isLectern(newState) {
 		return
 	}
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	lec := h.lecterns[pos]
 	if lec == nil {
 		return
 	}
 	delete(h.lecterns, pos)
 	if lec.book.item != 0 {
-		if it := h.spawnItem(players, lec.book.item, 1, float64(x)+0.5, float64(y)+1, float64(z)+0.5); it != nil {
+		if it := h.spawnItemIn(players, dim, lec.book.item, 1, float64(x)+0.5, float64(y)+1, float64(z)+0.5); it != nil {
 			it.bookID = lec.book.bookID
 		}
 	}
@@ -255,10 +255,10 @@ func shelfHitSlot(state uint32, face int32, cx, cy, cz float32) int {
 // the book already there.
 func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	t := players[e.eid]
-	if t == nil || t.inv == nil || t.dim != 0 {
+	if t == nil || t.inv == nil {
 		return
 	}
-	state := h.world.At(e.x, e.y, e.z)
+	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
 	if !isBookshelf(state) {
 		return
 	}
@@ -266,7 +266,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	if slot < 0 {
 		return
 	}
-	pos := blockPos{e.x, e.y, e.z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}
 	shelf := h.bookshelves[pos]
 	if shelf == nil {
 		shelf = &[6]invStack{}
@@ -301,7 +301,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	} else {
 		return
 	}
-	h.shelfSyncState(players, t.dim, pos, state, shelf)
+	h.shelfSyncState(players, t.dim, pos.blockPos, state, shelf)
 }
 
 // shelfSyncState mirrors slot occupancy into the block-state bools.
@@ -326,11 +326,11 @@ func (h *hub) shelfSyncState(players map[int32]*tracked, dim int, pos blockPos, 
 }
 
 // spillShelf drops the shelf's books when the block goes away.
-func (h *hub) spillShelf(players map[int32]*tracked, x, y, z int, newState uint32) {
+func (h *hub) spillShelf(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
 	if isBookshelf(newState) {
 		return
 	}
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	shelf := h.bookshelves[pos]
 	if shelf == nil {
 		return
@@ -338,7 +338,7 @@ func (h *hub) spillShelf(players map[int32]*tracked, x, y, z int, newState uint3
 	delete(h.bookshelves, pos)
 	for _, st := range shelf {
 		if st.item != 0 {
-			if it := h.spawnItem(players, st.item, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5); it != nil {
+			if it := h.spawnItemIn(players, dim, st.item, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5); it != nil {
 				it.ench = st.ench
 				it.bookID = st.bookID
 				it.boxID, it.hiveID = st.boxID, st.hiveID

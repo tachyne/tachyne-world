@@ -61,7 +61,7 @@ func (h *hub) boxContents(id int32) *chest {
 // stowShulkerBox moves a placed box's contents onto the item that is about to
 // drop, and returns the boxID to stamp on it. Returns 0 for an empty box, which
 // then drops as a plain item with nothing to remember.
-func (h *hub) stowShulkerBox(pos blockPos) int32 {
+func (h *hub) stowShulkerBox(pos simPos) int32 {
 	c := h.chests[pos]
 	if c == nil {
 		return 0
@@ -85,7 +85,7 @@ func (h *hub) stowShulkerBox(pos blockPos) int32 {
 
 // restoreShulkerBox is the other half: a placed box takes back the contents its
 // item was carrying, and the id is retired.
-func (h *hub) restoreShulkerBox(pos blockPos, boxID int32) {
+func (h *hub) restoreShulkerBox(pos simPos, boxID int32) {
 	if boxID == 0 {
 		return
 	}
@@ -98,15 +98,15 @@ func (h *hub) restoreShulkerBox(pos blockPos, boxID int32) {
 
 // dropShulkerBox replaces the ordinary loot drop for a broken box: one item of
 // the matching colour, carrying whatever was inside it.
-func (h *hub) dropShulkerBox(players map[int32]*tracked, state uint32, pos blockPos) {
+func (h *hub) dropShulkerBox(players map[int32]*tracked, dim int, state uint32, pos blockPos) {
 	// The baked loot table already knows which colour of box this state drops.
 	ds := h.evalBlockLoot(lootCtx{state: state, rng: h.rng.Intn, randf: h.rng.Float64})
 	if len(ds) == 0 {
 		return
 	}
 	item := ds[0].item
-	boxID := h.stowShulkerBox(pos)
-	it := h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+	boxID := h.stowShulkerBox(simPos{dim: dim, blockPos: pos})
+	it := h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	if it != nil {
 		it.boxID = boxID
 	}

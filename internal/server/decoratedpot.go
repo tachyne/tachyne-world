@@ -21,7 +21,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	if h.pots == nil {
 		h.pots = map[simPos]invStack{}
 	}
-	key := simPos{dim: t.dim, pos: pos}
+	key := simPos{dim: t.dim, blockPos: pos}
 	held := heldStack(t)
 	stored := h.pots[key]
 
@@ -57,7 +57,7 @@ func (h *hub) spillPot(players map[int32]*tracked, dim int, pos blockPos, newSta
 	if isDecoratedPot(newState) {
 		return
 	}
-	key := simPos{dim: dim, pos: pos}
+	key := simPos{dim: dim, blockPos: pos}
 	st, ok := h.pots[key]
 	if !ok {
 		return

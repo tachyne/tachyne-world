@@ -109,6 +109,7 @@ type evSetBehavior struct { // a bus-driven behavior change on an existing mob
 	behavior string
 }
 type evDrop struct { // a destroyed block's loot — roll its drop table and spawn items
+	dim     int
 	x, y, z int
 	state   uint32
 	held    uint16 // item id used to break it (0 = hand); gates tool-required drops
@@ -295,14 +296,14 @@ type tracked struct {
 	craft   [9]invStack // active crafting grid (first 4 cells for the 2x2)
 	winID   int32       // open window id; 0 = player inventory
 	winKind winKind     // what the open window views (winPlayer while winID == 0)
-	winPos  blockPos    // the furnace/chest block this window views
+	winPos  simPos      // the furnace/chest block this window views (dim + pos)
 	// The chest a winChest window is looking at. Indirect because the storage
 	// is not always a block: an ender chest is the player's own, and both hang
 	// the same 27-slot window off it.
 	viewChest *chest
 	// The player's OWN ender-chest storage: the block is just a door onto it.
 	ender   *chest
-	winPos2 blockPos    // the RIGHT half of an open double chest (winPos = LEFT)
+	winPos2 simPos      // the RIGHT half of an open double chest (winPos = LEFT)
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	offhand invStack
 
@@ -436,9 +437,9 @@ type hub struct {
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
 
-	nextWin  int32                 // last container window id handed out (cycles 1..100)
-	furnaces map[blockPos]*furnace // active furnace states (hub-goroutine-only)
-	chests   map[blockPos]*chest   // chest storage (hub-goroutine-only)
+	nextWin  int32               // last container window id handed out (cycles 1..100)
+	furnaces map[simPos]*furnace // active furnace states (hub-goroutine-only)
+	chests   map[simPos]*chest   // chest storage (hub-goroutine-only)
 	// Every placed conduit, so none has to be found by scanning blocks.
 	conduits map[simPos]bool
 	// Trial spawners currently awake, keyed by position.
@@ -492,25 +493,25 @@ type hub struct {
 	sculkLastX   map[int32]float64         // per-player last X, for step-movement detection
 	sculkLastZ   map[int32]float64         // per-player last Z
 	sculkScanned map[[2]int32]bool         // chunks already scanned for worldgen sculk listeners
-	bins         map[blockPos]*bin         // dispenser/dropper/hopper storage
-	binFire      map[blockPos]uint64       // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
+	bins         map[simPos]*bin           // dispenser/dropper/hopper storage
+	binFire      map[simPos]uint64         // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
-	vehicles     map[int32]*vehicle        // minecarts + boats
-	paintings    map[int32]*painting       // placed hanging paintings (persisted with containers)
-	itemFrames   map[int32]*itemFrame      // placed item frames (persisted with containers)
-	armorStands  map[int32]*armorStand     // placed armor stands (persisted with containers)
-	jukeboxes    map[blockPos]*jukebox     // discs + playback clocks (persisted with containers)
-	beacons      map[blockPos]*beacon      // placed beacons (chosen powers persisted with containers)
-	campfires    map[blockPos]*campfire    // live cook state (item view in cfStore)
-	cfStore      *campfireStore            // campfires.json + the chunk builders' read view
-	banners      *bannerStore              // banners.json + the chunk builders' read view
-	books        *bookStore                // books.json (contents by book id, the map model)
-	lecterns     map[blockPos]*lectern     // held books + open pages (persisted with containers)
-	bookshelves  map[blockPos]*[6]invStack // chiseled shelves (persisted with containers)
-	detectorsOn  map[blockPos]bool         // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64       // dungeon spawner cooldowns
-	patrolNextAt uint64                    // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid        // active village raids by centre
+	vehicles     map[int32]*vehicle      // minecarts + boats
+	paintings    map[int32]*painting     // placed hanging paintings (persisted with containers)
+	itemFrames   map[int32]*itemFrame    // placed item frames (persisted with containers)
+	armorStands  map[int32]*armorStand   // placed armor stands (persisted with containers)
+	jukeboxes    map[simPos]*jukebox     // discs + playback clocks (persisted with containers)
+	beacons      map[simPos]*beacon      // placed beacons (chosen powers persisted with containers)
+	campfires    map[simPos]*campfire    // live cook state (item view in cfStore)
+	cfStore      *campfireStore          // campfires.json + the chunk builders' read view
+	banners      *bannerStore            // banners.json + the chunk builders' read view
+	books        *bookStore              // books.json (contents by book id, the map model)
+	lecterns     map[simPos]*lectern     // held books + open pages (persisted with containers)
+	bookshelves  map[simPos]*[6]invStack // chiseled shelves (persisted with containers)
+	detectorsOn  map[blockPos]bool       // detector rails currently pressed
+	spawnerNext  map[blockPos]uint64     // dungeon spawner cooldowns
+	patrolNextAt uint64                  // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid      // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
 	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
@@ -519,8 +520,8 @@ type hub struct {
 	siegeRolled bool
 	siegeLeft   int
 	siegeCenter blockPos
-	brewProg    map[blockPos]int    // brewing stand progress (ticks)
-	brewFuel    map[blockPos]int    // brewing stand fuel charges (1 blaze powder = 20)
+	brewProg    map[simPos]int      // brewing stand progress (ticks)
+	brewFuel    map[simPos]int      // brewing stand fuel charges (1 blaze powder = 20)
 	portalLinks map[dimPos]dimPos   // sticky portal pairs (both directions)
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
@@ -632,8 +633,8 @@ func newHub(w *world.World) *hub {
 		rockets:       map[int32]*rocketEntity{},
 		bobbers:       map[int32]*bobberEntity{},
 		npcs:          map[int32]*npc{},
-		furnaces:      map[blockPos]*furnace{},
-		chests:        map[blockPos]*chest{},
+		furnaces:      map[simPos]*furnace{},
+		chests:        map[simPos]*chest{},
 		rng:           rand.New(rand.NewSource(1)),
 		rules:         defaultRules(),
 		pressedAt:     map[blockPos]uint64{},
@@ -655,25 +656,25 @@ func newHub(w *world.World) *hub {
 		sculkLastX:    map[int32]float64{},
 		sculkLastZ:    map[int32]float64{},
 		sculkScanned:  map[[2]int32]bool{},
-		bins:          map[blockPos]*bin{},
-		binFire:       map[blockPos]uint64{},
+		bins:          map[simPos]*bin{},
+		binFire:       map[simPos]uint64{},
 		vehicles:      map[int32]*vehicle{},
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
-		lecterns:      map[blockPos]*lectern{},
-		bookshelves:   map[blockPos]*[6]invStack{},
-		jukeboxes:     map[blockPos]*jukebox{},
-		beacons:       map[blockPos]*beacon{},
-		campfires:     map[blockPos]*campfire{},
+		lecterns:      map[simPos]*lectern{},
+		bookshelves:   map[simPos]*[6]invStack{},
+		jukeboxes:     map[simPos]*jukebox{},
+		beacons:       map[simPos]*beacon{},
+		campfires:     map[simPos]*campfire{},
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
 		detectorsOn:  map[blockPos]bool{},
 		spawnerNext:  map[blockPos]uint64{},
 		raids:        map[blockPos]*raid{},
-		brewProg:     map[blockPos]int{},
-		brewFuel:     map[blockPos]int{},
+		brewProg:     map[simPos]int{},
+		brewFuel:     map[simPos]int{},
 		portalLinks:  map[dimPos]dimPos{},
 		bossSeen:     map[[2]int32]bool{},
 		openDoors:    map[blockPos]uint64{},
@@ -739,8 +740,8 @@ func (h *hub) run() {
 		h.bookshelves = h.containers.loadShelves()
 		h.loadCampfires()
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
-			if isHopper(h.world.At(pos.x, pos.y, pos.z)) {
-				h.schedule(pos, hopperCadence)
+			if w := h.worldFor(pos.dim); w != nil && isHopper(w.At(pos.x, pos.y, pos.z)) {
+				h.scheduleIn(pos.dim, pos.blockPos, hopperCadence)
 			}
 		}
 	}
@@ -1060,7 +1061,7 @@ func (h *hub) run() {
 					// This runs before the evConsume that empties the slot,
 					// because the events channel is FIFO.
 					if t := players[e.by]; t != nil {
-						h.restoreShulkerBox(blockPos{e.x, e.y, e.z}, heldStack(t).boxID)
+						h.restoreShulkerBox(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, heldStack(t).boxID)
 					}
 				}
 				if e.broken == 0 && isBeeHome(e.state) {
@@ -1258,7 +1259,7 @@ func (h *hub) run() {
 					// The box keeps what is inside it: stow the contents under a
 					// boxID and drop an item stamped with it, rather than letting
 					// the ordinary loot path drop a bare box.
-					h.dropShulkerBox(players, e.state, blockPos{e.x, e.y, e.z})
+					h.dropShulkerBox(players, e.dim, e.state, blockPos{e.x, e.y, e.z})
 					break
 				}
 				if isBeeHome(e.state) {
@@ -1280,23 +1281,23 @@ func (h *hub) run() {
 				if ds := h.evalBlockLoot(lootCtx{state: e.state, tool: int32(e.held),
 					silk: silk > 0, fortune: fortune, rng: h.rng.Intn, randf: h.rng.Float64}); ds != nil {
 					for _, d := range ds {
-						h.spawnBlockDrop(players, d.item, d.count, e.x, e.y, e.z)
+						h.spawnBlockDrop(players, e.dim, d.item, d.count, e.x, e.y, e.z)
 					}
 				} else if item, ok := silkTouchDrop[e.state]; ok && silk > 0 {
-					h.spawnBlockDrop(players, item, 1, e.x, e.y, e.z)
+					h.spawnBlockDrop(players, e.dim, item, 1, e.x, e.y, e.z)
 				} else {
 					for _, d := range h.rollDrops(e.state) {
 						if fortune > 0 && isOreState(e.state) {
 							d.count *= 1 + h.rng.Intn(fortune+1) // Fortune multiplies ore yield
 						}
-						h.spawnBlockDrop(players, d.item, d.count, e.x, e.y, e.z)
+						h.spawnBlockDrop(players, e.dim, d.item, d.count, e.x, e.y, e.z)
 					}
 				}
 				// Ore XP: only for an actual survival miner (never creative/world).
 				if t := players[e.by]; t != nil && t.gamemode == gmSurvival {
 					t.exhaustion += 0.005 // vanilla: mining a block
 					if xp := xpForBlock(e.state, h.rng.Intn); xp > 0 && silk == 0 {
-						h.spawnXPOrb(players, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
+						h.spawnXPOrbIn(players, e.dim, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 					}
 				}
 			case evBorderCmd:
@@ -2039,8 +2040,15 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	}
 	h.paintingsOnBlockChange(players, e.dim, e.x, e.y, e.z)
 	h.framesOnBlockChange(players, e.dim, e.x, e.y, e.z)
-	if e.dim != 0 {
-		return // v1: block simulation (falling/fluids/redstone) runs overworld-only
+	// Block ENTITIES are registered in every dimension — their stores are keyed
+	// by dimension, so a Nether beacon is its own beacon and a broken Nether
+	// chest scatters its own contents.
+	h.beaconsOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state)
+	h.bannersOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state, e.by)
+	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.state) // a broken container scatters
+	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
+	if e.dim != dimOverworld {
+		return // block SIMULATION (falling/fluids/redstone/sculk) is still overworld-only
 	}
 	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state)   // lightning-rod POI set
 	h.sculkIndexOnBlockChange(e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
@@ -2050,14 +2058,10 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	} else if e.state != worldgen.Air {
 		h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
 	}
-	h.beaconsOnBlockChange(players, e.x, e.y, e.z, e.state)
-	h.bannersOnBlockChange(players, e.x, e.y, e.z, e.state, e.by)
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.
 	h.scheduleAround(blockPos{e.x, e.y, e.z}, 1)
-	h.spillContainer(players, e.x, e.y, e.z, e.state) // broken chest/furnace scatters its contents
-	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
 }
 
 // chunkFloor maps a world coordinate to its chunk index (floors toward -inf).
@@ -2129,9 +2133,9 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 			t.p.trySendEv(body)
 		}
 	}
-	if dim == 0 {
+	h.beaconsOnBlockChange(players, dim, x, y, z, state)
+	if dim == dimOverworld {
 		h.rodIndexOnBlockChange(x, y, z, state)
-		h.beaconsOnBlockChange(players, x, y, z, state)
 		h.scheduleAround(blockPos{x, y, z}, 1)
 	}
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})

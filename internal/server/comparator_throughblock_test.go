@@ -25,7 +25,7 @@ func TestComparatorThroughBlock(t *testing.T) {
 		w.SetBlock(far.x, far.y, far.z, worldgen.BlockBase("chest"))
 
 		// Empty chest → no signal.
-		h.chests[far] = &chest{}
+		h.chests[simPos{blockPos: far}] = &chest{}
 		h.updateComparator(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
 		if h.compOut[pos] != 0 {
 			t.Fatalf("empty chest through a block gave signal %d", h.compOut[pos])
@@ -33,7 +33,7 @@ func TestComparatorThroughBlock(t *testing.T) {
 
 		// Fill the chest → the comparator reads it through the stone, after its
 		// vanilla 2-tick delay (first call schedules the flip, the second applies).
-		h.chests[far].slots[0] = invStack{item: 1, count: 64}
+		h.chests[simPos{blockPos: far}].slots[0] = invStack{item: 1, count: 64}
 		h.updateComparator(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
 		h.tick.Store(h.tick.Load() + comparatorDelay)
 		h.updateComparator(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))

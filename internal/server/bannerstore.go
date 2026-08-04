@@ -52,28 +52,29 @@ func newBannerStore(path string) *bannerStore {
 	if path != "" {
 		if data, err := os.ReadFile(path); err == nil {
 			json.Unmarshal(data, &s.m)
+			migrateSimKeys(s.m) // pre-dimension files keyed banners by position alone
 		}
 	}
 	return s
 }
 
-func (s *bannerStore) get(x, y, z int) []attachproto.BannerLayer {
+func (s *bannerStore) get(dim, x, y, z int) []attachproto.BannerLayer {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.m[posKey(blockPos{x, y, z})]
+	return s.m[simKey(simPos{dim: dim, blockPos: blockPos{x, y, z}})]
 }
 
-func (s *bannerStore) set(pos blockPos, layers []attachproto.BannerLayer) {
+func (s *bannerStore) set(pos simPos, layers []attachproto.BannerLayer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m[posKey(pos)] = layers
+	s.m[simKey(pos)] = layers
 	s.dirty = true
 }
 
-func (s *bannerStore) remove(pos blockPos) {
+func (s *bannerStore) remove(pos simPos) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	k := posKey(pos)
+	k := simKey(pos)
 	if _, ok := s.m[k]; ok {
 		delete(s.m, k)
 		s.dirty = true
@@ -102,10 +103,10 @@ var dyeName = []string{"white", "orange", "magenta", "light_blue", "yellow", "li
 
 // bannersOnBlockChange records a patterned banner's layers at placement (the
 // placer's held stack still carries them — consumption lands after evBlock)
-// and clears the entry when the banner goes away. Overworld-only, like the
-// other block sims.
-func (h *hub) bannersOnBlockChange(players map[int32]*tracked, x, y, z int, state uint32, by int32) {
-	pos := blockPos{x, y, z}
+// and clears the entry when the banner goes away — in whichever dimension it
+// was placed, so a Nether banner renders its pattern like any other.
+func (h *hub) bannersOnBlockChange(players map[int32]*tracked, dim, x, y, z int, state uint32, by int32) {
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	if !isBannerState(state) {
 		h.banners.remove(pos)
 		return
@@ -131,7 +132,7 @@ func (h *hub) bannersOnBlockChange(players map[int32]*tracked, x, y, z int, stat
 		return
 	}
 	h.banners.set(pos, layers)
-	h.toNearbyEv(players, 0, float64(x), float64(z), attachproto.BannerPatterns{
+	h.toNearbyEv(players, dim, float64(x), float64(z), attachproto.BannerPatterns{
 		X: int32(x), Y: int32(y), Z: int32(z), Layers: layers})
 }
 

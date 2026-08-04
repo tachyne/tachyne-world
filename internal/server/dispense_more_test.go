@@ -20,7 +20,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		w.SetBlock(pos.x, pos.y, pos.z, state)
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = st
-		h.bins[pos] = b
+		h.bins[simPos{blockPos: pos}] = b
 		return &b.slots[0]
 	}
 
@@ -28,7 +28,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		// Wind charge → a wind_charge projectile flies out, one consumed.
 		h.arrows = map[int32]*arrowEntity{}
 		s := load(invStack{item: itemWindCharge, count: 2})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if len(h.arrows) != 1 {
 			t.Fatalf("wind charge: %d projectiles, want 1", len(h.arrows))
 		}
@@ -39,7 +39,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		// Water bottle onto dirt → mud, bottle becomes glass.
 		w.SetBlock(front.x, front.y, front.z, worldgen.Dirt)
 		s = load(potionStack(potWater))
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if w.At(front.x, front.y, front.z) != worldgen.Mud {
 			t.Errorf("dirt ahead should have become mud")
 		}
@@ -50,7 +50,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		w.SetBlock(front.x, front.y, front.z, worldgen.Stone)
 		before := len(h.items)
 		load(potionStack(potWater))
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if len(h.items) != before+1 {
 			t.Errorf("non-mud target should toss the bottle: items %d want %d", len(h.items), before+1)
 		}
@@ -58,7 +58,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		// Glass bottle facing water → a water bottle in the slot.
 		w.SetBlock(front.x, front.y, front.z, worldgen.Water)
 		s = load(invStack{item: itemGlassBottle, count: 1})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if s.item != itemPotion || s.potion != potWater {
 			t.Errorf("glass bottle should fill to a water bottle: %+v", *s)
 		}
@@ -69,7 +69,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 		// Wither skull into an empty cell → the skull block is placed.
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
 		s = load(invStack{item: itemWitherSkull, count: 2})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if w.At(front.x, front.y, front.z) != witherSkullBlock {
 			t.Errorf("wither skull should have been placed ahead")
 		}
@@ -87,7 +87,7 @@ func TestDispenseMoreBehaviors(t *testing.T) {
 			x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5}
 		h.armorStands[sd.eid] = sd
 		s = load(invStack{item: helmet, count: 1})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if sd.equip[standSlotFor(helmet)].item != helmet {
 			t.Errorf("helmet should be equipped on the stand: %+v", sd.equip)
 		}

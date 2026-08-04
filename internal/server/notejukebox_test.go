@@ -93,7 +93,7 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 		w.SetBlock(6, sy, 0, jukeboxState(false))
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: int32(itemByName["music_disc_cat"]), count: 1}
 		h.onUseJukebox(h.playersRef, evUseJukebox{eid: p.eid, x: 6, y: sy, z: 0, slot: int32(tr.p.heldSlot())})
-		jb := h.jukeboxes[blockPos{6, sy, 0}]
+		jb := h.jukeboxes[simPos{blockPos: blockPos{6, sy, 0}}]
 		if jb == nil || jb.disc.item != int32(itemByName["music_disc_cat"]) || jb.started == 0 {
 			t.Errorf("jukebox after insert: %+v", jb)
 			return
@@ -102,7 +102,7 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 			t.Error("has_record not set")
 		}
 		h.onUseJukebox(h.playersRef, evUseJukebox{eid: p.eid, x: 6, y: sy, z: 0, slot: int32(tr.p.heldSlot())})
-		if h.jukeboxes[blockPos{6, sy, 0}] != nil {
+		if h.jukeboxes[simPos{blockPos: blockPos{6, sy, 0}}] != nil {
 			t.Error("disc not ejected")
 		}
 		if w.At(6, sy, 0) != jukeboxState(false) {

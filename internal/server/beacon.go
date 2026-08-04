@@ -110,9 +110,11 @@ func isBeamPassable(s uint32) bool { return glassStates[s] }
 
 // beaconsOnBlockChange keeps the beacon set current: placing a beacon
 // registers it, breaking one drops it with the deactivate sound. Mirrors
-// rodIndexOnBlockChange (overworld-only, like the container sims).
-func (h *hub) beaconsOnBlockChange(players map[int32]*tracked, x, y, z int, state uint32) {
-	pos := blockPos{x, y, z}
+// rodIndexOnBlockChange, and like every block-entity store it is keyed by
+// dimension: a beacon in the Nether is not the one at the same coordinates in
+// the overworld.
+func (h *hub) beaconsOnBlockChange(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	if state == beaconState {
 		if h.beacons[pos] == nil {
 			h.beacons[pos] = &beacon{}
@@ -131,7 +133,7 @@ func (h *hub) beaconsOnBlockChange(players map[int32]*tracked, x, y, z int, stat
 // openBeacon opens the beacon menu: one payment slot (t.anvil[0], reclaimed
 // on close like the anvil) + the three container properties.
 func (h *hub) openBeacon(t *tracked, x, y, z int) {
-	if t.inv == nil || h.beacons[blockPos{x, y, z}] == nil {
+	if t.inv == nil || h.beacons[simPos{dim: t.dim, blockPos: blockPos{x, y, z}}] == nil {
 		return
 	}
 	h.releaseContainerView(t)
@@ -141,7 +143,7 @@ func (h *hub) openBeacon(t *tracked, x, y, z int) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winKind, t.winPos = h.nextWin, winBeacon, blockPos{x, y, z}
+	t.winID, t.winKind, t.winPos = h.nextWin, winBeacon, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuBeacon), Title: "Beacon"})
 	h.sendBeaconWindow(t)
@@ -224,10 +226,16 @@ func (h *hub) onSetBeacon(players map[int32]*tracked, t *tracked, primary, secon
 // play the activation transitions, fire construct_beacon on tier growth,
 // and re-apply the chosen effects to players in range.
 func (h *hub) beaconTick(players map[int32]*tracked) {
-	w := h.worldFor(0)
-	for pos, b := range h.beacons {
+	for key, b := range h.beacons {
+		dim, pos := key.dim, key.blockPos
+		w := h.worldFor(dim)
+		if w == nil {
+			continue
+		}
 		cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 		levels := 0
+		// A Nether or End beacon has no sky to see, so beaconSkyOpen decides
+		// on that dimension's own blocks rather than the overworld's.
 		if beaconSkyOpen(w, pos.x, pos.y, pos.z) {
 			levels = beaconLevels(w, pos.x, pos.y, pos.z)
 		}
@@ -240,7 +248,7 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 		}
 		if levels > prev { // vanilla: the trigger fires on tier growth, nearby players
 			for _, t := range players {
-				if t.dim == 0 && absF(t.x-cx) <= 10 && absF(t.y-cy) <= 10 && absF(t.z-cz) <= 10 {
+				if t.dim == dim && absF(t.x-cx) <= 10 && absF(t.y-cy) <= 10 && absF(t.z-cz) <= 10 {
 					h.advance(players, t, "construct_beacon", advMatch{level: levels})
 				}
 			}
@@ -259,7 +267,7 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 		}
 		secs := 9 + levels*2
 		for _, t := range players {
-			if t.dim != 0 || absF(t.x-cx) > rng || absF(t.z-cz) > rng || t.y < float64(pos.y)-rng {
+			if t.dim != dim || absF(t.x-cx) > rng || absF(t.z-cz) > rng || t.y < float64(pos.y)-rng {
 				continue // vanilla box: ±range horizontally, down range, up to the sky
 			}
 			h.applyEffect(players, t, b.primary-1, amp, secs)

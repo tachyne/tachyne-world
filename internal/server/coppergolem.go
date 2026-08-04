@@ -251,8 +251,8 @@ func (h *hub) copperGolemSort(players map[int32]*tracked, m *mob) {
 			m.sortHasGoal = false
 			return
 		}
-		m.sortGoal, m.sortHasGoal = pos, true
-		if h.golemNear(m, pos) {
+		m.sortGoal, m.sortHasGoal = pos.blockPos, true
+		if h.golemNear(m, pos.blockPos) {
 			st := &h.chests[pos].slots[slot]
 			n := st.count
 			if n > copperSortMax {
@@ -272,8 +272,8 @@ func (h *hub) copperGolemSort(players map[int32]*tracked, m *mob) {
 		m.sortHasGoal = false // nowhere to put it — keep carrying
 		return
 	}
-	m.sortGoal, m.sortHasGoal = pos, true
-	if h.golemNear(m, pos) {
+	m.sortGoal, m.sortHasGoal = pos.blockPos, true
+	if h.golemNear(m, pos.blockPos) {
 		m.carrying = depositIntoChest(h.chests[pos], m.carrying)
 		m.sortCD = copperSortCDMin + h.rng.Intn(copperSortCDMax-copperSortCDMin+1)
 		m.sortHasGoal = false
@@ -282,10 +282,13 @@ func (h *hub) copperGolemSort(players map[int32]*tracked, m *mob) {
 
 // findCopperSource returns the position + slot of the nearest copper chest in
 // range holding items (slot -1 = none).
-func (h *hub) findCopperSource(m *mob) (blockPos, int) {
-	best, bestPos, bestSlot := math.MaxFloat64, blockPos{}, -1
+func (h *hub) findCopperSource(m *mob) (simPos, int) {
+	best, bestPos, bestSlot := math.MaxFloat64, simPos{}, -1
+	w := h.worldFor(m.dim)
 	for pos, c := range h.chests {
-		if !isCopperChest(h.world.At(pos.x, pos.y, pos.z)) || !h.inSortRange(m, pos) {
+		// A golem only sorts the chests standing in its OWN dimension.
+		if pos.dim != m.dim || w == nil ||
+			!isCopperChest(w.At(pos.x, pos.y, pos.z)) || !h.inSortRange(m, pos.blockPos) {
 			continue
 		}
 		for i, st := range c.slots {
@@ -302,11 +305,15 @@ func (h *hub) findCopperSource(m *mob) (blockPos, int) {
 
 // findSortTarget returns the nearest wooden/trapped chest in range with room for
 // the golem's carried stack.
-func (h *hub) findSortTarget(m *mob) (blockPos, bool) {
-	best, bestPos, found := math.MaxFloat64, blockPos{}, false
+func (h *hub) findSortTarget(m *mob) (simPos, bool) {
+	best, bestPos, found := math.MaxFloat64, simPos{}, false
+	w := h.worldFor(m.dim)
 	for pos := range h.chests {
-		s := h.world.At(pos.x, pos.y, pos.z)
-		if isCopperChest(s) || !isChestBlock(s) || !h.inSortRange(m, pos) {
+		if pos.dim != m.dim || w == nil {
+			continue
+		}
+		s := w.At(pos.x, pos.y, pos.z)
+		if isCopperChest(s) || !isChestBlock(s) || !h.inSortRange(m, pos.blockPos) {
 			continue
 		}
 		if !chestHasRoom(h.chests[pos], m.carrying) {

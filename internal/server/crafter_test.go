@@ -15,7 +15,7 @@ func TestCrafter(t *testing.T) {
 		w.SetBlock(pos.x, pos.y, pos.z, state)
 		c := &bin{slots: make([]invStack, 9)}
 		c.slots[0] = invStack{item: oakLog, count: 2} // 1 log → planks (shapeless)
-		h.bins[pos] = c
+		h.bins[simPos{blockPos: pos}] = c
 
 		// Confirm the recipe resolves before asserting the craft.
 		grid := make([]invStack, 9)
@@ -27,7 +27,7 @@ func TestCrafter(t *testing.T) {
 		}
 
 		before := len(h.items)
-		h.crafterCraft(h.playersRef, pos, state)
+		h.crafterCraft(h.playersRef, simPos{blockPos: pos}, state)
 
 		if c.slots[0].count != 1 {
 			t.Errorf("ingredient count %d after craft, want 1 (one consumed)", c.slots[0].count)
@@ -50,7 +50,7 @@ func TestCrafter(t *testing.T) {
 		c.slots[0] = invStack{item: oakLog, count: 1}
 		w.SetBlock(pos.x+1, pos.y+1, pos.z, redstoneBlock) // power source (diagonal-safe: use a neighbour)
 		w.SetBlock(pos.x, pos.y+1, pos.z, redstoneBlock)   // directly above → powers the crafter
-		h.updateCrafter(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
+		h.updateCrafter(h.playersRef, simPos{blockPos: pos}, w.At(pos.x, pos.y, pos.z))
 		if crafterTriggered(w.At(pos.x, pos.y, pos.z)) != true {
 			t.Error("crafter did not latch triggered on a rising edge")
 		}

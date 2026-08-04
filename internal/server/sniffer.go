@@ -47,7 +47,7 @@ func (h *hub) scheduleSnifferEgg(dim, x, y, z int) {
 	if h.snifferEggs == nil {
 		h.snifferEggs = map[simPos]uint64{}
 	}
-	h.snifferEggs[simPos{dim: dim, pos: blockPos{x, y, z}}] = h.tick.Load() + delay
+	h.snifferEggs[simPos{dim: dim, blockPos: blockPos{x, y, z}}] = h.tick.Load() + delay
 	h.scheduleIn(dim, blockPos{x, y, z}, delay)
 }
 
@@ -60,7 +60,7 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 	if !isSnifferEgg(state) {
 		return false
 	}
-	key := simPos{dim: dim, pos: blockPos{x, y, z}}
+	key := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	now := h.tick.Load()
 	due, known := h.snifferEggs[key]
 	if !known {

@@ -48,18 +48,18 @@ func TestDoubleChestPairing(t *testing.T) {
 		w.SetBlock(0, 64, 0, placed)
 
 		// chestPairPositions resolves the ordered halves from either block.
-		l, r, paired := h.chestPairPositions(0, 64, 0, placed)
+		l, r, paired := h.chestPairPositions(0, 0, 64, 0, placed)
 		if !paired || l != (blockPos{0, 64, 0}) || r != (blockPos{1, 64, 0}) {
 			t.Fatalf("pair from left: %v %v paired=%v", l, r, paired)
 		}
-		l, r, paired = h.chestPairPositions(1, 64, 0, w.At(1, 64, 0))
+		l, r, paired = h.chestPairPositions(0, 1, 64, 0, w.At(1, 64, 0))
 		if !paired || l != (blockPos{0, 64, 0}) || r != (blockPos{1, 64, 0}) {
 			t.Fatalf("pair from right: %v %v paired=%v", l, r, paired)
 		}
 
 		// Breaking the right half reverts the left half to a single chest.
 		h.setBlock(h.playersRef, blockPos{1, 64, 0}, worldgen.Air)
-		h.spillContainer(h.playersRef, 1, 64, 0, worldgen.Air)
+		h.spillContainer(h.playersRef, 0, 1, 64, 0, worldgen.Air)
 		if got := chestType(w.At(0, 64, 0)); got != "single" {
 			t.Fatalf("survivor chest type %q, want single after partner broke", got)
 		}
@@ -100,14 +100,14 @@ func TestDoubleChestContentsAndBreak(t *testing.T) {
 		lc, rc := &chest{}, &chest{}
 		lc.slots[3] = invStack{item: 10, count: 7}  // left has items
 		rc.slots[5] = invStack{item: 20, count: 12} // right has items
-		h.chests[left], h.chests[right] = lc, rc
+		h.chests[simPos{blockPos: left}], h.chests[simPos{blockPos: right}] = lc, rc
 
 		// Opening self-heals them into a pair WITHOUT touching contents.
-		l, r, ok := h.formChestPair(left.x, left.y, left.z, w.At(left.x, left.y, left.z))
+		l, r, ok := h.formChestPair(0, left.x, left.y, left.z, w.At(left.x, left.y, left.z))
 		if !ok || l != left || r != right {
 			t.Fatalf("formChestPair: %v %v ok=%v", l, r, ok)
 		}
-		if h.chests[left].slots[3].count != 7 || h.chests[right].slots[5].count != 12 {
+		if h.chests[simPos{blockPos: left}].slots[3].count != 7 || h.chests[simPos{blockPos: right}].slots[5].count != 12 {
 			t.Fatal("pairing altered chest contents")
 		}
 		if chestType(w.At(left.x, left.y, left.z)) != "left" || chestType(w.At(right.x, right.y, right.z)) != "right" {
@@ -117,11 +117,11 @@ func TestDoubleChestContentsAndBreak(t *testing.T) {
 		// Break the RIGHT half: its items spill (storage deleted), the LEFT half
 		// keeps its items and reverts to a single chest.
 		h.setBlock(h.playersRef, right, worldgen.Air)
-		h.spillContainer(h.playersRef, right.x, right.y, right.z, worldgen.Air)
-		if h.chests[right] != nil {
+		h.spillContainer(h.playersRef, 0, right.x, right.y, right.z, worldgen.Air)
+		if h.chests[simPos{blockPos: right}] != nil {
 			t.Error("broken half's storage not cleared")
 		}
-		if h.chests[left] == nil || h.chests[left].slots[3].count != 7 {
+		if h.chests[simPos{blockPos: left}] == nil || h.chests[simPos{blockPos: left}].slots[3].count != 7 {
 			t.Error("survivor lost its contents")
 		}
 		if chestType(w.At(left.x, left.y, left.z)) != "single" {
@@ -138,8 +138,8 @@ func TestDoubleChestWindowSlots(t *testing.T) {
 		lc, rc := &chest{}, &chest{}
 		lc.slots[0] = invStack{item: 1, count: 5}  // top-left corner
 		rc.slots[26] = invStack{item: 2, count: 9} // bottom-right corner
-		h.chests[left], h.chests[right] = lc, rc
-		tr.winID, tr.winPos, tr.winPos2, tr.winKind = 7, left, right, winDoubleChest
+		h.chests[simPos{blockPos: left}], h.chests[simPos{blockPos: right}] = lc, rc
+		tr.winID, tr.winPos, tr.winPos2, tr.winKind = 7, simPos{blockPos: left}, simPos{blockPos: right}, winDoubleChest
 
 		// Slot 0 → left[0]; slot 53 → right[26]; slot 81 → hotbar 0.
 		if ptr, _ := h.winSlotPtr(tr, 0); ptr == nil || ptr.item != 1 {

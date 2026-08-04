@@ -84,7 +84,7 @@ func (h *hub) conduitActiveBlocks(dim int, pos blockPos) int {
 // where they were placed is both cheaper and more complete than scanning
 // blocks around players looking for them.
 func (h *hub) noteConduitBlock(dim int, pos blockPos, state uint32) {
-	key := simPos{dim: dim, pos: pos}
+	key := simPos{dim: dim, blockPos: pos}
 	if state == conduitState {
 		if h.conduits == nil {
 			h.conduits = map[simPos]bool{}
@@ -99,20 +99,20 @@ func (h *hub) noteConduitBlock(dim int, pos blockPos, state uint32) {
 // care. Anything whose block has gone is forgotten as it is found.
 func (h *hub) updateConduits(players map[int32]*tracked) {
 	for key := range h.conduits {
-		if h.worldFor(key.dim).At(key.pos.x, key.pos.y, key.pos.z) != conduitState {
+		if h.worldFor(key.dim).At(key.x, key.y, key.z) != conduitState {
 			delete(h.conduits, key) // mined out, or the position was never one
 			continue
 		}
 		near := false
 		for _, t := range players {
 			if t.dim == key.dim && !t.dead &&
-				dist3(t.x, t.y, t.z, float64(key.pos.x), float64(key.pos.y), float64(key.pos.z)) <= conduitWakeRange {
+				dist3(t.x, t.y, t.z, float64(key.x), float64(key.y), float64(key.z)) <= conduitWakeRange {
 				near = true
 				break
 			}
 		}
 		if near {
-			h.runConduit(players, key.dim, key.pos)
+			h.runConduit(players, key.dim, key.blockPos)
 		}
 	}
 }

@@ -14,7 +14,7 @@ func chestSetup() (*hub, map[int32]*tracked, *tracked, *chest) {
 	players[1] = pl
 	h.world.SetBlock(10, 70, 10, chestStateMin+1) // a placed chest (default state)
 	h.openChest(pl, 10, 70, 10)
-	return h, players, pl, h.chests[blockPos{10, 70, 10}]
+	return h, players, pl, h.chests[simPos{blockPos: blockPos{10, 70, 10}}]
 }
 
 func TestChestStoresAcrossReopen(t *testing.T) {
@@ -42,7 +42,7 @@ func TestChestStoresAcrossReopen(t *testing.T) {
 		t.Fatalf("window should be closed: %d/%d", pl.winID, pl.winKind)
 	}
 	h.openChest(pl, 10, 70, 10)
-	c2 := h.chests[blockPos{10, 70, 10}]
+	c2 := h.chests[simPos{blockPos: blockPos{10, 70, 10}}]
 	if c2 != c || c2.slots[5].count != 4 {
 		t.Fatalf("chest must keep contents across reopen, got %+v", c2.slots[5])
 	}
@@ -77,7 +77,7 @@ func TestChestSpillsOnBreak(t *testing.T) {
 	if len(h.items)-before != 2 {
 		t.Fatalf("breaking the chest should spill 2 stacks, spawned %d", len(h.items)-before)
 	}
-	if h.chests[blockPos{10, 70, 10}] != nil {
+	if h.chests[simPos{blockPos: blockPos{10, 70, 10}}] != nil {
 		t.Fatal("chest state should be forgotten after the break")
 	}
 }
@@ -88,7 +88,7 @@ func TestChestNotSpilledByOwnStateChange(t *testing.T) {
 	h.closeWindow(players, pl)
 	// A chest→chest state change (e.g. waterlogged flag) must NOT spill.
 	h.onBlock(players, evBlock{x: 10, y: 70, z: 10, state: chestStateMin})
-	if h.chests[blockPos{10, 70, 10}] == nil {
+	if h.chests[simPos{blockPos: blockPos{10, 70, 10}}] == nil {
 		t.Fatal("chest must survive a same-block state change")
 	}
 }
@@ -96,14 +96,14 @@ func TestChestNotSpilledByOwnStateChange(t *testing.T) {
 func TestContainerStoreChestRoundTrip(t *testing.T) {
 	path := t.TempDir() + "/containers.json"
 	s := newContainerStore(path)
-	in := map[blockPos]*chest{{-4, 65, 900}: {}}
-	in[blockPos{-4, 65, 900}].slots[0] = invStack{item: 1, count: 64}
-	in[blockPos{-4, 65, 900}].slots[26] = invStack{item: itemByName["wheat_seeds"], count: 7}
+	in := map[simPos]*chest{{blockPos: blockPos{-4, 65, 900}}: {}}
+	in[simPos{blockPos: blockPos{-4, 65, 900}}].slots[0] = invStack{item: 1, count: 64}
+	in[simPos{blockPos: blockPos{-4, 65, 900}}].slots[26] = invStack{item: itemByName["wheat_seeds"], count: 7}
 	s.recordChests(in)
 	s.flush()
 
 	got := newContainerStore(path).loadChests()
-	c := got[blockPos{-4, 65, 900}]
+	c := got[simPos{blockPos: blockPos{-4, 65, 900}}]
 	if c == nil {
 		t.Fatal("chest not restored")
 	}

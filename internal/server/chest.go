@@ -53,14 +53,14 @@ func (evOpenChest) isHubEvent() {}
 // openChest opens the chest window at a block position for a player. A chest
 // that is half of a pair opens the combined Large Chest instead.
 func (h *hub) openChest(t *tracked, x, y, z int) {
-	state := h.world.At(x, y, z)
-	if left, right, paired := h.chestPairPositions(x, y, z, state); paired {
+	state := h.worldFor(t.dim).At(x, y, z)
+	if left, right, paired := h.chestPairPositions(t.dim, x, y, z, state); paired {
 		h.openDoubleChest(t, left, right)
 		return
 	}
 	// Self-heal chests placed before pairing existed: two adjacent singles on a
 	// connect side become a pair on first open. Contents are untouched.
-	if left, right, ok := h.formChestPair(x, y, z, state); ok {
+	if left, right, ok := h.formChestPair(t.dim, x, y, z, state); ok {
 		h.openDoubleChest(t, left, right)
 		return
 	}
@@ -70,11 +70,15 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 	c := h.chests[pos]
 	if c == nil {
 		c = &chest{}
-		h.fillStructureChest(pos, c) // a generated structure chest fills on first open
+		if pos.dim == dimOverworld {
+			// Structure loot is a pure function of the OVERWORLD generator, so a
+			// Nether chest at the same coordinates must not inherit a dungeon's.
+			h.fillStructureChest(pos.blockPos, c)
+		}
 		h.chests[pos] = c
 	}
 	h.nextWin++
@@ -109,16 +113,16 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // storage and the block there is no longer that container, the contents
 // scatter as item drops and the state is forgotten. Anyone still viewing it
 // gets a resync on their next click (stale window id path).
-func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState uint32) {
-	h.spillJukebox(players, x, y, z, newState)
-	h.spillCampfire(players, x, y, z, newState)
-	h.spillLectern(players, x, y, z, newState)
-	h.spillShelf(players, x, y, z, newState)
-	pos := blockPos{x, y, z}
+func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
+	h.spillJukebox(players, dim, x, y, z, newState)
+	h.spillCampfire(players, dim, x, y, z, newState)
+	h.spillLectern(players, dim, x, y, z, newState)
+	h.spillShelf(players, dim, x, y, z, newState)
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	spill := func(slots []invStack) {
 		for _, st := range slots {
 			if st.item != 0 && st.count > 0 {
-				if it := h.spawnItem(players, st.item, st.count, float64(x)+0.5, float64(y), float64(z)+0.5); it != nil {
+				if it := h.spawnItemIn(players, dim, st.item, st.count, float64(x)+0.5, float64(y), float64(z)+0.5); it != nil {
 					it.dmg = st.dmg
 					it.ench = st.ench
 					it.mapID = st.mapID
@@ -132,7 +136,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, x, y, z int, newState u
 	}
 	if !isChestBlock(newState) {
 		// A removed chest half releases its partner back to a single chest.
-		h.unpairChestNeighbors(players, x, y, z)
+		h.unpairChestNeighbors(players, dim, x, y, z)
 		if c := h.chests[pos]; c != nil {
 			spill(c.slots[:])
 			delete(h.chests, pos)

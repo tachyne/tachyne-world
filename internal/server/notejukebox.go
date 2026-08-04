@@ -245,10 +245,10 @@ func (h *hub) onUseJukebox(players map[int32]*tracked, e evUseJukebox) {
 	if t == nil || t.inv == nil {
 		return
 	}
-	pos := blockPos{e.x, e.y, e.z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}
 	jb := h.jukeboxes[pos]
 	if jb != nil && jb.disc.count > 0 { // eject
-		h.ejectJukebox(players, t.dim, pos, jb)
+		h.ejectJukebox(players, pos, jb)
 		return
 	}
 	st := t.inv.slots[e.slot]
@@ -273,14 +273,14 @@ func (h *hub) onUseJukebox(players map[int32]*tracked, e evUseJukebox) {
 }
 
 // ejectJukebox pops the disc and stops the music.
-func (h *hub) ejectJukebox(players map[int32]*tracked, dim int, pos blockPos, jb *jukebox) {
+func (h *hub) ejectJukebox(players map[int32]*tracked, pos simPos, jb *jukebox) {
 	delete(h.jukeboxes, pos)
-	if it := h.spawnItem(players, jb.disc.item, 1,
+	if it := h.spawnItemIn(players, pos.dim, jb.disc.item, 1,
 		float64(pos.x)+0.5, float64(pos.y)+1.01, float64(pos.z)+0.5); it != nil {
 		it.mapID = jb.disc.mapID
 	}
-	h.setBlockLive(players, dim, pos.x, pos.y, pos.z, jukeboxState(false))
-	h.toNearbyEv(players, dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
+	h.setBlockLive(players, pos.dim, pos.x, pos.y, pos.z, jukeboxState(false))
+	h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 		Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
 }
 
@@ -300,17 +300,17 @@ func (h *hub) jukeboxTick(players map[int32]*tracked) {
 }
 
 // spillJukebox runs from spillContainer: a broken jukebox drops its disc.
-func (h *hub) spillJukebox(players map[int32]*tracked, x, y, z int, newState uint32) {
-	pos := blockPos{x, y, z}
+func (h *hub) spillJukebox(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	jb := h.jukeboxes[pos]
 	if jb == nil || isJukebox(newState) {
 		return
 	}
 	delete(h.jukeboxes, pos)
-	if it := h.spawnItem(players, jb.disc.item, 1,
+	if it := h.spawnItemIn(players, dim, jb.disc.item, 1,
 		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5); it != nil {
 		it.mapID = jb.disc.mapID
 	}
-	h.toNearbyEv(players, 0, float64(x), float64(z), attachproto.WorldFX{
+	h.toNearbyEv(players, dim, float64(x), float64(z), attachproto.WorldFX{
 		Event: worldEventJukeboxStop, X: x, Y: y, Z: z})
 }

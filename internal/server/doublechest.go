@@ -58,15 +58,16 @@ func connectedDir(facing, ctype string) (string, bool) {
 // chestPairPositions returns the ordered (left, right) block positions of the
 // double chest that (x,y,z) belongs to, or paired=false for a single chest. It
 // verifies the partner is a matching chest with the complementary type.
-func (h *hub) chestPairPositions(x, y, z int, state uint32) (left, right blockPos, paired bool) {
+func (h *hub) chestPairPositions(dim, x, y, z int, state uint32) (left, right blockPos, paired bool) {
+	w := h.worldFor(dim)
 	facing, ctype := chestFacingType(state)
 	dir, ok := connectedDir(facing, ctype)
-	if !ok {
+	if !ok || w == nil {
 		return blockPos{}, blockPos{}, false
 	}
 	d := horizDelta[dir]
 	pp := blockPos{x + d[0], y + d[1], z + d[2]}
-	ps := h.world.At(pp.x, pp.y, pp.z)
+	ps := w.At(pp.x, pp.y, pp.z)
 	if chestBlockBase(ps) != chestBlockBase(state) {
 		return blockPos{}, blockPos{}, false // partner gone or mismatched
 	}
@@ -86,9 +87,10 @@ func (h *hub) chestPairPositions(x, y, z int, state uint32) (left, right blockPo
 // self-heals worlds whose chests were placed before pairing existed (two
 // adjacent singles on a connect side — a state vanilla never produces). No-op
 // (ok=false) for a chest that is already typed or has no eligible neighbour.
-func (h *hub) formChestPair(x, y, z int, state uint32) (left, right blockPos, ok bool) {
+func (h *hub) formChestPair(dim, x, y, z int, state uint32) (left, right blockPos, ok bool) {
+	w := h.worldFor(dim)
 	info, iok := worldgen.InfoForState(state)
-	if !iok || !isChestBlock(state) || !info.HasProperty("type") {
+	if !iok || w == nil || !isChestBlock(state) || !info.HasProperty("type") {
 		return blockPos{}, blockPos{}, false
 	}
 	facing, ctype := chestFacingType(state)
@@ -100,7 +102,7 @@ func (h *hub) formChestPair(x, y, z int, state uint32) (left, right blockPos, ok
 	try := func(side, selfType, partnerType string) (blockPos, blockPos, bool) {
 		d := horizDelta[horizSide(side, facing)]
 		pp := blockPos{x + d[0], y + d[1], z + d[2]}
-		ps := h.world.At(pp.x, pp.y, pp.z)
+		ps := w.At(pp.x, pp.y, pp.z)
 		if chestBlockBase(ps) != base {
 			return blockPos{}, blockPos{}, false
 		}
@@ -108,8 +110,8 @@ func (h *hub) formChestPair(x, y, z int, state uint32) (left, right blockPos, ok
 			return blockPos{}, blockPos{}, false
 		}
 		pinfo, _ := worldgen.InfoForState(ps)
-		h.setBlock(h.playersRef, self, worldgen.SetProperty(info, state, "type", selfType))
-		h.setBlock(h.playersRef, pp, worldgen.SetProperty(pinfo, ps, "type", partnerType))
+		h.setBlockAt(h.playersRef, dim, self, worldgen.SetProperty(info, state, "type", selfType))
+		h.setBlockAt(h.playersRef, dim, pp, worldgen.SetProperty(pinfo, ps, "type", partnerType))
 		if selfType == "left" {
 			return self, pp, true
 		}
@@ -131,10 +133,12 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
-	for _, pos := range [2]blockPos{left, right} {
+	for _, pos := range [2]simPos{{dim: t.dim, blockPos: left}, {dim: t.dim, blockPos: right}} {
 		if h.chests[pos] == nil {
 			c := &chest{}
-			h.fillStructureChest(pos, c)
+			if pos.dim == dimOverworld {
+				h.fillStructureChest(pos.blockPos, c)
+			}
 			h.chests[pos] = c
 		}
 	}
@@ -142,7 +146,9 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winPos, t.winPos2, t.winKind = h.nextWin, left, right, winDoubleChest
+	t.winID, t.winKind = h.nextWin, winDoubleChest
+	t.winPos = simPos{dim: t.dim, blockPos: left}
+	t.winPos2 = simPos{dim: t.dim, blockPos: right}
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
 	h.sendDoubleChestWindow(t)
 	t.p.trySendEv(soundEv("minecraft:block.chest.open", sndBlock,
@@ -154,7 +160,7 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 func (h *hub) sendDoubleChestWindow(t *tracked) {
 	t.inv.stateId++
 	slots := make([]attachproto.ItemStack, 0, 90)
-	for _, pos := range [2]blockPos{t.winPos, t.winPos2} {
+	for _, pos := range [2]simPos{t.winPos, t.winPos2} {
 		c := h.chests[pos]
 		for i := 0; i < 27; i++ {
 			if c != nil {
@@ -229,11 +235,15 @@ func (s *Server) setPartnerChest(p *player, pos blockPos, ns uint32) {
 
 // unpairChestNeighbors reverts any chest that was paired with (x,y,z) back to a
 // single chest — called from the hub when the block there stops being a chest.
-func (h *hub) unpairChestNeighbors(players map[int32]*tracked, x, y, z int) {
+func (h *hub) unpairChestNeighbors(players map[int32]*tracked, dim, x, y, z int) {
+	w := h.worldFor(dim)
+	if w == nil {
+		return
+	}
 	for dir, d := range horizDelta {
 		_ = dir
 		np := blockPos{x + d[0], y + d[1], z + d[2]}
-		ns := h.world.At(np.x, np.y, np.z)
+		ns := w.At(np.x, np.y, np.z)
 		if !isChestBlock(ns) {
 			continue
 		}
@@ -245,7 +255,7 @@ func (h *hub) unpairChestNeighbors(players map[int32]*tracked, x, y, z int) {
 		pd := horizDelta[cd]
 		if np.x+pd[0] == x && np.y+pd[1] == y && np.z+pd[2] == z {
 			info, _ := worldgen.InfoForState(ns)
-			h.setBlock(players, np, worldgen.SetProperty(info, ns, "type", "single"))
+			h.setBlockAt(players, dim, np, worldgen.SetProperty(info, ns, "type", "single"))
 		}
 	}
 }

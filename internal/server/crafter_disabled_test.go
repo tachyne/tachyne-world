@@ -73,10 +73,10 @@ func TestCrafterSlotToggle(t *testing.T) {
 	pos := blockPos{2, 70, 2}
 	c := &bin{slots: make([]invStack, 9)}
 	c.slots[5] = invStack{item: int32(itemByName["stone"]), count: 1}
-	h.bins[pos] = c
+	h.bins[simPos{blockPos: pos}] = c
 
 	pl := testTracked()
-	pl.winKind, pl.winPos, pl.winID = winCrafter, pos, 3
+	pl.winKind, pl.winPos, pl.winID = winCrafter, simPos{blockPos: pos}, 3
 	players := map[int32]*tracked{pl.p.eid: pl}
 
 	// Disable an empty slot (state=false = disable).
@@ -119,8 +119,8 @@ func TestCrafterDisabledPersists(t *testing.T) {
 	c.disabled[8] = true
 
 	st := newContainerStore(t.TempDir() + "/containers.json")
-	st.recordBins(map[blockPos]*bin{pos: c})
-	got := st.loadBins()[pos]
+	st.recordBins(map[simPos]*bin{{blockPos: pos}: c})
+	got := st.loadBins()[simPos{blockPos: pos}]
 	if got == nil {
 		t.Fatal("bin not persisted")
 	}

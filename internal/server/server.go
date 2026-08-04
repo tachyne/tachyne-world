@@ -428,7 +428,7 @@ func (s *Server) Serve() error {
 				s.hub.rods[blockPos{x, y, z}] = struct{}{}
 			}
 			if state == beaconState { // beacons rebuild from edits; powers re-attach from containers
-				s.hub.beacons[blockPos{x, y, z}] = &beacon{}
+				s.hub.beacons[simPos{blockPos: blockPos{x, y, z}}] = &beacon{}
 			}
 			s.hub.sculkIndexOnBlockChange(x, y, z, state) // sculk listener/catalyst POI sets
 		})

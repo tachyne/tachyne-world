@@ -27,9 +27,9 @@ func TestDispenserBehaviors(t *testing.T) {
 		w.SetBlock(pos.x, pos.y, pos.z, state)
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = invStack{item: item, count: 3, dmg: dmg}
-		h.bins[pos] = b
+		h.bins[simPos{blockPos: pos}] = b
 		h.arrows = map[int32]*arrowEntity{} // isolate the projectile count
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		return &b.slots[0]
 	}
 

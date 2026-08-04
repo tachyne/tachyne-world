@@ -118,7 +118,7 @@ func projectileSpeed(a *arrowEntity) float64 {
 // breakPotByProjectile shatters a decorated pot, spilling what it held.
 func (h *hub) breakPotByProjectile(players map[int32]*tracked, dim int, pos blockPos) {
 	state := h.worldFor(dim).At(pos.x, pos.y, pos.z)
-	h.spillContainer(players, pos.x, pos.y, pos.z, worldgen.Air)
+	h.spillContainer(players, dim, pos.x, pos.y, pos.z, worldgen.Air)
 	h.setBlockAt(players, dim, pos, worldgen.Air)
 	h.dropLoose(players, dim, pos, state)
 	h.playSoundDim(players, dim, "minecraft:block.decorated_pot.shatter", sndBlock,

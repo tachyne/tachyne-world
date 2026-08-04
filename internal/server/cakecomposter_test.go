@@ -16,7 +16,7 @@ func TestCakeIsEatenSliceBySlice(t *testing.T) {
 	pos := blockPos{0, 180, 0}
 	h.worldFor(0).SetBlock(pos.x, pos.y, pos.z, cakeBase)
 
-	if got := h.analogSignal(pos); got != 14 {
+	if got := h.analogSignal(simPos{blockPos: pos}); got != 14 {
 		t.Fatalf("a whole cake should read 14, got %d", got)
 	}
 	pl.food = maxFood
@@ -32,7 +32,7 @@ func TestCakeIsEatenSliceBySlice(t *testing.T) {
 		if !ok || bites != i+1 {
 			t.Fatalf("after bite %d the cake is %v/%d", i+1, ok, bites)
 		}
-		if got, want := h.analogSignal(pos), (7-(i+1))*2; got != want {
+		if got, want := h.analogSignal(simPos{blockPos: pos}), (7-(i+1))*2; got != want {
 			t.Fatalf("comparator reads %d after bite %d, want %d", got, i+1, want)
 		}
 		pl.food = 10 // hungry again for the next slice
@@ -93,7 +93,7 @@ func TestComposterFillsAndPaysOut(t *testing.T) {
 		if lvl != want {
 			t.Fatalf("after item %d the level is %d", want, lvl)
 		}
-		if got := h.analogSignal(pos); got != want {
+		if got := h.analogSignal(simPos{blockPos: pos}); got != want {
 			t.Fatalf("comparator reads %d at level %d", got, want)
 		}
 	}
@@ -142,7 +142,7 @@ func TestComparatorReadsNonContainers(t *testing.T) {
 	for _, c := range cases {
 		pos := blockPos{0, 180, 0}
 		w.SetBlock(pos.x, pos.y, pos.z, c.state)
-		if got := h.analogSignal(pos); got != c.want {
+		if got := h.analogSignal(simPos{blockPos: pos}); got != c.want {
 			t.Errorf("%s reads %d, want %d", c.name, got, c.want)
 		}
 	}
@@ -153,15 +153,15 @@ func TestJukeboxComparatorReadsTheSong(t *testing.T) {
 	h := newHub(world.New(1))
 	pos := blockPos{0, 180, 0}
 	h.worldFor(0).SetBlock(pos.x, pos.y, pos.z, jukeboxBase)
-	if got := h.analogSignal(pos); got != 0 {
+	if got := h.analogSignal(simPos{blockPos: pos}); got != 0 {
 		t.Fatalf("an empty jukebox reads %d", got)
 	}
-	h.jukeboxes[pos] = &jukebox{disc: invStack{item: int32(itemByName["music_disc_5"]), count: 1}}
-	if got := h.analogSignal(pos); got != 15 {
+	h.jukeboxes[simPos{blockPos: pos}] = &jukebox{disc: invStack{item: int32(itemByName["music_disc_5"]), count: 1}}
+	if got := h.analogSignal(simPos{blockPos: pos}); got != 15 {
 		t.Fatalf("disc 5 should read 15, got %d", got)
 	}
-	h.jukeboxes[pos] = &jukebox{disc: invStack{item: int32(itemByName["music_disc_13"]), count: 1}}
-	if got := h.analogSignal(pos); got != 1 {
+	h.jukeboxes[simPos{blockPos: pos}] = &jukebox{disc: invStack{item: int32(itemByName["music_disc_13"]), count: 1}}
+	if got := h.analogSignal(simPos{blockPos: pos}); got != 1 {
 		t.Fatalf("disc 13 should read 1, got %d", got)
 	}
 }

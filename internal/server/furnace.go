@@ -114,7 +114,7 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 	kind, _ := furnaceKindOf(h.worldFor(t.dim).At(x, y, z))
 	f := h.furnaces[pos]
 	if f == nil {
@@ -193,7 +193,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 		}
 		if f.resync > 0 {
 			if f.resync--; f.resync == 0 {
-				h.broadcastBlock(players, pos.x, pos.y, pos.z, h.world.Block(pos.x, pos.y, pos.z))
+				h.broadcastBlockIn(players, pos.dim, pos.x, pos.y, pos.z, h.worldFor(pos.dim).Block(pos.x, pos.y, pos.z))
 			}
 		}
 		// Idle, empty, unlit, unwatched furnaces are dropped from the tick set.
@@ -240,7 +240,7 @@ func (h *hub) reconcileFurnaceBlocks() {
 				base = smokerStateMin
 			}
 			wx, wz := int(c[0])*16+e.LX, int(c[1])*16+e.LZ
-			f := h.furnaces[blockPos{wx, e.Y, wz}]
+			f := h.furnaces[simPos{blockPos: blockPos{wx, e.Y, wz}}] // this pass walks the overworld only
 			if f != nil {
 				f.kind = kind // persisted furnaces re-learn their block's kind
 			}
@@ -262,8 +262,12 @@ func (h *hub) reconcileFurnaceBlocks() {
 }
 
 // setFurnaceLit flips the furnace block's lit property and broadcasts it.
-func (h *hub) setFurnaceLit(players map[int32]*tracked, pos blockPos, lit bool) {
-	state := h.world.Block(pos.x, pos.y, pos.z)
+func (h *hub) setFurnaceLit(players map[int32]*tracked, pos simPos, lit bool) {
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return
+	}
+	state := w.Block(pos.x, pos.y, pos.z)
 	info, ok := worldgen.InfoForState(state)
 	if !ok || !info.HasProperty("lit") {
 		return
@@ -272,7 +276,7 @@ func (h *hub) setFurnaceLit(players map[int32]*tracked, pos blockPos, lit bool) 
 	if lit {
 		v = "true"
 	}
-	h.setBlock(players, pos, worldgen.SetProperty(info, state, "lit", v))
+	h.setBlockAt(players, pos.dim, pos.blockPos, worldgen.SetProperty(info, state, "lit", v))
 }
 
 // sendFurnaceBars pushes the progress-bar properties to the viewer — only the

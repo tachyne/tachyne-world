@@ -77,7 +77,7 @@ func (h *hub) turnFarmlandToDirt(players map[int32]*tracked, x, y, z int) {
 		if h.rules.DoTileDrops {
 			for _, d := range h.evalBlockLoot(lootCtx{state: above,
 				rng: h.rng.Intn, randf: h.rng.Float64}) {
-				h.spawnBlockDrop(players, d.item, d.count, x, y+1, z)
+				h.spawnBlockDrop(players, dimOverworld, d.item, d.count, x, y+1, z)
 			}
 		}
 		h.setBlock(players, blockPos{x, y + 1, z}, worldgen.Air)

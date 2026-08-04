@@ -84,19 +84,23 @@ func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count
 // an adjacent column whose surface sits at the break level (vanilla physics
 // would bounce the item onto it); only genuinely fall when no neighbour
 // catches it.
-func (h *hub) spawnBlockDrop(players map[int32]*tracked, item int32, count int, x, y, z int) {
-	if y-h.world.DropY(x, y, z) <= 2 {
-		h.spawnItem(players, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
+func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, count int, x, y, z int) {
+	w := h.worldFor(dim)
+	if w == nil {
+		return
+	}
+	if y-w.DropY(x, y, z) <= 2 {
+		h.spawnItemIn(players, dim, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
 		return
 	}
 	for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
 		nx, nz := x+d[0], z+d[1]
-		if rest := h.world.DropY(nx, y+1, nz); rest == y+1 || rest == y {
-			h.spawnItem(players, item, count, float64(nx)+0.5, float64(rest), float64(nz)+0.5)
+		if rest := w.DropY(nx, y+1, nz); rest == y+1 || rest == y {
+			h.spawnItemIn(players, dim, item, count, float64(nx)+0.5, float64(rest), float64(nz)+0.5)
 			return
 		}
 	}
-	h.spawnItem(players, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
+	h.spawnItemIn(players, dim, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
 }
 
 // updateItems despawns dropped items past their lifetime and merges nearby

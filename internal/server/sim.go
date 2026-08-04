@@ -32,9 +32,14 @@ func (h *hub) inWorldYIn(dim, y int) bool {
 // The dimension is part of the key because the same x/y/z exists in all three
 // worlds: without it, a Nether update rewrites the overworld.
 type simPos struct {
-	dim int
-	pos blockPos
+	dim      int
+	blockPos // the block itself, embedded so a simPos reads like one: .x/.y/.z
 }
+
+// at returns another block in the same dimension as p — the common move when
+// a block entity reaches for a neighbour (the cell a hopper pulls from, the one
+// a dispenser faces) and must not stray into another world's copy of it.
+func (p simPos) at(b blockPos) simPos { return simPos{dim: p.dim, blockPos: b} }
 
 // schedule queues an OVERWORLD block update `delay` ticks from now.
 func (h *hub) schedule(pos blockPos, delay uint64) { h.scheduleIn(0, pos, delay) }
@@ -45,7 +50,7 @@ func (h *hub) scheduleIn(dim int, pos blockPos, delay uint64) {
 		return // don't simulate blocks outside this pod's region
 	}
 	due := h.tick.Load() + delay
-	h.pending[due] = append(h.pending[due], simPos{dim: dim, pos: pos})
+	h.pending[due] = append(h.pending[due], simPos{dim: dim, blockPos: pos})
 }
 
 // scheduleAround queues a block and its six neighbours in the overworld.
@@ -82,7 +87,7 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 			continue
 		}
 		seen[sp] = struct{}{}
-		h.processUpdate(players, sp.dim, sp.pos)
+		h.processUpdate(players, sp.dim, sp.blockPos)
 	}
 }
 
@@ -129,9 +134,7 @@ func (h *hub) setBlock(players map[int32]*tracked, pos blockPos, state uint32) {
 func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
 	h.worldFor(dim).SetBlock(pos.x, pos.y, pos.z, state)
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
-	if dim == 0 {
-		h.spillContainer(players, pos.x, pos.y, pos.z, state)
-	}
+	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
 }
 
 // broadcastBlock sends a Block Update to overworld players tracking the chunk.

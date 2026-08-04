@@ -18,7 +18,7 @@ func enchSetup(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	pl.x, pl.z = float64(lx), float64(lz)
 	pl.y = float64(h.world.SurfaceFeet(lx, lz))
 	pl.winID, pl.winKind = 7, winEnchant
-	pl.winPos = blockPos{lx, int(pl.y), lz}
+	pl.winPos = simPos{blockPos: blockPos{lx, int(pl.y), lz}}
 	return h, pl, map[int32]*tracked{1: pl}
 }
 

@@ -29,7 +29,7 @@ func TestDesertTempleChestLoots(t *testing.T) {
 		t.Skip("no desert temple in range")
 	}
 	c := &chest{}
-	h.chests[chestPos] = c
+	h.chests[simPos{blockPos: chestPos}] = c
 	h.fillStructureChest(chestPos, c)
 	items := 0
 	for _, s := range c.slots {

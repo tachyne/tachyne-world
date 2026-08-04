@@ -77,8 +77,8 @@ func TestMossSpeedsTheSnifferEgg(t *testing.T) {
 
 	h.scheduleSnifferEgg(0, plain.x, plain.y, plain.z)
 	h.scheduleSnifferEgg(0, mossy.x, mossy.y, mossy.z)
-	slow := h.snifferEggs[simPos{dim: 0, pos: plain}]
-	fast := h.snifferEggs[simPos{dim: 0, pos: mossy}]
+	slow := h.snifferEggs[simPos{dim: 0, blockPos: plain}]
+	fast := h.snifferEggs[simPos{dim: 0, blockPos: mossy}]
 	if fast >= slow {
 		t.Errorf("mossy egg due at %d, plain at %d — moss should be sooner", fast, slow)
 	}

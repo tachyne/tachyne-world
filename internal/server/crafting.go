@@ -745,7 +745,7 @@ func (h *hub) releaseContainerView(t *tracked) {
 			f.viewer = 0
 		}
 	}
-	t.winKind, t.winPos = winPlayer, blockPos{}
+	t.winKind, t.winPos = winPlayer, simPos{}
 }
 
 // reclaimCraft returns grid + cursor contents to the inventory, dropping what

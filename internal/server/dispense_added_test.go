@@ -20,7 +20,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		w.SetBlock(pos.x, pos.y, pos.z, state)
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = st
-		h.bins[pos] = b
+		h.bins[simPos{blockPos: pos}] = b
 		return &b.slots[0]
 	}
 
@@ -29,7 +29,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		for _, egg := range []int32{itemBlueEgg, itemBrownEgg} {
 			h.arrows = map[int32]*arrowEntity{}
 			load(invStack{item: egg, count: 1})
-			h.ejectFromBin(h.playersRef, pos, state)
+			h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 			if len(h.arrows) != 1 {
 				t.Fatalf("egg %d: %d projectiles, want 1", egg, len(h.arrows))
 			}
@@ -38,7 +38,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		// A spectral arrow flies as an ordinary (non-tipped) arrow.
 		h.arrows = map[int32]*arrowEntity{}
 		load(invStack{item: itemSpectralArr, count: 1})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if len(h.arrows) != 1 {
 			t.Fatalf("spectral arrow: %d projectiles, want 1", len(h.arrows))
 		}
@@ -51,7 +51,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		// A tipped arrow flies and carries its potion's effects onto a hit.
 		h.arrows = map[int32]*arrowEntity{}
 		load(invStack{item: itemTippedArrow, count: 1, potion: potPoison})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if len(h.arrows) != 1 {
 			t.Fatalf("tipped arrow: %d projectiles, want 1", len(h.arrows))
 		}
@@ -64,7 +64,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		// The powder-snow bucket pours a powder-snow block and empties to a bucket.
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
 		s := load(invStack{item: itemPowderBucket, count: 1})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if w.At(front.x, front.y, front.z) != powderSnowBlock {
 			t.Errorf("powder-snow bucket should place powder snow ahead")
 		}
@@ -76,7 +76,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		w.SetBlock(front.x, front.y, front.z, worldgen.Air)
 		before := len(h.armorStands)
 		s = load(invStack{item: itemArmorStand, count: 1})
-		h.ejectFromBin(h.playersRef, pos, state)
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
 		if len(h.armorStands) != before+1 {
 			t.Errorf("armor stand should spawn a stand: %d want %d", len(h.armorStands), before+1)
 		}

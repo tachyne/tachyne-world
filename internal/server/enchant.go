@@ -87,7 +87,7 @@ func (h *hub) openEnchantTable(t *tracked, x, y, z int) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
-	t.winID, t.winKind, t.winPos = h.nextWin, winEnchant, blockPos{x, y, z}
+	t.winID, t.winKind, t.winPos = h.nextWin, winEnchant, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuEnchantment), Title: "Enchant"})
 	h.sendEnchantWindow(t)
@@ -172,7 +172,11 @@ func enchMaxLvl(id int8) int8 {
 }
 
 // countBookshelves scans the vanilla 5×5 ring (two high) around the table.
-func (h *hub) countBookshelves(pos blockPos) int {
+func (h *hub) countBookshelves(pos simPos) int {
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return 0
+	}
 	n := 0
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
@@ -180,7 +184,7 @@ func (h *hub) countBookshelves(pos blockPos) int {
 				continue // only the outer ring counts
 			}
 			for dy := 0; dy <= 1; dy++ {
-				if h.world.At(pos.x+dx, pos.y+dy, pos.z+dz) == bookshelfState {
+				if w.At(pos.x+dx, pos.y+dy, pos.z+dz) == bookshelfState {
 					n++
 				}
 			}

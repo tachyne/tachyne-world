@@ -17,21 +17,21 @@ func TestDropperEjectsOnRisingEdge(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, dispEast(dropperMin))
 	pos := blockPos{x, y, z}
-	h.bins[pos] = &bin{slots: make([]invStack, 9)}
-	h.bins[pos].slots[3] = invStack{item: 35, count: 5} // some cobble mid-bin
+	h.bins[simPos{blockPos: pos}] = &bin{slots: make([]invStack, 9)}
+	h.bins[simPos{blockPos: pos}].slots[3] = invStack{item: 35, count: 5} // some cobble mid-bin
 	lever := setBoolProp(uint32((worldgen.BlockBase("lever") + 9)), "powered", false)
 	w.SetBlock(x, y, z-1, lever)
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
 	stepTicks(h, players, 8) // rising edge + vanilla's 4-tick dispense delay
-	if h.bins[pos].slots[3].count != 4 {
-		t.Fatalf("one item should eject on the rising edge, left %d", h.bins[pos].slots[3].count)
+	if h.bins[simPos{blockPos: pos}].slots[3].count != 4 {
+		t.Fatalf("one item should eject on the rising edge, left %d", h.bins[simPos{blockPos: pos}].slots[3].count)
 	}
 	if len(h.items) != 1 {
 		t.Fatalf("ejected item should be an entity, have %d", len(h.items))
 	}
 	// Held power: NO further ejection (edge, not level).
 	stepTicks(h, players, 20)
-	if h.bins[pos].slots[3].count != 4 {
+	if h.bins[simPos{blockPos: pos}].slots[3].count != 4 {
 		t.Fatal("held power must not re-eject")
 	}
 	// Off + on again: one more.
@@ -39,8 +39,8 @@ func TestDropperEjectsOnRisingEdge(t *testing.T) {
 	stepTicks(h, players, 8)
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
 	stepTicks(h, players, 8)
-	if h.bins[pos].slots[3].count != 3 {
-		t.Fatalf("second rising edge should eject again, left %d", h.bins[pos].slots[3].count)
+	if h.bins[simPos{blockPos: pos}].slots[3].count != 3 {
+		t.Fatalf("second rising edge should eject again, left %d", h.bins[simPos{blockPos: pos}].slots[3].count)
 	}
 }
 
@@ -48,13 +48,13 @@ func TestDispenserShootsArrows(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, dispEast(dispenserMin))
 	pos := blockPos{x, y, z}
-	h.bins[pos] = &bin{slots: make([]invStack, 9)}
-	h.bins[pos].slots[0] = invStack{item: itemArrowAmmo, count: 2}
+	h.bins[simPos{blockPos: pos}] = &bin{slots: make([]invStack, 9)}
+	h.bins[simPos{blockPos: pos}].slots[0] = invStack{item: itemArrowAmmo, count: 2}
 	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
 	h.scheduleAround(pos, 1)
 	stepTicks(h, players, 6) // rising edge (tick 1) + vanilla's 4-tick dispense delay
-	if h.bins[pos].slots[0].count != 1 {
-		t.Fatalf("arrow should be consumed, left %d", h.bins[pos].slots[0].count)
+	if h.bins[simPos{blockPos: pos}].slots[0].count != 1 {
+		t.Fatalf("arrow should be consumed, left %d", h.bins[simPos{blockPos: pos}].slots[0].count)
 	}
 	if len(h.arrows) != 1 {
 		t.Fatalf("dispensed arrow should fly, have %d arrow entities", len(h.arrows))
@@ -69,8 +69,8 @@ func TestHopperPullsAndPushes(t *testing.T) {
 	w.SetBlock(x, y-1, z, chestStateMin)
 	top, bot := &chest{}, &chest{}
 	top.slots[5] = invStack{item: 35, count: 3}
-	h.chests[blockPos{x, y + 1, z}] = top
-	h.chests[blockPos{x, y - 1, z}] = bot
+	h.chests[simPos{blockPos: blockPos{x, y + 1, z}}] = top
+	h.chests[simPos{blockPos: blockPos{x, y - 1, z}}] = bot
 	h.schedule(blockPos{x, y, z}, 1)
 	stepTicks(h, players, 8*7) // 7 cadences: 3 pulls + 3 pushes overlap
 	if top.slots[5].count != 0 && top.slots[5].item != 0 {
@@ -85,11 +85,11 @@ func TestHopperPausesWhenPowered(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, hopperMin)
 	pos := blockPos{x, y, z}
-	h.bins[pos] = &bin{slots: make([]invStack, 5)}
-	h.bins[pos].slots[0] = invStack{item: 35, count: 1}
+	h.bins[simPos{blockPos: pos}] = &bin{slots: make([]invStack, 5)}
+	h.bins[simPos{blockPos: pos}].slots[0] = invStack{item: 35, count: 1}
 	w.SetBlock(x, y-1, z, chestStateMin)
 	bot := &chest{}
-	h.chests[blockPos{x, y - 1, z}] = bot
+	h.chests[simPos{blockPos: blockPos{x, y - 1, z}}] = bot
 	w.SetBlock(x+1, y, z, worldgen.BlockBase("redstone_block")) // powered → disabled
 	h.schedule(pos, 1)
 	stepTicks(h, players, 24)
@@ -120,8 +120,8 @@ func TestHopperSucksItemEntities(t *testing.T) {
 	if len(h.items) != 0 {
 		t.Fatalf("hopper should vacuum the drop, %d items remain", len(h.items))
 	}
-	if c := h.bins[pos]; c == nil || c.slots[0].item != 35 || c.slots[0].count != 7 {
-		t.Fatalf("stack should land in the hopper: %+v", h.bins[pos])
+	if c := h.bins[simPos{blockPos: pos}]; c == nil || c.slots[0].item != 35 || c.slots[0].count != 7 {
+		t.Fatalf("stack should land in the hopper: %+v", h.bins[simPos{blockPos: pos}])
 	}
 }
 
@@ -132,7 +132,7 @@ func TestComparatorReadsContainer(t *testing.T) {
 	for i := 0; i < 27; i++ { // stuffed chest → signal 15
 		c.slots[i] = invStack{item: 35, count: 64}
 	}
-	h.chests[blockPos{x, y, z}] = c
+	h.chests[simPos{blockPos: blockPos{x, y, z}}] = c
 	info, _ := worldgen.InfoForState(uint32((worldgen.BlockBase("comparator") + 1)))
 	comp := worldgen.SetProperty(info, uint32((worldgen.BlockBase("comparator") + 1)), "facing", "west")
 	w.SetBlock(x+1, y, z, comp)

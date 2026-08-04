@@ -141,21 +141,21 @@ type savedStand struct {
 }
 
 // recordLecterns / loadLecterns persist lectern books + pages.
-func (s *containerStore) recordLecterns(ls map[blockPos]*lectern) {
+func (s *containerStore) recordLecterns(ls map[simPos]*lectern) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m.Lecterns = map[string]savedLectern{}
 	for pos, l := range ls {
-		s.m.Lecterns[posKey(pos)] = savedLectern{Item: packStack(l.book), Page: l.page}
+		s.m.Lecterns[simKey(pos)] = savedLectern{Item: packStack(l.book), Page: l.page}
 	}
 }
 
-func (s *containerStore) loadLecterns() map[blockPos]*lectern {
+func (s *containerStore) loadLecterns() map[simPos]*lectern {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*lectern{}
+	out := map[simPos]*lectern{}
 	for k, sv := range s.m.Lecterns {
-		if pos, ok := parsePosKey(k); ok {
+		if pos, ok := parseSimKey(k); ok {
 			out[pos] = &lectern{book: unpackStack(sv.Item), page: sv.Page}
 		}
 	}
@@ -163,7 +163,7 @@ func (s *containerStore) loadLecterns() map[blockPos]*lectern {
 }
 
 // recordShelves / loadShelves persist chiseled bookshelves.
-func (s *containerStore) recordShelves(m map[blockPos]*[6]invStack) {
+func (s *containerStore) recordShelves(m map[simPos]*[6]invStack) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m.Shelves = map[string][6]stackRow{}
@@ -172,16 +172,16 @@ func (s *containerStore) recordShelves(m map[blockPos]*[6]invStack) {
 		for i, st := range shelf {
 			rows[i] = packStack(st)
 		}
-		s.m.Shelves[posKey(pos)] = rows
+		s.m.Shelves[simKey(pos)] = rows
 	}
 }
 
-func (s *containerStore) loadShelves() map[blockPos]*[6]invStack {
+func (s *containerStore) loadShelves() map[simPos]*[6]invStack {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*[6]invStack{}
+	out := map[simPos]*[6]invStack{}
 	for k, rows := range s.m.Shelves {
-		if pos, ok := parsePosKey(k); ok {
+		if pos, ok := parseSimKey(k); ok {
 			var shelf [6]invStack
 			for i, r := range rows {
 				shelf[i] = unpackStack(r)
@@ -222,6 +222,42 @@ func (s *containerStore) loadStands(alloc func() int32) map[int32]*armorStand {
 }
 
 func posKey(p blockPos) string { return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z) }
+
+// simKey is posKey with the dimension in front — the key every block-entity
+// store now writes, in the same "dim:x,y,z" shape signs have always used. A key
+// without the prefix is a record from before the stores knew about dimensions,
+// and every one of those was written in the overworld.
+func simKey(p simPos) string { return fmt.Sprintf("%d:%d,%d,%d", p.dim, p.x, p.y, p.z) }
+
+// migrateSimKeys rewrites a store's legacy "x,y,z" keys into "0:x,y,z" in
+// place. Stores that only ever rewrite the entries they touch — the banner and
+// campfire render views — need this at load, or a build placed before the
+// dimension existed would go blank the moment its key stopped matching.
+func migrateSimKeys[T any](m map[string]T) {
+	for k, v := range m {
+		if strings.Contains(k, ":") {
+			continue
+		}
+		if pos, ok := parsePosKey(k); ok {
+			delete(m, k)
+			m[simKey(simPos{blockPos: pos})] = v
+		}
+	}
+}
+
+// parseSimKey reads either shape back.
+func parseSimKey(k string) (simPos, bool) {
+	dim := 0
+	if d, rest, ok := strings.Cut(k, ":"); ok {
+		n, err := strconv.Atoi(d)
+		if err != nil {
+			return simPos{}, false
+		}
+		dim, k = n, rest
+	}
+	pos, ok := parsePosKey(k)
+	return simPos{dim: dim, blockPos: pos}, ok
+}
 
 // containerRow is one sparse container slot: the slot index + the full
 // stackRow pack. NAMED for the same reason as stackRow — widening it is a
@@ -266,12 +302,12 @@ func newContainerStore(path string) *containerStore {
 
 // loadFurnaces reconstructs live furnace state from the last snapshot. Viewer
 // and bar-sync fields are transient and start zeroed.
-func (s *containerStore) loadFurnaces() map[blockPos]*furnace {
+func (s *containerStore) loadFurnaces() map[simPos]*furnace {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*furnace{}
+	out := map[simPos]*furnace{}
 	for k, sf := range s.m.Furnaces {
-		pos, ok := parsePosKey(k)
+		pos, ok := parseSimKey(k)
 		if !ok {
 			continue
 		}
@@ -288,12 +324,12 @@ func (s *containerStore) loadFurnaces() map[blockPos]*furnace {
 }
 
 // loadChests reconstructs chest storage from the last snapshot.
-func (s *containerStore) loadChests() map[blockPos]*chest {
+func (s *containerStore) loadChests() map[simPos]*chest {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*chest{}
+	out := map[simPos]*chest{}
 	for k, saved := range s.m.Chests {
-		pos, ok := parsePosKey(k)
+		pos, ok := parseSimKey(k)
 		if !ok {
 			continue
 		}
@@ -322,12 +358,12 @@ func (s *containerStore) loadItems() []savedItem {
 }
 
 // loadBins reconstructs dispenser/dropper/hopper storage from the snapshot.
-func (s *containerStore) loadBins() map[blockPos]*bin {
+func (s *containerStore) loadBins() map[simPos]*bin {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*bin{}
+	out := map[simPos]*bin{}
 	for k, saved := range s.m.Bins {
-		pos, ok := parsePosKey(k)
+		pos, ok := parseSimKey(k)
 		if !ok || saved.Size <= 0 || saved.Size > 27 {
 			continue
 		}
@@ -346,7 +382,7 @@ func (s *containerStore) loadBins() map[blockPos]*bin {
 }
 
 // recordBins replaces the in-memory bin snapshot (no write).
-func (s *containerStore) recordBins(bins map[blockPos]*bin) {
+func (s *containerStore) recordBins(bins map[simPos]*bin) {
 	snap := map[string]savedBin{}
 	for pos, b := range bins {
 		sb := savedBin{Size: len(b.slots)}
@@ -360,7 +396,7 @@ func (s *containerStore) recordBins(bins map[blockPos]*bin) {
 				sb.Disabled |= 1 << uint(i)
 			}
 		}
-		snap[posKey(pos)] = sb
+		snap[simKey(pos)] = sb
 	}
 	s.mu.Lock()
 	s.m.Bins = snap
@@ -368,7 +404,7 @@ func (s *containerStore) recordBins(bins map[blockPos]*bin) {
 }
 
 // recordChests replaces the in-memory chest snapshot (no write).
-func (s *containerStore) recordChests(chests map[blockPos]*chest) {
+func (s *containerStore) recordChests(chests map[simPos]*chest) {
 	snap := map[string][]containerRow{}
 	for pos, c := range chests {
 		var rows []containerRow
@@ -377,7 +413,7 @@ func (s *containerStore) recordChests(chests map[blockPos]*chest) {
 				rows = append(rows, slotRow(i, st))
 			}
 		}
-		snap[posKey(pos)] = rows
+		snap[simKey(pos)] = rows
 	}
 	s.mu.Lock()
 	s.m.Chests = snap
@@ -385,14 +421,14 @@ func (s *containerStore) recordChests(chests map[blockPos]*chest) {
 }
 
 // recordFurnaces replaces the in-memory furnace snapshot (no write).
-func (s *containerStore) recordFurnaces(furnaces map[blockPos]*furnace) {
+func (s *containerStore) recordFurnaces(furnaces map[simPos]*furnace) {
 	snap := map[string]savedFurnace{}
 	for pos, f := range furnaces {
 		sf := savedFurnace{BurnLeft: f.burnLeft, BurnMax: f.burnMax, Cook: f.cook, CookMax: f.cookMax}
 		for i, st := range f.slots {
 			sf.Slots[i] = [3]int32{st.item, int32(st.count), int32(st.dmg)}
 		}
-		snap[posKey(pos)] = sf
+		snap[simKey(pos)] = sf
 	}
 	s.mu.Lock()
 	s.m.Furnaces = snap
@@ -463,22 +499,22 @@ func (s *containerStore) recordPaintings(paintings map[int32]*painting) {
 }
 
 // recordJukeboxes snapshots jukebox discs (playback clocks reset on boot).
-func (s *containerStore) recordJukeboxes(jbs map[blockPos]*jukebox) {
+func (s *containerStore) recordJukeboxes(jbs map[simPos]*jukebox) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m.Jukeboxes = map[string]stackRow{}
 	for pos, jb := range jbs {
-		s.m.Jukeboxes[posKey(pos)] = packStack(jb.disc)
+		s.m.Jukeboxes[simKey(pos)] = packStack(jb.disc)
 	}
 }
 
 // loadJukeboxes restores held discs (not playing until re-inserted).
-func (s *containerStore) loadJukeboxes() map[blockPos]*jukebox {
+func (s *containerStore) loadJukeboxes() map[simPos]*jukebox {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := map[blockPos]*jukebox{}
+	out := map[simPos]*jukebox{}
 	for key, row := range s.m.Jukeboxes {
-		if pos, ok := parsePosKey(key); ok {
+		if pos, ok := parseSimKey(key); ok {
 			out[pos] = &jukebox{disc: unpackStack(row)}
 		}
 	}
@@ -487,22 +523,22 @@ func (s *containerStore) loadJukeboxes() map[blockPos]*jukebox {
 
 // recordBeacons snapshots each beacon's chosen powers (menu encoding:
 // mob_effect id + 1, 0 = none). The pyramid tier is recomputed live.
-func (s *containerStore) recordBeacons(bs map[blockPos]*beacon) {
+func (s *containerStore) recordBeacons(bs map[simPos]*beacon) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m.Beacons = map[string][2]int32{}
 	for pos, b := range bs {
-		s.m.Beacons[posKey(pos)] = [2]int32{b.primary, b.secondary}
+		s.m.Beacons[simKey(pos)] = [2]int32{b.primary, b.secondary}
 	}
 }
 
 // loadBeacons re-attaches saved powers to the beacons already rebuilt from
 // the world edits (a saved row without a live beacon is a stale ghost).
-func (s *containerStore) loadBeacons(bs map[blockPos]*beacon) {
+func (s *containerStore) loadBeacons(bs map[simPos]*beacon) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for key, row := range s.m.Beacons {
-		if pos, ok := parsePosKey(key); ok {
+		if pos, ok := parseSimKey(key); ok {
 			if b := bs[pos]; b != nil {
 				b.primary, b.secondary = row[0], row[1]
 			}
@@ -747,7 +783,7 @@ func parseHexUUIDs(ss []string) [][16]byte {
 func (s *containerStore) recordConduits(conduits map[simPos]bool) {
 	out := make([]string, 0, len(conduits))
 	for k := range conduits {
-		out = append(out, strconv.Itoa(k.dim)+","+posKey(k.pos))
+		out = append(out, strconv.Itoa(k.dim)+","+posKey(k.blockPos))
 	}
 	sort.Strings(out) // stable on disk, so an unchanged world writes an identical file
 	s.mu.Lock()
@@ -770,7 +806,7 @@ func (s *containerStore) loadConduits() map[simPos]bool {
 			continue
 		}
 		if pos, ok := parsePosKey(rest); ok {
-			out[simPos{dim: d, pos: pos}] = true
+			out[simPos{dim: d, blockPos: pos}] = true
 		}
 	}
 	return out

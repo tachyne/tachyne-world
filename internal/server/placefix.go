@@ -103,7 +103,7 @@ func (s *Server) usePot(p *player, x, y, z int, state uint32, seq int32) bool {
 	}
 	if plant, ok := plantBlockByPotted[state]; ok {
 		s.putBlock(p, x, y, z, flowerPotState, true, seq)
-		s.hub.post(evDrop{x: x, y: y, z: z, state: plant}) // the plant pops back out
+		s.hub.post(evDrop{dim: p.dim, x: x, y: y, z: z, state: plant}) // the plant pops back out
 		return true
 	}
 	return false

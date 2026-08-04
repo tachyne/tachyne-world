@@ -51,9 +51,9 @@ func TestBeaconFlow(t *testing.T) {
 				w.SetBlock(bx+dx, by-1, bz+dz, iron)
 			}
 		}
-		h.beaconsOnBlockChange(h.playersRef, bx, by, bz, beaconState)
+		h.beaconsOnBlockChange(h.playersRef, 0, bx, by, bz, beaconState)
 		w.SetBlock(bx, by, bz, beaconState)
-		if h.beacons[blockPos{bx, by, bz}] == nil {
+		if h.beacons[simPos{blockPos: blockPos{bx, by, bz}}] == nil {
 			t.Error("beacon not registered on place")
 			return
 		}
@@ -66,7 +66,7 @@ func TestBeaconFlow(t *testing.T) {
 
 		// The 80-tick scan activates it and fires create_beacon range checks.
 		h.beaconTick(h.playersRef)
-		b := h.beacons[blockPos{bx, by, bz}]
+		b := h.beacons[simPos{blockPos: blockPos{bx, by, bz}}]
 		if b.levels != 1 {
 			t.Errorf("scanned levels = %d, want 1", b.levels)
 		}
@@ -115,8 +115,8 @@ func TestBeaconFlow(t *testing.T) {
 		}
 
 		// Breaking the beacon unregisters it.
-		h.beaconsOnBlockChange(h.playersRef, bx, by, bz, 0)
-		if h.beacons[blockPos{bx, by, bz}] != nil {
+		h.beaconsOnBlockChange(h.playersRef, 0, bx, by, bz, 0)
+		if h.beacons[simPos{blockPos: blockPos{bx, by, bz}}] != nil {
 			t.Error("beacon not removed on break")
 		}
 	})

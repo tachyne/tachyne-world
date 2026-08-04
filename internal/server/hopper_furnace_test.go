@@ -19,13 +19,13 @@ func TestHopperUnderFurnacePullsOutputOnly(t *testing.T) {
 		f.slots[furnaceInput] = invStack{item: rawIron, count: 8}
 		f.slots[furnaceFuel] = invStack{item: coal, count: 8}
 		f.slots[furnaceOutput] = invStack{item: ingot, count: 3}
-		h.furnaces[furnacePos] = f
+		h.furnaces[simPos{blockPos: furnacePos}] = f
 
 		hopper := hopperMin // enabled, facing down (into air → no push)
 		w.SetBlock(hopperPos.x, hopperPos.y, hopperPos.z, hopper)
-		h.updateHopper(h.playersRef, hopperPos, hopper)
+		h.updateHopper(h.playersRef, simPos{blockPos: hopperPos}, hopper)
 
-		b := h.bins[hopperPos]
+		b := h.bins[simPos{blockPos: hopperPos}]
 		if b == nil || b.slots[0].item != ingot || b.slots[0].count != 1 {
 			t.Fatalf("hopper should have pulled 1 ingot, got %+v", b)
 		}
@@ -53,18 +53,18 @@ func TestHopperIntoFurnaceFuelOnlyFuel(t *testing.T) {
 		furnacePos := blockPos{5, 71, 5}
 		hopperPos := blockPos{6, 71, 5} // west of the furnace
 		w.SetBlock(furnacePos.x, furnacePos.y, furnacePos.z, furnaceStateMin)
-		h.furnaces[furnacePos] = &furnace{kind: cookFurnace}
+		h.furnaces[simPos{blockPos: furnacePos}] = &furnace{kind: cookFurnace}
 
 		hopper := hopperMin + 3 // enabled, facing west (dx -1) into the furnace side
 		w.SetBlock(hopperPos.x, hopperPos.y, hopperPos.z, hopper)
 		b := &bin{slots: make([]invStack, 5)}
 		b.slots[0] = invStack{item: cobble, count: 4} // non-fuel, first in line
 		b.slots[1] = invStack{item: coal, count: 4}   // fuel
-		h.bins[hopperPos] = b
+		h.bins[simPos{blockPos: hopperPos}] = b
 
 		// One push cycle: cobblestone is rejected by the fuel slot, coal goes in.
-		h.hopperPush(h.playersRef, hopperPos, hopper, b)
-		f := h.furnaces[furnacePos]
+		h.hopperPush(h.playersRef, simPos{blockPos: hopperPos}, hopper, b)
+		f := h.furnaces[simPos{blockPos: furnacePos}]
 		if f.slots[furnaceFuel].item != coal || f.slots[furnaceFuel].count != 1 {
 			t.Fatalf("fuel slot %+v, want 1 coal", f.slots[furnaceFuel])
 		}

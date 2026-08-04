@@ -67,7 +67,7 @@ func TestCampfireFlow(t *testing.T) {
 
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: beef, count: 2}
 		h.onCampfireAdd(h.playersRef, evCampfireAdd{eid: p.eid, x: bx, y: by, z: bz})
-		cf := h.campfires[blockPos{bx, by, bz}]
+		cf := h.campfires[simPos{blockPos: blockPos{bx, by, bz}}]
 		if cf == nil || cf.items[0] != beef || cf.total[0] != 600 {
 			t.Errorf("campfire after add: %+v", cf)
 			return
@@ -75,7 +75,7 @@ func TestCampfireFlow(t *testing.T) {
 		if got := tr.inv.slots[tr.p.heldSlot()].count; got != 1 {
 			t.Errorf("held count %d, want 1 after consuming", got)
 		}
-		if ci, ok := h.cfStore.get(bx, by, bz); !ok || ci.Items[0] != "minecraft:beef" {
+		if ci, ok := h.cfStore.get(0, bx, by, bz); !ok || ci.Items[0] != "minecraft:beef" {
 			t.Errorf("store view: %+v %v", ci, ok)
 		}
 
@@ -111,11 +111,11 @@ func TestCampfireFlow(t *testing.T) {
 
 		// Breaking the fire drops the remaining raw food.
 		w.SetBlock(bx, by, bz, 0)
-		h.spillCampfire(h.playersRef, bx, by, bz, 0)
-		if h.campfires[blockPos{bx, by, bz}] != nil {
+		h.spillCampfire(h.playersRef, 0, bx, by, bz, 0)
+		if h.campfires[simPos{blockPos: blockPos{bx, by, bz}}] != nil {
 			t.Error("campfire not removed on break")
 		}
-		if _, ok := h.cfStore.get(bx, by, bz); ok {
+		if _, ok := h.cfStore.get(0, bx, by, bz); ok {
 			t.Error("store entry not removed")
 		}
 	})

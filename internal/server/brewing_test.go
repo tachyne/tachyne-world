@@ -14,7 +14,7 @@ func brewSetup(t *testing.T) (*hub, map[int32]*tracked, blockPos, *bin) {
 	pos := blockPos{10, 70, 10}
 	h.world.SetBlock(pos.x, pos.y, pos.z, brewStandMax)
 	b := &bin{slots: make([]invStack, 5)}
-	h.bins[pos] = b
+	h.bins[simPos{blockPos: pos}] = b
 	return h, players, pos, b
 }
 
@@ -54,7 +54,7 @@ func TestBrewNeedsFuelAndValidIngredient(t *testing.T) {
 	if b.slots[0].potion != potWater {
 		t.Fatal("brewing without blaze powder must not proceed")
 	}
-	if h.brewProg[pos] != 0 {
+	if h.brewProg[simPos{blockPos: pos}] != 0 {
 		t.Fatal("no progress without fuel")
 	}
 	// Wrong ingredient on water: idle.

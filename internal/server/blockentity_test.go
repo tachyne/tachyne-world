@@ -70,20 +70,20 @@ func TestShulkerBoxKeepsItsContents(t *testing.T) {
 	c := &chest{}
 	c.slots[0] = invStack{item: itemByName["diamond"], count: 5}
 	c.slots[26] = invStack{item: itemByName["emerald"], count: 2}
-	h.chests[pos] = c
+	h.chests[simPos{blockPos: pos}] = c
 
-	boxID := h.stowShulkerBox(pos)
+	boxID := h.stowShulkerBox(simPos{blockPos: pos})
 	if boxID == 0 {
 		t.Fatal("a box with contents stowed as empty")
 	}
-	if _, still := h.chests[pos]; still {
+	if _, still := h.chests[simPos{blockPos: pos}]; still {
 		t.Error("the block still has storage after being stowed")
 	}
 
 	// Placed again somewhere else, the contents come back.
 	dest := blockPos{-40, 12, 900}
-	h.restoreShulkerBox(dest, boxID)
-	back := h.chests[dest]
+	h.restoreShulkerBox(simPos{blockPos: dest}, boxID)
+	back := h.chests[simPos{blockPos: dest}]
 	if back == nil {
 		t.Fatal("the box restored no storage")
 	}
@@ -102,8 +102,8 @@ func TestShulkerBoxKeepsItsContents(t *testing.T) {
 func TestEmptyShulkerBoxNeedsNoIdentity(t *testing.T) {
 	h := newHub(world.New(1))
 	pos := blockPos{1, 70, 1}
-	h.chests[pos] = &chest{}
-	if id := h.stowShulkerBox(pos); id != 0 {
+	h.chests[simPos{blockPos: pos}] = &chest{}
+	if id := h.stowShulkerBox(simPos{blockPos: pos}); id != 0 {
 		t.Errorf("an empty box minted id %d, want 0", id)
 	}
 	if len(h.boxes) != 0 {
@@ -216,7 +216,7 @@ func TestDecoratedPotHoldsOneStack(t *testing.T) {
 	if !h.usePot(players, pl, pos) {
 		t.Fatal("the pot refused a held stack")
 	}
-	if got := h.pots[simPos{dim: pl.dim, pos: pos}]; got != diamonds {
+	if got := h.pots[simPos{dim: pl.dim, blockPos: pos}]; got != diamonds {
 		t.Errorf("the pot holds %+v, want %+v", got, diamonds)
 	}
 	if pl.inv.slots[pl.p.heldSlot()].item != 0 {
@@ -227,7 +227,7 @@ func TestDecoratedPotHoldsOneStack(t *testing.T) {
 	if !h.usePot(players, pl, pos) {
 		t.Fatal("the pot refused to give its contents back")
 	}
-	if _, still := h.pots[simPos{dim: pl.dim, pos: pos}]; still {
+	if _, still := h.pots[simPos{dim: pl.dim, blockPos: pos}]; still {
 		t.Error("the pot kept its contents after handing them back")
 	}
 	found := false
@@ -246,7 +246,7 @@ func TestDecoratedPotSpillsOnBreak(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := blockPos{4, 70, 4}
-	h.pots = map[simPos]invStack{{dim: 0, pos: pos}: {item: itemByName["emerald"], count: 3}}
+	h.pots = map[simPos]invStack{{dim: 0, blockPos: pos}: {item: itemByName["emerald"], count: 3}}
 
 	h.spillPot(players, 0, pos, worldgen.Air)
 	if len(h.pots) != 0 {
@@ -331,11 +331,11 @@ func TestConduitRegistryTracksPlacement(t *testing.T) {
 	h := newHub(world.New(1))
 	pos := blockPos{7, 70, 7}
 	h.noteConduitBlock(0, pos, conduitState)
-	if !h.conduits[simPos{dim: 0, pos: pos}] {
+	if !h.conduits[simPos{dim: 0, blockPos: pos}] {
 		t.Fatal("a placed conduit was not remembered")
 	}
 	h.noteConduitBlock(0, pos, worldgen.Air)
-	if h.conduits[simPos{dim: 0, pos: pos}] {
+	if h.conduits[simPos{dim: 0, blockPos: pos}] {
 		t.Error("a broken conduit is still remembered")
 	}
 }

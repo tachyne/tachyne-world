@@ -12,8 +12,8 @@ func TestDispenserFireDelay(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, dispEast(dispenserMin))
 	pos := blockPos{x, y, z}
-	h.bins[pos] = &bin{slots: make([]invStack, 9)}
-	h.bins[pos].slots[0] = invStack{item: itemArrowAmmo, count: 1}
+	h.bins[simPos{blockPos: pos}] = &bin{slots: make([]invStack, 9)}
+	h.bins[simPos{blockPos: pos}].slots[0] = invStack{item: itemArrowAmmo, count: 1}
 	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
 	h.scheduleAround(pos, 1) // edge detected at tick 1 → scheduled to fire at tick 5
 
@@ -33,8 +33,8 @@ func TestDispenserQuasiConnectivity(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, dispEast(dispenserMin))
 	pos := blockPos{x, y, z}
-	h.bins[pos] = &bin{slots: make([]invStack, 9)}
-	h.bins[pos].slots[0] = invStack{item: itemArrowAmmo, count: 1}
+	h.bins[simPos{blockPos: pos}] = &bin{slots: make([]invStack, 9)}
+	h.bins[simPos{blockPos: pos}].slots[0] = invStack{item: itemArrowAmmo, count: 1}
 	// Redstone block two above → powers the cell above the dispenser (y+1), but
 	// is not adjacent to the dispenser itself. Vanilla QC still triggers it.
 	w.SetBlock(x, y+2, z, worldgen.BlockBase("redstone_block"))

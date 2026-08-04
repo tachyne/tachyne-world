@@ -77,29 +77,30 @@ func newCampfireStore(path string) *campfireStore {
 	if path != "" {
 		if data, err := os.ReadFile(path); err == nil {
 			json.Unmarshal(data, &s.m)
+			migrateSimKeys(s.m) // pre-dimension files keyed campfires by position alone
 		}
 	}
 	return s
 }
 
-func (s *campfireStore) get(x, y, z int) (campfireItems, bool) {
+func (s *campfireStore) get(dim, x, y, z int) (campfireItems, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	d, ok := s.m[posKey(blockPos{x, y, z})]
+	d, ok := s.m[simKey(simPos{dim: dim, blockPos: blockPos{x, y, z}})]
 	return d, ok
 }
 
-func (s *campfireStore) set(pos blockPos, d campfireItems) {
+func (s *campfireStore) set(pos simPos, d campfireItems) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m[posKey(pos)] = d
+	s.m[simKey(pos)] = d
 	s.dirty = true
 }
 
-func (s *campfireStore) remove(pos blockPos) {
+func (s *campfireStore) remove(pos simPos) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	k := posKey(pos)
+	k := simKey(pos)
 	if _, ok := s.m[k]; ok {
 		delete(s.m, k)
 		s.dirty = true
@@ -140,7 +141,7 @@ func (s *campfireStore) flushIfDirty() {
 // (progress restarts, like furnace viewers and jukebox clocks).
 func (h *hub) loadCampfires() {
 	for key, d := range h.cfStore.snapshot() {
-		pos, ok := parsePosKey(key)
+		pos, ok := parseSimKey(key)
 		if !ok {
 			continue
 		}
@@ -170,10 +171,10 @@ func (evCampfireAdd) isHubEvent() {}
 // onCampfireAdd lays the held cookable on the first free slot.
 func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 	t := players[e.eid]
-	if t == nil || t.inv == nil || t.dim != 0 {
+	if t == nil || t.inv == nil {
 		return
 	}
-	state := h.world.At(e.x, e.y, e.z)
+	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
 	if !isCampfireBlock(state) || !boolProp(state, "lit") {
 		return
 	}
@@ -182,7 +183,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 	if !ok || held.count <= 0 {
 		return
 	}
-	pos := blockPos{e.x, e.y, e.z}
+	pos := simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}
 	cf := h.campfires[pos]
 	if cf == nil {
 		cf = &campfire{}
@@ -212,7 +213,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 
 // campfireSync refreshes the store (chunk builders + persistence) and pushes
 // the live block-entity update to nearby viewers.
-func (h *hub) campfireSync(players map[int32]*tracked, pos blockPos, cf *campfire) {
+func (h *hub) campfireSync(players map[int32]*tracked, pos simPos, cf *campfire) {
 	var names [4]string
 	for i, it := range cf.items {
 		if it != 0 {
@@ -220,7 +221,7 @@ func (h *hub) campfireSync(players map[int32]*tracked, pos blockPos, cf *campfir
 		}
 	}
 	h.cfStore.set(pos, campfireItems{Items: names})
-	h.toNearbyEv(players, 0, float64(pos.x), float64(pos.z), attachproto.CampfireItems{
+	h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.CampfireItems{
 		X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Items: names})
 }
 
@@ -229,7 +230,11 @@ func (h *hub) campfireSync(players map[int32]*tracked, pos blockPos, cf *campfir
 // items pop into the world — there is no output slot.
 func (h *hub) campfireTick(players map[int32]*tracked) {
 	for pos, cf := range h.campfires {
-		state := h.world.At(pos.x, pos.y, pos.z)
+		w := h.worldFor(pos.dim)
+		if w == nil {
+			continue
+		}
+		state := w.At(pos.x, pos.y, pos.z)
 		if !isCampfireBlock(state) {
 			delete(h.campfires, pos) // spillCampfire handles drops; this is the fallback
 			h.cfStore.remove(pos)
@@ -252,7 +257,7 @@ func (h *hub) campfireTick(players map[int32]*tracked) {
 			}
 			if cf.prog[i]++; cf.prog[i] >= cf.total[i] {
 				if rec, ok := campfireResult[cf.items[i]]; ok {
-					h.spawnItem(players, rec.Out, 1,
+					h.spawnItemIn(players, pos.dim, rec.Out, 1,
 						float64(pos.x)+0.5, float64(pos.y)+1, float64(pos.z)+0.5)
 				}
 				cf.items[i], cf.prog[i] = 0, 0
@@ -269,11 +274,11 @@ func (h *hub) campfireTick(players map[int32]*tracked) {
 }
 
 // spillCampfire drops the raw food when the campfire block is broken.
-func (h *hub) spillCampfire(players map[int32]*tracked, x, y, z int, newState uint32) {
+func (h *hub) spillCampfire(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
 	if isCampfireBlock(newState) {
 		return
 	}
-	pos := blockPos{x, y, z}
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	h.cfStore.remove(pos)
 	cf := h.campfires[pos]
 	if cf == nil {
@@ -282,7 +287,7 @@ func (h *hub) spillCampfire(players map[int32]*tracked, x, y, z int, newState ui
 	delete(h.campfires, pos)
 	for _, it := range cf.items {
 		if it != 0 {
-			h.spawnItem(players, it, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5)
+			h.spawnItemIn(players, dim, it, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5)
 		}
 	}
 }

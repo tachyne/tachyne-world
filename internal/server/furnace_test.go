@@ -18,7 +18,7 @@ func furnaceSetup() (*hub, map[int32]*tracked, *tracked, *furnace) {
 	pl := testTracked()
 	players[1] = pl
 	h.openFurnace(pl, 10, 70, 10)
-	return h, players, pl, h.furnaces[blockPos{10, 70, 10}]
+	return h, players, pl, h.furnaces[simPos{blockPos: blockPos{10, 70, 10}}]
 }
 
 func TestFurnaceSmeltsIron(t *testing.T) {
@@ -82,7 +82,7 @@ func TestFurnaceKeepsContentsOnClose(t *testing.T) {
 	if pl.winKind == winFurnace || pl.winID != 0 {
 		t.Fatalf("window should be closed: %+v", pl)
 	}
-	f2 := h.furnaces[blockPos{10, 70, 10}]
+	f2 := h.furnaces[simPos{blockPos: blockPos{10, 70, 10}}]
 	if f2 == nil || f2.slots[furnaceInput].count != 3 {
 		t.Fatalf("furnace must keep its contents after close, got %+v", f2)
 	}
@@ -146,14 +146,14 @@ func TestBootSweepRelightsRestoredBurningFurnace(t *testing.T) {
 	// state says it's mid-burn: the sweep must relight it, not extinguish.
 	w.SetBlock(8, 70, 8, furnaceStateMin+1)
 	h := newHub(w)
-	h.furnaces[blockPos{8, 70, 8}] = &furnace{burnLeft: 500, burnMax: 1600, cookMax: 200}
+	h.furnaces[simPos{blockPos: blockPos{8, 70, 8}}] = &furnace{burnLeft: 500, burnMax: 1600, cookMax: 200}
 	h.reconcileFurnaceBlocks()
 	if got := w.Block(8, 70, 8); got != furnaceStateMin {
 		t.Fatalf("burning restored furnace should be relit: state %d, want %d", got, furnaceStateMin)
 	}
 	// And a lit block whose restored furnace is NOT burning goes out.
 	w.SetBlock(9, 70, 8, furnaceStateMin)
-	h.furnaces[blockPos{9, 70, 8}] = &furnace{cookMax: 200}
+	h.furnaces[simPos{blockPos: blockPos{9, 70, 8}}] = &furnace{cookMax: 200}
 	h.reconcileFurnaceBlocks()
 	if got := w.Block(9, 70, 8); got != furnaceStateMin+1 {
 		t.Fatalf("non-burning furnace block should be unlit: state %d", got)
@@ -163,8 +163,8 @@ func TestBootSweepRelightsRestoredBurningFurnace(t *testing.T) {
 func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 	path := t.TempDir() + "/containers.json"
 	s := newContainerStore(path)
-	in := map[blockPos]*furnace{
-		{10, 64, -3}: {
+	in := map[simPos]*furnace{
+		{blockPos: blockPos{10, 64, -3}}: {
 			slots:    [3]invStack{{item: tRawIron, count: 5}, {item: itemByName["leather_chestplate"], count: 2}, {item: tIronIngot, count: 7}},
 			burnLeft: 123, burnMax: 1600, cook: 42, cookMax: 200,
 		},
@@ -173,11 +173,11 @@ func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 	s.flush()
 
 	got := newContainerStore(path).loadFurnaces()
-	f := got[blockPos{10, 64, -3}]
+	f := got[simPos{blockPos: blockPos{10, 64, -3}}]
 	if f == nil {
 		t.Fatal("furnace not restored")
 	}
-	if f.slots != in[blockPos{10, 64, -3}].slots {
+	if f.slots != in[simPos{blockPos: blockPos{10, 64, -3}}].slots {
 		t.Fatalf("slots mismatch: %+v", f.slots)
 	}
 	if f.burnLeft != 123 || f.burnMax != 1600 || f.cook != 42 || f.cookMax != 200 {
@@ -195,7 +195,7 @@ func TestFurnaceLitFollowsWorldBlock(t *testing.T) {
 	pl := testTracked()
 	players[1] = pl
 	h.openFurnace(pl, 10, 70, 10)
-	f := h.furnaces[blockPos{10, 70, 10}]
+	f := h.furnaces[simPos{blockPos: blockPos{10, 70, 10}}]
 	f.slots[furnaceInput] = invStack{item: tRawIron, count: 1}
 	f.slots[furnaceFuel] = invStack{item: tStick, count: 1} // 100 ticks, dies mid-cook
 

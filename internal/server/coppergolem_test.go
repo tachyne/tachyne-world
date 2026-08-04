@@ -139,8 +139,8 @@ func TestCopperGolemSortsItems(t *testing.T) {
 	h.world.SetBlock(dst.x, dst.y, dst.z, worldgen.BlockID("chest"))
 	sc := &chest{}
 	sc.slots[0] = invStack{item: itemByName["diamond"], count: 20}
-	h.chests[src] = sc
-	h.chests[dst] = &chest{}
+	h.chests[simPos{blockPos: src}] = sc
+	h.chests[simPos{blockPos: dst}] = &chest{}
 
 	m := spawnGolem(h, players, 11.0, 70, 10.5) // adjacent to both chests
 	for i := 0; i < 12; i++ {
@@ -148,11 +148,11 @@ func TestCopperGolemSortsItems(t *testing.T) {
 		h.copperGolemSort(players, m)
 	}
 
-	if left := h.chests[src].slots[0].count; left != 0 {
+	if left := h.chests[simPos{blockPos: src}].slots[0].count; left != 0 {
 		t.Errorf("copper chest should be emptied by the golem, %d left", left)
 	}
 	moved := 0
-	for _, st := range h.chests[dst].slots {
+	for _, st := range h.chests[simPos{blockPos: dst}].slots {
 		if st.item == itemByName["diamond"] {
 			moved += st.count
 		}

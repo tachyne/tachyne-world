@@ -78,7 +78,8 @@ func potionStack(p int8) invStack {
 // one blaze-powder fuel are consumed.
 func (h *hub) updateBrewing(players map[int32]*tracked) {
 	for pos, b := range h.bins {
-		if len(b.slots) != 5 || !isBrewStand(h.world.At(pos.x, pos.y, pos.z)) {
+		w := h.worldFor(pos.dim)
+		if len(b.slots) != 5 || w == nil || !isBrewStand(w.At(pos.x, pos.y, pos.z)) {
 			continue
 		}
 		out, ok := brewResult(b)

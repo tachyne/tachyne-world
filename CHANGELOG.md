@@ -11,6 +11,33 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-04 (later)
+
+### Fixed
+- **A chest in the Nether and a chest in the Overworld shared one inventory.**
+  Every block-entity store on the engine — chests, furnaces, hoppers,
+  dispensers, droppers, crafters, brewing stands, jukeboxes, beacons, lecterns,
+  chiseled bookshelves, campfires and banners — was keyed by x/y/z with no
+  dimension, so the same coordinates in two worlds named a single container.
+  Opening the Nether chest showed you the Overworld chest's contents, and
+  whichever you touched last was the one that got saved. Opening a container
+  also read the block state from the Overworld regardless of where you were
+  standing, which is why a Nether double chest could pair against an Overworld
+  neighbour. Everything is now keyed by dimension, and `containers.json` and
+  `campfires.json` write `dim:x,y,z` keys — files written before this load as
+  the Overworld records they have always been.
+- **Beacons, banners, lecterns and jukebox-stop did nothing outside the
+  Overworld.** Block-entity registration sat behind an early return that
+  skipped every non-Overworld edit, so a Nether beacon never opened or ticked,
+  a Nether banner rendered plain, a Nether lectern was inert, and music started
+  in the Nether but could never be stopped — it played forever. Registration
+  now runs in every dimension; block *simulation* (falling blocks, fluids,
+  redstone, sculk) is still Overworld-only, which is the part that early return
+  was actually for.
+- **Mining a block in the Nether or the End dropped its item into the
+  Overworld**, along with any ore experience — the same defect fixed for death
+  drops yesterday, in the block-loot path.
+
 ## 2026-08-04
 
 ### Added

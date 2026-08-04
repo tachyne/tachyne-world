@@ -210,7 +210,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	rear := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z)
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.world.At(back.x, back.y, back.z)
-	if sig := h.analogSignal(back); sig >= 0 {
+	if sig := h.analogSignal(simPos{blockPos: back}); sig >= 0 { // redstone still simulates only the overworld
 		if sig > rear {
 			rear = sig // container fullness, cake left, composter level, …
 		}
@@ -227,7 +227,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).
-		if sig := h.analogSignal(blockPos{back.x + dx, back.y, back.z + dz}); sig > rear {
+		if sig := h.analogSignal(simPos{blockPos: blockPos{back.x + dx, back.y, back.z + dz}}); sig > rear {
 			rear = sig
 		}
 	}

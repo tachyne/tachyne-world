@@ -230,8 +230,8 @@ func TestDispenserWorksAFullHive(t *testing.T) {
 		h.hives[front] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 100, Nectar: true}}
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = invStack{item: item, count: 1}
-		h.bins[pos] = b
-		h.ejectFromBin(players, pos, state)
+		h.bins[simPos{blockPos: pos}] = b
+		h.ejectFromBin(players, simPos{blockPos: pos}, state)
 		return b
 	}
 

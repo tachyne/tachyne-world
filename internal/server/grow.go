@@ -346,7 +346,7 @@ func (h *hub) tickThaw(players map[int32]*tracked, dim, x, y, z int, state uint3
 	}
 	if isSnow {
 		// dropResources: one snowball per layer, then the block goes.
-		h.spawnBlockDrop(players, itemByName["snowball"], int(state-snowLayer1)+1, x, y, z)
+		h.spawnBlockDrop(players, dim, itemByName["snowball"], int(state-snowLayer1)+1, x, y, z)
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 		return true
 	}
@@ -729,7 +729,7 @@ func (h *hub) findSaplingSquare(dim, x, z, y int, rng [2]uint32) (int, int, bool
 // rollLeafDrops spawns a decaying leaf's loot (5% sapling / 2% sticks / 0.5% apple).
 func (h *hub) rollLeafDrops(players map[int32]*tracked, dim, x, y, z int) {
 	for _, d := range h.leafDrops() {
-		h.spawnBlockDrop(players, d.item, d.count, x, y, z)
+		h.spawnBlockDrop(players, dim, d.item, d.count, x, y, z)
 	}
 }
 
