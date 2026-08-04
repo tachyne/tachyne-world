@@ -152,8 +152,8 @@ func TestVillagerSleepsAtNight(t *testing.T) {
 		t.Fatal("a villager at its bed should fall asleep at night")
 	}
 	// Snapped onto the bed surface.
-	if m.y != float64(bed.y)+bedSurface {
-		t.Fatalf("sleeper should sit on the bed surface, y=%.3f", m.y)
+	if m.y != float64(bed.y)+bedSleepY {
+		t.Fatalf("sleeper should sit at vanilla's bed height, y=%.3f", m.y)
 	}
 	h.dayTime.Store(200) // first light
 	if h.villagerSleep(players, m) || m.sleeping {

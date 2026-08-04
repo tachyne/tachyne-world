@@ -11,6 +11,29 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-04 (evening)
+
+### Fixed
+- **Sleepers lay in the wrong half of the bed.** A bed is two blocks, and
+  vanilla anchors everything about sleeping — the pose, the respawn claim, the
+  position — to the HEAD half, stepping there first if you clicked the foot.
+  tachyne used whichever end you clicked, and because the client draws a
+  sleeping body extending from the anchor down the bed, clicking the foot laid
+  the sleeper backwards with their legs hanging off the end into thin air.
+  Sleeping villagers had the same bug, anchored to whichever cell worldgen
+  recorded for their bed.
+- **Beds never looked slept in.** Vanilla sets the block's `occupied` property
+  while someone is in it, which is what rumples the blanket; it was never set
+  or cleared.
+- **Waking up left you standing in the bed.** Vanilla gets you out of it —
+  a fixed ring of ten cells around the bed tried in an order that starts on
+  whichever side you are already facing, the bed's own cells only as a last
+  resort — and turns you to face the bed you just left.
+- **Sleeping height was the mattress height** (0.5625) rather than vanilla's
+  `setPosToBed` (0.6875), so a sleeper sat sunk into the bed.
+- **A monster two floors up stopped you sleeping.** The check was a sphere of
+  radius 8; vanilla's box is ±8 across but only ±5 up and down.
+
 ## 2026-08-04 (later)
 
 ### Fixed

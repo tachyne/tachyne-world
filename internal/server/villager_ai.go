@@ -114,10 +114,16 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 		return false // still walking home to bed
 	}
 	m.sleeping = true
-	m.x, m.y, m.z = bx, float64(m.bed.y)+bedSurface, bz // snap onto the bed
+	// Lie down on the HEAD half, wherever worldgen recorded the bed — the same
+	// anchor rule players follow, and for the same rendering reason.
+	head, ok := h.bedHead(m.dim, m.bed)
+	if !ok {
+		head = m.bed
+	}
+	m.x, m.y, m.z = float64(head.x)+0.5, float64(head.y)+bedSleepY, float64(head.z)+0.5
 	m.sx, m.sy, m.sz = m.x, m.y, m.z
 	h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, m.bed)))
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, head)))
 	return true
 }
 

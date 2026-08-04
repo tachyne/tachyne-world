@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -30,7 +31,16 @@ const (
 	poseStanding         = 0
 	poseSleeping         = 2
 
-	bedSurface = 0.5625 // a bed's collision height — where a sleeper/waker stands
+	// LivingEntity.setPosToBed: a sleeper sits at the bed block's centre, this
+	// far up. Not the mattress height (0.5625) — vanilla lifts the body clear
+	// of it, and the difference reads as a player sunk into the bed.
+	bedSleepY = 0.6875
+
+	// ServerPlayer.startSleepInBed's monster box: ±8 horizontally, ±5 up and
+	// down from the bed. A sphere is close but lets a mob two floors up stop
+	// you sleeping when vanilla would not.
+	monsterRangeH = 8.0
+	monsterRangeV = 5.0
 )
 
 // sleepMetadata builds set_entity_data putting an entity into the sleeping
@@ -69,12 +79,61 @@ type evStopSleep struct{ eid int32 }
 func (evUseBed) isHubEvent()    {}
 func (evStopSleep) isHubEvent() {}
 
+// bedHead resolves a clicked bed cell to the HEAD half, which is the block
+// every other part of sleeping is anchored to. Vanilla does this first thing in
+// BedBlock.useWithoutItem, and skipping it is visible: the client draws a
+// sleeper lying from the anchor block DOWN the bed, so anchoring at the foot
+// leaves the body hanging off the end with nothing under its legs.
+func (h *hub) bedHead(dim int, pos blockPos) (blockPos, bool) {
+	w := h.worldFor(dim)
+	if w == nil {
+		return pos, false
+	}
+	state := w.Block(pos.x, pos.y, pos.z)
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !isBed(info) {
+		return pos, false
+	}
+	if worldgen.GetProperty(info, state, "part") == "head" {
+		return pos, true
+	}
+	dx, dz := facingStep(worldgen.GetProperty(info, state, "facing")) // foot → head
+	head := blockPos{pos.x + dx, pos.y, pos.z + dz}
+	if hi, ok := worldgen.InfoForState(w.Block(head.x, head.y, head.z)); ok && isBed(hi) {
+		return head, true
+	}
+	return pos, false // a half-bed: vanilla returns CONSUME rather than sleeping
+}
+
+// setBedOccupied writes the bed's `occupied` property, which is what makes the
+// blanket render rumpled while someone is in it.
+func (h *hub) setBedOccupied(players map[int32]*tracked, dim int, pos blockPos, occupied bool) {
+	w := h.worldFor(dim)
+	if w == nil {
+		return
+	}
+	state := w.Block(pos.x, pos.y, pos.z)
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !info.HasProperty("occupied") {
+		return
+	}
+	v := "false"
+	if occupied {
+		v = "true"
+	}
+	if next := worldgen.SetProperty(info, state, "occupied", v); next != state {
+		h.setBlockAt(players, dim, pos, next)
+	}
+}
+
 // setSleeping lies the player down: move them onto the bed (their own client
-// gets a position sync; everyone's gets the sleeping pose + bed anchor).
+// gets a position sync; everyone's gets the sleeping pose + bed anchor). pos is
+// the HEAD half — see bedHead.
 func (h *hub) setSleeping(players map[int32]*tracked, t *tracked, pos blockPos) {
 	t.sleeping, t.sleepPos, t.sleepingAt = true, pos, h.tick.Load()
-	t.x, t.y, t.z = float64(pos.x)+0.5, float64(pos.y)+bedSurface, float64(pos.z)+0.5
+	t.x, t.y, t.z = float64(pos.x)+0.5, float64(pos.y)+bedSleepY, float64(pos.z)+0.5
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
+	h.setBedOccupied(players, t.dim, pos, true)
 	body := sleepMetadata(t.p.eid, pos)
 	for _, o := range players {
 		o.p.trySendEv(metaEv(body))
@@ -93,6 +152,16 @@ func (h *hub) wakePlayer(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	t.sleeping = false
+	bed := t.sleepPos
+	h.setBedOccupied(players, t.dim, bed, false)
+	// LivingEntity.stopSleeping: you get OUT of the bed, beside it, turned to
+	// face it. Leaving the player standing in the bed's own cell is what made
+	// waking look like nothing had happened.
+	if x, y, z, ok := h.bedStandUp(t, bed); ok {
+		t.x, t.y, t.z = x, y, z
+		t.yaw = bedFacingAwayFrom(bed, x, z)
+		t.pitch = 0
+	}
 	body := wakeMetadata(t.p.eid)
 	t.p.trySendEv(metaEv(body))
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
@@ -101,6 +170,76 @@ func (h *hub) wakePlayer(players map[int32]*tracked, t *tracked) {
 			o.p.trySendEv(metaEv(body))
 		}
 	}
+}
+
+// bedStandUp is BedBlock.findStandUpPosition: the ring of cells around the bed
+// is tried in a fixed order that starts on whichever side the sleeper is
+// already facing, then the bed's own two cells as a last resort.
+func (h *hub) bedStandUp(t *tracked, bed blockPos) (float64, float64, float64, bool) {
+	w := h.worldFor(t.dim)
+	if w == nil {
+		return 0, 0, 0, false
+	}
+	state := w.Block(bed.x, bed.y, bed.z)
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !isBed(info) {
+		return 0, 0, 0, false
+	}
+	dx, dz := facingStep(worldgen.GetProperty(info, state, "facing"))
+	// The clockwise neighbour, flipped to the far side when the sleeper is
+	// already looking that way (Direction.isFacingAngle).
+	sx, sz := -dz, dx // facing.getClockWise()
+	rad := float64(t.yaw) * math.Pi / 180
+	if float64(sx)*-math.Sin(rad)+float64(sz)*math.Cos(rad) > 0 {
+		sx, sz = -sx, -sz
+	}
+	offsets := [][2]int{
+		{sx, sz}, {sx - dx, sz - dz}, {sx - dx*2, sz - dz*2}, {-dx * 2, -dz * 2},
+		{-sx - dx*2, -sz - dz*2}, {-sx - dx, -sz - dz}, {-sx, -sz}, {-sx + dx, -sz + dz},
+		{dx, dz}, {sx + dx, sz + dz},
+		{0, 0}, {-dx, -dz}, // bedAboveStandUpOffsets: the bed's own cells
+	}
+	for _, o := range offsets {
+		x, z := bed.x+o[0], bed.z+o[1]
+		if h.bedStandable(t.dim, x, bed.y, z) {
+			return float64(x) + 0.5, float64(bed.y), float64(z) + 0.5, true
+		}
+	}
+	// Vanilla's fallback: on top of the bed, just clear of the mattress.
+	return float64(bed.x) + 0.5, float64(bed.y) + 1.1, float64(bed.z) + 0.5, true
+}
+
+// bedStandable reports whether a player fits stood up in this cell. Looser
+// than the creaking's air-only test: vanilla's dismount check is about
+// COLLISION, so grass, snow and carpet are all fine to stand up into.
+func (h *hub) bedStandable(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
+	if w == nil {
+		return false
+	}
+	return !worldgen.IsSolidFull(w.At(x, y, z)) && !worldgen.IsSolidFull(w.At(x, y+1, z)) &&
+		worldgen.IsSolidFull(w.At(x, y-1, z))
+}
+
+// bedFacingAwayFrom turns a woken sleeper back toward the bed they left.
+func bedFacingAwayFrom(bed blockPos, x, z float64) float32 {
+	vx, vz := float64(bed.x)+0.5-x, float64(bed.z)+0.5-z
+	if vx == 0 && vz == 0 {
+		return 0
+	}
+	return float32(wrapDegrees(math.Atan2(vz, vx)*180/math.Pi - 90))
+}
+
+// wrapDegrees folds an angle into (-180, 180], like Mth.wrapDegrees.
+func wrapDegrees(d float64) float64 {
+	d = math.Mod(d, 360)
+	if d >= 180 {
+		d -= 360
+	}
+	if d < -180 {
+		d += 360
+	}
+	return d
 }
 
 // handleUseBed processes a right-click on a bed block.
@@ -115,23 +254,30 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		h.blowUpRespawnBlock(players, t, pos, true)
 		return
 	}
+	// Everything below is anchored to the HEAD half, whichever end was clicked.
+	head, ok := h.bedHead(t.dim, pos)
+	if !ok {
+		return // half a bed: nothing to lie in
+	}
 	if h.spawns != nil { // clicking a bed claims it as home (vanilla)
-		h.spawns.set(t.p.name, pos, t.dim)
+		h.spawns.set(t.p.name, head, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
 	}
 	if dt := h.dayTime.Load() % dayLengthTicks; dt < sleepStart || dt > sleepEnd {
 		t.p.trySendEv(chatEv("You can only sleep at night"))
 		return
 	}
+	bx, by, bz := float64(head.x)+0.5, float64(head.y), float64(head.z)+0.5
 	for _, m := range h.mobs {
-		if m.hostile && m.dying == 0 &&
-			sq(m.x-float64(pos.x))+sq(m.y-float64(pos.y))+sq(m.z-float64(pos.z)) < monsterR2 {
+		if m.hostile && m.dying == 0 && m.dim == t.dim &&
+			math.Abs(m.x-bx) <= monsterRangeH && math.Abs(m.z-bz) <= monsterRangeH &&
+			math.Abs(m.y-by) <= monsterRangeV {
 			t.p.trySendEv(chatEv("You may not rest now; there are monsters nearby"))
 			return
 		}
 	}
 	if !t.sleeping {
-		h.setSleeping(players, t, pos)
+		h.setSleeping(players, t, head)
 		n, m := sleepCount(players)
 		body := chatEv(fmt.Sprintf("%s is sleeping (%d/%d)", t.p.name, n, m))
 		for _, o := range players {

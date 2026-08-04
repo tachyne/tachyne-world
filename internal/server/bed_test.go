@@ -15,10 +15,17 @@ func bedSetup(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[1] = pl
+	// A WHOLE bed: foot at 4,70,4 facing north, head one block north of it.
+	// Half a bed cannot be slept in — see TestHalfABedCannotBeSleptIn.
+	info, _ := worldgen.InfoForState(tWhiteBed)
 	h.world.SetBlock(4, 70, 4, tWhiteBed)
+	h.world.SetBlock(4, 70, 3, worldgen.SetProperty(info, tWhiteBed, "part", "head"))
 	pl.x, pl.y, pl.z = 4.5, 70, 4.5
 	return h, players, pl
 }
+
+// tBedHead is where bedSetup's sleeper actually lies.
+var tBedHead = blockPos{4, 70, 3}
 
 func TestBedClaimsRespawnPoint(t *testing.T) {
 	h, players, pl := bedSetup(t)
@@ -27,14 +34,14 @@ func TestBedClaimsRespawnPoint(t *testing.T) {
 	if pl.sleeping {
 		t.Fatal("must not sleep during the day")
 	}
-	if pos, dim, ok := h.spawns.get("tester"); !ok || dim != dimOverworld || pos != (blockPos{4, 70, 4}) {
+	if pos, dim, ok := h.spawns.get("tester"); !ok || dim != dimOverworld || pos != tBedHead {
 		t.Fatalf("respawn point should be claimed, got %v %v", pos, ok)
 	}
 	// Death now returns to the bed, not world spawn.
 	h.damageOf(players, pl, 25, dtGeneric)
 	h.respawn(pl)
-	if pl.x != 4.5 || pl.z != 4.5 {
-		t.Fatalf("respawn should return to the bed, got (%v,%v)", pl.x, pl.z)
+	if pl.x != 4.5 || pl.z != float64(tBedHead.z)+0.5 {
+		t.Fatalf("respawn should return to the bed head, got (%v,%v)", pl.x, pl.z)
 	}
 }
 
@@ -42,6 +49,7 @@ func TestRespawnFallsBackWhenBedGone(t *testing.T) {
 	h, players, pl := bedSetup(t)
 	h.handleUseBed(players, pl, blockPos{4, 70, 4})
 	h.world.SetBlock(4, 70, 4, worldgen.Air) // bed destroyed
+	h.world.SetBlock(tBedHead.x, tBedHead.y, tBedHead.z, worldgen.Air)
 	h.damageOf(players, pl, 25, dtGeneric)
 	h.respawn(pl)
 	if pl.x != 0.5 || pl.z != 0.5 {
@@ -120,9 +128,9 @@ func TestSleepingLiesOnBed(t *testing.T) {
 	if !pl.sleeping {
 		t.Fatal("should be sleeping")
 	}
-	// The sleeper is moved onto the bed surface (vanilla anchors them there).
-	if pl.x != 4.5 || pl.y != 70+bedSurface || pl.z != 4.5 {
-		t.Fatalf("sleeper should lie at the bed centre, got (%v,%v,%v)", pl.x, pl.y, pl.z)
+	// The sleeper is moved onto the bed's HEAD half at vanilla's height.
+	if pl.x != 4.5 || pl.y != float64(tBedHead.y)+bedSleepY || pl.z != float64(tBedHead.z)+0.5 {
+		t.Fatalf("sleeper should lie at the bed head, got (%v,%v,%v)", pl.x, pl.y, pl.z)
 	}
 	// Leave Bed (player_command STOP_SLEEPING → evStopSleep) stands them up.
 	h.wakePlayer(players, pl)
