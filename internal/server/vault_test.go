@@ -68,7 +68,7 @@ func TestVaultPaysEachPlayerOnce(t *testing.T) {
 	if got := pl.inv.slots[pl.p.heldSlot()].count; got != 1 {
 		t.Errorf("%d keys left, want 1 spent", got)
 	}
-	if !v.rewarded[pl.p.uuid] {
+	if !v.hasRewarded(pl.p.uuid) {
 		t.Error("the player was not recorded as rewarded")
 	}
 
@@ -110,7 +110,7 @@ func TestVaultRefusesTheWrongKey(t *testing.T) {
 	if v.state != vaultActive {
 		t.Error("an ominous key opened a plain vault")
 	}
-	if v.rewarded[pl.p.uuid] {
+	if v.hasRewarded(pl.p.uuid) {
 		t.Error("a refused claim still recorded the player")
 	}
 }

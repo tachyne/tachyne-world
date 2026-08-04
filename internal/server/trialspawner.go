@@ -49,8 +49,11 @@ type trialSpawner struct {
 	kind    string // which mob, from the chamber piece
 	ominous bool
 
-	state     trialState
-	detected  map[int32]bool // players who triggered it (the reward roll)
+	state trialState
+	// Players who triggered it (the reward roll), by UUID like vanilla's
+	// detectedPlayers — an eid would not survive the relog this set is meant
+	// to outlast, let alone the restart it is persisted across.
+	detected  map[[16]byte]bool
 	current   map[int32]bool // mob eids alive from this spawner
 	spawned   int            // totalMobsSpawned this round
 	nextSpawn uint64         // tick the next mob may appear
@@ -184,10 +187,12 @@ func (h *hub) trialAt(pos blockPos, f worldgen.TrialChamberFeature) *trialSpawne
 	}
 	ts := h.trials[pos]
 	if ts == nil {
-		ts = &trialSpawner{pos: pos, dim: 0, kind: f.Kind, ominous: f.Ominous,
-			detected: map[int32]bool{}, current: map[int32]bool{}}
+		ts = &trialSpawner{pos: pos, detected: map[[16]byte]bool{}, current: map[int32]bool{}}
 		h.trials[pos] = ts
 	}
+	// Which mob and which kind of spawner always come from worldgen, never from
+	// the save file: a restored record carries progress only.
+	ts.dim, ts.kind, ts.ominous = 0, f.Kind, f.Ominous
 	return ts
 }
 
@@ -246,8 +251,8 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 			return
 		}
 		// One reward per player who fought, one at a time.
-		for eid := range ts.detected {
-			delete(ts.detected, eid)
+		for u := range ts.detected {
+			delete(ts.detected, u)
 			break
 		}
 		h.ejectTrialReward(players, ts)
@@ -274,7 +279,7 @@ func (ts *trialSpawner) detect(h *hub, players map[int32]*tracked) int {
 			continue
 		}
 		if dist3(t.x, t.y, t.z, ts.fx(), ts.fy(), ts.fz()) <= trialPlayerRange {
-			ts.detected[t.p.eid] = true
+			ts.detected[t.p.uuid] = true
 		}
 	}
 	return len(ts.detected)
@@ -301,7 +306,7 @@ func (ts *trialSpawner) targetSimultaneous(extra int) int {
 // reset returns a spent spawner to its sleeping state.
 func (ts *trialSpawner) reset() {
 	ts.state = trialWaitingPlayers
-	ts.detected = map[int32]bool{}
+	ts.detected = map[[16]byte]bool{}
 	ts.current = map[int32]bool{}
 	ts.spawned, ts.nextSpawn, ts.nextEject = 0, 0, 0
 }

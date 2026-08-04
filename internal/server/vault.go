@@ -66,13 +66,42 @@ func vaultOminousAt(cur uint32) bool {
 	return (cur-vaultMin)%perFacing < uint32(len(vaultStateOrder))
 }
 
+// vaultMaxRewarded is VaultServerData.MAX_REWARD_PLAYERS: past this many
+// claimants the oldest is forgotten, so one vault's record cannot grow without
+// bound on a long-lived world.
+const vaultMaxRewarded = 128
+
 // vaultRecord is one vault's live state plus who has already claimed it.
 type vaultRecord struct {
-	pos      blockPos
-	ominous  bool
-	state    vaultState
-	until    uint64            // tick the unlocking/ejecting pose ends
-	rewarded map[[16]byte]bool // player UUIDs, not eids: this outlives a session
+	pos     blockPos
+	ominous bool
+	state   vaultState
+	until   uint64 // tick the unlocking/ejecting pose ends
+	// Player UUIDs, not eids: this outlives a session AND a restart (it is
+	// written to containers.json). Ordered oldest-first like vanilla's linked
+	// set, because the cap evicts by insertion order.
+	rewarded [][16]byte
+}
+
+// hasRewarded reports whether this player has already had their share.
+func (v *vaultRecord) hasRewarded(u [16]byte) bool {
+	for _, r := range v.rewarded {
+		if r == u {
+			return true
+		}
+	}
+	return false
+}
+
+// addRewarded records a claim, forgetting the oldest past the cap.
+func (v *vaultRecord) addRewarded(u [16]byte) {
+	if v.hasRewarded(u) {
+		return
+	}
+	v.rewarded = append(v.rewarded, u)
+	if n := len(v.rewarded) - vaultMaxRewarded; n > 0 {
+		v.rewarded = append(v.rewarded[:0], v.rewarded[n:]...)
+	}
 }
 
 // vaultKeyFor is the item a vault of this kind opens with.
@@ -98,9 +127,10 @@ func (h *hub) vaultAt(pos blockPos, ominous bool) *vaultRecord {
 	}
 	v := h.vaults[pos]
 	if v == nil {
-		v = &vaultRecord{pos: pos, ominous: ominous, rewarded: map[[16]byte]bool{}}
+		v = &vaultRecord{pos: pos}
 		h.vaults[pos] = v
 	}
+	v.ominous = ominous // the block is authoritative; a restored record holds only claims
 	return v
 }
 
@@ -184,7 +214,7 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	if v.state != vaultActive {
 		return // still opening, or nobody is close enough for it to be awake
 	}
-	if v.rewarded[t.p.uuid] {
+	if v.hasRewarded(t.p.uuid) {
 		// VAULT_REJECT_REWARDED_PLAYER: you have had your share of this one.
 		h.playSound(players, "minecraft:block.vault.reject_rewarded_player", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
@@ -206,7 +236,7 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	t.inv.slots[slot] = held
 	h.sendSlot(t, slot)
 
-	v.rewarded[t.p.uuid] = true
+	v.addRewarded(t.p.uuid)
 	v.state, v.until = vaultUnlocking, h.tick.Load()+vaultUnlockTicks
 	h.playSound(players, "minecraft:block.vault.insert_item", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)

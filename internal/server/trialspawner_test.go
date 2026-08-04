@@ -75,7 +75,7 @@ func TestTrialSpawnerRunsAFight(t *testing.T) {
 	players[pl.p.eid] = pl
 
 	ts := &trialSpawner{pos: pos, kind: "zombie",
-		detected: map[int32]bool{}, current: map[int32]bool{}}
+		detected: map[[16]byte]bool{}, current: map[int32]bool{}}
 
 	// Nobody near: it waits.
 	far := survPlayer(h)

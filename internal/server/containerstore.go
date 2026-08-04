@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -60,6 +61,31 @@ type containerFile struct {
 	// Placed conduits as "dim,x,y,z" — they are player-built, so nothing else
 	// can rediscover them after a restart.
 	Conduits []string `json:"conduits,omitempty"`
+	// Trial-chamber progress. Both are overworld-only, so a plain position key
+	// is enough. Without these a restart re-arms every spent spawner and lets
+	// everyone claim every vault again.
+	Vaults map[string]savedVault `json:"vaults,omitempty"`
+	Trials map[string]savedTrial `json:"trials,omitempty"`
+}
+
+// savedVault is who has already been paid by one vault (VaultServerData's
+// rewarded_players), oldest claim first.
+type savedVault struct {
+	Rewarded []string `json:"rewarded,omitempty"` // player UUIDs, hex
+}
+
+// savedTrial is one trial spawner's progress. Its POSE is not here — that
+// rides the block state in world.gob, exactly as vanilla reads it back off the
+// block — only the bookkeeping the block cannot express.
+//
+// The cooldown is stored as ticks REMAINING, not as an absolute deadline: the
+// hub's world age restarts at zero every boot, so an absolute tick would read
+// as long expired.
+type savedTrial struct {
+	State        uint8    `json:"state"`
+	CooldownLeft uint64   `json:"cooldown_left,omitempty"`
+	Spawned      int      `json:"spawned,omitempty"`
+	Detected     []string `json:"detected,omitempty"` // player UUIDs, hex
 }
 
 // savedLectern is one lectern's book + open page.
@@ -594,6 +620,127 @@ func (s *containerStore) loadHiveItems() (map[int32]hiveStow, int32) {
 		}
 	}
 	return out, s.m.NextHiveID
+}
+
+// recordVaults snapshots who each vault has already paid.
+func (s *containerStore) recordVaults(vaults map[blockPos]*vaultRecord) {
+	snap := map[string]savedVault{}
+	for pos, v := range vaults {
+		if len(v.rewarded) == 0 {
+			continue // nothing to remember; the pose comes off the block
+		}
+		snap[posKey(pos)] = savedVault{Rewarded: hexUUIDs(v.rewarded)}
+	}
+	s.mu.Lock()
+	s.m.Vaults = snap
+	s.mu.Unlock()
+}
+
+// loadVaults reconstructs the claim ledgers. The vault's kind and pose are
+// filled in by vaultAt from the block itself.
+func (s *containerStore) loadVaults() map[blockPos]*vaultRecord {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]*vaultRecord{}
+	for k, sv := range s.m.Vaults {
+		pos, ok := parsePosKey(k)
+		if !ok {
+			continue
+		}
+		out[pos] = &vaultRecord{pos: pos, rewarded: parseHexUUIDs(sv.Rewarded)}
+	}
+	return out
+}
+
+// recordTrials snapshots trial-spawner progress, converting the cooldown
+// deadline to ticks remaining (see savedTrial).
+func (s *containerStore) recordTrials(trials map[blockPos]*trialSpawner, now uint64) {
+	snap := map[string]savedTrial{}
+	for pos, ts := range trials {
+		left := uint64(0)
+		if ts.cooldown > now {
+			left = ts.cooldown - now
+		}
+		if ts.state == trialWaitingPlayers && left == 0 && ts.spawned == 0 && len(ts.detected) == 0 {
+			continue // a sleeping spawner is indistinguishable from an unvisited one
+		}
+		snap[posKey(pos)] = savedTrial{
+			State:        uint8(ts.state),
+			CooldownLeft: left,
+			Spawned:      ts.spawned,
+			Detected:     hexUUIDSet(ts.detected),
+		}
+	}
+	s.mu.Lock()
+	s.m.Trials = snap
+	s.mu.Unlock()
+}
+
+// loadTrials reconstructs spawner progress, rebasing the cooldown onto the
+// current world age. kind/ominous come from worldgen when trialAt first sees
+// the spawner again.
+func (s *containerStore) loadTrials(now uint64) map[blockPos]*trialSpawner {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]*trialSpawner{}
+	for k, st := range s.m.Trials {
+		pos, ok := parsePosKey(k)
+		if !ok {
+			continue
+		}
+		ts := &trialSpawner{
+			pos: pos, state: trialState(st.State), spawned: st.Spawned,
+			detected: map[[16]byte]bool{}, current: map[int32]bool{},
+		}
+		if st.CooldownLeft > 0 {
+			ts.cooldown = now + st.CooldownLeft
+		}
+		for _, u := range parseHexUUIDs(st.Detected) {
+			ts.detected[u] = true
+		}
+		// A fight cannot resume: its mobs were saved as ordinary mobs and no
+		// longer answer to this spawner. Anything mid-round falls back to the
+		// waiting pose, which is where vanilla's own reload lands once its
+		// current_mobs fail to resolve.
+		if ts.state == trialActive || ts.state == trialWaitingEjection || ts.state == trialEjecting {
+			ts.state, ts.spawned = trialWaitingPlayers, 0
+		}
+		out[pos] = ts
+	}
+	return out
+}
+
+// hexUUIDs / parseHexUUIDs move ordered UUID lists to and from JSON.
+func hexUUIDs(us [][16]byte) []string {
+	out := make([]string, 0, len(us))
+	for _, u := range us {
+		out = append(out, hex.EncodeToString(u[:]))
+	}
+	return out
+}
+
+// hexUUIDSet is the same for an unordered set, sorted so the file is stable.
+func hexUUIDSet(us map[[16]byte]bool) []string {
+	out := make([]string, 0, len(us))
+	for u := range us {
+		out = append(out, hex.EncodeToString(u[:]))
+	}
+	sort.Strings(out)
+	return out
+}
+
+func parseHexUUIDs(ss []string) [][16]byte {
+	out := make([][16]byte, 0, len(ss))
+	for _, s := range ss {
+		b, err := hex.DecodeString(s)
+		if err != nil || len(b) != 16 {
+			continue
+		}
+		var u [16]byte
+		copy(u[:], b)
+		out = append(out, u)
+	}
+	return out
 }
 
 // recordConduits replaces the in-memory conduit snapshot (no write).
