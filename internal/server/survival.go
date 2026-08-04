@@ -497,7 +497,7 @@ func (h *hub) respawn(t *tracked) {
 		return
 	}
 	initSurvival(t)
-	sx, sy, sz := h.respawnPoint(t)
+	sx, sy, sz, sdim := h.respawnPoint(h.playersRef, t)
 	t.x, t.y, t.z = sx, sy, sz
 	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode)})
 	t.p.trySendEv(teleportEv(sx, sy, sz, t.yaw, t.pitch))
@@ -505,16 +505,18 @@ func (h *hub) respawn(t *tracked) {
 	h.sendHealth(t)
 	h.sendInventory(t)  // clear the client's inventory view after the death drop
 	h.sendExperience(t) // …and the (zeroed) XP bar
-	if t.dim != 0 {
-		// Death respawns to the OVERWORLD: without this, the connection kept
-		// streaming the old dimension's chunks and the hub kept the player in
-		// it for everyone else — phantom players and blocks-in-thin-air. Route
-		// through the pending-switch machinery so the connection resets its
-		// dimension, restreams overworld chunks, and everyone's view swaps.
+	if t.dim != sdim {
+		// The respawn point decides the dimension — usually the overworld, but a
+		// charged respawn anchor keeps you in the Nether. Without this, the
+		// connection kept streaming the old dimension's chunks and the hub kept
+		// the player in it for everyone else — phantom players and
+		// blocks-in-thin-air. Route through the pending-switch machinery so the
+		// connection resets its dimension, restreams chunks, and everyone's view
+		// swaps.
 		t.p.pendingFrom = dimPos{}
 		t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
 		t.p.pendingDestOK = true
-		t.p.pendingDim.Store(0)
+		t.p.pendingDim.Store(int32(sdim))
 	}
 }
 

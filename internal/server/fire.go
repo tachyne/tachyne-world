@@ -157,6 +157,14 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 // radius went, every block outside survived, and a wall of obsidian protected
 // nothing beyond its own cell.
 func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius, maxDamage int) {
+	h.explodeTyped(players, dim, cx, cy, cz, radius, maxDamage, dtExplosion, deathCause{key: causeExplosion})
+}
+
+// explodeTyped is explodeIn with the damage type and death message spelled out
+// — a bed detonating in the Nether is bad_respawn_point, not a generic blast,
+// and the two carry different protection maths and different death messages.
+func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float64,
+	radius, maxDamage int, dt dmgType, cause deathCause) {
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
@@ -228,7 +236,7 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 			continue
 		}
 		dmg := float32(maxDamage) * float32(1-d/rangeF)
-		h.hurtFrom(players, t, dmg, dtExplosion, deathCause{key: causeExplosion}, from(cx, cz))
+		h.hurtFrom(players, t, dmg, dt, cause, from(cx, cz))
 		// Blast Protection braces you against the shove as well as the burn.
 		// explosion is tagged no_knockback, which looks like a contradiction
 		// and is not: that tag suppresses the ordinary shove a hit gives, and
@@ -244,7 +252,7 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 		if d >= rangeF || om.dying > 0 {
 			continue
 		}
-		om.hurtKind(float64(maxDamage)*(1-d/rangeF), dtExplosion)
+		om.hurtKind(float64(maxDamage)*(1-d/rangeF), dt)
 		if om.health <= 0 {
 			h.killMob(players, om)
 		}

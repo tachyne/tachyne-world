@@ -47,6 +47,10 @@ const (
 	causeBorder     = "border"     // strayed outside the world border
 	causeWither     = "wither"     // withered away
 	causeThorns     = "thorns"     // killed by the armour of whoever they attacked
+	// A bed in the Nether or a respawn anchor outside it. Vanilla's own message
+	// is "was killed by [Intentional Game Design]" — the bracketed phrase is a
+	// link to the bug report Mojang closed as working-as-intended.
+	causeBadRespawn = "badRespawnPoint"
 )
 
 // deathMessage renders the message for a death. The "by" form is used when
@@ -93,6 +97,8 @@ func deathMessage(victim string, c deathCause) string {
 			return victim + " was blown up by " + by
 		}
 		return victim + " blew up"
+	case causeBadRespawn:
+		return victim + " was killed by [Intentional Game Design]"
 	case causeMagic:
 		if by != "" {
 			return victim + " was killed by " + by + " using magic"

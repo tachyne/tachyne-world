@@ -449,6 +449,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if anchorCharge(state) >= 0 { // charge it with glowstone, or claim it as a respawn point
+		s.hub.post(evUseAnchor{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if _, isComposter := composterLevel(state); isComposter { // feed it, or take the bone meal
 		s.hub.post(evUseComposter{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)

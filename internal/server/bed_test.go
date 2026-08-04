@@ -27,7 +27,7 @@ func TestBedClaimsRespawnPoint(t *testing.T) {
 	if pl.sleeping {
 		t.Fatal("must not sleep during the day")
 	}
-	if pos, ok := h.spawns.get("tester"); !ok || pos != (blockPos{4, 70, 4}) {
+	if pos, dim, ok := h.spawns.get("tester"); !ok || dim != dimOverworld || pos != (blockPos{4, 70, 4}) {
 		t.Fatalf("respawn point should be claimed, got %v %v", pos, ok)
 	}
 	// Death now returns to the bed, not world spawn.

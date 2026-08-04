@@ -11,6 +11,30 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-04
+
+### Added
+- **Respawn anchors.** The Nether's bed now works: glowstone charges it up to
+  four times, a charged anchor claims your respawn point, and respawning there
+  spends one charge and leaves you in the Nether instead of dragging you back
+  to the overworld.
+
+### Fixed
+- **A bed in the Nether or the End silently stole your respawn point.** It
+  neither exploded — vanilla's whole point — nor let you sleep, but it did
+  record the spot as home. The claim was then validated against the *overworld*
+  block at the same coordinates, because the stored respawn point had no
+  dimension, so it usually evaporated without a word. Beds now detonate
+  wherever they do not work, respawn points carry the dimension they were
+  claimed in, and existing spawn files load as the overworld points they
+  always were.
+- **Trial-chamber progress was lost on every restart.** Vault claims and trial
+  spawner cooldowns lived only in memory, so a restart re-armed every spent
+  spawner and let every player claim every vault a second time. Both now
+  persist — claims by UUID (capped at vanilla's 128 per vault, oldest first),
+  cooldowns as ticks remaining, since a restarted world's clock begins again
+  at zero.
+
 ## 2026-08-03 (later)
 
 ### Fixed

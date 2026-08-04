@@ -108,8 +108,15 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 	if t.dead {
 		return
 	}
+	if !bedWorks(t.dim) {
+		// BedBlock.useWithoutItem: outside the overworld a bed is a bomb. Both
+		// halves go first, then the blast — so the bed cannot be relit by the
+		// explosion's own block updates.
+		h.blowUpRespawnBlock(players, t, pos, true)
+		return
+	}
 	if h.spawns != nil { // clicking a bed claims it as home (vanilla)
-		h.spawns.set(t.p.name, pos)
+		h.spawns.set(t.p.name, pos, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
 	}
 	if dt := h.dayTime.Load() % dayLengthTicks; dt < sleepStart || dt > sleepEnd {
@@ -198,18 +205,91 @@ func (h *hub) wakeIfAway(players map[int32]*tracked, t *tracked) {
 	}
 }
 
-// respawnPoint resolves where a player comes back after death: their claimed
-// bed if it still stands, else world spawn.
-func (h *hub) respawnPoint(t *tracked) (float64, float64, float64) {
+// blowUpRespawnBlock is the shared "you cannot respawn here" detonation behind
+// a bed in the Nether and a respawn anchor anywhere but. The block is removed
+// first (both halves, for a bed), then a power-5 blast goes off at its centre
+// carrying the bad_respawn_point damage type — the one whose death message
+// vanilla writes as [Intentional Game Design].
+func (h *hub) blowUpRespawnBlock(players map[int32]*tracked, t *tracked, pos blockPos, bed bool) {
+	dim := t.dim
+	if bed {
+		for _, p := range h.bedHalves(dim, pos) {
+			h.setBlockAt(players, dim, p, worldgen.Air)
+		}
+	} else {
+		h.setBlockAt(players, dim, pos, worldgen.Air)
+	}
+	h.explodeTyped(players, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5,
+		badRespawnPower, badRespawnDamage, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
+}
+
+const (
+	badRespawnPower  = 5  // BedBlock/RespawnAnchorBlock explode(): radius 5.0F
+	badRespawnDamage = 50 // point-blank, before armour — scaled from TNT's 4/40
+)
+
+// bedHalves returns the clicked bed cell plus its other half, found through the
+// facing/part pair the two blocks share.
+func (h *hub) bedHalves(dim int, pos blockPos) []blockPos {
+	out := []blockPos{pos}
+	w := h.worldFor(dim)
+	if w == nil {
+		return out
+	}
+	state := w.Block(pos.x, pos.y, pos.z)
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !isBed(info) {
+		return out
+	}
+	dx, dz := facingStep(worldgen.GetProperty(info, state, "facing"))
+	if worldgen.GetProperty(info, state, "part") == "head" {
+		dx, dz = -dx, -dz // the head points back down the bed to the foot
+	}
+	other := blockPos{pos.x + dx, pos.y, pos.z + dz}
+	if oi, ok := worldgen.InfoForState(w.Block(other.x, other.y, other.z)); ok && isBed(oi) {
+		out = append(out, other)
+	}
+	return out
+}
+
+// facingStep is the horizontal step a "facing" property names.
+func facingStep(facing string) (int, int) {
+	switch facing {
+	case "north":
+		return 0, -1
+	case "south":
+		return 0, 1
+	case "west":
+		return -1, 0
+	case "east":
+		return 1, 0
+	}
+	return 0, 0
+}
+
+// respawnPoint resolves where a player comes back after death, and in which
+// dimension: their claimed bed or charged respawn anchor if it still stands and
+// still works where it stands, else world spawn in the overworld.
+func (h *hub) respawnPoint(players map[int32]*tracked, t *tracked) (float64, float64, float64, int) {
 	if h.spawns != nil {
-		if pos, ok := h.spawns.get(t.p.name); ok {
-			if info, ok2 := worldgen.InfoForState(h.world.Block(pos.x, pos.y, pos.z)); ok2 && isBed(info) {
-				return float64(pos.x) + 0.5, float64(pos.y) + 0.6, float64(pos.z) + 0.5
+		if pos, dim, ok := h.spawns.get(t.p.name); ok {
+			w := h.worldFor(dim)
+			if w != nil {
+				state := w.Block(pos.x, pos.y, pos.z)
+				if info, ok2 := worldgen.InfoForState(state); ok2 && isBed(info) && bedWorks(dim) {
+					return float64(pos.x) + 0.5, float64(pos.y) + 0.6, float64(pos.z) + 0.5, dim
+				}
+				if charge := anchorCharge(state); charge > 0 && anchorWorks(dim) {
+					// The anchor spends one charge per respawn.
+					h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+					return float64(pos.x) + 0.5, float64(pos.y) + 1, float64(pos.z) + 0.5, dim
+				}
 			}
-			t.p.trySendEv(chatEv("You have no home bed, or it was obstructed"))
+			t.p.trySendEv(chatEv("You have no home bed or charged respawn anchor, or it was obstructed"))
 		}
 	}
-	return h.worldSpawn()
+	x, y, z := h.worldSpawn()
+	return x, y, z, dimOverworld
 }
 
 // worldSpawn is the death-respawn fallback (no bed): the configured spawn when

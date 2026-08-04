@@ -1692,6 +1692,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.handleUseBed(players, t, blockPos{e.x, e.y, e.z})
 				}
+			case evUseAnchor:
+				if t := players[e.eid]; t != nil {
+					h.handleUseAnchor(players, t, blockPos{e.x, e.y, e.z})
+				}
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
 					h.applyToolWear(t, e.slot, 1)

@@ -10,6 +10,19 @@ import (
 // then tells the hub via evDim so the authoritative record and everyone's
 // entity views move between dimensions.
 
+// The three dimensions, by the index every dim-carrying field uses.
+const (
+	dimOverworld = 0
+	dimNether    = 1
+	dimEnd       = 2
+)
+
+// bedWorks and anchorWorks are DimensionType.bedWorks / respawnAnchorWorks: the
+// two respawn blocks each work in exactly one dimension and detonate in the
+// others. Anywhere they do not work, using one is an explosion, not a refusal.
+func bedWorks(dim int) bool    { return dim == dimOverworld }
+func anchorWorks(dim int) bool { return dim == dimNether }
+
 type evDim struct {
 	eid     int32
 	dim     int
