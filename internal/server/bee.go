@@ -53,8 +53,10 @@ const (
 	beeWanderLeashHome = 24.0
 	beeWanderLeashFree = 32.0
 	// BeeGoToHiveGoal: give up after MAX_TRAVELLING_TICKS and blacklist the
-	// hive, up to MAX_BLACKLISTED_TARGETS. Ours counts mob-updates (2 ticks).
-	beeTravelGiveUp = 2400 / mobMoveInterval
+	// hive, up to MAX_BLACKLISTED_TARGETS. The counter ticks once per second,
+	// with the rest of updateBee's clocks — measuring it in mob-updates made
+	// the deadline twenty minutes instead of two.
+	beeTravelGiveUp = 2400 / survivalTickN
 	beeMaxBanned    = 3
 	// The goal only computes a real route once it is CLOSE — further out it
 	// just heads the right way (pathfindRandomlyTowards). That is what keeps
@@ -70,6 +72,10 @@ const (
 	// flowers never returns at all — it is not night, it has no nectar, so
 	// nothing else in the condition ever fires.
 	beeTiredSecs = 3600 / 20
+	// BeeLocateHiveGoal.start: remainingCooldownBeforeLocatingNewHive = 200,
+	// so a homeless bee looks for somewhere to live every ten seconds rather
+	// than on every pass. The scan is not cheap and vanilla does not run it hot.
+	beeLocateCD = 200 / survivalTickN
 	// BeehiveBlockEntity.emptyAllLivingFromHive: robbing a SEDATED hive does
 	// not anger its bees, it bars them from going back in for 400 ticks.
 	beeStayOutSecs    = 400 / 20
@@ -347,14 +353,41 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	// mid-pollination, dying of its sting, angry, or barred after a robbery
 	// does not go at all — nor does any bee whose hive is on fire.
 	if h.beeWantsHive(m, day, raining) {
-		if !m.beeHasHome || !h.hiveHasRoom(m.beeHome) {
-			if p, ok := h.findHiveFor(m); ok {
-				m.beeHome, m.beeHasHome, m.beeTravel = p, true, 0
+		// Bee.isHiveValid: a hive stops being one when the block is gone. Being
+		// FULL is not the same thing and must not drop it here — that is what
+		// sent a bee with nectar wandering off instead of flying home.
+		if m.beeHasHome && !isBeeHome(h.world.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) {
+			m.beeHasHome, m.beeTravel = false, 0
+			m.flyClearPath()
+		}
+		// BeeLocateHiveGoal.canBeeUse: only a bee with NO hive goes looking, and
+		// only once every remainingCooldownBeforeLocatingNewHive. Searching every
+		// second also meant running the local block scan every second.
+		if !m.beeHasHome {
+			if m.beeLocateCD > 0 {
+				m.beeLocateCD--
+			} else {
+				m.beeLocateCD = beeLocateCD
+				if p, ok := h.findHiveFor(m); ok {
+					m.beeHome, m.beeHasHome, m.beeTravel = p, true, 0
+				}
 			}
 		}
-		if m.beeHasHome && h.hiveHasRoom(m.beeHome) {
+		if m.beeHasHome {
+			// BeeGoToHiveGoal.canBeeUse does not care whether the hive is full:
+			// the bee flies home either way and finds out when it gets there.
 			m.beeGoal, m.beeGoalKind = m.beeHome, beeGoalKindHive
 			if m.beeNoEnter <= 0 && h.beeNear(m, m.beeHome) {
+				// BeeEnterHiveGoal.canBeeUse: arriving to find the hive full
+				// drops it (hivePos = null) — the bee does not queue. It is not
+				// blacklisted: a busy hive is a perfectly good hive, so the
+				// locate cooldown lets it try again rather than writing it off.
+				if !h.hiveHasRoom(m.beeHome) {
+					m.beeHasHome, m.beeTravel = false, 0
+					m.beeGoalKind = beeGoalKindNone
+					m.flyClearPath()
+					return
+				}
 				h.enterHive(players, m)
 				return
 			}
@@ -489,22 +522,42 @@ func (h *hub) enterHive(players map[int32]*tracked, m *mob) {
 
 // findHiveFor looks for a home: any registered hive with room within reach,
 // else a small local scan (a player-built hive the registry has not met).
+//
+// Only hives with SPACE are candidates — that much is
+// BeeLocateHiveGoal.findNearbyHivesWithSpace, and it is the one place fullness
+// belongs. A bee that already has a hive keeps it even once it fills up.
 func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
-	bestD := math.MaxFloat64
-	var best blockPos
-	found := false
+	bestD, banD := math.MaxFloat64, math.MaxFloat64
+	var best, ban blockPos
+	found, banned := false, false
 	for p := range h.hives {
-		if len(h.hives[p]) >= beeMaxOccupants || m.beeHiveBanned(p) ||
-			!isBeeHome(h.world.At(p.x, p.y, p.z)) {
+		if len(h.hives[p]) >= beeMaxOccupants || !isBeeHome(h.world.At(p.x, p.y, p.z)) {
 			continue
 		}
 		d := dist3(m.x, m.y, m.z, float64(p.x), float64(p.y), float64(p.z))
-		if d < bestD && d <= 48 {
+		if d > 48 {
+			continue
+		}
+		if m.beeHiveBanned(p) {
+			if d < banD { // remembered separately: it is still somewhere to live
+				banD, ban, banned = d, p, true
+			}
+			continue
+		}
+		if d < bestD {
 			bestD, best, found = d, p, true
 		}
 	}
 	if found {
 		return best, true
+	}
+	// BeeLocateHiveGoal.start: when every hive with space is blacklisted, the
+	// blacklist is CLEARED and the nearest taken anyway. Without that a bee
+	// whose only hive it once failed to reach is homeless for ever, even after
+	// whatever blocked the way is gone.
+	if banned {
+		m.beeBanned = nil
+		return ban, true
 	}
 	bx, by, bz := int(m.x), int(m.y), int(m.z)
 	for dy := -beeSeekScan; dy <= beeSeekScan; dy++ {

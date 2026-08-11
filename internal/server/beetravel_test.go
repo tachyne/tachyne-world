@@ -26,22 +26,34 @@ func beeTravelWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	return h, players, hive
 }
 
-// flyBee ticks a bee's errand until it is inside the hive or the budget runs
-// out, returning how many updates it took.
+// movesPerBeeUpdate is how many movement steps fall between two bee updates in
+// the real engine: updateBees runs on the 1 Hz survival pass, updateMobs every
+// mobMoveInterval ticks. Ten to one. A harness that steps them together models
+// a bee that flies a tenth as fast as the real one — which stayed invisible
+// only while the trip deadline was wrong in the same direction.
+const movesPerBeeUpdate = survivalTickN / mobMoveInterval
+
+// flyBee ticks a bee's errand until it is inside the hive or the budget (in
+// bee updates, i.e. seconds) runs out, returning how many it took.
 func flyBee(h *hub, players map[int32]*tracked, m *mob, budget int) int {
 	for i := 0; i < budget; i++ {
 		if _, still := h.mobs[m.eid]; !still {
 			return i // gone into the hive
 		}
 		h.updateBee(players, m, true, false)
-		dvx, dvz := m.behavior.steer(h, m)
-		m.vx = m.vx*0.85 + dvx*0.15
-		m.vz = m.vz*0.85 + dvz*0.15
-		if sp := math.Hypot(m.vx, m.vz); sp > m.moveSpeed() {
-			m.vx, m.vz = m.vx/sp*m.moveSpeed(), m.vz/sp*m.moveSpeed()
+		for j := 0; j < movesPerBeeUpdate; j++ {
+			if _, still := h.mobs[m.eid]; !still {
+				return i
+			}
+			dvx, dvz := m.behavior.steer(h, m)
+			m.vx = m.vx*0.85 + dvx*0.15
+			m.vz = m.vz*0.85 + dvz*0.15
+			if sp := math.Hypot(m.vx, m.vz); sp > m.moveSpeed() {
+				m.vx, m.vz = m.vx/sp*m.moveSpeed(), m.vz/sp*m.moveSpeed()
+			}
+			nx, nz := m.x+m.vx, m.z+m.vz
+			h.flyMove(m, nx, nz, int(math.Floor(nx)), int(math.Floor(nz)))
 		}
-		nx, nz := m.x+m.vx, m.z+m.vz
-		h.flyMove(m, nx, nz, int(math.Floor(nx)), int(math.Floor(nz)))
 	}
 	return budget
 }
@@ -57,13 +69,13 @@ func TestBeeWithNectarFliesHomeAndEnters(t *testing.T) {
 	m.beeNectar = true
 
 	startD := dist3(m.x, m.y, m.z, float64(hive.x), float64(hive.y), float64(hive.z))
-	flyBee(h, players, m, 600)
+	flyBee(h, players, m, 60)
 
 	if len(h.hives[hive]) > 0 {
 		return // went in: the errand completed
 	}
 	endD := dist3(m.x, m.y, m.z, float64(hive.x), float64(hive.y), float64(hive.z))
-	t.Errorf("bee never reached the hive: %.1f blocks away after 600 updates (started %.1f); "+
+	t.Errorf("bee never reached the hive: %.1f blocks away after 60 s (started %.1f); "+
 		"y=%.1f vs hive y=%d", endD, startD, m.y, hive.y)
 }
 
@@ -79,7 +91,7 @@ func TestBeeClimbsToAHiveAboveIt(t *testing.T) {
 	m.beeHome, m.beeHasHome = hive, true
 	m.beeNectar = true
 
-	flyBee(h, players, m, 400)
+	flyBee(h, players, m, 60)
 	if len(h.hives[hive]) > 0 {
 		return
 	}
@@ -111,7 +123,7 @@ func TestBeeGivesUpOnAnUnreachableHive(t *testing.T) {
 	m.beeHome, m.beeHasHome = hive, true
 	m.beeNectar = true
 
-	flyBee(h, players, m, 200)
+	flyBee(h, players, m, 100)
 	if !m.beeHiveBanned(hive) {
 		t.Error("an unreachable hive was never blacklisted — the bee will hover at it for ever")
 	}

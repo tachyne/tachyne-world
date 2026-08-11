@@ -11,6 +11,30 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-11
+
+### Fixed
+- **A bee whose hive filled up while it was out wandered off with its
+  nectar.** Fullness was consulted on every pass, so the moment a hive reached
+  three occupants it stopped being a destination and its bees drifted away.
+  Vanilla checks it in exactly two places: when a homeless bee ADOPTS a hive,
+  and again when one ARRIVES at the door — and a bee that arrives to find it
+  full simply drops that hive and goes to find another. In between it flies
+  home regardless; whether the hive is busy is not something a bee knows from
+  half a field away. A full hive is also not blacklisted now: being busy is not
+  the same as being unreachable.
+- **A homeless bee searched for somewhere to live every second**, local block
+  scan and all. Vanilla allows one search every 200 ticks.
+- **A bee could be homeless for ever.** When every hive with room had been
+  blacklisted, nothing ever cleared the list, so a bee that once failed to
+  reach the only hive around never went home again even after the way was
+  clear. Vanilla clears the blacklist and takes the nearest.
+- **The trip deadline was twenty minutes rather than two.** The counter ticks
+  once a second with the rest of the bee clocks, but it was being compared
+  against a limit converted for a different pass. Shipped in the previous
+  release; a bee stuck out of reach of its hive took ten times too long to give
+  up on it and look elsewhere.
+
 ## 2026-08-05
 
 ### Added

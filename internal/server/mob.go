@@ -89,6 +89,7 @@ type mob struct {
 	beeTravel       int        // bee: mob-updates spent on the current trip (give-up timer)
 	beeNoNectar     int        // bee: seconds foraging empty-handed (ticksWithoutNectarSinceExitingHive)
 	beeStayOut      int        // bee: seconds barred from the hive after a sedated robbery
+	beeLocateCD     int        // bee: seconds until it may look for a hive again
 	beeBanned       []blockPos // bee: hives it could not reach (MAX_BLACKLISTED_TARGETS)
 	// A flier's route through the air, and how far along it is. Set by the
 	// behaviour, walked by flyMove — the node's own y IS the altitude the mob
