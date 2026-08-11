@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-05
 
 ### Added
+- **Mobs no longer stand inside one another.** Vanilla shoves every pair of
+  overlapping living entities apart on every tick; tachyne had no mob-vs-mob
+  separation anywhere, so two bees, or a herd of cows, or forty zombies could
+  share a single point indefinitely. Each species now carries its real vanilla
+  hitbox — babies at half size, slimes and magma cubes scaled by theirs — and
+  the crowd is resolved with vanilla's own arithmetic, quirks intact: the shove
+  weakens as a pair converges, and a pair sharing a spot to within a hundredth
+  of a block gets none at all. The mobs vanilla exempts are exempt here too
+  (bats, the ridden, a watched creaking). Packing a pen past the cramming limit
+  now crushes what is in it, which is what makes one work.
 - **Fliers can find their way.** A flying A* over air cells, ported from
   vanilla's `FlyNodeEvaluator` — the 26-neighbour expansion (every axis, edge
   and corner move) with vanilla's rule that a diagonal is only available when

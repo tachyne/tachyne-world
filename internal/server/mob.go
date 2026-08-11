@@ -180,6 +180,9 @@ type mob struct {
 	syaw       float32 // last broadcast head yaw (only resend on change)
 	vx, vz     float64
 	vy         float64 // vertical velocity (swimmers/fliers only)
+	pushX      float64 // crowding shove (push.go), held apart from the steering
+	pushZ      float64 // velocity so a shoved mob does not turn to face the shove
+	cramCD     int     // mob-updates until this mob can take cramming damage again
 	sx, sy, sz float64 // last broadcast position (for delta moves)
 }
 
@@ -235,6 +238,7 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 // cap, terrain collision) so every primitive moves consistently.
 func (h *hub) updateMobs(players map[int32]*tracked) {
 	h.updateHerdTargets()
+	h.pushMobs(players) // crowding: mobs standing in one another shove apart
 	for _, m := range h.mobs {
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
@@ -365,7 +369,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 
 		// Move, by locomotion mode: walkers collide with terrain, fliers float
 		// free, swimmers stay inside their water column, anchored mobs hold.
-		nx, nz := m.x+m.vx, m.z+m.vz
+		// The crowding shove rides on top of the steering: vanilla applies it
+		// after the AI has moved (pushEntities is the tail of aiStep), and it
+		// deliberately escapes the speed clamp above — squeezing out of a
+		// packed pen is meant to outrun a walk.
+		nx, nz := m.x+m.vx+m.pushX, m.z+m.vz+m.pushZ
 		fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 		switch {
 		case m.statik:
@@ -376,31 +384,19 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.swimMove(m, nx, nz, fnx, fnz)
 		default:
 			// Walk — but never onto water, into a tree, or up/down a step taller
-			// than one block. The step is measured against the edit-aware surface,
-			// so mobs climb onto placed blocks and refuse cliffs/walls. When
-			// blocked, commit to a fresh random heading for a while to escape.
-			// Step height is measured at the mob's own level (MobFeetFrom), not
-			// the column surface — a cave zombie steps along the cave floor, and
-			// the cave wall reads as an impossible step instead of "the surface
-			// is 30 up". Surface mobs get the same answer as before.
-			step := h.worldFor(m.dim).MobFeetFrom(fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
-			// A fence/wall/fence-gate is only one block of "step" but 1.5 blocks of
-			// collision, so a land mob can't climb over it — treat it as a wall.
-			// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)
-			// may move regardless — steering walks it ashore like vanilla wading;
-			// without this it was permanently trapped, every destination rejected.
-			destOK := h.worldFor(m.dim).Walkable(fnx, fnz) ||
-				!h.worldFor(m.dim).Walkable(int(math.Floor(m.x)), int(math.Floor(m.z)))
-			// Even a blindly-wandering mob won't step into a hazard its kind
-			// treats as impassable (lava/fire/cactus) — unless it's already
-			// standing in one, so a mob knocked into lava can still scramble out.
-			// Striders/fire-immune mobs use their own profile (lava is fine).
-			cx, cz := int(math.Floor(m.x)), int(math.Floor(m.z))
-			prof := malusFor(m.etype)
-			w := h.worldFor(m.dim)
-			hazardOK := prof[pathHazardKind(w, fnx, fnz)] >= 0 ||
-				prof[pathHazardKind(w, cx, cz)] < 0
-			stepOK := destOK && hazardOK && step <= 1 && step >= -1 && !h.worldFor(m.dim).TallObstacle(fnx, fnz)
+			// than one block (mobStepOK holds the rules). When blocked, commit to
+			// a fresh random heading for a while to escape.
+			//
+			// The shove gets a second chance first: a mob being pressed into a
+			// wall by the crowd should slide along it, as vanilla's axis-separated
+			// collision does, not read the wall as "my route is blocked" and pick
+			// a random new heading. Dropping the shove and retrying the mob's own
+			// step keeps a herd against a fence from twitching.
+			stepOK := h.mobStepOK(m, nx, nz)
+			if !stepOK && (m.pushX != 0 || m.pushZ != 0) {
+				nx, nz = m.x+m.vx, m.z+m.vz
+				stepOK = h.mobStepOK(m, nx, nz)
+			}
 			switch {
 			case stepOK && h.ownedAt(nx, nz):
 				m.x, m.z = nx, nz
@@ -498,6 +494,33 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 		}
 	}
+}
+
+// mobStepOK reports whether a walker may stand at (nx, nz): never onto water,
+// into a tree, or up/down a step taller than one block.
+//
+// Step height is measured at the mob's own level (MobFeetFrom), not the column
+// surface — a cave zombie steps along the cave floor, and the cave wall reads
+// as an impossible step instead of "the surface is 30 up". Surface mobs get the
+// same answer either way.
+func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
+	w := h.worldFor(m.dim)
+	fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
+	cx, cz := int(math.Floor(m.x)), int(math.Floor(m.z))
+	step := w.MobFeetFrom(fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
+	// A fence/wall/fence-gate is only one block of "step" but 1.5 blocks of
+	// collision, so a land mob can't climb over it — treat it as a wall.
+	// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)
+	// may move regardless — steering walks it ashore like vanilla wading;
+	// without this it was permanently trapped, every destination rejected.
+	destOK := w.Walkable(fnx, fnz) || !w.Walkable(cx, cz)
+	// Even a blindly-wandering mob won't step into a hazard its kind treats as
+	// impassable (lava/fire/cactus) — unless it's already standing in one, so a
+	// mob knocked into lava can still scramble out. Striders/fire-immune mobs
+	// use their own profile (lava is fine).
+	prof := malusFor(m.etype)
+	hazardOK := prof[pathHazardKind(w, fnx, fnz)] >= 0 || prof[pathHazardKind(w, cx, cz)] < 0
+	return destOK && hazardOK && step <= 1 && step >= -1 && !w.TallObstacle(fnx, fnz)
 }
 
 // speedFor derives a species' per-step speed from its vanilla MOVEMENT_SPEED
