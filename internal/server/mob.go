@@ -180,11 +180,13 @@ type mob struct {
 	yaw        float32
 	syaw       float32 // last broadcast head yaw (only resend on change)
 	vx, vz     float64
-	vy         float64 // vertical velocity (swimmers/fliers only)
-	pushX      float64 // crowding shove (push.go), held apart from the steering
-	pushZ      float64 // velocity so a shoved mob does not turn to face the shove
-	cramCD     int     // mob-updates until this mob can take cramming damage again
-	sx, sy, sz float64 // last broadcast position (for delta moves)
+	vy         float64  // vertical velocity (swimmers/fliers only)
+	pushX      float64  // crowding shove (push.go), held apart from the steering
+	pushZ      float64  // velocity so a shoved mob does not turn to face the shove
+	cramCD     int      // mob-updates until this mob can take cramming damage again
+	leash      int32    // eid holding this mob's lead (player or knot); 0 = free
+	leashPos   blockPos // the fence knot's block, when the holder is one (persisted)
+	sx, sy, sz float64  // last broadcast position (for delta moves)
 }
 
 // spawnMob creates a server-controlled entity and shows it to nearby players.

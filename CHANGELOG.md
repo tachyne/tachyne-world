@@ -13,6 +13,21 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-08-11
 
+### Added
+- **Leads.** Tie a mob to yourself with a lead and it follows you about; tie it
+  to a fence and it stays there until you come back for it. The rope is real —
+  vanilla draws it between two entity ids, so a fence knot is an actual entity
+  that appears when the first lead is tied and vanishes with the last. Clicking
+  a knot empty-handed collects everything on it back onto your own lead, which
+  is how a pen full of animals gets moved. The physics are vanilla's: slack
+  inside six blocks, a spring beyond that, and a snap at twelve that drops the
+  lead as an item. Hostile mobs and most water life refuse a lead, exactly as
+  they do in vanilla — dolphins and axolotls accept one, squid and turtles do
+  not. A lead tied to a fence survives a restart; one held by a player does not,
+  because it is already cut the moment that player disconnects.
+  Java only for now: the Bedrock gateway does not draw the rope yet, though
+  tying and untying work there because the engine itself is versionless.
+
 ### Fixed
 - **A bee whose hive filled up while it was out wandered off with its
   nectar.** Fullness was consulted on every pass, so the moment a hive reached

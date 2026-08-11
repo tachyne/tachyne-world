@@ -86,6 +86,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			copy(m.ownerUUID[:], b) // owner eid re-resolves when that player joins
 		}
 	}
+	h.restoreLeash(players, m, sm.LeashPos) // re-tie to its fence knot, rebuilding it
 	m.ovrSpeed, m.ovrDamage = sm.OvrSpeed, sm.OvrDamage
 	if m.ovrSpeed > 0 {
 		m.setMoveSpeed(m.ovrSpeed)

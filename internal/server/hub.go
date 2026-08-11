@@ -500,6 +500,7 @@ type hub struct {
 	paintings    map[int32]*painting     // placed hanging paintings (persisted with containers)
 	itemFrames   map[int32]*itemFrame    // placed item frames (persisted with containers)
 	armorStands  map[int32]*armorStand   // placed armor stands (persisted with containers)
+	knots        map[int32]*leashKnot    // fence leash knots (the far end of a lead)
 	jukeboxes    map[simPos]*jukebox     // discs + playback clocks (persisted with containers)
 	beacons      map[simPos]*beacon      // placed beacons (chosen powers persisted with containers)
 	campfires    map[simPos]*campfire    // live cook state (item view in cfStore)
@@ -662,6 +663,7 @@ func newHub(w *world.World) *hub {
 		paintings:     map[int32]*painting{},
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
+		knots:         map[int32]*leashKnot{},
 		lecterns:      map[simPos]*lectern{},
 		bookshelves:   map[simPos]*[6]invStack{},
 		jukeboxes:     map[simPos]*jukebox{},
@@ -874,6 +876,7 @@ func (h *hub) run() {
 				h.updateTrialSpawners(players) // trial-chamber fights
 				h.updateVaults(players)        // …and the vaults they pay you to open
 				h.updateBees(players)          // hive occupants, pollination, honey
+				h.updateLeashes(players)       // leads: pull, snap, and holders that left
 				h.entityInsideTick(players)    // magma/berry bush/wither rose contact
 				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)      // populate villages on approach
@@ -1488,10 +1491,19 @@ func (h *hub) run() {
 						h.dismount(players, t)
 					}
 				}
+			case evLeashFence:
+				if t := players[e.eid]; t != nil &&
+					isFence(h.worldFor(t.dim).At(e.pos.x, e.pos.y, e.pos.z)) {
+					h.leashToFence(players, t, e.pos)
+				}
 			case evInteractMob:
 				if t := players[e.eid]; t != nil {
 					if st := h.armorStands[e.target]; st != nil {
 						h.interactStand(players, t, st)
+						break
+					}
+					if k := h.knots[e.target]; k != nil {
+						h.interactKnot(players, t, k, e.sneak)
 						break
 					}
 					if f := h.itemFrames[e.target]; f != nil {
@@ -1509,7 +1521,7 @@ func (h *hub) run() {
 					}
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
-						_ = h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+						_ = h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
@@ -1858,6 +1870,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
 	h.sendStandsTo(nt)
+	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
 	// Show the newcomer every mob already in their dimension.
 	for _, m := range h.mobs {

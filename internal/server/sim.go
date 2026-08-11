@@ -135,6 +135,12 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	h.worldFor(dim).SetBlock(pos.x, pos.y, pos.z, state)
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
 	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
+	// Break the fence and the knot goes with it, dropping whatever it held.
+	// Guarded on there being any knot at all: this is the choke point every
+	// block change runs through.
+	if len(h.knots) > 0 && !isFence(state) {
+		h.cutLeashesAt(players, dim, pos)
+	}
 }
 
 // broadcastBlock sends a Block Update to overworld players tracking the chunk.

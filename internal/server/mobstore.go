@@ -97,6 +97,13 @@ type savedMob struct {
 	Strength  int8        `json:"str,omitempty"`
 	Held      int32       `json:"held,omitempty"`
 	Harness   int32       `json:"harn,omitempty"`
+	// A lead tied to a FENCE survives a restart; one held by a player does not,
+	// because the leash drops the moment its holder disconnects (vanilla's
+	// tickLeash gives up as soon as the two cannot interact). So the only thing
+	// worth storing is the knot's block, and the knot itself is rebuilt from
+	// whichever mobs still name it — exactly as vanilla discards a knot with
+	// nothing tied to it.
+	LeashPos *[3]int `json:"leash,omitempty"`
 
 	Tamed     bool    `json:"tame,omitempty"`
 	Sitting   bool    `json:"sit,omitempty"`
@@ -451,7 +458,8 @@ func toSavedMob(m *mob) savedMob {
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
-		Tamed: m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage,
+		LeashPos: leashSavePos(m),
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage,
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])

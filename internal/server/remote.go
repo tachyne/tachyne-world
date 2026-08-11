@@ -386,6 +386,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgAbilities, ev)
 	case attachproto.Passengers:
 		send(attachproto.MsgPassengers, ev)
+	case attachproto.EntityLink:
+		send(attachproto.MsgEntityLink, ev)
 	case attachproto.VehicleMove:
 		send(attachproto.MsgVehicleMove, ev)
 	case attachproto.Velocity:
