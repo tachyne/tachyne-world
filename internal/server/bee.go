@@ -42,6 +42,37 @@ const (
 	beeSeekScan       = 8   // local box scanned for a flower or hive
 	beeGoalSpeed      = 0.2 // steer factor toward the current goal
 	beeGoalReach      = 1.8 // close enough to a flower / hive front
+
+	// Bee.TOO_FAR_DISTANCE: past this the hive stops counting as its own and
+	// the bee drops it (Bee.dropHive), becoming homeless until it finds another.
+	beeTooFar = 48.0
+	// BeeWanderGoal.getWanderThreshold: 48 - 24 with a hive or a saved flower,
+	// 48 - 16 without. Past it, wandering is biased back toward the hive
+	// instead of following the bee's nose — the soft leash that keeps a colony
+	// near its nest.
+	beeWanderLeashHome = 24.0
+	beeWanderLeashFree = 32.0
+	// BeeGoToHiveGoal: give up after MAX_TRAVELLING_TICKS and blacklist the
+	// hive, up to MAX_BLACKLISTED_TARGETS. Ours counts mob-updates (2 ticks).
+	beeTravelGiveUp = 2400 / mobMoveInterval
+	beeMaxBanned    = 3
+	// The goal only computes a real route once it is CLOSE — further out it
+	// just heads the right way (pathfindRandomlyTowards). That is what keeps
+	// the node budget honest: A* is never asked to solve a 48-block detour,
+	// only the last stretch, where the trees actually are.
+	beeDirectRange = 16.0
+	// pathfindDirectlyTowards: setMaxVisitedNodesMultiplier(10) — the close-in
+	// search is allowed ten times the ordinary budget.
+	beeDirectBudget = flyPathBudget * 10
+
+	// Bee.isTiredOfLookingForNectar: 3600 ticks out with nothing to show for
+	// it and the bee goes home anyway. Without this a bee somewhere with no
+	// flowers never returns at all — it is not night, it has no nectar, so
+	// nothing else in the condition ever fires.
+	beeTiredSecs = 3600 / 20
+	// BeehiveBlockEntity.emptyAllLivingFromHive: robbing a SEDATED hive does
+	// not anger its bees, it bars them from going back in for 400 ticks.
+	beeStayOutSecs    = 400 / 20
 	beeGoalKindNone   = 0
 	beeGoalKindFlower = 1
 	beeGoalKindHive   = 2
@@ -135,14 +166,50 @@ type beeBehavior struct{}
 func (beeBehavior) name() string { return "bee" }
 func (beeBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.beeGoalKind != beeGoalKindNone {
-		dx := float64(m.beeGoal.x) + 0.5 - m.x
-		dz := float64(m.beeGoal.z) + 0.5 - m.z
-		if math.Hypot(dx, dz) > beeGoalReach {
-			return dx * beeGoalSpeed, dz * beeGoalSpeed
+		g := m.beeGoal
+		if dist3(m.x, m.y, m.z, float64(g.x)+0.5, float64(g.y)+0.5, float64(g.z)+0.5) > beeDirectRange {
+			// Still a way out: head the right way and let the cruise altitude
+			// stand, exactly as pathfindRandomlyTowards does.
+			m.flyClearPath()
+			return beeHeadFor(m, g)
 		}
-		return 0, 0
+		// Close in, where the leaves and the trunk are: fly the real route.
+		if h.flyToBudget(m, g, beeDirectBudget) {
+			return flySteer(m, beeGoalSpeed*2)
+		}
+		return 0, 0 // no way through; updateBee blacklists on the next pass
 	}
-	return wanderBehavior{}.steer(h, m)
+	m.flyClearPath()
+	return beeWander(h, m)
+}
+
+// beeHeadFor is the long-range half of the errand: point at the goal and go.
+func beeHeadFor(m *mob, g blockPos) (float64, float64) {
+	dx, dz := float64(g.x)+0.5-m.x, float64(g.z)+0.5-m.z
+	if d := math.Hypot(dx, dz); d > 0.01 {
+		return dx / d * beeGoalSpeed * 2, dz / d * beeGoalSpeed * 2
+	}
+	return 0, 0
+}
+
+// beeWander is BeeWanderGoal.findPos: ordinary wandering, except that a bee
+// which has drifted past its leash has the wander biased back toward the hive.
+// It is a pull, not a wall — the bee still meanders, it just meanders home.
+func beeWander(h *hub, m *mob) (float64, float64) {
+	vx, vz := wanderBehavior{}.steer(h, m)
+	if !m.beeHasHome {
+		return vx, vz
+	}
+	leash := beeWanderLeashFree
+	if m.beeHasHome {
+		leash = beeWanderLeashHome
+	}
+	dx, dz := float64(m.beeHome.x)+0.5-m.x, float64(m.beeHome.z)+0.5-m.z
+	if d := math.Hypot(dx, dz); d > leash && d > 0.01 {
+		home := m.moveSpeed()
+		return dx / d * home, dz / d * home
+	}
+	return vx, vz
 }
 
 // updateBees is the 1 Hz hive-and-bee pass, replacing the old proximity
@@ -224,6 +291,16 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	if m.beeNoEnter > 0 {
 		m.beeNoEnter--
 	}
+	if m.beeStayOut > 0 {
+		m.beeStayOut--
+	}
+	// customServerAiStep: the give-up clock runs whenever the bee is
+	// empty-handed, and setHasNectar resets it the moment it is not.
+	if m.beeNectar {
+		m.beeNoNectar = 0
+	} else {
+		m.beeNoNectar++
+	}
 	h.syncBeeLook(players, m)
 	// The pollen coat at work — even while flying home, and regardless of a
 	// fight: the nectar drips (vanilla aiStep, 5% per tick) and crops below
@@ -259,18 +336,37 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 		}
 		return
 	}
-	// Home time: carrying nectar, or night, or rain.
-	if m.beeNectar || !day || raining {
+	// Bee.aiStep: a hive left far behind stops being this bee's hive at all.
+	if m.beeHasHome && dist3(m.x, m.y, m.z,
+		float64(m.beeHome.x)+0.5, float64(m.beeHome.y)+0.5, float64(m.beeHome.z)+0.5) > beeTooFar {
+		m.beeHasHome, m.beeTravel = false, 0
+		m.flyClearPath()
+	}
+	// Home time. Bee.wantsToEnterHive is a good deal more than "has nectar":
+	// a bee that has been out too long gives up and goes back, and one that is
+	// mid-pollination, dying of its sting, angry, or barred after a robbery
+	// does not go at all — nor does any bee whose hive is on fire.
+	if h.beeWantsHive(m, day, raining) {
 		if !m.beeHasHome || !h.hiveHasRoom(m.beeHome) {
 			if p, ok := h.findHiveFor(m); ok {
-				m.beeHome, m.beeHasHome = p, true
+				m.beeHome, m.beeHasHome, m.beeTravel = p, true, 0
 			}
 		}
 		if m.beeHasHome && h.hiveHasRoom(m.beeHome) {
 			m.beeGoal, m.beeGoalKind = m.beeHome, beeGoalKindHive
-			h.beeApproach(m)
 			if m.beeNoEnter <= 0 && h.beeNear(m, m.beeHome) {
 				h.enterHive(players, m)
+				return
+			}
+			// BeeGoToHiveGoal.tick: the trip has a deadline, and a hive that
+			// cannot be routed to FROM CLOSE UP is written off. Failing to
+			// path from far away means nothing — the goal does not even try
+			// until it is inside beeDirectRange.
+			near := dist3(m.x, m.y, m.z, float64(m.beeHome.x)+0.5,
+				float64(m.beeHome.y)+0.5, float64(m.beeHome.z)+0.5) <= beeDirectRange
+			if m.beeTravel++; m.beeTravel > beeTravelGiveUp ||
+				(near && !h.beeCanReach(m, m.beeHome)) {
+				h.beeBanHive(m, m.beeHome)
 			}
 		} else {
 			m.beeGoalKind = beeGoalKindNone
@@ -279,11 +375,11 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	}
 	// Foraging: on a goal, close the distance; otherwise sometimes go look.
 	if m.beeGoalKind == beeGoalKindFlower {
-		h.beeApproach(m)
 		if h.beeNear(m, m.beeGoal) {
 			m.beePollinate = beePollinateSecs
 		} else if !worldgen.IsFlower(h.world.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
 			m.beeGoalKind = beeGoalKindNone
+			m.flyClearPath()
 		}
 		return
 	}
@@ -294,16 +390,75 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	}
 }
 
-// beeApproach nudges a flying bee's altitude toward its goal — the steer
-// primitive covers the ground plane, this covers the tree.
-func (h *hub) beeApproach(m *mob) {
-	dy := float64(m.beeGoal.y) + 0.5 - m.y
-	switch {
-	case dy > 0.3:
-		m.y += math.Min(dy, 0.5)
-	case dy < -0.3:
-		m.y += math.Max(dy, -0.5)
+// beeWantsHive is Bee.wantsToEnterHive. The first four are hard refusals —
+// whatever else is true, a bee doing one of these is not going home — and the
+// rest are the reasons it would want to.
+func (h *hub) beeWantsHive(m *mob, day, raining bool) bool {
+	if m.beeStayOut > 0 || m.beePollinate > 0 || m.beeStingDie > 0 || m.anger > 0 {
+		return false
 	}
+	// isNightOrRaining is measured on the SKY, so it is the overworld's
+	// business: a dimension with no sky never sends its bees in on the hour.
+	dark := m.dim == dimOverworld && (!day || raining)
+	want := m.beeNoNectar > beeTiredSecs || dark || m.beeNectar
+	return want && !h.hiveOnFire(m)
+}
+
+// hiveOnFire is BeehiveBlockEntity.isFireNearby: an actual fire block in the
+// 3x3x3 around the hive. NOT a campfire — a campfire under a hive sedates it,
+// which is a different rule living in campfireUnder.
+func (h *hub) hiveOnFire(m *mob) bool {
+	if !m.beeHasHome {
+		return false
+	}
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return false
+	}
+	for dx := -1; dx <= 1; dx++ {
+		for dy := -1; dy <= 1; dy++ {
+			for dz := -1; dz <= 1; dz++ {
+				if isFire(w.At(m.beeHome.x+dx, m.beeHome.y+dy, m.beeHome.z+dz)) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// beeCanReach reports whether a route to the goal exists right now. The path
+// is computed by the steer as the bee flies; this only asks whether the last
+// attempt found anything, so it costs nothing extra.
+func (h *hub) beeCanReach(m *mob, goal blockPos) bool {
+	return m.flyGoal != goal || len(m.flyPath) > 0
+}
+
+// beeBanHive is BeeGoToHiveGoal's blacklist: give up on a hive that cannot be
+// reached and look for another. Vanilla remembers three; a fourth pushes the
+// oldest out.
+func (h *hub) beeBanHive(m *mob, pos blockPos) {
+	for _, p := range m.beeBanned {
+		if p == pos {
+			return
+		}
+	}
+	m.beeBanned = append(m.beeBanned, pos)
+	if n := len(m.beeBanned) - beeMaxBanned; n > 0 {
+		m.beeBanned = append(m.beeBanned[:0], m.beeBanned[n:]...)
+	}
+	m.beeHasHome, m.beeTravel, m.beeGoalKind = false, 0, beeGoalKindNone
+	m.flyClearPath()
+}
+
+// beeHiveBanned reports whether this bee has written a hive off.
+func (m *mob) beeHiveBanned(p blockPos) bool {
+	for _, b := range m.beeBanned {
+		if b == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *hub) beeNear(m *mob, p blockPos) bool {
@@ -325,6 +480,8 @@ func (h *hub) enterHive(players map[int32]*tracked, m *mob) {
 		stay = beeOccupySecs
 	}
 	h.registerHive(m.beeHome)
+	m.beeTravel, m.beeBanned, m.beeNoNectar = 0, nil, 0
+	m.flyClearPath()
 	h.hives[m.beeHome] = append(h.hives[m.beeHome], hiveOccupant{SecsLeft: stay, Nectar: m.beeNectar})
 	h.hivesMark()
 	h.removeMob(players, m)
@@ -337,7 +494,8 @@ func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
 	var best blockPos
 	found := false
 	for p := range h.hives {
-		if len(h.hives[p]) >= beeMaxOccupants || !isBeeHome(h.world.At(p.x, p.y, p.z)) {
+		if len(h.hives[p]) >= beeMaxOccupants || m.beeHiveBanned(p) ||
+			!isBeeHome(h.world.At(p.x, p.y, p.z)) {
 			continue
 		}
 		d := dist3(m.x, m.y, m.z, float64(p.x), float64(p.y), float64(p.z))
@@ -353,7 +511,8 @@ func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
 		for dx := -beeSeekScan; dx <= beeSeekScan; dx++ {
 			for dz := -beeSeekScan; dz <= beeSeekScan; dz++ {
 				p := blockPos{bx + dx, by + dy, bz + dz}
-				if isBeeHome(h.world.At(p.x, p.y, p.z)) && len(h.hives[p]) < beeMaxOccupants {
+				if isBeeHome(h.world.At(p.x, p.y, p.z)) && len(h.hives[p]) < beeMaxOccupants &&
+					!m.beeHiveBanned(p) {
 					h.registerHive(p)
 					return p, true
 				}
@@ -588,11 +747,22 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, po
 		}
 		return
 	}
-	// EMERGENCY release: the occupants come out after whoever broke their
-	// home, and the neighbours join in.
-	h.releaseHiveBees(players, pos, t)
-	if t != nil {
-		h.angerBees(players, t, pos)
+	// EMERGENCY release. Whether the occupants come out ANGRY is the smoke's
+	// decision (BeehiveBlockEntity.emptyAllLivingFromHive): a sedated hive's
+	// bees have nobody to blame, and are simply barred from going back in
+	// while they settle.
+	if sedated := h.campfireUnder(pos); sedated {
+		h.releaseHiveBees(players, pos, nil)
+		for _, m := range h.mobs {
+			if m.etype == entityBee && m.beeHasHome && m.beeHome == pos {
+				m.beeStayOut = beeStayOutSecs
+			}
+		}
+	} else {
+		h.releaseHiveBees(players, pos, t)
+		if t != nil {
+			h.angerBees(players, t, pos)
+		}
 	}
 	if beeHomeBase(state) != beeNestMin {
 		h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)

@@ -43,6 +43,13 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
 		want = m.ty + m.hover*0.3
 	}
+	// On a route, the current waypoint's own height IS the altitude wanted.
+	// Without this the hover spring pulls the mob back to its cruising height
+	// every tick while the errand pushes it up, and the two cancel: the mob
+	// bobs in place and never climbs to the hive in the tree.
+	if node, ok := m.flyWaypoint(); ok {
+		want = float64(node.y) + 0.5
+	}
 	if !worldgen.Collides(w.At(fnx, int(math.Floor(m.y)), fnz)) {
 		m.x, m.z = nx, nz
 	} else {

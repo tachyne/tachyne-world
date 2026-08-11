@@ -37,55 +37,66 @@ var (
 type mob struct {
 	eid             int32
 	etype           int
-	behavior        Behavior       // per-tick steering primitive (wander/herd/…)
-	herd            int            // index into hub.herds — the goal a herd mob steers toward
-	reroute         int            // ticks left committed to an escape heading after a block
-	health          int            // hit points; mob dies and drops loot at 0
-	dying           int            // ticks left in the death animation (0 = alive); despawns at 0
-	panic           int            // ticks left fleeing after being hit
-	kb              int            // knockback updates left (velocity decays, no steering/clamp)
-	rest            int            // grazing pause: updates left standing still (passive idling)
-	fleeX, fleeZ    float64        // the threat to flee away from while panicking
-	hostile         bool           // hunts + attacks players (zombies) rather than grazing
-	burns           bool           // undead: catches fire in daylight (zombie/skeleton)
-	burning         bool           // on fire — rendered via entity flags (any ignite source)
-	burnDelay       int            // seconds of dawn-ramp grace before this mob ignites
-	fireSecs        int            // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
-	submerged       int            // consecutive seconds fully underwater (land mobs drown past maxAir)
-	fuse            int            // creeper: ticks left on a lit fuse (0 = not ignited)
-	anger           int            // spider: mob-updates it stays hostile in daylight after a hit
-	jumpStrength    float64        // horse family: how high it jumps (vanilla 0.4-1.0)
-	dragonPhase     int            // ender dragon: which phase of the fight it is in
-	dragonPhaseTick int            // ticks spent in the current phase
-	dragonFlames    int            // breaths taken this perch
-	dragonCharge    int            // ticks of fireball aim built up
-	fangNextAt      uint64         // evoker: tick its fang spell comes off cooldown
-	vexNextAt       uint64         // evoker: tick its summon spell comes off cooldown
-	vexLife         int            // summoned vex: ticks left before it expires (0 = unlimited)
-	hitByPlayer     bool           // a player has hit it — its death pays XP (vanilla rule)
-	lastAttacker    int32          // eid of the last entity that hurt it (plugin death event)
-	looting         int            // killer's Looting level (stamped per hit, used at drop time)
-	baby            bool           // ageable: half-size, grows up, no drops/XP
-	growLeft        int            // ticks until a baby matures
-	loveTicks       int            // courting window after love-food (hearts)
-	lovedBy         int32          // who fed the love-food (advancement credit)
-	breedCD         int            // ticks before this parent may breed again
-	stroll          int            // wander spell: updates left walking before the next rest
-	sheared         bool           // sheep: fleece off (regrows by grazing)
-	color           int8           // sheep: fleece colour (0 white .. 15 black), dyeable
-	customName      string         // name-tagged: shown above the mob, and it never despawns
-	eggIn           int            // chicken: ticks until the next egg
-	beeNectar       bool           // bee: carrying nectar home (fills the hive on delivery)
-	beePollinate    int            // bee: seconds left hovering at its flower
-	beeGoal         blockPos       // bee: the flower or hive it flies toward
-	beeGoalKind     int            // bee: beeGoalKindNone/Flower/Hive
-	beeHome         blockPos       // bee: its hive (beeHasHome)
-	beeHasHome      bool           //
-	beeNoEnter      int            // bee: seconds before it may re-enter a hive
-	beeStingDie     int            // bee: seconds left to live after stinging
-	beeCropsGrown   int8           // bee: crops boosted since its last pollination (cap 10)
-	beeSentFlags    uint8          // bee: last synced flags byte (pollen coat / lost stinger)
-	beeSentAngry    bool           // bee: last synced anger state (red eyes)
+	behavior        Behavior   // per-tick steering primitive (wander/herd/…)
+	herd            int        // index into hub.herds — the goal a herd mob steers toward
+	reroute         int        // ticks left committed to an escape heading after a block
+	health          int        // hit points; mob dies and drops loot at 0
+	dying           int        // ticks left in the death animation (0 = alive); despawns at 0
+	panic           int        // ticks left fleeing after being hit
+	kb              int        // knockback updates left (velocity decays, no steering/clamp)
+	rest            int        // grazing pause: updates left standing still (passive idling)
+	fleeX, fleeZ    float64    // the threat to flee away from while panicking
+	hostile         bool       // hunts + attacks players (zombies) rather than grazing
+	burns           bool       // undead: catches fire in daylight (zombie/skeleton)
+	burning         bool       // on fire — rendered via entity flags (any ignite source)
+	burnDelay       int        // seconds of dawn-ramp grace before this mob ignites
+	fireSecs        int        // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
+	submerged       int        // consecutive seconds fully underwater (land mobs drown past maxAir)
+	fuse            int        // creeper: ticks left on a lit fuse (0 = not ignited)
+	anger           int        // spider: mob-updates it stays hostile in daylight after a hit
+	jumpStrength    float64    // horse family: how high it jumps (vanilla 0.4-1.0)
+	dragonPhase     int        // ender dragon: which phase of the fight it is in
+	dragonPhaseTick int        // ticks spent in the current phase
+	dragonFlames    int        // breaths taken this perch
+	dragonCharge    int        // ticks of fireball aim built up
+	fangNextAt      uint64     // evoker: tick its fang spell comes off cooldown
+	vexNextAt       uint64     // evoker: tick its summon spell comes off cooldown
+	vexLife         int        // summoned vex: ticks left before it expires (0 = unlimited)
+	hitByPlayer     bool       // a player has hit it — its death pays XP (vanilla rule)
+	lastAttacker    int32      // eid of the last entity that hurt it (plugin death event)
+	looting         int        // killer's Looting level (stamped per hit, used at drop time)
+	baby            bool       // ageable: half-size, grows up, no drops/XP
+	growLeft        int        // ticks until a baby matures
+	loveTicks       int        // courting window after love-food (hearts)
+	lovedBy         int32      // who fed the love-food (advancement credit)
+	breedCD         int        // ticks before this parent may breed again
+	stroll          int        // wander spell: updates left walking before the next rest
+	sheared         bool       // sheep: fleece off (regrows by grazing)
+	color           int8       // sheep: fleece colour (0 white .. 15 black), dyeable
+	customName      string     // name-tagged: shown above the mob, and it never despawns
+	eggIn           int        // chicken: ticks until the next egg
+	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
+	beePollinate    int        // bee: seconds left hovering at its flower
+	beeGoal         blockPos   // bee: the flower or hive it flies toward
+	beeGoalKind     int        // bee: beeGoalKindNone/Flower/Hive
+	beeHome         blockPos   // bee: its hive (beeHasHome)
+	beeHasHome      bool       //
+	beeNoEnter      int        // bee: seconds before it may re-enter a hive
+	beeStingDie     int        // bee: seconds left to live after stinging
+	beeCropsGrown   int8       // bee: crops boosted since its last pollination (cap 10)
+	beeSentFlags    uint8      // bee: last synced flags byte (pollen coat / lost stinger)
+	beeSentAngry    bool       // bee: last synced anger state (red eyes)
+	beeTravel       int        // bee: mob-updates spent on the current trip (give-up timer)
+	beeNoNectar     int        // bee: seconds foraging empty-handed (ticksWithoutNectarSinceExitingHive)
+	beeStayOut      int        // bee: seconds barred from the hive after a sedated robbery
+	beeBanned       []blockPos // bee: hives it could not reach (MAX_BLACKLISTED_TARGETS)
+	// A flier's route through the air, and how far along it is. Set by the
+	// behaviour, walked by flyMove — the node's own y IS the altitude the mob
+	// wants, which is what stops the hover spring fighting the errand.
+	flyPath         []blockPos
+	flyIdx          int
+	flyGoal         blockPos
+	flyStale        int            // mob-updates since the path was computed
 	size            int            // slime: 4/2/1 (splits in half on death)
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)

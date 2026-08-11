@@ -11,6 +11,45 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-05
+
+### Added
+- **Fliers can find their way.** A flying A* over air cells, ported from
+  vanilla's `FlyNodeEvaluator` — the 26-neighbour expansion (every axis, edge
+  and corner move) with vanilla's rule that a diagonal is only available when
+  the orthogonal moves composing it are, so nothing squeezes through the gap
+  between two blocks that merely touch. The engine's existing pathfinder is
+  two-dimensional by construction: it walks x/z and asks the world where the
+  floor is, which is no use to something with no floor.
+
+### Fixed
+- **A bee somewhere with no flowers never went home at all.** Going home was
+  gated on "has nectar, or it is night, or it is raining" — but vanilla's
+  `wantsToEnterHive` has a fourth reason: a bee that has been out 3600 ticks
+  empty-handed gives up and returns anyway. Without it, a bee that could not
+  find a flower satisfied none of the conditions and simply foraged for ever.
+  The five vanilla refusals were missing too: a bee mid-pollination, dying of
+  its sting, angry at someone, barred after a sedated robbery, or whose hive
+  has fire beside it does not go in. (Fire — not a campfire. A campfire under
+  a hive sedates it, which is what makes honey farms safe, and reading that as
+  fire would have locked every bee out of its own hive.)
+- **Bees picked up pollen and then hovered where they stood.** Two faults
+  stacked. The altitude spring that keeps a flier at its cruising height ran
+  every tick against the errand's attempt to climb, and the two cancelled — so
+  a bee under a nest in a tree bobbed in place indefinitely, pollen on, going
+  nowhere. And the errand steered in a straight line with no way around a
+  trunk or a canopy. A bee now flies a real route, and the route's own
+  waypoints set the altitude, so climbing to a nest is simply part of
+  following it.
+- **A bee would try an unreachable hive for ever.** Vanilla gives a trip a
+  deadline and blacklists a hive it cannot route to from close up, keeping the
+  last three; drops a hive left more than 48 blocks behind entirely; and, past
+  a soft leash of 24 blocks, biases its idle wandering back toward home
+  instead of drifting. All three were missing. The near/far split is vanilla's
+  too: a real route is only computed within 16 blocks — further out the bee
+  simply heads the right way — which is what keeps the search cheap enough to
+  run on every bee.
+
 ## 2026-08-04 (evening)
 
 ### Fixed
