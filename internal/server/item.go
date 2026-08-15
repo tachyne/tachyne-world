@@ -147,14 +147,15 @@ func appendSlot(b []byte, item int32, count int) []byte {
 // renders the glint + tooltip (the chain renumbers it to 13 for 774+ clients
 // — see protocol.copyFullSlot).
 const (
-	componentDamage       = 3
-	componentEnchantments = 10
-	componentStoredEnch   = 34 // books; remapped per version by the chain
-	componentCustomName   = 5  // anvil renames (NBT text); remapped per version
-	componentLore         = 8  // plugin-UI item lore (list of NBT texts); remapped per version
-	componentMapID        = 37 // filled_map's map number; remapped per version
-	componentTrim         = 47 // armor trim (material + pattern holders); remapped per version
-	componentBannerPats   = 63 // banner pattern layers; remapped per version
+	componentDamage         = 3
+	componentEnchantments   = 10
+	componentStoredEnch     = 34 // books; remapped per version by the chain
+	componentCustomName     = 5  // anvil renames (NBT text); remapped per version
+	componentLore           = 8  // plugin-UI item lore (list of NBT texts); remapped per version
+	componentMapID          = 37 // filled_map's map number; remapped per version
+	componentTrim           = 47 // armor trim (material + pattern holders); remapped per version
+	componentBannerPats     = 63 // banner pattern layers; remapped per version
+	componentBundleContents = 41 // bundle contents (list of Slots); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -230,11 +231,22 @@ func stackComponents(st invStack) []byte {
 			}
 		}
 	}
+	var bundleBytes []byte
+	if st.bundleID != 0 {
+		if bs := bundleComponentBytes(st.bundleID); len(bs) > 0 {
+			bundleBytes = bs
+			comps++
+		}
+	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
 	if st.dmg > 0 {
 		b = protocol.AppendVarInt(b, componentDamage)
 		b = protocol.AppendVarInt(b, int32(st.dmg))
+	}
+	if bundleBytes != nil {
+		b = protocol.AppendVarInt(b, componentBundleContents)
+		b = append(b, bundleBytes...)
 	}
 	if st.mapID != 0 {
 		b = protocol.AppendVarInt(b, componentMapID)

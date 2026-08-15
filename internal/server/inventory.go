@@ -53,6 +53,10 @@ type invStack struct {
 	// Carried-hive identity (0 = none): a Silk-Touched hive's bees + honey
 	// live in the hub's hiveItems store. Same indirection as boxID.
 	hiveID int32
+	// Bundle identity (0 = empty pouch): the contents live in the hub's bundle
+	// store. Same indirection again — and the reason a bundle can be dropped,
+	// chested or put inside another bundle without losing what it holds.
+	bundleID int32
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).

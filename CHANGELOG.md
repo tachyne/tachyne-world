@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-11
 
 ### Added
+- **Bundles.** All seventeen of them. A pouch holds one stack's worth of
+  anything, by vanilla's own rule: each item costs one over its stack size, so
+  sixty-four dirt, sixteen ender pearls or a single lava bucket each fill it
+  exactly, and a mixture shares the space between them. Left-click a stack with
+  a pouch in hand to take it in, right-click an empty slot to tip one back out,
+  and scroll to choose which stack that is. The contents show in the tooltip,
+  travel with the pouch when it is dropped or chested, and survive a restart. A
+  pouch can go inside another at vanilla's one-sixteenth surcharge, which is
+  what stops them nesting forever.
 - **Leads.** Tie a mob to yourself with a lead and it follows you about; tie it
   to a fence and it stays there until you come back for it. The rope is real —
   vanilla draws it between two entity ids, so a fence knot is an actual entity

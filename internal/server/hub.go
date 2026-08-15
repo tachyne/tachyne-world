@@ -451,6 +451,8 @@ type hub struct {
 	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
 	boxes     map[int32]*chest
 	nextBoxID int32
+	// Bundle contents riding a bundle item, keyed by the stack's bundleID.
+	bundles *bundleStore
 	// Bees + honey riding a Silk-Touched hive item, keyed by the stack's hiveID.
 	hiveItems  map[int32]hiveStow
 	nextHiveID int32
@@ -664,6 +666,7 @@ func newHub(w *world.World) *hub {
 		itemFrames:    map[int32]*itemFrame{},
 		armorStands:   map[int32]*armorStand{},
 		knots:         map[int32]*leashKnot{},
+		bundles:       newBundleStore(),
 		lecterns:      map[simPos]*lectern{},
 		bookshelves:   map[simPos]*[6]invStack{},
 		jukeboxes:     map[simPos]*jukebox{},
@@ -692,7 +695,8 @@ func newHub(w *world.World) *hub {
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
 	h.plugins = plugin.NewDispatcher()
 	h.psched = newPluginSched(h)
-	globalBooks.Store(h.books) // free-function component composition (see book.go)
+	globalBooks.Store(h.books)     // free-function component composition (see book.go)
+	globalBundles.Store(h.bundles) // ditto for bundle contents (see bundle.go)
 	return h
 }
 
@@ -727,6 +731,7 @@ func (h *hub) run() {
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
 		h.boxes, h.nextBoxID = h.containers.loadBoxes()
+		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
 		h.vaults = h.containers.loadVaults()
@@ -981,6 +986,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
@@ -1491,6 +1497,10 @@ func (h *hub) run() {
 						h.dismount(players, t)
 					}
 				}
+			case evBundleSelect:
+				if t := players[e.eid]; t != nil {
+					h.selectBundleItem(t, e.slot, e.selected)
+				}
 			case evLeashFence:
 				if t := players[e.eid]; t != nil &&
 					isFence(h.worldFor(t.dim).At(e.pos.x, e.pos.y, e.pos.z)) {
@@ -1761,6 +1771,7 @@ func (h *hub) run() {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)

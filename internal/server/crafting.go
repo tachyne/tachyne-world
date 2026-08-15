@@ -42,6 +42,7 @@ type evClick struct {
 	windowID int32
 	slot     int16
 	mode     int32
+	button   int32 // 0 left, 1 right — only bundles need it (see bundle.go)
 	changed  []slotChange
 	cursor   invStack
 }
@@ -359,6 +360,13 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	if e.slot >= 5 && e.slot <= 8 && t.winID == 0 && t.gamemode != gmCreative &&
 		t.armor[e.slot-5].enchLvl(enchBindingCurse) > 0 {
 		h.resyncWindow(t)
+		return
+	}
+
+	// Bundles move items by CLICK, and their contents are server state the
+	// client cannot declare — so this runs before the reconciliation below and
+	// resyncs rather than trusting the declared slots.
+	if h.tryBundleClick(players, t, e) {
 		return
 	}
 

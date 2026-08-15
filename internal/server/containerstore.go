@@ -55,6 +55,11 @@ type containerFile struct {
 	Boxes map[string][]containerRow `json:"boxes,omitempty"`
 	// The next boxID to mint, so ids stay unique across restarts.
 	NextBoxID int32 `json:"next_box_id,omitempty"`
+	// Bundle contents riding a bundle item, keyed by bundleID. Ordered, not
+	// slot-indexed: a pouch has no slots, just a list with the most recently
+	// touched stack first.
+	Bundles      map[string][]stackRow `json:"bundles,omitempty"`
+	NextBundleID int32                 `json:"next_bundle_id,omitempty"`
 	// Bees + honey riding a Silk-Touched hive item, keyed by hiveID.
 	HiveItems  map[string]hiveStow `json:"hive_items,omitempty"`
 	NextHiveID int32               `json:"next_hive_id,omitempty"`
@@ -809,5 +814,51 @@ func (s *containerStore) loadConduits() map[simPos]bool {
 			out[simPos{dim: d, blockPos: pos}] = true
 		}
 	}
+	return out
+}
+
+// recordBundles snapshots every bundle's contents for the save file.
+func (s *containerStore) recordBundles(bs *bundleStore) {
+	if bs == nil {
+		return
+	}
+	bs.mu.Lock()
+	snap := make(map[string][]stackRow, len(bs.items))
+	for id, items := range bs.items {
+		rows := make([]stackRow, 0, len(items))
+		for _, st := range items {
+			if st.item != 0 && st.count > 0 {
+				rows = append(rows, packStack(st))
+			}
+		}
+		if len(rows) > 0 {
+			snap[strconv.Itoa(int(id))] = rows
+		}
+	}
+	last := bs.lastID
+	bs.mu.Unlock()
+
+	s.mu.Lock()
+	s.m.Bundles, s.m.NextBundleID = snap, last
+	s.mu.Unlock()
+}
+
+// loadBundles rebuilds the bundle store from the save file.
+func (s *containerStore) loadBundles() *bundleStore {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := newBundleStore()
+	for k, rows := range s.m.Bundles {
+		id, err := strconv.Atoi(k)
+		if err != nil {
+			continue
+		}
+		items := make([]invStack, 0, len(rows))
+		for _, r := range rows {
+			items = append(items, unpackStack(r))
+		}
+		out.items[int32(id)] = items
+	}
+	out.lastID = s.m.NextBundleID
 	return out
 }

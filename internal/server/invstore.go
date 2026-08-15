@@ -68,7 +68,10 @@ func newInvStore(path string) *invStore {
 //
 // Layout: [item, count, dmg, enchPack, mapID, 6 banner layers
 // (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID, hiveID].
-type stackRow = [15]int32
+// stackRow is the persisted form of a stack. It GROWS at the end: an older
+// save decodes with the new trailing fields left zero, which is exactly what
+// "no bundle" means.
+type stackRow = [16]int32
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -81,6 +84,7 @@ func packStack(st invStack) stackRow {
 	r[12] = st.bookID
 	r[13] = st.boxID
 	r[14] = st.hiveID
+	r[15] = st.bundleID
 	return r
 }
 
@@ -93,6 +97,7 @@ func unpackStack(r stackRow) invStack {
 	st.bookID = r[12]
 	st.boxID = r[13]
 	st.hiveID = r[14]
+	st.bundleID = r[15]
 	return st
 }
 

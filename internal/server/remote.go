@@ -150,7 +150,7 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evDismount{eid: p.eid})
 		}
 	case attachproto.WindowClick:
-		ev := evClick{eid: p.eid, windowID: e.ID, slot: int16(e.Slot), mode: e.Mode,
+		ev := evClick{eid: p.eid, windowID: e.ID, slot: int16(e.Slot), mode: e.Mode, button: e.Button,
 			cursor: invStack{item: e.Cursor.ID, count: int(e.Cursor.Count)}}
 		for _, c := range e.Changed {
 			ev.changed = append(ev.changed, slotChange{slot: int16(c.Slot),
@@ -169,6 +169,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evEnchant{eid: p.eid, button: e.Button})
 	case attachproto.SetBeacon:
 		h.post(evSetBeacon{eid: p.eid, primary: e.Primary, secondary: e.Secondary})
+	case attachproto.BundleSelect:
+		h.post(evBundleSelect{eid: p.eid, slot: e.Slot, selected: e.Selected})
 	case attachproto.SlotState:
 		h.post(evSlotState{eid: p.eid, slot: e.Slot, enable: e.State})
 	case attachproto.EditBook:
