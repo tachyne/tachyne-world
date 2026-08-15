@@ -58,30 +58,7 @@ func maceSmashing(t *tracked) (bool, float64) {
 func (h *hub) smashEffects(players map[int32]*tracked, t *tracked, target *mob, fall float64) {
 	t.peakY = t.y // vanilla resetFallDistance: the smash negates the attacker's fall damage
 
-	heavy := 1.0
-	if fall > maceHeavyThreshold {
-		heavy = 2.0
-	}
-	for _, o := range h.mobs {
-		if o == target || o.dying > 0 || o.kbScale() <= 0 || o.dim != t.dim {
-			continue
-		}
-		dx, dz := o.x-t.x, o.z-t.z
-		dist := math.Hypot(dx, dz)
-		if dist > maceKnockRadius || dist < 1e-6 {
-			continue
-		}
-		power := (maceKnockRadius - dist) * maceKnockPower * heavy * o.kbScale()
-		o.vx, o.vz, o.kb, o.reroute = dx/dist*power, dz/dist*power, 3, 0
-		h.mobKnockVelocity(players, o)
-	}
-
-	snd := "minecraft:item.mace.smash_ground"
-	if fall > maceHeavyThreshold {
-		snd = "minecraft:item.mace.smash_ground_heavy"
-	}
-	h.playSound(players, snd, sndPlayer, t.x, t.y, t.z, 1, 1)
-	h.spawnParticles(players, particlePoof, t.x, t.y, t.z, maceKnockRadius/2, 0.1, 40)
+	h.smashAround(players, t, target.x, target.y, target.z, target.eid, fall)
 
 	// wind_burst: launch the attacker upward like a wind charge to chain smashes.
 	if wb := heldStack(t).enchLvl(enchWindBurst); wb > 0 {
@@ -104,4 +81,75 @@ func windBurstMult(level int) float64 {
 	default:
 		return 1.2
 	}
+}
+
+// smashAround is MaceItem.knockback: the shockwave a smash attack sends out
+// through everything standing near the entity it struck.
+//
+// Three things it does that the mob-only version did not.
+//
+// It is centred on the STRUCK entity, not the attacker — vanilla measures
+// `nearby.position() - entity.position()` and inflates that entity's box.
+// The two only coincide when the attacker lands squarely on its target.
+//
+// It carries a fixed 0.7 UPWARD component, so the wave pops people into the
+// air rather than sliding them along the floor.
+//
+// And it catches PLAYERS, which is the whole point in PvP. Vanilla's predicate
+// spares the attacker, the entity struck, spectators, and players flying in
+// creative; allies and the attacker's own tamed pets are spared too, which
+// here means the attacker's own pets.
+func (h *hub) smashAround(players map[int32]*tracked, t *tracked, cx, cy, cz float64, exceptEID int32, fall float64) {
+	heavy := 1.0
+	if fall > maceHeavyThreshold {
+		heavy = 2.0
+	}
+	// getKnockbackPower: (radius − distance) × 0.7 × (heavy ? 2 : 1) × (1 − kbResist)
+	power := func(dist, kbScale float64) float64 {
+		return (maceKnockRadius - dist) * maceKnockPower * heavy * kbScale
+	}
+
+	for _, o := range h.mobs {
+		if o.eid == exceptEID || o.dying > 0 || o.kbScale() <= 0 || o.dim != t.dim {
+			continue
+		}
+		if o.owner == t.p.eid && o.tamed {
+			continue // your own pets ride out the shockwave
+		}
+		dx, dz := o.x-cx, o.z-cz
+		dist := math.Hypot(dx, dz)
+		if dist > maceKnockRadius || dist < 1e-6 {
+			continue
+		}
+		p := power(dist, o.kbScale())
+		o.vx, o.vz, o.kb, o.reroute = dx/dist*p, dz/dist*p, 3, 0
+		h.mobKnockVelocity(players, o)
+	}
+
+	for _, v := range players {
+		if v == t || v.p.eid == exceptEID || v.dead || v.dim != t.dim {
+			continue
+		}
+		if v.gamemode == gmSpectator || v.gamemode == gmCreative {
+			continue // spectators, and creative fliers, are not shoved
+		}
+		dx, dz := v.x-cx, v.z-cz
+		dist := math.Hypot(dx, dz)
+		if dist > maceKnockRadius || dist < 1e-6 {
+			continue
+		}
+		p := power(dist, 1)
+		// The vertical is a flat 0.7 in vanilla, not scaled by distance.
+		v.p.trySendEv(attachproto.Velocity{
+			EID: v.p.eid,
+			VX:  dx / dist * p, VY: maceKnockPower, VZ: dz / dist * p,
+		})
+	}
+
+	snd := "minecraft:item.mace.smash_ground"
+	if fall > maceHeavyThreshold {
+		snd = "minecraft:item.mace.smash_ground_heavy"
+	}
+	h.playSound(players, snd, sndPlayer, cx, cy, cz, 1, 1)
+	h.spawnParticles(players, particlePoof, cx, cy, cz, maceKnockRadius/2, 0.1, 40)
 }

@@ -76,6 +76,14 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	if !landed {
 		return true
 	}
+	// A mace smash lands its shockwave in PvP too. meleeSwing already folded the
+	// fall bonus into the damage, but the rest of the smash — the wave, the
+	// fall-damage reset, the sound, wind_burst — only ever ran against mobs.
+	// After the landed check, because vanilla runs post-attack effects only
+	// when the blow actually connected.
+	if smash, fall := maceSmashing(t); smash {
+		h.smashAround(players, t, v.x, v.y, v.z, v.p.eid, fall)
+	}
 	// Fire Aspect sets the victim alight.
 	if lvl := heldStack(t).enchLvl(enchFireAspect); lvl > 0 && v.hasEffect(effFireRes) == 0 {
 		v.fireSecs = max(v.fireSecs, 4*lvl)
@@ -86,6 +94,12 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 
 	if v.dead {
 		h.incCustom(t, "player_kills", 1)
+		// Player.awardKillScore: a player kill counts on BOTH criteria —
+		// playerKillCount for player victims, totalKillCount for any. Only the
+		// statistic was being kept, so a scoreboard tracking either read zero
+		// no matter how the fight went.
+		h.sbCriteria(players, "playerKillCount", t.p.name, 1, false)
+		h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 	}
 	return true
 }

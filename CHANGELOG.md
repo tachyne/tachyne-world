@@ -11,6 +11,33 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-15
+
+### Fixed
+- **Every projectile dealt arrow damage.** The damage type decides more than it
+  sounds: whether armour absorbs a hit, which protection enchantment applies,
+  what the death message says, what it costs in hunger. So a ghast's fireball, a
+  llama's spit and a wither skull were all absorbed and enchanted against
+  exactly like an arrow — and the `fireball` type, which armour does *not*
+  protect against the way it does arrows, was never dealt at all. Each
+  projectile now carries its own: tridents, thrown snowballs and eggs, both
+  fireballs, wither skulls, shulker bullets, spit, wind charges and ender
+  pearls. Two of them depend on who threw it, as vanilla's damage sources do —
+  an ownerless fireball is *unattributed*, and a wither skull with no living
+  owner deals plain magic, and less of it.
+- **A mace smash sent no shockwave in PvP.** The wave reached mobs only, so
+  smashing another player moved nobody standing nearby. It was also centred on
+  the attacker rather than on whatever was struck — the two only coincide when
+  you land squarely on your target — and it was missing the flat upward
+  component that makes the wave pop people into the air rather than slide them
+  along the ground. Vanilla's exemptions are in place: the attacker, the entity
+  struck, spectators, creative players, and your own tamed pets ride it out.
+- **A scoreboard could not count kills.** `playerKillCount` was incremented
+  nowhere in the engine, and `totalKillCount` was kept for mobs and arrows but
+  not for killing a player, so an objective tracking either read zero however
+  the fight went. The statistic was being kept correctly all along — it is the
+  scoreboard criteria that were missed.
+
 ## 2026-08-11
 
 ### Added

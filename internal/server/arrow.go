@@ -39,6 +39,7 @@ var (
 
 type arrowEntity struct {
 	eid        int32
+	etype      int // projectile species — decides its damage type (projectileDamage)
 	uuid       [16]byte
 	x, y, z    float64
 	vx, vy, vz float64
@@ -125,7 +126,7 @@ func (h *hub) launchProjectile(players map[int32]*tracked, etype int, x, y, z, v
 // launchProjectileIn launches into an explicit dimension.
 func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, y, z, vx, vy, vz float64) *arrowEntity {
 	eid := h.allocEID()
-	a := &arrowEntity{eid: eid, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz,
+	a := &arrowEntity{eid: eid, etype: etype, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz,
 		born: h.tick.Load(), sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.arrows[eid] = a
@@ -314,7 +315,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			if a.pierce > 0 {
 				src = dmgFrom{}
 			}
-			landed := h.hurtFrom(players, t, float32(a.dmg), dtArrow, shot, src)
+			landed := h.hurtFrom(players, t, float32(a.dmg), projectileDamageOf(a), shot, src)
 			h.knockback(t, a.x, a.z) // the shove lands even off a shield
 			if !landed {
 				return true // caught on the shield: no venom, no thorns, no fire
@@ -392,7 +393,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
-			m.hurtKind(float64(dmg), dtArrow)  // trident shares arrow's tags exactly
+			m.hurtKind(float64(dmg), projectileDamageOf(a))
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
 			if a.playerShot {                  // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
@@ -429,4 +430,56 @@ func arrowYaw(a *arrowEntity) float32 {
 
 func arrowPitch(a *arrowEntity) float32 {
 	return float32(-math.Atan2(a.vy, math.Hypot(a.vx, a.vz)) * 180 / math.Pi)
+}
+
+// projectileDamage is the vanilla damage type each projectile deals on a
+// direct hit. Everything used to land as `arrow`, which meant a fireball's
+// burn, a spit and a wither skull were all absorbed, enchanted against and
+// counted exactly like an arrow — and the fireball type, which armour does
+// NOT protect against the way it protects against arrows, was never dealt at
+// all.
+//
+// Taken from each projectile's onHitEntity in vanilla. The two owner-dependent
+// cases are resolved at hit time in projectileDamageOf, not here.
+func projectileDamage(etype int) dmgType {
+	switch etype {
+	case entityTrident:
+		return dtTrident
+	case entitySnowball, entityEggProj:
+		return dtThrown // Snowball/ThrownEgg: damageSources().thrown
+	case entitySmallFireball, entityLargeFireball:
+		return dtFireball // blaze bolt and ghast fireball alike
+	case entityWitherSkull:
+		return dtWitherSkull
+	case entityShulkerBullet:
+		return dtMobProjectile
+	case entityLlamaSpit:
+		return dtSpit
+	case entityWindCharge:
+		return dtWindCharge
+	case entityPearlProj:
+		return dtEnderPearl
+	}
+	return dtArrow
+}
+
+// projectileDamageOf is projectileDamage with the owner known, which two
+// vanilla projectiles need:
+//
+//   - DamageSources.fireball returns UNATTRIBUTED_FIREBALL when the fireball
+//     has no owner, and FIREBALL when it does.
+//   - WitherSkull.onHitEntity only deals witherSkull damage when its owner is
+//     a living entity; an ownerless skull deals plain magic instead.
+func projectileDamageOf(a *arrowEntity) dmgType {
+	dt := projectileDamage(a.etype)
+	if a.shooter != 0 {
+		return dt
+	}
+	switch dt {
+	case dtFireball:
+		return dtUnattributedFireball
+	case dtWitherSkull:
+		return dtMagic
+	}
+	return dt
 }
