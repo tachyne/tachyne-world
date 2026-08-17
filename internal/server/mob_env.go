@@ -155,12 +155,26 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 
 		// Drowning: a land mob whose eye level (head) is underwater past maxAir.
 		// Zombies/husks don't drown — they convert (husk→zombie→drowned).
-		if worldgen.IsWater(head) && !waterBreathers[m.etype] {
-			m.submerged++
-			if target, ok := waterConvert[m.etype]; ok {
-				if m.submerged >= drownConvertSecs {
+		// A conversion already under way runs to completion wherever the mob
+		// is: Zombie.tick decrements it BEFORE it looks at the water, so
+		// hauling a shaking zombie onto dry land does not save it.
+		if m.convertIn > 0 {
+			if m.convertIn--; m.convertIn <= 0 {
+				if target, ok := waterConvert[m.etype]; ok {
 					h.convertMob(players, m, target)
 					continue // the old entity is gone
+				}
+			}
+			continue
+		}
+		if worldgen.IsWater(head) && !waterBreathers[m.etype] {
+			m.submerged++
+			if _, ok := waterConvert[m.etype]; ok {
+				if m.submerged >= drownConvertSecs {
+					// Not the conversion itself — the START of it. The mob now
+					// shakes for drownShakeSecs before it turns.
+					m.convertIn = drownShakeSecs
+					h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
 				}
 			} else if m.submerged > maxAir/20 { // maxAir is in ticks; /20 = seconds
 				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)

@@ -306,3 +306,49 @@ func (h *hub) staredAt(players map[int32]*tracked, m *mob) bool {
 	}
 	return false
 }
+
+// setClimbing syncs a spider's climbing flag, and only when it changed — the
+// client renders a climbing spider clinging to the wall, and re-sending an
+// unchanged flag every update would be pure noise.
+//
+// Spider.setClimbing writes bit 0x01 of the spider's own flags byte. That byte
+// is Spider's first synced field, so it sits at index 16 (Entity 8 +
+// LivingEntity 7 + Mob 1) — the same index in 1.21.5 and 26.2, because Spider
+// is not ageable and the 26.x insertion that shifted everything is in the
+// AgeableMob chain.
+func (h *hub) setClimbing(players map[int32]*tracked, m *mob, on bool) {
+	if m.climbing == on {
+		return
+	}
+	m.climbing = on
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(spiderClimbMeta(m.eid, on)))
+}
+
+const metaIndexSpiderFlags = 16
+
+func spiderClimbMeta(eid int32, climbing bool) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexSpiderFlags)
+	b = protocol.AppendVarInt(b, 0) // type 0: byte
+	var flags byte
+	if climbing {
+		flags = 0x01 // Spider.setClimbing: flags | 1
+	}
+	b = protocol.AppendU8(b, flags)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// climbsWalls and isAmphibious are capabilities of a SPECIES, not state set by
+// whichever spawn path happened to create the mob — the same lesson the leash
+// code learned when a zombie spawned outside spawnHostileY read as peaceful.
+//
+// Spider.onClimbable: a spider goes up whatever it walks into. Cave spiders
+// inherit it.
+func climbsWalls(etype int) bool {
+	return etype == entitySpider || etype == entityCaveSpider
+}
+
+// Drowned.travelInWater: a drowned walks on land and SWIMS in water. It is the
+// only mob that does both — m.swims means water-BOUND, which a fish is and a
+// drowned is not.
+func isAmphibious(etype int) bool { return etype == entityDrowned }

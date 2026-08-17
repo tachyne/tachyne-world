@@ -40,6 +40,20 @@ the public history since the project was open-sourced on 2026-07-10.
   its sonic boom recharged in 60 ticks where vanilla's takes 100 (a 60-tick
   attack and then a 40-tick cooldown), which made it markedly more punishing
   than the real thing.
+- **A zombie drowned fifteen seconds too fast, and without warning.** Vanilla
+  gives it two phases: thirty seconds with its eyes under water starts the
+  conversion, and only then does a fifteen-second countdown run during which the
+  zombie visibly shakes. We turned it the moment the first timer elapsed, so
+  there was never the shudder that tells you what is about to surface. Once
+  started the countdown finishes wherever the zombie is — dragging a shaking one
+  onto dry land no longer saves it.
+- **Spiders climb.** A spider walking into a wall now goes up it, which is
+  vanilla's whole rule for climbing: you are climbing exactly when you bumped
+  into something. The client is told, so it renders the spider clinging.
+- **Drowned swim.** They used to trudge along the seabed like any other zombie;
+  in water they now swim, which is what lets one come up at you rather than
+  pacing about beneath you. They still walk out onto land — the only mob here
+  that does both.
 - **A wither could not feed itself.** Its skull heals it 5 when the skull KILLS
   what it hits — not when it merely wounds — and that clause was missing, so a
   wither could not claw health back by killing whatever else was in the fight.

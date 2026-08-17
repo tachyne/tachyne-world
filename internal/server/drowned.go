@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // Drowned trident: a fraction of drowned spawn holding a trident and hurl it at
 // range instead of biting (vanilla Drowned + ThrownTrident). The projectile
@@ -19,7 +23,31 @@ var waterConvert = map[int]int{
 	entityHusk:   entityZombie,
 }
 
-const drownConvertSecs = 30 // ~30 s fully underwater before converting
+const (
+	// Zombie.tick: 600 ticks with its EYES in water before the conversion even
+	// starts…
+	drownConvertSecs = 600 / 20
+	// …and then startUnderWaterConversion(300) — fifteen more seconds during
+	// which the zombie shakes, and only then does it turn. We used to convert
+	// the moment the first timer ran out: fifteen seconds early, and with no
+	// warning shudder at all.
+	drownShakeSecs = 300 / 20
+	// Zombie's DATA_DROWNED_CONVERSION_ID. Zombie's own synced fields start at
+	// 16 (Entity 8 + LivingEntity 7 + Mob 1) and run baby, special_type,
+	// conversion — so 18, and identically so in 1.21.5 and 26.2, which is worth
+	// stating because a wrong metadata index disconnects a 26.2 client outright.
+	metaIndexConverting = 18
+)
+
+// convertingMeta is the shaking-zombie flag the client renders while a drowning
+// conversion counts down.
+func convertingMeta(eid int32, on bool) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexConverting)
+	b = protocol.AppendVarInt(b, metaTypeBool)
+	b = protocol.AppendBool(b, on)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
 
 // convertMob swaps a mob for its converted type in place, preserving baby state
 // and not healing it. The client sees the old entity vanish and the new appear.

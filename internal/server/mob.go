@@ -52,6 +52,7 @@ type mob struct {
 	burnDelay       int        // seconds of dawn-ramp grace before this mob ignites
 	fireSecs        int        // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
 	submerged       int        // consecutive seconds fully underwater (land mobs drown past maxAir)
+	convertIn       int        // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	fuse            int        // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int        // spider: mob-updates it stays hostile in daylight after a hit
 	jumpStrength    float64    // horse family: how high it jumps (vanilla 0.4-1.0)
@@ -151,6 +152,7 @@ type mob struct {
 	swims           bool           // water-bound: lives inside a water column (fish/squid)
 	flies           bool           // free flight: no ground collision (bat/phantom/ghast)
 	statik          bool           // anchored: never walks (shulker)
+	climbing        bool           // spider: clinging to a wall right now (synced state)
 	skittish        bool           // bolts from any close player (fox/ocelot/rabbit)
 	hover           float64        // fliers: preferred altitude above the terrain
 	held            int32          // rendered main-hand item (0 = empty)
@@ -385,6 +387,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.flyMove(m, nx, nz, fnx, fnz)
 		case m.swims:
 			h.swimMove(m, nx, nz, fnx, fnz)
+		case isAmphibious(m.etype) && h.inWater(m.dim, m.x, m.y, m.z):
+			// Drowned.travelInWater: in water it swims rather than walking the
+			// floor, which is what lets it come up at a target instead of
+			// trudging along the seabed under them.
+			h.swimMove(m, nx, nz, fnx, fnz)
 		default:
 			// Walk — but never onto water, into a tree, or up/down a step taller
 			// than one block (mobStepOK holds the rules). When blocked, commit to
@@ -405,10 +412,19 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.x, m.z = nx, nz
 			case stepOK && h.migrateMobAcross(players, m, nx, nz):
 				continue // stepped into a neighbour shard — handed off, done this tick
+			case climbsWalls(m.etype):
+				// Spider.tick: setClimbing(horizontalCollision) — a spider is
+				// climbing exactly when it walked into something, and then goes
+				// UP rather than looking for a way round.
+				h.setClimbing(players, m, true)
+				m.y++
 			default:
 				ang := h.rng.Float64() * 2 * math.Pi
 				m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
 				m.reroute = 15 + h.rng.Intn(15)
+			}
+			if climbsWalls(m.etype) && stepOK {
+				h.setClimbing(players, m, false) // nothing in the way any more
 			}
 			// Seat the feet on the real (edit-aware) floor every tick, so digging
 			// the block under a mob drops it and a placed block lifts it — but never
