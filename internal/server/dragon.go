@@ -52,6 +52,9 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	h.mobs[eid] = m
 	m.hostile = true
 	m.health = dragonHealth
+	if left := h.rules.DragonHealth; left > 0 && left < dragonHealth {
+		m.health = left // resume a fight a restart interrupted
+	}
 	m.behavior = idleBehavior{} // movement is updateDragon's, not steer()'s
 	h.dragon = m
 	// spawnMobIn's broadcast is radius-culled; the boss must reach the whole
@@ -84,6 +87,9 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 	if m == nil || m.dying > 0 {
 		return
 	}
+	// Mirror the fight's progress into the settings the world saves, so a
+	// restart resumes where the fight got to rather than healing the dragon.
+	h.rules.DragonHealth = m.health
 	now := h.tick.Load()
 	// The phase machine picks where it is going and whether it is sitting;
 	// the movement below is unchanged, it just follows a smarter target.
@@ -168,6 +174,7 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
 func (h *hub) dragonDefeated(players map[int32]*tracked) {
 	h.dragon = nil
 	h.rules.DragonDefeated = true
+	h.rules.DragonHealth = 0 // the fight is over; nothing left to resume
 	h.saveRules()
 	cx, cy := 0, worldgen.EndSurfaceY
 	for h.end.At(cx, cy, 0) != worldgen.Air && cy < worldgen.EndSurfaceY+8 {

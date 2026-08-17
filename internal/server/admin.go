@@ -47,19 +47,23 @@ type worldRules struct {
 	LocatorBar    bool `json:"locatorBar"`
 	// Added 2026-07-26. The JSON keys keep the historical spelling so an
 	// existing settings.json still loads; only the COMMAND surface renamed.
-	SpawnPhantoms  bool         `json:"spawnPhantoms"`
-	SpawnPatrols   bool         `json:"spawnPatrols"`
-	SpawnWardens   bool         `json:"spawnWardens"`
-	Raids          bool         `json:"raids"`
-	TNTExplodes    bool         `json:"tntExplodes"`
-	WaterSourceCnv bool         `json:"waterSourceConversion"`
-	LavaSourceCnv  bool         `json:"lavaSourceConversion"`
-	MovementCheck  bool         `json:"playerMovementCheck"`
-	ElytraCheck    bool         `json:"elytraMovementCheck"`
-	PvP            bool         `json:"pvp"`
-	DragonDefeated bool         `json:"dragonDefeated,omitempty"` // the End's fight is won
-	Weather        *weatherSave `json:"weather,omitempty"`
-	Border         *worldBorder `json:"border,omitempty"`
+	SpawnPhantoms  bool `json:"spawnPhantoms"`
+	SpawnPatrols   bool `json:"spawnPatrols"`
+	SpawnWardens   bool `json:"spawnWardens"`
+	Raids          bool `json:"raids"`
+	TNTExplodes    bool `json:"tntExplodes"`
+	WaterSourceCnv bool `json:"waterSourceConversion"`
+	LavaSourceCnv  bool `json:"lavaSourceConversion"`
+	MovementCheck  bool `json:"playerMovementCheck"`
+	ElytraCheck    bool `json:"elytraMovementCheck"`
+	PvP            bool `json:"pvp"`
+	DragonDefeated bool `json:"dragonDefeated,omitempty"` // the End's fight is won
+	// The dragon is not in mobs.json (bosses are not persisted), so without
+	// this a restart mid-fight handed it back its full health. Zero means "no
+	// fight in progress"; a live fight writes what it has left.
+	DragonHealth int          `json:"dragonHealth,omitempty"`
+	Weather      *weatherSave `json:"weather,omitempty"`
+	Border       *worldBorder `json:"border,omitempty"`
 }
 
 func defaultRules() worldRules {

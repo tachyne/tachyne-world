@@ -314,7 +314,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// Swing the arm so the bite is visible (not just "walking into you"), deal the
 	// hit, and knock the player back — which also unglues them so they can retaliate.
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
-	landed := h.hurtFrom(players, t, dmg, dtMobAttack,
+	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
 	h.knockback(t, m.x, m.z) // a caught bite still shoves them
 	if !landed {
@@ -551,4 +551,15 @@ func (h *hub) skyExposedColumn(x, z int) bool {
 		}
 	}
 	return true
+}
+
+// mobMeleeDamage is the damage type a species' melee deals. Almost everything
+// bites with mob_attack; a bee stings, which is its own type in vanilla
+// (Bee.doHurtTarget uses damageSources().sting) and reads as such in the death
+// message.
+func mobMeleeDamage(etype int) dmgType {
+	if etype == entityBee {
+		return dtSting
+	}
+	return dtMobAttack
 }

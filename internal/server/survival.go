@@ -147,7 +147,11 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 			t.exhaustion -= exhaustionThreshold
 			if t.saturation > 0 {
 				t.saturation = float32(math.Max(0, float64(t.saturation)-1))
-			} else if t.food > 0 {
+			} else if t.food > 0 && h.rules.Difficulty != diffPeaceful {
+				// FoodData.tick drains saturation on any difficulty but only
+				// takes from the food bar when it is not PEACEFUL. Without the
+				// guard the bar emptied on peaceful too — you simply never
+				// starved once it did.
 				t.food--
 				changed = true
 			}

@@ -247,6 +247,12 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				if applyEffectTickNow(e.left, 40, e.amp) {
 					h.damageOf(players, t, 1, dtWither)
 				}
+			case effHunger:
+				// HungerMobEffect: 0.005 exhaustion EVERY TICK per level. This
+				// pass runs at 1 Hz, so a second's worth goes on at once — the
+				// effect was being applied (a husk's bite grants it) and then
+				// costing its victim nothing at all.
+				t.exhaustion += hungerExhaustionPerSec * float32(e.amp+1)
 			case effSaturation:
 				// SaturationMobEffect fires every tick it is active.
 				h.feedSaturation(t, e.amp)
@@ -334,3 +340,7 @@ type evEffect struct {
 }
 
 func (evEffect) isHubEvent() {}
+
+// hungerExhaustionPerSec is HungerMobEffect's 0.005-per-tick exhaustion,
+// gathered into the one-second step this engine ticks effects on.
+const hungerExhaustionPerSec = 0.005 * 20

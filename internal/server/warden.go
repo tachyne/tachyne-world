@@ -13,11 +13,17 @@ import (
 // Full anger management, sniffing, and the emerge/dig animations are deferred.
 
 const (
-	wardenDarknessR  = 20.0 // players this close get the Darkness effect
-	wardenSonicR     = 15.0 // sonic-boom range
-	wardenSonicDmg   = 10.0 // sonic boom bypasses armour AND shields
-	wardenSonicCD    = 30   // mob-updates between booms (~6 s at 2 ticks/update)
-	wardenDigAwayUpd = 300  // mob-updates with no target before it digs away (~60 s)
+	wardenDarknessR = 20.0 // players this close get the Darkness effect
+	wardenSonicR    = 15.0 // sonic-boom range
+	wardenSonicDmg  = 10.0 // sonic boom bypasses armour AND shields
+	// SonicBoom runs for DURATION 60 ticks and sets a 40-tick cooldown when it
+	// stops, so vanilla booms land 100 ticks apart — not the 60 this used to
+	// allow, which made a warden noticeably more punishing than the real one.
+	wardenSonicCD = 100 / mobMoveInterval
+	// WardenAi.DIGGING_COOLDOWN: 1200 ticks after the last interaction before
+	// it burrows away. This counted 300 updates — 600 ticks, half of vanilla —
+	// and the comment claiming ~60 s was reading updates as ticks.
+	wardenDigAwayUpd = 1200 / mobMoveInterval
 )
 
 // wardenTick runs once per mob update (every mobMoveInterval ticks) for a Warden.
@@ -35,7 +41,11 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, 24)
 	if t == nil {
 		if m.digClock++; m.digClock >= wardenDigAwayUpd {
-			h.despawnMob(players, m) // no prey for a minute: burrow back underground
+			// Digging.stop removes the warden with RemovalReason.DISCARDED —
+			// it is not a death, so there is no loot and no experience. Going
+			// through despawnMob rolled the full death drop instead, which
+			// handed out a free sculk catalyst for waiting a minute.
+			h.removeMob(players, m)
 		}
 		return
 	}

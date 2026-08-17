@@ -32,6 +32,25 @@ the public history since the project was open-sourced on 2026-07-10.
   component that makes the wave pop people into the air rather than slide them
   along the ground. Vanilla's exemptions are in place: the attacker, the entity
   struck, spectators, creative players, and your own tamed pets ride it out.
+- **A warden dug away and left its loot behind.** Burrowing off after losing
+  interest went through the death path, so waiting a minute near one paid out
+  its sculk catalyst and experience. Vanilla removes it as *discarded* — not a
+  death, nothing dropped. Its two clocks were wrong in opposite directions
+  while we were there: it dug away after 600 ticks against vanilla's 1200, and
+  its sonic boom recharged in 60 ticks where vanilla's takes 100 (a 60-tick
+  attack and then a 40-tick cooldown), which made it markedly more punishing
+  than the real thing.
+- **The hunger bar emptied on Peaceful.** Vanilla burns saturation on every
+  difficulty but only takes from the food bar when the difficulty is not
+  peaceful; ours drained it and then simply never starved you.
+- **The Hunger effect did nothing.** A husk's bite grants it, and nothing
+  consumed it — it should add exhaustion every tick, scaled by its level.
+- **A bee's sting was an ordinary bite**, rather than the sting damage type
+  vanilla gives it, which is what the death message reads from.
+- **The ender dragon healed itself across a restart.** Bosses are not written
+  to the mob file, so a fight interrupted halfway resumed against a dragon at
+  full health. Its remaining health now rides the world settings alongside the
+  flag that says the fight was won.
 - **A scoreboard could not count kills.** `playerKillCount` was incremented
   nowhere in the engine, and `totalKillCount` was kept for mobs and arrows but
   not for killing a player, so an objective tracking either read zero however
