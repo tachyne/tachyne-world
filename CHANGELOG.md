@@ -40,6 +40,10 @@ the public history since the project was open-sourced on 2026-07-10.
   its sonic boom recharged in 60 ticks where vanilla's takes 100 (a 60-tick
   attack and then a 40-tick cooldown), which made it markedly more punishing
   than the real thing.
+- **A wither could not feed itself.** Its skull heals it 5 when the skull KILLS
+  what it hits — not when it merely wounds — and that clause was missing, so a
+  wither could not claw health back by killing whatever else was in the fight.
+  It made the boss meaningfully easier than vanilla's.
 - **The hunger bar emptied on Peaceful.** Vanilla burns saturation on every
   difficulty but only takes from the food bar when the difficulty is not
   peaceful; ours drained it and then simply never starved you.

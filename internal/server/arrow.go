@@ -320,6 +320,9 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			if !landed {
 				return true // caught on the shield: no venom, no thorns, no fire
 			}
+			if t.dead {
+				h.witherSkullHeal(a) // a wither feeds on what its skull kills
+			}
 			h.thornsAgainstShooter(players, t, a.shooter)
 			if a.poison {
 				h.applyEffect(players, t, effPoison, 0, 10)
@@ -399,6 +402,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				h.zombieReinforce(players, m, players[a.shooter])
 			}
 			if m.health <= 0 {
+				h.witherSkullHeal(a)
 				h.killMob(players, m)
 				if a.playerShot {
 					if shooter := players[a.shooter]; shooter != nil {
@@ -483,3 +487,25 @@ func projectileDamageOf(a *arrowEntity) dmgType {
 	}
 	return dt
 }
+
+// witherSkullHeal is the last clause of WitherSkull.onHitEntity: when a skull
+// KILLS what it hits, its owner heals 5. Only on a kill — a skull that merely
+// wounds runs the post-attack effects instead — and only for a skull with a
+// living owner, which is the same condition that decides whether it deals
+// wither_skull damage or plain magic.
+//
+// It is what lets a wither out-heal a drawn-out fight by killing whatever else
+// is nearby, so leaving it out made the boss meaningfully easier.
+func (h *hub) witherSkullHeal(a *arrowEntity) {
+	if a.etype != entityWitherSkull || a.shooter == 0 {
+		return
+	}
+	owner := h.mobs[a.shooter]
+	if owner == nil || owner.dying > 0 {
+		return
+	}
+	owner.health = min(owner.health+witherSkullHealHP, owner.maxHP())
+}
+
+// WitherSkull.onHitEntity: livingOwner.heal(5.0F).
+const witherSkullHealHP = 5
