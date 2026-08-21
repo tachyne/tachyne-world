@@ -11,6 +11,24 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-08-21
+
+### Fixed
+- **An empty server slowly ate its own memory.** A world with nobody on it grew
+  by about 15 MiB an hour, indefinitely — enough to exhaust the pod in a couple
+  of days of sitting idle. Three things had to line up. Each world boots three
+  cow herds so there is life near spawn; those are created directly rather than
+  through the chunk bookkeeping, so nothing ever unloads them — and the unload
+  pass is reached only from the natural spawner, which stops early when there
+  are no players, so on an empty server it never runs at all. Meanwhile a
+  herd's roaming goal drifted by a random walk with nothing pulling it back,
+  and a random walk does not stay put: it wanders off without limit, and the
+  cows steer after it. So ten cows spent every tick walking into terrain no
+  player had ever visited, generating it and filing it in the chunk cache,
+  forever. A herd's goal now stays within 64 blocks of where the herd was
+  rooted — sized against the cache budget rather than by feel, so the whole
+  boot population can only ever account for a small fraction of it.
+
 ## 2026-08-15
 
 ### Fixed

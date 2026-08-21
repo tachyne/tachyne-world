@@ -726,8 +726,26 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 	}
 }
 
+// herdRoamRadius bounds how far a herd's goal may drift from where the herd was
+// rooted. Without it the walk below is a pure random walk with no restoring
+// force, so a herd diffuses outward without limit — and since a herd's cows
+// steer toward the goal, they follow it. That matters most when NOBODY is
+// playing: the boot-seeded herds are spawned straight into h.mobs, never enter
+// activeChunks, and reconcileMobChunks (the only unload path) is reached solely
+// from naturalSpawn, which returns early with no players. So those herds tick
+// forever, and every step reads the world at fresh coordinates, generating and
+// caching terrain that nobody will ever see.
+//
+// The size is chosen against the chunk cache, not by feel: a herd can touch
+// roughly π(r+16)²/256 chunks (the +16 is the cows' spread around the goal),
+// and world.cacheCap budgets 256 MiB of generator output. At 64 the three boot
+// herds can reach ~88 MiB even if their discs never overlap (they start within
+// 60 blocks of each other, so in practice far less); at 128 they could fill the
+// whole budget on their own, which is the very thing this bound exists to stop.
+const herdRoamRadius = 64 // blocks from home; 4 chunks each way
+
 // updateHerdTargets roams each herd's goal, so each group moves as one rather
-// than scattering. Slow random walk that stays on land.
+// than scattering. Slow random walk that stays on land and near home.
 func (h *hub) updateHerdTargets() {
 	for _, hd := range h.herds {
 		if h.rng.Intn(100) == 0 { // occasionally pick a new drift direction
@@ -735,11 +753,15 @@ func (h *hub) updateHerdTargets() {
 			hd.vx, hd.vz = math.Cos(ang)*0.05, math.Sin(ang)*0.05
 		}
 		nx, nz := hd.x+hd.vx, hd.z+hd.vz
-		if h.world.IsLand(int(math.Floor(nx)), int(math.Floor(nz))) {
-			hd.x, hd.z = nx, nz
-		} else {
+		// Turn back at the water's edge and at the edge of the home range, the
+		// same way: reversing the drift rather than clamping the position keeps
+		// the herd from sliding along an invisible wall.
+		if !h.world.IsLand(int(math.Floor(nx)), int(math.Floor(nz))) ||
+			sq(nx-hd.hx)+sq(nz-hd.hz) > herdRoamRadius*herdRoamRadius {
 			hd.vx, hd.vz = -hd.vx, -hd.vz
+			continue
 		}
+		hd.x, hd.z = nx, nz
 	}
 }
 

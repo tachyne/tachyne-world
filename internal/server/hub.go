@@ -562,7 +562,15 @@ type hub struct {
 type herd struct {
 	x, z   float64
 	vx, vz float64
+	hx, hz float64 // home: the drift is confined to herdRoamRadius around this
 }
+
+// newHerd roots a herd's roaming goal at (x,z). The home is what keeps the
+// slow drift in updateHerdTargets from becoming a one-way migration: a herd
+// that never unloads (the boot-seeded ones never do — they are spawned outside
+// the chunk bookkeeping) would otherwise walk outward forever, generating
+// fresh terrain the whole way and filling the chunk cache on an EMPTY server.
+func newHerd(x, z float64) *herd { return &herd{x: x, z: z, hx: x, hz: z} }
 
 // snapshotItems converts live dropped-item entities for persistence.
 func (h *hub) snapshotItems() []savedItem {
@@ -768,7 +776,7 @@ func (h *hub) run() {
 		ang := h.rng.Float64() * 2 * math.Pi
 		ox, oz := int(math.Cos(ang)*60), int(math.Sin(ang)*60)
 		hx, hz := h.findLand(ox, oz)
-		h.herds = append(h.herds, &herd{x: float64(hx), z: float64(hz)})
+		h.herds = append(h.herds, newHerd(float64(hx), float64(hz)))
 
 		herdSize := 3 + h.rng.Intn(3) // 3..5 cows — a family, not a stampede
 		for i := 0; i < herdSize; i++ {

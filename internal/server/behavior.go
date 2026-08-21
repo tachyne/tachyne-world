@@ -127,7 +127,7 @@ func (h *hub) rejoinNearestHerd(m *mob) {
 // has a goal to belong to.
 func (h *hub) herdNear(x, z float64) int {
 	if len(h.herds) == 0 {
-		h.herds = append(h.herds, &herd{x: x, z: z})
+		h.herds = append(h.herds, newHerd(x, z))
 		return 0
 	}
 	best, bestD2 := 0, math.Inf(1)
