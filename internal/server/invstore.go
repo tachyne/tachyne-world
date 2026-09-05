@@ -67,11 +67,17 @@ func newInvStore(path string) *invStore {
 // backward-compatible by construction.
 //
 // Layout: [item, count, dmg, enchPack, mapID, 6 banner layers
-// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID, hiveID].
+// (patPlus1<<8|color), trimPack ((mat+1)<<8|(pat+1)), bookID, boxID, hiveID,
+// bundleID, potion, repairCost, instrument, nameID].
 // stackRow is the persisted form of a stack. It GROWS at the end: an older
 // save decodes with the new trailing fields left zero, which is exactly what
-// "no bundle" means.
-type stackRow = [16]int32
+// "no bundle", "no potion", "never repaired", "ponder" and "no name" mean.
+//
+// The last four columns closed a restart data-loss gap (2026-09-05): potion,
+// name, repairCost and instrument existed on invStack but never reached the
+// row, so every rollout turned potions into water bottles, stripped anvil
+// names, reset the prior-work cost and made every goat horn play ponder.
+type stackRow = [20]int32
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -85,6 +91,10 @@ func packStack(st invStack) stackRow {
 	r[13] = st.boxID
 	r[14] = st.hiveID
 	r[15] = st.bundleID
+	r[16] = int32(st.potion)
+	r[17] = int32(st.repairCost)
+	r[18] = int32(st.instrument)
+	r[19] = globalNames.Load().intern(st.name)
 	return r
 }
 
@@ -98,6 +108,10 @@ func unpackStack(r stackRow) invStack {
 	st.boxID = r[13]
 	st.hiveID = r[14]
 	st.bundleID = r[15]
+	st.potion = int8(r[16])
+	st.repairCost = int(r[17])
+	st.instrument = int8(r[18])
+	st.name = globalNames.Load().get(r[19])
 	return st
 }
 

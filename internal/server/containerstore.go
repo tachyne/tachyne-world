@@ -37,6 +37,12 @@ type savedItem struct {
 	Book  int32    `json:"book,omitempty"` // book id
 	Box   int32    `json:"box,omitempty"`  // shulker-box contents id
 	Hive  int32    `json:"hive,omitempty"` // carried-hive contents id
+	// The four that were lost on every restart until 2026-09-05.
+	Bundle int32  `json:"bundle,omitempty"` // bundle contents id — was dropped on the floor, literally
+	Potion int8   `json:"potion,omitempty"`
+	Repair int    `json:"repair,omitempty"` // anvil prior-work cost
+	Instr  int8   `json:"instr,omitempty"`  // goat horn instrument
+	Name   string `json:"name,omitempty"`   // anvil rename
 }
 
 type containerFile struct {
@@ -60,6 +66,10 @@ type containerFile struct {
 	// touched stack first.
 	Bundles      map[string][]stackRow `json:"bundles,omitempty"`
 	NextBundleID int32                 `json:"next_bundle_id,omitempty"`
+	// Custom item names by id (names.go). Loaded before any other store
+	// decodes a stack, because unpackStack resolves nameIDs through it.
+	Names      map[string]string `json:"names,omitempty"`
+	NextNameID int32             `json:"next_name_id,omitempty"`
 	// Bees + honey riding a Silk-Touched hive item, keyed by hiveID.
 	HiveItems  map[string]hiveStow `json:"hive_items,omitempty"`
 	NextHiveID int32               `json:"next_hive_id,omitempty"`

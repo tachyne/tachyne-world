@@ -28,25 +28,51 @@ var (
 )
 
 type itemEntity struct {
-	dim           int // dimension the drop lives in
-	eid           int32
-	uuid          [16]byte
-	x, y, z       float64
-	item          int32
-	count         int
-	dmg           int            // durability damage carried by the dropped stack
-	ench          [2]enchApply   // enchantments carried by the dropped stack
-	mapID         int32          // filled_map identity carried by the dropped stack
-	pats          [6]bannerLayer // banner pattern layers carried by the dropped stack
-	trimMat       int8           // armor trim carried by the dropped stack (+1 enc)
-	trimPat       int8
-	bookID        int32  // book identity carried by the dropped stack
-	boxID         int32  // shulker-box identity carried by the dropped stack
-	hiveID        int32  // carried-hive identity (Silk-Touched hive's bees + honey)
+	dim     int // dimension the drop lives in
+	eid     int32
+	uuid    [16]byte
+	x, y, z float64
+	item    int32
+	count   int
+	dmg     int            // durability damage carried by the dropped stack
+	ench    [2]enchApply   // enchantments carried by the dropped stack
+	mapID   int32          // filled_map identity carried by the dropped stack
+	pats    [6]bannerLayer // banner pattern layers carried by the dropped stack
+	trimMat int8           // armor trim carried by the dropped stack (+1 enc)
+	trimPat int8
+	bookID  int32 // book identity carried by the dropped stack
+	boxID   int32 // shulker-box identity carried by the dropped stack
+	hiveID  int32 // carried-hive identity (Silk-Touched hive's bees + honey)
+	// The five below were missing until 2026-09-05: a dropped bundle lost its
+	// contents, a dropped potion became water, a dropped renamed item lost its
+	// name and prior-work cost, a dropped goat horn forgot its instrument.
+	bundleID      int32
+	potion        int8
+	repairCost    int
+	instrument    int8
+	name          string
 	born          uint64 // world tick spawned (for despawn)
 	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
 	//                      underflows the unsigned despawn age and vanishes the item)
+}
+
+// stack is the dropped item as the stack it would be in a slot — the ONE
+// conversion, so a field added to invStack is carried by the pickup path, the
+// hopper path and the ground render alike (three copies used to disagree).
+func (it *itemEntity) stack() invStack {
+	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
+		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
+		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
+		instrument: it.instrument, name: it.name}
+}
+
+// refreshItemMeta re-sends a ground item's stack after a drop site has
+// finished filling in its fields — the spawn broadcast happens first with the
+// bare (item, count), so without this a renamed potion lay on the floor
+// looking like water until someone picked it up.
+func (h *hub) refreshItemMeta(players map[int32]*tracked, it *itemEntity) {
+	h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(it.eid, it.stack())))
 }
 
 // spawnItem creates a dropped-item entity at (x,y,z) and shows it to nearby
@@ -72,7 +98,7 @@ func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count
 	h.items[eid] = it
 
 	h.toNearbyEv(players, dim, x, z, entAdd(eid, entityItem, it.uuid, x, y, z, 0, 0))
-	h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, item, count)))
+	h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, it.stack())))
 	h.bus.publish("item_drop", map[string]any{"eid": eid, "item": item, "count": count, "x": x, "y": y, "z": z})
 	return it
 }
@@ -119,6 +145,8 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
 				other.bookID != it.bookID || other.boxID != it.boxID ||
 				other.hiveID != it.hiveID ||
+				other.bundleID != it.bundleID || other.potion != it.potion || other.repairCost != it.repairCost ||
+				other.instrument != it.instrument || other.name != it.name ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}
@@ -132,7 +160,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 			it.count += other.count // absorb the newer into this one
 			delete(h.items, oid)
 			h.toNearbyEv(players, other.dim, other.x, other.z, entGone(oid))
-			h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.item, it.count)))
+			h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))
 		}
 	}
 }
@@ -294,11 +322,11 @@ func stackComponents(st invStack) []byte {
 
 // itemMetadata builds set_entity_metadata (0x5c) setting an item entity's stack
 // (index 8, Slot type) and terminating the list.
-func itemMetadata(eid int32, item int32, count int) []byte {
+func itemMetadata(eid int32, st invStack) []byte {
 	b := protocol.AppendVarInt(nil, eid)
 	b = protocol.AppendU8(b, itemMetaIndexStack)
 	b = protocol.AppendVarInt(b, itemMetaTypeSlot)
-	b = appendSlot(b, item, count)
+	b = appendStack(b, st)
 	b = protocol.AppendU8(b, itemMetaEnd)
 	return b
 }

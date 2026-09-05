@@ -435,6 +435,7 @@ type hub struct {
 
 	mobs  map[int32]*mob // server-controlled entities (living world)
 	mgrid mobGrid        // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
+	names *nameStore     // custom item names by id (names.go); persisted in containers.json
 	// Scratch maps the tick loop fills and clears every tick (clear() keeps
 	// the buckets), instead of allocating fresh ones 20 times a second.
 	scratchChunks map[[2]int32]bool       // naturalSpawn: view-window chunk set
@@ -592,7 +593,8 @@ func (h *hub) snapshotItems() []savedItem {
 		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
 			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
 			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
-			Box: it.boxID, Hive: it.hiveID}
+			Box: it.boxID, Hive: it.hiveID, Bundle: it.bundleID,
+			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name}
 		for i, l := range it.pats {
 			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
 		}
@@ -613,7 +615,8 @@ func (h *hub) restoreItems(saved []savedItem) {
 			}
 			it.trimMat, it.trimPat = int8(si.Trim>>8), int8(si.Trim&0xff)
 			it.bookID = si.Book
-			it.boxID, it.hiveID = si.Box, si.Hive
+			it.boxID, it.hiveID, it.bundleID = si.Box, si.Hive, si.Bundle
+			it.potion, it.repairCost, it.instrument, it.name = si.Potion, si.Repair, si.Instr, si.Name
 		}
 	}
 }
@@ -718,6 +721,8 @@ func newHub(w *world.World) *hub {
 	h.psched = newPluginSched(h)
 	globalBooks.Store(h.books)     // free-function component composition (see book.go)
 	globalBundles.Store(h.bundles) // ditto for bundle contents (see bundle.go)
+	h.names = newNameStore()
+	globalNames.Store(h.names) // ditto for custom names (see names.go)
 	return h
 }
 
@@ -783,6 +788,10 @@ func (h *hub) postFromHub(ev hubEvent) {
 // run is the tick loop. It owns the registry and advances the clock at 20 TPS.
 func (h *hub) run() {
 	if h.containers != nil { // restore furnace/chest contents from the last run
+		// Names first: every unpackStack below resolves nameIDs through the
+		// global table, so it must be the loaded one before a single stack decodes.
+		h.names = h.containers.loadNames()
+		globalNames.Store(h.names)
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
 		h.boxes, h.nextBoxID = h.containers.loadBoxes()
@@ -1055,6 +1064,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
 					h.containers.recordBundles(h.bundles)
+					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
@@ -1841,6 +1851,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes, h.nextBoxID)
 					h.containers.recordBundles(h.bundles)
+					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
@@ -1978,7 +1989,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			continue
 		}
 		e.p.trySendEv(entAdd(it.eid, entityItem, it.uuid, it.x, it.y, it.z, 0, 0))
-		e.p.trySendEv(metaEv(itemMetadata(it.eid, it.item, it.count)))
+		e.p.trySendEv(metaEv(itemMetadata(it.eid, it.stack())))
 	}
 	for _, o := range h.orbs {
 		if o.dim != nt.dim {

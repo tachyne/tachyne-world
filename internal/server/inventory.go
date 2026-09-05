@@ -29,8 +29,8 @@ type invStack struct {
 	count      int
 	dmg        int          // durability damage taken (tools/armor); 0 for everything else
 	ench       [2]enchApply // up to two enchantments (zero slots = none); comparable
-	name       string       // anvil rename ("" = none) — in-session only (not persisted yet)
-	repairCost int          // anvil prior-work penalty (grows 2·max+1 per use) — in-session only
+	name       string       // anvil rename ("" = none); persisted by id via the nameStore (names.go)
+	repairCost int          // anvil prior-work penalty (grows 2·max+1 per use)
 	potion     int8         // brewed potion type (potWater..): drives drink effects + label
 	mapID      int32        // filled_map: which map this stack shows (0 = none)
 
@@ -200,9 +200,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			if math.Abs(it.x-t.x) > 1 || math.Abs(it.z-t.z) > 1 || math.Abs(it.y-t.y) > 1.5 {
 				continue
 			}
-			changed, leftover := t.inv.addStack(invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench,
-				mapID: it.mapID, pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID,
-				boxID: it.boxID, hiveID: it.hiveID})
+			changed, leftover := t.inv.addStack(it.stack())
 			picked := it.count - leftover
 			if picked == 0 {
 				continue // inventory full — leave it on the ground
@@ -218,7 +216,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
 			} else {
 				it.count = leftover
-				h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.item, it.count)))
+				h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))
 			}
 		}
 	}

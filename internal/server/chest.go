@@ -130,6 +130,8 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 					it.trimMat, it.trimPat = st.trimMat, st.trimPat
 					it.bookID = st.bookID
 					it.boxID, it.hiveID = st.boxID, st.hiveID
+					it.bundleID, it.potion, it.repairCost, it.instrument, it.name = st.bundleID, st.potion, st.repairCost, st.instrument, st.name
+					h.refreshItemMeta(players, it) // the spawn broadcast went out bare; show the real stack
 				}
 			}
 		}

@@ -165,7 +165,7 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 			t.p.sendEv(entGone(eid))
 		case e.dim:
 			t.p.sendEv(entAdd(eid, entityItem, it.uuid, it.x, it.y, it.z, 0, 0))
-			t.p.sendEv(metaEv(itemMetadata(eid, it.item, it.count)))
+			t.p.sendEv(metaEv(itemMetadata(eid, it.stack())))
 		}
 	}
 	for eid, a := range h.arrows {

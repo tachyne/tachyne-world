@@ -11,6 +11,20 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-05
+
+### Fixed
+- **Potions, renamed items, anvil repair costs and goat horns did not survive a
+  restart.** The in-memory stack carried all four, but the saved row never
+  did — so every rollout turned potions back into water bottles, stripped
+  anvil names, reset the prior-work cost and made every goat horn play
+  *ponder*. Player inventories, containers, mob gear and items on the ground
+  were all affected. The saved row carries them now (older saves still load;
+  the new columns simply read as empty), custom names go through an interned
+  name table saved alongside the containers, and the same four — plus a
+  bundle's contents, which were lost the moment the bundle hit the floor —
+  now ride a dropped item too, and are shown on it while it lies there.
+
 ## 2026-08-21
 
 ### Fixed
