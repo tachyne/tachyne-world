@@ -50,7 +50,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		if a.Text == "" {
 			return nil, "say requires a text arg"
 		}
-		h.post(evChat{text: a.Text})
+		h.postTimeout(evChat{text: a.Text}, foreignPostTimeout)
 	case "announce":
 		// A plugin's note to the OPERATORS (not the room): "[name] text" to
 		// every online op; the plugin manager records it for /plugin too.
@@ -62,13 +62,13 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		if a.Name == "" || a.Text == "" {
 			return nil, "announce requires name,text"
 		}
-		h.post(evAnnounce{name: a.Name, text: a.Text})
+		h.postTimeout(evAnnounce{name: a.Name, text: a.Text}, foreignPostTimeout)
 	case "settime":
 		var a struct {
 			Time uint64 `json:"time"`
 		}
 		json.Unmarshal(args, &a)
-		h.post(evSetTime{t: a.Time}) // through the hub so the plugin TimeSetEvent fires
+		h.postTimeout(evSetTime{t: a.Time}, foreignPostTimeout) // through the hub so the plugin TimeSetEvent fires
 	case "setblock":
 		var a struct {
 			X     int    `json:"x"`
@@ -79,7 +79,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		if json.Unmarshal(args, &a) != nil {
 			return nil, "setblock requires x,y,z,state"
 		}
-		h.post(evSetBlock{x: a.X, y: a.Y, z: a.Z, state: a.State})
+		h.postTimeout(evSetBlock{x: a.X, y: a.Y, z: a.Z, state: a.State}, foreignPostTimeout)
 	case "spawn":
 		return busCmdSpawn(h, args)
 	case "behavior":
@@ -93,7 +93,7 @@ func executeCommand(h *hub, cmd string, args json.RawMessage) (any, string) {
 		if _, ok := behaviors[a.Behavior]; !ok {
 			return nil, fmt.Sprintf("unknown behavior %q", a.Behavior)
 		}
-		h.post(evSetBehavior{eid: a.EID, behavior: a.Behavior})
+		h.postTimeout(evSetBehavior{eid: a.EID, behavior: a.Behavior}, foreignPostTimeout)
 
 	// Facade-parity commands (busv2.go).
 	case "weather":

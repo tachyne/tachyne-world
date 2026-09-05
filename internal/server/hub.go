@@ -753,6 +753,22 @@ func actionBarEv(text string) attachproto.Chat {
 // case work really must wait for the next drain, uses postFromHub.
 func (h *hub) post(ev hubEvent) { h.events <- ev }
 
+// postTimeout is post for callers that can afford to give up: the bus, NPC
+// decisions — anything where a wedged hub should degrade the caller rather
+// than freeze it (and its goroutine) for good. Reports whether it queued.
+func (h *hub) postTimeout(ev hubEvent, d time.Duration) bool {
+	select {
+	case h.events <- ev:
+		return true
+	case <-time.After(d):
+		log.Printf("hub event queue full for %s — dropping %T (is the tick loop stalled?)", d, ev)
+		return false
+	}
+}
+
+// foreignPostTimeout bounds how long a non-session caller waits on the hub.
+const foreignPostTimeout = 10 * time.Second
+
 // postFromHub queues an event from hub-goroutine code without ever blocking.
 // A full queue here is a programming error (the caller should have called the
 // handler directly), so it fails loudly rather than deadlocking quietly.
@@ -872,7 +888,12 @@ func (h *hub) run() {
 			h.runBinFires(players, age) // dispenser/dropper ejections due this tick (4-tick delay)
 			h.updateFurnaces(players)   // smelting progress + lit state + viewer sync
 			h.runRandomTicks(players)   // growth: crops, cane, cactus, saplings, grass, leaves
-			if age%mobMoveInterval == 0 {
+			// Vanilla ticks entities only in loaded chunks, and chunks load around
+			// players — so an empty server ticks no mobs at all. Gated here at the
+			// loop (not inside updateMobs) so tests that drive updateMobs directly
+			// are unaffected. Before this gate the boot herds walked the world for
+			// nobody, generating terrain into the chunk cache around the clock.
+			if age%mobMoveInterval == 0 && len(players) > 0 {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours

@@ -60,7 +60,9 @@ func bridgeEv[T plugin.Event](h *hub) {
 // the state from before.
 func (h *hub) runOnHub(fn func()) bool {
 	done := make(chan struct{})
-	h.post(evRunOnHub{fn: func() { fn(); close(done) }})
+	if !h.postTimeout(evRunOnHub{fn: func() { fn(); close(done) }}, foreignPostTimeout) {
+		return false
+	}
 	select {
 	case <-done:
 		return true
@@ -85,7 +87,7 @@ func busCmdWeather(h *hub, args json.RawMessage) (any, string) {
 		(a.Kind != "clear" && a.Kind != "rain" && a.Kind != "thunder") {
 		return nil, "weather requires kind=clear|rain|thunder [,duration ticks]"
 	}
-	h.post(evSetWeather{kind: a.Kind, duration: a.Duration})
+	h.postTimeout(evSetWeather{kind: a.Kind, duration: a.Duration}, foreignPostTimeout)
 	return nil, ""
 }
 
@@ -103,7 +105,7 @@ func busCmdGamerule(h *hub, args json.RawMessage) (any, string) {
 	default:
 		return nil, fmt.Sprintf("unknown gamerule %q", a.Rule)
 	}
-	h.post(evSetRule{rule: a.Rule, on: a.On, num: a.Num})
+	h.postTimeout(evSetRule{rule: a.Rule, on: a.On, num: a.Num}, foreignPostTimeout)
 	return nil, ""
 }
 
@@ -120,7 +122,7 @@ func busCmdGive(h *hub, args json.RawMessage) (any, string) {
 	if !ok {
 		return nil, fmt.Sprintf("unknown item %q", a.Item)
 	}
-	h.post(evGive{target: a.Player, item: id, count: max(1, a.Count)})
+	h.postTimeout(evGive{target: a.Player, item: id, count: max(1, a.Count)}, foreignPostTimeout)
 	return nil, ""
 }
 

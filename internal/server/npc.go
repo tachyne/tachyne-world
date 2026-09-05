@@ -127,15 +127,15 @@ func (h *hub) npcThink(n *npc, system, perception string) {
 	defer cancel()
 	reply, err := h.llm.complete(ctx, system, perception)
 	if err != nil {
-		h.post(evNPCDecision{eid: n.eid}) // clears inFlight; no action
+		h.postTimeout(evNPCDecision{eid: n.eid}, foreignPostTimeout) // clears inFlight; no action
 		return
 	}
 	var a npcAction
 	if json.Unmarshal([]byte(extractJSON(reply)), &a) != nil {
-		h.post(evNPCDecision{eid: n.eid})
+		h.postTimeout(evNPCDecision{eid: n.eid}, foreignPostTimeout)
 		return
 	}
-	h.post(evNPCDecision{eid: n.eid, action: &a})
+	h.postTimeout(evNPCDecision{eid: n.eid, action: &a}, foreignPostTimeout)
 }
 
 // npcAct applies a decided action on the hub goroutine.
