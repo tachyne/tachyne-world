@@ -418,7 +418,12 @@ persistence), `-gamemode survival` (default for new players),
 `-chunkdir chunks`), `-nats nats://localhost:4222` (plugin bus),
 `-llm http://…/v1` (NPCs), `-spawn x,y,z`, `-hud=false`,
 `-spawner tachyne|vanilla` (natural-spawn model; default tachyne),
-`-waves` (opt-in cosmetic beach waves; off by default — see below).
+`-waves` (opt-in cosmetic beach waves; off by default — see below),
+`-health :8081` (opt-in health/metrics listener: `/healthz` answers 503 once
+the tick loop has stalled 5 s — point a liveness probe at it — plus
+`/debug/vars` with players, mobs, cache sizes, tick p50/p99 and which chunk
+cache and bus the pod actually connected to, and `/debug/pprof`; bind it to
+the pod, never the public ingress).
 
 Vanilla parity: a real vanilla 1.21.5 server ran beside tachyne as an oracle
 (RCON via `scripts/oracle_rcon.py`), with Mojang's datagen dumps checked into

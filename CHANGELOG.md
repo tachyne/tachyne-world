@@ -14,6 +14,69 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-08-21
 
 ### Fixed
+- **Fire reaching TNT could freeze the whole server.** The fire simulation
+  handed the primed charge to the hub through the same queue the gateways use
+  — from the hub's own goroutine. The hub is that queue's only reader, so with
+  the queue full at that moment (a burst of player actions plus a fire reaching
+  a TNT stack is exactly when a tick is already long) the hand-off could never
+  complete: the tick loop stopped for good while the process stayed up and kept
+  passing its health check. It is now a direct call, and the hub-side queue
+  path fails loudly rather than deadlocking quietly.
+- **A corrupt save file could be silently replaced by an empty one.** Sixteen
+  on-disk stores — inventories, containers, mobs, players, advancements, stats,
+  the whitelist and ban list, the game rules — loaded with the decode error
+  ignored, so a truncated or damaged file came back as an empty store, the
+  server started cleanly, and the next 30-second save wrote that emptiness
+  over the only good copy. A file that fails to decode is now moved aside with
+  a timestamp, logged loudly, and the store starts empty over preserved bytes;
+  a file that cannot be read stops startup. Every store write is also atomic
+  and synced to disk now — four stores (whitelist/bans, game rules, plugin
+  data, migration markers) were plain overwrites that a crash could truncate,
+  and none of them, nor the world file, synced before the rename.
+- **Ten cows ticked forever on an empty server.** With nobody online the mob
+  update still ran every tick for the boot herds, which (until the earlier fix
+  today) walked the world generating terrain for no one. Vanilla ticks
+  entities only in loaded chunks, and chunks load around players; the engine
+  now does the same.
+- **Neighbour searches walked every mob.** Seven places asked "who is within a
+  few blocks of here" by scanning the whole mob list — the herd cohesion for
+  every herd animal every tick among them, which made herds quadratic in the
+  mob count. A per-tick spatial grid answers the question from a handful of
+  cells, with exact positions checked, so the result is unchanged and the cost
+  no longer grows with the size of the world's population.
+- **Gear attributes were recomputed twenty times a second per player.** Armour
+  points and enchantment attributes follow equipment changes now, as they do
+  in vanilla, instead of being rebuilt every tick.
+- **Three small per-player records outlived the player** (the sculk step
+  throttle and last-position pair), one set per join, forever.
+
+### Changed
+- **The world reports its own health.** A new opt-in `-health` listener serves
+  `/healthz` (503 once the tick loop has stalled for five seconds — a wedged
+  hub still accepts connections, so the old TCP check could not tell), a
+  `/debug/vars` page with players, mobs, cache sizes, block edits, tick timing
+  percentiles and which chunk cache and plugin bus the pod actually connected
+  to, and `/debug/pprof`. Any tick over 100 ms is logged with what it was
+  carrying. The cluster's liveness probe now points at `/healthz`.
+- **A shared chunk cache or plugin bus that is down at startup is retried**,
+  every 30 seconds, and swapped in when it answers — instead of falling back
+  for the life of the process. The local directory cache serves in front
+  meanwhile and stays warm afterwards.
+- **Cache budgets follow the memory limit.** The generator and light caches
+  were fixed at ~530 MiB combined regardless of the pod's limit; they now take
+  half of whatever `GOMEMLIMIT` allows, and keep the old sizes only when no
+  limit is set. The directory chunk cache is bounded too (512 MiB, oldest
+  files evicted) — it had no eviction at all.
+- **Random ticks read blocks through a pinned chunk**, one lookup per chunk
+  instead of two locks and three lookups per block, on the hottest read path
+  in the engine (~5,800 reads a tick per player).
+- Continuous integration now runs the race detector on every push and pull
+  request; the image build no longer re-runs the test suite it already gated.
+- The Bedrock gateway checks every packet write, so a client that drops
+  mid-session ends that session at once instead of when its read side happens
+  to fail.
+
+### Fixed (earlier today)
 - **An empty server slowly ate its own memory.** A world with nobody on it grew
   by about 15 MiB an hour, indefinitely — enough to exhaust the pod in a couple
   of days of sitting idle. Three things had to line up. Each world boots three

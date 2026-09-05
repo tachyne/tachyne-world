@@ -12,3 +12,12 @@ jobs:
       - run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+  race:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.26.x" }
+      # The race gate the project treats as mandatory before every push;
+      # until this job existed it was a local discipline only. ~15 min.
+      - run: go test -race -timeout 1500s ./...
