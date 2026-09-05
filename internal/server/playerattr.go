@@ -42,6 +42,21 @@ func (t *tracked) maxHP() float32 { return float32(t.playerAttrs().Value(attr.Ma
 //
 // Re-applying the same source does not stack, so calling this every tick costs
 // an arithmetic pass and nothing else.
+// refreshGearIfChanged is vanilla's updateEquipmentAttributes at vanilla's
+// cadence — when equipment changes — instead of twenty times a second per
+// player. Both refreshes below read only t.armor, so comparing the four worn
+// stacks against the last-synced copy is complete: no writer can be missed,
+// whichever path changed the slot (equip, break, durability, creative set,
+// inventory load).
+func (t *tracked) refreshGearIfChanged() {
+	if t.gearSynced && t.armor == t.lastArmor {
+		return
+	}
+	t.lastArmor, t.gearSynced = t.armor, true
+	t.refreshArmorAttrs()
+	t.refreshEnchantAttrs()
+}
+
 func (t *tracked) refreshArmorAttrs() {
 	points, tough := 0.0, 0.0
 	for _, a := range t.armor {

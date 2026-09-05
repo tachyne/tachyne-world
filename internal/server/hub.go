@@ -305,7 +305,11 @@ type tracked struct {
 	ender   *chest
 	winPos2 simPos      // the RIGHT half of an open double chest (winPos = LEFT)
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
-	offhand invStack
+	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
+	// compares against it so gear attributes recompute on change, not per tick.
+	lastArmor  [4]invStack
+	gearSynced bool
+	offhand    invStack
 
 	plugUI *plugUIState // plugin-browser window state (nil until first opened)
 
@@ -898,8 +902,7 @@ func (h *hub) run() {
 			h.borderDamage(players)   // outside the world border hurts (players only)
 			h.updateSleep(players)    // turn the night once everyone's slept ~5s
 			for _, t := range players {
-				t.refreshArmorAttrs()   // vanilla updateEquipmentAttributes: worn gear → ARMOR
-				t.refreshEnchantAttrs() // …and the attribute effects its enchantments carry
+				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
