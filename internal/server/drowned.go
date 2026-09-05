@@ -54,6 +54,7 @@ func convertingMeta(eid int32, on bool) []byte {
 func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	delete(h.mobs, m.eid)
+	h.gridDirty()
 	nm := h.spawnHostileY(players, target, m.x, m.y, m.z)
 	if nm == nil {
 		return

@@ -91,9 +91,9 @@ func (herdBehavior) steer(h *hub, m *mob) (float64, float64) {
 	hd := h.herds[m.herd]
 	vx := (hd.x - m.x) * cohesion
 	vz := (hd.z - m.z) * cohesion
-	for _, o := range h.mobs {
+	h.grid().nearby(m.dim, m.x, m.z, sepRadius, func(o *mob) {
 		if o == m || o.etype != m.etype {
-			continue
+			return
 		}
 		dx, dz := o.x-m.x, o.z-m.z
 		if d2 := dx*dx + dz*dz; d2 < sepRadius*sepRadius && d2 > 1e-4 {
@@ -101,7 +101,7 @@ func (herdBehavior) steer(h *hub, m *mob) (float64, float64) {
 			vx -= dx * inv * separate
 			vz -= dz * inv * separate
 		}
-	}
+	})
 	vx += (h.rng.Float64()*2 - 1) * wander
 	vz += (h.rng.Float64()*2 - 1) * wander
 	return vx, vz

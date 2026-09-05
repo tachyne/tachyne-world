@@ -148,14 +148,14 @@ func (golemBehavior) name() string { return "golem" }
 func (golemBehavior) steer(h *hub, m *mob) (float64, float64) {
 	var target *mob
 	best := 16.0
-	for _, o := range h.mobs {
-		if !o.hostile || o.dying > 0 || o.dim != m.dim {
-			continue
+	h.grid().nearby(m.dim, m.x, m.z, best, func(o *mob) {
+		if !o.hostile || o.dying > 0 {
+			return
 		}
 		if d := math.Hypot(o.x-m.x, o.z-m.z); d < best {
 			best, target = d, o
 		}
-	}
+	})
 	if target != nil {
 		return (target.x - m.x) * 0.3, (target.z - m.z) * 0.3
 	}
@@ -174,13 +174,16 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 		m.attackCD--
 		return
 	}
-	for _, o := range h.mobs {
-		if !o.hostile || o.dying > 0 || o.dim != m.dim {
-			continue
+	// Pick the nearest hostile in reach via the grid, then punch it outside
+	// the query — the punch may kill (killMob mutates h.mobs).
+	var o *mob
+	h.grid().nearby(m.dim, m.x, m.z, 2.2, func(c *mob) {
+		if o != nil || !c.hostile || c.dying > 0 || dist3(c.x, c.y, c.z, m.x, m.y, m.z) > 2.2 {
+			return
 		}
-		if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > 2.2 {
-			continue
-		}
+		o = c
+	})
+	if o != nil {
 		m.attackCD = 5 // mob-updates between swings
 		if kdx, kdz := o.x-m.x, o.z-m.z; kdx != 0 || kdz != 0 {
 			d := math.Hypot(kdx, kdz)
@@ -195,7 +198,6 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 		if o.health <= 0 {
 			h.killMob(players, o)
 		}
-		return
 	}
 }
 

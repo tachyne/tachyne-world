@@ -1,8 +1,6 @@
 package server
 
 import (
-	"math"
-
 	"github.com/tachyne/tachyne-common/protocol"
 )
 
@@ -177,13 +175,14 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			continue
 		}
 		m.loveTicks -= survivalTickN
-		for _, o := range h.mobs {
-			if o == m || o.etype != m.etype || o.loveTicks <= 0 || o.dying > 0 {
-				continue
+		var partner *mob
+		h.grid().nearby(m.dim, m.x, m.z, breedRange, func(o *mob) {
+			if partner != nil || o == m || o.etype != m.etype || o.loveTicks <= 0 || o.dying > 0 {
+				return
 			}
-			if math.Hypot(o.x-m.x, o.z-m.z) > breedRange {
-				continue
-			}
+			partner = o
+		})
+		if o := partner; o != nil {
 			m.loveTicks, o.loveTicks = 0, 0
 			m.breedCD, o.breedCD = breedCooldown, breedCooldown
 			baby := h.spawnAnimal(players, m.etype, int(m.x), int(m.z))

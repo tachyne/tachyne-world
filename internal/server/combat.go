@@ -328,12 +328,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	h.zombieReinforce(players, m, t)      // hard mode: a hurt zombie may call for backup
 	if m.etype == entityZombifiedPiglin { // vanilla: one hit angers the pack
-		for _, o := range h.mobs {
-			if o.etype == entityZombifiedPiglin && o.dim == m.dim &&
-				dist3(o.x, o.y, o.z, m.x, m.y, m.z) < 16 {
+		h.grid().nearby(m.dim, m.x, m.z, 16, func(o *mob) {
+			if o.etype == entityZombifiedPiglin && dist3(o.x, o.y, o.z, m.x, m.y, m.z) < 16 {
 				o.anger = spiderAnger * 4 // piglins hold a long grudge
 			}
-		}
+		})
 	}
 	if m.health <= 0 {
 		if m.patrolCaptain && t != nil { // a slain raid captain curses its killer
@@ -397,6 +396,7 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 // once the death animation has played out).
 func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
+	h.gridDirty()
 	if m.mount != 0 { // a mob rider died — detach it from its vehicle's view
 		if v := h.mobs[m.mount]; v != nil {
 			v.mobRider = 0

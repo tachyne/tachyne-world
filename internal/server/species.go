@@ -460,18 +460,18 @@ func (h *hub) provoke(m *mob, t *tracked) {
 	if !pack {
 		return
 	}
-	for _, o := range h.mobs {
-		if o == m || o.etype != m.etype || o.dim != m.dim || o.dying > 0 {
-			continue
+	h.grid().nearby(m.dim, m.x, m.z, 16, func(o *mob) {
+		if o == m || o.etype != m.etype || o.dying > 0 {
+			return
 		}
 		if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > 16 {
-			continue
+			return
 		}
 		o.hostile = true
 		o.behavior = Behavior(hostileBehavior{})
 		o.anger = spiderAnger * 4
 		o.hasTarget, o.tx, o.tz = true, t.x, t.z
-	}
+	})
 }
 
 // mobEquip builds the equipment event showing an item in a mob's main hand.

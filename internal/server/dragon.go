@@ -50,6 +50,7 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 		sx: 0.5, sy: float64(worldgen.EndSurfaceY + 25), sz: 0.5}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid))
 	h.mobs[eid] = m
+	h.gridDirty()
 	m.hostile = true
 	m.health = dragonHealth
 	if left := h.rules.DragonHealth; left > 0 && left < dragonHealth {

@@ -109,22 +109,22 @@ func (h *hub) smashAround(players map[int32]*tracked, t *tracked, cx, cy, cz flo
 		return (maceKnockRadius - dist) * maceKnockPower * heavy * kbScale
 	}
 
-	for _, o := range h.mobs {
-		if o.eid == exceptEID || o.dying > 0 || o.kbScale() <= 0 || o.dim != t.dim {
-			continue
+	h.grid().nearby(t.dim, cx, cz, maceKnockRadius, func(o *mob) {
+		if o.eid == exceptEID || o.dying > 0 || o.kbScale() <= 0 {
+			return
 		}
 		if o.owner == t.p.eid && o.tamed {
-			continue // your own pets ride out the shockwave
+			return // your own pets ride out the shockwave
 		}
 		dx, dz := o.x-cx, o.z-cz
 		dist := math.Hypot(dx, dz)
 		if dist > maceKnockRadius || dist < 1e-6 {
-			continue
+			return
 		}
 		p := power(dist, o.kbScale())
 		o.vx, o.vz, o.kb, o.reroute = dx/dist*p, dz/dist*p, 3, 0
 		h.mobKnockVelocity(players, o)
-	}
+	})
 
 	for _, v := range players {
 		if v == t || v.p.eid == exceptEID || v.dead || v.dim != t.dim {

@@ -225,12 +225,14 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
 	}
 	h.mobs[eid] = m
+	h.gridDirty()
 
 	if !h.reloading && plugin.Has[*plugin.MobSpawnEvent](h.plugins) {
 		ev := &plugin.MobSpawnEvent{EID: eid, Type: etype, TypeName: entityNameByID[etype],
 			X: x, Y: y, Z: z, Dim: dim, Reason: cause}
 		if !h.plugins.Fire(ev) {
 			delete(h.mobs, eid)
+			h.gridDirty()
 			return nil
 		}
 	}
@@ -642,6 +644,7 @@ func (m *mob) grounded() bool { return !m.flies }
 // out-of-range cleanup, where a loot shower would be wrong.
 func (h *hub) removeMob(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
+	h.gridDirty()
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 }

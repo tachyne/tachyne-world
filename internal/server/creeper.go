@@ -75,6 +75,7 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 // damage + knock back every entity in range, spill any destroyed containers.
 func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
+	h.gridDirty()
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 	radius := blastRadius

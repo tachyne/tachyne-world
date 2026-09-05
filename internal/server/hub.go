@@ -430,6 +430,7 @@ type hub struct {
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
 	mobs    map[int32]*mob          // server-controlled entities (living world)
+	mgrid   mobGrid                 // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
 	items   map[int32]*itemEntity   // dropped-item entities (block drops)
 	arrows  map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
 	clouds  map[int32]*effectCloud  // lingering-potion area-effect clouds
