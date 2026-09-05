@@ -135,16 +135,8 @@ func obsDelta(s uint32) (int, int, int) {
 // either side faces into this repeater — a locked repeater freezes its output
 // (vanilla DiodeBlock.isLocked / getAlternateSignal).
 func (h *hub) repeaterLocked(pos blockPos, state uint32) bool {
-	dx, dz := facingDelta(stateFacing(state))
-	for _, s := range [2][2]int{{dz, -dx}, {-dz, dx}} { // the two perpendicular sides
-		np := blockPos{pos.x + s[0], pos.y, pos.z + s[1]}
-		ns := h.world.At(np.x, np.y, np.z)
-		// emitPower already checks the diode faces this cell and outputs > 0.
-		if (isRepeater(ns) || isComparator(ns)) && h.emitPower(np.x, np.y, np.z, pos.x, pos.y, pos.z) > 0 {
-			return true
-		}
-	}
-	return false
+	// DiodeBlock.isLocked: getAlternateSignal with sideInputDiodesOnly.
+	return h.diodeSideSignal(pos, state, true) > 0
 }
 
 // updateRepeater: reads the cell behind (facing side), flips `powered` after
@@ -159,8 +151,7 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 		delete(h.rsDue, pos) // frozen: cancel any pending flip, hold current output
 		return
 	}
-	dx, dz := facingDelta(stateFacing(state))
-	in := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z) > 0
+	in := h.diodeInputSignal(pos, state) > 0 // DiodeBlock.shouldTurnOn
 	cur := boolProp(state, "powered")
 	if in == cur {
 		delete(h.rsDue, pos) // input settled back before the flip landed
@@ -176,7 +167,7 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 	if now >= due {
 		delete(h.rsDue, pos)
 		h.setBlock(players, pos, setBoolProp(state, "powered", in))
-		h.scheduleAround(pos, 1)
+		h.scheduleSignalAround(pos)
 	}
 }
 
@@ -199,7 +190,7 @@ func (h *hub) updateCopperBulb(players map[int32]*tracked, pos blockPos, state u
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 	}
 	h.setBlock(players, pos, worldgen.CopperBulbSet(state, lit, powered))
-	h.scheduleAround(pos, 1) // relight + let an adjacent comparator re-read
+	h.scheduleSignalAround(pos) // relight + let an adjacent comparator re-read
 }
 
 // updateComparator: output = rear if rear >= strongest side (compare mode),
@@ -207,7 +198,7 @@ func (h *hub) updateCopperBulb(players map[int32]*tracked, pos blockPos, state u
 // keeps it in a block entity).
 func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state uint32) {
 	dx, dz := facingDelta(stateFacing(state))
-	rear := h.emitPower(pos.x+dx, pos.y, pos.z+dz, pos.x, pos.y, pos.z)
+	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.world.At(back.x, back.y, back.z)
 	if sig := h.analogSignal(simPos{blockPos: back}); sig >= 0 { // redstone still simulates only the overworld
@@ -231,11 +222,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 			rear = sig
 		}
 	}
-	sdx, sdz := facingDelta(leftOf(stateFacing(state)))
-	side := h.emitPower(pos.x+sdx, pos.y, pos.z+sdz, pos.x, pos.y, pos.z)
-	if s2 := h.emitPower(pos.x-sdx, pos.y, pos.z-sdz, pos.x, pos.y, pos.z); s2 > side {
-		side = s2
-	}
+	side := h.diodeSideSignal(pos, state, false) // any source on a comparator's sides
 	out := 0
 	info, _ := worldgen.InfoForState(state)
 	if worldgen.GetProperty(info, state, "mode") == "subtract" {
@@ -263,7 +250,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 		delete(h.rsDue, pos)
 		h.compOut[pos] = out
 		h.setBlock(players, pos, setBoolProp(state, "powered", out > 0))
-		h.scheduleAround(pos, 1)
+		h.scheduleSignalAround(pos)
 	}
 }
 
@@ -277,7 +264,7 @@ func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uin
 		if at, ok := h.obsPulse[pos]; !ok || now >= at+observerPulseTicks {
 			delete(h.obsPulse, pos)
 			h.setBlock(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleAround(pos, 1)
+			h.scheduleSignalAround(pos)
 		}
 		return
 	}
@@ -289,7 +276,7 @@ func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uin
 		h.obsPulse[pos] = now
 		h.setBlock(players, pos, setBoolProp(state, "powered", true))
 		h.schedule(pos, observerPulseTicks)
-		h.scheduleAround(pos, 1)
+		h.scheduleSignalAround(pos)
 	}
 }
 
@@ -310,7 +297,7 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 	}
 	if daylightPower(state) != power {
 		h.setBlock(players, pos, daylightWith(daylightInverted(state), power))
-		h.scheduleAround(pos, 1)
+		h.scheduleSignalAround(pos)
 	}
 	h.schedule(pos, 100)
 }
@@ -339,7 +326,7 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 					float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.8)
 			}
 			h.setBlock(players, pos, ns)
-			h.scheduleAround(pos, 1)
+			h.scheduleSignalAround(pos)
 			h.platesOn[pos] = true
 		} else if platePower(s) > 0 {
 			h.platesOn[pos] = true
@@ -355,7 +342,7 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 			h.setBlock(players, pos, plateWith(s, 0))
 			h.playSound(players, "minecraft:block.stone_pressure_plate.click_off", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.7)
-			h.scheduleAround(pos, 1)
+			h.scheduleSignalAround(pos)
 		}
 	}
 }

@@ -87,30 +87,11 @@ func pistonFragile(s uint32) bool {
 // updatePiston reacts to power: extend when powered, retract when not.
 func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint32) {
 	dx, dy, dz := pistonDelta(state)
-	// Power from any side except the face (vanilla ignores front power).
+	// PistonBaseBlock.getNeighborSignal (signal.go): any side but the push
+	// face, then quasi-connectivity through the block above.
 	powered := false
-	for _, d := range rsNeighbors {
-		if d[0] == dx && d[1] == dy && d[2] == dz {
-			continue
-		}
-		if h.emitPower(pos.x+d[0], pos.y+d[1], pos.z+d[2], pos.x, pos.y, pos.z) > 0 {
-			powered = true
-			break
-		}
-	}
-	// Quasi-connectivity (Java): the piston also fires when the block directly
-	// above it is powered from any side but below (getNeighborSignal step 3).
-	if !powered {
-		ax, ay, az := pos.x, pos.y+1, pos.z
-		for _, d := range rsNeighbors {
-			if d[0] == 0 && d[1] == -1 && d[2] == 0 {
-				continue // skip DOWN (that's the piston itself)
-			}
-			if h.emitPower(ax+d[0], ay+d[1], az+d[2], ax, ay, az) > 0 {
-				powered = true
-				break
-			}
-		}
+	if push, ok := dirFromDelta(dx, dy, dz); ok {
+		powered = h.pistonHasSignal(pos, push)
 	}
 	extended := boolProp(state, "extended")
 	if powered && !extended {
@@ -143,7 +124,7 @@ func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint3
 	h.setBlock(players, pos, setBoolProp(state, "extended", true))
 	h.playSound(players, "minecraft:block.piston.extend", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
-	h.scheduleAround(pos, 1)
+	h.scheduleSignalAround(pos)
 }
 
 // retractPiston removes the head; sticky pistons pull the next block in.
@@ -161,5 +142,5 @@ func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint
 	h.setBlock(players, pos, setBoolProp(state, "extended", false))
 	h.playSound(players, "minecraft:block.piston.contract", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
-	h.scheduleAround(pos, 1)
+	h.scheduleSignalAround(pos)
 }

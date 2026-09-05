@@ -90,17 +90,21 @@ func TestButtonPulsesAndReleases(t *testing.T) {
 
 func TestTorchInverts(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
-	w.SetBlock(x, y-1, z, worldgen.Stone)                         // support
-	w.SetBlock(x, y, z, worldgen.BlockBase("redstone_torch"))     // lit floor torch on it
-	w.SetBlock(x+1, y-1, z, worldgen.BlockBase("redstone_block")) // redstone block beside the SUPPORT
-	h.scheduleAround(blockPos{x, y, z}, 1)
-	stepTicks(h, players, 4)
+	w.SetBlock(x, y-1, z, worldgen.Stone)                     // support
+	w.SetBlock(x, y, z, worldgen.BlockBase("redstone_torch")) // lit floor torch on it
+	// A lever mounted ON the support block drives it strongly, and a strongly
+	// powered support turns the torch off. (A redstone block beside the
+	// support would not: it has no direct signal, so the support stays inert
+	// and the torch stays lit — vanilla's documented quirk.)
+	lever := wallLever(t, "east") // on the support's EAST face, attached to the west
+	w.SetBlock(x+1, y-1, z, lever)
+	h.toggleLever(players, blockPos{x + 1, y - 1, z}, w.At(x+1, y-1, z))
+	stepTicks(h, players, 6)
 	if torchLit(w.At(x, y, z)) {
 		t.Fatal("a torch whose support is powered must turn off")
 	}
-	w.SetBlock(x+1, y-1, z, worldgen.Stone) // remove the power
-	h.scheduleAround(blockPos{x, y, z}, 1)
-	stepTicks(h, players, 4)
+	h.toggleLever(players, blockPos{x + 1, y - 1, z}, w.At(x+1, y-1, z)) // remove the power
+	stepTicks(h, players, 6)
 	if !torchLit(w.At(x, y, z)) {
 		t.Fatal("torch should relight when the power goes")
 	}

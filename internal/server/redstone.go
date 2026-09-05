@@ -155,50 +155,28 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 	return 0
 }
 
-// inputPower is the strongest signal ARRIVING at a cell: sources emit their
-// full strength, dust arrives decayed by one. Dust also listens one step up
-// and down (stairs of dust), like vanilla's diagonal connections.
+// inputPower is the strongest signal ARRIVING at a cell, on the vanilla
+// model (signal.go): for dust, the evaluator's target strength; for anything
+// else, SignalGetter.getBestNeighborSignal — which is how a solid block
+// carrying direct power reaches a consumer on its far side.
 func (h *hub) inputPower(x, y, z int, forWire bool) int {
-	best := 0
-	take := func(px, py, pz int) {
-		s := h.world.At(px, py, pz)
-		p := h.emitPower(px, py, pz, x, y, z)
-		if isWire(s) {
-			p-- // dust-to-dust (and dust-to-consumer) decays
-		}
-		if p > best {
-			best = p
-		}
+	if forWire {
+		return h.wireTargetStrength(x, y, z)
 	}
-	for _, d := range rsNeighbors {
-		take(x+d[0], y+d[1], z+d[2])
-	}
-	if forWire { // diagonal dust steps
-		for _, d := range rsNeighbors[:4] {
-			take(x+d[0], y+1, z+d[2])
-			take(x+d[0], y-1, z+d[2])
-		}
-	}
-	if best < 0 {
-		return 0
-	}
-	return best
+	return h.bestNeighborSignal(x, y, z)
 }
 
-// supportPowered reports whether a torch's support block receives power —
-// EXCLUDING the torch itself (a lit torch must never power its own support,
-// or every torch becomes a 2-tick self-oscillator).
+// supportPowered is RedstoneTorchBlock.hasNeighborSignal: is the torch's
+// support block sending power toward the torch? The support is asked with d
+// pointing from the torch to it (level.hasSignal(pos.below(), DOWN)). A lit
+// torch cannot power its own support — its weak signal is zero toward the
+// support and its direct signal goes only upward — so no self-oscillation.
 func (h *hub) supportPowered(sx, sy, sz, tx, ty, tz int) bool {
-	for _, d := range rsNeighbors {
-		px, py, pz := sx+d[0], sy+d[1], sz+d[2]
-		if px == tx && py == ty && pz == tz {
-			continue
-		}
-		if h.emitPower(px, py, pz, sx, sy, sz) > 0 {
-			return true
-		}
+	d, ok := dirFromDelta(sx-tx, sy-ty, sz-tz)
+	if !ok {
+		return false
 	}
-	return false
+	return h.signal(sx, sy, sz, d) > 0
 }
 
 // updateRedstone is the scheduled step for any redstone-ish cell.
@@ -232,7 +210,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			info, _ := worldgen.InfoForState(state)
 			ns := worldgen.SetProperty(info, state, "power", itoa(want))
 			h.setBlock(players, pos, h.connectWire(x, y, z, ns))
-			h.scheduleAround(pos, 1) // ripple on
+			h.scheduleSignalAround(pos) // ripple on
 		}
 	case isRSTorch(state):
 		// The torch inverts its support block (below for floor torches, the
@@ -248,7 +226,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		powered := h.supportPowered(sx, sy, sz, x, y, z)
 		if torchLit(state) == powered {
 			h.setBlock(players, pos, torchWithLit(state, !powered))
-			h.scheduleAround(pos, 1)
+			h.scheduleSignalAround(pos)
 		}
 	case worldgen.IsCopperBulb(state):
 		h.updateCopperBulb(players, pos, state)
@@ -269,7 +247,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.setBlock(players, pos, setBoolProp(state, "powered", false))
 			h.playSound(players, "minecraft:block.stone_button.click_off", sndBlock,
 				float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 0.9)
-			h.scheduleAround(pos, 1)
+			h.scheduleSignalAround(pos)
 		}
 	case isTNT(state):
 		if h.inputPower(x, y, z, false) > 0 {
@@ -317,26 +295,44 @@ func (h *hub) updatePoweredOpenable(players map[int32]*tracked, pos blockPos, st
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 }
 
-// connectWire shapes a dust cell's visual arms toward its redstone neighbours.
+// connectWire stores a dust cell's arms as wireArms computes them, plus the
+// "up" flavour where the arm climbs onto a neighbour (the client draws the
+// dust running up the block face).
 func (h *hub) connectWire(x, y, z int, state uint32) uint32 {
 	info, ok := worldgen.InfoForState(state)
 	if !ok {
 		return state
 	}
-	dirs := map[string][2]int{"east": {1, 0}, "west": {-1, 0}, "south": {0, 1}, "north": {0, -1}}
-	for name, d := range dirs {
+	arms := h.wireArms(x, y, z)
+	aboveConducts := conducts(h.world.At(x, y+1, z))
+	for _, d := range horizontalDirs {
+		dx, _, dz := d.delta()
 		v := "none"
-		ns := h.world.At(x+d[0], y, z+d[1])
-		if isRedstoneish(ns) || isLever(ns) || ns == redstoneBlock ||
-			isWire(h.world.At(x+d[0], y-1, z+d[1])) {
+		if arms[d] {
 			v = "side"
+			if !aboveConducts && canHoldDust(h.world.At(x+dx, y, z+dz)) && isWire(h.world.At(x+dx, y+1, z+dz)) {
+				v = "up"
+			}
 		}
-		if isWire(h.world.At(x+d[0], y+1, z+d[1])) {
-			v = "up"
-		}
-		state = worldgen.SetProperty(info, state, name, v)
+		state = worldgen.SetProperty(info, state, rsDirName[d], v)
 	}
 	return state
+}
+
+// wireConnectsTo is shouldConnectTo(state, direction) with direction the way
+// from the dust to the neighbour.
+func (h *hub) wireConnectsTo(ns uint32, d rsDir) bool {
+	switch {
+	case isWire(ns):
+		return true
+	case isRepeater(ns):
+		f, ok := propDir(ns, "facing")
+		return ok && (f == d || f.opposite() == d)
+	case isObserver(ns):
+		f, ok := propDir(ns, "facing")
+		return ok && f == d
+	}
+	return h.isSignalSource(ns)
 }
 
 // pressButton / toggleLever are the right-click interactions.
@@ -348,7 +344,7 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 	h.setBlock(players, pos, setBoolProp(state, "powered", true))
 	h.playSound(players, "minecraft:block.stone_button.click_on", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
-	h.scheduleAround(pos, 1)
+	h.scheduleSignalAround(pos)
 	h.schedule(pos, buttonPressTicks) // the unpress timer
 }
 
@@ -361,7 +357,7 @@ func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32
 	}
 	h.playSound(players, "minecraft:block.lever.click", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, pitch)
-	h.scheduleAround(pos, 1)
+	h.scheduleSignalAround(pos)
 }
 
 type evUseRedstone struct {

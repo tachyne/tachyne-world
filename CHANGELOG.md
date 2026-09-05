@@ -13,6 +13,29 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-05
 
+### Added
+- **Redstone power travels through solid blocks the way it does in vanilla.**
+  The engine only ever saw sources a consumer touched directly, so the first
+  things a player builds — a lever on the far side of a wall, dust ending in a
+  block with a lamp beyond it, a torch under a block — did nothing. Power now
+  follows vanilla's own model: a source powers its neighbours *weakly*, some
+  sources drive one block *strongly* (a lever or button into the block it
+  hangs from, a torch into the block above it, a pressure plate, detector rail,
+  lectern or sculk sensor into the block beneath, a repeater, comparator or
+  observer out of its front, and dust into the block it points at), and a
+  solid block receiving strong power passes it on to everything it touches.
+  Which blocks conduct is decided per block state by vanilla's rule — a full
+  collision cube, from the game's own collision data — with vanilla's
+  exemptions (glass, ice, glowstone, sea lanterns, beacons, redstone blocks,
+  pistons, TNT, leaves, copper grates and bulbs never conduct; soul sand and
+  mud always do). Dust also connects the way vanilla connects it — recomputed
+  from its surroundings every time it is asked, a lone connection extending
+  into a straight line — so a line of dust ending beside a lamp lights it.
+  Two behaviours that were wrong before and are now vanilla's: a redstone block
+  beside a torch's support block no longer switches the torch off (it has no
+  strong signal), and a torch or lever beside a comparator is no longer a side
+  input (only dust, a redstone block or a diode is).
+
 ### Fixed
 - **Potions, renamed items, anvil repair costs and goat horns did not survive a
   restart.** The in-memory stack carried all four, but the saved row never

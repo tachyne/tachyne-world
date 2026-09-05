@@ -433,9 +433,10 @@ type hub struct {
 	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
-	mobs  map[int32]*mob // server-controlled entities (living world)
-	mgrid mobGrid        // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
-	names *nameStore     // custom item names by id (names.go); persisted in containers.json
+	mobs        map[int32]*mob // server-controlled entities (living world)
+	mgrid       mobGrid        // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
+	names       *nameStore     // custom item names by id (names.go); persisted in containers.json
+	wiresSilent bool           // RedStoneWireBlock.shouldSignal=false while dust computes its block signal (signal.go)
 	// Scratch maps the tick loop fills and clears every tick (clear() keeps
 	// the buckets), instead of allocating fresh ones 20 times a second.
 	scratchChunks map[[2]int32]bool       // naturalSpawn: view-window chunk set

@@ -61,9 +61,12 @@ func TestComparatorModes(t *testing.T) {
 	comp := worldgen.SetProperty(info, uint32((worldgen.BlockBase("comparator") + 1)), "facing", "west")
 	w.SetBlock(x+1, y, z, comp)
 	w.SetBlock(x+2, y, z, (worldgen.BlockBase("redstone_wire") + 1160))
-	// Side signal 15: torch south of the comparator.
-	w.SetBlock(x+1, y-1, z+1, worldgen.Stone)
-	w.SetBlock(x+1, y, z+1, uint32(worldgen.BlockBase("redstone_torch")))
+	// Side signal 15: a redstone block south of the comparator. (A torch would
+	// NOT do — vanilla reads side inputs through getControlInputSignal, i.e. a
+	// source's DIRECT signal toward the comparator, and a torch's direct
+	// signal goes only upward. Dust, a redstone block or a diode are the side
+	// inputs; a torch or lever beside a comparator is ignored.)
+	w.SetBlock(x+1, y, z+1, worldgen.BlockBase("redstone_block"))
 	h.scheduleAround(blockPos{x + 1, y, z}, 1)
 	stepTicks(h, players, 6)
 	// Compare mode: rear(15) >= side(15) → out 15.
