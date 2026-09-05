@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"sync"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -144,11 +145,16 @@ func (h *hub) advTick(players map[int32]*tracked) {
 		// health objectives are a gauge (vanilla read-only criteria): poll at
 		// 1 Hz; sbSetScore suppresses unchanged values.
 		h.sbCriteria(players, "health", t.p.name, int32(t.health+t.absorption+0.5), true)
-		if t.dim == 0 { // the visit-every-biome list is overworld-only
-			if biome := h.worldFor(t.dim).BiomeAt(int(t.x), int(t.z)); biome != "" {
-				h.advance(players, t, "location", advMatch{biome: biome})
-			}
+		// LocationTrigger (polled): biome, the structure the player stands in,
+		// the block underfoot and the boots worn — one payload, every criterion
+		// checks only the fields it names.
+		loc := advMatch{feet: t.armor[3].item}
+		if t.dim == 0 {
+			loc.biome = h.worldFor(t.dim).BiomeAt(int(t.x), int(t.z))
+			loc.structure = h.structureAt(int(math.Floor(t.x)), int(math.Floor(t.z)))
 		}
+		loc.blockState = h.worldFor(t.dim).At(int(math.Floor(t.x)), int(math.Floor(t.y))-1, int(math.Floor(t.z)))
+		h.advance(players, t, "location", loc)
 	}
 }
 
@@ -238,4 +244,20 @@ func (s *advStore) flush() {
 func (s *advStore) save(name string, st advState) {
 	s.record(name, st)
 	s.flush()
+}
+
+// structureAt names the overworld structure whose footprint contains (x,z),
+// for the location trigger — the structures the generator can be asked
+// about. Footprints are the structures' known extents around their anchor:
+// a stronghold sprawls ~100 blocks from its portal room, a trial chamber
+// ~60 from its centre. "" when in none.
+func (h *hub) structureAt(x, z int) string {
+	g := h.world.Gen()
+	if s := g.StrongholdIn(x, z); s.Exists && math.Hypot(float64(x-s.X), float64(z-s.Z)) <= 100 {
+		return "stronghold"
+	}
+	if c := g.TrialChamberIn(x, z); c.Exists && math.Hypot(float64(x-c.X), float64(z-c.Z)) <= 60 {
+		return "trial_chambers"
+	}
+	return ""
 }

@@ -26,7 +26,7 @@ func TestWitherBuildSpawns(t *testing.T) {
 	buildWitherFrame(w, cx, cy, cz)
 
 	before := len(h.mobs)
-	h.checkWitherBuild(players, 0, cx+1, cy, cz, (worldgen.BlockBase("wither_skeleton_skull") + 16)) // "placed" the last skull
+	h.checkWitherBuild(players, 0, 0, cx+1, cy, cz, (worldgen.BlockBase("wither_skeleton_skull") + 16)) // "placed" the last skull
 	if len(h.mobs) != before+1 {
 		t.Fatalf("completing the frame should spawn a wither: %d mobs", len(h.mobs))
 	}
@@ -82,7 +82,7 @@ func TestNonSkullDoesNotSpawnWither(t *testing.T) {
 	players := map[int32]*tracked{}
 	buildWitherFrame(w, 5, 70, 5)
 	// A non-skull placement (e.g. soul sand) must not trigger the build.
-	h.checkWitherBuild(players, 0, 6, 70, 5, blockSoulSand)
+	h.checkWitherBuild(players, 0, 0, 6, 70, 5, blockSoulSand)
 	for _, m := range h.mobs {
 		if m.etype == entityWither {
 			t.Fatal("only a wither skull completes the build")

@@ -11,6 +11,33 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-06
+
+### Fixed
+- **Most of the advancement tree could not be earned.** Sixty-nine of the 125
+  advancements were unobtainable: one hundred and eight criteria used
+  triggers the engine never fired, and one blocked criterion blocks its whole
+  advancement. The engine now observes them — an item used on a block (a key
+  in a vault, glowstone into an anchor, a disc in a jukebox, glow ink on a
+  sign, a bottle at a smoked hive), a hand on a mob, a recipe taken from the
+  crafting or smithing table, a crafter's own output, archaeology finds, a
+  wither built, effects gained (the *all effects* and *all potions* sets
+  included), levitation, falls from world height and after a wind charge,
+  lightning beside a villager, Nether fast travel, stepping into an end
+  gateway, a target block's bullseye, a kill beside a sculk catalyst, a
+  spyglass trained on a ghast or dragon or parrot, arrows and tridents and
+  mace smashes landing, a shield turning a projectile, a crossbow's kills
+  (two phantoms with one bolt, five different mobs with one), a nest cut
+  with Silk Touch, and where you stand: a stronghold, a trial chamber, powder
+  snow in leather boots. The advancement table is generated with each
+  criterion's real conditions now instead of a flag, so the tree tells the
+  truth about what is earnable. Nine criteria remain unobtainable until their
+  mechanics exist — channeling, honey-block sliding, wolf armour, piglin
+  bartering, allays, a goat in a boat, spears, and sneaking past sculk — and a
+  handful of others wait on mechanics not yet built (player copper waxing,
+  mob buckets, a built iron golem, dragon respawn, lodestones, the Nether and
+  End structures).
+
 ## 2026-09-05
 
 ### Added

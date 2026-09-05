@@ -230,7 +230,15 @@ type tracked struct {
 	gatewayUntil   uint64           // end gateway won't take this player again until this tick
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
-	lastCause      deathCause       // what last hurt them — the death message is made of this
+	// Advancement bookkeeping (advancement_hooks.go): where a levitation began,
+	// the overworld spot a Nether trip started from, and what last launched us.
+	levStartY      float64
+	levitating     bool
+	netherEntryX   float64
+	netherEntryZ   float64
+	hasNetherEntry bool
+	launchCause    string     // "wind_charge" until the next landing (fall_after_explosion)
+	lastCause      deathCause // what last hurt them — the death message is made of this
 	onGround       bool
 	sprinting      bool // last reported sprint state (crit/knockback modifiers)
 	gamemode       int
@@ -1160,11 +1168,13 @@ func (h *hub) run() {
 						h.restoreBeeHome(players, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
 					}
 				}
-				h.checkWitherBuild(players, e.dim, e.x, e.y, e.z, e.state)
+				h.checkWitherBuild(players, e.by, e.dim, e.x, e.y, e.z, e.state)
 				h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state)
 				if t := players[e.by]; t != nil {
 					if e.state != 0 && e.broken == 0 {
-						h.advance(players, t, "placed_block", advMatch{blockState: e.state})
+						px, py, pz, pd := e.x, e.y, e.z, e.dim
+						h.advance(players, t, "placed_block", advMatch{blockState: e.state,
+							blockAt: func(dx, dy, dz int) uint32 { return h.worldFor(pd).At(px+dx, py+dy, pz+dz) }})
 					}
 					if e.broken != 0 {
 						if reg, ok := statBlockReg(e.broken); ok {
@@ -1178,8 +1188,17 @@ func (h *hub) run() {
 				log.Printf("portal: linked %v <-> %v", e.from, e.to)
 			case evDim:
 				if t := players[e.eid]; t != nil {
+					fromDim, fromX, fromZ := t.dim, t.x, t.z
 					h.onDimSwitch(players, t, e)
 					h.advance(players, t, "changed_dimension", advMatch{dim: int32(e.dim)})
+					// NetherTravelTrigger: remember where the trip began in the overworld;
+					// coming back measures the overworld distance covered via the Nether.
+					if fromDim == 0 && e.dim == 1 {
+						t.netherEntryX, t.netherEntryZ, t.hasNetherEntry = fromX, fromZ, true
+					} else if fromDim == 1 && e.dim == 0 && t.hasNetherEntry {
+						h.advance(players, t, "nether_travel", advMatch{distH: math.Hypot(t.x-t.netherEntryX, t.z-t.netherEntryZ)})
+						t.hasNetherEntry = false
+					}
 				}
 			case evChat:
 				if e.from == nil {
@@ -1611,11 +1630,14 @@ func (h *hub) run() {
 					}
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
-						_ = h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+						held := heldStack(t).item
+						if h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
-							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m)
+							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
+							h.advance(players, t, "player_interacted_with_entity", advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held})
+						}
 					}
 				}
 			case evClick:

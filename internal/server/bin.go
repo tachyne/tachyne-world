@@ -397,7 +397,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// (skull kept, like OptionalDispenseItemBehavior).
 		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			h.setBlock(players, front, witherSkullBlock)
-			h.checkWitherBuild(players, 0, front.x, front.y, front.z, witherSkullBlock)
+			h.checkWitherBuild(players, 0, 0, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
 		} else {
 			took = false
 		}

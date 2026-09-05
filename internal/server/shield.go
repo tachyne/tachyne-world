@@ -101,6 +101,9 @@ func (h *hub) shieldBlocked(t *tracked, amount float32, dt dmgType, src dmgFrom)
 		return 0
 	}
 	blocked := shieldReduceBase + shieldReduceFactor*amount
+	if blocked > 0 && dt.has(tagIsProjectile) {
+		h.advance(h.playersRef, t, "entity_hurt_player", advMatch{blocked: true, damageTags: map[string]bool{"is_projectile": true}})
+	}
 	return float32(math.Max(0, math.Min(float64(blocked), float64(amount))))
 }
 

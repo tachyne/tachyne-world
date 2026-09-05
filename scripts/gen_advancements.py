@@ -53,22 +53,43 @@ def strip_ns(name):
 
 
 class Tags:
+    """Tag expansion for item, block and entity_type tags (recursive)."""
     def __init__(self, z):
         self.z, self.cache = z, {}
 
-    def expand(self, tag):  # "#minecraft:stone_tool_materials" -> item names
+    def expand(self, tag, kind="item"):  # "#minecraft:beehives" -> block names
         tag = strip_ns(tag.lstrip("#"))
-        if tag in self.cache:
-            return self.cache[tag]
+        key = (kind, tag)
+        if key in self.cache:
+            return self.cache[key]
         out = []
-        d = json.loads(self.z.read(f"data/minecraft/tags/item/{tag}.json"))
+        try:
+            d = json.loads(self.z.read(f"data/minecraft/tags/{kind}/{tag}.json"))
+        except KeyError:
+            self.cache[key] = out
+            return out
         for v in d["values"]:
+            v = v["id"] if isinstance(v, dict) else v
             if v.startswith("#"):
-                out += self.expand(v)
+                out += self.expand(v, kind)
             else:
                 out.append(strip_ns(v))
-        self.cache[tag] = out
+        self.cache[key] = out
         return out
+
+
+def names_of(val, tags, kind):
+    """A string / list of ids-or-tags -> concrete name list ('' -> [])."""
+    if val is None:
+        return []
+    vals = val if isinstance(val, list) else [val]
+    out = []
+    for v in vals:
+        if v.startswith("#"):
+            out += tags.expand(v, kind)
+        else:
+            out.append(strip_ns(v))
+    return out
 
 
 def items_pred(pred, tags):
@@ -95,10 +116,89 @@ def entity_type(cond_list):
     return ""
 
 
+def ent_pred(cond_list):
+    """Contextual entity-predicate list -> (type, baby, variant). type '' = any,
+    baby: None/True/False."""
+    for c in cond_list or []:
+        p = c.get("predicate") or {}
+        t = p.get("type")
+        t = strip_ns(t) if t and not t.startswith("#") else ""
+        baby = (p.get("flags") or {}).get("is_baby")
+        var = ""
+        ts = p.get("type_specific") or {}
+        if isinstance(ts, dict) and "variant" in ts:
+            var = strip_ns(str(ts["variant"]))
+        return t, baby, var
+    return "", None, ""
+
+
+def loc_of(pred):
+    """A location predicate -> dict(blocks, props, biome, structure, smokey)."""
+    out = {}
+    b = pred.get("block") or {}
+    if b.get("blocks") is not None:
+        out["blocks"] = b["blocks"]
+    if b.get("state"):
+        out["props"] = {k: str(v) for k, v in b["state"].items()}
+    if isinstance(pred.get("biomes"), str) and not pred["biomes"].startswith("#"):
+        out["biome"] = strip_ns(pred["biomes"])
+    if isinstance(pred.get("structures"), str):
+        out["structure"] = strip_ns(pred["structures"])
+    if pred.get("smokey"):
+        out["smokey"] = True
+    return out
+
+
+def loc_checks(terms, tags):
+    """placed_block's location list: any_of(all_of(location_check...)) ->
+    OR-groups of (offset, blocks, props). A bare location_check is one group;
+    a block_state_property term checks the placed block itself."""
+    def one(term):
+        c = term.get("condition", "")
+        if c == "minecraft:location_check":
+            p = term.get("predicate") or {}
+            l = loc_of(p)
+            return [{"dx": term.get("offsetX", 0), "dy": term.get("offsetY", 0),
+                     "dz": term.get("offsetZ", 0),
+                     "blocks": names_of(l.get("blocks"), tags, "block"),
+                     "props": l.get("props", {})}]
+        if c == "minecraft:block_state_property":
+            return [{"dx": 0, "dy": 0, "dz": 0,
+                     "blocks": [strip_ns(term["block"])],
+                     "props": {k: str(v) for k, v in (term.get("properties") or {}).items()}}]
+        if c == "minecraft:all_of":
+            out = []
+            for t in term.get("terms", []):
+                out += one(t)
+            return out
+        return []
+    groups = []
+    for term in terms or []:
+        if term.get("condition") == "minecraft:any_of":
+            for alt in term.get("terms", []):
+                groups.append(one(alt))
+        else:
+            g = one(term)
+            if g:
+                groups.append(g)
+    return groups
+
+
+def rng_min(v, key=None):
+    """A number-or-{min,max} range -> its min (0 if absent)."""
+    if v is None:
+        return 0
+    if isinstance(v, dict):
+        if key is not None:
+            return rng_min(v.get(key))
+        return float(v.get("min", 0))
+    return float(v)
+
+
 def distill(trigger, cond, tags):
-    """Reduce a criterion to the engine-matchable schema. Returns a dict of
-    non-default fields, or {'unmatchable': True} when the engine cannot
-    observe this trigger/condition shape yet."""
+    """Reduce a criterion to the engine-matchable schema: a dict of non-default
+    fields. `unmatchable` is set only where the engine has no way to observe
+    the shape at all; the engine sites decide the rest at runtime."""
     t = strip_ns(trigger)
     c = cond or {}
     d = {"trigger": t}
@@ -108,54 +208,195 @@ def distill(trigger, cond, tags):
         if not preds:
             d["unmatchable"] = True  # slot-count/any-item shapes: not yet
         d["items"] = preds
-    elif t == "consume_item":
+    elif t in ("consume_item", "fishing_rod_hooked", "filled_bucket", "used_totem",
+               "shot_crossbow", "item_durability_changed"):
         p = items_pred(c.get("item", {}), tags)
         d["items"] = [p] if p else []
-    elif t == "fishing_rod_hooked":
-        p = items_pred(c.get("item", {}), tags)  # the caught item
-        d["items"] = [p] if p else []
+        if t == "item_durability_changed":
+            for pl in c.get("player", []) or []:
+                v = ((pl.get("predicate") or {}).get("vehicle") or {}).get("type")
+                if v: d["vehicle"] = strip_ns(v)
     elif t == "placed_block":
-        blocks = [strip_ns(l["block"]) for l in c.get("location", [])
-                  if isinstance(l, dict) and "block" in l]
-        if blocks:
-            d["block"] = blocks[0]
+        groups = loc_checks(c.get("location", []), tags)
+        simple = [g for g in groups if len(g) == 1 and g[0]["dx"] == g[0]["dy"] == g[0]["dz"] == 0
+                  and not g[0]["props"] and len(g[0]["blocks"]) == 1]
+        if len(groups) == 1 and simple:
+            d["block"] = simple[0][0]["blocks"][0]
+        elif groups:
+            d["locChecks"] = groups
         else:
             d["unmatchable"] = True
-    elif t == "player_killed_entity":
-        d["entity"] = entity_type(c.get("entity"))
-    elif t == "entity_killed_player":
-        d["entity"] = entity_type(c.get("entity"))
+    elif t == "item_used_on_block":
+        for term in c.get("location", []) or []:
+            cc = term.get("condition")
+            if cc == "minecraft:location_check":
+                l = loc_of(term.get("predicate") or {})
+                if "blocks" in l: d["blocks"] = names_of(l["blocks"], tags, "block")
+                for k in ("props", "biome", "structure", "smokey"):
+                    if k in l: d[k] = l[k]
+            elif cc == "minecraft:match_tool":
+                p = items_pred(term.get("predicate") or {}, tags)
+                if p is not None: d["items"] = [p]
+                if "predicates" in (term.get("predicate") or {}):
+                    d["toolPred"] = list((term["predicate"]["predicates"]).keys())[0].split(":")[-1]
+    elif t in ("player_killed_entity", "entity_killed_player", "tame_animal", "summoned_entity",
+               "thrown_item_picked_up_by_player"):
+        d["entity"], _, _ = ent_pred(c.get("entity"))
     elif t == "bred_animals":
-        d["entity"] = entity_type(c.get("child"))
-    elif t == "tame_animal":
-        d["entity"] = entity_type(c.get("entity"))
+        d["entity"], _, _ = ent_pred(c.get("child"))
+    elif t in ("player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity"):
+        d["entity"], baby, var = ent_pred(c.get("entity"))
+        if baby is not None: d["baby"] = 1 if baby else 0
+        if var: d["variant"] = var
+        p = items_pred(c.get("item", {}), tags)
+        if p: d["items"] = [p]
     elif t == "changed_dimension":
         d["dim"] = DIMS.get(c.get("to"), -1)
-        if "from" in c:  # nether_travel-style round trips: not yet
+        if "from" in c:
             d["unmatchable"] = True
     elif t == "location":
-        biome = ""
-        for p in c.get("player", []) or []:
-            loc = (p.get("predicate") or {}).get("location") or {}
-            b = loc.get("biomes")
-            if isinstance(b, str) and not b.startswith("#"):
-                biome = strip_ns(b)
-        if biome:
-            d["biome"] = biome
-        else:
-            d["unmatchable"] = True  # structure visits etc.
+        for pl in c.get("player", []) or []:
+            p = pl.get("predicate") or {}
+            l = loc_of(p.get("location") or {})
+            for k in ("biome", "structure"):
+                if k in l: d[k] = l[k]
+            so = (p.get("stepping_on") or {}).get("block") or {}
+            if so.get("blocks") is not None:
+                d["blocks"] = names_of(so["blocks"], tags, "block")
+            feet = ((p.get("equipment") or {}).get("feet") or {})
+            fp = items_pred(feet, tags) if feet else None
+            if fp: d["equipFeet"] = fp
+        if not any(k in d for k in ("biome", "structure", "blocks")):
+            d["unmatchable"] = True
     elif t == "construct_beacon":
         lv = c.get("level", {})
-        if isinstance(lv, dict):
-            d["minLevel"] = int(lv.get("min", 0))
-        else:
-            d["minLevel"] = int(lv)
-    elif t in ("slept_in_bed", "villager_trade", "enchanted_item",
-               "brewed_potion", "cured_zombie_villager"):
-        pass  # condition-free (or engine matches unconditionally)
+        d["minLevel"] = int(lv.get("min", 0)) if isinstance(lv, dict) else int(lv)
+    elif t == "effects_changed":
+        eff = c.get("effects")
+        if eff:
+            d["effects"] = [strip_ns(k) for k in eff.keys()]
+        src, _, _ = ent_pred(c.get("source"))
+        if src: d["sourceEntity"] = src
+    elif t in ("recipe_crafted", "crafter_recipe_crafted"):
+        d["recipe"] = strip_ns(c.get("recipe_id", ""))
+        ings = [items_pred(i, tags) for i in c.get("ingredients", [])]
+        ings = [i for i in ings if i]
+        if ings: d["ingredients"] = ings
+    elif t == "player_generates_container_loot":
+        d["lootTable"] = strip_ns(c.get("loot_table", ""))
+    elif t in ("player_hurt_entity", "entity_hurt_player"):
+        dm = c.get("damage") or {}
+        ty = dm.get("type") or {}
+        de = ty.get("direct_entity") or {}
+        if de.get("type"):
+            d["damageDirect"] = names_of(de["type"], tags, "entity_type")
+        mh = ((de.get("equipment") or {}).get("mainhand") or {})
+        mp = items_pred(mh, tags) if mh else None
+        if mp: d["mainhand"] = mp
+        for tg in ty.get("tags", []) or []:
+            if tg.get("expected", True): d["damageTag"] = strip_ns(tg["id"])
+        if dm.get("dealt") is not None: d["minDealt"] = rng_min(dm["dealt"])
+        if dm.get("blocked"): d["blocked"] = True
+    elif t == "killed_by_arrow":
+        p = items_pred(c.get("fired_from_weapon", {}), tags)
+        if p: d["items"] = [p]
+        if c.get("unique_entity_types") is not None:
+            d["minUnique"] = int(rng_min(c["unique_entity_types"]))
+        vs = []
+        for v in c.get("victims", []) or []:
+            et, _, _ = ent_pred(v)
+            vs.append(et)
+        if vs: d["victims"] = vs
+    elif t == "using_item":
+        p = items_pred(c.get("item", {}), tags)
+        if p: d["items"] = [p]
+        for pl in c.get("player", []) or []:
+            la = (((pl.get("predicate") or {}).get("type_specific") or {}).get("looking_at") or {}).get("type")
+            if la: d["lookingAt"] = strip_ns(la)
+    elif t in ("enter_block", "slide_down_block", "bee_nest_destroyed"):
+        if c.get("block"): d["blocks"] = names_of(c["block"], tags, "block")
+        if t == "bee_nest_destroyed":
+            if c.get("num_bees_inside") is not None: d["minCount"] = int(rng_min(c["num_bees_inside"]))
+            ip = c.get("item") or {}
+            ench = (ip.get("predicates") or {}).get("minecraft:enchantments")
+            if ench: d["enchant"] = strip_ns(ench[0]["enchantments"])
+    elif t == "target_hit":
+        d["signal"] = int(rng_min(c.get("signal_strength")))
+        for pr in c.get("projectile", []) or []:
+            dist = (pr.get("predicate") or {}).get("distance") or {}
+            if dist.get("horizontal"): d["minDistH"] = rng_min(dist["horizontal"])
+    elif t in ("levitation", "nether_travel", "ride_entity_in_lava", "fall_from_height", "fall_after_explosion"):
+        dist = c.get("distance") or {}
+        if dist.get("y"): d["minDistY"] = rng_min(dist["y"])
+        if dist.get("horizontal"): d["minDistH"] = rng_min(dist["horizontal"])
+        if dist.get("absolute"): d["minDistAbs"] = rng_min(dist["absolute"])
+        sp = (c.get("start_position") or {}).get("position") or {}
+        if sp.get("y"): d["startYMin"] = rng_min(sp["y"])
+        for pl in c.get("player", []) or []:
+            p = pl.get("predicate") or {}
+            pos = ((p.get("location") or {}).get("position") or {})
+            if isinstance(pos.get("y"), dict) and "max" in pos["y"]: d["endYMax"] = float(pos["y"]["max"])
+            v = (p.get("vehicle") or {}).get("type")
+            if v: d["vehicle"] = strip_ns(v)
+            dm = (p.get("location") or {}).get("dimension")
+            if dm: d["dim"] = DIMS.get(dm, -1)
+        cause, _, _ = ent_pred(c.get("cause"))
+        if cause: d["cause"] = cause
+    elif t == "lightning_strike":
+        by, _, _ = ent_pred(c.get("bystander"))
+        if by: d["bystander"] = by
+        for l in c.get("lightning", []) or []:
+            ts = (l.get("predicate") or {}).get("type_specific") or {}
+            if ts.get("blocks_set_on_fire") == 0: d["noFire"] = True
+            dist = (l.get("predicate") or {}).get("distance") or {}
+            if dist.get("absolute"): d["maxDistAbs"] = float(dist["absolute"].get("max", 0))
+    elif t == "started_riding":
+        for pl in c.get("player", []) or []:
+            v = (pl.get("predicate") or {}).get("vehicle") or {}
+            if v.get("type"): d["vehicle"] = names_of(v["type"], tags, "entity_type")[0] if names_of(v["type"], tags, "entity_type") else ""
+            if (v.get("passenger") or {}).get("type"): d["passenger"] = strip_ns(v["passenger"]["type"])
+    elif t == "spear_mobs":
+        d["minCount"] = int(rng_min(c.get("count")))
+    elif t == "channeled_lightning":
+        vs = []
+        for v in c.get("victims", []) or []:
+            et, _, _ = ent_pred(v)
+            vs.append(et)
+        if vs: d["victims"] = vs
+    elif t == "allay_drop_item_on_block":
+        for term in c.get("location", []) or []:
+            if term.get("condition") == "minecraft:location_check":
+                l = loc_of(term.get("predicate") or {})
+                if "blocks" in l: d["blocks"] = names_of(l["blocks"], tags, "block")
+            elif term.get("condition") == "minecraft:match_tool":
+                p = items_pred(term.get("predicate") or {}, tags)
+                if p: d["items"] = [p]
+    elif t in ("slept_in_bed", "villager_trade", "enchanted_item", "brewed_potion",
+               "cured_zombie_villager", "avoid_vibration", "hero_of_the_village",
+               "kill_mob_near_sculk_catalyst"):
+        pass  # condition-free
     else:
         d["unmatchable"] = True  # trigger not yet observable engine-side
+    # Triggers whose mechanics the engine does not have at all stay flagged, so
+    # the tree keeps telling the truth about what is obtainable.
+    if t in NOT_OBSERVABLE:
+        d["unmatchable"] = True
     return d
+
+
+# Triggers with NO engine mechanic behind them (yet). Listed here rather than
+# silently unmatched so the count in the header stays honest.
+NOT_OBSERVABLE = {
+    "channeled_lightning",          # no channeling trident / lightning entity
+    "slide_down_block",             # no honey-block slide
+    "player_sheared_equipment",     # no wolf armour
+    "thrown_item_picked_up_by_entity",  # no piglin bartering
+    "thrown_item_picked_up_by_player",  # no allay behaviour
+    "allay_drop_item_on_block",
+    "started_riding",               # no mob-in-boat (goat) riding
+    "spear_mobs",                   # no spear
+    "avoid_vibration",              # sneaking does not yet suppress vibrations
+}
 
 
 # ---- vanilla TreeNodePosition (Buchheim tidy tree), x = depth, y = row ----
@@ -389,6 +630,55 @@ def main():
                     ids = sorted(set(item_ids[x] for x in p if x in item_ids))
                     sets.append("{%s}" % ", ".join(map(str, ids)))
                 f.append("items: [][]int32{%s}" % ", ".join(sets))
+            if c.get("ingredients"):
+                sets = []
+                for p in c["ingredients"]:
+                    ids = sorted(set(item_ids[x] for x in p if x in item_ids))
+                    sets.append("{%s}" % ", ".join(map(str, ids)))
+                f.append("ingredients: [][]int32{%s}" % ", ".join(sets))
+            if c.get("equipFeet"):
+                ids = sorted(set(item_ids[x] for x in c["equipFeet"] if x in item_ids))
+                f.append("equipFeet: []int32{%s}" % ", ".join(map(str, ids)))
+            if c.get("mainhand"):
+                ids = sorted(set(item_ids[x] for x in c["mainhand"] if x in item_ids))
+                f.append("mainhand: []int32{%s}" % ", ".join(map(str, ids)))
+            if c.get("blocks"):
+                f.append("blocks: []string{%s}" % ", ".join(gstr(b) for b in c["blocks"]))
+            if c.get("props"):
+                f.append("props: map[string]string{%s}" % ", ".join(
+                    f"{gstr(k)}: {gstr(v)}" for k, v in sorted(c["props"].items())))
+            if c.get("locChecks"):
+                groups = []
+                for g in c["locChecks"]:
+                    checks = []
+                    for chk in g:
+                        props = ", ".join(f"{gstr(k)}: {gstr(v)}" for k, v in sorted(chk["props"].items()))
+                        checks.append("{dx: %d, dy: %d, dz: %d, blocks: []string{%s}, props: map[string]string{%s}}" % (
+                            chk["dx"], chk["dy"], chk["dz"], ", ".join(gstr(b) for b in chk["blocks"]), props))
+                    groups.append("{%s}" % ", ".join(checks))
+                f.append("locChecks: [][]advLocCheck{%s}" % ", ".join(groups))
+            for key in ("structure", "recipe", "lootTable", "sourceEntity", "damageTag",
+                        "lookingAt", "vehicle", "passenger", "bystander", "cause", "variant",
+                        "enchant", "toolPred"):
+                if c.get(key):
+                    f.append(f"{key}: {gstr(c[key])}")
+            if c.get("damageDirect"):
+                f.append("damageDirect: []string{%s}" % ", ".join(gstr(x) for x in c["damageDirect"]))
+            if c.get("victims"):
+                f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
+            if c.get("effects"):
+                f.append("effects: []string{%s}" % ", ".join(gstr(x) for x in c["effects"]))
+            for key in ("minUnique", "minCount", "signal"):
+                if key in c:
+                    f.append(f"{key}: {c[key]}")
+            if "baby" in c:
+                f.append(f"baby: {c['baby']}, hasBaby: true")
+            for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax"):
+                if key in c:
+                    f.append(f"{key}: {c[key]}")
+            for key in ("smokey", "blocked", "noFire"):
+                if c.get(key):
+                    f.append(f"{key}: true")
             w.append("\t\t\t{%s}," % ", ".join(f))
         w.append("\t\t},")
         w.append("\t\treqs: [][]string{")

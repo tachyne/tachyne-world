@@ -287,6 +287,11 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			return
 		}
 		dist := t.peakY - e.y
+		h.advance(players, t, "fall_from_height", advMatch{distY: dist, startY: t.peakY, endY: e.y})
+		if t.launchCause != "" {
+			h.advance(players, t, "fall_after_explosion", advMatch{distY: dist, cause: t.launchCause})
+			t.launchCause = ""
+		}
 		// Trampling farmland happens on any hard landing — before the fall-damage
 		// grace and regardless of the FallDamage gamerule (FarmBlock.fallOn). The
 		// soil is the block just under the player's feet.

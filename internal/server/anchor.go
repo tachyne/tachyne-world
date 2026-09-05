@@ -59,6 +59,7 @@ func (h *hub) handleUseAnchor(players map[int32]*tracked, t *tracked, pos blockP
 	}
 	if heldStack(t).item == itemGlowstoneBlock && charge < anchorMaxCharge {
 		h.setBlockAt(players, t.dim, pos, anchorWithCharge(state, charge+1))
+		h.advance(players, t, "item_used_on_block", advMatch{blockState: anchorWithCharge(state, charge+1), item: heldStack(t).item})
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}

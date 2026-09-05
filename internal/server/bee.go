@@ -793,6 +793,7 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, po
 		item = int32(itemByName["bee_nest"])
 	}
 	if t != nil && heldStack(t).enchLvl(enchSilkTouch) > 0 {
+		h.advance(players, t, "bee_nest_destroyed", advMatch{blockState: state, count: len(h.hives[pos]), enchant: "silk_touch"})
 		if it := h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
 			it.hiveID = h.stowHiveItem(pos, honeyLevel(state))
 		}

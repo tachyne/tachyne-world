@@ -111,12 +111,18 @@ func (h *hub) takeSmithResult(players map[int32]*tracked, t *tracked) {
 		h.sendSmithWindow(t)
 		return
 	}
+	tmpl, base, add := t.extraSlot.item, t.anvil[0].item, t.anvil[1].item // before the take consumes them
 	for _, s := range []*invStack{&t.extraSlot, &t.anvil[0], &t.anvil[1]} {
 		if s.count--; s.count <= 0 {
 			*s = invStack{}
 		}
 	}
 	t.cursor = res
+	// RecipeCraftedTrigger for the smithing recipes: vanilla names a trim recipe
+	// after its template (<pattern>_armor_trim_smithing_template_smithing_trim).
+	if _, isTrim := protocol.SmithingTrimTemplate[tmpl]; isTrim {
+		h.advance(players, t, "recipe_crafted", advMatch{recipe: itemNameOf[tmpl] + "_smithing_trim", ingredients: []int32{tmpl, base, add}})
+	}
 	h.toNearbyEv(players, t.dim, float64(t.winPos.x), float64(t.winPos.z), attachproto.WorldFX{
 		Event: worldEventSmithingTable, X: t.winPos.x, Y: t.winPos.y, Z: t.winPos.z})
 	h.sendCursor(t)

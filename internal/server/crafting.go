@@ -672,6 +672,15 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 		res.mapID = h.maps.derive(src, src.Scale+1, false).ID
 	}
 	item, count := res.item, res.count
+	{ // RecipeCraftedTrigger (ResultSlot.onTake): the recipe by its result, with what went in
+		var ings []int32
+		for i := range grid {
+			if grid[i].item != 0 && grid[i].count > 0 {
+				ings = append(ings, grid[i].item)
+			}
+		}
+		h.advance(players, t, "recipe_crafted", advMatch{recipe: itemNameOf[item], ingredients: ings})
+	}
 
 	switch {
 	case mode == 1: // shift-click: craft one straight into the inventory

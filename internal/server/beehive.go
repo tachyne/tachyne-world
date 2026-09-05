@@ -70,6 +70,7 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 		return false // not ready; vanilla just does nothing
 	}
 	held := heldStack(t)
+	tool := held.item // the bottle or shears, for the item_used_on_block trigger
 	var give invStack
 	sound := "minecraft:block.beehive.shear"
 	switch held.item {
@@ -90,6 +91,8 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 	}
 
 	changed, left := t.inv.addStack(give)
+	// ItemUsedOnBlockTrigger (safely_harvest_honey wants a smoked hive + bottle).
+	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(pos.x, pos.y, pos.z), item: tool, smokey: h.campfireUnder(pos)})
 	for _, sl := range changed {
 		h.sendSlot(t, sl)
 	}

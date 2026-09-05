@@ -48,29 +48,32 @@ type arrowEntity struct {
 	born       uint64
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 
-	shooter    int32   // eid of who fired it (players skip their own fresh shots)
-	dmg        int     // damage on a hit (charge-scaled for player bows)
-	noHitUntil uint64  // tick before which the shooter can't hit themselves
-	playerShot bool    // player-fired: hits mobs, and is retrievable once stuck
-	breaks     bool    // snowball/egg: shatters on impact instead of sticking
-	breath     bool    // dragon fireball: bursts into a breath cloud where it lands
-	egg        bool    // an egg: 1-in-8 chance to hatch a chick where it lands
-	xpBottle   bool    // a bottle o' enchanting: shatters into experience orbs
-	pearl      bool    // an ender pearl: teleports its thrower where it lands
-	poison     bool    // witch splash: poisons the player it hits
-	splash     bool    // a thrown potion: shatters on any impact into an AoE (see splashPotion)
-	tipped     bool    // a tipped arrow: applies its potion's effects to the player it hits
-	potion     int8    // the potion kind a splash/lingering/tipped projectile carries
-	lingering  bool    // a lingering potion: leaves an effect cloud instead of an instant splash
-	fire       bool    // blaze fireball: sets its target burning
-	wither     int     // wither skull: seconds of wither effect on a hit
-	weaken     int     // parched arrow: seconds of weakness effect on a hit
-	slow       int     // stray arrow: seconds of slowness effect on a hit
-	homing     int32   // shulker bullet: eid of the target it curves toward (0 = straight)
-	levitate   int     // shulker bullet: seconds of Levitation applied on a hit
-	explode    int     // ghast/wither fireball: explosion power on impact (0 = none)
-	knock      float64 // wind charge: pure knockback impulse, no damage
-	punch      int     // bow Punch enchant: +0.6/level extra hit knockback
+	shooter    int32    // eid of who fired it (players skip their own fresh shots)
+	ox, oz     float64  // launch point (target-block distance, advancements)
+	weapon     int32    // the bow/crossbow that loosed it (0 = thrown/mob) — killed_by_arrow
+	victims    []string // entity types this projectile has killed (piercing) — killed_by_arrow
+	dmg        int      // damage on a hit (charge-scaled for player bows)
+	noHitUntil uint64   // tick before which the shooter can't hit themselves
+	playerShot bool     // player-fired: hits mobs, and is retrievable once stuck
+	breaks     bool     // snowball/egg: shatters on impact instead of sticking
+	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
+	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
+	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
+	pearl      bool     // an ender pearl: teleports its thrower where it lands
+	poison     bool     // witch splash: poisons the player it hits
+	splash     bool     // a thrown potion: shatters on any impact into an AoE (see splashPotion)
+	tipped     bool     // a tipped arrow: applies its potion's effects to the player it hits
+	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
+	lingering  bool     // a lingering potion: leaves an effect cloud instead of an instant splash
+	fire       bool     // blaze fireball: sets its target burning
+	wither     int      // wither skull: seconds of wither effect on a hit
+	weaken     int      // parched arrow: seconds of weakness effect on a hit
+	slow       int      // stray arrow: seconds of slowness effect on a hit
+	homing     int32    // shulker bullet: eid of the target it curves toward (0 = straight)
+	levitate   int      // shulker bullet: seconds of Levitation applied on a hit
+	explode    int      // ghast/wither fireball: explosion power on impact (0 = none)
+	knock      float64  // wind charge: pure knockback impulse, no damage
+	punch      int      // bow Punch enchant: +0.6/level extra hit knockback
 
 	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
 	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
@@ -127,7 +130,7 @@ func (h *hub) launchProjectile(players map[int32]*tracked, etype int, x, y, z, v
 func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, y, z, vx, vy, vz float64) *arrowEntity {
 	eid := h.allocEID()
 	a := &arrowEntity{eid: eid, etype: etype, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz,
-		born: h.tick.Load(), sx: x, sy: y, sz: z}
+		born: h.tick.Load(), sx: x, sy: y, sz: z, ox: x, oz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.arrows[eid] = a
 	add := entAdd(eid, etype, a.uuid, x, y, z, arrowYaw(a), arrowPitch(a))
@@ -299,6 +302,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		}
 		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
 			h.knockback(t, a.x, a.z)
+			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
 			return true
 		}
 		if a.dmg > 0 {
@@ -397,6 +401,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
 			m.hurtKind(float64(dmg), projectileDamageOf(a))
+			if a.playerShot {
+				if s := players[a.shooter]; s != nil {
+					h.advance(players, s, "player_hurt_entity", advMatch{damageDirect: advEntityName[a.etype],
+						damageTags: map[string]bool{"is_projectile": true}, dealt: float64(dmg), mainhand: heldStack(s).item})
+				}
+			}
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
 			if a.playerShot {                  // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
@@ -404,9 +414,11 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if m.health <= 0 {
 				h.witherSkullHeal(a)
 				h.killMob(players, m)
+				a.victims = append(a.victims, advEntityName[m.etype])
 				if a.playerShot {
 					if shooter := players[a.shooter]; shooter != nil {
 						h.advance(players, shooter, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+						h.advance(players, shooter, "killed_by_arrow", advMatch{item: a.weapon, victims: a.victims})
 						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
 						h.incCustom(shooter, "mob_kills", 1)
 						h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)

@@ -53,13 +53,18 @@ func clampF(v, lo, hi float64) float64 {
 
 // hitTarget energises a target block struck at (hx,hy,hz). arrow selects the
 // longer 20-tick hold. Overworld only (the reset uses the block-update queue).
-func (h *hub) hitTarget(players map[int32]*tracked, pos blockPos, state uint32, hx, hy, hz float64, arrow bool) {
+func (h *hub) hitTarget(players map[int32]*tracked, pos blockPos, state uint32, hx, hy, hz float64, arrow bool, a *arrowEntity) {
 	h.setBlock(players, pos, targetWithPower(state, targetStrength(hx, hy, hz)))
 	ticks := uint64(8)
 	if arrow {
 		ticks = 20
 	}
 	h.targetDue[pos] = h.tick.Load() + ticks
+	if a != nil && a.playerShot {
+		if s := players[a.shooter]; s != nil {
+			h.advance(players, s, "target_hit", advMatch{signal: targetStrength(hx, hy, hz), distH: math.Hypot(a.x-a.ox, a.z-a.oz)})
+		}
+	}
 	h.schedule(pos, ticks)
 	h.scheduleAround(pos, 1) // let neighbours read the new signal
 }

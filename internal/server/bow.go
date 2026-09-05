@@ -114,6 +114,7 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	}
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
 	a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
+	a.weapon = itemBow
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
 	a.punch = heldStack(t).enchLvl(enchPunch) // Punch: extra hit knockback
 	// Flame: the arrow burns, which sets what it hits alight AND counts as a

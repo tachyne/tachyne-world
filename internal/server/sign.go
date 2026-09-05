@@ -338,6 +338,7 @@ func (h *hub) onUseSign(players map[int32]*tracked, e evUseSign) {
 	case e.item == itemGlowInkSac && side.hasMessage() && !side.Glow:
 		side.Glow = true
 		sound = "minecraft:item.glow_ink_sac.use"
+		h.advance(players, t, "item_used_on_block", advMatch{blockState: state, item: e.item})
 	case e.item == itemInkSac && side.hasMessage() && side.Glow:
 		side.Glow = false
 		sound = "minecraft:item.ink_sac.use"

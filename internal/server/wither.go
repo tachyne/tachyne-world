@@ -30,7 +30,7 @@ func isWitherSkull(s uint32) bool { return s >= witherSkullMin && s <= witherSku
 // checkWitherBuild is called after any block placement. If the placed block is
 // a wither skull that completes the soul-sand T with three skulls, it consumes
 // the structure and spawns a charging wither. The skull can be any of the three.
-func (h *hub) checkWitherBuild(players map[int32]*tracked, dim, px, py, pz int, state uint32) {
+func (h *hub) checkWitherBuild(players map[int32]*tracked, by int32, dim, px, py, pz int, state uint32) {
 	if !isWitherSkull(state) {
 		return
 	}
@@ -41,7 +41,7 @@ func (h *hub) checkWitherBuild(players map[int32]*tracked, dim, px, py, pz int, 
 		for k := -1; k <= 1; k++ {
 			cx, cz := px-k*ax[0], pz-k*ax[1] // candidate centre column
 			if witherPatternAt(w, cx, py, cz, ax) {
-				h.spawnWitherFrom(players, dim, cx, py, cz, ax)
+				h.spawnWitherFrom(players, by, dim, cx, py, cz, ax)
 				return
 			}
 		}
@@ -62,7 +62,7 @@ func witherPatternAt(w *world.World, cx, topY, cz int, ax [2]int) bool {
 }
 
 // spawnWitherFrom clears the structure and spawns a charging wither at its base.
-func (h *hub) spawnWitherFrom(players map[int32]*tracked, dim, cx, topY, cz int, ax [2]int) {
+func (h *hub) spawnWitherFrom(players map[int32]*tracked, by int32, dim, cx, topY, cz int, ax [2]int) {
 	for j := -1; j <= 1; j++ {
 		x, z := cx+j*ax[0], cz+j*ax[1]
 		h.setBlock(players, blockPos{x, topY, z}, worldgen.Air)     // skull
@@ -71,6 +71,9 @@ func (h *hub) spawnWitherFrom(players map[int32]*tracked, dim, cx, topY, cz int,
 	h.setBlock(players, blockPos{cx, topY - 2, cz}, worldgen.Air) // stem
 
 	m := h.spawnSpecies(players, entityWither, dim, float64(cx)+0.5, float64(topY-2), float64(cz)+0.5)
+	if t := players[by]; t != nil && m != nil {
+		h.advance(players, t, "summoned_entity", advMatch{entity: "wither"})
+	}
 	if m == nil {
 		return
 	}

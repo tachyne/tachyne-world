@@ -82,7 +82,7 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 	case isTarget(state):
 		// Targets already had a handler; it lives here now with the rest, and
 		// it works in every dimension rather than only the overworld.
-		h.hitTarget(players, pos, state, a.x, a.y, a.z, true)
+		h.hitTarget(players, pos, state, a.x, a.y, a.z, true, a)
 
 	case inRanges(candleRanges, state):
 		// Only a BURNING projectile lights a candle, and only an unlit one.

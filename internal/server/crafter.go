@@ -2,6 +2,7 @@ package server
 
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"math"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -99,6 +100,13 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 			if c.slots[i].count--; c.slots[i].count <= 0 {
 				c.slots[i] = invStack{}
 			}
+		}
+	}
+	// CrafterRecipeCraftedTrigger: vanilla credits every player inside a
+	// 17-block cube around the crafter (CrafterBlock.craft).
+	for _, t := range players {
+		if t.dim == pos.dim && math.Abs(t.x-float64(pos.x)-0.5) <= 8.5 && math.Abs(t.y-float64(pos.y)-0.5) <= 8.5 && math.Abs(t.z-float64(pos.z)-0.5) <= 8.5 {
+			h.advance(players, t, "crafter_recipe_crafted", advMatch{recipe: itemNameOf[item]})
 		}
 	}
 	h.ejectCrafted(players, pos, state, item, count)

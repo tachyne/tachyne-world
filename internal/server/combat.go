@@ -321,6 +321,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
 	if t != nil {
+		h.advance(players, t, "player_hurt_entity", advMatch{damageDirect: "player", mainhand: heldStack(t).item,
+			damageTags: map[string]bool{"mace_smash": smash}, dealt: float64(dmg)})
+	}
+	if t != nil {
 		h.applyFireAspect(players, t, m) // Fire Aspect: 4 s alight per level
 	}
 	if smash { // shockwave, fall-damage negation, wind_burst launch
@@ -480,6 +484,9 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	// XP into a bloom instead of dropping orbs.
 	h.gameEvent(freqEntityDie, floorInt(m.x), floorInt(m.y), floorInt(m.z), m.eid)
 	if xp > 0 && h.catalystConsume(players, m, xp) {
+		if k := players[m.lastAttacker]; k != nil {
+			h.advance(players, k, "kill_mob_near_sculk_catalyst", advMatch{})
+		}
 		return
 	}
 	if xp > 0 {

@@ -94,6 +94,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 	if t.gamemode == gmSurvival {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
+	h.advance(players, t, "shot_crossbow", advMatch{item: itemCrossbow})
 	offsets := []float64{0}
 	if multi {
 		offsets = []float64{-xbowMultiSpread, 0, xbowMultiSpread}
@@ -102,6 +103,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 		dx, dy, dz := lookVector(t.yaw+float32(off), t.pitch)
 		a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z,
 			dx*xbowSpeed, dy*xbowSpeed, dz*xbowSpeed)
+		a.weapon = itemCrossbow
 		a.shooter, a.dmg, a.noHitUntil = t.p.eid, xbowDamage, h.tick.Load()+arrowNoSelfHT
 		a.playerShot = true
 		if a.pierce = pierce; pierce > 0 {

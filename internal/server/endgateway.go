@@ -153,6 +153,7 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 			continue
 		}
 		t.gatewayUntil = now + endGatewayCooldown
+		h.advance(players, t, "enter_block", advMatch{blockState: endGatewayState})
 		if math.Hypot(float64(gx), float64(gz)) < endGatewayRing*2 {
 			h.outboundEndGateway(players, t, blockPos{x: gx, y: gy, z: gz})
 		} else {

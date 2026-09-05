@@ -266,6 +266,8 @@ func (h *hub) onUseJukebox(players map[int32]*tracked, e evUseJukebox) {
 		h.sendSlot(t, int(e.slot))
 	}
 	h.jukeboxes[pos] = &jukebox{disc: disc, started: h.tick.Load(), length: length}
+	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(e.x, e.y, e.z), item: disc.item,
+		biome: h.worldFor(t.dim).BiomeAt(e.x, e.z)})
 	h.setBlockLive(players, t.dim, e.x, e.y, e.z, jukeboxState(true))
 	h.toNearbyEv(players, t.dim, float64(e.x), float64(e.z), attachproto.WorldFX{
 		Event: worldEventJukeboxPlay, X: e.x, Y: e.y, Z: e.z, Data: song})

@@ -160,6 +160,17 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 		h.broadcastPlayerFlags(players, t) // other players have to see it too
 	}
 	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
+	if id == effHeroOfVillage {
+		h.advance(players, t, "hero_of_the_village", advMatch{})
+	}
+	if id == effLevitation && !t.levitating {
+		t.levStartY, t.levitating = t.y, true
+	}
+	active := make(map[int32]bool, len(t.effects))
+	for eid := range t.effects {
+		active[eid] = true
+	}
+	h.advance(players, t, "effects_changed", advMatch{effects: active})
 }
 
 // applyEffectModifiers installs an effect's attribute modifiers at its level,
@@ -246,6 +257,14 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				// kill.
 				if applyEffectTickNow(e.left, 40, e.amp) {
 					h.damageOf(players, t, 1, dtWither)
+				}
+			case effLevitation:
+				// LevitationTrigger: checked while the effect runs, against where it began.
+				if t.levitating {
+					h.advance(players, t, "levitation", advMatch{distY: t.y - t.levStartY})
+					if e.left <= 1 {
+						t.levitating = false
+					}
 				}
 			case effHunger:
 				// HungerMobEffect: 0.005 exhaustion EVERY TICK per level. This

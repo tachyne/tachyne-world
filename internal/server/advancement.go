@@ -32,15 +32,64 @@ type advCriterion struct {
 	name    string
 	trigger string // short trigger name (no namespace)
 
-	entity   string    // player_killed_entity / entity_killed_player / bred_animals / tame_animal ("" = any)
-	items    [][]int32 // inventory_changed (all predicate sets must be present) / consume_item (items[0])
-	block    string    // placed_block
-	biome    string    // location biome visit
-	dim      int32     // changed_dimension target (0/1/2)
+	entity   string    // entity-typed triggers ("" = any)
+	items    [][]int32 // inventory_changed (all sets present) / the criterion's item, tool or weapon (items[0])
+	block    string    // placed_block, simple form
+	biome    string    // location / item_used_on_block biome
+	dim      int32     // changed_dimension target, or a player-location dimension (0/1/2)
 	hasDim   bool
 	minLevel int // construct_beacon minimum pyramid tier
 
+	// The generic condition schema (gen_advancements.py distill): each
+	// trigger uses the few it needs; the matcher below reads them.
+	blocks       []string          // block set (tags expanded) for the block at the site
+	props        map[string]string // required block-state properties there
+	locChecks    [][]advLocCheck   // placed_block: OR of AND-groups of offset checks
+	structure    string            // location: the structure the player stands in
+	smokey       bool              // item_used_on_block: a campfire within 5 below
+	equipFeet    []int32           // location: boots worn
+	baby         int8              // entity: 0 adult, 1 baby, -1 any (zero value; see genBaby)
+	hasBaby      bool
+	variant      string    // entity variant (frog)
+	effects      []string  // effects_changed: every one must be active
+	sourceEntity string    // effects_changed: what granted it
+	recipe       string    // recipe_crafted / crafter_recipe_crafted
+	ingredients  [][]int32 // recipe_crafted: each set must be among the inputs
+	lootTable    string    // player_generates_container_loot
+	damageDirect []string  // *_hurt_*: the direct entity's type (tags expanded)
+	damageTag    string    // *_hurt_*: a damage-type tag the hit must carry
+	mainhand     []int32   // *_hurt_*: the attacker's held item
+	minDealt     float64
+	blocked      bool     // entity_hurt_player: the hit was shield-blocked
+	victims      []string // killed_by_arrow: victim types, with multiplicity
+	minUnique    int      // killed_by_arrow: distinct victim types
+	minCount     int      // bee_nest_destroyed bees / spear_mobs
+	signal       int      // target_hit signal strength
+	minDistH     float64
+	minDistY     float64
+	minDistAbs   float64
+	maxDistAbs   float64
+	startYMin    float64
+	endYMax      float64
+	vehicle      string
+	passenger    string
+	lookingAt    string
+	bystander    string
+	noFire       bool
+	cause        string
+	enchant      string
+	toolPred     string
+
 	unmatchable bool // trigger/conditions the engine can't observe yet
+}
+
+// advLocCheck is one placed_block location term: the block at an offset from
+// the placed block must be one of blocks, with props.
+type advLocCheck struct {
+	dx, dy, dz int
+	blocks     []string
+	props      map[string]string
+	ranges     []stateRange // resolved from blocks at init (advBlockSets)
 }
 
 // advNode is one advancement. reqs is the wire's OR-of-AND requirements

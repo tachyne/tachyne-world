@@ -20,7 +20,7 @@ func TestTargetBlock(t *testing.T) {
 		h.tick.Store(1000)
 
 		// A centre strike energises it to 15 and it emits to every neighbour.
-		h.hitTarget(h.playersRef, pos, targetMin, 5.5, 70.5, 5.5, true)
+		h.hitTarget(h.playersRef, pos, targetMin, 5.5, 70.5, 5.5, true, nil)
 		if targetPower(w.At(pos.x, pos.y, pos.z)) != 15 {
 			t.Fatalf("target power %d after centre hit, want 15", targetPower(w.At(pos.x, pos.y, pos.z)))
 		}

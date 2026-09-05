@@ -409,24 +409,40 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 			}
 		}
 	}
-	h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z)))
+	lit := h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z)))
+	// LightningStrikeTrigger: every player within reach sees the bolt, with
+	// whether a villager stood by and whether anything caught fire.
+	villagerBy := false
+	for _, m := range h.mobs {
+		if m.etype == entityVillager && m.dying == 0 && dist3(m.x, m.y, m.z, x, y, z) <= 30 {
+			villagerBy = true
+			break
+		}
+	}
+	for _, t := range players {
+		if t.dim == 0 && dist3(t.x, t.y, t.z, x, y, z) <= 30 {
+			h.advance(players, t, "lightning_strike", advMatch{bystander: villagerBy, noFire: !lit})
+		}
+	}
 }
 
 // strikeFire ports LightningBolt.spawnFire: on normal+ difficulty, fire at
 // the strike cell plus four attempts one block around it.
-func (h *hub) strikeFire(players map[int32]*tracked, x, y, z int) {
+func (h *hub) strikeFire(players map[int32]*tracked, x, y, z int) (lit bool) {
 	if h.rules.Difficulty < diffNormal {
-		return
+		return false
 	}
 	try := func(pos blockPos) {
 		if h.world.At(pos.x, pos.y, pos.z) == worldgen.Air && h.validFireLocation(pos) {
 			h.igniteFire(players, pos, 0)
+			lit = true
 		}
 	}
 	try(blockPos{x, y, z})
 	for i := 0; i < 4; i++ {
 		try(blockPos{x + h.rng.Intn(3) - 1, y + h.rng.Intn(3) - 1, z + h.rng.Intn(3) - 1})
 	}
+	return lit
 }
 
 // bolt is a transient lightning entity awaiting despawn.

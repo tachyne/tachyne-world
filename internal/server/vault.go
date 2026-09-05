@@ -240,6 +240,7 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	v.state, v.until = vaultUnlocking, h.tick.Load()+vaultUnlockTicks
 	h.playSound(players, "minecraft:block.vault.insert_item", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
+	h.advance(players, t, "item_used_on_block", advMatch{blockState: cur, item: held.item})
 	if next := vaultBlock(cur, v.ominous, v.state); next != cur {
 		h.setBlockAt(players, 0, pos, next)
 	}

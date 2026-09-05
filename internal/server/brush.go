@@ -172,6 +172,7 @@ func (h *hub) finishBrush(players map[int32]*tracked, t *tracked, pos blockPos, 
 			h.spawnItemIn(players, t.dim, s.item, s.count, ox, oy, oz)
 		}
 	}
+	h.advance(players, t, "player_generates_container_loot", advMatch{lootTable: name})
 }
 
 // tickBrushes lets a half-brushed block settle back if nobody keeps at it —
