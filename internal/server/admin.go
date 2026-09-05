@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"os"
+	"log"
 	"strconv"
 	"strings"
 
@@ -344,8 +344,8 @@ func (h *hub) loadRules() {
 	if h.rulesPath == "" {
 		return
 	}
-	if data, err := os.ReadFile(h.rulesPath); err == nil {
-		json.Unmarshal(data, &h.rules)
+	if err := loadStore(h.rulesPath, &h.rules); err != nil {
+		log.Fatal(err)
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
 	if h.rules.Border != nil {
@@ -380,5 +380,5 @@ func (h *hub) saveRules() {
 		Raining: h.rainFlag, Thundering: h.thunderFlag,
 	}
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
-	os.WriteFile(h.rulesPath, data, 0o644)
+	writeStore(h.rulesPath, data)
 }

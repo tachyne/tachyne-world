@@ -50,7 +50,7 @@ func (s *Server) migrateEditsIDSpace() error {
 		total += n
 	}
 	log.Printf("id-space migration: remapped %d block edits 1.21.5→%s", total, idSpaceVersion)
-	return os.WriteFile(marker, []byte(idSpaceVersion+"\n"), 0o644)
+	return writeAtomic(marker, []byte(idSpaceVersion+"\n"))
 }
 
 // migrateItemIDSpace remaps persisted ITEM ids (survival inventories + world
@@ -78,7 +78,7 @@ func (s *Server) migrateItemIDSpace() error {
 		}
 	}
 	log.Printf("item id-space migration: remapped %d item ids 1.21.5→%s", n, idSpaceVersion)
-	return os.WriteFile(marker, []byte(idSpaceVersion+"\n"), 0o644)
+	return writeAtomic(marker, []byte(idSpaceVersion+"\n"))
 }
 
 // autosaveInterval is how often the world's edits are flushed to disk while

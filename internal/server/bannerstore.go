@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"strings"
 	"sync"
 
@@ -50,10 +50,10 @@ type bannerStore struct {
 func newBannerStore(path string) *bannerStore {
 	s := &bannerStore{path: path, m: map[string][]attachproto.BannerLayer{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
-			migrateSimKeys(s.m) // pre-dimension files keyed banners by position alone
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
+		migrateSimKeys(s.m) // pre-dimension files keyed banners by position alone
 	}
 	return s
 }
@@ -91,8 +91,7 @@ func (s *bannerStore) flushIfDirty() {
 	if err != nil {
 		return
 	}
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil && os.Rename(tmp, s.path) == nil {
+	if writeStore(s.path, data) {
 		s.dirty = false
 	}
 }

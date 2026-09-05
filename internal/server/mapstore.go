@@ -119,8 +119,7 @@ func (ms *mapStore) flushIfDirty() {
 	if err != nil {
 		return
 	}
-	tmp := ms.path + ".tmp"
-	if os.WriteFile(tmp, raw, 0o644) == nil && os.Rename(tmp, ms.path) == nil {
+	if writeStore(ms.path, raw) {
 		ms.dirty = false
 	}
 }

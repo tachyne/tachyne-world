@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -49,8 +49,8 @@ type bookStore struct {
 func newBookStore(path string) *bookStore {
 	s := &bookStore{path: path, Books: map[string]savedBook{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, s)
+		if err := loadStore(path, s); err != nil {
+			log.Fatal(err)
 		}
 	}
 	if s.Books == nil {
@@ -106,8 +106,7 @@ func (s *bookStore) flushIfDirty() {
 	if err != nil {
 		return
 	}
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil && os.Rename(tmp, s.path) == nil {
+	if writeStore(s.path, data) {
 		s.dirty = false
 	}
 }

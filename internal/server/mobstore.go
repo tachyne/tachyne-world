@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/hex"
 	"encoding/json"
-	"os"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -153,8 +153,8 @@ func mobChunkKey(cx, cz int32) string {
 func newMobStore(path string) *mobStore {
 	s := &mobStore{path: path}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	if s.m.Chunks == nil {
@@ -438,10 +438,7 @@ func (s *mobStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 // toSavedMob flattens a live mob into its persisted row.

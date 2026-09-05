@@ -8,7 +8,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"log"
 	"sync"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -182,8 +182,8 @@ type advStore struct {
 func newAdvStore(path string) *advStore {
 	s := &advStore{path: path, m: map[string]advState{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -231,10 +231,7 @@ func (s *advStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 // save records and immediately flushes one player's state (on disconnect).

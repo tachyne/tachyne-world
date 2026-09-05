@@ -71,7 +71,7 @@ func (st *plugStore) flushIfDirty() {
 		log.Printf("plugin store %s: marshal: %v", st.path, err)
 		return
 	}
-	if err := os.WriteFile(st.path, raw, 0o644); err != nil {
+	if err := writeAtomic(st.path, raw); err != nil {
 		log.Printf("plugin store %s: write: %v", st.path, err)
 		return
 	}

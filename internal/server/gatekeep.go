@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"strings"
 	"sync"
 )
@@ -24,8 +24,8 @@ type gatekeeper struct {
 func newGatekeeper(path string) *gatekeeper {
 	g := &gatekeeper{path: path}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, g)
+		if err := loadStore(path, g); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return g
@@ -36,7 +36,7 @@ func (g *gatekeeper) save() {
 		return
 	}
 	data, _ := json.MarshalIndent(g, "", "  ")
-	os.WriteFile(g.path, data, 0o644)
+	writeStore(g.path, data)
 }
 
 func containsFold(list []string, name string) bool {

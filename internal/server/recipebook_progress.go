@@ -10,7 +10,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"sort"
 	"sync"
 
@@ -124,8 +124,8 @@ type recipeBookStore struct {
 func newRecipeBookStore(path string) *recipeBookStore {
 	s := &recipeBookStore{path: path, m: map[string]rbState{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -173,10 +173,7 @@ func (s *recipeBookStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 func (s *recipeBookStore) save(name string, t *tracked) {

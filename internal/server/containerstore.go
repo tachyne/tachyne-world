@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -298,8 +298,8 @@ func parsePosKey(k string) (blockPos, bool) {
 func newContainerStore(path string) *containerStore {
 	s := &containerStore{path: path}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -486,10 +486,7 @@ func (s *containerStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 // recordPaintings snapshots the live paintings for the next flush.

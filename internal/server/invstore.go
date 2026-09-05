@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"sync"
 )
 
@@ -54,8 +54,8 @@ func (s *savedInv) UnmarshalJSON(b []byte) error {
 func newInvStore(path string) *invStore {
 	s := &invStore{path: path, m: map[string]*savedInv{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -194,10 +194,7 @@ func (s *invStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 // save records and immediately flushes one player's loadout (on disconnect).

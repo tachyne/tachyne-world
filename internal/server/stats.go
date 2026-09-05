@@ -11,7 +11,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -119,8 +119,8 @@ type statsStore struct {
 func newStatsStore(path string) *statsStore {
 	s := &statsStore{path: path, m: map[string]map[string]int32{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -166,10 +166,7 @@ func (s *statsStore) flush() {
 	if path == "" {
 		return
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, path)
-	}
+	writeStore(path, data)
 }
 
 func (s *statsStore) save(name string, st map[statKey]int32) {

@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"sync"
 )
 
@@ -24,8 +24,8 @@ type spawnStore struct {
 func newSpawnStore(path string) *spawnStore {
 	s := &spawnStore{path: path, m: map[string][4]int{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -47,9 +47,6 @@ func (s *spawnStore) set(name string, pos blockPos, dim int) {
 	path := s.path
 	s.mu.Unlock()
 	if path != "" {
-		tmp := path + ".tmp"
-		if os.WriteFile(tmp, data, 0o644) == nil {
-			os.Rename(tmp, path)
-		}
+		writeStore(path, data)
 	}
 }

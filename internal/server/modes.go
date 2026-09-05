@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/json"
 	attachproto "github.com/tachyne/tachyne-common/attach"
-	"os"
+	"log"
 	"sync"
 )
 
@@ -28,8 +28,8 @@ type modeStore struct {
 func newModeStore(path string, def int) *modeStore {
 	s := &modeStore{path: path, def: def, m: map[string]int{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -54,10 +54,7 @@ func (s *modeStore) set(name string, mode int) {
 	s.mu.Unlock()
 
 	if path != "" {
-		tmp := path + ".tmp"
-		if os.WriteFile(tmp, data, 0o644) == nil {
-			os.Rename(tmp, path)
-		}
+		writeStore(path, data)
 	}
 }
 

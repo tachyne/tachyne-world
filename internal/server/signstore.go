@@ -3,7 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"log"
 	"sync"
 )
 
@@ -51,8 +51,8 @@ func signKey(dim, x, y, z int) string { return fmt.Sprintf("%d:%d,%d,%d", dim, x
 func newSignStore(path string) *signStore {
 	s := &signStore{path: path, m: map[string]signData{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -97,11 +97,7 @@ func (s *signStore) flushIfDirty() {
 	if err != nil {
 		return
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return
-	}
-	if os.Rename(tmp, s.path) == nil {
+	if writeStore(s.path, data) {
 		s.dirty = false
 	}
 }

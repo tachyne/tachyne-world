@@ -10,7 +10,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"os"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -57,8 +57,8 @@ func newScoreboard(path string) (*scoreboardState, *sbStore) {
 		Teams:      map[string]*sbTeam{},
 	}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, sb)
+		if err := loadStore(path, sb); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return sb, &sbStore{path: path}
@@ -71,10 +71,7 @@ func (s *sbStore) flush(sb *scoreboardState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	data, _ := json.MarshalIndent(sb, "", "  ")
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		os.Rename(tmp, s.path)
-	}
+	writeStore(s.path, data)
 }
 
 // --- frame builders -----------------------------------------------------------

@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"os"
+	"log"
 	"strings"
 	"sync"
 
@@ -75,10 +75,10 @@ type campfireStore struct {
 func newCampfireStore(path string) *campfireStore {
 	s := &campfireStore{path: path, m: map[string]campfireItems{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			json.Unmarshal(data, &s.m)
-			migrateSimKeys(s.m) // pre-dimension files keyed campfires by position alone
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
+		migrateSimKeys(s.m) // pre-dimension files keyed campfires by position alone
 	}
 	return s
 }
@@ -128,11 +128,7 @@ func (s *campfireStore) flushIfDirty() {
 	if err != nil {
 		return
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return
-	}
-	if os.Rename(tmp, s.path) == nil {
+	if writeStore(s.path, data) {
 		s.dirty = false
 	}
 }

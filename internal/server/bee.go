@@ -3,8 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -102,8 +102,8 @@ type hiveStore struct {
 func newHiveStore(path string) *hiveStore {
 	s := &hiveStore{path: path, m: map[string][]hiveOccupant{}}
 	if path != "" {
-		if data, err := os.ReadFile(path); err == nil {
-			_ = json.Unmarshal(data, &s.m)
+		if err := loadStore(path, &s.m); err != nil {
+			log.Fatal(err)
 		}
 	}
 	return s
@@ -118,11 +118,9 @@ func (s *hiveStore) save() {
 		return
 	}
 	data, _ := json.MarshalIndent(s.m, "", " ")
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, data, 0o644) == nil {
-		_ = os.Rename(tmp, s.path)
+	if writeStore(s.path, data) {
+		s.dirty = false
 	}
-	s.dirty = false
 }
 
 // hivesLoad rebuilds the hub's live hive map from the store at boot.

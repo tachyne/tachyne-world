@@ -82,6 +82,13 @@ func (fs *FileStore) Save(edits map[chunkPos]map[int]uint32) error {
 		os.Remove(tmp)
 		return err
 	}
+	// fsync before the rename: tmp+rename makes the replace atomic against a
+	// process death; only a sync makes it durable against a power loss.
+	if err := f.Sync(); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
 	if err := f.Close(); err != nil {
 		os.Remove(tmp)
 		return err

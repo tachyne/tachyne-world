@@ -328,10 +328,7 @@ func contentWords(s string) map[string]bool {
 }
 
 func saveNPCMemory(name string, mem []string) {
-	tmp := npcMemPath(name) + ".tmp"
-	if os.WriteFile(tmp, []byte(strings.Join(mem, "\n")+"\n"), 0o644) == nil {
-		os.Rename(tmp, npcMemPath(name))
-	}
+	writeStore(npcMemPath(name), []byte(strings.Join(mem, "\n")+"\n"))
 }
 
 // daytimeName describes the time of day for the prompt.
