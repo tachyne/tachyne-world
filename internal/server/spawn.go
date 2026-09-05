@@ -161,8 +161,12 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	// SPAWN_DISTANCE_CHUNK=8 ring around each player — its size is the mob-cap
 	// denominator (vanilla NaturalSpawner.SpawnState.spawnableChunkCount), so
 	// one player's 17×17=289 spawn ring yields exactly maxInstancesPerChunk.
-	chunkSet := map[[2]int32]bool{}
-	spawnRing := map[[2]int32]bool{}
+	if h.scratchChunks == nil {
+		h.scratchChunks, h.scratchRing = map[[2]int32]bool{}, map[[2]int32]bool{}
+	}
+	clear(h.scratchChunks)
+	clear(h.scratchRing)
+	chunkSet, spawnRing := h.scratchChunks, h.scratchRing
 	overworld := 0
 	for _, t := range players {
 		if t.dim != 0 {

@@ -10,6 +10,7 @@ package attach
 import (
 	"bufio"
 	"bytes"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -133,7 +134,7 @@ func session(c net.Conn, cfg Config) {
 		log.Printf("attach %s: bad hello: %v", c.RemoteAddr(), err)
 		return
 	}
-	if cfg.Token == "" || hello.Token != cfg.Token {
+	if cfg.Token == "" || subtle.ConstantTimeCompare([]byte(hello.Token), []byte(cfg.Token)) != 1 {
 		c.Write(frameJSON(proto.MsgBye, proto.Bye{Reason: "attach: unauthorized"}))
 		log.Printf("attach %s: unauthorized hello from %q", c.RemoteAddr(), hello.Gateway)
 		return

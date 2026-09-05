@@ -7,6 +7,8 @@ package world
 import (
 	"container/list"
 	"fmt"
+	"math"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -23,9 +25,12 @@ type chunkPos = [2]int32
 // ~400 MB to ~1.8 GB and swap the box (it did). cacheCap() derives the entry
 // count from the world's actual chunk size.
 const (
-	genCacheBudget      = 256 << 20 // main-world cached generator output
-	genCacheBudgetMinor = 64 << 20  // nether/End: toured rarely, cheap to regen
-	genCacheMin         = 128       // floor: lighting reads 3×3, keep a useful window
+	// The default budgets, used only when no memory limit is set (a dev box).
+	// Under a limit they are derived from it — see cacheBudgets.
+	genCacheBudgetDefault      = 256 << 20 // main-world cached generator output
+	genCacheBudgetMinorDefault = 64 << 20  // nether/End: toured rarely, cheap to regen
+	lightCacheBudgetDefault    = 48 << 20  // per world
+	genCacheMin                = 128       // floor: lighting reads 3×3, keep a useful window
 )
 
 // cacheCap is the LRU entry limit for this world's chunk size. The budget is
@@ -34,9 +39,10 @@ const (
 // caches at once and 3×400 MB OOM-killed the 1Gi world pod the first time a
 // player toured the nether.
 func (w *World) cacheCap() int {
-	budget := genCacheBudget
+	main, minor, _ := cacheBudgets()
+	budget := main
 	if w.noSky { // nether/End
-		budget = genCacheBudgetMinor
+		budget = minor
 	}
 	bytesPerChunk := w.Sections() * 4096 * 4
 	n := budget / bytesPerChunk
@@ -78,10 +84,11 @@ type World struct {
 	lightCache map[chunkPos]lightCacheEntry
 	lightLRU   *list.List
 
-	store  Store       // nil = in-memory only (no persistence)
-	noSky  bool        // nether/End: sky light is zero everywhere
-	dimTag string      // chunk-cache key prefix for non-overworld dims
-	dirty  atomic.Bool // edits changed since the last successful Save
+	nEdits atomic.Int64 // len of all edit overlays, maintained by SetBlock (EditCount used to walk them all)
+	store  Store        // nil = in-memory only (no persistence)
+	noSky  bool         // nether/End: sky light is zero everywhere
+	dimTag string       // chunk-cache key prefix for non-overworld dims
+	dirty  atomic.Bool  // edits changed since the last successful Save
 
 	chunkCache ChunkCache    // persistent generated-chunk cache (nil = off)
 	cachePuts  chan cachePut // async write queue for the cache (drop when full)
@@ -146,6 +153,7 @@ func NewEnd(seed int64, store Store) (*World, error) {
 			return nil, err
 		}
 		w.edits = edits
+		w.countEdits()
 	}
 	return w, nil
 }
@@ -163,6 +171,7 @@ func NewNether(seed int64, store Store) (*World, error) {
 			return nil, err
 		}
 		w.edits = edits
+		w.countEdits()
 	}
 	return w, nil
 }
@@ -179,20 +188,23 @@ func NewWithStore(seed int64, store Store) (*World, error) {
 			return nil, err
 		}
 		w.edits = edits
+		w.countEdits()
 	}
 	return w, nil
 }
 
 // EditCount reports how many block edits are currently held (placed/broken
 // blocks). Useful at boot to confirm persisted edits reloaded.
-func (w *World) EditCount() int {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+func (w *World) EditCount() int { return int(w.nEdits.Load()) }
+
+// countEdits recomputes nEdits from the overlays — for the load paths, where
+// the map arrives whole.
+func (w *World) countEdits() {
 	n := 0
 	for _, m := range w.edits {
 		n += len(m)
 	}
-	return n
+	w.nEdits.Store(int64(n))
 }
 
 // Save persists the current edits if anything changed since the last save. It
@@ -320,6 +332,23 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 		delete(w.cache, oldest.Value.(chunkPos))
 	}
 	return ch
+}
+
+// cacheBudgets sizes the three caches against the process memory limit rather
+// than by fixed constants. The fixed values (256 + 64 + 64 MiB of generator
+// output plus 48 MiB of light per world) added up to ~530 MiB — inside a
+// 768 MiB GOMEMLIMIT that also had to hold the heap proper, so a quiet server
+// with mobs touring terrain filled the caches to the point where the GC began
+// to thrash, and it read as a leak. Under a limit, the caches together get
+// half of it: main 5/16, each minor 1/16, light 1/16 per world (three worlds).
+// With no limit set the historical defaults apply.
+func cacheBudgets() (main, minor, light int) {
+	limit := debug.SetMemoryLimit(-1) // read-only query of GOMEMLIMIT
+	if limit <= 0 || limit == math.MaxInt64 {
+		return genCacheBudgetDefault, genCacheBudgetMinorDefault, lightCacheBudgetDefault
+	}
+	pool := int(limit / 2)
+	return pool * 5 / 8, pool / 8, pool / 8
 }
 
 // CacheLen reports how many generated chunks are held in memory — the number
@@ -690,6 +719,9 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	if m == nil {
 		m = make(map[int]uint32)
 		w.edits[key] = m
+	}
+	if _, had := m[idx]; !had {
+		w.nEdits.Add(1)
 	}
 	m[idx] = state
 	w.mu.Unlock()

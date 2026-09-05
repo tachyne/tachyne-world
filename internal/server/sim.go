@@ -81,7 +81,11 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 	// is idempotent per position. Without this a receding pool re-processes the
 	// same cells exponentially and never settles. Keyed by dimension too, so the
 	// same coordinates in two worlds are two distinct updates.
-	seen := make(map[simPos]struct{}, len(due))
+	if h.scratchSim == nil {
+		h.scratchSim = make(map[simPos]struct{}, len(due))
+	}
+	clear(h.scratchSim)
+	seen := h.scratchSim
 	for _, sp := range due {
 		if _, ok := seen[sp]; ok {
 			continue

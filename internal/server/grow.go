@@ -123,7 +123,11 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 	}
 	// seen is keyed by dimension too: the same chunk coordinates in two worlds
 	// are two different chunks.
-	seen := map[[3]int]bool{}
+	if h.scratchSeen3 == nil {
+		h.scratchSeen3 = map[[3]int]bool{}
+	}
+	clear(h.scratchSeen3)
+	seen := h.scratchSeen3
 	for _, t := range players {
 		pcx, pcz := chunkFloor(t.x), chunkFloor(t.z)
 		for dx := -simRadius; dx <= simRadius; dx++ {

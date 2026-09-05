@@ -429,13 +429,19 @@ type hub struct {
 	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
-	mobs    map[int32]*mob          // server-controlled entities (living world)
-	mgrid   mobGrid                 // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
-	items   map[int32]*itemEntity   // dropped-item entities (block drops)
-	arrows  map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
-	clouds  map[int32]*effectCloud  // lingering-potion area-effect clouds
-	orbs    map[int32]*xpOrb        // experience orbs awaiting pickup
-	rockets map[int32]*rocketEntity // firework rockets in the air
+	mobs  map[int32]*mob // server-controlled entities (living world)
+	mgrid mobGrid        // per-tick spatial index over mobs (mobgrid.go); gridDirty on insert/delete
+	// Scratch maps the tick loop fills and clears every tick (clear() keeps
+	// the buckets), instead of allocating fresh ones 20 times a second.
+	scratchChunks map[[2]int32]bool       // naturalSpawn: view-window chunk set
+	scratchRing   map[[2]int32]bool       // naturalSpawn / overworldSpawnRing: ±8 spawn ring
+	scratchSeen3  map[[3]int]bool         // runRandomTicks: chunks ticked this pass
+	scratchSim    map[simPos]struct{}     // runUpdates: positions processed this tick
+	items         map[int32]*itemEntity   // dropped-item entities (block drops)
+	arrows        map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
+	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds
+	orbs          map[int32]*xpOrb        // experience orbs awaiting pickup
+	rockets       map[int32]*rocketEntity // firework rockets in the air
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
@@ -2046,6 +2052,11 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 			delete(h.signMayEdit, k)
 		}
 	}
+	// Per-player side tables keyed by eid. Eids are unique per join, so an
+	// entry left behind is a permanent one — three per join, forever.
+	delete(h.sculkStep, p.eid)
+	delete(h.sculkLastX, p.eid)
+	delete(h.sculkLastZ, p.eid)
 	if h.statstore != nil {
 		h.statstore.save(p.name, t.stats)
 	}

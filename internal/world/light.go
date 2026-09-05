@@ -123,7 +123,8 @@ type lightCacheEntry struct {
 // more than one player's tracked window, so steady-state spawning and chunk
 // sends hit the cache.
 func (w *World) lightCacheCap() int {
-	n := (48 << 20) / (w.Sections() * 4096 * 2)
+	_, _, budget := cacheBudgets()
+	n := budget / (w.Sections() * 4096 * 2)
 	if n < 64 {
 		n = 64
 	}
