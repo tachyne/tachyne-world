@@ -362,7 +362,10 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 	}
 	if isTNT(state) {
 		h.setBlock(players, pos, worldgen.Air)
-		h.post(evPrimeTNT{x: pos.x, y: pos.y, z: pos.z})
+		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
+		// is the only consumer of h.events — a self-post with a full queue
+		// blocks forever and takes the whole server with it (see postFromHub).
+		h.primeTNT(players, pos.x, pos.y, pos.z, tntFuseTicks)
 		return
 	}
 	if h.rng.Intn(srcAge+10) < 5 && !(h.raining && h.fireNearRain(pos)) {

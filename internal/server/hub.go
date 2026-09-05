@@ -731,7 +731,25 @@ func actionBarEv(text string) attachproto.Chat {
 
 // post sends an event to the hub. Blocking is acceptable: the events buffer is
 // large and the hub goroutine never blocks on a single client (it uses trySend).
+// post hands an event to the hub from ANOTHER goroutine (a session, the bus,
+// an NPC think). It blocks when the queue is full — that back-pressure is the
+// design. It must never be called from hub-goroutine code: the hub is the only
+// consumer, so a self-post against a full queue can never be drained and the
+// tick loop stops for good while the TCP liveness probe keeps passing. Hub-side
+// code calls the handler directly (it already has `players`), or, in the rare
+// case work really must wait for the next drain, uses postFromHub.
 func (h *hub) post(ev hubEvent) { h.events <- ev }
+
+// postFromHub queues an event from hub-goroutine code without ever blocking.
+// A full queue here is a programming error (the caller should have called the
+// handler directly), so it fails loudly rather than deadlocking quietly.
+func (h *hub) postFromHub(ev hubEvent) {
+	select {
+	case h.events <- ev:
+	default:
+		panic("hub self-post with a full event queue — call the handler directly instead")
+	}
+}
 
 // run is the tick loop. It owns the registry and advances the clock at 20 TPS.
 func (h *hub) run() {
