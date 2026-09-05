@@ -831,6 +831,13 @@ func (h *hub) run() {
 		case <-ticker.C:
 			tickStart := time.Now()
 			age := h.tick.Add(1) // world age; drives day/night
+			h.world.Tick()       // LRU epoch: cached chunks promote at most once per tick
+			if h.nether != nil {
+				h.nether.Tick()
+			}
+			if h.end != nil {
+				h.end.Tick()
+			}
 			dueNow := len(h.pending[age])
 			dt := h.dayTime.Load()
 			if h.rules.DoDaylight {

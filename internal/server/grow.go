@@ -143,6 +143,9 @@ func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {
 	if h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled
 		h.precipTick(players, dim, cx, cz)
 	}
+	// One chunk resolution for the whole chunk's reads (see world.ChunkReader):
+	// this loop is the single hottest block-read site in the engine.
+	rd := h.worldFor(dim).Reader(int32(cx), int32(cz))
 	for s := 0; s < h.worldFor(dim).Sections(); s++ {
 		baseY := worldgen.MinY + s*16
 		speed := randomTickSpeed
@@ -153,13 +156,18 @@ func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {
 			x := cx*16 + h.rng.Intn(16)
 			y := baseY + h.rng.Intn(16)
 			z := cz*16 + h.rng.Intn(16)
-			h.randomTickBlock(players, dim, x, y, z)
+			h.randomTickBlockState(players, dim, x, y, z, rd.At(x, y, z))
 		}
 	}
 }
 
 func (h *hub) randomTickBlock(players map[int32]*tracked, dim, x, y, z int) {
-	state := h.worldFor(dim).At(x, y, z)
+	h.randomTickBlockState(players, dim, x, y, z, h.worldFor(dim).At(x, y, z))
+}
+
+// randomTickBlockState is randomTickBlock with the block already read (the
+// chunk loop reads through a pinned ChunkReader).
+func (h *hub) randomTickBlockState(players map[int32]*tracked, dim, x, y, z int, state uint32) {
 	if worldgen.IsLava(state) {
 		h.lavaIgnite(players, dim, x, y, z)
 		return

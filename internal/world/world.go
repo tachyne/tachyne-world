@@ -48,8 +48,9 @@ func (w *World) cacheCap() int {
 
 // cacheEntry is a generated chunk plus its node in the LRU list.
 type cacheEntry struct {
-	ch   *worldgen.Chunk
-	elem *list.Element
+	ch      *worldgen.Chunk
+	elem    *list.Element
+	touched uint64 // epoch of the last LRU promotion (see generated)
 }
 
 // World wraps the terrain generator with an edit overlay and a generated-chunk
@@ -64,6 +65,10 @@ type World struct {
 	genMu sync.Mutex
 	cache map[chunkPos]cacheEntry
 	lru   *list.List // front = most recently used; values are chunkPos
+	// epoch is bumped once per hub tick (Tick). A cached chunk is moved to the
+	// LRU front at most once per epoch, so the hot read path — thousands of
+	// block reads a tick — is a lookup with no list write.
+	epoch atomic.Uint64
 
 	// Computed chunk light, LRU'd like the generator output but INVALIDATED
 	// by edits (light is a pure function of terrain + edits). Natural mob
@@ -263,9 +268,19 @@ func (w *World) ForEachEdit(fn func(x, y, z int, state uint32)) {
 func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	key := chunkPos{cx, cz}
 
+	// A plain mutex, deliberately: an RWMutex measured SLOWER here under
+	// parallel readers (Go's reader-count contention), and the critical
+	// section is one map lookup. The saving is the LRU write — a cached chunk
+	// is moved to the front at most once per epoch (hub tick), so the common
+	// hit is lookup-and-return.
+	ep := w.epoch.Load()
 	w.genMu.Lock()
 	if e, ok := w.cache[key]; ok {
-		w.lru.MoveToFront(e.elem)
+		if e.touched != ep {
+			w.lru.MoveToFront(e.elem)
+			e.touched = ep
+			w.cache[key] = e
+		}
 		w.genMu.Unlock()
 		return e.ch
 	}
@@ -295,7 +310,7 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	if e, ok := w.cache[key]; ok { // lost a race; keep the existing entry
 		return e.ch
 	}
-	w.cache[key] = cacheEntry{ch: ch, elem: w.lru.PushFront(key)}
+	w.cache[key] = cacheEntry{ch: ch, elem: w.lru.PushFront(key), touched: ep}
 	for len(w.cache) > w.cacheCap() {
 		oldest := w.lru.Back()
 		if oldest == nil {
@@ -313,6 +328,47 @@ func (w *World) CacheLen() int {
 	w.genMu.Lock()
 	defer w.genMu.Unlock()
 	return len(w.cache)
+}
+
+// Tick advances the LRU epoch. The hub calls it once per tick for each world;
+// a world nobody ticks (tests, tools) simply promotes each chunk once.
+func (w *World) Tick() { w.epoch.Add(1) }
+
+// ChunkReader pins one chunk for a run of block reads inside it: the cached
+// generated base is resolved once, and each At then costs a single shared
+// lock on the edit overlay instead of two locks, three map lookups and an
+// LRU write. It is what the random ticker uses — 81 chunks × 24 sections × 3
+// reads a tick per player — and any loop that scans within one chunk should.
+type ChunkReader struct {
+	w      *World
+	cx, cz int32
+	ch     *worldgen.Chunk
+}
+
+// Reader returns a ChunkReader for chunk (cx,cz), generating it if needed.
+func (w *World) Reader(cx, cz int32) ChunkReader {
+	return ChunkReader{w: w, cx: cx, cz: cz, ch: w.generated(cx, cz)}
+}
+
+// At reads a block by WORLD coordinates that must lie inside this reader's
+// chunk (it does not re-resolve; a coordinate outside it reads the wrong
+// cell of the pinned chunk). Out-of-range y is air, as World.At.
+func (r ChunkReader) At(x, y, z int) uint32 {
+	if !r.w.inBounds(y) {
+		return worldgen.Air
+	}
+	lx, lz := x-int(r.cx)*16, z-int(r.cz)*16
+	r.w.mu.RLock()
+	if m := r.w.edits[chunkPos{r.cx, r.cz}]; m != nil {
+		if s, ok := m[localIndex(lx, y, lz)]; ok {
+			r.w.mu.RUnlock()
+			return s
+		}
+	}
+	r.w.mu.RUnlock()
+	sec := (y - worldgen.MinY) / 16
+	ly := (y - worldgen.MinY) % 16
+	return r.ch.Sections[sec][(ly*16+lz)*16+lx]
 }
 
 // LightCacheLen reports the cached lit chunks (see CacheLen).
