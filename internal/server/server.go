@@ -195,6 +195,7 @@ type Server struct {
 	// up" is a number on a dashboard, not a boot log line nobody re-reads.
 	cacheBackend atomic.Value // string: valkey | dir | none
 	busConnected atomic.Bool
+	natsURL      string // set from NatsAddr once the hub exists; connectBusWithRetry consumes it
 
 	// NatsAddr, if set, connects the plugin bus to a standalone NATS server
 	// (e.g. "nats://localhost:4222"). OPTIONAL — the server runs fine without it.
@@ -449,16 +450,12 @@ func (s *Server) Serve() error {
 		// Optional NATS plugin bus (set before run() reads h.bus). A misconfigured
 		// or down broker must NOT stop the game — we log and run without it.
 		if s.NatsAddr != "" {
-			if nb, err := newNatsBus(s.hub, s.NatsAddr); err != nil {
-				log.Printf("NATS bus disabled: %v (server continues without it)", err)
-			} else {
-				s.hub.bus = nb
-				s.busConnected.Store(true)
-				// v2: mirror the plugin event catalog onto mc.event.v2.*
-				// (busv2.go). Registered only when a real bus exists, so
-				// hot sites like PlayerMove stay cold otherwise.
-				s.hub.registerBusBridge()
-			}
+			// A broker that is down at boot must not stop the game — and must
+			// not stay disconnected forever either (connectBusWithRetry).
+			// v2: registerBusBridge mirrors the plugin event catalog onto
+			// mc.event.v2.* only once a real bus exists, so hot sites like
+			// PlayerMove stay cold otherwise.
+			s.natsURL = s.NatsAddr
 		}
 		// World↔world peer mesh: warm links to neighbour shards for handover +
 		// shadow (sharded only). Established at boot so a seam crossing is instant.
@@ -484,6 +481,9 @@ func (s *Server) Serve() error {
 			return err
 		}
 		go s.hub.run()
+		if s.natsURL != "" {
+			s.connectBusWithRetry(s.natsURL)
+		}
 		if s.HealthAddr != "" {
 			go s.serveHealth(s.HealthAddr)
 		}
@@ -554,25 +554,72 @@ func (s *Server) resolveSpawn() {
 // configured (falling back to the directory if unreachable), else the local
 // directory, else none.
 func (s *Server) openChunkCache() world.ChunkCache {
-	if s.ValkeyAddr != "" {
-		if c, err := world.NewValkeyCache(s.ValkeyAddr); err == nil {
-			log.Printf("chunk cache: valkey at %s", s.ValkeyAddr)
-			s.cacheBackend.Store("valkey")
-			return c
-		} else {
-			log.Printf("chunk cache: valkey at %s unavailable (%v) — falling back", s.ValkeyAddr, err)
-		}
-	}
+	var dir world.ChunkCache
 	if s.ChunkCacheDir != "" {
-		if c := world.NewDirCache(s.ChunkCacheDir); c != nil {
+		if dir = world.NewDirCache(s.ChunkCacheDir); dir != nil {
 			log.Printf("chunk cache: directory %s", s.ChunkCacheDir)
 			s.cacheBackend.Store("dir")
-			return c
 		}
 	}
-	s.cacheBackend.Store("none")
-	return nil
+	if s.ValkeyAddr == "" {
+		if dir == nil {
+			s.cacheBackend.Store("none")
+		}
+		return dir
+	}
+	// Valkey in front of the directory. A dial that fails at boot (the
+	// cluster's DNS is not always answering in a pod's first seconds) is
+	// retried in the background rather than abandoned for the life of the
+	// process — the previous behaviour, which once left the pod on the
+	// directory fallback for a day with nothing but a boot log line to say so.
+	addr := s.ValkeyAddr
+	return world.NewReconnecting("valkey "+addr,
+		func() (world.ChunkCache, error) { return world.NewValkeyCache(addr) },
+		dir, chunkCacheRetry,
+		func() { s.cacheBackend.Store("valkey") })
 }
+
+// chunkCacheRetry is how often an unreachable shared chunk cache is re-dialed.
+const chunkCacheRetry = 30 * time.Second
+
+// connectBusWithRetry attaches the NATS plugin bus, retrying in the background
+// when the broker is unreachable at boot. The swap happens ON the hub goroutine
+// (an evRunOnHub barrier) because h.bus is hub-owned state and registering the
+// event bridge touches hub dispatch tables.
+func (s *Server) connectBusWithRetry(url string) {
+	attach := func() bool {
+		nb, err := newNatsBus(s.hub, url)
+		if err != nil {
+			return false
+		}
+		s.hub.runOnHub(func() {
+			s.hub.bus = nb
+			s.hub.registerBusBridge()
+		})
+		s.busConnected.Store(true)
+		return true
+	}
+	if attach() {
+		return
+	}
+	log.Printf("NATS bus unavailable at %s — server continues without it and retries every %s", url, busRetry)
+	go func() {
+		failures := 1
+		for {
+			time.Sleep(busRetry)
+			if attach() {
+				log.Printf("NATS bus connected after %d failed attempt(s)", failures)
+				return
+			}
+			failures++
+			if failures%20 == 0 {
+				log.Printf("NATS bus still unavailable after %d attempts", failures)
+			}
+		}
+	}()
+}
+
+const busRetry = 30 * time.Second
 
 // autosave periodically flushes world edits to disk (a no-op when unchanged).
 func (s *Server) autosave() {
