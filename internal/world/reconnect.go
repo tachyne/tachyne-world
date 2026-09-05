@@ -32,11 +32,15 @@ type reconnectingCache struct {
 // chunk is served; only a failure goes to the background.
 func NewReconnecting(name string, dial func() (ChunkCache, error), fallback ChunkCache, every time.Duration, onUp func()) ChunkCache {
 	rc := &reconnectingCache{fallback: fallback, name: name, onUp: onUp}
+	// onUp runs BEFORE the primary is published (here and below): anything
+	// that observes Connected() then also sees whatever onUp recorded — the
+	// backend label on /debug/vars, in practice — rather than a moment where
+	// the cache is in place and the label still says otherwise.
 	if c, err := dial(); err == nil {
-		rc.primary.Store(&c)
 		if onUp != nil {
 			onUp()
 		}
+		rc.primary.Store(&c)
 		return rc
 	} else {
 		log.Printf("chunk cache: %s unavailable (%v) — using fallback and retrying every %s", name, err, every)
@@ -47,11 +51,11 @@ func NewReconnecting(name string, dial func() (ChunkCache, error), fallback Chun
 			time.Sleep(every)
 			c, err := dial()
 			if err == nil {
-				rc.primary.Store(&c)
 				log.Printf("chunk cache: %s connected after %d failed attempt(s)", name, failures)
 				if onUp != nil {
 					onUp()
 				}
+				rc.primary.Store(&c)
 				return
 			}
 			failures++
