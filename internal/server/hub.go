@@ -332,6 +332,8 @@ type hub struct {
 	stop       chan struct{} // closed to end run(); production never closes it, tests do (t.Cleanup)
 	eidCounter int64         // per-pod eid mint counter, fed through shard.MintEID when sharded
 	tick       atomic.Uint64 // world age (ticks); atomic so connections can read it
+	lastTick   atomic.Int64  // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
+	tickStats  tickHist      // recent tick durations for /debug/vars + the slow-tick log
 	dayTime    atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
 
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
@@ -827,7 +829,9 @@ func (h *hub) run() {
 	for {
 		select {
 		case <-ticker.C:
+			tickStart := time.Now()
 			age := h.tick.Add(1) // world age; drives day/night
+			dueNow := len(h.pending[age])
 			dt := h.dayTime.Load()
 			if h.rules.DoDaylight {
 				dt = h.dayTime.Add(1)
@@ -1059,6 +1063,7 @@ func (h *hub) run() {
 					t.p.trySendEv(actionBarEv(renderHud(h.hud, v)))
 				}
 			}
+			h.noteTick(tickStart, players, dueNow)
 
 		case <-h.stop:
 			return // test teardown closes h.stop so run() goroutines don't leak (production never does)

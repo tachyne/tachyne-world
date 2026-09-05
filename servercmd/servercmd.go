@@ -33,6 +33,7 @@ func Main() {
 	llmURL := flag.String("llm", "", "OPTIONAL OpenAI-compatible endpoint for LLM NPCs, e.g. http://localhost:1234/v1 (empty = NPCs off)")
 	llmModel := flag.String("llm-model", "", "model name for the LLM NPC endpoint (e.g. gpt-oss-20b)")
 	attachAddr := flag.String("attach", ":25500", "tachyne gateway attach listener (token from ATTACH_TOKEN env)")
+	healthAddr := flag.String("health", "", "OPTIONAL health/metrics/pprof listener, e.g. :8081 — /healthz (503 once the tick loop stalls), /debug/vars, /debug/pprof; bind to the pod, never the ingress")
 	sid := flag.Int("sid", -1, "shard id for a sharded world (-1 = derive from POD_NAME ordinal)")
 	topology := flag.String("topology", "", "path to shard topology JSON (empty = unsharded single pod)")
 	debugBorders := flag.Bool("debug-borders", false, "dev: draw a particle wall along shard region seams")
@@ -59,6 +60,7 @@ func Main() {
 	srv.Ceiling = *ceiling
 	srv.AttachAddr = *attachAddr
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
+	srv.HealthAddr = *healthAddr
 	srv.WorldFile = *worldFile
 	srv.DisableHUD = !*hud
 	switch *spawner {

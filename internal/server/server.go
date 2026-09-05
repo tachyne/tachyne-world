@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -185,6 +186,15 @@ type Server struct {
 	// (gateway sessions); AttachToken is the shared secret gateways present.
 	AttachAddr  string
 	AttachToken string
+
+	// HealthAddr, if set, serves /healthz + /debug/vars + /debug/pprof there
+	// (health.go). Bind it to the pod, never to the ingress.
+	HealthAddr string
+
+	// Degraded-state flags surfaced on /debug/vars so "the cache never came
+	// up" is a number on a dashboard, not a boot log line nobody re-reads.
+	cacheBackend atomic.Value // string: valkey | dir | none
+	busConnected atomic.Bool
 
 	// NatsAddr, if set, connects the plugin bus to a standalone NATS server
 	// (e.g. "nats://localhost:4222"). OPTIONAL — the server runs fine without it.
@@ -443,6 +453,7 @@ func (s *Server) Serve() error {
 				log.Printf("NATS bus disabled: %v (server continues without it)", err)
 			} else {
 				s.hub.bus = nb
+				s.busConnected.Store(true)
 				// v2: mirror the plugin event catalog onto mc.event.v2.*
 				// (busv2.go). Registered only when a real bus exists, so
 				// hot sites like PlayerMove stay cold otherwise.
@@ -473,6 +484,9 @@ func (s *Server) Serve() error {
 			return err
 		}
 		go s.hub.run()
+		if s.HealthAddr != "" {
+			go s.serveHealth(s.HealthAddr)
+		}
 	}
 	// Domain attach listener for tachyne gateways ("worlds are versionless":
 	// gateways speak Minecraft, this side speaks raw world state).
@@ -543,6 +557,7 @@ func (s *Server) openChunkCache() world.ChunkCache {
 	if s.ValkeyAddr != "" {
 		if c, err := world.NewValkeyCache(s.ValkeyAddr); err == nil {
 			log.Printf("chunk cache: valkey at %s", s.ValkeyAddr)
+			s.cacheBackend.Store("valkey")
 			return c
 		} else {
 			log.Printf("chunk cache: valkey at %s unavailable (%v) — falling back", s.ValkeyAddr, err)
@@ -551,9 +566,11 @@ func (s *Server) openChunkCache() world.ChunkCache {
 	if s.ChunkCacheDir != "" {
 		if c := world.NewDirCache(s.ChunkCacheDir); c != nil {
 			log.Printf("chunk cache: directory %s", s.ChunkCacheDir)
+			s.cacheBackend.Store("dir")
 			return c
 		}
 	}
+	s.cacheBackend.Store("none")
 	return nil
 }
 

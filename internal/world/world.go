@@ -307,6 +307,21 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	return ch
 }
 
+// CacheLen reports how many generated chunks are held in memory — the number
+// that grows when something is touring terrain nobody is looking at.
+func (w *World) CacheLen() int {
+	w.genMu.Lock()
+	defer w.genMu.Unlock()
+	return len(w.cache)
+}
+
+// LightCacheLen reports the cached lit chunks (see CacheLen).
+func (w *World) LightCacheLen() int {
+	w.lightMu.Lock()
+	defer w.lightMu.Unlock()
+	return len(w.lightCache)
+}
+
 // editsCopy returns a snapshot of a chunk's edit overlay, or nil if it has none.
 // A copy lets lighting read edits lock-free without racing SetBlock.
 func (w *World) editsCopy(cx, cz int32) map[int]uint32 {
