@@ -32,15 +32,22 @@ def _mansion_names():
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/woodland_mansion/" in n and n.endswith(".nbt"))
 MANSION = _mansion_names()
+END_CITY = ["end_city/" + n for n in (
+    "base_floor", "base_roof", "bridge_end", "bridge_gentle_stairs", "bridge_piece", "bridge_steep_stairs",
+    "fat_tower_base", "fat_tower_middle", "fat_tower_top", "second_floor_1", "second_floor_2", "second_roof",
+    "ship", "third_floor_1", "third_floor_2", "third_roof", "tower_base", "tower_floor", "tower_piece", "tower_top")]
 TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-] + SHIPWRECK + RUINED_PORTAL + MANSION
+] + SHIPWRECK + RUINED_PORTAL + MANSION + END_CITY
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).
 MOB_MARKER = {"Mage": 0, "Warrior": 1, "Group of Allays": 2}
+# End city DATA markers → entities the server seeds ("Sentry" = a shulker,
+# "Elytra" = the ship's item frame holding an elytra); baked into "mobs".
+ENTITY_MARKER = {"Sentry": "shulker", "Elytra": "elytra_frame"}
 MARKER_LOOT = {
     "supply_chest": "chests/shipwreck_supply",
     "map_chest": "chests/shipwreck_map",
@@ -49,6 +56,7 @@ MARKER_LOOT = {
     "ChestEast": "chests/woodland_mansion",
     "ChestSouth": "chests/woodland_mansion",
     "ChestNorth": "chests/woodland_mansion",
+    "Chest": "chests/end_city_treasure",
 }
 
 # Jigsaw structures to bake: their template pools (+ every template the pools
@@ -140,6 +148,7 @@ def bake(inner, name):
     chests = []
     chestloot = []
     mobspawns = []  # [x,y,z,type] illager markers (mansion): 0=evoker 1=vindicator 2=allay
+    entity_markers = []  # DATA markers that stand for an entity (end city sentries, the elytra frame)
     spawners = []
     jigsaws = []
     beds = []      # bed HEAD positions → one villager home each
@@ -177,6 +186,8 @@ def bake(inner, name):
         elif bid == "minecraft:structure_block" and nbt.get("metadata", "") in MOB_MARKER:
             # Woodland mansion illager markers: the server seeds the mob here.
             mobspawns.append([x, y, z, MOB_MARKER[nbt["metadata"]]])
+        elif bid == "minecraft:structure_block" and nbt.get("metadata", "") in ENTITY_MARKER:
+            entity_markers.append({"pos": [x, y, z], "type": ENTITY_MARKER[nbt["metadata"]]})
         elif bid == "minecraft:mob_spawner":
             sd = nbt.get("SpawnData", {}).get("entity", {})
             spawners.append([x, y, z, sd.get("id", "") if isinstance(sd, dict) else ""])
@@ -194,7 +205,7 @@ def bake(inner, name):
             })
     # Entities embedded in the template (the bastion "mobs" pieces are one
     # entity each): the server seeds them when a player first arrives.
-    mobs = []
+    mobs = list(entity_markers)
     for e in d.get("entities", []):
         eid = (e.get("nbt") or {}).get("id", "")
         bp = e.get("blockPos")

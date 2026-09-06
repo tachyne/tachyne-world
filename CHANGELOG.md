@@ -235,6 +235,16 @@ the public history since the project was open-sourced on 2026-07-10.
   bastion_hoglin_stable, bastion_other), and the templates' mob pieces
   seed the garrison — piglins, piglin brutes and hoglins — when a player
   first arrives; a cleared bastion stays cleared across restarts.
+- **End cities.** The outer islands' highlands grow End cities: a port of
+  vanilla's own piece generator (the house tower branching into towers,
+  fat towers and bridges to depth eight, each batch discarded when it
+  collides with an earlier one, one ship per city sailing off a bridge)
+  over the twenty real end_city templates, with vanilla's rule that a
+  floor piece keeps the world's blocks where its template has air. The
+  treasure chests fill from end_city_treasure, the shulker sentries stand
+  where the templates' markers put them, and the ship's item frame holds
+  the elytra — all seeded when a player first arrives, and a looted city
+  stays looted across restarts.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

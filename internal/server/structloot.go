@@ -39,6 +39,16 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 				}
 			}
 		}
+	case dimEnd:
+		g := h.worldFor(dim).Gen()
+		if ec := g.EndCityIn(pos.x, pos.z); ec.Exists {
+			for _, cc := range g.EndCityChests(ec) {
+				if pos.x == cc.X && pos.y == cc.Y && pos.z == cc.Z {
+					h.fillChest(c, cc.Table, pos)
+					return
+				}
+			}
+		}
 	}
 }
 

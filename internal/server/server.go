@@ -422,6 +422,9 @@ func (s *Server) Serve() error {
 		for _, b := range s.hub.mobstore.bastions() {
 			s.hub.bastionDone[[2]int32{int32(b[0]), int32(b[1])}] = true // cleared bastions stay cleared
 		}
+		for _, c := range s.hub.mobstore.endCities() {
+			s.hub.endCityDone[[2]int32{int32(c[0]), int32(c[1])}] = true // looted cities stay looted
+		}
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
 		if s.WorldFile != "" {

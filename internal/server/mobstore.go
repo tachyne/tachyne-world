@@ -50,6 +50,9 @@ type mobFile struct {
 	// Bastions lists the (x,z) of bastion remnants already seeded with their
 	// piglins and hoglins — a cleared bastion stays cleared.
 	Bastions [][2]int `json:"bastions,omitempty"`
+	// EndCities lists the (x,z) of End cities already seeded with their
+	// shulkers and the ship's elytra.
+	EndCities [][2]int `json:"end_cities,omitempty"`
 	// Seeded is the permanent set of chunks that have already received their
 	// one-time vanilla chunk-generation herd. Persisted (was in-memory, reset
 	// every restart) so a rollout never re-lays herds on a chunk whose animals
@@ -370,6 +373,23 @@ func (s *mobStore) bastions() [][2]int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Bastions
+}
+
+// recordEndCities snapshots the seeded-End-city set for the next flush.
+func (s *mobStore) recordEndCities(done map[[2]int32]bool) {
+	cs := make([][2]int, 0, len(done))
+	for k := range done {
+		cs = append(cs, [2]int{int(k[0]), int(k[1])})
+	}
+	s.mu.Lock()
+	s.m.EndCities = cs
+	s.mu.Unlock()
+}
+
+func (s *mobStore) endCities() [][2]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.EndCities
 }
 
 // removeNear deletes persisted mobs of the given types within radius r of

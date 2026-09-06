@@ -72,6 +72,14 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 
 // generateEndChunk fills a chunk in End mode.
 func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
+	ch := g.generateEndTerrain(cx, cz)
+	g.stampEndCities(ch, cx, cz)
+	ch.computeHeightmap()
+	return ch
+}
+
+// generateEndTerrain is the End's terrain alone (structures stamp on top).
+func (g *Generator) generateEndTerrain(cx, cz int32) *Chunk {
 	ch := NewChunk(g.sections)
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {

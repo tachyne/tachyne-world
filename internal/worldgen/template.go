@@ -224,15 +224,16 @@ func applyRules(rules []procRule, state uint32, wx, wy, wz, ox, oy, oz int) uint
 }
 
 // StampTemplateProc is StampTemplate with a processor list applied to every
-// block as it lands.
-func (t *Template) StampTemplateProc(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rules []procRule) [][3]int {
-	if len(rules) == 0 {
+// block as it lands; skipAir leaves the world's blocks where the template
+// has air (vanilla's STRUCTURE_AND_AIR block-ignore).
+func (t *Template) StampTemplateProc(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rules []procRule, skipAir bool) [][3]int {
+	if len(rules) == 0 && !skipAir {
 		return t.StampTemplate(ch, cx, cz, ox, oy, oz, rot)
 	}
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	for _, b := range t.Blocks {
 		state := t.resolved[rot&3][b[3]]
-		if state == tmplSkip {
+		if state == tmplSkip || (skipAir && state == Air) {
 			continue
 		}
 		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], rot)
