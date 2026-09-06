@@ -24,7 +24,10 @@ the public history since the project was open-sourced on 2026-07-10.
   hands over the result. The recipe book's auto-craft goes through the
   world's own place-recipe step first, filling the grid from the
   inventory the way the Java book does. Previously every craft request
-  from a Bedrock client was refused.
+  from a Bedrock client was refused. The anvil and the grindstone open
+  too: their inputs sit where Bedrock keeps them, the result is whatever
+  the world previewed, and an anvil rename reaches the world before the
+  result is taken.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
