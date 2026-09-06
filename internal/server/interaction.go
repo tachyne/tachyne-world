@@ -579,6 +579,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isBell(state) { // strike it (the hub applies BellBlock.isProperHit)
+		s.hub.post(evRingBell{eid: p.eid, x: x, y: y, z: z, dir: face, hitY: cy})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if isNoteBlock(state) {
 		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z, tune: true})
 		s.sendBlockChange(p, x, y, z, state, seq)

@@ -380,6 +380,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgParticles, ev)
 	case attachproto.WorldFX:
 		send(attachproto.MsgWorldFX, ev)
+	case attachproto.BlockEvent:
+		send(attachproto.MsgBlockEvent, ev)
 	case attachproto.BlockSet:
 		send(attachproto.MsgBlockSet, ev)
 	case attachproto.GameEvent:

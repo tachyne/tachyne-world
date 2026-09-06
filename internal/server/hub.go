@@ -1437,6 +1437,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.incCustom(t, e.name, 1)
 				}
+			case evRingBell:
+				h.onRingBell(players, e)
 			case evUseSign:
 				h.onUseSign(players, e)
 			case evUseAxe:

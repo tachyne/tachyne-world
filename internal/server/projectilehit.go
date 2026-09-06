@@ -79,6 +79,8 @@ func inRanges(rs []stateRange, s uint32) bool {
 // sticking (currently only a block it destroys).
 func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos blockPos, state uint32) {
 	switch {
+	case isBell(state): // BellBlock.onProjectileHit: any projectile rings it
+		h.ringBell(players, a.dim, pos, -1)
 	case isTarget(state):
 		// Targets already had a handler; it lives here now with the rest, and
 		// it works in every dimension rather than only the overworld.

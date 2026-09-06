@@ -31,3 +31,10 @@ func BlockRange(name string) (lo, hi uint32) {
 	}
 	return blockBase(name), hi
 }
+
+// BlockRegistryID returns a block's id in the minecraft:block registry (what
+// block_event and similar packets name), 0 and false for an unknown name.
+func BlockRegistryID(name string) (uint32, bool) {
+	id, ok := blockRegistryID[name]
+	return id, ok
+}

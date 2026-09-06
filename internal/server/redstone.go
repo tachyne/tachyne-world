@@ -240,6 +240,14 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		}
 	case worldgen.IsCopperBulb(state):
 		h.updateCopperBulb(players, pos, state)
+	case isBell(state): // BellBlock.neighborChanged: rings on the rising edge of its input
+		want := h.inputPower(x, y, z, false) > 0
+		if boolProp(state, "powered") != want {
+			if want {
+				h.ringBell(players, 0, pos, -1)
+			}
+			h.setBlock(players, pos, setBoolProp(state, "powered", want))
+		}
 	case isLamp(state):
 		want := h.inputPower(x, y, z, false) > 0
 		if (state == lampOn) != want {
