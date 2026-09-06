@@ -8,7 +8,7 @@ import (
 // Pillager patrols — reimplemented from the vanilla 1.21.5 PatrolSpawner.
 // From day 5 on, during clear daylight, roaming illager squads led by a
 // banner-bearing captain spawn out in the world (away from villages) and menace
-// whoever they find. The captain drops the ominous banner; Bad Omen → raids is
+// whoever they find. The captain drops the ominous banner; the ominous bottle → raids is
 // a follow-up.
 
 const (
@@ -106,7 +106,7 @@ const (
 // it this session: a banner-bearing captain plus a few pillagers around the
 // tower base. (Vanilla keeps pillagers spawning around an outpost via a
 // StructureSpawnOverride; a one-time garrison is the v1 — continuous respawn is
-// a follow-up.) The captain drops the ominous banner and grants Bad Omen on
+// a follow-up.) The captain drops the ominous banner and an ominous bottle on
 // death via the shared patrolCaptain path (combat.go).
 func (h *hub) updateOutposts(players map[int32]*tracked) {
 	gen := h.world.Gen()

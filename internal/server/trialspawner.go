@@ -187,12 +187,12 @@ func (h *hub) trialAt(pos blockPos, f worldgen.TrialChamberFeature) *trialSpawne
 	}
 	ts := h.trials[pos]
 	if ts == nil {
-		ts = &trialSpawner{pos: pos, detected: map[[16]byte]bool{}, current: map[int32]bool{}}
+		ts = &trialSpawner{pos: pos, detected: map[[16]byte]bool{}, current: map[int32]bool{}, ominous: f.Ominous}
 		h.trials[pos] = ts
 	}
-	// Which mob and which kind of spawner always come from worldgen, never from
-	// the save file: a restored record carries progress only.
-	ts.dim, ts.kind, ts.ominous = 0, f.Kind, f.Ominous
+	// Which mob comes from worldgen, never from the save file: a restored
+	// record carries progress — and whether an omen turned it ominous.
+	ts.dim, ts.kind = 0, f.Kind
 	return ts
 }
 
@@ -209,8 +209,10 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 		if ts.detect(h, players) > 0 {
 			ts.state = trialActive
 		}
+		h.trialOmenCheck(players, ts)
 
 	case trialActive:
+		h.trialOmenCheck(players, ts)
 		extra := ts.detect(h, players) - 1
 		if extra < 0 {
 			extra = 0
@@ -259,13 +261,15 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 		ts.nextEject = now + trialEjectEvery
 
 	case trialCooldown:
-		if ts.detect(h, players) > 0 && now >= ts.cooldown {
-			ts.spawned, ts.nextSpawn = 0, 0
-			ts.state = trialActive
-			return
-		}
+		// The cooldown always ends in waiting_for_players (vanilla's COOLDOWN
+		// tick), the omen dropped with it; players still in the room are
+		// picked up again on the next tick.
 		if now >= ts.cooldown {
 			ts.reset()
+			if ts.ominous { // removeOminous: the omen wears off with the cooldown
+				ts.ominous = false
+				h.showTrialState(players, ts)
+			}
 		}
 	}
 }
@@ -296,6 +300,9 @@ func (ts *trialSpawner) forgetDeadMobs(h *hub) {
 }
 
 func (ts *trialSpawner) targetTotal(extra int) int {
+	if ts.ominous && ts.kind == "breeze" {
+		return int(trialOminousBreeze + trialTotalPerPlayer*float64(extra))
+	}
 	return int(trialTotalMobs + trialTotalPerPlayer*float64(extra))
 }
 
@@ -337,6 +344,9 @@ func (h *hub) spawnTrialMob(players map[int32]*tracked, ts *trialSpawner) *mob {
 			m.refreshBabySpeed()
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 		}
+		if ts.ominous {
+			h.equipTrialMob(players, m, ts.kind) // the ominous configs' equipment tables
+		}
 		h.playSound(players, "minecraft:block.trial_spawner.spawn_mob", sndBlock,
 			ts.fx(), ts.fy(), ts.fz(), 1, 1)
 		return m
@@ -355,11 +365,8 @@ func (h *hub) spawnableAt(x, y, z int) bool {
 // ejectTrialReward pays out one player's share: vanilla rolls the key table and
 // the consumables table, and the key is the only way one enters the world.
 func (h *hub) ejectTrialReward(players map[int32]*tracked, ts *trialSpawner) {
-	tables := []string{"spawners/trial_chamber/consumables", "spawners/trial_chamber/key"}
-	if ts.ominous {
-		tables = []string{"spawners/ominous/trial_chamber/consumables", "spawners/ominous/trial_chamber/key"}
-	}
-	for _, name := range tables {
+	// One table per ejection, drawn by weight (lootTablesToEject.getRandom).
+	for _, name := range []string{h.trialRewardTable(ts)} {
 		tbl, ok := lootForChest(name)
 		if !ok {
 			continue // table not baked — the other still pays out

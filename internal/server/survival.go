@@ -574,8 +574,8 @@ func (h *hub) startEating(t *tracked, slot int) {
 	// Milk is a drink, not a food: it has no nutrition, so the "already full"
 	// gate below must not stop it — carrying it to cure a poison is the whole
 	// reason to have it.
-	if t.inv.slots[slot].item == itemMilkBucket && t.inv.slots[slot].count > 0 {
-		t.eatingSlot, t.eatingAt = slot, h.tick.Load()
+	if it := t.inv.slots[slot].item; (it == itemMilkBucket || it == itemOminousBottle) && t.inv.slots[slot].count > 0 {
+		t.eatingSlot, t.eatingAt = slot, h.tick.Load() // drinks: no nutrition, so no "already full" gate
 		return
 	}
 	if _, ok := foodPoints[t.inv.slots[slot].item]; !ok || t.inv.slots[slot].count == 0 || t.food >= maxFood {
@@ -632,6 +632,10 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	if s.item == itemMilkBucket && s.count > 0 {
 		h.drinkMilk(t, slot)
+		return
+	}
+	if s.item == itemOminousBottle && s.count > 0 {
+		h.drinkOminousBottle(players, t, slot)
 		return
 	}
 	s = &t.inv.slots[slot]

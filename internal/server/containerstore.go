@@ -104,6 +104,7 @@ type savedTrial struct {
 	CooldownLeft uint64   `json:"cooldown_left,omitempty"`
 	Spawned      int      `json:"spawned,omitempty"`
 	Detected     []string `json:"detected,omitempty"` // player UUIDs, hex
+	Ominous      bool     `json:"ominous,omitempty"`  // turned ominous by an omen
 }
 
 // savedLectern is one lectern's book + open page.
@@ -743,7 +744,7 @@ func (s *containerStore) recordTrials(trials map[blockPos]*trialSpawner, now uin
 		if ts.cooldown > now {
 			left = ts.cooldown - now
 		}
-		if ts.state == trialWaitingPlayers && left == 0 && ts.spawned == 0 && len(ts.detected) == 0 {
+		if ts.state == trialWaitingPlayers && left == 0 && ts.spawned == 0 && len(ts.detected) == 0 && !ts.ominous {
 			continue // a sleeping spawner is indistinguishable from an unvisited one
 		}
 		snap[posKey(pos)] = savedTrial{
@@ -751,6 +752,7 @@ func (s *containerStore) recordTrials(trials map[blockPos]*trialSpawner, now uin
 			CooldownLeft: left,
 			Spawned:      ts.spawned,
 			Detected:     hexUUIDSet(ts.detected),
+			Ominous:      ts.ominous,
 		}
 	}
 	s.mu.Lock()
@@ -771,7 +773,7 @@ func (s *containerStore) loadTrials(now uint64) map[blockPos]*trialSpawner {
 			continue
 		}
 		ts := &trialSpawner{
-			pos: pos, state: trialState(st.State), spawned: st.Spawned,
+			pos: pos, state: trialState(st.State), spawned: st.Spawned, ominous: st.Ominous,
 			detected: map[[16]byte]bool{}, current: map[int32]bool{},
 		}
 		if st.CooldownLeft > 0 {

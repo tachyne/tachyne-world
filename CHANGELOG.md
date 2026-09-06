@@ -294,6 +294,22 @@ the public history since the project was open-sourced on 2026-07-10.
   profession's own gift tables (thirty seconds to five and a half minutes
   apart), and raids that survive a restart: the raid and its raiders are
   saved with the mobs and pick up mid-wave.
+- **Ominous trials.** The omen chain vanilla 1.21 built around the trial
+  chambers: a slain raid captain now drops an ominous bottle (level I–V,
+  rolled as vanilla's pillager loot rolls it) instead of cursing its
+  killer; drinking the bottle gives Bad Omen for a hundred minutes at the
+  bottle's level; a trial spawner that sees a player with Bad Omen turns it
+  into Trial Omen (fifteen minutes a level, with the level event at the
+  player's eyes) and goes ominous — its current mobs vanish in a puff, the
+  round restarts on the ominous config (breezes in fours), the block shows
+  the ominous flame, and each reward ejection pays from one table drawn
+  by weight (ominous: keys three in ten, consumables seven; normal spawners
+  now also draw one table per ejection at vanilla's even odds instead of
+  paying both). The ominous state persists and wears off when the cooldown
+  ends. Ominous zombies, husks and archers come armed from vanilla's
+  trial-chamber equipment tables (trimmed, enchanted chainmail at even odds
+  per piece, enchanted swords and bows) as gear that never drops. The
+  ominous item spawners are still to come.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

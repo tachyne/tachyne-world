@@ -343,13 +343,8 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		})
 	}
 	if m.health <= 0 {
-		if m.patrolCaptain && t != nil { // a slain raid captain curses its killer
-			lvl := t.hasEffect(effBadOmen) // 0-based next level, capped at Bad Omen V
-			if lvl > 4 {
-				lvl = 4
-			}
-			h.applyEffect(players, t, effBadOmen, lvl, badOmenSecs)
-			t.p.trySendEv(chatEv("Bad Omen"))
+		if m.patrolCaptain { // a slain raid captain drops its ominous bottle (1.21: no curse on the killer)
+			h.dropOminousBottle(players, m)
 		}
 		h.killMob(players, m)
 		if t != nil {
@@ -442,13 +437,16 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
 			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
 		}
-		// Picked-up gear drops in full (vanilla drops equipped loot at 100%).
-		if m.held != 0 {
+		// Picked-up gear drops in full (vanilla drops equipped loot at 100%);
+		// gear issued at spawn (ominous trial mobs) never does.
+		if m.held != 0 && !m.spawnGear {
 			drops = append(drops, plugin.ItemStack{Item: m.held, Count: 1})
 		}
-		for _, g := range m.gear {
-			if g.item != 0 {
-				drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
+		if !m.spawnGear {
+			for _, g := range m.gear {
+				if g.item != 0 {
+					drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
+				}
 			}
 		}
 		if !m.baby { // babies drop nothing (vanilla)

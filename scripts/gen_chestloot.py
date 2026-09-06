@@ -105,6 +105,10 @@ def funcs(node):
     return [x for x in (func(f) for f in node.get("functions", [])) if x is not None]
 
 
+CURRENT = [""]  # the table being baked (names its inline sub-tables)
+EXTRA = {}      # synthetic sub-tables baked out of inline loot_table entries
+
+
 def entry(e):
     t = e["type"].removeprefix("minecraft:")
     if t == "item":
@@ -118,7 +122,11 @@ def entry(e):
         # rolls it as a sub-table. Inline value objects are unsupported.
         v = e["value"]
         if not isinstance(v, str):
-            raise Unsupported("inline loot_table")
+            # An inline table (the trial-chamber armour sets): bake it as a
+            # synthetic sub-table of the enclosing one and reference that.
+            name = "%s/inline%d" % (CURRENT[0], len(EXTRA))
+            EXTRA[name] = table(v)
+            v = name
         return {"type": "ref", "ref": v.removeprefix("minecraft:"), "w": e.get("weight", 1),
                 "q": e.get("quality", 0), "conditions": conds(e), "functions": funcs(e)}
     if t in ("alternatives", "group", "sequence"):
@@ -161,6 +169,7 @@ PREFIXES = [
     "data/minecraft/loot_table/spawners/",
     "data/minecraft/loot_table/archaeology/",
     "data/minecraft/loot_table/gameplay/hero_of_the_village/",
+    "data/minecraft/loot_table/equipment/",  # what ominous trial mobs wear and wield
 ]
 out, kept, skipped = {}, 0, 0
 for n in sorted(z.namelist()):
@@ -169,12 +178,14 @@ for n in sorted(z.namelist()):
         continue
     name = pre[len("data/minecraft/loot_table/"):] + n[len(pre):-len(".json")]
     try:
+        CURRENT[0] = name
         out[name] = table(json.loads(z.read(n)))
         kept += 1
     except Unsupported as ex:
         skipped += 1
         print(f"  skip {name}: {ex}", file=sys.stderr)
 
+out.update(EXTRA)
 os.makedirs(OUTDIR, exist_ok=True)
 with open(OUT, "w") as f:
     json.dump(out, f, separators=(",", ":"), sort_keys=True)
