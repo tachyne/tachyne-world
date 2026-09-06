@@ -700,7 +700,7 @@ func (h *hub) containerSlots(pos simPos) []invStack {
 	if b := h.bins[pos]; b != nil {
 		return b.slots
 	}
-	return nil
+	return h.vehicleContainerAt(pos) // a chest or hopper cart parked in the cell
 }
 
 // containerSignal is the comparator's read of a container: 0 when empty, else

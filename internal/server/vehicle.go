@@ -63,8 +63,11 @@ var chestBoatTypes = func() map[int]bool {
 // vehicleItems: item id → entity type, built from the generated name table.
 var vehicleItems = func() map[int32]int {
 	m := map[int32]int{}
-	if id, ok := itemByName["minecart"]; ok {
-		m[id] = entityMinecart
+	for name, et := range map[string]int{"minecart": entityMinecart, "chest_minecart": entityChestMinecart,
+		"hopper_minecart": entityHopperMinecart, "tnt_minecart": entityTntMinecart, "furnace_minecart": entityFurnaceMinecart} {
+		if id, ok := itemByName[name]; ok {
+			m[id] = et
+		}
 	}
 	for name, et := range boatEntities {
 		if id, ok := itemByName[name]; ok {
@@ -92,17 +95,32 @@ type vehicle struct {
 	x, y, z    float64
 	yaw        float32
 	rider      int32   // player eid, 0 when empty
+	mobRider   int32   // a mob scooped up by a rolling cart (minecart.go), 0 when none
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 	syaw       float32 // last broadcast facing
 	chest      *chest  // a chest boat's 27 slots (nil for the rest)
 	// Minecart motion state (the server rolls carts; see minecart.go).
-	vx, vy, vz float64
-	yawO       float32 // facing at the previous tick
-	flipped    bool    // model turned 180° from its motion (vanilla's flip flag)
-	onGround   bool
+	vx, vy, vz  float64
+	yawO        float32 // facing at the previous tick
+	flipped     bool    // model turned 180° from its motion (vanilla's flip flag)
+	onGround    bool
+	fallFrom    float64 // highest y since it last stood on something
+	landedFall  float64 // blocks fallen on this tick's landing (0 otherwise)
+	hitWall     bool    // ran into a block this tick…
+	hitSpeedSqr float64 // …at this horizontal speed²
+	// The special carts (minecart_special.go).
+	bin          *bin    // a hopper cart's five slots
+	fuel         int     // furnace cart: ticks of push left
+	pushX, pushZ float64 // furnace cart: the push (set by the coal-bearer's side)
+	lit          bool    // furnace cart: synced fuel flag
+	fuse         int     // TNT cart: ticks to the blast (-1 = not primed)
+	disabled     bool    // hopper cart: switched off by a live activator rail
 }
 
-func (v *vehicle) isBoat() bool { return v.etype != entityMinecart }
+func (v *vehicle) isBoat() bool { return !cartTypes[v.etype] }
+
+// rideable: boats and the plain cart carry a player; the special carts do not.
+func (v *vehicle) rideable() bool { return v.isBoat() || v.etype == entityMinecart }
 
 type evPlaceVehicle struct {
 	eid     int32
@@ -152,7 +170,7 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz 
 	}
 	x, y, z := float64(bx)+0.5, float64(by), float64(bz)+0.5
 	ground := w.At(bx, by, bz)
-	if etype == entityMinecart {
+	if cartTypes[etype] {
 		if !isAnyRail(ground) {
 			return false // carts only go on rails
 		}
@@ -170,6 +188,7 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz 
 	if chestBoatTypes[etype] {
 		v.chest = &chest{}
 	}
+	initCartKind(v)
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
 	return true
@@ -194,7 +213,7 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 
 // mountVehicle seats a player (interact with an empty vehicle).
 func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
-	if v.rider != 0 || dist3(t.x, t.y, t.z, v.x, v.y, v.z) > maxMeleeReach+1 {
+	if !v.rideable() || v.rider != 0 || v.mobRider != 0 || dist3(t.x, t.y, t.z, v.x, v.y, v.z) > maxMeleeReach+1 {
 		return
 	}
 	v.rider = t.p.eid
@@ -219,17 +238,23 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 
 // breakVehicle pops it back into an item (any punch — vanilla-lite).
 func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
+	if v.etype == entityTntMinecart && v.vx*v.vx+v.vz*v.vz >= 0.01 {
+		// MinecartTNT.destroy: a moving TNT cart that is broken lights instead.
+		h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
+		return
+	}
 	if v.rider != 0 {
 		if t := players[v.rider]; t != nil {
 			h.dismount(players, t)
 		}
 		v.rider = 0
 	}
+	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
 	h.toNearbyEv(players, v.dim, v.x, v.z, entGone(v.eid))
 	h.spawnItem(players, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
-	if v.chest != nil { // ChestBoat.destroy: the cargo spills
-		for _, st := range v.chest.slots {
+	if slots := v.cartSlots(); slots != nil { // ChestBoat.destroy: the cargo spills
+		for _, st := range slots {
 			if st.item == 0 || st.count == 0 {
 				continue
 			}
@@ -321,6 +346,12 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 			continue
 		}
 		t.p.trySendEv(entAdd(v.eid, v.etype, v.uuid, v.x, v.y, v.z, v.yaw, 0))
+		if v.lit {
+			t.p.trySendEv(metaEv(cartFuelMeta(v.eid, true)))
+		}
+		if v.mobRider != 0 {
+			t.p.trySendEv(passengersBody(v.eid, v.mobRider))
+		}
 		if v.rider != 0 {
 			t.p.trySendEv(passengersBody(v.eid, v.rider))
 		}
@@ -345,10 +376,12 @@ func (h *hub) snapshotVehicles() []savedVehicle {
 			continue
 		}
 		sv := savedVehicle{Dim: v.dim, Etype: name, X: v.x, Y: v.y, Z: v.z, Yaw: v.yaw}
-		if v.chest != nil {
-			for _, st := range v.chest.slots {
-				sv.Chest = append(sv.Chest, packStack(st))
-			}
+		for _, st := range v.cartSlots() {
+			sv.Chest = append(sv.Chest, packStack(st))
+		}
+		sv.Fuel, sv.PushX, sv.PushZ, sv.Disabled = v.fuel, v.pushX, v.pushZ, v.disabled
+		if v.etype == entityTntMinecart && v.fuse >= 0 {
+			sv.Fuse = v.fuse + 1
 		}
 		out = append(out, sv)
 	}
@@ -366,11 +399,18 @@ func (h *hub) restoreVehicles(saved []savedVehicle) {
 		binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
 		if chestBoatTypes[et] {
 			v.chest = &chest{}
+		}
+		initCartKind(v)
+		if slots := v.cartSlots(); slots != nil {
 			for i, r := range sv.Chest {
-				if i < len(v.chest.slots) {
-					v.chest.slots[i] = unpackStack(r)
+				if i < len(slots) {
+					slots[i] = unpackStack(r)
 				}
 			}
+		}
+		v.fuel, v.pushX, v.pushZ, v.disabled = sv.Fuel, sv.PushX, sv.PushZ, sv.Disabled
+		if sv.Fuse > 0 {
+			v.fuse = sv.Fuse - 1
 		}
 		h.vehicles[v.eid] = v // boot-time: shown to players by the join pass (sendVehiclesTo)
 	}
@@ -390,6 +430,10 @@ func (h *hub) openVehicleChest(players map[int32]*tracked, t *tracked, v *vehicl
 		h.nextWin = 1
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, simPos{}, winChest, v.chest
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest Boat"})
+	title := "Chest Boat"
+	if !v.isBoat() {
+		title = "Minecart with Chest"
+	}
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: title})
 	h.sendChestWindow(t, v.chest)
 }

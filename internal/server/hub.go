@@ -312,6 +312,7 @@ type tracked struct {
 	// is not always a block: an ender chest is the player's own, and both hang
 	// the same 27-slot window off it.
 	viewChest *chest
+	viewBin   *bin // a hopper cart's slots while its window is open
 	// The player's OWN ender-chest storage: the block is just a door onto it.
 	ender   *chest
 	winPos2 simPos      // the RIGHT half of an open double chest (winPos = LEFT)
@@ -528,23 +529,24 @@ type hub struct {
 	bins         map[simPos]*bin           // dispenser/dropper/hopper storage
 	binFire      map[simPos]uint64         // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
-	vehicles     map[int32]*vehicle      // minecarts + boats
-	paintings    map[int32]*painting     // placed hanging paintings (persisted with containers)
-	itemFrames   map[int32]*itemFrame    // placed item frames (persisted with containers)
-	armorStands  map[int32]*armorStand   // placed armor stands (persisted with containers)
-	knots        map[int32]*leashKnot    // fence leash knots (the far end of a lead)
-	jukeboxes    map[simPos]*jukebox     // discs + playback clocks (persisted with containers)
-	beacons      map[simPos]*beacon      // placed beacons (chosen powers persisted with containers)
-	campfires    map[simPos]*campfire    // live cook state (item view in cfStore)
-	cfStore      *campfireStore          // campfires.json + the chunk builders' read view
-	banners      *bannerStore            // banners.json + the chunk builders' read view
-	books        *bookStore              // books.json (contents by book id, the map model)
-	lecterns     map[simPos]*lectern     // held books + open pages (persisted with containers)
-	bookshelves  map[simPos]*[6]invStack // chiseled shelves (persisted with containers)
-	detectorsOn  map[blockPos]bool       // detector rails currently pressed
-	spawnerNext  map[blockPos]uint64     // dungeon spawner cooldowns
-	patrolNextAt uint64                  // world tick the next pillager-patrol attempt is due
-	raids        map[blockPos]*raid      // active village raids by centre
+	vehicles        map[int32]*vehicle      // minecarts + boats
+	blastSpareRails bool                    // set around a TNT cart's blast: rails survive it
+	paintings       map[int32]*painting     // placed hanging paintings (persisted with containers)
+	itemFrames      map[int32]*itemFrame    // placed item frames (persisted with containers)
+	armorStands     map[int32]*armorStand   // placed armor stands (persisted with containers)
+	knots           map[int32]*leashKnot    // fence leash knots (the far end of a lead)
+	jukeboxes       map[simPos]*jukebox     // discs + playback clocks (persisted with containers)
+	beacons         map[simPos]*beacon      // placed beacons (chosen powers persisted with containers)
+	campfires       map[simPos]*campfire    // live cook state (item view in cfStore)
+	cfStore         *campfireStore          // campfires.json + the chunk builders' read view
+	banners         *bannerStore            // banners.json + the chunk builders' read view
+	books           *bookStore              // books.json (contents by book id, the map model)
+	lecterns        map[simPos]*lectern     // held books + open pages (persisted with containers)
+	bookshelves     map[simPos]*[6]invStack // chiseled shelves (persisted with containers)
+	detectorsOn     map[blockPos]bool       // detector rails currently pressed
+	spawnerNext     map[blockPos]uint64     // dungeon spawner cooldowns
+	patrolNextAt    uint64                  // world tick the next pillager-patrol attempt is due
+	raids           map[blockPos]*raid      // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
 	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
@@ -1660,6 +1662,10 @@ func (h *hub) run() {
 						break
 					}
 					if v := h.vehicles[e.target]; v != nil {
+						if !v.isBoat() {
+							h.interactCart(players, t, v)
+							break
+						}
 						if e.sneak && v.chest != nil { // ChestBoat: sneak-click opens the cargo
 							h.openVehicleChest(players, t, v)
 							break

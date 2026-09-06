@@ -202,6 +202,27 @@ the public history since the project was open-sourced on 2026-07-10.
   as in vanilla, and the gateway follows the ridden vehicle so a long ride
   keeps streaming chunks (boats and mounts benefit too — their riders'
   chunk window used to freeze at the point of boarding).
+- **The special minecarts.** Chest, hopper, TNT and furnace carts were
+  items that placed nothing. They now place on rails (by hand or
+  dispenser), roll on the cart physics and do their jobs the vanilla way:
+  the chest cart opens its 27 slots on a click, spills them when broken
+  and rolls more freely the emptier it is; the hopper cart sucks up items
+  lying on the track or draws from a container above it, hands its cargo
+  to hopper blocks beneath, reads on a comparator over a detector rail,
+  and a live activator rail switches it off; the TNT cart is lit by a
+  live activator rail, a nearby blast or a punch while it is moving, goes
+  off when it runs into a block at speed or drops three blocks, blows
+  with vanilla's speed-scaled power and leaves the rails and their bed
+  standing; the furnace cart takes coal and charcoal (a coal is three
+  minutes of push, at most sixteen), sets off away from whoever fed it,
+  follows the track at half the usual cap, shows its fire while it burns
+  and coasts to a stop when the fuel is spent. None of them can be
+  ridden. All of it survives a restart.
+- **Carts scoop up mobs.** A plain cart rolling at speed takes aboard the
+  mob in its path — not a player, an iron golem or a boss — and carries
+  it until the cart breaks or blows up (vanilla's pickup rule); a cart
+  with a passenger has no seat for a player. A carried mob stands where
+  the cart was after a restart rather than aboard it.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

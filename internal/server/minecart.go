@@ -23,12 +23,13 @@ import (
 const (
 	cartGravity       = 0.04
 	cartGravityWater  = 0.005
-	cartMaxSpeed      = 0.4 // blocks per tick on land
-	cartMaxSpeedWater = 0.2
+	cartTopSpeed      = 0.4 // blocks per tick on land
+	cartTopSpeedWater = 0.2
 	cartSlide         = 0.0078125 // gravity along a sloped rail
 	cartAirDrag       = 0.95
 	cartBoost         = 0.06 // powered rail, per tick, along the motion
 	cartStationPush   = 0.02 // powered rail start-up away from a solid block
+	cartRideHeight    = 0.1  // a scooped-up mob's seat above the cart
 )
 
 // railExits gives, per rail shape, the two neighbouring cells a rail leads
@@ -136,6 +137,10 @@ func (h *hub) tickMinecart(players map[int32]*tracked, v *vehicle) {
 		return
 	}
 	xo, zo := v.x, v.z
+	v.hitWall, v.landedFall = false, 0
+	if v.onGround || v.y > v.fallFrom {
+		v.fallFrom = v.y
+	}
 	inWater := worldgen.IsWater(w.At(floorInt(v.x), floorInt(v.y), floorInt(v.z)))
 	if inWater {
 		v.vy -= cartGravityWater
@@ -146,14 +151,16 @@ func (h *hub) tickMinecart(players map[int32]*tracked, v *vehicle) {
 	state := w.At(pos.x, pos.y, pos.z)
 	if isAnyRail(state) {
 		h.cartMoveAlongTrack(players, w, v, pos, state, inWater)
-		if isActivatorRail(state) && railPowered(state) && v.rider != 0 {
-			if t := players[v.rider]; t != nil { // a live activator rail throws the rider off
-				h.dismount(players, t)
-			}
+		if isActivatorRail(state) {
+			h.cartActivate(players, v, railPowered(state))
 		}
 	} else {
 		h.cartComeOffTrack(w, v, inWater)
 	}
+	if !h.tickSpecialCart(players, v) {
+		return // blown up
+	}
+	h.cartPickup(players, v)
 	// Facing follows the motion; the flip flag keeps the model from spinning
 	// through 180° when the cart reverses.
 	yawO := v.yawO
@@ -256,25 +263,14 @@ func (h *hub) cartMoveAlongTrack(players map[int32]*tracked, w *world.World, v *
 	if v.rider != 0 {
 		scale = 0.75
 	}
-	maxSpeed := cartMaxSpeed
-	if inWater {
-		maxSpeed = cartMaxSpeedWater
-	}
+	maxSpeed := cartMaxSpeed(v, inWater)
 	h.cartMove(w, v, clampF(scale*v.vx, -maxSpeed, maxSpeed), 0, clampF(scale*v.vz, -maxSpeed, maxSpeed))
 	if ex[0][1] != 0 && floorInt(v.x)-pos.x == ex[0][0] && floorInt(v.z)-pos.z == ex[0][2] {
 		v.y += float64(ex[0][1])
 	} else if ex[1][1] != 0 && floorInt(v.x)-pos.x == ex[1][0] && floorInt(v.z)-pos.z == ex[1][2] {
 		v.y += float64(ex[1][1])
 	}
-	// Natural slowdown: an empty cart bleeds 4% a tick, a ridden one 0.3%.
-	f := 0.96
-	if v.rider != 0 {
-		f = 0.997
-	}
-	v.vx, v.vy, v.vz = v.vx*f, 0, v.vz*f
-	if inWater {
-		v.vx, v.vz = v.vx*0.95, v.vz*0.95
-	}
+	cartNaturalSlowdown(v, inWater)
 	if _, newY, _, ok := cartRailPoint(w, v.x, v.y, v.z); ok && oldOK {
 		// Height lost along the rail becomes speed (and height gained costs it).
 		speed := (oldY - newY) * 0.05
@@ -320,10 +316,7 @@ func (h *hub) cartMoveAlongTrack(players map[int32]*tracked, w *world.World, v *
 // cartComeOffTrack is AbstractMinecart.comeOffTrack: a cart off the rails
 // falls, skids to a halt on the ground and drifts in the air.
 func (h *hub) cartComeOffTrack(w *world.World, v *vehicle, inWater bool) {
-	maxSpeed := cartMaxSpeed
-	if inWater {
-		maxSpeed = cartMaxSpeedWater
-	}
+	maxSpeed := cartMaxSpeed(v, inWater)
 	v.vx, v.vz = clampF(v.vx, -maxSpeed, maxSpeed), clampF(v.vz, -maxSpeed, maxSpeed)
 	if v.onGround {
 		v.vx, v.vy, v.vz = v.vx*0.5, v.vy*0.5, v.vz*0.5
@@ -341,6 +334,7 @@ func (h *hub) cartMove(w *world.World, v *vehicle, dx, dy, dz float64) {
 		nx := v.x + dx
 		edge := nx + math.Copysign(0.49, dx)
 		if cartSolid(w.At(floorInt(edge), floorInt(v.y), floorInt(v.z))) {
+			v.hitWall, v.hitSpeedSqr = true, dx*dx+dz*dz
 			v.vx = 0
 		} else {
 			v.x = nx
@@ -350,6 +344,7 @@ func (h *hub) cartMove(w *world.World, v *vehicle, dx, dy, dz float64) {
 		nz := v.z + dz
 		edge := nz + math.Copysign(0.49, dz)
 		if cartSolid(w.At(floorInt(v.x), floorInt(v.y), floorInt(edge))) {
+			v.hitWall, v.hitSpeedSqr = true, dx*dx+dz*dz
 			v.vz = 0
 		} else {
 			v.z = nz
@@ -359,9 +354,47 @@ func (h *hub) cartMove(w *world.World, v *vehicle, dx, dy, dz float64) {
 	if dy < 0 && cartSolid(w.At(floorInt(v.x), floorInt(ny), floorInt(v.z))) {
 		v.y = float64(floorInt(ny) + 1) // landed on the block below
 		v.vy = 0
+		if !v.onGround {
+			v.landedFall = v.fallFrom - v.y
+		}
 		v.onGround = true
 		return
 	}
 	v.y = ny
 	v.onGround = dy <= 0 && cartSolid(w.At(floorInt(v.x), floorInt(v.y-0.001), floorInt(v.z)))
+}
+
+// cartPickup is the scoop in pushAndPickupEntities: a rideable cart rolling
+// at speed takes aboard the first mob in its widened box — never a player,
+// an iron golem, a mob already carrying or being carried — and carries it
+// until the cart breaks.
+func (h *hub) cartPickup(players map[int32]*tracked, v *vehicle) {
+	if v.etype != entityMinecart || v.rider != 0 || v.mobRider != 0 || v.vx*v.vx+v.vz*v.vz < 0.01 {
+		return
+	}
+	for _, m := range h.mobs {
+		if m.dim != v.dim || m.dying > 0 || m.mount != 0 || m.cart != 0 || m.rider != 0 ||
+			m.mobRider != 0 || len(m.riders) > 0 || m.etype == entityIronGolem || m.etype == entityEnderDragon || m.etype == entityWither {
+			continue
+		}
+		if math.Abs(m.x-v.x) > 0.9 || math.Abs(m.z-v.z) > 0.9 || m.y > v.y+0.7 || m.y+1 < v.y {
+			continue
+		}
+		m.cart, v.mobRider = v.eid, m.eid
+		m.vx, m.vz, m.hasTarget = 0, 0, false
+		h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid, m.eid))
+		return
+	}
+}
+
+// releaseCartMob sets a carried mob down where the cart was.
+func (h *hub) releaseCartMob(players map[int32]*tracked, v *vehicle) {
+	if v.mobRider == 0 {
+		return
+	}
+	if m := h.mobs[v.mobRider]; m != nil {
+		m.cart = 0
+	}
+	v.mobRider = 0
+	h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
 }

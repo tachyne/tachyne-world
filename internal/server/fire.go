@@ -207,6 +207,9 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 		}
 		for pos := range hit {
 			st := w.At(pos.x, pos.y, pos.z)
+			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
+				continue // a primed TNT cart's blast leaves the track and its bed alone
+			}
 			if isTNT(st) { // chain reaction: light it, don't vaporize it
 				h.primeTNTIn(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20))
 				continue
@@ -226,6 +229,11 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	rangeF := float64(radius) + 2
 	if radius <= 0 {
 		rangeF = blastRange // no crater, full hurt (mobGriefing off)
+	}
+	for _, v := range h.vehicles { // a blast lights the TNT carts it reaches
+		if v.dim == dim && v.etype == entityTntMinecart && v.fuse < 0 && dist3(v.x, v.y, v.z, cx, cy, cz) < rangeF {
+			h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
+		}
 	}
 	for _, t := range players {
 		if t.dim != dim {

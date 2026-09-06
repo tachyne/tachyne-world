@@ -411,6 +411,12 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
 		}
 	}
+	if m.cart != 0 { // died in a minecart — the cart is empty again
+		if v := h.vehicles[m.cart]; v != nil {
+			v.mobRider = 0
+			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+		}
+	}
 	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it

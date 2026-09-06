@@ -122,6 +122,7 @@ type mob struct {
 	rider           int32          // player eid riding this mob (0 = none); AI pauses while ridden
 	riders          []int32        // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
 	mount           int32          // eid of the MOB this mob rides (raid ravager riders); 0 = none
+	cart            int32          // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
 	mobRider        int32          // eid of the MOB riding this one (the reverse of mount); 0 = none
 	harness         int32          // happy ghast: equipped harness item id (0 = none); gates riding
 	oxidation       int            // copper golem: weather stage 0 unaffected → 3 oxidized
@@ -277,6 +278,15 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				// passengers frame, so the server just keeps us co-located and
 				// skips independent movement/AI.
 				m.x, m.y, m.z, m.dim = v.x, v.y+mountRideHeight, v.z, v.dim
+				continue
+			}
+		}
+		if m.cart != 0 { // aboard a minecart: carried until the cart breaks
+			v := h.vehicles[m.cart]
+			if v == nil {
+				m.cart = 0
+			} else {
+				m.x, m.y, m.z, m.dim = v.x, v.y+cartRideHeight, v.z, v.dim
 				continue
 			}
 		}

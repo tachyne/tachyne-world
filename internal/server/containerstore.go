@@ -379,7 +379,13 @@ type savedVehicle struct {
 	Y     float64    `json:"y"`
 	Z     float64    `json:"z"`
 	Yaw   float32    `json:"yaw,omitempty"`
-	Chest []stackRow `json:"chest,omitempty"` // a chest boat's cargo
+	Chest []stackRow `json:"chest,omitempty"` // a chest boat's or container cart's cargo
+	// The special carts' state.
+	Fuel     int     `json:"fuel,omitempty"`
+	PushX    float64 `json:"push_x,omitempty"`
+	PushZ    float64 `json:"push_z,omitempty"`
+	Fuse     int     `json:"fuse,omitempty"` // fuse+1 (0 = not primed)
+	Disabled bool    `json:"disabled,omitempty"`
 }
 
 func (s *containerStore) recordVehicles(v []savedVehicle) {

@@ -229,6 +229,9 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 	case winBin: // dispenser/dropper 9 or hopper 5 slots, then main + hotbar
 		c := h.bins[t.winPos]
 		if c == nil {
+			c = t.viewBin // a hopper cart
+		}
+		if c == nil {
 			return nil, -1
 		}
 		n := int16(len(c.slots))
@@ -772,7 +775,7 @@ func (h *hub) releaseContainerView(t *tracked) {
 			f.viewer = 0
 		}
 	}
-	t.winKind, t.winPos = winPlayer, simPos{}
+	t.winKind, t.winPos, t.viewBin = winPlayer, simPos{}, nil
 }
 
 // reclaimCraft returns grid + cursor contents to the inventory, dropping what
@@ -823,6 +826,8 @@ func (h *hub) resyncWindow(t *tracked) {
 	case winBin:
 		if c := h.bins[t.winPos]; c != nil {
 			h.sendBinWindow(t, c)
+		} else if t.viewBin != nil {
+			h.sendBinWindow(t, t.viewBin)
 		}
 	case winTrade:
 		h.sendTradeWindow(t)

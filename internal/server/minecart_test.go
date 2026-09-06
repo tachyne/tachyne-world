@@ -83,8 +83,8 @@ func TestPoweredRailBoostsAndBrakes(t *testing.T) {
 	}
 	before := v.x
 	h.tickMinecart(players, v)
-	if step := v.x - before; math.Abs(step-cartMaxSpeed) > 1e-6 {
-		t.Errorf("a boosted cart moves at the cap: step %.4f, want %.4f", step, cartMaxSpeed)
+	if step := v.x - before; math.Abs(step-cartTopSpeed) > 1e-6 {
+		t.Errorf("a boosted cart moves at the cap: step %.4f, want %.4f", step, cartTopSpeed)
 	}
 	// Cut the power ahead of it.
 	for x := floorInt(v.x) + 1; x <= 200; x++ {
@@ -201,5 +201,35 @@ func TestCartSlidesDownSlope(t *testing.T) {
 	}
 	if v.x >= 5 {
 		t.Errorf("should have rolled west down the slope, x=%.2f vx=%.4f", v.x, v.vx)
+	}
+}
+
+// A rolling empty cart scoops up a mob in its path and carries it; breaking
+// the cart sets the mob down.
+func TestCartScoopsUpMob(t *testing.T) {
+	h, players := cartHub()
+	cartTrack(h, 0, 60, railMin, false)
+	v := cartOnTrack(t, h, players, 5)
+	cow := h.spawnMob(players, entityCow, 10.5, cartY, 10.5)
+	if cow == nil {
+		t.Fatal("no cow")
+	}
+	v.vx = 0.3
+	for i := 0; i < 40; i++ {
+		h.tickMinecart(players, v)
+	}
+	if v.mobRider != cow.eid || cow.cart != v.eid {
+		t.Fatalf("the cart should have picked the cow up: mobRider=%d cow.cart=%d x=%.2f", v.mobRider, cow.cart, v.x)
+	}
+	r := testTracked()
+	players[r.p.eid] = r
+	r.x, r.y, r.z = v.x, v.y, v.z
+	h.mountVehicle(players, r, v)
+	if v.rider != 0 {
+		t.Error("a cart with a mob aboard has no seat for a player")
+	}
+	h.breakVehicle(players, v)
+	if cow.cart != 0 {
+		t.Error("breaking the cart frees the cow")
 	}
 }
