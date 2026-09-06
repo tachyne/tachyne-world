@@ -42,7 +42,9 @@ the public history since the project was open-sourced on 2026-07-10.
   the one tag-written trim recipe, and takes the world's trimmed
   preview), and the loom applies a
   pattern: Bedrock's pick becomes the row in the list the world offers
-  for the banner and pattern item in hand.
+  for the banner and pattern item in hand. The beacon takes its payment
+  too: the chosen effects are shown off the beacon's block entity, and
+  paying sends the world the same effect choice a Java client does.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
