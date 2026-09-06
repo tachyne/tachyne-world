@@ -31,7 +31,7 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 				}
 			}
 		}
-		if b := g.BastionIn(pos.x, pos.z); b.Exists {
+		for _, b := range g.BastionsNear(pos.x, pos.z) {
 			for _, bc := range g.BastionChests(b) {
 				if pos.x == bc.X && pos.y == bc.Y && pos.z == bc.Z {
 					h.fillChest(c, bc.Table, pos)
@@ -39,9 +39,17 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 				}
 			}
 		}
+		for _, f := range g.FortressesNear(pos.x, pos.z) {
+			for _, fc := range g.FortressChests(f) {
+				if pos.x == fc[0] && pos.y == fc[1] && pos.z == fc[2] {
+					h.fillChest(c, "chests/nether_bridge", pos)
+					return
+				}
+			}
+		}
 	case dimEnd:
 		g := h.worldFor(dim).Gen()
-		if ec := g.EndCityIn(pos.x, pos.z); ec.Exists {
+		for _, ec := range g.EndCitiesNear(pos.x, pos.z) {
 			for _, cc := range g.EndCityChests(ec) {
 				if pos.x == cc.X && pos.y == cc.Y && pos.z == cc.Z {
 					h.fillChest(c, cc.Table, pos)

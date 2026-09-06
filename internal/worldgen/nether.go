@@ -99,6 +99,7 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 	}
 	g.stampNetherPortals(ch, cx, cz) // ruined portals stand on the cavern floors too
 	g.stampBastions(ch, cx, cz)
+	g.stampFortress(ch, cx, cz)
 	for s := 0; s < len(ch.Sections); s++ {
 		ch.Biomes[s] = "minecraft:nether_wastes"
 	}

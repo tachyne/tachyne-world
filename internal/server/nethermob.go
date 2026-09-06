@@ -57,6 +57,10 @@ func (h *hub) updateNetherMobs(players map[int32]*tracked) {
 		d := 16 + h.rng.Float64()*float64(netherSpawnRange-16)
 		x := int(t.x + math.Cos(ang)*d)
 		z := int(t.z + math.Sin(ang)*d)
+		if m := h.spawnFortressMob(players, x, z); m != nil {
+			count++ // inside a fortress: its own garrison rolls, on its own floors
+			continue
+		}
 		y, ok := h.nether.Gen().NetherFloorOK(x, z)
 		if !ok { // solid rock or open lava sea — no fallback-height spawns
 			continue

@@ -68,11 +68,23 @@ func (g *Generator) AssembleBastion(b Bastion) []PlacedPiece {
 
 // stampBastions stamps the bastion pieces overlapping this nether chunk.
 func (g *Generator) stampBastions(ch *Chunk, cx, cz int32) {
-	b := g.BastionIn(int(cx)*16+8, int(cz)*16+8)
-	if !b.Exists {
-		return
+	for _, b := range g.BastionsNear(int(cx)*16+8, int(cz)*16+8) {
+		g.StampPieces(ch, cx, cz, g.AssembleBastion(b))
 	}
-	g.StampPieces(ch, cx, cz, g.AssembleBastion(b))
+}
+
+// BastionsNear returns the bastions of the cell around (wx,wz) and its eight
+// neighbours — a bastion's pieces can cross its cell's border.
+func (g *Generator) BastionsNear(wx, wz int) []Bastion {
+	var out []Bastion
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if b := g.BastionIn(wx+dx*bastionCell, wz+dz*bastionCell); b.Exists {
+				out = append(out, b)
+			}
+		}
+	}
+	return out
 }
 
 // BastionChest is a bastion loot chest and the vanilla table it fills from.

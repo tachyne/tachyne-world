@@ -245,6 +245,20 @@ the public history since the project was open-sourced on 2026-07-10.
   where the templates' markers put them, and the ship's item frame holds
   the elytra — all seeded when a player first arrives, and a looted city
   stays looted across restarts.
+- **Nether fortresses.** A port of vanilla's fortress piece generator: the
+  start crossing grows bridges, crossings, stairs rooms, room crossings
+  and monster thrones on the bridge table, and the castle entrance leads
+  into corridors, crossings, left and right turns, corridor stairs, T
+  balconies and nether-wart stalk rooms on the castle table — with
+  vanilla's placement caps, five tries per slot, the 112-block reach, the
+  end-filler fallback, the random pending-piece order and the 48–70 height
+  band. The corridor chests fill from nether_bridge, the thrones' blaze
+  spawners run on the dungeon-spawner cadence, and inside the fortress the
+  nether's spawn pass rolls the fortress's own table (blazes, wither
+  skeletons, zombified piglins, skeletons, magma cubes) on its floors.
+  Structures whose pieces reach past their siting cell's border (bastions,
+  End cities, fortresses) now stamp, seed and route their chests from the
+  neighbouring cells as well, so a bridge is never cut at a cell edge.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

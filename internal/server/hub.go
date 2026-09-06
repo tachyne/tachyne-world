@@ -978,17 +978,18 @@ func (h *hub) run() {
 				for _, t := range players {
 					h.checkRaidTrigger(players, t) // Bad Omen + village → start a raid
 				}
-				h.mobEnvironment(players)      // mob lava/fire/drowning/afterburn (after daylight ignites)
-				h.updateSpawners(players)      // dungeon spawner rooms
-				h.updateTrialSpawners(players) // trial-chamber fights
-				h.updateVaults(players)        // …and the vaults they pay you to open
-				h.updateBees(players)          // hive occupants, pollination, honey
-				h.updateLeashes(players)       // leads: pull, snap, and holders that left
-				h.entityInsideTick(players)    // magma/berry bush/wither rose contact
-				h.updateConduits(players)      // player-built conduits: Conduit Power + hunting
-				h.updateVillages(players)      // populate villages on approach
-				h.updateVillageGolems(players) // census-driven iron golem spawns
-				h.updateOutposts(players)      // populate pillager outposts on approach
+				h.mobEnvironment(players)         // mob lava/fire/drowning/afterburn (after daylight ignites)
+				h.updateSpawners(players)         // dungeon spawner rooms
+				h.updateFortressSpawners(players) // the fortresses' blaze spawners
+				h.updateTrialSpawners(players)    // trial-chamber fights
+				h.updateVaults(players)           // …and the vaults they pay you to open
+				h.updateBees(players)             // hive occupants, pollination, honey
+				h.updateLeashes(players)          // leads: pull, snap, and holders that left
+				h.entityInsideTick(players)       // magma/berry bush/wither rose contact
+				h.updateConduits(players)         // player-built conduits: Conduit Power + hunting
+				h.updateVillages(players)         // populate villages on approach
+				h.updateVillageGolems(players)    // census-driven iron golem spawns
+				h.updateOutposts(players)         // populate pillager outposts on approach
 				h.updatePortalDwell(players)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands

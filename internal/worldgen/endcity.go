@@ -347,11 +347,23 @@ func (g *Generator) AssembleEndCity(c EndCity) []PlacedPiece {
 
 // stampEndCities stamps the city pieces overlapping this End chunk.
 func (g *Generator) stampEndCities(ch *Chunk, cx, cz int32) {
-	c := g.EndCityIn(int(cx)*16+8, int(cz)*16+8)
-	if !c.Exists {
-		return
+	for _, c := range g.EndCitiesNear(int(cx)*16+8, int(cz)*16+8) {
+		g.StampPieces(ch, cx, cz, g.AssembleEndCity(c))
 	}
-	g.StampPieces(ch, cx, cz, g.AssembleEndCity(c))
+}
+
+// EndCitiesNear returns the cities of the cell around (wx,wz) and its eight
+// neighbours — bridges and the ship reach well past a cell's border.
+func (g *Generator) EndCitiesNear(wx, wz int) []EndCity {
+	var out []EndCity
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if c := g.EndCityIn(wx+dx*endCityCell, wz+dz*endCityCell); c.Exists {
+				out = append(out, c)
+			}
+		}
+	}
+	return out
 }
 
 // EndCityChest is a city treasure chest and its table.
