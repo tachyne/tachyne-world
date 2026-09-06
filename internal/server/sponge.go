@@ -82,9 +82,21 @@ func (h *hub) absorbWater(players map[int32]*tracked, dim int, pos blockPos) boo
 }
 
 // soakSponge is the check run when a sponge is placed or its neighbourhood
-// changes: a dry sponge that finds water drinks it and turns wet.
+// changes: a dry sponge that finds water drinks it and turns wet. A wet
+// sponge placed in the Nether dries out on the spot instead
+// (WetSpongeBlock.onPlace in an ultrawarm dimension).
 func (h *hub) soakSponge(players map[int32]*tracked, dim int, pos blockPos) {
-	if h.worldFor(dim) == nil || h.worldFor(dim).At(pos.x, pos.y, pos.z) != spongeState {
+	w := h.worldFor(dim)
+	if w == nil {
+		return
+	}
+	if dim == dimNether && w.At(pos.x, pos.y, pos.z) == wetSpongeState {
+		h.setBlockAt(players, dim, pos, spongeState)
+		h.playSoundDim(players, dim, "minecraft:block.wet_sponge.dries", sndBlock,
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, (1+h.rng.Float32()*0.2)*0.7)
+		return
+	}
+	if w.At(pos.x, pos.y, pos.z) != spongeState {
 		return
 	}
 	if !h.absorbWater(players, dim, pos) {

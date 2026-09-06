@@ -460,6 +460,14 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isRedstoneOre(state) && !boolProp(state, "lit") { // RedStoneOreBlock.useItemOn: lights up (then falls through, so a block still places against it)
+		s.hub.post(evLightOre{eid: p.eid, x: x, y: y, z: z})
+	}
+	if state == pumpkinBlock && p.heldItem() == itemShears { // PumpkinBlock.useItemOn: carve it
+		s.hub.post(evCarvePumpkin{eid: p.eid, x: x, y: y, z: z, face: face, yaw: p.yaw})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if inRanges(candleRanges, state) { // snuff a candle, or eat a candle cake
 		held := p.heldItem()
 		if held == itemFlintSteel || held == itemFireCharge {

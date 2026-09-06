@@ -32,6 +32,12 @@ func (h *hub) analogSignal(pos simPos) int {
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}
+	if isBookshelf(st) { // ChiseledBookShelfBlock: last interacted slot + 1 (0 = never)
+		if slot, ok := h.shelfLast[pos]; ok {
+			return slot + 1
+		}
+		return 0
+	}
 	if level, ok := composterLevel(st); ok {
 		return level
 	}

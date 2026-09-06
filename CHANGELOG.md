@@ -51,6 +51,14 @@ the public history since the project was open-sourced on 2026-07-10.
   one from a dispenser flew like an arrow and stuck in the wall. The blast
   ray-cast that TNT and creepers use now serves the gust too, so a wind
   charge reaches exactly the blocks a vanilla one would.
+- **Three small block interactions.** Shears carve a pumpkin where it
+  stands — the face you click becomes the face, four seeds pop out of it,
+  the shears wear a point — where before shears did nothing to a pumpkin.
+  A right-click lights a dark redstone ore, as stepping on it does. A
+  comparator beside a chiseled bookshelf reads the slot last put into or
+  taken from (one to six), vanilla's rule, instead of nothing. And a wet
+  sponge placed in the Nether dries out on the spot, the vanilla way to
+  reuse one.
 
 ### Added
 - **Mobs in all their coats.** Wolves, cats, horses, llamas, parrots,

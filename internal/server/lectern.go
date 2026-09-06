@@ -301,7 +301,12 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	} else {
 		return
 	}
+	// ChiseledBookShelfBlockEntity.updateState: the slot touched last is what
+	// a comparator beside the shelf reads (slot + 1). Not persisted — a
+	// restart reads 0 until the shelf is used again.
+	h.shelfLast[pos] = slot
 	h.shelfSyncState(players, t.dim, pos.blockPos, state, shelf)
+	h.scheduleSignalAround(pos.blockPos)
 }
 
 // shelfSyncState mirrors slot occupancy into the block-state bools.
@@ -336,6 +341,7 @@ func (h *hub) spillShelf(players map[int32]*tracked, dim, x, y, z int, newState 
 		return
 	}
 	delete(h.bookshelves, pos)
+	delete(h.shelfLast, pos)
 	for _, st := range shelf {
 		if st.item != 0 {
 			if it := h.spawnItemIn(players, dim, st.item, 1, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5); it != nil {

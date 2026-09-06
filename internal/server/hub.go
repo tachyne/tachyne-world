@@ -546,6 +546,7 @@ type hub struct {
 	books           *bookStore                // books.json (contents by book id, the map model)
 	lecterns        map[simPos]*lectern       // held books + open pages (persisted with containers)
 	bookshelves     map[simPos]*[6]invStack   // chiseled shelves (persisted with containers)
+	shelfLast       map[simPos]int            // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
 	detectorsOn     map[blockPos]bool         // detector rails currently pressed
 	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
 	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
@@ -717,6 +718,7 @@ func newHub(w *world.World) *hub {
 		bundles:       newBundleStore(),
 		lecterns:      map[simPos]*lectern{},
 		bookshelves:   map[simPos]*[6]invStack{},
+		shelfLast:     map[simPos]int{},
 		jukeboxes:     map[simPos]*jukebox{},
 		beacons:       map[simPos]*beacon{},
 		campfires:     map[simPos]*campfire{},
@@ -1754,6 +1756,10 @@ func (h *hub) run() {
 				}
 			case evLightBlock:
 				h.onLightBlock(players, e)
+			case evCarvePumpkin:
+				h.carvePumpkin(players, e)
+			case evLightOre:
+				h.lightOre(players, e)
 			case evUseCandle:
 				h.useCandle(players, e)
 			case evUseCake:
