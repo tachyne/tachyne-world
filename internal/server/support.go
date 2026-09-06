@@ -118,10 +118,51 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if isWire(state) { // RedStoneWireBlock.canSurviveOn: a sturdy top face or a hopper
 		return canHoldDust(below())
 	}
+	if isMultiface(state) { // vines, lichen, sculk veins, resin: any face still attached
+		_, ok := multifaceUpdated(w, pos, state)
+		return ok
+	}
+	if isScaffolding(state) { // ScaffoldingBlock.canSurvive: distance < 7
+		return scaffoldDistance(w, pos) < 7
+	}
+	if isChorusPlant(state) || isChorusFlower(state) {
+		return chorusSurvives(w, pos, state)
+	}
 	switch worldgen.SupportFor(state) {
 	case worldgen.SupportFloor:
 		return holdsBlock(below())
 	case worldgen.SupportSoil:
+		if inStates(state, caneStates) { // SugarCaneBlock.canSurvive
+			b := below()
+			if inStates(b, caneStates) {
+				return true
+			}
+			if !worldgen.IsDirtTag(b) && !inRanges2(b, sandStates) {
+				return false
+			}
+			for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {
+				n := w.At(pos.x+d[0], pos.y-1, pos.z+d[2])
+				if worldgen.IsWater(n) || worldgen.IsWaterlogged(n) || n == frostedIceState {
+					return true
+				}
+			}
+			return false
+		}
+		if inStates(state, cactusStates) { // CactusBlock.canSurvive
+			for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {
+				n := w.At(pos.x+d[0], pos.y, pos.z+d[2])
+				if worldgen.Collides(n) || worldgen.IsLava(n) {
+					return false
+				}
+			}
+			b := below()
+			return (inStates(b, cactusStates) || inRanges2(b, sandStates)) && !worldgen.IsFluid(above())
+		}
+		if inStates(state, bambooStates) || inStates(state, bambooSapStates) { // BambooStalkBlock: #bamboo_plantable_on
+			b := below()
+			return inStates(b, bambooStates) || inStates(b, bambooSapStates) || worldgen.IsDirtTag(b) ||
+				inRanges2(b, sandStates) || inRanges2(b, gravelStates)
+		}
 		return plantSoils[below()] || stacksOnItself(state, below())
 	case worldgen.SupportFarmland:
 		return isFarmland(below())
@@ -222,6 +263,32 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			// world.At, not Block: naturally generated plants are not in the
 			// edit overlay, and Block would miss them entirely.
 			st := h.worldFor(dim).At(n.x, n.y, n.z)
+			// Multiface blocks and scaffolding update their STATE on a neighbour
+			// change (a lost face, a new distance) and only drop past the last
+			// face / at distance 7 — vanilla's updateShape for both.
+			if isMultiface(st) || isScaffolding(st) || isChorusPlant(st) {
+				var ns uint32
+				var ok bool
+				switch {
+				case isMultiface(st):
+					ns, ok = multifaceUpdated(h.worldFor(dim), n, st)
+				case isScaffolding(st):
+					ns, ok = scaffoldUpdated(h.worldFor(dim), n, st)
+				default: // a chorus stem re-wires its connections (ChorusPlantBlock.updateShape)
+					ns, ok = h.chorusPlantAt(dim, n.x, n.y, n.z), chorusSurvives(h.worldFor(dim), n, st)
+				}
+				if ok {
+					if ns != st {
+						h.setBlockAt(players, dim, n, ns)
+						queue = append(queue, n)
+					}
+					continue
+				}
+				h.setBlockAt(players, dim, n, worldgen.Air)
+				h.dropLoose(players, dim, n, st)
+				queue = append(queue, n)
+				continue
+			}
 			if worldgen.SupportFor(st) == worldgen.SupportNone || supported(h.worldFor(dim), n, st) {
 				continue
 			}
@@ -250,4 +317,63 @@ func (h *hub) dropLoose(players map[int32]*tracked, dim int, pos blockPos, state
 	for _, d := range drops {
 		h.spawnItemIn(players, dim, d.item, d.count, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	}
+}
+
+// sandStates is the #sand tag (SugarCaneBlock / CactusBlock floors).
+var sandStates = blockRange("sand", "red_sand", "suspicious_sand")
+
+var frostedIceState = func() uint32 {
+	lo, _, ok := worldgen.BlockRangeOK("frosted_ice")
+	if !ok {
+		return 0
+	}
+	return lo
+}()
+
+// gravelStates: the gravels bamboo may root in (#bamboo_plantable_on).
+var gravelStates = blockRange("gravel", "suspicious_gravel")
+
+// chorusSurvives is ChorusPlantBlock.canSurvive / ChorusFlowerBlock.canSurvive.
+// A stem stands on end stone or another stem, or hangs off a horizontal
+// stem that itself has one below — unless it is boxed in above and below. A
+// flower stands on a stem or end stone, or on air with exactly one stem
+// beside it and nothing else around.
+func chorusSurvives(w *world.World, pos blockPos, state uint32) bool {
+	at := func(dx, dy, dz int) uint32 { return w.At(pos.x+dx, pos.y+dy, pos.z+dz) }
+	below := at(0, -1, 0)
+	if isChorusFlower(state) {
+		if isChorusPlant(below) || below == endStoneBlock {
+			return true
+		}
+		if below != worldgen.Air {
+			return false
+		}
+		one := false
+		for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {
+			n := at(d[0], 0, d[2])
+			switch {
+			case isChorusPlant(n):
+				if one {
+					return false
+				}
+				one = true
+			case n != worldgen.Air:
+				return false
+			}
+		}
+		return one
+	}
+	boxed := at(0, 1, 0) != worldgen.Air && below != worldgen.Air
+	for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {
+		n := at(d[0], 0, d[2])
+		if isChorusPlant(n) {
+			if boxed {
+				return false
+			}
+			if nb := at(d[0], -1, d[2]); isChorusPlant(nb) || nb == endStoneBlock {
+				return true
+			}
+		}
+	}
+	return isChorusPlant(below) || below == endStoneBlock
 }

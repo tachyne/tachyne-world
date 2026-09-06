@@ -372,6 +372,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		if isChestBlock(state) { // pair with an adjacent single chest → double chest
 			state = s.pairChestOnPlace(p, tx, ty, tz, state)
 		}
+		if isScaffolding(state) { // ScaffoldingBlock.getStateForPlacement: distance + bottom
+			state, _ = scaffoldUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state)
+		}
 		if !supported(s.worldFor(p), blockPos{tx, ty, tz}, state) {
 			// vanilla canSurvive at placement: a rail, torch or flower with
 			// nothing to hold it is refused rather than left floating.
@@ -775,6 +778,11 @@ func blockFaceOffset(dir int32) (dx, dy, dz int) {
 // a top/bottom half from the cursor, and facing blocks point sensibly. Blocks
 // with no orientation property (most blocks) are returned unchanged.
 func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, clicked uint32) uint32 {
+	if isMultiface(defaultState) { // vines, lichen, sculk veins, resin: the face toward the clicked block
+		if info, ok := worldgen.InfoForState(defaultState); ok {
+			return orientMultiface(info, defaultState, dir)
+		}
+	}
 	info, ok := worldgen.OrientInfo(defaultState)
 	if !ok {
 		return defaultState

@@ -134,6 +134,22 @@ the public history since the project was open-sourced on 2026-07-10.
   potting a flower, and the clocks — total world time, time since death,
   time sneaking.
 
+- **Vines and scaffolding obey their rules.** Both had no survival logic
+  at all. A placed vine, glow lichen, sculk vein or resin clump now attaches
+  through the face toward the block it was placed on (a placed vine used to
+  come out faceless), keeps each face only while that neighbour offers a
+  full face — a vine's side face also hangs from the vine above it — and
+  drops when its last face goes. Scaffolding carries vanilla's distance
+  from support: zero on solid ground, one more per scaffold out or up from
+  a neighbour, and the seventh out cannot stand; distance and the bottom
+  marker are set at placement and recomputed when a neighbour changes.
+  Vines still do not spread on their own. Sugar cane and cactus follow
+  vanilla's placement rules too: cane needs water beside the block it
+  stands on, a cactus refuses a solid or lava neighbour and grows only on
+  sand or another cactus, and bamboo roots only in sand, dirt, gravel or
+  bamboo. Chorus stems and flowers keep vanilla's survival rules too, and
+  a stem re-wires its connections when a neighbour changes.
+
 ### Changed
 - Copper oxidation on a double copper chest now ages both halves together
   (vanilla's connected-half rule) instead of leaving a mismatched pair.
