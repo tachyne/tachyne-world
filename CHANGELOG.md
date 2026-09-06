@@ -27,7 +27,10 @@ the public history since the project was open-sourced on 2026-07-10.
   from a Bedrock client was refused. The anvil and the grindstone open
   too: their inputs sit where Bedrock keeps them, the result is whatever
   the world previewed, and an anvil rename reaches the world before the
-  result is taken.
+  result is taken. Villagers trade with Bedrock players: the world's
+  offers (with their demand and reputation pricing, uses and tier) are
+  rendered as Bedrock's trade screen, and picking an offer selects it in
+  the world before the goods change hands.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
