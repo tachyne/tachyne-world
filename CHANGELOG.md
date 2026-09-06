@@ -58,8 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   and axolotls in lush-cave water over clay — as vanilla's own "axolotls"
   category with its cap of five. Each species keeps vanilla's spawnable-on
   rule (mycelium, sand, terracotta and coarse dirt, mud and mangrove roots,
-  clay) rather than the generic grass rule. Frog and axolotl colour variants
-  are not yet carried, so they show as the default colours.
+  clay) rather than the generic grass rule. Frogs come in vanilla's cold,
+  warm and temperate variants by spawn biome, axolotls in their five colours
+  (one in 1200 blue; a bred one takes a parent's colour), persisted with the
+  mob and translated for 26.2 clients — a fix in the shared protocol library
+  and both Java gateways, since a frog's variant field renumbers there.
 
 - **The vanilla enchantment engine.** The enchanting table, loot chests, the
   fishing treasure book and the anvil now run vanilla's own selection

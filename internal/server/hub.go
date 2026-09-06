@@ -2015,6 +2015,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		if m.sheared {
 			e.p.trySendEv(metaEv(sheepMeta(m, true)))
 		}
+		if vm := variantMeta(m); vm != nil {
+			e.p.trySendEv(metaEv(vm))
+		}
 	}
 	h.showShadowsTo(nt) // …and every cross-seam shadow (neighbour entities near the border).
 	// …and every dropped item and waiting XP orb in their dimension.

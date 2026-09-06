@@ -191,6 +191,10 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				// A foal lands between its parents, which is the whole point of
 				// breeding horses rather than taming whatever wanders past.
 				h.breedHorseAttributes(m, o, baby)
+				h.inheritVariant(baby, m, o) // an axolotl takes a parent's colour (or the rare blue)
+				if vm := variantMeta(baby); vm != nil {
+					h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(vm))
+				}
 				h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 			}
 			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)

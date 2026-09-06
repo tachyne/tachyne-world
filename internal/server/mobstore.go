@@ -72,9 +72,10 @@ type savedMob struct {
 	LoveTicks  int    `json:"love,omitempty"`
 	BreedCD    int    `json:"bcd,omitempty"`
 	Sheared    bool   `json:"shear,omitempty"`
-	Color      int8   `json:"color,omitempty"`  // sheep fleece colour
-	CustomName string `json:"name,omitempty"`   // name tag; also makes the mob persistent
-	FromBucket bool   `json:"bucket,omitempty"` // released from a mob bucket: persistent
+	Color      int8   `json:"color,omitempty"`   // sheep fleece colour
+	CustomName string `json:"name,omitempty"`    // name tag; also makes the mob persistent
+	FromBucket bool   `json:"bucket,omitempty"`  // released from a mob bucket: persistent
+	Variant    int8   `json:"variant,omitempty"` // frog/axolotl colour + 1 (0 = unset)
 	EggIn      int    `json:"egg,omitempty"`
 	Size       int    `json:"size,omitempty"`
 
@@ -458,7 +459,7 @@ func toSavedMob(m *mob) savedMob {
 		Health: m.health, Max: m.maxHP(), DmgFrac: m.dmgFrac,
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
-		Color: m.color, CustomName: m.customName, FromBucket: m.fromBucket,
+		Color: m.color, CustomName: m.customName, FromBucket: m.fromBucket, Variant: packVariant(m),
 		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
 		CarriedBlk: m.carriedBlock,
 		Oxidation:  m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),

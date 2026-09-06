@@ -146,6 +146,9 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 			t.p.sendEv(entGone(m.eid))
 		case e.dim:
 			t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
+			if vm := variantMeta(m); vm != nil {
+				t.p.sendEv(metaEv(vm))
+			}
 			if m.size > 0 {
 				t.p.sendEv(metaEv(slimeMeta(m.eid, m.size)))
 			}
