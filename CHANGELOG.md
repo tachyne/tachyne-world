@@ -45,6 +45,10 @@ the public history since the project was open-sourced on 2026-07-10.
   for the banner and pattern item in hand. The beacon takes its payment
   too: the chosen effects are shown off the beacon's block entity, and
   paying sends the world the same effect choice a Java client does.
+  Creative mode has an inventory on Bedrock at last: every item with a
+  Bedrock counterpart is listed (blocks under the construction tab), and
+  taking, dropping or destroying items becomes the same creative slot
+  set a Java client sends — the world still checks the player's mode.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
