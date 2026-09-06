@@ -95,7 +95,7 @@ func TestSharpnessAddsMeleeDamage(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
 	players := map[int32]*tracked{1: pl}
-	pl.inv.slots[0] = invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 3}}}
+	pl.inv.slots[0] = invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
 	pl.p.setHotbarSlot(0, tDiamondSword) // the connection-side held-item mirror
 	m := &mob{eid: 2, etype: entityZombie, hostile: true, health: zombieHealth, x: 1.5, y: 70, z: 0.5}
 	h.mobs[2] = m
@@ -112,7 +112,7 @@ func TestProtectionReducesDamage(t *testing.T) {
 	// now (vanilla runs armour absorption then magic absorption), so this
 	// exercises enchantProtect rather than armorReduce.
 	for i := range pl.armor {
-		pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1, ench: [2]enchApply{{id: enchProtection, lvl: 4}}}
+		pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1, ench: enchList{{id: enchProtection, lvl: 4}}}
 	}
 	// 4 pieces x level 4 = 16 points = 64% off.
 	if got := pl.enchantProtect(10, dtGeneric); math.Abs(float64(got)-3.6) > 0.01 {
@@ -137,7 +137,7 @@ func TestSpecialisedProtectionOnlyGuardsItsOwnFamily(t *testing.T) {
 		pl := testTracked()
 		for i := range pl.armor {
 			pl.armor[i] = invStack{item: itemByName["wooden_axe"], count: 1,
-				ench: [2]enchApply{{id: c.ench, lvl: 4}}}
+				ench: enchList{{id: c.ench, lvl: 4}}}
 		}
 		// 4 pieces x level 4 x points, capped at 20.
 		pts := math.Min(4*4*c.points, 20)
@@ -155,7 +155,7 @@ func TestEnchantPersistsAndNeverMergesWithPlain(t *testing.T) {
 	// Store round-trip keeps the enchantment.
 	st := newInvStore(t.TempDir() + "/inv.json")
 	pl := testTracked()
-	pl.inv.slots[3] = invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 5}, {id: enchUnbreaking, lvl: 2}}}
+	pl.inv.slots[3] = invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}, {id: enchUnbreaking, lvl: 2}}}
 	st.save("Steve", pl)
 	got := testTracked()
 	newInvStore(st.path).loadInto(got, "Steve")
@@ -165,7 +165,7 @@ func TestEnchantPersistsAndNeverMergesWithPlain(t *testing.T) {
 	// An enchanted stack refuses to merge into a plain one.
 	inv := &inventory{}
 	inv.add(35, 10)
-	changed, leftover := inv.addStack(invStack{item: 35, count: 5, ench: [2]enchApply{{id: enchEfficiency, lvl: 1}}})
+	changed, leftover := inv.addStack(invStack{item: 35, count: 5, ench: enchList{{id: enchEfficiency, lvl: 1}}})
 	if leftover != 0 || len(changed) != 1 || changed[0] == 0 {
 		t.Fatalf("enchanted stack must take its own slot: changed=%v leftover=%d", changed, leftover)
 	}

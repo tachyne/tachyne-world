@@ -57,14 +57,15 @@ func TestBrewNeedsFuelAndValidIngredient(t *testing.T) {
 	if h.brewProg[simPos{blockPos: pos}] != 0 {
 		t.Fatal("no progress without fuel")
 	}
-	// Wrong ingredient on water: idle.
+	// Wrong ingredient on water: idle. (Not sugar — vanilla's addStartMix
+	// makes water + any start ingredient a Mundane Potion.)
 	b.slots[4] = invStack{item: itemBlazePowder, count: 1}
-	b.slots[3] = invStack{item: itemSugarBrew, count: 1}
+	b.slots[3] = invStack{item: itemByName["diamond"], count: 1}
 	for i := 0; i < 30; i++ {
 		h.updateBrewing(players)
 	}
 	if b.slots[0].potion != potWater {
-		t.Fatal("sugar on a water bottle is not a recipe")
+		t.Fatal("a diamond on a water bottle is not a recipe")
 	}
 }
 

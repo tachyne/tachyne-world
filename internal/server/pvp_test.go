@@ -155,7 +155,7 @@ func TestThornsBitesAPlayerAttacker(t *testing.T) {
 
 	for i := range b.armor {
 		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+			ench: enchList{{id: enchThorns, lvl: 3}}}
 	}
 	bit := 0
 	for i := 0; i < 200; i++ {
@@ -182,7 +182,7 @@ func TestShieldBlockSuppressesThorns(t *testing.T) {
 	a, b, players := pvpPair(h)
 	for i := range b.armor {
 		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+			ench: enchList{{id: enchThorns, lvl: 3}}}
 	}
 	b.inv.slots[b.p.heldSlot()] = invStack{item: itemByName["shield"], count: 1}
 	b.blockingSince = 1
@@ -212,7 +212,7 @@ func TestThornsReachesTheArcher(t *testing.T) {
 	a, b, players := pvpPair(h)
 	for i := range b.armor {
 		b.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+			ench: enchList{{id: enchThorns, lvl: 3}}}
 	}
 	a.x, a.z = 30, 30 // right across the field, well out of melee reach
 

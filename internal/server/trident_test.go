@@ -22,7 +22,7 @@ func TestTridentThrowConsumesAndCarriesStack(t *testing.T) {
 	h, pl, players := tridentSetup()
 	// A loyalty II trident, so the thrown projectile should carry the enchant.
 	pl.inv.slots[0] = invStack{item: itemTrident, count: 1,
-		ench: [2]enchApply{{id: enchLoyalty, lvl: 2}}}
+		ench: enchList{{id: enchLoyalty, lvl: 2}}}
 
 	h.startTridentCharge(pl)
 	if pl.tridentAt == 0 {
@@ -61,7 +61,7 @@ func TestTridentLoyaltyReturns(t *testing.T) {
 	h, pl, players := tridentSetup()
 	pl.inv.slots[0] = invStack{} // hand already empty (trident is mid-flight)
 	stack := invStack{item: itemTrident, count: 1, dmg: 1,
-		ench: [2]enchApply{{id: enchLoyalty, lvl: 3}}}
+		ench: enchList{{id: enchLoyalty, lvl: 3}}}
 
 	// A returning trident well away from the owner should steer closer, not catch.
 	a := h.launchProjectileIn(players, entityTrident, 0, 0.5, 80, 20.5, 0, 0, 0)
@@ -88,7 +88,7 @@ func TestTridentLoyaltyReturns(t *testing.T) {
 func TestTridentRiptideLaunchesInRain(t *testing.T) {
 	h, pl, players := tridentSetup()
 	pl.inv.slots[0] = invStack{item: itemTrident, count: 1,
-		ench: [2]enchApply{{id: enchRiptide, lvl: 2}}}
+		ench: enchList{{id: enchRiptide, lvl: 2}}}
 
 	// Dry land, no rain: riptide can't charge — nothing happens.
 	h.startTridentCharge(pl)

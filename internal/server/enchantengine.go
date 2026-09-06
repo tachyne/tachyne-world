@@ -14,8 +14,9 @@ import (
 // an enchantment is obtainable exactly where vanilla makes it obtainable and
 // nowhere else.
 //
-// One engine-wide limit remains: a stack holds at most two enchantments
-// ([2]enchApply), so a vanilla roll of three or four keeps its first two.
+// A stack holds up to four enchantments (enchList), which covers every
+// table and loot roll; the anvil can pile on more in vanilla, and there the
+// fifth is lost.
 
 type enchDef struct {
 	name                                               string
@@ -154,7 +155,7 @@ func enchCompatible(a, b int8) bool {
 
 // enchCompatibleWith reports whether id can join every enchantment already on
 // a stack (EnchantmentHelper.isEnchantmentCompatible).
-func enchCompatibleWith(id int8, have [2]enchApply) bool {
+func enchCompatibleWith(id int8, have enchList) bool {
 	for _, e := range have {
 		if e.lvl > 0 && !enchCompatible(e.id, id) {
 			return false
@@ -272,10 +273,10 @@ func enchSelect(r enchRand, item int32, cost int, allow func(int8) bool) []enchI
 	return out
 }
 
-// enchApplyList writes a selection onto a stack's two enchantment slots
-// (ItemStack.enchant for each; the third and later are lost to the cap).
-func enchApplyList(list []enchInstance) [2]enchApply {
-	var out [2]enchApply
+// enchApplyList writes a selection onto a stack's enchantment slots
+// (ItemStack.enchant for each; a fifth and later are lost to the cap).
+func enchApplyList(list []enchInstance) enchList {
+	var out enchList
 	for i, e := range list {
 		if i >= len(out) {
 			break
@@ -307,7 +308,7 @@ func enchTableCost(r enchRand, slot, bookcases int, item int32) int {
 // enchRandomly is loot's enchant_randomly: one uniformly chosen enchantment
 // the loot tag allows and the item supports (any, for a book), at a uniform
 // level in [1, max].
-func enchRandomly(r enchRand, item int32) [2]enchApply {
+func enchRandomly(r enchRand, item int32) enchList {
 	var pool []int8
 	for i := range enchDefs {
 		id := int8(i)
@@ -316,15 +317,15 @@ func enchRandomly(r enchRand, item int32) [2]enchApply {
 		}
 	}
 	if len(pool) == 0 {
-		return [2]enchApply{}
+		return enchList{}
 	}
 	id := pool[r.Intn(len(pool))]
-	return [2]enchApply{{id: id, lvl: int8(1 + r.Intn(enchDefs[id].maxLevel))}}
+	return enchList{{id: id, lvl: int8(1 + r.Intn(enchDefs[id].maxLevel))}}
 }
 
 // enchWithLevels is loot's enchant_with_levels / the fishing treasure book:
 // a full table-style selection at the given level cost from the loot tag
 // (which, unlike the table, includes mending, frost walker and the curses).
-func enchWithLevels(r enchRand, item int32, levels int) [2]enchApply {
+func enchWithLevels(r enchRand, item int32, levels int) enchList {
 	return enchApplyList(enchSelect(r, item, levels, enchLootAllowed))
 }

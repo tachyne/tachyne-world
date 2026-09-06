@@ -146,7 +146,7 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 				continue
 			}
 			cur := int8(res.enchLvl(e.id))
-			var others [2]enchApply // what the target carries besides e itself
+			var others enchList // what the target carries besides e itself
 			for i, x := range res.ench {
 				if x.lvl > 0 && x.id != e.id {
 					others[i] = x
@@ -241,7 +241,7 @@ func grindResult(a, b invStack) (invStack, int) {
 		refund += int(e.lvl) * grindXPPerLevel
 	}
 	res := src
-	res.ench = [2]enchApply{}
+	res.ench = enchList{}
 	if res.item == itemEnchantedBook {
 		res.item = itemBook
 	}

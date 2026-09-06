@@ -35,7 +35,7 @@ type itemEntity struct {
 	item    int32
 	count   int
 	dmg     int            // durability damage carried by the dropped stack
-	ench    [2]enchApply   // enchantments carried by the dropped stack
+	ench    enchList       // enchantments carried by the dropped stack
 	mapID   int32          // filled_map identity carried by the dropped stack
 	pats    [6]bannerLayer // banner pattern layers carried by the dropped stack
 	trimMat int8           // armor trim carried by the dropped stack (+1 enc)

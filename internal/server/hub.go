@@ -604,7 +604,7 @@ func (h *hub) snapshotItems() []savedItem {
 	out := make([]savedItem, 0, len(h.items))
 	for _, it := range h.items {
 		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
-			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
+			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench), Ench2: packEnchHi(it.ench),
 			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
 			Box: it.boxID, Hive: it.hiveID, Bundle: it.bundleID,
 			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name, Lode: packLode(it.lode)}
@@ -622,7 +622,7 @@ func (h *hub) restoreItems(saved []savedItem) {
 	none := map[int32]*tracked{}
 	for _, si := range saved {
 		if it := h.spawnItemIn(none, si.Dim, si.Item, si.Count, si.X, si.Y, si.Z); it != nil {
-			it.dmg, it.ench, it.mapID = si.Dmg, unpackEnch(si.Ench), si.MapID
+			it.dmg, it.ench, it.mapID = si.Dmg, unpackEnch2(si.Ench, si.Ench2), si.MapID
 			for i, p := range si.Pats {
 				it.pats[i] = bannerLayer{patPlus1: int16(p >> 8), color: int8(p & 0xff)}
 			}

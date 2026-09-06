@@ -40,7 +40,7 @@ func TestPlayerHandoverRoundTrip(t *testing.T) {
 			effPoison: {amp: 0, left: 160},
 		}},
 	}
-	orig.inv.slots[0] = invStack{item: 278, count: 1, dmg: 12, ench: [2]enchApply{{id: 3, lvl: 4}}}
+	orig.inv.slots[0] = invStack{item: 278, count: 1, dmg: 12, ench: enchList{{id: 3, lvl: 4}}}
 	orig.inv.slots[9] = invStack{item: 1, count: 64}
 	orig.armor[3] = invStack{item: 310, count: 1, dmg: 40}
 	orig.offhand = invStack{item: 289, count: 16}

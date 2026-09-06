@@ -16,7 +16,7 @@ func TestEfficiencyIsAllowedByTheFastBreakCheck(t *testing.T) {
 
 	plain := minDigTicks(stone, pick, 0)
 	effV := minDigTicks(stone, pick, int32(efficiencyBonus(invStack{
-		item: pick, count: 1, ench: [2]enchApply{{id: enchEfficiency, lvl: 5}}})))
+		item: pick, count: 1, ench: enchList{{id: enchEfficiency, lvl: 5}}})))
 
 	if effV >= plain {
 		t.Errorf("Efficiency V allowed %d ticks, plain %d — it must allow a faster break", effV, plain)
@@ -24,7 +24,7 @@ func TestEfficiencyIsAllowedByTheFastBreakCheck(t *testing.T) {
 	// Efficiency V adds 26 to a wooden pickaxe's speed of 2: a fourteen-fold
 	// speed-up, far beyond the old flat allowance.
 	if got := efficiencyBonus(invStack{item: pick, count: 1,
-		ench: [2]enchApply{{id: enchEfficiency, lvl: 5}}}); got != 26 {
+		ench: enchList{{id: enchEfficiency, lvl: 5}}}); got != 26 {
 		t.Errorf("Efficiency V bonus = %d, want 26 (5^2+1)", got)
 	}
 }
@@ -36,7 +36,7 @@ func TestMendingRepairsBeforeBanking(t *testing.T) {
 
 	pick := itemByName["diamond_pickaxe"]
 	pl.inv.slots[0] = invStack{item: pick, count: 1, dmg: 100,
-		ench: [2]enchApply{{id: enchMending, lvl: 1}}}
+		ench: enchList{{id: enchMending, lvl: 1}}}
 
 	left := h.mendingRepair(pl, 10) // 10 xp = 20 durability
 	if got := pl.inv.slots[0].dmg; got != 80 {
@@ -54,7 +54,7 @@ func TestMendingRepairsBeforeBanking(t *testing.T) {
 
 	// Worn armour counts too, and a nearly-mended item leaves the remainder.
 	pl.armor[0] = invStack{item: itemByName["diamond_helmet"], count: 1, dmg: 3,
-		ench: [2]enchApply{{id: enchMending, lvl: 1}}}
+		ench: enchList{{id: enchMending, lvl: 1}}}
 	left = h.mendingRepair(pl, 10)
 	if pl.armor[0].dmg != 0 {
 		t.Errorf("armour damage %d after mending, want 0", pl.armor[0].dmg)

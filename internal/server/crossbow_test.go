@@ -77,7 +77,7 @@ func TestCrossbowQuickCharge(t *testing.T) {
 	h, pl, players := xbowSetup()
 	// quick_charge III → 25 − 15 = 10 ticks to full charge.
 	pl.inv.slots[0] = invStack{item: itemCrossbow, count: 1,
-		ench: [2]enchApply{{id: enchQuickCharge, lvl: 3}}}
+		ench: enchList{{id: enchQuickCharge, lvl: 3}}}
 
 	if got := xbowChargeTicks(pl); got != 10 {
 		t.Fatalf("quick_charge III should charge in 10 ticks, got %d", got)

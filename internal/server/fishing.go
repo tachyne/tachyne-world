@@ -539,6 +539,6 @@ func (h *hub) rollFishTreasure() invStack {
 // fishingTreasureEnch is the fishing treasure table's enchant_with_levels
 // 30 (the loot tag: table enchantments plus mending, frost walker and the
 // curses) on the vanilla engine.
-func (h *hub) fishingTreasureEnch(item int32) [2]enchApply {
+func (h *hub) fishingTreasureEnch(item int32) enchList {
 	return enchWithLevels(h.rng, item, 30)
 }

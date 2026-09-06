@@ -209,15 +209,15 @@ func (c *lootCtx) applyChestFn(h *hub, f *lootFn, st invStack) invStack {
 	case "ench_random":
 		// enchant_randomly with a single named option pins the enchantment
 		// (the ancient city's Swift Sneak book, the bastion's Soul Speed).
-		var e [2]enchApply
+		var e enchList
 		if f.Ench != "" {
 			if id, ok := enchByName[f.Ench]; ok {
-				e = [2]enchApply{{id: id, lvl: int8(1 + c.rng(enchDefs[id].maxLevel))}}
+				e = enchList{{id: id, lvl: int8(1 + c.rng(enchDefs[id].maxLevel))}}
 			}
 		} else {
 			e = h.chestEnchRandom(c.rng, st.item)
 		}
-		if e != ([2]enchApply{}) {
+		if e != (enchList{}) {
 			if st.item == itemBook {
 				st.item = itemEnchantedBook
 			}
@@ -228,10 +228,10 @@ func (c *lootCtx) applyChestFn(h *hub, f *lootFn, st invStack) invStack {
 			if st.item == itemBook {
 				st.item = itemEnchantedBook
 			}
-			st.ench = [2]enchApply{{id: id, lvl: int8(f.Lvl)}}
+			st.ench = enchList{{id: id, lvl: int8(f.Lvl)}}
 		}
 	case "ench_levels":
-		if e := h.chestEnchLevels(c.rng, st.item, int(c.np(f.NP))); e != ([2]enchApply{}) {
+		if e := h.chestEnchLevels(c.rng, st.item, int(c.np(f.NP))); e != (enchList{}) {
 			if st.item == itemBook {
 				st.item = itemEnchantedBook
 			}
@@ -271,12 +271,12 @@ func (c *lootCtx) npFloat(n *lootNP) float64 {
 }
 
 // chestEnchRandom is loot's enchant_randomly on the vanilla engine.
-func (h *hub) chestEnchRandom(rng func(int) int, item int32) [2]enchApply {
+func (h *hub) chestEnchRandom(rng func(int) int, item int32) enchList {
 	return enchRandomly(lootRand(rng), item)
 }
 
 // chestEnchLevels is loot's enchant_with_levels on the vanilla engine.
-func (h *hub) chestEnchLevels(rng func(int) int, item int32, cost int) [2]enchApply {
+func (h *hub) chestEnchLevels(rng func(int) int, item int32, cost int) enchList {
 	return enchWithLevels(lootRand(rng), item, cost)
 }
 

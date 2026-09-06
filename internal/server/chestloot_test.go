@@ -102,38 +102,47 @@ func TestEnchRandomOnBook(t *testing.T) {
 	}
 }
 
-func TestEnchLevelsCapsAtTwo(t *testing.T) {
+// enchant_with_levels at 30 levels yields between one and four distinct,
+// mutually compatible enchantments on a sword (vanilla's selection loop),
+// and across seeds more than one regularly.
+func TestEnchLevelsFillsUpToFour(t *testing.T) {
 	h := newHub(world.New(1))
 	sword := int32(itemByName["diamond_sword"])
 	if _, ok := meleeDamage[sword]; !ok {
 		t.Skip("diamond_sword not a melee weapon in this build")
 	}
-	sawTwo := false
-	for seed := int64(0); seed < 40; seed++ {
+	sawMany := false
+	for seed := int64(0); seed < 60; seed++ {
 		ctx := seededCtx(seed)
 		fn := lootFn{F: "ench_levels", NP: &lootNP{T: "const", V: 30}}
 		st := ctx.applyChestFn(h, &fn, invStack{item: sword, count: 1})
 		n := 0
+		seen := map[int8]bool{}
 		for _, e := range st.ench {
 			if e.lvl > 0 {
 				n++
+				if seen[e.id] {
+					t.Fatalf("seed %d: enchantment %d applied twice: %+v", seed, e.id, st.ench)
+				}
+				seen[e.id] = true
+				for _, o := range st.ench {
+					if o.lvl > 0 && o.id != e.id && !enchCompatible(e.id, o.id) {
+						t.Fatalf("seed %d: incompatible pair %s/%s", seed, enchName(e.id), enchName(o.id))
+					}
+				}
 			}
 		}
-		if n < 1 || n > 2 {
-			t.Fatalf("ench_levels applied %d enchants, want 1-2", n)
+		if n < 1 || n > 4 {
+			t.Fatalf("ench_levels applied %d enchants, want 1-4", n)
 		}
-		if n == 2 {
-			sawTwo = true
-			if st.ench[0].id == st.ench[1].id {
-				t.Fatal("the two enchants must be distinct")
-			}
+		if n >= 2 {
+			sawMany = true
 		}
 	}
-	if !sawTwo {
-		t.Fatal("ench_levels(30) should sometimes apply a second enchant")
+	if !sawMany {
+		t.Error("60 seeds at level 30 never produced a second enchantment")
 	}
 }
-
 func TestChestFillDeterministicAndScattered(t *testing.T) {
 	h := newHub(world.New(1))
 	pos := blockPos{100, 40, -200}

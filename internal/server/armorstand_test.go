@@ -27,7 +27,7 @@ func TestArmorStandFlow(t *testing.T) {
 			t.Errorf("yaw %f not snapped", st.yaw)
 		}
 		// Dress with an enchanted helmet; the swap preserves components.
-		helm := invStack{item: int32(itemByName["iron_helmet"]), count: 1, ench: [2]enchApply{{id: 1, lvl: 2}}}
+		helm := invStack{item: int32(itemByName["iron_helmet"]), count: 1, ench: enchList{{id: 1, lvl: 2}}}
 		tr.inv.slots[tr.p.heldSlot()] = helm
 		h.interactStand(h.playersRef, tr, st)
 		if st.equip[attachproto.EquipHead] != helm || tr.inv.slots[tr.p.heldSlot()].item != 0 {

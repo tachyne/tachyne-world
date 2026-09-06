@@ -64,3 +64,34 @@ func TestRuinedPortalStamps(t *testing.T) {
 			x, z, p.Tmpl, p.X, p.Z, sx, sz)
 	}
 }
+
+// The Nether has ruined portals too: on a cavern floor, their masonry turned
+// to polished blackstone (the vanilla processor), their frames aged like the
+// surface ones.
+func TestNetherRuinedPortalStamps(t *testing.T) {
+	g := NewNetherGenerator(7)
+	bricks, _, ok := BlockRangeOK("polished_blackstone_bricks")
+	if !ok {
+		t.Skip("no polished blackstone bricks in this block set")
+	}
+	x, y, z, found := findWith(g, 24, func(b uint32) bool { return b == CryingObsidian || b == bricks })
+	if !found {
+		t.Skip("no nether ruined portal within scan radius for this seed")
+	}
+	p := g.RuinedPortalNetherIn(x, z)
+	if !p.Exists {
+		t.Fatalf("portal block at (%d,%d,%d) but RuinedPortalNetherIn empty", x, y, z)
+	}
+	if p.Y < NetherLavaSea || p.Y > NetherCeiling {
+		t.Errorf("portal at y=%d, want on a cavern floor above the lava sea", p.Y)
+	}
+	if g.RuinedPortalIn(x, z).Exists && g.RuinedPortalIn(x, z).Y == p.Y {
+		t.Error("the Nether variant must not simply mirror the overworld placement")
+	}
+	if got := blackstoneRemap(blockBase("stone_bricks")); got != bricks {
+		t.Errorf("stone bricks should remap to polished blackstone bricks, got %d", got)
+	}
+	if got := blackstoneRemap(Obsidian); got != Obsidian {
+		t.Error("obsidian must survive the processor")
+	}
+}

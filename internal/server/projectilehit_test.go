@@ -55,7 +55,7 @@ func TestFlameBowLightsItsArrows(t *testing.T) {
 		}
 	}
 	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["bow"], count: 1,
-		ench: [2]enchApply{{id: enchFlame, lvl: 1}}}
+		ench: enchList{{id: enchFlame, lvl: 1}}}
 	pl.inv.slots[1] = invStack{item: itemArrowAmmo, count: 8}
 	pl.drawingAt = 1
 	h.tick.Store(40) // a full draw
@@ -79,7 +79,7 @@ func TestInfinityKeepsTheArrow(t *testing.T) {
 		pl = p
 	}
 	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["bow"], count: 1,
-		ench: [2]enchApply{{id: enchInfinity, lvl: 1}}}
+		ench: enchList{{id: enchInfinity, lvl: 1}}}
 	pl.inv.slots[1] = invStack{item: itemArrowAmmo, count: 8}
 	pl.drawingAt = 1
 	h.tick.Store(40)

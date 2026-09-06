@@ -31,6 +31,7 @@ type savedItem struct {
 	Count int      `json:"count"`
 	Dmg   int      `json:"dmg,omitempty"`
 	Ench  int32    `json:"ench,omitempty"`
+	Ench2 int32    `json:"ench2,omitempty"` // enchantments 3-4 (2026-09-06)
 	MapID int32    `json:"map_id,omitempty"`
 	Pats  [6]int32 `json:"pats,omitempty"` // banner layers, patPlus1<<8|color
 	Trim  int32    `json:"trim,omitempty"` // (mat+1)<<8|(pat+1)

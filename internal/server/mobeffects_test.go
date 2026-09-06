@@ -178,7 +178,7 @@ func TestMobGearEnchantmentsCount(t *testing.T) {
 		t.Fatalf("diamond chestplate has no toughness in the table — fixture wrong")
 	}
 	z.gear[1] = invStack{item: diamond, count: 1,
-		ench: [2]enchApply{{id: enchProtection, lvl: 4}, {id: enchRespiration, lvl: 3}}}
+		ench: enchList{{id: enchProtection, lvl: 4}, {id: enchRespiration, lvl: 3}}}
 	z.refreshGearArmor()
 
 	if z.armorValue() <= base {

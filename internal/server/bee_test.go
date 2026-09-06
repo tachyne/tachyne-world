@@ -286,7 +286,7 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	t2 := survPlayer(h)
 	players[t2.p.eid] = t2
 	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["diamond_pickaxe"]),
-		count: 1, ench: [2]enchApply{{enchSilkTouch, 1}}}
+		count: 1, ench: enchList{{enchSilkTouch, 1}}}
 
 	h.world.SetBlock(nest.x, nest.y, nest.z, worldgen.Air)
 	h.dropBeeHome(players, t2.p.eid, state, nest)

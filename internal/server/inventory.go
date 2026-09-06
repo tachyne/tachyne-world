@@ -27,12 +27,12 @@ type enchApply struct{ id, lvl int8 }
 type invStack struct {
 	item       int32
 	count      int
-	dmg        int          // durability damage taken (tools/armor); 0 for everything else
-	ench       [2]enchApply // up to two enchantments (zero slots = none); comparable
-	name       string       // anvil rename ("" = none); persisted by id via the nameStore (names.go)
-	repairCost int          // anvil prior-work penalty (grows 2·max+1 per use)
-	potion     int8         // brewed potion type (potWater..): drives drink effects + label
-	mapID      int32        // filled_map: which map this stack shows (0 = none)
+	dmg        int      // durability damage taken (tools/armor); 0 for everything else
+	ench       enchList // up to four enchantments (zero slots = none); comparable
+	name       string   // anvil rename ("" = none); persisted by id via the nameStore (names.go)
+	repairCost int      // anvil prior-work penalty (grows 2·max+1 per use)
+	potion     int8     // brewed potion type (potWater..): drives drink effects + label
+	mapID      int32    // filled_map: which map this stack shows (0 = none)
 
 	// Banner pattern layers (loom): patPlus1 is the banner_pattern registry
 	// id + 1 (0 = empty layer, layers fill from index 0); color is the dye
@@ -85,7 +85,7 @@ func (st invStack) sameExtras(o invStack) bool {
 }
 
 // enchanted reports whether the stack carries any enchantment.
-func (st invStack) enchanted() bool { return st.ench != [2]enchApply{} }
+func (st invStack) enchanted() bool { return st.ench != enchList{} }
 
 // enchLvl is the stack's level of one enchantment id (0 = not present).
 func (st invStack) enchLvl(id int8) int {
@@ -100,16 +100,37 @@ func (st invStack) enchLvl(id int8) int {
 // packEnch/unpackEnch squeeze the two (id, lvl) pairs into one int32 for the
 // JSON stores (row shape [item, count, dmg, ench]); old 3-column rows load
 // with a zero here — unenchanted — the same trick as the armor migration.
-func packEnch(e [2]enchApply) int32 {
+// enchList is a stack's enchantments: up to four (vanilla loot and table
+// rolls reach three or four; the anvil can stack more but four covers what
+// play produces). Fixed-size so invStack stays comparable. Persisted as two
+// int32 columns of two (id, level) byte pairs each — packEnch (slots 0-1,
+// the original column) and packEnchHi (slots 2-3, added 2026-09-06; older
+// rows unpack with the high column zero).
+type enchList = [4]enchApply
+
+func packEnch(e enchList) int32 {
 	return int32(uint8(e[0].id))<<24 | int32(uint8(e[0].lvl))<<16 |
 		int32(uint8(e[1].id))<<8 | int32(uint8(e[1].lvl))
 }
 
-func unpackEnch(v int32) [2]enchApply {
-	return [2]enchApply{
+func packEnchHi(e enchList) int32 {
+	return int32(uint8(e[2].id))<<24 | int32(uint8(e[2].lvl))<<16 |
+		int32(uint8(e[3].id))<<8 | int32(uint8(e[3].lvl))
+}
+
+func unpackEnch(v int32) enchList {
+	return enchList{
 		{id: int8(v >> 24), lvl: int8(v >> 16)},
 		{id: int8(v >> 8), lvl: int8(v)},
 	}
+}
+
+// unpackEnch2 decodes both persisted columns.
+func unpackEnch2(lo, hi int32) enchList {
+	e := unpackEnch(lo)
+	e[2] = enchApply{id: int8(hi >> 24), lvl: int8(hi >> 16)}
+	e[3] = enchApply{id: int8(hi >> 8), lvl: int8(hi)}
+	return e
 }
 
 type inventory struct {

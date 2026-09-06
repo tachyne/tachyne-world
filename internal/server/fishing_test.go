@@ -10,7 +10,7 @@ import (
 
 // fishSetup arms a survival player with a fishing rod beside a 5×5 two-deep
 // pool of water sources centered at (500, 199-200, 500), open sky above.
-func fishSetup(t *testing.T, ench [2]enchApply) (*hub, *tracked, map[int32]*tracked) {
+func fishSetup(t *testing.T, ench enchList) (*hub, *tracked, map[int32]*tracked) {
 	t.Helper()
 	h := newHub(world.New(1))
 	for dx := -2; dx <= 2; dx++ {
@@ -40,7 +40,7 @@ func poolBobber(h *hub, pl *tracked) *bobberEntity {
 }
 
 func TestCastCreatesBobber(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{{id: enchLure, lvl: 2}, {id: enchLuckOfTheSea, lvl: 1}})
+	h, pl, players := fishSetup(t, enchList{{id: enchLure, lvl: 2}, {id: enchLuckOfTheSea, lvl: 1}})
 	h.useRod(players, pl)
 	b := h.bobbers[pl.p.eid]
 	if b == nil {
@@ -58,7 +58,7 @@ func TestCastCreatesBobber(t *testing.T) {
 }
 
 func TestBobberLandsAndFloats(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{})
+	h, pl, players := fishSetup(t, enchList{})
 	h.useRod(players, pl)
 	b := h.bobbers[pl.p.eid]
 	for i := 0; i < 200 && b.state != bobberBobbing; i++ {
@@ -79,7 +79,7 @@ func TestBobberLandsAndFloats(t *testing.T) {
 }
 
 func TestSwitchingItemSnapsLine(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{})
+	h, pl, players := fishSetup(t, enchList{})
 	poolBobber(h, pl)
 	pl.p.setHotbarSlot(0, itemByName["stick"])
 	h.updateBobbers(players)
@@ -89,7 +89,7 @@ func TestSwitchingItemSnapsLine(t *testing.T) {
 }
 
 func TestLureShortensWait(t *testing.T) {
-	h, pl, _ := fishSetup(t, [2]enchApply{})
+	h, pl, _ := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	b.lureSpeed = 300 // Lure III
 	for i := 0; i < 50; i++ {
@@ -102,7 +102,7 @@ func TestLureShortensWait(t *testing.T) {
 }
 
 func TestReelDuringNibbleLandsLoot(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{})
+	h, pl, players := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	b.nibble = 10
 	b.openWater = false // fish or junk only
@@ -128,7 +128,7 @@ func TestReelDuringNibbleLandsLoot(t *testing.T) {
 }
 
 func TestReelBeachedCostsTwo(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{})
+	h, pl, players := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	b.state, b.grounded, b.nibble = bobberFlying, true, 0
 	h.reelBobber(players, pl, b)
@@ -141,7 +141,7 @@ func TestReelBeachedCostsTwo(t *testing.T) {
 }
 
 func TestReelHookedMobPullsIt(t *testing.T) {
-	h, pl, players := fishSetup(t, [2]enchApply{})
+	h, pl, players := fishSetup(t, enchList{})
 	m := &mob{eid: 9, etype: entityCow, health: 10, x: 510.5, y: 200, z: 500.5}
 	h.mobs[9] = m
 	b := poolBobber(h, pl)
@@ -156,7 +156,7 @@ func TestReelHookedMobPullsIt(t *testing.T) {
 }
 
 func TestOpenWaterDetection(t *testing.T) {
-	h, pl, _ := fishSetup(t, [2]enchApply{})
+	h, pl, _ := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	if !h.bobberOpenWater(b) {
 		t.Fatal("a clear 5×5 pool with open sky is open water")
@@ -172,7 +172,7 @@ func TestOpenWaterDetection(t *testing.T) {
 }
 
 func TestFishingLootPools(t *testing.T) {
-	h, pl, _ := fishSetup(t, [2]enchApply{})
+	h, pl, _ := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	treasureIDs := map[int32]bool{
 		itemByName["name_tag"]: true, itemByName["saddle"]: true,
@@ -218,7 +218,7 @@ func TestFishingLootPools(t *testing.T) {
 }
 
 func TestJunkGearComesDamaged(t *testing.T) {
-	h, pl, _ := fishSetup(t, [2]enchApply{})
+	h, pl, _ := fishSetup(t, enchList{})
 	b := poolBobber(h, pl)
 	boots := itemByName["leather_boots"]
 	seen := false

@@ -106,17 +106,17 @@ func TestAvailableLevelsFollowCostWindows(t *testing.T) {
 
 // Exclusive sets and item support at the anvil.
 func TestAnvilHonoursSupportAndExclusiveSets(t *testing.T) {
-	sword := invStack{item: itemByName["diamond_sword"], count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 3}}}
-	smiteBook := invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchSmite, lvl: 2}}}
+	sword := invStack{item: itemByName["diamond_sword"], count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
+	smiteBook := invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchSmite, lvl: 2}}}
 	if res, _ := anvilResult(sword, smiteBook, ""); res.item != 0 {
 		t.Errorf("a Smite book must not go onto a Sharpness sword, got %+v", res)
 	}
 	boots := invStack{item: itemByName["diamond_boots"], count: 1}
-	sharpBook := invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 1}}}
+	sharpBook := invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchSharpness, lvl: 1}}}
 	if res, _ := anvilResult(boots, sharpBook, ""); res.item != 0 {
 		t.Errorf("a Sharpness book must not go onto boots, got %+v", res)
 	}
-	unbBook := invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchUnbreaking, lvl: 3}}}
+	unbBook := invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchUnbreaking, lvl: 3}}}
 	res, cost := anvilResult(sword, unbBook, "")
 	if res.enchLvl(enchUnbreaking) != 3 || res.enchLvl(enchSharpness) != 3 {
 		t.Errorf("Unbreaking III should join Sharpness III, got %+v", res)
@@ -140,5 +140,26 @@ func TestEnchantabilityValues(t *testing.T) {
 	}
 	if enchantabilityOf(itemByName["rotten_flesh"]) != 0 {
 		t.Error("rotten flesh has no Enchantable value")
+	}
+}
+
+// Four enchantments ride a stack through the two persisted forms.
+func TestFourEnchantmentsPersist(t *testing.T) {
+	st := invStack{item: itemByName["diamond_sword"], count: 1, ench: enchList{
+		{id: enchSharpness, lvl: 5}, {id: enchUnbreaking, lvl: 3}, {id: enchLooting, lvl: 3}, {id: enchFireAspect, lvl: 2}}}
+	if back := unpackStack(packStack(st)); back != st {
+		t.Errorf("stack row round trip %+v, want %+v", back.ench, st.ench)
+	}
+	if got := unpackEnch2(packEnch(st.ench), packEnchHi(st.ench)); got != st.ench {
+		t.Errorf("column round trip %+v", got)
+	}
+	// An older row with only the first column keeps its two enchantments.
+	two := unpackEnch2(packEnch(st.ench), 0)
+	if two[0] != st.ench[0] || two[1] != st.ench[1] || two[2].lvl != 0 {
+		t.Errorf("legacy row decode %+v", two)
+	}
+	list := []enchInstance{{enchSharpness, 5}, {enchUnbreaking, 3}, {enchLooting, 3}, {enchFireAspect, 2}, {enchSmite, 1}}
+	if got := enchApplyList(list); got[3].id != enchFireAspect || got[3].lvl != 2 {
+		t.Errorf("enchApplyList must keep four: %+v", got)
 	}
 }

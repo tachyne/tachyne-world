@@ -36,7 +36,7 @@ func TestMagmaBlockBurns(t *testing.T) {
 	// So do Frost Walker boots.
 	pl.health = 20
 	pl.armor[3] = invStack{item: itemByName["iron_boots"], count: 1,
-		ench: [2]enchApply{{id: enchFrostWalker, lvl: 1}}}
+		ench: enchList{{id: enchFrostWalker, lvl: 1}}}
 	h.entityInsideTick(players)
 	if pl.health != 20 {
 		t.Errorf("Frost Walker boots took %v from magma", 20-pl.health)

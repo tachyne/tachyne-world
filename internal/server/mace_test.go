@@ -8,7 +8,7 @@ import (
 
 // maceSetup arms a survival player with a mace, high in the air and falling, and
 // returns a full-health test mob just in reach.
-func maceSetup(t *testing.T, ench [2]enchApply) (*hub, *tracked, *mob, map[int32]*tracked) {
+func maceSetup(t *testing.T, ench enchList) (*hub, *tracked, *mob, map[int32]*tracked) {
 	h := newHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 82, 4.5
@@ -35,7 +35,7 @@ func TestMaceFallBonusTiers(t *testing.T) {
 }
 
 func TestMaceSmashDamage(t *testing.T) {
-	h, pl, m, players := maceSetup(t, [2]enchApply{})
+	h, pl, m, players := maceSetup(t, enchList{})
 	h.attackMob(players, pl.p.eid, m.eid)
 	// base 6 + fall bonus 24 (fell 10), no crit (sprinting), no armour.
 	if want := 100 - 30; m.health != want {
@@ -48,7 +48,7 @@ func TestMaceSmashDamage(t *testing.T) {
 }
 
 func TestMaceDensityScales(t *testing.T) {
-	h, pl, m, players := maceSetup(t, [2]enchApply{{id: enchDensity, lvl: 2}})
+	h, pl, m, players := maceSetup(t, enchList{{id: enchDensity, lvl: 2}})
 	h.attackMob(players, pl.p.eid, m.eid)
 	// base 6 + fall 24 + density(0.5·2·10=10) = 40.
 	if want := 100 - 40; m.health != want {
@@ -57,7 +57,7 @@ func TestMaceDensityScales(t *testing.T) {
 }
 
 func TestMaceNotFallingIsPlainHit(t *testing.T) {
-	h, pl, m, players := maceSetup(t, [2]enchApply{})
+	h, pl, m, players := maceSetup(t, enchList{})
 	pl.airborne, pl.peakY = false, pl.y // standing on the ground — no smash
 	h.attackMob(players, pl.p.eid, m.eid)
 	if 100-m.health != 6 { // just the mace's base damage
@@ -79,7 +79,7 @@ func TestMaceBreachPiercesArmor(t *testing.T) {
 }
 
 func TestMaceShockwaveKnocksNearby(t *testing.T) {
-	h, pl, m, players := maceSetup(t, [2]enchApply{})
+	h, pl, m, players := maceSetup(t, enchList{})
 	bystander := &mob{eid: 10, etype: entityPig, health: 20, x: 1.5, y: 80, z: 6.0} // within 3.5 of the attacker
 	h.mobs[10] = bystander
 	h.attackMob(players, pl.p.eid, m.eid)

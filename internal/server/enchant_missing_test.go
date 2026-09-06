@@ -12,9 +12,9 @@ import (
 // Smite and Bane of Arthropods bite one family each and nothing else.
 func TestFamilyMeleeBonusPicksItsFamily(t *testing.T) {
 	smiter := invStack{item: tDiamondSword, count: 1,
-		ench: [2]enchApply{{id: enchSmite, lvl: 4}}}
+		ench: enchList{{id: enchSmite, lvl: 4}}}
 	baner := invStack{item: tDiamondSword, count: 1,
-		ench: [2]enchApply{{id: enchBaneOfArthropods, lvl: 4}}}
+		ench: enchList{{id: enchBaneOfArthropods, lvl: 4}}}
 
 	for _, c := range []struct {
 		weapon invStack
@@ -58,7 +58,7 @@ func TestFireAspectIgnites(t *testing.T) {
 	}
 
 	pl.inv.slots[pl.p.heldSlot()] = invStack{item: tDiamondSword, count: 1,
-		ench: [2]enchApply{{id: enchFireAspect, lvl: 2}}}
+		ench: enchList{{id: enchFireAspect, lvl: 2}}}
 	h.applyFireAspect(players, pl, m)
 	if want := fireAspectSecsPerLvl * 2; m.fireSecs != want {
 		t.Errorf("fire aspect II lit the cow for %d s, want %d", m.fireSecs, want)
@@ -93,7 +93,7 @@ func TestThornsRetaliates(t *testing.T) {
 
 	for i := range pl.armor {
 		pl.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchThorns, lvl: 3}}}
+			ench: enchList{{id: enchThorns, lvl: 3}}}
 	}
 	for i := 0; i < 200; i++ {
 		h.thornsRetaliate(players, pl, m)
@@ -118,7 +118,7 @@ func TestFireProtectionShortensBurning(t *testing.T) {
 	pl.fireSecs = 0
 	for i := range pl.armor {
 		pl.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchFireProtection, lvl: 1}}}
+			ench: enchList{{id: enchFireProtection, lvl: 1}}}
 	}
 	h.setBurning(players, pl, 10)
 	// Four pieces x level 1 = −60%: 10 s becomes 4.
@@ -136,7 +136,7 @@ func TestRespirationSlowsDrowning(t *testing.T) {
 	}
 
 	pl.armor[0] = invStack{item: itemByName["iron_helmet"], count: 1,
-		ench: [2]enchApply{{id: enchRespiration, lvl: 3}}}
+		ench: enchList{{id: enchRespiration, lvl: 3}}}
 	pl.refreshEnchantAttrs()
 	if got := pl.playerAttrs().Value(attr.OxygenBonus); got != 3 {
 		t.Fatalf("oxygen bonus %v under Respiration III, want 3", got)
@@ -161,7 +161,7 @@ func TestBlastProtectionResistsTheShove(t *testing.T) {
 	}
 	for i := range pl.armor {
 		pl.armor[i] = invStack{item: itemByName["iron_helmet"], count: 1,
-			ench: [2]enchApply{{id: enchBlastProtection, lvl: 1}}}
+			ench: enchList{{id: enchBlastProtection, lvl: 1}}}
 	}
 	pl.refreshEnchantAttrs()
 	// 4 pieces x 0.15 = 0.6 resistance, so 40% of the shove gets through.
@@ -181,7 +181,7 @@ func TestVanishingCurseDestroysOnDeath(t *testing.T) {
 	cursed := itemByName["iron_helmet"]
 	plain := itemByName["iron_sword"]
 	pl.armor[0] = invStack{item: cursed, count: 1,
-		ench: [2]enchApply{{id: enchVanishingCurse, lvl: 1}}}
+		ench: enchList{{id: enchVanishingCurse, lvl: 1}}}
 	pl.inv.slots[0] = invStack{item: plain, count: 1}
 
 	h.dropInventory(players, pl)
@@ -221,7 +221,7 @@ func TestFrostWalkerFreezesTheSurface(t *testing.T) {
 	}
 
 	pl.armor[3] = invStack{item: itemByName["iron_boots"], count: 1,
-		ench: [2]enchApply{{id: enchFrostWalker, lvl: 1}}}
+		ench: enchList{{id: enchFrostWalker, lvl: 1}}}
 	h.frostWalk(players, pl)
 	if got := w.At(0, wy, 0); got < frostedIceMin || got > frostedIceMax {
 		t.Errorf("underfoot block %d, want frosted ice", got)
@@ -265,7 +265,7 @@ func TestSoulSpeedAppliesOnSoulBlocksOnly(t *testing.T) {
 	w.SetBlock(2, fy, 0, worldgen.BlockBase("stone"))
 
 	pl.armor[3] = invStack{item: itemByName["iron_boots"], count: 1,
-		ench: [2]enchApply{{id: enchSoulSpeed, lvl: 2}}}
+		ench: enchList{{id: enchSoulSpeed, lvl: 2}}}
 
 	pl.x, pl.y, pl.z, pl.onGround = 0.5, fy+1, 0.5, true
 	h.refreshSoulSpeed(pl)

@@ -408,7 +408,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	// isn't a thing a vanilla client does.)
 	loss := map[int32]int{}
 	dmgOf := map[int32]int{}
-	enchOf := map[int32][2]enchApply{}   // enchantments ride along like wear does
+	enchOf := map[int32]enchList{}       // enchantments ride along like wear does
 	nameOf := map[int32]string{}         // …and anvil names
 	mapOf := map[int32]int32{}           // …and filled-map identities
 	patsOf := map[int32][6]bannerLayer{} // …and banner layers

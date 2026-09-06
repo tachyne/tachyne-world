@@ -93,7 +93,7 @@ func TestProtectionsStackWhenTagsOverlap(t *testing.T) {
 	}
 	pl := testTracked()
 	pl.armor[0] = invStack{item: itemByName["diamond_helmet"], count: 1,
-		ench: [2]enchApply{{id: enchFireProtection, lvl: 2}, {id: enchProjectileProtection, lvl: 2}}}
+		ench: enchList{{id: enchFireProtection, lvl: 2}, {id: enchProjectileProtection, lvl: 2}}}
 
 	both := protectionPoints(pl.armor[:], dtFireball)
 	fireOnly := protectionPoints(pl.armor[:], dtInFire)
@@ -114,7 +114,7 @@ func TestBypassTagsSkipTheirOwnMitigation(t *testing.T) {
 	warded.health = maxHealth
 	equipSet(t, warded, [4]int{3, 8, 6, 3}, 2)
 	for i := range warded.armor {
-		warded.armor[i].ench = [2]enchApply{{id: enchProtection, lvl: 4}}
+		warded.armor[i].ench = enchList{{id: enchProtection, lvl: 4}}
 	}
 	h.damageOf(map[int32]*tracked{1: warded}, warded, 10, dtSonicBoom)
 	if maxHealth-warded.health != 10 {

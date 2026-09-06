@@ -77,7 +77,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow = [24]int32
+type stackRow = [25]int32
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -97,11 +97,12 @@ func packStack(st invStack) stackRow {
 	r[19] = globalNames.Load().intern(st.name)
 	lode := packLode(st.lode) // lodestone_tracker (columns 20-23)
 	copy(r[20:24], lode[:])
+	r[24] = packEnchHi(st.ench) // enchantments 3-4 (column 24)
 	return r
 }
 
 func unpackStack(r stackRow) invStack {
-	st := invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch(r[3]), mapID: r[4]}
+	st := invStack{item: r[0], count: int(r[1]), dmg: int(r[2]), ench: unpackEnch2(r[3], r[24]), mapID: r[4]}
 	for i := 0; i < 6; i++ {
 		st.pats[i] = bannerLayer{patPlus1: int16(r[5+i] >> 8), color: int8(r[5+i] & 0xff)}
 	}

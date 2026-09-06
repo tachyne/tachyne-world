@@ -59,7 +59,7 @@ func TestSmithingFlow(t *testing.T) {
 		// Netherite transform carries enchantments + damage.
 		sword := int32(itemByName["diamond_sword"])
 		tr.extraSlot = invStack{item: protocol.SmithingUpgradeTemplate, count: 1}
-		tr.anvil[0] = invStack{item: sword, count: 1, dmg: 7, ench: [2]enchApply{{id: 1, lvl: 3}}}
+		tr.anvil[0] = invStack{item: sword, count: 1, dmg: 7, ench: enchList{{id: 1, lvl: 3}}}
 		tr.anvil[1] = invStack{item: int32(itemByName["netherite_ingot"]), count: 1}
 		res := h.smithResult(tr)
 		if res.item != int32(itemByName["netherite_sword"]) || res.dmg != 7 || res.enchLvl(1) != 3 {

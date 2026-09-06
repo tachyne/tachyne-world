@@ -8,8 +8,8 @@ import (
 )
 
 func TestAnvilMergesBookOntoSword(t *testing.T) {
-	sword := invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 3}}}
-	book := invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchLooting, lvl: 2}}}
+	sword := invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
+	book := invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchLooting, lvl: 2}}}
 	res, cost := anvilResult(sword, book, "")
 	if res.enchLvl(enchSharpness) != 3 || res.enchLvl(enchLooting) != 2 {
 		t.Fatalf("book merge wrong: %+v", res)
@@ -18,8 +18,8 @@ func TestAnvilMergesBookOntoSword(t *testing.T) {
 		t.Fatalf("merging 2 levels must cost at least 2, got %d", cost)
 	}
 	// Equal levels combine upward, capped.
-	a := invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 3}}}
-	b := invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 3}}}
+	a := invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
+	b := invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
 	res, _ = anvilResult(a, b, "")
 	if res.enchLvl(enchSharpness) != 4 {
 		t.Fatalf("3+3 should combine to 4, got %d", res.enchLvl(enchSharpness))
@@ -54,7 +54,7 @@ func TestAnvilChargesLevels(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 	pl.winID, pl.winKind = 5, winAnvil
 	pl.anvil[0] = invStack{item: tDiamondSword, count: 1}
-	pl.anvil[1] = invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 5}}}
+	pl.anvil[1] = invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}}}
 	pl.xpLevel = 0
 	h.takeTwoSlotResult(players, pl) // broke — rejected
 	if pl.cursor.item != 0 || pl.anvil[0].item == 0 {
@@ -75,7 +75,7 @@ func TestGrindstoneStripsAndRefunds(t *testing.T) {
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pl.winID, pl.winKind = 5, winGrind
-	pl.anvil[0] = invStack{item: tDiamondSword, count: 1, ench: [2]enchApply{{id: enchSharpness, lvl: 5}}}
+	pl.anvil[0] = invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}}}
 	h.takeTwoSlotResult(players, pl)
 	if pl.cursor.item != tDiamondSword || pl.cursor.enchanted() {
 		t.Fatalf("grindstone must strip enchants: %+v", pl.cursor)
@@ -84,7 +84,7 @@ func TestGrindstoneStripsAndRefunds(t *testing.T) {
 		t.Fatal("stripping must refund XP as an orb")
 	}
 	// An enchanted book grinds back to a plain book.
-	res, _ := grindResult(invStack{item: itemEnchantedBook, count: 1, ench: [2]enchApply{{id: enchFortune, lvl: 2}}}, invStack{})
+	res, _ := grindResult(invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchFortune, lvl: 2}}}, invStack{})
 	if res.item != itemBook {
 		t.Fatalf("ground book should be plain, got item %d", res.item)
 	}
