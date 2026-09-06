@@ -14,6 +14,19 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-06
 
 ### Added
+- **Bedrock: mobs look like themselves.** The Bedrock gateway now renders
+  every mob look the engine syncs as entity metadata, reading each index
+  by the mob it belongs to (Java reuses the same index for a sheep's
+  fleece, a pet's sitting flag, a creeper's charge and a frog's variant)
+  and writing the Bedrock actor data the Geyser project established for
+  each: sheep colour and shearing, pets sitting/tamed/angry, bee stings
+  and anger, creeper charge and lit fuse, slime and magma cube size,
+  spiders climbing, drowning and curing zombies shaking, villager and
+  zombie villager profession, biome and trade tier in Bedrock's
+  numbering, frog and axolotl variants (wild and cyan swap places),
+  the enderman's carried block, the guardian beam's target, name tags,
+  primed TNT fuse, and the shared sprinting, invisible, gliding,
+  swimming and sleeping states.
 - **Bedrock: container windows.** A Bedrock player opening a chest, barrel,
   shulker box, hopper, dispenser, dropper, furnace, blast furnace, smoker
   or brewing stand now gets the real container screen at the block they
