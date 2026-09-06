@@ -50,7 +50,13 @@ the public history since the project was open-sourced on 2026-07-10.
   taking, dropping or destroying items becomes the same creative slot
   set a Java client sends — the world still checks the player's mode.
   Bedrock players can also drop items now, from a window or the held
-  stack, where before every drop was refused.
+  stack, where before every drop was refused. Fall damage on Bedrock
+  now keys off the client's own ground test (its vertical-collision
+  input flag) instead of a height-stability guess; sixty-odd more
+  particles (flames, smoke, splashes, hearts, notes, portal swirls,
+  enchanting glyphs…) reach Bedrock as the named particles Geyser's
+  table maps them to; and Bedrock players see each other's real skins
+  in the player list instead of a grey placeholder.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English

@@ -374,6 +374,31 @@ def main():
         f.write("}\n")
     print(f"  bedrock_entities_gen.go: {len(mcents)} types, unmapped: {unmapped}")
 
+    # ---- particles -----------------------------------------------------------
+    # Geyser's particle mappings name a Bedrock particle (a named particle
+    # effect) and/or a level event for each Java particle; the named ones are
+    # what the gateway spawns. "geyseropt:" ids need Geyser's optional pack.
+    mcparts = sorted(json.loads(fetch(f"{MCDATA}/particles.json")), key=lambda e: e["id"])
+    if [e["id"] for e in mcparts] != list(range(len(mcparts))):
+        raise SystemExit("minecraft-data particle ids are not dense from 0")
+    pmap = json.loads(fetch(f"{MAPPINGS}/particles.json"))
+    named = 0
+    with open(os.path.join(OUT, "bedrock_particles_gen.go"), "w") as f:
+        header(f.write, "gen_bedrock.py")
+        f.write("// bedrockParticleNames[canonical Java particle id] = the Bedrock named\n")
+        f.write("// particle Geyser maps it to (\"\" = none).\n")
+        f.write("var bedrockParticleNames = []string{\n")
+        for e in mcparts:
+            entry = pmap.get(e["name"].upper(), {})
+            bid = entry.get("bedrockId", "")
+            if bid.startswith("geyseropt:"):
+                bid = ""
+            if bid:
+                named += 1
+            f.write(f"\t{json.dumps(bid)}, // {e['name']}\n")
+        f.write("}\n")
+    print(f"  bedrock_particles_gen.go: {len(mcparts)} particles, {named} named")
+
     # ---- language: advancement titles/descriptions ---------------------------
     # Java clients translate advancement keys themselves; Bedrock has no Java
     # language table, so the gateway carries the English strings for the
