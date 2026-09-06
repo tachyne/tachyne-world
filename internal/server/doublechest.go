@@ -136,9 +136,7 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	for _, pos := range [2]simPos{{dim: t.dim, blockPos: left}, {dim: t.dim, blockPos: right}} {
 		if h.chests[pos] == nil {
 			c := &chest{}
-			if pos.dim == dimOverworld {
-				h.fillStructureChest(pos.blockPos, c)
-			}
+			h.fillStructureChestIn(pos.dim, pos.blockPos, c)
 			h.chests[pos] = c
 		}
 	}

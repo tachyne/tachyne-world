@@ -84,8 +84,8 @@ the public history since the project was open-sourced on 2026-07-10.
   every tier from one to four the vanilla way — a random tradeable
   enchantment at a random level, priced 2 + rand(5 + 10·level) + 3·level
   emeralds (doubled for a treasure enchantment, capped at 64) plus one
-  book, the first trade offer with two costs. Still narrow: a stack holds
-  two enchantments.
+  book, the first trade offer with two costs. A stack now carries up to
+  four enchantments (it held two), which is every table and loot roll.
 
 - **Redstone follow-ups.** A trapped chest is now a signal source: its
   strength is how many players have it open, it powers the block beneath
@@ -97,6 +97,42 @@ the public history since the project was open-sourced on 2026-07-10.
   no longer runs forever. Dust sits on exactly the tops vanilla accepts:
   full blocks, top and double slabs, upside-down stairs, closed top
   trapdoors and hoppers; a bottom slab or an upright stair drops it.
+
+- **Mobs and potions.** A lingering cloud doses every mob standing in it,
+  not only players — a lingering Harming thrown into a horde works — and a
+  hostile that picks up a dropped weapon or armour piece becomes persistent
+  the way vanilla's does (Mob.pickUpItem sets persistence), so a looting
+  zombie no longer despawns while you walk back for it; the flag rides the
+  mob store across restarts.
+
+- **Brewing is the whole vanilla table.** The stand brewed six potions from
+  an awkward base and nothing else; it now runs vanilla's PotionBrewing
+  recipes: every potion with its long (redstone) and strong (glowstone)
+  forms, the fermented-spider-eye corruptions (swiftness or leaping to
+  slowness, night vision to invisibility, healing or poison to harming,
+  water to weakness), mundane and thick, and the container steps —
+  gunpowder makes any potion splash, dragon's breath makes a splash potion
+  linger. Each bottle brews on its own against the ingredient, and
+  durations and amplifiers are vanilla's (Potions.java), so a Potion of
+  the Turtle Master is Slowness IV with Resistance III for twenty seconds.
+
+- **Ruined portals in the Nether.** They were overworld-only. The Nether
+  now has its own, on the cavern floors above the lava sea: the same
+  thirteen templates with vanilla's blackstone processor (the stone-brick
+  masonry becomes polished blackstone), aged crying obsidian, and the
+  ruined-portal chest loot.
+
+- **Statistics that count.** Only thirty of vanilla's seventy-seven custom
+  counters ever moved. The statistics screen now tracks the movement family
+  by how you moved (walking, sprinting, crouching, jumping, falling,
+  climbing, swimming, walking on and under water, flying, gliding, and
+  riding a horse, pig, strider, happy ghast, boat or minecart), the damage
+  family (dealt, taken, resisted by armour and magic, absorbed, blocked by a
+  shield), every "interacted with" and "inspected" block menu (anvil,
+  grindstone, crafting table, brewing stand, dispenser, dropper, hopper,
+  ender chest), talking to a villager, triggering a raid, washing a banner,
+  potting a flower, and the clocks — total world time, time since death,
+  time sneaking.
 
 ### Changed
 - Copper oxidation on a double copper chest now ages both halves together

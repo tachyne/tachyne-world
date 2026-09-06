@@ -108,11 +108,9 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	c := h.chests[pos]
 	if c == nil {
 		c = &chest{}
-		if pos.dim == dimOverworld {
-			// Structure loot is a pure function of the OVERWORLD generator, so a
-			// Nether chest at the same coordinates must not inherit a dungeon's.
-			h.fillStructureChest(pos.blockPos, c)
-		}
+		// Structure loot is a pure function of each dimension's generator, so
+		// a Nether chest never inherits an overworld dungeon's table.
+		h.fillStructureChestIn(pos.dim, pos.blockPos, c)
 		h.chests[pos] = c
 	}
 	h.nextWin++

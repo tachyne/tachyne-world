@@ -14,6 +14,25 @@ func (h *hub) fillStructureChest(pos blockPos, c *chest) {
 	}
 }
 
+// fillStructureChestIn is fillStructureChest for any dimension: the
+// overworld's full table, the Nether's ruined portals (the same loot as the
+// surface ones — vanilla's ruined_portal table serves every variant).
+func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
+	switch dim {
+	case dimOverworld:
+		h.fillStructureChest(pos, c)
+	case dimNether:
+		if p := h.worldFor(dim).Gen().RuinedPortalNetherIn(pos.x, pos.z); p.Exists {
+			for _, cp := range p.Chests {
+				if pos.x == cp[0] && pos.y == cp[1] && pos.z == cp[2] {
+					h.fillChest(c, "chests/ruined_portal", pos)
+					return
+				}
+			}
+		}
+	}
+}
+
 // structureChestTable reports the loot-table name for a structure chest at pos
 // (empty/false when pos is not a known structure chest cell).
 func (h *hub) structureChestTable(pos blockPos) (string, bool) {

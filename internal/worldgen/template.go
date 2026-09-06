@@ -343,6 +343,13 @@ func (t *Template) StampTemplate(ch *Chunk, cx, cz int32, ox, oy, oz, rot int) [
 // "ruined" incompleteness — except the chest (loot must stay reachable), and
 // obsidian occasionally weeps (BlockAgeProcessor). Deterministic per rotSeed.
 func (t *Template) StampTemplateRot(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rotSeed int64, integrity float64) [][3]int {
+	return t.StampTemplateRotRemap(ch, cx, cz, ox, oy, oz, rot, rotSeed, integrity, nil)
+}
+
+// StampTemplateRotRemap is StampTemplateRot with a structure processor: every
+// placed state passes through remap (nil = none) — the Nether ruined portal's
+// blackstone replacement, for one.
+func (t *Template) StampTemplateRotRemap(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rotSeed int64, integrity float64, remap func(uint32) uint32) [][3]int {
 	baseX, baseZ := int(cx)*16, int(cz)*16
 	for _, b := range t.Blocks {
 		state := t.resolved[rot&3][b[3]]
@@ -358,6 +365,9 @@ func (t *Template) StampTemplateRot(ch *Chunk, cx, cz int32, ox, oy, oz, rot int
 		}
 		if name == "obsidian" && hash01(rotSeed, wx*3, (wz*8192+wy)*5, 0x2075) < 0.15 {
 			state = CryingObsidian // aged
+		}
+		if remap != nil {
+			state = remap(state)
 		}
 		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
 	}
