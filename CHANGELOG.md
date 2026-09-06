@@ -36,7 +36,11 @@ the public history since the project was open-sourced on 2026-07-10.
   same button a Java client does, so the world pays the levels and
   lapis and enchants the item. The stonecutter too: its recipe table
   rides in the crafting data, and a cut picks the world's row before
-  taking the result.
+  taking the result. The smithing table upgrades diamond gear to
+  netherite (the upgrade table rides as Bedrock transform recipes; armor
+  trims still wait on Bedrock's trim data), and the loom applies a
+  pattern: Bedrock's pick becomes the row in the list the world offers
+  for the banner and pattern item in hand.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
