@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // A captain's death drops an ominous bottle (I–V); drinking it gives Bad
@@ -100,5 +101,58 @@ func TestOminousTrialMobsAreEquipped(t *testing.T) {
 	}
 	if trialEquipmentTable("slime") != "" || trialEquipmentTable("stray") != "equipment/trial_chamber_ranged" {
 		t.Error("equipment tables by kind")
+	}
+}
+
+// An ominous spawner conjures an item spawner above a detected player on
+// the 160-tick cadence; it drops its projectile 60–120 ticks later.
+func TestOminousItemSpawner(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := testTracked()
+	players[pl.p.eid] = pl
+	pl.x, pl.y, pl.z = 12.5, 200, 12.5
+	for y := 200; y < 206; y++ {
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				h.world.SetBlock(12+dx, y, 12+dz, worldgen.Air)
+			}
+		}
+	}
+	ts := &trialSpawner{pos: blockPos{12, 199, 12}, kind: "zombie", state: trialActive, ominous: true,
+		detected: map[[16]byte]bool{pl.p.uuid: true}, current: map[int32]bool{}}
+	h.tick.Store(1000)
+	h.trialItemSpawner(players, ts)
+	if len(h.itemSpawners) != 1 {
+		t.Fatalf("one item spawner should be conjured, have %d", len(h.itemSpawners))
+	}
+	if ts.itemSpawnAt != 1000+itemSpawnerGap {
+		t.Errorf("next spawner in 160 ticks, got %d", ts.itemSpawnAt)
+	}
+	h.trialItemSpawner(players, ts)
+	if len(h.itemSpawners) != 1 {
+		t.Error("the cadence holds the next one back")
+	}
+	var e *itemSpawnerEnt
+	for _, x := range h.itemSpawners {
+		e = x
+	}
+	if e.y < pl.y+2 || e.dueAt < 1060 || e.dueAt > 1120 {
+		t.Errorf("the spawner hangs above the player and drops in 60–120 ticks: y=%.1f due=%d", e.y, e.dueAt)
+	}
+	h.tick.Store(e.dueAt)
+	arrowsBefore := len(h.arrows)
+	h.updateItemSpawners(players)
+	if len(h.itemSpawners) != 0 {
+		t.Error("the spawner is gone after its drop")
+	}
+	if len(h.arrows) <= arrowsBefore {
+		t.Error("the drop is a projectile heading down")
+	}
+	for _, a := range h.arrows {
+		if a.vy >= 0 {
+			t.Errorf("the projectile falls: vy=%.2f", a.vy)
+		}
 	}
 }

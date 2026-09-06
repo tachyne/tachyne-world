@@ -26,9 +26,10 @@ const (
 
 // enchRiptide / enchLoyalty / enchImpaling ids (our declared registry order).
 const (
-	enchLoyalty  = 19
-	enchImpaling = 15
-	enchRiptide  = 31
+	enchLoyalty    = 19
+	enchImpaling   = 15
+	enchChanneling = 5
+	enchRiptide    = 31
 )
 
 // evTridentUse begins a trident charge-hold; the hub owns the draw state.
@@ -98,6 +99,7 @@ func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) 
 	a.playerShot = true
 	a.loyalty = st.enchLvl(enchLoyalty)
 	a.impaling = st.enchLvl(enchImpaling)
+	a.channeling = st.enchLvl(enchChanneling) > 0
 	if t.gamemode == gmSurvival {
 		slot := t.p.heldSlot()
 		st.dmg++           // one durability point of wear rides with the thrown stack

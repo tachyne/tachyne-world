@@ -401,13 +401,19 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 			h.hurtBy(players, t, lightningDamage, dtLightningBolt, deathCause{key: causeLightning})
 		}
 	}
+	var struck []*mob
 	for _, m := range h.mobs {
 		if m.dying == 0 && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
 			m.hurtKind(float64(lightningDamage), dtLightningBolt)
 			if m.health <= 0 {
 				h.killMob(players, m)
+			} else {
+				struck = append(struck, m)
 			}
 		}
+	}
+	for _, m := range struck {
+		h.lightningTransforms(players, m) // thunderHit: charged creepers, zombified pigs, witches
 	}
 	lit := h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z)))
 	// LightningStrikeTrigger: every player within reach sees the bolt, with

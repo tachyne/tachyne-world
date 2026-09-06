@@ -308,8 +308,32 @@ the public history since the project was open-sourced on 2026-07-10.
   paying both). The ominous state persists and wears off when the cooldown
   ends. Ominous zombies, husks and archers come armed from vanilla's
   trial-chamber equipment tables (trimmed, enchanted chainmail at even odds
-  per piece, enchanted swords and bows) as gear that never drops. The
-  ominous item spawners are still to come.
+  per piece, enchanted swords and bows) as gear that never drops, and
+  while the fight is on the spawner conjures an ominous item spawner above
+  a player every 160 ticks — the floating item vanilla shows — which drops
+  its load straight down 60–120 ticks later: a lingering potion (wind
+  charging, oozing, weaving, infested, strength, swiftness, slow falling),
+  a plain, poison or slowness arrow, or a fire or wind charge.
+- **Bedrock: health, hunger and XP.** The Bedrock gateway relayed none of
+  the survival state — a Bedrock player sat at a static twenty hearts
+  whatever happened. It now turns the world's health and XP frames into
+  Bedrock attribute updates (health, hunger, saturation, experience bar
+  and level), and the death screen and its respawn button work — the
+  death frame becomes the death message plus Bedrock's respawn packet, the
+  client's respawn answer reaches the world, and the respawn teleport
+  carries the ready-to-spawn packet ahead of the move. Mobs flinch and
+  keel over (hurt and death actor events), dropped items show as item
+  actors carrying their stack, and the common sounds — mob voices, hits,
+  bows, chests, doors, explosions, the anvil, bells, thunder — play as
+  level sound events.
+- **Channeling, and what lightning does.** The last enchantment without an
+  effect: a Channeling trident that hits a mob or player under open sky in
+  a thunderstorm, or a lightning rod, calls a bolt down on the spot with
+  the trident's thunder. Bolts now do what vanilla's do to what they hit:
+  a creeper charges (its aura synced, its blast doubled, the charge saved
+  with the mob), a pig becomes a zombified piglin and a villager a witch.
+- Fixed: an ender dragon summoned by an op was saved with the mobs and came
+  back as a stray after a restart; every dragon is an event, not a resident.
 - **The gossip system.** Villager reputation is now vanilla's
   GossipContainer rather than a per-session trade counter: each villager
   holds the five gossip types about each player at vanilla's weights,

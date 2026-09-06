@@ -136,6 +136,7 @@ type mob struct {
 	canPickup       bool        // may pick up dropped gear (spawn-time roll)
 	gear            [4]invStack // worn armor by slot (0 head,1 chest,2 legs,3 feet)
 	spawnGear       bool        // gear issued at spawn (ominous trials): never drops (vanilla drop chance 0)
+	charged         bool        // creeper struck by lightning: a doubled blast (persisted)
 	saddled         bool        // a saddle is on: this mob can be mounted
 	saddleSt        invStack    // the saddle item (horse family; saddled mirrors it)
 	armorSt         invStack    // body armor / llama carpet

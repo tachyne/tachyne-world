@@ -78,11 +78,14 @@ func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	h.gridDirty()
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
-	radius := blastRadius
+	radius, maxDmg := blastRadius, blastMaxDamage
+	if m.charged { // Creeper.explodeCreeper: a charged creeper blasts at twice the radius
+		radius, maxDmg = blastRadius*2, blastMaxDamage*2
+	}
 	if !h.rules.MobGriefing {
 		radius = 0 // gamerule: creepers hurt but leave the terrain alone
 	}
-	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, blastMaxDamage)
+	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, maxDmg)
 }
 
 // creeperStateMeta builds set_entity_data for the creeper fuse state (index 16,

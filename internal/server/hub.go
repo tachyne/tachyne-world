@@ -529,24 +529,25 @@ type hub struct {
 	bins         map[simPos]*bin           // dispenser/dropper/hopper storage
 	binFire      map[simPos]uint64         // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
-	vehicles        map[int32]*vehicle      // minecarts + boats
-	blastSpareRails bool                    // set around a TNT cart's blast: rails survive it
-	paintings       map[int32]*painting     // placed hanging paintings (persisted with containers)
-	itemFrames      map[int32]*itemFrame    // placed item frames (persisted with containers)
-	armorStands     map[int32]*armorStand   // placed armor stands (persisted with containers)
-	knots           map[int32]*leashKnot    // fence leash knots (the far end of a lead)
-	jukeboxes       map[simPos]*jukebox     // discs + playback clocks (persisted with containers)
-	beacons         map[simPos]*beacon      // placed beacons (chosen powers persisted with containers)
-	campfires       map[simPos]*campfire    // live cook state (item view in cfStore)
-	cfStore         *campfireStore          // campfires.json + the chunk builders' read view
-	banners         *bannerStore            // banners.json + the chunk builders' read view
-	books           *bookStore              // books.json (contents by book id, the map model)
-	lecterns        map[simPos]*lectern     // held books + open pages (persisted with containers)
-	bookshelves     map[simPos]*[6]invStack // chiseled shelves (persisted with containers)
-	detectorsOn     map[blockPos]bool       // detector rails currently pressed
-	spawnerNext     map[blockPos]uint64     // dungeon spawner cooldowns
-	patrolNextAt    uint64                  // world tick the next pillager-patrol attempt is due
-	raids           map[blockPos]*raid      // active village raids by centre
+	vehicles        map[int32]*vehicle // minecarts + boats
+	blastSpareRails bool
+	itemSpawners    map[int32]*itemSpawnerEnt // ominous item spawners in the air (ominousitem.go)                    // set around a TNT cart's blast: rails survive it
+	paintings       map[int32]*painting       // placed hanging paintings (persisted with containers)
+	itemFrames      map[int32]*itemFrame      // placed item frames (persisted with containers)
+	armorStands     map[int32]*armorStand     // placed armor stands (persisted with containers)
+	knots           map[int32]*leashKnot      // fence leash knots (the far end of a lead)
+	jukeboxes       map[simPos]*jukebox       // discs + playback clocks (persisted with containers)
+	beacons         map[simPos]*beacon        // placed beacons (chosen powers persisted with containers)
+	campfires       map[simPos]*campfire      // live cook state (item view in cfStore)
+	cfStore         *campfireStore            // campfires.json + the chunk builders' read view
+	banners         *bannerStore              // banners.json + the chunk builders' read view
+	books           *bookStore                // books.json (contents by book id, the map model)
+	lecterns        map[simPos]*lectern       // held books + open pages (persisted with containers)
+	bookshelves     map[simPos]*[6]invStack   // chiseled shelves (persisted with containers)
+	detectorsOn     map[blockPos]bool         // detector rails currently pressed
+	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
+	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
+	raids           map[blockPos]*raid        // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
 	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
@@ -1032,6 +1033,7 @@ func (h *hub) run() {
 				h.populateEndCities(players)   // seed shulkers + the elytra frame when a player reaches an End city
 			}
 			h.updateVehicles(players)
+			h.updateItemSpawners(players)
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players) // polled advancement criteria (inventory, biome)
@@ -2058,6 +2060,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 
 	h.sendBorder(nt) // the border, before anything can walk into it
 	h.sendVehiclesTo(nt)
+	h.sendItemSpawnersTo(nt)
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
 	h.sendStandsTo(nt)

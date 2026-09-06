@@ -129,10 +129,11 @@ type savedMob struct {
 	TradeLevel int          `json:"tlvl,omitempty"`
 	TradeXP    int          `json:"txp,omitempty"`
 	Offers     []savedOffer `json:"offers,omitempty"`
-	Raid       [3]int       `json:"raid,omitempty"`   // raider: the raid centre it belongs to
-	Gossip     gossipBook   `json:"gossip,omitempty"` // villager: what it holds about each player
-	Converting int          `json:"conv,omitempty"`   // zombie villager: cure ticks left
-	Curer      string       `json:"curer,omitempty"`  // zombie villager: who started the cure
+	Raid       [3]int       `json:"raid,omitempty"`    // raider: the raid centre it belongs to
+	Gossip     gossipBook   `json:"gossip,omitempty"`  // villager: what it holds about each player
+	Converting int          `json:"conv,omitempty"`    // zombie villager: cure ticks left
+	Charged    bool         `json:"charged,omitempty"` // creeper: struck by lightning
+	Curer      string       `json:"curer,omitempty"`   // zombie villager: who started the cure
 
 	// Anchors: villager schedule sites + the golem/villager home.
 	Home [3]int `json:"home,omitempty"`
@@ -528,6 +529,7 @@ func toSavedMob(m *mob) savedMob {
 	}
 	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
 	sm.Converting, sm.Curer = m.converting, m.curer
+	sm.Charged = m.charged
 	if len(m.gossip) > 0 {
 		sm.Gossip = gossipBook{}
 		for k, v := range m.gossip {

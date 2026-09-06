@@ -183,5 +183,6 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 		}
 	} else {
 		h.sendVehiclesTo(t)
+		h.sendItemSpawnersTo(t)
 	}
 }

@@ -53,13 +53,14 @@ type trialSpawner struct {
 	// Players who triggered it (the reward roll), by UUID like vanilla's
 	// detectedPlayers — an eid would not survive the relog this set is meant
 	// to outlast, let alone the restart it is persisted across.
-	detected  map[[16]byte]bool
-	current   map[int32]bool // mob eids alive from this spawner
-	spawned   int            // totalMobsSpawned this round
-	nextSpawn uint64         // tick the next mob may appear
-	nextEject uint64         // tick the next reward may be ejected
-	cooldown  uint64         // tick the cooldown ends
-	shown     bool           // its block has been corrected from the template's base state
+	detected    map[[16]byte]bool
+	current     map[int32]bool // mob eids alive from this spawner
+	spawned     int            // totalMobsSpawned this round
+	nextSpawn   uint64         // tick the next mob may appear
+	nextEject   uint64         // tick the next reward may be ejected
+	cooldown    uint64         // tick the cooldown ends
+	itemSpawnAt uint64         // ominous: tick the next item spawner may be conjured
+	shown       bool           // its block has been corrected from the template's base state
 }
 
 // trialSpawnerMobs maps a chamber piece's mob name to the entity type it
@@ -213,6 +214,9 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 
 	case trialActive:
 		h.trialOmenCheck(players, ts)
+		if ts.ominous {
+			h.trialItemSpawner(players, ts)
+		}
 		extra := ts.detect(h, players) - 1
 		if extra < 0 {
 			extra = 0

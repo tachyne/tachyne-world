@@ -81,6 +81,7 @@ type arrowEntity struct {
 
 	loyalty     int      // thrown-trident loyalty: >0 flies back to the thrower instead of sticking
 	impaling    int      // thrown-trident impaling: bonus damage to targets in water or rain
+	channeling  bool     // thrown-trident channeling: a storm bolt on whatever it hits under open sky
 	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
 	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
 }
@@ -408,7 +409,8 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			}
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
-			if a.playerShot {                  // shot by a living entity → may call reinforcements
+			h.channelingStrike(players, a, m.dim, m.x, m.y, m.z)
+			if a.playerShot { // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
 			}
 			if m.health <= 0 {

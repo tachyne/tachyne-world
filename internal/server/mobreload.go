@@ -11,11 +11,11 @@ import "encoding/hex"
 // bodied, but their identity lives in the npc registry + memory files — they
 // stay resident and are respawned by their own system).
 func (h *hub) persistMob(m *mob) bool {
-	if m == nil || m.dying > 0 || m == h.dragon {
+	if m == nil || m.dying > 0 {
 		return false
 	}
-	if m.etype == entityWither {
-		return false
+	if m.etype == entityEnderDragon || m.etype == entityWither {
+		return false // bosses: the fight's dragon is staged by the End itself, a summoned one is an event, not a resident
 	}
 	if _, isNPC := h.npcs[m.eid]; isNPC {
 		return false
@@ -54,6 +54,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.color, m.customName, m.fromBucket = sm.Color, sm.CustomName, sm.FromBucket
 	m.persistent = sm.Persistent
 	m.raidCenter = unpackPos(sm.Raid)
+	if sm.Charged {
+		m.charged = true
+	}
 	h.raiderReloaded(m)
 	if sm.Variant > 0 {
 		m.variant, m.variantSet = sm.Variant-1, true
