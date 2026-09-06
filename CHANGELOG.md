@@ -63,6 +63,9 @@ the public history since the project was open-sourced on 2026-07-10.
   the way it does from Java — before, a Bedrock rider sent only sneak
   and the client was never told it was aboard. The cartography table
   opens on Bedrock as well, taking the world's preview like the anvil.
+  Books work on Bedrock: a written book opens with its pages, title and
+  author, a book and quill can be written and signed, and a lectern
+  shows its book and turns pages.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
