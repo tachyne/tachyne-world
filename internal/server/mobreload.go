@@ -51,7 +51,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.refreshBabySpeed() // the spawn roll may have set a different flag
 	m.loveTicks, m.breedCD = sm.LoveTicks, sm.BreedCD
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
-	m.color, m.customName = sm.Color, sm.CustomName
+	m.color, m.customName, m.fromBucket = sm.Color, sm.CustomName, sm.FromBucket
 	if sm.Size > 0 {
 		m.size = sm.Size
 		m.applyCubeSize() // health/speed/damage/armour all follow a cube's size

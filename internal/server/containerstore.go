@@ -38,11 +38,12 @@ type savedItem struct {
 	Box   int32    `json:"box,omitempty"`  // shulker-box contents id
 	Hive  int32    `json:"hive,omitempty"` // carried-hive contents id
 	// The four that were lost on every restart until 2026-09-05.
-	Bundle int32  `json:"bundle,omitempty"` // bundle contents id — was dropped on the floor, literally
-	Potion int8   `json:"potion,omitempty"`
-	Repair int    `json:"repair,omitempty"` // anvil prior-work cost
-	Instr  int8   `json:"instr,omitempty"`  // goat horn instrument
-	Name   string `json:"name,omitempty"`   // anvil rename
+	Bundle int32    `json:"bundle,omitempty"` // bundle contents id — was dropped on the floor, literally
+	Potion int8     `json:"potion,omitempty"`
+	Repair int      `json:"repair,omitempty"` // anvil prior-work cost
+	Instr  int8     `json:"instr,omitempty"`  // goat horn instrument
+	Name   string   `json:"name,omitempty"`   // anvil rename
+	Lode   [4]int32 `json:"lode,omitempty"`   // lodestone compass target (packLode)
 }
 
 type containerFile struct {

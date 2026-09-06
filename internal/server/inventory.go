@@ -46,6 +46,8 @@ type invStack struct {
 	// Goat horn: which of the eight instruments this horn sounds (0 = ponder,
 	// which is also what an unset horn plays).
 	instrument int8
+	// Lodestone compass target (lodestone.go); zero = a plain compass.
+	lode lodeTracker
 	// Shulker-box identity (0 = none): the 27 slots live in the hub's box
 	// store, so a broken box carries its contents as an item. Same indirection
 	// as maps and books, for the same reason — invStack stays comparable.
@@ -79,7 +81,7 @@ func (st invStack) patCount() int {
 // stacking (patterns + trim; ids/counts checked by callers).
 func (st invStack) sameExtras(o invStack) bool {
 	return st.pats == o.pats && st.trimMat == o.trimMat && st.trimPat == o.trimPat &&
-		st.bookID == o.bookID
+		st.bookID == o.bookID && st.lode == o.lode
 }
 
 // enchanted reports whether the stack carries any enchantment.

@@ -603,7 +603,7 @@ func (h *hub) snapshotItems() []savedItem {
 			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench),
 			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
 			Box: it.boxID, Hive: it.hiveID, Bundle: it.bundleID,
-			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name}
+			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name, Lode: packLode(it.lode)}
 		for i, l := range it.pats {
 			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
 		}
@@ -626,6 +626,7 @@ func (h *hub) restoreItems(saved []savedItem) {
 			it.bookID = si.Book
 			it.boxID, it.hiveID, it.bundleID = si.Box, si.Hive, si.Bundle
 			it.potion, it.repairCost, it.instrument, it.name = si.Potion, si.Repair, si.Instr, si.Name
+			it.lode = unpackLode(si.Lode)
 		}
 	}
 }
@@ -895,7 +896,8 @@ func (h *hub) run() {
 				}
 			}
 			if age%20 == 0 {
-				h.jukeboxTick(players) // end songs whose length elapsed
+				h.jukeboxTick(players)   // end songs whose length elapsed
+				h.lodestoneTick(players) // compasses forget a removed lodestone
 			}
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
@@ -1169,7 +1171,9 @@ func (h *hub) run() {
 					}
 				}
 				h.checkWitherBuild(players, e.by, e.dim, e.x, e.y, e.z, e.state)
-				h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state)
+				if !h.checkGolemBuild(players, e.dim, e.x, e.y, e.z, e.state) { // snow, then iron…
+					h.checkCopperGolemBuild(players, e.dim, e.x, e.y, e.z, e.state) // …then copper
+				}
 				if t := players[e.by]; t != nil {
 					if e.state != 0 && e.broken == 0 {
 						px, py, pz, pd := e.x, e.y, e.z, e.dim
@@ -1420,6 +1424,12 @@ func (h *hub) run() {
 				h.onSignPlaced(players, e)
 			case evUseSign:
 				h.onUseSign(players, e)
+			case evUseAxe:
+				h.onUseAxe(players, e)
+			case evUseHoneycomb:
+				h.onUseHoneycomb(players, e)
+			case evUseLodestone:
+				h.onUseLodestone(players, e)
 			case evSignUpdate:
 				h.onSignUpdate(players, e)
 			case evRecipeSettings:
@@ -1631,7 +1641,7 @@ func (h *hub) run() {
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
 						held := heldStack(t).item
-						if h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+						if h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||

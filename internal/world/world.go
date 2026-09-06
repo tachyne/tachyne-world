@@ -468,6 +468,20 @@ func (w *World) Gen() *worldgen.Generator { return w.gen }
 // Seed is the world's generation seed.
 func (w *World) Seed() int64 { return w.seed }
 
+// EditAt reports the player-placed block at a position from the edit overlay
+// alone — no chunk generation, no cache traffic. ok=false means nothing was
+// ever placed there (the position is natural terrain, whatever that is).
+func (w *World) EditAt(x, y, z int) (uint32, bool) {
+	cx, cz, lx, lz := chunkOf(x, z)
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	if m := w.edits[chunkPos{int32(cx), int32(cz)}]; m != nil {
+		s, ok := m[localIndex(lx, y, lz)]
+		return s, ok
+	}
+	return 0, false
+}
+
 // NearestEdited finds the closest edited block within a horizontal radius of
 // (x,z) whose state satisfies pred. Portals and other placed structures exist
 // only as edits, so this scans the (small) edit overlay rather than raw

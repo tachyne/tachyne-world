@@ -51,8 +51,9 @@ type itemEntity struct {
 	repairCost    int
 	instrument    int8
 	name          string
-	born          uint64 // world tick spawned (for despawn)
-	noPickupUntil uint64 // absolute tick pickup unlocks (tosses get a longer hold;
+	lode          lodeTracker // lodestone compass target
+	born          uint64      // world tick spawned (for despawn)
+	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
 	//                      underflows the unsigned despawn age and vanishes the item)
 }
@@ -64,7 +65,7 @@ func (it *itemEntity) stack() invStack {
 	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
-		instrument: it.instrument, name: it.name}
+		instrument: it.instrument, name: it.name, lode: it.lode}
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -147,6 +148,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 				other.hiveID != it.hiveID ||
 				other.bundleID != it.bundleID || other.potion != it.potion || other.repairCost != it.repairCost ||
 				other.instrument != it.instrument || other.name != it.name ||
+				other.lode != it.lode ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}
@@ -184,6 +186,7 @@ const (
 	componentTrim           = 47 // armor trim (material + pattern holders); remapped per version
 	componentBannerPats     = 63 // banner pattern layers; remapped per version
 	componentBundleContents = 41 // bundle contents (list of Slots); remapped per version
+	componentLodestone      = 58 // lodestone_tracker (lodestone compass target); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -248,6 +251,9 @@ func stackComponents(st invStack) []byte {
 		comps++
 	}
 	if st.trimMat != 0 || st.trimPat != 0 {
+		comps++
+	}
+	if st.lode.has {
 		comps++
 	}
 	var bookBytes []byte
@@ -315,6 +321,9 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, componentTrim)
 		b = protocol.AppendVarInt(b, int32(st.trimMat))
 		b = protocol.AppendVarInt(b, int32(st.trimPat))
+	}
+	if st.lode.has {
+		b = lodestoneComponent(b, st.lode)
 	}
 	b = append(b, bookBytes...) // writable/written book content (see book.go)
 	return b

@@ -33,7 +33,8 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		return
 	}
 	held := t.inv.slots[slot].item
-	if held != itemBucketH2O && held != itemBucketLav {
+	mobBucket := isMobBucket(held) // MobBucketItem: water content + a mob to release
+	if held != itemBucketH2O && held != itemBucketLav && !mobBucket {
 		return
 	}
 	w := h.worldFor(t.dim)
@@ -41,11 +42,15 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		!worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
 		return // cell filled in since the click
 	}
-	if held == itemBucketH2O && t.dim == 1 {
-		// The nether boils water off the moment it leaves the bucket.
+	if held != itemBucketLav && t.dim == 1 {
+		// The nether boils water off the moment it leaves the bucket — and a
+		// bucketed mob still comes out (checkExtraContent runs regardless).
 		h.playSoundDim(players, t.dim, "minecraft:block.fire.extinguish", sndBlock,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 2.6+(h.rng.Float32()-h.rng.Float32())*0.8)
 		h.swapBucket(t, slot, itemBucket)
+		if mobBucket {
+			h.releaseBucketMob(players, t, held, x, y, z)
+		}
 		return
 	}
 	fluid, snd := worldgen.WaterBase, "minecraft:item.bucket.empty"
@@ -53,8 +58,13 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		fluid, snd = worldgen.LavaBase, "minecraft:item.bucket.empty_lava"
 	}
 	h.setBlockLive(players, t.dim, x, y, z, fluid)
-	h.playSoundDim(players, t.dim, snd, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+	if !mobBucket { // a mob bucket's empty sound is the mob's own (playEmptySound override)
+		h.playSoundDim(players, t.dim, snd, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+	}
 	h.swapBucket(t, slot, itemBucket)
+	if mobBucket {
+		h.releaseBucketMob(players, t, held, x, y, z)
+	}
 }
 
 // bucketFill scoops with an empty bucket: walk the look ray to the first

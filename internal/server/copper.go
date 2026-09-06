@@ -42,12 +42,22 @@ type copperRange struct {
 	lo, hi   uint32 // this block's [min,max] state range
 	stage    int    // 0 unaffected .. 3 oxidized
 	nextBase uint32 // base of the next-stage block (unused at stage 3)
+	prevBase uint32 // base of the previous-stage block (unused at stage 0)
+}
+
+// waxedRange is a waxed copper block's state range and the base of the
+// unwaxed block it came from (HoneycombItem.WAX_OFF_BY_BLOCK).
+type waxedRange struct {
+	lo, hi    uint32
+	unwaxedLo uint32
 }
 
 var (
 	copperRanges       []copperRange         // sorted by lo, for binary search
 	copperLo, copperHi uint32                // coarse bounds for a cheap reject
 	waxedByBase        = map[uint32]uint32{} // unwaxed block base → waxed base
+	waxedRanges        []waxedRange          // sorted by lo
+	waxedLo, waxedHi   uint32
 )
 
 // safeRange looks up a block's state range without letting an unknown name
@@ -80,14 +90,24 @@ func init() {
 		}
 		for stage, name := range fam {
 			lo, hi, _ := safeRange(name)
-			next := uint32(0)
+			next, prev := uint32(0), uint32(0)
 			if stage < 3 {
 				next = los[stage+1]
 			}
-			if wl, _, wok := safeRange("waxed_" + name); wok { // honeycomb target
-				waxedByBase[lo] = wl
+			if stage > 0 {
+				prev = los[stage-1]
 			}
-			copperRanges = append(copperRanges, copperRange{lo: lo, hi: hi, stage: stage, nextBase: next})
+			if wl, wh, wok := safeRange("waxed_" + name); wok { // honeycomb target
+				waxedByBase[lo] = wl
+				waxedRanges = append(waxedRanges, waxedRange{lo: wl, hi: wh, unwaxedLo: lo})
+				if waxedLo == 0 || wl < waxedLo {
+					waxedLo = wl
+				}
+				if wh > waxedHi {
+					waxedHi = wh
+				}
+			}
+			copperRanges = append(copperRanges, copperRange{lo: lo, hi: hi, stage: stage, nextBase: next, prevBase: prev})
 			if copperLo == 0 || lo < copperLo {
 				copperLo = lo
 			}
@@ -97,6 +117,7 @@ func init() {
 		}
 	}
 	sort.Slice(copperRanges, func(i, j int) bool { return copperRanges[i].lo < copperRanges[j].lo })
+	sort.Slice(waxedRanges, func(i, j int) bool { return waxedRanges[i].lo < waxedRanges[j].lo })
 }
 
 // copperOf classifies a block state as copper, returning its range record.
@@ -126,6 +147,67 @@ func waxedCopper(state uint32) (uint32, bool) {
 	return wl + (state - cr.lo), true
 }
 
+// unwaxedCopper strips the wax off a waxed copper state (an axe's
+// WAX_OFF_BY_BLOCK lookup), preserving stage and orientation, or ok=false if
+// the state is not waxed copper.
+func unwaxedCopper(state uint32) (uint32, bool) {
+	if state < waxedLo || state > waxedHi {
+		return 0, false
+	}
+	i := sort.Search(len(waxedRanges), func(i int) bool { return waxedRanges[i].hi >= state })
+	if i < len(waxedRanges) && state >= waxedRanges[i].lo && state <= waxedRanges[i].hi {
+		return waxedRanges[i].unwaxedLo + (state - waxedRanges[i].lo), true
+	}
+	return 0, false
+}
+
+// scrapedCopper is WeatheringCopper.getPrevious: one oxidation stage back,
+// same orientation; ok=false for unaffected copper, waxed copper or non-copper.
+func scrapedCopper(state uint32) (uint32, bool) {
+	cr, ok := copperOf(state)
+	if !ok || cr.stage == 0 {
+		return 0, false
+	}
+	return cr.prevBase + (state - cr.lo), true
+}
+
+// copperChestPartner returns the other half of a double copper chest, if the
+// state at (x,y,z) is one half of a pair. Vanilla's CopperChestBlock.updateShape
+// makes the connected half adopt whatever block its partner becomes
+// (oxidation, wax on, wax off), so every copper state change on a chest half
+// goes through setCopperState, which carries the partner along.
+func (h *hub) copperChestPartner(dim, x, y, z int, state uint32) (blockPos, bool) {
+	if !isCopperChest(state) {
+		return blockPos{}, false
+	}
+	left, right, paired := h.chestPairPositions(dim, x, y, z, state)
+	if !paired {
+		return blockPos{}, false
+	}
+	if left == (blockPos{x, y, z}) {
+		return right, true
+	}
+	return left, true
+}
+
+// setCopperState writes a copper block's new state (a stage or wax change) and,
+// for a double chest, the partner half's matching change: the new block with
+// the partner's own facing/type (Block.withPropertiesOf). Returns the partner
+// position when there was one, so callers can echo the particle event there.
+func (h *hub) setCopperState(players map[int32]*tracked, dim, x, y, z int, old, next uint32) (blockPos, bool) {
+	partner, paired := h.copperChestPartner(dim, x, y, z, old)
+	h.setBlockLive(players, dim, x, y, z, next)
+	if paired {
+		ps := h.worldFor(dim).At(partner.x, partner.y, partner.z)
+		pinfo, pok := worldgen.InfoForState(ps)
+		ninfo, nok := worldgen.InfoForState(next)
+		if pok && nok { // the same block, with the partner's own facing/type
+			h.setBlockLive(players, dim, partner.x, partner.y, partner.z, ninfo.Min+(ps-pinfo.Min))
+		}
+	}
+	return partner, paired
+}
+
 // tickCopper runs one ChangeOverTimeBlock.changeOverTime on a copper block.
 // Returns whether the block was copper (handled).
 func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
@@ -135,6 +217,11 @@ func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uin
 	}
 	if cr.stage >= 3 || h.rng.Float64() >= 0.05688889 { // fully oxidized, or gate closed
 		return true
+	}
+	if isCopperChest(state) { // WeatheringCopperChestBlock.randomTick: only the left half ages
+		if _, ct := chestFacingType(state); ct == "right" {
+			return true
+		}
 	}
 	// Neighbourhood scan (Manhattan ≤ 4): a less-oxidized copper block halts
 	// oxidation; tally more-oxidized vs same-stage.
@@ -167,7 +254,7 @@ func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uin
 		chance *= 0.75 // getChanceModifier: slower from unaffected
 	}
 	if h.rng.Float64() < chance {
-		h.setBlockAt(players, dim, blockPos{x, y, z}, cr.nextBase+(state-cr.lo))
+		h.setCopperState(players, dim, x, y, z, state, cr.nextBase+(state-cr.lo))
 	}
 	return true
 }

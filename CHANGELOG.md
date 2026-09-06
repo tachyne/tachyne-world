@@ -11,6 +11,48 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-06
+
+### Added
+- **Four mechanics the advancement tree was waiting on.** Each had its trigger
+  wired last week and nothing in the world that could fire it; each now works
+  the vanilla way, with its advancement.
+  - *Copper waxing and scraping, and axe stripping.* Honeycomb on any copper
+    block, stair, slab, door, trapdoor, bar, grate, bulb, chest, lantern,
+    chain, lightning rod or golem statue waxes it (one comb used, vanilla's
+    particle burst); an axe strips a log, wood, stem, hyphae or bamboo block
+    to its stripped form, scrapes one oxidation stage off copper, or takes
+    the wax back off — in that order, with vanilla's sounds and particles, a
+    point of durability each, and vanilla's rule that an axe held with a
+    shield in the other hand blocks rather than strips unless you sneak. A
+    double copper chest changes as one: wax, scrape or oxidise either half
+    and the partner follows, and only the left half ages on its own. *Wax
+    On* and *Wax Off* are obtainable.
+  - *Mob buckets.* A water bucket on a cod, salmon, pufferfish, tropical
+    fish, axolotl or tadpole scoops it up (its own pickup sound, the lead
+    drops); pouring the bucket places the water — or boils it off in the
+    Nether — and releases the mob, which never despawns again. *The Cutest
+    Predator*, *Fishy Business*'s bucket half and *Tadpole in a Bucket* are
+    obtainable.
+  - *Lodestone compasses.* A compass used on a lodestone locks onto it with
+    the lock sound and becomes a lodestone compass whose needle follows that
+    block from anywhere in its dimension; a stack yields one lodestone
+    compass and spends one plain one. The target is a real item component,
+    so it survives chests, drops, restarts and both Java client generations
+    (the shared protocol library learned to renumber it per version), and a
+    compass in a player's inventory forgets a lodestone that has been
+    removed within a second, the needle spinning as in vanilla. *Country
+    Lode, Take Me Home* is obtainable.
+  - *Pumpkin-built golems.* A carved pumpkin or jack o'lantern placed on two
+    snow blocks builds a snow golem; on the iron-block T (arms along either
+    axis, air at the shoulders and beside the feet) it builds an iron golem
+    — the blocks break away with their particles and the golem stands where
+    the foot was. Every player within five blocks earns *Hired Help*.
+
+### Changed
+- Copper oxidation on a double copper chest now ages both halves together
+  (vanilla's connected-half rule) instead of leaving a mismatched pair.
+
 ## 2026-09-05
 
 ### Added

@@ -75,6 +75,7 @@ type mob struct {
 	sheared         bool       // sheep: fleece off (regrows by grazing)
 	color           int8       // sheep: fleece colour (0 white .. 15 black), dyeable
 	customName      string     // name-tagged: shown above the mob, and it never despawns
+	fromBucket      bool       // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
 	beePollinate    int        // bee: seconds left hovering at its flower

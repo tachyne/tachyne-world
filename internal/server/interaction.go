@@ -194,6 +194,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if s.tryFlatten(p, x, y, z, dir, seq) {
 		return
 	}
+	// An axe stripping a log or scraping/un-waxing copper, and honeycomb waxing
+	// copper (AxeItem.useOn / HoneycombItem.useOn) — same slot in the chain.
+	if s.tryAxeUse(p, x, y, z, seq) || s.tryHoneycombUse(p, x, y, z, seq) || s.tryCompassUse(p, x, y, z, seq) {
+		return
+	}
 
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz
@@ -224,7 +229,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
 	}
-	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav { // pour into the target cell
+	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav || isMobBucket(p.heldItem()) { // pour into the target cell
 		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
