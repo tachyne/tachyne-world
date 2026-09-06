@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-06
 
 ### Added
+- **Bedrock: crafting.** Bedrock players can craft. The world's recipe
+  book is sent to the client as Bedrock crafting data (so its crafting
+  screen recognises patterns and lists recipes), the player's 2x2 grid
+  and the crafting table's 3x3 render in Bedrock's own crafting UI, and a
+  craft — whether laid out by hand or picked from the recipe book, once or
+  many times — is turned into the same result-slot clicks a Java client
+  sends, so the world itself matches the recipe, consumes the grid and
+  hands over the result. The recipe book's auto-craft goes through the
+  world's own place-recipe step first, filling the grid from the
+  inventory the way the Java book does. Previously every craft request
+  from a Bedrock client was refused.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
