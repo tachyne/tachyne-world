@@ -34,7 +34,9 @@ the public history since the project was open-sourced on 2026-07-10.
   too: the world's three rolled rows (cost, hinted enchantment and
   level) become Bedrock's enchant options, and picking one presses the
   same button a Java client does, so the world pays the levels and
-  lapis and enchants the item.
+  lapis and enchants the item. The stonecutter too: its recipe table
+  rides in the crafting data, and a cut picks the world's row before
+  taking the result.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
