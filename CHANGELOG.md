@@ -15,15 +15,19 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ### Added
 - **Bedrock: container windows.** A Bedrock player opening a chest, barrel,
-  shulker box, hopper, dispenser or dropper now gets the real container
-  screen at the block they used, with the container's slots above their
-  own inventory. Every move in that screen is translated through a
-  per-window slot map into the same window-click the Java gateways send,
-  so items move in the shared world, and the engine's per-slot updates
-  render back into the open screen. Closing the screen tells the world to
-  release the container. Menus Bedrock has no counterpart for (furnaces,
-  crafting tables, anvils, enchanting, brewing…) are closed straight back
-  instead of leaving the world waiting on a screen that never opens.
+  shulker box, hopper, dispenser, dropper, furnace, blast furnace, smoker
+  or brewing stand now gets the real container screen at the block they
+  used, with the container's slots laid out where Bedrock keeps them
+  (the brewing stand orders its ingredient and bottles differently from
+  Java) above their own inventory. Every move in that screen is
+  translated through a per-window slot map into the same window-click
+  the Java gateways send, so items move in the shared world, and the
+  engine's per-slot updates render back into the open screen; the
+  furnace's burn and cook bars and the brewing stand's fuel gauge are
+  relayed as container data. Closing the screen tells the world to
+  release the container. Menus Bedrock has no counterpart for (crafting
+  tables, anvils, enchanting, trading…) are closed straight back instead
+  of leaving the world waiting on a screen that never opens.
 - **Four mechanics the advancement tree was waiting on.** Each had its trigger
   wired last week and nothing in the world that could fire it; each now works
   the vanilla way, with its advancement.
