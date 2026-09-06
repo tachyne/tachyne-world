@@ -203,7 +203,7 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 			breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
 		}
 		if t.gamemode == gmSurvival {
-			t.exhaustion += attackExhaustion // vanilla: attacking burns food
+			t.exhaust(attackExhaustion) // vanilla: attacking burns food
 			h.applyToolWear(t, t.p.heldSlot(), 1)
 		}
 	}

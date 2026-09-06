@@ -26,12 +26,14 @@ const (
 	survivalTickN = 20 // run the per-second survival step every N ticks
 
 	// Vanilla tuning (see docs/MECHANICS.md).
-	regenPeriod         = 80  // ticks per 1 HP regen / 1 HP starvation step (4 s)
-	regenExhaustion     = 6.0 // exhaustion added per HP regenerated
-	exhaustionThreshold = 4.0 // exhaustion units per 1 saturation/food drained
-	voidDamagePerSec    = 8   // 4 HP every 0.5 s, applied as 8 HP once per second
-	sprintExhaustion    = 0.1 // exhaustion per block sprinted (walking is free)
-	attackExhaustion    = 0.1 // exhaustion per landed melee hit
+	regenPeriod         = 80   // ticks per 1 HP regen / 1 HP starvation step (4 s)
+	regenExhaustion     = 6.0  // exhaustion added per HP regenerated
+	maxExhaustion       = 40.0 // vanilla FoodData: exhaustion never banks past this
+	waterExhaustion     = 0.01 // exhaustion per block swum, walked under or on water
+	exhaustionThreshold = 4.0  // exhaustion units per 1 saturation/food drained
+	voidDamagePerSec    = 8    // 4 HP every 0.5 s, applied as 8 HP once per second
+	sprintExhaustion    = 0.1  // exhaustion per block sprinted (walking is free)
+	attackExhaustion    = 0.1  // exhaustion per landed melee hit
 
 	// Environmental contact damage, applied once per survival second (see
 	// environmentDamage). Air is in ticks so the bubble HUD reads it directly.
@@ -68,6 +70,13 @@ func initSurvival(t *tracked) {
 // min(saturation, 6)/6 HP, costing that many exhaustion points (the same
 // 6.0/HP ratio) — so healing tapers as saturation drains, exactly like
 // vanilla, instead of the old 2-HP-per-second chunks.
+// exhaust adds food exhaustion, capped the way vanilla's FoodData caps it
+// (40.0): a long sprint or a heal cannot bank more than ten food points of
+// debt.
+func (t *tracked) exhaust(f float32) {
+	t.exhaustion = float32(math.Min(float64(t.exhaustion+f), maxExhaustion))
+}
+
 func (h *hub) fastRegen(players map[int32]*tracked) {
 	for _, t := range players {
 		if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
@@ -83,7 +92,7 @@ func (h *hub) fastRegen(players map[int32]*tracked) {
 				heal = t.maxHP() - t.health
 			}
 			t.health += heal
-			t.exhaustion += f
+			t.exhaust(f)
 			h.sendHealth(t)
 		}
 	}
@@ -93,10 +102,34 @@ func (h *hub) fastRegen(players map[int32]*tracked) {
 // converting exhaustion into hunger. Regen/starvation step only every regenPeriod
 // ticks (vanilla: 1 HP per 80 ticks); the exhaustion→hunger drain runs each call.
 func (h *hub) survivalTick(players map[int32]*tracked) {
-	slow := h.tick.Load()%regenPeriod == 0 // 80-tick (4s) regen/starve cadence
+	now := h.tick.Load()
+	slow := now%regenPeriod == 0 // 80-tick (4s) regen/starve cadence
 	for _, t := range players {
 		if t.gamemode != gmSurvival || t.dead {
 			continue
+		}
+		// Peaceful (vanilla's tickRegeneration): with natural regeneration on,
+		// a point of health and of saturation every second, a point of food
+		// every half second, whatever the player has eaten.
+		if h.rules.Difficulty == diffPeaceful && h.rules.NaturalRegen && t.health > 0 {
+			changed := false
+			if now%20 == 0 {
+				if t.health < t.maxHP() {
+					t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+1))
+					changed = true
+				}
+				if t.saturation < maxFood {
+					t.saturation = float32(math.Min(maxFood, float64(t.saturation)+1))
+					changed = true
+				}
+			}
+			if now%10 == 0 && t.food < maxFood {
+				t.food++
+				changed = true
+			}
+			if changed {
+				h.sendHealth(t)
+			}
 		}
 		if t.y < float64(voidBelow) {
 			h.damageOf(players, t, voidDamagePerSec, dtOutOfWorld)
@@ -125,7 +158,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 		fastActive := t.food == maxFood && t.saturation > 0
 		if slow && !fastActive && h.rules.NaturalRegen && t.food >= regenFood && t.health < t.maxHP() && t.health > 0 {
 			t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+1))
-			t.exhaustion += regenExhaustion // vanilla: 6.0 exhaustion per HP healed
+			t.exhaust(regenExhaustion) // vanilla: 6.0 exhaustion per HP healed
 			changed = true
 		}
 		if slow && t.food == 0 && h.rules.Difficulty != diffPeaceful {
@@ -255,7 +288,10 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 		return
 	}
 	if e.sprinting { // vanilla: only sprinting drains food from movement; walking is free
-		t.exhaustion += sprintExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z))
+		t.exhaust(sprintExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
+	}
+	if h.inWater(t.dim, e.x, e.y, e.z) { // swimming, walking under or on water: 0.01 a block
+		t.exhaust(waterExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
 	}
 	if !e.onGround {
 		// Touching water cancels accumulated fall distance (vanilla resets fall
@@ -269,9 +305,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			t.airborne, t.peakY = true, e.y
 			if e.y > t.y { // leaving the ground UPWARD = a jump (vanilla 0.05 / sprint 0.2)
 				if e.sprinting {
-					t.exhaustion += 0.2
+					t.exhaust(0.2)
 				} else {
-					t.exhaustion += 0.05
+					t.exhaust(0.05)
 				}
 			}
 		} else if e.y > t.peakY {
@@ -302,16 +338,20 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			// A stalagmite tip is the one block that makes a fall WORSE: it
 			// counts the drop 2.5 blocks longer and doubles what it deals, so
 			// it hurts even from heights that would otherwise be safe.
-			landed := h.worldFor(t.dim).At(int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)))
+			lx, ly, lz := int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z))
+			landed := h.worldFor(t.dim).At(lx, ly, lz)
+			if isTurtleEgg(landed) && h.rng.Intn(3) == 0 { // TurtleEggBlock.fallOn
+				h.crushTurtleEgg(players, t.dim, lx, ly, lz, landed)
+			}
 			hurt, impaled := stalagmiteFallExtra(landed, dist)
 			if !impaled {
 				// SAFE_FALL_DISTANCE: the three-block grace plus one per Jump
 				// Boost level (the effect's attribute modifier).
 				grace := 3 + float64(t.hasEffect(effJumpBoost))
-				if dist <= grace {
+				hurt = fallDamageOn(landed, dist, grace, t.p.sneaking) // hay, honey, beds and slime soften; powder snow catches
+				if hurt <= 0 {
 					return
 				}
-				hurt = math.Floor(dist - grace)
 			}
 			if hurt > 0 {
 				cause := deathCause{key: causeFall}
@@ -416,9 +456,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		// armour and Resistance does not.
 		return blocked <= 0
 	}
-	h.wakePlayer(players, t)        // pain wakes (and stands the pose back up)
-	t.exhaustion += dt.exhaustion() // vanilla: DamageType.exhaustion, per type
-	h.infestOnHurt(players, t)      // Infested: silverfish burst out on being hit
+	h.wakePlayer(players, t)   // pain wakes (and stands the pose back up)
+	t.exhaust(dt.exhaustion()) // vanilla: DamageType.exhaustion, per type
+	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
 	h.incCustom(t, "damage_taken", tenths(amount))
 	t.health -= amount
 	if t.health <= 0 {
@@ -547,6 +587,18 @@ var (
 	itemHoneyBottle = itemByName["honey_bottle"]
 )
 
+// alwaysEdible are the foods vanilla marks can_always_eat: eaten at full
+// hunger for their other effect.
+var alwaysEdible = map[int32]bool{
+	int32(itemByName["golden_apple"]): true, int32(itemByName["enchanted_golden_apple"]): true,
+	int32(itemByName["chorus_fruit"]): true, int32(itemByName["honey_bottle"]): true,
+	int32(itemByName["suspicious_stew"]): true,
+}
+
+var (
+	_ = alwaysEdible
+)
+
 // foodEatTicks is a food's consume time (vanilla Consumable consume_seconds ×
 // 20). The default is 32 t (1.6 s); in 1.21.11 only dried kelp (16 t / 0.8 s)
 // and honey bottle (40 t / 2.0 s) deviate.
@@ -640,8 +692,8 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	s = &t.inv.slots[slot]
 	pts, ok := foodPoints[s.item]
-	if !ok || s.count == 0 || t.food >= maxFood {
-		return
+	if !ok || s.count == 0 || (t.food >= maxFood && !alwaysEdible[s.item]) {
+		return // vanilla canEat: full players may still eat the can_always_eat foods
 	}
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
 	h.incStat(t, attachproto.StatUsed, s.item, 1)

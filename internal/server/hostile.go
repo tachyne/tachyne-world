@@ -301,6 +301,9 @@ func (h *hub) nearestHuntable(players map[int32]*tracked, dim int, x, z, maxDist
 // mobMelee bites a survival player standing within reach, on an attack cooldown.
 // Damage flows through the normal player-damage path (hurt flash, death drops).
 func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
+	if m.etype == entityBee && m.beeStingDie > 0 {
+		return // vanilla: a bee that has stung attacks no more (it dies of it)
+	}
 	if m.attackCD > 0 {
 		m.attackCD--
 		return

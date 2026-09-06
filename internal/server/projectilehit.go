@@ -139,15 +139,5 @@ func (h *hub) breakBlockDrop(players map[int32]*tracked, dim int, pos blockPos, 
 
 // lightCandle sets a candle (or candle cake) alight.
 func (h *hub) lightCandle(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	info, ok := worldgen.InfoForState(state)
-	if !ok || worldgen.GetProperty(info, state, "lit") == "true" {
-		return
-	}
-	lit := worldgen.SetProperty(info, state, "lit", "true")
-	if lit == state {
-		return
-	}
-	h.setBlockAt(players, dim, pos, lit)
-	h.playSoundDim(players, dim, "minecraft:item.flintandsteel.use", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.lightBlock(players, dim, pos, state, sndFlintSteelUse)
 }

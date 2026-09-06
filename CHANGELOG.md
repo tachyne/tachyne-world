@@ -13,6 +13,45 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-06
 
+### Fixed
+- **Survival loop, vanilla's small rules.** Peaceful difficulty now heals a
+  point of health and saturation every second and a point of food every
+  half second, as vanilla's peaceful regeneration does (it drained no food
+  before but also never fed you). Exhaustion is capped at vanilla's 40, so
+  a long sprint cannot bank more than ten food points of debt, and moving
+  through or on water costs a hundredth of a point per block as it does
+  on Java. Golden apples, enchanted golden apples, chorus fruit, honey
+  bottles and suspicious stew can be eaten at full hunger (vanilla's
+  can_always_eat), `/effect give … hunger` works, and a bee that has stung
+  stands down for its last minute instead of stinging again.
+- **Blocks you stand in and on.** Powder snow freezes: standing in it counts
+  vanilla's 140 frozen ticks (the frost creeps over the screen), a fully
+  frozen player takes a point of freeze damage every two seconds and
+  "froze to death" if they stay, any piece of leather armour keeps the
+  cold out, and the open air thaws two ticks per tick; a fall into powder
+  snow costs nothing. Hay bales soften a fall to a fifth. Walking on turtle
+  eggs cracks one in a hundred steps and a fall onto them one in three,
+  sneaking spares them. Redstone ore glows when stepped on and fades on a
+  random tick. Landing on a bed halves the fall, honey softens it to a
+  fifth, and a slime block catches it whole unless you are sneaking.
+- **Candles light and go out.** Flint and steel or a fire charge lights an
+  unlit candle, candle cake or campfire in place (a waterlogged one never
+  catches, and a fire charge is spent, a flint worn), a dispenser's flint
+  does the same to the block in front of it, an empty hand snuffs a
+  burning candle, and clicking the cake under a candle eats the first
+  slice and hands the candle back. The fire charge now works in hand at
+  all: it lights a fire against a block as vanilla's does.
+- **Wind charges trigger what they hit.** A wind charge's gust — thrown by
+  a player, a breeze, a dispenser or an ominous trial — now bursts where
+  it lands and, as vanilla's trigger explosion does, swings the wooden
+  doors, trapdoors and fence gates its blast reaches (both halves of a
+  door; never iron, never one a redstone signal holds), presses buttons,
+  flips levers, rings bells, snuffs candles and sends a hive's bees after
+  the thrower. Before, a wind charge only shoved the mob it struck, and
+  one from a dispenser flew like an arrow and stuck in the wall. The blast
+  ray-cast that TNT and creepers use now serves the gust too, so a wind
+  charge reaches exactly the blocks a vanilla one would.
+
 ### Added
 - **Mobs in all their coats.** Wolves, cats, horses, llamas, parrots,
   rabbits, foxes, mooshrooms and the warm/cold/temperate pigs, cows and

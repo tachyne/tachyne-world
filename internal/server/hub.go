@@ -316,6 +316,7 @@ type tracked struct {
 	// The player's OWN ender-chest storage: the block is just a door onto it.
 	ender   *chest
 	winPos2 simPos      // the RIGHT half of an open double chest (winPos = LEFT)
+	frozen  int         // vanilla TICKS_FROZEN: powder snow counts it up, the open air thaws it
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
 	// compares against it so gear attributes recompute on change, not per tick.
@@ -1438,7 +1439,7 @@ func (h *hub) run() {
 				}
 				// Ore XP: only for an actual survival miner (never creative/world).
 				if t := players[e.by]; t != nil && t.gamemode == gmSurvival {
-					t.exhaustion += 0.005 // vanilla: mining a block
+					t.exhaust(0.005) // vanilla: mining a block
 					if xp := xpForBlock(e.state, h.rng.Intn); xp > 0 && silk == 0 {
 						h.spawnXPOrbIn(players, e.dim, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 					}
@@ -1751,6 +1752,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.harvestBeeHome(players, t, blockPos{e.x, e.y, e.z})
 				}
+			case evLightBlock:
+				h.onLightBlock(players, e)
+			case evUseCandle:
+				h.useCandle(players, e)
 			case evUseCake:
 				if t := players[e.eid]; t != nil {
 					h.eatCake(players, t, blockPos{e.x, e.y, e.z})

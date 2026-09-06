@@ -224,6 +224,10 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.useFlintSteel(p, x, y, z, dx, dy, dz, seq)
 		return
 	}
+	if p.heldItem() == itemFireCharge { // FireChargeItem.useOn: light in place, or start a fire
+		s.useFireCharge(p, x, y, z, dx, dy, dz, seq)
+		return
+	}
 	if int32(p.heldItem()) == itemBrush { // sweep a suspicious block
 		s.hub.post(evBrush{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
@@ -453,6 +457,18 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	state := s.worldFor(p).Block(x, y, z)
 	if _, _, isCauldron := cauldronOf(state); isCauldron { // bucket/bottle/wash interactions
 		s.hub.post(evCauldron{eid: p.eid, slot: int32(p.held), x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if inRanges(candleRanges, state) { // snuff a candle, or eat a candle cake
+		held := p.heldItem()
+		if held == itemFlintSteel || held == itemFireCharge {
+			return false // the lighter handles it
+		}
+		if _, isCake := candleCakeOf(state); !isCake && held != 0 {
+			return false // CandleBlock passes with anything in hand (stacking a candle, say)
+		}
+		s.hub.post(evUseCandle{eid: p.eid, x: x, y: y, z: z, cy: cy})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

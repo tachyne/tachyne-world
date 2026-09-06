@@ -157,3 +157,61 @@ func TestBlocksTouchingCoversFeetBodyAndFloor(t *testing.T) {
 		t.Errorf("probed %d floor + %d other, want 1 + 2", floors, others)
 	}
 }
+
+// Powder snow freezes a player without leather, hurts once fully frozen,
+// and thaws in the open; hay bales soften a fall to a fifth.
+func TestFreezingAndHayFall(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	x, z := int(pl.x), int(pl.z)
+	y := int(pl.y)
+	w := h.worldFor(0)
+	w.SetBlock(x, y, z, powderSnowBlock)
+	for i := 0; i < freezeTicks; i++ {
+		h.tick.Store(uint64(i + 1))
+		h.tickFreezing(players, pl)
+	}
+	if pl.frozen != freezeTicks {
+		t.Fatalf("frozen %d after %d ticks in powder snow", pl.frozen, freezeTicks)
+	}
+	hp := pl.health
+	h.tick.Store(freezeHurtEvery)
+	h.tickFreezing(players, pl)
+	if pl.health >= hp {
+		t.Errorf("fully frozen took no damage: %v", pl.health)
+	}
+	pl.armor[0] = invStack{item: int32(itemByName["leather_helmet"]), count: 1}
+	h.tickFreezing(players, pl)
+	if pl.frozen != freezeTicks-2 {
+		t.Errorf("leather wearer still freezing: %d", pl.frozen)
+	}
+	w.SetBlock(x, y, z, 0)
+	pl.armor[0] = invStack{}
+	h.tickFreezing(players, pl)
+	if pl.frozen != freezeTicks-4 {
+		t.Errorf("open air did not thaw: %d", pl.frozen)
+	}
+	if d := fallDamageOn(hayMin, 13, 3, false); d != 2 {
+		t.Errorf("hay fall from 13 = %v, want 2", d)
+	}
+	if d := fallDamageOn(powderSnowBlock, 30, 3, false); d != 0 {
+		t.Errorf("powder snow fall = %v, want 0", d)
+	}
+	if d := fallDamageOn(1, 13, 3, false); d != 10 {
+		t.Errorf("stone fall from 13 = %v, want 10", d)
+	}
+	if d := fallDamageOn(slimeMin, 30, 3, false); d != 0 {
+		t.Errorf("slime fall = %v, want 0", d)
+	}
+	if d := fallDamageOn(slimeMin, 30, 3, true); d != 27 {
+		t.Errorf("sneaking slime fall = %v, want 27", d)
+	}
+	if d := fallDamageOn(worldgen.BlockBase("red_bed"), 13, 3, false); d != 3 {
+		t.Errorf("bed fall from 13 = %v, want 3", d)
+	}
+	if d := fallDamageOn(honeyMin, 13, 3, false); d != 2 {
+		t.Errorf("honey fall from 13 = %v, want 2", d)
+	}
+}

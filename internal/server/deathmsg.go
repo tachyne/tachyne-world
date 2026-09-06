@@ -35,6 +35,7 @@ const (
 	causeStalagmite = "stalagmite" // impaled
 	causeLava       = "lava"       // tried to swim in lava
 	causeFire       = "fire"       // went up in flames
+	causeFreeze     = "freeze"     // froze to death
 	causeDrown      = "drown"      // drowned
 	causeStarve     = "starve"     // starved to death
 	causeCactus     = "cactus"     // pricked to death
@@ -79,6 +80,8 @@ func deathMessage(victim string, c deathCause) string {
 		return victim + " was impaled on a stalagmite"
 	case causeLava:
 		return victim + " tried to swim in lava"
+	case causeFreeze:
+		return victim + " froze to death"
 	case causeFire:
 		if by != "" {
 			return victim + " was burnt to a crisp whilst fighting " + by

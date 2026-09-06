@@ -109,7 +109,7 @@ var effectNames = map[string]int32{
 	"bad_omen": effBadOmen, "hero_of_the_village": effHeroOfVillage,
 	"mining_fatigue": effMiningFatigue, "nausea": effNausea,
 	"invisibility": effInvisibility, "blindness": effBlindness,
-	"health_boost": effHealthBoost, "saturation": effSaturation,
+	"health_boost": effHealthBoost, "saturation": effSaturation, "hunger": effHunger,
 	"glowing": effGlowing, "luck": effLuck, "unluck": effUnluck,
 	"conduit_power": effConduitPower, "dolphins_grace": effDolphinsGrace,
 	"darkness":   effDarkness,
@@ -271,7 +271,7 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				// pass runs at 1 Hz, so a second's worth goes on at once — the
 				// effect was being applied (a husk's bite grants it) and then
 				// costing its victim nothing at all.
-				t.exhaustion += hungerExhaustionPerSec * float32(e.amp+1)
+				t.exhaust(hungerExhaustionPerSec * float32(e.amp+1))
 			case effSaturation:
 				// SaturationMobEffect fires every tick it is active.
 				h.feedSaturation(t, e.amp)

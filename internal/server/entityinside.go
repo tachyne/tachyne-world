@@ -2,7 +2,9 @@ package server
 
 import (
 	"math"
+	"strconv"
 
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -20,6 +22,119 @@ const (
 	witherRoseSecs   = 2   // WitherRoseBlock: Wither for 2 s
 	berryMoveEpsilon = 0.003
 )
+
+// Freezing (vanilla Entity/LivingEntity): standing in powder snow counts
+// up to 140 frozen ticks unless a piece of leather armour is worn; fully
+// frozen, a point of freeze damage lands every 40 ticks; out of the snow
+// the count thaws two a tick. The client draws the frost from the synced
+// TICKS_FROZEN field.
+const (
+	freezeTicks       = 140
+	freezeHurtEvery   = 40
+	freezeDamage      = 1
+	metaIndexFrozen   = 7   // Entity DATA_TICKS_FROZEN (INT), same on every served version
+	hayFallMultiplier = 0.2 // HayBlock.fallOn
+)
+
+var (
+	slimeMin, slimeMax                 = worldgen.BlockRange("slime_block")
+	honeyMin, honeyMax                 = worldgen.BlockRange("honey_block")
+	hayMin, hayMax                     = worldgen.BlockRange("hay_block")
+	turtleEggMin, turtleEggMax         = worldgen.BlockRange("turtle_egg")
+	redstoneOreMin, redstoneOreMax     = worldgen.BlockRange("redstone_ore")
+	dsRedstoneOreMin, dsRedstoneOreMax = worldgen.BlockRange("deepslate_redstone_ore")
+	leatherArmour                      = map[int32]bool{
+		int32(itemByName["leather_helmet"]): true, int32(itemByName["leather_chestplate"]): true,
+		int32(itemByName["leather_leggings"]): true, int32(itemByName["leather_boots"]): true,
+	}
+)
+
+func isHay(s uint32) bool        { return s >= hayMin && s <= hayMax }
+func isSlimeBlock(s uint32) bool { return s >= slimeMin && s <= slimeMax }
+func isHoneyBlock(s uint32) bool { return s >= honeyMin && s <= honeyMax }
+func isTurtleEgg(s uint32) bool  { return s >= turtleEggMin && s <= turtleEggMax }
+func isRedstoneOre(s uint32) bool {
+	return (s >= redstoneOreMin && s <= redstoneOreMax) || (s >= dsRedstoneOreMin && s <= dsRedstoneOreMax)
+}
+
+// canFreeze is vanilla's: any leather armour piece keeps the cold out.
+func (t *tracked) canFreeze() bool {
+	for _, a := range t.armor {
+		if a.count > 0 && leatherArmour[a.item] {
+			return false
+		}
+	}
+	return true
+}
+
+// frozenMetadata syncs the frost overlay.
+func frozenMetadata(eid int32, ticks int) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexFrozen)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(ticks))
+	return protocol.AppendU8(b, 0xff)
+}
+
+// tickFreezing runs one player's freeze clock.
+func (h *hub) tickFreezing(players map[int32]*tracked, t *tracked) {
+	w := h.worldFor(t.dim)
+	fx, fz, feet := int(math.Floor(t.x)), int(math.Floor(t.z)), int(math.Floor(t.y))
+	inSnow := w.At(fx, feet, fz) == powderSnowBlock || w.At(fx, feet+1, fz) == powderSnowBlock
+	was := t.frozen
+	if inSnow && t.canFreeze() {
+		t.frozen = min(freezeTicks, t.frozen+1)
+	} else {
+		t.frozen = max(0, t.frozen-2)
+	}
+	if t.frozen != was && (t.frozen%5 == 0 || t.frozen == freezeTicks) {
+		t.p.trySendEv(metaEv(frozenMetadata(t.p.eid, t.frozen)))
+	}
+	if t.frozen >= freezeTicks && h.tick.Load()%freezeHurtEvery == 0 {
+		h.hurtBy(players, t, freezeDamage, dtFreeze, deathCause{key: causeFreeze})
+	}
+}
+
+// crushTurtleEgg breaks one egg of a clutch (TurtleEggBlock.destroyEgg).
+func (h *hub) crushTurtleEgg(players map[int32]*tracked, dim, x, y, z int, s uint32) {
+	info, ok := worldgen.InfoForState(s)
+	if !ok {
+		return
+	}
+	h.playSound(players, "minecraft:block.turtle_egg.break", sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.7, 0.9+h.rng.Float32()*0.2)
+	eggs := 1
+	if n, err := strconv.Atoi(worldgen.GetProperty(info, s, "eggs")); err == nil {
+		eggs = n
+	}
+	if eggs <= 1 {
+		h.setBlockLive(players, dim, x, y, z, 0)
+		return
+	}
+	h.setBlockLive(players, dim, x, y, z, worldgen.SetProperty(info, s, "eggs", strconv.Itoa(eggs-1)))
+}
+
+// fallDamageOn is the fall damage for landing on a block: hay bales and
+// honey soften it to a fifth, a bed halves the drop, a slime block
+// catches it whole unless the player is sneaking (which suppresses the
+// bounce), powder snow catches it entirely.
+func fallDamageOn(landed uint32, dist, grace float64, sneaking bool) float64 {
+	switch {
+	case landed == powderSnowBlock:
+		return 0
+	case isSlimeBlock(landed) && !sneaking:
+		return 0
+	case isBedBlock(landed):
+		dist *= 0.5
+	}
+	if dist <= grace {
+		return 0
+	}
+	hurt := dist - grace
+	if isHay(landed) || isHoneyBlock(landed) {
+		hurt *= hayFallMultiplier
+	}
+	return math.Floor(hurt)
+}
 
 var (
 	magmaBlockState              = worldgen.BlockBase("magma_block")
@@ -47,8 +162,21 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 		movedX := math.Abs(t.x - t.contactX)
 		movedZ := math.Abs(t.z - t.contactZ)
 		t.contactX, t.contactZ = t.x, t.z
+		h.tickFreezing(players, t)
+		if t.dead {
+			continue
+		}
+		fx, fz, feet := int(math.Floor(t.x)), int(math.Floor(t.z)), int(math.Floor(t.y))
 		h.blocksTouching(t.dim, t.x, t.y, t.z, func(s uint32, onFloor bool) {
 			switch {
+			case onFloor && isTurtleEgg(s): // TurtleEggBlock.stepOn: one in a hundred a tick, not when sneaking
+				if !t.p.sneaking && h.rng.Intn(100) == 0 {
+					h.crushTurtleEgg(players, t.dim, fx, feet-1, fz, s)
+				}
+			case onFloor && isRedstoneOre(s) && !boolProp(s, "lit"): // RedStoneOreBlock.stepOn: lights up
+				if !t.p.sneaking {
+					h.setBlockLive(players, t.dim, fx, feet-1, fz, setBoolProp(s, "lit", true))
+				}
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you. Vanilla
 				// ALSO spares a crouching player (isSteppingCarefully), which

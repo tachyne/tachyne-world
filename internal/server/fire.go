@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -67,6 +68,12 @@ type primedTNT struct {
 // the face-adjacent air cell alight. Returns whether the click was consumed.
 func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bool {
 	target := s.worldFor(p).Block(x, y, z)
+	if canLightBlock(target) { // an unlit candle, candle cake or campfire
+		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFlintSteelUse})
+		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		s.sendBlockChange(p, x, y, z, target, seq)
+		return true
+	}
 	if isTNT(target) {
 		s.hub.post(evPrimeTNT{x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, target, seq)
@@ -85,6 +92,25 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
 	s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 	return true
+}
+
+// useFireCharge is FireChargeItem.useOn: lights a candle/candle cake/campfire
+// in place or starts a fire in the empty cell in front, spending the charge.
+func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
+	target := s.worldFor(p).Block(x, y, z)
+	if canLightBlock(target) {
+		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFireChargeUse})
+		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		s.sendBlockChange(p, x, y, z, target, seq)
+		return
+	}
+	fx, fy, fz := x+dx, y+dy, z+dz
+	if s.worldFor(p).Block(fx, fy, fz) != worldgen.Air {
+		s.sendBlockChange(p, fx, fy, fz, s.worldFor(p).Block(fx, fy, fz), seq)
+		return
+	}
+	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
+	s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 }
 
 type evPrimeTNT struct{ x, y, z int }
@@ -170,41 +196,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 
 	w := h.worldFor(dim)
 	if w != nil && radius > 0 {
-		hit := map[blockPos]bool{}
-		for sx := 0; sx < explodeRays; sx++ {
-			for sy := 0; sy < explodeRays; sy++ {
-				for sz := 0; sz < explodeRays; sz++ {
-					// Only the shell of the cube: those are the ray directions.
-					if sx != 0 && sx != explodeRays-1 && sy != 0 && sy != explodeRays-1 &&
-						sz != 0 && sz != explodeRays-1 {
-						continue
-					}
-					dx := float64(sx)/(explodeRays-1)*2 - 1
-					dy := float64(sy)/(explodeRays-1)*2 - 1
-					dz := float64(sz)/(explodeRays-1)*2 - 1
-					l := math.Sqrt(dx*dx + dy*dy + dz*dz)
-					if l == 0 {
-						continue
-					}
-					dx, dy, dz = dx/l*explodeStep, dy/l*explodeStep, dz/l*explodeStep
-					power := float64(radius) * (0.7 + h.rng.Float64()*0.6)
-					px, py, pz := cx, cy, cz
-					for power > 0 {
-						pos := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
-						st := w.At(pos.x, pos.y, pos.z)
-						if st != worldgen.Air {
-							power -= (float64(worldgen.Resistance(st)) + 0.3) * 0.3
-						}
-						if power > 0 && st != worldgen.Air && st != worldgen.Bedrock &&
-							!worldgen.IsWater(st) && !worldgen.IsLava(st) {
-							hit[pos] = true
-						}
-						px, py, pz = px+dx, py+dy, pz+dz
-						power -= explodeDrain
-					}
-				}
-			}
-		}
+		hit := h.blastPositions(w, cx, cy, cz, float64(radius))
 		for pos := range hit {
 			st := w.At(pos.x, pos.y, pos.z)
 			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
@@ -225,7 +217,57 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			}
 		}
 	}
+	h.explodeHurt(players, dim, cx, cy, cz, radius, maxDamage, dt, cause)
+}
 
+// blastPositions is the crater ray-cast on its own: the set of blocks an
+// explosion of the given power reaches, before anything is done to them.
+// A TNT blast destroys them; a wind charge only triggers them.
+func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blockPos]bool {
+	hit := map[blockPos]bool{}
+	{
+		for sx := 0; sx < explodeRays; sx++ {
+			for sy := 0; sy < explodeRays; sy++ {
+				for sz := 0; sz < explodeRays; sz++ {
+					// Only the shell of the cube: those are the ray directions.
+					if sx != 0 && sx != explodeRays-1 && sy != 0 && sy != explodeRays-1 &&
+						sz != 0 && sz != explodeRays-1 {
+						continue
+					}
+					dx := float64(sx)/(explodeRays-1)*2 - 1
+					dy := float64(sy)/(explodeRays-1)*2 - 1
+					dz := float64(sz)/(explodeRays-1)*2 - 1
+					l := math.Sqrt(dx*dx + dy*dy + dz*dz)
+					if l == 0 {
+						continue
+					}
+					dx, dy, dz = dx/l*explodeStep, dy/l*explodeStep, dz/l*explodeStep
+					power := radius * (0.7 + h.rng.Float64()*0.6)
+					px, py, pz := cx, cy, cz
+					for power > 0 {
+						pos := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+						st := w.At(pos.x, pos.y, pos.z)
+						if st != worldgen.Air {
+							power -= (float64(worldgen.Resistance(st)) + 0.3) * 0.3
+						}
+						if power > 0 && st != worldgen.Air && st != worldgen.Bedrock &&
+							!worldgen.IsWater(st) && !worldgen.IsLava(st) {
+							hit[pos] = true
+						}
+						px, py, pz = px+dx, py+dy, pz+dz
+						power -= explodeDrain
+					}
+				}
+			}
+		}
+	}
+	return hit
+}
+
+// explodeHurt is the blast's second half: the TNT carts it lights and the
+// falloff damage + shove on everything within reach.
+func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz float64,
+	radius, maxDamage int, dt dmgType, cause deathCause) {
 	rangeF := float64(radius) + 2
 	if radius <= 0 {
 		rangeF = blastRange // no crater, full hurt (mobGriefing off)

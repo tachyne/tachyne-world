@@ -26,6 +26,7 @@ func TestBurningProjectileLightsACandle(t *testing.T) {
 	}
 	info, _ := worldgen.InfoForState(lo)
 	unlit := worldgen.SetProperty(info, lo, "lit", "false")
+	unlit = worldgen.SetProperty(info, unlit, "waterlogged", "false") // a wet candle never lights (CandleBlock.canBeLit)
 	pos := blockPos{3, 70, 0}
 
 	// A plain arrow leaves it alone.

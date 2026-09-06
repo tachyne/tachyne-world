@@ -279,3 +279,44 @@ func TestDeathDropsStayInTheDimensionYouDiedIn(t *testing.T) {
 		}
 	}
 }
+
+// Peaceful heals and feeds on its own clock; exhaustion never banks past
+// forty; the always-edible foods go down at full hunger.
+func TestPeacefulRegenExhaustionCapAlwaysEdible(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	h.rules.Difficulty = diffPeaceful
+	pl.health, pl.food, pl.saturation = 10, 15, 3
+	h.tick.Store(20)
+	h.survivalTick(players)
+	if pl.health != 11 || pl.saturation != 4 || pl.food != 16 {
+		t.Errorf("peaceful tick: health %v saturation %v food %v", pl.health, pl.saturation, pl.food)
+	}
+	h.tick.Store(30)
+	h.survivalTick(players)
+	if pl.health != 11 || pl.food != 17 {
+		t.Errorf("half-second tick: health %v food %v", pl.health, pl.food)
+	}
+	h.rules.Difficulty = diffNormal
+	pl.exhaustion = 39
+	pl.exhaust(5)
+	if pl.exhaustion != 40 {
+		t.Errorf("exhaustion cap: %v", pl.exhaustion)
+	}
+	pl.food, pl.saturation, pl.exhaustion = maxFood, 0, 0
+	pl.inv.slots[0] = invStack{item: int32(itemByName["bread"]), count: 1}
+	h.eat(players, pl, 0)
+	if pl.inv.slots[0].count != 1 {
+		t.Error("bread eaten at full hunger")
+	}
+	pl.inv.slots[0] = invStack{item: int32(itemByName["golden_apple"]), count: 1}
+	h.eat(players, pl, 0)
+	if pl.inv.slots[0].count != 0 {
+		t.Error("golden apple refused at full hunger")
+	}
+	if effectNames["hunger"] != effHunger {
+		t.Error("/effect hunger unknown")
+	}
+}

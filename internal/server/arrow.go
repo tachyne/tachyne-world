@@ -133,6 +133,9 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	a := &arrowEntity{eid: eid, etype: etype, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz,
 		born: h.tick.Load(), sx: x, sy: y, sz: z, ox: x, oz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
+	if etype == entityWindCharge { // a gust, not a dart: shoves, bursts on contact, never sticks
+		a.knock, a.breaks = 1.5, true
+	}
 	h.arrows[eid] = a
 	add := entAdd(eid, etype, a.uuid, x, y, z, arrowYaw(a), arrowPitch(a))
 	add.VX, add.VY, add.VZ = vx, vy, vz // the launch arc, ahead of the first move
@@ -217,6 +220,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			if worldgen.Collides(h.worldFor(a.dim).At(int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz)))) {
 				if a.breaks { // snowballs/eggs shatter
 					hit = true
+					if a.knock > 0 { // a wind charge bursts a quarter block off the face it struck
+						h.windBurst(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter)
+						break
+					}
 					h.spawnParticles(players, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
 					if a.pearl {
 						h.pearlLand(players, a)
@@ -304,6 +311,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
 			h.knockback(t, a.x, a.z)
 			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
+			h.windBurst(players, a.dim, px, py, pz, a.shooter)
 			return true
 		}
 		if a.dmg > 0 {
