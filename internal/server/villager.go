@@ -61,6 +61,7 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED (vanilla 1.21.5)
 					prof, work := nearestJobSite(bed, jobs)
 					h.initVillagerTrades(m, prof)
+					h.sendVillagerData(players, m)
 					m.home = blockPos{bed[0], bed[1], bed[2]}
 					m.bed = blockPos{bed[0], bed[1], bed[2]}
 					m.work = work
@@ -227,7 +228,7 @@ func (h *hub) addTradeGossip(m *mob, name string) {
 // reputation discount (−floor(reputation · priceMultiplier)) plus a Hero of the
 // Village discount (−max(1, floor((0.3 + 0.0625·amp) · baseCost))).
 func (h *hub) updateSpecialPrices(t *tracked, m *mob) {
-	rep := m.gossip[t.p.name] // 0 if absent
+	rep := m.gossip[t.p.name] + m.cureRep[t.p.name] // 0 if absent
 	heroAmp := t.hasEffect(effHeroOfVillage)
 	for i := range m.offers {
 		o := &m.offers[i]

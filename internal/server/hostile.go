@@ -242,6 +242,15 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	}
 	if tx, tz, ok := h.nearestQuarry(players, m.dim, m.x, m.z, reach); ok {
 		m.hasTarget, m.tx, m.tz = true, tx, tz
+		m.villagerTarget = 0
+	} else if zombieKind(m.etype) {
+		// No player: a zombie turns on the nearest villager (vanilla's
+		// AbstractVillager target goal sits right below the player one).
+		if v := h.nearestVillager(m, zombieVillagerHunt); v != nil {
+			m.hasTarget, m.tx, m.tz, m.villagerTarget = true, v.x, v.z, v.eid
+		} else {
+			m.hasTarget, m.villagerTarget = false, 0
+		}
 	} else {
 		m.hasTarget = false
 	}
@@ -298,6 +307,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, attackReach)
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
+		if t == nil && m.villagerTarget != 0 {
+			h.zombieBitesVillager(players, m) // no player in reach: the villager it hunts
+		}
 		return
 	}
 	dmg := (hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()

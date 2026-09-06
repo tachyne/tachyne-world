@@ -174,6 +174,10 @@ type mob struct {
 	frozen          bool           // creaking: a player is watching, so it cannot move
 	tx, tz          float64        // that target's position (set by acquireTarget)
 	dim             int            // dimension this mob lives in (0 overworld, 1 nether)
+	villagerTarget  int32          // zombie: the villager it hunts when no player is near (0 = none)
+	converting      int            // zombie villager: ticks left in its cure (0 = not curing)
+	curer           string         // zombie villager: who fed it the golden apple
+	cureRep         map[string]int // villager: gratitude gossip toward its curers (per session)
 	profession      int            // villager: index into professionNames/villagerTrades
 	tradeLevel      int            // villager merchant tier 1-5 (novice..master)
 	tradeXP         int            // trade experience toward the next tier

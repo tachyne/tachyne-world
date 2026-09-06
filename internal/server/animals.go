@@ -160,6 +160,10 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, false)))
 			}
 		}
+		if m.converting > 0 {
+			h.tickCure(players, m)
+			continue // the cure may have replaced the mob
+		}
 		if m.etype == entitySheep && m.sheared && h.rng.Intn(woolRegrowIn) == 0 {
 			m.sheared = false
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, false)))

@@ -56,6 +56,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	if sm.Variant > 0 {
 		m.variant, m.variantSet = sm.Variant-1, true
 	}
+	if m.etype == entityVillager || m.etype == entityZombieVillager {
+		h.villagerType(m) // villagers saved before clothes were synced dress by their biome
+	}
 	if sm.Size > 0 {
 		m.size = sm.Size
 		m.applyCubeSize() // health/speed/damage/armour all follow a cube's size
@@ -100,11 +103,18 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	}
 	m.home, m.bed, m.work, m.meet = unpackPos(sm.Home), unpackPos(sm.Bed), unpackPos(sm.Work), unpackPos(sm.Meet)
 	switch m.etype {
-	case entityVillager:
-		// The village-population stance (updateVillages) — spawnMob alone
-		// leaves a villager as a generic grazer.
-		m.behavior, m.usesDoors = villagerBehavior{}, true
-		m.setMoveSpeed(0.135)
+	case entityVillager, entityZombieVillager:
+		if m.etype == entityVillager {
+			// The village-population stance (updateVillages) — spawnMob alone
+			// leaves a villager as a generic grazer.
+			m.behavior, m.usesDoors = villagerBehavior{}, true
+			m.setMoveSpeed(0.135)
+		} else {
+			m.converting, m.curer = sm.Converting, sm.Curer
+			if m.converting > 0 {
+				m.persistent = true
+			}
+		}
 		m.profession = sm.Profession % len(professionNames)
 		if m.profession < 0 {
 			m.profession = 0

@@ -53,6 +53,9 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 		return 0, 0 // in bed — held still by villagerSleep, but be defensive
 	}
 	homeX, homeZ := float64(m.home.x), float64(m.home.z)
+	if vx, vz, fleeing := h.villagerFlee(m); fleeing {
+		return vx, vz // a zombie within eight blocks: run
+	}
 	if h.tick.Load() < m.hideUntil && m.bed != (blockPos{}) { // a rung bell: hide at the bed
 		return h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
 	}

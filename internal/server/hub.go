@@ -1690,7 +1690,7 @@ func (h *hub) run() {
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
 						held := heldStack(t).item
-						if h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+						if h.cureZombieVillager(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||

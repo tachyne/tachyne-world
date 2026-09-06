@@ -143,9 +143,14 @@ func (h *hub) unlockTier(m *mob, tier int) {
 // tier thresholds it crosses, unlocking the new tier's trades.
 func (h *hub) awardTradeXP(m *mob, xp int32) {
 	m.tradeXP += int(xp)
+	promoted := false
 	for m.tradeLevel < maxTradeTier && m.tradeXP >= tierMinXP[m.tradeLevel+1] {
 		m.tradeLevel++
 		h.unlockTier(m, m.tradeLevel)
+		promoted = true
+	}
+	if promoted && h.playersRef != nil {
+		h.sendVillagerData(h.playersRef, m) // the new tier's badge
 	}
 }
 

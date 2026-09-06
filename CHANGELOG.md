@@ -260,6 +260,31 @@ the public history since the project was open-sourced on 2026-07-10.
   End cities, fortresses) now stamp, seed and route their chests from the
   neighbouring cells as well, so a bridge is never cut at a cell edge.
 
+### Fixed
+- **Villagers wear their profession.** Every villager rendered as an
+  unemployed plains villager, whatever it traded: the VillagerData
+  metadata (the type of the biome it was born in, its profession and its
+  trade tier) was never sent. It is now, at spawn, on join, on a dimension
+  change and whenever a villager is promoted — and the shared protocol
+  library learned the serializer so 26.2 clients get it renumbered and
+  index-shifted correctly.
+
+### Added
+- **Zombie villagers, both ways.** Zombies, husks and drowned now hunt the
+  nearest villager within sixteen blocks when no player is near (vanilla
+  puts that target goal right below the player one), and villagers run
+  from a zombie within eight. A killing bite turns the villager on Normal
+  (half the time) and Hard (always) — Easy just kills — into a zombie
+  villager that keeps its profession, tier, trades, XP and gossip, with
+  vanilla's infection level event. A golden apple fed to a weakened zombie
+  villager starts the cure exactly as vanilla does: the apple is spent,
+  Weakness gives way to Strength, the cure sound and shaking play from the
+  entity event, three to five minutes tick down (each iron bar or bed
+  within four blocks may hurry it along), and the villager returns with
+  everything it had, queasy for ten seconds, owing its curer vanilla's
+  major-positive gratitude (a steep discount) and the *Zombie Doctor*
+  advancement. A cure in progress survives a restart.
+
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its
   attribute modifier does in vanilla; the three-block grace was fixed.

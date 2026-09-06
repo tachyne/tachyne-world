@@ -117,6 +117,9 @@ func (h *hub) inheritVariant(baby, a, b *mob) {
 // variantMeta is the set_entity_data body carrying a mob's variant, or nil
 // when the species has none.
 func variantMeta(m *mob) []byte {
+	if m.etype == entityVillager || m.etype == entityZombieVillager {
+		return villagerDataMeta(m) // clothes: type + profession + tier
+	}
 	if !m.variantSet {
 		return nil
 	}
