@@ -63,13 +63,13 @@ func villagerTypeForBiome(biome string) int8 {
 func (h *hub) villagerType(m *mob) int8 {
 	if !m.variantSet {
 		if w := h.worldFor(m.dim); w != nil {
-			m.variant = villagerTypeForBiome(w.BiomeAt(floorInt(m.x), floorInt(m.z)))
+			m.variant = int32(villagerTypeForBiome(w.BiomeAt(floorInt(m.x), floorInt(m.z))))
 		} else {
 			m.variant = villagerTypePlains
 		}
 		m.variantSet = true
 	}
-	return m.variant
+	return int8(m.variant)
 }
 
 // villagerDataMeta builds the VillagerData entry for a villager or a zombie

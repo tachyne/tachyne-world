@@ -81,6 +81,19 @@ func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, cat int, c [2]in
 func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, counts *[catCount]int, cap int) {
 	total := 0
 	for g := 0; g < 3; g++ {
+		if !h.spawnOneGroupAt(players, cat, ax, ay, az, counts, cap, &total) {
+			return
+		}
+	}
+}
+
+// spawnOneGroupAt places one pack; false once the position is done (the
+// category cap or the cluster limit reached). The pack shares its
+// SpawnGroupData — the wolf/horse/llama/rabbit/fox variant — through the
+// scoped spawn group.
+func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, counts *[catCount]int, cap int, total *int) (more bool) {
+	more = true
+	h.withSpawnGroup(func() {
 		x, z := ax, az
 		groupSize := h.rng.Intn(4) + 1 // vanilla ceil(rand*4) = 1..4 until a type is rolled
 		picked := false
@@ -117,13 +130,16 @@ func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, cou
 			h.spawnNatural(players, cat, sd.etype, x, ay, z)
 			counts[cat]++
 			if counts[cat] >= cap {
+				more = false
 				return
 			}
-			if total++; total >= maxSpawnCluster { // vanilla getMaxSpawnClusterSize: 4 total → done
+			if *total++; *total >= maxSpawnCluster { // vanilla getMaxSpawnClusterSize: 4 total → done
+				more = false
 				return
 			}
 		}
-	}
+	})
+	return more
 }
 
 // nearWorldSpawn reports whether (x,y,z) is within the spawn-point exclusion

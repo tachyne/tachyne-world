@@ -83,7 +83,7 @@ type savedMob struct {
 	Color      int8   `json:"color,omitempty"`   // sheep fleece colour
 	CustomName string `json:"name,omitempty"`    // name tag; also makes the mob persistent
 	FromBucket bool   `json:"bucket,omitempty"`  // released from a mob bucket: persistent
-	Variant    int8   `json:"variant,omitempty"` // frog/axolotl colour + 1 (0 = unset)
+	Variant    int32  `json:"variant,omitempty"` // species variant + 1 (0 = unset; rows without one re-roll on load)
 	Persistent bool   `json:"persist,omitempty"` // picked up gear: persistenceRequired
 	EggIn      int    `json:"egg,omitempty"`
 	Size       int    `json:"size,omitempty"`

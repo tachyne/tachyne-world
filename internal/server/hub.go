@@ -432,6 +432,7 @@ type hub struct {
 	psched     *pluginSched
 	plugHost   *pluginHost
 	spawnCause plugin.SpawnReason // in-force MobSpawnEvent reason (zero = SpawnNatural)
+	spawnGroup *spawnGroup        // in-force natural pack sharing a variant (variant.go); nil = none
 	opsRef     map[string]bool    // Server.Ops, read-only after Serve (announce targeting)
 
 	invs       *invStore        // survival inventory persistence (nil = in-memory only)

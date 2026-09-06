@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-06
 
 ### Added
+- **Mobs in all their coats.** Wolves, cats, horses, llamas, parrots,
+  rabbits, foxes, mooshrooms and the warm/cold/temperate pigs, cows and
+  chickens now roll their vanilla variants at spawn — the biome-tag
+  rules, the pack that shares one coat, the full-moon black cat, the
+  horse herd's colour with markings per animal, the llama's strength —
+  inherit them by vanilla's breeding odds, keep them across restarts,
+  and show them on every client. The Bedrock gateway renders them with
+  Geyser's numbering. Getting there fixed a numbering slip from earlier
+  today: the villager-data serializer is 19 on 1.21.5 (18 on 26.2), so
+  1.21.5 clients now see villager clothes correctly.
 - **Bedrock: crafting.** Bedrock players can craft. The world's recipe
   book is sent to the client as Bedrock crafting data (so its crafting
   screen recognises patterns and lists recipes), the player's 2x2 grid
@@ -75,7 +85,12 @@ the public history since the project was open-sourced on 2026-07-10.
   other players swing their arms, picked-up items fly to the player,
   the difficulty and a server-chosen hotbar slot follow, the dragon's
   boss bar shows, and a ridden vehicle snaps back where the world
-  puts it.
+  puts it. Filled maps draw on Bedrock (vanilla's colours, the player
+  and banner markers, explorer-map icons), and scoreboards show in the
+  sidebar, list and below-name slots with team colours and prefixes.
+  The mount screen opens on Bedrock too: saddle and armour on a horse,
+  saddle or carpet and the chest on a donkey, mule or llama. Typing a
+  slash on Bedrock now offers the server's command names.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English

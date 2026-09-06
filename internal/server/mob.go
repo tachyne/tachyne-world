@@ -77,7 +77,7 @@ type mob struct {
 	customName      string   // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)
-	variant         int8     // frog / axolotl colour (variant.go); meaningful when variantSet
+	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)

@@ -721,8 +721,10 @@ func (h *hub) herdTopUp(players map[int32]*tracked) {
 	}
 	occupied := map[[2]int]bool{}
 	pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
-	for i := 0; i < pack; i++ {
-		x, z := h.spreadSpawn(cx, cz, occupied)
-		h.spawnAnimal(players, sd.etype, x, z)
-	}
+	h.withSpawnGroup(func() { // one pack, one shared variant (variant.go)
+		for i := 0; i < pack; i++ {
+			x, z := h.spreadSpawn(cx, cz, occupied)
+			h.spawnAnimal(players, sd.etype, x, z)
+		}
+	})
 }
