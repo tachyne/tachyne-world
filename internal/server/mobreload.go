@@ -53,6 +53,8 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
 	m.color, m.customName, m.fromBucket = sm.Color, sm.CustomName, sm.FromBucket
 	m.persistent = sm.Persistent
+	m.raidCenter = unpackPos(sm.Raid)
+	h.raiderReloaded(m)
 	if sm.Variant > 0 {
 		m.variant, m.variantSet = sm.Variant-1, true
 	}

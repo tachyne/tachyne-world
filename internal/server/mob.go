@@ -178,6 +178,7 @@ type mob struct {
 	converting      int            // zombie villager: ticks left in its cure (0 = not curing)
 	curer           string         // zombie villager: who fed it the golden apple
 	cureRep         map[string]int // villager: gratitude gossip toward its curers (per session)
+	giftAt          uint64         // villager: tick its next Hero of the Village gift may be thrown
 	profession      int            // villager: index into professionNames/villagerTrades
 	tradeLevel      int            // villager merchant tier 1-5 (novice..master)
 	tradeXP         int            // trade experience toward the next tier

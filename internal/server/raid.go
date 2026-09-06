@@ -34,12 +34,23 @@ var raiderWaves = map[int][8]int{
 type raid struct {
 	center      blockPos
 	uuid        [16]byte
+	omenLevel   int            // the Raid Omen level that started it (Raid.raidOmenLevel, 1-5)
+	bonusDone   bool           // the omen-level bonus wave has spawned
+	pending     int            // restored raid: saved raiders whose chunks have not loaded yet
 	wave        int            // waves spawned so far
 	numGroups   int            // total waves (by difficulty)
 	waveSpawned int            // raiders spawned in the current wave (for the bar)
 	alive       map[int32]bool // raider eids currently spawned
 	shown       map[int32]bool // player eids currently shown the bar
 	idleTicks   int            // ticks with no player near
+}
+
+// raidUUID is the raid's boss-bar identity, stable per village centre.
+func raidUUID(center blockPos) [16]byte {
+	var u [16]byte
+	binary.BigEndian.PutUint32(u[8:], 0x52414944) // "RAID"
+	binary.BigEndian.PutUint32(u[12:], uint32(center.x*31+center.z))
+	return u
 }
 
 // raidWaveCount is the wave total by difficulty (Raid.getNumGroups).
@@ -56,18 +67,24 @@ func raidWaveCount(diff int) int {
 
 // startRaid begins a raid at a village centre (no-op if one is already active).
 func (h *hub) startRaid(players map[int32]*tracked, center blockPos) {
+	h.startRaidLevel(players, center, 1)
+}
+
+// startRaidLevel starts a raid at a Raid Omen level: above one it brings a
+// bonus wave after the last, and a stronger Hero of the Village.
+func (h *hub) startRaidLevel(players map[int32]*tracked, center blockPos, omenLevel int) {
 	if h.raids[center] != nil {
 		return
 	}
+	omenLevel = max(1, min(raidOmenMax, omenLevel))
 	for _, t := range players { // Raid.absorbRaidOmen: everyone the raid wakes for is a trigger
 		if t.dim == dimOverworld && t.hasEffect(effRaidOmen) > 0 {
 			h.incCustom(t, "raid_trigger", 1)
 		}
 	}
-	r := &raid{center: center, numGroups: raidWaveCount(h.rules.Difficulty),
+	r := &raid{center: center, numGroups: raidWaveCount(h.rules.Difficulty), omenLevel: omenLevel,
 		alive: map[int32]bool{}, shown: map[int32]bool{}}
-	binary.BigEndian.PutUint32(r.uuid[8:], 0x52414944) // "RAID"
-	binary.BigEndian.PutUint32(r.uuid[12:], uint32(center.x*31+center.z))
+	r.uuid = raidUUID(center)
 	h.raids[center] = r
 	h.spawnWave(players, r)
 	h.broadcastChat(players, "A raid has begun!")
@@ -81,9 +98,20 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 	if r.wave > 7 {
 		return
 	}
+	// The omen-level bonus wave comes after the last regular one and takes
+	// the final wave's counts (getDefaultNumSpawns with isBonusWave).
+	bonus := r.omenLevel > 1 && r.wave > r.numGroups
+	if bonus {
+		r.bonusDone = true
+	}
 	for etype, counts := range raiderWaves {
 		ravagerN := 0 // successful ravagers this wave (first one gets the evoker rider)
-		for i := 0; i < counts[r.wave]; i++ {
+		n := counts[r.wave]
+		if bonus {
+			n = counts[r.numGroups]
+		}
+		n += h.raidBonusSpawns(etype, r.wave, bonus)
+		for i := 0; i < n; i++ {
 			ang := h.rng.Float64() * 2 * math.Pi
 			d := 8 + h.rng.Float64()*raidSpawnRadius
 			x := r.center.x + int(math.Cos(ang)*d)
@@ -156,15 +184,20 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 			continue
 		}
 		r.idleTicks = 0
+		h.raidBell(players, r)
+		if aliveN == 0 && r.pending > 0 {
+			continue // a restored raid: its raiders are still in unloaded chunks
+		}
 		if aliveN == 0 { // wave cleared
-			if r.wave >= r.numGroups {
+			if r.wave >= r.numGroups && (r.omenLevel <= 1 || r.bonusDone) {
 				h.broadcastChat(players, "Victory! The raid has been defeated.")
 				// vanilla: everyone who helped (in the raid area) earns Hero of
-				// the Village — 48000 ticks (40 min), which discounts villager
-				// trades via updateSpecialPrices.
+				// the Village — 48000 ticks (40 min) at the omen level's
+				// amplifier, which discounts villager trades via
+				// updateSpecialPrices and moves the villagers to give gifts.
 				for _, t := range players {
 					if t.dim == 0 && dist3(t.x, t.y, t.z, float64(center.x), float64(center.y), float64(center.z)) <= raidBarRange {
-						h.applyEffect(players, t, effHeroOfVillage, 0, 2400)
+						h.applyEffect(players, t, effHeroOfVillage, r.omenLevel-1, 2400)
 					}
 				}
 				h.endRaid(players, r)
@@ -266,5 +299,5 @@ func (h *hub) raidOmenExpired(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	t.raidOmenSet = false
-	h.startRaid(players, t.raidOmenPos)
+	h.startRaidLevel(players, t.raidOmenPos, max(1, t.hasEffect(effRaidOmen))) // hasEffect = amplifier+1 = the omen level
 }

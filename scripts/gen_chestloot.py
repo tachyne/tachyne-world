@@ -154,10 +154,13 @@ def table(t):
 # chests/ is the bulk of it; spawners/ holds what a trial spawner ejects when
 # its fight is won, which is the only way a trial key enters the world; and
 # archaeology/ is what a brush turns up out of a suspicious block.
+# gameplay/hero_of_the_village/ is what a grateful villager throws a Hero of
+# the Village after a won raid, per profession.
 PREFIXES = [
     "data/minecraft/loot_table/chests/",
     "data/minecraft/loot_table/spawners/",
     "data/minecraft/loot_table/archaeology/",
+    "data/minecraft/loot_table/gameplay/hero_of_the_village/",
 ]
 out, kept, skipped = {}, 0, 0
 for n in sorted(z.namelist()):

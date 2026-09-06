@@ -53,6 +53,8 @@ type mobFile struct {
 	// EndCities lists the (x,z) of End cities already seeded with their
 	// shulkers and the ship's elytra.
 	EndCities [][2]int `json:"end_cities,omitempty"`
+	// Raids in progress (their raiders are ordinary saved mobs carrying Raid).
+	Raids []savedRaid `json:"raids,omitempty"`
 	// Seeded is the permanent set of chunks that have already received their
 	// one-time vanilla chunk-generation herd. Persisted (was in-memory, reset
 	// every restart) so a rollout never re-lays herds on a chunk whose animals
@@ -127,6 +129,7 @@ type savedMob struct {
 	TradeLevel int          `json:"tlvl,omitempty"`
 	TradeXP    int          `json:"txp,omitempty"`
 	Offers     []savedOffer `json:"offers,omitempty"`
+	Raid       [3]int       `json:"raid,omitempty"`  // raider: the raid centre it belongs to
 	Converting int          `json:"conv,omitempty"`  // zombie villager: cure ticks left
 	Curer      string       `json:"curer,omitempty"` // zombie villager: who started the cure
 
@@ -524,6 +527,7 @@ func toSavedMob(m *mob) savedMob {
 	}
 	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
 	sm.Converting, sm.Curer = m.converting, m.curer
+	sm.Raid = packPos(m.raidCenter)
 	for _, o := range m.offers {
 		sm.Offers = append(sm.Offers, packOffer(o))
 	}

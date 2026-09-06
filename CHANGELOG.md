@@ -284,6 +284,16 @@ the public history since the project was open-sourced on 2026-07-10.
   everything it had, queasy for ten seconds, owing its curer vanilla's
   major-positive gratitude (a steep discount) and the *Zombie Doctor*
   advancement. A cure in progress survives a restart.
+- **Raids, finished.** The follow-ups the raids row listed: vanilla's
+  per-difficulty bonus spawns (extra pillagers and vindicators, a witch on
+  the witch waves, a ravager on the bonus wave), the Raid Omen level — a
+  level above one brings the bonus wave after the last regular one and a
+  stronger Hero of the Village — villagers ringing the village bell while
+  the raid is on (which lights every raider up), grateful villagers
+  walking up to a Hero of the Village and throwing gifts from their
+  profession's own gift tables (thirty seconds to five and a half minutes
+  apart), and raids that survive a restart: the raid and its raiders are
+  saved with the mobs and pick up mid-wave.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its
