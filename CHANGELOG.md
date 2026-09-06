@@ -69,7 +69,13 @@ the public history since the project was open-sourced on 2026-07-10.
   chunk shows its text (colour and glow included), placing or editing
   one opens Bedrock's sign editor, and the text written there reaches
   the world. Banners show their patterns on the right base colour,
-  campfires show what is cooking, and bells swing when rung.
+  campfires show what is cooking, and bells swing when rung. Potion and
+  other status effects show on Bedrock, creative mode can fly (and a
+  game-mode change mid-session takes effect), it rains and thunders,
+  other players swing their arms, picked-up items fly to the player,
+  the difficulty and a server-chosen hotbar slot follow, the dragon's
+  boss bar shows, and a ridden vehicle snaps back where the world
+  puts it.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
