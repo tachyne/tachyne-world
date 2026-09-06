@@ -65,7 +65,10 @@ the public history since the project was open-sourced on 2026-07-10.
   opens on Bedrock as well, taking the world's preview like the anvil.
   Books work on Bedrock: a written book opens with its pages, title and
   author, a book and quill can be written and signed, and a lectern
-  shows its book and turns pages.
+  shows its book and turns pages. Signs too: every sign in a loaded
+  chunk shows its text (colour and glow included), placing or editing
+  one opens Bedrock's sign editor, and the text written there reaches
+  the world.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
