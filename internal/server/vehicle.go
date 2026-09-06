@@ -254,6 +254,9 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 func (h *hub) updateVehicles(players map[int32]*tracked) {
 	occupied := map[blockPos]bool{}
 	for _, v := range h.vehicles {
+		if v.dim != dimOverworld {
+			continue // redstone (detector rails) is simulated in the overworld only
+		}
 		pos := blockPos{floorInt(v.x), floorInt(v.y + 0.01), floorInt(v.z)}
 		if isDetectorRail(h.world.At(pos.x, pos.y, pos.z)) {
 			occupied[pos] = true
@@ -280,6 +283,9 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 // sendVehiclesTo shows existing vehicles to a joining player.
 func (h *hub) sendVehiclesTo(t *tracked) {
 	for _, v := range h.vehicles {
+		if v.dim != t.dim {
+			continue
+		}
 		t.p.trySendEv(entAdd(v.eid, v.etype, v.uuid, v.x, v.y, v.z, v.yaw, 0))
 		if v.rider != 0 {
 			t.p.trySendEv(passengersBody(v.eid, v.rider))
@@ -288,9 +294,6 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 }
 
 func passengersBody(vehicleEID int32, riders ...int32) attachproto.Passengers {
-		if v.dim != dimOverworld {
-			continue // redstone (detector rails) is simulated in the overworld only
-		}
 	return attachproto.Passengers{Vehicle: vehicleEID, Riders: append([]int32{}, riders...)}
 }
 
@@ -317,9 +320,6 @@ func (h *hub) snapshotVehicles() []savedVehicle {
 	}
 	return out
 }
-		if v.dim != t.dim {
-			continue
-		}
 
 func (h *hub) restoreVehicles(saved []savedVehicle) {
 	for _, sv := range saved {
