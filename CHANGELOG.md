@@ -30,7 +30,11 @@ the public history since the project was open-sourced on 2026-07-10.
   result is taken. Villagers trade with Bedrock players: the world's
   offers (with their demand and reputation pricing, uses and tier) are
   rendered as Bedrock's trade screen, and picking an offer selects it in
-  the world before the goods change hands.
+  the world before the goods change hands. The enchanting table works
+  too: the world's three rolled rows (cost, hinted enchantment and
+  level) become Bedrock's enchant options, and picking one presses the
+  same button a Java client does, so the world pays the levels and
+  lapis and enchants the item.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
