@@ -87,6 +87,17 @@ the public history since the project was open-sourced on 2026-07-10.
   book, the first trade offer with two costs. Still narrow: a stack holds
   two enchantments.
 
+- **Redstone follow-ups.** A trapped chest is now a signal source: its
+  strength is how many players have it open, it powers the block beneath
+  it strongly (a trapped chest over a block over a lamp is the classic
+  alarm), and opening or closing either half of a large one re-evaluates
+  the wiring. Redstone torches burn out the vanilla way — eight flips at
+  one torch inside sixty ticks leave it dark with the fizz and smoke, and
+  it tries again 160 ticks later — so a torch clock or an inverter loop
+  no longer runs forever. Dust sits on exactly the tops vanilla accepts:
+  full blocks, top and double slabs, upside-down stairs, closed top
+  trapdoors and hoppers; a bottom slab or an upright stair drops it.
+
 ### Changed
 - Copper oxidation on a double copper chest now ages both halves together
   (vanilla's connected-half rule) instead of leaving a mismatched pair.

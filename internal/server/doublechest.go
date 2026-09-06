@@ -149,6 +149,8 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	t.winID, t.winKind = h.nextWin, winDoubleChest
 	t.winPos = simPos{dim: t.dim, blockPos: left}
 	t.winPos2 = simPos{dim: t.dim, blockPos: right}
+	h.trappedChestChanged(t.dim, left) // a trapped pair: both halves signal their viewers
+	h.trappedChestChanged(t.dim, right)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
 	h.sendDoubleChestWindow(t)
 	t.p.trySendEv(soundEv("minecraft:block.chest.open", sndBlock,

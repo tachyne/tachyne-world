@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -224,8 +225,17 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			sx, sy, sz = x-dx, y, z-dz
 		}
 		powered := h.supportPowered(sx, sy, sz, x, y, z)
-		if torchLit(state) == powered {
-			h.setBlock(players, pos, torchWithLit(state, !powered))
+		h.pruneTorchToggles()
+		switch {
+		case torchLit(state) && powered:
+			h.setBlock(players, pos, torchWithLit(state, false))
+			h.scheduleSignalAround(pos)
+			if h.torchToggledTooOften(pos, true) { // burn out: fizz, and try again in 160 ticks
+				h.toNearbyEv(players, 0, float64(x), float64(z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: x, Y: y, Z: z})
+				h.schedule(pos, torchRestartDelay)
+			}
+		case !torchLit(state) && !powered && !h.torchToggledTooOften(pos, false):
+			h.setBlock(players, pos, torchWithLit(state, true))
 			h.scheduleSignalAround(pos)
 		}
 	case worldgen.IsCopperBulb(state):
@@ -372,4 +382,47 @@ func itoa(n int) string {
 		return string(rune('0' + n))
 	}
 	return "1" + string(rune('0'+n-10))
+}
+
+// Redstone torch burnout (RedstoneTorchBlock.isToggledTooFrequently): every
+// lit→unlit flip is logged; toggles older than 60 ticks are forgotten; a
+// torch with eight logged flips stays dark (fizzing, level event 1502) and
+// is re-tried 160 ticks later — which is what stops a torch clock or an
+// inverter loop from ticking forever.
+const (
+	torchToggleWindow      = 60
+	torchMaxRecentToggles  = 8
+	torchRestartDelay      = 160
+	worldEventTorchBurnout = 1502
+)
+
+type torchToggle struct {
+	pos  blockPos
+	when uint64
+}
+
+func (h *hub) pruneTorchToggles() {
+	now := h.tick.Load()
+	i := 0
+	for i < len(h.torchToggles) && now-h.torchToggles[i].when > torchToggleWindow {
+		i++
+	}
+	h.torchToggles = h.torchToggles[i:]
+}
+
+// torchToggledTooOften is isToggledTooFrequently: optionally log this flip,
+// then report whether the position has eight or more recent ones.
+func (h *hub) torchToggledTooOften(pos blockPos, add bool) bool {
+	if add {
+		h.torchToggles = append(h.torchToggles, torchToggle{pos: pos, when: h.tick.Load()})
+	}
+	n := 0
+	for _, tg := range h.torchToggles {
+		if tg.pos == pos {
+			if n++; n >= torchMaxRecentToggles {
+				return true
+			}
+		}
+	}
+	return false
 }

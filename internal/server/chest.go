@@ -39,6 +39,40 @@ func isChestBlock(s uint32) bool {
 
 func isCopperChest(s uint32) bool { return s >= copperChestMin && s <= copperChestMax }
 
+// isTrappedChest reports a trapped chest — a signal source whose strength is
+// how many players have it open (TrappedChestBlock.ownSignal).
+func isTrappedChest(s uint32) bool { return s >= trappedChestMin && s <= trappedChestMax }
+
+// chestOpenCount is ChestBlockEntity.getOpenCount for the chest at pos: the
+// players viewing it, counting both halves of a double chest (opening a large
+// chest starts both block entities' opener counters).
+func (h *hub) chestOpenCount(dim int, pos blockPos) int {
+	n := 0
+	at := simPos{dim: dim, blockPos: pos}
+	for _, t := range h.playersRef {
+		switch t.winKind {
+		case winChest:
+			if t.winPos == at {
+				n++
+			}
+		case winDoubleChest:
+			if t.winPos == at || t.winPos2 == at {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// trappedChestChanged re-evaluates the redstone around a trapped chest whose
+// viewer count just changed (open or close) — its signal is that count.
+func (h *hub) trappedChestChanged(dim int, pos blockPos) {
+	if dim != dimOverworld || !isTrappedChest(h.worldFor(dim).At(pos.x, pos.y, pos.z)) {
+		return
+	}
+	h.scheduleSignalAround(pos)
+}
+
 type chest struct {
 	slots [27]invStack
 }
@@ -86,6 +120,7 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		h.nextWin = 1
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
+	h.trappedChestChanged(t.dim, pos.blockPos) // a trapped chest's signal is its viewer count
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest"})
 	h.sendChestWindow(t, c)

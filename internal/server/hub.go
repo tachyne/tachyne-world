@@ -409,6 +409,9 @@ type hub struct {
 	pendingResume map[string]handover.PlayerState
 	pendingMu     sync.Mutex
 
+	// Redstone torch toggles of the last 60 ticks (RedstoneTorchBlock
+	// RECENT_TOGGLES): eight at one position burn the torch out.
+	torchToggles []torchToggle
 	// pending block updates bucketed by the tick they're due — the heart of
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
 	pending map[uint64][]simPos

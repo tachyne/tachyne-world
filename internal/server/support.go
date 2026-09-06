@@ -115,6 +115,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		return sameBlockFamily(below(), state) || holdsBlock(below())
 	}
 
+	if isWire(state) { // RedStoneWireBlock.canSurviveOn: a sturdy top face or a hopper
+		return canHoldDust(below())
+	}
 	switch worldgen.SupportFor(state) {
 	case worldgen.SupportFloor:
 		return holdsBlock(below())

@@ -236,7 +236,7 @@ func (h *hub) wireArms(x, y, z int) [6]bool {
 // canHoldDust approximates RedStoneWireBlock.canSurviveOn (a sturdy top
 // face, or a hopper): full cubes and hoppers. Upside-down stairs and top
 // slabs also qualify in vanilla and are not covered here.
-func canHoldDust(s uint32) bool { return worldgen.IsFullCube(s) || isHopper(s) }
+func canHoldDust(s uint32) bool { return worldgen.IsSturdyTop(s) || isHopper(s) }
 
 // ownSignal is BlockBehaviour.ownSignal: a source's omnidirectional strength.
 func (h *hub) ownSignal(x, y, z int, s uint32) int {
@@ -283,6 +283,8 @@ func (h *hub) ownSignal(x, y, z int, s uint32) int {
 		if boolProp(s, "powered") {
 			return 15
 		}
+	case isTrappedChest(s): // clamp(open count, 0, 15)
+		return min(h.chestOpenCount(0, blockPos{x, y, z}), 15)
 	}
 	return 0
 }
@@ -294,7 +296,8 @@ func (h *hub) isSignalSource(s uint32) bool {
 	}
 	return isLever(s) || isButton(s) || isRSTorch(s) || isRepeater(s) || isComparator(s) ||
 		isObserver(s) || s == redstoneBlock || isPlate(s) || isDetectorRail(s) || isLectern(s) ||
-		isTripwireHook(s) || isDaylight(s) || isTarget(s) || isAnySensor(s) || isLightningRod(s)
+		isTripwireHook(s) || isDaylight(s) || isTarget(s) || isAnySensor(s) || isLightningRod(s) ||
+		isTrappedChest(s)
 }
 
 // weakSignal is BlockState.getSignal(level, pos, d): what the block at
@@ -362,7 +365,7 @@ func (h *hub) directSignal(x, y, z int, s uint32, d rsDir) int {
 		return h.weakSignal(x, y, z, s, d)
 	case isRepeater(s), isComparator(s), isObserver(s):
 		return h.weakSignal(x, y, z, s, d)
-	case isPlate(s), isDetectorRail(s), isLectern(s), isAnySensor(s):
+	case isPlate(s), isDetectorRail(s), isLectern(s), isAnySensor(s), isTrappedChest(s):
 		if d == dUp { // the block BENEATH (it asks with d = UP)
 			return h.weakSignal(x, y, z, s, d)
 		}
