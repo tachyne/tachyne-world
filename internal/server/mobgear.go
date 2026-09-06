@@ -53,7 +53,8 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 		h.playSound(players, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)},
 			invStack{}, m.gear))
-		return // one pickup per scan
+		m.persistent = true // Mob.pickUpItem → setPersistenceRequired: a looter never despawns
+		return              // one pickup per scan
 	}
 }
 

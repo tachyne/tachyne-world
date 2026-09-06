@@ -76,6 +76,7 @@ type savedMob struct {
 	CustomName string `json:"name,omitempty"`    // name tag; also makes the mob persistent
 	FromBucket bool   `json:"bucket,omitempty"`  // released from a mob bucket: persistent
 	Variant    int8   `json:"variant,omitempty"` // frog/axolotl colour + 1 (0 = unset)
+	Persistent bool   `json:"persist,omitempty"` // picked up gear: persistenceRequired
 	EggIn      int    `json:"egg,omitempty"`
 	Size       int    `json:"size,omitempty"`
 
@@ -460,7 +461,8 @@ func toSavedMob(m *mob) savedMob {
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
 		Color: m.color, CustomName: m.customName, FromBucket: m.fromBucket, Variant: packVariant(m),
-		Hostile: m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
+		Persistent: m.persistent,
+		Hostile:    m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
 		CarriedBlk: m.carriedBlock,
 		Oxidation:  m.oxidation, Waxed: m.waxed, Carrying: packStack(m.carrying),
 		Trident: m.trident, CanPickup: m.canPickup,

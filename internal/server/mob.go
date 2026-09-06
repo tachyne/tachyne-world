@@ -76,6 +76,7 @@ type mob struct {
 	color           int8     // sheep: fleece colour (0 white .. 15 black), dyeable
 	customName      string   // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
+	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)
 	variant         int8     // frog / axolotl colour (variant.go); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg

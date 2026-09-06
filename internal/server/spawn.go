@@ -640,8 +640,8 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 		if m.dying > 0 || h.spawnExempt(m) {
 			continue
 		}
-		if m.named() || m.fromBucket {
-			continue // a name tag or a bucket makes a mob persistent (Mob.checkDespawn)
+		if m.named() || m.fromBucket || m.persistent {
+			continue // a name tag, a bucket or picked-up gear makes a mob persistent (Mob.checkDespawn)
 		}
 		cat := mobSpawnCategory(m)
 		dist := categoryDespawnDist[cat]

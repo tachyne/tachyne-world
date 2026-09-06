@@ -178,6 +178,19 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 		}
 		c.reapplyAt = now + cloudReapply
 		effs := potionEffects(c.kind)
+		// AreaEffectCloud doses every LivingEntity inside it, mobs included: a
+		// lingering potion of Harming thrown at a zombie horde works.
+		if !c.breath {
+			h.grid().nearby(c.dim, c.x, c.z, c.radius+1, func(m *mob) {
+				if m.dying > 0 || m.dim != c.dim {
+					return
+				}
+				if dist3(m.x, m.y, m.z, c.x, c.y, c.z) > c.radius {
+					return
+				}
+				h.applyPotionAoEMob(players, m, effs, 1, lingerFactor)
+			})
+		}
 		for _, t := range players {
 			if t.dim != c.dim || t.gamemode != gmSurvival || t.dead {
 				continue
