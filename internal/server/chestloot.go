@@ -207,11 +207,28 @@ func (c *lootCtx) applyChestFn(h *hub, f *lootFn, st invStack) invStack {
 			st.dmg = int(math.Floor((1 - remain) * float64(maxd)))
 		}
 	case "ench_random":
-		if e := h.chestEnchRandom(c.rng, st.item); e != ([2]enchApply{}) {
+		// enchant_randomly with a single named option pins the enchantment
+		// (the ancient city's Swift Sneak book, the bastion's Soul Speed).
+		var e [2]enchApply
+		if f.Ench != "" {
+			if id, ok := enchByName[f.Ench]; ok {
+				e = [2]enchApply{{id: id, lvl: int8(1 + c.rng(enchDefs[id].maxLevel))}}
+			}
+		} else {
+			e = h.chestEnchRandom(c.rng, st.item)
+		}
+		if e != ([2]enchApply{}) {
 			if st.item == itemBook {
 				st.item = itemEnchantedBook
 			}
 			st.ench = e
+		}
+	case "set_ench": // set_enchantments: one fixed enchantment at a fixed level
+		if id, ok := enchByName[f.Ench]; ok && f.Lvl > 0 {
+			if st.item == itemBook {
+				st.item = itemEnchantedBook
+			}
+			st.ench = [2]enchApply{{id: id, lvl: int8(f.Lvl)}}
 		}
 	case "ench_levels":
 		if e := h.chestEnchLevels(c.rng, st.item, int(c.np(f.NP))); e != ([2]enchApply{}) {
@@ -253,75 +270,14 @@ func (c *lootCtx) npFloat(n *lootNP) float64 {
 	return c.np(n) // binomial etc. keep the integer path
 }
 
-// chestEnchPool is the engine's simplified candidate enchantment set for an
-// item — a stand-in for vanilla's per-enchantment supported-item tables, sized
-// to the [2]enchApply stack cap.
-func chestEnchPool(item int32) []int8 {
-	switch {
-	case item == itemBook:
-		return []int8{enchSharpness, enchEfficiency, enchProtection, enchUnbreaking,
-			enchFortune, enchLooting, enchPower, enchLure, enchLuckOfTheSea, enchMending}
-	case item == itemBow:
-		return []int8{enchPower, enchPunch, enchFlame, enchInfinity, enchUnbreaking}
-	case item == itemFishingRod:
-		return []int8{enchLure, enchLuckOfTheSea, enchUnbreaking, enchMending}
-	}
-	if _, isSword := meleeDamage[item]; isSword {
-		if swordPeriod[item] {
-			return []int8{enchSharpness, enchLooting, enchUnbreaking, enchMending}
-		}
-		return []int8{enchEfficiency, enchFortune, enchSilkTouch, enchUnbreaking}
-	}
-	if _, isArmor := armorInfo[item]; isArmor {
-		return []int8{enchProtection, enchUnbreaking, enchMending}
-	}
-	if _, durable := itemMaxDurability[item]; durable {
-		return []int8{enchEfficiency, enchUnbreaking, enchMending}
-	}
-	return nil
-}
-
-// chestEnchRandom applies one uniformly-chosen enchantment at a random valid
-// level (vanilla enchant_randomly, single enchant).
+// chestEnchRandom is loot's enchant_randomly on the vanilla engine.
 func (h *hub) chestEnchRandom(rng func(int) int, item int32) [2]enchApply {
-	pool := chestEnchPool(item)
-	if len(pool) == 0 {
-		return [2]enchApply{}
-	}
-	id := pool[rng(len(pool))]
-	return [2]enchApply{{id: id, lvl: int8(1 + rng(int(enchMaxLvl(id))))}}
+	return enchRandomly(lootRand(rng), item)
 }
 
-// chestEnchLevels approximates vanilla enchant_with_levels: a primary enchant
-// scaled toward its cap by the level cost (the rollEnchOptions idiom), and a
-// second, distinct enchant when rng(50) ≤ cost — capped at 2 by the stack.
+// chestEnchLevels is loot's enchant_with_levels on the vanilla engine.
 func (h *hub) chestEnchLevels(rng func(int) int, item int32, cost int) [2]enchApply {
-	pool := chestEnchPool(item)
-	if len(pool) == 0 {
-		return [2]enchApply{}
-	}
-	pick := func(c int) enchApply {
-		id := pool[rng(len(pool))]
-		maxl := int(enchMaxLvl(id))
-		lvl := 1 + c*(maxl-1)/30
-		if lvl < 1 {
-			lvl = 1
-		}
-		if lvl > maxl {
-			lvl = maxl
-		}
-		return enchApply{id: id, lvl: int8(lvl)}
-	}
-	out := [2]enchApply{pick(cost)}
-	if len(pool) > 1 && rng(50) <= cost {
-		for i := 0; i < 5; i++ {
-			if e := pick(cost / 2); e.id != out[0].id {
-				out[1] = e
-				break
-			}
-		}
-	}
-	return out
+	return enchWithLevels(lootRand(rng), item, cost)
 }
 
 // shuffleSplitItems scatters and fragments the rolled stacks to fill more of

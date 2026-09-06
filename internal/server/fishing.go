@@ -536,24 +536,9 @@ func (h *hub) rollFishTreasure() invStack {
 	}
 }
 
-// fishingTreasureEnch stands in for vanilla's enchant-with-30-levels roll:
-// one near-cap enchantment fitting the item, often with Unbreaking beside it.
+// fishingTreasureEnch is the fishing treasure table's enchant_with_levels
+// 30 (the loot tag: table enchantments plus mending, frost walker and the
+// curses) on the vanilla engine.
 func (h *hub) fishingTreasureEnch(item int32) [2]enchApply {
-	var pool []int8
-	switch item {
-	case itemBow:
-		pool = []int8{enchPower, enchPunch, enchFlame, enchInfinity, enchUnbreaking}
-	case itemFishingRod:
-		pool = []int8{enchLure, enchLuckOfTheSea, enchUnbreaking, enchMending}
-	default: // books draw from the wide table pool plus the treasure-only ids
-		pool = []int8{enchSharpness, enchEfficiency, enchProtection, enchUnbreaking,
-			enchFortune, enchLooting, enchPower, enchLure, enchLuckOfTheSea, enchMending}
-	}
-	primary := pool[h.rng.Intn(len(pool))]
-	lvl := max(1, int(enchMaxLvl(primary))-h.rng.Intn(2))
-	out := [2]enchApply{{id: primary, lvl: int8(lvl)}}
-	if primary != enchUnbreaking && h.rng.Intn(4) == 0 {
-		out[1] = enchApply{id: enchUnbreaking, lvl: int8(1 + h.rng.Intn(3))}
-	}
-	return out
+	return enchWithLevels(h.rng, item, 30)
 }

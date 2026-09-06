@@ -57,6 +57,7 @@ type lootFn struct {
 	Min     *int    `json:"min"`
 	Max     *int    `json:"max"`
 	Ench    string  `json:"ench"`
+	Lvl     int     `json:"lvl"` // set_ench: the fixed level
 	Formula string  `json:"formula"`
 	Mult    int     `json:"mult"`
 	Extra   int     `json:"extra"`

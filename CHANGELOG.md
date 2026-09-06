@@ -49,9 +49,42 @@ the public history since the project was open-sourced on 2026-07-10.
     — the blocks break away with their particles and the golem stands where
     the foot was. Every player within five blocks earns *Hired Help*.
 
+- **Six species that never spawned now do.** Mooshrooms, turtles,
+  armadillos, camels, frogs and axolotls were in the roster but in no spawn
+  pool. They now spawn where vanilla puts them, at vanilla's weights and pack
+  sizes: mooshrooms alone on mushroom fields, turtles alone on beaches (never
+  above sea level plus three), armadillos across the savannas and badlands,
+  the rare camel in a desert, frogs in swamps and alone in mangrove swamps,
+  and axolotls in lush-cave water over clay — as vanilla's own "axolotls"
+  category with its cap of five. Each species keeps vanilla's spawnable-on
+  rule (mycelium, sand, terracotta and coarse dirt, mud and mangrove roots,
+  clay) rather than the generic grass rule. Frog and axolotl colour variants
+  are not yet carried, so they show as the default colours.
+
+- **The vanilla enchantment engine.** The enchanting table, loot chests, the
+  fishing treasure book and the anvil now run vanilla's own selection
+  (EnchantmentHelper's cost roll, enchantability bonus and spread, weighted
+  pick, and the halving follow-up picks) over every enchantment's real data
+  from the 1.21.11 jar: weight, level cap, min/max cost windows, anvil cost,
+  supported and primary item sets, exclusive sets, and the table / treasure
+  / loot / tradeable tags. In play: a table row's clue is one enchantment of
+  a whole selection, a gold sword rolls higher than a diamond one, an axe
+  never offers Smite but accepts a Smite book, treasure enchantments never
+  come from a table, and the fifteen enchantments no roller ever produced —
+  the crossbow and trident sets, Knockback, Sweeping Edge, Density, Breach,
+  Wind Burst, Soul Speed and both curses — are obtainable where vanilla
+  places them (Swift Sneak in ancient cities, Soul Speed in bastions, Wind
+  Burst in ominous vaults, the rest at the table or in loot). The anvil
+  applies only enchantments the item supports and its current ones allow,
+  drops the rest for a level each, and charges vanilla's per-enchantment
+  anvil cost (halved for a book). Still narrow: a stack holds two
+  enchantments, and librarians do not yet sell enchanted books.
+
 ### Changed
 - Copper oxidation on a double copper chest now ages both halves together
   (vanilla's connected-half rule) instead of leaving a mismatched pair.
+- Desert rabbits now spawn at vanilla's weight (12, from the 1.21.11 biome
+  report) rather than 4.
 
 ## 2026-09-05
 

@@ -28,12 +28,20 @@ func TestEnchantTableRollsAndApplies(t *testing.T) {
 	pl.enchSlots[0] = invStack{item: tDiamondSword, count: 1}
 	pl.enchSlots[1] = invStack{item: itemLapisLazuli, count: 10}
 
-	h.rollEnchOptions(pl)
-	swordPool := map[int8]bool{enchSharpness: true, enchSmite: true,
-		enchBaneOfArthropods: true, enchFireAspect: true, enchLooting: true}
+	// With no bookshelves a row can legitimately go dark (its cost came out
+	// below its index); roll until all three light up, as a player would.
+	for tries := 0; ; tries++ {
+		h.rollEnchOptions(pl)
+		if pl.enchOpts[0].cost > 0 && pl.enchOpts[1].cost > 0 && pl.enchOpts[2].cost > 0 {
+			break
+		}
+		if tries > 200 {
+			t.Fatalf("three lit rows never rolled: %+v", pl.enchOpts)
+		}
+	}
 	for i, o := range pl.enchOpts {
-		if o.cost < 1 || !swordPool[o.id] || o.lvl < 1 {
-			t.Fatalf("option %d not rolled for a sword: %+v", i, o)
+		if o.cost < 1 || !enchIsPrimary(o.id, tDiamondSword) || !enchTableAllowed(o.id) || o.lvl < 1 {
+			t.Fatalf("option %d not a table enchantment for a sword: %+v", i, o)
 		}
 	}
 

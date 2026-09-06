@@ -324,6 +324,7 @@ type tracked struct {
 	// Enchanting table view (winEnchant): the two table slots + rolled offers.
 	enchSlots [2]invStack // 0 = the item, 1 = lapis
 	enchOpts  [3]enchOption
+	enchLists [3][]enchInstance // the full selection behind each row (enchOpts holds the clue)
 
 	// Anvil/grindstone view (winAnvil/winGrind): two inputs + the rename box.
 	anvil     [2]invStack

@@ -130,20 +130,51 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 		if !sameItem && !book {
 			return invStack{}, 0 // incompatible sacrifice
 		}
+		// AnvilMenu.createResult: each sacrifice enchantment must support the
+		// target item (a book of Sharpness will not go on boots) and be
+		// compatible with what the target already carries (a Smite book will
+		// not join Sharpness); an incompatible one costs a level and is
+		// dropped. Levels combine upward when equal, capped at the max; the
+		// price is the enchantment's anvil cost per level, halved for a book.
+		applied := false
 		for _, e := range b.ench {
 			if e.lvl <= 0 {
 				continue
 			}
-			lvl := e.lvl
-			if cur := res.enchLvl(e.id); cur > 0 {
-				if int8(cur) == e.lvl && lvl < enchMaxLvl(e.id) {
-					lvl = e.lvl + 1 // equal levels combine upward (vanilla)
-				} else if int8(cur) > e.lvl {
-					lvl = int8(cur)
+			if !enchIsSupported(e.id, a.item) {
+				cost++
+				continue
+			}
+			cur := int8(res.enchLvl(e.id))
+			var others [2]enchApply // what the target carries besides e itself
+			for i, x := range res.ench {
+				if x.lvl > 0 && x.id != e.id {
+					others[i] = x
 				}
 			}
+			if !enchCompatibleWith(e.id, others) {
+				cost++
+				continue
+			}
+			lvl := e.lvl
+			if cur == e.lvl {
+				lvl = e.lvl + 1
+			} else if cur > e.lvl {
+				lvl = cur
+			}
+			if lvl > enchMaxLvl(e.id) {
+				lvl = enchMaxLvl(e.id)
+			}
+			per := enchDefs[e.id].anvilCost
+			if book {
+				per = max(1, per/2)
+			}
 			res = withEnch(res, e.id, lvl)
-			cost += int(lvl)
+			cost += per * int(lvl)
+			applied = true
+		}
+		if book && !applied {
+			return invStack{}, 0 // nothing on the book applies to this item
 		}
 		if sameItem && a.dmg > 0 {
 			if max, ok := itemMaxDurability[a.item]; ok {

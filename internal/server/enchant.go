@@ -110,67 +110,6 @@ func (h *hub) sendEnchantWindow(t *tracked) {
 		Slots: slots, Cursor: stackEv(t.cursor)})
 }
 
-// enchCategory rolls which enchantment an offer carries for an item: swords
-// favor sharpness with a chance at its siblings, tools favor efficiency with
-// fortune and the rare silk touch, armor rolls the protection family plus
-// whatever suits the slot, and plain books can roll anything (they become
-// enchanted books). Zero = not table-enchantable.
-func (h *hub) enchCategory(item int32) int8 {
-	r := h.rng.Intn(100)
-	if _, isSword := meleeDamage[item]; isSword {
-		if swordPeriod[item] { // swords proper
-			switch {
-			case r < 45:
-				return enchSharpness
-			case r < 60:
-				return enchSmite
-			case r < 75:
-				return enchBaneOfArthropods
-			case r < 88:
-				return enchFireAspect
-			}
-			return enchLooting
-		}
-		// axes/picks/shovels reached via meleeDamage too
-		switch {
-		case r < 60:
-			return enchEfficiency
-		case r < 85:
-			return enchFortune
-		}
-		return enchSilkTouch
-	}
-	if piece, ok := armorInfo[item]; ok {
-		return armorEnchantFor(piece.Slot, r)
-	}
-	if item == itemBook { // books take anything — the anvil applies it later
-		return bookEnchantPool[h.rng.Intn(len(bookEnchantPool))]
-	}
-	if _, ok := itemMaxDurability[item]; ok {
-		return enchEfficiency // other durable tools (hoes, shears, …)
-	}
-	return 0
-}
-
-// enchMaxLvl is the vanilla cap per enchantment (Enchantment.definition's
-// maxLevel argument).
-func enchMaxLvl(id int8) int8 {
-	switch id {
-	case enchProtection, enchFireProtection, enchBlastProtection,
-		enchProjectileProtection, enchFeatherFalling:
-		return 4
-	case enchUnbreaking, enchFortune, enchLooting, enchLure, enchLuckOfTheSea,
-		enchRespiration, enchDepthStrider, enchSoulSpeed, enchSwiftSneak, enchThorns:
-		return 3
-	case enchPunch, enchFireAspect, enchFrostWalker:
-		return 2
-	case enchSilkTouch, enchMending, enchFlame, enchInfinity,
-		enchAquaAffinity, enchBindingCurse, enchVanishingCurse:
-		return 1
-	}
-	return 5 // sharpness, smite, bane of arthropods, efficiency, power
-}
-
 // countBookshelves scans the vanilla 5×5 ring (two high) around the table.
 func (h *hub) countBookshelves(pos simPos) int {
 	w := h.worldFor(pos.dim)
@@ -197,19 +136,26 @@ func (h *hub) countBookshelves(pos simPos) int {
 // the window properties (costs, seed, and the hover hints).
 func (h *hub) rollEnchOptions(t *tracked) {
 	t.enchOpts = [3]enchOption{}
+	t.enchLists = [3][]enchInstance{}
 	item := t.enchSlots[0]
-	if cat := h.enchCategory(item.item); cat != 0 && item.count > 0 && !item.enchanted() {
+	// EnchantmentMenu.slotsChanged: an unenchanted item with an Enchantable
+	// value gets three rows; each row's level requirement comes from
+	// getEnchantmentCost (a row cheaper than its own index goes dark), and its
+	// clue is one random member of the selection that row would apply.
+	if enchantabilityOf(item.item) > 0 && item.count > 0 && !item.enchanted() {
 		b := h.countBookshelves(t.winPos)
-		base := h.rng.Intn(8) + 1 + b/2 + h.rng.Intn(b+1)
-		costs := [3]int{max(base/3, 1), base*2/3 + 1, max(base, b*2)}
-		for i, cost := range costs {
-			lvl := int8(1 + cost*int(enchMaxLvl(cat)-1)/30) // scale toward the cap at cost 30
-			t.enchOpts[i] = enchOption{cost: cost, id: cat, lvl: lvl}
-		}
-		// The top-tier roll on a strong table also lands unbreaking (a second
-		// enchantment), mirroring vanilla's multi-enchant rolls.
-		if costs[2] >= 15 && cat != enchUnbreaking {
-			t.enchOpts[2].lvl = enchMaxLvl(cat)
+		for i := range t.enchOpts {
+			cost := enchTableCost(h.rng, i, b, item.item)
+			if cost < i+1 {
+				continue
+			}
+			list := enchSelect(h.rng, item.item, cost, enchTableAllowed)
+			if len(list) == 0 {
+				continue
+			}
+			clue := list[h.rng.Intn(len(list))]
+			t.enchOpts[i] = enchOption{cost: cost, id: clue.id, lvl: clue.lvl}
+			t.enchLists[i] = list
 		}
 	}
 	prop := func(p, v int) {
@@ -249,11 +195,8 @@ func (h *hub) handleEnchant(players map[int32]*tracked, t *tracked, button int32
 		t.xpLevel -= need // vanilla: pay 1-3 LEVELS (the cost is the gate)
 		h.sendExperience(t)
 	}
-	item.ench[0] = enchApply{id: opt.id, lvl: opt.lvl}
-	if button == 2 && opt.cost >= 15 && opt.id != enchUnbreaking {
-		item.ench[1] = enchApply{id: enchUnbreaking, lvl: 2}
-	}
-	if item.item == itemBook { // a book takes the enchant as a STORED one
+	item.ench = enchApplyList(t.enchLists[button]) // every enchantment of the row's selection
+	if item.item == itemBook {                     // a book takes the enchant as a STORED one
 		item.item = itemEnchantedBook
 	}
 	h.sendEnchantWindow(t)
@@ -286,78 +229,4 @@ func (h *hub) reclaimEnchant(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	t.enchOpts = [3]enchOption{}
-}
-
-// armorEnchantFor rolls an armour offer. Protection and its three specialised
-// siblings are mutually exclusive in vanilla (#armor_exclusive), so only one
-// can come out of a roll; the slot-specific ones ride alongside because the
-// exclusivity does not cover them.
-func armorEnchantFor(slot, r int) int8 {
-	switch slot {
-	case 0: // helmet
-		switch {
-		case r < 40:
-			return enchProtection
-		case r < 55:
-			return enchFireProtection
-		case r < 70:
-			return enchBlastProtection
-		case r < 80:
-			return enchProjectileProtection
-		case r < 92:
-			return enchRespiration
-		}
-		return enchAquaAffinity
-	case 1: // chestplate
-		switch {
-		case r < 45:
-			return enchProtection
-		case r < 60:
-			return enchFireProtection
-		case r < 75:
-			return enchBlastProtection
-		case r < 88:
-			return enchProjectileProtection
-		}
-		return enchThorns
-	case 2: // leggings
-		switch {
-		case r < 45:
-			return enchProtection
-		case r < 60:
-			return enchFireProtection
-		case r < 75:
-			return enchBlastProtection
-		case r < 90:
-			return enchProjectileProtection
-		}
-		return enchSwiftSneak
-	default: // boots
-		switch {
-		case r < 35:
-			return enchProtection
-		case r < 48:
-			return enchFireProtection
-		case r < 60:
-			return enchBlastProtection
-		case r < 70:
-			return enchProjectileProtection
-		case r < 84:
-			return enchFeatherFalling
-		case r < 92:
-			return enchDepthStrider
-		}
-		return enchFrostWalker
-	}
-}
-
-// bookEnchantPool is what a plain book can roll at the table. Soul Speed and
-// the two curses are absent on purpose: vanilla makes them treasure, reachable
-// only through loot and trades, not through a table.
-var bookEnchantPool = []int8{
-	enchSharpness, enchSmite, enchBaneOfArthropods, enchFireAspect,
-	enchEfficiency, enchFortune, enchSilkTouch, enchLooting, enchUnbreaking,
-	enchProtection, enchFireProtection, enchBlastProtection, enchProjectileProtection,
-	enchFeatherFalling, enchThorns, enchRespiration, enchAquaAffinity,
-	enchDepthStrider, enchFrostWalker, enchSwiftSneak,
 }

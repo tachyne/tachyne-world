@@ -64,7 +64,21 @@ def func(f):
     if t == "set_count":
         return {"f": "set_count", "np": num(f["count"]), "add": bool(f.get("add", False))}
     if t == "enchant_randomly":
+        # A single named option (ancient city's swift_sneak book, the bastion's
+        # soul_speed) pins the enchantment; a tag or list keeps the default pool.
+        opt = f.get("options")
+        if isinstance(opt, str) and not opt.startswith("#"):
+            return {"f": "ench_random", "ench": opt.removeprefix("minecraft:")}
         return {"f": "ench_random"}
+    if t == "set_enchantments":
+        # One fixed enchantment at a fixed level (the ominous vault's wind_burst
+        # book); anything richer is still dropped.
+        ench = f.get("enchantments", {})
+        if len(ench) == 1:
+            (name, lvl), = ench.items()
+            if isinstance(lvl, (int, float)):
+                return {"f": "set_ench", "ench": name.removeprefix("minecraft:"), "lvl": int(lvl)}
+        return None
     if t == "enchant_with_levels":
         return {"f": "ench_levels", "np": num(f["levels"])}
     if t == "set_damage":
@@ -72,7 +86,7 @@ def func(f):
         return {"f": "set_damage", "np": num(dmg), "add": bool(f.get("add", False))}
     # Cosmetic / component functions the engine cannot represent yet — drop the
     # function (the item still appears, just plainer).
-    if t in ("exploration_map", "set_name", "set_enchantments", "set_instrument",
+    if t in ("exploration_map", "set_name", "set_instrument",
              "set_potion", "set_stew_effect", "set_ominous_bottle_amplifier",
              "set_nbt", "set_components", "set_custom_data", "enchanted_count_increase",
              "set_written_book_pages", "set_book_cover", "reference", "furnace_smelt"):
