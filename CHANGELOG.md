@@ -49,6 +49,8 @@ the public history since the project was open-sourced on 2026-07-10.
   Bedrock counterpart is listed (blocks under the construction tab), and
   taking, dropping or destroying items becomes the same creative slot
   set a Java client sends — the world still checks the player's mode.
+  Bedrock players can also drop items now, from a window or the held
+  stack, where before every drop was refused.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
