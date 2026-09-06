@@ -106,12 +106,25 @@ func (h *hub) ringBell(players map[int32]*tracked, dim int, pos blockPos, dir in
 // bellRevealRaiders is BellBlockEntity.updateEntities + makeRaidersGlow:
 // every raider within 48 blocks of a rung bell glows for three seconds,
 // and the bell resonates if it found any.
-const bellRaiderRange = 48
+const (
+	bellRaiderRange   = 48
+	bellVillagerRange = 32  // BellBlockEntity: villagers within 32 blocks hear it
+	villagerHideTicks = 300 // SetHiddenState.create(15 s, …)
+)
 
 func (h *hub) bellRevealRaiders(players map[int32]*tracked, dim int, pos blockPos) {
 	found := false
 	h.grid().nearby(dim, float64(pos.x)+0.5, float64(pos.z)+0.5, bellRaiderRange, func(m *mob) {
-		if m.dying > 0 || m.raidCenter == (blockPos{}) {
+		if m.dying > 0 {
+			return
+		}
+		if m.etype == entityVillager { // HEARD_BELL_TIME → the hide package: 15 s at a hiding place
+			if dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5) <= bellVillagerRange {
+				m.hideUntil = h.tick.Load() + villagerHideTicks
+			}
+			return
+		}
+		if m.raidCenter == (blockPos{}) {
 			return
 		}
 		if dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5) > bellRaiderRange {

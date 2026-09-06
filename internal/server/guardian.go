@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // Guardian + Elder Guardian behaviour, ported from Guardian.GuardianAttackGoal
 // and ElderGuardian: the beam attack (charge then indirect-magic damage that
@@ -9,10 +13,9 @@ import "math"
 
 const (
 
-	// Guardian.getAttackDuration()==80; the goal's attackTime starts at -10, so a
-	// beam lands ~90 ticks after lock-on. Our mob update runs every 2 ticks.
-	guardianBeamUpd = 45   // ~90 ticks
-	guardianBeamR   = 16.0 // beam reach (target must also be > 3 blocks: d2 > 9)
+	// Guardian.getAttackDuration()==80 (elder 60); the goal's attackTime starts
+	// at -10, so a beam lands ~90 ticks after lock-on.
+	guardianBeamR = 16.0 // beam reach (target must also be > 3 blocks: d2 > 9)
 
 	// ElderGuardian: every 1200 ticks apply MINING_FATIGUE (amp 2, 6000-tick =
 	// 300 s) to players within 50 blocks.
@@ -37,20 +40,38 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 			}
 		}
 	}
-	if m.sonicCD > 0 {
-		m.sonicCD--
+	// GuardianAttackGoal: lock on (the client draws the beam from the synced
+	// attack target), let attackTime run from -10 up to the attack duration
+	// while the target stays in reach and sight, then land the two hits and
+	// let go — the goal restarts at once, so the cycle is ~90 ticks.
+	if m.beamTarget == 0 {
+		t := h.nearestHuntable(players, m.dim, m.x, m.z, guardianBeamR)
+		if t == nil {
+			return
+		}
+		if dx, dz := t.x-m.x, t.z-m.z; dx*dx+dz*dz <= 9 { // the beam only fires past 3 blocks
+			return
+		}
+		m.beamTarget, m.beamTicks = t.p.eid, -10
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, m.beamTarget)))
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, guardianBeamR)
-	if t == nil {
+	t := players[m.beamTarget]
+	if t == nil || t.dead || t.dim != m.dim || t.gamemode == gmCreative || t.gamemode == gmSpectator ||
+		dist3(t.x, t.y, t.z, m.x, m.y, m.z) > guardianBeamR {
+		h.guardianRelease(players, m)
 		return
 	}
+	m.beamTicks += mobMoveInterval
 	dx, dz := t.x-m.x, t.z-m.z
-	if dx*dx+dz*dz <= 9 { // the beam only fires past 3 blocks (distanceToSqr > 9)
+	m.yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
+	duration := 80 // Guardian.getAttackDuration
+	if elder {
+		duration = 60
+	}
+	if m.beamTicks < duration {
 		return
 	}
-	m.sonicCD = guardianBeamUpd
-	m.yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
 	magic := float32(1)
 	if h.rules.Difficulty == diffHard {
 		magic += 2
@@ -69,6 +90,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	if !t.dead {
 		h.hurtFrom(players, t, melee, dtMobAttack, cause, from(m.x, m.z))
 	}
+	h.guardianRelease(players, m)
 	h.thornsRetaliate(players, t, m)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
@@ -156,4 +178,24 @@ func (h *hub) countMobNear(etype, dim int, x, z, r float64) int {
 		}
 	}
 	return n
+}
+
+// guardianRelease is GuardianAttackGoal.stop: the beam lets go.
+func (h *hub) guardianRelease(players map[int32]*tracked, m *mob) {
+	if m.beamTarget == 0 {
+		return
+	}
+	m.beamTarget, m.beamTicks = 0, 0
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, 0)))
+}
+
+// guardianTargetMeta is DATA_ID_ATTACK_TARGET (index 17, INT): the entity id
+// the beam is locked on, 0 for none. Guardian is a Monster, so the index is
+// the same on every served client.
+func guardianTargetMeta(eid, target int32) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, 17)
+	b = protocol.AppendVarInt(b, 1) // INT
+	b = protocol.AppendVarInt(b, target)
+	return protocol.AppendU8(b, itemMetaEnd)
 }

@@ -107,6 +107,9 @@ type mob struct {
 	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)
 	sonicCD         int            // warden: mob-updates until the next sonic boom
+	beamTarget      int32          // guardian: the player the beam is locked on (0 = none)
+	hideUntil       uint64         // villager: heard a bell — stay at the bed until this tick
+	beamTicks       int            // guardian: GuardianAttackGoal.attackTime, in ticks
 	digClock        int            // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain   bool           // pillager patrol leader (carries the ominous banner)
 	raidCenter      blockPos       // raider: the raid this mob belongs to (zero = not a raider)

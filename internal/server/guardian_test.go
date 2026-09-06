@@ -18,12 +18,20 @@ func TestGuardianBeamAndElderAura(t *testing.T) {
 	if g == nil {
 		t.Fatal("elder guardian spawn returned nil")
 	}
+	// The beam locks on first, then charges for the elder's 60-tick attack
+	// duration before it lands — no instant hit.
 	h.guardianTick(players, g)
+	if g.beamTarget != pl.p.eid || pl.health < maxHealth {
+		t.Fatalf("lock-on should hurt nobody yet: target %d health %v", g.beamTarget, pl.health)
+	}
+	for i := 0; i < 60 && pl.health >= maxHealth; i++ {
+		h.guardianTick(players, g)
+	}
 	if pl.health >= maxHealth {
 		t.Fatalf("elder guardian beam should damage the player, health=%v", pl.health)
 	}
-	if g.sonicCD == 0 {
-		t.Fatal("firing the beam should start a cooldown")
+	if g.beamTarget != 0 {
+		t.Fatal("firing the beam should let go of the target")
 	}
 
 	// Elder aura fires on the interval and lays Mining Fatigue.

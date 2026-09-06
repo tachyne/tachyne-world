@@ -53,3 +53,22 @@ func TestBellRevealsRaiders(t *testing.T) {
 		t.Error("a raider 100 blocks off and a plain zombie must not glow")
 	}
 }
+
+// Villagers within 32 blocks of a rung bell go and hide at their beds for
+// fifteen seconds.
+func TestBellSendsVillagersToHide(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	h.world.SetBlock(300, 70, 300, withProps(t, worldgen.BlockBase("bell"), map[string]string{"attachment": "floor", "facing": "north"}))
+	v := h.spawnSpecies(players, entityVillager, 0, 310.5, 70, 300.5)
+	v.bed = blockPos{320, 70, 300}
+	far := h.spawnSpecies(players, entityVillager, 0, 340.5, 70, 300.5)
+	h.ringBell(players, 0, blockPos{300, 70, 300}, -1)
+	if v.hideUntil != h.tick.Load()+villagerHideTicks {
+		t.Errorf("villager hideUntil %d, want %d", v.hideUntil, h.tick.Load()+villagerHideTicks)
+	}
+	if far.hideUntil != 0 {
+		t.Error("a villager 40 blocks away does not hear the bell")
+	}
+}
