@@ -86,6 +86,7 @@ func (h *hub) boardGhast(players map[int32]*tracked, t *tracked, m *mob) {
 		}
 	}
 	m.riders = append(m.riders, t.p.eid)
+	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
 	h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 }
@@ -106,6 +107,7 @@ func (h *hub) leaveGhast(players map[int32]*tracked, t *tracked) bool {
 			continue
 		}
 		m.riders = append(m.riders[:idx], m.riders[idx+1:]...)
+		t.ridingEID = 0
 		if len(m.riders) == 0 {
 			m.sx, m.sy, m.sz = m.x, m.y, m.z // realign the relative-move baseline
 		}

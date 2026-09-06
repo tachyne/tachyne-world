@@ -146,9 +146,7 @@ func (r *remotePlayer) Action(v any) {
 	case attachproto.SelTrade:
 		h.post(evSelTrade{eid: p.eid, slot: e.Slot})
 	case attachproto.Input:
-		if e.Sneak {
-			h.post(evDismount{eid: p.eid})
-		}
+		h.post(evInput{eid: p.eid, in: e})
 	case attachproto.WindowClick:
 		ev := evClick{eid: p.eid, windowID: e.ID, slot: int16(e.Slot), mode: e.Mode, button: e.Button,
 			cursor: invStack{item: e.Cursor.ID, count: int(e.Cursor.Count)}}

@@ -220,6 +220,9 @@ type tracked struct {
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
+	ridingEID      int32   // the vehicle or mob carrying this player (0 afoot)
+	inLeft         float64 // last movement-key intent, -1/0/1 (vanilla lastClientInput)
+	inForward      float64
 	dim            int              // 0 overworld, 1 nether
 	portalTicks    int              // consecutive dwell passes standing in a portal block
 	portalLatch    bool             // just arrived by portal: no re-trigger until they step off
@@ -1625,6 +1628,14 @@ func (h *hub) run() {
 						h.dismount(players, t)
 					}
 				}
+			case evInput:
+				if t := players[e.eid]; t != nil {
+					t.inLeft = keyAxis(e.in.Left, e.in.Right)
+					t.inForward = keyAxis(e.in.Forward, e.in.Backward)
+					if e.in.Sneak && !h.leaveGhast(players, t) && !h.dismountMob(players, t) {
+						h.dismount(players, t)
+					}
+				}
 			case evBundleSelect:
 				if t := players[e.eid]; t != nil {
 					h.selectBundleItem(t, e.slot, e.selected)
@@ -2086,6 +2097,14 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 // reworked (velocity + f32 angles) in a way minecraft-data still mis-lists,
 // and a wrong byte count there desyncs and disconnects the client.
 func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
+	if t.ridingEID != 0 && !e.teleport {
+		// A passenger's client reports only its camera: vanilla drops the
+		// coordinates of a passenger's move packet, and the vehicle (client-
+		// driven boat, server-rolled cart) places the player.
+		t.yaw, t.pitch = e.yaw, e.pitch
+		h.relayRiderLook(players, t, e)
+		return
+	}
 	if !h.validateMove(t, e) {
 		return // impossible move — not applied, client rubber-banded back
 	}

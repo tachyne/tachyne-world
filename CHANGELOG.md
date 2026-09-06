@@ -184,6 +184,24 @@ the public history since the project was open-sourced on 2026-07-10.
   dimension instead of appearing as a phantom at the same coordinates in
   every world. Detector rails still switch only in the overworld, where
   redstone is simulated.
+- **Minecarts roll.** A cart used to move only under a rider, and then
+  only because the rider's client said so — which is not how a minecart
+  works any more: since 1.21.2 a minecart has no controlling passenger, so
+  the server moves it and the rider's client only sends its movement keys.
+  The engine now rolls every cart itself with vanilla's classic behaviour:
+  gravity, the cart pinned to the rail line through its cell, sloped rails
+  that speed it up downhill and slow it uphill, powered rails that push a
+  rolling cart to the 8 m/s cap and brake it to a stop when unpowered, a
+  resting cart on a live powered rail setting off away from a solid block
+  (the classic station), a live activator rail throwing the rider off, an
+  empty cart bleeding speed four times faster than a ridden one, and a
+  cart off the rails that falls, lands and skids to a halt. A rider's
+  forward key gets a resting cart going and the rails take it from there.
+  To make that work the player-input frame now carries every movement key
+  (it only carried sneak), a passenger's move packets count as camera-only
+  as in vanilla, and the gateway follows the ridden vehicle so a long ride
+  keeps streaming chunks (boats and mounts benefit too — their riders'
+  chunk window used to freeze at the point of boarding).
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

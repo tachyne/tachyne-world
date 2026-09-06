@@ -35,9 +35,15 @@ func TestMinecartPlacesOnRailOnly(t *testing.T) {
 	}
 }
 
+// A boat is client-driven: its rider's move packets carry it, within a
+// sanity cap. A minecart is not — the server rolls it and a rider's client
+// move is ignored (vanilla: no controlling passenger since 1.21.2).
 func TestRideValidateAndSnapBack(t *testing.T) {
 	h, pl, players, x, y, z := vehSetup(t)
-	h.placeVehicle(players, pl, evPlaceVehicle{eid: 1, item: itemByName["minecart"], x: x, y: y, z: z, slot: 0})
+	h.world.SetBlock(x, y, z, worldgen.WaterBase)
+	if !h.spawnVehicleAt(players, 0, boatEntities["oak_boat"], x, y, z) {
+		t.Fatal("boat should spawn on water")
+	}
 	v := firstVehicle(h)
 	h.mountVehicle(players, pl, v)
 	if v.rider != 1 {
@@ -61,6 +67,24 @@ func TestRideValidateAndSnapBack(t *testing.T) {
 	h.dismount(players, pl)
 	if v.rider != 0 || pl.x == v.x {
 		t.Fatal("dismount should clear the rider and move them aside")
+	}
+	// A cart pays no attention to its rider's client.
+	h.world.SetBlock(x+2, y, z, railMin+1)
+	if !h.spawnVehicleAt(players, 0, entityMinecart, x+2, y, z) {
+		t.Fatal("cart should spawn on the rail")
+	}
+	var cart *vehicle
+	for _, c := range h.vehicles {
+		if !c.isBoat() {
+			cart = c
+		}
+	}
+	pl.x, pl.y, pl.z = cart.x, cart.y, cart.z
+	h.mountVehicle(players, pl, cart)
+	cx := cart.x
+	h.applyVehicleMove(players, pl, evVehicleMove{eid: 1, x: cart.x + 1, y: cart.y, z: cart.z})
+	if cart.x != cx {
+		t.Fatalf("a minecart is server-driven; the client's move must be ignored, x=%v", cart.x)
 	}
 }
 

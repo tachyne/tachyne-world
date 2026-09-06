@@ -93,7 +93,13 @@ type vehicle struct {
 	yaw        float32
 	rider      int32   // player eid, 0 when empty
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
+	syaw       float32 // last broadcast facing
 	chest      *chest  // a chest boat's 27 slots (nil for the rest)
+	// Minecart motion state (the server rolls carts; see minecart.go).
+	vx, vy, vz float64
+	yawO       float32 // facing at the previous tick
+	flipped    bool    // model turned 180° from its motion (vanilla's flip flag)
+	onGround   bool
 }
 
 func (v *vehicle) isBoat() bool { return v.etype != entityMinecart }
@@ -110,6 +116,27 @@ type evVehicleMove struct {
 	yaw     float32
 }
 type evDismount struct{ eid int32 }
+type evInput struct {
+	eid int32
+	in  attachproto.Input
+}
+
+func (evInput) isHubEvent() {}
+
+// relayRiderLook forwards a passenger's turned head to the viewers around
+// its vehicle (the body stays where the vehicle put it).
+func (h *hub) relayRiderLook(players map[int32]*tracked, t *tracked, e evMove) {
+	move := entMove(e.eid, t.x, t.y, t.z, e.yaw, e.pitch, e.onGround)
+	head := entHead(e.eid, e.yaw)
+	cx, cz := chunkFloor(t.x), chunkFloor(t.z)
+	for eid, other := range players {
+		if eid == e.eid || other.dim != t.dim || abs(chunkFloor(other.x)-cx) > viewRadius || abs(chunkFloor(other.z)-cz) > viewRadius {
+			continue
+		}
+		other.p.trySendEv(move)
+		other.p.trySendEv(head)
+	}
+}
 
 func (evPlaceVehicle) isHubEvent() {}
 func (evVehicleMove) isHubEvent()  {}
@@ -171,6 +198,7 @@ func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 		return
 	}
 	v.rider = t.p.eid
+	t.ridingEID = v.eid
 	h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid, v.rider))
 }
 
@@ -181,6 +209,7 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 			continue
 		}
 		v.rider = 0
+		t.ridingEID = 0
 		h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
 		t.x, t.y, t.z = v.x+0.9, v.y+0.6, v.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
@@ -225,8 +254,8 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 			break
 		}
 	}
-	if v == nil {
-		return
+	if v == nil || !v.isBoat() {
+		return // a minecart is server-driven: its rider's client has no say
 	}
 	if math.IsNaN(e.x) || math.IsNaN(e.y) || math.IsNaN(e.z) ||
 		dist3(v.x, v.y, v.z, e.x, e.y, e.z) > vehicleMoveCap {
@@ -252,6 +281,11 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 // updateVehicles: detector rails press while a cart (or its rider) sits on
 // them, and release after.
 func (h *hub) updateVehicles(players map[int32]*tracked) {
+	for _, v := range h.vehicles {
+		if !v.isBoat() {
+			h.tickMinecart(players, v)
+		}
+	}
 	occupied := map[blockPos]bool{}
 	for _, v := range h.vehicles {
 		if v.dim != dimOverworld {
