@@ -61,7 +61,8 @@ the public history since the project was open-sourced on 2026-07-10.
   passenger list becomes Bedrock actor links), the ride carries the
   loaded area, and the full key state steers a server-driven vehicle
   the way it does from Java — before, a Bedrock rider sent only sneak
-  and the client was never told it was aboard.
+  and the client was never told it was aboard. The cartography table
+  opens on Bedrock as well, taking the world's preview like the anvil.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
