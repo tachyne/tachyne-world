@@ -77,8 +77,12 @@ the public history since the project was open-sourced on 2026-07-10.
   Burst in ominous vaults, the rest at the table or in loot). The anvil
   applies only enchantments the item supports and its current ones allow,
   drops the rest for a level each, and charges vanilla's per-enchantment
-  anvil cost (halved for a book). Still narrow: a stack holds two
-  enchantments, and librarians do not yet sell enchanted books.
+  anvil cost (halved for a book). Librarians sell an enchanted book at
+  every tier from one to four the vanilla way — a random tradeable
+  enchantment at a random level, priced 2 + rand(5 + 10·level) + 3·level
+  emeralds (doubled for a treasure enchantment, capped at 64) plus one
+  book, the first trade offer with two costs. Still narrow: a stack holds
+  two enchantments.
 
 ### Changed
 - Copper oxidation on a double copper chest now ages both halves together

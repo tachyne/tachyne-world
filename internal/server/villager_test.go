@@ -149,3 +149,67 @@ func TestAllProfessionsHaveTrades(t *testing.T) {
 		}
 	}
 }
+
+// A librarian sells an enchanted book at every tier from one to four: a
+// tradeable enchantment, priced by vanilla's formula (doubled for treasure,
+// capped at 64) in emeralds plus one plain book, both of which the trade
+// consumes; and the offer survives the store round trip.
+func TestLibrarianSellsEnchantedBooks(t *testing.T) {
+	w := world.New(7)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
+	h.initVillagerTrades(m, librarianProfession)
+	var book *mobOffer
+	for i := range m.offers {
+		if m.offers[i].trade.outItem == itemEnchantedBook {
+			book = &m.offers[i]
+		}
+	}
+	if book == nil {
+		t.Fatalf("a tier-1 librarian must offer an enchanted book: %+v", m.offers)
+	}
+	if book.outEnch.lvl < 1 || !enchTradeAllowed(book.outEnch.id) {
+		t.Fatalf("book enchantment %+v must be tradeable", book.outEnch)
+	}
+	if book.cost2Item != itemByName["book"] || book.cost2Count != 1 {
+		t.Errorf("second cost %d×%d, want one book", book.cost2Item, book.cost2Count)
+	}
+	price := int(book.trade.inCount)
+	lvl := int(book.outEnch.lvl)
+	lo, hi := 2+3*lvl, 2+(5+lvl*10-1)+3*lvl
+	if enchDefs[book.outEnch.id].flags&enchDoubleTradePrice != 0 {
+		lo, hi = lo*2, hi*2
+	}
+	if hi > 64 {
+		hi = 64
+	}
+	if price < lo || price > hi {
+		t.Errorf("price %d emeralds outside vanilla's [%d, %d] for %s %d", price, lo, hi, enchName(book.outEnch.id), lvl)
+	}
+
+	// Emeralds alone do not buy it; emeralds + a book do, and both are taken.
+	h.openTrades(pl, m) // resets the selection to the first offer
+	for i := range m.offers {
+		if &m.offers[i] == book {
+			pl.tradeSel = i
+		}
+	}
+	pl.trade[0] = invStack{item: itemByName["emerald"], count: 64}
+	h.takeTradeResult(players, pl)
+	if pl.cursor.item != 0 {
+		t.Fatal("the book cost must be enforced")
+	}
+	pl.trade[1] = invStack{item: itemByName["book"], count: 2}
+	h.takeTradeResult(players, pl)
+	if pl.cursor.item != itemEnchantedBook || pl.cursor.ench[0] != book.outEnch {
+		t.Fatalf("expected the enchanted book on the cursor, got %+v", pl.cursor)
+	}
+	if pl.trade[0].count != 64-price || pl.trade[1].count != 1 {
+		t.Errorf("costs not consumed: emeralds %d (want %d), books %d (want 1)", pl.trade[0].count, 64-price, pl.trade[1].count)
+	}
+	if back := unpackOffer(packOffer(*book)); back.cost2Item != book.cost2Item || back.outEnch != book.outEnch || back.trade != book.trade {
+		t.Errorf("offer store round trip lost data: %+v vs %+v", back, *book)
+	}
+}

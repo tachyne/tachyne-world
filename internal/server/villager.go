@@ -288,9 +288,16 @@ func (h *hub) sendTradeList(t *tracked, m *mob) {
 		b = protocol.AppendVarInt(b, tr.inItem) // ItemCost: id + count + no components
 		b = protocol.AppendVarInt(b, tr.inCount)
 		b = protocol.AppendVarInt(b, 0)
-		b = appendStack(b, invStack{item: tr.outItem, count: int(tr.outCount)}) // output Slot
-		b = protocol.AppendBool(b, false)                                       // no second cost
-		b = protocol.AppendBool(b, o.uses >= tr.maxUses)                        // disabled when used up
+		b = appendStack(b, o.output()) // output Slot (with its enchantment, for a book)
+		if o.cost2Item != 0 {          // optional second ItemCost
+			b = protocol.AppendBool(b, true)
+			b = protocol.AppendVarInt(b, o.cost2Item)
+			b = protocol.AppendVarInt(b, o.cost2Count)
+			b = protocol.AppendVarInt(b, 0)
+		} else {
+			b = protocol.AppendBool(b, false)
+		}
+		b = protocol.AppendBool(b, o.uses >= tr.maxUses) // disabled when used up
 		b = protocol.AppendI32(b, o.uses)
 		b = protocol.AppendI32(b, tr.maxUses)
 		b = protocol.AppendI32(b, tr.xp)
@@ -333,16 +340,22 @@ func (h *hub) tradeResult(t *tracked) (invStack, *mobOffer) {
 	if o.uses >= o.trade.maxUses {
 		return invStack{}, nil // exhausted until restock
 	}
-	have := 0
+	have, have2 := 0, 0
 	for _, in := range t.trade {
 		if in.item == o.trade.inItem {
 			have += in.count
+		}
+		if o.cost2Item != 0 && in.item == o.cost2Item {
+			have2 += in.count
 		}
 	}
 	if have < o.costCount() { // demand/reputation/Hero-adjusted price
 		return invStack{}, nil
 	}
-	return invStack{item: o.trade.outItem, count: int(o.trade.outCount)}, o
+	if o.cost2Item != 0 && have2 < int(o.cost2Count) { // the second cost, unadjusted
+		return invStack{}, nil
+	}
+	return o.output(), o
 }
 
 // takeTradeResult consumes the cost and hands over the goods (AUTHORITY: the
@@ -353,23 +366,28 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 		h.sendTradeWindow(t)
 		return
 	}
-	need := o.costCount() // charge the demand/reputation/Hero-adjusted price
-	for i := range t.trade {
-		if need == 0 {
-			break
+	consume := func(item int32, need int) {
+		for i := range t.trade {
+			if need == 0 {
+				break
+			}
+			if t.trade[i].item != item {
+				continue
+			}
+			take := t.trade[i].count
+			if take > need {
+				take = need
+			}
+			t.trade[i].count -= take
+			need -= take
+			if t.trade[i].count == 0 {
+				t.trade[i] = invStack{}
+			}
 		}
-		if t.trade[i].item != o.trade.inItem {
-			continue
-		}
-		take := t.trade[i].count
-		if take > need {
-			take = need
-		}
-		t.trade[i].count -= take
-		need -= take
-		if t.trade[i].count == 0 {
-			t.trade[i] = invStack{}
-		}
+	}
+	consume(o.trade.inItem, o.costCount()) // the demand/reputation/Hero-adjusted price
+	if o.cost2Item != 0 {
+		consume(o.cost2Item, int(o.cost2Count))
 	}
 	t.cursor = res
 	o.uses++ // toward this offer's lock

@@ -18,6 +18,66 @@ type mobOffer struct {
 	uses         int32
 	demand       int32 // vanilla MerchantOffer.demand; persisted
 	specialPrice int32 // vanilla specialPriceDiff; per-viewer, not persisted
+	// The optional second ItemCost (a librarian's book beside the emeralds)
+	// and the enchantment on the output (an enchanted book). Both persist;
+	// the second cost takes no demand or reputation adjustment (vanilla
+	// adjusts costA only).
+	cost2Item, cost2Count int32
+	outEnch               enchApply
+}
+
+// output is the stack an offer hands over.
+func (o *mobOffer) output() invStack {
+	st := invStack{item: o.trade.outItem, count: int(o.trade.outCount)}
+	if o.outEnch.lvl > 0 {
+		st.ench[0] = o.outEnch
+	}
+	return st
+}
+
+// librarianProfession is the profession index whose tiers 1-4 each carry a
+// vanilla EnchantBookForEmeralds listing.
+var librarianProfession = func() int {
+	for i, n := range professionNames {
+		if n == "librarian" {
+			return i
+		}
+	}
+	return -1
+}()
+
+// bookTradeXP is EnchantBookForEmeralds' villagerXp per librarian tier.
+var bookTradeXP = [5]int32{0, 1, 5, 10, 15}
+
+// rollBookOffer is VillagerTrades.EnchantBookForEmeralds.getOffer: a random
+// tradeable enchantment at a random level; the price is 2 + nextInt(5 +
+// 10·level) + 3·level emeralds, doubled for a treasure enchantment and
+// capped at 64, plus one book; 12 uses.
+func (h *hub) rollBookOffer(tier int) mobOffer {
+	var pool []int8
+	for i := range enchDefs {
+		if enchTradeAllowed(int8(i)) {
+			pool = append(pool, int8(i))
+		}
+	}
+	if len(pool) == 0 {
+		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier]}}
+	}
+	id := pool[h.rng.Intn(len(pool))]
+	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
+	price := 2 + h.rng.Intn(5+lvl*10) + 3*lvl
+	if enchDefs[id].flags&enchDoubleTradePrice != 0 {
+		price *= 2
+	}
+	if price > 64 {
+		price = 64
+	}
+	return mobOffer{
+		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier]},
+		cost2Item:  itemByName["book"],
+		cost2Count: 1,
+		outEnch:    enchApply{id: id, lvl: int8(lvl)},
+	}
 }
 
 // tradePriceMultiplier is vanilla MerchantOffer.priceMultiplier. Vanilla varies
@@ -73,6 +133,9 @@ func (h *hub) unlockTier(m *mob, tier int) {
 	start := int(m.eid) % len(pool) // stable per-villager rotation
 	for i := 0; i < offersPerTier && i < len(pool); i++ {
 		m.offers = append(m.offers, mobOffer{trade: pool[(start+i)%len(pool)]})
+	}
+	if m.profession == librarianProfession && tier >= 1 && tier <= 4 {
+		m.offers = append(m.offers, h.rollBookOffer(tier)) // the tier's enchanted book
 	}
 }
 

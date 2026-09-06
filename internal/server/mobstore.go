@@ -132,16 +132,25 @@ type savedMob struct {
 // demand was added later; older 7-element saves unmarshal with demand=0 (a JSON
 // array shorter than the Go array leaves the extra slot zero), so the format is
 // backward-compatible.
-type savedOffer [8]int32
+// savedOffer columns: the eight above, then (2026-09-06) the second item
+// cost {item, count} and the output enchantment packed id<<8|lvl. Older
+// eight-column rows decode with zeros there.
+type savedOffer [11]int32
 
 func packOffer(o mobOffer) savedOffer {
 	t := o.trade
-	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses, o.demand}
+	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses, o.demand,
+		o.cost2Item, o.cost2Count, int32(uint8(o.outEnch.id))<<8 | int32(uint8(o.outEnch.lvl))}
 }
 
 func unpackOffer(s savedOffer) mobOffer {
-	return mobOffer{trade: vTrade{inItem: s[0], inCount: s[1], outItem: s[2],
-		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6], demand: s[7]}
+	o := mobOffer{trade: vTrade{inItem: s[0], inCount: s[1], outItem: s[2],
+		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6], demand: s[7],
+		cost2Item: s[8], cost2Count: s[9]}
+	if s[10] != 0 {
+		o.outEnch = enchApply{id: int8(s[10] >> 8), lvl: int8(s[10] & 0xff)}
+	}
+	return o
 }
 
 func packPos(p blockPos) [3]int   { return [3]int{p.x, p.y, p.z} }
