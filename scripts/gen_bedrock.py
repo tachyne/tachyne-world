@@ -341,6 +341,26 @@ def main():
         f.write("}\n")
     print(f"  bedrock_items_gen.go: {len(ritems)} registry entries, {len(mcitems)} java items ({missing} unmapped)")
 
+    # ---- banner base colours -------------------------------------------------
+    # A banner's own colour is its block (red_banner…); Bedrock keeps it on
+    # the block entity ("Base"), so the gateway needs the colour by state.
+    dyes = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+            "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"]
+    with open(os.path.join(OUT, "bedrock_banners_gen.go"), "w") as f:
+        header(f.write, "gen_bedrock.py")
+        f.write("// bannerBaseRanges: block-state ranges of the banner blocks and their dye\n")
+        f.write("// colour (Java dye id: white 0 … black 15).\n")
+        f.write("var bannerBaseRanges = []struct {\n\tMin, Max uint32\n\tColor   int32\n}{\n")
+        nb = 0
+        for b in sorted(mcblocks, key=lambda b: b["minStateId"]):
+            name = b["name"]
+            for i, d in enumerate(dyes):
+                if name == d + "_banner" or name == d + "_wall_banner":
+                    f.write(f"\t{{{b['minStateId']}, {b['maxStateId']}, {i}}}, // {name}\n")
+                    nb += 1
+        f.write("}\n")
+    print(f"  bedrock_banners_gen.go: {nb} banner blocks")
+
     # ---- entities -----------------------------------------------------------
     mcents = sorted(json.loads(fetch(f"{MCDATA}/entities.json")), key=lambda e: e["id"])
     if [e["id"] for e in mcents] != list(range(len(mcents))):

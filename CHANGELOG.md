@@ -68,7 +68,8 @@ the public history since the project was open-sourced on 2026-07-10.
   shows its book and turns pages. Signs too: every sign in a loaded
   chunk shows its text (colour and glow included), placing or editing
   one opens Bedrock's sign editor, and the text written there reaches
-  the world.
+  the world. Banners show their patterns on the right base colour,
+  campfires show what is cooking, and bells swing when rung.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
