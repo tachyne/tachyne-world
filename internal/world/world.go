@@ -518,6 +518,23 @@ func (w *World) NearestEdited(x, y, z, radius int, pred func(uint32) bool) (int,
 // BiomeAt reports the biome identifier at a world column.
 func (w *World) BiomeAt(x, z int) string { return w.gen.BiomeName(x, z) }
 
+// BiomeAt3D reports the biome at a position: the generated chunk's
+// per-section biome, which is a cave biome (lush_caves, dripstone_caves,
+// deep_dark) well below the surface and the column's surface biome above.
+// Falls back to the surface biome outside the vertical range.
+func (w *World) BiomeAt3D(x, y, z int) string {
+	if !w.inBounds(y) {
+		return w.BiomeAt(x, z)
+	}
+	cx, cz, _, _ := chunkOf(x, z)
+	ch := w.generated(int32(cx), int32(cz))
+	sec := (y - worldgen.MinY) / 16
+	if ch != nil && sec >= 0 && sec < len(ch.Biomes) && ch.Biomes[sec] != "" {
+		return ch.Biomes[sec]
+	}
+	return w.BiomeAt(x, z)
+}
+
 // GroundY is the terrain surface height (top of the solid ground, where a land
 // mob's feet rest) — unlike SurfaceY it is NOT clamped to sea level, so over
 // oceans it's the seafloor, not the water surface.

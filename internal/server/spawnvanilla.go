@@ -26,7 +26,7 @@ const (
 // maximum distance a mob of that category may spawn from a player
 // (NaturalSpawner.isValidSpawnPostitionForType). This is distinct from
 // categoryDespawnDist, which is -1 for the persistent creature category.
-var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64}
+var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64, 64}
 
 // spawnVanilla runs the exact-vanilla path for one tick.
 func (h *hub) spawnVanilla(players map[int32]*tracked, chunks [][2]int32, chunkSet map[[2]int32]bool, spawnRingSize int, counts *[catCount]int) {
@@ -221,7 +221,7 @@ func (h *hub) seedChunkAnimals(players map[int32]*tracked, c [2]int32, counts *[
 		z := cz0 + h.rng.Intn(16)
 		for k := 0; k < pack; k++ {
 			for attempt := 0; attempt < 4; attempt++ { // vanilla: up to 4 placement tries per individual
-				if h.ownedBlock(x, z) && h.spawnableAnimal(x, z) {
+				if h.ownedBlock(x, z) && h.spawnableAnimalFor(sd.etype, x, z) {
 					h.spawnAnimal(players, sd.etype, x, z)
 					counts[catCreature]++
 					break

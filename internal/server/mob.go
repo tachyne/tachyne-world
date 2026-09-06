@@ -774,10 +774,23 @@ func (h *hub) updateHerdTargets() {
 // grass+light rule, and what keeps boot-seeded herds out of player builds
 // (a roofed interior is never sky-exposed).
 func (h *hub) spawnableAnimal(x, z int) bool {
+	return h.spawnableAnimalFor(entityCow, x, z)
+}
+
+// spawnableAnimalFor is spawnableAnimal with the species' own spawnable-on
+// rule (spawnspecies.go): a turtle herd wants beach sand, a mooshroom herd
+// mycelium, a frog herd mud — none of which the generic grass/dirt check
+// would ever accept.
+func (h *hub) spawnableAnimalFor(etype, x, z int) bool {
 	if !h.world.Spawnable(x, z) || !h.skyExposedColumn(x, z) {
 		return false
 	}
-	switch h.world.Block(x, h.world.MobFeet(x, z)-1, z) {
+	feet := h.world.MobFeet(x, z)
+	below := h.world.Block(x, feet-1, z)
+	if ok, handled := creatureFloorOK(etype, below, feet); handled {
+		return ok
+	}
+	switch below {
 	case worldgen.GrassBlock, worldgen.Dirt:
 		return true
 	}

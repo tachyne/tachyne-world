@@ -35,11 +35,12 @@ const (
 	catAmbient
 	catWaterCreature
 	catWaterAmbient
+	catAxolotls // vanilla AXOLOTLS: its own cap, lush caves only
 	catCount
 )
 
-var categoryCap = [catCount]int{70, 10, 15, 5, 20}
-var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64}
+var categoryCap = [catCount]int{70, 10, 15, 5, 20, 5}
+var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64, 64}
 
 const (
 	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
@@ -100,7 +101,7 @@ var (
 	creaturePoolPlains = append([]spawnerEntry{
 		{entityHorse, 5, 2, 6}, {entityDonkey, 1, 1, 3},
 	}, creaturePoolDefault...)
-	creaturePoolDesert = []spawnerEntry{{entityRabbit, 4, 2, 3}} // vanilla deserts have no farm animals
+	creaturePoolDesert = []spawnerEntry{{entityRabbit, 12, 2, 3}, {entityCamel, 1, 1, 1}} // no farm animals (1.21.11 biome report)
 	creaturePoolSnowy  = []spawnerEntry{{entityRabbit, 10, 2, 3}, {entityPolarBear, 1, 1, 2}, {entityFox, 8, 2, 4}}
 	creaturePoolTaiga  = append([]spawnerEntry{
 		{entityWolf, 8, 4, 4}, {entityRabbit, 4, 2, 3}, {entityFox, 8, 2, 4},
@@ -109,7 +110,7 @@ var (
 		{entityParrot, 40, 1, 2}, {entityPanda, 1, 1, 2}, {entityOcelot, 2, 1, 3},
 	}, creaturePoolDefault...)
 	creaturePoolSavanna = append([]spawnerEntry{
-		{entityHorse, 1, 2, 6}, {entityDonkey, 1, 1, 1}, {entityLlama, 8, 4, 4},
+		{entityHorse, 1, 2, 6}, {entityDonkey, 1, 1, 1}, {entityLlama, 8, 4, 4}, {entityArmadillo, 10, 2, 3},
 	}, creaturePoolDefault...)
 	creaturePoolPeaks = []spawnerEntry{{entityGoat, 5, 1, 3}}
 
@@ -128,7 +129,9 @@ func mobSpawnCategory(m *mob) int {
 	switch m.etype {
 	case entityBat:
 		return catAmbient
-	case entitySquid, entityDolphin, entityGlowSquid, entityAxolotl:
+	case entityAxolotl:
+		return catAxolotls
+	case entitySquid, entityDolphin, entityGlowSquid:
 		return catWaterCreature
 	case entityCod, entitySalmon, entityTropicalFish, entityPufferfish, entityNautilus:
 		return catWaterAmbient
@@ -329,6 +332,18 @@ func (h *hub) spawnPool(cat, x, y, z int) []spawnerEntry {
 		return monsterPoolDefault
 	case catCreature:
 		switch {
+		case isMushroomBiome(biome):
+			return creaturePoolMushroom
+		case isBeachBiome(biome):
+			return creaturePoolBeach
+		case isMangroveBiome(biome):
+			return creaturePoolMangrove
+		case isSwampBiome(biome):
+			return creaturePoolSwamp
+		case biome == "minecraft:wooded_badlands":
+			return creaturePoolWoodedBadlands
+		case isBadlandsBiome(biome):
+			return creaturePoolBadlands
 		case isDesertBiome(biome):
 			return creaturePoolDesert
 		case isColdBiome(biome):
@@ -347,6 +362,11 @@ func (h *hub) spawnPool(cat, x, y, z int) []spawnerEntry {
 		return creaturePoolDefault
 	case catAmbient:
 		return ambientPool
+	case catAxolotls: // the lush_caves cave biome, wherever it is in the column
+		if h.world.BiomeAt3D(x, y, z) == "minecraft:lush_caves" {
+			return axolotlPool
+		}
+		return nil
 	case catWaterCreature:
 		if y < 30 { // vanilla underground_water_creature: glow squid in cave water
 			return waterCreatureCaves
@@ -402,6 +422,8 @@ func (h *hub) spawnPositionOK(cat, etype, x, y, z int) bool {
 	switch cat {
 	case catWaterCreature, catWaterAmbient:
 		return worldgen.IsWater(at) && worldgen.IsWater(h.world.At(x, y+1, z))
+	case catAxolotls: // IN_WATER placement: water here, no conductor above
+		return worldgen.IsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
 	}
 	if worldgen.IsWater(at) || worldgen.IsLava(at) ||
 		worldgen.Collides(at) || worldgen.Collides(h.world.At(x, y+1, z)) {
@@ -502,10 +524,17 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 		}
 		return true
 	case catCreature: // vanilla Animal.checkAnimalSpawnRules: grass + light > 8
-		switch h.world.At(x, y-1, z) {
-		case worldgen.GrassBlock, worldgen.Dirt, worldgen.SnowBlock, worldgen.Sand:
-		default:
-			return false
+		below := h.world.At(x, y-1, z)
+		if ok, handled := creatureFloorOK(etype, below, y); handled {
+			if !ok {
+				return false // the species' own spawnable-on tag (spawnspecies.go)
+			}
+		} else {
+			switch below {
+			case worldgen.GrassBlock, worldgen.Dirt, worldgen.SnowBlock, worldgen.Sand:
+			default:
+				return false
+			}
 		}
 		// vanilla Animal.isBrightEnoughToSpawn: getRawBrightness(pos, 0) > 8 — the
 		// TRUE raw light with no time-of-day darkening, so a sky-lit surface (15)
@@ -518,6 +547,8 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 		return y < 30 || (y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel)
 	case catWaterAmbient: // vanilla surface-water band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
+	case catAxolotls: // checkAxolotlSpawnRules: clay below, no light rule
+		return inRanges2(h.world.At(x, y-1, z), axolotlFloor)
 	}
 	return false
 }
@@ -561,7 +592,7 @@ func (h *hub) spawnNatural(players map[int32]*tracked, cat, etype, x, y, z int) 
 	switch cat {
 	case catMonster:
 		h.spawnHostileY(players, etype, fx, fy, fz)
-	case catWaterCreature, catWaterAmbient:
+	case catWaterCreature, catWaterAmbient, catAxolotls:
 		h.spawnSpecies(players, etype, 0, fx, fy+0.5, fz)
 	default:
 		m := h.spawnMob(players, etype, fx, fy, fz)
