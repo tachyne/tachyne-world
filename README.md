@@ -73,8 +73,11 @@ detailed inventory follows in [What works today](#what-works-today).
 
 Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
 share one world (1.21.9–26.1 are currently rejected at login), and **Bedrock**
-(latest release) joins through its own gateway with Bedrock-specific limits —
-see each gateway's README. Content newer than a client's own version is
+(latest release) joins through its own gateway — survival HUD, every
+container and workstation screen (crafting, furnaces, anvil, enchanting,
+trading, smithing, loom, stonecutter, beacon…), the creative inventory,
+portal travel and Bedrock-to-Bedrock skins all bridged, with a short list
+of remaining Bedrock-specific limits in that gateway's README. Content newer than a client's own version is
 downgraded rather than sent regardless: blocks and items it has never heard of
 arrive as air, and newer mobs as their nearest sensible stand-in, so an older
 client is never handed an id its registry cannot resolve.

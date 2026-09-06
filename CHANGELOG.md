@@ -56,7 +56,12 @@ the public history since the project was open-sourced on 2026-07-10.
   particles (flames, smoke, splashes, hearts, notes, portal swirls,
   enchanting glyphs…) reach Bedrock as the named particles Geyser's
   table maps them to; and Bedrock players see each other's real skins
-  in the player list instead of a grey placeholder.
+  in the player list instead of a grey placeholder. Riding works on
+  Bedrock: the player is seated on the boat or minecart (the world's
+  passenger list becomes Bedrock actor links), the ride carries the
+  loaded area, and the full key state steers a server-driven vehicle
+  the way it does from Java — before, a Bedrock rider sent only sneak
+  and the client was never told it was aboard.
 - **Bedrock: advancement toasts and boat woods.** Completing an
   advancement now pops Bedrock's toast ("Advancement Made!", "Goal
   Reached!" or "Challenge Complete!" over the advancement's English
