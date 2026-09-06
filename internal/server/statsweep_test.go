@@ -5,6 +5,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func stat(t *tracked, name string) int32 {
@@ -74,5 +75,30 @@ func TestDamageStatistics(t *testing.T) {
 	}
 	if got := stat(pl, "damage_taken"); got != 50 {
 		t.Errorf("damage_taken after absorption %d, want 50", got)
+	}
+}
+
+// Jump Boost raises the safe fall distance by one block per level.
+func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	h.rules.FallDamage = true
+	drop := func(blocks float64) float32 {
+		pl.health, pl.dead = 20, false
+		pl.airborne, pl.peakY = true, 100
+		pl.x, pl.y, pl.z = 0.5, 100, 0.5
+		h.world.SetBlock(0, int(100-blocks)-1, 0, worldgen.Stone)
+		h.onFallAndExhaust(nil, pl, evMove{x: 0.5, y: 100 - blocks, z: 0.5, onGround: true})
+		return 20 - pl.health
+	}
+	if d := drop(4); d != 1 {
+		t.Fatalf("a four-block fall deals %v, want 1", d)
+	}
+	pl.effects[effJumpBoost] = &activeEffect{amp: 1, left: 100} // Jump Boost II: grace 3 + 2
+	if d := drop(4); d != 0 {
+		t.Errorf("with Jump Boost II a four-block fall should be free, dealt %v", d)
+	}
+	if d := drop(7); d != 2 {
+		t.Errorf("with Jump Boost II a seven-block fall deals %v, want 2", d)
 	}
 }

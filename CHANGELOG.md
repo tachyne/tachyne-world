@@ -143,14 +143,27 @@ the public history since the project was open-sourced on 2026-07-10.
   from support: zero on solid ground, one more per scaffold out or up from
   a neighbour, and the seventh out cannot stand; distance and the bottom
   marker are set at placement and recomputed when a neighbour changes.
-  Vines still do not spread on their own. Sugar cane and cactus follow
+  Vines also spread the vanilla way on random ticks — along a wall, round
+  a corner, up it or hanging down — until five of them crowd a spot. Sugar cane and cactus follow
   vanilla's placement rules too: cane needs water beside the block it
   stands on, a cactus refuses a solid or lava neighbour and grows only on
   sand or another cactus, and bamboo roots only in sand, dirt, gravel or
   bamboo. Chorus stems and flowers keep vanilla's survival rules too, and
   a stem re-wires its connections when a neighbour changes.
 
+- **Bells ring.** A bell could be placed and hung but never rung. Strike it
+  on a proper side (along a floor bell's axis, across a wall bell's, any
+  side of a ceiling bell — never from above or below, nor high on the
+  block), power it, or hit it with a projectile, and it swings on every
+  client with the bell sound at vanilla's volume; the strike counts toward
+  the bell-ringing statistic. This rode a new shared frame for block
+  events, so the Java gateways were updated with it. A rung bell makes
+  every raider within 48 blocks glow for three seconds and resonates when
+  it finds one; villagers running for their beds are not yet modelled.
+
 ### Changed
+- Jump Boost raises the safe fall distance by one block per level, as its
+  attribute modifier does in vanilla; the three-block grace was fixed.
 - Copper oxidation on a double copper chest now ages both halves together
   (vanilla's connected-half rule) instead of leaving a mismatched pair.
 - Desert rabbits now spawn at vanilla's weight (12, from the 1.21.11 biome

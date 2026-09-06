@@ -201,3 +201,68 @@ func TestChorusSurvival(t *testing.T) {
 		t.Error("a flower beside two stems falls")
 	}
 }
+
+// A vine on a wall spreads: over enough random ticks it grows sideways or
+// downward, every new vine keeping a real face; hemmed in by five vines it
+// stops.
+func TestVineSpreads(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.world
+	for dx := -6; dx <= 6; dx++ {
+		for dy := -6; dy <= 4; dy++ {
+			for dz := -6; dz <= 6; dz++ {
+				w.SetBlock(120+dx, 100+dy, 120+dz, worldgen.Air)
+			}
+		}
+	}
+	// A stone wall along z at x=121; a vine on its west face at (120,100,120).
+	for dz := -3; dz <= 3; dz++ {
+		for dy := -5; dy <= 3; dy++ {
+			w.SetBlock(121, 100+dy, 120+dz, worldgen.Stone)
+		}
+	}
+	w.SetBlock(120, 100, 120, vineWith(t, "east"))
+	count := func() int {
+		n := 0
+		for dx := -6; dx <= 6; dx++ {
+			for dy := -6; dy <= 4; dy++ {
+				for dz := -6; dz <= 6; dz++ {
+					if isVineBlock(w.At(120+dx, 100+dy, 120+dz)) {
+						n++
+					}
+				}
+			}
+		}
+		return n
+	}
+	for i := 0; i < 4000 && count() < 3; i++ {
+		for dx := -6; dx <= 6; dx++ {
+			for dy := -6; dy <= 4; dy++ {
+				for dz := -6; dz <= 6; dz++ {
+					if s := w.At(120+dx, 100+dy, 120+dz); isVineBlock(s) {
+						h.tickVine(players, 0, 120+dx, 100+dy, 120+dz, s)
+					}
+				}
+			}
+		}
+	}
+	if count() < 3 {
+		t.Fatalf("the vine never spread: %d vines", count())
+	}
+	// Every vine placed is supported (no faceless or floating vine).
+	for dx := -6; dx <= 6; dx++ {
+		for dy := -6; dy <= 4; dy++ {
+			for dz := -6; dz <= 6; dz++ {
+				p := blockPos{120 + dx, 100 + dy, 120 + dz}
+				if s := w.At(p.x, p.y, p.z); isVineBlock(s) && !supported(w, p, s) {
+					t.Errorf("spread produced an unsupported vine at %v state %d", p, s)
+				}
+			}
+		}
+	}
+	if h.vineCanSpread(w, 120, 100, 120) && count() >= 5 {
+		t.Error("five or more vines nearby must stop spreading")
+	}
+}

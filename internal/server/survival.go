@@ -305,10 +305,13 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			landed := h.worldFor(t.dim).At(int(math.Floor(e.x)), int(math.Floor(e.y))-1, int(math.Floor(e.z)))
 			hurt, impaled := stalagmiteFallExtra(landed, dist)
 			if !impaled {
-				if dist <= 3 { // the ordinary three-block grace
+				// SAFE_FALL_DISTANCE: the three-block grace plus one per Jump
+				// Boost level (the effect's attribute modifier).
+				grace := 3 + float64(t.hasEffect(effJumpBoost))
+				if dist <= grace {
 					return
 				}
-				hurt = math.Floor(dist - 3)
+				hurt = math.Floor(dist - grace)
 			}
 			if hurt > 0 {
 				cause := deathCause{key: causeFall}

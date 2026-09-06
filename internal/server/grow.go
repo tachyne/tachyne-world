@@ -194,6 +194,9 @@ func (h *hub) randomTickBlockState(players map[int32]*tracked, dim, x, y, z int,
 	if h.tickBerry(players, dim, x, y, z, state) {
 		return
 	}
+	if h.tickVine(players, dim, x, y, z, state) {
+		return
+	}
 	if h.tickCopper(players, dim, x, y, z, state) {
 		return
 	}
