@@ -816,6 +816,7 @@ func (h *hub) run() {
 		h.trials = h.containers.loadTrials(h.tick.Load())
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
+		h.restoreVehicles(h.containers.loadVehicles())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
@@ -1093,6 +1094,7 @@ func (h *hub) run() {
 					h.containers.recordTrials(h.trials, h.tick.Load())
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
+					h.containers.recordVehicles(h.snapshotVehicles())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
@@ -1647,6 +1649,10 @@ func (h *hub) run() {
 						break
 					}
 					if v := h.vehicles[e.target]; v != nil {
+						if e.sneak && v.chest != nil { // ChestBoat: sneak-click opens the cargo
+							h.openVehicleChest(players, t, v)
+							break
+						}
 						h.mountVehicle(players, t, v)
 						break
 					}
@@ -1921,6 +1927,7 @@ func (h *hub) run() {
 					h.containers.recordTrials(h.trials, h.tick.Load())
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
+					h.containers.recordVehicles(h.snapshotVehicles())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)

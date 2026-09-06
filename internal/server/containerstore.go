@@ -49,9 +49,10 @@ type savedItem struct {
 
 type containerFile struct {
 	Furnaces  map[string]savedFurnace   `json:"furnaces,omitempty"`
-	Chests    map[string][]containerRow `json:"chests,omitempty"` // (slot + the stack pack) — sparse; old shorter rows zero-fill
-	Bins      map[string]savedBin       `json:"bins,omitempty"`   // dispenser/dropper/hopper
-	Items     []savedItem               `json:"items,omitempty"`  // dropped item entities
+	Chests    map[string][]containerRow `json:"chests,omitempty"`   // (slot + the stack pack) — sparse; old shorter rows zero-fill
+	Bins      map[string]savedBin       `json:"bins,omitempty"`     // dispenser/dropper/hopper
+	Items     []savedItem               `json:"items,omitempty"`    // dropped item entities
+	Vehicles  []savedVehicle            `json:"vehicles,omitempty"` // boats and minecarts (2026-09-06)
 	Paintings []savedPainting           `json:"paintings,omitempty"`
 	Frames    []savedFrame              `json:"frames,omitempty"`
 	Jukeboxes map[string]stackRow       `json:"jukeboxes,omitempty"`
@@ -366,6 +367,31 @@ func (s *containerStore) recordItems(items []savedItem) {
 	s.mu.Lock()
 	s.m.Items = items
 	s.mu.Unlock()
+}
+
+// savedVehicle is one parked boat or minecart: the entity type by NAME (ids
+// shift with the canonical version) and where it sits. A rider is never
+// saved — the player is gone by the time the store is written.
+type savedVehicle struct {
+	Dim   int        `json:"dim,omitempty"`
+	Etype string     `json:"type"`
+	X     float64    `json:"x"`
+	Y     float64    `json:"y"`
+	Z     float64    `json:"z"`
+	Yaw   float32    `json:"yaw,omitempty"`
+	Chest []stackRow `json:"chest,omitempty"` // a chest boat's cargo
+}
+
+func (s *containerStore) recordVehicles(v []savedVehicle) {
+	s.mu.Lock()
+	s.m.Vehicles = v
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadVehicles() []savedVehicle {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Vehicles
 }
 
 func (s *containerStore) loadItems() []savedItem {

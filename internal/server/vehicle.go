@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"math"
+	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -36,11 +37,25 @@ var boatEntities = func() map[string]int {
 	m := map[string]int{}
 	for _, wood := range []string{"oak", "spruce", "birch", "jungle", "acacia",
 		"dark_oak", "cherry", "mangrove", "pale_oak", "bamboo"} {
-		name := wood + "_boat"
+		name, chestName := wood+"_boat", wood+"_chest_boat"
 		if wood == "bamboo" {
-			name = "bamboo_raft" // bamboo floats a raft, not a boat
+			name, chestName = "bamboo_raft", "bamboo_chest_raft" // bamboo floats a raft, not a boat
 		}
 		m[wood+"_boat"] = entityID(name)
+		if id, ok := entityByName[chestName]; ok { // the chest variant: item and entity share the name
+			m[chestName] = id
+		}
+	}
+	return m
+}()
+
+// chestBoatTypes are the boat/raft entities that carry a 27-slot chest.
+var chestBoatTypes = func() map[int]bool {
+	m := map[int]bool{}
+	for name, id := range entityByName {
+		if strings.HasSuffix(name, "_chest_boat") || name == "bamboo_chest_raft" {
+			m[id] = true
+		}
 	}
 	return m
 }()
@@ -78,6 +93,7 @@ type vehicle struct {
 	yaw        float32
 	rider      int32   // player eid, 0 when empty
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
+	chest      *chest  // a chest boat's 27 slots (nil for the rest)
 }
 
 func (v *vehicle) isBoat() bool { return v.etype != entityMinecart }
@@ -120,6 +136,9 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, etype, bx, by, bz int) 
 	}
 	v := &vehicle{eid: h.allocEID(), etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
+	if chestBoatTypes[etype] {
+		v.chest = &chest{}
+	}
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, 0, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
 	return true
@@ -176,6 +195,19 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	delete(h.vehicles, v.eid)
 	h.toNearbyEv(players, v.dim, v.x, v.z, entGone(v.eid))
 	h.spawnItem(players, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
+	if v.chest != nil { // ChestBoat.destroy: the cargo spills
+		for _, st := range v.chest.slots {
+			if st.item == 0 || st.count == 0 {
+				continue
+			}
+			if it := h.spawnItemIn(players, v.dim, st.item, st.count, v.x, v.y, v.z); it != nil {
+				it.dmg, it.ench, it.mapID, it.pats = st.dmg, st.ench, st.mapID, st.pats
+				it.trimMat, it.trimPat, it.bookID, it.boxID, it.hiveID = st.trimMat, st.trimPat, st.bookID, st.boxID, st.hiveID
+				it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode
+				h.refreshItemMeta(players, it)
+			}
+		}
+	}
 	h.playSound(players, "minecraft:entity.minecart.riding", sndNeutral, v.x, v.y, v.z, 0.4, 1.6)
 }
 
@@ -257,4 +289,63 @@ func passengersBody(vehicleEID int32, riders ...int32) attachproto.Passengers {
 
 func vehicleMoveBody(x, y, z float64, yaw float32) attachproto.VehicleMove {
 	return attachproto.VehicleMove{X: x, Y: y, Z: z, Yaw: yaw}
+}
+
+// snapshotVehicles / restoreVehicles: boats and carts persist across restarts
+// like dropped items do (vehicles used to vanish with the pod).
+func (h *hub) snapshotVehicles() []savedVehicle {
+	out := make([]savedVehicle, 0, len(h.vehicles))
+	for _, v := range h.vehicles {
+		name := entityNameByID[v.etype]
+		if name == "" {
+			continue
+		}
+		sv := savedVehicle{Dim: v.dim, Etype: name, X: v.x, Y: v.y, Z: v.z, Yaw: v.yaw}
+		if v.chest != nil {
+			for _, st := range v.chest.slots {
+				sv.Chest = append(sv.Chest, packStack(st))
+			}
+		}
+		out = append(out, sv)
+	}
+	return out
+}
+
+func (h *hub) restoreVehicles(saved []savedVehicle) {
+	for _, sv := range saved {
+		et, ok := entityByName[sv.Etype]
+		if !ok {
+			continue
+		}
+		v := &vehicle{eid: h.allocEID(), dim: sv.Dim, etype: et, x: sv.X, y: sv.Y, z: sv.Z, yaw: sv.Yaw,
+			sx: sv.X, sy: sv.Y, sz: sv.Z}
+		binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
+		if chestBoatTypes[et] {
+			v.chest = &chest{}
+			for i, r := range sv.Chest {
+				if i < len(v.chest.slots) {
+					v.chest.slots[i] = unpackStack(r)
+				}
+			}
+		}
+		h.vehicles[v.eid] = v // boot-time: shown to players by the join pass (sendVehiclesTo)
+	}
+}
+
+// openVehicleChest is ChestBoat.openCustomInventoryScreen: a sneaking click
+// on a chest boat opens its cargo in the ordinary chest window (the slots
+// resolve through viewChest, exactly as a placed chest's do).
+func (h *hub) openVehicleChest(players map[int32]*tracked, t *tracked, v *vehicle) {
+	if t.inv == nil || v.chest == nil {
+		return
+	}
+	h.releaseContainerView(t)
+	h.reclaimCraft(nil, t)
+	h.nextWin++
+	if h.nextWin > 100 {
+		h.nextWin = 1
+	}
+	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, simPos{}, winChest, v.chest
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest Boat"})
+	h.sendChestWindow(t, v.chest)
 }

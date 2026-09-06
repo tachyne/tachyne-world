@@ -161,6 +161,22 @@ the public history since the project was open-sourced on 2026-07-10.
   every raider within 48 blocks glow for three seconds and resonates when
   it finds one; villagers running for their beds are not yet modelled.
 
+- **Guardian beams.** A guardian or elder guardian now locks onto its
+  target the vanilla way — the beam is drawn on every client from the
+  synced attack target, charges for the attack duration (four seconds,
+  three for an elder) while the target stays in reach, then lands its two
+  hits and lets go. Before, the hits landed with no beam and no warning.
+- **Villagers hear bells.** A villager within 32 blocks of a rung bell
+  goes to its bed and stays there for fifteen seconds (vanilla's hide
+  package), so ringing the village bell empties the streets.
+
+- **Chest boats and the chest raft.** All ten woods' chest boats place,
+  carry a 27-slot chest that a sneaking click opens in the ordinary chest
+  window, spill their cargo when broken, and keep it across restarts.
+- **Boats and minecarts survive restarts.** A parked vehicle used to vanish
+  with the pod; it is now saved with the world's containers (type by name,
+  position, heading, cargo) and put back on boot.
+
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its
   attribute modifier does in vanilla; the three-block grace was fixed.
