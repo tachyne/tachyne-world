@@ -267,6 +267,7 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 		h.nextWin = 1
 	}
 	t.winID, t.winKind = h.nextWin, winTrade
+	h.incCustom(t, "talked_to_villager", 1)
 	t.tradeWith, t.tradeSel = m.eid, 0
 	t.trade = [2]invStack{}
 

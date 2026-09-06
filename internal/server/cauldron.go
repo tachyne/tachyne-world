@@ -109,6 +109,7 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 		// Washing: a patterned banner loses its TOP layer for one water level.
 		if kind == cauldronWater && held.patCount() > 0 {
 			held.pats[held.patCount()-1] = bannerLayer{}
+			h.incCustom(t, "clean_banner", 1)
 			t.inv.slots[slot] = held
 			h.sendSlot(t, int(slot))
 			next := cauldronState

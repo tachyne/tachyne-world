@@ -302,6 +302,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				}
 				om.hitByPlayer = true
 				om.hurt(float64(sweep))
+				h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				if om.health <= 0 {
 					h.killMob(players, om)
 					h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[om.etype]})
@@ -320,6 +321,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
+	if t != nil {
+		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
+	}
 	if t != nil {
 		h.advance(players, t, "player_hurt_entity", advMatch{damageDirect: "player", mainhand: heldStack(t).item,
 			damageTags: map[string]bool{"mace_smash": smash}, dealt: float64(dmg)})

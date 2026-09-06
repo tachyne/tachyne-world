@@ -197,6 +197,7 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 		t.p.trySendEv(vehicleMoveBody(v.x, v.y, v.z, v.yaw)) // snap back
 		return
 	}
+	h.vehicleStats(t, v, math.Hypot(e.x-v.x, e.z-v.z))
 	v.x, v.y, v.z, v.yaw = e.x, e.y, e.z, e.yaw
 	// The rider rides along: hub position drives chunk streaming + interest.
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z

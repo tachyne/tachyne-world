@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+	"math"
 )
 
 // Rideable mounts. Horses, donkeys, mules, camels, pigs and striders can be
@@ -113,6 +114,7 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 		return true
 	}
 	moved := e.x != m.sx || e.y != m.sy || e.z != m.sz
+	h.rideStats(t, m, math.Hypot(e.x-m.x, e.z-m.z))
 	m.x, m.y, m.z, m.yaw = e.x, e.y, e.z, e.yaw
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z // the rider rides along (chunk streaming)
 	t.p.setHubPos(e.x, e.z)

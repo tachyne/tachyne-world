@@ -96,6 +96,7 @@ func (s *Server) usePot(p *player, x, y, z int, state uint32, seq int32) bool {
 			return false // empty pot, nothing pottable in hand — not our click
 		}
 		s.putBlock(p, x, y, z, potted, true, seq)
+		s.hub.post(evStat{eid: p.eid, name: "pot_flower"})
 		if s.modes.get(p.name) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}

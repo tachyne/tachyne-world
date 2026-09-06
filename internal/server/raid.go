@@ -59,6 +59,11 @@ func (h *hub) startRaid(players map[int32]*tracked, center blockPos) {
 	if h.raids[center] != nil {
 		return
 	}
+	for _, t := range players { // Raid.absorbRaidOmen: everyone the raid wakes for is a trigger
+		if t.dim == dimOverworld && t.hasEffect(effRaidOmen) > 0 {
+			h.incCustom(t, "raid_trigger", 1)
+		}
+	}
 	r := &raid{center: center, numGroups: raidWaveCount(h.rules.Difficulty),
 		alive: map[int32]bool{}, shown: map[int32]bool{}}
 	binary.BigEndian.PutUint32(r.uuid[8:], 0x52414944) // "RAID"

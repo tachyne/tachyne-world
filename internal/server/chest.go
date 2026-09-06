@@ -119,6 +119,14 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
 	h.trappedChestChanged(t.dim, pos.blockPos) // a trapped chest's signal is its viewer count
+	switch {                                   // the opener's statistic (ChestBlock.getOpenChestStat and kin)
+	case isTrappedChest(state):
+		h.incCustom(t, "trigger_trapped_chest", 1)
+	case isShulkerBox(state):
+		h.incCustom(t, "open_shulker_box", 1)
+	default:
+		h.incCustom(t, "open_chest", 1)
+	}
 
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest"})
 	h.sendChestWindow(t, c)

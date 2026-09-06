@@ -70,6 +70,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 		h.playSound(players, "minecraft:entity.player.attack.weak", sndPlayer, v.x, v.y, v.z, 1, 1)
 	}
 
+	h.incCustom(t, "damage_dealt", tenths(dmg))
 	landed := h.hurtFrom(players, v, dmg, dtPlayerAttack,
 		deathCause{key: causePlayer, by: t.p.name}, from(t.x, t.z))
 	h.knockbackPvP(t, v) // a raised shield eats the hit but not the shove

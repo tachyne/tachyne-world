@@ -366,6 +366,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	blocked := h.shieldBlocked(t, amount, dt, src)
 	if blocked > 0 {
 		h.shieldBlockFX(players, t, blocked)
+		h.incCustom(t, "damage_blocked_by_shield", tenths(blocked))
 		amount -= blocked
 	}
 	// A falling anvil batters the helmet specifically, then a quarter of the
@@ -374,6 +375,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.wearArmorSlot(players, t, 0, helmetWear(amount), dt)
 		amount *= 0.75
 	}
+	preMitigation := amount // what armour and magic will be measured against
 	// Armour absorbs the blow and wears from it under ONE condition, as vanilla
 	// does in getDamageAfterArmorAbsorb — hurtArmor is called there, with the
 	// damage as it stands BEFORE the reduction. Keeping the two together is the
@@ -395,8 +397,12 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		}
 	}
 	// Absorption soaks damage into its buffer before real health (yellow hearts).
+	if beforeAbsorb := amount; beforeAbsorb < preMitigation { // armour + magic took the rest
+		h.incCustom(t, "damage_resisted", tenths(preMitigation-beforeAbsorb))
+	}
 	if t.absorption > 0 && amount > 0 {
 		soak := float32(math.Min(float64(t.absorption), float64(amount)))
+		h.incCustom(t, "damage_absorbed", tenths(soak))
 		t.absorption -= soak
 		amount -= soak
 	}
@@ -410,6 +416,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	h.wakePlayer(players, t)        // pain wakes (and stands the pose back up)
 	t.exhaustion += dt.exhaustion() // vanilla: DamageType.exhaustion, per type
 	h.infestOnHurt(players, t)      // Infested: silverfish burst out on being hit
+	h.incCustom(t, "damage_taken", tenths(amount))
 	t.health -= amount
 	if t.health <= 0 {
 		t.health = 0
@@ -417,6 +424,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
 		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book
+		h.resetCustom(t, "time_since_death")
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
 			deathMessage(t.p.name, t.lastCause))

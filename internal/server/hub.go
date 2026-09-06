@@ -1024,6 +1024,13 @@ func (h *hub) run() {
 				h.advTick(players) // polled advancement criteria (inventory, biome)
 				for _, t := range players {
 					h.incCustom(t, "play_time", survivalTickN)
+					h.incCustom(t, "total_world_time", survivalTickN)
+					if !t.dead {
+						h.incCustom(t, "time_since_death", survivalTickN)
+					}
+					if t.p.sneaking {
+						h.incCustom(t, "sneak_time", survivalTickN)
+					}
 					// Insomnia: the clock the phantom spawner reads. Vanilla
 					// ticks it for anyone awake, and getting INTO a bed is what
 					// resets it (see setSleeping) — not waking up.
@@ -1426,6 +1433,10 @@ func (h *hub) run() {
 				h.cmdTeam(players, e)
 			case evSignPlaced:
 				h.onSignPlaced(players, e)
+			case evStat:
+				if t := players[e.eid]; t != nil {
+					h.incCustom(t, e.name, 1)
+				}
 			case evUseSign:
 				h.onUseSign(players, e)
 			case evUseAxe:
@@ -1684,6 +1695,7 @@ func (h *hub) run() {
 			case evOpenCraft:
 				if t := players[e.eid]; t != nil {
 					h.openCraftingTable(t)
+					h.incCustom(t, "interact_with_crafting_table", 1)
 				}
 			case evOpenFurnace:
 				if t := players[e.eid]; t != nil {
@@ -1720,23 +1732,35 @@ func (h *hub) run() {
 			case evOpenEnder:
 				if t := players[e.eid]; t != nil {
 					h.openEnderChest(players, t, e.x, e.y, e.z)
+					h.incCustom(t, "open_enderchest", 1)
 				}
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
-					h.openChest(t, e.x, e.y, e.z)
-					h.incCustom(t, "open_chest", 1)
+					h.openChest(t, e.x, e.y, e.z) // (its statistic is chosen inside: chest / trapped / shulker)
 				}
 			case evOpenBin:
 				if t := players[e.eid]; t != nil {
 					h.openBin(t, e.x, e.y, e.z)
+					switch st := h.worldFor(t.dim).At(e.x, e.y, e.z); {
+					case isDispenser(st):
+						h.incCustom(t, "inspect_dispenser", 1)
+					case isDropper(st):
+						h.incCustom(t, "inspect_dropper", 1)
+					case isHopper(st):
+						h.incCustom(t, "inspect_hopper", 1)
+					case isBrewStand(st):
+						h.incCustom(t, "interact_with_brewingstand", 1)
+					}
 				}
 			case evOpenAnvil:
 				if t := players[e.eid]; t != nil {
 					h.openAnvil(t)
+					h.incCustom(t, "interact_with_anvil", 1)
 				}
 			case evOpenGrind:
 				if t := players[e.eid]; t != nil {
 					h.openGrindstone(t)
+					h.incCustom(t, "interact_with_grindstone", 1)
 				}
 			case evOpenCarto:
 				if t := players[e.eid]; t != nil {
@@ -2056,15 +2080,9 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	if !h.validateMove(t, e) {
 		return // impossible move — not applied, client rubber-banded back
 	}
-	fromX, fromY, fromZ := t.x, t.y, t.z                   // pre-move position (plugin move event)
-	h.onFallAndExhaust(players, t, e)                      // fall damage + walking hunger (reads pre-move position)
-	if d := math.Hypot(e.x-t.x, e.z-t.z); d > 0 && d < 8 { // cm, teleports excluded
-		name := "walk_one_cm"
-		if e.sprinting {
-			name = "sprint_one_cm"
-		}
-		h.incCustom(t, name, int32(d*100))
-	}
+	fromX, fromY, fromZ := t.x, t.y, t.z // pre-move position (plugin move event)
+	h.onFallAndExhaust(players, t, e)    // fall damage + walking hunger (reads pre-move position)
+	h.moveStats(t, e)                    // the vanilla movement statistics family (cm, teleports excluded)
 	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
