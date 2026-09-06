@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-06
 
 ### Added
+- **Bedrock: the Nether and the End.** Bedrock players can now follow a
+  portal. The gateway takes the client through Bedrock's dimension-change
+  screen the way Geyser does (parked at the world origin with empty
+  columns around it so the screen can finish), then the world's landing
+  teleport places the player and the new dimension's chunks stream in.
+  Nether and End chunks render at the same absolute height as on Java,
+  clipped to Bedrock's shorter 0..127 and 0..255 ranges. Rendered
+  entities are dropped on the way through and the world re-adds the new
+  dimension's. Previously a Bedrock player stayed put in the overworld
+  while the world moved them.
 - **Bedrock: mobs look like themselves.** The Bedrock gateway now renders
   every mob look the engine syncs as entity metadata, reading each index
   by the mob it belongs to (Java reuses the same index for a sheep's
