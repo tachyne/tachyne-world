@@ -176,6 +176,14 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Boats and minecarts survive restarts.** A parked vehicle used to vanish
   with the pod; it is now saved with the world's containers (type by name,
   position, heading, cargo) and put back on boot.
+- **Vehicles in every dimension.** Boats and minecarts could only be placed
+  in the overworld — a boat item on a Nether lake or a cart on an End rail
+  did nothing, and a dispenser there swallowed the item. A vehicle now
+  belongs to the dimension it was placed in (by hand or by dispenser), is
+  saved and restored there, and is shown only to the players in that
+  dimension instead of appearing as a phantom at the same coordinates in
+  every world. Detector rails still switch only in the overworld, where
+  redstone is simulated.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

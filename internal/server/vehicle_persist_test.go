@@ -13,11 +13,11 @@ func TestVehiclesPersist(t *testing.T) {
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.world.SetBlock(40, 62, 40, worldgen.WaterBase)
-	if !h.spawnVehicleAt(players, boatEntities["oak_boat"], 40, 62, 40) {
+	if !h.spawnVehicleAt(players, 0, boatEntities["oak_boat"], 40, 62, 40) {
 		t.Fatal("boat should spawn on water")
 	}
 	h.world.SetBlock(41, 63, 40, worldgen.BlockBase("rail"))
-	if !h.spawnVehicleAt(players, entityMinecart, 41, 63, 40) {
+	if !h.spawnVehicleAt(players, 0, entityMinecart, 41, 63, 40) {
 		t.Fatal("cart should spawn on a rail")
 	}
 	saved := h.snapshotVehicles()
@@ -57,7 +57,7 @@ func TestChestBoatCargo(t *testing.T) {
 	if et == 0 {
 		t.Skip("no chest boat in this build")
 	}
-	if !h.spawnVehicleAt(players, et, 40, 62, 40) {
+	if !h.spawnVehicleAt(players, 0, et, 40, 62, 40) {
 		t.Fatal("chest boat should spawn on water")
 	}
 	var v *vehicle
@@ -90,5 +90,29 @@ func TestChestBoatCargo(t *testing.T) {
 	}
 	if !found {
 		t.Error("breaking a chest boat should spill its cargo")
+	}
+}
+
+// A boat placed on Nether lava does not float, but a cart on a Nether rail
+// rolls; vehicles carry their dimension and are only shown to players in it.
+func TestVehiclesInOtherDimensions(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	if h.worldFor(dimNether) == nil {
+		t.Skip("no nether world in this hub")
+	}
+	h.worldFor(dimNether).SetBlock(10, 40, 10, worldgen.BlockBase("rail"))
+	if !h.spawnVehicleAt(players, dimNether, entityMinecart, 10, 40, 10) {
+		t.Fatal("a cart should place on a Nether rail")
+	}
+	for _, v := range h.vehicles {
+		if v.dim != dimNether {
+			t.Errorf("cart dim %d, want the Nether", v.dim)
+		}
+	}
+	saved := h.snapshotVehicles()
+	if len(saved) != 1 || saved[0].Dim != dimNether {
+		t.Errorf("the dimension must persist: %+v", saved)
 	}
 }

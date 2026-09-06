@@ -86,7 +86,7 @@ func vehicleItemFor(etype int) int32 {
 
 type vehicle struct {
 	eid        int32
-	dim        int // dimension (0 overworld — nether vehicles unsupported)
+	dim        int // the dimension it floats or rolls in
 	uuid       [16]byte
 	etype      int
 	x, y, z    float64
@@ -118,9 +118,13 @@ func (evDismount) isHubEvent()     {}
 // spawnVehicleAt places a cart on a rail / a boat on-or-above water at a block
 // cell (player-independent core, also used by dispensers). Returns whether it
 // spawned.
-func (h *hub) spawnVehicleAt(players map[int32]*tracked, etype, bx, by, bz int) bool {
+func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz int) bool {
+	w := h.worldFor(dim)
+	if w == nil {
+		return false
+	}
 	x, y, z := float64(bx)+0.5, float64(by), float64(bz)+0.5
-	ground := h.world.At(bx, by, bz)
+	ground := w.At(bx, by, bz)
 	if etype == entityMinecart {
 		if !isAnyRail(ground) {
 			return false // carts only go on rails
@@ -128,26 +132,26 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, etype, bx, by, bz int) 
 		y += 0.1
 	} else {
 		if !worldgen.IsWater(ground) { // shore block: try the cell above
-			if !worldgen.IsWater(h.world.At(bx, by+1, bz)) && h.world.At(bx, by+1, bz) != worldgen.Air {
+			if !worldgen.IsWater(w.At(bx, by+1, bz)) && w.At(bx, by+1, bz) != worldgen.Air {
 				return false
 			}
 			y += 1
 		}
 	}
-	v := &vehicle{eid: h.allocEID(), etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	v := &vehicle{eid: h.allocEID(), dim: dim, etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	binary.BigEndian.PutUint32(v.uuid[12:], uint32(v.eid))
 	if chestBoatTypes[etype] {
 		v.chest = &chest{}
 	}
 	h.vehicles[v.eid] = v
-	h.toNearbyEv(players, 0, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
+	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, 0, 0))
 	return true
 }
 
 // placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
 func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
 	etype, ok := vehicleItems[e.item]
-	if !ok || !h.spawnVehicleAt(players, etype, e.x, e.y, e.z) {
+	if !ok || !h.spawnVehicleAt(players, t.dim, etype, e.x, e.y, e.z) {
 		return
 	}
 	if t.gamemode == gmSurvival && t.inv != nil && e.slot >= 0 && e.slot < 9 {
@@ -237,7 +241,7 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 		move := entMove(v.eid, v.x, v.y, v.z, v.yaw, 0, true)
 		cx, cz := chunkFloor(v.x), chunkFloor(v.z)
 		for _, o := range players {
-			if o.p.eid != e.eid && abs(chunkFloor(o.x)-cx) <= viewRadius && abs(chunkFloor(o.z)-cz) <= viewRadius {
+			if o.p.eid != e.eid && o.dim == v.dim && abs(chunkFloor(o.x)-cx) <= viewRadius && abs(chunkFloor(o.z)-cz) <= viewRadius {
 				o.p.trySendEv(move)
 			}
 		}
@@ -284,6 +288,9 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 }
 
 func passengersBody(vehicleEID int32, riders ...int32) attachproto.Passengers {
+		if v.dim != dimOverworld {
+			continue // redstone (detector rails) is simulated in the overworld only
+		}
 	return attachproto.Passengers{Vehicle: vehicleEID, Riders: append([]int32{}, riders...)}
 }
 
@@ -310,6 +317,9 @@ func (h *hub) snapshotVehicles() []savedVehicle {
 	}
 	return out
 }
+		if v.dim != t.dim {
+			continue
+		}
 
 func (h *hub) restoreVehicles(saved []savedVehicle) {
 	for _, sv := range saved {

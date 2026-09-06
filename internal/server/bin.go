@@ -497,7 +497,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && isVeh:
 		// Place a boat/minecart in the cell ahead (rail for carts, water for
 		// boats); if it can't be placed, toss the item like the default.
-		if !h.spawnVehicleAt(players, vehEt, front.x, front.y, front.z) {
+		if !h.spawnVehicleAt(players, pos.dim, vehEt, front.x, front.y, front.z) {
 			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 				it.dmg, it.ench = st.dmg, st.ench
 			}
