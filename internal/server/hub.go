@@ -568,6 +568,7 @@ type hub struct {
 	villageDone   map[blockPos]bool   // villages populated this session
 	villageGolem  map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
 	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
+	bastionDone   map[[2]int32]bool   // bastion remnants seeded with piglins/hoglins (persisted)
 	outpostDone   map[blockPos]bool   // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
@@ -730,6 +731,7 @@ func newHub(w *world.World) *hub {
 		villageDone:  map[blockPos]bool{},
 		villageGolem: map[blockPos]uint64{},
 		mansionDone:  map[[2]int32]bool{},
+		bastionDone:  map[[2]int32]bool{},
 		outpostDone:  map[blockPos]bool{},
 		rods:         map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
@@ -1023,6 +1025,7 @@ func (h *hub) run() {
 				h.registerHeartChunks(players) // …and worldgen creaking hearts in the pale garden
 				h.populateMonuments(players)   // seed elder guardians when a player reaches a monument
 				h.populateMansions(players)    // seed illagers when a player reaches a woodland mansion
+				h.populateBastions(players)    // seed piglins/hoglins when a player reaches a bastion
 			}
 			h.updateVehicles(players)
 			if age%survivalTickN == 0 {
@@ -1112,6 +1115,7 @@ func (h *hub) run() {
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.recordMansions(h.mansionDone)
+					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
@@ -1957,6 +1961,7 @@ func (h *hub) run() {
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.recordMansions(h.mansionDone)
+					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()

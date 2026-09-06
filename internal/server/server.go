@@ -419,6 +419,9 @@ func (s *Server) Serve() error {
 		for _, mn := range s.hub.mobstore.mansions() {
 			s.hub.mansionDone[[2]int32{int32(mn[0]), int32(mn[1])}] = true // cleared mansions stay cleared
 		}
+		for _, b := range s.hub.mobstore.bastions() {
+			s.hub.bastionDone[[2]int32{int32(b[0]), int32(b[1])}] = true // cleared bastions stay cleared
+		}
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
 		if s.WorldFile != "" {

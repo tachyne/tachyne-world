@@ -63,6 +63,7 @@ POOL_ROOTS = [
     "village/taiga/town_centers",
     "ancient_city/city_center",
     "trial_chambers/chamber/end",
+    "bastion/starts",
 ]
 
 
@@ -191,7 +192,17 @@ def bake(inner, name):
                 "target": nbt.get("target", "").split(":", 1)[-1],
                 "final": nbt.get("final_state", "minecraft:air"),
             })
+    # Entities embedded in the template (the bastion "mobs" pieces are one
+    # entity each): the server seeds them when a player first arrives.
+    mobs = []
+    for e in d.get("entities", []):
+        eid = (e.get("nbt") or {}).get("id", "")
+        bp = e.get("blockPos")
+        if eid and bp:
+            mobs.append({"pos": [bp[0], bp[1], bp[2]], "type": eid.split(":", 1)[-1]})
     t = {"size": d["size"], "palette": palette, "blocks": blocks}
+    if mobs:
+        t["mobs"] = mobs
     if chests:
         t["chests"] = chests
         if any(chestloot):
@@ -234,12 +245,66 @@ def load_pool(inner, name):
         loc = elem_location(el)
         if not loc:  # feature/empty pool elements — skip for now
             continue
-        out["elements"].append({
+        entry = {
             "location": loc.split(":", 1)[-1],
             "weight": e.get("weight", 1),
             "projection": el.get("projection", "rigid"),
-        })
+        }
+        if isinstance(el.get("processors"), str):
+            entry["processors"] = strip_ns(el["processors"])
+        out["elements"].append(entry)
     return out
+
+
+# Processor pieces the baker does not model (reported once per run). The
+# bastion pools use only what IS modelled; trial chambers and villages were
+# assembled without processors before and still are.
+skipped = set()
+
+
+def load_processors(inner, name):
+    """Parse a processor_list into flat rules the Go side applies per block:
+    {in: block name ("" = any), p: probability, out: {name, props}, pos: {...}}.
+    Only the rule processor with random_block_match / always_true inputs is
+    modelled — that is every processor the bastion pools use."""
+    j = json.loads(inner.read("data/minecraft/worldgen/processor_list/%s.json" % name))
+    rules = []
+    for p in j.get("processors", []):
+        if p.get("processor_type") != "minecraft:rule":
+            skipped.add("%s: %s" % (name, p.get("processor_type")))
+            continue
+        for r in p.get("rules", []):
+            ip = r["input_predicate"]
+            rule = {}
+            if ip["predicate_type"] == "minecraft:random_block_match":
+                rule["in"] = strip_ns(ip["block"])
+                rule["p"] = ip.get("probability", 1.0)
+            elif ip["predicate_type"] == "minecraft:block_match":
+                rule["in"] = strip_ns(ip["block"])
+                rule["p"] = 1.0
+            elif ip["predicate_type"] == "minecraft:always_true":
+                rule["in"] = ""
+                rule["p"] = 1.0
+            else:
+                skipped.add("%s: input %s" % (name, ip["predicate_type"]))
+                continue
+            if r["location_predicate"]["predicate_type"] != "minecraft:always_true":
+                skipped.add("%s: location %s" % (name, r["location_predicate"]["predicate_type"]))
+                continue
+            out = {"name": r["output_state"]["Name"]}
+            if r["output_state"].get("Properties"):
+                out["props"] = r["output_state"]["Properties"]
+            rule["out"] = out
+            pp = r.get("position_predicate")
+            if pp:
+                if pp["predicate_type"] != "minecraft:axis_aligned_linear_pos":
+                    skipped.add("%s: position %s" % (name, pp["predicate_type"]))
+                    continue
+                rule["pos"] = {"axis": pp.get("axis", "y"), "min_chance": pp.get("min_chance", 0.0),
+                               "max_chance": pp.get("max_chance", 0.0), "min_dist": pp.get("min_dist", 0),
+                               "max_dist": pp.get("max_dist", 0)}
+            rules.append(rule)
+    return rules
 
 
 def strip_ns(s):
@@ -331,22 +396,30 @@ def collect(inner):
             kept.append(el)
         pool["elements"] = kept
         pools[pn] = pool
-    return pools, templates, aliases
+    processors = {}
+    for pool in pools.values():
+        for el in pool["elements"]:
+            pr = el.get("processors")
+            if pr and pr not in processors:
+                processors[pr] = load_processors(inner, pr)
+    return pools, templates, aliases, processors
 
 
 def main():
     outer = zipfile.ZipFile(JAR)
     inner = zipfile.ZipFile(io.BytesIO(outer.read("META-INF/versions/1.21.11/server-1.21.11.jar")))
     out = {name: bake(inner, name) for name in TEMPLATES}
-    pools, jig_templates, aliases = collect(inner)
+    pools, jig_templates, aliases, processors = collect(inner)
     out.update(jig_templates)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
-        json.dump({"templates": out, "pools": pools, "aliases": aliases}, f, separators=(",", ":"))
+        json.dump({"templates": out, "pools": pools, "aliases": aliases, "processors": processors}, f, separators=(",", ":"))
     total = sum(len(t["blocks"]) for t in out.values())
     nal = sum(len(v) for v in aliases.values())
-    print("baked %d templates (%d blocks), %d pools, %d alias entries -> %s" % (
-        len(out), total, len(pools), nal, os.path.relpath(OUT)))
+    for sk in sorted(skipped):
+        print("  skipped processor piece:", sk)
+    print("baked %d templates (%d blocks), %d pools, %d alias entries, %d processor lists -> %s" % (
+        len(out), total, len(pools), nal, len(processors), os.path.relpath(OUT)))
 
 
 if __name__ == "__main__":

@@ -47,6 +47,9 @@ type mobFile struct {
 	// Mansions lists the (x,z) of woodland mansions already populated with
 	// illagers, so a cleared mansion stays cleared across restarts.
 	Mansions [][2]int `json:"mansions,omitempty"`
+	// Bastions lists the (x,z) of bastion remnants already seeded with their
+	// piglins and hoglins — a cleared bastion stays cleared.
+	Bastions [][2]int `json:"bastions,omitempty"`
 	// Seeded is the permanent set of chunks that have already received their
 	// one-time vanilla chunk-generation herd. Persisted (was in-memory, reset
 	// every restart) so a rollout never re-lays herds on a chunk whose animals
@@ -350,6 +353,23 @@ func (s *mobStore) mansions() [][2]int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Mansions
+}
+
+// recordBastions snapshots the seeded-bastion set for the next flush.
+func (s *mobStore) recordBastions(done map[[2]int32]bool) {
+	bs := make([][2]int, 0, len(done))
+	for k := range done {
+		bs = append(bs, [2]int{int(k[0]), int(k[1])})
+	}
+	s.mu.Lock()
+	s.m.Bastions = bs
+	s.mu.Unlock()
+}
+
+func (s *mobStore) bastions() [][2]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Bastions
 }
 
 // removeNear deletes persisted mobs of the given types within radius r of

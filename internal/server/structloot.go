@@ -22,10 +22,19 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 	case dimOverworld:
 		h.fillStructureChest(pos, c)
 	case dimNether:
-		if p := h.worldFor(dim).Gen().RuinedPortalNetherIn(pos.x, pos.z); p.Exists {
+		g := h.worldFor(dim).Gen()
+		if p := g.RuinedPortalNetherIn(pos.x, pos.z); p.Exists {
 			for _, cp := range p.Chests {
 				if pos.x == cp[0] && pos.y == cp[1] && pos.z == cp[2] {
 					h.fillChest(c, "chests/ruined_portal", pos)
+					return
+				}
+			}
+		}
+		if b := g.BastionIn(pos.x, pos.z); b.Exists {
+			for _, bc := range g.BastionChests(b) {
+				if pos.x == bc.X && pos.y == bc.Y && pos.z == bc.Z {
+					h.fillChest(c, bc.Table, pos)
 					return
 				}
 			}

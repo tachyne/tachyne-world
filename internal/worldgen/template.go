@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"log"
+	"math"
 	"strconv"
 )
 
@@ -51,6 +52,7 @@ type Template struct {
 	JobSites  [][4]int       `json:"jobsites"`  // x,y,z,profession
 	Bells     [][3]int       `json:"bells"`
 	Jigsaws   []jigsawBlock  `json:"jigsaws"`
+	Mobs      []templateMob  `json:"mobs"` // entities embedded in the template (bastion "mobs" pieces)
 	name      string         // the template's location key (set at init; for loot inference)
 	resolved  [4][]uint32
 }
@@ -59,7 +61,50 @@ type poolElement struct {
 	Location   string `json:"location"`
 	Weight     int    `json:"weight"`
 	Projection string `json:"projection"`
+	Processors string `json:"processors"` // processor list applied to this element's blocks ("" = none)
 }
+
+// templateMob is an entity baked out of a template's entity list.
+type templateMob struct {
+	Pos  [3]int `json:"pos"`
+	Type string `json:"type"` // entity name without namespace
+}
+
+// procRule is one rule of a vanilla RuleProcessor: a block that matches the
+// input (with a probability) becomes the output state. Position-seeded, so a
+// chunk-clipped stamp makes the same choice for a block whichever chunk
+// stamps it.
+type procRule struct {
+	In  string       `json:"in"` // block name ("" = any block)
+	P   float64      `json:"p"`
+	Out paletteEntry `json:"out"`
+	Pos *procPos     `json:"pos"`
+	// resolved at init
+	inLo, inHi uint32
+	outState   uint32
+}
+
+// procPos is the axis_aligned_linear_pos position predicate: the chance
+// runs from MinChance at MinDist to MaxChance at MaxDist along one axis,
+// measured from the piece's origin.
+type procPos struct {
+	Axis      string  `json:"axis"`
+	MinChance float64 `json:"min_chance"`
+	MaxChance float64 `json:"max_chance"`
+	MinDist   int     `json:"min_dist"`
+	MaxDist   int     `json:"max_dist"`
+}
+
+// procFor names the processor list a pool applies to a template location.
+func (p *templatePool) procFor(loc string) string {
+	for _, e := range p.Elements {
+		if e.Location == loc {
+			return e.Processors
+		}
+	}
+	return ""
+}
+
 type templatePool struct {
 	Elements []poolElement `json:"elements"`
 	Fallback string        `json:"fallback"`
@@ -91,15 +136,29 @@ var (
 
 func init() {
 	var data struct {
-		Templates map[string]*Template     `json:"templates"`
-		Pools     map[string]*templatePool `json:"pools"`
-		Aliases   map[string][]aliasEntry  `json:"aliases"`
+		Templates  map[string]*Template     `json:"templates"`
+		Pools      map[string]*templatePool `json:"pools"`
+		Aliases    map[string][]aliasEntry  `json:"aliases"`
+		Processors map[string][]procRule    `json:"processors"`
 	}
 	if err := json.Unmarshal(structuresJSON, &data); err != nil {
 		log.Printf("structure templates: %v", err)
 		return
 	}
-	templates, pools, poolAliases = data.Templates, data.Pools, data.Aliases
+	templates, pools, poolAliases, processors = data.Templates, data.Pools, data.Aliases, data.Processors
+	for _, rules := range processors {
+		for i := range rules {
+			r := &rules[i]
+			if r.In != "" {
+				if lo, hi, ok := BlockRangeOK(r.In); ok {
+					r.inLo, r.inHi = lo, hi
+				} else {
+					r.inLo, r.inHi = 1, 0 // unknown block: never matches
+				}
+			}
+			r.outState = resolveState(r.Out, 0)
+		}
+	}
 	for name, t := range templates {
 		t.name = name
 		for rot := 0; rot < 4; rot++ {
@@ -109,6 +168,84 @@ func init() {
 			}
 		}
 	}
+}
+
+var processors map[string][]procRule
+
+// posSeed is Mth.getSeed: the per-position seed vanilla's processors roll from.
+func posSeed(x, y, z int) uint64 {
+	l := int64(x)*3129871 ^ int64(z)*116129781 ^ int64(y)
+	l = l*l*42317861 + l*11
+	return uint64(l >> 16)
+}
+
+// applyRules runs a processor list on one placed block (RuleProcessor: the
+// first rule whose input, probability and position tests pass rewrites the
+// state). ox/oy/oz is the piece origin (the position predicate's pivot).
+func applyRules(rules []procRule, state uint32, wx, wy, wz, ox, oy, oz int) uint32 {
+	if len(rules) == 0 || state == tmplSkip {
+		return state
+	}
+	r := &jigsawRNG{s: posSeed(wx, wy, wz)}
+	for i := range rules {
+		rule := &rules[i]
+		if rule.In != "" && (state < rule.inLo || state > rule.inHi) {
+			continue
+		}
+		if rule.P < 1 && r.float() >= rule.P {
+			continue
+		}
+		if pp := rule.Pos; pp != nil {
+			var dist int
+			switch pp.Axis {
+			case "x":
+				dist = abs(wx - ox)
+			case "z":
+				dist = abs(wz - oz)
+			default:
+				dist = abs(wy - oy)
+			}
+			chance := pp.MinChance
+			if pp.MaxDist > pp.MinDist {
+				t := (float64(dist) - float64(pp.MinDist)) / float64(pp.MaxDist-pp.MinDist)
+				t = math.Max(0, math.Min(1, t))
+				chance = pp.MinChance + (pp.MaxChance-pp.MinChance)*t
+			}
+			if r.float() >= chance {
+				continue
+			}
+		}
+		if rule.outState == tmplSkip {
+			return state
+		}
+		return rule.outState
+	}
+	return state
+}
+
+// StampTemplateProc is StampTemplate with a processor list applied to every
+// block as it lands.
+func (t *Template) StampTemplateProc(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rules []procRule) [][3]int {
+	if len(rules) == 0 {
+		return t.StampTemplate(ch, cx, cz, ox, oy, oz, rot)
+	}
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	for _, b := range t.Blocks {
+		state := t.resolved[rot&3][b[3]]
+		if state == tmplSkip {
+			continue
+		}
+		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], rot)
+		wx, wy, wz := ox+rx, oy+ry, oz+rz
+		state = applyRules(rules, state, wx, wy, wz, ox, oy, oz)
+		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
+	}
+	var chests [][3]int
+	for _, c := range t.Chests {
+		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		chests = append(chests, [3]int{ox + rx, oy + ry, oz + rz})
+	}
+	return chests
 }
 
 // TemplateByName returns a baked template (nil if absent).

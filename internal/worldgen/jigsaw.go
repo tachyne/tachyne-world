@@ -11,7 +11,8 @@ package worldgen
 type PlacedPiece struct {
 	Tmpl            *Template
 	OX, OY, OZ, Rot int
-	x1, y1, z1      int // exclusive max corner (world)
+	Proc            string // processor list the pool applies to this piece ("" = none)
+	x1, y1, z1      int    // exclusive max corner (world)
 }
 
 var dirDelta = map[string][3]int{
@@ -143,7 +144,8 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 	if sp == nil || len(sp.Elements) == 0 {
 		return nil
 	}
-	start := templates[weightedPick(sp, prng)]
+	startLoc := weightedPick(sp, prng)
+	start := templates[startLoc]
 	if start == nil {
 		return nil
 	}
@@ -151,7 +153,7 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 	if terrain {
 		sy = g.Height(sx+sw/2, sz+sd/2) - 1
 	}
-	pieces := []*PlacedPiece{{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0,
+	pieces := []*PlacedPiece{{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0, Proc: sp.procFor(startLoc),
 		x1: sx + sw, y1: sy + sh, z1: sz + sd}}
 
 	q := make([]queued, 0, 16)
@@ -227,7 +229,7 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 					if clash {
 						continue
 					}
-					np := &PlacedPiece{Tmpl: cand, OX: ox, OY: oy, OZ: oz, Rot: rot,
+					np := &PlacedPiece{Tmpl: cand, OX: ox, OY: oy, OZ: oz, Rot: rot, Proc: pool.procFor(loc),
 						x1: nx1, y1: ny1, z1: nz1}
 					pieces = append(pieces, np)
 					for _, nj := range cand.Jigsaws {
@@ -261,7 +263,7 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 	var chests [][3]int
 	for i := range pieces {
 		p := &pieces[i]
-		chests = append(chests, p.Tmpl.StampTemplate(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot)...)
+		chests = append(chests, p.Tmpl.StampTemplateProc(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc])...)
 	}
 	return chests
 }
@@ -282,6 +284,10 @@ func (r *jigsawRNG) next() uint64 {
 	z = (z ^ (z >> 27)) * 0x94D049BB133111EB
 	return z ^ (z >> 31)
 }
+
+// float is the next value in [0, 1).
+func (r *jigsawRNG) float() float64 { return float64(r.next()>>11) / float64(uint64(1)<<53) }
+
 func (r *jigsawRNG) intn(n int) int {
 	if n <= 1 {
 		return 0

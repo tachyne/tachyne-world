@@ -223,6 +223,18 @@ the public history since the project was open-sourced on 2026-07-10.
   it until the cart breaks or blows up (vanilla's pickup rule); a cart
   with a passenger has no seat for a player. A carried mob stands where
   the cart was after a restart rather than aboard it.
+- **Bastion remnants.** The Nether's first big structure: bastions are
+  assembled from the real vanilla jigsaw pools (167 templates in the four
+  vanilla flavours — housing units, hoglin stables, treasure rooms and
+  bridges) at vanilla's start height, in every nether biome but the basalt
+  deltas. The structure pipeline learned vanilla's rule processors on the
+  way, so the pools' own degradation lists crack the polished blackstone
+  bricks, crumble the gilded blackstone and eat the ramparts exactly as
+  vanilla's do, position-seeded so a chunk edge never changes a roll.
+  Chests fill from their own tables (bastion_treasure, bastion_bridge,
+  bastion_hoglin_stable, bastion_other), and the templates' mob pieces
+  seed the garrison — piglins, piglin brutes and hoglins — when a player
+  first arrives; a cleared bastion stays cleared across restarts.
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its
