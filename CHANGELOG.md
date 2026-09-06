@@ -310,6 +310,18 @@ the public history since the project was open-sourced on 2026-07-10.
   trial-chamber equipment tables (trimmed, enchanted chainmail at even odds
   per piece, enchanted swords and bows) as gear that never drops. The
   ominous item spawners are still to come.
+- **The gossip system.** Villager reputation is now vanilla's
+  GossipContainer rather than a per-session trade counter: each villager
+  holds the five gossip types about each player at vanilla's weights,
+  caps and daily decay — trading (+2 a trade), the cure (+20 major, +25
+  minor positive), a blow (+25 minor negative) and a murder, which every
+  villager within sight holds against the killer (+25 major negative,
+  −125 reputation). Gossip spreads between villagers standing together
+  (ten weighted entries a chat, minus the transfer decay, once per twenty
+  minutes each), rides along through infection and cure, is saved with
+  the villager, sets the trade discount, and turns the village's iron
+  golem on a survival player whose reputation with a villager within ten
+  blocks has fallen to −100 (DefendVillageTargetGoal).
 
 ### Changed
 - Jump Boost raises the safe fall distance by one block per level, as its

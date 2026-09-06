@@ -342,6 +342,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			}
 		})
 	}
+	if m.etype == entityVillager && t != nil {
+		h.villagerHurtBy(players, m, t, m.health <= 0) // VILLAGER_HURT / VILLAGER_KILLED gossip
+	}
 	if m.health <= 0 {
 		if m.patrolCaptain { // a slain raid captain drops its ominous bottle (1.21: no curse on the killer)
 			h.dropOminousBottle(players, m)

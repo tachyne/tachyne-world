@@ -102,92 +102,93 @@ type mob struct {
 	flyPath         []blockPos
 	flyIdx          int
 	flyGoal         blockPos
-	flyStale        int            // mob-updates since the path was computed
-	size            int            // slime: 4/2/1 (splits in half on death)
-	neutral         bool           // enderman: peaceful until hit (anger flips it hostile)
-	carriedBlock    uint32         // enderman: the block state it's holding (0 = none)
-	sonicCD         int            // warden: mob-updates until the next sonic boom
-	beamTarget      int32          // guardian: the player the beam is locked on (0 = none)
-	hideUntil       uint64         // villager: heard a bell — stay at the bed until this tick
-	beamTicks       int            // guardian: GuardianAttackGoal.attackTime, in ticks
-	digClock        int            // warden: mob-updates with no target (digs away at the cap)
-	patrolCaptain   bool           // pillager patrol leader (carries the ominous banner)
-	raidCenter      blockPos       // raider: the raid this mob belongs to (zero = not a raider)
-	idleSecs        int            // seconds spent >32 blocks from every player (despawn clock)
-	reinf           float64        // zombie SPAWN_REINFORCEMENTS_CHANCE (0 for non-zombies)
-	hopTicks        int            // slime: updates left mid-bound (traveling)
-	hopDelay        int            // slime: updates until the next bound (grounded, still)
-	strafeCW        bool           // skeleton: current circling direction while shooting
-	retaliates      bool           // peaceful until hit, then hunts its attacker (wolf/goat)
-	rider           int32          // player eid riding this mob (0 = none); AI pauses while ridden
-	riders          []int32        // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
-	mount           int32          // eid of the MOB this mob rides (raid ravager riders); 0 = none
-	cart            int32          // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
-	mobRider        int32          // eid of the MOB riding this one (the reverse of mount); 0 = none
-	harness         int32          // happy ghast: equipped harness item id (0 = none); gates riding
-	oxidation       int            // copper golem: weather stage 0 unaffected → 3 oxidized
-	oxidizeAt       uint64         // copper golem: tick of the next oxidation step
-	waxed           bool           // copper golem: honeycombed → never oxidizes
-	carrying        invStack       // copper golem: items in transit between chests
-	sortGoal        blockPos       // copper golem: the container it's walking to
-	sortHasGoal     bool           // copper golem: sortGoal is valid
-	sortCD          int            // copper golem: ticks until the next transport
-	trident         bool           // drowned: armed with a trident (throws it at range)
-	canPickup       bool           // may pick up dropped gear (spawn-time roll)
-	gear            [4]invStack    // worn armor by slot (0 head,1 chest,2 legs,3 feet)
-	spawnGear       bool           // gear issued at spawn (ominous trials): never drops (vanilla drop chance 0)
-	saddled         bool           // a saddle is on: this mob can be mounted
-	saddleSt        invStack       // the saddle item (horse family; saddled mirrors it)
-	armorSt         invStack       // body armor / llama carpet
-	chested         bool           // donkey/mule/llama carrying a chest
-	chest           []invStack     // chest contents (columns×3)
-	strength        int8           // llama: chest columns (1-5)
-	tamed           bool           // wolf/cat/parrot tamed to an owner
-	sitting         bool           // tamed pet told to stay (right-click toggle)
-	spawnInvuln     int            // wither: ticks of spawn-charge invulnerability left
-	owner           int32          // owner player eid (0 = wild); pets follow this player
-	ownerUUID       [16]byte       // owner's stable identity (persisted; owner eid is re-resolved on join)
-	path            []pathPoint    // A* route toward the current goal (nil = steer straight)
-	pathIdx         int            // index of the next waypoint to walk to
-	pathGoal        [2]int         // block goal the current path was computed for
-	pathAt          uint64         // tick the path was computed (staleness clock)
-	usesDoors       bool           // villager: may plan through + open wooden doors
-	roamX, roamZ    float64        // villager: current roam target (goal-directed wander)
-	roamAt          uint64         // tick to pick a fresh roam target
-	bed             blockPos       // villager: its bed (sleep anchor; zero = no schedule)
-	work            blockPos       // villager: its profession workstation (day work site)
-	meet            blockPos       // villager: the village meeting point (bell/well)
-	sleeping        bool           // villager: lying in its bed through the night
-	swims           bool           // water-bound: lives inside a water column (fish/squid)
-	flies           bool           // free flight: no ground collision (bat/phantom/ghast)
-	statik          bool           // anchored: never walks (shulker)
-	climbing        bool           // spider: clinging to a wall right now (synced state)
-	skittish        bool           // bolts from any close player (fox/ocelot/rabbit)
-	hover           float64        // fliers: preferred altitude above the terrain
-	held            int32          // rendered main-hand item (0 = empty)
-	ty              float64        // hunted target's feet height (fliers dive to it)
-	living                         // attributes + status effects, shared with players
-	dmgFrac         float64        // fractional damage carry (vanilla HP is float, ours int)
-	attackCD        int            // mob-updates left before this mob can melee again
-	hasTarget       bool           // a player is within aggro range this update
-	heartBound      bool           // creaking: a standing heart is keeping it alive
-	heartHit        bool           // …and it took a blow the heart must answer for
-	frozen          bool           // creaking: a player is watching, so it cannot move
-	tx, tz          float64        // that target's position (set by acquireTarget)
-	dim             int            // dimension this mob lives in (0 overworld, 1 nether)
-	villagerTarget  int32          // zombie: the villager it hunts when no player is near (0 = none)
-	converting      int            // zombie villager: ticks left in its cure (0 = not curing)
-	curer           string         // zombie villager: who fed it the golden apple
-	cureRep         map[string]int // villager: gratitude gossip toward its curers (per session)
-	giftAt          uint64         // villager: tick its next Hero of the Village gift may be thrown
-	profession      int            // villager: index into professionNames/villagerTrades
-	tradeLevel      int            // villager merchant tier 1-5 (novice..master)
-	tradeXP         int            // trade experience toward the next tier
-	offers          []mobOffer     // this villager's unlocked trades (+ per-offer uses)
-	restocksToday   int            // villager: restocks done this day (vanilla ≤2/day)
-	lastRestockTick uint64         // villager: tick of the last restock (2400-tick spacing gate)
-	gossip          map[string]int // villager: per-player TRADING reputation (in-session)
-	home            blockPos       // villager house / golem well — the anchor to drift back to
+	flyStale        int         // mob-updates since the path was computed
+	size            int         // slime: 4/2/1 (splits in half on death)
+	neutral         bool        // enderman: peaceful until hit (anger flips it hostile)
+	carriedBlock    uint32      // enderman: the block state it's holding (0 = none)
+	sonicCD         int         // warden: mob-updates until the next sonic boom
+	beamTarget      int32       // guardian: the player the beam is locked on (0 = none)
+	hideUntil       uint64      // villager: heard a bell — stay at the bed until this tick
+	beamTicks       int         // guardian: GuardianAttackGoal.attackTime, in ticks
+	digClock        int         // warden: mob-updates with no target (digs away at the cap)
+	patrolCaptain   bool        // pillager patrol leader (carries the ominous banner)
+	raidCenter      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
+	idleSecs        int         // seconds spent >32 blocks from every player (despawn clock)
+	reinf           float64     // zombie SPAWN_REINFORCEMENTS_CHANCE (0 for non-zombies)
+	hopTicks        int         // slime: updates left mid-bound (traveling)
+	hopDelay        int         // slime: updates until the next bound (grounded, still)
+	strafeCW        bool        // skeleton: current circling direction while shooting
+	retaliates      bool        // peaceful until hit, then hunts its attacker (wolf/goat)
+	rider           int32       // player eid riding this mob (0 = none); AI pauses while ridden
+	riders          []int32     // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
+	mount           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
+	cart            int32       // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
+	mobRider        int32       // eid of the MOB riding this one (the reverse of mount); 0 = none
+	harness         int32       // happy ghast: equipped harness item id (0 = none); gates riding
+	oxidation       int         // copper golem: weather stage 0 unaffected → 3 oxidized
+	oxidizeAt       uint64      // copper golem: tick of the next oxidation step
+	waxed           bool        // copper golem: honeycombed → never oxidizes
+	carrying        invStack    // copper golem: items in transit between chests
+	sortGoal        blockPos    // copper golem: the container it's walking to
+	sortHasGoal     bool        // copper golem: sortGoal is valid
+	sortCD          int         // copper golem: ticks until the next transport
+	trident         bool        // drowned: armed with a trident (throws it at range)
+	canPickup       bool        // may pick up dropped gear (spawn-time roll)
+	gear            [4]invStack // worn armor by slot (0 head,1 chest,2 legs,3 feet)
+	spawnGear       bool        // gear issued at spawn (ominous trials): never drops (vanilla drop chance 0)
+	saddled         bool        // a saddle is on: this mob can be mounted
+	saddleSt        invStack    // the saddle item (horse family; saddled mirrors it)
+	armorSt         invStack    // body armor / llama carpet
+	chested         bool        // donkey/mule/llama carrying a chest
+	chest           []invStack  // chest contents (columns×3)
+	strength        int8        // llama: chest columns (1-5)
+	tamed           bool        // wolf/cat/parrot tamed to an owner
+	sitting         bool        // tamed pet told to stay (right-click toggle)
+	spawnInvuln     int         // wither: ticks of spawn-charge invulnerability left
+	owner           int32       // owner player eid (0 = wild); pets follow this player
+	ownerUUID       [16]byte    // owner's stable identity (persisted; owner eid is re-resolved on join)
+	path            []pathPoint // A* route toward the current goal (nil = steer straight)
+	pathIdx         int         // index of the next waypoint to walk to
+	pathGoal        [2]int      // block goal the current path was computed for
+	pathAt          uint64      // tick the path was computed (staleness clock)
+	usesDoors       bool        // villager: may plan through + open wooden doors
+	roamX, roamZ    float64     // villager: current roam target (goal-directed wander)
+	roamAt          uint64      // tick to pick a fresh roam target
+	bed             blockPos    // villager: its bed (sleep anchor; zero = no schedule)
+	work            blockPos    // villager: its profession workstation (day work site)
+	meet            blockPos    // villager: the village meeting point (bell/well)
+	sleeping        bool        // villager: lying in its bed through the night
+	swims           bool        // water-bound: lives inside a water column (fish/squid)
+	flies           bool        // free flight: no ground collision (bat/phantom/ghast)
+	statik          bool        // anchored: never walks (shulker)
+	climbing        bool        // spider: clinging to a wall right now (synced state)
+	skittish        bool        // bolts from any close player (fox/ocelot/rabbit)
+	hover           float64     // fliers: preferred altitude above the terrain
+	held            int32       // rendered main-hand item (0 = empty)
+	ty              float64     // hunted target's feet height (fliers dive to it)
+	living                      // attributes + status effects, shared with players
+	dmgFrac         float64     // fractional damage carry (vanilla HP is float, ours int)
+	attackCD        int         // mob-updates left before this mob can melee again
+	hasTarget       bool        // a player is within aggro range this update
+	heartBound      bool        // creaking: a standing heart is keeping it alive
+	heartHit        bool        // …and it took a blow the heart must answer for
+	frozen          bool        // creaking: a player is watching, so it cannot move
+	tx, tz          float64     // that target's position (set by acquireTarget)
+	dim             int         // dimension this mob lives in (0 overworld, 1 nether)
+	villagerTarget  int32       // zombie: the villager it hunts when no player is near (0 = none)
+	converting      int         // zombie villager: ticks left in its cure (0 = not curing)
+	curer           string      // zombie villager: who fed it the golden apple
+	gossipAt        uint64      // villager: tick of its last chat (Villager.lastGossipTime)
+	gossipDecayAt   uint64      // villager: tick its gossip last faded (a day apart)
+	giftAt          uint64      // villager: tick its next Hero of the Village gift may be thrown
+	profession      int         // villager: index into professionNames/villagerTrades
+	tradeLevel      int         // villager merchant tier 1-5 (novice..master)
+	tradeXP         int         // trade experience toward the next tier
+	offers          []mobOffer  // this villager's unlocked trades (+ per-offer uses)
+	restocksToday   int         // villager: restocks done this day (vanilla ≤2/day)
+	lastRestockTick uint64      // villager: tick of the last restock (2400-tick spacing gate)
+	gossip          gossipBook  // villager: what it holds about each player (persisted)
+	home            blockPos    // villager house / golem well — the anchor to drift back to
 
 	ovrSpeed   float64 // >0: plugin speed override — survives behavior-driven speed resets
 	ovrDamage  float64 // >0: plugin melee-damage override (hostileMelee honors it)

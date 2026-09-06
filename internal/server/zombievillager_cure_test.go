@@ -76,8 +76,8 @@ func TestZombieVillagerInfectionAndCure(t *testing.T) {
 	if cured.profession != 4 || cured.tradeLevel != 3 || len(cured.offers) != offers {
 		t.Errorf("the cured villager keeps the identity: prof=%d tier=%d offers=%d", cured.profession, cured.tradeLevel, len(cured.offers))
 	}
-	if cured.cureRep[pl.p.name] != cureMajorGossip+cureMinorGossip {
-		t.Errorf("gratitude gossip %d", cured.cureRep[pl.p.name])
+	if rep := cured.gossip.reputation(pl.p.name); rep != 20*5+25 {
+		t.Errorf("gratitude gossip: reputation %d, want 125", rep)
 	}
 	if cured.hasEffect(effNausea) == 0 {
 		t.Error("a cured villager is queasy")

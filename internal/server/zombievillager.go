@@ -124,7 +124,7 @@ func copyVillagerIdentity(from, to *mob) {
 	to.baby, to.growLeft = from.baby, from.growLeft
 	to.refreshBabySpeed()
 	to.customName = from.customName
-	to.gossip, to.cureRep = from.gossip, from.cureRep
+	to.gossip = from.gossip
 	to.home, to.bed, to.work, to.meet = from.home, from.bed, from.work, from.meet
 }
 
@@ -243,10 +243,8 @@ func (h *hub) finishCure(players map[int32]*tracked, m *mob) {
 	v.behavior = villagerBehavior{}
 	v.usesDoors = true
 	if m.curer != "" {
-		if v.cureRep == nil {
-			v.cureRep = map[string]int{}
-		}
-		v.cureRep[m.curer] += cureMajorGossip + cureMinorGossip
+		v.gossip.add(m.curer, gossipMajorPositive, 20) // ZOMBIE_VILLAGER_CURED
+		v.gossip.add(m.curer, gossipMinorPositive, 25)
 		for _, t := range players {
 			if t.p.name == m.curer {
 				h.advance(players, t, "cured_zombie_villager", advMatch{})

@@ -54,8 +54,8 @@ func TestReputationAndHeroDiscount(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		h.addTradeGossip(m, pl.p.name) // capped at 25
 	}
-	if rep := m.gossip[pl.p.name]; rep != gossipTradeMax {
-		t.Fatalf("trading reputation %d, want capped at %d", rep, gossipTradeMax)
+	if rep := m.gossip.reputation(pl.p.name); rep != 25 {
+		t.Fatalf("trading reputation %d, want capped at 25", rep)
 	}
 	h.updateSpecialPrices(pl, m)
 	// special = -floor(25 * 0.05) = -1 → cost 40 - 1 = 39.

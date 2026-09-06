@@ -147,6 +147,9 @@ type golemBehavior struct{}
 
 func (golemBehavior) name() string { return "golem" }
 func (golemBehavior) steer(h *hub, m *mob) (float64, float64) {
+	if p := h.golemGrudge(h.playersRef, m); p != nil {
+		return (p.x - m.x) * 0.3, (p.z - m.z) * 0.3 // DefendVillageTargetGoal: a villager's enemy
+	}
 	var target *mob
 	best := 16.0
 	h.grid().nearby(m.dim, m.x, m.z, best, func(o *mob) {
@@ -173,6 +176,9 @@ func (golemBehavior) steer(h *hub, m *mob) (float64, float64) {
 func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 	if m.attackCD > 0 {
 		m.attackCD--
+		return
+	}
+	if h.golemPunchPlayer(players, m) {
 		return
 	}
 	// Pick the nearest hostile in reach via the grid, then punch it outside
@@ -202,25 +208,11 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 	}
 }
 
-// gossipTradeMax is the TRADING gossip cap (vanilla GossipType.TRADING.max),
-// and gossipTradePerTrade the +2 each completed trade adds.
-const (
-	gossipTradeMax      = 25
-	gossipTradePerTrade = 2
-)
-
 // addTradeGossip credits a completed trade toward a player's reputation with
 // this villager (vanilla onReputationEventFrom TRADE → gossips.add TRADING 2,
 // capped at the type max). Reputation lowers the offer's special price.
 func (h *hub) addTradeGossip(m *mob, name string) {
-	if m.gossip == nil {
-		m.gossip = map[string]int{}
-	}
-	if v := m.gossip[name] + gossipTradePerTrade; v < gossipTradeMax {
-		m.gossip[name] = v
-	} else {
-		m.gossip[name] = gossipTradeMax
-	}
+	m.gossip.add(name, gossipTrading, 2)
 }
 
 // updateSpecialPrices is vanilla Villager.updateSpecialPrices: recompute each
@@ -228,7 +220,7 @@ func (h *hub) addTradeGossip(m *mob, name string) {
 // reputation discount (−floor(reputation · priceMultiplier)) plus a Hero of the
 // Village discount (−max(1, floor((0.3 + 0.0625·amp) · baseCost))).
 func (h *hub) updateSpecialPrices(t *tracked, m *mob) {
-	rep := m.gossip[t.p.name] + m.cureRep[t.p.name] // 0 if absent
+	rep := m.gossip.reputation(t.p.name) // 0 if absent
 	heroAmp := t.hasEffect(effHeroOfVillage)
 	for i := range m.offers {
 		o := &m.offers[i]

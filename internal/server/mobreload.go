@@ -118,6 +118,12 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			}
 		}
 		m.profession = sm.Profession % len(professionNames)
+		if len(sm.Gossip) > 0 {
+			m.gossip = gossipBook{}
+			for k, v := range sm.Gossip {
+				m.gossip[k] = v
+			}
+		}
 		if m.profession < 0 {
 			m.profession = 0
 		}
