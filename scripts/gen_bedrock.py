@@ -39,6 +39,7 @@ import os
 import struct
 import subprocess
 import urllib.request
+import zipfile
 
 PIN = "2f0a8da2"  # GeyserMC/mappings: last Java 1.21.11 commit
 MAPPINGS = f"https://raw.githubusercontent.com/GeyserMC/mappings/{PIN}"
@@ -46,6 +47,7 @@ GEYSER = "https://raw.githubusercontent.com/GeyserMC/Geyser/master/core/src/main
 MCDATA = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11"
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SERVER_JAR = os.path.expanduser("~/vanilla/server-1.21.11.jar")  # en_us.json lives in the bundled inner jar
 OUT = os.path.join(REPO, "..", "tachyne-gw-bedrock", "internal", "gw")
 
 # Geyser EntityDefinitions.java: Java entity-type name → Bedrock identifier
@@ -363,8 +365,35 @@ def main():
                 unmapped.append(name)
                 ident = ""
             f.write(f"\t{json.dumps(ident)}, // {name}\n")
+        f.write("}\n\n")
+        f.write("// javaEntityNames[canonical Java entity-type ID] = the Java name, for the\n")
+        f.write("// looks that hang off the type alone (a boat's wood).\n")
+        f.write("var javaEntityNames = []string{\n")
+        for e in mcents:
+            f.write(f"\t{json.dumps(e['name'])},\n")
         f.write("}\n")
     print(f"  bedrock_entities_gen.go: {len(mcents)} types, unmapped: {unmapped}")
+
+    # ---- language: advancement titles/descriptions ---------------------------
+    # Java clients translate advancement keys themselves; Bedrock has no Java
+    # language table, so the gateway carries the English strings for the
+    # advancement toast (from the vanilla server jar's en_us.json).
+    jar = zipfile.ZipFile(SERVER_JAR)
+    inner = [n for n in jar.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
+    if inner:
+        jar = zipfile.ZipFile(io.BytesIO(jar.read(inner[0])))
+    lang = json.loads(jar.read("assets/minecraft/lang/en_us.json"))
+    keys = sorted(k for k in lang if k.startswith("advancements.") and
+                  (k.endswith(".title") or k.endswith(".description") or k.startswith("advancements.toast.")))
+    with open(os.path.join(OUT, "bedrock_lang_gen.go"), "w") as f:
+        header(f.write, "gen_bedrock.py")
+        f.write("// advLangEN: English text for the advancement translate keys (vanilla\n")
+        f.write("// 1.21.11 en_us.json), for the Bedrock toast.\n")
+        f.write("var advLangEN = map[string]string{\n")
+        for k in keys:
+            f.write(f"\t{json.dumps(k)}: {json.dumps(lang[k])},\n")
+        f.write("}\n")
+    print(f"  bedrock_lang_gen.go: {len(keys)} strings")
     print(f"  entity_identifiers.dat: {len(dat)} bytes ({len(idlist)} bedrock ids)")
 
     subprocess.run(["gofmt", "-w", OUT], check=True)

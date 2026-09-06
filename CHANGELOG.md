@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-06
 
 ### Added
+- **Bedrock: advancement toasts and boat woods.** Completing an
+  advancement now pops Bedrock's toast ("Advancement Made!", "Goal
+  Reached!" or "Challenge Complete!" over the advancement's English
+  title) the way it does on Java; the gateway keeps the player's criteria
+  from the streamed progress so the toast fires exactly once, and never
+  for the join-time snapshot. Boats and chest boats render in their wood
+  instead of all as oak. The gateway's table generator now also emits the
+  Java entity names and the advancement strings from the vanilla
+  language file.
 - **Bedrock: the Nether and the End.** Bedrock players can now follow a
   portal. The gateway takes the client through Bedrock's dimension-change
   screen the way Geyser does (parked at the world origin with empty
