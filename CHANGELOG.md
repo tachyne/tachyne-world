@@ -323,9 +323,12 @@ the public history since the project was open-sourced on 2026-07-10.
   client's respawn answer reaches the world, and the respawn teleport
   carries the ready-to-spawn packet ahead of the move. Mobs flinch and
   keel over (hurt and death actor events), dropped items show as item
-  actors carrying their stack, and the common sounds — mob voices, hits,
+  actors carrying their stack, the common sounds — mob voices, hits,
   bows, chests, doors, explosions, the anvil, bells, thunder — play as
-  level sound events.
+  level sound events, entities show what they hold and wear, burning,
+  sneaking and baby entities read as such, and block-break chips,
+  bone-meal sparkles and the crit, explosion, poof and bubble bursts play
+  as level events.
 - **Channeling, and what lightning does.** The last enchantment without an
   effect: a Channeling trident that hits a mob or player under open sky in
   a thunderstorm, or a lightning rod, calls a bolt down on the spot with
