@@ -573,14 +573,25 @@ func variantMeta(m *mob) []byte {
 	if m.etype == entityVillager || m.etype == entityZombieVillager {
 		return villagerDataMeta(m) // clothes: type + profession + tier
 	}
-	if !m.variantSet {
-		return nil
-	}
-	e, ok := variantEntryFor(m.etype)
-	if !ok {
+	collar, hasCollar := collarEntryFor(m)
+	if !m.variantSet && !hasCollar {
 		return nil
 	}
 	b := protocol.AppendVarInt(nil, m.eid)
+	if hasCollar {
+		// DATA_COLLAR_COLOR (int): the dye on a tamed wolf's or cat's collar.
+		// Rides with the variant so the 26.2 index shift covers it too.
+		b = protocol.AppendU8(b, collar)
+		b = protocol.AppendVarInt(b, metaTypeInt)
+		b = protocol.AppendVarInt(b, int32(m.collar))
+	}
+	if !m.variantSet {
+		return protocol.AppendU8(b, itemMetaEnd)
+	}
+	e, ok := variantEntryFor(m.etype)
+	if !ok {
+		return protocol.AppendU8(b, itemMetaEnd)
+	}
 	if m.etype == entityLlama || m.etype == entityTraderLlama {
 		b = protocol.AppendU8(b, metaIndexLlamaStrength)
 		b = protocol.AppendVarInt(b, metaTypeVarIntFor)
@@ -599,3 +610,35 @@ func packVariant(m *mob) int32 {
 	}
 	return m.variant + 1
 }
+
+// Collar colour: DATA_COLLAR_COLOR sits two entries before a wolf's variant
+// and three after a cat's (1.21.5 registration order).
+const (
+	metaIndexWolfCollar = 20
+	metaIndexCatCollar  = 22
+	collarDefault       = 14 // DyeColor.RED
+)
+
+func collarEntryFor(m *mob) (byte, bool) {
+	if !m.tamed {
+		return 0, false
+	}
+	switch m.etype {
+	case entityWolf:
+		return metaIndexWolfCollar, true
+	case entityCat:
+		return metaIndexCatCollar, true
+	}
+	return 0, false
+}
+
+// dyeOrdinalByItem: a dye item to its DyeColor ordinal.
+var dyeOrdinalByItem = func() map[int32]int8 {
+	out := map[int32]int8{}
+	for i, c := range dyeColors {
+		if id, ok := itemByName[c+"_dye"]; ok {
+			out[int32(id)] = int8(i)
+		}
+	}
+	return out
+}()

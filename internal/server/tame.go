@@ -46,6 +46,19 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return false
 	}
 	if m.tamed {
+		// A dye in the owner's hand recolours the collar (Wolf/Cat.mobInteract);
+		// the same colour again does nothing.
+		if dye, ok := dyeOrdinalByItem[heldStack(t).item]; ok && m.owner == t.p.eid && (m.etype == entityWolf || m.etype == entityCat) {
+			if dye == m.collar {
+				return false
+			}
+			m.collar = dye
+			if t.gamemode == gmSurvival {
+				h.consumeHeld(t)
+			}
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(variantMeta(m)))
+			return true
+		}
 		// The owner toggles sit/stand with an empty hand; anyone else is ignored.
 		if m.owner != t.p.eid || heldStack(t).item != 0 {
 			return false
@@ -65,11 +78,15 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return true
 	}
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
+	m.collar = collarDefault
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
 	m.setFollowRange(petFollowStart)
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
+	if vm := variantMeta(m); vm != nil {
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vm)) // the collar appears with the tame
+	}
 	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
 	return true
 }

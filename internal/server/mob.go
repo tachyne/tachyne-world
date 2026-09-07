@@ -76,6 +76,7 @@ type mob struct {
 	stroll          int      // wander spell: updates left walking before the next rest
 	sheared         bool     // sheep: fleece off (regrows by grazing)
 	color           int8     // sheep: fleece colour (0 white .. 15 black), dyeable
+	collar          int8     // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
 	customName      string   // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)

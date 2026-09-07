@@ -52,6 +52,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.loveTicks, m.breedCD = sm.LoveTicks, sm.BreedCD
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
 	m.color, m.customName, m.fromBucket = sm.Color, sm.CustomName, sm.FromBucket
+	m.collar = sm.Collar
 	m.persistent = sm.Persistent
 	m.raidCenter = unpackPos(sm.Raid)
 	if sm.Charged {

@@ -70,6 +70,11 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Pet collars.** A tamed wolf or cat wears a red collar from the
+  moment it is tamed, and its owner recolours it with any dye (spent,
+  unless it is the colour already there). The colour is synced to every
+  client — Bedrock included — and kept across restarts. Collars were
+  never shown before.
 - **Wolf armour.** A tamed wolf's owner straps armadillo-scute armour
   onto it (not onto a pup), and while it is worn every blow that does not
   bypass wolf armour goes into the armour's durability instead of the
