@@ -623,6 +623,7 @@ func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 	tz := t.z + math.Cos(yaw)*1.5
 	if it := h.spawnItem(players, st.item, st.count, tx, t.y+1, tz); it != nil {
 		it.noPickupUntil = it.born + 40 // ~2s before pickup (vanilla toss delay)
+		it.thrower = t.p.eid
 		it.dmg = st.dmg
 		it.ench = st.ench
 		it.mapID = st.mapID
@@ -774,6 +775,8 @@ func (h *hub) releaseContainerView(t *tracked) {
 		if f := h.furnaces[t.winPos]; f != nil && f.viewer == t.p.eid {
 			f.viewer = 0
 		}
+	case winChest:
+		h.closeBarrel(t)
 	}
 	t.winKind, t.winPos, t.viewBin = winPlayer, simPos{}, nil
 }

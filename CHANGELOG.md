@@ -59,6 +59,25 @@ the public history since the project was open-sourced on 2026-07-10.
   additionally accepts an empty bucket into its fuel slot and lets a
   hopper below take one back (the lava-bucket loop), and a dropper firing
   into a furnace or stand obeys the same faces.
+- **Totem of undying.** A totem in either hand answers a killing blow
+  the vanilla way: it is spent, health is set to one, every effect is
+  cleared and Regeneration II (45 s), Absorption II (5 s) and Fire
+  Resistance (40 s) take over, with the totem animation for everyone
+  watching. A `/kill` still kills. Before this the totem was a drop with
+  no effect.
+- **Barrels are containers.** A placed barrel opens as a 27-slot
+  container titled "Barrel", its lid shows open while someone has it
+  open, hoppers and droppers feed and drain it, and it places facing the
+  way you look, like a dispenser. Before, a barrel was a solid block that
+  did nothing.
+- **Statistics and advancement triggers filled in.** Swimming distance,
+  raid wins, target hits, filling a cauldron (separately from using one),
+  washing a dyed shulker box back to plain in a cauldron, and opening a
+  barrel now count. The triggers behind "Sneak 100" (a sneaking player
+  near a sculk sensor makes no vibration), "Feels like home" (riding a
+  strider on lava), "Postmortal" (the totem), "The Healing Power of
+  Friendship"-style thrown-item pickups, starting to ride, and tool wear
+  now fire.
 
 ## 2026-09-06
 

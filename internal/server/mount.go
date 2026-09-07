@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"math"
 )
 
@@ -76,6 +77,7 @@ func (h *hub) mountMob(players map[int32]*tracked, t *tracked, m *mob) {
 	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
 	h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+	h.advance(players, t, "started_riding", advMatch{})
 }
 
 // dismountMob stands a mob's rider up beside it. Returns true if the player was
@@ -117,6 +119,11 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 	}
 	moved := e.x != m.sx || e.y != m.sy || e.z != m.sz
 	h.rideStats(t, m, math.Hypot(e.x-m.x, e.z-m.z))
+	if m.etype == entityStrider && moved {
+		if w := h.worldFor(m.dim); w != nil && worldgen.IsLava(w.At(floorInt(e.x), floorInt(e.y), floorInt(e.z))) {
+			h.advance(players, t, "ride_entity_in_lava", advMatch{}) // "Feels like home"
+		}
+	}
 	m.x, m.y, m.z, m.yaw = e.x, e.y, e.z, e.yaw
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z // the rider rides along (chunk streaming)
 	t.p.setHubPos(e.x, e.z)

@@ -23,6 +23,9 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 	if t.gamemode != gmSurvival || t.dead || t.inv == nil || slot < 0 || slot >= 9 {
 		return
 	}
+	if s := t.inv.slots[slot]; s.item != 0 {
+		h.advance(h.playersRef, t, "item_durability_changed", advMatch{item: s.item})
+	}
 	s := &t.inv.slots[slot]
 	max, ok := itemMaxDurability[s.item]
 	if !ok || s.count == 0 {

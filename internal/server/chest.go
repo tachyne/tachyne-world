@@ -31,6 +31,12 @@ var (
 )
 
 // isChestBlock reports whether a state is any single-block chest container.
+var barrelMin, barrelMax = worldgen.BlockRange("barrel")
+
+// isBarrel: the 27-slot barrel (BarrelBlock), facing six ways with an
+// open flag that shows while someone has it open.
+func isBarrel(s uint32) bool { return s >= barrelMin && s <= barrelMax }
+
 func isChestBlock(s uint32) bool {
 	return (s >= chestStateMin && s <= chestStateMax) ||
 		(s >= copperChestMin && s <= copperChestMax) ||
@@ -98,7 +104,11 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		h.openDoubleChest(t, left, right)
 		return
 	}
-	defer t.p.trySendEv(soundEv("minecraft:block.chest.open", sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.5, 1))
+	openSound := "minecraft:block.chest.open"
+	if isBarrel(state) {
+		openSound = "minecraft:block.barrel.open"
+	}
+	defer t.p.trySendEv(soundEv(openSound, sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.5, 1))
 	if t.inv == nil {
 		return
 	}
@@ -119,16 +129,23 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
 	h.trappedChestChanged(t.dim, pos.blockPos) // a trapped chest's signal is its viewer count
-	switch {                                   // the opener's statistic (ChestBlock.getOpenChestStat and kin)
+	title := "Chest"
+	switch { // the opener's statistic (ChestBlock.getOpenChestStat and kin)
 	case isTrappedChest(state):
 		h.incCustom(t, "trigger_trapped_chest", 1)
 	case isShulkerBox(state):
 		h.incCustom(t, "open_shulker_box", 1)
+		title = "Shulker Box"
+	case isBarrel(state):
+		h.incCustom(t, "open_barrel", 1)
+		title = "Barrel"
+		// BarrelBlockEntity.updateBlockState: the lid shows open while viewed.
+		h.setBlockLive(h.playersRef, t.dim, x, y, z, setBoolProp(state, "open", true))
 	default:
 		h.incCustom(t, "open_chest", 1)
 	}
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: "Chest"})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: title})
 	h.sendChestWindow(t, c)
 }
 
@@ -177,7 +194,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 			}
 		}
 	}
-	if !isChestBlock(newState) {
+	if !isChestBlock(newState) && !isBarrel(newState) {
 		// A removed chest half releases its partner back to a single chest.
 		h.unpairChestNeighbors(players, dim, x, y, z)
 		if c := h.chests[pos]; c != nil {
@@ -216,7 +233,7 @@ const (
 // containerOpenFor maps a block state to the container it opens.
 func containerOpenFor(state uint32) containerOpen {
 	switch {
-	case isChestBlock(state), isShulkerBox(state):
+	case isChestBlock(state), isShulkerBox(state), isBarrel(state):
 		return openChestWindow
 	case isEnderChest(state):
 		return openEnderWindow
@@ -228,4 +245,25 @@ func containerOpenFor(state uint32) containerOpen {
 		return openHiveHarvest
 	}
 	return openNothing
+}
+
+// closeBarrel shuts a barrel's lid when its last viewer leaves the window.
+func (h *hub) closeBarrel(t *tracked) {
+	pos := t.winPos
+	w := h.worldFor(pos.dim)
+	if w == nil {
+		return
+	}
+	state := w.At(pos.x, pos.y, pos.z)
+	if !isBarrel(state) || !boolProp(state, "open") {
+		return
+	}
+	for _, o := range h.playersRef {
+		if o != t && o.winKind == winChest && o.winPos == pos {
+			return // someone else still has it open
+		}
+	}
+	h.setBlockLive(h.playersRef, pos.dim, pos.x, pos.y, pos.z, setBoolProp(state, "open", false))
+	h.playSoundDim(h.playersRef, pos.dim, "minecraft:block.barrel.close", sndBlock,
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 }

@@ -198,6 +198,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 				for _, t := range players {
 					if t.dim == 0 && dist3(t.x, t.y, t.z, float64(center.x), float64(center.y), float64(center.z)) <= raidBarRange {
 						h.applyEffect(players, t, effHeroOfVillage, r.omenLevel-1, 2400)
+						h.incCustom(t, "raid_win", 1)
 					}
 				}
 				h.endRaid(players, r)

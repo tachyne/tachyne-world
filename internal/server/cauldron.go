@@ -57,23 +57,27 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 	if !ok {
 		return
 	}
-	set := func(state uint32, snd string) {
+	// Vanilla keeps two counters: FILL_CAULDRON for pouring in, USE_CAULDRON
+	// for everything taken out or washed.
+	setStat := func(state uint32, snd, stat string) {
 		h.setBlockLive(players, t.dim, x, y, z, state)
 		if snd != "" {
 			h.playSoundDim(players, t.dim, snd, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 		}
-		h.incCustom(t, "use_cauldron", 1)
+		h.incCustom(t, stat, 1)
 	}
+	set := func(state uint32, snd string) { setStat(state, snd, "use_cauldron") }
+	fill := func(state uint32, snd string) { setStat(state, snd, "fill_cauldron") }
 	held := t.inv.slots[slot]
 	switch held.item {
 	case itemBucketH2O: // fills with water regardless of prior content
-		set(waterCauldronBase+2, "minecraft:item.bucket.empty")
+		fill(waterCauldronBase+2, "minecraft:item.bucket.empty")
 		h.swapBucket(t, slot, itemBucket)
 	case itemBucketLav:
-		set(lavaCauldronState, "minecraft:item.bucket.empty_lava")
+		fill(lavaCauldronState, "minecraft:item.bucket.empty_lava")
 		h.swapBucket(t, slot, itemBucket)
 	case itemBucketSnow:
-		set(powderCauldronBase+2, "minecraft:item.bucket.empty_powder_snow")
+		fill(powderCauldronBase+2, "minecraft:item.bucket.empty_powder_snow")
 		h.swapBucket(t, slot, itemBucket)
 	case itemBucket:
 		switch {
@@ -102,10 +106,24 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			if kind == cauldronWater {
 				next = waterCauldronBase + uint32(level) // level+1
 			}
-			set(next, "minecraft:item.bottle.empty")
+			fill(next, "minecraft:item.bottle.empty")
 			h.giveFilled(players, t, slot, itemGlassBottle)
 		}
 	default:
+		// Washing a dyed shulker box back to plain (CauldronInteraction
+		// SHULKER_BOX): one water level, contents kept.
+		if kind == cauldronWater && isShulkerBoxItem(held.item) && held.item != int32(itemByName["shulker_box"]) {
+			held.item = int32(itemByName["shulker_box"])
+			t.inv.slots[slot] = held
+			h.sendSlot(t, int(slot))
+			h.incCustom(t, "clean_shulker_box", 1)
+			next := cauldronState
+			if level > 1 {
+				next = waterCauldronBase + uint32(level-2)
+			}
+			set(next, "")
+			return
+		}
 		// Washing: a patterned banner loses its TOP layer for one water level.
 		if kind == cauldronWater && held.patCount() > 0 {
 			held.pats[held.patCount()-1] = bannerLayer{}

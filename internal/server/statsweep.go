@@ -27,6 +27,10 @@ func (h *hub) moveStats(t *tracked, e evMove) {
 		if d := cm(dist3d); d > 0 {
 			h.incCustom(t, "walk_under_water_one_cm", d)
 		}
+	case inWater && e.sprinting: // Player.isSwimming: sprinting in water
+		if d := cm(dist3d); d > 0 {
+			h.incCustom(t, "swim_one_cm", d)
+		}
 	case inWater:
 		if d := cm(horiz); d > 0 {
 			h.incCustom(t, "walk_on_water_one_cm", d)

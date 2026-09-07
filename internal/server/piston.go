@@ -38,7 +38,7 @@ func isDropper(s uint32) bool   { return s >= dropperMin && s <= dropperMax }
 
 // sixWayFacing: blocks whose placement uses the full up/down facing set.
 func sixWayFacing(s uint32) bool {
-	return isPistonBase(s) || isObserver(s) || isDispenser(s) || isDropper(s)
+	return isPistonBase(s) || isObserver(s) || isDispenser(s) || isDropper(s) || isBarrel(s)
 }
 
 func isPistonBase(s uint32) bool {

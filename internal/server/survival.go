@@ -461,6 +461,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
 	h.incCustom(t, "damage_taken", tenths(amount))
 	t.health -= amount
+	if t.health <= 0 && h.totemSaves(players, t, dt) {
+		return true // the blow landed; a totem of undying answered it
+	}
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true

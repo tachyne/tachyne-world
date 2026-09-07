@@ -320,6 +320,15 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			continue
 		}
 		h.sculkStep[t.p.eid] = now + 3
+		if t.p.sneaking {
+			// VibrationSystem: a sneaking entity makes no step vibration
+			// (#ignore_vibrations_sneaking), and a sensor that would have
+			// heard it awards "Sneak 100" instead.
+			if h.sensorWithinEarshot(floorInt(t.x), floorInt(t.y), floorInt(t.z)) {
+				h.advance(players, t, "avoid_vibration", advMatch{})
+			}
+			continue
+		}
 		h.gameEvent(freqStep, floorInt(t.x), floorInt(t.y), floorInt(t.z), t.p.eid)
 	}
 }

@@ -232,6 +232,11 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 				h.sendSlot(t, slot)
 			}
 			h.incStat(t, attachproto.StatPickedUp, it.item, int32(picked))
+			if it.thrower != 0 && it.thrower != t.p.eid { // ItemEntity.playerTouch: the THROWER's trigger
+				if thrower := players[it.thrower]; thrower != nil {
+					h.advance(players, thrower, "thrown_item_picked_up_by_player", advMatch{item: it.item})
+				}
+			}
 			h.toNearbyEv(players, it.dim, it.x, it.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: int32(picked)})
 			h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, it.x, it.y, it.z, 0.4, 1+h.rng.Float32())
 			if leftover == 0 {

@@ -42,6 +42,7 @@ type itemEntity struct {
 	trimPat int8
 	bookID  int32 // book identity carried by the dropped stack
 	boxID   int32 // shulker-box identity carried by the dropped stack
+	thrower int32 // the player who tossed it (0 = the world did), for the thrower's advancement
 	hiveID  int32 // carried-hive identity (Silk-Touched hive's bees + honey)
 	// The five below were missing until 2026-09-05: a dropped bundle lost its
 	// contents, a dropped potion became water, a dropped renamed item lost its

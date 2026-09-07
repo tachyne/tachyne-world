@@ -62,6 +62,7 @@ func (h *hub) hitTarget(players map[int32]*tracked, pos blockPos, state uint32, 
 	h.targetDue[pos] = h.tick.Load() + ticks
 	if a != nil && a.playerShot {
 		if s := players[a.shooter]; s != nil {
+			h.incCustom(s, "target_hit", 1)
 			h.advance(players, s, "target_hit", advMatch{signal: targetStrength(hx, hy, hz), distH: math.Hypot(a.x-a.ox, a.z-a.oz)})
 		}
 	}
