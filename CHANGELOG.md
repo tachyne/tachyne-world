@@ -70,6 +70,10 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Hoppers reach a chest nobody has opened.** A freshly placed chest,
+  barrel or shulker box counts as a container from the moment it is
+  placed — a hopper or dropper feeding it, or a comparator reading it, no
+  longer waits for a player to open it first.
 - **Statistics and advancement triggers filled in.** Swimming distance,
   raid wins, target hits, filling a cauldron (separately from using one),
   washing a dyed shulker box back to plain in a cauldron, and opening a

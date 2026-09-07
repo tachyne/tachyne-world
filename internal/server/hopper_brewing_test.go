@@ -71,3 +71,26 @@ func TestHopperFeedsBrewingStandByFace(t *testing.T) {
 		}
 	})
 }
+
+// A hopper feeds a chest nobody has opened yet.
+func TestHopperFeedsAnUnopenedChest(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	cobble := int32(itemByName["cobblestone"])
+	onHub(t, h, func() {
+		chestPos := blockPos{5, 70, 5}
+		w.SetBlock(chestPos.x, chestPos.y, chestPos.z, chestStateMin)
+		hopperPos := blockPos{5, 71, 5}
+		w.SetBlock(hopperPos.x, hopperPos.y, hopperPos.z, hopperMin) // facing down into the chest
+		hb := &bin{slots: make([]invStack, 5)}
+		hb.slots[0] = invStack{item: cobble, count: 1}
+		h.bins[simPos{blockPos: hopperPos}] = hb
+		if !h.hopperPush(h.playersRef, simPos{blockPos: hopperPos}, hopperMin, hb) {
+			t.Fatal("the hopper should push into the fresh chest")
+		}
+		c := h.chests[simPos{blockPos: chestPos}]
+		if c == nil || c.slots[0].item != cobble {
+			t.Fatalf("the chest should hold the cobblestone: %+v", c)
+		}
+	})
+}

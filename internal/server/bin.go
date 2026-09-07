@@ -729,6 +729,15 @@ func (h *hub) containerSlots(pos simPos) []invStack {
 	if c := h.chests[pos]; c != nil {
 		return c.slots[:]
 	}
+	// A chest, barrel or shulker box that nobody has opened yet is still a
+	// container to a hopper, dropper or comparator (vanilla's block entity
+	// exists from placement); give it its storage now.
+	if w := h.worldFor(pos.dim); w != nil && containerOpenFor(w.At(pos.x, pos.y, pos.z)) == openChestWindow {
+		c := &chest{}
+		h.fillStructureChestIn(pos.dim, pos.blockPos, c)
+		h.chests[pos] = c
+		return c.slots[:]
+	}
 	if f := h.furnaces[pos]; f != nil {
 		return f.slots[:]
 	}
