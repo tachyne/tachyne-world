@@ -141,7 +141,8 @@ type mob struct {
 	charged         bool        // creeper struck by lightning: a doubled blast (persisted)
 	saddled         bool        // a saddle is on: this mob can be mounted
 	saddleSt        invStack    // the saddle item (horse family; saddled mirrors it)
-	armorSt         invStack    // body armor / llama carpet
+	armorSt         invStack    // body armor / llama carpet / wolf armor
+	armorNote       int8        // wolf armor: 1 = cracked further, 2 = broke — the hub plays it next update
 	chested         bool        // donkey/mule/llama carrying a chest
 	chest           []invStack  // chest contents (columns×3)
 	strength        int8        // llama: chest columns (1-5)
@@ -269,6 +270,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 	h.updateHerdTargets()
 	h.pushMobs(players) // crowding: mobs standing in one another shove apart
 	for _, m := range h.mobs {
+		if m.armorNote != 0 {
+			h.wolfArmorNote(players, m)
+		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
 			//          shared gravity/ground-snap would pin it into the island
@@ -642,6 +646,12 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 		m.heartHit = true
 		return
 	}
+	if m.etype == entityWolf && m.armorSt.item == itemWolfArmor && !dt.has(tagBypassesWolfArmor) {
+		// Wolf.actuallyHurt: the armour takes the whole blow as durability
+		// (ceil of the damage) and the wolf none of it, until it breaks.
+		m.wolfArmorAbsorb(dmg)
+		return
+	}
 	if !dt.has(tagBypassesEffects) && !dt.has(tagBypassesResistance) {
 		dmg *= m.damageResistance() // the Resistance effect, as on a player
 	}
@@ -959,6 +969,9 @@ func (m *mob) refreshGearArmor() {
 			pts += float64(p.Points)
 			tough += p.Toughness
 		}
+	}
+	if m.etype == entityWolf && m.armorSt.item == itemWolfArmor {
+		pts += wolfArmorPoints // ArmorMaterials.ARMADILLO_SCUTE, the body slot
 	}
 	a := m.mobAttrs()
 	setEquip(a.Get(attr.Armor), pts)

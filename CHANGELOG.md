@@ -70,6 +70,14 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Wolf armour.** A tamed wolf's owner straps armadillo-scute armour
+  onto it (not onto a pup), and while it is worn every blow that does not
+  bypass wolf armour goes into the armour's durability instead of the
+  wolf — cracking audibly at vanilla's thresholds and breaking when
+  spent. Shears take it off and drop it, an armadillo scute repairs an
+  eighth of it while the wolf sits, it dyes in the crafting grid like
+  leather, drops when the wolf dies, and survives a restart. The item
+  was a plain drop before.
 - **Leather armour takes dye.** A leather helmet, chestplate, leggings,
   boots or horse armour (and wolf armour) crafted with one or more dyes
   takes vanilla's blended colour — the dyes' colours averaged with the
