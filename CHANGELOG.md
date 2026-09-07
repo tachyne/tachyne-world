@@ -70,6 +70,13 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Three small mob habits.** Frogs hunt small slimes and small magma
+  cubes and take them with their tongue — a slime eaten this way leaves
+  nothing, a magma cube leaves the froglight of the frog's variant (ochre,
+  pearlescent or verdant). Panda cubs sneeze now and then, one sneeze in
+  seven hundred leaving a slime ball. A tamed cat that is not sitting
+  turns up beside its owner at sunrise after a full night's sleep and,
+  seven times in ten, drops a morning gift from vanilla's table.
 - **Two more counters.** "Damage dealt (absorbed)" and "(resisted)" now
   count from the attacker's side against players and mobs, and a
   chiseled bookshelf's last-touched slot (its comparator reading) now

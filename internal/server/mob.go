@@ -176,6 +176,8 @@ type mob struct {
 	allayNote       blockPos    // allay: that note block
 	dupCD           int         // allay: ticks until it may duplicate again (6000)
 	dancing         bool        // allay: a jukebox plays within earshot
+	frogEaten       int8        // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
+	sneezeAt        uint64      // baby panda: the tick its sneeze lands (0 = not sneezing)
 	ty              float64     // hunted target's feet height (fliers dive to it)
 	living                      // attributes + status effects, shared with players
 	dmgFrac         float64     // fractional damage carry (vanilla HP is float, ours int)
@@ -280,6 +282,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.armorNote != 0 {
 			h.wolfArmorNote(players, m)
 		}
+		if m.etype == entityPanda && m.baby && m.dying == 0 {
+			h.pandaSneezeTick(players, m)
+		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
 			//          shared gravity/ground-snap would pin it into the island
@@ -376,6 +381,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityFrog && h.frogStep(players, m):
+			// A frog after a small slime or magma cube (FrogAi's tongue).
 		case m.etype == entityAllay && h.allayStep(players, m):
 			// An allay with a job: collecting matching drops, delivering them,
 			// or keeping near the player who handed it its item.

@@ -336,9 +336,13 @@ func (h *hub) updateSleep(players map[int32]*tracked) {
 	body := timeEv(h.tick.Load(), h.dayTime.Load())
 	morning := chatEv("Good morning — the night was slept away")
 	for _, t := range players {
+		slept := t.sleeping && now-t.sleepingAt >= catGiftMinSleep
 		h.wakePlayer(players, t)
 		t.p.trySendEv(body)
 		t.p.trySendEv(morning)
+		if slept {
+			h.catMorningGifts(players, t)
+		}
 	}
 }
 

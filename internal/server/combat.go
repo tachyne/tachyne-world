@@ -438,7 +438,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	// Gamerule doMobLoot=false silences the roll entirely.
 	var drops []plugin.ItemStack
 	if h.rules.DoMobLoot { // gamerule doMobLoot=false silences the roll
-		if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 {
+		if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 && m.frogEaten == 0 {
 			drops = append(drops, plugin.ItemStack{Item: itemSlimeball, Count: h.rng.Intn(3)})
 		}
 		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
@@ -456,7 +456,14 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 				}
 			}
 		}
-		if !m.baby { // babies drop nothing (vanilla)
+		if m.frogEaten > 0 {
+			// Eaten by a frog (the magma_cube loot table's frog branch): a
+			// magma cube becomes the froglight of the frog's variant, and
+			// nothing else — no slime, no magma cream.
+			if m.etype == entityMagmaCube {
+				drops = append(drops, plugin.ItemStack{Item: froglightFor(int32(m.frogEaten - 1)), Count: 1})
+			}
+		} else if !m.baby { // babies drop nothing (vanilla)
 			// Data-driven entity table (looting, killed-by-player, cooked-on-fire)
 			// when one is baked; else the legacy mobLoot roll.
 			if ds, ok := h.evalEntityLoot(int32(m.etype), lootCtx{
