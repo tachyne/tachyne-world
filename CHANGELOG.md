@@ -70,6 +70,15 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Piglins barter.** A gold ingot dropped in front of an adult piglin,
+  or held out to it, goes into its off hand for six seconds of admiring,
+  after which it throws something from vanilla's bartering table at the
+  nearest player — ender pearls, quartz, obsidian, crying obsidian, fire
+  charges, soul speed books and boots, fire resistance potions and the
+  rest at their weights. Other gold it loves it simply keeps (and drops
+  when it dies), a player wearing any piece of gold armour is left
+  alone, and hitting a piglin ends its admiring and puts it off bartering
+  for twenty seconds. None of this existed before.
 - **Sniffers dig.** A grown sniffer picks a scent — reachable diggable
   ground (dirt, grass, podzol, coarse or rooted dirt, moss, mud) within
   ten to eighteen blocks it has not dug before — walks over, digs with

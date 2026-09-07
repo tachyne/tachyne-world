@@ -178,6 +178,10 @@ type mob struct {
 	dancing         bool        // allay: a jukebox plays within earshot
 	frogEaten       int8        // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt        uint64      // baby panda: the tick its sneeze lands (0 = not sneezing)
+	offhand         invStack    // piglin: the gold it is admiring (rendered in the off hand)
+	admireUntil     uint64      // piglin: the tick the admiring ends (0 = not admiring)
+	admireOffUntil  uint64      // piglin: no admiring until this tick (hit by a player)
+	hoard           []invStack  // piglin: loved items it kept; dropped on death
 	sniffState      int8        // sniffer: 0 idle, 1 walking to a dig site, 2 digging
 	sniffStart      uint64      // sniffer: the tick the dig began
 	sniffUntil      uint64      // sniffer: the tick the dig ends
@@ -290,6 +294,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityPanda && m.baby && m.dying == 0 {
 			h.pandaSneezeTick(players, m)
+		}
+		if m.etype == entityPiglin && m.admireUntil != 0 && m.dying == 0 {
+			h.piglinAdmireTick(players, m)
 		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —

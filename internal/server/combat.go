@@ -321,6 +321,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
 	hpBefore := m.health
+	if m.etype == entityPiglin && t != nil {
+		h.piglinHurtByPlayer(players, m) // PiglinAi.wasHurtBy: admiring stops, and stays off a while
+	}
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
@@ -455,6 +458,12 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 					drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
 				}
 			}
+		}
+		for _, st := range m.hoard { // a piglin's gold, and whatever it was admiring
+			drops = append(drops, plugin.ItemStack{Item: st.item, Count: st.count})
+		}
+		if m.offhand.item != 0 {
+			drops = append(drops, plugin.ItemStack{Item: m.offhand.item, Count: m.offhand.count})
 		}
 		if m.frogEaten > 0 {
 			// Eaten by a frog (the magma_cube loot table's frog branch): a

@@ -83,6 +83,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.saddled = sm.Saddled
 	m.saddleSt, m.armorSt = unpackStack(sm.SaddleSt), unpackStack(sm.ArmorSt)
 	m.carry, m.dupCD, m.sniffCD = unpackStack(sm.Carry), sm.DupCD, sm.SniffCD
+	for _, r := range sm.Hoard {
+		m.hoard = append(m.hoard, unpackStack(r))
+	}
 	m.chested = sm.Chested
 	if sm.Strength > 0 { // a row without one keeps the spawn roll (llamas)
 		m.strength = sm.Strength

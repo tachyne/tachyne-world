@@ -111,6 +111,7 @@ type savedMob struct {
 	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
 	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
 	SniffCD   int         `json:"sniffcd,omitempty"`     // sniffer: ticks until the next dig
+	Hoard     []stackRow  `json:"hoard,omitempty"`       // piglin: the gold it keeps (its off-hand item folded in)
 	Harness   int32       `json:"harn,omitempty"`
 	// A lead tied to a FENCE survives a restart; one held by a player does not,
 	// because the leash drops the moment its holder disconnects (vanilla's
@@ -519,7 +520,7 @@ func toSavedMob(m *mob) savedMob {
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
-		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD,
+		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
 		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage,
 	}
@@ -547,4 +548,16 @@ func toSavedMob(m *mob) savedMob {
 	}
 	sm.Home, sm.Bed, sm.Work, sm.Meet = packPos(m.home), packPos(m.bed), packPos(m.work), packPos(m.meet)
 	return sm
+}
+
+// packHoard is a piglin's kept gold plus whatever it was admiring.
+func packHoard(m *mob) []stackRow {
+	var out []stackRow
+	for _, st := range m.hoard {
+		out = append(out, packStack(st))
+	}
+	if m.offhand.item != 0 {
+		out = append(out, packStack(m.offhand))
+	}
+	return out
 }

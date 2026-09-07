@@ -43,6 +43,13 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 		if math.Abs(it.x-m.x) > 1 || math.Abs(it.z-m.z) > 1 || math.Abs(it.y-m.y) > 1 {
 			continue
 		}
+		if m.etype == entityPiglin && h.piglinTakesItem(players, m, it) {
+			if it.count--; it.count <= 0 {
+				delete(h.items, eid)
+				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+			}
+			return
+		}
 		if !h.mobEquipItem(players, m, it.item) {
 			continue
 		}
