@@ -70,6 +70,10 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Honey blocks slide.** Falling against a honey block's side slows to
+  a slide (the client already did the slowing): the fall resets every
+  tick so the landing costs nothing, the slide sound plays now and then,
+  and "Sticky Situation" is awarded.
 - **Allays work.** Hand an allay an item and it becomes your helper:
   it flies to matching drops within thirty-two blocks, gathers them into
   one stack and throws them at you once within three blocks — or at a

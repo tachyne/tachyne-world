@@ -161,8 +161,10 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 		// below is the position against itself and a bush never scratches.
 		movedX := math.Abs(t.x - t.contactX)
 		movedZ := math.Abs(t.z - t.contactZ)
-		t.contactX, t.contactZ = t.x, t.z
+		fellY := t.y - t.contactY
+		t.contactX, t.contactY, t.contactZ = t.x, t.y, t.z
 		h.tickFreezing(players, t)
+		h.honeySlide(players, t, fellY)
 		if t.dead {
 			continue
 		}
@@ -257,4 +259,55 @@ func (h *hub) cobwebSlow(dim int, x, y, z float64) bool {
 	fx, fz := int(math.Floor(x)), int(math.Floor(z))
 	feet := int(math.Floor(y))
 	return w.At(fx, feet, fz) == cobwebState || w.At(fx, feet+1, fz) == cobwebState
+}
+
+// Honey block sliding (vanilla HoneyBlock.entityInside / isSlidingDown): a
+// player falling past 0.08 a tick while pressed against a honey block's
+// side — off the ground, below its top, and outside its inset face — is
+// sliding: the fall resets every tick (no damage at the bottom), the slide
+// sound plays now and then, and "Sticky Situation" is checked each second.
+const (
+	honeySlideMinFall = 0.08   // MIN_FALL_SPEED_TO_BE_CONSIDERED_SLIDING
+	honeyFaceInset    = 0.4375 // the block is a 14/16 column: the face sits 1/16 in
+	playerHalfWidth   = 0.3
+)
+
+func (h *hub) honeySlide(players map[int32]*tracked, t *tracked, fellY float64) {
+	if t.p.onGround || fellY >= -honeySlideMinFall {
+		return
+	}
+	w := h.worldFor(t.dim)
+	if w == nil {
+		return
+	}
+	fx, fz, feet := int(math.Floor(t.x)), int(math.Floor(t.z)), int(math.Floor(t.y))
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			if dx == 0 && dz == 0 {
+				continue
+			}
+			bx, bz := fx+dx, fz+dz
+			ox, oz := math.Abs(float64(bx)+0.5-t.x), math.Abs(float64(bz)+0.5-t.z)
+			if ox >= 0.5+playerHalfWidth || oz >= 0.5+playerHalfWidth {
+				continue // the player's box does not reach into that cell
+			}
+			if ox+1e-7 <= honeyFaceInset+playerHalfWidth && oz+1e-7 <= honeyFaceInset+playerHalfWidth {
+				continue // inside the face, not against it
+			}
+			for _, by := range []int{feet, feet + 1} {
+				s := w.At(bx, by, bz)
+				if !isHoneyBlock(s) || t.y > float64(by)+0.9375-1e-7 {
+					continue
+				}
+				t.peakY = t.y // Entity.resetFallDistance: the slide costs nothing at the bottom
+				if h.rng.Intn(5) == 0 {
+					h.playSoundDim(players, t.dim, "minecraft:block.honey_block.slide", sndBlock, t.x, t.y, t.z, 1, 1)
+				}
+				if h.tick.Load()%20 == 0 {
+					h.advance(players, t, "slide_down_block", advMatch{blockState: s})
+				}
+				return
+			}
+		}
+	}
 }

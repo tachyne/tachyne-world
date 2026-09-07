@@ -215,3 +215,38 @@ func TestFreezingAndHayFall(t *testing.T) {
 		t.Errorf("honey fall from 13 = %v, want 2", d)
 	}
 }
+
+// A player falling against a honey block's side slides: the fall resets so
+// the landing costs nothing; standing on the ground or clear of the face,
+// nothing happens.
+func TestHoneyBlockSlide(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	w := h.worldFor(0)
+	for y := 170; y <= 176; y++ {
+		w.SetBlock(5, y, 5, honeyMin) // a honey column at x=5
+	}
+	pl.p.onGround = false
+	pl.x, pl.y, pl.z = 4.75, 172.5, 5.5 // pressed against the column's west face (its face sits at 5.0625; the box reaches 5.05)
+	pl.peakY = 190
+	h.honeySlide(players, pl, -0.2)
+	if pl.peakY != pl.y {
+		t.Fatalf("sliding should reset the fall: peakY=%v y=%v", pl.peakY, pl.y)
+	}
+	pl.peakY = 190
+	h.honeySlide(players, pl, -0.02) // too slow to count as sliding
+	if pl.peakY != 190 {
+		t.Fatal("a slow drift is not a slide")
+	}
+	pl.x = 3.5 // a block clear of the face
+	h.honeySlide(players, pl, -0.2)
+	if pl.peakY != 190 {
+		t.Fatal("away from the block there is no slide")
+	}
+	pl.x, pl.p.onGround = 4.75, true
+	h.honeySlide(players, pl, -0.2)
+	if pl.peakY != 190 {
+		t.Fatal("on the ground there is no slide")
+	}
+}

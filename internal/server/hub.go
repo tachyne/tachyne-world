@@ -299,6 +299,7 @@ type tracked struct {
 	moveBudget         float64 // banked movement allowance in blocks (accrues per tick)
 	lastMoveTick       uint64  // tick of the last vetted move event
 	contactX, contactZ float64 // position at the last contact check (berry bushes hurt only while you move)
+	contactY           float64 // …and its height (a honey slide is a slow fall against the block)
 	floatTicks         int     // consecutive ticks unsupported and not descending
 	lastRubber         uint64  // tick of the last correction teleport (throttle)
 
