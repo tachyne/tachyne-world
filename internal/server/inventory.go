@@ -33,6 +33,7 @@ type invStack struct {
 	repairCost int      // anvil prior-work penalty (grows 2·max+1 per use)
 	potion     int8     // brewed potion type (potWater..): drives drink effects + label
 	mapID      int32    // filled_map: which map this stack shows (0 = none)
+	color      int32    // dyed_color rgb for leather armour (0 = undyed; dye.go)
 
 	// Banner pattern layers (loom): patPlus1 is the banner_pattern registry
 	// id + 1 (0 = empty layer, layers fill from index 0); color is the dye

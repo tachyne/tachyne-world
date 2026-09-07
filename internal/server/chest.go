@@ -185,7 +185,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 					it.ench = st.ench
 					it.mapID = st.mapID
 					it.pats = st.pats
-					it.trimMat, it.trimPat = st.trimMat, st.trimPat
+					it.trimMat, it.trimPat, it.color = st.trimMat, st.trimPat, st.color
 					it.bookID = st.bookID
 					it.boxID, it.hiveID = st.boxID, st.hiveID
 					it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode

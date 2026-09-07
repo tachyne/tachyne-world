@@ -42,6 +42,7 @@ type itemEntity struct {
 	trimPat int8
 	bookID  int32 // book identity carried by the dropped stack
 	boxID   int32 // shulker-box identity carried by the dropped stack
+	color   int32 // dyed_color of leather armour
 	thrower int32 // the player who tossed it (0 = the world did), for the thrower's advancement
 	hiveID  int32 // carried-hive identity (Silk-Touched hive's bees + honey)
 	// The five below were missing until 2026-09-05: a dropped bundle lost its
@@ -66,7 +67,7 @@ func (it *itemEntity) stack() invStack {
 	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
-		instrument: it.instrument, name: it.name, lode: it.lode}
+		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color}
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -184,6 +185,7 @@ const (
 	componentCustomName     = 5  // anvil renames (NBT text); remapped per version
 	componentLore           = 8  // plugin-UI item lore (list of NBT texts); remapped per version
 	componentMapID          = 37 // filled_map's map number; remapped per version
+	componentDyedColor      = 35 // dyed_color rgb (leather armour); remapped per version
 	componentTrim           = 47 // armor trim (material + pattern holders); remapped per version
 	componentBannerPats     = 63 // banner pattern layers; remapped per version
 	componentBundleContents = 41 // bundle contents (list of Slots); remapped per version
@@ -247,6 +249,9 @@ func stackComponents(st invStack) []byte {
 	if st.mapID != 0 {
 		comps++
 	}
+	if st.color != 0 {
+		comps++
+	}
 	patN := int32(st.patCount())
 	if patN > 0 {
 		comps++
@@ -286,6 +291,10 @@ func stackComponents(st invStack) []byte {
 	if st.mapID != 0 {
 		b = protocol.AppendVarInt(b, componentMapID)
 		b = protocol.AppendVarInt(b, st.mapID)
+	}
+	if st.color != 0 {
+		b = protocol.AppendVarInt(b, componentDyedColor)
+		b = protocol.AppendVarInt(b, st.color)
 	}
 	if enchN > 0 {
 		// Books carry STORED enchantments (what the anvil applies); everything

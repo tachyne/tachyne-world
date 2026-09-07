@@ -70,6 +70,13 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Leather armour takes dye.** A leather helmet, chestplate, leggings,
+  boots or horse armour (and wolf armour) crafted with one or more dyes
+  takes vanilla's blended colour — the dyes' colours averaged with the
+  piece's own and rescaled to their brightness — shows it on every
+  client, keeps it across restarts and drops, and loses it again in a
+  water cauldron for one level. The engine had no item colours at all
+  before.
 - **Hoppers reach a chest nobody has opened.** A freshly placed chest,
   barrel or shulker box counts as a container from the moment it is
   placed — a hopper or dropper feeding it, or a comparator reading it, no

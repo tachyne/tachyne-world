@@ -191,7 +191,7 @@ func (h *hub) spillHorse(players map[int32]*tracked, m *mob) {
 		if it := h.spawnItem(players, st.item, st.count, m.x, m.y+0.5, m.z); it != nil {
 			it.dmg, it.ench, it.mapID = st.dmg, st.ench, st.mapID
 			it.pats = st.pats
-			it.trimMat, it.trimPat = st.trimMat, st.trimPat
+			it.trimMat, it.trimPat, it.color = st.trimMat, st.trimPat, st.color
 			it.bookID = st.bookID
 			it.boxID, it.hiveID = st.boxID, st.hiveID
 			it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode

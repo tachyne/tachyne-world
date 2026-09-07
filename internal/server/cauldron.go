@@ -110,6 +110,20 @@ func (h *hub) useCauldron(players map[int32]*tracked, t *tracked, slot int32, x,
 			h.giveFilled(players, t, slot, itemGlassBottle)
 		}
 	default:
+		// Washing dyed leather armour (CauldronInteraction DYED_ITEM): the
+		// colour comes off for one water level.
+		if kind == cauldronWater && isDyeable(held.item) && held.color != 0 {
+			held.color = 0
+			t.inv.slots[slot] = held
+			h.sendSlot(t, int(slot))
+			h.incCustom(t, "clean_armor", 1)
+			next := cauldronState
+			if level > 1 {
+				next = waterCauldronBase + uint32(level-2)
+			}
+			set(next, "")
+			return
+		}
 		// Washing a dyed shulker box back to plain (CauldronInteraction
 		// SHULKER_BOX): one water level, contents kept.
 		if kind == cauldronWater && isShulkerBoxItem(held.item) && held.item != int32(itemByName["shulker_box"]) {

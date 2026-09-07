@@ -178,7 +178,7 @@ func binInsert(slots []invStack, st invStack) int {
 		if left == 0 {
 			break
 		}
-		if s.item == st.item && s.count > 0 && s.dmg == st.dmg && s.ench == st.ench && s.name == st.name {
+		if s.item == st.item && s.count > 0 && s.dmg == st.dmg && s.ench == st.ench && s.name == st.name && s.color == st.color {
 			room := stackMax - s.count
 			if room <= 0 {
 				continue
