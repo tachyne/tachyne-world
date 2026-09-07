@@ -70,6 +70,15 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Allays work.** Hand an allay an item and it becomes your helper:
+  it flies to matching drops within thirty-two blocks, gathers them into
+  one stack and throws them at you once within three blocks — or at a
+  note block it heard played in the last thirty seconds — then keeps
+  within a few blocks of you between errands. A jukebox playing nearby
+  sets it dancing, and a dancing allay given an amethyst shard splits in
+  two (five minutes' cooldown each). An empty hand takes its item back
+  along with whatever it collected. It remembers its player and its
+  stack across restarts. Allays were decorative before.
 - **Pet collars.** A tamed wolf or cat wears a red collar from the
   moment it is tamed, and its owner recolours it with any dye (spent,
   unless it is the colour already there). The colour is synced to every

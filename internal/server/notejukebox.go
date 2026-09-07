@@ -132,6 +132,7 @@ func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state 
 	}
 	cx, cy, cz := float64(x)+0.5, float64(y)+0.5, float64(z)+0.5
 	h.playSoundDim(players, dim, sound, sndRecord, cx, cy, cz, 3, pitch)
+	h.allaysHearNote(dim, blockPos{x, y, z})
 	if !noteHeadInstruments[instr] {
 		// The note particle: with count 0 the offset is the hue (note/24).
 		h.toNearbyEv(players, dim, cx, cz, attachproto.Particles{

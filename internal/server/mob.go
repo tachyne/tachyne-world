@@ -170,6 +170,12 @@ type mob struct {
 	skittish        bool        // bolts from any close player (fox/ocelot/rabbit)
 	hover           float64     // fliers: preferred altitude above the terrain
 	held            int32       // rendered main-hand item (0 = empty)
+	carry           invStack    // allay: the stack it has collected for its liked player
+	allayPickupCD   int         // allay: ticks before it collects again (60 after a throw)
+	allayNoteCD     int         // allay: ticks it keeps delivering to the liked note block (600 per note)
+	allayNote       blockPos    // allay: that note block
+	dupCD           int         // allay: ticks until it may duplicate again (6000)
+	dancing         bool        // allay: a jukebox plays within earshot
 	ty              float64     // hunted target's feet height (fliers dive to it)
 	living                      // attributes + status effects, shared with players
 	dmgFrac         float64     // fractional damage carry (vanilla HP is float, ours int)
@@ -370,6 +376,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityAllay && h.allayStep(players, m):
+			// An allay with a job: collecting matching drops, delivering them,
+			// or keeping near the player who handed it its item.
 		case m.baby && h.followParentStep(m):
 			// A baby trailing the nearest adult of its kind (FollowParentGoal /
 			// BabyFollowAdult): steered straight at it, ahead of idling and

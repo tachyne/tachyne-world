@@ -82,6 +82,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.refreshGearArmor() // saved gear protects again after a restart — it used not to
 	m.saddled = sm.Saddled
 	m.saddleSt, m.armorSt = unpackStack(sm.SaddleSt), unpackStack(sm.ArmorSt)
+	m.carry, m.dupCD = unpackStack(sm.Carry), sm.DupCD
 	m.chested = sm.Chested
 	if sm.Strength > 0 { // a row without one keeps the spawn roll (llamas)
 		m.strength = sm.Strength
@@ -160,7 +161,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 // persisted owner eid was discarded — pets carry the owner's stable UUID).
 func (h *hub) resolvePetOwners(t *tracked) {
 	for _, m := range h.mobs {
-		if m.tamed && m.owner == 0 && m.ownerUUID != ([16]byte{}) && m.ownerUUID == t.p.uuid {
+		if (m.tamed || m.etype == entityAllay) && m.owner == 0 && m.ownerUUID != ([16]byte{}) && m.ownerUUID == t.p.uuid {
 			m.owner = t.p.eid
 		}
 	}
