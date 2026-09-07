@@ -50,6 +50,16 @@ the public history since the project was open-sourced on 2026-07-10.
   armadillo for a scute, wearing by sixteen. Brushing an armadillo by
   hand works too — it did not before.
 
+### Fixed
+- **Hoppers and droppers respect a container's faces.** A brewing stand
+  now takes its ingredient from a hopper above, bottles into empty bottle
+  slots and blaze powder as fuel from a hopper at its side, and gives a
+  hopper below its bottles but never its fuel, vanilla's slot rules;
+  before, a hopper poured anything into the first bottle slot. A furnace
+  additionally accepts an empty bucket into its fuel slot and lets a
+  hopper below take one back (the lava-bucket loop), and a dropper firing
+  into a furnace or stand obeys the same faces.
+
 ## 2026-09-06
 
 ### Fixed

@@ -300,7 +300,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	// (vanilla DropperBlock): the redstone-driven item pipe.
 	if !dispense {
 		if dst := h.containerSlots(pos.at(front)); dst != nil {
-			if binInsert(dst, invStack{item: item, count: 1}) == 0 {
+			if h.insertByFace(pos.at(front), dy, invStack{item: item, count: 1}) {
 				if st.count--; st.count <= 0 {
 					*st = invStack{}
 				}
@@ -648,13 +648,10 @@ func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32)
 func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 	above := blockPos{pos.x, pos.y + 1, pos.z}
 	src := h.containerSlots(pos.at(above))
-	if f := h.furnaces[pos.at(above)]; f != nil {
-		src = f.slots[2:3] // a hopper below a furnace draws ONLY the output slot
-	}
 	if src != nil {
 		for i := range src {
 			s := &src[i]
-			if s.item == 0 || s.count == 0 {
+			if s.item == 0 || s.count == 0 || !h.canTakeFromBelow(pos.at(above), i, s.item) {
 				continue
 			}
 			one := *s
@@ -697,19 +694,8 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c *bin) bool {
 	dx, dy, dz := hopperDelta(state)
 	target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-	dst := h.containerSlots(pos.at(target))
-	if dst == nil {
+	if h.containerSlots(pos.at(target)) == nil {
 		return false
-	}
-	f := h.furnaces[pos.at(target)]
-	toFuel := false
-	if f != nil {
-		if dy < 0 {
-			dst = f.slots[0:1] // top: smelt input
-		} else {
-			dst = f.slots[1:2] // side: fuel
-			toFuel = true
-		}
 	}
 	cb := h.crafterBinAt(pos.at(target)) // non-nil → fill via the disabled-aware rule
 	for i := range c.slots {
@@ -717,16 +703,13 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 		if s.item == 0 || s.count == 0 {
 			continue
 		}
-		if toFuel && cookerFuelTicks(f.kind, s.item) <= 0 {
-			continue // the fuel slot only accepts burnable items (vanilla canPlaceItem)
-		}
 		one := *s
 		one.count = 1
 		placed := false
 		if cb != nil {
 			placed = crafterInsert(cb, one) == 0
 		} else {
-			placed = binInsert(dst, one) == 0
+			placed = h.insertByFace(pos.at(target), dy, one)
 		}
 		if placed {
 			s.count--
@@ -812,4 +795,101 @@ func (h *hub) refreshBinViewers(players map[int32]*tracked, pos simPos) {
 			}
 		}
 	}
+}
+
+// insertByFace puts one item into a container the way a hopper or dropper
+// arriving along dy would (vanilla WorldlyContainer.getSlotsForFace +
+// canPlaceItemThroughFace): a furnace takes smelt input from above and
+// fuel (or an empty bucket) from the sides or below, never output; a
+// brewing stand takes the ingredient from above, bottles into empty bottle
+// slots and blaze powder as fuel from the sides, and bottles or ingredient
+// from below. Any other container takes the item wherever it fits. dy is the
+// direction the item travels: negative from above, positive from below,
+// zero from a side.
+func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
+	if f := h.furnaces[target]; f != nil {
+		if dy < 0 {
+			return binInsert(f.slots[0:1], one) == 0
+		}
+		// AbstractFurnaceBlockEntity.canPlaceItem(1): burnable, or an empty
+		// bucket when none is there already.
+		if cookerFuelTicks(f.kind, one.item) > 0 || (one.item == itemBucket && f.slots[1].item != itemBucket) {
+			return binInsert(f.slots[1:2], one) == 0
+		}
+		return false
+	}
+	w := h.worldFor(target.dim)
+	if b := h.bins[target]; b != nil && len(b.slots) == 5 && w != nil && isBrewStand(w.At(target.x, target.y, target.z)) {
+		var slots []int
+		switch {
+		case dy < 0:
+			slots = []int{3}
+		case dy > 0:
+			slots = []int{0, 1, 2, 3}
+		default:
+			slots = []int{0, 1, 2, 4}
+		}
+		for _, i := range slots {
+			if !brewCanPlace(b, i, one.item) {
+				continue
+			}
+			if binInsert(b.slots[i:i+1], one) == 0 {
+				return true
+			}
+		}
+		return false
+	}
+	dst := h.containerSlots(target)
+	return dst != nil && binInsert(dst, one) == 0
+}
+
+// brewCanPlace is BrewingStandBlockEntity.canPlaceItem.
+func brewCanPlace(b *bin, slot int, item int32) bool {
+	switch slot {
+	case 3:
+		return brewIsIngredient(item)
+	case 4:
+		return item == itemBlazePowder // #minecraft:brewing_fuel
+	}
+	isBottle := item == itemPotion || item == itemSplashPotion || item == itemLingerPotion || item == itemGlassBottle
+	return isBottle && (b.slots[slot].item == 0 || b.slots[slot].count == 0)
+}
+
+// brewIsIngredient: anything some mix starts from (PotionBrewing.isIngredient).
+func brewIsIngredient(item int32) bool {
+	if _, ok := brewContainerMixes[item]; ok {
+		return true
+	}
+	for _, m := range brewMixes {
+		if m.ingredient == item {
+			return true
+		}
+	}
+	return false
+}
+
+// canTakeFromBelow is canTakeItemThroughFace for a hopper under a
+// container: a furnace yields its output, and its fuel slot only once the
+// fuel has become an empty bucket; a brewing stand yields its bottles, its
+// ingredient only as a glass bottle, and never its fuel.
+func (h *hub) canTakeFromBelow(src simPos, slot int, item int32) bool {
+	if f := h.furnaces[src]; f != nil {
+		switch slot {
+		case 2:
+			return true
+		case 1:
+			return item == itemBucket || item == itemBucketH2O
+		}
+		return false
+	}
+	w := h.worldFor(src.dim)
+	if b := h.bins[src]; b != nil && len(b.slots) == 5 && w != nil && isBrewStand(w.At(src.x, src.y, src.z)) {
+		switch slot {
+		case 3:
+			return item == itemGlassBottle
+		case 4:
+			return false
+		}
+	}
+	return true
 }
