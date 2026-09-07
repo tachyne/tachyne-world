@@ -47,10 +47,14 @@ func (h *hub) skyOpen(dim int, x, y, z float64) bool {
 // channelingStrike is ThrownTrident's Channeling: in a thunderstorm, a hit
 // under open sky calls a bolt down on the spot (the trident's own thunder
 // sound goes with it).
-func (h *hub) channelingStrike(players map[int32]*tracked, a *arrowEntity, dim int, x, y, z float64) {
+func (h *hub) channelingStrike(players map[int32]*tracked, a *arrowEntity, dim int, x, y, z float64, struck *mob) {
 	if !a.channeling || !h.thundering || !h.skyOpen(dim, x, y, z) {
 		return
 	}
 	h.strikeLightning(players, x, y, z, false)
 	h.playSound(players, "minecraft:item.trident.thunder", sndNeutral, x, y, z, 5, 1)
+	if t := players[a.shooter]; t != nil && struck != nil {
+		// "Very Very Frightening": the bolt's victim, by species.
+		h.advance(players, t, "channeled_lightning", advMatch{entity: advEntityName[struck.etype]})
+	}
 }

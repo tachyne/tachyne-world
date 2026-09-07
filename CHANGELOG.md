@@ -70,6 +70,8 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- "Very Very Frightening" (a channeling trident's bolt on a villager) and
+  "Birthday Song" (an allay dropping onto a note block) now fire.
 - **Piglins barter.** A gold ingot dropped in front of an adult piglin,
   or held out to it, goes into its off hand for six seconds of admiring,
   after which it throws something from vanilla's bartering table at the

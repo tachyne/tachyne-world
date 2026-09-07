@@ -417,7 +417,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			}
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
-			h.channelingStrike(players, a, m.dim, m.x, m.y, m.z)
+			h.channelingStrike(players, a, m.dim, m.x, m.y, m.z, m)
 			if a.playerShot { // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])
 			}

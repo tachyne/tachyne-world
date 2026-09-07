@@ -43,21 +43,21 @@ func TestLightningTransformsAndChanneling(t *testing.T) {
 	bolts := len(h.bolts)
 	a := &arrowEntity{channeling: true, dim: dimOverworld}
 	h.thundering = false
-	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z)
+	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z, nil)
 	if len(h.bolts) != bolts {
 		t.Error("no bolt without a storm")
 	}
 	h.thundering = true
-	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z)
+	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z, nil)
 	if len(h.bolts) != bolts+1 {
 		t.Error("a Channeling hit in a storm under open sky calls a bolt")
 	}
-	h.channelingStrike(players, a, dimOverworld, target.x, target.y-20, target.z)
+	h.channelingStrike(players, a, dimOverworld, target.x, target.y-20, target.z, nil)
 	if len(h.bolts) != bolts+1 {
 		t.Error("no bolt underground")
 	}
 	a.channeling = false
-	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z)
+	h.channelingStrike(players, a, dimOverworld, target.x, target.y, target.z, nil)
 	if len(h.bolts) != bolts+1 {
 		t.Error("no bolt without the enchantment")
 	}

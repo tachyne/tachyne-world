@@ -100,7 +100,7 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 
 	case isLightningRodState(state):
 		// A Channeling trident on a rod in a storm calls the bolt down on it.
-		h.channelingStrike(players, a, a.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+		h.channelingStrike(players, a, a.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, nil)
 
 	case isDecoratedPot(state):
 		// A direct hit shatters it. Vanilla cracks it and then destroys it,

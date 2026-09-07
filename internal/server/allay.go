@@ -91,7 +91,14 @@ func (h *hub) allayStep(players map[int32]*tracked, m *mob) bool {
 	if m.carry.item != 0 && m.carry.count > 0 {
 		if tx, ty, tz, ok := h.allayDeposit(players, m); ok {
 			if dist3(tx, ty, tz, m.x, m.y, m.z) <= allayCloseEnough {
+				toNote := m.allayNoteCD > 0 && m.dim == 0
+				item := m.carry.item
 				h.allayThrow(players, m, tx, ty, tz)
+				if toNote { // "Birthday Song": the liked player's allay dropped onto a note block
+					if t := players[m.owner]; t != nil {
+						h.advance(players, t, "allay_drop_item_on_block", advMatch{blockState: h.world.At(m.allayNote.x, m.allayNote.y, m.allayNote.z), item: item})
+					}
+				}
 				return true
 			}
 			h.allaySteer(m, tx, ty, tz, allayDeliverSpeed)
