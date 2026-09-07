@@ -4,10 +4,14 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Pistons (tier 1c). Powered pistons push up to 12 movable blocks one cell
-// along their facing and grow a piston_head; unpowering retracts (sticky
-// pistons pull the block in front back in). Block movement is instant — no
-// moving_piston animation entity yet — and entities aren't carried.
+// Pistons. A powered piston pushes the structure in front of it one cell
+// along its facing and grows a piston_head; unpowering retracts, and a
+// sticky piston pulls the structure back. The structure is vanilla's
+// (PistonStructureResolver, pistonmove.go): the straight line ahead plus
+// whatever slime and honey blocks in it stick to, up to 12 blocks, with the
+// push reactions of pistonreact.go. Block movement is still instant — there
+// is no moving_piston animation block — but anything standing where a block
+// arrives is shoved along with it.
 
 const (
 	pistonMaxPush = 12
@@ -66,24 +70,6 @@ func headFor(base uint32) uint32 {
 	return head
 }
 
-// pistonImmovable: blocks a piston can never move.
-func pistonImmovable(s uint32) bool {
-	return s == worldgen.Bedrock || s == obsidianState ||
-		isPistonHead(s) ||
-		(isPistonBase(s) && boolProp(s, "extended")) ||
-		isChestBlock(s) ||
-		isCookerBlock(s) ||
-		s == enchTableState || // enchanting table
-		(s >= anvilStateMin && s <= anvilStateMax) ||
-		(s >= grindstoneStateMin && s <= grindstoneStateMax)
-}
-
-// pistonFragile: attached/thin blocks that break instead of moving.
-func pistonFragile(s uint32) bool {
-	return isRedstoneish(s) || isLever(s) || worldgen.IsReplaceable(s) ||
-		worldgen.IsWater(s) || worldgen.IsLava(s)
-}
-
 // updatePiston reacts to power: extend when powered, retract when not.
 func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint32) {
 	dx, dy, dz := pistonDelta(state)
@@ -95,50 +81,40 @@ func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint3
 	}
 	extended := boolProp(state, "extended")
 	if powered && !extended {
-		h.extendPiston(players, pos, state, dx, dy, dz)
+		h.extendPiston(players, pos, state, [3]int{dx, dy, dz})
 	} else if !powered && extended {
-		h.retractPiston(players, pos, state, dx, dy, dz)
+		h.retractPiston(players, pos, state, [3]int{dx, dy, dz})
 	}
 }
 
-// extendPiston gathers the movable column in front and shifts it one cell.
-func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint32, dx, dy, dz int) {
-	var column []blockPos
-	cx, cy, cz := pos.x+dx, pos.y+dy, pos.z+dz
-	for {
-		s := h.world.At(cx, cy, cz)
-		if s == worldgen.Air || pistonFragile(s) {
-			break // room (fragile blocks at the end get crushed)
-		}
-		if pistonImmovable(s) || len(column) >= pistonMaxPush {
-			return // blocked: stay retracted
-		}
-		column = append(column, blockPos{cx, cy, cz})
-		cx, cy, cz = cx+dx, cy+dy, cz+dz
+// extendPiston moves the structure ahead one cell and grows the head.
+func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint32, dir [3]int) {
+	if !h.movePistonBlocks(players, pos, dir, true) {
+		return // blocked: stay retracted
 	}
-	for i := len(column) - 1; i >= 0; i-- { // far block first
-		from := column[i]
-		h.setBlock(players, blockPos{from.x + dx, from.y + dy, from.z + dz}, h.world.At(from.x, from.y, from.z))
-	}
-	h.setBlock(players, blockPos{pos.x + dx, pos.y + dy, pos.z + dz}, headFor(state))
 	h.setBlock(players, pos, setBoolProp(state, "extended", true))
 	h.playSound(players, "minecraft:block.piston.extend", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
 	h.scheduleSignalAround(pos)
 }
 
-// retractPiston removes the head; sticky pistons pull the next block in.
-func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint32, dx, dy, dz int) {
-	head := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-	fill := uint32(worldgen.Air)
+// retractPiston removes the head; a sticky piston first tries to pull the
+// structure beyond it back (PistonBaseBlock.triggerEvent, retract branch).
+func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint32, dir [3]int) {
+	head := blockPos{pos.x + dir[0], pos.y + dir[1], pos.z + dir[2]}
+	pulled := false
 	if isSticky(state) {
-		bx, by, bz := head.x+dx, head.y+dy, head.z+dz
-		if s := h.world.At(bx, by, bz); s != worldgen.Air && !pistonImmovable(s) && !pistonFragile(s) {
-			fill = s
-			h.setBlock(players, blockPos{bx, by, bz}, worldgen.Air)
+		beyond := blockPos{head.x + dir[0], head.y + dir[1], head.z + dir[2]}
+		s := h.world.At(beyond.x, beyond.y, beyond.z)
+		back := [3]int{-dir[0], -dir[1], -dir[2]}
+		if s != worldgen.Air && h.pistonPushable(s, beyond.y, back, false, dir) &&
+			(pushReactionOf(s) == pushNormal || isPistonBase(s)) {
+			pulled = h.movePistonBlocks(players, pos, dir, false)
 		}
 	}
-	h.setBlock(players, head, fill)
+	if !pulled && isPistonHead(h.world.At(head.x, head.y, head.z)) {
+		h.setBlock(players, head, worldgen.Air)
+	}
 	h.setBlock(players, pos, setBoolProp(state, "extended", false))
 	h.playSound(players, "minecraft:block.piston.contract", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)

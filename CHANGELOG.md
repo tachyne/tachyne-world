@@ -11,6 +11,25 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-07
+
+### Changed
+- **Pistons move what vanilla moves.** A piston now resolves the
+  structure in front of it the way vanilla's does: the line ahead, plus
+  everything a slime or honey block in that line is stuck to (slime sticks
+  to anything but honey, honey to anything but slime), branching sideways
+  and back, up to twelve blocks. Blocks carry their vanilla push
+  reactions — glazed terracotta moves only away from the piston, torches,
+  plants, redstone and the like break when pushed and are never pulled,
+  chests, signs, banners and every other block with a block entity stop
+  the piston, obsidian, crying obsidian, respawn anchors and reinforced
+  deepslate never move — and a sticky piston pulls a slime chain back
+  with the blocks stuck to it. A player or mob standing where a block
+  arrives is carried a block along (lifted without fall damage). Before
+  this, a piston pushed a plain straight column and slime blocks were
+  just heavy blocks. Movement is still instant: there is no moving_piston
+  animation yet.
+
 ## 2026-09-06
 
 ### Fixed
