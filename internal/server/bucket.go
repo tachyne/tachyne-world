@@ -49,7 +49,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 2.6+(h.rng.Float32()-h.rng.Float32())*0.8)
 		h.swapBucket(t, slot, itemBucket)
 		if mobBucket {
-			h.releaseBucketMob(players, t, held, x, y, z)
+			h.releaseBucketMob(players, t.dim, held, x, y, z)
 		}
 		return
 	}
@@ -63,7 +63,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	}
 	h.swapBucket(t, slot, itemBucket)
 	if mobBucket {
-		h.releaseBucketMob(players, t, held, x, y, z)
+		h.releaseBucketMob(players, t.dim, held, x, y, z)
 	}
 }
 

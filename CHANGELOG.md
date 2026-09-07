@@ -38,6 +38,17 @@ the public history since the project was open-sourced on 2026-07-10.
   more than three blocks off (five for the brain-driven species) at the
   species' own speed, given up past sixteen. Before, a newborn wandered
   off on its own the moment it was bred.
+- **The dispenser table is complete.** Every item vanilla gives a
+  dispenser behaviour now has one here: bottles o' enchanting and
+  firework rockets fly out, a mob bucket pours its water and its fish
+  (or axolotl, or tadpole) and leaves an empty bucket, a chest straps
+  onto a tamed donkey, mule or llama in front, a carved pumpkin is placed
+  facing the dispenser and builds a snow, iron or copper golem where the
+  body is ready, a shulker box is placed with its contents intact
+  (opening along the dispense direction, or upward over solid ground),
+  glowstone charges a respawn anchor ahead, and a brush combs an
+  armadillo for a scute, wearing by sixteen. Brushing an armadillo by
+  hand works too — it did not before.
 
 ## 2026-09-06
 

@@ -334,6 +334,56 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		h.launchProjectileIn(players, entityEggProj, 0, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && item == itemFireCharge:
 		h.launchProjectileIn(players, entitySmallFireball, 0, fx, fy, fz, vx, vy, vz)
+	case dispense && item == itemXPBottle:
+		// Vanilla registerProjectileBehavior: the bottle flies and shatters.
+		a := h.launchProjectileIn(players, entityXPBottle, pos.dim, fx, fy, fz, vx, vy, vz)
+		a.breaks, a.xpBottle = true, true
+	case dispense && item == itemFireworkRocket:
+		// A rocket leaves along the facing (FireworkRocketItem's projectile
+		// config: power 0.5) and climbs from there.
+		r := h.spawnRocket(players, pos.dim, fx, fy, fz, 0)
+		r.vx, r.vy, r.vz = float64(dx)*0.5, float64(dy)*0.5, float64(dz)*0.5
+	case dispense && isMobBucket(item):
+		// A mob bucket pours its water and its passenger into the cell ahead
+		// and leaves an empty bucket (DispensibleContainerItem.emptyContents).
+		took = false
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) || worldgen.IsWater(ts) {
+			if !worldgen.IsWater(ts) {
+				h.setBlockAt(players, pos.dim, front, worldgen.WaterBase)
+			}
+			h.releaseBucketMob(players, pos.dim, item, front.x, front.y, front.z)
+			st.item, st.count = itemBucket, 1
+		}
+	case dispense && item == int32(itemByName["chest"]) && h.dispenseChest(players, pos.dim, front):
+		// Strapped onto a tamed, unchested donkey, mule or llama in front.
+	case dispense && item == itemCarvedPumpkin:
+		// Placed facing back at the dispenser (BlockItem placement through a
+		// DirectionalPlaceContext), then the golem patterns are tried.
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+			h.dispenseCarvedPumpkin(players, pos.dim, state, front)
+		} else {
+			took = false
+		}
+	case dispense && isShulkerBoxItem(item):
+		// ShulkerBoxDispenseBehavior: the box is placed in the cell ahead, its
+		// contents intact, opening along the dispense direction (upward when
+		// there is nothing under it).
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
+			h.dispenseShulkerBox(players, pos.dim, state, front, st)
+		} else {
+			took = false
+		}
+	case dispense && item == itemGlowstoneBlock && h.dispenseGlowstone(players, pos.dim, front):
+		// Charged a respawn anchor ahead (else the glowstone is tossed below).
+	case dispense && item == itemBrush:
+		// Brushes the armadillo in front for a scute, wearing the brush 16.
+		took = false
+		if h.dispenseBrush(players, pos.dim, front) {
+			st.dmg += 16
+			if max := itemMaxDurability[item]; max > 0 && st.dmg >= max {
+				*st = invStack{}
+			}
+		}
 	case dispense && item == itemWindCharge:
 		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
 		// throws, launched out of the face.

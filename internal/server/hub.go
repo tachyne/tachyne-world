@@ -1701,7 +1701,7 @@ func (h *hub) run() {
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
-							h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
+							h.tryBrush(players, t, m) || h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
 							h.advance(players, t, "player_interacted_with_entity", advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held})
 						}
 					}

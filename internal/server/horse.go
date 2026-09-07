@@ -79,21 +79,26 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 	}
 	// Chest-equip: a held chest on an unchested donkey/mule/llama.
 	if heldStack(t).item == int32(itemByName["chest"]) && chestedFamily(m.etype) && !m.chested {
-		if m.strength == 0 {
-			m.strength = int8(1 + h.rng.Intn(3)) // llama columns; harmless for donkeys
-			if h.rng.Intn(20) == 0 {
-				m.strength = int8(1 + h.rng.Intn(5)) // the rare strong llama
-			}
-		}
-		m.chested = true
-		m.chest = make([]invStack, horseColumns(m)*3)
+		h.equipChest(players, m)
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}
-		h.playSound(players, "minecraft:entity.donkey.chest", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	return false
+}
+
+// equipChest straps a chest onto a donkey, mule or llama.
+func (h *hub) equipChest(players map[int32]*tracked, m *mob) {
+	if m.strength == 0 {
+		m.strength = int8(1 + h.rng.Intn(3)) // llama columns; harmless for donkeys
+		if h.rng.Intn(20) == 0 {
+			m.strength = int8(1 + h.rng.Intn(5)) // the rare strong llama
+		}
+	}
+	m.chested = true
+	m.chest = make([]invStack, horseColumns(m)*3)
+	h.playSound(players, "minecraft:entity.donkey.chest", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 
 // openHorseScreen opens the mount window: its own open packet, then the

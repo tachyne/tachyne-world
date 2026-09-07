@@ -71,12 +71,12 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 // releaseBucketMob is MobBucketItem.checkExtraContent: after the bucket's
 // water has been poured (or boiled off), spawn the mob in the cell with the
 // bucket's empty sound in place of the water one.
-func (h *hub) releaseBucketMob(players map[int32]*tracked, t *tracked, item int32, x, y, z int) {
+func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, item int32, x, y, z int) {
 	etype := speciesByMobBucket[item]
 	mb := mobBucketBySpecies[etype]
-	m := h.spawnSpecies(players, etype, t.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
+	m := h.spawnSpecies(players, etype, dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 	if m != nil {
 		m.fromBucket = true
 	}
-	h.playSoundDim(players, t.dim, mb.empty, sndNeutral, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+	h.playSoundDim(players, dim, mb.empty, sndNeutral, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 }
