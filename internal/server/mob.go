@@ -71,6 +71,8 @@ type mob struct {
 	loveTicks       int      // courting window after love-food (hearts)
 	lovedBy         int32    // who fed the love-food (advancement credit)
 	breedCD         int      // ticks before this parent may breed again
+	parent          int32    // baby: the adult it is following (FollowParentGoal), 0 = none
+	parentRecalc    int      // mob updates until the parent search runs again
 	stroll          int      // wander spell: updates left walking before the next rest
 	sheared         bool     // sheep: fleece off (regrows by grazing)
 	color           int8     // sheep: fleece colour (0 white .. 15 black), dyeable
@@ -363,6 +365,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.baby && h.followParentStep(m):
+			// A baby trailing the nearest adult of its kind (FollowParentGoal /
+			// BabyFollowAdult): steered straight at it, ahead of idling and
+			// strolling, behind panic and knockback.
 		case m.reroute > 0:
 			// Committed to an escape heading (just after a block): keep it instead
 			// of re-steering, so the mob walks away from an obstacle rather than

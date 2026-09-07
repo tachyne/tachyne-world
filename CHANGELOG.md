@@ -30,6 +30,15 @@ the public history since the project was open-sourced on 2026-07-10.
   just heavy blocks. Movement is still instant: there is no moving_piston
   animation yet.
 
+### Added
+- **Babies follow a parent.** Calves, lambs, piglets, chicks, foals,
+  baby llamas, pandas, polar bear cubs, bees, striders, goats, axolotls,
+  armadillos, camels and hoglins now trail the nearest adult of their
+  kind, vanilla's way: an adult within eight blocks, followed once it is
+  more than three blocks off (five for the brain-driven species) at the
+  species' own speed, given up past sixteen. Before, a newborn wandered
+  off on its own the moment it was bred.
+
 ## 2026-09-06
 
 ### Fixed
