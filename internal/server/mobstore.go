@@ -110,6 +110,7 @@ type savedMob struct {
 	Held      int32       `json:"held,omitempty"`
 	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
 	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
+	SniffCD   int         `json:"sniffcd,omitempty"`     // sniffer: ticks until the next dig
 	Harness   int32       `json:"harn,omitempty"`
 	// A lead tied to a FENCE survives a restart; one held by a player does not,
 	// because the leash drops the moment its holder disconnects (vanilla's
@@ -518,7 +519,7 @@ func toSavedMob(m *mob) savedMob {
 		Trident: m.trident, CanPickup: m.canPickup,
 		Saddled: m.saddled, SaddleSt: packStack(m.saddleSt), ArmorSt: packStack(m.armorSt),
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
-		Carry: packStack(m.carry), DupCD: m.dupCD,
+		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD,
 		LeashPos: leashSavePos(m),
 		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage,
 	}

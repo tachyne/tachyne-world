@@ -70,6 +70,13 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Sniffers dig.** A grown sniffer picks a scent — reachable diggable
+  ground (dirt, grass, podzol, coarse or rooted dirt, moss, mud) within
+  ten to eighteen blocks it has not dug before — walks over, digs with
+  its nose down for eight or nine seconds, and two seconds in drops a
+  torchflower seed or a pitcher pod, then leaves digging alone for eight
+  minutes and never returns to its last twenty sites. Until now the
+  archaeology chain ended with a hatched sniffer that did nothing.
 - **Three small mob habits.** Frogs hunt small slimes and small magma
   cubes and take them with their tongue — a slime eaten this way leaves
   nothing, a magma cube leaves the froglight of the frog's variant (ochre,

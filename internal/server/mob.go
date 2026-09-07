@@ -178,6 +178,12 @@ type mob struct {
 	dancing         bool        // allay: a jukebox plays within earshot
 	frogEaten       int8        // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt        uint64      // baby panda: the tick its sneeze lands (0 = not sneezing)
+	sniffState      int8        // sniffer: 0 idle, 1 walking to a dig site, 2 digging
+	sniffStart      uint64      // sniffer: the tick the dig began
+	sniffUntil      uint64      // sniffer: the tick the dig ends
+	sniffCD         int         // sniffer: ticks before it sniffs again (9600 after a dig)
+	sniffTarget     blockPos    // sniffer: the block it digs (the floor block)
+	sniffExplored   []blockPos  // sniffer: the last 20 dig sites, never dug twice
 	ty              float64     // hunted target's feet height (fliers dive to it)
 	living                      // attributes + status effects, shared with players
 	dmgFrac         float64     // fractional damage carry (vanilla HP is float, ours int)
@@ -381,6 +387,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entitySniffer && h.snifferStep(players, m):
+			// A sniffer walking to, or digging at, a scent.
 		case m.etype == entityFrog && h.frogStep(players, m):
 			// A frog after a small slime or magma cube (FrogAi's tongue).
 		case m.etype == entityAllay && h.allayStep(players, m):
