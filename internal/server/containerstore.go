@@ -59,7 +59,8 @@ type containerFile struct {
 	Beacons   map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands    []savedStand              `json:"stands,omitempty"`  // placed armor stands
 	Lecterns  map[string]savedLectern   `json:"lecterns,omitempty"`
-	Shelves   map[string][6]stackRow    `json:"shelves,omitempty"` // chiseled bookshelves
+	Shelves   map[string][6]stackRow    `json:"shelves,omitempty"`    // chiseled bookshelves
+	ShelfLast map[string]int            `json:"shelf_last,omitempty"` // …and each one's last-touched slot (comparator)
 	// Shulker-box contents riding a dropped or stored item, keyed by boxID.
 	Boxes map[string][]containerRow `json:"boxes,omitempty"`
 	// The next boxID to mint, so ids stay unique across restarts.
@@ -182,23 +183,28 @@ func (s *containerStore) loadLecterns() map[simPos]*lectern {
 }
 
 // recordShelves / loadShelves persist chiseled bookshelves.
-func (s *containerStore) recordShelves(m map[simPos]*[6]invStack) {
+func (s *containerStore) recordShelves(m map[simPos]*[6]invStack, last map[simPos]int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m.Shelves = map[string][6]stackRow{}
+	s.m.ShelfLast = map[string]int{}
 	for pos, shelf := range m {
 		var rows [6]stackRow
 		for i, st := range shelf {
 			rows[i] = packStack(st)
 		}
 		s.m.Shelves[simKey(pos)] = rows
+		if slot, ok := last[pos]; ok {
+			s.m.ShelfLast[simKey(pos)] = slot + 1 // +1 so slot 0 survives omitempty
+		}
 	}
 }
 
-func (s *containerStore) loadShelves() map[simPos]*[6]invStack {
+func (s *containerStore) loadShelves() (map[simPos]*[6]invStack, map[simPos]int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	out := map[simPos]*[6]invStack{}
+	last := map[simPos]int{}
 	for k, rows := range s.m.Shelves {
 		if pos, ok := parseSimKey(k); ok {
 			var shelf [6]invStack
@@ -206,9 +212,12 @@ func (s *containerStore) loadShelves() map[simPos]*[6]invStack {
 				shelf[i] = unpackStack(r)
 			}
 			out[pos] = &shelf
+			if v := s.m.ShelfLast[k]; v > 0 {
+				last[pos] = v - 1
+			}
 		}
 	}
-	return out
+	return out, last
 }
 
 // recordStands snapshots placed armor stands for the next flush.

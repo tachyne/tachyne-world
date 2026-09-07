@@ -70,6 +70,10 @@ the public history since the project was open-sourced on 2026-07-10.
   open, hoppers and droppers feed and drain it, and it places facing the
   way you look, like a dispenser. Before, a barrel was a solid block that
   did nothing.
+- **Two more counters.** "Damage dealt (absorbed)" and "(resisted)" now
+  count from the attacker's side against players and mobs, and a
+  chiseled bookshelf's last-touched slot (its comparator reading) now
+  survives a restart.
 - **Honey blocks slide.** Falling against a honey block's side slows to
   a slide (the client already did the slowing): the fall resets every
   tick so the landing costs nothing, the slide sound plays now and then,

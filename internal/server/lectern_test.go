@@ -88,8 +88,11 @@ func TestLecternAndShelf(t *testing.T) {
 		}
 		var sh [6]invStack
 		sh[5] = invStack{item: int32(itemByName["book"]), count: 1}
-		cs.recordShelves(map[simPos]*[6]invStack{{blockPos: blockPos{4, 5, 6}}: &sh})
-		ss := cs.loadShelves()
+		cs.recordShelves(map[simPos]*[6]invStack{{blockPos: blockPos{4, 5, 6}}: &sh}, map[simPos]int{{blockPos: blockPos{4, 5, 6}}: 0})
+		ss, last := cs.loadShelves()
+		if last[simPos{blockPos: blockPos{4, 5, 6}}] != 0 || len(last) != 1 {
+			t.Errorf("last-touched slot should persist as 0: %v", last)
+		}
 		if s := ss[simPos{blockPos: blockPos{4, 5, 6}}]; s == nil || s[5].item != int32(itemByName["book"]) {
 			t.Errorf("shelf round trip: %+v", ss)
 		}

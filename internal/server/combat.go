@@ -320,9 +320,13 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if t != nil {
 		m.looting = heldStack(t).enchLvl(enchLooting)
 	}
+	hpBefore := m.health
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
+		if taken := float64(hpBefore - m.health); taken >= 0 && float64(dmg) > taken {
+			h.incCustom(t, "damage_dealt_resisted", tenths(float32(float64(dmg)-taken))) // armour, Resistance
+		}
 	}
 	if t != nil {
 		h.advance(players, t, "player_hurt_entity", advMatch{damageDirect: "player", mainhand: heldStack(t).item,

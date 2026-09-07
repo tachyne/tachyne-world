@@ -838,7 +838,7 @@ func (h *hub) run() {
 		h.jukeboxes = h.containers.loadJukeboxes()
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
 		h.lecterns = h.containers.loadLecterns()
-		h.bookshelves = h.containers.loadShelves()
+		h.bookshelves, h.shelfLast = h.containers.loadShelves()
 		h.loadCampfires()
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if w := h.worldFor(pos.dim); w != nil && isHopper(w.At(pos.x, pos.y, pos.z)) {
@@ -1120,7 +1120,7 @@ func (h *hub) run() {
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)
-					h.containers.recordShelves(h.bookshelves)
+					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
@@ -1976,7 +1976,7 @@ func (h *hub) run() {
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)
-					h.containers.recordShelves(h.bookshelves)
+					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
