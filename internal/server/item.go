@@ -280,6 +280,13 @@ func stackComponents(st invStack) []byte {
 	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
+	if st.color != 0 {
+		// First on purpose: the Bedrock gateway reads a stack's leading
+		// component for its NBT (maps, books, and now the dye), and a dyed
+		// piece is never a map or a book.
+		b = protocol.AppendVarInt(b, componentDyedColor)
+		b = protocol.AppendVarInt(b, st.color)
+	}
 	if st.dmg > 0 {
 		b = protocol.AppendVarInt(b, componentDamage)
 		b = protocol.AppendVarInt(b, int32(st.dmg))
@@ -291,10 +298,6 @@ func stackComponents(st invStack) []byte {
 	if st.mapID != 0 {
 		b = protocol.AppendVarInt(b, componentMapID)
 		b = protocol.AppendVarInt(b, st.mapID)
-	}
-	if st.color != 0 {
-		b = protocol.AppendVarInt(b, componentDyedColor)
-		b = protocol.AppendVarInt(b, st.color)
 	}
 	if enchN > 0 {
 		// Books carry STORED enchantments (what the anvil applies); everything
