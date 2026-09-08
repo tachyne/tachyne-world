@@ -182,6 +182,9 @@ type mob struct {
 	admireUntil     uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil  uint64      // piglin: no admiring until this tick (hit by a player)
 	hoard           []invStack  // piglin: loved items it kept; dropped on death
+	foxFlags        int8        // fox: DATA_FLAGS (crouching 4, interested 8, pouncing 16, sleeping 32)
+	foxEatTicks     int         // fox: ticks since it last ate (eats a held food past 600)
+	foxSleepIn      int         // fox: ticks of quiet before it lies down
 	armState        int8        // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
 	armStateAt      uint64      // armadillo: the tick the state began
 	armDangerUntil  uint64      // armadillo: DANGER_DETECTED_RECENTLY expiry
@@ -401,6 +404,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityFox && h.foxStep(players, m):
+			// A fox asleep, stalking prey, or after a dropped item.
 		case m.etype == entityArmadillo && m.armState != 0:
 			m.vx, m.vz = 0, 0 // rolled up: it stays where it is
 		case m.etype == entitySniffer && h.snifferStep(players, m):

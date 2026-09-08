@@ -25,6 +25,13 @@ the public history since the project was open-sourced on 2026-07-10.
   rightmost shelf taking the last three hotbar slots, as vanilla lays it
   out. Clients before 1.21.9 have no shelf and are sent none of this.
 
+- **Foxes behave like foxes.** By day, sheltered from the sky and with
+  nobody about, a fox lies down and sleeps (and wakes when someone walks
+  up); it hunts chickens, rabbits, baby turtles on land and schooling
+  fish, creeping in with the crouch before it bites; and it picks up
+  whatever is lying within eight blocks, carrying it in its mouth — food
+  it eats after half a minute, anything else it keeps and drops when it
+  dies. Foxes were skittish wanderers before.
 - **Armadillos roll up.** A threat within seven blocks — an undead mob,
   whoever last hurt it, a player sprinting or riding — makes an armadillo
   roll up (ten ticks), stay rolled for as long as the danger keeps being
