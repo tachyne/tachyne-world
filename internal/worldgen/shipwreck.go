@@ -120,3 +120,25 @@ func (g *Generator) stampBuriedTreasure(ch *Chunk, cx, cz int32) {
 	}
 	setSectionBlock(ch, b.X-baseX, b.Y, b.Z-baseZ, ChestNorth, true)
 }
+
+// NearestShipwreck finds the closest wreck to (wx, wz) within radius blocks
+// (vanilla's dolphin looks 50 chunks), scanning the placement cells around
+// the point. ok=false when none lies within reach.
+func (g *Generator) NearestShipwreck(wx, wz, radius int) (x, z int, ok bool) {
+	bestD := radius * radius
+	cells := radius/shipwreckCell + 1
+	ox, oz := cellOrigin(wx, shipwreckCell), cellOrigin(wz, shipwreckCell)
+	for cx := -cells; cx <= cells; cx++ {
+		for cz := -cells; cz <= cells; cz++ {
+			s := g.ShipwreckIn(ox+cx*shipwreckCell, oz+cz*shipwreckCell)
+			if !s.Exists {
+				continue
+			}
+			dx, dz := s.X-wx, s.Z-wz
+			if d := dx*dx + dz*dz; d < bestD {
+				x, z, ok, bestD = s.X, s.Z, true, d
+			}
+		}
+	}
+	return x, z, ok
+}

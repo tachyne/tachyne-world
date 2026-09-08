@@ -182,43 +182,46 @@ type mob struct {
 	admireUntil     uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil  uint64      // piglin: no admiring until this tick (hit by a player)
 	hoard           []invStack  // piglin: loved items it kept; dropped on death
-	foxFlags        int8        // fox: DATA_FLAGS (crouching 4, interested 8, pouncing 16, sleeping 32)
-	foxEatTicks     int         // fox: ticks since it last ate (eats a held food past 600)
-	foxSleepIn      int         // fox: ticks of quiet before it lies down
-	armState        int8        // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
-	armStateAt      uint64      // armadillo: the tick the state began
-	armDangerUntil  uint64      // armadillo: DANGER_DETECTED_RECENTLY expiry
-	armScuteAt      uint64      // armadillo: the tick the next scute drops (0 = unset)
-	sniffState      int8        // sniffer: 0 idle, 1 walking to a dig site, 2 digging
-	sniffStart      uint64      // sniffer: the tick the dig began
-	sniffUntil      uint64      // sniffer: the tick the dig ends
-	sniffCD         int         // sniffer: ticks before it sniffs again (9600 after a dig)
-	sniffTarget     blockPos    // sniffer: the block it digs (the floor block)
-	sniffExplored   []blockPos  // sniffer: the last 20 dig sites, never dug twice
-	ty              float64     // hunted target's feet height (fliers dive to it)
-	living                      // attributes + status effects, shared with players
-	dmgFrac         float64     // fractional damage carry (vanilla HP is float, ours int)
-	attackCD        int         // mob-updates left before this mob can melee again
-	hasTarget       bool        // a player is within aggro range this update
-	heartBound      bool        // creaking: a standing heart is keeping it alive
-	heartHit        bool        // …and it took a blow the heart must answer for
-	frozen          bool        // creaking: a player is watching, so it cannot move
-	tx, tz          float64     // that target's position (set by acquireTarget)
-	dim             int         // dimension this mob lives in (0 overworld, 1 nether)
-	villagerTarget  int32       // zombie: the villager it hunts when no player is near (0 = none)
-	converting      int         // zombie villager: ticks left in its cure (0 = not curing)
-	curer           string      // zombie villager: who fed it the golden apple
-	gossipAt        uint64      // villager: tick of its last chat (Villager.lastGossipTime)
-	gossipDecayAt   uint64      // villager: tick its gossip last faded (a day apart)
-	giftAt          uint64      // villager: tick its next Hero of the Village gift may be thrown
-	profession      int         // villager: index into professionNames/villagerTrades
-	tradeLevel      int         // villager merchant tier 1-5 (novice..master)
-	tradeXP         int         // trade experience toward the next tier
-	offers          []mobOffer  // this villager's unlocked trades (+ per-offer uses)
-	restocksToday   int         // villager: restocks done this day (vanilla ≤2/day)
-	lastRestockTick uint64      // villager: tick of the last restock (2400-tick spacing gate)
-	gossip          gossipBook  // villager: what it holds about each player (persisted)
-	home            blockPos    // villager house / golem well — the anchor to drift back to
+	gotFish         bool        // dolphin: fed a fish, leading to treasure
+	treasureX       int         // dolphin: the shipwreck it leads to (valid while gotFish)
+	treasureZ       int
+	foxFlags        int8       // fox: DATA_FLAGS (crouching 4, interested 8, pouncing 16, sleeping 32)
+	foxEatTicks     int        // fox: ticks since it last ate (eats a held food past 600)
+	foxSleepIn      int        // fox: ticks of quiet before it lies down
+	armState        int8       // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
+	armStateAt      uint64     // armadillo: the tick the state began
+	armDangerUntil  uint64     // armadillo: DANGER_DETECTED_RECENTLY expiry
+	armScuteAt      uint64     // armadillo: the tick the next scute drops (0 = unset)
+	sniffState      int8       // sniffer: 0 idle, 1 walking to a dig site, 2 digging
+	sniffStart      uint64     // sniffer: the tick the dig began
+	sniffUntil      uint64     // sniffer: the tick the dig ends
+	sniffCD         int        // sniffer: ticks before it sniffs again (9600 after a dig)
+	sniffTarget     blockPos   // sniffer: the block it digs (the floor block)
+	sniffExplored   []blockPos // sniffer: the last 20 dig sites, never dug twice
+	ty              float64    // hunted target's feet height (fliers dive to it)
+	living                     // attributes + status effects, shared with players
+	dmgFrac         float64    // fractional damage carry (vanilla HP is float, ours int)
+	attackCD        int        // mob-updates left before this mob can melee again
+	hasTarget       bool       // a player is within aggro range this update
+	heartBound      bool       // creaking: a standing heart is keeping it alive
+	heartHit        bool       // …and it took a blow the heart must answer for
+	frozen          bool       // creaking: a player is watching, so it cannot move
+	tx, tz          float64    // that target's position (set by acquireTarget)
+	dim             int        // dimension this mob lives in (0 overworld, 1 nether)
+	villagerTarget  int32      // zombie: the villager it hunts when no player is near (0 = none)
+	converting      int        // zombie villager: ticks left in its cure (0 = not curing)
+	curer           string     // zombie villager: who fed it the golden apple
+	gossipAt        uint64     // villager: tick of its last chat (Villager.lastGossipTime)
+	gossipDecayAt   uint64     // villager: tick its gossip last faded (a day apart)
+	giftAt          uint64     // villager: tick its next Hero of the Village gift may be thrown
+	profession      int        // villager: index into professionNames/villagerTrades
+	tradeLevel      int        // villager merchant tier 1-5 (novice..master)
+	tradeXP         int        // trade experience toward the next tier
+	offers          []mobOffer // this villager's unlocked trades (+ per-offer uses)
+	restocksToday   int        // villager: restocks done this day (vanilla ≤2/day)
+	lastRestockTick uint64     // villager: tick of the last restock (2400-tick spacing gate)
+	gossip          gossipBook // villager: what it holds about each player (persisted)
+	home            blockPos   // villager house / golem well — the anchor to drift back to
 
 	ovrSpeed   float64 // >0: plugin speed override — survives behavior-driven speed resets
 	ovrDamage  float64 // >0: plugin melee-damage override (hostileMelee honors it)
@@ -404,6 +407,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityDolphin && h.dolphinStep(players, m):
+			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):
 			// A fox asleep, stalking prey, or after a dropped item.
 		case m.etype == entityArmadillo && m.armState != 0:

@@ -25,6 +25,11 @@ the public history since the project was open-sourced on 2026-07-10.
   rightmost shelf taking the last three hotbar slots, as vanilla lays it
   out. Clients before 1.21.9 have no shelf and are sent none of this.
 
+- **Dolphins lead to treasure.** Feed a dolphin a fish and it takes a
+  bearing on the nearest shipwreck within fifty chunks and swims for it,
+  giving the errand up once within four blocks (or at once if no wreck is
+  in reach); a calf just eats. Vanilla's dolphins aim at shipwrecks and
+  ocean ruins; the engine's oceans hold wrecks.
 - **Foxes behave like foxes.** By day, sheltered from the sky and with
   nobody about, a fox lies down and sleeps (and wakes when someone walks
   up); it hunts chickens, rabbits, baby turtles on land and schooling
