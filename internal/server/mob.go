@@ -182,6 +182,10 @@ type mob struct {
 	admireUntil     uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil  uint64      // piglin: no admiring until this tick (hit by a player)
 	hoard           []invStack  // piglin: loved items it kept; dropped on death
+	armState        int8        // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
+	armStateAt      uint64      // armadillo: the tick the state began
+	armDangerUntil  uint64      // armadillo: DANGER_DETECTED_RECENTLY expiry
+	armScuteAt      uint64      // armadillo: the tick the next scute drops (0 = unset)
 	sniffState      int8        // sniffer: 0 idle, 1 walking to a dig site, 2 digging
 	sniffStart      uint64      // sniffer: the tick the dig began
 	sniffUntil      uint64      // sniffer: the tick the dig ends
@@ -298,6 +302,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityPiglin && m.admireUntil != 0 && m.dying == 0 {
 			h.piglinAdmireTick(players, m)
 		}
+		if m.etype == entityArmadillo && m.dying == 0 {
+			h.armadilloTick(players, m)
+		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
 			//          shared gravity/ground-snap would pin it into the island
@@ -394,6 +401,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityArmadillo && m.armState != 0:
+			m.vx, m.vz = 0, 0 // rolled up: it stays where it is
 		case m.etype == entitySniffer && h.snifferStep(players, m):
 			// A sniffer walking to, or digging at, a scent.
 		case m.etype == entityFrog && h.frogStep(players, m):
@@ -677,6 +686,12 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.heartBound && !dt.has(tagBypassesInvulnerability) {
 		m.heartHit = true
 		return
+	}
+	if m.etype == entityArmadillo && m.armState == armScared {
+		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves
+		if dmg < 0 {
+			dmg = 0
+		}
 	}
 	if m.etype == entityWolf && m.armorSt.item == itemWolfArmor && !dt.has(tagBypassesWolfArmor) {
 		// Wolf.actuallyHurt: the armour takes the whole blow as durability

@@ -324,6 +324,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if m.etype == entityPiglin && t != nil {
 		h.piglinHurtByPlayer(players, m) // PiglinAi.wasHurtBy: admiring stops, and stays off a while
 	}
+	if m.etype == entityArmadillo {
+		h.armadilloHurtByLiving(players, m) // Armadillo.actuallyHurt: danger, and it rolls up
+	}
 	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))

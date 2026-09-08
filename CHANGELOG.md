@@ -25,6 +25,17 @@ the public history since the project was open-sourced on 2026-07-10.
   rightmost shelf taking the last three hotbar slots, as vanilla lays it
   out. Clients before 1.21.9 have no shelf and are sent none of this.
 
+- **Armadillos roll up.** A threat within seven blocks — an undead mob,
+  whoever last hurt it, a player sprinting or riding — makes an armadillo
+  roll up (ten ticks), stay rolled for as long as the danger keeps being
+  seen (checked every four seconds, remembered for four), then unroll
+  over thirty ticks. Rolled up it holds still, cannot breed, and a blow
+  loses a point and halves; a blow from anything living rolls it up on
+  its own. A grown one sheds a scute every five to ten minutes. The
+  state reaches 1.21.5 and 26.2 clients alike (the rolled-up model and
+  animations are the client's), which needed the common library to learn
+  the armadillo-state serializer's number on 26.2.
+
 ### Fixed
 - **Block entities were mis-typed for every client but 1.21.11.** The
   block-entity type numbers in chunk data and block-entity updates follow
