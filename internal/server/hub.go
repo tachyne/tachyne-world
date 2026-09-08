@@ -548,6 +548,8 @@ type hub struct {
 	lecterns        map[simPos]*lectern       // held books + open pages (persisted with containers)
 	bookshelves     map[simPos]*[6]invStack   // chiseled shelves (persisted with containers)
 	shelfLast       map[simPos]int            // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
+	woodShelves     map[simPos]*[3]invStack   // 1.21.9 wooden shelves: three display slots (persisted with containers)
+	shelfView       *shelfStore               // the chunk builders' mutex'd read view of the shelves
 	detectorsOn     map[blockPos]bool         // detector rails currently pressed
 	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
 	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
@@ -720,6 +722,8 @@ func newHub(w *world.World) *hub {
 		lecterns:      map[simPos]*lectern{},
 		bookshelves:   map[simPos]*[6]invStack{},
 		shelfLast:     map[simPos]int{},
+		woodShelves:   map[simPos]*[3]invStack{},
+		shelfView:     newShelfStore(),
 		jukeboxes:     map[simPos]*jukebox{},
 		beacons:       map[simPos]*beacon{},
 		campfires:     map[simPos]*campfire{},
@@ -839,6 +843,10 @@ func (h *hub) run() {
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
 		h.lecterns = h.containers.loadLecterns()
 		h.bookshelves, h.shelfLast = h.containers.loadShelves()
+		h.woodShelves = h.containers.loadWoodShelves()
+		for pos, sh := range h.woodShelves {
+			h.shelfView.set(pos, shelfViewOf(sh))
+		}
 		h.loadCampfires()
 		for pos := range h.bins { // restart hoppers' self-scheduling chains
 			if w := h.worldFor(pos.dim); w != nil && isHopper(w.At(pos.x, pos.y, pos.z)) {
@@ -1121,6 +1129,7 @@ func (h *hub) run() {
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
+					h.containers.recordWoodShelves(h.woodShelves)
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
@@ -1190,6 +1199,9 @@ func (h *hub) run() {
 					h.soakSponge(players, e.dim, blockPos{e.x + d[0], e.y + d[1], e.z + d[2]})
 				}
 				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
+				if e.broken == 0 && isWoodShelf(e.state) {
+					h.shelfPlaced(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
+				}
 				if e.broken == 0 && isShulkerBox(e.state) {
 					// A box placed from a stamped stack takes its contents back.
 					// This runs before the evConsume that empties the slot,
@@ -1761,6 +1773,8 @@ func (h *hub) run() {
 				h.carvePumpkin(players, e)
 			case evLightOre:
 				h.lightOre(players, e)
+			case evUseWoodShelf:
+				h.useWoodShelf(players, e)
 			case evUseCandle:
 				h.useCandle(players, e)
 			case evUseCake:
@@ -1977,6 +1991,7 @@ func (h *hub) run() {
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
+					h.containers.recordWoodShelves(h.woodShelves)
 					h.containers.flush()
 				}
 				if h.mobstore != nil {

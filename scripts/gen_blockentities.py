@@ -34,7 +34,7 @@ def classify(n):
     """Map a block name to its block_entity_type name (or None if it has none)."""
     if n.endswith("_bed"):
         return "bed"
-    if n == "chest":
+    if n == "chest" or n.endswith("copper_chest"):  # copper chests share ChestBlockEntity
         return "chest"
     if n == "trapped_chest":
         return "trapped_chest"
@@ -62,6 +62,10 @@ def classify(n):
         return "command_block"
     if n == "spawner":
         return "mob_spawner"
+    if n.endswith("_shelf"):  # the 1.21.9 wooden shelves (ShelfBlockEntity)
+        return "shelf"
+    if n == "copper_golem_statue":
+        return "copper_golem_statue"
     exact = {
         "furnace", "blast_furnace", "smoker", "dispenser", "dropper", "hopper",
         "brewing_stand", "beacon", "bell", "conduit", "lectern", "enchanting_table",

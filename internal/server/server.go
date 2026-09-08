@@ -519,7 +519,7 @@ func (s *Server) Serve() error {
 				case s.end:
 					dim = 2
 				}
-				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners)
+				return appendBlockEntities(nil, w, cx, cz, dim, s.hub.signs, s.hub.cfStore, s.hub.banners, s.hub.shelfView)
 			},
 			Worlds: func(dim int32) *world.World {
 				switch dim {

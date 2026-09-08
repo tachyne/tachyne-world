@@ -508,6 +508,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	// Every 27-slot container routes through one decision, so a new one cannot
 	// be added to the storage side and forgotten on the interaction side —
 	// which is exactly how placed shulker boxes shipped unopenable.
+	if isWoodShelf(state) { // a slot on its face: swap the held stack in or out (or the hotbar, powered)
+		s.hub.post(evUseWoodShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	switch containerOpenFor(state) {
 	case openChestWindow:
 		s.hub.post(evOpenChest{eid: p.eid, x: x, y: y, z: z})

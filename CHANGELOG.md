@@ -11,6 +11,31 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-08
+
+### Added
+- **Shelves.** The twelve wooden shelves of 1.21.9 work on 1.21.11 and
+  26.2 clients: three display slots on the front face, a click swapping
+  the whole held stack in or out of the column you point at, the stacks
+  shown standing on the shelf and kept across restarts, a comparator
+  reading a bit per filled slot, and the broken shelf dropping what it
+  held. Power one with redstone and it links with powered shelves beside
+  it that face the same way, up to three in a row, and a click on any of
+  the row then swaps its nine slots with your hotbar in one go — the
+  rightmost shelf taking the last three hotbar slots, as vanilla lays it
+  out. Clients before 1.21.9 have no shelf and are sent none of this.
+
+### Fixed
+- **Block entities were mis-typed for every client but 1.21.11.** The
+  block-entity type numbers in chunk data and block-entity updates follow
+  1.21.11's registry; 1.21.5–1.21.8 clients received every type after
+  the shelf (suspicious sand and gravel, decorated pots, crafters, trial
+  spawners, vaults) one too high, and 26.2 clients — where beds lost their
+  block entity — received everything from conduits on one too high
+  (campfires, beehives, sculk blocks, chiseled bookshelves, pots, vaults
+  and more). The translation chain now renumbers both, drops the entries a
+  client has no type for, and swallows updates for them.
+
 ## 2026-09-07
 
 ### Changed

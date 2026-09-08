@@ -48,19 +48,20 @@ type savedItem struct {
 }
 
 type containerFile struct {
-	Furnaces  map[string]savedFurnace   `json:"furnaces,omitempty"`
-	Chests    map[string][]containerRow `json:"chests,omitempty"`   // (slot + the stack pack) — sparse; old shorter rows zero-fill
-	Bins      map[string]savedBin       `json:"bins,omitempty"`     // dispenser/dropper/hopper
-	Items     []savedItem               `json:"items,omitempty"`    // dropped item entities
-	Vehicles  []savedVehicle            `json:"vehicles,omitempty"` // boats and minecarts (2026-09-06)
-	Paintings []savedPainting           `json:"paintings,omitempty"`
-	Frames    []savedFrame              `json:"frames,omitempty"`
-	Jukeboxes map[string]stackRow       `json:"jukeboxes,omitempty"`
-	Beacons   map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
-	Stands    []savedStand              `json:"stands,omitempty"`  // placed armor stands
-	Lecterns  map[string]savedLectern   `json:"lecterns,omitempty"`
-	Shelves   map[string][6]stackRow    `json:"shelves,omitempty"`    // chiseled bookshelves
-	ShelfLast map[string]int            `json:"shelf_last,omitempty"` // …and each one's last-touched slot (comparator)
+	Furnaces    map[string]savedFurnace   `json:"furnaces,omitempty"`
+	Chests      map[string][]containerRow `json:"chests,omitempty"`   // (slot + the stack pack) — sparse; old shorter rows zero-fill
+	Bins        map[string]savedBin       `json:"bins,omitempty"`     // dispenser/dropper/hopper
+	Items       []savedItem               `json:"items,omitempty"`    // dropped item entities
+	Vehicles    []savedVehicle            `json:"vehicles,omitempty"` // boats and minecarts (2026-09-06)
+	Paintings   []savedPainting           `json:"paintings,omitempty"`
+	Frames      []savedFrame              `json:"frames,omitempty"`
+	Jukeboxes   map[string]stackRow       `json:"jukeboxes,omitempty"`
+	Beacons     map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
+	Stands      []savedStand              `json:"stands,omitempty"`  // placed armor stands
+	Lecterns    map[string]savedLectern   `json:"lecterns,omitempty"`
+	Shelves     map[string][6]stackRow    `json:"shelves,omitempty"`      // chiseled bookshelves
+	ShelfLast   map[string]int            `json:"shelf_last,omitempty"`   // …and each one's last-touched slot (comparator)
+	WoodShelves map[string][3]stackRow    `json:"wood_shelves,omitempty"` // 1.21.9 shelves: three display slots
 	// Shulker-box contents riding a dropped or stored item, keyed by boxID.
 	Boxes map[string][]containerRow `json:"boxes,omitempty"`
 	// The next boxID to mint, so ids stay unique across restarts.
@@ -912,5 +913,35 @@ func (s *containerStore) loadBundles() *bundleStore {
 		out.items[int32(id)] = items
 	}
 	out.lastID = s.m.NextBundleID
+	return out
+}
+
+// recordWoodShelves / loadWoodShelves persist the wooden shelves.
+func (s *containerStore) recordWoodShelves(m map[simPos]*[3]invStack) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.WoodShelves = map[string][3]stackRow{}
+	for pos, sh := range m {
+		var rows [3]stackRow
+		for i, st := range sh {
+			rows[i] = packStack(st)
+		}
+		s.m.WoodShelves[simKey(pos)] = rows
+	}
+}
+
+func (s *containerStore) loadWoodShelves() map[simPos]*[3]invStack {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[simPos]*[3]invStack{}
+	for k, rows := range s.m.WoodShelves {
+		if pos, ok := parseSimKey(k); ok {
+			var sh [3]invStack
+			for i, r := range rows {
+				sh[i] = unpackStack(r)
+			}
+			out[pos] = &sh
+		}
+	}
 	return out
 }

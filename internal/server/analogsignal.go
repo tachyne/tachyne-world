@@ -32,6 +32,17 @@ func (h *hub) analogSignal(pos simPos) int {
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}
+	if isWoodShelf(st) { // ShelfBlock: a bit per filled slot (read from behind in vanilla)
+		sig := 0
+		if sh := h.woodShelves[pos]; sh != nil {
+			for i, s := range sh {
+				if s.item != 0 && s.count > 0 {
+					sig |= 1 << i
+				}
+			}
+		}
+		return sig
+	}
 	if isBookshelf(st) { // ChiseledBookShelfBlock: last interacted slot + 1 (0 = never)
 		if slot, ok := h.shelfLast[pos]; ok {
 			return slot + 1

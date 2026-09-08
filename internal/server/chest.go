@@ -194,6 +194,9 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 			}
 		}
 	}
+	if !isWoodShelf(newState) {
+		h.spillWoodShelf(players, pos)
+	}
 	if !isChestBlock(newState) && !isBarrel(newState) {
 		// A removed chest half releases its partner back to a single chest.
 		h.unpairChestNeighbors(players, dim, x, y, z)

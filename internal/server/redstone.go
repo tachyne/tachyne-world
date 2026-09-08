@@ -285,6 +285,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		h.updateBinTrigger(players, simPos{blockPos: pos}, state)
 	case isHopper(state):
 		h.updateHopper(players, simPos{blockPos: pos}, state)
+	case isWoodShelf(state):
+		h.updateShelfPower(players, 0, pos, state)
 	case isAnyRail(state):
 		h.updateRail(players, pos, state)
 	case isPortalBlock(state):
