@@ -168,7 +168,7 @@ func TestBusEventBridge(t *testing.T) {
 	pcancel := func(e *plugin.PlayerChatEvent) { e.SetCancelled(true) }
 	off := plugin.On(h.plugins, plugin.Normal, false, pcancel)
 	h.post(evChat{from: p1, text: "silenced"})
-	h.runOnHub(func() {}) // barrier: the chat event was processed
+	hubBarrier(h) // barrier: the chat event was processed (event order, no timeout)
 	if _, ok := rec.get("player_chat"); ok {
 		t.Fatal("cancelled chat leaked onto the bus")
 	}
@@ -231,4 +231,14 @@ func (b *recordingBus) get(topic string) ([]byte, bool) {
 func jsonInt(v int32) string {
 	raw, _ := json.Marshal(v)
 	return string(raw)
+}
+
+// hubBarrier returns once the hub has drained every event posted before it.
+// runOnHub gives up after a timeout when the events channel is full — under
+// a loaded CI runner that let a cancelled chat be processed AFTER the test
+// had unregistered its cancel handler.
+func hubBarrier(h *hub) {
+	done := make(chan struct{})
+	h.post(evRunOnHub{fn: func() { close(done) }})
+	<-done
 }
