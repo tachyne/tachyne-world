@@ -244,7 +244,7 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 			return &t.inv.slots[slot-n-27], int(slot - n - 27)
 		}
 		return nil, -1
-	case winCrafter: // crafter_3x3: 0-8 grid, 9 result (server-owned), 10-36 main, 37-45 hotbar
+	case winCrafter: // crafter_3x3: 0-8 grid, 9-35 main, 36-44 hotbar, 45 result (server-owned)
 		c := h.bins[t.winPos]
 		if c == nil {
 			return nil, -1
@@ -252,12 +252,12 @@ func (h *hub) winSlotPtr(t *tracked, slot int16) (*invStack, int) {
 		switch {
 		case slot >= 0 && slot <= 8:
 			return &c.slots[slot], -1
-		case slot >= 10 && slot <= 36:
-			return &t.inv.slots[slot-1], -1
-		case slot >= 37 && slot <= 45:
-			return &t.inv.slots[slot-37], int(slot - 37)
+		case slot >= 9 && slot <= 35:
+			return &t.inv.slots[slot], -1
+		case slot >= 36 && slot <= 44:
+			return &t.inv.slots[slot-36], int(slot - 36)
 		}
-		return nil, -1 // slot 9 = the non-interactive result preview
+		return nil, -1 // slot 45 = the non-interactive result preview
 	case winTrade: // same 3-slot shape as the anvil
 		switch {
 		case slot >= 0 && slot <= 1:

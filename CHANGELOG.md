@@ -68,6 +68,13 @@ the public history since the project was open-sourced on 2026-07-10.
   declares the climate property for the three types at spawn and sends
   each animal's value with it, the way Geyser does.
 
+### Fixed
+- **Crafter menu slot order.** The crafter window listed its result
+  preview right after the grid, where vanilla's menu puts the first
+  inventory slot; the result now sits last (slot 45) as in vanilla, so
+  Java clients see the inventory in the right slots and clicks land on
+  the items they show.
+
 ## 2026-09-08
 
 ### Added

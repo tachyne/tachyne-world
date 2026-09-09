@@ -157,21 +157,26 @@ func crafterResult(c *bin) invStack {
 	return invStack{item: item, count: count}
 }
 
-// sendCrafterWindow refreshes the whole crafter window: 9 grid slots, the
-// result preview (slot 9), then main inventory + hotbar.
+// crafterResultSlot is the menu index of the result preview: vanilla's
+// CrafterMenu adds the 3×3 grid (0-8), the standard inventory (9-35) and
+// hotbar (36-44), then the NonInteractiveResultSlot last.
+const crafterResultSlot = 45
+
+// sendCrafterWindow refreshes the whole crafter window: 9 grid slots, main
+// inventory + hotbar, then the result preview (slot 45).
 func (h *hub) sendCrafterWindow(t *tracked, c *bin) {
 	t.inv.stateId++
 	slots := make([]attachproto.ItemStack, 0, 46)
 	for i := 0; i < 9; i++ {
 		slots = append(slots, stackEv(c.slots[i]))
 	}
-	slots = append(slots, stackEv(crafterResult(c))) // slot 9: result preview
 	for i := 9; i <= 35; i++ {
 		slots = append(slots, stackEv(t.inv.slots[i]))
 	}
 	for i := 0; i <= 8; i++ {
 		slots = append(slots, stackEv(t.inv.slots[i]))
 	}
+	slots = append(slots, stackEv(crafterResult(c))) // slot 45: result preview
 	t.p.trySendEv(attachproto.WindowItems{ID: int32(t.winID), StateID: t.inv.stateId,
 		Slots: slots, Cursor: stackEv(t.cursor)})
 }
@@ -199,7 +204,7 @@ func (h *hub) refreshCrafterResult(players map[int32]*tracked, pos simPos) {
 	res := crafterResult(c)
 	for _, t := range players {
 		if t.winKind == winCrafter && t.winPos == pos {
-			h.sendWinSlot(t, 9, res)
+			h.sendWinSlot(t, crafterResultSlot, res)
 		}
 	}
 }
