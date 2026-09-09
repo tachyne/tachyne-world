@@ -34,6 +34,7 @@ func TestPistonQuasiConnectivity(t *testing.T) {
 		if !boolProp(w.At(p.x, p.y, p.z), "extended") {
 			t.Fatal("piston did not extend via quasi-connectivity")
 		}
+		stepTicks(h, h.playersRef, movingPistonTicks) // the head slides out over two ticks
 		if !isPistonHead(w.At(1, 70, 0)) {
 			t.Error("piston head not placed in front after QC extend")
 		}

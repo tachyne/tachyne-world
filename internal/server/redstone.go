@@ -281,6 +281,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		h.updateDaylight(players, pos, state)
 	case isPistonBase(state):
 		h.updatePiston(players, pos, state)
+	case isMovingPiston(state):
+		h.finishMoving(players, pos)
 	case isDispenser(state) || isDropper(state):
 		h.updateBinTrigger(players, simPos{blockPos: pos}, state)
 	case isHopper(state):

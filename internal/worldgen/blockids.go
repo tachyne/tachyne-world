@@ -1,5 +1,10 @@
 package worldgen
 
+import (
+	"sort"
+	"sync"
+)
+
 // Exported block name → state-id lookups, so the server package can name blocks
 // instead of hard-coding numeric state ids that churn every Minecraft version.
 // (blockBase/blockID themselves are generated in blockids_gen.go.)
@@ -37,4 +42,48 @@ func BlockRange(name string) (lo, hi uint32) {
 func BlockRegistryID(name string) (uint32, bool) {
 	id, ok := blockRegistryID[name]
 	return id, ok
+}
+
+// stateRanges is the reverse of blockStateBase: every block's [Min, Max]
+// state range with its name, sorted by Min, for StateName's lookup.
+var (
+	stateRanges     []stateRange
+	stateRangesOnce sync.Once
+)
+
+type stateRange struct {
+	lo, hi uint32
+	name   string
+}
+
+func buildStateRanges() {
+	stateRanges = make([]stateRange, 0, len(blockStateBase))
+	for name, lo := range blockStateBase {
+		stateRanges = append(stateRanges, stateRange{lo, blockStateMax[name], name})
+	}
+	sort.Slice(stateRanges, func(i, j int) bool { return stateRanges[i].lo < stateRanges[j].lo })
+}
+
+// StateName returns the block name (no namespace) owning a state id.
+func StateName(state uint32) (string, bool) {
+	stateRangesOnce.Do(buildStateRanges)
+	i := sort.Search(len(stateRanges), func(i int) bool { return stateRanges[i].hi >= state })
+	if i < len(stateRanges) && stateRanges[i].lo <= state && state <= stateRanges[i].hi {
+		return stateRanges[i].name, true
+	}
+	return "", false
+}
+
+// StateProps returns a state's property values by name (nil when the block
+// has no properties).
+func StateProps(state uint32) map[string]string {
+	info, ok := InfoForState(state)
+	if !ok || len(info.Props) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(info.Props))
+	for _, p := range info.Props {
+		out[p.Name] = GetProperty(info, state, p.Name)
+	}
+	return out
 }

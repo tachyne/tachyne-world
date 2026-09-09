@@ -55,6 +55,13 @@ the public history since the project was open-sourced on 2026-07-10.
   portals, mineshafts, and the Nether's fortresses, bastions and portals
   and the End's cities — within a hundred chunks, answered in vanilla's
   words with the distance.
+- **Pistons animate.** A piston no longer teleports what it moves: each
+  cell a block is heading for holds a moving_piston for two ticks carrying
+  the block, the piston's facing and its direction, and the client draws
+  the block sliding into place before the real block lands — the head
+  sliding out on extension, the base drawing it back on retraction, and a
+  sticky piston catching a block still on its way. Java clients see
+  vanilla's animation; Bedrock lays the carried block down at once.
 - **Bedrock: warm and cold farm animals.** Pigs, cows and chickens now
   show their warm and cold looks on Bedrock too. Bedrock keeps the
   variant as an entity property rather than entity data, so the gateway

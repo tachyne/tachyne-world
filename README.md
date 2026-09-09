@@ -289,7 +289,8 @@ multi-pod plan).
   change), pressure plates (entity occupancy scanned every tick; weighted
   plates count standers) and daylight detectors (track the sun, invertible)
 - Pistons + sticky pistons: push up to 12 blocks, crush fragile ones, sticky
-  retraction pulls; obsidian/bedrock/containers are immovable
+  retraction pulls; obsidian/bedrock/containers are immovable; moved blocks
+  and the head slide over two ticks as vanilla's moving_piston cells do
 - Dispensers (shoot arrows, prime TNT, pour buckets), droppers, and hoppers
   (pull from the container above, vacuum dropped items, push into the
   container they face — furnaces take input from above, fuel from the side;

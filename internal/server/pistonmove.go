@@ -255,44 +255,45 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 	for i, p := range r.toPush {
 		states[i] = h.world.At(p.x, p.y, p.z)
 	}
-	dest := make(map[blockPos]bool, len(r.toPush))
-	for _, p := range r.toPush {
-		dest[stepPos(p, r.push, 1)] = true
+	dest := make(map[blockPos]uint32, len(r.toPush)+1)
+	for i, p := range r.toPush {
+		dest[stepPos(p, r.push, 1)] = states[i]
 	}
 	for _, p := range r.toPush {
-		if !dest[p] {
+		if _, isDest := dest[p]; !isDest {
 			h.setBlock(players, p, worldgen.Air)
 		}
 	}
+	// Each destination holds a moving_piston carrying its block for two
+	// ticks (PistonBaseBlock.moveBlocks: MOVING_PISTON facing the piston's
+	// way, the head marked as the source), then the block lands.
+	base := h.world.At(pos.x, pos.y, pos.z)
+	moving := movingPistonState(dir, false)
 	for i := len(r.toPush) - 1; i >= 0; i-- {
-		h.setBlock(players, stepPos(r.toPush[i], r.push, 1), states[i])
+		h.placeMoving(players, stepPos(r.toPush[i], r.push, 1), moving,
+			movingBlock{moved: states[i], facing: dir, extending: extending})
 	}
 	if extending {
-		h.setBlock(players, front, headFor(h.world.At(pos.x, pos.y, pos.z)))
+		head := headFor(base)
+		dest[front] = head
+		h.placeMoving(players, front, movingPistonState(dir, isSticky(base)),
+			movingBlock{moved: head, facing: dir, extending: true, source: true})
 	}
 	for _, p := range r.toPush {
 		h.scheduleAround(p, 1)
-		h.scheduleAround(stepPos(p, r.push, 1), 1)
 	}
-	h.shoveOutOfBlocks(players, r.toPush, r.push, extending, front)
+	h.shoveOutOfBlocks(players, dest, r.push)
 	return true
 }
 
 // shoveOutOfBlocks carries whoever stands where a block just arrived: a
 // player or mob whose feet are now inside a moved block (or the new head)
 // is pushed one cell along the move, as vanilla's moving piston does.
-func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, moved []blockPos, dir [3]int, extending bool, front blockPos) {
-	arrived := map[blockPos]bool{}
-	for _, p := range moved {
-		arrived[stepPos(p, dir, 1)] = true
-	}
-	if extending {
-		arrived[front] = true
-	}
+func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]uint32, dir [3]int) {
 	inside := func(x, y, z float64) (blockPos, bool) {
 		for _, dy := range []float64{0.05, 1.0} {
 			p := blockPos{int(math.Floor(x)), int(math.Floor(y + dy)), int(math.Floor(z))}
-			if arrived[p] && worldgen.Collides(h.world.At(p.x, p.y, p.z)) {
+			if st, ok := arrived[p]; ok && worldgen.Collides(st) {
 				return p, true
 			}
 		}

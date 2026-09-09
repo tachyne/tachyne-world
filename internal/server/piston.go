@@ -9,9 +9,9 @@ import (
 // sticky piston pulls the structure back. The structure is vanilla's
 // (PistonStructureResolver, pistonmove.go): the straight line ahead plus
 // whatever slime and honey blocks in it stick to, up to 12 blocks, with the
-// push reactions of pistonreact.go. Block movement is still instant — there
-// is no moving_piston animation block — but anything standing where a block
-// arrives is shoved along with it.
+// push reactions of pistonreact.go. Moved blocks travel as moving_piston
+// cells for two ticks (movingpiston.go), and anything standing where a
+// block arrives is shoved along with it.
 
 const (
 	pistonMaxPush = 12
@@ -98,16 +98,26 @@ func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint3
 	h.scheduleSignalAround(pos)
 }
 
-// retractPiston removes the head; a sticky piston first tries to pull the
-// structure beyond it back (PistonBaseBlock.triggerEvent, retract branch).
+// retractPiston pulls the head back into the base (the base itself is a
+// moving cell for two ticks, carrying the retracted piston); a sticky
+// piston first tries to pull the structure beyond it back, or catches a
+// block still sliding toward it (PistonBaseBlock.triggerEvent, retract
+// branch).
 func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint32, dir [3]int) {
 	head := blockPos{pos.x + dir[0], pos.y + dir[1], pos.z + dir[2]}
+	h.finalTickMoving(players, head) // a head still extending lands first
+	h.placeMoving(players, pos, movingPistonState(dir, isSticky(state)),
+		movingBlock{moved: setBoolProp(state, "extended", false), facing: dir, source: true})
 	pulled := false
 	if isSticky(state) {
 		beyond := blockPos{head.x + dir[0], head.y + dir[1], head.z + dir[2]}
+		if mb, ok := h.movingBlocks[beyond]; ok && mb.facing == dir && mb.extending {
+			h.finalTickMoving(players, beyond) // caught mid-push: it lands where it is
+			pulled = true
+		}
 		s := h.world.At(beyond.x, beyond.y, beyond.z)
 		back := [3]int{-dir[0], -dir[1], -dir[2]}
-		if s != worldgen.Air && h.pistonPushable(s, beyond.y, back, false, dir) &&
+		if !pulled && s != worldgen.Air && h.pistonPushable(s, beyond.y, back, false, dir) &&
 			(pushReactionOf(s) == pushNormal || isPistonBase(s)) {
 			pulled = h.movePistonBlocks(players, pos, dir, false)
 		}
@@ -115,7 +125,6 @@ func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint
 	if !pulled && isPistonHead(h.world.At(head.x, head.y, head.z)) {
 		h.setBlock(players, head, worldgen.Air)
 	}
-	h.setBlock(players, pos, setBoolProp(state, "extended", false))
 	h.playSound(players, "minecraft:block.piston.contract", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
 	h.scheduleSignalAround(pos)
