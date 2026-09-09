@@ -34,7 +34,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder"
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate"
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
 		}
@@ -63,6 +63,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdTime(p, fields[1:])
 	case "tp", "teleport":
 		s.cmdTeleport(p, fields[1:])
+	case "locate":
+		s.cmdLocate(p, fields[1:])
 	case "whitelist":
 		s.cmdWhitelist(p, fields[1:])
 	case "ban":

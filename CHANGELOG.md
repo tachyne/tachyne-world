@@ -48,6 +48,13 @@ the public history since the project was open-sourced on 2026-07-10.
   and brush from the desert-pyramid archaeology table. The temple faces
   a random direction and settles on the lowest ground under its
   footprint, as vanilla's does.
+- **`/locate structure`.** Operators can ask for the nearest site of any
+  generated structure — villages, temples, igloos, outposts, mansions,
+  monuments, ancient cities, trial chambers, strongholds, shipwrecks,
+  buried treasure, ocean ruins (warm or cold), trail ruins, ruined
+  portals, mineshafts, and the Nether's fortresses, bastions and portals
+  and the End's cities — within a hundred chunks, answered in vanilla's
+  words with the distance.
 
 ## 2026-09-08
 

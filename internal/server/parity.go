@@ -24,7 +24,7 @@ const (
 // input; execution still validates ops and arguments server-side.
 var commandNames = []string{
 	"ban", "clear", "difficulty", "effect", "end", "gamemode", "gamerule",
-	"give", "gm", "help", "hud", "kick", "kill", "list", "msg", "nether",
+	"give", "gm", "help", "hud", "kick", "kill", "list", "locate", "msg", "nether",
 	"pardon", "particle", "playsound", "plugin", "refresh", "rescue", "say",
 	"scoreboard", "spawnpoint", "summon", "team", "teleport", "tell", "time",
 	"tp", "w", "weather", "where", "whitelist", "worldborder", "xp",

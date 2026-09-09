@@ -407,7 +407,7 @@ multi-pod plan).
   cheats revert), and chunk streaming follows only the validated position;
   suffocation damage backs it all up
 - Chat + commands: `/scoreboard /team /give /kill /xp /summon /effect /weather /difficulty
-  /gamerule /time /tp /gamemode /list /say` — with client-side tab-completion
+  /gamerule /time /tp /gamemode /list /say /locate` — with client-side tab-completion
   (the brigadier command tree is sent on join); difficulty scales mob damage
   (peaceful clears hostiles), and 28 gamerules — under vanilla's snake_case
   names, with the legacy camelCase spellings still accepted — persist in
