@@ -32,6 +32,15 @@ def _mansion_names():
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/woodland_mansion/" in n and n.endswith(".nbt"))
 MANSION = _mansion_names()
+def _jar_names(prefix):
+    jar=_os.path.expanduser("~/vanilla/server-1.21.11.jar")
+    z=_zf.ZipFile(jar); inner=[n for n in z.namelist() if n.endswith("server-1.21.11.jar") and "versions" in n]
+    zz=_zf.ZipFile(_io.BytesIO(z.read(inner[0]))) if inner else z
+    return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
+                  if "/structure/" + prefix in n and n.endswith(".nbt"))
+# Ocean ruins: 8 warm + 8 each of brick/cracked/mossy small pieces, 4 big of
+# each (OceanRuinPieces picks by biome temperature; the engine's oceanruin.go).
+UNDERWATER_RUIN = _jar_names("underwater_ruin/")
 END_CITY = ["end_city/" + n for n in (
     "base_floor", "base_roof", "bridge_end", "bridge_gentle_stairs", "bridge_piece", "bridge_steep_stairs",
     "fat_tower_base", "fat_tower_middle", "fat_tower_top", "second_floor_1", "second_floor_2", "second_roof",
@@ -40,14 +49,14 @@ TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-] + SHIPWRECK + RUINED_PORTAL + MANSION + END_CITY
+] + SHIPWRECK + RUINED_PORTAL + MANSION + END_CITY + UNDERWATER_RUIN
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).
 MOB_MARKER = {"Mage": 0, "Warrior": 1, "Group of Allays": 2}
 # End city DATA markers → entities the server seeds ("Sentry" = a shulker,
 # "Elytra" = the ship's item frame holding an elytra); baked into "mobs".
-ENTITY_MARKER = {"Sentry": "shulker", "Elytra": "elytra_frame"}
+ENTITY_MARKER = {"Sentry": "shulker", "Elytra": "elytra_frame", "drowned": "drowned"}
 MARKER_LOOT = {
     "supply_chest": "chests/shipwreck_supply",
     "map_chest": "chests/shipwreck_map",
@@ -140,10 +149,13 @@ def bake(inner, name):
     # (vanilla handleDataMarker on blockPos.below): "supply_chest"/"map_chest"/
     # "treasure_chest" → the shipwreck tables.
     markers = {}
+    real_chests = set()
     for b in d["blocks"]:
         nbt = b.get("nbt")
         if nbt and nbt.get("id") == "minecraft:structure_block" and nbt.get("metadata"):
             markers[tuple(b["pos"])] = nbt["metadata"]
+        if nbt and nbt.get("id") == "minecraft:chest":
+            real_chests.add(tuple(b["pos"]))
     blocks = []
     chests = []
     chestloot = []
@@ -183,6 +195,13 @@ def bake(inner, name):
             # position (vanilla handleDataMarker), with the mansion loot table.
             chests.append([x, y, z])
             chestloot.append(MARKER_LOOT.get(nbt["metadata"], "chests/woodland_mansion"))
+        elif bid == "minecraft:structure_block" and nbt.get("metadata", "") == "chest" \
+                and (x, y - 1, z) not in real_chests:
+            # Ocean ruins: a "chest" DATA marker becomes a chest at its own
+            # position; big/small loot is the piece's call (assigned by code).
+            # (The igloo's "chest" marker sits over a real chest — leave it.)
+            chests.append([x, y, z])
+            chestloot.append("")
         elif bid == "minecraft:structure_block" and nbt.get("metadata", "") in MOB_MARKER:
             # Woodland mansion illager markers: the server seeds the mob here.
             mobspawns.append([x, y, z, MOB_MARKER[nbt["metadata"]]])

@@ -577,6 +577,7 @@ type hub struct {
 	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
 	bastionDone   map[[2]int32]bool   // bastion remnants seeded with piglins/hoglins (persisted)
 	endCityDone   map[[2]int32]bool   // End cities seeded with shulkers + the elytra frame (persisted)
+	oceanRuinDone map[[2]int32]bool   // ocean ruin sites seeded with their drowned (persisted)
 	outpostDone   map[blockPos]bool   // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
@@ -730,22 +731,23 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:  map[blockPos]bool{},
-		spawnerNext:  map[blockPos]uint64{},
-		raids:        map[blockPos]*raid{},
-		brewProg:     map[simPos]int{},
-		brewFuel:     map[simPos]int{},
-		portalLinks:  map[dimPos]dimPos{},
-		bossSeen:     map[[2]int32]bool{},
-		openDoors:    map[blockPos]uint64{},
-		crystals:     map[int32]*crystal{},
-		villageDone:  map[blockPos]bool{},
-		villageGolem: map[blockPos]uint64{},
-		mansionDone:  map[[2]int32]bool{},
-		bastionDone:  map[[2]int32]bool{},
-		endCityDone:  map[[2]int32]bool{},
-		outpostDone:  map[blockPos]bool{},
-		rods:         map[blockPos]struct{}{},
+		detectorsOn:   map[blockPos]bool{},
+		spawnerNext:   map[blockPos]uint64{},
+		raids:         map[blockPos]*raid{},
+		brewProg:      map[simPos]int{},
+		brewFuel:      map[simPos]int{},
+		portalLinks:   map[dimPos]dimPos{},
+		bossSeen:      map[[2]int32]bool{},
+		openDoors:     map[blockPos]uint64{},
+		crystals:      map[int32]*crystal{},
+		villageDone:   map[blockPos]bool{},
+		villageGolem:  map[blockPos]uint64{},
+		mansionDone:   map[[2]int32]bool{},
+		bastionDone:   map[[2]int32]bool{},
+		endCityDone:   map[[2]int32]bool{},
+		oceanRuinDone: map[[2]int32]bool{},
+		outpostDone:   map[blockPos]bool{},
+		rods:          map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
 		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
@@ -1044,6 +1046,7 @@ func (h *hub) run() {
 				h.populateMansions(players)    // seed illagers when a player reaches a woodland mansion
 				h.populateBastions(players)    // seed piglins/hoglins when a player reaches a bastion
 				h.populateEndCities(players)   // seed shulkers + the elytra frame when a player reaches an End city
+				h.populateOceanRuins(players)  // seed the drowned when a player reaches an ocean ruin
 			}
 			h.updateVehicles(players)
 			h.updateItemSpawners(players)
@@ -1137,6 +1140,7 @@ func (h *hub) run() {
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordEndCities(h.endCityDone)
+					h.mobstore.recordOceanRuins(h.oceanRuinDone)
 					h.mobstore.recordRaids(h.raids)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
@@ -1999,6 +2003,7 @@ func (h *hub) run() {
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordEndCities(h.endCityDone)
+					h.mobstore.recordOceanRuins(h.oceanRuinDone)
 					h.mobstore.recordRaids(h.raids)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)

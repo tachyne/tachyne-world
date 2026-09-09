@@ -11,6 +11,25 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-09
+
+### Added
+- **Ocean ruins.** The 48 vanilla underwater-ruin templates now generate
+  on the sea floor, placed as vanilla places them: one site per twenty
+  chunks of ocean, sandstone pieces in warm and lukewarm water and
+  stone-brick pieces elsewhere (a cracked and a mossy copy of the same
+  piece laid over the brick one at falling integrity, which is what gives
+  a cold ruin its mottled walls), a large ruin three times in ten that
+  usually brings a cluster of four to eight small ruins round it, the
+  vanilla decay leaving gaps in the masonry, and a piece standing on the
+  ocean floor sinking to the lowest ground under it on a slope. Each piece
+  keeps its loot chest (the big and small underwater-ruin tables), seeds
+  the drowned its template marks when a player first arrives (persistent,
+  and a cleared site stays cleared across restarts), and turns up to five
+  of its sand or gravel blocks suspicious, brushing from the real warm and
+  cold ocean-ruin archaeology tables. A fed dolphin now swims for
+  whichever of the nearest shipwreck or ocean ruin is closer.
+
 ## 2026-09-08
 
 ### Added

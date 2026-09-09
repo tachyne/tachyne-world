@@ -425,6 +425,9 @@ func (s *Server) Serve() error {
 		for _, c := range s.hub.mobstore.endCities() {
 			s.hub.endCityDone[[2]int32{int32(c[0]), int32(c[1])}] = true // looted cities stay looted
 		}
+		for _, r := range s.hub.mobstore.oceanRuins() {
+			s.hub.oceanRuinDone[[2]int32{int32(r[0]), int32(r[1])}] = true // cleared ruins stay cleared
+		}
 		s.hub.restoreRaids(s.hub.mobstore.raids()) // raids in progress pick up mid-wave
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.

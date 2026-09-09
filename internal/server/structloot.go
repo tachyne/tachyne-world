@@ -116,6 +116,15 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if r := g.OceanRuinsIn(pos.x, pos.z); r.Exists {
+		for _, p := range r.Pieces {
+			for _, c := range p.Chests {
+				if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+					return c.Table, true
+				}
+			}
+		}
+	}
 	if b := g.BuriedTreasureIn(pos.x, pos.z); b.Exists && pos.x == b.X && pos.y == b.Y && pos.z == b.Z {
 		return "chests/buried_treasure", true
 	}

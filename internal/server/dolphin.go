@@ -35,7 +35,7 @@ func (h *hub) tryFeedDolphin(players map[int32]*tracked, t *tracked, m *mob) boo
 	if m.baby {
 		return true // a calf just eats
 	}
-	if x, z, ok := h.worldFor(m.dim).Gen().NearestShipwreck(int(m.x), int(m.z), dolphinTreasureRadius); ok && m.dim == 0 {
+	if x, z, ok := h.worldFor(m.dim).Gen().NearestDolphinTreasure(int(m.x), int(m.z), dolphinTreasureRadius); ok && m.dim == 0 {
 		m.gotFish, m.treasureX, m.treasureZ = true, x, z
 		h.playSoundDim(players, m.dim, "minecraft:entity.dolphin.play", sndNeutral, m.x, m.y, m.z, 1, 1)
 	}

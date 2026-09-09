@@ -89,6 +89,19 @@ func (h *hub) brushLootTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if r := g.OceanRuinsIn(pos.x, pos.z); r.Exists {
+		table := "archaeology/ocean_ruin_cold"
+		if r.Warm {
+			table = "archaeology/ocean_ruin_warm"
+		}
+		for _, p := range r.Pieces {
+			for _, s := range p.Sus {
+				if pos.x == s[0] && pos.y == s[1] && pos.z == s[2] {
+					return table, true
+				}
+			}
+		}
+	}
 	return "", false
 }
 

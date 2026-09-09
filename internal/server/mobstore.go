@@ -53,6 +53,9 @@ type mobFile struct {
 	// EndCities lists the (x,z) of End cities already seeded with their
 	// shulkers and the ship's elytra.
 	EndCities [][2]int `json:"end_cities,omitempty"`
+	// OceanRuins lists the (x,z) of ocean ruin sites already seeded with
+	// their drowned — a cleared ruin stays cleared.
+	OceanRuins [][2]int `json:"ocean_ruins,omitempty"`
 	// Raids in progress (their raiders are ordinary saved mobs carrying Raid).
 	Raids []savedRaid `json:"raids,omitempty"`
 	// Seeded is the permanent set of chunks that have already received their
@@ -402,6 +405,23 @@ func (s *mobStore) endCities() [][2]int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.EndCities
+}
+
+// recordOceanRuins snapshots the seeded-ocean-ruin set for the next flush.
+func (s *mobStore) recordOceanRuins(done map[[2]int32]bool) {
+	rs := make([][2]int, 0, len(done))
+	for k := range done {
+		rs = append(rs, [2]int{int(k[0]), int(k[1])})
+	}
+	s.mu.Lock()
+	s.m.OceanRuins = rs
+	s.mu.Unlock()
+}
+
+func (s *mobStore) oceanRuins() [][2]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.OceanRuins
 }
 
 // removeNear deletes persisted mobs of the given types within radius r of
