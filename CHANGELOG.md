@@ -55,6 +55,11 @@ the public history since the project was open-sourced on 2026-07-10.
   portals, mineshafts, and the Nether's fortresses, bastions and portals
   and the End's cities — within a hundred chunks, answered in vanilla's
   words with the distance.
+- **Bedrock: warm and cold farm animals.** Pigs, cows and chickens now
+  show their warm and cold looks on Bedrock too. Bedrock keeps the
+  variant as an entity property rather than entity data, so the gateway
+  declares the climate property for the three types at spawn and sends
+  each animal's value with it, the way Geyser does.
 
 ## 2026-09-08
 
