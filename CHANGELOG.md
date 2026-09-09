@@ -29,6 +29,16 @@ the public history since the project was open-sourced on 2026-07-10.
   of its sand or gravel blocks suspicious, brushing from the real warm and
   cold ocean-ruin archaeology tables. A fed dolphin now swims for
   whichever of the nearest shipwreck or ocean ruin is closer.
+- **Trail ruins.** The buried jigsaw structure generates from the real
+  templates in taigas, old-growth birch forest and jungle: the tower start
+  piece fifteen blocks under the surface with halls, roads, buildings and
+  decor attached, the pool processors turning some gravel to dirt and
+  coarse dirt and some mud bricks to packed mud, and vanilla's capped
+  archaeology rules choosing each piece's suspicious gravel — six common
+  and three rare finds in a house, two common in a road or tower top —
+  which brush from the real trail-ruins common and rare tables. Every
+  archaeology loot table vanilla ships now has a structure seeding it
+  except the desert temple's.
 
 ## 2026-09-08
 

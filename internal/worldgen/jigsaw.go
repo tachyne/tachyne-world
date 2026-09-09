@@ -11,9 +11,10 @@ package worldgen
 type PlacedPiece struct {
 	Tmpl            *Template
 	OX, OY, OZ, Rot int
-	Proc            string // processor list the pool applies to this piece ("" = none)
-	SkipAir         bool   // the template's air keeps the world's blocks (vanilla's STRUCTURE_AND_AIR ignore)
-	x1, y1, z1      int    // exclusive max corner (world)
+	Proc            string    // processor list the pool applies to this piece ("" = none)
+	SkipAir         bool      // the template's air keeps the world's blocks (vanilla's STRUCTURE_AND_AIR ignore)
+	Sus             []SusCell // the capped rules' picks (cappedPicks), world coordinates
+	x1, y1, z1      int       // exclusive max corner (world)
 }
 
 var dirDelta = map[string][3]int{
@@ -264,7 +265,14 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 	var chests [][3]int
 	for i := range pieces {
 		p := &pieces[i]
-		chests = append(chests, p.Tmpl.StampTemplateProc(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc], p.SkipAir)...)
+		var sus map[[3]int]uint32
+		if len(p.Sus) > 0 {
+			sus = make(map[[3]int]uint32, len(p.Sus))
+			for _, s := range p.Sus {
+				sus[[3]int{s.X, s.Y, s.Z}] = s.State
+			}
+		}
+		chests = append(chests, p.Tmpl.StampTemplateProcSus(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc], p.SkipAir, sus)...)
 	}
 	return chests
 }

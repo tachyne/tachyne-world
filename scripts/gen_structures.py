@@ -81,6 +81,7 @@ POOL_ROOTS = [
     "ancient_city/city_center",
     "trial_chambers/chamber/end",
     "bastion/starts",
+    "trail_ruins/tower",
 ]
 
 
@@ -300,13 +301,31 @@ def load_processors(inner, name):
     j = json.loads(inner.read("data/minecraft/worldgen/processor_list/%s.json" % name))
     rules = []
     for p in j.get("processors", []):
+        # A capped processor (trail ruins archaeology) wraps a rule processor
+        # and applies it to at most `limit` blocks of the piece, chosen at
+        # random; its rules bake with the cap and the loot table the rule's
+        # block_entity_modifier appends, and the Go side picks per piece.
+        cap = 0
+        if p.get("processor_type") == "minecraft:capped" and \
+                p.get("delegate", {}).get("processor_type") == "minecraft:rule" and \
+                isinstance(p.get("limit"), int):
+            cap = p["limit"]
+            p = p["delegate"]
         if p.get("processor_type") != "minecraft:rule":
             skipped.add("%s: %s" % (name, p.get("processor_type")))
             continue
         for r in p.get("rules", []):
             ip = r["input_predicate"]
             rule = {}
-            if ip["predicate_type"] == "minecraft:random_block_match":
+            if cap:
+                rule["cap"] = cap
+                mod = r.get("block_entity_modifier", {})
+                if mod.get("type") == "minecraft:append_loot":
+                    rule["loot"] = strip_ns(mod["loot_table"])
+            if ip["predicate_type"] == "minecraft:tag_match" and len(block_tag(inner, ip["tag"])) == 1:
+                rule["in"] = strip_ns(block_tag(inner, ip["tag"])[0])
+                rule["p"] = 1.0
+            elif ip["predicate_type"] == "minecraft:random_block_match":
                 rule["in"] = strip_ns(ip["block"])
                 rule["p"] = ip.get("probability", 1.0)
             elif ip["predicate_type"] == "minecraft:block_match":
@@ -335,6 +354,16 @@ def load_processors(inner, name):
                                "max_dist": pp.get("max_dist", 0)}
             rules.append(rule)
     return rules
+
+
+def block_tag(inner, tag):
+    """The blocks a block tag names (one level; enough for the single-block
+    tags the structure processors use)."""
+    try:
+        j = json.loads(inner.read("data/minecraft/tags/block/%s.json" % strip_ns(tag)))
+    except KeyError:
+        return []
+    return [v for v in j.get("values", []) if isinstance(v, str) and not v.startswith("#")]
 
 
 def strip_ns(s):

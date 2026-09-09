@@ -79,6 +79,12 @@ type procRule struct {
 	P   float64      `json:"p"`
 	Out paletteEntry `json:"out"`
 	Pos *procPos     `json:"pos"`
+	// A capped rule (vanilla's CappedProcessor round a rule) fires on at
+	// most Cap blocks of the piece, chosen per piece rather than per
+	// position — see cappedPicks — and appends Loot to what it places
+	// (the trail ruins' suspicious gravel).
+	Cap  int    `json:"cap"`
+	Loot string `json:"loot"`
 	// resolved at init
 	inLo, inHi uint32
 	outState   uint32
@@ -189,6 +195,9 @@ func applyRules(rules []procRule, state uint32, wx, wy, wz, ox, oy, oz int) uint
 	r := &jigsawRNG{s: posSeed(wx, wy, wz)}
 	for i := range rules {
 		rule := &rules[i]
+		if rule.Cap > 0 {
+			continue // decided per piece, not per position
+		}
 		if rule.In != "" && (state < rule.inLo || state > rule.inHi) {
 			continue
 		}
@@ -227,6 +236,12 @@ func applyRules(rules []procRule, state uint32, wx, wy, wz, ox, oy, oz int) uint
 // block as it lands; skipAir leaves the world's blocks where the template
 // has air (vanilla's STRUCTURE_AND_AIR block-ignore).
 func (t *Template) StampTemplateProc(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rules []procRule, skipAir bool) [][3]int {
+	return t.StampTemplateProcSus(ch, cx, cz, ox, oy, oz, rot, rules, skipAir, nil)
+}
+
+// StampTemplateProcSus is StampTemplateProc with the piece's capped-rule
+// picks: cells in sus land as the state the capped rule chose for them.
+func (t *Template) StampTemplateProcSus(ch *Chunk, cx, cz int32, ox, oy, oz, rot int, rules []procRule, skipAir bool, sus map[[3]int]uint32) [][3]int {
 	if len(rules) == 0 && !skipAir {
 		return t.StampTemplate(ch, cx, cz, ox, oy, oz, rot)
 	}
@@ -238,7 +253,13 @@ func (t *Template) StampTemplateProc(ch *Chunk, cx, cz int32, ox, oy, oz, rot in
 		}
 		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], rot)
 		wx, wy, wz := ox+rx, oy+ry, oz+rz
+		if wx-baseX < 0 || wx-baseX >= 16 || wz-baseZ < 0 || wz-baseZ >= 16 {
+			continue
+		}
 		state = applyRules(rules, state, wx, wy, wz, ox, oy, oz)
+		if s, ok := sus[[3]int{wx, wy, wz}]; ok {
+			state = s
+		}
 		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
 	}
 	var chests [][3]int

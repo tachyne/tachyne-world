@@ -89,3 +89,39 @@ func TestOceanRuinSeedsAndLoots(t *testing.T) {
 		t.Error("a cell that is not a ruin chest must not route")
 	}
 }
+
+// Trail-ruins suspicious gravel brushes from the common and rare tables the
+// capped rules appended, and both tables are baked.
+func TestTrailRuinsBrushTables(t *testing.T) {
+	h := newHub(world.New(1))
+	g := h.world.Gen()
+	var site worldgen.TrailRuins
+	for i := -40; i < 40 && !site.Exists; i++ {
+		for j := -40; j < 40 && !site.Exists; j++ {
+			site = g.TrailRuinsIn(i*544+272, j*544+272)
+		}
+	}
+	if !site.Exists {
+		t.Fatal("no trail ruins found")
+	}
+	sus := g.TrailRuinsSus(site)
+	if len(sus) == 0 {
+		t.Fatal("site holds no suspicious gravel")
+	}
+	rare := 0
+	for _, s := range sus {
+		tbl, ok := h.brushLootTable(blockPos{s.X, s.Y, s.Z})
+		if !ok || tbl != s.Table {
+			t.Errorf("cell %d,%d,%d brushes %q (%v), want %q", s.X, s.Y, s.Z, tbl, ok, s.Table)
+		}
+		if _, found := lootForChest(tbl); !found {
+			t.Errorf("archaeology table %q is not baked", tbl)
+		}
+		if tbl == "archaeology/trail_ruins_rare" {
+			rare++
+		}
+	}
+	if rare == 0 {
+		t.Error("a site should hold some rare finds")
+	}
+}
