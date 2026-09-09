@@ -22,12 +22,16 @@ func TestDesertTempleQuery(t *testing.T) {
 		t.Skip("no desert temple within scan range for this seed")
 	}
 	// Deterministic: a second query for the same cell returns the same temple.
-	if q := g.DesertTempleIn(d.X, d.Z); q != d {
+	if q := g.DesertTempleIn(d.X, d.Z); q.X != d.X || q.Y != d.Y || q.Z != d.Z || q.Dir != d.Dir || len(q.Sus) != len(d.Sus) {
 		t.Fatalf("DesertTempleIn not deterministic: %+v vs %+v", q, d)
 	}
 	// Desert-only.
-	if name := g.BiomeName(d.X, d.Z); name != "minecraft:desert" {
+	if name := g.BiomeName(d.X+10, d.Z+10); name != "minecraft:desert" {
 		t.Fatalf("temple sited off-desert: %s", name)
+	}
+	// Five to seven cellar finds plus the collapsed-roof one.
+	if n := len(d.Sus); n < 6 || n > 8 {
+		t.Fatalf("temple seeds %d suspicious sand cells, want 6..8", n)
 	}
 	// Four distinct chest positions.
 	seen := map[[3]int]bool{}

@@ -90,6 +90,33 @@ func TestOceanRuinSeedsAndLoots(t *testing.T) {
 	}
 }
 
+// The desert temple's cellar sand brushes from the desert_pyramid table.
+func TestDesertTempleBrushTable(t *testing.T) {
+	h := newHub(world.New(7))
+	g := h.world.Gen()
+	var d worldgen.DesertTemple
+	for cx := 0; cx < 24000 && !d.Exists; cx += 336 {
+		for cz := 0; cz < 24000 && !d.Exists; cz += 336 {
+			d = g.DesertTempleIn(cx+168, cz+168)
+		}
+	}
+	if !d.Exists {
+		t.Skip("no desert temple in range")
+	}
+	if len(d.Sus) == 0 {
+		t.Fatal("temple seeds no suspicious sand")
+	}
+	for _, s := range d.Sus {
+		tbl, ok := h.brushLootTable(blockPos{s[0], s[1], s[2]})
+		if !ok || tbl != "archaeology/desert_pyramid" {
+			t.Errorf("cell %v brushes %q (%v)", s, tbl, ok)
+		}
+	}
+	if _, found := lootForChest("archaeology/desert_pyramid"); !found {
+		t.Error("desert_pyramid archaeology table is not baked")
+	}
+}
+
 // Trail-ruins suspicious gravel brushes from the common and rare tables the
 // capped rules appended, and both tables are baked.
 func TestTrailRuinsBrushTables(t *testing.T) {

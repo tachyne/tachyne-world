@@ -102,6 +102,13 @@ func (h *hub) brushLootTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if d := g.DesertTempleIn(pos.x, pos.z); d.Exists {
+		for _, s := range d.Sus {
+			if pos.x == s[0] && pos.y == s[1] && pos.z == s[2] {
+				return "archaeology/desert_pyramid", true
+			}
+		}
+	}
 	for _, t := range g.TrailRuinsNear(pos.x, pos.z) {
 		for _, s := range g.TrailRuinsSus(t) {
 			if pos.x == s.X && pos.y == s.Y && pos.z == s.Z && s.Table != "" {

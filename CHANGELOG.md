@@ -37,8 +37,17 @@ the public history since the project was open-sourced on 2026-07-10.
   archaeology rules choosing each piece's suspicious gravel — six common
   and three rare finds in a house, two common in a road or tower top —
   which brush from the real trail-ruins common and rare tables. Every
-  archaeology loot table vanilla ships now has a structure seeding it
-  except the desert temple's.
+  archaeology loot table vanilla ships now has a structure seeding it.
+- **Desert temples are vanilla's.** The hand-built pyramid is replaced by
+  a block-for-block port of the vanilla piece: the stepped sandstone shell
+  with its two corner towers, the orange and blue terracotta motifs, the
+  pillared hall, the treasure well under the centre with its four chests
+  (each facing the pressure plate over the TNT), and the sand-filled
+  cellar under the east side reached by a broken stair, where five to
+  seven of the sand blocks and one in the collapsed roof are suspicious
+  and brush from the desert-pyramid archaeology table. The temple faces
+  a random direction and settles on the lowest ground under its
+  footprint, as vanilla's does.
 
 ## 2026-09-08
 
