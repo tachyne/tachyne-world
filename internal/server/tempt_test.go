@@ -85,3 +85,36 @@ func TestTemptRodsAndFamily(t *testing.T) {
 		t.Error("wolves have no tempt goal")
 	}
 }
+
+// TestScareableTempt: an ocelot creeps up on a still player holding cod at
+// 0.6×, and a step or a turn within six blocks breaks the spell.
+func TestScareableTempt(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	oc := h.spawnAnimal(players, entityOcelot, 0, 0)
+	oc.x, oc.y, oc.z = 0.5, 70, 0.5
+	pl.x, pl.y, pl.z = 4.5, 70, 0.5
+	pl.p.setHotbarSlot(0, itemByName["cod"])
+	pl.inv.slots[0] = invStack{item: itemByName["cod"], count: 1}
+	if !h.temptStep(players, oc) || math.Abs(oc.vx-oc.moveSpeed()*0.6) > 1e-9 {
+		t.Fatalf("the ocelot should creep east at 0.6×: vx=%.4f", oc.vx)
+	}
+	if !h.temptStep(players, oc) {
+		t.Fatal("a still player keeps it coming")
+	}
+	pl.yaw += 10 // a turn of more than five degrees
+	if h.temptStep(players, oc) || oc.tempted || oc.temptCalm != temptCalm {
+		t.Fatal("a turn within six blocks should scare it off")
+	}
+	oc.temptCalm = 0
+	pl.x = 20.5 // out of range: a move there is nothing to it
+	oc.x = 12.5 // …but back in tempt range
+	if !h.temptStep(players, oc) {
+		t.Fatal("far off, the player may move")
+	}
+	pl.x += 1
+	if !h.temptStep(players, oc) {
+		t.Fatal("a step taken beyond six blocks does not scare")
+	}
+}

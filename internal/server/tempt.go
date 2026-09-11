@@ -20,8 +20,7 @@ const (
 )
 
 // temptSpeed is the per-species speed modifier; a species not listed is
-// never tempted (wolves, foxes, parrots, and cats/ocelots, whose scare-able
-// variant is folded into the engine's skittish flee).
+// never tempted (wolves, foxes, parrots).
 var temptSpeed = map[int]float64{
 	entityCow: 1.25, entityMooshroom: 1.25, entitySheep: 1.1, entityPig: 1.2,
 	entityChicken: 1.0, entityRabbit: 1.0, entityPanda: 1.0, entityTurtle: 1.1,
@@ -30,7 +29,13 @@ var temptSpeed = map[int]float64{
 	entityTraderLlama: 1.25, entityStrider: 1.4, entityGoat: 1.25,
 	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5,
 	entitySniffer: 1.25, entityTadpole: 1.25,
+	entityCat: 0.6, entityOcelot: 0.6, // the scare-able creep (CatTemptGoal / OcelotTemptGoal)
 }
+
+// scareable are the species whose TemptGoal has canScare: within six blocks
+// the player must hold still — a step (more than 0.1 of a block) or a turn
+// of more than five degrees breaks the spell.
+var scareable = map[int]bool{entityCat: true, entityOcelot: true}
 
 // temptStopFor is the close-enough distance where the species overrides it.
 func temptStopFor(m *mob) float64 {
@@ -107,6 +112,22 @@ func (h *hub) temptStep(players map[int32]*tracked, m *mob) bool {
 			m.temptCalm = temptCalm // stop(): calmDown before the next temptation
 		}
 		return false
+	}
+	if scareable[m.etype] {
+		// canContinueToUse: close by, the player's slightest move or turn ends
+		// it; farther off, just remember where they are.
+		if m.tempted && dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) < 36 {
+			moved := (t.x-m.temptPX)*(t.x-m.temptPX)+(t.y-m.temptPY)*(t.y-m.temptPY)+(t.z-m.temptPZ)*(t.z-m.temptPZ) > 0.01
+			turned := math.Abs(float64(t.pitch-m.temptPitch)) > 5 || math.Abs(float64(t.yaw-m.temptYaw)) > 5
+			if moved || turned {
+				m.tempted = false
+				m.temptCalm = temptCalm
+				return false
+			}
+		} else {
+			m.temptPX, m.temptPY, m.temptPZ = t.x, t.y, t.z
+		}
+		m.temptYaw, m.temptPitch = t.yaw, t.pitch
 	}
 	m.tempted = true
 	m.rest = 0

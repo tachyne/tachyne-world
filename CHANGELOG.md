@@ -35,7 +35,9 @@ the public history since the project was open-sourced on 2026-07-10.
   two and a half times its walk, an axolotl slow ashore), stops short
   beside you, looks at you, and loses interest for five seconds once the
   food is put away. Panic still wins, and a baby follows the food before
-  its parent, as vanilla's goal order has it.
+  its parent, as vanilla's goal order has it. Wild cats and ocelots creep
+  up on fish the slow way vanilla has them do it, and within six blocks
+  the slightest step or turn sends them off again.
 
 - **Big dripleaves tip.** Stand on a big dripleaf and it turns unstable,
   tips part way half a second later, folds fully half a second after
