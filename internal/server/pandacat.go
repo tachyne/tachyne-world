@@ -8,12 +8,13 @@ package server
 // them at sunrise and, seven times in ten, drops a small present.
 
 const (
-	pandaSneezeOdds   = 6000 // ticks between sneezes, on average
-	pandaSneezeWindup = 20
-	pandaSneezeGift   = 700 // one sneeze in this many drops a slime ball
-	catGiftMinSleep   = 100 // the owner's sleep timer must have reached this
-	catGiftRange      = 16.0
-	catGiftChance     = 0.7
+	pandaSneezeOdds     = 6000 // ticks between sneezes, on average
+	pandaWeakSneezeOdds = 500  // …for a weak cub
+	pandaSneezeWindup   = 20
+	pandaSneezeGift     = 700 // one sneeze in this many drops a slime ball
+	catGiftMinSleep     = 100 // the owner's sleep timer must have reached this
+	catGiftRange        = 16.0
+	catGiftChance       = 0.7
 )
 
 // catGifts is the cat_morning_gift table: weight 10 each, the membrane 2.
@@ -28,8 +29,16 @@ var catGifts = []struct {
 func (h *hub) pandaSneezeTick(players map[int32]*tracked, m *mob) {
 	now := h.tick.Load()
 	if m.sneezeAt == 0 {
-		if h.rng.Intn(pandaSneezeOdds/mobMoveInterval) == 0 {
+		if !h.pandaCanAct(m) {
+			return // PandaSneezeGoal.canUse: canPerformAction
+		}
+		odds := pandaSneezeOdds / mobMoveInterval
+		if pandaTrait(m.variant) == pandaWeak {
+			odds = pandaWeakSneezeOdds / mobMoveInterval // a weak cub sneezes twelve times as often
+		}
+		if h.rng.Intn(odds) == 0 {
 			m.sneezeAt = now + pandaSneezeWindup
+			h.setPandaFlag(players, m, pandaFlagSneeze, true) // the client plays the wind-up
 			h.playSoundDim(players, m.dim, "minecraft:entity.panda.pre_sneeze", sndNeutral, m.x, m.y, m.z, 1, 1)
 		}
 		return
@@ -38,6 +47,7 @@ func (h *hub) pandaSneezeTick(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.sneezeAt = 0
+	h.setPandaFlag(players, m, pandaFlagSneeze, false)
 	h.playSoundDim(players, m.dim, "minecraft:entity.panda.sneeze", sndNeutral, m.x, m.y, m.z, 1, 1)
 	if h.rules.DoMobLoot && h.rng.Intn(pandaSneezeGift) == 0 {
 		h.spawnItemIn(players, m.dim, itemSlimeball, 1, m.x, m.y+0.5, m.z)

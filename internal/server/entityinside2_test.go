@@ -96,3 +96,24 @@ func TestFallingBlockSinksThroughWater(t *testing.T) {
 		t.Fatal("the frogspawn should be gone")
 	}
 }
+
+// TestOpenEyeblossomPoisonsBees: a bee inside an open eyeblossom is poisoned.
+func TestOpenEyeblossomPoisonsBees(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.worldFor(0)
+	w.SetBlock(0, 179, 0, worldgen.GrassBlock)
+	w.SetBlock(0, 180, 0, openEyeblossom)
+	bee := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
+	h.entityInsideTick(players)
+	if bee.hasEffect(effPoison) == 0 {
+		t.Fatal("the bee should be poisoned")
+	}
+	w.SetBlock(0, 180, 0, closedEyeblossom)
+	bee2 := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
+	h.entityInsideTick(players)
+	if bee2.hasEffect(effPoison) != 0 {
+		t.Fatal("a closed eyeblossom does nothing")
+	}
+}

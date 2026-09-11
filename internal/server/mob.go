@@ -185,6 +185,10 @@ type mob struct {
 	dancing                   bool        // allay: a jukebox plays within earshot
 	frogEaten                 int8        // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt                  uint64      // baby panda: the tick its sneeze lands (0 = not sneezing)
+	pandaFlags                byte        // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)
+	rollLeft                  int         // panda: updates left in a roll
+	rollDX, rollDZ            float64     // panda: the roll's heading
+	lieCD                     uint64      // panda: the tick it may lie on its back again
 	offhand                   invStack    // piglin: the gold it is admiring (rendered in the off hand)
 	admireUntil               uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil            uint64      // piglin: no admiring until this tick (hit by a player)
@@ -432,6 +436,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case m.etype == entityPanda && h.pandaStep(players, m):
+			// A panda held by its personality: sitting out a storm, lying
+			// on its back, or tumbling.
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.

@@ -109,5 +109,5 @@ func pandaGeneMeta(b []byte, m *mob) []byte {
 	b = protocol.AppendU8(b, metaIndexPandaHiddenGene)
 	b = protocol.AppendVarInt(b, metaTypeByteFox)
 	b = protocol.AppendU8(b, byte(hidden))
-	return b
+	return pandaFlagsMeta(b, m) // the personality flags ride with the genes
 }

@@ -243,6 +243,10 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 					m.ignite(lavaFireSecs)
 					h.hurtMobOf(nil, m, lavaDmgPerSec, dtLava)
 				}
+			case !onFloor && m.etype == entityBee && s == openEyeblossom && h.rules.Difficulty != diffPeaceful && m.hasEffect(effPoison) == 0:
+				// EyeblossomBlock.entityInside: an open eyeblossom poisons the
+				// bee that visits it (25 ticks), unless it is poisoned already.
+				h.applyMobEffect(h.playersRef, m, effPoison, 0, 2)
 			case !onFloor && m.etype == entityRavager && isCropState(s) && h.rules.MobGriefing:
 				// CropBlock.entityInside: a ravager tramples crops flat.
 				h.breakBlockDrop(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)

@@ -87,6 +87,15 @@ the public history since the project was open-sourced on 2026-07-10.
   pumpkin, one in ten of those a jack o'lantern, and the head never
   drops — vanilla's one calendar rule.
 
+- **Panda personalities.** The genes now change how a panda behaves, not
+  only how it looks: a lazy one lies on its back now and then and gets
+  up in its own time, a worried one sits out thunderstorms and keeps
+  eight blocks from players, a playful one and every cub tumble along
+  their facing — off a ledge for certain, otherwise at vanilla's odds —
+  and a weak cub sneezes twelve times as often. Each state rides the
+  panda's flags byte, so every client plays the animation, sneeze
+  wind-up included.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with
