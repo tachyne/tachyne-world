@@ -53,8 +53,9 @@ type remotePlayer struct {
 	gm      int32 // resume: explicit gamemode from the migration snapshot (< 0 = use modeStore)
 }
 
-func (r *remotePlayer) EID() int32               { return r.p.eid }
-func (r *remotePlayer) Spawn() (x, y, z float64) { return r.x, r.y, r.z }
+func (r *remotePlayer) EID() int32                   { return r.p.eid }
+func (r *remotePlayer) Spawn() (x, y, z float64)     { return r.x, r.y, r.z }
+func (r *remotePlayer) Death() *attachproto.DeathPos { return r.s.deathOf(r.p.name) }
 func (r *remotePlayer) Gamemode() int32 {
 	if r.gm >= 0 {
 		return r.gm

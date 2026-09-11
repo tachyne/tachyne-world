@@ -467,6 +467,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true
+		h.recordDeath(t)             // ServerPlayer.die: the last death location
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
 		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book
@@ -562,7 +563,7 @@ func (h *hub) respawn(t *tracked) {
 	initSurvival(t)
 	sx, sy, sz, sdim := h.respawnPoint(h.playersRef, t)
 	t.x, t.y, t.z = sx, sy, sz
-	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode)})
+	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode), Death: h.deathOf(t.p.name)})
 	t.p.trySendEv(teleportEv(sx, sy, sz, t.yaw, t.pitch))
 	t.p.trySendEv(abilitiesFor(t.gamemode))
 	h.sendHealth(t)

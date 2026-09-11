@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
 	"sync"
 )
@@ -41,6 +42,12 @@ type savedInv struct {
 	Pitch  float32 `json:"pitch,omitempty"`
 	Dim    int32   `json:"dim,omitempty"`
 	HasPos bool    `json:"has_pos,omitempty"`
+
+	// Last death location (ServerPlayer.lastDeathLocation): what the
+	// recovery compass points at. HasDeath false = never died.
+	DeathDim int32    `json:"death_dim,omitempty"`
+	DeathPos [3]int32 `json:"death_pos,omitempty"`
+	HasDeath bool     `json:"has_death,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -147,6 +154,28 @@ func (s *invStore) loadInto(t *tracked, name string) {
 
 // savedPos returns a player's last saved position (ok=false for a new player
 // or a legacy entry without one). Safe to call off the hub goroutine.
+// setDeath records where name last died (the block they were standing in).
+func (s *invStore) setDeath(name string, d attachproto.DeathPos) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sv := s.m[name]
+	if sv == nil {
+		sv = &savedInv{}
+		s.m[name] = sv
+	}
+	sv.DeathDim, sv.DeathPos, sv.HasDeath = d.Dim, [3]int32{d.X, d.Y, d.Z}, true
+}
+
+// death returns name's last death location, nil if they never died.
+func (s *invStore) death(name string) *attachproto.DeathPos {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if sv, has := s.m[name]; has && sv.HasDeath {
+		return &attachproto.DeathPos{Dim: sv.DeathDim, X: sv.DeathPos[0], Y: sv.DeathPos[1], Z: sv.DeathPos[2]}
+	}
+	return nil
+}
+
 func (s *invStore) savedPos(name string) (x, y, z float64, yaw, pitch float32, dim int32, ok bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -164,6 +193,9 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints),
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
+	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
+		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true
+	}
 	for i, st := range t.inv.slots {
 		snap.Slots[i] = packStack(st)
 	}

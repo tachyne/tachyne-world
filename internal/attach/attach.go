@@ -62,6 +62,8 @@ type Remote interface {
 	EID() int32
 	Spawn() (x, y, z float64)
 	Gamemode() int32
+	// Death is the player's last death location (nil = never died).
+	Death() *proto.DeathPos
 	Move(x, y, z float64, yaw, pitch float32, onGround bool)
 	Chat(text string)
 	Command(cmd string)
@@ -217,6 +219,7 @@ func session(c net.Conn, cfg Config) {
 		welcome.EID = remote.EID()
 		welcome.Spawn.X, welcome.Spawn.Y, welcome.Spawn.Z = remote.Spawn()
 		welcome.Gamemode = remote.Gamemode()
+		welcome.Death = remote.Death()
 	}
 	send(frameJSON(proto.MsgWelcome, welcome))
 	preMu.Lock() // flush held frames; concurrent emits block until we're done

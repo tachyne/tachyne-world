@@ -68,7 +68,7 @@ func (s *Server) switchDimension(p *player, dim int) {
 
 	// Respawn into the new dimension (the session renders the respawn packet,
 	// resets its entity view, and re-Wants chunks on the Teleport).
-	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.name))})
+	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.name)), Death: s.deathOf(p.name)})
 	p.x, p.y, p.z = x+0.5, y, z+0.5
 	p.setHubPos(p.x, p.z) // server-initiated placement: open the stream gate here
 	p.sendEv(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))
@@ -83,7 +83,7 @@ func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
 	}
 	p.dim = dim
 	log.Printf("portal: %q respawning into dim %d at linked portal (%d,%d,%d)", p.name, dim, dest.x, dest.y, dest.z)
-	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.name))})
+	p.sendEv(attachproto.Dimension{Dim: int32(dim), Gamemode: int32(s.modes.get(p.name)), Death: s.deathOf(p.name)})
 	p.x, p.y, p.z = float64(dest.x)+0.5, float64(dest.y), float64(dest.z)+1.5
 	p.setHubPos(p.x, p.z)
 	p.sendEv(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))

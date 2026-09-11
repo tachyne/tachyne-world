@@ -149,6 +149,7 @@ type mockRemote struct{}
 func (mockRemote) EID() int32                                              { return 7 }
 func (mockRemote) Spawn() (float64, float64, float64)                      { return 0.5, 63, 0.5 }
 func (mockRemote) Gamemode() int32                                         { return 0 }
+func (mockRemote) Death() *proto.DeathPos                                  { return nil }
 func (mockRemote) Move(x, y, z float64, yaw, pitch float32, onGround bool) {}
 func (mockRemote) Chat(string)                                             {}
 func (mockRemote) Command(string)                                          {}

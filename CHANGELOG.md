@@ -49,6 +49,11 @@ the public history since the project was open-sourced on 2026-07-10.
   gives that stew from its next bowl. The effect is a secret, as in
   vanilla, and it survives restarts on the stack.
 
+- **The recovery compass points home.** The place a player last died is
+  remembered with their record, sent with the login and respawn spawn
+  info as vanilla sends it, and kept across restarts and dimension
+  changes, so a recovery compass points at it on Java and on Bedrock.
+
 ### Fixed
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:
