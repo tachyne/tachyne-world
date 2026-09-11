@@ -45,6 +45,9 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return false
 	}
 	held := heldStack(t).item
+	if isMobFood(m.etype, held) {
+		return false // a meal is never a ride: Pig/AbstractHorse test isFood first
+	}
 	if !m.saddled {
 		if held != itemSaddle {
 			return false // an unsaddled mount ignores an empty hand

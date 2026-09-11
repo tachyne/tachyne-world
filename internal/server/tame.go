@@ -23,26 +23,37 @@ const (
 	metaIndexTameFlags = 17 // TamableAnimal flags byte: 0x01 sitting, 0x04 tamed
 )
 
-// tameFood maps a tameable species to the item that tames it.
-func tameFood(etype int) int32 {
+// isTameFood reports whether item tames the species: a bone for wolves,
+// #cat_food / #ocelot_food (cod or salmon) for cats and ocelots, any
+// #parrot_food seed for parrots.
+func isTameFood(etype int, item int32) bool {
 	switch etype {
 	case entityWolf:
-		return itemBone
-	case entityCat, entityOcelot:
-		return itemByName["cod"]
-	case entityParrot:
-		return itemWheatSeeds
+		return item == itemBone
+	case entityCat, entityOcelot, entityParrot:
+		return isLoveFood(etype, item)
 	}
-	return 0
+	return false
 }
+
+// tameable reports whether the species can be tamed by hand at all.
+func tameable(etype int) bool {
+	switch etype {
+	case entityWolf, entityCat, entityOcelot, entityParrot:
+		return true
+	}
+	return false
+}
+
+// wolfTamedHealth is a tamed wolf's MAX_HEALTH (a wild one has 8).
+const wolfTamedHealth = 40
 
 // tameOdds is the 1-in-N chance a single feeding tames the animal (vanilla 1/3).
 const tameOdds = 3
 
 // tryTame handles a right-click on a tameable mob. Returns true if consumed.
 func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
-	food := tameFood(m.etype)
-	if food == 0 || m.dying > 0 {
+	if !tameable(m.etype) || m.dying > 0 {
 		return false
 	}
 	if m.tamed {
@@ -67,7 +78,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 		return true
 	}
-	if heldStack(t).item != food {
+	if !isTameFood(m.etype, heldStack(t).item) {
 		return false
 	}
 	if t.gamemode == gmSurvival {
@@ -79,6 +90,10 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	}
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
 	m.collar = collarDefault
+	if m.etype == entityWolf { // Wolf.applyTamingSideEffects: 8 → 40 max, healed to full
+		m.setMaxHP(wolfTamedHealth)
+		m.health = wolfTamedHealth
+	}
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
 	m.setFollowRange(petFollowStart)

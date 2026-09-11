@@ -95,28 +95,49 @@ func sheepMeta(m *mob, sheared bool) []byte {
 	return sheepFleeceMeta(m.eid, m.color, sheared)
 }
 
-// feedAnimal handles a right-click with this species' love-food: consume one
-// and start courting (adults only, off cooldown).
+// feedAnimal handles a right-click with something this species eats
+// (Animal.mobInteract and the pet/horse overrides): a hurt pet heals, a
+// baby grows a tenth of its remaining time, an adult off cooldown starts
+// courting. Returns whether the food was taken.
 func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
-	food := loveFood(m.etype)
-	courted := food != 0 && heldStack(t).item == food
-	if m.etype == entityBee {
-		courted = isBeeFood(heldStack(t).item) // vanilla #bee_food: any flower
-	}
-	if !courted || m.baby || m.loveTicks > 0 || m.breedCD > 0 {
+	item := heldStack(t).item
+	if m.dying > 0 {
 		return false
 	}
-	if t.gamemode == gmSurvival {
-		s := &t.inv.slots[t.p.heldSlot()]
-		if s.count--; s.count == 0 {
-			*s = invStack{}
-		}
-		h.sendSlot(t, t.p.heldSlot())
+	if horseFamily(m.etype) {
+		return h.feedHorse(players, t, m, item)
 	}
-	m.loveTicks = loveTicks
-	m.lovedBy = t.p.eid
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, statusInLove))
-	h.playSound(players, "minecraft:entity.generic.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
+	if !isLoveFood(m.etype, item) {
+		return false
+	}
+	// A tamed wolf eats to heal (any player); a cat only from its owner.
+	// The meal heals its nutrition (twice that for a wolf), 1 for a non-food.
+	if m.tamed && (m.etype == entityWolf || (m.etype == entityCat && m.owner == t.p.eid)) && m.health < m.maxHP() {
+		n := foodPoints[item]
+		if n == 0 {
+			n = 1
+		}
+		if m.etype == entityWolf {
+			n *= 2
+		}
+		h.healMob(m, n)
+		h.consumeFed(t, item)
+		h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+		return true
+	}
+	if m.baby {
+		// getSpeedUpSecondsWhenFeeding: a tenth of the remaining time, in whole seconds.
+		h.ageUp(m, m.growLeft/200*20)
+		h.consumeFed(t, item)
+		h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+		return true
+	}
+	if neverLoves[m.etype] || m.loveTicks > 0 || m.breedCD > 0 {
+		return false
+	}
+	h.consumeFed(t, item)
+	h.setInLove(players, t, m)
+	h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 

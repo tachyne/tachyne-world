@@ -14,6 +14,19 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-11
 
 ### Added
+- **Animals eat their whole vanilla food list.** Breeding used one item per
+  species; it now takes everything on vanilla's per-species food tag — a
+  pig carrots, potatoes or beetroot, a rabbit a dandelion or golden carrot,
+  a fox glow berries, a chicken any seed, a cat or ocelot salmon as well as
+  cod (for taming too, and any seed tames a parrot), a wolf every meat and
+  fish and a bowl of rabbit stew, a horse golden apples, an axolotl a
+  bucket of tropical fish (the water stays in the bucket). Feeding a baby
+  grows it a tenth faster, a hurt tamed wolf or cat heals on its food (and
+  taming a wolf raises it to vanilla's forty health), the horse family has
+  its own table — wheat, sugar, apples and hay heal a hurt horse and grow a
+  foal, hay is a llama's love food, a cactus a camel's — and a mount is
+  never ridden with its food in hand.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with
