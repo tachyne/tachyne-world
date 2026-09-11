@@ -467,6 +467,7 @@ type hub struct {
 	scratchSeen3  map[[3]int]bool         // runRandomTicks: chunks ticked this pass
 	scratchSim    map[simPos]struct{}     // runUpdates: positions processed this tick
 	dripleafDue   map[simPos]uint64       // big dripleaf: the tick its next tilt stage is due
+	bubbleDue     map[simPos]uint64       // soul sand / magma: the tick its bubble column forms
 	items         map[int32]*itemEntity   // dropped-item entities (block drops)
 	arrows        map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
 	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds

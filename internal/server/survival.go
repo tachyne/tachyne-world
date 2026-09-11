@@ -207,7 +207,9 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	// Drowning: eyes in water deplete the breath supply; empty → 2 HP/s.
 	// Water Breathing holds the breath indefinitely (no drain).
 	old := t.air
-	if worldgen.IsWater(h.worldFor(t.dim).At(fx, eyeY, fz)) && !t.breathesUnderwater() {
+	// A bubble column is water you can breathe in (LivingEntity.baseTick
+	// exempts it from the air drain).
+	if eye := h.worldFor(t.dim).At(fx, eyeY, fz); worldgen.IsWater(eye) && !worldgen.IsBubbleColumn(eye) && !t.breathesUnderwater() {
 		drain := airDrainPerSec
 		if h.keepsAirThisTick(t) {
 			drain = 0 // Respiration: a 1-in-(bonus+1) chance of losing a breath

@@ -43,6 +43,14 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla's tilt sounds. A redstone signal on any side pins it flat and
   straightens a tilted one, and any projectile folds it at once.
 
+- **Bubble columns.** Source water resting on soul sand becomes an
+  updraft a second later and over a magma block a whirlpool, climbing
+  through every source-water cell above; mine the block underneath and
+  the whole column falls back to plain water. The column is a water
+  source to everything else — it spreads, floats, douses and wets as
+  water does — and you do not drown inside one. The lift and drag on a
+  player are the client's own physics once the block is there.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

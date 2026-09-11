@@ -100,8 +100,38 @@ func IsLeaves(state uint32) bool {
 	return state >= blockBase("oak_leaves") && state <= hi
 }
 
+// BubbleColumnDrag / BubbleColumnUp are the two bubble column states: the
+// whirlpool a magma block pulls down, the updraft soul sand sends up. Both
+// hold a water source, so IsWater counts them (the fluid sim reads their
+// level as 0; see FluidLevel).
+var (
+	BubbleColumnDrag = blockBase("bubble_column")
+	BubbleColumnUp   = BubbleColumnDrag + 1
+)
+
+// IsBubbleColumn reports either bubble column state.
+func IsBubbleColumn(state uint32) bool {
+	return state == BubbleColumnDrag || state == BubbleColumnUp
+}
+
 // IsWater / IsLava report fluid membership; FluidLevel extracts 0..15.
-func IsWater(state uint32) bool { return state >= WaterBase && state <= WaterBase+15 }
+func IsWater(state uint32) bool {
+	return state >= WaterBase && state <= WaterBase+15 || IsBubbleColumn(state)
+}
+
+// FluidLevel is a fluid state's level: 0 source, 1..7 flowing, 8 falling.
+// A bubble column is a water source.
+func FluidLevel(state, base uint32) int {
+	if IsBubbleColumn(state) {
+		return 0
+	}
+	return int(state - base)
+}
+
+// IsFluidSource reports a level-0 cell of the fluid whose base is given.
+func IsFluidSource(state, base uint32) bool {
+	return state == base || (base == WaterBase && IsBubbleColumn(state))
+}
 func IsLava(state uint32) bool  { return state >= LavaBase && state <= LavaBase+15 }
 func IsFluid(state uint32) bool { return IsWater(state) || IsLava(state) }
 

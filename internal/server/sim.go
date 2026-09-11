@@ -111,6 +111,15 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// recompute through the canopy as a wave and the rim rots first.
 	case worldgen.IsFalling(state):
 		h.updateFalling(players, dim, pos, state)
+	case h.tickBubbleSource(players, dim, pos, state):
+		// Soul sand or magma with water above raises (or drops) its column.
+	case worldgen.IsBubbleColumn(state):
+		// The column keeps itself: it collapses to water without its source
+		// and climbs into source water above; then it spreads as the water
+		// source it is.
+		if h.updateBubbleColumn(players, dim, pos) {
+			h.updateFluid(players, dim, pos, h.worldFor(dim).Block(pos.x, pos.y, pos.z))
+		}
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
@@ -227,7 +236,7 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 		}
 		return worldgen.IsLava(s)
 	}
-	level := int(state - base)
+	level := worldgen.FluidLevel(state, base)
 
 	// Water/lava contact solidifies (LiquidBlock.shouldSpreadLiquid + LavaFluid.
 	// spreadTo). Lava touched by water above or beside it turns to obsidian
@@ -261,7 +270,7 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 		if ns != state {
 			h.setBlockAt(players, dim, pos, ns)
 			h.scheduleAroundIn(dim, pos, delay)
-			state, level = ns, int(ns-base)
+			state, level = ns, worldgen.FluidLevel(ns, base)
 		}
 	}
 
@@ -315,7 +324,7 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 		if !same(nb) {
 			continue
 		}
-		nl := int(nb - base)
+		nl := worldgen.FluidLevel(nb, base)
 		amt := 8 - nl
 		if nl == 0 || nl == 8 { // source or falling = full strength
 			amt = 8
@@ -330,7 +339,7 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 	// Infinite sources: vanilla gates each fluid on its own conversion rule.
 	// Water converts by default, lava does not (it is an experimental rule).
 	if sourceCount >= 2 && ((water && h.rules.WaterSourceCnv) || (!water && h.rules.LavaSourceCnv)) {
-		if belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z); worldgen.IsSolidFull(belowB) || belowB == base {
+		if belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z); worldgen.IsSolidFull(belowB) || worldgen.IsFluidSource(belowB, base) {
 			return base, true
 		}
 	}
@@ -348,7 +357,7 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 func (h *hub) sourceNeighborCount(dim int, pos blockPos, base uint32) int {
 	n := 0
 	for _, d := range horizNeighbors {
-		if h.worldFor(dim).Block(pos.x+d.x, pos.y, pos.z+d.z) == base {
+		if worldgen.IsFluidSource(h.worldFor(dim).Block(pos.x+d.x, pos.y, pos.z+d.z), base) {
 			n++
 		}
 	}
