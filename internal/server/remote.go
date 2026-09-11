@@ -98,6 +98,10 @@ func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
 	switch e := v.(type) {
 	case attachproto.UseItem:
+		if equipSlotOnUse(p.heldItem()) >= 0 { // armour in hand goes on
+			h.post(evEquipHeld{eid: p.eid})
+			return
+		}
 		switch p.heldItem() {
 		case itemBow:
 			h.post(evBowStart{eid: p.eid})

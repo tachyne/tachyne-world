@@ -1556,6 +1556,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.startEating(t, e.slot)
 				}
+			case evEquipHeld:
+				h.onEquipHeld(players, e)
 			case evUseMap:
 				if t := players[e.eid]; t != nil {
 					h.mapCreateFilled(players, t)

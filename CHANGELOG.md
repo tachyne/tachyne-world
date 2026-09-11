@@ -73,6 +73,12 @@ the public history since the project was open-sourced on 2026-07-10.
   a zombie drowns. Lightning now also swaps a mooshroom's colour and
   kills a turtle, as vanilla's does.
 
+- **Armour goes on from the hand.** Using a piece of armour or an elytra
+  held in the hand puts it on, as vanilla does: an empty slot takes it,
+  a worn piece comes back to the hand (or into the inventory when the
+  hand held a stack), a piece under the Curse of Binding stays put, and
+  the material's equip sound plays.
+
 ### Fixed
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now
