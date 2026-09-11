@@ -460,6 +460,9 @@ func (h *hub) rollVariant(m *mob) {
 		m.variant = h.groupVariant(m, func() int32 { return foxVariantFor(h.spawnBiome(m)) })
 	case entityMooshroom:
 		m.variant = mooshroomRed
+	case entityPanda:
+		m.variant = packPandaGenes(pandaGeneRandom(h.rng.Intn), pandaGeneRandom(h.rng.Intn))
+		h.applyPandaGenes(m)
 	case entityPig, entityCow, entityChicken:
 		m.variant = farmVariantFor(m.dim, h.spawnBiome(m))
 	default:
@@ -490,6 +493,9 @@ func (h *hub) inheritVariant(baby, a, b *mob) {
 		}
 	case entityWolf, entityCat, entityFox, entityPig, entityCow, entityChicken:
 		baby.variant = h.pickParent(a, b).variant
+	case entityPanda:
+		baby.variant = pandaCubGenes(a.variant, b.variant, h.rng.Intn)
+		h.applyPandaGenes(baby)
 	case entityLlama, entityTraderLlama:
 		// Strength: 1 + rand(max of the parents'), one better 3% of the time.
 		n := max(int(a.strength), int(b.strength), 1)
@@ -587,6 +593,9 @@ func variantMeta(m *mob) []byte {
 	}
 	if !m.variantSet {
 		return protocol.AppendU8(b, itemMetaEnd)
+	}
+	if m.etype == entityPanda { // two gene bytes instead of one variant entry
+		return protocol.AppendU8(pandaGeneMeta(b, m), itemMetaEnd)
 	}
 	e, ok := variantEntryFor(m.etype)
 	if !ok {

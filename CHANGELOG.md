@@ -95,6 +95,13 @@ the public history since the project was open-sourced on 2026-07-10.
   else one in ten with a calf riding it. On hard, a spider may spawn with
   vanilla's lasting speed, strength, regeneration or invisibility.
 
+- **Panda genes.** Pandas carry vanilla's main and hidden genes, rolled
+  at vanilla's odds in the wild and inherited one from each parent with
+  the one-in-32 mutation; the look follows the main gene unless it is a
+  recessive brown or weak that the hidden gene does not match. Weak
+  pandas have ten health and aggressive ones bite back. Both genes reach
+  every client, Bedrock included.
+
 ### Fixed
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now
