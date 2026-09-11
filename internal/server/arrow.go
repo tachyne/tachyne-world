@@ -107,6 +107,17 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	vz := (dz/d + tri()) * arrowSpeed
 	a := h.launchArrow(players, ox, oy, oz, vx, vy, vz)
 	a.shooter, a.dmg = m.eid, arrowDamage
+	// ProjectileUtil.getMobArrow carries the bow's enchantments: Power adds
+	// 0.5·lvl+0.5 to the base damage (before ×speed), Punch its knockback,
+	// Flame sets the arrow alight.
+	bow := m.heldStack()
+	if pl := bow.enchLvl(enchPower); pl > 0 {
+		a.dmg += int(math.Ceil((0.5*float64(pl) + 0.5) * arrowSpeed))
+	}
+	a.punch = bow.enchLvl(enchPunch)
+	if bow.enchLvl(enchFlame) > 0 {
+		a.fire = true
+	}
 	if m.etype == entityParched {
 		a.weaken = parchedWeaknessSecs // vanilla Parched: WEAKNESS, 600 ticks
 	}

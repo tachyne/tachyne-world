@@ -129,7 +129,7 @@ func (h *hub) piglinAdmire(players map[int32]*tracked, m *mob, st invStack) {
 	m.admireUntil = h.tick.Load() + piglinAdmireTicks
 	m.hasTarget = false
 	h.playSoundDim(players, m.dim, "minecraft:entity.piglin.admiring_item", sndHostile, m.x, m.y, m.z, 1, 1)
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, m.offhand, m.gear))
+	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), m.offhand, m.gear))
 }
 
 // tryBarter is PiglinAi.mobInteract: a gold ingot held out to an adult
@@ -156,7 +156,7 @@ func (h *hub) piglinAdmireTick(players map[int32]*tracked, m *mob) {
 	m.admireUntil = 0
 	item := m.offhand
 	m.offhand = invStack{}
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, invStack{}, m.gear))
+	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 	if item.item != itemGoldIngot {
 		if item.item != 0 {
 			m.hoard = append(m.hoard, item)
@@ -212,7 +212,7 @@ func (h *hub) piglinHurtByPlayer(players map[int32]*tracked, m *mob) {
 			m.hoard = append(m.hoard, m.offhand)
 			m.offhand = invStack{}
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, invStack{}, m.gear))
+		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 	}
 	m.admireOffUntil = now + piglinAdmireOffTck
 }

@@ -11,9 +11,8 @@ import "math"
 // (25%, or 10% on hard). Zombies also have a 1% (hard 5%) chance of an
 // iron sword (one in three) or shovel; skeletons and their kin carry a bow,
 // wither skeletons a stone sword. Armour pieces are enchanted with
-// probability 0.5×f each (the weapon's 0.25×f has nowhere to live yet — a
-// mob's held item is a bare id) at a cost of 5 plus up to 17×f, drawn from
-// the on_mob_spawn_equipment set. What spawned on a mob drops at 8.5%.
+// probability 0.5×f each and the weapon at 0.25×f, at a cost of 5 plus up to
+// 17×f, drawn from the on_mob_spawn_equipment set. What spawned on a mob drops at 8.5%.
 
 const spawnGearDropChance = 0.085
 
@@ -116,9 +115,14 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 			m.gear[slot].ench = enchApplyList(enchSelect(h.rng, m.gear[slot].item, cost, enchMobAllowed))
 		}
 	}
+	// enchantSpawnedWeapon: the main hand at 0.25×f, the same cost formula.
+	if m.held != 0 && h.rng.Float64() < 0.25*f {
+		cost := 5 + h.rng.Intn(int(math.Floor(f*17))+1)
+		m.heldEnch = enchApplyList(enchSelect(h.rng, m.held, cost, enchMobAllowed))
+	}
 	m.spawnGear, m.gearDrop = true, spawnGearDropChance
 	m.refreshGearArmor()
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, invStack{}, m.gear))
+	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 }
 
 // wearsAnything reports whether the mob shows any equipment.

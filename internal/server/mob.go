@@ -176,6 +176,7 @@ type mob struct {
 	skittish        bool        // bolts from any close player (fox/ocelot/rabbit)
 	hover           float64     // fliers: preferred altitude above the terrain
 	held            int32       // rendered main-hand item (0 = empty)
+	heldEnch        enchList    // enchantments on that item (spawn gear rolls them)
 	carry           invStack    // allay: the stack it has collected for its liked player
 	allayPickupCD   int         // allay: ticks before it collects again (60 after a throw)
 	allayNoteCD     int         // allay: ticks it keeps delivering to the liked note block (600 per note)
@@ -1142,3 +1143,9 @@ func (m *mob) setAttackDamage(v float64) { m.mobAttrs().SetBase(attr.AttackDamag
 // pace — which is the hostile-and-baby case here. Needed wherever the flag is
 // assigned rather than rolled: a reload, or a drowning conversion.
 func (m *mob) refreshBabySpeed() { m.setBabySpeed(m.baby && m.hostile) }
+
+// heldStack is the mob's main-hand item as a stack: what the equipment frame
+// renders and what drops when it dies.
+func (m *mob) heldStack() invStack {
+	return invStack{item: m.held, count: b2i(m.held != 0), ench: m.heldEnch}
+}

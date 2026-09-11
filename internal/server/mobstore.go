@@ -119,6 +119,7 @@ type savedMob struct {
 	Chest     []stackRow  `json:"chest,omitempty"`
 	Strength  int8        `json:"str,omitempty"`
 	Held      int32       `json:"held,omitempty"`
+	HeldSt    stackRow    `json:"held_st,omitempty"`     // the held item with its enchantments (when it has any)
 	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
 	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
 	SniffCD   int         `json:"sniffcd,omitempty"`     // sniffer: ticks until the next dig
@@ -554,6 +555,9 @@ func toSavedMob(m *mob) savedMob {
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])
+	}
+	if m.heldEnch[0].id != 0 || m.heldEnch[0].lvl != 0 {
+		sm.HeldSt = packStack(m.heldStack())
 	}
 	for _, c := range m.chest {
 		sm.Chest = append(sm.Chest, packStack(c))

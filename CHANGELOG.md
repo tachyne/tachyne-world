@@ -72,6 +72,14 @@ the public history since the project was open-sourced on 2026-07-10.
   an anvil — sinks through water and lava to the floor, destroying
   frogspawn on the way, instead of coming to rest on the surface.
 
+- **Mobs' weapons are enchanted too.** Spawn gear enchanted armour but
+  never the weapon; the main hand now rolls at vanilla's quarter of the
+  regional odds, and the enchantments do their work — Sharpness on a
+  zombie's sword, Fire Aspect setting you alight, Knockback shoving
+  harder, Power, Punch and Flame on a skeleton's bow — survive a restart,
+  and go with the weapon when it drops (armour drops keep theirs now as
+  well).
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

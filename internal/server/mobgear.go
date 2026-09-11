@@ -54,7 +54,7 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 			h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
 		}
 		h.playSound(players, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)},
+		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(),
 			invStack{}, m.gear))
 		m.persistent = true // Mob.pickUpItem → setPersistenceRequired: a looter never despawns
 		return              // one pickup per scan
@@ -104,6 +104,14 @@ func mobHeldBonus(m *mob) float32 {
 func b2i(b bool) int {
 	if b {
 		return 1
+	}
+	return 0
+}
+
+// mobSharpness is the held weapon's Sharpness bonus: 1.0 + 0.5·(lvl-1).
+func mobSharpness(m *mob) float32 {
+	if lvl := m.heldStack().enchLvl(enchSharpness); lvl > 0 {
+		return 0.5*float32(lvl) + 0.5
 	}
 	return 0
 }

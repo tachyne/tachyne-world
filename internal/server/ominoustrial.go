@@ -180,5 +180,5 @@ func (h *hub) equipTrialMob(players map[int32]*tracked, m *mob, kind string) {
 	}
 	m.spawnGear = true
 	m.refreshGearArmor()
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, invStack{}, m.gear))
+	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 }

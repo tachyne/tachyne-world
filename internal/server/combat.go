@@ -459,12 +459,24 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		}
 		// Picked-up gear drops in full (vanilla drops equipped loot at 100%);
 		// gear issued at spawn (ominous trial mobs) never does.
+		// An enchanted piece drops as itself (the plugin drop list carries
+		// bare ids); a plain one goes through the list like any other drop.
+		dropGear := func(st invStack) {
+			if st.ench[0].id == 0 && st.ench[0].lvl == 0 {
+				drops = append(drops, plugin.ItemStack{Item: st.item, Count: 1})
+				return
+			}
+			if it := h.spawnItemIn(players, m.dim, st.item, 1, m.x, m.y, m.z); it != nil {
+				it.ench = st.ench
+				h.refreshItemMeta(players, it)
+			}
+		}
 		if m.held != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
-			drops = append(drops, plugin.ItemStack{Item: m.held, Count: 1})
+			dropGear(m.heldStack())
 		}
 		for _, g := range m.gear {
 			if g.item != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
-				drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
+				dropGear(g)
 			}
 		}
 		for _, st := range m.hoard { // a piglin's gold, and whatever it was admiring

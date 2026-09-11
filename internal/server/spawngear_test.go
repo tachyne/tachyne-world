@@ -53,6 +53,18 @@ func TestSpawnGearByDifficulty(t *testing.T) {
 	if sk.held != itemBow {
 		t.Errorf("skeleton holds %d, want a bow", sk.held)
 	}
+	// enchantSpawnedWeapon: the bow is enchanted at 0.25×f.
+	bows := 0
+	for i := 0; i < total; i++ {
+		s := h.spawnHostileY(players, entitySkeleton, x, y, z)
+		if s.heldEnch[0].id != 0 || s.heldEnch[0].lvl != 0 {
+			bows++
+		}
+		delete(h.mobs, s.eid)
+	}
+	if lo, hi := int(0.25*f*float64(total)*0.4), int(0.25*f*float64(total)*1.8)+5; bows < lo || bows > hi {
+		t.Errorf("%d of %d skeleton bows enchanted, want about %.0f", bows, total, 0.25*f*float64(total))
+	}
 	ws := h.spawnHostileY(players, entityWitherSkeleton, x, y, z)
 	if ws.held != itemStoneSword {
 		t.Errorf("wither skeleton holds %d, want a stone sword", ws.held)

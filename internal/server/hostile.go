@@ -325,7 +325,10 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		}
 		return
 	}
-	dmg := (hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()
+	// Mob.doHurtTarget: ATTACK_DAMAGE (the weapon's included), then the
+	// weapon's Sharpness (EnchantmentHelper.modifyDamage). Smite and Bane never
+	// match a player.
+	dmg := (hostileMelee(m) + mobHeldBonus(m) + mobSharpness(m)) * h.diffMult()
 	// Plugin damage event (mob → player), before the swing so a cancel makes
 	// the whole bite invisible.
 	if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
@@ -341,7 +344,14 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
-	h.knockback(t, m.x, m.z) // a caught bite still shoves them
+	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
+	// top of the 0.4 base (Mob.getKnockback → LivingEntity.knockback).
+	h.knockbackScaled(t, m.x, m.z, 1+1.25*float64(m.heldStack().enchLvl(enchKnockback)))
+	if landed {
+		if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {
+			h.setBurning(players, t, 4*lvl) // Fire Aspect: 4 s per level
+		}
+	}
 	if !landed {
 		// A raised shield facing the attacker catches the whole bite, and with
 		// it everything the bite would have delivered.
