@@ -85,7 +85,7 @@ func (h *hub) followParentStep(m *mob) bool {
 		return false
 	}
 	if m.etype == entityAxolotl {
-		if w := h.worldFor(m.dim); w != nil && worldgen.IsWater(w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)))) {
+		if w := h.worldFor(m.dim); w != nil && worldgen.HoldsWater(w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)))) {
 			speed = 0.6
 		}
 	}

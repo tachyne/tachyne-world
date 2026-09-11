@@ -121,7 +121,7 @@ func (h *hub) temptStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	if m.etype == entityAxolotl { // AxolotlAi.getSpeedModifier: 0.5 in water, 0.15 ashore
-		if w := h.worldFor(m.dim); w != nil && !worldgen.IsWater(w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)))) {
+		if w := h.worldFor(m.dim); w != nil && !worldgen.HoldsWater(w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)))) {
 			speed = 0.15
 		}
 	}

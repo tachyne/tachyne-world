@@ -51,6 +51,20 @@ the public history since the project was open-sourced on 2026-07-10.
   water does — and you do not drown inside one. The lift and drag on a
   player are the client's own physics once the block is there.
 
+- **Sea floors grow things.** Oceans, rivers and swamps were bare gravel
+  and sand under the water. They now carry vanilla's sea-floor
+  vegetation at vanilla's per-biome densities: seagrass (short in the
+  shallow oceans, mostly tall in the deep ones, along rivers and through
+  swamps), kelp forests where vanilla's low-frequency noise places them,
+  each stalk one to ten tall and stopping short of the surface, and
+  clusters of sea pickles in one warm-ocean chunk in sixteen, and coral
+  reefs in warm oceans — vanilla's tree, claw and mushroom generators in
+  all five colours, with coral plants and fans on top, wall fans on the
+  sides and the odd sea pickle, at vanilla's noise-placed density; frozen
+  oceans stay bare. A seagrass or kelp cell counts as water to mobs,
+  spawning, drowning and swimming, as its fluid does in vanilla. Chunks already cached regenerate with the plants
+  (generator version 13); player edits are kept as always.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

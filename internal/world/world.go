@@ -563,8 +563,8 @@ func (w *World) Walkable(x, z int) bool {
 	// AT the feet (fluids aren't standable, so MobFeet bottoms out on the
 	// seabed with water above), beaches have air at the feet and sand below.
 	y := w.MobFeet(x, z)
-	if !w.inBounds(y) || worldgen.IsWater(w.Block(x, y, z)) || worldgen.IsWater(w.Block(x, y-1, z)) {
-		return false
+	if !w.inBounds(y) || worldgen.HoldsWater(w.Block(x, y, z)) || worldgen.HoldsWater(w.Block(x, y-1, z)) {
+		return false // water at the feet — or a seagrass/kelp cell, which is water too
 	}
 	return !w.gen.TreeAt(x, z)
 }

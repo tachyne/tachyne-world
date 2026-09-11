@@ -18,4 +18,7 @@ package worldgen
 //
 // v12: the capetown DEM crop grew from the bare peninsula to greater Cape Town
 // (same grid name, new data) — every earth chunk regenerates.
-const GenVersion = 12
+//
+// v13: sea floors grow seagrass, kelp forests and sea pickle clusters
+// (seafloor.go) — every water column below sea level decorates differently.
+const GenVersion = 13

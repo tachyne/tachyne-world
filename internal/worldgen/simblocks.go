@@ -211,6 +211,18 @@ func IsWaterlogged(state uint32) bool {
 	return GetProperty(info, state, "waterlogged") == "true"
 }
 
+// HoldsWater reports a cell whose fluid state is water: the fluid itself, a
+// bubble column, a waterlogged block, or one of the plants that only exist
+// under water (seagrass, kelp). Mobs, spawning, drowning and swimming ask
+// this; the fluid sim and buckets keep to IsWater.
+func HoldsWater(state uint32) bool {
+	if IsWater(state) || state == Seagrass || state == TallSeagrassUpper || state == TallSeagrassLower ||
+		state == KelpPlant || IsKelpHead(state) {
+		return true
+	}
+	return IsWaterlogged(state)
+}
+
 // IsFlower is the #flowers block tag — what a sapling checks for to grow its
 // bee-nest variant, and what bees will forage.
 func IsFlower(state uint32) bool {

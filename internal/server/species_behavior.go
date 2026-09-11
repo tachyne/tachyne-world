@@ -19,7 +19,7 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 	ny := m.y + m.vy
 	// Only advance into cells that are still water — otherwise bounce off the
 	// bank/surface and pick a new heading, so the fish never beaches itself.
-	if worldgen.IsWater(w.At(fnx, int(math.Floor(ny)), fnz)) {
+	if worldgen.HoldsWater(w.At(fnx, int(math.Floor(ny)), fnz)) {
 		m.x, m.y, m.z = nx, ny, nz
 	} else {
 		m.vx, m.vy, m.vz = -m.vx*0.5, -m.vy, -m.vz*0.5

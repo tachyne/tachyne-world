@@ -38,6 +38,7 @@ func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
 			}
 		}
 	}
+	g.decorateSeafloor(ch, cx, cz) // seagrass, kelp and sea pickles under the water
 }
 
 // plantable reports whether a surface block can root a tree or ground cover.

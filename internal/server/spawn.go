@@ -417,15 +417,15 @@ func (h *hub) spawnPositionOK(cat, etype, x, y, z int) bool {
 	// water at the anchor with a non-solid block above (SpawnPlacementType
 	// IN_WATER = fluid is water && block above is not a redstone conductor).
 	if etype == entityDrowned {
-		return worldgen.IsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
 	}
 	switch cat {
 	case catWaterCreature, catWaterAmbient:
-		return worldgen.IsWater(at) && worldgen.IsWater(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && worldgen.HoldsWater(h.world.At(x, y+1, z))
 	case catAxolotls: // IN_WATER placement: water here, no conductor above
-		return worldgen.IsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
 	}
-	if worldgen.IsWater(at) || worldgen.IsLava(at) ||
+	if worldgen.HoldsWater(at) || worldgen.IsLava(at) ||
 		worldgen.Collides(at) || worldgen.Collides(h.world.At(x, y+1, z)) {
 		return false
 	}

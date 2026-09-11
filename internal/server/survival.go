@@ -209,7 +209,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	old := t.air
 	// A bubble column is water you can breathe in (LivingEntity.baseTick
 	// exempts it from the air drain).
-	if eye := h.worldFor(t.dim).At(fx, eyeY, fz); worldgen.IsWater(eye) && !worldgen.IsBubbleColumn(eye) && !t.breathesUnderwater() {
+	if eye := h.worldFor(t.dim).At(fx, eyeY, fz); worldgen.HoldsWater(eye) && !worldgen.IsBubbleColumn(eye) && !t.breathesUnderwater() {
 		drain := airDrainPerSec
 		if h.keepsAirThisTick(t) {
 			drain = 0 // Respiration: a 1-in-(bonus+1) chance of losing a breath
@@ -280,7 +280,7 @@ func (h *hub) touchingCactus(dim, fx, feet, fz int) bool {
 // test for cancelling fall distance (and thus fall damage).
 func (h *hub) inWater(dim int, x, y, z float64) bool {
 	w := h.worldFor(dim)
-	return worldgen.IsWater(w.At(int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))))
+	return worldgen.HoldsWater(w.At(int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))))
 }
 
 // onFallAndExhaust updates fall-damage tracking and walking exhaustion from a
