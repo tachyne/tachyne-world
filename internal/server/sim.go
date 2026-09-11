@@ -176,16 +176,25 @@ func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, s
 	if !h.inWorldY(below.y) {
 		return
 	}
+	key := simPos{dim: dim, blockPos: pos}
 	if worldgen.IsReplaceable(h.worldFor(dim).Block(below.x, below.y, below.z)) {
+		fallen := h.fallDist[key] + 1
+		delete(h.fallDist, key)
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 		h.setBlockAt(players, dim, below, state)
+		h.fallDist[simPos{dim: dim, blockPos: below}] = fallen
 		h.scheduleIn(dim, below, fallDelay)     // keep falling
 		h.scheduleAroundIn(dim, pos, fallDelay) // a block resting on it loses support
 		return
 	}
+	fallen := h.fallDist[key]
+	delete(h.fallDist, key)
 	// Landed: concrete powder touching water turns to concrete (ConcretePowderBlock).
 	if worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos) {
 		h.setBlockAt(players, dim, pos, worldgen.ConcreteFor(state))
+	}
+	if worldgen.IsAnvil(state) && fallen > 0 {
+		h.anvilLanded(players, dim, pos, state, fallen)
 	}
 }
 

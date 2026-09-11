@@ -423,6 +423,8 @@ type hub struct {
 	pending map[uint64][]simPos
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[blockPos]movingBlock
+	// fallDist counts the cells a falling block has dropped so far (falling.go).
+	fallDist map[simPos]int
 
 	hud []HudWidget // action-bar HUD widgets (nil = HUD off)
 	bus bus         // out-of-process plugin bus (nopBus = disabled)
@@ -677,6 +679,7 @@ func newHub(w *world.World) *hub {
 		stop:          make(chan struct{}),
 		pending:       map[uint64][]simPos{},
 		movingBlocks:  map[blockPos]movingBlock{},
+		fallDist:      map[simPos]int{},
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},

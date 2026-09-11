@@ -20,11 +20,35 @@ var (
 // IsFalling reports whether a block is affected by gravity (sand, gravel, …).
 func IsFalling(state uint32) bool {
 	switch state {
-	case Sand, RedSand, Gravel:
+	case Sand, RedSand, Gravel, DragonEgg:
 		return true
 	}
-	return state >= concretePowderLo && state <= concretePowderHi
+	return (state >= concretePowderLo && state <= concretePowderHi) ||
+		(state >= suspiciousLo && state <= suspiciousHi) || IsAnvil(state)
 }
+
+// IsAnvil: the anvil family (anvil, chipped, damaged), which falls, hurts
+// what it lands on and chips on the way (AnvilBlock/FallingBlockEntity).
+func IsAnvil(state uint32) bool { return state >= anvilLo && state <= anvilHi }
+
+// AnvilDamaged is AnvilBlock.damage: the next stage of wear, or 0 when a
+// damaged anvil breaks outright.
+func AnvilDamaged(state uint32) uint32 {
+	switch {
+	case state < anvilLo || state > anvilHi:
+		return state
+	case state < anvilLo+4: // anvil → chipped, same facing
+		return state + 4
+	case state < anvilLo+8: // chipped → damaged
+		return state + 4
+	}
+	return 0
+}
+
+var (
+	suspiciousLo, suspiciousHi = blockBase("suspicious_sand"), blockBase("suspicious_gravel") + 3 // sand 4 states, then gravel 4
+	anvilLo, anvilHi           = blockBase("anvil"), blockBase("damaged_anvil") + 3               // three kinds × facing 4, consecutive
+)
 
 // IsLeaves reports whether a state is one of the generated leaf families (oak,
 // spruce, birch — contiguous state ranges). Leaves collide, but dropped items

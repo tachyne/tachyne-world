@@ -21,6 +21,13 @@ the public history since the project was open-sourced on 2026-07-10.
   block entity's data on Bedrock, rebuilt from the container properties
   Java uses.
 
+- **Anvils fall, and hurt.** Anvils, suspicious sand and gravel, and the
+  dragon egg now fall like sand when nothing holds them up. A falling anvil
+  hurts whatever it lands on — two hearts' worth per block fallen after the
+  first, up to twenty hearts, sparing creative and spectator players — and
+  wears with the fall: a chance of five percent plus five per block chips
+  it, then damages it, and a damaged anvil breaks outright.
+
 ### Fixed
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:
