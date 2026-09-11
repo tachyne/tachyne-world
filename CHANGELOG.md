@@ -37,6 +37,12 @@ the public history since the project was open-sourced on 2026-07-10.
   food is put away. Panic still wins, and a baby follows the food before
   its parent, as vanilla's goal order has it.
 
+- **Big dripleaves tip.** Stand on a big dripleaf and it turns unstable,
+  tips part way half a second later, folds fully half a second after
+  that and drops you through, then springs back five seconds on, with
+  vanilla's tilt sounds. A redstone signal on any side pins it flat and
+  straightens a tilted one, and any projectile folds it at once.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

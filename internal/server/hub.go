@@ -466,6 +466,7 @@ type hub struct {
 	scratchRing   map[[2]int32]bool       // naturalSpawn / overworldSpawnRing: ±8 spawn ring
 	scratchSeen3  map[[3]int]bool         // runRandomTicks: chunks ticked this pass
 	scratchSim    map[simPos]struct{}     // runUpdates: positions processed this tick
+	dripleafDue   map[simPos]uint64       // big dripleaf: the tick its next tilt stage is due
 	items         map[int32]*itemEntity   // dropped-item entities (block drops)
 	arrows        map[int32]*arrowEntity  // in-flight/stuck projectiles (skeleton shots)
 	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds

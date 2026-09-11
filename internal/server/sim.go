@@ -123,6 +123,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// Coral left out of water bleaches to its dead twin.
 	case h.tickComposter(players, dim, pos, state):
 		// A full composter finishes composting a second after its last item.
+	case h.tickDripleaf(players, dim, pos, state):
+		// A big dripleaf tipping under a load, or pinned flat by a signal.
 	default:
 		h.updateRedstone(players, pos, state)
 	}

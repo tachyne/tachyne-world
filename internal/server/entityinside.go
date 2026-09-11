@@ -179,6 +179,12 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 				if !t.p.sneaking {
 					h.setBlockLive(players, t.dim, fx, feet-1, fz, setBoolProp(s, "lit", true))
 				}
+			case isBigDripleaf(s) && t.onGround: // BigDripleafBlock.entityInside: a load starts it tipping
+				y := feet
+				if onFloor {
+					y = feet - 1
+				}
+				h.dripleafStepped(players, t.dim, blockPos{fx, y, fz}, s)
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you. Vanilla
 				// ALSO spares a crouching player (isSteppingCarefully), which
@@ -212,6 +218,12 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 					return
 				}
 				h.hurtMobOf(nil, m, magmaDamage, dtHotFloor)
+			case isBigDripleaf(s) && m.grounded():
+				y := int(math.Floor(m.y))
+				if onFloor {
+					y--
+				}
+				h.dripleafStepped(players, m.dim, blockPos{int(math.Floor(m.x)), y, int(math.Floor(m.z))}, s)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla).
 				if m.etype == entityFox || m.etype == entityBee {
