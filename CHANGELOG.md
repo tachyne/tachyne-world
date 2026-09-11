@@ -85,6 +85,14 @@ the public history since the project was open-sourced on 2026-07-10.
   monster and pays ten experience; one spider in a hundred spawns with a
   skeleton on its back that shoots from the saddle.
 
+- **Skeleton traps, strider riders, spider effects.** A skeleton horse
+  born of a lightning strike now waits as a trap and springs on the first
+  player within ten blocks: a flash, and four skeleton horses with
+  helmeted, persistent skeleton riders shooting from the saddle. One
+  strider in thirty spawns saddled with a zombified piglin on its back,
+  else one in ten with a calf riding it. On hard, a spider may spawn with
+  vanilla's lasting speed, strength, regeneration or invisibility.
+
 ### Fixed
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now

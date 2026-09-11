@@ -478,6 +478,7 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 	case entitySpider:
 		// (spider speed comes from speedFor: attr 0.30; they survive the day, neutral until dark)
 		h.rollSpiderJockey(players, m)
+		h.rollSpiderEffect(players, m)
 	case entityCreeper:
 		m.behavior = creeperBehavior{}
 	default:
@@ -501,6 +502,7 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 	}
 	day := h.dayTime.Load() % dayLength
 	h.despawnSweep(players)                 // vanilla checkDespawn for every non-persistent category
+	h.tickSkeletonTraps(players)            // armed skeleton horses spring on approach
 	if h.rules.Difficulty == diffPeaceful { // peaceful: hostiles never linger
 		for _, m := range h.mobs {
 			if m.hostile && m.dying == 0 {

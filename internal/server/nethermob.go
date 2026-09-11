@@ -119,6 +119,7 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		m.setFollowRange(48)                    // Blaze FOLLOW_RANGE (vanilla 1.21.5)
 	default:
 		h.applySpecies(players, m) // roster nether species (piglin/hoglin/strider/…)
+		h.rollStriderRider(players, m)
 	}
 }
 

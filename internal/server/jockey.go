@@ -62,3 +62,25 @@ func (h *hub) rollSpiderJockey(players map[int32]*tracked, m *mob) {
 		h.mountMobOn(players, sk, m, false)
 	}
 }
+
+// rollSpiderEffect is Spider.finalizeSpawn's SpiderEffectsGroupData: on
+// hard, with probability 0.1 × the special multiplier, the spider spawns
+// with a lasting effect — speed (two chances in five), strength,
+// regeneration or invisibility.
+func (h *hub) rollSpiderEffect(players map[int32]*tracked, m *mob) {
+	if h.rules.Difficulty != diffHard || h.rng.Float64() >= 0.1*h.specialMultiplier() {
+		return
+	}
+	var eff int32
+	switch h.rng.Intn(5) {
+	case 0, 1:
+		eff = effSpeed
+	case 2:
+		eff = effStrength
+	case 3:
+		eff = effRegen
+	default:
+		eff = effInvisibility
+	}
+	h.applyMobEffect(players, m, eff, 0, 1<<20) // vanilla: infinite
+}

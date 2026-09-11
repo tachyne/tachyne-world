@@ -80,6 +80,7 @@ type savedMob struct {
 
 	Baby       bool   `json:"baby,omitempty"`
 	Jockey     bool   `json:"jockey,omitempty"` // a chicken that carried a jockey
+	Trap       bool   `json:"trap,omitempty"`   // a skeleton horse still armed as a trap
 	GrowLeft   int    `json:"grow,omitempty"`
 	LoveTicks  int    `json:"love,omitempty"`
 	BreedCD    int    `json:"bcd,omitempty"`
@@ -532,7 +533,7 @@ func toSavedMob(m *mob) savedMob {
 	sm := savedMob{
 		Etype: m.etype, Dim: m.dim, X: m.x, Y: m.y, Z: m.z, Yaw: m.yaw,
 		Health: m.health, Max: m.maxHP(), DmgFrac: m.dmgFrac,
-		Baby: m.baby, Jockey: m.jockey, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
+		Baby: m.baby, Jockey: m.jockey, Trap: m.trap, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
 		Color: m.color, Collar: m.collar, Stew: m.stew, CustomName: m.customName, FromBucket: m.fromBucket, Variant: packVariant(m),
 		Persistent: m.persistent,

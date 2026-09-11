@@ -291,12 +291,14 @@ func (h *hub) tickLightning(players map[int32]*tracked) {
 			continue // dry and snowy biomes see the storm but never the bolt
 		}
 		// vanilla skeleton trap: difficulty-scaled chance, never on a rod; the
-		// trap's bolt is visual-only (no damage, no fire). The full four-
-		// horsemen ambush on approach is future work — today it's the horse.
+		// trap's bolt is visual-only (no damage, no fire). The horse waits
+		// armed and springs the four horsemen on approach (skeletontrap.go).
 		visualOnly := false
 		if h.rules.DoMobSpawning && !onRod &&
 			h.rng.Float64() < float64(h.effectiveDifficulty())*0.01 {
-			h.spawnMob(players, entitySkeletonHorse, float64(sx)+0.5, float64(sy), float64(sz)+0.5)
+			if horse := h.spawnMob(players, entitySkeletonHorse, float64(sx)+0.5, float64(sy), float64(sz)+0.5); horse != nil {
+				horse.trap = true // SkeletonHorse.setTrap: springs on approach (skeletontrap.go)
+			}
 			visualOnly = true
 		}
 		h.strikeLightning(players, float64(sx)+0.5, float64(sy), float64(sz)+0.5, visualOnly)
