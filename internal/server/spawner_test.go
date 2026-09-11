@@ -40,6 +40,9 @@ func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 	}
 	want := dungeonMobs[d.Mob%3]
 	for _, m := range h.mobs {
+		if m.mount != 0 {
+			continue // a spawner finalizes its spawns too: a spider may carry a skeleton
+		}
 		if m.etype != want {
 			t.Fatalf("spawner mob type %d, want %d", m.etype, want)
 		}
