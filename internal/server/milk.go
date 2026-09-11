@@ -47,16 +47,18 @@ func (h *hub) tryMilk(players map[int32]*tracked, t *tracked, m *mob) bool {
 	return true
 }
 
-// tryMilkStew is the mooshroom's other half: a bowl comes back as stew.
-// Vanilla's brown mooshrooms can additionally be fed a flower to brew a
-// SUSPICIOUS stew, which needs both per-mob stored effects and the stew's
-// effect component carried through the render chain — neither exists yet, so
-// every mooshroom gives the plain stew.
+// tryMilkStew is the mooshroom's other half: a bowl comes back as stew — the
+// suspicious kind when a brown mooshroom was fed a flower (stew.go).
 func (h *hub) tryMilkStew(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if heldStack(t).item != itemBowlEmpty || m.etype != entityMooshroom || m.baby {
 		return false
 	}
 	h.playSound(players, "minecraft:entity.mooshroom.milk", sndNeutral, m.x, m.y, m.z, 1, 1)
+	if m.stew != 0 { // a brown mooshroom fed a flower: suspicious stew, once
+		h.giveFilledStack(players, t, int32(t.p.heldSlot()), invStack{item: itemSuspiciousStew, count: 1, stew: m.stew})
+		m.stew = 0
+		return true
+	}
 	h.giveFilled(players, t, int32(t.p.heldSlot()), itemMushroomStew)
 	return true
 }

@@ -702,6 +702,9 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	h.incStat(t, attachproto.StatUsed, s.item, 1)
 	t.food = min(maxFood, t.food+pts)
 	h.eatSpecial(players, t, s.item) // the food's on_consume effects
+	if s.item == itemSuspiciousStew {
+		h.eatStew(players, t, s.stew) // the flower's hidden effect
+	}
 	// Saturation gained per the food's value, capped at the new food level (vanilla).
 	t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+float64(foodSaturation[s.item])))
 	s.count--

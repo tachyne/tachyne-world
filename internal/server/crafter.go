@@ -150,6 +150,9 @@ func (h *hub) openCrafter(t *tracked, x, y, z int) {
 // crafterResult is the current recipe output for the grid (empty = no match).
 // Disabled slots are always empty, so the grid is the recipe as-is.
 func crafterResult(c *bin) invStack {
+	if res, ok := stewCraftMatch(c.slots[:9]); ok {
+		return res
+	}
 	item, count := matchRecipe(c.slots[:9], 3)
 	if item == 0 || count == 0 {
 		return invStack{}

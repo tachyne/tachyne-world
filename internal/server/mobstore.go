@@ -85,6 +85,7 @@ type savedMob struct {
 	Sheared    bool   `json:"shear,omitempty"`
 	Color      int8   `json:"color,omitempty"`   // sheep fleece colour
 	Collar     int8   `json:"collar,omitempty"`  // pet collar dye
+	Stew       int8   `json:"stew,omitempty"`    // brown mooshroom's stored stew flower
 	CustomName string `json:"name,omitempty"`    // name tag; also makes the mob persistent
 	FromBucket bool   `json:"bucket,omitempty"`  // released from a mob bucket: persistent
 	Variant    int32  `json:"variant,omitempty"` // species variant + 1 (0 = unset; rows without one re-roll on load)
@@ -532,7 +533,7 @@ func toSavedMob(m *mob) savedMob {
 		Health: m.health, Max: m.maxHP(), DmgFrac: m.dmgFrac,
 		Baby: m.baby, GrowLeft: m.growLeft, LoveTicks: m.loveTicks, BreedCD: m.breedCD,
 		Sheared: m.sheared, EggIn: m.eggIn, Size: m.size,
-		Color: m.color, Collar: m.collar, CustomName: m.customName, FromBucket: m.fromBucket, Variant: packVariant(m),
+		Color: m.color, Collar: m.collar, Stew: m.stew, CustomName: m.customName, FromBucket: m.fromBucket, Variant: packVariant(m),
 		Persistent: m.persistent,
 		Hostile:    m.hostile, Anger: m.anger, Neutral: m.neutral, PatrolCaptain: m.patrolCaptain,
 		CarriedBlk: m.carriedBlock,

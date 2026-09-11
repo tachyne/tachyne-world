@@ -42,6 +42,13 @@ the public history since the project was open-sourced on 2026-07-10.
   the fall forgiven and a second's cooldown. Only the golden apples had
   their effects before.
 
+- **Suspicious stew.** A bowl, a red and a brown mushroom and one flower
+  craft a stew carrying the flower's effect — vanilla's table, from the
+  dandelion's moment of saturation to the wither rose's wither and the
+  eyeblossoms' blindness and nausea — and a brown mooshroom fed a flower
+  gives that stew from its next bowl. The effect is a secret, as in
+  vanilla, and it survives restarts on the stack.
+
 ### Fixed
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:

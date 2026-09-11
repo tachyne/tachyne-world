@@ -496,6 +496,9 @@ func (h *hub) craftResult(grid []invStack, w int) (invStack, int) {
 	if res, ok := armorDyeMatch(grid); ok {
 		return res, mapCraftNone
 	}
+	if res, ok := stewCraftMatch(grid); ok {
+		return res, mapCraftNone
+	}
 	item, count := matchRecipe(grid, w)
 	return invStack{item: item, count: count}, mapCraftNone
 }
