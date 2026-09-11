@@ -11,6 +11,16 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-11
+
+### Added
+- **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
+  Bedrock's own crafter screen instead of closing again: the grid, the
+  result preview, the disabled-slot overlay and the trigger state, with
+  slot toggles reaching the world. The overlay and trigger travel as the
+  block entity's data on Bedrock, rebuilt from the container properties
+  Java uses.
+
 ## 2026-09-09
 
 ### Added
