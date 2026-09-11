@@ -88,13 +88,12 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 		h.craftFail(players, pos)
 		return
 	}
-	grid := make([]invStack, 9)
-	copy(grid, c.slots[:9])
-	item, count := matchRecipe(grid, 3)
-	if item == 0 || count == 0 {
+	res := crafterResult(c) // the same match the preview shows: a suspicious stew keeps its flower
+	if res.item == 0 || res.count == 0 {
 		h.craftFail(players, pos)
 		return
 	}
+	item := res.item
 	for i := 0; i < 9; i++ {
 		if c.slots[i].item != 0 && c.slots[i].count > 0 {
 			if c.slots[i].count--; c.slots[i].count <= 0 {
@@ -109,7 +108,7 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 			h.advance(players, t, "crafter_recipe_crafted", advMatch{recipe: itemNameOf[item]})
 		}
 	}
-	h.ejectCrafted(players, pos, state, item, count)
+	h.ejectCrafted(players, pos, state, res)
 	h.refreshBinViewers(players, pos)
 	h.playSound(players, "minecraft:block.crafter.craft", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
@@ -315,26 +314,29 @@ func (h *hub) craftFail(players map[int32]*tracked, pos simPos) {
 
 // ejectCrafted pushes the result into the container the crafter faces, or drops
 // it into the world if none accepts it (CrafterBlockEntity output behaviour).
-func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32, item int32, count int) {
+func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32, st invStack) {
 	dx, dy, dz := crafterFront(state)
 	target := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 	if dst := h.containerSlots(pos.at(target)); dst != nil {
 		var left int
 		if cb := h.crafterBinAt(pos.at(target)); cb != nil {
-			left = crafterInsert(cb, invStack{item: item, count: count}) // crafter → crafter
+			left = crafterInsert(cb, st) // crafter → crafter
 		} else {
-			left = binInsert(dst, invStack{item: item, count: count})
+			left = binInsert(dst, st)
 		}
 		if left == 0 {
 			h.refreshBinViewers(players, pos.at(target))
 			return
-		} else if left < count {
+		} else if left < st.count {
 			h.refreshBinViewers(players, pos.at(target))
-			count = left
+			st.count = left
 		}
 	}
 	fx := float64(pos.x) + 0.5 + float64(dx)*0.7
 	fy := float64(pos.y) + 0.5 + float64(dy)*0.7
 	fz := float64(pos.z) + 0.5 + float64(dz)*0.7
-	h.spawnItem(players, item, count, fx, fy, fz)
+	if it := h.spawnItem(players, st.item, st.count, fx, fy, fz); it != nil && st.stew != 0 {
+		it.stew = st.stew // the ejected stew keeps its flower
+		h.refreshItemMeta(players, it)
+	}
 }

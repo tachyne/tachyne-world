@@ -54,6 +54,7 @@ type itemEntity struct {
 	instrument    int8
 	name          string
 	lode          lodeTracker // lodestone compass target
+	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
 	born          uint64      // world tick spawned (for despawn)
 	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -67,7 +68,7 @@ func (it *itemEntity) stack() invStack {
 	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
-		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color}
+		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew}
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has

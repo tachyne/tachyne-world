@@ -628,7 +628,7 @@ func (h *hub) snapshotItems() []savedItem {
 			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench), Ench2: packEnchHi(it.ench),
 			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
 			Box: it.boxID, Hive: it.hiveID, Bundle: it.bundleID,
-			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name, Lode: packLode(it.lode)}
+			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name, Lode: packLode(it.lode), Stew: it.stew}
 		for i, l := range it.pats {
 			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
 		}
@@ -652,6 +652,7 @@ func (h *hub) restoreItems(saved []savedItem) {
 			it.boxID, it.hiveID, it.bundleID = si.Box, si.Hive, si.Bundle
 			it.potion, it.repairCost, it.instrument, it.name = si.Potion, si.Repair, si.Instr, si.Name
 			it.lode = unpackLode(si.Lode)
+			it.stew = si.Stew
 		}
 	}
 }

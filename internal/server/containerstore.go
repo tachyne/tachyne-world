@@ -45,6 +45,7 @@ type savedItem struct {
 	Instr  int8     `json:"instr,omitempty"`  // goat horn instrument
 	Name   string   `json:"name,omitempty"`   // anvil rename
 	Lode   [4]int32 `json:"lode,omitempty"`   // lodestone compass target (packLode)
+	Stew   int8     `json:"stew,omitempty"`   // suspicious stew's hidden flower
 }
 
 type containerFile struct {
