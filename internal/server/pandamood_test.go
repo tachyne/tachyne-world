@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -39,8 +40,12 @@ func TestPandaPersonalities(t *testing.T) {
 		t.Fatal("…and stands when the storm passes")
 	}
 	wo.dying = 1
-	// Lazy: lies down within a few thousand updates, then gets up.
+	// Lazy: slow (setAttributes), lies down within a few thousand updates, then gets up.
 	la := pandaWith(h, players, pandaLazy)
+	h.applyPandaGenes(la)
+	if got, want := la.moveSpeed(), pandaLazySpeed*attrToStep; math.Abs(got-want) > 1e-9 {
+		t.Fatalf("a lazy panda walks at 0.07: %.4f want %.4f", got, want)
+	}
 	lay := false
 	for i := 0; i < 5000 && !lay; i++ {
 		h.pandaStep(players, la)

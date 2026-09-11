@@ -97,8 +97,13 @@ func (h *hub) applyPandaGenes(m *mob) {
 		}
 	case pandaAggressive:
 		m.retaliates = true
+	case pandaLazy:
+		m.setMoveSpeed(pandaLazySpeed * attrToStep) // MOVEMENT_SPEED 0.07 (the table's is 0.15)
 	}
 }
+
+// pandaLazySpeed is a lazy panda's MOVEMENT_SPEED attribute.
+const pandaLazySpeed = 0.07
 
 // pandaGeneMeta is the two gene bytes.
 func pandaGeneMeta(b []byte, m *mob) []byte {
