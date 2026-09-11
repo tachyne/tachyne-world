@@ -2375,6 +2375,7 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 // broadcast to the dimension's viewers, and schedule simulation (overworld
 // only — block sim is v1 overworld-only, like onBlock).
 func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	old := h.worldFor(dim).At(x, y, z)
 	h.worldFor(dim).SetBlock(x, y, z, state)
 	bcx, bcz := chunkFloor(float64(x)), chunkFloor(float64(z))
 	body := blockSetEv(x, y, z, state)
@@ -2391,6 +2392,7 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 		h.rodIndexOnBlockChange(x, y, z, state)
 		h.scheduleAround(blockPos{x, y, z}, 1)
 	}
+	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
 }
 

@@ -136,9 +136,12 @@ func (h *hub) setBlock(players map[int32]*tracked, pos blockPos, state uint32) {
 // setBlockAt applies a simulation-driven change in a dimension and broadcasts
 // it to the players standing in that dimension.
 func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	h.worldFor(dim).SetBlock(pos.x, pos.y, pos.z, state)
+	w := h.worldFor(dim)
+	old := w.At(pos.x, pos.y, pos.z)
+	w.SetBlock(pos.x, pos.y, pos.z, state)
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
 	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
+	h.afterRemoval(players, dim, pos, old, state)
 	// Break the fence and the knot goes with it, dropping whatever it held.
 	// Guarded on there being any knot at all: this is the choke point every
 	// block change runs through.

@@ -21,6 +21,18 @@ the public history since the project was open-sourced on 2026-07-10.
   block entity's data on Bedrock, rebuilt from the container properties
   Java uses.
 
+### Fixed
+- **Blocks have a last word when removed.** Vanilla lets a block that is
+  being replaced act on its neighbours once more, and the engine did not:
+  breaking a powered lever, button, torch or plate left what it powered
+  through a wall switched on; breaking a chest left a comparator reading
+  it through a solid block on its old value; breaking a piston head left
+  the extended base standing, and breaking the base left its head floating.
+  Every block write now runs that hook, so the far side of the wall goes
+  dark, the comparator drops to zero, the head takes its base with it (the
+  piston drops as an item), and a base gone from behind a head takes the
+  head.
+
 ## 2026-09-09
 
 ### Added
