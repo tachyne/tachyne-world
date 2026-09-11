@@ -52,6 +52,7 @@ func (h *hub) updateDragonBar(players map[int32]*tracked) {
 			// destroy+spawn so the dragon exists client-side unconditionally.
 			t.p.sendEv(entGone(m.eid))
 			t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
+			sendAttrsTo(t, mobAttrFrame(m))
 			log.Printf("end: dragon refresh sent to %q (dragon eid=%d, player eid=%d)", t.p.name, m.eid, t.p.eid)
 		} else {
 			t.p.trySendEv(bossBarHealth(dragonBarUUID, frac))

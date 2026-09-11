@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Mob persistence: live mobs are saved to mobs.json and reconstructed at boot so
@@ -119,6 +121,8 @@ type savedMob struct {
 	Chest     []stackRow  `json:"chest,omitempty"`
 	Strength  int8        `json:"str,omitempty"`
 	Held      int32       `json:"held,omitempty"`
+	HSpeed    float64     `json:"hspeed,omitempty"`      // horse family: rolled MOVEMENT_SPEED base (per-step units)
+	HJump     float64     `json:"hjump,omitempty"`       // horse family: rolled JUMP_STRENGTH base
 	HeldSt    stackRow    `json:"held_st,omitempty"`     // the held item with its enchantments (when it has any)
 	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
 	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
@@ -558,6 +562,9 @@ func toSavedMob(m *mob) savedMob {
 	}
 	if m.heldEnch[0].id != 0 || m.heldEnch[0].lvl != 0 {
 		sm.HeldSt = packStack(m.heldStack())
+	}
+	if horseFamily(m.etype) {
+		sm.HSpeed, sm.HJump = m.mobAttrs().Get(attr.MovementSpeed).Base(), m.jumpStrength()
 	}
 	for _, c := range m.chest {
 		sm.Chest = append(sm.Chest, packStack(c))

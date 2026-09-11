@@ -132,10 +132,12 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 		case e.dim: // both sides gain sight (gear rides with the spawn)
 			o.p.trySendEv(entAdd(t.p.eid, playerEntityType, t.p.uuid, t.x, t.y, t.z, t.yaw, t.pitch))
 			o.p.trySendEv(equipEv(t.p.eid, heldStack(t), t.offhand, t.armor))
+			sendAttrsTo(o, playerAttrFrame(t))
 			// The switcher's queue is mid-chunk-flood: a trySend here silently
 			// drops and the other player stays invisible until relog. Block.
 			t.p.sendEv(entAdd(o.p.eid, playerEntityType, o.p.uuid, o.x, o.y, o.z, o.yaw, o.pitch))
 			t.p.sendEv(equipEv(o.p.eid, heldStack(o), o.offhand, o.armor))
+			sendAttrsTo(t, playerAttrFrame(o))
 		}
 	}
 	// Swap entity views: hide the old dimension's mobs/items/projectiles,
@@ -146,6 +148,7 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 			t.p.sendEv(entGone(m.eid))
 		case e.dim:
 			t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
+			sendAttrsTo(t, mobAttrFrame(m))
 			if vm := variantMeta(m); vm != nil {
 				t.p.sendEv(metaEv(vm))
 			}

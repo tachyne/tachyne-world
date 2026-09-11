@@ -1,5 +1,7 @@
 package server
 
+import attr "github.com/tachyne/tachyne-world/plugin/attribute"
+
 // Horse variation.
 //
 // Every horse in tachyne was a clone: the species table gives all of them 22
@@ -37,12 +39,17 @@ func (h *hub) rollHorseAttributes(m *mob) {
 	case entityHorse:
 		m.setMaxHP(h.horseHealthRoll())
 		m.health = m.maxHP()
-		m.setMoveSpeed(h.horseSpeedRoll())
-		m.jumpStrength = h.horseJumpRoll()
+		m.setMoveSpeed(h.horseSpeedRoll() * attrToStep) // the roll is a vanilla figure; the map holds per-step units
+		m.setJumpStrength(h.horseJumpRoll())
 	case entitySkeletonHorse, entityZombieHorse:
-		m.jumpStrength = h.horseJumpRoll()
+		m.setJumpStrength(h.horseJumpRoll())
 	}
 }
+
+// jumpStrength / setJumpStrength are the JUMP_STRENGTH attribute (vanilla
+// units: 0.4–1.0), which the riding client reads to size the jump.
+func (m *mob) jumpStrength() float64     { return m.mobAttrs().Value(attr.JumpStrength) }
+func (m *mob) setJumpStrength(v float64) { m.mobAttrs().SetBase(attr.JumpStrength, v) }
 
 // breedHorseAttributes is setOffspringAttribute: a foal lands between its
 // parents with a little drift, so breeding two good horses tends to produce a
@@ -53,8 +60,8 @@ func (h *hub) breedHorseAttributes(a, b, foal *mob) {
 	}
 	foal.setMaxHP(int(h.breedValue(float64(a.maxHP()), float64(b.maxHP()), 15, 30)))
 	foal.health = foal.maxHP()
-	foal.setMoveSpeed(h.breedValue(a.moveSpeed(), b.moveSpeed(), 0.1125, 0.3375))
-	foal.jumpStrength = h.breedValue(a.jumpStrength, b.jumpStrength, 0.4, 1.0)
+	foal.setMoveSpeed(h.breedValue(a.moveSpeed(), b.moveSpeed(), 0.1125*attrToStep, 0.3375*attrToStep))
+	foal.setJumpStrength(h.breedValue(a.jumpStrength(), b.jumpStrength(), 0.4, 1.0))
 }
 
 // breedValue averages the parents and adds a fresh roll across the range,

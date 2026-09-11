@@ -20,16 +20,16 @@ func TestHorsesVary(t *testing.T) {
 		}
 		seenHP[m.maxHP()] = true
 		seenSpeed[m.moveSpeed()] = true
-		seenJump[m.jumpStrength] = true
+		seenJump[m.jumpStrength()] = true
 
 		if m.maxHP() < 15 || m.maxHP() > 30 {
 			t.Fatalf("health %d outside vanilla's 15-30", m.maxHP())
 		}
-		if m.jumpStrength < 0.4 || m.jumpStrength > 1.0 {
-			t.Fatalf("jump %v outside vanilla's 0.4-1.0", m.jumpStrength)
+		if m.jumpStrength() < 0.4 || m.jumpStrength() > 1.0 {
+			t.Fatalf("jump %v outside vanilla's 0.4-1.0", m.jumpStrength())
 		}
-		if m.moveSpeed() < 0.11 || m.moveSpeed() > 0.34 {
-			t.Fatalf("speed %v outside vanilla's range", m.moveSpeed())
+		if sp := m.moveSpeed() / attrToStep; sp < 0.11 || sp > 0.34 { // the map holds per-step units
+			t.Fatalf("speed %v outside vanilla's range", sp)
 		}
 	}
 	if len(seenHP) < 5 || len(seenSpeed) < 5 || len(seenJump) < 5 {
@@ -45,14 +45,14 @@ func TestDonkeysDoNotVary(t *testing.T) {
 	first := h.spawnSpecies(players, entityDonkey, 0, 0, 70, 0)
 	for i := 0; i < 30; i++ {
 		m := h.spawnSpecies(players, entityDonkey, 0, float64(i), 70, 5)
-		if m.maxHP() != first.maxHP() || m.jumpStrength != 0 {
-			t.Fatalf("a donkey varied: hp=%d jump=%v", m.maxHP(), m.jumpStrength)
+		if m.maxHP() != first.maxHP() || m.jumpStrength() != first.jumpStrength() {
+			t.Fatalf("a donkey varied: hp=%d jump=%v", m.maxHP(), m.jumpStrength())
 		}
 	}
 	// A skeleton horse rolls its jump but nothing else.
 	sk := h.spawnSpecies(players, entitySkeletonHorse, 0, 0, 70, 9)
-	if sk.jumpStrength < 0.4 || sk.jumpStrength > 1.0 {
-		t.Errorf("skeleton horse jump %v outside 0.4-1.0", sk.jumpStrength)
+	if sk.jumpStrength() < 0.4 || sk.jumpStrength() > 1.0 {
+		t.Errorf("skeleton horse jump %v outside 0.4-1.0", sk.jumpStrength())
 	}
 }
 
@@ -65,20 +65,22 @@ func TestFoalInheritsFromItsParents(t *testing.T) {
 	foal := h.spawnSpecies(players, entityHorse, 0, 2, 70, 0)
 
 	// Two excellent parents should not produce a hopeless foal.
-	a.jumpStrength, b.jumpStrength = 1.0, 1.0
+	a.setJumpStrength(1.0)
+	b.setJumpStrength(1.0)
 	a.setMaxHP(30)
 	b.setMaxHP(30)
 	h.breedHorseAttributes(a, b, foal)
-	if foal.jumpStrength < 0.7 {
-		t.Errorf("two maximum parents gave a foal jumping %v", foal.jumpStrength)
+	if foal.jumpStrength() < 0.7 {
+		t.Errorf("two maximum parents gave a foal jumping %v", foal.jumpStrength())
 	}
 	if foal.maxHP() < 22 {
 		t.Errorf("two maximum parents gave a foal with %d health", foal.maxHP())
 	}
 	// …and everything stays inside vanilla's range.
-	a.jumpStrength, b.jumpStrength = 0.4, 0.4
+	a.setJumpStrength(0.4)
+	b.setJumpStrength(0.4)
 	h.breedHorseAttributes(a, b, foal)
-	if foal.jumpStrength < 0.4 || foal.jumpStrength > 1.0 {
-		t.Errorf("foal jump %v escaped the range", foal.jumpStrength)
+	if foal.jumpStrength() < 0.4 || foal.jumpStrength() > 1.0 {
+		t.Errorf("foal jump %v escaped the range", foal.jumpStrength())
 	}
 }

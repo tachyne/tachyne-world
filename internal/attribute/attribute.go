@@ -157,6 +157,14 @@ func (a *Map) Value(id api.ID) float64 { return a.Get(id).Value() }
 // SetBase sets an attribute's base value.
 func (a *Map) SetBase(id api.ID, v float64) { a.Get(id).SetBase(v) }
 
+// Each visits every instance the map holds, in no particular order — what a
+// sync needs: the attributes something has actually set or modified.
+func (a *Map) Each(fn func(id api.ID, in *Instance)) {
+	for id, in := range a.m {
+		fn(id, in)
+	}
+}
+
 // RemoveSource drops every modifier from one source across ALL attributes —
 // what unequipping an item or expiring an effect needs, without the caller
 // having to remember which attributes it touched.

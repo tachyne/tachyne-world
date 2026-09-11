@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-11
 
 ### Added
+- **Attributes reach the client.** Vanilla syncs a living entity's
+  attributes to whoever sees it (on first sight, and when they change);
+  tachyne never did, so a horse's rolled speed and jump stopped at the
+  server and the client rode every horse alike. A new attach frame
+  carries each entity's syncable attributes by canonical name with their
+  modifiers, the Java renderer emits update_attributes with the registry
+  ids remapped per client version (Bedrock gets its movement and jump
+  attributes), and the engine sends them on pairing and once a second
+  when something changed. Horses now keep their rolled speed and jump
+  across a restart as well.
+
 - **Animals eat their whole vanilla food list.** Breeding used one item per
   species; it now takes everything on vanilla's per-species food tag — a
   pig carrots, potatoes or beetroot, a rabbit a dandelion or golden carrot,
@@ -185,6 +196,11 @@ the public history since the project was open-sourced on 2026-07-10.
   every client, Bedrock included.
 
 ### Fixed
+- **A dropped suspicious stew kept its secret.** A suspicious stew on the
+  floor — tossed, or ejected by a crafter — lost its hidden flower and
+  landed as a plain one; the dropped item now carries it, the crafter
+  crafts the stew the same way its preview shows it, and a stew on the
+  floor survives a restart with its flower.
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now
   carries vanilla's hundred, so a village's golem is the wall it should

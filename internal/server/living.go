@@ -13,8 +13,9 @@ import (
 // matters more than it sounds: effects were player-only, which meant nothing
 // could poison a mob and half of vanilla's potion surface had nowhere to land.
 type living struct {
-	attrs   *attribute.Map          // entity attributes (base + modifiers)
-	effects map[int32]*activeEffect // active status effects, ticked by the hub
+	attrs    *attribute.Map          // entity attributes (base + modifiers)
+	effects  map[int32]*activeEffect // active status effects, ticked by the hub
+	attrSent uint64                  // fingerprint of the last attribute frame sent (attrsync.go)
 }
 
 // hasEffect returns the 1-based level of an active effect (0 = none).

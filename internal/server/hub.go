@@ -995,6 +995,7 @@ func (h *hub) run() {
 			}
 			if age%survivalTickN == 0 {
 				h.survivalTick(players)       // health regen, hunger, starvation, void
+				h.syncAttributes(players)     // changed attributes reach their viewers (sendChanges)
 				h.updateHostiles(players)     // night mob spawning + daylight burn
 				h.updatePatrols(players)      // roaming pillager patrols (day 5+, throttled)
 				h.catSpawner(players)         // village cats (vanilla CustomSpawner)
@@ -2090,8 +2091,10 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		// set_equipment right after add_entity; without this the newcomer's
 		// armor is invisible to others until the 2 s resync).
 		t.p.trySendEv(equipEv(e.p.eid, heldStack(nt), nt.offhand, nt.armor))
+		sendAttrsTo(t, playerAttrFrame(nt))
 		e.p.trySendEv(entAdd(t.p.eid, playerEntityType, t.p.uuid, t.x, t.y, t.z, t.yaw, t.pitch))
 		e.p.trySendEv(equipEv(t.p.eid, heldStack(t), t.offhand, t.armor))
+		sendAttrsTo(nt, playerAttrFrame(t))
 		if t.sleeping { // …lying down, if they're mid-sleep
 			e.p.trySendEv(metaEv(sleepMetadata(t.p.eid, t.sleepPos)))
 		}
@@ -2118,6 +2121,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			continue
 		}
 		e.p.trySendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
+		sendAttrsTo(nt, mobAttrFrame(m)) // addPairing: the attributes ride with the spawn
 		if m.burning {
 			e.p.trySendEv(metaEv(fireMetadata(m.eid, true)))
 		}
