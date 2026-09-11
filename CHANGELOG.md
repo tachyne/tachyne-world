@@ -65,6 +65,13 @@ the public history since the project was open-sourced on 2026-07-10.
   spawning, drowning and swimming, as its fluid does in vanilla. Chunks already cached regenerate with the plants
   (generator version 13); player edits are kept as always.
 
+- **Block contact odds and ends.** A burning player or mob standing in a
+  water (or powder snow) cauldron is put out and the cauldron loses a
+  level; a lava cauldron ignites and hurts whoever stands in it; a ravager
+  tramples the crops it walks through; and a falling block — sand, gravel,
+  an anvil — sinks through water and lava to the floor, destroying
+  frogspawn on the way, instead of coming to rest on the surface.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

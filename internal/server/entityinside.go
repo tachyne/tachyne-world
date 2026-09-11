@@ -185,6 +185,17 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 					y = feet - 1
 				}
 				h.dripleafStepped(players, t.dim, blockPos{fx, y, fz}, s)
+			case !onFloor && isFilledCauldron(s) && t.fireSecs > 0:
+				// LayeredCauldronBlock.entityInside: a burning entity in the
+				// water (or powder snow) is put out, and the cauldron loses a level.
+				t.fireSecs = 0
+				h.lowerCauldron(players, t.dim, cellWith(h, t.dim, fx, feet, fz, s), s)
+			case !onFloor && s == lavaCauldronState:
+				// LavaCauldronBlock.entityInside: lavaIgnite + lavaHurt.
+				if t.hasEffect(effFireRes) == 0 {
+					h.setBurning(players, t, lavaFireSecs)
+					h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{key: causeLava})
+				}
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you. Vanilla
 				// ALSO spares a crouching player (isSteppingCarefully), which
@@ -224,6 +235,17 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 					y--
 				}
 				h.dripleafStepped(players, m.dim, blockPos{int(math.Floor(m.x)), y, int(math.Floor(m.z))}, s)
+			case !onFloor && isFilledCauldron(s) && m.fireSecs > 0:
+				m.fireSecs = 0
+				h.lowerCauldron(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
+			case !onFloor && s == lavaCauldronState:
+				if !m.resistsFire() {
+					m.ignite(lavaFireSecs)
+					h.hurtMobOf(nil, m, lavaDmgPerSec, dtLava)
+				}
+			case !onFloor && m.etype == entityRavager && isCropState(s) && h.rules.MobGriefing:
+				// CropBlock.entityInside: a ravager tramples crops flat.
+				h.breakBlockDrop(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla).
 				if m.etype == entityFox || m.etype == entityBee {
@@ -322,4 +344,43 @@ func (h *hub) honeySlide(players map[int32]*tracked, t *tracked, fellY float64) 
 			}
 		}
 	}
+}
+
+// isFilledCauldron reports a water or powder-snow cauldron with anything in it.
+func isFilledCauldron(s uint32) bool {
+	kind, level, ok := cauldronOf(s)
+	return ok && level > 0 && (kind == cauldronWater || kind == cauldronSnow)
+}
+
+// lowerCauldron is LayeredCauldronBlock.lowerFillLevel: one level down,
+// empty at zero.
+func (h *hub) lowerCauldron(players map[int32]*tracked, dim int, pos blockPos, s uint32) {
+	_, level, ok := cauldronOf(s)
+	if !ok || level == 0 {
+		return
+	}
+	if level == 1 {
+		h.setBlockAt(players, dim, pos, cauldronState)
+		return
+	}
+	h.setBlockAt(players, dim, pos, s-1)
+}
+
+// isCropState reports a staged crop (wheat, carrots, potatoes, beetroots).
+func isCropState(s uint32) bool {
+	for _, r := range cropRanges {
+		if s >= r[0] && s <= r[1] {
+			return true
+		}
+	}
+	return false
+}
+
+// cellWith is the feet or body cell holding state s — blocksTouching reports
+// the state without saying which of the two it came from.
+func cellWith(h *hub, dim, fx, feet, fz int, s uint32) blockPos {
+	if h.worldFor(dim).At(fx, feet, fz) == s {
+		return blockPos{fx, feet, fz}
+	}
+	return blockPos{fx, feet + 1, fz}
 }

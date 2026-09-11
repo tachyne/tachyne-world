@@ -188,7 +188,10 @@ func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, s
 		return
 	}
 	key := simPos{dim: dim, blockPos: pos}
-	if worldgen.IsReplaceable(h.worldFor(dim).Block(below.x, below.y, below.z)) {
+	// A falling block passes through fluids (the entity has no collision
+	// with them) and through frogspawn, which it destroys on the way
+	// (FrogspawnBlock.entityInside).
+	if b := h.worldFor(dim).Block(below.x, below.y, below.z); worldgen.IsReplaceable(b) || worldgen.IsFluid(b) || b == frogspawnBlock {
 		fallen := h.fallDist[key] + 1
 		delete(h.fallDist, key)
 		h.setBlockAt(players, dim, pos, worldgen.Air)

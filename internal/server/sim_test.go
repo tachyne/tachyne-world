@@ -19,7 +19,7 @@ func TestFallingBlock(t *testing.T) {
 	h := newHub(w)
 	players := map[int32]*tracked{}
 
-	const x, z = 100, 100
+	x, z := h.findLand(100, 100) // dry ground: sand sinks through water now, as vanilla's does
 	surf := int(w.SurfaceY(x, z))
 	for y := surf; y <= surf+10; y++ { // clear a column
 		w.SetBlock(x, y, z, worldgen.Air)
