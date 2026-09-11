@@ -91,3 +91,27 @@ func TestBubbleColumnBreathable(t *testing.T) {
 		t.Fatal("plain water at the eyes drains air")
 	}
 }
+
+// TestBubbleColumnMovesSwimmers: a fish in an updraft rises, in a whirlpool
+// it sinks (Entity.onInsideBubbleColumn).
+func TestBubbleColumnMovesSwimmers(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	for y := 170; y <= 190; y++ {
+		w.SetBlock(0, y, 0, worldgen.BubbleColumnUp)
+		w.SetBlock(3, y, 0, worldgen.BubbleColumnDrag)
+	}
+	up := h.spawnMob(players, entityCod, 0.5, 180, 0.5)
+	down := h.spawnMob(players, entityCod, 3.5, 180, 0.5)
+	for i := 0; i < 10; i++ {
+		h.swimMove(up, up.x, up.z, 0, 0)
+		h.swimMove(down, down.x, down.z, 3, 0)
+	}
+	if up.y <= 180 || up.vy <= 0 {
+		t.Fatalf("the updraft should lift the cod: y %.2f vy %.3f", up.y, up.vy)
+	}
+	if down.y >= 180 || down.vy >= 0 {
+		t.Fatalf("the whirlpool should pull the cod down: y %.2f vy %.3f", down.y, down.vy)
+	}
+}

@@ -29,6 +29,14 @@ func (h *hub) swimMove(m *mob, nx, nz float64, fnx, fnz int) {
 		m.vy = (h.rng.Float64() - 0.5) * m.moveSpeed()
 	}
 	m.vy *= 0.8
+	// Entity.onInsideBubbleColumn: a whirlpool pulls a swimmer down, an
+	// updraft carries it up — the clamps are vanilla's per-tick figures.
+	switch w.At(int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))) {
+	case worldgen.BubbleColumnDrag:
+		m.vy = math.Max(-0.3, m.vy-0.03)
+	case worldgen.BubbleColumnUp:
+		m.vy = math.Min(0.7, m.vy+0.06)
+	}
 }
 
 // flyMove floats a flying mob toward its hover altitude above the terrain,

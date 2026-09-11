@@ -62,7 +62,8 @@ the public history since the project was open-sourced on 2026-07-10.
   the whole column falls back to plain water. The column is a water
   source to everything else — it spreads, floats, douses and wets as
   water does — and you do not drown inside one. The lift and drag on a
-  player are the client's own physics once the block is there.
+  player are the client's own physics once the block is there; a swimming
+  mob is carried up an updraft and pulled down a whirlpool by the server.
 
 - **Sea floors grow things.** Oceans, rivers and swamps were bare gravel
   and sand under the water. They now carry vanilla's sea-floor
