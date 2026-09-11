@@ -69,7 +69,7 @@ the public history since the project was open-sourced on 2026-07-10.
   and sand under the water. They now carry vanilla's sea-floor
   vegetation at vanilla's per-biome densities: seagrass (short in the
   shallow oceans, mostly tall in the deep ones, along rivers and through
-  swamps), kelp forests where vanilla's low-frequency noise places them,
+  swamps and mangrove swamps), kelp forests where vanilla's low-frequency noise places them,
   each stalk one to ten tall and stopping short of the surface, and
   clusters of sea pickles in one warm-ocean chunk in sixteen, and coral
   reefs in warm oceans — vanilla's tree, claw and mushroom generators in

@@ -42,6 +42,7 @@ var seafloorRules = map[string]seafloorRule{
 	"minecraft:warm_ocean":          {seagrass: 80, tall: 0.3, pickles: true, coral: true},
 	"minecraft:river":               {seagrass: 48, tall: 0.4},
 	"minecraft:swamp":               {seagrass: 64, tall: 0.6},
+	"minecraft:mangrove_swamp":      {seagrass: 64, tall: 0.6}, // seagrass_swamp there too
 }
 
 const (

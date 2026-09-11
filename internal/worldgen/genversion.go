@@ -21,4 +21,7 @@ package worldgen
 //
 // v13: sea floors grow seagrass, kelp forests and sea pickle clusters
 // (seafloor.go) — every water column below sea level decorates differently.
-const GenVersion = 13
+//
+// v14: mangrove swamps grow seagrass too (seagrass_swamp is in their feature
+// list as well).
+const GenVersion = 14
