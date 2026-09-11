@@ -483,7 +483,8 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 			h.applySpecies(players, m) // …else a roster species from the table
 		}
 	}
-	h.rollCanPickup(m) // some hostiles spawn able to grab dropped gear
+	h.spawnGear(players, m) // armour and weapons by regional difficulty
+	h.rollCanPickup(m)      // some hostiles spawn able to grab dropped gear
 	return m
 }
 

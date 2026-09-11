@@ -2116,7 +2116,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		if m.burning {
 			e.p.trySendEv(metaEv(fireMetadata(m.eid, true)))
 		}
-		if m.etype == entitySkeleton {
+		if m.wearsAnything() {
+			e.p.trySendEv(equipEv(m.eid, invStack{item: m.held, count: b2i(m.held != 0)}, invStack{}, m.gear))
+		} else if m.etype == entitySkeleton {
 			e.p.trySendEv(skeletonEquip(m.eid))
 		}
 		if m.baby {

@@ -459,14 +459,12 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		}
 		// Picked-up gear drops in full (vanilla drops equipped loot at 100%);
 		// gear issued at spawn (ominous trial mobs) never does.
-		if m.held != 0 && !m.spawnGear {
+		if m.held != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
 			drops = append(drops, plugin.ItemStack{Item: m.held, Count: 1})
 		}
-		if !m.spawnGear {
-			for _, g := range m.gear {
-				if g.item != 0 {
-					drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
-				}
+		for _, g := range m.gear {
+			if g.item != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
+				drops = append(drops, plugin.ItemStack{Item: g.item, Count: 1})
 			}
 		}
 		for _, st := range m.hoard { // a piglin's gold, and whatever it was admiring

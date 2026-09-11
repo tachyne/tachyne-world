@@ -61,6 +61,12 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	}
 	nm.baby, nm.growLeft = m.baby, m.growLeft
 	nm.refreshBabySpeed()
+	// convertTo carries the equipment over rather than rolling it afresh.
+	nm.gear, nm.held, nm.spawnGear, nm.gearDrop = m.gear, m.held, m.spawnGear, m.gearDrop
+	nm.refreshGearArmor()
+	if nm.wearsAnything() {
+		h.toNearbyEv(players, nm.dim, nm.x, nm.z, equipEv(nm.eid, invStack{item: nm.held, count: b2i(nm.held != 0)}, invStack{}, nm.gear))
+	}
 	if m.health < nm.health {
 		nm.health = m.health // carry damage across; never heal on conversion
 	}

@@ -62,6 +62,17 @@ the public history since the project was open-sourced on 2026-07-10.
   kills a parrot — every mob interaction vanilla's mobs override now has
   its counterpart.
 
+- **Hostiles spawn dressed.** Vanilla's spawn-time equipment: with the
+  regional difficulty (hard worlds, and worlds past their first days) a
+  zombie, husk, skeleton, stray, bogged, wither skeleton or piglin spawns
+  in armour of a rolled tier from leather to diamond, each piece with a
+  chance of enchantment, zombies sometimes with an iron sword or shovel,
+  skeletons and their kin with bows, wither skeletons with stone swords,
+  and drowned with a trident or a fishing rod at vanilla's odds. What a
+  mob spawned wearing drops rarely, as in vanilla; gear rides along when
+  a zombie drowns. Lightning now also swaps a mooshroom's colour and
+  kills a turtle, as vanilla's does.
+
 ### Fixed
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now

@@ -24,11 +24,7 @@ func (h *hub) rollCanPickup(m *mob) {
 	if !equipCapable[m.etype] {
 		return
 	}
-	chance := 0.1
-	if h.rules.Difficulty == diffHard {
-		chance = 0.55
-	}
-	m.canPickup = h.rng.Float64() < chance
+	m.canPickup = h.rng.Float64() < 0.55*h.specialMultiplier() // Zombie.finalizeSpawn: 0.55 × the special multiplier
 }
 
 // mobPickupScan lets a mob grab one nearby dropped weapon/armour it can use.

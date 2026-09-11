@@ -72,10 +72,17 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 			m.setBaseArmor(2)
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
-			if !m.baby && h.rng.Float64() < 0.15 { // vanilla: some drowned carry a trident
-				m.trident = true
-				m.behavior = rangedBehavior{} // kite like a skeleton while armed
-				h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
+			// Drowned.populateDefaultEquipmentSlots: one in ten spawns armed,
+			// ten of sixteen of those with a trident, the rest a fishing rod.
+			if !m.baby && h.rng.Float64() > 0.9 {
+				if h.rng.Intn(16) < 10 {
+					m.trident = true
+					m.behavior = rangedBehavior{} // kite like a skeleton while armed
+					h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
+				} else {
+					m.held = int32(itemFishingRod)
+					h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
+				}
 			}
 		}
 	case entitySlime:

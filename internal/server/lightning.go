@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-common/protocol"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // What a lightning bolt does to the mobs it hits (their thunderHit), and
 // the Channeling trident that calls one down.
@@ -23,6 +27,16 @@ func (h *hub) lightningTransforms(players map[int32]*tracked, m *mob) {
 			return
 		}
 		h.convertMob(players, m, entityWitch)
+	case entityMooshroom: // MushroomCow.thunderHit: red and brown swap
+		if m.variant == mooshroomRed {
+			m.variant = mooshroomBrown
+		} else {
+			m.variant = mooshroomRed
+		}
+		m.variantSet = true
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(variantMeta(m)))
+	case entityTurtle: // Turtle.thunderHit: the bolt is always fatal
+		h.hurtMobOf(players, m, math.MaxFloat32, dtLightningBolt)
 	}
 }
 
