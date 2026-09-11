@@ -79,6 +79,12 @@ the public history since the project was open-sourced on 2026-07-10.
   hand held a stack), a piece under the Curse of Binding stays put, and
   the material's equip sound plays.
 
+- **Jockeys.** A baby zombie has vanilla's one-in-twenty chance of riding
+  a chicken — one already nearby, or one spawned for it — and the chicken
+  then carries it wherever its hunt goes, lays no eggs, despawns like a
+  monster and pays ten experience; one spider in a hundred spawns with a
+  skeleton on its back that shoots from the saddle.
+
 ### Fixed
 - **Iron golems had ten hearts, not fifty.** The golem is not on the
   species roster and its health fell through to the cow's ten; it now

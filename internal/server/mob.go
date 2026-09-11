@@ -128,6 +128,8 @@ type mob struct {
 	mount           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
 	cart            int32       // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
 	mobRider        int32       // eid of the MOB riding this one (the reverse of mount); 0 = none
+	mountDrives     bool        // this rider's AI leads and its mount follows (a chicken jockey's zombie)
+	jockey          bool        // a chicken carrying a jockey: no eggs, despawns, ten experience
 	harness         int32       // happy ghast: equipped harness item id (0 = none); gates riding
 	oxidation       int         // copper golem: weather stage 0 unaffected → 3 oxidized
 	oxidizeAt       uint64      // copper golem: tick of the next oxidation step
@@ -323,15 +325,29 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 			continue
 		}
-		if m.mount != 0 { // riding another mob (raid ravager rider)
+		if m.mount != 0 { // riding another mob (raid ravager rider, jockey)
 			v := h.mobs[m.mount]
 			if v == nil || v.dying > 0 {
-				m.mount = 0 // vehicle gone — dismount and resume as a normal mob
-			} else {
+				m.mount, m.mountDrives = 0, false // vehicle gone — dismount and resume as a normal mob
+			} else if !m.mountDrives {
 				// Glued to the vehicle: the client renders us seated from the
 				// passengers frame, so the server just keeps us co-located and
-				// skips independent movement/AI.
+				// skips independent movement — a skeleton jockey still shoots.
 				m.x, m.y, m.z, m.dim = v.x, v.y+mountRideHeight, v.z, v.dim
+				if m.hostile && (m.etype == entitySkeleton || m.etype == entityStray || m.etype == entityBogged) {
+					h.acquireTarget(players, m)
+					h.skeletonShoot(players, m)
+				}
+				continue
+			}
+		}
+		if m.mobRider != 0 { // carrying a mob
+			r := h.mobs[m.mobRider]
+			if r == nil || r.dying > 0 || r.mount != m.eid {
+				m.mobRider = 0
+				h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid))
+			} else if r.mountDrives {
+				m.x, m.y, m.z, m.dim = r.x, r.y, r.z, r.dim // the rider leads: carried under it
 				continue
 			}
 		}

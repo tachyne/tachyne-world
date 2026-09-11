@@ -171,7 +171,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			m.sheared = false
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, false)))
 		}
-		if m.etype == entityChicken && !m.baby {
+		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {
 				m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin)
 				h.spawnItem(players, itemEgg, 1, m.x, m.y, m.z)

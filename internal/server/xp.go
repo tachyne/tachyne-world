@@ -158,6 +158,9 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 func xpForMob(m *mob, rng func(int) int) int {
 	switch m.etype {
 	case entityCow, entityChicken, entityPig, entitySheep:
+		if m.jockey {
+			return 10 // Chicken.getBaseExperienceReward for a jockey chicken
+		}
 		return 1 + rng(3) // Animal: 1-3
 	case entitySlime, entityMagmaCube:
 		return m.size // Slime: xpReward = size (4/2/1 as it splits down)

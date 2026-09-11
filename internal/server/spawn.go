@@ -644,6 +644,9 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 			continue // a name tag, a bucket or picked-up gear makes a mob persistent (Mob.checkDespawn)
 		}
 		cat := mobSpawnCategory(m)
+		if m.jockey {
+			cat = catMonster // Chicken.removeWhenFarAway: a jockey's chicken goes like its rider
+		}
 		dist := categoryDespawnDist[cat]
 		if dist < 0 {
 			continue // creatures are persistent
