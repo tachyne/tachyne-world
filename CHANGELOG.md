@@ -27,6 +27,16 @@ the public history since the project was open-sourced on 2026-07-10.
   foal, hay is a llama's love food, a cactus a camel's — and a mount is
   never ridden with its food in hand.
 
+- **Animals follow held food.** Hold a species' food — or the carrot or
+  warped fungus on a stick that steers it — and every cow, pig, sheep,
+  chicken, rabbit, horse, donkey, mule, llama, camel, goat, frog, bee,
+  turtle, panda, armadillo, sniffer, strider, tadpole or axolotl within
+  ten blocks trots after you at vanilla's per-species pace (a camel at
+  two and a half times its walk, an axolotl slow ashore), stops short
+  beside you, looks at you, and loses interest for five seconds once the
+  food is put away. Panic still wins, and a baby follows the food before
+  its parent, as vanilla's goal order has it.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

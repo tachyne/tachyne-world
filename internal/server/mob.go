@@ -209,6 +209,8 @@ type mob struct {
 	dmgFrac         float64    // fractional damage carry (vanilla HP is float, ours int)
 	attackCD        int        // mob-updates left before this mob can melee again
 	hasTarget       bool       // a player is within aggro range this update
+	tempted         bool       // following a player's held food (temptStep)
+	temptCalm       int        // updates left before it can be tempted again
 	heartBound      bool       // creaking: a standing heart is keeping it alive
 	heartHit        bool       // …and it took a blow the heart must answer for
 	frozen          bool       // creaking: a player is watching, so it cannot move
@@ -427,6 +429,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee
 			}
+		case h.temptStep(players, m):
+			// Walking after a player's held food (TemptGoal / FollowTemptation):
+			// behind panic, ahead of a baby's parent and the species' own errands.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):
