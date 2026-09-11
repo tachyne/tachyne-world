@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   wears with the fall: a chance of five percent plus five per block chips
   it, then damages it, and a damaged anvil breaks outright.
 
+- **The dragon egg blinks away.** Hit it or use it and the egg teleports
+  to an empty cell nearby — up to fifteen blocks sideways and seven up or
+  down, nearer cells likelier, inside the world border — as vanilla's
+  does. Punching redstone ore now lights it up too, the way using it did.
+
 ### Fixed
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:

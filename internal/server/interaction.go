@@ -49,10 +49,18 @@ func (s *Server) handleDig(p *player, data []byte) {
 	broken := s.worldFor(p).Block(x, y, z)
 	mode := s.modes.get(p.name)
 
-	// A punched note block plays its note (vanilla attack) — and the dig
-	// proceeds normally on top of it.
-	if status == digStartBreak && isNoteBlock(broken) {
-		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z})
+	// The block's attack hook (BlockBehaviour.attack) fires on the first
+	// punch, and the dig proceeds normally on top of it: a note block plays
+	// its note, redstone ore lights up, the dragon egg blinks away.
+	if status == digStartBreak {
+		switch {
+		case isNoteBlock(broken):
+			s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z})
+		case isRedstoneOre(broken) && !boolProp(broken, "lit"):
+			s.hub.post(evLightOre{eid: p.eid, x: x, y: y, z: z})
+		case isDragonEgg(broken):
+			s.hub.post(evDragonEgg{eid: p.eid, x: x, y: y, z: z})
+		}
 	}
 
 	// Mining time: creative breaks instantly on Start; survival/adventure break on
@@ -615,6 +623,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	}
 	if isNoteBlock(state) {
 		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z, tune: true})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
+	if isDragonEgg(state) { // DragonEggBlock.useWithoutItem: it blinks away
+		s.hub.post(evDragonEgg{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
