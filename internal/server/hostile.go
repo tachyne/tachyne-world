@@ -468,7 +468,9 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 			m.setBaseArmor(2)    // Zombie base ARMOR attribute (vanilla 1.21.5)
 			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
-			h.rollChickenJockey(players, m)
+			if !h.reloading { // finalizeSpawn extras roll once, never on a chunk reload
+				h.rollChickenJockey(players, m)
+			}
 		}
 		if etype == entitySkeleton {
 			m.behavior = rangedBehavior{}
@@ -477,8 +479,10 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 		}
 	case entitySpider:
 		// (spider speed comes from speedFor: attr 0.30; they survive the day, neutral until dark)
-		h.rollSpiderJockey(players, m)
-		h.rollSpiderEffect(players, m)
+		if !h.reloading {
+			h.rollSpiderJockey(players, m)
+			h.rollSpiderEffect(players, m)
+		}
 	case entityCreeper:
 		m.behavior = creeperBehavior{}
 	default:
@@ -486,8 +490,10 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 			h.applySpecies(players, m) // …else a roster species from the table
 		}
 	}
-	h.spawnGear(players, m) // armour and weapons by regional difficulty
-	h.rollCanPickup(m)      // some hostiles spawn able to grab dropped gear
+	if !h.reloading { // a reloaded mob brings its own gear and flags back
+		h.spawnGear(players, m) // armour and weapons by regional difficulty
+		h.rollCanPickup(m)      // some hostiles spawn able to grab dropped gear
+	}
 	return m
 }
 

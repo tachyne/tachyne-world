@@ -84,3 +84,19 @@ func (h *hub) rollSpiderEffect(players map[int32]*tracked, m *mob) {
 	}
 	h.applyMobEffect(players, m, eff, 0, 1<<20) // vanilla: infinite
 }
+
+// relinkMounts seats reloaded riders back on their vehicles, matched by the
+// eids both had when saved; a vehicle that did not come back (or came back
+// in another batch) leaves its rider on foot.
+func (h *hub) relinkMounts(players map[int32]*tracked, riders []*mob, byOld map[int32]*mob) {
+	for _, r := range riders {
+		old := r.savedMount
+		r.savedMount = 0
+		v := byOld[old]
+		if v == nil || v == r || v.mobRider != 0 {
+			r.mountDrives = false
+			continue
+		}
+		h.mountMobOn(players, r, v, r.mountDrives)
+	}
+}

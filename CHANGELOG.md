@@ -83,7 +83,9 @@ the public history since the project was open-sourced on 2026-07-10.
   a chicken — one already nearby, or one spawned for it — and the chicken
   then carries it wherever its hunt goes, lays no eggs, despawns like a
   monster and pays ten experience; one spider in a hundred spawns with a
-  skeleton on its back that shoots from the saddle.
+  skeleton on its back that shoots from the saddle. A ridden pair comes
+  back mounted after a restart, and a reloaded mob never re-rolls the
+  gear, riders or effects it spawned with.
 
 - **Skeleton traps, strider riders, spider effects.** A skeleton horse
   born of a lightning strike now waits as a trap and springs on the first

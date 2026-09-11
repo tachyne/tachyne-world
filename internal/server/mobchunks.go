@@ -47,10 +47,22 @@ func (h *hub) reconcileMobChunks(players map[int32]*tracked, chunkSet map[[2]int
 		}
 		budget--
 		h.activeChunks[c] = true
+		byOld := map[int32]*mob{}
+		var riders []*mob
 		for _, sm := range h.mobstore.take(c[0], c[1]) {
 			sm := sm
-			h.reloadMob(players, &sm) // players in range get the EntityAdd for the reloaded mob
+			m := h.reloadMob(players, &sm) // players in range get the EntityAdd for the reloaded mob
+			if m == nil {
+				continue
+			}
+			if sm.EID != 0 {
+				byOld[sm.EID] = m
+			}
+			if m.savedMount != 0 {
+				riders = append(riders, m)
+			}
 		}
+		h.relinkMounts(players, riders, byOld)
 	}
 	h.reloading = false
 

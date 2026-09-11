@@ -79,3 +79,53 @@ func TestJockeys(t *testing.T) {
 		t.Errorf("the skeleton should ride the spider: sk %.1f,%.1f spider %.1f,%.1f", sk.x, sk.z, spider.x, spider.z)
 	}
 }
+
+// A saved jockey pair comes back mounted, and a reloaded baby zombie does
+// not roll a fresh chicken.
+func TestMountsSurviveReload(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	x, z := 10.5, 10.5
+	y := float64(h.world.SurfaceFeet(10, 10))
+	chicken := h.spawnSpecies(players, entityChicken, 0, x, y, z)
+	zombie := h.spawnHostileY(players, entityZombie, x, y, z)
+	zombie.baby, chicken.jockey = true, true
+	h.mountMobOn(players, zombie, chicken, true)
+	sz, sc := toSavedMob(zombie), toSavedMob(chicken)
+	if sz.Mount != chicken.eid || !sz.MountDrives || sz.EID != zombie.eid || !sc.Jockey {
+		t.Fatalf("saved rider %+v", sz)
+	}
+	h2 := newHub(world.New(1))
+	h2.reloading = true
+	byOld := map[int32]*mob{}
+	var riders []*mob
+	for _, sm := range []savedMob{sz, sc} {
+		sm := sm
+		m := h2.reloadMob(players, &sm)
+		byOld[sm.EID] = m
+		if m.savedMount != 0 {
+			riders = append(riders, m)
+		}
+	}
+	h2.relinkMounts(players, riders, byOld)
+	h2.reloading = false
+	z2, c2 := byOld[zombie.eid], byOld[chicken.eid]
+	if z2.mount != c2.eid || c2.mobRider != z2.eid || !z2.mountDrives || !c2.jockey {
+		t.Errorf("relink: zombie.mount=%d chicken.rider=%d drives=%v jockey=%v", z2.mount, c2.mobRider, z2.mountDrives, c2.jockey)
+	}
+	// Reloading many baby zombies must not spawn chickens.
+	h3 := newHub(world.New(1))
+	h3.reloading = true
+	for i := 0; i < 200; i++ {
+		sm := toSavedMob(zombie)
+		sm.Mount, sm.EID = 0, 0
+		h3.reloadMob(players, &sm)
+	}
+	h3.reloading = false
+	for _, m := range h3.mobs {
+		if m.etype == entityChicken {
+			t.Fatal("a reload rolled a jockey chicken")
+		}
+	}
+}

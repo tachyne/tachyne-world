@@ -131,6 +131,7 @@ type mob struct {
 	mountDrives     bool        // this rider's AI leads and its mount follows (a chicken jockey's zombie)
 	jockey          bool        // a chicken carrying a jockey: no eggs, despawns, ten experience
 	trap            bool        // a skeleton horse waiting as a lightning trap (skeletontrap.go)
+	savedMount      int32       // a reloaded rider's vehicle by its OLD eid, relinked once the chunk is up (mobchunks.go)
 	harness         int32       // happy ghast: equipped harness item id (0 = none); gates riding
 	oxidation       int         // copper golem: weather stage 0 unaffected → 3 oxidized
 	oxidizeAt       uint64      // copper golem: tick of the next oxidation step

@@ -49,6 +49,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.dmgFrac = sm.DmgFrac
 	m.baby, m.growLeft = sm.Baby, sm.GrowLeft
 	m.jockey, m.trap = sm.Jockey, sm.Trap
+	m.savedMount, m.mountDrives = sm.Mount, sm.MountDrives
 	m.refreshBabySpeed() // the spawn roll may have set a different flag
 	m.loveTicks, m.breedCD = sm.LoveTicks, sm.BreedCD
 	m.sheared, m.eggIn = sm.Sheared, sm.EggIn
