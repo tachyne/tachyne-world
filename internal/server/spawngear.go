@@ -1,6 +1,9 @@
 package server
 
-import "math"
+import (
+	"math"
+	"time"
+)
 
 // Spawn-time equipment (Mob.populateDefaultEquipmentSlots and its
 // overrides, then populateDefaultEquipmentEnchantments). The regional
@@ -106,6 +109,17 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 			changed = true
 		}
 	}
+	// Halloween (Zombie/AbstractSkeleton.finalizeSpawn): on the 31st of
+	// October a bare head wears a carved pumpkin one time in four (a jack
+	// o'lantern one in ten of those), and that head never drops.
+	if m.gear[0].item == 0 && isHalloween(spawnClock()) && h.rng.Float64() < 0.25 {
+		head := itemCarvedPumpkin
+		if h.rng.Float64() < 0.1 {
+			head = itemJackOLantern
+		}
+		m.gear[0] = invStack{item: head, count: 1}
+		changed = true
+	}
 	if !changed {
 		return
 	}
@@ -137,3 +151,15 @@ func (m *mob) wearsAnything() bool {
 	}
 	return false
 }
+
+// spawnClock is the wall clock finalizeSpawn reads for its calendar rules;
+// a variable so tests can set the date.
+var spawnClock = time.Now
+
+// isHalloween is vanilla's date test: the 31st of October, server local time.
+func isHalloween(now time.Time) bool {
+	return now.Month() == time.October && now.Day() == 31
+}
+
+// isPumpkinHead reports the Halloween heads, which never drop.
+func isPumpkinHead(item int32) bool { return item == itemCarvedPumpkin || item == itemJackOLantern }

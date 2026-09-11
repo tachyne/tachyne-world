@@ -474,7 +474,10 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		if m.held != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
 			dropGear(m.heldStack())
 		}
-		for _, g := range m.gear {
+		for slot, g := range m.gear {
+			if slot == 0 && m.spawnGear && isPumpkinHead(g.item) {
+				continue // a Halloween pumpkin has a drop chance of 0
+			}
 			if g.item != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
 				dropGear(g)
 			}

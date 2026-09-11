@@ -80,6 +80,11 @@ the public history since the project was open-sourced on 2026-07-10.
   and go with the weapon when it drops (armour drops keep theirs now as
   well).
 
+- **Halloween heads.** On the 31st of October (the server's local date)
+  a quarter of bare-headed zombies and skeletons spawn wearing a carved
+  pumpkin, one in ten of those a jack o'lantern, and the head never
+  drops — vanilla's one calendar rule.
+
 - **Bedrock: the crafter's menu.** Opening a crafter on Bedrock now shows
   Bedrock's own crafter screen instead of closing again: the grid, the
   result preview, the disabled-slot overlay and the trigger state, with

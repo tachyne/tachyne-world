@@ -284,6 +284,7 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 // drifted to spruce_fence in the 1.21.11 id migration — the enderman
 // disguise silently stopped working).
 var itemCarvedPumpkin = int32(itemByName["carved_pumpkin"])
+var itemJackOLantern = int32(itemByName["jack_o_lantern"])
 
 // staredAt implements EnderMan.isBeingStaredBy (vanilla behavior): a survival player
 // within follow range whose view vector points at the enderman's eyes —
