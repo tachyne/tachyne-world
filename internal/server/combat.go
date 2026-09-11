@@ -89,12 +89,19 @@ func mobHealth(etype int) int {
 		return pigHealth
 	case entitySheep:
 		return sheepHealth
+	case entityIronGolem:
+		return ironGolemHealth
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return d.health
 	}
 	return cowHealth
 }
+
+// ironGolemHealth is IronGolem.createAttributes' MAX_HEALTH; the golem is
+// not on the roster table (it belongs with the villagers), and without this
+// it fell through to the cow's ten.
+const ironGolemHealth = 100
 
 // meleeDamageFor is a species' base ATTACK_DAMAGE, seeded at spawn. Slimes and
 // magma cubes are absent: their damage is their size, set by applyCubeSize.

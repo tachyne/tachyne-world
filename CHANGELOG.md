@@ -54,7 +54,20 @@ the public history since the project was open-sourced on 2026-07-10.
   info as vanilla sends it, and kept across restarts and dimension
   changes, so a recovery compass points at it on Java and on Bedrock.
 
+- **The rest of the mob interactions.** Shears turn a mooshroom into a
+  cow and shed five mushrooms of its colour, take a snow golem's pumpkin
+  off (its head shows) and a bogged's two mushrooms once; an iron ingot
+  mends a hurt iron golem by twenty-five with the repair clank; flint and
+  steel or a fire charge lights a creeper's fuse; and a cookie poisons and
+  kills a parrot — every mob interaction vanilla's mobs override now has
+  its counterpart.
+
 ### Fixed
+- **Iron golems had ten hearts, not fifty.** The golem is not on the
+  species roster and its health fell through to the cow's ten; it now
+  carries vanilla's hundred, so a village's golem is the wall it should
+  be (golems already in the world keep their old maximum until they are
+  replaced).
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:
   breaking a powered lever, button, torch or plate left what it powered
