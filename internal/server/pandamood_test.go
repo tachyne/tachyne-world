@@ -65,6 +65,7 @@ func TestPandaPersonalities(t *testing.T) {
 	if !h.pandaStep(players, pl) || pl.pandaFlags&pandaFlagRoll == 0 || pl.vz <= 0 {
 		t.Fatalf("a playful panda rolls off the ledge ahead: flags %d vz %.3f", pl.pandaFlags, pl.vz)
 	}
+	w.SetBlock(3, 179, 4, worldgen.Stone) // the panda never actually moves here: fill the ledge so it does not roll again
 	for i := 0; i < pandaRollTicks; i++ {
 		h.pandaStep(players, pl)
 	}

@@ -59,9 +59,10 @@ func TestPandaGenes(t *testing.T) {
 	if meta == nil {
 		t.Fatal("no variant metadata")
 	}
-	// eid varint, then [20, 0, main], [21, 0, hidden], 0xff
-	tail := meta[len(meta)-7:]
-	if tail[0] != metaIndexPandaMainGene || tail[2] != pandaAggressive || tail[3] != metaIndexPandaHiddenGene || tail[5] != pandaNormal || tail[6] != 0xff {
+	// eid varint, then [20, 0, main], [21, 0, hidden], [22, 0, flags], 0xff
+	tail := meta[len(meta)-10:]
+	if tail[0] != metaIndexPandaMainGene || tail[2] != pandaAggressive || tail[3] != metaIndexPandaHiddenGene || tail[5] != pandaNormal ||
+		tail[6] != metaIndexPandaFlags || tail[8] != angry.pandaFlags || tail[9] != 0xff {
 		t.Errorf("gene metadata tail %v", tail)
 	}
 	// Wild pandas roll genes at spawn.
