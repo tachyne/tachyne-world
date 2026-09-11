@@ -167,6 +167,10 @@ func TestEverySpeciesSummonsAndConfigures(t *testing.T) {
 			if m.health < 15 || m.health > 30 {
 				t.Errorf("%s: rolled health %d, want 15-30", d.name, m.health)
 			}
+		case entityPanda: // a weak gene halves it (panda.go); the roll is the map order's
+			if m.health != d.health && m.health != pandaWeakHealth {
+				t.Errorf("%s: health %d, want %d or %d", d.name, m.health, d.health, pandaWeakHealth)
+			}
 		default:
 			if d.health != 0 && m.health != d.health {
 				t.Errorf("%s: health %d, want %d", d.name, m.health, d.health)
