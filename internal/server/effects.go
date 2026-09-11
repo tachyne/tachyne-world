@@ -304,6 +304,9 @@ func applyEffectTickNow(left, base, amp int) bool {
 
 // eatSpecial applies the food-item side effects beyond hunger (golden apples).
 // Called from eat() after the normal restore.
+// eatSpecial is the food's on_consume effects (vanilla's Consumables table):
+// apply_effects with their chances, the honey bottle's remove_effects, and
+// the chorus fruit's teleport_randomly.
 func (h *hub) eatSpecial(players map[int32]*tracked, t *tracked, item int32) {
 	switch item {
 	case itemGoldenApple:
@@ -314,8 +317,36 @@ func (h *hub) eatSpecial(players map[int32]*tracked, t *tracked, item int32) {
 		h.applyEffect(players, t, effFireRes, 0, 300)    // Fire Res ×5 min
 		h.applyEffect(players, t, effAbsorption, 3, 120) // Absorption IV ×2 min (16 HP)
 		h.applyEffect(players, t, effResistance, 0, 300) // Resistance I ×5 min
+	case itemRawChicken:
+		if h.rng.Float64() < 0.3 {
+			h.applyEffect(players, t, effHunger, 0, 30)
+		}
+	case itemRottenFlesh:
+		if h.rng.Float64() < 0.8 {
+			h.applyEffect(players, t, effHunger, 0, 30)
+		}
+	case itemSpiderEye:
+		h.applyEffect(players, t, effPoison, 0, 5)
+	case itemPoisonousPotato:
+		if h.rng.Float64() < 0.6 {
+			h.applyEffect(players, t, effPoison, 0, 5)
+		}
+	case itemPufferfish:
+		h.applyEffect(players, t, effPoison, 1, 60)
+		h.applyEffect(players, t, effHunger, 2, 15)
+		h.applyEffect(players, t, effNausea, 0, 15)
+	case itemHoneyBottle:
+		h.removeEffect(t, effPoison)
+	case itemChorusFruit:
+		h.chorusTeleport(players, t)
 	}
 }
+
+var (
+	itemPoisonousPotato = int32(itemByName["poisonous_potato"])
+	itemPufferfish      = int32(itemByName["pufferfish"])
+	itemChorusFruit     = int32(itemByName["chorus_fruit"])
+)
 
 // cmdEffect is the op command: /effect <give|clear> <player> <effect> [secs] [amp].
 func (s *Server) cmdEffect(p *player, args []string) {

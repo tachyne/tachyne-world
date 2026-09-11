@@ -701,7 +701,7 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
 	h.incStat(t, attachproto.StatUsed, s.item, 1)
 	t.food = min(maxFood, t.food+pts)
-	h.eatSpecial(nil, t, s.item) // golden apples carry regen/fire-res
+	h.eatSpecial(players, t, s.item) // the food's on_consume effects
 	// Saturation gained per the food's value, capped at the new food level (vanilla).
 	t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+float64(foodSaturation[s.item])))
 	s.count--

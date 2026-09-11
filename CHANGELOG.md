@@ -33,6 +33,15 @@ the public history since the project was open-sourced on 2026-07-10.
   down, nearer cells likelier, inside the world border — as vanilla's
   does. Punching redstone ore now lights it up too, the way using it did.
 
+- **Foods do what vanilla's do.** Every entry of vanilla's consumables
+  table now applies: raw chicken (three in ten) and rotten flesh (eight in
+  ten) bring thirty seconds of hunger, a spider eye poisons for five
+  seconds and a poisonous potato does six times in ten, a pufferfish
+  poisons for a minute, starves and sickens, a honey bottle lifts poison,
+  and a chorus fruit blinks you up to eight blocks to nearby ground with
+  the fall forgiven and a second's cooldown. Only the golden apples had
+  their effects before.
+
 ### Fixed
 - **Blocks have a last word when removed.** Vanilla lets a block that is
   being replaced act on its neighbours once more, and the engine did not:
