@@ -228,6 +228,8 @@ type mob struct {
 	brzSlide                  bool    // breeze: Slide walk target set
 	brzSlideX, brzSlideZ      float64
 	brzSlideTicks             int
+	drinkTicks                int        // witch: ticks left on the bottle (0 = not drinking)
+	drinkKind                 int8       // witch: the potion being drunk
 	doorPos                   blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int        // zombie: ticks spent on it
 	doorStage                 int8       // zombie: the crack stage last shown (-1 = none)
@@ -728,7 +730,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			case entityCreeper:
 				h.creeperFuse(players, m) // fuse + swell + bang
 			case entityWitch:
-				h.witchThrow(players, m) // splash potions from a distance
+				h.witchTick(players, m) // splash potions from a distance
 			case entityDrowned:
 				if m.trident {
 					h.drownedThrow(players, m) // ranged: hurl a trident

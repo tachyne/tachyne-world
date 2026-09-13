@@ -16,7 +16,6 @@ const (
 	endermanHealth = 40
 	endermanDamage = 7
 	witchHealth    = 26
-	witchDamage    = 4    // v1: her splash potion lands as instant harm
 	witchRange     = 10.0 // throw distance
 	witchCooldown  = 30   // mob-updates between throws (~3 s)
 
@@ -213,29 +212,6 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		return
 	}
-}
-
-// witchThrow lobs a splash potion at the nearest huntable player (her ranged
-// "melee" — the projectile lands as instant harm until brewing exists).
-func (h *hub) witchThrow(players map[int32]*tracked, m *mob) {
-	if m.attackCD > 0 {
-		m.attackCD--
-		return
-	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, witchRange)
-	if t == nil {
-		return
-	}
-	dx, dy, dz := t.x-m.x, (t.y+0.5)-(m.y+1.2), t.z-m.z
-	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-	if d < 1e-6 {
-		return
-	}
-	v := 1.0
-	a := h.launchProjectileIn(players, entitySplashProj, m.dim, m.x, m.y+1.2, m.z, dx/d*v, dy/d*v+0.06*d, dz/d*v)
-	a.shooter, a.dmg, a.breaks, a.poison = m.eid, witchDamage, true, true
-	h.playSound(players, "minecraft:entity.witch.throw", sndHostile, m.x, m.y, m.z, 1, 1)
-	m.attackCD = witchCooldown
 }
 
 // throwPearl handles a player's ender-pearl right-click: the pearl flies, and

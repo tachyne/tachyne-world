@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Witches brew properly.** A witch drinks water breathing under water,
+  fire resistance when burning, healing when hurt and swiftness when her
+  target is far (thirty-two ticks a bottle at a quarter less speed, no
+  throwing meanwhile), and throws slowness at a distant target, poison at
+  a healthy one, weakness now and then within three blocks and harming
+  otherwise; the splash lands on everyone within four blocks, weaker with
+  distance, as vanilla's does.
+
 - **Breeze AI.** The breeze fights as vanilla's does: it slides to a spot
   behind you (or away, if you are within four blocks), draws breath and
   long-jumps there on a forty-to-eighty-degree arc, lands, and in the
