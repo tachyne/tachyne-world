@@ -126,6 +126,7 @@ type savedMob struct {
 	HasEgg      bool        `json:"has_egg,omitempty"`      // turtle: carrying an egg home
 	Screaming   bool        `json:"screaming,omitempty"`    // goat: the screaming variant
 	BreaksDoors bool        `json:"breaks_doors,omitempty"` // zombie: can break doors
+	PoseTick    int64       `json:"pose_tick,omitempty"`    // camel: LastPoseTick
 	HornsGone   int8        `json:"horns_gone,omitempty"`   // goat: horns rammed off
 	HeldSt      stackRow    `json:"held_st,omitempty"`      // the held item with its enchantments (when it has any)
 	Carry       stackRow    `json:"allay_carry,omitempty"`  // allay: collected stack
@@ -559,7 +560,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors,
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick,
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])

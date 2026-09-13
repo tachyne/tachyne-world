@@ -1684,6 +1684,9 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					t.inLeft = keyAxis(e.in.Left, e.in.Right)
 					t.inForward = keyAxis(e.in.Forward, e.in.Backward)
+					if e.in.Forward {
+						h.camelRiderForward(players, t) // tickRidden: forward stands a sat camel up
+					}
 					if e.in.Sneak && !h.leaveGhast(players, t) && !h.dismountMob(players, t) {
 						h.dismount(players, t)
 					}

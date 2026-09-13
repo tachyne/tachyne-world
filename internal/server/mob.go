@@ -189,6 +189,7 @@ type mob struct {
 	rollDX, rollDZ            float64     // panda: the roll's heading
 	lieCD                     uint64      // panda: the tick it may lie on its back again
 	dashCD                    int         // camel: ticks left on the dash cooldown (flag drops at 50)
+	poseTick                  int64       // camel: LAST_POSE_CHANGE_TICK (negative while sitting; persisted)
 	dashing                   bool        // camel: the DASH flag is up
 	puff                      int8        // pufferfish: PUFF_STATE 0-2
 	hasEgg                    bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
@@ -415,6 +416,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityCamel && m.dashCD > 0 {
 			h.camelDashTick(players, m)
+		}
+		if m.etype == entityCamel && m.rider == 0 && h.camelSitStep(players, m) {
+			continue // sat, folding or rising: refuseToMove (a ridden camel's client does this itself)
 		}
 		if m.etype == entityPufferfish {
 			h.pufferStep(players, m)

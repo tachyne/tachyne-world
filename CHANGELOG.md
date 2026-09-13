@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Camels sit.** An idle camel that has held its pose for twenty
+  seconds folds its legs now and then and gets up the same way later; a
+  rider pushing forward, a hit or water under it stands it up. The
+  client animates the fold and the rise from the synced pose-change
+  tick, and the pose survives a restart, as vanilla's does.
+
 - **Cats lie on beds.** A tamed cat whose owner goes to sleep within ten
   blocks walks to the foot of the bed, watches them for a moment in the
   relax pose, then lies there until they wake — one cat per bed — and a

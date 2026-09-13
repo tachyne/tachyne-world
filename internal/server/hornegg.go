@@ -67,6 +67,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.lying || m.relaxOne {
 			return catLieMeta(m)
 		}
+	case entityCamel:
+		if m.poseTick != 0 {
+			return camelPoseMeta(m)
+		}
 	}
 	return nil
 }
