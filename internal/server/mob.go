@@ -247,6 +247,12 @@ type mob struct {
 	illBlindLast                int32      // illusioner: the last target blinded (never twice)
 	traderDespawn               int        // wandering trader + its llamas: DespawnDelay ticks left (0 = none)
 	traderDrink                 int8       // wandering trader: what it is drinking (potion / milk)
+	axDead                      int        // axolotl: PLAY_DEAD_TICKS left (0 = not playing dead)
+	axHurt                      bool       // axolotl: a blow landed since the last update (hurtServer's roll pending)
+	axHurtDmg                   float64    // axolotl: that blow's damage
+	axHuntCD                    uint64     // axolotl: HAS_HUNTING_COOLDOWN until this tick
+	axTarget                    int32      // axolotl: ATTACK_TARGET
+	axBiteCD                    int        // axolotl: ticks until the next bite
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -511,6 +517,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entityAxolotl && h.axolotlStep(players, m):
+			// An axolotl playing dead, or hunting.
 		case (m.etype == entityWanderingTrader || m.etype == entityTraderLlama) && h.traderStep(players, m):
 			// A trader drinking by the clock, or leaving when its time is up.
 		case m.etype == entityHoglin && h.hoglinStep(players, m):
@@ -864,6 +872,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.heartBound && !dt.has(tagBypassesInvulnerability) {
 		m.heartHit = true
 		return
+	}
+	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
+		m.axHurt, m.axHurtDmg = true, dmg
 	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves

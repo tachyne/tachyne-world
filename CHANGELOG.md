@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Axolotl behaviour.** Axolotls hunt fish, squid and tadpoles within
+  eight blocks (and rest for two minutes after a hunt), always fight
+  drowned and guardians, play dead for ten seconds (regenerating) when a
+  blow lands under water by vanilla's roll, and grant a player who kills
+  their target within twenty blocks regeneration and relief from mining
+  fatigue, as vanilla's do; the play-dead pose reaches every client.
+
 - **The wandering trader.** Every twenty minutes the world rolls for one
   (a quarter chance, rising by a quarter each miss to three quarters,
   reset on a spawn) and one time in ten it appears within forty-eight

@@ -71,6 +71,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.poseTick != 0 {
 			return camelPoseMeta(m)
 		}
+	case entityAxolotl:
+		if m.axDead > 0 {
+			return axolotlDeadMeta(m)
+		}
 	}
 	return nil
 }
