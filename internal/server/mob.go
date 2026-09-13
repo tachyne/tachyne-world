@@ -218,27 +218,37 @@ type mob struct {
 	avoidLeft                 int         // AvoidEntityGoal: updates left on that path (0 = idle)
 	avoidWalk, avoidSprint    float64     // AvoidEntityGoal: the rule's speed modifiers
 	avoidPlayer               bool        // AvoidEntityGoal: avoidEID is a player, not a mob
-	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
-	doorTicks                 int         // zombie: ticks spent on it
-	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
-	hornsGone                 int8        // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
-	ramCD                     int         // goat: ticks before it may ram again
-	ramPhase                  int8        // goat: idle / walking to its start / lowering its head / charging
-	ramStart                  blockPos    // goat: where the charge begins
-	ramTX, ramTZ              float64     // goat: the target's position when the ram was chosen
-	ramDX, ramDZ              float64     // goat: the charge direction
-	ramTicks                  int         // goat: ticks in the current phase
-	raidTarget                blockPos    // rabbit: the farmland it is raiding
-	raidRest                  int         // rabbit: ticks before it looks for a garden again
-	layCounter                int         // turtle: ticks spent digging the nest
-	inflate, deflate          int         // pufferfish: its inflate and deflate clocks (ticks)
-	stingCD                   int         // pufferfish: ticks before it stings again
-	offhand                   invStack    // piglin: the gold it is admiring (rendered in the off hand)
-	admireUntil               uint64      // piglin: the tick the admiring ends (0 = not admiring)
-	admireOffUntil            uint64      // piglin: no admiring until this tick (hit by a player)
-	hoard                     []invStack  // piglin: loved items it kept; dropped on death
-	gotFish                   bool        // dolphin: fed a fish, leading to treasure
-	treasureX                 int         // dolphin: the shipwreck it leads to (valid while gotFish)
+	brzState                  int8        // breeze: standing / inhaling / jumping / shooting
+	brzTicks                  int         // breeze: ticks into the inhale or the shot
+	brzJumpCD, brzShootCD     int         // breeze: BREEZE_JUMP_COOLDOWN / BREEZE_SHOOT_COOLDOWN
+	brzShootWindow            int         // breeze: BREEZE_SHOOT memory ticks left
+	brzJumpX, brzJumpY        float64     // breeze: BREEZE_JUMP_TARGET
+	brzJumpZ                  float64
+	brzVX, brzVY, brzVZ       float64 // breeze: the jump's motion, per tick
+	brzSlide                  bool    // breeze: Slide walk target set
+	brzSlideX, brzSlideZ      float64
+	brzSlideTicks             int
+	doorPos                   blockPos   // zombie: the door it is beating on (lower half; zero = none)
+	doorTicks                 int        // zombie: ticks spent on it
+	doorStage                 int8       // zombie: the crack stage last shown (-1 = none)
+	hornsGone                 int8       // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
+	ramCD                     int        // goat: ticks before it may ram again
+	ramPhase                  int8       // goat: idle / walking to its start / lowering its head / charging
+	ramStart                  blockPos   // goat: where the charge begins
+	ramTX, ramTZ              float64    // goat: the target's position when the ram was chosen
+	ramDX, ramDZ              float64    // goat: the charge direction
+	ramTicks                  int        // goat: ticks in the current phase
+	raidTarget                blockPos   // rabbit: the farmland it is raiding
+	raidRest                  int        // rabbit: ticks before it looks for a garden again
+	layCounter                int        // turtle: ticks spent digging the nest
+	inflate, deflate          int        // pufferfish: its inflate and deflate clocks (ticks)
+	stingCD                   int        // pufferfish: ticks before it stings again
+	offhand                   invStack   // piglin: the gold it is admiring (rendered in the off hand)
+	admireUntil               uint64     // piglin: the tick the admiring ends (0 = not admiring)
+	admireOffUntil            uint64     // piglin: no admiring until this tick (hit by a player)
+	hoard                     []invStack // piglin: loved items it kept; dropped on death
+	gotFish                   bool       // dolphin: fed a fish, leading to treasure
+	treasureX                 int        // dolphin: the shipwreck it leads to (valid while gotFish)
 	treasureZ                 int
 	foxFlags                  int8       // fox: DATA_FLAGS (crouching 4, interested 8, pouncing 16, sleeping 32)
 	foxEatTicks               int        // fox: ticks since it last ate (eats a held food past 600)
@@ -476,6 +486,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entityBreeze && h.breezeStep(players, m):
+			// A breeze sliding, drawing breath, mid-jump or shooting.
 		case h.avoidStep(players, m):
 			// Keeping clear of a mob its kind avoids, at the goal's pace.
 		case m.panic > 0:
@@ -585,6 +597,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		switch {
 		case m.statik:
 			m.vx, m.vz = 0, 0 // anchored (shulker)
+		case m.etype == entityBreeze && m.brzState == brzJumping:
+			h.breezeFlight(players, m) // the long jump's arc, gravity and all
 		case m.flies:
 			h.flyMove(m, nx, nz, fnx, fnz)
 		case m.swims:
@@ -699,8 +713,6 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.blazeShoot(players, m) // ranged: fireballs
 			case entityGhast:
 				h.ghastShoot(players, m) // ranged: explosive fireballs
-			case entityBreeze:
-				h.breezeShoot(players, m) // ranged: wind charges
 			case entityWither:
 				h.witherShoot(players, m) // ranged: wither skulls
 			case entityShulker:

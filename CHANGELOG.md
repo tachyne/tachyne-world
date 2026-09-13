@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Breeze AI.** The breeze fights as vanilla's does: it slides to a spot
+  behind you (or away, if you are within four blocks), draws breath and
+  long-jumps there on a forty-to-eighty-degree arc, lands, and in the
+  hundred ticks after a landing inhales for fifteen and fires a wind
+  charge — shooting from where it stands when it cannot jump. Its poses
+  (inhaling, jumping, shooting) drive the client's animation.
+
 - **The dragon respawn ceremony.** Four end crystals set around the exit
   portal no longer bring the dragon straight back: the portal closes, the
   crystals' beams point at the sky, the dragon growls, the beams sweep

@@ -112,19 +112,6 @@ func (h *hub) ghastShoot(players map[int32]*tracked, m *mob) {
 	h.playSoundDim(players, m.dim, "minecraft:entity.ghast.shoot", sndHostile, m.x, m.y, m.z, 3, 1)
 }
 
-// breezeShoot fires a wind charge — knockback, no damage (vanilla Breeze).
-func (h *hub) breezeShoot(players map[int32]*tracked, m *mob) {
-	t := h.mobRanged(players, m, 24, 15)
-	if t == nil {
-		return
-	}
-	ux, uy, uz := aimAt(m.x, m.y+1, m.z, t.x, t.y+0.5, t.z)
-	v := 1.4
-	a := h.launchProjectileIn(players, entityWindCharge, m.dim, m.x, m.y+1, m.z, ux*v, uy*v, uz*v)
-	a.shooter, a.knock, a.breaks = m.eid, 1.5, true
-	h.playSound(players, "minecraft:entity.breeze.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
-}
-
 // witherShoot fires a wither skull (dark damage + the wither effect).
 func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
 	t := h.mobRanged(players, m, 40, 8)
