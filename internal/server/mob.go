@@ -192,6 +192,9 @@ type mob struct {
 	dashing                   bool        // camel: the DASH flag is up
 	puff                      int8        // pufferfish: PUFF_STATE 0-2
 	hasEgg                    bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
+	carrotTicks               int         // rabbit: moreCarrotTicks (full after a bite)
+	raidTarget                blockPos    // rabbit: the farmland it is raiding
+	raidRest                  int         // rabbit: ticks before it looks for a garden again
 	layCounter                int         // turtle: ticks spent digging the nest
 	inflate, deflate          int         // pufferfish: its inflate and deflate clocks (ticks)
 	stingCD                   int         // pufferfish: ticks before it stings again
@@ -459,6 +462,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.
+		case m.etype == entityRabbit && h.rabbitStep(players, m):
+			// A rabbit after a grown carrot in somebody's garden.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):

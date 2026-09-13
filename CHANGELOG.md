@@ -74,6 +74,11 @@ the public history since the project was open-sourced on 2026-07-10.
   badlands and the Nether, as vanilla's does. A snowball a player throws
   now hurts a blaze too.
 
+- **Rabbits raid gardens.** A hungry rabbit hops to a grown carrot on
+  farmland within sixteen blocks and takes a bite — one growth stage off,
+  the whole plant if it was at its first — then is full for a while;
+  mobGriefing off keeps them out, as vanilla's RaidGardenGoal has it.
+
 ## 2026-09-11
 
 ### Added
