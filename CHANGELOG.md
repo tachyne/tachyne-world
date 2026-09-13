@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Water animals out of water.** A fish, squid or tadpole on land lasts
+  its fifteen seconds of air and then takes drowning damage, an axolotl
+  its five minutes before drying out, and a dolphin dries out after two
+  minutes (rain keeps it wet). Under water a dolphin has vanilla's four
+  minutes of air, not the fifteen seconds every non-breather had, and
+  surfaces to breathe when it runs low.
 - **Wololo.** An evoker with nobody to fight casts on a blue sheep within
   sixteen blocks (mob griefing on): forty ticks under the casting arms,
   then the sheep turns red, as vanilla's evokers have always done.

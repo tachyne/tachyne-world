@@ -52,6 +52,7 @@ type mob struct {
 	burnDelay       int      // seconds of dawn-ramp grace before this mob ignites
 	fireSecs        int      // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
 	submerged       int      // consecutive seconds fully underwater (land mobs drown past maxAir)
+	dryTicks        int      // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
 	convertIn       int      // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	fuse            int      // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int      // spider: mob-updates it stays hostile in daylight after a hit
@@ -625,6 +626,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A tamed cat walking onto, or sat on, a chest, bed or lit furnace.
 		case (m.etype == entityCat || m.etype == entityOcelot) && h.catHuntStep(players, m):
 			// A wild cat after a rabbit, an ocelot after a chicken.
+		case m.etype == entityDolphin && h.dolphinBreathe(players, m):
+			// A dolphin low on air making for the surface.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityDolphin && h.dolphinSwimWithPlayer(players, m):

@@ -104,6 +104,10 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 		if m.health <= 0 {
 			continue
 		}
+		h.waterAnimalDry(players, m) // a fish out of water, a dolphin drying out
+		if m.health <= 0 {
+			continue
+		}
 		w := h.worldFor(m.dim)
 		fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
 		feet, head := w.At(fx, fy, fz), w.At(fx, fy+1, fz)
@@ -176,7 +180,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 					m.convertIn = drownShakeSecs
 					h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
 				}
-			} else if m.submerged > maxAir/20 { // maxAir is in ticks; /20 = seconds
+			} else if m.submerged > mobMaxAir(m)/20 { // air is in ticks; /20 = seconds
 				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 			}
 		} else {
