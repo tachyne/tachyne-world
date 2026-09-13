@@ -383,6 +383,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityPufferfish {
 			h.pufferStep(players, m)
 		}
+		if m.etype == entitySnowGolem {
+			h.snowGolemStep(players, m)
+		}
 		if m.rider != 0 || len(m.riders) > 0 {
 			continue // a ridden mount is client-driven (applyMountMove) — AI paused
 		}

@@ -67,6 +67,13 @@ the public history since the project was open-sourced on 2026-07-10.
   into hatchlings whose home is the nest; a turtle carrying an egg cannot
   be courted again until she has laid it.
 
+- **Snow golems do their job.** A snow golem leaves a trail of snow
+  layers where it walks, throws a snowball every second at the nearest
+  hostile within ten blocks — harmless to everything but a blaze, which
+  takes three — and melts, a heart every two ticks, in deserts, savannas,
+  badlands and the Nether, as vanilla's does. A snowball a player throws
+  now hurts a blaze too.
+
 ## 2026-09-11
 
 ### Added

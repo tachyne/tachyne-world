@@ -56,6 +56,7 @@ type arrowEntity struct {
 	noHitUntil uint64   // tick before which the shooter can't hit themselves
 	playerShot bool     // player-fired: hits mobs, and is retrievable once stuck
 	breaks     bool     // snowball/egg: shatters on impact instead of sticking
+	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
 	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
@@ -224,7 +225,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		for _, f := range [2]float64{0.5, 1.0} {
 			px, py, pz := a.x+a.vx*f, a.y+a.vy*f, a.z+a.vz*f
 			if h.arrowHitsPlayer(players, a, px, py, pz) ||
-				(a.playerShot && h.arrowHitsMob(players, a, px, py, pz)) {
+				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) {
 				hit = true
 				break
 			}
@@ -381,7 +382,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 // and applies the hit through the normal attack bookkeeping.
 func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, pz float64) bool {
 	for _, m := range h.mobs {
-		if m.dying > 0 || m.dim != a.dim {
+		if m.dying > 0 || m.dim != a.dim || (a.mobShot && m.eid == a.shooter) {
 			continue
 		}
 		ddx, ddz := px-m.x, pz-m.z
@@ -397,8 +398,10 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.endermanTeleport(players, m)
 			continue
 		}
-		if a.dmg > 0 {
-			m.hitByPlayer = true
+		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
+			if a.playerShot {
+				m.hitByPlayer = true
+			}
 			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && m.kbScale() > 0 { // ride the arrow's momentum
 				kbp := (0.5 + 0.6*float64(a.punch)) * m.kbScale() // Punch adds 0.6/level
 				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
@@ -416,7 +419,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if hurt, _, _ := mobSounds(m.etype); hurt != "" {
 				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 			}
-			dmg := a.dmg
+			dmg := dmg0
 			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
@@ -542,3 +545,16 @@ func (h *hub) witherSkullHeal(a *arrowEntity) {
 
 // WitherSkull.onHitEntity: livingOwner.heal(5.0F).
 const witherSkullHealHP = 5
+
+// projectileHitDamage is what a projectile does to the mob it strikes: its
+// own damage, except a snowball, which does nothing to anyone but a blaze
+// (Snowball.onHitEntity: 3 to a blaze, 0 otherwise).
+func projectileHitDamage(a *arrowEntity, m *mob) int {
+	if a.etype == entitySnowball {
+		if m.etype == entityBlaze {
+			return 3
+		}
+		return 0
+	}
+	return a.dmg
+}
