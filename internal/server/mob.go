@@ -194,6 +194,10 @@ type mob struct {
 	hasEgg                    bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
 	carrotTicks               int         // rabbit: moreCarrotTicks (full after a bite)
 	screaming                 bool        // goat: the screaming variant (2% at spawn)
+	breaksDoors               bool        // zombie: spawned able to break doors (f×10%)
+	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
+	doorTicks                 int         // zombie: ticks spent on it
+	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
 	hornsGone                 int8        // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
 	ramCD                     int         // goat: ticks before it may ram again
 	ramPhase                  int8        // goat: idle / walking to its start / lowering its head / charging
@@ -584,9 +588,19 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.setClimbing(players, m, true)
 				m.y++
 			default:
+				// A hunting zombie stopped by a closed wooden door beats on it
+				// (BreakDoorGoal) instead of picking a new heading.
+				if m.breaksDoors && m.hasTarget {
+					if door, ok := h.doorAhead(m, nx, nz); ok && h.zombieBeatsDoor(players, m, door) {
+						break
+					}
+				}
 				ang := h.rng.Float64() * 2 * math.Pi
 				m.vx, m.vz = math.Cos(ang)*m.moveSpeed(), math.Sin(ang)*m.moveSpeed()
 				m.reroute = 15 + h.rng.Intn(15)
+			}
+			if stepOK && m.doorPos != (blockPos{}) {
+				h.zombieStopDoor(players, m) // walked on: the door is no longer in the way
 			}
 			if climbsWalls(m.etype) && stepOK {
 				h.setClimbing(players, m, false) // nothing in the way any more

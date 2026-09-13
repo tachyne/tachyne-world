@@ -429,6 +429,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgMovingPiston, ev)
 	case attachproto.EntityAttributes:
 		send(attachproto.MsgEntityAttributes, ev)
+	case attachproto.BlockBreakProgress:
+		send(attachproto.MsgBlockBreakProgress, ev)
 	case attachproto.WorldBorder:
 		send(attachproto.MsgWorldBorder, ev)
 	case attachproto.BannerPatterns:

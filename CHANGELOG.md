@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Zombies break doors.** On hard, a zombie that spawned with the knack
+  (one in ten, scaled by the regional difficulty) and is stopped by a
+  closed wooden door on its way to a player beats on it — the thud and
+  swing about once a second, the crack overlay stepping through its ten
+  stages — and after twelve seconds knocks it off its hinges, dropping
+  the door. Iron and copper doors hold; mob griefing off stops it. The
+  crack overlay is a new attach frame (block-break progress) rendered on
+  every client.
+
 - **Camel dash.** Release the jump key on a saddled camel and it dashes:
   the server plays the dash, raises the camel's dash flag for the
   animation and runs vanilla's fifty-five-tick cooldown, while the lunge

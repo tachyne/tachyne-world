@@ -480,6 +480,7 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 			h.rollZombieBaby(players, m)
 			if !h.reloading { // finalizeSpawn extras roll once, never on a chunk reload
 				h.rollChickenJockey(players, m)
+				m.breaksDoors = h.rng.Float64() < h.specialMultiplier()*0.1 // setCanBreakDoors(random < f × 0.1)
 			}
 		}
 		if etype == entitySkeleton {

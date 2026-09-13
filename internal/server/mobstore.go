@@ -108,30 +108,31 @@ type savedMob struct {
 	PatrolCaptain bool   `json:"capt,omitempty"`
 	CarriedBlk    uint32 `json:"eblk,omitempty"` // enderman: held block state
 
-	Oxidation int         `json:"ox,omitempty"`
-	Waxed     bool        `json:"wax,omitempty"`
-	Carrying  stackRow    `json:"carry,omitempty"`
-	Trident   bool        `json:"tri,omitempty"`
-	CanPickup bool        `json:"pick,omitempty"`
-	Gear      [4]stackRow `json:"gear,omitempty"`
-	Saddled   bool        `json:"sad,omitempty"`
-	SaddleSt  stackRow    `json:"sadst,omitempty"`
-	ArmorSt   stackRow    `json:"armst,omitempty"`
-	Chested   bool        `json:"chd,omitempty"`
-	Chest     []stackRow  `json:"chest,omitempty"`
-	Strength  int8        `json:"str,omitempty"`
-	Held      int32       `json:"held,omitempty"`
-	HSpeed    float64     `json:"hspeed,omitempty"`      // horse family: rolled MOVEMENT_SPEED base (per-step units)
-	HJump     float64     `json:"hjump,omitempty"`       // horse family: rolled JUMP_STRENGTH base
-	HasEgg    bool        `json:"has_egg,omitempty"`     // turtle: carrying an egg home
-	Screaming bool        `json:"screaming,omitempty"`   // goat: the screaming variant
-	HornsGone int8        `json:"horns_gone,omitempty"`  // goat: horns rammed off
-	HeldSt    stackRow    `json:"held_st,omitempty"`     // the held item with its enchantments (when it has any)
-	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
-	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
-	SniffCD   int         `json:"sniffcd,omitempty"`     // sniffer: ticks until the next dig
-	Hoard     []stackRow  `json:"hoard,omitempty"`       // piglin: the gold it keeps (its off-hand item folded in)
-	Harness   int32       `json:"harn,omitempty"`
+	Oxidation   int         `json:"ox,omitempty"`
+	Waxed       bool        `json:"wax,omitempty"`
+	Carrying    stackRow    `json:"carry,omitempty"`
+	Trident     bool        `json:"tri,omitempty"`
+	CanPickup   bool        `json:"pick,omitempty"`
+	Gear        [4]stackRow `json:"gear,omitempty"`
+	Saddled     bool        `json:"sad,omitempty"`
+	SaddleSt    stackRow    `json:"sadst,omitempty"`
+	ArmorSt     stackRow    `json:"armst,omitempty"`
+	Chested     bool        `json:"chd,omitempty"`
+	Chest       []stackRow  `json:"chest,omitempty"`
+	Strength    int8        `json:"str,omitempty"`
+	Held        int32       `json:"held,omitempty"`
+	HSpeed      float64     `json:"hspeed,omitempty"`       // horse family: rolled MOVEMENT_SPEED base (per-step units)
+	HJump       float64     `json:"hjump,omitempty"`        // horse family: rolled JUMP_STRENGTH base
+	HasEgg      bool        `json:"has_egg,omitempty"`      // turtle: carrying an egg home
+	Screaming   bool        `json:"screaming,omitempty"`    // goat: the screaming variant
+	BreaksDoors bool        `json:"breaks_doors,omitempty"` // zombie: can break doors
+	HornsGone   int8        `json:"horns_gone,omitempty"`   // goat: horns rammed off
+	HeldSt      stackRow    `json:"held_st,omitempty"`      // the held item with its enchantments (when it has any)
+	Carry       stackRow    `json:"allay_carry,omitempty"`  // allay: collected stack
+	DupCD       int         `json:"dupcd,omitempty"`        // allay: duplication cooldown
+	SniffCD     int         `json:"sniffcd,omitempty"`      // sniffer: ticks until the next dig
+	Hoard       []stackRow  `json:"hoard,omitempty"`        // piglin: the gold it keeps (its off-hand item folded in)
+	Harness     int32       `json:"harn,omitempty"`
 	// A lead tied to a FENCE survives a restart; one held by a player does not,
 	// because the leash drops the moment its holder disconnects (vanilla's
 	// tickLeash gives up as soon as the two cannot interact). So the only thing
@@ -558,7 +559,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone,
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors,
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])
