@@ -49,6 +49,13 @@ the public history since the project was open-sourced on 2026-07-10.
   shrieker and catalyst five each; an infested stone block sets its
   silverfish on you unless Silk Touch keeps it whole.
 
+- **Pufferfish puff and sting.** A pufferfish inflates in two stages at
+  a player or a mob that comes within two blocks (the calm sea life does
+  not count), deflates in two stages once left alone, and while puffed
+  stings whatever touches it — one damage plus its stage, poison for
+  three seconds a stage, and the sting flash for a player — as vanilla's
+  does.
+
 ## 2026-09-11
 
 ### Added
