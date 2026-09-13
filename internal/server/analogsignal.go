@@ -1,6 +1,9 @@
 package server
 
-import "math"
+import (
+	"math"
+	"strings"
+)
 
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
@@ -59,6 +62,21 @@ func (h *hub) analogSignal(pos simPos) int {
 		}
 		d := dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5)
 		return 15 - int(math.Floor(math.Min(math.Max(d, 0), 32)/32*15))
+	}
+	if name, _ := worldgen.StateName(st); strings.HasSuffix(name, "copper_golem_statue") { // CopperGolemStatueBlock: pose ordinal + 1
+		if info, ok := worldgen.InfoForState(st); ok {
+			switch worldgen.GetProperty(info, st, "copper_golem_pose") {
+			case "standing":
+				return 1
+			case "sitting":
+				return 2
+			case "running":
+				return 3
+			case "star":
+				return 4
+			}
+		}
+		return 0
 	}
 	if isBookshelf(st) { // ChiseledBookShelfBlock: last interacted slot + 1 (0 = never)
 		if slot, ok := h.shelfLast[pos]; ok {

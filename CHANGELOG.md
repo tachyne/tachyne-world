@@ -41,7 +41,8 @@ the public history since the project was open-sourced on 2026-07-10.
   damage, as vanilla's does. A comparator reads a decorated pot's single
   slot like any container's, and a creaking heart's distance to its
   creaking — fifteen at the heart, fading to one thirty-two blocks out,
-  nothing while it is dormant or uprooted.
+  nothing while it is dormant or uprooted — and a copper golem statue's
+  pose, one for standing through four for the star.
 
 ## 2026-09-11
 

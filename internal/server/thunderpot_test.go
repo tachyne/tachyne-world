@@ -54,6 +54,13 @@ func TestComparatorPotAndHeart(t *testing.T) {
 	if got := h.analogSignal(simPos{blockPos: heart}); got != 8 { // 15 - floor(16/32 × 15)
 		t.Fatalf("a creaking 16 blocks out reads 8, got %d", got)
 	}
+	// A copper golem statue reads its pose: standing 1 … star 4.
+	statue := worldgen.BlockID("oxidized_copper_golem_statue")
+	info, _ := worldgen.InfoForState(statue)
+	w.SetBlock(20, 180, 0, worldgen.SetProperty(info, statue, "copper_golem_pose", "running"))
+	if got := h.analogSignal(simPos{blockPos: blockPos{20, 180, 0}}); got != 3 {
+		t.Fatalf("a running statue reads 3, got %d", got)
+	}
 	w.SetBlock(10, 180, 0, worldgen.CreakingHeartBase) // dormant
 	if got := h.analogSignal(simPos{blockPos: heart}); got != 0 {
 		t.Fatalf("a dormant heart reads 0, got %d", got)
