@@ -204,32 +204,7 @@ func (h *hub) breezeJumpTarget(m *mob, t *tracked) (float64, float64, float64, b
 // breezeJumpVector is LongJumpUtil.calculateJumpVectorForAngle over the
 // shuffled allowed angles, capped at 0.0583 × FOLLOW_RANGE (1.4).
 func (h *hub) breezeJumpVector(m *mob, tx, ty, tz float64) (float64, float64, float64, bool) {
-	maxV := breezeJumpVelMul * float64(m.followRange())
-	angles := append([]int(nil), breezeJumpAngles...)
-	h.rng.Shuffle(len(angles), func(i, j int) { angles[i], angles[j] = angles[j], angles[i] })
-	for _, n := range angles {
-		// The target is pulled half a block toward the mob.
-		hx, hz := tx-m.x, tz-m.z
-		if hd := math.Hypot(hx, hz); hd > 1e-6 {
-			hx, hz = tx-hx/hd*0.5-m.x, tz-hz/hd*0.5-m.z
-		}
-		f2 := float64(n) * math.Pi / 180
-		dir := math.Atan2(hz, hx)
-		d2 := hx*hx + hz*hz
-		d3 := math.Sqrt(d2)
-		d4 := ty - m.y
-		d12 := d2 * mobGravity / (d3*math.Sin(2*f2) - 2*d4*math.Pow(math.Cos(f2), 2))
-		if d12 < 0 {
-			continue
-		}
-		d13 := math.Sqrt(d12)
-		if d13 > maxV {
-			continue
-		}
-		d14, d15 := d13*math.Cos(f2), d13*math.Sin(f2)
-		return d14 * math.Cos(dir) * 0.95, d15 * 0.95, d14 * math.Sin(dir) * 0.95, true
-	}
-	return 0, 0, 0, false
+	return jumpVectorFor(m, tx, ty, tz, breezeJumpAngles, breezeJumpVelMul*float64(m.followRange()), h.rng.Intn)
 }
 
 // breezeFlight is the jump's arc, in place of the walk: gravity per tick,

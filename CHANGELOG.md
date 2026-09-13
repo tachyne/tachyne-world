@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Goats long-jump.** Every thirty to sixty seconds an idle goat looks,
+  twenty tries, for a spot up to five blocks out and five up or down that
+  it cannot simply walk to — a gap or a ledge in the way — crouches for
+  forty ticks and jumps it on a steep arc with its long-jump bleat,
+  landing with a hoof-step and a fresh cooldown, as vanilla's do.
+
 - **Zoglins and endermen fight mobs.** A zoglin goes for any living
   thing within its follow range that is not a zoglin or a creeper —
   biting for its hoglin damage every forty ticks (fifteen for a baby)
