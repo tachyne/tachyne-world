@@ -153,7 +153,7 @@ func (golemBehavior) steer(h *hub, m *mob) (float64, float64) {
 	var target *mob
 	best := 16.0
 	h.grid().nearby(m.dim, m.x, m.z, best, func(o *mob) {
-		if !o.hostile || o.dying > 0 {
+		if !o.hostile || o.dying > 0 || o.etype == entityCreeper { // Enemy && !Creeper: golems leave creepers be
 			return
 		}
 		if d := math.Hypot(o.x-m.x, o.z-m.z); d < best {
@@ -185,7 +185,7 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 	// the query — the punch may kill (killMob mutates h.mobs).
 	var o *mob
 	h.grid().nearby(m.dim, m.x, m.z, 2.2, func(c *mob) {
-		if o != nil || !c.hostile || c.dying > 0 || dist3(c.x, c.y, c.z, m.x, m.y, m.z) > 2.2 {
+		if o != nil || !c.hostile || c.dying > 0 || c.etype == entityCreeper || dist3(c.x, c.y, c.z, m.x, m.y, m.z) > 2.2 {
 			return
 		}
 		o = c

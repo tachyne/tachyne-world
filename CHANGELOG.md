@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+### Fixed
+- Iron golems no longer attack creepers, which vanilla's golems leave
+  alone (they would punch one into exploding beside the village).
+
 - **Fox trust.** A cub born of two fed foxes trusts whoever fed each
   parent (kept across restarts); a fox never runs from a player it
   trusts, and goes for whatever last hurt one of them within sixteen
