@@ -132,7 +132,7 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
-	if neverLoves[m.etype] || m.loveTicks > 0 || m.breedCD > 0 {
+	if neverLoves[m.etype] || m.loveTicks > 0 || m.breedCD > 0 || m.hasEgg { // Turtle.canFallInLove: not while carrying an egg
 		return false
 	}
 	h.consumeFed(t, item)
@@ -213,7 +213,12 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		if o := partner; o != nil {
 			m.loveTicks, o.loveTicks = 0, 0
 			m.breedCD, o.breedCD = breedCooldown, breedCooldown
-			baby := h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
+			var baby *mob
+			if m.etype == entityTurtle {
+				m.hasEgg = true // TurtleBreedGoal.breed: an egg to carry home, no hatchling yet
+			} else {
+				baby = h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
+			}
 			if baby != nil { // a plugin may cancel the birth; the parents still cool down
 				baby.baby, baby.growLeft = true, growUpTicks
 				// A foal lands between its parents, which is the whole point of

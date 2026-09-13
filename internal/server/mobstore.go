@@ -123,6 +123,7 @@ type savedMob struct {
 	Held      int32       `json:"held,omitempty"`
 	HSpeed    float64     `json:"hspeed,omitempty"`      // horse family: rolled MOVEMENT_SPEED base (per-step units)
 	HJump     float64     `json:"hjump,omitempty"`       // horse family: rolled JUMP_STRENGTH base
+	HasEgg    bool        `json:"has_egg,omitempty"`     // turtle: carrying an egg home
 	HeldSt    stackRow    `json:"held_st,omitempty"`     // the held item with its enchantments (when it has any)
 	Carry     stackRow    `json:"allay_carry,omitempty"` // allay: collected stack
 	DupCD     int         `json:"dupcd,omitempty"`       // allay: duplication cooldown
@@ -555,7 +556,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage,
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg,
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])

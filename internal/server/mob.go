@@ -191,6 +191,8 @@ type mob struct {
 	dashCD                    int         // camel: ticks left on the dash cooldown (flag drops at 50)
 	dashing                   bool        // camel: the DASH flag is up
 	puff                      int8        // pufferfish: PUFF_STATE 0-2
+	hasEgg                    bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
+	layCounter                int         // turtle: ticks spent digging the nest
 	inflate, deflate          int         // pufferfish: its inflate and deflate clocks (ticks)
 	stingCD                   int         // pufferfish: ticks before it stings again
 	offhand                   invStack    // piglin: the gold it is admiring (rendered in the off hand)
@@ -449,6 +451,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityPanda && h.pandaStep(players, m):
 			// A panda held by its personality: sitting out a storm, lying
 			// on its back, or tumbling.
+		case m.etype == entityTurtle && h.turtleStep(players, m):
+			// A turtle carrying an egg home, or digging its nest.
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.

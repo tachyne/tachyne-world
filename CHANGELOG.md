@@ -60,6 +60,13 @@ the public history since the project was open-sourced on 2026-07-10.
   honey block moves at vanilla's four tenths of its speed; it already did
   for players, whose movement is the client's.
 
+- **Turtles lay eggs.** Breeding two turtles gives one of them an egg
+  instead of a hatchling; she carries it back to the beach she came from,
+  digs for ten seconds on sand and lays a clutch of one to four. The eggs
+  crack twice and hatch on random ticks, mostly in the hour before dawn,
+  into hatchlings whose home is the nest; a turtle carrying an egg cannot
+  be courted again until she has laid it.
+
 ## 2026-09-11
 
 ### Added

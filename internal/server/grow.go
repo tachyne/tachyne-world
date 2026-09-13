@@ -179,6 +179,9 @@ func (h *hub) randomTickBlockState(players map[int32]*tracked, dim, x, y, z int,
 	if h.tickStem(players, dim, x, y, z, state) {
 		return
 	}
+	if h.turtleEggRandomTick(players, dim, x, y, z, state) {
+		return
+	}
 	if h.farmlandRandomTick(players, dim, x, y, z, state) {
 		return
 	}
