@@ -249,3 +249,20 @@ func (h *hub) steerAwayFrom(m *mob, x, z, speed float64) {
 	sp := m.moveSpeed() * speed
 	m.vx, m.vz = dx/d*sp, dz/d*sp
 }
+
+// hoglinBroadcastTarget is HoglinAi.broadcastAttackTarget: an adult's bite
+// brings every adult hoglin within sixteen onto the same target.
+func (h *hub) hoglinBroadcastTarget(players map[int32]*tracked, m *mob, t *tracked) {
+	if m.baby {
+		return
+	}
+	h.grid().nearby(m.dim, m.x, m.z, hoglinSeeRange, func(o *mob) {
+		if o == m || o.etype != entityHoglin || o.baby || o.dying > 0 || o.hogPacified > 0 || o.hogRetreat > 0 {
+			return
+		}
+		if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > hoglinSeeRange {
+			return
+		}
+		o.hasTarget, o.tx, o.tz, o.rest = true, t.x, t.z, 0
+	})
+}

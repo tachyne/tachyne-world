@@ -365,6 +365,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	if landed && (m.etype == entityHoglin || m.etype == entityZoglin) && !m.baby {
 		h.hoglinThrow(t, m) // HoglinBase.throwTarget: tossed up and away
 	}
+	if landed && m.etype == entityHoglin {
+		h.hoglinBroadcastTarget(players, m, t) // onHitTarget: the pack joins in
+	}
 	if m.etype == entityHoglin || m.etype == entityZoglin {
 		defer func() { m.attackCD = hoglinAttackCD(m) }() // ATTACK_INTERVAL 40 (15 for a piglet)
 	}

@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Hoglin packs; camels on a lead.** A hoglin's bite brings every adult
+  hoglin within sixteen blocks onto the same player, and a sat camel led
+  more than six blocks stands up, as in vanilla.
+
 - **Pillager crossbows.** With a target within eight blocks a pillager
   stops, draws its crossbow for twenty-five ticks (the charging flag the
   client animates from), holds the loaded bolt for twenty to forty

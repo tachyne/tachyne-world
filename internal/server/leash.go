@@ -255,6 +255,9 @@ func (h *hub) updateLeashes(players map[int32]*tracked) {
 			continue
 		}
 		d := dist3(m.x, m.y, m.z, hx, hy, hz)
+		if m.etype == entityCamel && d > 6 && m.camelSitting() && !m.camelInTransition(h.tick.Load()) {
+			h.camelStandUp(players, m) // handleLeashAtDistance: led past six blocks, it gets up
+		}
 		if d > leashSnapDist {
 			h.playSound(players, "minecraft:entity.lead.break", sndNeutral, m.x, m.y, m.z, 1, 1)
 			h.dropLeash(players, m, true)
