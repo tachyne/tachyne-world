@@ -233,6 +233,13 @@ type mob struct {
 	ravAttackTick             int        // ravager: AttackTick (a bite\'s pause)
 	ravStunTick               int        // ravager: StunTick (a shield stopped it)
 	ravRoarTick               int        // ravager: RoarTick (the roar lands at 10)
+	overworldTicks            int        // piglin/brute/hoglin: TimeInOverworld (zombifies past 300)
+	immuneZombify             bool       // piglin/brute/hoglin: IsImmuneToZombification
+	hogPacified               int        // hoglin: ticks of REPELLENT_PACIFY left
+	hogRetreat                int        // hoglin: AVOID_TARGET ticks left
+	hogRetreatX, hogRetreatZ  float64    // hoglin: what it retreats from
+	hogRepellent              blockPos   // hoglin: NEAREST_REPELLENT
+	hogRepelled               bool       // hoglin: a repellent is in range
 	doorPos                   blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int        // zombie: ticks spent on it
 	doorStage                 int8       // zombie: the crack stage last shown (-1 = none)
@@ -433,6 +440,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityCamel && m.dashCD > 0 {
 			h.camelDashTick(players, m)
 		}
+		if _, ok := zombifiesOutside(m.etype); ok {
+			h.zombifyTick(players, m) // out of the Nether, three hundred ticks and it turns
+			if h.mobs[m.eid] == nil {
+				continue
+			}
+		}
 		if m.etype == entityCamel && m.rider == 0 && h.camelSitStep(players, m) {
 			continue // sat, folding or rising: refuseToMove (a ridden camel's client does this itself)
 		}
@@ -491,6 +504,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entityHoglin && h.hoglinStep(players, m):
+			// A hoglin walking off from warped fungus, or retreating from piglins.
 		case m.etype == entityRavager && h.ravagerStep(players, m):
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):

@@ -329,6 +329,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// weapon's Sharpness (EnchantmentHelper.modifyDamage). Smite and Bane never
 	// match a player.
 	dmg := (hostileMelee(m) + mobHeldBonus(m) + mobSharpness(m)) * h.diffMult()
+	if m.etype == entityHoglin || m.etype == entityZoglin {
+		dmg = h.hoglinBiteDamage(m) * h.diffMult() // hurtAndThrowTarget: half plus a roll
+	}
 	// Plugin damage event (mob → player), before the swing so a cancel makes
 	// the whole bite invisible.
 	if plugin.Has[*plugin.EntityDamageByEntityEvent](h.plugins) {
@@ -345,6 +348,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	if m.etype == entityRavager {
 		h.ravagerBite(players, m) // doHurtTarget: the ten-tick pause and the bite animation
 	}
+	if m.etype == entityHoglin || m.etype == entityZoglin {
+		h.hoglinBiteStart(players, m) // doHurtTarget: the animation and the grunt
+	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
 	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
@@ -354,6 +360,12 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {
 			h.setBurning(players, t, 4*lvl) // Fire Aspect: 4 s per level
 		}
+	}
+	if landed && (m.etype == entityHoglin || m.etype == entityZoglin) && !m.baby {
+		h.hoglinThrow(t, m) // HoglinBase.throwTarget: tossed up and away
+	}
+	if m.etype == entityHoglin || m.etype == entityZoglin {
+		defer func() { m.attackCD = hoglinAttackCD(m) }() // ATTACK_INTERVAL 40 (15 for a piglet)
 	}
 	if !landed {
 		// A raised shield facing the attacker catches the whole bite, and with

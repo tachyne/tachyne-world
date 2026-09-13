@@ -14,6 +14,16 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Zombification and hoglin AI.** Piglins, brutes and hoglins outside
+  the Nether turn after three hundred ticks (the client shows the
+  shudder) into a zombified piglin or a zoglin, nauseous for ten seconds,
+  unless flagged immune; the timer survives a restart. Hoglins bite for
+  half their damage plus a roll and throw the victim up and away, wait
+  forty ticks between bites (fifteen for a piglet), are pacified by warped
+  fungus, nether portals and respawn anchors within eight blocks and walk
+  off, keep eight blocks from adult piglins, retreat at 1.3 for five to
+  twenty seconds when outnumbered, and a hurt piglet runs — as vanilla's.
+
 - **Ravager stun and roar.** A ravager's bite pauses it for ten ticks; a
   bite caught on a shield stuns it for forty half the time — after which
   it roars, dealing six to everything within four blocks and hurling
