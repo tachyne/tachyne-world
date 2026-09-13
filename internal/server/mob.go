@@ -61,6 +61,9 @@ type mob struct {
 	dragonCharge    int      // ticks of fireball aim built up
 	fangNextAt      uint64   // evoker: tick its fang spell comes off cooldown
 	vexNextAt       uint64   // evoker: tick its summon spell comes off cooldown
+	wololoTarget    int32    // evoker: the blue sheep its wololo is aimed at
+	wololoWarm      int      // evoker: wololo warm-up ticks left
+	wololoNextAt    uint64   // evoker: tick the wololo comes off cooldown
 	vexLife         int      // summoned vex: ticks left before it expires (0 = unlimited)
 	hitByPlayer     bool     // a player has hit it — its death pays XP (vanilla rule)
 	lastAttacker    int32    // eid of the last entity that hurt it (plugin death event)

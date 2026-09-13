@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Wololo.** An evoker with nobody to fight casts on a blue sheep within
+  sixteen blocks (mob griefing on): forty ticks under the casting arms,
+  then the sheep turns red, as vanilla's evokers have always done.
 - **Lamb colours.** A lamb wears the dye its parents' dyes would craft
   together — red and yellow give an orange lamb, blue and red a purple one,
   white and black a gray one — and otherwise one parent's colour, as

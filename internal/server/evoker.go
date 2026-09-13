@@ -54,9 +54,13 @@ type evokerFang struct {
 // update switch, so it ticks at the mob cadence rather than every tick.
 func (h *hub) evokerCast(players map[int32]*tracked, m *mob) {
 	h.spellAnimTick(players, m)
+	if h.wololoTick(players, m) {
+		return // a wololo warming up lands first
+	}
 	now := h.tick.Load()
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, 16)
 	if t == nil {
+		h.wololoStart(players, m) // nobody to fight: a blue sheep will do
 		return
 	}
 	// Vexes first: vanilla weights the summon down by how many are already
