@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Wolves hunt.** A wild wolf goes for sheep, rabbits and foxes (looked
+  for one tick in ten) and turtle hatchlings on land, every wolf goes for
+  skeletons, and a tamed wolf goes for whatever hurt its owner or
+  whatever its owner hits — never a creeper, a ghast or a pet of the
+  same owner — chasing at full pace and biting every twenty ticks, as
+  vanilla's do.
+
 - **Helmets against the sun; phantoms fear cats.** An undead wearing
   anything on its head no longer burns in daylight: the helmet takes the
   sun, a point or none each tick, and burns away before the wearer

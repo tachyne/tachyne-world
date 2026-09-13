@@ -273,6 +273,8 @@ type mob struct {
 	vexExpired                  bool       // vex: limited life run out (now taking damage)
 	phantomCatAt                uint64     // phantom: the tick of the next cat search
 	phantomScared               bool       // phantom: a cat was within sixteen at the last search
+	wolfPrey                    int32      // wolf: the mob it hunts (0 = none)
+	wolfBiteCD                  int        // wolf: ticks until the next bite
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -539,6 +541,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case m.etype == entityWolf && h.wolfHuntStep(players, m):
+			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
 		case m.etype == entityBat && h.batStep(players, m):
 			// A bat hanging under a block.
 		case m.etype == entityIronGolem && h.golemOfferTick(players, m):

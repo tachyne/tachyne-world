@@ -357,6 +357,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// top of the 0.4 base (Mob.getKnockback → LivingEntity.knockback).
 	h.knockbackScaled(t, m.x, m.z, 1+1.25*float64(m.heldStack().enchLvl(enchKnockback)))
 	if landed {
+		t.lastHurtByMob = m.eid // the owner's wolves take note
 		if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {
 			h.setBurning(players, t, 4*lvl) // Fire Aspect: 4 s per level
 		}

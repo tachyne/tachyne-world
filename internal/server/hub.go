@@ -268,23 +268,25 @@ type tracked struct {
 	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
-	living      // attributes + status effects, shared with mobs
-	health      float32
-	absorption  float32 // extra damage buffer from the Absorption effect (soaked first)
-	food        int
-	saturation  float32
-	exhaustion  float32
-	dead        bool
-	airborne    bool
-	peakY       float64    // highest y since leaving the ground (for fall damage)
-	air         int        // remaining breath in ticks (maxAir underwater→0 = drowning)
-	inv         *inventory // survival inventory (picked-up drops)
-	eatingSlot  int        // hotbar slot being eaten from (-1 = not eating)
-	eatingAt    uint64     // tick the eat-hold started (applies after eatDuration)
-	resyncInvAt uint64     // tick to re-push the inventory (self-heal a dropped one-shot)
-	sleeping    bool       // in bed, waiting for everyone else (skips night when all sleep)
-	sleepPos    blockPos   // the bed being slept in (drifting away wakes)
-	sleepingAt  uint64     // tick they lay down (night turns after sleepSkipTicks)
+	living        // attributes + status effects, shared with mobs
+	health        float32
+	absorption    float32 // extra damage buffer from the Absorption effect (soaked first)
+	food          int
+	saturation    float32
+	exhaustion    float32
+	dead          bool
+	airborne      bool
+	peakY         float64    // highest y since leaving the ground (for fall damage)
+	air           int        // remaining breath in ticks (maxAir underwater→0 = drowning)
+	inv           *inventory // survival inventory (picked-up drops)
+	eatingSlot    int        // hotbar slot being eaten from (-1 = not eating)
+	eatingAt      uint64     // tick the eat-hold started (applies after eatDuration)
+	resyncInvAt   uint64     // tick to re-push the inventory (self-heal a dropped one-shot)
+	sleeping      bool       // in bed, waiting for everyone else (skips night when all sleep)
+	lastHurtByMob int32      // the mob whose bite last landed on them (a tamed wolf's OwnerHurtByTargetGoal)
+	lastHitMob    int32      // the mob they last struck (OwnerHurtTargetGoal)
+	sleepPos      blockPos   // the bed being slept in (drifting away wakes)
+	sleepingAt    uint64     // tick they lay down (night turns after sleepSkipTicks)
 
 	// Raid Omen: where the Bad Omen was converted, and therefore where the
 	// raid lands when the omen's 30-second fuse burns out.

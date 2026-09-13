@@ -233,6 +233,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		return // not a mob (player/item), or already dying — ignore
 	}
 	if t := players[attacker]; t != nil {
+		t.lastHitMob = target // their wolves join in (OwnerHurtTargetGoal)
 		if t.dim != m.dim {
 			return // cross-dimension hits are impossible
 		}
