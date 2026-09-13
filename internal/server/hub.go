@@ -2145,6 +2145,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		}
 		e.p.trySendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
 		sendAttrsTo(nt, mobAttrFrame(m)) // addPairing: the attributes ride with the spawn
+		if m.etype == entityPufferfish && m.puff != 0 {
+			e.p.trySendEv(metaEv(puffMeta(m.eid, m.puff)))
+		}
 		if m.burning {
 			e.p.trySendEv(metaEv(fireMetadata(m.eid, true)))
 		}

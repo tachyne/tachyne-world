@@ -190,6 +190,9 @@ type mob struct {
 	lieCD                     uint64      // panda: the tick it may lie on its back again
 	dashCD                    int         // camel: ticks left on the dash cooldown (flag drops at 50)
 	dashing                   bool        // camel: the DASH flag is up
+	puff                      int8        // pufferfish: PUFF_STATE 0-2
+	inflate, deflate          int         // pufferfish: its inflate and deflate clocks (ticks)
+	stingCD                   int         // pufferfish: ticks before it stings again
 	offhand                   invStack    // piglin: the gold it is admiring (rendered in the off hand)
 	admireUntil               uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil            uint64      // piglin: no admiring until this tick (hit by a player)
@@ -374,6 +377,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityCamel && m.dashCD > 0 {
 			h.camelDashTick(players, m)
+		}
+		if m.etype == entityPufferfish {
+			h.pufferStep(players, m)
 		}
 		if m.rider != 0 || len(m.riders) > 0 {
 			continue // a ridden mount is client-driven (applyMountMove) — AI paused
