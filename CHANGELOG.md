@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Silverfish nests.** A hurt silverfish looks, twenty ticks later,
+  through the infested blocks within five up or down and ten across and
+  breaks them open one after another (each freeing its silverfish),
+  stopping after any with a coin toss; an idle one, one tick in ten,
+  burrows into stone, cobblestone, stone bricks (mossy, cracked or
+  chiselled too) or deepslate beside it, leaving the block infested — as
+  vanilla's do, under the mob-griefing rule.
+
 - **Axolotl behaviour.** Axolotls hunt fish, squid and tadpoles within
   eight blocks (and rest for two minutes after a hunt), always fight
   drowned and guardians, play dead for ten seconds (regenerating) when a

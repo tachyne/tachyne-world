@@ -253,6 +253,8 @@ type mob struct {
 	axHuntCD                    uint64     // axolotl: HAS_HUNTING_COOLDOWN until this tick
 	axTarget                    int32      // axolotl: ATTACK_TARGET
 	axBiteCD                    int        // axolotl: ticks until the next bite
+	silverHurt                  bool       // silverfish: hurt since the last update (notifyHurt pending)
+	silverWake                  int        // silverfish: lookForFriends ticks
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -517,6 +519,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entitySilverfish && h.silverfishStep(players, m):
+			// A silverfish burrowing into stone.
 		case m.etype == entityAxolotl && h.axolotlStep(players, m):
 			// An axolotl playing dead, or hunting.
 		case (m.etype == entityWanderingTrader || m.etype == entityTraderLlama) && h.traderStep(players, m):
@@ -875,6 +879,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
 		m.axHurt, m.axHurtDmg = true, dmg
+	}
+	if m.etype == entitySilverfish { // Silverfish.hurtServer: notifyHurt
+		m.silverHurt = true
 	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves
