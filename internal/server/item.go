@@ -55,6 +55,7 @@ type itemEntity struct {
 	name          string
 	lode          lodeTracker // lodestone compass target
 	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
+	vy            float64     // vertical motion while in or over fluid (floatItems); 0 at rest
 	born          uint64      // world tick spawned (for despawn)
 	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born

@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Dropped items float.** An item under water rises to the surface and
+  floats there, an upward bubble column lifts it clear of the water and it
+  drops back in to be lifted again (so item elevators work), and a
+  whirlpool holds it at the bottom, with vanilla's per-tick figures.
+
 - **Camels sit.** An idle camel that has held its pose for twenty
   seconds folds its legs now and then and gets up the same way later; a
   rider pushing forward, a hit or water under it stands it up. The

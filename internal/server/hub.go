@@ -974,6 +974,7 @@ func (h *hub) run() {
 			if age%20 == 0 {
 				h.updateItems(players) // despawn dropped items past their lifetime
 			}
+			h.floatItems(players)     // items rise in water, ride bubble columns
 			h.pickupItems(players)    // collect dropped items into survival inventories
 			h.updateOrbs(players)     // collect experience orbs / expire old ones
 			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
