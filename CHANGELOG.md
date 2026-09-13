@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Pandas sit and eat.** A grown panda that spots bamboo or a cake lying
+  within eight blocks trots over, picks it up, sits down with it and
+  chews — the eat counter and munching sound the client animates from —
+  until the food is gone; a bored or hurt panda drops it and waits ten
+  seconds to a few minutes before trying again, as vanilla's does.
+
 - **Cats sit on chests, beds and furnaces.** A tamed cat left to itself
   looks every ten to twenty seconds for a chest nobody has open, a lit
   furnace or the foot of a bed within eight blocks, walks onto it and

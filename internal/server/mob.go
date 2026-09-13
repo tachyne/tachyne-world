@@ -205,6 +205,8 @@ type mob struct {
 	sitTry                    int         // cat: MoveToBlockGoal tryTicks (up while walking, down while sat)
 	sitStay                   int         // cat: maxStayTicks
 	sitNext                   int         // cat: nextStartTick
+	pandaEat                  int         // panda: EAT_COUNTER (0 = not chewing)
+	pandaSitCD                uint64      // panda: the tick PandaSitGoal may start again
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)

@@ -103,6 +103,11 @@ func (h *hub) pandaStep(players map[int32]*tracked, m *mob) bool {
 		m.vx, m.vz = 0, 0
 		return true
 	}
+	// PandaSitGoal (priority 7, ahead of lying and rolling): fetching,
+	// sitting with, and eating bamboo or cake.
+	if h.pandaSitEat(players, m, trait, now) {
+		return true
+	}
 	if m.panic > 0 || m.kb > 0 || m.loveTicks > 0 {
 		return false
 	}
