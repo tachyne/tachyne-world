@@ -45,6 +45,9 @@ func (h *hub) witchTick(players map[int32]*tracked, m *mob) {
 		h.witchStartDrink(players, m, kind)
 		return
 	}
+	if h.witchHealTick(players, m) {
+		return // a raid witch tending a fellow raider leaves the players alone
+	}
 	h.witchThrow(players, m, t)
 }
 

@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Raid witches heal.** A witch in a raid looks now and then for a hurt
+  fellow raider within reach and throws it a healing potion (four health
+  or less) or one of regeneration, leaving the players alone for ten
+  seconds, as vanilla's does.
+
 - **Drawn bows.** Skeletons, strays, bogged and illusioners draw their
   bows for the twenty ticks before each shot and a loading pillager's
   hand is busy — the living-entity flag every client animates the pull

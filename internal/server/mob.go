@@ -290,6 +290,7 @@ type mob struct {
 	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
+	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
