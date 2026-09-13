@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Ravager stun and roar.** A ravager's bite pauses it for ten ticks; a
+  bite caught on a shield stuns it for forty half the time — after which
+  it roars, dealing six to everything within four blocks and hurling
+  every mob — or hurls the shield-bearer instead; while stunned, roaring
+  or biting it cannot move, and leaves in its path are trampled, as in
+  vanilla.
+
 - **Witches brew properly.** A witch drinks water breathing under water,
   fire resistance when burning, healing when hurt and swiftness when her
   target is far (thirty-two ticks a bottle at a quarter less speed, no

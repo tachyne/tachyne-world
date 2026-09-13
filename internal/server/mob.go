@@ -230,6 +230,9 @@ type mob struct {
 	brzSlideTicks             int
 	drinkTicks                int        // witch: ticks left on the bottle (0 = not drinking)
 	drinkKind                 int8       // witch: the potion being drunk
+	ravAttackTick             int        // ravager: AttackTick (a bite\'s pause)
+	ravStunTick               int        // ravager: StunTick (a shield stopped it)
+	ravRoarTick               int        // ravager: RoarTick (the roar lands at 10)
 	doorPos                   blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int        // zombie: ticks spent on it
 	doorStage                 int8       // zombie: the crack stage last shown (-1 = none)
@@ -488,6 +491,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entityRavager && h.ravagerStep(players, m):
+			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):
 			// A breeze sliding, drawing breath, mid-jump or shooting.
 		case h.avoidStep(players, m):

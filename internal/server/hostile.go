@@ -342,6 +342,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// Swing the arm so the bite is visible (not just "walking into you"), deal the
 	// hit, and knock the player back — which also unglues them so they can retaliate.
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	if m.etype == entityRavager {
+		h.ravagerBite(players, m) // doHurtTarget: the ten-tick pause and the bite animation
+	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
 	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
@@ -356,6 +359,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		// A raised shield facing the attacker catches the whole bite, and with
 		// it everything the bite would have delivered.
 		m.attackCD = attackCooldown
+		if m.etype == entityRavager {
+			h.ravagerBlocked(players, m, t) // blockedByItem: a stun, or a hurl
+		}
 		return
 	}
 	h.thornsRetaliate(players, t, m) // armour that bites back
