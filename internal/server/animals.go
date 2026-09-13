@@ -216,6 +216,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			var baby *mob
 			if m.etype == entityTurtle {
 				m.hasEgg = true // TurtleBreedGoal.breed: an egg to carry home, no hatchling yet
+				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(turtleMeta(m)))
 			} else {
 				baby = h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
 			}

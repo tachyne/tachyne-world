@@ -450,6 +450,9 @@ func (h *hub) spawnSpecies(players map[int32]*tracked, etype, dim int, x, y, z f
 		if h.rng.Intn(goatRamHornOdds) == 0 {
 			m.hornsGone = 1
 		}
+		if m.screaming || m.hornsGone > 0 {
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(goatMeta(m)))
+		}
 	}
 	return m
 }

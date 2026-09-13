@@ -901,6 +901,9 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		if m.etype == entityCopperGolem && m.oxidation > 0 {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
 		}
+		if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
+			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sm))
+		}
 		if m.etype == entityEnderman && m.carriedBlock != 0 {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
 		}

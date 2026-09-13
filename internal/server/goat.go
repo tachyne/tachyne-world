@@ -250,6 +250,7 @@ func (h *hub) goatDropHorn(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	m.hornsGone++
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(goatMeta(m))) // the horn vanishes from the model
 	it := h.spawnItemIn(players, m.dim, itemGoatHorn, 1, m.x, m.y+0.5, m.z)
 	if it != nil {
 		it.instrument = int8(h.rng.Intn(4)) // ponder, sing, seek, feel

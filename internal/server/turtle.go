@@ -68,6 +68,11 @@ func (h *hub) turtleStep(players map[int32]*tracked, m *mob) bool {
 		return false // not a nest spot: wander until it is
 	}
 	m.vx, m.vz = 0, 0
+	if m.layCounter == 0 {
+		m.layCounter = mobMoveInterval
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(turtleMeta(m))) // setLayingEgg(true): the digging pose
+		return true
+	}
 	m.layCounter += mobMoveInterval
 	if m.layCounter <= turtleLayTicks {
 		return true
@@ -75,6 +80,7 @@ func (h *hub) turtleStep(players map[int32]*tracked, m *mob) bool {
 	h.setBlockLive(players, m.dim, fx, fy, fz, turtleEggState(1+h.rng.Intn(4), 0))
 	h.playSoundDim(players, m.dim, "minecraft:entity.turtle.lay_egg", sndBlock, float64(fx)+0.5, float64(fy), float64(fz)+0.5, 0.3, 0.9+h.rng.Float32()*0.2)
 	m.hasEgg, m.layCounter = false, 0
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(turtleMeta(m)))
 	m.breedCD = turtleLoveAfter
 	return true
 }

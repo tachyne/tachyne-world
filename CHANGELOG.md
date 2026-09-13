@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Goat horns and turtle eggs render.** A goat's screaming variant and
+  the horns it still has, and a turtle's carried egg and digging pose
+  while it lays, now reach every client (26.2 included, its metadata
+  shift for both species landed in the shared library).
+
 - **Mobs avoid the mobs vanilla's avoid.** A skeleton backs off from a
   wolf, a creeper from a cat or ocelot, a spider from an armadillo that
   has not rolled up, a rabbit from a wolf or any monster, a fox from a
