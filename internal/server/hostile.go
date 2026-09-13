@@ -568,6 +568,9 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 					m.burnDelay--
 					continue
 				}
+				if h.sunHelmetTakesIt(players, m) {
+					continue // a helmet takes the sun (and wears away under it)
+				}
 				m.ignite(8)
 			}
 		}

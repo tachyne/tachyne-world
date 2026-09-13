@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Helmets against the sun; phantoms fear cats.** An undead wearing
+  anything on its head no longer burns in daylight: the helmet takes the
+  sun, a point or none each tick, and burns away before the wearer
+  catches fire. A phantom about to swoop checks every twenty ticks for a
+  cat within sixteen blocks; the cats hiss and the swoop is called off,
+  as in vanilla.
+
 - **Tadpoles grow up; vexes charge and fade.** A tadpole counts its age
   and at twenty-four thousand ticks becomes a frog of the biome's kind;
   a slime ball fed to it takes a tenth of the time left off (the age
