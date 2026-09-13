@@ -132,12 +132,18 @@ func TestEvokerSummonsVexesThatExpire(t *testing.T) {
 	if one.vexLife <= 0 {
 		t.Error("a summoned vex has no limited life and would linger forever")
 	}
-	// Run its clock out.
+	// Run its clock out: past its life it wastes a point every twenty
+	// ticks (Vex.tick) rather than vanishing, and dies of it.
 	one.vexLife = 1
+	hp := one.health
 	h.updateVexLife(players)
-	for _, v := range h.mobs {
-		if v == one {
-			t.Error("an expired vex is still in the world")
-		}
+	if !one.vexExpired || one.health >= hp {
+		t.Errorf("an expired vex should start taking damage: expired %v health %d vs %d", one.vexExpired, one.health, hp)
+	}
+	for i := 0; i < 2000 && one.dying == 0; i++ {
+		h.updateVexLife(players)
+	}
+	if one.dying == 0 {
+		t.Error("an expired vex should waste away and die")
 	}
 }

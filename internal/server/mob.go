@@ -268,6 +268,9 @@ type mob struct {
 	striderCold                 bool       // strider: DATA_SUFFOCATING (off lava)
 	golemFlower                 int        // iron golem: offerFlowerTick
 	batResting                  bool       // bat: DATA_ID_FLAGS resting (hanging under a block)
+	tadpoleAge                  int        // tadpole: Age (a frog at 24000)
+	vexCharging                 bool       // vex: DATA_FLAGS charging
+	vexExpired                  bool       // vex: limited life run out (now taking damage)
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -777,6 +780,15 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityParrot {
 			h.parrotImitateTick(players, m) // a monster's call, now and then
+		}
+		if m.etype == entityTadpole {
+			h.tadpoleTick(players, m) // growing up
+			if h.mobs[m.eid] == nil {
+				continue
+			}
+		}
+		if m.etype == entityVex {
+			h.vexChargeTick(players, m) // the charging flag
 		}
 		if m.etype == entityEndermite {
 			h.endermiteTick(players, m) // two minutes to live

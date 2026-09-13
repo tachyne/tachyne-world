@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Tadpoles grow up; vexes charge and fade.** A tadpole counts its age
+  and at twenty-four thousand ticks becomes a frog of the biome's kind;
+  a slime ball fed to it takes a tenth of the time left off (the age
+  survives a restart). A summoned vex past its life takes a point of
+  magic damage every twenty ticks rather than vanishing, and its charging
+  flag is raised while it goes for a target, as in vanilla.
+
 - **Bats hang; parrots mimic.** A flying bat under a solid block settles
   one tick in a hundred and hangs there upside down until the block goes
   or a player comes within four blocks, dropping with the takeoff

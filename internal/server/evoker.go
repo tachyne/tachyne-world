@@ -207,8 +207,15 @@ func (h *hub) updateVexLife(players map[int32]*tracked) {
 		if m.vexLife <= 0 || m.dying > 0 {
 			continue
 		}
-		if m.vexLife--; m.vexLife <= 0 {
-			h.removeMob(players, m)
+		if m.vexLife--; m.vexLife <= 0 { // Vex.tick: past its life it takes a point of magic damage every twenty ticks
+			m.vexLife = vexLifeHurtEvery
+			m.vexExpired = true
+		}
+		if m.vexExpired && m.vexLife == vexLifeHurtEvery {
+			h.hurtMobEffect(players, m, 1)
+			if m.health <= 0 {
+				h.killMob(players, m)
+			}
 		}
 	}
 }
