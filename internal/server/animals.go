@@ -227,6 +227,9 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 						}
 					}
 				}
+				if baby.etype == entitySheep { // the lamb was announced in its rolled colour
+					h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(sheepMeta(baby, false)))
+				}
 				if vm := variantMeta(baby); vm != nil {
 					h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(vm))
 				}

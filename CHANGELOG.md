@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Lamb colours.** A lamb wears the dye its parents' dyes would craft
+  together — red and yellow give an orange lamb, blue and red a purple one,
+  white and black a gray one — and otherwise one parent's colour, as
+  vanilla's sheep breed; before, every lamb rolled a fresh spawn colour.
 - **Dolphin's Grace.** A dolphin that sees a swimming player within ten
   blocks keeps them company — racing to within two and a half blocks at
   four times its pace — and gives them Dolphin's Grace for five seconds,

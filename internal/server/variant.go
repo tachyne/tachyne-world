@@ -493,6 +493,8 @@ func (h *hub) inheritVariant(baby, a, b *mob) {
 		}
 	case entityWolf, entityCat, entityFox, entityPig, entityCow, entityChicken:
 		baby.variant = h.pickParent(a, b).variant
+	case entitySheep:
+		baby.color = h.mixedFleeceColor(a.color, b.color) // the dye the parents' dyes craft, else a parent's
 	case entityPanda:
 		baby.variant = pandaCubGenes(a.variant, b.variant, h.rng.Intn)
 		h.applyPandaGenes(baby)
