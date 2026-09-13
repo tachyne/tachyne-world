@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **The wandering trader.** Every twenty minutes the world rolls for one
+  (a quarter chance, rising by a quarter each miss to three quarters,
+  reset on a spawn) and one time in ten it appears within forty-eight
+  blocks of a random player with two leashed trader llamas, nine trades
+  drawn from vanilla's three pools, forty minutes to live, drinking
+  invisibility at night and milk at dawn. The spawner's clock and chance
+  and the trader's time left survive a restart; a new `doTraderSpawning`
+  rule switches it off.
+
 - **Illusioner spells and casting arms.** An illusioner with a target
   casts its mirror spell (invisible for a minute — the client draws the
   four illusions — every three hundred and forty ticks) and, on hard,

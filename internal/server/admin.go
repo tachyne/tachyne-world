@@ -67,10 +67,15 @@ type worldRules struct {
 	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
 	// entity name they spawn instead of their dungeon's (SpawnEggItem.useOn).
 	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
+	// WanderingTraderSpawner state (ServerLevelData): the countdown to the
+	// next roll and the rising chance; zero for both means "never rolled".
+	DoTraderSpawning  bool `json:"doTraderSpawning"`
+	TraderSpawnDelay  int  `json:"wanderingTraderSpawnDelay,omitempty"`
+	TraderSpawnChance int  `json:"wanderingTraderSpawnChance,omitempty"`
 }
 
 func defaultRules() worldRules {
-	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true,
+	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true, DoTraderSpawning: true,
 		MobGriefing: true, DoWeather: true, DoFireTick: true, DoTileDrops: true,
 		DoMobLoot: true, NaturalRegen: true, FallDamage: true, DrownDamage: true,
 		FireDamage: true, AnnounceAdv: true, ShowDeathMsgs: true,

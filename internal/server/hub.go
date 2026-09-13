@@ -975,6 +975,9 @@ func (h *hub) run() {
 			if age%20 == 0 {
 				h.updateItems(players) // despawn dropped items past their lifetime
 			}
+			if age%traderTickDelay == 0 {
+				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
+			}
 			h.floatItems(players)     // items rise in water, ride bubble columns
 			h.pickupItems(players)    // collect dropped items into survival inventories
 			h.updateOrbs(players)     // collect experience orbs / expire old ones
@@ -1729,7 +1732,7 @@ func (h *hub) run() {
 						h.mountVehicle(players, t, v)
 						break
 					}
-					if m := h.mobs[e.target]; m != nil && m.etype == entityVillager && m.dying == 0 &&
+					if m := h.mobs[e.target]; m != nil && (m.etype == entityVillager || m.etype == entityWanderingTrader) && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
 						h.openTrades(t, m)
 						break

@@ -264,7 +264,11 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 	t.tradeWith, t.tradeSel = m.eid, 0
 	t.trade = [2]invStack{}
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuMerchant), Title: "Villager"})
+	title := "Villager"
+	if m.etype == entityWanderingTrader {
+		title = "Wandering Trader"
+	}
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuMerchant), Title: title})
 	h.sendTradeList(t, m)
 	h.sendTradeWindow(t)
 }

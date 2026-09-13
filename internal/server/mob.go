@@ -245,6 +245,8 @@ type mob struct {
 	illWarmup                   int        // illusioner: ticks until it lands
 	illMirrorNext, illBlindNext uint64     // illusioner: the tick each spell may next start
 	illBlindLast                int32      // illusioner: the last target blinded (never twice)
+	traderDespawn               int        // wandering trader + its llamas: DespawnDelay ticks left (0 = none)
+	traderDrink                 int8       // wandering trader: what it is drinking (potion / milk)
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -509,6 +511,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case (m.etype == entityWanderingTrader || m.etype == entityTraderLlama) && h.traderStep(players, m):
+			// A trader drinking by the clock, or leaving when its time is up.
 		case m.etype == entityHoglin && h.hoglinStep(players, m):
 			// A hoglin walking off from warped fungus, or retreating from piglins.
 		case m.etype == entityRavager && h.ravagerStep(players, m):

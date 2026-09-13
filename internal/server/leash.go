@@ -99,6 +99,9 @@ func (h *hub) leashHolderPos(players map[int32]*tracked, m *mob) (x, y, z float6
 	if t := players[m.leash]; t != nil {
 		return t.x, t.y, t.z, t.dim, true
 	}
+	if o := h.mobs[m.leash]; o != nil && o.dying == 0 { // a trader leading its llamas
+		return o.x, o.y, o.z, o.dim, true
+	}
 	return 0, 0, 0, 0, false
 }
 
