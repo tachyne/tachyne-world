@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Villagers flee.** A villager with one of the hostiles it fears within
+  that hostile's range — zombies, husks, drowned, zombie villagers and
+  vexes at eight, vindicators and zoglins at ten, evokers, illusioners
+  and ravagers at twelve, pillagers at fifteen — runs from it at one and
+  a half times its pace to six blocks off, and from whatever hurt it for
+  five seconds after the blow, as vanilla's do.
+
 - **Ghast charges; blaze volleys.** A ghast with a target within
   sixty-four charges for twenty ticks — the warning cry at ten, the red
   eyes and open mouth while charged — fires and rests forty; a blaze

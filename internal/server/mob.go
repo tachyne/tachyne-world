@@ -285,6 +285,8 @@ type mob struct {
 	blazeStep                       int        // blaze: BlazeAttackGoal attackStep
 	blazeTime                       int        // blaze: attackTime
 	blazeCharged                    bool       // blaze: DATA_FLAGS charged
+	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
+	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
@@ -553,6 +555,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A squid jetting away from whatever hurt it.
 		case (m.etype == entityZoglin || m.etype == entityEnderman) && h.mobHuntStep(players, m):
 			// A zoglin after anything living, an enderman after an endermite.
+		case m.etype == entityVillager && h.villagerPanicStep(players, m):
+			// A villager running from a zombie, a pillager, or whatever hurt it.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
 		case m.etype == entityBat && h.batStep(players, m):
@@ -963,6 +967,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	if m.etype == entityShulker { // Shulker.hurtServer: the teleport roll
 		m.shHurt = true
+	}
+	if m.etype == entityVillager { // HurtBySensor: the villager runs from what hurt it
+		m.villagerHurt = true
 	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves
