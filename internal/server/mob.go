@@ -541,6 +541,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case (m.etype == entityZoglin || m.etype == entityEnderman) && h.mobHuntStep(players, m):
+			// A zoglin after anything living, an enderman after an endermite.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
 		case m.etype == entityBat && h.batStep(players, m):

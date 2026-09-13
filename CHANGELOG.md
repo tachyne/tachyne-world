@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Zoglins and endermen fight mobs.** A zoglin goes for any living
+  thing within its follow range that is not a zoglin or a creeper —
+  biting for its hoglin damage every forty ticks (fifteen for a baby)
+  and tossing what it bites — and an enderman goes for endermites within
+  sixty-four blocks, as in vanilla.
+
 - **Cats and ocelots hunt.** A wild cat goes for rabbits and turtle
   hatchlings on land, an ocelot for chickens and hatchlings — looked for
   one tick in ten, chased and bitten every twenty ticks, given up past
