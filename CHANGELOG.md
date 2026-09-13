@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Pillager crossbows.** With a target within eight blocks a pillager
+  stops, draws its crossbow for twenty-five ticks (the charging flag the
+  client animates from), holds the loaded bolt for twenty to forty
+  ticks, fires and draws again, as vanilla's does, in place of the
+  skeleton's bow cadence.
+
 - **Villagers flee.** A villager with one of the hostiles it fears within
   that hostile's range — zombies, husks, drowned, zombie villagers and
   vexes at eight, vindicators and zoglins at ten, evokers, illusioners

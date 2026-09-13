@@ -287,6 +287,8 @@ type mob struct {
 	blazeCharged                    bool       // blaze: DATA_FLAGS charged
 	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
 	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
+	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
+	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
@@ -829,8 +831,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.hostile {
 			switch m.etype {
-			case entitySkeleton, entityStray, entityBogged, entityPillager:
+			case entitySkeleton, entityStray, entityBogged:
 				h.skeletonShoot(players, m) // ranged: arrows from bow distance
+			case entityPillager:
+				h.pillagerTick(players, m) // the crossbow: draw, aim, fire
 			case entityIllusioner:
 				h.illusionerTick(players, m) // mirror and blindness spells, then the bow
 			case entityBlaze:
