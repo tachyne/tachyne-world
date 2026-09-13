@@ -515,7 +515,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// after the AI has moved (pushEntities is the tail of aiStep), and it
 		// deliberately escapes the speed clamp above — squeezing out of a
 		// packed pen is meant to outrun a walk.
-		nx, nz := m.x+m.vx+m.pushX, m.z+m.vz+m.pushZ
+		// Block.getSpeedFactor: soul sand and honey take a walker down to 0.4×
+		// (Entity.getBlockSpeedFactor reads the feet cell, else the one below).
+		sf := 1.0
+		if !m.flies && !m.swims {
+			sf = h.mobSpeedFactor(m)
+		}
+		nx, nz := m.x+m.vx*sf+m.pushX, m.z+m.vz*sf+m.pushZ
 		fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 		switch {
 		case m.statik:
@@ -1167,4 +1173,25 @@ func (m *mob) refreshBabySpeed() { m.setBabySpeed(m.baby && m.hostile) }
 // renders and what drops when it dies.
 func (m *mob) heldStack() invStack {
 	return invStack{item: m.held, count: b2i(m.held != 0), ench: m.heldEnch}
+}
+
+// mobSpeedFactor is Entity.getBlockSpeedFactor for a mob: the feet cell's
+// factor, or when that is 1 the cell below's; soul sand and honey are 0.4.
+func (h *hub) mobSpeedFactor(m *mob) float64 {
+	w := h.worldFor(m.dim)
+	fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
+	factor := func(s uint32) float64 {
+		if s == worldgen.SoulSand || isHoneyBlock(s) {
+			return 0.4
+		}
+		return 1
+	}
+	feet := w.At(fx, fy, fz)
+	if worldgen.IsWater(feet) {
+		return factor(feet)
+	}
+	if f := factor(feet); f != 1 {
+		return f
+	}
+	return factor(w.At(fx, fy-1, fz))
 }

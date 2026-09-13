@@ -56,6 +56,10 @@ the public history since the project was open-sourced on 2026-07-10.
   three seconds a stage, and the sting flash for a player — as vanilla's
   does.
 
+- **Soul sand and honey slow mobs.** A walking mob on soul sand or a
+  honey block moves at vanilla's four tenths of its speed; it already did
+  for players, whose movement is the client's.
+
 ## 2026-09-11
 
 ### Added
