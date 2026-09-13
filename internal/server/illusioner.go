@@ -93,5 +93,6 @@ func (h *hub) illusionerTick(players map[int32]*tracked, m *mob) {
 			return
 		}
 	}
+	h.bowDrawTick(players, m)
 	h.skeletonShoot(players, m) // RangedBowAttackGoal
 }

@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Drawn bows.** Skeletons, strays, bogged and illusioners draw their
+  bows for the twenty ticks before each shot and a loading pillager's
+  hand is busy — the living-entity flag every client animates the pull
+  from, as in vanilla.
+
 - **Hoglin packs; camels on a lead.** A hoglin's bite brings every adult
   hoglin within sixteen blocks onto the same player, and a sat camel led
   more than six blocks stands up, as in vanilla.

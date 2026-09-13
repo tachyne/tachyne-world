@@ -34,6 +34,7 @@ func (h *hub) setCrossbowState(players map[int32]*tracked, m *mob, st int8) {
 	m.cbState = st
 	if now := st == cbCharging; now != was {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(pillagerChargingMeta(m)))
+		h.setHandActive(players, m, now) // startUsingItem / releaseUsingItem
 	}
 }
 
