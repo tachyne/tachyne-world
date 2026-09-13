@@ -220,6 +220,13 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				// breeding horses rather than taming whatever wanders past.
 				h.breedHorseAttributes(m, o, baby)
 				h.inheritVariant(baby, m, o) // an axolotl takes a parent's colour (or the rare blue)
+				if baby.etype == entityFox { // FoxBreedGoal.breed: the cub trusts whoever fed each parent
+					for _, eid := range []int32{m.lovedBy, o.lovedBy} {
+						if t := players[eid]; t != nil {
+							foxAddTrusted(baby, t.p.name)
+						}
+					}
+				}
 				if vm := variantMeta(baby); vm != nil {
 					h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(vm))
 				}

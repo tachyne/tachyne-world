@@ -88,7 +88,7 @@ func (h *hub) avoidScan(players map[int32]*tracked, m *mob) {
 		var threat *tracked
 		bestD2 := pr.dist * pr.dist
 		for _, t := range players {
-			if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || math.Abs(t.y-m.y) > 3 {
+			if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || math.Abs(t.y-m.y) > 3 || avoidPlayerExempt(m, t) {
 				continue
 			}
 			if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 {

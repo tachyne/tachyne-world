@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Fox trust.** A cub born of two fed foxes trusts whoever fed each
+  parent (kept across restarts); a fox never runs from a player it
+  trusts, and goes for whatever last hurt one of them within sixteen
+  blocks, as vanilla's does.
+
 - **Raid witches heal.** A witch in a raid looks now and then for a hurt
   fellow raider within reach and throws it a healing potion (four health
   or less) or one of regeneration, leaving the players alone for ten

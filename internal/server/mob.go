@@ -291,6 +291,7 @@ type mob struct {
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
 	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
+	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)

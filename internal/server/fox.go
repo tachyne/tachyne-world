@@ -99,9 +99,13 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 		}
 	}
-	// Prey within reach: stalk, then bite.
+	// Prey within reach: stalk, then bite — or, first, whatever hurt a player
+	// it trusts (DefendTrustedTargetGoal).
 	var prey *mob
 	best := foxFishRange
+	if d := h.foxDefendTarget(players, m); d != nil {
+		prey, best = d, dist3(d.x, d.y, d.z, m.x, m.y, m.z)
+	}
 	h.grid().nearby(m.dim, m.x, m.z, foxFishRange, func(o *mob) {
 		if o == m || o.dying > 0 {
 			return

@@ -127,6 +127,11 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.traderDespawn = sm.TraderDespawn
 	m.endermiteLife = sm.Lifetime
 	m.tadpoleAge = sm.TadpoleAge
+	for i, n := range sm.Trusted {
+		if i < 2 {
+			m.trusted[i] = n
+		}
+	}
 	if m.ovrSpeed > 0 {
 		m.setMoveSpeed(m.ovrSpeed)
 	}
