@@ -205,6 +205,11 @@ type mob struct {
 	sitTry                    int         // cat: MoveToBlockGoal tryTicks (up while walking, down while sat)
 	sitStay                   int         // cat: maxStayTicks
 	sitNext                   int         // cat: nextStartTick
+	lying                     bool        // cat: IS_LYING (on a bed)
+	relaxOne                  bool        // cat: RELAX_STATE_ONE (watching its owner before lying)
+	relaxTicks                int         // cat: CatRelaxOnOwnerGoal onBedTicks (0 = goal idle)
+	lieBlock                  blockPos    // cat: CatLieOnBedGoal target (zero = none)
+	lieTry, lieStay, lieNext  int         // cat: CatLieOnBedGoal tryTicks / maxStayTicks / nextStartTick
 	pandaEat                  int         // panda: EAT_COUNTER (0 = not chewing)
 	pandaSitCD                uint64      // panda: the tick PandaSitGoal may start again
 	avoidEID                  int32       // AvoidEntityGoal: the mob being kept clear of
@@ -492,6 +497,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// on its back, or tumbling.
 		case m.etype == entityTurtle && h.turtleStep(players, m):
 			// A turtle carrying an egg home, or digging its nest.
+		case m.etype == entityCat && h.catRelaxStep(players, m):
+			// A cat settling at the foot of its sleeping owner's bed.
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.
@@ -501,6 +508,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A goat lining up, lowering its head for, or charging a ram.
 		case skeletonKind(m.etype) && h.fleeSunStep(players, m):
 			// A burning skeleton with nobody to shoot heading for shade.
+		case m.etype == entityCat && h.catLieStep(players, m):
+			// A tamed cat walking to, or lying on, any bed.
 		case m.etype == entityCat && h.catSitStep(players, m):
 			// A tamed cat walking onto, or sat on, a chest, bed or lit furnace.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):

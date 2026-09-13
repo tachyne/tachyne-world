@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Cats lie on beds.** A tamed cat whose owner goes to sleep within ten
+  blocks walks to the foot of the bed, watches them for a moment in the
+  relax pose, then lies there until they wake — one cat per bed — and a
+  tamed cat with nothing to do lies on any bed within eight blocks for a
+  while, as vanilla's do. Both poses reach every client.
+
 - **Goat horns and turtle eggs render.** A goat's screaming variant and
   the horns it still has, and a turtle's carried egg and digging pose
   while it lays, now reach every client (26.2 included, its metadata

@@ -43,19 +43,20 @@ func (h *hub) catSitTarget(dim int, pos blockPos) bool {
 	return false
 }
 
-// catSitFind is findNearestBlock: rings out to eight, the block a level
-// below the feet first, then one up, then two down.
-func (h *hub) catSitFind(m *mob) (blockPos, bool) {
+// catFindBlock is MoveToBlockGoal.findNearestBlock: rings out to the search
+// range, the block a level below the feet first, then vertical offsets
+// alternating up and down from verticalSearchStart to the vertical range.
+func (h *hub) catFindBlock(m *mob, search, vstart, vrange int, valid func(dim int, pos blockPos) bool) (blockPos, bool) {
 	bx, by, bz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
-	for _, dy := range []int{0, 1, -1} {
-		for r := 0; r < catSitSearch; r++ {
+	for dy := vstart; dy <= vrange; dy = alternate(dy) {
+		for r := 0; r < search; r++ {
 			for dx := -r; dx <= r; dx++ {
 				for dz := -r; dz <= r; dz++ {
 					if dx != r && dx != -r && dz != r && dz != -r {
 						continue // the ring's edge only
 					}
 					p := blockPos{bx + dx, by + dy - 1, bz + dz}
-					if h.catSitTarget(m.dim, p) {
+					if valid(m.dim, p) {
 						return p, true
 					}
 				}
@@ -65,9 +66,17 @@ func (h *hub) catSitFind(m *mob) (blockPos, bool) {
 	return blockPos{}, false
 }
 
+// alternate is the goal's vertical walk: 0, 1, -1, 2, -2, …
+func alternate(n int) int {
+	if n > 0 {
+		return -n
+	}
+	return 1 - n
+}
+
 // catSitStep is the goal's tick. Returns whether it holds the cat.
 func (h *hub) catSitStep(players map[int32]*tracked, m *mob) bool {
-	if !m.tamed || m.sitting || m.hasTarget || m.loveTicks > 0 || m.tempted {
+	if !m.tamed || m.sitting || m.hasTarget || m.loveTicks > 0 || m.tempted || m.lying || m.relaxTicks > 0 {
 		h.catSitStop(players, m)
 		return false
 	}
@@ -77,7 +86,7 @@ func (h *hub) catSitStep(players map[int32]*tracked, m *mob) bool {
 			return false
 		}
 		m.sitNext = catSitInterval + h.rng.Intn(catSitInterval)
-		pos, ok := h.catSitFind(m)
+		pos, ok := h.catFindBlock(m, catSitSearch, 0, 1, h.catSitTarget)
 		if !ok {
 			return false
 		}

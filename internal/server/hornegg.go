@@ -63,6 +63,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.hasEgg {
 			return turtleMeta(m)
 		}
+	case entityCat:
+		if m.lying || m.relaxOne {
+			return catLieMeta(m)
+		}
 	}
 	return nil
 }
