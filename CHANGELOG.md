@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Zombies stamp turtle eggs.** A zombie, husk or drowned that finds a
+  clutch within twenty-four blocks goes for it ahead of anything else,
+  stands on it stamping, and after sixty ticks the eggs are gone, as
+  vanilla's does (mob griefing off protects them).
 - **Axes disable shields.** A melee blow from an axe caught on a shield
   puts it down for five seconds — it cannot be raised and blocks nothing
   until the cooldown is out — as vanilla's does.

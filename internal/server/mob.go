@@ -305,6 +305,10 @@ type mob struct {
 	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
+	eggPos                          blockPos   // zombie: the turtle-egg clutch it is after (zero = none)
+	eggNext                         int        // zombie: ticks until the next egg search
+	eggTry                          int        // zombie: ticks spent trying to reach the clutch
+	eggStamp                        int        // zombie: ticks spent stamping on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
 	hornsGone                       int8       // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
 	ramCD                           int        // goat: ticks before it may ram again
@@ -629,6 +633,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A goat crouched for, or mid-way through, a long jump.
 		case skeletonKind(m.etype) && h.fleeSunStep(players, m):
 			// A burning skeleton with nobody to shoot heading for shade.
+		case zombieKind(m.etype) && h.zombieEggStep(players, m):
+			// A zombie after a clutch of turtle eggs (above the hunt, as vanilla ranks it).
 		case m.etype == entityCat && h.catLieStep(players, m):
 			// A tamed cat walking to, or lying on, any bed.
 		case m.etype == entityCat && h.catSitStep(players, m):
