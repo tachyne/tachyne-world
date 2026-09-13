@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Cats and ocelots hunt.** A wild cat goes for rabbits and turtle
+  hatchlings on land, an ocelot for chickens and hatchlings — looked for
+  one tick in ten, chased and bitten every twenty ticks, given up past
+  fifteen blocks — as vanilla's do.
+
 - **Wolves hunt.** A wild wolf goes for sheep, rabbits and foxes (looked
   for one tick in ten) and turtle hatchlings on land, every wolf goes for
   skeletons, and a tamed wolf goes for whatever hurt its owner or

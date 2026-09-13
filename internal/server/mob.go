@@ -596,6 +596,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A tamed cat walking to, or lying on, any bed.
 		case m.etype == entityCat && h.catSitStep(players, m):
 			// A tamed cat walking onto, or sat on, a chest, bed or lit furnace.
+		case (m.etype == entityCat || m.etype == entityOcelot) && h.catHuntStep(players, m):
+			// A wild cat after a rabbit, an ocelot after a chicken.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):
