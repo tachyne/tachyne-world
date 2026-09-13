@@ -61,7 +61,7 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				if near >= spawnerMobCap {
 					continue
 				}
-				etype := dungeonMobs[d.Mob%3]
+				etype := h.spawnerMobFor(0, d.X, d.Y, d.Z, dungeonMobs[d.Mob%3])
 				for i := 0; i < spawnerCount; i++ { // vanilla: 4 spawn attempts per cycle
 					sx := float64(d.X-d.W) + h.rng.Float64()*float64(2*d.W) + 0.5
 					sz := float64(d.Z-d.D) + h.rng.Float64()*float64(2*d.D) + 0.5

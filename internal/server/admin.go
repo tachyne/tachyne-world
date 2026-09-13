@@ -64,6 +64,9 @@ type worldRules struct {
 	DragonHealth int          `json:"dragonHealth,omitempty"`
 	Weather      *weatherSave `json:"weather,omitempty"`
 	Border       *worldBorder `json:"border,omitempty"`
+	// SpawnerMobs are the spawners a spawn egg was used on: "dim,x,y,z" → the
+	// entity name they spawn instead of their dungeon's (SpawnEggItem.useOn).
+	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
 }
 
 func defaultRules() worldRules {

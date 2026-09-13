@@ -471,6 +471,30 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	if isRedstoneOre(state) && !boolProp(state, "lit") { // RedStoneOreBlock.useItemOn: lights up (then falls through, so a block still places against it)
 		s.hub.post(evLightOre{eid: p.eid, x: x, y: y, z: z})
 	}
+	// Item.useOn overriders (useon.go): what the held item does to this block,
+	// which vanilla runs before the block's own use.
+	if held := p.heldItem(); held != 0 {
+		var ev hubEvent
+		switch {
+		case held == itemShears && isGrowingPlantHead(state):
+			ev = evTrimPlant{eid: p.eid, x: x, y: y, z: z}
+		case held == itemPotion && face != 0 && convertableToMud(state):
+			ev = evMudBottle{eid: p.eid, x: x, y: y, z: z}
+		case state == spawnerBlock && spawnEggEntity[held] != 0:
+			ev = evEggSpawner{eid: p.eid, x: x, y: y, z: z}
+		case held == itemEndCrystal && (state == obsidianBase || state == worldgen.Bedrock):
+			ev = evPlaceCrystal{eid: p.eid, x: x, y: y, z: z}
+		case held == itemFireworkRocket:
+			ev = evPlaceRocket{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz}
+		case isShovel(held) && isCampfireBlock(state) && boolProp(state, "lit"):
+			ev = evDowseCampfire{eid: p.eid, x: x, y: y, z: z}
+		}
+		if ev != nil {
+			s.hub.post(ev)
+			s.sendBlockChange(p, x, y, z, state, seq)
+			return true
+		}
+	}
 	if state == pumpkinBlock && p.heldItem() == itemShears { // PumpkinBlock.useItemOn: carve it
 		s.hub.post(evCarvePumpkin{eid: p.eid, x: x, y: y, z: z, face: face, yaw: p.yaw})
 		s.sendBlockChange(p, x, y, z, state, seq)

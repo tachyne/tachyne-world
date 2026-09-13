@@ -1787,6 +1787,18 @@ func (h *hub) run() {
 				h.onLightBlock(players, e)
 			case evCarvePumpkin:
 				h.carvePumpkin(players, e)
+			case evTrimPlant:
+				h.trimPlant(players, e)
+			case evMudBottle:
+				h.mudBottle(players, e)
+			case evEggSpawner:
+				h.eggSpawner(players, e)
+			case evPlaceCrystal:
+				h.placeCrystal(players, e)
+			case evPlaceRocket:
+				h.placeRocket(players, e)
+			case evDowseCampfire:
+				h.dowseCampfire(players, e)
 			case evLightOre:
 				h.lightOre(players, e)
 			case evDragonEgg:

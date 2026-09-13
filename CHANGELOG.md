@@ -20,6 +20,17 @@ the public history since the project was open-sourced on 2026-07-10.
   itself is the riding client's own physics, as in vanilla. The camel's
   metadata now shifts correctly for 26.2 clients (gateways repinned).
 
+- **Hand tools on blocks.** Vanilla's remaining item-on-block behaviours:
+  shears cap a kelp, cave-vine, weeping- or twisting-vine head at full
+  age so it stops growing; a water bottle turns dirt, coarse dirt or
+  rooted dirt to mud and hands the bottle back; a spawn egg used on a
+  monster spawner makes it spawn that mob from then on (kept across
+  restarts); a shovel puts a lit campfire out; a firework rocket lit
+  against a block launches from the click; and an end crystal placed on
+  obsidian or bedrock in the End stands as a crystal — set one two blocks
+  out on each side of the exit portal after the dragon is beaten and the
+  fight begins again.
+
 ## 2026-09-11
 
 ### Added
