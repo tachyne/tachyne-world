@@ -255,6 +255,7 @@ type mob struct {
 	axBiteCD                    int        // axolotl: ticks until the next bite
 	silverHurt                  bool       // silverfish: hurt since the last update (notifyHurt pending)
 	silverWake                  int        // silverfish: lookForFriends ticks
+	bearStanding                bool       // polar bear: DATA_STANDING_ID (rearing up before a bite)
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -747,6 +748,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)
+		}
+		if m.etype == entityPolarBear {
+			h.polarBearStep(players, m) // guarding a cub, rearing up before a bite
 		}
 		if m.hostile {
 			switch m.etype {

@@ -75,6 +75,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.axDead > 0 {
 			return axolotlDeadMeta(m)
 		}
+	case entityPolarBear:
+		if m.bearStanding {
+			return bearStandingMeta(m)
+		}
 	}
 	return nil
 }

@@ -465,12 +465,15 @@ func (h *hub) provoke(m *mob, t *tracked) {
 	m.behavior = Behavior(hostileBehavior{})
 	m.anger = spiderAnger * 4
 	m.hasTarget, m.tx, m.tz = true, t.x, t.z
-	pack := m.etype == entityWolf || m.etype == entityBee
+	pack := m.etype == entityWolf || m.etype == entityBee || m.etype == entityPolarBear
 	if !pack {
 		return
 	}
+	if m.etype == entityPolarBear && m.baby { // a hit cub rouses the adults and does not fight itself
+		m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
+	}
 	h.grid().nearby(m.dim, m.x, m.z, 16, func(o *mob) {
-		if o == m || o.etype != m.etype || o.dying > 0 {
+		if o == m || o.etype != m.etype || o.dying > 0 || (m.etype == entityPolarBear && o.baby) {
 			return
 		}
 		if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > 16 {

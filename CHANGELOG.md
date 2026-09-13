@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Polar bears guard their cubs.** An adult bear with a cub within eight
+  blocks turns on any player within ten; a hit bear rouses every adult
+  bear within sixteen (a hit cub only rouses the others and does not
+  fight); and a bear about to bite rears up on its hind legs with a
+  warning growl, dropping as the bite lands or the target draws off, as
+  vanilla's do. (26.2 clients see the rearing once the shared library's
+  next pin lands.)
+
 - **Silverfish nests.** A hurt silverfish looks, twenty ticks later,
   through the infested blocks within five up or down and ten across and
   breaks them open one after another (each freeing its silverfish),
