@@ -267,6 +267,7 @@ type mob struct {
 	grazeTicks                  int        // sheep: EatBlockGoal eatAnimationTick
 	striderCold                 bool       // strider: DATA_SUFFOCATING (off lava)
 	golemFlower                 int        // iron golem: offerFlowerTick
+	batResting                  bool       // bat: DATA_ID_FLAGS resting (hanging under a block)
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -533,6 +534,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case m.etype == entityBat && h.batStep(players, m):
+			// A bat hanging under a block.
 		case m.etype == entityIronGolem && h.golemOfferTick(players, m):
 			// A golem holding out its poppy to a villager.
 		case m.etype == entitySheep && h.grazeStep(players, m):
@@ -771,6 +774,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityStrider {
 			h.striderShiverTick(players, m) // cold off lava: the shiver and the slow walk
+		}
+		if m.etype == entityParrot {
+			h.parrotImitateTick(players, m) // a monster's call, now and then
 		}
 		if m.etype == entityEndermite {
 			h.endermiteTick(players, m) // two minutes to live

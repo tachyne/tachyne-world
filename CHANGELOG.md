@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Bats hang; parrots mimic.** A flying bat under a solid block settles
+  one tick in a hundred and hangs there upside down until the block goes
+  or a player comes within four blocks, dropping with the takeoff
+  flutter; and one tick in four hundred, half the time, a parrot picks a
+  mob within twenty and squawks its call if it is one of the thirty-six
+  monsters parrots know — as vanilla's do.
+
 - **The iron golem's poppy.** One tick in eight thousand, a golem with a
   villager within six blocks holds out a poppy for four hundred ticks,
   standing still and facing them, then puts it away; its punches now show
