@@ -288,6 +288,8 @@ type mob struct {
 	goatJumping                     bool       // goat: LONG_JUMP_MID_JUMP
 	goatJumpX, goatJumpY, goatJumpZ float64    // goat: the chosen landing
 	goatVX, goatVY, goatVZ          float64    // goat: the jump's motion, per tick
+	leaping                         bool       // LeapAtTargetGoal: mid-spring
+	leapVX, leapVY, leapVZ          float64    // the spring's motion, per tick
 	ghastCharge                     int        // ghast: GhastShootFireballGoal chargeTime
 	blazeStep                       int        // blaze: BlazeAttackGoal attackStep
 	blazeTime                       int        // blaze: attackTime
@@ -696,6 +698,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 		}
 
+		h.leapCheck(players, m) // LeapAtTargetGoal: a spider, wolf, cat, ocelot or fox springs at its target
+
 		// Move, by locomotion mode: walkers collide with terrain, fliers float
 		// free, swimmers stay inside their water column, anchored mobs hold.
 		// The crowding shove rides on top of the steering: vanilla applies it
@@ -713,6 +717,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		switch {
 		case m.statik:
 			m.vx, m.vz = 0, 0 // anchored (shulker)
+		case m.leaping:
+			h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
 		case m.etype == entityGoat && m.goatJumping:
 			h.goatFlight(players, m) // the long jump's arc
 		case m.etype == entityBreeze && m.brzState == brzJumping:

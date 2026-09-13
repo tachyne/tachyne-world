@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Leaping.** Spiders, wolves, cats, ocelots and foxes spring at a
+  target two to four blocks away — a jump along the line to it that
+  lands them on you — as vanilla's do.
 - **Mobs float.** The land mobs vanilla floats — animals, villagers,
   creepers, spiders, the illagers — bob at the surface of deep water with
   their eyes clear and swim across it instead of drowning on the bottom;
