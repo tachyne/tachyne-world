@@ -297,6 +297,7 @@ type mob struct {
 	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
 	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
 	dolphinSwimmer                  int32      // dolphin: the swimming player it keeps company (0 = none)
+	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
@@ -632,6 +633,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityDolphin && h.dolphinSwimWithPlayer(players, m):
 			// A dolphin keeping a swimmer company, Dolphin's Grace and all.
+		case m.etype == entityDolphin && h.dolphinPlay(players, m):
+			// A dolphin tossing a floating item about.
 		case m.etype == entityFox && h.foxStep(players, m):
 			// A fox asleep, stalking prey, or after a dropped item.
 		case m.etype == entityArmadillo && m.armState != 0:

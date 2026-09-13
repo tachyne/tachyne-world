@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Dolphins play.** A dolphin that sees an item floating within eight
+  blocks calls out, swims over, takes it in its mouth and tosses it ahead
+  of itself, then goes after it again, as vanilla's do.
 - **Water animals out of water.** A fish, squid or tadpole on land lasts
   its fifteen seconds of air and then takes drowning damage, an axolotl
   its five minutes before drying out, and a dolphin dries out after two
