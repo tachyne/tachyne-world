@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Squid ink and endermites.** A squid hurt by something squirts a cloud
+  of thirty ink particles and jets away from its attacker at up to three
+  blocks a second while they are within ten; a glow squid also goes dark
+  for a hundred ticks (synced for every client). One ender pearl in
+  twenty lands an endermite, which lives two minutes unless something
+  keeps it — as in vanilla.
+
 - **Polar bears guard their cubs.** An adult bear with a cub within eight
   blocks turns on any player within ten; a hit bear rouses every adult
   bear within sixteen (a hit cub only rouses the others and does not

@@ -79,6 +79,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.bearStanding {
 			return bearStandingMeta(m)
 		}
+	case entityGlowSquid:
+		if m.glowDark > 0 {
+			return glowDarkMeta(m)
+		}
 	}
 	return nil
 }

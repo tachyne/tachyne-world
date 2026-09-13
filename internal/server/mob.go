@@ -256,6 +256,9 @@ type mob struct {
 	silverHurt                  bool       // silverfish: hurt since the last update (notifyHurt pending)
 	silverWake                  int        // silverfish: lookForFriends ticks
 	bearStanding                bool       // polar bear: DATA_STANDING_ID (rearing up before a bite)
+	squidHurt                   bool       // squid: hurt since the last update (spawnInk pending)
+	glowDark                    int        // glow squid: DATA_DARK_TICKS_REMAINING
+	endermiteLife               int        // endermite: Lifetime ticks (discarded at 2400 unless persistent)
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -520,6 +523,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
+			// A squid jetting away from whatever hurt it.
 		case m.etype == entitySilverfish && h.silverfishStep(players, m):
 			// A silverfish burrowing into stone.
 		case m.etype == entityAxolotl && h.axolotlStep(players, m):
@@ -752,6 +757,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityPolarBear {
 			h.polarBearStep(players, m) // guarding a cub, rearing up before a bite
 		}
+		if m.etype == entityEndermite {
+			h.endermiteTick(players, m) // two minutes to live
+			if h.mobs[m.eid] == nil {
+				continue
+			}
+		}
 		if m.hostile {
 			switch m.etype {
 			case entitySkeleton, entityStray, entityBogged, entityPillager:
@@ -886,6 +897,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	if m.etype == entitySilverfish { // Silverfish.hurtServer: notifyHurt
 		m.silverHurt = true
+	}
+	if m.etype == entitySquid || m.etype == entityGlowSquid { // Squid.hurtServer: spawnInk + the flee goal
+		m.squidHurt = true
 	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves

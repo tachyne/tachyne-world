@@ -125,6 +125,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.ravStunTick, m.ravRoarTick = sm.RavStun, sm.RavRoar
 	m.overworldTicks, m.immuneZombify = sm.Overworld, sm.ImmuneZombify
 	m.traderDespawn = sm.TraderDespawn
+	m.endermiteLife = sm.Lifetime
 	if m.ovrSpeed > 0 {
 		m.setMoveSpeed(m.ovrSpeed)
 	}

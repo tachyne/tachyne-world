@@ -132,6 +132,7 @@ type savedMob struct {
 	Overworld     int         `json:"overworld,omitempty"`      // piglin/hoglin: TimeInOverworld
 	ImmuneZombify bool        `json:"immune_zombify,omitempty"` // IsImmuneToZombification
 	TraderDespawn int         `json:"trader_despawn,omitempty"` // wandering trader / llama: DespawnDelay
+	Lifetime      int         `json:"lifetime,omitempty"`       // endermite: Lifetime
 	HornsGone     int8        `json:"horns_gone,omitempty"`     // goat: horns rammed off
 	HeldSt        stackRow    `json:"held_st,omitempty"`        // the held item with its enchantments (when it has any)
 	Carry         stackRow    `json:"allay_carry,omitempty"`    // allay: collected stack
@@ -565,7 +566,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, TraderDespawn: m.traderDespawn,
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, TraderDespawn: m.traderDespawn, Lifetime: m.endermiteLife,
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])
