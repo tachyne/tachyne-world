@@ -107,9 +107,12 @@ func TestVanillaSpawnerFillsCaves(t *testing.T) {
 	if monsters == 0 {
 		t.Fatal("the vanilla per-tick loop must spawn monsters")
 	}
+	// The global cap gates each chunk's attempt BEFORE its pack is placed
+	// (canSpawnForCategoryGlobal), so vanilla — and the port — can overshoot
+	// it by the last pack, never by more than a cluster.
 	capN := categoryCap[catMonster] * (13 * 13) / spawnChunkArea
-	if monsters > capN {
-		t.Fatalf("monster count %d exceeded the scaled cap %d", monsters, capN)
+	if monsters > capN+maxSpawnCluster-1 {
+		t.Fatalf("monster count %d exceeded the scaled cap %d by more than a pack", monsters, capN)
 	}
 	if below == 0 {
 		t.Fatal("the full-column Y roll must populate caves")
