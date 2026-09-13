@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Mobs avoid the mobs vanilla's avoid.** A skeleton backs off from a
+  wolf, a creeper from a cat or ocelot, a spider from an armadillo that
+  has not rolled up, a rabbit from a wolf or any monster, a fox from a
+  wild wolf or a polar bear, a dolphin from a guardian, the illagers from
+  a creaking, and a wild wolf from a llama it judges too strong — each
+  at vanilla's range and pace, picking a spot up to sixteen blocks away
+  on the far side and sprinting while the threat is within seven.
+
 - **Pandas sit and eat.** A grown panda that spots bamboo or a cake lying
   within eight blocks trots over, picks it up, sits down with it and
   chews — the eat counter and munching sound the client animates from —

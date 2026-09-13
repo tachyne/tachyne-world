@@ -207,6 +207,10 @@ type mob struct {
 	sitNext                   int         // cat: nextStartTick
 	pandaEat                  int         // panda: EAT_COUNTER (0 = not chewing)
 	pandaSitCD                uint64      // panda: the tick PandaSitGoal may start again
+	avoidEID                  int32       // AvoidEntityGoal: the mob being kept clear of
+	avoidX, avoidZ            float64     // AvoidEntityGoal: the spot it is walking to
+	avoidLeft                 int         // AvoidEntityGoal: updates left on that path (0 = idle)
+	avoidWalk, avoidSprint    float64     // AvoidEntityGoal: the rule's speed modifiers
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
@@ -447,6 +451,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.panic, m.fleeX, m.fleeZ = panicTicks/2, t.x, t.z
 			}
 		}
+		// AvoidEntityGoal for the mob-class registrations (a skeleton and a
+		// wolf, a creeper and a cat, …): pick a spot on the far side.
+		h.avoidScan(players, m)
 		// Villagers run a daily schedule: at night they lie in their bed (held
 		// still); by day they open the wooden door in their way BEFORE the step
 		// below, so an open door (not a wall) is what the walk test sees this tick.
@@ -465,6 +472,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case h.avoidStep(players, m):
+			// Keeping clear of a mob its kind avoids, at the goal's pace.
 		case m.panic > 0:
 			// Spooked: bolt directly away from the threat at PanicGoal's
 			// vanilla 2.0× speed modifier (chickens flap off at 1.4×),
