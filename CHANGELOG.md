@@ -14,7 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
-- **Line of sight.** Every ranged mob now needs to see its target before
+- **Line of sight.** Hostiles hunt by sight: a monster acquires a player
+  only when it can see them and gives one up after three seconds out of
+  sight (fifteen once that player hurt it), as vanilla's target goals do.
+  Every ranged mob now needs to see its target before
   it shoots, as vanilla's do: a skeleton, pillager, witch, drowned, llama,
   snow golem, wither, ghast or blaze holds fire while a block is between,
   and a guardian's beam neither locks onto nor stays on a player behind a

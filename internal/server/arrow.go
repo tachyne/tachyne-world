@@ -418,6 +418,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				m.panic, m.fleeX, m.fleeZ = panicTicks, a.x, a.z
 			} else {
 				m.anger = spiderAnger
+				if shooter := players[a.shooter]; shooter != nil && a.playerShot {
+					m.targetEID, m.unseenTicks = shooter.p.eid, 0 // HurtByTargetGoal
+				}
 			}
 			if hurt, _, _ := mobSounds(m.etype); hurt != "" {
 				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())

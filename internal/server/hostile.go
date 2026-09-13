@@ -253,7 +253,10 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 		}
 		return
 	}
-	if tx, tz, ok := h.nearestQuarry(players, m.dim, m.x, m.z, reach); ok {
+	if t := h.huntTarget(players, m, reach); t != nil { // mustSee: a player it can see, or one remembered
+		m.hasTarget, m.tx, m.tz = true, t.x, t.z
+		m.villagerTarget = 0
+	} else if tx, tz, ok := h.nearestQuarry(noPlayers, m.dim, m.x, m.z, reach); ok { // a shadow over the seam: no blocks are known across it to see through
 		m.hasTarget, m.tx, m.tz = true, tx, tz
 		m.villagerTarget = 0
 	} else if zombieKind(m.etype) {

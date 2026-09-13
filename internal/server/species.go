@@ -465,6 +465,7 @@ func (h *hub) provoke(m *mob, t *tracked) {
 	m.behavior = Behavior(hostileBehavior{})
 	m.anger = spiderAnger * 4
 	m.hasTarget, m.tx, m.tz = true, t.x, t.z
+	m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, remembered 300 ticks unseen
 	pack := m.etype == entityWolf || m.etype == entityBee || m.etype == entityPolarBear
 	if !pack {
 		return

@@ -385,7 +385,8 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		} else if !m.hostile {
 			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, t.x, t.z, 0
 		} else {
-			m.anger = spiderAnger // a hit spider/enderman retaliates
+			m.anger = spiderAnger                   // a hit spider/enderman retaliates
+			m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
 			if m.etype == entityEnderman {
 				h.endermanTeleport(players, m) // blinks away from the blow
 			}
