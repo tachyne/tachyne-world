@@ -266,6 +266,7 @@ type mob struct {
 	shArmored                   bool       // shulker: the covered armour has been installed once
 	grazeTicks                  int        // sheep: EatBlockGoal eatAnimationTick
 	striderCold                 bool       // strider: DATA_SUFFOCATING (off lava)
+	golemFlower                 int        // iron golem: offerFlowerTick
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -532,6 +533,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case m.etype == entityIronGolem && h.golemOfferTick(players, m):
+			// A golem holding out its poppy to a villager.
 		case m.etype == entitySheep && h.grazeStep(players, m):
 			// A sheep with its head down in the grass.
 		case m.etype == entitySilverfish && h.silverfishStep(players, m):

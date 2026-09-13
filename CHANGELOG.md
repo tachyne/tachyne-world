@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **The iron golem's poppy.** One tick in eight thousand, a golem with a
+  villager within six blocks holds out a poppy for four hundred ticks,
+  standing still and facing them, then puts it away; its punches now show
+  the arm swing on every client, as in vanilla.
+
 - **Sheep graze; striders shiver.** A sheep standing on a grass block or
   in short grass lowers its head one tick in a thousand (fifty for a
   lamb), eats for forty ticks — the grass block turning to dirt or the
