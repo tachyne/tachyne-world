@@ -10,10 +10,10 @@ import (
 // duration without hurting, lands its hits at the end, and lets go.
 func TestGuardianBeamChargesThenFires(t *testing.T) {
 	h := newHub(world.New(1))
-	pl := riderAt(1, 100.5, 40, 100.5)
+	pl := riderAt(1, 100.5, 180, 100.5) // open sky: the beam needs line of sight
 	players := map[int32]*tracked{1: pl}
 	h.playersRef = players
-	g := h.spawnSpecies(players, entityGuardian, 0, 108.5, 40, 100.5) // 8 blocks off: in reach, past 3
+	g := h.spawnSpecies(players, entityGuardian, 0, 108.5, 180, 100.5) // 8 blocks off: in reach, past 3
 	if g == nil {
 		t.Skip("no guardian species in this build")
 	}

@@ -87,6 +87,9 @@ func (h *hub) drownedThrow(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // face the throw
+	if !h.seeTimeTick(m, t, false) {
+		return // RangedAttackGoal: no throw without line of sight
+	}
 	ox, oy, oz := m.x, m.y+1.4, m.z
 	dx, dy, dz := t.x-ox, (t.y+0.6)-oy, t.z-oz
 	dy += math.Hypot(dx, dz) * 0.2 // gravity lob, like an arrow

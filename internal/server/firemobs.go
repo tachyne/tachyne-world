@@ -53,7 +53,7 @@ func blazeFlagsMeta(m *mob) []byte {
 func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, 64)
 	was := m.ghastCharge > ghastChargeWarn
-	if t == nil || dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) >= ghastRangeSq {
+	if t == nil || dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) >= ghastRangeSq || !h.mobSees(m, t) {
 		if m.ghastCharge > 0 {
 			m.ghastCharge -= mobMoveInterval
 			if m.ghastCharge < 0 {
@@ -101,14 +101,18 @@ func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
 		return
 	}
 	d := dist3sq(t.x, t.y, t.z, m.x, m.y, m.z)
+	los := h.mobSees(m, t) // BlazeAttackGoal: neither bite nor volley without it
 	if d < blazeMeleeSq {
+		if !los {
+			return
+		}
 		if m.blazeTime <= 0 {
 			m.blazeTime = 20
 			h.mobMelee(players, m) // doHurtTarget
 		}
 		return
 	}
-	if m.blazeTime > 0 {
+	if m.blazeTime > 0 || !los {
 		return
 	}
 	m.blazeStep++

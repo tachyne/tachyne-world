@@ -86,8 +86,8 @@ func (h *hub) snowGolemStep(players map[int32]*tracked, m *mob) {
 			best, target = d2, o
 		}
 	}
-	if target == nil {
-		return
+	if target == nil || !h.mobSeesMob(m, target) {
+		return // its target goal must see the monster
 	}
 	h.snowGolemShoot(players, m, target)
 	m.attackCD = snowGolemShootEvery

@@ -38,6 +38,9 @@ func (h *hub) llamaSpit(players map[int32]*tracked, m *mob) {
 	if t == nil {
 		return
 	}
+	if !h.seeTimeTick(m, t, false) {
+		return // RangedAttackGoal: no spit without line of sight
+	}
 	m.attackCD = llamaSpitCooldown
 	ox, oy, oz := m.x, m.y+1.4, m.z
 	dx, dy, dz := t.x-ox, (t.y+0.6)-oy, t.z-oz

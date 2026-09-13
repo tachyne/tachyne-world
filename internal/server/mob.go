@@ -338,6 +338,7 @@ type mob struct {
 	dmgFrac                         float64    // fractional damage carry (vanilla HP is float, ours int)
 	attackCD                        int        // mob-updates left before this mob can melee again
 	hasTarget                       bool       // a player is within aggro range this update
+	seeTime                         int        // ranged goals: ticks the target has been in (positive) or out of (negative) sight
 	tempted                         bool       // following a player's held food (temptStep)
 	temptCalm                       int        // updates left before it can be tempted again
 	temptPX, temptPZ, temptPY       float64    // cat/ocelot: where the tempting player stood (canScare)

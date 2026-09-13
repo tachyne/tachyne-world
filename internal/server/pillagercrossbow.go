@@ -72,6 +72,9 @@ func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
 			h.setCrossbowState(players, m, cbReady)
 		}
 	case cbReady:
+		if !h.seeTimeTick(m, t, true) {
+			return // READY_TO_ATTACK waits for line of sight
+		}
 		h.spawnArrow(players, m, t) // performCrossbowAttack at 1.6
 		h.playSoundDim(players, m.dim, "minecraft:item.crossbow.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 		h.setCrossbowState(players, m, cbUncharged)

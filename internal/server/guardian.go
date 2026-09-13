@@ -52,13 +52,16 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 		if dx, dz := t.x-m.x, t.z-m.z; dx*dx+dz*dz <= 9 { // the beam only fires past 3 blocks
 			return
 		}
+		if !h.mobSees(m, t) {
+			return // its target goal must see the player
+		}
 		m.beamTarget, m.beamTicks = t.p.eid, -10
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, m.beamTarget)))
 		return
 	}
 	t := players[m.beamTarget]
 	if t == nil || t.dead || t.dim != m.dim || t.gamemode == gmCreative || t.gamemode == gmSpectator ||
-		dist3(t.x, t.y, t.z, m.x, m.y, m.z) > guardianBeamR {
+		dist3(t.x, t.y, t.z, m.x, m.y, m.z) > guardianBeamR || !h.mobSees(m, t) { // GuardianAttackGoal.tick: out of sight, let go
 		h.guardianRelease(players, m)
 		return
 	}

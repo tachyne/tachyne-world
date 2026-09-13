@@ -133,6 +133,9 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // face the shot
+	if !h.seeTimeTick(m, t, true) {
+		return // RangedBowAttackGoal: the shot needs line of sight
+	}
 	h.spawnArrow(players, m, t)
 	h.playSound(players, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 	// RangedBowAttackGoal cadence (vanilla behavior): 40 ticks on easy/normal,

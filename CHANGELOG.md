@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Line of sight.** Every ranged mob now needs to see its target before
+  it shoots, as vanilla's do: a skeleton, pillager, witch, drowned, llama,
+  snow golem, wither, ghast or blaze holds fire while a block is between,
+  and a guardian's beam neither locks onto nor stays on a player behind a
+  wall. Before, all of them shot straight through stone.
 - **Dolphins play.** A dolphin that sees an item floating within eight
   blocks calls out, swims over, takes it in its mouth and tosses it ahead
   of itself, then goes after it again, as vanilla's do.

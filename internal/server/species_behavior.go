@@ -84,6 +84,9 @@ func (h *hub) mobRanged(players map[int32]*tracked, m *mob, rng, period int) *tr
 	if t == nil {
 		return nil
 	}
+	if !h.seeTimeTick(m, t, false) {
+		return nil // RangedAttackGoal: no shot without line of sight
+	}
 	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
 	m.attackCD = period
 	return t

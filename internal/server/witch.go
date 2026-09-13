@@ -48,6 +48,9 @@ func (h *hub) witchTick(players map[int32]*tracked, m *mob) {
 	if h.witchHealTick(players, m) {
 		return // a raid witch tending a fellow raider leaves the players alone
 	}
+	if t != nil && !h.seeTimeTick(m, t, false) {
+		return // RangedAttackGoal: no throw without line of sight
+	}
 	h.witchThrow(players, m, t)
 }
 
