@@ -217,6 +217,7 @@ type mob struct {
 	avoidX, avoidZ            float64     // AvoidEntityGoal: the spot it is walking to
 	avoidLeft                 int         // AvoidEntityGoal: updates left on that path (0 = idle)
 	avoidWalk, avoidSprint    float64     // AvoidEntityGoal: the rule's speed modifiers
+	avoidPlayer               bool        // AvoidEntityGoal: avoidEID is a player, not a mob
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
@@ -453,15 +454,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.loveTicks > 0 {
 			m.rest = 0 // courtship overrides idling (vanilla goal priority)
 		}
-		// Skittish species bolt from any close survival player (vanilla foxes/
-		// ocelots avoid players outright — no hit needed).
-		if m.skittish && m.panic == 0 && m.kb == 0 && !m.tempted { // a tempted cat/ocelot holds its nerve (TemptGoal outranks the avoid goal)
-			if t := h.nearestHuntable(players, m.dim, m.x, m.z, 5); t != nil {
-				m.panic, m.fleeX, m.fleeZ = panicTicks/2, t.x, t.z
-			}
-		}
-		// AvoidEntityGoal for the mob-class registrations (a skeleton and a
-		// wolf, a creeper and a cat, …): pick a spot on the far side.
+		// AvoidEntityGoal — the mob-class registrations (a skeleton and a
+		// wolf, a creeper and a cat, …) and the player ones (a rabbit, fox,
+		// wild cat or ocelot, an evoker): pick a spot on the far side.
 		h.avoidScan(players, m)
 		// Villagers run a daily schedule: at night they lie in their bed (held
 		// still); by day they open the wooden door in their way BEFORE the step

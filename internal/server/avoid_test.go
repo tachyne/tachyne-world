@@ -52,3 +52,47 @@ func TestSkeletonAvoidsWolf(t *testing.T) {
 		t.Fatal("but it does mind a cat")
 	}
 }
+
+// TestRabbitAvoidsPlayer: a survival player eight blocks off sends a rabbit
+// the other way at vanilla's 2.2; a creative one does not; a tamed cat is
+// not shy but a wild one is.
+func TestRabbitAvoidsPlayer(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.worldFor(0)
+	for x := -24; x <= 24; x++ {
+		for z := -24; z <= 24; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	pl.x, pl.y, pl.z = 6.5, 180, 0.5
+	r := h.spawnMob(players, entityRabbit, 0.5, 180, 0.5)
+	h.avoidScan(players, r)
+	if r.avoidLeft == 0 || !r.avoidPlayer || r.avoidEID != pl.p.eid || r.avoidX > r.x {
+		t.Fatalf("the rabbit should flee the player: left %d player %v x %.1f", r.avoidLeft, r.avoidPlayer, r.avoidX)
+	}
+	h.avoidStep(players, r)
+	if got := math.Hypot(r.vx, r.vz); math.Abs(got-r.moveSpeed()*2.2) > 1e-9 {
+		t.Fatalf("sprint pace 2.2 inside seven: %.4f", got)
+	}
+	pl.gamemode = gmCreative
+	r.avoidLeft = 0
+	h.avoidScan(players, r)
+	if r.avoidLeft != 0 {
+		t.Fatal("creative players are not fled")
+	}
+	pl.gamemode = gmSurvival
+	c := h.spawnMob(players, entityCat, 0.5, 180, 2.5)
+	c.tamed = true
+	h.avoidScan(players, c)
+	if c.avoidLeft != 0 {
+		t.Fatal("a tamed cat is not shy")
+	}
+	c.tamed = false
+	h.avoidScan(players, c)
+	if c.avoidLeft == 0 {
+		t.Fatal("a wild cat is")
+	}
+}

@@ -44,6 +44,12 @@ the public history since the project was open-sourced on 2026-07-10.
   while it lays, now reach every client (26.2 included, its metadata
   shift for both species landed in the shared library).
 
+- **Mobs avoid players at vanilla's figures.** Rabbits (eight blocks),
+  foxes, wild cats and ocelots (sixteen) and evokers (eight) keep clear of
+  survival and adventure players at vanilla's walk and sprint paces,
+  picking a spot on the far side rather than bolting blindly; a tamed cat
+  is not shy, nor one following your fish.
+
 - **Mobs avoid the mobs vanilla's avoid.** A skeleton backs off from a
   wolf, a creeper from a cat or ocelot, a spider from an armadillo that
   has not rolled up, a rabbit from a wolf or any monster, a fox from a

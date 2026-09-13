@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Mobs that keep clear of other mobs (AvoidEntityGoal, the mob-class
 // registrations): a skeleton backs off from a wolf, a creeper from a cat
@@ -30,6 +34,23 @@ func isMonster(o *mob) bool { // the Monster class: hostiles that are not slimes
 
 var avoidRules = map[int][]avoidRule{}
 
+// avoidPlayerRules are the AvoidEntityGoal<Player> registrations: the
+// same goal aimed at survival and adventure players (NO_CREATIVE_OR_
+// SPECTATOR). when gates it on the mob's own state.
+type avoidPlayerRule struct {
+	dist         float64
+	walk, sprint float64
+	when         func(m *mob) bool
+}
+
+var avoidPlayerRules = map[int]avoidPlayerRule{
+	entityRabbit: {8, 2.2, 2.2, func(m *mob) bool { return true }},       // RabbitAvoidEntityGoal<Player>
+	entityFox:    {16, 1.6, 1.4, func(m *mob) bool { return true }},      // (trust and defending: open)
+	entityOcelot: {16, 0.8, 1.33, func(m *mob) bool { return !m.tamed }}, // OcelotAvoidEntityGoal: !isTrusting
+	entityCat:    {16, 0.8, 1.33, func(m *mob) bool { return !m.tamed }}, // CatAvoidEntityGoal: !isTame
+	entityEvoker: {8, 0.6, 1.0, func(m *mob) bool { return true }},       // Evoker: keeps its distance
+}
+
 func init() {
 	wolf := func(h *hub, m, o *mob) bool { return o.etype == entityWolf }
 	wildWolf := func(h *hub, m, o *mob) bool { return o.etype == entityWolf && !o.tamed }
@@ -57,11 +78,36 @@ func init() {
 	avoidRules[entityEvoker] = []avoidRule{{8, 0.6, 1.0, creaking}}
 }
 
-// avoidScan is canUse: the nearest avoided mob within the rule's range
-// (and three blocks of height), then a spot away from it.
+// avoidScan is canUse: the nearest avoided mob (or player) within the
+// rule's range (and three blocks of height), then a spot away from it.
 func (h *hub) avoidScan(players map[int32]*tracked, m *mob) {
+	if m.avoidLeft > 0 || m.panic > 0 || m.kb > 0 {
+		return
+	}
+	if pr, ok := avoidPlayerRules[m.etype]; ok && pr.when(m) && !m.tempted { // a tempted cat holds its nerve (TemptGoal shares the priority)
+		var threat *tracked
+		bestD2 := pr.dist * pr.dist
+		for _, t := range players {
+			if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || math.Abs(t.y-m.y) > 3 {
+				continue
+			}
+			if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 {
+				threat, bestD2 = t, d2
+			}
+		}
+		if threat != nil {
+			if fx, fz, ok := h.posAwayFrom(m, threat.x, threat.z); ok {
+				m.avoidEID, m.avoidX, m.avoidZ, m.avoidLeft = threat.p.eid, fx, fz, avoidGiveUp
+				m.avoidWalk, m.avoidSprint = pr.walk, pr.sprint
+				m.avoidPlayer = true
+				m.hasTarget = false
+				m.rest = 0
+				return
+			}
+		}
+	}
 	rules := avoidRules[m.etype]
-	if len(rules) == 0 || m.avoidLeft > 0 || m.panic > 0 || m.kb > 0 {
+	if len(rules) == 0 {
 		return
 	}
 	maxR := 0.0
@@ -95,6 +141,7 @@ func (h *hub) avoidScan(players map[int32]*tracked, m *mob) {
 	}
 	m.avoidEID, m.avoidX, m.avoidZ, m.avoidLeft = threat.eid, fx, fz, avoidGiveUp
 	m.avoidWalk, m.avoidSprint = rule.walk, rule.sprint
+	m.avoidPlayer = false
 	m.hasTarget = false // the avoid goal outranks the attack goals (start(): a wolf-shy wolf drops its target)
 	m.rest = 0
 }
@@ -118,7 +165,12 @@ func (h *hub) posAwayFrom(m *mob, tx, tz float64) (float64, float64, bool) {
 		dx := (ax*math.Cos(ang) - az*math.Sin(ang)) * dist
 		dz := (ax*math.Sin(ang) + az*math.Cos(ang)) * dist
 		fx, fz := m.x+dx, m.z+dz
-		if !w.Walkable(int(math.Floor(fx)), int(math.Floor(fz))) {
+		// A standable spot within seven blocks of the mob's own level (the
+		// vertical reach), not the column's surface far above a cave.
+		bx, bz, by := int(math.Floor(fx)), int(math.Floor(fz)), int(math.Floor(m.y))
+		feet := w.MobFeetFrom(bx, bz, by)
+		if feet-by > 7 || by-feet > 7 || !worldgen.Collides(w.At(bx, feet-1, bz)) ||
+			worldgen.Collides(w.At(bx, feet, bz)) || worldgen.Collides(w.At(bx, feet+1, bz)) {
 			continue
 		}
 		if (fx-tx)*(fx-tx)+(fz-tz)*(fz-tz) < curD2 {
@@ -144,7 +196,16 @@ func (h *hub) avoidStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	speed := m.avoidWalk
-	if o := h.mobs[m.avoidEID]; o != nil && (o.x-m.x)*(o.x-m.x)+(o.z-m.z)*(o.z-m.z) < avoidSprintSq {
+	var tx, tz float64
+	near := false
+	if m.avoidPlayer {
+		if t := h.playersRef[m.avoidEID]; t != nil {
+			tx, tz, near = t.x, t.z, true
+		}
+	} else if o := h.mobs[m.avoidEID]; o != nil {
+		tx, tz, near = o.x, o.z, true
+	}
+	if near && (tx-m.x)*(tx-m.x)+(tz-m.z)*(tz-m.z) < avoidSprintSq {
 		speed = m.avoidSprint
 	}
 	sp := m.moveSpeed() * speed
