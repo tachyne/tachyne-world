@@ -40,8 +40,9 @@ var (
 // arc), so the zero value means exactly "unblockable" — which is what you want
 // for starving, drowning or falling.
 type dmgFrom struct {
-	x, z float64
-	ok   bool
+	x, z   float64
+	ok     bool
+	weapon int32 // what a melee attacker struck with (0 = none/unknown): an axe disables the shield
 }
 
 // from names a source position for a hit.
@@ -55,7 +56,7 @@ func (evBlockStart) isHubEvent() {}
 // raiseShield records the tick a shield went up (if the player is actually
 // holding one). isBlockingShield gates on the block delay.
 func (h *hub) raiseShield(t *tracked) {
-	if t.p.heldItem() == itemShield {
+	if t.p.heldItem() == itemShield && !h.onCooldown(t, itemShield) { // disabled by an axe: it stays down
 		t.blockingSince = h.tick.Load()
 	}
 }
@@ -94,7 +95,7 @@ func (h *hub) shieldBlocked(t *tracked, amount float32, dt dmgType, src dmgFrom)
 	if amount <= 0 || dt.has(tagBypassesShield) {
 		return 0
 	}
-	if !t.isBlockingShield(h.tick.Load()) {
+	if !t.isBlockingShield(h.tick.Load()) || h.onCooldown(t, itemShield) {
 		return 0
 	}
 	if !src.ok || !t.facesSource(src.x, src.z) {

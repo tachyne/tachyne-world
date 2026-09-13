@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Axes disable shields.** A melee blow from an axe caught on a shield
+  puts it down for five seconds — it cannot be raised and blocks nothing
+  until the cooldown is out — as vanilla's does.
 - **Leaping.** Spiders, wolves, cats, ocelots and foxes spring at a
   target two to four blocks away — a jump along the line to it that
   lands them on you — as vanilla's do.

@@ -413,6 +413,11 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.shieldBlockFX(players, t, blocked)
 		h.incCustom(t, "damage_blocked_by_shield", tenths(blocked))
 		amount -= blocked
+		if !dt.has(tagIsProjectile) { // blockUsingItem: a melee attacker's axe disables the shield
+			if secs := weaponDisableSeconds(src.weapon); secs > 0 {
+				h.disableShield(players, t, secs)
+			}
+		}
 	}
 	// A falling anvil batters the helmet specifically, then a quarter of the
 	// blow is gone before the rest of the armour ever sees it.
