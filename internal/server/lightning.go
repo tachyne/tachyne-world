@@ -11,6 +11,9 @@ import (
 
 const metaIndexCreeperPowered = 17 // Creeper DATA_IS_POWERED (after SWELL_DIR at 16)
 
+// lightningFireSecs is Entity.thunderHit's igniteForSeconds(8).
+const lightningFireSecs = 8
+
 // lightningTransforms is the struck mob's thunderHit: a creeper charges, a
 // pig becomes a zombified piglin, a villager a witch.
 func (h *hub) lightningTransforms(players map[int32]*tracked, m *mob) {

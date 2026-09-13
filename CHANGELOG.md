@@ -36,6 +36,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to take it off. The marker goes when the banner is broken or recoloured,
   rides with a locked copy, and is kept across restarts.
 
+- **Lightning burns; two more comparator readings.** A bolt now sets the
+  player or mob it strikes alight for eight seconds on top of its five of
+  damage, as vanilla's does. A comparator reads a decorated pot's single
+  slot like any container's, and a creaking heart's distance to its
+  creaking — fifteen at the heart, fading to one thirty-two blocks out,
+  nothing while it is dormant or uprooted.
+
 ## 2026-09-11
 
 ### Added

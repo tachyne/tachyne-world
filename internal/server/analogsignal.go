@@ -1,5 +1,7 @@
 package server
 
+import "math"
+
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // What a comparator reads out of the block behind it.
@@ -42,6 +44,21 @@ func (h *hub) analogSignal(pos simPos) int {
 			}
 		}
 		return sig
+	}
+	if awake, ok := creakingHeartState(st); ok { // CreakingHeartBlockEntity: 15 at the creaking, fading to 1 at 32 blocks
+		if !awake {
+			return 0 // uprooted or dormant: no protector out
+		}
+		link := h.hearts[pos.blockPos]
+		if link == nil || link.creaking == 0 {
+			return 0
+		}
+		m := h.mobs[link.creaking]
+		if m == nil || m.dying > 0 {
+			return 0
+		}
+		d := dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5)
+		return 15 - int(math.Floor(math.Min(math.Max(d, 0), 32)/32*15))
 	}
 	if isBookshelf(st) { // ChiseledBookShelfBlock: last interacted slot + 1 (0 = never)
 		if slot, ok := h.shelfLast[pos]; ok {

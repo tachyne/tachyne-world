@@ -754,6 +754,16 @@ func (h *hub) containerSignal(pos simPos) int {
 		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
 	}
 	slots := h.containerSlots(pos)
+	// A decorated pot reads as a one-slot container (DecoratedPotBlock's
+	// getRedstoneSignalFromBlockEntity); its storage is read-only here so a
+	// hopper never writes into a copy.
+	if w := h.worldFor(pos.dim); slots == nil && w != nil && isDecoratedPot(w.At(pos.x, pos.y, pos.z)) {
+		if st, ok := h.pots[pos]; ok && st.item != 0 {
+			slots = []invStack{st}
+		} else {
+			return 0
+		}
+	}
 	if slots == nil {
 		return -1
 	}
