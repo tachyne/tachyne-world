@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Dolphin's Grace.** A dolphin that sees a swimming player within ten
+  blocks keeps them company — racing to within two and a half blocks at
+  four times its pace — and gives them Dolphin's Grace for five seconds,
+  renewed one tick in six while they keep swimming, until they stop or
+  draw off past sixteen, as vanilla's does.
+
 ### Fixed
 - Iron golems no longer attack creepers, which vanilla's golems leave
   alone (they would punch one into exploding beside the village).
