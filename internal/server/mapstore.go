@@ -21,12 +21,13 @@ type mapStore struct {
 
 // savedMap is one map's JSON form.
 type savedMap struct {
-	CenterX int32  `json:"center_x"`
-	CenterZ int32  `json:"center_z"`
-	Scale   int8   `json:"scale"`
-	Dim     int    `json:"dim"`
-	Locked  bool   `json:"locked,omitempty"`
-	Colors  []byte `json:"colors"` // base64 in JSON
+	CenterX int32                `json:"center_x"`
+	CenterZ int32                `json:"center_z"`
+	Scale   int8                 `json:"scale"`
+	Dim     int                  `json:"dim"`
+	Locked  bool                 `json:"locked,omitempty"`
+	Colors  []byte               `json:"colors"` // base64 in JSON
+	Banners map[string]mapBanner `json:"banners,omitempty"`
 }
 
 type savedMaps struct {
@@ -55,7 +56,7 @@ func newMapStore(path string) *mapStore {
 		}
 		md := &mapData{
 			ID: int32(id64), CenterX: m.CenterX, CenterZ: m.CenterZ,
-			Scale: m.Scale, Dim: m.Dim, Locked: m.Locked,
+			Scale: m.Scale, Dim: m.Dim, Locked: m.Locked, Banners: m.Banners,
 			holders: map[int32]*mapHolder{},
 		}
 		copy(md.Colors[:], m.Colors)
@@ -92,6 +93,12 @@ func (ms *mapStore) derive(src *mapData, scale int8, locked bool) *mapData {
 		md.Colors = src.Colors
 		md.CenterX, md.CenterZ = src.CenterX, src.CenterZ
 		md.Scale = src.Scale
+		if len(src.Banners) > 0 { // a locked copy keeps its markers (MapItemSavedData.locked)
+			md.Banners = map[string]mapBanner{}
+			for k, b := range src.Banners {
+				md.Banners[k] = b
+			}
+		}
 	}
 	ms.maps[md.ID] = md
 	ms.dirty = true
@@ -112,7 +119,7 @@ func (ms *mapStore) flushIfDirty() {
 	for id, md := range ms.maps {
 		sv.Maps[strconv.FormatInt(int64(id), 10)] = savedMap{
 			CenterX: md.CenterX, CenterZ: md.CenterZ, Scale: md.Scale,
-			Dim: md.Dim, Locked: md.Locked, Colors: md.Colors[:],
+			Dim: md.Dim, Locked: md.Locked, Colors: md.Colors[:], Banners: md.Banners,
 		}
 	}
 	raw, err := json.Marshal(&sv)

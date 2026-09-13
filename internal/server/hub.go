@@ -1799,6 +1799,8 @@ func (h *hub) run() {
 				h.placeRocket(players, e)
 			case evDowseCampfire:
 				h.dowseCampfire(players, e)
+			case evMapBanner:
+				h.toggleMapBanner(players, e)
 			case evLightOre:
 				h.lightOre(players, e)
 			case evDragonEgg:

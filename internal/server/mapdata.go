@@ -60,6 +60,7 @@ type mapData struct {
 	Dim     int
 	Locked  bool
 	Colors  [mapSize * mapSize]byte
+	Banners map[string]mapBanner // pinned banner markers by "x,y,z" (mapbanner.go)
 	holders map[int32]*mapHolder // eid → per-viewer dirty tracking
 }
 
@@ -316,7 +317,7 @@ func (h *hub) mapDecorations(md *mapData, players map[int32]*tracked) []attachpr
 			Rot: uint8(int((yaw+8)*16/360)) & 15,
 		})
 	}
-	return out
+	return append(out, h.mapBannerDecorations(md)...)
 }
 
 func clampMapByte(d float64) int8 {

@@ -31,6 +31,11 @@ the public history since the project was open-sourced on 2026-07-10.
   out on each side of the exit portal after the dragon is beaten and the
   fight begins again.
 
+- **Banner markers on maps.** Use a filled map on a banner inside its
+  area and a marker of the banner's colour is pinned there; use it again
+  to take it off. The marker goes when the banner is broken or recoloured,
+  rides with a locked copy, and is kept across restarts.
+
 ## 2026-09-11
 
 ### Added
