@@ -82,9 +82,8 @@ func TestUseOnItems(t *testing.T) {
 // round the beaten dragon's portal bring it back.
 func TestEndCrystalRespawnsDragon(t *testing.T) {
 	h := newHub(world.New(1))
-	if h.end == nil {
-		t.Skip("no End world in this hub")
-	}
+	ew, _ := world.NewEnd(7, nil)
+	h.end = ew
 	pl := survPlayer(h)
 	pl.dim = 2
 	players := map[int32]*tracked{pl.p.eid: pl}
