@@ -122,26 +122,3 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		h.rollStriderRider(players, m)
 	}
 }
-
-// blazeShoot fires a small fireball at the hunted player (skeleton pattern).
-func (h *hub) blazeShoot(players map[int32]*tracked, m *mob) {
-	if m.attackCD > 0 {
-		m.attackCD--
-		return
-	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, blazeShootRange)
-	if t == nil {
-		return
-	}
-	m.attackCD = 8 // mob-updates between volleys
-	ox, oy, oz := m.x, m.y+1.2, m.z
-	dx, dy, dz := t.x-ox, (t.y+0.9)-oy, t.z-oz
-	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-	if d < 1e-6 {
-		return
-	}
-	v := 0.9
-	a := h.launchProjectileIn(players, entitySmallFireball, m.dim, ox, oy, oz, dx/d*v, dy/d*v, dz/d*v)
-	a.shooter, a.dmg, a.fire = m.eid, blazeFireballDmg, true
-	h.playSoundDim(players, m.dim, "minecraft:entity.blaze.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
-}

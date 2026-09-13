@@ -91,6 +91,14 @@ func speciesStateMeta(m *mob) []byte {
 		if m.batResting {
 			return batFlagsMeta(m)
 		}
+	case entityBlaze:
+		if m.blazeCharged {
+			return blazeFlagsMeta(m)
+		}
+	case entityGhast:
+		if m.ghastCharge > ghastChargeWarn {
+			return ghastChargingMeta(m)
+		}
 	}
 	return nil
 }

@@ -1,0 +1,146 @@
+package server
+
+import (
+	"math"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
+)
+
+// The ghast's charge (GhastShootFireballGoal) and the blaze's volleys
+// (BlazeAttackGoal): a ghast with a target within sixty-four charges for
+// twenty ticks — the warning cry at ten, the red eyes and open mouth
+// while charged — fires, and rests forty; a blaze within reach bites
+// every twenty ticks, else it flares up (the charged flag), waits sixty,
+// then fires three small fireballs six ticks apart on a spread that
+// widens with distance, and rests a hundred.
+
+const (
+	metaIndexGhastCharging = 16 // Ghast DATA_IS_CHARGING (bool)
+	metaIndexBlazeFlags    = 16 // Blaze DATA_FLAGS_ID (byte): 1 = charged
+	ghastChargeWarn        = 10 // levelEvent 1015
+	ghastChargeFire        = 20
+	ghastChargeRest        = -40
+	ghastRangeSq           = 4096.0
+	worldEventGhastWarn    = 1015
+	worldEventGhastShoot   = 1016
+	worldEventBlazeShoot   = 1018
+	blazeMeleeSq           = 4.0
+	blazeFlareTicks        = 60
+	blazeVolleyGap         = 6
+	blazeVolleyShots       = 3
+	blazeRestTicks         = 100
+	blazeSpread            = 2.297
+)
+
+func ghastChargingMeta(m *mob) []byte {
+	return boolMeta(m.eid, metaIndexGhastCharging, m.ghastCharge > ghastChargeWarn)
+}
+
+func blazeFlagsMeta(m *mob) []byte {
+	var f byte
+	if m.blazeCharged {
+		f = 1
+	}
+	b := protocol.AppendVarInt(nil, m.eid)
+	b = protocol.AppendU8(b, metaIndexBlazeFlags)
+	b = protocol.AppendVarInt(b, metaTypeByteFox)
+	b = protocol.AppendU8(b, f)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// ghastTick runs each mob update from the hostile switch.
+func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
+	t := h.nearestHuntable(players, m.dim, m.x, m.z, 64)
+	was := m.ghastCharge > ghastChargeWarn
+	if t == nil || dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) >= ghastRangeSq {
+		if m.ghastCharge > 0 {
+			m.ghastCharge -= mobMoveInterval
+			if m.ghastCharge < 0 {
+				m.ghastCharge = 0
+			}
+		}
+	} else {
+		for i := 0; i < mobMoveInterval; i++ {
+			m.ghastCharge++
+			if m.ghastCharge == ghastChargeWarn {
+				h.toDimEv(players, m.dim, attachproto.WorldFX{Event: worldEventGhastWarn, X: int(math.Floor(m.x)), Y: int(math.Floor(m.y)), Z: int(math.Floor(m.z))})
+			}
+			if m.ghastCharge == ghastChargeFire {
+				ux, uy, uz := aimAt(m.x, m.y+2, m.z, t.x, t.y+0.5, t.z)
+				a := h.launchProjectileIn(players, entityLargeFireball, m.dim, m.x+ux*4, m.y+2, m.z+uz*4, ux, uy, uz)
+				a.shooter, a.dmg, a.explode, a.fire = m.eid, 6, 1, true
+				h.playSoundDim(players, m.dim, "minecraft:entity.ghast.shoot", sndHostile, m.x, m.y, m.z, 3, 1)
+				m.ghastCharge = ghastChargeRest
+				break
+			}
+		}
+	}
+	if now := m.ghastCharge > ghastChargeWarn; now != was {
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(ghastChargingMeta(m)))
+	}
+}
+
+func (h *hub) setBlazeCharged(players map[int32]*tracked, m *mob, on bool) {
+	if m.blazeCharged == on {
+		return
+	}
+	m.blazeCharged = on
+	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(blazeFlagsMeta(m)))
+}
+
+// blazeTick runs each mob update from the hostile switch.
+func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
+	m.blazeTime -= mobMoveInterval
+	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
+	if t == nil {
+		if m.blazeStep != 0 || m.blazeCharged {
+			m.blazeStep = 0
+			h.setBlazeCharged(players, m, false)
+		}
+		return
+	}
+	d := dist3sq(t.x, t.y, t.z, m.x, m.y, m.z)
+	if d < blazeMeleeSq {
+		if m.blazeTime <= 0 {
+			m.blazeTime = 20
+			h.mobMelee(players, m) // doHurtTarget
+		}
+		return
+	}
+	if m.blazeTime > 0 {
+		return
+	}
+	m.blazeStep++
+	switch {
+	case m.blazeStep == 1:
+		m.blazeTime = blazeFlareTicks
+		h.setBlazeCharged(players, m, true)
+	case m.blazeStep <= 1+blazeVolleyShots:
+		m.blazeTime = blazeVolleyGap
+	default:
+		m.blazeTime = blazeRestTicks
+		m.blazeStep = 0
+		h.setBlazeCharged(players, m, false)
+	}
+	if m.blazeStep > 1 {
+		d5 := math.Sqrt(math.Sqrt(d)) * 0.5
+		dx, dy, dz := t.x-m.x, (t.y+0.9)-(m.y+0.9), t.z-m.z
+		vx := h.triangle(dx, blazeSpread*d5)
+		vz := h.triangle(dz, blazeSpread*d5)
+		l := math.Sqrt(vx*vx + dy*dy + vz*vz)
+		if l < 1e-6 {
+			return
+		}
+		h.toDimEv(players, m.dim, attachproto.WorldFX{Event: worldEventBlazeShoot, X: int(math.Floor(m.x)), Y: int(math.Floor(m.y)), Z: int(math.Floor(m.z))})
+		v := 0.9
+		a := h.launchProjectileIn(players, entitySmallFireball, m.dim, m.x, m.y+1.4, m.z, vx/l*v, dy/l*v, vz/l*v)
+		a.shooter, a.dmg, a.fire = m.eid, blazeFireballDmg, true
+		h.playSoundDim(players, m.dim, "minecraft:entity.blaze.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
+	}
+}
+
+// triangle is RandomSource.triangle: mode ± deviation × (r − r).
+func (h *hub) triangle(mode, dev float64) float64 {
+	return mode + dev*(h.rng.Float64()-h.rng.Float64())
+}

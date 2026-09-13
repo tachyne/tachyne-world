@@ -58,7 +58,9 @@ func TestBlazeShootsFireballs(t *testing.T) {
 	pl.gamemode = gmSurvival
 	m := h.spawnMobIn(players, entityBlaze, 1, pl.x+5, pl.y, pl.z)
 	h.configureNetherMob(players, m)
-	h.blazeShoot(players, m)
+	for i := 0; i < 60 && len(h.arrows) == 0; i++ { // the flare, then the volley
+		h.blazeTick(players, m)
+	}
 	if len(h.arrows) != 1 {
 		t.Fatalf("blaze should launch a fireball, arrows=%d", len(h.arrows))
 	}

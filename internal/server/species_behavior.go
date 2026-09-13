@@ -100,18 +100,6 @@ func aimAt(ox, oy, oz, tx, ty, tz float64) (float64, float64, float64) {
 	return dx / d, dy / d, dz / d
 }
 
-// ghastShoot lobs an explosive fireball (vanilla Ghast: explosionPower 1).
-func (h *hub) ghastShoot(players map[int32]*tracked, m *mob) {
-	t := h.mobRanged(players, m, 64, 30) // fires every ~3 s from far off
-	if t == nil {
-		return
-	}
-	ux, uy, uz := aimAt(m.x, m.y+2, m.z, t.x, t.y+0.5, t.z)
-	a := h.launchProjectileIn(players, entityLargeFireball, m.dim, m.x, m.y+2, m.z, ux, uy, uz)
-	a.shooter, a.dmg, a.explode, a.fire = m.eid, 6, 1, true
-	h.playSoundDim(players, m.dim, "minecraft:entity.ghast.shoot", sndHostile, m.x, m.y, m.z, 3, 1)
-}
-
 // witherShoot fires a wither skull (dark damage + the wither effect).
 func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
 	t := h.mobRanged(players, m, 40, 8)

@@ -281,6 +281,10 @@ type mob struct {
 	goatJumping                     bool       // goat: LONG_JUMP_MID_JUMP
 	goatJumpX, goatJumpY, goatJumpZ float64    // goat: the chosen landing
 	goatVX, goatVY, goatVZ          float64    // goat: the jump's motion, per tick
+	ghastCharge                     int        // ghast: GhastShootFireballGoal chargeTime
+	blazeStep                       int        // blaze: BlazeAttackGoal attackStep
+	blazeTime                       int        // blaze: attackTime
+	blazeCharged                    bool       // blaze: DATA_FLAGS charged
 	doorPos                         blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                       int        // zombie: ticks spent on it
 	doorStage                       int8       // zombie: the crack stage last shown (-1 = none)
@@ -826,9 +830,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			case entityIllusioner:
 				h.illusionerTick(players, m) // mirror and blindness spells, then the bow
 			case entityBlaze:
-				h.blazeShoot(players, m) // ranged: fireballs
+				h.blazeTick(players, m) // the flare, the volley of three, the rest
 			case entityGhast:
-				h.ghastShoot(players, m) // ranged: explosive fireballs
+				h.ghastTick(players, m) // the twenty-tick charge, the fireball, the rest
 			case entityWither:
 				h.witherShoot(players, m) // ranged: wither skulls
 			case entityShulker:

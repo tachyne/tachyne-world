@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Ghast charges; blaze volleys.** A ghast with a target within
+  sixty-four charges for twenty ticks — the warning cry at ten, the red
+  eyes and open mouth while charged — fires and rests forty; a blaze
+  within two blocks bites every twenty ticks, otherwise flares up (its
+  charged flag), waits sixty, fires three small fireballs six ticks apart
+  on a spread that widens with distance, and rests a hundred — vanilla's
+  cadences in place of the old steady shots.
+
 - **Goats long-jump.** Every thirty to sixty seconds an idle goat looks,
   twenty tries, for a spot up to five blocks out and five up or down that
   it cannot simply walk to — a gap or a ledge in the way — crouches for
