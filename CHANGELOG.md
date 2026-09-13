@@ -14,6 +14,18 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Sheep graze; striders shiver.** A sheep standing on a grass block or
+  in short grass lowers its head one tick in a thousand (fifty for a
+  lamb), eats for forty ticks — the grass block turning to dirt or the
+  short grass gone — and grows its wool back (a lamb grows a little
+  too); wool no longer regrows on a timer. A strider off lava shivers,
+  goes purple and walks a third slower, as vanilla's does; both are
+  synced for every client.
+
+### Changed
+- A sheared sheep's wool regrows only by grazing, as in vanilla (it used
+  to come back on a forty-second timer).
+
 - **Shulker shells.** A shulker starts closed — twenty points of armour,
   arrows glancing off — peeks out now and then, opens wide and fires a
   homing bullet every one to five and a half seconds at anyone within

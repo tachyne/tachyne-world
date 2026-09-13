@@ -28,8 +28,6 @@ const (
 	eggLayMin = 6000 // chickens lay every 5-10 min (vanilla)
 	eggLayMax = 12000
 
-	woolRegrowIn = 40 // sheared sheep: 1-in-N chance per second to regrow (~40 s)
-
 	passiveSpawnEvery = 600 // ticks between herd top-up attempts (30 s, spawn.go)
 )
 
@@ -187,10 +185,6 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		}
 		if m.etype == entityVillager {
 			h.villagerGossipTick(m)
-		}
-		if m.etype == entitySheep && m.sheared && h.rng.Intn(woolRegrowIn) == 0 {
-			m.sheared = false
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, false)))
 		}
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {

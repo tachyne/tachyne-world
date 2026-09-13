@@ -83,6 +83,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.glowDark > 0 {
 			return glowDarkMeta(m)
 		}
+	case entityStrider:
+		if m.striderCold {
+			return striderColdMeta(m)
+		}
 	}
 	return nil
 }

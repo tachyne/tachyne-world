@@ -1,9 +1,11 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // TestRosterSpeciesBreed: the new species breed on their table love-food, not
@@ -119,8 +121,18 @@ func TestShearingAndRegrowth(t *testing.T) {
 	for i := 0; i < 500 && m.sheared; i++ {
 		h.updateBreeding(players)
 	}
+	if !m.sheared {
+		t.Fatal("wool regrows only by grazing, never on a timer")
+	}
+	// On grass it grazes, and the wool comes back.
+	w := h.worldFor(0)
+	fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
+	w.SetBlock(fx, int(math.Floor(m.y))-1, fz, worldgen.GrassBlock)
+	for i := 0; i < 40000 && m.sheared; i++ {
+		h.grazeStep(players, m)
+	}
 	if m.sheared {
-		t.Fatal("wool must regrow eventually")
+		t.Fatal("wool must regrow once it has grazed")
 	}
 }
 
