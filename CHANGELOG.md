@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Illusioner spells and casting arms.** An illusioner with a target
+  casts its mirror spell (invisible for a minute — the client draws the
+  four illusions — every three hundred and forty ticks) and, on hard,
+  blinds its target for twenty seconds every hundred and eighty, never
+  the same target twice, shooting its bow between spells; spellcasters'
+  arms (evoker fangs and vex summons included) now animate from the
+  synced spell id, as in vanilla.
+
 - **Zombification and hoglin AI.** Piglins, brutes and hoglins outside
   the Nether turn after three hundred ticks (the client shows the
   shudder) into a zombified piglin or a zoglin, nauseous for ten seconds,

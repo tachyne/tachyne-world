@@ -53,6 +53,7 @@ type evokerFang struct {
 // evokerCast runs both spell goals for one evoker. Called from the hostile
 // update switch, so it ticks at the mob cadence rather than every tick.
 func (h *hub) evokerCast(players map[int32]*tracked, m *mob) {
+	h.spellAnimTick(players, m)
 	now := h.tick.Load()
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, 16)
 	if t == nil {
@@ -81,6 +82,7 @@ func (h *hub) castFangs(players map[int32]*tracked, m *mob, t *tracked) {
 	maxY := math.Max(t.y, m.y) + 1
 	bearing := math.Atan2(t.z-m.z, t.x-m.x)
 	h.playSoundDim(players, m.dim, "minecraft:entity.evoker.prepare_attack", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.setSpell(players, m, spellFangs, fangsCastAnim) // the casting arms
 
 	if dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) < fangCloseRange {
 		for i := 0; i < 5; i++ {
@@ -183,6 +185,7 @@ func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
 // abandoned swarm eventually clears itself.
 func (h *hub) summonVexes(players map[int32]*tracked, m *mob) {
 	h.playSoundDim(players, m.dim, "minecraft:entity.evoker.prepare_summon", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.setSpell(players, m, spellSummonVex, summonCastAnim)
 	for i := 0; i < vexSummonCount; i++ {
 		x := m.x + float64(-2+h.rng.Intn(5))
 		z := m.z + float64(-2+h.rng.Intn(5))
