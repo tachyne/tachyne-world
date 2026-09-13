@@ -25,8 +25,8 @@ the public history since the project was open-sourced on 2026-07-10.
   age so it stops growing; a water bottle turns dirt, coarse dirt or
   rooted dirt to mud and hands the bottle back; a spawn egg used on a
   monster spawner makes it spawn that mob from then on (kept across
-  restarts); a shovel puts a lit campfire out; a firework rocket lit
-  against a block launches from the click; and an end crystal placed on
+  restarts); a firework rocket lit against a block launches from the
+  click; and an end crystal placed on
   obsidian or bedrock in the End stands as a crystal — set one two blocks
   out on each side of the exit portal after the dragon is beaten and the
   fight begins again.

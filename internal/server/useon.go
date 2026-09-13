@@ -10,8 +10,9 @@ import (
 
 // Item.useOn overriders the block-use path did not carry: shears trimming a
 // growing plant, a water bottle turning dirt to mud, a spawn egg retargeting
-// a spawner, an end crystal set on obsidian or bedrock, a firework rocket
-// lit against a block, and a shovel dowsing a campfire.
+// a spawner, an end crystal set on obsidian or bedrock, and a firework rocket
+// lit against a block (the shovel's campfire dowsing already lived on the
+// placement path).
 
 var (
 	rootedDirt     = worldgen.BlockBase("rooted_dirt")
@@ -71,17 +72,12 @@ type evPlaceRocket struct {
 	face       int32
 	cx, cy, cz float32
 }
-type evDowseCampfire struct {
-	eid     int32
-	x, y, z int
-}
 
-func (evTrimPlant) isHubEvent()     {}
-func (evMudBottle) isHubEvent()     {}
-func (evEggSpawner) isHubEvent()    {}
-func (evPlaceCrystal) isHubEvent()  {}
-func (evPlaceRocket) isHubEvent()   {}
-func (evDowseCampfire) isHubEvent() {}
+func (evTrimPlant) isHubEvent()    {}
+func (evMudBottle) isHubEvent()    {}
+func (evEggSpawner) isHubEvent()   {}
+func (evPlaceCrystal) isHubEvent() {}
+func (evPlaceRocket) isHubEvent()  {}
 
 // growingPlantOf finds the species a head state belongs to.
 func growingPlantOf(state uint32) (growingPlant, bool) {
@@ -274,22 +270,4 @@ func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 		h.consumeHeld(t)
 	}
 	h.spawnRocket(players, t.dim, x, y, z, 0)
-}
-
-// dowseCampfire is ShovelItem.useOn on a lit campfire: out it goes, and the
-// shovel wears.
-func (h *hub) dowseCampfire(players map[int32]*tracked, e evDowseCampfire) {
-	t := players[e.eid]
-	if t == nil || !isShovel(heldStack(t).item) {
-		return
-	}
-	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
-	if !isCampfireBlock(state) || !boolProp(state, "lit") {
-		return
-	}
-	h.setBlockLive(players, t.dim, e.x, e.y, e.z, setBoolProp(state, "lit", false))
-	h.playSoundDim(players, t.dim, "minecraft:block.fire.extinguish", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
-	if t.gamemode == gmSurvival {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
-	}
 }

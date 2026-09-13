@@ -58,17 +58,6 @@ func TestUseOnItems(t *testing.T) {
 	if h.spawnerMobFor(0, 5, 179, 0, entityZombie) != entityZombie {
 		t.Fatal("other spawners keep their own mob")
 	}
-	// A shovel on a lit campfire.
-	lit := worldgen.BlockBase("campfire")
-	info, _ := worldgen.InfoForState(lit)
-	lit = worldgen.SetProperty(info, lit, "lit", "true")
-	lit = worldgen.SetProperty(info, lit, "waterlogged", "false")
-	w.SetBlock(6, 179, 0, lit)
-	hold(itemIronShovel, 0)
-	h.dowseCampfire(players, evDowseCampfire{eid: pl.p.eid, x: 6, y: 179, z: 0})
-	if boolProp(w.At(6, 179, 0), "lit") {
-		t.Fatal("the shovel should put the campfire out")
-	}
 	// A rocket against a block launches from the click point.
 	hold(itemFireworkRocket, 0)
 	before := len(h.rockets)

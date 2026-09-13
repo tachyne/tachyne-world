@@ -486,8 +486,6 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 			ev = evPlaceCrystal{eid: p.eid, x: x, y: y, z: z}
 		case held == itemFireworkRocket:
 			ev = evPlaceRocket{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz}
-		case isShovel(held) && isCampfireBlock(state) && boolProp(state, "lit"):
-			ev = evDowseCampfire{eid: p.eid, x: x, y: y, z: z}
 		case held == itemFilledMap && isBannerState(state):
 			ev = evMapBanner{eid: p.eid, x: x, y: y, z: z}
 		}
