@@ -63,6 +63,7 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	nm.refreshBabySpeed()
 	// convertTo carries the equipment over rather than rolling it afresh.
 	nm.gear, nm.held, nm.heldEnch, nm.spawnGear, nm.gearDrop = m.gear, m.held, m.heldEnch, m.spawnGear, m.gearDrop
+	nm.heldDmg, nm.heldCount, nm.gearSure = m.heldDmg, m.heldCount, m.gearSure
 	nm.refreshGearArmor()
 	if nm.wearsAnything() {
 		h.toNearbyEv(players, nm.dim, nm.x, nm.z, equipEv(nm.eid, nm.heldStack(), invStack{}, nm.gear))

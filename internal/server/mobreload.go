@@ -102,9 +102,11 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	if sm.Held != 0 {
 		m.held = sm.Held
 		if sm.HeldSt[0] == sm.Held {
-			m.heldEnch = unpackStack(sm.HeldSt).ench
+			st := unpackStack(sm.HeldSt)
+			m.heldEnch, m.heldDmg, m.heldCount = st.ench, st.dmg, st.count
 		}
 	}
+	m.gearSure = sm.GearSure
 	m.harness = sm.Harness
 	m.tamed, m.sitting = sm.Tamed, sm.Sitting
 	if sm.OwnerUUID != "" {

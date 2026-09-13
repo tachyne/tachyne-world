@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Mob looting by vanilla's rules.** A looting monster weighs what it
+  walks over as vanilla does: armour must beat what it wears on points,
+  toughness, then enchantments and wear (never over a bound piece), a
+  weapon must beat what it holds with the species' preferred weapon first
+  (a skeleton keeps its bow over any sword, a drowned its trident), and an
+  empty hand takes anything, the whole stack. Replaced gear drops at
+  vanilla's odds, picked-up gear always drops on death with its
+  enchantments, and mob griefing off stops the looting.
 - **Line of sight.** Hostiles hunt by sight: a monster acquires a player
   only when it can see them and gives one up after three seconds out of
   sight (fifteen once that player hurt it), as vanilla's target goals do.

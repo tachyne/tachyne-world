@@ -464,23 +464,23 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		// An enchanted piece drops as itself (the plugin drop list carries
 		// bare ids); a plain one goes through the list like any other drop.
 		dropGear := func(st invStack) {
-			if st.ench[0].id == 0 && st.ench[0].lvl == 0 {
-				drops = append(drops, plugin.ItemStack{Item: st.item, Count: 1})
+			if st.ench[0].id == 0 && st.ench[0].lvl == 0 && st.dmg == 0 {
+				drops = append(drops, plugin.ItemStack{Item: st.item, Count: max(st.count, 1)})
 				return
 			}
-			if it := h.spawnItemIn(players, m.dim, st.item, 1, m.x, m.y, m.z); it != nil {
-				it.ench = st.ench
+			if it := h.spawnItemIn(players, m.dim, st.item, max(st.count, 1), m.x, m.y, m.z); it != nil {
+				it.ench, it.dmg = st.ench, st.dmg
 				h.refreshItemMeta(players, it)
 			}
 		}
-		if m.held != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
+		if m.held != 0 && h.rng.Float32() < h.gearDropChance(m, gearSlotHand) { // DropChances: picked up = certain, spawn gear = its roll
 			dropGear(m.heldStack())
 		}
 		for slot, g := range m.gear {
 			if slot == 0 && m.spawnGear && isPumpkinHead(g.item) {
 				continue // a Halloween pumpkin has a drop chance of 0
 			}
-			if g.item != 0 && (!m.spawnGear || h.rng.Float32() < m.gearDrop) {
+			if g.item != 0 && h.rng.Float32() < h.gearDropChance(m, slot) {
 				dropGear(g)
 			}
 		}

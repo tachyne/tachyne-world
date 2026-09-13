@@ -57,7 +57,7 @@ func TestMobWeaponEnchantments(t *testing.T) {
 	if m2.held != itemIronSword || m2.heldStack().enchLvl(enchSharpness) != 5 {
 		t.Fatalf("reloaded held %d ench %v", m2.held, m2.heldEnch)
 	}
-	z.spawnGear, z.gearDrop = false, 0 // picked-up gear drops in full
+	z.gearSure[gearSlotHand] = true // picked up: a guaranteed drop
 	z.dying = 1
 	h.despawnMob(players, z)
 	found := false

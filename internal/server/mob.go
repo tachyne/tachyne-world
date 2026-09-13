@@ -180,6 +180,9 @@ type mob struct {
 	hover                           float64     // fliers: preferred altitude above the terrain
 	held                            int32       // rendered main-hand item (0 = empty)
 	heldEnch                        enchList    // enchantments on that item (spawn gear rolls them)
+	heldDmg                         int         // wear on that item
+	heldCount                       int         // how many it holds (0 = one): a hand takes a whole stack
+	gearSure                        [5]bool     // setGuaranteedDrop per slot (0-3 armour, 4 hand): picked up, so it always drops
 	carry                           invStack    // allay: the stack it has collected for its liked player
 	allayPickupCD                   int         // allay: ticks before it collects again (60 after a throw)
 	allayNoteCD                     int         // allay: ticks it keeps delivering to the liked note block (600 per note)
@@ -1421,7 +1424,7 @@ func (m *mob) refreshBabySpeed() { m.setBabySpeed(m.baby && m.hostile) }
 // heldStack is the mob's main-hand item as a stack: what the equipment frame
 // renders and what drops when it dies.
 func (m *mob) heldStack() invStack {
-	return invStack{item: m.held, count: b2i(m.held != 0), ench: m.heldEnch}
+	return invStack{item: m.held, count: max(b2i(m.held != 0), m.heldCount*b2i(m.held != 0)), ench: m.heldEnch, dmg: m.heldDmg}
 }
 
 // mobSpeedFactor is Entity.getBlockSpeedFactor for a mob: the feet cell's

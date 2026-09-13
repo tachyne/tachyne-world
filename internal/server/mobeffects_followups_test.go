@@ -35,7 +35,9 @@ func TestPickedUpGearMakesMobPersistent(t *testing.T) {
 	m := h.spawnSpecies(players, entityZombie, 0, 5000.5, 70, 5000.5)
 	m.hostile = true // a monster (the legacy zombie takes its stance elsewhere): despawn distance 128
 	m.canPickup = true
-	h.spawnItemIn(players, 0, itemByName["iron_helmet"], 1, 5000.5, 70, 5000.5)
+	if it := h.spawnItemIn(players, 0, itemByName["iron_helmet"], 1, 5000.5, 70, 5000.5); it != nil {
+		it.noPickupUntil = 0 // past the drop's pickup delay
+	}
 	h.mobPickupScan(players, m)
 	if !m.persistent {
 		t.Fatal("a zombie that took a helmet must be flagged persistent")
