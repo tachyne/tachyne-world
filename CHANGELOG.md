@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Skeletons flee the sun.** A skeleton, stray or bogged burning in
+  daylight with no target and no helmet looks for cover — a spot within
+  ten blocks the sky cannot see and that is dim — and walks there, as
+  vanilla's do.
+
 - **Zombies break doors.** On hard, a zombie that spawned with the knack
   (one in ten, scaled by the regional difficulty) and is stopped by a
   closed wooden door on its way to a player beats on it — the thud and

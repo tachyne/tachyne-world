@@ -195,6 +195,7 @@ type mob struct {
 	carrotTicks               int         // rabbit: moreCarrotTicks (full after a bite)
 	screaming                 bool        // goat: the screaming variant (2% at spawn)
 	breaksDoors               bool        // zombie: spawned able to break doors (f×10%)
+	hidePos                   blockPos    // skeleton: the shade it is heading for out of the sun (zero = none)
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
@@ -478,6 +479,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A rabbit after a grown carrot in somebody's garden.
 		case m.etype == entityGoat && h.goatStep(players, m):
 			// A goat lining up, lowering its head for, or charging a ram.
+		case skeletonKind(m.etype) && h.fleeSunStep(players, m):
+			// A burning skeleton with nobody to shoot heading for shade.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):
