@@ -11,6 +11,15 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-13
+
+### Added
+- **Camel dash.** Release the jump key on a saddled camel and it dashes:
+  the server plays the dash, raises the camel's dash flag for the
+  animation and runs vanilla's fifty-five-tick cooldown, while the lunge
+  itself is the riding client's own physics, as in vanilla. The camel's
+  metadata now shifts correctly for 26.2 clients (gateways repinned).
+
 ## 2026-09-11
 
 ### Added

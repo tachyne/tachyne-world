@@ -1957,6 +1957,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.wakePlayer(players, t)
 				}
+			case evRidingJump:
+				if t := players[e.eid]; t != nil && t.ridingEID != 0 {
+					h.camelDashStart(players, t)
+				}
 			case evHeldChange:
 				if t := players[e.eid]; t != nil {
 					h.broadcastEquipment(players, t) // new item in hand

@@ -188,6 +188,8 @@ type mob struct {
 	rollLeft                  int         // panda: updates left in a roll
 	rollDX, rollDZ            float64     // panda: the roll's heading
 	lieCD                     uint64      // panda: the tick it may lie on its back again
+	dashCD                    int         // camel: ticks left on the dash cooldown (flag drops at 50)
+	dashing                   bool        // camel: the DASH flag is up
 	offhand                   invStack    // piglin: the gold it is admiring (rendered in the off hand)
 	admireUntil               uint64      // piglin: the tick the admiring ends (0 = not admiring)
 	admireOffUntil            uint64      // piglin: no admiring until this tick (hit by a player)
@@ -369,6 +371,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.x, m.y, m.z, m.dim = v.x, v.y+cartRideHeight, v.z, v.dim
 				continue
 			}
+		}
+		if m.etype == entityCamel && m.dashCD > 0 {
+			h.camelDashTick(players, m)
 		}
 		if m.rider != 0 || len(m.riders) > 0 {
 			continue // a ridden mount is client-driven (applyMountMove) — AI paused
