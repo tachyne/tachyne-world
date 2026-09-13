@@ -196,6 +196,10 @@ type mob struct {
 	screaming                 bool        // goat: the screaming variant (2% at spawn)
 	breaksDoors               bool        // zombie: spawned able to break doors (f×10%)
 	hidePos                   blockPos    // skeleton: the shade it is heading for out of the sun (zero = none)
+	begging                   bool        // wolf: INTERESTED flag (head tilt) is up
+	begTicks                  int         // wolf: ticks of begging left
+	begPlayer                 int32       // wolf: who it is begging from
+	begCalm                   int         // wolf: updates until the goal is reconsidered
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
@@ -657,6 +661,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityEnderman {
 			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
+		}
+		if m.etype == entityWolf {
+			h.begStep(players, m) // head tilt at a held bone or meat (look only)
 		}
 		if m.hostile {
 			switch m.etype {

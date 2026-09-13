@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Wolves beg.** A wolf that sees a player within eight blocks holding
+  a bone or any of its food tilts its head and watches them for two to
+  four seconds, as vanilla's does.
+
 - **Skeletons flee the sun.** A skeleton, stray or bogged burning in
   daylight with no target and no helmet looks for cover — a spot within
   ten blocks the sky cannot see and that is dim — and walks there, as
