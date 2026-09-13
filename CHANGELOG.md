@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Mobs float.** The land mobs vanilla floats — animals, villagers,
+  creepers, spiders, the illagers — bob at the surface of deep water with
+  their eyes clear and swim across it instead of drowning on the bottom;
+  the undead, piglins, hoglins and golems sink and walk the bed, as
+  vanilla's do.
 - **Mob looting by vanilla's rules.** A looting monster weighs what it
   walks over as vanilla does: armour must beat what it wears on points,
   toughness, then enchantments and wear (never over a bound piece), a

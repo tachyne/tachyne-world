@@ -110,7 +110,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 		}
 		w := h.worldFor(m.dim)
 		fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
-		feet, head := w.At(fx, fy, fz), w.At(fx, fy+1, fz)
+		feet, head := w.At(fx, fy, fz), w.At(fx, int(math.Floor(m.y+mobEyeHeight(m))), fz) // the head is where the eyes are: a floater's clear the water
 		inLava := worldgen.IsLava(feet) || worldgen.IsLava(head)
 		inFire := isFire(feet) || isFire(head)
 		if fireImmune[m.etype] { // striders/blazes/etc. bathe unharmed

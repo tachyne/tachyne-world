@@ -777,9 +777,20 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// floor is found from the mob's own height, NOT the column surface —
 			// seating against the surface teleported every cave mob into daylight.
 			oldY := m.y
-			m.y = float64(h.worldFor(m.dim).MobFeetFrom(int(math.Floor(m.x)), int(math.Floor(m.z)), int(math.Floor(m.y))))
-			if fell := oldY - m.y; fell > mobSafeFall { // the ground dropped out under it
-				h.mobFall(players, m, fell)
+			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
+			floor := float64(h.worldFor(m.dim).MobFeetFrom(fx, fz, int(math.Floor(m.y))))
+			if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
+				// FloatGoal / Swim: in deep water it bobs up until its eyes clear the surface.
+				if m.y < fl {
+					m.y = math.Min(fl, m.y+floatRisePerUpd)
+				} else {
+					m.y = fl
+				}
+			} else {
+				m.y = floor
+				if fell := oldY - m.y; fell > mobSafeFall { // the ground dropped out under it
+					h.mobFall(players, m, fell)
+				}
 			}
 		}
 		if m.vx != 0 || m.vz != 0 {
@@ -916,6 +927,9 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	// use their own profile (lava is fine).
 	prof := malusFor(m.etype)
 	hazardOK := prof[pathHazardKind(w, fnx, fnz)] >= 0 || prof[pathHazardKind(w, cx, cz)] < 0
+	if h.floatSwims(m, fnx, fnz) {
+		return hazardOK && !w.TallObstacle(fnx, fnz) // afloat: the water at its level is the floor it steps on
+	}
 	return destOK && hazardOK && step <= 1 && step >= -1 && !w.TallObstacle(fnx, fnz)
 }
 
