@@ -444,7 +444,13 @@ func (h *hub) spawnSpecies(players map[int32]*tracked, etype, dim int, x, y, z f
 		return nil // plugin-cancelled spawn
 	}
 	h.applySpecies(players, m)
-	h.rollHorseAttributes(m) // horses are not clones: health, speed and jump all vary
+	h.rollHorseAttributes(m)                   // horses are not clones: health, speed and jump all vary
+	if m.etype == entityGoat && !h.reloading { // Goat.finalizeSpawn: 2% scream, one in ten with a horn already gone
+		m.screaming = h.rng.Float64() < 0.02
+		if h.rng.Intn(goatRamHornOdds) == 0 {
+			m.hornsGone = 1
+		}
+	}
 	return m
 }
 

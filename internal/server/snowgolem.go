@@ -39,7 +39,7 @@ func (h *hub) snowGolemMelts(m *mob) bool {
 
 // snowLayerCanSurvive is SnowLayerBlock.canSurvive.
 func snowLayerCanSurvive(below uint32) bool {
-	if name, _ := worldgen.StateName(below); name == "minecraft:ice" || name == "minecraft:packed_ice" || name == "minecraft:barrier" {
+	if name, _ := worldgen.StateName(below); name == "ice" || name == "packed_ice" || name == "barrier" {
 		return false
 	}
 	if below == worldgen.SoulSand || isHoneyBlock(below) || below == worldgen.Mud {

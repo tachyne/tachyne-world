@@ -79,6 +79,16 @@ the public history since the project was open-sourced on 2026-07-10.
   the whole plant if it was at its first — then is full for a while;
   mobGriefing off keeps them out, as vanilla's RaidGardenGoal has it.
 
+- **Goats ram.** Off its cooldown a goat picks the nearest player or
+  animal, walks to a spot four to seven blocks straight out from it,
+  lowers its head for a second and charges at three times its walk;
+  whatever it hits takes its bite and a shove scaled by its speed, and a
+  charge into a log, stone, packed ice or a coal, iron, copper or emerald
+  ore snaps a horn off as a goat horn with a random call. One goat in
+  fifty is a screaming goat (its own sounds, its own horns, rams every
+  few seconds) and one in ten is born with a horn already gone; both
+  survive a restart.
+
 ## 2026-09-11
 
 ### Added

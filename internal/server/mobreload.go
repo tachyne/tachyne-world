@@ -119,6 +119,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	}
 	m.ovrSpeed, m.ovrDamage = sm.OvrSpeed, sm.OvrDamage
 	m.hasEgg = sm.HasEgg
+	m.screaming, m.hornsGone = sm.Screaming, sm.HornsGone
 	if m.ovrSpeed > 0 {
 		m.setMoveSpeed(m.ovrSpeed)
 	}

@@ -193,6 +193,14 @@ type mob struct {
 	puff                      int8        // pufferfish: PUFF_STATE 0-2
 	hasEgg                    bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
 	carrotTicks               int         // rabbit: moreCarrotTicks (full after a bite)
+	screaming                 bool        // goat: the screaming variant (2% at spawn)
+	hornsGone                 int8        // goat: horns lost to ramming (0-2; one in ten spawns with one gone)
+	ramCD                     int         // goat: ticks before it may ram again
+	ramPhase                  int8        // goat: idle / walking to its start / lowering its head / charging
+	ramStart                  blockPos    // goat: where the charge begins
+	ramTX, ramTZ              float64     // goat: the target's position when the ram was chosen
+	ramDX, ramDZ              float64     // goat: the charge direction
+	ramTicks                  int         // goat: ticks in the current phase
 	raidTarget                blockPos    // rabbit: the farmland it is raiding
 	raidRest                  int         // rabbit: ticks before it looks for a garden again
 	layCounter                int         // turtle: ticks spent digging the nest
@@ -464,6 +472,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// behind panic, ahead of a baby's parent and the species' own errands.
 		case m.etype == entityRabbit && h.rabbitStep(players, m):
 			// A rabbit after a grown carrot in somebody's garden.
+		case m.etype == entityGoat && h.goatStep(players, m):
+			// A goat lining up, lowering its head for, or charging a ram.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):
