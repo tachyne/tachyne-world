@@ -211,7 +211,31 @@ func xpForBlock(state uint32, rng func(int) int) int {
 	case worldgen.NetherGoldOre:
 		return rng(2) // 0-1
 	}
+	if state == spawnerBlock { // SpawnerBlock.spawnAfterBreak: 15 + rand(15) + rand(15)
+		return 15 + rng(15) + rng(15)
+	}
+	for _, r := range sculkXPRanges { // sculk sensor/calibrated sensor/shrieker/catalyst: 5
+		if state >= r[0] && state <= r[1] {
+			return 5
+		}
+	}
 	return 0
+}
+
+// sculkXPRanges are the sculk blocks whose spawnAfterBreak drops experience.
+var sculkXPRanges = blockRange("sculk_sensor", "calibrated_sculk_sensor", "sculk_shrieker", "sculk_catalyst")
+
+// infestedBlocks are the InfestedBlock states: mined, they spawn a silverfish.
+var infestedBlocks = blockRange("infested_stone", "infested_cobblestone", "infested_stone_bricks",
+	"infested_mossy_stone_bricks", "infested_cracked_stone_bricks", "infested_chiseled_stone_bricks", "infested_deepslate")
+
+func isInfested(state uint32) bool {
+	for _, r := range infestedBlocks {
+		if state >= r[0] && state <= r[1] {
+			return true
+		}
+	}
+	return false
 }
 
 // dropDeathXP scatters a dying player's experience at the death spot (7×level,

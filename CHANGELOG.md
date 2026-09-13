@@ -44,6 +44,11 @@ the public history since the project was open-sourced on 2026-07-10.
   nothing while it is dormant or uprooted — and a copper golem statue's
   pose, one for standing through four for the star.
 
+- **What comes out of a broken block.** Mining a monster spawner pays
+  vanilla's fifteen to forty-three experience and the sculk sensors,
+  shrieker and catalyst five each; an infested stone block sets its
+  silverfish on you unless Silk Touch keeps it whole.
+
 ## 2026-09-11
 
 ### Added
