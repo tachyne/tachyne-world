@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Cats sit on chests, beds and furnaces.** A tamed cat left to itself
+  looks every ten to twenty seconds for a chest nobody has open, a lit
+  furnace or the foot of a bed within eight blocks, walks onto it and
+  settles into the sitting pose for a minute to three, getting up when
+  the chest is opened or the furnace goes out, as vanilla's do.
+
 - **Wolves beg.** A wolf that sees a player within eight blocks holding
   a bone or any of its food tilts its head and watches them for two to
   four seconds, as vanilla's does.

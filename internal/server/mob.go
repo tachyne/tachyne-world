@@ -200,6 +200,11 @@ type mob struct {
 	begTicks                  int         // wolf: ticks of begging left
 	begPlayer                 int32       // wolf: who it is begging from
 	begCalm                   int         // wolf: updates until the goal is reconsidered
+	sitPose                   bool        // cat: setInSittingPose (sat on a chest/bed/furnace, not ordered)
+	sitBlock                  blockPos    // cat: the block it is heading for or sat on (zero = none)
+	sitTry                    int         // cat: MoveToBlockGoal tryTicks (up while walking, down while sat)
+	sitStay                   int         // cat: maxStayTicks
+	sitNext                   int         // cat: nextStartTick
 	doorPos                   blockPos    // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                 int         // zombie: ticks spent on it
 	doorStage                 int8        // zombie: the crack stage last shown (-1 = none)
@@ -485,6 +490,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A goat lining up, lowering its head for, or charging a ram.
 		case skeletonKind(m.etype) && h.fleeSunStep(players, m):
 			// A burning skeleton with nobody to shoot heading for shade.
+		case m.etype == entityCat && h.catSitStep(players, m):
+			// A tamed cat walking onto, or sat on, a chest, bed or lit furnace.
 		case m.etype == entityDolphin && h.dolphinStep(players, m):
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityFox && h.foxStep(players, m):

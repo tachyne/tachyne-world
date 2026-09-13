@@ -144,7 +144,7 @@ func petMeta(m *mob) []byte {
 	if m.etype == entityOcelot {
 		return boolMeta(m.eid, 17, true)
 	}
-	return petFlagsMeta(m.eid, true, m.sitting)
+	return petFlagsMeta(m.eid, true, m.sitting || m.sitPose)
 }
 
 // petFlagsMeta builds the TamableAnimal flags byte (tamed + sitting bits).
