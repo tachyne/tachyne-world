@@ -259,6 +259,11 @@ type mob struct {
 	squidHurt                   bool       // squid: hurt since the last update (spawnInk pending)
 	glowDark                    int        // glow squid: DATA_DARK_TICKS_REMAINING
 	endermiteLife               int        // endermite: Lifetime ticks (discarded at 2400 unless persistent)
+	shPeek                      int8       // shulker: DATA_PEEK_ID (0 closed, 30 a glimpse, 100 open)
+	shPeekTicks                 int        // shulker: ShulkerPeekGoal ticks left
+	shAttack                    int        // shulker: ShulkerAttackGoal attackTime
+	shHurt                      bool       // shulker: hurt since the last update (the teleport roll)
+	shArmored                   bool       // shulker: the covered armour has been installed once
 	doorPos                     blockPos   // zombie: the door it is beating on (lower half; zero = none)
 	doorTicks                   int        // zombie: ticks spent on it
 	doorStage                   int8       // zombie: the crack stage last shown (-1 = none)
@@ -776,7 +781,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			case entityWither:
 				h.witherShoot(players, m) // ranged: wither skulls
 			case entityShulker:
-				h.shulkerShoot(players, m) // ranged: homing bullets (ours: straight)
+				h.shulkerTick(players, m) // the shell, the bullets, the teleport
 			case entityLlama, entityTraderLlama:
 				h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
 			case entityEvoker:
@@ -900,6 +905,9 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	if m.etype == entitySquid || m.etype == entityGlowSquid { // Squid.hurtServer: spawnInk + the flee goal
 		m.squidHurt = true
+	}
+	if m.etype == entityShulker { // Shulker.hurtServer: the teleport roll
+		m.shHurt = true
 	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves

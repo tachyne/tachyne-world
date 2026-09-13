@@ -392,6 +392,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if a.hitMobs != nil && a.hitMobs[m.eid] {
 			continue // piercing bolt already struck this mob — pass through
 		}
+		if m.etype == entityShulker && m.shulkerClosed() && a.etype != entityShulkerBullet {
+			continue // a closed shell: arrows glance off (Shulker.hurtServer)
+		}
 		if m.etype == entityEnderman {
 			// Vanilla EnderMan.hurtServer: projectiles NEVER land — the
 			// enderman teleports out from under them, taking no damage.
@@ -431,6 +434,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			}
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
+			if m.etype == entityShulker && a.etype == entityShulkerBullet && m.health > 0 {
+				h.shulkerBulletHit(players, m) // hitByShulkerBullet: a teleport, maybe a new shulker
+			}
 			h.channelingStrike(players, a, m.dim, m.x, m.y, m.z, m)
 			if a.playerShot { // shot by a living entity → may call reinforcements
 				h.zombieReinforce(players, m, players[a.shooter])

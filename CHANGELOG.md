@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Shulker shells.** A shulker starts closed — twenty points of armour,
+  arrows glancing off — peeks out now and then, opens wide and fires a
+  homing bullet every one to five and a half seconds at anyone within
+  twenty blocks, closing when they leave; hurt below half health it
+  teleports one time in four up to eight blocks onto a floor; and struck
+  by one of its own bullets it teleports and, unless shulkers already
+  crowd the spot, leaves a new one of its colour where it stood — as in
+  vanilla. The shell's opening is synced for every client.
+
 - **Squid ink and endermites.** A squid hurt by something squirts a cloud
   of thirty ink particles and jets away from its attacker at up to three
   blocks a second while they are within ten; a glow squid also goes dark
