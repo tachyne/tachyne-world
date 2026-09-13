@@ -240,19 +240,10 @@ func (h *hub) tryRespawnDragon(players map[int32]*tracked) {
 		}
 		found = append(found, hit)
 	}
-	for _, c := range found {
-		delete(h.crystals, c.eid)
-		h.toDimEv(players, 2, entGone(c.eid))
+	if h.dragonRespawn != nil {
+		return
 	}
-	h.rules.DragonDefeated = false
-	h.rules.DragonHealth = 0
-	h.saveRules()
-	h.enterEnd(players, nil)
-	for _, t := range players {
-		if t.dim == 2 {
-			t.p.trySendEv(chatEv("The Ender Dragon stirs again."))
-		}
-	}
+	h.startDragonRespawn(players, found, cy) // the ceremony brings the dragon back
 }
 
 // placeRocket is FireworkRocketItem.useOn: a rocket lit against a block

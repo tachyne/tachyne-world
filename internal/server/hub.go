@@ -576,6 +576,7 @@ type hub struct {
 
 	dragon        *mob                // the ender dragon (nil = none / defeated)
 	crystals      map[int32]*crystal  // end crystals by eid
+	dragonRespawn *dragonRespawn      // the respawn ceremony in progress (nil = none)
 	phantomNextAt uint64              // next insomnia check (vanilla PhantomSpawner cadence)
 	catNextAt     uint64              // next village-cat spawner tick
 	villageDone   map[blockPos]bool   // villages populated this session
@@ -1021,6 +1022,7 @@ func (h *hub) run() {
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
 				h.updateDragon(players)
+				h.tickDragonRespawn(players)
 				if age%20 == 0 {
 					h.updateDragonBar(players)
 				}

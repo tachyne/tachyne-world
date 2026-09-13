@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **The dragon respawn ceremony.** Four end crystals set around the exit
+  portal no longer bring the dragon straight back: the portal closes, the
+  crystals' beams point at the sky, the dragon growls, the beams sweep
+  the obsidian pillars one by one as each goes up in a blast, then return
+  to the centre and the crystals detonate — and the dragon is back over
+  the island with a crystal on every pillar, as in vanilla. Destroying a
+  ceremony crystal aborts it.
+
 - **Dropped items float.** An item under water rises to the surface and
   floats there, an upward bubble column lifts it clear of the water and it
   drops back in to be lifted again (so item elevators work), and a

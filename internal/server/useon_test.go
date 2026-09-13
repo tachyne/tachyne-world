@@ -91,7 +91,13 @@ func TestEndCrystalRespawnsDragon(t *testing.T) {
 		pl.inv.slots[0] = invStack{item: itemEndCrystal, count: 1}
 		h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: d[0], y: cy - 1, z: d[1]})
 	}
+	if h.dragonRespawn == nil || h.dragon != nil {
+		t.Fatalf("four crystals should start the ceremony: respawn %v dragon %v crystals %d", h.dragonRespawn != nil, h.dragon != nil, len(h.crystals))
+	}
+	for i := 0; i < 2000 && h.dragonRespawn != nil; i++ {
+		h.tickDragonRespawn(players)
+	}
 	if h.dragon == nil || h.rules.DragonDefeated {
-		t.Fatalf("four crystals should restage the fight: dragon %v defeated %v crystals %d", h.dragon != nil, h.rules.DragonDefeated, len(h.crystals))
+		t.Fatalf("the ceremony should restage the fight: dragon %v defeated %v crystals %d", h.dragon != nil, h.rules.DragonDefeated, len(h.crystals))
 	}
 }
