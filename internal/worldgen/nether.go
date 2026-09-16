@@ -29,6 +29,7 @@ var (
 func NewNetherGenerator(seed int64) *Generator {
 	g := NewGenerator(seed ^ 0x6E7BE7) // distinct noise from the overworld
 	g.nether = true
+	g.netherN = newNetherNoises(seed ^ 0x6E7BE7)
 	return g
 }
 
@@ -83,10 +84,11 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
 			prev := uint32(Bedrock)
+			col := g.netherColumn(wx, wz) // the terrain dressed by its biome's surface rules
 			for s := 0; s < len(ch.Sections); s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
-					b := g.netherBlock(wx, wy, wz)
+					b := col[wy-MinY]
 					// Wild nether wart sprouts on soul-sand floors.
 					if b == Air && prev == SoulSand && hash01(g.seed, wx, wz, 0x3A57) < 0.4 {
 						b = NetherWart + uint32(hash01(g.seed, wx, wz, 0x3A58)*4)
@@ -100,9 +102,11 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 	g.stampNetherPortals(ch, cx, cz) // ruined portals stand on the cavern floors too
 	g.stampBastions(ch, cx, cz)
 	g.stampFortress(ch, cx, cz)
+	biome := g.netherBiome(int(cx)*16+8, int(cz)*16+8)
 	for s := 0; s < len(ch.Sections); s++ {
-		ch.Biomes[s] = "minecraft:nether_wastes"
+		ch.Biomes[s] = biome
 	}
+	g.decorateNether(ch, cx, cz) // the forests' fungi, roots and vines
 	ch.computeHeightmap()
 	return ch
 }

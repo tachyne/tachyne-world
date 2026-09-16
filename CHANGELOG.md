@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-16
 
 ### Added
+- **The nether's biomes.** Chunks carry their biome, and vanilla's surface
+  rules dress the caverns: nylium floors in the crimson and warped forests,
+  soul sand and soul soil in the valleys, basalt and blackstone in the
+  deltas, gravel and a soul sand layer in the wastes. The forests grow
+  huge fungi (one in seventeen a giant), roots, fungi, sprouts, weeping
+  vine roofs and twisting vines on vanilla's per-layer placement.
 - **Bone meal, complete.** Every vanilla target answers: tall flowers,
   grass and ferns, flower beds, sea pickles, seagrass, kelp and the vines,
   dripleaves, rooted dirt, bamboo, propagules, the sniffer's crops, stems,

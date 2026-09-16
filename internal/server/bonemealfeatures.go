@@ -327,126 +327,24 @@ func (h *hub) weepingVinesColumn(players map[int32]*tracked, dim, x, y, z, total
 	}
 }
 
-// fungusStemReplaceable is TreeFeatures' stemReplaceableBlocks: the plants a
-// growing stem may push through (crops, berry bushes, the fungi, the vines).
-func fungusStemReplaceable(s uint32) bool {
-	return isCropState(s) || (s >= torchflowerCropMin && s <= torchflowerCropMax) || (s >= pitcherCropMin && s <= pitcherCropMax) ||
-		(s >= berryBase && s <= berryBase+3) || s == crimsonFungus || s == warpedFungus ||
-		inRange(s, [2]uint32{growingPlants[1].headLo, growingPlants[1].headHi}) || s == growingPlants[1].body ||
-		inRange(s, [2]uint32{growingPlants[2].headLo, growingPlants[2].headHi}) || s == growingPlants[2].body
-}
-
-// placeHugeFungus is HugeFungusFeature.place for a planted fungus: a stem
-// four to thirteen tall (doubled one time in twelve), a hat of wart blocks
-// with shroomlights, and on a crimson hat weeping vines.
+// placeHugeFungus is HugeFungusFeature.place for a planted fungus, on the
+// shared placer (worldgen.PlaceHugeFungus grows the forests' too); a plant
+// the stem pushes through breaks with its drops.
 func (h *hub) placeHugeFungus(players map[int32]*tracked, dim, x, y, z int, warped bool) {
 	w := h.worldFor(dim)
-	stem, hat := worldgen.BlockID("crimson_stem"), netherWartBlock
-	if warped {
-		stem, hat = worldgen.BlockID("warped_stem"), warpedWartBlock
-	}
-	total := 4 + h.rng.Intn(10)
-	if h.rng.Intn(12) == 0 {
-		total *= 2
-	}
-	replaceable := func(p blockPos, plants bool) bool {
-		s := w.At(p.x, p.y, p.z)
-		return s == worldgen.Air || worldgen.IsReplaceable(s) || (plants && fungusStemReplaceable(s))
-	}
-	// planted: a replaced block over solid ground breaks with its drops
-	clear := func(p blockPos) {
-		s := w.At(p.x, p.y, p.z)
-		if s != worldgen.Air && w.At(p.x, p.y-1, p.z) != worldgen.Air {
+	worldgen.PlaceHugeFungus(h.rng, x, y, z, warped, true, worldgen.FungusDriver{
+		Read: func(px, py, pz int) uint32 { return w.At(px, py, pz) },
+		Set:  func(px, py, pz int, s uint32) { h.setBlockAt(players, dim, blockPos{px, py, pz}, s) },
+		Destroy: func(px, py, pz int) {
+			s := w.At(px, py, pz)
 			if h.rules.DoTileDrops {
 				for _, d := range h.evalBlockLoot(lootCtx{state: s, rng: h.rng.Intn, randf: h.rng.Float64}) {
-					h.spawnBlockDrop(players, dim, d.item, d.count, p.x, p.y, p.z)
+					h.spawnBlockDrop(players, dim, d.item, d.count, px, py, pz)
 				}
 			}
-		}
-	}
-	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	for dy := 0; dy < total; dy++ { // placeStem, radius 0
-		p := blockPos{x, y + dy, z}
-		if replaceable(p, true) {
-			clear(p)
-			h.setBlockAt(players, dim, p, stem)
-		}
-	}
-	placeVines := !warped
-	hatHeight := min(h.rng.Intn(1+total/3)+5, total)
-	hatStart := total - hatHeight
-	hatBlock := func(p blockPos, decorP, hatP, vinesP float64) {
-		switch r := h.rng.Float64(); {
-		case r < decorP:
-			h.setBlockAt(players, dim, p, shroomlight)
-		case h.rng.Float64() < hatP:
-			h.setBlockAt(players, dim, p, hat)
-			if h.rng.Float64() < vinesP {
-				h.tryWeepingVines(players, dim, p)
-			}
-		}
-	}
-	for dy := hatStart; dy <= total; dy++ {
-		radius := 1
-		if dy < total-h.rng.Intn(3) {
-			radius = 2
-		}
-		if hatHeight > 8 && dy < hatStart+4 {
-			radius = 3
-		}
-		for dx := -radius; dx <= radius; dx++ {
-			for dz := -radius; dz <= radius; dz++ {
-				edgeX, edgeZ := dx == -radius || dx == radius, dz == -radius || dz == radius
-				inside := !edgeX && !edgeZ && dy != total
-				corner := edgeX && edgeZ
-				bottom := dy < hatStart+3
-				p := blockPos{x + dx, y + dy, z + dz}
-				if !replaceable(p, false) {
-					continue
-				}
-				clear(p)
-				switch {
-				case bottom:
-					if !inside { // placeHatDropBlock
-						if w.At(p.x, p.y-1, p.z) == hat {
-							h.setBlockAt(players, dim, p, hat)
-						} else if h.rng.Float64() < 0.15 {
-							h.setBlockAt(players, dim, p, hat)
-							if placeVines && h.rng.Intn(11) == 0 {
-								h.tryWeepingVines(players, dim, p)
-							}
-						}
-					}
-				case inside:
-					hatBlock(p, 0.1, 0.2, vinesOr(placeVines, 0.1))
-				case corner:
-					hatBlock(p, 0.01, 0.7, vinesOr(placeVines, 0.083))
-				default:
-					hatBlock(p, 5.0e-4, 0.98, vinesOr(placeVines, 0.07))
-				}
-			}
-		}
-	}
-}
-
-func vinesOr(on bool, p float64) float64 {
-	if on {
-		return p
-	}
-	return 0
-}
-
-// tryWeepingVines is HugeFungusFeature.tryPlaceWeepingVines: a column one
-// to five long (doubled one time in seven) below a hat block, aged 23–25.
-func (h *hub) tryWeepingVines(players map[int32]*tracked, dim int, hatPos blockPos) {
-	if h.worldFor(dim).At(hatPos.x, hatPos.y-1, hatPos.z) != worldgen.Air {
-		return
-	}
-	n := 1 + h.rng.Intn(5)
-	if h.rng.Intn(7) == 0 {
-		n *= 2
-	}
-	h.weepingVinesColumn(players, dim, hatPos.x, hatPos.y-1, hatPos.z, n, 23, 25)
+		},
+		InWorld: func(py int) bool { return h.inWorldYIn(dim, py) },
+	})
 }
 
 // mossReplaceable is #moss_replaceable: the overworld's base stone, cave
