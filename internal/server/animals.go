@@ -184,7 +184,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			continue // the cure may have replaced the mob
 		}
 		if m.etype == entityVillager {
-			h.villagerGossipTick(m)
+			h.villagerGossipTick(players, m)
 		}
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {

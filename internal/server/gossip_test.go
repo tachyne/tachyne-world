@@ -73,7 +73,7 @@ func TestGossipEventsSpreadAndGolem(t *testing.T) {
 	u := h.spawnMob(players, entityVillager, 14.5, 200, 10.5)
 	h.gridDirty()
 	h.tick.Store(100)
-	h.villagerGossipTick(u)
+	h.villagerGossipTick(nil, u)
 	if got := u.gossip["tester"][gossipMajorNegative]; got != 25-10 {
 		t.Errorf("gossip spreads minus its transfer decay: %d, want 15", got)
 	}

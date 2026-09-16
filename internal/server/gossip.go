@@ -200,7 +200,7 @@ func (h *hub) villagerHurtBy(players map[int32]*tracked, m *mob, t *tracked, kil
 // and a chat with a villager standing beside it (TradeWithVillager →
 // Villager.gossip: up to ten entries pass over, at most once per 1200 ticks
 // for either party).
-func (h *hub) villagerGossipTick(m *mob) {
+func (h *hub) villagerGossipTick(players map[int32]*tracked, m *mob) {
 	now := h.tick.Load()
 	if m.gossipDecayAt == 0 {
 		m.gossipDecayAt = now
@@ -213,7 +213,7 @@ func (h *hub) villagerGossipTick(m *mob) {
 	}
 	var partner *mob
 	h.grid().nearby(m.dim, m.x, m.z, 2, func(o *mob) {
-		if partner != nil || o == m || o.etype != entityVillager || o.dying > 0 || len(o.gossip) == 0 {
+		if partner != nil || o == m || o.etype != entityVillager || o.dying > 0 {
 			return
 		}
 		if o.gossipAt != 0 && now < o.gossipAt+gossipChatCooldown {
@@ -226,7 +226,10 @@ func (h *hub) villagerGossipTick(m *mob) {
 	if partner == nil {
 		return
 	}
-	m.gossip.transferFrom(partner.gossip, h.rng.Intn, gossipTransferCount)
+	if len(partner.gossip) > 0 {
+		m.gossip.transferFrom(partner.gossip, h.rng.Intn, gossipTransferCount)
+	}
+	h.villagerShareFood(players, m, partner) // the same chat hands over surplus food and wanted goods
 	m.gossipAt, partner.gossipAt = now, now
 }
 

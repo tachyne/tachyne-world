@@ -155,6 +155,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			}
 		}
 		m.profession = sm.Profession % len(professionNames)
+		m.vFood = sm.Food
 		if len(sm.Gossip) > 0 {
 			m.gossip = gossipBook{}
 			for k, v := range sm.Gossip {

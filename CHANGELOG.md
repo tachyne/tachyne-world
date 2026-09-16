@@ -11,6 +11,15 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-16
+
+### Added
+- **Villages grow.** Fed villagers (twelve food points in belly and
+  pockets) court within eight blocks and, given a vacant bed within
+  forty-eight, bear a child that claims it; parents eat, digest and wait
+  five minutes. Villagers chatting share surplus food, a farmer's spare
+  wheat, and what a neighbour's trade asks for, as vanilla's do.
+
 ## 2026-09-13
 
 ### Added

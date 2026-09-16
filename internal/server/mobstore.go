@@ -161,6 +161,7 @@ type savedMob struct {
 	// table indices — the live unlock rotation keys off the eid, which is
 	// reminted every load, so re-rolling would shuffle a villager's stock.
 	Profession int          `json:"prof,omitempty"`
+	Food       int          `json:"food,omitempty"` // villager: foodLevel
 	TradeLevel int          `json:"tlvl,omitempty"`
 	TradeXP    int          `json:"txp,omitempty"`
 	Offers     []savedOffer `json:"offers,omitempty"`
@@ -588,6 +589,7 @@ func toSavedMob(m *mob) savedMob {
 		sm.OwnerUUID = hex.EncodeToString(m.ownerUUID[:])
 	}
 	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
+	sm.Food = m.vFood
 	sm.Converting, sm.Curer = m.converting, m.curer
 	sm.Charged = m.charged
 	if len(m.gossip) > 0 {
