@@ -60,16 +60,7 @@ func (g *Generator) netherBlock(x, y, z int) uint32 {
 		}
 	}
 	if g.netherDensity(x, y, z) > 0.15 {
-		// Solid: mostly netherrack with ore/soul-sand/glowstone variety.
-		switch r := hash01(g.seed, x+y*257, z, 0x6E1); {
-		case r < 0.02 && y < 100:
-			return NetherQuartzOre
-		case r < 0.10 && g.netherDensity(x, y+1, z) <= 0.15:
-			return SoulSand // floor patches (open cavern above)
-		case r < 0.115 && g.netherDensity(x, y-1, z) <= 0.15 && y > 40:
-			return Glowstone // glowing crust on cavern ceilings (open below)
-		}
-		return Netherrack
+		return Netherrack // ores, soul sand and glowstone come from vanilla's features (netherfeatures.go)
 	}
 	if y <= NetherLavaSea {
 		return Lava

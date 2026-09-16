@@ -65,9 +65,11 @@ func netherPlantMayPlaceOn(s uint32) bool {
 // decorateNether stamps the forests' features into a chunk.
 func (g *Generator) decorateNether(ch *Chunk, cx, cz int32) {
 	reg := &netherRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int][]uint32{}}
+	g.placeNetherOres(ch, cx, cz)
 	for dcx := int32(-1); dcx <= 1; dcx++ {
 		for dcz := int32(-1); dcz <= 1; dcz++ {
-			g.netherChunkFeatures(reg, cx+dcx, cz+dcz)
+			g.netherChunkFeatures2(reg, cx+dcx, cz+dcz) // pillars, deltas, columns, blobs, springs, fire, glowstone
+			g.netherChunkFeatures(reg, cx+dcx, cz+dcz)  // the forests
 		}
 	}
 }

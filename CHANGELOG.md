@@ -20,6 +20,11 @@ the public history since the project was open-sourced on 2026-07-10.
   deltas, gravel and a soul sand layer in the wastes. The forests grow
   huge fungi (one in seventeen a giant), roots, fungi, sprouts, weeping
   vine roofs and twisting vines on vanilla's per-layer placement.
+- **The nether's ores and features.** Vanilla's nether ores — gold, quartz,
+  gravel, blackstone, magma, soul sand, and ancient debris buried away
+  from air — plus glowstone blobs, fire and soul fire, basalt pillars,
+  lava deltas, basalt columns and blobs, and lava springs. Nether mobs
+  spawn by their biome's lists.
 - **Bone meal, complete.** Every vanilla target answers: tall flowers,
   grass and ferns, flower beds, sea pickles, seagrass, kelp and the vines,
   dripleaves, rooted dirt, bamboo, propagules, the sniffer's crops, stems,
