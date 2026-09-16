@@ -550,6 +550,7 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	//                               legitimately-floating parts (monument arches/lanterns,
 	//                               ruined-portal fragments, ship masts).
 	g.stampStructures(ch, cx, cz) // lakes/dungeons/mineshafts/ruins overwrite
+	g.freezeTopLayer(ch, cx, cz)  // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
 
 	// One biome per section, sampled at the section's centre column. Sections
 	// well below the surface take an underground biome (dripstone/lush/deep_dark)

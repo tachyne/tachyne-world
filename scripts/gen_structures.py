@@ -41,6 +41,8 @@ def _jar_names(prefix):
 # Ocean ruins: 8 warm + 8 each of brick/cracked/mossy small pieces, 4 big of
 # each (OceanRuinPieces picks by biome temperature; the engine's oceanruin.go).
 UNDERWATER_RUIN = _jar_names("underwater_ruin/")
+# Fossils: four spines and four skulls, each with its coal-ore overlay (FossilFeature).
+FOSSIL = _jar_names("fossil/")
 END_CITY = ["end_city/" + n for n in (
     "base_floor", "base_roof", "bridge_end", "bridge_gentle_stairs", "bridge_piece", "bridge_steep_stairs",
     "fat_tower_base", "fat_tower_middle", "fat_tower_top", "second_floor_1", "second_floor_2", "second_roof",
@@ -49,7 +51,7 @@ TEMPLATES = [
     "igloo/top",
     "igloo/middle",
     "igloo/bottom",
-] + SHIPWRECK + RUINED_PORTAL + MANSION + END_CITY + UNDERWATER_RUIN
+] + SHIPWRECK + RUINED_PORTAL + MANSION + END_CITY + UNDERWATER_RUIN + FOSSIL
 
 # structure_block DATA-marker metadata → the vanilla loot table for the chest
 # one block below it (shipwreck supply/map/treasure chests).

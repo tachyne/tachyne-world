@@ -29,7 +29,19 @@ var (
 	DeepslateLapisOre    = blockBase("deepslate_lapis_ore")
 	EmeraldOre           = blockBase("emerald_ore")
 	DeepslateEmeraldOre  = blockBase("deepslate_emerald_ore")
+	InfestedStone        = blockBase("infested_stone")
+	InfestedDeepslate    = blockBase("infested_deepslate")
 )
+
+// infestedBiomes are where ore_infested generates (BiomeDefaultFeatures
+// .addInfestedStone: the windswept hills, meadow and cherry grove, stony
+// peaks, snowy slopes and grove).
+var infestedBiomes = map[string]bool{
+	"minecraft:windswept_hills": true, "minecraft:windswept_forest": true,
+	"minecraft:windswept_gravelly_hills": true, "minecraft:meadow": true,
+	"minecraft:cherry_grove": true, "minecraft:stony_peaks": true,
+	"minecraft:snowy_slopes": true, "minecraft:grove": true,
+}
 
 // mountainBiomes are where emerald ore generates (vanilla adds ore_emerald only
 // to the mountain-family biomes).
@@ -67,6 +79,8 @@ var oreSpecs = []oreSpec{
 	// trapezoid — most land in air above the surface and place nothing (vanilla
 	// sparsity). Range trimmed to the in-world portion.
 	{EmeraldOre, DeepslateEmeraldOre, 100, 1, -16, 256, 1, mountainBiomes},
+	// ore_infested: silverfish stone, 14 veins of 9 from the bottom to y=63.
+	{InfestedStone, InfestedDeepslate, 14, 9, -64, 63, 0, infestedBiomes},
 }
 
 // placeOres stamps this chunk's ore veins. Deterministic: the RNG derives from

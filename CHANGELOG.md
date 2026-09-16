@@ -25,6 +25,11 @@ the public history since the project was open-sourced on 2026-07-10.
   from air — plus glowstone blobs, fire and soul fire, basalt pillars,
   lava deltas, basalt columns and blobs, and lava springs. Nether mobs
   spawn by their biome's lists.
+- **Snow, ice, icebergs, fossils, silverfish.** Cold water freezes and cold
+  ground takes snow layers (vanilla's freeze-top-layer pass, with each
+  biome's temperature and the altitude drop); frozen oceans raise icebergs;
+  deserts and swamps hide fossils with coal or diamond in their bones; the
+  mountains carry infested stone.
 - **Bone meal, complete.** Every vanilla target answers: tall flowers,
   grass and ferns, flower beds, sea pickles, seagrass, kelp and the vines,
   dripleaves, rooted dirt, bamboo, propagules, the sniffer's crops, stems,
