@@ -14,11 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-16
 
 ### Added
-- **Bone meal, the rest.** Tall flowers, short grass and ferns, flower
-  beds, sea pickles, seagrass, kelp, the nether and cave vines, dripleaves,
-  rooted dirt, bamboo, propagules and the sniffer's crops all answer bone
-  meal as vanilla's do, and bone meal on water seeds seagrass (corals in a
-  warm ocean).
+- **Bone meal, complete.** Every vanilla target answers: tall flowers,
+  grass and ferns, flower beds, sea pickles, seagrass, kelp and the vines,
+  dripleaves, rooted dirt, bamboo, propagules, the sniffer's crops, stems,
+  huge fungi on nylium, nether vegetation, netherrack beside nylium, moss
+  patches, glow lichen, pale moss, bushes and dry grass, and bone meal on
+  water seeds seagrass (corals in a warm ocean).
 - **Villages grow.** Fed villagers (twelve food points in belly and
   pockets) court within eight blocks and, given a vacant bed within
   forty-eight, bear a child that claims it; parents eat, digest and wait

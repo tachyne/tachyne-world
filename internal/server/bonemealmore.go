@@ -13,7 +13,7 @@ import (
 // dripleaves grow, rooted dirt sprouts roots, bamboo shoots up, hanging
 // propagules ripen, the sniffer's crops advance, and bone meal on water
 // seeds seagrass (and corals in a warm ocean). Nylium, fungi, moss and
-// lichen — the feature-driven ones — are still to come.
+// lichen — the feature-driven ones — follow in bonemealfeatures.go.
 
 var (
 	tallFlowerRanges = blockRange("sunflower", "lilac", "rose_bush", "peony")
@@ -236,7 +236,7 @@ func (h *hub) applyBoneMealMore(players map[int32]*tracked, dim, x, y, z int, st
 		}
 		return true
 	}
-	return false
+	return h.applyBoneMealFeatures(players, dim, x, y, z, state)
 }
 
 // bonemealSapling is the sapling path for a planted propagule (SaplingBlock
