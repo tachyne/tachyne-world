@@ -170,6 +170,12 @@ type mob struct {
 	roamAt                          uint64      // tick to pick a fresh roam target
 	bed                             blockPos    // villager: its bed (sleep anchor; zero = no schedule)
 	work                            blockPos    // villager: its profession workstation (day work site)
+	farmPos                         blockPos    // farmer: the plot it is tending (zero = none)
+	farmWorked                      int         // farmer: ticks worked this session
+	farmNext                        uint64      // farmer: tick it may start (or switch plots) again
+	bmPos                           blockPos    // farmer: the crop it is bone-mealing (zero = none)
+	bmWorked                        int         // farmer: ticks of this bone-meal session
+	bmNext, bmLast                  uint64      // farmer: next pinch; last session's end
 	meet                            blockPos    // villager: the village meeting point (bell/well)
 	sleeping                        bool        // villager: lying in its bed through the night
 	swims                           bool        // water-bound: lives inside a water column (fish/squid)
@@ -580,6 +586,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A zoglin after anything living, an enderman after an endermite.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
+		case m.etype == entityVillager && h.villagerPickupStep(players, m):
+			// A villager after a dropped item it wants (seeds, crops, bread).
+		case m.etype == entityVillager && h.farmerBonemealStep(players, m):
+			// A farmer feeding a growing crop bone meal.
+		case m.etype == entityVillager && h.farmerStep(players, m):
+			// A farmer harvesting and sowing its field.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
 		case m.etype == entityBat && h.batStep(players, m):

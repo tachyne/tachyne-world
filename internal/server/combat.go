@@ -484,8 +484,10 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 				dropGear(g)
 			}
 		}
-		for _, st := range m.hoard { // a piglin's gold, and whatever it was admiring
-			drops = append(drops, plugin.ItemStack{Item: st.item, Count: st.count})
+		if m.etype != entityVillager { // a villager's pockets are lost with it (no dropCustomDeathLoot)
+			for _, st := range m.hoard { // a piglin's gold, and whatever it was admiring
+				drops = append(drops, plugin.ItemStack{Item: st.item, Count: st.count})
+			}
 		}
 		if m.offhand.item != 0 {
 			drops = append(drops, plugin.ItemStack{Item: m.offhand.item, Count: m.offhand.count})

@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-13
 
 ### Added
+- **Farmers farm.** Villagers carry vanilla's eight-slot pockets and pick
+  up the seeds, crops and bread they want; at work a farmer harvests ripe
+  crops, sows seed from its pockets on bare farmland, and feeds growing
+  crops bone meal when it has some, on vanilla's timings (mob griefing off
+  stops it).
 - **Zombies stamp turtle eggs.** A zombie, husk or drowned that finds a
   clutch within twenty-four blocks goes for it ahead of anything else,
   stands on it stamping, and after sixty ticks the eggs are gone, as
