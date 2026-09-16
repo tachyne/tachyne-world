@@ -70,6 +70,14 @@ func (h *hub) tickBamboo(players map[int32]*tracked, dim, x, y, z int, state uin
 		return true
 	}
 
+	h.growBambooAt(players, dim, x, y, z, state, height)
+	return true
+}
+
+// growBambooAt is BambooStalkBlock.growBamboo: the new segment above the
+// tip, the crown pushed up, the stalk capped past eleven by chance and at
+// fifteen for sure.
+func (h *hub) growBambooAt(players map[int32]*tracked, dim, x, y, z int, state uint32, height int) {
 	below := h.worldFor(dim).At(x, y-1, z)
 	twoBelow := h.worldFor(dim).At(x, y-2, z)
 
@@ -98,7 +106,6 @@ func (h *hub) tickBamboo(players map[int32]*tracked, dim, x, y, z int, state uin
 		stage = 1
 	}
 	h.setBlockAt(players, dim, blockPos{x, y + 1, z}, bambooState(age, leaves, stage))
-	return true
 }
 
 // tickBambooSapling grows the sapling into its first stalk segment.

@@ -76,10 +76,19 @@ func (h *hub) tickPropagule(players map[int32]*tracked, dim, x, y, z int, state 
 	if h.rng.Intn(propaguleGrow) != 0 {
 		return true
 	}
+	h.advancePropagule(players, dim, x, y, z, state)
+	return true
+}
+
+// advancePropagule is SaplingBlock.advanceTree for a planted propagule:
+// stage 0 becomes stage 1; stage 1 grows the mangrove (bone meal comes here
+// at its 45%, the random tick after its 1-in-7).
+func (h *hub) advancePropagule(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	age := propaguleAge(state)
 	if propaguleStage(state) == 0 {
 		h.setBlockAt(players, dim, blockPos{x, y, z},
 			propaguleState(age, false, 1, propaguleWet(state)))
-		return true
+		return
 	}
 	// TreeGrower MANGROVE: tall_mangrove at 0.85, mangrove otherwise.
 	feature := "mangrove"
@@ -90,5 +99,4 @@ func (h *hub) tickPropagule(players map[int32]*tracked, dim, x, y, z int, state 
 	if !h.placeLiveTree(players, dim, x, y, z, feature) {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, state)
 	}
-	return true
 }

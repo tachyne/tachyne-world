@@ -224,7 +224,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	if int32(p.heldItem()) == itemBoneMeal { // grow the clicked block
-		s.hub.post(evBoneMeal{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+		s.hub.post(evBoneMeal{eid: p.eid, x: x, y: y, z: z, dx: dx, dy: dy, dz: dz, slot: int32(p.held)})
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
 	}

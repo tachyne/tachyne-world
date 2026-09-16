@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-16
 
 ### Added
+- **Bone meal, the rest.** Tall flowers, short grass and ferns, flower
+  beds, sea pickles, seagrass, kelp, the nether and cave vines, dripleaves,
+  rooted dirt, bamboo, propagules and the sniffer's crops all answer bone
+  meal as vanilla's do, and bone meal on water seeds seagrass (corals in a
+  warm ocean).
 - **Villages grow.** Fed villagers (twelve food points in belly and
   pockets) court within eight blocks and, given a vacant bed within
   forty-eight, bear a child that claims it; parents eat, digest and wait

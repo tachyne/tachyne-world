@@ -27,9 +27,10 @@ var (
 )
 
 type evBoneMeal struct {
-	eid     int32
-	x, y, z int
-	slot    int32
+	eid        int32
+	x, y, z    int
+	dx, dy, dz int // the clicked face: bone meal on water beside a solid face seeds the sea
+	slot       int32
 }
 
 func (evBoneMeal) isHubEvent() {}
@@ -43,8 +44,13 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 	}
 	w := h.worldFor(t.dim)
 	state := w.At(e.x, e.y, e.z)
+	fx, fy, fz := e.x, e.y, e.z
 	if !h.applyBoneMeal(players, t.dim, e.x, e.y, e.z, state) {
-		return
+		// growWaterPlant: the face must be sturdy and the cell beyond it water
+		if !worldgen.Collides(state) || !h.bonemealWater(players, t.dim, e.x+e.dx, e.y+e.dy, e.z+e.dz, e.dx, e.dy, e.dz) {
+			return
+		}
+		fx, fy, fz = e.x+e.dx, e.y+e.dy, e.z+e.dz
 	}
 	if t.gamemode == gmSurvival {
 		s := &t.inv.slots[e.slot]
@@ -56,7 +62,7 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 		}
 	}
 	h.toNearbyEv(players, t.dim, float64(e.x), float64(e.z), attachproto.Particles{
-		PID: particleHappyVillager, X: float64(e.x) + 0.5, Y: float64(e.y) + 0.5, Z: float64(e.z) + 0.5,
+		PID: particleHappyVillager, X: float64(fx) + 0.5, Y: float64(fy) + 0.5, Z: float64(fz) + 0.5,
 		Spread: 0.3, Count: 15})
 }
 
@@ -139,7 +145,7 @@ func (h *hub) applyBoneMeal(players map[int32]*tracked, dim, x, y, z int, state 
 	if state == worldgen.GrassBlock {
 		return h.bonemealGrass(players, dim, x, y, z)
 	}
-	return false
+	return h.applyBoneMealMore(players, dim, x, y, z, state)
 }
 
 // bonemealGrass sprinkles short grass (and the occasional flower) on the
