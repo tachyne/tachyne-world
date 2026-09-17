@@ -168,6 +168,8 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 			}
 		}
 	}
+	// The dripstone caves' clusters, large dripstone and pointed dripstone.
+	g.dripstoneFeatures(r, reg, ox, oz)
 	// GLOW_LICHEN ×104–157, at least thirteen blocks under the ground.
 	for i, n := 0, 104+r.Intn(54); i < n; i++ {
 		x, y, z := ox+r.Intn(16), rangeY(), oz+r.Intn(16)

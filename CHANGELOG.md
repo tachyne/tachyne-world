@@ -22,6 +22,8 @@ the public history since the project was open-sourced on 2026-07-10.
   ceilings with azaleas, carpet and grass, clay patches and pools with
   dripleaves, spore blossoms, rooted azalea trees and wall vines, on
   vanilla's placements; glow lichen grows in every cave.
+- **Dripstone caves.** Dripstone clusters, large dripstone with its wind
+  lean, and pointed dripstone spikes, on vanilla's placements.
 
 ## 2026-09-16
 
