@@ -18,6 +18,10 @@ the public history since the project was open-sourced on 2026-07-10.
   its tripwire arrow traps, lever puzzle and two chests; the witch's hut on
   stilts with the witch and her black cat at home; and the soul sand
   valley's bone-block skeletons, all as vanilla places them.
+- **Lush caves.** Cave vines with glow berries, moss patches on floors and
+  ceilings with azaleas, carpet and grass, clay patches and pools with
+  dripleaves, spore blossoms, rooted azalea trees and wall vines, on
+  vanilla's placements; glow lichen grows in every cave.
 
 ## 2026-09-16
 

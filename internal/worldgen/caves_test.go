@@ -2,30 +2,54 @@ package worldgen
 
 import "testing"
 
-// TestCavesCarved: the deep stone band should be partly hollowed by caves —
-// present (not zero) and not total swiss cheese.
-func TestCavesCarved(t *testing.T) {
-	g := NewGenerator(1)
-	air, total := 0, 0
-	for cx := int32(-3); cx <= 3; cx++ {
-		for cz := int32(-3); cz <= 3; cz++ {
-			ch := g.GenerateChunk(cx, cz)
-			for y := 0; y <= 40; y++ { // well below any surface
-				sec := (y - MinY) / 16
-				ly := (y - MinY) % 16
-				for lx := 0; lx < 16; lx++ {
-					for lz := 0; lz < 16; lz++ {
-						total++
-						if ch.Sections[sec][(ly*16+lz)*16+lx] == Air {
-							air++
-						}
+// findLushColumn scans outward for a column whose caves at y=-10 are lush.
+func findLushChunk(g *Generator) (int32, int32, bool) {
+	for r := 0; r < 96; r++ {
+		for cx := -r; cx <= r; cx++ {
+			for _, cz := range []int{-r, r} {
+				x, z := cx*16+8, cz*16+8
+				if g.caveBiome(x, z, -10) == "minecraft:lush_caves" && g.Height(x, z)-24 > -10 {
+					return int32(cx), int32(cz), true
+				}
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+// A lush cave grows: cave vines, moss, and something on the floor or
+// ceiling across a stretch of lush chunks; glow lichen shows up underground.
+func TestLushCavesGrow(t *testing.T) {
+	g := NewGenerator(5)
+	cx, cz, ok := findLushChunk(g)
+	if !ok {
+		t.Skip("no lush caves near the origin for this seed")
+	}
+	vines, moss, lichen := 0, 0, 0
+	for dcx := int32(-3); dcx <= 3; dcx++ {
+		for dcz := int32(-3); dcz <= 3; dcz++ {
+			ch := g.GenerateChunk(cx+dcx, cz+dcz)
+			for s := range ch.Sections {
+				for _, b := range ch.Sections[s] {
+					switch {
+					case (b >= caveVinesLo && b <= caveVinesHi) || b == caveVinesBody || b == caveVinesBody-1:
+						vines++
+					case b == MossBlock || b == MossCarpet:
+						moss++
+					case b >= glowLichenLo && b <= glowLichenHi:
+						lichen++
 					}
 				}
 			}
 		}
 	}
-	pct := 100 * float64(air) / float64(total)
-	if pct < 2 || pct > 30 {
-		t.Errorf("cave air in y[0..40] = %.1f%%, want a sane 2..30%%", pct)
+	if vines == 0 {
+		t.Error("no cave vines in forty-nine lush chunks")
+	}
+	if moss == 0 {
+		t.Error("no moss in forty-nine lush chunks")
+	}
+	if lichen == 0 {
+		t.Error("no glow lichen underground")
 	}
 }

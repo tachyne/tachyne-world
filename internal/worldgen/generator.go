@@ -553,6 +553,7 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	//                               BEFORE structures, so it never culls a structure's
 	//                               legitimately-floating parts (monument arches/lanterns,
 	//                               ruined-portal fragments, ship masts).
+	g.decorateCaves(ch, cx, cz)   // the lush caves' vegetation and every cave's glow lichen
 	g.stampStructures(ch, cx, cz) // lakes/dungeons/mineshafts/ruins overwrite
 	g.freezeTopLayer(ch, cx, cz)  // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
 
