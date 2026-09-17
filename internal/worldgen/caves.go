@@ -101,7 +101,7 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	ox, oz := int(ncx)*16, int(ncz)*16
 	r := newTreeRNG(g.seed^0xCA7E, ox, oz)
 	rangeY := func() int { return MinY + r.Intn(256-MinY+1) } // RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT
-	lush := func(x, y, z int) bool { return g.caveBiomeAt(x, y, z) == "minecraft:lush_caves" }
+	lush := func(x, y, z int) bool { return reg.caveBiomeAt(x, y, z) == "minecraft:lush_caves" }
 	// CAVE_VINES ×188: under a sturdy ceiling, a column of vines down.
 	for i := 0; i < 188; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
@@ -173,7 +173,7 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	// GLOW_LICHEN ×104–157, at least thirteen blocks under the ground.
 	for i, n := 0, 104+r.Intn(54); i < n; i++ {
 		x, y, z := ox+r.Intn(16), rangeY(), oz+r.Intn(16)
-		if y > g.Height(x, z)-13 {
+		if y > reg.col(x, z).h-13 {
 			continue
 		}
 		g.lichenGrowth(r, reg, x, y, z)
@@ -437,7 +437,7 @@ func (g *Generator) rootSystem(r TreeRNG, reg *owRegion, x, y, z int) {
 	treeY := -1
 	for i := 1; i <= 100; i++ {
 		py := y + i
-		if g.Height(x, z) < py {
+		if reg.col(x, z).h < py {
 			return
 		}
 		s := reg.read(x, py, z)

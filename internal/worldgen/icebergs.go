@@ -10,12 +10,14 @@ import "math"
 // carved out on one side. A neighbouring chunk's bergs are replayed so a
 // berg on the border is whole.
 
-// owRegion is an overworld chunk buffer with pure-terrain reads beyond it.
+// owRegion is an overworld chunk buffer with pure-terrain reads beyond it;
+// a column outside the chunk is carved once, on first touch, and kept.
 type owRegion struct {
 	g            *Generator
 	ch           *Chunk
 	baseX, baseZ int
 	cols         map[[2]int]column
+	carved       map[[2]int][]uint32
 }
 
 func (r *owRegion) read(x, y, z int) uint32 {
@@ -27,12 +29,47 @@ func (r *owRegion) read(x, y, z int) uint32 {
 		return sectionBlockAt(r.ch, lx, y, lz)
 	}
 	k := [2]int{x, z}
-	col, ok := r.cols[k]
-	if !ok {
-		col = r.g.columnAt(x, z)
-		r.cols[k] = col
+	col, ok := r.carved[k]
+	if !ok { // a column of unknowns, carved cell by cell as the features look
+		n := len(r.ch.Sections) * 16
+		col = make([]uint32, n)
+		for i := range col {
+			col[i] = unknownCell
+		}
+		if r.carved == nil {
+			r.carved = map[[2]int][]uint32{}
+		}
+		r.carved[k] = col
 	}
-	return r.g.carve(col.block(y), x, y, z, col.h)
+	if col[y-MinY] == unknownCell {
+		c := r.col(x, z)
+		col[y-MinY] = r.g.carve(c.block(y), x, y, z, c.h)
+	}
+	return col[y-MinY]
+}
+
+const unknownCell = ^uint32(0)
+
+// col is the column model at (x, z), cached: the cave features ask for the
+// height and biome of thousands of columns per chunk.
+func (r *owRegion) col(x, z int) column {
+	k := [2]int{x, z}
+	if c, ok := r.cols[k]; ok {
+		return c
+	}
+	c := r.g.columnAt(x, z)
+	r.cols[k] = c
+	return c
+}
+
+// caveBiomeAt is the biome a cave feature sees at a cell (Generator
+// .caveBiomeAt) through the column cache.
+func (r *owRegion) caveBiomeAt(x, y, z int) string {
+	c := r.col(x, z)
+	if y < c.h-24 && y < SeaLevel {
+		return r.g.caveBiome(x, z, y)
+	}
+	return c.biome.Name
 }
 
 func (r *owRegion) set(x, y, z int, s uint32) {

@@ -61,7 +61,7 @@ func (reg *owRegion) columnScan(x, y, z, rng int, inside, edge func(uint32) bool
 // dripstoneFeatures adds the dripstone caves' features to a chunk's draws.
 func (g *Generator) dripstoneFeatures(r TreeRNG, reg *owRegion, ox, oz int) {
 	rangeY := func() int { return MinY + r.Intn(256-MinY+1) }
-	drip := func(x, y, z int) bool { return g.caveBiomeAt(x, y, z) == "minecraft:dripstone_caves" }
+	drip := func(x, y, z int) bool { return reg.caveBiomeAt(x, y, z) == "minecraft:dripstone_caves" }
 	for i, n := 0, 48+r.Intn(49); i < n; i++ { // DRIPSTONE_CLUSTER
 		x, y, z := ox+r.Intn(16), rangeY(), oz+r.Intn(16)
 		if drip(x, y, z) {
@@ -483,7 +483,7 @@ func (g *Generator) largeDripstone(r TreeRNG, reg *owRegion, x, y, z int) {
 				out := false
 				maxY := 1 << 30
 				if d.up {
-					maxY = g.Height(px, pz)
+					maxY = reg.col(px, pz).h
 				}
 				for i := 0; i < h && py < maxY; i++ {
 					wx, wz := offset(px, py, pz)
