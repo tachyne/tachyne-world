@@ -88,13 +88,13 @@ var biomeReg = map[string]*Biome{
 
 	// ── Cold/taiga family ────────────────────────────────────────────────
 	"minecraft:taiga":                   {Top: GrassBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.7, Flora: floraTaiga},
-	"minecraft:snowy_taiga":             {Top: SnowBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.4, Flora: floraSnowy},
+	"minecraft:snowy_taiga":             {Top: GrassBlock, Sub: Dirt, Tree: treeSpruce, TreeDensity: 1.4, Flora: floraSnowy},
 	"minecraft:old_growth_pine_taiga":   {Top: Podzol, Sub: Dirt, Tree: treePineOld, TreeDensity: 2.2, Flora: floraTaiga},
 	"minecraft:old_growth_spruce_taiga": {Top: Podzol, Sub: Dirt, Tree: treeSpruceOld, TreeDensity: 2.4, Flora: floraTaiga},
 	"minecraft:grove":                   {Top: SnowBlock, Sub: Dirt, Tree: treeGrove, TreeDensity: 1.2, Flora: floraSnowy},
 
 	// ── Snow/ice ─────────────────────────────────────────────────────────
-	"minecraft:snowy_plains": {Top: SnowBlock, Sub: Dirt, Tree: treeNone, Flora: floraSnowy},
+	"minecraft:snowy_plains": {Top: GrassBlock, Sub: Dirt, Tree: treeNone, Flora: floraSnowy},
 	"minecraft:ice_spikes":   {Top: SnowBlock, Sub: Dirt, Tree: treeNone, Flora: floraNone},
 
 	// ── Mountains/peaks ──────────────────────────────────────────────────

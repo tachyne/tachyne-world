@@ -15,22 +15,23 @@ const (
 // layer seeded from the world seed, so the same seed always reproduces the world.
 type Generator struct {
 	seed      int64
-	continent *Perlin       // very low frequency: ocean ↔ coast ↔ inland highland
-	hills     *Perlin       // medium frequency: rolling relief
-	detail    *Perlin       // high frequency: surface roughness
-	temp      *Perlin       // temperature field (before altitude adjustment)
-	humid     *Perlin       // humidity field
-	forest    *Perlin       // low frequency: tree density (forests vs clearings)
-	erosion   *Perlin       // regional flatness vs mountainousness
-	peaks     *Perlin       // ridged noise for sharp mountain ridgelines
-	variety   *Perlin       // biome sub-variant selector (plains↔sunflower, forest↔flower)
-	river     *Perlin       // river channels (low-|value| bands carve to sea level)
-	cave      *Perlin       // underground biome selector (dripstone/lush/deep_dark)
-	netherN   *netherNoises // nether surface-rule noises (nil in the overworld)
-	caveA     *Perlin       // 3D cave field A
-	caveB     *Perlin       // 3D cave field B (tunnels where A and B both ≈ 0)
-	nether    bool          // nether mode: cavern-sponge assembly, no surface features
-	end       bool          // End mode: floating island + pillar ring, void elsewhere
+	continent *Perlin        // very low frequency: ocean ↔ coast ↔ inland highland
+	hills     *Perlin        // medium frequency: rolling relief
+	detail    *Perlin        // high frequency: surface roughness
+	temp      *Perlin        // temperature field (before altitude adjustment)
+	humid     *Perlin        // humidity field
+	forest    *Perlin        // low frequency: tree density (forests vs clearings)
+	erosion   *Perlin        // regional flatness vs mountainousness
+	peaks     *Perlin        // ridged noise for sharp mountain ridgelines
+	variety   *Perlin        // biome sub-variant selector (plains↔sunflower, forest↔flower)
+	river     *Perlin        // river channels (low-|value| bands carve to sea level)
+	cave      *Perlin        // underground biome selector (dripstone/lush/deep_dark)
+	netherN   *netherNoises  // nether surface-rule noises (nil in the overworld)
+	surfN     *surfaceNoises // overworld surface-rule noises
+	caveA     *Perlin        // 3D cave field A
+	caveB     *Perlin        // 3D cave field B (tunnels where A and B both ≈ 0)
+	nether    bool           // nether mode: cavern-sponge assembly, no surface features
+	end       bool           // End mode: floating island + pillar ring, void elsewhere
 
 	// earth mode (earth.go): terrain heights come from a real elevation model
 	// instead of the noise stack; rivers and caves are disabled (the DEM has
@@ -82,6 +83,7 @@ func NewGenerator(seed int64) *Generator {
 		cave:      NewPerlin(seed ^ 0xE),
 		caveA:     NewPerlin(seed ^ 0x8),
 		caveB:     NewPerlin(seed ^ 0x9),
+		surfN:     newSurfaceNoises(seed),
 	}
 }
 
@@ -328,19 +330,21 @@ func (g *Generator) riverDepth(wx, wz, baseH int) int {
 type column struct {
 	h     int
 	biome *Biome
+	surf  surface // the surface rules' picks for this column
 }
 
 func (g *Generator) columnAt(wx, wz int) column {
-	return column{h: g.Height(wx, wz), biome: g.resolveBiome(wx, wz)}
+	h, b := g.Height(wx, wz), g.resolveBiome(wx, wz)
+	return column{h: h, biome: b, surf: g.surfaceFor(b, wx, wz, h)}
 }
 
 // top/sub read the biome's surface blocks (badlands bands its terracotta).
-func (c column) topBlock() uint32 { return c.biome.Top }
+func (c column) topBlock() uint32 { return c.surf.top }
 func (c column) subBlock(y int) uint32 {
-	if c.biome.Sub == Terracotta { // badlands: coloured terracotta banding by height
-		return badlandsBand(y)
+	if c.surf.badlands { // badlands: coloured terracotta banding by height
+		return badlandsUnder(y, c.h)
 	}
-	return c.biome.Sub
+	return c.surf.under
 }
 
 // badlandsBand returns the terracotta colour for a badlands sub-block at world

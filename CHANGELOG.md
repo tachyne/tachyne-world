@@ -30,6 +30,12 @@ the public history since the project was open-sourced on 2026-07-10.
   biome's temperature and the altitude drop); frozen oceans raise icebergs;
   deserts and swamps hide fossils with coal or diamond in their bones; the
   mountains carry infested stone.
+- **Surface rules.** Floors follow vanilla's overworld surface rules: packed
+  ice and ice on the frozen peaks, powder snow pockets on the slopes and
+  grove, calcite in the stony peaks, gravel on the stony shore, bare stone
+  and coarse dirt where the surface noise says in the windswept biomes and
+  old-growth taigas, terracotta badlands surfaces above y=74, swamp
+  puddles, and grass under the snow in the snowy plains and taiga.
 - **Bone meal, complete.** Every vanilla target answers: tall flowers,
   grass and ferns, flower beds, sea pickles, seagrass, kelp and the vines,
   dripleaves, rooted dirt, bamboo, propagules, the sniffer's crops, stems,
