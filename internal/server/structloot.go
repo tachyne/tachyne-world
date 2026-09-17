@@ -74,6 +74,13 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if t := g.JungleTempleIn(pos.x, pos.z); t.Exists {
+		for _, ch := range t.Chests() {
+			if pos.x == ch[0] && pos.y == ch[1] && pos.z == ch[2] {
+				return "chests/jungle_temple", true
+			}
+		}
+	}
 	if p := g.RuinedPortalIn(pos.x, pos.z); p.Exists {
 		for _, c := range p.Chests {
 			if pos.x == c[0] && pos.y == c[1] && pos.z == c[2] {

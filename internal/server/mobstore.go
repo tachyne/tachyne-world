@@ -52,6 +52,8 @@ type mobFile struct {
 	// Bastions lists the (x,z) of bastion remnants already seeded with their
 	// piglins and hoglins — a cleared bastion stays cleared.
 	Bastions [][2]int `json:"bastions,omitempty"`
+	// Huts lists the (x,z) of swamp huts already seeded with their witch and cat.
+	Huts [][2]int `json:"huts,omitempty"`
 	// EndCities lists the (x,z) of End cities already seeded with their
 	// shulkers and the ship's elytra.
 	EndCities [][2]int `json:"end_cities,omitempty"`
@@ -416,6 +418,23 @@ func (s *mobStore) bastions() [][2]int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Bastions
+}
+
+// recordHuts snapshots the seeded-swamp-hut set for the next flush.
+func (s *mobStore) recordHuts(done map[[2]int32]bool) {
+	hs := make([][2]int, 0, len(done))
+	for k := range done {
+		hs = append(hs, [2]int{int(k[0]), int(k[1])})
+	}
+	s.mu.Lock()
+	s.m.Huts = hs
+	s.mu.Unlock()
+}
+
+func (s *mobStore) huts() [][2]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Huts
 }
 
 // recordEndCities snapshots the seeded-End-city set for the next flush.

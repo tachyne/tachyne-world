@@ -585,6 +585,7 @@ type hub struct {
 	villageGolem  map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
 	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
 	bastionDone   map[[2]int32]bool   // bastion remnants seeded with piglins/hoglins (persisted)
+	hutDone       map[[2]int32]bool   // swamp huts seeded with their witch and cat (persisted)
 	endCityDone   map[[2]int32]bool   // End cities seeded with shulkers + the elytra frame (persisted)
 	oceanRuinDone map[[2]int32]bool   // ocean ruin sites seeded with their drowned (persisted)
 	outpostDone   map[blockPos]bool   // pillager outposts populated this session
@@ -756,6 +757,7 @@ func newHub(w *world.World) *hub {
 		villageGolem:  map[blockPos]uint64{},
 		mansionDone:   map[[2]int32]bool{},
 		bastionDone:   map[[2]int32]bool{},
+		hutDone:       map[[2]int32]bool{},
 		endCityDone:   map[[2]int32]bool{},
 		oceanRuinDone: map[[2]int32]bool{},
 		outpostDone:   map[blockPos]bool{},
@@ -1063,6 +1065,7 @@ func (h *hub) run() {
 				h.populateMonuments(players)   // seed elder guardians when a player reaches a monument
 				h.populateMansions(players)    // seed illagers when a player reaches a woodland mansion
 				h.populateBastions(players)    // seed piglins/hoglins when a player reaches a bastion
+				h.populateSwampHuts(players)   // seed the witch and her cat when a player reaches a swamp hut
 				h.populateEndCities(players)   // seed shulkers + the elytra frame when a player reaches an End city
 				h.populateOceanRuins(players)  // seed the drowned when a player reaches an ocean ruin
 			}
@@ -1157,6 +1160,7 @@ func (h *hub) run() {
 					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
+					h.mobstore.recordHuts(h.hutDone)
 					h.mobstore.recordEndCities(h.endCityDone)
 					h.mobstore.recordOceanRuins(h.oceanRuinDone)
 					h.mobstore.recordRaids(h.raids)
@@ -2048,6 +2052,7 @@ func (h *hub) run() {
 					h.mobstore.recordVillages(h.villageDone)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
+					h.mobstore.recordHuts(h.hutDone)
 					h.mobstore.recordEndCities(h.endCityDone)
 					h.mobstore.recordOceanRuins(h.oceanRuinDone)
 					h.mobstore.recordRaids(h.raids)

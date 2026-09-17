@@ -422,6 +422,9 @@ func (s *Server) Serve() error {
 		for _, b := range s.hub.mobstore.bastions() {
 			s.hub.bastionDone[[2]int32{int32(b[0]), int32(b[1])}] = true // cleared bastions stay cleared
 		}
+		for _, hh := range s.hub.mobstore.huts() {
+			s.hub.hutDone[[2]int32{int32(hh[0]), int32(hh[1])}] = true // a cleared hut stays cleared
+		}
 		for _, c := range s.hub.mobstore.endCities() {
 			s.hub.endCityDone[[2]int32{int32(c[0]), int32(c[1])}] = true // looted cities stay looted
 		}

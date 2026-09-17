@@ -11,6 +11,14 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-17
+
+### Added
+- **Jungle temples, swamp huts, nether fossils.** The mossy pyramid with
+  its tripwire arrow traps, lever puzzle and two chests; the witch's hut on
+  stilts with the witch and her black cat at home; and the soul sand
+  valley's bone-block skeletons, all as vanilla places them.
+
 ## 2026-09-16
 
 ### Added

@@ -93,6 +93,7 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 	g.stampNetherPortals(ch, cx, cz) // ruined portals stand on the cavern floors too
 	g.stampBastions(ch, cx, cz)
 	g.stampFortress(ch, cx, cz)
+	g.stampNetherFossils(ch, cx, cz) // bone-block fossils in the soul sand valley
 	biome := g.netherBiome(int(cx)*16+8, int(cz)*16+8)
 	for s := 0; s < len(ch.Sections); s++ {
 		ch.Biomes[s] = biome

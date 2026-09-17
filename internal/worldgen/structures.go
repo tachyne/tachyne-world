@@ -377,6 +377,8 @@ func (g *Generator) stampStructures(ch *Chunk, cx, cz int32) {
 	g.stampIgloo(ch, cx, cz)
 	g.stampMansion(ch, cx, cz)
 	g.stampDesertWell(ch, cx, cz)
-	g.stampFossils(ch, cx, cz)  // FossilFeature: bones in the desert and swamp rock
-	g.stampIcebergs(ch, cx, cz) // IcebergFeature: the frozen oceans' bergs
+	g.stampJungleTemples(ch, cx, cz) // JungleTemplePiece: the mossy pyramid and its traps
+	g.stampSwampHuts(ch, cx, cz)     // SwampHutPiece: the witch's hut on stilts
+	g.stampFossils(ch, cx, cz)       // FossilFeature: bones in the desert and swamp rock
+	g.stampIcebergs(ch, cx, cz)      // IcebergFeature: the frozen oceans' bergs
 }

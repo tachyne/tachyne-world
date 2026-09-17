@@ -259,5 +259,11 @@ func (h *hub) structureAt(x, z int) string {
 	if c := g.TrialChamberIn(x, z); c.Exists && math.Hypot(float64(x-c.X), float64(z-c.Z)) <= 60 {
 		return "trial_chambers"
 	}
+	if t := g.SwampHutIn(x, z); t.Exists && x >= t.X-1 && x <= t.X+9 && z >= t.Z-1 && z <= t.Z+9 {
+		return "swamp_hut"
+	}
+	if t := g.JungleTempleIn(x, z); t.Exists && x >= t.X && x <= t.X+15 && z >= t.Z && z <= t.Z+15 {
+		return "jungle_pyramid"
+	}
 	return ""
 }
