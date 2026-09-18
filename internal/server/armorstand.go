@@ -178,6 +178,9 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 	}
 	delete(h.armorStands, st.eid)
 	h.toNearbyEv(players, st.dim, st.x, st.z, entGone(st.eid))
+	if !h.rules.EntityDrops {
+		return // gamerule entity_drops
+	}
 	if t == nil || t.gamemode != gmCreative {
 		if it := h.spawnItem(players, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil {
 			_ = it

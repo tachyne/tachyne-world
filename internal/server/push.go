@@ -253,7 +253,7 @@ func (h *hub) pushMobs(players map[int32]*tracked) {
 		// maxEntityCramming: vanilla hurts an entity sharing its box with
 		// maxCramming-1 others or more. Rare outside a packed pen, and exactly
 		// what makes one work.
-		if crowd > maxEntityCramming-1 && m.cramCD == 0 && h.rng.Intn(4) == 0 {
+		if limit := h.rules.MaxCramming; limit > 0 && crowd > limit-1 && m.cramCD == 0 && h.rng.Intn(4) == 0 {
 			m.cramCD = crammingCD
 			h.hurtMobOf(players, m, crammingDamage, dtCramming)
 		}

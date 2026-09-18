@@ -96,7 +96,7 @@ func TestExplosionAttenuatesAndShields(t *testing.T) {
 			w.SetBlock(-4, 180+dy, dz, dirt)
 		}
 	}
-	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 4, 4)
+	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 4, 4, blastTNT)
 
 	if w.At(3, 180, 0) != obsidian {
 		t.Error("obsidian should survive a size-4 blast")
@@ -122,7 +122,7 @@ func TestExplosionStaysInItsDimension(t *testing.T) {
 			nw.SetBlock(dx, 180, dz, dirt)
 		}
 	}
-	h.explodeIn(players, 1, 0.5, 180.5, 0.5, 4, 4)
+	h.explodeIn(players, 1, 0.5, 180.5, 0.5, 4, 4, blastTNT)
 	if nw.At(1, 180, 0) != worldgen.Air {
 		t.Error("the nether explosion left its own blocks standing")
 	}

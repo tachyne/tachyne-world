@@ -84,7 +84,7 @@ func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	if !h.rules.MobGriefing {
 		radius = 0 // gamerule: creepers hurt but leave the terrain alone
 	}
-	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, power)
+	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, power, blastMob)
 }
 
 // creeperStateMeta builds set_entity_data for the creeper fuse state (index 16,

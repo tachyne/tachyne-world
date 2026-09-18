@@ -35,7 +35,7 @@ func TestExplosionDamageModel(t *testing.T) {
 		pl.health = 20
 		drainEvents(pl)
 	}
-	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 0, 1)
+	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 0, 1, blastMob)
 	want := explosionDamage(1, explosionImpact(1, 0.5, 180.5, 0.5, 1.5, 180, 0.5, 1)) // ≈5.45
 	if d := 20 - open.health; math.Abs(float64(d)-want) > 0.05 {
 		t.Fatalf("in the open a block off: took %v, want %.2f", d, want)
@@ -77,7 +77,7 @@ func TestExplosionHurtsMobs(t *testing.T) {
 	players := map[int32]*tracked{}
 	m := h.spawnMob(players, entityCow, 1.5, 180, 0.5)
 	hp := m.health
-	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 0, 1)
+	h.explodeIn(players, 0, 0.5, 180.5, 0.5, 0, 1, blastMob)
 	if d := hp - m.health; d < 5 || d > 6 {
 		t.Fatalf("the cow took %v, want ~5.5", d)
 	}

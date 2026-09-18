@@ -44,6 +44,18 @@ the public history since the project was open-sourced on 2026-07-10.
   burning, as vanilla's does, and a blast throws any primed charge in
   reach — so a TNT cannon fires. Its blast goes off at vanilla's height
   on the charge. It sat where it was lit before.
+- **Thirteen more game rules.** `/gamerule` now takes freeze_damage,
+  spread_vines, spawn_monsters, spawner_blocks_work (dungeon and trial
+  spawners), forgive_dead_players (a neutral mob angry at you calms when
+  you die), ender_pearls_vanish_on_death (your pearls in flight go with
+  you), entity_drops (boats, minecarts, armour stands and item frames
+  leave nothing when off), the three explosion drop-decay rules by what
+  set the blast off — and, as vanilla's defaults have it, a TNT blast now
+  drops every block it breaks while a creeper's or a bed's drops one in
+  `power` — max_entity_cramming and respawn_radius (a death with no bed
+  puts you down at a random spot within ten blocks of the spawn), plus
+  spawn_wandering_traders. All with vanilla's defaults; the old camelCase
+  spellings are accepted.
 - **Villagers yield a workstation.** An unemployed villager on its way to
   a workstation gives it up to a neighbour who already holds that trade
   but lost its own block, and that villager walks there instead, as

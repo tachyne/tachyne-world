@@ -51,6 +51,7 @@ func TestRespawnFallsBackWhenBedGone(t *testing.T) {
 	h.world.SetBlock(4, 70, 4, worldgen.Air) // bed destroyed
 	h.world.SetBlock(tBedHead.x, tBedHead.y, tBedHead.z, worldgen.Air)
 	h.damageOf(players, pl, 25, dtGeneric)
+	h.rules.RespawnRadius = 0 // the exact spawn (the default fuzzes it by up to ten)
 	h.respawn(pl)
 	if pl.x != 0.5 || pl.z != 0.5 {
 		t.Fatalf("missing bed should fall back to world spawn, got (%v,%v)", pl.x, pl.z)

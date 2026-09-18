@@ -41,8 +41,8 @@ func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, sp
 	var caps [catCount]int
 	var active [catCount]bool
 	for cat := 0; cat < catCount; cat++ {
-		if cat == catMonster && h.rules.Difficulty == diffPeaceful {
-			continue
+		if cat == catMonster && (h.rules.Difficulty == diffPeaceful || !h.rules.SpawnMonsters) {
+			continue // peaceful, or gamerule spawn_monsters off
 		}
 		if cat == catCreature && !spawnPersistent {
 			continue // persistent category only every 400 ticks

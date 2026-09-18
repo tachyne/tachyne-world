@@ -34,6 +34,19 @@ var gameruleAlias = map[string]string{
 	"playersSleepingPercentage": "players_sleeping_percentage",
 	"locatorBar":                "locator_bar",
 	"doFireTick":                "fire_ticks",
+	"doTraderSpawning":          "spawn_wandering_traders",
+	"freezeDamage":              "freeze_damage",
+	"doVinesSpread":             "spread_vines",
+	"spawnMonsters":             "spawn_monsters",
+	"spawnerBlocksEnabled":      "spawner_blocks_work",
+	"forgiveDeadPlayers":        "forgive_dead_players",
+	"enderPearlsVanishOnDeath":  "ender_pearls_vanish_on_death",
+	"doEntityDrops":             "entity_drops",
+	"blockExplosionDropDecay":   "block_explosion_drop_decay",
+	"mobExplosionDropDecay":     "mob_explosion_drop_decay",
+	"tntExplosionDropDecay":     "tnt_explosion_drop_decay",
+	"maxEntityCramming":         "max_entity_cramming",
+	"spawnRadius":               "respawn_radius",
 }
 
 // booleanRules is every boolean rule tachyne enforces, canonical names.
@@ -47,10 +60,16 @@ var booleanRules = []string{
 	"spawn_phantoms", "spawn_patrols", "spawn_wardens", "raids",
 	"tnt_explodes", "water_source_conversion", "lava_source_conversion",
 	"player_movement_check", "elytra_movement_check", "pvp",
+	// Added 2026-09-18 — the rest of vanilla's set the engine has a
+	// mechanic for.
+	"freeze_damage", "spread_vines", "spawn_monsters", "spawner_blocks_work",
+	"forgive_dead_players", "ender_pearls_vanish_on_death", "entity_drops",
+	"block_explosion_drop_decay", "mob_explosion_drop_decay",
+	"tnt_explosion_drop_decay", "spawn_wandering_traders",
 }
 
 // numericRules is the same for the rules that take a number.
-var numericRules = []string{"random_tick_speed", "players_sleeping_percentage"}
+var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius"}
 
 // canonicalRule resolves either spelling to the canonical name, and reports
 // whether it is a rule at all.

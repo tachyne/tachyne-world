@@ -57,7 +57,7 @@ func TestBlastPushesPrimedTNT(t *testing.T) {
 	h.rules.TNTExplodes = false
 	h.tnt = append(h.tnt, &primedTNT{eid: h.allocEID(), dim: 0, x: 1.5, y: 180, z: 0.5, fuse: 80, onGround: true})
 	pt := h.tnt[0]
-	h.explodeIn(players, 0, 0.5, 180, 0.5, 0, 4)
+	h.explodeIn(players, 0, 0.5, 180, 0.5, 0, 4, blastTNT)
 	if pt.vx <= 0.5 {
 		t.Fatalf("a power-4 blast a block off should throw the charge east hard: vx=%v", pt.vx)
 	}

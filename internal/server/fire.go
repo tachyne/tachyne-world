@@ -171,15 +171,38 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 		if !h.rules.TNTExplodes {
 			continue // gamerule tnt_explodes: the fuse burns out and nothing happens
 		}
-		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius)
+		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius, blastTNT)
 	}
 }
 
 // explodeAt is the shared blast: crater (respecting blast resistance,
 // chain-priming TNT), boom + particle, and falloff damage with knockback for
 // players and mobs. Creepers and TNT both detonate through here.
-func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius int, power float64) {
-	h.explodeIn(players, 0, cx, cy, cz, radius, power)
+func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius int, power float64, kind blastKind) {
+	h.explodeIn(players, 0, cx, cy, cz, radius, power, kind)
+}
+
+// blastKind is what set the blast off, for the drop-decay rules (Level.
+// ExplosionInteraction): a TNT blast drops everything by default, a mob's
+// or a block's one in `radius`.
+type blastKind int
+
+const (
+	blastTNT   blastKind = iota // TNT, a TNT cart
+	blastMob                    // a creeper, the wither, a fireball
+	blastBlock                  // a bed or anchor, an end crystal
+)
+
+// dropDecay reports whether this kind's blast keeps only 1/radius of the
+// drops (the *_explosion_drop_decay rules).
+func (h *hub) dropDecay(kind blastKind) bool {
+	switch kind {
+	case blastTNT:
+		return h.rules.TNTDropDecay
+	case blastMob:
+		return h.rules.MobDropDecay
+	}
+	return h.rules.BlockDropDecay
 }
 
 // explodeIn is the explosion, in the dimension it actually happened in.
@@ -196,15 +219,15 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius i
 // radius is the crater's power (0: no crater — mobGriefing off, or a purely
 // cosmetic blast); power is the explosion's vanilla radius for what it does
 // to entities (TNT 4, a creeper 3, a bed 5; 0 hurts nothing).
-func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64) {
-	h.explodeTyped(players, dim, cx, cy, cz, radius, power, dtExplosion, deathCause{key: causeExplosion})
+func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64, kind blastKind) {
+	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{key: causeExplosion})
 }
 
 // explodeTyped is explodeIn with the damage type and death message spelled out
 // — a bed detonating in the Nether is bad_respawn_point, not a generic blast,
 // and the two carry different protection maths and different death messages.
 func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float64,
-	radius int, power float64, dt dmgType, cause deathCause) {
+	radius int, power float64, kind blastKind, dt dmgType, cause deathCause) {
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
@@ -222,8 +245,9 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
-			// vanilla yields 1/radius of the block's drops.
-			if h.rng.Intn(max(1, radius)) == 0 && worldgen.HarvestableBy(st, 0) {
+			// vanilla yields 1/radius of the block's drops when the kind's
+			// drop-decay rule is on (TNT's is off: it drops everything).
+			if (!h.dropDecay(kind) || h.rng.Intn(max(1, radius)) == 0) && worldgen.HarvestableBy(st, 0) {
 				for _, d := range h.rollDrops(st) {
 					h.spawnItemIn(players, dim, d.item, d.count,
 						float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)

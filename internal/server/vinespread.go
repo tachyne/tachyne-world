@@ -22,6 +22,9 @@ var horizontalFaces = []struct {
 
 // tickVine returns whether the block was a vine (handled).
 func (h *hub) tickVine(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	if !h.rules.SpreadVines { // gamerule spread_vines: vines keep still
+		return isVineBlock(state)
+	}
 	if !isVineBlock(state) {
 		return false
 	}

@@ -474,7 +474,8 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true
-		h.recordDeath(t)             // ServerPlayer.die: the last death location
+		h.recordDeath(t) // ServerPlayer.die: the last death location
+		h.deathForgiveness(players, t)
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)
 		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book

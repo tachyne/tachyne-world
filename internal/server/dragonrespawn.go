@@ -125,7 +125,7 @@ func (h *hub) tickDragonRespawn(players map[int32]*tracked) {
 					h.toDimEv(players, 2, entGone(eid))
 				}
 			}
-			h.explodeIn(players, 2, float64(px)+0.5, float64(top), float64(pz)+0.5, 0, 0)
+			h.explodeIn(players, 2, float64(px)+0.5, float64(top), float64(pz)+0.5, 0, 0, blastBlock)
 		}
 	case respawnDragon:
 		switch {
@@ -135,7 +135,7 @@ func (h *hub) tickDragonRespawn(players map[int32]*tracked) {
 			for _, c := range r.crystals {
 				delete(h.crystals, c.eid)
 				h.toDimEv(players, 2, entGone(c.eid))
-				h.explodeIn(players, 2, c.x, c.y, c.z, 0, 0)
+				h.explodeIn(players, 2, c.x, c.y, c.z, 0, 0, blastBlock)
 			}
 			h.dragonRespawn = nil
 			// setRespawnStage(END): dragonKilled = false, createNewDragon —

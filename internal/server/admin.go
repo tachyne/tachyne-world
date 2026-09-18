@@ -69,7 +69,21 @@ type worldRules struct {
 	SpawnerMobs map[string]string `json:"spawnerMobs,omitempty"`
 	// WanderingTraderSpawner state (ServerLevelData): the countdown to the
 	// next roll and the rising chance; zero for both means "never rolled".
-	DoTraderSpawning  bool `json:"doTraderSpawning"`
+	DoTraderSpawning bool `json:"doTraderSpawning"`
+	// Added 2026-09-18 — vanilla's remaining rules the engine has a mechanic
+	// for. Missing keys in an older settings.json keep the defaults below.
+	FreezeDamage      bool `json:"freezeDamage"`
+	SpreadVines       bool `json:"spreadVines"`
+	SpawnMonsters     bool `json:"spawnMonsters"`
+	SpawnerBlocks     bool `json:"spawnerBlocksWork"`
+	ForgiveDead       bool `json:"forgiveDeadPlayers"`
+	PearlsVanish      bool `json:"enderPearlsVanishOnDeath"`
+	EntityDrops       bool `json:"entityDrops"`
+	BlockDropDecay    bool `json:"blockExplosionDropDecay"`
+	MobDropDecay      bool `json:"mobExplosionDropDecay"`
+	TNTDropDecay      bool `json:"tntExplosionDropDecay"`
+	MaxCramming       int  `json:"maxEntityCramming"`
+	RespawnRadius     int  `json:"respawnRadius"`
 	TraderSpawnDelay  int  `json:"wanderingTraderSpawnDelay,omitempty"`
 	TraderSpawnChance int  `json:"wanderingTraderSpawnChance,omitempty"`
 }
@@ -82,7 +96,11 @@ func defaultRules() worldRules {
 		RandomTicks: 3, SleepPercent: 100, LocatorBar: true,
 		SpawnPhantoms: true, SpawnPatrols: true, SpawnWardens: true, Raids: true,
 		TNTExplodes: true, WaterSourceCnv: true, LavaSourceCnv: false,
-		MovementCheck: true, ElytraCheck: true, PvP: true}
+		MovementCheck: true, ElytraCheck: true, PvP: true,
+		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
+		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
+		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
+		MaxCramming: maxEntityCramming, RespawnRadius: 10}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -318,6 +336,32 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.ImmediateResp = e.on
 	case "random_tick_speed":
 		h.rules.RandomTicks = e.num
+	case "max_entity_cramming":
+		h.rules.MaxCramming = max(0, e.num)
+	case "respawn_radius":
+		h.rules.RespawnRadius = max(0, e.num)
+	case "freeze_damage":
+		h.rules.FreezeDamage = e.on
+	case "spread_vines":
+		h.rules.SpreadVines = e.on
+	case "spawn_monsters":
+		h.rules.SpawnMonsters = e.on
+	case "spawner_blocks_work":
+		h.rules.SpawnerBlocks = e.on
+	case "forgive_dead_players":
+		h.rules.ForgiveDead = e.on
+	case "ender_pearls_vanish_on_death":
+		h.rules.PearlsVanish = e.on
+	case "entity_drops":
+		h.rules.EntityDrops = e.on
+	case "block_explosion_drop_decay":
+		h.rules.BlockDropDecay = e.on
+	case "mob_explosion_drop_decay":
+		h.rules.MobDropDecay = e.on
+	case "tnt_explosion_drop_decay":
+		h.rules.TNTDropDecay = e.on
+	case "spawn_wandering_traders":
+		h.rules.DoTraderSpawning = e.on
 	case "players_sleeping_percentage":
 		h.rules.SleepPercent = e.num
 	case "locator_bar":

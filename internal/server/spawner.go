@@ -20,7 +20,7 @@ var dungeonMobs = [3]int{entityZombie, entitySkeleton, entitySpider}
 
 // updateSpawners runs on a 40-tick cadence from the hub loop.
 func (h *hub) updateSpawners(players map[int32]*tracked) {
-	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful {
+	if !h.rules.DoMobSpawning || h.rules.Difficulty == diffPeaceful || !h.rules.SpawnerBlocks {
 		return
 	}
 	gen := h.world.Gen()

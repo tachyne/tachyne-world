@@ -90,7 +90,7 @@ func (h *hub) tickFreezing(players map[int32]*tracked, t *tracked) {
 	if t.frozen != was && (t.frozen%5 == 0 || t.frozen == freezeTicks) {
 		t.p.trySendEv(metaEv(frozenMetadata(t.p.eid, t.frozen)))
 	}
-	if t.frozen >= freezeTicks && h.tick.Load()%freezeHurtEvery == 0 {
+	if t.frozen >= freezeTicks && h.tick.Load()%freezeHurtEvery == 0 && h.rules.FreezeDamage {
 		h.hurtBy(players, t, freezeDamage, dtFreeze, deathCause{key: causeFreeze})
 	}
 }

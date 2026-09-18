@@ -137,7 +137,7 @@ func isTrialSpawner(s uint32) bool { return s >= trialSpawnerMin && s <= trialSp
 // still standing in them. Chambers are a pure function of the seed, so this
 // needs no block scan — the same trick updateSpawners uses for dungeons.
 func (h *hub) updateTrialSpawners(players map[int32]*tracked) {
-	if h.rules.Difficulty == diffPeaceful {
+	if h.rules.Difficulty == diffPeaceful || !h.rules.SpawnerBlocks {
 		return
 	}
 	gen := h.world.Gen()

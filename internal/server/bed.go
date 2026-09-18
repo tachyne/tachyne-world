@@ -370,7 +370,7 @@ func (h *hub) blowUpRespawnBlock(players map[int32]*tracked, t *tracked, pos blo
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 	}
 	h.explodeTyped(players, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5,
-		badRespawnPower, badRespawnPower, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
+		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
 }
 
 const (
@@ -438,6 +438,13 @@ func (h *hub) respawnPoint(players map[int32]*tracked, t *tracked) (float64, flo
 		}
 	}
 	x, y, z := h.worldSpawn()
+	if r := h.rules.RespawnRadius; r > 0 && h.shardOf == nil {
+		// respawn_radius: a random spot within the radius of the spawn, on
+		// the surface there (ServerPlayer.fudgeSpawnLocation).
+		x += float64(h.rng.Intn(2*r+1) - r)
+		z += float64(h.rng.Intn(2*r+1) - r)
+		y = h.world.SurfaceY(int(math.Floor(x)), int(math.Floor(z)))
+	}
 	return x, y, z, dimOverworld
 }
 

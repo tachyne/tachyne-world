@@ -272,7 +272,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)
 			}
 			if a.explode > 0 { // ghast/wither fireball detonates on impact
-				h.explodeIn(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode))
+				h.explodeIn(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob)
 			}
 			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing
 				a.returning = true

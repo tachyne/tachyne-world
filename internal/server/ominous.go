@@ -32,7 +32,7 @@ const (
 	weavingCubeR     = 1   // BlockPos.randomInCube radius
 	weavingTries     = 15  // how many candidate cells vanilla walks
 
-	maxEntityCramming = 24 // vanilla's game-rule default, which we do not expose
+	maxEntityCramming = 24 // the max_entity_cramming default
 )
 
 // ominousOnDeath runs the three death-triggered ominous effects. Called from
