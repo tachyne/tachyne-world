@@ -233,7 +233,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				if a.breaks { // snowballs/eggs shatter
 					hit = true
 					if a.knock > 0 { // a wind charge bursts a quarter block off the face it struck
-						h.windBurst(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter)
+						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
 						break
 					}
 					h.spawnParticles(players, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
@@ -323,7 +323,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
 			h.knockback(t, a.x, a.z)
 			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
-			h.windBurst(players, a.dim, px, py, pz, a.shooter)
+			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
 			return true
 		}
 		if a.dmg > 0 {
@@ -410,7 +410,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if m.health <= 0 {
 				h.killMob(players, m)
 			}
-			h.windBurst(players, a.dim, px, py, pz, a.shooter)
+			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
 			return true
 		}
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {

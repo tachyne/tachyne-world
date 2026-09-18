@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
@@ -103,5 +104,48 @@ func TestPearlCooldown(t *testing.T) {
 	h.throwPearl(players, pl)
 	if pl.inv.slots[0].count != 1 {
 		t.Fatalf("the cooldown out, the next pearl should fly: count=%d", pl.inv.slots[0].count)
+	}
+}
+
+// A gust at your feet launches you: the explosion's shove, straight up from
+// the eyes at nearly the full 1.22, and nothing for someone out of reach.
+func TestWindBurstLaunchesPlayer(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 80, 0.5
+	far := testTracked()
+	far.p.eid = 2
+	far.x, far.y, far.z = 6.5, 80, 0.5
+	players := map[int32]*tracked{1: pl, 2: far}
+	h.playersRef = players
+	drainEvents(pl)
+	drainEvents(far)
+	h.windBurst(players, 0, 0.5, 80, 0.5, 0)
+	var got []attachproto.Velocity
+	for done := false; !done; {
+		select {
+		case pkt := <-pl.p.out:
+			if v, ok := pkt.ev.(attachproto.Velocity); ok {
+				got = append(got, v)
+			}
+		default:
+			done = true
+		}
+	}
+	if len(got) != 1 || got[0].VY < 1.2 || got[0].VY > 1.23 || got[0].VX != 0 || got[0].VZ != 0 {
+		t.Fatalf("launch %+v, want straight up at 1.22", got)
+	}
+	if pl.launchCause != "wind_charge" {
+		t.Error("the launch should count as a wind charge for fall_after_explosion")
+	}
+	for done := false; !done; {
+		select {
+		case pkt := <-far.p.out:
+			if _, ok := pkt.ev.(attachproto.Velocity); ok {
+				t.Fatal("a player six blocks off was pushed")
+			}
+		default:
+			done = true
+		}
 	}
 }
