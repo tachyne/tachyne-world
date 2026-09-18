@@ -66,3 +66,46 @@ func TestVillagerTakesAndLosesAJob(t *testing.T) {
 		t.Error("an experienced librarian was fired")
 	}
 }
+
+// YieldJobSite: an unemployed villager walking to a composter gives it up
+// to a farmer nearby who lost its own, and the farmer walks there instead.
+func TestVillagerYieldsJobSite(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.world
+	for x := -6; x <= 12; x++ {
+		for z := -6; z <= 6; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	pl.x, pl.y, pl.z = 40.5, 180, 0.5
+	h.dayTime.Store(3000)
+	h.tick.Store(1000)
+	composter := worldgen.BlockID("composter")
+	w.SetBlock(5, 180, 0, composter)
+	u := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
+	u.profession, u.work, u.jobSearchAt = profUnemployed, blockPos{}, 0
+	h.villagerJobTick(players, u)
+	if u.jobPos != (blockPos{5, 180, 0}) {
+		t.Fatalf("no potential job site: %+v", u.jobPos)
+	}
+	farmer := h.spawnMob(players, entityVillager, 0.5, 180, 3.5)
+	farmer.work, farmer.jobPos = blockPos{}, blockPos{}
+	for i, n := range professionNames {
+		if n == "farmer" {
+			farmer.profession = i
+		}
+	}
+	h.villagerJobTick(players, u)
+	if u.jobPos != (blockPos{}) || farmer.jobPos != (blockPos{5, 180, 0}) {
+		t.Fatalf("the composter should pass to the farmer: unemployed %+v farmer %+v", u.jobPos, farmer.jobPos)
+	}
+	// A farmer that already has a workstation wants nothing.
+	u.jobPos, farmer.jobPos, farmer.work = blockPos{5, 180, 0}, blockPos{}, blockPos{7, 180, 0}
+	h.villagerJobTick(players, u)
+	if u.jobPos != (blockPos{5, 180, 0}) {
+		t.Error("a farmer at work took a second composter")
+	}
+}

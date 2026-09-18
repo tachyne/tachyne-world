@@ -109,10 +109,13 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 		}
 		return
 	}
-	// Walking to a potential site: GoToPotentialJobSite's stop validates it.
+	// Walking to a potential site: GoToPotentialJobSite's stop validates it,
+	// and an unemployed villager yields it to a neighbour whose trade it is.
 	if m.jobPos != (blockPos{}) {
 		if p := jobBlockProfession(w.At(m.jobPos.x, m.jobPos.y, m.jobPos.z)); p < 0 || (m.profession >= 0 && p != m.profession) || h.jobSiteClaimed(m.jobPos, m) {
 			m.jobPos = blockPos{}
+		} else if m.profession < 0 {
+			h.yieldJobSite(m, p)
 		}
 		return
 	}
@@ -177,4 +180,26 @@ func (h *hub) villagerJobWalk(players map[int32]*tracked, m *mob) bool {
 	}
 	m.vx, m.vz = 0, 0
 	return true
+}
+
+// yieldJobSite is YieldJobSite: an unemployed villager on its way to a
+// workstation gives it up to the nearest villager in sensor range that
+// already holds that trade and has no workstation of its own (one that
+// lost its block) — the site becomes that villager's potential job site
+// instead, unless it is already walking to one.
+func (h *hub) yieldJobSite(m *mob, prof int) {
+	r := m.followRange()
+	for _, o := range h.mobs {
+		if o == m || o.etype != entityVillager || o.dying > 0 || o.dim != m.dim || o.baby {
+			continue
+		}
+		if o.profession != prof || o.jobPos != (blockPos{}) || o.work != (blockPos{}) {
+			continue
+		}
+		if math.Abs(o.x-m.x) > r || math.Abs(o.y-m.y) > r || math.Abs(o.z-m.z) > r {
+			continue
+		}
+		o.jobPos, m.jobPos = m.jobPos, blockPos{}
+		return
+	}
 }
