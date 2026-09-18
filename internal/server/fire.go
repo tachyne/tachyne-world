@@ -23,8 +23,7 @@ const (
 
 	tntFuseTicks     = 80 // 4 s (vanilla)
 	tntRadius        = 4  // TNT is power 4 (creeper 3)
-	tntMaxDamage     = 40
-	metaIndexTNTFuse = 8 // primed-TNT metadata: fuse ticks (VarInt)
+	metaIndexTNTFuse = 8  // primed-TNT metadata: fuse ticks (VarInt)
 
 	blastResistCap = 100 // (unused since the ray model — kept for the drop-chance callers)
 
@@ -158,7 +157,7 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 			if !h.rules.TNTExplodes {
 				continue // gamerule tnt_explodes: the fuse burns out and nothing happens
 			}
-			h.explodeIn(players, t.dim, t.x, t.y+0.5, t.z, tntRadius, tntMaxDamage)
+			h.explodeIn(players, t.dim, t.x, t.y+0.5, t.z, tntRadius, tntRadius)
 		} else {
 			h.tnt = append(h.tnt, t)
 		}
@@ -168,8 +167,8 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 // explodeAt is the shared blast: crater (respecting blast resistance,
 // chain-priming TNT), boom + particle, and falloff damage with knockback for
 // players and mobs. Creepers and TNT both detonate through here.
-func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, maxDamage int) {
-	h.explodeIn(players, 0, cx, cy, cz, radius, maxDamage)
+func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius int, power float64) {
+	h.explodeIn(players, 0, cx, cy, cz, radius, power)
 }
 
 // explodeIn is the explosion, in the dimension it actually happened in.
@@ -182,15 +181,19 @@ func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius, 
 // with a resistance cap could not express any of that: every block inside the
 // radius went, every block outside survived, and a wall of obsidian protected
 // nothing beyond its own cell.
-func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius, maxDamage int) {
-	h.explodeTyped(players, dim, cx, cy, cz, radius, maxDamage, dtExplosion, deathCause{key: causeExplosion})
+//
+// radius is the crater's power (0: no crater — mobGriefing off, or a purely
+// cosmetic blast); power is the explosion's vanilla radius for what it does
+// to entities (TNT 4, a creeper 3, a bed 5; 0 hurts nothing).
+func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64) {
+	h.explodeTyped(players, dim, cx, cy, cz, radius, power, dtExplosion, deathCause{key: causeExplosion})
 }
 
 // explodeTyped is explodeIn with the damage type and death message spelled out
 // — a bed detonating in the Nether is bad_respawn_point, not a generic blast,
 // and the two carry different protection maths and different death messages.
 func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float64,
-	radius, maxDamage int, dt dmgType, cause deathCause) {
+	radius int, power float64, dt dmgType, cause deathCause) {
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
@@ -217,7 +220,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			}
 		}
 	}
-	h.explodeHurt(players, dim, cx, cy, cz, radius, maxDamage, dt, cause)
+	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
 }
 
 // blastPositions is the crater ray-cast on its own: the set of blocks an
@@ -262,52 +265,6 @@ func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blo
 		}
 	}
 	return hit
-}
-
-// explodeHurt is the blast's second half: the TNT carts it lights and the
-// falloff damage + shove on everything within reach.
-func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz float64,
-	radius, maxDamage int, dt dmgType, cause deathCause) {
-	rangeF := float64(radius) + 2
-	if radius <= 0 {
-		rangeF = blastRange // no crater, full hurt (mobGriefing off)
-	}
-	for _, v := range h.vehicles { // a blast lights the TNT carts it reaches
-		if v.dim == dim && v.etype == entityTntMinecart && v.fuse < 0 && dist3(v.x, v.y, v.z, cx, cy, cz) < rangeF {
-			h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
-		}
-	}
-	for _, t := range players {
-		if t.dim != dim {
-			continue
-		}
-		d := dist3(t.x, t.y, t.z, cx, cy, cz)
-		if d >= rangeF {
-			continue
-		}
-		dmg := float32(maxDamage) * float32(1-d/rangeF)
-		h.hurtFrom(players, t, dmg, dt, cause, from(cx, cz))
-		// Blast Protection braces you against the shove as well as the burn.
-		// explosion is tagged no_knockback, which looks like a contradiction
-		// and is not: that tag suppresses the ordinary shove a hit gives, and
-		// a blast then applies its own, scaled by distance. Both would be
-		// double-counting.
-		h.knockbackScaled(t, cx, cz, t.explosionKnockScale())
-	}
-	for _, om := range h.mobs {
-		if om.dim != dim {
-			continue
-		}
-		d := dist3(om.x, om.y, om.z, cx, cy, cz)
-		if d >= rangeF || om.dying > 0 {
-			continue
-		}
-		om.hurtKind(float64(maxDamage)*(1-d/rangeF), dt)
-		if om.health <= 0 {
-			h.killMob(players, om)
-		}
-	}
-	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
 }
 
 // updateFire is the fire block's scheduled step — a reimplementation of the

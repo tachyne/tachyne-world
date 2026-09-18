@@ -20,10 +20,8 @@ const (
 
 	metaIndexCreeperState = 16 // creeper metadata: fuse state (-1 idle, +1 primed)
 
-	blastRadius     = 3   // crater: blocks destroyed within this sphere
-	blastRange      = 6.0 // entity damage falls off linearly to zero here
-	blastMaxDamage  = 30  // point-blank damage before armor (fatal unarmored — vanilla-ish)
-	blastDropChance = 30  // % of destroyed blocks that drop their loot (vanilla ~1/power)
+	blastRadius     = 3  // Creeper.explosionRadius: crater and hurt alike
+	blastDropChance = 30 // % of destroyed blocks that drop their loot (vanilla ~1/power)
 )
 
 var (
@@ -78,14 +76,15 @@ func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	h.gridDirty()
 	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
-	radius, maxDmg := blastRadius, blastMaxDamage
+	radius := blastRadius
 	if m.charged { // Creeper.explodeCreeper: a charged creeper blasts at twice the radius
-		radius, maxDmg = blastRadius*2, blastMaxDamage*2
+		radius = blastRadius * 2
 	}
+	power := float64(radius)
 	if !h.rules.MobGriefing {
 		radius = 0 // gamerule: creepers hurt but leave the terrain alone
 	}
-	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, maxDmg)
+	h.explodeIn(players, m.dim, m.x, m.y+0.5, m.z, radius, power)
 }
 
 // creeperStateMeta builds set_entity_data for the creeper fuse state (index 16,

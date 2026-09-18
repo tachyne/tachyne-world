@@ -370,12 +370,11 @@ func (h *hub) blowUpRespawnBlock(players map[int32]*tracked, t *tracked, pos blo
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 	}
 	h.explodeTyped(players, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5,
-		badRespawnPower, badRespawnDamage, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
+		badRespawnPower, badRespawnPower, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
 }
 
 const (
-	badRespawnPower  = 5  // BedBlock/RespawnAnchorBlock explode(): radius 5.0F
-	badRespawnDamage = 50 // point-blank, before armour — scaled from TNT's 4/40
+	badRespawnPower = 5 // BedBlock/RespawnAnchorBlock explode(): radius 5.0F
 )
 
 // bedHalves returns the clicked bed cell plus its other half, found through the

@@ -201,7 +201,7 @@ func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float
 	speed := math.Min(math.Sqrt(speedSqr), 5)
 	power := 4 + h.rng.Float64()*1.5*speed
 	h.blastSpareRails = true
-	h.explodeIn(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), int(power*10))
+	h.explodeIn(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), power)
 	h.blastSpareRails = false
 }
 

@@ -90,7 +90,7 @@ func TestExplosionRespectsBlastResistance(t *testing.T) {
 		t.Fatal("obsidian must be placeable")
 	}
 	w.SetBlock(lx, y, lz, st)
-	h.explodeAt(players, float64(lx)+0.5, float64(y)+1, float64(lz)+0.5, 3, 20)
+	h.explodeAt(players, float64(lx)+0.5, float64(y)+1, float64(lz)+0.5, 3, 3)
 	if w.At(lx, y, lz) != st {
 		t.Fatal("obsidian must survive an explosion")
 	}

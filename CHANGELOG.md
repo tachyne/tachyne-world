@@ -61,6 +61,18 @@ the public history since the project was open-sourced on 2026-07-10.
   villager; a lost workstation costs the job, and the profession too if it
   never traded, as vanilla's do.
 
+### Changed
+- **Explosions hurt the way vanilla's do.** What a blast does to whoever
+  stands in it now follows vanilla's model: everything within twice the
+  power is a candidate, the blast's view of it (rays from a grid over its
+  body to the centre, through blocks) scales the damage and the shove — a
+  wall shields, a corner half-shields — and the damage is vanilla's curve
+  (a TNT blast at your feet is 57, at the edge 1) with the shove from the
+  eyes in three dimensions, scaled by Blast Protection. Mobs are shoved
+  too. Before, damage fell off linearly to a per-cause cap and nothing
+  shielded. TNT, creepers (charged ones at twice the power), the wither,
+  fireballs, beds and anchors and TNT carts all use it.
+
 ### Fixed
 - **Ender pearls throw again.** A player's pearl right-click was posted to
   the world and never handled — since the public release nothing flew.
