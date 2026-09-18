@@ -22,6 +22,13 @@ var (
 // with a noise scaled to eight blocks.
 func (g *Generator) heightAdjustedTemperature(biome string, x, y, z int) float64 {
 	t := biomeTemperature[biome]
+	if frozenModifier[biome] && g.surfN != nil { // TemperatureModifier.FROZEN: patches of open water
+		large := g.surfN.frozenA.FBm(float64(x)*0.05, float64(z)*0.05, 3, 2, 0.5) * 14 // vanilla's simplex sum runs about twice this Perlin's
+		edge := g.surfN.frozenB.Noise2(float64(x)*0.2, float64(z)*0.2)
+		if large+edge < 0.3 && g.surfN.frozenB.Noise2(float64(x)*0.09, float64(z)*0.09) < 0.8 {
+			t = 0.2
+		}
+	}
 	if y > 80 {
 		n := g.detail.Noise2(float64(x)/8, float64(z)/8) * 8
 		return t - (n+float64(y)-80)*0.05/40

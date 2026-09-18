@@ -230,6 +230,8 @@ func (g *Generator) netherChunkFeatures2(reg *netherRegion, ncx, ncz int32) {
 			}
 		}
 	}
+	// BROWN/RED_MUSHROOM_NETHER (the wastes and the forests)
+	g.netherMushrooms(r, ox, oz, biome, d)
 	// SPRING_CLOSED ×16 RANGE_10_10: lava sealed in five rock faces
 	for i := 0; i < 16; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)

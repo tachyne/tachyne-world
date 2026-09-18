@@ -169,6 +169,9 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 			}
 		}
 	}
+	// Surface mushrooms in the dark, and magma in the underwater caves.
+	g.overworldMushrooms(r, reg, ox, oz)
+	g.underwaterMagma(r, reg, ox, oz)
 	// The dripstone caves' clusters, large dripstone and pointed dripstone.
 	g.dripstoneFeatures(r, reg, ox, oz)
 	// GLOW_LICHEN ×104–157, at least thirteen blocks under the ground.

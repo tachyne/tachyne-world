@@ -14,6 +14,7 @@ package worldgen
 
 type surfaceNoises struct {
 	surface, powder, packedIce, ice, calcite, gravel, swamp *Perlin
+	frozenA, frozenB                                        *Perlin // the frozen oceans' open-water patches
 }
 
 func newSurfaceNoises(seed int64) *surfaceNoises {
@@ -25,6 +26,8 @@ func newSurfaceNoises(seed int64) *surfaceNoises {
 		calcite:   NewPerlin(seed ^ 0x5F05),
 		gravel:    NewPerlin(seed ^ 0x5F06),
 		swamp:     NewPerlin(seed ^ 0x5F07),
+		frozenA:   NewPerlin(seed ^ 0x5F08),
+		frozenB:   NewPerlin(seed ^ 0x5F09),
 	}
 }
 

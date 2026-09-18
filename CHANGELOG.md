@@ -21,6 +21,11 @@ the public history since the project was open-sourced on 2026-07-10.
   jungle, in the mountains' rock, on the sea floor, in the swamps, or half
   underground elsewhere; aged by mossiness, gold pilfered, lava to magma
   or netherrack, on a spread of netherrack with drips beneath, as vanilla's.
+- **Mushrooms, underwater magma, open water in the frozen oceans.** Mushroom
+  patches in the nether and under cover on the overworld's surface, magma
+  in the underwater caves, and the frozen oceans' temperature modifier
+  (patches of open water in the frozen ocean, mostly open water with
+  icebergs in the deep frozen ocean).
 - **Villager jobs.** Villagers are born unemployed and take the nearest free
   workstation, gaining its profession and trades; a workstation serves one
   villager; a lost workstation costs the job, and the profession too if it

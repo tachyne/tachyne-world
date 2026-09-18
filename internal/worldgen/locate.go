@@ -23,6 +23,14 @@ var structureLocators = map[string]structureLocator{
 		d := g.DesertTempleIn(wx, wz)
 		return d.X + templeWidth/2, d.Z + templeDepth/2, d.Exists
 	}},
+	"jungle_pyramid": {0, jungleTempleCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		t := g.JungleTempleIn(wx, wz)
+		return t.X + jungleTempleWidth/2, t.Z + jungleTempleDepth/2, t.Exists
+	}},
+	"swamp_hut": {0, swampHutCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		h := g.SwampHutIn(wx, wz)
+		return h.X + swampHutWidth/2, h.Z + swampHutDepth/2, h.Exists
+	}},
 	"igloo": {0, iglooCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		i := g.IglooIn(wx, wz)
 		return i.X, i.Z, i.Exists

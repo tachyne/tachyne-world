@@ -1,8 +1,7 @@
 package worldgen
 
 // Code generated from the vanilla biome reports (worldgen/biome/*.json
-// "temperature", with the "frozen" temperature_modifier folded in as 0.0);
-// DO NOT EDIT.
+// "temperature" and "temperature_modifier"); DO NOT EDIT.
 
 // biomeTemperature is each biome's base temperature (Biome.climateSettings).
 var biomeTemperature = map[string]float64{
@@ -17,7 +16,7 @@ var biomeTemperature = map[string]float64{
 	"minecraft:dark_forest":              0.7,
 	"minecraft:deep_cold_ocean":          0.5,
 	"minecraft:deep_dark":                0.8,
-	"minecraft:deep_frozen_ocean":        0.0,
+	"minecraft:deep_frozen_ocean":        0.5,
 	"minecraft:deep_lukewarm_ocean":      0.5,
 	"minecraft:deep_ocean":               0.5,
 	"minecraft:desert":                   2.0,
@@ -71,4 +70,10 @@ var biomeTemperature = map[string]float64{
 	"minecraft:windswept_hills":          0.2,
 	"minecraft:windswept_savanna":        2.0,
 	"minecraft:wooded_badlands":          2.0,
+}
+
+// frozenModifier marks the biomes with the FROZEN temperature modifier.
+var frozenModifier = map[string]bool{
+	"minecraft:deep_frozen_ocean": true,
+	"minecraft:frozen_ocean":      true,
 }

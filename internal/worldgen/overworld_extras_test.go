@@ -49,13 +49,17 @@ func TestFreezeTopLayer(t *testing.T) {
 	if info, ok := InfoForState(sectionBlockAt(ch, 3, y, 3)); !ok || GetProperty(info, sectionBlockAt(ch, 3, y, 3), "snowy") != "true" {
 		t.Errorf("grass under the layer is not snowy: %d", sectionBlockAt(ch, 3, y, 3))
 	}
-	if cx, cz, ok := findBiomeChunk(g, isFrozenOcean); ok {
-		ch := g.GenerateChunk(cx, cz)
+	if cx, cz, ok := findBiomeChunk(g, func(n string) bool { return n == "minecraft:frozen_ocean" }); ok {
 		ice := 0
-		for lx := 0; lx < 16; lx++ {
-			for lz := 0; lz < 16; lz++ {
-				if sectionBlockAt(ch, lx, SeaLevel-1, lz) == Ice {
-					ice++
+		for dcx := int32(-1); dcx <= 1; dcx++ {
+			for dcz := int32(-1); dcz <= 1; dcz++ {
+				ch := g.GenerateChunk(cx+dcx, cz+dcz)
+				for lx := 0; lx < 16; lx++ {
+					for lz := 0; lz < 16; lz++ {
+						if sectionBlockAt(ch, lx, SeaLevel-1, lz) == Ice {
+							ice++
+						}
+					}
 				}
 			}
 		}

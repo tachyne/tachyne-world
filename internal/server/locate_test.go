@@ -36,7 +36,7 @@ func TestCommandLocate(t *testing.T) {
 	if !strings.HasPrefix(got, "The nearest minecraft:village is at [") || !strings.HasSuffix(got, "(14 blocks away)") {
 		t.Errorf("reply %q", got)
 	}
-	if got := reply("locate swamp_hut"); !strings.Contains(got, "no structure with type") {
+	if got := reply("locate moon_base"); !strings.Contains(got, "no structure with type") {
 		t.Errorf("unknown id reply %q", got)
 	}
 	if got := reply("locate structure end_city"); !strings.Contains(got, "Could not find") {
