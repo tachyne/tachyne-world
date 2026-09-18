@@ -39,6 +39,11 @@ the public history since the project was open-sourced on 2026-07-10.
   one in twelve a child. Each claims the nearest free bed. Before, tachyne
   spawned one adult per bed, so villages had rather more villagers than
   vanilla's; a village already populated keeps the villagers it has.
+- **Primed TNT moves.** Lit TNT hops up in a random direction, falls
+  under gravity, drags in the air and settles on the ground with its fuse
+  burning, as vanilla's does, and a blast throws any primed charge in
+  reach — so a TNT cannon fires. Its blast goes off at vanilla's height
+  on the charge. It sat where it was lit before.
 - **Villagers yield a workstation.** An unemployed villager on its way to
   a workstation gives it up to a neighbour who already holds that trade
   but lost its own block, and that villager walks there instead, as

@@ -125,5 +125,16 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 			}
 		}
 	}
+	for _, pt := range h.tnt { // PrimedTnt is pushed from its position, not its eyes
+		if pt.dim != dim || dist3(pt.x, pt.y, pt.z, cx, cy, cz) > dr {
+			continue
+		}
+		exposure := h.seenPercent(dim, cx, cy, cz, pt.x-tntHalfWidth, pt.y, pt.z-tntHalfWidth, pt.x+tntHalfWidth, pt.y+tntHeight, pt.z+tntHalfWidth)
+		impact := explosionImpact(power, cx, cy, cz, pt.x, pt.y, pt.z, exposure)
+		ex, ey, ez := pt.x-cx, pt.y-cy, pt.z-cz
+		if n := math.Sqrt(ex*ex + ey*ey + ez*ez); impact > 0 && n > 1e-9 {
+			pt.vx, pt.vy, pt.vz = pt.vx+ex/n*impact, pt.vy+ey/n*impact, pt.vz+ez/n*impact
+		}
+	}
 	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
 }

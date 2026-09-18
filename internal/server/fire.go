@@ -57,10 +57,12 @@ func isTNT(state uint32) bool { return state >= tntStateMin && state <= tntState
 
 // primedTNT is a lit charge counting down to the bang.
 type primedTNT struct {
-	eid     int32
-	dim     int
-	x, y, z float64
-	fuse    int
+	eid        int32
+	dim        int
+	x, y, z    float64
+	vx, vy, vz float64 // PrimedTnt's own motion: the hop when lit, gravity, what blasts push it
+	onGround   bool
+	fuse       int
 }
 
 // useFlintSteel handles a flint-&-steel click on (x,y,z): prime TNT, or set
@@ -131,7 +133,9 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
-	h.tnt = append(h.tnt, &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz, fuse: fuse})
+	rot := h.rng.Float64() * 2 * math.Pi // PrimedTnt(): a small hop in a random direction
+	h.tnt = append(h.tnt, &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz,
+		vx: -math.Sin(rot) * tntHopH, vy: tntHopV, vz: -math.Cos(rot) * tntHopH, fuse: fuse})
 	h.toNearbyEv(players, dim, cx, cz, entAdd(eid, entityTNT, uuid, cx, cy, cz, 0, 0))
 	b := protocol.AppendVarInt(nil, eid) // fuse metadata: the client renders the flash timing
 	b = protocol.AppendU8(b, metaIndexTNTFuse)
@@ -149,18 +153,25 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 	// Detonations chain-prime more TNT (primeTNT appends to h.tnt), so swap in
 	// a FRESH slice before iterating — rebuilding in place would alias the
 	// backing array and silently drop the newly-primed charges.
+	// The survivors are re-listed BEFORE anything detonates, so a blast's
+	// push reaches every other charge in the air (TNT cannons).
 	current := h.tnt
 	h.tnt = nil
+	var due []*primedTNT
 	for _, t := range current {
+		h.tntStep(players, t)
 		if t.fuse--; t.fuse <= 0 {
-			h.toNearbyEv(players, t.dim, t.x, t.z, entGone(t.eid))
-			if !h.rules.TNTExplodes {
-				continue // gamerule tnt_explodes: the fuse burns out and nothing happens
-			}
-			h.explodeIn(players, t.dim, t.x, t.y+0.5, t.z, tntRadius, tntRadius)
+			due = append(due, t)
 		} else {
 			h.tnt = append(h.tnt, t)
 		}
+	}
+	for _, t := range due {
+		h.toNearbyEv(players, t.dim, t.x, t.z, entGone(t.eid))
+		if !h.rules.TNTExplodes {
+			continue // gamerule tnt_explodes: the fuse burns out and nothing happens
+		}
+		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius)
 	}
 }
 
