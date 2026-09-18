@@ -158,10 +158,13 @@ func (g *Generator) stampRuinedPortalVariant(ch *Chunk, cx, cz int32, p RuinedPo
 	// the template, through the rules and the block ageing
 	for _, b := range t.Blocks {
 		state := t.resolved[p.Rot&3][b[3]]
+		if p.Mir != mirNone {
+			state = resolveStateM(t.Palette[b[3]], p.Rot, p.Mir)
+		}
 		if state == tmplSkip {
 			continue
 		}
-		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], p.Rot)
+		rx, ry, rz := t.placePos(b[0], b[1], b[2], p.Rot, p.Mir)
 		wx, wy, wz := p.X+rx, p.Y+ry, p.Z+rz
 		name := trimNS(t.Palette[b[3]].Name)
 		if name == "air" && !p.Props.airPocket {

@@ -21,9 +21,24 @@ the public history since the project was open-sourced on 2026-07-10.
   attach frame in the shared library, forwarded by every gateway.
 - **Wind charges throw from the hand.** A right-click with a wind charge
   throws it from the eyes along your look, as vanilla's does — the gust
-  hurts what it strikes a point, shoves it and bursts (swinging doors,
-  pressing buttons) — one charge spent, half a second before the next.
-  Ender pearls gate on their second of cooldown the same way.
+  hurts what it strikes a point and bursts (swinging doors, pressing
+  buttons), and the burst throws everyone near it away from the centre by
+  vanilla's explosion knockback: burst one at your feet and it launches
+  you straight up (the wind charge jump). The breeze's gust reaches three
+  blocks, a thrown one 1.2, as vanilla's do. One charge spent, half a
+  second before the next. Ender pearls gate on their second of cooldown
+  the same way.
+- **Jungle temple traps fire.** The temple's two dispensers are loaded from
+  vanilla's jungle_temple_dispenser table (arrows) the first time anything
+  touches them, so the tripwire fires an arrow instead of clicking on an
+  empty dispenser. `/locate structure nether_fossil` finds nether fossils.
+- **Villages peopled from their pieces, nitwits included.** A village's
+  villagers are now the ones vanilla's jigsaw places (the villagers pool
+  hung off each house): most unemployed, one in twelve a nitwit — green
+  robe, no trades, never a workstation, a head shake when you try — and
+  one in twelve a child. Each claims the nearest free bed. Before, tachyne
+  spawned one adult per bed, so villages had rather more villagers than
+  vanilla's; a village already populated keeps the villagers it has.
 - **Villagers yield a workstation.** An unemployed villager on its way to
   a workstation gives it up to a neighbour who already holds that trade
   but lost its own block, and that villager walks there instead, as
@@ -34,7 +49,8 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Ruined portals by biome.** Buried in the desert, overgrown in the
   jungle, in the mountains' rock, on the sea floor, in the swamps, or half
   underground elsewhere; aged by mossiness, gold pilfered, lava to magma
-  or netherrack, on a spread of netherrack with drips beneath, as vanilla's.
+  or netherrack, on a spread of netherrack with drips beneath, half of them
+  mirrored, as vanilla's.
 - **Mushrooms, underwater magma, open water in the frozen oceans.** Mushroom
   patches in the nether and under cover on the overworld's surface, magma
   in the underwater caves, and the frozen oceans' temperature modifier

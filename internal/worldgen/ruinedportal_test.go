@@ -97,3 +97,41 @@ func TestRuinedPortalVariants(t *testing.T) {
 		t.Errorf("aged stamp: mossy %d netherrack %d", mossy, netherrack)
 	}
 }
+
+// Half the portals are mirrored front-to-back: the mirror flips the
+// template's X within its footprint before the rotation, and its chests
+// with it.
+func TestRuinedPortalMirror(t *testing.T) {
+	g := NewGenerator(3)
+	mirrored, plain := 0, 0
+	for i := -40; i < 40 && (mirrored == 0 || plain == 0); i++ {
+		for j := -40; j < 40; j++ {
+			p := g.RuinedPortalIn(i*portalCell+8, j*portalCell+8)
+			if !p.Exists {
+				continue
+			}
+			if p.Mir == mirFB {
+				mirrored++
+			} else {
+				plain++
+			}
+			tmpl := TemplateByName(p.Tmpl)
+			for k, c := range tmpl.Chests {
+				rx, ry, rz := tmpl.placePos(c[0], c[1], c[2], p.Rot, p.Mir)
+				if got := p.Chests[k]; got != [3]int{p.X + rx, p.Y + ry, p.Z + rz} {
+					t.Fatalf("chest %d at %v, want the mirrored placement", k, got)
+				}
+			}
+		}
+	}
+	if mirrored == 0 || plain == 0 {
+		t.Fatalf("portals: %d mirrored, %d plain — want both", mirrored, plain)
+	}
+	tm := &Template{Size: [3]int{5, 1, 3}}
+	if x, _, z := tm.placePos(0, 0, 0, 0, mirFB); x != 4 || z != 0 {
+		t.Fatalf("front-back mirror of the corner gave %d,%d", x, z)
+	}
+	if x, _, z := tm.placePos(0, 0, 0, 1, mirFB); x != 2 || z != 4 {
+		t.Fatalf("mirror then clockwise turn gave %d,%d", x, z)
+	}
+}

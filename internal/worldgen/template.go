@@ -475,6 +475,18 @@ func (t *Template) rotatePos(x, y, z, rot int) (int, int, int) {
 	return x, y, z
 }
 
+// placePos is rotatePos after a mirror, both keeping the position within
+// the bounding box (vanilla mirrors before it rotates).
+func (t *Template) placePos(x, y, z, rot, mir int) (int, int, int) {
+	switch mir {
+	case mirFB:
+		x = t.Size[0] - 1 - x
+	case mirLR:
+		z = t.Size[2] - 1 - z
+	}
+	return t.rotatePos(x, y, z, rot)
+}
+
 // StampTemplate places the template with its min corner at world (ox,oy,oz),
 // rotated, into the chunk. Returns the world positions of its chests (for loot
 // routing). Only the portion overlapping this chunk is written.

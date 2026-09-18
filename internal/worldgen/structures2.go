@@ -22,6 +22,7 @@ type RuinedPortal struct {
 	X, Y, Z   int // template min corner (Y = surface it settles on)
 	Tmpl      string
 	Rot       int
+	Mir       int // mirNone or mirFB: vanilla mirrors half of them front-to-back
 	Integrity float64
 	Chests    [][3]int
 	Exists    bool
@@ -72,9 +73,13 @@ func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
 	}
 	py := portalY(setup.placement, y-1, ySpan, MinY, hash01(g.seed, ox, oz, 0x9F0B), hash01(g.seed, ox, oz, 0x9F0C))
 	props.cold = setup.canBeCold && g.coldEnoughToSnow(g.BiomeName(x, z), x, py, z)
-	p := RuinedPortal{X: x, Y: py, Z: z, Tmpl: name, Rot: rot, Integrity: integ, Exists: true, Props: props}
+	mir := mirNone
+	if hash01(g.seed, ox, oz, 0x9F0D) < 0.5 {
+		mir = mirFB
+	}
+	p := RuinedPortal{X: x, Y: py, Z: z, Tmpl: name, Rot: rot, Mir: mir, Integrity: integ, Exists: true, Props: props}
 	for _, c := range t.Chests {
-		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		rx, ry, rz := t.placePos(c[0], c[1], c[2], rot, mir)
 		p.Chests = append(p.Chests, [3]int{p.X + rx, p.Y + ry, p.Z + rz})
 	}
 	return p
@@ -104,9 +109,13 @@ func (g *Generator) RuinedPortalNetherIn(wx, wz int) RuinedPortal {
 	}
 	rot := int(hash01(g.seed, ox, oz, 0x9F17)*4) & 3
 	integ := 0.7 + hash01(g.seed, ox, oz, 0x9F18)*0.2
-	p := RuinedPortal{X: x, Y: y - 1, Z: z, Tmpl: name, Rot: rot, Integrity: integ, Exists: true}
+	mir := mirNone
+	if hash01(g.seed, ox, oz, 0x9F19) < 0.5 {
+		mir = mirFB
+	}
+	p := RuinedPortal{X: x, Y: y - 1, Z: z, Tmpl: name, Rot: rot, Mir: mir, Integrity: integ, Exists: true}
 	for _, c := range t.Chests {
-		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+		rx, ry, rz := t.placePos(c[0], c[1], c[2], rot, mir)
 		p.Chests = append(p.Chests, [3]int{p.X + rx, p.Y + ry, p.Z + rz})
 	}
 	return p
