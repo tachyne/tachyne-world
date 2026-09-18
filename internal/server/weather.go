@@ -389,6 +389,9 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
 	h.toNearbyEv(players, 0, x, z, entAdd(eid, entityLightning, uuid, x, y, z, 0, 0))
 	h.bolts = append(h.bolts, bolt{eid: eid, x: x, z: z, dieAt: h.tick.Load() + boltLifeTicks})
+	if !visualOnly {
+		h.vibAt(0, freqLightning, x, y, z, eid)
+	}
 	// Thunder is heard far beyond the chunk-tracking radius in vanilla; the
 	// crack at volume 10 carries like the real thing.
 	h.playSound(players, "minecraft:entity.lightning_bolt.thunder", sndBlock, x, y, z, 10, 0.8+h.rng.Float32()*0.4)

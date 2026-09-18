@@ -211,6 +211,7 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
+		h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)
 		return
 	}
 }
@@ -259,6 +260,7 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 	t.x, t.y, t.z = a.x, float64(h.world.DropY(int(a.x), int(math.Ceil(a.y)), int(a.z))), a.z
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 	h.playSound(players, "minecraft:entity.enderman.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.vibAt(t.dim, freqTeleport, t.x, t.y, t.z, t.p.eid)
 	h.damageOf(players, t, pearlDamage, dtEnderPearl)
 	h.pearlEndermite(players, a) // one pearl in twenty leaves an endermite behind
 }

@@ -145,6 +145,7 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	a := &arrowEntity{eid: eid, etype: etype, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz,
 		born: h.tick.Load(), sx: x, sy: y, sz: z, ox: x, oz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
+	h.vibAt(dim, freqProjectileShoot, x, y, z, 0)
 	if etype == entityWindCharge { // a gust, not a dart: shoves, bursts on contact, never sticks
 		a.knock, a.breaks = 1.5, true
 	}
@@ -230,6 +231,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				break
 			}
 			if worldgen.Collides(h.worldFor(a.dim).At(int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz)))) {
+				h.vibAt(a.dim, freqProjectileLand, px, py, pz, a.shooter)
 				if a.breaks { // snowballs/eggs shatter
 					hit = true
 					if a.knock > 0 { // a wind charge bursts a quarter block off the face it struck

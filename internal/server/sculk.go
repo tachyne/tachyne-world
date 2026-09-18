@@ -20,13 +20,66 @@ import (
 // These blocks are not in the generated orientable-property table, so the state
 // layouts are hand-encoded (verified against the 1.21.11 datagen report).
 
-// Vanilla VibrationSystem frequencies for the events the engine emits.
+// Vanilla VibrationSystem frequencies (VIBRATION_FREQUENCY_FOR_EVENT) for
+// the game events the engine emits.
 const (
-	freqStep         = 1
-	freqBlockDestroy = 12
-	freqBlockPlace   = 13
-	freqEntityDie    = 15
+	freqStep            = 1
+	freqProjectileLand  = 2
+	freqHitGround       = 2
+	freqProjectileShoot = 3
+	freqInstrumentPlay  = 3
+	freqElytraGlide     = 4
+	freqDismount        = 5
+	freqShear           = 6
+	freqMount           = 6
+	freqEntityDamage    = 7
+	freqDrink           = 8
+	freqEat             = 8
+	freqContainerClose  = 9
+	freqBlockClose      = 9
+	freqBlockDeactivate = 9
+	freqContainerOpen   = 10
+	freqBlockOpen       = 10
+	freqBlockActivate   = 10
+	freqPrimeFuse       = 10
+	freqNoteBlockPlay   = 10
+	freqBlockChange     = 11
+	freqBlockDestroy    = 12
+	freqFluidPickup     = 12
+	freqBlockPlace      = 13
+	freqFluidPlace      = 13
+	freqEntityPlace     = 14
+	freqLightning       = 14
+	freqTeleport        = 14
+	freqEntityDie       = 15
+	freqExplode         = 15
 )
+
+// vib is gameEvent for a dimension: sculk listening is overworld-only (the
+// block simulation is), so a Nether or End event reaches no listener.
+func (h *hub) vib(dim int, freq int, x, y, z int, src int32) {
+	if dim != dimOverworld {
+		return
+	}
+	h.gameEvent(freq, x, y, z, src)
+}
+
+// vibAt is vib at an entity's feet.
+func (h *hub) vibAt(dim int, freq int, x, y, z float64, src int32) {
+	h.vib(dim, freq, floorInt(x), floorInt(y), floorInt(z), src)
+}
+
+// evVibration is a vibration the server side raises for a block it
+// toggled (a door swung, a gate opened): quiet marks the block-change that
+// follows as a toggle, not a placement.
+type evVibration struct {
+	eid     int32
+	x, y, z int
+	freq    int
+	quiet   bool
+}
+
+func (evVibration) isHubEvent() {}
 
 const (
 	sculkPhaseInactive = 0
@@ -329,7 +382,11 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			}
 			continue
 		}
-		h.gameEvent(freqStep, floorInt(t.x), floorInt(t.y), floorInt(t.z), t.p.eid)
+		if t.gliding() {
+			h.vibAt(t.dim, freqElytraGlide, t.x, t.y, t.z, t.p.eid)
+			continue
+		}
+		h.vibAt(t.dim, freqStep, t.x, t.y, t.z, t.p.eid)
 	}
 }
 

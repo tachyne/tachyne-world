@@ -32,6 +32,7 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	if int(slot) != t.p.heldSlot() || t.inv == nil {
 		return
 	}
+	h.vib(t.dim, freqFluidPlace, x, y, z, t.p.eid)
 	held := t.inv.slots[slot].item
 	mobBucket := isMobBucket(held) // MobBucketItem: water content + a mob to release
 	if held != itemBucketH2O && held != itemBucketLav && !mobBucket {
@@ -73,6 +74,7 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 	if int(slot) != t.p.heldSlot() || t.inv == nil || t.inv.slots[slot].item != itemBucket {
 		return
 	}
+	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
 	ox, oy, oz := t.x, t.y+1.5, t.z
 	w := h.worldFor(t.dim)

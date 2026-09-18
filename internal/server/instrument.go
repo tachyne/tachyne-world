@@ -50,6 +50,7 @@ func (h *hub) tootHorn(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	h.setCooldown(t, itemGoatHorn, hornCooldown)
+	h.vibAt(t.dim, freqInstrumentPlay, t.x, t.y, t.z, t.p.eid)
 	i := int(held.instrument)
 	if i < 0 || i >= len(instrumentSounds) {
 		i = 0

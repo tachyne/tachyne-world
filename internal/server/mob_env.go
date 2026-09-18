@@ -69,6 +69,7 @@ func (m *mob) ignite(secs int) {
 // bush does not, so a zombie in full diamond used to burn exactly as fast as a
 // naked one — the same bug the player side had, found by fixing that one.
 func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgType) {
+	h.vibAt(m.dim, freqEntityDamage, m.x, m.y, m.z, m.eid)
 	if m.spawnInvuln > 0 {
 		return
 	}

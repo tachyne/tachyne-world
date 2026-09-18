@@ -110,6 +110,7 @@ func (h *hub) onNoteBlock(players map[int32]*tracked, e evNoteBlock) {
 		h.incCustom(t, "tune_noteblock", 1)
 	} else {
 		h.incCustom(t, "play_noteblock", 1)
+		h.vib(t.dim, freqNoteBlockPlay, e.x, e.y, e.z, t.p.eid)
 	}
 	h.playNoteBlock(players, t.dim, e.x, e.y, e.z, state)
 }

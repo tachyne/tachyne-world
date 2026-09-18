@@ -532,6 +532,7 @@ type hub struct {
 	sculkList    map[blockPos]bool         // sensor + shrieker listener positions
 	catalysts    map[blockPos]bool         // sculk catalyst positions
 	sculkVib     map[blockPos]sculkPending // one in-flight vibration per listener
+	vibQuiet     map[blockPos]uint64       // block toggles this tick: no placement vibration for them
 	sculkDue     map[blockPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
 	sculkFreq    map[blockPos]int          // sensor last-vibration frequency (comparator out)
 	sculkWarn    map[blockPos]int          // shrieker warning level toward a Warden
@@ -720,6 +721,7 @@ func newHub(w *world.World) *hub {
 		sculkList:     map[blockPos]bool{},
 		catalysts:     map[blockPos]bool{},
 		sculkVib:      map[blockPos]sculkPending{},
+		vibQuiet:      map[blockPos]uint64{},
 		sculkDue:      map[blockPos]uint64{},
 		sculkFreq:     map[blockPos]int{},
 		sculkWarn:     map[blockPos]int{},
@@ -1411,6 +1413,13 @@ func (h *hub) run() {
 						h.spawnHostile(players, e.etype, e.x, e.z)
 					}
 				})
+			case evVibration:
+				if t := players[e.eid]; t != nil {
+					if e.quiet {
+						h.vibQuiet[blockPos{e.x, e.y, e.z}] = h.tick.Load()
+					}
+					h.vib(t.dim, e.freq, e.x, e.y, e.z, e.eid)
+				}
 			case evUseRedstone:
 				pos := blockPos{e.x, e.y, e.z}
 				st := h.world.At(e.x, e.y, e.z)
@@ -2376,7 +2385,11 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	if e.broken != 0 {
 		h.gameEvent(freqBlockDestroy, e.x, e.y, e.z, e.by)
 	} else if e.state != worldgen.Air {
-		h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
+		if at, ok := h.vibQuiet[blockPos{e.x, e.y, e.z}]; ok && at == h.tick.Load() {
+			delete(h.vibQuiet, blockPos{e.x, e.y, e.z}) // a toggle already made its own vibration
+		} else {
+			h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
+		}
 	}
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows

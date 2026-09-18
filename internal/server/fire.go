@@ -143,6 +143,7 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	b = protocol.AppendVarInt(b, int32(fuse))
 	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 	h.playSound(players, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
+	h.vib(dim, freqPrimeFuse, x, y, z, 0)
 }
 
 // updateTNT ticks the fuses (every tick).
@@ -229,6 +230,7 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float64,
 	radius int, power float64, kind blastKind, dt dmgType, cause deathCause) {
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
+	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
 	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
 	w := h.worldFor(dim)

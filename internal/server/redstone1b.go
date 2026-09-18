@@ -324,6 +324,7 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 			if platePower(s) == 0 {
 				h.playSound(players, "minecraft:block.stone_pressure_plate.click_on", sndBlock,
 					float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.8)
+				h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 			}
 			h.setBlock(players, pos, ns)
 			h.scheduleSignalAround(pos)
@@ -342,6 +343,7 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 			h.setBlock(players, pos, plateWith(s, 0))
 			h.playSound(players, "minecraft:block.stone_pressure_plate.click_off", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.7)
+			h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.scheduleSignalAround(pos)
 		}
 	}

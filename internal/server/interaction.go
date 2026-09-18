@@ -687,9 +687,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return false
 	}
 	nv := "true"
+	freq := freqBlockOpen
 	if worldgen.GetProperty(info, state, "open") == "true" {
-		nv = "false"
+		nv, freq = "false", freqBlockClose
 	}
+	s.hub.post(evVibration{eid: p.eid, x: x, y: y, z: z, freq: freq, quiet: true}) // BLOCK_OPEN / BLOCK_CLOSE
 	s.putBlock(p, x, y, z, worldgen.SetProperty(info, state, "open", nv), true, seq)
 	if isTwoTall(info) { // a door — toggle its other half to match
 		oy := y + 1

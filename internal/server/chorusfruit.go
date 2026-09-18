@@ -25,6 +25,7 @@ func (h *hub) chorusTeleport(players map[int32]*tracked, t *tracked) bool {
 			t.peakY = t.y // resetFallDistance
 			h.playSoundDim(players, t.dim, "minecraft:item.chorus_fruit.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
 			h.toNearbyEv(players, t.dim, t.x, t.z, entityStatus(t.p.eid, entityStatusTeleport))
+			h.vibAt(t.dim, freqTeleport, t.x, t.y, t.z, t.p.eid)
 			h.setCooldown(t, itemChorusFruit, 20)
 			return true
 		}

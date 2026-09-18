@@ -103,3 +103,62 @@ func TestSculkCatalystSpreadsOnDeath(t *testing.T) {
 		t.Fatal("a catalyst bloom should convert nearby solid blocks to sculk")
 	}
 }
+
+// The engine's mechanics raise vanilla's vibrations: a lever thrown is
+// BLOCK_ACTIVATE (10) then BLOCK_DEACTIVATE (9), a chest opened
+// CONTAINER_OPEN (10), a Nether event reaches no overworld listener, and
+// a door swung is BLOCK_OPEN, not a placement.
+func TestMechanicsRaiseVibrations(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(x, y, z, sensor)
+	pos := blockPos{x, y, z}
+	heard := func() int {
+		v, ok := h.sculkVib[pos]
+		if !ok {
+			return 0
+		}
+		delete(h.sculkVib, pos)
+		return v.freq
+	}
+	lever := setBoolProp(worldgen.BlockBase("lever"), "powered", false) // the base state is the powered one
+	w.SetBlock(x+3, y, z, lever)
+	h.toggleLever(players, blockPos{x + 3, y, z}, w.At(x+3, y, z))
+	if f := heard(); f != freqBlockActivate {
+		t.Fatalf("a lever thrown on should be heard at 10, got %d", f)
+	}
+	h.toggleLever(players, blockPos{x + 3, y, z}, w.At(x+3, y, z))
+	if f := heard(); f != freqBlockDeactivate {
+		t.Fatalf("a lever thrown off should be heard at 9, got %d", f)
+	}
+	h.vib(dimNether, freqExplode, x+2, y, z, 0)
+	if f := heard(); f != 0 {
+		t.Fatalf("a Nether blast reached an overworld sensor: %d", f)
+	}
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	h.playersRef = players
+	pl.x, pl.y, pl.z = float64(x)+2.5, float64(y), float64(z)+1.5
+	disp := worldgen.BlockID("dispenser")
+	w.SetBlock(x+2, y, z, disp)
+	h.openBin(pl, x+2, y, z)
+	if f := heard(); f != freqContainerOpen {
+		t.Fatalf("a container opened should be heard at 10, got %d", f)
+	}
+	h.closeWindow(players, pl)
+	if f := heard(); f != freqContainerClose {
+		t.Fatalf("a container closed should be heard at 9, got %d", f)
+	}
+	// A toggle marked quiet suppresses the placement vibration of the block
+	// change that follows it in the same tick.
+	h.vibQuiet[blockPos{x + 4, y, z}] = h.tick.Load()
+	h.onBlock(players, evBlock{x: x + 4, y: y, z: z, state: lever, by: pl.p.eid})
+	if f := heard(); f != 0 {
+		t.Fatalf("a toggled block should not count as placed: heard %d", f)
+	}
+	h.onBlock(players, evBlock{x: x + 5, y: y, z: z, state: lever, by: pl.p.eid})
+	if f := heard(); f != freqBlockPlace {
+		t.Fatalf("a placed block should be heard at 13, got %d", f)
+	}
+}

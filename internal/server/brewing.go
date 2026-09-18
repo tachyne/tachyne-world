@@ -391,6 +391,7 @@ func potionEffects(kind int8) []potEffect { return potionDefs[kind].effects }
 func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 	s := &t.inv.slots[slot]
 	p := s.potion
+	h.vibAt(t.dim, freqDrink, t.x, t.y, t.z, t.p.eid)
 	*s = invStack{item: itemGlassBottle, count: 1}
 	h.sendSlot(t, slot)
 	for _, e := range potionEffects(p) {

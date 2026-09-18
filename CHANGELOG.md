@@ -74,6 +74,17 @@ the public history since the project was open-sourced on 2026-07-10.
   own item, the sniffer's dig, and the happy burst after a trade. Villager
   hearts and happiness now use the villager's own ids (its hearts were
   sent on the animals' id, which draws nothing on a villager).
+- **Sculk hears what vanilla's hears.** Sculk sensors (and through them
+  shriekers and the warden) heard only footsteps, deaths and blocks placed
+  or broken. They now hear the rest of vanilla's vibrations at vanilla's
+  frequencies: doors, trapdoors and gates swinging, buttons, levers and
+  pressure plates, containers opened and closed, projectiles loosed and
+  landing, a landing after a fall (never a sneaking one), eating and
+  drinking, explosions and a TNT fuse, note blocks, every hit taken,
+  teleports, buckets emptied and filled, lightning, shearing, mounting
+  and dismounting, the goat horn, cake, bone meal and an elytra glide.
+  A door swung no longer counts as a block placed, and nothing in the
+  Nether or End reaches an overworld sensor.
 - **Anvils wear out.** One use in eight chips an anvil a stage (anvil,
   chipped, damaged) and a damaged one breaks under the next, as vanilla's
   do; creative use never wears it. The anvil's use and break sounds now

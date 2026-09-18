@@ -79,6 +79,7 @@ func (h *hub) mountMob(players map[int32]*tracked, t *tracked, m *mob) {
 	m.rider = t.p.eid
 	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
+	h.vibAt(m.dim, freqMount, m.x, m.y, m.z, t.p.eid)
 	h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
 	h.advance(players, t, "started_riding", advMatch{})
 }
@@ -92,6 +93,7 @@ func (h *hub) dismountMob(players map[int32]*tracked, t *tracked) bool {
 		}
 		m.rider = 0
 		t.ridingEID = 0
+		h.vibAt(m.dim, freqDismount, m.x, m.y, m.z, t.p.eid)
 		m.sx, m.sy, m.sz = m.x, m.y, m.z // realign the relative-move baseline
 		h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid))
 		t.x, t.y, t.z = m.x+0.9, m.y+0.6, m.z

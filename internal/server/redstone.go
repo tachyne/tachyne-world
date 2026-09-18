@@ -263,6 +263,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		if at, ok := h.pressedAt[pos]; ok && h.tick.Load() >= at+buttonPressTicks {
 			delete(h.pressedAt, pos)
 			h.setBlock(players, pos, setBoolProp(state, "powered", false))
+			h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.playSound(players, "minecraft:block.stone_button.click_off", sndBlock,
 				float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 0.9)
 			h.scheduleSignalAround(pos)
@@ -364,6 +365,7 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 	}
 	h.pressedAt[pos] = h.tick.Load()
 	h.setBlock(players, pos, setBoolProp(state, "powered", true))
+	h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 	h.playSound(players, "minecraft:block.stone_button.click_on", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 	h.scheduleSignalAround(pos)
@@ -373,6 +375,11 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32) {
 	on := !boolProp(state, "powered")
 	h.setBlock(players, pos, setBoolProp(state, "powered", on))
+	if on {
+		h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
+	} else {
+		h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+	}
 	pitch := float32(0.9)
 	if on {
 		pitch = 1.1

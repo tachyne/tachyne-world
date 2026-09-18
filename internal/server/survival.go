@@ -326,6 +326,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			return
 		}
 		dist := t.peakY - e.y
+		if dist > 0 && !t.p.sneaking {
+			h.vibAt(t.dim, freqHitGround, t.x, e.y, t.z, t.p.eid) // HIT_GROUND (sneaking is silent)
+		}
 		h.advance(players, t, "fall_from_height", advMatch{distY: dist, startY: t.peakY, endY: e.y})
 		if t.launchCause != "" {
 			h.advance(players, t, "fall_after_explosion", advMatch{distY: dist, cause: t.launchCause})
@@ -469,6 +472,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	h.infestOnHurt(players, t) // Infested: silverfish burst out on being hit
 	h.incCustom(t, "damage_taken", tenths(amount))
 	t.health -= amount
+	h.vibAt(t.dim, freqEntityDamage, t.x, t.y, t.z, t.p.eid)
 	if t.health <= 0 && h.totemSaves(players, t, dt) {
 		return true // the blow landed; a totem of undying answered it
 	}
@@ -691,6 +695,9 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 		return
 	}
 	s := &t.inv.slots[slot]
+	if s.item != itemPotion && s.count > 0 {
+		h.vibAt(t.dim, freqEat, t.x, t.y, t.z, t.p.eid)
+	}
 	if s.item == itemPotion && s.count > 0 {
 		h.drinkPotion(nil, t, slot)
 		return

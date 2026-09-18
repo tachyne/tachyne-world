@@ -747,6 +747,12 @@ func (h *hub) openCraftingTable(t *tracked) {
 // A furnace/chest keeps its contents (only the cursor is reclaimed) and loses
 // its viewer, so a furnace smelts on unwatched.
 func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
+	switch t.winKind {
+	case winChest, winDoubleChest, winBin, winFurnace:
+		if t.winPos != (simPos{}) {
+			h.vib(t.winPos.dim, freqContainerClose, t.winPos.x, t.winPos.y, t.winPos.z, t.p.eid)
+		}
+	}
 	h.reclaimAnvil(players, t)
 	h.reclaimTrade(players, t)
 	var closedChest []simPos // trapped chests to re-evaluate once this viewer is gone
