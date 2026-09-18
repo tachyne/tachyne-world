@@ -185,6 +185,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		}
 		if m.etype == entityVillager {
 			h.villagerGossipTick(players, m)
+			h.villagerJobTick(players, m) // workstations: validate the held one, look for a free one
 		}
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {

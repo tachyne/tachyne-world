@@ -24,6 +24,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla's placements; glow lichen grows in every cave.
 - **Dripstone caves.** Dripstone clusters, large dripstone with its wind
   lean, and pointed dripstone spikes, on vanilla's placements.
+- **Villager jobs.** Villagers are born unemployed and take the nearest free
+  workstation, gaining its profession and trades; a workstation serves one
+  villager; a lost workstation costs the job, and the profession too if it
+  never traded, as vanilla's do.
 
 ## 2026-09-16
 

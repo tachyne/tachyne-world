@@ -154,7 +154,10 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 				m.persistent = true
 			}
 		}
-		m.profession = sm.Profession % len(professionNames)
+		m.profession = sm.Profession
+		if m.profession >= len(professionNames) {
+			m.profession %= len(professionNames)
+		}
 		m.vFood = sm.Food
 		if len(sm.Gossip) > 0 {
 			m.gossip = gossipBook{}
@@ -163,7 +166,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			}
 		}
 		if m.profession < 0 {
-			m.profession = 0
+			m.profession = profUnemployed // born or fired: no workstation yet
 		}
 		m.tradeLevel = max(1, sm.TradeLevel)
 		m.tradeXP = sm.TradeXP

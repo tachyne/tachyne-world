@@ -71,7 +71,7 @@ func TestVillagersBreedWithAVacantBed(t *testing.T) {
 			child = m
 		}
 	}
-	if child == nil || child.bed != bed || child.growLeft != growUpTicks || child.profession != 0 {
+	if child == nil || child.bed != bed || child.growLeft != growUpTicks || child.profession != profUnemployed {
 		t.Fatalf("child %+v", child)
 	}
 	for _, v := range []*mob{a, b} {

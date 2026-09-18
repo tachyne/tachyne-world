@@ -52,6 +52,7 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 				if bells := gen.VillageBells(v); len(bells) > 0 {
 					meet = blockPos{bells[0][0], bells[0][1], bells[0][2]}
 				}
+				usedJobs := map[blockPos]bool{}
 				for _, bed := range gen.VillageBeds(v) {
 					m := h.spawnMob(players, entityVillager,
 						float64(bed[0])+0.5, float64(bed[1]), float64(bed[2])+0.5)
@@ -59,7 +60,7 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 						continue // plugin-cancelled spawn
 					}
 					m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED (vanilla 1.21.5)
-					prof, work := nearestJobSite(bed, jobs)
+					prof, work := nearestJobSite(bed, jobs, usedJobs)
 					h.initVillagerTrades(m, prof)
 					h.sendVillagerData(players, m)
 					m.home = blockPos{bed[0], bed[1], bed[2]}
@@ -130,13 +131,20 @@ func (h *hub) updateVillageGolems(players map[int32]*tracked) {
 // nearestJobSite returns the profession index + work position of the job-site
 // block nearest a villager's bed (a village with no job sites leaves it a farmer
 // working at its bed).
-func nearestJobSite(bed [3]int, jobs [][4]int) (int, blockPos) {
-	prof, work, best := 0, blockPos{bed[0], bed[1], bed[2]}, 1<<30
+func nearestJobSite(bed [3]int, jobs [][4]int, used map[blockPos]bool) (int, blockPos) {
+	prof, work, best := profUnemployed, blockPos{}, 1<<30
 	for _, j := range jobs {
+		pos := blockPos{j[0], j[1], j[2]}
+		if used[pos] {
+			continue // one villager per workstation (PoiManager occupancy)
+		}
 		dx, dy, dz := j[0]-bed[0], j[1]-bed[1], j[2]-bed[2]
 		if d := dx*dx + dy*dy + dz*dz; d < best {
-			best, prof, work = d, j[3], blockPos{j[0], j[1], j[2]}
+			best, prof, work = d, j[3], pos
 		}
+	}
+	if work != (blockPos{}) {
+		used[work] = true
 	}
 	return prof, work
 }
@@ -251,6 +259,10 @@ func clearSpecialPrices(m *mob) {
 // openTrades shows a villager's merchant screen.
 func (h *hub) openTrades(t *tracked, m *mob) {
 	if t.inv == nil {
+		return
+	}
+	if m.profession < 0 || m.baby { // Villager.mobInteract: NONE and children shake their heads
+		h.toNearbyEv(h.playersRef, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerNo))
 		return
 	}
 	h.releaseContainerView(t)

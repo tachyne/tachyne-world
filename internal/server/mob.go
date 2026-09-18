@@ -180,6 +180,8 @@ type mob struct {
 	breedMate                       int32       // villager: BREED_TARGET (0 = none)
 	breedAt                         uint64      // villager: VillagerMakeLove birthTimestamp
 	breedLead                       bool        // villager: this half runs the courtship clock
+	jobPos                          blockPos    // villager: POTENTIAL_JOB_SITE (zero = none)
+	jobSearchAt                     uint64      // villager: tick of the next workstation scan
 	meet                            blockPos    // villager: the village meeting point (bell/well)
 	sleeping                        bool        // villager: lying in its bed through the night
 	swims                           bool        // water-bound: lives inside a water column (fish/squid)
@@ -596,6 +598,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A farmer feeding a growing crop bone meal.
 		case m.etype == entityVillager && h.farmerStep(players, m):
 			// A farmer harvesting and sowing its field.
+		case m.etype == entityVillager && h.villagerJobWalk(players, m):
+			// An unemployed villager walking to a free workstation, and claiming it.
 		case m.etype == entityVillager && h.villagerBreedStep(players, m):
 			// Two fed villagers courting, and a child if a bed is free.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
