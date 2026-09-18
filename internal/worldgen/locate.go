@@ -106,6 +106,10 @@ var structureLocators = map[string]structureLocator{
 		b := g.BastionIn(wx, wz)
 		return b.X, b.Z, b.Exists
 	}},
+	"nether_fossil": {1, netherFossilCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		f := g.NetherFossilIn(wx, wz)
+		return f.X, f.Z, f.Exists
+	}},
 	"end_city": {2, endCityCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		c := g.EndCityIn(wx, wz)
 		return c.X, c.Z, c.Exists

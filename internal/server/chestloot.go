@@ -38,6 +38,12 @@ func lootForChest(name string) (*lootTable, bool) {
 // fillChest rolls a table into a chest's 27 slots, scattered the way vanilla's
 // LootTable.fill does. Deterministic per (world seed, position, table name).
 func (h *hub) fillChest(c *chest, name string, pos blockPos) {
+	h.fillSlots(c.slots[:], name, pos)
+}
+
+// fillSlots is fillChest for any container's slots (a structure's
+// dispenser takes its table the same way).
+func (h *hub) fillSlots(slots []invStack, name string, pos blockPos) {
 	tbl, ok := lootForChest(name)
 	if !ok {
 		return
@@ -64,7 +70,7 @@ func (h *hub) fillChest(c *chest, name string, pos blockPos) {
 		}
 	}
 
-	free := make([]int, len(c.slots))
+	free := make([]int, len(slots))
 	for i := range free {
 		free[i] = i
 	}
@@ -79,7 +85,7 @@ func (h *hub) fillChest(c *chest, name string, pos blockPos) {
 		}
 		slot := free[len(free)-1]
 		free = free[:len(free)-1]
-		c.slots[slot] = s
+		slots[slot] = s
 	}
 }
 

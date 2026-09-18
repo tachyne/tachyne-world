@@ -147,3 +147,20 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	}
 	return "", false
 }
+
+// structureBinTable is structureChestTable for a dispenser: the jungle
+// temple's two arrow traps take jungle_temple_dispenser (JungleTemplePiece.
+// createDispenser), so the tripwire fires arrows as vanilla's does.
+func (h *hub) structureBinTable(dim int, pos blockPos) (string, bool) {
+	if dim != dimOverworld {
+		return "", false
+	}
+	if t := h.world.Gen().JungleTempleIn(pos.x, pos.z); t.Exists {
+		for _, d := range t.Dispensers() {
+			if pos.x == d[0] && pos.y == d[1] && pos.z == d[2] {
+				return "chests/jungle_temple_dispenser", true
+			}
+		}
+	}
+	return "", false
+}

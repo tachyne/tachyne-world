@@ -90,6 +90,21 @@ type bin struct {
 	disabled [9]bool // crafter only: grid slots toggled off (hoppers skip; recipe holes)
 }
 
+// binAt is the storage behind a dispenser/dropper/hopper block, created on
+// first touch — and, for a structure's dispenser, filled from its loot
+// table then (the jungle temple's arrow traps).
+func (h *hub) binAt(pos simPos, state uint32) *bin {
+	c := h.bins[pos]
+	if c == nil {
+		c = &bin{slots: make([]invStack, binSizeFor(state))}
+		if name, ok := h.structureBinTable(pos.dim, pos.blockPos); ok {
+			h.fillSlots(c.slots, name, pos.blockPos)
+		}
+		h.bins[pos] = c
+	}
+	return c
+}
+
 // mobInBlock reports whether a mob's bounding box overlaps the single-block
 // cube at p (the dispenser's front cell) — the AABB(blockPos) test vanilla's
 // shears dispense uses.
@@ -136,11 +151,7 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
 	pos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
-	c := h.bins[pos]
-	if c == nil {
-		c = &bin{slots: make([]invStack, binSizeFor(state))}
-		h.bins[pos] = c
-	}
+	c := h.binAt(pos, state)
 	h.nextWin++
 	if h.nextWin > 100 {
 		h.nextWin = 1
@@ -268,10 +279,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	if w == nil {
 		return
 	}
-	c := h.bins[pos]
-	if c == nil {
-		return
-	}
+	c := h.binAt(pos, state)
 	// Vanilla getRandomSlot: a uniformly random non-empty slot (reservoir
 	// sampling), not the first one — so a dispenser empties unpredictably.
 	var st *invStack
@@ -627,11 +635,7 @@ func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32)
 		h.setBlockAt(players, pos.dim, pos.blockPos, state)
 	}
 	if hopperEnabled(state) {
-		c := h.bins[pos]
-		if c == nil {
-			c = &bin{slots: make([]invStack, 5)}
-			h.bins[pos] = c
-		}
+		c := h.binAt(pos, state)
 		moved := h.hopperPull(players, pos, c)
 		if h.hopperPush(players, pos, state, c) {
 			moved = true
