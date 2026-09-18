@@ -47,3 +47,35 @@ func TestJigsawAssemblesVillage(t *testing.T) {
 		t.Fatal("village should branch into streets and houses")
 	}
 }
+
+// The villagers pool hangs a villager off the houses: every village with
+// houses spawns some, of the three kinds and nowhere else.
+func TestVillageVillagers(t *testing.T) {
+	g := NewGenerator(1)
+	kinds := map[string]int{}
+	seen := 0
+	for i := -20; i < 20 && seen < 12; i++ {
+		for j := -20; j < 20 && seen < 12; j++ {
+			v := g.VillageIn(i*384+8, j*384+8)
+			if !v.Exists {
+				continue
+			}
+			seen++
+			for _, sp := range g.VillageVillagers(v) {
+				switch sp.Kind {
+				case "unemployed", "nitwit", "baby":
+					kinds[sp.Kind]++
+				default:
+					t.Fatalf("villager kind %q", sp.Kind)
+				}
+			}
+		}
+	}
+	if seen == 0 {
+		t.Skip("no villages in the scan")
+	}
+	if kinds["unemployed"] == 0 {
+		t.Fatalf("no villagers across %d villages: %v", seen, kinds)
+	}
+	t.Logf("%d villages: %v", seen, kinds)
+}

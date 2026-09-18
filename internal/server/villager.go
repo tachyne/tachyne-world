@@ -44,28 +44,46 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					continue
 				}
 				h.villageDone[well] = true
-				// The economy is built from the real vanilla village pieces: one
-				// villager per BED, its profession claimed from the nearest JOB-SITE
-				// block, the town-centre BELL as the shared meeting point.
+				// The villagers are the ones the jigsaw placed (the villagers
+				// pool: unemployed, a nitwit or a baby one in twelve each), as
+				// vanilla's Villager entities baked in the pieces. Each takes the
+				// nearest free BED as home; an unemployed one's profession is
+				// claimed from the nearest JOB-SITE block; the town-centre BELL
+				// is the shared meeting point.
 				jobs := gen.VillageJobSites(v)
+				beds := gen.VillageBeds(v)
 				meet := blockPos{v.X, v.Y, v.Z}
 				if bells := gen.VillageBells(v); len(bells) > 0 {
 					meet = blockPos{bells[0][0], bells[0][1], bells[0][2]}
 				}
-				usedJobs := map[blockPos]bool{}
-				for _, bed := range gen.VillageBeds(v) {
-					m := h.spawnMob(players, entityVillager,
-						float64(bed[0])+0.5, float64(bed[1]), float64(bed[2])+0.5)
+				usedJobs, usedBeds := map[blockPos]bool{}, map[blockPos]bool{}
+				for _, sp := range gen.VillageVillagers(v) {
+					m := h.spawnMob(players, entityVillager, float64(sp.X)+0.5, float64(sp.Y), float64(sp.Z)+0.5)
 					if m == nil {
 						continue // plugin-cancelled spawn
 					}
 					m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED (vanilla 1.21.5)
-					prof, work := nearestJobSite(bed, jobs, usedJobs)
-					h.initVillagerTrades(m, prof)
+					bed, hasBed := nearestFreeBed([3]int{sp.X, sp.Y, sp.Z}, beds, usedBeds)
+					if hasBed {
+						m.home = blockPos{bed[0], bed[1], bed[2]}
+						m.bed = m.home
+					}
+					switch sp.Kind {
+					case "nitwit":
+						h.initVillagerTrades(m, profNitwit)
+					case "baby":
+						m.baby, m.growLeft = true, growUpTicks
+						h.initVillagerTrades(m, profUnemployed)
+						h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+					default:
+						prof, work := nearestJobSite(bed, jobs, usedJobs)
+						if !hasBed {
+							prof, work = nearestJobSite([3]int{sp.X, sp.Y, sp.Z}, jobs, usedJobs)
+						}
+						h.initVillagerTrades(m, prof)
+						m.work = work
+					}
 					h.sendVillagerData(players, m)
-					m.home = blockPos{bed[0], bed[1], bed[2]}
-					m.bed = blockPos{bed[0], bed[1], bed[2]}
-					m.work = work
 					m.meet = meet
 					m.behavior = villagerBehavior{} // path home/around + open doors
 					m.usesDoors = true
@@ -443,3 +461,24 @@ type evSelTrade struct {
 }
 
 func (evSelTrade) isHubEvent() {}
+
+// nearestFreeBed is the unclaimed village bed nearest a villager's spawn
+// (its home, as vanilla's villagers claim the nearest free bed).
+func nearestFreeBed(at [3]int, beds [][3]int, used map[blockPos]bool) ([3]int, bool) {
+	var best [3]int
+	bestD, found := 1<<30, false
+	for _, b := range beds {
+		p := blockPos{b[0], b[1], b[2]}
+		if used[p] {
+			continue
+		}
+		dx, dy, dz := b[0]-at[0], b[1]-at[1], b[2]-at[2]
+		if d := dx*dx + dy*dy + dz*dz; d < bestD {
+			best, bestD, found = b, d, true
+		}
+	}
+	if found {
+		used[blockPos{best[0], best[1], best[2]}] = true
+	}
+	return best, found
+}

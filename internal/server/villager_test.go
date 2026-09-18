@@ -39,7 +39,7 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 			golems++
 		}
 	}
-	wantVillagers := len(w.Gen().VillageBeds(v)) // one villager per bed
+	wantVillagers := len(w.Gen().VillageVillagers(v)) // the jigsaw's villager pieces
 	// The golem appears only if the village met the vanilla 5-villager quorum.
 	wantGolems := 0
 	if wantVillagers >= golemVillagersToAgree {

@@ -86,6 +86,8 @@ func villagerDataMeta(m *mob) []byte {
 	var prof int32
 	if m.profession >= 0 && m.profession < len(professionNames) {
 		prof = professionRegistryID[professionNames[m.profession]]
+	} else if m.profession == profNitwit {
+		prof = professionRegistryID["nitwit"]
 	}
 	level := int32(m.tradeLevel)
 	if level < 1 {

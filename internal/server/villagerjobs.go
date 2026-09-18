@@ -23,6 +23,7 @@ const (
 	jobClaimDist    = 2.0 // AssignProfessionFromJobSite: closerToCenterThan(pos, 2.0)
 	jobValidateDist = 16.0
 	profUnemployed  = -1
+	profNitwit      = -2 // VillagerProfession.NITWIT: no trades, never a workstation
 
 	entityStatusVillagerSplash = 14 // Villager.handleEntityEvent: the profession flourish
 	entityStatusVillagerNo     = 40 // the head shake (setUnhappy)
@@ -89,7 +90,7 @@ func (h *hub) jobSiteClaimed(pos blockPos, by *mob) bool {
 // villagerJobTick runs once a survival step (20 ticks): ValidateNearbyPoi on
 // a held site, ResetProfession, and AcquirePoi's scan for a free one.
 func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
-	if m.baby || m.dying > 0 {
+	if m.baby || m.dying > 0 || m.profession == profNitwit {
 		return
 	}
 	w := h.worldFor(m.dim)
@@ -155,7 +156,7 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 // run each mob update: the walk to the site at half pace, and the claim
 // within two blocks. Returns whether it holds the villager.
 func (h *hub) villagerJobWalk(players map[int32]*tracked, m *mob) bool {
-	if m.jobPos == (blockPos{}) || m.baby || m.dying > 0 {
+	if m.jobPos == (blockPos{}) || m.baby || m.dying > 0 || m.profession == profNitwit {
 		return false
 	}
 	if seg := villagerSegment(h.dayTime.Load()); seg == vsSleep {

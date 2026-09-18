@@ -109,3 +109,36 @@ func TestVillagerYieldsJobSite(t *testing.T) {
 		t.Error("a farmer at work took a second composter")
 	}
 }
+
+// A nitwit never takes a workstation, has no trades, wears the nitwit
+// robe, and survives a reload as a nitwit.
+func TestNitwitNeverWorks(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.world
+	for x := -6; x <= 12; x++ {
+		for z := -6; z <= 6; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	pl.x, pl.y, pl.z = 40.5, 180, 0.5
+	h.dayTime.Store(3000)
+	h.tick.Store(1000)
+	w.SetBlock(5, 180, 0, worldgen.BlockID("lectern"))
+	n := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
+	h.initVillagerTrades(n, profNitwit)
+	n.work, n.jobSearchAt = blockPos{}, 0
+	h.villagerJobTick(players, n)
+	if n.jobPos != (blockPos{}) || n.profession != profNitwit || len(n.offers) != 0 {
+		t.Fatalf("a nitwit went for the lectern: jobPos %+v profession %d offers %d", n.jobPos, n.profession, len(n.offers))
+	}
+	if h.villagerJobWalk(players, n) {
+		t.Fatal("a nitwit is walking to work")
+	}
+	meta := villagerDataMeta(n)
+	if want := byte(professionRegistryID["nitwit"]); meta[len(meta)-3] != want {
+		t.Fatalf("nitwit robe: profession byte %d want %d (%x)", meta[len(meta)-3], want, meta)
+	}
+}

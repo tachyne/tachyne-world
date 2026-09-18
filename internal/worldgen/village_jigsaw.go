@@ -66,6 +66,36 @@ func (g *Generator) VillageBeds(v Village) [][3]int {
 	return out
 }
 
+// VillagerSpawn is a villager the village's jigsaw placed: the villagers
+// pool hangs one off each house (unemployed ten in twelve, a nitwit one,
+// a baby one), the entity baked in the piece's template.
+type VillagerSpawn struct {
+	X, Y, Z int
+	Kind    string // "unemployed", "nitwit" or "baby"
+}
+
+// VillageVillagers returns the villagers the village's pieces spawn.
+func (g *Generator) VillageVillagers(v Village) []VillagerSpawn {
+	var out []VillagerSpawn
+	pieces := g.AssembleVillage(v)
+	for i := range pieces {
+		p := &pieces[i]
+		k := strings.LastIndex(p.Tmpl.name, "/villagers/")
+		if k < 0 {
+			continue
+		}
+		kind := p.Tmpl.name[k+len("/villagers/"):]
+		for _, m := range p.Tmpl.Mobs {
+			if m.Type != "villager" {
+				continue
+			}
+			w := wp(p, m.Pos[0], m.Pos[1], m.Pos[2])
+			out = append(out, VillagerSpawn{w[0], w[1], w[2], kind})
+		}
+	}
+	return out
+}
+
 // VillageJobSites returns [x,y,z,profession] for every job-site block.
 func (g *Generator) VillageJobSites(v Village) [][4]int {
 	var out [][4]int

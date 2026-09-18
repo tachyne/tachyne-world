@@ -165,7 +165,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 				m.gossip[k] = v
 			}
 		}
-		if m.profession < 0 {
+		if m.profession < 0 && m.profession != profNitwit {
 			m.profession = profUnemployed // born or fired: no workstation yet
 		}
 		m.tradeLevel = max(1, sm.TradeLevel)
