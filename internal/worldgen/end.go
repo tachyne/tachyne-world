@@ -73,6 +73,7 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 // generateEndChunk fills a chunk in End mode.
 func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
 	ch := g.generateEndTerrain(cx, cz)
+	g.decorateEnd(ch, cx, cz) // chorus forests, small islands, return gateways
 	g.stampEndCities(ch, cx, cz)
 	ch.computeHeightmap()
 	return ch
@@ -92,8 +93,9 @@ func (g *Generator) generateEndTerrain(cx, cz int32) *Chunk {
 			}
 		}
 	}
+	biome := g.endBiome(int(cx)*16+8, int(cz)*16+8) // the_end, the highlands ring, midlands, barrens, small islands
 	for s := 0; s < len(ch.Sections); s++ {
-		ch.Biomes[s] = "minecraft:the_end"
+		ch.Biomes[s] = biome
 	}
 	ch.computeHeightmap()
 	return ch

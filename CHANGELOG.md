@@ -11,6 +11,13 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-18
+
+### Added
+- **The outer End.** Chunks carry their biome ring; the highlands grow
+  chorus forests and hide return gateways; the small islands' biome floats
+  end-stone islands, all on vanilla's placements.
+
 ## 2026-09-17
 
 ### Added
