@@ -25,6 +25,7 @@ type RuinedPortal struct {
 	Integrity float64
 	Chests    [][3]int
 	Exists    bool
+	Props     portalProps // the biome's setup, rolled (overworld)
 }
 
 // ruinedPortalTemplates: the standard portals are common; the giant portals are
@@ -47,7 +48,9 @@ func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
 	x := ox + 16 + int(hash01(g.seed, ox, oz, 0x9F02)*float64(portalCell-32))
 	z := oz + 16 + int(hash01(g.seed, ox, oz, 0x9F03)*float64(portalCell-32))
 	y := g.Height(x, z)
-	if y <= SeaLevel { // not underwater
+	setups := portalSetupsFor(g.BiomeName(x, z))
+	setup := pickPortalSetup(setups, hash01(g.seed, ox, oz, 0x9F09))
+	if y <= SeaLevel && setup.placement != plOceanFloor { // only the ocean's and the swamp's stand under water
 		return RuinedPortal{}
 	}
 	name := ruinedPortalStd[int(hash01(g.seed, ox, oz, 0x9F04)*float64(len(ruinedPortalStd)))]
@@ -62,7 +65,14 @@ func (g *Generator) RuinedPortalIn(wx, wz int) RuinedPortal {
 	// Vanilla mossiness → integrity in roughly [0.7, 0.9]: a moderately broken
 	// frame, not obliterated.
 	integ := 0.7 + hash01(g.seed, ox, oz, 0x9F08)*0.2
-	p := RuinedPortal{X: x, Y: y - 1, Z: z, Tmpl: name, Rot: rot, Integrity: integ, Exists: true}
+	_, ySpan, _ := t.rotatedSize(rot)
+	props := portalProps{
+		airPocket: setup.airPocket == 1 || (setup.airPocket > 0 && hash01(g.seed, ox, oz, 0x9F0A) < setup.airPocket),
+		mossiness: setup.mossiness, overgrown: setup.overgrown, vines: setup.vines, placement: setup.placement,
+	}
+	py := portalY(setup.placement, y-1, ySpan, MinY, hash01(g.seed, ox, oz, 0x9F0B), hash01(g.seed, ox, oz, 0x9F0C))
+	props.cold = setup.canBeCold && g.coldEnoughToSnow(g.BiomeName(x, z), x, py, z)
+	p := RuinedPortal{X: x, Y: py, Z: z, Tmpl: name, Rot: rot, Integrity: integ, Exists: true, Props: props}
 	for _, c := range t.Chests {
 		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
 		p.Chests = append(p.Chests, [3]int{p.X + rx, p.Y + ry, p.Z + rz})
@@ -155,7 +165,7 @@ func (g *Generator) stampRuinedPortals(ch *Chunk, cx, cz int32) {
 			continue
 		}
 		if t := TemplateByName(p.Tmpl); t != nil {
-			t.StampTemplateRot(ch, cx, cz, p.X, p.Y, p.Z, p.Rot, g.seed, p.Integrity)
+			g.stampRuinedPortalVariant(ch, cx, cz, p, t) // the biome's setup, aged, on its netherrack
 		}
 	}
 }

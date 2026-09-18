@@ -17,6 +17,14 @@ the public history since the project was open-sourced on 2026-07-10.
 - **The outer End.** Chunks carry their biome ring; the highlands grow
   chorus forests and hide return gateways; the small islands' biome floats
   end-stone islands, all on vanilla's placements.
+- **Ruined portals by biome.** Buried in the desert, overgrown in the
+  jungle, in the mountains' rock, on the sea floor, in the swamps, or half
+  underground elsewhere; aged by mossiness, gold pilfered, lava to magma
+  or netherrack, on a spread of netherrack with drips beneath, as vanilla's.
+- **Villager jobs.** Villagers are born unemployed and take the nearest free
+  workstation, gaining its profession and trades; a workstation serves one
+  villager; a lost workstation costs the job, and the profession too if it
+  never traded, as vanilla's do.
 
 ## 2026-09-17
 
@@ -31,10 +39,6 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla's placements; glow lichen grows in every cave.
 - **Dripstone caves.** Dripstone clusters, large dripstone with its wind
   lean, and pointed dripstone spikes, on vanilla's placements.
-- **Villager jobs.** Villagers are born unemployed and take the nearest free
-  workstation, gaining its profession and trades; a workstation serves one
-  villager; a lost workstation costs the job, and the profession too if it
-  never traded, as vanilla's do.
 
 ## 2026-09-16
 
