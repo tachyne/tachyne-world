@@ -86,7 +86,11 @@ func (g *Generator) endIslandNoise(cx, cz int64) float64 {
 // endOuterColumn returns the top and bottom of the island plate at a column,
 // or ok=false where there is only void.
 func (g *Generator) endOuterColumn(x, z int) (top, bottom int, ok bool) {
-	h := g.endIslandHeight(floorDiv(x, 8), floorDiv(z, 8))
+	return endOuterPlate(g.endIslandHeight(floorDiv(x, 8), floorDiv(z, 8)))
+}
+
+// endOuterPlate maps an island height to the plate's top and bottom.
+func endOuterPlate(h float64) (top, bottom int, ok bool) {
 	if h <= 0 {
 		return 0, 0, false
 	}

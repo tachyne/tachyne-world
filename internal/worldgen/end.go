@@ -42,15 +42,25 @@ func endPillarAt(x, z int) int {
 // EndPillarTop is the crystal height for a pillar (varies per pillar).
 func EndPillarTop(i int) int { return 76 + (i*7)%28 }
 
-// endBlock assembles one End cell.
+// endBlock assembles one End cell (a point read: the outer islands'
+// column is worked out per call; the chunk loop hoists it).
 func (g *Generator) endBlock(x, y, z int) uint32 {
+	top, bottom, ok := 0, 0, false
+	if x*x+z*z > EndIslandR*EndIslandR {
+		top, bottom, ok = g.endOuterColumn(x, z)
+	}
+	return g.endBlockCol(x, y, z, top, bottom, ok)
+}
+
+// endBlockCol is endBlock given the column's outer-island plate.
+func (g *Generator) endBlockCol(x, y, z, top, bottom int, ok bool) uint32 {
 	if p := endPillarAt(x, z); p >= 0 && y >= EndSurfaceY-8 && y < EndPillarTop(p) {
 		return Obsidian
 	}
 	r := float64(x*x + z*z)
 	if r > EndIslandR*EndIslandR {
 		// Beyond the main island: void, until the outer islands begin.
-		if top, bottom, ok := g.endOuterColumn(x, z); ok && y <= top && y >= bottom {
+		if ok && y <= top && y >= bottom {
 			return EndStone
 		}
 		return Air
@@ -63,8 +73,8 @@ func (g *Generator) endBlock(x, y, z int) uint32 {
 		depth = 26
 	}
 	wob := g.hills.Noise2(float64(x)/40, float64(z)/40) * 4
-	top := float64(EndSurfaceY) + g.detail.Noise2(float64(x)/30, float64(z)/30)*2
-	if float64(y) <= top && float64(y) >= top-depth+wob {
+	lensTop := float64(EndSurfaceY) + g.detail.Noise2(float64(x)/30, float64(z)/30)*2
+	if float64(y) <= lensTop && float64(y) >= lensTop-depth+wob {
 		return EndStone
 	}
 	return Air
@@ -82,13 +92,24 @@ func (g *Generator) generateEndChunk(cx, cz int32) *Chunk {
 // generateEndTerrain is the End's terrain alone (structures stamp on top).
 func (g *Generator) generateEndTerrain(cx, cz int32) *Chunk {
 	ch := NewChunk(g.sections)
+	heights := map[[2]int]float64{} // the island height per 8×8 cell, once (it was per cell: 144 noise reads each)
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
+			top, bottom, ok := 0, 0, false
+			if wx*wx+wz*wz > EndIslandR*EndIslandR {
+				k := [2]int{floorDiv(wx, 8), floorDiv(wz, 8)}
+				h, seen := heights[k]
+				if !seen {
+					h = g.endIslandHeight(k[0], k[1])
+					heights[k] = h
+				}
+				top, bottom, ok = endOuterPlate(h)
+			}
 			for s := 0; s < len(ch.Sections); s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
-					ch.Sections[s][(ly*16+lz)*16+lx] = g.endBlock(wx, wy, wz)
+					ch.Sections[s][(ly*16+lz)*16+lx] = g.endBlockCol(wx, wy, wz, top, bottom, ok)
 				}
 			}
 		}

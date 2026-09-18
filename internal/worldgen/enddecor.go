@@ -27,6 +27,7 @@ type endRegion struct {
 	g            *Generator
 	ch           *Chunk
 	baseX, baseZ int
+	cols         map[[2]int][3]int // outer plate per column beyond the chunk: top, bottom, ok
 }
 
 func (r *endRegion) read(x, y, z int) uint32 {
@@ -37,7 +38,23 @@ func (r *endRegion) read(x, y, z int) uint32 {
 	if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
 		return sectionBlockAt(r.ch, lx, y, lz)
 	}
-	return r.g.endBlock(x, y, z)
+	if x*x+z*z <= EndIslandR*EndIslandR {
+		return r.g.endBlockCol(x, y, z, 0, 0, false)
+	}
+	k := [2]int{x, z}
+	c, ok := r.cols[k]
+	if !ok {
+		top, bottom, has := r.g.endOuterColumn(x, z)
+		c = [3]int{top, bottom, 0}
+		if has {
+			c[2] = 1
+		}
+		if r.cols == nil {
+			r.cols = map[[2]int][3]int{}
+		}
+		r.cols[k] = c
+	}
+	return r.g.endBlockCol(x, y, z, c[0], c[1], c[2] == 1)
 }
 
 func (r *endRegion) set(x, y, z int, s uint32) {
