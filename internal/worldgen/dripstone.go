@@ -60,6 +60,9 @@ func (reg *owRegion) columnScan(x, y, z, rng int, inside, edge func(uint32) bool
 
 // dripstoneFeatures adds the dripstone caves' features to a chunk's draws.
 func (g *Generator) dripstoneFeatures(r TreeRNG, reg *owRegion, ox, oz int) {
+	if !reg.chunkHasCaveBiome(ox, oz, "minecraft:dripstone_caves") {
+		return
+	}
 	rangeY := func() int { return MinY + r.Intn(256-MinY+1) }
 	drip := func(x, y, z int) bool { return reg.caveBiomeAt(x, y, z) == "minecraft:dripstone_caves" }
 	for i, n := 0, 48+r.Intn(49); i < n; i++ { // DRIPSTONE_CLUSTER
@@ -119,17 +122,33 @@ func (reg *owRegion) scanForWet(x, y, z, dy, max int) (int, bool) {
 	return 0, false
 }
 
+// pointedStates holds every pointed dripstone state the features place:
+// [down][wet][thickness], built once (a property lookup per block was a
+// fifth of a chunk's time).
+var pointedStates = func() (t [2][2][5]uint32) {
+	names := [5]string{"tip_merge", "tip", "frustum", "middle", "base"}
+	for d, dir := range [2]string{"up", "down"} {
+		for w, wet := range [2]string{"false", "true"} {
+			for i, th := range names {
+				t[d][w][i] = withProps("pointed_dripstone", "vertical_direction", dir, "thickness", th, "waterlogged", wet)
+			}
+		}
+	}
+	return t
+}()
+
+var thicknessIndex = map[string]int{"tip_merge": 0, "tip": 1, "frustum": 2, "middle": 3, "base": 4}
+
 // pointedState is createPointedBlock, waterlogged where the cell is water.
 func (reg *owRegion) pointedState(x, y, z int, down bool, thickness string) uint32 {
-	dir := "up"
+	d, w := 0, 0
 	if down {
-		dir = "down"
+		d = 1
 	}
-	wet := "false"
 	if reg.read(x, y, z) == Water {
-		wet = "true"
+		w = 1
 	}
-	return withProps("pointed_dripstone", "vertical_direction", dir, "thickness", thickness, "waterlogged", wet)
+	return pointedStates[d][w][thicknessIndex[thickness]]
 }
 
 // growSpeleothem is SpeleothemUtils.growSpeleothem: from start toward the

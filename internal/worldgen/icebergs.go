@@ -11,13 +11,29 @@ import "math"
 // berg on the border is whole.
 
 // owRegion is an overworld chunk buffer with pure-terrain reads beyond it;
-// a column outside the chunk is carved once, on first touch, and kept.
+// a column outside the chunk is carved cell by cell on first touch and
+// kept. Columns within a chunk of the buffer sit in a grid (the features
+// touch thousands, and a map hash per read showed in the profile); the
+// rare column further out goes in a map.
 type owRegion struct {
 	g            *Generator
 	ch           *Chunk
 	baseX, baseZ int
 	cols         map[[2]int]column
 	carved       map[[2]int][]uint32
+	gridCols     [regionSpan * regionSpan]*column
+	gridCarved   [regionSpan * regionSpan][]uint32
+	biomeChecks  map[string]int8 // chunkHasCaveBiome answers, per biome
+}
+
+const regionSpan = 48 // 16 + 16 either side
+
+func (r *owRegion) gridIndex(x, z int) int {
+	gx, gz := x-r.baseX+16, z-r.baseZ+16
+	if gx < 0 || gx >= regionSpan || gz < 0 || gz >= regionSpan {
+		return -1
+	}
+	return gx*regionSpan + gz
 }
 
 func (r *owRegion) read(x, y, z int) uint32 {
@@ -28,18 +44,27 @@ func (r *owRegion) read(x, y, z int) uint32 {
 	if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 {
 		return sectionBlockAt(r.ch, lx, y, lz)
 	}
-	k := [2]int{x, z}
-	col, ok := r.carved[k]
-	if !ok { // a column of unknowns, carved cell by cell as the features look
+	var col []uint32
+	gi := r.gridIndex(x, z)
+	if gi >= 0 {
+		col = r.gridCarved[gi]
+	} else {
+		col = r.carved[[2]int{x, z}]
+	}
+	if col == nil { // a column of unknowns, carved cell by cell as the features look
 		n := len(r.ch.Sections) * 16
 		col = make([]uint32, n)
 		for i := range col {
 			col[i] = unknownCell
 		}
-		if r.carved == nil {
-			r.carved = map[[2]int][]uint32{}
+		if gi >= 0 {
+			r.gridCarved[gi] = col
+		} else {
+			if r.carved == nil {
+				r.carved = map[[2]int][]uint32{}
+			}
+			r.carved[[2]int{x, z}] = col
 		}
-		r.carved[k] = col
 	}
 	if col[y-MinY] == unknownCell {
 		c := r.col(x, z)
@@ -53,11 +78,23 @@ const unknownCell = ^uint32(0)
 // col is the column model at (x, z), cached: the cave features ask for the
 // height and biome of thousands of columns per chunk.
 func (r *owRegion) col(x, z int) column {
+	gi := r.gridIndex(x, z)
+	if gi >= 0 {
+		if c := r.gridCols[gi]; c != nil {
+			return *c
+		}
+		c := r.g.columnAt(x, z)
+		r.gridCols[gi] = &c
+		return c
+	}
 	k := [2]int{x, z}
 	if c, ok := r.cols[k]; ok {
 		return c
 	}
 	c := r.g.columnAt(x, z)
+	if r.cols == nil {
+		r.cols = map[[2]int]column{}
+	}
 	r.cols[k] = c
 	return c
 }
@@ -70,6 +107,59 @@ func (r *owRegion) caveBiomeAt(x, y, z int) string {
 		return r.g.caveBiome(x, z, y)
 	}
 	return c.biome.Name
+}
+
+// chunkHasCaveBiome samples a chunk's caves at its four quarter columns and
+// three depths for the biome; a chunk with none of it skips that biome's
+// features outright (the cave biomes vary over hundreds of blocks, so a
+// chunk that straddles a border loses at most a sliver).
+func (r *owRegion) chunkHasCaveBiome(ox, oz int, biome string) bool {
+	key := biome + ":" + itoaSmall(ox) + ":" + itoaSmall(oz)
+	if v, ok := r.biomeChecks[key]; ok {
+		return v == 1
+	}
+	found := false
+	for _, dx := range [2]int{4, 12} {
+		for _, dz := range [2]int{4, 12} {
+			c := r.col(ox+dx, oz+dz)
+			for _, y := range [3]int{-50, -20, 10} {
+				if y < c.h-24 && y < SeaLevel && r.g.caveBiome(ox+dx, oz+dz, y) == biome {
+					found = true
+				}
+			}
+		}
+	}
+	if r.biomeChecks == nil {
+		r.biomeChecks = map[string]int8{}
+	}
+	if found {
+		r.biomeChecks[key] = 1
+	} else {
+		r.biomeChecks[key] = 0
+	}
+	return found
+}
+
+func itoaSmall(n int) string {
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	var b [12]byte
+	i := len(b)
+	for {
+		i--
+		b[i] = byte('0' + n%10)
+		n /= 10
+		if n == 0 {
+			break
+		}
+	}
+	if neg {
+		i--
+		b[i] = '-'
+	}
+	return string(b[i:])
 }
 
 func (r *owRegion) set(x, y, z int, s uint32) {

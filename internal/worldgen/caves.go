@@ -101,23 +101,24 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	ox, oz := int(ncx)*16, int(ncz)*16
 	r := newTreeRNG(g.seed^0xCA7E, ox, oz)
 	rangeY := func() int { return MinY + r.Intn(256-MinY+1) } // RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT
-	lush := func(x, y, z int) bool { return reg.caveBiomeAt(x, y, z) == "minecraft:lush_caves" }
+	lushChunk := reg.chunkHasCaveBiome(ox, oz, "minecraft:lush_caves")
+	lush := func(x, y, z int) bool { return lushChunk && reg.caveBiomeAt(x, y, z) == "minecraft:lush_caves" }
 	// CAVE_VINES ×188: under a sturdy ceiling, a column of vines down.
-	for i := 0; i < 188; i++ {
+	for i := 0; lushChunk && i < 188; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if cy, ok := reg.scanFor(x, rangeY(), z, +1, 12, solid); ok && lush(x, cy-1, z) {
 			g.caveVineColumn(r, reg, x, cy-1, z, [][3]int{{0, 19, 2}, {0, 2, 3}, {0, 6, 10}})
 		}
 	}
 	// LUSH_CAVES_VEGETATION ×125: a moss patch on the floor.
-	for i := 0; i < 125; i++ {
+	for i := 0; lushChunk && i < 125; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if fy, ok := reg.scanFor(x, rangeY(), z, -1, 12, solid); ok && lush(x, fy+1, z) {
 			g.vegetationPatch(r, reg, x, fy+1, z, patchCfg{replaceable: mossReplaceable, ground: MossBlock, floor: true, depth: 1, extraBottom: 0, vertical: 5, vegetation: 0.8, radiusLo: 4, radiusHi: 7, edge: 0.3, plant: g.mossVegetation})
 		}
 	}
 	// LUSH_CAVES_CLAY ×62: clay with dripleaves, half of them pools.
-	for i := 0; i < 62; i++ {
+	for i := 0; lushChunk && i < 62; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if fy, ok := reg.scanFor(x, rangeY(), z, -1, 12, solid); ok && lush(x, fy+1, z) {
 			if r.Intn(2) == 0 {
@@ -128,7 +129,7 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 		}
 	}
 	// LUSH_CAVES_CEILING_VEGETATION ×125: moss on the ceiling with vines in it.
-	for i := 0; i < 125; i++ {
+	for i := 0; lushChunk && i < 125; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if cy, ok := reg.scanFor(x, rangeY(), z, +1, 12, solid); ok && lush(x, cy-1, z) {
 			g.vegetationPatch(r, reg, x, cy-1, z, patchCfg{replaceable: mossReplaceable, ground: MossBlock, floor: false, depth: 1 + r.Intn(2), extraBottom: 0, vertical: 5, vegetation: 0.08, radiusLo: 4, radiusHi: 7, edge: 0.3,
@@ -138,7 +139,7 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 		}
 	}
 	// SPORE_BLOSSOM ×25: under a sturdy ceiling.
-	for i := 0; i < 25; i++ {
+	for i := 0; lushChunk && i < 25; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if cy, ok := reg.scanFor(x, rangeY(), z, +1, 12, solid); ok && lush(x, cy-1, z) && reg.read(x, cy-1, z) == Air {
 			reg.set(x, cy-1, z, SporeBlossom)
@@ -146,14 +147,14 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	}
 	// ROOTED_AZALEA_TREE ×1–2: from under a ceiling, up through the rock to
 	// a cavity with room for the tree, rooted dirt below it, hanging roots.
-	for i, n := 0, 1+r.Intn(2); i < n; i++ {
+	for i, n := 0, 1+r.Intn(2); lushChunk && i < n; i++ {
 		x, z := ox+r.Intn(16), oz+r.Intn(16)
 		if cy, ok := reg.scanFor(x, rangeY(), z, +1, 12, solid); ok && lush(x, cy-1, z) {
 			g.rootSystem(r, reg, x, cy-1, z)
 		}
 	}
 	// CLASSIC_VINES ×256: a vine on the first wall it can hold to.
-	for i := 0; i < 256; i++ {
+	for i := 0; lushChunk && i < 256; i++ {
 		x, y, z := ox+r.Intn(16), rangeY(), oz+r.Intn(16)
 		if !lush(x, y, z) || reg.read(x, y, z) != Air {
 			continue
