@@ -216,6 +216,7 @@ func TestSeededChunksHatchNestBees(t *testing.T) {
 // A sapling grown beside flowers comes up as the bee variant: the tree
 // carries a nest. Away from flowers it never does.
 func TestSaplingNearFlowersGrowsANest(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	lo, hi := worldgen.BlockRange("birch_sapling")

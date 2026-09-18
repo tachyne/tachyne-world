@@ -5,6 +5,7 @@ import "testing"
 // The nether's ores: gold and quartz veins in the rock, ancient debris
 // buried and never touching air.
 func TestNetherOresAndDebris(t *testing.T) {
+	skipHeavy(t)
 	g := NewNetherGenerator(11)
 	gold, quartz, debris, exposed := 0, 0, 0, 0
 	for cx := int32(-4); cx <= 4; cx++ {

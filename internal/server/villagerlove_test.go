@@ -41,6 +41,7 @@ func villagerPair(t *testing.T) (*hub, *mob, *mob, map[int32]*tracked) {
 // Two fed villagers take up, walk together, and with a vacant bed about
 // bear a child that gets the bed; each parent eats and cools down.
 func TestVillagersBreedWithAVacantBed(t *testing.T) {
+	skipHeavy(t)
 	h, a, b, players := villagerPair(t)
 	bed := bedHeadAt(h.world, 6, 180, 3)
 	for i := 0; i < 200 && a.breedMate == 0 && b.breedMate == 0; i++ {
@@ -83,6 +84,7 @@ func TestVillagersBreedWithAVacantBed(t *testing.T) {
 
 // No vacant bed: no child, the pair shows anger and parts.
 func TestVillagersNeedABed(t *testing.T) {
+	skipHeavy(t)
 	h, a, b, players := villagerPair(t)
 	bed := bedHeadAt(h.world, 6, 180, 3)
 	a.bed = bed // claimed

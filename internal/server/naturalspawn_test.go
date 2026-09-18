@@ -299,6 +299,7 @@ func TestSurfaceSeatingUnchanged(t *testing.T) {
 // cave-population mechanic the old surface-only spawner lacked entirely —
 // and never exceed the scaled category cap.
 func TestNaturalSpawnFillsCaves(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5

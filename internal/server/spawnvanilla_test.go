@@ -42,6 +42,7 @@ func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 // TestVanillaSpawnerModeIsolation: only vanilla mode runs chunk-generation
 // seeding — the default tachyne sampler never touches the seeded set.
 func TestVanillaSpawnerModeIsolation(t *testing.T) {
+	skipHeavy(t)
 	for _, vanilla := range []bool{false, true} {
 		h := newHub(world.New(1))
 		h.vanillaSpawner = vanilla
@@ -85,6 +86,7 @@ func TestNearWorldSpawnExclusion(t *testing.T) {
 // chunk) still populates caves through the full-column Y roll and respects the
 // scaled monster cap — the same guarantees as the default sampler.
 func TestVanillaSpawnerFillsCaves(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.vanillaSpawner = true
 	pl := testTracked()

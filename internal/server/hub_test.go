@@ -39,7 +39,7 @@ func waitFor(t *testing.T, p *player, id int32, what string) {
 	// Generous deadline: these tests leak their hub goroutines (run() has no
 	// stop), so under -race with -count>1 the accumulated tick load made a
 	// 2-second deadline flaky long before it means anything is wrong.
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(hubTestWait)
 	for {
 		select {
 		case pkt := <-p.out:

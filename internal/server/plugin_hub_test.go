@@ -26,7 +26,7 @@ func pluginTestHub(t *testing.T) (*hub, srvFacade) {
 // waitJoined polls until the hub has registered the named player.
 func waitJoined(t *testing.T, h *hub, name string) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(hubTestWait)
 	for {
 		var found bool
 		onHub(t, h, func() {
@@ -78,7 +78,7 @@ func TestPluginScheduler(t *testing.T) {
 		if at < start+3 || at > start+6 {
 			t.Fatalf("After(3) fired at tick %d (scheduled at %d)", at, start)
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(hubTestWait):
 		t.Fatal("After(3) never fired")
 	}
 
@@ -89,7 +89,7 @@ func TestPluginScheduler(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		select {
 		case <-ticks:
-		case <-time.After(10 * time.Second):
+		case <-time.After(hubTestWait):
 			t.Fatalf("Every(2) fire %d never came", i+1)
 		}
 	}
@@ -244,7 +244,7 @@ func TestPluginPlayerHandle(t *testing.T) {
 	})
 
 	// The private message reached her queue.
-	chatDeadline := time.After(10 * time.Second)
+	chatDeadline := time.After(hubTestWait)
 	for {
 		select {
 		case pkt := <-p1.out:
@@ -388,7 +388,7 @@ func TestPluginJoinQuitChatEvents(t *testing.T) {
 		if e.Name != "alice" || e.EID != p1.eid {
 			t.Fatalf("join event %+v", e)
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(hubTestWait):
 		t.Fatal("PlayerJoinEvent never fired")
 	}
 
@@ -397,7 +397,7 @@ func TestPluginJoinQuitChatEvents(t *testing.T) {
 	h.post(evChat{text: "[system] weather"}) // system line: no chat event, verbatim
 
 	var lines []string
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(hubTestWait)
 	for len(lines) < 2 {
 		select {
 		case pkt := <-p1.out:
@@ -424,7 +424,7 @@ func TestPluginJoinQuitChatEvents(t *testing.T) {
 		if e.Name != "alice" {
 			t.Fatalf("quit event %+v", e)
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(hubTestWait):
 		t.Fatal("PlayerQuitEvent never fired")
 	}
 }
@@ -456,7 +456,7 @@ func TestPluginWeatherTimeGameruleEvents(t *testing.T) {
 		if e.New != 9000 {
 			t.Fatalf("TimeSetEvent %+v", e)
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(hubTestWait):
 		t.Fatal("TimeSetEvent never fired")
 	}
 	select {
@@ -464,7 +464,7 @@ func TestPluginWeatherTimeGameruleEvents(t *testing.T) {
 		if e.Rule != "mobGriefing" || e.On {
 			t.Fatalf("GameruleChangeEvent %+v", e)
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(hubTestWait):
 		t.Fatal("GameruleChangeEvent never fired")
 	}
 }

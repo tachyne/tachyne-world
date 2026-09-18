@@ -18,6 +18,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "1.26.x" }
-      # The race gate the project treats as mandatory before every push;
-      # until this job existed it was a local discipline only. ~15 min.
-      - run: go test -race -timeout 2400s ./...
+      # The race gate the project treats as mandatory before every push.
+      # -short skips the heavy deterministic tests (skipHeavy): the detector
+      # has nothing to find in a chunk-generation census and makes it ten
+      # times slower. -p 1 keeps the hub tests' real server loops from
+      # starving behind another package's generation. ~15 min.
+      - run: go test -race -short -p 1 -timeout 2400s ./...

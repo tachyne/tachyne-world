@@ -62,7 +62,7 @@ func TestUIStackComponents(t *testing.T) {
 // drainWindow waits for the next WindowOpen or WindowItems on the queue.
 func drainWindow(t *testing.T, p *player) (opens []attachproto.WindowOpen, items []attachproto.WindowItems) {
 	t.Helper()
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(hubTestWait)
 	for {
 		select {
 		case pkt := <-p.out:
@@ -139,7 +139,7 @@ func TestPluginUIBrowseAndAct(t *testing.T) {
 	// The uninstall op fires on the bus then reopens the UI, whose refresh
 	// records "list"/"search" — so poll the append-only history, not the
 	// (transient) last subject, or the reopen races us to overwrite it.
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(hubTestWait)
 	for !stub.sawSubject("mc.plugin.uninstall") {
 		if time.Now().After(deadline) {
 			t.Fatalf("uninstall never hit the bus (subjects seen %v)", stub.subjects())

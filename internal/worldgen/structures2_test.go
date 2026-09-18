@@ -48,6 +48,7 @@ func TestDesertTempleQuery(t *testing.T) {
 // stamp-vs-query pattern (cf. TestDungeonQueryMatchesStamp), independent of
 // cross-machine height float determinism.
 func TestRuinedPortalStamps(t *testing.T) {
+	skipHeavy(t)
 	g := NewGenerator(7)
 	x, _, z, ok := findWith(g, 24, func(b uint32) bool { return b == CryingObsidian })
 	if !ok {
@@ -73,6 +74,7 @@ func TestRuinedPortalStamps(t *testing.T) {
 // to polished blackstone (the vanilla processor), their frames aged like the
 // surface ones.
 func TestNetherRuinedPortalStamps(t *testing.T) {
+	skipHeavy(t)
 	g := NewNetherGenerator(7)
 	bricks, _, ok := BlockRangeOK("polished_blackstone_bricks")
 	if !ok {

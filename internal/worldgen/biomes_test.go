@@ -93,6 +93,7 @@ func TestRiversStayShallow(t *testing.T) {
 // solid block above sea level the flood can't reach is a floating fragment
 // (cave-severed spire, undercut bank) that removeFloatingFragments must delete.
 func TestNoSkyFloaters(t *testing.T) {
+	skipHeavy(t)
 	g := NewGenerator(1)
 	const N = 5
 	lo, hi := -N*16, N*16

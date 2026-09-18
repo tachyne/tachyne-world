@@ -25,7 +25,7 @@ func TestSnapCenter(t *testing.T) {
 // arrives (or fails at the deadline).
 func drainMapData(t *testing.T, p *player) attachproto.MapData {
 	t.Helper()
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(hubTestWait)
 	for {
 		select {
 		case pkt := <-p.out:

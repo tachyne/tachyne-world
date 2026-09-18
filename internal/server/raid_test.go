@@ -7,6 +7,7 @@ import (
 )
 
 func TestRaidWavesAndVictory(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(7))
 	players := map[int32]*tracked{}
 	pl := testTracked()

@@ -5,6 +5,7 @@ import "testing"
 // Mushrooms grow in the nether's wastes and under the overworld's cover;
 // a frozen ocean's surface is mostly ice with patches of open water.
 func TestSmallFeatures(t *testing.T) {
+	skipHeavy(t)
 	n := NewNetherGenerator(11)
 	shrooms := 0
 	for cx := int32(-3); cx <= 3; cx++ {

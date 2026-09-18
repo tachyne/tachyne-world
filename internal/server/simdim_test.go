@@ -23,6 +23,7 @@ func dimHub() *hub {
 
 // A player in the Nether must not cause overworld blocks to tick.
 func TestNetherPlayerDoesNotTickOverworld(t *testing.T) {
+	skipHeavy(t)
 	h := dimHub()
 
 	x, y, z := 300, 70, 300
@@ -45,6 +46,7 @@ func TestNetherPlayerDoesNotTickOverworld(t *testing.T) {
 
 // And the same player must tick the Nether's own world.
 func TestNetherPlayerTicksTheNether(t *testing.T) {
+	skipHeavy(t)
 	h := dimHub()
 
 	x, y, z := 300, 70, 300

@@ -66,7 +66,7 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 	})
 
 	// Sound + note particle reached the player's queue.
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(hubTestWait)
 	gotSound, gotParticle := false, false
 	for !(gotSound && gotParticle) {
 		select {
@@ -120,7 +120,7 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 	})
 
 	// The play + stop world events reached the player.
-	deadline = time.After(10 * time.Second)
+	deadline = time.After(hubTestWait)
 	gotPlay, gotStop := false, false
 	for !(gotPlay && gotStop) {
 		select {

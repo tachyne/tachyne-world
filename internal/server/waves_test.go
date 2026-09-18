@@ -50,6 +50,7 @@ func buildBeach(w *world.World, cx, cz int) map[int]blockPos {
 }
 
 func TestWaveWashesUpAndRollsBack(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	cx, cz := 200, 200
@@ -87,6 +88,7 @@ func TestWaveWashesUpAndRollsBack(t *testing.T) {
 }
 
 func TestWaveNeverWritesWorld(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	cx, cz := 400, 400
@@ -110,6 +112,7 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 // on top: the wave climbs one block at a time and can't scale it, even when the
 // crest peaks above the cliff top.
 func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
@@ -153,6 +156,7 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 // some are FLOWING (non-source) levels, so the edges slope/soften on the client
 // rather than every cell being a full source cube.
 func TestWaveEdgesAreFlowing(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	cx, cz := 1000, 1000
@@ -240,6 +244,7 @@ func TestWaveBumpPausesAndSwells(t *testing.T) {
 // TestWaveWaterIsThin — no wave cell is a full source cube; the sheet is a
 // shallow flowing film (levels 1..7) so it reads as a low, consistent wash.
 func TestWaveWaterIsThin(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	cx, cz := 1600, 1600
@@ -263,6 +268,7 @@ func TestWaveWaterIsThin(t *testing.T) {
 // where a near cell is wet while a farther one is dry (the front sits between
 // them), and the front never inverts (far wet while near dry).
 func TestWaveFrontIsGradualOnFlat(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel

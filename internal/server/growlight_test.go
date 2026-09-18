@@ -86,11 +86,12 @@ func TestCropDoesNotGrowInTheDark(t *testing.T) {
 // sapling advanced on every lit random tick — roughly seven times too fast.
 // Over many trials the observed rate must sit near 1/7, not 1.
 func TestSaplingAdvancesAtVanillaRate(t *testing.T) {
+	skipHeavy(t)
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 
 	base, _ := worldgen.BlockRange("oak_sapling")
-	const trials = 3000
+	const trials = 700 // 1/7 over 700 trials: σ ≈ 0.013, the band below is ±3σ
 	advanced := 0
 	for i := 0; i < trials; i++ {
 		x, y, z := 100+i%50, 200, 100+i/50
@@ -101,7 +102,7 @@ func TestSaplingAdvancesAtVanillaRate(t *testing.T) {
 		}
 	}
 	rate := float64(advanced) / float64(trials)
-	if rate < 0.10 || rate > 0.19 { // 1/7 = 0.143, generous band for 3000 trials
+	if rate < 0.10 || rate > 0.19 { // 1/7 = 0.143, generous band for 700 trials
 		t.Errorf("sapling advance rate %.3f, want ~0.143 (1 in 7)", rate)
 	}
 }

@@ -15,7 +15,7 @@ import (
 // the hub event queue since the plugin TimeSetEvent).
 func waitDayTime(t *testing.T, h *hub, want uint64) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(hubTestWait)
 	for h.dayTime.Load() != want {
 		if time.Now().After(deadline) {
 			t.Fatalf("dayTime=%d, want %d", h.dayTime.Load(), want)
@@ -61,7 +61,7 @@ func TestBusCommands(t *testing.T) {
 	if _, e := executeCommand(h, "gamerule", json.RawMessage(`{"rule":"keepInventory","on":true}`)); e != "" {
 		t.Fatalf("gamerule: %s", e)
 	}
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(hubTestWait)
 	for {
 		var flag, keep bool
 		h.runOnHub(func() { flag, keep = h.thunderFlag, h.rules.KeepInventory })
@@ -146,7 +146,7 @@ func TestBusEventBridge(t *testing.T) {
 	// A join publishes v2.player_join with the struct fields.
 	p1 := newPlayer(h.allocEID(), "alice", [16]byte{1})
 	h.post(evJoin{p: p1, x: 0.5, y: 80, z: 0.5})
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(hubTestWait)
 	for {
 		if raw, ok := rec.get("player_join"); ok {
 			var ev struct {
@@ -174,7 +174,7 @@ func TestBusEventBridge(t *testing.T) {
 	}
 	off()
 	h.post(evChat{from: p1, text: "audible"})
-	deadline = time.Now().Add(10 * time.Second)
+	deadline = time.Now().Add(hubTestWait)
 	for {
 		if raw, ok := rec.get("player_chat"); ok {
 			var ev struct {

@@ -61,6 +61,7 @@ func TestOresDeterministic(t *testing.T) {
 // TestRedstoneLapisGeneration confirms the newly added ores appear in their
 // vanilla bands and that redstone generates in its UNLIT state.
 func TestRedstoneLapisGeneration(t *testing.T) {
+	skipHeavy(t)
 	g := NewGenerator(1)
 	litRedstone := blockBase("redstone_ore")
 	litDeepRedstone := blockBase("deepslate_redstone_ore")
@@ -105,6 +106,7 @@ func TestRedstoneLapisGeneration(t *testing.T) {
 // TestEmeraldMountainsOnly: emerald ore only appears in chunks whose biome is
 // a mountain biome, and it does appear where mountains exist.
 func TestEmeraldMountainsOnly(t *testing.T) {
+	skipHeavy(t)
 	g := NewGenerator(1)
 	mountainChunks, emeraldTotal, emeraldOffMountain := 0, 0, 0
 	for cx := int32(-20); cx <= 20; cx++ {

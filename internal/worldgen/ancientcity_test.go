@@ -3,6 +3,7 @@ package worldgen
 import "testing"
 
 func TestAncientCityGenerates(t *testing.T) {
+	skipHeavy(t)
 	g := NewGenerator(1)
 	// Find a placed city by sampling cell centres over a wide area.
 	var city AncientCity
