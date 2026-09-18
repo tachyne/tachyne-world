@@ -215,8 +215,12 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 }
 
 // throwPearl handles a player's ender-pearl right-click: the pearl flies, and
-// where it shatters the thrower lands (paying the vanilla 5 HP).
+// where it shatters the thrower lands (paying the vanilla 5 HP). The item's
+// use_cooldown (a second) gates the next throw and is shown on the client.
 func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
+	if h.onCooldown(t, itemEnderPearl) {
+		return
+	}
 	slot := -1
 	for i := range t.inv.slots {
 		if s := &t.inv.slots[i]; s.item == itemEnderPearl && s.count > 0 {
@@ -242,6 +246,7 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 	a.noHitUntil = h.tick.Load() + arrowNoSelfHT
 	a.playerShot = true
 	h.playSound(players, "minecraft:entity.ender_pearl.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
+	h.setCooldown(t, itemEnderPearl, pearlCooldown)
 }
 
 // pearlLand teleports the thrower to the shatter point (vanilla: 5 HP toll).

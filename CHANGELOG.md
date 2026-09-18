@@ -14,6 +14,20 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-18
 
 ### Added
+- **Item cooldowns shown on the client.** The cooldowns the world keeps — a
+  shield disabled by an axe, a goat horn blown, chorus fruit eaten — now
+  reach the client as vanilla's cooldown packet, so the sweep is drawn
+  over the item (Bedrock included for the groups it animates). A new
+  attach frame in the shared library, forwarded by every gateway.
+- **Wind charges throw from the hand.** A right-click with a wind charge
+  throws it from the eyes along your look, as vanilla's does — the gust
+  hurts what it strikes a point, shoves it and bursts (swinging doors,
+  pressing buttons) — one charge spent, half a second before the next.
+  Ender pearls gate on their second of cooldown the same way.
+- **Villagers yield a workstation.** An unemployed villager on its way to
+  a workstation gives it up to a neighbour who already holds that trade
+  but lost its own block, and that villager walks there instead, as
+  vanilla's do.
 - **The outer End.** Chunks carry their biome ring; the highlands grow
   chorus forests and hide return gateways; the small islands' biome floats
   end-stone islands, all on vanilla's placements.
@@ -30,6 +44,12 @@ the public history since the project was open-sourced on 2026-07-10.
   workstation, gaining its profession and trades; a workstation serves one
   villager; a lost workstation costs the job, and the profession too if it
   never traded, as vanilla's do.
+
+### Fixed
+- **Ender pearls throw again.** A player's pearl right-click was posted to
+  the world and never handled — since the public release nothing flew.
+  It is dispatched now, and a test holds every posted event to a handler.
+
 
 ## 2026-09-17
 

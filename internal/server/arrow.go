@@ -401,6 +401,18 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.endermanTeleport(players, m)
 			continue
 		}
+		if a.knock > 0 { // a wind charge: one point of damage, a shove and the burst
+			if a.playerShot {
+				m.hitByPlayer = true
+			}
+			h.windChargeShoveMob(players, a, m)
+			m.hurtKind(windChargeHitDamage, dtWindCharge)
+			if m.health <= 0 {
+				h.killMob(players, m)
+			}
+			h.windBurst(players, a.dim, px, py, pz, a.shooter)
+			return true
+		}
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
 			if a.playerShot {
 				m.hitByPlayer = true

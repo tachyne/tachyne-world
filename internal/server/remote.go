@@ -131,6 +131,8 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evPlaceOnWater{eid: p.eid})
 		case itemEnderPearl:
 			h.post(evThrowPearl{eid: p.eid})
+		case itemWindCharge:
+			h.post(evThrowWindCharge{eid: p.eid})
 		case itemEnderEye:
 			h.post(evThrowEye{eid: p.eid})
 		case itemEmptyMap:
@@ -431,6 +433,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgEntityAttributes, ev)
 	case attachproto.BlockBreakProgress:
 		send(attachproto.MsgBlockBreakProgress, ev)
+	case attachproto.ItemCooldown:
+		send(attachproto.MsgItemCooldown, ev)
 	case attachproto.WorldBorder:
 		send(attachproto.MsgWorldBorder, ev)
 	case attachproto.BannerPatterns:

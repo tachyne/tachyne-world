@@ -138,9 +138,11 @@ type evInteractMob struct {                    // right-clicked a mob (feed/shea
 
 func (evInteractMob) isHubEvent() {}
 
-type evThrowPearl struct{ eid int32 } // right-clicked with an ender pearl
+type evThrowPearl struct{ eid int32 }      // right-clicked with an ender pearl
+type evThrowWindCharge struct{ eid int32 } // right-clicked with a wind charge
 
-func (evThrowPearl) isHubEvent() {}
+func (evThrowPearl) isHubEvent()      {}
+func (evThrowWindCharge) isHubEvent() {}
 
 type evNPCDecision struct { // an LLM NPC's decided action (nil = none)
 	eid    int32
@@ -1629,6 +1631,14 @@ func (h *hub) run() {
 			case evThrowXPBottle:
 				if t := players[e.eid]; t != nil {
 					h.throwXPBottle(players, t)
+				}
+			case evThrowPearl:
+				if t := players[e.eid]; t != nil {
+					h.throwPearl(players, t)
+				}
+			case evThrowWindCharge:
+				if t := players[e.eid]; t != nil {
+					h.throwWindCharge(players, t)
 				}
 			case evSpyglass:
 				if t := players[e.eid]; t != nil {

@@ -8,6 +8,8 @@ package server
 // this world drops one yet (that is the goat's ram, tracked separately), so
 // in practice a horn comes from creative and sounds Ponder.
 
+import attachproto "github.com/tachyne/tachyne-common/attach"
+
 var itemGoatHorn = itemByName["goat_horn"]
 
 // instrumentSounds is the goat_horn_instrument registry in order — the
@@ -55,9 +57,11 @@ func (h *hub) tootHorn(players map[int32]*tracked, t *tracked) {
 	h.playSoundDim(players, t.dim, instrumentSounds[i], sndRecord, t.x, t.y, t.z, hornRange/16, 1)
 }
 
-// onCooldown / setCooldown are vanilla's per-item use cooldown, kept
-// server-side. The client draws its own sweep from the packet vanilla sends;
-// this is the half that decides whether a use counts.
+// onCooldown / setCooldown are vanilla's ItemCooldowns, the server's half:
+// whether a use counts, and the cooldown frame the client draws its sweep
+// from (ServerItemCooldowns.onCooldownStarted). The client counts its own
+// copy down, so only the start is sent; vanilla's end-of-cooldown packet is
+// a no-op there.
 func (h *hub) onCooldown(t *tracked, item int32) bool {
 	return t.cooldowns != nil && h.tick.Load() < t.cooldowns[item]
 }
@@ -67,4 +71,7 @@ func (h *hub) setCooldown(t *tracked, item int32, ticks int) {
 		t.cooldowns = map[int32]uint64{}
 	}
 	t.cooldowns[item] = h.tick.Load() + uint64(ticks)
+	if name, ok := itemNameOf[item]; ok && t.p != nil {
+		t.p.sendEv(attachproto.ItemCooldown{Group: "minecraft:" + name, Ticks: int32(ticks)})
+	}
 }
