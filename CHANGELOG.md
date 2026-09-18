@@ -57,6 +57,14 @@ the public history since the project was open-sourced on 2026-07-10.
   spawn_wandering_traders, and max_snow_accumulation_height (raised above
   vanilla's one, snowfall piles layers up to it). All with vanilla's
   defaults; the old camelCase spellings are accepted.
+- **Menus close when they should.** A container's menu now closes from the
+  server the moment it stops being valid, as vanilla's does every tick:
+  the block broken out from under it, or the player walked out of reach
+  (the interaction range plus four blocks) or into another dimension, and
+  a trade screen when its villager dies or is left behind. What the
+  cursor and crafting slots held comes back. A new attach frame in the
+  shared library, forwarded by every gateway (Bedrock included). Menus
+  stayed open over a broken chest or from across the map before.
 - **Anvils wear out.** One use in eight chips an anvil a stage (anvil,
   chipped, damaged) and a damaged one breaks under the next, as vanilla's
   do; creative use never wears it. The anvil's use and break sounds now

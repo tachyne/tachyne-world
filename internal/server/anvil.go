@@ -366,10 +366,7 @@ func (h *hub) wearAnvil(players map[int32]*tracked, t *tracked) {
 		if stage := (st - anvilStateMin) / 4; stage >= 2 {
 			h.setBlockAt(players, t.dim, pos, worldgen.Air)
 			h.levelEvent(players, t.dim, worldEventAnvilBroken, pos.x, pos.y, pos.z, 0)
-			// AnvilMenu.stillValid fails and vanilla closes the menu; the attach
-			// protocol has no clientbound close yet, so the server side closes
-			// and the client's menu goes on its next click or escape.
-			h.closeWindow(players, t)
+			h.closeWindowServer(players, t) // AnvilMenu.stillValid fails: the menu closes
 			return
 		}
 		h.setBlockAt(players, t.dim, pos, st+4)

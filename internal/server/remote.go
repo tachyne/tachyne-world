@@ -435,6 +435,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBlockBreakProgress, ev)
 	case attachproto.ItemCooldown:
 		send(attachproto.MsgItemCooldown, ev)
+	case attachproto.WindowCloseServer:
+		send(attachproto.MsgWindowCloseServer, ev)
 	case attachproto.WorldBorder:
 		send(attachproto.MsgWorldBorder, ev)
 	case attachproto.BannerPatterns:

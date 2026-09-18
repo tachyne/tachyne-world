@@ -1053,6 +1053,7 @@ func (h *hub) run() {
 			}
 			h.updateBolts(players) // despawn finished lightning flashes
 			h.updateTNT(players)
+			h.validateWindows(players) // AbstractContainerMenu.stillValid, every tick
 			h.updateFangs(players)     // evoker fangs: bite once, then sink
 			h.updateVexLife(players)   // summoned vexes expire   // primed charges burn their fuses
 			h.tickBrushes(players)     // half-brushed suspicious blocks settle back
