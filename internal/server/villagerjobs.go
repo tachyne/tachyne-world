@@ -25,8 +25,8 @@ const (
 	profUnemployed  = -1
 	profNitwit      = -2 // VillagerProfession.NITWIT: no trades, never a workstation
 
-	entityStatusVillagerSplash = 14 // Villager.handleEntityEvent: the profession flourish
-	entityStatusVillagerNo     = 40 // the head shake (setUnhappy)
+	entityStatusVillagerHappy = 14 // Villager.handleEntityEvent 14 (VILLAGER_HAPPY): the green burst — the profession flourish
+	entityStatusVillagerNo    = 40 // the head shake (setUnhappy)
 )
 
 // jobBlocks maps a workstation block range to its profession index
@@ -174,7 +174,7 @@ func (h *hub) villagerJobWalk(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	m.work, m.jobPos = m.jobPos, blockPos{}
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerSplash))
+	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy))
 	if m.profession < 0 {
 		h.initVillagerTrades(m, p)
 		h.sendVillagerData(players, m)

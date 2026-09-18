@@ -217,6 +217,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if t.air -= drain; t.air <= 0 {
 			t.air = 0
 			if h.rules.DrownDamage {
+				h.toNearbyEv(players, t.dim, t.x, t.z, entityStatus(t.p.eid, entityStatusDrown))
 				h.hurtBy(players, t, drownDamagePerSec, dtDrown, deathCause{key: causeDrown})
 			}
 		}

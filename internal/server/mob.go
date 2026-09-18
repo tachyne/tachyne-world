@@ -480,6 +480,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.dying > 0 { // playing the death animation — hold still, then despawn + drop
 			if m.dying -= mobMoveInterval; m.dying <= 0 {
+				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusPoof)) // LivingEntity.tickDeath
 				h.despawnMob(players, m)
 			}
 			continue

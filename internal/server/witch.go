@@ -32,6 +32,9 @@ func witchUsingMeta(eid int32, on bool) []byte {
 // witchTick runs each mob update: the drink in progress, a new one, or a
 // throw at the nearest player within ten blocks.
 func (h *hub) witchTick(players map[int32]*tracked, m *mob) {
+	if h.rng.Float64() < 7.5e-4*mobMoveInterval { // Witch.aiStep: the ambient sparkle
+		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusWitchMagic))
+	}
 	if m.drinkTicks > 0 {
 		m.drinkTicks -= mobMoveInterval
 		if m.drinkTicks > 0 {

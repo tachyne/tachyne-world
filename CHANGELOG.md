@@ -65,6 +65,15 @@ the public history since the project was open-sourced on 2026-07-10.
   cursor and crafting slots held comes back. A new attach frame in the
   shared library, forwarded by every gateway (Bedrock included). Menus
   stayed open over a broken chest or from across the map before.
+- **Vanilla's entity cues.** Eleven of the one-byte cues vanilla broadcasts
+  for clients to animate now fire where vanilla fires them: the death
+  cloud when a corpse goes, the bubbles of a drowning breath (players and
+  mobs), portal particles at an enderman's or a chorus-fruit teleport, a
+  witch's ambient sparkle, a fox's crumbs, the sniffer's digging sound,
+  the creaking's shudder, the ravager's roar, a firework's burst from its
+  own item, the sniffer's dig, and the happy burst after a trade. Villager
+  hearts and happiness now use the villager's own ids (its hearts were
+  sent on the animals' id, which draws nothing on a villager).
 - **Anvils wear out.** One use in eight chips an anvil a stage (anvil,
   chipped, damaged) and a damaged one breaks under the next, as vanilla's
   do; creative use never wears it. The anvil's use and break sounds now

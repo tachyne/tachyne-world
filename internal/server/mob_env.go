@@ -181,6 +181,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 					h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
 				}
 			} else if m.submerged > mobMaxAir(m)/20 { // air is in ticks; /20 = seconds
+				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
 				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 			}
 		} else {

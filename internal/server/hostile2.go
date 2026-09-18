@@ -210,6 +210,7 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		m.y = float64(h.world.MobFeet(x, z))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
 		return
 	}
 }

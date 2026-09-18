@@ -136,6 +136,7 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 // the star components a stack does not carry here yet.
 func (h *hub) popRocket(players map[int32]*tracked, r *rocketEntity) {
 	delete(h.rockets, r.eid)
+	h.toNearbyEv(players, r.dim, r.x, r.z, entityStatus(r.eid, entityStatusFireworks)) // FireworkRocketEntity.explode
 	h.playSound(players, "minecraft:entity.firework_rocket.blast", sndAmbient, r.x, r.y, r.z, 3, 1)
 	h.toNearbyEv(players, r.dim, r.x, r.z, entGone(r.eid))
 }

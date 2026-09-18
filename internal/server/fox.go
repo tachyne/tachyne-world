@@ -94,6 +94,7 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 		if m.foxEatTicks > foxEatAfter {
 			m.held, m.foxEatTicks = 0, 0
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
+			h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFoxEat))
 			h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		} else if m.foxEatTicks > foxEatAfter-40 && h.rng.Intn(10) == 0 {
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)

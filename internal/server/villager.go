@@ -426,6 +426,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 		h.updateSpecialPrices(t, m)   // reflect the new reputation immediately
 		h.sendTradeList(t, m)         // refresh uses/level/price (and any new offers)
 		h.playSound(players, "minecraft:entity.villager.yes", sndNeutral, m.x, m.y, m.z, 0.7, 1)
+		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy)) // Villager.customServerAiStep after a trade
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
 	h.incCustom(t, "traded_with_villager", 1)

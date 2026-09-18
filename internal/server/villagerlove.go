@@ -37,9 +37,9 @@ const (
 	shareThrowDist      = 1.0 // the throw lands this far toward the partner (items here have no flight)
 	villagerFoodBread   = 4
 
-	entityStatusLoveHearts    = 18 // LivingEntity.handleEntityEvent: heart particles (in love)
-	entityStatusVillagerHappy = 12 // Villager: happy particles
-	entityStatusVillagerAngry = 13 // Villager: angry particles
+	entityStatusLoveHearts     = 18 // LivingEntity.handleEntityEvent: heart particles (in love)
+	entityStatusVillagerHearts = 12 // Villager.handleEntityEvent 12: heart particles (a villager is no Animal, so 18 draws nothing on it)
+	entityStatusVillagerAngry  = 13 // Villager: angry particles
 )
 
 // villagerFoodPoints is Villager.FOOD_POINTS.
@@ -139,8 +139,8 @@ func (h *hub) villagerBreedStep(players map[int32]*tracked, m *mob) bool {
 		m.breedLead, mate.breedLead = true, false
 		m.breedAt = now + breedDurationMin + uint64(h.rng.Intn(breedDurationRand))
 		mate.breedAt = m.breedAt
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusLoveHearts))             // hearts (event 18)
-		h.toNearbyEv(players, mate.dim, mate.x, mate.z, entityStatus(mate.eid, entityStatusLoveHearts)) //
+		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHearts))             // hearts (event 18)
+		h.toNearbyEv(players, mate.dim, mate.x, mate.z, entityStatus(mate.eid, entityStatusVillagerHearts)) //
 		return true
 	}
 	o := h.mobs[m.breedMate]

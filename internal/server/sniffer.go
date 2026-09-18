@@ -184,6 +184,7 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		}
 		m.sniffState, m.sniffStart = 2, now
 		m.sniffUntil = now + snifferDigMin + uint64(h.rng.Intn(snifferDigJitter+1))
+		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusSnifferDig)) // onDiggingStart
 		m.vx, m.vz = 0, 0
 		h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.digging", sndNeutral, m.x, m.y, m.z, 1, 1)
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseDigging)))

@@ -46,6 +46,7 @@ func (h *hub) ravagerStep(players map[int32]*tracked, m *mob) bool {
 			m.ravStunTick--
 			if m.ravStunTick == 0 {
 				h.playSoundDim(players, m.dim, "minecraft:entity.ravager.roar", sndHostile, m.x, m.y, m.z, 1, 1)
+				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusRavagerRoar))
 				m.ravRoarTick = ravagerRoarTicks
 			}
 		}
