@@ -47,6 +47,7 @@ var gameruleAlias = map[string]string{
 	"tntExplosionDropDecay":     "tnt_explosion_drop_decay",
 	"maxEntityCramming":         "max_entity_cramming",
 	"spawnRadius":               "respawn_radius",
+	"snowAccumulationHeight":    "max_snow_accumulation_height",
 }
 
 // booleanRules is every boolean rule tachyne enforces, canonical names.
@@ -69,7 +70,7 @@ var booleanRules = []string{
 }
 
 // numericRules is the same for the rules that take a number.
-var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius"}
+var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius", "max_snow_accumulation_height"}
 
 // canonicalRule resolves either spelling to the canonical name, and reports
 // whether it is a rule at all.

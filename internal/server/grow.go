@@ -814,9 +814,11 @@ var (
 func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 	x := cx*16 + h.rng.Intn(16)
 	z := cz*16 + h.rng.Intn(16)
-	// Find the topmost non-air near the surface (water sits above the terrain).
+	// Find the topmost non-air near the surface (water sits above the
+	// terrain; a snow layer or a cauldron on the ground sits above GroundY,
+	// which counts only what collides).
 	start := worldgen.SeaLevel + 4
-	if g := h.worldFor(dim).GroundY(x, z); g > start {
+	if g := h.worldFor(dim).GroundY(x, z) + 2; g > start {
 		start = g
 	}
 	topY, top := 0, uint32(0)
@@ -862,9 +864,21 @@ func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
 		}
 		return
 	}
-	// Snow: while snowing, lay a snow layer on a solid, snow-free surface.
-	if h.raining && worldgen.IsSolidFull(top) && top != iceBlock &&
-		h.worldFor(dim).At(x, topY+1, z) == worldgen.Air {
+	// Snow: while snowing, lay a snow layer on a solid, snow-free surface,
+	// or pile another on the layers there up to max_snow_accumulation_height
+	// (Biome.shouldSnow also wants block light under 10).
+	maxLayers := h.rules.MaxSnowHeight
+	if !h.raining || maxLayers <= 0 {
+		return
+	}
+	if top >= snowLayer1 && top <= snowLayer1+7 {
+		if layers := int(top-snowLayer1) + 1; layers < maxLayers && h.blockLight(dim, x, topY, z) < 10 {
+			h.setBlockAt(players, dim, blockPos{x, topY, z}, snowLayer1+uint32(layers))
+		}
+		return
+	}
+	if worldgen.IsSolidFull(top) && top != iceBlock &&
+		h.worldFor(dim).At(x, topY+1, z) == worldgen.Air && h.blockLight(dim, x, topY+1, z) < 10 {
 		h.setBlockAt(players, dim, blockPos{x, topY + 1, z}, snowLayer1)
 	}
 }

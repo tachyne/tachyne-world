@@ -84,6 +84,7 @@ type worldRules struct {
 	TNTDropDecay      bool `json:"tntExplosionDropDecay"`
 	MaxCramming       int  `json:"maxEntityCramming"`
 	RespawnRadius     int  `json:"respawnRadius"`
+	MaxSnowHeight     int  `json:"maxSnowAccumulationHeight"`
 	TraderSpawnDelay  int  `json:"wanderingTraderSpawnDelay,omitempty"`
 	TraderSpawnChance int  `json:"wanderingTraderSpawnChance,omitempty"`
 }
@@ -100,7 +101,7 @@ func defaultRules() worldRules {
 		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
-		MaxCramming: maxEntityCramming, RespawnRadius: 10}
+		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1}
 }
 
 // diffMult scales hostile-mob damage by difficulty (vanilla-ish).
@@ -340,6 +341,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.MaxCramming = max(0, e.num)
 	case "respawn_radius":
 		h.rules.RespawnRadius = max(0, e.num)
+	case "max_snow_accumulation_height":
+		h.rules.MaxSnowHeight = min(8, max(0, e.num))
 	case "freeze_damage":
 		h.rules.FreezeDamage = e.on
 	case "spread_vines":

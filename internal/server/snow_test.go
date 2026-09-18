@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -51,4 +52,62 @@ func TestSnowAndIce(t *testing.T) {
 			t.Error("exposed cold water never froze to ice")
 		}
 	})
+}
+
+// max_snow_accumulation_height: at the default of one, snow never piles
+// past a single layer; raised, snowfall stacks layers up to it.
+func TestSnowAccumulatesToRule(t *testing.T) {
+	w := world.New(1)
+	h := newHub(w)
+	h.playersRef = map[int32]*tracked{}
+	fx, fz, found := 0, 0, false
+	for r := 0; r < 400 && !found; r += 8 {
+		for _, c := range [][2]int{{r, 0}, {0, r}, {-r, 0}, {0, -r}} {
+			if worldgen.PrecipitationAt(w.BiomeAt(c[0], c[1]), worldgen.SeaLevel) == worldgen.PrecipSnow {
+				fx, fz, found = c[0], c[1], true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Skip("no snowy biome near origin in this seed")
+	}
+	y := max(w.GroundY(fx, fz), worldgen.SeaLevel)
+	w.SetBlock(fx, y, fz, worldgen.Stone)
+	for cy := y + 1; cy < y+7; cy++ {
+		w.SetBlock(fx, cy, fz, worldgen.Air)
+	}
+	h.raining = true
+	layers := func() int {
+		s := w.At(fx, y+1, fz)
+		if s >= snowLayer1 && s <= snowLayer1+7 {
+			return int(s-snowLayer1) + 1
+		}
+		return 0
+	}
+	for i := 0; i < 6000 && layers() < 1; i++ {
+		h.precipTick(h.playersRef, 0, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
+	}
+	if layers() != 1 {
+		t.Fatalf("snowfall should lay a layer: %d", layers())
+	}
+	for i := 0; i < 6000; i++ {
+		h.precipTick(h.playersRef, 0, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
+	}
+	if layers() != 1 {
+		t.Fatalf("at the default height snow stays one layer: %d", layers())
+	}
+	h.rules.MaxSnowHeight = 3
+	for i := 0; i < 20000 && layers() < 3; i++ {
+		h.precipTick(h.playersRef, 0, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
+	}
+	if layers() != 3 {
+		t.Fatalf("raised to three, snow should pile to three layers: %d", layers())
+	}
+	for i := 0; i < 6000; i++ {
+		h.precipTick(h.playersRef, 0, chunkFloor(float64(fx)), chunkFloor(float64(fz)))
+	}
+	if layers() != 3 {
+		t.Fatalf("and no further: %d", layers())
+	}
 }

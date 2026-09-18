@@ -54,8 +54,9 @@ the public history since the project was open-sourced on 2026-07-10.
   drops every block it breaks while a creeper's or a bed's drops one in
   `power` — max_entity_cramming and respawn_radius (a death with no bed
   puts you down at a random spot within ten blocks of the spawn), plus
-  spawn_wandering_traders. All with vanilla's defaults; the old camelCase
-  spellings are accepted.
+  spawn_wandering_traders, and max_snow_accumulation_height (raised above
+  vanilla's one, snowfall piles layers up to it). All with vanilla's
+  defaults; the old camelCase spellings are accepted.
 - **Villagers yield a workstation.** An unemployed villager on its way to
   a workstation gives it up to a neighbour who already holds that trade
   but lost its own block, and that villager walks there instead, as
@@ -91,6 +92,9 @@ the public history since the project was open-sourced on 2026-07-10.
   fireballs, beds and anchors and TNT carts all use it.
 
 ### Fixed
+- **Cauldrons on high ground fill in the rain.** The precipitation scan
+  started at the ground's own height on any ground above sea level plus
+  four, so a cauldron (or the snow already lying) on it was never seen.
 - **Ender pearls throw again.** A player's pearl right-click was posted to
   the world and never handled — since the public release nothing flew.
   It is dispatched now, and a test holds every posted event to a handler.
