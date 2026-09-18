@@ -1878,7 +1878,7 @@ func (h *hub) run() {
 				}
 			case evOpenAnvil:
 				if t := players[e.eid]; t != nil {
-					h.openAnvil(t)
+					h.openAnvil(t, blockPos{e.x, e.y, e.z})
 					h.incCustom(t, "interact_with_anvil", 1)
 				}
 			case evOpenGrind:

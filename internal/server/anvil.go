@@ -27,6 +27,7 @@ const (
 )
 
 var (
+	anvilWearChance    = 0.12                        // AnvilMenu.onTake: random.nextFloat() < 0.12F
 	anvilStateMin      = worldgen.BlockBase("anvil") // anvil/chipped/damaged × facing
 	anvilStateMax      = worldgen.BlockBase("damaged_anvil") + 3
 	grindstoneStateMin = worldgen.BlockBase("grindstone")
@@ -38,7 +39,10 @@ var (
 	itemEnchantedBook = itemByName["enchanted_book"]
 )
 
-type evOpenAnvil struct{ eid int32 }
+type evOpenAnvil struct {
+	eid     int32
+	x, y, z int // the anvil block, for the wear roll
+}
 type evOpenGrind struct{ eid int32 }
 type evRename struct {
 	eid  int32
@@ -50,7 +54,12 @@ func (evOpenGrind) isHubEvent() {}
 func (evRename) isHubEvent()    {}
 
 // openAnvil / openGrindstone open the two-input + result windows.
-func (h *hub) openAnvil(t *tracked) { h.openTwoSlot(t, winAnvil, menuAnvil, "Repair & Name") }
+func (h *hub) openAnvil(t *tracked, pos blockPos) {
+	h.openTwoSlot(t, winAnvil, menuAnvil, "Repair & Name")
+	if t.winKind == winAnvil {
+		t.winPos = simPos{dim: t.dim, blockPos: pos}
+	}
+}
 func (h *hub) openGrindstone(t *tracked) {
 	h.openTwoSlot(t, winGrind, menuGrindstone, "Repair & Disenchant")
 }
@@ -278,7 +287,7 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
 		if consumed {
 			t.anvil[1] = invStack{}
 		}
-		h.playSound(players, "minecraft:block.anvil.use", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.wearAnvil(players, t) // AnvilMenu.onTake: one use in eight chips it; the sound rides the event
 	} else { // grindstone: refund XP for the stripped enchantments
 		if t.anvil[0].item != 0 {
 			t.anvil[0] = invStack{}
@@ -339,4 +348,31 @@ var silkTouchDrop = map[uint32]int32{
 func isOreState(s uint32) bool {
 	_, ok := silkTouchDrop[s]
 	return ok && s != worldgen.Stone && s != worldgen.GrassBlock
+}
+
+// wearAnvil is AnvilMenu.onTake's damage roll: outside creative, one use in
+// eight (0.12) chips the anvil a stage — anvil, chipped, damaged, gone — and
+// the sound is the level event the client plays (SOUND_ANVIL_USED, or
+// SOUND_ANVIL_BROKEN when it goes).
+func (h *hub) wearAnvil(players map[int32]*tracked, t *tracked) {
+	pos := t.winPos.blockPos
+	w := h.worldFor(t.dim)
+	st := w.At(pos.x, pos.y, pos.z)
+	if st < anvilStateMin || st > anvilStateMax {
+		h.levelEvent(players, t.dim, worldEventAnvilUsed, floorInt(t.x), floorInt(t.y), floorInt(t.z), 0)
+		return
+	}
+	if t.gamemode != gmCreative && h.rng.Float64() < anvilWearChance {
+		if stage := (st - anvilStateMin) / 4; stage >= 2 {
+			h.setBlockAt(players, t.dim, pos, worldgen.Air)
+			h.levelEvent(players, t.dim, worldEventAnvilBroken, pos.x, pos.y, pos.z, 0)
+			// AnvilMenu.stillValid fails and vanilla closes the menu; the attach
+			// protocol has no clientbound close yet, so the server side closes
+			// and the client's menu goes on its next click or escape.
+			h.closeWindow(players, t)
+			return
+		}
+		h.setBlockAt(players, t.dim, pos, st+4)
+	}
+	h.levelEvent(players, t.dim, worldEventAnvilUsed, pos.x, pos.y, pos.z, 0)
 }

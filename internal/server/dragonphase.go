@@ -182,7 +182,7 @@ func (h *hub) launchDragonFireball(players map[int32]*tracked, m *mob, t *tracke
 	a := h.launchProjectileIn(players, entityDragonFireball, 2, m.x, m.y+0.5, m.z,
 		dx/d*v, dy/d*v, dz/d*v)
 	a.shooter, a.dmg, a.breaks, a.breath = m.eid, 0, true, true
-	h.playSoundDim(players, 2, "minecraft:entity.ender_dragon.shoot", sndHostile, m.x, m.y, m.z, 4, 1)
+	h.levelEvent(players, 2, worldEventDragonFireball, floorInt(m.x), floorInt(m.y), floorInt(m.z), 0) // SOUND_DRAGON_FIREBALL
 }
 
 // dragonTarget is the player the dragon is interested in: the nearest one

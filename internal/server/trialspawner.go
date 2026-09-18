@@ -353,6 +353,7 @@ func (h *hub) spawnTrialMob(players map[int32]*tracked, ts *trialSpawner) *mob {
 		}
 		h.playSound(players, "minecraft:block.trial_spawner.spawn_mob", sndBlock,
 			ts.fx(), ts.fy(), ts.fz(), 1, 1)
+		h.levelEvent(players, 0, worldEventTrialSpawn, ts.pos.x, ts.pos.y, ts.pos.z, boolInt32(ts.ominous))
 		return m
 	}
 	return nil
@@ -385,4 +386,5 @@ func (h *hub) ejectTrialReward(players map[int32]*tracked, ts *trialSpawner) {
 	}
 	h.playSound(players, "minecraft:block.trial_spawner.eject_item", sndBlock,
 		ts.fx(), ts.fy(), ts.fz(), 1, 1)
+	h.levelEvent(players, 0, worldEventTrialEject, ts.pos.x, ts.pos.y, ts.pos.z, boolInt32(ts.ominous))
 }

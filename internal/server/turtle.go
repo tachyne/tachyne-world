@@ -105,7 +105,7 @@ func (h *hub) turtleEggRandomTick(players map[int32]*tracked, dim, x, y, z int, 
 	}
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
 	if hatch < 2 {
-		h.playSoundDim(players, dim, "minecraft:entity.turtle.egg_crack", sndBlock, cx, cy, cz, 0.7, 0.9+h.rng.Float32()*0.2)
+		h.levelEvent(players, dim, worldEventEggCrack, x, y, z, 0) // TurtleEggBlock.crack: sound + shell particles
 		h.setBlockLive(players, dim, x, y, z, turtleEggState(eggs, hatch+1))
 		return true
 	}

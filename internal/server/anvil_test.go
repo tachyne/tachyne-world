@@ -118,3 +118,42 @@ func TestLootingBoostsMobDrops(t *testing.T) {
 		t.Fatalf("looting III over 40 kills yielded only %d flesh", total)
 	}
 }
+
+// AnvilMenu.onTake: an anvil wears with use — one take in eight chips it a
+// stage, and a damaged one goes altogether — with the use/broken sounds as
+// level events the client plays.
+func TestAnvilWearsWithUse(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pos := blockPos{2, 70, 2}
+	h.world.SetBlock(pos.x, pos.y, pos.z, anvilStateMin)
+	h.openAnvil(pl, pos)
+	if pl.winPos.blockPos != pos {
+		t.Fatalf("the anvil window should know its block: %+v", pl.winPos)
+	}
+	stages := 0
+	for i := 0; i < 400 && h.world.At(pos.x, pos.y, pos.z) != worldgen.Air; i++ {
+		before := h.world.At(pos.x, pos.y, pos.z)
+		h.wearAnvil(players, pl)
+		if after := h.world.At(pos.x, pos.y, pos.z); after != before {
+			stages++
+			if after != worldgen.Air && after != before+4 {
+				t.Fatalf("wear should step a stage (facing kept): %d -> %d", before, after)
+			}
+		}
+	}
+	if stages != 3 || h.world.At(pos.x, pos.y, pos.z) != worldgen.Air {
+		t.Fatalf("four hundred uses should chip it twice and break it: %d changes, block %d", stages, h.world.At(pos.x, pos.y, pos.z))
+	}
+	drainEvents(pl)
+	h.world.SetBlock(pos.x, pos.y, pos.z, anvilStateMin)
+	pl.gamemode = gmCreative
+	for i := 0; i < 200; i++ {
+		h.wearAnvil(players, pl)
+	}
+	if h.world.At(pos.x, pos.y, pos.z) != anvilStateMin {
+		t.Fatal("creative use must not wear the anvil")
+	}
+}

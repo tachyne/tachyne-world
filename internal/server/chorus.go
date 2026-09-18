@@ -123,10 +123,12 @@ func (h *hub) tickChorus(players map[int32]*tracked, dim, x, y, z int, state uin
 		h.worldFor(dim).At(x, y+2, z) == worldgen.Air {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, h.chorusPlantAt(dim, x, y, z))
 		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, chorusFlowerBase+uint32(age))
+		h.levelEvent(players, dim, worldEventChorusGrow, x, y+1, z, 0)
 		return true
 	}
 	if age >= 4 { // too old to branch
 		h.setBlockAt(players, dim, blockPos{x, y, z}, chorusFlowerBase+chorusDeadAge)
+		h.levelEvent(players, dim, worldEventChorusDeath, x, y, z, 0)
 		return true
 	}
 
@@ -142,6 +144,7 @@ func (h *hub) tickChorus(players map[int32]*tracked, dim, x, y, z int, state uin
 			h.worldFor(dim).At(tx, y-1, tz) == worldgen.Air &&
 			h.chorusNeighboursEmpty(dim, tx, y, tz, -d.x, -d.z) {
 			h.setBlockAt(players, dim, blockPos{tx, y, tz}, chorusFlowerBase+uint32(age+1))
+			h.levelEvent(players, dim, worldEventChorusGrow, tx, y, tz, 0)
 			branched = true
 		}
 	}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -61,9 +60,7 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 			h.sendSlot(t, int(e.slot))
 		}
 	}
-	h.toNearbyEv(players, t.dim, float64(e.x), float64(e.z), attachproto.Particles{
-		PID: particleHappyVillager, X: float64(fx) + 0.5, Y: float64(fy) + 0.5, Z: float64(fz) + 0.5,
-		Spread: 0.3, Count: 15})
+	h.levelEvent(players, t.dim, worldEventBoneMeal, fx, fy, fz, 15) // BoneMealItem: the burst + its sound
 }
 
 // applyBoneMeal advances the block, returning whether it did anything.

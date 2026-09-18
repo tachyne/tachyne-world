@@ -57,6 +57,19 @@ the public history since the project was open-sourced on 2026-07-10.
   spawn_wandering_traders, and max_snow_accumulation_height (raised above
   vanilla's one, snowfall piles layers up to it). All with vanilla's
   defaults; the old camelCase spellings are accepted.
+- **Anvils wear out.** One use in eight chips an anvil a stage (anvil,
+  chipped, damaged) and a damaged one breaks under the next, as vanilla's
+  do; creative use never wears it. The anvil's use and break sounds now
+  ride vanilla's level events.
+- **Vanilla's world effects.** Fifteen effects vanilla asks the client to
+  draw by number now fire where vanilla fires them: the bone meal burst
+  with its sound, the smoke and flames of a spawner, a trial spawner's
+  spawn burst and item ejection, a vault opening, closing and paying
+  out, a turtle egg cracking, the chorus flower's growth and death sounds,
+  a bee's crop growth, the dig-out of a brushed block with the block's own
+  sound and particles, the dragon's fireball shot, and the puff out of a
+  dispenser's face. Some replace hand-made particle bursts; most were
+  missing.
 - **Villagers yield a workstation.** An unemployed villager on its way to
   a workstation gives it up to a neighbour who already holds that trade
   but lost its own block, and that villager walks there instead, as

@@ -573,7 +573,7 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if state >= anvilStateMin && state <= anvilStateMax {
-		s.hub.post(evOpenAnvil{eid: p.eid})
+		s.hub.post(evOpenAnvil{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}

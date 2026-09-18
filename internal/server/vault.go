@@ -191,6 +191,12 @@ func (h *hub) tickVault(players map[int32]*tracked, v *vaultRecord, cur uint32, 
 	}
 	if next := vaultBlock(cur, v.ominous, v.state); next != cur {
 		h.setBlockAt(players, 0, v.pos, next)
+		switch v.state {
+		case vaultActive:
+			h.levelEvent(players, 0, worldEventVaultActivate, v.pos.x, v.pos.y, v.pos.z, boolInt32(v.ominous))
+		case vaultInactive:
+			h.levelEvent(players, 0, worldEventVaultDeactive, v.pos.x, v.pos.y, v.pos.z, boolInt32(v.ominous))
+		}
 	}
 }
 
@@ -265,6 +271,7 @@ func (h *hub) ejectVaultReward(players map[int32]*tracked, v *vaultRecord) {
 	}
 	h.playSound(players, "minecraft:block.vault.eject_item", sndBlock,
 		float64(v.pos.x)+0.5, float64(v.pos.y), float64(v.pos.z)+0.5, 1, 1)
+	h.levelEvent(players, 0, worldEventVaultEject, v.pos.x, v.pos.y, v.pos.z, boolInt32(v.ominous))
 }
 
 // evUseVault asks the hub to run a right-click on a vault.

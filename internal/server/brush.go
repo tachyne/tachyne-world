@@ -174,8 +174,7 @@ func suspiciousBase(state uint32) uint32 {
 func (h *hub) finishBrush(players map[int32]*tracked, t *tracked, pos blockPos, state, turnsInto uint32, b *brushing) {
 	delete(h.brushes, pos)
 	h.setBlockAt(players, t.dim, pos, turnsInto)
-	h.playSound(players, "minecraft:block.rooted_dirt.break", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.levelEvent(players, t.dim, worldEventBrushDone, pos.x, pos.y, pos.z, int32(state)) // BrushableBlockEntity.brush: the block's break sound + particles
 
 	name, ok := h.brushLootTable(pos)
 	if !ok {

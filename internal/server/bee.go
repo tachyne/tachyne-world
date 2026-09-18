@@ -700,9 +700,7 @@ func (h *hub) beeGrowCropsBelow(players map[int32]*tracked, m *mob) {
 			continue
 		}
 		h.setBlockAt(players, 0, p, next)
-		// Level event 2011: the client shows a green burst over the plant.
-		h.spawnParticles(players, particleHappyVillager,
-			float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 0.5, 0, 15)
+		h.levelEvent(players, 0, worldEventBeeGrowth, p.x, p.y, p.z, 15) // the green burst over the plant
 		m.beeCropsGrown++
 	}
 }
