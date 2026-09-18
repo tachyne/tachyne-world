@@ -230,7 +230,7 @@ var speciesTable = map[int]*speciesDef{
 	entityTropicalFish: {name: "tropical_fish", health: 3, step: 0.08, arch: archWater,
 		quiet: true, drops: []specDrop{{item: "tropical_fish", min: 1}}},
 	entityPufferfish: {name: "pufferfish", health: 3, step: 0.06, arch: archWater,
-		quiet: true, drops: []specDrop{{item: "pufferfish", min: 1}}},
+		quiet: true, soundAs: "puffer_fish", drops: []specDrop{{item: "pufferfish", min: 1}}},
 	entityTadpole: {name: "tadpole", health: 6, step: 0.06, arch: archWater, quiet: true},
 	entityAxolotl: {name: "axolotl", health: 14, step: 0.10, damage: 2, arch: archWater},
 	entityDolphin: {name: "dolphin", health: 10, step: 0.16, damage: 3,
@@ -258,7 +258,7 @@ var speciesTable = map[int]*speciesDef{
 	entityParrot: {name: "parrot", health: 6, step: 0.13, arch: archFlyer, hover: 2,
 		drops: []specDrop{{item: "feather", min: 1, rnd: 1}}},
 	entityAllay: {name: "allay", health: 20, step: 0.13, arch: archFlyer, hover: 2,
-		xp: xpNone, quiet: true},
+		xp: xpNone}, // ambient: with/without item (mobSoundsFor)
 	entityBee: {name: "bee", health: 10, step: 0.13, damage: 2, arch: archFlyer,
 		// quiet: vanilla bees have NO server ambient (getAmbientSound is null;
 		// the buzz is the client's own looping sound) — and the derived
@@ -273,7 +273,7 @@ var speciesTable = map[int]*speciesDef{
 
 	// ── Overworld hostiles ───────────────────────────────────────────────
 	entityCaveSpider: {name: "cave_spider", health: 12, speed: 0.30, damage: 2,
-		arch: archHostile, poison: [2]int{7, 15},
+		arch: archHostile, poison: [2]int{7, 15}, soundAs: "spider", // CaveSpider extends Spider: the spider's voice
 		drops: []specDrop{{item: "string", rnd: 2}, {item: "spider_eye", min: 1, chance: 3}}},
 	entitySilverfish: {name: "silverfish", health: 8, speed: 0.25, damage: 1, arch: archHostile},
 	entityEndermite:  {name: "endermite", health: 8, speed: 0.25, damage: 2, arch: archHostile},

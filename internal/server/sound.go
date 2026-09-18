@@ -100,6 +100,43 @@ func mobSounds(etype int) (hurt, death, ambient string) {
 	return "", "", ""
 }
 
+// mobSoundsFor is mobSounds for a live mob: the species whose vanilla voice
+// depends on its state (getAmbientSound/getHurtSound overrides that pick by
+// water, age, held item, flight or the creaking's sway).
+func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
+	hurt, death, ambient = mobSounds(m.etype)
+	switch m.etype {
+	case entityCreaking:
+		hurt = "minecraft:entity.creaking.sway" // Creaking.getHurtSound
+	case entityTurtle:
+		if m.baby { // Turtle: the babies' own hurt/death
+			hurt, death = "minecraft:entity.turtle.hurt_baby", "minecraft:entity.turtle.death_baby"
+		}
+		ambient = "minecraft:entity.turtle.ambient_land" // getAmbientSound: land only, silent in water
+		if h.inWater(m.dim, m.x, m.y, m.z) {
+			ambient = ""
+		}
+	case entityAxolotl:
+		ambient = "minecraft:entity.axolotl.idle_air" // getAmbientSound: isInWaterOrBubble
+		if h.inWater(m.dim, m.x, m.y, m.z) {
+			ambient = "minecraft:entity.axolotl.idle_water"
+		}
+	case entityAllay:
+		ambient = "minecraft:entity.allay.ambient_without_item" // getAmbientSound: hasItemInHand
+		if m.held != 0 {
+			ambient = "minecraft:entity.allay.ambient_with_item"
+		}
+	case entityBreeze:
+		ambient = "minecraft:entity.breeze.idle_ground" // getAmbientSound: onGround
+		if m.brzState == brzJumping {
+			ambient = "minecraft:entity.breeze.idle_air"
+		}
+	case entitySniffer:
+		ambient = "minecraft:entity.sniffer.idle" // Sniffer.getAmbientSound
+	}
+	return hurt, death, ambient
+}
+
 // mobAmbience gives loaded mobs their idle voices: each mob has a small chance
 // per second to vocalize (zombie groans in the night, cows moo). Runs at 1 Hz.
 func (h *hub) mobAmbience(players map[int32]*tracked) {
@@ -107,7 +144,7 @@ func (h *hub) mobAmbience(players map[int32]*tracked) {
 		if m.dying > 0 || h.rng.Intn(12) != 0 {
 			continue
 		}
-		if _, _, ambient := mobSounds(m.etype); ambient != "" {
+		if _, _, ambient := h.mobSoundsFor(m); ambient != "" {
 			cat := int32(sndNeutral)
 			if m.hostile {
 				cat = sndHostile

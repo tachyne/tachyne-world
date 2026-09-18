@@ -396,7 +396,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		}
 	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: yaw})
-	if hurt, _, _ := mobSounds(m.etype); hurt != "" {
+	if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
 		h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
 }
@@ -412,7 +412,7 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	m.dying = deathAnimTicks
 	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
-	if _, death, _ := mobSounds(m.etype); death != "" {
+	if _, death, _ := h.mobSoundsFor(m); death != "" {
 		h.playSound(players, death, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
 }

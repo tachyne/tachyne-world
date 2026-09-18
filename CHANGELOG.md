@@ -133,6 +133,14 @@ the public history since the project was open-sourced on 2026-07-10.
   fireballs, beds and anchors and TNT carts all use it.
 
 ### Fixed
+- **Silent mobs speak.** Cave spiders had no voice at all, pufferfish no
+  hurt or death sound, the creaking no hurt sound, and turtles, axolotls,
+  allays, breezes and sniffers no idle call — their vanilla sound ids do
+  not follow their names. Each now uses vanilla's: the spider's voice for
+  the cave spider, the pufferfish's own, the creaking's sway, and the idle
+  calls that depend on state (a turtle only on land, an axolotl by water
+  or air, an allay by whether it holds something, a breeze by ground or
+  air, the sniffer's idle). Baby turtles hurt and die in their own voice.
 - **Cauldrons on high ground fill in the rain.** The precipitation scan
   started at the ground's own height on any ground above sea level plus
   four, so a cauldron (or the snow already lying) on it was never seen.

@@ -436,7 +436,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 					m.targetEID, m.unseenTicks = shooter.p.eid, 0 // HurtByTargetGoal
 				}
 			}
-			if hurt, _, _ := mobSounds(m.etype); hurt != "" {
+			if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
 				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 			}
 			dmg := dmg0
