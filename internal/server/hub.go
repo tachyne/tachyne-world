@@ -384,7 +384,9 @@ type hub struct {
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
 	hasWorldSpawn                         bool
 
-	localCaps    *localCapState // per-player category counts for this tick's spawning (localcap.go)
+	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
+	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
+	seededNether map[[2]int32]bool // nether chunks given their one-time strider packs this pod lifetime
 	seededChunks map[[2]int32]bool
 	hives        map[blockPos][]hiveOccupant // known hives and their occupants
 	hivestore    *hiveStore                  // hives.json persistence

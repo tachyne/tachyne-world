@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -60,7 +61,7 @@ func TestLocalMobCap(t *testing.T) {
 	for i := 0; i < categoryCap[catCreature]; i++ {
 		h.spawnMob(players, entityCow, float64(i*3)+0.5, 180, 20.5)
 	}
-	h.buildLocalCaps(players)
+	h.buildLocalCaps(players, 0)
 	if h.localCapAllows(catCreature, [2]int32{1, 1}) {
 		t.Fatal("the first player's chunks are at the creature cap")
 	}
@@ -95,5 +96,33 @@ func TestCullSpawnCows(t *testing.T) {
 	}
 	if len(s.m.Chunks["0,0"]) != 2 || len(s.m.Chunks["20,20"]) != 1 || len(s.m.Chunks["1,1"]) != 1 {
 		t.Fatalf("kept the tamed, the named, the sheep and the far cow: %+v", s.m.Chunks)
+	}
+}
+
+// Spawn costs: the soul sand valley prices its ghasts (charge 0.7, budget
+// 0.15), so a second ghast may not spawn within about three blocks of one,
+// and the potential is the sum of every charge over its distance.
+func TestSpawnCosts(t *testing.T) {
+	c, ok := spawnCostFor("minecraft:soul_sand_valley", entityGhast)
+	if !ok || c.charge != 0.7 || c.budget != 0.15 {
+		t.Fatalf("soul sand valley ghast cost: %+v %v", c, ok)
+	}
+	if _, ok := spawnCostFor("minecraft:nether_wastes", entityGhast); ok {
+		t.Fatal("the nether wastes price nothing")
+	}
+	h := newHub(world.New(1))
+	h.spawnCharges = []pointCharge{{0, 64, 0, 0.7}}
+	if p := h.spawnPotential(2, 64, 0); p*0.7 <= 0.15 {
+		t.Fatalf("two blocks from a ghast the potential %.3f × 0.7 must exceed the 0.15 budget", p)
+	}
+	if p := h.spawnPotential(10, 64, 0); p*0.7 > 0.15 {
+		t.Fatalf("ten blocks away the potential %.3f × 0.7 fits the budget", p)
+	}
+	h.spawnCharges = append(h.spawnCharges, pointCharge{20, 64, 0, 0.7})
+	if p := h.spawnPotential(10, 64, 0); math.Abs(p-2*0.7/10) > 1e-9 {
+		t.Fatalf("charges sum over distance: %.3f", p)
+	}
+	if !math.IsInf(h.spawnPotential(0, 64, 0), 1) {
+		t.Fatal("a charge's own spot is unspawnable")
 	}
 }

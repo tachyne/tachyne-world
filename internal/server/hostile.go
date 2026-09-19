@@ -492,7 +492,12 @@ func (h *hub) spawnHostile(players map[int32]*tracked, etype, x, z int) *mob {
 // spawnHostileY spawns a configured hostile at an explicit position (dungeon
 // spawners put mobs underground, not on the surface).
 func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float64) *mob {
-	m := h.spawnMob(players, etype, x, y, z)
+	return h.spawnHostileYIn(players, etype, 0, x, y, z)
+}
+
+// spawnHostileYIn is spawnHostileY in any dimension.
+func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {
+	m := h.spawnMobIn(players, etype, dim, x, y, z)
 	if m == nil {
 		return nil // plugin-cancelled spawn
 	}
@@ -541,7 +546,6 @@ func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float
 // insomnia check that summons phantoms. Natural SPAWNING happens per tick in
 // spawn.go; attacks + chasing happen at the faster mob-update cadence.
 func (h *hub) updateHostiles(players map[int32]*tracked) {
-	h.updateNetherMobs(players)
 	if len(players) == 0 {
 		return
 	}

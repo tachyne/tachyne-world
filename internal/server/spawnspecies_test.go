@@ -115,8 +115,8 @@ func TestAxolotlCategory(t *testing.T) {
 	if mobSpawnCategory(m) != catAxolotls {
 		t.Fatal("axolotl must count against the AXOLOTLS category")
 	}
-	if categoryCap[catAxolotls] != 5 || categoryDespawnDist[catAxolotls] != 64 || categorySpawnRange[catAxolotls] != 64 {
-		t.Errorf("axolotl category cap/despawn/range = %d/%d/%d, want 5/64/64",
+	if categoryCap[catAxolotls] != 5 || categoryDespawnDist[catAxolotls] != 128 || categorySpawnRange[catAxolotls] != 128 {
+		t.Errorf("axolotl category cap/despawn/range = %d/%d/%d, want 5/128/128 (MobCategory.AXOLOTLS despawns at 128)",
 			categoryCap[catAxolotls], categoryDespawnDist[catAxolotls], categorySpawnRange[catAxolotls])
 	}
 	// Placement: water at the anchor with nothing solid above; rule: clay below.
@@ -124,16 +124,16 @@ func TestAxolotlCategory(t *testing.T) {
 	h.world.SetBlock(x, y-1, z, worldgen.Clay)
 	h.world.SetBlock(x, y, z, worldgen.WaterBase)
 	h.world.SetBlock(x, y+1, z, worldgen.WaterBase)
-	if !h.spawnPositionOK(catAxolotls, entityAxolotl, x, y, z) || !h.spawnRulesOK(catAxolotls, entityAxolotl, x, y, z, 0, 0) {
+	if !h.spawnPositionOK(0, catAxolotls, entityAxolotl, x, y, z) || !h.spawnRulesOK(0, catAxolotls, entityAxolotl, x, y, z, 0, 0) {
 		t.Error("water over clay should accept an axolotl")
 	}
 	h.world.SetBlock(x, y-1, z, worldgen.Stone)
-	if h.spawnRulesOK(catAxolotls, entityAxolotl, x, y, z, 0, 0) {
+	if h.spawnRulesOK(0, catAxolotls, entityAxolotl, x, y, z, 0, 0) {
 		t.Error("stone below must refuse an axolotl")
 	}
 	// The pool follows the 3D biome: a surface column never offers axolotls.
 	surfaceY := h.world.SurfaceFeet(x, z)
-	if h.spawnPool(catAxolotls, x, surfaceY, z) != nil {
+	if h.spawnPool(0, catAxolotls, x, surfaceY, z) != nil {
 		t.Error("axolotls must not pool at the surface")
 	}
 }

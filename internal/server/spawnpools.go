@@ -25,6 +25,7 @@ var spawnCatByName = map[string]int{
 type biomeSpawns struct {
 	prob  float32
 	pools [catCount][]spawnerEntry
+	costs map[int]biomeSpawnCost // MobSpawnCost by species (the soul sand valley's and warped forest's charges)
 }
 
 // biomeSpawnPools resolves the baked data to entity ids once; a species the
@@ -34,6 +35,14 @@ var biomeSpawnPools = func() map[string]biomeSpawns {
 	unknown := map[string]bool{}
 	for biome, def := range biomeSpawnDefs {
 		bs := biomeSpawns{prob: def.prob}
+		for _, c := range def.costs {
+			if id, ok := entityByName[c.etype]; ok {
+				if bs.costs == nil {
+					bs.costs = map[int]biomeSpawnCost{}
+				}
+				bs.costs[id] = c
+			}
+		}
 		for _, r := range def.rows {
 			cat, ok := spawnCatByName[r.cat]
 			if !ok {
@@ -63,6 +72,27 @@ func biomeSpawnPool(biome string, cat int) ([]spawnerEntry, bool) {
 	}
 	return bs.pools[cat], true
 }
+
+// spawnCostFor is MobSpawnSettings.getMobSpawnCost for a species in a biome.
+func spawnCostFor(biome string, etype int) (biomeSpawnCost, bool) {
+	bs, ok := biomeSpawnPools[biome]
+	if !ok || bs.costs == nil {
+		return biomeSpawnCost{}, false
+	}
+	c, ok := bs.costs[etype]
+	return c, ok
+}
+
+// fortressSpawnPool is NetherFortressStructure.FORTRESS_ENEMIES (fortress.go's
+// table) as a spawner pool: inside a fortress piece the monster pool is the
+// garrison's, not the biome's.
+var fortressSpawnPool = func() []spawnerEntry {
+	out := make([]spawnerEntry, 0, len(fortressPool))
+	for _, e := range fortressPool {
+		out = append(out, spawnerEntry{etype: e.etype, weight: e.weight, min: e.min, max: e.max})
+	}
+	return out
+}()
 
 // biomeCreatureProbability is MobSpawnSettings.getCreatureProbability: the
 // geometric-loop probability of the chunk-generation packs (0.1 unless the

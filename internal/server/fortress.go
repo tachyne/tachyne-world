@@ -21,58 +21,22 @@ var fortressPool = []struct {
 	{3, entityMagmaCube, 4, 4},
 }
 
-// spawnFortressMob is the nether spawn pass's fortress branch: a spot inside
-// a fortress piece spawns one of the fortress's own mobs on the piece's
-// floor (nether bricks count as ground there). Returns nil outside a
-// fortress or when the spot has no floor.
-func (h *hub) spawnFortressMob(players map[int32]*tracked, x, z int) *mob {
+// inFortressPiece reports whether a nether column lies inside a fortress
+// piece's footprint — where the structure's spawn override applies.
+func (h *hub) inFortressPiece(x, z int) bool {
 	nw := h.worldFor(dimNether)
 	if nw == nil {
-		return nil
+		return false
 	}
 	gen := nw.Gen()
-	var box *worldgen.FortressPiece
 	for _, f := range gen.FortressesNear(x, z) {
-		pieces := gen.FortressPieces(f)
-		for i := range pieces {
-			p := &pieces[i]
+		for _, p := range gen.FortressPieces(f) {
 			if x >= p.X0 && x <= p.X1 && z >= p.Z0 && z <= p.Z1 {
-				box = p
-				break
+				return true
 			}
 		}
-		if box != nil {
-			break
-		}
 	}
-	if box == nil {
-		return nil
-	}
-	floor := -1
-	for y := box.Y0; y <= box.Y1+1; y++ {
-		below := nw.At(x, y-1, z)
-		if below != worldgen.Air && !worldgen.IsFluid(below) &&
-			nw.At(x, y, z) == worldgen.Air && nw.At(x, y+1, z) == worldgen.Air {
-			floor = y
-			break
-		}
-	}
-	if floor < 0 {
-		return nil
-	}
-	total := 0
-	for _, e := range fortressPool {
-		total += e.weight
-	}
-	r := h.rng.Intn(total)
-	for _, e := range fortressPool {
-		if r -= e.weight; r < 0 {
-			m := h.spawnMobIn(players, e.etype, dimNether, float64(x)+0.5, float64(floor), float64(z)+0.5)
-			h.configureNetherMob(players, m)
-			return m
-		}
-	}
-	return nil
+	return false
 }
 
 // updateFortressSpawners is updateSpawners for the fortresses' blaze

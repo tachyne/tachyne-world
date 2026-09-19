@@ -118,7 +118,7 @@ func (h *hub) spawnSiegeZombie(players map[int32]*tracked) bool {
 		x := c.x + int(math.Cos(ang)*d)
 		z := c.z + int(math.Sin(ang)*d)
 		y := h.world.SurfaceFeet(x, z)
-		if !h.spawnPositionOK(catMonster, entityZombie, x, y, z) {
+		if !h.spawnPositionOK(0, catMonster, entityZombie, x, y, z) {
 			continue
 		}
 		return h.spawnHostileY(players, entityZombie, float64(x)+0.5, float64(y), float64(z)+0.5) != nil

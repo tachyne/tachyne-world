@@ -21,18 +21,18 @@ func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 	}
 	var counts [catCount]int
 
-	h.seedChunkGeneration(players, chunkSet, &counts)
+	h.seedChunkGeneration(players, 0, chunkSet, &counts)
 	if len(h.seededChunks) != chunkSeedBudget {
 		t.Fatalf("first tick should seed exactly the budget %d, got %d", chunkSeedBudget, len(h.seededChunks))
 	}
 	for i := 0; i < 5; i++ { // drain the remainder over later ticks
-		h.seedChunkGeneration(players, chunkSet, &counts)
+		h.seedChunkGeneration(players, 0, chunkSet, &counts)
 	}
 	if len(h.seededChunks) != 20 {
 		t.Fatalf("every chunk should eventually seed once, got %d", len(h.seededChunks))
 	}
 	before := len(h.seededChunks)
-	h.seedChunkGeneration(players, chunkSet, &counts)
+	h.seedChunkGeneration(players, 0, chunkSet, &counts)
 	if len(h.seededChunks) != before {
 		t.Fatal("an already-seeded chunk must never re-seed")
 	}

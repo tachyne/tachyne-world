@@ -28,7 +28,7 @@ func TestSeedSkipsPersistedChunks(t *testing.T) {
 	chunkSet := map[[2]int32]bool{{0, 0}: true}
 	var counts [catCount]int
 	before := len(h.mobs)
-	h.seedChunkGeneration(nil, chunkSet, &counts)
+	h.seedChunkGeneration(nil, 0, chunkSet, &counts)
 
 	if len(h.mobs) != before {
 		t.Fatalf("a store-backed chunk must not get a generation herd: %d new mobs", len(h.mobs)-before)

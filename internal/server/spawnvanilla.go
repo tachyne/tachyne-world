@@ -1,6 +1,9 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // The vanilla NaturalSpawner — the engine's only natural spawner since
 // 2026-09-19 (the cheaper sampler and its animal top-up are gone). Its
@@ -29,15 +32,16 @@ const (
 var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64, 128, 128}
 
 // spawnVanilla runs the exact-vanilla path for one tick.
-func (h *hub) spawnVanilla(players map[int32]*tracked, chunks [][2]int32, chunkSet map[[2]int32]bool, spawnRingSize int, counts *[catCount]int) {
-	h.seedChunkGeneration(players, chunkSet, counts)           // one-time herds as land loads
-	h.buildLocalCaps(players)                                  // LocalMobCapCalculator: per-player counts
-	h.spawnVanillaTick(players, chunks, spawnRingSize, counts) // per-tick NaturalSpawner
+func (h *hub) spawnVanilla(players map[int32]*tracked, dim int, chunks [][2]int32, chunkSet map[[2]int32]bool, spawnRingSize int, counts *[catCount]int) {
+	h.seedChunkGeneration(players, dim, chunkSet, counts)           // one-time packs as land loads
+	h.buildLocalCaps(players, dim)                                  // LocalMobCapCalculator: per-player counts
+	h.buildSpawnPotential(dim)                                      // PotentialCalculator: the costed species' charges
+	h.spawnVanillaTick(players, dim, chunks, spawnRingSize, counts) // per-tick NaturalSpawner
 }
 
 // spawnVanillaTick is NaturalSpawner.spawnForChunk: filter categories by the
 // global cap + persistent gate once, then one position attempt per chunk.
-func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, spawnRingSize int, counts *[catCount]int) {
+func (h *hub) spawnVanillaTick(players map[int32]*tracked, dim int, chunks [][2]int32, spawnRingSize int, counts *[catCount]int) {
 	spawnPersistent := h.tick.Load()%creatureSpawnMod == 0
 	var caps [catCount]int
 	var active [catCount]bool
@@ -56,7 +60,7 @@ func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, sp
 			if !active[cat] || counts[cat] >= caps[cat] {
 				continue
 			}
-			h.spawnCategoryForChunk(players, cat, c, counts, caps[cat])
+			h.spawnCategoryForChunk(players, dim, cat, c, counts, caps[cat])
 		}
 	}
 }
@@ -64,28 +68,35 @@ func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, sp
 // spawnCategoryForChunk is NaturalSpawner.spawnCategoryForChunk: a random column
 // at a random height through the whole chunk (this is what populates caves),
 // then the three-group pack loop if the anchor block is not solid.
-func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, cat int, c [2]int32, counts *[catCount]int, cap int) {
+func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, dim, cat int, c [2]int32, counts *[catCount]int, cap int) {
 	if !h.localCapAllows(cat, c) {
 		return // canSpawnForCategoryLocal: every player near this chunk is at the category's cap
 	}
+	w := h.worldFor(dim)
 	x := int(c[0])*16 + h.rng.Intn(16)
 	z := int(c[1])*16 + h.rng.Intn(16)
-	surface := h.world.SurfaceFeet(x, z)
-	y := worldgen.MinY + h.rng.Intn(surface+2-worldgen.MinY) // uniform [minY, surface+1]
-	if worldgen.Collides(h.world.At(x, y, z)) {
+	minY, surface := worldgen.MinY, w.SurfaceFeet(x, z)
+	if dim != 0 {
+		minY = 0 // the nether and the end floor at 0
+	}
+	if surface+2 <= minY {
+		return
+	}
+	y := minY + h.rng.Intn(surface+2-minY) // uniform [minY, surface+1]
+	if worldgen.Collides(w.At(x, y, z)) {
 		return // vanilla: a redstone-conductor / solid anchor aborts the attempt
 	}
-	h.spawnGroupsAt(players, cat, x, y, z, counts, cap)
+	h.spawnGroupsAt(players, dim, cat, x, y, z, counts, cap)
 }
 
 // spawnGroupsAt is NaturalSpawner.spawnCategoryForPosition: up to three groups,
 // each a random-walking pack whose size comes from the rolled biome entry, with
 // every member re-checked for distance, position and spawn rules. The whole
 // position stops once maxSpawnCluster mobs have been placed (vanilla returns).
-func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, counts *[catCount]int, cap int) {
+func (h *hub) spawnGroupsAt(players map[int32]*tracked, dim, cat, ax, ay, az int, counts *[catCount]int, cap int) {
 	total := 0
 	for g := 0; g < 3; g++ {
-		if !h.spawnOneGroupAt(players, cat, ax, ay, az, counts, cap, &total) {
+		if !h.spawnOneGroupAt(players, dim, cat, ax, ay, az, counts, cap, &total) {
 			return
 		}
 	}
@@ -95,7 +106,7 @@ func (h *hub) spawnGroupsAt(players map[int32]*tracked, cat, ax, ay, az int, cou
 // category cap or the cluster limit reached). The pack shares its
 // SpawnGroupData — the wolf/horse/llama/rabbit/fox variant — through the
 // scoped spawn group.
-func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, counts *[catCount]int, cap int, total *int) (more bool) {
+func (h *hub) spawnOneGroupAt(players map[int32]*tracked, dim, cat, ax, ay, az int, counts *[catCount]int, cap int, total *int) (more bool) {
 	more = true
 	h.withSpawnGroup(func() {
 		x, z := ax, az
@@ -108,15 +119,15 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, c
 			if !h.ownedBlock(x, z) {
 				continue
 			}
-			d := h.nearestPlayerSq(players, float64(x)+0.5, float64(ay), float64(z)+0.5)
-			if d <= float64(spawnMinDist*spawnMinDist) || h.nearWorldSpawn(x, ay, z) {
+			d := h.nearestPlayerSq(players, dim, float64(x)+0.5, float64(ay), float64(z)+0.5)
+			if d <= float64(spawnMinDist*spawnMinDist) || (dim == 0 && h.nearWorldSpawn(x, ay, z)) {
 				continue // never within 24 of a player, nor 24 of world spawn
 			}
 			if r := categorySpawnRange[cat]; cat != catCreature && r > 0 && d > float64(r*r) {
 				continue // may not spawn beyond the category's max distance from a player (creatures canSpawnFarFromPlayer)
 			}
 			if !picked {
-				sd2, ok := h.rollSpawner(h.spawnPool(cat, x, ay, z))
+				sd2, ok := h.rollSpawner(h.spawnPool(dim, cat, x, ay, z))
 				if !ok {
 					break // empty pool for this biome/category — abandon the group
 				}
@@ -124,15 +135,19 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, c
 				groupSize = sd.min + h.rng.Intn(sd.max-sd.min+1) // reset to the biome pack size
 				picked = true
 			}
-			if !h.spawnPositionOK(cat, sd.etype, x, ay, z) {
+			if !h.spawnPositionOK(dim, cat, sd.etype, x, ay, z) {
 				continue
 			}
-			sky, block := h.world.LightAt(x, ay, z)
-			if !h.spawnRulesOK(cat, sd.etype, x, ay, z, sky, block) {
+			if !h.spawnPotentialOK(dim, sd.etype, x, ay, z) {
+				continue // SpawnState.canSpawn: the costed species' potential is over its budget here
+			}
+			sky, block := h.worldFor(dim).LightAt(x, ay, z)
+			if !h.spawnRulesOK(dim, cat, sd.etype, x, ay, z, sky, block) {
 				continue
 			}
-			h.spawnNatural(players, cat, sd.etype, x, ay, z)
+			h.spawnNatural(players, dim, cat, sd.etype, x, ay, z)
 			h.localCapAdd(cat, x, z)
+			h.addSpawnCharge(dim, sd.etype, x, ay, z)
 			counts[cat]++
 			if counts[cat] >= cap {
 				more = false
@@ -165,9 +180,16 @@ func (h *hub) nearWorldSpawn(x, y, z int) bool {
 // each freshly loaded chunk — the vanilla animal herds that appear as you
 // explore. Bounded to chunkSeedBudget new chunks per tick so a fresh join does
 // not seed a whole view window in one tick.
-func (h *hub) seedChunkGeneration(players map[int32]*tracked, chunkSet map[[2]int32]bool, counts *[catCount]int) {
+func (h *hub) seedChunkGeneration(players map[int32]*tracked, dim int, chunkSet map[[2]int32]bool, counts *[catCount]int) {
 	if h.seededChunks == nil {
 		h.seededChunks = map[[2]int32]bool{}
+	}
+	if dim == dimEnd {
+		return // the end's biomes have no creature pools
+	}
+	if dim == dimNether {
+		h.seedNetherGeneration(players, chunkSet, counts)
+		return
 	}
 	budget := chunkSeedBudget
 	for c := range chunkSet {
@@ -192,6 +214,71 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, chunkSet map[[2]in
 		h.seedChunkAnimals(players, c, counts)
 		h.seedChunkBees(players, c)
 	}
+}
+
+// seedNetherGeneration is the nether's spawnMobsForChunkGeneration: its
+// creature pools hold striders, laid in lava at the chunk's lava surface.
+// The nether's seeded set is per pod lifetime (striders are not persisted
+// by chunk the way the overworld's animals are).
+func (h *hub) seedNetherGeneration(players map[int32]*tracked, chunkSet map[[2]int32]bool, counts *[catCount]int) {
+	if h.seededNether == nil {
+		h.seededNether = map[[2]int32]bool{}
+	}
+	w := h.worldFor(dimNether)
+	budget := chunkSeedBudget
+	for c := range chunkSet {
+		if budget <= 0 {
+			return
+		}
+		if h.seededNether[c] {
+			continue
+		}
+		h.seededNether[c] = true
+		budget--
+		cx0, cz0 := int(c[0])*16, int(c[1])*16
+		pool := h.spawnPool(dimNether, catCreature, cx0, 64, cz0)
+		if len(pool) == 0 {
+			continue
+		}
+		prob := biomeCreatureProbability(w.BiomeAt(cx0, cz0))
+		for h.rng.Float32() < prob {
+			sd, ok := h.rollSpawner(pool)
+			if !ok {
+				break
+			}
+			pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
+			x := cx0 + h.rng.Intn(16)
+			z := cz0 + h.rng.Intn(16)
+			h.withSpawnGroup(func() {
+				for k := 0; k < pack; k++ {
+					for attempt := 0; attempt < 4; attempt++ {
+						if y, ok := netherTopPos(w, x, z); ok && h.spawnPositionOK(dimNether, catCreature, sd.etype, x, y, z) &&
+							h.spawnRulesOK(dimNether, catCreature, sd.etype, x, y, z, 0, 0) {
+							h.spawnNatural(players, dimNether, catCreature, sd.etype, x, y, z)
+							counts[catCreature]++
+							break
+						}
+						x = clampChunk(x+h.rng.Intn(5)-h.rng.Intn(5), cx0)
+						z = clampChunk(z+h.rng.Intn(5)-h.rng.Intn(5), cz0)
+					}
+				}
+			})
+		}
+	}
+}
+
+// netherTopPos is NaturalSpawner.getTopNonCollidingPos under a ceiling: from
+// the top, down through the roof to the first air, then down through the
+// air to the first block that is not — the lava surface or the floor.
+func netherTopPos(w *world.World, x, z int) (int, bool) {
+	y := 126
+	for y > 0 && w.At(x, y, z) != worldgen.Air {
+		y--
+	}
+	for y > 0 && w.At(x, y, z) == worldgen.Air {
+		y--
+	}
+	return y, y > 0
 }
 
 // seedChunkBees hatches the occupants of freshly generated bee nests — the
@@ -229,7 +316,7 @@ func (h *hub) seedChunkAnimals(players map[int32]*tracked, c [2]int32, counts *[
 		return
 	}
 	biome := h.world.BiomeAt(cx0, cz0) // ChunkGenerator.spawnOriginalMobs: the biome at the chunk's corner
-	pool := h.spawnPool(catCreature, cx0, h.world.MobFeet(cx0, cz0), cz0)
+	pool := h.spawnPool(0, catCreature, cx0, h.world.MobFeet(cx0, cz0), cz0)
 	if len(pool) == 0 {
 		return
 	}

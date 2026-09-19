@@ -153,31 +153,38 @@ func (h *hub) spawnExempt(m *mob) bool {
 }
 
 // naturalSpawn runs every tick — the port of NaturalSpawner.spawnForChunk
-// over the spawnable-chunk set (the union of overworld players' view
-// windows). Vanilla attempts one position per chunk per tick; we sample the
-// set at one attempt per 64 chunks per tick per category, which converges on
-// the same caps within seconds while bounding hub (and light-engine) cost.
+// over the spawnable-chunk set of every dimension with a player in it (the
+// union of those players' view windows), one position attempt per chunk.
 func (h *hub) naturalSpawn(players map[int32]*tracked) {
 	if !h.rules.DoMobSpawning || len(players) == 0 {
 		return
 	}
-	// Spawnable chunks + the players list once per tick. chunkSet is the view
-	// window (mob load/unload + gen-herd seeding); spawnRing is the vanilla
-	// SPAWN_DISTANCE_CHUNK=8 ring around each player — its size is the mob-cap
-	// denominator (vanilla NaturalSpawner.SpawnState.spawnableChunkCount), so
-	// one player's 17×17=289 spawn ring yields exactly maxInstancesPerChunk.
+	for dim := 0; dim <= 2; dim++ {
+		if dim != 0 && (h.worldFor(dim) == nil || h.worldFor(dim) == h.world) {
+			continue // no such dimension on this server
+		}
+		h.naturalSpawnDim(players, dim)
+	}
+}
+
+// naturalSpawnDim is one dimension's pass. chunkSet is the view window (mob
+// load/unload + chunk-generation seeding); spawnRing is the vanilla
+// SPAWN_DISTANCE_CHUNK=8 ring around each player — its size is the mob-cap
+// denominator (NaturalSpawner.SpawnState.spawnableChunkCount), so one
+// player's 17×17=289 spawn ring yields exactly maxInstancesPerChunk.
+func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 	if h.scratchChunks == nil {
 		h.scratchChunks, h.scratchRing = map[[2]int32]bool{}, map[[2]int32]bool{}
 	}
 	clear(h.scratchChunks)
 	clear(h.scratchRing)
 	chunkSet, spawnRing := h.scratchChunks, h.scratchRing
-	overworld := 0
+	here := 0
 	for _, t := range players {
-		if t.dim != 0 {
+		if t.dim != dim {
 			continue
 		}
-		overworld++
+		here++
 		r := t.p.radius()
 		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
 		for x := cx - r; x <= cx+r; x++ {
@@ -190,7 +197,7 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 			}
 		}
 	}
-	if overworld == 0 {
+	if here == 0 {
 		return
 	}
 	chunks := make([][2]int32, 0, len(chunkSet))
@@ -198,19 +205,21 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 		chunks = append(chunks, c)
 	}
 
-	// Load/unload mobs with their chunks before counting or spawning, so caps see
-	// the reloaded herds and freed-up room from unloaded ones.
-	h.reconcileMobChunks(players, chunkSet)
+	if dim == 0 {
+		// Load/unload mobs with their chunks before counting or spawning, so caps
+		// see the reloaded packs and freed-up room from unloaded ones.
+		h.reconcileMobChunks(players, chunkSet)
+	}
 
 	var counts [catCount]int
 	for _, m := range h.mobs {
-		if m.dim != 0 || m.dying > 0 || h.spawnExempt(m) {
+		if m.dim != dim || m.dying > 0 || h.spawnExempt(m) {
 			continue
 		}
 		counts[mobSpawnCategory(m)]++
 	}
 
-	h.spawnVanilla(players, chunks, chunkSet, len(spawnRing), &counts)
+	h.spawnVanilla(players, dim, chunks, chunkSet, len(spawnRing), &counts)
 }
 
 // spawnCap is vanilla NaturalSpawner.canSpawnForCategoryGlobal: the per-category
@@ -220,32 +229,18 @@ func spawnCap(cat, spawnRingSize int) int {
 	return categoryCap[cat] * spawnRingSize / spawnChunkArea
 }
 
-// overworldSpawnRing counts the distinct chunks inside the vanilla ±8 spawn ring
-// of every overworld player — the spawnable-chunk count feeding spawnCap.
-func (h *hub) overworldSpawnRing(players map[int32]*tracked) int {
-	ring := map[[2]int32]bool{}
-	for _, t := range players {
-		if t.dim != 0 {
-			continue
-		}
-		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
-		for x := cx - spawnDistChunks; x <= cx+spawnDistChunks; x++ {
-			for z := cz - spawnDistChunks; z <= cz+spawnDistChunks; z++ {
-				ring[[2]int32{x, z}] = true
-			}
-		}
-	}
-	return len(ring)
-}
-
 // spawnPool picks the weighted species list for a category at a position:
 // the biome's own data (the cave biome down a column, as vanilla samples
 // the biome at the position), else the hand-written family fallback.
-func (h *hub) spawnPool(cat, x, y, z int) []spawnerEntry {
-	if pool, ok := biomeSpawnPool(h.world.BiomeAt3D(x, y, z), cat); ok {
+func (h *hub) spawnPool(dim, cat, x, y, z int) []spawnerEntry {
+	w := h.worldFor(dim)
+	if dim == dimNether && cat == catMonster && h.inFortressPiece(x, z) {
+		return fortressSpawnPool // the structure's spawn override
+	}
+	if pool, ok := biomeSpawnPool(w.BiomeAt3D(x, y, z), cat); ok {
 		return pool
 	}
-	biome := h.world.BiomeAt(x, z)
+	biome := w.BiomeAt(x, z)
 	switch cat {
 	case catMonster:
 		switch {
@@ -340,25 +335,29 @@ func (h *hub) rollSpawner(pool []spawnerEntry) (spawnerEntry, bool) {
 
 // spawnPositionOK is vanilla SpawnPlacements.isSpawnPositionOk: solid ground
 // with two clear cells for land categories, open water for aquatic ones.
-func (h *hub) spawnPositionOK(cat, etype, x, y, z int) bool {
-	at := h.world.At(x, y, z)
+func (h *hub) spawnPositionOK(dim, cat, etype, x, y, z int) bool {
+	w := h.worldFor(dim)
+	at := w.At(x, y, z)
 	// Drowned use vanilla's IN_WATER placement even though they are monsters:
 	// water at the anchor with a non-solid block above (SpawnPlacementType
 	// IN_WATER = fluid is water && block above is not a redstone conductor).
 	if etype == entityDrowned {
-		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && !worldgen.Collides(w.At(x, y+1, z))
+	}
+	if etype == entityStrider { // IN_LAVA placement: lava at the anchor
+		return worldgen.IsLava(at)
 	}
 	switch cat {
 	case catWaterCreature, catWaterAmbient, catUndergroundWater:
-		return worldgen.HoldsWater(at) && worldgen.HoldsWater(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && worldgen.HoldsWater(w.At(x, y+1, z))
 	case catAxolotls: // IN_WATER placement: water here, no conductor above
-		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
+		return worldgen.HoldsWater(at) && !worldgen.Collides(w.At(x, y+1, z))
 	}
 	if worldgen.HoldsWater(at) || worldgen.IsLava(at) ||
-		worldgen.Collides(at) || worldgen.Collides(h.world.At(x, y+1, z)) {
+		worldgen.Collides(at) || worldgen.Collides(w.At(x, y+1, z)) {
 		return false
 	}
-	below := h.world.At(x, y-1, z)
+	below := w.At(x, y-1, z)
 	return worldgen.Collides(below) && !worldgen.IsThinFloor(below)
 }
 
@@ -426,13 +425,27 @@ func (h *hub) darkEnoughToSpawn(sky, block uint8) bool {
 
 // spawnRulesOK is the per-category/per-species spawn rule check (vanilla
 // SpawnPlacements.checkSpawnRules dispatch).
-func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
-	if etype == entityOcelot { // Ocelot.checkOcelotSpawnRules: two tries in three, whatever the light (it sits in the jungle's monster pool)
+func (h *hub) spawnRulesOK(dim, cat, etype, x, y, z int, sky, block uint8) bool {
+	w := h.worldFor(dim)
+	switch etype { // the species with their own SpawnPlacements predicate
+	case entityOcelot: // Ocelot.checkOcelotSpawnRules: two tries in three, whatever the light (it sits in the jungle's monster pool)
 		return h.rng.Intn(3) != 0
+	case entityGhast: // Ghast.checkGhastSpawnRules: one try in twenty, any light
+		return h.rules.Difficulty != diffPeaceful && h.rng.Intn(20) == 0
+	case entityMagmaCube, entityBlaze: // checkMagmaCubeSpawnRules / checkAnyLightMonsterSpawnRules
+		return h.rules.Difficulty != diffPeaceful
+	case entityZombifiedPiglin, entityPiglin, entityHoglin: // never on a nether wart block, any light
+		return h.rules.Difficulty != diffPeaceful && w.At(x, y-1, z) != worldgen.NetherWartBlock
+	case entityStrider: // Strider.checkStriderSpawnRules: air above the lava column
+		yy := y + 1
+		for worldgen.IsLava(w.At(x, yy, z)) && yy < 320 {
+			yy++
+		}
+		return w.At(x, yy, z) == worldgen.Air
 	}
 	switch cat {
 	case catUndergroundWater: // GlowSquid.checkGlowSquidSpawnRules: deep, unlit water
-		return y <= worldgen.SeaLevel-33 && h.rawBrightness(sky, block, 0) == 0 && worldgen.IsWater(h.world.At(x, y, z))
+		return y <= worldgen.SeaLevel-33 && h.rawBrightness(sky, block, 0) == 0 && worldgen.IsWater(w.At(x, y, z))
 	case catMonster:
 		if !h.darkEnoughToSpawn(sky, block) {
 			return false
@@ -448,17 +461,17 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 			// (#is_river = the MORE_FREQUENT_DROWNED_SPAWNS tag), else 1/40 and
 			// only well below sea level (isDeepEnoughToSpawn). Water AT the anchor
 			// and darkness are already enforced by placement + darkEnoughToSpawn.
-			if !worldgen.IsWater(h.world.At(x, y-1, z)) {
+			if !worldgen.IsWater(w.At(x, y-1, z)) {
 				return false
 			}
-			if isRiverBiome(h.world.BiomeAt(x, z)) {
+			if isRiverBiome(w.BiomeAt(x, z)) {
 				return h.rng.Intn(15) == 0
 			}
 			return h.rng.Intn(40) == 0 && y < worldgen.SeaLevel-5
 		}
 		return true
 	case catCreature: // vanilla Animal.checkAnimalSpawnRules: grass + light > 8
-		below := h.world.At(x, y-1, z)
+		below := w.At(x, y-1, z)
 		if ok, handled := creatureFloorOK(etype, below, y); handled {
 			if !ok {
 				return false // the species' own spawnable-on tag (spawnspecies.go)
@@ -475,14 +488,14 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 		// permits animal spawns day or night.
 		return h.rawBrightness(sky, block, 0) > 8
 	case catAmbient: // vanilla Bat.checkBatSpawnRules
-		return y < h.world.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
+		return y < w.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
 			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4)
 	case catWaterCreature: // squid/dolphin/nautilus near the surface band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catWaterAmbient: // vanilla surface-water band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catAxolotls: // checkAxolotlSpawnRules: clay below, no light rule
-		return inRanges2(h.world.At(x, y-1, z), axolotlFloor)
+		return inRanges2(w.At(x, y-1, z), axolotlFloor)
 	}
 	return false
 }
@@ -521,18 +534,32 @@ func isSlimeChunk(seed int64, cx, cz int32) bool {
 }
 
 // spawnNatural creates the mob with its category wiring.
-func (h *hub) spawnNatural(players map[int32]*tracked, cat, etype, x, y, z int) {
+func (h *hub) spawnNatural(players map[int32]*tracked, dim, cat, etype, x, y, z int) {
 	fx, fy, fz := float64(x)+0.5, float64(y), float64(z)+0.5
 	switch {
+	case dim == dimNether && netherConfigured(etype): // the nether's own kit (piglin family, cubes, blazes, ghasts, striders)
+		m := h.spawnMobIn(players, etype, dim, fx, fy, fz)
+		h.configureNetherMob(players, m)
+		h.rollPackBaby(players, m)
 	case cat == catMonster && etype != entityOcelot: // the ocelot is listed under the jungle's monsters but is no monster
-		h.spawnHostileY(players, etype, fx, fy, fz)
+		h.spawnHostileYIn(players, etype, dim, fx, fy, fz)
 	case cat == catWaterCreature || cat == catWaterAmbient || cat == catAxolotls || cat == catUndergroundWater:
-		h.spawnSpecies(players, etype, 0, fx, fy+0.5, fz)
+		h.spawnSpecies(players, etype, dim, fx, fy+0.5, fz)
 	default:
-		m := h.spawnMob(players, etype, fx, fy, fz)
+		m := h.spawnMobIn(players, etype, dim, fx, fy, fz)
 		h.applySpecies(players, m)
 		h.rollPackBaby(players, m)
 	}
+}
+
+// netherConfigured is the species configureNetherMob dresses: the ones the
+// old nether pass spawned, with their nether stances.
+func netherConfigured(etype int) bool {
+	switch etype {
+	case entityZombifiedPiglin, entityMagmaCube, entityBlaze, entityPiglin, entityHoglin, entityStrider, entityGhast:
+		return true
+	}
+	return false
 }
 
 // rollPackBaby is AgeableMob.finalizeSpawn's group data for a natural pack:
@@ -550,11 +577,11 @@ func (h *hub) rollPackBaby(players map[int32]*tracked, m *mob) {
 	g.members++
 }
 
-// nearestPlayerSq is the 3D squared distance to the closest overworld player.
-func (h *hub) nearestPlayerSq(players map[int32]*tracked, x, y, z float64) float64 {
+// nearestPlayerSq is the 3D squared distance to the closest player in the dimension.
+func (h *hub) nearestPlayerSq(players map[int32]*tracked, dim int, x, y, z float64) float64 {
 	best := math.Inf(1)
 	for _, t := range players {
-		if t.dim != 0 {
+		if t.dim != dim {
 			continue
 		}
 		d := (t.x-x)*(t.x-x) + (t.y-y)*(t.y-y) + (t.z-z)*(t.z-z)

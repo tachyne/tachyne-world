@@ -38,6 +38,20 @@ the public history since the project was open-sourced on 2026-07-10.
   may spawn at any distance inside the spawn ring; the jungle's ocelot
   spawns by its own two-in-three rule though it sits in the monster pool;
   the axolotl category's despawn distance is vanilla's 128, not 64.
+- **The Nether and the End spawn as vanilla's do.** The Nether's old pass
+  (a species rolled on a ring around each player under a flat cap of
+  fourteen) and the End's absence of natural spawns are replaced by the
+  same NaturalSpawner as the overworld's, dimension by dimension: each
+  nether biome's own pools, weights and packs, the monster cap scaled by
+  the chunks around players, the per-player local cap, one attempt per
+  chunk per tick at any height, vanilla's per-species rules (a ghast one
+  try in twenty, no piglin, hoglin or zombified piglin on a nether wart
+  block, magma cubes and blazes in any light, skeletons and endermen only
+  in the dark), striders placed in lava with air above and laid as packs
+  when a nether chunk first loads, the fortress's garrison pool inside its
+  pieces, the soul sand valley's and warped forest's spawn costs (each
+  costed mob is a charge that keeps the next one at a distance), and the
+  End's endermen in packs of four.
 
 ### Added
 - **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs

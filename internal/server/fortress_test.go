@@ -7,8 +7,9 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Inside a fortress the nether spawn pass rolls the fortress's own table on
-// the fortress floors, and the corridor chests fill from nether_bridge.
+// Inside a fortress the natural spawner's monster pool is the fortress's own
+// garrison table (the structure's spawn override), and the corridor chests
+// fill from nether_bridge.
 func TestFortressSpawnsAndLoots(t *testing.T) {
 	h := newHub(world.New(9))
 	players := map[int32]*tracked{}
@@ -29,29 +30,32 @@ func TestFortressSpawnsAndLoots(t *testing.T) {
 	if len(pieces) == 0 {
 		t.Fatal("fortress has no pieces")
 	}
-	spawned := 0
+	inside := 0
 	for _, p := range pieces {
 		x, z := (p.X0+p.X1)/2, (p.Z0+p.Z1)/2
-		if m := h.spawnFortressMob(players, x, z); m != nil {
-			if m.dim != dimNether {
-				t.Fatalf("fortress mob in dim %d", m.dim)
-			}
-			switch m.etype {
+		if !h.inFortressPiece(x, z) {
+			t.Fatalf("the middle of a fortress piece at (%d,%d) is inside the fortress", x, z)
+		}
+		pool := h.spawnPool(dimNether, catMonster, x, (p.Y0+p.Y1)/2, z)
+		if len(pool) != len(fortressPool) {
+			t.Fatalf("inside a fortress the monster pool is the garrison's, got %d entries", len(pool))
+		}
+		for _, e := range pool {
+			switch e.etype {
 			case entityBlaze, entityZombifiedPiglin, entityWitherSkeleton, entitySkeleton, entityMagmaCube:
 			default:
-				t.Fatalf("fortress rolled an off-table mob %d", m.etype)
+				t.Fatalf("an off-table species %d in the garrison pool", e.etype)
 			}
-			spawned++
 		}
-		if spawned >= 5 {
+		if inside++; inside >= 5 {
 			break
 		}
 	}
-	if spawned == 0 {
-		t.Error("no fortress piece offered a floor to spawn on")
+	if h.inFortressPiece(f.X+5000, f.Z+5000) {
+		t.Error("far outside every fortress the biome's pool applies")
 	}
-	if h.spawnFortressMob(players, f.X+5000, f.Z+5000) != nil {
-		t.Error("outside every fortress the branch must decline")
+	if pool := h.spawnPool(dimNether, catCreature, pieces[0].X0, pieces[0].Y0, pieces[0].Z0); len(pool) == 0 || pool[0].etype != entityStrider {
+		t.Error("the creature pool inside a fortress is still the biome's (striders)")
 	}
 	chests := g.FortressChests(f)
 	if len(chests) == 0 {

@@ -49,11 +49,11 @@ func TestAnimalLightUsesRawSky(t *testing.T) {
 	// Grass floor under a sky-lit (15) column: vanilla lets animals spawn.
 	x, y, z := 40, 70, 40
 	h.world.SetBlock(x, y-1, z, worldgen.GrassBlock)
-	if !h.spawnRulesOK(catCreature, entityCow, x, y, z, 15, 0) {
+	if !h.spawnRulesOK(0, catCreature, entityCow, x, y, z, 15, 0) {
 		t.Fatal("animals must be allowed on a sky-lit surface at night (raw light 15 > 8)")
 	}
 	// A dark cave floor (sky 0, block 0) still rejects them.
-	if h.spawnRulesOK(catCreature, entityCow, x, y, z, 0, 0) {
+	if h.spawnRulesOK(0, catCreature, entityCow, x, y, z, 0, 0) {
 		t.Fatal("animals must NOT spawn in pitch dark (raw light 0)")
 	}
 }
@@ -69,10 +69,10 @@ func TestDrownedPlacementAndRarity(t *testing.T) {
 	h.world.SetBlock(wx, wy, wz, worldgen.Water)
 	h.world.SetBlock(wx, wy+1, wz, worldgen.Water)
 	h.world.SetBlock(wx, wy-1, wz, worldgen.Water)
-	if !h.spawnPositionOK(catMonster, entityDrowned, wx, wy, wz) {
+	if !h.spawnPositionOK(0, catMonster, entityDrowned, wx, wy, wz) {
 		t.Fatal("drowned must accept an IN_WATER anchor")
 	}
-	if h.spawnPositionOK(catMonster, entityZombie, wx, wy, wz) {
+	if h.spawnPositionOK(0, catMonster, entityZombie, wx, wy, wz) {
 		t.Fatal("a land monster must reject a water anchor")
 	}
 
@@ -80,7 +80,7 @@ func TestDrownedPlacementAndRarity(t *testing.T) {
 	// only well below sea level; forced non-zero, it always fails.
 	pass := 0
 	for i := 0; i < 2000; i++ {
-		if h.spawnRulesOK(catMonster, entityDrowned, wx, wy, wz, 0, 0) {
+		if h.spawnRulesOK(0, catMonster, entityDrowned, wx, wy, wz, 0, 0) {
 			pass++
 		}
 	}
@@ -91,7 +91,7 @@ func TestDrownedPlacementAndRarity(t *testing.T) {
 	// No water below → never spawns, regardless of the roll.
 	h.world.SetBlock(wx, wy-1, wz, worldgen.Stone)
 	for i := 0; i < 200; i++ {
-		if h.spawnRulesOK(catMonster, entityDrowned, wx, wy, wz, 0, 0) {
+		if h.spawnRulesOK(0, catMonster, entityDrowned, wx, wy, wz, 0, 0) {
 			t.Fatal("drowned must not spawn without water below the anchor")
 		}
 	}

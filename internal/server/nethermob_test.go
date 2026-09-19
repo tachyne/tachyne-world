@@ -14,6 +14,7 @@ func netherHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	h.nether = nw
 	pl := testTracked()
 	pl.dim = 1
+	pl.p.viewDist.Store(2) // a 5×5-chunk window: the spawner's per-chunk attempts generate nether terrain
 	// Park the player on a real nether floor.
 	y := nw.Gen().NetherFloor(40, 40)
 	pl.x, pl.y, pl.z = 40.5, float64(y), 40.5
@@ -22,8 +23,9 @@ func netherHub(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 
 func TestNetherMobsSpawnInDimOne(t *testing.T) {
 	h, _, players := netherHub(t)
-	for i := 0; i < 60 && len(h.mobs) == 0; i++ {
-		h.updateNetherMobs(players)
+	for i := 0; i < 600 && len(h.mobs) == 0; i++ {
+		h.tick.Store(uint64(i))
+		h.naturalSpawn(players)
 	}
 	if len(h.mobs) == 0 {
 		t.Fatal("no nether mobs spawned in 60 passes")
@@ -145,10 +147,14 @@ func TestNetherDropsStayInNether(t *testing.T) {
 
 func TestNetherSpawnsNeverFloat(t *testing.T) {
 	h, _, players := netherHub(t)
-	for i := 0; i < 200; i++ {
-		h.updateNetherMobs(players)
+	for i := 0; i < 600; i++ {
+		h.tick.Store(uint64(i))
+		h.naturalSpawn(players)
 	}
 	for _, m := range h.mobs {
+		if m.etype == entityStrider {
+			continue // striders spawn IN lava (SpawnPlacementTypes.IN_LAVA)
+		}
 		below := h.nether.At(floorInt(m.x), floorInt(m.y)-1, floorInt(m.z))
 		if below == worldgen.Air || worldgen.IsLava(below) {
 			t.Fatalf("mob %d floating/in-lava at (%.1f,%.1f,%.1f) over %d", m.etype, m.x, m.y, m.z, below)

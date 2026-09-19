@@ -10,8 +10,15 @@ type biomeSpawnRow struct {
 
 // biomeSpawnDef is a biome's spawners and its creature-generation probability.
 type biomeSpawnDef struct {
-	prob float32
-	rows []biomeSpawnRow
+	prob  float32
+	rows  []biomeSpawnRow
+	costs []biomeSpawnCost
+}
+
+// biomeSpawnCost is a MobSpawnCost: a species' charge and energy budget.
+type biomeSpawnCost struct {
+	etype          string
+	charge, budget float64
 }
 
 var biomeSpawnDefs = map[string]biomeSpawnDef{
@@ -31,7 +38,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:bamboo_jungle": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -51,12 +58,12 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"monster", "ocelot", 2, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:basalt_deltas": {0.1, []biomeSpawnRow{
 		{"creature", "strider", 60, 1, 2},
 		{"monster", "ghast", 40, 1, 1},
 		{"monster", "magma_cube", 100, 2, 5},
-	}},
+	}, nil},
 	"minecraft:beach": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "turtle", 5, 2, 5},
@@ -69,7 +76,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:birch_forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -85,7 +92,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:cherry_grove": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "pig", 1, 1, 2},
@@ -100,7 +107,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:cold_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -117,13 +124,13 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_ambient", "salmon", 15, 1, 5},
 		{"water_creature", "squid", 3, 1, 4},
 		{"water_creature", "nautilus", 2, 1, 1},
-	}},
+	}, nil},
 	"minecraft:crimson_forest": {0.1, []biomeSpawnRow{
 		{"creature", "strider", 60, 1, 2},
 		{"monster", "zombified_piglin", 1, 2, 4},
 		{"monster", "hoglin", 9, 3, 4},
 		{"monster", "piglin", 5, 3, 4},
-	}},
+	}, nil},
 	"minecraft:dark_forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -139,7 +146,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:deep_cold_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -156,8 +163,8 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_ambient", "salmon", 15, 1, 5},
 		{"water_creature", "squid", 3, 1, 4},
 		{"water_creature", "nautilus", 2, 1, 1},
-	}},
-	"minecraft:deep_dark": {0.1, []biomeSpawnRow{}},
+	}, nil},
+	"minecraft:deep_dark": {0.1, []biomeSpawnRow{}, nil},
 	"minecraft:deep_frozen_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "polar_bear", 1, 1, 2},
@@ -174,7 +181,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_ambient", "salmon", 15, 1, 5},
 		{"water_creature", "squid", 1, 1, 4},
 		{"water_creature", "nautilus", 2, 1, 1},
-	}},
+	}, nil},
 	"minecraft:deep_lukewarm_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -193,7 +200,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_creature", "squid", 8, 1, 4},
 		{"water_creature", "dolphin", 2, 1, 2},
 		{"water_creature", "nautilus", 5, 1, 1},
-	}},
+	}, nil},
 	"minecraft:deep_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -210,7 +217,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_creature", "squid", 1, 1, 4},
 		{"water_creature", "dolphin", 1, 1, 2},
 		{"water_creature", "nautilus", 5, 1, 1},
-	}},
+	}, nil},
 	"minecraft:desert": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "rabbit", 12, 2, 3},
@@ -226,7 +233,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "husk", 80, 4, 4},
 		{"monster", "parched", 50, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:dripstone_caves": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -239,16 +246,16 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"monster", "drowned", 95, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:end_barrens": {0.1, []biomeSpawnRow{
 		{"monster", "enderman", 10, 4, 4},
-	}},
+	}, nil},
 	"minecraft:end_highlands": {0.1, []biomeSpawnRow{
 		{"monster", "enderman", 10, 4, 4},
-	}},
+	}, nil},
 	"minecraft:end_midlands": {0.1, []biomeSpawnRow{
 		{"monster", "enderman", 10, 4, 4},
-	}},
+	}, nil},
 	"minecraft:eroded_badlands": {0.03, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -265,7 +272,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:flower_forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -282,7 +289,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -299,7 +306,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:frozen_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "polar_bear", 1, 1, 2},
@@ -316,7 +323,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_ambient", "salmon", 15, 1, 5},
 		{"water_creature", "squid", 1, 1, 4},
 		{"water_creature", "nautilus", 2, 1, 1},
-	}},
+	}, nil},
 	"minecraft:frozen_peaks": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "goat", 5, 1, 3},
@@ -329,7 +336,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:frozen_river": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -344,7 +351,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
 		{"water_ambient", "salmon", 5, 1, 5},
 		{"water_creature", "squid", 2, 1, 4},
-	}},
+	}, nil},
 	"minecraft:grove": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "wolf", 1, 1, 1},
@@ -359,7 +366,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:ice_spikes": {0.07, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "rabbit", 10, 2, 3},
@@ -374,7 +381,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"monster", "stray", 80, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:jagged_peaks": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "goat", 5, 1, 3},
@@ -387,7 +394,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:jungle": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -407,7 +414,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"monster", "ocelot", 2, 1, 3},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:lukewarm_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -426,7 +433,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_creature", "squid", 10, 1, 2},
 		{"water_creature", "dolphin", 2, 1, 2},
 		{"water_creature", "nautilus", 5, 1, 1},
-	}},
+	}, nil},
 	"minecraft:lush_caves": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"axolotls", "axolotl", 10, 4, 6},
@@ -440,7 +447,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
 		{"water_ambient", "tropical_fish", 25, 8, 8},
-	}},
+	}, nil},
 	"minecraft:mangrove_swamp": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "frog", 10, 2, 5},
@@ -456,7 +463,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "bogged", 30, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
 		{"water_ambient", "tropical_fish", 25, 8, 8},
-	}},
+	}, nil},
 	"minecraft:meadow": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "donkey", 1, 1, 2},
@@ -471,12 +478,12 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:mushroom_fields": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "mooshroom", 8, 4, 8},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:nether_wastes": {0.1, []biomeSpawnRow{
 		{"creature", "strider", 60, 1, 2},
 		{"monster", "ghast", 50, 4, 4},
@@ -484,7 +491,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "magma_cube", 2, 4, 4},
 		{"monster", "enderman", 1, 4, 4},
 		{"monster", "piglin", 15, 4, 4},
-	}},
+	}, nil},
 	"minecraft:ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -501,7 +508,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_creature", "squid", 1, 1, 4},
 		{"water_creature", "dolphin", 1, 1, 2},
 		{"water_creature", "nautilus", 5, 1, 1},
-	}},
+	}, nil},
 	"minecraft:old_growth_birch_forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -517,7 +524,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:old_growth_pine_taiga": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -536,7 +543,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:old_growth_spruce_taiga": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -555,7 +562,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:pale_garden": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -567,7 +574,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:plains": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -586,7 +593,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:river": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -601,7 +608,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
 		{"water_ambient", "salmon", 5, 1, 5},
 		{"water_creature", "squid", 2, 1, 4},
-	}},
+	}, nil},
 	"minecraft:savanna": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -621,7 +628,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:savanna_plateau": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -643,10 +650,10 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:small_end_islands": {0.1, []biomeSpawnRow{
 		{"monster", "enderman", 10, 4, 4},
-	}},
+	}, nil},
 	"minecraft:snowy_beach": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -658,7 +665,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:snowy_plains": {0.07, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "rabbit", 10, 2, 3},
@@ -674,7 +681,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "witch", 5, 1, 1},
 		{"monster", "stray", 80, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:snowy_slopes": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "rabbit", 4, 2, 3},
@@ -688,7 +695,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:snowy_taiga": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -707,12 +714,17 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:soul_sand_valley": {0.1, []biomeSpawnRow{
 		{"creature", "strider", 60, 1, 2},
 		{"monster", "skeleton", 20, 5, 5},
 		{"monster", "ghast", 50, 4, 4},
 		{"monster", "enderman", 1, 4, 4},
+	}, []biomeSpawnCost{
+		{"enderman", 0.7, 0.15},
+		{"ghast", 0.7, 0.15},
+		{"skeleton", 0.7, 0.15},
+		{"strider", 0.7, 0.15},
 	}},
 	"minecraft:sparse_jungle": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
@@ -731,7 +743,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:stony_peaks": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -743,7 +755,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:stony_shore": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "spider", 100, 4, 4},
@@ -755,7 +767,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:sunflower_plains": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -774,7 +786,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:swamp": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -793,7 +805,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "slime", 1, 1, 1},
 		{"monster", "bogged", 30, 4, 4},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:taiga": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -812,11 +824,11 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:the_end": {0.1, []biomeSpawnRow{
 		{"monster", "enderman", 10, 4, 4},
-	}},
-	"minecraft:the_void": {0.1, []biomeSpawnRow{}},
+	}, nil},
+	"minecraft:the_void": {0.1, []biomeSpawnRow{}, nil},
 	"minecraft:warm_ocean": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"monster", "drowned", 5, 1, 1},
@@ -834,10 +846,12 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"water_creature", "nautilus", 5, 1, 1},
 		{"water_creature", "squid", 10, 4, 4},
 		{"water_creature", "dolphin", 2, 1, 2},
-	}},
+	}, nil},
 	"minecraft:warped_forest": {0.1, []biomeSpawnRow{
 		{"creature", "strider", 60, 1, 2},
 		{"monster", "enderman", 1, 4, 4},
+	}, []biomeSpawnCost{
+		{"enderman", 1, 0.12},
 	}},
 	"minecraft:windswept_forest": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
@@ -855,7 +869,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:windswept_gravelly_hills": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -872,7 +886,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:windswept_hills": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -889,7 +903,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:windswept_savanna": {0.1, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -909,7 +923,7 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 	"minecraft:wooded_badlands": {0.04, []biomeSpawnRow{
 		{"ambient", "bat", 10, 8, 8},
 		{"creature", "sheep", 12, 4, 4},
@@ -927,5 +941,5 @@ var biomeSpawnDefs = map[string]biomeSpawnDef{
 		{"monster", "enderman", 10, 1, 4},
 		{"monster", "witch", 5, 1, 1},
 		{"underground_water_creature", "glow_squid", 10, 4, 6},
-	}},
+	}, nil},
 }

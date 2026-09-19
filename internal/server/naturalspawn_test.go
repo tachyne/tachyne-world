@@ -150,7 +150,7 @@ func TestSpawnPools(t *testing.T) {
 		}
 		return false
 	}
-	if !has(h.spawnPool(catMonster, 0, 64, 0), entityZombie) && !has(h.spawnPool(catMonster, 0, 64, 0), entityDrowned) {
+	if !has(h.spawnPool(0, catMonster, 0, 64, 0), entityZombie) && !has(h.spawnPool(0, catMonster, 0, 64, 0), entityDrowned) {
 		t.Fatal("the monster pool must have a zombie-family entry")
 	}
 	if !has(monsterPoolDesert, entityHusk) || has(monsterPoolDesert, entityStray) {
@@ -170,7 +170,7 @@ func TestSpawnPools(t *testing.T) {
 		}
 	}
 	// glow squid pool only below the cave-water depth
-	if p := h.spawnPool(catUndergroundWater, 0, 20, 0); !has(p, entityGlowSquid) {
+	if p := h.spawnPool(0, catUndergroundWater, 0, 20, 0); !has(p, entityGlowSquid) {
 		t.Fatal("deep water creature pool must be glow squid")
 	}
 }
@@ -182,14 +182,14 @@ func TestSpawnPositionRules(t *testing.T) {
 	h.world.SetBlock(10, 99, 10, worldgen.Stone)
 	h.world.SetBlock(10, 100, 10, worldgen.Air)
 	h.world.SetBlock(10, 101, 10, worldgen.Air)
-	if !h.spawnPositionOK(catMonster, entityZombie, 10, 100, 10) {
+	if !h.spawnPositionOK(0, catMonster, entityZombie, 10, 100, 10) {
 		t.Fatal("solid ground + two clear cells must be spawnable")
 	}
 	h.world.SetBlock(10, 101, 10, worldgen.Stone) // block at head height
-	if h.spawnPositionOK(catMonster, entityZombie, 10, 100, 10) {
+	if h.spawnPositionOK(0, catMonster, entityZombie, 10, 100, 10) {
 		t.Fatal("a mob-height obstruction must reject the position")
 	}
-	if h.spawnPositionOK(catWaterCreature, entitySquid, 10, 100, 10) {
+	if h.spawnPositionOK(0, catWaterCreature, entitySquid, 10, 100, 10) {
 		t.Fatal("water categories need water")
 	}
 }
