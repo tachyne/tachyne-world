@@ -111,6 +111,14 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Explosions drop what vanilla's drop, and burning arrows light things.**
+  TNT-mined stone and ore dropped nothing: the blast applied the player's
+  correct-tool rule and an old drop roller. Every block an explosion
+  breaks now rolls its real loot table with an empty tool — stone drops
+  cobblestone, diamond ore its diamond — with explosion decay's one-in-
+  radius survival per item where the blast decays (TNT's does not by
+  default, as vanilla's). A flaming arrow primes the TNT it strikes and
+  lights a campfire, as it already lit candles.
 - **Mobs have footsteps.** Every walking mob was silent underfoot. They
   now play vanilla's step sounds at vanilla's cadence (one every 1.67
   blocks walked): the block's own sound type at step volume — stone,

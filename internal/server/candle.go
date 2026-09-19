@@ -68,8 +68,10 @@ func (h *hub) lightBlock(players map[int32]*tracked, dim int, pos blockPos, stat
 		return false
 	}
 	h.setBlockAt(players, dim, pos, lit)
-	h.playSoundDim(players, dim, sound, sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 0.8+h.rng.Float32()*0.4)
+	if sound != "" {
+		h.playSoundDim(players, dim, sound, sndBlock,
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 0.8+h.rng.Float32()*0.4)
+	}
 	return true
 }
 

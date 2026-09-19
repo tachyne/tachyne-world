@@ -247,14 +247,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
-			// vanilla yields 1/radius of the block's drops when the kind's
-			// drop-decay rule is on (TNT's is off: it drops everything).
-			if (!h.dropDecay(kind) || h.rng.Intn(max(1, radius)) == 0) && worldgen.HarvestableBy(st, 0) {
-				for _, d := range h.rollDrops(st) {
-					h.spawnItemIn(players, dim, d.item, d.count,
-						float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
-				}
-			}
+			h.dropExploded(players, dim, pos, st, radius, kind)
 		}
 	}
 	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
@@ -518,5 +511,29 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.broadcastPlayerFlags(players, t)
+	}
+}
+
+// dropExploded is BlockBehaviour.onExplosionHit's drop: the block's loot
+// table rolled with an empty tool — the correct-tool rule is a player's,
+// not an explosion's, so TNT mines stone into cobblestone and ores into
+// their gems — and, for a decaying blast, explosion_decay's one-in-radius
+// survival per item. Blocks without a table keep the old roller with the
+// decay applied to the block as a whole.
+func (h *hub) dropExploded(players map[int32]*tracked, dim int, pos blockPos, st uint32, radius int, kind blastKind) {
+	ctx := lootCtx{state: st, rng: h.rng.Intn, randf: h.rng.Float64}
+	if h.dropDecay(kind) {
+		ctx.explosion = float64(max(1, radius))
+	}
+	if ds := h.evalBlockLoot(ctx); ds != nil {
+		for _, d := range ds {
+			h.spawnBlockDrop(players, dim, d.item, d.count, pos.x, pos.y, pos.z)
+		}
+		return
+	}
+	if !h.dropDecay(kind) || h.rng.Intn(max(1, radius)) == 0 {
+		for _, d := range h.rollDrops(st) {
+			h.spawnBlockDrop(players, dim, d.item, d.count, pos.x, pos.y, pos.z)
+		}
 	}
 }

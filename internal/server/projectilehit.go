@@ -91,6 +91,14 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		if a.fire {
 			h.lightCandle(players, a.dim, pos, state)
 		}
+	case isTNT(state): // TntBlock.onProjectileHit: a burning projectile primes it
+		if a.fire {
+			h.primeTNTIn(players, a.dim, pos.x, pos.y, pos.z, 80)
+		}
+	case isCampfireBlock(state): // CampfireBlock.onProjectileHit: a burning projectile lights it
+		if a.fire {
+			h.lightBlock(players, a.dim, pos, state, "")
+		}
 
 	case inRanges(amethystChimeSet, state):
 		// Amethyst rings when struck — pitch varies, which is the whole charm.
