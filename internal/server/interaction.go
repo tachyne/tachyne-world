@@ -660,6 +660,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isBerryBush(state) || isCaveVine(state) || isGolemStatue(state) || isWire(state) { // the block's own use (blockclick.go)
+		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if isButton(state) || isLever(state) || isRepeater(state) ||
 		isComparator(state) || isDaylight(state) { // redstone controls
 		s.hub.post(evUseRedstone{eid: p.eid, x: x, y: y, z: z})

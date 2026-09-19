@@ -1421,6 +1421,8 @@ func (h *hub) run() {
 					}
 					h.vib(t.dim, e.freq, e.x, e.y, e.z, e.eid)
 				}
+			case evClickBlock:
+				h.clickBlock(players, e)
 			case evUseRedstone:
 				pos := blockPos{e.x, e.y, e.z}
 				st := h.world.At(e.x, e.y, e.z)

@@ -206,6 +206,31 @@ func rsWallTorchDir(state uint32) rsDir {
 // and a lone dot is a cross. That second rule is why dust ending beside a
 // lamp powers it.
 func (h *hub) wireArms(x, y, z int) [6]bool {
+	arms := h.wireRealArms(x, y, z)
+	noNS := !arms[dNorth] && !arms[dSouth]
+	noEW := !arms[dEast] && !arms[dWest]
+	if noNS {
+		arms[dWest], arms[dEast] = true, true
+	}
+	if noEW {
+		arms[dNorth], arms[dSouth] = true, true
+	}
+	return arms
+}
+
+// wireHasRealArms reports whether any neighbour actually connects (before
+// the cross fill of a lone dust).
+func (h *hub) wireHasRealArms(x, y, z int) bool {
+	for _, a := range h.wireRealArms(x, y, z) {
+		if a {
+			return true
+		}
+	}
+	return false
+}
+
+// wireRealArms is wireArms before getMissingConnections' cross fill.
+func (h *hub) wireRealArms(x, y, z int) [6]bool {
 	var arms [6]bool
 	aboveConducts := conducts(h.world.At(x, y+1, z))
 	for _, d := range horizontalDirs {
@@ -221,14 +246,6 @@ func (h *hub) wireArms(x, y, z int) [6]bool {
 		} else if !conducts(ns) && isWire(h.world.At(nx, y-1, nz)) {
 			arms[d] = true // steps down past a non-conductor
 		}
-	}
-	noNS := !arms[dNorth] && !arms[dSouth]
-	noEW := !arms[dEast] && !arms[dWest]
-	if noNS {
-		arms[dWest], arms[dEast] = true, true
-	}
-	if noEW {
-		arms[dNorth], arms[dSouth] = true, true
 	}
 	return arms
 }

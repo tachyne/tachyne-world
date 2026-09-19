@@ -47,6 +47,13 @@ the public history since the project was open-sourced on 2026-07-10.
   death buys no forgiveness, as vanilla's rule does.
 - **The mount inventory closes when it should**, like every other menu:
   when the horse, donkey or llama dies or is left out of reach.
+- **Four block clicks.** A ripe sweet berry bush picks by hand (two or
+  three berries, back to age one, with vanilla's pick sound), a berried
+  cave vine gives up its glow berry, a copper golem statue cycles standing,
+  sitting, running and star on a click unless an axe is held (which
+  scrapes or unwaxes it as before), and a lone piece of redstone dust
+  toggles between its cross and a dot, the dot staying put until something
+  connects to it, as vanilla's does.
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.

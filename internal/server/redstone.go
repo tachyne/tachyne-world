@@ -326,6 +326,9 @@ func (h *hub) connectWire(x, y, z int, state uint32) uint32 {
 	if !ok {
 		return state
 	}
+	if wireIsDot(state) && !h.wireHasRealArms(x, y, z) {
+		return state // getConnectionState: a dot with nothing to connect to stays a dot
+	}
 	arms := h.wireArms(x, y, z)
 	aboveConducts := conducts(h.world.At(x, y+1, z))
 	for _, d := range horizontalDirs {
