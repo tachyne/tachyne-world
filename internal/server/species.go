@@ -204,7 +204,7 @@ var speciesTable = map[int]*speciesDef{
 		arch: archPassive, retaliate: true, soundAs: "llama",
 		drops: []specDrop{{item: "leather", rnd: 2}}},
 	entityTurtle: {name: "turtle", health: 30, speed: 0.25, step: 0.05, arch: archPassive,
-		love: "seagrass", drops: []specDrop{{item: "seagrass", rnd: 2}}},
+		love: "seagrass"}, // loot: mobLoot's turtle case (seagrass, a bowl for lightning)
 	entityFrog: {name: "frog", health: 10, speed: 1.0, step: 0.11, arch: archPassive,
 		love: "slime_ball"},
 	entityWanderingTrader: {name: "wandering_trader", health: 20, speed: 0.5, step: 0.135,

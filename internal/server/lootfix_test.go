@@ -91,3 +91,60 @@ func TestGuardianLoot(t *testing.T) {
 		t.Fatalf("a burning guardian drops cooked cod: %v", c)
 	}
 }
+
+// A creeper a skeleton shot drops a music disc, a burning sheep's mutton
+// comes cooked, and a turtle struck by lightning leaves a bowl.
+func TestSkeletonKillDiscBurningSheepAndLightningTurtle(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	creeper := h.spawnMob(players, entityCreeper, 0.5, 40, 0.5)
+	skel := h.spawnMob(players, entitySkeleton, 5.5, 40, 0.5)
+	discs := 0
+	for i := 0; i < 20; i++ {
+		for _, d := range h.mobLoot(creeper) {
+			if d.item != itemGunpowder {
+				discs++
+			}
+		}
+	}
+	if discs != 0 {
+		t.Fatal("no disc without a skeleton's kill")
+	}
+	creeper.lastAttacker = skel.eid
+	discs = 0
+	for i := 0; i < 20; i++ {
+		for _, d := range h.mobLoot(creeper) {
+			if d.item != itemGunpowder {
+				discs++
+			}
+		}
+	}
+	if discs != 20 {
+		t.Fatalf("a skeleton's kill always drops a disc: %d of 20", discs)
+	}
+	sheep := h.spawnMob(players, entitySheep, 0.5, 40, 0.5)
+	sheep.burning = true
+	cooked := false
+	for _, d := range h.mobLoot(sheep) {
+		if d.item == itemCookedMutton {
+			cooked = true
+		}
+		if d.item == itemMutton {
+			t.Fatal("a burning sheep's mutton is cooked")
+		}
+	}
+	if !cooked {
+		t.Fatal("no cooked mutton")
+	}
+	turtle := h.spawnMob(players, entityTurtle, 0.5, 40, 0.5)
+	turtle.hurtKind(1, dtLightningBolt)
+	bowl := false
+	for _, d := range h.mobLoot(turtle) {
+		if d.item == itemBowlItem {
+			bowl = true
+		}
+	}
+	if !bowl {
+		t.Fatal("lightning on a turtle leaves a bowl")
+	}
+}

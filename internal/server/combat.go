@@ -574,13 +574,21 @@ func (h *hub) mobLoot(m *mob) []drop {
 		}
 		return l
 	case entityCreeper:
-		return []drop{{itemGunpowder, h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
+		l := []drop{{itemGunpowder, h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
+		if k := h.mobs[m.lastAttacker]; k != nil && skeletonFamily(k.etype) {
+			l = append(l, drop{creeperDiscs[h.rng.Intn(len(creeperDiscs))], 1}) // entities/creeper: #creeper_drop_music_discs for a skeleton's kill
+		}
+		return l
 	case entityChicken:
 		return []drop{{itemFeather, h.rng.Intn(3)}, {itemRawChicken, 1}}
 	case entityPig:
 		return []drop{{itemPorkchop, 1 + h.rng.Intn(3)}}
 	case entitySheep:
-		return []drop{{sheepWool(m), 1}, {itemMutton, 1 + h.rng.Intn(2)}} // its own fleece
+		meat := itemMutton
+		if m.burning {
+			meat = itemCookedMutton // furnace_smelt: a burning death cooks the meat
+		}
+		return []drop{{sheepWool(m), 1}, {meat, 1 + h.rng.Intn(2)}} // its own fleece
 	case entityHusk, entityDrowned:
 		return []drop{{itemRottenFlesh, h.rng.Intn(3)}}
 	case entityStray:
@@ -607,6 +615,15 @@ func (h *hub) mobLoot(m *mob) []drop {
 		return []drop{{itemBlazeRod, h.rng.Intn(2)}} // brewing: the fuel + powder
 	case entityGuardian, entityElderGuardian:
 		return h.guardianLoot(m)
+	case entityTurtle:
+		l := []drop{}
+		if n := h.rng.Intn(3); n > 0 {
+			l = append(l, drop{itemSeagrassItem, n}) // entities/turtle: 0-2 seagrass
+		}
+		if m.lastDT == dtLightningBolt {
+			l = append(l, drop{itemBowlItem, 1}) // …and a bowl when lightning did it
+		}
+		return l
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return h.speciesLoot(d)

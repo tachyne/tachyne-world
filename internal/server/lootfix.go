@@ -98,3 +98,20 @@ func (h *hub) guardianLoot(m *mob) []drop {
 	}
 	return out
 }
+
+var (
+	itemCookedMutton = int32(itemByName["cooked_mutton"])
+	itemSeagrassItem = int32(itemByName["seagrass"])
+	itemBowlItem     = int32(itemByName["bowl"])
+	// creeperDiscs is #creeper_drop_music_discs: what a creeper drops when one
+	// of #skeletons (skeletonFamily) made the kill.
+	creeperDiscs = func() []int32 {
+		var out []int32
+		for _, n := range []string{"13", "cat", "blocks", "chirp", "far", "mall", "mellohi", "stal", "strad", "ward", "11", "wait"} {
+			if id, ok := itemByName["music_disc_"+n]; ok {
+				out = append(out, int32(id))
+			}
+		}
+		return out
+	}()
+)

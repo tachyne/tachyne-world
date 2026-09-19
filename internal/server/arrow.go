@@ -443,6 +443,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
 				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
 			}
+			if a.mobShot {
+				m.lastAttacker = a.shooter // a mob's arrow counts as its blow (the creeper's disc)
+			}
 			m.hurtKind(float64(dmg), projectileDamageOf(a))
 			if a.playerShot {
 				if s := players[a.shooter]; s != nil {

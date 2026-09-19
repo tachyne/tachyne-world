@@ -52,6 +52,10 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
+  wither skeleton or bogged shoots dead drops one of the twelve music
+  discs; a burning sheep's mutton comes cooked; a turtle struck by
+  lightning leaves a bowl.
 - **Tall grass, large ferns, snow layers and chorus flowers drop right.**
   Their loot tables were outside the generated set, so they fell back to
   dropping their own item. Now shears cut a two-tall plant into two of its
