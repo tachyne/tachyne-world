@@ -109,30 +109,49 @@ func (st invStack) enchLvl(id int8) int {
 // int32 columns of two (id, level) byte pairs each — packEnch (slots 0-1,
 // the original column) and packEnchHi (slots 2-3, added 2026-09-06; older
 // rows unpack with the high column zero).
-type enchList = [4]enchApply
+// enchList holds a stack's enchantments. Vanilla's ItemEnchantments has no
+// cap; eight covers every combination a survival tool, sword or armour
+// piece can legitimately carry (a sword takes at most seven: sharpness,
+// unbreaking, mending, looting, fire aspect, knockback, sweeping edge).
+// Fixed-size so stacks stay comparable with ==.
+type enchList = [8]enchApply
 
-func packEnch(e enchList) int32 {
-	return int32(uint8(e[0].id))<<24 | int32(uint8(e[0].lvl))<<16 |
-		int32(uint8(e[1].id))<<8 | int32(uint8(e[1].lvl))
+// packEnchAt squeezes the two (id, lvl) pairs at slots i and i+1 into one
+// int32 — the persisted columns are two pairs each.
+func packEnchAt(e enchList, i int) int32 {
+	return int32(uint8(e[i].id))<<24 | int32(uint8(e[i].lvl))<<16 |
+		int32(uint8(e[i+1].id))<<8 | int32(uint8(e[i+1].lvl))
 }
 
-func packEnchHi(e enchList) int32 {
-	return int32(uint8(e[2].id))<<24 | int32(uint8(e[2].lvl))<<16 |
-		int32(uint8(e[3].id))<<8 | int32(uint8(e[3].lvl))
+func packEnch(e enchList) int32   { return packEnchAt(e, 0) }
+func packEnchHi(e enchList) int32 { return packEnchAt(e, 2) }
+func packEnch3(e enchList) int32  { return packEnchAt(e, 4) }
+func packEnch4(e enchList) int32  { return packEnchAt(e, 6) }
+
+// unpackEnchAt decodes one persisted column into slots i and i+1.
+func unpackEnchAt(e *enchList, i int, v int32) {
+	e[i] = enchApply{id: int8(v >> 24), lvl: int8(v >> 16)}
+	e[i+1] = enchApply{id: int8(v >> 8), lvl: int8(v)}
 }
 
 func unpackEnch(v int32) enchList {
-	return enchList{
-		{id: int8(v >> 24), lvl: int8(v >> 16)},
-		{id: int8(v >> 8), lvl: int8(v)},
-	}
+	var e enchList
+	unpackEnchAt(&e, 0, v)
+	return e
 }
 
-// unpackEnch2 decodes both persisted columns.
+// unpackEnch2 decodes the first two persisted columns (slots 0-3).
 func unpackEnch2(lo, hi int32) enchList {
 	e := unpackEnch(lo)
-	e[2] = enchApply{id: int8(hi >> 24), lvl: int8(hi >> 16)}
-	e[3] = enchApply{id: int8(hi >> 8), lvl: int8(hi)}
+	unpackEnchAt(&e, 2, hi)
+	return e
+}
+
+// unpackEnch4 decodes all four persisted columns (slots 0-7).
+func unpackEnch4(c0, c1, c2, c3 int32) enchList {
+	e := unpackEnch2(c0, c1)
+	unpackEnchAt(&e, 4, c2)
+	unpackEnchAt(&e, 6, c3)
 	return e
 }
 

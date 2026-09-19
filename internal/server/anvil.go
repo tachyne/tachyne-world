@@ -218,7 +218,7 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 	return res, cost
 }
 
-// withEnch sets an enchantment level on a stack (two slots; overflow dropped).
+// withEnch sets an enchantment level on a stack (a free slot; overflow dropped).
 func withEnch(st invStack, id, lvl int8) invStack {
 	for i := range st.ench {
 		if st.ench[i].id == id && st.ench[i].lvl > 0 {

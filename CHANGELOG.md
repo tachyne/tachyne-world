@@ -111,6 +111,11 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **No more four-enchantment cap.** A stack carried at most four
+  enchantments, so an endgame sword (sharpness, unbreaking, mending,
+  looting, fire aspect, knockback, sweeping edge) could not exist; the
+  anvil silently dropped the fifth. Stacks now hold eight, persisted
+  alongside the old columns so existing inventories load unchanged.
 - **Every block change checks what leaned on it.** Only a player's edits
   used to drop the torches, crops, rails and plants that lost their floor,
   wall or ceiling; the engine's own changes — water washing a cell out,
