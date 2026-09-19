@@ -400,6 +400,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	if visualOnly {
 		return
 	}
+	h.rodStruck(players, blockPos{int(math.Floor(x)), int(math.Floor(y - 1e-6)), int(math.Floor(z))})
 
 	// Entity.thunderHit: eight seconds alight (unless already burning), then
 	// the five of damage.
@@ -543,3 +544,23 @@ type evSetWeather struct {
 }
 
 func (evSetWeather) isHubEvent() {}
+
+// rodStruck is LightningBolt.powerLightningRod → LightningRodBlock.onLightningStrike:
+// a rod at the strike position (or just under it) powers for 8 ticks.
+func (h *hub) rodStruck(players map[int32]*tracked, pos blockPos) {
+	w := h.worldFor(0)
+	st := w.At(pos.x, pos.y, pos.z)
+	if !isLightningRodState(st) {
+		pos.y--
+		st = w.At(pos.x, pos.y, pos.z)
+		if !isLightningRodState(st) {
+			return
+		}
+	}
+	h.inDim(0, func() {
+		h.rsSet(players, pos, setBoolProp(st, "powered", true))
+		h.rsDue[pos] = h.tick.Load() + 8
+		h.rsSchedule(pos, 8)
+		h.scheduleSignalAround(pos)
+	})
+}

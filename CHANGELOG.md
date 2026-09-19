@@ -111,6 +111,11 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Lectern clocks and lightning rods drive redstone.** A page turn on a
+  lectern pulses its power for two ticks and a comparator behind it reads
+  the open page (1 on the first page through 15 on the last, 0 empty); a
+  lightning rod struck by a bolt powers for eight ticks. Neither emitted
+  anything before.
 - **Redstone timing: repeaters keep short pulses, lamps hold four ticks,
   plates and detector rails hold twenty.** A pulse shorter than a
   repeater's delay was dropped (the pending flip was cancelled); vanilla's

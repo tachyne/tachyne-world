@@ -243,6 +243,18 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			}
 			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
+	case isLightningRod(state) && boolProp(state, "powered"): // LightningRodBlock.tick: 8 ticks after the strike
+		if due, ok := h.rsDue[pos]; ok && h.tick.Load() >= due {
+			delete(h.rsDue, pos)
+			h.rsSet(players, pos, setBoolProp(state, "powered", false))
+			h.scheduleSignalAround(pos)
+		}
+	case isLectern(state) && boolProp(state, "powered"): // LecternBlock.tick: the page-turn pulse ends after 2
+		if due, ok := h.rsDue[pos]; ok && h.tick.Load() >= due {
+			delete(h.rsDue, pos)
+			h.rsSet(players, pos, setBoolProp(state, "powered", false))
+			h.scheduleSignalAround(pos)
+		}
 	case isLamp(state):
 		// RedstoneLampBlock: lights at once, goes dark a scheduled 4 ticks
 		// after the power leaves (and stays lit if it comes back first).

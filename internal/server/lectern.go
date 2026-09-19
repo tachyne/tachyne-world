@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	"math"
 )
 
 // Lectern + chiseled bookshelf, on the vanilla models. The lectern holds one
@@ -174,6 +175,39 @@ func (h *hub) lecternButton(players map[int32]*tracked, t *tracked, button int32
 	t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 0, Value: int32(lec.page)})
 	h.toNearbyEv(players, 0, float64(t.winPos.x), float64(t.winPos.z), attachproto.WorldFX{
 		Event: worldEventPageTurn, X: t.winPos.x, Y: t.winPos.y, Z: t.winPos.z})
+	h.lecternPulse(players, t.winPos)
+}
+
+// lecternPulse is LecternBlock.signalPageChange: a page turn powers the
+// lectern for 2 ticks (a lectern clock) and its comparator reading moves.
+func (h *hub) lecternPulse(players map[int32]*tracked, pos simPos) {
+	h.inDim(pos.dim, func() {
+		st := h.rsWorld().At(pos.x, pos.y, pos.z)
+		if !isLectern(st) {
+			return
+		}
+		if !boolProp(st, "powered") {
+			h.rsSet(players, pos.blockPos, setBoolProp(st, "powered", true))
+		}
+		h.rsDue[pos.blockPos] = h.tick.Load() + 2
+		h.rsSchedule(pos.blockPos, 2)
+		h.scheduleSignalAround(pos.blockPos)
+		h.updateNeighbourForOutputSignal(pos.blockPos)
+	})
+}
+
+// lecternSignal is LecternBlockEntity.getRedstoneSignal: the open page's
+// fraction of the book, 1 on the first page to 15 on the last, 0 empty.
+func (h *hub) lecternSignal(pos simPos) int {
+	lec := h.lecterns[pos]
+	if lec == nil || lec.book.item == 0 {
+		return 0
+	}
+	f := 1.0
+	if pages := h.lecternPages(lec); pages > 1 {
+		f = float64(lec.page) / float64(pages-1)
+	}
+	return int(math.Floor(f*14)) + 1
 }
 
 // spillLectern drops the book when the lectern goes away.

@@ -37,6 +37,9 @@ func (h *hub) analogSignal(pos simPos) int {
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}
+	if isLectern(st) {
+		return h.lecternSignal(pos)
+	}
 	if isWoodShelf(st) { // ShelfBlock: a bit per filled slot (read from behind in vanilla)
 		sig := 0
 		if sh := h.woodShelves[pos]; sh != nil {
