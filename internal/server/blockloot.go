@@ -67,6 +67,15 @@ type lootFn struct {
 	Extra   int     `json:"extra"`
 	Prob    float64 `json:"prob"`
 	Limit   int     `json:"limit"`
+	// Chest-table extras (2026-09-19): the potion, name, horn kind, stew
+	// effects, ominous amplifier and treasure-map target functions.
+	Potion     string   `json:"potion,omitempty"`
+	Name       string   `json:"name,omitempty"`
+	Options    string   `json:"options,omitempty"`
+	Effects    []string `json:"effects,omitempty"`
+	Dest       string   `json:"dest,omitempty"`
+	Zoom       int      `json:"zoom,omitempty"`
+	Decoration string   `json:"decoration,omitempty"`
 }
 
 type lootEntry struct {
@@ -157,6 +166,11 @@ type lootCtx struct {
 	explosion float64 // 0 = not an explosion (no decay/survives roll)
 	rng       func(int) int
 	randf     func() float64
+
+	// Where the loot is being rolled (a chest's position; exploration_map
+	// searches from here). located=false when no position applies.
+	pos     blockPos
+	located bool
 
 	// Entity-death context (unused for block loot).
 	looting        int

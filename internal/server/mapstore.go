@@ -28,6 +28,7 @@ type savedMap struct {
 	Locked  bool                 `json:"locked,omitempty"`
 	Colors  []byte               `json:"colors"` // base64 in JSON
 	Banners map[string]mapBanner `json:"banners,omitempty"`
+	Marks   []mapMark            `json:"marks,omitempty"`
 }
 
 type savedMaps struct {
@@ -56,7 +57,7 @@ func newMapStore(path string) *mapStore {
 		}
 		md := &mapData{
 			ID: int32(id64), CenterX: m.CenterX, CenterZ: m.CenterZ,
-			Scale: m.Scale, Dim: m.Dim, Locked: m.Locked, Banners: m.Banners,
+			Scale: m.Scale, Dim: m.Dim, Locked: m.Locked, Banners: m.Banners, Marks: m.Marks,
 			holders: map[int32]*mapHolder{},
 		}
 		copy(md.Colors[:], m.Colors)
@@ -119,7 +120,7 @@ func (ms *mapStore) flushIfDirty() {
 	for id, md := range ms.maps {
 		sv.Maps[strconv.FormatInt(int64(id), 10)] = savedMap{
 			CenterX: md.CenterX, CenterZ: md.CenterZ, Scale: md.Scale,
-			Dim: md.Dim, Locked: md.Locked, Colors: md.Colors[:], Banners: md.Banners,
+			Dim: md.Dim, Locked: md.Locked, Colors: md.Colors[:], Banners: md.Banners, Marks: md.Marks,
 		}
 	}
 	raw, err := json.Marshal(&sv)

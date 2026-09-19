@@ -84,11 +84,31 @@ def func(f):
     if t == "set_damage":
         dmg = f["damage"]
         return {"f": "set_damage", "np": num(dmg), "add": bool(f.get("add", False))}
-    # Cosmetic / component functions the engine cannot represent yet — drop the
-    # function (the item still appears, just plainer).
-    if t in ("exploration_map", "set_name", "set_instrument",
-             "set_potion", "set_stew_effect", "set_ominous_bottle_amplifier",
-             "set_nbt", "set_components", "set_custom_data", "enchanted_count_increase",
+    if t == "set_potion":
+        return {"f": "set_potion", "potion": f["id"].removeprefix("minecraft:")}
+    if t == "set_name":
+        name = f["name"]
+        if isinstance(name, dict):  # a translatable: the English text
+            name = {"filled_map.buried_treasure": "Buried Treasure Map"}.get(name.get("translate", ""), "")
+        if not isinstance(name, str) or not name:
+            return None
+        return {"f": "set_name", "name": name}
+    if t == "set_instrument":
+        return {"f": "set_instrument", "options": f["options"].removeprefix("#minecraft:").removesuffix("_goat_horns")}
+    if t == "set_stew_effect":
+        return {"f": "set_stew", "effects": [e["type"].removeprefix("minecraft:") for e in f["effects"]]}
+    if t == "set_ominous_bottle_amplifier":
+        return {"f": "set_ominous", "np": num(f["amplifier"])}
+    if t == "exploration_map":
+        # The destination is a structure tag; on_treasure_maps = buried treasure.
+        dest = f.get("destination", "#minecraft:on_treasure_maps").removeprefix("#minecraft:").removeprefix("minecraft:")
+        if dest == "on_treasure_maps":
+            dest = "buried_treasure"
+        return {"f": "exploration_map", "dest": dest, "zoom": int(f.get("zoom", 2)),
+                "decoration": f.get("decoration", "minecraft:red_x").removeprefix("minecraft:")}
+    # Component functions the engine cannot represent yet — drop the function
+    # (the item still appears, just plainer).
+    if t in ("set_nbt", "set_components", "set_custom_data", "enchanted_count_increase",
              "set_written_book_pages", "set_book_cover", "reference", "furnace_smelt"):
         return None
     raise Unsupported("func " + t)

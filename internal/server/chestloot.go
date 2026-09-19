@@ -49,7 +49,7 @@ func (h *hub) fillSlots(slots []invStack, name string, pos blockPos) {
 		return
 	}
 	r := rand.New(rand.NewSource(chestSeed(h.world.Seed(), pos, name)))
-	ctx := &lootCtx{rng: r.Intn, randf: r.Float64}
+	ctx := &lootCtx{rng: r.Intn, randf: r.Float64, pos: pos, located: true}
 	stacks := h.evalChestStacks(tbl, ctx, 0)
 
 	// Split oversized stacks to their per-item cap (vanilla createStackSplitter).
@@ -243,6 +243,8 @@ func (c *lootCtx) applyChestFn(h *hub, f *lootFn, st invStack) invStack {
 			}
 			st.ench = e
 		}
+	default:
+		st = h.applyChestExtraFn(c, f, st)
 	}
 	return st
 }

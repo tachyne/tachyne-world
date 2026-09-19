@@ -111,6 +111,16 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Chest loot keeps its potions, names, horns, stews, ominous levels
+  and treasure maps.** Six loot functions were dropped when the chest
+  tables were baked, so an ancient city's strong regeneration was a water
+  bottle, an outpost's goat horn had no voice, a shipwreck's suspicious
+  stew was plain, a trial chamber's ominous bottle was level one and a
+  shipwreck's treasure map was a blank map. All six are in the tables
+  now: the shipwreck map chest hands out a filled map centred on the
+  nearest buried treasure with a red cross on it (the mark is kept with
+  the map), and the ominous trial spawner's tipped arrows and lingering
+  potions carry their effects.
 - **No more four-enchantment cap.** A stack carried at most four
   enchantments, so an endgame sword (sharpness, unbreaking, mending,
   looting, fire aspect, knockback, sweeping edge) could not exist; the
