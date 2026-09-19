@@ -22,7 +22,6 @@ the public history since the project was open-sourced on 2026-07-10.
   NaturalSpawner is the only source of natural mobs now. A one-time
   `-cull-spawn-cows` pass removes the accumulated wild cows within 160
   blocks of the origin from the saved mobs (tamed and named cows stay).
-
 - **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
   wither skeleton or bogged shoots dead drops one of the twelve music
   discs; a burning sheep's mutton comes cooked; a turtle struck by
