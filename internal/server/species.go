@@ -236,11 +236,9 @@ var speciesTable = map[int]*speciesDef{
 	entityDolphin: {name: "dolphin", health: 10, step: 0.16, damage: 3,
 		arch: archWater, retaliate: true, drops: []specDrop{{item: "cod", rnd: 1}}},
 	entityGuardian: {name: "guardian", health: 30, step: 0.11, damage: 6,
-		arch: archWaterHostile, xp: 10,
-		drops: []specDrop{{item: "prismarine_shard", rnd: 2}, {item: "cod", rnd: 1}}},
+		arch: archWaterHostile, xp: 10}, // loot: guardianLoot
 	entityElderGuardian: {name: "elder_guardian", health: 80, step: 0.11, damage: 8,
-		arch: archWaterHostile, xp: 10,
-		drops: []specDrop{{item: "prismarine_shard", rnd: 2}, {item: "wet_sponge", min: 1}}},
+		arch: archWaterHostile, xp: 10}, // loot: guardianLoot
 	// nautilus (1.21.11): an armoured, tameable water creature (its shell can
 	// be fitted with nautilus_armor — taming/riding is a later slice, like the
 	// happy-ghast harness). MAX_HEALTH 15, ATTACK_DAMAGE 3, KB-resist 0.3

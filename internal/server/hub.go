@@ -1481,6 +1481,10 @@ func (h *hub) run() {
 					for _, d := range ds {
 						h.spawnBlockDrop(players, e.dim, d.item, d.count, e.x, e.y, e.z)
 					}
+				} else if ds, ok := h.specialBlockDrops(e.state, int32(e.held), silk > 0); ok {
+					for _, d := range ds {
+						h.spawnBlockDrop(players, e.dim, d.item, d.count, e.x, e.y, e.z)
+					}
 				} else if item, ok := silkTouchDrop[e.state]; ok && silk > 0 {
 					h.spawnBlockDrop(players, e.dim, item, 1, e.x, e.y, e.z)
 				} else {

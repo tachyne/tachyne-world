@@ -47,6 +47,16 @@ func (h *hub) rollDrops(state uint32) []drop {
 		return []drop{{itemGravel, 1}}
 	case isAnyLeaf(state):
 		return h.leafDrops() // 5% sapling / 2% sticks / 0.5% apple
+	case state >= snowLayer1 && state <= snowLayer1+7:
+		return []drop{{itemSnowball, int(state-snowLayer1) + 1}} // blocks/snow: a snowball a layer
+	case isChorusFlower(state):
+		return nil // blocks/chorus_flower: nothing
+	}
+	if _, lower, ok := doublePlantOf(state); ok { // blocks/tall_grass, large_fern: seeds 1/8 from the half that breaks
+		if lower && h.rng.Intn(8) == 0 {
+			return []drop{{itemWheatSeeds, 1}}
+		}
+		return nil
 	}
 	if item, ok := generatedDrop(state); ok { // generated default: block drops its item
 		return []drop{{item, 1}}

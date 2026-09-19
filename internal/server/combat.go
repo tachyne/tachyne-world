@@ -605,6 +605,8 @@ func (h *hub) mobLoot(m *mob) []drop {
 			return nil // vanilla: rods only on player kills
 		}
 		return []drop{{itemBlazeRod, h.rng.Intn(2)}} // brewing: the fuel + powder
+	case entityGuardian, entityElderGuardian:
+		return h.guardianLoot(m)
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return h.speciesLoot(d)

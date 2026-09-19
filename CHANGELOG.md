@@ -20,6 +20,11 @@ the public history since the project was open-sourced on 2026-07-10.
   leaving a boat or cart, and a player stepping into water (a splash,
   never a sneaking one). A villager inside a raid sweats now and then, and
   reeling a hooked mob in shows the rod's tug, both as vanilla's cues.
+- **Guardians drop what vanilla's drop.** A guardian pays 0–2 prismarine
+  shards and then cod (cooked if it was burning), prismarine crystals or
+  nothing at vanilla's odds; the elder adds a wet sponge for a player's
+  kill and a tide armour trim template one time in five. Before, crystals
+  and the template never dropped and the sponge came with every death.
 - **The special crafting recipes.** Six of vanilla's dynamic recipes now
   work in the crafting grid: two damaged tools or armour pieces combine
   into one (both remainders plus five percent, curses kept, every other
@@ -38,6 +43,16 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.
+
+### Fixed
+- **Tall grass, large ferns, snow layers and chorus flowers drop right.**
+  Their loot tables were outside the generated set, so they fell back to
+  dropping their own item. Now shears cut a two-tall plant into two of its
+  small kind and a bare hand finds wheat seeds one time in eight (from the
+  half that breaks), snow layers give a snowball a layer (the layers
+  themselves to shears or Silk Touch), and a chorus flower drops nothing,
+  as vanilla's do.
+
 
 ## 2026-09-18
 
