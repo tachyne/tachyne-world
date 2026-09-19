@@ -85,6 +85,7 @@ type worldRules struct {
 	MaxCramming       int  `json:"maxEntityCramming"`
 	RespawnRadius     int  `json:"respawnRadius"`
 	MaxSnowHeight     int  `json:"maxSnowAccumulationHeight"`
+	UniversalAnger    bool `json:"universalAnger"`
 	TraderSpawnDelay  int  `json:"wanderingTraderSpawnDelay,omitempty"`
 	TraderSpawnChance int  `json:"wanderingTraderSpawnChance,omitempty"`
 }
@@ -343,6 +344,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.RespawnRadius = max(0, e.num)
 	case "max_snow_accumulation_height":
 		h.rules.MaxSnowHeight = min(8, max(0, e.num))
+	case "universal_anger":
+		h.rules.UniversalAnger = e.on
 	case "freeze_damage":
 		h.rules.FreezeDamage = e.on
 	case "spread_vines":

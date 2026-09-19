@@ -278,6 +278,7 @@ type tracked struct {
 	exhaustion    float32
 	dead          bool
 	airborne      bool
+	wasInWater    bool       // last move's water state, for the SPLASH vibration on entry
 	peakY         float64    // highest y since leaving the ground (for fall damage)
 	air           int        // remaining breath in ticks (maxAir underwater→0 = drowning)
 	inv           *inventory // survival inventory (picked-up drops)

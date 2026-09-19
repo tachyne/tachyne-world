@@ -17,8 +17,17 @@ the public history since the project was open-sourced on 2026-07-10.
 - **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs
   walking (throttled like footsteps; nothing on the wing), a boat, minecart
   or armour stand set down, a furnace opened, and a player mounting or
-  leaving a boat or cart. A villager inside a raid sweats now and then, and
+  leaving a boat or cart, and a player stepping into water (a splash,
+  never a sneaking one). A villager inside a raid sweats now and then, and
   reeling a hooked mob in shows the rod's tug, both as vanilla's cues.
+- **universal_anger.** With the rule on, a provoked neutral mob holds its
+  grudge against everyone nearby rather than the one who struck it, and a
+  death buys no forgiveness, as vanilla's rule does.
+- **The mount inventory closes when it should**, like every other menu:
+  when the horse, donkey or llama dies or is left out of reach.
+- **Dispensers sound their launch.** A projectile leaving a dispenser
+  (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
+  plays vanilla's launch sound instead of the plain dispense click.
 
 ## 2026-09-18
 

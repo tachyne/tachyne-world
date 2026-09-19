@@ -466,6 +466,12 @@ func (h *hub) provoke(m *mob, t *tracked) {
 	m.anger = spiderAnger * 4
 	m.hasTarget, m.tx, m.tz = true, t.x, t.z
 	m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, remembered 300 ticks unseen
+	if h.rules.UniversalAnger {
+		// universal_anger: the grudge is against everyone — no one player is
+		// remembered, so the hunt takes whoever is nearest (NeutralMob:
+		// persistentAngerTarget stays unset).
+		m.targetEID = 0
+	}
 	pack := m.etype == entityWolf || m.etype == entityBee || m.etype == entityPolarBear
 	if !pack {
 		return

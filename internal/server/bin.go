@@ -281,6 +281,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		return
 	}
 	c := h.binAt(pos, state)
+	arrowsBefore := len(h.arrows) // a projectile behaviour plays the launch sound, not the dispense click
 	// Vanilla getRandomSlot: a uniformly random non-empty slot (reservoir
 	// sampling), not the first one — so a dispenser empties unpredictably.
 	var st *invStack
@@ -623,7 +624,11 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			*st = invStack{}
 		}
 	}
-	h.playSound(players, "minecraft:block.dispenser.dispense", sndBlock,
+	snd := "minecraft:block.dispenser.dispense" // SOUND_DISPENSER_DISPENSE (1000)
+	if len(h.arrows) > arrowsBefore {
+		snd = "minecraft:block.dispenser.launch" // SOUND_DISPENSER_PROJECTILE_LAUNCH (1002)
+	}
+	h.playSound(players, snd, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 	h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz)) // the puff out of the face
 	h.refreshBinViewers(players, pos)

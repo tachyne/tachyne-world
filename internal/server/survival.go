@@ -293,8 +293,14 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 	if e.sprinting { // vanilla: only sprinting drains food from movement; walking is free
 		t.exhaust(sprintExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
 	}
-	if h.inWater(t.dim, e.x, e.y, e.z) { // swimming, walking under or on water: 0.01 a block
+	if inWater := h.inWater(t.dim, e.x, e.y, e.z); inWater { // swimming, walking under or on water: 0.01 a block
 		t.exhaust(waterExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
+		if !t.wasInWater && !t.p.sneaking {
+			h.vibAt(t.dim, freqSplash, e.x, e.y, e.z, t.p.eid) // Entity.doWaterSplashEffect: SPLASH (sneaking is silent)
+		}
+		t.wasInWater = true
+	} else {
+		t.wasInWater = false
 	}
 	if !e.onGround {
 		// Touching water cancels accumulated fall distance (vanilla resets fall

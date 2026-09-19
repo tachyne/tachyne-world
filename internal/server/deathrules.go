@@ -7,7 +7,7 @@ package server
 // (ServerPlayer.die), which would otherwise carry the respawned player off
 // when they land.
 func (h *hub) deathForgiveness(players map[int32]*tracked, t *tracked) {
-	if h.rules.ForgiveDead {
+	if h.rules.ForgiveDead && !h.rules.UniversalAnger { // universal anger holds the grudge past a death
 		for _, m := range h.mobs {
 			if m.hostile && m.targetEID == t.p.eid && m.dim == t.dim && neutralMob(m) {
 				m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false

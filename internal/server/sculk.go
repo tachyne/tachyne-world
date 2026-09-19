@@ -25,6 +25,7 @@ import (
 const (
 	freqStep            = 1
 	freqProjectileLand  = 2
+	freqSplash          = 2
 	freqHitGround       = 2
 	freqProjectileShoot = 3
 	freqInstrumentPlay  = 3

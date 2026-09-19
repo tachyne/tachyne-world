@@ -37,8 +37,13 @@ func (h *hub) closeWindowServer(players map[int32]*tracked, t *tracked) {
 func (h *hub) validateWindows(players map[int32]*tracked) {
 	for _, t := range players {
 		switch {
-		case t.winKind == winPlayer || t.winKind == winHorse:
+		case t.winKind == winPlayer:
 			continue
+		case t.winKind == winHorse: // AbstractMountInventoryMenu.stillValid: alive, within entity reach + 4
+			m := h.mobs[t.horseEID]
+			if m == nil || m.dying > 0 || m.dim != t.dim || !h.withinEntityReach(t, m) {
+				h.closeWindowServer(players, t)
+			}
 		case t.winKind == winTrade:
 			m := h.mobs[t.tradeWith]
 			if m == nil || m.dying > 0 || m.dim != t.dim || !h.withinEntityReach(t, m) {
