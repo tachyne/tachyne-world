@@ -253,6 +253,7 @@ func (h *hub) runBinFires(players map[int32]*tracked, age uint64) {
 		if !h.inWorldYIn(pos.dim, pos.y) {
 			continue
 		}
+		h.rsDim = pos.dim // the cell's own dimension for the whole ejection
 		w := h.worldFor(pos.dim)
 		if w == nil {
 			continue
@@ -295,7 +296,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		}
 	}
 	if st == nil {
-		h.playSound(players, "minecraft:block.dispenser.fail", sndBlock,
+		h.rsSound(players, "minecraft:block.dispenser.fail", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1.2)
 		return
 	}
@@ -316,7 +317,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				}
 				h.refreshBinViewers(players, pos.at(front)) // update anyone viewing the target
 			}
-			h.playSound(players, "minecraft:block.dispenser.dispense", sndBlock,
+			h.rsSound(players, "minecraft:block.dispenser.dispense", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 			h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz))
 			h.refreshBinViewers(players, pos)
@@ -410,9 +411,9 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// (dirt / coarse dirt / rooted dirt) turns it to mud and empties the
 		// bottle to glass; anything else falls back to the default toss.
 		if convertableToMud(w.At(front.x, front.y, front.z)) {
-			h.setBlock(players, front, worldgen.Mud)
+			h.rsSet(players, front, worldgen.Mud)
 			h.spawnParticles(players, particleSplash, float64(front.x)+0.5, float64(front.y)+1, float64(front.z)+0.5, 0.3, 0.1, 5)
-			h.playSound(players, "minecraft:item.bottle.empty", sndBlock,
+			h.rsSound(players, "minecraft:item.bottle.empty", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			*st = invStack{item: itemGlassBottle, count: 1}
 			took = false
@@ -427,7 +428,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
 			took = false
 			h.releaseHiveBees(players, front, nil)
-			h.setBlock(players, front, withHoney(fs, 0))
+			h.rsSet(players, front, withHoney(fs, 0))
 			hb := invStack{item: itemHoneyBottle, count: 1}
 			if st.count <= 1 {
 				*st = hb
@@ -457,7 +458,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// cell ahead and try to raise a wither; if the cell is blocked, fail
 		// (skull kept, like OptionalDispenseItemBehavior).
 		if w.At(front.x, front.y, front.z) == worldgen.Air {
-			h.setBlock(players, front, witherSkullBlock)
+			h.rsSet(players, front, witherSkullBlock)
 			h.checkWitherBuild(players, 0, 0, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
 		} else {
 			took = false
@@ -479,7 +480,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw}
 			h.armorStands[sd.eid] = sd
 			h.toNearbyEv(players, 0, sd.x, sd.z, h.standAddEv(sd))
-			h.playSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
+			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
 		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
@@ -536,12 +537,12 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		took = false
 		sheared := false
 		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
-			h.playSound(players, "minecraft:block.beehive.shear", sndBlock,
+			h.rsSound(players, "minecraft:block.beehive.shear", sndBlock,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5, 1, 1)
 			h.spawnItem(players, int32(itemHoneycomb), beeHoneycombYield,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5)
 			h.releaseHiveBees(players, front, nil)
-			h.setBlock(players, front, withHoney(fs, 0))
+			h.rsSet(players, front, withHoney(fs, 0))
 			sheared = true
 		} else {
 			for _, m := range h.mobs {
@@ -568,7 +569,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == int32(itemHoneycomb):
 		// Wax the copper block ahead (HoneycombItem.getWaxed); otherwise toss.
 		if ws, ok := waxedCopper(w.At(front.x, front.y, front.z)); ok {
-			h.setBlock(players, front, ws)
+			h.rsSet(players, front, ws)
 		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
@@ -581,7 +582,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		}
 		took = false
 		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
-			h.setBlock(players, front, fluid)
+			h.rsSet(players, front, fluid)
 			st.item = itemBucket // filled bucket (stack size 1) empties in place
 		}
 	case dispense && item == itemPowderBucket:
@@ -589,7 +590,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// pour it into the cell ahead and leave an empty bucket in the slot.
 		took = false
 		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) {
-			h.setBlock(players, front, powderSnowBlock)
+			h.rsSet(players, front, powderSnowBlock)
 			st.item = itemBucket
 		}
 	case dispense && item == itemBucket:
@@ -603,7 +604,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			filled = itemBucketLav
 		}
 		if filled != 0 {
-			h.setBlock(players, front, worldgen.Air)
+			h.rsSet(players, front, worldgen.Air)
 			if st.count <= 1 {
 				*st = invStack{item: filled, count: 1}
 			} else { // empty buckets stack — the filled one finds its own slot
@@ -628,7 +629,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	if len(h.arrows) > arrowsBefore {
 		snd = "minecraft:block.dispenser.launch" // SOUND_DISPENSER_PROJECTILE_LAUNCH (1002)
 	}
-	h.playSound(players, snd, sndBlock,
+	h.rsSound(players, snd, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 	h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz)) // the puff out of the face
 	h.refreshBinViewers(players, pos)

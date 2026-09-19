@@ -61,7 +61,7 @@ func (evUseLectern) isHubEvent() {}
 // onUseLectern places the held book (empty lectern) or opens the menu.
 func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 	t := players[e.eid]
-	if t == nil || t.inv == nil || t.dim != 0 {
+	if t == nil || t.inv == nil {
 		return
 	}
 	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
@@ -87,7 +87,7 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 		}
 		info, _ := worldgen.InfoForState(state)
 		h.setBlockLive(players, t.dim, e.x, e.y, e.z, worldgen.SetProperty(info, state, "has_book", "true"))
-		h.playSound(players, "minecraft:item.book.put", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:item.book.put", sndBlock,
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 		h.incCustom(t, "interact_with_lectern", 1)
 		return

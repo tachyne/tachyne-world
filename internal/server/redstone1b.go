@@ -145,7 +145,7 @@ func (h *hub) repeaterLocked(pos blockPos, state uint32) bool {
 func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uint32) {
 	if locked := h.repeaterLocked(pos, state); locked != boolProp(state, "locked") {
 		state = setBoolProp(state, "locked", locked)
-		h.setBlock(players, pos, state)
+		h.rsSet(players, pos, state)
 	}
 	if boolProp(state, "locked") {
 		delete(h.rsDue, pos) // frozen: cancel any pending flip, hold current output
@@ -161,12 +161,12 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 	due, pendingFlip := h.rsDue[pos]
 	if !pendingFlip {
 		h.rsDue[pos] = now + uint64(repeaterDelay(state))
-		h.schedule(pos, uint64(repeaterDelay(state)))
+		h.rsSchedule(pos, uint64(repeaterDelay(state)))
 		return
 	}
 	if now >= due {
 		delete(h.rsDue, pos)
-		h.setBlock(players, pos, setBoolProp(state, "powered", in))
+		h.rsSet(players, pos, setBoolProp(state, "powered", in))
 		h.scheduleSignalAround(pos)
 	}
 }
@@ -186,10 +186,10 @@ func (h *hub) updateCopperBulb(players map[int32]*tracked, pos blockPos, state u
 		if lit {
 			snd = "minecraft:block.copper_bulb.turn_on"
 		}
-		h.playSound(players, snd, sndBlock,
+		h.rsSound(players, snd, sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 	}
-	h.setBlock(players, pos, worldgen.CopperBulbSet(state, lit, powered))
+	h.rsSet(players, pos, worldgen.CopperBulbSet(state, lit, powered))
 	h.scheduleSignalAround(pos) // relight + let an adjacent comparator re-read
 }
 
@@ -200,8 +200,8 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	dx, dz := facingDelta(stateFacing(state))
 	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
-	bs := h.world.At(back.x, back.y, back.z)
-	if sig := h.analogSignal(simPos{blockPos: back}); sig >= 0 { // redstone still simulates only the overworld
+	bs := h.rsWorld().At(back.x, back.y, back.z)
+	if sig := h.analogSignal(simPos{dim: h.rsDim, blockPos: back}); sig >= 0 {
 		if sig > rear {
 			rear = sig // container fullness, cake left, composter level, …
 		}
@@ -243,13 +243,13 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	due, pending := h.rsDue[pos]
 	if !pending {
 		h.rsDue[pos] = now + comparatorDelay
-		h.schedule(pos, comparatorDelay)
+		h.rsSchedule(pos, comparatorDelay)
 		return
 	}
 	if now >= due {
 		delete(h.rsDue, pos)
 		h.compOut[pos] = out
-		h.setBlock(players, pos, setBoolProp(state, "powered", out > 0))
+		h.rsSet(players, pos, setBoolProp(state, "powered", out > 0))
 		h.scheduleSignalAround(pos)
 	}
 }
@@ -263,19 +263,19 @@ func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uin
 	if boolProp(state, "powered") {
 		if at, ok := h.obsPulse[pos]; !ok || now >= at+observerPulseTicks {
 			delete(h.obsPulse, pos)
-			h.setBlock(players, pos, setBoolProp(state, "powered", false))
+			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.scheduleSignalAround(pos)
 		}
 		return
 	}
 	dx, dy, dz := obsDelta(state)
-	watched := h.world.At(pos.x+dx, pos.y+dy, pos.z+dz)
+	watched := h.rsWorld().At(pos.x+dx, pos.y+dy, pos.z+dz)
 	prev, seen := h.obsSeen[pos]
 	h.obsSeen[pos] = watched
 	if seen && watched != prev {
 		h.obsPulse[pos] = now
-		h.setBlock(players, pos, setBoolProp(state, "powered", true))
-		h.schedule(pos, observerPulseTicks)
+		h.rsSet(players, pos, setBoolProp(state, "powered", true))
+		h.rsSchedule(pos, observerPulseTicks)
 		h.scheduleSignalAround(pos)
 	}
 }
@@ -296,37 +296,51 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 		power = 15 - power
 	}
 	if daylightPower(state) != power {
-		h.setBlock(players, pos, daylightWith(daylightInverted(state), power))
+		h.rsSet(players, pos, daylightWith(daylightInverted(state), power))
 		h.scheduleSignalAround(pos)
 	}
-	h.schedule(pos, 100)
+	h.rsSchedule(pos, 100)
 }
 
 // updatePlates is the per-tick occupancy scan: entities standing on plates
 // press them; empty pressed plates release. platesOn tracks what's pressed.
 func (h *hub) updatePlates(players map[int32]*tracked) {
+	for dim := 0; dim <= 2; dim++ {
+		if dim != 0 && h.worldFor(dim) == h.world {
+			continue
+		}
+		h.inDim(dim, func() { h.updatePlatesIn(players, dim) })
+	}
+}
+
+// updatePlatesIn is one dimension's plate pass (the simulation is pointed at it).
+func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 	occupied := map[blockPos]int{}
 	feet := func(x, y, z float64) {
 		pos := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
-		if isPlate(h.world.At(pos.x, pos.y, pos.z)) {
+		if isPlate(h.rsWorld().At(pos.x, pos.y, pos.z)) {
 			occupied[pos]++
 		}
 	}
 	for _, t := range players {
-		feet(t.x, t.y, t.z)
+		if t.dim == dim {
+			feet(t.x, t.y, t.z)
+		}
 	}
 	for _, m := range h.mobs {
-		feet(m.x, m.y, m.z)
+		if m.dim == dim {
+			feet(m.x, m.y, m.z)
+		}
 	}
 	for pos, n := range occupied {
-		s := h.world.At(pos.x, pos.y, pos.z)
+		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if ns := plateWith(s, n); ns != s {
 			if platePower(s) == 0 {
-				h.playSound(players, "minecraft:block.stone_pressure_plate.click_on", sndBlock,
+				h.rsSound(players, "minecraft:block.stone_pressure_plate.click_on", sndBlock,
 					float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.8)
-				h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
+				h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 			}
-			h.setBlock(players, pos, ns)
+			h.rsSet(players, pos, ns)
 			h.scheduleSignalAround(pos)
 			h.platesOn[pos] = true
 		} else if platePower(s) > 0 {
@@ -338,12 +352,12 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 			continue
 		}
 		delete(h.platesOn, pos)
-		s := h.world.At(pos.x, pos.y, pos.z)
+		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if isPlate(s) && platePower(s) > 0 {
-			h.setBlock(players, pos, plateWith(s, 0))
-			h.playSound(players, "minecraft:block.stone_pressure_plate.click_off", sndBlock,
+			h.rsSet(players, pos, plateWith(s, 0))
+			h.rsSound(players, "minecraft:block.stone_pressure_plate.click_off", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.7)
-			h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.scheduleSignalAround(pos)
 		}
 	}
@@ -357,8 +371,8 @@ func (h *hub) useRedstone1b(players map[int32]*tracked, pos blockPos, state uint
 		info, _ := worldgen.InfoForState(state)
 		d := worldgen.GetProperty(info, state, "delay")[0] - '0'
 		next := d%4 + 1
-		h.setBlock(players, pos, worldgen.SetProperty(info, state, "delay", string(rune('0'+next))))
-		h.playSound(players, "minecraft:block.lever.click", sndBlock,
+		h.rsSet(players, pos, worldgen.SetProperty(info, state, "delay", string(rune('0'+next))))
+		h.rsSound(players, "minecraft:block.lever.click", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, 1.2)
 	case isComparator(state):
 		info, _ := worldgen.InfoForState(state)
@@ -366,13 +380,13 @@ func (h *hub) useRedstone1b(players map[int32]*tracked, pos blockPos, state uint
 		if worldgen.GetProperty(info, state, "mode") == "subtract" {
 			mode = "compare"
 		}
-		h.setBlock(players, pos, worldgen.SetProperty(info, state, "mode", mode))
-		h.playSound(players, "minecraft:block.comparator.click", sndBlock,
+		h.rsSet(players, pos, worldgen.SetProperty(info, state, "mode", mode))
+		h.rsSound(players, "minecraft:block.comparator.click", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, 1.1)
-		h.schedule(pos, 1)
+		h.rsSchedule(pos, 1)
 	case isDaylight(state):
-		h.setBlock(players, pos, daylightWith(!daylightInverted(state), daylightPower(state)))
-		h.schedule(pos, 1)
+		h.rsSet(players, pos, daylightWith(!daylightInverted(state), daylightPower(state)))
+		h.rsSchedule(pos, 1)
 	default:
 		return false
 	}

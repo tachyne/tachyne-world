@@ -782,7 +782,7 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 			}
 			s := h.worldFor(dim).At(cx, cy, cz)
 			if s == worldgen.Air && flammableNear(cx, cy, cz) {
-				h.igniteFire(players, blockPos{cx, cy, cz}, 0)
+				h.inDim(dim, func() { h.igniteFire(players, blockPos{cx, cy, cz}, 0) })
 				return
 			}
 			if worldgen.IsSolidFull(s) {
@@ -796,7 +796,7 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 		ax, az := x+h.rng.Intn(3)-1, z+h.rng.Intn(3)-1
 		if h.inWorldY(y+1) && h.worldFor(dim).At(ax, y, az) != worldgen.Air {
 			if ig, _ := worldgen.Flammability(h.worldFor(dim).At(ax, y, az)); ig > 0 && h.worldFor(dim).At(ax, y+1, az) == worldgen.Air {
-				h.igniteFire(players, blockPos{ax, y + 1, az}, 0)
+				h.inDim(dim, func() { h.igniteFire(players, blockPos{ax, y + 1, az}, 0) })
 			}
 		}
 	}

@@ -34,31 +34,38 @@ const tripwireReach = 42
 
 // updateTripwires is the per-tick occupancy scan for tripwire strings.
 func (h *hub) updateTripwires(players map[int32]*tracked) {
-	now := map[blockPos]bool{}
-	mark := func(x, y, z float64) {
-		p := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
-		if isTripwire(h.world.At(p.x, p.y, p.z)) {
-			now[p] = true
+	now := map[simPos]bool{}
+	for dim := 0; dim <= 2; dim++ {
+		if dim != 0 && h.worldFor(dim) == h.world {
+			continue
 		}
-	}
-	for _, t := range players {
-		if t.dim == 0 {
-			mark(t.x, t.y, t.z)
-		}
-	}
-	for _, m := range h.mobs {
-		if m.dim == 0 {
-			mark(m.x, m.y, m.z)
-		}
+		h.inDim(dim, func() {
+			mark := func(x, y, z float64) {
+				p := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
+				if isTripwire(h.rsWorld().At(p.x, p.y, p.z)) {
+					now[simPos{dim, p}] = true
+				}
+			}
+			for _, t := range players {
+				if t.dim == dim {
+					mark(t.x, t.y, t.z)
+				}
+			}
+			for _, m := range h.mobs {
+				if m.dim == dim {
+					mark(m.x, m.y, m.z)
+				}
+			}
+		})
 	}
 	for p := range h.wiresOn { // released strings
 		if !now[p] {
-			h.setWirePressed(players, p, false)
+			h.inDim(p.dim, func() { h.setWirePressed(players, p.blockPos, false) })
 		}
 	}
 	for p := range now { // newly pressed strings
 		if !h.wiresOn[p] {
-			h.setWirePressed(players, p, true)
+			h.inDim(p.dim, func() { h.setWirePressed(players, p.blockPos, true) })
 		}
 	}
 	h.wiresOn = now
@@ -67,17 +74,17 @@ func (h *hub) updateTripwires(players map[int32]*tracked) {
 // setWirePressed flips a string's powered bit and re-evaluates the hooks along
 // its two axes.
 func (h *hub) setWirePressed(players map[int32]*tracked, pos blockPos, pressed bool) {
-	s := h.world.At(pos.x, pos.y, pos.z)
+	s := h.rsWorld().At(pos.x, pos.y, pos.z)
 	if !isTripwire(s) {
 		return
 	}
 	if boolProp(s, "powered") != pressed {
-		h.setBlock(players, pos, setBoolProp(s, "powered", pressed))
+		h.rsSet(players, pos, setBoolProp(s, "powered", pressed))
 	}
 	for _, d := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
 		for i := 1; i < tripwireReach; i++ {
 			np := blockPos{pos.x + d[0]*i, pos.y, pos.z + d[1]*i}
-			ns := h.world.At(np.x, np.y, np.z)
+			ns := h.rsWorld().At(np.x, np.y, np.z)
 			if isTripwireHook(ns) {
 				h.calcHook(players, np, ns)
 				break
@@ -97,7 +104,7 @@ func (h *hub) calcHook(players map[int32]*tracked, pos blockPos, state uint32) {
 	dist, powered := 0, false
 	for i := 1; i < tripwireReach; i++ {
 		np := blockPos{pos.x + dx*i, pos.y, pos.z + dz*i}
-		ns := h.world.At(np.x, np.y, np.z)
+		ns := h.rsWorld().At(np.x, np.y, np.z)
 		if isTripwireHook(ns) {
 			if stateFacing(ns) == oppositeFacing(facing) {
 				dist = i // a matching hook closes the line
@@ -118,7 +125,7 @@ func (h *hub) calcHook(players map[int32]*tracked, pos blockPos, state uint32) {
 	}
 	ns := setBoolProp(setBoolProp(state, "attached", attached), "powered", powered)
 	if ns != state {
-		h.setBlock(players, pos, ns)
-		h.scheduleAround(pos, 1) // a powered hook drives its neighbours
+		h.rsSet(players, pos, ns)
+		h.scheduleAroundIn(h.rsDim, pos, 1) // a powered hook drives its neighbours
 	}
 }

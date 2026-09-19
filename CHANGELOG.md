@@ -40,6 +40,14 @@ the public history since the project was open-sourced on 2026-07-10.
   deviations traceable to a dozen cross-cutting defects listed there.
 
 ### Fixed
+- **Redstone, fire, rails, plates, tripwires, dispensers and comparators
+  work in every dimension.** The block simulation read and wrote the
+  overworld whatever dimension the block was in: a lever in the Nether did
+  nothing there, and a scheduled update at Nether coordinates could rewrite
+  overworld blocks at the same position. The simulation now runs in the
+  block's own dimension (the scheduled update's, the clicking player's, the
+  cart's, the dispenser cell's, the removed block's), with lecterns usable
+  outside the overworld too.
 - **Hordes of cows near spawn.** Every restart used to seed three small
   "herds" of cows around the origin for something to see on join, and since
   mobs persist, each rollout added nine to fifteen more — the cattle crowd

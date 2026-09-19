@@ -232,18 +232,18 @@ func (h *hub) wireHasRealArms(x, y, z int) bool {
 // wireRealArms is wireArms before getMissingConnections' cross fill.
 func (h *hub) wireRealArms(x, y, z int) [6]bool {
 	var arms [6]bool
-	aboveConducts := conducts(h.world.At(x, y+1, z))
+	aboveConducts := conducts(h.rsWorld().At(x, y+1, z))
 	for _, d := range horizontalDirs {
 		dx, _, dz := d.delta()
 		nx, nz := x+dx, z+dz
-		ns := h.world.At(nx, y, nz)
-		if !aboveConducts && canHoldDust(ns) && isWire(h.world.At(nx, y+1, nz)) {
+		ns := h.rsWorld().At(nx, y, nz)
+		if !aboveConducts && canHoldDust(ns) && isWire(h.rsWorld().At(nx, y+1, nz)) {
 			arms[d] = true // climbs onto the neighbour
 			continue
 		}
 		if h.wireConnectsTo(ns, d) {
 			arms[d] = true
-		} else if !conducts(ns) && isWire(h.world.At(nx, y-1, nz)) {
+		} else if !conducts(ns) && isWire(h.rsWorld().At(nx, y-1, nz)) {
 			arms[d] = true // steps down past a non-conductor
 		}
 	}
@@ -403,7 +403,7 @@ func (h *hub) directInto(x, y, z int) int {
 	for d := dDown; d <= dEast; d++ {
 		dx, dy, dz := d.delta()
 		nx, ny, nz := x+dx, y+dy, z+dz
-		if v := h.directSignal(nx, ny, nz, h.world.At(nx, ny, nz), d); v > best {
+		if v := h.directSignal(nx, ny, nz, h.rsWorld().At(nx, ny, nz), d); v > best {
 			best = v
 			if best >= 15 {
 				return 15
@@ -417,7 +417,7 @@ func (h *hub) directInto(x, y, z int) int {
 // that direction, or — if it conducts — the strong power it is receiving,
 // whichever is greater.
 func (h *hub) signal(x, y, z int, d rsDir) int {
-	s := h.world.At(x, y, z)
+	s := h.rsWorld().At(x, y, z)
 	v := h.weakSignal(x, y, z, s, d)
 	if conducts(s) {
 		if di := h.directInto(x, y, z); di > v {
@@ -458,7 +458,7 @@ func (h *hub) bestNeighborSignal(x, y, z int) int {
 // controlInputSignal is SignalGetter.getControlInputSignal: what a diode
 // reads from a side block at (x,y,z) lying in direction d from it.
 func (h *hub) controlInputSignal(x, y, z int, d rsDir, onlyDiodes bool) int {
-	s := h.world.At(x, y, z)
+	s := h.rsWorld().At(x, y, z)
 	switch {
 	case onlyDiodes:
 		if isRepeater(s) || isComparator(s) {
@@ -507,20 +507,20 @@ func (h *hub) wireBlockSignal(x, y, z int) int {
 // solid caps this cell, one down past a non-conductor — minus one.
 func (h *hub) incomingWireSignal(x, y, z int) int {
 	wireAt := func(px, py, pz int) int {
-		if s := h.world.At(px, py, pz); isWire(s) {
+		if s := h.rsWorld().At(px, py, pz); isWire(s) {
 			return wirePower(s)
 		}
 		return 0
 	}
 	best := 0
-	aboveConducts := conducts(h.world.At(x, y+1, z))
+	aboveConducts := conducts(h.rsWorld().At(x, y+1, z))
 	for _, d := range horizontalDirs {
 		dx, _, dz := d.delta()
 		nx, nz := x+dx, z+dz
 		if v := wireAt(nx, y, nz); v > best {
 			best = v
 		}
-		if nc := conducts(h.world.At(nx, y, nz)); nc && !aboveConducts {
+		if nc := conducts(h.rsWorld().At(nx, y, nz)); nc && !aboveConducts {
 			if v := wireAt(nx, y+1, nz); v > best {
 				best = v
 			}
@@ -551,7 +551,7 @@ func (h *hub) diodeInputSignal(pos blockPos, s uint32) int {
 	if in >= 15 {
 		return 15
 	}
-	if bs := h.world.At(bx, by, bz); isWire(bs) {
+	if bs := h.rsWorld().At(bx, by, bz); isWire(bs) {
 		if p := wirePower(bs); p > in {
 			return p
 		}
@@ -611,12 +611,12 @@ func (h *hub) pistonHasSignal(pos blockPos, push rsDir) bool {
 // reach next tick: the six neighbours as before, and — because direct power
 // crosses a conductor — the neighbours of every conducting neighbour too.
 func (h *hub) scheduleSignalAround(pos blockPos) {
-	h.scheduleAround(pos, 1)
+	h.scheduleAroundIn(h.rsDim, pos, 1)
 	for d := dDown; d <= dEast; d++ {
 		dx, dy, dz := d.delta()
 		n := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
-		if conducts(h.world.At(n.x, n.y, n.z)) {
-			h.scheduleAround(n, 1)
+		if conducts(h.rsWorld().At(n.x, n.y, n.z)) {
+			h.scheduleAroundIn(h.rsDim, n, 1)
 		}
 	}
 }

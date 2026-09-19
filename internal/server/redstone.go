@@ -116,7 +116,7 @@ var rsNeighbors = [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, 1,
 // (rx,ry,rz): omnidirectional for simple sources and dust, directional for
 // repeaters/comparators (front only) and observers (back only).
 func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
-	s := h.world.At(px, py, pz)
+	s := h.rsWorld().At(px, py, pz)
 	switch {
 	case isLever(s) && boolProp(s, "powered"),
 		isButton(s) && boolProp(s, "powered"),
@@ -185,8 +185,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	x, y, z := pos.x, pos.y, pos.z
 	// Quasi-connectivity relay: a redstone update at this cell re-evaluates a
 	// piston directly below, which reads power through this block (Java QC).
-	if pb := (blockPos{x, y - 1, z}); !isPistonBase(state) && isPistonBase(h.world.At(pb.x, pb.y, pb.z)) {
-		h.schedule(pb, 1)
+	if pb := (blockPos{x, y - 1, z}); !isPistonBase(state) && isPistonBase(h.rsWorld().At(pb.x, pb.y, pb.z)) {
+		h.rsSchedule(pb, 1)
 	}
 	switch {
 	case isTarget(state):
@@ -203,14 +203,14 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			if powered {
 				h.playNoteBlock(players, 0, x, y, z, state)
 			}
-			h.setBlock(players, pos, noteWithPowered(state, powered))
+			h.rsSet(players, pos, noteWithPowered(state, powered))
 		}
 	case isWire(state):
 		want := h.inputPower(x, y, z, true)
 		if wirePower(state) != want {
 			info, _ := worldgen.InfoForState(state)
 			ns := worldgen.SetProperty(info, state, "power", itoa(want))
-			h.setBlock(players, pos, h.connectWire(x, y, z, ns))
+			h.rsSet(players, pos, h.connectWire(x, y, z, ns))
 			h.scheduleSignalAround(pos) // ripple on
 		}
 	case isRSTorch(state):
@@ -228,14 +228,14 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		h.pruneTorchToggles()
 		switch {
 		case torchLit(state) && powered:
-			h.setBlock(players, pos, torchWithLit(state, false))
+			h.rsSet(players, pos, torchWithLit(state, false))
 			h.scheduleSignalAround(pos)
 			if h.torchToggledTooOften(pos, true) { // burn out: fizz, and try again in 160 ticks
 				h.toNearbyEv(players, 0, float64(x), float64(z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: x, Y: y, Z: z})
-				h.schedule(pos, torchRestartDelay)
+				h.rsSchedule(pos, torchRestartDelay)
 			}
 		case !torchLit(state) && !powered && !h.torchToggledTooOften(pos, false):
-			h.setBlock(players, pos, torchWithLit(state, true))
+			h.rsSet(players, pos, torchWithLit(state, true))
 			h.scheduleSignalAround(pos)
 		}
 	case worldgen.IsCopperBulb(state):
@@ -246,7 +246,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			if want {
 				h.ringBell(players, 0, pos, -1)
 			}
-			h.setBlock(players, pos, setBoolProp(state, "powered", want))
+			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
 	case isLamp(state):
 		want := h.inputPower(x, y, z, false) > 0
@@ -255,16 +255,16 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			if want {
 				ns = lampOn
 			}
-			h.setBlock(players, pos, ns)
+			h.rsSet(players, pos, ns)
 		}
 	case isButton(state) && boolProp(state, "powered"):
 		// Scheduled unpress: only past the press window (neighbor updates land
 		// here too — they must not cut a press short).
 		if at, ok := h.pressedAt[pos]; ok && h.tick.Load() >= at+buttonPressTicks {
 			delete(h.pressedAt, pos)
-			h.setBlock(players, pos, setBoolProp(state, "powered", false))
-			h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
-			h.playSound(players, "minecraft:block.stone_button.click_off", sndBlock,
+			h.rsSet(players, pos, setBoolProp(state, "powered", false))
+			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+			h.rsSound(players, "minecraft:block.stone_button.click_off", sndBlock,
 				float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 0.9)
 			h.scheduleSignalAround(pos)
 		}
@@ -297,7 +297,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	}
 	// Doors/trapdoors/gates respond to power beside redstone-ish updates: the
 	// scheduler visits THEM directly (they're in every changed neighbourhood).
-	h.updatePoweredOpenable(players, pos, h.world.At(x, y, z))
+	h.updatePoweredOpenable(players, pos, h.rsWorld().At(x, y, z))
 }
 
 // updatePoweredOpenable syncs an "open" block (iron doors especially) with
@@ -313,8 +313,8 @@ func (h *hub) updatePoweredOpenable(players map[int32]*tracked, pos blockPos, st
 	}
 	ns := setBoolProp(state, "powered", powered)
 	ns = setBoolProp(ns, "open", powered)
-	h.setBlock(players, pos, ns)
-	h.playSound(players, "minecraft:block.iron_door.open", sndBlock,
+	h.rsSet(players, pos, ns)
+	h.rsSound(players, "minecraft:block.iron_door.open", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 }
 
@@ -330,13 +330,13 @@ func (h *hub) connectWire(x, y, z int, state uint32) uint32 {
 		return state // getConnectionState: a dot with nothing to connect to stays a dot
 	}
 	arms := h.wireArms(x, y, z)
-	aboveConducts := conducts(h.world.At(x, y+1, z))
+	aboveConducts := conducts(h.rsWorld().At(x, y+1, z))
 	for _, d := range horizontalDirs {
 		dx, _, dz := d.delta()
 		v := "none"
 		if arms[d] {
 			v = "side"
-			if !aboveConducts && canHoldDust(h.world.At(x+dx, y, z+dz)) && isWire(h.world.At(x+dx, y+1, z+dz)) {
+			if !aboveConducts && canHoldDust(h.rsWorld().At(x+dx, y, z+dz)) && isWire(h.rsWorld().At(x+dx, y+1, z+dz)) {
 				v = "up"
 			}
 		}
@@ -367,27 +367,27 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 		return
 	}
 	h.pressedAt[pos] = h.tick.Load()
-	h.setBlock(players, pos, setBoolProp(state, "powered", true))
-	h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
-	h.playSound(players, "minecraft:block.stone_button.click_on", sndBlock,
+	h.rsSet(players, pos, setBoolProp(state, "powered", true))
+	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
+	h.rsSound(players, "minecraft:block.stone_button.click_on", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
 	h.scheduleSignalAround(pos)
-	h.schedule(pos, buttonPressTicks) // the unpress timer
+	h.rsSchedule(pos, buttonPressTicks) // the unpress timer
 }
 
 func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32) {
 	on := !boolProp(state, "powered")
-	h.setBlock(players, pos, setBoolProp(state, "powered", on))
+	h.rsSet(players, pos, setBoolProp(state, "powered", on))
 	if on {
-		h.vib(0, freqBlockActivate, pos.x, pos.y, pos.z, 0)
+		h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 	} else {
-		h.vib(0, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+		h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 	}
 	pitch := float32(0.9)
 	if on {
 		pitch = 1.1
 	}
-	h.playSound(players, "minecraft:block.lever.click", sndBlock,
+	h.rsSound(players, "minecraft:block.lever.click", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, pitch)
 	h.scheduleSignalAround(pos)
 }

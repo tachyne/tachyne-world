@@ -142,7 +142,7 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	b = protocol.AppendVarInt(b, metaTypeInt)
 	b = protocol.AppendVarInt(b, int32(fuse))
 	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
-	h.playSound(players, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
+	h.rsSound(players, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
 	h.vib(dim, freqPrimeFuse, x, y, z, 0)
 }
 
@@ -314,12 +314,12 @@ func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blo
 // fire as a pure hazard that never eats a build.
 func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Reschedule next tick (vanilla getFireTickDelay: 30 + rand(10)).
-	h.schedule(pos, uint64(30+h.rng.Intn(10)))
+	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
 	if !h.rules.DoFireTick {
 		return // gamerule doFireTick=false: fire neither spreads nor burns out
 	}
 
-	below := h.world.Block(pos.x, pos.y-1, pos.z)
+	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
 	infiniburn := below == worldgen.Netherrack // eternal fire on netherrack
 	n := h.fireAge[pos]
 
@@ -399,13 +399,13 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 	if !h.inWorldY(pos.y) {
 		return
 	}
-	state := h.world.Block(pos.x, pos.y, pos.z)
+	state := h.rsWorld().Block(pos.x, pos.y, pos.z)
 	_, burn := worldgen.Flammability(state)
 	if h.rng.Intn(resilience) >= int(burn) {
 		return
 	}
 	if isTNT(state) {
-		h.setBlock(players, pos, worldgen.Air)
+		h.rsSet(players, pos, worldgen.Air)
 		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
 		// is the only consumer of h.events — a self-post with a full queue
 		// blocks forever and takes the whole server with it (see postFromHub).
@@ -415,24 +415,24 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 	if h.rng.Intn(srcAge+10) < 5 && !(h.raining && h.fireNearRain(pos)) {
 		h.igniteFire(players, pos, min(srcAge+h.rng.Intn(5)/4, 15))
 	} else {
-		h.setBlock(players, pos, worldgen.Air)
-		h.scheduleAround(pos, 1) // sand above falls, fluid flows into the gap
+		h.rsSet(players, pos, worldgen.Air)
+		h.scheduleAroundIn(h.rsDim, pos, 1) // sand above falls, fluid flows into the gap
 	}
 }
 
 // igniteFire places a fire block of the given age and schedules its first tick.
 func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
-	h.setBlock(players, pos, fireDefault)
+	h.rsSet(players, pos, fireDefault)
 	h.fireAge[pos] = age
-	h.schedule(pos, uint64(30+h.rng.Intn(10)))
+	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
 }
 
 // removeFire clears a fire block (and its side-mapped age).
 func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) {
-	h.setBlock(players, pos, worldgen.Air)
+	h.rsSet(players, pos, worldgen.Air)
 	delete(h.fireAge, pos)
 	if doused {
-		h.playSound(players, "minecraft:block.fire.extinguish", sndBlock,
+		h.rsSound(players, "minecraft:block.fire.extinguish", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 0.5, 1.2)
 	}
 }
@@ -440,7 +440,7 @@ func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) 
 // validFireLocation reports whether any of the six neighbours can catch fire.
 func (h *hub) validFireLocation(pos blockPos) bool {
 	for _, d := range sixDirs {
-		if isFlammable(h.world.Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
+		if isFlammable(h.rsWorld().Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
 			return true
 		}
 	}
@@ -450,12 +450,12 @@ func (h *hub) validFireLocation(pos blockPos) bool {
 // igniteOddsAt is the ignite weight of the air block at pos: 0 unless it's
 // empty, else the max ignite odds among its six neighbours.
 func (h *hub) igniteOddsAt(pos blockPos) int {
-	if h.world.Block(pos.x, pos.y, pos.z) != worldgen.Air {
+	if h.rsWorld().Block(pos.x, pos.y, pos.z) != worldgen.Air {
 		return 0
 	}
 	best := 0
 	for _, d := range sixDirs {
-		if ig, _ := worldgen.Flammability(h.world.Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)); int(ig) > best {
+		if ig, _ := worldgen.Flammability(h.rsWorld().Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)); int(ig) > best {
 			best = int(ig)
 		}
 	}

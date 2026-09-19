@@ -442,6 +442,7 @@ type hub struct {
 	psched     *pluginSched
 	plugHost   *pluginHost
 	spawnCause plugin.SpawnReason // in-force MobSpawnEvent reason (zero = SpawnNatural)
+	rsDim      int                // the dimension the block simulation is evaluating in (dimctx.go)
 	spawnGroup *spawnGroup        // in-force natural pack sharing a variant (variant.go); nil = none
 	opsRef     map[string]bool    // Server.Ops, read-only after Serve (announce targeting)
 
@@ -524,7 +525,7 @@ type hub struct {
 	obsSeen   map[blockPos]uint32 // observer last-seen watched state
 	compOut   map[blockPos]int    // comparator output levels (vanilla block entity)
 	platesOn  map[blockPos]bool   // currently pressed pressure plates
-	wiresOn   map[blockPos]bool   // currently pressed tripwire strings
+	wiresOn   map[simPos]bool     // currently pressed tripwire strings, by dimension
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
@@ -561,7 +562,7 @@ type hub struct {
 	shelfLast       map[simPos]int            // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
 	woodShelves     map[simPos]*[3]invStack   // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView       *shelfStore               // the chunk builders' mutex'd read view of the shelves
-	detectorsOn     map[blockPos]bool         // detector rails currently pressed
+	detectorsOn     map[simPos]bool           // detector rails currently pressed, by dimension
 	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
 	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
 	raids           map[blockPos]*raid        // active village raids by centre
@@ -716,7 +717,7 @@ func newHub(w *world.World) *hub {
 		obsSeen:       map[blockPos]uint32{},
 		compOut:       map[blockPos]int{},
 		platesOn:      map[blockPos]bool{},
-		wiresOn:       map[blockPos]bool{},
+		wiresOn:       map[simPos]bool{},
 		fireAge:       map[blockPos]int{},
 		sculkList:     map[blockPos]bool{},
 		catalysts:     map[blockPos]bool{},
@@ -748,7 +749,7 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:   map[blockPos]bool{},
+		detectorsOn:   map[simPos]bool{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
 		brewProg:      map[simPos]int{},
@@ -1400,16 +1401,22 @@ func (h *hub) run() {
 			case evClickBlock:
 				h.clickBlock(players, e)
 			case evUseRedstone:
-				pos := blockPos{e.x, e.y, e.z}
-				st := h.world.At(e.x, e.y, e.z)
-				switch {
-				case isButton(st):
-					h.pressButton(players, pos, st)
-				case isLever(st):
-					h.toggleLever(players, pos, st)
-				default:
-					h.useRedstone1b(players, pos, st)
+				dim := 0
+				if t := players[e.eid]; t != nil {
+					dim = t.dim
 				}
+				h.inDim(dim, func() {
+					pos := blockPos{e.x, e.y, e.z}
+					st := h.rsWorld().At(e.x, e.y, e.z)
+					switch {
+					case isButton(st):
+						h.pressButton(players, pos, st)
+					case isLever(st):
+						h.toggleLever(players, pos, st)
+					default:
+						h.useRedstone1b(players, pos, st)
+					}
+				})
 			case evSetRule:
 				h.applyRule(players, e)
 			case evSetWeather:

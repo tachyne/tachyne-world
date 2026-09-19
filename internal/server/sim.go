@@ -123,7 +123,7 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
-		h.updateFire(players, pos)
+		h.inDim(dim, func() { h.updateFire(players, pos) })
 	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
 		// The egg cracks twice and then opens.
 	case h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state):
@@ -135,7 +135,7 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	case h.tickDripleaf(players, dim, pos, state):
 		// A big dripleaf tipping under a load, or pinned flat by a signal.
 	default:
-		h.updateRedstone(players, pos, state)
+		h.inDim(dim, func() { h.updateRedstone(players, pos, state) })
 	}
 }
 

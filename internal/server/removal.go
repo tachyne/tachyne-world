@@ -42,6 +42,11 @@ func (h *hub) afterRemoval(players map[int32]*tracked, dim int, pos blockPos, ol
 	if old == worldgen.Air || sameBlockKind(old, now) {
 		return
 	}
+	h.inDim(dim, func() { h.afterRemovalIn(players, dim, pos, old, now) })
+}
+
+// afterRemovalIn is afterRemoval with the block simulation pointed at dim.
+func (h *hub) afterRemovalIn(players map[int32]*tracked, dim int, pos blockPos, old, now uint32) {
 	switch {
 	case isPistonHead(old):
 		// PistonHeadBlock.affectNeighborsAfterRemoval: the fitting base
@@ -77,7 +82,7 @@ func (h *hub) afterRemoval(players map[int32]*tracked, dim int, pos blockPos, ol
 		h.scheduleSignalAround(pos)
 	}
 	if isAnyRail(old) && railShape(old) >= 2 && railShape(old) <= 5 {
-		h.scheduleAround(blockPos{pos.x, pos.y + 1, pos.z}, 1) // the rail this slope climbed to
+		h.scheduleAroundIn(h.rsDim, blockPos{pos.x, pos.y + 1, pos.z}, 1) // the rail this slope climbed to
 	}
 	if hasComparatorOutput(old) {
 		h.updateNeighbourForOutputSignal(pos)
@@ -91,11 +96,11 @@ func (h *hub) updateNeighbourForOutputSignal(pos blockPos) {
 	for d := dNorth; d <= dEast; d++ {
 		dx, _, dz := d.delta()
 		n := blockPos{pos.x + dx, pos.y, pos.z + dz}
-		h.schedule(n, 1)
-		if conducts(h.world.At(n.x, n.y, n.z)) {
+		h.rsSchedule(n, 1)
+		if conducts(h.rsWorld().At(n.x, n.y, n.z)) {
 			beyond := blockPos{n.x + dx, n.y, n.z + dz}
-			if isComparator(h.world.At(beyond.x, beyond.y, beyond.z)) {
-				h.schedule(beyond, 1)
+			if isComparator(h.rsWorld().At(beyond.x, beyond.y, beyond.z)) {
+				h.rsSchedule(beyond, 1)
 			}
 		}
 	}

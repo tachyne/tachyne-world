@@ -92,8 +92,8 @@ func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint3
 	if !h.movePistonBlocks(players, pos, dir, true) {
 		return // blocked: stay retracted
 	}
-	h.setBlock(players, pos, setBoolProp(state, "extended", true))
-	h.playSound(players, "minecraft:block.piston.extend", sndBlock,
+	h.rsSet(players, pos, setBoolProp(state, "extended", true))
+	h.rsSound(players, "minecraft:block.piston.extend", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
 	h.scheduleSignalAround(pos)
 }
@@ -115,17 +115,17 @@ func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint
 			h.finalTickMoving(players, beyond) // caught mid-push: it lands where it is
 			pulled = true
 		}
-		s := h.world.At(beyond.x, beyond.y, beyond.z)
+		s := h.rsWorld().At(beyond.x, beyond.y, beyond.z)
 		back := [3]int{-dir[0], -dir[1], -dir[2]}
 		if !pulled && s != worldgen.Air && h.pistonPushable(s, beyond.y, back, false, dir) &&
 			(pushReactionOf(s) == pushNormal || isPistonBase(s)) {
 			pulled = h.movePistonBlocks(players, pos, dir, false)
 		}
 	}
-	if !pulled && isPistonHead(h.world.At(head.x, head.y, head.z)) {
-		h.setBlock(players, head, worldgen.Air)
+	if !pulled && isPistonHead(h.rsWorld().At(head.x, head.y, head.z)) {
+		h.rsSet(players, head, worldgen.Air)
 	}
-	h.playSound(players, "minecraft:block.piston.contract", sndBlock,
+	h.rsSound(players, "minecraft:block.piston.contract", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
 	h.scheduleSignalAround(pos)
 }

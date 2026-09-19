@@ -272,7 +272,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 			}
 		}
 	}
-	h.playSound(players, "minecraft:entity.minecart.riding", sndNeutral, v.x, v.y, v.z, 0.4, 1.6)
+	h.playSoundDim(players, v.dim, "minecraft:entity.minecart.riding", sndNeutral, v.x, v.y, v.z, 0.4, 1.6)
 }
 
 // applyVehicleMove is the authority gate on a rider's client-simulated
@@ -317,31 +317,33 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			h.tickMinecart(players, v)
 		}
 	}
-	occupied := map[blockPos]bool{}
+	occupied := map[simPos]bool{}
 	for _, v := range h.vehicles {
-		if v.dim != dimOverworld {
-			continue // redstone (detector rails) is simulated in the overworld only
-		}
-		pos := blockPos{floorInt(v.x), floorInt(v.y + 0.01), floorInt(v.z)}
-		if isDetectorRail(h.world.At(pos.x, pos.y, pos.z)) {
-			occupied[pos] = true
-			if !railPowered(h.world.At(pos.x, pos.y, pos.z)) {
-				s := h.world.At(pos.x, pos.y, pos.z)
-				h.setBlock(players, pos, railWith(s, railShape(s), true))
-				h.scheduleAround(pos, 1)
-				h.detectorsOn[pos] = true
+		h.inDim(v.dim, func() {
+			pos := blockPos{floorInt(v.x), floorInt(v.y + 0.01), floorInt(v.z)}
+			if isDetectorRail(h.rsWorld().At(pos.x, pos.y, pos.z)) {
+				occupied[simPos{v.dim, pos}] = true
+				if !railPowered(h.rsWorld().At(pos.x, pos.y, pos.z)) {
+					s := h.rsWorld().At(pos.x, pos.y, pos.z)
+					h.rsSet(players, pos, railWith(s, railShape(s), true))
+					h.scheduleAroundIn(h.rsDim, pos, 1)
+					h.detectorsOn[simPos{v.dim, pos}] = true
+				}
 			}
-		}
+		})
 	}
-	for pos := range h.detectorsOn {
-		if occupied[pos] {
+	for sp := range h.detectorsOn {
+		if occupied[sp] {
 			continue
 		}
-		delete(h.detectorsOn, pos)
-		if s := h.world.At(pos.x, pos.y, pos.z); isDetectorRail(s) && railPowered(s) {
-			h.setBlock(players, pos, railWith(s, railShape(s), false))
-			h.scheduleAround(pos, 1)
-		}
+		delete(h.detectorsOn, sp)
+		h.inDim(sp.dim, func() {
+			pos := sp.blockPos
+			if s := h.rsWorld().At(pos.x, pos.y, pos.z); isDetectorRail(s) && railPowered(s) {
+				h.rsSet(players, pos, railWith(s, railShape(s), false))
+				h.scheduleAroundIn(h.rsDim, pos, 1)
+			}
+		})
 	}
 }
 

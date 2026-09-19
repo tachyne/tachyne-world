@@ -99,8 +99,8 @@ func (h *hub) clickBlock(players map[int32]*tracked, e evClickBlock) {
 		h.playSoundDim(players, t.dim, "minecraft:entity.copper_golem_become_statue", sndBlock, fx, fy, fz, 1, 1)
 		h.setBlockAt(players, t.dim, pos, worldgen.SetProperty(info, state, "copper_golem_pose", next))
 		h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid)
-	case isWire(state) && t.dim == dimOverworld:
-		h.toggleWireDot(players, pos, state)
+	case isWire(state):
+		h.inDim(t.dim, func() { h.toggleWireDot(players, pos, state) })
 	}
 }
 
@@ -121,7 +121,7 @@ func (h *hub) toggleWireDot(players map[int32]*tracked, pos blockPos, state uint
 		next = worldgen.SetProperty(info, next, rsDirName[d], v)
 	}
 	if next != state {
-		h.setBlock(players, pos, next)
+		h.rsSet(players, pos, next)
 	}
 }
 
