@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -403,46 +404,52 @@ func TestCreativeSlotWritesThrough(t *testing.T) {
 	}
 }
 
-// TestLedgeEndDropLandsBeside: breaking the end block of a one-thick ledge must
-// leave the drop on the adjacent ledge block, not sunk to the bottom of the
-// cliff (items have no horizontal physics; the neighbour catch emulates the
-// vanilla bounce).
-func TestLedgeEndDropLandsBeside(t *testing.T) {
+// A block's drop pops out with vanilla's offset and hop and the physics
+// tick lands it: on a one-thick ledge it comes to rest on something solid
+// (the ledge, or the ground below if the hop carried it off the edge).
+func TestLedgeEndDropComesToRest(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
 	players := map[int32]*tracked{}
-	// A one-block-thick ledge at y=90, hanging in open air.
 	for x := 10; x <= 12; x++ {
 		w.SetBlock(x, 90, 10, worldgen.Stone)
 	}
-	// The end block (12) was just broken: its cell is air, nothing below it.
-	w.SetBlock(12, 90, 10, worldgen.Air)
+	w.SetBlock(12, 90, 10, worldgen.Air) // the end block was just broken
 	h.spawnBlockDrop(players, 0, 35, 1, 12, 90, 10)
 	if len(h.items) != 1 {
 		t.Fatalf("expected one drop, got %d", len(h.items))
 	}
+	for i := 0; i < 200; i++ {
+		h.tickItems(players)
+	}
 	for _, it := range h.items {
-		if it.y != 91 {
-			t.Fatalf("drop should rest ON the ledge (y=91), got y=%v (x=%v z=%v)", it.y, it.x, it.z)
-		}
-		if int(it.x) != 11 {
-			t.Fatalf("drop should land on the neighbouring ledge block x=11, got x=%v", it.x)
+		below := w.At(int(math.Floor(it.x)), int(math.Floor(it.y))-1, int(math.Floor(it.z)))
+		if it.vx != 0 || it.vy != 0 || it.vz != 0 || !(itemGrounded(w, it) || worldgen.IsWater(below)) {
+			t.Fatalf("drop should have come to rest on a block (or afloat), got (%v,%v,%v) v=(%v,%v,%v)", it.x, it.y, it.z, it.vx, it.vy, it.vz)
 		}
 	}
 }
 
-// TestFloorDropStaysPut: a normal floor break (support below intact) drops in
-// its own cell, no neighbour magic.
+// A floor break's drop lands back in its own cell (the hop and the quarter-
+// block offset keep it within the block) and rests exactly on the floor.
 func TestFloorDropStaysPut(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
 	players := map[int32]*tracked{}
-	w.SetBlock(20, 80, 20, worldgen.Stone) // support
-	w.SetBlock(20, 81, 20, worldgen.Air)   // the broken cell
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			w.SetBlock(20+dx, 80, 20+dz, worldgen.Stone) // support
+			w.SetBlock(20+dx, 81, 20+dz, worldgen.Air)
+			w.SetBlock(20+dx, 82, 20+dz, worldgen.Air)
+		}
+	}
 	h.spawnBlockDrop(players, 0, 35, 1, 20, 81, 20)
+	for i := 0; i < 100; i++ {
+		h.tickItems(players)
+	}
 	for _, it := range h.items {
-		if int(it.x) != 20 || it.y != 81 {
-			t.Fatalf("floor drop should stay in its cell, got (%v,%v,%v)", it.x, it.y, it.z)
+		if it.y != 81 || math.Abs(it.x-20.5) > 0.75 || math.Abs(it.z-20.5) > 0.75 {
+			t.Fatalf("floor drop should rest on its floor near its cell, got (%v,%v,%v)", it.x, it.y, it.z)
 		}
 	}
 }

@@ -56,7 +56,7 @@ type itemEntity struct {
 	lode          lodeTracker // lodestone compass target
 	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
-	vy            float64     // vertical motion while in or over fluid (floatItems); 0 at rest
+	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned (for despawn)
 	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
 	//                      NEVER fake this by moving born forward — a future born
@@ -95,11 +95,19 @@ func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count
 	// Fall from the spawn point to the local floor, so a drop mined underground
 	// rests in the tunnel (not teleported to the world surface) and a popped
 	// plant's drop doesn't hang in the air.
-	y = float64(h.worldFor(dim).DropY(int(x), int(math.Ceil(y)), int(z)))
+	y = float64(h.worldFor(dim).DropY(int(math.Floor(x)), int(math.Ceil(y)), int(math.Floor(z))))
+	return h.spawnItemAt(players, dim, item, count, x, y, z, 0, 0, 0)
+}
 
+// spawnItemAt drops an item exactly where asked, with an initial velocity,
+// and leaves the physics tick to land it (a block's popped drop, a toss).
+func (h *hub) spawnItemAt(players map[int32]*tracked, dim int, item int32, count int, x, y, z, vx, vy, vz float64) *itemEntity {
+	if item == 0 || count <= 0 {
+		return nil
+	}
 	eid := h.allocEID()
 	now := h.tick.Load()
-	it := &itemEntity{eid: eid, dim: dim, x: x, y: y, z: z, item: item, count: count, born: now, noPickupUntil: now + pickupDelay}
+	it := &itemEntity{eid: eid, dim: dim, x: x, y: y, z: z, vx: vx, vy: vy, vz: vz, item: item, count: count, born: now, noPickupUntil: now + pickupDelay}
 	binary.BigEndian.PutUint32(it.uuid[12:], uint32(eid))
 	h.items[eid] = it
 
@@ -109,30 +117,19 @@ func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count
 	return it
 }
 
-// spawnBlockDrop places a broken block's loot. Items have no horizontal
-// physics (they rest via a straight column drop), so breaking the END block of
-// a ledge — nothing below the broken cell — would sink the drop to the bottom
-// of the cliff. When the drop would fall more than a couple of blocks, prefer
-// an adjacent column whose surface sits at the break level (vanilla physics
-// would bounce the item onto it); only genuinely fall when no neighbour
-// catches it.
+// spawnBlockDrop places a broken block's loot as vanilla Block.popResource
+// does: at the block's centre nudged by up to a quarter block each way, with
+// a small random sideways push and a hop, so neighbouring blocks' drops
+// scatter and merge as they land.
 func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, count int, x, y, z int) {
-	w := h.worldFor(dim)
-	if w == nil {
+	if h.worldFor(dim) == nil {
 		return
 	}
-	if y-w.DropY(x, y, z) <= 2 {
-		h.spawnItemIn(players, dim, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
-		return
-	}
-	for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-		nx, nz := x+d[0], z+d[1]
-		if rest := w.DropY(nx, y+1, nz); rest == y+1 || rest == y {
-			h.spawnItemIn(players, dim, item, count, float64(nx)+0.5, float64(rest), float64(nz)+0.5)
-			return
-		}
-	}
-	h.spawnItemIn(players, dim, item, count, float64(x)+0.5, float64(y), float64(z)+0.5)
+	off := func() float64 { return h.rng.Float64()*0.5 - 0.25 }
+	px := float64(x) + 0.5 + off()
+	py := float64(y) + 0.5 + off() - 0.125 // minus half the item's height
+	pz := float64(z) + 0.5 + off()
+	h.spawnItemAt(players, dim, item, count, px, py, pz, h.rng.Float64()*0.2-0.1, 0.2, h.rng.Float64()*0.2-0.1)
 }
 
 // updateItems despawns dropped items past their lifetime and merges nearby

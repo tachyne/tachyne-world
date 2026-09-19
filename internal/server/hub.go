@@ -967,7 +967,7 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
-			h.floatItems(players)     // items rise in water, ride bubble columns
+			h.tickItems(players)      // item physics: gravity, sliding, floating, currents
 			h.pickupItems(players)    // collect dropped items into survival inventories
 			h.updateOrbs(players)     // collect experience orbs / expire old ones
 			h.updateRockets(players)  // firework rockets climb, boost gliders, pop

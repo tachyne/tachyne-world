@@ -618,10 +618,19 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 // tossItem spawns a thrown item entity a step in front of the player, with an
 // extended pickup delay so it isn't instantly re-collected by the thrower.
 func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
+	// Player.drop: from just below the eyes, along the look at 0.3 plus a
+	// little lift and a small random spread; the physics tick lands it.
 	yaw := float64(t.yaw) * math.Pi / 180
-	tx := t.x - math.Sin(yaw)*1.5
-	tz := t.z + math.Cos(yaw)*1.5
-	if it := h.spawnItem(players, st.item, st.count, tx, t.y+1, tz); it != nil {
+	pitch := float64(t.pitch) * math.Pi / 180
+	vx := -math.Sin(yaw) * math.Cos(pitch) * 0.3
+	vz := math.Cos(yaw) * math.Cos(pitch) * 0.3
+	vy := -math.Sin(pitch)*0.3 + 0.1
+	f1 := h.rng.Float64() * 2 * math.Pi
+	f2 := 0.02 * h.rng.Float64()
+	vx += math.Cos(f1) * f2
+	vy += (h.rng.Float64() - h.rng.Float64()) * 0.1
+	vz += math.Sin(f1) * f2
+	if it := h.spawnItemAt(players, t.dim, st.item, st.count, t.x, t.y+playerEyeStand-0.3, t.z, vx, vy, vz); it != nil {
 		it.noPickupUntil = it.born + 40 // ~2s before pickup (vanilla toss delay)
 		it.thrower = t.p.eid
 		it.dmg = st.dmg

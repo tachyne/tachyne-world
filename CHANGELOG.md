@@ -111,6 +111,17 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Dropped items move as vanilla's do.** Items had no horizontal motion:
+  a block's drop appeared at rest in its cell, a toss landed a block and a
+  half ahead on the spot, and a stream could not carry anything. Items now
+  run vanilla's ItemEntity physics — gravity, air drag, ground friction
+  (ice slides, slime grips), walls that stop them, ledges they tumble
+  off, a floor that drops them when it is mined out — and flowing water
+  pushes them downstream with vanilla's current (the flow vector of the
+  cell they are in, at the water scale). A block's drops pop out with
+  vanilla's quarter-block offset and hop, so neighbouring blocks' drops
+  land close enough to merge into a stack, and a toss leaves from the
+  eyes along the look and arcs a block or two out.
 - **A felled trunk now rots its canopy.** The leaf-distance recompute
   wrote each leaf's new distance with a setter that never told its
   neighbours, so the wave stopped one leaf in and the canopy stood forever

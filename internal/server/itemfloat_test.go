@@ -33,7 +33,7 @@ func TestItemsFloatAndRideColumns(t *testing.T) {
 	gy := ground.y
 	peak := col.y
 	for i := 0; i < 400; i++ {
-		h.floatItems(players)
+		h.tickItems(players)
 		if col.y > peak {
 			peak = col.y
 		}

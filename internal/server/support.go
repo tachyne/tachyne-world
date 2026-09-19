@@ -319,7 +319,7 @@ func (h *hub) dropLoose(players map[int32]*tracked, dim int, pos blockPos, state
 		drops = h.rollDrops(state)
 	}
 	for _, d := range drops {
-		h.spawnItemIn(players, dim, d.item, d.count, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+		h.spawnBlockDrop(players, dim, d.item, d.count, pos.x, pos.y, pos.z)
 	}
 }
 
