@@ -23,6 +23,18 @@ the public history since the project was open-sourced on 2026-07-10.
   `-cull-spawn-cows` pass removes the accumulated wild cows within 160
   blocks of the origin from the saved mobs (tamed and named cows stay).
 
+- **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
+  wither skeleton or bogged shoots dead drops one of the twelve music
+  discs; a burning sheep's mutton comes cooked; a turtle struck by
+  lightning leaves a bowl.
+- **Tall grass, large ferns, snow layers and chorus flowers drop right.**
+  Their loot tables were outside the generated set, so they fell back to
+  dropping their own item. Now shears cut a two-tall plant into two of its
+  small kind and a bare hand finds wheat seeds one time in eight (from the
+  half that breaks), snow layers give a snowball a layer (the layers
+  themselves to shears or Silk Touch), and a chorus flower drops nothing,
+  as vanilla's do.
+
 ### Changed
 - **Natural spawning is vanilla's, biome by biome.** Species, weights and
   pack sizes come from vanilla's own biome data for every biome, the cave
@@ -124,19 +136,6 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.
-
-### Fixed
-- **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
-  wither skeleton or bogged shoots dead drops one of the twelve music
-  discs; a burning sheep's mutton comes cooked; a turtle struck by
-  lightning leaves a bowl.
-- **Tall grass, large ferns, snow layers and chorus flowers drop right.**
-  Their loot tables were outside the generated set, so they fell back to
-  dropping their own item. Now shears cut a two-tall plant into two of its
-  small kind and a bare hand finds wheat seeds one time in eight (from the
-  half that breaks), snow layers give a snowball a layer (the layers
-  themselves to shears or Silk Touch), and a chorus flower drops nothing,
-  as vanilla's do.
 
 
 ## 2026-09-18
