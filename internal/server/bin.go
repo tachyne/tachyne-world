@@ -659,6 +659,11 @@ func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32)
 // hopperPull takes one item from the container above, or sucks up item
 // entities sitting above or inside the hopper cell.
 func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
+	// HopperBlock.entityInside: an item that has fallen into the hopper's
+	// own cell is taken whatever sits above it.
+	if h.hopperTakeItems(players, pos, c, false) {
+		return true
+	}
 	above := blockPos{pos.x, pos.y + 1, pos.z}
 	src := h.containerSlots(pos.at(above))
 	if src != nil {
@@ -681,9 +686,15 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 		return false
 	}
 	// No container above: vacuum item entities in this cell and the one above.
+	return h.hopperTakeItems(players, pos, c, true)
+}
+
+// hopperTakeItems takes one dropped item lying in the hopper's cell (or,
+// with the cell above too, from the pickup area over an open hopper).
+func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, aboveToo bool) bool {
 	for eid, it := range h.items {
 		ix, iy, iz := floorInt(it.x), floorInt(it.y), floorInt(it.z)
-		if ix != pos.x || iz != pos.z || (iy != pos.y && iy != pos.y+1) {
+		if it.dim != pos.dim || ix != pos.x || iz != pos.z || (iy != pos.y && !(aboveToo && iy == pos.y+1)) {
 			continue
 		}
 		st := it.stack()

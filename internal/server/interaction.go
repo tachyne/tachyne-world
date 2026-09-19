@@ -730,12 +730,18 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	if !info.HasProperty("open") {
 		return false
 	}
+	blockName, _ := worldgen.StateName(state)
+	if !opensByHand(blockName) { // BlockSetType.canOpenByHand: iron answers only to redstone
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	nv := "true"
 	freq := freqBlockOpen
 	if worldgen.GetProperty(info, state, "open") == "true" {
 		nv, freq = "false", freqBlockClose
 	}
 	s.hub.post(evVibration{eid: p.eid, x: x, y: y, z: z, freq: freq, quiet: true}) // BLOCK_OPEN / BLOCK_CLOSE
+	s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: x, y: y, z: z, name: openCloseSound(blockName, nv == "true")})
 	s.putBlock(p, x, y, z, worldgen.SetProperty(info, state, "open", nv), true, seq)
 	if isTwoTall(info) { // a door — toggle its other half to match
 		oy := y + 1

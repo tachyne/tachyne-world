@@ -1392,6 +1392,9 @@ func (h *hub) run() {
 						h.spawnHostile(players, e.etype, e.x, e.z)
 					}
 				})
+			case evBlockSound:
+				h.playSoundExcept(players, e.dim, e.eid, e.name, sndBlock,
+					float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 0.9+h.rng.Float32()*0.1)
 			case evVibration:
 				if t := players[e.eid]; t != nil {
 					if e.quiet {

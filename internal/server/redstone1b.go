@@ -46,48 +46,7 @@ func isComparator(s uint32) bool { return s >= comparatorMin && s <= comparatorM
 func isObserver(s uint32) bool   { return s >= observerMin && s <= observerMax }
 func isDaylight(s uint32) bool   { return s >= daylightMin && s <= daylightMax }
 
-func isPlate(s uint32) bool {
-	return s == stonePlateOn || s == stonePlateOff || s == oakPlateOn || s == oakPlateOff ||
-		(s >= lightPlateMin && s <= heavyPlateMax)
-}
-
 // platePower is the signal a plate emits in its current state.
-func platePower(s uint32) int {
-	switch {
-	case s == stonePlateOn || s == oakPlateOn:
-		return 15
-	case s >= lightPlateMin && s <= lightPlateMax:
-		return int(s - lightPlateMin)
-	case s >= heavyPlateMin && s <= heavyPlateMax:
-		return int(s - heavyPlateMin)
-	}
-	return 0
-}
-
-// plateWith returns the plate state for a number of entities standing on it.
-func plateWith(s uint32, count int) uint32 {
-	p := count
-	if p > 15 {
-		p = 15
-	}
-	switch {
-	case s == stonePlateOn || s == stonePlateOff:
-		if p > 0 {
-			return stonePlateOn
-		}
-		return stonePlateOff
-	case s == oakPlateOn || s == oakPlateOff:
-		if p > 0 {
-			return oakPlateOn
-		}
-		return oakPlateOff
-	case s >= lightPlateMin && s <= lightPlateMax:
-		return lightPlateMin + uint32(p)
-	case s >= heavyPlateMin && s <= heavyPlateMax:
-		return heavyPlateMin + uint32(p)
-	}
-	return s
-}
 
 // daylight detector state math: power is the fastest-varying property.
 func daylightPower(s uint32) int     { return int((s - daylightMin) % 16) }
@@ -316,28 +275,44 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 // updatePlatesIn is one dimension's plate pass (the simulation is pointed at it).
 func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 	occupied := map[blockPos]int{}
-	feet := func(x, y, z float64) {
+	feet := func(x, y, z float64, living bool) {
 		pos := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
-		if isPlate(h.rsWorld().At(pos.x, pos.y, pos.z)) {
+		s := h.rsWorld().At(pos.x, pos.y, pos.z)
+		if !isPlate(s) {
+			return
+		}
+		// Sensitivity: stone-like plates feel living things; wooden and
+		// weighted plates feel everything — dropped items and arrows too.
+		if _, _, everything, _, _ := plateKind(s); living || everything {
 			occupied[pos]++
 		}
 	}
 	for _, t := range players {
 		if t.dim == dim {
-			feet(t.x, t.y, t.z)
+			feet(t.x, t.y, t.z, true)
 		}
 	}
 	for _, m := range h.mobs {
 		if m.dim == dim {
-			feet(m.x, m.y, m.z)
+			feet(m.x, m.y, m.z, true)
+		}
+	}
+	for _, it := range h.items {
+		if it.dim == dim {
+			feet(it.x, it.y, it.z, false)
+		}
+	}
+	for _, a := range h.arrows {
+		if a.dim == dim {
+			feet(a.x, a.y, a.z, false)
 		}
 	}
 	for pos, n := range occupied {
 		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if ns := plateWith(s, n); ns != s {
 			if platePower(s) == 0 {
-				h.rsSound(players, "minecraft:block.stone_pressure_plate.click_on", sndBlock,
-					float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.8)
+				_, _, _, on, _ := plateKind(s)
+				h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 				h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 			}
 			h.rsSet(players, pos, ns)
@@ -355,8 +330,8 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if isPlate(s) && platePower(s) > 0 {
 			h.rsSet(players, pos, plateWith(s, 0))
-			h.rsSound(players, "minecraft:block.stone_pressure_plate.click_off", sndBlock,
-				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.4, 0.7)
+			_, _, _, _, off := plateKind(s)
+			h.rsSound(players, off, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.scheduleSignalAround(pos)
 		}

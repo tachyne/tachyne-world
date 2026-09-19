@@ -78,7 +78,7 @@ func TestButtonPulsesAndReleases(t *testing.T) {
 	if w.At(x+1, y, z) != lampOn {
 		t.Fatal("pressed button should light the lamp")
 	}
-	stepTicks(h, players, buttonPressTicks+8)
+	stepTicks(h, players, 20+8)
 	if boolProp(w.At(x, y, z), "powered") {
 		t.Fatal("button must release after its press window")
 	}

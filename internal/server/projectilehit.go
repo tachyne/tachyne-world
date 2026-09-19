@@ -91,6 +91,10 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		if a.fire {
 			h.lightCandle(players, a.dim, pos, state)
 		}
+	case isButton(state): // ButtonBlock.entityInside: an arrow presses a wooden button
+		if _, _, _, wooden := buttonKind(state); wooden {
+			h.inDim(a.dim, func() { h.pressButton(players, pos, state) })
+		}
 	case isTNT(state): // TntBlock.onProjectileHit: a burning projectile primes it
 		if a.fire {
 			h.primeTNTIn(players, a.dim, pos.x, pos.y, pos.z, 80)

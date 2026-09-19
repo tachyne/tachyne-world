@@ -48,6 +48,22 @@ func (h *hub) playSoundDim(players map[int32]*tracked, dim int, name string, cat
 	h.toNearbyEv(players, dim, x, z, soundEv(name, category, x, y, z, volume, pitch))
 }
 
+// playSoundExcept is playSoundDim to everyone but one player — the one
+// whose own client already played the sound on prediction (vanilla's
+// Level.playSound(except, …) for doors, buttons and the like).
+func (h *hub) playSoundExcept(players map[int32]*tracked, dim int, except int32, name string, category int32, x, y, z float64, volume, pitch float32) {
+	ev := soundEv(name, category, x, y, z, volume, pitch)
+	cx, cz := chunkFloor(x), chunkFloor(z)
+	for eid, t := range players {
+		if eid == except || t.dim != dim {
+			continue
+		}
+		if abs(chunkFloor(t.x)-cx) <= viewRadius && abs(chunkFloor(t.z)-cz) <= viewRadius {
+			t.p.trySendEv(ev)
+		}
+	}
+}
+
 // hurtPitch is the vanilla-feel randomized pitch for hurt/ambient sounds.
 func (h *hub) hurtPitch() float32 { return 0.9 + h.rng.Float32()*0.2 }
 

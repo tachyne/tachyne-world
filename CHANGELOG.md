@@ -111,6 +111,20 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Every button and pressure plate works, doors sound like doors, iron
+  doors need redstone.** Only the stone and oak button and the stone, oak
+  and weighted plates were live; the other twelve buttons and eleven
+  plates were inert blocks. All fourteen buttons and sixteen plates now
+  work with vanilla's set-type sounds and press lengths (wooden buttons
+  30 ticks, stone 20; an arrow presses a wooden button and holds it),
+  vanilla's sensitivities (stone plates feel living things, wooden and
+  weighted plates feel dropped items and arrows too) and the weighted
+  plates' real formula (a heavy plate needs 150 things for full power).
+  Doors, trapdoors and fence gates play their open and close sounds
+  (wooden, cherry, bamboo, nether wood, copper, iron) to everyone but the
+  player who worked them, and iron doors and trapdoors no longer open by
+  hand. A hopper takes an item that lands in its own cell even with a
+  chest above it.
 - **Explosions drop what vanilla's drop, and burning arrows light things.**
   TNT-mined stone and ore dropped nothing: the blast applied the player's
   correct-tool rule and an old drop roller. Every block an explosion

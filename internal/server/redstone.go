@@ -12,9 +12,7 @@ import (
 // tick, so signals propagate one block per tick and converge without a
 // global graph. Wire loops can't self-sustain — the -1 decay kills them.
 
-const (
-	buttonPressTicks = 20 // stone (wooden 30 — close enough for v1)
-)
+const ()
 
 var (
 	wireStateMin = worldgen.BlockBase("redstone_wire") // redstone_wire (east×north×power×south×west)
@@ -43,9 +41,6 @@ func isWire(s uint32) bool  { return s >= wireStateMin && s <= wireStateMax }
 func isLever(s uint32) bool { return s >= leverStateMin && s <= leverStateMax }
 func isRSTorch(s uint32) bool {
 	return (s >= rsTorchMin && s <= rsTorchMax) || (s >= rsWallTorchMin && s <= rsWallTorchMax)
-}
-func isButton(s uint32) bool {
-	return (s >= stoneButtonMin && s <= stoneButtonMax) || (s >= oakButtonMin && s <= oakButtonMax)
 }
 func isLamp(s uint32) bool { return s == lampOn || s == lampOff }
 
@@ -260,12 +255,17 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isButton(state) && boolProp(state, "powered"):
 		// Scheduled unpress: only past the press window (neighbor updates land
 		// here too — they must not cut a press short).
-		if at, ok := h.pressedAt[pos]; ok && h.tick.Load() >= at+buttonPressTicks {
+		ticks, _, off, wooden := buttonKind(state)
+		if at, ok := h.pressedAt[pos]; ok && h.tick.Load() >= at+uint64(ticks) {
+			if wooden && h.arrowInCell(h.rsDim, pos) { // ButtonBlock.checkPressed: an arrow keeps it down
+				h.pressedAt[pos] = h.tick.Load()
+				h.rsSchedule(pos, uint64(ticks))
+				break
+			}
 			delete(h.pressedAt, pos)
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
-			h.rsSound(players, "minecraft:block.stone_button.click_off", sndBlock,
-				float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 0.9)
+			h.rsSound(players, off, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 			h.scheduleSignalAround(pos)
 		}
 	case isTNT(state):
@@ -366,13 +366,13 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 	if boolProp(state, "powered") {
 		return
 	}
+	ticks, on, _, _ := buttonKind(state)
 	h.pressedAt[pos] = h.tick.Load()
 	h.rsSet(players, pos, setBoolProp(state, "powered", true))
 	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
-	h.rsSound(players, "minecraft:block.stone_button.click_on", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
+	h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	h.scheduleSignalAround(pos)
-	h.rsSchedule(pos, buttonPressTicks) // the unpress timer
+	h.rsSchedule(pos, uint64(ticks)) // the unpress timer
 }
 
 func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32) {
@@ -444,6 +444,17 @@ func (h *hub) torchToggledTooOften(pos blockPos, add bool) bool {
 			if n++; n >= torchMaxRecentToggles {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// arrowInCell reports a projectile lying in a block's cell (the arrow that
+// holds a wooden button down or presses a wooden plate).
+func (h *hub) arrowInCell(dim int, pos blockPos) bool {
+	for _, a := range h.arrows {
+		if a.dim == dim && floorInt(a.x) == pos.x && floorInt(a.y) == pos.y && floorInt(a.z) == pos.z {
+			return true
 		}
 	}
 	return false
