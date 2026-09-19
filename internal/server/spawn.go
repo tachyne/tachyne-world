@@ -41,7 +41,7 @@ const (
 )
 
 var categoryCap = [catCount]int{70, 10, 15, 5, 20, 5, 5}
-var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64, 128, 128}
+var categoryDespawnDist = [catCount]int{128, 128, 128, 128, 64, 128, 128}
 
 const (
 	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
@@ -608,26 +608,28 @@ func isSavannaBiome(b string) bool {
 }
 func isPlainsBiome(b string) bool { return strings.Contains(b, "plains") || b == "minecraft:meadow" }
 
-// despawnSweep is vanilla Mob.checkDespawn for every non-persistent mob:
-// instant beyond the category's despawn distance (water ambient 64, others
-// 128), and past 32 blocks an idle clock runs — after 30 idle seconds each
-// second has a ≈2.5% chance (the 1 Hz form of vanilla's per-tick 1/800).
+// despawnSweep is vanilla Mob.checkDespawn for every mob once a second:
+// instant beyond the category's despawn distance (water ambient 64, the
+// rest 128) when the species removes itself when far away, and past 32
+// blocks an idle clock runs — after 30 idle seconds each second has a
+// ≈2.5% chance (the 1 Hz form of vanilla's per-tick 1/800). Persistence
+// (a name tag, picked-up gear, a bucket, a lead, a rider's seat, a raid, an
+// enderman's block) keeps a mob whatever the distance.
 func (h *hub) despawnSweep(players map[int32]*tracked) {
+	now := h.tick.Load()
 	for _, m := range h.mobs {
 		if m.dying > 0 || h.spawnExempt(m) {
 			continue
 		}
-		if m.named() || m.fromBucket || m.persistent {
-			continue // a name tag, a bucket or picked-up gear makes a mob persistent (Mob.checkDespawn)
+		if m.named() || m.persistent || h.requiresCustomPersistence(m) {
+			m.idleSecs = 0
+			continue
 		}
 		cat := mobSpawnCategory(m)
 		if m.jockey {
 			cat = catMonster // Chicken.removeWhenFarAway: a jockey's chicken goes like its rider
 		}
 		dist := categoryDespawnDist[cat]
-		if dist < 0 {
-			continue // creatures are persistent
-		}
 		best := math.Inf(1)
 		for _, t := range players {
 			if t.dim != m.dim {
@@ -638,14 +640,65 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 			}
 		}
 		switch {
-		case best > float64(dist*dist): // includes "no player in this dimension"
+		case best > float64(dist*dist) && h.removeWhenFarAway(m, best, now): // includes "no player in this dimension"
 			h.removeMob(players, m)
 		case best > 32*32:
-			if m.idleSecs++; m.idleSecs > 30 && h.rng.Intn(40) == 0 {
+			if m.idleSecs++; m.idleSecs > 30 && h.rng.Intn(40) == 0 && h.removeWhenFarAway(m, best, now) {
 				h.removeMob(players, m)
 			}
 		default:
 			m.idleSecs = 0
 		}
 	}
+}
+
+// removeWhenFarAway is Mob.removeWhenFarAway with vanilla's overrides: an
+// animal never (Animal), but a wild cat or ocelot does after two minutes
+// alive, a jockey's chicken goes with its rider, nautiluses, zombie
+// horses, hoglins and camel husks always, golems, allays, wardens,
+// villagers and traders never, a zombie villager only while not curing, a
+// raider never inside its raid, and a patrol captain only beyond 128.
+func (h *hub) removeWhenFarAway(m *mob, d2 float64, now uint64) bool {
+	age := now - m.spawnTick
+	switch m.etype {
+	case entityCat, entityOcelot: // Cat / Ocelot: !isTame (trusting) && tickCount > 2400
+		return !m.tamed && age > 2400
+	case entityChicken:
+		return m.jockey
+	case entityNautilus, entityZombieHorse, entityHoglin, entityCamelHusk:
+		return true
+	case entityAllay, entityIronGolem, entitySnowGolem, entityWarden, entityVillager, entityWanderingTrader:
+		return false
+	case entityZombieVillager:
+		return m.converting == 0
+	}
+	if isIllager(m.etype) || m.etype == entityRavager || m.etype == entityWitch { // Raider
+		if m.raidCenter != (blockPos{}) {
+			return false
+		}
+		if m.patrolCaptain { // PatrollingMonster: a patrol despawns only beyond 128
+			return d2 > 16384
+		}
+		return true
+	}
+	if mobSpawnCategory(m) == catCreature && !m.hostile {
+		return false // Animal.removeWhenFarAway
+	}
+	return true
+}
+
+// requiresCustomPersistence is Mob.requiresCustomPersistence with vanilla's
+// overrides: a passenger or a leashed mob, a bucketed fish or axolotl, a
+// tamed nautilus, an enderman holding a block, a raider in a raid.
+func (h *hub) requiresCustomPersistence(m *mob) bool {
+	if m.mount != 0 || m.leash != 0 || m.fromBucket {
+		return true
+	}
+	switch m.etype {
+	case entityNautilus:
+		return m.tamed
+	case entityEnderman:
+		return m.carriedBlock != 0
+	}
+	return (isIllager(m.etype) || m.etype == entityRavager || m.etype == entityWitch) && m.raidCenter != (blockPos{})
 }

@@ -63,6 +63,14 @@ the public history since the project was open-sourced on 2026-07-10.
   pieces, the soul sand valley's and warped forest's spawn costs (each
   costed mob is a charge that keeps the next one at a distance), and the
   End's endermen in packs of four.
+- **Despawning follows vanilla's per-species rules.** Animals never
+  despawn, but a wild cat or ocelot does once it has been alive two
+  minutes; a jockey's chicken goes with its rider; nautiluses, zombie
+  horses and hoglins always; golems, allays, wardens, villagers and traders
+  never; a zombie villager only while it is not being cured; a raider never
+  inside its raid and a patrol captain only beyond 128 blocks. A leashed
+  mob, one riding another, a bucketed fish or axolotl, a tamed nautilus and
+  an enderman holding a block are kept whatever the distance.
 
 ### Added
 - **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs

@@ -27,8 +27,8 @@ const (
 
 // categorySpawnRange is the vanilla MobCategory despawnDistance, reused as the
 // maximum distance a mob of that category may spawn from a player
-// (NaturalSpawner.isValidSpawnPostitionForType). This is distinct from
-// categoryDespawnDist, which is -1 for the persistent creature category.
+// (NaturalSpawner.isValidSpawnPostitionForType); creatures skip the gate
+// (canSpawnFarFromPlayer).
 var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64, 128, 128}
 
 // spawnVanilla runs the exact-vanilla path for one tick.

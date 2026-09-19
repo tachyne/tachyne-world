@@ -135,6 +135,7 @@ type mob struct {
 	mobRider                        int32       // eid of the MOB riding this one (the reverse of mount); 0 = none
 	mountDrives                     bool        // this rider's AI leads and its mount follows (a chicken jockey's zombie)
 	jockey                          bool        // a chicken carrying a jockey: no eggs, despawns, ten experience
+	spawnTick                       uint64      // Entity.tickCount's origin: the world tick it was created (resets on a reload, as vanilla's does)
 	trap                            bool        // a skeleton horse waiting as a lightning trap (skeletontrap.go)
 	savedMount                      int32       // a reloaded rider's vehicle by its OLD eid, relinked once the chunk is up (mobchunks.go)
 	harness                         int32       // happy ghast: equipped harness item id (0 = none); gates riding
@@ -432,7 +433,7 @@ func (h *hub) withSpawnCause(c plugin.SpawnReason, fn func()) {
 // fetch its handle and adjust stats; a cancel unregisters it silently.
 func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z float64, cause plugin.SpawnReason) *mob {
 	eid := h.allocEID()
-	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z}
+	m := &mob{living: living{attrs: newMobAttributes(etype)}, eid: eid, etype: etype, dim: dim, behavior: wanderBehavior{}, health: mobHealth(etype), x: x, y: y, z: z, sx: x, sy: y, sz: z, spawnTick: h.tick.Load()}
 	binary.BigEndian.PutUint32(m.uuid[12:], uint32(eid)) // unique enough for the client
 	if etype == entitySheep {
 		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
