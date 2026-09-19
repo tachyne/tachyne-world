@@ -212,6 +212,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	tx, ty, tz := x+dx, y+dy, z+dz
 	if cs := s.worldFor(p).Block(x, y, z); worldgen.IsReplaceable(cs) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
 		tx, ty, tz = x, y, z // vanilla replacingClickedOnBlock: fill the clicked cell (grass, snow, fluids)
+	} else if hb, ok := protocol.BlockForItem(p.heldItem()); ok && isMultiface(hb) && sameBlockFamily(cs, hb) && !multifaceFull(cs) {
+		tx, ty, tz = x, y, z // MultifaceBlock.canBeReplaced: the same item joins a block with a free face
 	}
 
 	if int32(p.heldItem()) == itemArmorStand { // spawn the stand at the target cell
@@ -299,6 +301,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if p.heldItem() == int32(itemString) { // string laid on a surface becomes tripwire
 		defState, ok = tripwireDefaultState(), true
 	}
+	if alias, isAlias := placeAlias[p.heldItem()]; isAlias { // redstone → wire, cocoa beans → cocoa
+		defState, ok = alias, true
+	}
 	if !ok { // planting items are named differently from their block — see farming.go
 		if c, isSeed := cropForSeed(p.heldItem()); isSeed {
 			if !s.canPlantAt(p, c, tx, ty, tz) {
@@ -313,7 +318,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if ts := s.worldFor(p).Block(tx, ty, tz); !worldgen.IsReplaceable(ts) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
+	if ts := s.worldFor(p).Block(tx, ty, tz); !worldgen.IsReplaceable(ts) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) &&
+		!(isMultiface(defState) && sameBlockFamily(ts, defState) && !multifaceFull(ts)) { // the same multiface item joins a block with a free face
 		// vanilla BlockItem.canPlace: never overwrite an occupied cell (a
 		// candle placed at a stair's open half must not eat the stair);
 		// fluids stay replaceable — building into the ocean must keep working
@@ -370,8 +376,26 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	case hasInfo && isBed(info): // beds: place foot + head
 		placed = s.placeBed(p, info, defState, tx, ty, tz, p.yaw, seq)
 	default:
-		intoWater := worldgen.IsWater(s.worldFor(p).Block(tx, ty, tz)) // waterlog when placed into water
-		state := orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
+		target := s.worldFor(p).Block(tx, ty, tz)
+		intoWater := worldgen.IsWater(target) // waterlog when placed into water
+		var state uint32
+		lookPlaced := true
+		switch wallDef, isStandingWall := standingWallVariant[defState]; {
+		case isStandingWall: // torches, coral fans: floor or wall by the look order
+			state, lookPlaced = standingOrWallState(s.worldFor(p), blockPos{tx, ty, tz}, defState, wallDef, p.yaw, p.pitch)
+		case isHangable(defState): // lanterns: hang from a ceiling or stand on a floor
+			state, lookPlaced = hangableState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+		case isCocoa(defState): // cocoa: faces its jungle log
+			state, lookPlaced = cocoaState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+		case isMultiface(defState): // vines, lichen, sculk veins, resin: a face that something holds
+			state, lookPlaced = multifacePlacement(s.worldFor(p), blockPos{tx, ty, tz}, defState, target, p.yaw, p.pitch)
+		default:
+			state = orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
+		}
+		if !lookPlaced {
+			s.abortPlace(p, tx, ty, tz, seq)
+			return
+		}
 		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(tx, ty, tz, state, p.yaw)
@@ -856,11 +880,6 @@ func blockFaceOffset(dir int32) (dx, dy, dz int) {
 // a top/bottom half from the cursor, and facing blocks point sensibly. Blocks
 // with no orientation property (most blocks) are returned unchanged.
 func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, clicked uint32) uint32 {
-	if isMultiface(defaultState) { // vines, lichen, sculk veins, resin: the face toward the clicked block
-		if info, ok := worldgen.InfoForState(defaultState); ok {
-			return orientMultiface(info, defaultState, dir)
-		}
-	}
 	info, ok := worldgen.OrientInfo(defaultState)
 	if !ok {
 		return defaultState

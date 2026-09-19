@@ -2389,7 +2389,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.
-	h.scheduleAround(blockPos{e.x, e.y, e.z}, 1)
+	h.scheduleAroundIn(e.dim, blockPos{e.x, e.y, e.z}, 1)
 }
 
 // chunkFloor maps a world coordinate to its chunk index (floors toward -inf).

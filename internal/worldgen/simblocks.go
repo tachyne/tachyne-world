@@ -138,12 +138,39 @@ func IsFluid(state uint32) bool { return IsWater(state) || IsLava(state) }
 // IsReplaceable reports whether a fluid or falling block may overwrite this block
 // (air and small plants — never solid terrain).
 func IsReplaceable(state uint32) bool {
-	switch state {
-	case Air, ShortGrass, Fern, Dandelion, Poppy:
+	if state == Air {
 		return true
 	}
-	return state == blockBase("tall_grass") || state == blockBase("tall_grass")+1 // tall_grass halves
+	return replaceableStates[state]
 }
+
+// replaceableStates is vanilla's replaceable() block set (Blocks.java) minus
+// the fluids, which the engine handles by their own predicates: the plants,
+// roots, vines, lichen, resin, light and structure void that any placed
+// block, flowing fluid or falling block overwrites. Snow counts only at one
+// layer (SnowLayerBlock.canBeReplaced). Dandelion and poppy are not vanilla
+// replaceable but stay for the engine's older fixtures.
+var replaceableStates = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	for _, name := range []string{
+		"short_grass", "fern", "dead_bush", "bush", "short_dry_grass", "tall_dry_grass",
+		"seagrass", "vine", "glow_lichen", "resin_clump", "light", "tall_grass",
+		"large_fern", "structure_void", "warped_roots", "nether_sprouts",
+		"crimson_roots", "leaf_litter", "hanging_roots", "dandelion", "poppy",
+	} {
+		lo, hi, ok := BlockRangeOK(name)
+		if !ok {
+			continue
+		}
+		for s := lo; s <= hi; s++ {
+			m[s] = true
+		}
+	}
+	if lo, _, ok := BlockRangeOK("snow"); ok {
+		m[lo] = true // layers=1
+	}
+	return m
+}()
 
 // NeedsGroundSupport reports whether a block must rest on the block below it and
 // breaks when that support is removed — the small plants (grass, ferns, flowers)

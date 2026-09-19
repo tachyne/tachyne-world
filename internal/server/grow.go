@@ -497,6 +497,11 @@ func (h *hub) updateLeafDistance(players map[int32]*tracked, dim, x, y, z int, s
 	}
 	if newD != d {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, leafWithDistance(state, base, newD))
+		// setBlockAt does not notify neighbours; vanilla's setBlock does
+		// (updateNeighborShapes → LeavesBlock.updateShape schedules a 1-tick
+		// recompute). Without this the wave stopped one leaf in and a felled
+		// trunk left its canopy standing forever.
+		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
 	}
 	return true
 }

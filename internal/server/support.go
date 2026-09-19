@@ -118,6 +118,10 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if isWire(state) { // RedStoneWireBlock.canSurviveOn: a sturdy top face or a hopper
 		return canHoldDust(below())
 	}
+	if isCocoa(state) { // CocoaBlock.canSurvive: a jungle log where it faces
+		dx, dz := facingDelta(prop("facing"))
+		return inRanges2(w.At(pos.x+dx, pos.y, pos.z+dz), cocoaSupports)
+	}
 	if isMultiface(state) { // vines, lichen, sculk veins, resin: any face still attached
 		_, ok := multifaceUpdated(w, pos, state)
 		return ok

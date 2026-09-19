@@ -100,7 +100,9 @@ var supportNames = map[SupportKind][]string{
 		"yellow_candle_cake", "yellow_carpet",
 	},
 	SupportHangable: {
-		"lantern", "soul_lantern",
+		"lantern", "soul_lantern", "copper_lantern", "exposed_copper_lantern",
+		"weathered_copper_lantern", "oxidized_copper_lantern", "waxed_copper_lantern",
+		"waxed_exposed_copper_lantern", "waxed_weathered_copper_lantern", "waxed_oxidized_copper_lantern",
 	},
 	SupportSoil: {
 		"acacia_sapling", "allium", "attached_melon_stem",

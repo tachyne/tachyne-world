@@ -40,39 +40,6 @@ var faceDirs = []struct {
 	{"west", [3]int{-1, 0, 0}}, {"east", [3]int{1, 0, 0}},
 }
 
-// faceTowardClicked is the face property a multiface block placed against
-// clicked face `dir` uses: the block sits on the far side of that face, so
-// it attaches back through the opposite one (clicked the north face →
-// the new block's south face touches the clicked block).
-func faceTowardClicked(dir int32) string {
-	switch dir {
-	case 0:
-		return "up" // placed under a block: hangs from it
-	case 1:
-		return "down"
-	case 2:
-		return "south"
-	case 3:
-		return "north"
-	case 4:
-		return "east"
-	case 5:
-		return "west"
-	}
-	return ""
-}
-
-// orientMultiface sets the placed block's attaching face; a vine cannot sit
-// on a floor (VineBlock rejects DOWN), so a vine placed on a top face gets no
-// face and the caller's support check refuses the placement.
-func orientMultiface(info worldgen.BlockInfo, state uint32, dir int32) uint32 {
-	face := faceTowardClicked(dir)
-	if face == "" || !info.HasProperty(face) {
-		return state
-	}
-	return worldgen.SetProperty(info, state, face, "true")
-}
-
 // multifaceUpdated is VineBlock.getUpdatedState / MultifaceBlock's
 // updateShape: every set face is re-checked against its neighbour, and the
 // surviving state is returned (ok=false when no face is left).

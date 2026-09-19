@@ -39,76 +39,6 @@ the public history since the project was open-sourced on 2026-07-10.
   exist with a deviation, and a sixth are absent — with most of the
   deviations traceable to a dozen cross-cutting defects listed there.
 
-### Fixed
-- **Redstone, fire, rails, plates, tripwires, dispensers and comparators
-  work in every dimension.** The block simulation read and wrote the
-  overworld whatever dimension the block was in: a lever in the Nether did
-  nothing there, and a scheduled update at Nether coordinates could rewrite
-  overworld blocks at the same position. The simulation now runs in the
-  block's own dimension (the scheduled update's, the clicking player's, the
-  cart's, the dispenser cell's, the removed block's), with lecterns usable
-  outside the overworld too.
-- **Hordes of cows near spawn.** Every restart used to seed three small
-  "herds" of cows around the origin for something to see on join, and since
-  mobs persist, each rollout added nine to fifteen more — the cattle crowd
-  Wesley found on the live world. The boot seeding is gone, along with the
-  non-vanilla sampler spawner and its periodic animal top-up: vanilla's
-  NaturalSpawner is the only source of natural mobs now. A one-time
-  `-cull-spawn-cows` pass removes the accumulated wild cows within 160
-  blocks of the origin from the saved mobs (tamed and named cows stay).
-- **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
-  wither skeleton or bogged shoots dead drops one of the twelve music
-  discs; a burning sheep's mutton comes cooked; a turtle struck by
-  lightning leaves a bowl.
-- **Tall grass, large ferns, snow layers and chorus flowers drop right.**
-  Their loot tables were outside the generated set, so they fell back to
-  dropping their own item. Now shears cut a two-tall plant into two of its
-  small kind and a bare hand finds wheat seeds one time in eight (from the
-  half that breaks), snow layers give a snowball a layer (the layers
-  themselves to shears or Silk Touch), and a chorus flower drops nothing,
-  as vanilla's do.
-
-### Changed
-- **Natural spawning is vanilla's, biome by biome.** Species, weights and
-  pack sizes come from vanilla's own biome data for every biome, the cave
-  biomes down a column included (the hand-written family pools remain only
-  as a fallback for a biome the data does not name); the chunk-generation
-  packs use each biome's own creature probability (badlands sparser, snowy
-  plains too); the glow squid is its own capped category; the per-player
-  local cap keeps one player's crowd from filling another's range; each
-  species' spawn-cluster limit applies (fish and wolves in eights, the
-  horse family in sixes, ghasts and pillagers alone); after a pack's first
-  animal each further one is born a baby one time in twenty (every rabbit
-  after the first; none for wolves, foxes, axolotls or parrots); creatures
-  may spawn at any distance inside the spawn ring; the jungle's ocelot
-  spawns by its own two-in-three rule though it sits in the monster pool;
-  the axolotl category's despawn distance is vanilla's 128, not 64; and
-  the census behind the caps skips what vanilla's skips — named, tamed,
-  leashed, riding and gear-carrying mobs do not count against them.
-- **The Nether and the End spawn as vanilla's do.** The Nether's old pass
-  (a species rolled on a ring around each player under a flat cap of
-  fourteen) and the End's absence of natural spawns are replaced by the
-  same NaturalSpawner as the overworld's, dimension by dimension: each
-  nether biome's own pools, weights and packs, the monster cap scaled by
-  the chunks around players, the per-player local cap, one attempt per
-  chunk per tick at any height, vanilla's per-species rules (a ghast one
-  try in twenty, no piglin, hoglin or zombified piglin on a nether wart
-  block, magma cubes and blazes in any light, skeletons and endermen only
-  in the dark), striders placed in lava with air above and laid as packs
-  when a nether chunk first loads, the fortress's garrison pool inside its
-  pieces, the soul sand valley's and warped forest's spawn costs (each
-  costed mob is a charge that keeps the next one at a distance), and the
-  End's endermen in packs of four.
-- **Despawning follows vanilla's per-species rules.** Animals never
-  despawn, but a wild cat or ocelot does once it has been alive two
-  minutes; a jockey's chicken goes with its rider; nautiluses, zombie
-  horses and hoglins always; golems, allays, wardens, villagers and traders
-  never; a zombie villager only while it is not being cured; a raider never
-  inside its raid and a patrol captain only beyond 128 blocks. A leashed
-  mob, one riding another, a bucketed fish or axolotl, a tamed nautilus and
-  an enderman holding a block are kept whatever the distance.
-
-### Added
 - **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs
   walking (throttled like footsteps; nothing on the wing), a boat, minecart
   or armour stand set down, a furnace opened, and a player mounting or
@@ -180,6 +110,108 @@ the public history since the project was open-sourced on 2026-07-10.
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.
 
+### Fixed
+- **A felled trunk now rots its canopy.** The leaf-distance recompute
+  wrote each leaf's new distance with a setter that never told its
+  neighbours, so the wave stopped one leaf in and the canopy stood forever
+  after the last log was mined. Every rewrite now schedules the six
+  neighbours (vanilla's updateShape tick), so the recompute crosses the
+  whole canopy and the random tick rots it from the far edge in. A
+  player's block edits in the Nether and the End now schedule their
+  neighbours in that dimension too.
+- **Redstone dust and cocoa beans can be placed.** The item-to-block table
+  pairs items with same-named blocks, and neither item is named after its
+  block; both now resolve (dust onto any sturdy top or hopper, cocoa onto
+  the jungle log it faces).
+- **Torches go on walls, lanterns hang, vines never float.** The torch
+  family (torch, soul, redstone, copper) and the coral fans place as
+  vanilla's StandingAndWallBlockItem does — by the player's look order:
+  down onto a floor for the standing block, otherwise against the first
+  wall the look order reaches, facing away from it. Lanterns pick hanging
+  or standing the same way (a ceiling holds a hanging lantern; the copper
+  lanterns hold too). Vines, glow lichen, sculk veins and resin clumps
+  take the first look-order face something actually holds — a second
+  vine placed onto a vine joins it with a new face instead of replacing
+  it, and a face nothing holds is never placed, so no more half-in-air
+  vines. Cocoa faces its log.
+- **Flowing water washes out what vanilla's does.** Water and lava used
+  to stop at any block that was not air or grass, so a crop, torch, dust
+  line or carpet dammed a stream. Flowing fluid now enters any cell whose
+  block does not block motion (vanilla's canHoldAnyFluid, with its
+  exceptions: doors, signs, ladders, sugar cane, portals; waterloggable
+  blocks stand, since the engine keeps no flowing water inside them),
+  and water drops the washed block's loot as it goes — a flooded wheat
+  field pays its seeds. The replaceable set is vanilla's too: dead bushes,
+  seagrass, vines, glow lichen, resin clumps, roots, sprouts, leaf litter,
+  hanging roots and single-layer snow are overwritten by any placed block,
+  falling block or fluid.
+- **Redstone, fire, rails, plates, tripwires, dispensers and comparators
+  work in every dimension.** The block simulation read and wrote the
+  overworld whatever dimension the block was in: a lever in the Nether did
+  nothing there, and a scheduled update at Nether coordinates could rewrite
+  overworld blocks at the same position. The simulation now runs in the
+  block's own dimension (the scheduled update's, the clicking player's, the
+  cart's, the dispenser cell's, the removed block's), with lecterns usable
+  outside the overworld too.
+- **Hordes of cows near spawn.** Every restart used to seed three small
+  "herds" of cows around the origin for something to see on join, and since
+  mobs persist, each rollout added nine to fifteen more — the cattle crowd
+  Wesley found on the live world. The boot seeding is gone, along with the
+  non-vanilla sampler spawner and its periodic animal top-up: vanilla's
+  NaturalSpawner is the only source of natural mobs now. A one-time
+  `-cull-spawn-cows` pass removes the accumulated wild cows within 160
+  blocks of the origin from the saved mobs (tamed and named cows stay).
+- **Three drops by vanilla's conditions.** A creeper a skeleton, stray,
+  wither skeleton or bogged shoots dead drops one of the twelve music
+  discs; a burning sheep's mutton comes cooked; a turtle struck by
+  lightning leaves a bowl.
+- **Tall grass, large ferns, snow layers and chorus flowers drop right.**
+  Their loot tables were outside the generated set, so they fell back to
+  dropping their own item. Now shears cut a two-tall plant into two of its
+  small kind and a bare hand finds wheat seeds one time in eight (from the
+  half that breaks), snow layers give a snowball a layer (the layers
+  themselves to shears or Silk Touch), and a chorus flower drops nothing,
+  as vanilla's do.
+
+### Changed
+- **Natural spawning is vanilla's, biome by biome.** Species, weights and
+  pack sizes come from vanilla's own biome data for every biome, the cave
+  biomes down a column included (the hand-written family pools remain only
+  as a fallback for a biome the data does not name); the chunk-generation
+  packs use each biome's own creature probability (badlands sparser, snowy
+  plains too); the glow squid is its own capped category; the per-player
+  local cap keeps one player's crowd from filling another's range; each
+  species' spawn-cluster limit applies (fish and wolves in eights, the
+  horse family in sixes, ghasts and pillagers alone); after a pack's first
+  animal each further one is born a baby one time in twenty (every rabbit
+  after the first; none for wolves, foxes, axolotls or parrots); creatures
+  may spawn at any distance inside the spawn ring; the jungle's ocelot
+  spawns by its own two-in-three rule though it sits in the monster pool;
+  the axolotl category's despawn distance is vanilla's 128, not 64; and
+  the census behind the caps skips what vanilla's skips — named, tamed,
+  leashed, riding and gear-carrying mobs do not count against them.
+- **The Nether and the End spawn as vanilla's do.** The Nether's old pass
+  (a species rolled on a ring around each player under a flat cap of
+  fourteen) and the End's absence of natural spawns are replaced by the
+  same NaturalSpawner as the overworld's, dimension by dimension: each
+  nether biome's own pools, weights and packs, the monster cap scaled by
+  the chunks around players, the per-player local cap, one attempt per
+  chunk per tick at any height, vanilla's per-species rules (a ghast one
+  try in twenty, no piglin, hoglin or zombified piglin on a nether wart
+  block, magma cubes and blazes in any light, skeletons and endermen only
+  in the dark), striders placed in lava with air above and laid as packs
+  when a nether chunk first loads, the fortress's garrison pool inside its
+  pieces, the soul sand valley's and warped forest's spawn costs (each
+  costed mob is a charge that keeps the next one at a distance), and the
+  End's endermen in packs of four.
+- **Despawning follows vanilla's per-species rules.** Animals never
+  despawn, but a wild cat or ocelot does once it has been alive two
+  minutes; a jockey's chicken goes with its rider; nautiluses, zombie
+  horses and hoglins always; golems, allays, wardens, villagers and traders
+  never; a zombie villager only while it is not being cured; a raider never
+  inside its raid and a patrol captain only beyond 128 blocks. A leashed
+  mob, one riding another, a bucketed fish or axolotl, a tamed nautilus and
+  an enderman holding a block are kept whatever the distance.
 
 ## 2026-09-18
 

@@ -288,8 +288,8 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	}
 	// Flow straight down into an open cell (never into existing same-fluid — that
 	// cell turns to falling on its own tick via getNewLiquid's "fluid above" rule).
-	if h.inWorldY(below.y) && worldgen.IsReplaceable(belowB) && !same(belowB) {
-		h.setBlockAt(players, dim, below, base+8) // falling
+	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) {
+		h.fluidInto(players, dim, below, base+8, water) // falling
 		h.scheduleIn(dim, below, delay)
 		if water {
 			h.wakePowder(dim, below) // flowing water solidifies concrete powder it reaches
@@ -413,7 +413,7 @@ func (h *hub) spreadSides(players map[int32]*tracked, dim int, pos blockPos, bas
 	waterFlow := base == worldgen.WaterBase
 	for _, d := range h.flowDirections(dim, pos, slopeFind) {
 		np := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
-		h.setBlockAt(players, dim, np, out)
+		h.fluidInto(players, dim, np, out, waterFlow)
 		h.scheduleIn(dim, np, delay)
 		if waterFlow {
 			h.wakePowder(dim, np) // flowing water solidifies concrete powder beside it
@@ -460,7 +460,7 @@ func (h *hub) flowDirections(dim int, pos blockPos, findDist int) []blockPos {
 	best := 1 << 30
 	for i, d := range horizNeighbors {
 		n := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
-		if !worldgen.IsReplaceable(h.worldFor(dim).Block(n.x, n.y, n.z)) {
+		if !fluidPassable(h.worldFor(dim).Block(n.x, n.y, n.z)) {
 			dist[i] = 1 << 30 // impassable — never a candidate
 			continue
 		}
@@ -495,7 +495,7 @@ func (h *hub) slopeDist(dim int, pos blockPos, depth, findDist, from int) int {
 			continue
 		}
 		n := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
-		if !worldgen.IsReplaceable(h.worldFor(dim).Block(n.x, n.y, n.z)) {
+		if !fluidPassable(h.worldFor(dim).Block(n.x, n.y, n.z)) {
 			continue
 		}
 		if h.fluidHole(dim, n) {
@@ -513,5 +513,5 @@ func (h *hub) slopeDist(dim int, pos blockPos, depth, findDist, from int) int {
 // fluidHole reports whether fluid at pos could fall (the cell below is open).
 func (h *hub) fluidHole(dim int, pos blockPos) bool {
 	b := pos.y - 1
-	return h.inWorldY(b) && worldgen.IsReplaceable(h.worldFor(dim).Block(pos.x, b, pos.z))
+	return h.inWorldY(b) && fluidPassable(h.worldFor(dim).Block(pos.x, b, pos.z))
 }
