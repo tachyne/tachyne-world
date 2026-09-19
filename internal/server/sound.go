@@ -193,19 +193,59 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 	return hurt, death, ambient
 }
 
-// mobAmbience gives loaded mobs their idle voices: each mob has a small chance
-// per second to vocalize (zombie groans in the night, cows moo). Runs at 1 Hz.
+// mobAmbience is Mob.baseTick's idle voice: every tick a mob rolls
+// random(1000) < ambientSoundTime++, and on a hit resets the counter to
+// minus its ambient interval — 80 ticks for most, 120 for animals, fish,
+// golems and cats, 160 guardians, 200 turtles, 400 horses, 900 ocelots —
+// so the next call cannot come sooner than that and grows likelier after.
 func (h *hub) mobAmbience(players map[int32]*tracked) {
 	for _, m := range h.mobs {
-		if m.dying > 0 || h.rng.Intn(12) != 0 {
+		if m.dying > 0 {
 			continue
 		}
+		t := m.ambientTime
+		m.ambientTime++
+		if int32(h.rng.Intn(1000)) >= t {
+			continue
+		}
+		m.ambientTime = -ambientInterval(m)
 		if _, _, ambient := h.mobSoundsFor(m); ambient != "" {
 			cat := int32(sndNeutral)
 			if m.hostile {
 				cat = sndHostile
 			}
-			h.playSound(players, ambient, cat, m.x, m.y, m.z, 1, h.hurtPitch())
+			h.playSoundDim(players, m.dim, ambient, cat, m.x, m.y, m.z, 1, h.voicePitch(m))
 		}
 	}
 }
+
+// voicePitch is LivingEntity.getVoicePitch: babies squeak half an octave up.
+func (h *hub) voicePitch(m *mob) float32 {
+	p := (h.rng.Float32() - h.rng.Float32()) * 0.2
+	if m.baby {
+		return p + 1.5
+	}
+	return p + 1
+}
+
+// ambientInterval is getAmbientSoundInterval by class.
+func ambientInterval(m *mob) int32 {
+	if iv, ok := ambientIntervals[entityNameByID[m.etype]]; ok {
+		return iv
+	}
+	return 80
+}
+
+var ambientIntervals = func() map[string]int32 {
+	m := map[string]int32{"turtle": 200, "ocelot": 900, "guardian": 160, "elder_guardian": 160}
+	for _, n := range []string{"cow", "mooshroom", "pig", "sheep", "chicken", "rabbit", "wolf", "cat", "fox", "panda",
+		"polar_bear", "bee", "goat", "frog", "axolotl", "armadillo", "sniffer", "strider", "hoglin", "parrot",
+		"dolphin", "squid", "glow_squid", "nautilus", "cod", "salmon", "pufferfish", "tropical_fish", "tadpole",
+		"iron_golem", "snow_golem", "copper_golem"} {
+		m[n] = 120
+	}
+	for _, n := range []string{"horse", "donkey", "mule", "skeleton_horse", "zombie_horse", "camel", "camel_husk", "llama", "trader_llama"} {
+		m[n] = 400
+	}
+	return m
+}()

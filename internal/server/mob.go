@@ -389,22 +389,23 @@ type mob struct {
 	gossip                          gossipBook // villager: what it holds about each player (persisted)
 	home                            blockPos   // villager house / golem well — the anchor to drift back to
 
-	ovrSpeed   float64 // >0: plugin speed override — survives behavior-driven speed resets
-	ovrDamage  float64 // >0: plugin melee-damage override (hostileMelee honors it)
-	uuid       [16]byte
-	x, y, z    float64
-	yaw        float32
-	syaw       float32 // last broadcast head yaw (only resend on change)
-	vx, vz     float64
-	vy         float64  // vertical velocity (swimmers/fliers only)
-	pushX      float64  // crowding shove (push.go), held apart from the steering
-	pushZ      float64  // velocity so a shoved mob does not turn to face the shove
-	cramCD     int      // mob-updates until this mob can take cramming damage again
-	leash      int32    // eid holding this mob's lead (player or knot); 0 = free
-	leashPos   blockPos // the fence knot's block, when the holder is one (persisted)
-	sx, sy, sz float64  // last broadcast position (for delta moves)
-	moveDist   float32  // Entity.moveDist: 0.6 × distance walked, for footsteps
-	nextStep   float32  // Entity.nextStep: the moveDist at which the next footstep plays (0 = fresh: 1)
+	ovrSpeed    float64 // >0: plugin speed override — survives behavior-driven speed resets
+	ovrDamage   float64 // >0: plugin melee-damage override (hostileMelee honors it)
+	uuid        [16]byte
+	x, y, z     float64
+	yaw         float32
+	syaw        float32 // last broadcast head yaw (only resend on change)
+	vx, vz      float64
+	vy          float64  // vertical velocity (swimmers/fliers only)
+	pushX       float64  // crowding shove (push.go), held apart from the steering
+	pushZ       float64  // velocity so a shoved mob does not turn to face the shove
+	cramCD      int      // mob-updates until this mob can take cramming damage again
+	leash       int32    // eid holding this mob's lead (player or knot); 0 = free
+	leashPos    blockPos // the fence knot's block, when the holder is one (persisted)
+	sx, sy, sz  float64  // last broadcast position (for delta moves)
+	moveDist    float32  // Entity.moveDist: 0.6 × distance walked, for footsteps
+	ambientTime int32    // Mob.ambientSoundTime: the idle-voice counter (negative right after a call)
+	nextStep    float32  // Entity.nextStep: the moveDist at which the next footstep plays (0 = fresh: 1)
 }
 
 // spawnMob creates a server-controlled entity and shows it to nearby players.

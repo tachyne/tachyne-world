@@ -111,6 +111,13 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Mobs chatter at vanilla's cadence.** Every mob rolled one flat
+  one-in-twelve chance a second to vocalise. The roll is vanilla's now: a
+  per-tick counter that starts at minus the species' interval after each
+  call and grows likelier as it climbs — 80 ticks for most mobs, 120 for
+  animals, fish, golems and cats, 160 for guardians, 200 for turtles, 400
+  for the horse family, 900 for ocelots — and babies squeak half an
+  octave up.
 - **Dust carries a signal end to end in one tick.** Redstone dust used to
   pass power one block per tick, so a ten-block line added ten ticks and
   every contraption's timing was off. A dust whose power changes now

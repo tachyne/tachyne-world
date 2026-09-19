@@ -1023,10 +1023,10 @@ func (h *hub) run() {
 					h.updateWithers(players) // spawn charge + boss bars
 				}
 				h.updateBrewing(players)
-				h.mobAmbience(players)        // idle groans/moos near players
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
 			}
+			h.mobAmbience(players)   // Mob.baseTick: the idle-voice roll runs every tick
 			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
 			if h.waves && age%waveCadence == 0 {
