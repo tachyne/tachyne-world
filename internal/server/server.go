@@ -173,9 +173,11 @@ type Server struct {
 	// DisableHUD turns off the action-bar HUD (time/coords/etc.) for all players.
 	DisableHUD bool
 
-	// VanillaSpawner selects the exact-vanilla NaturalSpawner (per-chunk rate +
-	// chunk-generation herds) instead of the default tachyne sampler.
-	VanillaSpawner bool
+	// CullSpawnCows, if set, runs a ONE-TIME pass at boot that removes the
+	// wild cows within 160 blocks of the origin from the persisted store — the
+	// boot-seeded "herds" every restart used to add near spawn (removed
+	// 2026-09-19). Tamed and named cows stay. Set once, then clear.
+	CullSpawnCows bool
 
 	// Waves enables the NON-VANILLA cosmetic beach-wave overlay (a client-only
 	// water sheet washing up the shore and rolling back). Off by default — it
@@ -375,7 +377,6 @@ func (s *Server) Serve() error {
 		if s.DisableHUD {
 			s.hub.hud = nil
 		}
-		s.hub.vanillaSpawner = s.VanillaSpawner
 		s.hub.waves = s.Waves
 		s.hub.invs = newInvStore(s.InventoryFile)
 		s.hub.advs = newAdvStore(s.AdvancementFile)
@@ -395,6 +396,11 @@ func (s *Server) Serve() error {
 			s.hub.mobstore.flush()
 			log.Printf("wipe-wild: removed all wild mobs (kept village-tied + tamed), persisted mobs %d -> %d",
 				before, after)
+		}
+		if s.CullSpawnCows {
+			before, after := s.hub.mobstore.cullSpawnCows(entityCow, 160)
+			s.hub.mobstore.flush()
+			log.Printf("cull-spawn-cows: removed the wild cows within 160 of the origin, persisted mobs %d -> %d", before, after)
 		}
 		if s.CullAnimals > 0 {
 			before, after := s.hub.mobstore.cullAnimals(s.CullAnimals, 5)

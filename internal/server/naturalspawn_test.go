@@ -170,7 +170,7 @@ func TestSpawnPools(t *testing.T) {
 		}
 	}
 	// glow squid pool only below the cave-water depth
-	if p := h.spawnPool(catWaterCreature, 0, 20, 0); !has(p, entityGlowSquid) {
+	if p := h.spawnPool(catUndergroundWater, 0, 20, 0); !has(p, entityGlowSquid) {
 		t.Fatal("deep water creature pool must be glow squid")
 	}
 }
@@ -311,7 +311,7 @@ func TestNaturalSpawnFillsCaves(t *testing.T) {
 	}
 	monsters, below := 0, 0
 	for _, m := range h.mobs {
-		if m.hostile {
+		if m.hostile && m.mount == 0 { // a jockey's rider is finalizeSpawn's extra, outside the tick's count as in vanilla
 			monsters++
 			if m.y < 50 { // well under the seed-1 surface near spawn — a cave spawn
 				below++

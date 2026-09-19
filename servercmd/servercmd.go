@@ -43,7 +43,8 @@ func Main() {
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
-	spawner := flag.String("spawner", "tachyne", "natural-spawn model: tachyne (cheaper 1/8 sampler + herd top-up) or vanilla (exact NaturalSpawner: per-chunk rate + chunk-generation herds)")
+	spawner := flag.String("spawner", "vanilla", "natural-spawn model: only vanilla (the NaturalSpawner port) exists now; kept so older manifests still parse")
+	cullSpawnCows := flag.Bool("cull-spawn-cows", false, "ONE-TIME maintenance: remove the wild cows within 160 blocks of the origin from the saved mobs (the old boot-seeded herds). Run once, then remove.")
 	waves := flag.Bool("waves", false, "NON-VANILLA eye-candy: a cosmetic water sheet washes up beaches near the shore and rolls back (client-only overlay, never written to the world)")
 	cleanupVillage := flag.String("cleanup-village", "", "ONE-TIME: remove a suppressed village's stranded mobs + crop/door debris near x,z (empty = off)")
 	cullAnimals := flag.Int("cull-animals", 0, "ONE-TIME maintenance: cap each species to N per chunk in the saved mobs and thin overgrown cows (0 = off). Run once to undo pre-fix herd doubling, then remove.")
@@ -63,13 +64,13 @@ func Main() {
 	srv.HealthAddr = *healthAddr
 	srv.WorldFile = *worldFile
 	srv.DisableHUD = !*hud
+	srv.CullSpawnCows = *cullSpawnCows
 	switch *spawner {
-	case "tachyne":
-		srv.VanillaSpawner = false
 	case "vanilla":
-		srv.VanillaSpawner = true
+	case "tachyne":
+		log.Printf("WARNING: -spawner tachyne no longer exists; the vanilla NaturalSpawner is the only spawner")
 	default:
-		log.Fatalf("invalid -spawner %q (want tachyne or vanilla)", *spawner)
+		log.Fatalf("invalid -spawner %q (want vanilla)", *spawner)
 	}
 	srv.Waves = *waves
 	srv.NatsAddr = *natsURL

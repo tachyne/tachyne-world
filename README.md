@@ -219,16 +219,19 @@ multi-pod plan).
   loaded chunk rolls spawn attempts at a random height through the whole
   column — caves fill with monsters around the clock while the surface only
   spawns them in darkness (or under a thunderstorm's darkened sky); torch
-  light is absolute protection; per-category mob caps (monster/creature/
-  ambient/water) scale with loaded chunks; species come from per-biome
-  weighted pools with vanilla pack sizes (husks in deserts, strays in the
-  snow, drowned in oceans and rivers, slime chunks below y40 on the vanilla
-  chunk seed); the far-away despawn distances match vanilla per category.
-  All are `/summon`-able by name. Two spawners are selectable with `-spawner`:
-  the default `tachyne` sampler (a cheaper 1-in-8-chunks rate paired with a
-  herd top-up, tuned to feel right at lower hub cost) or `vanilla` — the exact
-  NaturalSpawner: one attempt per chunk per tick, the three-group pack loop,
-  the full distance gates, and one-time chunk-generation herds as land loads.
+  light is absolute protection; the per-category mob caps (monster, creature,
+  ambient, water creature, water ambient, axolotls, the glow squid's own)
+  scale with the chunks players can spawn into, globally and per player as
+  vanilla's local cap does; species, weights and pack sizes come from
+  vanilla's own biome data for every biome (the cave biomes down a column
+  included), with vanilla's per-species cluster limits (fish in eights,
+  horses in sixes, a ghast alone), a five-percent baby after a pack's first
+  animal (every rabbit after the first), and the far-away despawn distances
+  per category. Natural spawning IS vanilla's NaturalSpawner: one attempt
+  per chunk per tick, the three-group pack loop, the full distance gates,
+  and the one-time chunk-generation packs as land loads at each biome's own
+  probability. There is no other spawner and nothing seeds animals at boot.
+  All are `/summon`-able by name.
 - **Mobs collide with each other** — vanilla's `pushEntities`/`push`: every
   living entity shoves the pushable ones its box touches apart each tick, with
   vanilla's own arithmetic quirks (the shove weakens as a pair converges, and
@@ -439,7 +442,6 @@ persistence), `-gamemode survival` (default for new players),
 `-ops Name1,Name2`, `-valkey localhost:6379` (chunk cache; falls back to
 `-chunkdir chunks`), `-nats nats://localhost:4222` (plugin bus),
 `-llm http://…/v1` (NPCs), `-spawn x,y,z`, `-hud=false`,
-`-spawner tachyne|vanilla` (natural-spawn model; default tachyne),
 `-waves` (opt-in cosmetic beach waves; off by default — see below),
 `-health :8081` (opt-in health/metrics listener: `/healthz` answers 503 once
 the tick loop has stalled 5 s — point a liveness probe at it — plus

@@ -384,13 +384,10 @@ type hub struct {
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
 	hasWorldSpawn                         bool
 
-	// vanillaSpawner selects the exact-vanilla NaturalSpawner (spawnvanilla.go)
-	// over the default tachyne sampler; seededChunks records which chunks have
-	// received their one-time chunk-generation herd this pod lifetime.
-	vanillaSpawner bool
-	seededChunks   map[[2]int32]bool
-	hives          map[blockPos][]hiveOccupant // known hives and their occupants
-	hivestore      *hiveStore                  // hives.json persistence
+	localCaps    *localCapState // per-player category counts for this tick's spawning (localcap.go)
+	seededChunks map[[2]int32]bool
+	hives        map[blockPos][]hiveOccupant // known hives and their occupants
+	hivestore    *hiveStore                  // hives.json persistence
 
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
 	// sheet of water washes up the beach and rolls back. It is a pure client
@@ -882,26 +879,6 @@ func (h *hub) run() {
 	players := map[int32]*tracked{}
 	h.playersRef = players // created once, never reassigned — facades read it on this goroutine
 
-	// Seed a few clustered herds on dry land near world spawn (so there's life to
-	// see on join). Each herd gets its own roaming goal at its centre, and its
-	// cows are tagged with that herd's index so they group up separately.
-	occupied := map[[2]int]bool{} // one cow per column — no stacking at spawn
-	for hi := 0; hi < 3; hi++ {
-		// Spread herds out so they don't start on top of each other.
-		ang := h.rng.Float64() * 2 * math.Pi
-		ox, oz := int(math.Cos(ang)*60), int(math.Sin(ang)*60)
-		hx, hz := h.findLand(ox, oz)
-		h.herds = append(h.herds, newHerd(float64(hx), float64(hz)))
-
-		herdSize := 3 + h.rng.Intn(3) // 3..5 cows — a family, not a stampede
-		for i := 0; i < herdSize; i++ {
-			x, z := h.spreadSpawn(hx, hz, occupied)
-			if m := h.spawnMob(players, entityCow, float64(x), float64(h.world.SurfaceFeet(x, z)), float64(z)); m != nil {
-				m.behavior, m.herd = herdBehavior{}, hi
-			}
-		}
-	}
-
 	// Spawn a small village of LLM-driven villagers when a model is configured —
 	// each with its own persona (and its own memory file + conversation history).
 	if h.llm != nil {
@@ -1045,9 +1022,6 @@ func (h *hub) run() {
 				h.mobAmbience(players)        // idle groans/moos near players
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
-			}
-			if age%passiveSpawnEvery == 0 && !h.vanillaSpawner {
-				h.herdTopUp(players) // the chunk-gen herd analog (tachyne spawner only)
 			}
 			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning

@@ -11,7 +11,6 @@ import (
 // re-seeds a chunk it has already handled.
 func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 	h := newHub(world.New(1))
-	h.vanillaSpawner = true
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}
@@ -39,27 +38,21 @@ func TestVanillaSeedChunksOnceAndBudget(t *testing.T) {
 	}
 }
 
-// TestVanillaSpawnerModeIsolation: only vanilla mode runs chunk-generation
-// seeding — the default tachyne sampler never touches the seeded set.
-func TestVanillaSpawnerModeIsolation(t *testing.T) {
+// TestVanillaSpawnerSeedsChunks: the chunk-generation seeding runs as land
+// loads (the NaturalSpawner port is the only spawner).
+func TestVanillaSpawnerSeedsChunks(t *testing.T) {
 	skipHeavy(t)
-	for _, vanilla := range []bool{false, true} {
-		h := newHub(world.New(1))
-		h.vanillaSpawner = vanilla
-		h.dayTime.Store(18000)
-		pl := testTracked()
-		pl.x, pl.y, pl.z = 0.5, 64, 0.5
-		players := map[int32]*tracked{1: pl}
-		for i := 0; i < 30; i++ {
-			h.tick.Store(uint64(i))
-			h.naturalSpawn(players)
-		}
-		if vanilla && len(h.seededChunks) == 0 {
-			t.Error("vanilla mode should seed chunks as land loads")
-		}
-		if !vanilla && len(h.seededChunks) != 0 {
-			t.Error("tachyne mode must not run chunk-generation seeding")
-		}
+	h := newHub(world.New(1))
+	h.dayTime.Store(18000)
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5
+	players := map[int32]*tracked{1: pl}
+	for i := 0; i < 30; i++ {
+		h.tick.Store(uint64(i))
+		h.naturalSpawn(players)
+	}
+	if len(h.seededChunks) == 0 {
+		t.Error("chunk-generation seeding should mark chunks as land loads")
 	}
 }
 
@@ -88,7 +81,6 @@ func TestNearWorldSpawnExclusion(t *testing.T) {
 func TestVanillaSpawnerFillsCaves(t *testing.T) {
 	skipHeavy(t)
 	h := newHub(world.New(1))
-	h.vanillaSpawner = true
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 64, 0.5
 	players := map[int32]*tracked{1: pl}

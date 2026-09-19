@@ -35,12 +35,13 @@ const (
 	catAmbient
 	catWaterCreature
 	catWaterAmbient
-	catAxolotls // vanilla AXOLOTLS: its own cap, lush caves only
+	catAxolotls         // vanilla AXOLOTLS: its own cap, lush caves only
+	catUndergroundWater // vanilla UNDERGROUND_WATER_CREATURE: the glow squid, its own cap
 	catCount
 )
 
-var categoryCap = [catCount]int{70, 10, 15, 5, 20, 5}
-var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64, 64}
+var categoryCap = [catCount]int{70, 10, 15, 5, 20, 5, 5}
+var categoryDespawnDist = [catCount]int{128, -1, 128, 128, 64, 128, 128}
 
 const (
 	spawnChunkArea   = 17 * 17 // vanilla MAGIC_NUMBER: cap scale denominator
@@ -52,7 +53,6 @@ const (
 	// (random Y lands inside rock), so a higher rate is what makes cave
 	// density feel vanilla — affordable now that chunk light is cached in
 	// the world (the first live tuning at 1/64 left caves near-empty).
-	spawnAttemptBatch = 8
 )
 
 // spawnerEntry is vanilla MobSpawnSettings.SpawnerData: a weighted species
@@ -131,9 +131,11 @@ func mobSpawnCategory(m *mob) int {
 		return catAmbient
 	case entityAxolotl:
 		return catAxolotls
-	case entitySquid, entityDolphin, entityGlowSquid:
+	case entitySquid, entityDolphin, entityNautilus:
 		return catWaterCreature
-	case entityCod, entitySalmon, entityTropicalFish, entityPufferfish, entityNautilus:
+	case entityGlowSquid:
+		return catUndergroundWater
+	case entityCod, entitySalmon, entityTropicalFish, entityPufferfish:
 		return catWaterAmbient
 	}
 	if m.hostile {
@@ -208,14 +210,7 @@ func (h *hub) naturalSpawn(players map[int32]*tracked) {
 		counts[mobSpawnCategory(m)]++
 	}
 
-	// Two selectable spawners (admin: -spawner). Vanilla mode is the exact
-	// NaturalSpawner (one attempt per chunk per tick + chunk-generation herds);
-	// the default tachyne mode is the cheaper 1/8 sampler paired with herdTopUp.
-	if h.vanillaSpawner {
-		h.spawnVanilla(players, chunks, chunkSet, len(spawnRing), &counts)
-		return
-	}
-	h.spawnTachyne(players, chunks, len(spawnRing), &counts)
+	h.spawnVanilla(players, chunks, chunkSet, len(spawnRing), &counts)
 }
 
 // spawnCap is vanilla NaturalSpawner.canSpawnForCategoryGlobal: the per-category
@@ -243,79 +238,13 @@ func (h *hub) overworldSpawnRing(players map[int32]*tracked) int {
 	return len(ring)
 }
 
-// spawnTachyne is the default sampler: one position attempt per spawnAttemptBatch
-// chunks per tick per category — cheaper than vanilla's per-chunk rate, tuned to
-// converge on the same caps (see natural-spawn tuning notes).
-func (h *hub) spawnTachyne(players map[int32]*tracked, chunks [][2]int32, spawnRingSize int, counts *[catCount]int) {
-	spawnPersistent := h.tick.Load()%creatureSpawnMod == 0
-	attempts := (len(chunks) + spawnAttemptBatch - 1) / spawnAttemptBatch
-	for cat := 0; cat < catCount; cat++ {
-		if cat == catMonster && h.rules.Difficulty == diffPeaceful {
-			continue
-		}
-		if cat == catCreature && !spawnPersistent {
-			continue // vanilla: persistent-category spawns only every 400 ticks
-		}
-		cap := spawnCap(cat, spawnRingSize)
-		for a := 0; a < attempts && counts[cat] < cap; a++ {
-			h.spawnAttempt(players, cat, chunks, &counts[cat], cap)
-		}
-	}
-}
-
-// spawnAttempt is one vanilla spawnCategoryForPosition: a random column in a
-// random loaded chunk, a random height through the whole column (this is
-// what populates caves), then a pack that random-walks around the anchor
-// with every member re-checked for ground, distance and light.
-func (h *hub) spawnAttempt(players map[int32]*tracked, cat int, chunks [][2]int32, count *int, cap int) {
-	c := chunks[h.rng.Intn(len(chunks))]
-	x := int(c[0])*16 + h.rng.Intn(16)
-	z := int(c[1])*16 + h.rng.Intn(16)
-	surface := h.world.SurfaceFeet(x, z)
-	y := worldgen.MinY + h.rng.Intn(surface+2-worldgen.MinY) // vanilla: uniform [minY, surface+1]
-	if worldgen.Collides(h.world.At(x, y, z)) {
-		return // vanilla: anchor inside a solid block aborts the attempt
-	}
-	pool := h.spawnPool(cat, x, y, z)
-	if len(pool) == 0 {
-		return
-	}
-	sd, ok := h.rollSpawner(pool)
-	if !ok {
-		return
-	}
-	pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
-	spawned := 0
-	for i := 0; i < pack; i++ {
-		x += h.rng.Intn(6) - h.rng.Intn(6)
-		z += h.rng.Intn(6) - h.rng.Intn(6)
-		if !h.ownedBlock(x, z) {
-			continue
-		}
-		if d := h.nearestPlayerSq(players, float64(x)+0.5, float64(y), float64(z)+0.5); d <= 576 ||
-			(categoryDespawnDist[cat] > 0 && d > float64(categoryDespawnDist[cat]*categoryDespawnDist[cat])) {
-			continue // vanilla: never within 24 blocks of a player, never where it would instantly despawn
-		}
-		if h.nearWorldSpawn(x, y, z) {
-			continue // vanilla: never within 24 blocks of world spawn
-		}
-		if !h.spawnPositionOK(cat, sd.etype, x, y, z) {
-			continue
-		}
-		sky, block := h.world.LightAt(x, y, z) // cached in world, invalidated by edits
-		if !h.spawnRulesOK(cat, sd.etype, x, y, z, sky, block) {
-			continue
-		}
-		h.spawnNatural(players, cat, sd.etype, x, y, z)
-		*count++
-		if spawned++; spawned >= maxSpawnCluster || *count >= cap {
-			return
-		}
-	}
-}
-
-// spawnPool picks the weighted species list for a category at a position.
+// spawnPool picks the weighted species list for a category at a position:
+// the biome's own data (the cave biome down a column, as vanilla samples
+// the biome at the position), else the hand-written family fallback.
 func (h *hub) spawnPool(cat, x, y, z int) []spawnerEntry {
+	if pool, ok := biomeSpawnPool(h.world.BiomeAt3D(x, y, z), cat); ok {
+		return pool
+	}
 	biome := h.world.BiomeAt(x, z)
 	switch cat {
 	case catMonster:
@@ -420,7 +349,7 @@ func (h *hub) spawnPositionOK(cat, etype, x, y, z int) bool {
 		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
 	}
 	switch cat {
-	case catWaterCreature, catWaterAmbient:
+	case catWaterCreature, catWaterAmbient, catUndergroundWater:
 		return worldgen.HoldsWater(at) && worldgen.HoldsWater(h.world.At(x, y+1, z))
 	case catAxolotls: // IN_WATER placement: water here, no conductor above
 		return worldgen.HoldsWater(at) && !worldgen.Collides(h.world.At(x, y+1, z))
@@ -498,7 +427,12 @@ func (h *hub) darkEnoughToSpawn(sky, block uint8) bool {
 // spawnRulesOK is the per-category/per-species spawn rule check (vanilla
 // SpawnPlacements.checkSpawnRules dispatch).
 func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
+	if etype == entityOcelot { // Ocelot.checkOcelotSpawnRules: two tries in three, whatever the light (it sits in the jungle's monster pool)
+		return h.rng.Intn(3) != 0
+	}
 	switch cat {
+	case catUndergroundWater: // GlowSquid.checkGlowSquidSpawnRules: deep, unlit water
+		return y <= worldgen.SeaLevel-33 && h.rawBrightness(sky, block, 0) == 0 && worldgen.IsWater(h.world.At(x, y, z))
 	case catMonster:
 		if !h.darkEnoughToSpawn(sky, block) {
 			return false
@@ -543,8 +477,8 @@ func (h *hub) spawnRulesOK(cat, etype, x, y, z int, sky, block uint8) bool {
 	case catAmbient: // vanilla Bat.checkBatSpawnRules
 		return y < h.world.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
 			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4)
-	case catWaterCreature: // squid/dolphin near the surface band, glow squid any cave depth
-		return y < 30 || (y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel)
+	case catWaterCreature: // squid/dolphin/nautilus near the surface band
+		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catWaterAmbient: // vanilla surface-water band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catAxolotls: // checkAxolotlSpawnRules: clay below, no light rule
@@ -589,15 +523,31 @@ func isSlimeChunk(seed int64, cx, cz int32) bool {
 // spawnNatural creates the mob with its category wiring.
 func (h *hub) spawnNatural(players map[int32]*tracked, cat, etype, x, y, z int) {
 	fx, fy, fz := float64(x)+0.5, float64(y), float64(z)+0.5
-	switch cat {
-	case catMonster:
+	switch {
+	case cat == catMonster && etype != entityOcelot: // the ocelot is listed under the jungle's monsters but is no monster
 		h.spawnHostileY(players, etype, fx, fy, fz)
-	case catWaterCreature, catWaterAmbient, catAxolotls:
+	case cat == catWaterCreature || cat == catWaterAmbient || cat == catAxolotls || cat == catUndergroundWater:
 		h.spawnSpecies(players, etype, 0, fx, fy+0.5, fz)
 	default:
 		m := h.spawnMob(players, etype, fx, fy, fz)
 		h.applySpecies(players, m)
+		h.rollPackBaby(players, m)
 	}
+}
+
+// rollPackBaby is AgeableMob.finalizeSpawn's group data for a natural pack:
+// the first member is grown, each later one is born a baby at the species'
+// chance (packBabyChance). Only inside a spawn-group scope.
+func (h *hub) rollPackBaby(players map[int32]*tracked, m *mob) {
+	g := h.spawnGroup
+	if m == nil || g == nil {
+		return
+	}
+	if ch := packBabyChance(m.etype); g.members > 0 && ch > 0 && h.rng.Float32() <= ch {
+		m.baby, m.growLeft = true, growUpTicks
+		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+	}
+	g.members++
 }
 
 // nearestPlayerSq is the 3D squared distance to the closest overworld player.
@@ -656,7 +606,7 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 			if t.dim != m.dim {
 				continue
 			}
-			if d := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d < best {
+			if d := (t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z); d < best { // Mob.checkDespawn: distanceToSqr, all three axes
 				best = d
 			}
 		}
@@ -671,63 +621,4 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 			m.idleSecs = 0
 		}
 	}
-}
-
-// herdTopUp approximates vanilla's chunk-generation creature herds: our
-// chunks regenerate on the fly and mobs don't persist, so exploration and
-// restarts would leave the countryside bare without it. Every 30 s, if the
-// nearby creature population is thin, seed one vanilla farm pack out of
-// sight of a random player.
-func (h *hub) herdTopUp(players map[int32]*tracked) {
-	if !h.rules.DoMobSpawning {
-		return
-	}
-	var pick *tracked
-	for _, t := range players {
-		if t.dim == 0 {
-			pick = t
-			break
-		}
-	}
-	if pick == nil {
-		return
-	}
-	// Respect the vanilla global creature cap: count every loaded wild creature
-	// and the spawn ring the players cover, and never top up past it. Without
-	// this gate herdTopUp was an uncapped animal source — the runaway that
-	// filled the overworld with cows/sheep. (It stays as a sparse-area filler
-	// only while the population is genuinely below the vanilla ceiling.)
-	total, near := 0, 0
-	for _, m := range h.mobs {
-		if m.dim != 0 || m.dying > 0 || h.spawnExempt(m) || mobSpawnCategory(m) != catCreature {
-			continue
-		}
-		total++
-		if (m.x-pick.x)*(m.x-pick.x)+(m.z-pick.z)*(m.z-pick.z) < 96*96 {
-			near++
-		}
-	}
-	if near >= 8 || total >= spawnCap(catCreature, h.overworldSpawnRing(players)) {
-		return
-	}
-	ang := h.rng.Float64() * 2 * math.Pi
-	dist := spawnMinDist + h.rng.Intn(56)
-	cx := int(pick.x) + int(math.Cos(ang)*float64(dist))
-	cz := int(pick.z) + int(math.Sin(ang)*float64(dist))
-	if !h.ownedBlock(cx, cz) || !h.spawnableAnimal(cx, cz) {
-		return
-	}
-	pool := h.spawnPool(catCreature, cx, h.world.MobFeet(cx, cz), cz)
-	sd, ok := h.rollSpawner(pool)
-	if !ok {
-		return
-	}
-	occupied := map[[2]int]bool{}
-	pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
-	h.withSpawnGroup(func() { // one pack, one shared variant (variant.go)
-		for i := 0; i < pack; i++ {
-			x, z := h.spreadSpawn(cx, cz, occupied)
-			h.spawnAnimal(players, sd.etype, x, z)
-		}
-	})
 }

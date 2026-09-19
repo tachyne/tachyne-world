@@ -395,6 +395,7 @@ type spawnGroup struct {
 	etype   int
 	set     bool
 	variant int32
+	members int // AgeableMobGroupData.getGroupSize: how many the pack has placed (babies after the first)
 }
 
 // withSpawnGroup runs fn with a fresh spawn group in force (hub goroutine

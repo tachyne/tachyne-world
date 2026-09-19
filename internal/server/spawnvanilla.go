@@ -2,8 +2,9 @@ package server
 
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
-// The exact-vanilla NaturalSpawner (opt-in via `-spawner vanilla`). It differs
-// from the default tachyne sampler in three ways, each mirroring Mojang's code:
+// The vanilla NaturalSpawner — the engine's only natural spawner since
+// 2026-09-19 (the cheaper sampler and its animal top-up are gone). Its
+// shape, mirroring Mojang's code:
 //
 //   - one position attempt per spawnable chunk per tick (not one per 8), with
 //     the three-group pack loop of spawnCategoryForPosition;
@@ -12,9 +13,8 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 //   - the full distance gates: 24-block minimum from a player, a 24-block
 //     exclusion around world spawn, and the per-category max spawn distance.
 //
-// Our world does not persist mobs, so each chunk seeds its herd exactly once per
-// pod lifetime (seededChunks); a restart clears both the herds and the set
-// together, so it stays self-consistent. herdTopUp is disabled in this mode.
+// Each chunk seeds its packs exactly once EVER: the seeded set persists with
+// the mobs (mobstore), so a restart never re-lays them.
 
 const (
 	creatureGenProbability = 0.1 // vanilla MobSpawnSettings.creatureGenerationProbability
@@ -26,11 +26,12 @@ const (
 // maximum distance a mob of that category may spawn from a player
 // (NaturalSpawner.isValidSpawnPostitionForType). This is distinct from
 // categoryDespawnDist, which is -1 for the persistent creature category.
-var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64, 64}
+var categorySpawnRange = [catCount]int{128, 128, 128, 128, 64, 128, 128}
 
 // spawnVanilla runs the exact-vanilla path for one tick.
 func (h *hub) spawnVanilla(players map[int32]*tracked, chunks [][2]int32, chunkSet map[[2]int32]bool, spawnRingSize int, counts *[catCount]int) {
 	h.seedChunkGeneration(players, chunkSet, counts)           // one-time herds as land loads
+	h.buildLocalCaps(players)                                  // LocalMobCapCalculator: per-player counts
 	h.spawnVanillaTick(players, chunks, spawnRingSize, counts) // per-tick NaturalSpawner
 }
 
@@ -64,6 +65,9 @@ func (h *hub) spawnVanillaTick(players map[int32]*tracked, chunks [][2]int32, sp
 // at a random height through the whole chunk (this is what populates caves),
 // then the three-group pack loop if the anchor block is not solid.
 func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, cat int, c [2]int32, counts *[catCount]int, cap int) {
+	if !h.localCapAllows(cat, c) {
+		return // canSpawnForCategoryLocal: every player near this chunk is at the category's cap
+	}
 	x := int(c[0])*16 + h.rng.Intn(16)
 	z := int(c[1])*16 + h.rng.Intn(16)
 	surface := h.world.SurfaceFeet(x, z)
@@ -108,8 +112,8 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, c
 			if d <= float64(spawnMinDist*spawnMinDist) || h.nearWorldSpawn(x, ay, z) {
 				continue // never within 24 of a player, nor 24 of world spawn
 			}
-			if r := categorySpawnRange[cat]; r > 0 && d > float64(r*r) {
-				continue // may not spawn beyond the category's max distance from a player
+			if r := categorySpawnRange[cat]; cat != catCreature && r > 0 && d > float64(r*r) {
+				continue // may not spawn beyond the category's max distance from a player (creatures canSpawnFarFromPlayer)
 			}
 			if !picked {
 				sd2, ok := h.rollSpawner(h.spawnPool(cat, x, ay, z))
@@ -128,12 +132,13 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, cat, ax, ay, az int, c
 				continue
 			}
 			h.spawnNatural(players, cat, sd.etype, x, ay, z)
+			h.localCapAdd(cat, x, z)
 			counts[cat]++
 			if counts[cat] >= cap {
 				more = false
 				return
 			}
-			if *total++; *total >= maxSpawnCluster { // vanilla getMaxSpawnClusterSize: 4 total → done
+			if *total++; *total >= maxSpawnClusterFor(sd.etype) { // Mob.getMaxSpawnClusterSize: 4 total → done (fish 8, horses 6, ghasts 1)
 				more = false
 				return
 			}
@@ -223,11 +228,13 @@ func (h *hub) seedChunkAnimals(players map[int32]*tracked, c [2]int32, counts *[
 	if !h.ownedBlock(cx0, cz0) {
 		return
 	}
-	pool := h.spawnPool(catCreature, cx0+8, h.world.MobFeet(cx0+8, cz0+8), cz0+8)
+	biome := h.world.BiomeAt(cx0, cz0) // ChunkGenerator.spawnOriginalMobs: the biome at the chunk's corner
+	pool := h.spawnPool(catCreature, cx0, h.world.MobFeet(cx0, cz0), cz0)
 	if len(pool) == 0 {
 		return
 	}
-	for h.rng.Float32() < creatureGenProbability {
+	prob := biomeCreatureProbability(biome)
+	for h.rng.Float32() < prob {
 		sd, ok := h.rollSpawner(pool)
 		if !ok {
 			return
@@ -235,17 +242,19 @@ func (h *hub) seedChunkAnimals(players map[int32]*tracked, c [2]int32, counts *[
 		pack := sd.min + h.rng.Intn(sd.max-sd.min+1)
 		x := cx0 + h.rng.Intn(16)
 		z := cz0 + h.rng.Intn(16)
-		for k := 0; k < pack; k++ {
-			for attempt := 0; attempt < 4; attempt++ { // vanilla: up to 4 placement tries per individual
-				if h.ownedBlock(x, z) && h.spawnableAnimalFor(sd.etype, x, z) {
-					h.spawnAnimal(players, sd.etype, x, z)
-					counts[catCreature]++
-					break
+		h.withSpawnGroup(func() { // one SpawnGroupData per pack: shared variant, babies after the first
+			for k := 0; k < pack; k++ {
+				for attempt := 0; attempt < 4; attempt++ { // vanilla: up to 4 placement tries per individual
+					if h.ownedBlock(x, z) && h.spawnableAnimalFor(sd.etype, x, z) {
+						h.rollPackBaby(players, h.spawnAnimal(players, sd.etype, x, z))
+						counts[catCreature]++
+						break
+					}
+					x = clampChunk(x+h.rng.Intn(5)-h.rng.Intn(5), cx0)
+					z = clampChunk(z+h.rng.Intn(5)-h.rng.Intn(5), cz0)
 				}
-				x = clampChunk(x+h.rng.Intn(5)-h.rng.Intn(5), cx0)
-				z = clampChunk(z+h.rng.Intn(5)-h.rng.Intn(5), cz0)
 			}
-		}
+		})
 	}
 }
 

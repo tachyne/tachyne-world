@@ -295,6 +295,33 @@ func (s *mobStore) wipeWild() (before, after int) {
 	return before, after
 }
 
+// cullSpawnCows is a one-time maintenance pass (behind -cull-spawn-cows):
+// it removes the wild members of one species within radius blocks of the
+// origin in the overworld — what the boot-seeded herds left behind — keeping
+// tamed and named ones. Idempotent.
+func (s *mobStore) cullSpawnCows(etype, radius int) (before, after int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	r2 := float64(radius * radius)
+	for key, bucket := range s.m.Chunks {
+		before += len(bucket)
+		out := bucket[:0:0]
+		for _, m := range bucket {
+			if m.Etype == etype && m.Dim == 0 && !m.Tamed && m.CustomName == "" && m.X*m.X+m.Z*m.Z <= r2 {
+				continue
+			}
+			out = append(out, m)
+		}
+		after += len(out)
+		if len(out) == 0 {
+			delete(s.m.Chunks, key)
+		} else {
+			s.m.Chunks[key] = out
+		}
+	}
+	return before, after
+}
+
 // keepMob reports whether a saved mob survives the wild wipe: the village-tied
 // and player-owned set (mirrors hub.spawnExempt — the vanilla persistence /
 // MISC category that never despawns).

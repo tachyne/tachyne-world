@@ -27,8 +27,6 @@ const (
 
 	eggLayMin = 6000 // chickens lay every 5-10 min (vanilla)
 	eggLayMax = 12000
-
-	passiveSpawnEvery = 600 // ticks between herd top-up attempts (30 s, spawn.go)
 )
 
 var (
@@ -261,6 +259,6 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 	}
 }
 
-// (wildSpawn/biomeAnimal retired 2026-07-11: natural spawning is the vanilla
-// NaturalSpawner port in spawn.go; the low-rate herd top-up near players is
-// herdTopUp there, drawing from the same per-biome creature pools.)
+// (wildSpawn/biomeAnimal retired 2026-07-11, the herd top-up 2026-09-19:
+// natural spawning is the vanilla NaturalSpawner port in spawn.go and
+// spawnvanilla.go, drawing from the biome data's pools.)

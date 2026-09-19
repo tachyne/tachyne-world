@@ -13,6 +13,32 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-19
 
+### Fixed
+- **Hordes of cows near spawn.** Every restart used to seed three small
+  "herds" of cows around the origin for something to see on join, and since
+  mobs persist, each rollout added nine to fifteen more — the cattle crowd
+  Wesley found on the live world. The boot seeding is gone, along with the
+  non-vanilla sampler spawner and its periodic animal top-up: vanilla's
+  NaturalSpawner is the only source of natural mobs now. A one-time
+  `-cull-spawn-cows` pass removes the accumulated wild cows within 160
+  blocks of the origin from the saved mobs (tamed and named cows stay).
+
+### Changed
+- **Natural spawning is vanilla's, biome by biome.** Species, weights and
+  pack sizes come from vanilla's own biome data for every biome, the cave
+  biomes down a column included (the hand-written family pools remain only
+  as a fallback for a biome the data does not name); the chunk-generation
+  packs use each biome's own creature probability (badlands sparser, snowy
+  plains too); the glow squid is its own capped category; the per-player
+  local cap keeps one player's crowd from filling another's range; each
+  species' spawn-cluster limit applies (fish and wolves in eights, the
+  horse family in sixes, ghasts and pillagers alone); after a pack's first
+  animal each further one is born a baby one time in twenty (every rabbit
+  after the first; none for wolves, foxes, axolotls or parrots); creatures
+  may spawn at any distance inside the spawn ring; the jungle's ocelot
+  spawns by its own two-in-three rule though it sits in the monster pool;
+  the axolotl category's despawn distance is vanilla's 128, not 64.
+
 ### Added
 - **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs
   walking (throttled like footsteps; nothing on the wing), a boat, minecart
