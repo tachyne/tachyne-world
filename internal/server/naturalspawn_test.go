@@ -94,7 +94,7 @@ func TestDarkEnoughToSpawn(t *testing.T) {
 func TestSpawnCategoriesAndDespawn(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := testTracked()
-	pl.x, pl.z = 0.5, 0.5
+	pl.x, pl.y, pl.z = 0.5, 64, 0.5 // level with the mobs: the despawn distance is three-axis
 	players := map[int32]*tracked{1: pl}
 
 	cow := h.spawnMob(players, entityCow, 40, 64, 0.5)
