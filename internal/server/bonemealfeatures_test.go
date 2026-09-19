@@ -19,6 +19,7 @@ func TestBoneMealFeatureTargets(t *testing.T) {
 		t.Errorf("melon stem → %d", w.At(0, 180, 0)-melonStemBase)
 	}
 	// A bamboo sapling shoots its first segment.
+	w.SetBlock(2, 179, 0, worldgen.Dirt)
 	w.SetBlock(2, 180, 0, bambooSapling)
 	if !apply(2, 180, 0) || !isBamboo(w.At(2, 181, 0)) {
 		t.Error("bamboo sapling did not shoot")

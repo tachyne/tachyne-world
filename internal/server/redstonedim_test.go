@@ -30,7 +30,8 @@ func TestRedstoneRunsInTheNether(t *testing.T) {
 			nw.SetBlock(x+dx, y+1, z+dz, worldgen.Air)
 		}
 	}
-	lever := setBoolProp(worldgen.BlockBase("lever")+9, "powered", false)
+	lever := setBoolProp(worldgen.BlockBase("lever")+9, "powered", false) // a wall lever facing north
+	nw.SetBlock(x, y, z+1, worldgen.Stone)
 	nw.SetBlock(x, y, z, lever)
 	for i := 1; i <= 4; i++ {
 		nw.SetBlock(x+i, y, z, worldgen.BlockBase("redstone_wire")+1160)

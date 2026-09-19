@@ -111,6 +111,13 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Every block change checks what leaned on it.** Only a player's edits
+  used to drop the torches, crops, rails and plants that lost their floor,
+  wall or ceiling; the engine's own changes — water washing a cell out,
+  a piston, fire, sand falling away, farmland trampling back to dirt, a
+  growing tree — left them floating. The support sweep now runs from the
+  engine's block setter for every change, as vanilla's setBlock notifies
+  its neighbours.
 - **Dropped items move as vanilla's do.** Items had no horizontal motion:
   a block's drop appeared at rest in its cell, a toss landed a block and a
   half ahead on the spot, and a stream could not carry anything. Items now

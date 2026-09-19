@@ -14,6 +14,13 @@ func TestWindBurstTriggersBlocks(t *testing.T) {
 	pl := survPlayer(h)
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
+	for x := -3; x <= 6; x++ { // a floor: doors and levers that lose their floor come down now
+		for z := -3; z <= 6; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+			w.SetBlock(x, 181, z, worldgen.Air)
+		}
+	}
+	w.SetBlock(0, 181, 0, worldgen.Stone) // the candle's floor
 
 	oakInfo, _ := worldgen.InfoForState(worldgen.BlockBase("oak_door"))
 	closedDoor := func(name string) uint32 { // lower, closed, unpowered

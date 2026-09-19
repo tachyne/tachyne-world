@@ -190,18 +190,17 @@ func TestBeeBoostsCropsBelow(t *testing.T) {
 	h, players, nest := beeWorld(t)
 	wheat := worldgen.BlockBase("wheat")
 	cx, cz := nest.x+10, nest.z
-	// Vanilla checks BOTH cells below the bee — cover each.
+	// Vanilla checks BOTH cells below the bee; a crop needs farmland under
+	// it, so a fixture vanilla would let stand can only hold one.
+	h.world.SetBlock(cx, nest.y-2, cz, worldgen.BlockID("farmland"))
 	h.world.SetBlock(cx, nest.y-1, cz, wheat)
-	h.world.SetBlock(cx, nest.y-2, cz, wheat)
 	m := h.spawnAnimal(players, entityBee, cx, cz)
 	if m == nil {
 		t.Fatal("no bee")
 	}
 	m.beeNectar, m.beeHome, m.beeHasHome = true, nest, true
 	m.beeNoEnter = 1 << 20 // stay out working
-	grown := func() bool {
-		return h.world.At(cx, nest.y-1, cz) != wheat && h.world.At(cx, nest.y-2, cz) != wheat
-	}
+	grown := func() bool { return h.world.At(cx, nest.y-1, cz) != wheat }
 	for i := 0; i < 200 && !grown(); i++ {
 		m.x, m.y, m.z = float64(cx)+0.5, float64(nest.y)+0.5, float64(cz)+0.5
 		h.updateBees(players)
@@ -210,8 +209,8 @@ func TestBeeBoostsCropsBelow(t *testing.T) {
 		t.Fatalf("minutes over wheat and the bee left (%d,%d) ungrown",
 			h.world.At(cx, nest.y-1, cz), h.world.At(cx, nest.y-2, cz))
 	}
-	if m.beeCropsGrown < 2 {
-		t.Fatalf("boost budget counted %d, want both crops", m.beeCropsGrown)
+	if m.beeCropsGrown < 1 {
+		t.Fatalf("boost budget counted %d, want the crop", m.beeCropsGrown)
 	}
 }
 

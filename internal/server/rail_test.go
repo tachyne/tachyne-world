@@ -38,7 +38,7 @@ func TestRailShapesOnPlacement(t *testing.T) {
 func TestPoweredRailSyncsWithRedstone(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	w.SetBlock(x, y, z, railWith(poweredRailMin, shapeEW, false))
-	lever := setBoolProp(uint32((worldgen.BlockBase("lever") + 9)), "powered", false)
+	lever := withProps(t, worldgen.BlockBase("lever"), map[string]string{"face": "floor", "powered": "false"})
 	w.SetBlock(x, y, z-1, lever)
 	h.toggleLever(players, blockPos{x, y, z - 1}, w.At(x, y, z-1))
 	stepTicks(h, players, 4)

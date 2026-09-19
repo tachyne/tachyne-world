@@ -27,6 +27,8 @@ func TestStackPlantGrowsUpward(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 5, 200, 5
+	h.world.SetBlock(x, y-1, z, worldgen.BlockID("sand")) // cane stands on sand beside water
+	h.world.SetBlock(x+1, y-1, z, worldgen.WaterBase)
 	h.world.SetBlock(x, y, z, caneMax) // sugar cane at age 15 (ready to grow)
 	h.tickStackPlant(players, 0, x, y, z, caneMax, caneMin)
 	if got := h.world.At(x, y+1, z); got != caneMin {

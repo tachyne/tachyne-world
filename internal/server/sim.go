@@ -153,6 +153,18 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
 	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
 	h.afterRemoval(players, dim, pos, old, state)
+	// Vanilla's setBlock notifies the neighbours, and a block that just lost
+	// its floor, wall or ceiling comes down (updateShape → canSurvive). This
+	// is every engine-driven change — fluid washing a cell out, a piston, a
+	// fire, sand dropping away, farmland turning back to dirt — not only a
+	// player's edit (which runs its own sweep from the hub loop). The sweep's
+	// own writes come back through here; its queue already walks the
+	// cascade, so a nested sweep is skipped.
+	if old != state && !h.supportSweep {
+		h.supportSweep = true
+		h.dropUnsupported(players, dim, pos)
+		h.supportSweep = false
+	}
 	// Break the fence and the knot goes with it, dropping whatever it held.
 	// Guarded on there being any knot at all: this is the choke point every
 	// block change runs through.

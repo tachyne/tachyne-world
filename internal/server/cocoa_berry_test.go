@@ -19,6 +19,8 @@ func TestCocoaGrowth(t *testing.T) {
 			t.Fatalf("cocoa start age %q, want 0", a)
 		}
 		wantFacing := worldgen.GetProperty(info, start, "facing")
+		dx, dz := facingDelta(wantFacing)
+		w.SetBlock(5+dx, 70, dz, worldgen.BlockID("jungle_log")) // the log the pod grows on
 		w.SetBlock(5, 70, 0, start)
 		for i := 0; i < 500 && worldgen.GetProperty(info, w.At(5, 70, 0), "age") != "2"; i++ {
 			h.tickCocoa(h.playersRef, 0, 5, 70, 0, w.At(5, 70, 0))
@@ -32,6 +34,8 @@ func TestCocoaGrowth(t *testing.T) {
 		}
 
 		// Bone meal advances a pod one stage.
+		dx, dz = facingDelta(worldgen.GetProperty(info, cocoaBase, "facing"))
+		w.SetBlock(6+dx, 70, dz, worldgen.BlockID("jungle_log"))
 		w.SetBlock(6, 70, 0, cocoaBase) // age 0
 		if !h.applyBoneMeal(h.playersRef, 0, 6, 70, 0, cocoaBase) {
 			t.Error("bone meal did nothing to cocoa")
@@ -50,6 +54,8 @@ func TestSweetBerryGrowth(t *testing.T) {
 		for ay := 121; ay <= 130; ay++ {
 			w.SetBlock(5, ay, 0, worldgen.Air)
 		}
+		w.SetBlock(5, 119, 0, worldgen.Dirt)
+		w.SetBlock(6, 119, 0, worldgen.Dirt)
 		w.SetBlock(5, 120, 0, berryBase) // age 0
 		for i := 0; i < 500 && w.At(5, 120, 0) != berryBase+3; i++ {
 			h.tickBerry(h.playersRef, 0, 5, 120, 0, w.At(5, 120, 0))

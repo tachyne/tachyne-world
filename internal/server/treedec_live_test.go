@@ -239,6 +239,7 @@ func TestSaplingNearFlowersGrowsANest(t *testing.T) {
 	for i := 0; i < 120; i++ {
 		x, y, z := 1900+i*20, 200, 900
 		h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+		h.world.SetBlock(x+1, y-1, z, worldgen.Dirt) // the poppy needs soil, or the growing tree's block changes drop it
 		h.world.SetBlock(x+1, y, z, worldgen.BlockBase("poppy"))
 		h.world.SetBlock(x, y, z, lo)
 		if !growUntilGone(h, players, x, y, z, lo, hi) {

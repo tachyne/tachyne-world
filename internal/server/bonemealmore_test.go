@@ -39,6 +39,9 @@ func TestBoneMealMoreTargets(t *testing.T) {
 	apply := func(x, y, z int) bool { return h.applyBoneMeal(players, 0, x, y, z, w.At(x, y, z)) }
 
 	// A sunflower pops a sunflower.
+	for x := 0; x <= 3; x++ {
+		w.SetBlock(x, 179, 0, worldgen.Dirt) // plants need soil, or the growth's own block change drops them
+	}
 	w.SetBlock(0, 180, 0, worldgen.BlockID("sunflower"))
 	if !apply(0, 180, 0) {
 		t.Error("sunflower refused")
@@ -145,6 +148,7 @@ func TestBoneMealMoreTargets(t *testing.T) {
 		t.Error("rooted dirt grew no roots")
 	}
 	// Bamboo: one or two segments.
+	w.SetBlock(3, 179, -5, worldgen.Dirt)
 	w.SetBlock(3, 180, -5, bambooState(0, bambooLeavesNone, 0))
 	if !apply(3, 180, -5) || !isBamboo(w.At(3, 181, -5)) {
 		t.Error("bamboo did not grow")

@@ -35,7 +35,8 @@ func redSetup(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, i
 
 func TestLeverPowersWireToLamp(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
-	lever := setBoolProp((worldgen.BlockBase("lever") + 9), "powered", false) // default lever state
+	lever := setBoolProp((worldgen.BlockBase("lever") + 9), "powered", false) // default lever state: on a wall, facing north
+	w.SetBlock(x, y, z+1, worldgen.Stone)                                     // the wall it hangs on
 	w.SetBlock(x, y, z, lever)
 	for i := 1; i <= 4; i++ { // four dust cells
 		w.SetBlock(x+i, y, z, worldgen.BlockBase("redstone_wire")+1160) // default wire (power 0)
@@ -69,6 +70,7 @@ func TestLeverPowersWireToLamp(t *testing.T) {
 
 func TestButtonPulsesAndReleases(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z+1, worldgen.Stone)                         // the wall the button sits on
 	w.SetBlock(x, y, z, (worldgen.BlockBase("stone_button") + 9)) // stone button default
 	w.SetBlock(x+1, y, z, lampOff)
 	h.pressButton(players, blockPos{x, y, z}, w.At(x, y, z))

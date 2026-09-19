@@ -349,16 +349,17 @@ type tracked struct {
 }
 
 type hub struct {
-	world      *world.World
-	nether     *world.World // second dimension (nil in bare tests → worldFor falls back)
-	end        *world.World // third dimension
-	events     chan hubEvent
-	stop       chan struct{} // closed to end run(); production never closes it, tests do (t.Cleanup)
-	eidCounter int64         // per-pod eid mint counter, fed through shard.MintEID when sharded
-	tick       atomic.Uint64 // world age (ticks); atomic so connections can read it
-	lastTick   atomic.Int64  // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
-	tickStats  tickHist      // recent tick durations for /debug/vars + the slow-tick log
-	dayTime    atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
+	supportSweep bool // a dropUnsupported sweep is running (its writes must not start another)
+	world        *world.World
+	nether       *world.World // second dimension (nil in bare tests → worldFor falls back)
+	end          *world.World // third dimension
+	events       chan hubEvent
+	stop         chan struct{} // closed to end run(); production never closes it, tests do (t.Cleanup)
+	eidCounter   int64         // per-pod eid mint counter, fed through shard.MintEID when sharded
+	tick         atomic.Uint64 // world age (ticks); atomic so connections can read it
+	lastTick     atomic.Int64  // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
+	tickStats    tickHist      // recent tick durations for /debug/vars + the slow-tick log
+	dayTime      atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
 
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
 	// unsharded — own the whole world (the default for a single-pod or test hub).
