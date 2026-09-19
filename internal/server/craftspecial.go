@@ -20,12 +20,15 @@ var (
 	itemFireworks = int32(itemByName["firework_rocket"])
 )
 
+// dyeOrder is the DyeColor enum's order (the wire's dye varint).
+var dyeOrder = []string{"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+	"light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"}
+
 // dyeColorName maps a dye item to its colour name (for the transmute
 // recipes' result lookup).
 var dyeColorName = func() map[int32]string {
 	out := map[int32]string{}
-	for _, name := range []string{"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
-		"light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"} {
+	for _, name := range dyeOrder {
 		if id, ok := itemByName[name+"_dye"]; ok {
 			out[int32(id)] = name
 		}
@@ -64,7 +67,51 @@ func (h *hub) specialCraftMatch(grid []invStack, w int) (invStack, int, bool) {
 	if res, ok := h.bookCloneMatch(grid); ok {
 		return res, craftBookClone, true
 	}
+	if res, ok := shieldDecorationMatch(grid); ok {
+		return res, mapCraftNone, true
+	}
 	return invStack{}, mapCraftNone, false
+}
+
+// bannerItemColor is a banner item's own colour in dye order.
+var bannerItemColor = func() map[int32]int8 {
+	out := map[int32]int8{}
+	for i, name := range dyeOrder {
+		if id, ok := itemByName[name+"_banner"]; ok {
+			out[int32(id)] = int8(i)
+		}
+	}
+	return out
+}()
+
+// shieldDecorationMatch is ShieldDecorationRecipe: a shield without
+// patterns and any banner, nothing else, make the shield with the
+// banner's layers and its colour as the base; the shield's own
+// components (damage, name, enchantments) ride along.
+func shieldDecorationMatch(grid []invStack) (invStack, bool) {
+	s := gridStacks(grid)
+	if len(s) != 2 {
+		return invStack{}, false
+	}
+	var shield, banner *invStack
+	for i := range s {
+		switch {
+		case bannerItems[s[i].item]:
+			banner = &s[i]
+		case s[i].item == int32(itemShield) && s[i].patCount() == 0:
+			shield = &s[i]
+		default:
+			return invStack{}, false
+		}
+	}
+	if shield == nil || banner == nil {
+		return invStack{}, false
+	}
+	res := *shield
+	res.count = 1
+	res.pats = banner.pats
+	res.shieldBase = bannerItemColor[banner.item] + 1
+	return res, true
 }
 
 // repairMatch is RepairItemRecipe: two of the same damageable item and

@@ -35,6 +35,7 @@ type invStack struct {
 	mapID      int32    // filled_map: which map this stack shows (0 = none)
 	color      int32    // dyed_color rgb for leather armour (0 = undyed; dye.go)
 	stew       int8     // suspicious_stew_effects: 1 + the stewEffects index (0 = none; stew.go)
+	shieldBase int8     // base_color: 1 + the dye of a decorated shield's banner (0 = plain; craftspecial.go)
 
 	// Banner pattern layers (loom): patPlus1 is the banner_pattern registry
 	// id + 1 (0 = empty layer, layers fill from index 0); color is the dye

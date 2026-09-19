@@ -55,6 +55,7 @@ type itemEntity struct {
 	name          string
 	lode          lodeTracker // lodestone compass target
 	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
+	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	vy            float64     // vertical motion while in or over fluid (floatItems); 0 at rest
 	born          uint64      // world tick spawned (for despawn)
 	noPickupUntil uint64      // absolute tick pickup unlocks (tosses get a longer hold;
@@ -69,7 +70,7 @@ func (it *itemEntity) stack() invStack {
 	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
-		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew}
+		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew, shieldBase: it.shieldBase}
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -192,6 +193,7 @@ const (
 	componentBannerPats     = 63 // banner pattern layers; remapped per version
 	componentBundleContents = 41 // bundle contents (list of Slots); remapped per version
 	componentLodestone      = 58 // lodestone_tracker (lodestone compass target); remapped per version
+	componentBaseColor      = 64 // base_color (a decorated shield's banner base, one dye varint); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -262,6 +264,9 @@ func stackComponents(st invStack) []byte {
 		comps++
 	}
 	if st.lode.has {
+		comps++
+	}
+	if st.shieldBase != 0 {
 		comps++
 	}
 	var bookBytes []byte
@@ -339,6 +344,12 @@ func stackComponents(st invStack) []byte {
 	}
 	if st.lode.has {
 		b = lodestoneComponent(b, st.lode)
+	}
+	if st.shieldBase != 0 {
+		// base_color: the banner base under a decorated shield's patterns,
+		// one DyeColor varint (the layers above ride in banner_patterns).
+		b = protocol.AppendVarInt(b, componentBaseColor)
+		b = protocol.AppendVarInt(b, int32(st.shieldBase-1))
 	}
 	b = append(b, bookBytes...) // writable/written book content (see book.go)
 	return b

@@ -75,6 +75,12 @@ the public history since the project was open-sourced on 2026-07-10.
   so arrows and everything thrown flew fifty percent faster than their
   speed said — and the path is sampled every half block, so a fast arrow
   cannot pass through a player between samples.
+- **Shield decoration.** A plain shield and a banner in the crafting grid
+  make the shield carry the banner's layers over the banner's colour, as
+  vanilla's recipe does; the shield keeps its own wear, name and
+  enchantments, a decorated shield takes no second banner, and the base
+  colour rides the wire (translated for every Java version), the ground and
+  the save. Bedrock clients see the plain shield.
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.

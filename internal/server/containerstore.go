@@ -46,6 +46,7 @@ type savedItem struct {
 	Name   string   `json:"name,omitempty"`   // anvil rename
 	Lode   [4]int32 `json:"lode,omitempty"`   // lodestone compass target (packLode)
 	Stew   int8     `json:"stew,omitempty"`   // suspicious stew's hidden flower
+	Shield int8     `json:"shield,omitempty"` // a decorated shield's banner base (dye + 1)
 }
 
 type containerFile struct {
