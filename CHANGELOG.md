@@ -111,6 +111,12 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Dust carries a signal end to end in one tick.** Redstone dust used to
+  pass power one block per tick, so a ten-block line added ten ticks and
+  every contraption's timing was off. A dust whose power changes now
+  re-evaluates every dust within two blocks at once and the change runs
+  the whole line within the tick, on and off, as vanilla's dust update
+  does; the components around still respond on the next tick.
 - **Lectern clocks and lightning rods drive redstone.** A page turn on a
   lectern pulses its power for two ticks and a comparator behind it reads
   the open page (1 on the first page through 15 on the last, 0 empty); a

@@ -206,7 +206,8 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			info, _ := worldgen.InfoForState(state)
 			ns := worldgen.SetProperty(info, state, "power", itoa(want))
 			h.rsSet(players, pos, h.connectWire(x, y, z, ns))
-			h.scheduleSignalAround(pos) // ripple on
+			h.scheduleSignalAround(pos) // the components around hear next tick
+			h.propagateWires(players, pos)
 		}
 	case isRSTorch(state):
 		// The torch inverts its support block (below for floor torches, the
@@ -480,3 +481,53 @@ func (h *hub) arrowInCell(dim int, pos blockPos) bool {
 	}
 	return false
 }
+
+// propagateWires is RedStoneWireBlock.updatePowerStrength's reach within
+// one tick: a dust whose power changed notifies every block within two of
+// it, and every dust among them re-evaluates at once — so a line of dust
+// carries a signal end to end in the tick it changes, not a block per
+// tick. Turning off converges the way vanilla's does: each pass lowers a
+// stale dust by at least one, so the worklist runs until nothing moves
+// (bounded, for a pathological web).
+func (h *hub) propagateWires(players map[int32]*tracked, start blockPos) {
+	queue := []blockPos{start}
+	for work := 0; len(queue) > 0 && work < 1<<16; work++ {
+		p := queue[0]
+		queue = queue[1:]
+		for _, o := range wireReach {
+			n := blockPos{p.x + o[0], p.y + o[1], p.z + o[2]}
+			st := h.rsWorld().At(n.x, n.y, n.z)
+			if !isWire(st) {
+				continue
+			}
+			want := h.inputPower(n.x, n.y, n.z, true)
+			if wirePower(st) == want {
+				continue
+			}
+			info, _ := worldgen.InfoForState(st)
+			ns := worldgen.SetProperty(info, st, "power", itoa(want))
+			h.rsSet(players, n, h.connectWire(n.x, n.y, n.z, ns))
+			h.scheduleSignalAround(n)
+			queue = append(queue, n)
+		}
+	}
+}
+
+// wireReach is every offset within two steps of a dust (its neighbours and
+// their neighbours): the blocks vanilla's dust update notifies.
+var wireReach = func() [][3]int {
+	seen := map[[3]int]bool{}
+	var out [][3]int
+	dirs := [][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}
+	for _, a := range dirs {
+		for _, b := range append(dirs, [3]int{0, 0, 0}) {
+			o := [3]int{a[0] + b[0], a[1] + b[1], a[2] + b[2]}
+			if o == [3]int{} || seen[o] {
+				continue
+			}
+			seen[o] = true
+			out = append(out, o)
+		}
+	}
+	return out
+}()
