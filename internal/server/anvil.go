@@ -259,9 +259,9 @@ func grindResult(a, b invStack) (invStack, int) {
 
 // takeTwoSlotResult handles a click on the result slot: enforce the level
 // cost (anvil), consume the inputs, hand the result to the cursor, pay/refund.
-func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
+func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked, mode int32) {
 	res, cost := h.twoSlotResult(t)
-	if res.item == 0 || t.cursor.item != 0 {
+	if res.item == 0 || !h.canTakeResult(t, res, mode) {
 		h.sendTwoSlotWindow(t)
 		return
 	}
@@ -297,7 +297,7 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked) {
 		h.spawnXPOrb(players, cost, t.x, t.y, t.z)
 		h.playSound(players, "minecraft:block.grindstone.use", sndBlock, t.x, t.y, t.z, 1, 1)
 	}
-	t.cursor = res
+	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
 	h.sendCursor(t)
 	h.sendTwoSlotWindow(t)
 }

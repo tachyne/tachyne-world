@@ -96,27 +96,22 @@ func (h *hub) stonecutSelect(t *tracked, button int32) {
 
 // takeStonecutResult hands the result to the cursor and consumes one input
 // (vanilla onTake: repeated takes keep cutting while input remains).
-func (h *hub) takeStonecutResult(players map[int32]*tracked, t *tracked) {
-	res := h.stonecutResult(t)
-	if res.item == 0 {
-		h.sendStonecutWindow(t)
-		return
+func (h *hub) takeStonecutResult(players map[int32]*tracked, t *tracked, mode int32) {
+	for n := 0; n < 64; n++ { // a shift-click repeats while the input lasts (ResultSlot quick-move)
+		res := h.stonecutResult(t)
+		if res.item == 0 || !h.resultTake(t, res, mode) {
+			break
+		}
+		h.incStat(t, attachproto.StatCrafted, res.item, int32(res.count))
+		if t.anvil[0].count--; t.anvil[0].count <= 0 {
+			t.anvil[0] = invStack{}
+			t.stoneSel = -1 // vanilla: empty input resets the recipe list
+		}
+		h.playSound(players, "minecraft:ui.stonecutter.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
+		if mode != 1 {
+			break
+		}
 	}
-	switch {
-	case t.cursor.item == 0:
-		t.cursor = res
-	case t.cursor.item == res.item && t.cursor.count+res.count <= stackCap(res.item):
-		t.cursor.count += res.count
-	default:
-		h.sendStonecutWindow(t)
-		return
-	}
-	h.incStat(t, attachproto.StatCrafted, res.item, int32(res.count))
-	if t.anvil[0].count--; t.anvil[0].count <= 0 {
-		t.anvil[0] = invStack{}
-		t.stoneSel = -1 // vanilla: empty input resets the recipe list
-	}
-	h.playSound(players, "minecraft:ui.stonecutter.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
 	h.sendCursor(t)
 	h.sendStonecutWindow(t)
 }

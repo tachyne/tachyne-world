@@ -111,6 +111,18 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Menus keep vanilla's slot rules on the server.** A modified client
+  could put anything anywhere; the choosy slots now refuse what they do
+  not take (a furnace's fuel slot wants fuel, the enchanting table lapis,
+  a beacon its payment, the armour slots their piece, a horse its saddle
+  and barding, a loom banners, dyes and patterns, a smithing table a
+  template, result slots nothing) and no placement may exceed the item's
+  stack cap. Shift-clicking a stonecutter, loom, smithing table, anvil,
+  grindstone or trade result now quick-moves it into the inventory
+  (repeating while the inputs last for the stonecutter, loom and smithing
+  table) instead of onto the cursor. Hoppers, droppers and comparators
+  use each item's own stack cap: eggs stack to 16 and tools to one, not a
+  flat 64.
 - **Mobs chatter at vanilla's cadence.** Every mob rolled one flat
   one-in-twelve chance a second to vocalise. The roll is vanilla's now: a
   per-tick counter that starts at minus the species' interval after each

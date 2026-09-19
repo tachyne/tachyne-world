@@ -56,12 +56,12 @@ func TestAnvilChargesLevels(t *testing.T) {
 	pl.anvil[0] = invStack{item: tDiamondSword, count: 1}
 	pl.anvil[1] = invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}}}
 	pl.xpLevel = 0
-	h.takeTwoSlotResult(players, pl) // broke — rejected
+	h.takeTwoSlotResult(players, pl, 0) // broke — rejected
 	if pl.cursor.item != 0 || pl.anvil[0].item == 0 {
 		t.Fatal("AUTHORITY: anvil must reject an unaffordable take")
 	}
 	pl.xpLevel = 10
-	h.takeTwoSlotResult(players, pl)
+	h.takeTwoSlotResult(players, pl, 0)
 	if pl.cursor.item != tDiamondSword || pl.cursor.enchLvl(enchSharpness) != 5 {
 		t.Fatalf("result should be on the cursor: %+v", pl.cursor)
 	}
@@ -76,7 +76,7 @@ func TestGrindstoneStripsAndRefunds(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 	pl.winID, pl.winKind = 5, winGrind
 	pl.anvil[0] = invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 5}}}
-	h.takeTwoSlotResult(players, pl)
+	h.takeTwoSlotResult(players, pl, 0)
 	if pl.cursor.item != tDiamondSword || pl.cursor.enchanted() {
 		t.Fatalf("grindstone must strip enchants: %+v", pl.cursor)
 	}

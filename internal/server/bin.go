@@ -191,7 +191,7 @@ func binInsert(slots []invStack, st invStack) int {
 			break
 		}
 		if s.item == st.item && s.count > 0 && s.dmg == st.dmg && s.ench == st.ench && s.name == st.name && s.color == st.color {
-			room := stackMax - s.count
+			room := stackCap(s.item) - s.count // per-item cap: 16 for eggs, 1 for tools, not a flat 64
 			if room <= 0 {
 				continue
 			}
@@ -208,9 +208,13 @@ func binInsert(slots []invStack, st invStack) int {
 			break
 		}
 		if slots[i].item == 0 || slots[i].count == 0 {
+			take := left
+			if cap := stackCap(st.item); take > cap {
+				take = cap // an empty slot takes at most one stack of the item
+			}
 			slots[i] = st
-			slots[i].count = left
-			left = 0
+			slots[i].count = take
+			left -= take
 		}
 	}
 	return left
@@ -795,7 +799,7 @@ func (h *hub) containerSignal(pos simPos) int {
 	for _, s := range slots {
 		if s.item != 0 && s.count > 0 {
 			any = true
-			full += float64(s.count) / float64(stackMax)
+			full += float64(s.count) / float64(stackCap(s.item)) // ContainerHelper: each slot's fraction of ITS cap
 		}
 	}
 	if !any {

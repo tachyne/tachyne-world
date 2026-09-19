@@ -75,13 +75,13 @@ func TestTradeAuthority(t *testing.T) {
 	}
 	// Not enough wheat: result empty, click gives nothing.
 	pl.trade[0] = invStack{item: itemByName["wheat"], count: 10}
-	h.takeTradeResult(players, pl)
+	h.takeTradeResult(players, pl, 0)
 	if pl.cursor.item != 0 {
 		t.Fatal("AUTHORITY: trade must not pay without the full cost")
 	}
 	// Full cost: pays out, consumes exactly 20.
 	pl.trade[0] = invStack{item: itemByName["wheat"], count: 25}
-	h.takeTradeResult(players, pl)
+	h.takeTradeResult(players, pl, 0)
 	if pl.cursor.item != itemByName["emerald"] || pl.cursor.count != 1 {
 		t.Fatalf("trade should pay 1 emerald, cursor %+v", pl.cursor)
 	}
@@ -92,7 +92,7 @@ func TestTradeAuthority(t *testing.T) {
 	pl.cursor = invStack{}
 	pl.tradeSel = 1 // 1 emerald → 6 bread
 	pl.trade[0] = invStack{item: itemByName["emerald"], count: 1}
-	h.takeTradeResult(players, pl)
+	h.takeTradeResult(players, pl, 0)
 	if pl.cursor.item != itemByName["bread"] || pl.cursor.count != 6 {
 		t.Fatalf("bread trade broken: %+v", pl.cursor)
 	}
@@ -197,12 +197,12 @@ func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 		}
 	}
 	pl.trade[0] = invStack{item: itemByName["emerald"], count: 64}
-	h.takeTradeResult(players, pl)
+	h.takeTradeResult(players, pl, 0)
 	if pl.cursor.item != 0 {
 		t.Fatal("the book cost must be enforced")
 	}
 	pl.trade[1] = invStack{item: itemByName["book"], count: 2}
-	h.takeTradeResult(players, pl)
+	h.takeTradeResult(players, pl, 0)
 	if pl.cursor.item != itemEnchantedBook || pl.cursor.ench[0] != book.outEnch {
 		t.Fatalf("expected the enchanted book on the cursor, got %+v", pl.cursor)
 	}

@@ -23,7 +23,7 @@ func TestCartographyTable(t *testing.T) {
 		// Zoom out: map + paper → a fresh BLANK map at scale 1.
 		tr.anvil[0] = invStack{item: itemFilledMap, count: 1, mapID: src.ID}
 		tr.anvil[1] = invStack{item: itemPaper, count: 2}
-		h.takeTwoSlotResult(h.playersRef, tr)
+		h.takeTwoSlotResult(h.playersRef, tr, 0)
 		if tr.cursor.item != itemFilledMap || tr.cursor.count != 1 {
 			t.Errorf("zoom cursor: %+v", tr.cursor)
 		}
@@ -39,7 +39,7 @@ func TestCartographyTable(t *testing.T) {
 		tr.cursor = invStack{}
 		tr.anvil[0] = invStack{item: itemFilledMap, count: 1, mapID: src.ID}
 		tr.anvil[1] = invStack{item: itemGlassPane, count: 1}
-		h.takeTwoSlotResult(h.playersRef, tr)
+		h.takeTwoSlotResult(h.playersRef, tr, 0)
 		locked := h.maps.get(tr.cursor.mapID)
 		if locked == nil || locked.ID == src.ID || !locked.Locked ||
 			locked.Scale != src.Scale || locked.Colors[5] != 42 {
@@ -63,7 +63,7 @@ func TestCartographyTable(t *testing.T) {
 
 		// …but still clones (both copies share the locked map's id).
 		tr.anvil[1] = invStack{item: itemEmptyMap, count: 1}
-		h.takeTwoSlotResult(h.playersRef, tr)
+		h.takeTwoSlotResult(h.playersRef, tr, 0)
 		if tr.cursor.count != 2 || tr.cursor.mapID != locked.ID {
 			t.Errorf("clone cursor: %+v", tr.cursor)
 		}

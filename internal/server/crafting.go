@@ -381,24 +381,31 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 	}
 	// Anvil/grindstone/cartography slot 2 is their server-owned result.
 	if e.slot == 2 && (t.winKind == winAnvil || t.winKind == winGrind || t.winKind == winCarto) {
-		h.takeTwoSlotResult(players, t)
+		h.takeTwoSlotResult(players, t, e.mode)
 		return
 	}
 	if e.slot == 1 && t.winKind == winStonecut { // the stonecutter's result slot
-		h.takeStonecutResult(players, t)
+		h.takeStonecutResult(players, t, e.mode)
 		return
 	}
 	if e.slot == 3 && t.winKind == winLoom { // the loom's result slot
-		h.takeLoomResult(players, t)
+		h.takeLoomResult(players, t, e.mode)
 		return
 	}
 	if e.slot == 3 && t.winKind == winSmith { // the smithing table's result slot
-		h.takeSmithResult(players, t)
+		h.takeSmithResult(players, t, e.mode)
 		return
 	}
 	if e.slot == 2 && t.winKind == winTrade {
-		h.takeTradeResult(players, t)
+		h.takeTradeResult(players, t, e.mode)
 		return
+	}
+	for _, ch := range e.changed { // Slot.mayPlace: the choosy slots refuse what they do not take
+		if !h.slotAccepts(t, ch.slot, ch.st) {
+			h.resyncWindow(t)
+			h.sendCursor(t)
+			return
+		}
 	}
 
 	// Conservation tally: items that net-disappear across this click's declared

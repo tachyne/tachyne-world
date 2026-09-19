@@ -143,22 +143,25 @@ func (h *hub) loomSelect(t *tracked, button int32) {
 }
 
 // takeLoomResult consumes one banner + one dye (the pattern item stays).
-func (h *hub) takeLoomResult(players map[int32]*tracked, t *tracked) {
-	res := h.loomResult(t)
-	if res.item == 0 || t.cursor.item != 0 {
-		h.sendLoomWindow(t)
-		return
-	}
-	for i := 0; i <= 1; i++ {
-		if t.anvil[i].count--; t.anvil[i].count <= 0 {
-			t.anvil[i] = invStack{}
+func (h *hub) takeLoomResult(players map[int32]*tracked, t *tracked, mode int32) {
+	for n := 0; n < 64; n++ { // a shift-click repeats while the banner and dye last
+		res := h.loomResult(t)
+		if res.item == 0 || (mode != 1 && t.cursor.item != 0) || !h.resultTake(t, res, mode) {
+			break
+		}
+		for i := 0; i <= 1; i++ {
+			if t.anvil[i].count--; t.anvil[i].count <= 0 {
+				t.anvil[i] = invStack{}
+			}
+		}
+		if t.anvil[0].item == 0 || t.anvil[1].item == 0 {
+			t.stoneSel = -1
+		}
+		h.playSound(players, "minecraft:ui.loom.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
+		if mode != 1 {
+			break
 		}
 	}
-	if t.anvil[0].item == 0 || t.anvil[1].item == 0 {
-		t.stoneSel = -1
-	}
-	t.cursor = res
-	h.playSound(players, "minecraft:ui.loom.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
 	h.sendCursor(t)
 	h.sendLoomWindow(t)
 }

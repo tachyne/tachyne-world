@@ -389,9 +389,9 @@ func (h *hub) tradeResult(t *tracked) (invStack, *mobOffer) {
 
 // takeTradeResult consumes the cost and hands over the goods (AUTHORITY: the
 // server recomputes the offer; the click is a wish).
-func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
+func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32) {
 	res, o := h.tradeResult(t)
-	if res.item == 0 || t.cursor.item != 0 {
+	if res.item == 0 || !h.canTakeResult(t, res, mode) {
 		h.sendTradeWindow(t)
 		return
 	}
@@ -418,8 +418,8 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked) {
 	if o.cost2Item != 0 {
 		consume(o.cost2Item, int(o.cost2Count))
 	}
-	t.cursor = res
-	o.uses++ // toward this offer's lock
+	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
+	o.uses++                   // toward this offer's lock
 	if m := h.mobs[t.tradeWith]; m != nil {
 		h.awardTradeXP(m, o.trade.xp) // may promote the villager + unlock trades
 		h.addTradeGossip(m, t.p.name) // build reputation → cheaper future offers

@@ -45,11 +45,11 @@ func TestStonecutterFlow(t *testing.T) {
 
 		// Take twice: each consumes one input; the second empties it and
 		// resets the selection.
-		h.takeStonecutResult(h.playersRef, tr)
+		h.takeStonecutResult(h.playersRef, tr, 0)
 		if tr.cursor.item != list[0].Out || tr.anvil[0].count != 1 || tr.stoneSel != 0 {
 			t.Errorf("first take: cursor=%+v input=%+v sel=%d", tr.cursor, tr.anvil[0], tr.stoneSel)
 		}
-		h.takeStonecutResult(h.playersRef, tr)
+		h.takeStonecutResult(h.playersRef, tr, 0)
 		if tr.anvil[0].item != 0 || tr.stoneSel != -1 {
 			t.Errorf("second take: input=%+v sel=%d", tr.anvil[0], tr.stoneSel)
 		}

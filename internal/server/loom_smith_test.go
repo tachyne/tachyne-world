@@ -36,7 +36,7 @@ func TestLoomFlow(t *testing.T) {
 		if res.patCount() != 1 || res.pats[0].patPlus1 != int16(base[0]+1) || res.pats[0].color != 14 {
 			t.Errorf("result: %+v", res.pats[0])
 		}
-		h.takeLoomResult(h.playersRef, tr)
+		h.takeLoomResult(h.playersRef, tr, 0)
 		if tr.cursor.patCount() != 1 || tr.anvil[0].count != 1 || tr.anvil[1].item != 0 {
 			t.Errorf("take: cursor=%d banner=%d dye=%+v", tr.cursor.patCount(), tr.anvil[0].count, tr.anvil[1])
 		}
@@ -65,7 +65,7 @@ func TestSmithingFlow(t *testing.T) {
 		if res.item != int32(itemByName["netherite_sword"]) || res.dmg != 7 || res.enchLvl(1) != 3 {
 			t.Errorf("transform: %+v", res)
 		}
-		h.takeSmithResult(h.playersRef, tr)
+		h.takeSmithResult(h.playersRef, tr, 0)
 		if tr.cursor.item != res.item || tr.extraSlot.item != 0 || tr.anvil[0].item != 0 || tr.anvil[1].item != 0 {
 			t.Errorf("take consumption: %+v %+v %+v", tr.extraSlot, tr.anvil[0], tr.anvil[1])
 		}
