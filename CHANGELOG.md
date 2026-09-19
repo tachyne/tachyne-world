@@ -13,6 +13,32 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-19
 
+### Added
+- **Minecraft Java 26.3 clients are served.** 26.3 (released 2026-09-15,
+  protocol 777) joins through the 26.2 gateway, which now accepts 776–777,
+  with the ingress routing it there. It is a real translation step, not a
+  re-use of 26.2's ids: three clientbound packets and one configuration
+  packet were inserted (a hundred-odd ids shift), the arm swing became a
+  payload-free "punch", most block-state, item, entity, particle and item
+  component ids renumbered, and the login and respawn spawn info, entity
+  moves, position syncs, particles, animations, sign updates and teleport
+  confirms changed shape. The shared library carries the step (packet ids
+  from the server's own packet report, the 26.3 tag set and its three newly
+  synced registries, body rewriters for every changed layout); a server
+  list ping from a served version is now answered with that version.
+- **A full vanilla-parity audit, and a scorecard.** Every unit of vanilla's
+  server-side surface — block behaviour hooks, block entities and menus,
+  items and their components, the entity roster, every mob's AI, recipes,
+  loot, advancements, statistics, tags, game rules, enchantments, effects,
+  attributes, damage types, brewing, villagers, world systems, worldgen,
+  player mechanics, commands, chat and the protocol — was enumerated
+  mechanically and graded against the engine as it is today. The summary
+  lives in `docs/PARITY.md` (rewritten from the 2026-07 plan into the
+  scorecard); the per-unit ledgers stay outside the repo. Headline: of
+  about 2,300 gradeable units, roughly half match one-for-one, a third
+  exist with a deviation, and a sixth are absent — with most of the
+  deviations traceable to a dozen cross-cutting defects listed there.
+
 ### Fixed
 - **Hordes of cows near spawn.** Every restart used to seed three small
   "herds" of cows around the origin for something to see on join, and since

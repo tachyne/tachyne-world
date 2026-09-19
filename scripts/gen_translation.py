@@ -27,7 +27,7 @@ CANON = "1.21.11"  # engine content is 1.21.11 (proto 774); wire LAYOUT stays 77
 # ID↔name dumps (used to derive our own delta tables, not their code).
 TARGETS = {
     770: ("1.21.5", "md"), 771: ("1.21.6", "md"), 772: ("1.21.8", "md"),
-    773: ("1.21.9", "md"), 775: ("26.1", "via"), 776: ("26.2", "via"),
+    773: ("1.21.9", "md"), 775: ("26.1", "via"), 776: ("26.2", "via"), 777: ("26.3", "via"),
     # 774 = 1.21.11 = canonical id version → identity, no table.
 }
 VIA = "https://raw.githubusercontent.com/ViaVersion/Mappings/main/mappings/mapping-{}.json"

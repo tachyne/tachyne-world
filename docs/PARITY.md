@@ -1,127 +1,83 @@
-# Road to parity — how tachyne reaches Java-server behaviour
+# Vanilla parity — where tachyne stands (scorecard, 2026-09-19)
 
-A from-scratch server "on par with the Java variants" is a multi-year effort if
-taken literally. This doc is the strategy that makes it *tractable*: turn "all the
-rules of Minecraft" into **generated data + a small set of engine subsystems**, and
-grow it in **client-verifiable vertical slices**, the way the project already runs.
+The goal is one-for-one behavioural parity with vanilla Java (the engine's canonical
+content version is 1.21.11; the reference behaviour is 26.2) *before* anything that is not
+vanilla is added. This page is the scorecard: every unit of vanilla's server-side surface,
+enumerated mechanically (registries, data files, and the behaviour hooks each class
+overrides), graded against the engine as it stands today. It replaces the 2026-07 plan
+that used to live here; the per-unit ledgers with file-and-line evidence are kept outside
+the repository and refreshed the same way (re-enumerate, re-grade, diff).
 
-Read this alongside `CLAUDE.md` (status + conventions) and `docs/MECHANICS.md`
-(vanilla-vs-ours tuning). This is the *plan*; those are the *state*.
+**Grades.** OK — matches vanilla in normal play. PARTIAL — exists, but a rule, branch or
+value differs (the row says which). MISSING — not implemented. N-A — 26.2-only content,
+command-block/creative-only constructs, or client-side only.
 
-> **Post-refactor note (2026-07-07):** file references to `internal/protocol`
-> and `play.go` in the checklists below predate the domain-events refactor —
-> the wire layer now lives in `tachyne-common` (`protocol/` + `render770/`)
-> and chunk streaming is the attach protocol (`internal/attach` +
-> gateway-side rendering). The subsystem statuses themselves are unaffected:
-> parity is a property of the GAME engine, which is exactly what this repo
-> still is.
+## Totals
 
-## The core reframe
+| Dimension | Units | OK | PARTIAL | MISSING | N-A | OK share | OK+PARTIAL |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Block behaviour hooks A (random tick, scheduled tick, neighbour change, use, place, entity inside, comparator read) | 297 | 138 | 119 | 27 | 13 | 49% | 90% |
+| Block behaviour hooks B (signals, projectile hit, removal, step/fall, survival, drops, explosions, placement state, shape updates) | 412 | 214 | 141 | 49 | 8 | 53% | 88% |
+| Block entities (49) and menus (25) | 75 | 37 | 29 | 0 | 9 | 56% | 100% |
+| Item behaviours and item components | 103 | 57 | 28 | 6 | 12 | 63% | 93% |
+| Entity roster (attributes, spawn rules, drops, sounds, signature mechanics) | 157 | 36 | 112 | 1 | 8 | 24% | 99% |
+| Monster AI (goal lists) | 46 | 2 | 41 | 2 | 1 | 4% | 96% |
+| Creature, villager and golem AI (goals and brains) | 48 | 2 | 40 | 5 | 1 | 4% | 89% |
+| Recipes, loot tables, advancements, statistics, tags | 162 | 81 | 44 | 37 | 0 | 50% | 77% |
+| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 286 | 113 | 63 | 16 | 62% | 86% |
+| World systems and worldgen | 279 | 124 | 88 | 60 | 7 | 46% | 78% |
+| Player mechanics, commands, chat/social, protocol coverage | 356 | 130 | 54 | 150 | 22 | 39% | 55% |
+| **All** | **2413** | **1107** | **809** | **400** | **97** | **48%** | **83%** |
 
-Mojang's server is mostly **data interpreted by a dozen engine loops**: registries,
-tags, loot tables, recipes, worldgen JSON, block/entity definitions — all read by
-block-behaviour dispatch, an entity/AI system, physics, worldgen, etc. Parity is
-therefore *not* one giant codebase to hand-write; it is:
+Of 2316 gradeable units, 1107 (48%) are one-for-one with vanilla today, 809 (35%) exist with a
+deviation, and 400 (17%) are absent. The PARTIAL column is where the work is, and most of it
+traces back to a dozen cross-cutting defects; fixing each moves many rows at once.
 
-1. **Generate everything generable.** Every rule expressible as a table pulled from
-   minecraft-data / mcmeta is a rule we don't hand-write or hand-maintain across
-   versions (and it keeps the multi-version translation seam viable). This is the
-   established `scripts/gen_*.py -> *_gen.go` pattern — widen it.
-2. **Hand-write the ~12 engine loops** that interpret that data.
-3. **Land each subsystem as a vertical slice** a real client can see working — not
-   "architecturally complete." Every hard bug so far was caught by a real client;
-   keep that loop.
+## Cross-cutting defects
 
-## Parity target: behavioural, not bug-for-bug
+1. **Overworld hard-wiring.** Block use, redstone, comparators, lecterns, tripwires, plates and detector rails read and write the overworld whatever dimension the player is in; redstone does not work in the Nether or the End, and a scheduled update at Nether coordinates can write overworld blocks (a correctness bug, first in the queue).
+2. **Support loss reacts only to a player's edit.** Pistons, explosions, fluids, falling blocks, mobs and worldgen leave torches, rails, plants and signs floating.
+3. **Menus trust the client.** Slot layouts are vanilla's, but server-side slot rules, quick-move and result-taking are not vanilla's click logic; shift-click never quick-moves.
+4. **Mob AI defaults.** No idle head tracking, no per-species stroll speeds, no alerting of kin when hurt, no non-player targets (golems, villagers, turtles, axolotls, squid), no preference for dark ground — five defaults that mark most mobs PARTIAL on top of their own missing goals.
+5. **The off-hand is dead.** The engine's use-item event carries no hand, so a shield in the off-hand never raises.
+6. **Status-effect icons never render**, because the effect packet's flags are fixed; ambient and infinite effects cannot be expressed.
+7. **A stack holds at most four enchantments**, so a normal end-game sword cannot exist.
+8. **Commands are a word splitter**: 34 verbs of vanilla's 95, no selectors, no relative coordinates, no `/execute`, no `/data`.
+9. **Seven loot functions are dropped when the tables are baked** (treasure maps are blank paper, chest gear is always pristine, bee nests, pots and spawners lose their data).
+10. **Eleven species are silent, every mob's eye height is a flat fraction of its hitbox, there are no step sounds, and babies drop nothing.**
+11. **Seed parity is out of reach by construction**: terrain is a 2-D heightmap with hand-tuned noise, not vanilla's noise router, so no seed reproduces vanilla's terrain, biomes, structures or ores. That is a decision (vanilla-feeling vs vanilla-identical worldgen), not a backlog item.
 
-Aim for **behavioural parity** — a player can't tell the difference in normal play.
-Do **not** chase *identical* internals (same seed→same worldgen output, same
-redstone sub-tick quirks): that often needs vanilla internals we can't legally
-copy (ViaVersion/Mojang code is read for *facts*, never copied — see CLAUDE.md), and
-the effort is disproportionate to the payoff. Where we deliberately diverge, record
-it in `docs/MECHANICS.md`.
+## What is strong
 
-**Prioritise by what players and (goal #4) LLM NPCs actually touch.** The
-differentiator doesn't need full parity — it needs a believable-enough world. Let
-that steer the order, not a completionist checklist.
+Weather, explosions (rays, exposure, damage), fluids, redstone components, the natural spawner (biome data, caps, local caps, spawn costs), 85 of 92 entity loot tables and 1,078 of 1,083 block loot tables baked from the data, every shaped/shapeless/stonecutting/cooking/smithing recipe, all enchantment data, all brewing recipes and potions, the damage-type tables, gossip/restock/demand, the signal getter, the removal dispatch, connections and placement of fences/walls/stairs/rails/signs, trial spawners and vaults, beacons, bells, shelves, crafters, jukeboxes, sculk sensors, the template-based structures, and the signature mechanics of nearly every mob (creeper charge, enderman teleport and carry, slime split, shulker peek, guardian beam, bee sting and pollen, turtle eggs, frog eating, sniffer digging, armadillo roll, camel dash, breeze wind, bogged shearing, creaking heart, copper golem oxidation, nautilus dash).
 
-## Subsystems (dependency order)
+## Work queue (top of each dimension's list, by player impact)
 
-Legend: ✅ built · 🟡 partial · ⬜ not started
+1. Support loss on every block change, not only a player's edits
+2. Dimension-correct block use, redstone and comparators; the Nether-writes-overworld scheduled-update bug
+3. Explosion drops through the real loot tables; flaming arrows prime TNT and light campfires
+4. Wall torches; lever, button and grindstone attach faces; hanging lanterns; hopper facing from the clicked face; double slabs and the other count-cycling placements
+5. Iron doors and trapdoors not openable by hand; door sounds; the twelve missing button kinds and ten plate kinds; hoppers collecting items under a chest
+6. Redstone timing: sub-delay repeater pulses, the lamp's four-tick hold, crafter scheduling, plate and rail hold, lightning-rod power
+7. Anvil material repair and book-on-book merging; grindstone curse-keeping, durability merge and XP; a persistent enchanting seed and bookshelf air gaps
+8. Decorated pots (one item per insert, sherds, persistence); brewing-stand feedback and persistence; per-item stack caps in hoppers and comparators; a generic spawner block entity
+9. The hand on use-item (off-hand, shields); serialising the components the engine already models (potions, stews, instruments, shulker contents, bottles, repair cost)
+10. Fireworks: stars and fades, flight duration, explosions
+11. Voices for the eleven silent species; per-type eye heights; ambient cadence and step sounds; babies' drops and XP
+12. Monster goals: zombie village pathing and targeting, drowned water goals, the spider light rule, skeleton weapon reassessment, enderman stare and teleport, ghast and phantom flight, the raider base goals, wither phases
+13. Creature brains: villager trading look/follow, POI acquisition and play; frog spawn; per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
+14. Loot functions (exploration map, copy components, set damage); advancement predicate fidelity; per-recipe smelting XP
+15. Effect HUD flags; trading XP; the mason's trade pool; the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour
+16. Aquifers, springs, lava lakes, ore blobs, ravines and the ground-cover features; dust propagation within the tick; sky light through translucent blocks
+17. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; a real command parser; titles, tab list and boss-bar styles
 
-### Foundation
-- ✅ **Wire protocol + framing + translation seam** (`internal/protocol`, 770 core,
-  chained translation to 776).
-- ✅ **Registries / tags / persistence** (`registries_gen.go`, world edit overlay,
-  FileStore). 🟡 tag *contents* for 26.x still empty — see `tachyne-26x-tags-plan`.
-- ✅ **Chunk streaming + sky/block lighting** (`play.go`, `world/light.go`).
-- ✅ **Central 20-TPS tick loop**, single-writer world (`hub.go`).
+## Versions
 
-### Simulation core — where "the rules" live
-- 🟡 **Block-behaviour dispatch** — THE big one. Give each block typed hooks:
-  `onPlace / onNeighborUpdate / randomTick / onEntityCollide / getCollisionShape /
-  onBreak`. Redstone, farming/growth, fluids, fire spread, gravity, pistons, doors,
-  and collision shapes (the fence rule belongs here long-term) all become behaviours
-  keyed off block state. Today this is scattered: `sim.go` (falling/fluids), `grow.go`,
-  `interaction.go` orientation, `worldgen.IsTallCollision`. **Next architectural
-  step: a real block-behaviour registry** so these stop being special-cases.
-- 🟡 **Entity system** — AI goal selector, **pathfinding (A\* over a walkability
-  graph — the correct long-term home for the fence rule)**, attributes, mob effects,
-  spawn rules, despawning. Today: wander/herd/flee + **hostile hunt/attack with
-  night-spawn + daylight burn** (`mob.go`, `behavior.go`, `hostile.go`); steering is
-  still straight-line, not true pathfinding.
-- ⬜ **Collision / movement physics** — real per-entity AABB step; eventually
-  server-authoritative *player* movement (needed for anti-cheat + honest survival).
-- 🟡 **Combat / damage / health / hunger / status effects** — `combat.go`,
-  `survival.go`: health, hunger/saturation/exhaustion, regen, fall/void/**drown/lava/
-  cactus** damage, death + **inventory drop-on-death**, respawn, eating, mob combat +
-  loot, **hostile mobs (zombies) that hunt + bite players, night-spawn, and burn at
-  dawn** (`hostile.go`) all done. Remaining: status effects, armor reduction, XP,
-  fire/suffocation, player knockback, mob pathfinding.
-- 🟡 **Inventory / crafting / recipes / loot / containers** — `inventory.go`,
-  `loot_gen.go`, `crafting.go`, `recipebook.go`, `furnace.go`: server-side
-  container clicks, generated recipe tables (1.5k), 2x2 + crafting-table 3x3,
-  recipe book with click-to-fill, weapon damage, **furnace smelting (generated
-  recipes + fuels, lit state, progress bars)**, **ore veins in worldgen**.
-  Remaining: chest UIs, durability, furnace persistence, XP.
-- ⬜ **Worldgen parity** — structures, exact biome placement, features, carvers,
-  ore distribution. Hardest to match *exactly*; behavioural parity (looks/plays right)
-  is the goal, not seed-identical output.
+The engine's content is canonical 1.21.11; clients on 1.21.5–1.21.8, 26.2 and 26.3 are served through the translation chain (26.3 since 2026-09-19). Moving canonical to 26.2 was sized alongside this audit: it is a content move (most block-state and item ids renumber, forty generated tables regenerate, the translation direction flips for older clients) with one unconfirmed dependency in the Bedrock gateway's block map; it is independent of serving 26.3 and is deferred until that dependency is confirmed.
 
-### Content layers (data-heavy, low-risk once the engines exist)
-- ⬜ Full mob roster + per-mob AI, items/tools/durability, enchantments (needs Update
-  Tags — partly unblocked now), potions/brewing, villagers/trading, the Nether/End
-  dimensions, weather, mobs' drops/XP.
+## Method, kept
 
-### Cross-cutting
-- ⬜ **Online-mode auth + encryption** (offline today; compression done).
-- ✅ **Multi-version translation** — the answer to "support new clients," not
-  re-targeting the core.
-- ⬜ **Bedrock frontend** via gophertunnel (goal #2).
-- 🟡 **Extensibility** — message bus (`bus.go`) built; behaviour packs pending.
-
-## Working method (keep doing this)
-
-- **Vertical slices, client-verified.** Each subsystem lands as "you can see it in a
-  real client," per the testing loop in `CLAUDE.md`.
-- **Generate, don't hand-maintain.** Prefer a `gen_*.py` table over hand-written
-  rules whenever minecraft-data/mcmeta carries the fact.
-- **Conformance tests as the definition of "done."** Capture each behaviour as a Go
-  test (e.g. `TestMobPennedByFence`) so parity is *measured*, not vibes. This suite
-  becomes the running scorecard.
-- **Respect the module boundaries** (`worldgen`/`world` stay wire-agnostic; only
-  `server` touches the wire) — it's what keeps dual-edition + translation viable.
-
-## Suggested next few slices (subject to the user's priorities)
-
-1. **Survival mechanics** — mostly done (health, hunger, fall/void/drown/lava/cactus
-   damage, death-drops, eating). Remaining depth: status effects, armor, XP, fire.
-2. **Block-behaviour registry** — refactor the scattered block special-cases
-   (sim/grow/collision) behind one dispatch, so future rules are additive.
-3. **Entity A\* pathfinding** — replace the toy wander; the fence rule then falls out
-   of the walkability graph instead of a movement-gate clause.
-4. **26.x real tag contents** — see `tachyne-26x-tags-plan`; restores client-side
-   mining/fire/food for translated clients.
-5. **Recipes + container UIs** — crafting table, chest, furnace.
-
-None of these is the whole ocean; each is a slice you can float and verify.
+- Enumerate from the reference, never from memory; cross-check registry counts against the data-generator reports.
+- Grade both sides read, never a name grep; a name that exists proves nothing.
+- Re-run the enumeration on a new reference version and the diff is the version bump's work list.
+- Conformance tests are the definition of done for every row that moves.

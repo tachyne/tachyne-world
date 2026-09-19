@@ -72,7 +72,7 @@ detailed inventory follows in [What works today](#what-works-today).
 | Raids | 🟡 | Killing a pillager-patrol captain grants Bad Omen; carrying it into a village converts it to Raid Omen — vanilla's thirty-second fuse — and the raid starts when that runs out. Vanilla's wave tables and per-difficulty wave counts (3/5/7), all five raider types with their mounted riders, and the raid boss bar; winning grants Hero of the Village (40 min), which discounts villager trades. Vanilla's per-difficulty bonus spawns pad the waves, a Raid Omen above level one brings the bonus wave and a stronger Hero of the Village, villagers ring the village bell while the raid is on (lighting the raiders up) and, once it is won, walk up to the heroes and throw them gifts from their profession's tables, and a raid in progress survives a restart with its raiders. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
-Multi-version is a headline feature: **Java 1.21.5–1.21.8 and 26.2** clients
+Multi-version is a headline feature: **Java 1.21.5–1.21.8, 26.2 and 26.3** clients
 share one world (1.21.9–26.1 are currently rejected at login), and **Bedrock**
 (latest release) joins through its own gateway — survival HUD, every
 container and workstation screen (crafting, furnaces, anvil, enchanting,
@@ -89,7 +89,7 @@ domain events over the **attach protocol** (`-attach :25500`); per-protocol
 **gateway pods** terminate real clients, render events into canonical **1.21.5
 (770)** wire via the shared `tachyne-common/render770` package, and apply a
 translation chain for newer clients. Deployed today: 1.21.5–1.21.8 clients via
-`tachyne-gw-java-770`, 26.2 (776) via `tachyne-gw-java-776`, both behind the
+`tachyne-gw-java-770`, 26.2 and 26.3 (776–777) via `tachyne-gw-java-776`, both behind the
 version-routing `tachyne-ingress` front door. See `docs/DOMAIN-EVENTS.md`
 (the architecture and how it got this way) and `docs/SHARDING.md` (the
 multi-pod plan).
