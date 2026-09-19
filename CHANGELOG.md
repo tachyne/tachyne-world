@@ -111,6 +111,17 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Mobs have footsteps.** Every walking mob was silent underfoot. They
+  now play vanilla's step sounds at vanilla's cadence (one every 1.67
+  blocks walked): the block's own sound type at step volume — stone,
+  wood, grass, sand, snow, wool and the hundred-odd others, from the full
+  per-block table — with a carpet, snow layer or the sprouts and roots a
+  mob wades through playing over a muffled copy of the block beneath, and
+  powder snow, lily pads and petals playing alone. Fifty species carry
+  their own footfall (cows, pigs, sheep, wolves, the zombie and skeleton
+  families, piglins, a warden's thud, a camel's sand step, a strider's
+  lava step, a baby turtle's shamble); fliers and fish make none, and a
+  mob moving through water splashes instead.
 - **Eleven species found their voices, mobs look from vanilla's eye
   height, and baby monsters drop their loot.** Husks, drowned (with their
   underwater voice), strays, endermen, witches, blazes, slimes and magma

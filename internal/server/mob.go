@@ -403,6 +403,8 @@ type mob struct {
 	leash      int32    // eid holding this mob's lead (player or knot); 0 = free
 	leashPos   blockPos // the fence knot's block, when the holder is one (persisted)
 	sx, sy, sz float64  // last broadcast position (for delta moves)
+	moveDist   float32  // Entity.moveDist: 0.6 × distance walked, for footsteps
+	nextStep   float32  // Entity.nextStep: the moveDist at which the next footstep plays (0 = fresh: 1)
 }
 
 // spawnMob creates a server-controlled entity and shows it to nearby players.
@@ -847,6 +849,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// event carries the absolute position; each viewer's renderer derives
 		// its own relative deltas.
 		if m.x != m.sx || m.y != m.sy || m.z != m.sz {
+			h.mobFootsteps(players, m, m.x-m.sx, m.y-m.sy, m.z-m.sz)
 			// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
 			// gameEvent), throttled like a player's; fliers make none.
 			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && m.dim == dimOverworld && h.tick.Load() >= h.sculkStep[m.eid] {
