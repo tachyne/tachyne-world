@@ -79,6 +79,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 		h.consumeHeld(t)
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
+	h.vibAt(st.dim, freqEntityPlace, st.x, st.y, st.z, t.p.eid)
 	h.playSound(players, "minecraft:entity.armor_stand.place", sndBlock, st.x, st.y, st.z, 0.75, 0.8)
 }
 

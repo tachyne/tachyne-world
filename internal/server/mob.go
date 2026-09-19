@@ -843,6 +843,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// event carries the absolute position; each viewer's renderer derives
 		// its own relative deltas.
 		if m.x != m.sx || m.y != m.sy || m.z != m.sz {
+			// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
+			// gameEvent), throttled like a player's; fliers make none.
+			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && m.dim == dimOverworld && h.tick.Load() >= h.sculkStep[m.eid] {
+				h.sculkStep[m.eid] = h.tick.Load() + 3
+				h.vibAt(m.dim, freqStep, m.x, m.y, m.z, m.eid)
+			}
 			m.sx, m.sy, m.sz = m.x, m.y, m.z
 			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}

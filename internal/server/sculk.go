@@ -616,3 +616,9 @@ func veinStateForFaces(faces int) uint32 {
 	}
 	return off
 }
+
+// flyerSpecies reports a species that moves on the wing (no footsteps).
+func flyerSpecies(etype int) bool {
+	d := speciesTable[etype]
+	return d != nil && (d.arch == archFlyer || d.arch == archFlyerHostile)
+}

@@ -383,6 +383,7 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 			m.vx, m.vz, m.kb, m.reroute = (t.x-m.x)*0.1*s, (t.z-m.z)*0.1*s, 3, 0
 			h.mobKnockVelocity(players, m)
 		}
+		h.toNearbyEv(players, b.dim, b.x, b.z, entityStatus(b.eid, entityStatusReelIn)) // FISHING_ROD_REEL_IN
 		wear = 5
 	case b.nibble > 0:
 		st, isFish := h.rollFishingLoot(t, b)

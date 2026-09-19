@@ -200,6 +200,7 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 	if !ok || !h.spawnVehicleAt(players, t.dim, etype, e.x, e.y, e.z) {
 		return
 	}
+	h.vib(t.dim, freqEntityPlace, e.x, e.y, e.z, t.p.eid) // ENTITY_PLACE
 	if t.gamemode == gmSurvival && t.inv != nil && e.slot >= 0 && e.slot < 9 {
 		if sl := &t.inv.slots[e.slot]; sl.count > 0 {
 			sl.count--
@@ -218,6 +219,7 @@ func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	}
 	v.rider = t.p.eid
 	t.ridingEID = v.eid
+	h.vibAt(v.dim, freqMount, v.x, v.y, v.z, t.p.eid)
 	h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid, v.rider))
 }
 
@@ -229,6 +231,7 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 		}
 		v.rider = 0
 		t.ridingEID = 0
+		h.vibAt(v.dim, freqDismount, v.x, v.y, v.z, t.p.eid)
 		h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
 		t.x, t.y, t.z = v.x+0.9, v.y+0.6, v.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))

@@ -187,6 +187,11 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		if m.etype == entityVillager {
 			h.villagerGossipTick(players, m)
 			h.villagerJobTick(players, m) // workstations: validate the held one, look for a free one
+			// Villager.customServerAiStep: one tick in a hundred inside an active
+			// raid, the sweat particles (VILLAGER_SWEAT) — this step is 20 ticks.
+			if h.rng.Intn(5) == 0 && h.raidNear(m.dim, m.x, m.z) {
+				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerSwt))
+			}
 		}
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {

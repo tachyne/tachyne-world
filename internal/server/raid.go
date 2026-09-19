@@ -302,3 +302,18 @@ func (h *hub) raidOmenExpired(players map[int32]*tracked, t *tracked) {
 	t.raidOmenSet = false
 	h.startRaidLevel(players, t.raidOmenPos, max(1, t.hasEffect(effRaidOmen))) // hasEffect = amplifier+1 = the omen level
 }
+
+// raidNear reports whether an active raid's village is within vanilla's
+// raid reach (Raids.getNearbyRaid: 96 blocks) of a point.
+func (h *hub) raidNear(dim int, x, z float64) bool {
+	if dim != dimOverworld {
+		return false
+	}
+	for c := range h.raids {
+		dx, dz := float64(c.x)-x, float64(c.z)-z
+		if dx*dx+dz*dz <= 96*96 {
+			return true
+		}
+	}
+	return false
+}

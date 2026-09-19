@@ -127,6 +127,7 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 		h.nextWin = 1
 	}
 	t.winID, t.winPos, t.winKind = h.nextWin, pos, winFurnace
+	h.vib(pos.dim, freqContainerOpen, pos.x, pos.y, pos.z, t.p.eid)
 	f.viewer = t.p.eid
 	f.lastBars = [4]int{-1, -1, -1, -1} // force a full bar sync to the new window
 

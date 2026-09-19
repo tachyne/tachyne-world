@@ -11,6 +11,15 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-19
+
+### Added
+- **More of vanilla's vibrations and cues.** Sculk sensors now hear mobs
+  walking (throttled like footsteps; nothing on the wing), a boat, minecart
+  or armour stand set down, a furnace opened, and a player mounting or
+  leaving a boat or cart. A villager inside a raid sweats now and then, and
+  reeling a hooked mob in shows the rod's tug, both as vanilla's cues.
+
 ## 2026-09-18
 
 ### Added

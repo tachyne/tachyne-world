@@ -162,3 +162,38 @@ func TestMechanicsRaiseVibrations(t *testing.T) {
 		t.Fatalf("a placed block should be heard at 13, got %d", f)
 	}
 }
+
+// A mob walking past a sensor is heard as STEP (throttled like a player's
+// footsteps); a flier makes no footstep.
+func TestMobFootstepsAreVibrations(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(x, y, z, sensor)
+	pos := blockPos{x, y, z}
+	walk := func(m *mob) (steps int) {
+		m.vx, m.kb = 0.25, 3 // a shove carries it: no steering in the way
+		for i := 0; i < 8; i++ {
+			h.tick.Add(1)
+			h.updateMobs(players)
+			if v, ok := h.sculkVib[pos]; ok && v.src == m.eid {
+				if v.freq != freqStep {
+					t.Fatalf("heard at %d, want STEP (1)", v.freq)
+				}
+				steps++
+				delete(h.sculkVib, pos)
+			}
+			m.vx, m.kb = 0.25, 3
+		}
+		return steps
+	}
+	cow := h.spawnMob(players, entityCow, float64(x)+3.5, float64(y), float64(z)+0.5)
+	if n := walk(cow); n < 1 || n > 3 {
+		t.Fatalf("a cow shoved past the sensor should be heard once every three ticks: %d", n)
+	}
+	h.removeMob(players, cow)
+	bat := h.spawnMob(players, entityBat, float64(x)+3.5, float64(y)+2, float64(z)+0.5)
+	if n := walk(bat); n != 0 {
+		t.Fatalf("a bat in flight makes no footstep: %d", n)
+	}
+}
