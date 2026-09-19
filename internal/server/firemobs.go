@@ -68,7 +68,7 @@ func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
 			}
 			if m.ghastCharge == ghastChargeFire {
 				ux, uy, uz := aimAt(m.x, m.y+2, m.z, t.x, t.y+0.5, t.z)
-				a := h.launchProjectileIn(players, entityLargeFireball, m.dim, m.x+ux*4, m.y+2, m.z+uz*4, ux, uy, uz)
+				a := h.launchProjectileIn(players, entityLargeFireball, m.dim, m.x+ux*4, m.y+2, m.z+uz*4, ux*hurtingSpeed, uy*hurtingSpeed, uz*hurtingSpeed)
 				a.shooter, a.dmg, a.explode, a.fire = m.eid, 6, 1, true
 				h.playSoundDim(players, m.dim, "minecraft:entity.ghast.shoot", sndHostile, m.x, m.y, m.z, 3, 1)
 				m.ghastCharge = ghastChargeRest
@@ -137,7 +137,7 @@ func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
 			return
 		}
 		h.toDimEv(players, m.dim, attachproto.WorldFX{Event: worldEventBlazeShoot, X: int(math.Floor(m.x)), Y: int(math.Floor(m.y)), Z: int(math.Floor(m.z))})
-		v := 0.9
+		v := hurtingSpeed
 		a := h.launchProjectileIn(players, entitySmallFireball, m.dim, m.x, m.y+1.4, m.z, vx/l*v, dy/l*v, vz/l*v)
 		a.shooter, a.dmg, a.fire = m.eid, blazeFireballDmg, true
 		h.playSoundDim(players, m.dim, "minecraft:entity.blaze.shoot", sndHostile, m.x, m.y, m.z, 1, 1)

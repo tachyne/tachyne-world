@@ -178,7 +178,7 @@ func (h *hub) launchDragonFireball(players map[int32]*tracked, m *mob, t *tracke
 	if d < 1e-6 {
 		return
 	}
-	const v = 0.7
+	const v = hurtingSpeed
 	a := h.launchProjectileIn(players, entityDragonFireball, 2, m.x, m.y+0.5, m.z,
 		dx/d*v, dy/d*v, dz/d*v)
 	a.shooter, a.dmg, a.breaks, a.breath = m.eid, 0, true, true

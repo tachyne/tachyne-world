@@ -156,6 +156,27 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	return a
 }
 
+// hurtingSpeed is AbstractHurtingProjectile's launch speed: the direction
+// scaled by its acceleration power, from which it works up to 1.9 a tick.
+const hurtingSpeed = 0.1
+
+// hurtingMotion is AbstractHurtingProjectile.applyInertia's constants for
+// the self-propelled projectiles (fireballs, wither skulls, dragon
+// fireballs): the push along the flight each tick and the inertia it is
+// then scaled by, 0.8 in water. A wind charge coasts (no push, inertia 1).
+func hurtingMotion(a *arrowEntity, water bool) (accel, inertia float64, ok bool) {
+	switch a.etype {
+	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
+		if water {
+			return hurtingSpeed, 0.8, true
+		}
+		return hurtingSpeed, 0.95, true
+	case entityWindCharge:
+		return 0, 1, true
+	}
+	return 0, 0, false
+}
+
 // retrieveProjectile restores a stuck projectile to a survival player's
 // inventory: a thrown trident hands back its exact stack (enchantments intact),
 // everything else hands back a plain arrow.
@@ -220,11 +241,20 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 		}
 
-		// Sample the step at its midpoint and endpoint: at 1.6 blocks/tick a
-		// single endpoint test can pass clean through a one-block wall.
+		// Sample the step every half block along the tick's move (at least
+		// its midpoint and endpoint): a single endpoint test at 1.6
+		// blocks/tick can pass clean through a one-block wall, and a bow's
+		// 3-a-tick arrow through a player. Samples measure from where the
+		// tick began, so the move is exactly one velocity a tick.
 		hit := false
-		for _, f := range [2]float64{0.5, 1.0} {
-			px, py, pz := a.x+a.vx*f, a.y+a.vy*f, a.z+a.vz*f
+		bx, by, bz := a.x, a.y, a.z
+		n := 2
+		if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); sp > 1 {
+			n = int(math.Ceil(sp / 0.5))
+		}
+		for i := 1; i <= n; i++ {
+			f := float64(i) / float64(n)
+			px, py, pz := bx+a.vx*f, by+a.vy*f, bz+a.vz*f
 			if h.arrowHitsPlayer(players, a, px, py, pz) ||
 				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) {
 				hit = true
@@ -284,7 +314,16 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
 			continue
 		}
-		if !a.stuck && a.homing == 0 { // homing bullets steer themselves, no gravity/drag
+		if accel, inertia, ok := hurtingMotion(a, h.inWater(a.dim, a.x, a.y, a.z)); ok {
+			if !a.stuck { // AbstractHurtingProjectile.applyInertia: self-propelled, no gravity
+				if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); sp > 1e-9 {
+					a.vx += a.vx / sp * accel
+					a.vy += a.vy / sp * accel
+					a.vz += a.vz / sp * accel
+				}
+				a.vx, a.vy, a.vz = a.vx*inertia, a.vy*inertia, a.vz*inertia
+			}
+		} else if !a.stuck && a.homing == 0 { // homing bullets steer themselves, no gravity/drag
 			a.vy -= arrowGravity
 			a.vx, a.vy, a.vz = a.vx*arrowDrag, a.vy*arrowDrag, a.vz*arrowDrag
 		}

@@ -110,7 +110,7 @@ func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
 		return
 	}
 	ux, uy, uz := aimAt(m.x, m.y+2, m.z, t.x, t.y+0.5, t.z)
-	v := 1.2
+	v := hurtingSpeed
 	a := h.launchProjectileIn(players, entityWitherSkull, m.dim, m.x, m.y+2, m.z, ux*v, uy*v, uz*v)
 	a.shooter, a.dmg, a.wither, a.breaks = m.eid, 8, 10, true
 	h.playSoundDim(players, m.dim, "minecraft:entity.wither.shoot", sndHostile, m.x, m.y, m.z, 2, 1)

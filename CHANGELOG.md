@@ -65,6 +65,16 @@ the public history since the project was open-sourced on 2026-07-10.
   the captain dies, not only from a melee blow, and an ordinary pillager
   drops nothing but that, as vanilla's does (it dropped arrows, and every
   pillager an ominous bottle).
+- **Fireballs fly as vanilla's fly.** A ghast's or blaze's fireball, a
+  wither skull and the dragon's fireball are self-propelled now: they leave
+  slowly, push along their flight every tick and settle toward vanilla's
+  top speed on a level line, never dropping like an arrow (a ghast's shot
+  reaches you at range instead of falling short), and slow in water; a
+  wind charge coasts. Every projectile also moves exactly one velocity a
+  tick now — the path sampling had been advancing them half again as far,
+  so arrows and everything thrown flew fifty percent faster than their
+  speed said — and the path is sampled every half block, so a fast arrow
+  cannot pass through a player between samples.
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.
