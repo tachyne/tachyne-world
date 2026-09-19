@@ -244,13 +244,22 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
 	case isLamp(state):
+		// RedstoneLampBlock: lights at once, goes dark a scheduled 4 ticks
+		// after the power leaves (and stays lit if it comes back first).
 		want := h.inputPower(x, y, z, false) > 0
-		if (state == lampOn) != want {
-			ns := uint32(lampOff)
-			if want {
-				ns = lampOn
+		now := h.tick.Load()
+		due, pending := h.rsDue[pos]
+		switch {
+		case want && state == lampOff:
+			h.rsSet(players, pos, lampOn)
+		case !want && state == lampOn && !pending:
+			h.rsDue[pos] = now + 4
+			h.rsSchedule(pos, 4)
+		case pending && now >= due:
+			delete(h.rsDue, pos)
+			if !want && state == lampOn {
+				h.rsSet(players, pos, lampOff)
 			}
-			h.rsSet(players, pos, ns)
 		}
 	case isButton(state) && boolProp(state, "powered"):
 		// Scheduled unpress: only past the press window (neighbor updates land

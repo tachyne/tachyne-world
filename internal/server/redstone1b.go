@@ -41,6 +41,10 @@ var (
 	daylightMax = worldgen.BlockBase("daylight_detector") + 31
 )
 
+// platePressedTicks is BasePressurePlateBlock.getPressedTime and the
+// detector rail's: the release check runs this long after the last press.
+const platePressedTicks = 20
+
 func isRepeater(s uint32) bool   { return s >= repeaterMin && s <= repeaterMax }
 func isComparator(s uint32) bool { return s >= comparatorMin && s <= comparatorMax }
 func isObserver(s uint32) bool   { return s >= observerMin && s <= observerMax }
@@ -107,26 +111,39 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 		h.rsSet(players, pos, state)
 	}
 	if boolProp(state, "locked") {
-		delete(h.rsDue, pos) // frozen: cancel any pending flip, hold current output
+		delete(h.rsDue, pos) // frozen: a pending tick fires into nothing (DiodeBlock.tick returns)
 		return
 	}
 	in := h.diodeInputSignal(pos, state) > 0 // DiodeBlock.shouldTurnOn
 	cur := boolProp(state, "powered")
-	if in == cur {
-		delete(h.rsDue, pos) // input settled back before the flip landed
-		return
-	}
 	now := h.tick.Load()
-	due, pendingFlip := h.rsDue[pos]
-	if !pendingFlip {
-		h.rsDue[pos] = now + uint64(repeaterDelay(state))
-		h.rsSchedule(pos, uint64(repeaterDelay(state)))
+	delay := uint64(repeaterDelay(state))
+	if due, pending := h.rsDue[pos]; pending {
+		if now < due {
+			return // a neighbour update while a tick is pending: one tick per position (LevelTicks dedup)
+		}
+		// The scheduled tick (DiodeBlock.tick): an input that went away
+		// before the tick still turns the output on, and a second tick then
+		// turns it off — a pulse shorter than the delay comes out the
+		// delay long, never lost.
+		delete(h.rsDue, pos)
+		switch {
+		case cur && !in:
+			h.rsSet(players, pos, setBoolProp(state, "powered", false))
+			h.scheduleSignalAround(pos)
+		case !cur:
+			h.rsSet(players, pos, setBoolProp(state, "powered", true))
+			h.scheduleSignalAround(pos)
+			if !in {
+				h.rsDue[pos] = now + delay
+				h.rsSchedule(pos, delay)
+			}
+		}
 		return
 	}
-	if now >= due {
-		delete(h.rsDue, pos)
-		h.rsSet(players, pos, setBoolProp(state, "powered", in))
-		h.scheduleSignalAround(pos)
+	if in != cur { // DiodeBlock.checkTickOnNeighbor
+		h.rsDue[pos] = now + delay
+		h.rsSchedule(pos, delay)
 	}
 }
 
@@ -317,13 +334,15 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 			}
 			h.rsSet(players, pos, ns)
 			h.scheduleSignalAround(pos)
-			h.platesOn[pos] = true
+			h.platesOn[pos] = h.tick.Load()
 		} else if platePower(s) > 0 {
-			h.platesOn[pos] = true
+			h.platesOn[pos] = h.tick.Load()
 		}
 	}
-	for pos := range h.platesOn {
-		if occupied[pos] > 0 {
+	for pos, last := range h.platesOn {
+		// BasePressurePlateBlock.checkPressed schedules the release check
+		// getPressedTime (20) ticks after the last thing stood here.
+		if occupied[pos] > 0 || h.tick.Load() < last+platePressedTicks {
 			continue
 		}
 		delete(h.platesOn, pos)

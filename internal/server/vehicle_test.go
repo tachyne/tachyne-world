@@ -118,7 +118,9 @@ func TestDetectorRailPressesUnderCart(t *testing.T) {
 	}
 	h.breakVehicle(players, firstVehicle(h))
 	h.updateVehicles(players)
-	stepTicks(h, players, 20)
+	stepTicks(h, players, 20) // the rail releases 20 ticks after the cart last sat on it …
+	h.updateVehicles(players)
+	stepTicks(h, players, 8) // … and the lamp goes dark 4 after that
 	if railPowered(h.world.At(x, y, z)) || h.world.At(x+1, y, z) != lampOff {
 		t.Fatal("detector should release when the cart goes")
 	}

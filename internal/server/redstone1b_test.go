@@ -166,7 +166,9 @@ func TestPlatePressAndRelease(t *testing.T) {
 	}
 	pl.x += 3 // step off
 	h.updatePlates(players)
-	stepTicks(h, players, 20)
+	stepTicks(h, players, 20) // the plate releases 20 ticks after the last press check …
+	h.updatePlates(players)
+	stepTicks(h, players, 8) // … and the lamp goes dark 4 after that
 	if w.At(x, y, z) != stonePlateOff || w.At(x+1, y, z) != lampOff {
 		t.Fatalf("plate must release when empty: plate=%d lamp=%d", w.At(x, y, z), w.At(x+1, y, z))
 	}

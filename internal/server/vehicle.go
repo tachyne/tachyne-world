@@ -327,13 +327,17 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 					s := h.rsWorld().At(pos.x, pos.y, pos.z)
 					h.rsSet(players, pos, railWith(s, railShape(s), true))
 					h.scheduleAroundIn(h.rsDim, pos, 1)
-					h.detectorsOn[simPos{v.dim, pos}] = true
+					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
+				} else {
+					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
 				}
 			}
 		})
 	}
-	for sp := range h.detectorsOn {
-		if occupied[sp] {
+	for sp, last := range h.detectorsOn {
+		// DetectorRailBlock.checkPressed: the release check runs 20 ticks
+		// after a cart last sat on the rail.
+		if occupied[sp] || h.tick.Load() < last+platePressedTicks {
 			continue
 		}
 		delete(h.detectorsOn, sp)

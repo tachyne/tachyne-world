@@ -111,6 +111,14 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Redstone timing: repeaters keep short pulses, lamps hold four ticks,
+  plates and detector rails hold twenty.** A pulse shorter than a
+  repeater's delay was dropped (the pending flip was cancelled); vanilla's
+  diode tick still fires, so the output comes out one delay long. A
+  redstone lamp now goes dark a scheduled four ticks after its power
+  leaves (and stays lit if it returns first) instead of at once. Pressure
+  plates and detector rails release twenty ticks after the last thing
+  stood on them, as vanilla's pressed time has it.
 - **Every button and pressure plate works, doors sound like doors, iron
   doors need redstone.** Only the stone and oak button and the stone, oak
   and weighted plates were live; the other twelve buttons and eleven

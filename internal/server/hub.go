@@ -525,7 +525,7 @@ type hub struct {
 	obsPulse  map[blockPos]uint64 // observer pulse start ticks
 	obsSeen   map[blockPos]uint32 // observer last-seen watched state
 	compOut   map[blockPos]int    // comparator output levels (vanilla block entity)
-	platesOn  map[blockPos]bool   // currently pressed pressure plates
+	platesOn  map[blockPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
 	wiresOn   map[simPos]bool     // currently pressed tripwire strings, by dimension
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
@@ -563,7 +563,7 @@ type hub struct {
 	shelfLast       map[simPos]int            // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
 	woodShelves     map[simPos]*[3]invStack   // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView       *shelfStore               // the chunk builders' mutex'd read view of the shelves
-	detectorsOn     map[simPos]bool           // detector rails currently pressed, by dimension
+	detectorsOn     map[simPos]uint64         // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
 	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
 	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
 	raids           map[blockPos]*raid        // active village raids by centre
@@ -717,7 +717,7 @@ func newHub(w *world.World) *hub {
 		obsPulse:      map[blockPos]uint64{},
 		obsSeen:       map[blockPos]uint32{},
 		compOut:       map[blockPos]int{},
-		platesOn:      map[blockPos]bool{},
+		platesOn:      map[blockPos]uint64{},
 		wiresOn:       map[simPos]bool{},
 		fireAge:       map[blockPos]int{},
 		sculkList:     map[blockPos]bool{},
@@ -750,7 +750,7 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:   map[simPos]bool{},
+		detectorsOn:   map[simPos]uint64{},
 		spawnerNext:   map[blockPos]uint64{},
 		raids:         map[blockPos]*raid{},
 		brewProg:      map[simPos]int{},
