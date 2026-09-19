@@ -500,6 +500,9 @@ func (h *hub) craftResult(grid []invStack, w int) (invStack, int) {
 	if res, ok := stewCraftMatch(grid); ok {
 		return res, mapCraftNone
 	}
+	if res, kind, ok := h.specialCraftMatch(grid, w); ok {
+		return res, kind
+	}
 	item, count := matchRecipe(grid, w)
 	return invStack{item: item, count: count}, mapCraftNone
 }

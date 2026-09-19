@@ -20,6 +20,16 @@ the public history since the project was open-sourced on 2026-07-10.
   leaving a boat or cart, and a player stepping into water (a splash,
   never a sneaking one). A villager inside a raid sweats now and then, and
   reeling a hooked mob in shows the rod's tug, both as vanilla's cues.
+- **The special crafting recipes.** Six of vanilla's dynamic recipes now
+  work in the crafting grid: two damaged tools or armour pieces combine
+  into one (both remainders plus five percent, curses kept, every other
+  enchantment lost), a lingering potion ringed by eight arrows tips them,
+  a shulker box or bundle and a dye recolour it with its contents, a
+  patterned banner and a blank one make a copy (the patterned one stays),
+  paper and one to three gunpowder make three rockets, and a written book
+  with book-and-quills makes copies a generation up (the original stays,
+  a copy of a copy is final). Armour dyeing, suspicious stew and the map
+  recipes already worked.
 - **universal_anger.** With the rule on, a provoked neutral mob holds its
   grudge against everyone nearby rather than the one who struck it, and a
   death buys no forgiveness, as vanilla's rule does.

@@ -676,6 +676,12 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 		src := h.maps.get(res.mapID)
 		res.mapID = h.maps.derive(src, src.Scale+1, false).ID
 	}
+	if kind == craftBookClone { // the copies are born at take time, a generation up
+		if b, ok := h.books.get(res.bookID); ok {
+			b.Gen++
+			res.bookID = h.books.create(b)
+		}
+	}
 	item, count := res.item, res.count
 	{ // RecipeCraftedTrigger (ResultSlot.onTake): the recipe by its result, with what went in
 		var ings []int32
@@ -710,10 +716,15 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 	}
 
 	for i := range grid {
-		if grid[i].item != 0 && grid[i].count > 0 {
-			if grid[i].count--; grid[i].count == 0 {
-				grid[i].item = 0
-			}
+		if grid[i].item == 0 || grid[i].count <= 0 {
+			continue
+		}
+		// getRemainingItems: the patterned banner and the written book stay.
+		if (kind == craftKeepPattern && grid[i].pats[0].patPlus1 != 0) || (kind == craftBookClone && grid[i].bookID != 0) {
+			continue
+		}
+		if grid[i].count--; grid[i].count == 0 {
+			grid[i].item = 0
 		}
 	}
 	for i := range grid { // resync the consumed grid
