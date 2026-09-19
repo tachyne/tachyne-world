@@ -152,6 +152,15 @@ func (h *hub) spawnExempt(m *mob) bool {
 		m.etype == entitySnowGolem || m.etype == entityWanderingTrader
 }
 
+// countsTowardCaps is NaturalSpawner.createState's census filter: a mob
+// counts against its category unless persistence is required of it (a
+// name tag, picked-up gear, a tame) or it requires custom persistence (a
+// lead, a seat, a bucket, a raid, an enderman's block); the MISC-category
+// kinds (villagers, golems, traders, the dragon) never count.
+func (h *hub) countsTowardCaps(m *mob) bool {
+	return !h.spawnExempt(m) && !m.named() && !m.persistent && !h.requiresCustomPersistence(m)
+}
+
 // naturalSpawn runs every tick — the port of NaturalSpawner.spawnForChunk
 // over the spawnable-chunk set of every dimension with a player in it (the
 // union of those players' view windows), one position attempt per chunk.
@@ -213,7 +222,7 @@ func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 
 	var counts [catCount]int
 	for _, m := range h.mobs {
-		if m.dim != dim || m.dying > 0 || h.spawnExempt(m) {
+		if m.dim != dim || m.dying > 0 || !h.countsTowardCaps(m) {
 			continue
 		}
 		counts[mobSpawnCategory(m)]++

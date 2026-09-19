@@ -33,7 +33,7 @@ func (h *hub) buildLocalCaps(players map[int32]*tracked, dim int) {
 	}
 	st.counts = make([][catCount]int, len(st.players))
 	for _, m := range h.mobs {
-		if m.dim != dim || m.dying > 0 || h.spawnExempt(m) {
+		if m.dim != dim || m.dying > 0 || !h.countsTowardCaps(m) {
 			continue
 		}
 		cat := mobSpawnCategory(m)
@@ -94,7 +94,7 @@ func (h *hub) buildSpawnPotential(dim int) {
 	h.spawnCharges = h.spawnCharges[:0]
 	w := h.worldFor(dim)
 	for _, m := range h.mobs {
-		if m.dim != dim || m.dying > 0 {
+		if m.dim != dim || m.dying > 0 || !h.countsTowardCaps(m) {
 			continue
 		}
 		if c, ok := spawnCostFor(w.BiomeAt3D(int(m.x), int(m.y), int(m.z)), m.etype); ok {

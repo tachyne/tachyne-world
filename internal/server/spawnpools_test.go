@@ -61,6 +61,8 @@ func TestLocalMobCap(t *testing.T) {
 	for i := 0; i < categoryCap[catCreature]; i++ {
 		h.spawnMob(players, entityCow, float64(i*3)+0.5, 180, 20.5)
 	}
+	named := h.spawnMob(players, entityCow, 40.5, 180, 20.5)
+	named.customName = "Bessie" // persistence required: outside the census
 	h.buildLocalCaps(players, 0)
 	if h.localCapAllows(catCreature, [2]int32{1, 1}) {
 		t.Fatal("the first player's chunks are at the creature cap")

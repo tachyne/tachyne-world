@@ -48,7 +48,9 @@ the public history since the project was open-sourced on 2026-07-10.
   after the first; none for wolves, foxes, axolotls or parrots); creatures
   may spawn at any distance inside the spawn ring; the jungle's ocelot
   spawns by its own two-in-three rule though it sits in the monster pool;
-  the axolotl category's despawn distance is vanilla's 128, not 64.
+  the axolotl category's despawn distance is vanilla's 128, not 64; and
+  the census behind the caps skips what vanilla's skips — named, tamed,
+  leashed, riding and gear-carrying mobs do not count against them.
 - **The Nether and the End spawn as vanilla's do.** The Nether's old pass
   (a species rolled on a ring around each player under a flat cap of
   fourteen) and the End's absence of natural spawns are replaced by the
