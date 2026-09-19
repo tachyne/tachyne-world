@@ -69,6 +69,7 @@ type mob struct {
 	hitByPlayer     bool     // a player has hit it — its death pays XP (vanilla rule)
 	lastAttacker    int32    // eid of the last entity that hurt it (plugin death event)
 	lastDT          dmgType  // the last damage type it took (the killing blow's, for loot conditions)
+	lastDirect      int      // entity type of the projectile that struck the last blow (0 = none)
 	looting         int      // killer's Looting level (stamped per hit, used at drop time)
 	baby            bool     // ageable: half-size, grows up, no drops/XP
 	growLeft        int      // ticks until a baby matures
@@ -1030,7 +1031,7 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
 	}
-	m.lastDT = dt // what the loot tables ask of the killing blow (damage_source_properties)
+	m.lastDT, m.lastDirect = dt, 0 // what the loot tables ask of the killing blow (damage_source_properties)
 	// A creaking with a standing heart cannot be hurt: the blow goes to the
 	// heart instead. Recorded rather than acted on, because this is the mob's
 	// own arithmetic with no hub in reach — the hub answers for it next tick.

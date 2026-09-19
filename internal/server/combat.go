@@ -364,9 +364,6 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		h.villagerHurtBy(players, m, t, m.health <= 0) // VILLAGER_HURT / VILLAGER_KILLED gossip
 	}
 	if m.health <= 0 {
-		if m.patrolCaptain { // a slain raid captain drops its ominous bottle (1.21: no curse on the killer)
-			h.dropOminousBottle(players, m)
-		}
 		h.killMob(players, m)
 		if t != nil {
 			h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
@@ -411,6 +408,9 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	}
 	m.dying = deathAnimTicks
 	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies
+	if m.patrolCaptain {          // entities/pillager: a raid captain's death drops its ominous bottle, however it died
+		h.dropOminousBottle(players, m)
+	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
 	if _, death, _ := h.mobSoundsFor(m); death != "" {
 		h.playSound(players, death, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
@@ -504,6 +504,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			// when one is baked; else the legacy mobLoot roll.
 			if ds, ok := h.evalEntityLoot(int32(m.etype), lootCtx{
 				looting: m.looting, killedByPlayer: m.hitByPlayer, onFire: m.burning,
+				direct: advEntityName[m.lastDirect], source: h.blowSourceName(players, m), dt: m.lastDT,
 				rng: h.rng.Intn, randf: h.rng.Float64}); ok {
 				if m.etype == entitySheep && m.sheared {
 					ds = nil // no wool off a sheared sheep (handled outside the table)

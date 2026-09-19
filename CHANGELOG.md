@@ -54,6 +54,17 @@ the public history since the project was open-sourced on 2026-07-10.
   scrapes or unwaxes it as before), and a lone piece of redstone dust
   toggles between its cross and a dot, the dot staying put until something
   connects to it, as vanilla's does.
+- **Return to Sender.** A swing at a ghast's fireball or a wind charge no
+  longer passes through it: the projectile turns along your look as your
+  own shot, with vanilla's no-damage swing sound. A ghast killed by its
+  returned fireball counts as your kill by a fireball, which is what its
+  Tears music disc and the Return to Sender advancement ask for. Loot
+  tables can now ask what struck the killing blow (the damage type's tags,
+  the projectile, who was behind it), so the ghast's and turtle's vanilla
+  tables run as written. A raid captain's ominous bottle now drops however
+  the captain dies, not only from a melee blow, and an ordinary pillager
+  drops nothing but that, as vanilla's does (it dropped arrows, and every
+  pillager an ominous bottle).
 - **Dispensers sound their launch.** A projectile leaving a dispenser
   (arrows, eggs, snowballs, fire charges, bottles, potions, wind charges)
   plays vanilla's launch sound instead of the plain dispense click.

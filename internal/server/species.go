@@ -298,7 +298,7 @@ var speciesTable = map[int]*speciesDef{
 	entityRavager: {name: "ravager", health: 100, speed: 0.30, damage: 12, follow: 32,
 		arch: archHostile, kbResist: 0.75, xp: 20, drops: []specDrop{{item: "saddle", min: 1}}},
 	entityPillager: {name: "pillager", health: 24, speed: 0.35, follow: 32,
-		arch: archRanged, held: "crossbow", drops: []specDrop{{item: "arrow", rnd: 2}}},
+		arch: archRanged, held: "crossbow"}, // entities/pillager: only a captain's bottle
 	entityVindicator: {name: "vindicator", health: 24, speed: 0.35, damage: 5, follow: 12,
 		arch: archHostile, held: "iron_axe", // ATTACK_DAMAGE base 5 (source)
 		drops: []specDrop{{item: "emerald", rnd: 1}}},

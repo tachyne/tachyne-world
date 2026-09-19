@@ -1689,6 +1689,10 @@ func (h *hub) run() {
 					h.hitFrame(players, players[e.attacker], f)
 					break
 				}
+				if a := h.arrows[e.target]; a != nil {
+					h.deflectProjectile(players, players[e.attacker], a)
+					break
+				}
 				if v := h.vehicles[e.target]; v != nil {
 					h.breakVehicle(players, v)
 				} else if !h.attackPlayer(players, e.attacker, e.target) {

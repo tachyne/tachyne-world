@@ -41,6 +41,10 @@ type lootCond struct {
 	Tag     string            `json:"tag"`
 	Term    *lootCond         `json:"term"`
 	Terms   []lootCond        `json:"terms"`
+	// damage-source conditions (the killing blow)
+	Direct  string          `json:"direct"`   // direct_entity type (the projectile that landed)
+	Source  string          `json:"source"`   // source_entity type (who is behind it)
+	DmgTags map[string]bool `json:"dmg_tags"` // damage type tags, each with its expected value
 	// entity conditions
 	Who        string  `json:"who"`
 	OnFire     bool    `json:"on_fire"`
@@ -157,7 +161,10 @@ type lootCtx struct {
 	// Entity-death context (unused for block loot).
 	looting        int
 	killedByPlayer bool
-	onFire         bool // the dying mob burned to death → cooked-meat smelt
+	onFire         bool    // the dying mob burned to death → cooked-meat smelt
+	direct         string  // entity type name of the projectile that struck the killing blow ("" = none)
+	source         string  // entity type name of who dealt the killing blow ("" = none)
+	dt             dmgType // the killing blow's damage type (its tags)
 
 	// Chest-loot context (unused for block/entity loot): luck shifts
 	// weighted-entry selection. Chest contents here are DETERMINISTIC per
@@ -319,6 +326,14 @@ func (c *lootCtx) applyFn(f *lootFn, count int) int {
 	return count
 }
 
+// dmgTagByName maps the damage type tags the entity tables ask about.
+var dmgTagByName = map[string]dmgTag{
+	"is_lightning":  tagIsLightning,
+	"is_projectile": tagIsProjectile,
+	"is_fire":       tagIsFire,
+	"is_explosion":  tagIsExplosion,
+}
+
 func hasSmelt(fns []lootFn) bool {
 	for i := range fns {
 		if fns[i].F == "smelt" {
@@ -379,6 +394,20 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 		return false
 	case "killed_by_player":
 		return c.killedByPlayer
+	case "dmgsrc": // DamageSourceCondition: the killing blow's tags, direct and source entities
+		for name, want := range cd.DmgTags {
+			flag, ok := dmgTagByName[name]
+			if !ok || c.dt.has(flag) != want {
+				return false
+			}
+		}
+		if cd.Direct != "" && c.direct != cd.Direct {
+			return false
+		}
+		if cd.Source != "" && c.source != cd.Source {
+			return false
+		}
+		return true
 	case "ench_chance":
 		lvl := 0
 		if cd.Ench == "looting" {

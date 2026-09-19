@@ -87,9 +87,27 @@ def cond(c):
         flags = pred.get("flags", {})
         if "is_on_fire" in flags:
             out["on_fire"] = bool(flags["is_on_fire"])
+        if "type_specific" in pred:
+            raise Unsupported("entity_properties type_specific")
         ty = pred.get("type")
         if isinstance(ty, str):
             out["etype"] = ty.removeprefix("minecraft:")
+        return out
+    if t == "damage_source_properties":
+        pred = c.get("predicate", {})
+        out = {"c": "dmgsrc"}
+        tags = {}
+        for tg in pred.get("tags", []):
+            tags[tg["id"].removeprefix("minecraft:")] = bool(tg["expected"])
+        if tags:
+            out["dmg_tags"] = tags
+        for key, field in (("direct_entity", "direct"), ("source_entity", "source")):
+            ent = pred.get(key)
+            if ent is None:
+                continue
+            if set(ent) != {"type"} or not isinstance(ent["type"], str) or ent["type"].startswith("#"):
+                raise Unsupported("damage_source_properties " + key)
+            out[field] = ent["type"].removeprefix("minecraft:")
         return out
     if t == "inverted":
         return {"c": "not", "term": cond(c["term"])}

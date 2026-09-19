@@ -447,6 +447,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				m.lastAttacker = a.shooter // a mob's arrow counts as its blow (the creeper's disc)
 			}
 			m.hurtKind(float64(dmg), projectileDamageOf(a))
+			m.lastDirect = a.etype // the blow's direct entity (the ghast's disc asks for its own fireball)
 			if a.playerShot {
 				if s := players[a.shooter]; s != nil {
 					h.advance(players, s, "player_hurt_entity", advMatch{damageDirect: advEntityName[a.etype],
