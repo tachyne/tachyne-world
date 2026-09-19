@@ -151,7 +151,14 @@ the public history since the project was open-sourced on 2026-07-10.
   take the first look-order face something actually holds — a second
   vine placed onto a vine joins it with a new face instead of replacing
   it, and a face nothing holds is never placed, so no more half-in-air
-  vines. Cocoa faces its log.
+  vines. Cocoa faces its log. Levers, buttons and grindstones pick floor,
+  ceiling or wall the same way (a lever on the floor faces the way you
+  face). A hopper's spout points into the block it was placed against,
+  or down from a floor. And the same item stacks into its own block as
+  vanilla's does: a slab clicked on its open half (or placed into a cell
+  already holding one) becomes a double slab, candles, sea pickles and
+  turtle eggs count up to four (not while sneaking), snow piles a layer
+  when clicked from the top.
 - **Flowing water washes out what vanilla's does.** Water and lava used
   to stop at any block that was not air or grass, so a crop, torch, dust
   line or carpet dammed a stream. Flowing fluid now enters any cell whose

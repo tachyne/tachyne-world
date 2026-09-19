@@ -2,6 +2,7 @@ package server
 
 import (
 	"math"
+	"strconv"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -257,6 +258,125 @@ func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, yaw,
 		if multifaceCanAttach(w, pos, d, vine) {
 			return worldgen.SetProperty(info, state, f.prop, "true"), true
 		}
+	}
+	return 0, false
+}
+
+// faceAttachedState is FaceAttachedHorizontalDirectionalBlock.getStateForPlacement
+// (levers, buttons, grindstones): the first look-order direction whose
+// attachment holds — floor or ceiling with the block facing the way the
+// player faces, or a wall with the block facing away from it.
+func faceAttachedState(w *world.World, pos blockPos, def uint32, yaw, pitch float32) (uint32, bool) {
+	info, ok := worldgen.InfoForState(def)
+	if !ok {
+		return 0, false
+	}
+	for _, d := range lookOrder(yaw, pitch) {
+		var st uint32
+		switch d {
+		case 0:
+			st = worldgen.SetProperty(info, worldgen.SetProperty(info, def, "face", "floor"), "facing", playerFacing(yaw))
+		case 1:
+			st = worldgen.SetProperty(info, worldgen.SetProperty(info, def, "face", "ceiling"), "facing", playerFacing(yaw))
+		default:
+			st = worldgen.SetProperty(info, worldgen.SetProperty(info, def, "face", "wall"), "facing", faceName(oppositeDir(d)))
+		}
+		if supported(w, pos, st) {
+			return st, true
+		}
+	}
+	return 0, false
+}
+
+// isFaceAttached reports a block placed by its "face" property (levers,
+// buttons, grindstones).
+func isFaceAttached(def uint32) bool {
+	info, ok := worldgen.InfoForState(def)
+	return ok && info.HasProperty("face") && info.HasProperty("facing")
+}
+
+// hopperFacing is HopperBlock.getStateForPlacement: the spout points into
+// the clicked block, or down when placed on a floor or ceiling.
+func hopperFacing(dir int32) string {
+	if dir < 2 {
+		return "down"
+	}
+	return faceName(oppositeDir(dir))
+}
+
+// stackProperty names the counted property a block of the held item's kind
+// stacks into (candles, sea pickles, turtle eggs, snow layers), with its cap.
+func stackProperty(info worldgen.BlockInfo) (string, int) {
+	for _, p := range []struct {
+		name string
+		max  int
+	}{{"candles", 4}, {"pickles", 4}, {"eggs", 4}, {"layers", 8}} {
+		if info.HasProperty(p.name) {
+			return p.name, p.max
+		}
+	}
+	return "", 0
+}
+
+// isSlab reports a slab state (type + waterlogged, no facing).
+func isSlab(info worldgen.BlockInfo) bool {
+	return info.HasProperty("type") && info.HasProperty("waterlogged") && !info.HasProperty("facing")
+}
+
+// blockReplaceableBy is the per-block canBeReplaced override that lets the
+// held item's own block stack into a standing one: a slab doubles when the
+// click lands on its open half, candles, sea pickles and turtle eggs count
+// up (not while sneaking), snow piles a layer (from the top when clicked).
+// `clicked` says the target IS the clicked block (replacingClickedOnBlock).
+func blockReplaceableBy(target, def uint32, dir int32, cursorY float32, clicked, sneaking bool) bool {
+	if !sameBlockFamily(target, def) {
+		return false
+	}
+	info, ok := worldgen.InfoForState(target)
+	if !ok {
+		return false
+	}
+	if isSlab(info) {
+		switch worldgen.GetProperty(info, target, "type") {
+		case "double":
+			return false
+		case "bottom":
+			return !clicked || dir == 1 || (cursorY > 0.5 && dir >= 2)
+		default:
+			return !clicked || dir == 0 || (cursorY <= 0.5 && dir >= 2)
+		}
+	}
+	if name, max := stackProperty(info); name != "" {
+		n := atoi(worldgen.GetProperty(info, target, name))
+		if n >= max {
+			return false
+		}
+		if name == "layers" {
+			return !clicked || dir == 1
+		}
+		return !sneaking
+	}
+	return false
+}
+
+// stackedState is the state a held item's block leaves when it stacks into
+// the standing one: a double slab (never waterlogged), or one more candle,
+// pickle, egg or layer.
+func stackedState(target uint32) (uint32, bool) {
+	info, ok := worldgen.InfoForState(target)
+	if !ok {
+		return 0, false
+	}
+	if isSlab(info) {
+		st := worldgen.SetProperty(info, target, "type", "double")
+		return worldgen.SetProperty(info, st, "waterlogged", "false"), true
+	}
+	if name, max := stackProperty(info); name != "" {
+		n := atoi(worldgen.GetProperty(info, target, name))
+		if n >= max {
+			return 0, false
+		}
+		return worldgen.SetProperty(info, target, name, strconv.Itoa(n+1)), true
 	}
 	return 0, false
 }

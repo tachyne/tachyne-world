@@ -210,10 +210,20 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz
+	heldBlock, heldIsBlock := protocol.BlockForItem(p.heldItem())
+	if alias, isAlias := placeAlias[p.heldItem()]; isAlias {
+		heldBlock, heldIsBlock = alias, true
+	}
+	replacingClicked := false
 	if cs := s.worldFor(p).Block(x, y, z); worldgen.IsReplaceable(cs) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
 		tx, ty, tz = x, y, z // vanilla replacingClickedOnBlock: fill the clicked cell (grass, snow, fluids)
-	} else if hb, ok := protocol.BlockForItem(p.heldItem()); ok && isMultiface(hb) && sameBlockFamily(cs, hb) && !multifaceFull(cs) {
+		replacingClicked = true
+	} else if heldIsBlock && isMultiface(heldBlock) && sameBlockFamily(cs, heldBlock) && !multifaceFull(cs) {
 		tx, ty, tz = x, y, z // MultifaceBlock.canBeReplaced: the same item joins a block with a free face
+		replacingClicked = true
+	} else if heldIsBlock && blockReplaceableBy(cs, heldBlock, dir, cursorY, true, p.sneaking) {
+		tx, ty, tz = x, y, z // the same item stacks into the clicked block (slab → double, one more candle/pickle/egg/layer)
+		replacingClicked = true
 	}
 
 	if int32(p.heldItem()) == itemArmorStand { // spawn the stand at the target cell
@@ -319,7 +329,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	if ts := s.worldFor(p).Block(tx, ty, tz); !worldgen.IsReplaceable(ts) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) &&
-		!(isMultiface(defState) && sameBlockFamily(ts, defState) && !multifaceFull(ts)) { // the same multiface item joins a block with a free face
+		!(isMultiface(defState) && sameBlockFamily(ts, defState) && !multifaceFull(ts)) && // the same multiface item joins a block with a free face
+		!blockReplaceableBy(ts, defState, dir, cursorY, replacingClicked, p.sneaking) { // or stacks into it
 		// vanilla BlockItem.canPlace: never overwrite an occupied cell (a
 		// candle placed at a stair's open half must not eat the stair);
 		// fluids stay replaceable — building into the ocean must keep working
@@ -381,12 +392,16 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		var state uint32
 		lookPlaced := true
 		switch wallDef, isStandingWall := standingWallVariant[defState]; {
+		case !isMultiface(defState) && blockReplaceableBy(target, defState, dir, cursorY, replacingClicked, p.sneaking):
+			state, lookPlaced = stackedState(target) // one more slab half, candle, pickle, egg or layer
 		case isStandingWall: // torches, coral fans: floor or wall by the look order
 			state, lookPlaced = standingOrWallState(s.worldFor(p), blockPos{tx, ty, tz}, defState, wallDef, p.yaw, p.pitch)
 		case isHangable(defState): // lanterns: hang from a ceiling or stand on a floor
 			state, lookPlaced = hangableState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
 		case isCocoa(defState): // cocoa: faces its jungle log
 			state, lookPlaced = cocoaState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+		case isFaceAttached(defState): // levers, buttons, grindstones: floor, ceiling or wall by the look order
+			state, lookPlaced = faceAttachedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
 		case isMultiface(defState): // vines, lichen, sculk veins, resin: a face that something holds
 			state, lookPlaced = multifacePlacement(s.worldFor(p), blockPos{tx, ty, tz}, defState, target, p.yaw, p.pitch)
 		default:
@@ -894,6 +909,10 @@ func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, cl
 		case "half": // stairs, trapdoors
 			state = worldgen.SetProperty(info, state, "half", topOrBottom(dir, cursorY))
 		case "facing":
+			if isHopper(defaultState) { // HopperBlock: the spout points into the clicked block, or down
+				state = worldgen.SetProperty(info, state, "facing", hopperFacing(dir))
+				break
+			}
 			if isRodState(defaultState) {
 				// Rods point out of the clicked face (vanilla RodBlock); an end
 				// rod placed on the tip of a same-facing end rod extends it
