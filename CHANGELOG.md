@@ -111,6 +111,17 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Eleven species found their voices, mobs look from vanilla's eye
+  height, and baby monsters drop their loot.** Husks, drowned (with their
+  underwater voice), strays, endermen, witches, blazes, slimes and magma
+  cubes (small ones squeak), zombified piglins, iron golems and villagers
+  were silent when hurt or killed. Every mob's eyes sat at 0.85 of its
+  height; the vanilla per-type table is in (an enderman looks from 2.55,
+  a villager from 1.62, a baby from half its adult's), which moves line
+  of sight, drowning and every ranged mob's aim. Babies of the monster
+  classes — baby zombies, piglins, zoglins — drop loot and pay experience
+  as vanilla's do; baby animals still drop nothing, a baby hoglin pays
+  experience only.
 - **Chest loot keeps its potions, names, horns, stews, ominous levels
   and treasure maps.** Six loot functions were dropped when the chest
   tables were baked, so an ancient city's strong regeneration was a water
