@@ -81,6 +81,28 @@ func mobSounds(etype int) (hurt, death, ambient string) {
 		return "minecraft:entity.pig.hurt", "minecraft:entity.pig.death", "minecraft:entity.pig.ambient"
 	case entitySheep:
 		return "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death", "minecraft:entity.sheep.ambient"
+	case entityHusk:
+		return "minecraft:entity.husk.hurt", "minecraft:entity.husk.death", "minecraft:entity.husk.ambient"
+	case entityDrowned:
+		return "minecraft:entity.drowned.hurt", "minecraft:entity.drowned.death", "minecraft:entity.drowned.ambient"
+	case entityStray:
+		return "minecraft:entity.stray.hurt", "minecraft:entity.stray.death", "minecraft:entity.stray.ambient"
+	case entityEnderman:
+		return "minecraft:entity.enderman.hurt", "minecraft:entity.enderman.death", "minecraft:entity.enderman.ambient"
+	case entityWitch:
+		return "minecraft:entity.witch.hurt", "minecraft:entity.witch.death", "minecraft:entity.witch.ambient"
+	case entityBlaze:
+		return "minecraft:entity.blaze.hurt", "minecraft:entity.blaze.death", "minecraft:entity.blaze.ambient"
+	case entitySlime: // no ambient: a slime's voice is its squish on landing
+		return "minecraft:entity.slime.hurt", "minecraft:entity.slime.death", ""
+	case entityMagmaCube:
+		return "minecraft:entity.magma_cube.hurt", "minecraft:entity.magma_cube.death", ""
+	case entityZombifiedPiglin:
+		return "minecraft:entity.zombified_piglin.hurt", "minecraft:entity.zombified_piglin.death", "minecraft:entity.zombified_piglin.ambient"
+	case entityIronGolem: // IronGolem: no ambient sound
+		return "minecraft:entity.iron_golem.hurt", "minecraft:entity.iron_golem.death", ""
+	case entityVillager:
+		return "minecraft:entity.villager.hurt", "minecraft:entity.villager.death", "minecraft:entity.villager.ambient"
 	}
 	// Roster species: derive the sound-event names from the registry name (or a
 	// borrowed voice). The client silently ignores any name it doesn't know, so
@@ -106,6 +128,14 @@ func mobSounds(etype int) (hurt, death, ambient string) {
 func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 	hurt, death, ambient = mobSounds(m.etype)
 	switch m.etype {
+	case entityDrowned: // Drowned: its own voice under water
+		if h.inWater(m.dim, m.x, m.y, m.z) {
+			hurt, death, ambient = "minecraft:entity.drowned.hurt_water", "minecraft:entity.drowned.death_water", "minecraft:entity.drowned.ambient_water"
+		}
+	case entitySlime, entityMagmaCube: // AbstractCubeMob: the small size has its own voice
+		if m.size == 1 {
+			hurt, death = hurt+"_small", death+"_small"
+		}
 	case entityCreaking:
 		hurt = "minecraft:entity.creaking.sway" // Creaking.getHurtSound
 	case entityTurtle:

@@ -499,7 +499,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			if m.etype == entityMagmaCube {
 				drops = append(drops, plugin.ItemStack{Item: froglightFor(int32(m.frogEaten - 1)), Count: 1})
 			}
-		} else if !m.baby { // babies drop nothing (vanilla)
+		} else if loot, _ := deathDropsAllowed(m); loot { // LivingEntity.shouldDropLoot
 			// Data-driven entity table (looting, killed-by-player, cooked-on-fire)
 			// when one is baked; else the legacy mobLoot roll.
 			if ds, ok := h.evalEntityLoot(int32(m.etype), lootCtx{
@@ -527,7 +527,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		}
 	}
 	xp := 0
-	if m.hitByPlayer && !m.baby { // burn/blast/baby deaths pay nothing
+	if _, pays := deathDropsAllowed(m); m.hitByPlayer && pays { // burn/blast deaths pay nothing
 		xp = xpForMob(m, h.rng.Intn)
 	}
 	if plugin.Has[*plugin.MobDeathEvent](h.plugins) {
@@ -689,4 +689,22 @@ func attackPeriod(item int32) int {
 		return 5
 	}
 	return 5 // bare hand
+}
+
+// deathDropsAllowed is LivingEntity.shouldDropLoot / shouldDropExperience:
+// a baby drops no loot and pays no experience — except that every Monster
+// (the zombie family, piglins, zoglins) drops and pays whatever its age, a
+// baby hoglin pays experience without loot, and a tadpole pays none.
+func deathDropsAllowed(m *mob) (loot, xp bool) {
+	switch {
+	case m.etype == entityTadpole:
+		return !m.baby, false
+	case m.etype == entityHoglin:
+		return !m.baby, true
+	case !m.baby:
+		return true, true
+	case m.hostile, m.etype == entityPiglin, m.etype == entityZombifiedPiglin, m.etype == entityZoglin:
+		return true, true // Monster overrides both
+	}
+	return false, false
 }

@@ -114,4 +114,3 @@ func (h *hub) snowGolemShoot(players map[int32]*tracked, m *mob, t *mob) {
 }
 
 // mobEyeHeight is roughly the mob's eye level above its feet.
-func mobEyeHeight(m *mob) float64 { return m.box().h * 0.85 }
