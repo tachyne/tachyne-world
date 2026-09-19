@@ -29,6 +29,7 @@ const (
 	freqHitGround       = 2
 	freqProjectileShoot = 3
 	freqInstrumentPlay  = 3
+	freqEntityAction    = 4
 	freqElytraGlide     = 4
 	freqDismount        = 5
 	freqShear           = 6

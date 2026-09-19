@@ -21,9 +21,13 @@ var breedFoodNames = map[string][]string{
 		"cod", "cooked_cod", "salmon", "cooked_salmon", "tropical_fish", "pufferfish", "rabbit_stew"},
 	// The horse family's love foods; wheat/sugar/apple/hay only heal and
 	// grow (horseMeals). Mules never fall in love.
-	"horse":       {"golden_carrot", "golden_apple", "enchanted_golden_apple"},
-	"donkey":      {"golden_carrot", "golden_apple", "enchanted_golden_apple"},
-	"axolotl":     {"tropical_fish_bucket"},
+	"horse":   {"golden_carrot", "golden_apple", "enchanted_golden_apple"},
+	"donkey":  {"golden_carrot", "golden_apple", "enchanted_golden_apple"},
+	"axolotl": {"tropical_fish_bucket"},
+	// #nautilus_food: #fishes and the fish buckets (a tamed adult's meals and
+	// love foods; a baby's growth; taming itself takes a pufferfish, tame.go).
+	"nautilus": {"cod", "cooked_cod", "salmon", "cooked_salmon", "pufferfish", "tropical_fish",
+		"pufferfish_bucket", "cod_bucket", "salmon_bucket", "tropical_fish_bucket"},
 	"happy_ghast": {"snowball"}, // grows a ghastling; adults never court
 }
 

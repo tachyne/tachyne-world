@@ -133,6 +133,16 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 		}
 	case entitySniffer:
 		ambient = "minecraft:entity.sniffer.idle" // Sniffer.getAmbientSound
+	case entityNautilus: // Nautilus: its own voice under water, the land one out of it, the baby's own
+		p := "minecraft:entity.nautilus."
+		if m.baby {
+			p = "minecraft:entity.baby_nautilus."
+		}
+		land := ""
+		if !h.inWater(m.dim, m.x, m.y, m.z) {
+			land = "_land"
+		}
+		hurt, death, ambient = p+"hurt"+land, p+"death"+land, p+"ambient"+land
 	}
 	return hurt, death, ambient
 }

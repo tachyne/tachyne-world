@@ -106,7 +106,7 @@ func (t *tracked) luck() float64 { return t.playerAttrs().Value(attr.Luck) }
 // Vanilla treats Conduit Power as Water Breathing for the air supply
 // (LivingEntity.decreaseAirSupply), on top of what it does for mining speed.
 func (t *tracked) breathesUnderwater() bool {
-	return t.hasEffect(effWaterBreathing) > 0 || t.hasEffect(effConduitPower) > 0
+	return t.hasEffect(effWaterBreathing) > 0 || t.hasEffect(effConduitPower) > 0 || t.hasEffect(effBreathOfTheNautilus) > 0
 }
 
 // attackPeriodTicks scales a weapon's cooldown by ATTACK_SPEED. The attribute

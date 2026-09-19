@@ -70,11 +70,11 @@ func horseColumns(m *mob) int {
 // tryHorseScreen handles sneak-interacts and chest-equips on the horse
 // family. Returns true if the interaction was consumed.
 func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sneak bool) bool {
-	if !horseFamily(m.etype) || m.dying > 0 || m.baby {
+	if !horseFamily(m.etype) && !(m.etype == entityNautilus && m.tamed) || m.dying > 0 || m.baby {
 		return false
 	}
 	if sneak {
-		h.openHorseScreen(players, t, m)
+		h.openHorseScreen(players, t, m) // HasCustomInventoryScreen: the nautilus shares the mount screen
 		return true
 	}
 	// Chest-equip: a held chest on an unchested donkey/mule/llama.
@@ -170,7 +170,7 @@ func (h *hub) horseEquipSync(players map[int32]*tracked, m *mob) {
 	if m.saddleSt.item != 0 && m.saddleSt.item != itemSaddle {
 		m.saddleSt = invStack{}
 	}
-	if m.armorSt.item != 0 && !horseArmorItems[m.armorSt.item] && !carpetItems[m.armorSt.item] {
+	if m.armorSt.item != 0 && !bodyArmorFor(m.etype, m.armorSt.item) {
 		m.armorSt = invStack{}
 	}
 	m.saddled = m.saddleSt.item != 0
@@ -206,4 +206,24 @@ func (h *hub) spillHorse(players map[int32]*tracked, m *mob) {
 			drop(st)
 		}
 	}
+}
+
+// nautilusArmorItems is what a nautilus's body slot takes (its five armours).
+var nautilusArmorItems = func() map[int32]bool {
+	m := map[int32]bool{}
+	for _, n := range []string{"iron_nautilus_armor", "golden_nautilus_armor", "diamond_nautilus_armor", "netherite_nautilus_armor", "copper_nautilus_armor"} {
+		if id := int32(itemByName[n]); id != 0 {
+			m[id] = true
+		}
+	}
+	return m
+}()
+
+// bodyArmorFor reports whether a mount's body slot takes the item: horse
+// armour or a carpet on the horse family, nautilus armour on a nautilus.
+func bodyArmorFor(etype int, item int32) bool {
+	if etype == entityNautilus {
+		return nautilusArmorItems[item]
+	}
+	return horseArmorItems[item] || carpetItems[item]
 }

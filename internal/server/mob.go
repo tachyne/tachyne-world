@@ -522,6 +522,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityCamel && m.dashCD > 0 {
 			h.camelDashTick(players, m)
+			h.nautilusDashTick(players, m)
 		}
 		if _, ok := zombifiesOutside(m.etype); ok {
 			h.zombifyTick(players, m) // out of the Nether, three hundred ticks and it turns

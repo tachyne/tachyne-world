@@ -20,6 +20,13 @@ the public history since the project was open-sourced on 2026-07-10.
   leaving a boat or cart, and a player stepping into water (a splash,
   never a sneaking one). A villager inside a raid sweats now and then, and
   reeling a hooked mob in shows the rod's tug, both as vanilla's cues.
+- **The nautilus is a mount.** Tame one with a pufferfish (one try in
+  three, as vanilla's), saddle it, and ride it under water, where it dashes
+  on the jump key with a forty-tick cooldown and its rider breathes on the
+  new Breath of the Nautilus effect the mount grants and refreshes. A
+  sneak-click opens its armour screen (the five nautilus armours), fish
+  and fish buckets feed and breed it, and it speaks under water in its own
+  voice and on land in the other, the young in theirs.
 - **Guardians drop what vanilla's drop.** A guardian pays 0–2 prismarine
   shards and then cod (cooked if it was burning), prismarine crystals or
   nothing at vanilla's odds; the elder adds a wet sponge for a player's

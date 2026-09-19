@@ -2017,6 +2017,7 @@ func (h *hub) run() {
 			case evRidingJump:
 				if t := players[e.eid]; t != nil && t.ridingEID != 0 {
 					h.camelDashStart(players, t)
+					h.nautilusDashStart(players, t)
 				}
 			case evHeldChange:
 				if t := players[e.eid]; t != nil {

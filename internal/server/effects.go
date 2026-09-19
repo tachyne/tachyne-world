@@ -51,6 +51,8 @@ const (
 	effBadOmen        = 30
 	effHeroOfVillage  = 31 // raid-victory reward; discounts villager trades
 	effDarkness       = 32
+	// 33-38: trial_omen, raid_omen, wind_charged, weaving, oozing, infested
+	effBreathOfTheNautilus = 39 // riding a nautilus: breathes under water (MobEffectUtil.hasWaterBreathing)
 )
 
 // effectModifier is one attribute modifier an effect contributes, straight
@@ -107,7 +109,8 @@ var effectNames = map[string]int32{
 	"resistance": effResistance, "water_breathing": effWaterBreathing,
 	"absorption": effAbsorption, "slow_falling": effSlowFalling,
 	"bad_omen": effBadOmen, "hero_of_the_village": effHeroOfVillage,
-	"mining_fatigue": effMiningFatigue, "nausea": effNausea,
+	"breath_of_the_nautilus": effBreathOfTheNautilus,
+	"mining_fatigue":         effMiningFatigue, "nausea": effNausea,
 	"invisibility": effInvisibility, "blindness": effBlindness,
 	"health_boost": effHealthBoost, "saturation": effSaturation, "hunger": effHunger,
 	"glowing": effGlowing, "luck": effLuck, "unluck": effUnluck,

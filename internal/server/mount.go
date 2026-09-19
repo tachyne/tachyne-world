@@ -32,6 +32,8 @@ func rideable(etype int) (ok bool, steerItem int32) {
 		return true, itemCarrotOnStick
 	case entityStrider:
 		return true, itemWarpedFungusStick
+	case entityNautilus: // AbstractNautilus: a saddled, tamed nautilus is steered like a horse
+		return true, 0
 	}
 	return false, 0
 }
@@ -43,6 +45,9 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	ok, _ := rideable(m.etype)
 	if !ok || m.dying > 0 || m.baby {
 		return false
+	}
+	if m.etype == entityNautilus && !m.tamed {
+		return false // isSaddleable: only a tamed nautilus takes a saddle or a rider
 	}
 	held := heldStack(t).item
 	if isMobFood(m.etype, held) {
@@ -62,7 +67,14 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		} else {
 			h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
 		}
-		h.playSound(players, "minecraft:entity.horse.saddle", sndNeutral, m.x, m.y, m.z, 1, 1)
+		snd := "minecraft:entity.horse.saddle"
+		if m.etype == entityNautilus {
+			snd = "minecraft:item.nautilus_saddle_equip"
+			if h.inWater(m.dim, m.x, m.y, m.z) {
+				snd = "minecraft:item.nautilus_saddle_underwater_equip"
+			}
+		}
+		h.playSound(players, snd, sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	// Saddled: mount (unless the player is placing a block / feeding — a held

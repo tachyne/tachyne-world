@@ -243,8 +243,8 @@ var speciesTable = map[int]*speciesDef{
 	// be fitted with nautilus_armor — taming/riding is a later slice, like the
 	// happy-ghast harness). MAX_HEALTH 15, ATTACK_DAMAGE 3, KB-resist 0.3
 	// (vanilla AbstractNautilus.createAttributes). Squid on pre-1.21.11.
-	entityNautilus: {name: "nautilus", health: 15, step: 0.10, damage: 3, arch: archWater, kbResist: 0.3,
-		drops: []specDrop{{item: "nautilus_shell", rnd: 1}}},
+	entityNautilus: {name: "nautilus", health: 15, speed: 1.0, step: 0.10, damage: 3, arch: archWater, kbResist: 0.3,
+		drops: []specDrop{{item: "nautilus_shell", rnd: 1}}}, // speed 1.0 is the synced MOVEMENT_SPEED the riding client scales (0.0325×)
 	// zombie_nautilus (1.21.11): the drowned-analogue hostile nautilus variant.
 	// Same body as the nautilus but hunts (createAttributes + MOVEMENT_SPEED
 	// 1.1). Glow squid on pre-1.21.11.

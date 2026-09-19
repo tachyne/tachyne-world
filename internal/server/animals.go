@@ -193,6 +193,11 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerSwt))
 			}
 		}
+		if m.etype == entityNautilus {
+			if m.rider != 0 {
+				h.nautilusBreath(players, m)
+			}
+		}
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {
 				m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin)

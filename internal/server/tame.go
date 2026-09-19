@@ -32,14 +32,21 @@ func isTameFood(etype int, item int32) bool {
 		return item == itemBone
 	case entityCat, entityOcelot, entityParrot:
 		return isLoveFood(etype, item)
+	case entityNautilus: // #nautilus_taming_items: a pufferfish, loose or in a bucket
+		return item == itemPufferfishItem || item == itemPufferfishBucket
 	}
 	return false
 }
 
+var (
+	itemPufferfishItem   = int32(itemByName["pufferfish"])
+	itemPufferfishBucket = int32(itemByName["pufferfish_bucket"])
+)
+
 // tameable reports whether the species can be tamed by hand at all.
 func tameable(etype int) bool {
 	switch etype {
-	case entityWolf, entityCat, entityOcelot, entityParrot:
+	case entityWolf, entityCat, entityOcelot, entityParrot, entityNautilus:
 		return true
 	}
 	return false
@@ -94,10 +101,16 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		m.setMaxHP(wolfTamedHealth)
 		m.health = wolfTamedHealth
 	}
+	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
+	if m.etype == entityNautilus {
+		// A tamed nautilus is a mount, not a follower (AbstractNautilus has no
+		// follow-owner goal); its tamed flag rides no metadata yet.
+		h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
+		return true
+	}
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
 	m.setFollowRange(petFollowStart)
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 	if vm := variantMeta(m); vm != nil {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vm)) // the collar appears with the tame
