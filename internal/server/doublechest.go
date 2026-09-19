@@ -152,8 +152,9 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	h.trappedChestChanged(t.dim, right)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
 	h.sendDoubleChestWindow(t)
-	t.p.trySendEv(soundEv("minecraft:block.chest.open", sndBlock,
-		float64(left.x)+0.5, float64(left.y), float64(left.z)+0.5, 0.5, 1))
+	h.containerSoundAt(h.playersRef, simPos{dim: t.dim, blockPos: left}, true)
+	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: left}) // both halves' lids rise
+	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: right})
 }
 
 // sendDoubleChestWindow refreshes all 54 chest slots (LEFT then RIGHT) plus the

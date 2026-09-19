@@ -111,6 +111,13 @@ the public history since the project was open-sourced on 2026-07-10.
   plays vanilla's launch sound instead of the plain dispense click.
 
 ### Fixed
+- **Chest lids open and close for everyone.** Chests, trapped chests,
+  ender chests and shulker boxes never sent their opener count, so other
+  players saw a lid that never moved (and the open sound reached only the
+  opener). Every open and close now sends the block's lid event with the
+  number of players inside it, and the open and close sounds — chest,
+  ender chest, shulker box, barrel — play to everyone near the block at
+  vanilla's volume and pitch.
 - **Menus keep vanilla's slot rules on the server.** A modified client
   could put anything anywhere; the choosy slots now refuse what they do
   not take (a furnace's fuel slot wants fuel, the enchanting table lapis,

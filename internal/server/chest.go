@@ -104,11 +104,9 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		h.openDoubleChest(t, left, right)
 		return
 	}
-	openSound := "minecraft:block.chest.open"
-	if isBarrel(state) {
-		openSound = "minecraft:block.barrel.open"
-	}
-	defer t.p.trySendEv(soundEv(openSound, sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.5, 1))
+	openPos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
+	defer h.containerSoundAt(h.playersRef, openPos, true) // everyone hears a chest open (Level.playSound(null, …))
+	defer h.lidEvent(h.playersRef, openPos)               // and sees its lid rise
 	if t.inv == nil {
 		return
 	}

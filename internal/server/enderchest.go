@@ -41,8 +41,8 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	h.vib(t.dim, freqContainerOpen, x, y, z, t.p.eid)
 	t.viewChest = t.enderChest()
 
-	h.playSound(players, "minecraft:block.ender_chest.open", sndBlock,
-		float64(x)+0.5, float64(y), float64(z)+0.5, 0.5, 1)
+	h.containerSoundAt(players, t.winPos, true)
+	h.lidEvent(players, t.winPos)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3),
 		Title: "Ender Chest"})
 	h.sendChestWindow(t, t.viewChest)

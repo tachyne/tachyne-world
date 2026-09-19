@@ -782,10 +782,9 @@ func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
 	}
 	h.reclaimAnvil(players, t)
 	h.reclaimTrade(players, t)
-	var closedChest []simPos // trapped chests to re-evaluate once this viewer is gone
+	var closedChest []simPos // lids to drop and trapped chests to re-evaluate once this viewer is gone
 	if t.winKind == winChest || t.winKind == winDoubleChest {
-		h.playSound(players, "minecraft:block.chest.close", sndBlock,
-			float64(t.winPos.x)+0.5, float64(t.winPos.y), float64(t.winPos.z)+0.5, 0.5, 1)
+		h.containerSoundAt(players, t.winPos, false)
 		closedChest = append(closedChest, t.winPos)
 		if t.winKind == winDoubleChest {
 			closedChest = append(closedChest, t.winPos2)
@@ -793,6 +792,7 @@ func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
 	}
 	h.releaseContainerView(t)
 	for _, p := range closedChest {
+		h.lidEvent(players, p)
 		h.trappedChestChanged(p.dim, p.blockPos)
 	}
 	h.reclaimCraft(players, t)
