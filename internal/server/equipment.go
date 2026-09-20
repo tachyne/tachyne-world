@@ -58,3 +58,23 @@ func (h *hub) broadcastEquipment(players map[int32]*tracked, t *tracked) {
 		}
 	}
 }
+
+// evSwapHands is the F key: swap the held hotbar slot with the off-hand.
+type evSwapHands struct{ eid int32 }
+
+func (evSwapHands) isHubEvent() {}
+
+// onSwapHands is ServerboundPlayerActionPacket's SWAP_ITEM_WITH_OFFHAND.
+// Vanilla swaps the two stacks whole — enchantments, damage and all — and
+// refuses while the player is using an item.
+func (h *hub) onSwapHands(players map[int32]*tracked, e evSwapHands) {
+	t := players[e.eid]
+	if t == nil || t.inv == nil || t.dead || t.gamemode == gmSpectator {
+		return
+	}
+	slot := t.p.heldSlot()
+	t.inv.slots[slot], t.offhand = t.offhand, t.inv.slots[slot]
+	h.sendSlot(t, slot)
+	h.sendOffhand(t)
+	h.broadcastEquipment(players, t)
+}

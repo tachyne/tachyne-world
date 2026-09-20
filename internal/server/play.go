@@ -16,6 +16,7 @@ const (
 	digDropStack   = 3 // ctrl+Q: drop the whole held stack
 	digDropOne     = 4 // Q: drop one of the held item
 	digReleaseUse  = 5 // released right-click (ends an eat-hold / bow draw)
+	digSwapHands   = 6 // F: swap the held item with the off-hand
 
 	gameEventChangeGameMode = 3 // change game mode (value = mode)
 

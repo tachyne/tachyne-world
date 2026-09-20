@@ -1389,6 +1389,8 @@ func (h *hub) run() {
 					}
 					h.sendExperience(t)
 				}
+			case evSwapHands:
+				h.onSwapHands(players, e)
 			case evTeleportTo:
 				h.onTeleportTo(players, e)
 			case evEndRefresh:

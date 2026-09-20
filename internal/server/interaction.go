@@ -39,6 +39,11 @@ func (s *Server) handleDig(p *player, data []byte) {
 		s.hub.post(evTossHeld{eid: p.eid, slot: p.held, all: status == digDropStack})
 		return
 	}
+	if status == digSwapHands {
+		// SWAP_ITEM_WITH_OFFHAND: the F key. The hub owns both stacks.
+		s.hub.post(evSwapHands{eid: p.eid})
+		return
+	}
 	if status != digStartBreak && status != digFinishBreak {
 		return
 	}

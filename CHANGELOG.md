@@ -28,6 +28,9 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The F key works.** Swapping the held item with the off-hand did
+  nothing — the action arrived and was dropped. It swaps the two stacks
+  whole now, enchantments, damage and all, and shows on every client.
 - **Potion effects survive a relog.** They lived only in memory, so
   logging out threw away whatever you were carrying — a brewed potion, a
   beacon's gift, a conduit's — and coming back gave you nothing. Active

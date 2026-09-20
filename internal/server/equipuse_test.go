@@ -63,3 +63,30 @@ func TestEquipArmourOnUse(t *testing.T) {
 		t.Error("a carved pumpkin is not swappable on use")
 	}
 }
+
+// The F key swaps the held item with the off-hand, stacks whole.
+func TestSwapHands(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	sword := invStack{item: tDiamondSword, count: 1, ench: enchList{{id: enchSharpness, lvl: 3}}}
+	shield := invStack{item: itemByName["shield"], count: 1, dmg: 7}
+	pl.inv.slots[pl.p.heldSlot()] = sword
+	pl.offhand = shield
+
+	h.onSwapHands(players, evSwapHands{eid: pl.p.eid})
+	if pl.inv.slots[pl.p.heldSlot()] != shield || pl.offhand != sword {
+		t.Fatalf("the two should have changed places: held=%+v off=%+v", pl.inv.slots[pl.p.heldSlot()], pl.offhand)
+	}
+	// Swapping back restores the original, enchantments and damage intact.
+	h.onSwapHands(players, evSwapHands{eid: pl.p.eid})
+	if pl.inv.slots[pl.p.heldSlot()] != sword || pl.offhand != shield {
+		t.Error("swapping twice should be a no-op")
+	}
+	// A spectator's hands are not swapped.
+	pl.gamemode = gmSpectator
+	h.onSwapHands(players, evSwapHands{eid: pl.p.eid})
+	if pl.inv.slots[pl.p.heldSlot()] != sword {
+		t.Error("a spectator swaps nothing")
+	}
+}
