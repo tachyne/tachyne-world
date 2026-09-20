@@ -136,6 +136,12 @@ func isLifecycleFrame(ev any) bool {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
 		attachproto.PlayerInfo, attachproto.PlayerGone:
 		return true
+	case attachproto.BlockAck:
+		// A dropped acknowledgement leaves the client showing its own guess
+		// at that position for good, ignoring everything the world says
+		// about it — and the hub sends this one, so it must neither block
+		// nor drop.
+		return true
 	case attachproto.Chat:
 		// A chat LINE must not be dropped — a lost message is gone forever
 		// (unlike entity moves, which self-heal on the next absolute resync). The
