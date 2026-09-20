@@ -185,6 +185,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 			m.behavior = holdRangedBehavior{radius: tridentRange}
 		}
 	}
+	h.reassessWeapon(m)                                // …and a saved skeleton's goal follows what it holds
 	m.x, m.y, m.z, m.sx, m.sy, m.sz = x, y, z, x, y, z // seat the broadcast baseline at the load position
 	// Mark the restored mob's chunk seeded so the vanilla spawner does not lay a
 	// second chunk-generation herd on top of it.

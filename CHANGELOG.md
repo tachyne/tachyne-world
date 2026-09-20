@@ -28,6 +28,18 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Skeletons fight at vanilla's distances; ghasts stop chasing.** A
+  skeleton backed away from anything closer than five blocks and stood
+  still past ten — vanilla's bow goal closes while you are outside
+  fifteen, then circles you, drifting out inside seven and a half and
+  back in past thirteen. One holding a sword rather than a bow now walks
+  in and swings, as the goal it runs depends on what is in its hand, and
+  every skeleton kind — wither skeletons included — keeps six blocks
+  from a wolf. Ghasts had been given chase, which is not something a
+  ghast does: it drifts to a random point within sixteen blocks, turns
+  to face what it is shooting at and lobs a fireball from wherever it
+  happens to be, and it only targets someone within four blocks of its
+  own height.
 - **Zombies work a village at night; drowned keep to the water by day.**
   A zombie with nobody to chase milled about wherever it happened to be,
   and a drowned behaved like any other zombie: it would leave the sea at

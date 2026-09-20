@@ -53,6 +53,11 @@ func blazeFlagsMeta(m *mob) []byte {
 func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, 64)
 	was := m.ghastCharge > ghastChargeWarn
+	// The target selector only accepts somebody within four blocks of the
+	// ghast's own height — the reason one high above a lava lake ignores you.
+	if t != nil && !ghastCanTarget(m, t.y) {
+		t = nil
+	}
 	if t == nil || dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) >= ghastRangeSq || !h.mobSees(m, t) {
 		if m.ghastCharge > 0 {
 			m.ghastCharge -= mobMoveInterval

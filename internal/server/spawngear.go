@@ -136,6 +136,7 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 	}
 	m.spawnGear, m.gearDrop = true, spawnGearDropChance
 	m.refreshGearArmor()
+	h.reassessWeapon(m) // a skeleton that rolled a sword melees instead of shooting
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 }
 

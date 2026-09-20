@@ -32,8 +32,13 @@ const (
 	// Skeleton kiting: approach to shooting range, back off if crowded.
 	shootRange   = 15.0 // fire at a target inside this range
 	tridentRange = 10.0 // DrownedTridentAttackGoal's attack radius
-	skeletonKite = 5.0  // retreat when the target is closer than this
-	skeletonHold = 10.0 // advance until inside this, then stand and shoot
+	// RangedBowAttackGoal(this, 1.0, 20, 15.0f): the goal closes while the
+	// target is outside the attack radius, then stops and strafes — drifting
+	// backwards inside a quarter of the radius squared (7.5 blocks) and
+	// forwards again past three quarters of it (about 13).
+	bowRadius    = 15.0
+	skeletonKite = bowRadius * 0.5   // √0.25 · radius: back off inside this
+	skeletonHold = bowRadius * 0.866 // √0.75 · radius: close in again past this
 
 	aggroRange     = 16.0 // default FOLLOW_RANGE (vanilla Mob base; species override via m.aggro)
 	deaggroSlack   = 8.0  // keep chasing this far past aggro before giving up (edge hysteresis)
@@ -105,22 +110,35 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if d < 1e-6 {
 		return 0, 0
 	}
-	switch {
-	case d < skeletonKite:
-		return -dx / d * m.moveSpeed(), -dz / d * m.moveSpeed() // too close — back off
-	case d > skeletonHold:
-		return dx / d * m.moveSpeed(), dz / d * m.moveSpeed() // close in to bow range
+	if d > bowRadius {
+		return dx / d * m.moveSpeed(), dz / d * m.moveSpeed() // outside bow range: close in
 	}
-	// In the sweet spot: vanilla RangedBowAttackGoal STRAFES — circle the
-	// target at 0.5× speed, flipping direction ~30% of the time each second.
+	// Inside it the goal strafes: a sideways half-speed circle plus a
+	// forward/back half-speed drift, both flipping about 30% of the time each
+	// second, held to the band between a quarter and three quarters of the
+	// radius.
 	if h.rng.Intn(33) == 0 {
 		m.strafeCW = !m.strafeCW
+	}
+	if h.rng.Intn(33) == 0 {
+		m.strafeBack = !m.strafeBack
+	}
+	switch {
+	case d > skeletonHold:
+		m.strafeBack = false
+	case d < skeletonKite:
+		m.strafeBack = true
 	}
 	sx, sz := -dz/d, dx/d // perpendicular to the firing line
 	if m.strafeCW {
 		sx, sz = -sx, -sz
 	}
-	return sx * m.moveSpeed() * 0.5, sz * m.moveSpeed() * 0.5
+	fx, fz := dx/d, dz/d
+	if m.strafeBack {
+		fx, fz = -fx, -fz
+	}
+	sp := m.moveSpeed() * 0.5
+	return (sx + fx) * sp, (sz + fz) * sp
 }
 
 // holdRangedBehavior is vanilla's plain RangedAttackGoal: walk in until the

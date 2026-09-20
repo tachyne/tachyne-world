@@ -63,8 +63,12 @@ func init() {
 	llama := func(h *hub, m, o *mob) bool { // WolfAvoidEntityGoal: a wild wolf, strength ≥ nextInt(5)
 		return o.etype == entityLlama && !m.tamed && int(o.strength) >= h.rng.Intn(5)
 	}
-	for _, e := range []int{entitySkeleton, entityStray, entityBogged} {
-		avoidRules[e] = []avoidRule{{6, 1.0, 1.2, wolf}}
+	// AbstractSkeleton's AvoidEntityGoal<Wolf>(6, 1.0, 1.2) — the whole
+	// family, wither skeletons and any version's extra kinds included.
+	for _, n := range []string{"skeleton", "stray", "bogged", "wither_skeleton", "parched"} {
+		if e, ok := entityByName[n]; ok {
+			avoidRules[e] = []avoidRule{{6, 1.0, 1.2, wolf}}
+		}
 	}
 	avoidRules[entityCreeper] = []avoidRule{{6, 1.0, 1.2, cat}}
 	avoidRules[entitySpider] = []avoidRule{{6, 1.0, 1.2, armadillo}}

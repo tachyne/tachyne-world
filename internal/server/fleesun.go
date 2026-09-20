@@ -70,3 +70,22 @@ func (h *hub) sunHidePos(m *mob) (blockPos, bool) {
 	}
 	return blockPos{}, false
 }
+
+// reassessWeapon is AbstractSkeleton.reassessWeaponGoal: the goal it runs
+// depends on what it is holding. A skeleton with a bow keeps its distance
+// and shoots; one holding anything else — a sword from its spawn gear, or
+// something it picked up — walks in and swings.
+func (h *hub) reassessWeapon(m *mob) {
+	if !skeletonKind(m.etype) {
+		return
+	}
+	if m.held == itemBow {
+		if _, ranged := m.behavior.(rangedBehavior); !ranged {
+			m.behavior = rangedBehavior{}
+		}
+		return
+	}
+	if _, melee := m.behavior.(hostileBehavior); !melee {
+		m.behavior = hostileBehavior{}
+	}
+}

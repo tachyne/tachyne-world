@@ -70,7 +70,7 @@ Struck-through rows have landed since the audit; the date says when.
 9. ~~The hand on use-item (off-hand, shields)~~ (2026-09-20); serialising the components the engine already models (potions, stews, instruments, shulker contents, bottles, repair cost) remains
 10. Fireworks: stars and fades, flight duration, explosions
 11. ~~Voices for the eleven silent species; per-type eye heights; ambient cadence and step sounds; babies' drops and XP~~ (2026-09-19)
-12. Monster goals: ~~zombie village pathing and targeting~~ (2026-09-20), ~~drowned water goals~~ (2026-09-20), ~~the spider light rule~~ (2026-09-20), skeleton weapon reassessment, ~~enderman stare and teleport~~ (2026-09-20), ghast and phantom flight, the raider base goals, wither phases
+12. Monster goals: ~~zombie village pathing and targeting~~ (2026-09-20), ~~drowned water goals~~ (2026-09-20), ~~the spider light rule~~ (2026-09-20), ~~skeleton weapon reassessment~~ (2026-09-20), ~~enderman stare and teleport~~ (2026-09-20), ~~ghast flight~~ (2026-09-20) and phantom flight, the raider base goals, wither phases
 13. Creature brains: villager trading look/follow, POI acquisition and play; ~~frog spawn~~ (2026-09-20); per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
 14. Loot functions ~~(exploration map, set damage)~~ (2026-09-19), copy/set components; advancement predicate fidelity; per-recipe smelting XP
 15. Effect HUD flags ~~(2026-09-20)~~; ~~trading XP~~ (2026-09-20); the mason's trade pool; ~~the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour~~ (2026-09-19/20)

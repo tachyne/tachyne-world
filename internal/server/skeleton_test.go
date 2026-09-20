@@ -81,25 +81,66 @@ func TestSkeletonKites(t *testing.T) {
 	m := &mob{etype: entitySkeleton, hasTarget: true, x: 0, z: 0}
 	m.setMoveSpeed(speedFor(entitySkeleton))
 
-	m.tx, m.tz = 2, 0 // target too close — back away (negative x)
-	vx, _ := rangedBehavior{}.steer(h, m)
-	if vx >= 0 {
-		t.Fatalf("skeleton must retreat from a close target, vx=%v", vx)
-	}
-	m.tx = 14 // too far — advance
-	vx, _ = rangedBehavior{}.steer(h, m)
-	if vx <= 0 {
-		t.Fatalf("skeleton must advance on a distant target, vx=%v", vx)
-	}
-	m.tx = 8 // sweet spot — STRAFE (vanilla circles the target while shooting)
+	// Outside the bow radius (15) the goal simply closes, at full speed and
+	// straight at the target.
+	m.tx, m.tz = 20, 0
 	vx, vz := rangedBehavior{}.steer(h, m)
-	if vx != 0 {
-		t.Fatalf("strafing must be perpendicular to the firing line, got radial vx=%v", vx)
+	if vx <= 0 || math.Abs(vz) > 1e-9 {
+		t.Fatalf("a distant target is closed on directly: vx=%v vz=%v", vx, vz)
+	}
+	if math.Abs(vx-m.moveSpeed()) > 1e-9 {
+		t.Fatalf("closing runs at full speed, got %v", vx)
+	}
+	// Inside a quarter of the radius squared (7.5 blocks) it drifts backwards
+	// while it circles — a sideways component and a negative radial one.
+	m.tx = 4
+	vx, vz = rangedBehavior{}.steer(h, m)
+	if vx >= 0 {
+		t.Fatalf("a close target is backed away from: vx=%v", vx)
 	}
 	if vz == 0 {
-		t.Fatal("in bow range the skeleton must circle its target, not freeze")
+		t.Fatal("it circles while it backs off, not straight out")
 	}
-	if math.Abs(vz) > m.moveSpeed()*0.5+1e-9 {
-		t.Fatalf("vanilla strafes at half speed, got %v", vz)
+	// The two half-speed components never exceed the mob's speed.
+	if got := math.Hypot(vx, vz); got > m.moveSpeed()+1e-9 {
+		t.Fatalf("strafing at %v exceeds the walking speed %v", got, m.moveSpeed())
+	}
+	// Past three quarters of the radius squared (about 13) it turns back in.
+	m.tx = 14
+	vx, _ = rangedBehavior{}.steer(h, m)
+	if vx <= 0 {
+		t.Fatalf("inside the radius but far out, it closes again: vx=%v", vx)
+	}
+}
+
+// AbstractSkeleton.reassessWeaponGoal: what it holds decides the goal it
+// runs — a bow keeps its distance, anything else walks in and swings.
+func TestSkeletonReassessesItsWeapon(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	m := h.spawnHostileY(players, entitySkeleton, 0.5, 70, 0.5)
+	m.held = itemBow
+	h.reassessWeapon(m)
+	if _, ok := m.behavior.(rangedBehavior); !ok {
+		t.Fatalf("a bow skeleton shoots, got %s", m.behavior.name())
+	}
+	m.held = itemIronSword
+	h.reassessWeapon(m)
+	if _, ok := m.behavior.(hostileBehavior); !ok {
+		t.Fatalf("a sworded skeleton melees, got %s", m.behavior.name())
+	}
+	m.held = itemBow
+	h.reassessWeapon(m)
+	if _, ok := m.behavior.(rangedBehavior); !ok {
+		t.Fatalf("picking a bow back up goes back to shooting, got %s", m.behavior.name())
+	}
+	// Wither skeletons are not in the family that reassesses (they have no
+	// bow goal at all), so their stance is left alone.
+	ws := h.spawnHostileY(players, entityWitherSkeleton, 3.5, 70, 0.5)
+	before := ws.behavior.name()
+	ws.held = itemBow
+	h.reassessWeapon(ws)
+	if ws.behavior.name() != before {
+		t.Errorf("a wither skeleton's goal should not change, %s → %s", before, ws.behavior.name())
 	}
 }

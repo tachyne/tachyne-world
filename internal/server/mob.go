@@ -94,7 +94,12 @@ type mob struct {
 	aggressive      bool     // Mob.setAggressive: the zombie family's raised arms while it chases
 	drifting        bool     // MoveThroughVillageGoal: walking to a spot in the village, not chasing
 	drownedGoal     bool     // drowned: walking to water (by day) or to the beach (at night)
-	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	strafeBack      bool     // RangedBowAttackGoal.strafingBackwards: drifting away while circling
+	floatX          float64  // RandomFloatAroundGoal's wanted position (ghast)
+	floatY          float64
+	floatZ          float64
+	floatSet        bool
+	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
