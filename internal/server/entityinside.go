@@ -91,7 +91,7 @@ func (h *hub) tickFreezing(players map[int32]*tracked, t *tracked) {
 		t.p.trySendEv(metaEv(frozenMetadata(t.p.eid, t.frozen)))
 	}
 	if t.frozen >= freezeTicks && h.tick.Load()%freezeHurtEvery == 0 && h.rules.FreezeDamage {
-		h.hurtBy(players, t, freezeDamage, dtFreeze, deathCause{key: causeFreeze})
+		h.hurtBy(players, t, freezeDamage, dtFreeze, deathCause{})
 	}
 }
 
@@ -194,7 +194,7 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 				// LavaCauldronBlock.entityInside: lavaIgnite + lavaHurt.
 				if t.hasEffect(effFireRes) == 0 {
 					h.setBurning(players, t, lavaFireSecs)
-					h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{key: causeLava})
+					h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{})
 				}
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you. Vanilla
@@ -204,12 +204,12 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 				if t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
 					return
 				}
-				h.hurtBy(players, t, magmaDamage, dtHotFloor, deathCause{key: causeFire})
+				h.hurtBy(players, t, magmaDamage, dtHotFloor, deathCause{})
 			case berryBushRipe(s):
 				// Vanilla only scratches you while you are MOVING through the
 				// bush: standing still in one is safe.
 				if movedX >= berryMoveEpsilon || movedZ >= berryMoveEpsilon {
-					h.hurtBy(players, t, berryBushDamage, dtSweetBerryBush, deathCause{key: causeSweetBerry})
+					h.hurtBy(players, t, berryBushDamage, dtSweetBerryBush, deathCause{})
 				}
 			case isWitherRose(s):
 				if h.rules.Difficulty != diffPeaceful {

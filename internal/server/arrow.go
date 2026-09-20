@@ -304,7 +304,13 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				h.splashPotion(players, a.dim, a.x, a.y, a.z, a.potion, a.lingering)
 			}
 			if a.explode > 0 { // ghast/wither fireball detonates on impact
-				h.explodeIn(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob)
+				by := ""
+				if s := players[a.shooter]; s != nil {
+					by = s.p.name
+				} else if m := h.mobs[a.shooter]; m != nil {
+					by = mobDisplayName(m.etype)
+				}
+				h.explodeBy(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob, by)
 			}
 			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing
 				a.returning = true
@@ -369,7 +375,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		}
 		if a.dmg > 0 {
 			// Whoever loosed it gets the credit, player or mob.
-			shot := deathCause{key: causeArrow}
+			shot := deathCause{}
 			byMob := false
 			if s := players[a.shooter]; s != nil {
 				shot.by = s.p.name

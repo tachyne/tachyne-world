@@ -130,7 +130,7 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		switch {
 		case d < dragonBodyReach:
 			h.hurtFrom(players, t, dragonContact, dtMobAttack,
-				deathCause{key: causeDragon, by: "Ender Dragon"}, fromMob(m.x, m.z))
+				deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
 			h.knockback(t, m.x, m.z)
 		case d < dragonWingReach:
 			// knockBack: push = (dx/d², 0.2, dz/d²)·4, then five damage.
@@ -140,7 +140,7 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 				VX: dx / d2 * dragonWingPush, VY: 0.2, VZ: dz / d2 * dragonWingPush})
 			t.spinUntil = now + windBurstGrace
 			h.hurtFrom(players, t, dragonWingDamage, dtMobAttack,
-				deathCause{key: causeDragon, by: "Ender Dragon"}, fromMob(m.x, m.z))
+				deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
 		}
 	}
 	// Crystal healing.
@@ -184,7 +184,7 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
 		if t.dim == 2 && !t.dead && t.gamemode == gmSurvival &&
 			dist3(t.x, t.y, t.z, c.x, c.y, c.z) < 5 {
 			h.hurtFrom(players, t, 6, dtExplosion,
-				deathCause{key: causeExplosion, by: "an End Crystal"}, from(c.x, c.z))
+				deathCause{by: "an End Crystal"}, from(c.x, c.z))
 		}
 	}
 	return true

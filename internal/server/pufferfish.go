@@ -98,7 +98,7 @@ func (h *hub) pufferStep(players map[int32]*tracked, m *mob) {
 		if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator || !touching(t.x, t.y, t.z, 1.0) {
 			continue
 		}
-		if h.hurtFrom(players, t, float32(1+m.puff), mobMeleeDamage(m.etype), deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromMob(m.x, m.z)) {
+		if h.hurtFrom(players, t, float32(1+m.puff), mobMeleeDamage(m.etype), deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z)) {
 			t.p.trySendEv(attachproto.GameEvent{Event: gameEventPufferSting})
 			h.applyEffect(players, t, effPoison, 0, 3*int(m.puff))
 			m.stingCD = pufferStingCooldown

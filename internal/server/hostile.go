@@ -427,7 +427,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		h.hoglinBiteStart(players, m) // doHurtTarget: the animation and the grunt
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
-		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))
+		deathCause{by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))
 	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
 	// top of the 0.4 base (Mob.getKnockback → LivingEntity.knockback).
 	h.knockbackScaled(t, m.x, m.z, 1+1.25*float64(m.heldStack().enchLvl(enchKnockback)))

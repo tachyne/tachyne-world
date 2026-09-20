@@ -101,7 +101,7 @@ func TestDeathForgivesAndVanishesPearls(t *testing.T) {
 		t.Fatal("no pearl in flight")
 	}
 	pl.health = 1
-	h.hurtFrom(players, pl, 5, dtGeneric, deathCause{key: causeGeneric}, from(0, 0))
+	h.hurtFrom(players, pl, 5, dtGeneric, deathCause{}, from(0, 0))
 	if !pl.dead {
 		t.Fatal("the player should be dead")
 	}

@@ -409,7 +409,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 			if t.fireSecs == 0 {
 				h.setBurning(players, t, lightningFireSecs)
 			}
-			h.hurtBy(players, t, lightningDamage, dtLightningBolt, deathCause{key: causeLightning})
+			h.hurtBy(players, t, lightningDamage, dtLightningBolt, deathCause{})
 		}
 	}
 	var struck []*mob

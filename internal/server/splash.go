@@ -220,7 +220,7 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 			}
 			if c.breath {
 				h.hurtBy(players, t, breathDamage, dtDragonBreath,
-					deathCause{key: causeDragon, by: "the dragon's breath"})
+					deathCause{by: "the dragon's breath"})
 				continue
 			}
 			h.applyPotionAoE(players, t, effs, 1, lingerFactor)

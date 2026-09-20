@@ -252,6 +252,8 @@ type tracked struct {
 	hasNetherEntry bool
 	launchCause    string     // "wind_charge" until the next landing (fall_after_explosion)
 	lastCause      deathCause // what last hurt them — the death message is made of this
+	killCredit     string     // who they were last fighting (LivingEntity.getKillCredit)
+	killCreditAt   uint64     // and when, so the credit expires after 100 ticks
 	onGround       bool
 	// fallFlying is elytra flight proper (Entity FLAG_FALL_FLYING): begun by
 	// the client's own START_FALL_FLYING, ended by landing or by taking the

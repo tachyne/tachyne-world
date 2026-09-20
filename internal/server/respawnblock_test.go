@@ -47,8 +47,8 @@ func TestBedExplodesOutsideTheOverworld(t *testing.T) {
 	if pl.health >= 20 {
 		t.Errorf("health %v — standing on an exploding bed should hurt", pl.health)
 	}
-	if pl.lastCause.key != causeBadRespawn {
-		t.Errorf("death cause %q, want %q", pl.lastCause.key, causeBadRespawn)
+	if pl.lastCause.dt != dtBadRespawnPoint {
+		t.Errorf("death cause %v, want bad_respawn_point", dmgTypeNames[pl.lastCause.dt])
 	}
 }
 

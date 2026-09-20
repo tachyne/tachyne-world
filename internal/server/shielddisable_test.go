@@ -15,7 +15,7 @@ func TestAxeDisablesShield(t *testing.T) {
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
 	sword, axe := int32(itemByName["iron_sword"]), int32(itemByName["iron_axe"])
-	cause := deathCause{key: causePlayer, by: "foe"}
+	cause := deathCause{by: "foe"}
 
 	if h.hurtFrom(players, pl, 4, dtPlayerAttack, cause, fromWeapon(5, 0, sword)) {
 		t.Fatal("a sword blow on a raised shield landed")

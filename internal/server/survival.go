@@ -218,7 +218,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 			t.air = 0
 			if h.rules.DrownDamage {
 				h.toNearbyEv(players, t.dim, t.x, t.z, entityStatus(t.p.eid, entityStatusDrown))
-				h.hurtBy(players, t, drownDamagePerSec, dtDrown, deathCause{key: causeDrown})
+				h.hurtBy(players, t, drownDamagePerSec, dtDrown, deathCause{})
 			}
 		}
 	} else if t.air < maxAir {
@@ -235,7 +235,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if t.hasEffect(effFireRes) == 0 &&
 		(worldgen.IsLava(h.worldFor(t.dim).At(fx, feet, fz)) || worldgen.IsLava(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, lavaFireSecs)
-		if h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{key: causeLava}); t.dead {
+		if h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{}); t.dead {
 			return
 		}
 	}
@@ -243,7 +243,7 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if h.rules.FireDamage &&
 		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, fireContactSecs)
-		if h.hurtBy(players, t, fireDamagePerSec, dtInFire, deathCause{key: causeFire}); t.dead {
+		if h.hurtBy(players, t, fireDamagePerSec, dtInFire, deathCause{}); t.dead {
 			return
 		}
 	}
@@ -254,13 +254,13 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		if isSoulCampfire(s) {
 			dmg = 2
 		}
-		if h.hurtBy(players, t, dmg, dtCampfire, deathCause{key: causeFire}); t.dead {
+		if h.hurtBy(players, t, dmg, dtCampfire, deathCause{}); t.dead {
 			return
 		}
 	}
 	// Cactus: contact with an adjacent cactus at feet or body height.
 	if h.touchingCactus(t.dim, fx, feet, fz) {
-		h.hurtBy(players, t, cactusDamagePerSec, dtCactus, deathCause{key: causeCactus})
+		h.hurtBy(players, t, cactusDamagePerSec, dtCactus, deathCause{})
 	}
 }
 
@@ -369,12 +369,15 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 				}
 			}
 			if hurt > 0 {
-				cause := deathCause{key: causeFall}
+				// Landing on a stalagmite is its own damage type, not a fall
+				// with a different label: it pierces armour and a shield, and
+				// it reads "was impaled on a stalagmite".
+				dt := dtFall
 				if impaled {
-					cause.key = causeStalagmite
+					dt = dtStalagmite
 				}
 				dmg := math.Floor(hurt)
-				h.hurtBy(players, t, float32(dmg), dtFall, cause)
+				h.hurtBy(players, t, float32(dmg), dt, deathCause{})
 				h.playFallDamageSound(players, t.dim, t.x, t.y, t.z, dmg)
 			}
 		}
@@ -457,7 +460,17 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if amount = h.difficultyScaled(amount, dt, src.byMob); amount == 0 {
 		return false
 	}
-	t.lastCause = cause // the LAST thing to hurt them is what gets the credit
+	// The LAST thing to hurt them is what gets the credit, and the damage type
+	// is what the message is built from, so stamp it on here rather than
+	// asking twenty call sites to repeat themselves.
+	cause.dt = dt
+	if cause.by != "" {
+		t.killCredit, t.killCreditAt = cause.by, h.tick.Load()
+	} else if h.tick.Load() < t.killCreditAt+killCreditTicks {
+		// LivingEntity.getKillCredit: still counts as dying in a fight.
+		cause.credit = t.killCredit
+	}
+	t.lastCause = cause
 	blocked := h.shieldBlocked(t, amount, dt, src)
 	if blocked > 0 {
 		h.shieldBlockFX(players, t, blocked)

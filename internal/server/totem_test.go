@@ -16,7 +16,7 @@ func TestTotemOfUndying(t *testing.T) {
 	pl.offhand = invStack{item: itemTotem, count: 1}
 	h.applyEffect(players, pl, effPoison, 0, 30)
 
-	h.hurtFrom(players, pl, 10, dtGeneric, deathCause{key: causeGeneric}, dmgFrom{})
+	h.hurtFrom(players, pl, 10, dtGeneric, deathCause{}, dmgFrom{})
 	if pl.dead {
 		t.Fatal("the totem should have saved the player")
 	}
@@ -36,7 +36,7 @@ func TestTotemOfUndying(t *testing.T) {
 	// No totem left: the next lethal hit kills. A /kill bypasses a totem too.
 	pl.health = 1
 	pl.offhand = invStack{item: itemTotem, count: 1}
-	h.hurtFrom(players, pl, 100, dtGenericKill, deathCause{key: causeGeneric}, dmgFrom{})
+	h.hurtFrom(players, pl, 100, dtGenericKill, deathCause{}, dmgFrom{})
 	if !pl.dead {
 		t.Fatal("a kill command ignores the totem")
 	}

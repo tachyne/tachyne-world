@@ -171,7 +171,7 @@ func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
 			// indirect_magic bypasses armour, which is what makes an evoker
 			// dangerous to a fully-kitted player. The tag says so, not this call.
 			h.hurtBy(players, t, fangDamage, dtIndirectMagic,
-				deathCause{key: causeMagic, by: mobDisplayName(entityEvoker)})
+				deathCause{by: mobDisplayName(entityEvoker)})
 		}
 	}
 	for _, m := range h.mobs {

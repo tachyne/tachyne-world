@@ -372,7 +372,7 @@ func (h *hub) blowUpRespawnBlock(players map[int32]*tracked, t *tracked, pos blo
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 	}
 	h.explodeTyped(players, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5,
-		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{key: causeBadRespawn})
+		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{})
 }
 
 const (

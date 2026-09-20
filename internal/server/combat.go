@@ -335,7 +335,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 						continue
 					}
 					h.hurtFrom(players, o, float32(sweep), dtPlayerAttack,
-						deathCause{key: causePlayer, by: t.p.name}, from(t.x, t.z))
+						deathCause{by: t.p.name}, from(t.x, t.z))
 					h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				}
 			}

@@ -184,7 +184,7 @@ func (h *hub) goatStep(players map[int32]*tracked, m *mob) bool {
 		for _, t := range players {
 			if t.dim == m.dim && !t.dead && t.gamemode != gmCreative && t.gamemode != gmSpectator &&
 				math.Abs(t.x-m.x) < 0.9 && math.Abs(t.z-m.z) < 0.9 && math.Abs(t.y-m.y) < 1.5 {
-				h.hurtFrom(players, t, dmg, dtMobAttackNoAggro, deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
+				h.hurtFrom(players, t, dmg, dtMobAttackNoAggro, deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
 				h.knockbackScaled(t, m.x-m.ramDX, m.z-m.ramDZ, f3*force/0.4)
 				h.playSoundDim(players, m.dim, goatSound(m, "ram_impact"), sndNeutral, m.x, m.y, m.z, 1, 1)
 				h.goatRamFinish(m)

@@ -21,7 +21,7 @@ func TestLastDeathLocation(t *testing.T) {
 		t.Fatal("a fresh player has no death location")
 	}
 	pl.x, pl.y, pl.z, pl.dim = 10.7, 64.2, -3.4, 1
-	h.hurtBy(players, pl, 100, dtMagic, deathCause{key: causeMagic})
+	h.hurtBy(players, pl, 100, dtMagic, deathCause{})
 	if !pl.dead {
 		t.Fatal("the player should be dead")
 	}

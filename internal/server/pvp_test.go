@@ -172,8 +172,8 @@ func TestThornsBitesAPlayerAttacker(t *testing.T) {
 	}
 
 	// And the death it causes says so, rather than falling back to "died".
-	if got, want := deathMessage("attacker", deathCause{key: causeThorns, by: "victim"}),
-		"attacker was killed whilst trying to hurt victim"; got != want {
+	if got, want := deathMessage("attacker", deathCause{dt: dtThorns, by: "victim"}),
+		"attacker was killed while trying to hurt victim"; got != want {
 		t.Errorf("thorns death message = %q, want %q", got, want)
 	}
 }

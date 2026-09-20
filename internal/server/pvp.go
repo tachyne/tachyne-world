@@ -72,8 +72,15 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 
 	h.incCustom(t, "damage_dealt", tenths(dmg))
 	hpBefore, absBefore := v.health, v.absorption
+	// A weapon with a name of its own gets named in the death message, which
+	// is the only case vanilla names one (getLocalizedDeathMessage's .item
+	// branch tests for CUSTOM_NAME).
+	cause := deathCause{by: t.p.name}
+	if held := t.inv.slots[t.p.heldSlot()]; held.count > 0 {
+		cause.weapon = held.name
+	}
 	landed := h.hurtFrom(players, v, dmg, dtPlayerAttack,
-		deathCause{key: causePlayer, by: t.p.name}, fromWeapon(t.x, t.z, t.p.heldItem()))
+		cause, fromWeapon(t.x, t.z, t.p.heldItem()))
 	// The attacker's view of where the damage went (Player.attack's
 	// DAMAGE_DEALT_ABSORBED / DAMAGE_DEALT_RESISTED).
 	if absorbed := absBefore - v.absorption; absorbed > 0 {

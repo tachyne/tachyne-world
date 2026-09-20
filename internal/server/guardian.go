@@ -88,7 +88,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	// TWO hits, as the attack goal deals them: the beam's indirect_magic, which
 	// armour does not stop, and then an ordinary bite, which it does. Folding
 	// them into one number would have to pick a single answer to that question.
-	cause := deathCause{key: causeMob, by: mobDisplayName(m.etype)}
+	cause := deathCause{by: mobDisplayName(m.etype)}
 	h.hurtBy(players, t, magic, dtIndirectMagic, cause)
 	if !t.dead {
 		h.hurtFrom(players, t, melee, dtMobAttack, cause, fromMob(m.x, m.z))

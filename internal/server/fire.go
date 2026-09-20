@@ -221,7 +221,22 @@ func (h *hub) dropDecay(kind blastKind) bool {
 // cosmetic blast); power is the explosion's vanilla radius for what it does
 // to entities (TNT 4, a creeper 3, a bed 5; 0 hurts nothing).
 func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64, kind blastKind) {
-	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{key: causeExplosion})
+	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{})
+}
+
+// explodeBy is an explosion something is to blame for. Vanilla splits these:
+// DamageSources.explosion hands back player_explosion when there is a causing
+// entity and plain explosion when there is not, which is the difference
+// between "was blown up by Creeper" and "blew up". The attributed type also
+// always scales with the difficulty.
+func (h *hub) explodeBy(players map[int32]*tracked, dim int, cx, cy, cz float64,
+	radius int, power float64, kind blastKind, by string) {
+	if by == "" {
+		h.explodeIn(players, dim, cx, cy, cz, radius, power, kind)
+		return
+	}
+	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind,
+		dtPlayerExplosion, deathCause{by: by})
 }
 
 // explodeTyped is explodeIn with the damage type and death message spelled out
@@ -509,7 +524,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		t.fireSecs = 0
 	} else {
 		t.fireSecs--
-		h.hurtBy(players, t, fireDamagePerSec, dtOnFire, deathCause{key: causeFire}) // the afterburn bypasses armour
+		h.hurtBy(players, t, fireDamagePerSec, dtOnFire, deathCause{}) // the afterburn bypasses armour
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.broadcastPlayerFlags(players, t)
