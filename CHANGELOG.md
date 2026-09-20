@@ -28,6 +28,15 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The Warden holds a grudge.** It chased whoever happened to be
+  nearest. It now keeps vanilla's anger tally, one score per suspect: a
+  disturbance it hears within sixteen blocks adds thirty-five, an arrow
+  ten, a blow a hundred, and it goes for whoever it is angriest at — so
+  the player who keeps still is not the one it comes for. The tally ebbs
+  a point a second and everything it notices resets its burrow clock, so
+  staying quiet really does send it back into the ground. Its sonic boom
+  now throws you the way vanilla's does, hard along the beam and a little
+  upward, instead of an ordinary melee shove.
 - **Auto-crafters make what a crafting table makes.** The crafter ran a
   reduced recipe matcher, so it could not tip arrows, dye armour, make
   firework rockets or transmute a shulker box — recipes a crafting table

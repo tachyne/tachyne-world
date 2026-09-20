@@ -63,6 +63,9 @@ func (h *hub) vib(dim int, freq int, x, y, z int, src int32) {
 	if dim != dimOverworld {
 		return
 	}
+	// A Warden is a listener in its own right: what it hears within sixteen
+	// blocks it takes personally (Warden's VibrationUser).
+	h.wardenHeard(dim, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, src)
 	h.gameEvent(freq, x, y, z, src)
 }
 

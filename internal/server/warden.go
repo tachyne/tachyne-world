@@ -38,7 +38,12 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 		}
 	}
 
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, 24)
+	// AngerManagement: it goes for whoever it is angriest at, and only falls
+	// back on what it can sense nearby when nobody has provoked it.
+	t := h.wardenAngerTickOne(players, m)
+	if t == nil {
+		t = h.nearestHuntable(players, m.dim, m.x, m.z, 24)
+	}
 	if t == nil {
 		if m.digClock++; m.digClock >= wardenDigAwayUpd {
 			// Digging.stop removes the warden with RemovalReason.DISCARDED —
@@ -68,7 +73,7 @@ func (h *hub) wardenSonicBoom(players map[int32]*tracked, m *mob, t *tracked) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.warden.sonic_boom", sndHostile, m.x, m.y, m.z, 3, 1)
 	h.damageOf(players, t, wardenSonicDmg, dtSonicBoom)
-	h.knockback(t, m.x, m.z)
+	h.wardenSonicKnock(m, t) // SonicBoom's own push: 2.5 along the beam, 0.5 up
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 		h.incStat(t, attachproto.StatKilledBy, int32(m.etype), 1)

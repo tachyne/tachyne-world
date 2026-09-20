@@ -99,21 +99,23 @@ type mob struct {
 	floatY          float64
 	floatZ          float64
 	floatSet        bool
-	headNext        [2]int   // wither: nextHeadUpdate for each side head
-	headIdle        [2]int   // …and idleHeadUpdates, the count before a bored shot
-	headTarget      [2]int32 // …and the victim each has picked
-	witherSmash     int      // WitherBoss.destroyBlocksTick: ticks until it levels its surroundings
-	schoolLeader    int32    // fish: the leader it follows (FollowFlockLeaderGoal)
-	schoolFollowers int      // …or how many follow IT
-	schoolNext      int      // …and the ticks before it looks for a school again
-	bedSearchAt     uint64   // villager: the tick its next AcquirePoi(HOME) scan is due
-	turtleHoming    bool     // turtle: swimming back to the beach it was born on
-	phantomRadius   float64  // phantom: the circle it flies around its anchor
-	phantomHigh     float64  // …how far above the target that anchor sits
-	phantomCW       bool     // …which way round it goes
-	phantomNext     int      // …ticks to the next swoop
-	phantomSwoop    int      // …and the ticks left in the one it is flying
-	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	headNext        [2]int        // wither: nextHeadUpdate for each side head
+	headIdle        [2]int        // …and idleHeadUpdates, the count before a bored shot
+	headTarget      [2]int32      // …and the victim each has picked
+	witherSmash     int           // WitherBoss.destroyBlocksTick: ticks until it levels its surroundings
+	schoolLeader    int32         // fish: the leader it follows (FollowFlockLeaderGoal)
+	schoolFollowers int           // …or how many follow IT
+	schoolNext      int           // …and the ticks before it looks for a school again
+	bedSearchAt     uint64        // villager: the tick its next AcquirePoi(HOME) scan is due
+	turtleHoming    bool          // turtle: swimming back to the beach it was born on
+	phantomRadius   float64       // phantom: the circle it flies around its anchor
+	phantomHigh     float64       // …how far above the target that anchor sits
+	phantomCW       bool          // …which way round it goes
+	phantomNext     int           // …ticks to the next swoop
+	phantomSwoop    int           // …and the ticks left in the one it is flying
+	wardenAnger     map[int32]int // warden: AngerManagement's grudge per suspect
+	angerClock      int           // …and the ticks until the next decay
+	variant         int32         // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)

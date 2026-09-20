@@ -383,6 +383,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		} else if !m.hostile {
 			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, t.x, t.z, 0
 		} else {
+			if m.etype == entityWarden {
+				h.wardenAngerAt(m, t.p.eid, wardenAngerHurt) // ANGRY + 20 at whoever struck
+			}
 			m.anger = spiderAnger                   // a hit spider/enderman retaliates
 			m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
 			m.settled = 0                           // a new target restarts the enderman's daylight clock

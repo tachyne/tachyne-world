@@ -442,6 +442,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.endermanTeleport(players, m)
 			continue
 		}
+		if m.etype == entityWarden && a.shooter != 0 {
+			h.wardenAngerAt(m, a.shooter, wardenAngerShot) // PROJECTILE_ANGER
+		}
 		if a.knock > 0 { // a wind charge: one point of damage, a shove and the burst
 			if a.playerShot {
 				m.hitByPlayer = true
