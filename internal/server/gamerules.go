@@ -67,13 +67,19 @@ var booleanRules = []string{
 	"forgive_dead_players", "ender_pearls_vanish_on_death", "entity_drops",
 	"block_explosion_drop_decay", "mob_explosion_drop_decay",
 	"tnt_explosion_drop_decay", "spawn_wandering_traders", "universal_anger",
+	// Added 2026-09-20 — vanilla rules the engine has a mechanic for.
+	"allow_entering_nether_using_portals", "projectiles_can_break_blocks",
+	"global_sound_events",
 }
 
 // numericRules is the same for the rules that take a number.
 var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius", "max_snow_accumulation_height",
 	// 1.21.9 replaced the boolean doFireTick with this radius: fire spreads
 	// only within it of a player, -1 being everywhere and 0 nowhere.
-	"fire_spread_radius_around_player"}
+	"fire_spread_radius_around_player",
+	// The two nether-portal dwell delays, which were hard-coded at vanilla's
+	// values rather than settable.
+	"players_nether_portal_default_delay", "players_nether_portal_creative_delay"}
 
 // canonicalRule resolves either spelling to the canonical name, and reports
 // whether it is a rule at all.

@@ -89,6 +89,18 @@ type worldRules struct {
 	// this many blocks of a player. -1 is everywhere, 0 is nowhere (which is
 	// what the old doFireTick=false meant).
 	FireSpreadRadius int `json:"fireSpreadRadiusAroundPlayer"`
+	// The nether-portal rules: whether a portal will take you there at all,
+	// and how long you have to stand in one first (vanilla's two delays,
+	// 80 ticks in survival and 1 in creative).
+	AllowNether       bool `json:"allowEnteringNetherUsingPortals"`
+	PortalDelay       int  `json:"playersNetherPortalDefaultDelay"`
+	PortalDelayCreate int  `json:"playersNetherPortalCreativeDelay"`
+	// projectiles_can_break_blocks: whether an arrow or a trident may break
+	// what it hits (a decorated pot, dripstone).
+	ProjectilesBreak bool `json:"projectilesCanBreakBlocks"`
+	// global_sound_events: whether a wither waking, the dragon dying and an
+	// end portal opening are heard across the whole dimension.
+	GlobalSounds bool `json:"globalSoundEvents"`
 	// LegacyFireTick is the boolean doFireTick a world saved before the switch.
 	// loadRules folds a stored false into FireSpreadRadius 0 and drops it, so a
 	// server that had fire turned off keeps it off. Never written back.
@@ -111,7 +123,9 @@ func defaultRules() worldRules {
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
 		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1,
-		FireSpreadRadius: defaultFireSpreadRadius}
+		FireSpreadRadius: defaultFireSpreadRadius,
+		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 1,
+		ProjectilesBreak: true, GlobalSounds: true}
 }
 
 // summonable maps /summon names to entity types.
@@ -352,6 +366,16 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.RespawnRadius = max(0, e.num)
 	case "fire_spread_radius_around_player":
 		h.rules.FireSpreadRadius = max(-1, e.num)
+	case "players_nether_portal_default_delay":
+		h.rules.PortalDelay = max(0, e.num)
+	case "players_nether_portal_creative_delay":
+		h.rules.PortalDelayCreate = max(0, e.num)
+	case "allow_entering_nether_using_portals":
+		h.rules.AllowNether = e.on
+	case "projectiles_can_break_blocks":
+		h.rules.ProjectilesBreak = e.on
+	case "global_sound_events":
+		h.rules.GlobalSounds = e.on
 	case "max_snow_accumulation_height":
 		h.rules.MaxSnowHeight = min(8, max(0, e.num))
 	case "universal_anger":

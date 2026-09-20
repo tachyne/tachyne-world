@@ -249,3 +249,33 @@ var ambientIntervals = func() map[string]int32 {
 	}
 	return m
 }()
+
+// globalSoundRange is how far ServerLevel.globalLevelEvent places a sound a
+// listener is further away from than this: on the line towards it, so it still
+// arrives from the right direction at full volume.
+const globalSoundRange = 32.0
+
+// playSoundGlobal is ServerLevel.globalLevelEvent — the handful of sounds
+// everyone in a dimension is meant to hear wherever they are: a wither waking
+// up, the dragon dying, an end portal opening. A listener out of earshot hears
+// it from a point globalSoundRange blocks off in its direction, which is what
+// makes it carry without being placeless. The global_sound_events gamerule
+// turns that off, and then only the people nearby hear it.
+func (h *hub) playSoundGlobal(players map[int32]*tracked, dim int, name string, category int32, x, y, z float64, volume, pitch float32) {
+	if !h.rules.GlobalSounds {
+		h.playSoundDim(players, dim, name, category, x, y, z, volume, pitch)
+		return
+	}
+	for _, t := range players {
+		if t.dim != dim {
+			continue
+		}
+		sx, sy, sz := x, y, z
+		if d := dist3(t.x, t.y, t.z, x, y, z); d > globalSoundRange {
+			sx = t.x + (x-t.x)/d*globalSoundRange
+			sy = t.y + (y-t.y)/d*globalSoundRange
+			sz = t.z + (z-t.z)/d*globalSoundRange
+		}
+		t.p.trySendEv(soundEv(name, category, sx, sy, sz, volume, pitch))
+	}
+}

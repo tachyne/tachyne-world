@@ -118,15 +118,16 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		// BigDripleafBlock.onProjectileHit: tips all the way at once.
 		h.dripleafShot(players, a.dim, pos, state)
 
-	case isDecoratedPot(state):
+	case isDecoratedPot(state) && h.rules.ProjectilesBreak:
 		// A direct hit shatters it. Vanilla cracks it and then destroys it,
-		// which drops the pot's contents along with the pot.
+		// which drops the pot's contents along with the pot — and only when
+		// projectiles_can_break_blocks allows it (Projectile.canBreakBlocks).
 		h.breakPotByProjectile(players, a.dim, pos)
 
 	case pointedDripHi > 0 && state >= pointedDripLo && state <= pointedDripHi:
 		// Only a THROWN TRIDENT, and only one still travelling, shears
 		// dripstone off — an arrow just sticks in it.
-		if a.pickupStack.item == itemTrident && projectileSpeed(a) > 0.6 {
+		if a.pickupStack.item == itemTrident && projectileSpeed(a) > 0.6 && h.rules.ProjectilesBreak {
 			h.breakBlockDrop(players, a.dim, pos, state)
 		}
 	}

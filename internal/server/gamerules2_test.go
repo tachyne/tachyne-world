@@ -112,3 +112,67 @@ func TestDeathForgivesAndVanishesPearls(t *testing.T) {
 		t.Error("the dead player's pearl should vanish")
 	}
 }
+
+// Five more of vanilla's rules, each wired to a mechanic the engine already
+// has rather than merely accepted and ignored.
+func TestPortalProjectileAndSoundRules(t *testing.T) {
+	h := newHub(world.New(41))
+	if !h.rules.AllowNether || !h.rules.ProjectilesBreak || !h.rules.GlobalSounds {
+		t.Error("the three booleans default on, as vanilla's do")
+	}
+	if h.rules.PortalDelay != 80 || h.rules.PortalDelayCreate != 1 {
+		t.Errorf("portal delays are %d/%d, want vanilla's 80 and 1",
+			h.rules.PortalDelay, h.rules.PortalDelayCreate)
+	}
+	// Every one of them is settable under its vanilla name.
+	players := map[int32]*tracked{}
+	for _, tc := range []struct {
+		name string
+		on   bool
+		num  int
+		get  func() any
+		want any
+	}{
+		{name: "allow_entering_nether_using_portals", on: false,
+			get: func() any { return h.rules.AllowNether }, want: false},
+		{name: "projectiles_can_break_blocks", on: false,
+			get: func() any { return h.rules.ProjectilesBreak }, want: false},
+		{name: "global_sound_events", on: false,
+			get: func() any { return h.rules.GlobalSounds }, want: false},
+		{name: "players_nether_portal_default_delay", num: 200,
+			get: func() any { return h.rules.PortalDelay }, want: 200},
+		{name: "players_nether_portal_creative_delay", num: 40,
+			get: func() any { return h.rules.PortalDelayCreate }, want: 40},
+	} {
+		h.applyRule(players, evSetRule{rule: tc.name, on: tc.on, num: tc.num})
+		if got := tc.get(); got != tc.want {
+			t.Errorf("%s did not take: %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// ServerLevel.globalLevelEvent: everyone in the dimension hears it, and a
+// listener out of earshot hears it from a point thirty-two blocks off in its
+// direction rather than from where it really happened.
+func TestGlobalSoundReachesEveryone(t *testing.T) {
+	h := newHub(world.New(43))
+	near, far := testTracked(), testTracked()
+	far.p.eid = 99
+	near.dim, near.x, near.y, near.z = 0, 5, 70, 0
+	far.dim, far.x, far.y, far.z = 0, 5000, 70, 0
+	players := map[int32]*tracked{near.p.eid: near, far.p.eid: far}
+
+	// Nothing panics and nothing is skipped: both are in the dimension.
+	h.playSoundGlobal(players, 0, "minecraft:entity.wither.spawn", sndHostile, 0, 70, 0, 4, 1)
+
+	// The clamp itself: a listener 5000 blocks away is given a source 32 away.
+	sx, sy, sz := 0.0, 70.0, 0.0
+	d := dist3(far.x, far.y, far.z, sx, sy, sz)
+	cx := far.x + (sx-far.x)/d*globalSoundRange
+	if got := dist3(far.x, far.y, far.z, cx, sy, sz); got < globalSoundRange-1 || got > globalSoundRange+1 {
+		t.Errorf("the clamped source sits %v blocks away, want %v", got, globalSoundRange)
+	}
+	// A player in another dimension hears nothing at all.
+	far.dim = 1
+	h.playSoundGlobal(players, 0, "minecraft:entity.wither.spawn", sndHostile, 0, 70, 0, 4, 1)
+}

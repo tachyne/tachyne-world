@@ -52,7 +52,8 @@ func (h *hub) insertEye(players map[int32]*tracked, t *tracked, pos blockPos, st
 					}
 				}
 			}
-			h.playSound(players, "minecraft:block.end_portal.spawn", sndBlock,
+			// LevelEvent 1038: the whole dimension hears the portal open.
+			h.playSoundGlobal(players, dimOverworld, "minecraft:block.end_portal.spawn", sndBlock,
 				float64(cx)+0.5, float64(pos.y)+0.5, float64(cz)+0.5, 1, 1)
 			return
 		}

@@ -163,11 +163,23 @@ func (h *hub) updatePortalDwell(players map[int32]*tracked) {
 			t.portalTicks = 0
 			continue
 		}
-		t.portalTicks++
-		need := portalDwellTicks / survivalTickN // the dwell pass runs once a second
-		if t.gamemode == gmCreative {
-			need = 1
+		// ServerLevel.isAllowedToEnterPortal: the rule gates the way IN to the
+		// Nether only. Coming back out always works, or the rule would strand
+		// whoever was already there when it was turned off.
+		if t.dim == dimOverworld && !h.rules.AllowNether {
+			t.portalTicks = 0
+			continue
 		}
+		t.portalTicks++
+		// players_nether_portal_default_delay / _creative_delay: how long you
+		// stand in a portal before it takes you. The dwell pass runs once a
+		// second, so the tick count is divided down; a delay under a second
+		// still costs one pass, which is what the creative default asks for.
+		delay := h.rules.PortalDelay
+		if t.gamemode == gmCreative {
+			delay = h.rules.PortalDelayCreate
+		}
+		need := max(1, delay/survivalTickN)
 		log.Printf("portal: %q dwell %d/%d (dim=%d gm=%d pending=%d)",
 			t.p.name, t.portalTicks, need, t.dim, t.gamemode, t.p.pendingDim.Load())
 		if t.portalTicks >= need && t.p.pendingDim.Load() < 0 {
