@@ -144,6 +144,18 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 	// show the new dimension's. Vehicles are overworld-only.
 	// Mobs, items and orbs are the tracker's: drop the whole view the
 	// client holds, and the next pass spawns the new dimension's.
+	// PlayerList.sendAllPlayerInfo + sendLevelInfo, which vanilla's
+	// changeDimension runs after the respawn: the respawn clears what the
+	// client is holding, so all of it has to go again. Without this the hotbar
+	// came up empty on every portal — most visibly in creative, where the
+	// server otherwise never pushes an inventory at all (sendInventory is
+	// gated on survival at join, because in creative the client keeps its own
+	// copy — a copy the respawn had just thrown away).
+	h.sendInventory(t)
+	h.sendHealth(t)
+	h.sendExperience(t)
+	h.resendEffects(t)
+
 	h.dropTracked(t)
 	for eid, c := range h.crystals {
 		switch {
