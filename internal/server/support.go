@@ -210,6 +210,15 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			anchor = above()
 		}
 		return sameGrowingPlant(state, anchor) || holdsBlock(anchor)
+	case worldgen.SupportMossCarpet:
+		// MossyCarpetBlock.canSurvive: the base layer needs only something —
+		// anything that is not air — under it; a layer growing up a wall
+		// needs a BASE carpet directly beneath.
+		b := below()
+		if prop("bottom") == "true" {
+			return b != worldgen.Air
+		}
+		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b)
 	case worldgen.SupportBell:
 		// BellBlock.canSurvive: the attachment says which way it hangs. A bell
 		// between two walls needs both of them — taking either one down drops
@@ -252,6 +261,13 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 }
 
 var dirtPathState = worldgen.BlockBase("dirt_path")
+
+// bottomProp reads a state's "bottom" flag — the pale moss carpet's BASE,
+// which vanilla spells "bottom" on the wire.
+func bottomProp(s uint32) bool {
+	info, ok := worldgen.InfoForState(s)
+	return ok && worldgen.GetProperty(info, s, "bottom") == "true"
+}
 
 // coversPath is DirtPathBlock.canSurvive inverted: a solid block on top turns
 // the path back to dirt, and a fence gate — which vanilla names explicitly —

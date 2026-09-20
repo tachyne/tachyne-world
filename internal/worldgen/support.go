@@ -35,6 +35,7 @@ const (
 	SupportSpawn                  // frogspawn: water below, open air above
 	SupportBell                   // its own "attachment" picks floor, ceiling or a wall
 	SupportStem                   // a big dripleaf stem: held at BOTH ends
+	SupportMossCarpet             // pale moss carpet: on anything if it is the base, else on a base
 )
 
 // supportNames is the classification. Names, not ids: ids move between
@@ -152,6 +153,12 @@ var supportNames = map[SupportKind][]string{
 	// rest of the plant above — a stem is the middle of a thing, not an end.
 	SupportStem: {
 		"big_dripleaf_stem",
+	},
+	// MossyCarpetBlock.canSurvive: the BASE layer sits on anything that is
+	// not air (it is a carpet, not a plant), and a layer above it needs a
+	// base carpet directly underneath.
+	SupportMossCarpet: {
+		"pale_moss_carpet",
 	},
 	SupportSpeleothem: {
 		"pointed_dripstone", "sulfur_spike",

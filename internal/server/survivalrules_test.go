@@ -204,3 +204,40 @@ func TestDripleafStemNeedsBothEnds(t *testing.T) {
 		}
 	}
 }
+
+// MossyCarpetBlock.canSurvive: the base layer sits on anything solid enough
+// to be a block at all, and a layer climbing a wall needs a BASE carpet
+// directly under it.
+func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
+	w := world.New(1)
+	const x, y, z = 50, 180, 50
+	base := worldgen.BlockBase("pale_moss_carpet") // bottom=true
+	info, _ := worldgen.InfoForState(base)
+	upper := worldgen.SetProperty(info, base, "bottom", "false")
+	if bottomProp(upper) {
+		t.Fatal("the upper layer still reads as the base")
+	}
+
+	w.SetBlock(x, y-1, z, worldgen.Stone)
+	if !supported(w, blockPos{x, y, z}, base) {
+		t.Error("a base carpet on stone should stay")
+	}
+	w.SetBlock(x, y-1, z, worldgen.Air)
+	if supported(w, blockPos{x, y, z}, base) {
+		t.Error("a base carpet over air should not")
+	}
+
+	// The upper layer is pickier: it wants a base carpet, not just anything.
+	w.SetBlock(x, y-1, z, worldgen.Stone)
+	if supported(w, blockPos{x, y, z}, upper) {
+		t.Error("an upper layer stood on plain stone")
+	}
+	w.SetBlock(x, y-1, z, base)
+	if !supported(w, blockPos{x, y, z}, upper) {
+		t.Error("an upper layer on a base carpet should stay")
+	}
+	w.SetBlock(x, y-1, z, upper)
+	if supported(w, blockPos{x, y, z}, upper) {
+		t.Error("an upper layer stood on another upper layer")
+	}
+}
