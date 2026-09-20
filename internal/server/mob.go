@@ -149,6 +149,7 @@ type mob struct {
 	size                            int         // slime: 4/2/1 (splits in half on death)
 	neutral                         bool        // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock                    uint32      // enderman: the block state it's holding (0 = none)
+	witherHealFrac                  float32     // wither: the part of a health point its regen has banked
 	sonicCD                         int         // warden: mob-updates until the next sonic boom
 	beamTarget                      int32       // guardian: the player the beam is locked on (0 = none)
 	hideUntil                       uint64      // villager: heard a bell — stay at the bed until this tick

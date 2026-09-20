@@ -98,7 +98,32 @@ func (h *hub) updateWithers(players map[int32]*tracked) {
 		}
 		h.witherHeadsTick(players, m) // the two side heads pick their own victims
 		h.witherSmashTick(players, m) // …and a blow brings the arena down
+		h.witherRegen(m)              // one heart back a second, always
 		h.updateBossBar(players, m, "Wither", witherHealth)
+	}
+}
+
+// witherPowered is WitherBoss.isPowered: below half health the wither enters
+// its second phase — it hangs in the air, and an arrow can no longer touch it.
+// That is the whole reason the fight has a shape: you cannot simply snipe it
+// from a hole, you have to close.
+func witherPowered(m *mob) bool { return m.health*2 <= witherHealth }
+
+// witherSweepTicks is how often updateWithers runs (hub.go's age%4).
+const witherSweepTicks = 4
+
+// witherRegen is the heal in WitherBoss.customServerAiStep: one health point
+// every twenty ticks, from the moment its charge ends. This runs on the
+// four-tick wither sweep, so it carries the fraction between passes rather
+// than healing five times too fast.
+func (h *hub) witherRegen(m *mob) {
+	if m.spawnInvuln > 0 {
+		return
+	}
+	m.witherHealFrac += witherSweepTicks / 20.0
+	if m.witherHealFrac >= 1 {
+		m.witherHealFrac--
+		h.healMob(m, 1)
 	}
 }
 

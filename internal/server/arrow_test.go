@@ -59,3 +59,59 @@ func TestNetheriteResistsKnockback(t *testing.T) {
 		t.Fatalf("stripped, it is back to zero: %v", got)
 	}
 }
+
+// Bogged.getArrow tips its arrows with Poison for a hundred ticks — the one
+// thing that makes a bogged different from a skeleton at range. Parched and
+// stray already tipped theirs; the bogged fired plain ones.
+func TestBoggedShootsPoisonArrows(t *testing.T) {
+	h := newHub(world.New(83))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.dim, pl.x, pl.y, pl.z = 0, 0.5, 180, 0.5
+
+	for _, tc := range []struct {
+		etype int
+		want  int32
+		secs  int
+	}{
+		{entityBogged, effPoison, boggedPoisonSecs},
+		{entityStray, effSlowness, 30},
+		{entityParched, effWeakness, parchedWeaknessSecs},
+	} {
+		m := h.spawnMob(players, tc.etype, 6, 180, 0.5)
+
+		h.spawnArrow(players, m, pl)
+		var shot *arrowEntity
+		for _, a := range h.arrows {
+			if a.shooter == m.eid {
+				shot = a
+			}
+		}
+		if shot == nil {
+			t.Fatalf("%s loosed no arrow", advEntityName[tc.etype])
+		}
+		got := 0
+		switch tc.want {
+		case effPoison:
+			got = shot.poison
+		case effSlowness:
+			got = shot.slow
+		case effWeakness:
+			got = shot.weaken
+		}
+		if got != tc.secs {
+			t.Errorf("%s arrow carries %d s, want %d", advEntityName[tc.etype], got, tc.secs)
+		}
+	}
+
+	// A plain skeleton's arrow carries nothing.
+	sk := h.spawnMob(players, entitySkeleton, 7, 180, 0.5)
+
+	h.spawnArrow(players, sk, pl)
+	for _, a := range h.arrows {
+		if a.shooter == sk.eid && (a.poison > 0 || a.slow > 0 || a.weaken > 0) {
+			t.Error("a skeleton's arrow is plain")
+		}
+	}
+}

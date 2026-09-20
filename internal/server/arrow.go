@@ -30,11 +30,13 @@ const (
 	shulkerBulletSteer = 0.2 // how hard it turns toward the target each tick
 
 	parchedWeaknessSecs = 30 // Parched arrows: WEAKNESS 600 ticks (vanilla behavior)
+	boggedPoisonSecs    = 5  // Bogged.getArrow: POISON 100 ticks
 )
 
 var (
-	entityArrow    = entityID("arrow") // minecraft:entity_type "arrow" (1.21.5)
-	entityXPBottle = entityID("experience_bottle")
+	entityArrow         = entityID("arrow")          // minecraft:entity_type "arrow" (1.21.5)
+	entitySpectralArrow = entityID("spectral_arrow") // …and the glowing one
+	entityXPBottle      = entityID("experience_bottle")
 )
 
 type arrowEntity struct {
@@ -61,7 +63,7 @@ type arrowEntity struct {
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
 	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
 	pearl      bool     // an ender pearl: teleports its thrower where it lands
-	poison     bool     // witch splash: poisons the player it hits
+	poison     int      // seconds of poison on a hit: a witch's splash, a bogged's arrow
 	splash     bool     // a thrown potion: shatters on any impact into an AoE (see splashPotion)
 	tipped     bool     // a tipped arrow: applies its potion's effects to the player it hits
 	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
@@ -70,11 +72,12 @@ type arrowEntity struct {
 	wither     int      // wither skull: seconds of wither effect on a hit
 	weaken     int      // parched arrow: seconds of weakness effect on a hit
 	slow       int      // stray arrow: seconds of slowness effect on a hit
-	homing     int32    // shulker bullet: eid of the target it curves toward (0 = straight)
-	levitate   int      // shulker bullet: seconds of Levitation applied on a hit
-	explode    int      // ghast/wither fireball: explosion power on impact (0 = none)
-	knock      float64  // wind charge: pure knockback impulse, no damage
-	punch      int      // bow Punch enchant: +0.6/level extra hit knockback
+
+	homing   int32   // shulker bullet: eid of the target it curves toward (0 = straight)
+	levitate int     // shulker bullet: seconds of Levitation applied on a hit
+	explode  int     // ghast/wither fireball: explosion power on impact (0 = none)
+	knock    float64 // wind charge: pure knockback impulse, no damage
+	punch    int     // bow Punch enchant: +0.6/level extra hit knockback
 
 	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
 	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
@@ -124,6 +127,9 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	}
 	if m.etype == entityStray {
 		a.slow = 30 // vanilla Stray: an arrow of SLOWNESS, 600 ticks
+	}
+	if m.etype == entityBogged {
+		a.poison = boggedPoisonSecs // Bogged.getArrow: POISON, 100 ticks
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
 }
@@ -399,8 +405,8 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				h.witherSkullHeal(a) // a wither feeds on what its skull kills
 			}
 			h.thornsAgainstShooter(players, t, a.shooter)
-			if a.poison {
-				h.applyEffect(players, t, effPoison, 0, 10)
+			if a.poison > 0 {
+				h.applyEffect(players, t, effPoison, 0, a.poison)
 			}
 			if a.wither > 0 {
 				h.applyEffect(players, t, effWither, 0, a.wither)
@@ -645,6 +651,14 @@ func projectileHitDamage(a *arrowEntity, m *mob) int {
 		if m.etype == entityBlaze {
 			return 3
 		}
+		return 0
+	}
+	// WitherBoss.hurtServer: once it is below half health the wither shrugs
+	// off arrows and wind charges entirely. That rule is what gives the fight
+	// its shape — the second half cannot be sniped from a hole, you have to
+	// come within reach of it.
+	if m.etype == entityWither && witherPowered(m) &&
+		(a.etype == entityArrow || a.etype == entitySpectralArrow || a.etype == entityWindCharge) {
 		return 0
 	}
 	return a.dmg

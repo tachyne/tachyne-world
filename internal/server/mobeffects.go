@@ -163,8 +163,8 @@ func (m *mob) damageResistance() float64 {
 // arrowEffectsOnMob transfers an arrow's effects to the mob it struck — the
 // same set the player path applies, which mobs were simply excluded from.
 func (h *hub) arrowEffectsOnMob(players map[int32]*tracked, a *arrowEntity, m *mob) {
-	if a.poison {
-		h.applyMobEffect(players, m, effPoison, 0, 10)
+	if a.poison > 0 {
+		h.applyMobEffect(players, m, effPoison, 0, a.poison)
 	}
 	if a.wither > 0 {
 		h.applyMobEffect(players, m, effWither, 0, a.wither)

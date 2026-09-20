@@ -163,3 +163,55 @@ func TestWitherSmashesAfterBeingHurt(t *testing.T) {
 		t.Error("bedrock is wither-immune")
 	}
 }
+
+// WitherBoss's second phase. Below half health it shrugs off arrows and wind
+// charges entirely — that rule is what stops the fight being a sniping
+// exercise — and it heals a health point a second from the moment its charge
+// ends, which is what makes the damage race matter.
+func TestWitherPhaseTwoAndRegen(t *testing.T) {
+	h := newHub(world.New(89))
+	players := map[int32]*tracked{}
+	m := h.spawnMob(players, entityWither, 0, 180, 0)
+	m.health = witherHealth
+
+	if witherPowered(m) {
+		t.Error("a full-health wither is not in its second phase")
+	}
+	arrow := &arrowEntity{etype: entityArrow, dmg: 9}
+	if got := projectileHitDamage(arrow, m); got != 9 {
+		t.Errorf("an arrow does %d to a healthy wither, want 9", got)
+	}
+
+	m.health = witherHealth / 2
+	if !witherPowered(m) {
+		t.Error("at exactly half health it IS powered (vanilla's <=)")
+	}
+	for _, et := range []int{entityArrow, entitySpectralArrow, entityWindCharge} {
+		if got := projectileHitDamage(&arrowEntity{etype: et, dmg: 9}, m); got != 0 {
+			t.Errorf("%d does %d to a powered wither, want 0", et, got)
+		}
+	}
+	// Melee and everything else still land.
+	if got := projectileHitDamage(&arrowEntity{etype: entityTrident, dmg: 9}, m); got != 9 {
+		t.Errorf("a trident does %d to a powered wither, want 9", got)
+	}
+
+	// Regeneration: a health point a second, banked across the four-tick
+	// sweep rather than healed five times over.
+	m.health = 100
+	for i := 0; i < 20/witherSweepTicks; i++ {
+		h.witherRegen(m)
+	}
+	if m.health != 101 {
+		t.Errorf("a second of regen took the wither to %d, want 101", m.health)
+	}
+
+	// …and nothing heals while the spawn charge is still running.
+	m.health, m.spawnInvuln = 100, 10
+	for i := 0; i < 40; i++ {
+		h.witherRegen(m)
+	}
+	if m.health != 100 {
+		t.Errorf("a charging wither healed to %d, want 100", m.health)
+	}
+}
