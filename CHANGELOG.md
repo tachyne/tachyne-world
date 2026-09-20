@@ -120,6 +120,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Falling in makes a splash, and landing hard makes a thud.** Entering
+  water was silent for players and mobs alike — the game registered it (a
+  sculk sensor could hear it) but nothing played. So was every landing that
+  hurt, however far the drop. Both are back, with the real game's own rules:
+  the splash is as loud as the speed you go in at, a player gets their own
+  heavier splash for a proper dive, and a landing past four points of damage
+  gets the big thud rather than the small one.
 - **It stays light under water and under trees.** Light was being charged
   twice over for anything you can see through: each block of water or leaves
   took two levels off instead of one, so a pond or a canopy went dark at half

@@ -443,6 +443,7 @@ type mob struct {
 	syaw        float32 // last broadcast head yaw (only resend on change)
 	headYaw     float32 // where the head is pointed (LookControl); the body yaw when nothing is watched
 	sheadYaw    float32 // last broadcast head yaw
+	wasWet      bool    // last step's water state, for the splash on entry
 	lookTicks   int32   // ticks left on a look goal (0 = neither is running)
 	lookEID     int32   // the player being watched (0 = a fixed direction)
 	lookDX      float64 // RandomLookAroundGoal's direction

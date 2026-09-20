@@ -48,7 +48,7 @@ not yet re-graded (a re-grade means re-enumerating, not editing the numbers by h
 7. ~~**A stack holds at most four enchantments.**~~ **Fixed 2026-09-19.** Eight, as vanilla allows.
 8. **Commands are a word splitter** — part fixed. Target selectors (`@s @p @a @r @e` with `type=`, `distance=`, `limit=`, `sort=`, `name=`) and `~`/`^` coordinates landed 2026-09-20. Still 34 verbs of vanilla's 95, no brigadier tree (so no client-side completion), no `/execute`, no `/data`.
 9. **Loot functions dropped at bake time** — mostly fixed 2026-09-19: treasure maps, potions, names, instruments, stew effects and ominous bottles are baked and evaluated. `copy_components` (block-entity data on the drop) and `set_components` (trial-chamber gear) remain; banner patterns now ride a broken banner's drop (2026-09-20).
-10. **Eleven silent species, flat eye heights, no step sounds, babies drop nothing** — mostly fixed 2026-09-19: voices, per-type eye heights, ambient cadence, step sounds and baby drops/XP are in. Splash and fall sounds remain.
+10. **Eleven silent species, flat eye heights, no step sounds, babies drop nothing** — mostly fixed 2026-09-19: voices, per-type eye heights, ambient cadence, step sounds and baby drops/XP are in. ~~Splash and fall sounds remain~~ (2026-09-20).
 11. **Seed parity is out of reach by construction**: terrain is a 2-D heightmap with hand-tuned noise, not vanilla's noise router, so no seed reproduces vanilla's terrain, biomes, structures or ores. That is a decision (vanilla-feeling vs vanilla-identical worldgen), not a backlog item.
 
 ## What is strong

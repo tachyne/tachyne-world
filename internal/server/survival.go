@@ -297,6 +297,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 		t.exhaust(waterExhaustion * float32(math.Hypot(e.x-t.x, e.z-t.z)))
 		if !t.wasInWater && !t.p.sneaking {
 			h.vibAt(t.dim, freqSplash, e.x, e.y, e.z, t.p.eid) // Entity.doWaterSplashEffect: SPLASH (sneaking is silent)
+			// …and the splash itself, which had never been audible. The volume
+			// is the speed going in, so a dive is loud and wading is not.
+			h.playSplash(players, t.dim, e.x, e.y, e.z, e.x-t.x, e.y-t.y, e.z-t.z, true)
 		}
 		t.wasInWater = true
 	} else {
@@ -370,7 +373,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 				if impaled {
 					cause.key = causeStalagmite
 				}
-				h.hurtBy(players, t, float32(math.Floor(hurt)), dtFall, cause)
+				dmg := math.Floor(hurt)
+				h.hurtBy(players, t, float32(dmg), dtFall, cause)
+				h.playFallDamageSound(players, t.dim, t.x, t.y, t.z, dmg)
 			}
 		}
 	}

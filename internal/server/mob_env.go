@@ -127,6 +127,7 @@ func (h *hub) mobFall(players map[int32]*tracked, m *mob, fell float64) {
 	}
 	if dmg := math.Floor(fell - mobSafeFall); dmg >= 1 {
 		h.hurtMobOf(players, m, dmg, dtFall)
+		h.playFallDamageSound(players, m.dim, m.x, m.y, m.z, dmg)
 	}
 }
 

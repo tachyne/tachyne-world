@@ -80,6 +80,18 @@ func blockStepSound(state uint32) stepSound {
 // mobFootsteps is Entity.move's step-sound half for one movement: the
 // distance accumulates and each whole unit past the last step plays.
 func (h *hub) mobFootsteps(players map[int32]*tracked, m *mob, dx, dy, dz float64) {
+	// Entering water splashes, whatever the step cadence is doing — a mob
+	// falling in makes the noise on the way past, not on its next footfall.
+	// Water-dwellers are exempt: a fish is never "entering" water.
+	if !m.swims {
+		if wet := h.inWater(m.dim, m.x, m.y, m.z); wet != m.wasWet {
+			if wet {
+				h.playSplash(players, m.dim, m.x, m.y, m.z,
+					dx/mobMoveInterval, dy/mobMoveInterval, dz/mobMoveInterval, false)
+			}
+			m.wasWet = wet
+		}
+	}
 	if m.flies || m.mount != 0 {
 		return // no ground, or a passenger (vanilla emits nothing for passengers)
 	}
