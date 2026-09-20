@@ -15,6 +15,13 @@ const (
 	gmSpectator = 3
 )
 
+// mayBuild is Abilities.mayBuild, which GameType sets to
+// !isBlockPlacingRestricted(): adventure and spectator may not change the
+// world. Vanilla softens that for an item carrying a can_place_on or can_break
+// list — a map-maker's tool that works on exactly the blocks it names — and
+// the engine has no such component, so for us the restriction is absolute.
+func mayBuild(mode int) bool { return mode == gmSurvival || mode == gmCreative }
+
 // modeStore remembers each player's game mode by name so a mixed survival/
 // creative server keeps who-is-who across restarts. Plain JSON so an admin can
 // hand-edit who's creative. Unknown players get the server default.

@@ -54,6 +54,13 @@ func (s *Server) handleDig(p *player, data []byte) {
 	}
 	broken := s.worldFor(p).Block(x, y, z)
 	mode := s.modes.get(p.name)
+	// Player.blockActionRestricted: an adventure or spectator player cannot
+	// break anything. The client predicts the break regardless, so the block
+	// has to be sent back.
+	if !mayBuild(mode) {
+		s.sendBlockChange(p, x, y, z, broken, seq)
+		return
+	}
 
 	// The block's attack hook (BlockBehaviour.attack) fires on the first
 	// punch, and the dig proceeds normally on top of it: a note block plays
@@ -193,6 +200,15 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return // clicked block is outside this pod's region (finite world / cross-shard)
 	}
 
+	// ServerPlayerGameMode.useItemOn: a spectator's click does nothing to the
+	// world. (Vanilla does let one open a container's menu to look inside;
+	// this stops short of that rather than open doors and place blocks too.)
+	placeMode := s.modes.get(p.name)
+	if placeMode == gmSpectator {
+		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
+		return
+	}
+
 	// Right-clicking an interactive block (door/gate/trapdoor) operates it instead
 	// of placing — unless the player is sneaking.
 	if !p.sneaking && s.tryUseBlock(p, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
@@ -217,6 +233,14 @@ func (s *Server) handlePlace(p *player, data []byte) {
 
 	dx, dy, dz := blockFaceOffset(dir)
 	tx, ty, tz := x+dx, y+dy, z+dz
+	// BlockPlaceContext.canPlace → Player.mayUseItemAt: everything below this
+	// line puts something INTO the world, which adventure mode may not do.
+	// Using a block — a door, a button, a chest — is allowed and has already
+	// happened above.
+	if !mayBuild(placeMode) {
+		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
+		return
+	}
 	heldBlock, heldIsBlock := protocol.BlockForItem(p.heldItem())
 	if alias, isAlias := placeAlias[p.heldItem()]; isAlias {
 		heldBlock, heldIsBlock = alias, true
