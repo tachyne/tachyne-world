@@ -358,6 +358,9 @@ type mob struct {
 	wardenPoseLeft                  int        // …and the updates left in it
 	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
+	playMate                        int32      // baby villager: the child it is chasing (0 = none)
+	playFlee                        bool       // …or running away from one, toward
+	playX, playZ                    float64    // …this spot
 	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
 	dolphinSwimmer                  int32      // dolphin: the swimming player it keeps company (0 = none)
 	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
@@ -673,6 +676,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// a vindicator named Johnny after everything.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
+		case m.etype == entityVillager && m.baby && h.villagerPlayStep(players, m):
+			// Baby villagers playing tag with the other children. Below panic:
+			// a frightened child runs from the zombie, not after its friend.
 		case m.etype == entityVillager && h.villagerPickupStep(players, m):
 			// A villager after a dropped item it wants (seeds, crops, bread).
 		case m.etype == entityVillager && h.farmerBonemealStep(players, m):

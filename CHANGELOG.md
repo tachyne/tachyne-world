@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **Village children play tag.** Baby villagers ran the adults' daily
+  schedule, which had them standing at workstations they cannot use. They
+  now play the game vanilla gives them: a child picks one of the other
+  children it can see and runs after it, a child being chased drops its own
+  quarry and bolts somewhere else in the village, and whoever is already
+  being chased is the one the rest pile onto — up to five at a time. They
+  still run from a zombie first, and still go to bed at dusk.
 - **Tab completion past the command name.** The command tree the client is
   sent described every command as a name followed by one opaque run of
   text, so pressing tab after `/gamemode ` offered nothing and every
