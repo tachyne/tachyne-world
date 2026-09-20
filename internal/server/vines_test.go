@@ -44,10 +44,15 @@ func TestGrowingPlantsAdvanceAndLeaveBody(t *testing.T) {
 		}
 		x, y, z := 100+i*8, 100, 100
 
-		// A column of the right medium for it to grow through.
+		// A column of the right medium for it to grow through…
 		for k := -6; k <= 6; k++ {
 			h.world.SetBlock(x, y+k, z, c.medium)
 		}
+		// …and something to hang off at the end it grows AWAY from. A growing
+		// plant with no anchor does not survive in vanilla either, and since
+		// 2026-09-20 it does not survive here: the support sweep that runs on
+		// every block change takes it straight back out.
+		h.world.SetBlock(x, y-g.dy, z, worldgen.Stone)
 		h.world.SetBlock(x, y, z, g.headLo) // age 0 head
 
 		grew := false

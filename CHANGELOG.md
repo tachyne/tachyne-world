@@ -121,6 +121,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Kelp, vines and dirt paths obey the rules they should.** A handful of
+  blocks had no survival rule at all, so they simply hung in the air when
+  whatever held them was taken away: kelp and twisting vines growing up,
+  cave vines and weeping vines hanging down, and frogspawn floating with no
+  water under it. Each now needs what the real game asks for. A dirt path
+  with a block set on top turns back into dirt, as it should, rather than
+  staying a path forever — a fence gate on top still doesn't count.
 - **A kick tells you why.** Being kicked put a line in chat and then dropped
   the connection, so what you actually read was "connection lost". The
   reason now appears on the disconnect screen, where the real game puts it.

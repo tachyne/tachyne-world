@@ -30,6 +30,9 @@ const (
 	SupportHangable               // floor or ceiling, by its own "hanging" property (lanterns)
 	SupportSpeleothem             // floor or ceiling, by "vertical_direction" (pointed dripstone)
 	SupportWater                  // floating on a water surface (lily pads)
+	SupportGrowsUp                // a growing plant hanging off what is BELOW it (kelp, twisting vines)
+	SupportGrowsDown              // …and off what is ABOVE it (cave vines, weeping vines)
+	SupportSpawn                  // frogspawn: water below, open air above
 )
 
 // supportNames is the classification. Names, not ids: ids move between
@@ -124,6 +127,20 @@ var supportNames = map[SupportKind][]string{
 	},
 	SupportWater: {
 		"lily_pad",
+	},
+	// GrowingPlantBlock.canSurvive: the cell opposite the growth direction
+	// must be the plant's own head or body, or a face sturdy toward it. Both
+	// the growing tip and the grown body are listed — a stem whose support
+	// goes must come down with it.
+	SupportGrowsUp: {
+		"kelp", "kelp_plant", "twisting_vines", "twisting_vines_plant",
+	},
+	SupportGrowsDown: {
+		"cave_vines", "cave_vines_plant", "weeping_vines", "weeping_vines_plant",
+	},
+	// FrogspawnBlock.mayPlaceOn: water under it and nothing wet above.
+	SupportSpawn: {
+		"frogspawn",
 	},
 	SupportSpeleothem: {
 		"pointed_dripstone", "sulfur_spike",

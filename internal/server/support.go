@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strings"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -200,6 +202,18 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	case worldgen.SupportWater:
 		b := below()
 		return worldgen.IsWater(b) || b == worldgen.BlockBase("ice")
+	case worldgen.SupportGrowsUp, worldgen.SupportGrowsDown:
+		// GrowingPlantBlock.canSurvive: the cell OPPOSITE the way it grows
+		// holds it — another length of the same plant, or a sturdy face.
+		anchor := below()
+		if worldgen.SupportFor(state) == worldgen.SupportGrowsDown {
+			anchor = above()
+		}
+		return sameGrowingPlant(state, anchor) || holdsBlock(anchor)
+	case worldgen.SupportSpawn:
+		// FrogspawnBlock.mayPlaceOn: water under it, and not under water
+		// itself — a clutch floats ON the surface.
+		return worldgen.IsWater(below()) && !worldgen.IsWater(state) && !worldgen.IsWater(above())
 	case worldgen.SupportHangable:
 		if prop("hanging") == "true" {
 			return holdsBlock(above())
@@ -212,6 +226,31 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		return holdsBlock(above())
 	}
 	return true
+}
+
+var dirtPathState = worldgen.BlockBase("dirt_path")
+
+// coversPath is DirtPathBlock.canSurvive inverted: a solid block on top turns
+// the path back to dirt, and a fence gate — which vanilla names explicitly —
+// does not.
+func coversPath(above uint32) bool {
+	return worldgen.Collides(above) && !isFenceGate(above)
+}
+
+// isFenceGate asks the state its own name rather than keeping a list, so a
+// new wood type needs nothing here.
+func isFenceGate(state uint32) bool {
+	n, ok := worldgen.StateName(state)
+	return ok && strings.HasSuffix(n, "_fence_gate")
+}
+
+// sameGrowingPlant reports whether a cell holds the same growing plant as the
+// one asking — its tip or its grown body, which is what a stalk of kelp or a
+// curtain of cave vines hangs from.
+func sameGrowingPlant(state, other uint32) bool {
+	k := worldgen.SupportFor(state)
+	return (k == worldgen.SupportGrowsUp || k == worldgen.SupportGrowsDown) &&
+		worldgen.SupportFor(other) == k
 }
 
 // holdsBlock reports whether a block can hold another one against it.
@@ -270,6 +309,14 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			// Multiface blocks and scaffolding update their STATE on a neighbour
 			// change (a lost face, a new distance) and only drop past the last
 			// face / at distance 7 — vanilla's updateShape for both.
+			// A dirt path under a solid block turns back into dirt rather
+			// than falling — DirtPathBlock.canSurvive is about what is ABOVE
+			// it, and the block converts instead of dropping.
+			if st == dirtPathState && coversPath(h.worldFor(dim).At(n.x, n.y+1, n.z)) {
+				h.setBlockAt(players, dim, n, worldgen.Dirt)
+				queue = append(queue, n)
+				continue
+			}
 			if isMultiface(st) || isScaffolding(st) || isChorusPlant(st) {
 				var ns uint32
 				var ok bool
