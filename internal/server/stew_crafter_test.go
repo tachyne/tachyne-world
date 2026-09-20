@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/world"
+)
 
 // TestCrafterKeepsSuspiciousStew: a crafter that assembles a suspicious stew
 // ejects it with its flower, and a tossed one keeps it too.
@@ -17,7 +21,7 @@ func TestCrafterKeepsSuspiciousStew(t *testing.T) {
 		c.slots[2] = invStack{item: itemByName["brown_mushroom"], count: 1}
 		c.slots[3] = invStack{item: itemByName["dandelion"], count: 1}
 		h.bins[simPos{blockPos: pos}] = c
-		res := crafterResult(c)
+		res := h.crafterResult(c)
 		if res.item != itemSuspiciousStew || res.stew == 0 {
 			t.Fatalf("the preview should be a suspicious stew with a flower: %+v", res)
 		}
@@ -45,4 +49,29 @@ func TestCrafterKeepsSuspiciousStew(t *testing.T) {
 			}
 		}
 	})
+}
+
+// The crafter runs the same resolver a crafting table does, so the special
+// recipes work in it — a tipped arrow here — while the map recipes, which
+// mint a new map when a player takes them, do not.
+func TestCrafterMakesSpecialRecipes(t *testing.T) {
+	h := newHub(world.New(1))
+	c := &bin{slots: make([]invStack, 9)}
+	// Eight arrows around a lingering potion: vanilla's tipped-arrow recipe.
+	for i := 0; i < 9; i++ {
+		c.slots[i] = invStack{item: itemByName["arrow"], count: 1}
+	}
+	c.slots[4] = invStack{item: itemLingerPotion, count: 1, potion: potSwiftness}
+	res := h.crafterResult(c)
+	if res.item != itemByName["tipped_arrow"] || res.potion != potSwiftness {
+		t.Fatalf("a crafter should tip arrows: %+v", res)
+	}
+	// A filled map ringed by paper zooms out in a table, but not in a crafter.
+	for i := 0; i < 9; i++ {
+		c.slots[i] = invStack{item: itemByName["paper"], count: 1}
+	}
+	c.slots[4] = invStack{item: itemFilledMap, count: 1, mapID: 1}
+	if got := h.crafterResult(c); got.item != 0 {
+		t.Errorf("the map recipes stay out of the crafter: %+v", got)
+	}
 }

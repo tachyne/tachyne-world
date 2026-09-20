@@ -88,7 +88,7 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 		h.craftFail(players, pos)
 		return
 	}
-	res := crafterResult(c) // the same match the preview shows: a suspicious stew keeps its flower
+	res := h.crafterResult(c) // the same match the preview shows: a suspicious stew keeps its flower
 	if res.item == 0 || res.count == 0 {
 		h.craftFail(players, pos)
 		return
@@ -148,15 +148,23 @@ func (h *hub) openCrafter(t *tracked, x, y, z int) {
 
 // crafterResult is the current recipe output for the grid (empty = no match).
 // Disabled slots are always empty, so the grid is the recipe as-is.
-func crafterResult(c *bin) invStack {
-	if res, ok := stewCraftMatch(c.slots[:9]); ok {
-		return res
+//
+// It runs the SAME resolver a crafting table does — vanilla's crafter goes
+// through the recipe manager, and the "special" recipes are ordinary
+// recipes there — so an auto-crafter makes tipped arrows, dyed armour,
+// suspicious stew, firework rockets and the box/bundle transmutes. The map
+// recipes are the exception: they mint a new map at take time, which a
+// crafter has no player to mint for.
+func (h *hub) crafterResult(c *bin) invStack {
+	res, kind := h.craftResult(c.slots[:9], 3)
+	switch kind {
+	case mapCraftZoom, mapCraftClone, craftBookClone:
+		return invStack{} // these mint a new map or book at take time
 	}
-	item, count := matchRecipe(c.slots[:9], 3)
-	if item == 0 || count == 0 {
+	if res.item == 0 || res.count == 0 {
 		return invStack{}
 	}
-	return invStack{item: item, count: count}
+	return res
 }
 
 // crafterResultSlot is the menu index of the result preview: vanilla's
@@ -178,7 +186,7 @@ func (h *hub) sendCrafterWindow(t *tracked, c *bin) {
 	for i := 0; i <= 8; i++ {
 		slots = append(slots, stackEv(t.inv.slots[i]))
 	}
-	slots = append(slots, stackEv(crafterResult(c))) // slot 45: result preview
+	slots = append(slots, stackEv(h.crafterResult(c))) // slot 45: result preview
 	t.p.trySendEv(attachproto.WindowItems{ID: int32(t.winID), StateID: t.inv.stateId,
 		Slots: slots, Cursor: stackEv(t.cursor)})
 }
@@ -203,7 +211,7 @@ func (h *hub) refreshCrafterResult(players map[int32]*tracked, pos simPos) {
 	if c == nil {
 		return
 	}
-	res := crafterResult(c)
+	res := h.crafterResult(c)
 	for _, t := range players {
 		if t.winKind == winCrafter && t.winPos == pos {
 			h.sendWinSlot(t, crafterResultSlot, res)

@@ -28,6 +28,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Auto-crafters make what a crafting table makes.** The crafter ran a
+  reduced recipe matcher, so it could not tip arrows, dye armour, make
+  firework rockets or transmute a shulker box — recipes a crafting table
+  has always handled, and which vanilla's crafter handles too because
+  they are ordinary recipes to it. It runs the same resolver now. The map
+  recipes stay out: they mint a new map when a player takes them, and a
+  crafter has no player.
 - **Two statistics start moving, and a broken tool snaps.** The
   Statistics screen's "dropped" and "broken" columns never counted
   anything. Dropping a stack counts it now, and a tool that wears out

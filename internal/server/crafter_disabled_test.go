@@ -100,12 +100,13 @@ func TestCrafterSlotToggle(t *testing.T) {
 
 // TestCrafterResultPreview — the preview slot reflects the grid's recipe.
 func TestCrafterResultPreview(t *testing.T) {
+	h := newHub(world.New(1))
 	c := &bin{slots: make([]invStack, 9)}
-	if crafterResult(c).item != 0 {
+	if h.crafterResult(c).item != 0 {
 		t.Fatal("empty grid must have no result")
 	}
 	c.slots[0] = invStack{item: int32(itemByName["oak_log"]), count: 1}
-	if crafterResult(c).item == 0 {
+	if h.crafterResult(c).item == 0 {
 		t.Fatal("a log in the grid should preview planks")
 	}
 }
