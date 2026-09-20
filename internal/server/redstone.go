@@ -204,7 +204,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		powered := h.inputPower(x, y, z, false) > 0
 		if powered != notePowered(state) {
 			if powered {
-				h.playNoteBlock(players, 0, x, y, z, state)
+				h.playNoteBlock(players, 0, x, y, z, state, 0)
 			}
 			h.rsSet(players, pos, noteWithPowered(state, powered))
 		}

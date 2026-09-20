@@ -97,6 +97,7 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 	if level == composterReady {
 		h.setBlockAt(players, t.dim, pos, composterBase)
+		h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // ComposterBlock.empty
 		h.spawnItemIn(players, t.dim, itemBoneMeal, 1, cx, cy+1, cz)
 		h.playSoundDim(players, t.dim, "minecraft:block.composter.empty", sndBlock, cx, cy, cz, 1, 1)
 		return
@@ -116,6 +117,7 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 		return
 	}
 	h.setBlockAt(players, t.dim, pos, composterBase+uint32(level)+1)
+	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // ComposterBlock.addItem, on a level that actually rose
 	h.playSoundDim(players, t.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
 	if level+1 == composterFull {
 		h.scheduleIn(t.dim, pos, composterDelay) // it finishes composting a second later

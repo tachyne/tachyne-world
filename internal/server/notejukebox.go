@@ -110,18 +110,21 @@ func (h *hub) onNoteBlock(players map[int32]*tracked, e evNoteBlock) {
 		h.incCustom(t, "tune_noteblock", 1)
 	} else {
 		h.incCustom(t, "play_noteblock", 1)
-		h.vib(t.dim, freqNoteBlockPlay, e.x, e.y, e.z, t.p.eid)
 	}
-	h.playNoteBlock(players, t.dim, e.x, e.y, e.z, state)
+	h.playNoteBlock(players, t.dim, e.x, e.y, e.z, state, t.p.eid)
 }
 
 // playNoteBlock resolves and plays the note (vanilla playNote+triggerEvent):
 // muffled by a solid block above unless a head instrument is at work.
-func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state uint32, by int32) {
 	instr := h.noteInstrument(dim, x, y, z)
 	if !noteHeadInstruments[instr] && h.worldFor(dim).At(x, y+1, z) != 0 {
 		return // muffled
 	}
+	// NoteBlock.playNote emits NOTE_BLOCK_PLAY only when the note actually
+	// sounds, and for redstone as much as for a fist — a skulk sensor hears a
+	// note block played by a repeater.
+	h.vib(dim, freqNoteBlockPlay, x, y, z, by)
 	sound, ok := noteInstrumentSounds[instr]
 	if !ok {
 		return // custom_head: no skull sound source in v1

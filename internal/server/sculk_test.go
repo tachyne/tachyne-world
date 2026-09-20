@@ -254,3 +254,43 @@ func countMobs(h *hub, etype int) int {
 	}
 	return n
 }
+
+// A sculk sensor hears a note block played by redstone, not just one punched
+// by a player: NoteBlock.playNote emits the event whatever set it off.
+func TestSculkSensorHearsARedstoneNoteBlock(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(x, y, z, sensor)
+
+	nb := worldgen.BlockBase("note_block")
+	w.SetBlock(x+2, y, z, nb)
+	w.SetBlock(x+2, y+1, z, worldgen.Air) // not muffled
+	h.playNoteBlock(players, 0, x+2, y, z, nb, 0)
+	stepSculk(h, players, 8)
+
+	if s := w.At(x, y, z); sensorPhase(s) != sculkPhaseActive {
+		t.Fatalf("the sensor should have heard the note: phase=%d", sensorPhase(s))
+	}
+	if f := h.sculkFreq[blockPos{x, y, z}]; f != freqNoteBlockPlay {
+		t.Fatalf("frequency = %d, want note_block_play %d", f, freqNoteBlockPlay)
+	}
+}
+
+// A muffled note block makes no sound and so emits no vibration either.
+func TestMuffledNoteBlockIsSilentToSculk(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(x, y, z, sensor)
+
+	nb := worldgen.BlockBase("note_block")
+	w.SetBlock(x+2, y, z, nb)
+	w.SetBlock(x+2, y+1, z, worldgen.BlockBase("stone")) // muffled
+	h.playNoteBlock(players, 0, x+2, y, z, nb, 0)
+	stepSculk(h, players, 8)
+
+	if s := w.At(x, y, z); sensorPhase(s) == sculkPhaseActive {
+		t.Fatal("a muffled note block should not be heard")
+	}
+}
