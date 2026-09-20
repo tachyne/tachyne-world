@@ -32,7 +32,6 @@ type worldRules struct {
 	DoMobSpawning bool `json:"doMobSpawning"`
 	MobGriefing   bool `json:"mobGriefing"`
 	DoWeather     bool `json:"doWeatherCycle"`
-	DoFireTick    bool `json:"doFireTick"`
 	DoTileDrops   bool `json:"doTileDrops"`
 	DoMobLoot     bool `json:"doMobLoot"`
 	NaturalRegen  bool `json:"naturalRegeneration"`
@@ -72,27 +71,36 @@ type worldRules struct {
 	DoTraderSpawning bool `json:"doTraderSpawning"`
 	// Added 2026-09-18 — vanilla's remaining rules the engine has a mechanic
 	// for. Missing keys in an older settings.json keep the defaults below.
-	FreezeDamage      bool `json:"freezeDamage"`
-	SpreadVines       bool `json:"spreadVines"`
-	SpawnMonsters     bool `json:"spawnMonsters"`
-	SpawnerBlocks     bool `json:"spawnerBlocksWork"`
-	ForgiveDead       bool `json:"forgiveDeadPlayers"`
-	PearlsVanish      bool `json:"enderPearlsVanishOnDeath"`
-	EntityDrops       bool `json:"entityDrops"`
-	BlockDropDecay    bool `json:"blockExplosionDropDecay"`
-	MobDropDecay      bool `json:"mobExplosionDropDecay"`
-	TNTDropDecay      bool `json:"tntExplosionDropDecay"`
-	MaxCramming       int  `json:"maxEntityCramming"`
-	RespawnRadius     int  `json:"respawnRadius"`
-	MaxSnowHeight     int  `json:"maxSnowAccumulationHeight"`
-	UniversalAnger    bool `json:"universalAnger"`
-	TraderSpawnDelay  int  `json:"wanderingTraderSpawnDelay,omitempty"`
-	TraderSpawnChance int  `json:"wanderingTraderSpawnChance,omitempty"`
+	FreezeDamage   bool `json:"freezeDamage"`
+	SpreadVines    bool `json:"spreadVines"`
+	SpawnMonsters  bool `json:"spawnMonsters"`
+	SpawnerBlocks  bool `json:"spawnerBlocksWork"`
+	ForgiveDead    bool `json:"forgiveDeadPlayers"`
+	PearlsVanish   bool `json:"enderPearlsVanishOnDeath"`
+	EntityDrops    bool `json:"entityDrops"`
+	BlockDropDecay bool `json:"blockExplosionDropDecay"`
+	MobDropDecay   bool `json:"mobExplosionDropDecay"`
+	TNTDropDecay   bool `json:"tntExplosionDropDecay"`
+	MaxCramming    int  `json:"maxEntityCramming"`
+	RespawnRadius  int  `json:"respawnRadius"`
+	MaxSnowHeight  int  `json:"maxSnowAccumulationHeight"`
+	// FireSpreadRadius is vanilla's fire_spread_radius_around_player, which
+	// replaced doFireTick in 1.21.9: fire only spreads and burns out within
+	// this many blocks of a player. -1 is everywhere, 0 is nowhere (which is
+	// what the old doFireTick=false meant).
+	FireSpreadRadius int `json:"fireSpreadRadiusAroundPlayer"`
+	// LegacyFireTick is the boolean doFireTick a world saved before the switch.
+	// loadRules folds a stored false into FireSpreadRadius 0 and drops it, so a
+	// server that had fire turned off keeps it off. Never written back.
+	LegacyFireTick    *bool `json:"doFireTick,omitempty"`
+	UniversalAnger    bool  `json:"universalAnger"`
+	TraderSpawnDelay  int   `json:"wanderingTraderSpawnDelay,omitempty"`
+	TraderSpawnChance int   `json:"wanderingTraderSpawnChance,omitempty"`
 }
 
 func defaultRules() worldRules {
 	return worldRules{Difficulty: diffNormal, DoDaylight: true, DoMobSpawning: true, DoTraderSpawning: true,
-		MobGriefing: true, DoWeather: true, DoFireTick: true, DoTileDrops: true,
+		MobGriefing: true, DoWeather: true, DoTileDrops: true,
 		DoMobLoot: true, NaturalRegen: true, FallDamage: true, DrownDamage: true,
 		FireDamage: true, AnnounceAdv: true, ShowDeathMsgs: true,
 		RandomTicks: 3, SleepPercent: 100, LocatorBar: true,
@@ -102,18 +110,8 @@ func defaultRules() worldRules {
 		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
-		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1}
-}
-
-// diffMult scales hostile-mob damage by difficulty (vanilla-ish).
-func (h *hub) diffMult() float32 {
-	switch h.rules.Difficulty {
-	case diffEasy:
-		return 0.5
-	case diffHard:
-		return 1.5
-	}
-	return 1
+		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1,
+		FireSpreadRadius: defaultFireSpreadRadius}
 }
 
 // summonable maps /summon names to entity types.
@@ -328,8 +326,6 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.MobGriefing = e.on
 	case "advance_weather":
 		h.rules.DoWeather = e.on
-	case "fire_ticks":
-		h.rules.DoFireTick = e.on
 	case "block_drops":
 		h.rules.DoTileDrops = e.on
 	case "mob_drops":
@@ -354,6 +350,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.MaxCramming = max(0, e.num)
 	case "respawn_radius":
 		h.rules.RespawnRadius = max(0, e.num)
+	case "fire_spread_radius_around_player":
+		h.rules.FireSpreadRadius = max(-1, e.num)
 	case "max_snow_accumulation_height":
 		h.rules.MaxSnowHeight = min(8, max(0, e.num))
 	case "universal_anger":
@@ -416,6 +414,12 @@ func (h *hub) loadRules() {
 	}
 	if err := loadStore(h.rulesPath, &h.rules); err != nil {
 		log.Fatal(err)
+	}
+	if b := h.rules.LegacyFireTick; b != nil {
+		if !*b { // the old doFireTick=false is the new radius 0
+			h.rules.FireSpreadRadius = 0
+		}
+		h.rules.LegacyFireTick = nil
 	}
 	h.difficultyPub.Store(int32(h.rules.Difficulty))
 	if h.rules.Border != nil {

@@ -38,7 +38,11 @@ func TestLavaSetsAfterburnAndWaterClears(t *testing.T) {
 func TestFireBlockBurnsOutOnItsOwn(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
-	players := map[int32]*tracked{}
+	// Fire only spreads or burns out within fire_spread_radius_around_player
+	// of somebody, so the fixture needs a witness.
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 3.5, 70, 3.5
+	players := map[int32]*tracked{1: pl}
 	w.SetBlock(3, 70, 3, fireDefault)
 	pos := blockPos{3, 70, 3}
 	for i := 0; i < 64 && isFire(w.At(3, 70, 3)); i++ {
@@ -103,7 +107,9 @@ func TestExplosionRespectsBlastResistance(t *testing.T) {
 func TestFireSpreadsAndConsumes(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
-	players := map[int32]*tracked{}
+	pl := testTracked() // fire needs a player within the spread radius
+	pl.x, pl.y, pl.z = 100.5, 70, 100.5
+	players := map[int32]*tracked{1: pl}
 	h.rules.MobGriefing = true
 	planks := worldgen.OakPlanks
 	count := func() (n int) {
@@ -158,5 +164,78 @@ func TestFireSpreadsAndConsumes(t *testing.T) {
 	}
 	if !sawSpread {
 		t.Fatal("fire never spread to a new block")
+	}
+}
+
+// fire_spread_radius_around_player replaced the boolean doFireTick in 1.21.9:
+// a fire out of every player's reach neither spreads nor burns out, -1 lets it
+// burn anywhere, and 0 is the old doFireTick=false.
+func TestFireSpreadRadiusRule(t *testing.T) {
+	w := world.New(1)
+	h := newHub(w)
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 70, 0.5
+	players := map[int32]*tracked{1: pl}
+	near, far := blockPos{4, 70, 0}, blockPos{4000, 70, 0}
+
+	if h.rules.FireSpreadRadius != defaultFireSpreadRadius {
+		t.Errorf("the default radius is %d, want %d", h.rules.FireSpreadRadius, defaultFireSpreadRadius)
+	}
+	if !h.canSpreadFireAround(players, near) {
+		t.Error("a fire four blocks from a player is well within the default radius")
+	}
+	if h.canSpreadFireAround(players, far) {
+		t.Error("a fire four thousand blocks away is not")
+	}
+	h.rules.FireSpreadRadius = -1
+	if !h.canSpreadFireAround(players, far) {
+		t.Error("-1 means everywhere")
+	}
+	h.rules.FireSpreadRadius = 0
+	if h.canSpreadFireAround(players, near) {
+		t.Error("0 means nowhere — the old doFireTick=false")
+	}
+	h.rules.FireSpreadRadius = defaultFireSpreadRadius
+	if h.canSpreadFireAround(map[int32]*tracked{}, near) {
+		t.Error("with nobody online there is nobody to be near")
+	}
+	pl.dim = 1 // the same coordinates in another dimension are not nearby
+	if h.canSpreadFireAround(players, near) {
+		t.Error("a player in the Nether does not keep an overworld fire alive")
+	}
+}
+
+// A world saved before the switch stored a boolean doFireTick. A stored false
+// has to survive as radius 0, or a server that deliberately turned fire off
+// would come back with it burning again.
+func TestLegacyFireTickMigrates(t *testing.T) {
+	off := false
+	on := true
+	for _, tc := range []struct {
+		name   string
+		legacy *bool
+		want   int
+	}{
+		{"doFireTick: false becomes radius 0", &off, 0},
+		{"doFireTick: true keeps the default", &on, defaultFireSpreadRadius},
+		{"a world with neither keeps the default", nil, defaultFireSpreadRadius},
+	} {
+		dir := t.TempDir()
+		h := newHub(world.New(1))
+		h.rules = defaultRules()
+		h.rules.LegacyFireTick = tc.legacy
+		h.rulesPath = dir + "/rules.json"
+		h.saveRules()
+		// Re-read into a fresh hub, the way a restart does.
+		h2 := newHub(world.New(1))
+		h2.rules = defaultRules()
+		h2.rulesPath = h.rulesPath
+		h2.loadRules()
+		if h2.rules.FireSpreadRadius != tc.want {
+			t.Errorf("%s: radius %d, want %d", tc.name, h2.rules.FireSpreadRadius, tc.want)
+		}
+		if h2.rules.LegacyFireTick != nil {
+			t.Errorf("%s: the legacy key must not survive the load", tc.name)
+		}
 	}
 }

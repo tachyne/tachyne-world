@@ -308,8 +308,10 @@ func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blo
 func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Reschedule next tick (vanilla getFireTickDelay: 30 + rand(10)).
 	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
-	if !h.rules.DoFireTick {
-		return // gamerule doFireTick=false: fire neither spreads nor burns out
+	if !h.canSpreadFireAround(players, pos) {
+		// ServerLevel.canSpreadFireAround: out of every player's reach, fire
+		// neither spreads nor burns out — it just sits there.
+		return
 	}
 
 	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
@@ -536,4 +538,35 @@ func (h *hub) dropExploded(players map[int32]*tracked, dim int, pos blockPos, st
 			h.spawnBlockDrop(players, dim, d.item, d.count, pos.x, pos.y, pos.z)
 		}
 	}
+}
+
+// defaultFireSpreadRadius is vanilla's fire_spread_radius_around_player
+// default: 128 blocks.
+const defaultFireSpreadRadius = 128
+
+// canSpreadFireAround is ServerLevel.canSpreadFireAround — the gamerule that
+// replaced doFireTick in 1.21.9. A radius of -1 means everywhere (the old
+// doFireTick=true), 0 means nowhere (the old false), and anything else asks
+// whether a player is within that many blocks. Out of reach, a fire neither
+// spreads nor burns out, so a far-off forest cannot quietly burn down while
+// nobody is there to see it.
+func (h *hub) canSpreadFireAround(players map[int32]*tracked, pos blockPos) bool {
+	r := h.rules.FireSpreadRadius
+	if r < 0 {
+		return true
+	}
+	if r == 0 {
+		return false
+	}
+	r2 := float64(r) * float64(r)
+	for _, t := range players {
+		if t.dim != h.rsDim {
+			continue
+		}
+		dx, dy, dz := t.x-float64(pos.x), t.y-float64(pos.y), t.z-float64(pos.z)
+		if dx*dx+dy*dy+dz*dz <= r2 {
+			return true
+		}
+	}
+	return false
 }

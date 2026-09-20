@@ -33,7 +33,6 @@ var gameruleAlias = map[string]string{
 	"randomTickSpeed":           "random_tick_speed",
 	"playersSleepingPercentage": "players_sleeping_percentage",
 	"locatorBar":                "locator_bar",
-	"doFireTick":                "fire_ticks",
 	"doTraderSpawning":          "spawn_wandering_traders",
 	"freezeDamage":              "freeze_damage",
 	"doVinesSpread":             "spread_vines",
@@ -54,7 +53,7 @@ var gameruleAlias = map[string]string{
 // booleanRules is every boolean rule tachyne enforces, canonical names.
 var booleanRules = []string{
 	"keep_inventory", "advance_time", "spawn_mobs", "mob_griefing",
-	"advance_weather", "fire_ticks", "block_drops", "mob_drops",
+	"advance_weather", "block_drops", "mob_drops",
 	"natural_health_regeneration", "fall_damage", "drowning_damage",
 	"fire_damage", "show_advancement_messages", "show_death_messages",
 	"immediate_respawn", "locator_bar",
@@ -71,7 +70,10 @@ var booleanRules = []string{
 }
 
 // numericRules is the same for the rules that take a number.
-var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius", "max_snow_accumulation_height"}
+var numericRules = []string{"random_tick_speed", "players_sleeping_percentage", "max_entity_cramming", "respawn_radius", "max_snow_accumulation_height",
+	// 1.21.9 replaced the boolean doFireTick with this radius: fire spreads
+	// only within it of a player, -1 being everywhere and 0 nowhere.
+	"fire_spread_radius_around_player"}
 
 // canonicalRule resolves either spelling to the canonical name, and reports
 // whether it is a rule at all.

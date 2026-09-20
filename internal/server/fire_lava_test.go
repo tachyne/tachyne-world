@@ -13,6 +13,12 @@ func TestLavaIgnition(t *testing.T) {
 	w := h.world
 	onHub(t, h, func() {
 		y := 70
+		// Lava only lights what a player is near enough to see burn
+		// (fire_spread_radius_around_player), so park the session's player
+		// beside the pool.
+		for _, pl := range h.playersRef {
+			pl.dim, pl.x, pl.y, pl.z = 0, 30.5, float64(y), 0.5
+		}
 		planks := worldgen.BlockBase("oak_planks")
 		w.SetBlock(30, y, 0, worldgen.LavaBase) // lava source
 		w.SetBlock(31, y, 0, planks)            // flammable beside it

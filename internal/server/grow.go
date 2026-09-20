@@ -763,9 +763,12 @@ func (h *hub) opaqueAbove(dim, x, y, z int) bool {
 
 // lavaIgnite is the vanilla LavaFluid.randomTick fire-starter: an overworld
 // lava block randomly sets fire to a nearby flammable block (using the
-// flammability table as the ignitedByLava proxy). Gated by doFireTick.
+// flammability table as the ignitedByLava proxy). Gated by the fire-spread
+// radius, like every other way fire travels.
 func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
-	if !h.rules.DoFireTick {
+	var spreads bool
+	h.inDim(dim, func() { spreads = h.canSpreadFireAround(players, blockPos{x, y, z}) })
+	if !spreads {
 		return
 	}
 	flammableNear := func(px, py, pz int) bool {
