@@ -30,38 +30,81 @@ var commandNames = []string{
 	"tp", "w", "weather", "where", "whitelist", "worldborder", "xp",
 }
 
-// commandTreeBody is the static Commands packet body: node 0 = root, node 1 =
-// one shared greedy-string argument node, nodes 2.. = one literal per command,
-// all pointing at node 1. Sharing the argument node keeps the packet tiny
-// (brigadier trees are DAGs; vanilla shares nodes via redirects the same way).
+// commandTreeBody is the Commands packet body sent at join.
 var commandTreeBody = buildCommandTree()
 
-// buildCommandTree composes the tree for the built-ins plus any extra
-// (plugin-registered) names — all sharing the one greedy-arg node.
+// buildCommandTree composes the tree: the modelled grammars (commandtree.go)
+// for the commands worth describing, and a literal with one greedy argument
+// for everything else, including the plugin-registered names passed in.
 func buildCommandTree(extra ...string) []byte {
-	names := commandNames
-	if len(extra) > 0 {
-		names = append(append([]string{}, commandNames...), extra...)
+	roots := modelledCommands()
+	have := map[string]bool{}
+	for _, n := range roots {
+		have[n.lit] = true
 	}
-	b := protocol.AppendVarInt(nil, int32(2+len(names)))
-	// node 0: root (type 0), children = every literal
-	b = protocol.AppendU8(b, 0x00)
-	b = protocol.AppendVarInt(b, int32(len(names)))
-	for i := range names {
-		b = protocol.AppendVarInt(b, int32(2+i))
+	for _, name := range append(append([]string{}, commandNames...), extra...) {
+		if have[name] {
+			continue
+		}
+		have[name] = true
+		roots = append(roots, lit(name, true, argGreedy("args", true)))
 	}
-	// node 1: argument "args" (type 2 | executable 0x04), greedy string
-	b = protocol.AppendU8(b, 0x06)
-	b = protocol.AppendVarInt(b, 0) // no children
-	b = protocol.AppendString(b, "args")
-	b = protocol.AppendVarInt(b, parserBrigadierString)
-	b = protocol.AppendVarInt(b, stringPropGreedy)
-	// nodes 2..: literals (type 1 | executable 0x04), child = node 1
-	for _, name := range names {
-		b = protocol.AppendU8(b, 0x05)
-		b = protocol.AppendVarInt(b, 1)
-		b = protocol.AppendVarInt(b, 1)
-		b = protocol.AppendString(b, name)
+	return encodeCommandTree(roots)
+}
+
+// encodeCommandTree flattens the tree and writes the Commands packet body:
+// node count, the nodes, then the root's index. Node 0 is the root; children
+// are laid out depth-first after it.
+func encodeCommandTree(roots []cmdNode) []byte {
+	type flat struct {
+		n    *cmdNode
+		kids []int32
+	}
+	nodes := []flat{{}} // node 0: the root, children filled in below
+	var add func(n *cmdNode) int32
+	add = func(n *cmdNode) int32 {
+		idx := int32(len(nodes))
+		nodes = append(nodes, flat{n: n})
+		kids := make([]int32, 0, len(n.children))
+		for i := range n.children {
+			kids = append(kids, add(&n.children[i]))
+		}
+		nodes[idx].kids = kids
+		return idx
+	}
+	for i := range roots {
+		nodes[0].kids = append(nodes[0].kids, add(&roots[i]))
+	}
+
+	b := protocol.AppendVarInt(nil, int32(len(nodes)))
+	for _, f := range nodes {
+		var flags byte
+		switch {
+		case f.n == nil:
+			flags = 0x00 // root
+		case f.n.lit != "":
+			flags = 0x01 // literal
+		default:
+			flags = 0x02 // argument
+		}
+		if f.n != nil && f.n.exec {
+			flags |= 0x04
+		}
+		b = protocol.AppendU8(b, flags)
+		b = protocol.AppendVarInt(b, int32(len(f.kids)))
+		for _, k := range f.kids {
+			b = protocol.AppendVarInt(b, k)
+		}
+		if f.n == nil {
+			continue
+		}
+		if f.n.lit != "" {
+			b = protocol.AppendString(b, f.n.lit)
+			continue
+		}
+		b = protocol.AppendString(b, f.n.arg)
+		b = protocol.AppendVarInt(b, f.n.parser)
+		b = append(b, f.n.props...)
 	}
 	return protocol.AppendVarInt(b, 0) // root index
 }

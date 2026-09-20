@@ -14,6 +14,18 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **Tab completion past the command name.** The command tree the client is
+  sent described every command as a name followed by one opaque run of
+  text, so pressing tab after `/gamemode ` offered nothing and every
+  argument you typed looked equally valid. The commands worth describing
+  now carry their real grammar: `/gamemode` lists the four modes,
+  `/gamerule` lists every rule and whether it takes true/false or a number,
+  `/weather`, `/difficulty`, `/time`, `/whitelist` and `/effect` list their
+  sub-commands, and the arguments that take a player, an item, a count or a
+  position are typed as such — so tab fills in player names and item ids,
+  and the input turns red before you press enter rather than after. Only
+  the argument types that mean the same thing on every version tachyne
+  serves are used, so a 1.21.5 client and a 26.3 client read the same tree.
 - **The Warden's four set pieces.** It simply appeared, chased, and
   blinked out of existence. Now a warden a shrieker calls rises out of the
   ground over six and a half seconds before it does anything; it casts
