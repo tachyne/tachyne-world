@@ -260,6 +260,9 @@ type tracked struct {
 	// the client's own START_FALL_FLYING, ended by landing or by taking the
 	// elytra off. Falling while wearing one is NOT this.
 	fallFlying bool
+	// glideTicks is LivingEntity.fallFlyTicks: how long the current glide has
+	// run, which is what the elytra is charged for.
+	glideTicks int
 	sprinting  bool // last reported sprint state (crit/knockback modifiers)
 	gamemode   int
 	hudOn      bool
@@ -1018,6 +1021,8 @@ func (h *hub) run() {
 			h.pickupItems(players)    // collect dropped items into survival inventories
 			h.updateOrbs(players)     // collect experience orbs / expire old ones
 			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
+			h.tickGliding(players)    // elytra wear: a point a second, and the glide ends with the wing
+			h.tickBoosts(players)     // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players) // a scope held to its full duration drops
 			h.updateEating(players)   // apply finished eat-holds (32-tick chew)
 			h.borderDamage(players)   // outside the world border hurts (players only)
@@ -2110,6 +2115,10 @@ func (h *hub) run() {
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
 					h.applyToolWear(t, e.slot, 1)
+				}
+			case evSteerBoost:
+				if t := players[e.eid]; t != nil {
+					h.steerBoost(players, t, e.slot)
 				}
 			case evFallFly:
 				if t := players[e.eid]; t != nil {

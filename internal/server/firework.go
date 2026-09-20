@@ -71,14 +71,21 @@ func (evUseFirework) isHubEvent() {}
 // must be off the ground and in a serviceable elytra, or anyone could glide
 // along the floor.
 func canStartFallFlying(t *tracked) bool {
-	return !t.onGround && t.armor[1].item == itemElytra
+	return !t.onGround && canGlideOn(t.armor[chestArmorSlot])
 }
 
 func (t *tracked) gliding() bool {
 	// Both, deliberately: the flag is cleared on landing anyway, but reading
 	// the ground here too means a clear that never arrives cannot leave
 	// somebody gliding along the floor for the rest of the session.
-	return t.fallFlying && !t.onGround && t.armor[1].item == itemElytra
+	return t.fallFlying && !t.onGround && canGlideOn(t.armor[chestArmorSlot])
+}
+
+// canGlideOn is LivingEntity.canGlideUsing for the chest slot: an elytra, and
+// one with a point of durability to spare — a wing whose next damage would
+// break it has stopped being a glider (glide.go).
+func canGlideOn(s invStack) bool {
+	return s.item == itemElytra && !elytraSpent(s)
 }
 
 // useFirework fires the held rocket. Used while gliding it attaches to the
