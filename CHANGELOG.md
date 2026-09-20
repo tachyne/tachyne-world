@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Mob heads and turtle scutes exist.** A charged creeper's blast now
+  leaves behind the head of whatever it killed — a creeper, skeleton,
+  wither skeleton, zombie or piglin — which is the only way to any of
+  them in survival, and the trick the trap is built for. And a turtle
+  that grows up drops a scute, the one source of them in the game: sea
+  turtle helmets were unobtainable without it.
 - **Phantoms circle and swoop.** One simply hovered over you and bit. It
   now flies vanilla's attack: a circle of five to fifteen blocks around a
   point ten to thirty above its target, held for eight to twelve seconds,

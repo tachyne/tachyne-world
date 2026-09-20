@@ -176,6 +176,14 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			if m.growLeft -= survivalTickN; m.growLeft <= 0 {
 				m.baby = false
 				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, false)))
+				if m.etype == entityTurtle {
+					// Turtle.ageBoundaryReached drops gameplay/turtle_grow —
+					// the only source of turtle scute in the game.
+					if scute := itemByName["turtle_scute"]; scute != 0 {
+						h.spawnItemIn(players, m.dim, scute, 1, m.x, m.y+0.5, m.z)
+						h.playSoundDim(players, m.dim, "minecraft:entity.turtle.egg_hatch", sndNeutral, m.x, m.y, m.z, 1, 1)
+					}
+				}
 			}
 		}
 		if m.converting > 0 {

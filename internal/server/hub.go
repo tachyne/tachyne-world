@@ -559,16 +559,19 @@ type hub struct {
 
 	vehicles        map[int32]*vehicle // minecarts + boats
 	blastSpareRails bool
-	itemSpawners    map[int32]*itemSpawnerEnt // ominous item spawners in the air (ominousitem.go)                    // set around a TNT cart's blast: rails survive it
-	paintings       map[int32]*painting       // placed hanging paintings (persisted with containers)
-	itemFrames      map[int32]*itemFrame      // placed item frames (persisted with containers)
-	armorStands     map[int32]*armorStand     // placed armor stands (persisted with containers)
-	knots           map[int32]*leashKnot      // fence leash knots (the far end of a lead)
-	jukeboxes       map[simPos]*jukebox       // discs + playback clocks (persisted with containers)
-	beacons         map[simPos]*beacon        // placed beacons (chosen powers persisted with containers)
-	campfires       map[simPos]*campfire      // live cook state (item view in cfStore)
-	cfStore         *campfireStore            // campfires.json + the chunk builders' read view
-	banners         *bannerStore              // banners.json + the chunk builders' read view
+	// A charged creeper's blast: whatever it kills drops its own head, which
+	// is the only way to a mob head in survival.
+	blastChargedCreeper bool
+	itemSpawners        map[int32]*itemSpawnerEnt // ominous item spawners in the air (ominousitem.go)                    // set around a TNT cart's blast: rails survive it
+	paintings           map[int32]*painting       // placed hanging paintings (persisted with containers)
+	itemFrames          map[int32]*itemFrame      // placed item frames (persisted with containers)
+	armorStands         map[int32]*armorStand     // placed armor stands (persisted with containers)
+	knots               map[int32]*leashKnot      // fence leash knots (the far end of a lead)
+	jukeboxes           map[simPos]*jukebox       // discs + playback clocks (persisted with containers)
+	beacons             map[simPos]*beacon        // placed beacons (chosen powers persisted with containers)
+	campfires           map[simPos]*campfire      // live cook state (item view in cfStore)
+	cfStore             *campfireStore            // campfires.json + the chunk builders' read view
+	banners             *bannerStore              // banners.json + the chunk builders' read view
 	// The layers of the banner that was broken a moment ago, waiting for its
 	// drop (the block change lands one event ahead of the drop).
 	lastBannerPos    simPos

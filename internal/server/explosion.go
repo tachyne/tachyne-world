@@ -115,6 +115,9 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		om.hurtKind(explosionDamage(power, impact), dt)
 		if om.health <= 0 {
 			h.killMob(players, om)
+			if h.blastChargedCreeper {
+				h.chargedHeadDrop(players, om) // charged_creeper/<victim>: its head
+			}
 			continue
 		}
 		if kb := impact * om.kbScale(); kb > 0 {
