@@ -34,8 +34,9 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate" +
-			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^"
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /bug" +
+			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^." +
+			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
 		}

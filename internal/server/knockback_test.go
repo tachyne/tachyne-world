@@ -120,3 +120,27 @@ func lastKnockVY(t *testing.T, tr *tracked) float64 {
 	}
 	return vy
 }
+
+// A plain compass points at the world spawn, which the client only knows
+// because the server tells it. Without this every compass pointed at the
+// world origin — the client's own default — wherever spawn actually was.
+func TestJoinerIsToldTheWorldSpawn(t *testing.T) {
+	h := newHub(world.New(1))
+	h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ = -1533.5, 300, 4175.5
+	h.hasWorldSpawn = true
+	tr := &tracked{p: newPlayer(1, "p", [16]byte{})}
+
+	h.sendDefaultSpawn(tr)
+
+	got := takeEvents(tr)
+	if len(got) != 1 {
+		t.Fatalf("%d frames sent, want 1", len(got))
+	}
+	e, ok := got[0].(attachproto.DefaultSpawn)
+	if !ok {
+		t.Fatalf("sent %T, want DefaultSpawn", got[0])
+	}
+	if e.X != -1534 || e.Y != 300 || e.Z != 4175 {
+		t.Errorf("spawn %d,%d,%d, want the block containing -1533.5,300,4175.5", e.X, e.Y, e.Z)
+	}
+}

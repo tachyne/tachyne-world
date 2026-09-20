@@ -27,11 +27,13 @@ import (
 // it. Nothing here acts on it.
 
 const (
-	bugRegionXZ   = 7 // blocks either side of the reporter
-	bugRegionDown = 3 // and below
-	bugRegionUp   = 5 // and above
-	bugTextMax    = 400
-	bugsKept      = 200 // a ring: the newest 200 reports
+	bugRegionXZ    = 7 // blocks either side of the reporter
+	bugRegionDown  = 3 // and below
+	bugRegionUp    = 5 // and above
+	bugTextMax     = 400
+	bugsKept       = 200 // a ring: the newest 200 reports
+	bugListShown   = 5   // how many /bug list shows
+	bugListTextMax = 48  // …and how much of each report's text fits on a line
 )
 
 // bugReport is one filed report plus the world around it.
@@ -135,6 +137,33 @@ func (s *bugStore) reply(id int, player, text string) (string, bool) {
 		return s.Items[i].Text, true
 	}
 	return "", false
+}
+
+// bugSummary is one line of `/bug list`: enough to recognise a report and
+// know whether anything has come back on it.
+type bugSummary struct {
+	ID       int
+	Player   string
+	Text     string
+	Answered bool // somebody wrote back
+	Replies  int  // …and how much the reporter added afterwards
+}
+
+// recent is the newest n reports, oldest of those first, so the list reads in
+// the order they happened.
+func (s *bugStore) recent(n int) []bugSummary {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	from := len(s.Items) - n
+	if from < 0 {
+		from = 0
+	}
+	out := make([]bugSummary, 0, len(s.Items)-from)
+	for _, r := range s.Items[from:] {
+		out = append(out, bugSummary{ID: r.ID, Player: r.Player, Text: r.Text,
+			Answered: strings.TrimSpace(r.Note) != "", Replies: len(r.Replies)})
+	}
+	return out
 }
 
 // latestFrom is the newest report a player filed, which is what a bare
@@ -289,6 +318,10 @@ func itemRegistryName(id int32) string {
 // anything was to file a fresh report, which buried the thread it belonged to.
 // Anybody may use either: a report is not a privilege.
 func (s *Server) cmdBug(p *player, args []string) {
+	if len(args) > 0 && strings.EqualFold(args[0], "list") {
+		s.hub.post(evBugList{eid: p.eid})
+		return
+	}
 	if len(args) > 0 && strings.EqualFold(args[0], "re") {
 		rest := args[1:]
 		on := 0
@@ -307,10 +340,42 @@ func (s *Server) cmdBug(p *player, args []string) {
 	}
 	text := strings.TrimSpace(strings.Join(args, " "))
 	if text == "" {
-		p.tell("Usage: /bug <what went wrong>, or /bug re <more about the last one you filed>.")
+		p.tell("Usage: /bug <what went wrong>, /bug re <more about the last one>, or /bug list.")
 		return
 	}
 	s.hub.post(evBug{eid: p.eid, text: text})
+}
+
+// evBugList asks the hub for the recent reports — the store lives there.
+type evBugList struct{ eid int32 }
+
+func (evBugList) isHubEvent() {}
+
+// showBugList is `/bug list`: the last few reports with what has happened to
+// each. Answered means somebody wrote back; a reply count is what the
+// reporter added afterwards.
+func (h *hub) showBugList(t *tracked) {
+	recent := h.bugs.recent(bugListShown)
+	if len(recent) == 0 {
+		t.p.tell("No reports yet. /bug <what went wrong> files one.")
+		return
+	}
+	t.p.tell(fmt.Sprintf("The last %d reports:", len(recent)))
+	for _, r := range recent {
+		status := "open"
+		if r.Answered {
+			status = "answered"
+		}
+		if r.Replies > 0 {
+			status = fmt.Sprintf("%s, %d from you", status, r.Replies)
+		}
+		text := r.Text
+		if len(text) > bugListTextMax {
+			text = text[:bugListTextMax-1] + "…"
+		}
+		t.p.tell(fmt.Sprintf("  #%d %s: %s — %s", r.ID, r.Player, text, status))
+	}
+	t.p.tell("Add to one with /bug re #<number> <what you want to say>.")
 }
 
 // stateFromDescription is describeState's inverse: "name" or

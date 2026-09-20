@@ -39,7 +39,13 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Answering a bug report no longer means filing another one.** `/bug re
   <what you want to add>` adds to the last report you filed, and `/bug re #3
   <…>` adds to that one, so a question and its answer stay in one thread.
-  Asked for in game by LegionZA.
+  `/bug list` shows the last five with who filed each and where it stands —
+  open, answered if somebody wrote back, and how much the reporter added
+  since. Both asked for in game by LegionZA.
+- **A compass points at spawn.** The server never told clients where the
+  world's spawn point was, so they fell back to their own assumption of the
+  world origin and every compass in the world pointed at 0,0 — wherever
+  spawn actually was.
 - **Spawners show what they spawn.** A mob spawner is a cage with a little
   version of its mob turning inside it — that is how you know a dungeon is a
   skeleton dungeon before anything walks out of it, and how a fortress

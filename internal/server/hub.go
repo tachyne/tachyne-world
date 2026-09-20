@@ -1481,6 +1481,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.handleBugEvent(t, e)
 				}
+			case evBugList:
+				if t := players[e.eid]; t != nil {
+					h.showBugList(t)
+				}
 			case evSetRule:
 				h.applyRule(players, e)
 			case evSetWeather:
@@ -2205,6 +2209,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			h.resendEffects(nt)  // …and the potion effects it was carrying
 		}
 	}
+	h.sendDefaultSpawn(nt)         // the compass's north, before anything else uses it
 	if nt.gamemode == gmSurvival { // sync the survival HUD (hearts/hunger + inventory)
 		h.sendHealth(nt)
 		h.sendInventory(nt)

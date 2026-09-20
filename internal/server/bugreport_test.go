@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -300,5 +301,44 @@ func TestBugReplyGoesOnTheRightReport(t *testing.T) {
 	}
 	if len(items[1].Replies) != 0 {
 		t.Error("the reply landed on the wrong report as well")
+	}
+}
+
+// Legion also asked to see what she had filed and what had come of it.
+// `/bug list` shows the last few with a status: answered when somebody wrote
+// back, plus how much the reporter added afterwards.
+func TestBugListSummarises(t *testing.T) {
+	s := newBugStore("")
+	for i := 1; i <= 7; i++ {
+		s.add(bugReport{Player: "LegionZA", Text: fmt.Sprintf("report number %d", i)})
+	}
+	got := s.recent(bugListShown)
+	if len(got) != bugListShown {
+		t.Fatalf("listed %d, want %d", len(got), bugListShown)
+	}
+	// The newest few, oldest of those first, so it reads in order.
+	if got[0].Text != "report number 3" || got[len(got)-1].Text != "report number 7" {
+		t.Errorf("listed %q … %q, want reports 3 … 7", got[0].Text, got[len(got)-1].Text)
+	}
+	for _, r := range got {
+		if r.Answered || r.Replies != 0 {
+			t.Errorf("#%d starts answered=%v replies=%d, want a fresh report", r.ID, r.Answered, r.Replies)
+		}
+	}
+
+	// A note from the other side marks it answered; a reply counts separately.
+	s.mu.Lock()
+	s.Items[6].Note = "fixed, deploying"
+	s.mu.Unlock()
+	s.reply(s.Items[6].ID, "LegionZA", "still happening")
+	got = s.recent(bugListShown)
+	last := got[len(got)-1]
+	if !last.Answered || last.Replies != 1 {
+		t.Errorf("the answered report reads answered=%v replies=%d, want true/1", last.Answered, last.Replies)
+	}
+
+	// A short store lists everything it has rather than padding.
+	if n := len(newBugStore("").recent(bugListShown)); n != 0 {
+		t.Errorf("an empty store listed %d", n)
 	}
 }

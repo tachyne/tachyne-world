@@ -1,6 +1,8 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"fmt"
 	"math"
 
@@ -460,4 +462,13 @@ func (h *hub) worldSpawn() (x, y, z float64) {
 		return float64(bx) + 0.5, h.world.SurfaceY(bx, bz), float64(bz) + 0.5
 	}
 	return 0.5, h.world.SurfaceY(0, 0), 0.5
+}
+
+// sendDefaultSpawn tells a client where the world's spawn point is. It is
+// what a plain compass points at and where the respawn marker sits — without
+// it the client keeps its own default of the world origin, so every compass
+// pointed at 0,0 no matter where spawn actually was.
+func (h *hub) sendDefaultSpawn(t *tracked) {
+	x, y, z := h.worldSpawn()
+	t.p.trySendEv(attachproto.DefaultSpawn{X: floorInt(x), Y: floorInt(y), Z: floorInt(z)})
 }
