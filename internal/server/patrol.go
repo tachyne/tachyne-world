@@ -73,6 +73,7 @@ func (h *hub) updatePatrols(players map[int32]*tracked) {
 func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
 	n := 2 + h.rules.Difficulty + h.rng.Intn(2)
 	spawned := 0
+	var captain *mob
 	for i := 0; i < n; i++ {
 		x := sx + h.rng.Intn(5) - h.rng.Intn(5)
 		z := sz + h.rng.Intn(5) - h.rng.Intn(5)
@@ -86,13 +87,18 @@ func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
 		}
 		if spawned == 0 { // the first is the captain
 			m.patrolCaptain = true
-			// PatrolSpawner: only the leader is given a target — the rest
-			// start patrolling when it hands them their first waypoint.
-			h.findPatrolTarget(m)
+			captain = m
 			banner := invStack{item: itemByName["white_banner"], count: 1}
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
 		}
 		spawned++
+	}
+	if captain != nil {
+		// PatrolSpawner gives only the leader a target; the rest start
+		// patrolling when it hands them their first waypoint. Done after the
+		// squad is placed so picking the target cannot shift the random draws
+		// the members' own positions come from.
+		h.findPatrolTarget(captain)
 	}
 	if spawned > 0 {
 		log.Printf("pillager patrol spawned near (%d,%d): %d members", sx, sz, spawned)

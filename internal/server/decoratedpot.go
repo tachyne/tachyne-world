@@ -67,9 +67,18 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	// filling up without opening anything.
 	fill := float32(stored.count) / float32(stackCap(stored.item))
 	h.playSound(players, "minecraft:block.decorated_pot.insert", sndBlock, cx, cy, cz, 1, 0.7+0.5*fill)
+	// DecoratedPotBlock.useItemOn: seven dust motes puff off the rim. Sent in
+	// the pot's own dimension, not the overworld.
+	h.toNearbyEv(players, key.dim, cx, cz, attachproto.Particles{
+		PID: particleDustPlume, X: cx, Y: float64(key.y) + 1.2, Z: cz, Count: potPlumeCount})
 	h.potWobble(players, key, potWobblePositive)
 	return true
 }
+
+const (
+	particleDustPlume = 104 // canonical-770 minecraft:dust_plume
+	potPlumeCount     = 7   // sendParticles(..., 7, 0, 0, 0, 0)
+)
 
 // potWobble sends the pot's block event; every client animates the lean.
 func (h *hub) potWobble(players map[int32]*tracked, pos simPos, style uint8) {

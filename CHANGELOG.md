@@ -56,6 +56,18 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Squid ink and minecart smoke were the wrong particles.** Particle ids
+  shift as new versions insert particles ahead of old ones, and the table
+  that renumbers them for each client was maintained by hand — four the
+  engine emits were not in it at all, so squid ink, glow squid ink, smoke
+  and a furnace minecart's large smoke came out as whatever particle
+  happened to hold that id on the client. That is every client but the
+  oldest. The table is now generated from the vanilla registries and covers
+  all 114 particles, so the next one added is right without anyone having
+  to notice.
+- **A decorated pot puffs dust when you put something in it.** Seven motes
+  off the rim, as vanilla does — the particle that told you the pot took
+  the item was missing, leaving only the sound.
 - **Glow lichen, vines and sculk veins stop growing a face into thin air.**
   A newly placed multiface block started from a state that already had
   every one of its six faces switched on, and placement only ever added
