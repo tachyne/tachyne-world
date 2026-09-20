@@ -1,4 +1,4 @@
-# Vanilla parity — where tachyne stands (scorecard, 2026-09-19)
+# Vanilla parity — where tachyne stands (scorecard, 2026-09-19; defects updated 2026-09-20)
 
 The goal is one-for-one behavioural parity with vanilla Java (the engine's canonical
 content version is 1.21.11; the reference behaviour is 26.2) *before* anything that is not
@@ -35,16 +35,20 @@ traces back to a dozen cross-cutting defects; fixing each moves many rows at onc
 
 ## Cross-cutting defects
 
-1. **Overworld hard-wiring.** Block use, redstone, comparators, lecterns, tripwires, plates and detector rails read and write the overworld whatever dimension the player is in; redstone does not work in the Nether or the End, and a scheduled update at Nether coordinates can write overworld blocks (a correctness bug, first in the queue).
-2. **Support loss reacts only to a player's edit.** Pistons, explosions, fluids, falling blocks, mobs and worldgen leave torches, rails, plants and signs floating.
-3. **Menus trust the client.** Slot layouts are vanilla's, but server-side slot rules, quick-move and result-taking are not vanilla's click logic; shift-click never quick-moves.
-4. **Mob AI defaults.** No idle head tracking, no per-species stroll speeds, no alerting of kin when hurt, no non-player targets (golems, villagers, turtles, axolotls, squid), no preference for dark ground — five defaults that mark most mobs PARTIAL on top of their own missing goals.
-5. **The off-hand is dead.** The engine's use-item event carries no hand, so a shield in the off-hand never raises.
-6. **Status-effect icons never render**, because the effect packet's flags are fixed; ambient and infinite effects cannot be expressed.
-7. **A stack holds at most four enchantments**, so a normal end-game sword cannot exist.
-8. **Commands are a word splitter**: 34 verbs of vanilla's 95, no selectors, no relative coordinates, no `/execute`, no `/data`.
-9. **Seven loot functions are dropped when the tables are baked** (treasure maps are blank paper, chest gear is always pristine, bee nests, pots and spawners lose their data).
-10. **Eleven species are silent, every mob's eye height is a flat fraction of its hitbox, there are no step sounds, and babies drop nothing.**
+Each of these marks dozens of otherwise-correct units PARTIAL, so they are worked first.
+The totals above are the 2026-09-19 audit's; the fixes dated below landed after it and are
+not yet re-graded (a re-grade means re-enumerating, not editing the numbers by hand).
+
+1. ~~**Overworld hard-wiring.**~~ **Fixed 2026-09-19.** Block use, redstone, comparators, lecterns, tripwires, plates and detector rails run in the dimension the block is in; redstone works in the Nether and the End, and a scheduled update no longer writes overworld blocks from Nether coordinates.
+2. ~~**Support loss reacts only to a player's edit.**~~ **Fixed 2026-09-19.** Every block change — pistons, explosions, fluids, falling blocks, mobs, worldgen — drops what it was holding up.
+3. **Menus trust the client** — part fixed. Slot rules, per-item stack caps, quick-move and result-taking are server-side now (2026-09-19), as are chest/shulker lids, decorated-pot inserts and the brewing stand's bars (2026-09-20). A full port of vanilla's click logic (`doClick`/`quickMoveStack`) is still outstanding.
+4. ~~**Mob AI defaults.**~~ **Fixed 2026-09-20.** Idle head tracking, per-species stroll speeds, kin alerted when one is hurt, non-player targets (golems, villagers, turtles, axolotls, squid) and the monsters' preference for dark ground are all in.
+5. ~~**The off-hand is dead.**~~ **Fixed 2026-09-20.** The use-item event carries the hand; a shield raises in either.
+6. ~~**Status-effect icons never render.**~~ **Fixed 2026-09-20.** Effects carry vanilla's ambient/visible/show-icon flags, and infinite effects pass through.
+7. ~~**A stack holds at most four enchantments.**~~ **Fixed 2026-09-19.** Eight, as vanilla allows.
+8. **Commands are a word splitter** — part fixed. Target selectors (`@s @p @a @r @e` with `type=`, `distance=`, `limit=`, `sort=`, `name=`) and `~`/`^` coordinates landed 2026-09-20. Still 34 verbs of vanilla's 95, no brigadier tree (so no client-side completion), no `/execute`, no `/data`.
+9. **Loot functions dropped at bake time** — mostly fixed 2026-09-19: treasure maps, potions, names, instruments, stew effects and ominous bottles are baked and evaluated. `copy_components` (block-entity data on the drop) and `set_components` (trial-chamber gear) remain; banner patterns now ride a broken banner's drop (2026-09-20).
+10. **Eleven silent species, flat eye heights, no step sounds, babies drop nothing** — mostly fixed 2026-09-19: voices, per-type eye heights, ambient cadence, step sounds and baby drops/XP are in. Splash and fall sounds remain.
 11. **Seed parity is out of reach by construction**: terrain is a 2-D heightmap with hand-tuned noise, not vanilla's noise router, so no seed reproduces vanilla's terrain, biomes, structures or ores. That is a decision (vanilla-feeling vs vanilla-identical worldgen), not a backlog item.
 
 ## What is strong
@@ -53,23 +57,25 @@ Weather, explosions (rays, exposure, damage), fluids, redstone components, the n
 
 ## Work queue (top of each dimension's list, by player impact)
 
-1. Support loss on every block change, not only a player's edits
-2. Dimension-correct block use, redstone and comparators; the Nether-writes-overworld scheduled-update bug
-3. Explosion drops through the real loot tables; flaming arrows prime TNT and light campfires
-4. Wall torches; lever, button and grindstone attach faces; hanging lanterns; hopper facing from the clicked face; double slabs and the other count-cycling placements
-5. Iron doors and trapdoors not openable by hand; door sounds; the twelve missing button kinds and ten plate kinds; hoppers collecting items under a chest
-6. Redstone timing: sub-delay repeater pulses, the lamp's four-tick hold, crafter scheduling, plate and rail hold, lightning-rod power
-7. Anvil material repair and book-on-book merging; grindstone curse-keeping, durability merge and XP; a persistent enchanting seed and bookshelf air gaps
-8. Decorated pots (one item per insert, sherds, persistence); brewing-stand feedback and persistence; per-item stack caps in hoppers and comparators; a generic spawner block entity
-9. The hand on use-item (off-hand, shields); serialising the components the engine already models (potions, stews, instruments, shulker contents, bottles, repair cost)
+Struck-through rows have landed since the audit; the date says when.
+
+1. ~~Support loss on every block change~~ (2026-09-19)
+2. ~~Dimension-correct block use, redstone and comparators; the Nether-writes-overworld bug~~ (2026-09-19)
+3. ~~Explosion drops through the real loot tables; flaming arrows prime TNT and light campfires~~ (2026-09-19)
+4. ~~Wall torches; lever, button and grindstone attach faces; hanging lanterns; hopper facing; double slabs and the count-cycling placements~~ (2026-09-19)
+5. ~~Iron doors and trapdoors by hand; door sounds; the missing button and plate kinds; hoppers under a chest~~ (2026-09-19)
+6. ~~Redstone timing: sub-delay repeater pulses, the lamp's four-tick hold, crafter scheduling, plate and rail hold, lightning-rod power~~ (2026-09-19)
+7. ~~Anvil material repair and book-on-book merging; grindstone curse-keeping, durability merge and XP; a persistent enchanting seed and bookshelf air gaps~~ (2026-09-20)
+8. Decorated pots ~~(one item per insert, persistence)~~, brewing-stand feedback and persistence, per-item stack caps ~~(2026-09-20)~~ — pot sherds and a generic spawner block entity remain
+9. ~~The hand on use-item (off-hand, shields)~~ (2026-09-20); serialising the components the engine already models (potions, stews, instruments, shulker contents, bottles, repair cost) remains
 10. Fireworks: stars and fades, flight duration, explosions
-11. Voices for the eleven silent species; per-type eye heights; ambient cadence and step sounds; babies' drops and XP
-12. Monster goals: zombie village pathing and targeting, drowned water goals, the spider light rule, skeleton weapon reassessment, enderman stare and teleport, ghast and phantom flight, the raider base goals, wither phases
-13. Creature brains: villager trading look/follow, POI acquisition and play; frog spawn; per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
-14. Loot functions (exploration map, copy components, set damage); advancement predicate fidelity; per-recipe smelting XP
-15. Effect HUD flags; trading XP; the mason's trade pool; the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour
-16. Aquifers, springs, lava lakes, ore blobs, ravines and the ground-cover features; dust propagation within the tick; sky light through translucent blocks
-17. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; a real command parser; titles, tab list and boss-bar styles
+11. ~~Voices for the eleven silent species; per-type eye heights; ambient cadence and step sounds; babies' drops and XP~~ (2026-09-19)
+12. Monster goals: zombie village pathing and targeting, drowned water goals, ~~the spider light rule~~ (2026-09-20), skeleton weapon reassessment, ~~enderman stare and teleport~~ (2026-09-20), ghast and phantom flight, the raider base goals, wither phases
+13. Creature brains: villager trading look/follow, POI acquisition and play; ~~frog spawn~~ (2026-09-20); per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
+14. Loot functions ~~(exploration map, set damage)~~ (2026-09-19), copy/set components; advancement predicate fidelity; per-recipe smelting XP
+15. Effect HUD flags ~~(2026-09-20)~~; ~~trading XP~~ (2026-09-20); the mason's trade pool; ~~the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour~~ (2026-09-19/20)
+16. Aquifers, lava lakes, ravines; ~~springs, ore blobs and the ground-cover features~~ (2026-09-20); ~~dust propagation within the tick~~ (2026-09-19); sky light through translucent blocks
+17. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
 
 ## Versions
 
