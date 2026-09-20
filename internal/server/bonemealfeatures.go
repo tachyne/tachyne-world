@@ -439,7 +439,7 @@ func (h *hub) spreadLichen(players map[int32]*tracked, dim int, pos blockPos, st
 		if !holdsBlock(w.At(p.x+d[0], p.y+d[1], p.z+d[2])) {
 			return 0, false
 		}
-		base := worldgen.BlockID("glow_lichen")
+		base := multifaceBase("glow_lichen") // every face off (see multifaceBase)
 		bi, _ := worldgen.InfoForState(base)
 		switch {
 		case lichen:

@@ -267,7 +267,13 @@ func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, orde
 	if !ok {
 		return 0, false
 	}
-	state := def
+	// MultifaceBlock.getDefaultMultifaceState: a fresh one has NO face set.
+	// worldgen.BlockBase is property index 0 throughout, and index 0 of a
+	// boolean is true — so the "default" glow lichen, vine, sculk vein and
+	// resin clump all arrive with every face already on, and adding one more
+	// left a full cube of lichen with its unsupported sides hanging in the
+	// air. Legion reported exactly that.
+	state := multifaceCleared(info, def)
 	joined := sameBlockFamily(existing, def)
 	if joined {
 		state = existing
@@ -405,4 +411,29 @@ func stackedState(target uint32) (uint32, bool) {
 		return worldgen.SetProperty(info, target, name, strconv.Itoa(n+1)), true
 	}
 	return 0, false
+}
+
+// multifaceCleared turns every face of a multiface block off, which is what
+// vanilla's default state is.
+func multifaceCleared(info worldgen.BlockInfo, def uint32) uint32 {
+	for _, f := range faceDirs {
+		if info.HasProperty(f.prop) {
+			def = worldgen.SetProperty(info, def, f.prop, "false")
+		}
+	}
+	return def
+}
+
+// multifaceBase is the cleared default state of a multiface block by name —
+// what vanilla's getDefaultMultifaceState gives, with every face off. Use it
+// anywhere a multiface block is built from scratch: worldgen.BlockBase is
+// property index 0, and index 0 of a boolean is TRUE, so the raw base is a
+// full cube of lichen/vine/vein.
+func multifaceBase(name string) uint32 {
+	def := worldgen.BlockBase(name)
+	info, ok := worldgen.InfoForState(def)
+	if !ok {
+		return def
+	}
+	return multifaceCleared(info, def)
 }

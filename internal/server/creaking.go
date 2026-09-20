@@ -32,8 +32,10 @@ const (
 	creakingHurtInterval = 10
 )
 
-// resinClump is what a hurt creaking's heart bleeds onto the tree.
-var resinClump = worldgen.BlockBase("resin_clump")
+// resinClump is what a hurt creaking's heart bleeds onto the tree: a clump
+// with no face set yet, which the caller then turns on for the face it lands
+// against.
+var resinClump = multifaceBase("resin_clump")
 
 // heartLink is one creaking heart and the creaking it currently owns.
 type heartLink struct {

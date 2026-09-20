@@ -40,7 +40,7 @@ func (h *hub) tickVine(players map[int32]*tracked, dim, x, y, z int, state uint3
 	withFace := func(s uint32, prop string, on bool) uint32 {
 		return worldgen.SetProperty(info, s, prop, map[bool]string{true: "true", false: "false"}[on])
 	}
-	base := worldgen.BlockBase("vine")
+	base := multifaceBase("vine") // every face off; withFace turns one on
 	attachable := func(bx, by, bz int) bool { return holdsBlock(w.At(bx, by, bz)) }
 	set := func(bx, by, bz int, s uint32) { h.setBlockAt(players, dim, blockPos{bx, by, bz}, s) }
 

@@ -272,3 +272,45 @@ func TestLeverTakesTheClickedWall(t *testing.T) {
 		t.Fatalf("clicking the floor gives a floor lever, got %d (ok=%v)", st, ok)
 	}
 }
+
+// Glow lichen goes on the face you highlighted, not on whatever else is in
+// reach. Legion hit this where a floor meets a wall: clicking the floor put
+// the lichen up the wall instead, a "corner" placement with the patch
+// standing out into the air.
+func TestGlowLichenTakesTheClickedFace(t *testing.T) {
+	w := world.New(1)
+	x, y, z := 48, 70, 48
+	clearAirBox(w, x, y, z, 2)
+	w.SetBlock(x, y-1, z, worldgen.Stone) // the floor she clicked
+	w.SetBlock(x, y, z+1, worldgen.Stone) // a wall alongside it
+	lichen := worldgen.BlockBase("glow_lichen")
+	info, _ := worldgen.InfoForState(lichen)
+
+	// Looking across the floor at a shallow angle, but the highlighted face
+	// is the floor's top.
+	st, ok := multifacePlacement(w, blockPos{x, y, z}, lichen, 0, placeOrder(1 /*up*/, false, 0, 20))
+	if !ok {
+		t.Fatal("the lichen should have found the floor")
+	}
+	if worldgen.GetProperty(info, st, "down") != "true" {
+		t.Fatalf("the lichen should lie on the clicked floor, got %d", st)
+	}
+	if worldgen.GetProperty(info, st, "north") == "true" || worldgen.GetProperty(info, st, "south") == "true" {
+		t.Fatalf("no wall face should be set by a click on the floor, got %d", st)
+	}
+	// And clicking the wall's north face takes the wall, not the floor.
+	st, ok = multifacePlacement(w, blockPos{x, y, z}, lichen, 0, placeOrder(2 /*north*/, false, 0, 20))
+	if !ok || worldgen.GetProperty(info, st, "south") != "true" {
+		t.Fatalf("clicking the wall should set the south face, got %d (ok=%v)", st, ok)
+	}
+	if worldgen.GetProperty(info, st, "down") == "true" {
+		t.Fatalf("a wall click must not lay it on the floor as well, got %d", st)
+	}
+	// A face with nothing behind it is never chosen: no support at all means
+	// no placement, never a patch hanging in the air.
+	w.SetBlock(x, y-1, z, worldgen.Air)
+	w.SetBlock(x, y, z+1, worldgen.Air)
+	if _, ok := multifacePlacement(w, blockPos{x, y, z}, lichen, 0, placeOrder(1, false, 0, 20)); ok {
+		t.Fatal("with nothing to hold it the placement must be refused")
+	}
+}
