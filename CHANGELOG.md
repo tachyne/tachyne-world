@@ -28,6 +28,17 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The mason sells stone again.** A stonecutter villager was offering
+  iron and chainmail armour, a shield, a bell, a clock and a name tag —
+  another profession's stock entirely. The generator that bakes the trade
+  table ran the last profession's section to the end of the file and
+  swallowed the trade-rebalance tables that follow it, so the mason
+  inherited the experimental armorer's and librarian's offers. It now
+  sells what it should: clay and bricks, stone and chiseled stone bricks,
+  granite, andesite, diorite and their polished forms, dripstone, quartz,
+  every terracotta colour glazed and plain, and quartz blocks and pillars.
+  (The same fix restored every "villager buys X" offer the generator had
+  been dropping for want of a cast in the reference's formatting.)
 - **Hit an iron golem and it hits back.** A golem only ever went for
   players the village had a grudge against, so one you attacked yourself
   simply took it — and, because it is not a hostile mob, the engine had

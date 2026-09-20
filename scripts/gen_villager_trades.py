@@ -40,16 +40,29 @@ def main():
     # Per profession, isolate its put(...) region up to the next put or EOF.
     prof_re = {p: None for p in PROFS}
     puts = list(re.finditer(r"hashMap\.put\(VillagerProfession\.([A-Z_]+),", src))
+    # The LAST profession's region must stop at the end of the trade map, not
+    # run to EOF: what follows is the wandering trader's list and the
+    # trade-rebalance EXPERIMENTAL_TRADES, and swallowing those gave the mason
+    # the experimental armorer's and librarian's offers.
+    tail = len(src)
+    for marker in ("WANDERING_TRADER_TRADES", "EXPERIMENTAL_TRADES"):
+        i = src.find(marker)
+        if i != -1:
+            tail = min(tail, i)
     for i, m in enumerate(puts):
         p = m.group(1)
         if p not in prof_re:
             continue
         start = m.end()
-        end = puts[i + 1].start() if i + 1 < len(puts) else len(src)
+        end = puts[i + 1].start() if i + 1 < len(puts) else tail
         prof_re[p] = src[start:end]
 
-    efi = re.compile(r"new EmeraldForItems\((?:Items|Blocks)\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*(\d+)\)")
-    ife = re.compile(r"new ItemsForEmeralds\((?:new ItemStack\()?(?:Items|Blocks)\.([A-Z_]+)\)?,\s*([0-9.,fF ]+)\)")
+    # Decompilers differ on casts: CFR writes `new EmeraldForItems((ItemLike)
+    # Items.WHEAT, 20, 16, 2)` where others drop the cast. Tolerate both, or
+    # every "villager buys X" row silently disappears from the table.
+    cast = r"(?:\((?:ItemLike|Object)\)\s*)?"
+    efi = re.compile(r"new EmeraldForItems\(" + cast + r"(?:Items|Blocks)\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*(\d+)\)")
+    ife = re.compile(r"new ItemsForEmeralds\((?:new ItemStack\()?" + cast + r"(?:Items|Blocks)\.([A-Z_]+)\)?,\s*([0-9.,fF ]+)\)")
     tier_re = re.compile(r"\(Object\)(\d),\s*\(Object\)new ItemListing\[\]\{")
 
     # profession-index → tier(1..5) → list of trades

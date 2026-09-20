@@ -284,3 +284,36 @@ func TestVillagerClaimsAPlacedBed(t *testing.T) {
 		t.Errorf("a broken bed should be forgotten, still %+v", m.bed)
 	}
 }
+
+// The mason sells stone, not armour: its table used to be the trade-rebalance
+// armorer's (the generator ran the last profession's region to the end of the
+// file and swallowed the experimental trades).
+func TestMasonSellsStone(t *testing.T) {
+	prof := -1
+	for i, n := range professionNames {
+		if n == "mason" {
+			prof = i
+		}
+	}
+	if prof < 0 {
+		t.Fatal("no mason profession")
+	}
+	banned := map[int32]string{
+		itemByName["iron_helmet"]: "iron helmet", itemByName["chainmail_chestplate"]: "chainmail",
+		itemByName["name_tag"]: "name tag", itemByName["bell"]: "bell", itemByName["shield"]: "shield",
+	}
+	seen := map[int32]bool{}
+	for _, offers := range villagerTrades[prof] {
+		for _, o := range offers {
+			if what, bad := banned[o.outItem]; bad {
+				t.Errorf("a mason should not sell a %s", what)
+			}
+			seen[o.outItem] = true
+		}
+	}
+	for _, want := range []string{"brick", "chiseled_stone_bricks", "quartz_block"} {
+		if !seen[itemByName[want]] {
+			t.Errorf("a mason should sell %s", want)
+		}
+	}
+}
