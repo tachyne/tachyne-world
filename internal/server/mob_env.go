@@ -79,6 +79,7 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 		return // soaked into the fractional carry — no flash for a scratch
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.infestOnMobHurt(players, m) // Infested: silverfish burst out of a mob too
 	if m.health <= 0 {
 		h.killMob(players, m)
 		return

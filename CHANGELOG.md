@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The trial-chamber effects work on mobs too.** Wind Charged, Weaving,
+  Oozing and Infested only ever did anything to players. In vanilla they
+  belong to any living thing: a mob that dies wind-charged leaves the
+  gust, one that dies weaving strings cobwebs where it fell, one that
+  dies oozing splits into slimes, and an infested one bursts silverfish
+  whenever it is hurt. An ominous trial's mobs now do all of that.
 - **The sword sweep reaches other players.** It clipped mobs standing
   beside your target and passed straight through players, which made
   Sweeping Edge worth nothing in a fight between people. It now hits

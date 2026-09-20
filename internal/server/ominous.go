@@ -53,17 +53,23 @@ func (h *hub) ominousOnDeath(players map[int32]*tracked, t *tracked) {
 // explodes with the wind-charge damage calculator, which deals no damage and
 // breaks nothing — it only shoves. Radius 3-5, as vanilla rolls it.
 func (h *hub) windChargedBurst(players map[int32]*tracked, t *tracked) {
+	h.windChargedBurstAt(players, t.dim, t.x, t.y, t.z, t.p.eid, 0)
+}
+
+// windChargedBurstAt is the burst itself, for a player or a mob. skipPlayer
+// and skipMob keep the victim out of its own gust.
+func (h *hub) windChargedBurstAt(players map[int32]*tracked, dim int, cx, cy, cz float64, skipPlayer, skipMob int32) {
 	radius := 3.0 + h.rng.Float64()*2
-	y := t.y + 0.9 // mid-body, as vanilla uses half the bounding-box height
-	h.spawnParticles(players, particlePoof, t.x, y, t.z, float32(radius/2), 0.1, 40)
-	h.playSound(players, "minecraft:entity.breeze_wind_charge.burst", sndNeutral, t.x, y, t.z, 1, 1)
+	y := cy + 0.9 // mid-body, as vanilla uses half the bounding-box height
+	h.spawnParticles(players, particlePoof, cx, y, cz, float32(radius/2), 0.1, 40)
+	h.playSoundDim(players, dim, "minecraft:entity.breeze_wind_charge.burst", sndNeutral, cx, y, cz, 1, 1)
 
 	now := h.tick.Load()
 	for _, o := range players {
-		if o == t || o.dim != t.dim || o.dead {
+		if o.p.eid == skipPlayer || o.dim != dim || o.dead {
 			continue
 		}
-		dx, dy, dz := o.x-t.x, o.y-y, o.z-t.z
+		dx, dy, dz := o.x-cx, o.y-y, o.z-cz
 		d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 		if d > radius || d < 1e-6 {
 			continue
@@ -73,10 +79,10 @@ func (h *hub) windChargedBurst(players map[int32]*tracked, t *tracked) {
 		o.spinUntil = now + windBurstGrace // let the launch past the speed check
 	}
 	for _, m := range h.mobs {
-		if m.dying > 0 || m.dim != t.dim || m.kbScale() <= 0 {
+		if m.eid == skipMob || m.dying > 0 || m.dim != dim || m.kbScale() <= 0 {
 			continue
 		}
-		dx, dz := m.x-t.x, m.z-t.z
+		dx, dz := m.x-cx, m.z-cz
 		d := math.Hypot(dx, dz)
 		if d > radius || d < 1e-6 {
 			continue
@@ -91,6 +97,11 @@ func (h *hub) windChargedBurst(players map[int32]*tracked, t *tracked) {
 // walks up to 15 random cells in a 1-block cube and takes the ones that are
 // replaceable AND sitting on a solid top face, so webs never hang in the air.
 func (h *hub) weaveCobwebs(players map[int32]*tracked, t *tracked) {
+	h.weaveCobwebsAt(players, t.dim, t.x, t.y, t.z)
+}
+
+// weaveCobwebsAt is the placement itself, for a player or a mob.
+func (h *hub) weaveCobwebsAt(players map[int32]*tracked, dim int, cx, cy, cz float64) {
 	if !h.rules.MobGriefing {
 		return // vanilla gates the block placement on mobGriefing for non-players
 	}
@@ -99,8 +110,8 @@ func (h *hub) weaveCobwebs(players map[int32]*tracked, t *tracked) {
 	if web == 0 {
 		return
 	}
-	bx, by, bz := int(math.Floor(t.x)), int(math.Floor(t.y)), int(math.Floor(t.z))
-	w := h.worldFor(t.dim)
+	bx, by, bz := int(math.Floor(cx)), int(math.Floor(cy)), int(math.Floor(cz))
+	w := h.worldFor(dim)
 	placed := map[blockPos]bool{}
 	for i := 0; i < weavingTries && len(placed) < want; i++ {
 		p := blockPos{
@@ -115,7 +126,7 @@ func (h *hub) weaveCobwebs(players map[int32]*tracked, t *tracked) {
 			continue // nothing sturdy underneath
 		}
 		placed[p] = true
-		h.setBlockAt(players, t.dim, p, web)
+		h.setBlockAt(players, dim, p, web)
 	}
 }
 
@@ -123,13 +134,18 @@ func (h *hub) weaveCobwebs(players map[int32]*tracked, t *tracked) {
 // caps the count by maxEntityCramming minus the slimes already crowding the
 // spot, so a stack of oozing deaths cannot run away with itself.
 func (h *hub) oozeSlimes(players map[int32]*tracked, t *tracked) {
+	h.oozeSlimesAt(players, t.dim, t.x, t.y, t.z)
+}
+
+// oozeSlimesAt is the split itself, for a player or a mob.
+func (h *hub) oozeSlimesAt(players map[int32]*tracked, dim int, cx, cy, cz float64) {
 	near := 0
 	for _, m := range h.mobs {
-		if m.etype != entitySlime || m.dim != t.dim {
+		if m.etype != entitySlime || m.dim != dim {
 			continue
 		}
-		if math.Abs(m.x-t.x) <= oozingCrowdR && math.Abs(m.y-t.y) <= oozingCrowdR &&
-			math.Abs(m.z-t.z) <= oozingCrowdR {
+		if math.Abs(m.x-cx) <= oozingCrowdR && math.Abs(m.y-cy) <= oozingCrowdR &&
+			math.Abs(m.z-cz) <= oozingCrowdR {
 			near++
 		}
 	}
@@ -141,7 +157,7 @@ func (h *hub) oozeSlimes(players map[int32]*tracked, t *tracked) {
 		want = room
 	}
 	for i := 0; i < want; i++ {
-		s := h.spawnMobIn(players, entitySlime, t.dim, t.x, t.y+0.5, t.z)
+		s := h.spawnMobIn(players, entitySlime, dim, cx, cy+0.5, cz)
 		if s == nil {
 			continue // plugin-cancelled
 		}
@@ -160,12 +176,45 @@ func (h *hub) infestOnHurt(players map[int32]*tracked, t *tracked) {
 	if t.hasEffect(effInfested) == 0 || h.rng.Float64() > infestedChance {
 		return
 	}
+	h.infestBurst(players, t.dim, t.x, t.y, t.z)
+}
+
+// infestOnMobHurt is the same for a mob: vanilla's onMobHurt is
+// LivingEntity-wide, so an infested zombie bursts too.
+func (h *hub) infestOnMobHurt(players map[int32]*tracked, m *mob) {
+	if _, on := m.effects[effInfested]; !on || h.rng.Float64() > infestedChance {
+		return
+	}
+	h.infestBurst(players, m.dim, m.x, m.y, m.z)
+}
+
+// infestBurst spawns the silverfish.
+func (h *hub) infestBurst(players map[int32]*tracked, dim int, cx, cy, cz float64) {
 	for i, n := 0, 1+h.rng.Intn(2); i < n; i++ {
-		s := h.spawnMobIn(players, entitySilverfish, t.dim, t.x, t.y+0.9, t.z)
+		s := h.spawnMobIn(players, entitySilverfish, dim, cx, cy+0.9, cz)
 		if s == nil {
 			continue
 		}
 		h.applySpecies(players, s)
-		h.playSound(players, "minecraft:entity.silverfish.hurt", sndHostile, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, dim, "minecraft:entity.silverfish.hurt", sndHostile, cx, cy, cz, 1, 1)
+	}
+}
+
+// ominousOnMobDeath is the LivingEntity half of the three death-triggered
+// ominous effects: vanilla runs them for anything that dies carrying one, not
+// only for players, which is what makes an ominous trial's mobs leave webs,
+// slimes and gusts behind them.
+func (h *hub) ominousOnMobDeath(players map[int32]*tracked, m *mob) {
+	if len(m.effects) == 0 {
+		return
+	}
+	if _, on := m.effects[effWindCharged]; on {
+		h.windChargedBurstAt(players, m.dim, m.x, m.y, m.z, 0, m.eid)
+	}
+	if _, on := m.effects[effWeaving]; on {
+		h.weaveCobwebsAt(players, m.dim, m.x, m.y, m.z)
+	}
+	if _, on := m.effects[effOozing]; on {
+		h.oozeSlimesAt(players, m.dim, m.x, m.y, m.z)
 	}
 }

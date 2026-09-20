@@ -431,8 +431,9 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 		return // already dying
 	}
 	m.dying = deathAnimTicks
-	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies
-	if m.patrolCaptain {          // entities/pillager: a raid captain's death drops its ominous bottle, however it died
+	m.vx, m.vz, m.panic = 0, 0, 0   // stop moving while it dies
+	h.ominousOnMobDeath(players, m) // wind-charged, weaving and oozing are LivingEntity-wide
+	if m.patrolCaptain {            // entities/pillager: a raid captain's death drops its ominous bottle, however it died
 		h.dropOminousBottle(players, m)
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
