@@ -58,11 +58,13 @@ func TestZombieArmorHitsToKill(t *testing.T) {
 	m := &mob{health: 20}
 	m.setBaseArmor(2)
 	for i := 1; i <= 4; i++ {
+		m.invulnTicks = 0 // each blow lands past the last one's damage cooldown
 		m.hurt(5)
 		if m.health <= 0 {
 			t.Fatalf("armor-2 zombie died on hit %d of a 5-damage weapon; vanilla needs 5", i)
 		}
 	}
+	m.invulnTicks = 0
 	m.hurt(5)
 	if m.health > 0 {
 		t.Fatalf("armor-2 zombie survived 5 hits of 5 damage (health %d)", m.health)
@@ -70,6 +72,7 @@ func TestZombieArmorHitsToKill(t *testing.T) {
 	// Unarmored control: 4 hits exactly.
 	c := &mob{health: 20}
 	for i := 0; i < 4; i++ {
+		c.invulnTicks = 0
 		c.hurt(5)
 	}
 	if c.health > 0 {

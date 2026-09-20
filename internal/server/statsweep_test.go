@@ -68,6 +68,7 @@ func TestDamageStatistics(t *testing.T) {
 	if got := stat(pl, "damage_taken"); got != 40 {
 		t.Errorf("damage_taken %d, want 40 (4 hearts × 10)", got)
 	}
+	h.tick.Add(20) // past the first blow's cooldown window
 	pl.absorption = 2
 	h.hurtBy(nil, pl, 3, dtGeneric, deathCause{})
 	if got := stat(pl, "damage_absorbed"); got != 20 {
@@ -84,6 +85,7 @@ func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
 	pl := testTracked()
 	h.rules.FallDamage = true
 	drop := func(blocks float64) float32 {
+		h.tick.Add(20) // each fall lands past the last one's damage cooldown
 		pl.health, pl.dead = 20, false
 		pl.airborne, pl.peakY = true, 100
 		pl.x, pl.y, pl.z = 0.5, 100, 0.5

@@ -35,6 +35,8 @@ var (
 )
 
 type mob struct {
+	invulnTicks     int32   // LivingEntity.invulnerableTime: 20 after a landed blow, counting down
+	lastHurt        float64 // the raw amount of that blow: only a bigger blow's excess lands while > 10
 	eid             int32
 	etype           int
 	behavior        Behavior // per-tick steering primitive (wander/herd/…)
@@ -468,6 +470,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 	h.updateHerdTargets()
 	h.pushMobs(players) // crowding: mobs standing in one another shove apart
 	for _, m := range h.mobs {
+		if m.invulnTicks > 0 {
+			m.invulnTicks -= mobMoveInterval
+		}
 		if m.armorNote != 0 {
 			h.wolfArmorNote(players, m)
 		}
@@ -1046,6 +1051,8 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 		m.heartHit = true
 		return
 	}
+	// LivingEntity.hurt's cooldown: for 10 ticks after a landed blow only a
+	// bigger blow lands, and only its excess over the last one.
 	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
 		m.axHurt, m.axHurtDmg = true, dmg
 	}
@@ -1066,6 +1073,20 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 		if dmg < 0 {
 			dmg = 0
 		}
+	}
+	// LivingEntity.hurt's cooldown: for ten ticks after a landed blow only a
+	// bigger blow lands, and only its excess over the last one. It sits here,
+	// where vanilla has it: after the per-species reductions a mob applies
+	// before calling super (the armadillo's roll-up), and before the wolf's
+	// armour, which vanilla soaks inside actuallyHurt. The counter is wound
+	// down by updateMobs, so a test that hits without ticking must clear it.
+	if m.invulnTicks > 10 {
+		if dmg <= m.lastHurt {
+			return
+		}
+		dmg, m.lastHurt = dmg-m.lastHurt, dmg
+	} else {
+		m.lastHurt, m.invulnTicks = dmg, 20
 	}
 	if m.etype == entityWolf && m.armorSt.item == itemWolfArmor && !dt.has(tagBypassesWolfArmor) {
 		// Wolf.actuallyHurt: the armour takes the whole blow as durability

@@ -141,6 +141,7 @@ func TestEvokerSummonsVexesThatExpire(t *testing.T) {
 		t.Errorf("an expired vex should start taking damage: expired %v health %d vs %d", one.vexExpired, one.health, hp)
 	}
 	for i := 0; i < 2000 && one.dying == 0; i++ {
+		one.invulnTicks = 0 // updateMobs would wind the damage cooldown down between wastings
 		h.updateVexLife(players)
 	}
 	if one.dying == 0 {

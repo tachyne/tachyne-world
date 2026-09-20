@@ -39,11 +39,13 @@ func TestWolfArmor(t *testing.T) {
 		t.Fatalf("a scute should repair: dmg=%d", w.armorSt.dmg)
 	}
 	// Enough blows break it and the wolf is bare again.
+	w.invulnTicks = 0 // a later blow, past the first one's damage cooldown
 	w.hurt(float64(wolfArmorMax()))
 	if w.armorSt.item != 0 || w.armorNote != 2 {
 		t.Fatalf("the armour should break: %+v note=%d", w.armorSt, w.armorNote)
 	}
 	h.wolfArmorNote(players, w)
+	w.invulnTicks = 0
 	w.hurt(2)
 	if w.health >= hp {
 		t.Fatal("a bare wolf takes the blow")

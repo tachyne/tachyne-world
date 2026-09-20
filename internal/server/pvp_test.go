@@ -40,6 +40,7 @@ func TestPvPGuards(t *testing.T) {
 	check := func(name string, setup func(), wantHurt bool) {
 		b.health = 20
 		a.lastAttack = 0
+		h.tick.Add(20) // each check is its own blow, past the last one's damage cooldown
 		setup()
 		h.attackPlayer(players, a.p.eid, b.p.eid)
 		if hurt := b.health < 20; hurt != wantHurt {
@@ -86,7 +87,7 @@ func TestPvPRespectsArmourAndShields(t *testing.T) {
 		t.Fatal("the unshielded blow did no damage — this test would prove nothing")
 	}
 
-	h.tick.Store(uint64(shieldDelay) + 2)
+	h.tick.Store(uint64(shieldDelay) + 40) // past the earlier blow's cooldown window too
 	b.inv.slots[0] = invStack{item: itemShield, count: 1}
 	b.p.held = 0
 
@@ -97,6 +98,7 @@ func TestPvPRespectsArmourAndShields(t *testing.T) {
 		t.Errorf("a shield facing the blow should have caught it: took %v", 20-b.health)
 	}
 
+	h.tick.Add(20) // the next blow must not fall inside the last one's cooldown
 	b.health, a.lastAttack, b.blockingSince = 20, 0, 1
 	b.yaw = -90 // turned away from it
 	h.attackPlayer(players, a.p.eid, b.p.eid)
@@ -142,6 +144,7 @@ func TestThornsBitesAPlayerAttacker(t *testing.T) {
 	swing := func() {
 		a.health, b.health = 20, 20
 		a.lastAttack = 0
+		h.tick.Add(20) // each swing lands past the last one's damage cooldown
 		h.attackPlayer(players, a.p.eid, b.p.eid)
 	}
 
@@ -219,6 +222,7 @@ func TestThornsReachesTheArcher(t *testing.T) {
 	bit := 0
 	for i := 0; i < 200; i++ {
 		a.health, b.health = 20, 20
+		h.tick.Add(20) // each arrow lands past the last one's damage cooldown
 		arrow := &arrowEntity{eid: h.allocEID(), dim: 0, shooter: a.p.eid,
 			dmg: 1, playerShot: true, x: b.x, y: b.y, z: b.z}
 		h.arrowHitsPlayer(players, arrow, b.x, b.y+0.5, b.z)

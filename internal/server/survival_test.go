@@ -96,19 +96,22 @@ func TestDrowning(t *testing.T) {
 
 	// maxAir/airDrainPerSec seconds submerged drain the supply; after that, damage.
 	for i := 0; i < maxAir/airDrainPerSec; i++ {
+		h.tick.Add(survivalTickN)
 		h.survivalTick(players)
 	}
 	if pl.air != 0 {
 		t.Fatalf("air should be depleted after %d s, got %d", maxAir/airDrainPerSec, pl.air)
 	}
 	before := pl.health
-	pl.food = 10            // below full: fast saturation regen must not mask the drowning
+	pl.food = 10 // below full: fast saturation regen must not mask the drowning
+	h.tick.Add(survivalTickN)
 	h.survivalTick(players) // now drowning
 	if pl.health >= before {
 		t.Fatalf("submerged with no air should drown: health %v -> %v", before, pl.health)
 	}
 	// Surfacing refills the air supply.
 	w.SetBlock(0, 71, 0, worldgen.Air)
+	h.tick.Add(survivalTickN)
 	h.survivalTick(players)
 	if pl.air == 0 {
 		t.Fatalf("air should refill out of water, still %d", pl.air)

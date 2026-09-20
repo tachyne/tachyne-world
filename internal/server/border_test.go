@@ -54,6 +54,7 @@ func TestBorderDamageOnlyBeyondTheSafeZone(t *testing.T) {
 	at := func(x float64) float32 {
 		pl.x, pl.z = x, 0
 		pl.health, pl.dead = 20, false
+		h.tick.Add(20) // each measurement is its own blow, past the last one's damage cooldown
 		h.borderDamage(players)
 		return 20 - pl.health
 	}

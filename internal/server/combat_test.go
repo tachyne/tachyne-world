@@ -23,6 +23,8 @@ func TestMobCombatKillDropsBeef(t *testing.T) {
 	}
 
 	for m.dying == 0 { // beat it to death (starts the death animation)
+		h.tick.Add(20) // each blow lands past the last one's damage cooldown
+		m.invulnTicks = 0
 		h.attackMob(players, 999, m.eid)
 	}
 	for h.mobs[m.eid] != nil { // let the death animation play out → despawn + drops

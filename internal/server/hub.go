@@ -212,6 +212,8 @@ const (
 // tracked is the hub's authoritative record for a connected player. Position is
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
+	hurtAt         uint64  // LivingEntity.invulnerableTime: the tick of the last landed blow (10 ticks of cooldown follow)
+	lastHurt       float32 // …and its raw amount: only a bigger blow's excess lands inside the window
 	p              *player
 	adv            advState          // advancement grants (advID → criterion → millis)
 	advVisible     map[string]bool   // nodes revealed to the client (vanilla frontier)

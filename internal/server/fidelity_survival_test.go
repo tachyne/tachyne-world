@@ -21,6 +21,7 @@ func effectInterval(t *testing.T, id int32, amp, secs, ticks int) int {
 	prev := pl.health
 	first, second := -1, -1
 	for i := 0; i < ticks; i++ {
+		h.tick.Add(1) // the effect pass runs once a tick; the damage cooldown counts in ticks
 		h.updateEffects(players)
 		if pl.health != prev {
 			if first < 0 {
@@ -85,6 +86,7 @@ func TestWitherCanKill(t *testing.T) {
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.applyEffect(players, pl, effWither, 0, 60)
 	for i := 0; i < 1200 && !pl.dead; i++ {
+		h.tick.Add(1)
 		h.updateEffects(players)
 	}
 	if !pl.dead {

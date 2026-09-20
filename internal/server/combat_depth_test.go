@@ -34,7 +34,8 @@ func TestSpamClickingIsScaledDown(t *testing.T) {
 	if spam := before - m.health; spam > 2 {
 		t.Fatalf("a 1-tick spam-click should deal ~20%%, dealt %d", spam)
 	}
-	h.tick.Add(20) // fully recovered
+	h.tick.Add(20) // fully recovered — and the mob's damage cooldown (counted down in updateMobs) with it
+	m.invulnTicks = 0
 	before = m.health
 	h.attackMob(players, 1, 2)
 	if got := before - m.health; got != 7 {

@@ -435,6 +435,17 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.wearArmorSlot(players, t, 0, helmetWear(amount), dt)
 		amount *= 0.75
 	}
+	// LivingEntity.hurt's cooldown: for 10 ticks after a landed blow only a
+	// bigger blow lands, and only its excess over the last one — so fire,
+	// cactus, a crowd of zombies do not stack their hits every tick.
+	if now := h.tick.Load(); now < t.hurtAt+10 {
+		if amount <= t.lastHurt {
+			return false
+		}
+		amount, t.lastHurt = amount-t.lastHurt, amount
+	} else {
+		t.lastHurt, t.hurtAt = amount, now
+	}
 	preMitigation := amount // what armour and magic will be measured against
 	// Armour absorbs the blow and wears from it under ONE condition, as vanilla
 	// does in getDamageAfterArmorAbsorb — hurtArmor is called there, with the

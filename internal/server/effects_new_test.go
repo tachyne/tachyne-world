@@ -37,6 +37,7 @@ func TestAbsorptionSoaksDamage(t *testing.T) {
 	if pl.health != 20 || pl.absorption != 1 {
 		t.Fatalf("absorption soak: health=%v absorption=%v, want 20/1", pl.health, pl.absorption)
 	}
+	h.tick.Add(20)                        // past the first blow's damage cooldown
 	h.damageOf(players, pl, 5, dtGeneric) // 1 soaked, 4 to health
 	if pl.health != 16 || pl.absorption != 0 {
 		t.Fatalf("absorption overflow: health=%v absorption=%v, want 16/0", pl.health, pl.absorption)

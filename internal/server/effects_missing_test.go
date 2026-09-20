@@ -264,6 +264,7 @@ func TestInfestedSpawnsSilverfishOnHurt(t *testing.T) {
 
 	// A 10% roll per hit, so take a lot of small ones and heal back up.
 	for i := 0; i < 400; i++ {
+		h.tick.Add(20) // each blow lands past the last one's damage cooldown
 		h.damageOf(players, pl, 1, dtGeneric)
 		pl.health, pl.dead = maxHealth, false
 	}

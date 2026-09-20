@@ -62,9 +62,9 @@ func TestTheHungerEffectCostsExhaustion(t *testing.T) {
 	if tr.exhaustion <= 0 {
 		t.Fatal("a second under Hunger cost no exhaustion at all")
 	}
-	if got := tr.exhaustion; got != hungerExhaustionPerSec {
+	if got := tr.exhaustion; got != hungerExhaustionPerTick {
 		t.Errorf("exhaustion %.3f, want %.3f (0.005 a tick for a second)",
-			got, hungerExhaustionPerSec)
+			got, hungerExhaustionPerTick)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestHungerScalesWithItsLevel(t *testing.T) {
 	tr.exhaustion = 0
 
 	h.updateEffects(players)
-	if got, want := tr.exhaustion, float32(hungerExhaustionPerSec*2); got != want {
+	if got, want := tr.exhaustion, float32(hungerExhaustionPerTick*2); got != want {
 		t.Errorf("Hunger II cost %.3f, want %.3f", got, want)
 	}
 }

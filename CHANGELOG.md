@@ -11,6 +11,26 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-20
+
+### Fixed
+- **Damage has vanilla's invulnerability window.** Every source of damage
+  landed in full, every time it was applied: standing in fire, in a cactus
+  or in a crowd of zombies stacked hits tick after tick, and two blows in
+  the same tick both told. Living things now carry vanilla's cooldown —
+  for ten ticks after a blow lands, a smaller one does nothing and a
+  bigger one lands only its excess over the last, then the window resets
+  to twenty ticks. It sits where vanilla has it: after a shield and the
+  helmet's share, after a mob's own reductions (an armadillo's roll-up),
+  and before armour, resistance and a wolf's barding.
+- **The Hunger effect drains twenty times slower.** It applied a whole
+  second's exhaustion every tick, so a husk's bite emptied the food bar in
+  seconds; it is vanilla's 0.005 per tick per level again.
+- **Unbreaking protects armour by the armour formula.** A piece was spared
+  wear with the tool's odds (a half, two thirds, three quarters by level)
+  instead of vanilla's armour branch — a fifth, 27%, 30% — so enchanted
+  armour lasted about twice as long as it should.
+
 ## 2026-09-19
 
 ### Added

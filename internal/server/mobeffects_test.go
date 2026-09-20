@@ -52,6 +52,7 @@ func TestMobPoisonStopsAtOneAndSparesTheUndead(t *testing.T) {
 	}
 	h.applyMobEffect(players, cow, effPoison, 0, 60)
 	for i := 0; i < 20*60 && cow.health > 1; i++ {
+		cow.invulnTicks = 0 // updateMobs would wind the damage cooldown down between poison ticks
 		h.updateMobEffects(players)
 	}
 	if cow.health != 1 {

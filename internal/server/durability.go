@@ -108,7 +108,7 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32, dt 
 		if resistsWear(a.item, dt) {
 			continue // netherite in a fire: the set comes out unmarked
 		}
-		if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
+		if h.armourUnbreakingSpares(a.enchLvl(enchUnbreaking)) {
 			continue // unbreaking spared this piece
 		}
 		if a.dmg += n; a.dmg >= max {
@@ -136,7 +136,7 @@ func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int,
 	if resistsWear(a.item, dt) {
 		return
 	}
-	if lvl := a.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
+	if h.armourUnbreakingSpares(a.enchLvl(enchUnbreaking)) {
 		return
 	}
 	if a.dmg += n; a.dmg >= max {
@@ -200,4 +200,14 @@ func (h *hub) pickMendable(t *tracked) *invStack {
 		return nil
 	}
 	return found[h.rng.Intn(len(found))]
+}
+
+// armourUnbreakingSpares is Unbreaking's armour rule: a piece is spared
+// with chance 2·lvl/(5·lvl+5) — 20%, 27%, 30% — not the tool rule's
+// lvl/(lvl+1) (armour takes the hit 60% of the time before the roll).
+func (h *hub) armourUnbreakingSpares(lvl int) bool {
+	if lvl <= 0 {
+		return false
+	}
+	return h.rng.Float64() < float64(2*lvl)/float64(5*lvl+5)
 }

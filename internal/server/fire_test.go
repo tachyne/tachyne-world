@@ -22,6 +22,7 @@ func TestLavaSetsAfterburnAndWaterClears(t *testing.T) {
 	// Step out: afterburn ticks damage.
 	w.SetBlock(0, 70, 0, worldgen.Air)
 	before := pl.health
+	h.tick.Add(survivalTickN) // the afterburn tick is a second later, past the lava's cooldown
 	h.survivalTick(players)
 	if pl.health >= before || pl.fireSecs != lavaFireSecs-1 {
 		t.Fatalf("afterburn should tick: health %v→%v fireSecs=%d", before, pl.health, pl.fireSecs)
