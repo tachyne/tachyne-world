@@ -84,7 +84,7 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		}
 	}
 	if len(pool) == 0 {
-		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0}}
+		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0, defaultPriceMult100}}
 	}
 	id := pool[h.rng.Intn(len(pool))]
 	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
@@ -96,7 +96,7 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		price = 64
 	}
 	return mobOffer{
-		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0},
+		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0, defaultPriceMult100},
 		cost2Item:  itemByName["book"],
 		cost2Count: 1,
 		outEnchs:   enchList{{id: id, lvl: int8(lvl)}},
@@ -262,17 +262,28 @@ func (h *hub) typeItemOffer(m *mob, t vTrade) (mobOffer, bool) {
 	return o, true
 }
 
-// tradePriceMultiplier is vanilla MerchantOffer.priceMultiplier. Vanilla varies
-// it per listing (0.05 for most emerald-cost trades, 0.2 for a few); we apply
-// the common 0.05 to every offer — the wire packet carries it so the client's
-// displayed price matches what costCount charges.
-const tradePriceMultiplier = 0.05
+// defaultPriceMult100 is the priceMultiplier most listings carry (0.05), in
+// hundredths. It stands in for an offer stored before the multiplier was
+// per-listing, when every offer used this value.
+const defaultPriceMult100 = 5
+
+// priceMult is vanilla MerchantOffer.priceMultiplier for this offer: how hard
+// demand pushes the price up and how far reputation pulls it down. The wire
+// packet carries it too, so the client's displayed price matches what
+// costCount charges.
+func (o *mobOffer) priceMult() float64 {
+	m := o.trade.mult100
+	if m == 0 {
+		m = defaultPriceMult100
+	}
+	return float64(m) / 100
+}
 
 // costCount is vanilla MerchantOffer.getModifiedCostCount: the base input count
 // plus the demand markup, plus the special-price delta, clamped to [1, stack].
 func (o *mobOffer) costCount() int {
 	base := int(o.trade.inCount)
-	bump := int(math.Floor(float64(base) * float64(o.demand) * tradePriceMultiplier))
+	bump := int(math.Floor(float64(base*int(o.demand)) * o.priceMult()))
 	if bump < 0 {
 		bump = 0
 	}

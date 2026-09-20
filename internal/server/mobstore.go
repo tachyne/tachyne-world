@@ -204,6 +204,7 @@ type savedOffer struct {
 	Color   int32   `json:"col,omitempty"` // dyed leather armour
 	Stew    int8    `json:"st,omitempty"`  // a suspicious stew's effect row
 	Potion  int8    `json:"po,omitempty"`  // a tipped arrow's potion
+	Mult    int32   `json:"pm,omitempty"`  // priceMultiplier in hundredths
 }
 
 // UnmarshalJSON accepts the historical array form as well as the object one.
@@ -235,7 +236,7 @@ func packOffer(o mobOffer) savedOffer {
 	s := savedOffer{In: t.inItem, InN: t.inCount, Out: t.outItem, OutN: t.outCount,
 		MaxUses: t.maxUses, XP: t.xp, Uses: o.uses, Demand: o.demand,
 		C2Item: o.cost2Item, C2N: o.cost2Count, MapID: o.outMapID, Name: o.outName,
-		Color: o.outColor, Stew: o.outStew, Potion: o.outPotion}
+		Color: o.outColor, Stew: o.outStew, Potion: o.outPotion, Mult: o.trade.mult100}
 	for _, e := range o.outEnchs {
 		if e.lvl == 0 {
 			break
@@ -250,6 +251,9 @@ func unpackOffer(s savedOffer) mobOffer {
 		outCount: s.OutN, maxUses: s.MaxUses, xp: s.XP}, uses: s.Uses, demand: s.Demand,
 		cost2Item: s.C2Item, cost2Count: s.C2N, outMapID: s.MapID, outName: s.Name,
 		outColor: s.Color, outStew: s.Stew, outPotion: s.Potion}
+	if o.trade.mult100 = s.Mult; o.trade.mult100 == 0 {
+		o.trade.mult100 = defaultPriceMult100 // an offer stored before it was per-listing
+	}
 	for i, e := range s.Ench {
 		if i >= len(o.outEnchs) || e == 0 {
 			break

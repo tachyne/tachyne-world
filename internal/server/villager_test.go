@@ -68,8 +68,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0, defaultPriceMult100}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -689,5 +689,53 @@ func TestRemainingVillagerListingTypes(t *testing.T) {
 		if back := unpackOffer(packOffer(o)); back.outColor != o.outColor || back.trade != o.trade {
 			t.Errorf("dyed offer round trip lost data: %+v vs %+v", back, o)
 		}
+	}
+}
+
+// Vanilla's priceMultiplier is per listing, not per world: 0.2 on armour,
+// bells, shields, saddles, explorer maps, dyed armour and most enchanted gear,
+// 0.05 on everything else. It scales both the demand markup and the reputation
+// discount, so a single global 0.05 made those offers react four times too
+// weakly to both.
+func TestPerListingPriceMultiplier(t *testing.T) {
+	seen := map[int32]int{}
+	for _, tiers := range villagerTrades {
+		for _, pool := range tiers {
+			for _, tr := range pool {
+				seen[tr.mult100]++
+			}
+		}
+	}
+	for m := range seen {
+		if m != 5 && m != 20 {
+			t.Errorf("multiplier %d/100 is neither of vanilla's two values", m)
+		}
+	}
+	if seen[20] == 0 || seen[5] == 0 {
+		t.Fatalf("expected both multipliers in the table, got %v", seen)
+	}
+
+	// The armorer's iron helmet is one of vanilla's 0.2 listings; the wheat
+	// the farmer buys is 0.05. Demand bites four times harder on the former.
+	steep := mobOffer{trade: vTrade{inItem: itemByName["emerald"], inCount: 20, mult100: 20}, demand: 10}
+	shallow := mobOffer{trade: vTrade{inItem: itemByName["emerald"], inCount: 20, mult100: 5}, demand: 10}
+	if got, want := steep.costCount(), 20+int(20*10*0.2); got != want {
+		t.Errorf("0.2 offer charges %d, want %d", got, want)
+	}
+	if got, want := shallow.costCount(), 20+int(20*10*0.05); got != want {
+		t.Errorf("0.05 offer charges %d, want %d", got, want)
+	}
+	if steep.priceMult() <= shallow.priceMult() {
+		t.Error("the 0.2 listing must react harder than the 0.05 one")
+	}
+
+	// An offer stored before the multiplier was per-listing reads back as the
+	// old global 0.05 rather than as zero (which would kill demand entirely).
+	var legacy savedOffer
+	if err := json.Unmarshal([]byte(`[1,2,3,4,5,6,7,8]`), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	if o := unpackOffer(legacy); o.priceMult() != 0.05 {
+		t.Errorf("a legacy offer's multiplier is %v, want 0.05", o.priceMult())
 	}
 }

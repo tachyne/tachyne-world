@@ -253,7 +253,7 @@ func (h *hub) updateSpecialPrices(t *tracked, m *mob) {
 		o := &m.offers[i]
 		o.specialPrice = 0
 		if rep != 0 {
-			o.specialPrice -= int32(math.Floor(float64(rep) * tradePriceMultiplier))
+			o.specialPrice -= int32(math.Floor(float64(rep) * o.priceMult()))
 		}
 		if heroAmp > 0 { // hasEffect returns amp+1 (1-based)
 			d := 0.3 + 0.0625*float64(heroAmp-1)
@@ -331,7 +331,7 @@ func (h *hub) sendTradeList(t *tracked, m *mob) {
 		b = protocol.AppendI32(b, tr.maxUses)
 		b = protocol.AppendI32(b, tr.xp)
 		b = protocol.AppendI32(b, o.specialPrice) // reputation + Hero delta
-		b = protocol.AppendF32(b, float32(tradePriceMultiplier))
+		b = protocol.AppendF32(b, float32(o.priceMult()))
 		b = protocol.AppendI32(b, o.demand)
 	}
 	b = protocol.AppendVarInt(b, int32(m.tradeLevel))
