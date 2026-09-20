@@ -90,6 +90,7 @@ type mob struct {
 	customName      string   // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)
+	pregnant        bool     // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
 	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
@@ -908,6 +909,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if h.endermanStareStep(players, m) {
 				continue // EndermanFreezeWhenLookedAt: held by the stare
 			}
+		}
+		if m.etype == entityFrog {
+			h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
 		}
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)

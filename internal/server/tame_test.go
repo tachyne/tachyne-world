@@ -50,7 +50,7 @@ func TestPetFollowsOwner(t *testing.T) {
 	m.tamed, m.owner = true, pl.p.eid
 
 	// Owner walks out of range (but within teleport distance) → target them.
-	pl.x = 115.5 // 15 blocks: past follow-start (10), under teleport (20)
+	pl.x = 111.5 // 11 blocks: past follow-start (10), under teleport (12)
 	if h.petAcquire(players, m); !m.hasTarget {
 		t.Fatalf("a pet should follow an owner past %v blocks", petFollowStart)
 	}
@@ -74,7 +74,8 @@ func TestPetTeleportsWhenFar(t *testing.T) {
 	m.tamed, m.owner = true, pl.p.eid
 	pl.x, pl.z = 200.5, 200.5 // way past the teleport range
 	h.petAcquire(players, m)
-	if dist2 := (m.x-pl.x)*(m.x-pl.x) + (m.z-pl.z)*(m.z-pl.z); dist2 > 9 {
+	// tryToTeleportToOwner lands two to three blocks away, never underfoot.
+	if dist2 := (m.x-pl.x)*(m.x-pl.x) + (m.z-pl.z)*(m.z-pl.z); dist2 > 25 {
 		t.Fatalf("a pet left too far should teleport to the owner, still at (%v,%v)", m.x, m.z)
 	}
 }
@@ -87,5 +88,36 @@ func TestSitInterruptsFollow(t *testing.T) {
 	}
 	if m.hasTarget {
 		t.Fatal("a sitting pet must not chase the owner")
+	}
+}
+
+// FollowOwnerGoal's stop distance is per species: a wolf comes to your heel,
+// a cat keeps five blocks, a parrot lands on you.
+func TestPetStopDistancePerSpecies(t *testing.T) {
+	for _, c := range []struct {
+		etype int
+		want  float64
+	}{{entityWolf, 2}, {entityCat, 5}, {entityOcelot, 5}, {entityParrot, 1}} {
+		if got := petStopDistance(c.etype); got != c.want {
+			t.Errorf("stop distance for %d = %v, want %v", c.etype, got, c.want)
+		}
+	}
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 100.5, 70, 100.5
+	players := map[int32]*tracked{1: pl}
+	cat := h.spawnSpecies(players, entityCat, 0, 104.5, 70, 100.5) // four blocks off
+	cat.tamed, cat.owner = true, pl.p.eid
+	cat.hasTarget = true
+	h.petAcquire(players, cat)
+	if cat.hasTarget {
+		t.Error("a cat four blocks from its owner has come close enough")
+	}
+	wolf := h.spawnSpecies(players, entityWolf, 0, 104.5, 70, 100.5)
+	wolf.tamed, wolf.owner = true, pl.p.eid
+	wolf.hasTarget = true
+	h.petAcquire(players, wolf)
+	if !wolf.hasTarget {
+		t.Error("a wolf four blocks off is still coming")
 	}
 }

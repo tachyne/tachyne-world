@@ -221,6 +221,10 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			if m.etype == entityTurtle {
 				m.hasEgg = true // TurtleBreedGoal.breed: an egg to carry home, no hatchling yet
 				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(turtleMeta(m)))
+			} else if m.etype == entityFrog {
+				// FrogAi: frogs do not have babies, they go IS_PREGNANT and
+				// lay a clutch of frogspawn on the nearest water.
+				m.pregnant = true
 			} else {
 				baby = h.spawnAnimal(players, m.etype, int(m.x), int(m.z))
 			}

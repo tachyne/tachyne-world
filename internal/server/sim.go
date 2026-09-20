@@ -124,6 +124,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
 		h.inDim(dim, func() { h.updateFire(players, pos) })
+	case h.tickFrogspawn(players, dim, pos, state):
+		// A clutch bursts into tadpoles once its timer runs out.
 	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
 		// The egg cracks twice and then opens.
 	case h.tickChorusPlant(players, dim, pos.x, pos.y, pos.z, state):

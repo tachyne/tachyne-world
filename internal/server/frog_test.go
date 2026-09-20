@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // A warm frog eats a small magma cube for a pearlescent froglight and a
@@ -50,5 +51,50 @@ func TestFrogEatsForFroglight(t *testing.T) {
 	h.pandaSneezeTick(players, cub)
 	if cub.sneezeAt != 0 {
 		t.Fatal("a due sneeze should land")
+	}
+}
+
+// Frogs do not have babies: a bred pair lays a clutch of frogspawn on the
+// water beside them, and it hatches into a handful of tadpoles.
+func TestFrogLaysSpawnThatHatches(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	// A bank at y=70 with a pool of water beside it.
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			h.world.SetBlock(dx, 69, dz, worldgen.Stone)
+			h.world.SetBlock(dx, 70, dz, worldgen.Air)
+		}
+	}
+	h.world.SetBlock(1, 69, 0, worldgen.WaterBase)
+	h.world.SetBlock(1, 70, 0, worldgen.Air)
+
+	frog := h.spawnSpecies(players, entityFrog, 0, 0.5, 70, 0.5)
+	if frog == nil {
+		t.Fatal("no frog")
+	}
+	frog.pregnant = true
+	h.frogLaySpawn(players, frog)
+	if frog.pregnant {
+		t.Fatal("a frog beside water lays its clutch")
+	}
+	spawn := blockPos{1, 70, 0}
+	if got := h.world.At(spawn.x, spawn.y, spawn.z); got != frogspawnBlock {
+		t.Fatalf("frogspawn should sit on the water, got state %d", got)
+	}
+
+	// Hatch it: the block goes, tadpoles arrive.
+	h.tickFrogspawn(players, 0, spawn, h.world.At(spawn.x, spawn.y, spawn.z))
+	if h.world.At(spawn.x, spawn.y, spawn.z) != worldgen.Air {
+		t.Error("hatching clears the clutch")
+	}
+	tadpoles := 0
+	for _, m := range h.mobs {
+		if m.etype == entityTadpole {
+			tadpoles++
+		}
+	}
+	if tadpoles < 2 || tadpoles > 5 {
+		t.Fatalf("a clutch hatches two to five tadpoles, got %d", tadpoles)
 	}
 }

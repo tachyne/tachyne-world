@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Frogs lay spawn, and pets keep vanilla's distances.** Breeding two
+  frogs produced a baby frog out of nowhere. As in vanilla, the pair now
+  leaves one of them carrying a clutch: it walks to the bank, lays
+  frogspawn on the water beside it, and three to ten minutes later the
+  clutch bursts into two to five tadpoles that grow into frogs of the
+  local kind. Spawn placed by hand hatches the same way, and draining
+  the water under it destroys it. Tamed animals follow at vanilla's own
+  distances too: a wolf comes to your heel, a cat stops five blocks off,
+  a parrot right at your feet, and any pet left more than twelve blocks
+  behind catches up with a blink that lands beside you rather than
+  underfoot.
 - **Light, not the clock: spiders, daylight detectors, endermen and the
   Warden's warning.** Four mechanics that were reading the wrong thing. A
   spider went neutral by the world clock, so one in a pitch-dark cave

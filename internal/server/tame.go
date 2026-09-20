@@ -16,9 +16,9 @@ const (
 	entityStatusTameFail = 6 // smoke puff: taming didn't take
 	entityStatusTameOK   = 7 // hearts: tamed!
 
-	petFollowStart = 10.0 // start walking to the owner past this…
-	petFollowStop  = 3.0  // …and stop within this
-	petTeleport    = 20.0 // farther than this: blink to the owner (vanilla pets do)
+	petFollowStart = 10.0 // FollowOwnerGoal's start distance: every pet's is 10
+	petFollowStop  = 2.0  // …the wolf's stop distance; cats and parrots differ
+	petTeleport    = 12.0 // TELEPORT_WHEN_DISTANCE_IS_SQ = 144: blink at twelve blocks
 
 	metaIndexTameFlags = 17 // TamableAnimal flags byte: 0x01 sitting, 0x04 tamed
 )
@@ -136,17 +136,35 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 	d := math.Hypot(owner.x-m.x, owner.z-m.z)
 	switch {
 	case d > petTeleport: // blink to the owner's side (vanilla pet teleport)
-		m.x, m.z = owner.x+1, owner.z
+		// tryToTeleportToOwner lands two to three blocks off, not underfoot.
+		off := 2 + h.rng.Float64()
+		if h.rng.Intn(2) == 0 {
+			off = -off
+		}
+		m.x, m.z = owner.x+off, owner.z+float64(h.rng.Intn(3)-1)
 		m.y = float64(h.worldFor(m.dim).MobFeet(int(math.Floor(m.x)), int(math.Floor(m.z))))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		m.hasTarget = false
 	case d > petFollowStart:
 		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z
-	case d < petFollowStop:
+	case d < petStopDistance(m.etype):
 		m.hasTarget = false // close enough — mill around
 	}
 	return false
+}
+
+// petStopDistance is FollowOwnerGoal's per-species stop distance: a wolf
+// comes right up to you, a cat keeps its dignity at five blocks, a parrot
+// lands on your shoulder.
+func petStopDistance(etype int) float64 {
+	switch etype {
+	case entityCat, entityOcelot:
+		return 5
+	case entityParrot:
+		return 1
+	}
+	return petFollowStop
 }
 
 // petMeta picks the right taming metadata for the species: ocelots are NOT
