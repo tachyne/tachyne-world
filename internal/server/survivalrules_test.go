@@ -115,3 +115,92 @@ func TestDirtPathTurnsBackToDirtUnderABlock(t *testing.T) {
 		t.Errorf("a path under a fence gate became %d, want it left alone", got)
 	}
 }
+
+// BellBlock.canSurvive goes by the bell's own attachment, and a bell hung
+// between two walls needs both of them — the case a plain "which face" rule
+// cannot express.
+func TestBellNeedsWhateverItHangsFrom(t *testing.T) {
+	w := world.New(1)
+	const x, y, z = 42, 180, 42
+	bell := func(attachment, facing string) uint32 {
+		s := worldgen.BlockBase("bell")
+		info, _ := worldgen.InfoForState(s)
+		s = worldgen.SetProperty(info, s, "attachment", attachment)
+		return worldgen.SetProperty(info, s, "facing", facing)
+	}
+	clear := func() {
+		for dx := -2; dx <= 2; dx++ {
+			for dy := -2; dy <= 2; dy++ {
+				w.SetBlock(x+dx, y+dy, z, worldgen.Air)
+			}
+		}
+	}
+
+	// Floor: the block below.
+	clear()
+	b := bell("floor", "north")
+	w.SetBlock(x, y, z, b)
+	if supported(w, blockPos{x, y, z}, b) {
+		t.Error("a floor bell stood on nothing")
+	}
+	w.SetBlock(x, y-1, z, worldgen.Stone)
+	if !supported(w, blockPos{x, y, z}, b) {
+		t.Error("a floor bell on stone should stand")
+	}
+
+	// Ceiling: the block above.
+	clear()
+	c := bell("ceiling", "north")
+	w.SetBlock(x, y, z, c)
+	if supported(w, blockPos{x, y, z}, c) {
+		t.Error("a ceiling bell hung from nothing")
+	}
+	w.SetBlock(x, y+1, z, worldgen.Stone)
+	if !supported(w, blockPos{x, y, z}, c) {
+		t.Error("a ceiling bell under stone should hang")
+	}
+
+	// Double wall: BOTH sides, so taking either one away drops it.
+	clear()
+	d := bell("double_wall", "east")
+	w.SetBlock(x, y, z, d)
+	w.SetBlock(x+1, y, z, worldgen.Stone)
+	if supported(w, blockPos{x, y, z}, d) {
+		t.Error("a double-wall bell stood on one wall")
+	}
+	w.SetBlock(x-1, y, z, worldgen.Stone)
+	if !supported(w, blockPos{x, y, z}, d) {
+		t.Error("a double-wall bell with both walls should stand")
+	}
+	w.SetBlock(x+1, y, z, worldgen.Air)
+	if supported(w, blockPos{x, y, z}, d) {
+		t.Error("a double-wall bell survived losing one of its two walls")
+	}
+}
+
+// BigDripleafStemBlock.canSurvive: a stem is the middle of a plant, so it
+// needs something to root in below AND the rest of the plant above.
+func TestDripleafStemNeedsBothEnds(t *testing.T) {
+	w := world.New(1)
+	const x, y, z = 46, 180, 46
+	stem := worldgen.BlockBase("big_dripleaf_stem")
+	leaf := worldgen.BlockBase("big_dripleaf")
+	for _, tc := range []struct {
+		name         string
+		below, above uint32
+		want         bool
+	}{
+		{"rooted, leaf on top", worldgen.Stone, leaf, true},
+		{"rooted, stem on top", worldgen.Stone, stem, true},
+		{"stem on stem, leaf above", stem, leaf, true},
+		{"rooted, nothing above", worldgen.Stone, worldgen.Air, false},
+		{"nothing below", worldgen.Air, leaf, false},
+	} {
+		w.SetBlock(x, y-1, z, tc.below)
+		w.SetBlock(x, y, z, stem)
+		w.SetBlock(x, y+1, z, tc.above)
+		if got := supported(w, blockPos{x, y, z}, stem); got != tc.want {
+			t.Errorf("%s: survives=%v, want %v", tc.name, got, tc.want)
+		}
+	}
+}

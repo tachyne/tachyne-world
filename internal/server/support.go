@@ -210,6 +210,29 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			anchor = above()
 		}
 		return sameGrowingPlant(state, anchor) || holdsBlock(anchor)
+	case worldgen.SupportBell:
+		// BellBlock.canSurvive: the attachment says which way it hangs. A bell
+		// between two walls needs both of them — taking either one down drops
+		// it, which is the case a plain "face" rule cannot express.
+		switch prop("attachment") {
+		case "ceiling":
+			return holdsBlock(above())
+		case "floor":
+			return holdsBlock(below())
+		case "double_wall":
+			dx, dz := facingDelta(prop("facing"))
+			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz)) &&
+				holdsBlock(w.At(pos.x-dx, pos.y, pos.z-dz))
+		default: // single_wall
+			return holdsBlock(behind())
+		}
+	case worldgen.SupportStem:
+		// BigDripleafStemBlock.canSurvive: rooted below AND carrying the rest
+		// of the plant above.
+		b, a := below(), above()
+		rooted := worldgen.SupportFor(b) == worldgen.SupportStem || holdsBlock(b)
+		carries := worldgen.SupportFor(a) == worldgen.SupportStem || isBigDripleaf(a)
+		return rooted && carries
 	case worldgen.SupportSpawn:
 		// FrogspawnBlock.mayPlaceOn: water under it, and not under water
 		// itself — a clutch floats ON the surface.

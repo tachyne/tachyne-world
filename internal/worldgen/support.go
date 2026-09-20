@@ -33,6 +33,8 @@ const (
 	SupportGrowsUp                // a growing plant hanging off what is BELOW it (kelp, twisting vines)
 	SupportGrowsDown              // …and off what is ABOVE it (cave vines, weeping vines)
 	SupportSpawn                  // frogspawn: water below, open air above
+	SupportBell                   // its own "attachment" picks floor, ceiling or a wall
+	SupportStem                   // a big dripleaf stem: held at BOTH ends
 )
 
 // supportNames is the classification. Names, not ids: ids move between
@@ -141,6 +143,15 @@ var supportNames = map[SupportKind][]string{
 	// FrogspawnBlock.mayPlaceOn: water under it and nothing wet above.
 	SupportSpawn: {
 		"frogspawn",
+	},
+	// BellBlock.canSurvive, by its own attachment rather than a "face".
+	SupportBell: {
+		"bell",
+	},
+	// BigDripleafStemBlock.canSurvive: something to root in below AND the
+	// rest of the plant above — a stem is the middle of a thing, not an end.
+	SupportStem: {
+		"big_dripleaf_stem",
 	},
 	SupportSpeleothem: {
 		"pointed_dripstone", "sulfur_spike",
