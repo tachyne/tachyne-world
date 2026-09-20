@@ -103,6 +103,9 @@ type mob struct {
 	headIdle        [2]int   // …and idleHeadUpdates, the count before a bored shot
 	headTarget      [2]int32 // …and the victim each has picked
 	witherSmash     int      // WitherBoss.destroyBlocksTick: ticks until it levels its surroundings
+	schoolLeader    int32    // fish: the leader it follows (FollowFlockLeaderGoal)
+	schoolFollowers int      // …or how many follow IT
+	schoolNext      int      // …and the ticks before it looks for a school again
 	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
@@ -620,6 +623,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case schoolingFish[m.etype] && h.schoolStep(players, m):
+			// A fish swimming after its shoal's leader.
 		case m.etype == entityDrowned && h.drownedWaterStep(players, m):
 			// A drowned going back to the water by day, or ashore after dark.
 		case zombieKind(m.etype) && h.villageDriftStep(players, m):
@@ -1179,6 +1184,11 @@ func (m *mob) grounded() bool { return !m.flies }
 // removeMob silently despawns a mob (no death animation, no loot) — used for
 // out-of-range cleanup, where a loot shower would be wrong.
 func (h *hub) removeMob(players map[int32]*tracked, m *mob) {
+	if m.schoolLeader != 0 { // leaving a shoal frees a place in it
+		if leader := h.mobs[m.schoolLeader]; leader != nil && leader.schoolFollowers > 0 {
+			leader.schoolFollowers--
+		}
+	}
 	delete(h.mobs, m.eid)
 	h.gridDirty()
 	h.entityGone(players, m.dim, m.eid)

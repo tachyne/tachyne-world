@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Fish shoal, and dart away from you.** Cod, salmon and tropical fish
+  swam as a scatter of singletons and let you swim right up to them. They
+  now form schools the way vanilla's do — one fish leads, up to four
+  follow it about, and a straggler more than eleven blocks behind breaks
+  off and looks for another — and every fish, pufferfish and tadpole
+  included, darts away from a player who comes within eight blocks.
 - **Animals panic the way each of them does.** Everything but a chicken
   bolted at twice its walking speed, and only ever from a blow. Each
   species now runs at its own goal's pace — a cow and a rabbit sprint, a

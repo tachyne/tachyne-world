@@ -52,6 +52,16 @@ var avoidPlayerRules = map[int]avoidPlayerRule{
 }
 
 func init() {
+	// AbstractFish's AvoidEntityGoal<Player>(8, 1.6, 1.4) — every fish darts
+	// away when you swim up to it, which is what makes them hard to catch.
+	for _, n := range []string{"cod", "salmon", "tropical_fish", "pufferfish", "tadpole"} {
+		if id, ok := entityByName[n]; ok {
+			avoidPlayerRules[id] = avoidPlayerRule{8, 1.6, 1.4, func(m *mob) bool { return true }}
+		}
+	}
+}
+
+func init() {
 	wolf := func(h *hub, m, o *mob) bool { return o.etype == entityWolf }
 	wildWolf := func(h *hub, m, o *mob) bool { return o.etype == entityWolf && !o.tamed }
 	cat := func(h *hub, m, o *mob) bool { return o.etype == entityCat || o.etype == entityOcelot }
