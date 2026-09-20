@@ -41,6 +41,7 @@ func (h *hub) villageDriftStep(players map[int32]*tracked, m *mob) bool {
 	if m.drifting && math.Hypot(m.x-m.tx, m.z-m.tz) > villageDriftArrive {
 		return true // still on the way to the last spot
 	}
+	m.drifting, m.hasTarget = false, false // arrived: pick another spot below
 	// A new spot somewhere in the village, roughly where its buildings are.
 	ang := h.rng.Float64() * 2 * math.Pi
 	r := h.rng.Float64() * villageDriftSpread

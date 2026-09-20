@@ -595,7 +595,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		} else if m.hostile {
 			h.acquireTarget(players, m) // pick a player to hunt this update
 			if m.hasTarget {
-				m.rest = 0 // a resting hostile wakes the instant prey appears
+				m.rest = 0                               // a resting hostile wakes the instant prey appears
+				m.drifting, m.drownedGoal = false, false // a real quarry outranks any errand
 			}
 		}
 		if m.loveTicks > 0 {

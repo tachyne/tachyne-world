@@ -30,8 +30,11 @@ func (h *hub) drownedOKTarget(t *tracked) bool {
 // drownedWaterStep walks a drowned back to the water by day, or out onto the
 // beach at night. Reports whether it took the step.
 func (h *hub) drownedWaterStep(players map[int32]*tracked, m *mob) bool {
-	if m.etype != entityDrowned || m.dying != 0 || m.hasTarget {
+	if m.etype != entityDrowned || m.dying != 0 {
 		return false
+	}
+	if m.hasTarget && !m.drownedGoal {
+		return false // something to chase outranks the walk
 	}
 	w := h.worldFor(m.dim)
 	if w == nil {
@@ -41,7 +44,7 @@ func (h *hub) drownedWaterStep(players map[int32]*tracked, m *mob) bool {
 	if m.drownedGoal && math.Hypot(m.x-m.tx, m.z-m.tz) > drownedArrive {
 		return true // still walking to the spot it picked
 	}
-	m.drownedGoal = false
+	m.drownedGoal, m.hasTarget = false, false
 	switch {
 	case h.isDayTime() && !inWater:
 		// GoToWater: the sun is up and it is out of it — find some.

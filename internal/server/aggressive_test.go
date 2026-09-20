@@ -129,3 +129,24 @@ func TestDrownedDaylightRules(t *testing.T) {
 		t.Errorf("it should aim at the pool: goal=%v tz=%v", m.drownedGoal, m.tz)
 	}
 }
+
+// An errand never survives a real target: a drifting zombie that spots
+// somebody drops the walk, raises its arms and chases.
+func TestRealTargetOutranksTheErrand(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	m := h.spawnHostileY(players, entityZombie, pl.x+2, pl.y, pl.z)
+	m.drifting, m.hasTarget = true, true
+	m.tx, m.tz = 500, 500 // a village spot far away
+	h.updateMobs(players)
+	if m.drifting {
+		t.Error("spotting a player ends the village walk")
+	}
+	if !m.hasTarget || math.Abs(m.tx-pl.x) > 2 {
+		t.Errorf("it should be chasing the player, target (%v,%v)", m.tx, m.tz)
+	}
+	if !m.aggressive {
+		t.Error("and its arms go up")
+	}
+}
