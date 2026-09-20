@@ -1591,6 +1591,12 @@ func (h *hub) run() {
 						h.spawnBlockDrop(players, e.dim, d.item, d.count, e.x, e.y, e.z)
 					}
 				}
+				// IceBlock.playerDestroy: mined without Silk Touch, ice leaves
+				// WATER behind rather than air — unless it sat over the void or
+				// in a dimension where water cannot exist.
+				if silk == 0 {
+					h.iceMeltsOnBreak(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
+				}
 				// Ore XP: only for an actual survival miner (never creative/world).
 				if t := players[e.by]; t != nil && t.gamemode == gmSurvival {
 					t.exhaust(0.005) // vanilla: mining a block

@@ -72,7 +72,10 @@ func sheepFleeceMeta(eid int32, color int8, sheared bool) []byte {
 // caller knows to consume the dye.
 func (h *hub) dyeSheep(players map[int32]*tracked, m *mob, item int32) bool {
 	color, ok := dyeItemColor[item]
-	if !ok || m.etype != entitySheep || m.color == color {
+	// DyeItem.interactLivingEntity also refuses a SHEARED sheep: there is no
+	// wool on it to take the colour, and vanilla makes you wait for it to
+	// grow back rather than silently spending the dye.
+	if !ok || m.etype != entitySheep || m.color == color || m.sheared || m.dying > 0 {
 		return false
 	}
 	m.color = color

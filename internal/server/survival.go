@@ -805,13 +805,54 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	// Saturation gained per the food's value, capped at the new food level (vanilla).
 	t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+float64(foodSaturation[s.item])))
+	eaten := s.item
 	s.count--
 	if s.count == 0 {
 		s.item = 0
 	}
+	h.giveUseRemainder(t, slot, eaten)
 	h.sendHealth(t)
 	h.sendSlot(t, slot)
 	t.p.trySendEv(soundEv("minecraft:entity.player.burp", sndPlayer, t.x, t.y, t.z, 1, 1))
+}
+
+// useRemainder is Item.Properties.usingConvertsTo: what a food leaves behind
+// when it is eaten. A stew leaves its bowl and a honey bottle its glass; both
+// simply vanished, which is a quiet tax on every bowl a player owns.
+var useRemainder = map[int32]int32{}
+
+func init() {
+	for food, left := range map[string]string{
+		"mushroom_stew": "bowl", "rabbit_stew": "bowl", "beetroot_soup": "bowl",
+		"suspicious_stew": "bowl", "honey_bottle": "glass_bottle",
+	} {
+		if f, ok := itemByName[food]; ok {
+			if l, ok := itemByName[left]; ok {
+				useRemainder[int32(f)] = int32(l)
+			}
+		}
+	}
+}
+
+// giveUseRemainder hands back the bowl or bottle. Vanilla puts it in the slot
+// the food came from when that slot is now empty, and otherwise into the
+// inventory — dropping it at the player's feet when there is nowhere left.
+func (h *hub) giveUseRemainder(t *tracked, slot int, eaten int32) {
+	left, ok := useRemainder[eaten]
+	if !ok {
+		return
+	}
+	if s := &t.inv.slots[slot]; s.item == 0 {
+		*s = invStack{item: left, count: 1}
+		return
+	}
+	changed, leftover := t.inv.addStack(invStack{item: left, count: 1})
+	for _, sl := range changed {
+		h.sendSlot(t, sl)
+	}
+	if leftover > 0 {
+		h.spawnItemIn(h.playersRef, t.dim, left, leftover, t.x, t.y, t.z)
+	}
 }
 
 func (h *hub) sendHealth(t *tracked) {

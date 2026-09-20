@@ -118,6 +118,21 @@ func (h *hub) frostedBrightness(dim int, pos blockPos) int {
 	return h.plantBrightness(dim, pos.x, pos.y, pos.z, 0)
 }
 
+// iceMeltsOnBreak is IceBlock.playerDestroy: breaking ordinary ice without
+// Silk Touch fills the cell with water, which is why an ice roof over a lake
+// turns back into the lake. Packed and blue ice do not melt, and neither does
+// ice broken in the Nether, where the water would evaporate anyway.
+func (h *hub) iceMeltsOnBreak(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	if state != iceBlock || dim == dimNether {
+		return
+	}
+	if w := h.worldFor(dim); w != nil && !worldgen.IsReplaceable(w.At(pos.x, pos.y, pos.z)) {
+		return // something already took the cell
+	}
+	h.setBlockAt(players, dim, pos, worldgen.WaterBase)
+	h.scheduleAroundIn(dim, pos, 1)
+}
+
 // slightlyMelt ages the ice one step, or turns it back to water at the last
 // one. Reports whether the block actually went.
 func (h *hub) slightlyMelt(players map[int32]*tracked, dim int, pos blockPos, age int) bool {
