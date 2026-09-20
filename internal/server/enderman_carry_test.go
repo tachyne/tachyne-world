@@ -241,3 +241,125 @@ func TestEndermanCarriesInItsOwnDimension(t *testing.T) {
 		t.Errorf("exactly one block should have left its own dimension, got %d", taken)
 	}
 }
+
+// How much does the line-of-sight test actually change? Over every cell the
+// goal can roll, count the ones holding a holdable block (what the engine used
+// to accept) against the ones that are also VISIBLE (what vanilla accepts).
+// The answer is the whole claim that the missing ray was making endermen
+// permanent, so it is measured rather than asserted.
+func TestEndermanSightChangesTheTakeRate(t *testing.T) {
+	stone := worldgen.BlockBase("stone")
+	grass := worldgen.BlockBase("grass_block")
+
+	// Two terrains: open ground with a scatter of holdable blocks at head
+	// height, and an enderman standing against a bank of earth.
+	for _, tc := range []struct {
+		name  string
+		build func(w *world.World)
+	}{
+		{"open ground", func(w *world.World) {
+			for x := -6; x <= 6; x++ {
+				for z := -6; z <= 6; z++ {
+					w.SetBlock(x, 179, z, stone)
+				}
+			}
+			w.SetBlock(2, 180, 0, grass)
+			w.SetBlock(-2, 181, 1, grass)
+		}},
+		{"against a bank", func(w *world.World) {
+			for x := -6; x <= 6; x++ {
+				for z := -6; z <= 6; z++ {
+					w.SetBlock(x, 179, z, stone)
+				}
+			}
+			// A solid wall of earth from x=1 outwards, two deep: the far
+			// column is holdable but hidden behind the near one.
+			for x := 1; x <= 2; x++ {
+				for y := 180; y <= 182; y++ {
+					for z := -2; z <= 2; z++ {
+						w.SetBlock(x, y, z, grass)
+					}
+				}
+			}
+		}},
+	} {
+		w := world.New(73)
+		h := newHub(w)
+		tc.build(w)
+		m := h.spawnMob(map[int32]*tracked{}, entityEnderman, 0.5, 180, 0.5)
+		holdable, visible := 0, 0
+		for x := -2; x <= 2; x++ {
+			for y := 180; y <= 182; y++ {
+				for z := -2; z <= 2; z++ {
+					if endermanHoldableDefault(w.At(x, y, z)) == 0 {
+						continue
+					}
+					holdable++
+					if _, ok := h.endermanTakeable(m, x, y, z); ok {
+						visible++
+					}
+				}
+			}
+		}
+		t.Logf("%s: %d holdable cells in reach, %d of them visible", tc.name, holdable, visible)
+		if holdable == 0 {
+			t.Errorf("%s: the fixture has nothing to take", tc.name)
+		}
+		if visible > holdable {
+			t.Errorf("%s: %d visible of %d holdable is impossible", tc.name, visible, holdable)
+		}
+	}
+}
+
+// EndermanTakeBlockGoal ray-casts before it lifts: an enderman takes only
+// what it can actually see. Driven through the real predicate rather than
+// through the one-in-ten random roll, which would make the test a coin flip.
+// (Legion reported endermen crowding up, 2026-09-20.)
+func TestEndermanTakesOnlyWhatItCanSee(t *testing.T) {
+	w := world.New(67)
+	h := newHub(w)
+	h.rules.MobGriefing = true
+	grass := worldgen.BlockBase("grass_block")
+	stone := worldgen.BlockBase("stone")
+	for x := -6; x <= 6; x++ {
+		for z := -6; z <= 6; z++ {
+			w.SetBlock(x, 179, z, stone)
+		}
+	}
+	m := h.spawnMob(map[int32]*tracked{}, entityEnderman, 0.5, 180, 0.5)
+
+	// In the open, two blocks away: takeable.
+	w.SetBlock(2, 180, 0, grass)
+	if _, ok := h.endermanTakeable(m, 2, 180, 0); !ok {
+		t.Error("an enderman must lift a holdable block it can see")
+	}
+
+	// The same block with a wall in front of it: not takeable.
+	for y := 179; y <= 182; y++ {
+		w.SetBlock(1, y, 0, stone)
+	}
+	if _, ok := h.endermanTakeable(m, 2, 180, 0); ok {
+		t.Error("an enderman reached a block through a solid wall")
+	}
+
+	// A block that is not holdable at all is never takeable, wall or none.
+	w.SetBlock(-2, 180, 0, stone)
+	if _, ok := h.endermanTakeable(m, -2, 180, 0); ok {
+		t.Error("stone is not in #enderman_holdable")
+	}
+
+	// And the whole goal still works end to end: with the wall gone and the
+	// grass in the open, enough rolls eventually take it.
+	for y := 179; y <= 182; y++ {
+		w.SetBlock(1, y, 0, worldgen.Air)
+	}
+	took := false
+	for i := 0; i < 20000 && !took; i++ {
+		m.carriedBlock = 0
+		h.endermanTakeBlock(map[int32]*tracked{}, m)
+		took = m.carriedBlock != 0
+	}
+	if !took {
+		t.Error("the goal never lifted a block it could plainly see")
+	}
+}

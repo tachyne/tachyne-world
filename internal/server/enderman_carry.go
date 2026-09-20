@@ -112,8 +112,8 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	if !h.inWorldY(y) {
 		return
 	}
-	def := endermanHoldableDefault(h.worldFor(m.dim).At(x, y, z))
-	if def == 0 {
+	def, ok := h.endermanTakeable(m, x, y, z)
+	if !ok {
 		return
 	}
 	pos := blockPos{x, y, z}
@@ -121,6 +121,34 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	h.scheduleAroundIn(m.dim, pos, 1) // let neighbours (fluids/falling blocks) react
 	m.carriedBlock = def
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
+}
+
+// endermanTakeable is the pair of tests EndermanTakeBlockGoal.tick makes on
+// the cell it rolled: the block is in #enderman_holdable, AND a ray from the
+// enderman reaches it. The engine had only the first, so an enderman could
+// lift a block it could not see — one buried in a hillside beside it, or on
+// the far side of a wall. That matters more than it sounds, because an
+// enderman holding a block is exempt from BOTH despawn and the monster-cap
+// census (Mob.requiresCustomPersistence), so every extra pick-up is one more
+// permanent enderman and one more free slot for the spawner.
+//
+// The ray is vanilla's own odd one: from the enderman's BLOCK centre taken at
+// the TARGET's height, to the target's centre.
+func (h *hub) endermanTakeable(m *mob, x, y, z int) (uint32, bool) {
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return 0, false
+	}
+	def := endermanHoldableDefault(w.At(x, y, z))
+	if def == 0 {
+		return 0, false
+	}
+	if !h.sightClear(m.dim,
+		math.Floor(m.x)+0.5, float64(y)+0.5, math.Floor(m.z)+0.5,
+		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5) {
+		return 0, false
+	}
+	return def, true
 }
 
 // endermanPlaceBlock is EnderMan.EndermanLeaveBlockGoal: much more rarely, set
