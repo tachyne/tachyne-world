@@ -54,6 +54,7 @@ type rocketEntity struct {
 	life       int
 	lifetime   int
 	attached   int32 // eid of the gliding player being boosted (0 = loose)
+	explosions int   // how many stars it carries — what its blast is worth
 }
 
 type evUseFirework struct{ eid int32 }
@@ -108,9 +109,10 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	r := &rocketEntity{
 		eid: eid, dim: dim, x: x, y: y, z: z,
 		sx: x, sy: y, sz: z,
-		vy:       fireworkLaunchVY,
-		lifetime: fireworkLifeBase*(1+flight) + h.rng.Intn(6) + h.rng.Intn(7),
-		attached: attached,
+		vy:         fireworkLaunchVY,
+		lifetime:   fireworkLifeBase*(1+flight) + h.rng.Intn(6) + h.rng.Intn(7),
+		attached:   attached,
+		explosions: h.starCount(st),
 	}
 	binary.BigEndian.PutUint32(r.uuid[12:], uint32(eid))
 	h.rockets[eid] = r
@@ -123,6 +125,16 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	}
 	h.playSound(players, "minecraft:entity.firework_rocket.launch", sndAmbient, x, y, z, 3, 1)
 	return r
+}
+
+// starCount is how many bursts a firework stack carries, which is what its
+// blast is worth. A world without a star store yet (a fresh test hub) has
+// none.
+func (h *hub) starCount(st invStack) int {
+	if h.stars == nil || st.starID == 0 {
+		return 0
+	}
+	return len(h.stars.get(st.starID))
 }
 
 // updateRockets flies every rocket one tick.
@@ -165,12 +177,60 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 	}
 }
 
-// popRocket detonates and removes one. A plain rocket carries no explosion,
-// so this is the bang and nothing else — the damage vanilla deals scales with
-// the star components a stack does not carry here yet.
+// popRocket detonates and removes one.
 func (h *hub) popRocket(players map[int32]*tracked, r *rocketEntity) {
 	delete(h.rockets, r.eid)
 	h.toTracking(players, r.eid, r.dim, r.x, r.z, entityStatus(r.eid, entityStatusFireworks)) // FireworkRocketEntity.explode
 	h.playSound(players, "minecraft:entity.firework_rocket.blast", sndAmbient, r.x, r.y, r.z, 3, 1)
+	h.rocketBlast(players, r)
 	h.entityGone(players, r.dim, r.eid)
+}
+
+// fireworkBlastRange is how far a rocket's stars reach (vanilla's 5 blocks).
+const fireworkBlastRange = 5.0
+
+// rocketBlast is FireworkRocketEntity.dealExplosionDamage: a rocket with
+// stars in it hurts. The glider it is boosting takes the full 5 + 2 per star
+// wherever it is; everything else living within five blocks, with a clear
+// line to the burst, takes that scaled by how close it was. A rocket with no
+// star does nothing at all, which is why one is safe to fly with.
+func (h *hub) rocketBlast(players map[int32]*tracked, r *rocketEntity) {
+	if r.explosions == 0 {
+		return
+	}
+	full := float32(5 + r.explosions*2)
+	cause := deathCause{}
+	if rider := players[r.attached]; rider != nil {
+		cause.by = rider.p.name
+		h.hurtFrom(players, rider, full, dtFireworks, cause, from(r.x, r.z))
+	}
+	// Vanilla clips to the target's feet and its middle; either line reaching
+	// is enough.
+	seen := func(x, y, z, height float64) bool {
+		return h.sightClear(r.dim, x, y, z, r.x, r.y, r.z) ||
+			h.sightClear(r.dim, x, y+height*0.5, z, r.x, r.y, r.z)
+	}
+	scaled := func(dist float64) float32 {
+		return full * float32(math.Sqrt((fireworkBlastRange-dist)/fireworkBlastRange))
+	}
+	for _, t := range players {
+		if t.dim != r.dim || t.dead || t.p.eid == r.attached {
+			continue
+		}
+		d := dist3(t.x, t.y, t.z, r.x, r.y, r.z)
+		if d > fireworkBlastRange || !seen(t.x, t.y, t.z, playerEyeHeightStand) {
+			continue
+		}
+		h.hurtFrom(players, t, scaled(d), dtFireworks, cause, from(r.x, r.z))
+	}
+	for _, m := range h.mobs {
+		if m.dim != r.dim || m.dying > 0 {
+			continue
+		}
+		d := dist3(m.x, m.y, m.z, r.x, r.y, r.z)
+		if d > fireworkBlastRange || !seen(m.x, m.y, m.z, 1.8) {
+			continue
+		}
+		h.hurtMobOf(players, m, float64(scaled(d)), dtFireworks)
+	}
 }
