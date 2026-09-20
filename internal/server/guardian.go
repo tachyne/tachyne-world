@@ -21,6 +21,9 @@ const (
 	// 300 s) to players within 50 blocks.
 	elderAuraUpd = 600 // 1200 ticks / 2
 	elderAuraR   = 50.0
+
+	// Guardian.hurtServer: the spikes are worth two points, elder or not.
+	guardianThornsDamage = 2
 )
 
 // guardianTick drives one guardian/elder-guardian mob update.
@@ -97,6 +100,51 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	h.thornsRetaliate(players, t, m)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
+	}
+}
+
+// guardianSpikesOut is Guardian's isMoving(), inverted. GuardianMoveControl
+// raises that flag only while it is driving the guardian toward a wanted
+// point and drops it the moment the navigation is done — and the attack goal
+// stops the navigation outright, which is why a guardian bearing down on you
+// has its spikes folded back and one holding station over you has them out.
+// The engine's steering asks the same question: a swimming guardian is
+// closing on its target, and one already inside the standoff distance has
+// nowhere left to go. With no target at all, the idle half of the stroll
+// cycle is the still one.
+func guardianSpikesOut(m *mob) bool {
+	if m.hasTarget {
+		return math.Hypot(m.tx-m.x, m.tz-m.z) < standoffDist
+	}
+	return m.rest > 0
+}
+
+// guardianThorns is Guardian.hurtServer's retaliation: land a blow on a
+// guardian with its spikes out and you take two points back, whoever you are.
+//
+// Vanilla reads the DIRECT entity of the damage source and only reflects onto
+// a LivingEntity, so this belongs on the melee seam and nowhere else: an
+// arrow's direct entity is the arrow, not the archer, and a guardian never
+// spikes someone who shot it. The other half of the guard — magic, explosions
+// and thorns themselves (#avoids_guardian_thorns) — cannot reach a melee blow
+// at all, which is why there is no damage-type test here.
+//
+// The reflection runs BEFORE the guardian takes the hit, as it does in
+// vanilla, so even a killing blow costs the killer its two points.
+func (h *hub) guardianThorns(players map[int32]*tracked, m *mob, attacker int32) {
+	if m.etype != entityGuardian && m.etype != entityElderGuardian {
+		return
+	}
+	if m.dying > 0 || !guardianSpikesOut(m) {
+		return
+	}
+	if t := players[attacker]; t != nil {
+		h.hurtFrom(players, t, guardianThornsDamage, dtThorns,
+			deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
+		return
+	}
+	if o := h.mobs[attacker]; o != nil && o != m {
+		h.hurtMobOf(players, o, guardianThornsDamage, dtThorns)
 	}
 }
 

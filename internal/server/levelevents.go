@@ -28,6 +28,7 @@ const (
 	worldEventVaultDeactive  = 3016 // ANIMATION_VAULT_DEACTIVATE
 	worldEventVaultEject     = 3017 // ANIMATION_VAULT_EJECT_ITEM
 	worldEventCobweb         = 3018 // ANIMATION_SPAWN_COBWEB
+	worldEventSkelToStray    = 1048 // SOUND_SKELETON_TO_STRAY
 )
 
 // levelEvent fires one at a block position for everyone near it.

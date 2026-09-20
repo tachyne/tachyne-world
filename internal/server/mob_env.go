@@ -192,6 +192,11 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 
 		h.mobPickupScan(players, m) // grab a dropped weapon/armour piece nearby
 
+		// A skeleton standing in powder snow freezes into a stray.
+		if h.strayFreezeStep(players, m) {
+			continue // it turned: the skeleton is gone
+		}
+
 		// Drowning: a land mob whose eye level (head) is underwater past maxAir.
 		// Zombies/husks don't drown — they convert (husk→zombie→drowned).
 		// A conversion already under way runs to completion wherever the mob

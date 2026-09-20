@@ -267,6 +267,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		dmg = int(math.Max(0, math.Round(dev.Damage)))
 	}
 
+	// A guardian's spikes bite back at whoever is close enough to punch it —
+	// before its own damage lands, exactly as Guardian.hurtServer orders it.
+	h.guardianThorns(players, m, attacker)
+
 	if crit {
 		h.spawnParticles(players, m.dim, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
 		h.playSound(players, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
