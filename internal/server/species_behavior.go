@@ -48,7 +48,9 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	// over the cave floor, not the mountain top far above it).
 	ground := float64(w.MobFeetFrom(fnx, fnz, int(math.Floor(m.y))))
 	want := ground + m.hover
-	if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
+	if y, ok := m.phantomAltitude(); ok { // circling high, or diving at the target
+		want = y
+	} else if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
 		want = m.ty + m.hover*0.3
 	}
 	// On a route, the current waypoint's own height IS the altitude wanted.

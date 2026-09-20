@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Phantoms circle and swoop.** One simply hovered over you and bit. It
+  now flies vanilla's attack: a circle of five to fifteen blocks around a
+  point ten to thirty above its target, held for eight to twelve seconds,
+  then a dive to your level with the swoop cry, and back up to circle
+  again. Losing sight of you ends the dive.
 - **Stranded animals head back to their element.** A dolphin or a fish
   left on the sand, and a strider walked off its lava, stayed where they
   were and died there. Each now makes for what it needs — water within

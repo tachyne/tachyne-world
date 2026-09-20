@@ -423,6 +423,11 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if m.etype == entityBee {
 		m.behavior = beeBehavior{} // flies its flower-and-hive errands
 	}
+	if m.etype == entityPhantom {
+		// PhantomCircleAroundAnchorGoal + PhantomSweepAttackGoal: it circles
+		// high and dives, rather than flying at you.
+		m.behavior = phantomFlightBehavior{}
+	}
 	if m.etype == entityGhast {
 		// A ghast never gives chase: RandomFloatAroundGoal is its only
 		// movement, and the fireball does the rest.
