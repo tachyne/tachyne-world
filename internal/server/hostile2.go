@@ -204,12 +204,13 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		// Vanilla EnderMan.teleport(): ±32 blocks on each horizontal axis.
 		x := int(m.x) + h.rng.Intn(65) - 32
 		z := int(m.z) + h.rng.Intn(65) - 32
-		if !h.world.Spawnable(x, z) {
+		w := h.worldFor(m.dim)
+		if w == nil || !w.Spawnable(x, z) {
 			continue
 		}
 		h.playSound(players, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 		m.x, m.z = float64(x)+0.5, float64(z)+0.5
-		m.y = float64(h.world.MobFeet(x, z))
+		m.y = float64(w.MobFeet(x, z))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
@@ -259,7 +260,14 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 	if t == nil || t.dead {
 		return
 	}
-	t.x, t.y, t.z = a.x, float64(h.world.DropY(int(a.x), int(math.Ceil(a.y)), int(a.z))), a.z
+	// The drop height comes from the dimension the pearl was thrown in: this
+	// read the overworld, so a pearl thrown in the Nether or the End landed
+	// its thrower at whatever height the overworld happened to have there.
+	w := h.worldFor(a.dim)
+	if w == nil {
+		w = h.world
+	}
+	t.x, t.y, t.z = a.x, float64(w.DropY(int(a.x), int(math.Ceil(a.y)), int(a.z))), a.z
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 	h.playSound(players, "minecraft:entity.enderman.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
 	h.vibAt(t.dim, freqTeleport, t.x, t.y, t.z, t.p.eid)
@@ -353,11 +361,11 @@ func isAmphibious(etype int) bool { return etype == entityDrowned }
 func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z float64) {
 	bx, bz := floorInt(x), floorInt(z)
 	w := h.worldFor(m.dim)
-	if w == nil || !h.world.Spawnable(bx, bz) {
+	if w == nil || !w.Spawnable(bx, bz) {
 		return
 	}
 	m.x, m.z = float64(bx)+0.5, float64(bz)+0.5
-	m.y = float64(h.world.MobFeet(bx, bz))
+	m.y = float64(w.MobFeet(bx, bz))
 	m.sx, m.sy, m.sz = m.x, m.y, m.z
 	h.playSound(players, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))

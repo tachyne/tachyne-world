@@ -185,3 +185,59 @@ func lookPitchTo(t *tracked, m *mob) float64 {
 	dx, dy, dz := m.x-t.x, (m.y+2.55)-(t.y+1.62), m.z-t.z
 	return -math.Atan2(dy, math.Sqrt(dx*dx+dz*dz)) * 180 / math.Pi
 }
+
+// An enderman in the End takes its block from the End and leaves the overworld
+// alone. Both goals read and wrote dimension zero whatever dimension the mob
+// was in, so every enderman in the End — where they are the whole population —
+// was quietly cutting holes in the overworld at the matching coordinates, and
+// carrying a block that had never been beside it.
+func TestEndermanCarriesInItsOwnDimension(t *testing.T) {
+	h := dimHub()
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	nw := h.nether // dimHub gives the hub a second world; use it as the far dimension
+
+	const ex, ey, ez = 300, 70, 300
+	m := h.spawnMobIn(players, entityEnderman, dimNether, ex+0.5, ey, ez+0.5)
+	if m == nil {
+		t.Fatal("failed to spawn the enderman")
+	}
+	dirt := worldgen.BlockID("dirt")
+	for dx := -2; dx <= 2; dx++ {
+		for dy := 0; dy <= 3; dy++ {
+			for dz := -2; dz <= 2; dz++ {
+				nw.SetBlock(ex+dx, ey+dy, ez+dz, dirt)
+				h.world.SetBlock(ex+dx, ey+dy, ez+dz, worldgen.Stone) // the overworld, untouched
+			}
+		}
+	}
+	for i := 0; i < 400 && m.carriedBlock == 0; i++ {
+		h.endermanTakeBlock(players, m)
+	}
+	if m.carriedBlock == 0 {
+		t.Skip("the pickup roll never came up in 400 tries")
+	}
+	for dx := -2; dx <= 2; dx++ {
+		for dy := 0; dy <= 3; dy++ {
+			for dz := -2; dz <= 2; dz++ {
+				if got := h.world.At(ex+dx, ey+dy, ez+dz); got != worldgen.Stone {
+					t.Fatalf("the overworld at (%d,%d,%d) became %d — the enderman reached through",
+						ex+dx, ey+dy, ez+dz, got)
+				}
+			}
+		}
+	}
+	taken := 0
+	for dx := -2; dx <= 2; dx++ {
+		for dy := 0; dy <= 3; dy++ {
+			for dz := -2; dz <= 2; dz++ {
+				if nw.At(ex+dx, ey+dy, ez+dz) == worldgen.Air {
+					taken++
+				}
+			}
+		}
+	}
+	if taken != 1 {
+		t.Errorf("exactly one block should have left its own dimension, got %d", taken)
+	}
+}

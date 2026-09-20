@@ -99,7 +99,9 @@ func (h *hub) endermanCarry(players map[int32]*tracked, m *mob) {
 
 // endermanTakeBlock is EnderMan.EndermanTakeBlockGoal: with a small chance, lift
 // a holdable block from a random cell around the enderman (x±2, y..y+3, z±2),
-// leaving air.
+// leaving air. In the enderman's OWN dimension — this read and wrote the
+// overworld whatever dimension the mob was in, so every enderman in the End
+// was quietly taking blocks out of the overworld at the matching coordinates.
 func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	if h.rng.Intn(endermanPickupOdds) != 0 {
 		return
@@ -110,13 +112,13 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	if !h.inWorldY(y) {
 		return
 	}
-	def := endermanHoldableDefault(h.world.At(x, y, z))
+	def := endermanHoldableDefault(h.worldFor(m.dim).At(x, y, z))
 	if def == 0 {
 		return
 	}
 	pos := blockPos{x, y, z}
-	h.setBlock(players, pos, worldgen.Air)
-	h.scheduleAround(pos, 1) // let neighbours (fluids/falling blocks) react
+	h.setBlockAt(players, m.dim, pos, worldgen.Air)
+	h.scheduleAroundIn(m.dim, pos, 1) // let neighbours (fluids/falling blocks) react
 	m.carriedBlock = def
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
 }
@@ -134,16 +136,16 @@ func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	if !h.inWorldY(y) {
 		return
 	}
-	if h.world.At(x, y, z) != worldgen.Air { // vanilla canPlaceBlock: target empty
+	if h.worldFor(m.dim).At(x, y, z) != worldgen.Air { // vanilla canPlaceBlock: target empty
 		return
 	}
-	below := h.world.At(x, y-1, z) // …on a solid full block that isn't bedrock
+	below := h.worldFor(m.dim).At(x, y-1, z) // …on a solid full block that isn't bedrock
 	if below == worldgen.Bedrock || !worldgen.IsSolidFull(below) {
 		return
 	}
 	pos := blockPos{x, y, z}
-	h.setBlock(players, pos, m.carriedBlock)
-	h.scheduleAround(pos, 1)
+	h.setBlockAt(players, m.dim, pos, m.carriedBlock)
+	h.scheduleAroundIn(m.dim, pos, 1)
 	m.carriedBlock = 0
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, 0)))
 }
