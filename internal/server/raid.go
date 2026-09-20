@@ -125,6 +125,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 				continue
 			}
 			m.raidCenter = r.center
+			h.applyRaidBuffs(m, r) // enchanted gear on the later waves
 			r.alive[m.eid] = true
 			r.waveSpawned++
 			// Vanilla Raid.spawnGroup mounts a rider on each ravager on the
@@ -316,4 +317,52 @@ func (h *hub) raidNear(dim int, x, z float64) bool {
 		}
 	}
 	return false
+}
+
+// raidEnchantOdds is Raid.getEnchantOdds: from Raid Omen level 2 up, a raider
+// has a chance of coming out of the spawn with enchanted gear, and the chance
+// climbs with the omen — a bad omen bought cheaply brings a softer raid than
+// one carried in at full strength.
+func raidEnchantOdds(omenLevel int) float64 {
+	switch {
+	case omenLevel == 2:
+		return 0.10
+	case omenLevel == 3:
+		return 0.25
+	case omenLevel == 4:
+		return 0.50
+	case omenLevel >= 5:
+		return 0.75
+	}
+	return 0
+}
+
+// applyRaidBuffs is Pillager.applyRaidBuffs / Vindicator.applyRaidBuffs. The
+// wave thresholds are vanilla's NORMAL and EASY group counts (5 and 3)
+// whatever difficulty the raid is running at, so a hard raid's seventh wave
+// is the dangerous one everywhere.
+func (h *hub) applyRaidBuffs(m *mob, r *raid) {
+	if h.rng.Float64() > raidEnchantOdds(r.omenLevel) {
+		return
+	}
+	set := func(id int8, lvl int8) {
+		m.heldEnch = enchApplyList([]enchInstance{{id: id, lvl: lvl}})
+	}
+	switch m.etype {
+	case entityPillager:
+		// A pillager's crossbow gets nothing before the fourth wave.
+		switch {
+		case r.wave > raidWaveCount(diffNormal):
+			set(enchQuickCharge, 2)
+		case r.wave > raidWaveCount(diffEasy):
+			set(enchQuickCharge, 1)
+		}
+	case entityVindicator:
+		// A vindicator's axe is always sharpened, harder after wave five.
+		lvl := int8(1)
+		if r.wave > raidWaveCount(diffNormal) {
+			lvl = 2
+		}
+		set(enchSharpness, lvl)
+	}
 }

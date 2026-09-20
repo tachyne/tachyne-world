@@ -39,6 +39,17 @@ func (h *hub) setCrossbowState(players map[int32]*tracked, m *mob, st int8) {
 }
 
 // pillagerTick runs each mob update from the hostile switch.
+// mobCrossbowCharge is CrossbowItem.getChargeDuration: 25 ticks, five fewer
+// per level of Quick Charge — which a raid pillager's crossbow carries from
+// the fourth wave on, and is why a late raid comes at you faster.
+func mobCrossbowCharge(m *mob) int {
+	d := crossbowChargeTicks - 5*m.heldStack().enchLvl(enchQuickCharge)
+	if d < 1 {
+		d = 1
+	}
+	return d
+}
+
 func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
 	if t == nil {
@@ -66,7 +77,7 @@ func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
 		}
 	case cbCharging:
 		m.cbTicks += mobMoveInterval
-		if m.cbTicks >= crossbowChargeTicks {
+		if m.cbTicks >= mobCrossbowCharge(m) {
 			h.setCrossbowState(players, m, cbCharged)
 			m.cbTicks = crossbowAimMin + h.rng.Intn(crossbowAimRandom)
 		}

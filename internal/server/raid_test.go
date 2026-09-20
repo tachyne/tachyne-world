@@ -58,3 +58,68 @@ func TestBadOmenTriggersRaidNearVillage(t *testing.T) {
 		t.Fatal("Bad Omen at a village should start a raid")
 	}
 }
+
+// Raid.getEnchantOdds and the two applyRaidBuffs overrides: from Raid Omen
+// level 2 a raider may come out of the spawn armed better than the last wave's,
+// and the wave thresholds are vanilla's NORMAL and EASY group counts whatever
+// difficulty the raid runs at.
+func TestRaidBuffsArmTheLaterWaves(t *testing.T) {
+	for _, tc := range []struct {
+		omen int
+		want float64
+	}{{1, 0}, {2, 0.10}, {3, 0.25}, {4, 0.50}, {5, 0.75}} {
+		if got := raidEnchantOdds(tc.omen); got != tc.want {
+			t.Errorf("omen %d gives odds %v, want %v", tc.omen, got, tc.want)
+		}
+	}
+
+	h := newHub(world.New(59))
+	players := map[int32]*tracked{}
+	// Omen 5 makes the roll near-certain enough to see both outcomes over
+	// many spawns; the wave decides the level.
+	for _, tc := range []struct {
+		etype  int
+		wave   int
+		id     int8
+		wantLo int8
+	}{
+		{entityPillager, 7, enchQuickCharge, 2},
+		{entityPillager, 4, enchQuickCharge, 1},
+		{entityVindicator, 7, enchSharpness, 2},
+		{entityVindicator, 1, enchSharpness, 1},
+	} {
+		r := &raid{omenLevel: 5, wave: tc.wave, numGroups: raidWaveCount(diffNormal)}
+		seen := int8(0)
+		for i := 0; i < 200 && seen == 0; i++ {
+			m := h.spawnMob(players, tc.etype, float64(i), 70, 0)
+			h.applyRaidBuffs(m, r)
+			if lvl := m.heldStack().enchLvl(tc.id); lvl > 0 {
+				seen = int8(lvl)
+			}
+		}
+		if seen != tc.wantLo {
+			t.Errorf("%s on wave %d got level %d, want %d",
+				advEntityName[tc.etype], tc.wave, seen, tc.wantLo)
+		}
+	}
+
+	// A pillager on the first waves gets nothing at all, however good the omen.
+	r := &raid{omenLevel: 5, wave: 2, numGroups: raidWaveCount(diffNormal)}
+	for i := 0; i < 100; i++ {
+		m := h.spawnMob(players, entityPillager, float64(100+i), 70, 0)
+		h.applyRaidBuffs(m, r)
+		if m.heldStack().enchLvl(enchQuickCharge) > 0 {
+			t.Fatal("an early-wave pillager's crossbow is plain")
+		}
+	}
+
+	// Quick Charge shortens the draw, which is what makes the later waves bite.
+	plain := h.spawnMob(players, entityPillager, 300, 70, 0)
+	if got := mobCrossbowCharge(plain); got != crossbowChargeTicks {
+		t.Errorf("a plain crossbow charges in %d ticks, want %d", got, crossbowChargeTicks)
+	}
+	plain.heldEnch = enchApplyList([]enchInstance{{id: enchQuickCharge, lvl: 2}})
+	if got := mobCrossbowCharge(plain); got != crossbowChargeTicks-10 {
+		t.Errorf("Quick Charge II charges in %d ticks, want %d", got, crossbowChargeTicks-10)
+	}
+}

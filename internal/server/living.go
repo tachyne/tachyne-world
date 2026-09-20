@@ -38,13 +38,19 @@ func (l *living) effectLeft(id int32) int {
 // vanilla's MobEffectInstance.update keeps the stronger, then longer, instance.
 // Reports whether it took.
 func (l *living) startEffect(id int32, amp, secs int) bool {
+	return l.startEffectTicks(id, amp, secs*20)
+}
+
+// startEffectTicks is startEffect in the unit vanilla stores, for the effects
+// whose duration is not a whole number of seconds.
+func (l *living) startEffectTicks(id int32, amp, ticks int) bool {
 	if l.effects == nil {
 		l.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := l.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > secs*20)) {
+	if cur, ok := l.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > ticks)) {
 		return false
 	}
-	l.effects[id] = &activeEffect{amp: amp, left: secs * 20}
+	l.effects[id] = &activeEffect{amp: amp, left: ticks}
 	return true
 }
 

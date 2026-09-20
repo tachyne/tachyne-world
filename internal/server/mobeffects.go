@@ -18,12 +18,22 @@ import (
 
 // applyMobEffect starts (or refreshes) an effect on a mob and tells the
 // watching clients so the particle colours show.
-// applyMobEffectTicks is applyMobEffect in vanilla's own unit.
+// applyMobEffectTicks is applyMobEffect in vanilla's own unit — a potion's
+// duration, or Bane of Arthropods' rolled Slowness, is a tick count that
+// rounding through seconds would move.
 func (h *hub) applyMobEffectTicks(players map[int32]*tracked, m *mob, id int32, amp, ticks int) {
-	h.applyMobEffect(players, m, id, amp, (ticks+19)/20) // round up: never lose a tick to the floor
+	h.applyMobEffectDur(players, m, id, amp, ticks, true)
 }
 
 func (h *hub) applyMobEffect(players map[int32]*tracked, m *mob, id int32, amp, secs int) {
+	h.applyMobEffectDur(players, m, id, amp, secs, false)
+}
+
+func (h *hub) applyMobEffectDur(players map[int32]*tracked, m *mob, id int32, amp, dur int, inTicks bool) {
+	ticks := dur * 20
+	if inTicks {
+		ticks = dur
+	}
 	if m == nil || m.dying > 0 {
 		return
 	}
@@ -50,14 +60,14 @@ func (h *hub) applyMobEffect(players map[int32]*tracked, m *mob, id int32, amp, 
 	case effFireRes:
 		m.fireSecs = 0 // as on a player: the burn is snuffed outright
 	}
-	if !m.startEffect(id, amp, secs) {
+	if !m.startEffectTicks(id, amp, ticks) {
 		return // a stronger or longer instance is already running
 	}
 	m.installEffectModifiers(id, amp)
 	if id == effInvisibility || id == effGlowing {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Amp: int32(amp), Ticks: int32(ticks)})
 }
 
 // removeMobEffect ends one effect on a mob.
