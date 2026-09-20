@@ -88,6 +88,31 @@ the public history since the project was open-sourced on 2026-07-10.
   to whoever it is boosting and softened by distance for anything else within
   five blocks — and a wall between you and the burst still saves you. A plain
   rocket with no star in it stays perfectly safe to fly with.
+- **Raids arm themselves as the waves go on.** Every pillager and vindicator
+  in a raid carried plain gear, whatever the omen that called it. From the
+  fourth wave a pillager's crossbow may come with Quick Charge — and draws
+  faster for it — and a vindicator's axe comes sharpened, harder still after
+  the fifth. How likely that is rises with the Raid Omen level, so a bad omen
+  carried in at full strength now brings a genuinely worse raid.
+- **Riptide is a weapon, not just a ride.** Launching yourself with a trident
+  flung you across the water and did nothing to whatever you flew through. The
+  first living thing you pass through now takes the real game's eight damage,
+  and that ends the spin — one strike, not a drill.
+- **Four enchantments do the rest of what they promise.** Bane of Arthropods
+  slows what it bites to a crawl, which is half of what it is for. Impaling
+  bites sea life when the trident is in your hand, not only when it is in the
+  air. Soul Speed cancels soul sand's drag outright rather than partly paying
+  it back. Looting makes a mob a little likelier to drop what it was wearing,
+  a percent a level. Frost Walker works wherever there is water to walk
+  on, instead of only in the overworld — and stops working while you ride. And
+  a bookshelf only counts towards an enchanting table when the gap between
+  them is genuinely empty, where a torch or a tuft of grass used to do.
+- **Five more game rules do something.** A nether portal can be switched off
+  entirely, the time you must stand in one before it takes you is settable
+  (separately for creative), arrows and tridents can be stopped from breaking
+  what they hit, and the sounds the real game plays to a whole dimension — a
+  wither waking up, an end portal opening — now carry to everyone in it, from
+  the right direction, rather than only to whoever was standing close.
 - **Fire follows the real game's rule, not an invented one.** The engine kept
   a `fire_ticks` switch of its own making; the real game replaced that switch
   in 1.21.9 with `fire_spread_radius_around_player`, a distance. Fire now

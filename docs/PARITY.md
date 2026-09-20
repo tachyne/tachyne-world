@@ -24,12 +24,12 @@ command-block/creative-only constructs, or client-side only.
 | Monster AI (goal lists) | 46 | 2 | 41 | 2 | 1 | 4% | 96% |
 | Creature, villager and golem AI (goals and brains) | 48 | 2 | 40 | 5 | 1 | 4% | 89% |
 | Recipes, loot tables, advancements, statistics, tags | 162 | 81 | 44 | 37 | 0 | 50% | 77% |
-| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 340 | 78 | 44 | 16 | 74% | 90% |
+| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 348 | 70 | 44 | 16 | 75% | 90% |
 | World systems and worldgen | 279 | 124 | 88 | 60 | 7 | 46% | 78% |
 | Player mechanics, commands, chat/social, protocol coverage | 356 | 130 | 54 | 150 | 22 | 39% | 55% |
-| **All** | **2413** | **1161** | **774** | **381** | **97** | **50%** | **84%** |
+| **All** | **2413** | **1169** | **766** | **381** | **97** | **50%** | **84%** |
 
-Of 2316 gradeable units, 1161 (50%) are one-for-one with vanilla today, 774 (33%) exist with a
+Of 2316 gradeable units, 1169 (50%) are one-for-one with vanilla today, 766 (33%) exist with a
 deviation, and 381 (16%) are absent. The PARTIAL column is where the work is, and most of it
 traces back to a dozen cross-cutting defects; fixing each moves many rows at once.
 
