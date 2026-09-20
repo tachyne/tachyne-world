@@ -282,6 +282,8 @@ type tracked struct {
 	// grants fast travel until then so the launch isn't rubber-banded).
 	tridentAt uint64
 	spinUntil uint64
+	// spinSpent marks the one strike a riptide gets as used.
+	spinSpent bool
 	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
@@ -1026,8 +1028,9 @@ func (h *hub) run() {
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
 				}
 			}
-			h.updateEffects(players)    // status effects at 20 Hz (vanilla per-effect cadence)
-			h.updateMobEffects(players) // …and the mobs', on the same cadence
+			h.updateEffects(players)      // status effects at 20 Hz (vanilla per-effect cadence)
+			h.updateMobEffects(players)   // …and the mobs', on the same cadence
+			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
 			if age%10 == 0 {
 				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
 			}

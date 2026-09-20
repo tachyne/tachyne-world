@@ -84,7 +84,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
 	t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: dx * power, VY: dy * power, VZ: dz * power})
 	now := h.tick.Load()
-	t.spinUntil = now + tridentSpinTicks
+	t.spinUntil, t.spinSpent = now+tridentSpinTicks, false
 	t.moveBudget = budgetCapTicks * spinPerTick // let the launch through the speed check
 	h.playSound(players, riptideSound(riptide), sndPlayer, t.x, t.y, t.z, 1, 1)
 }
@@ -167,3 +167,45 @@ var sensitiveToImpaling = entityTypeSet(
 	"salmon", "tropical_fish", "dolphin", "squid", "glow_squid", "tadpole",
 	"nautilus", "zombie_nautilus",
 )
+
+// spinAttackDamage is what a riptiding player deals on contact — vanilla's
+// startAutoSpinAttack(20, 8.0F, stack): a flat eight, whatever the Riptide
+// level, which only decides how far you fly.
+const spinAttackDamage = 8
+
+// spinAttackReach is how close a mob has to be to be caught by the spin. The
+// engine does not sweep the player's box along its travel the way vanilla
+// does, so this stands in for that sweep: roughly the player's own width plus
+// the mob's.
+const spinAttackReach = 1.2
+
+// riptideSpinAttacks is LivingEntity.checkAutoSpinAttack: while the spin is
+// running, the first living thing the player passes through takes the hit and
+// the spin ENDS — a riptide is one strike, not a drill. Vanilla also bounces
+// the attacker back off what they hit.
+func (h *hub) riptideSpinAttacks(players map[int32]*tracked) {
+	now := h.tick.Load()
+	for _, t := range players {
+		if t.dead || t.gamemode != gmSurvival || now >= t.spinUntil || t.spinSpent {
+			continue
+		}
+		for _, m := range h.mobs {
+			if m.dim != t.dim || m.dying > 0 {
+				continue
+			}
+			if dist3(m.x, m.y, m.z, t.x, t.y, t.z) > spinAttackReach {
+				continue
+			}
+			m.hitByPlayer = true // the kill pays experience and drops as a player kill
+			h.hurtMobOf(players, m, spinAttackDamage, dtPlayerAttack)
+			// Vanilla ends the spin here (autoSpinAttackTicks = 0) and bounces
+			// the attacker off what they hit. The engine cannot bounce a
+			// client it does not simulate, and cutting the movement grace
+			// short would rubber-band a player still travelling at spin
+			// speed — so the STRIKE is spent and the grace window runs out on
+			// its own.
+			t.spinSpent = true
+			break
+		}
+	}
+}

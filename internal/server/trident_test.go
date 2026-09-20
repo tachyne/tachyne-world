@@ -137,3 +137,49 @@ func TestTridentImpalingHitsTheAquatic(t *testing.T) {
 		t.Fatalf("impaling II on a dolphin should deal 13: health=%d want %d", d.health, want)
 	}
 }
+
+// LivingEntity.checkAutoSpinAttack: a riptiding player is a projectile in its
+// own right — the first living thing it passes through takes eight, and the
+// spin ends there rather than drilling through a crowd.
+func TestRiptideSpinAttackHits(t *testing.T) {
+	h := newHub(world.New(53))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.dim, pl.x, pl.y, pl.z = 0, 0, 180, 0
+
+	near := h.spawnMob(players, entityZombie, 0.5, 180, 0)
+	far := h.spawnMob(players, entityZombie, 8, 180, 0)
+	nearHP, farHP := near.health, far.health
+
+	// Not spinning: nothing happens, however close the zombie stands.
+	h.tick.Store(100)
+	h.riptideSpinAttacks(players)
+	if near.health != nearHP {
+		t.Fatal("a player who is not riptiding hits nothing")
+	}
+
+	pl.spinUntil = h.tick.Load() + tridentSpinTicks
+	h.riptideSpinAttacks(players)
+	if near.health >= nearHP {
+		t.Errorf("the zombie in the way took nothing: %v → %v", nearHP, near.health)
+	}
+	if got := nearHP - near.health; got < 1 {
+		t.Errorf("spin damage %v, want about %d before armour", got, spinAttackDamage)
+	}
+	if far.health != farHP {
+		t.Error("a zombie eight blocks away is not in the way")
+	}
+	if !pl.spinSpent {
+		t.Error("the spin's one strike is spent on the first thing it hits")
+	}
+	// And it does not drill through a second.
+	near.health = nearHP
+	h.riptideSpinAttacks(players)
+	if near.health != nearHP {
+		t.Error("a riptide is one strike, not a drill")
+	}
+	if !near.hitByPlayer {
+		t.Error("the kill must count as the player's")
+	}
+}
