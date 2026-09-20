@@ -98,6 +98,7 @@ func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
 	switch e := v.(type) {
 	case attachproto.UseItem:
+		p.noteAck(e.Seq) // vanilla acks use_item's prediction sequence too
 		// The client says which hand it used; the offhand is where a shield
 		// lives, and food, rockets and throwables work from it too.
 		item, slot := p.heldItem(), int32(p.held)
@@ -239,7 +240,7 @@ func (r *remotePlayer) Dig(d attachproto.Dig) {
 	b := protocol.AppendVarInt(nil, d.Status)
 	b = protocol.AppendPosition(b, d.X, d.Y, d.Z)
 	b = append(b, byte(d.Face))
-	b = protocol.AppendVarInt(b, 0) // seq: the gateway acks locally
+	b = protocol.AppendVarInt(b, d.Seq) // the world acks it, after processing
 	r.s.handleDig(r.p, b)
 }
 
@@ -251,8 +252,8 @@ func (r *remotePlayer) Place(pl attachproto.Place) {
 	b = protocol.AppendF32(b, pl.CY)
 	b = protocol.AppendF32(b, pl.CZ)
 	b = protocol.AppendBool(b, pl.Inside)
-	b = protocol.AppendBool(b, false) // world border hit
-	b = protocol.AppendVarInt(b, 0)   // seq: gateway acks locally
+	b = protocol.AppendBool(b, false)    // world border hit
+	b = protocol.AppendVarInt(b, pl.Seq) // the world acks it, after processing
 	r.s.handlePlace(r.p, b)
 }
 
@@ -395,6 +396,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgWorldFX, ev)
 	case attachproto.BlockEvent:
 		send(attachproto.MsgBlockEvent, ev)
+	case attachproto.BlockAck:
+		send(attachproto.MsgBlockAck, ev)
 	case attachproto.BlockSet:
 		send(attachproto.MsgBlockSet, ev)
 	case attachproto.GameEvent:

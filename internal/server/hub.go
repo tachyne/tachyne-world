@@ -1203,6 +1203,15 @@ func (h *hub) run() {
 					t.p.trySendEv(actionBarEv(renderHud(h.hud, v)))
 				}
 			}
+			// Retire the clients' block predictions LAST, after everything
+			// this tick sent: until the ack lands a client keeps showing what
+			// it guessed and discards the server's word on those positions,
+			// so the ack has to follow the corrections, never precede them.
+			for _, t := range players {
+				if seq, ok := t.p.takeAck(); ok {
+					t.p.sendEv(attachproto.BlockAck{Seq: seq})
+				}
+			}
 			h.noteTick(tickStart, players, dueNow)
 
 		case <-h.stop:

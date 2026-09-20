@@ -41,6 +41,14 @@ type player struct {
 	sprinting     bool // from Entity Action start/stop-sprint (for hunger exhaustion)
 	sneaking      bool // from Entity Action start/stop-sneak (place against usable blocks)
 
+	// ackSeq is the highest block-prediction sequence this player has sent,
+	// stored +1 so the zero value means "nothing to acknowledge". The
+	// connection goroutine records it as actions arrive; the hub drains it
+	// once a tick and sends one BlockAck, which is vanilla's cadence —
+	// ServerGamePacketListenerImpl keeps the max and flushes it at the top of
+	// the next tick, after the changes the action produced.
+	ackSeq atomic.Int32
+
 	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
 	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch
 	hmu            sync.Mutex   // guards hotbar (the hub mirrors the survival inventory in)
@@ -292,3 +300,26 @@ func (p *player) heldPaintVariant() string {
 // disconnect tears the session down (used by /kick); safe alongside the
 // normal leave path — quit closes exactly once.
 func (p *player) disconnect() { p.quitOnce.Do(func() { close(p.quit) }) }
+
+// noteAck records a block-prediction sequence to acknowledge. Vanilla keeps
+// the maximum, so a sequence older than one already pending is ignored.
+func (p *player) noteAck(seq int32) {
+	if seq < 0 {
+		return
+	}
+	for {
+		cur := p.ackSeq.Load()
+		if cur >= seq+1 {
+			return
+		}
+		if p.ackSeq.CompareAndSwap(cur, seq+1) {
+			return
+		}
+	}
+}
+
+// takeAck drains the pending sequence, if any.
+func (p *player) takeAck() (int32, bool) {
+	v := p.ackSeq.Swap(0)
+	return v - 1, v != 0
+}

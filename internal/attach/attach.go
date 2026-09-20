@@ -369,9 +369,9 @@ func session(c net.Conn, cfg Config) {
 				}
 			}
 		case proto.MsgUseItem:
-			if remote != nil {
-				remote.Action(proto.UseItem{})
-			}
+			// The payload carries the hand and the prediction sequence;
+			// dropping it pinned every use to the main hand.
+			actTo(remote, payload, proto.UseItem{})
 		case proto.MsgUseEntity:
 			actTo(remote, payload, proto.UseEntity{})
 		case proto.MsgSelTrade:

@@ -28,6 +28,21 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Blocks stop flickering when you place or break them.** Since 1.19 a
+  client applies your dig or placement immediately, tags it with a
+  sequence number, and then shows its own guess for that position -
+  ignoring the server - until the server acknowledges the sequence. The
+  gateway was answering that acknowledgement itself, the moment the packet
+  arrived and before the world had seen it, so the block snapped back to
+  what the client last knew and only then flicked to what the world
+  actually decided. The sequence now travels to the world and is
+  acknowledged after the resulting changes have been sent, which is the
+  order vanilla uses.
+- **The offhand works again.** The frame that says which hand you used was
+  being decoded as an empty one on the way into the engine, so every use
+  was treated as the main hand however the client had sent it - a shield
+  in the offhand never raised. Reported in the same session as the
+  placement bug above.
 - **Trial-chamber mobs wear the armour the loot table describes.** Two
   loot functions were dropped when the tables were baked: the one that
   sets an armour trim and the one that sets more than a single

@@ -27,6 +27,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 	}
 	br.ReadByte()                     // face (unused)
 	seq, _ := protocol.ReadVarInt(br) // prediction sequence
+	p.noteAck(seq)                    // the hub acknowledges it at the end of the tick
 
 	if status == digReleaseUse {
 		s.hub.post(evStopEat{eid: p.eid, fire: true}) // ends an eat-hold; looses a drawn bow
@@ -184,6 +185,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	cursorZ := math.Float32frombits(binary.BigEndian.Uint32(cur[8:12]))
 	br.Seek(2, io.SeekCurrent)        // insideBlock + worldBorderHit bools
 	seq, _ := protocol.ReadVarInt(br) // prediction sequence
+	p.noteAck(seq)                    // the hub acknowledges it at the end of the tick
 
 	x, y, z := protocol.ReadPosition(posb[:])
 

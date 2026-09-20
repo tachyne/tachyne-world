@@ -230,3 +230,49 @@ func TestNearestFirst(t *testing.T) {
 		t.Fatalf("queue length %d, want %d", len(queue), (2*r+1)*(2*r+1))
 	}
 }
+
+// recordingRemote captures the actions the decoder hands the engine.
+type recordingRemote struct {
+	mockRemote
+	acts chan any
+}
+
+func (r *recordingRemote) Action(v any) { r.acts <- v }
+
+// The use_item frame carries the hand and the block-prediction sequence.
+// The decoder used to hand the engine a zero UseItem whatever the payload
+// said, which pinned every use to the main hand and lost the sequence the
+// world has to acknowledge.
+func TestUseItemKeepsHandAndSequence(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := &recordingRemote{acts: make(chan any, 4)}
+	w := world.New(1)
+	go Serve(ln, Config{
+		World: w,
+		Time:  func() int64 { return 6000 },
+		Token: "secret",
+		Spawn: proto.Pos{X: 0.5, Y: w.SurfaceY(0, 0), Z: 0.5},
+		Join: func(name string, uuid [16]byte, emit func(byte, []byte)) (Remote, error) {
+			return rec, nil
+		},
+	})
+	t.Cleanup(func() { ln.Close() })
+
+	c := hello(t, ln.Addr(), "secret")
+	proto.WriteJSON(c, proto.MsgUseItem, proto.UseItem{Hand: 1, Seq: 5})
+	select {
+	case got := <-rec.acts:
+		u, ok := got.(proto.UseItem)
+		if !ok {
+			t.Fatalf("the engine should see a UseItem, got %T", got)
+		}
+		if u.Hand != 1 || u.Seq != 5 {
+			t.Fatalf("hand/sequence lost: %+v", u)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the use_item frame never reached the engine")
+	}
+}
