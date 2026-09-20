@@ -142,36 +142,15 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 	}
 	// Swap entity views: hide the old dimension's mobs/items/projectiles,
 	// show the new dimension's. Vehicles are overworld-only.
-	for _, m := range h.mobs {
-		switch m.dim {
-		case old:
-			t.p.sendEv(entGone(m.eid))
-		case e.dim:
-			t.p.sendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
-			sendAttrsTo(t, mobAttrFrame(m))
-			if vm := variantMeta(m); vm != nil {
-				t.p.sendEv(metaEv(vm))
-			}
-			if m.size > 0 {
-				t.p.sendEv(metaEv(slimeMeta(m.eid, m.size)))
-			}
-		}
-	}
+	// Mobs, items and orbs are the tracker's: drop the whole view the
+	// client holds, and the next pass spawns the new dimension's.
+	h.dropTracked(t)
 	for eid, c := range h.crystals {
 		switch {
 		case old == 2:
 			t.p.sendEv(entGone(eid))
 		case e.dim == 2:
 			t.p.sendEv(entAdd(eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
-		}
-	}
-	for eid, it := range h.items {
-		switch it.dim {
-		case old:
-			t.p.sendEv(entGone(eid))
-		case e.dim:
-			t.p.sendEv(entAdd(eid, entityItem, it.uuid, it.x, it.y, it.z, 0, 0))
-			t.p.sendEv(metaEv(itemMetadata(eid, it.stack())))
 		}
 	}
 	for eid, a := range h.arrows {

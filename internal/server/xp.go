@@ -98,8 +98,7 @@ func (h *hub) spawnXPOrbIn(players map[int32]*tracked, dim, value int, x, y, z f
 	eid := h.allocEID()
 	o := &xpOrb{eid: eid, dim: dim, x: x, y: y, z: z, sx: x, sy: y, sz: z, value: value, born: h.tick.Load()}
 	binary.BigEndian.PutUint32(o.uuid[12:], uint32(eid))
-	h.orbs[eid] = o
-	h.toNearbyEv(players, dim, x, z, entAdd(eid, entityXPOrb, o.uuid, x, y, z, 0, 0))
+	h.orbs[eid] = o // syncTracking shows it to whoever is near enough
 }
 
 // updateOrbs collects orbs into nearby survival players and expires the rest.

@@ -312,11 +312,12 @@ type tracked struct {
 	lastRubber         uint64  // tick of the last correction teleport (throttle)
 
 	// Container state — window 0 unless a crafting table / furnace / chest is open.
-	cursor  invStack    // the stack carried on the mouse cursor
-	craft   [9]invStack // active crafting grid (first 4 cells for the 2x2)
-	winID   int32       // open window id; 0 = player inventory
-	winKind winKind     // what the open window views (winPlayer while winID == 0)
-	winPos  simPos      // the furnace/chest block this window views (dim + pos)
+	cursor  invStack       // the stack carried on the mouse cursor
+	craft   [9]invStack    // active crafting grid (first 4 cells for the 2x2)
+	winID   int32          // open window id; 0 = player inventory
+	winKind winKind        // what the open window views (winPlayer while winID == 0)
+	winPos  simPos         // the furnace/chest block this window views (dim + pos)
+	tracked map[int32]bool // entities this viewer's client currently holds (entityview.go)
 	// The chest a winChest window is looking at. Indirect because the storage
 	// is not always a block: an ender chest is the player's own, and both hang
 	// the same 27-slot window off it.
@@ -475,6 +476,7 @@ type hub struct {
 	scratchRing   map[[2]int32]bool       // naturalSpawn / overworldSpawnRing: ±8 spawn ring
 	scratchSeen3  map[[3]int]bool         // runRandomTicks: chunks ticked this pass
 	scratchSim    map[simPos]struct{}     // runUpdates: positions processed this tick
+	scratchWant   map[int32]bool          // syncTracking's reusable in-view set
 	dripleafDue   map[simPos]uint64       // big dripleaf: the tick its next tilt stage is due
 	bubbleDue     map[simPos]uint64       // soul sand / magma: the tick its bubble column forms
 	items         map[int32]*itemEntity   // dropped-item entities (block drops)
@@ -950,6 +952,7 @@ func (h *hub) run() {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
+				h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
 			}
 			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
 			h.updateClouds(players)  // lingering-potion clouds: dose, shrink, expire
@@ -2174,50 +2177,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendStandsTo(nt)
 	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
-	// Show the newcomer every mob already in their dimension.
-	for _, m := range h.mobs {
-		if m.dim != nt.dim {
-			continue
-		}
-		e.p.trySendEv(entAdd(m.eid, m.etype, m.uuid, m.x, m.y, m.z, m.yaw, 0))
-		sendAttrsTo(nt, mobAttrFrame(m)) // addPairing: the attributes ride with the spawn
-		if m.etype == entityPufferfish && m.puff != 0 {
-			e.p.trySendEv(metaEv(puffMeta(m.eid, m.puff)))
-		}
-		if m.burning {
-			e.p.trySendEv(metaEv(fireMetadata(m.eid, true)))
-		}
-		if m.wearsAnything() {
-			e.p.trySendEv(equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
-		} else if m.etype == entitySkeleton {
-			e.p.trySendEv(skeletonEquip(m.eid))
-		}
-		if m.baby {
-			e.p.trySendEv(metaEv(babyMeta(m.eid, true)))
-		}
-		if m.sheared {
-			e.p.trySendEv(metaEv(sheepMeta(m, true)))
-		}
-		if vm := variantMeta(m); vm != nil {
-			e.p.trySendEv(metaEv(vm))
-		}
-	}
-	h.showShadowsTo(nt) // …and every cross-seam shadow (neighbour entities near the border).
-	// …and every dropped item and waiting XP orb in their dimension.
-	for _, it := range h.items {
-		if it.dim != nt.dim {
-			continue
-		}
-		e.p.trySendEv(entAdd(it.eid, entityItem, it.uuid, it.x, it.y, it.z, 0, 0))
-		e.p.trySendEv(metaEv(itemMetadata(it.eid, it.stack())))
-	}
-	for _, o := range h.orbs {
-		if o.dim != nt.dim {
-			continue
-		}
-		e.p.trySendEv(entAdd(o.eid, entityXPOrb, o.uuid, o.x, o.y, o.z, 0, 0))
-	}
-
+	// The newcomer's mobs, items and orbs arrive with the next tracking
+	// pass (entityview.go), which spawns each one for them in full.
+	h.showShadowsTo(nt)  // …and every cross-seam shadow (neighbour entities near the border).
 	if h.rainLevel > 0 { // late joiners start under the same sky
 		h.sendWeather(nt)
 	}

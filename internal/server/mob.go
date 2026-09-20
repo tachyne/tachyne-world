@@ -462,10 +462,8 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 			return nil
 		}
 	}
-	h.toNearbyEv(players, dim, x, z, entAdd(eid, etype, m.uuid, x, y, z, 0, 0))
-	if vm := variantMeta(m); vm != nil {
-		h.toNearbyEv(players, dim, x, z, metaEv(vm))
-	}
+	// The spawn itself is not broadcast: syncTracking announces it to the
+	// players who can see it, in full, on the next pass (entityview.go).
 	return m
 }
 
@@ -1566,5 +1564,8 @@ func (h *hub) mobSpeedFactor(m *mob) float64 {
 // longer has that id. Adds stay culled to the interest radius, as they
 // should be — it is only the goodbye that has to travel.
 func (h *hub) entityGone(players map[int32]*tracked, dim int, eid int32) {
+	for _, t := range players {
+		delete(t.tracked, eid) // the viewer has been told: the tracker must not say it twice
+	}
 	h.toDimEv(players, dim, entGone(eid))
 }

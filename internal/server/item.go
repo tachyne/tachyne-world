@@ -111,8 +111,7 @@ func (h *hub) spawnItemAt(players map[int32]*tracked, dim int, item int32, count
 	binary.BigEndian.PutUint32(it.uuid[12:], uint32(eid))
 	h.items[eid] = it
 
-	h.toNearbyEv(players, dim, x, z, entAdd(eid, entityItem, it.uuid, x, y, z, 0, 0))
-	h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, it.stack())))
+	// syncTracking spawns it for whoever can see it, with its stack.
 	h.bus.publish("item_drop", map[string]any{"eid": eid, "item": item, "count": count, "x": x, "y": y, "z": z})
 	return it
 }

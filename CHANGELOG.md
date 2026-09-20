@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Every player is told what they can actually see.** The server now keeps,
+  per player, the set of entities their client is holding, and each pass
+  spawns what has come into view and removes what has left it — vanilla's
+  tracked-entity model. Creatures, dropped items and experience orbs used to
+  be announced once, to whoever happened to be near at the time, and never
+  retracted: walk away from a cow and it froze on your screen where it
+  stood, since nothing was ever sent about it again. Now it is dropped when
+  it leaves your view and spawned afresh, in full — attributes, equipment,
+  variant, passengers — when it returns. Joining and changing dimension go
+  through the same path, which also fixes experience orbs surviving a trip
+  to the Nether on the client's side of things.
 - **Ghost creatures no longer linger.** A mob removed while every player
   was far away told nobody it had gone: the removal frame was culled to the
   six-chunk interest radius, and the two ways a creature leaves the world
