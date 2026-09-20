@@ -93,10 +93,26 @@ def main():
                       r"StructureTags\.([A-Z_]+),\s*\"[^\"]*\",\s*"
                       r"(?:\(Holder<MapDecorationType>\)\s*)?MapDecorationTypes\.[A-Z_]+,"
                       r"\s*(\d+),\s*(\d+)\)")
+    # ItemsAndEmeraldsToItems(from, fromCount, emeraldCost, to, toCount,
+    # maxUses, xp, mult): a second item cost beside the emeralds.
+    iaeti = re.compile(r"new ItemsAndEmeraldsToItems\(" + cast + r"(?:Items|Blocks)\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*"
+                       + cast + r"(?:Items|Blocks)\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*(\d+)")
+    # DyedArmorForEmeralds(item, cost[, maxUses, xp]) — maxUses 12, xp 1 by default.
+    dafe = re.compile(r"new DyedArmorForEmeralds\(" + cast + r"Items\.([A-Z_]+),\s*(\d+)((?:,\s*\d+){0,2})\)")
+    # SuspiciousStewForEmerald(MobEffects.X, durationTicks, xp).
+    ssfe = re.compile(r"new SuspiciousStewForEmerald\((?:\(Holder<MobEffect>\)\s*)?MobEffects\.([A-Z_]+),\s*(\d+),\s*(\d+)\)")
+    # TippedArrowForItemsAndEmeralds(from, fromCount, to, toCount, cost, maxUses, xp).
+    tafie = re.compile(r"new TippedArrowForItemsAndEmeralds\(" + cast + r"Items\.([A-Z_]+),\s*(\d+),\s*"
+                       + cast + r"Items\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)")
+    # EmeraldsForVillagerTypeItem(cost, maxUses, xp, {type: item, ...}).
+    efvti = re.compile(r"new EmeraldsForVillagerTypeItem\((\d+),\s*(\d+),\s*(\d+),")
+    vtype_item = re.compile(r"put\(VillagerType\.([A-Z_]+),\s*(?:\(Object\)\s*)?Items\.([A-Z_]+)\)")
     tier_re = re.compile(r"\(Object\)(\d),\s*\(Object\)new ItemListing\[\]\{")
 
     # profession-index → tier(1..5) → list of trades
     table = {}
+    stews = []      # (effect name, duration ticks) per SuspiciousStewForEmerald row
+    typeitems = []  # the per-villager-type item of an EmeraldsForVillagerTypeItem row
     skipped = 0
     for p in PROFS:
         body = prof_re.get(p)
@@ -120,7 +136,7 @@ def main():
                     continue
                 price, maxu, xp = int(m.group(2)), int(m.group(3)), int(m.group(4))
                 # villager BUYS: in = item×price → out = emerald×1
-                trades.append((m.start(), (iid, price, emerald, 1, maxu, xp, 0)))
+                trades.append((m.start(), (iid, price, emerald, 1, maxu, xp, 0, 0, 0, 0)))
             for m in ife.finditer(seg):
                 iid = item_id(m.group(1))
                 if iid is None:
@@ -135,7 +151,7 @@ def main():
                 else:                    # cost, count, maxUses, xp[, priceMult]
                     maxu, xp = int(vals[2]), int(vals[3])
                 # villager SELLS: in = emerald×cost → out = item×count
-                trades.append((m.start(), (emerald, cost, iid, count, maxu, xp, 0)))
+                trades.append((m.start(), (emerald, cost, iid, count, maxu, xp, 0, 0, 0, 0)))
             for m in eife.finditer(seg):
                 iid = item_id(m.group(1))
                 if iid is None:
@@ -143,7 +159,7 @@ def main():
                 base, maxu, xp = int(m.group(2)), int(m.group(3)), int(m.group(4))
                 # villager SELLS ONE, enchanted at roll time. inCount carries the
                 # BASE emerald cost; rollGearOffer replaces it with base+level.
-                trades.append((m.start(), (emerald, base, iid, 1, maxu, xp, 1)))
+                trades.append((m.start(), (emerald, base, iid, 1, maxu, xp, 1, 0, 0, 0)))
             for m in tmfe.finditer(seg):
                 dest = MAP_DESTS.get(m.group(2))
                 if dest is None:
@@ -156,13 +172,54 @@ def main():
                     for t in re.finditer(r"VillagerType\.([A-Z_]+)", tail[:tail.index(")")]):
                         if t.group(1) in VILLAGER_TYPES:
                             mask |= 1 << VILLAGER_TYPES.index(t.group(1))
-                trades.append((m.start(), ("map", emerald, cost, ids["filled_map"],
-                                           maxu, xp, dest, mask)))
+                trades.append((m.start(), (emerald, cost, ids["filled_map"], 1, maxu, xp,
+                                           "map", (dest, mask), ids["compass"], 1)))
+            for m in iaeti.finditer(seg):
+                fid, tid = item_id(m.group(1)), item_id(m.group(4))
+                if fid is None or tid is None:
+                    continue
+                # in = emerald×cost PLUS from×fromCount → out = to×toCount.
+                trades.append((m.start(), (emerald, int(m.group(3)), tid, int(m.group(5)),
+                                           int(m.group(6)), int(m.group(7)), 0, 0,
+                                           fid, int(m.group(2)))))
+            for m in dafe.finditer(seg):
+                iid = item_id(m.group(1))
+                if iid is None:
+                    continue
+                extra = [int(n) for n in re.findall(r"\d+", m.group(3))]
+                maxu, xp = (extra + [12, 1])[:2] if extra else (12, 1)
+                trades.append((m.start(), (emerald, int(m.group(2)), iid, 1, maxu, xp,
+                                           "dyed", 0, 0, 0)))
+            for m in ssfe.finditer(seg):
+                stews.append((m.group(1).lower(), int(m.group(2))))
+                trades.append((m.start(), (emerald, 1, ids["suspicious_stew"], 1, 12,
+                                           int(m.group(3)), "stew", len(stews), 0, 0)))
+            for m in tafie.finditer(seg):
+                fid, tid = item_id(m.group(1)), item_id(m.group(3))
+                if fid is None or tid is None:
+                    continue
+                trades.append((m.start(), (emerald, int(m.group(5)), tid, int(m.group(4)),
+                                           int(m.group(6)), int(m.group(7)), "arrow", 0,
+                                           fid, int(m.group(2)))))
+            for m in efvti.finditer(seg):
+                per = {}
+                for t in vtype_item.finditer(seg[m.end():m.end() + 1200]):
+                    if t.group(1) in VILLAGER_TYPES:
+                        per[VILLAGER_TYPES.index(t.group(1))] = item_id(t.group(2))
+                if len(per) != len(VILLAGER_TYPES) or None in per.values():
+                    continue
+                typeitems.append(tuple(per[i] for i in range(len(VILLAGER_TYPES))))
+                # villager BUYS the type's item: in = item×cost → out = emerald×1.
+                trades.append((m.start(), (0, int(m.group(1)), emerald, 1, int(m.group(2)),
+                                           int(m.group(3)), "typeitem", len(typeitems), 0, 0)))
             trades.sort(key=lambda t: t[0])
             trades = [t for _, t in trades]
             # count the exotic listings we skipped in this segment
             skipped += (seg.count("new ") - len(efi.findall(seg)) - len(ife.findall(seg))
-                        - len(eife.findall(seg)) - len(tmfe.findall(seg)))
+                        - len(eife.findall(seg)) - len(tmfe.findall(seg))
+                        - len(iaeti.findall(seg)) - len(dafe.findall(seg))
+                        - len(ssfe.findall(seg)) - len(tafie.findall(seg))
+                        - len(efvti.findall(seg)))
             if trades:
                 table[pi][tier] = trades
 
@@ -171,15 +228,13 @@ def main():
     for pi in sorted(table):
         for tier in sorted(table[pi]):
             for row in table[pi][tier]:
-                if row[0] == "map" and (row[6], row[7]) not in maps:
-                    maps.append((row[6], row[7]))
+                if row[6] == "map" and row[7] not in maps:
+                    maps.append(row[7])
 
     with open(OUT, "w") as f:
         f.write("// Code generated by scripts/gen_villager_trades.py. DO NOT EDIT.\n")
         f.write("// Villager trades transcribed from the vanilla VillagerTrades.TRADES\n")
-        f.write("// (EmeraldForItems, ItemsForEmeralds, EnchantedItemForEmeralds and\n")
-        f.write("// TreasureMapForEmeralds listings, in source order per tier; the remaining\n")
-        f.write("// exotic types are omitted).\n\n")
+        f.write("// (every listing type in the trade map, in source order per tier).\n\n")
         f.write("package server\n\n")
         f.write("// vTrade is one merchant offer: input item×count → output item×count, with a\n")
         f.write("// use limit before it locks and the trade-XP it grants the villager.\n")
@@ -188,15 +243,25 @@ def main():
         f.write("\t// kind is vTradeFixed for a plain offer, or one of the rolled kinds\n")
         f.write("\t// below, whose output is built when the villager unlocks the tier.\n")
         f.write("\tkind int32\n")
-        f.write("\t// For a treasure map, 1 + its index into villagerMapListings (0 = none);\n")
-        f.write("\t// vTrade stays a comparable row of plain ints, so the map-only extras\n")
-        f.write("\t// live beside the table.\n")
-        f.write("\tmapIdx int32\n")
+        f.write("\t// aux is 1 + the row's index into the side table its kind uses (0 =\n")
+        f.write("\t// none): villagerMapListings for a treasure map, villagerStewListings\n")
+        f.write("\t// for a stew, villagerTypeItems for a per-villager-type buy. vTrade\n")
+        f.write("\t// stays a comparable row of plain ints, so those extras live beside the\n")
+        f.write("\t// table rather than in it.\n")
+        f.write("\taux int32\n")
+        f.write("\t// An optional SECOND item cost beside the emeralds (0 = none):\n")
+        f.write("\t// ItemsAndEmeraldsToItems' input, a treasure map's compass, the arrows a\n")
+        f.write("\t// fletcher tips.\n")
+        f.write("\tc2Item, c2Count int32\n")
         f.write("}\n\n")
         f.write("const (\n")
         f.write("\tvTradeFixed         int32 = 0 // EmeraldForItems / ItemsForEmeralds\n")
         f.write("\tvTradeEnchantedGear int32 = 1 // EnchantedItemForEmeralds\n")
         f.write("\tvTradeTreasureMap   int32 = 2 // TreasureMapForEmeralds\n")
+        f.write("\tvTradeDyedArmor     int32 = 3 // DyedArmorForEmeralds\n")
+        f.write("\tvTradeStew          int32 = 4 // SuspiciousStewForEmerald\n")
+        f.write("\tvTradeTippedArrow   int32 = 5 // TippedArrowForItemsAndEmeralds\n")
+        f.write("\tvTradeTypeItem      int32 = 6 // EmeraldsForVillagerTypeItem\n")
         f.write(")\n\n")
         f.write("// vMapListing is the rest of a TreasureMapForEmeralds row: the structure\n")
         f.write("// the map points at, the decoration that marks it, the name the map\n")
@@ -211,6 +276,19 @@ def main():
         for (dest, decor, label), mask in maps:
             f.write(f'\t{{"{dest}", "{label}", {decor}, {mask}}},\n')
         f.write("}\n\n")
+        f.write("// villagerStewListings is the effect a SuspiciousStewForEmerald row sells:\n")
+        f.write("// the vanilla effect name and its duration in ticks. stewCodeFor resolves\n")
+        f.write("// each to a suspicious-stew table row at startup.\n")
+        f.write("var villagerStewListings = []struct {\n\teffect string\n\tticks  int\n}{\n")
+        for name, ticks in stews:
+            f.write(f'\t{{"{name}", {ticks}}},\n')
+        f.write("}\n\n")
+        f.write("// villagerTypeItems is one EmeraldsForVillagerTypeItem row: the item the\n")
+        f.write("// villager buys, indexed by its villager type (the boats a fisherman takes).\n")
+        f.write("var villagerTypeItems = [][%d]int32{\n" % len(VILLAGER_TYPES))
+        for row in typeitems:
+            f.write("\t{" + ", ".join(str(v) for v in row) + "},\n")
+        f.write("}\n\n")
         f.write("// profession names by tachyne index (order matches the generator).\n")
         f.write("var professionNames = []string{\n")
         for p in PROFS:
@@ -222,14 +300,18 @@ def main():
             f.write(f"\t{pi}: {{ // {PROFS[pi].lower()}\n")
             for tier in sorted(table[pi]):
                 f.write(f"\t\t{tier}: {{")
-                for row in table[pi][tier]:
-                    if row[0] == "map":
-                        _, ii, ic, oi, mu, xp, dest, mask = row
-                        f.write(f"{{{ii}, {ic}, {oi}, 1, {mu}, {xp}, vTradeTreasureMap, "
-                                f"{maps.index((dest, mask)) + 1}}}, ")
-                        continue
-                    (ii, ic, oi, oc, mu, xp, kind) = row
-                    f.write(f"{{{ii}, {ic}, {oi}, {oc}, {mu}, {xp}, {kind}, 0}}, ")
+                for (ii, ic, oi, oc, mu, xp, kind, aux, c2i, c2n) in table[pi][tier]:
+                    if kind == "map":
+                        kind, aux = "vTradeTreasureMap", maps.index(aux) + 1
+                    elif kind == "dyed":
+                        kind = "vTradeDyedArmor"
+                    elif kind == "stew":
+                        kind = "vTradeStew"
+                    elif kind == "arrow":
+                        kind = "vTradeTippedArrow"
+                    elif kind == "typeitem":
+                        kind = "vTradeTypeItem"
+                    f.write(f"{{{ii}, {ic}, {oi}, {oc}, {mu}, {xp}, {kind}, {aux}, {c2i}, {c2n}}}, ")
                 f.write("},\n")
             f.write("\t},\n")
         f.write("}\n")

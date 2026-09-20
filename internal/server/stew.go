@@ -35,6 +35,12 @@ var stewEffects = []stewEffect{
 	{"lily_of_the_valley", effPoison, 11},
 	{"open_eyeblossom", effBlindness, 11},
 	{"closed_eyeblossom", effNausea, 7},
+	// Vanilla's SuspiciousStewForEmerald trades sell three effect/duration
+	// pairs no flower produces, so the farmer's stews continue the table.
+	// Appending keeps every existing stack's code valid.
+	{"", effJumpBoost, 8},
+	{"", effBlindness, 6},
+	{"", effPoison, 14},
 }
 
 var (
@@ -44,6 +50,9 @@ var (
 	stewFlowerIndex    = func() map[int32]int8 {
 		m := map[int32]int8{}
 		for i, e := range stewEffects {
+			if e.flower == "" { // a trade-only row: no flower makes it
+				continue
+			}
 			m[int32(itemByName[e.flower])] = int8(i + 1)
 		}
 		return m

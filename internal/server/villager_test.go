@@ -68,8 +68,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -498,7 +498,7 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 	var monument vTrade
 	for _, pool := range villagerTrades[cartographer] {
 		for _, tr := range pool {
-			if tr.kind == vTradeTreasureMap && villagerMapListings[tr.mapIdx-1].dest == "monument" {
+			if tr.kind == vTradeTreasureMap && villagerMapListings[tr.aux-1].dest == "monument" {
 				monument = tr
 			}
 		}
@@ -533,9 +533,161 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 		if l.forTypes == 0 || l.forTypes&(1<<uint(typ)) != 0 {
 			continue
 		}
-		if _, ok := h.rollMapOffer(m, vTrade{kind: vTradeTreasureMap, mapIdx: int32(i + 1)}); ok {
+		if _, ok := h.rollMapOffer(m, vTrade{kind: vTradeTreasureMap, aux: int32(i + 1)}); ok {
 			t.Errorf("%s is not offered to villager type %d", l.label, typ)
 		}
 		break
+	}
+}
+
+// The four remaining vanilla listing types, which between them finish the
+// trade map: a leatherworker's dyed armour, a farmer's suspicious stew, a
+// fletcher's tipped arrows and a fisherman's biome boat — plus
+// ItemsAndEmeraldsToItems, whose second item cost rides the plain path.
+func TestRemainingVillagerListingTypes(t *testing.T) {
+	w := world.New(13)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	prof := func(name string) int {
+		for i, n := range professionNames {
+			if n == name {
+				return i
+			}
+		}
+		t.Fatalf("no profession %q", name)
+		return -1
+	}
+	find := func(p int, kind int32) (vTrade, bool) {
+		for tier := 1; tier <= maxTradeTier; tier++ {
+			for _, tr := range villagerTrades[p][tier] {
+				if tr.kind == kind {
+					return tr, true
+				}
+			}
+		}
+		return vTrade{}, false
+	}
+
+	// Dyed armour: a leather piece with a blended colour, every roll.
+	dyed, ok := find(prof("leatherworker"), vTradeDyedArmor)
+	if !ok {
+		t.Fatal("the leatherworker has no dyed-armour listing")
+	}
+	colors := map[int32]bool{}
+	for i := 0; i < 60; i++ {
+		o := h.rollDyedOffer(dyed)
+		st := o.output()
+		if !isDyeable(st.item) || st.color == 0 {
+			t.Fatalf("roll %d gave %+v, want a dyed leather piece", i, st)
+		}
+		colors[st.color] = true
+	}
+	if len(colors) < 5 {
+		t.Errorf("only %d distinct colours in 60 rolls — the dye is not random", len(colors))
+	}
+
+	// Suspicious stew: every listing must resolve to a stew table row, and
+	// the stack must carry the effect vanilla's listing names.
+	stews := 0
+	for i, l := range villagerStewListings {
+		code, ok := stewCodeFor(l.effect, l.ticks)
+		if !ok {
+			t.Errorf("listing %d (%s %d ticks) has no suspicious-stew row; add one to stewEffects",
+				i, l.effect, l.ticks)
+			continue
+		}
+		stews++
+		o, ok := h.rollStewOffer(vTrade{inItem: itemByName["emerald"], inCount: 1,
+			outItem: itemSuspiciousStew, outCount: 1, maxUses: 12, xp: 15,
+			kind: vTradeStew, aux: int32(i + 1)})
+		if !ok {
+			t.Fatalf("listing %d did not roll", i)
+		}
+		st := o.output()
+		eff, found := stewEffectOf(st.stew)
+		if st.item != itemSuspiciousStew || !found || eff.effect != effectNames[l.effect] {
+			t.Errorf("listing %d sold %+v, want a stew of %s", i, st, l.effect)
+		}
+		if code != st.stew {
+			t.Errorf("listing %d resolved to %d but sold %d", i, code, st.stew)
+		}
+	}
+	if stews != len(villagerStewListings) {
+		t.Errorf("%d of %d stew listings resolved", stews, len(villagerStewListings))
+	}
+
+	// Tipped arrows: a brewable potion with effects, never a plain bottle.
+	arrow, ok := find(prof("fletcher"), vTradeTippedArrow)
+	if !ok {
+		t.Fatal("the fletcher has no tipped-arrow listing")
+	}
+	brewable := map[int8]bool{}
+	for _, p := range brewablePotions() {
+		brewable[p] = true
+	}
+	if brewable[potLuck] {
+		t.Error("Luck cannot be brewed, so a villager cannot tip an arrow with it")
+	}
+	kinds := map[int8]bool{}
+	for i := 0; i < 60; i++ {
+		o, ok := h.rollArrowOffer(arrow)
+		if !ok {
+			t.Fatal("the tipped-arrow listing must always roll")
+		}
+		st := o.output()
+		if st.item != itemTippedArrow || !brewable[st.potion] ||
+			len(potionDefs[st.potion].effects) == 0 {
+			t.Fatalf("roll %d gave %+v, want a tipped arrow of a brewable potion", i, st)
+		}
+		if o.cost2Item != itemByName["arrow"] || o.cost2Count != 5 {
+			t.Fatalf("second cost %d×%d, want five arrows", o.cost2Item, o.cost2Count)
+		}
+		kinds[st.potion] = true
+	}
+	if len(kinds) < 5 {
+		t.Errorf("only %d distinct potions in 60 rolls", len(kinds))
+	}
+
+	// The biome boat: the villager buys the boat its own birth biome names.
+	boat, ok := find(prof("fisherman"), vTradeTypeItem)
+	if !ok {
+		t.Fatal("the fisherman has no villager-type listing")
+	}
+	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
+	o, ok := h.typeItemOffer(m, boat)
+	if !ok {
+		t.Fatal("the boat listing must roll for any villager type")
+	}
+	want := villagerTypeItems[boat.aux-1][h.villagerType(m)]
+	if o.trade.inItem != want || o.trade.outItem != itemByName["emerald"] {
+		t.Errorf("buys %d for %d, want %d for an emerald", o.trade.inItem, o.trade.outItem, want)
+	}
+
+	// ItemsAndEmeraldsToItems: a plain offer that carries a second item cost
+	// out of the table, and keeps it through the store.
+	combo := vTrade{}
+	for tier := 1; tier <= maxTradeTier; tier++ {
+		for _, tr := range villagerTrades[prof("fisherman")][tier] {
+			if tr.kind == vTradeFixed && tr.c2Item != 0 {
+				combo = tr
+			}
+		}
+	}
+	if combo.c2Item == 0 {
+		t.Fatal("the fisherman's cooked-fish trades need a second item cost")
+	}
+	co := offerFrom(combo)
+	if co.cost2Item != combo.c2Item || co.cost2Count != combo.c2Count {
+		t.Errorf("second cost %d×%d did not reach the offer", co.cost2Item, co.cost2Count)
+	}
+	if back := unpackOffer(packOffer(co)); back != co {
+		t.Errorf("round trip lost data: %+v vs %+v", back, co)
+	}
+	// And a rolled offer keeps its roll through the store.
+	for _, o := range []mobOffer{h.rollDyedOffer(dyed)} {
+		if back := unpackOffer(packOffer(o)); back.outColor != o.outColor || back.trade != o.trade {
+			t.Errorf("dyed offer round trip lost data: %+v vs %+v", back, o)
+		}
 	}
 }
