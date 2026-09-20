@@ -336,8 +336,12 @@ func (h *hub) sendTradeList(t *tracked, m *mob) {
 	}
 	b = protocol.AppendVarInt(b, int32(m.tradeLevel))
 	b = protocol.AppendVarInt(b, int32(m.tradeXP))
-	b = protocol.AppendBool(b, true) // regular villager (show progress bar)
-	b = protocol.AppendBool(b, true) // can restock
+	// Merchant.showProgressBar / canRestock: a villager levels up and
+	// restocks, a wandering trader does neither, so its window carries no XP
+	// bar and no "out of stock" restock hint.
+	villager := m.etype == entityVillager
+	b = protocol.AppendBool(b, villager)
+	b = protocol.AppendBool(b, villager)
 	t.p.trySendEv(attachproto.Trades{Data: b})
 }
 

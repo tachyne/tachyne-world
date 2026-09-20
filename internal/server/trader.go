@@ -37,6 +37,13 @@ type traderListing struct {
 	maxUses int32
 	xp      int32
 	buy     bool
+	// The two listings that are not a plain swap: kind marks the enchanted
+	// iron pickaxe (rolled like a villager's gear), potion is the brew the
+	// sold bottle carries (0 = none), and mult100 is this listing's
+	// priceMultiplier in hundredths (0 = vanilla's usual 0.05).
+	kind    int32
+	potion  int8
+	mult100 int32
 }
 
 var traderPools = [3]struct {
@@ -44,53 +51,76 @@ var traderPools = [3]struct {
 	listings []traderListing
 }{
 	{2, []traderListing{ // the water potion's ItemCost needs a potion input: left out
-		{"water_bucket", 1, 2, 1, 2, true}, {"milk_bucket", 1, 2, 1, 2, true}, {"fermented_spider_eye", 1, 3, 1, 2, true},
-		{"baked_potato", 4, 1, 2, 1, true}, {"hay_block", 1, 1, 2, 1, true},
+		{item: "water_bucket", cost: 1, count: 2, maxUses: 2, xp: 1, buy: true},
+		{item: "milk_bucket", cost: 1, count: 2, maxUses: 2, xp: 1, buy: true},
+		{item: "fermented_spider_eye", cost: 1, count: 3, maxUses: 2, xp: 1, buy: true},
+		{item: "baked_potato", cost: 4, count: 1, maxUses: 2, xp: 1, buy: true},
+		{item: "hay_block", cost: 1, count: 1, maxUses: 2, xp: 1, buy: true},
 	}},
-	{2, []traderListing{ // the enchanted iron pickaxe and the long invisibility potion carry components: left out
-		{"packed_ice", 1, 1, 6, 1, false}, {"blue_ice", 6, 1, 6, 1, false}, {"gunpowder", 1, 4, 2, 1, false}, {"podzol", 3, 3, 6, 1, false},
-		{"acacia_log", 1, 8, 4, 1, false}, {"birch_log", 1, 8, 4, 1, false}, {"dark_oak_log", 1, 8, 4, 1, false}, {"jungle_log", 1, 8, 4, 1, false},
-		{"oak_log", 1, 8, 4, 1, false}, {"spruce_log", 1, 8, 4, 1, false}, {"cherry_log", 1, 8, 4, 1, false}, {"mangrove_log", 1, 8, 4, 1, false}, {"pale_oak_log", 1, 8, 4, 1, false},
+	{2, []traderListing{
+		{item: "iron_pickaxe", cost: 1, count: 1, maxUses: 1, xp: 1, kind: vTradeEnchantedGear, mult100: 20},
+		{item: "potion", cost: 5, count: 1, maxUses: 1, xp: 1, potion: potLongInvisibility},
+		{"packed_ice", 1, 1, 6, 1, false, 0, 0, 0}, {"blue_ice", 6, 1, 6, 1, false, 0, 0, 0}, {"gunpowder", 1, 4, 2, 1, false, 0, 0, 0}, {"podzol", 3, 3, 6, 1, false, 0, 0, 0},
+		{"acacia_log", 1, 8, 4, 1, false, 0, 0, 0}, {"birch_log", 1, 8, 4, 1, false, 0, 0, 0}, {"dark_oak_log", 1, 8, 4, 1, false, 0, 0, 0}, {"jungle_log", 1, 8, 4, 1, false, 0, 0, 0},
+		{"oak_log", 1, 8, 4, 1, false, 0, 0, 0}, {"spruce_log", 1, 8, 4, 1, false, 0, 0, 0}, {"cherry_log", 1, 8, 4, 1, false, 0, 0, 0}, {"mangrove_log", 1, 8, 4, 1, false, 0, 0, 0}, {"pale_oak_log", 1, 8, 4, 1, false, 0, 0, 0},
 	}},
 	{5, []traderListing{
-		{"tropical_fish_bucket", 3, 1, 4, 1, false}, {"pufferfish_bucket", 3, 1, 4, 1, false}, {"sea_pickle", 2, 1, 5, 1, false}, {"slime_ball", 4, 1, 5, 1, false},
-		{"glowstone", 2, 1, 5, 1, false}, {"nautilus_shell", 5, 1, 5, 1, false}, {"fern", 1, 1, 12, 1, false}, {"sugar_cane", 1, 1, 8, 1, false},
-		{"pumpkin", 1, 1, 4, 1, false}, {"kelp", 3, 1, 12, 1, false}, {"cactus", 3, 1, 8, 1, false}, {"dandelion", 1, 1, 12, 1, false},
-		{"poppy", 1, 1, 12, 1, false}, {"blue_orchid", 1, 1, 8, 1, false}, {"allium", 1, 1, 12, 1, false}, {"azure_bluet", 1, 1, 12, 1, false},
-		{"red_tulip", 1, 1, 12, 1, false}, {"orange_tulip", 1, 1, 12, 1, false}, {"white_tulip", 1, 1, 12, 1, false}, {"pink_tulip", 1, 1, 12, 1, false},
-		{"oxeye_daisy", 1, 1, 12, 1, false}, {"cornflower", 1, 1, 12, 1, false}, {"lily_of_the_valley", 1, 1, 7, 1, false}, {"open_eyeblossom", 1, 1, 7, 1, false},
-		{"wheat_seeds", 1, 1, 12, 1, false}, {"beetroot_seeds", 1, 1, 12, 1, false}, {"pumpkin_seeds", 1, 1, 12, 1, false}, {"melon_seeds", 1, 1, 12, 1, false},
-		{"acacia_sapling", 5, 1, 8, 1, false}, {"birch_sapling", 5, 1, 8, 1, false}, {"dark_oak_sapling", 5, 1, 8, 1, false}, {"jungle_sapling", 5, 1, 8, 1, false},
-		{"oak_sapling", 5, 1, 8, 1, false}, {"spruce_sapling", 5, 1, 8, 1, false}, {"cherry_sapling", 5, 1, 8, 1, false}, {"pale_oak_sapling", 5, 1, 8, 1, false},
-		{"mangrove_propagule", 5, 1, 8, 1, false},
-		{"red_dye", 1, 3, 12, 1, false}, {"white_dye", 1, 3, 12, 1, false}, {"blue_dye", 1, 3, 12, 1, false}, {"pink_dye", 1, 3, 12, 1, false},
-		{"black_dye", 1, 3, 12, 1, false}, {"green_dye", 1, 3, 12, 1, false}, {"light_gray_dye", 1, 3, 12, 1, false}, {"magenta_dye", 1, 3, 12, 1, false},
-		{"yellow_dye", 1, 3, 12, 1, false}, {"gray_dye", 1, 3, 12, 1, false}, {"purple_dye", 1, 3, 12, 1, false}, {"light_blue_dye", 1, 3, 12, 1, false},
-		{"lime_dye", 1, 3, 12, 1, false}, {"orange_dye", 1, 3, 12, 1, false}, {"brown_dye", 1, 3, 12, 1, false}, {"cyan_dye", 1, 3, 12, 1, false},
-		{"brain_coral_block", 3, 1, 8, 1, false}, {"bubble_coral_block", 3, 1, 8, 1, false}, {"fire_coral_block", 3, 1, 8, 1, false}, {"horn_coral_block", 3, 1, 8, 1, false},
-		{"tube_coral_block", 3, 1, 8, 1, false}, {"vine", 1, 3, 4, 1, false}, {"pale_hanging_moss", 1, 3, 4, 1, false}, {"brown_mushroom", 1, 3, 4, 1, false},
-		{"red_mushroom", 1, 3, 4, 1, false}, {"lily_pad", 1, 5, 2, 1, false}, {"small_dripleaf", 1, 2, 5, 1, false}, {"sand", 1, 8, 8, 1, false},
-		{"red_sand", 1, 4, 6, 1, false}, {"pointed_dripstone", 1, 2, 5, 1, false}, {"rooted_dirt", 1, 2, 5, 1, false}, {"moss_block", 1, 2, 5, 1, false},
-		{"pale_moss_block", 1, 2, 5, 1, false}, {"wildflowers", 1, 1, 12, 1, false}, {"tall_dry_grass", 1, 1, 12, 1, false}, {"firefly_bush", 3, 1, 12, 1, false},
+		{"tropical_fish_bucket", 3, 1, 4, 1, false, 0, 0, 0}, {"pufferfish_bucket", 3, 1, 4, 1, false, 0, 0, 0}, {"sea_pickle", 2, 1, 5, 1, false, 0, 0, 0}, {"slime_ball", 4, 1, 5, 1, false, 0, 0, 0},
+		{"glowstone", 2, 1, 5, 1, false, 0, 0, 0}, {"nautilus_shell", 5, 1, 5, 1, false, 0, 0, 0}, {"fern", 1, 1, 12, 1, false, 0, 0, 0}, {"sugar_cane", 1, 1, 8, 1, false, 0, 0, 0},
+		{"pumpkin", 1, 1, 4, 1, false, 0, 0, 0}, {"kelp", 3, 1, 12, 1, false, 0, 0, 0}, {"cactus", 3, 1, 8, 1, false, 0, 0, 0}, {"dandelion", 1, 1, 12, 1, false, 0, 0, 0},
+		{"poppy", 1, 1, 12, 1, false, 0, 0, 0}, {"blue_orchid", 1, 1, 8, 1, false, 0, 0, 0}, {"allium", 1, 1, 12, 1, false, 0, 0, 0}, {"azure_bluet", 1, 1, 12, 1, false, 0, 0, 0},
+		{"red_tulip", 1, 1, 12, 1, false, 0, 0, 0}, {"orange_tulip", 1, 1, 12, 1, false, 0, 0, 0}, {"white_tulip", 1, 1, 12, 1, false, 0, 0, 0}, {"pink_tulip", 1, 1, 12, 1, false, 0, 0, 0},
+		{"oxeye_daisy", 1, 1, 12, 1, false, 0, 0, 0}, {"cornflower", 1, 1, 12, 1, false, 0, 0, 0}, {"lily_of_the_valley", 1, 1, 7, 1, false, 0, 0, 0}, {"open_eyeblossom", 1, 1, 7, 1, false, 0, 0, 0},
+		{"wheat_seeds", 1, 1, 12, 1, false, 0, 0, 0}, {"beetroot_seeds", 1, 1, 12, 1, false, 0, 0, 0}, {"pumpkin_seeds", 1, 1, 12, 1, false, 0, 0, 0}, {"melon_seeds", 1, 1, 12, 1, false, 0, 0, 0},
+		{"acacia_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"birch_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"dark_oak_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"jungle_sapling", 5, 1, 8, 1, false, 0, 0, 0},
+		{"oak_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"spruce_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"cherry_sapling", 5, 1, 8, 1, false, 0, 0, 0}, {"pale_oak_sapling", 5, 1, 8, 1, false, 0, 0, 0},
+		{"mangrove_propagule", 5, 1, 8, 1, false, 0, 0, 0},
+		{"red_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"white_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"blue_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"pink_dye", 1, 3, 12, 1, false, 0, 0, 0},
+		{"black_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"green_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"light_gray_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"magenta_dye", 1, 3, 12, 1, false, 0, 0, 0},
+		{"yellow_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"gray_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"purple_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"light_blue_dye", 1, 3, 12, 1, false, 0, 0, 0},
+		{"lime_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"orange_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"brown_dye", 1, 3, 12, 1, false, 0, 0, 0}, {"cyan_dye", 1, 3, 12, 1, false, 0, 0, 0},
+		{"brain_coral_block", 3, 1, 8, 1, false, 0, 0, 0}, {"bubble_coral_block", 3, 1, 8, 1, false, 0, 0, 0}, {"fire_coral_block", 3, 1, 8, 1, false, 0, 0, 0}, {"horn_coral_block", 3, 1, 8, 1, false, 0, 0, 0},
+		{"tube_coral_block", 3, 1, 8, 1, false, 0, 0, 0}, {"vine", 1, 3, 4, 1, false, 0, 0, 0}, {"pale_hanging_moss", 1, 3, 4, 1, false, 0, 0, 0}, {"brown_mushroom", 1, 3, 4, 1, false, 0, 0, 0},
+		{"red_mushroom", 1, 3, 4, 1, false, 0, 0, 0}, {"lily_pad", 1, 5, 2, 1, false, 0, 0, 0}, {"small_dripleaf", 1, 2, 5, 1, false, 0, 0, 0}, {"sand", 1, 8, 8, 1, false, 0, 0, 0},
+		{"red_sand", 1, 4, 6, 1, false, 0, 0, 0}, {"pointed_dripstone", 1, 2, 5, 1, false, 0, 0, 0}, {"rooted_dirt", 1, 2, 5, 1, false, 0, 0, 0}, {"moss_block", 1, 2, 5, 1, false, 0, 0, 0},
+		{"pale_moss_block", 1, 2, 5, 1, false, 0, 0, 0}, {"wildflowers", 1, 1, 12, 1, false, 0, 0, 0}, {"tall_dry_grass", 1, 1, 12, 1, false, 0, 0, 0}, {"firefly_bush", 3, 1, 12, 1, false, 0, 0, 0},
 	}},
 }
 
-// traderTrade turns a listing into an offer.
+// traderTrade turns a listing into a trade row.
 func traderTrade(l traderListing) vTrade {
 	emerald := int32(itemByName["emerald"])
-	if l.buy {
-		return vTrade{inItem: int32(itemByName[l.item]), inCount: l.cost, outItem: emerald, outCount: l.count, maxUses: l.maxUses, xp: l.xp}
+	mult := l.mult100
+	if mult == 0 {
+		mult = defaultPriceMult100
 	}
-	return vTrade{inItem: emerald, inCount: l.cost, outItem: int32(itemByName[l.item]), outCount: l.count, maxUses: l.maxUses, xp: l.xp}
+	t := vTrade{inItem: emerald, inCount: l.cost, outItem: int32(itemByName[l.item]),
+		outCount: l.count, maxUses: l.maxUses, xp: l.xp, kind: l.kind, mult100: mult}
+	if l.buy {
+		t.inItem, t.inCount, t.outItem, t.outCount = int32(itemByName[l.item]), l.cost, emerald, l.count
+	}
+	return t
 }
 
-// rollTraderOffers is WanderingTrader.updateTrades: pick per pool.
+// rollTraderOffers is WanderingTrader.updateTrades: draw from each pool until
+// it has the pool's quota of OFFERS (vanilla's addOffersFromItemListings —
+// a listing that yields nothing is skipped, not counted).
 func (h *hub) rollTraderOffers(m *mob) {
 	m.offers = nil
 	for _, pool := range traderPools {
-		idx := h.rng.Perm(len(pool.listings))
-		for i := 0; i < pool.pick && i < len(idx); i++ {
-			m.offers = append(m.offers, mobOffer{trade: traderTrade(pool.listings[idx[i]])})
+		added := 0
+		for _, i := range h.rng.Perm(len(pool.listings)) {
+			if added >= pool.pick {
+				break
+			}
+			l := pool.listings[i]
+			o, ok := h.resolveOffer(m, traderTrade(l))
+			if !ok {
+				continue
+			}
+			o.outPotion = l.potion
+			m.offers = append(m.offers, o)
+			added++
 		}
 	}
 }
@@ -171,7 +201,9 @@ func (h *hub) traderSpawnPosNear(x, z, n int) (int, int, bool) {
 // traderStep runs each mob update for a trader (and its llamas): the
 // despawn clock, and the potion or milk by the time of day.
 func (h *hub) traderStep(players map[int32]*tracked, m *mob) bool {
-	if m.traderDespawn > 0 {
+	// WanderingTrader.maybeDespawn holds the clock while a player has the
+	// trade screen open, so a trader cannot vanish mid-transaction.
+	if m.traderDespawn > 0 && h.tradingPartner(players, m) == nil {
 		m.traderDespawn -= mobMoveInterval
 		if m.traderDespawn <= 0 {
 			h.despawnMob(players, m)
