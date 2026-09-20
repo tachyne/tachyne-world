@@ -667,10 +667,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// vanilla 2.0× speed modifier (chickens flap off at 1.4×),
 			// ignoring herd steering until the panic wears off.
 			m.panic--
-			flee := m.moveSpeed() * 2
-			if m.etype == entityChicken {
-				flee = m.moveSpeed() * 1.4
-			}
+			flee := m.moveSpeed() * panicSpeed(m.etype)
 			dx, dz := m.x-m.fleeX, m.z-m.fleeZ
 			if d := math.Hypot(dx, dz); d > 1e-6 {
 				m.vx, m.vz = dx/d*flee, dz/d*flee

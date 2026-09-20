@@ -28,6 +28,18 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Animals panic the way each of them does.** Everything but a chicken
+  bolted at twice its walking speed, and only ever from a blow. Each
+  species now runs at its own goal's pace — a cow and a rabbit sprint, a
+  sheep or a pig trot, a llama and a turtle barely hurry, a wandering
+  trader actually slows down — and the things vanilla panics them over
+  do it: fire, lava, a cactus, a hot floor, freezing, lightning. An
+  animal that catches fire makes for water within five blocks rather
+  than running anywhere. Wolves and adult polar bears keep their nerve
+  when something hits them and run only from the environment (a cub
+  still bolts from anything), and goats, armadillos and zombie horses —
+  which have no panic goal at all — now stand their ground; a goat that
+  is hit no longer turns on you, it rams when it chooses to.
 - **The wither fights the room.** Its two side heads never did anything
   of their own: everything it fired went at the player. As in vanilla,
   each head now picks its own victim — any living thing in a twenty-block

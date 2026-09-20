@@ -81,7 +81,39 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 	if m.health <= 0 {
 		h.killMob(players, m)
+		return
 	}
+	// PanicGoal: the environment sets an animal running too — out of the
+	// fire, off the cactus, away from the lava — not only a blow from
+	// something. On fire it makes for water if there is any within five.
+	if !m.hostile && m.panic == 0 && panicsAt(m, dt) {
+		if x, z, ok := h.panicWaterNear(m); ok {
+			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, 2*m.x-x, 2*m.z-z, 0
+		} else {
+			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, m.x+h.rng.Float64()*2-1, m.z+h.rng.Float64()*2-1, 0
+		}
+	}
+}
+
+// panicWaterNear is PanicGoal.lookForWater: a burning animal runs for water
+// within five blocks rather than anywhere at all. The flee point is mirrored
+// through the mob by the caller, since panic steering runs AWAY from it.
+func (h *hub) panicWaterNear(m *mob) (float64, float64, bool) {
+	if !m.burning {
+		return 0, 0, false
+	}
+	w := h.worldFor(m.dim)
+	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	for dx := -5; dx <= 5; dx++ {
+		for dz := -5; dz <= 5; dz++ {
+			for dy := -1; dy <= 1; dy++ {
+				if worldgen.IsWater(w.At(bx+dx, by+dy, bz+dz)) {
+					return float64(bx+dx) + 0.5, float64(bz+dz) + 0.5, true
+				}
+			}
+		}
+	}
+	return 0, 0, false
 }
 
 // mobFall applies fall damage when the block under a mob is removed and it drops
