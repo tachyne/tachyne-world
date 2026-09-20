@@ -453,3 +453,34 @@ func TestFloorDropStaysPut(t *testing.T) {
 		}
 	}
 }
+
+// Crafting a cake gives the three milk buckets back as empty ones
+// (Item.craftRemainder), in the slots the milk came out of.
+func TestCraftReturnsBuckets(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	pl.winKind, pl.winID = winCraft, 0
+	milk, egg := itemByName["milk_bucket"], itemByName["egg"]
+	sugar, wheat := itemByName["sugar"], itemByName["wheat"]
+	// The cake grid: milk milk milk / sugar egg sugar / wheat wheat wheat.
+	pl.craft = [9]invStack{
+		{item: milk, count: 1}, {item: milk, count: 1}, {item: milk, count: 1},
+		{item: sugar, count: 1}, {item: egg, count: 1}, {item: sugar, count: 1},
+		{item: wheat, count: 1}, {item: wheat, count: 1}, {item: wheat, count: 1},
+	}
+	h.takeCraftResult(players, pl, 0)
+	if pl.cursor.item != itemByName["cake"] {
+		t.Fatalf("the cake should be on the cursor, got %+v", pl.cursor)
+	}
+	bucket := itemByName["bucket"]
+	for i := 0; i < 3; i++ {
+		if pl.craft[i].item != bucket || pl.craft[i].count != 1 {
+			t.Fatalf("slot %d should hold an empty bucket, got %+v", i, pl.craft[i])
+		}
+	}
+	if pl.craft[4].item != 0 {
+		t.Fatalf("the egg leaves nothing behind, got %+v", pl.craft[4])
+	}
+}

@@ -563,16 +563,20 @@ type hub struct {
 	campfires       map[simPos]*campfire      // live cook state (item view in cfStore)
 	cfStore         *campfireStore            // campfires.json + the chunk builders' read view
 	banners         *bannerStore              // banners.json + the chunk builders' read view
-	books           *bookStore                // books.json (contents by book id, the map model)
-	lecterns        map[simPos]*lectern       // held books + open pages (persisted with containers)
-	bookshelves     map[simPos]*[6]invStack   // chiseled shelves (persisted with containers)
-	shelfLast       map[simPos]int            // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
-	woodShelves     map[simPos]*[3]invStack   // 1.21.9 wooden shelves: three display slots (persisted with containers)
-	shelfView       *shelfStore               // the chunk builders' mutex'd read view of the shelves
-	detectorsOn     map[simPos]uint64         // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
-	spawnerNext     map[blockPos]uint64       // dungeon spawner cooldowns
-	patrolNextAt    uint64                    // world tick the next pillager-patrol attempt is due
-	raids           map[blockPos]*raid        // active village raids by centre
+	// The layers of the banner that was broken a moment ago, waiting for its
+	// drop (the block change lands one event ahead of the drop).
+	lastBannerPos    simPos
+	lastBannerLayers []attachproto.BannerLayer
+	books            *bookStore              // books.json (contents by book id, the map model)
+	lecterns         map[simPos]*lectern     // held books + open pages (persisted with containers)
+	bookshelves      map[simPos]*[6]invStack // chiseled shelves (persisted with containers)
+	shelfLast        map[simPos]int          // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
+	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
+	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
+	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
+	spawnerNext      map[blockPos]uint64     // dungeon spawner cooldowns
+	patrolNextAt     uint64                  // world tick the next pillager-patrol attempt is due
+	raids            map[blockPos]*raid      // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
 	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
@@ -583,6 +587,7 @@ type hub struct {
 	siegeCenter blockPos
 	brewProg    map[simPos]int      // brewing stand progress (ticks)
 	brewFuel    map[simPos]int      // brewing stand fuel charges (1 blaze powder = 20)
+	brewIng     map[simPos]int32    // …and the ingredient it started on (swapped out → the brew is lost)
 	portalLinks map[dimPos]dimPos   // sticky portal pairs (both directions)
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
@@ -761,6 +766,7 @@ func newHub(w *world.World) *hub {
 		raids:         map[blockPos]*raid{},
 		brewProg:      map[simPos]int{},
 		brewFuel:      map[simPos]int{},
+		brewIng:       map[simPos]int32{},
 		portalLinks:   map[dimPos]dimPos{},
 		bossSeen:      map[[2]int32]bool{},
 		openDoors:     map[blockPos]uint64{},
@@ -868,6 +874,8 @@ func (h *hub) run() {
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
 		h.jukeboxes = h.containers.loadJukeboxes()
+		h.pots = h.containers.loadPots()
+		h.brewProg, h.brewFuel, h.brewIng = h.containers.loadBrews()
 		h.containers.loadBeacons(h.beacons) // re-attach chosen powers to rebuilt beacons
 		h.lecterns = h.containers.loadLecterns()
 		h.bookshelves, h.shelfLast = h.containers.loadShelves()
@@ -1140,6 +1148,8 @@ func (h *hub) run() {
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
+					h.containers.recordPots(h.pots)
+					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)
@@ -1454,6 +1464,17 @@ func (h *hub) run() {
 					// boxID and drop an item stamped with it, rather than letting
 					// the ordinary loot path drop a bare box.
 					h.dropShulkerBox(players, e.dim, e.state, blockPos{e.x, e.y, e.z})
+					break
+				}
+				if isBannerState(e.state) {
+					// A patterned banner drops patterned: the loot table gives a
+					// plain one, the layers held aside a moment ago go back on.
+					for _, d := range h.rollDrops(e.state) {
+						if it := h.spawnItemIn(players, e.dim, d.item, d.count,
+							float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5); it != nil {
+							h.dropBannerLayers(players, simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, it)
+						}
+					}
 					break
 				}
 				if isBeeHome(e.state) {
@@ -2067,6 +2088,8 @@ func (h *hub) run() {
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
+					h.containers.recordPots(h.pots)
+					h.containers.recordBrews(h.brewProg, h.brewFuel, h.brewIng)
 					h.containers.recordBeacons(h.beacons)
 					h.containers.recordStands(h.armorStands)
 					h.containers.recordLecterns(h.lecterns)

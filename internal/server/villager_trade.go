@@ -141,7 +141,7 @@ func (h *hub) unlockTier(m *mob, tier int) {
 
 // awardTradeXP credits a completed trade and promotes the villager across any
 // tier thresholds it crosses, unlocking the new tier's trades.
-func (h *hub) awardTradeXP(m *mob, xp int32) {
+func (h *hub) awardTradeXP(m *mob, xp int32) bool {
 	m.tradeXP += int(xp)
 	promoted := false
 	for m.tradeLevel < maxTradeTier && m.tradeXP >= tierMinXP[m.tradeLevel+1] {
@@ -152,6 +152,7 @@ func (h *hub) awardTradeXP(m *mob, xp int32) {
 	if promoted && h.playersRef != nil {
 		h.sendVillagerData(h.playersRef, m) // the new tier's badge
 	}
+	return promoted
 }
 
 // restockInterval is vanilla's minimum spacing between a villager's restocks

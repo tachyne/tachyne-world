@@ -14,6 +14,25 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Decorated pots, brewing stands, banners and the crafting bench keep
+  what they are given.** Four benches-and-blocks fixes that each lost
+  something. A decorated pot swallowed an entire stack per click, handed
+  it straight back to an empty hand, and forgot everything on restart; it
+  now takes one item at a time, holds up to a stack of them, rocks and
+  refuses anything that does not belong, gives its contents back only
+  when it is broken, saves them across restarts, and a hopper can fill or
+  empty it. A brewing stand ran an invisible clock: no bubbles, no fuel
+  gauge, no bottles on the model, and a restart threw the brew and the
+  blaze powder away. It now follows vanilla's own tick — powder swallowed
+  on sight for twenty charges, one charge spent to start a twenty-second
+  brew, the brew abandoned if the ingredient is swapped under it — and
+  the bottle arms, the bubble bar and the fuel gauge all show it, saved
+  with the world. A patterned banner dropped plain when broken and now
+  comes back with its layers. And the five items that leave a container
+  behind — three buckets and two bottles — do: a cake gives back its
+  milk buckets instead of eating them. Trading now pays the player the
+  experience it should, three to six a trade and five more when the trade
+  levels the villager up.
 - **Anvils repair with materials, grindstones behave, enchanting offers
   hold.** Three benches that looked right and quietly were not. An anvil
   could only ever combine two of the same item, so a half-worn diamond

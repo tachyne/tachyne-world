@@ -421,11 +421,22 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32
 	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
 	o.uses++                   // toward this offer's lock
 	if m := h.mobs[t.tradeWith]; m != nil {
-		h.awardTradeXP(m, o.trade.xp) // may promote the villager + unlock trades
+		promoted := h.awardTradeXP(m, o.trade.xp) // may promote the villager + unlock trades
+		// Villager.rewardTradeXp: the trader hands the PLAYER 3-6 experience
+		// for the trade, and five more when that trade levelled them up.
+		xp := 3 + h.rng.Intn(4)
+		if promoted {
+			xp += 5
+		}
+		h.spawnXPOrbIn(players, m.dim, xp, m.x, m.y+0.5, m.z)
 		h.addTradeGossip(m, t.p.name) // build reputation → cheaper future offers
 		h.updateSpecialPrices(t, m)   // reflect the new reputation immediately
 		h.sendTradeList(t, m)         // refresh uses/level/price (and any new offers)
-		h.playSound(players, "minecraft:entity.villager.yes", sndNeutral, m.x, m.y, m.z, 0.7, 1)
+		yes := "minecraft:entity.villager.yes"
+		if m.etype == entityWanderingTrader {
+			yes = "minecraft:entity.wandering_trader.yes"
+		}
+		h.playSound(players, yes, sndNeutral, m.x, m.y, m.z, 0.7, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy)) // Villager.customServerAiStep after a trade
 	}
 	h.advance(players, t, "villager_trade", advMatch{})

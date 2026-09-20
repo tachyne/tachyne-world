@@ -669,6 +669,15 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 		return true
 	}
 	above := blockPos{pos.x, pos.y + 1, pos.z}
+	if w := h.worldFor(pos.dim); w != nil && isDecoratedPot(w.At(above.x, above.y, above.z)) {
+		if one, ok := h.potExtract(pos.at(above)); ok {
+			if binInsert(c.slots, one) == 0 {
+				return true
+			}
+			h.potInsert(pos.at(above), one) // no room below — put it back
+		}
+		return false
+	}
 	src := h.containerSlots(pos.at(above))
 	if src != nil {
 		for i := range src {
@@ -885,6 +894,11 @@ func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
 			}
 		}
 		return false
+	}
+	// A decorated pot is a one-slot container (ContainerSingleItem): a hopper
+	// can fill it one item at a time, and one underneath empties it.
+	if w != nil && isDecoratedPot(w.At(target.x, target.y, target.z)) {
+		return h.potInsert(target, one)
 	}
 	dst := h.containerSlots(target)
 	return dst != nil && binInsert(dst, one) == 0

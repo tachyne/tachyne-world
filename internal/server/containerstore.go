@@ -60,6 +60,8 @@ type containerFile struct {
 	Paintings   []savedPainting           `json:"paintings,omitempty"`
 	Frames      []savedFrame              `json:"frames,omitempty"`
 	Jukeboxes   map[string]stackRow       `json:"jukeboxes,omitempty"`
+	Pots        map[string]stackRow       `json:"pots,omitempty"`    // decorated pots' single stack
+	Brews       map[string]savedBrew      `json:"brews,omitempty"`   // brewing stands mid-brew
 	Beacons     map[string][2]int32       `json:"beacons,omitempty"` // chosen powers (mob_effect id+1; 0 = none)
 	Stands      []savedStand              `json:"stands,omitempty"`  // placed armor stands
 	Lecterns    map[string]savedLectern   `json:"lecterns,omitempty"`
@@ -577,6 +579,82 @@ func (s *containerStore) loadJukeboxes() map[simPos]*jukebox {
 	for key, row := range s.m.Jukeboxes {
 		if pos, ok := parseSimKey(key); ok {
 			out[pos] = &jukebox{disc: unpackStack(row)}
+		}
+	}
+	return out
+}
+
+// savedBrew is a brewing stand's clock: BrewTime is ticks REMAINING (as
+// vanilla stores it), Fuel the charges left off the last blaze powder, and
+// Ing the ingredient the brew started on.
+type savedBrew struct {
+	BrewTime int   `json:"brew_time,omitempty"`
+	Fuel     int   `json:"fuel,omitempty"`
+	Ing      int32 `json:"ing,omitempty"`
+}
+
+// recordBrews snapshots every brewing stand's clock. Without it a restart
+// threw away the blaze powder already burnt and any brew in progress.
+func (s *containerStore) recordBrews(prog, fuel map[simPos]int, ing map[simPos]int32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Brews = map[string]savedBrew{}
+	for pos, f := range fuel {
+		if f > 0 || prog[pos] > 0 {
+			s.m.Brews[simKey(pos)] = savedBrew{BrewTime: prog[pos], Fuel: f, Ing: ing[pos]}
+		}
+	}
+	for pos, p := range prog {
+		if _, have := s.m.Brews[simKey(pos)]; !have && p > 0 {
+			s.m.Brews[simKey(pos)] = savedBrew{BrewTime: p, Fuel: fuel[pos], Ing: ing[pos]}
+		}
+	}
+}
+
+// loadBrews restores the brewing stands' clocks.
+func (s *containerStore) loadBrews() (prog, fuel map[simPos]int, ing map[simPos]int32) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prog, fuel, ing = map[simPos]int{}, map[simPos]int{}, map[simPos]int32{}
+	for key, b := range s.m.Brews {
+		pos, ok := parseSimKey(key)
+		if !ok {
+			continue
+		}
+		if b.BrewTime > 0 {
+			prog[pos] = b.BrewTime
+		}
+		if b.Fuel > 0 {
+			fuel[pos] = b.Fuel
+		}
+		if b.Ing != 0 {
+			ing[pos] = b.Ing
+		}
+	}
+	return prog, fuel, ing
+}
+
+// recordPots snapshots what each decorated pot holds. Without this a pot
+// looked like a container and quietly emptied itself on every restart.
+func (s *containerStore) recordPots(pots map[simPos]invStack) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m.Pots = map[string]stackRow{}
+	for pos, st := range pots {
+		if st.item != 0 && st.count > 0 {
+			s.m.Pots[simKey(pos)] = packStack(st)
+		}
+	}
+}
+
+// loadPots restores the decorated pots' contents.
+func (s *containerStore) loadPots() map[simPos]invStack {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[simPos]invStack{}
+	for key, row := range s.m.Pots {
+		if pos, ok := parseSimKey(key); ok {
+			out[pos] = unpackStack(row)
 		}
 	}
 	return out

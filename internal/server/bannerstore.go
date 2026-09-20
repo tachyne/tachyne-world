@@ -107,6 +107,11 @@ var dyeName = []string{"white", "orange", "magenta", "light_blue", "yellow", "li
 func (h *hub) bannersOnBlockChange(players map[int32]*tracked, dim, x, y, z int, state uint32, by int32) {
 	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	if !isBannerState(state) {
+		// Hold the layers for the drop that follows this block change (evBlock
+		// is posted just ahead of evDrop), so the banner comes back patterned.
+		if was := h.banners.get(dim, x, y, z); len(was) > 0 {
+			h.lastBannerPos, h.lastBannerLayers = pos, was
+		}
 		h.banners.remove(pos)
 		return
 	}
@@ -141,4 +146,48 @@ func bannerPatternQualified(name string) string {
 		return name
 	}
 	return "minecraft:" + name
+}
+
+// bannerPatternIDs is the reverse of protocol.BannerPatternName, built once.
+var bannerPatternIDs = func() map[string]int16 {
+	out := map[string]int16{}
+	for id := int32(0); ; id++ {
+		name := protocol.BannerPatternName(id)
+		if name == "" {
+			return out
+		}
+		out[name] = int16(id)
+		out[strings.TrimPrefix(name, "minecraft:")] = int16(id)
+	}
+}()
+
+// dropBannerLayers stamps the layers a just-broken banner had onto the item
+// it dropped (BannerBlockEntity's saveToItem).
+func (h *hub) dropBannerLayers(players map[int32]*tracked, pos simPos, it *itemEntity) {
+	if it == nil || pos != h.lastBannerPos || len(h.lastBannerLayers) == 0 {
+		return
+	}
+	layers := h.lastBannerLayers
+	h.lastBannerPos, h.lastBannerLayers = simPos{}, nil
+	n := 0
+	for _, l := range layers {
+		id, ok := bannerPatternIDs[bannerPatternQualified(l.Pattern)]
+		if !ok || n >= len(it.pats) {
+			continue
+		}
+		color := int8(-1)
+		for i, name := range dyeName {
+			if name == l.Color {
+				color = int8(i)
+			}
+		}
+		if color < 0 {
+			continue
+		}
+		it.pats[n] = bannerLayer{patPlus1: id + 1, color: color}
+		n++
+	}
+	if n > 0 {
+		h.refreshItemMeta(players, it)
+	}
 }

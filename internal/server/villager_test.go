@@ -96,6 +96,15 @@ func TestTradeAuthority(t *testing.T) {
 	if pl.cursor.item != itemByName["bread"] || pl.cursor.count != 6 {
 		t.Fatalf("bread trade broken: %+v", pl.cursor)
 	}
+	// Every completed trade pays the player experience (rewardTradeXp).
+	if len(h.orbs) == 0 {
+		t.Fatal("a trade must drop experience for the player")
+	}
+	for _, o := range h.orbs {
+		if o.value < 3 || o.value > 11 {
+			t.Fatalf("trade experience out of vanilla's range: %d", o.value)
+		}
+	}
 }
 
 func TestGolemPunchesHostiles(t *testing.T) {

@@ -172,6 +172,7 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // gets a resync on their next click (stale window id path).
 func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
 	h.spillJukebox(players, dim, x, y, z, newState)
+	h.spillPot(players, dim, blockPos{x, y, z}, newState)
 	h.spillCampfire(players, dim, x, y, z, newState)
 	h.spillLectern(players, dim, x, y, z, newState)
 	h.spillShelf(players, dim, x, y, z, newState)

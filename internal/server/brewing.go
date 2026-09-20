@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Brewing: nether wart farming, water bottles, the brewing stand, and
 // drinkable potions. Potions are potion items carrying a server-side type
@@ -12,7 +16,8 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 const (
 	menuBrewing = 11
 
-	brewTicks = 400 // vanilla 20s
+	brewTicks    = 400 // vanilla 20s
+	brewFuelUses = 20  // BrewingStandBlockEntity.FUEL_USES: one powder, twenty brews
 )
 
 var (
@@ -295,60 +300,108 @@ func isNetherWart(s uint32) bool { return s >= netherWartMin && s <= netherWartM
 // potionStack builds a named potion item.
 func potionStack(p int8) invStack { return potionStackIn(itemPotion, p) }
 
-// updateBrewing runs once a second: any brewing stand with a valid batch
-// makes progress; at brewTicks the bottles transform and the ingredient +
-// one blaze-powder fuel are consumed.
+// updateBrewing is BrewingStandBlockEntity.serverTick on our one-second
+// cadence: a blaze powder in the fuel slot is burnt straight away for twenty
+// charges, a brewable stand spends one of them to start a twenty-second brew,
+// the brew is abandoned if the ingredient changes under it, and the bottle
+// flags on the block state (and the menu's two bars) follow along so the
+// stand actually looks like it is working.
 func (h *hub) updateBrewing(players map[int32]*tracked) {
 	for pos, b := range h.bins {
 		w := h.worldFor(pos.dim)
-		if len(b.slots) != 5 || w == nil || !isBrewStand(w.At(pos.x, pos.y, pos.z)) {
+		if len(b.slots) != 5 || w == nil {
 			continue
 		}
-		outs, ok := brewResult(b)
-		if !ok {
-			delete(h.brewProg, pos)
+		state := w.At(pos.x, pos.y, pos.z)
+		if !isBrewStand(state) {
 			continue
 		}
-		// Fuel gate: a blaze powder grants 20 brews (vanilla FUEL_USES). Need a
-		// remaining charge, or a powder in the fuel slot to burn for a new one.
-		if h.brewFuel[pos] <= 0 && (b.slots[4].item != itemBlazePowder || b.slots[4].count == 0) {
-			delete(h.brewProg, pos)
-			continue
-		}
-		h.brewProg[pos] += survivalTickN
-		if h.brewProg[pos] < brewTicks {
-			continue
-		}
-		delete(h.brewProg, pos)
-		for i := 0; i < 3; i++ {
-			if b.slots[i].item != 0 {
-				b.slots[i] = outs[i]
-			}
-		}
-		b.slots[3].count--
-		if b.slots[3].count <= 0 {
-			b.slots[3] = invStack{}
-		}
-		// Burn one fuel charge; refill from a blaze powder (20 charges) when empty.
-		if h.brewFuel[pos] <= 0 {
-			b.slots[4].count--
-			if b.slots[4].count <= 0 {
+		// A powder is consumed on sight, brewing or not — that is why a stand
+		// swallows the powder the moment you drop it in.
+		if h.brewFuel[pos] <= 0 && b.slots[4].item == itemBlazePowder && b.slots[4].count > 0 {
+			h.brewFuel[pos] = brewFuelUses
+			if b.slots[4].count--; b.slots[4].count <= 0 {
 				b.slots[4] = invStack{}
 			}
-			h.brewFuel[pos] = 20
+			h.refreshBinViewers(players, pos)
 		}
-		h.brewFuel[pos]--
-		h.playSound(players, "minecraft:block.brewing_stand.brew", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
-		h.refreshBinViewers(players, pos)
-		for _, t := range players {
-			// vanilla fires brewed_potion on taking the potion; the taker is
-			// anonymous in our generic window path, so credit the players
-			// standing at the open stand when the brew completes.
-			if t.winID != 0 && t.winPos == pos {
-				h.advance(players, t, "brewed_potion", advMatch{})
+		outs, brewable := brewResult(b)
+		switch {
+		case h.brewProg[pos] > 0:
+			h.brewProg[pos] -= survivalTickN
+			switch {
+			case h.brewProg[pos] <= 0 && brewable:
+				delete(h.brewProg, pos)
+				h.finishBrew(players, pos, b, outs)
+			case !brewable || b.slots[3].item != h.brewIng[pos]:
+				// The ingredient was taken out or swapped: the brew is lost.
+				delete(h.brewProg, pos)
+				delete(h.brewIng, pos)
 			}
+		case brewable && h.brewFuel[pos] > 0:
+			h.brewFuel[pos]--
+			h.brewProg[pos] = brewTicks
+			h.brewIng[pos] = b.slots[3].item
 		}
+		h.brewBottleState(players, pos, state, b)
+		h.sendBrewBars(players, pos)
+	}
+}
+
+// finishBrew turns the bottles, eats one ingredient and rings the stand.
+func (h *hub) finishBrew(players map[int32]*tracked, pos simPos, b *bin, outs [3]invStack) {
+	for i := 0; i < 3; i++ {
+		if b.slots[i].item != 0 {
+			b.slots[i] = outs[i]
+		}
+	}
+	if b.slots[3].count--; b.slots[3].count <= 0 {
+		b.slots[3] = invStack{}
+	}
+	delete(h.brewIng, pos)
+	h.playSound(players, "minecraft:block.brewing_stand.brew", sndBlock,
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
+	h.refreshBinViewers(players, pos)
+	for _, t := range players {
+		// vanilla fires brewed_potion on taking the potion; the taker is
+		// anonymous in our generic window path, so credit the players
+		// standing at the open stand when the brew completes.
+		if t.winID != 0 && t.winPos == pos {
+			h.advance(players, t, "brewed_potion", advMatch{})
+		}
+	}
+}
+
+// brewBottleState keeps the stand's has_bottle_N properties in step with what
+// is in the three bottle slots — the arms on the model.
+func (h *hub) brewBottleState(players map[int32]*tracked, pos simPos, state uint32, b *bin) {
+	info, ok := worldgen.InfoForState(state)
+	if !ok || !info.HasProperty("has_bottle_0") {
+		return
+	}
+	want := state
+	for i := 0; i < 3; i++ {
+		v := "false"
+		if b.slots[i].item != 0 && b.slots[i].count > 0 {
+			v = "true"
+		}
+		want = worldgen.SetProperty(info, want, "has_bottle_"+string(rune('0'+i)), v)
+	}
+	if want != state {
+		h.setBlockAt(players, pos.dim, pos.blockPos, want)
+	}
+}
+
+// sendBrewBars pushes BrewingStandMenu's two data slots (brew time left and
+// fuel charges) to whoever has the stand open. Without them the bubbles never
+// move and the fuel gauge reads empty however much powder went in.
+func (h *hub) sendBrewBars(players map[int32]*tracked, pos simPos) {
+	for _, t := range players {
+		if t.winID == 0 || t.winKind != winBin || t.winPos != pos {
+			continue
+		}
+		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 0, Value: int32(h.brewProg[pos])})
+		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 1, Value: int32(h.brewFuel[pos])})
 	}
 }
 

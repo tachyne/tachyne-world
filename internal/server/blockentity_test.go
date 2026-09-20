@@ -198,17 +198,22 @@ func TestEveryContainerBlockOpensSomething(t *testing.T) {
 	}
 }
 
-// A decorated pot holds exactly one stack: put in, take out.
-func TestDecoratedPotHoldsOneStack(t *testing.T) {
+// A decorated pot takes ONE item per click and never hands anything back:
+// what goes in comes out only when the pot is broken (DecoratedPotBlock).
+func TestDecoratedPotTakesOneAtATime(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
 	pos := blockPos{2, 70, 2}
+	key := simPos{dim: pl.dim, blockPos: pos}
 
-	// Nothing held, nothing inside: the pot does not react.
-	if h.usePot(players, pl, pos) {
-		t.Error("an empty pot reacted to an empty hand")
+	// An empty hand is a refusal, not a pass: the pot wobbles and says no.
+	if !h.usePot(players, pl, pos) {
+		t.Error("the pot should handle (and refuse) an empty hand")
+	}
+	if _, stored := h.pots[key]; stored {
+		t.Error("an empty hand must not put anything in")
 	}
 
 	diamonds := invStack{item: itemByName["diamond"], count: 12}
@@ -216,28 +221,58 @@ func TestDecoratedPotHoldsOneStack(t *testing.T) {
 	if !h.usePot(players, pl, pos) {
 		t.Fatal("the pot refused a held stack")
 	}
-	if got := h.pots[simPos{dim: pl.dim, blockPos: pos}]; got != diamonds {
-		t.Errorf("the pot holds %+v, want %+v", got, diamonds)
+	if got := h.pots[key]; got.item != diamonds.item || got.count != 1 {
+		t.Errorf("one diamond goes in, the pot holds %+v", got)
 	}
-	if pl.inv.slots[pl.p.heldSlot()].item != 0 {
-		t.Error("the stack was not taken out of the player's hand")
+	if left := pl.inv.slots[pl.p.heldSlot()].count; left != 11 {
+		t.Errorf("one diamond leaves the hand, %d left", left)
+	}
+	h.usePot(players, pl, pos)
+	if got := h.pots[key]; got.count != 2 {
+		t.Errorf("a second click adds one more, pot holds %d", got.count)
 	}
 
-	// A second stack does not fit while one is inside — it takes the first out.
-	if !h.usePot(players, pl, pos) {
-		t.Fatal("the pot refused to give its contents back")
+	// Something else is refused outright, and nothing comes back out.
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["emerald"], count: 4}
+	h.usePot(players, pl, pos)
+	if got := h.pots[key]; got.item != diamonds.item || got.count != 2 {
+		t.Errorf("a different item must not go into a full-of-diamonds pot: %+v", got)
 	}
-	if _, still := h.pots[simPos{dim: pl.dim, blockPos: pos}]; still {
-		t.Error("the pot kept its contents after handing them back")
+	if pl.inv.slots[pl.p.heldSlot()].count != 4 {
+		t.Error("a refused insert must not consume the held item")
 	}
-	found := false
 	for _, st := range pl.inv.slots {
-		if st.item == diamonds.item && st.count == diamonds.count {
-			found = true
+		if st.item == diamonds.item && st.count == 12 {
+			t.Error("the pot handed its contents back — only breaking it should")
 		}
 	}
-	if !found {
-		t.Error("the diamonds did not come back to the inventory")
+}
+
+// A hopper fills a pot one item at a time and one underneath empties it.
+func TestDecoratedPotHopperFlow(t *testing.T) {
+	h := newHub(world.New(1))
+	pos := simPos{dim: 0, blockPos: blockPos{3, 70, 3}}
+	st := invStack{item: itemByName["diamond"], count: 5}
+	if !h.potInsert(pos, st) || h.pots[pos].count != 1 {
+		t.Fatalf("a hopper insert puts exactly one in: %+v", h.pots[pos])
+	}
+	h.potInsert(pos, st)
+	if h.pots[pos].count != 2 {
+		t.Fatalf("the second insert stacks: %+v", h.pots[pos])
+	}
+	if h.potInsert(pos, invStack{item: itemByName["emerald"], count: 1}) {
+		t.Error("a pot holding diamonds must refuse emeralds")
+	}
+	one, ok := h.potExtract(pos)
+	if !ok || one.count != 1 || h.pots[pos].count != 1 {
+		t.Fatalf("extract takes one: %+v left %+v", one, h.pots[pos])
+	}
+	h.potExtract(pos)
+	if _, still := h.pots[pos]; still {
+		t.Error("an emptied pot is forgotten")
+	}
+	if _, ok := h.potExtract(pos); ok {
+		t.Error("an empty pot has nothing to give")
 	}
 }
 

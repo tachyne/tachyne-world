@@ -739,8 +739,29 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 		if (kind == craftKeepPattern && grid[i].pats[0].patPlus1 != 0) || (kind == craftBookClone && grid[i].bookID != 0) {
 			continue
 		}
+		back := craftRemainder[grid[i].item] // Item.craftRemainder
 		if grid[i].count--; grid[i].count == 0 {
-			grid[i].item = 0
+			grid[i] = invStack{}
+		}
+		if back == 0 {
+			continue
+		}
+		// ResultSlot.onTake: the empty bucket or bottle goes back into the
+		// slot it came from if that is now free, otherwise into the
+		// inventory, otherwise on the floor.
+		switch {
+		case grid[i].item == 0:
+			grid[i] = invStack{item: back, count: 1}
+		case grid[i].item == back && grid[i].count < stackCap(back):
+			grid[i].count++
+		default:
+			changed, leftover := t.inv.addStack(invStack{item: back, count: 1})
+			for _, slot := range changed {
+				h.sendSlot(t, slot)
+			}
+			if leftover > 0 {
+				h.spawnItem(players, back, leftover, t.x, t.y, t.z)
+			}
 		}
 	}
 	for i := range grid { // resync the consumed grid
@@ -948,3 +969,21 @@ func (h *hub) sendCraftWindow(t *tracked) {
 	t.p.trySendEv(attachproto.WindowItems{ID: int32(t.winID), StateID: t.inv.stateId,
 		Slots: slots, Cursor: stackEv(t.cursor)})
 }
+
+// craftRemainder is Item.craftRemainder: the five items that leave their
+// container behind when a recipe eats them (three buckets and two bottles).
+// Without it a cake ate your buckets and a honey block your bottles.
+var craftRemainder = func() map[int32]int32 {
+	out := map[int32]int32{}
+	add := func(from, to string) {
+		if f, t := itemByName[from], itemByName[to]; f != 0 && t != 0 {
+			out[f] = t
+		}
+	}
+	add("water_bucket", "bucket")
+	add("lava_bucket", "bucket")
+	add("milk_bucket", "bucket")
+	add("dragon_breath", "glass_bottle")
+	add("honey_bottle", "glass_bottle")
+	return out
+}()
