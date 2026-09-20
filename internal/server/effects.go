@@ -244,21 +244,26 @@ func (h *hub) clearEffects(t *tracked) {
 // Wither 40>>amp) and cannot be represented at 1 Hz.
 func (h *hub) updateEffects(players map[int32]*tracked) {
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.health <= 0 || len(t.effects) == 0 {
+		if t.dead || len(t.effects) == 0 {
 			continue
 		}
+		// Effects tick in every game mode (vanilla's MobEffectInstance does),
+		// but the periodic damage and healing are a survival concern — a
+		// creative player's Night Vision still runs out, their Poison still
+		// does nothing.
+		survival := t.gamemode == gmSurvival && t.health > 0
 		for id, e := range t.effects {
 			switch id {
 			case effRegen:
 				// RegenerationMobEffect: heal 1 HP every 50>>amp ticks.
-				if applyEffectTickNow(e.left, 50, e.amp) && t.health < t.maxHP() {
+				if survival && applyEffectTickNow(e.left, 50, e.amp) && t.health < t.maxHP() {
 					t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+1))
 					h.sendHealth(t)
 				}
 			case effPoison:
 				// PoisonMobEffect: 1 HP every 25>>amp ticks, never lethal
 				// (stops at half a heart).
-				if applyEffectTickNow(e.left, 25, e.amp) && t.health > 1 {
+				if survival && applyEffectTickNow(e.left, 25, e.amp) && t.health > 1 {
 					t.health--
 					h.sendHealth(t)
 					t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
@@ -266,7 +271,7 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 			case effWither:
 				// WitherMobEffect: 1 HP every 40>>amp ticks — like poison but CAN
 				// kill.
-				if applyEffectTickNow(e.left, 40, e.amp) {
+				if survival && applyEffectTickNow(e.left, 40, e.amp) {
 					h.damageOf(players, t, 1, dtWither)
 				}
 			case effLevitation:
@@ -281,10 +286,14 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				// HungerMobEffect: 0.005 exhaustion every tick per level (this
 				// pass runs every tick; a second's worth at once drained a
 				// husk's victim twenty times too fast).
-				t.exhaust(hungerExhaustionPerTick * float32(e.amp+1))
+				if survival {
+					t.exhaust(hungerExhaustionPerTick * float32(e.amp+1))
+				}
 			case effSaturation:
 				// SaturationMobEffect fires every tick it is active.
-				h.feedSaturation(t, e.amp)
+				if survival {
+					h.feedSaturation(t, e.amp)
+				}
 			case effRaidOmen:
 				// RaidOmenMobEffect fires on its LAST tick, and that is the
 				// raid horn.
@@ -404,3 +413,13 @@ func (evEffect) isHubEvent() {}
 
 // hungerExhaustionPerTick is HungerMobEffect's exhaustion per tick per level.
 const hungerExhaustionPerTick = 0.005 // HungerMobEffect.applyEffectTick
+
+// resendEffects pushes a restored player's active effects to their client.
+// The hub keeps effects live; without this a relog left them running on the
+// server with no icons, no particles and no way to see them run out.
+func (h *hub) resendEffects(t *tracked) {
+	for id, e := range t.effects {
+		t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(e.amp),
+			Ticks: int32(e.left), Ambient: e.ambient})
+	}
+}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -85,5 +86,41 @@ func TestEnvironmentalDamageStartsPanic(t *testing.T) {
 	}
 	if cow.fleeX > cow.x {
 		t.Errorf("it should flee towards the water at +x, flee point %v", cow.fleeX)
+	}
+}
+
+// Potion effects survive a relog, and they tick in creative too (the
+// periodic damage and healing stay a survival concern).
+func TestEffectsPersistAndTickOutsideSurvival(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "inventories.json")
+	s := newInvStore(path)
+	pl := testTracked()
+	pl.effects = map[int32]*activeEffect{
+		effSpeed:       {amp: 1, left: 600},
+		effNightVision: {amp: 0, left: 1200, ambient: true},
+	}
+	s.save("Steve", pl)
+
+	back := testTracked()
+	newInvStore(path).loadInto(back, "Steve")
+	if len(back.effects) != 2 {
+		t.Fatalf("both effects should come back, got %d", len(back.effects))
+	}
+	if e := back.effects[effSpeed]; e == nil || e.amp != 1 || e.left != 600 {
+		t.Errorf("speed II with 600 ticks left: %+v", e)
+	}
+	if e := back.effects[effNightVision]; e == nil || !e.ambient {
+		t.Errorf("the ambient flag should survive: %+v", e)
+	}
+
+	// A creative player's effects still count down.
+	h := newHub(world.New(1))
+	back.gamemode = gmCreative
+	players := map[int32]*tracked{back.p.eid: back}
+	before := back.effects[effSpeed].left
+	h.updateEffects(players)
+	if back.effects[effSpeed].left >= before {
+		t.Error("effects tick in creative as well")
 	}
 }

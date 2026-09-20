@@ -132,7 +132,7 @@ multi-pod plan).
   familiar regeneration/poison/strength/speed/fire resistance and instant
   health/harm through levitation, resistance, absorption, slow falling,
   conduit power, dolphin's grace, darkness and the trial/raid omens to the
-  1.21 set (wind charged, weaving, oozing, infested — on mobs as well as players, so an ominous trial's dead leave gusts, cobwebs, slimes and silverfish behind) — golden apples work,
+  1.21 set (wind charged, weaving, oozing, infested — on mobs as well as players, so an ominous trial's dead leave gusts, cobwebs, slimes and silverfish behind) — golden apples work, active effects save with the player so a relog keeps them (and tick in every game mode),
   witches poison, /effect for ops; splash and lingering potions dose mobs too, and a hostile that picks up gear stops despawning
 - **Enchanting**: real enchanting table UI — lapis + levels, three rolled
   offers scaled by surrounding bookshelves (a shelf counts only with a clear

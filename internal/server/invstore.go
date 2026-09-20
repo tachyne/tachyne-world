@@ -2,9 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
+	"sort"
 	"sync"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // invStore persists survival inventories by player name so picked-up items
@@ -23,6 +25,14 @@ type invStore struct {
 // (item,count,dmg,ench,mapID) row. Older files stored 4-column rows (or a
 // bare 36-slot array) — shorter JSON arrays zero-fill the new column, so
 // they migrate on load.
+// savedEffect is one active effect, with its remaining time in TICKS.
+type savedEffect struct {
+	ID      int32 `json:"id"`
+	Amp     int   `json:"amp,omitempty"`
+	Left    int   `json:"left"`
+	Ambient bool  `json:"ambient,omitempty"`
+}
+
 type savedInv struct {
 	Slots   [invSize]stackRow `json:"slots"`
 	Armor   [4]stackRow       `json:"armor"`
@@ -37,6 +47,10 @@ type savedInv struct {
 	EnchSeed int32 `json:"ench_seed,omitempty"`
 	// WardenSpawnTracker (warning level, cooldown, quiet time): vanilla keeps
 	// it in the player's data, so a relog does not wipe the deep dark's tally.
+	// Active status effects: vanilla keeps them in the player's data, so a
+	// relog does not strip a brewed potion or a beacon's gift.
+	Effects []savedEffect `json:"effects,omitempty"`
+
 	WardenWarn  int `json:"warden_warn,omitempty"`
 	WardenCool  int `json:"warden_cool,omitempty"`
 	WardenSince int `json:"warden_since,omitempty"`
@@ -165,6 +179,16 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 	t.enchSeed = saved.EnchSeed
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
+	if len(saved.Effects) > 0 {
+		t.effects = map[int32]*activeEffect{}
+		for _, e := range saved.Effects {
+			if e.Left <= 0 {
+				continue
+			}
+			t.effects[e.ID] = &activeEffect{amp: e.Amp, left: e.Left, ambient: e.Ambient}
+			t.applyEffectModifiers(e.ID, e.Amp) // the attribute side comes back too
+		}
+	}
 }
 
 // savedPos returns a player's last saved position (ok=false for a new player
@@ -208,7 +232,8 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince,
-		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
+		Effects: savedEffectsOf(t),
+		X:       t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true
 	}
@@ -271,4 +296,22 @@ func (s *invStore) flush() {
 func (s *invStore) save(name string, t *tracked) {
 	s.record(name, t)
 	s.flush()
+}
+
+// savedEffectsOf snapshots a player's active effects in a stable order.
+func savedEffectsOf(t *tracked) []savedEffect {
+	if len(t.effects) == 0 {
+		return nil
+	}
+	ids := make([]int32, 0, len(t.effects))
+	for id := range t.effects {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	out := make([]savedEffect, 0, len(ids))
+	for _, id := range ids {
+		e := t.effects[id]
+		out = append(out, savedEffect{ID: id, Amp: e.amp, Left: e.left, Ambient: e.ambient})
+	}
+	return out
 }

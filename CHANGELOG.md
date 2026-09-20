@@ -28,6 +28,14 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Potion effects survive a relog.** They lived only in memory, so
+  logging out threw away whatever you were carrying — a brewed potion, a
+  beacon's gift, a conduit's — and coming back gave you nothing. Active
+  effects now save with the player, amplifier, remaining time and the
+  ambient flag included, and are pushed to the client on the way in.
+  Effects also tick in every game mode, as vanilla's do: night vision
+  runs out in creative rather than lasting forever, while the periodic
+  damage and healing stay a survival matter.
 - **The trial-chamber effects work on mobs too.** Wind Charged, Weaving,
   Oozing and Infested only ever did anything to players. In vanilla they
   belong to any living thing: a mob that dies wind-charged leaves the

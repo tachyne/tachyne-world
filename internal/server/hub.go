@@ -2144,6 +2144,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		if h.invs != nil { // restore a persisted inventory
 			h.invs.loadInto(nt, e.p.name)
 			h.sendExperience(nt) // restore the XP bar with the loadout
+			h.resendEffects(nt)  // …and the potion effects it was carrying
 		}
 	}
 	if nt.gamemode == gmSurvival { // sync the survival HUD (hearts/hunger + inventory)
