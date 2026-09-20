@@ -37,6 +37,12 @@ func turtleEggOf(s uint32) (eggs, hatch int, ok bool) {
 	return n/3 + 1, n % 3, true
 }
 
+const (
+	turtleWaterSearch = 24.0 // TurtleGoToWaterGoal's MoveToBlockGoal(…, 24)
+	turtleHomeFar     = 64.0 // GoHome: only from more than this far out
+	turtleHomeOdds    = 700  // …and one roll in seven hundred ticks
+)
+
 // isSandFloor is TurtleEggBlock.isSand: the #sand tag.
 func isSandFloor(s uint32) bool {
 	return s == worldgen.Sand || s == worldgen.RedSand || s == worldgen.BlockBase("suspicious_sand")
@@ -51,7 +57,7 @@ func (h *hub) turtleStep(players map[int32]*tracked, m *mob) bool {
 	}
 	if !m.hasEgg || m.baby {
 		m.layCounter = 0
-		return false
+		return h.turtleWaterStep(m)
 	}
 	hx, hz := float64(m.home.x)+0.5, float64(m.home.z)+0.5
 	dx, dz := hx-m.x, hz-m.z
@@ -121,5 +127,57 @@ func (h *hub) turtleEggRandomTick(players map[int32]*tracked, dim, x, y, z int, 
 		h.applySpecies(players, baby)
 		h.toTracking(players, baby.eid, dim, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 	}
+	return true
+}
+
+// turtleWaterStep is TurtleGoToWaterGoal + TurtleGoHomeGoal: a turtle out of
+// the water heads back to it (a hatchling at double pace, which is what gets
+// the babies off the beach), and now and then a grown one that has drifted
+// more than sixty-four blocks from the beach it was born on swims home.
+func (h *hub) turtleWaterStep(m *mob) bool {
+	if m.dying != 0 || m.panic > 0 || m.tempted {
+		return false
+	}
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return false
+	}
+	if !h.inWater(m.dim, m.x, m.y+0.2, m.z) {
+		// GoToWater: search 24 blocks, as the goal does.
+		if x, z, ok := h.nearestWaterColumn(m, turtleWaterSearch); ok {
+			sp := m.moveSpeed()
+			if m.baby {
+				sp *= 2 // the goal's speed modifier for a hatchling
+			}
+			dx, dz := x-m.x, z-m.z
+			if d := math.Hypot(dx, dz); d > 1 {
+				m.vx, m.vz = dx/d*sp, dz/d*sp
+				m.rest = 0
+				return true
+			}
+		}
+		return false
+	}
+	if m.baby || m.home == (blockPos{}) {
+		return false
+	}
+	// GoHome: one roll in seven hundred ticks, and only from far away.
+	hx, hz := float64(m.home.x)+0.5, float64(m.home.z)+0.5
+	if math.Hypot(hx-m.x, hz-m.z) <= turtleHomeFar {
+		return false
+	}
+	if h.rng.Intn(turtleHomeOdds/mobMoveInterval) != 0 && !m.turtleHoming {
+		return false
+	}
+	m.turtleHoming = true
+	dx, dz := hx-m.x, hz-m.z
+	d := math.Hypot(dx, dz)
+	if d <= turtleHomeFar {
+		m.turtleHoming = false
+		return false
+	}
+	sp := m.moveSpeed()
+	m.vx, m.vz = dx/d*sp, dz/d*sp
+	m.rest = 0
 	return true
 }

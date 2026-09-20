@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -89,5 +90,53 @@ func TestTurtleEggLifeCycle(t *testing.T) {
 	}
 	if cracked > 3 {
 		t.Fatalf("daytime cracks should be rare: %d of 50", cracked)
+	}
+}
+
+// A turtle out of the water heads back to it — a hatchling twice as fast —
+// and a grown one far from its beach swims home.
+func TestTurtleGoesToWaterAndHome(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for x := -10; x <= 10; x++ {
+		for z := -10; z <= 10; z++ {
+			h.world.SetBlock(x, 69, z, worldgen.Sand)
+			h.world.SetBlock(x, 70, z, worldgen.Air)
+		}
+	}
+	for z := 5; z <= 8; z++ { // a pool to the +z side
+		for x := -3; x <= 3; x++ {
+			h.world.SetBlock(x, 70, z, worldgen.WaterBase)
+		}
+	}
+	m := h.spawnMob(players, entityTurtle, 0.5, 70, 0.5)
+	m.setMoveSpeed(0.1)
+	m.home = blockPos{0, 70, 0}
+	if !h.turtleWaterStep(m) {
+		t.Fatal("a dry turtle should head for the water")
+	}
+	if m.vz <= 0 {
+		t.Errorf("the pool is at +z, so should the turtle be going: vz=%v", m.vz)
+	}
+	// A hatchling hurries at double pace.
+	adult := math.Hypot(m.vx, m.vz)
+	m.baby, m.vx, m.vz = true, 0, 0
+	h.turtleWaterStep(m)
+	if baby := math.Hypot(m.vx, m.vz); baby < adult*1.9 {
+		t.Errorf("a hatchling moves at twice the pace: %v vs %v", baby, adult)
+	}
+	// In the water, far from home, it eventually turns for the beach.
+	m.baby, m.vx, m.vz = false, 0, 0
+	m.x, m.z = 0.5, 6.5
+	m.home = blockPos{0, 70, 200}
+	homing := false
+	for i := 0; i < 2000 && !homing; i++ {
+		homing = h.turtleWaterStep(m)
+	}
+	if !homing {
+		t.Fatal("a turtle far from its beach should head home eventually")
+	}
+	if m.vz <= 0 {
+		t.Errorf("home is at +z: vz=%v", m.vz)
 	}
 }

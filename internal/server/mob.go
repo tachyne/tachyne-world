@@ -107,6 +107,7 @@ type mob struct {
 	schoolFollowers int      // …or how many follow IT
 	schoolNext      int      // …and the ticks before it looks for a school again
 	bedSearchAt     uint64   // villager: the tick its next AcquirePoi(HOME) scan is due
+	turtleHoming    bool     // turtle: swimming back to the beach it was born on
 	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg

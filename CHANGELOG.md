@@ -28,6 +28,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Turtles head for the water, and hatchlings run for it.** A turtle
+  caught on land simply milled about. It makes for water within
+  twenty-four blocks now, and a hatchling does it at twice the pace,
+  which is what gets a clutch off the beach and away from whatever is
+  waiting there. A grown turtle that has drifted more than sixty-four
+  blocks from the beach it was born on turns and swims home now and
+  then, as vanilla's does.
 - **Villagers stand still to trade, and take the bed you built them.** A
   villager kept walking its schedule while its trade screen was open, so
   the shop wandered off mid-deal; it stands and faces its customer now,
