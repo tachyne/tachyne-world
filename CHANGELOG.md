@@ -88,6 +88,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to whoever it is boosting and softened by distance for anything else within
   five blocks — and a wall between you and the burst still saves you. A plain
   rocket with no star in it stays perfectly safe to fly with.
+- **The server stops writing itself out when nothing is happening.** An idle
+  world was rewriting four player files from scratch every thirty seconds,
+  with nobody online to have changed them — enough to cost a visible hitch
+  twice a minute. It skips them when the server is empty now, and any save
+  whose contents would come out identical to the file already there no longer
+  touches the disk at all. One of those files was also being written twice in
+  the same pass.
 - **You can sleep through a thunderstorm.** A bed refused you by the clock,
   so a storm at noon was no help. The real game does not check the clock — it
   checks how dark the sky is, which a thunderstorm darkens past the threshold
