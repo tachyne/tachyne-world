@@ -396,19 +396,22 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		intoWater := worldgen.IsWater(target) // waterlog when placed into water
 		var state uint32
 		lookPlaced := true
+		// The face you clicked comes first (getNearestLookingDirections), so
+		// a torch, lever or button sticks to the surface you highlighted.
+		order := placeOrder(dir, replacingClicked, p.yaw, p.pitch)
 		switch wallDef, isStandingWall := standingWallVariant[defState]; {
 		case !isMultiface(defState) && blockReplaceableBy(target, defState, dir, cursorY, replacingClicked, p.sneaking):
 			state, lookPlaced = stackedState(target) // one more slab half, candle, pickle, egg or layer
 		case isStandingWall: // torches, coral fans: floor or wall by the look order
-			state, lookPlaced = standingOrWallState(s.worldFor(p), blockPos{tx, ty, tz}, defState, wallDef, p.yaw, p.pitch)
+			state, lookPlaced = standingOrWallState(s.worldFor(p), blockPos{tx, ty, tz}, defState, wallDef, order)
 		case isHangable(defState): // lanterns: hang from a ceiling or stand on a floor
-			state, lookPlaced = hangableState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+			state, lookPlaced = hangableState(s.worldFor(p), blockPos{tx, ty, tz}, defState, order)
 		case isCocoa(defState): // cocoa: faces its jungle log
-			state, lookPlaced = cocoaState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+			state, lookPlaced = cocoaState(s.worldFor(p), blockPos{tx, ty, tz}, defState, order)
 		case isFaceAttached(defState): // levers, buttons, grindstones: floor, ceiling or wall by the look order
-			state, lookPlaced = faceAttachedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.yaw, p.pitch)
+			state, lookPlaced = faceAttachedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, order, p.yaw)
 		case isMultiface(defState): // vines, lichen, sculk veins, resin: a face that something holds
-			state, lookPlaced = multifacePlacement(s.worldFor(p), blockPos{tx, ty, tz}, defState, target, p.yaw, p.pitch)
+			state, lookPlaced = multifacePlacement(s.worldFor(p), blockPos{tx, ty, tz}, defState, target, order)
 		default:
 			state = orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		}

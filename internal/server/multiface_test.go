@@ -34,14 +34,14 @@ func TestVineFacesAndSurvival(t *testing.T) {
 	// Looking south (yaw 0) at the wall: the vine attaches through its SOUTH
 	// face — and only that one, whatever the clicked face was.
 	southOnly := withProps(t, def, map[string]string{"south": "true"})
-	if got, ok := multifacePlacement(w, blockPos{50, 100, 50}, def, worldgen.Air, 0, 0); !ok || got != southOnly {
+	if got, ok := multifacePlacement(w, blockPos{50, 100, 50}, def, worldgen.Air, lookOrder(0, 0)); !ok || got != southOnly {
 		t.Errorf("placement toward the south wall should set south only, got ok=%v state %d want %d", ok, got, southOnly)
 	}
 	// Looking down at a floor with no wall in reach: DOWN is never a vine
 	// face, so there is nothing to attach and the placement is refused.
 	w.SetBlock(50, 100, 51, worldgen.Air)
 	w.SetBlock(50, 99, 50, worldgen.Stone)
-	if _, ok := multifacePlacement(w, blockPos{50, 100, 50}, def, worldgen.Air, 180, 89); ok {
+	if _, ok := multifacePlacement(w, blockPos{50, 100, 50}, def, worldgen.Air, lookOrder(180, 89)); ok {
 		t.Error("a vine cannot attach to a floor (DOWN is never a vine face)")
 	}
 	w.SetBlock(50, 99, 50, worldgen.Air)

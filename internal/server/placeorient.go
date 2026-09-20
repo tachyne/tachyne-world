@@ -57,6 +57,33 @@ func lookOrder(yaw, pitch float32) [6]int32 {
 // oppositeDir flips a wire face index (down↔up, north↔south, west↔east).
 func oppositeDir(d int32) int32 { return d ^ 1 }
 
+// placeOrder is BlockPlaceContext.getNearestLookingDirections: the look
+// order with the OPPOSITE of the clicked face moved to the FRONT — the face
+// you highlighted is the one a torch, lever or button attaches to, whatever
+// else the look vector happens to favour. Only a click that replaced the
+// block it landed on (into tall grass, into snow) falls back to the plain
+// look order, exactly as vanilla's replaceClicked does.
+func placeOrder(face int32, replacingClicked bool, yaw, pitch float32) [6]int32 {
+	order := lookOrder(yaw, pitch)
+	if replacingClicked || face < 0 || face > 5 {
+		return order
+	}
+	want := oppositeDir(face)
+	at := -1
+	for i, d := range order {
+		if d == want {
+			at = i
+			break
+		}
+	}
+	if at <= 0 {
+		return order
+	}
+	copy(order[1:at+1], order[0:at])
+	order[0] = want
+	return order
+}
+
 // placeAlias maps items whose block carries a different name — the item
 // table pairs items with same-named blocks only. Seeds go through
 // cropForSeed (they need soil rules); these two need no more than the alias.
@@ -103,12 +130,11 @@ var standingWallVariant = func() map[uint32]uint32 {
 // holds (WallTorchBlock.getStateForPlacement, facing away from that wall);
 // then the look order decides — down onto a holding floor gives the standing
 // block, a sideways entry gives that wall state, up is never an option.
-func standingOrWallState(w *world.World, pos blockPos, standing, wall uint32, yaw, pitch float32) (uint32, bool) {
+func standingOrWallState(w *world.World, pos blockPos, standing, wall uint32, order [6]int32) (uint32, bool) {
 	winfo, ok := worldgen.InfoForState(wall)
 	if !ok {
 		return 0, false
 	}
-	order := lookOrder(yaw, pitch)
 	wallState, haveWall := uint32(0), false
 	for _, d := range order {
 		if d < 2 {
@@ -144,12 +170,12 @@ func isHangable(def uint32) bool {
 
 // hangableState is LanternBlock.getStateForPlacement: the first vertical
 // look-order direction whose attachment holds — up means hanging.
-func hangableState(w *world.World, pos blockPos, def uint32, yaw, pitch float32) (uint32, bool) {
+func hangableState(w *world.World, pos blockPos, def uint32, order [6]int32) (uint32, bool) {
 	info, ok := worldgen.InfoForState(def)
 	if !ok {
 		return 0, false
 	}
-	for _, d := range lookOrder(yaw, pitch) {
+	for _, d := range order {
 		if d > 1 {
 			continue
 		}
@@ -177,12 +203,12 @@ var cocoaSupports = blockRange("jungle_log", "jungle_wood", "stripped_jungle_log
 
 // cocoaState is CocoaBlock.getStateForPlacement: facing the first horizontal
 // look-order direction with a jungle log there (the pod faces its log).
-func cocoaState(w *world.World, pos blockPos, def uint32, yaw, pitch float32) (uint32, bool) {
+func cocoaState(w *world.World, pos blockPos, def uint32, order [6]int32) (uint32, bool) {
 	info, ok := worldgen.InfoForState(def)
 	if !ok {
 		return 0, false
 	}
-	for _, d := range lookOrder(yaw, pitch) {
+	for _, d := range order {
 		if d < 2 {
 			continue
 		}
@@ -236,7 +262,7 @@ func multifaceFull(state uint32) bool {
 // the first look-order face whose neighbour can hold it joins the existing
 // block of the same kind at the target, or starts a fresh one. No holdable
 // face means no placement — never a face out into the air.
-func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, yaw, pitch float32) (uint32, bool) {
+func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, order [6]int32) (uint32, bool) {
 	info, ok := worldgen.InfoForState(def)
 	if !ok {
 		return 0, false
@@ -247,7 +273,7 @@ func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, yaw,
 		state = existing
 	}
 	vine := isVineBlock(def)
-	for _, d := range lookOrder(yaw, pitch) {
+	for _, d := range order {
 		f := faceDirs[d]
 		if !info.HasProperty(f.prop) {
 			continue
@@ -266,12 +292,12 @@ func multifacePlacement(w *world.World, pos blockPos, def, existing uint32, yaw,
 // (levers, buttons, grindstones): the first look-order direction whose
 // attachment holds — floor or ceiling with the block facing the way the
 // player faces, or a wall with the block facing away from it.
-func faceAttachedState(w *world.World, pos blockPos, def uint32, yaw, pitch float32) (uint32, bool) {
+func faceAttachedState(w *world.World, pos blockPos, def uint32, order [6]int32, yaw float32) (uint32, bool) {
 	info, ok := worldgen.InfoForState(def)
 	if !ok {
 		return 0, false
 	}
-	for _, d := range lookOrder(yaw, pitch) {
+	for _, d := range order {
 		var st uint32
 		switch d {
 		case 0:
