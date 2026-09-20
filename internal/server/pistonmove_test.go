@@ -119,3 +119,24 @@ func TestStickyPullsSlimeChainAndShovesMobs(t *testing.T) {
 		t.Fatalf("the zombie should be shoved to x=%d, at %.1f", x, m.x)
 	}
 }
+
+// A piston carrying a live sculk sensor or a freshly shot target puts it down
+// switched off: the scheduled tick that would have cleared the power does not
+// travel with the block, which is why vanilla zeroes it on placement.
+func TestPistonLandsSensorsAndTargetsSwitchedOff(t *testing.T) {
+	live := sensorWith(worldgen.BlockBase("sculk_sensor"), 11, sculkPhaseActive)
+	if got := landedStateOf(live); sensorPower(got) != 0 {
+		t.Fatalf("a landed sensor should carry no power, got %d", sensorPower(got))
+	}
+	if sensorPhase(landedStateOf(live)) != sculkPhaseActive {
+		t.Fatal("the landed sensor should keep its phase; only the power is cleared")
+	}
+	if got := landedStateOf(targetMin + 9); targetPower(got) != 0 {
+		t.Fatalf("a landed target should carry no power, got %d", targetPower(got))
+	}
+	// Anything else lands unchanged.
+	stone := worldgen.BlockBase("stone")
+	if landedStateOf(stone) != stone {
+		t.Fatal("an ordinary block must land exactly as it was carried")
+	}
+}

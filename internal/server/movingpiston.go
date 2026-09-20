@@ -72,6 +72,21 @@ func (h *hub) movingFrame(pos blockPos, mb movingBlock) attachproto.MovingPiston
 	}
 }
 
+// landedStateOf is SculkSensorBlock.onPlace and TargetBlock.onPlace: a block
+// that carries a redstone power but has no scheduled tick to clear it again
+// is put down with that power zeroed. Vanilla's guard exists for exactly this
+// case — a piston carrying a live sensor or a freshly shot target — because
+// the schedule that would have reset it does not travel with the block.
+func landedStateOf(state uint32) uint32 {
+	switch {
+	case isAnySensor(state) && sensorPower(state) > 0:
+		return sensorWith(state, 0, sensorPhase(state))
+	case isTarget(state) && targetPower(state) > 0:
+		return targetMin
+	}
+	return state
+}
+
 // finishMoving is the block entity's last tick: the carried block replaces
 // the moving cell (air when the record is gone — a cell left over from
 // before a restart) and the neighbours hear about it. A neighbour's block
@@ -86,7 +101,7 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	delete(h.movingBlocks, key)
 	final := uint32(worldgen.Air)
 	if ok {
-		final = mb.moved
+		final = landedStateOf(mb.moved)
 	}
 	h.rsSet(players, pos, final)
 	h.scheduleAroundIn(h.rsDim, pos, 1)
@@ -108,7 +123,7 @@ func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
 	if mb.source {
 		h.rsSet(players, pos, worldgen.Air)
 	} else {
-		h.rsSet(players, pos, mb.moved)
+		h.rsSet(players, pos, landedStateOf(mb.moved))
 	}
 	h.scheduleAroundIn(h.rsDim, pos, 1)
 	return true
