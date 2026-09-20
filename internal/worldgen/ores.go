@@ -60,27 +60,41 @@ type oreSpec struct {
 	attempts, size   int
 	minY, maxY       int
 	shape            int             // 0 uniform, 1 triangular (peak mid-band), 2 ramp-to-bottom
+	rarity           int             // 0 = every chunk; else one blob in `rarity` chunks
 	biomes           map[string]bool // nil = any biome; else only these (emerald)
 }
 
 // Bands/counts/sizes are the vanilla 1.21 ore placed_features (above_bottom
 // anchors resolved against MinY=-64; trapezoid ≈ our triangular shape 1).
 var oreSpecs = []oreSpec{
-	{CoalOre, DeepslateCoalOre, 14, 10, 0, 110, 0, nil},
-	{CopperOre, DeepslateCopperOre, 8, 8, -16, 80, 1, nil},
-	{IronOre, DeepslateIronOre, 10, 7, -56, 64, 1, nil},
-	{GoldOre, DeepslateGoldOre, 4, 6, -60, 28, 0, nil},
-	{DiamondOre, DeepslateDiamondOre, 5, 5, -60, 12, 2, nil},
-	{RedstoneOre, DeepslateRedstoneOre, 4, 8, -64, 15, 0, nil}, // ore_redstone: uniform -64..15
-	{RedstoneOre, DeepslateRedstoneOre, 8, 8, -96, 32, 1, nil}, // ore_redstone_lower: trapezoid, peak ~-32
-	{LapisOre, DeepslateLapisOre, 2, 7, -32, 32, 1, nil},       // ore_lapis: trapezoid, peak 0
-	{LapisOre, DeepslateLapisOre, 4, 7, -64, 64, 0, nil},       // ore_lapis_buried: uniform -64..64
+	{CoalOre, DeepslateCoalOre, 14, 10, 0, 110, 0, 0, nil},
+	{CopperOre, DeepslateCopperOre, 8, 8, -16, 80, 1, 0, nil},
+	{IronOre, DeepslateIronOre, 10, 7, -56, 64, 1, 0, nil},
+	{GoldOre, DeepslateGoldOre, 4, 6, -60, 28, 0, 0, nil},
+	{DiamondOre, DeepslateDiamondOre, 5, 5, -60, 12, 2, 0, nil},
+	{RedstoneOre, DeepslateRedstoneOre, 4, 8, -64, 15, 0, 0, nil}, // ore_redstone: uniform -64..15
+	{RedstoneOre, DeepslateRedstoneOre, 8, 8, -96, 32, 1, 0, nil}, // ore_redstone_lower: trapezoid, peak ~-32
+	{LapisOre, DeepslateLapisOre, 2, 7, -32, 32, 1, 0, nil},       // ore_lapis: trapezoid, peak 0
+	{LapisOre, DeepslateLapisOre, 4, 7, -64, 64, 0, 0, nil},       // ore_lapis_buried: uniform -64..64
 	// ore_emerald: mountains only, many attempts at single blocks over a tall
 	// trapezoid — most land in air above the surface and place nothing (vanilla
 	// sparsity). Range trimmed to the in-world portion.
-	{EmeraldOre, DeepslateEmeraldOre, 100, 1, -16, 256, 1, mountainBiomes},
+	{EmeraldOre, DeepslateEmeraldOre, 100, 1, -16, 256, 1, 0, mountainBiomes},
 	// ore_infested: silverfish stone, 14 veins of 9 from the bottom to y=63.
-	{InfestedStone, InfestedDeepslate, 14, 9, -64, 63, 0, infestedBiomes},
+	{InfestedStone, InfestedDeepslate, 14, 9, -64, 63, 0, 0, infestedBiomes},
+	// The stone-variant blobs, which vanilla places in every overworld biome
+	// and which give a cave wall its granite, diorite, andesite and tuff:
+	// the upper three one chunk in six between 64 and 128, the lower three
+	// twice a chunk from 0 to 60, tuff twice a chunk below 0. Size 64 in
+	// vanilla — the engine's vein walk is shorter-legged than its ellipsoid,
+	// so these read as pockets rather than the wide bands vanilla draws.
+	{stoneGranite, stoneGranite, 1, 64, 64, 128, 0, 6, nil},
+	{stoneDiorite, stoneDiorite, 1, 64, 64, 128, 0, 6, nil},
+	{stoneAndesite, stoneAndesite, 1, 64, 64, 128, 0, 6, nil},
+	{stoneGranite, stoneGranite, 2, 64, 0, 60, 0, 0, nil},
+	{stoneDiorite, stoneDiorite, 2, 64, 0, 60, 0, 0, nil},
+	{stoneAndesite, stoneAndesite, 2, 64, 0, 60, 0, 0, nil},
+	{stoneTuff, stoneTuff, 2, 64, -64, 0, 0, 0, nil},
 }
 
 // placeOres stamps this chunk's ore veins. Deterministic: the RNG derives from
@@ -93,6 +107,9 @@ func (g *Generator) placeOres(ch *Chunk, cx, cz int32) {
 		// eligible biome; sampled once at the chunk centre.
 		if spec.biomes != nil && !spec.biomes[g.resolveBiome(int(cx)*16+8, int(cz)*16+8).Name] {
 			continue
+		}
+		if spec.rarity > 0 && rng.Intn(spec.rarity) != 0 {
+			continue // rarity_filter: most chunks skip this blob entirely
 		}
 		for a := 0; a < spec.attempts; a++ {
 			lx, lz := rng.Intn(16), rng.Intn(16)

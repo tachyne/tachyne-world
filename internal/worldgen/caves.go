@@ -169,6 +169,11 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 			}
 		}
 	}
+	// The surface patches vanilla scatters: wild cane on the shores, melons
+	// in the jungles, the odd pumpkin — and the springs that seep out of
+	// stone walls, which is where a cave's water and lava come from.
+	g.overworldPatches(r, reg, ox, oz)
+	g.overworldSprings(r, reg, ox, oz)
 	// Surface mushrooms in the dark, and magma in the underwater caves.
 	g.overworldMushrooms(r, reg, ox, oz)
 	g.underwaterMagma(r, reg, ox, oz)

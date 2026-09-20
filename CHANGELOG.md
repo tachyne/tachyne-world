@@ -14,6 +14,21 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Wild sugar cane, pumpkins, melons, springs and the stone variants.**
+  Five families of feature the generator never placed, and their absence
+  reached well past the scenery. With no wild cane there was no paper, so
+  no books and no bookshelves; with no wild pumpkins there was no carved
+  pumpkin, so no snow or iron golem unless a village grew one. Cane now
+  grows two to four tall wherever air meets water on sand or dirt, one
+  chunk in six; pumpkins scatter one chunk in three hundred on the grass;
+  melons do the same in the jungles. Water and lava springs seep out of
+  cave walls — twenty-five and twenty attempts a chunk, the lava biased
+  hard toward the bottom, each needing stone above, below and on four of
+  its five other sides with exactly one way out — and they are source
+  blocks, as vanilla's are, so a cave spring is a water supply rather
+  than a trickle that dries up. Granite, diorite and andesite blobs fill
+  out the stone between sixty-four and one-twenty-eight and again down at
+  the bottom, with tuff below zero.
 - **An entity's updates follow the viewers holding it.** Everything the
   server says about a creature, item or orb — its movement, metadata,
   equipment, swings, status flashes, passengers — now goes to exactly the
