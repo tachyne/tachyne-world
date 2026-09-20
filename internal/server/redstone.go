@@ -234,7 +234,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, torchWithLit(state, false))
 			h.scheduleSignalAround(pos)
 			if h.torchToggledTooOften(pos, true) { // burn out: fizz, and try again in 160 ticks
-				h.toNearbyEv(players, 0, float64(x), float64(z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: x, Y: y, Z: z})
+				h.toNearbyEv(players, h.rsDim, float64(x), float64(z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: x, Y: y, Z: z})
 				h.rsSchedule(pos, torchRestartDelay)
 			}
 		case !torchLit(state) && !powered && !h.torchToggledTooOften(pos, false):

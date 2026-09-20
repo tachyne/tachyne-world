@@ -480,10 +480,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			case dx > 0:
 				yaw = 270
 			}
-			sd := &armorStand{eid: h.allocEID(), dim: 0,
+			sd := &armorStand{eid: h.allocEID(), dim: pos.dim,
 				x: float64(front.x) + 0.5, y: float64(front.y), z: float64(front.z) + 0.5, yaw: yaw}
 			h.armorStands[sd.eid] = sd
-			h.toNearbyEv(players, 0, sd.x, sd.z, h.standAddEv(sd))
+			h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standAddEv(sd))
 			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
 		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
@@ -499,7 +499,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				piece := *st
 				piece.count = 1
 				sd.equip[slot] = piece
-				h.toNearbyEv(players, 0, sd.x, sd.z, h.standEquipEv(sd))
+				h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standEquipEv(sd))
 				equipped = true
 				break
 			}

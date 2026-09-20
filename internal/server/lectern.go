@@ -173,7 +173,7 @@ func (h *hub) lecternButton(players map[int32]*tracked, t *tracked, button int32
 	}
 	lec.page = page
 	t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 0, Value: int32(lec.page)})
-	h.toNearbyEv(players, 0, float64(t.winPos.x), float64(t.winPos.z), attachproto.WorldFX{
+	h.toNearbyEv(players, t.dim, float64(t.winPos.x), float64(t.winPos.z), attachproto.WorldFX{
 		Event: worldEventPageTurn, X: t.winPos.x, Y: t.winPos.y, Z: t.winPos.z})
 	h.lecternPulse(players, t.winPos)
 }
