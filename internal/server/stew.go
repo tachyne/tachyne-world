@@ -6,8 +6,9 @@ package server
 // and the eyeblossoms, each with its own effect and duration from Blocks),
 // and a brown mooshroom fed such a flower gives that stew from the next
 // bowl instead of plain mushroom stew (MushroomCow.mobInteract). The effect
-// rides the stack as a table index and is a secret — vanilla's tooltip
-// hides it — so it never reaches the wire.
+// rides the stack as a table index; vanilla's tooltip keeps it a secret
+// outside creative, but the component itself is synced, so it goes out with
+// the stack (item.go) like any other.
 
 type stewEffect struct {
 	flower string
@@ -48,6 +49,16 @@ var (
 		return m
 	}()
 )
+
+// stewEffectOf resolves a stack's stew code to its row. Out-of-range codes
+// (0 = none, and anything a future table shrink would orphan in an old save)
+// come back absent rather than panicking the send path.
+func stewEffectOf(code int8) (stewEffect, bool) {
+	if code < 1 || int(code) > len(stewEffects) {
+		return stewEffect{}, false
+	}
+	return stewEffects[code-1], true
+}
 
 // stewIndexFor is SuspiciousEffectHolder.tryGet: the flower's stew code, 0
 // when the item is no stew flower.

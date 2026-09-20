@@ -10,6 +10,8 @@ import attachproto "github.com/tachyne/tachyne-common/attach"
 const (
 	worldEventDispenserSmoke = 2000 // PARTICLES_SHOOT_SMOKE, data: the facing's 3D index
 	worldEventSpawnerSpawn   = 2004 // PARTICLES_MOBBLOCK_SPAWN
+	worldEventPotionSplash   = 2002 // PARTICLES_SPELL_POTION_SPLASH, data: the liquid's rgb
+	worldEventInstantSplash  = 2007 // PARTICLES_INSTANT_POTION_SPLASH, data: the liquid's rgb
 	worldEventBeeGrowth      = 2011 // PARTICLES_BEE_GROWTH, data: particle count
 	worldEventTurtleEggPlace = 2012 // PARTICLES_TURTLE_EGG_PLACEMENT
 	worldEventBoneMeal       = 1505 // PARTICLES_AND_SOUND_PLANT_GROWTH, data: count

@@ -190,6 +190,9 @@ const (
 	componentBundleContents = 41 // bundle contents (list of Slots); remapped per version
 	componentLodestone      = 58 // lodestone_tracker (lodestone compass target); remapped per version
 	componentBaseColor      = 64 // base_color (a decorated shield's banner base, one dye varint); remapped per version
+	componentPotionContents = 42 // potion_contents (what a brew does, and so what colour it is); remapped per version
+	componentStewEffects    = 44 // suspicious_stew_effects (creative tooltip only, but vanilla syncs it); remapped per version
+	componentRepairCost     = 16 // repair_cost (the anvil's prior-work penalty); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -265,6 +268,15 @@ func stackComponents(st invStack) []byte {
 	if st.shieldBase != 0 {
 		comps++
 	}
+	if st.potion != potNone {
+		comps++
+	}
+	if _, ok := stewEffectOf(st.stew); ok {
+		comps++
+	}
+	if st.repairCost > 0 {
+		comps++
+	}
 	var bookBytes []byte
 	if st.bookID != 0 {
 		if bs := globalBooks.Load(); bs != nil {
@@ -337,6 +349,26 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, componentTrim)
 		b = protocol.AppendVarInt(b, int32(st.trimMat))
 		b = protocol.AppendVarInt(b, int32(st.trimPat))
+	}
+	if st.potion != potNone {
+		// potion_contents: the brew's effects. The client colours the liquid
+		// from them and lists them in the tooltip — without it every potion is
+		// the same purple and says nothing about what it does.
+		b = protocol.AppendVarInt(b, componentPotionContents)
+		b = append(b, potionComponentBytes(st.potion)...)
+	}
+	if e, ok := stewEffectOf(st.stew); ok {
+		// suspicious_stew_effects: (effect holder, duration) pairs. The stew
+		// keeps its secret — vanilla shows these only on a creative tooltip —
+		// but it is a synced component, so it belongs on the wire.
+		b = protocol.AppendVarInt(b, componentStewEffects)
+		b = protocol.AppendVarInt(b, 1)
+		b = protocol.AppendVarInt(b, e.effect+1) // holder ref = id + 1
+		b = protocol.AppendVarInt(b, int32(e.secs*20))
+	}
+	if st.repairCost > 0 {
+		b = protocol.AppendVarInt(b, componentRepairCost)
+		b = protocol.AppendVarInt(b, int32(st.repairCost))
 	}
 	if st.lode.has {
 		b = lodestoneComponent(b, st.lode)

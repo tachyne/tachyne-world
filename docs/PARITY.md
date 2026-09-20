@@ -67,7 +67,7 @@ Struck-through rows have landed since the audit; the date says when.
 6. ~~Redstone timing: sub-delay repeater pulses, the lamp's four-tick hold, crafter scheduling, plate and rail hold, lightning-rod power~~ (2026-09-19)
 7. ~~Anvil material repair and book-on-book merging; grindstone curse-keeping, durability merge and XP; a persistent enchanting seed and bookshelf air gaps~~ (2026-09-20)
 8. Decorated pots ~~(one item per insert, persistence)~~, brewing-stand feedback and persistence, per-item stack caps ~~(2026-09-20)~~ — pot sherds and a generic spawner block entity remain
-9. ~~The hand on use-item (off-hand, shields)~~ (2026-09-20); serialising the components the engine already models (potions, stews, instruments, shulker contents, bottles, repair cost) remains
+9. ~~The hand on use-item (off-hand, shields)~~ (2026-09-20); serialising the components the engine already models: ~~potions, stews, repair cost~~ (2026-09-20), instruments, shulker contents and bottles remain
 10. Fireworks: stars and fades, flight duration, explosions
 11. ~~Voices for the eleven silent species; per-type eye heights; ambient cadence and step sounds; babies' drops and XP~~ (2026-09-19)
 12. Monster goals: ~~zombie village pathing and targeting~~ (2026-09-20), ~~drowned water goals~~ (2026-09-20), ~~the spider light rule~~ (2026-09-20), ~~skeleton weapon reassessment~~ (2026-09-20), ~~enderman stare and teleport~~ (2026-09-20), ~~ghast flight~~ (2026-09-20) and phantom flight, the raider base goals, wither phases

@@ -46,7 +46,15 @@ type effectCloud struct {
 // splashPotion resolves a thrown potion at its impact point.
 func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64, kind int8, lingering bool) {
 	h.playSound(players, "minecraft:entity.splash_potion.break", sndNeutral, x, y, z, 1, 1)
-	h.spawnParticles(players, dim, particleSplash, x, y, z, 0.4, 0.2, 8)
+	// The burst is a level event carrying the brew's colour, not a generic
+	// water splash: the client draws the bottle shards and a hundred effect
+	// particles tinted like the liquid (AbstractThrownPotion.onHit). Instant
+	// potions get the other of the pair, which uses the sharper particle.
+	ev := int32(worldEventPotionSplash)
+	if potionIsInstant(kind) {
+		ev = worldEventInstantSplash
+	}
+	h.levelEvent(players, dim, ev, floorInt(x), floorInt(y), floorInt(z), potionColor(kind))
 	if lingering {
 		h.spawnPotionCloud(dim, x, y, z, kind)
 		return
@@ -78,6 +86,18 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 		}
 		h.applyPotionAoEMob(players, m, effs, 1-d/splashRadius, splashFactor)
 	}
+}
+
+// potionIsInstant is Potion.hasInstantEffects: a brew whose effects land all
+// at once (Healing, Harming) rather than over time. It picks the splash
+// particle and, in vanilla, how the AoE scales.
+func potionIsInstant(kind int8) bool {
+	for _, e := range potionEffects(kind) {
+		if e.secs == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // applyPotionAoEMob is applyPotionAoE for a mob: timed effects scale with

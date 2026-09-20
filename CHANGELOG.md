@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **Potions look like what they are.** Every brew rendered the same default
+  purple and its tooltip said nothing about its effects, so a potion of
+  Healing and a potion of Poison were indistinguishable in the hand. Potions
+  and tipped arrows now carry their effects to the client, which tints the
+  liquid from them exactly as the real game does — Swiftness cyan, Harming
+  red, Turtle Master its muddy violet — and lists each effect with its
+  duration. A thrown potion now bursts in its own colour too, instead of a
+  water splash. Two smaller stacks-on-the-wire gaps close with it: a
+  suspicious stew now carries the effect it hides (which creative mode is
+  meant to reveal) and a repaired item carries the anvil's prior-work
+  penalty.
 - **Reports get answered.** A reply can be sent to a player in game, and if
   they are not online it waits and arrives the moment they next join —
   which is the usual case, since whoever answers a report is rarely at a
@@ -69,6 +80,15 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **A broken lever no longer leaves the line it powered switched on.** A
+  lever mounted on a block powers that block, and dust on the block's far
+  side reads the power straight through it — so the dust a lever actually
+  drives can sit two cells away from the lever. Breaking the lever told only
+  the six cells touching it to look again, so that dust kept its signal
+  forever and whatever it fed — a lamp, a piston — stayed on with nothing
+  powering it. Removing or placing any signal source now re-checks
+  everything the block it hangs on was driving. Reported in game by
+  LegionZA.
 - **Lichen stops sprouting where two pieces meet.** The connector that
   joins a fence to its neighbour matched any block with north, east, south
   and west switches — which is also how glow lichen, vines, sculk veins,
