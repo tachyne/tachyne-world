@@ -140,16 +140,53 @@ func TestVillagerLevelsUp(t *testing.T) {
 	if base == 0 {
 		t.Fatal("a novice should already have tier-1 offers")
 	}
-	h.awardTradeXP(m, 10) // vanilla threshold to apprentice
+	// Vanilla does not promote on the trade itself: rewardTradeXp arms
+	// updateMerchantTimer and the tier lands forty ticks later, along with the
+	// Regeneration that draws the sparkle. That pause is visible in game.
+	if !h.awardTradeXP(m, 10) { // vanilla threshold to apprentice
+		t.Fatal("10 XP should arm a promotion")
+	}
+	if m.tradeLevel != 1 || !m.levelUpPending {
+		t.Fatalf("the tier must wait for the timer: level %d pending %v", m.tradeLevel, m.levelUpPending)
+	}
+	for i := 0; i < merchantUpdateDelay/mobMoveInterval-1; i++ {
+		h.villagerMerchantTick(players, m)
+	}
+	if m.tradeLevel != 1 {
+		t.Fatalf("promoted %d ticks early", merchantUpdateDelay)
+	}
+	h.villagerMerchantTick(players, m)
 	if m.tradeLevel != 2 {
-		t.Fatalf("10 XP should promote to tier 2, got %d", m.tradeLevel)
+		t.Fatalf("10 XP should promote to tier 2 after the delay, got %d", m.tradeLevel)
 	}
 	if len(m.offers) <= base {
 		t.Fatal("leveling up should unlock more offers")
 	}
-	h.awardTradeXP(m, 500) // overshoot straight to master, capped
-	if m.tradeLevel != 5 {
-		t.Fatalf("should cap at master (5), got %d", m.tradeLevel)
+	if m.hasEffect(effRegen) == 0 {
+		t.Error("a promotion grants Regeneration — the level-up sparkle")
+	}
+
+	// And only ONE tier per trade, however much experience it paid.
+	if !h.awardTradeXP(m, 500) {
+		t.Fatal("500 XP should arm another promotion")
+	}
+	runMerchantTimer := func() {
+		for i := 0; i < merchantUpdateDelay/mobMoveInterval; i++ {
+			h.villagerMerchantTick(players, m)
+		}
+	}
+	runMerchantTimer()
+	if m.tradeLevel != 3 {
+		t.Fatalf("one trade promotes one tier; got %d", m.tradeLevel)
+	}
+	for m.tradeLevel < maxTradeTier {
+		if !h.awardTradeXP(m, 0) {
+			t.Fatalf("stuck at tier %d with %d XP", m.tradeLevel, m.tradeXP)
+		}
+		runMerchantTimer()
+	}
+	if h.awardTradeXP(m, 500) {
+		t.Fatalf("master is the cap, got %d", m.tradeLevel)
 	}
 }
 
@@ -236,6 +273,7 @@ func TestTradingVillagerStandsAndFaces(t *testing.T) {
 	if m == nil {
 		t.Fatal("no villager")
 	}
+	h.initVillagerTrades(m, 0) // a villager with nothing to sell opens nothing
 	if h.tradingPartner(players, m) != nil {
 		t.Fatal("nobody is trading with it yet")
 	}
@@ -737,5 +775,169 @@ func TestPerListingPriceMultiplier(t *testing.T) {
 	}
 	if o := unpackOffer(legacy); o.priceMult() != 0.05 {
 		t.Errorf("a legacy offer's multiplier is %v, want 0.05", o.priceMult())
+	}
+}
+
+// The librarian's enchanted book is one of the tier's listings, not an extra
+// on top: vanilla's EnchantBookForEmeralds sits in the pool and competes for
+// the two slots. Appending it gave librarians three offers a tier where every
+// other profession gets two.
+func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
+	books := 0
+	for tier := 1; tier <= 4; tier++ {
+		found := false
+		for _, tr := range villagerTrades[librarianProfession][tier] {
+			if tr.kind == vTradeEnchantedBook {
+				found = true
+				books++
+				if tr.c2Item != itemByName["book"] || tr.c2Count != 1 || tr.mult100 != 20 {
+					t.Errorf("tier %d's book listing is %+v; want one book beside the emeralds at 0.2", tier, tr)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("tier %d has no enchanted-book listing", tier)
+		}
+	}
+	if books != 4 {
+		t.Errorf("%d book listings, want one each for tiers 1-4", books)
+	}
+	if len(villagerTrades[librarianProfession][5]) != 1 {
+		t.Error("a master librarian's only listing is the name tag")
+	}
+
+	w := world.New(29)
+	h := newHub(w)
+	players := map[int32]*tracked{}
+	sawBook := false
+	for i := 0; i < 40; i++ {
+		m := h.spawnMob(players, entityVillager, float64(i), 70, 0)
+		h.initVillagerTrades(m, librarianProfession)
+		if len(m.offers) != offersPerTier {
+			t.Fatalf("a novice librarian has %d offers, want %d", len(m.offers), offersPerTier)
+		}
+		for _, o := range m.offers {
+			if o.trade.outItem == itemEnchantedBook {
+				sawBook = true
+				if o.outEnchs[0].lvl == 0 || o.cost2Item != itemByName["book"] {
+					t.Fatalf("the book offer is unrolled: %+v", o)
+				}
+			}
+		}
+	}
+	if !sawBook {
+		t.Error("the book never came up in 40 novice librarians")
+	}
+}
+
+// Villager.mobInteract refuses a screen it has nothing to put in: a sleeping
+// villager is not interactable at all, and one with no offers left shakes its
+// head instead of opening an empty window.
+func TestTradeScreenRefusals(t *testing.T) {
+	w := world.New(31)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	h.playersRef = players
+	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
+	h.initVillagerTrades(m, librarianProfession)
+
+	m.sleeping = true
+	h.openTrades(pl, m)
+	if pl.winKind == winTrade {
+		t.Error("a sleeping villager must not open its trades")
+	}
+	m.sleeping = false
+
+	m.offers = nil
+	h.openTrades(pl, m)
+	if pl.winKind == winTrade {
+		t.Error("a villager with no offers must not open an empty screen")
+	}
+
+	h.initVillagerTrades(m, librarianProfession)
+	h.openTrades(pl, m)
+	if pl.winKind != winTrade || pl.tradeWith != m.eid {
+		t.Errorf("a stocked villager must open its trades, got window kind %v", pl.winKind)
+	}
+}
+
+// Villager.shouldRestock rolls the trading day over off the DAY COUNT, not off
+// waking up, so a villager with no bed — or one whose bed was broken — still
+// gets its two restocks a day. The counters persist, too: a reload used to
+// hand every villager a fresh budget.
+func TestRestockDayRollsOverWithoutABed(t *testing.T) {
+	w := world.New(37)
+	h := newHub(w)
+	players := map[int32]*tracked{}
+	m := h.spawnMob(players, entityVillager, 0, 70, 0)
+	h.initVillagerTrades(m, 0) // farmer
+	use := func() {
+		for i := range m.offers {
+			m.offers[i].uses = m.offers[i].trade.maxUses
+		}
+	}
+
+	// Two restocks, then the cap bites.
+	h.tick.Store(1000)
+	use()
+	if !h.shouldRestock(m) {
+		t.Fatal("the first restock of the day must be allowed")
+	}
+	h.restockOffers(m)
+	h.tick.Store(h.tick.Load() + restockInterval + 1)
+	use()
+	if !h.shouldRestock(m) {
+		t.Fatal("a second restock 2400 ticks later must be allowed")
+	}
+	h.restockOffers(m)
+	h.tick.Store(h.tick.Load() + restockInterval + 1)
+	use()
+	if h.shouldRestock(m) {
+		t.Fatalf("a third restock in one day must be refused (today=%d)", m.restocksToday)
+	}
+
+	// The day turns over — no bed, no sleeping, just time — and the budget
+	// comes back, with the missed restocks caught up.
+	h.dayTime.Store(h.dayTime.Load() + dayLengthTicks*2)
+	h.tick.Store(h.tick.Load() + restockDayInterval + 1)
+	use()
+	if !h.shouldRestock(m) {
+		t.Fatal("a new day must restore the restock budget")
+	}
+	if m.restocksToday != 0 {
+		t.Errorf("the daily counter is %d after the roll-over, want 0", m.restocksToday)
+	}
+	// catchUpDemand only makes up restocks the villager did NOT take, so a
+	// villager that used both of yesterday's gets nothing extra here — the
+	// restock the fresh budget allows is what unlocks its offers.
+	h.restockOffers(m)
+	for _, o := range m.offers {
+		if o.uses != 0 {
+			t.Error("the day's first restock must unlock every offer")
+			break
+		}
+	}
+
+	// A villager that took NEITHER restock has both made up for it.
+	idle := h.spawnMob(players, entityVillager, 4, 70, 0)
+	h.initVillagerTrades(idle, 0)
+	for i := range idle.offers {
+		idle.offers[i].uses = idle.offers[i].trade.maxUses
+	}
+	idle.lastRestockDay = 1
+	h.dayTime.Store(h.dayTime.Load() + dayLengthTicks)
+	h.shouldRestock(idle)
+	for _, o := range idle.offers {
+		if o.uses != 0 {
+			t.Error("catchUpDemand unlocks the offers an idle villager never restocked")
+			break
+		}
+	}
+
+	// And the budget survives the store.
+	sm := toSavedMob(m)
+	if sm.Restocks != m.restocksToday || sm.LastStock != m.lastRestockTick {
+		t.Errorf("the restock budget did not reach the store: %+v", sm)
 	}
 }

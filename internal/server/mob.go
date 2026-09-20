@@ -431,7 +431,10 @@ type mob struct {
 	tradeXP                         int        // trade experience toward the next tier
 	offers                          []mobOffer // this villager's unlocked trades (+ per-offer uses)
 	restocksToday                   int        // villager: restocks done this day (vanilla ≤2/day)
+	merchantTimer                   int32      // villager: ticks left on Villager.updateMerchantTimer
+	levelUpPending                  bool       // villager: increaseProfessionLevelOnUpdate
 	lastRestockTick                 uint64     // villager: tick of the last restock (2400-tick spacing gate)
+	lastRestockDay                  uint64     // villager: day count at the last shouldRestock check
 	gossip                          gossipBook // villager: what it holds about each player (persisted)
 	home                            blockPos   // villager house / golem well — the anchor to drift back to
 
@@ -642,6 +645,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.headYaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
 			m.yaw = m.headYaw
 			continue
+		}
+		if m.etype == entityVillager {
+			// Not reached while trading: the branch above continues out.
+			h.villagerMerchantTick(players, m)
 		}
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {

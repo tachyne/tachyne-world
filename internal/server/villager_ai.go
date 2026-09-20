@@ -68,8 +68,9 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 			// Vanilla WorkAtPoi: standing at the job-site POI restocks used
 			// offers (gated by allowedToRestock to ≤2/day, ≥2400 ticks apart) —
 			// this is the day's second restock a heavily-traded villager gets.
-			if needsRestock(m) && dist3(m.x, m.y, m.z,
-				float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5) < 2 {
+			if dist3(m.x, m.y, m.z,
+				float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5) < 2 &&
+				h.shouldRestock(m) {
 				h.restockOffers(m)
 			}
 			return h.pathSteer(m, float64(m.work.x)+0.5, float64(m.work.z)+0.5)
@@ -108,9 +109,11 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 		if night {
 			return true // still asleep
 		}
-		m.sleeping = false  // dawn — wake up
-		m.restocksToday = 0 // vanilla resets the daily restock counter each morning
-		h.restockOffers(m)  // a night's rest restocks the day's trades (restock #1)
+		m.sleeping = false // dawn — wake up
+		// A night's rest restocks the day's trades. The daily counter is NOT
+		// zeroed here any more: vanilla rolls it over in shouldRestock, off the
+		// day count, so a villager with no bed to wake from still gets its day.
+		h.restockOffers(m)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(wakeMetadata(m.eid)))
 		return false
 	}

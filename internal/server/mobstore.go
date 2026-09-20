@@ -160,12 +160,15 @@ type savedMob struct {
 	OvrDamage float64 `json:"ovd,omitempty"`
 
 	// Villager merchant identity (v2.1). Offers are saved as FULL trades, not
-	// table indices — the live unlock rotation keys off the eid, which is
-	// reminted every load, so re-rolling would shuffle a villager's stock.
+	// table indices: a tier's listings are drawn at random and several of them
+	// roll their result (an enchantment, a map, a dye), so re-deriving an
+	// offer from the table would hand the villager different stock every load.
 	Profession int          `json:"prof,omitempty"`
 	Food       int          `json:"food,omitempty"` // villager: foodLevel
 	TradeLevel int          `json:"tlvl,omitempty"`
 	TradeXP    int          `json:"txp,omitempty"`
+	Restocks   int          `json:"rst,omitempty"`  // villager: restocks taken today
+	LastStock  uint64       `json:"lrst,omitempty"` // villager: tick of the last one
 	Offers     []savedOffer `json:"offers,omitempty"`
 	Raid       [3]int       `json:"raid,omitempty"`    // raider: the raid centre it belongs to
 	Gossip     gossipBook   `json:"gossip,omitempty"`  // villager: what it holds about each player
@@ -692,6 +695,7 @@ func toSavedMob(m *mob) savedMob {
 		sm.OwnerUUID = hex.EncodeToString(m.ownerUUID[:])
 	}
 	sm.Profession, sm.TradeLevel, sm.TradeXP = m.profession, m.tradeLevel, m.tradeXP
+	sm.Restocks, sm.LastStock = m.restocksToday, m.lastRestockTick
 	sm.Food = m.vFood
 	sm.Converting, sm.Curer = m.converting, m.curer
 	sm.Charged = m.charged

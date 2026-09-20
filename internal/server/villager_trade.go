@@ -58,8 +58,7 @@ func offerFrom(t vTrade) mobOffer {
 	return o
 }
 
-// librarianProfession is the profession index whose tiers 1-4 each carry a
-// vanilla EnchantBookForEmeralds listing.
+// librarianProfession is the librarian's index (the tests name it).
 var librarianProfession = func() int {
 	for i, n := range professionNames {
 		if n == "librarian" {
@@ -69,14 +68,13 @@ var librarianProfession = func() int {
 	return -1
 }()
 
-// bookTradeXP is EnchantBookForEmeralds' villagerXp per librarian tier.
-var bookTradeXP = [5]int32{0, 1, 5, 10, 15}
-
 // rollBookOffer is VillagerTrades.EnchantBookForEmeralds.getOffer: a random
-// tradeable enchantment at a random level; the price is 2 + nextInt(5 +
-// 10·level) + 3·level emeralds, doubled for a treasure enchantment and
-// capped at 64, plus one book; 12 uses.
-func (h *hub) rollBookOffer(tier int) mobOffer {
+// #tradeable enchantment at a level drawn uniformly from its own range; the
+// price is 2 + nextInt(5 + 10·level) + 3·level emeralds, doubled for a
+// double-price enchantment and capped at 64, plus one book. With no tradeable
+// enchantment at all vanilla sells a plain book for one emerald.
+func (h *hub) rollBookOffer(t vTrade) mobOffer {
+	o := offerFrom(t)
 	var pool []int8
 	for i := range enchDefs {
 		if enchTradeAllowed(int8(i)) {
@@ -84,7 +82,8 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		}
 	}
 	if len(pool) == 0 {
-		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0, defaultPriceMult100}}
+		o.trade.inCount, o.trade.outItem = 1, itemByName["book"]
+		return o
 	}
 	id := pool[h.rng.Intn(len(pool))]
 	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
@@ -95,12 +94,9 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 	if price > 64 {
 		price = 64
 	}
-	return mobOffer{
-		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed, 0, 0, 0, defaultPriceMult100},
-		cost2Item:  itemByName["book"],
-		cost2Count: 1,
-		outEnchs:   enchList{{id: id, lvl: int8(lvl)}},
-	}
+	o.trade.inCount = int32(price)
+	o.outEnchs = enchList{{id: id, lvl: int8(lvl)}}
+	return o
 }
 
 // enchGearAllowed is EnchantmentTags.ON_TRADED_EQUIPMENT — the set a villager
@@ -323,21 +319,23 @@ func (h *hub) unlockTier(m *mob, tier int) {
 	if len(pool) == 0 {
 		return
 	}
-	// Vanilla draws listings until it has offersPerTier OFFERS, so a listing
-	// that yields none (a treasure map for another villager type, or one whose
-	// structure is out of reach) is skipped rather than costing a slot.
-	start := int(m.eid) % len(pool) // stable per-villager rotation
+	// Villager.addOffersFromItemListings: draw listings at random WITHOUT
+	// replacement until the tier has offersPerTier OFFERS. Two things follow
+	// from "offers", not "listings": a listing that yields none (a treasure
+	// map for another villager type, or one whose structure is out of reach)
+	// is skipped rather than costing a slot, and the librarian's enchanted
+	// book competes for a slot like everything else instead of being extra.
 	added := 0
-	for i := 0; i < len(pool) && added < offersPerTier; i++ {
-		o, ok := h.resolveOffer(m, pool[(start+i)%len(pool)])
+	for _, i := range h.rng.Perm(len(pool)) {
+		if added >= offersPerTier {
+			break
+		}
+		o, ok := h.resolveOffer(m, pool[i])
 		if !ok {
 			continue
 		}
 		m.offers = append(m.offers, o)
 		added++
-	}
-	if m.profession == librarianProfession && tier >= 1 && tier <= 4 {
-		m.offers = append(m.offers, h.rollBookOffer(tier)) // the tier's enchanted book
 	}
 }
 
@@ -359,29 +357,68 @@ func (h *hub) resolveOffer(m *mob, t vTrade) (mobOffer, bool) {
 		return h.rollArrowOffer(t)
 	case vTradeTypeItem:
 		return h.typeItemOffer(m, t)
+	case vTradeEnchantedBook:
+		return h.rollBookOffer(t), true
 	}
 	return offerFrom(t), true
 }
 
-// awardTradeXP credits a completed trade and promotes the villager across any
-// tier thresholds it crosses, unlocking the new tier's trades.
+// awardTradeXP is Villager.rewardTradeXp's bookkeeping half: credit the trade
+// and, if that crossed the next tier's threshold, ARM the level-up rather than
+// applying it. Vanilla waits forty ticks (Villager.updateMerchantTimer) before
+// the villager actually gains the tier, which is what the pause and the
+// sparkle after a promoting trade are. It returns whether the trade armed one,
+// because that is also what adds five to the experience orb.
 func (h *hub) awardTradeXP(m *mob, xp int32) bool {
 	m.tradeXP += int(xp)
-	promoted := false
-	for m.tradeLevel < maxTradeTier && m.tradeXP >= tierMinXP[m.tradeLevel+1] {
-		m.tradeLevel++
-		h.unlockTier(m, m.tradeLevel)
-		promoted = true
+	if !shouldIncreaseLevel(m) {
+		return false
 	}
-	if promoted && h.playersRef != nil {
-		h.sendVillagerData(h.playersRef, m) // the new tier's badge
-	}
-	return promoted
+	m.merchantTimer = merchantUpdateDelay
+	m.levelUpPending = true
+	return true
 }
 
-// restockInterval is vanilla's minimum spacing between a villager's restocks
-// (Villager.allowedToRestock: gameTime > lastRestock + 2400).
-const restockInterval = 2400
+// merchantUpdateDelay is vanilla's updateMerchantTimer, in ticks.
+const merchantUpdateDelay = 40
+
+// shouldIncreaseLevel is Villager.shouldIncreaseLevel — ONE tier at a time,
+// however much experience a single trade paid.
+func shouldIncreaseLevel(m *mob) bool {
+	return m.tradeLevel < maxTradeTier && m.tradeXP >= tierMinXP[m.tradeLevel+1]
+}
+
+// villagerMerchantTick is the Villager.customServerAiStep branch that runs the
+// armed level-up: count the delay down (never while the villager is mid-trade,
+// which the caller guarantees), then take the tier and sparkle. Vanilla grants
+// the Regeneration whenever the timer expires, promotion or not.
+func (h *hub) villagerMerchantTick(players map[int32]*tracked, m *mob) {
+	if m.merchantTimer <= 0 {
+		return
+	}
+	if m.merchantTimer -= mobMoveInterval; m.merchantTimer > 0 {
+		return
+	}
+	m.merchantTimer = 0
+	if m.levelUpPending {
+		m.levelUpPending = false
+		m.tradeLevel++
+		h.unlockTier(m, m.tradeLevel)
+		h.sendVillagerData(players, m) // the new tier's badge
+	}
+	h.applyMobEffect(players, m, effRegen, 0, 10) // REGENERATION 200 ticks, amp 0
+}
+
+const (
+	// restockInterval is vanilla's minimum spacing between a villager's
+	// restocks (Villager.allowedToRestock: gameTime > lastRestock + 2400).
+	restockInterval = 2400
+	// restockDayInterval is how long since the last restock counts as a new
+	// trading day (Villager.shouldRestock: lastRestock + 12000).
+	restockDayInterval = 12000
+	// restocksPerDay is vanilla's daily cap.
+	restocksPerDay = 2
+)
 
 // allowedToRestock is vanilla Villager.allowedToRestock: the first restock of
 // the day is free, then at most one more, and only ≥2400 ticks after the last.
@@ -389,7 +426,55 @@ func (h *hub) allowedToRestock(m *mob) bool {
 	if m.restocksToday == 0 {
 		return true
 	}
-	return m.restocksToday < 2 && h.tick.Load() > m.lastRestockTick+restockInterval
+	return m.restocksToday < restocksPerDay && h.tick.Load() > m.lastRestockTick+restockInterval
+}
+
+// shouldRestock is vanilla Villager.shouldRestock, run when the villager
+// reaches its job site: once 12000 ticks have passed since its last restock,
+// or the day count has turned over since it last looked, it catches up the
+// restocks it never took and its daily counter goes back to zero. Then the
+// ordinary gate — at most two a day, 2400 ticks apart — decides.
+//
+// This replaced "reset the counter on waking", which left a bedless villager
+// (no bed claimed, or one whose bed was broken) capped at two restocks for the
+// rest of the world's life.
+func (h *hub) shouldRestock(m *mob) bool {
+	now, day := h.tick.Load(), h.dayTime.Load()/dayLengthTicks
+	newDay := now > m.lastRestockTick+restockDayInterval ||
+		(m.lastRestockDay > 0 && day > m.lastRestockDay)
+	m.lastRestockDay = day
+	if newDay {
+		m.lastRestockTick = now
+		h.catchUpDemand(m)
+		m.restocksToday = 0
+	}
+	return h.allowedToRestock(m) && needsRestock(m)
+}
+
+// catchUpDemand is Villager.catchUpDemand: a villager that took fewer than its
+// two restocks yesterday gets the missed ones applied at once — its offers
+// unlock and their demand ages once per restock it skipped.
+func (h *hub) catchUpDemand(m *mob) {
+	n := restocksPerDay - m.restocksToday
+	if n <= 0 {
+		return
+	}
+	for i := range m.offers {
+		m.offers[i].uses = 0
+	}
+	for i := 0; i < n; i++ {
+		updateDemand(m)
+	}
+}
+
+// updateDemand is Villager.updateDemand over every offer: vanilla
+// MerchantOffer.updateDemand, where heavy use raises the demand and an idle
+// day lowers it (not clamped here; costCount floors the markup at 0).
+func updateDemand(m *mob) {
+	for i := range m.offers {
+		o := &m.offers[i]
+		o.demand = o.demand + o.uses - (o.trade.maxUses - o.uses)
+	}
 }
 
 // needsRestock is vanilla Villager.needsToRestock: any offer has been used.
@@ -403,18 +488,16 @@ func needsRestock(m *mob) bool {
 }
 
 // restockOffers refreshes a villager's trades — vanilla Villager.restock: bump
-// each offer's demand from its usage, then reset uses to 0. Gated by
-// allowedToRestock (≤2/day, ≥2400 ticks apart), so callers may invoke it freely.
+// each offer's demand from its usage, then unlock every offer. Still gated by
+// allowedToRestock so the existing callers may invoke it freely; shouldRestock
+// is the fuller gate that also rolls the day over.
 func (h *hub) restockOffers(m *mob) {
 	if !h.allowedToRestock(m) {
 		return
 	}
+	updateDemand(m)
 	for i := range m.offers {
-		o := &m.offers[i]
-		// vanilla MerchantOffer.updateDemand — heavy use raises demand, idle
-		// days lower it (not clamped here; costCount floors the markup at 0).
-		o.demand = o.demand + o.uses - (o.trade.maxUses - o.uses)
-		o.uses = 0
+		m.offers[i].uses = 0
 	}
 	m.restocksToday++
 	m.lastRestockTick = h.tick.Load()

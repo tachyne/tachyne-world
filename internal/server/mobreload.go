@@ -170,6 +170,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		}
 		m.tradeLevel = max(1, sm.TradeLevel)
 		m.tradeXP = sm.TradeXP
+		// The daily restock budget persists: without it a reloaded villager
+		// got two fresh restocks every time the world came back.
+		m.restocksToday, m.lastRestockTick = sm.Restocks, sm.LastStock
 		m.offers = nil
 		for _, o := range sm.Offers {
 			m.offers = append(m.offers, unpackOffer(o))

@@ -279,8 +279,23 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 	if t.inv == nil {
 		return
 	}
-	if m.profession < 0 || m.baby { // Villager.mobInteract: NONE and children shake their heads
+	// Villager.mobInteract. A sleeping villager is not interactable at all;
+	// a child, an unemployed one and — the case that used to open an empty
+	// screen — one whose profession has no offers left to give shake their
+	// heads instead. The "talked to a villager" statistic counts either way.
+	if m.sleeping {
+		return
+	}
+	unhappy := func() {
 		h.toTracking(h.playersRef, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerNo))
+	}
+	if m.profession < 0 || m.baby {
+		unhappy()
+		return
+	}
+	h.incCustom(t, "talked_to_villager", 1)
+	if len(m.offers) == 0 {
+		unhappy()
 		return
 	}
 	h.releaseContainerView(t)
@@ -291,7 +306,6 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 		h.nextWin = 1
 	}
 	t.winID, t.winKind = h.nextWin, winTrade
-	h.incCustom(t, "talked_to_villager", 1)
 	t.tradeWith, t.tradeSel = m.eid, 0
 	t.trade = [2]invStack{}
 

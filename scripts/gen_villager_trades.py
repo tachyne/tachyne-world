@@ -109,6 +109,9 @@ def main():
     # TippedArrowForItemsAndEmeralds(from, fromCount, to, toCount, cost, maxUses, xp).
     tafie = re.compile(r"new TippedArrowForItemsAndEmeralds\(" + cast + r"Items\.([A-Z_]+),\s*(\d+),\s*"
                        + cast + r"Items\.([A-Z_]+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)")
+    # EnchantBookForEmeralds(villagerXp, EnchantmentTags.TRADEABLE): an
+    # ordinary listing in the librarian's pool, competing for the tier's slots.
+    ebfe = re.compile(r"new EnchantBookForEmeralds\((\d+),\s*(?:\(TagKey<Enchantment>\)\s*)?EnchantmentTags\.TRADEABLE\)")
     # EmeraldsForVillagerTypeItem(cost, maxUses, xp, {type: item, ...}).
     efvti = re.compile(r"new EmeraldsForVillagerTypeItem\((\d+),\s*(\d+),\s*(\d+),")
     vtype_item = re.compile(r"put\(VillagerType\.([A-Z_]+),\s*(?:\(Object\)\s*)?Items\.([A-Z_]+)\)")
@@ -208,6 +211,11 @@ def main():
                 trades.append((m.start(), (emerald, int(m.group(5)), tid, int(m.group(4)),
                                            int(m.group(6)), int(m.group(7)), "arrow", 0,
                                            fid, int(m.group(2)), 5)))
+            for m in ebfe.finditer(seg):
+                # The price and the enchantment are rolled; inCount is a
+                # placeholder rollBookOffer replaces.
+                trades.append((m.start(), (emerald, 0, ids["enchanted_book"], 1, 12,
+                                           int(m.group(1)), "book", 0, ids["book"], 1, 20)))
             for m in efvti.finditer(seg):
                 per = {}
                 for t in vtype_item.finditer(seg[m.end():m.end() + 1200]):
@@ -226,7 +234,7 @@ def main():
                         - len(eife.findall(seg)) - len(tmfe.findall(seg))
                         - len(iaeti.findall(seg)) - len(dafe.findall(seg))
                         - len(ssfe.findall(seg)) - len(tafie.findall(seg))
-                        - len(efvti.findall(seg)))
+                        - len(efvti.findall(seg)) - len(ebfe.findall(seg)))
             if trades:
                 table[pi][tier] = trades
 
@@ -274,6 +282,7 @@ def main():
         f.write("\tvTradeStew          int32 = 4 // SuspiciousStewForEmerald\n")
         f.write("\tvTradeTippedArrow   int32 = 5 // TippedArrowForItemsAndEmeralds\n")
         f.write("\tvTradeTypeItem      int32 = 6 // EmeraldsForVillagerTypeItem\n")
+        f.write("\tvTradeEnchantedBook int32 = 7 // EnchantBookForEmeralds\n")
         f.write(")\n\n")
         f.write("// vMapListing is the rest of a TreasureMapForEmeralds row: the structure\n")
         f.write("// the map points at, the decoration that marks it, the name the map\n")
@@ -323,6 +332,8 @@ def main():
                         kind = "vTradeTippedArrow"
                     elif kind == "typeitem":
                         kind = "vTradeTypeItem"
+                    elif kind == "book":
+                        kind = "vTradeEnchantedBook"
                     f.write(f"{{{ii}, {ic}, {oi}, {oc}, {mu}, {xp}, {kind}, {aux}, {c2i}, {c2n}, {mult}}}, ")
                 f.write("},\n")
             f.write("\t},\n")
