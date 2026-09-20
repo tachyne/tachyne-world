@@ -45,6 +45,15 @@ the public history since the project was open-sourced on 2026-07-10.
   it will not wander off while you have its window open.
 
 ### Changed
+- **Death messages say what killed you.** Starving, falling out of the world
+  and withering away all read "<name> died", along with ten other ways to go
+  that had no message at all. Every one now reads what the real game reads,
+  word for word, including the forms it uses when somebody is to blame — "was
+  slain by X using Excalibur", "walked into a cactus while trying to escape
+  Zombie" — and a creeper is credited for blowing you up instead of you simply
+  blowing up. Landing on a stalagmite is also its own kind of harm now rather
+  than a fall with a different name, so it goes through armour and a shield
+  the way it should.
 - **Difficulty changes what hurts you, and by how much.** The difficulty used
   to multiply a hostile mob's bite and nothing else, so an explosion, an
   arrow, a fall or a lava bath did the same damage on Peaceful as on Hard,
@@ -64,6 +73,12 @@ the public history since the project was open-sourced on 2026-07-10.
   — or that never claimed one — stopped restocking for good after its first
   two. Its trading day now turns over on the clock, catching up the restocks it
   missed, and the day's budget survives a restart instead of resetting to full.
+- **Firework rockets go off with a bang.** A rocket packed with stars did
+  nothing to anyone, which is most of the reason to load one into a crossbow.
+  It now deals the real game's damage — five plus two a star, at full strength
+  to whoever it is boosting and softened by distance for anything else within
+  five blocks — and a wall between you and the burst still saves you. A plain
+  rocket with no star in it stays perfectly safe to fly with.
 - **Fire follows the real game's rule, not an invented one.** The engine kept
   a `fire_ticks` switch of its own making; the real game replaced that switch
   in 1.21.9 with `fire_spread_radius_around_player`, a distance. Fire now
