@@ -204,3 +204,62 @@ func (h *hub) yieldJobSite(m *mob, prof int) {
 		return
 	}
 }
+
+// AcquirePoi(HOME) — claiming a bed at runtime. A villager born without one,
+// or one whose bed was broken, looks for a free bed nearby and takes it, so
+// building a house for the village actually houses somebody.
+const (
+	bedSearchRange  = 16  // the same scan the workstation search uses
+	bedSearchRangeY = 4   //
+	bedSearchEvery  = 400 // ticks between scans (vanilla retries on a backoff)
+)
+
+// villagerBedTick gives a bedless villager a bed when one is free nearby.
+func (h *hub) villagerBedTick(m *mob) {
+	if m.etype != entityVillager || m.dying > 0 || m.baby {
+		return
+	}
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return
+	}
+	if m.bed != (blockPos{}) {
+		if !isBedBlock(w.Block(m.bed.x, m.bed.y, m.bed.z)) {
+			m.bed, m.home = blockPos{}, blockPos{} // somebody took the bed away
+		}
+		return
+	}
+	now := h.tick.Load()
+	if now < m.bedSearchAt {
+		return
+	}
+	m.bedSearchAt = now + bedSearchEvery + uint64(h.rng.Intn(bedSearchEvery/2))
+	mx, my, mz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	best, bestD := blockPos{}, math.MaxFloat64
+	for dx := -bedSearchRange; dx <= bedSearchRange; dx++ {
+		for dz := -bedSearchRange; dz <= bedSearchRange; dz++ {
+			for dy := -bedSearchRangeY; dy <= bedSearchRangeY; dy++ {
+				pos := blockPos{mx + dx, my + dy, mz + dz}
+				if !isBedBlock(w.Block(pos.x, pos.y, pos.z)) || h.bedClaimed(pos, m) {
+					continue
+				}
+				if d := float64(dx*dx + dy*dy + dz*dz); d < bestD {
+					best, bestD = pos, d
+				}
+			}
+		}
+	}
+	if bestD < math.MaxFloat64 {
+		m.bed, m.home = best, best
+	}
+}
+
+// bedClaimed reports whether another villager already sleeps in this bed.
+func (h *hub) bedClaimed(pos blockPos, self *mob) bool {
+	for _, o := range h.mobs {
+		if o != self && o.etype == entityVillager && o.dying == 0 && o.bed == pos {
+			return true
+		}
+	}
+	return false
+}

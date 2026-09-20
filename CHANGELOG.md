@@ -28,6 +28,14 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Villagers stand still to trade, and take the bed you built them.** A
+  villager kept walking its schedule while its trade screen was open, so
+  the shop wandered off mid-deal; it stands and faces its customer now,
+  as vanilla's trading sink does. And a villager with no bed — one born
+  without one, or one whose bed was broken — looks for a free bed within
+  sixteen blocks and claims it, so adding a house to a village houses
+  somebody instead of leaving them standing in the square. A bed that is
+  broken is given up again, and two villagers never share one.
 - **Fish shoal, and dart away from you.** Cod, salmon and tropical fish
   swam as a scatter of singletons and let you swim right up to them. They
   now form schools the way vanilla's do — one fish leads, up to four

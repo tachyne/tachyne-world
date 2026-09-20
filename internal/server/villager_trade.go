@@ -195,3 +195,18 @@ func (h *hub) restockOffers(m *mob) {
 	m.restocksToday++
 	m.lastRestockTick = h.tick.Load()
 }
+
+// tradingPartner is the player whose trade screen this villager is serving,
+// if any — vanilla's tradingPlayer, which pins the villager in place and
+// turns its head (LookAndFollowTradingPlayerSink).
+func (h *hub) tradingPartner(players map[int32]*tracked, m *mob) *tracked {
+	if m.etype != entityVillager && m.etype != entityWanderingTrader {
+		return nil
+	}
+	for _, t := range players {
+		if t.winKind == winTrade && t.tradeWith == m.eid {
+			return t
+		}
+	}
+	return nil
+}

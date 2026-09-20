@@ -222,3 +222,65 @@ func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 		t.Errorf("offer store round trip lost data: %+v vs %+v", back, *book)
 	}
 }
+
+// A villager with its trade screen open stands still and faces the customer
+// (LookAndFollowTradingPlayerSink).
+func TestTradingVillagerStandsAndFaces(t *testing.T) {
+	h := newHub(world.New(7))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 10, 70, 0
+	m := h.spawnSpecies(players, entityVillager, 0, 0, 70, 0)
+	if m == nil {
+		t.Fatal("no villager")
+	}
+	if h.tradingPartner(players, m) != nil {
+		t.Fatal("nobody is trading with it yet")
+	}
+	h.openTrades(pl, m)
+	if got := h.tradingPartner(players, m); got != pl {
+		t.Fatalf("the customer should be the trading partner, got %v", got)
+	}
+	m.vx, m.vz = 1, 1
+	h.updateMobs(players)
+	if m.vx != 0 || m.vz != 0 {
+		t.Errorf("a trading villager stands still, got %v %v", m.vx, m.vz)
+	}
+	if m.headYaw < -95 || m.headYaw > -85 { // the customer is due +x: yaw -90
+		t.Errorf("it should face the customer, headYaw=%v", m.headYaw)
+	}
+}
+
+// AcquirePoi(HOME): a villager with no bed claims a free one nearby, gives
+// it up when it is broken, and never takes one another villager sleeps in.
+func TestVillagerClaimsAPlacedBed(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	m := h.spawnSpecies(players, entityVillager, 0, 0.5, 70, 0.5)
+	if m == nil {
+		t.Fatal("no villager")
+	}
+	m.bed, m.home = blockPos{}, blockPos{}
+	bed := blockPos{3, 70, 0}
+	h.world.SetBlock(bed.x, bed.y, bed.z, worldgen.BlockBase("red_bed"))
+	if !isBedBlock(h.world.At(bed.x, bed.y, bed.z)) {
+		t.Fatal("test fixture: that is not a bed")
+	}
+	h.villagerBedTick(m)
+	if m.bed != bed {
+		t.Fatalf("a bedless villager should claim the bed, got %+v", m.bed)
+	}
+	// Another villager cannot take the same bed.
+	o := h.spawnSpecies(players, entityVillager, 0, 1.5, 70, 0.5)
+	o.bed, o.home, o.bedSearchAt = blockPos{}, blockPos{}, 0
+	h.villagerBedTick(o)
+	if o.bed == bed {
+		t.Error("two villagers must not share a bed")
+	}
+	// Break it and the claim goes.
+	h.world.SetBlock(bed.x, bed.y, bed.z, worldgen.Air)
+	h.villagerBedTick(m)
+	if m.bed != (blockPos{}) {
+		t.Errorf("a broken bed should be forgotten, still %+v", m.bed)
+	}
+}

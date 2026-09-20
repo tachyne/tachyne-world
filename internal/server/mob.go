@@ -106,6 +106,7 @@ type mob struct {
 	schoolLeader    int32    // fish: the leader it follows (FollowFlockLeaderGoal)
 	schoolFollowers int      // …or how many follow IT
 	schoolNext      int      // …and the ticks before it looks for a school again
+	bedSearchAt     uint64   // villager: the tick its next AcquirePoi(HOME) scan is due
 	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
@@ -606,6 +607,15 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// Villagers run a daily schedule: at night they lie in their bed (held
 		// still); by day they open the wooden door in their way BEFORE the step
 		// below, so an open door (not a wall) is what the walk test sees this tick.
+		if t := h.tradingPartner(players, m); t != nil {
+			// LookAndFollowTradingPlayerSink: a villager with its trade screen
+			// open stands where it is and faces the customer — it does not
+			// wander off to its bed or its workstation mid-deal.
+			m.vx, m.vz = 0, 0
+			m.headYaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
+			m.yaw = m.headYaw
+			continue
+		}
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {
 				continue // asleep in bed — no movement this tick
