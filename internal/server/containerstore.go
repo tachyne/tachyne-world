@@ -77,6 +77,10 @@ type containerFile struct {
 	// touched stack first.
 	Bundles      map[string][]stackRow `json:"bundles,omitempty"`
 	NextBundleID int32                 `json:"next_bundle_id,omitempty"`
+	// Firework bursts riding a star or a rocket, keyed by starID. A star has
+	// one; a rocket has up to seven.
+	Stars      map[string][]fireworkBurst `json:"stars,omitempty"`
+	NextStarID int32                      `json:"next_star_id,omitempty"`
 	// Custom item names by id (names.go). Loaded before any other store
 	// decodes a stack, because unpackStack resolves nameIDs through it.
 	Names      map[string]string `json:"names,omitempty"`
@@ -976,6 +980,37 @@ func (s *containerStore) recordBundles(bs *bundleStore) {
 	s.mu.Lock()
 	s.m.Bundles, s.m.NextBundleID = snap, last
 	s.mu.Unlock()
+}
+
+// recordStars snapshots every firework's bursts for the save file.
+func (s *containerStore) recordStars(ss *starStore) {
+	if ss == nil {
+		return
+	}
+	items, last := ss.snapshot()
+	snap := make(map[string][]fireworkBurst, len(items))
+	for id, bursts := range items {
+		if len(bursts) > 0 {
+			snap[strconv.Itoa(int(id))] = bursts
+		}
+	}
+	s.mu.Lock()
+	s.m.Stars, s.m.NextStarID = snap, last
+	s.mu.Unlock()
+}
+
+// loadStars rebuilds the firework-burst store from the save file.
+func (s *containerStore) loadStars() *starStore {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := newStarStore()
+	for k, bursts := range s.m.Stars {
+		if id, err := strconv.Atoi(k); err == nil {
+			out.items[int32(id)] = bursts
+		}
+	}
+	out.lastID = s.m.NextStarID
+	return out
 }
 
 // loadBundles rebuilds the bundle store from the save file.

@@ -30,6 +30,15 @@ the public history since the project was open-sourced on 2026-07-10.
   kept, and came back when the box was placed, but nothing said so until
   you put it down again. The box now carries its contents to the client, so
   the first few appear under its name in the tooltip the way they should.
+- **Fireworks have stars.** A rocket was three gunpowder-and-paper and
+  nothing else: it always flew the same short hop and always burst as
+  nothing. The gunpowder now sets the flight duration it was always meant
+  to, and firework stars are craftable — gunpowder and dyes give a burst its
+  colours, a fire charge, feather, gold nugget or any mob head give it its
+  shape, glowstone dust makes it twinkle and a diamond gives it a trail, and
+  a second pass with more dyes sets the colours it fades to. Up to seven
+  stars go into one rocket, and the rocket carries every one of them to the
+  client, so what goes up is what you built.
 - **A raid captain's bottle keeps its own level.** The bottle stores its Bad
   Omen level in the same place a potion stores its brew, so it now goes out
   with its own component instead of being mistaken for whichever potion

@@ -195,6 +195,8 @@ const (
 	componentRepairCost     = 16 // repair_cost (the anvil's prior-work penalty); remapped per version
 	componentContainer      = 66 // container (a shulker box's contents, in its tooltip); remapped per version
 	componentOminousBottle  = 54 // ominous_bottle_amplifier (the Bad Omen level); remapped per version
+	componentFireworks      = 60 // fireworks (a rocket's flight duration + bursts); remapped per version
+	componentFireworkStar   = 59 // firework_explosion (one star's burst); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -277,6 +279,12 @@ func stackComponents(st invStack) []byte {
 		comps++
 	}
 	if st.repairCost > 0 {
+		comps++
+	}
+	if st.item == itemFireworkRocket {
+		comps++
+	}
+	if st.item == itemFireworkStar && len(burstsOf(st)) == 1 {
 		comps++
 	}
 	var bookBytes []byte
@@ -388,6 +396,25 @@ func stackComponents(st invStack) []byte {
 	if st.repairCost > 0 {
 		b = protocol.AppendVarInt(b, componentRepairCost)
 		b = protocol.AppendVarInt(b, int32(st.repairCost))
+	}
+	if st.item == itemFireworkRocket {
+		// fireworks: how long the rocket flies, then the bursts it shows.
+		bursts := burstsOf(st)
+		if len(bursts) > maxRocketBursts {
+			bursts = bursts[:maxRocketBursts]
+		}
+		b = protocol.AppendVarInt(b, componentFireworks)
+		b = protocol.AppendVarInt(b, int32(rocketFlight(st)))
+		b = protocol.AppendVarInt(b, int32(len(bursts)))
+		for _, e := range bursts {
+			b = appendBurst(b, e)
+		}
+	}
+	if bursts := burstsOf(st); st.item == itemFireworkStar && len(bursts) == 1 {
+		// firework_explosion: the single burst a star carries, which is what
+		// draws its colours in the tooltip and on the item itself.
+		b = protocol.AppendVarInt(b, componentFireworkStar)
+		b = appendBurst(b, bursts[0])
 	}
 	if boxBytes != nil {
 		// container: what a broken shulker box is carrying. The client draws

@@ -49,6 +49,14 @@ type invStack struct {
 	// Goat horn: which of the eight instruments this horn sounds (0 = ponder,
 	// which is also what an unset horn plays).
 	instrument int8
+	// Firework rocket flight duration, 1-3 (0 = an unset rocket, which flies
+	// as 1 does). The gunpowder in its recipe is what sets it.
+	flight int8
+	// Firework bursts (0 = none): a star's one burst or a rocket's up to
+	// seven live in the hub's star store. Same indirection as bundles, for
+	// the same reason — the list is variable-length and invStack is
+	// comparable.
+	starID int32
 	// Lodestone compass target (lodestone.go); zero = a plain compass.
 	lode lodeTracker
 	// Shulker-box identity (0 = none): the 27 slots live in the hub's box

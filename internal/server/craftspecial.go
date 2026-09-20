@@ -61,7 +61,13 @@ func (h *hub) specialCraftMatch(grid []invStack, w int) (invStack, int, bool) {
 	if res, ok := bannerDuplicateMatch(grid); ok {
 		return res, craftKeepPattern, true
 	}
-	if res, ok := fireworkRocketMatch(grid); ok {
+	if res, ok := h.fireworkStarMatch(grid); ok {
+		return res, mapCraftNone, true
+	}
+	if res, ok := h.fireworkStarFadeMatch(grid); ok {
+		return res, mapCraftNone, true
+	}
+	if res, ok := h.fireworkRocketMatch(grid); ok {
 		return res, mapCraftNone, true
 	}
 	if res, ok := h.bookCloneMatch(grid); ok {
@@ -222,17 +228,24 @@ func bannerDuplicateMatch(grid []invStack) (invStack, bool) {
 	return res, true
 }
 
-// fireworkRocketMatch is FireworkRocketRecipe without stars: one paper
-// and one to three gunpowder make three rockets (the gunpowder count is
-// the flight duration, which the engine's rocket does not yet carry).
-func fireworkRocketMatch(grid []invStack) (invStack, bool) {
+// fireworkRocketMatch is FireworkRocketRecipe: one paper and one to three
+// gunpowder make three rockets, the gunpowder count being the flight
+// duration, and up to seven firework stars ride along as the bursts the
+// rocket shows.
+func (h *hub) fireworkRocketMatch(grid []invStack) (invStack, bool) {
 	paper, powder := 0, 0
+	var bursts []fireworkBurst
 	for _, st := range gridStacks(grid) {
-		switch st.item {
-		case itemPaper:
+		switch {
+		case st.item == itemPaper:
 			paper += st.count
-		case itemGunpowder:
+		case st.item == itemGunpowder:
 			powder++
+		case st.item == itemFireworkStar:
+			if len(bursts) >= maxRocketBursts {
+				return invStack{}, false
+			}
+			bursts = append(bursts, burstsOf(st)...)
 		default:
 			return invStack{}, false
 		}
@@ -240,8 +253,90 @@ func fireworkRocketMatch(grid []invStack) (invStack, bool) {
 	if paper != 1 || powder < 1 || powder > 3 {
 		return invStack{}, false
 	}
-	return invStack{item: itemFireworks, count: 3}, true
+	return invStack{item: itemFireworks, count: 3, flight: int8(powder),
+		starID: h.stars.intern(bursts)}, true
 }
+
+// fireworkStarMatch is FireworkStarRecipe: gunpowder, at least one dye, and
+// at most one each of a shape item, glowstone dust (twinkle) and a diamond
+// (trail). The dyes give the burst its colours, in grid order.
+func (h *hub) fireworkStarMatch(grid []invStack) (invStack, bool) {
+	burst := fireworkBurst{Shape: burstSmallBall}
+	var powder, shapes, twinkles, trails int
+	for _, st := range gridStacks(grid) {
+		switch {
+		case burstShapeOf[st.item] != 0:
+			shapes++
+			burst.Shape = burstShapeOf[st.item] - 1
+		case st.item == itemGlowstone:
+			twinkles++
+			burst.Twinkle = true
+		case st.item == itemDiamond:
+			trails++
+			burst.Trail = true
+		case st.item == itemGunpowder:
+			powder++
+		default:
+			c, isDye := dyeColorOf[st.item]
+			if !isDye {
+				return invStack{}, false
+			}
+			burst.Colors = append(burst.Colors, dyeFireworkColor[c])
+		}
+	}
+	if powder != 1 || shapes > 1 || twinkles > 1 || trails > 1 || len(burst.Colors) == 0 {
+		return invStack{}, false
+	}
+	return invStack{item: itemFireworkStar, count: 1,
+		starID: h.stars.intern([]fireworkBurst{burst})}, true
+}
+
+// fireworkStarFadeMatch is FireworkStarFadeRecipe: one finished star and at
+// least one dye give it the colours it fades to. Everything else about the
+// star is kept.
+func (h *hub) fireworkStarFadeMatch(grid []invStack) (invStack, bool) {
+	var burst fireworkBurst
+	stars, fade := 0, []int32(nil)
+	for _, st := range gridStacks(grid) {
+		if st.item == itemFireworkStar {
+			stars++
+			if b := burstsOf(st); len(b) == 1 {
+				burst = b[0]
+			}
+			continue
+		}
+		c, isDye := dyeColorOf[st.item]
+		if !isDye {
+			return invStack{}, false
+		}
+		fade = append(fade, dyeFireworkColor[c])
+	}
+	if stars != 1 || len(fade) == 0 || len(burst.Colors) == 0 {
+		return invStack{}, false
+	}
+	burst.Fade = fade
+	return invStack{item: itemFireworkStar, count: 1,
+		starID: h.stars.intern([]fireworkBurst{burst})}, true
+}
+
+// burstShapeOf maps the shape-setting ingredients to their shape, stored +1
+// so the zero value means "not a shape item" (SHAPE_BY_ITEM).
+var burstShapeOf = func() map[int32]int8 {
+	m := map[int32]int8{}
+	set := func(name string, shape int8) {
+		if id := int32(itemByName[name]); id != 0 {
+			m[id] = shape + 1
+		}
+	}
+	set("fire_charge", burstLargeBall)
+	set("feather", burstBurst)
+	set("gold_nugget", burstStar)
+	for _, head := range []string{"skeleton_skull", "wither_skeleton_skull", "creeper_head",
+		"player_head", "dragon_head", "zombie_head", "piglin_head"} {
+		set(head, burstCreeper)
+	}
+	return m
+}()
 
 // bookCloneMatch is BookCloningRecipe: a written book below generation
 // two and any number of book-and-quills make that many copies, a

@@ -107,7 +107,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow = [30]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8; older rows load with the tail zero
+type stackRow = [32]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -133,6 +133,8 @@ func packStack(st invStack) stackRow {
 	r[27] = int32(st.shieldBase) // base_color, a decorated shield (column 27)
 	r[28] = packEnch3(st.ench)   // enchantments 5-6 (column 28)
 	r[29] = packEnch4(st.ench)   // enchantments 7-8 (column 29)
+	r[30] = int32(st.flight)     // a rocket's flight duration (column 30)
+	r[31] = st.starID            // a firework's bursts (column 31)
 	return r
 }
 
@@ -154,6 +156,8 @@ func unpackStack(r stackRow) invStack {
 	st.color = r[25]
 	st.stew = int8(r[26])
 	st.shieldBase = int8(r[27])
+	st.flight = int8(r[30])
+	st.starID = r[31]
 	return st
 }
 

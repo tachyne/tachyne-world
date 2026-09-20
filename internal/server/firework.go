@@ -30,8 +30,17 @@ const (
 	fireworkLaunchVY  = 0.05
 	fireworkBoostPull = 1.5 // how hard a glider is pulled toward their look
 	fireworkBoostAdd  = 0.1
-	fireworkFlight    = 1 // no flight-duration component on stacks yet
+	fireworkFlightMax = 3 // Fireworks.flightDuration is 1-3 from the recipe
 )
+
+// rocketFlight is a stack's flight duration, with vanilla's default for a
+// rocket that has none (a spawn-egg rocket, a dispenser fed an old stack).
+func rocketFlight(st invStack) int {
+	if st.flight < 1 {
+		return 1
+	}
+	return min(fireworkFlightMax, int(st.flight))
+}
 
 // rocketEntity is a rocket in the air. Attached rockets ride their player and
 // steer them; loose ones fly their own arc.
@@ -68,20 +77,21 @@ func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
 	if !t.gliding() {
 		return
 	}
+	flight := rocketFlight(heldStack(t))
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid)
+	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, flight)
 }
 
 // spawnRocket puts one in the air. attached is the eid it boosts, or 0.
-func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, attached int32) *rocketEntity {
+func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, attached int32, flight int) *rocketEntity {
 	eid := h.allocEID()
 	r := &rocketEntity{
 		eid: eid, dim: dim, x: x, y: y, z: z,
 		sx: x, sy: y, sz: z,
 		vy:       fireworkLaunchVY,
-		lifetime: fireworkLifeBase*(1+fireworkFlight) + h.rng.Intn(6) + h.rng.Intn(7),
+		lifetime: fireworkLifeBase*(1+flight) + h.rng.Intn(6) + h.rng.Intn(7),
 		attached: attached,
 	}
 	binary.BigEndian.PutUint32(r.uuid[12:], uint32(eid))

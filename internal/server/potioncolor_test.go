@@ -231,3 +231,41 @@ func TestOminousBottleIsNotABrew(t *testing.T) {
 		t.Errorf("amplifier %d, want 3 (level 4)", amp)
 	}
 }
+
+// A rocket's flight duration comes from the gunpowder in its recipe, survives
+// a save, reaches the client, and is what decides how long it flies.
+func TestRocketFlightDuration(t *testing.T) {
+	h := newHub(world.New(1))
+	for powder := 1; powder <= 3; powder++ {
+		grid := make([]invStack, 9)
+		grid[0] = invStack{item: itemPaper, count: 1}
+		for i := 0; i < powder; i++ {
+			grid[1+i] = invStack{item: itemGunpowder, count: 1}
+		}
+		res, ok := h.fireworkRocketMatch(grid)
+		if !ok {
+			t.Fatalf("%d gunpowder: no rocket", powder)
+		}
+		if int(res.flight) != powder {
+			t.Errorf("%d gunpowder made flight %d", powder, res.flight)
+		}
+		if got := unpackStack(packStack(res)); got.flight != res.flight {
+			t.Errorf("flight %d did not survive a save (got %d)", res.flight, got.flight)
+		}
+		// …and it is on the wire, where the tooltip reads it.
+		r := bytes.NewReader(appendStack(nil, res))
+		for i := 0; i < 4; i++ {
+			protocol.ReadVarInt(r)
+		}
+		if cid, _ := protocol.ReadVarInt(r); cid != componentFireworks {
+			t.Fatalf("component %d, want fireworks (%d)", cid, componentFireworks)
+		}
+		if dur, _ := protocol.ReadVarInt(r); int(dur) != powder {
+			t.Errorf("wire flight duration %d, want %d", dur, powder)
+		}
+	}
+	// A rocket with nothing set still flies, as vanilla's default one does.
+	if got := rocketFlight(invStack{item: itemFireworkRocket, count: 1}); got != 1 {
+		t.Errorf("an unset rocket flies %d, want 1", got)
+	}
+}
