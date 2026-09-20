@@ -201,6 +201,8 @@ func (r *remotePlayer) Action(v any) {
 			p.sprinting = false
 		case 5: // START_RIDING_JUMP: a camel dashes (horses jump client-side)
 			h.post(evRidingJump{eid: p.eid})
+		case 8: // START_FALL_FLYING: the jump pressed in mid-air on an elytra
+			h.post(evFallFly{eid: p.eid})
 		}
 	case attachproto.RespawnReq:
 		h.post(evRespawn{eid: p.eid})

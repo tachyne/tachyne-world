@@ -10,9 +10,10 @@ import (
 // bit. Invisibility and Glowing set two of the others, so composing them in one
 // place is now load-bearing rather than tidy.
 const (
-	entFlagOnFire    = 0x01
-	entFlagInvisible = 0x20
-	entFlagGlowing   = 0x40
+	entFlagOnFire     = 0x01
+	entFlagInvisible  = 0x20
+	entFlagGlowing    = 0x40
+	entFlagFallFlying = 0x80 // an elytra actually in flight (Entity FLAG_FALL_FLYING)
 )
 
 // playerEntityFlags packs every flag bit a player's current state implies.
@@ -26,6 +27,11 @@ func playerEntityFlags(t *tracked) byte {
 	}
 	if t.hasEffect(effGlowing) > 0 {
 		f |= entFlagGlowing
+	}
+	if t.fallFlying {
+		// What makes OTHER clients draw the glide: the pose follows this bit,
+		// so without it a player on an elytra reads as falling, arms down.
+		f |= entFlagFallFlying
 	}
 	return f
 }

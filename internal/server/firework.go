@@ -61,9 +61,23 @@ type evUseFirework struct{ eid int32 }
 func (evUseFirework) isHubEvent() {}
 
 // gliding reports whether a player is in elytra flight — the condition that
-// turns a rocket from a firework into a thruster.
-func (t *tracked) gliding() bool {
+// turns a rocket from a firework into a thruster. It is the client's own
+// START_FALL_FLYING that begins it, exactly as vanilla has it: merely being
+// in the air wearing an elytra is falling, not flying, and a rocket used
+// while falling should go off in your hand rather than carry you.
+// canStartFallFlying is ServerGamePacketListener's check on
+// START_FALL_FLYING: the server does not take the client's word for it. You
+// must be off the ground and in a serviceable elytra, or anyone could glide
+// along the floor.
+func canStartFallFlying(t *tracked) bool {
 	return !t.onGround && t.armor[1].item == itemElytra
+}
+
+func (t *tracked) gliding() bool {
+	// Both, deliberately: the flag is cleared on landing anyway, but reading
+	// the ground here too means a clear that never arrives cannot leave
+	// somebody gliding along the floor for the rest of the session.
+	return t.fallFlying && !t.onGround && t.armor[1].item == itemElytra
 }
 
 // useFirework fires the held rocket. Used while gliding it attaches to the

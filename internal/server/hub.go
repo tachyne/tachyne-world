@@ -253,9 +253,13 @@ type tracked struct {
 	launchCause    string     // "wind_charge" until the next landing (fall_after_explosion)
 	lastCause      deathCause // what last hurt them — the death message is made of this
 	onGround       bool
-	sprinting      bool // last reported sprint state (crit/knockback modifiers)
-	gamemode       int
-	hudOn          bool
+	// fallFlying is elytra flight proper (Entity FLAG_FALL_FLYING): begun by
+	// the client's own START_FALL_FLYING, ended by landing or by taking the
+	// elytra off. Falling while wearing one is NOT this.
+	fallFlying bool
+	sprinting  bool // last reported sprint state (crit/knockback modifiers)
+	gamemode   int
+	hudOn      bool
 
 	lastAttack    uint64 // tick of the last melee swing (attack-cooldown scaling)
 	drawingAt     uint64 // tick a bow draw began (0 = not drawing)
@@ -2087,6 +2091,17 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.applyToolWear(t, e.slot, 1)
 				}
+			case evFallFly:
+				if t := players[e.eid]; t != nil {
+					// ServerGamePacketListener refuses the start unless the
+					// player is actually airborne in a serviceable elytra —
+					// otherwise a client could glide off the ground.
+					on := canStartFallFlying(t)
+					if on != t.fallFlying {
+						t.fallFlying = on
+						h.broadcastPlayerFlags(players, t)
+					}
+				}
 			case evSneak:
 				if t := players[e.eid]; t != nil {
 					pose := int32(poseStanding)
@@ -2306,6 +2321,12 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
+	// LivingEntity.updateFallFlying: touching the ground ends the glide, and
+	// so does losing the elytra mid-air.
+	if t.fallFlying && (t.onGround || t.armor[1].item != itemElytra) {
+		t.fallFlying = false
+		h.broadcastPlayerFlags(players, t)
+	}
 	h.wakeIfAway(players, t) // walking off ends a bed sleep
 	// The two LOCATION_CHANGED boots enchantments fire from a position change,
 	// which is exactly here.

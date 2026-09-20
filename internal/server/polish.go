@@ -71,6 +71,12 @@ func poseMeta(eid int32, pose int32) []byte {
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
+// evFallFly is the client's START_FALL_FLYING: the jump pressed in mid-air
+// with an elytra on. The server decides whether it takes.
+type evFallFly struct{ eid int32 }
+
+func (evFallFly) isHubEvent() {}
+
 type evSneak struct {
 	eid      int32
 	sneaking bool

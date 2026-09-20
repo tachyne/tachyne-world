@@ -113,8 +113,17 @@ func TestFireworkBoostsOnlyAGlider(t *testing.T) {
 		t.Fatal("a rocket fired from the hand while standing")
 	}
 
+	// Falling in an elytra is falling, not flying: a rocket used then goes off
+	// in the hand. Gliding starts when the CLIENT says so (START_FALL_FLYING),
+	// exactly as vanilla has it.
 	pl.onGround = false
 	pl.armor[1] = invStack{item: itemElytra, count: 1}
+	h.useFirework(players, pl)
+	if len(h.rockets) != 0 {
+		t.Fatalf("a rocket boosted someone who was only falling, have %d", len(h.rockets))
+	}
+
+	pl.fallFlying = true
 	h.useFirework(players, pl)
 	if len(h.rockets) != 1 {
 		t.Fatalf("gliding should launch a rocket, have %d", len(h.rockets))
