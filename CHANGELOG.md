@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **Reports get answered.** A reply can be sent to a player in game, and if
+  they are not online it waits and arrives the moment they next join —
+  which is the usual case, since whoever answers a report is rarely at a
+  keyboard at the same time as whoever filed it. An answer tied to a report
+  is recorded against it, so the list shows what has been dealt with.
 - **`/bug` files a report with the world attached.** Typing
   `/bug <what went wrong>` records not just the message but the fifteen
   blocks around you — every block and the properties that differ from its

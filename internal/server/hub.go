@@ -2179,6 +2179,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		nt.adv = advState{}
 	}
 	h.advSendAll(nt)
+	h.deliverQueuedReplies(nt) // anything answered while they were away
 	if h.statstore != nil {
 		nt.stats = h.statstore.load(e.p.name)
 	}

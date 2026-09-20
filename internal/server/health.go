@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/pprof"
@@ -146,6 +147,43 @@ func (s *Server) serveHealth(addr string) {
 	mux.HandleFunc("/debug/bugs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(h.bugs.snapshot())
+	})
+
+	// Answer a report, or just tell somebody something. POST
+	// {"player":"Name","text":"…","bug":7}; bug is optional and records the
+	// answer against that report. A player who is not online gets it on their
+	// next join, which is the usual case — the person answering is rarely at a
+	// keyboard at the same time as the person who asked.
+	//
+	// This is the one WRITE on an otherwise read-only listener. It is
+	// cluster-internal and reachable only with the kubeconfig, which already
+	// permits far more than sending a chat line; every reply is logged.
+	mux.HandleFunc("/debug/reply", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "POST only", http.StatusMethodNotAllowed)
+			return
+		}
+		var a struct {
+			Player string `json:"player"`
+			Text   string `json:"text"`
+			Bug    int    `json:"bug"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&a); err != nil ||
+			a.Player == "" || a.Text == "" {
+			http.Error(w, "need {player, text[, bug]}", http.StatusBadRequest)
+			return
+		}
+		done := make(chan bool, 1)
+		h.post(evRunOnHub{fn: func() {
+			done <- h.queueReply(h.playersRef, a.Player, a.Text, a.Bug)
+		}})
+		select {
+		case online := <-done:
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"delivered": online, "queued": !online})
+		case <-time.After(5 * time.Second):
+			http.Error(w, "the world did not answer", http.StatusServiceUnavailable)
+		}
 	})
 
 	// pprof on our own mux, not DefaultServeMux — nothing else in the binary

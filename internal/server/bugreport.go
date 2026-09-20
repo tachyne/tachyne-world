@@ -71,11 +71,12 @@ func (evBug) isHubEvent() {}
 
 // bugStore persists reports beside the world.
 type bugStore struct {
-	mu    sync.Mutex
-	path  string
-	Next  int         `json:"next"`
-	Items []bugReport `json:"items"`
-	dirty bool
+	mu      sync.Mutex
+	path    string
+	Next    int                 `json:"next"`
+	Items   []bugReport         `json:"items"`
+	Pending map[string][]string `json:"pending,omitempty"` // replies waiting for an offline player
+	dirty   bool
 }
 
 func newBugStore(path string) *bugStore {
@@ -275,4 +276,84 @@ func stateFromDescription(d string) uint32 {
 		st = worldgen.SetProperty(info, st, k, v)
 	}
 	return st
+}
+
+// ---- replies -------------------------------------------------------------
+
+// Replying to a report is half the loop. A player who reports something and
+// hears nothing stops reporting, and the person who can answer is usually not
+// at a keyboard when the report lands — so a reply that cannot wait for them
+// to be online is not much of a reply. Messages queue against the player name
+// and are delivered the moment they next join.
+
+const bugReplyMax = 300
+
+// queueReply delivers a message to a player now if they are here, and holds it
+// for their next join if they are not. bug > 0 also records it against that
+// report, so the report list shows what was answered.
+func (h *hub) queueReply(players map[int32]*tracked, name, text string, bug int) (delivered bool) {
+	if len(text) > bugReplyMax {
+		text = text[:bugReplyMax]
+	}
+	msg := "[tachyne] " + text
+	if bug > 0 {
+		msg = fmt.Sprintf("[tachyne] re bug #%d: %s", bug, text)
+		h.bugs.note(bug, text)
+	}
+	for _, t := range players {
+		if strings.EqualFold(t.p.name, name) {
+			t.p.tell(msg)
+			log.Printf("reply to %q (online): %s", name, text)
+			return true
+		}
+	}
+	h.bugs.queue(name, msg)
+	log.Printf("reply to %q queued for their next join: %s", name, text)
+	return false
+}
+
+// deliverQueuedReplies hands a joining player whatever was left for them.
+func (h *hub) deliverQueuedReplies(t *tracked) {
+	for _, msg := range h.bugs.takeQueued(t.p.name) {
+		t.p.tell(msg)
+	}
+}
+
+func (s *bugStore) note(id int, note string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.Items {
+		if s.Items[i].ID == id {
+			s.Items[i].Note = note
+			s.dirty = true
+			return
+		}
+	}
+}
+
+func (s *bugStore) queue(name, msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.Pending == nil {
+		s.Pending = map[string][]string{}
+	}
+	key := strings.ToLower(name)
+	if len(s.Pending[key]) >= 10 { // never let a queue grow without bound
+		s.Pending[key] = s.Pending[key][1:]
+	}
+	s.Pending[key] = append(s.Pending[key], msg)
+	s.dirty = true
+}
+
+func (s *bugStore) takeQueued(name string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := strings.ToLower(name)
+	msgs := s.Pending[key]
+	if len(msgs) == 0 {
+		return nil
+	}
+	delete(s.Pending, key)
+	s.dirty = true
+	return msgs
 }

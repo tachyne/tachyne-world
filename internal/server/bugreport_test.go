@@ -143,3 +143,66 @@ func TestRegionRoundTrips(t *testing.T) {
 		}
 	}
 }
+
+// A reply reaches a player who is here, and waits for one who is not — the
+// usual case, since whoever answers a report is rarely online at the same
+// time as whoever filed it.
+func TestReplyReachesOnlineAndWaitsForOffline(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	here := survPlayer(h)
+	here.p.name = "Here"
+	players[here.p.eid] = here
+	here.p.out = make(chan outPkt, 16)
+
+	if delivered := h.queueReply(players, "Here", "fixed, deploying now", 0); !delivered {
+		t.Error("a player who is online should get it straight away")
+	}
+	if delivered := h.queueReply(players, "Away", "fixed that too", 0); delivered {
+		t.Error("a player who is not online cannot be delivered to")
+	}
+
+	// The absent one gets it when they arrive.
+	away := survPlayer(h)
+	away.p.name = "Away"
+	away.p.out = make(chan outPkt, 16)
+	h.deliverQueuedReplies(away)
+	close(away.p.out)
+	got := 0
+	for range away.p.out {
+		got++
+	}
+	if got == 0 {
+		t.Error("the queued reply should arrive on join")
+	}
+	// And only once.
+	away2 := survPlayer(h)
+	away2.p.name = "Away"
+	away2.p.out = make(chan outPkt, 16)
+	h.deliverQueuedReplies(away2)
+	close(away2.p.out)
+	for range away2.p.out {
+		t.Error("a queued reply should not be delivered twice")
+	}
+}
+
+// Answering a report records the answer against it, so the list shows what
+// has been dealt with.
+func TestReplyNotesTheReport(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	pl.x, pl.y, pl.z = 600.5, 180, 600.5
+	pl.p.out = make(chan outPkt, 16)
+
+	id := h.fileBugReport(players, pl, "lichen sprouts sideways")
+	h.queueReply(players, pl.p.name, "the fence connector was treating it as a fence", id)
+
+	got := h.bugs.snapshot()
+	if len(got) != 1 || !strings.Contains(got[0].Note, "fence connector") {
+		t.Errorf("the answer should be recorded on the report, got %+v", got)
+	}
+}
