@@ -138,3 +138,85 @@ func TestPlacingASourceThroughItsBlockPowersTheWire(t *testing.T) {
 		t.Errorf("the dust reads %d through the block, want 15", p)
 	}
 }
+
+// Legion's third report, built from the block capture it carried: a dust line
+// on the ground with sticky pistons facing down beside it, each with a solid
+// block above its base. The dust powers the block UNDER it strongly, and that
+// block powers the piston next to it — which is how the row extends at all.
+// Take the lever away and the whole row has to come back.
+func TestPistonRowRetractsWhenTheLeverGoes(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	// The ground the dust sits on, and the blocks above the piston bases.
+	for i := 0; i < 4; i++ {
+		w.SetBlock(x+i, y-1, z, worldgen.Stone)   // under the dust
+		w.SetBlock(x+i, y, z+1, worldgen.Stone)   // above each piston base
+		w.SetBlock(x+i, y-1, z+1, downPiston(t)) // the piston, facing down
+		w.SetBlock(x+i, y-2, z+1, worldgen.Air)  // room for the head
+		w.SetBlock(x+i, y-3, z+1, worldgen.Air)
+		w.SetBlock(x+i, y, z, dust(t))
+	}
+	// The lever hangs on the block UNDER the last dust cell — that is how the
+	// capture had it, and it is why the line is driven through a block rather
+	// than from a dust cell beside the lever.
+	w.SetBlock(x+4, y-1, z, wallLever(t, "east"))
+	lever := blockPos{x + 4, y - 1, z}
+
+	h.toggleLever(players, lever, w.At(lever.x, lever.y, lever.z))
+	stepTicks(h, players, 20)
+	for i := 0; i < 4; i++ {
+		if !boolProp(w.At(x+i, y-1, z+1), "extended") {
+			t.Fatalf("setup: piston %d should have extended (dust %d)", i, wirePower(w.At(x+i, y, z)))
+		}
+	}
+
+	broken := w.At(lever.x, lever.y, lever.z)
+	w.SetBlock(lever.x, lever.y, lever.z, worldgen.Air)
+	h.onBlock(players, evBlock{x: lever.x, y: lever.y, z: lever.z, dim: 0, state: worldgen.Air, broken: broken})
+	h.dropUnsupported(players, 0, lever)
+	stepTicks(h, players, 60)
+
+	for i := 0; i < 4; i++ {
+		if p := wirePower(w.At(x+i, y, z)); p != 0 {
+			t.Errorf("dust %d still carries %d", i, p)
+		}
+		if s := w.At(x+i, y-1, z+1); isPistonBase(s) && boolProp(s, "extended") {
+			t.Errorf("piston %d is still out", i)
+		}
+	}
+}
+
+// downPiston is a sticky piston facing down, retracted.
+func downPiston(t *testing.T) uint32 {
+	return withProps(t, worldgen.BlockBase("sticky_piston"),
+		map[string]string{"facing": "down", "extended": "false"})
+}
+
+// Damage already in the world: dust keeps its power in its own block state, so
+// a line left powered by the old bug stays powered across a restart and the
+// pistons it drives stay out. The boot sweep asks every powered dust cell and
+// every piston to work itself out again.
+func TestBootSweepClearsStalePower(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	// A line at full strength with nothing behind it, and a piston held out
+	// by the block beneath it — what a restart would load.
+	for i := 0; i < 3; i++ {
+		w.SetBlock(x+i, y-1, z, worldgen.Stone)
+		w.SetBlock(x+i, y, z, withProps(t, worldgen.BlockBase("redstone_wire"),
+			map[string]string{"power": "15", "east": "side", "west": "side"}))
+	}
+	w.SetBlock(x, y, z+1, worldgen.Stone)
+	w.SetBlock(x, y-1, z+1, withProps(t, worldgen.BlockBase("sticky_piston"),
+		map[string]string{"facing": "down", "extended": "true"}))
+
+	h.rescheduleRedstone()
+	stepTicks(h, players, 60)
+
+	for i := 0; i < 3; i++ {
+		if p := wirePower(w.At(x+i, y, z)); p != 0 {
+			t.Errorf("dust %d still carries %d after the sweep", i, p)
+		}
+	}
+	if s := w.At(x, y-1, z+1); isPistonBase(s) && boolProp(s, "extended") {
+		t.Error("the piston is still out after the sweep")
+	}
+}

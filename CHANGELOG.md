@@ -25,6 +25,11 @@ the public history since the project was open-sourced on 2026-07-10.
   suspicious stew now carries the effect it hides (which creative mode is
   meant to reveal) and a repaired item carries the anvil's prior-work
   penalty.
+- **A full shulker box shows what is in it.** Picking a loaded box up gave
+  you an item that looked exactly like an empty one — the contents were
+  kept, and came back when the box was placed, but nothing said so until
+  you put it down again. The box now carries its contents to the client, so
+  the first few appear under its name in the tooltip the way they should.
 - **Reports get answered.** A reply can be sent to a player in game, and if
   they are not online it waits and arrives the moment they next join —
   which is the usual case, since whoever answers a report is rarely at a
@@ -87,8 +92,11 @@ the public history since the project was open-sourced on 2026-07-10.
   the six cells touching it to look again, so that dust kept its signal
   forever and whatever it fed — a lamp, a piston — stayed on with nothing
   powering it. Removing or placing any signal source now re-checks
-  everything the block it hangs on was driving. Reported in game by
-  LegionZA.
+  everything the block it hangs on was driving. Lines already stuck that way
+  are cleared too: dust keeps its power in its own block, so a bad signal
+  survives a restart, and the server now asks every powered dust cell and
+  every piston in the world to work itself out once at startup. Reported in
+  game by LegionZA.
 - **Lichen stops sprouting where two pieces meet.** The connector that
   joins a fence to its neighbour matched any block with north, east, south
   and west switches — which is also how glow lichen, vines, sculk veins,

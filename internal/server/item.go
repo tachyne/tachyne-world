@@ -193,6 +193,7 @@ const (
 	componentPotionContents = 42 // potion_contents (what a brew does, and so what colour it is); remapped per version
 	componentStewEffects    = 44 // suspicious_stew_effects (creative tooltip only, but vanilla syncs it); remapped per version
 	componentRepairCost     = 16 // repair_cost (the anvil's prior-work penalty); remapped per version
+	componentContainer      = 66 // container (a shulker box's contents, in its tooltip); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -286,6 +287,13 @@ func stackComponents(st invStack) []byte {
 			}
 		}
 	}
+	var boxBytes []byte
+	if st.boxID != 0 {
+		if bs := boxComponentBytes(st.boxID); len(bs) > 0 {
+			boxBytes = bs
+			comps++
+		}
+	}
 	var bundleBytes []byte
 	if st.bundleID != 0 {
 		if bs := bundleComponentBytes(st.bundleID); len(bs) > 0 {
@@ -369,6 +377,13 @@ func stackComponents(st invStack) []byte {
 	if st.repairCost > 0 {
 		b = protocol.AppendVarInt(b, componentRepairCost)
 		b = protocol.AppendVarInt(b, int32(st.repairCost))
+	}
+	if boxBytes != nil {
+		// container: what a broken shulker box is carrying. The client draws
+		// the first few of them under the item's name, which is the whole
+		// point of being able to pick a full box up.
+		b = protocol.AppendVarInt(b, componentContainer)
+		b = append(b, boxBytes...)
 	}
 	if st.lode.has {
 		b = lodestoneComponent(b, st.lode)

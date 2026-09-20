@@ -508,8 +508,7 @@ type hub struct {
 	// Decorated pots: one stack each (vanilla ContainerSingleItem).
 	pots map[simPos]invStack
 	// Shulker-box contents riding a dropped item, keyed by the stack's boxID.
-	boxes     map[int32]*chest
-	nextBoxID int32
+	boxes *boxStore
 	// Bundle contents riding a bundle item, keyed by the stack's bundleID.
 	bundles *bundleStore
 	// Bees + honey riding a Silk-Touched hive item, keyed by the stack's hiveID.
@@ -800,6 +799,7 @@ func newHub(w *world.World) *hub {
 	h.psched = newPluginSched(h)
 	globalBooks.Store(h.books)     // free-function component composition (see book.go)
 	globalBundles.Store(h.bundles) // ditto for bundle contents (see bundle.go)
+	h.initBoxes(newBoxStore())     // …and for a stowed shulker box (see boxstore.go)
 	h.names = newNameStore()
 	globalNames.Store(h.names) // ditto for custom names (see names.go)
 	return h
@@ -873,7 +873,8 @@ func (h *hub) run() {
 		globalNames.Store(h.names)
 		h.furnaces = h.containers.loadFurnaces()
 		h.chests = h.containers.loadChests()
-		h.boxes, h.nextBoxID = h.containers.loadBoxes()
+		h.initBoxes(newBoxStore())
+		h.boxes.restore(h.containers.loadBoxes())
 		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
@@ -903,7 +904,8 @@ func (h *hub) run() {
 		}
 	}
 	h.reconcileFurnaceBlocks()
-	h.repairMultiface() // lichen/vines placed from the wrong default state
+	h.repairMultiface()    // lichen/vines placed from the wrong default state
+	h.rescheduleRedstone() // dust left powered by a source that is no longer there
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -1150,7 +1152,7 @@ func (h *hub) run() {
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
-					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
@@ -2101,7 +2103,7 @@ func (h *hub) run() {
 				if h.containers != nil {
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
-					h.containers.recordBoxes(h.boxes, h.nextBoxID)
+					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)

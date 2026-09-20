@@ -44,20 +44,6 @@ var shulkerBoxItems = func() map[int32]bool {
 	return set
 }()
 
-// boxContents is the storage a broken box's stack points at. Keyed by boxID,
-// persisted alongside the containers.
-func (h *hub) boxContents(id int32) *chest {
-	if h.boxes == nil {
-		h.boxes = map[int32]*chest{}
-	}
-	c := h.boxes[id]
-	if c == nil {
-		c = &chest{}
-		h.boxes[id] = c
-	}
-	return c
-}
-
 // stowShulkerBox moves a placed box's contents onto the item that is about to
 // drop, and returns the boxID to stamp on it. Returns 0 for an empty box, which
 // then drops as a plain item with nothing to remember.
@@ -77,9 +63,8 @@ func (h *hub) stowShulkerBox(pos simPos) int32 {
 	if empty {
 		return 0
 	}
-	h.nextBoxID++
-	id := h.nextBoxID
-	*h.boxContents(id) = *c
+	id := h.boxes.mint()
+	h.boxes.set(id, *c)
 	return id
 }
 
@@ -89,10 +74,8 @@ func (h *hub) restoreShulkerBox(pos simPos, boxID int32) {
 	if boxID == 0 {
 		return
 	}
-	if c := h.boxes[boxID]; c != nil {
-		stored := *c
+	if stored, ok := h.boxes.take(boxID); ok {
 		h.chests[pos] = &stored
-		delete(h.boxes, boxID)
 	}
 }
 

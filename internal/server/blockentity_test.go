@@ -93,7 +93,7 @@ func TestShulkerBoxKeepsItsContents(t *testing.T) {
 	if got := back.slots[26]; got.item != itemByName["emerald"] || got.count != 2 {
 		t.Errorf("slot 26 came back as %+v, want 2 emeralds", got)
 	}
-	if _, leaked := h.boxes[boxID]; leaked {
+	if _, leaked := h.boxes.get(boxID); leaked {
 		t.Error("the box id was not retired once its contents were placed")
 	}
 }
@@ -106,8 +106,8 @@ func TestEmptyShulkerBoxNeedsNoIdentity(t *testing.T) {
 	if id := h.stowShulkerBox(simPos{blockPos: pos}); id != 0 {
 		t.Errorf("an empty box minted id %d, want 0", id)
 	}
-	if len(h.boxes) != 0 {
-		t.Errorf("%d box records for an empty box, want 0", len(h.boxes))
+	if n := len(h.boxes.snapshot()); n != 0 {
+		t.Errorf("%d box records for an empty box, want 0", n)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // The mix is PotionContents.getColorOptional: each channel averaged over the
@@ -160,5 +161,48 @@ func TestStewAndRepairCostComponents(t *testing.T) {
 	dur, _ := protocol.ReadVarInt(r)
 	if n != 1 || id != want.effect+1 || dur != int32(want.secs*20) {
 		t.Errorf("stew carries %d×(%d, %d ticks), want 1×(%d, %d)", n, id, dur, want.effect+1, int32(want.secs*20))
+	}
+}
+
+// A shulker box picked up full carries its contents to the client, which is
+// what puts them in the item's tooltip. The list is positional, so all 27
+// slots ride — and the whole thing has to walk cleanly, because the copier
+// recurses into every nested stack.
+func TestShulkerBoxCarriesItsContents(t *testing.T) {
+	h := newHub(world.New(1))
+	pos := simPos{blockPos: blockPos{3, 70, 3}}
+	c := &chest{}
+	c.slots[0] = invStack{item: itemByName["diamond"], count: 5}
+	c.slots[26] = invStack{item: itemPotion, count: 1, potion: potSwiftness, name: potionName(potSwiftness, itemPotion)}
+	h.chests[pos] = c
+	boxID := h.stowShulkerBox(pos)
+	if boxID == 0 {
+		t.Fatal("a box with contents should mint an id")
+	}
+
+	st := invStack{item: itemByName["shulker_box"], count: 1, boxID: boxID}
+	body := appendStack(nil, st)
+	if _, _, ok := protocol.ReadSlot770(bytes.NewReader(body)); !ok {
+		t.Fatal("the slot copier rejected the box")
+	}
+
+	r := bytes.NewReader(body)
+	for i := 0; i < 4; i++ {
+		protocol.ReadVarInt(r)
+	}
+	if cid, _ := protocol.ReadVarInt(r); cid != componentContainer {
+		t.Fatalf("component %d, want container (%d)", cid, componentContainer)
+	}
+	n, _ := protocol.ReadVarInt(r)
+	if n != 27 {
+		t.Errorf("%d slots on the wire, want all 27", n)
+	}
+	// An empty box says nothing: there is no component to send.
+	empty := appendStack(nil, invStack{item: itemByName["shulker_box"], count: 1})
+	re := bytes.NewReader(empty)
+	protocol.ReadVarInt(re)
+	protocol.ReadVarInt(re)
+	if add, _ := protocol.ReadVarInt(re); add != 0 {
+		t.Errorf("an empty box carries %d components, want none", add)
 	}
 }
