@@ -174,7 +174,7 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 	now := h.tick.Load()
 	if t != nil && t.gamemode != gmCreative && (st.lastHit == 0 || now-st.lastHit > standBreakWindow) {
 		st.lastHit = now
-		h.toNearbyEv(players, st.dim, st.x, st.z, attachproto.EntityStatus{EID: st.eid, Status: entityStatusStandWobble})
+		h.toTracking(players, st.eid, st.dim, st.x, st.z, attachproto.EntityStatus{EID: st.eid, Status: entityStatusStandWobble})
 		return
 	}
 	delete(h.armorStands, st.eid)

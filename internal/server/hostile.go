@@ -155,7 +155,7 @@ func (h *hub) rollZombieBaby(players map[int32]*tracked, m *mob) {
 	}
 	m.baby = true
 	m.setBabySpeed(true)
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 }
 
 // rollReinforcements gives a fresh zombie its SPAWN_REINFORCEMENTS_CHANCE
@@ -352,7 +352,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	// Swing the arm so the bite is visible (not just "walking into you"), deal the
 	// hit, and knock the player back — which also unglues them so they can retaliate.
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	if m.etype == entityRavager {
 		h.ravagerBite(players, m) // doHurtTarget: the ten-tick pause and the bite animation
 	}
@@ -521,7 +521,7 @@ func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, 
 		if etype == entitySkeleton {
 			m.behavior = rangedBehavior{}
 			// Show the bow (pure visual — the arrows are real either way).
-			h.toNearbyEv(players, m.dim, m.x, m.z, skeletonEquip(m.eid))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, skeletonEquip(m.eid))
 		}
 	case entitySpider:
 		// (spider speed comes from speedFor: attr 0.30; they survive the day, neutral until dark)
@@ -594,7 +594,7 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 		for _, m := range h.mobs { // night fell mid-burn: put survivors out
 			if m.burning {
 				m.burning = false
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
 			}
 		}
 	}

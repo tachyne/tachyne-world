@@ -70,5 +70,5 @@ func (h *hub) setBegging(players map[int32]*tracked, m *mob, on bool) {
 		return
 	}
 	m.begging = on
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexWolfBeg, on)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexWolfBeg, on)))
 }

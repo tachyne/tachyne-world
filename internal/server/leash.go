@@ -116,7 +116,7 @@ func (h *hub) setLeash(players map[int32]*tracked, m *mob, holder int32) {
 	} else {
 		m.leashPos = blockPos{}
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.EntityLink{Leashed: m.eid, Holder: holder})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.EntityLink{Leashed: m.eid, Holder: holder})
 }
 
 // dropLeash is Leashable.dropLeash: cut the lead, tell the watchers, and pop

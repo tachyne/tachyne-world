@@ -32,7 +32,7 @@ func (h *hub) wololoTick(players map[int32]*tracked, m *mob) bool {
 	m.wololoWarm = 0
 	if s := h.mobs[m.wololoTarget]; s != nil && s.etype == entitySheep && s.dying == 0 && s.color != fleeceRed {
 		s.color = fleeceRed
-		h.toNearbyEv(players, s.dim, s.x, s.z, metaEv(sheepFleeceMeta(s.eid, s.color, s.sheared)))
+		h.toTracking(players, s.eid, s.dim, s.x, s.z, metaEv(sheepFleeceMeta(s.eid, s.color, s.sheared)))
 	}
 	m.wololoTarget = 0
 	return false

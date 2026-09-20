@@ -43,7 +43,7 @@ func (h *hub) foxSetFlags(players map[int32]*tracked, m *mob, flags int8) {
 		return
 	}
 	m.foxFlags = flags
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(foxFlagsMeta(m.eid, flags)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(foxFlagsMeta(m.eid, flags)))
 }
 
 // foxPrey: what a fox hunts, and from how far.
@@ -94,8 +94,8 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 		if m.foxEatTicks > foxEatAfter {
 			m.held, m.foxEatTicks = 0, 0
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
-			h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFoxEat))
-			h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFoxEat))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		} else if m.foxEatTicks > foxEatAfter-40 && h.rng.Intn(10) == 0 {
 			h.playSoundDim(players, m.dim, "minecraft:entity.fox.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 		}
@@ -125,7 +125,7 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 			if now%foxBiteEvery < uint64(mobMoveInterval) {
 				prey.lastAttacker = m.eid
 				prey.hurtKind(float64(m.attackDamage()), dtMobAttack)
-				h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 				if prey.health <= 0 {
 					h.killMob(players, prey)
 				}
@@ -163,7 +163,7 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 				} else {
 					h.refreshItemMeta(players, it)
 				}
-				h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 				h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 				m.persistent = true
 				return true

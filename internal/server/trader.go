@@ -188,7 +188,7 @@ func (h *hub) traderStep(players map[int32]*tracked, m *mob) bool {
 			return true
 		}
 		m.held = 0
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		switch m.traderDrink {
 		case traderDrinkPotion:
 			h.applyMobEffect(players, m, effInvisibility, 0, traderInvisSecs)
@@ -204,11 +204,11 @@ func (h *hub) traderStep(players map[int32]*tracked, m *mob) bool {
 	switch {
 	case !h.isDayTime() && !invisible: // isDarkOutside: the invisibility potion
 		m.traderDrink, m.drinkTicks, m.held = traderDrinkPotion, traderDrinkTicks, itemPotion
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: itemPotion, count: 1, potion: potInvisibility}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: itemPotion, count: 1, potion: potInvisibility}, invStack{}, m.gear))
 		return true
 	case h.isDayTime() && invisible: // isBrightOutside: the milk
 		m.traderDrink, m.drinkTicks, m.held = traderDrinkMilk, traderDrinkTicks, int32(itemByName["milk_bucket"])
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 		return true
 	}
 	return false

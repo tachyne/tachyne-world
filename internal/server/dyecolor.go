@@ -76,7 +76,7 @@ func (h *hub) dyeSheep(players map[int32]*tracked, m *mob, item int32) bool {
 		return false
 	}
 	m.color = color
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepFleeceMeta(m.eid, m.color, m.sheared)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(sheepFleeceMeta(m.eid, m.color, m.sheared)))
 	h.playSound(players, "minecraft:item.dye.use", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }

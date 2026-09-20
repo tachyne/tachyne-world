@@ -109,7 +109,7 @@ func (h *hub) snowGolemShoot(players map[int32]*tracked, m *mob, t *mob) {
 		(dx/d+tri())*snowballSpeed, (dy/d+tri())*snowballSpeed, (dz/d+tri())*snowballSpeed)
 	a.breaks, a.mobShot, a.shooter = true, true, m.eid
 	m.yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSoundDim(players, m.dim, "minecraft:entity.snow_golem.shoot", sndNeutral, m.x, m.y, m.z, 1, 0.4/(h.rng.Float32()*0.4+0.8))
 }
 

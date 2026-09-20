@@ -166,7 +166,7 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		it.vy = 0
 	}
 	if it.x != ox || it.y != oy || it.z != oz {
-		h.toNearbyEv(players, it.dim, it.x, it.z, entMove(it.eid, it.x, it.y, it.z, 0, 0, grounded || afloat))
+		h.toTracking(players, it.eid, it.dim, it.x, it.z, entMove(it.eid, it.x, it.y, it.z, 0, 0, grounded || afloat))
 	}
 }
 

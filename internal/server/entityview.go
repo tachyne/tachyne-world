@@ -1,5 +1,7 @@
 package server
 
+import "math"
+
 // Per-viewer entity tracking — vanilla's ChunkMap.TrackedEntity. Every
 // player carries the set of entities their client is currently holding,
 // and each pass compares that set against what is actually within the
@@ -39,15 +41,26 @@ const (
 	trackOrb
 )
 
-// inInterest reports whether a point is inside the viewer's entity interest
-// radius — the same window that carries an entity's movement, so anything
-// tracked is also kept up to date.
-func inInterest(t *tracked, dim int, x, z float64) bool {
+// trackRange is an entity type's tracking range in blocks — vanilla's
+// clientTrackingRange, which varies from four chunks for an arrow to
+// sixteen for an end crystal.
+func trackRange(etype int) float64 {
+	if r, ok := trackRanges[entityNameByID[etype]]; ok {
+		return float64(r) * 16
+	}
+	return trackRangeDefault * 16
+}
+
+// inRangeOf is ChunkMap.TrackedEntity.updatePlayer's visibility test: the
+// HORIZONTAL distance only, height ignored, against the smaller of the
+// entity type's own range and the viewer's render distance.
+func inRangeOf(t *tracked, dim int, x, z float64, etype int) bool {
 	if t.dim != dim {
 		return false
 	}
-	return abs(chunkFloor(t.x)-chunkFloor(x)) <= viewRadius &&
-		abs(chunkFloor(t.z)-chunkFloor(z)) <= viewRadius
+	r := math.Min(trackRange(etype), float64(t.p.radius())*16)
+	dx, dz := t.x-x, t.z-z
+	return dx*dx+dz*dz <= r*r
 }
 
 // syncTracking is the pass: one reconciliation per viewer.
@@ -62,17 +75,17 @@ func (h *hub) syncTracking(players map[int32]*tracked) {
 		}
 		clear(want)
 		for _, m := range h.mobs {
-			if m != h.dragon && inInterest(t, m.dim, m.x, m.z) {
+			if m != h.dragon && inRangeOf(t, m.dim, m.x, m.z, m.etype) {
 				want[m.eid] = true
 			}
 		}
 		for _, it := range h.items {
-			if inInterest(t, it.dim, it.x, it.z) {
+			if inRangeOf(t, it.dim, it.x, it.z, entityItem) {
 				want[it.eid] = true
 			}
 		}
 		for _, o := range h.orbs {
-			if inInterest(t, o.dim, o.x, o.z) {
+			if inRangeOf(t, o.dim, o.x, o.z, entityXPOrb) {
 				want[o.eid] = true
 			}
 		}
@@ -147,6 +160,35 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if vm := variantMeta(m); vm != nil {
 		t.p.trySendEv(metaEv(vm))
 	}
+	if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
+		t.p.trySendEv(metaEv(sm))
+	}
+	if m.harness != 0 {
+		t.p.trySendEv(ghastHarnessEquip(m.eid, m.harness))
+	}
+	if m.etype == entityCopperGolem && m.oxidation > 0 {
+		t.p.trySendEv(metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
+	}
+	if m.etype == entityEnderman && m.carriedBlock != 0 {
+		t.p.trySendEv(metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
+	}
+	if m.etype == entityBee {
+		if m.beeSentFlags != 0 {
+			t.p.trySendEv(metaEv(beeFlagsMeta(m.eid, m.beeSentFlags)))
+		}
+		if m.beeSentAngry {
+			t.p.trySendEv(metaEv(beeAngerMeta(m.eid, m.anger)))
+		}
+	}
+	if m.saddled && !horseFamily(m.etype) {
+		t.p.trySendEv(saddleEquip(m.eid))
+	}
+	if m.tamed {
+		t.p.trySendEv(metaEv(petMeta(m)))
+	}
+	if m.sleeping {
+		t.p.trySendEv(metaEv(sleepMetadata(m.eid, m.bed)))
+	}
 	if m.rider != 0 {
 		t.p.trySendEv(passengersBody(m.eid, m.rider))
 	}
@@ -180,4 +222,22 @@ func (h *hub) dropTracked(t *tracked) {
 	}
 	clear(t.tracked)
 	t.p.sendEv(entGone(gone...))
+}
+
+// toTracking sends a frame about one entity to the viewers whose clients
+// are holding it — vanilla's sendToTrackingPlayers. An entity's own frames
+// have to follow its tracked set rather than a fixed radius: the moment the
+// two disagree, a viewer who can see the entity stops hearing about it and
+// is left rendering it where it last stood. Kinds the tracker does not own
+// yet fall back to the positional broadcast they have always used.
+func (h *hub) toTracking(players map[int32]*tracked, eid int32, dim int, x, z float64, ev any) {
+	if _, managed := h.trackable(eid); !managed {
+		h.toNearbyEv(players, dim, x, z, ev)
+		return
+	}
+	for _, t := range players {
+		if t.tracked[eid] {
+			t.p.trySendEv(ev)
+		}
+	}
 }

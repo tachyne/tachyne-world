@@ -668,11 +668,11 @@ func (h *hub) syncBeeLook(players map[int32]*tracked, m *mob) {
 	}
 	if flags != m.beeSentFlags {
 		m.beeSentFlags = flags
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, flags)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, flags)))
 	}
 	if angry := m.anger > 0; angry != m.beeSentAngry {
 		m.beeSentAngry = angry
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
 	}
 }
 

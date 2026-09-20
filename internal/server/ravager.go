@@ -46,7 +46,7 @@ func (h *hub) ravagerStep(players map[int32]*tracked, m *mob) bool {
 			m.ravStunTick--
 			if m.ravStunTick == 0 {
 				h.playSoundDim(players, m.dim, "minecraft:entity.ravager.roar", sndHostile, m.x, m.y, m.z, 1, 1)
-				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusRavagerRoar))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusRavagerRoar))
 				m.ravRoarTick = ravagerRoarTicks
 			}
 		}
@@ -86,7 +86,7 @@ func (h *hub) ravagerTrample(players map[int32]*tracked, m *mob) {
 // and the sound.
 func (h *hub) ravagerBite(players map[int32]*tracked, m *mob) {
 	m.ravAttackTick = ravagerAttackTicks
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack))
 	h.playSoundDim(players, m.dim, "minecraft:entity.ravager.attack", sndHostile, m.x, m.y, m.z, 1, 1)
 }
 
@@ -99,7 +99,7 @@ func (h *hub) ravagerBlocked(players map[int32]*tracked, m *mob, t *tracked) {
 	if h.rng.Float64() < 0.5 {
 		m.ravStunTick = ravagerStunTicks
 		h.playSoundDim(players, m.dim, "minecraft:entity.ravager.stunned", sndHostile, m.x, m.y, m.z, 1, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusStun))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusStun))
 		h.knockback(t, m.x, m.z)
 		return
 	}

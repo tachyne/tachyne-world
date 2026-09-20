@@ -126,7 +126,7 @@ func (h *hub) shulkerTeleport(players map[int32]*tracked, m *mob) bool {
 		h.playSoundDim(players, m.dim, "minecraft:entity.shulker.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 		m.x, m.y, m.z = float64(x)+0.5, float64(y), float64(z)+0.5
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, true))
 		h.setShulkerPeek(players, m, 0)
 		m.hasTarget, m.shPeekTicks = false, 0
 		return true

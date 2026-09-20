@@ -100,7 +100,7 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 			h.refreshItemMeta(players, it)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 		m.persistent = true // setPersistenceRequired: a looter never despawns
 		return
 	}

@@ -111,7 +111,7 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 		m.sleeping = false  // dawn — wake up
 		m.restocksToday = 0 // vanilla resets the daily restock counter each morning
 		h.restockOffers(m)  // a night's rest restocks the day's trades (restock #1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(wakeMetadata(m.eid)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(wakeMetadata(m.eid)))
 		return false
 	}
 	if !night {
@@ -131,8 +131,8 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 	}
 	m.x, m.y, m.z = float64(head.x)+0.5, float64(head.y)+bedSleepY, float64(head.z)+0.5
 	m.sx, m.sy, m.sz = m.x, m.y, m.z
-	h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, head)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, head)))
 	return true
 }
 

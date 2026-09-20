@@ -118,7 +118,7 @@ func (h *hub) endermanTakeBlock(players map[int32]*tracked, m *mob) {
 	h.setBlock(players, pos, worldgen.Air)
 	h.scheduleAround(pos, 1) // let neighbours (fluids/falling blocks) react
 	m.carriedBlock = def
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, def)))
 }
 
 // endermanPlaceBlock is EnderMan.EndermanLeaveBlockGoal: much more rarely, set
@@ -145,5 +145,5 @@ func (h *hub) endermanPlaceBlock(players map[int32]*tracked, m *mob) {
 	h.setBlock(players, pos, m.carriedBlock)
 	h.scheduleAround(pos, 1)
 	m.carriedBlock = 0
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, 0)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, 0)))
 }

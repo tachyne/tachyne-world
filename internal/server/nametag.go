@@ -43,7 +43,7 @@ func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return false // vanilla refuses the bosses
 	}
 	m.customName = held.name
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
 	if t.gamemode == gmSurvival {
 		slot := t.p.heldSlot()
 		if held.count--; held.count <= 0 {

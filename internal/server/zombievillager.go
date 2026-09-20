@@ -56,7 +56,7 @@ func (h *hub) nearestVillager(m *mob, r float64) *mob {
 // and Hard (always), and simply kills on Easy.
 func (h *hub) zombieBitesVillager(players map[int32]*tracked, m, v *mob) bool {
 	m.attackCD = attackCooldown
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	v.hurt(float64((hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()))
 	h.mobKnockFrom(players, v, m.x, m.z)
 	if v.health > 0 {
@@ -150,8 +150,8 @@ func (h *hub) startCure(players map[int32]*tracked, m *mob, curer string, ticks 
 	m.persistent = true
 	h.removeMobEffect(players, m, effWeakness)
 	h.applyMobEffect(players, m, effStrength, 0, ticks/20)
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(zombieConvertingMeta(m.eid, true)))
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.EntityStatus{EID: m.eid, Status: cureStatusEvent})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(zombieConvertingMeta(m.eid, true)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.EntityStatus{EID: m.eid, Status: cureStatusEvent})
 }
 
 // zombieConvertingMeta is ZombieVillager's DATA_CONVERTING_ID (index 19).

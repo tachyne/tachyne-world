@@ -60,7 +60,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 		}
 		m.sheared = true
 		h.playSound(players, "minecraft:entity.bogged.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, boggedShearedMeta, true)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, boggedShearedMeta, true)))
 		for i := 0; i < 2; i++ { // shearing/bogged: two rolls, red or brown each
 			mush := itemRedMushroom
 			if h.rng.Intn(2) == 0 {
@@ -125,7 +125,7 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 	h.playSound(players, sound, sndHostile, m.x, m.y, m.z, 1, h.rng.Float32()*0.4+0.8)
 	if m.fuse == 0 {
 		m.fuse = creeperFuseTicks
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
 	}
 	if t.gamemode == gmSurvival {
 		if held == itemFireCharge {

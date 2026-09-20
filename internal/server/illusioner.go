@@ -40,7 +40,7 @@ func spellMeta(eid int32, spell int8) []byte {
 // setSpell raises the casting arms for the spell, for ticks.
 func (h *hub) setSpell(players map[int32]*tracked, m *mob, spell int8, ticks int) {
 	m.castLeft = ticks
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(spellMeta(m.eid, spell)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(spellMeta(m.eid, spell)))
 }
 
 // spellAnimTick drops the arms when the casting time is up.
@@ -51,7 +51,7 @@ func (h *hub) spellAnimTick(players map[int32]*tracked, m *mob) {
 	m.castLeft -= mobMoveInterval
 	if m.castLeft <= 0 {
 		m.castLeft = 0
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(spellMeta(m.eid, spellNone)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(spellMeta(m.eid, spellNone)))
 	}
 }
 

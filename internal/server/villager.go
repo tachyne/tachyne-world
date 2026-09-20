@@ -74,7 +74,7 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					case "baby":
 						m.baby, m.growLeft = true, growUpTicks
 						h.initVillagerTrades(m, profUnemployed)
-						h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+						h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 					default:
 						prof, work := nearestJobSite(bed, jobs, usedJobs)
 						if !hasBed {
@@ -217,8 +217,8 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 		o = c
 	})
 	if o != nil {
-		m.attackCD = 5                                                                  // mob-updates between swings
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack)) // the arm swing
+		m.attackCD = 5                                                                         // mob-updates between swings
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack)) // the arm swing
 		if kdx, kdz := o.x-m.x, o.z-m.z; kdx != 0 || kdz != 0 {
 			d := math.Hypot(kdx, kdz)
 			o.vx, o.vz = kdx/d*1.2, kdz/d*1.2 // golems launch their victims
@@ -280,7 +280,7 @@ func (h *hub) openTrades(t *tracked, m *mob) {
 		return
 	}
 	if m.profession < 0 || m.baby { // Villager.mobInteract: NONE and children shake their heads
-		h.toNearbyEv(h.playersRef, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerNo))
+		h.toTracking(h.playersRef, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerNo))
 		return
 	}
 	h.releaseContainerView(t)
@@ -426,7 +426,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32
 		h.updateSpecialPrices(t, m)   // reflect the new reputation immediately
 		h.sendTradeList(t, m)         // refresh uses/level/price (and any new offers)
 		h.playSound(players, "minecraft:entity.villager.yes", sndNeutral, m.x, m.y, m.z, 0.7, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy)) // Villager.customServerAiStep after a trade
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy)) // Villager.customServerAiStep after a trade
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
 	h.incCustom(t, "traded_with_villager", 1)

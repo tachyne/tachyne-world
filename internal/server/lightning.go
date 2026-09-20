@@ -21,7 +21,7 @@ func (h *hub) lightningTransforms(players map[int32]*tracked, m *mob) {
 	case entityCreeper:
 		if !m.charged {
 			m.charged = true
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(creeperPoweredMeta(m.eid, true)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperPoweredMeta(m.eid, true)))
 		}
 	case entityPig:
 		h.convertMob(players, m, entityZombifiedPiglin)

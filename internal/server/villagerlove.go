@@ -139,8 +139,8 @@ func (h *hub) villagerBreedStep(players map[int32]*tracked, m *mob) bool {
 		m.breedLead, mate.breedLead = true, false
 		m.breedAt = now + breedDurationMin + uint64(h.rng.Intn(breedDurationRand))
 		mate.breedAt = m.breedAt
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHearts))             // hearts (event 18)
-		h.toNearbyEv(players, mate.dim, mate.x, mate.z, entityStatus(mate.eid, entityStatusVillagerHearts)) //
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHearts))                // hearts (event 18)
+		h.toTracking(players, mate.eid, mate.dim, mate.x, mate.z, entityStatus(mate.eid, entityStatusVillagerHearts)) //
 		return true
 	}
 	o := h.mobs[m.breedMate]
@@ -162,8 +162,8 @@ func (h *hub) villagerBreedStep(players map[int32]*tracked, m *mob) bool {
 	if now < m.breedAt {
 		for i := 0; i < mobMoveInterval; i++ {
 			if h.rng.Intn(breedHappyOdds) == 0 {
-				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy))
-				h.toNearbyEv(players, o.dim, o.x, o.z, entityStatus(o.eid, entityStatusVillagerHappy))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy))
+				h.toTracking(players, o.eid, o.dim, o.x, o.z, entityStatus(o.eid, entityStatusVillagerHappy))
 			}
 		}
 		return true
@@ -179,8 +179,8 @@ func (h *hub) villagerBreedStep(players map[int32]*tracked, m *mob) bool {
 func (h *hub) villagerGiveBirth(players map[int32]*tracked, m, o *mob) {
 	bed, ok := h.vacantBedNear(m)
 	if !ok {
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerAngry))
-		h.toNearbyEv(players, o.dim, o.x, o.z, entityStatus(o.eid, entityStatusVillagerAngry))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerAngry))
+		h.toTracking(players, o.eid, o.dim, o.x, o.z, entityStatus(o.eid, entityStatusVillagerAngry))
 		return
 	}
 	m.breedCD, o.breedCD = breedCooldown, breedCooldown // setAge(6000)
@@ -192,11 +192,11 @@ func (h *hub) villagerGiveBirth(players map[int32]*tracked, m, o *mob) {
 	child.setMoveSpeed(0.135)
 	h.initVillagerTrades(child, profUnemployed) // born unemployed: it takes a workstation when it grows
 	h.sendVillagerData(players, child)
-	h.toNearbyEv(players, child.dim, child.x, child.z, metaEv(babyMeta(child.eid, true)))
+	h.toTracking(players, child.eid, child.dim, child.x, child.z, metaEv(babyMeta(child.eid, true)))
 	child.home, child.bed, child.meet = bed, bed, m.meet
 	child.behavior = villagerBehavior{}
 	child.usesDoors = true
-	h.toNearbyEv(players, child.dim, child.x, child.z, entityStatus(child.eid, entityStatusVillagerHappy))
+	h.toTracking(players, child.eid, child.dim, child.x, child.z, entityStatus(child.eid, entityStatusVillagerHappy))
 }
 
 // vacantBedNear is takeVacantBed: a bed head within forty-eight blocks that

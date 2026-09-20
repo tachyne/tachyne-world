@@ -44,7 +44,7 @@ func (h *hub) armadilloSetState(players map[int32]*tracked, m *mob, state int8) 
 		return
 	}
 	m.armState, m.armStateAt = state, h.tick.Load()
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(armadilloStateMeta(m.eid, state)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(armadilloStateMeta(m.eid, state)))
 	switch state {
 	case armRolling:
 		h.playSoundDim(players, m.dim, "minecraft:entity.armadillo.roll", sndNeutral, m.x, m.y, m.z, 1, 1)

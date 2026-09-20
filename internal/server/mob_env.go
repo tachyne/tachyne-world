@@ -78,7 +78,7 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	if m.health == before && m.dmgFrac > 0 {
 		return // soaked into the fractional carry — no flash for a scratch
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 	if m.health <= 0 {
 		h.killMob(players, m)
 	}
@@ -142,7 +142,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 		case m.fireSecs > 0:
 			if !m.burning {
 				m.burning = true
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
 			}
 			m.fireSecs--
 			if !inLava && !inFire { // lava/fire already dealt this second's damage
@@ -153,7 +153,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			}
 		case m.burning:
 			m.burning = false
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
 		}
 
 		h.mobPickupScan(players, m) // grab a dropped weapon/armour piece nearby
@@ -179,10 +179,10 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 					// Not the conversion itself — the START of it. The mob now
 					// shakes for drownShakeSecs before it turns.
 					m.convertIn = drownShakeSecs
-					h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
+					h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
 				}
 			} else if m.submerged > mobMaxAir(m)/20 { // air is in ticks; /20 = seconds
-				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
 				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 			}
 		} else {

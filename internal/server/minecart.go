@@ -182,7 +182,7 @@ func (h *hub) tickMinecart(players map[int32]*tracked, v *vehicle) {
 		}
 	}
 	if v.x != v.sx || v.y != v.sy || v.z != v.sz || v.yaw != v.syaw {
-		h.toNearbyEv(players, v.dim, v.x, v.z, entMove(v.eid, v.x, v.y, v.z, v.yaw, 0, v.onGround))
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, entMove(v.eid, v.x, v.y, v.z, v.yaw, 0, v.onGround))
 		v.sx, v.sy, v.sz, v.syaw = v.x, v.y, v.z, v.yaw
 	}
 }
@@ -382,7 +382,7 @@ func (h *hub) cartPickup(players map[int32]*tracked, v *vehicle) {
 		}
 		m.cart, v.mobRider = v.eid, m.eid
 		m.vx, m.vz, m.hasTarget = 0, 0, false
-		h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid, m.eid))
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, m.eid))
 		return
 	}
 }
@@ -396,5 +396,5 @@ func (h *hub) releaseCartMob(players map[int32]*tracked, v *vehicle) {
 		m.cart = 0
 	}
 	v.mobRider = 0
-	h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 }

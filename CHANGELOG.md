@@ -14,6 +14,20 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **An entity's updates follow the viewers holding it.** Everything the
+  server says about a creature, item or orb — its movement, metadata,
+  equipment, swings, status flashes, passengers — now goes to exactly the
+  players whose clients are holding that entity, as vanilla sends to its
+  tracking players, instead of to whoever happened to be within a fixed
+  radius. The two could disagree, and the moment they did a viewer who
+  could see something stopped hearing about it. Tracking ranges are the
+  entity registry's own, clamped by the viewer's render distance and
+  measured horizontally as vanilla measures them: four chunks for arrows
+  and thrown things, six for dropped items and experience orbs, eight for
+  most monsters, ten for most animals and vehicles, sixteen for an end
+  crystal. A spawn now carries everything the two-second re-assert carries,
+  so an entity that comes into view is right immediately rather than a
+  sweep later.
 - **Every player is told what they can actually see.** The server now keeps,
   per player, the set of entities their client is holding, and each pass
   spawns what has come into view and removes what has left it — vanilla's

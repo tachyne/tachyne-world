@@ -59,13 +59,13 @@ func (h *hub) tryHappyGhast(players map[int32]*tracked, t *tracked, m *mob) bool
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
 		h.playSound(players, "minecraft:item.armor.equip_generic", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	case m.harness != 0 && held == itemShears:
 		h.spawnItem(players, m.harness, 1, m.x, m.y, m.z) // pop the harness off
 		m.harness = 0
-		h.toNearbyEv(players, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, 0))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, 0))
 		return true
 	case m.harness != 0:
 		h.boardGhast(players, t, m)
@@ -88,7 +88,7 @@ func (h *hub) boardGhast(players map[int32]*tracked, t *tracked, m *mob) {
 	m.riders = append(m.riders, t.p.eid)
 	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
-	h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 }
 
 // leaveGhast removes a player from any happy ghast they're riding, standing them
@@ -111,7 +111,7 @@ func (h *hub) leaveGhast(players map[int32]*tracked, t *tracked) bool {
 		if len(m.riders) == 0 {
 			m.sx, m.sy, m.sz = m.x, m.y, m.z // realign the relative-move baseline
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 		t.x, t.y, t.z = m.x+0.9, m.y+0.6, m.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 		return true

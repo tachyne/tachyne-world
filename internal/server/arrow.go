@@ -125,7 +125,7 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	if m.etype == entityStray {
 		a.slow = 30 // vanilla Stray: an arrow of SLOWNESS, 600 ticks
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
 }
 
 // launchArrow spawns an arrow projectile with a velocity; callers stamp
@@ -276,7 +276,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						chick := h.spawnAnimal(players, entityChicken, int(a.x), int(a.z))
 						if chick != nil {
 							chick.baby, chick.growLeft = true, growUpTicks
-							h.toNearbyEv(players, 0, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
+							h.toTracking(players, chick.eid, 0, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
 						}
 					}
 					break

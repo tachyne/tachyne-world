@@ -42,7 +42,7 @@ const (
 var breezeJumpAngles = []int{40, 55, 60, 75, 80} // ALLOWED_ANGLES
 
 func (h *hub) breezePose(players map[int32]*tracked, m *mob, pose int32) {
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, pose)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, pose)))
 }
 
 // breezeStep is the fight's tick: returns whether it holds the breeze.

@@ -259,8 +259,8 @@ func (h *hub) creakingHurt(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.spawnInvuln = creakingInvulnTicks
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusShake)) // the invulnerability shudder
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusShake)) // the invulnerability shudder
 	h.playSound(players, "minecraft:entity.creaking.sway", sndHostile, m.x, m.y, m.z, 1, 1)
 	if link.hurtLeft <= 0 {
 		link.hurtLeft = creakingHurtCalls

@@ -73,7 +73,7 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 			if m.pandaEat > 80 && h.rng.Intn(20/mobMoveInterval) == 0 {
 				if m.pandaEat > 100 {
 					m.held = 0 // eaten
-					h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+					h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 					h.setPandaFlag(players, m, pandaFlagSit, false)
 				}
 				h.setPandaEat(players, m, 0)
@@ -113,7 +113,7 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 	m.held = it.item
 	delete(h.items, it.eid)
 	h.entityGone(players, it.dim, it.eid)
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 	h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 	m.persistent = true
 	h.setPandaFlag(players, m, pandaFlagSit, true)
@@ -127,7 +127,7 @@ func (h *hub) pandaEatStop(players map[int32]*tracked, m *mob, trait int32, now 
 	if m.held != 0 {
 		h.spawnItemIn(players, m.dim, m.held, 1, m.x, m.y+0.5, m.z)
 		m.held = 0
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		wait := h.rng.Intn(150) + 10
 		if trait == pandaLazy {
 			wait = h.rng.Intn(50) + 10

@@ -119,7 +119,7 @@ func (h *hub) turtleEggRandomTick(players map[int32]*tracked, dim, x, y, z int, 
 		baby.baby, baby.growLeft = true, growUpTicks
 		baby.home = blockPos{x, y, z}
 		h.applySpecies(players, baby)
-		h.toNearbyEv(players, dim, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
+		h.toTracking(players, baby.eid, dim, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 	}
 	return true
 }

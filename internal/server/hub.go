@@ -2285,14 +2285,14 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	for _, v := range h.vehicles { // a leaver stands up first
 		if v.rider == p.eid {
 			v.rider = 0
-			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 		}
 	}
 	for _, m := range h.mobs { // a leaver aboard a happy ghast steps off
 		for i, r := range m.riders {
 			if r == p.eid {
 				m.riders = append(m.riders[:i], m.riders[i+1:]...)
-				h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 				break
 			}
 		}

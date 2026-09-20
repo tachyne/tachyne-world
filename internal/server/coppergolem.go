@@ -69,7 +69,7 @@ func (h *hub) updateCopperGolems(players map[int32]*tracked) {
 				if m.oxidation < 3 {
 					m.oxidizeAt = now + h.copperWeatherDelay()
 				}
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
 			}
 			if m.oxidation >= 3 {
 				bx, by, bz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
@@ -120,7 +120,7 @@ func (h *hub) tryCopperGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 	case axeItems[held] && m.oxidation > 0:
 		m.oxidation--
 		m.oxidizeAt = h.tick.Load() + h.copperWeatherDelay()
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
 		h.playSound(players, "minecraft:item.axe.scrape", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}

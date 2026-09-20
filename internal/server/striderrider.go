@@ -15,9 +15,9 @@ func (h *hub) rollStriderRider(players map[int32]*tracked, m *mob) {
 		}
 		h.configureNetherMob(players, rider)
 		rider.held = int32(itemWarpedFungusStick)
-		h.toNearbyEv(players, rider.dim, rider.x, rider.z, mobEquip(rider.eid, rider.held))
+		h.toTracking(players, rider.eid, rider.dim, rider.x, rider.z, mobEquip(rider.eid, rider.held))
 		m.saddled = true
-		h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, saddleEquip(m.eid))
 		h.mountMobOn(players, rider, m, false)
 		return
 	}
@@ -29,7 +29,7 @@ func (h *hub) rollStriderRider(players map[int32]*tracked, m *mob) {
 		h.applySpecies(players, calf)
 		calf.baby = true
 		calf.setBabySpeed(true)
-		h.toNearbyEv(players, calf.dim, calf.x, calf.z, metaEv(babyMeta(calf.eid, true)))
+		h.toTracking(players, calf.eid, calf.dim, calf.x, calf.z, metaEv(babyMeta(calf.eid, true)))
 		h.mountMobOn(players, calf, m, false)
 	}
 }

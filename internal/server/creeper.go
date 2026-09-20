@@ -55,13 +55,13 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 		}
 		m.fuse = creeperFuseTicks
 		m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // stare down the target
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
 		h.playSound(players, "minecraft:entity.creeper.primed", sndHostile, m.x, m.y, m.z, 1, 1)
 		return
 	}
 	if t == nil { // escaped — stand down
 		m.fuse = 0
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, -1)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, -1)))
 		return
 	}
 	if m.fuse -= mobMoveInterval; m.fuse <= 0 {

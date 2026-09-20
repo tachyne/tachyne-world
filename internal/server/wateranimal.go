@@ -81,7 +81,7 @@ func (h *hub) waterAnimalDry(players map[int32]*tracked, m *mob) {
 	if m.etype == entityAxolotl {
 		h.hurtMobOf(players, m, drownDmgPerSec, dtDryOut)
 	} else {
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
 		h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 	}
 }

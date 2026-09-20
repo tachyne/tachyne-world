@@ -114,7 +114,7 @@ func (h *hub) hoglinThrow(t *tracked, m *mob) {
 // hoglinBiteStart is doHurtTarget's extras: the animation and the sound,
 // and the species' own interval between bites.
 func (h *hub) hoglinBiteStart(players map[int32]*tracked, m *mob) {
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack))
 	sound := "minecraft:entity.hoglin.attack"
 	if m.etype == entityZoglin {
 		sound = "minecraft:entity.zoglin.attack"

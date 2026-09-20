@@ -56,7 +56,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 			return // its target goal must see the player
 		}
 		m.beamTarget, m.beamTicks = t.p.eid, -10
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, m.beamTarget)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, m.beamTarget)))
 		return
 	}
 	t := players[m.beamTarget]
@@ -83,7 +83,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 		magic += 2
 	}
 	melee := hostileMelee(m) * h.diffMult()
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
 	// TWO hits, as the attack goal deals them: the beam's indirect_magic, which
 	// armour does not stop, and then an ordinary bite, which it does. Folding
@@ -189,7 +189,7 @@ func (h *hub) guardianRelease(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.beamTarget, m.beamTicks = 0, 0
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, 0)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, 0)))
 }
 
 // guardianTargetMeta is DATA_ID_ATTACK_TARGET (index 17, INT): the entity id

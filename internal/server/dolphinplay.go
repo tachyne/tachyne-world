@@ -75,7 +75,7 @@ func (h *hub) dolphinPlay(players map[int32]*tracked, m *mob) bool {
 		} else {
 			h.refreshItemMeta(players, it)
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 		h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 		m.dolphinPlayEID = 0
 		return true
@@ -95,7 +95,7 @@ func (h *hub) dolphinToss(players map[int32]*tracked, m *mob, now uint64) {
 	tz := m.z + math.Cos(yaw)*dolphinTossReach
 	item := m.held
 	m.held = 0
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 	if it := h.spawnItemIn(players, m.dim, item, 1, tx, m.y+0.5, tz); it != nil {
 		it.noPickupUntil = now + dolphinTossHold
 		it.vy = dolphinTossLift

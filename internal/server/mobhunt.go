@@ -73,7 +73,7 @@ func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
 		}
 		target.lastAttacker = m.eid
 		target.hurtKind(dmg, dtMobAttack)
-		h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 		if m.etype == entityZoglin && !m.baby { // HoglinBase.throwTarget on a mob
 			if kdx, kdz := target.x-m.x, target.z-m.z; kdx != 0 || kdz != 0 {
 				dd := math.Hypot(kdx, kdz)

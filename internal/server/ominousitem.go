@@ -106,7 +106,7 @@ func (h *hub) trialItemSpawner(players map[int32]*tracked, ts *trialSpawner) {
 func (h *hub) showItemSpawner(players map[int32]*tracked, e *itemSpawnerEnt) {
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(e.eid))
-	h.toNearbyEv(players, e.dim, e.x, e.z, entAdd(e.eid, entityOminousItemSpawner, uuid, e.x, e.y, e.z, 0, 0))
+	h.toTracking(players, e.eid, e.dim, e.x, e.z, entAdd(e.eid, entityOminousItemSpawner, uuid, e.x, e.y, e.z, 0, 0))
 	st := invStack{item: itemByName[e.drop.item], count: 1, potion: e.drop.potion}
 	b := protocol.AppendVarInt(nil, e.eid)
 	b = protocol.AppendU8(b, metaIndexSpawnerItem)

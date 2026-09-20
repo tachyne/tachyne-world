@@ -30,7 +30,7 @@ func (h *hub) sunHelmetTakesIt(players map[int32]*tracked, m *mob) bool {
 			*head = invStack{}
 			m.refreshGearArmor()
 			h.playSoundDim(players, m.dim, "minecraft:entity.item.break", sndNeutral, m.x, m.y+1.5, m.z, 0.8, 0.8+h.rng.Float32()*0.4)
-			h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
 		}
 	}
 	return true

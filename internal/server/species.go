@@ -430,7 +430,7 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	}
 	if d.held != "" {
 		m.held = itemByName[d.held]
-		h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
 	}
 }
 

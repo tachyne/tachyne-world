@@ -31,7 +31,7 @@ func (h *hub) setHandActive(players map[int32]*tracked, m *mob, on bool) {
 		return
 	}
 	m.handActive = on
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(livingFlagsMeta(m.eid, on)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(livingFlagsMeta(m.eid, on)))
 }
 
 // bowDrawTick keeps a bow-user's pull in step with its shot clock: drawn

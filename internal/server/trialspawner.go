@@ -346,7 +346,7 @@ func (h *hub) spawnTrialMob(players map[int32]*tracked, ts *trialSpawner) *mob {
 		if ts.kind == "baby_zombie" {
 			m.baby = true
 			m.refreshBabySpeed()
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 		}
 		if ts.ominous {
 			h.equipTrialMob(players, m, ts.kind) // the ominous configs' equipment tables

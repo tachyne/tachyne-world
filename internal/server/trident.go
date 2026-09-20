@@ -143,8 +143,7 @@ func (h *hub) updateReturningTrident(players map[int32]*tracked, a *arrowEntity)
 	a.x, a.y, a.z = a.x+a.vx, a.y+a.vy, a.z+a.vz
 	if a.x != a.sx || a.y != a.sy || a.z != a.sz {
 		a.sx, a.sy, a.sz = a.x, a.y, a.z
-		h.toNearbyEv(players, a.dim, a.x, a.z,
-			entMove(a.eid, a.x, a.y, a.z, arrowYaw(a), arrowPitch(a), false))
+		h.toTracking(players, a.eid, a.dim, a.x, a.z, entMove(a.eid, a.x, a.y, a.z, arrowYaw(a), arrowPitch(a), false))
 	}
 	return false
 }

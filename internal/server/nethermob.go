@@ -49,7 +49,7 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		}
 		m.applyCubeSize()
 		m.behavior = Behavior(hostileBehavior{})
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityBlaze:
 		m.hostile = true
 		m.health = blazeHealth

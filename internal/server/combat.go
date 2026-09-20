@@ -393,7 +393,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
 		}
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: yaw})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: yaw})
 	if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
 		h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
@@ -412,7 +412,7 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	if m.patrolCaptain {          // entities/pillager: a raid captain's death drops its ominous bottle, however it died
 		h.dropOminousBottle(players, m)
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
 	if _, death, _ := h.mobSoundsFor(m); death != "" {
 		h.playSound(players, death, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
@@ -426,13 +426,13 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	if m.mount != 0 { // a mob rider died — detach it from its vehicle's view
 		if v := h.mobs[m.mount]; v != nil {
 			v.mobRider = 0
-			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 		}
 	}
 	if m.cart != 0 { // died in a minecart — the cart is empty again
 		if v := h.vehicles[m.cart]; v != nil {
 			v.mobRider = 0
-			h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 		}
 	}
 	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it

@@ -37,7 +37,7 @@ func puffMeta(eid int32, state int8) []byte {
 
 func (h *hub) setPuff(players map[int32]*tracked, m *mob, state int8, sound string) {
 	m.puff = state
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(puffMeta(m.eid, state)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(puffMeta(m.eid, state)))
 	h.playSoundDim(players, m.dim, sound, sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 

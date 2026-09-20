@@ -65,7 +65,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if m.etype == entityStray {
 			m.behavior = rangedBehavior{}
-			h.toNearbyEv(players, m.dim, m.x, m.z, skeletonEquip(m.eid))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, skeletonEquip(m.eid))
 		} else {
 			m.setFollowRange(35) // drowned are zombies too
 			m.setBaseArmor(2)
@@ -77,17 +77,17 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 				if h.rng.Intn(16) < 10 {
 					m.trident = true
 					m.behavior = rangedBehavior{} // kite like a skeleton while armed
-					h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
+					h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
 				} else {
 					m.held = int32(itemFishingRod)
-					h.toNearbyEv(players, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
+					h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
 				}
 			}
 		}
 	case entitySlime:
 		m.size = 4
 		m.applyCubeSize()
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(slimeMeta(m.eid, m.size)))
 	case entityEnderman:
 		m.neutral = true     // holds its peace until hit
 		m.setFollowRange(64) // EnderMan FOLLOW_RANGE (vanilla 1.21.5)
@@ -191,7 +191,7 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 		}
 		s.size = m.size / 2
 		s.applyCubeSize()
-		h.toNearbyEv(players, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
+		h.toTracking(players, s.eid, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
 	}
 }
 
@@ -209,8 +209,8 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		m.x, m.z = float64(x)+0.5, float64(z)+0.5
 		m.y = float64(h.world.MobFeet(x, z))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
 		h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)
 		return
 	}
@@ -314,7 +314,7 @@ func (h *hub) setClimbing(players map[int32]*tracked, m *mob, on bool) {
 		return
 	}
 	m.climbing = on
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(spiderClimbMeta(m.eid, on)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(spiderClimbMeta(m.eid, on)))
 }
 
 const metaIndexSpiderFlags = 16

@@ -137,7 +137,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 						rd.mount, m.mobRider = m.eid, rd.eid
 						r.alive[rd.eid] = true
 						r.waveSpawned++
-						h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, rd.eid))
+						h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, rd.eid))
 					}
 				}
 				ravagerN++

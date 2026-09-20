@@ -125,7 +125,7 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 			continue
 		}
 		if r.x != r.sx || r.y != r.sy || r.z != r.sz {
-			h.toNearbyEv(players, r.dim, r.x, r.z, entMove(r.eid, r.x, r.y, r.z, 0, 0, false))
+			h.toTracking(players, r.eid, r.dim, r.x, r.z, entMove(r.eid, r.x, r.y, r.z, 0, 0, false))
 			r.sx, r.sy, r.sz = r.x, r.y, r.z
 		}
 	}
@@ -136,7 +136,7 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 // the star components a stack does not carry here yet.
 func (h *hub) popRocket(players map[int32]*tracked, r *rocketEntity) {
 	delete(h.rockets, r.eid)
-	h.toNearbyEv(players, r.dim, r.x, r.z, entityStatus(r.eid, entityStatusFireworks)) // FireworkRocketEntity.explode
+	h.toTracking(players, r.eid, r.dim, r.x, r.z, entityStatus(r.eid, entityStatusFireworks)) // FireworkRocketEntity.explode
 	h.playSound(players, "minecraft:entity.firework_rocket.blast", sndAmbient, r.x, r.y, r.z, 3, 1)
 	h.entityGone(players, r.dim, r.eid)
 }

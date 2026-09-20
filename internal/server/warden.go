@@ -65,7 +65,7 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 // wardenSonicBoom fires the piercing shriek: fixed damage that ignores armour
 // and shields, plus knockback.
 func (h *hub) wardenSonicBoom(players map[int32]*tracked, m *mob, t *tracked) {
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.warden.sonic_boom", sndHostile, m.x, m.y, m.z, 3, 1)
 	h.damageOf(players, t, wardenSonicDmg, dtSonicBoom)
 	h.knockback(t, m.x, m.z)

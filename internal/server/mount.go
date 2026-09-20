@@ -65,7 +65,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		if horseFamily(m.etype) {
 			h.horseEquipSync(players, m) // saddle + body armor together
 		} else {
-			h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, saddleEquip(m.eid))
 		}
 		snd := "minecraft:entity.horse.saddle"
 		if m.etype == entityNautilus {
@@ -92,7 +92,7 @@ func (h *hub) mountMob(players map[int32]*tracked, t *tracked, m *mob) {
 	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
 	h.vibAt(m.dim, freqMount, m.x, m.y, m.z, t.p.eid)
-	h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
 	h.advance(players, t, "started_riding", advMatch{})
 }
 
@@ -107,7 +107,7 @@ func (h *hub) dismountMob(players map[int32]*tracked, t *tracked) bool {
 		t.ridingEID = 0
 		h.vibAt(m.dim, freqDismount, m.x, m.y, m.z, t.p.eid)
 		m.sx, m.sy, m.sz = m.x, m.y, m.z // realign the relative-move baseline
-		h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid))
 		t.x, t.y, t.z = m.x+0.9, m.y+0.6, m.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 		return true

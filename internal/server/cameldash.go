@@ -25,7 +25,7 @@ func (h *hub) camelDashStart(players map[int32]*tracked, t *tracked) {
 	}
 	m.dashCD, m.dashing = camelDashCooldown, true
 	h.playSoundDim(players, m.dim, "minecraft:entity.camel.dash", sndNeutral, m.x, m.y, m.z, 1, 1)
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCamelDash, true)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCamelDash, true)))
 }
 
 // camelDashTick runs the cooldown (one mob update = mobMoveInterval ticks)
@@ -39,6 +39,6 @@ func (h *hub) camelDashTick(players map[int32]*tracked, m *mob) {
 	}
 	if m.dashing && m.dashCD < camelDashFlagOff {
 		m.dashing = false
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCamelDash, false)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCamelDash, false)))
 	}
 }

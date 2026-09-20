@@ -175,7 +175,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		if m.baby && !m.hostile { // baby zombies never mature (vanilla)
 			if m.growLeft -= survivalTickN; m.growLeft <= 0 {
 				m.baby = false
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, false)))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, false)))
 			}
 		}
 		if m.converting > 0 {
@@ -188,7 +188,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			// Villager.customServerAiStep: one tick in a hundred inside an active
 			// raid, the sweat particles (VILLAGER_SWEAT) — this step is 20 ticks.
 			if h.rng.Intn(5) == 0 && h.raidNear(m.dim, m.x, m.z) {
-				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerSwt))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerSwt))
 			}
 		}
 		if m.etype == entityNautilus {
@@ -243,7 +243,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				if vm := variantMeta(baby); vm != nil {
 					h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(vm))
 				}
-				h.toNearbyEv(players, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
+				h.toTracking(players, baby.eid, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 			}
 			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
 			breeder := players[m.lovedBy]

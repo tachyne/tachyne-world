@@ -78,7 +78,7 @@ func (it *itemEntity) stack() invStack {
 // bare (item, count), so without this a renamed potion lay on the floor
 // looking like water until someone picked it up.
 func (h *hub) refreshItemMeta(players map[int32]*tracked, it *itemEntity) {
-	h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(it.eid, it.stack())))
+	h.toTracking(players, it.eid, it.dim, it.x, it.z, metaEv(itemMetadata(it.eid, it.stack())))
 }
 
 // spawnItem creates a dropped-item entity at (x,y,z) and shows it to nearby

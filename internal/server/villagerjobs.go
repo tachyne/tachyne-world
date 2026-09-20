@@ -174,7 +174,7 @@ func (h *hub) villagerJobWalk(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	m.work, m.jobPos = m.jobPos, blockPos{}
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy))
 	if m.profession < 0 {
 		h.initVillagerTrades(m, p)
 		h.sendVillagerData(players, m)

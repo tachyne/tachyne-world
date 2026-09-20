@@ -56,12 +56,12 @@ func (h *hub) allayStep(players map[int32]*tracked, m *mob) bool {
 	if m.dupCD > 0 {
 		if m.dupCD -= mobMoveInterval; m.dupCD <= 0 {
 			m.dupCD = 0
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, true)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, true)))
 		}
 	}
 	if dancing := h.jukeboxPlayingNear(m); dancing != m.dancing {
 		m.dancing = dancing
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexDancing, dancing)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexDancing, dancing)))
 	}
 	if m.held == 0 || !h.rules.MobGriefing {
 		return false
@@ -226,11 +226,11 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 		if twin := h.spawnSpecies(players, entityAllay, m.dim, m.x, m.y, m.z); twin != nil {
 			twin.persistent = true
 			twin.dupCD = allayDupCD
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(twin.eid, metaIndexCanDupe, false)))
+			h.toTracking(players, twin.eid, twin.dim, twin.x, twin.z, metaEv(boolMeta(twin.eid, metaIndexCanDupe, false)))
 		}
 		m.dupCD = allayDupCD
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, false)))
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK)) // hearts (event 18)
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, false)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK)) // hearts (event 18)
 		h.playSoundDim(players, m.dim, "minecraft:block.amethyst_block.chime", sndNeutral, m.x, m.y, m.z, 2, 1)
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
@@ -243,14 +243,14 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.allay.item_given", sndNeutral, m.x, m.y, m.z, 2, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 		m.persistent = true
 		return true
 	case m.held != 0 && held.item == 0:
 		back := invStack{item: m.held, count: 1}
 		m.held = 0
 		m.owner, m.ownerUUID = 0, [16]byte{}
-		h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
 		h.playSoundDim(players, m.dim, "minecraft:entity.allay.item_taken", sndNeutral, m.x, m.y, m.z, 2, 1)
 		if m.carry.item != 0 {
 			h.allayThrow(players, m, m.x, m.y, m.z)

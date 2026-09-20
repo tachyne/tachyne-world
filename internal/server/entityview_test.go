@@ -111,3 +111,79 @@ func TestDimensionChangeDropsTheView(t *testing.T) {
 		t.Fatal("the entities the client held should be removed")
 	}
 }
+
+// An entity's own frames follow its tracked set, not a radius: a viewer
+// holding it hears about it, one who does not hear nothing. Kinds the
+// tracker does not own yet still ride the positional broadcast.
+func TestUpdatesFollowTheTrackedSet(t *testing.T) {
+	h := newHub(world.New(1))
+	near := survPlayer(h)
+	far := survPlayer(h)
+	far.p.eid = 2
+	near.x, near.y, near.z = 0, 70, 0
+	far.x, far.y, far.z = 300, 70, 300
+	players := map[int32]*tracked{near.p.eid: near, far.p.eid: far}
+	h.playersRef = players
+
+	m := h.spawnMob(players, entityCow, 5, 70, 5)
+	h.syncTracking(players)
+	drainEvents(near)
+	drainEvents(far)
+
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
+	if !sawSwing(near, m.eid) {
+		t.Error("the viewer holding the cow should get its frames")
+	}
+	if sawSwing(far, m.eid) {
+		t.Error("a player who is not holding it should get nothing")
+	}
+	// An id the tracker does not own falls back to the positional broadcast,
+	// so the kinds not yet moved over keep working.
+	h.toTracking(players, 999999, 0, 1, 1, swingArm(999999))
+	if !sawSwing(near, 999999) {
+		t.Error("an untracked kind should still reach the players nearby")
+	}
+}
+
+func sawSwing(tr *tracked, eid int32) bool {
+	for {
+		select {
+		case pkt := <-tr.p.out:
+			if ev, ok := pkt.ev.(attachproto.Swing); ok && ev.EID == eid {
+				return true
+			}
+		default:
+			return false
+		}
+	}
+}
+
+// Ranges come from the entity type, clamped by the viewer's render
+// distance, and the check ignores height as vanilla's does.
+func TestTrackRangesAreVanillas(t *testing.T) {
+	cases := map[int]float64{
+		entityCow: 10 * 16, entityZombie: 8 * 16, entityItem: 6 * 16,
+		entityXPOrb: 6 * 16, entityArrow: 4 * 16, entityBat: 5 * 16,
+	}
+	for et, want := range cases {
+		if got := trackRange(et); got != want {
+			t.Errorf("%s track range %v, want %v", entityNameByID[et], got, want)
+		}
+	}
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 0, 70, 0
+	// The viewer's own render distance clamps it: six chunks here, so a cow
+	// at seven is out even though its type reaches ten.
+	if inRangeOf(pl, 0, 7*16, 0, entityCow) {
+		t.Error("the viewer's render distance should clamp the type's range")
+	}
+	if !inRangeOf(pl, 0, 5*16, 0, entityCow) {
+		t.Error("a cow five chunks away is inside both")
+	}
+	// Height is ignored, as vanilla's horizontal check is.
+	pl.y = 300
+	if !inRangeOf(pl, 0, 5*16, 0, entityCow) {
+		t.Error("the check is horizontal: height must not matter")
+	}
+}

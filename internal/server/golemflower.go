@@ -21,7 +21,7 @@ func (h *hub) golemOfferTick(players map[int32]*tracked, m *mob) bool {
 		m.golemFlower -= mobMoveInterval
 		if m.golemFlower <= 0 {
 			m.golemFlower = 0
-			h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFlowerOff))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFlowerOff))
 			return false
 		}
 		if v := h.nearestVillager(m, golemFlowerRange); v != nil {
@@ -37,7 +37,7 @@ func (h *hub) golemOfferTick(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	m.golemFlower = golemFlowerTicks
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFlowerOn))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusFlowerOn))
 	m.vx, m.vz = 0, 0
 	return true
 }

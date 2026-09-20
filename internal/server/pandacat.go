@@ -74,7 +74,7 @@ func (h *hub) catMorningGifts(players map[int32]*tracked, t *tracked) {
 		m.x, m.z = t.x+float64(h.rng.Intn(3)-1), t.z+float64(h.rng.Intn(3)-1)
 		m.y = t.y
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		// …with something from the table.
 		roll := h.rng.Intn(total)
 		for _, g := range catGifts {

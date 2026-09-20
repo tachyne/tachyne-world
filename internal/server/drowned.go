@@ -66,7 +66,7 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	nm.heldDmg, nm.heldCount, nm.gearSure = m.heldDmg, m.heldCount, m.gearSure
 	nm.refreshGearArmor()
 	if nm.wearsAnything() {
-		h.toNearbyEv(players, nm.dim, nm.x, nm.z, equipEv(nm.eid, nm.heldStack(), invStack{}, nm.gear))
+		h.toTracking(players, nm.eid, nm.dim, nm.x, nm.z, equipEv(nm.eid, nm.heldStack(), invStack{}, nm.gear))
 	}
 	if m.health < nm.health {
 		nm.health = m.health // carry damage across; never heal on conversion
@@ -101,7 +101,7 @@ func (h *hub) drownedThrow(players map[int32]*tracked, m *mob) {
 	a := h.launchProjectileIn(players, entityTrident, m.dim, ox, oy, oz,
 		dx/d*arrowSpeed, dy/d*arrowSpeed, dz/d*arrowSpeed)
 	a.shooter, a.dmg = m.eid, 9 // vanilla thrown-trident damage
-	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSoundDim(players, m.dim, "minecraft:item.trident.throw", sndHostile, m.x, m.y, m.z, 1, 1)
 	m.attackCD = 19 // ≈40-tick cadence (mob-update counts 2 ticks each)
 }

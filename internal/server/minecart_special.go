@@ -183,7 +183,7 @@ func (h *hub) primeCart(players map[int32]*tracked, v *vehicle, fuse int) {
 		return
 	}
 	v.fuse = fuse
-	h.toNearbyEv(players, v.dim, v.x, v.z, attachproto.EntityStatus{EID: v.eid, Status: cartPrimeEvent})
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, attachproto.EntityStatus{EID: v.eid, Status: cartPrimeEvent})
 	h.playSoundDim(players, v.dim, "minecraft:entity.tnt.primed", sndBlock, v.x, v.y, v.z, 1, 1)
 }
 
@@ -239,7 +239,7 @@ func (h *hub) tickSpecialCart(players map[int32]*tracked, v *vehicle) bool {
 		}
 		if lit := v.fuel > 0; lit != v.lit {
 			v.lit = lit
-			h.toNearbyEv(players, v.dim, v.x, v.z, metaEv(cartFuelMeta(v.eid, lit)))
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, metaEv(cartFuelMeta(v.eid, lit)))
 		}
 		if v.lit && h.rng.Intn(4) == 0 {
 			h.spawnParticles(players, particleLargeSmoke, v.x, v.y+0.8, v.z, 0, 0, 1)

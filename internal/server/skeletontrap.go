@@ -69,6 +69,6 @@ func (h *hub) trapSkeleton(players map[int32]*tracked, horse *mob) *mob {
 	sk.gear[0].ench = enchApplyList(enchSelect(h.rng, sk.gear[0].item, cost, enchMobAllowed))
 	sk.spawnGear, sk.gearDrop = true, spawnGearDropChance
 	sk.refreshGearArmor()
-	h.toNearbyEv(players, sk.dim, sk.x, sk.z, equipEv(sk.eid, invStack{item: sk.held, count: b2i(sk.held != 0)}, invStack{}, sk.gear))
+	h.toTracking(players, sk.eid, sk.dim, sk.x, sk.z, equipEv(sk.eid, invStack{item: sk.held, count: b2i(sk.held != 0)}, invStack{}, sk.gear))
 	return sk
 }

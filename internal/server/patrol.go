@@ -87,8 +87,7 @@ func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
 		if spawned == 0 { // the first is the captain
 			m.patrolCaptain = true
 			banner := invStack{item: itemByName["white_banner"], count: 1}
-			h.toNearbyEv(players, m.dim, m.x, m.z,
-				equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
 		}
 		spawned++
 	}
@@ -144,8 +143,7 @@ func (h *hub) updateOutposts(players map[int32]*tracked) {
 					if i == 0 { // the captain
 						m.patrolCaptain = true
 						banner := invStack{item: itemByName["white_banner"], count: 1}
-						h.toNearbyEv(players, m.dim, m.x, m.z,
-							equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
+						h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
 					}
 				}
 				log.Printf("pillager outpost garrisoned at (%d,%d)", p.X, p.Z)

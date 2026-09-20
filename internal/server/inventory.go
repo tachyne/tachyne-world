@@ -259,7 +259,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 					h.advance(players, thrower, "thrown_item_picked_up_by_player", advMatch{item: it.item})
 				}
 			}
-			h.toNearbyEv(players, it.dim, it.x, it.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: int32(picked)})
+			h.toTracking(players, eid, it.dim, it.x, it.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: int32(picked)})
 			h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, it.x, it.y, it.z, 0.4, 1+h.rng.Float32())
 			if leftover == 0 {
 				delete(h.items, eid)

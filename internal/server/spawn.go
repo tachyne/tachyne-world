@@ -581,7 +581,7 @@ func (h *hub) rollPackBaby(players map[int32]*tracked, m *mob) {
 	}
 	if ch := packBabyChance(m.etype); g.members > 0 && ch > 0 && h.rng.Float32() <= ch {
 		m.baby, m.growLeft = true, growUpTicks
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 	}
 	g.members++
 }

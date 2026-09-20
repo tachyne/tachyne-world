@@ -83,7 +83,7 @@ func (h *hub) hatchGhastling(players map[int32]*tracked, x, y, z int, state uint
 		m.yaw = facingYaw(worldgen.GetProperty(info, state, "facing"))
 		m.syaw = m.yaw
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 	h.playSound(players, "minecraft:entity.ghastling.spawn", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
 }
 

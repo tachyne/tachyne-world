@@ -69,7 +69,7 @@ func (h *hub) wolfHuntStep(players map[int32]*tracked, m *mob) bool {
 		m.wolfBiteCD = wolfBiteTicks
 		target.lastAttacker = m.eid
 		target.hurtKind(float64(m.attackDamage()), dtMobAttack)
-		h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 		if target.health <= 0 {
 			h.killMob(players, target)
 			m.wolfPrey = 0

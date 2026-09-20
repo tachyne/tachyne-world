@@ -22,7 +22,7 @@ func (h *hub) mountMobOn(players map[int32]*tracked, rider, vehicle *mob, drives
 	rider.mount, rider.mountDrives = vehicle.eid, drives
 	vehicle.mobRider = rider.eid
 	rider.x, rider.z = vehicle.x, vehicle.z
-	h.toNearbyEv(players, vehicle.dim, vehicle.x, vehicle.z, passengersBody(vehicle.eid, rider.eid))
+	h.toTracking(players, vehicle.eid, vehicle.dim, vehicle.x, vehicle.z, passengersBody(vehicle.eid, rider.eid))
 }
 
 // rollChickenJockey is the baby zombie's jockey roll.

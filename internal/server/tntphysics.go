@@ -62,7 +62,7 @@ func (h *hub) tntStep(players map[int32]*tracked, t *primedTNT) {
 		t.vx, t.vy, t.vz = t.vx*tntGroundDragH, t.vy*tntGroundBounceV, t.vz*tntGroundDragH
 	}
 	if t.x != ox || t.y != oy || t.z != oz {
-		h.toNearbyEv(players, t.dim, t.x, t.z, entMove(t.eid, t.x, t.y, t.z, 0, 0, t.onGround))
+		h.toTracking(players, t.eid, t.dim, t.x, t.z, entMove(t.eid, t.x, t.y, t.z, 0, 0, t.onGround))
 	}
 }
 

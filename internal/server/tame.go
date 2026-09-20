@@ -92,7 +92,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.consumeHeld(t)
 	}
 	if h.rng.Intn(tameOdds) != 0 { // didn't take this time
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))
 		return true
 	}
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
@@ -101,7 +101,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		m.setMaxHP(wolfTamedHealth)
 		m.health = wolfTamedHealth
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 	if m.etype == entityNautilus {
 		// A tamed nautilus is a mount, not a follower (AbstractNautilus has no
 		// follow-owner goal); its tamed flag rides no metadata yet.
@@ -139,7 +139,7 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		m.x, m.z = owner.x+1, owner.z
 		m.y = float64(h.worldFor(m.dim).MobFeet(int(math.Floor(m.x)), int(math.Floor(m.z))))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		m.hasTarget = false
 	case d > petFollowStart:
 		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z

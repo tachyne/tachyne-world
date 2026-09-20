@@ -42,7 +42,7 @@ func (h *hub) grazeStep(players map[int32]*tracked, m *mob) bool {
 			return false
 		}
 		m.grazeTicks = grazeTicks
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusEat))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusEat))
 		m.vx, m.vz = 0, 0
 		return true
 	}

@@ -33,7 +33,7 @@ func witchUsingMeta(eid int32, on bool) []byte {
 // throw at the nearest player within ten blocks.
 func (h *hub) witchTick(players map[int32]*tracked, m *mob) {
 	if h.rng.Float64() < 7.5e-4*mobMoveInterval { // Witch.aiStep: the ambient sparkle
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusWitchMagic))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusWitchMagic))
 	}
 	if m.drinkTicks > 0 {
 		m.drinkTicks -= mobMoveInterval
@@ -77,8 +77,8 @@ func (h *hub) witchWantsToDrink(players map[int32]*tracked, m *mob, t *tracked) 
 func (h *hub) witchStartDrink(players map[int32]*tracked, m *mob, kind int8) {
 	m.drinkTicks, m.drinkKind = witchDrinkTicks, kind
 	m.held = itemPotion
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: itemPotion, count: 1, potion: kind}, invStack{}, m.gear))
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(witchUsingMeta(m.eid, true)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: itemPotion, count: 1, potion: kind}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(witchUsingMeta(m.eid, true)))
 	h.playSoundDim(players, m.dim, "minecraft:entity.witch.drink", sndHostile, m.x, m.y, m.z, 1, 0.8+h.rng.Float32()*0.4)
 	in := m.mobAttrs().Get(attr.MovementSpeed)
 	in.RemoveModifier(witchDrinkSource)
@@ -90,8 +90,8 @@ func (h *hub) witchFinishDrink(players map[int32]*tracked, m *mob) {
 		h.applyMobEffect(players, m, e.id, e.amp, e.secs)
 	}
 	m.drinkTicks, m.drinkKind, m.held = 0, potNone, 0
-	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(witchUsingMeta(m.eid, false)))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(witchUsingMeta(m.eid, false)))
 	m.mobAttrs().Get(attr.MovementSpeed).RemoveModifier(witchDrinkSource)
 }
 

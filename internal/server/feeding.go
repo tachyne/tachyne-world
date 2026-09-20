@@ -184,7 +184,7 @@ func (h *hub) ageUp(m *mob, ticks int) {
 func (h *hub) setInLove(players map[int32]*tracked, t *tracked, m *mob) {
 	m.loveTicks = loveTicks
 	m.lovedBy = t.p.eid
-	h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, statusInLove))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, statusInLove))
 }
 
 // consumeFed spends the held food; a fish bucket leaves the water behind

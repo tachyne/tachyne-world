@@ -143,7 +143,7 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 				snd, pitch = "minecraft:entity.player.levelup", 1
 			}
 			h.playSound(players, snd, sndPlayer, o.x, o.y, o.z, 0.6, pitch)
-			h.toNearbyEv(players, o.dim, o.x, o.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: 1})
+			h.toTracking(players, eid, o.dim, o.x, o.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: 1})
 			h.entityGone(players, o.dim, eid)
 			break
 		}

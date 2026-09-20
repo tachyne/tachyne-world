@@ -495,7 +495,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.dying > 0 { // playing the death animation — hold still, then despawn + drop
 			if m.dying -= mobMoveInterval; m.dying <= 0 {
-				h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusPoof)) // LivingEntity.tickDeath
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusPoof)) // LivingEntity.tickDeath
 				h.despawnMob(players, m)
 			}
 			continue
@@ -520,7 +520,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			r := h.mobs[m.mobRider]
 			if r == nil || r.dying > 0 || r.mount != m.eid {
 				m.mobRider = 0
-				h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid))
 			} else if r.mountDrives {
 				m.x, m.y, m.z, m.dim = r.x, r.y, r.z, r.dim // the rider leads: carried under it
 				continue
@@ -877,7 +877,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.vibAt(m.dim, freqStep, m.x, m.y, m.z, m.eid)
 			}
 			m.sx, m.sy, m.sz = m.x, m.y, m.z
-			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 		// Facing only when it changed meaningfully (saves packets). BOTH the head
 		// rotation and a zero-delta move ride the same latch: the move carries the
@@ -887,13 +887,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		// body yaw all along.
 		if math.Abs(float64(m.yaw-m.syaw)) > 8 {
 			m.syaw = m.yaw
-			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 		// The head is its own rotation: a mob watching a player turns it
 		// without turning the body (vanilla's ClientboundRotateHeadPacket).
 		if math.Abs(float64(m.headYaw-m.sheadYaw)) > 8 {
 			m.sheadYaw = m.headYaw
-			h.toNearbyEv(players, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
 		}
 		if m.etype == entityEnderDragon {
 			continue // the dragon flies on its own update (updateDragon)
@@ -1166,56 +1166,56 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 			//          clients lose entities to sync_entity_position, so it
 			//          rides relative moves only — nothing to resync here.
 		}
-		h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		if m.burning { // one-shot fire flags can be dropped — re-assert while lit
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
 		}
 		if m.etype == entitySkeleton { // bow-in-hand is one-shot too — keep it honest
-			h.toNearbyEv(players, m.dim, m.x, m.z, skeletonEquip(m.eid))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, skeletonEquip(m.eid))
 		}
 		// One-shot mount/pet state re-asserted so a late-joining player sees the
 		// saddle, rider and collar rather than a bare animal.
 		if m.rider != 0 {
-			h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
 		}
 		if len(m.riders) > 0 {
-			h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 		}
 		if m.mobRider != 0 { // a mob rider (raid ravager) — re-assert for late joiners
-			h.toNearbyEv(players, m.dim, m.x, m.z, passengersBody(m.eid, m.mobRider))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.mobRider))
 		}
 		if m.harness != 0 {
-			h.toNearbyEv(players, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
 		}
 		if m.etype == entityCopperGolem && m.oxidation > 0 {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
 		}
 		if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sm))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(sm))
 		}
 		if m.etype == entityEnderman && m.carriedBlock != 0 {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(enderCarryMeta(m.eid, m.carriedBlock)))
 		}
 		if m.etype == entityBee { // pollen coat / red eyes are one-shot state too
 			if m.beeSentFlags != 0 {
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, m.beeSentFlags)))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(beeFlagsMeta(m.eid, m.beeSentFlags)))
 			}
 			if m.beeSentAngry {
-				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(beeAngerMeta(m.eid, m.anger)))
 			}
 		}
 		if m.saddled { // the saddle is an EQUIPMENT slot on every species (1.21.5+)
 			if horseFamily(m.etype) {
 				h.horseEquipSync(players, m) // saddle + body armor together
 			} else {
-				h.toNearbyEv(players, m.dim, m.x, m.z, saddleEquip(m.eid))
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, saddleEquip(m.eid))
 			}
 		}
 		if m.tamed {
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(petMeta(m)))
 		}
 		if m.sleeping { // re-assert the lying pose so a late-joining player sees it
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, m.bed)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(sleepMetadata(m.eid, m.bed)))
 		}
 	}
 	// Players relay to each other with the same lossy relative moves, so resync

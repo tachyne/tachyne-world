@@ -52,8 +52,7 @@ func (h *hub) applyMobEffect(players map[int32]*tracked, m *mob, id int32, amp, 
 	if id == effInvisibility || id == effGlowing {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z,
-		attachproto.Effect{EID: m.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
 }
 
 // removeMobEffect ends one effect on a mob.
@@ -66,7 +65,7 @@ func (h *hub) removeMobEffect(players map[int32]*tracked, m *mob, id int32) {
 	if id == effInvisibility || id == effGlowing {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Remove: true})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Remove: true})
 }
 
 // updateMobEffects ticks every affected mob's effects at 20 Hz, on the same

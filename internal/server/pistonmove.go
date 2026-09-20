@@ -316,7 +316,7 @@ func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]
 		}
 		if _, ok := inside(m.x, m.y, m.z); ok {
 			m.x, m.y, m.z = m.x+float64(dir[0]), m.y+float64(dir[1]), m.z+float64(dir[2])
-			h.toNearbyEv(players, 0, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+			h.toTracking(players, m.eid, 0, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 	}
 }

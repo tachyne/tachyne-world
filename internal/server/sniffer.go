@@ -94,7 +94,7 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 	h.playSoundDim(players, dim, "minecraft:block.sniffer_egg.hatch", sndBlock, cx, cy, cz, 0.7, 1)
 	if m := h.spawnSpecies(players, entitySniffer, dim, cx, float64(y), cz); m != nil {
 		m.baby, m.growLeft = true, growUpTicks
-		h.toNearbyEv(players, dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+		h.toTracking(players, m.eid, dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 	}
 	return true
 }
@@ -164,7 +164,7 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 				continue
 			}
 			m.sniffTarget, m.sniffState = floor, 1
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseSniffing)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseSniffing)))
 			return true
 		}
 		return false
@@ -179,15 +179,15 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		}
 		if !inRanges(snifferDiggable, w.At(m.sniffTarget.x, m.sniffTarget.y, m.sniffTarget.z)) {
 			m.sniffState = 0 // the ground changed under it
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
 			return false
 		}
 		m.sniffState, m.sniffStart = 2, now
 		m.sniffUntil = now + snifferDigMin + uint64(h.rng.Intn(snifferDigJitter+1))
-		h.toNearbyEv(players, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusSnifferDig)) // onDiggingStart
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusSnifferDig)) // onDiggingStart
 		m.vx, m.vz = 0, 0
 		h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.digging", sndNeutral, m.x, m.y, m.z, 1, 1)
-		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseDigging)))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseDigging)))
 		return true
 	default:
 		m.vx, m.vz = 0, 0
@@ -200,7 +200,7 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		}
 		if now >= m.sniffUntil {
 			h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.digging_stop", sndNeutral, m.x, m.y, m.z, 1, 1)
-			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
 			m.sniffExplored = append(m.sniffExplored, m.sniffTarget)
 			if len(m.sniffExplored) > snifferExploredN {
 				m.sniffExplored = m.sniffExplored[len(m.sniffExplored)-snifferExploredN:]

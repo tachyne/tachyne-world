@@ -220,7 +220,7 @@ func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	v.rider = t.p.eid
 	t.ridingEID = v.eid
 	h.vibAt(v.dim, freqMount, v.x, v.y, v.z, t.p.eid)
-	h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid, v.rider))
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.rider))
 }
 
 // dismount stands the rider up beside the vehicle.
@@ -232,7 +232,7 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 		v.rider = 0
 		t.ridingEID = 0
 		h.vibAt(v.dim, freqDismount, v.x, v.y, v.z, t.p.eid)
-		h.toNearbyEv(players, v.dim, v.x, v.z, passengersBody(v.eid))
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 		t.x, t.y, t.z = v.x+0.9, v.y+0.6, v.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 		return

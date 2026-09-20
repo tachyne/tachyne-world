@@ -61,11 +61,11 @@ func (h *hub) zombieBeatsDoor(players map[int32]*tracked, m *mob, door blockPos)
 	m.doorTicks += mobMoveInterval
 	if h.rng.Intn(20/mobMoveInterval) == 0 { // levelEvent 1019 + the swing, 1/20 a tick
 		h.playSoundDim(players, m.dim, "minecraft:entity.zombie.attack_wooden_door", sndHostile, float64(door.x)+0.5, float64(door.y)+0.5, float64(door.z)+0.5, 2, 0.8+h.rng.Float32()*0.4)
-		h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	}
 	if stage := int8(m.doorTicks * 10 / doorBreakTicks); stage != m.doorStage {
 		m.doorStage = stage
-		h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.BlockBreakProgress{EID: m.eid, X: int32(door.x), Y: int32(door.y), Z: int32(door.z), Progress: stage})
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.BlockBreakProgress{EID: m.eid, X: int32(door.x), Y: int32(door.y), Z: int32(door.z), Progress: stage})
 	}
 	if m.doorTicks < doorBreakTicks {
 		return true
@@ -85,6 +85,6 @@ func (h *hub) zombieStopDoor(players map[int32]*tracked, m *mob) {
 	if m.doorPos == (blockPos{}) {
 		return
 	}
-	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.BlockBreakProgress{EID: m.eid, X: int32(m.doorPos.x), Y: int32(m.doorPos.y), Z: int32(m.doorPos.z), Progress: -1})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.BlockBreakProgress{EID: m.eid, X: int32(m.doorPos.x), Y: int32(m.doorPos.y), Z: int32(m.doorPos.z), Progress: -1})
 	m.doorPos, m.doorTicks, m.doorStage = blockPos{}, 0, -1
 }

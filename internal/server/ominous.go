@@ -148,7 +148,7 @@ func (h *hub) oozeSlimes(players map[int32]*tracked, t *tracked) {
 		s.hostile, s.behavior = true, Behavior(hostileBehavior{})
 		s.size = oozingSlimeSize
 		s.applyCubeSize()
-		h.toNearbyEv(players, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
+		h.toTracking(players, s.eid, s.dim, s.x, s.z, metaEv(slimeMeta(s.eid, s.size)))
 	}
 }
 

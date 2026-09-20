@@ -126,8 +126,7 @@ func (h *hub) placeFang(players map[int32]*tracked, m *mob, x, z, minY, maxY flo
 		var uuid [16]byte
 		binary.BigEndian.PutUint32(uuid[12:], uint32(f.eid))
 		h.fangs = append(h.fangs, f)
-		h.toNearbyEv(players, f.dim, f.x, f.z,
-			entAdd(f.eid, entityEvokerFangs, uuid, f.x, f.y, f.z, float32(0), 0))
+		h.toTracking(players, f.eid, f.dim, f.x, f.z, entAdd(f.eid, entityEvokerFangs, uuid, f.x, f.y, f.z, float32(0), 0))
 		return
 	}
 }
