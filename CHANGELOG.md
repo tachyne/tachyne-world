@@ -43,8 +43,51 @@ the public history since the project was open-sourced on 2026-07-10.
   buys could be sold to it only once, for double experience, instead of twice
   for single. It also no longer shows an experience bar it never fills, and
   it will not wander off while you have its window open.
+- **A pig with a carrot on a stick actually goes.** Steering a pig or a
+  strider worked, but the stick never did anything when you used it: the
+  mount now sprints for a rolled few seconds, easing in and back out, at the
+  cost of seven points off the stick — and a worn-out stick becomes the
+  fishing rod it was made from.
+- **An elytra wears out.** Gliding cost nothing at all. A wing now takes a
+  point of damage for every second in the air and gives up at its last point
+  — unusable rather than destroyed, exactly as the real game leaves it — and
+  the flight ends there instead of carrying on for free.
+- **Powder snow turns a skeleton into a stray.** Stand one in the snow for
+  seven seconds and it starts to change; fifteen seconds later it is a stray,
+  keeping its gear, its name and its refusal to despawn. Pulling it out stops
+  it.
+- **Guardians bite back.** Melee a guardian while its spikes are out and you
+  take two points for it, elder or not — and, as in the real game, an archer
+  never pays that price.
+- **Experience comes out in orbs, and they pile up.** Every award used to be
+  one orb worth the lot. It is now paid out in the same denominations the real
+  game uses, and orbs lying together merge into one that pays out over several
+  touches — so a farm no longer leaves hundreds of motes lying around.
 
 ### Changed
+- **A blocked container stays shut.** A chest with a solid block over it, or
+  a cat sitting on the lid, opened anyway; so did a shulker box with no room
+  for its lid, and a large chest with one half covered. All of them now
+  refuse, and a barrel still opens under a block — which is the whole reason
+  to build one.
+- **Shift-clicking a crafting result crafts the lot.** It handed over exactly
+  one result per click, so a stack of logs took sixty-four clicks to become
+  planks. It now repeats until the grid runs out or your inventory fills.
+- **Covered farmland goes back to dirt.** Placing a chest or a slab on a
+  tilled row left it tilled forever, still growing wheat under the floor. A
+  carpet or a passing piston still leaves it alone.
+- **The pale garden keeps the right hours.** Eyeblossoms opened and closed on
+  a hand-made window that was wrong at both ends, and the creaking woke on the
+  same wrong clock. Both now switch on the real game's times, and an
+  eyeblossom taken to the Nether keeps whichever face it went in with.
+- **Composters and note blocks can be heard.** Neither emitted the vibration
+  the real game does, so a sculk sensor or a warden was deaf to a composter
+  being filled or a note block played by redstone. A muffled note block still
+  makes no sound and no vibration.
+- **A converted mob keeps its name.** Every conversion — a zombie drowning, a
+  pig struck by lightning, a villager hit by a witch's curse — quietly threw
+  away the name tag you spent on it and put the mob back on the despawn
+  clock.
 - **Death messages say what killed you.** Starving, falling out of the world
   and withering away all read "<name> died", along with ten other ways to go
   that had no message at all. Every one now reads what the real game reads,
