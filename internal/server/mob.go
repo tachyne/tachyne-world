@@ -189,6 +189,9 @@ type mob struct {
 	charged                         bool        // creeper struck by lightning: a doubled blast (persisted)
 	saddled                         bool        // a saddle is on: this mob can be mounted
 	saddleSt                        invStack    // the saddle item (horse family; saddled mirrors it)
+	boosting                        bool        // pig/strider: a food-on-a-stick sprint is running (ItemBasedSteering)
+	boostTick                       int         // …how far into it, counted only while ridden
+	boostTotal                      int         // …and the rolled length the client was told about
 	armorSt                         invStack    // body armor / llama carpet / wolf armor
 	armorNote                       int8        // wolf armor: 1 = cracked further, 2 = broke — the hub plays it next update
 	chested                         bool        // donkey/mule/llama carrying a chest
