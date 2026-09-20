@@ -155,6 +155,28 @@ def main():
     L += [
         "}",
         "",
+        "// dmgTypeHurtSound is the sound a player makes when this kind of harm",
+        "// lands — DamageType.effects().sound(), which is what Player.getHurtSound",
+        "// returns. Types absent from this table use the ordinary hurt sound.",
+        "var dmgTypeHurtSound = [...]string{",
+    ]
+    effect_sound = {
+        "hurt": "",  # entity.player.hurt, the default
+        "thorns": "",  # vanilla plays the same sound for thorns
+        "drowning": "minecraft:entity.player.hurt_drown",
+        "burning": "minecraft:entity.player.hurt_on_fire",
+        "poking": "minecraft:entity.player.hurt_sweet_berry_bush",
+        "freezing": "minecraft:entity.player.hurt_freeze",
+    }
+    for t in types:
+        eff = defs[t].get("effects", "hurt")
+        if eff not in effect_sound:
+            raise SystemExit(f"{t}: unknown damage effect {eff!r}")
+        if effect_sound[eff]:
+            L.append(f'\tdt{camel(t)}: "{effect_sound[eff]}",')
+    L += [
+        "}",
+        "",
         "// dmgScaling is DamageType.scaling: whether the difficulty multiplies a",
         "// hit of this type before armour sees it (Player.hurtServer).",
         "type dmgScaling uint8",

@@ -109,3 +109,28 @@ func TestDeathCauseRidesWithTheDamage(t *testing.T) {
 		t.Errorf("a respawned player still carries their last death's cause: %+v", pl.lastCause)
 	}
 }
+
+// Player.getHurtSound: the sound belongs to the damage type. Drowning,
+// burning, freezing and a sweet berry bush each have their own; everything
+// else, thorns included, uses the ordinary one.
+func TestHurtSoundComesFromTheDamageType(t *testing.T) {
+	for _, tc := range []struct {
+		dt   dmgType
+		want string
+	}{
+		{dtDrown, "minecraft:entity.player.hurt_drown"},
+		{dtFreeze, "minecraft:entity.player.hurt_freeze"},
+		{dtSweetBerryBush, "minecraft:entity.player.hurt_sweet_berry_bush"},
+		{dtLava, "minecraft:entity.player.hurt_on_fire"},
+		{dtInFire, "minecraft:entity.player.hurt_on_fire"},
+		{dtCampfire, "minecraft:entity.player.hurt_on_fire"},
+		{dtFireball, "minecraft:entity.player.hurt_on_fire"},
+		{dtMobAttack, "minecraft:entity.player.hurt"},
+		{dtThorns, "minecraft:entity.player.hurt"},
+		{dtFall, "minecraft:entity.player.hurt"},
+	} {
+		if got := hurtSoundFor(tc.dt); got != tc.want {
+			t.Errorf("%s sounds like %q, want %q", dmgTypeNames[tc.dt], got, tc.want)
+		}
+	}
+}

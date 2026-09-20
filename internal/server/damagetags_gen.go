@@ -246,6 +246,22 @@ var dmgTypeExhaustion = [...]float32{
 	dtWitherSkull:          0.1,
 }
 
+// dmgTypeHurtSound is the sound a player makes when this kind of harm
+// lands — DamageType.effects().sound(), which is what Player.getHurtSound
+// returns. Types absent from this table use the ordinary hurt sound.
+var dmgTypeHurtSound = [...]string{
+	dtCampfire:             "minecraft:entity.player.hurt_on_fire",
+	dtDrown:                "minecraft:entity.player.hurt_drown",
+	dtFireball:             "minecraft:entity.player.hurt_on_fire",
+	dtFreeze:               "minecraft:entity.player.hurt_freeze",
+	dtHotFloor:             "minecraft:entity.player.hurt_on_fire",
+	dtInFire:               "minecraft:entity.player.hurt_on_fire",
+	dtLava:                 "minecraft:entity.player.hurt_on_fire",
+	dtOnFire:               "minecraft:entity.player.hurt_on_fire",
+	dtSweetBerryBush:       "minecraft:entity.player.hurt_sweet_berry_bush",
+	dtUnattributedFireball: "minecraft:entity.player.hurt_on_fire",
+}
+
 // dmgScaling is DamageType.scaling: whether the difficulty multiplies a
 // hit of this type before armour sees it (Player.hurtServer).
 type dmgScaling uint8

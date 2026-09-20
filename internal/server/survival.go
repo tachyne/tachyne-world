@@ -575,10 +575,20 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.playSound(players, "minecraft:entity.player.death", sndPlayer, t.x, t.y, t.z, 1, 1)
 	} else {
 		t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
-		h.playSound(players, "minecraft:entity.player.hurt", sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
+		h.playSound(players, hurtSoundFor(dt), sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
 	}
 	h.sendHealth(t)
 	return true
+}
+
+// hurtSoundFor is Player.getHurtSound: the sound belongs to the damage type,
+// not to the player. Drowning, burning, freezing and a sweet berry bush each
+// have their own; everything else uses the ordinary one.
+func hurtSoundFor(dt dmgType) string {
+	if int(dt) < len(dmgTypeHurtSound) && dmgTypeHurtSound[dt] != "" {
+		return dmgTypeHurtSound[dt]
+	}
+	return "minecraft:entity.player.hurt"
 }
 
 // helmetWear is doHurtEquipment's durability cost — the same max(1, damage/4)
