@@ -199,6 +199,8 @@ type savedOffer struct {
 	C2Item  int32   `json:"c2,omitempty"`
 	C2N     int32   `json:"c2n,omitempty"`
 	Ench    []int32 `json:"e,omitempty"` // one id<<8|lvl per enchantment
+	MapID   int32   `json:"m,omitempty"` // a treasure map's map id
+	Name    string  `json:"n,omitempty"` // and the name it carries
 }
 
 // UnmarshalJSON accepts the historical array form as well as the object one.
@@ -229,7 +231,7 @@ func packOffer(o mobOffer) savedOffer {
 	t := o.trade
 	s := savedOffer{In: t.inItem, InN: t.inCount, Out: t.outItem, OutN: t.outCount,
 		MaxUses: t.maxUses, XP: t.xp, Uses: o.uses, Demand: o.demand,
-		C2Item: o.cost2Item, C2N: o.cost2Count}
+		C2Item: o.cost2Item, C2N: o.cost2Count, MapID: o.outMapID, Name: o.outName}
 	for _, e := range o.outEnchs {
 		if e.lvl == 0 {
 			break
@@ -242,7 +244,7 @@ func packOffer(o mobOffer) savedOffer {
 func unpackOffer(s savedOffer) mobOffer {
 	o := mobOffer{trade: vTrade{inItem: s.In, inCount: s.InN, outItem: s.Out,
 		outCount: s.OutN, maxUses: s.MaxUses, xp: s.XP}, uses: s.Uses, demand: s.Demand,
-		cost2Item: s.C2Item, cost2Count: s.C2N}
+		cost2Item: s.C2Item, cost2Count: s.C2N, outMapID: s.MapID, outName: s.Name}
 	for i, e := range s.Ench {
 		if i >= len(o.outEnchs) || e == 0 {
 			break

@@ -68,8 +68,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -432,5 +432,110 @@ func TestSavedOfferLegacyArray(t *testing.T) {
 		if o := unpackOffer(got); len(tc.want.Ench) > 0 && o.outEnchs[0] != (enchApply{id: 9, lvl: 2}) {
 			t.Errorf("%s: enchantment lost, got %+v", tc.raw, o.outEnchs[0])
 		}
+	}
+}
+
+// Vanilla's TreasureMapForEmeralds — the cartographer's explorer maps, and the
+// only route to a monument, mansion or trial chamber that does not mean walking
+// the ocean. Every generated listing must name a structure the generator can
+// actually locate and a real decoration; the rolled offer must hand over a
+// marked, named map for emeralds plus a compass; and a listing restricted to
+// other villager types must yield nothing.
+func TestCartographerSellsExplorerMaps(t *testing.T) {
+	known := map[string]bool{}
+	for _, n := range worldgen.StructureNames() {
+		known[n] = true
+	}
+	for i, l := range villagerMapListings {
+		if !known[l.dest] {
+			t.Errorf("listing %d points at %q, which the generator cannot locate", i, l.dest)
+		}
+		if l.decor < 4 || l.decor > 34 {
+			t.Errorf("listing %d has decoration %d, outside the registry", i, l.decor)
+		}
+		if l.label == "" {
+			t.Errorf("listing %d has no name", i)
+		}
+	}
+	// Every map listing is reachable from the cartographer's table.
+	seen := 0
+	cartographer := -1
+	for i, n := range professionNames {
+		if n == "cartographer" {
+			cartographer = i
+		}
+	}
+	for _, pool := range villagerTrades[cartographer] {
+		for _, tr := range pool {
+			if tr.kind == vTradeTreasureMap {
+				seen++
+				if tr.inItem != itemByName["emerald"] || tr.outItem != itemFilledMap {
+					t.Errorf("a treasure map listing sells a filled map for emeralds, got %+v", tr)
+				}
+			}
+		}
+	}
+	if seen != len(villagerMapListings) {
+		t.Errorf("%d map listings in the cartographer's table, %d defined", seen, len(villagerMapListings))
+	}
+
+	// Roll the ocean-monument listing beside a real monument.
+	w := world.New(5)
+	g := w.Gen()
+	var mx, mz int
+	found := false
+	for r := 0; r < 40 && !found; r++ {
+		mx, mz, found = g.LocateStructure("monument", r*2000, 0, 2000)
+	}
+	if !found {
+		t.Skip("no ocean monument in the scanned range for this seed")
+	}
+	h := newHub(w)
+	h.maps = newMapStore("")
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	m := h.spawnMob(players, entityVillager, float64(mx)+8, 64, float64(mz)+8)
+	var monument vTrade
+	for _, pool := range villagerTrades[cartographer] {
+		for _, tr := range pool {
+			if tr.kind == vTradeTreasureMap && villagerMapListings[tr.mapIdx-1].dest == "monument" {
+				monument = tr
+			}
+		}
+	}
+	o, ok := h.rollMapOffer(m, monument)
+	if !ok {
+		t.Fatalf("the monument at %d,%d is right here and must be locatable", mx, mz)
+	}
+	if o.cost2Item != itemByName["compass"] || o.cost2Count != 1 {
+		t.Errorf("second cost %d×%d, want one compass", o.cost2Item, o.cost2Count)
+	}
+	if o.trade.kind != vTradeFixed {
+		t.Error("a rolled offer must not roll again")
+	}
+	st := o.output()
+	if st.item != itemFilledMap || st.mapID == 0 || st.name != "Ocean Explorer Map" {
+		t.Fatalf("offer hands over %+v, want a named filled map", st)
+	}
+	md := h.maps.get(st.mapID)
+	if md == nil || len(md.Marks) != 1 || md.Marks[0].Type != 9 ||
+		int(md.Marks[0].X) != mx || int(md.Marks[0].Z) != mz {
+		t.Fatalf("map %d does not mark the monument at %d,%d: %+v", st.mapID, mx, mz, md)
+	}
+	if back := unpackOffer(packOffer(o)); back.outMapID != o.outMapID || back.outName != o.outName ||
+		back.cost2Item != o.cost2Item || back.trade != o.trade {
+		t.Errorf("offer round trip lost data: %+v vs %+v", back, o)
+	}
+
+	// A listing meant for other villager types yields nothing at all.
+	typ := h.villagerType(m)
+	for i, l := range villagerMapListings {
+		if l.forTypes == 0 || l.forTypes&(1<<uint(typ)) != 0 {
+			continue
+		}
+		if _, ok := h.rollMapOffer(m, vTrade{kind: vTradeTreasureMap, mapIdx: int32(i + 1)}); ok {
+			t.Errorf("%s is not offered to villager type %d", l.label, typ)
+		}
+		break
 	}
 }

@@ -25,12 +25,18 @@ type mobOffer struct {
 	// only).
 	cost2Item, cost2Count int32
 	outEnchs              enchList
+	// A treasure map's output: which map the stack shows and the name it
+	// carries ("Ocean Explorer Map"). Both persist — the map is located once,
+	// when the offer is rolled.
+	outMapID int32
+	outName  string
 }
 
 // output is the stack an offer hands over.
 func (o *mobOffer) output() invStack {
 	st := invStack{item: o.trade.outItem, count: int(o.trade.outCount)}
 	st.ench = o.outEnchs
+	st.mapID, st.name = o.outMapID, o.outName
 	return st
 }
 
@@ -60,7 +66,7 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		}
 	}
 	if len(pool) == 0 {
-		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed}}
+		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed, 0}}
 	}
 	id := pool[h.rng.Intn(len(pool))]
 	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
@@ -72,7 +78,7 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		price = 64
 	}
 	return mobOffer{
-		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed},
+		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed, 0},
 		cost2Item:  itemByName["book"],
 		cost2Count: 1,
 		outEnchs:   enchList{{id: id, lvl: int8(lvl)}},
@@ -99,6 +105,42 @@ func (h *hub) rollGearOffer(t vTrade) mobOffer {
 	}
 	o.outEnchs = enchApplyList(enchSelect(h.rng, t.outItem, lvl, enchGearAllowed))
 	return o
+}
+
+// explorerMapSearch is the radius vanilla's TreasureMapForEmeralds searches —
+// findNearestMapStructure(..., 100, true), 100 chunks — in blocks.
+const explorerMapSearch = 100 * 16
+
+// rollMapOffer is VillagerTrades.TreasureMapForEmeralds.getOffer: find the
+// nearest site of the listing's structure to the villager, draw a map centred
+// on it, mark it, and name it. The villager sells it for emeralds plus a
+// compass. ok=false when the listing is not for this villager's type or
+// nothing is within reach — vanilla returns no offer in both cases, and the
+// caller draws another listing instead.
+func (h *hub) rollMapOffer(m *mob, t vTrade) (mobOffer, bool) {
+	if t.mapIdx <= 0 || int(t.mapIdx) > len(villagerMapListings) {
+		return mobOffer{}, false
+	}
+	l := villagerMapListings[t.mapIdx-1]
+	if l.forTypes != 0 && l.forTypes&(1<<uint(h.villagerType(m))) == 0 {
+		return mobOffer{}, false
+	}
+	w := h.worldFor(m.dim)
+	if w == nil || h.maps == nil {
+		return mobOffer{}, false
+	}
+	x, z, ok := w.Gen().LocateStructure(l.dest, floorInt(m.x), floorInt(m.z), explorerMapSearch)
+	if !ok {
+		return mobOffer{}, false
+	}
+	md := h.maps.create(x, z, 2, m.dim)
+	md.Marks = append(md.Marks, mapMark{X: int32(x), Z: int32(z), Type: l.decor})
+	h.maps.markDirty()
+	o := mobOffer{trade: t}
+	o.trade.kind, o.trade.mapIdx = vTradeFixed, 0 // resolved: nothing re-rolls it
+	o.cost2Item, o.cost2Count = itemByName["compass"], 1
+	o.outMapID, o.outName = md.ID, l.label
+	return o, true
 }
 
 // tradePriceMultiplier is vanilla MerchantOffer.priceMultiplier. Vanilla varies
@@ -151,14 +193,26 @@ func (h *hub) unlockTier(m *mob, tier int) {
 	if len(pool) == 0 {
 		return
 	}
+	// Vanilla draws listings until it has offersPerTier OFFERS, so a listing
+	// that yields none (a treasure map for another villager type, or one whose
+	// structure is out of reach) is skipped rather than costing a slot.
 	start := int(m.eid) % len(pool) // stable per-villager rotation
-	for i := 0; i < offersPerTier && i < len(pool); i++ {
+	added := 0
+	for i := 0; i < len(pool) && added < offersPerTier; i++ {
 		t := pool[(start+i)%len(pool)]
-		if t.kind == vTradeEnchantedGear {
+		switch t.kind {
+		case vTradeEnchantedGear:
 			m.offers = append(m.offers, h.rollGearOffer(t))
-			continue
+		case vTradeTreasureMap:
+			o, ok := h.rollMapOffer(m, t)
+			if !ok {
+				continue
+			}
+			m.offers = append(m.offers, o)
+		default:
+			m.offers = append(m.offers, mobOffer{trade: t})
 		}
-		m.offers = append(m.offers, mobOffer{trade: t})
+		added++
 	}
 	if m.profession == librarianProfession && tier >= 1 && tier <= 4 {
 		m.offers = append(m.offers, h.rollBookOffer(tier)) // the tier's enchanted book

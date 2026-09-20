@@ -19,6 +19,13 @@ var structureLocators = map[string]structureLocator{
 		v := g.VillageIn(wx, wz)
 		return v.X, v.Z, v.Exists
 	}},
+	// The village styles, which the cartographer's village maps point at:
+	// same placement, filtered to the variant the site's biome picks.
+	"village_plains":  villageVariantLocator("plains"),
+	"village_desert":  villageVariantLocator("desert"),
+	"village_savanna": villageVariantLocator("savanna"),
+	"village_snowy":   villageVariantLocator("snowy"),
+	"village_taiga":   villageVariantLocator("taiga"),
 	"desert_pyramid": {0, templeCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		d := g.DesertTempleIn(wx, wz)
 		return d.X + templeWidth/2, d.Z + templeDepth/2, d.Exists
@@ -114,6 +121,15 @@ var structureLocators = map[string]structureLocator{
 		c := g.EndCityIn(wx, wz)
 		return c.X, c.Z, c.Exists
 	}},
+}
+
+// villageVariantLocator is the "village" locator narrowed to one village
+// style — what vanilla's #on_<style>_village_maps structure tag selects.
+func villageVariantLocator(variant string) structureLocator {
+	return structureLocator{0, villageCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		v := g.VillageIn(wx, wz)
+		return v.X, v.Z, v.Exists && v.Variant == variant
+	}}
 }
 
 // StructureNames lists the structure ids /locate accepts, sorted.
