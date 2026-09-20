@@ -269,11 +269,30 @@ func bottomProp(s uint32) bool {
 	return ok && worldgen.GetProperty(info, s, "bottom") == "true"
 }
 
-// coversPath is DirtPathBlock.canSurvive inverted: a solid block on top turns
-// the path back to dirt, and a fence gate — which vanilla names explicitly —
-// does not.
-func coversPath(above uint32) bool {
-	return worldgen.Collides(above) && !isFenceGate(above)
+// coversSoil is DirtPathBlock.canSurvive and FarmBlock.canSurvive inverted —
+// one predicate, because the two blocks ask the same question and answer it
+// the same way: a solid block laid on top turns the ground back to dirt, and a
+// fence gate, which both classes name explicitly, does not count as one.
+func coversSoil(above uint32) bool {
+	return solidLid(above) && !isFenceGate(above)
+}
+
+// solidLid reports whether the block above seals the cell the way vanilla's
+// isSolid means it: the test is the COLLISION box, not opacity, so a slab, a
+// chest and a ladder all count while a pressure plate, a torch and a sign do
+// not. Collides is the nearest reading of that box the engine keeps, and
+// carpets are the one everyday block it over-counts — vanilla calls a
+// sixteenth of a block too flat to be solid — so a rug laid over a path or a
+// field leaves it as it found it.
+func solidLid(above uint32) bool {
+	// A block mid-push rides in a moving_piston cell, whose shape is worked
+	// out as it travels. Vanilla never calls a dynamically shaped block solid
+	// (and FarmBlock names this one outright anyway), so the journey leaves
+	// the row alone — only the block that comes to rest there ploughs it up.
+	if isMovingPiston(above) {
+		return false
+	}
+	return worldgen.Collides(above) && !worldgen.IsThinFloor(above)
 }
 
 // isFenceGate asks the state its own name rather than keeping a list, so a
@@ -345,17 +364,24 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			// world.At, not Block: naturally generated plants are not in the
 			// edit overlay, and Block would miss them entirely.
 			st := h.worldFor(dim).At(n.x, n.y, n.z)
-			// Multiface blocks and scaffolding update their STATE on a neighbour
-			// change (a lost face, a new distance) and only drop past the last
-			// face / at distance 7 — vanilla's updateShape for both.
-			// A dirt path under a solid block turns back into dirt rather
-			// than falling — DirtPathBlock.canSurvive is about what is ABOVE
-			// it, and the block converts instead of dropping.
-			if st == dirtPathState && coversPath(h.worldFor(dim).At(n.x, n.y+1, n.z)) {
+			// A dirt path or a patch of farmland under a solid block turns
+			// back into dirt rather than falling — canSurvive is about what
+			// is ABOVE them for both, and they share vanilla's turnToDirt:
+			// the block converts where it stands instead of dropping.
+			above := h.worldFor(dim).At(n.x, n.y+1, n.z)
+			if st == dirtPathState && coversSoil(above) {
 				h.setBlockAt(players, dim, n, worldgen.Dirt)
 				queue = append(queue, n)
 				continue
 			}
+			if isFarmland(st) && coversSoil(above) {
+				h.turnFarmlandToDirt(players, dim, n.x, n.y, n.z)
+				queue = append(queue, n)
+				continue
+			}
+			// Multiface blocks and scaffolding update their STATE on a neighbour
+			// change (a lost face, a new distance) and only drop past the last
+			// face / at distance 7 — vanilla's updateShape for both.
 			if isMultiface(st) || isScaffolding(st) || isChorusPlant(st) {
 				var ns uint32
 				var ok bool
