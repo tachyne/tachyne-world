@@ -194,6 +194,7 @@ const (
 	componentStewEffects    = 44 // suspicious_stew_effects (creative tooltip only, but vanilla syncs it); remapped per version
 	componentRepairCost     = 16 // repair_cost (the anvil's prior-work penalty); remapped per version
 	componentContainer      = 66 // container (a shulker box's contents, in its tooltip); remapped per version
+	componentOminousBottle  = 54 // ominous_bottle_amplifier (the Bad Omen level); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -270,7 +271,7 @@ func stackComponents(st invStack) []byte {
 		comps++
 	}
 	if st.potion != potNone {
-		comps++
+		comps++ // potion_contents, or the ominous bottle's level — see below
 	}
 	if _, ok := stewEffectOf(st.stew); ok {
 		comps++
@@ -359,11 +360,21 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, int32(st.trimPat))
 	}
 	if st.potion != potNone {
-		// potion_contents: the brew's effects. The client colours the liquid
-		// from them and lists them in the tooltip — without it every potion is
-		// the same purple and says nothing about what it does.
-		b = protocol.AppendVarInt(b, componentPotionContents)
-		b = append(b, potionComponentBytes(st.potion)...)
+		// The potion field does double duty: on a bottle from a raid captain
+		// it is the Bad Omen level, not a brew, and sending that as
+		// potion_contents would give the bottle some unrelated potion's
+		// colour and effect list.
+		if st.item == itemOminousBottle {
+			b = protocol.AppendVarInt(b, componentOminousBottle)
+			b = protocol.AppendVarInt(b, int32(ominousBottleLevel(st)-1)) // stored level, wire amplifier
+		} else {
+			// potion_contents: the brew's effects. The client colours the
+			// liquid from them and lists them in the tooltip — without it
+			// every potion is the same purple and says nothing about what it
+			// does.
+			b = protocol.AppendVarInt(b, componentPotionContents)
+			b = append(b, potionComponentBytes(st.potion)...)
+		}
 	}
 	if e, ok := stewEffectOf(st.stew); ok {
 		// suspicious_stew_effects: (effect holder, duration) pairs. The stew

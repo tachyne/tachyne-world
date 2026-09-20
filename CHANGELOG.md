@@ -30,6 +30,10 @@ the public history since the project was open-sourced on 2026-07-10.
   kept, and came back when the box was placed, but nothing said so until
   you put it down again. The box now carries its contents to the client, so
   the first few appear under its name in the tooltip the way they should.
+- **A raid captain's bottle keeps its own level.** The bottle stores its Bad
+  Omen level in the same place a potion stores its brew, so it now goes out
+  with its own component instead of being mistaken for whichever potion
+  happens to share that number.
 - **Reports get answered.** A reply can be sent to a player in game, and if
   they are not online it waits and arrives the moment they next join —
   which is the usual case, since whoever answers a report is rarely at a

@@ -148,8 +148,8 @@ func TestPistonRowRetractsWhenTheLeverGoes(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	// The ground the dust sits on, and the blocks above the piston bases.
 	for i := 0; i < 4; i++ {
-		w.SetBlock(x+i, y-1, z, worldgen.Stone)   // under the dust
-		w.SetBlock(x+i, y, z+1, worldgen.Stone)   // above each piston base
+		w.SetBlock(x+i, y-1, z, worldgen.Stone)  // under the dust
+		w.SetBlock(x+i, y, z+1, worldgen.Stone)  // above each piston base
 		w.SetBlock(x+i, y-1, z+1, downPiston(t)) // the piston, facing down
 		w.SetBlock(x+i, y-2, z+1, worldgen.Air)  // room for the head
 		w.SetBlock(x+i, y-3, z+1, worldgen.Air)

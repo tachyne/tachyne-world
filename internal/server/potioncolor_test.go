@@ -206,3 +206,28 @@ func TestShulkerBoxCarriesItsContents(t *testing.T) {
 		t.Errorf("an empty box carries %d components, want none", add)
 	}
 }
+
+// The stack's potion field does double duty: on a raid captain's bottle it is
+// the Bad Omen level, not a brew. Sending that as potion_contents would paint
+// the bottle with some unrelated potion's colour and list its effects.
+func TestOminousBottleIsNotABrew(t *testing.T) {
+	st := invStack{item: itemOminousBottle, count: 1, potion: 4} // level 4 → amplifier 3
+	body := appendStack(nil, st)
+	if _, _, ok := protocol.ReadSlot770(bytes.NewReader(body)); !ok {
+		t.Fatal("the slot copier rejected the bottle")
+	}
+	r := bytes.NewReader(body)
+	for i := 0; i < 4; i++ {
+		protocol.ReadVarInt(r)
+	}
+	cid, _ := protocol.ReadVarInt(r)
+	if cid == componentPotionContents {
+		t.Fatal("the bottle went out as a potion")
+	}
+	if cid != componentOminousBottle {
+		t.Fatalf("component %d, want ominous_bottle_amplifier (%d)", cid, componentOminousBottle)
+	}
+	if amp, _ := protocol.ReadVarInt(r); amp != 3 {
+		t.Errorf("amplifier %d, want 3 (level 4)", amp)
+	}
+}
