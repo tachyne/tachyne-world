@@ -671,16 +671,46 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 	h.tossItem(players, t, st)
 }
 
-// takeCraftResult performs a click on the result slot: match the grid, hand the
-// result over (cursor, or straight to inventory on shift-click), consume one
-// item from every grid cell, and resync everything the craft touched.
+// takeCraftResult performs a click on the result slot. A shift-click repeats:
+// vanilla's QUICK_MOVE loop keeps crafting while the grid still yields the
+// same item and the inventory still has room, which is how a stack of planks
+// comes out of a stack of logs in one click rather than sixty-four.
 func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32) {
+	if mode != 1 {
+		h.takeCraftOnce(players, t, mode)
+		return
+	}
+	first, _ := h.craftResult(t.craft[:gridSize(t)*gridSize(t)], gridSize(t))
+	for n := 0; n < craftRepeatCap; n++ {
+		if !h.takeCraftOnce(players, t, mode) {
+			return
+		}
+		next, _ := h.craftResult(t.craft[:gridSize(t)*gridSize(t)], gridSize(t))
+		if next.item != first.item || next.count == 0 {
+			return // the grid no longer makes the same thing
+		}
+		if !t.inv.hasRoomFor(next) {
+			return // ...or there is nowhere left to put it
+		}
+	}
+}
+
+// craftRepeatCap bounds the shift-click loop. A full grid of the largest
+// stacks cannot need more passes than this, and it keeps a bad recipe from
+// spinning the hub goroutine.
+const craftRepeatCap = 64 * 9
+
+// takeCraftOnce crafts a single result: match the grid, hand the result over
+// (cursor, or straight to inventory on shift-click), consume one item from
+// every grid cell, and resync everything the craft touched. It reports whether
+// anything was made, so the shift-click loop knows to go round again.
+func (h *hub) takeCraftOnce(players map[int32]*tracked, t *tracked, mode int32) bool {
 	w := gridSize(t)
 	grid := t.craft[:w*w]
 	res, kind := h.craftResult(grid, w)
 	if res.item == 0 {
 		h.sendCraftResult(t) // clicked an empty/stale result — just resync it
-		return
+		return false
 	}
 	if kind == mapCraftZoom {
 		// The zoomed map is born at take time (the preview shows the source).
@@ -723,7 +753,7 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 	default: // cursor holds something else — vanilla refuses the take
 		h.sendCraftResult(t)
 		h.sendCursor(t)
-		return
+		return false
 	}
 
 	for i := range grid {
@@ -764,6 +794,7 @@ func (h *hub) takeCraftResult(players map[int32]*tracked, t *tracked, mode int32
 	}
 	h.sendCraftResult(t)
 	h.sendCursor(t)
+	return true
 }
 
 // ---- open / close ----------------------------------------------------------

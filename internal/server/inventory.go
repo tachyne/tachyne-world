@@ -233,6 +233,28 @@ func (inv *inventory) addStack(st invStack) (changed []int, leftover int) {
 	return nil, st.count
 }
 
+// hasRoomFor reports whether at least part of a stack would fit. Vanilla's
+// shift-click loop stops when the quick-move can no longer place anything, so
+// a repeat-craft asks this before going round again.
+func (inv *inventory) hasRoomFor(st invStack) bool {
+	if st.count == 0 {
+		return true
+	}
+	mergeable := st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 &&
+		st.sameExtras(invStack{})
+	cap := stackCap(st.item)
+	for i := range inv.slots {
+		s := &inv.slots[i]
+		if s.count == 0 {
+			return true
+		}
+		if mergeable && s.item == st.item && s.count < cap {
+			return true
+		}
+	}
+	return false
+}
+
 // windowSlot maps a logical inventory index to its player-window slot: hotbar
 // (0-8) lives in window slots 36-44, the main inventory (9-35) maps directly.
 func windowSlot(logical int) int16 {

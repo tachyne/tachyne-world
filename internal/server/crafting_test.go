@@ -484,3 +484,53 @@ func TestCraftReturnsBuckets(t *testing.T) {
 		t.Fatalf("the egg leaves nothing behind, got %+v", pl.craft[4])
 	}
 }
+
+// A shift-click on the result crafts repeatedly until the grid runs out
+// (vanilla's QUICK_MOVE loop), so a stack of logs becomes a stack of planks
+// in one click.
+func TestCraftShiftClickRepeats(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	pl.winKind, pl.winID = winCraft, 0
+	log, planks := itemByName["oak_log"], itemByName["oak_planks"]
+	pl.craft = [9]invStack{{item: log, count: 16}}
+	h.takeCraftResult(players, pl, 1)
+	if pl.craft[0].count != 0 {
+		t.Fatalf("the whole stack of logs should be consumed, %d left", pl.craft[0].count)
+	}
+	got := 0
+	for _, s := range pl.inv.slots {
+		if s.item == planks {
+			got += s.count
+		}
+	}
+	if got != 64 {
+		t.Fatalf("16 logs should make 64 planks, got %d", got)
+	}
+}
+
+// The repeat stops when the inventory fills rather than dumping the overflow
+// on the floor: vanilla's quick-move simply fails and the craft doesn't happen.
+func TestCraftShiftClickStopsWhenFull(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	pl.winKind, pl.winID = winCraft, 0
+	log, planks := itemByName["oak_log"], itemByName["oak_planks"]
+	stone := itemByName["stone"]
+	for i := range pl.inv.slots {
+		pl.inv.slots[i] = invStack{item: stone, count: 64}
+	}
+	pl.inv.slots[0] = invStack{item: planks, count: 60}
+	pl.craft = [9]invStack{{item: log, count: 16}}
+	h.takeCraftResult(players, pl, 1)
+	if pl.inv.slots[0].count != 64 {
+		t.Fatalf("the one open stack should be topped up to 64, got %d", pl.inv.slots[0].count)
+	}
+	if pl.craft[0].count != 15 {
+		t.Fatalf("only one log should be spent, %d left of 16", pl.craft[0].count)
+	}
+}
