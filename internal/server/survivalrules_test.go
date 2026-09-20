@@ -241,3 +241,25 @@ func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
 		t.Error("an upper layer stood on another upper layer")
 	}
 }
+
+// gameplay/chicken_lay: a chicken lays the egg its own variant calls for.
+// Every chicken had been laying the plain white one.
+func TestChickensLayTheirVariantsEgg(t *testing.T) {
+	for _, tc := range []struct {
+		variant int32
+		want    int32
+		name    string
+	}{
+		{tempTemperate, itemEgg, "temperate"},
+		{tempWarm, itemBrownEgg, "warm"},
+		{tempCold, itemBlueEgg, "cold"},
+	} {
+		if got := chickenEggFor(tc.variant); got != tc.want {
+			t.Errorf("a %s chicken lays item %d, want %d", tc.name, got, tc.want)
+		}
+	}
+	// The three are genuinely different items, not the same id three times.
+	if itemEgg == itemBrownEgg || itemEgg == itemBlueEgg || itemBrownEgg == itemBlueEgg {
+		t.Error("the three egg items are not distinct")
+	}
+}

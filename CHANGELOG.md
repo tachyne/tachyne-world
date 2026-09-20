@@ -131,6 +131,10 @@ the public history since the project was open-sourced on 2026-07-10.
   and big dripleaf stems learned their rules too: a bell hung between two
   walls falls if either one goes, and a stem needs both the ground below and
   the rest of the plant above.
+- **Chickens lay the egg they should.** A chicken from a warm biome lays a
+  brown egg and one from a cold biome a blue egg; every chicken here had
+  been laying the plain white one, even though the server already knew which
+  kind of chicken it was.
 - **Breaking a powered block lets go of its neighbours.** Mining a lectern,
   a sculk sensor, a target, a block of redstone, a shelf, a trapped chest or
   a playing jukebox left whatever it was powering still switched on, because

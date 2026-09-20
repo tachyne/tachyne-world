@@ -208,7 +208,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {
 				m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin)
-				h.spawnItem(players, itemEgg, 1, m.x, m.y, m.z)
+				h.spawnItem(players, chickenEggFor(m.variant), 1, m.x, m.y, m.z)
 				h.playSound(players, "minecraft:entity.chicken.egg", sndNeutral, m.x, m.y, m.z, 1, 1)
 			}
 		}
@@ -275,3 +275,16 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 // (wildSpawn/biomeAnimal retired 2026-07-11, the herd top-up 2026-09-19:
 // natural spawning is the vanilla NaturalSpawner port in spawn.go and
 // spawnvanilla.go, drawing from the biome data's pools.)
+
+// chickenEggFor is the gameplay/chicken_lay table: a chicken lays the egg its
+// own variant calls for — brown in the warm biomes, blue in the cold ones,
+// the plain white egg everywhere else. Every chicken had been laying white.
+func chickenEggFor(variant int32) int32 {
+	switch variant {
+	case tempWarm:
+		return itemBrownEgg
+	case tempCold:
+		return itemBlueEgg
+	}
+	return itemEgg
+}
