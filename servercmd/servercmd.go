@@ -85,6 +85,7 @@ func Main() {
 	srv.RecipeBookFile = "recipebook.json"
 	srv.ScoreboardFile = "scoreboard.json"
 	srv.SignFile = "signs.json"
+	srv.BugFile = "bugs.json"
 	srv.CampfireFile = "campfires.json"
 	srv.BannerFile = "banners.json"
 	srv.BookFile = "books.json"

@@ -155,6 +155,7 @@ func modelledCommands() []cmdNode {
 			lit("add", false, argProfile("player", true)),
 			lit("remove", false, argProfile("player", true)))...),
 		lit("say", false, argGreedy("message", true)),
+		lit("bug", false, argGreedy("what went wrong", true)),
 		lit("msg", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),
 		lit("tell", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),
 		lit("w", false, argEntity("target", entitySingle|entityPlayers, false, argGreedy("message", true))),

@@ -470,6 +470,7 @@ type hub struct {
 	mobstore   *mobStore       // live-mob persistence across restarts (nil = in-memory only)
 
 	signs       *signStore       // sign text (the store is the live owner — chunk builders read it)
+	bugs        *bugStore        // in-game /bug reports (bugreport.go)
 	maps        *mapStore        // filled maps (colors + per-holder dirty tracking)
 	signMayEdit map[string]int32 // transient edit locks (vanilla playerWhoMayEdit), keyed by signKey
 
@@ -706,6 +707,7 @@ func newHub(w *world.World) *hub {
 		sb:            sb,
 		sbstore:       sbst,
 		signs:         newSignStore(""), // in-memory; server.Run swaps in the persisted one
+		bugs:          newBugStore(""),
 		books:         newBookStore(""), // in-memory; server.Run swaps in the persisted one
 		signMayEdit:   map[string]int32{},
 		events:        make(chan hubEvent, 256),
@@ -1138,6 +1140,7 @@ func (h *hub) run() {
 					h.sbstore.flush(h.sb)
 				}
 				h.signs.flushIfDirty()
+				h.bugs.flushIfDirty()
 				h.cfStore.flushIfDirty()
 				h.banners.flushIfDirty()
 				h.books.flushIfDirty()
@@ -1456,6 +1459,11 @@ func (h *hub) run() {
 						h.useRedstone1b(players, pos, st)
 					}
 				})
+			case evBug:
+				if t := players[e.eid]; t != nil {
+					id := h.fileBugReport(players, t, e.text)
+					t.p.tell(fmt.Sprintf("Filed as bug #%d, with the blocks around you. Thank you.", id))
+				}
 			case evSetRule:
 				h.applyRule(players, e)
 			case evSetWeather:
@@ -2128,6 +2136,7 @@ func (h *hub) run() {
 					h.mobstore.flush()
 				}
 				h.signs.flushIfDirty()
+				h.bugs.flushIfDirty()
 				h.cfStore.flushIfDirty()
 				h.banners.flushIfDirty()
 				h.books.flushIfDirty()

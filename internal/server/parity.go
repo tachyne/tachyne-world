@@ -23,7 +23,7 @@ const (
 // The tree is advisory — it buys client-side tab-completion and un-reddened
 // input; execution still validates ops and arguments server-side.
 var commandNames = []string{
-	"ban", "clear", "difficulty", "effect", "end", "gamemode", "gamerule",
+	"ban", "bug", "clear", "difficulty", "effect", "end", "gamemode", "gamerule",
 	"give", "gm", "help", "hud", "kick", "kill", "list", "locate", "msg", "nether",
 	"pardon", "particle", "playsound", "plugin", "refresh", "rescue", "say",
 	"scoreboard", "spawnpoint", "summon", "team", "teleport", "tell", "time",

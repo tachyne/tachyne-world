@@ -153,6 +153,7 @@ type Server struct {
 	RecipeBookFile  string // persists recipe-book unlocks/settings (empty = in-memory only)
 	ScoreboardFile  string // persists the scoreboard (empty = in-memory only)
 	SignFile        string // persists sign text (empty = in-memory only)
+	BugFile         string // persists in-game /bug reports (empty = in-memory only)
 	CampfireFile    string // persists campfire contents (empty = in-memory only)
 	BannerFile      string // persists placed-banner patterns (empty = in-memory only)
 	BookFile        string // persists book contents (empty = in-memory only)
@@ -384,6 +385,9 @@ func (s *Server) Serve() error {
 		s.hub.rbstore = newRecipeBookStore(s.RecipeBookFile)
 		s.hub.sb, s.hub.sbstore = newScoreboard(s.ScoreboardFile)
 		s.hub.signs = newSignStore(s.SignFile)
+	}
+	if s.BugFile != "" {
+		s.hub.bugs = newBugStore(s.BugFile)
 		s.hub.cfStore = newCampfireStore(s.CampfireFile)
 		s.hub.banners = newBannerStore(s.BannerFile)
 		s.hub.books = newBookStore(s.BookFile)

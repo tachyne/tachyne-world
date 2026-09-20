@@ -52,6 +52,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdPlaysound(p, fields[1:])
 	case "particle":
 		s.cmdParticle(p, fields[1:])
+	case "bug":
+		s.cmdBug(p, fields[1:])
 	case "say":
 		if len(fields) > 1 {
 			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})

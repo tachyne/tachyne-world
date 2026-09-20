@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"expvar"
 	"fmt"
 	"log"
@@ -139,6 +140,13 @@ func (s *Server) serveHealth(addr string) {
 	stats.Set("chunk_cache_backend", expvar.Func(func() any { return s.cacheBackend.Load() }))
 	stats.Set("bus_connected", expvar.Func(func() any { return s.busConnected.Load() }))
 	mux.Handle("/debug/vars", expvar.Handler())
+
+	// The in-game /bug reports, newest last. Read-only and on the health
+	// listener, which is cluster-internal — the same place /debug/vars lives.
+	mux.HandleFunc("/debug/bugs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(h.bugs.snapshot())
+	})
 
 	// pprof on our own mux, not DefaultServeMux — nothing else in the binary
 	// should be reachable here by accident.

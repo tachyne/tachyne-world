@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **`/bug` files a report with the world attached.** Typing
+  `/bug <what went wrong>` records not just the message but the fifteen
+  blocks around you — every block and the properties that differ from its
+  default, plus where you were standing, which way you were looking, what
+  you were holding and what was nearby. A description like "pistons next to
+  my dust line do nothing" is guesswork to act on; the same report with the
+  build attached can be rebuilt exactly and turned into a test. Reports are
+  kept beside the world and served on the internal health endpoint.
 - **Village children play tag.** Baby villagers ran the adults' daily
   schedule, which had them standing at workstations they cannot use. They
   now play the game vanilla gives them: a child picks one of the other
