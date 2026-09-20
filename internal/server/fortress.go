@@ -71,10 +71,11 @@ func (h *hub) updateFortressSpawners(players map[int32]*tracked) {
 			if nw.At(s[0], s[1], s[2]) != spawnerState {
 				continue // mined out
 			}
-			if next, ok := h.spawnerNext[pos]; ok && now < next {
+			key := simPos{dim: dimNether, blockPos: pos}
+			if next, ok := h.spawnerNext[key]; ok && now < next {
 				continue
 			}
-			h.spawnerNext[pos] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
+			h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
 			near := 0
 			for _, m := range h.mobs {
 				if m.dim == dimNether && m.etype == entityBlaze && dist3(m.x, m.y, m.z, float64(s[0]), float64(s[1]), float64(s[2])) < 9 {

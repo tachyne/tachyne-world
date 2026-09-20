@@ -213,7 +213,8 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	// Vanilla ComparatorBlock.getDelay() = 2: the output change lands two game
 	// ticks after the input settles, via the same delayed-flip (rsDue) mechanism
 	// repeaters use. (Was applied immediately.)
-	if h.compOut[pos] == out && boolProp(state, "powered") == (out > 0) {
+	key := simPos{dim: h.rsDim, blockPos: pos}
+	if h.compOut[key] == out && boolProp(state, "powered") == (out > 0) {
 		delete(h.rsDue, pos) // settled — cancel any pending flip
 		return
 	}
@@ -226,7 +227,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	}
 	if now >= due {
 		delete(h.rsDue, pos)
-		h.compOut[pos] = out
+		h.compOut[key] = out
 		h.rsSet(players, pos, setBoolProp(state, "powered", out > 0))
 		h.scheduleSignalAround(pos)
 	}

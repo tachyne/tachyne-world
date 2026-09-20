@@ -273,7 +273,7 @@ func (h *hub) ownSignal(x, y, z int, s uint32) int {
 			return 15
 		}
 	case isComparator(s):
-		return h.compOut[blockPos{x, y, z}]
+		return h.compOut[simPos{dim: h.rsDim, blockPos: blockPos{x, y, z}}]
 	case isObserver(s):
 		if boolProp(s, "powered") {
 			return 15

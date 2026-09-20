@@ -57,7 +57,7 @@ func TestSpawnerSpawnsWhenPlayerNear(t *testing.T) {
 		t.Fatal("spawner must respect its cooldown")
 	}
 	// Mined-out spawner goes dead.
-	h.spawnerNext = map[blockPos]uint64{}
+	h.spawnerNext = map[simPos]uint64{}
 	w.SetBlock(d.X, d.Y, d.Z, worldgen.Air)
 	before = len(h.mobs)
 	h.updateSpawners(players)

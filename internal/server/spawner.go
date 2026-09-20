@@ -48,10 +48,11 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				if h.world.At(d.X, d.Y, d.Z) != worldgen.BlockBase("spawner") { // mined out → dead spawner
 					continue
 				}
-				if next, ok := h.spawnerNext[pos]; ok && now < next {
+				key := simPos{blockPos: pos} // dungeons are overworld
+				if next, ok := h.spawnerNext[key]; ok && now < next {
 					continue
 				}
-				h.spawnerNext[pos] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
+				h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
 				near := 0
 				for _, m := range h.mobs {
 					if m.hostile && dist3(m.x, m.y, m.z, float64(d.X), float64(d.Y), float64(d.Z)) < 9 {

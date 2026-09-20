@@ -93,3 +93,36 @@ func TestScheduledTickRespectsDimension(t *testing.T) {
 		t.Error("a Nether-scheduled tick wrote into the overworld")
 	}
 }
+
+// The block sim's side tables are keyed by position AND dimension. They used
+// to be keyed by position alone, so a Nether fortress's blaze spawner and an
+// overworld dungeon spawner at the same coordinates shared one cooldown — the
+// first to fire silenced the other — and a comparator or button in the Nether
+// shared its stored output with whatever stood at those coordinates in the
+// overworld.
+func TestSimSideTablesAreKeyedByDimension(t *testing.T) {
+	h := dimHub()
+	pos := blockPos{100, 64, 100}
+	over := simPos{dim: dimOverworld, blockPos: pos}
+	under := simPos{dim: dimNether, blockPos: pos}
+
+	h.spawnerNext[over] = 500
+	if _, clash := h.spawnerNext[under]; clash {
+		t.Error("an overworld dungeon's cooldown must not silence a Nether spawner")
+	}
+	h.spawnerNext[under] = 900
+	if h.spawnerNext[over] != 500 {
+		t.Errorf("the Nether spawner overwrote the overworld's cooldown: %d", h.spawnerNext[over])
+	}
+
+	h.compOut[over], h.compOut[under] = 7, 2
+	if h.compOut[over] != 7 || h.compOut[under] != 2 {
+		t.Errorf("comparator outputs collided across dimensions: %d / %d",
+			h.compOut[over], h.compOut[under])
+	}
+
+	h.pressedAt[over], h.pressedAt[under] = 10, 20
+	if h.pressedAt[over] == h.pressedAt[under] {
+		t.Error("button press times collided across dimensions")
+	}
+}

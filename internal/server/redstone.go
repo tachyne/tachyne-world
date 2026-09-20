@@ -130,7 +130,7 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 	case isComparator(s):
 		dx, dz := facingDelta(stateFacing(s))
 		if rx == px-dx && ry == py && rz == pz-dz {
-			return h.compOut[blockPos{px, py, pz}]
+			return h.compOut[simPos{dim: h.rsDim, blockPos: blockPos{px, py, pz}}]
 		}
 	case isObserver(s) && boolProp(s, "powered"):
 		dx, dy, dz := obsDelta(s)
@@ -285,13 +285,13 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		// Scheduled unpress: only past the press window (neighbor updates land
 		// here too — they must not cut a press short).
 		ticks, _, off, wooden := buttonKind(state)
-		if at, ok := h.pressedAt[pos]; ok && h.tick.Load() >= at+uint64(ticks) {
+		if at, ok := h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}]; ok && h.tick.Load() >= at+uint64(ticks) {
 			if wooden && h.arrowInCell(h.rsDim, pos) { // ButtonBlock.checkPressed: an arrow keeps it down
-				h.pressedAt[pos] = h.tick.Load()
+				h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}] = h.tick.Load()
 				h.rsSchedule(pos, uint64(ticks))
 				break
 			}
-			delete(h.pressedAt, pos)
+			delete(h.pressedAt, simPos{dim: h.rsDim, blockPos: pos})
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.rsSound(players, off, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
@@ -396,7 +396,7 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 		return
 	}
 	ticks, on, _, _ := buttonKind(state)
-	h.pressedAt[pos] = h.tick.Load()
+	h.pressedAt[simPos{dim: h.rsDim, blockPos: pos}] = h.tick.Load()
 	h.rsSet(players, pos, setBoolProp(state, "powered", true))
 	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 	h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)

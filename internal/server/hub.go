@@ -531,12 +531,12 @@ type hub struct {
 	// join sequence sends Change Difficulty outside the hub goroutine).
 	difficultyPub atomic.Int32
 
-	pressedAt map[blockPos]uint64 // button-press ticks (for the unpress timer)
+	pressedAt map[simPos]uint64   // button-press ticks (for the unpress timer)
 	rsDue     map[blockPos]uint64 // repeater flip due-ticks
 	targetDue map[blockPos]uint64 // target-block signal reset ticks
 	obsPulse  map[blockPos]uint64 // observer pulse start ticks
 	obsSeen   map[blockPos]uint32 // observer last-seen watched state
-	compOut   map[blockPos]int    // comparator output levels (vanilla block entity)
+	compOut   map[simPos]int      // comparator output levels (vanilla block entity)
 	platesOn  map[blockPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
 	wiresOn   map[simPos]bool     // currently pressed tripwire strings, by dimension
 	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
@@ -583,9 +583,10 @@ type hub struct {
 	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
 	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
-	spawnerNext      map[blockPos]uint64     // dungeon spawner cooldowns
-	patrolNextAt     uint64                  // world tick the next pillager-patrol attempt is due
-	raids            map[blockPos]*raid      // active village raids by centre
+	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
+	// an overworld dungeon and a Nether fortress spawner can share coordinates
+	patrolNextAt uint64             // world tick the next pillager-patrol attempt is due
+	raids        map[blockPos]*raid // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
 	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
@@ -731,12 +732,12 @@ func newHub(w *world.World) *hub {
 		chests:        map[simPos]*chest{},
 		rng:           rand.New(rand.NewSource(1)),
 		rules:         defaultRules(),
-		pressedAt:     map[blockPos]uint64{},
+		pressedAt:     map[simPos]uint64{},
 		rsDue:         map[blockPos]uint64{},
 		targetDue:     map[blockPos]uint64{},
 		obsPulse:      map[blockPos]uint64{},
 		obsSeen:       map[blockPos]uint32{},
-		compOut:       map[blockPos]int{},
+		compOut:       map[simPos]int{},
 		platesOn:      map[blockPos]uint64{},
 		wiresOn:       map[simPos]bool{},
 		fireAge:       map[blockPos]int{},
@@ -771,7 +772,7 @@ func newHub(w *world.World) *hub {
 		banners:       newBannerStore(""),
 
 		detectorsOn:   map[simPos]uint64{},
-		spawnerNext:   map[blockPos]uint64{},
+		spawnerNext:   map[simPos]uint64{},
 		raids:         map[blockPos]*raid{},
 		brewProg:      map[simPos]int{},
 		brewFuel:      map[simPos]int{},
