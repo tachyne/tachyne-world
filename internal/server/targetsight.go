@@ -22,7 +22,8 @@ var noPlayers = map[int32]*tracked{}
 func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tracked {
 	if m.targetEID != 0 {
 		if t := players[m.targetEID]; t != nil && t.gamemode == gmSurvival && !t.dead && t.dim == m.dim &&
-			(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) <= reach*reach {
+			(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) <= reach*reach &&
+			(m.etype != entityDrowned || m.anger > 0 || h.drownedOKTarget(t)) {
 			memory := targetUnseenMemory
 			if m.anger > 0 {
 				memory = hurtByUnseenMemory
@@ -42,6 +43,12 @@ func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tra
 	bestD2 := reach * reach
 	for _, t := range players {
 		if t.gamemode != gmSurvival || t.dead || t.dim != m.dim {
+			continue
+		}
+		// Drowned.okTarget: by daylight a drowned only comes for somebody who
+		// is in the water with it (anger from a blow overrides it, as
+		// HurtByTargetGoal sits above the player goal).
+		if m.etype == entityDrowned && m.anger == 0 && !h.drownedOKTarget(t) {
 			continue
 		}
 		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 && h.mobSees(m, t) {

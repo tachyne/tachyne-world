@@ -163,6 +163,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
 		t.p.trySendEv(metaEv(sm))
 	}
+	if m.aggressive { // arms already up when it comes into view
+		t.p.trySendEv(metaEv(mobFlagsMeta(m.eid, true)))
+	}
 	if m.harness != 0 {
 		t.p.trySendEv(ghastHarnessEquip(m.eid, m.harness))
 	}

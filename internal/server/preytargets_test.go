@@ -8,8 +8,10 @@ import (
 
 // The target classes vanilla hangs on each species, with their selectors.
 func TestPreyClasses(t *testing.T) {
+	h := newHub(world.New(1))
 	mk := func(et int, mods ...func(*mob)) *mob {
-		m := &mob{eid: int32(et) + 1000, etype: et}
+		// High and dry: the baby-turtle selector asks whether it is in water.
+		m := &mob{eid: int32(et) + 1000, etype: et, x: 0.5, y: 200, z: 0.5}
 		for _, f := range mods {
 			f(m)
 		}
@@ -42,7 +44,7 @@ func TestPreyClasses(t *testing.T) {
 		{entityCreeper, entityVillager, nil, false}, // creepers hunt players only
 	}
 	for _, c := range cases {
-		if got := preyOf(mk(c.hunter), mk(c.prey, c.mods...)); got != c.want {
+		if got := h.preyOf(mk(c.hunter), mk(c.prey, c.mods...)); got != c.want {
 			t.Errorf("%s hunting %s = %v, want %v", entityNameByID[c.hunter], entityNameByID[c.prey], got, c.want)
 		}
 	}

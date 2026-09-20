@@ -91,6 +91,9 @@ type mob struct {
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
 	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)
 	pregnant        bool     // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
+	aggressive      bool     // Mob.setAggressive: the zombie family's raised arms while it chases
+	drifting        bool     // MoveThroughVillageGoal: walking to a spot in the village, not chasing
+	drownedGoal     bool     // drowned: walking to water (by day) or to the beach (at night)
 	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
@@ -608,6 +611,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case m.etype == entityDrowned && h.drownedWaterStep(players, m):
+			// A drowned going back to the water by day, or ashore after dark.
+		case zombieKind(m.etype) && h.villageDriftStep(players, m):
+			// A zombie walking through the village it stands in, after dark.
 		case (m.etype == entityZoglin || m.etype == entityEnderman) && h.mobHuntStep(players, m):
 			// A zoglin after anything living, an enderman after an endermite.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
@@ -913,6 +920,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityFrog {
 			h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
 		}
+		h.updateAggression(players, m) // the zombie family's arms go up while it chases
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)
 		}

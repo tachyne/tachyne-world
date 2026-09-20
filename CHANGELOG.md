@@ -28,6 +28,20 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Zombies work a village at night; drowned keep to the water by day.**
+  A zombie with nobody to chase milled about wherever it happened to be,
+  and a drowned behaved like any other zombie: it would leave the sea at
+  noon and chase you up a beach. Both now follow vanilla. A zombie, husk,
+  drowned or zombie villager standing in a village after dark walks
+  through it, building to building, which is how a horde ends up at the
+  doors by morning — and while it is really chasing something it raises
+  its arms, the flag every client renders and the engine never sent. A
+  drowned only comes for you in daylight if you are in the water with it;
+  caught ashore by the sun it heads back to the water, and after dark it
+  comes out onto the beach. A drowned with a trident now closes to ten
+  blocks and throws from there instead of backing away and circling like
+  a skeleton. Hatchling turtles are prey only out of the water, as
+  vanilla's selector says.
 - **Frogs lay spawn, and pets keep vanilla's distances.** Breeding two
   frogs produced a baby frog out of nowhere. As in vanilla, the pair now
   leaves one of them carrying a clutch: it walks to the bank, lays

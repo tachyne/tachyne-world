@@ -83,7 +83,7 @@ func (h *hub) drownedThrow(players map[int32]*tracked, m *mob) {
 		m.attackCD--
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, shootRange)
+	t := h.nearestHuntable(players, m.dim, m.x, m.z, tridentRange)
 	if t == nil {
 		return
 	}

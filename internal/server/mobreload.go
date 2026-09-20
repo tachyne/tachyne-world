@@ -180,6 +180,10 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	case entityIronGolem:
 		m.behavior = golemBehavior{} // village-guardian stance
 		m.setKBResist(1)
+	case entityDrowned:
+		if m.trident { // a saved trident drowned throws from ten blocks again
+			m.behavior = holdRangedBehavior{radius: tridentRange}
+		}
 	}
 	m.x, m.y, m.z, m.sx, m.sy, m.sz = x, y, z, x, y, z // seat the broadcast baseline at the load position
 	// Mark the restored mob's chunk seeded so the vanilla spawner does not lay a

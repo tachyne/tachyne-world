@@ -76,7 +76,9 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 			if !m.baby && h.rng.Float64() > 0.9 {
 				if h.rng.Intn(16) < 10 {
 					m.trident = true
-					m.behavior = rangedBehavior{} // kite like a skeleton while armed
+					// DrownedTridentAttackGoal: close to ten blocks and throw,
+					// standing its ground — no skeleton kiting.
+					m.behavior = holdRangedBehavior{radius: tridentRange}
 					h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, itemTrident))
 				} else {
 					m.held = int32(itemFishingRod)

@@ -31,6 +31,7 @@ const (
 
 	// Skeleton kiting: approach to shooting range, back off if crowded.
 	shootRange   = 15.0 // fire at a target inside this range
+	tridentRange = 10.0 // DrownedTridentAttackGoal's attack radius
 	skeletonKite = 5.0  // retreat when the target is closer than this
 	skeletonHold = 10.0 // advance until inside this, then stand and shoot
 
@@ -120,6 +121,24 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 		sx, sz = -sx, -sz
 	}
 	return sx * m.moveSpeed() * 0.5, sz * m.moveSpeed() * 0.5
+}
+
+// holdRangedBehavior is vanilla's plain RangedAttackGoal: walk in until the
+// target is inside the attack radius, then stand and throw. A trident drowned
+// uses it — it does not kite or strafe the way a skeleton does.
+type holdRangedBehavior struct{ radius float64 }
+
+func (holdRangedBehavior) name() string { return "hold-ranged" }
+func (b holdRangedBehavior) steer(h *hub, m *mob) (float64, float64) {
+	if !m.hasTarget {
+		return wanderBehavior{}.steer(h, m)
+	}
+	dx, dz := m.tx-m.x, m.tz-m.z
+	d := math.Hypot(dx, dz)
+	if d < 1e-6 || d <= b.radius {
+		return 0, 0 // in range: stand and throw
+	}
+	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
 }
 
 // skeletonShoot fires an arrow at the nearest huntable player, on a cooldown.

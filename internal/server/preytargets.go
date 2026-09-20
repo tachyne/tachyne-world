@@ -12,11 +12,12 @@ import "math"
 
 // preyOf reports whether hunter attacks o: vanilla's target classes, with
 // their selectors (a turtle only while it is a baby out of the water).
-func preyOf(hunter, o *mob) bool {
+func (h *hub) preyOf(hunter, o *mob) bool {
 	if o == nil || o.eid == hunter.eid || o.dying > 0 || o.dim != hunter.dim {
 		return false
 	}
-	babyTurtleOnLand := o.etype == entityTurtle && o.baby
+	// Turtle.BABY_ON_LAND_SELECTOR: a hatchling is prey only out of the water.
+	babyTurtleOnLand := o.etype == entityTurtle && o.baby && !h.inWater(o.dim, o.x, o.y, o.z)
 	switch {
 	case zombieKind(hunter.etype):
 		// Zombie: AbstractVillager, IronGolem, and a baby turtle on land;
@@ -71,7 +72,7 @@ func (h *hub) nearestPrey(m *mob, r float64) *mob {
 	var best *mob
 	bestD := r
 	h.grid().nearby(m.dim, m.x, m.z, r, func(c *mob) {
-		if !preyOf(m, c) {
+		if !h.preyOf(m, c) {
 			return
 		}
 		if h.npcs != nil && h.npcs[c.eid] != nil {
@@ -92,7 +93,7 @@ func (h *hub) mobBitesPrey(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	v := h.mobs[m.preyTarget]
-	if v == nil || v.dying > 0 || !preyOf(m, v) {
+	if v == nil || v.dying > 0 || !h.preyOf(m, v) {
 		m.preyTarget = 0
 		return false
 	}
