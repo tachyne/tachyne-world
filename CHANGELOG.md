@@ -56,6 +56,16 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Lichen and vines already in the world get repaired.** Fixing the
+  placement only helped blocks put down afterwards; the ones already
+  standing kept every face they had been given, including the ones facing
+  open air. A sweep at startup now trims each multiface block to the faces
+  something actually holds and removes any left holding nothing — which is
+  the update vanilla would have run on the next neighbour change. It does
+  not guess: a face with a block behind it stays, wherever it came from.
+  Naturally generated lichen and vines were never affected, because
+  worldgen builds them from the vanilla default rather than the state the
+  engine was using.
 - **Pistons work in the Nether and the End — and stop rewriting the
   overworld.** The entire piston path read and wrote the overworld whatever
   dimension the piston stood in: the structure resolver looked up overworld

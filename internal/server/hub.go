@@ -900,6 +900,7 @@ func (h *hub) run() {
 		}
 	}
 	h.reconcileFurnaceBlocks()
+	h.repairMultiface() // lichen/vines placed from the wrong default state
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
