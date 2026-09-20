@@ -21,11 +21,29 @@ var (
 // breeds slowly and hard several times as often.
 const portalPiglinOdds = 2000
 
+// The pale garden's night, in ticks of the day. Vanilla does not ask how
+// bright the sky is here: the day timeline keyframes the eyeblossom's open
+// state straight onto the clock, TRUE at 12600 and FALSE at 23401, and
+// keyframes the creaking's waking hours onto the very same pair. Those two
+// numbers ARE the rule, which is why neither of the engine's sky-brightness
+// curves belongs in it.
+const (
+	paleNightStart = 12600
+	paleNightEnd   = 23401
+)
+
 // tickEyeblossom opens the flower at night and closes it at dawn.
+//
+// Only under a real sky: the day timeline is tagged in_overworld, so in the
+// Nether or the End there is nothing to tell the flower what hour it is and it
+// keeps whichever face it was planted with, forever.
 func (h *hub) tickEyeblossom(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	var want uint32
 	switch state {
 	case openEyeblossom, closedEyeblossom:
+		if dim != dimOverworld {
+			return true
+		}
 		if h.nightNow() {
 			want = openEyeblossom
 		} else {
@@ -46,10 +64,16 @@ func (h *hub) tickEyeblossom(players map[int32]*tracked, dim, x, y, z int, state
 	return true
 }
 
-// nightNow reports whether the sun is down.
+// nightNow reports whether the sun is down, on the boundary the pale garden
+// works to — the eyeblossom and the creaking heart both switch on it, because
+// vanilla drives both from the same pair of keyframes.
+//
+// It is deliberately a clock window and not skyDarken: a thunderstorm at noon
+// darkens the sky far enough to spawn monsters, and it still does not open an
+// eyeblossom.
 func (h *hub) nightNow() bool {
 	dt := h.dayTime.Load() % dayLengthTicks
-	return dt >= 13000 && dt < 23000
+	return dt >= paleNightStart && dt < paleNightEnd
 }
 
 // tickNetherPortal breeds zombified piglins out of a standing portal.

@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -75,4 +76,50 @@ func TestFarmland(t *testing.T) {
 			t.Errorf("trample: crop %d not popped", got)
 		}
 	})
+}
+
+// FarmBlock.canSurvive and DirtPathBlock.canSurvive are both about what sits
+// ABOVE: put a solid block on a tilled row or a trodden path and it goes back
+// to dirt where it stands (their shared turnToDirt), instead of surviving
+// forever under somebody's chest.
+func TestTilledSoilRevertsUnderASolidBlock(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	const x, y, z = 66, 180, 66
+	flatFloor(w, x, y, z, 2)
+
+	for _, soil := range []struct {
+		name  string
+		state uint32
+	}{
+		{"farmland", farmlandMin + 7},
+		{"a dirt path", dirtPathState},
+	} {
+		w.SetBlock(x, y, z, soil.state)
+		h.setBlockAt(players, 0, blockPos{x, y + 1, z}, worldgen.BlockBase("chest"))
+		if got := w.At(x, y, z); got != worldgen.Dirt {
+			t.Errorf("%s under a chest is %d, want dirt (%d)", soil.name, got, worldgen.Dirt)
+		}
+
+		// The lids vanilla does not count: the fence gate both classes name,
+		// a carpet (too flat to be solid), and the cell a pushed block rides
+		// in while the piston is still moving it.
+		for _, lid := range []struct {
+			name  string
+			state uint32
+		}{
+			{"a fence gate", worldgen.BlockBase("oak_fence_gate")},
+			{"a carpet", worldgen.BlockBase("white_carpet")},
+			{"a travelling block", movingPistonState([3]int{1, 0, 0}, false)},
+		} {
+			w.SetBlock(x, y, z, soil.state)
+			h.setBlockAt(players, 0, blockPos{x, y + 1, z}, lid.state)
+			if got := w.At(x, y, z); got != soil.state {
+				t.Errorf("%s under %s is %d, want it left alone (%d)",
+					soil.name, lid.name, got, soil.state)
+			}
+			h.setBlockAt(players, 0, blockPos{x, y + 1, z}, worldgen.Air)
+		}
+	}
 }

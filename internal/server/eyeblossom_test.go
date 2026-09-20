@@ -66,3 +66,54 @@ func TestNetherPortalBreedsPiglins(t *testing.T) {
 		t.Error("a portal bred piglins on peaceful")
 	}
 }
+
+// The flower switches on vanilla's day timeline, not on a window of our own:
+// the eyeblossom's open state is keyframed TRUE at 12600 and FALSE at 23401.
+func TestEyeblossomSwitchesOnTheDayTimeline(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	pos := blockPos{0, 180, 0}
+
+	for _, tc := range []struct {
+		name string
+		tick uint64
+		want uint32
+	}{
+		{"the tick before dusk", 12599, closedEyeblossom},
+		{"dusk, the tick it opens", 12600, openEyeblossom},
+		{"the last tick of the night", 23400, openEyeblossom},
+		{"dawn, the tick it shuts", 23401, closedEyeblossom},
+	} {
+		// Start from the wrong face so a flower that never switches fails.
+		from := openEyeblossom
+		if tc.want == openEyeblossom {
+			from = closedEyeblossom
+		}
+		h.dayTime.Store(tc.tick)
+		w.SetBlock(pos.x, pos.y, pos.z, from)
+		h.tickEyeblossom(players, 0, pos.x, pos.y, pos.z, from)
+		if got := w.At(pos.x, pos.y, pos.z); got != tc.want {
+			t.Errorf("%s (tick %d): flower is %d, want %d", tc.name, tc.tick, got, tc.want)
+		}
+	}
+}
+
+// The day timeline is an overworld thing, so a flower carried into the Nether
+// has no hour to follow and keeps the face it went in with.
+func TestEyeblossomStaysPutOutsideTheOverworld(t *testing.T) {
+	h := newHub(world.New(1))
+	nw, _ := world.NewNether(1, nil)
+	h.nether = nw
+	players := map[int32]*tracked{}
+	pos := blockPos{0, 80, 0}
+
+	h.dayTime.Store(6000) // noon: an overworld flower would be shutting
+	nw.SetBlock(pos.x, pos.y, pos.z, openEyeblossom)
+	if !h.tickEyeblossom(players, 1, pos.x, pos.y, pos.z, openEyeblossom) {
+		t.Fatal("the tick disowned an eyeblossom in the Nether")
+	}
+	if got := nw.At(pos.x, pos.y, pos.z); got != openEyeblossom {
+		t.Errorf("a Nether eyeblossom is %d, want it left open (%d)", got, openEyeblossom)
+	}
+}
