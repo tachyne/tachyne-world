@@ -1,11 +1,13 @@
 package server
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -80,10 +82,26 @@ func writeAtomic(path string, data []byte) error {
 // writeStore is writeAtomic for the flush paths, which have nowhere to return
 // an error to: a failed save is logged, not lost silently. It reports success
 // so callers that track a dirty flag can clear it only when the bytes landed.
+// storeOnDisk remembers, per path, a hash of the bytes last written there, so
+// a flush whose content has not changed costs nothing. Several stores rewrite
+// themselves WHOLE on a timer rather than when something happens to them, and
+// each write is an open, a write, an FSYNC and a rename against the world's
+// volume — worth skipping when the file would come out byte-identical.
+//
+// Safe by construction: the hash is recorded only after a write SUCCEEDS, so
+// a failed write leaves nothing cached and the next flush tries again. It
+// compares against what this process last wrote, which is what is on disk.
+var storeOnDisk sync.Map // path -> [sha256.Size]byte
+
 func writeStore(path string, data []byte) bool {
+	sum := sha256.Sum256(data)
+	if prev, ok := storeOnDisk.Load(path); ok && prev.([sha256.Size]byte) == sum {
+		return true // identical to the file already there
+	}
 	if err := writeAtomic(path, data); err != nil {
 		log.Printf("STORE WRITE FAILED: %s: %v (state kept in memory; will retry next flush)", path, err)
 		return false
 	}
+	storeOnDisk.Store(path, sum)
 	return true
 }

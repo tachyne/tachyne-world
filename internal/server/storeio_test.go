@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The property every store depends on: a file that fails to decode is never
@@ -107,5 +108,55 @@ func TestInvStoreSurvivesCorruptFile(t *testing.T) {
 	entries, _ := os.ReadDir(dir)
 	if len(entries) != 2 { // the new file + the quarantined original
 		t.Errorf("dir holds %d entries, want the fresh store plus the quarantined original: %v", len(entries), entries)
+	}
+}
+
+// A store flush whose content has not changed must not touch the disk: the
+// timed passes rewrite several stores WHOLE on a clock rather than when
+// something happens to them, and each write costs an fsync against the
+// world's volume.
+func TestWriteStoreSkipsIdenticalContent(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/thing.json"
+
+	if !writeStore(path, []byte(`{"a":1}`)) {
+		t.Fatal("the first write must happen")
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := st.ModTime()
+
+	// Same bytes: no write, so the file is untouched.
+	time.Sleep(10 * time.Millisecond)
+	if !writeStore(path, []byte(`{"a":1}`)) {
+		t.Fatal("an unchanged write still reports success")
+	}
+	st2, _ := os.Stat(path)
+	if !st2.ModTime().Equal(first) {
+		t.Error("an identical flush rewrote the file")
+	}
+
+	// Changed bytes: written, and the new content is what lands.
+	if !writeStore(path, []byte(`{"a":2}`)) {
+		t.Fatal("a changed write must happen")
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != `{"a":2}` {
+		t.Errorf("file holds %q, want the new content", got)
+	}
+
+	// And going back to the earlier content writes again, because what
+	// matters is the file on disk, not whether the value was ever seen.
+	if !writeStore(path, []byte(`{"a":1}`)) {
+		t.Fatal("reverting content must be written")
+	}
+	got, _ = os.ReadFile(path)
+	if string(got) != `{"a":1}` {
+		t.Errorf("file holds %q after reverting", got)
 	}
 }
