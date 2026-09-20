@@ -1934,6 +1934,8 @@ func (h *hub) run() {
 				h.mudBottle(players, e)
 			case evEggSpawner:
 				h.eggSpawner(players, e)
+			case evSpawnEgg:
+				h.useSpawnEgg(players, e)
 			case evPlaceCrystal:
 				h.placeCrystal(players, e)
 			case evPlaceRocket:

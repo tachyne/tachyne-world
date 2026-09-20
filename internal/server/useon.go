@@ -55,6 +55,14 @@ type evEggSpawner struct {
 	eid     int32
 	x, y, z int
 }
+
+// evSpawnEgg is SpawnEggItem.useOn on an ordinary block: the mob appears on
+// the face that was clicked.
+type evSpawnEgg struct {
+	eid     int32
+	x, y, z int
+	face    int32
+}
 type evPlaceCrystal struct {
 	eid     int32
 	x, y, z int
@@ -69,6 +77,7 @@ type evPlaceRocket struct {
 func (evTrimPlant) isHubEvent()    {}
 func (evMudBottle) isHubEvent()    {}
 func (evEggSpawner) isHubEvent()   {}
+func (evSpawnEgg) isHubEvent()     {}
 func (evPlaceCrystal) isHubEvent() {}
 func (evPlaceRocket) isHubEvent()  {}
 
@@ -163,6 +172,45 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 		h.consumeHeld(t)
 	}
 	h.playSoundDim(players, t.dim, "minecraft:block.metal.place", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
+}
+
+// useSpawnEgg is SpawnEggItem.useOn away from a spawner: the egg's mob
+// appears on the clicked face — inside the block itself when it has no
+// collision (tall grass, a flower), otherwise in the cell beyond it. Only a
+// survival player pays for it.
+func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
+	t := players[e.eid]
+	if t == nil {
+		return
+	}
+	et, ok := spawnEggEntity[heldStack(t).item]
+	if !ok {
+		return
+	}
+	w := h.worldFor(t.dim)
+	if w == nil {
+		return
+	}
+	x, y, z := e.x, e.y, e.z
+	// Vanilla asks whether the clicked block's collision shape is empty; the
+	// engine's nearest predicate is #replaceable, which is the same set of
+	// things you can stand inside — grass, a flower, water.
+	if !worldgen.IsReplaceable(w.At(x, y, z)) {
+		dx, dy, dz := faceDelta(e.face)
+		x, y, z = x+dx, y+dy, z+dz
+	}
+	m := h.spawnMob(players, et, float64(x)+0.5, float64(y), float64(z)+0.5)
+	if m == nil {
+		return // a plugin refused it, or the species has no spawn path
+	}
+	// Vanilla marks an egg-spawned mob persistent: it is a placed thing, not
+	// part of the natural population, and must not despawn.
+	m.persistent = true
+	h.playSoundDim(players, t.dim, "minecraft:entity.egg.throw", sndPlayer,
+		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 1)
+	if t.gamemode == gmSurvival {
+		h.consumeHeld(t)
+	}
 }
 
 // spawnerMobFor is the mob a spawner spawns: a spawn egg's choice if one

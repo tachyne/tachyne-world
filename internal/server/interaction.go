@@ -531,6 +531,9 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 			ev = evMudBottle{eid: p.eid, x: x, y: y, z: z}
 		case state == spawnerBlock && spawnEggEntity[held] != 0:
 			ev = evEggSpawner{eid: p.eid, x: x, y: y, z: z}
+		case spawnEggEntity[held] != 0:
+			// SpawnEggItem.useOn anywhere else: the mob appears on the face.
+			ev = evSpawnEgg{eid: p.eid, x: x, y: y, z: z, face: face}
 		case held == itemEndCrystal && (state == obsidianBase || state == worldgen.Bedrock):
 			ev = evPlaceCrystal{eid: p.eid, x: x, y: y, z: z}
 		case held == itemFireworkRocket:
