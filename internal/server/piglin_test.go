@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // A gold ingot held out to a piglin is admired for six seconds and bought
@@ -55,5 +56,44 @@ func TestPiglinBartering(t *testing.T) {
 		if st := h.rollBarter(); st.item == 0 || st.count <= 0 {
 			t.Fatal("an empty barter")
 		}
+	}
+}
+
+// A piglin keeps away from soul lights and from its own undead.
+func TestPiglinAvoidsRepellentsAndZombified(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	m := h.spawnMob(players, entityPiglin, 0.5, 70, 0.5)
+	m.setMoveSpeed(0.2)
+
+	if h.piglinAvoidStep(players, m) {
+		t.Fatal("nothing to avoid yet")
+	}
+	// A soul torch three blocks to the +x: it walks the other way.
+	h.world.SetBlock(3, 70, 0, worldgen.BlockBase("soul_torch"))
+	if !h.piglinAvoidStep(players, m) {
+		t.Fatal("a soul torch should move a piglin")
+	}
+	if m.vx >= 0 {
+		t.Errorf("it backs away from the torch at +x: vx=%v", m.vx)
+	}
+	h.world.SetBlock(3, 70, 0, worldgen.Air)
+
+	// A zombified piglin two blocks to the -z: it retreats, and keeps
+	// retreating for five to seven seconds.
+	m.vx, m.vz = 0, 0
+	h.spawnMob(players, entityZombifiedPiglin, 0.5, 70, -1.5)
+	if !h.piglinAvoidStep(players, m) {
+		t.Fatal("a zombified piglin should move a living one")
+	}
+	if m.vz <= 0 {
+		t.Errorf("it backs away from the undead at -z: vz=%v", m.vz)
+	}
+	if m.piglinFlee < piglinAvoidMin {
+		t.Errorf("the retreat lasts five to seven seconds, got %d", m.piglinFlee)
+	}
+	// A brute avoids them too; an ordinary zombie does not move either of them.
+	if !isPiglinRepellent(worldgen.BlockBase("soul_lantern")) || isPiglinRepellent(worldgen.Stone) {
+		t.Error("the repellent set is wrong")
 	}
 }

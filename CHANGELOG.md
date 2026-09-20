@@ -28,6 +28,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Soul torches keep piglins off, and piglins avoid their own undead.**
+  Both of vanilla's avoid rules were missing. A piglin or brute now backs
+  away from soul fire, soul torches, soul lanterns and soul campfires
+  within eight blocks — which is what those blocks are for, and what
+  bastion paths are built out of — and gives a zombified piglin six
+  blocks of room, keeping its distance for five to seven seconds after
+  it sees one.
 - **The Warden holds a grudge.** It chased whoever happened to be
   nearest. It now keeps vanilla's anger tally, one score per suspect: a
   disturbance it hears within sixteen blocks adds thirty-five, an arrow

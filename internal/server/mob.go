@@ -115,7 +115,10 @@ type mob struct {
 	phantomSwoop    int           // …and the ticks left in the one it is flying
 	wardenAnger     map[int32]int // warden: AngerManagement's grudge per suspect
 	angerClock      int           // …and the ticks until the next decay
-	variant         int32         // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin
+	piglinFleeX     float64       // …and what it is backing away from
+	piglinFleeZ     float64
+	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
@@ -642,6 +645,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
+			// A piglin backing away from a soul light or a zombified piglin.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
 			// A stranded water animal heading back to the water, or a strider
 			// off the lava heading back to it.
