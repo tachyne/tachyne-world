@@ -357,7 +357,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == itemFireworkRocket:
 		// A rocket leaves along the facing (FireworkRocketItem's projectile
 		// config: power 0.5) and climbs from there.
-		r := h.spawnRocket(players, pos.dim, fx, fy, fz, 0, rocketFlight(*st))
+		r := h.spawnRocket(players, pos.dim, fx, fy, fz, 0, *st)
 		r.vx, r.vy, r.vz = float64(dx)*0.5, float64(dy)*0.5, float64(dz)*0.5
 	case dispense && isMobBucket(item):
 		// A mob bucket pours its water and its passenger into the cell ahead

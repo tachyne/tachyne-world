@@ -155,7 +155,7 @@ func TestFireworkBoostsOnlyAGlider(t *testing.T) {
 func TestLooseRocketClimbsAndPops(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
-	r := h.spawnRocket(players, 0, 0.5, 200, 0.5, 0, 1)
+	r := h.spawnRocket(players, 0, 0.5, 200, 0.5, 0, invStack{item: itemFireworkRocket, count: 1, flight: 1})
 	y0 := r.y
 	for i := 0; i < r.lifetime+2; i++ {
 		h.updateRockets(players)

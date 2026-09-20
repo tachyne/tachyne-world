@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/world"
 )
@@ -188,5 +189,46 @@ func TestIdenticalStarsShareAnId(t *testing.T) {
 	// …and the bursts survive a save.
 	if got := unpackStack(packStack(a)); got.starID != a.starID {
 		t.Errorf("starID %d did not survive a save (got %d)", a.starID, got.starID)
+	}
+}
+
+// The rocket ENTITY carries the stack it was fired from, which is what the
+// client draws the burst from when it pops. A rocket full of stars used to go
+// off as nothing, because the entity was told only where it was.
+func TestRocketEntityCarriesItsStack(t *testing.T) {
+	h := newHub(world.New(1))
+	star := mustStar(t, h, "gunpowder", "red_dye", "fire_charge")
+	grid := make([]invStack, 9)
+	grid[0] = invStack{item: itemPaper, count: 1}
+	grid[1] = invStack{item: itemGunpowder, count: 1}
+	grid[2] = star
+	rocket, ok := h.fireworkRocketMatch(grid)
+	if !ok {
+		t.Fatal("no rocket")
+	}
+	tr := &tracked{p: newPlayer(1, "p", [16]byte{})}
+	players := map[int32]*tracked{1: tr}
+	drainEvents(tr)
+
+	h.spawnRocket(players, 0, 0.5, 200, 0.5, 0, rocket)
+
+	var meta *attachproto.EntityMeta
+	for _, ev := range takeEvents(tr) {
+		if m, ok := ev.(attachproto.EntityMeta); ok {
+			meta = &m
+		}
+	}
+	if meta == nil {
+		t.Fatal("the rocket was spawned without its stack")
+	}
+	// Index 8, the ITEM_STACK serializer — the same pair a dropped item uses,
+	// and the same on 1.21.11 and 26.x (Entity has eight synced fields in
+	// both, so nothing shifts).
+	if meta.Meta[0] != itemMetaIndexStack {
+		t.Errorf("metadata index %d, want %d", meta.Meta[0], itemMetaIndexStack)
+	}
+	// …and what rides in it is the rocket with its burst.
+	if !bytes.Contains(meta.Meta, []byte{byte(componentFireworks)}) {
+		t.Error("the stack on the entity carries no fireworks component")
 	}
 }

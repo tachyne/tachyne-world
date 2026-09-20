@@ -91,15 +91,19 @@ func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
 	if !t.gliding() {
 		return
 	}
-	flight := rocketFlight(heldStack(t))
+	st := heldStack(t)
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, flight)
+	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, st)
 }
 
-// spawnRocket puts one in the air. attached is the eid it boosts, or 0.
-func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, attached int32, flight int) *rocketEntity {
+// spawnRocket puts one in the air. attached is the eid it boosts, or 0. The
+// STACK comes along because the rocket's own metadata carries it — that is
+// what the client draws the burst from when it pops, and without it a rocket
+// full of stars went off as nothing.
+func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, attached int32, st invStack) *rocketEntity {
+	flight := rocketFlight(st)
 	eid := h.allocEID()
 	r := &rocketEntity{
 		eid: eid, dim: dim, x: x, y: y, z: z,
@@ -111,6 +115,12 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	binary.BigEndian.PutUint32(r.uuid[12:], uint32(eid))
 	h.rockets[eid] = r
 	h.toNearbyEv(players, dim, x, z, entAdd(eid, entityFirework, r.uuid, x, y, z, 0, 0))
+	// FireworkRocketEntity's DATA_ID_FIREWORKS_ITEM, the same index and
+	// serializer a dropped item uses for its stack (verified 8 on 1.21.11 AND
+	// on 26.2/26.3 — Entity has the same eight synced fields in both).
+	if st.item != 0 {
+		h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, st)))
+	}
 	h.playSound(players, "minecraft:entity.firework_rocket.launch", sndAmbient, x, y, z, 3, 1)
 	return r
 }

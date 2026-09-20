@@ -60,7 +60,8 @@ the public history since the project was open-sourced on 2026-07-10.
   shape, glowstone dust makes it twinkle and a diamond gives it a trail, and
   a second pass with more dyes sets the colours it fades to. Up to seven
   stars go into one rocket, and the rocket carries every one of them to the
-  client, so what goes up is what you built.
+  client — on the item AND on the rocket in flight, which is what actually
+  paints the burst in the sky, so what goes up is what you built.
 - **A raid captain's bottle keeps its own level.** The bottle stores its Bad
   Omen level in the same place a potion stores its brew, so it now goes out
   with its own component instead of being mistaken for whichever potion

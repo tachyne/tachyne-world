@@ -253,9 +253,9 @@ func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 	x := float64(e.x) + float64(e.cx) + float64(dx)*0.15
 	y := float64(e.y) + float64(e.cy) + float64(dy)*0.15
 	z := float64(e.z) + float64(e.cz) + float64(dz)*0.15
-	flight := rocketFlight(heldStack(t))
+	st := heldStack(t)
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.spawnRocket(players, t.dim, x, y, z, 0, flight)
+	h.spawnRocket(players, t.dim, x, y, z, 0, st)
 }
