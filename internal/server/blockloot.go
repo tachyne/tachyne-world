@@ -77,6 +77,17 @@ type lootFn struct {
 	Dest       string   `json:"dest,omitempty"`
 	Zoom       int      `json:"zoom,omitempty"`
 	Decoration string   `json:"decoration,omitempty"`
+	// set_enchantments carries a whole set (the trial chamber's armour wears
+	// three at once); set_components carries the armour trim it asks for.
+	Enchs []lootEnch `json:"enchs,omitempty"`
+	Mat   int        `json:"mat,omitempty"`
+	Pat   int        `json:"pat,omitempty"`
+}
+
+// lootEnch is one fixed enchantment of a set_enchantments function.
+type lootEnch struct {
+	Ench string `json:"ench"`
+	Lvl  int    `json:"lvl"`
 }
 
 type lootEntry struct {

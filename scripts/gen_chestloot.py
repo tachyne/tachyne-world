@@ -31,6 +31,18 @@ class Unsupported(Exception):
     pass
 
 
+# OUR declared trim registry orders are the sorted data-dir entries, the same
+# rule gen_smithingdata.py uses, so the ids match SmithingTrim* in common.
+def registry_order(reg):
+    prefix = f"data/minecraft/{reg}/"
+    return sorted(p.removeprefix(prefix).removesuffix(".json")
+                  for p in z.namelist() if p.startswith(prefix) and p.endswith(".json"))
+
+
+pattern_ix = {n: i for i, n in enumerate(registry_order("trim_pattern"))}
+material_ix = {n: i for i, n in enumerate(registry_order("trim_material"))}
+
+
 def iid(name):
     n = name.removeprefix("minecraft:")
     if n not in item_id:
@@ -71,14 +83,15 @@ def func(f):
             return {"f": "ench_random", "ench": opt.removeprefix("minecraft:")}
         return {"f": "ench_random"}
     if t == "set_enchantments":
-        # One fixed enchantment at a fixed level (the ominous vault's wind_burst
-        # book); anything richer is still dropped.
+        # Fixed enchantments at fixed levels: the ominous vault's wind_burst
+        # book is one, the trial chamber's armour is three at once. A level
+        # given as a number provider (nothing does today) is still dropped.
         ench = f.get("enchantments", {})
-        if len(ench) == 1:
-            (name, lvl), = ench.items()
-            if isinstance(lvl, (int, float)):
-                return {"f": "set_ench", "ench": name.removeprefix("minecraft:"), "lvl": int(lvl)}
-        return None
+        out = [{"ench": n.removeprefix("minecraft:"), "lvl": int(l)}
+               for n, l in sorted(ench.items()) if isinstance(l, (int, float))]
+        if not out or len(out) != len(ench):
+            return None
+        return {"f": "set_ench", "enchs": out, "add": bool(f.get("add", False))}
     if t == "enchant_with_levels":
         return {"f": "ench_levels", "np": num(f["levels"])}
     if t == "set_damage":
@@ -106,9 +119,20 @@ def func(f):
             dest = "buried_treasure"
         return {"f": "exploration_map", "dest": dest, "zoom": int(f.get("zoom", 2)),
                 "decoration": f.get("decoration", "minecraft:red_x").removeprefix("minecraft:")}
+    if t == "set_components":
+        # The only component any 1.21.11 loot table sets is the armour trim on
+        # the trial chamber's equipment; anything else is still dropped.
+        comps = f.get("components", {})
+        trim = comps.get("minecraft:trim")
+        if len(comps) == 1 and isinstance(trim, dict):
+            mat = trim["material"].removeprefix("minecraft:")
+            pat = trim["pattern"].removeprefix("minecraft:")
+            if mat in material_ix and pat in pattern_ix:
+                return {"f": "set_trim", "mat": material_ix[mat], "pat": pattern_ix[pat]}
+        return None
     # Component functions the engine cannot represent yet — drop the function
     # (the item still appears, just plainer).
-    if t in ("set_nbt", "set_components", "set_custom_data", "enchanted_count_increase",
+    if t in ("set_nbt", "set_custom_data", "enchanted_count_increase",
              "set_written_book_pages", "set_book_cover", "reference", "furnace_smelt"):
         return None
     raise Unsupported("func " + t)

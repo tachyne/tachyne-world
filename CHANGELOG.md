@@ -28,6 +28,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Trial-chamber mobs wear the armour the loot table describes.** Two
+  loot functions were dropped when the tables were baked: the one that
+  sets an armour trim and the one that sets more than a single
+  enchantment. An ominous trial spawner's zombies and skeletons therefore
+  came out in plain, unenchanted chainmail. They now arrive trimmed in
+  copper and wearing Protection, Fire Protection and Projectile
+  Protection IV together, exactly as the chamber intends.
 - **A torch sticks to the wall you highlighted.** Placement picked the
   attachment face from the way you were looking and ignored the face you
   had actually aimed at, so a torch put against a dirt wall could jump to

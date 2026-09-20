@@ -229,13 +229,11 @@ func (c *lootCtx) applyChestFn(h *hub, f *lootFn, st invStack) invStack {
 			}
 			st.ench = e
 		}
-	case "set_ench": // set_enchantments: one fixed enchantment at a fixed level
-		if id, ok := enchByName[f.Ench]; ok && f.Lvl > 0 {
-			if st.item == itemBook {
-				st.item = itemEnchantedBook
-			}
-			st.ench = enchList{{id: id, lvl: int8(f.Lvl)}}
-		}
+	case "set_ench":
+		// SetEnchantmentsFunction: each named enchantment goes to the given
+		// level, or adds to the level it already has. The trial chamber's
+		// armour arrives with three protections on it this way.
+		st = applySetEnchantments(f, st)
 	case "ench_levels":
 		if e := h.chestEnchLevels(c.rng, st.item, int(c.np(f.NP))); e != (enchList{}) {
 			if st.item == itemBook {
@@ -335,4 +333,49 @@ func chestSeed(worldSeed int64, pos blockPos, name string) int64 {
 	}
 	h ^= h >> 31
 	return int64(h)
+}
+
+// applySetEnchantments is SetEnchantmentsFunction: `add` false pins each
+// named enchantment to the given level, `add` true raises the level the item
+// already carries. A plain book becomes an enchanted book, as vanilla's
+// EnchantmentHelper.setEnchantments does through the stored-enchantments
+// component.
+func applySetEnchantments(f *lootFn, st invStack) invStack {
+	for _, e := range f.Enchs {
+		id, ok := enchByName[e.Ench]
+		if !ok || e.Lvl <= 0 {
+			continue
+		}
+		lvl := e.Lvl
+		if f.Add {
+			lvl += st.enchLvl(id)
+		}
+		if lvl > 255 {
+			lvl = 255
+		}
+		if st.item == itemBook {
+			st.item = itemEnchantedBook
+		}
+		st.ench = enchSetLevel(st.ench, id, int8(lvl))
+	}
+	return st
+}
+
+// enchSetLevel writes an enchantment's level into a list, replacing the entry
+// that already holds it or taking the first free slot. A full list drops the
+// addition, as the eight-slot cap requires.
+func enchSetLevel(e enchList, id int8, lvl int8) enchList {
+	for i := range e {
+		if e[i].id == id && e[i].lvl > 0 {
+			e[i].lvl = lvl
+			return e
+		}
+	}
+	for i := range e {
+		if e[i].lvl == 0 {
+			e[i] = enchApply{id: id, lvl: lvl}
+			return e
+		}
+	}
+	return e
 }

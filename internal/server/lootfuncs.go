@@ -66,6 +66,13 @@ func (h *hub) applyChestExtraFn(c *lootCtx, f *lootFn, st invStack) invStack {
 		}
 	case "set_ominous": // SetOminousBottleAmplifierFunction: the bottle's level
 		st.potion = int8(c.np(f.NP)) + 1
+	case "set_trim":
+		// SetComponentsFunction, and the only component a 1.21.11 loot table
+		// sets: the armour trim on the trial chamber's equipment. Stored the
+		// way the smithing table stores it, registry id + 1.
+		if smithTrimmable[st.item] {
+			st.trimMat, st.trimPat = int8(f.Mat+1), int8(f.Pat+1)
+		}
 	case "exploration_map": // ExplorationMapFunction: a map to the nearest treasure
 		if !c.located || h.maps == nil || h.world == nil {
 			break
