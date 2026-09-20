@@ -643,13 +643,7 @@ func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 		it.thrower = t.p.eid
 		it.dmg = st.dmg
 		it.ench = st.ench
-		it.mapID = st.mapID
-		it.pats = st.pats
-		it.trimMat, it.trimPat, it.color = st.trimMat, st.trimPat, st.color
-		it.bookID = st.bookID
-		it.boxID, it.hiveID = st.boxID, st.hiveID
-		it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode
-		it.stew, it.shieldBase = st.stew, st.shieldBase
+		it.setFrom(st)
 		h.refreshItemMeta(players, it) // the spawn broadcast went out bare; show the real stack
 	}
 }

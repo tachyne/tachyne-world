@@ -79,6 +79,8 @@ type containerFile struct {
 	NextBundleID int32                 `json:"next_bundle_id,omitempty"`
 	// Firework bursts riding a star or a rocket, keyed by starID. A star has
 	// one; a rocket has up to seven.
+	// A decorated pot's four faces, keyed like the other block entities.
+	PotSherds  map[string]potSherds       `json:"pot_sherds,omitempty"`
 	Stars      map[string][]fireworkBurst `json:"stars,omitempty"`
 	NextStarID int32                      `json:"next_star_id,omitempty"`
 	// Custom item names by id (names.go). Loaded before any other store
@@ -997,6 +999,23 @@ func (s *containerStore) recordStars(ss *starStore) {
 	s.mu.Lock()
 	s.m.Stars, s.m.NextStarID = snap, last
 	s.mu.Unlock()
+}
+
+// recordPotSherds / loadPotSherds persist the decorated pots' faces.
+func (s *containerStore) recordPotSherds(ps *potSherdStore) {
+	if ps == nil {
+		return
+	}
+	snap := ps.snapshot()
+	s.mu.Lock()
+	s.m.PotSherds = snap
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadPotSherds() map[string]potSherds {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.PotSherds
 }
 
 // loadStars rebuilds the firework-burst store from the save file.

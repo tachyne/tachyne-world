@@ -259,3 +259,46 @@ func TestLongReplyIsSplitNotTruncated(t *testing.T) {
 		}
 	}
 }
+
+// Legion asked how to answer a question about a report without filing a
+// second one. `/bug re <text>` adds to her own most recent report; `/bug re
+// #n <text>` adds to that one exactly.
+func TestBugReplyGoesOnTheRightReport(t *testing.T) {
+	s := newBugStore("")
+	first := s.add(bugReport{Player: "LegionZA", Text: "pistons do not retract"})
+	second := s.add(bugReport{Player: "LegionZA", Text: "mobs do not knock back"})
+	s.add(bugReport{Player: "EdgeZA", Text: "something else"})
+
+	// A bare reply answers the player's own latest.
+	got, ok := s.latestFrom("LegionZA")
+	if !ok || got != second {
+		t.Fatalf("latest for LegionZA is #%d (ok=%v), want #%d", got, ok, second)
+	}
+	if _, ok := s.latestFrom("Nobody"); ok {
+		t.Error("a player who has filed nothing should have no latest report")
+	}
+
+	// …and a numbered one answers that report, whoever filed it.
+	subject, ok := s.reply(first, "LegionZA", "it was a loop, my fault")
+	if !ok {
+		t.Fatalf("no reply added to #%d", first)
+	}
+	if subject != "pistons do not retract" {
+		t.Errorf("the reply confirmed %q, want the first report's text", subject)
+	}
+	if _, ok := s.reply(9999, "LegionZA", "nowhere"); ok {
+		t.Error("a reply to a report that does not exist should be refused")
+	}
+
+	items := s.snapshot()
+	if n := len(items[0].Replies); n != 1 {
+		t.Fatalf("report #%d has %d replies, want 1", first, n)
+	}
+	r := items[0].Replies[0]
+	if r.Player != "LegionZA" || r.Text != "it was a loop, my fault" || r.At == "" {
+		t.Errorf("the reply reads %+v", r)
+	}
+	if len(items[1].Replies) != 0 {
+		t.Error("the reply landed on the wrong report as well")
+	}
+}

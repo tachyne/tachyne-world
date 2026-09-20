@@ -7,6 +7,8 @@ package server
 // BookCloningRecipe). Armour dyeing, suspicious stew and the map recipes
 // live beside their mechanics; these join them in craftResult.
 
+import "strings"
+
 // Crafting kinds beyond the map ones: what the take must do differently.
 const (
 	craftKeepPattern = 10 + iota // banner duplicate: the patterned banner is the remainder
@@ -60,6 +62,9 @@ func (h *hub) specialCraftMatch(grid []invStack, w int) (invStack, int, bool) {
 	}
 	if res, ok := bannerDuplicateMatch(grid); ok {
 		return res, craftKeepPattern, true
+	}
+	if res, ok := decoratedPotMatch(grid); ok {
+		return res, mapCraftNone, true
 	}
 	if res, ok := h.fireworkStarMatch(grid); ok {
 		return res, mapCraftNone, true
@@ -318,6 +323,50 @@ func (h *hub) fireworkStarFadeMatch(grid []invStack) (invStack, bool) {
 	return invStack{item: itemFireworkStar, count: 1,
 		starID: h.stars.intern([]fireworkBurst{burst})}, true
 }
+
+// decoratedPotMatch is DecoratedPotRecipe: exactly four sherds (or bricks)
+// in a diamond, and the pot wears them in the order the grid reads —
+// back, left, right, front, which is the top, left, right and bottom cell.
+// Vanilla has no data recipe for this one; the faces are what makes it
+// worth crafting, so the recipe and the decoration are the same feature.
+func decoratedPotMatch(grid []invStack) (invStack, bool) {
+	if len(grid) != 9 {
+		return invStack{}, false
+	}
+	// The four diamond cells, in vanilla's own order.
+	var sh potSherds
+	for i, cell := range []int{1, 3, 5, 7} {
+		st := grid[cell]
+		if st.item == 0 || st.count <= 0 || !potIngredients[st.item] {
+			return invStack{}, false
+		}
+		sh[i] = st.item
+	}
+	for i, st := range grid { // nothing anywhere else
+		if i == 1 || i == 3 || i == 5 || i == 7 {
+			continue
+		}
+		if st.item != 0 && st.count > 0 {
+			return invStack{}, false
+		}
+	}
+	return invStack{item: itemDecoratedPot, count: 1, sherds: sh}, true
+}
+
+// potIngredients is #decorated_pot_ingredients: the brick and the pottery
+// sherds. Named, not numbered, so a version bump cannot silently reshuffle it.
+var potIngredients = func() map[int32]bool {
+	m := map[int32]bool{int32(itemByName["brick"]): true}
+	for name, id := range itemByName {
+		if strings.HasSuffix(name, "_pottery_sherd") {
+			m[int32(id)] = true
+		}
+	}
+	delete(m, 0)
+	return m
+}()
+
+var itemDecoratedPot = int32(itemByName["decorated_pot"])
 
 // burstShapeOf maps the shape-setting ingredients to their shape, stored +1
 // so the zero value means "not a shape item" (SHAPE_BY_ITEM).

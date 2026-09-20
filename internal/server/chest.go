@@ -183,12 +183,7 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 				if it := h.spawnItemIn(players, dim, st.item, st.count, float64(x)+0.5, float64(y), float64(z)+0.5); it != nil {
 					it.dmg = st.dmg
 					it.ench = st.ench
-					it.mapID = st.mapID
-					it.pats = st.pats
-					it.trimMat, it.trimPat, it.color = st.trimMat, st.trimPat, st.color
-					it.bookID = st.bookID
-					it.boxID, it.hiveID = st.boxID, st.hiveID
-					it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode
+					it.setFrom(st)
 					h.refreshItemMeta(players, it) // the spawn broadcast went out bare; show the real stack
 				}
 			}

@@ -30,7 +30,7 @@ const (
 // whose text rides the chunk as their vanilla update tag. Called from the attach
 // layer's parallel chunk builders — the sign store is mutex-guarded for exactly
 // this reader.
-func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore, campfires *campfireStore, banners *bannerStore, shelves *shelfStore) []byte {
+func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs *signStore, campfires *campfireStore, banners *bannerStore, shelves *shelfStore, pots *potSherdStore) []byte {
 	edits := w.EditedBlocks(cx, cz)
 	var buf []byte
 	n := int32(0)
@@ -51,6 +51,9 @@ func appendBlockEntities(b []byte, w *world.World, cx, cz int32, dim int, signs 
 		} else if isWoodShelf(e.State) && shelves != nil {
 			sv, _ := shelves.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = empty shelf
 			buf = protocol.AppendShelfNBT(buf, sv.nbt())
+		} else if isDecoratedPot(e.State) && pots != nil {
+			sh, _ := pots.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ)) // zero value = a plain pot
+			buf = protocol.AppendPotNBT(buf, sh.names())
 		} else if isBannerState(e.State) && banners != nil {
 			ls := banners.get(dim, int(cx)*16+int(e.LX), int(e.Y), int(cz)*16+int(e.LZ))
 			nb := make([]protocol.BannerLayerNBT, len(ls))

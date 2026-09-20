@@ -52,6 +52,9 @@ type invStack struct {
 	// Firework rocket flight duration, 1-3 (0 = an unset rocket, which flies
 	// as 1 does). The gunpowder in its recipe is what sets it.
 	flight int8
+	// A decorated pot's four faces as item ids (back, left, right, front);
+	// all zero is the plain brick pot. Fixed-size so invStack stays comparable.
+	sherds potSherds
 	// Firework bursts (0 = none): a star's one burst or a rocket's up to
 	// seven live in the hub's star store. Same indirection as bundles, for
 	// the same reason — the list is variable-length and invStack is

@@ -288,7 +288,12 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			}
 			power += 0.5 * float64(heldStack(t).enchLvl(enchKnockback))
 			power *= m.kbScale() // LivingEntity.knockback: power *= 1 − resistance
-			m.vx, m.vz = kdx/d*power, kdz/d*power
+			// LivingEntity.knockback keeps HALF of what the mob already had and
+			// takes the shove off that, so a zombie charging in is turned
+			// rather than simply reset — its own momentum still counts against
+			// it. Per mob update, not per tick: m.v* is the step.
+			step := power * mobMoveInterval
+			m.vx, m.vz = m.vx/2+kdx/d*step, m.vz/2+kdz/d*step
 			m.kb, m.reroute = 3, 0
 			h.mobKnockVelocity(players, m)
 		}

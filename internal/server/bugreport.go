@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -58,13 +59,26 @@ type bugReport struct {
 
 	Nearby []string `json:"nearby,omitempty"` // entities in the region
 	Note   string   `json:"note,omitempty"`   // what was done about it
+	// Replies are what the reporter said AFTER filing — answers to a question,
+	// a correction, "still happening". Without this the only way to add
+	// anything was to file a second report, which buried the first.
+	Replies []bugReply `json:"replies,omitempty"`
+}
+
+// bugReply is one follow-up on a report, by whoever wrote it.
+type bugReply struct {
+	At     string `json:"at"`
+	Player string `json:"player"`
+	Text   string `json:"text"`
 }
 
 // evBug carries a filed report to the hub, which is where the world and the
 // entity lists can be read consistently.
 type evBug struct {
-	eid  int32
-	text string
+	eid   int32
+	text  string
+	reply bool // a follow-up rather than a new report
+	on    int  // which report, when the player named one (0 = their latest)
 }
 
 func (evBug) isHubEvent() {}
@@ -103,6 +117,37 @@ func (s *bugStore) add(r bugReport) int {
 	}
 	s.dirty = true
 	return r.ID
+}
+
+// reply appends a follow-up to a report. Reports the report's text back so
+// the caller can confirm WHICH one was answered — an id typed from memory is
+// easy to get wrong, and a reply on the wrong report is worse than none.
+func (s *bugStore) reply(id int, player, text string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.Items {
+		if s.Items[i].ID != id {
+			continue
+		}
+		s.Items[i].Replies = append(s.Items[i].Replies, bugReply{
+			At: time.Now().UTC().Format(time.RFC3339), Player: player, Text: text})
+		s.dirty = true
+		return s.Items[i].Text, true
+	}
+	return "", false
+}
+
+// latestFrom is the newest report a player filed, which is what a bare
+// `/bug re <text>` answers — almost always the one they are talking about.
+func (s *bugStore) latestFrom(player string) (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := len(s.Items) - 1; i >= 0; i-- {
+		if s.Items[i].Player == player {
+			return s.Items[i].ID, true
+		}
+	}
+	return 0, false
 }
 
 // snapshot renders the store for the /debug/bugs endpoint.
@@ -237,12 +282,32 @@ func itemRegistryName(id int32) string {
 	return fmt.Sprintf("item:%d", id)
 }
 
-// cmdBug is `/bug <what happened>`: file a report with the world around the
-// reporter attached. Anybody may use it — a report is not a privilege.
+// cmdBug is `/bug <what happened>` to file a report with the world around the
+// reporter attached, and `/bug re [#n] <what you want to add>` to say more
+// about one already filed — an answer to a question, a correction, or "still
+// happening after the fix". Without the second form the only way to add
+// anything was to file a fresh report, which buried the thread it belonged to.
+// Anybody may use either: a report is not a privilege.
 func (s *Server) cmdBug(p *player, args []string) {
+	if len(args) > 0 && strings.EqualFold(args[0], "re") {
+		rest := args[1:]
+		on := 0
+		if len(rest) > 0 {
+			if n, err := strconv.Atoi(strings.TrimPrefix(rest[0], "#")); err == nil && n > 0 {
+				on, rest = n, rest[1:]
+			}
+		}
+		text := strings.TrimSpace(strings.Join(rest, " "))
+		if text == "" {
+			p.tell("Usage: /bug re <what you want to add> — or /bug re #3 <…> to answer a particular one.")
+			return
+		}
+		s.hub.post(evBug{eid: p.eid, text: text, reply: true, on: on})
+		return
+	}
 	text := strings.TrimSpace(strings.Join(args, " "))
 	if text == "" {
-		p.tell("Usage: /bug <what went wrong> — say what you expected and what happened.")
+		p.tell("Usage: /bug <what went wrong>, or /bug re <more about the last one you filed>.")
 		return
 	}
 	s.hub.post(evBug{eid: p.eid, text: text})
@@ -394,4 +459,38 @@ func (s *bugStore) takeQueued(name string) []string {
 	delete(s.Pending, key)
 	s.dirty = true
 	return msgs
+}
+
+// handleBugEvent files a report, or adds a reply to one already filed.
+// A reply with no number answers the player's own most recent report, which
+// is nearly always the one they mean; a number answers that one exactly.
+func (h *hub) handleBugEvent(t *tracked, e evBug) {
+	if e.on == 0 && !e.reply {
+		id := h.fileBugReport(h.playersRef, t, e.text)
+		t.p.tell(fmt.Sprintf("Filed as bug #%d, with the blocks around you. Thank you.", id))
+		return
+	}
+	id := e.on
+	if id == 0 {
+		var ok bool
+		if id, ok = h.bugs.latestFrom(t.p.name); !ok {
+			t.p.tell("You have not filed a report yet — use /bug <what went wrong> first.")
+			return
+		}
+	}
+	text := e.text
+	if len(text) > bugTextMax {
+		text = text[:bugTextMax]
+	}
+	subject, ok := h.bugs.reply(id, t.p.name, text)
+	if !ok {
+		t.p.tell(fmt.Sprintf("There is no bug #%d.", id))
+		return
+	}
+	h.bugs.flushIfDirty()
+	log.Printf("bug #%d reply from %q: %s", id, t.p.name, text)
+	if len(subject) > 60 {
+		subject = subject[:57] + "…"
+	}
+	t.p.tell(fmt.Sprintf("Added to bug #%d (%s).", id, subject))
 }

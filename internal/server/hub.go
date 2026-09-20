@@ -584,6 +584,7 @@ type hub struct {
 	shelfLast        map[simPos]int          // chiseled shelves: the slot last put into or taken from (comparator reads slot+1)
 	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
+	potSherds        *potSherdStore          // …and of the decorated pots' faces
 	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
@@ -768,6 +769,7 @@ func newHub(w *world.World) *hub {
 		shelfLast:     map[simPos]int{},
 		woodShelves:   map[simPos]*[3]invStack{},
 		shelfView:     newShelfStore(),
+		potSherds:     newPotSherdStore(),
 		jukeboxes:     map[simPos]*jukebox{},
 		beacons:       map[simPos]*beacon{},
 		campfires:     map[simPos]*campfire{},
@@ -879,6 +881,7 @@ func (h *hub) run() {
 		h.initBoxes(newBoxStore())
 		h.boxes.restore(h.containers.loadBoxes())
 		h.initStars(h.containers.loadStars())
+		h.potSherds.restore(h.containers.loadPotSherds())
 		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
@@ -1158,6 +1161,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordStars(h.stars)
+					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
@@ -1266,6 +1270,13 @@ func (h *hub) run() {
 					// because the events channel is FIFO.
 					if t := players[e.by]; t != nil {
 						h.restoreShulkerBox(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, heldStack(t).boxID)
+					}
+				}
+				if e.broken == 0 && isDecoratedPot(e.state) {
+					// A pot placed from a decorated stack wears its faces.
+					// Same FIFO reasoning as the box and the hive above.
+					if t := players[e.by]; t != nil {
+						h.potSherds.set(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, heldStack(t).sherds)
 					}
 				}
 				if e.broken == 0 && isBeeHome(e.state) {
@@ -1468,8 +1479,7 @@ func (h *hub) run() {
 				})
 			case evBug:
 				if t := players[e.eid]; t != nil {
-					id := h.fileBugReport(players, t, e.text)
-					t.p.tell(fmt.Sprintf("Filed as bug #%d, with the blocks around you. Thank you.", id))
+					h.handleBugEvent(t, e)
 				}
 			case evSetRule:
 				h.applyRule(players, e)
@@ -1497,6 +1507,23 @@ func (h *hub) run() {
 					// boxID and drop an item stamped with it, rather than letting
 					// the ordinary loot path drop a bare box.
 					h.dropShulkerBox(players, e.dim, e.state, blockPos{e.x, e.y, e.z})
+					break
+				}
+				if isDecoratedPot(e.state) {
+					// A decorated pot drops decorated: the loot table gives a
+					// plain one, and the faces the block was wearing go on it.
+					// (Vanilla does this with copy_components; the faces are
+					// held aside for the same moment the banner's layers are.)
+					sh, _ := h.potSherds.get(e.dim, e.x, e.y, e.z)
+					for _, d := range h.rollDrops(e.state) {
+						if it := h.spawnItemIn(players, e.dim, d.item, d.count,
+							float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5); it != nil {
+							if d.item == itemDecoratedPot && !sh.empty() {
+								it.sherds = sh
+								h.refreshItemMeta(players, it)
+							}
+						}
+					}
 					break
 				}
 				if isBannerState(e.state) {
@@ -2110,6 +2137,7 @@ func (h *hub) run() {
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordStars(h.stars)
+					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)

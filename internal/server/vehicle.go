@@ -265,9 +265,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 				continue
 			}
 			if it := h.spawnItemIn(players, v.dim, st.item, st.count, v.x, v.y, v.z); it != nil {
-				it.dmg, it.ench, it.mapID, it.pats = st.dmg, st.ench, st.mapID, st.pats
-				it.trimMat, it.trimPat, it.bookID, it.boxID, it.hiveID = st.trimMat, st.trimPat, st.bookID, st.boxID, st.hiveID
-				it.bundleID, it.potion, it.repairCost, it.instrument, it.name, it.lode = st.bundleID, st.potion, st.repairCost, st.instrument, st.name, st.lode
+				it.setFrom(st)
 				h.refreshItemMeta(players, it)
 			}
 		}

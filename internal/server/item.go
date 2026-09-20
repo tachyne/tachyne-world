@@ -55,6 +55,9 @@ type itemEntity struct {
 	name          string
 	lode          lodeTracker // lodestone compass target
 	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
+	sherds        potSherds   // a decorated pot's four faces, carried by the dropped stack
+	flight        int8        // a firework rocket's flight duration
+	starID        int32       // a firework's bursts
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	vx, vy, vz    float64     // motion per tick (tickItem); all 0 at rest
 	born          uint64      // world tick spawned (for despawn)
@@ -70,7 +73,23 @@ func (it *itemEntity) stack() invStack {
 	return invStack{item: it.item, count: it.count, dmg: it.dmg, ench: it.ench, mapID: it.mapID,
 		pats: it.pats, trimMat: it.trimMat, trimPat: it.trimPat, bookID: it.bookID, boxID: it.boxID,
 		hiveID: it.hiveID, bundleID: it.bundleID, potion: it.potion, repairCost: it.repairCost,
-		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew, shieldBase: it.shieldBase}
+		instrument: it.instrument, name: it.name, lode: it.lode, color: it.color, stew: it.stew,
+		shieldBase: it.shieldBase, sherds: it.sherds, flight: it.flight, starID: it.starID}
+}
+
+// setFrom is stack()'s inverse: everything a slot carries, onto the dropped
+// item. One conversion, for the same reason stack() is one — five drop sites
+// had the field list written out by hand, and a field added to invStack was
+// carried by whichever of them somebody remembered. It deliberately does NOT
+// touch count or the item id: a drop site decides how many it is dropping.
+func (it *itemEntity) setFrom(st invStack) {
+	it.dmg, it.ench, it.mapID = st.dmg, st.ench, st.mapID
+	it.pats = st.pats
+	it.trimMat, it.trimPat, it.color = st.trimMat, st.trimPat, st.color
+	it.bookID, it.boxID, it.hiveID, it.bundleID = st.bookID, st.boxID, st.hiveID, st.bundleID
+	it.potion, it.repairCost, it.instrument = st.potion, st.repairCost, st.instrument
+	it.name, it.lode, it.stew, it.shieldBase = st.name, st.lode, st.stew, st.shieldBase
+	it.sherds, it.flight, it.starID = st.sherds, st.flight, st.starID
 }
 
 // refreshItemMeta re-sends a ground item's stack after a drop site has
@@ -197,6 +216,7 @@ const (
 	componentOminousBottle  = 54 // ominous_bottle_amplifier (the Bad Omen level); remapped per version
 	componentFireworks      = 60 // fireworks (a rocket's flight duration + bursts); remapped per version
 	componentFireworkStar   = 59 // firework_explosion (one star's burst); remapped per version
+	componentPotDecorations = 65 // pot_decorations (a pot's four faces, as ITEM ids); remapped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -285,6 +305,9 @@ func stackComponents(st invStack) []byte {
 		comps++
 	}
 	if st.item == itemFireworkStar && len(burstsOf(st)) == 1 {
+		comps++
+	}
+	if !st.sherds.empty() {
 		comps++
 	}
 	var bookBytes []byte
@@ -408,6 +431,18 @@ func stackComponents(st invStack) []byte {
 		b = protocol.AppendVarInt(b, int32(len(bursts)))
 		for _, e := range bursts {
 			b = appendBurst(b, e)
+		}
+	}
+	if !st.sherds.empty() {
+		// pot_decorations: the pot's four faces as item ids, back first. The
+		// ids inside are remapped for the client like the stack's own.
+		b = protocol.AppendVarInt(b, componentPotDecorations)
+		b = protocol.AppendVarInt(b, int32(len(st.sherds)))
+		for _, f := range st.sherds {
+			if f == 0 {
+				f = itemBrick
+			}
+			b = protocol.AppendVarInt(b, f)
 		}
 	}
 	if bursts := burstsOf(st); st.item == itemFireworkStar && len(bursts) == 1 {

@@ -30,6 +30,16 @@ the public history since the project was open-sourced on 2026-07-10.
   kept, and came back when the box was placed, but nothing said so until
   you put it down again. The box now carries its contents to the client, so
   the first few appear under its name in the tooltip the way they should.
+- **Decorated pots can be made, and they wear their sherds.** The pot had no
+  crafting recipe at all — the block existed, the sherds existed, and there
+  was no way to put one together. Four sherds or bricks in a diamond now make
+  a pot that wears them on its four sides, in the order the grid reads; the
+  faces show on the item, on the placed block, survive a restart, and come
+  back on the pot when it is mined.
+- **Answering a bug report no longer means filing another one.** `/bug re
+  <what you want to add>` adds to the last report you filed, and `/bug re #3
+  <…>` adds to that one, so a question and its answer stay in one thread.
+  Asked for in game by LegionZA.
 - **Spawners show what they spawn.** A mob spawner is a cage with a little
   version of its mob turning inside it — that is how you know a dungeon is a
   skeleton dungeon before anything walks out of it, and how a fortress
@@ -104,6 +114,14 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Hitting a mob shoves it as hard as it should.** Knockback was landing at
+  half strength: the game measures it in blocks per tick, mobs here take a
+  step every second tick, and that number had been stored as the per-step
+  one. A hit now moves a mob about a block, the way it does in the real game.
+  Two smaller things went with it — the mob keeps half its own momentum
+  rather than having it thrown away, so something walking into your swing is
+  turned rather than reset, and the little upward hop is vanilla's exact
+  ceiling instead of a shade under it. Reported in game by LegionZA.
 - **A broken lever no longer leaves the line it powered switched on.** A
   lever mounted on a block powers that block, and dust on the block's far
   side reads the power straight through it — so the dust a lever actually

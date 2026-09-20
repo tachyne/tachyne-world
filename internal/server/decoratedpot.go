@@ -1,6 +1,8 @@
 package server
 
 import (
+	"sync"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -13,6 +15,8 @@ import (
 // what is inside comes back when the pot is broken, and not before.
 
 var decoratedPotMin, decoratedPotMax = worldgen.BlockRange("decorated_pot")
+
+var itemBrick = int32(itemByName["brick"])
 
 // Wobble styles (DecoratedPotBlockEntity.WobbleStyle, block event action 1):
 // the pot leans in when it takes something, back when it refuses.
@@ -96,6 +100,7 @@ func (h *hub) spillPot(players map[int32]*tracked, dim int, pos blockPos, newSta
 		return
 	}
 	key := simPos{dim: dim, blockPos: pos}
+	h.potSherds.remove(key) // the faces go with the block; the DROP carries them
 	st, ok := h.pots[key]
 	if !ok {
 		return
@@ -162,3 +167,95 @@ type evUsePot struct {
 }
 
 func (evUsePot) isHubEvent() {}
+
+// Sherd decorations. A decorated pot made from four sherds (or bricks) wears
+// them on its four sides — back, left, right, front, in the order the recipe
+// grid reads them — and carries them on the item when it is picked up again.
+// The faces are what the whole block is for, so a pot with none is the plain
+// brick one.
+//
+// The decorations live in their own guarded store rather than beside the pot's
+// contents, because the chunk packet's block-entity section is composed on the
+// parallel chunk workers; that is the same reason signs, campfires, banners
+// and shelves have stores of their own.
+
+// potSherds is one pot's four faces as item ids, in vanilla's order:
+// back, left, right, front. A zero face is a plain brick side.
+type potSherds [4]int32
+
+// empty reports whether nothing was ever set — a plain pot.
+func (p potSherds) empty() bool { return p == potSherds{} }
+
+// names is the four faces as the registry names the block entity speaks —
+// names, not ids, because that is what the sherds tag carries and it is the
+// one form that does not renumber between versions.
+func (p potSherds) names() [4]string {
+	var out [4]string
+	for i, id := range p {
+		if n, ok := itemNameOfID[id]; ok {
+			out[i] = "minecraft:" + n
+		}
+	}
+	return out
+}
+
+// itemNameOfID inverts the generated item table.
+var itemNameOfID = func() map[int32]string {
+	m := make(map[int32]string, len(itemByName))
+	for name, id := range itemByName {
+		m[id] = name
+	}
+	return m
+}()
+
+type potSherdStore struct {
+	mu sync.Mutex
+	m  map[string]potSherds
+}
+
+func newPotSherdStore() *potSherdStore { return &potSherdStore{m: map[string]potSherds{}} }
+
+func (s *potSherdStore) get(dim, x, y, z int) (potSherds, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.m[simKey(simPos{dim: dim, blockPos: blockPos{x, y, z}})]
+	return v, ok
+}
+
+func (s *potSherdStore) set(pos simPos, v potSherds) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if v.empty() {
+		delete(s.m, simKey(pos))
+		return
+	}
+	s.m[simKey(pos)] = v
+}
+
+func (s *potSherdStore) remove(pos simPos) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.m, simKey(pos))
+}
+
+// snapshot is what the save file records.
+func (s *potSherdStore) snapshot() map[string]potSherds {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]potSherds, len(s.m))
+	for k, v := range s.m {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *potSherdStore) restore(m map[string]potSherds) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m = make(map[string]potSherds, len(m))
+	for k, v := range m {
+		if !v.empty() {
+			s.m[k] = v
+		}
+	}
+}

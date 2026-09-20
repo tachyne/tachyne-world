@@ -518,8 +518,15 @@ func swingArm(eid int32) attachproto.Swing {
 // client tracks the server position from deltas regardless of the velocity
 // animation — so this is pure feel, no drift.
 func (h *hub) mobKnockVelocity(players map[int32]*tracked, m *mob) {
+	// The hop is vanilla's min(0.4, vy/2 + strength) on a grounded victim.
+	// Any real hit already clears 0.4, so in practice it is the ceiling — the
+	// point of computing it rather than hardcoding is the SMALL shoves, where
+	// a light nudge should lift a mob less than a mace does. It was a flat
+	// 0.36 before, just under vanilla's ceiling for every hit. The strength is
+	// read back off the impulse, so every knockback source gets it for free.
+	vx, vz := m.vx/mobMoveInterval, m.vz/mobMoveInterval
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
-		EID: m.eid, VX: m.vx / mobMoveInterval, VY: 0.36, VZ: m.vz / mobMoveInterval})
+		EID: m.eid, VX: vx, VY: math.Min(0.4, math.Hypot(vx, vz)), VZ: vz})
 }
 
 // knockback shoves a player away from (fromX,fromZ) via Set Entity Velocity, the
