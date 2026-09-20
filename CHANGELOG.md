@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Ghost creatures no longer linger.** A mob removed while every player
+  was far away told nobody it had gone: the removal frame was culled to the
+  six-chunk interest radius, and the two ways a creature leaves the world
+  both happen further out than that — a despawn once the nearest player is
+  past 128 blocks, and a chunk's mobs unloading five seconds after the
+  chunk leaves the view. Since nothing else ever tells a client to forget an
+  entity, every client that had seen the creature kept it: standing there,
+  never moving, impossible to hit, because the server no longer had its id.
+  Removals now reach every player in the dimension. Additions stay culled
+  to the interest radius, as they should be — it is only the goodbye that
+  has to travel.
 - **Mobs look around, call for help, amble at their own pace, keep to the
   dark and hunt more than players.** Five defaults that vanilla gives
   almost every mob were missing, which left eighty-odd species short of

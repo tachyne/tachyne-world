@@ -82,7 +82,7 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 		if m.etype == entityPiglin && h.piglinTakesItem(players, m, it) {
 			if it.count--; it.count <= 0 {
 				delete(h.items, eid)
-				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+				h.entityGone(players, it.dim, eid)
 			}
 			return
 		}
@@ -95,7 +95,7 @@ func (h *hub) mobPickupScan(players map[int32]*tracked, m *mob) {
 		}
 		if it.count -= taken; it.count <= 0 {
 			delete(h.items, eid)
-			h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+			h.entityGone(players, it.dim, eid)
 		} else {
 			h.refreshItemMeta(players, it)
 		}

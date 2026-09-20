@@ -139,7 +139,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 	for eid, it := range h.items {
 		if now-it.born >= itemDespawnTicks {
 			delete(h.items, eid)
-			h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+			h.entityGone(players, it.dim, eid)
 			continue
 		}
 		for oid, other := range h.items {
@@ -163,7 +163,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 			}
 			it.count += other.count // absorb the newer into this one
 			delete(h.items, oid)
-			h.toNearbyEv(players, other.dim, other.x, other.z, entGone(oid))
+			h.entityGone(players, other.dim, oid)
 			h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))
 		}
 	}

@@ -74,7 +74,7 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
 	h.gridDirty()
-	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
+	h.entityGone(players, m.dim, m.eid)
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 	radius := blastRadius
 	if m.charged { // Creeper.explodeCreeper: a charged creeper blasts at twice the radius

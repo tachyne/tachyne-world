@@ -436,7 +436,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		}
 	}
 	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it
-	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
+	h.entityGone(players, m.dim, m.eid)
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 	if m.etype == entityWither {
 		h.clearBossBar(players, m) // pull the boss bar the instant it dies

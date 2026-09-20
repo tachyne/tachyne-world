@@ -142,7 +142,7 @@ func (h *hub) updateItemSpawners(players map[int32]*tracked) {
 			continue
 		}
 		delete(h.itemSpawners, eid)
-		h.toNearbyEv(players, e.dim, e.x, e.z, entGone(e.eid))
+		h.entityGone(players, e.dim, e.eid)
 		h.toNearbyEv(players, e.dim, e.x, e.z, attachproto.WorldFX{Event: worldEventItemSpawn, X: floorInt(e.x), Y: floorInt(e.y), Z: floorInt(e.z), Data: 1})
 		h.dropOminousItem(players, e)
 	}

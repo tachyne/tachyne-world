@@ -195,13 +195,13 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		if a.returning { // a loyal trident flying home — no collisions, steers to its owner
 			if h.updateReturningTrident(players, a) {
 				delete(h.arrows, eid)
-				h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+				h.entityGone(players, a.dim, eid)
 			}
 			continue
 		}
 		if now-a.born >= arrowLifeTicks {
 			delete(h.arrows, eid)
-			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+			h.entityGone(players, a.dim, eid)
 			continue
 		}
 		if a.stuck {
@@ -219,7 +219,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 							h.sendSlot(t, sl)
 						}
 						delete(h.arrows, eid)
-						h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+						h.entityGone(players, a.dim, eid)
 						h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, a.x, a.y, a.z, 0.4, 1.5)
 						break
 					}
@@ -311,7 +311,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				continue
 			}
 			delete(h.arrows, eid)
-			h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+			h.entityGone(players, a.dim, eid)
 			continue
 		}
 		if accel, inertia, ok := hurtingMotion(a, h.inWater(a.dim, a.x, a.y, a.z)); ok {

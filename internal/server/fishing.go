@@ -419,7 +419,7 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 
 func (h *hub) discardBobber(players map[int32]*tracked, b *bobberEntity) {
 	delete(h.bobbers, b.owner)
-	h.toNearbyEv(players, b.dim, b.x, b.z, entGone(b.eid))
+	h.entityGone(players, b.dim, b.eid)
 }
 
 // ---- The vanilla fishing loot tables (gameplay/fishing + sub-pools) ----

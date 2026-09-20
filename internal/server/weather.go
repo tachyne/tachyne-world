@@ -481,7 +481,7 @@ func (h *hub) updateBolts(players map[int32]*tracked) {
 	kept := h.bolts[:0]
 	for _, b := range h.bolts {
 		if now >= b.dieAt {
-			h.toNearbyEv(players, 0, b.x, b.z, entGone(b.eid))
+			h.entityGone(players, 0, b.eid)
 		} else {
 			kept = append(kept, b)
 		}

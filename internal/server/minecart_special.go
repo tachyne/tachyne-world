@@ -197,7 +197,7 @@ func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float
 	}
 	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
-	h.toNearbyEv(players, v.dim, v.x, v.z, entGone(v.eid))
+	h.entityGone(players, v.dim, v.eid)
 	speed := math.Min(math.Sqrt(speedSqr), 5)
 	power := 4 + h.rng.Float64()*1.5*speed
 	h.blastSpareRails = true
@@ -294,7 +294,7 @@ func (h *hub) cartSuckItems(players map[int32]*tracked, v *vehicle) bool {
 		if left := binInsert(v.bin.slots, st); left < st.count {
 			if left == 0 {
 				delete(h.items, eid)
-				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+				h.entityGone(players, it.dim, eid)
 			} else {
 				it.count = left
 			}

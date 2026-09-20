@@ -254,7 +254,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	}
 	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
-	h.toNearbyEv(players, v.dim, v.x, v.z, entGone(v.eid))
+	h.entityGone(players, v.dim, v.eid)
 	if !h.rules.EntityDrops {
 		return // gamerule entity_drops: nothing is left behind
 	}

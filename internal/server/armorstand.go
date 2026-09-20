@@ -178,7 +178,7 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 		return
 	}
 	delete(h.armorStands, st.eid)
-	h.toNearbyEv(players, st.dim, st.x, st.z, entGone(st.eid))
+	h.entityGone(players, st.dim, st.eid)
 	if !h.rules.EntityDrops {
 		return // gamerule entity_drops
 	}

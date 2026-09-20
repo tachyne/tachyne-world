@@ -705,7 +705,7 @@ func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, ab
 		if left := binInsert(c.slots, st); left < st.count {
 			if left == 0 {
 				delete(h.items, eid)
-				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+				h.entityGone(players, it.dim, eid)
 			} else {
 				it.count = left
 			}

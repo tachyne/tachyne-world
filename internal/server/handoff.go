@@ -176,7 +176,7 @@ func (h *hub) finishHandover(players map[int32]*tracked, migID string, ok bool) 
 		return
 	}
 	delete(players, ho.t.p.eid)
-	h.toNearbyEv(players, ho.t.dim, ho.t.x, ho.t.z, entGone(ho.t.p.eid))
+	h.entityGone(players, ho.t.dim, ho.t.p.eid)
 	h.toNearbyEv(players, ho.t.dim, ho.t.x, ho.t.z, infoGone(ho.t.p.uuid))
 	h.shadowGoneAll(ho.t.p.eid) // it's real on the destination now — retract our shadow of it
 	ho.t.p.trySendEv(attachproto.Rehome{DestSID: ho.dest, Token: migID})

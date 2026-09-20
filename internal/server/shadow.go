@@ -217,7 +217,7 @@ func (h *hub) applyShadowGone(players map[int32]*tracked, eid int32) {
 	if players[eid] != nil || h.mobs[eid] != nil {
 		return // superseded by a real entity — leave it be
 	}
-	h.toNearbyEv(players, se.dim, se.x, se.z, entGone(eid))
+	h.entityGone(players, se.dim, eid)
 	if se.kind == handover.KindPlayer {
 		h.toNearbyEv(players, se.dim, se.x, se.z, infoGone(se.uuid))
 	}

@@ -112,7 +112,7 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 	// pickUpItem: the whole stack goes into the mouth (a guaranteed drop).
 	m.held = it.item
 	delete(h.items, it.eid)
-	h.toNearbyEv(players, it.dim, it.x, it.z, entGone(it.eid))
+	h.entityGone(players, it.dim, it.eid)
 	h.toNearbyEv(players, m.dim, m.x, m.z, equipEv(m.eid, invStack{item: m.held, count: 1}, invStack{}, m.gear))
 	h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 	m.persistent = true

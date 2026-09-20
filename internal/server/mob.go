@@ -1153,7 +1153,7 @@ func (m *mob) grounded() bool { return !m.flies }
 func (h *hub) removeMob(players map[int32]*tracked, m *mob) {
 	delete(h.mobs, m.eid)
 	h.gridDirty()
-	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
+	h.entityGone(players, m.dim, m.eid)
 	h.shadowGoneAll(m.eid) // retract any cross-seam shadow of it
 }
 
@@ -1552,4 +1552,19 @@ func (h *hub) mobSpeedFactor(m *mob) float64 {
 		return f
 	}
 	return factor(w.At(fx, fy-1, fz))
+}
+
+// entityGone announces a removal to every player in the dimension rather
+// than only those near the spot. Removals happen precisely when nobody is
+// near: a mob despawns once the closest player is past 128 blocks, and a
+// chunk's mobs unload five seconds after the chunk leaves the player's
+// view — both well outside the six-chunk interest radius an ordinary
+// broadcast is culled to, so the frame reached nobody at all. Since the
+// engine never tells a client to forget a chunk, that frame is the only
+// chance a viewer has to drop the entity; without it the client keeps
+// what it last saw, standing still and unhittable, because the server no
+// longer has that id. Adds stay culled to the interest radius, as they
+// should be — it is only the goodbye that has to travel.
+func (h *hub) entityGone(players map[int32]*tracked, dim int, eid int32) {
+	h.toDimEv(players, dim, entGone(eid))
 }

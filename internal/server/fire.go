@@ -168,7 +168,7 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 		}
 	}
 	for _, t := range due {
-		h.toNearbyEv(players, t.dim, t.x, t.z, entGone(t.eid))
+		h.entityGone(players, t.dim, t.eid)
 		if !h.rules.TNTExplodes {
 			continue // gamerule tnt_explodes: the fuse burns out and nothing happens
 		}

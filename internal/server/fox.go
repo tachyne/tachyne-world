@@ -159,7 +159,7 @@ func (h *hub) foxStep(players map[int32]*tracked, m *mob) bool {
 				m.held, m.foxEatTicks = it.item, 0
 				if it.count--; it.count <= 0 {
 					delete(h.items, it.eid)
-					h.toNearbyEv(players, it.dim, it.x, it.z, entGone(it.eid))
+					h.entityGone(players, it.dim, it.eid)
 				} else {
 					h.refreshItemMeta(players, it)
 				}

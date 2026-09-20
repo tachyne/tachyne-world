@@ -150,7 +150,7 @@ func (h *hub) updateFangs(players map[int32]*tracked) {
 			h.fangBite(players, f)
 		}
 		if f.life--; f.life <= 0 {
-			h.toNearbyEv(players, f.dim, f.x, f.z, entGone(f.eid))
+			h.entityGone(players, f.dim, f.eid)
 			continue
 		}
 		h.fangs = append(h.fangs, f)

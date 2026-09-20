@@ -19,7 +19,7 @@ func (h *hub) deathForgiveness(players map[int32]*tracked, t *tracked) {
 		for eid, a := range h.arrows {
 			if a.pearl && a.shooter == t.p.eid {
 				delete(h.arrows, eid)
-				h.toNearbyEv(players, a.dim, a.x, a.z, entGone(eid))
+				h.entityGone(players, a.dim, eid)
 			}
 		}
 	}

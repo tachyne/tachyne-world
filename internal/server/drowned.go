@@ -52,7 +52,7 @@ func convertingMeta(eid int32, on bool) []byte {
 // convertMob swaps a mob for its converted type in place, preserving baby state
 // and not healing it. The client sees the old entity vanish and the new appear.
 func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
-	h.toNearbyEv(players, m.dim, m.x, m.z, entGone(m.eid))
+	h.entityGone(players, m.dim, m.eid)
 	delete(h.mobs, m.eid)
 	h.gridDirty()
 	nm := h.spawnHostileY(players, target, m.x, m.y, m.z)

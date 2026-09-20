@@ -143,7 +143,7 @@ func (h *hub) villagerPickupStep(players map[int32]*tracked, m *mob) bool {
 		}
 		if best.count -= n; best.count <= 0 {
 			delete(h.items, best.eid)
-			h.toNearbyEv(players, best.dim, best.x, best.z, entGone(best.eid))
+			h.entityGone(players, best.dim, best.eid)
 		} else {
 			h.refreshItemMeta(players, best)
 		}

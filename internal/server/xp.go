@@ -108,7 +108,7 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 	for eid, o := range h.orbs {
 		if now-o.born >= orbDespawnTicks {
 			delete(h.orbs, eid)
-			h.toNearbyEv(players, o.dim, o.x, o.z, entGone(eid))
+			h.entityGone(players, o.dim, eid)
 			continue
 		}
 		// Orbs drift toward the nearest living survival player (vanilla magnetism).
@@ -145,7 +145,7 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 			}
 			h.playSound(players, snd, sndPlayer, o.x, o.y, o.z, 0.6, pitch)
 			h.toNearbyEv(players, o.dim, o.x, o.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: 1})
-			h.toNearbyEv(players, o.dim, o.x, o.z, entGone(eid))
+			h.entityGone(players, o.dim, eid)
 			break
 		}
 	}

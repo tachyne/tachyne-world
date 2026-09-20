@@ -263,7 +263,7 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, it.x, it.y, it.z, 0.4, 1+h.rng.Float32())
 			if leftover == 0 {
 				delete(h.items, eid)
-				h.toNearbyEv(players, it.dim, it.x, it.z, entGone(eid))
+				h.entityGone(players, it.dim, eid)
 			} else {
 				it.count = leftover
 				h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))

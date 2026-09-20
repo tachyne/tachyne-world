@@ -221,7 +221,7 @@ func (h *hub) hitFrame(players map[int32]*tracked, attacker *tracked, f *itemFra
 // breakFrame removes the frame entity, dropping its item form.
 func (h *hub) breakFrame(players map[int32]*tracked, f *itemFrame, creative bool) {
 	delete(h.itemFrames, f.eid)
-	h.toNearbyEv(players, f.dim, float64(f.x), float64(f.z), entGone(f.eid))
+	h.entityGone(players, f.dim, f.eid)
 	if !creative && h.rules.EntityDrops {
 		frameItem := itemItemFrame
 		if f.glow {
