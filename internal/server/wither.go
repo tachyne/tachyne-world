@@ -96,6 +96,8 @@ func (h *hub) updateWithers(players map[int32]*tracked) {
 				h.playSoundDim(players, m.dim, "minecraft:entity.wither.spawn", sndHostile, m.x, m.y, m.z, 4, 1)
 			}
 		}
+		h.witherHeadsTick(players, m) // the two side heads pick their own victims
+		h.witherSmashTick(players, m) // …and a blow brings the arena down
 		h.updateBossBar(players, m, "Wither", witherHealth)
 	}
 }

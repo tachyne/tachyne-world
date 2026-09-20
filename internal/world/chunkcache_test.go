@@ -45,11 +45,12 @@ func TestDirCachePersistsChunksAcrossWorlds(t *testing.T) {
 	w1 := New(42)
 	w1.SetChunkCache(NewDirCache(dir))
 	ch1 := w1.generated(5, 5)
-	// The put is async — poll (with real sleeps: a loaded CI box can take
-	// longer than any spin loop) until it lands.
+	// The put is async — poll (with real sleeps: a loaded box, one running
+	// the race detector or another suite beside this one, can take seconds)
+	// until it lands.
 	key := w1.cacheKey(5, 5)
 	var data []byte
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 1000; i++ {
 		if d, ok := w1.chunkCache.Get(key); ok {
 			data = d
 			break
@@ -57,7 +58,7 @@ func TestDirCachePersistsChunksAcrossWorlds(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	if data == nil {
-		t.Fatal("chunk was not written to the cache within 1s")
+		t.Fatal("chunk was not written to the cache within 5s")
 	}
 	dec0 := decodeChunk(data, worldgen.SectionCount)
 	if dec0 == nil {

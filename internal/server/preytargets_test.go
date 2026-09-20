@@ -42,6 +42,8 @@ func TestPreyClasses(t *testing.T) {
 		{entityFox, entityCod, nil, true},
 		{entityPolarBear, entityFox, nil, true},
 		{entityCreeper, entityVillager, nil, false}, // creepers hunt players only
+		{entityWither, entityCow, nil, true},        // a wither fights everything living
+		{entityWither, entityZombie, nil, false},    // …but not the undead
 	}
 	for _, c := range cases {
 		if got := h.preyOf(mk(c.hunter), mk(c.prey, c.mods...)); got != c.want {

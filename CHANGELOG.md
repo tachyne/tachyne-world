@@ -28,6 +28,15 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The wither fights the room.** Its two side heads never did anything
+  of their own: everything it fired went at the player. As in vanilla,
+  each head now picks its own victim — any living thing in a twenty-block
+  box that is not undead — shoots it on its own clock, and, with nothing
+  to shoot at, lobs a skull at a random point nearby, which is what
+  hollows the arena out. The wither's main target can be a mob too, so
+  one loose in a village fights everything it meets; and a blow arms the
+  block-smashing it does twenty ticks later, bedrock and the rest of the
+  wither-immune blocks excepted.
 - **Illagers behave like raiders.** A pillager charged its crossbow at a
   dead run; vanilla lets it walk at full pace only with an empty one, so
   it now closes at half speed while the bolt is on the string. An evoker

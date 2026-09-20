@@ -99,7 +99,11 @@ type mob struct {
 	floatY          float64
 	floatZ          float64
 	floatSet        bool
-	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	headNext        [2]int   // wither: nextHeadUpdate for each side head
+	headIdle        [2]int   // …and idleHeadUpdates, the count before a bored shot
+	headTarget      [2]int32 // …and the victim each has picked
+	witherSmash     int      // WitherBoss.destroyBlocksTick: ticks until it levels its surroundings
+	variant         int32    // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
@@ -1098,6 +1102,11 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	// bigger blow lands, and only its excess over the last one.
 	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
 		m.axHurt, m.axHurtDmg = true, dmg
+	}
+	if m.etype == entityWither && m.witherSmash <= 0 {
+		// WitherBoss.hurtServer: a blow arms the block-smashing timer; twenty
+		// ticks later everything breakable around it comes down.
+		m.witherSmash = 20
 	}
 	if m.etype == entitySilverfish { // Silverfish.hurtServer: notifyHurt
 		m.silverHurt = true

@@ -30,6 +30,10 @@ func (h *hub) preyOf(hunter, o *mob) bool {
 		return o.etype == entityVillager || o.etype == entityWanderingTrader || o.etype == entityIronGolem
 	case hunter.etype == entitySlime || hunter.etype == entityMagmaCube:
 		return o.etype == entityIronGolem
+	case hunter.etype == entityWither:
+		// WitherBoss's target goal takes any living thing that is not undead:
+		// a wither loose in a village fights everything it meets.
+		return !undeadTypes[o.etype] && o.etype != entityWither
 	case hunter.etype == entityEnderman:
 		return o.etype == entityEndermite
 	case hunter.etype == entityGuardian || hunter.etype == entityElderGuardian:
@@ -60,7 +64,7 @@ func illagerKind(etype int) bool {
 // huntsPrey reports whether a species hunts anything but players at all —
 // the cheap gate before the grid search.
 func huntsPrey(etype int) bool {
-	return zombieKind(etype) || illagerKind(etype) || skeletonKind(etype) ||
+	return zombieKind(etype) || illagerKind(etype) || skeletonKind(etype) || etype == entityWither ||
 		etype == entitySlime || etype == entityMagmaCube || etype == entityEnderman ||
 		etype == entityGuardian || etype == entityElderGuardian ||
 		etype == entityFox || etype == entityOcelot || etype == entityPolarBear
