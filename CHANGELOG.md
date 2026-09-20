@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Smelting pays what the recipe says.** Every furnace result banked the
+  same experience — seven tenths, or a third for food — so a stack of
+  ancient debris was worth no more than a stack of cactus. The cook
+  tables now carry each recipe's own experience, and a furnace hands over
+  exactly that: two for netherite scrap, one for green dye and gold, seven
+  tenths for iron, a third for a steak.
 - **Seven advancement criteria come off the blocked list.** They were
   marked unobservable when the mechanics behind them did not exist, and
   the note outlived the code: the trident's channeling, sliding down a

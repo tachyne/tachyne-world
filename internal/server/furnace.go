@@ -317,11 +317,24 @@ func (h *hub) sendFurnaceWindow(t *tracked, f *furnace) {
 	h.sendFurnaceBars(t, f)
 }
 
-// smeltXP is the experience one smelted item banks (vanilla varies 0.1-1.0
-// per recipe; we approximate: food 0.35, everything else 0.7).
-func smeltXP(output int32) float64 {
-	if _, ok := foodPoints[output]; ok {
-		return 0.35
+// smeltXP is the experience one smelted item banks — the recipe's own
+// `experience` field, baked into the cook tables (ancient debris pays 2,
+// cactus 1, iron 0.7, food 0.35 and so on). The old flat approximation paid
+// the same for all of them.
+func smeltXP(output int32) float64 { return smeltXPByOutput[output] }
+
+// smeltXPByOutput indexes the cook tables by RESULT once at init. Vanilla
+// banks the experience of the recipe that produced the item; the engine
+// tracks only the result, and where two recipes share one (iron ore and raw
+// iron both give an ingot) vanilla gives them the same experience anyway.
+var smeltXPByOutput = func() map[int32]float64 {
+	out := map[int32]float64{}
+	for _, table := range []map[int32]cookEntry{smeltResult, blastResult, smokeResult, campfireResult} {
+		for _, e := range table {
+			if e.XP > out[e.Out] {
+				out[e.Out] = e.XP
+			}
+		}
 	}
-	return 0.7
-}
+	return out
+}()

@@ -210,3 +210,27 @@ func TestFurnaceLitFollowsWorldBlock(t *testing.T) {
 		t.Fatalf("burnout mid-cook should unlight the block: %d", got)
 	}
 }
+
+// Smelting experience is the recipe's own, not a flat guess: ancient debris
+// pays two, cactus one, iron seven tenths, food a third.
+func TestSmeltXPIsPerRecipe(t *testing.T) {
+	for _, c := range []struct {
+		out  string
+		want float64
+	}{
+		{"netherite_scrap", 2}, {"green_dye", 1}, {"iron_ingot", 0.7},
+		{"cooked_beef", 0.35}, {"gold_ingot", 1},
+	} {
+		id := itemByName[c.out]
+		if id == 0 {
+			t.Fatalf("no item %s", c.out)
+		}
+		if got := smeltXP(id); got != c.want {
+			t.Errorf("smelting %s banks %v, want %v", c.out, got, c.want)
+		}
+	}
+	// Something no recipe produces banks nothing.
+	if got := smeltXP(itemByName["dirt"]); got != 0 {
+		t.Errorf("dirt is not a smelting result: %v", got)
+	}
+}

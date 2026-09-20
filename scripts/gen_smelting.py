@@ -73,6 +73,10 @@ for path, r in sorted(recipes.items()):
         if result not in item_id:
             continue
         cook = r.get("cookingtime", default)
+        # Each recipe carries its own experience; the engine used to guess
+        # 0.7 (0.35 for food), which paid the same for cactus green and
+        # ancient debris.
+        xp = float(r.get("experience", 0.0))
         ing = r["ingredient"]
         ings = [ing] if isinstance(ing, str) else ing
         names = []
@@ -83,7 +87,7 @@ for path, r in sorted(recipes.items()):
                 names.append(i.removeprefix("minecraft:"))
         for n in names:
             if n in item_id:
-                tables[rtype].append((item_id[n], item_id[result], cook))
+                tables[rtype].append((item_id[n], item_id[result], cook, xp))
 for rows in tables.values():
     rows.sort()
 
@@ -104,10 +108,12 @@ L = [
     "",
     "package server",
     "",
-    "// cookEntry is one cooker recipe: output item + cook time in ticks.",
+    "// cookEntry is one cooker recipe: output item, cook time in ticks and",
+    "// the experience it banks (the recipe's own `experience` field).",
     "type cookEntry struct {",
     "\tOut  int32",
     "\tCook int",
+    "\tXP   float64",
     "}",
 ]
 for rtype, goname, _, doc in COOKERS:
@@ -116,8 +122,8 @@ for rtype, goname, _, doc in COOKERS:
         f"// {goname} maps a {doc} input item to its cooked output + cook ticks.",
         f"var {goname} = map[int32]cookEntry{{",
     ]
-    for inp, out, cook in tables[rtype]:
-        L.append(f"\t{inp}: {{{out}, {cook}}},")
+    for inp, out, cook, xp in tables[rtype]:
+        L.append(f"\t{inp}: {{{out}, {cook}, {xp:g}}},")
     L.append("}")
 L += [
     "",
