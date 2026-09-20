@@ -111,18 +111,29 @@ func TestTridentRiptideLaunchesInRain(t *testing.T) {
 	}
 }
 
-func TestTridentImpalingBonusInRain(t *testing.T) {
+func TestTridentImpalingHitsTheAquatic(t *testing.T) {
 	h, pl, players := tridentSetup()
 	h.raining = true
-	m := &mob{eid: 9, etype: entityZombie, hostile: true, health: 100, x: 0.5, y: 80, z: 4.5}
-	h.mobs[9] = m
 
+	// Impaling is #sensitive_to_impaling (= #aquatic) since 1.17: a zombie
+	// standing in the rain takes the trident's plain damage.
+	z := &mob{eid: 9, etype: entityZombie, hostile: true, health: 100, x: 0.5, y: 80, z: 4.5}
+	h.mobs[9] = z
 	a := h.launchProjectileIn(players, entityTrident, 0, 0.5, 81, 0.5, 0, 0, tridentSpeed)
 	a.shooter, a.dmg, a.playerShot, a.impaling = pl.p.eid, tridentDamage, true, 2
+	h.arrowHitsMob(players, a, z.x, 80.5, z.z)
+	if want := 100 - 8; z.health != want {
+		t.Fatalf("a rained-on zombie takes the plain 8: health=%d want %d", z.health, want)
+	}
 
-	h.arrowHitsMob(players, a, m.x, 80.5, m.z)
-	// base 8 + ceil(2.5 * 2) = 8 + 5 = 13 while it's raining.
-	if want := 100 - 13; m.health != want {
-		t.Fatalf("impaling II in rain should deal 13: health=%d want %d", m.health, want)
+	// A dolphin, wet or dry, takes the bonus: 8 + ceil(2.5 × 2) = 13.
+	delete(h.mobs, z.eid) // one target at a time: the hit picks whatever is in reach
+	d := &mob{eid: 10, etype: entityDolphin, health: 100, x: 0.5, y: 80, z: 4.5}
+	h.mobs[10] = d
+	a2 := h.launchProjectileIn(players, entityTrident, 0, 0.5, 81, 0.5, 0, 0, tridentSpeed)
+	a2.shooter, a2.dmg, a2.playerShot, a2.impaling = pl.p.eid, tridentDamage, true, 2
+	h.arrowHitsMob(players, a2, d.x, 80.5, d.z)
+	if want := 100 - 13; d.health != want {
+		t.Fatalf("impaling II on a dolphin should deal 13: health=%d want %d", d.health, want)
 	}
 }

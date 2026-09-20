@@ -158,3 +158,12 @@ func riptideSound(level int) string {
 		return "minecraft:item.trident.riptide_1"
 	}
 }
+
+// sensitiveToImpaling is #minecraft:sensitive_to_impaling, which is
+// #minecraft:aquatic: the sea's own. Impaling stopped being "anything wet"
+// in 1.17 — standing in the rain no longer makes a zombie easier to spear.
+var sensitiveToImpaling = entityTypeSet(
+	"turtle", "axolotl", "guardian", "elder_guardian", "cod", "pufferfish",
+	"salmon", "tropical_fish", "dolphin", "squid", "glow_squid", "tadpole",
+	"nautilus", "zombie_nautilus",
+)

@@ -81,7 +81,7 @@ type arrowEntity struct {
 	noPickup bool           // multishot side bolts / creative tridents: fly + hit, never retrievable
 
 	loyalty     int      // thrown-trident loyalty: >0 flies back to the thrower instead of sticking
-	impaling    int      // thrown-trident impaling: bonus damage to targets in water or rain
+	impaling    int      // thrown-trident impaling: bonus damage to #sensitive_to_impaling mobs
 	channeling  bool     // thrown-trident channeling: a storm bolt on whatever it hits under open sky
 	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
 	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
@@ -479,8 +479,11 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 			}
 			dmg := dmg0
-			if a.impaling > 0 && (h.raining || h.inWater(m.dim, m.x, m.y, m.z)) {
-				dmg += int(math.Ceil(2.5 * float64(a.impaling))) // trident impaling: +2.5/level in water or rain
+			if a.impaling > 0 && sensitiveToImpaling[m.etype] {
+				// Impaling bites #sensitive_to_impaling (= #aquatic) since
+				// 1.17 — the mobs of the sea, wet or dry — not anything
+				// standing in the rain.
+				dmg += int(math.Ceil(2.5 * float64(a.impaling)))
 			}
 			if a.mobShot {
 				m.lastAttacker = a.shooter // a mob's arrow counts as its blow (the creeper's disc)

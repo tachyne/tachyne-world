@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Impaling bites the sea, not the rain.** A trident enchanted with
+  Impaling hit anything standing in water or rain harder — the pre-1.17
+  rule. It now bites what vanilla marks sensitive to it: turtles,
+  axolotls, guardians, the fish, dolphins, squid, tadpoles and nautiluses,
+  wet or dry. A rained-on zombie takes the plain damage.
 - **Mob heads and turtle scutes exist.** A charged creeper's blast now
   leaves behind the head of whatever it killed — a creeper, skeleton,
   wither skeleton, zombie or piglin — which is the only way to any of
