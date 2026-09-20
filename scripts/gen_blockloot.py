@@ -50,6 +50,31 @@ def num(v):
     raise Unsupported("np " + t)
 
 
+def expand_item_tag(ref, seen=None):
+    """#minecraft:foo -> the concrete item names it contains (recursively)."""
+    seen = seen or set()
+    name = ref.lstrip("#")
+    if ":" not in name:
+        name = "minecraft:" + name
+    if name in seen:
+        return []
+    seen.add(name)
+    ns, path = name.split(":", 1)
+    entry = f"data/{ns}/tags/item/{path}.json"
+    try:
+        data = json.loads(z.read(entry))
+    except KeyError:
+        return []
+    out = []
+    for v in data.get("values", []):
+        v = v if isinstance(v, str) else v.get("id", "")
+        if v.startswith("#"):
+            out += expand_item_tag(v, seen)
+        elif v:
+            out.append(v.removeprefix("minecraft:"))
+    return out
+
+
 def cond(c):
     t = c["condition"].removeprefix("minecraft:")
     if t == "survives_explosion":
@@ -70,6 +95,12 @@ def cond(c):
         items = pred.get("items")
         if isinstance(items, str):
             if items.startswith("#"):
+                # Expand the tag here: the evaluator used to understand only
+                # "shears" by name, so #cluster_max_harvestables silently
+                # failed and amethyst clusters never gave their four shards.
+                names = expand_item_tag(items)
+                if names:
+                    return {"c": "tool", "items": names}
                 return {"c": "tool", "tag": items.lstrip("#").removeprefix("minecraft:")}
             return {"c": "tool", "item": items.removeprefix("minecraft:")}
         raise Unsupported("match_tool shape")

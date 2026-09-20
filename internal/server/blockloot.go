@@ -38,6 +38,7 @@ type lootCond struct {
 	Props   map[string]string `json:"props"`
 	Silk    bool              `json:"silk"`
 	Item    string            `json:"item"`
+	Items   []string          `json:"items"` // an expanded tool tag (#cluster_max_harvestables …)
 	Tag     string            `json:"tag"`
 	Term    *lootCond         `json:"term"`
 	Terms   []lootCond        `json:"terms"`
@@ -402,7 +403,15 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 		if cd.Item != "" {
 			return c.tool == int32(itemByName[cd.Item])
 		}
-		if cd.Tag != "" { // v1: shears is the only tool tag block loot references directly
+		if len(cd.Items) > 0 { // an expanded tool tag: any member matches
+			for _, n := range cd.Items {
+				if c.tool == int32(itemByName[n]) {
+					return true
+				}
+			}
+			return false
+		}
+		if cd.Tag != "" { // a tag the bake could not expand — shears is the old case
 			return c.tool == int32(itemByName["shears"]) && cd.Tag == "shears"
 		}
 		return false

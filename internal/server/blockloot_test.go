@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/tachyne/tachyne-world/internal/world"
 	"math/rand"
 	"testing"
 
@@ -126,4 +127,35 @@ func mustEntity(t *testing.T, h *hub, etype int32, ctx lootCtx) []drop {
 		t.Fatalf("no entity table for %d", etype)
 	}
 	return ds
+}
+
+// #cluster_max_harvestables: an amethyst cluster broken with a pickaxe gives
+// four shards (plus Fortune), and two with anything else.
+func TestAmethystClusterNeedsAPickaxe(t *testing.T) {
+	h := newHub(world.New(1))
+	cluster := worldgen.BlockBase("amethyst_cluster")
+	if cluster == 0 {
+		t.Skip("no amethyst cluster in this registry")
+	}
+	shard := itemByName["amethyst_shard"]
+	count := func(tool int32) int {
+		total := 0
+		for i := 0; i < 40; i++ {
+			for _, d := range h.evalBlockLoot(lootCtx{state: cluster, tool: tool,
+				rng: h.rng.Intn, randf: h.rng.Float64}) {
+				if d.item == shard {
+					total += d.count
+				}
+			}
+		}
+		return total / 40
+	}
+	withPick := count(itemByName["iron_pickaxe"])
+	byHand := count(0)
+	if withPick != 4 {
+		t.Errorf("a pickaxe gives four shards, got %d", withPick)
+	}
+	if byHand != 2 {
+		t.Errorf("anything else gives two, got %d", byHand)
+	}
 }
