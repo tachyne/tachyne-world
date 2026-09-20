@@ -104,3 +104,29 @@ func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
 		t.Errorf("with Jump Boost II a seven-block fall deals %v, want 2", d)
 	}
 }
+
+// The dropped and broken counters move: Q on a stack counts it, and a tool
+// that wears out counts once and snaps.
+func TestDroppedAndBrokenStats(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+
+	pl.inv.slots[0] = invStack{item: tDiamondSword, count: 1}
+	h.tossItem(players, pl, invStack{item: itemByName["cobblestone"], count: 7})
+	if got := pl.stats[statKey{attachproto.StatDropped, itemByName["cobblestone"]}]; got != 7 {
+		t.Errorf("dropping seven cobblestone should count seven, got %d", got)
+	}
+
+	// Wear the sword out: the last point breaks it and counts once.
+	max := itemMaxDurability[tDiamondSword]
+	pl.inv.slots[0].dmg = max - 1
+	h.applyToolWear(pl, 0, 1)
+	if pl.inv.slots[0].item != 0 {
+		t.Fatal("the sword should have broken")
+	}
+	if got := pl.stats[statKey{attachproto.StatBroken, tDiamondSword}]; got != 1 {
+		t.Errorf("breaking a tool counts once, got %d", got)
+	}
+}

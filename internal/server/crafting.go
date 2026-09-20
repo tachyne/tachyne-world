@@ -637,6 +637,7 @@ func (h *hub) tossItem(players map[int32]*tracked, t *tracked, st invStack) {
 	vx += math.Cos(f1) * f2
 	vy += (h.rng.Float64() - h.rng.Float64()) * 0.1
 	vz += math.Sin(f1) * f2
+	h.incStat(t, attachproto.StatDropped, st.item, int32(st.count)) // Stats.ITEM_DROPPED
 	if it := h.spawnItemAt(players, t.dim, st.item, st.count, t.x, t.y+playerEyeStand-0.3, t.z, vx, vy, vz); it != nil {
 		it.noPickupUntil = it.born + 40 // ~2s before pickup (vanilla toss delay)
 		it.thrower = t.p.eid

@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+)
 
 // Durability + armor. Tools wear one point per mined block (hardness > 0) and
 // per melee hit, breaking (vanishing) at their items.json max. Armor absorbs
@@ -35,6 +39,9 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 		return // unbreaking ate the wear (lvl/(lvl+1) chance, vanilla)
 	}
 	if s.dmg += n; s.dmg >= max {
+		// Stats.ITEM_BROKEN, and the snap everyone nearby hears.
+		h.incStat(t, attachproto.StatBroken, s.item, 1)
+		h.playSound(h.playersRef, "minecraft:entity.item.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
 		*s = invStack{} // the tool breaks
 	}
 	if slot == offhandSlot {

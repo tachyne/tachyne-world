@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Two statistics start moving, and a broken tool snaps.** The
+  Statistics screen's "dropped" and "broken" columns never counted
+  anything. Dropping a stack counts it now, and a tool that wears out
+  counts once — and makes the snapping sound everyone nearby expects to
+  hear, which the engine never played.
 - **Impaling bites the sea, not the rain.** A trident enchanted with
   Impaling hit anything standing in water or rain harder — the pre-1.17
   rule. It now bites what vanilla marks sensitive to it: turtles,
