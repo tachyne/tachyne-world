@@ -2411,7 +2411,18 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
 	// into the new gap) all re-evaluate next tick.
-	h.scheduleAroundIn(e.dim, blockPos{e.x, e.y, e.z}, 1)
+	pos := blockPos{e.x, e.y, e.z}
+	h.scheduleAroundIn(e.dim, pos, 1)
+	// A signal source that appears or disappears changes the STRONG power of
+	// the block it hangs on, and what that block drives can sit two cells away
+	// — dust on the far side of the block a lever is mounted to is the usual
+	// case. Six neighbours is not far enough for it, so the same relay a lever
+	// FLIP uses runs here too (vanilla does it in the block's own removal:
+	// LeverBlock.affectNeighborsAfterRemoval updates the neighbours of the
+	// attached block as well as its own).
+	if h.isSignalSource(e.state) || h.isSignalSource(e.broken) {
+		h.inDim(e.dim, func() { h.scheduleSignalAround(pos) })
+	}
 }
 
 // chunkFloor maps a world coordinate to its chunk index (floors toward -inf).
