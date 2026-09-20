@@ -19,19 +19,18 @@ type mobOffer struct {
 	demand       int32 // vanilla MerchantOffer.demand; persisted
 	specialPrice int32 // vanilla specialPriceDiff; per-viewer, not persisted
 	// The optional second ItemCost (a librarian's book beside the emeralds)
-	// and the enchantment on the output (an enchanted book). Both persist;
-	// the second cost takes no demand or reputation adjustment (vanilla
-	// adjusts costA only).
+	// and the enchantments on the output — one for an enchanted book, several
+	// for a piece of EnchantedItemForEmeralds gear. Both persist; the second
+	// cost takes no demand or reputation adjustment (vanilla adjusts costA
+	// only).
 	cost2Item, cost2Count int32
-	outEnch               enchApply
+	outEnchs              enchList
 }
 
 // output is the stack an offer hands over.
 func (o *mobOffer) output() invStack {
 	st := invStack{item: o.trade.outItem, count: int(o.trade.outCount)}
-	if o.outEnch.lvl > 0 {
-		st.ench[0] = o.outEnch
-	}
+	st.ench = o.outEnchs
 	return st
 }
 
@@ -61,7 +60,7 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		}
 	}
 	if len(pool) == 0 {
-		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier]}}
+		return mobOffer{trade: vTrade{itemByName["emerald"], 1, itemByName["book"], 1, 12, bookTradeXP[tier], vTradeFixed}}
 	}
 	id := pool[h.rng.Intn(len(pool))]
 	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
@@ -73,11 +72,33 @@ func (h *hub) rollBookOffer(tier int) mobOffer {
 		price = 64
 	}
 	return mobOffer{
-		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier]},
+		trade:      vTrade{itemByName["emerald"], int32(price), itemEnchantedBook, 1, 12, bookTradeXP[tier], vTradeFixed},
 		cost2Item:  itemByName["book"],
 		cost2Count: 1,
-		outEnch:    enchApply{id: id, lvl: int8(lvl)},
+		outEnchs:   enchList{{id: id, lvl: int8(lvl)}},
 	}
+}
+
+// enchGearAllowed is EnchantmentTags.ON_TRADED_EQUIPMENT — the set a villager
+// may put on the gear it sells.
+func enchGearAllowed(id int8) bool { return enchDefs[id].flags&enchOnTradedEquipment != 0 }
+
+// rollGearOffer is VillagerTrades.EnchantedItemForEmeralds.getOffer: the
+// villager sells one piece of equipment enchanted as if at level 5..19, and the
+// same roll tops its price up from the listing's base cost (capped at 64
+// emeralds). The enchantments are rolled ONCE, when the tier unlocks, and
+// persist with the offer — restocking never re-rolls them.
+func (h *hub) rollGearOffer(t vTrade) mobOffer {
+	lvl := 5 + h.rng.Intn(15)
+	o := mobOffer{trade: t}
+	o.trade.kind = vTradeFixed // resolved: nothing re-rolls it
+	if cost := int(t.inCount) + lvl; cost < 64 {
+		o.trade.inCount = int32(cost)
+	} else {
+		o.trade.inCount = 64
+	}
+	o.outEnchs = enchApplyList(enchSelect(h.rng, t.outItem, lvl, enchGearAllowed))
+	return o
 }
 
 // tradePriceMultiplier is vanilla MerchantOffer.priceMultiplier. Vanilla varies
@@ -132,7 +153,12 @@ func (h *hub) unlockTier(m *mob, tier int) {
 	}
 	start := int(m.eid) % len(pool) // stable per-villager rotation
 	for i := 0; i < offersPerTier && i < len(pool); i++ {
-		m.offers = append(m.offers, mobOffer{trade: pool[(start+i)%len(pool)]})
+		t := pool[(start+i)%len(pool)]
+		if t.kind == vTradeEnchantedGear {
+			m.offers = append(m.offers, h.rollGearOffer(t))
+			continue
+		}
+		m.offers = append(m.offers, mobOffer{trade: t})
 	}
 	if m.profession == librarianProfession && tier >= 1 && tier <= 4 {
 		m.offers = append(m.offers, h.rollBookOffer(tier)) // the tier's enchanted book

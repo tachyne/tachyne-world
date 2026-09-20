@@ -180,28 +180,74 @@ type savedMob struct {
 	Meet [3]int `json:"meet,omitempty"`
 }
 
-// savedOffer is one merchant offer flattened:
-// {inItem, inCount, outItem, outCount, maxUses, xp, uses, demand}. The trailing
-// demand was added later; older 7-element saves unmarshal with demand=0 (a JSON
-// array shorter than the Go array leaves the extra slot zero), so the format is
-// backward-compatible.
-// savedOffer columns: the eight above, then (2026-09-06) the second item
-// cost {item, count} and the output enchantment packed id<<8|lvl. Older
-// eight-column rows decode with zeros there.
-type savedOffer [11]int32
+// savedOffer is one merchant offer. It started life as a flat int32 array —
+// {inItem, inCount, outItem, outCount, maxUses, xp, uses, demand}, later
+// extended with the second item cost and one packed enchantment — and an offer
+// carrying several enchantments (a villager's EnchantedItemForEmeralds gear)
+// no longer fits a fixed-width row. Offers are written as the named object
+// below; UnmarshalJSON still accepts either legacy array, so existing worlds
+// load unchanged.
+type savedOffer struct {
+	In      int32   `json:"i"`
+	InN     int32   `json:"ic"`
+	Out     int32   `json:"o"`
+	OutN    int32   `json:"oc"`
+	MaxUses int32   `json:"mu"`
+	XP      int32   `json:"xp"`
+	Uses    int32   `json:"u,omitempty"`
+	Demand  int32   `json:"d,omitempty"`
+	C2Item  int32   `json:"c2,omitempty"`
+	C2N     int32   `json:"c2n,omitempty"`
+	Ench    []int32 `json:"e,omitempty"` // one id<<8|lvl per enchantment
+}
+
+// UnmarshalJSON accepts the historical array form as well as the object one.
+func (s *savedOffer) UnmarshalJSON(b []byte) error {
+	for _, c := range b {
+		switch c {
+		case ' ', '\t', '\n', '\r':
+			continue
+		case '[':
+			var a [11]int32 // a shorter array leaves the tail zero
+			if err := json.Unmarshal(b, &a); err != nil {
+				return err
+			}
+			*s = savedOffer{In: a[0], InN: a[1], Out: a[2], OutN: a[3], MaxUses: a[4],
+				XP: a[5], Uses: a[6], Demand: a[7], C2Item: a[8], C2N: a[9]}
+			if a[10] != 0 {
+				s.Ench = []int32{a[10]}
+			}
+			return nil
+		}
+		break
+	}
+	type plain savedOffer // shed this method, then decode the object
+	return json.Unmarshal(b, (*plain)(s))
+}
 
 func packOffer(o mobOffer) savedOffer {
 	t := o.trade
-	return savedOffer{t.inItem, t.inCount, t.outItem, t.outCount, t.maxUses, t.xp, o.uses, o.demand,
-		o.cost2Item, o.cost2Count, int32(uint8(o.outEnch.id))<<8 | int32(uint8(o.outEnch.lvl))}
+	s := savedOffer{In: t.inItem, InN: t.inCount, Out: t.outItem, OutN: t.outCount,
+		MaxUses: t.maxUses, XP: t.xp, Uses: o.uses, Demand: o.demand,
+		C2Item: o.cost2Item, C2N: o.cost2Count}
+	for _, e := range o.outEnchs {
+		if e.lvl == 0 {
+			break
+		}
+		s.Ench = append(s.Ench, int32(uint8(e.id))<<8|int32(uint8(e.lvl)))
+	}
+	return s
 }
 
 func unpackOffer(s savedOffer) mobOffer {
-	o := mobOffer{trade: vTrade{inItem: s[0], inCount: s[1], outItem: s[2],
-		outCount: s[3], maxUses: s[4], xp: s[5]}, uses: s[6], demand: s[7],
-		cost2Item: s[8], cost2Count: s[9]}
-	if s[10] != 0 {
-		o.outEnch = enchApply{id: int8(s[10] >> 8), lvl: int8(s[10] & 0xff)}
+	o := mobOffer{trade: vTrade{inItem: s.In, inCount: s.InN, outItem: s.Out,
+		outCount: s.OutN, maxUses: s.MaxUses, xp: s.XP}, uses: s.Uses, demand: s.Demand,
+		cost2Item: s.C2Item, cost2Count: s.C2N}
+	for i, e := range s.Ench {
+		if i >= len(o.outEnchs) || e == 0 {
+			break
+		}
+		o.outEnchs[i] = enchApply{id: int8(e >> 8), lvl: int8(e & 0xff)}
 	}
 	return o
 }

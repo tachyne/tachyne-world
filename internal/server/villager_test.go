@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -66,8 +68,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -179,23 +181,23 @@ func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 	if book == nil {
 		t.Fatalf("a tier-1 librarian must offer an enchanted book: %+v", m.offers)
 	}
-	if book.outEnch.lvl < 1 || !enchTradeAllowed(book.outEnch.id) {
-		t.Fatalf("book enchantment %+v must be tradeable", book.outEnch)
+	if book.outEnchs[0].lvl < 1 || !enchTradeAllowed(book.outEnchs[0].id) {
+		t.Fatalf("book enchantment %+v must be tradeable", book.outEnchs[0])
 	}
 	if book.cost2Item != itemByName["book"] || book.cost2Count != 1 {
 		t.Errorf("second cost %d×%d, want one book", book.cost2Item, book.cost2Count)
 	}
 	price := int(book.trade.inCount)
-	lvl := int(book.outEnch.lvl)
+	lvl := int(book.outEnchs[0].lvl)
 	lo, hi := 2+3*lvl, 2+(5+lvl*10-1)+3*lvl
-	if enchDefs[book.outEnch.id].flags&enchDoubleTradePrice != 0 {
+	if enchDefs[book.outEnchs[0].id].flags&enchDoubleTradePrice != 0 {
 		lo, hi = lo*2, hi*2
 	}
 	if hi > 64 {
 		hi = 64
 	}
 	if price < lo || price > hi {
-		t.Errorf("price %d emeralds outside vanilla's [%d, %d] for %s %d", price, lo, hi, enchName(book.outEnch.id), lvl)
+		t.Errorf("price %d emeralds outside vanilla's [%d, %d] for %s %d", price, lo, hi, enchName(book.outEnchs[0].id), lvl)
 	}
 
 	// Emeralds alone do not buy it; emeralds + a book do, and both are taken.
@@ -212,13 +214,13 @@ func TestLibrarianSellsEnchantedBooks(t *testing.T) {
 	}
 	pl.trade[1] = invStack{item: itemByName["book"], count: 2}
 	h.takeTradeResult(players, pl, 0)
-	if pl.cursor.item != itemEnchantedBook || pl.cursor.ench[0] != book.outEnch {
+	if pl.cursor.item != itemEnchantedBook || pl.cursor.ench[0] != book.outEnchs[0] {
 		t.Fatalf("expected the enchanted book on the cursor, got %+v", pl.cursor)
 	}
 	if pl.trade[0].count != 64-price || pl.trade[1].count != 1 {
 		t.Errorf("costs not consumed: emeralds %d (want %d), books %d (want 1)", pl.trade[0].count, 64-price, pl.trade[1].count)
 	}
-	if back := unpackOffer(packOffer(*book)); back.cost2Item != book.cost2Item || back.outEnch != book.outEnch || back.trade != book.trade {
+	if back := unpackOffer(packOffer(*book)); back.cost2Item != book.cost2Item || back.outEnchs[0] != book.outEnchs[0] || back.trade != book.trade {
 		t.Errorf("offer store round trip lost data: %+v vs %+v", back, *book)
 	}
 }
@@ -314,6 +316,121 @@ func TestMasonSellsStone(t *testing.T) {
 	for _, want := range []string{"brick", "chiseled_stone_bricks", "quartz_block"} {
 		if !seen[itemByName[want]] {
 			t.Errorf("a mason should sell %s", want)
+		}
+	}
+}
+
+// Vanilla's EnchantedItemForEmeralds: a weaponsmith/toolsmith/armorer/fletcher/
+// fisherman sells one piece of gear, enchanted at roll time. The enchantments
+// must all come from #on_traded_equipment, must land on the traded stack, and
+// the price must be the listing's base cost topped up by the roll level (5..19,
+// capped at 64 emeralds).
+func TestVillagerSellsEnchantedGear(t *testing.T) {
+	w := world.New(11)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+
+	// Every generated enchanted-gear listing, rolled many times over.
+	rolled := 0
+	for prof, tiers := range villagerTrades {
+		for _, pool := range tiers {
+			for _, tr := range pool {
+				if tr.kind != vTradeEnchantedGear {
+					continue
+				}
+				if tr.inItem != itemByName["emerald"] || tr.outCount != 1 {
+					t.Errorf("%s: an enchanted-gear listing costs emeralds and sells one item, got %+v",
+						professionNames[prof], tr)
+				}
+				for i := 0; i < 40; i++ {
+					o := h.rollGearOffer(tr)
+					rolled++
+					if o.trade.kind != vTradeFixed {
+						t.Fatal("a rolled offer must not roll again")
+					}
+					lvl := int(o.trade.inCount) - int(tr.inCount)
+					if o.trade.inCount != 64 && (lvl < 5 || lvl > 19) {
+						t.Fatalf("price %d is base %d + %d, outside vanilla's 5..19 top-up",
+							o.trade.inCount, tr.inCount, lvl)
+					}
+					if o.trade.inCount > 64 {
+						t.Fatalf("price %d exceeds vanilla's 64-emerald cap", o.trade.inCount)
+					}
+					st := o.output()
+					if st.item != tr.outItem {
+						t.Fatalf("sold %d, want %d", st.item, tr.outItem)
+					}
+					for _, e := range st.ench {
+						if e.lvl == 0 {
+							continue
+						}
+						if !enchGearAllowed(e.id) {
+							t.Fatalf("%s is not in #on_traded_equipment", enchName(e.id))
+						}
+						if e.lvl > enchMaxLvl(e.id) {
+							t.Fatalf("%s %d exceeds its cap %d", enchName(e.id), e.lvl, enchMaxLvl(e.id))
+						}
+					}
+				}
+			}
+		}
+	}
+	if rolled == 0 {
+		t.Fatal("no enchanted-gear listings in the generated table")
+	}
+
+	// A weaponsmith at master tier actually has one to sell, enchanted.
+	weaponsmith := -1
+	for i, n := range professionNames {
+		if n == "weaponsmith" {
+			weaponsmith = i
+		}
+	}
+	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
+	h.initVillagerTrades(m, weaponsmith)
+	for tier := 2; tier <= maxTradeTier; tier++ {
+		m.tradeLevel = tier
+		h.unlockTier(m, tier)
+	}
+	found := false
+	for i := range m.offers {
+		if o := &m.offers[i]; o.outEnchs[0].lvl > 0 {
+			found = true
+			// The offer survives the store, enchantments and all.
+			back := unpackOffer(packOffer(*o))
+			if back.outEnchs != o.outEnchs || back.trade != o.trade {
+				t.Errorf("offer round trip lost data: %+v vs %+v", back, *o)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("a master weaponsmith must offer enchanted gear: %+v", m.offers)
+	}
+}
+
+// Worlds saved before offers became a named object still load: the historical
+// flat array decodes into the same offer.
+func TestSavedOfferLegacyArray(t *testing.T) {
+	for _, tc := range []struct {
+		raw  string
+		want savedOffer
+	}{
+		{`[1,2,3,4,5,6,7,8]`, savedOffer{In: 1, InN: 2, Out: 3, OutN: 4, MaxUses: 5, XP: 6, Uses: 7, Demand: 8}},
+		{`[1,2,3,4,5,6,7]`, savedOffer{In: 1, InN: 2, Out: 3, OutN: 4, MaxUses: 5, XP: 6, Uses: 7}},
+		{`[1,2,3,4,5,6,7,8,9,1,2306]`, savedOffer{In: 1, InN: 2, Out: 3, OutN: 4, MaxUses: 5, XP: 6,
+			Uses: 7, Demand: 8, C2Item: 9, C2N: 1, Ench: []int32{2306}}},
+	} {
+		var got savedOffer
+		if err := json.Unmarshal([]byte(tc.raw), &got); err != nil {
+			t.Fatalf("%s: %v", tc.raw, err)
+		}
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s decoded to %+v, want %+v", tc.raw, got, tc.want)
+		}
+		// And the enchantment survives into the live offer.
+		if o := unpackOffer(got); len(tc.want.Ench) > 0 && o.outEnchs[0] != (enchApply{id: 9, lvl: 2}) {
+			t.Errorf("%s: enchantment lost, got %+v", tc.raw, o.outEnchs[0])
 		}
 	}
 }
