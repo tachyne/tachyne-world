@@ -319,6 +319,21 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 				}
 			}
+			// The sweep reaches every LIVING thing beside the target, which
+			// includes other players — it had only ever touched mobs.
+			if h.rules.PvP {
+				for _, o := range players {
+					if o == t || o.dead || o.dim != t.dim || o.gamemode != gmSurvival {
+						continue
+					}
+					if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > 1.5 {
+						continue
+					}
+					h.hurtFrom(players, o, float32(sweep), dtPlayerAttack,
+						deathCause{key: causePlayer, by: t.p.name}, from(t.x, t.z))
+					h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
+				}
+			}
 			h.playSound(players, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
 		}
 	}

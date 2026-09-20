@@ -237,3 +237,38 @@ func TestThornsReachesTheArcher(t *testing.T) {
 		t.Error("Thorns never reached the archer over 200 arrows")
 	}
 }
+
+// The sweep reaches other players, not only mobs (and only with PvP on).
+func TestSweepHitsPlayers(t *testing.T) {
+	h := newHub(world.New(1))
+	h.rules.PvP = true
+	att := survPlayer(h)
+	att.p.name = "Attacker"
+	att.x, att.y, att.z = 0.5, 70, 0.5
+	att.onGround = true
+	bystander := survPlayer(h)
+	bystander.p.name, bystander.p.eid = "Bystander", 900
+	bystander.x, bystander.y, bystander.z = 1.5, 70, 1.5
+	players := map[int32]*tracked{att.p.eid: att, bystander.p.eid: bystander}
+	h.playersRef = players
+
+	att.inv.slots[att.p.heldSlot()] = invStack{item: tDiamondSword, count: 1}
+	att.p.setHotbarSlot(att.p.heldSlot(), tDiamondSword)
+	m := h.spawnMob(players, entityZombie, 1.5, 70, 0.5)
+	m.hostile, m.health = true, 40
+
+	before := bystander.health
+	h.tick.Add(40) // a full charge
+	h.attackMob(players, att.p.eid, m.eid)
+	if bystander.health >= before {
+		t.Errorf("the sweep should clip the bystander: %v → %v", before, bystander.health)
+	}
+	// With PvP off it does not.
+	h.rules.PvP = false
+	bystander.health = 20
+	h.tick.Add(40)
+	h.attackMob(players, att.p.eid, m.eid)
+	if bystander.health != 20 {
+		t.Errorf("with PvP off the sweep leaves players alone, got %v", bystander.health)
+	}
+}

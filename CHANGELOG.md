@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The sword sweep reaches other players.** It clipped mobs standing
+  beside your target and passed straight through players, which made
+  Sweeping Edge worth nothing in a fight between people. It now hits
+  every living thing beside the target, players included, when the PvP
+  gamerule allows it.
 - **Tipped arrows are an eighth as long, and netherite shrugs off a
   hit.** A tipped arrow handed over the full bottle's duration — eight
   minutes of poison from a single shot; vanilla gives an eighth of it,
