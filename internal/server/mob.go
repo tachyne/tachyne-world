@@ -634,6 +634,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
+		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
+			// A stranded water animal heading back to the water, or a strider
+			// off the lava heading back to it.
 		case schoolingFish[m.etype] && h.schoolStep(players, m):
 			// A fish swimming after its shoal's leader.
 		case m.etype == entityDrowned && h.drownedWaterStep(players, m):

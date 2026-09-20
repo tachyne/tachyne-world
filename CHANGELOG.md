@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Stranded animals head back to their element.** A dolphin or a fish
+  left on the sand, and a strider walked off its lava, stayed where they
+  were and died there. Each now makes for what it needs — water within
+  twelve blocks, lava within eight — which is why a strider you lead out
+  of a lava lake turns straight back to it.
 - **Turtles head for the water, and hatchlings run for it.** A turtle
   caught on land simply milled about. It makes for water within
   twenty-four blocks now, and a hatchling does it at twice the pace,
