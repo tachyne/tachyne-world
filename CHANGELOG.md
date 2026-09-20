@@ -65,6 +65,18 @@ the public history since the project was open-sourced on 2026-07-10.
   touches — so a farm no longer leaves hundreds of motes lying around.
 
 ### Changed
+- **A powered door moves both halves.** A lever or a pressure plate beside one
+  half of an iron door opened that half and left the other standing shut — the
+  door was open and closed at once. Both halves now answer the signal, the way
+  the real game reads it, and the sound is the door's own instead of an iron
+  door's for everything.
+- **A piston no longer stamps a redstone signal into the ground.** A sculk
+  sensor pushed while it was listening, or a target still registering a shot,
+  arrived in its new cell still powered — permanently, because the tick that
+  would have cleared it stayed behind.
+- **Adventure and spectator players cannot change the world.** Both could mine
+  and build here. Neither can now; using a block — a door, a button, a lever —
+  still works in adventure, as it should.
 - **A blocked container stays shut.** A chest with a solid block over it, or
   a cat sitting on the lid, opened anyway; so did a shulker box with no room
   for its lid, and a large chest with one half covered. All of them now
