@@ -179,7 +179,7 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
 	delete(h.crystals, eid)
 	h.toDimEv(players, 2, entGone(eid))
 	h.playSoundDim(players, 2, "minecraft:entity.generic.explode", sndBlock, c.x, c.y, c.z, 1, 1)
-	h.spawnParticles(players, particleExplosionEmitter, c.x, c.y, c.z, 1, 0.5, 4)
+	h.spawnParticles(players, dimEnd, particleExplosionEmitter, c.x, c.y, c.z, 1, 0.5, 4)
 	for _, t := range players { // the blast bites anyone on the pillar
 		if t.dim == 2 && !t.dead && t.gamemode == gmSurvival &&
 			dist3(t.x, t.y, t.z, c.x, c.y, c.z) < 5 {

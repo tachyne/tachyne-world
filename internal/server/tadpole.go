@@ -45,7 +45,7 @@ func (h *hub) feedTadpole(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.spawnParticles(players, particleHappyVillager, m.x, m.y+0.5, m.z, 0.5, 0, 1)
+	h.spawnParticles(players, m.dim, particleHappyVillager, m.x, m.y+0.5, m.z, 0.5, 0, 1)
 	m.tadpoleAge += secs * 20
 	if m.tadpoleAge >= tadpoleTicksToFrog {
 		h.tadpoleGrowUp(players, m)

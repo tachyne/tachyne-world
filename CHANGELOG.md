@@ -56,6 +56,16 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Particles reach the dimension they happened in.** Every particle
+  effect the engine sends — crits, splashes, a ravager's roar, a mace
+  smash, an exploding crystal, bee nectar, squid ink, a furnace minecart's
+  smoke — was addressed to the overworld whatever dimension it actually
+  happened in. Since viewers are filtered by dimension, that meant nobody
+  in the Nether or the End ever saw one, while a player standing at the
+  matching overworld coordinates got a burst out of nowhere. A wind burst
+  even carried an explicit "only in the overworld" guard to suppress the
+  wrong particle rather than send the right one; it sends the right one
+  now.
 - **Squid ink and minecart smoke were the wrong particles.** Particle ids
   shift as new versions insert particles ahead of old ones, and the table
   that renumbers them for each client was maintained by hand — four the

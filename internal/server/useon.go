@@ -130,7 +130,7 @@ func (h *hub) mudBottle(players map[int32]*tracked, e evMudBottle) {
 	x, y, z := float64(e.x)+0.5, float64(e.y)+1, float64(e.z)+0.5
 	h.playSoundDim(players, t.dim, "minecraft:entity.generic.splash", sndBlock, x, y, z, 1, 1)
 	h.playSoundDim(players, t.dim, "minecraft:item.bottle.empty", sndBlock, x, y, z, 1, 1)
-	h.spawnParticles(players, particleSplash, x, y, z, 0.5, 0, 5)
+	h.spawnParticles(players, t.dim, particleSplash, x, y, z, 0.5, 0, 5)
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 		if changed, left := t.inv.addStack(invStack{item: itemGlassBottle, count: 1}); left == 0 {

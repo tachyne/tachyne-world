@@ -80,7 +80,7 @@ func (h *hub) silverfishStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	h.setBlockAt(players, m.dim, blockPos{bx, by, bz}, inf)
-	h.spawnParticles(players, particlePoof, m.x, m.y+0.5, m.z, 0.3, 0.05, 10) // spawnAnim
+	h.spawnParticles(players, m.dim, particlePoof, m.x, m.y+0.5, m.z, 0.3, 0.05, 10) // spawnAnim
 	h.removeMob(players, m)
 	return true
 }

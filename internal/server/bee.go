@@ -317,7 +317,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 			}
 		}
 		if drips > 0 {
-			h.spawnParticles(players, particleNectar, m.x, m.y+0.4, m.z, 0.3, 0, drips)
+			h.spawnParticles(players, m.dim, particleNectar, m.x, m.y+0.4, m.z, 0.3, 0, drips)
 		}
 		if m.beeHasHome && isBeeHome(h.world.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) &&
 			h.rng.Float64() < beeCropBoostProb {

@@ -106,7 +106,7 @@ func (h *hub) zombieEggStep(players map[int32]*tracked, m *mob) bool {
 		}
 		if m.eggStamp > eggStampTicks {
 			h.setBlockAt(players, m.dim, m.eggPos, worldgen.Air) // removeBlock(eatPos, false): the whole clutch, no drop
-			h.spawnParticles(players, particlePoof, tx, float64(m.eggPos.y), tz, 0.1, 0.15, 20)
+			h.spawnParticles(players, m.dim, particlePoof, tx, float64(m.eggPos.y), tz, 0.1, 0.15, 20)
 			h.playSoundDim(players, m.dim, "minecraft:block.turtle_egg.break", sndBlock, tx, float64(m.eggPos.y), tz, 0.7, 0.9+h.rng.Float32()*0.2)
 			m.eggPos = blockPos{}
 			return true

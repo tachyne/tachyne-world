@@ -231,7 +231,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	radius int, power float64, kind blastKind, dt dmgType, cause deathCause) {
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
-	h.spawnParticles(players, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
+	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
 	w := h.worldFor(dim)
 	if w != nil && radius > 0 {

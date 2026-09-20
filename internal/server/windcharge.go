@@ -45,9 +45,7 @@ func (h *hub) windBurst(players map[int32]*tracked, dim int, cx, cy, cz float64,
 // windBurstR is the gust at a given radius (the breeze's is wider).
 func (h *hub) windBurstR(players map[int32]*tracked, dim int, cx, cy, cz float64, shooter int32, radius float64) {
 	h.playSoundDim(players, dim, "minecraft:entity.wind_charge.wind_burst", sndNeutral, cx, cy, cz, 1, 1)
-	if dim == 0 {
-		h.spawnParticles(players, particlePoof, cx, cy, cz, 0.4, 0.1, 12)
-	}
+	h.spawnParticles(players, dim, particlePoof, cx, cy, cz, 0.4, 0.1, 12)
 	h.windPush(players, dim, cx, cy, cz, radius)
 	w := h.worldFor(dim)
 	if w == nil {

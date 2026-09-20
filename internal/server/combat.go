@@ -268,7 +268,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 
 	if crit {
-		h.spawnParticles(players, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
+		h.spawnParticles(players, m.dim, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
 		h.playSound(players, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
 	} else if charge >= 0.9 {
 		h.playSound(players, "minecraft:entity.player.attack.strong", sndPlayer, m.x, m.y, m.z, 1, 1)

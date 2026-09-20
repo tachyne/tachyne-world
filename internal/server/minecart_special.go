@@ -216,7 +216,7 @@ func (h *hub) tickSpecialCart(players map[int32]*tracked, v *vehicle) bool {
 	case entityTntMinecart:
 		if v.fuse > 0 {
 			v.fuse--
-			h.spawnParticles(players, particleSmoke, v.x, v.y+0.5, v.z, 0, 0, 1)
+			h.spawnParticles(players, v.dim, particleSmoke, v.x, v.y+0.5, v.z, 0, 0, 1)
 		} else if v.fuse == 0 {
 			h.explodeCart(players, v, v.vx*v.vx+v.vz*v.vz)
 			return false
@@ -242,7 +242,7 @@ func (h *hub) tickSpecialCart(players map[int32]*tracked, v *vehicle) bool {
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, metaEv(cartFuelMeta(v.eid, lit)))
 		}
 		if v.lit && h.rng.Intn(4) == 0 {
-			h.spawnParticles(players, particleLargeSmoke, v.x, v.y+0.8, v.z, 0, 0, 1)
+			h.spawnParticles(players, v.dim, particleLargeSmoke, v.x, v.y+0.8, v.z, 0, 0, 1)
 		}
 	}
 	return true

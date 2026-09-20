@@ -46,7 +46,7 @@ type effectCloud struct {
 // splashPotion resolves a thrown potion at its impact point.
 func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64, kind int8, lingering bool) {
 	h.playSound(players, "minecraft:entity.splash_potion.break", sndNeutral, x, y, z, 1, 1)
-	h.spawnParticles(players, particleSplash, x, y, z, 0.4, 0.2, 8)
+	h.spawnParticles(players, dim, particleSplash, x, y, z, 0.4, 0.2, 8)
 	if lingering {
 		h.spawnPotionCloud(dim, x, y, z, kind)
 		return
@@ -171,7 +171,7 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 			continue
 		}
 		if now%cloudPuff == 0 {
-			h.spawnParticles(players, particleSplash, c.x, c.y+0.1, c.z, float32(c.radius), 0, int32(c.radius*6))
+			h.spawnParticles(players, c.dim, particleSplash, c.x, c.y+0.1, c.z, float32(c.radius), 0, int32(c.radius*6))
 		}
 		if now < c.reapplyAt {
 			continue

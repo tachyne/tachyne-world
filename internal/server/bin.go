@@ -416,7 +416,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// bottle to glass; anything else falls back to the default toss.
 		if convertableToMud(w.At(front.x, front.y, front.z)) {
 			h.rsSet(players, front, worldgen.Mud)
-			h.spawnParticles(players, particleSplash, float64(front.x)+0.5, float64(front.y)+1, float64(front.z)+0.5, 0.3, 0.1, 5)
+			h.spawnParticles(players, pos.dim, particleSplash, float64(front.x)+0.5, float64(front.y)+1, float64(front.z)+0.5, 0.3, 0.1, 5)
 			h.rsSound(players, "minecraft:item.bottle.empty", sndBlock,
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			*st = invStack{item: itemGlassBottle, count: 1}

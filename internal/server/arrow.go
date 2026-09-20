@@ -268,7 +268,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
 						break
 					}
-					h.spawnParticles(players, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
+					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
 					if a.pearl {
 						h.pearlLand(players, a)
 					}

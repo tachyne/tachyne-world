@@ -34,12 +34,12 @@ func (h *hub) emitDebugBorders(players map[int32]*tracked) {
 				// streaming), so a wall there would just bisect continuous land.
 				if h.serveBlock(x-1, z) != h.serveBlock(x, z) { // vertical (N-S) edge at world x
 					for dy := 0; dy <= 4; dy++ {
-						h.spawnParticles(players, particleCrit, float64(x), t.y+float64(dy), float64(z)+0.5, 0, 0, 1)
+						h.spawnParticles(players, t.dim, particleCrit, float64(x), t.y+float64(dy), float64(z)+0.5, 0, 0, 1)
 					}
 				}
 				if h.serveBlock(x, z-1) != h.serveBlock(x, z) { // horizontal (E-W) edge at world z
 					for dy := 0; dy <= 4; dy++ {
-						h.spawnParticles(players, particleCrit, float64(x)+0.5, t.y+float64(dy), float64(z), 0, 0, 1)
+						h.spawnParticles(players, t.dim, particleCrit, float64(x)+0.5, t.y+float64(dy), float64(z), 0, 0, 1)
 					}
 				}
 			}

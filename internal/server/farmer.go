@@ -302,7 +302,7 @@ func (h *hub) farmerBonemealStep(players map[int32]*tracked, m *mob) bool {
 	state := h.worldFor(m.dim).At(p.x, p.y, p.z)
 	if villagerCount(m, itemBoneMeal) > 0 && isCropState(state) && !isMaxAgeCrop(state) && h.applyBoneMeal(players, m.dim, p.x, p.y, p.z, state) {
 		villagerTake(m, map[int32]bool{itemBoneMeal: true})
-		h.spawnParticles(players, particleHappyVillager, tx, ty+0.5, tz, 0.5, 0, 15) // levelEvent 1505
+		h.spawnParticles(players, m.dim, particleHappyVillager, tx, ty+0.5, tz, 0.5, 0, 15) // levelEvent 1505
 		if next, ok := h.farmerFindCrop(m, 1); ok {
 			m.bmPos = next
 		} else {

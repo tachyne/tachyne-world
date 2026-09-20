@@ -285,15 +285,15 @@ func (h *hub) catchingFish(players map[int32]*tracked, b *bobberEntity) {
 			fy := math.Floor(b.y) + 1
 			if worldgen.IsWater(h.worldFor(b.dim).At(int(math.Floor(fx)), int(fy)-1, int(math.Floor(fz)))) {
 				if h.rng.Float32() < 0.15 {
-					h.spawnParticles(players, particleBubble, fx, fy-0.1, fz, 0.05, 0, 1)
+					h.spawnParticles(players, b.dim, particleBubble, fx, fy-0.1, fz, 0.05, 0, 1)
 				}
-				h.spawnParticles(players, particleFishing, fx, fy, fz, 0.05, 0.01, 2)
+				h.spawnParticles(players, b.dim, particleFishing, fx, fy, fz, 0.05, 0.01, 2)
 			}
 		} else { // BITE
 			h.playSoundDim(players, b.dim, "minecraft:entity.fishing_bobber.splash", sndNeutral,
 				b.x, b.y, b.z, 0.25, 1+(h.rng.Float32()-h.rng.Float32())*0.4)
-			h.spawnParticles(players, particleBubble, b.x, b.y+0.5, b.z, 0.25, 0.2, 6)
-			h.spawnParticles(players, particleFishing, b.x, b.y+0.5, b.z, 0.25, 0.2, 6)
+			h.spawnParticles(players, b.dim, particleBubble, b.x, b.y+0.5, b.z, 0.25, 0.2, 6)
+			h.spawnParticles(players, b.dim, particleFishing, b.x, b.y+0.5, b.z, 0.25, 0.2, 6)
 			b.nibble = fishNibbleMin + h.rng.Intn(fishNibbleMax-fishNibbleMin+1)
 			b.vy -= 0.4 * (0.6 + 0.4*h.rng.Float64()) // the float ducks under
 		}
@@ -314,7 +314,7 @@ func (h *hub) catchingFish(players map[int32]*tracked, b *bobberEntity) {
 			fx, fz := b.x+math.Sin(rad)*dist, b.z+math.Cos(rad)*dist
 			fy := math.Floor(b.y) + 1
 			if worldgen.IsWater(h.worldFor(b.dim).At(int(math.Floor(fx)), int(fy)-1, int(math.Floor(fz)))) {
-				h.spawnParticles(players, particleSplash, fx, fy, fz, 0.1, 0, int32(2+h.rng.Intn(2)))
+				h.spawnParticles(players, b.dim, particleSplash, fx, fy, fz, 0.1, 0, int32(2+h.rng.Intn(2)))
 			}
 		}
 		if b.wait <= 0 {

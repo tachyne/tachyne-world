@@ -68,8 +68,8 @@ func (h *hub) playSoundExcept(players map[int32]*tracked, dim int, except int32,
 func (h *hub) hurtPitch() float32 { return 0.9 + h.rng.Float32()*0.2 }
 
 // spawnParticles shows a payload-free particle burst to everyone tracking it.
-func (h *hub) spawnParticles(players map[int32]*tracked, pid int32, x, y, z float64, spread, speed float32, count int32) {
-	h.toNearbyEv(players, 0, x, z, attachproto.Particles{PID: pid, X: x, Y: y, Z: z, Spread: spread, Speed: speed, Count: count})
+func (h *hub) spawnParticles(players map[int32]*tracked, dim int, pid int32, x, y, z float64, spread, speed float32, count int32) {
+	h.toNearbyEv(players, dim, x, z, attachproto.Particles{PID: pid, X: x, Y: y, Z: z, Spread: spread, Speed: speed, Count: count})
 }
 
 // blockBreakEvent builds the world-event 2001 FX — break particles + sound

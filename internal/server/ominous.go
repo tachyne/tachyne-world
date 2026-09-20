@@ -61,7 +61,7 @@ func (h *hub) windChargedBurst(players map[int32]*tracked, t *tracked) {
 func (h *hub) windChargedBurstAt(players map[int32]*tracked, dim int, cx, cy, cz float64, skipPlayer, skipMob int32) {
 	radius := 3.0 + h.rng.Float64()*2
 	y := cy + 0.9 // mid-body, as vanilla uses half the bounding-box height
-	h.spawnParticles(players, particlePoof, cx, y, cz, float32(radius/2), 0.1, 40)
+	h.spawnParticles(players, dim, particlePoof, cx, y, cz, float32(radius/2), 0.1, 40)
 	h.playSoundDim(players, dim, "minecraft:entity.breeze_wind_charge.burst", sndNeutral, cx, y, cz, 1, 1)
 
 	now := h.tick.Load()

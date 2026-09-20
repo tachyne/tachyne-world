@@ -141,7 +141,7 @@ func (h *hub) ravagerRoar(players map[int32]*tracked, m *mob) {
 		d3 := math.Max(dx*dx+dz*dz, 0.001)
 		o.vx, o.vz, o.kb, o.reroute = dx/d3*ravagerStrongPush*mobMoveInterval, dz/d3*ravagerStrongPush*mobMoveInterval, 3, 0
 	})
-	h.spawnParticles(players, particlePoof, m.x, m.y+1, m.z, 1.5, 0.1, 20)
+	h.spawnParticles(players, m.dim, particlePoof, m.x, m.y+1, m.z, 1.5, 0.1, 20)
 }
 
 // isIllager is the AbstractIllager family the roar spares.

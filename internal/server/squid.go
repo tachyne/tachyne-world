@@ -106,7 +106,7 @@ func (h *hub) squidStep(players map[int32]*tracked, m *mob) bool {
 	m.vx, m.vy, m.vz = dx/20*mobMoveInterval, dy/20*mobMoveInterval, dz/20*mobMoveInterval
 	m.rest = 0
 	if h.tick.Load()%10 == 5 {
-		h.spawnParticles(players, particleBubble, m.x, m.y, m.z, 0, 0, 1)
+		h.spawnParticles(players, m.dim, particleBubble, m.x, m.y, m.z, 0, 0, 1)
 	}
 	return true
 }
