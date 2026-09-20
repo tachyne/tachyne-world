@@ -100,3 +100,44 @@ func TestGossipEventsSpreadAndGolem(t *testing.T) {
 		t.Errorf("gossip reloaded: %+v", back)
 	}
 }
+
+// HurtByTargetGoal: hit an iron golem and it comes after you, whatever your
+// reputation in the village is.
+func TestGolemRetaliatesAgainstItsAttacker(t *testing.T) {
+	h := newHub(world.New(7))
+	pl := testTracked()
+	pl.p.name, pl.p.eid = "Hitter", 400
+	pl.x, pl.y, pl.z = 1.5, 70, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	g := h.spawnMob(players, entityIronGolem, 0.5, 70, 0.5)
+	g.health = 100
+
+	// No grudge to begin with: an unprovoked golem leaves a player alone.
+	if got := h.golemGrudge(players, g); got != nil {
+		t.Fatal("a golem does not attack an innocent bystander")
+	}
+	// A blow makes it the target.
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: tDiamondSword, count: 1}
+	h.attackMob(players, pl.p.eid, g.eid)
+	if g.golemGrudgeEID != pl.p.eid {
+		t.Fatalf("the golem should remember who hit it, got eid %d", g.golemGrudgeEID)
+	}
+	if got := h.golemGrudge(players, g); got != pl {
+		t.Fatal("a struck golem goes for its attacker")
+	}
+	// …and it swings.
+	before := pl.health
+	if !h.golemPunchPlayer(players, g) {
+		t.Fatal("it should punch the attacker standing next to it")
+	}
+	if pl.health >= before {
+		t.Error("the punch should hurt")
+	}
+	// The grudge runs out.
+	g.golemGrudgeLeft = mobMoveInterval
+	h.golemGrudge(players, g)
+	if got := h.golemGrudge(players, g); got != nil {
+		t.Error("the grudge should lapse")
+	}
+}

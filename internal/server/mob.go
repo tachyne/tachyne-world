@@ -118,6 +118,8 @@ type mob struct {
 	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin
 	piglinFleeX     float64       // …and what it is backing away from
 	piglinFleeZ     float64
+	golemGrudgeEID  int32 // iron golem: the player who hit it (HurtByTargetGoal)
+	golemGrudgeLeft int   // …and the ticks it keeps after them
 	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg

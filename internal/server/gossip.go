@@ -236,7 +236,22 @@ func (h *hub) villagerGossipTick(players map[int32]*tracked, m *mob) {
 // golemGrudge is DefendVillageTargetGoal: a survival player within ten
 // blocks of the golem whose reputation with a villager in the same box is
 // −100 or worse.
+// golemGrudgeTicks is how long a struck golem keeps after whoever hit it
+// (vanilla's HurtByTargetGoal holds the target until it is unreachable or
+// dead; this is the engine's stand-in).
+const golemGrudgeTicks = 600
+
 func (h *hub) golemGrudge(players map[int32]*tracked, m *mob) *tracked {
+	// HurtByTargetGoal first: whoever struck it outranks the village's
+	// grudges entirely.
+	if m.golemGrudgeLeft > 0 {
+		m.golemGrudgeLeft -= mobMoveInterval
+		if t := players[m.golemGrudgeEID]; t != nil && !t.dead && t.dim == m.dim &&
+			t.gamemode != gmCreative && t.gamemode != gmSpectator {
+			return t
+		}
+		m.golemGrudgeLeft = 0
+	}
 	var villagers []*mob
 	h.grid().nearby(m.dim, m.x, m.z, golemDefendRange, func(o *mob) {
 		if o.etype == entityVillager && o.dying == 0 && len(o.gossip) > 0 && math.Abs(o.y-m.y) <= 8 {

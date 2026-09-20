@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Hit an iron golem and it hits back.** A golem only ever went for
+  players the village had a grudge against, so one you attacked yourself
+  simply took it — and, because it is not a hostile mob, the engine had
+  it panic and run. It now does what vanilla's does: whoever strikes it
+  becomes its target for half a minute, reputation or no reputation.
 - **Soul torches keep piglins off, and piglins avoid their own undead.**
   Both of vanilla's avoid rules were missing. A piglin or brute now backs
   away from soul fire, soul torches, soul lanterns and soul campfires

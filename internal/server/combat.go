@@ -378,7 +378,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	// off and keeps hunting (it doesn't flee its prey).
 	yaw := m.yaw
 	if t != nil {
-		if m.retaliates { // wolf/goat/bee/llama: a hit turns the herd hostile
+		if m.etype == entityIronGolem {
+			// IronGolem's HurtByTargetGoal: it does not flee and it does not
+			// need a grudge — hit it and it comes after you.
+			m.golemGrudgeEID, m.golemGrudgeLeft = t.p.eid, golemGrudgeTicks
+		} else if m.retaliates { // wolf/goat/bee/llama: a hit turns the herd hostile
 			h.provoke(m, t)
 		} else if !m.hostile {
 			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, t.x, t.z, 0
