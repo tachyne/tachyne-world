@@ -278,12 +278,17 @@ func coversSoil(above uint32) bool {
 }
 
 // solidLid reports whether the block above seals the cell the way vanilla's
-// isSolid means it: the test is the COLLISION box, not opacity, so a slab, a
-// chest and a ladder all count while a pressure plate, a torch and a sign do
-// not. Collides is the nearest reading of that box the engine keeps, and
-// carpets are the one everyday block it over-counts — vanilla calls a
-// sixteenth of a block too flat to be solid — so a rug laid over a path or a
-// field leaves it as it found it.
+// isSolid means it. That test is about the COLLISION box, not opacity, and it
+// has a threshold: the box's bounds must average 0.729 of a block across the
+// three axes, or stand a full block tall. A slab, a chest, a door and a ladder
+// all clear it; a carpet, a candle, a flower pot and a skull do not.
+//
+// The engine only knows whether a block collides at all, which over-counts
+// every small box. smallCollisionBox below names the ones that matter — the
+// exact answer wants a per-state bounds table, which the generators do not
+// produce yet (blockCollisionShapes.json carries it, and the next generator
+// run should bake it). Being wrong in the over-counting direction destroys a
+// player's crop, so an unlisted small block is the bug to watch for here.
 func solidLid(above uint32) bool {
 	// A block mid-push rides in a moving_piston cell, whose shape is worked
 	// out as it travels. Vanilla never calls a dynamically shaped block solid
@@ -292,8 +297,60 @@ func solidLid(above uint32) bool {
 	if isMovingPiston(above) {
 		return false
 	}
-	return worldgen.Collides(above) && !worldgen.IsThinFloor(above)
+	return worldgen.Collides(above) && !smallCollisionBox(above)
 }
+
+// smallBoxNames are the blocks whose collision box is real but under vanilla's
+// solidity threshold, with the vanilla dimensions that put them there. The
+// families are matched by name so a new colour or wood cannot be missed.
+var smallBoxNames = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	// One-offs, with the shape that decides them.
+	singles := []string{
+		"lily_pad",         // 1 x 1.5/16 x 1 — averages 0.698, just under
+		"pitcher_crop",     // 10/16 x 6/16 x 10/16
+		"cocoa",            // at most 8/16 x 9/16 x 8/16
+		"sea_pickle",       // 6/16 cube
+		"turtle_egg",       // 12/16 x 7/16 x 12/16
+		"amethyst_cluster", // 7/16 x 7/16
+		"conduit",          // 8/16 cube
+		"heavy_core",       // 8/16 cube
+		"comparator",       // 1 x 2/16 x 1 — averages 0.708
+		"repeater",         // the same plate
+		"cake",             // 14/16 x 8/16 x 14/16 is 0.75: this one IS solid
+		"flower_pot",       // 6/16 cube
+	}
+	for _, n := range singles {
+		if n == "cake" {
+			continue // kept in the list above as a note, not as an exclusion
+		}
+		lo, hi := worldgen.BlockRange(n)
+		for st := lo; st <= hi; st++ {
+			m[st] = true
+		}
+	}
+	// Families: every carpet, candle, candle cake, potted plant, head/skull,
+	// amethyst bud and lantern. None of them reaches the threshold.
+	for _, name := range worldgen.AllBlockNames() {
+		switch {
+		case strings.HasSuffix(name, "_carpet"), name == "moss_carpet", name == "pale_moss_carpet",
+			strings.HasSuffix(name, "_candle"), name == "candle",
+			strings.HasSuffix(name, "_candle_cake"), name == "candle_cake",
+			strings.HasPrefix(name, "potted_"),
+			strings.HasSuffix(name, "_head"), strings.HasSuffix(name, "_wall_head"),
+			strings.HasSuffix(name, "_skull"), strings.HasSuffix(name, "_wall_skull"),
+			strings.HasSuffix(name, "_amethyst_bud"),
+			strings.HasSuffix(name, "_lantern"), name == "lantern":
+			lo, hi := worldgen.BlockRange(name)
+			for st := lo; st <= hi; st++ {
+				m[st] = true
+			}
+		}
+	}
+	return m
+}()
+
+func smallCollisionBox(state uint32) bool { return smallBoxNames[state] }
 
 // isFenceGate asks the state its own name rather than keeping a list, so a
 // new wood type needs nothing here.

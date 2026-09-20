@@ -1129,6 +1129,7 @@ func (h *hub) run() {
 				}
 			}
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)
+				persistStart := time.Now()
 				// The per-player stores below marshal and rewrite themselves
 				// WHOLE on every pass, whether or not anything changed. With
 				// nobody online the record loops add nothing, so the write is
@@ -1217,6 +1218,15 @@ func (h *hub) run() {
 				h.saveRules() // weather timers ride settings.json (tiny file)
 				if h.plugHost != nil {
 					h.plugHost.flushStores()
+				}
+				// This block is the prime suspect whenever an IDLE world logs a
+				// slow tick: the container store rebuilds itself whole from
+				// twenty-odd live maps every pass. Report what it cost so the
+				// next person does not have to guess.
+				if d := time.Since(persistStart); d > 20*time.Millisecond {
+					log.Printf("slow persist: %v (players=%d chests=%d furnaces=%d items=%d mobs=%d)",
+						d.Round(time.Millisecond), len(players), len(h.chests), len(h.furnaces),
+						len(h.items), len(h.mobs))
 				}
 			}
 

@@ -122,8 +122,8 @@ func TestReelDuringNibbleLandsLoot(t *testing.T) {
 	if pl.inv.slots[0].dmg != 1 {
 		t.Fatalf("a catch should cost the rod 1 durability, got %d", pl.inv.slots[0].dmg)
 	}
-	if len(h.orbs) != 1 {
-		t.Fatalf("a catch should drop one XP orb, got %d", len(h.orbs))
+	if len(h.orbs) == 0 {
+		t.Fatal("a catch should drop experience")
 	}
 }
 

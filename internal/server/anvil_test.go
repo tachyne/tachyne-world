@@ -80,8 +80,10 @@ func TestGrindstoneStripsAndRefunds(t *testing.T) {
 	if pl.cursor.item != tDiamondSword || pl.cursor.enchanted() {
 		t.Fatalf("grindstone must strip enchants: %+v", pl.cursor)
 	}
-	if len(h.orbs) != 1 {
-		t.Fatal("stripping must refund XP as an orb")
+	// The refund is paid in orbs down the vanilla ladder, so it may be
+	// several of them; what matters is that something came back.
+	if len(h.orbs) == 0 {
+		t.Fatal("stripping must refund XP as orbs")
 	}
 	// An enchanted book grinds back to a plain book.
 	res, _ := grindResult(invStack{item: itemEnchantedBook, count: 1, ench: enchList{{id: enchFortune, lvl: 2}}}, invStack{})

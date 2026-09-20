@@ -28,6 +28,18 @@ func BlockRangeOK(name string) (lo, hi uint32, ok bool) {
 	return blockBase(name), hi, true
 }
 
+// AllBlockNames returns every block name in the registry, sorted, so a caller
+// can pick out a FAMILY by name (every carpet, every potted plant) instead of
+// keeping a list that a new colour or wood would silently fall out of.
+func AllBlockNames() []string {
+	names := make([]string, 0, len(blockStateMax))
+	for n := range blockStateMax {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // BlockRange returns a block's [minStateId, maxStateId] by name (panics if unknown).
 func BlockRange(name string) (lo, hi uint32) {
 	hi, ok := blockStateMax[name]

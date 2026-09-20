@@ -20,7 +20,10 @@ func TestConsumeEffects(t *testing.T) {
 		pl.food = 1
 		pl.inv.slots[0] = invStack{item: int32(itemByName[name]), count: 1}
 		h.eat(players, pl, 0)
-		if pl.inv.slots[0].count != 0 {
+		// The slot may hold the use_remainder afterwards — a honey bottle
+		// leaves a glass bottle where it stood — so "eaten" means the food
+		// itself is gone, not that the slot is empty.
+		if pl.inv.slots[0].item == int32(itemByName[name]) {
 			t.Fatalf("%s not eaten", name)
 		}
 	}

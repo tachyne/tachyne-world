@@ -102,10 +102,14 @@ func TestTradeAuthority(t *testing.T) {
 	if len(h.orbs) == 0 {
 		t.Fatal("a trade must drop experience for the player")
 	}
+	// The award is paid in ladder denominations, so check the total rather
+	// than each orb: a 4-point trade comes out as a 3 and a 1.
+	total := 0
 	for _, o := range h.orbs {
-		if o.value < 3 || o.value > 11 {
-			t.Fatalf("trade experience out of vanilla's range: %d", o.value)
-		}
+		total += o.value * o.count
+	}
+	if total < 3 || total > 11 {
+		t.Fatalf("trade experience out of vanilla's range: %d", total)
 	}
 }
 

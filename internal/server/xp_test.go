@@ -94,8 +94,13 @@ func TestMobXPOnlyForPlayerKills(t *testing.T) {
 	fought.y = pl.y
 	h.attackMob(players, 1, fought.eid)
 	h.despawnMob(players, fought)
-	if len(h.orbs) != 1 {
-		t.Fatal("a player-hit mob's death must drop an XP orb")
+	// A zombie is worth 5, which the ladder pays as a 3 and two 1s.
+	total := 0
+	for _, o := range h.orbs {
+		total += o.value * o.count
+	}
+	if total != 5 {
+		t.Fatalf("a player-hit mob's death must drop its 5 XP, got %d", total)
 	}
 }
 
