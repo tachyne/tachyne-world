@@ -84,7 +84,7 @@ func stepPos(p blockPos, d [3]int, n int) blockPos {
 
 func neg(d [3]int) [3]int { return [3]int{-d[0], -d[1], -d[2]} }
 
-func (r *pistonResolver) at(p blockPos) uint32 { return r.h.world.At(p.x, p.y, p.z) }
+func (r *pistonResolver) at(p blockPos) uint32 { return r.h.rsWorld().At(p.x, p.y, p.z) }
 
 func (r *pistonResolver) indexOf(p blockPos) int {
 	for i, q := range r.toPush {
@@ -227,8 +227,8 @@ func (r *pistonResolver) addBranchingBlocks(pos blockPos) bool {
 // whether anything moved. Overworld-only, like the rest of the block sim.
 func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]int, extending bool) bool {
 	front := stepPos(pos, dir, 1)
-	if !extending && isPistonHead(h.world.At(front.x, front.y, front.z)) {
-		h.setBlock(players, front, worldgen.Air)
+	if !extending && isPistonHead(h.rsWorld().At(front.x, front.y, front.z)) {
+		h.rsSet(players, front, worldgen.Air)
 	}
 	r := &pistonResolver{h: h, pistonPos: pos, extending: extending}
 	if extending {
@@ -242,18 +242,18 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 	// What breaks drops its loot and goes.
 	for i := len(r.toDestroy) - 1; i >= 0; i-- {
 		p := r.toDestroy[i]
-		s := h.world.At(p.x, p.y, p.z)
+		s := h.rsWorld().At(p.x, p.y, p.z)
 		for _, d := range h.rollDrops(s) {
-			h.spawnItem(players, d.item, d.count, float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5)
+			h.spawnItemIn(players, h.rsDim, d.item, d.count, float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5)
 		}
-		h.setBlock(players, p, worldgen.Air)
+		h.rsSet(players, p, worldgen.Air)
 	}
 	// What moves: take every state first, clear the sources, then lay them
 	// down one cell along; a source that is also a destination keeps its
 	// new occupant.
 	states := make([]uint32, len(r.toPush))
 	for i, p := range r.toPush {
-		states[i] = h.world.At(p.x, p.y, p.z)
+		states[i] = h.rsWorld().At(p.x, p.y, p.z)
 	}
 	dest := make(map[blockPos]uint32, len(r.toPush)+1)
 	for i, p := range r.toPush {
@@ -261,13 +261,13 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 	}
 	for _, p := range r.toPush {
 		if _, isDest := dest[p]; !isDest {
-			h.setBlock(players, p, worldgen.Air)
+			h.rsSet(players, p, worldgen.Air)
 		}
 	}
 	// Each destination holds a moving_piston carrying its block for two
 	// ticks (PistonBaseBlock.moveBlocks: MOVING_PISTON facing the piston's
 	// way, the head marked as the source), then the block lands.
-	base := h.world.At(pos.x, pos.y, pos.z)
+	base := h.rsWorld().At(pos.x, pos.y, pos.z)
 	moving := movingPistonState(dir, false)
 	for i := len(r.toPush) - 1; i >= 0; i-- {
 		h.placeMoving(players, stepPos(r.toPush[i], r.push, 1), moving,
@@ -280,7 +280,7 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 			movingBlock{moved: head, facing: dir, extending: true, source: true})
 	}
 	for _, p := range r.toPush {
-		h.scheduleAround(p, 1)
+		h.scheduleAroundIn(h.rsDim, p, 1)
 	}
 	h.shoveOutOfBlocks(players, dest, r.push)
 	return true
@@ -300,7 +300,7 @@ func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]
 		return blockPos{}, false
 	}
 	for _, t := range players {
-		if t.dim != 0 || t.dead {
+		if t.dim != h.rsDim || t.dead {
 			continue
 		}
 		if _, ok := inside(t.x, t.y, t.z); ok {
@@ -311,12 +311,12 @@ func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]
 		}
 	}
 	for _, m := range h.mobs {
-		if m.dim != 0 || m.dying > 0 {
+		if m.dim != h.rsDim || m.dying > 0 {
 			continue
 		}
 		if _, ok := inside(m.x, m.y, m.z); ok {
 			m.x, m.y, m.z = m.x+float64(dir[0]), m.y+float64(dir[1]), m.z+float64(dir[2])
-			h.toTracking(players, m.eid, 0, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 	}
 }

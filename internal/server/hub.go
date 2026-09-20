@@ -438,7 +438,7 @@ type hub struct {
 	// world simulation (falling blocks, fluid flow). Hub-goroutine-only.
 	pending map[uint64][]simPos
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
-	movingBlocks map[blockPos]movingBlock
+	movingBlocks map[simPos]movingBlock
 	// fallDist counts the cells a falling block has dropped so far (falling.go).
 	fallDist map[simPos]int
 
@@ -710,7 +710,7 @@ func newHub(w *world.World) *hub {
 		events:        make(chan hubEvent, 256),
 		stop:          make(chan struct{}),
 		pending:       map[uint64][]simPos{},
-		movingBlocks:  map[blockPos]movingBlock{},
+		movingBlocks:  map[simPos]movingBlock{},
 		fallDist:      map[simPos]int{},
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},

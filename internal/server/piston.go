@@ -111,7 +111,7 @@ func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint
 	pulled := false
 	if isSticky(state) {
 		beyond := blockPos{head.x + dir[0], head.y + dir[1], head.z + dir[2]}
-		if mb, ok := h.movingBlocks[beyond]; ok && mb.facing == dir && mb.extending {
+		if mb, ok := h.movingBlocks[simPos{dim: h.rsDim, blockPos: beyond}]; ok && mb.facing == dir && mb.extending {
 			h.finalTickMoving(players, beyond) // caught mid-push: it lands where it is
 			pulled = true
 		}

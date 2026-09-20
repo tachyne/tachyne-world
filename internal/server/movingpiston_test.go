@@ -29,11 +29,11 @@ func TestPistonExtensionAnimates(t *testing.T) {
 	if got := w.At(x+1, y, z); !isMovingPiston(got) {
 		t.Fatalf("the head's cell holds %d, want a moving_piston", got)
 	}
-	mb, ok := h.movingBlocks[blockPos{x + 2, y, z}]
+	mb, ok := h.movingBlocks[simPos{blockPos: blockPos{x + 2, y, z}}]
 	if !ok || mb.moved != stone || !mb.extending || mb.source || mb.facing != [3]int{1, 0, 0} {
 		t.Fatalf("stone record %+v ok=%v", mb, ok)
 	}
-	if hb := h.movingBlocks[blockPos{x + 1, y, z}]; !hb.source || !isPistonHead(hb.moved) {
+	if hb := h.movingBlocks[simPos{blockPos: blockPos{x + 1, y, z}}]; !hb.source || !isPistonHead(hb.moved) {
 		t.Fatalf("head record %+v", hb)
 	}
 	frames := 0
@@ -90,14 +90,14 @@ func TestPistonRetractionAnimates(t *testing.T) {
 	if got := w.At(x, y, z); !isMovingPiston(got) {
 		t.Fatalf("the base holds %d during retraction, want a moving_piston", got)
 	}
-	mb := h.movingBlocks[blockPos{x, y, z}]
+	mb := h.movingBlocks[simPos{blockPos: blockPos{x, y, z}}]
 	if !mb.source || mb.extending || !isPistonBase(mb.moved) || boolProp(mb.moved, "extended") {
 		t.Fatalf("base record %+v", mb)
 	}
 	if got := w.At(x+1, y, z); !isMovingPiston(got) {
 		t.Fatalf("the pulled stone's destination holds %d", got)
 	}
-	if pb := h.movingBlocks[blockPos{x + 1, y, z}]; pb.moved != stone || pb.extending || pb.source {
+	if pb := h.movingBlocks[simPos{blockPos: blockPos{x + 1, y, z}}]; pb.moved != stone || pb.extending || pb.source {
 		t.Fatalf("pulled record %+v", pb)
 	}
 	stepTicks(h, players, movingPistonTicks)

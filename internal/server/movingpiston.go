@@ -55,11 +55,11 @@ func legacyDirID(d [3]int) int32 {
 // placeMoving sets a moving_piston cell carrying `moved`, tells viewers what
 // it carries, and schedules its completion.
 func (h *hub) placeMoving(players map[int32]*tracked, pos blockPos, moving uint32, mb movingBlock) {
-	h.setBlock(players, pos, moving)
+	h.rsSet(players, pos, moving)
 	mb.due = h.tick.Load() + movingPistonTicks
-	h.movingBlocks[pos] = mb
-	h.toNearbyEv(players, 0, float64(pos.x), float64(pos.z), h.movingFrame(pos, mb))
-	h.schedule(pos, movingPistonTicks)
+	h.movingBlocks[simPos{dim: h.rsDim, blockPos: pos}] = mb
+	h.toNearbyEv(players, h.rsDim, float64(pos.x), float64(pos.z), h.movingFrame(pos, mb))
+	h.rsSchedule(pos, movingPistonTicks)
 }
 
 // movingFrame is the cell's block-entity update for viewers.
@@ -78,17 +78,18 @@ func (h *hub) movingFrame(pos blockPos, mb movingBlock) attachproto.MovingPiston
 // update reaching the cell early changes nothing; the cell lands on its
 // own schedule.
 func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
-	mb, ok := h.movingBlocks[pos]
+	key := simPos{dim: h.rsDim, blockPos: pos}
+	mb, ok := h.movingBlocks[key]
 	if ok && h.tick.Load() < mb.due {
 		return
 	}
-	delete(h.movingBlocks, pos)
+	delete(h.movingBlocks, key)
 	final := uint32(worldgen.Air)
 	if ok {
 		final = mb.moved
 	}
-	h.setBlock(players, pos, final)
-	h.scheduleAround(pos, 1)
+	h.rsSet(players, pos, final)
+	h.scheduleAroundIn(h.rsDim, pos, 1)
 	if ok && isPistonBase(final) {
 		h.scheduleSignalAround(pos)
 	}
@@ -98,16 +99,17 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 // finalTick, as a retracting piston does to the head it is pulling back):
 // the source cell becomes air, any other its carried block.
 func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
-	mb, ok := h.movingBlocks[pos]
-	if !ok || !isMovingPiston(h.world.At(pos.x, pos.y, pos.z)) {
+	key := simPos{dim: h.rsDim, blockPos: pos}
+	mb, ok := h.movingBlocks[key]
+	if !ok || !isMovingPiston(h.rsWorld().At(pos.x, pos.y, pos.z)) {
 		return false
 	}
-	delete(h.movingBlocks, pos)
+	delete(h.movingBlocks, key)
 	if mb.source {
-		h.setBlock(players, pos, worldgen.Air)
+		h.rsSet(players, pos, worldgen.Air)
 	} else {
-		h.setBlock(players, pos, mb.moved)
+		h.rsSet(players, pos, mb.moved)
 	}
-	h.scheduleAround(pos, 1)
+	h.scheduleAroundIn(h.rsDim, pos, 1)
 	return true
 }

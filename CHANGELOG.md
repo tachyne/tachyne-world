@@ -56,6 +56,15 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Pistons work in the Nether and the End — and stop rewriting the
+  overworld.** The entire piston path read and wrote the overworld whatever
+  dimension the piston stood in: the structure resolver looked up overworld
+  blocks to decide what to push, the moving cells and the blocks they land
+  as were written to the overworld, the drops fell there, and the record of
+  what each cell was carrying was filed by position with no dimension at
+  all — so a piston in the Nether quietly rewrote whatever was at the same
+  coordinates in the overworld, and two pistons at matching coordinates in
+  different dimensions shared one animation.
 - **Particles reach the dimension they happened in.** Every particle
   effect the engine sends — crits, splashes, a ravager's roar, a mace
   smash, an exploding crystal, bee nectar, squid ink, a furnace minecart's
