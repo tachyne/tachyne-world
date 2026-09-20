@@ -131,7 +131,7 @@ func (s *Server) cmdGive(p *player, args []string) {
 		return
 	}
 	if len(args) < 2 {
-		p.tell("Usage: /give <player> <item> [count]")
+		p.tell("Usage: /give <player|@selector> <item> [count]")
 		return
 	}
 	item, ok := itemByName[strings.TrimPrefix(args[1], "minecraft:")]
@@ -145,7 +145,7 @@ func (s *Server) cmdGive(p *player, args []string) {
 			count = n
 		}
 	}
-	s.hub.post(evGive{target: args[0], item: item, count: count})
+	s.hub.post(evGive{target: args[0], by: p.eid, item: item, count: count})
 	p.tell(fmt.Sprintf("Gave %d × %s to %s", count, args[1], args[0]))
 }
 
@@ -158,7 +158,7 @@ func (s *Server) cmdKill(p *player, args []string) {
 	if len(args) >= 1 {
 		target = args[0]
 	}
-	s.hub.post(evKill{target: target})
+	s.hub.post(evKill{target: target, by: p.eid})
 }
 
 func (s *Server) cmdXP(p *player, args []string) {
@@ -167,15 +167,15 @@ func (s *Server) cmdXP(p *player, args []string) {
 		return
 	}
 	if len(args) < 3 || args[0] != "add" {
-		p.tell("Usage: /xp add <player> <levels>")
+		p.tell("Usage: /xp add <player|@selector> <levels>")
 		return
 	}
 	n, err := strconv.Atoi(args[2])
 	if err != nil {
-		p.tell("Usage: /xp add <player> <levels>")
+		p.tell("Usage: /xp add <player|@selector> <levels>")
 		return
 	}
-	s.hub.post(evXPLevels{target: args[1], levels: n})
+	s.hub.post(evXPLevels{target: args[1], by: p.eid, levels: n})
 	p.tell(fmt.Sprintf("Gave %d levels to %s", n, args[1]))
 }
 
@@ -185,7 +185,7 @@ func (s *Server) cmdSummon(p *player, args []string) {
 		return
 	}
 	if len(args) < 1 {
-		p.tell("Usage: /summon <mob> [x z]")
+		p.tell("Usage: /summon <mob> [<x> <y> <z>]")
 		return
 	}
 	et, ok := summonable[strings.TrimPrefix(args[0], "minecraft:")]
@@ -193,16 +193,23 @@ func (s *Server) cmdSummon(p *player, args []string) {
 		p.tell("Unknown mob: " + args[0])
 		return
 	}
-	x, z := int(p.x), int(p.z)+2
-	if len(args) >= 3 {
-		if xx, err := strconv.Atoi(args[1]); err == nil {
-			x = xx
+	x, y, z := p.x, p.y, p.z+2
+	if len(args) >= 4 { // /summon <mob> <x> <y> <z>, with ~ and ^ like vanilla
+		nx, ny, nz, ok := parsePosition(args[1:], p.x, p.y, p.z, p.yaw, p.pitch)
+		if !ok {
+			p.tell("Usage: /summon <mob> [<x> <y> <z>]")
+			return
 		}
-		if zz, err := strconv.Atoi(args[2]); err == nil {
-			z = zz
+		x, y, z = nx, ny, nz
+	} else if len(args) >= 3 { // the old two-argument form: x and z
+		if nx, ok := parseCoord(args[1], p.x); ok {
+			x = nx
+		}
+		if nz, ok := parseCoord(args[2], p.z); ok {
+			z = nz
 		}
 	}
-	s.hub.post(evSummon{etype: et, x: x, z: z, dim: p.dim, y: p.y})
+	s.hub.post(evSummon{etype: et, x: int(x), z: int(z), dim: p.dim, y: y})
 	p.tell("Summoned " + args[0])
 }
 
@@ -260,12 +267,17 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 
 type evGive struct {
 	target string
+	by     int32 // the caller, for @s/@p and distance predicates
 	item   int32
 	count  int
 }
-type evKill struct{ target string }
+type evKill struct {
+	target string
+	by     int32
+}
 type evXPLevels struct {
 	target string
+	by     int32
 	levels int
 }
 type evSummon struct {

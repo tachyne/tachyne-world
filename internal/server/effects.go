@@ -365,13 +365,13 @@ func (s *Server) cmdEffect(p *player, args []string) {
 		return
 	}
 	if len(args) < 2 {
-		p.tell("Usage: /effect <give|clear> <player> [effect] [seconds] [amplifier]")
+		p.tell("Usage: /effect <give|clear> <player|@selector> [effect] [seconds] [amplifier]")
 		return
 	}
-	ev := evEffect{target: args[1], clear: args[0] == "clear"}
+	ev := evEffect{target: args[1], by: p.eid, clear: args[0] == "clear"}
 	if !ev.clear {
 		if len(args) < 3 {
-			p.tell("Usage: /effect give <player> <effect> [seconds] [amplifier]")
+			p.tell("Usage: /effect give <player|@selector> <effect> [seconds] [amplifier]")
 			return
 		}
 		id, ok := effectNames[args[2]]
@@ -393,6 +393,7 @@ func (s *Server) cmdEffect(p *player, args []string) {
 
 type evEffect struct {
 	target string
+	by     int32
 	clear  bool
 	id     int32
 	secs   int

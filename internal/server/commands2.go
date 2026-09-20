@@ -96,37 +96,45 @@ type evClearInv struct {
 func (evClearInv) isHubEvent() {}
 
 func (h *hub) onClearInv(players map[int32]*tracked, e evClearInv) {
-	for _, t := range players {
-		if strings.EqualFold(t.p.name, e.name) {
-			if t.inv == nil {
-				return
+	targets := h.commandTargets(players, e.by.eid, e.name)
+	if len(targets) == 0 {
+		for _, t := range players { // a case-insensitive name still works
+			if strings.EqualFold(t.p.name, e.name) {
+				targets = append(targets, t)
 			}
-			n := 0
-			for i := range t.inv.slots {
-				if t.inv.slots[i].item != 0 {
-					n += t.inv.slots[i].count
-					t.inv.slots[i] = invStack{}
-				}
-			}
-			for i := range t.armor {
-				if t.armor[i].item != 0 {
-					n += t.armor[i].count
-					t.armor[i] = invStack{}
-				}
-			}
-			if t.offhand.item != 0 {
-				n += t.offhand.count
-				t.offhand = invStack{}
-			}
-			t.cursor = invStack{}
-			h.sendInventory(t)
-			h.sendCursor(t)
-			h.broadcastEquipment(players, t)
-			e.by.trySendEv(chatEv(fmt.Sprintf("Removed %d item(s) from %s.", n, t.p.name)))
-			return
 		}
 	}
-	e.by.trySendEv(chatEv("No player named " + e.name + " is online."))
+	if len(targets) == 0 {
+		e.by.trySendEv(chatEv("No player matched " + e.name + "."))
+		return
+	}
+	for _, t := range targets {
+		if t.inv == nil {
+			continue
+		}
+		n := 0
+		for i := range t.inv.slots {
+			if t.inv.slots[i].item != 0 {
+				n += t.inv.slots[i].count
+				t.inv.slots[i] = invStack{}
+			}
+		}
+		for i := range t.armor {
+			if t.armor[i].item != 0 {
+				n += t.armor[i].count
+				t.armor[i] = invStack{}
+			}
+		}
+		if t.offhand.item != 0 {
+			n += t.offhand.count
+			t.offhand = invStack{}
+		}
+		t.cursor = invStack{}
+		h.sendInventory(t)
+		h.sendCursor(t)
+		h.broadcastEquipment(players, t)
+		e.by.trySendEv(chatEv(fmt.Sprintf("Removed %d item(s) from %s.", n, t.p.name)))
+	}
 }
 
 // cmdSpawnpoint sets the caller's respawn point to where they stand.
@@ -159,7 +167,7 @@ func (s *Server) cmdPlaysound(p *player, args []string) {
 		return
 	}
 	if len(args) < 1 {
-		p.tell("Usage: /playsound <sound> [player] [volume] [pitch]")
+		p.tell("Usage: /playsound <sound> [player|@selector] [volume] [pitch]")
 		return
 	}
 	name := args[0]
@@ -194,13 +202,20 @@ type evPlaysound struct {
 func (evPlaysound) isHubEvent() {}
 
 func (h *hub) onPlaysound(players map[int32]*tracked, e evPlaysound) {
-	for _, t := range players {
-		if strings.EqualFold(t.p.name, e.target) {
-			t.p.trySendEv(soundEv(e.name, sndPlayer, t.x, t.y, t.z, e.vol, e.pitch))
-			return
-		}
+	hit := false
+	for _, t := range h.commandTargets(players, e.by.eid, e.target) {
+		t.p.trySendEv(soundEv(e.name, sndPlayer, t.x, t.y, t.z, e.vol, e.pitch))
+		hit = true
 	}
-	e.by.trySendEv(chatEv("No player named " + e.target + " is online."))
+	if !hit { // fall back to a case-insensitive name, as this command always did
+		for _, t := range players {
+			if strings.EqualFold(t.p.name, e.target) {
+				t.p.trySendEv(soundEv(e.name, sndPlayer, t.x, t.y, t.z, e.vol, e.pitch))
+				return
+			}
+		}
+		e.by.trySendEv(chatEv("No player matched " + e.target + "."))
+	}
 }
 
 // cmdParticle spawns particles at coordinates (op debug tool).
@@ -219,10 +234,8 @@ func (s *Server) cmdParticle(p *player, args []string) {
 		p.tell("Particle ids are numeric (canonical registry).")
 		return
 	}
-	x, e1 := strconv.ParseFloat(args[1], 64)
-	y, e2 := strconv.ParseFloat(args[2], 64)
-	z, e3 := strconv.ParseFloat(args[3], 64)
-	if e1 != nil || e2 != nil || e3 != nil {
+	x, y, z, okPos := parsePosition(args[1:], p.x, p.y, p.z, p.yaw, p.pitch)
+	if !okPos {
 		p.tell("Bad coordinates.")
 		return
 	}

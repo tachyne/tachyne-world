@@ -13,6 +13,20 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-20
 
+### Added
+- **Target selectors and relative coordinates.** Commands took a player
+  name and absolute numbers and nothing else, which made half of them
+  awkward and some useless. `@s`, `@p`, `@a`, `@r` and `@e` now stand
+  anywhere a name did — with the predicates people actually type,
+  `type=`, `distance=`, `limit=`, `sort=` and `name=`, including a
+  negated `type=!` — so `/kill @e[type=zombie,distance=..16]` clears the
+  monsters around you without touching anybody's pets, and
+  `/gamemode spectator @a` works. Coordinates take vanilla's `~` for
+  relative and `^` for local, measured along the way you are looking, so
+  `/tp ~ ~10 ~` lifts you ten blocks and `/summon creeper ^ ^ ^5` puts
+  one five blocks in front of your face. `/tp <player>` finally takes you
+  to someone instead of only to numbers.
+
 ### Fixed
 - **Frogs lay spawn, and pets keep vanilla's distances.** Breeding two
   frogs produced a baby frog out of nowhere. As in vanilla, the pair now

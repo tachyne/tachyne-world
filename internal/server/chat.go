@@ -34,7 +34,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate"
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate" +
+			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^"
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
 		}
@@ -212,15 +213,20 @@ func (s *Server) cmdTime(p *player, args []string) {
 
 // cmdTeleport moves the player to absolute coordinates and re-streams chunks.
 func (s *Server) cmdTeleport(p *player, args []string) {
-	if len(args) != 3 {
-		p.tell("Usage: /tp <x> <y> <z>")
+	// /tp <player|selector> puts you where they are; /tp <x> <y> <z> takes
+	// vanilla's coordinate forms — plain numbers, `~` relative to you, or
+	// `^` along the way you are looking.
+	if len(args) == 1 {
+		s.hub.post(evTeleportTo{eid: p.eid, target: args[0]})
 		return
 	}
-	x, ex := strconv.ParseFloat(args[0], 64)
-	y, ey := strconv.ParseFloat(args[1], 64)
-	z, ez := strconv.ParseFloat(args[2], 64)
-	if ex != nil || ey != nil || ez != nil {
-		p.tell("Usage: /tp <x> <y> <z> (numbers)")
+	if len(args) != 3 {
+		p.tell("Usage: /tp <x> <y> <z> | /tp <player|@selector>")
+		return
+	}
+	x, y, z, ok := parsePosition(args, p.x, p.y, p.z, p.yaw, p.pitch)
+	if !ok {
+		p.tell("Usage: /tp <x> <y> <z> (numbers, ~relative or ^local)")
 		return
 	}
 	p.x, p.y, p.z = x, y, z
@@ -239,7 +245,7 @@ func (s *Server) cmdGamemode(p *player, args []string) {
 		return
 	}
 	if len(args) < 1 || len(args) > 2 {
-		p.tell("Usage: /gamemode <survival|creative|adventure|spectator> [player]")
+		p.tell("Usage: /gamemode <survival|creative|adventure|spectator> [player|@selector]")
 		return
 	}
 	mode, ok := ParseGamemode(args[0])
@@ -257,7 +263,7 @@ func (s *Server) cmdGamemode(p *player, args []string) {
 	// Always apply via the hub: it owns the authoritative tracked.gamemode that
 	// pickup and the survival sim read. (The old self path only updated the client,
 	// so a player who switched themselves to survival still couldn't pick up items.)
-	s.hub.post(evSetGamemode{name: target, mode: mode, by: p.name})
+	s.hub.post(evSetGamemode{name: target, mode: mode, by: p.name, eid: p.eid})
 	if target == p.name {
 		p.tell("Set own game mode to " + args[0])
 	} else {

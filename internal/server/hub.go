@@ -91,10 +91,11 @@ type evChat struct {
 type evList struct{ p *player }             // send the online-player list to one player
 type evSetTime struct{ t uint64 }           // explicit day-time set (command/bus) — fires the plugin event
 type evAnnounce struct{ name, text string } // a plugin's note, relayed to online ops
-type evSetGamemode struct {                 // apply a game-mode change to a named player
+type evSetGamemode struct {                 // apply a game-mode change to a named player or selector
 	name string
 	mode int
 	by   string // who initiated it ("" or self = no "operator changed" notice)
+	eid  int32  // …and their entity id, so @s and distance predicates resolve
 }
 type evSetHud struct { // toggle a player's HUD
 	eid int32
@@ -1336,10 +1337,7 @@ func (h *hub) run() {
 				e.p.trySendEv(chatEv(
 					fmt.Sprintf("Players online (%d): %s", len(names), strings.Join(names, ", "))))
 			case evSetGamemode:
-				for _, t := range players {
-					if t.p.name != e.name {
-						continue
-					}
+				for _, t := range h.commandTargets(players, e.eid, e.name) {
 					t.gamemode = e.mode // the hub's authoritative copy (pickup/survival sim read this)
 					t.p.trySendEv(attachproto.GameEvent{Event: gameEventChangeGameMode, Value: float32(e.mode)})
 					t.p.trySendEv(abilitiesFor(e.mode))
@@ -1359,10 +1357,7 @@ func (h *hub) run() {
 			case evPrimeTNT:
 				h.primeTNT(players, e.x, e.y, e.z, tntFuseTicks)
 			case evEffect:
-				for _, t := range players {
-					if t.p.name != e.target {
-						continue
-					}
+				for _, t := range h.commandTargets(players, e.by, e.target) {
 					if e.clear {
 						h.clearEffects(t)
 					} else {
@@ -1372,26 +1367,27 @@ func (h *hub) run() {
 			case evPopItem:
 				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:
-				for _, t := range players {
-					if t.p.name == e.target {
-						h.giveTo(players, t, e.item, e.count)
-					}
+				for _, t := range h.commandTargets(players, e.by, e.target) {
+					h.giveTo(players, t, e.item, e.count)
 				}
 			case evKill:
-				for _, t := range players {
-					if t.p.name == e.target {
-						h.damageOf(players, t, 100000, dtGenericKill)
-					}
+				for _, t := range h.commandTargets(players, e.by, e.target) {
+					h.damageOf(players, t, 100000, dtGenericKill)
+				}
+				// /kill @e[type=…] reaches the mobs too, which is the whole
+				// reason anyone types a selector.
+				for _, m := range h.commandMobs(players, e.by, e.target) {
+					h.killMob(players, m)
 				}
 			case evXPLevels:
-				for _, t := range players {
-					if t.p.name == e.target {
-						if t.xpLevel += e.levels; t.xpLevel < 0 {
-							t.xpLevel = 0
-						}
-						h.sendExperience(t)
+				for _, t := range h.commandTargets(players, e.by, e.target) {
+					if t.xpLevel += e.levels; t.xpLevel < 0 {
+						t.xpLevel = 0
 					}
+					h.sendExperience(t)
 				}
+			case evTeleportTo:
+				h.onTeleportTo(players, e)
 			case evEndRefresh:
 				h.onEndRefresh(players, e.eid)
 			case evSummon:
