@@ -131,6 +131,13 @@ the public history since the project was open-sourced on 2026-07-10.
   and big dripleaf stems learned their rules too: a bell hung between two
   walls falls if either one goes, and a stem needs both the ground below and
   the rest of the plant above.
+- **Breaking a powered block lets go of its neighbours.** Mining a lectern,
+  a sculk sensor, a target, a block of redstone, a shelf, a trapped chest or
+  a playing jukebox left whatever it was powering still switched on, because
+  the list of blocks that announce their own removal had drifted away from
+  the list of blocks that can give power. The two are pinned together by a
+  test now, so a new source cannot be added to one and forgotten in the
+  other. Same family as the lever bug LegionZA reported.
 - **A jukebox powers redstone while it plays.** Vanilla jukeboxes are a
   redstone source in their own right — a full signal for as long as the disc
   runs, which is what note-block contraptions and disc-triggered doors are

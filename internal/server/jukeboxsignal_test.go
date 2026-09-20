@@ -44,3 +44,31 @@ func TestPlayingJukeboxPowersRedstone(t *testing.T) {
 		t.Errorf("a finished jukebox still emits %d, want 0", got)
 	}
 }
+
+// Whatever can emit must also announce its own removal, or its neighbours
+// keep power from a block that is no longer there. This pins the two lists
+// together so a source added to one cannot be forgotten in the other.
+func TestEveryEmitterAnnouncesItsRemoval(t *testing.T) {
+	h := newHub(world.New(1))
+	for _, name := range []string{
+		"lever", "stone_button", "redstone_torch", "repeater", "comparator",
+		"observer", "redstone_block", "stone_pressure_plate", "detector_rail",
+		"lectern", "tripwire_hook", "daylight_detector", "target",
+		"sculk_sensor", "calibrated_sculk_sensor", "jukebox", "trapped_chest",
+		"oak_shelf", "redstone_wire",
+	} {
+		lo, hi, ok := worldgen.BlockRangeOK(name)
+		if !ok {
+			continue // a block this version does not have
+		}
+		for s := lo; s <= hi; s++ {
+			if !h.isSignalSource(s) {
+				continue // e.g. an unpowered variant that never emits
+			}
+			if !signalSource(s) {
+				t.Errorf("%s (state %d) can emit but its removal tells nobody", name, s)
+			}
+			break // one state of each block is enough to make the point
+		}
+	}
+}

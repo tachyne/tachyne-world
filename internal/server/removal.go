@@ -31,10 +31,15 @@ func hasComparatorOutput(s uint32) bool {
 }
 
 // signalSource: blocks whose removal changes what their neighbours are
-// powered by.
+// powered by. It has to agree with what can EMIT — a source missing here is
+// one whose neighbours keep its power after it is gone, which is the
+// stuck-signal bug in miniature. Five were missing: a redstone block, a
+// lectern, a target, and either sculk sensor. The list is emitPower's, plus
+// the blocks whose removal matters for another reason (a lamp, TNT).
 func signalSource(s uint32) bool {
 	return isRedstoneish(s) || isLever(s) || isWire(s) || isTripwireHook(s) || isTripwire(s) ||
-		isLightningRod(s) || isAnyRail(s)
+		isLightningRod(s) || isAnyRail(s) || isLectern(s) || isAnySensor(s) || isWoodShelf(s) ||
+		isJukebox(s) || isTrappedChest(s) || isTarget(s) || s == redstoneBlock
 }
 
 // afterRemoval runs the old block's hook once `now` has replaced it at pos.
