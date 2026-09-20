@@ -157,3 +157,28 @@ func TestLightCacheInvalidation(t *testing.T) {
 		t.Fatal("cached re-read lost the glowstone light")
 	}
 }
+
+// TestSkyLightSeepsDownAMineshaft: light reaching an enclosed space through an
+// opening falls one level per block, so a short tunnel off a shaft is dim but
+// never pitch black. Legion reported a space going "completely black" three
+// blocks in; this pins the gradient the client is shipped.
+func TestSkyLightSeepsDownAMineshaft(t *testing.T) {
+	w := New(1)
+	const lx, lz = 4, 8
+	surface := int(w.SurfaceY(lx, lz))
+	y := surface - 6
+	for yy := y; yy <= surface+2; yy++ { // a shaft down from the open sky
+		w.SetBlock(lx, yy, lz, worldgen.Air)
+	}
+	for dx := 1; dx <= 8; dx++ { // and a tunnel off the bottom of it
+		w.SetBlock(lx+dx, y, lz, worldgen.Air)
+		w.SetBlock(lx+dx, y+1, lz, worldgen.Air)
+	}
+	ld := w.Light(0, 0)
+	for dx := 0; dx <= 8; dx++ {
+		want := uint8(15 - dx)
+		if got := skyLevel(ld, lx+dx, y, lz); got != want {
+			t.Errorf("sky light %d blocks into the tunnel = %d, want %d", dx, got, want)
+		}
+	}
+}

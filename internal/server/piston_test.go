@@ -83,3 +83,43 @@ func TestStickyPistonPullsBack(t *testing.T) {
 		t.Fatalf("sticky retract should pull the stone back: %d %d", w.At(x+1, y, z), w.At(x+2, y, z))
 	}
 }
+
+// A lever hanging under a piston pops off when the piston RETRACTS, and only
+// then. This looks like a bug — Legion reported it from in game — but it is
+// vanilla: retraction swaps the base for a moving_piston, whose shape is
+// empty, so the lever's attachment face is no longer sturdy and its shape
+// update drops it. Extension leaves a real piston block behind, so the lever
+// survives that. Pinned so nobody "fixes" the quirk away.
+func TestLeverUnderAPistonPopsOnRetractOnly(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pist := worldgen.BlockBase("sticky_piston")
+	info, _ := worldgen.InfoForState(pist)
+	pist = setBoolProp(worldgen.SetProperty(info, pist, "facing", "up"), "extended", false)
+	w.SetBlock(x, y+1, z, pist)
+	w.SetBlock(x, y+2, z, worldgen.Stone)
+
+	lever := worldgen.BlockBase("lever")
+	li, _ := worldgen.InfoForState(lever)
+	lever = worldgen.SetProperty(li, worldgen.SetProperty(li, lever, "face", "ceiling"), "facing", "north")
+	w.SetBlock(x, y, z, setBoolProp(lever, "powered", false))
+
+	w.SetBlock(x, y, z, setBoolProp(lever, "powered", true))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	stepTicks(h, players, 20)
+	if !isSameBlock(w.At(x, y, z), lever) {
+		t.Fatal("the lever should still hang under the extending piston")
+	}
+	if w.At(x, y+3, z) != worldgen.Stone {
+		t.Fatalf("the piston should have pushed the stone up, got %d", w.At(x, y+3, z))
+	}
+
+	w.SetBlock(x, y, z, setBoolProp(lever, "powered", false))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	stepTicks(h, players, 30)
+	if w.At(x, y+2, z) != worldgen.Stone {
+		t.Fatalf("the sticky piston should have pulled the stone back, got %d", w.At(x, y+2, z))
+	}
+	if w.At(x, y, z) != worldgen.Air {
+		t.Fatalf("the lever should have popped off the moving base, got %d", w.At(x, y, z))
+	}
+}
