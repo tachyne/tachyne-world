@@ -58,6 +58,8 @@ type mob struct {
 	convertIn       int      // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	fuse            int      // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int      // spider: mob-updates it stays hostile in daylight after a hit
+	stareTicks      int      // enderman: ticks a distant target has gone unwatched (teleportTowards)
+	settled         int      // enderman: ticks since its target last changed (the daylight flight waits 600)
 	dragonPhase     int      // ender dragon: which phase of the fight it is in
 	dragonPhaseTick int      // ticks spent in the current phase
 	dragonFlames    int      // breaths taken this perch
@@ -903,6 +905,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityEnderman {
 			h.endermanCarry(players, m) // pick up / put down blocks (even while neutral)
+			if h.endermanStareStep(players, m) {
+				continue // EndermanFreezeWhenLookedAt: held by the stare
+			}
 		}
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)

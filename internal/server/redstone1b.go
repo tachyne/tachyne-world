@@ -1,6 +1,8 @@
 package server
 
 import (
+	"math"
+
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -256,26 +258,36 @@ func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uin
 	}
 }
 
-// updateDaylight follows the sky: power tracks the day curve (inverted flips
-// it), self-rescheduling on a slow cadence while the detector exists.
+// updateDaylight is DaylightDetectorBlock.updateSignalStrength: the sky
+// light reaching the block, less the time-and-weather darkening, bent by the
+// sun's angle. A roof over it, or a storm, brings it down — and an inverted
+// detector reads the raw sky value back to front, which is why it fires at
+// dusk rather than tracking the night's curve.
 func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uint32) {
-	day := h.dayTime.Load() % 24000
-	power := 0
-	if day < 12000 { // rough day curve: 0 at dawn/dusk, 15 at noon
-		mid := int64(day) - 6000
-		if mid < 0 {
-			mid = -mid
-		}
-		power = int(15 * (6000 - mid) / 6000)
-	}
+	sky, _ := h.rsWorld().LightAt(pos.x, pos.y, pos.z)
+	n := int(sky) - h.skyDarken()
 	if daylightInverted(state) {
-		power = 15 - power
+		n = 15 - n
+	} else if n > 0 {
+		f := sunAngle(int64(h.dayTime.Load()))
+		target := 0.0
+		if f >= math.Pi {
+			target = 2 * math.Pi
+		}
+		f += (target - f) * 0.2
+		n = int(math.Round(float64(n) * math.Cos(f)))
 	}
-	if daylightPower(state) != power {
-		h.rsSet(players, pos, daylightWith(daylightInverted(state), power))
+	switch {
+	case n < 0:
+		n = 0
+	case n > 15:
+		n = 15
+	}
+	if daylightPower(state) != n {
+		h.rsSet(players, pos, daylightWith(daylightInverted(state), n))
 		h.scheduleSignalAround(pos)
 	}
-	h.rsSchedule(pos, 100)
+	h.rsSchedule(pos, 20) // vanilla re-checks every 20 ticks
 }
 
 // updatePlates is the per-tick occupancy scan: entities standing on plates

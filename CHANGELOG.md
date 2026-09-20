@@ -14,6 +14,27 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Light, not the clock: spiders, daylight detectors, endermen and the
+  Warden's warning.** Four mechanics that were reading the wrong thing. A
+  spider went neutral by the world clock, so one in a pitch-dark cave
+  ignored you at noon and one standing in a lit base hunted you at
+  midnight; it now reads the light where it stands, as vanilla's does —
+  neutral at light twelve and up, and a spider already chasing gives up
+  now and then once it is in the light. The daylight detector followed a
+  hand-drawn day curve that ignored the sky above it; it now reads the
+  sky light reaching the block, less the time-and-weather darkening, bent
+  by the sun's real eased angle, so a roof, a tree or a thunderstorm
+  brings it down and an inverted one reads the night properly. Endermen
+  hold a staring contest the way vanilla's do: one you have in your
+  crosshair stops where it is and stares back, blinks away if you close
+  to within four blocks, blinks towards you if you back off past sixteen
+  and stop looking, and one caught in the open sun disappears. And the
+  warning level that summons a Warden moved to where vanilla keeps it —
+  on the player, shared with whoever is nearby, raised at most once every
+  ten seconds and fading after ten minutes of quiet — so shriekers count
+  together instead of each keeping its own tally, every shrieker response
+  now drops Darkness on the room, and the ones before the fourth play the
+  growl from below that is supposed to warn you.
 - **Decorated pots, brewing stands, banners and the crafting bench keep
   what they are given.** Four benches-and-blocks fixes that each lost
   something. A decorated pot swallowed an entire stack per click, handed

@@ -197,3 +197,60 @@ func TestMobFootstepsAreVibrations(t *testing.T) {
 		t.Fatalf("a bat in flight makes no footstep: %d", n)
 	}
 }
+
+// The Warden warning chain: the tally lives on the player, one shriek raises
+// it at most every ten seconds, and the fourth calls a Warden — every
+// response dropping Darkness on whoever is near.
+func TestShriekerWarnsThenSummons(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	pl := testTracked()
+	pl.x, pl.y, pl.z = float64(x)+1, float64(y), float64(z)
+	players[pl.p.eid] = pl
+	pos := blockPos{x, y, z}
+	// can_summon true (property index 0), not shrieking, not waterlogged.
+	shrieker := shriekerWith(worldgen.BlockBase("sculk_shrieker"), false)
+	w.SetBlock(x, y, z, shrieker)
+	if !shriekerCanSummon(shrieker) {
+		t.Fatal("test fixture: the shrieker must be able to summon")
+	}
+
+	// One shriek: warning level 1, no Warden, but the room goes dark.
+	h.shriek(players, pos, w.At(x, y, z), pl.p.eid)
+	if pl.wardenWarn != 1 {
+		t.Fatalf("the first shriek warns the player once, level=%d", pl.wardenWarn)
+	}
+	stepSculk(h, players, shriekingTicks+1)
+	if _, dark := pl.effects[effDarkness]; !dark {
+		t.Error("a shrieker's response darkens everyone near it")
+	}
+	if wardens := countMobs(h, entityWarden); wardens != 0 {
+		t.Fatalf("one warning must not summon a Warden, got %d", wardens)
+	}
+	// A second shriek inside the cooldown does nothing at all.
+	h.shriek(players, pos, w.At(x, y, z), pl.p.eid)
+	if pl.wardenWarn != 1 {
+		t.Fatalf("a warning inside the cooldown must not count, level=%d", pl.wardenWarn)
+	}
+	// Three more warnings, each after the cooldown, summon one.
+	for i := 0; i < 3; i++ {
+		pl.wardenCool = 0
+		h.shriek(players, pos, w.At(x, y, z), pl.p.eid)
+		stepSculk(h, players, shriekingTicks+1)
+	}
+	if pl.wardenWarn != wardenWarnMax {
+		t.Fatalf("four warnings max the tally, got %d", pl.wardenWarn)
+	}
+	if wardens := countMobs(h, entityWarden); wardens != 1 {
+		t.Fatalf("the fourth shriek should summon exactly one Warden, got %d", wardens)
+	}
+}
+
+func countMobs(h *hub, etype int) int {
+	n := 0
+	for _, m := range h.mobs {
+		if m.etype == etype {
+			n++
+		}
+	}
+	return n
+}

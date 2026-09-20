@@ -212,7 +212,12 @@ const (
 // tracked is the hub's authoritative record for a connected player. Position is
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
-	hurtAt         uint64  // LivingEntity.invulnerableTime: the tick of the last landed blow (10 ticks of cooldown follow)
+	hurtAt uint64 // LivingEntity.invulnerableTime: the tick of the last landed blow (10 ticks of cooldown follow)
+	// WardenSpawnTracker: warning level toward a Warden, the cooldown between
+	// warnings and the quiet time since the last one (all in ticks).
+	wardenWarn     int
+	wardenCool     int
+	wardenSince    int
 	lastHurt       float32 // …and its raw amount: only a bigger blow's excess lands inside the window
 	p              *player
 	adv            advState          // advancement grants (advID → criterion → millis)
@@ -1005,6 +1010,7 @@ func (h *hub) run() {
 			}
 			if age%survivalTickN == 0 {
 				h.survivalTick(players)       // health regen, hunger, starvation, void
+				h.tickWardenTrackers(players) // WardenSpawnTracker: warning cooldown + decay
 				h.syncAttributes(players)     // changed attributes reach their viewers (sendChanges)
 				h.updateHostiles(players)     // night mob spawning + daylight burn
 				h.updatePatrols(players)      // roaming pillager patrols (day 5+, throttled)

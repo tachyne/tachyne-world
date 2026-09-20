@@ -385,6 +385,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		} else {
 			m.anger = spiderAnger                   // a hit spider/enderman retaliates
 			m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
+			m.settled = 0                           // a new target restarts the enderman's daylight clock
 			if m.etype == entityEnderman {
 				h.endermanTeleport(players, m) // blinks away from the blow
 			}

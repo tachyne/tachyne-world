@@ -345,3 +345,20 @@ func climbsWalls(etype int) bool {
 // only mob that does both — m.swims means water-BOUND, which a fish is and a
 // drowned is not.
 func isAmphibious(etype int) bool { return etype == entityDrowned }
+
+// endermanTeleportTo is EnderMan.teleport(x,y,z): the blink only lands on a
+// spot that can actually hold it — otherwise the enderman stays put.
+func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z float64) {
+	bx, bz := floorInt(x), floorInt(z)
+	w := h.worldFor(m.dim)
+	if w == nil || !h.world.Spawnable(bx, bz) {
+		return
+	}
+	m.x, m.z = float64(bx)+0.5, float64(bz)+0.5
+	m.y = float64(h.world.MobFeet(bx, bz))
+	m.sx, m.sy, m.sz = m.x, m.y, m.z
+	h.playSound(players, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport))
+	h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)
+}

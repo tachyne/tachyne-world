@@ -91,7 +91,8 @@ const (
 	sensorActiveTicks   = 30 // ACTIVE_TICKS
 	sensorCooldownTicks = 10 // COOLDOWN_TICKS
 	shriekingTicks      = 90 // SHRIEKING_TICKS
-	shriekWarnMax       = 4  // warning level that summons a Warden
+	// (the warning level that summons a Warden now lives on the player —
+	// see wardentracker.go's wardenWarnMax)
 )
 
 var (
@@ -336,7 +337,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseInactive:
 			h.activateSensor(players, pos, s, v)
 		case isShrieker(s) && !shriekerShrieking(s):
-			h.shriek(players, pos, s)
+			h.shriek(players, pos, s, v.src)
 		}
 	}
 
@@ -433,30 +434,48 @@ func redstoneForDistance(distance float64, radius int) int {
 
 // shriek sets a shrieker SHRIEKING for 90 ticks and, if it can summon, builds
 // its warning level toward a Warden.
-func (h *hub) shriek(players map[int32]*tracked, pos blockPos, s uint32) {
+func (h *hub) shriek(players map[int32]*tracked, pos blockPos, s uint32, by int32) {
+	// SculkShriekerBlockEntity.tryShriek: a shrieker that can summon asks the
+	// players around it to take a warning first, and stays silent if the
+	// warning cannot land (a Warden already about, or someone warned in the
+	// last ten seconds). Only a player sets one off.
+	h.sculkWarn[pos] = 0
+	if shriekerCanSummon(s) && h.rules.Difficulty != diffPeaceful && h.rules.SpawnWardens {
+		lvl, warned := h.tryWarnWarden(players, pos, 0, by)
+		if !warned {
+			return
+		}
+		h.sculkWarn[pos] = lvl
+	}
 	h.setBlock(players, pos, shriekerWith(s, true))
 	h.sculkDue[pos] = h.tick.Load() + shriekingTicks
-	if shriekerCanSummon(s) {
-		if h.sculkWarn[pos] < shriekWarnMax {
-			h.sculkWarn[pos]++
-		}
-	}
 	h.playSound(players, "minecraft:block.sculk_shrieker.shriek", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 2, 1)
 }
 
 // shriekerRespond fires when a shriek ends: at max warning a Warden emerges.
 func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32) {
-	if !shriekerCanSummon(s) || h.sculkWarn[pos] < shriekWarnMax {
+	lvl := h.sculkWarn[pos]
+	delete(h.sculkWarn, pos)
+	if !shriekerCanSummon(s) || lvl <= 0 || h.rules.Difficulty == diffPeaceful || !h.rules.SpawnWardens {
 		return
 	}
-	h.sculkWarn[pos] = 0
-	if !h.rules.SpawnWardens {
-		return // gamerule spawn_wardens
+	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
+	summoned := false
+	if lvl >= wardenWarnMax {
+		if sp := h.wardenSpawnSpot(pos); sp != nil {
+			h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5)
+			summoned = true
+		}
 	}
-	if sp := h.wardenSpawnSpot(pos); sp != nil {
-		h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5)
+	if !summoned {
+		// playWardenReplySound: the growl from somewhere below that tells you
+		// how close you are — the warning that is the whole point of the
+		// first three shrieks.
+		h.playSound(players, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
 	}
+	// Every response darkens the room, summon or not.
+	h.darknessAround(players, 0, cx, cy, cz, wardenDarknessRing)
 }
 
 // wardenSpawnSpot finds a 2-tall air gap on solid ground within a few blocks of

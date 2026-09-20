@@ -203,6 +203,26 @@ func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *trac
 	}
 }
 
+// How bright is bright enough to put a spider off: vanilla compares the
+// light-dependent "magic value" (the brightness ramp) against 0.5, which on
+// the overworld's ramp is light level 12.
+const (
+	spiderLightNeutral = 0.5
+	spiderDropOdds     = 100 / mobMoveInterval // 1-in-100 per TICK, and we run every other one
+)
+
+// lightMagic is Entity.getLightLevelDependentMagicValue: the brightness ramp
+// (l/15)/(4-3·l/15) over the effective light at the mob's eyes.
+func (h *hub) lightMagic(m *mob) float64 {
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return 0
+	}
+	sky, block := w.LightAt(floorInt(m.x), floorInt(m.y+mobEyeHeight(m)), floorInt(m.z))
+	f := float64(h.rawBrightness(sky, block, -1)) / 15
+	return f / (4 - 3*f)
+}
+
 // isDayTime reports whether the world clock is in the daylight window (the
 // same boundary the burn/spawn rules use).
 func (h *hub) isDayTime() bool {
@@ -214,19 +234,25 @@ func (h *hub) isDayTime() bool {
 // hysteresis: an idle mob only wakes to a player within aggroRange, but once
 // hunting it keeps chasing out to deaggroRange before giving up.
 func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
-	// Spiders are neutral in daylight (vanilla): they only hunt at night — or
-	// while angry at whoever just hit them.
-	if m.etype == entitySpider && h.isDayTime() {
-		if m.anger == 0 {
-			m.hasTarget = false
-			return
+	// Spiders go neutral in the LIGHT, not by the clock (SpiderTargetGoal):
+	// a spider in a dark cave hunts at noon, one standing in a lit base does
+	// not hunt at midnight, and one already chasing gives up now and then
+	// once it is in the light (SpiderAttackGoal's one-in-a-hundred).
+	if m.etype == entitySpider || m.etype == entityCaveSpider {
+		if h.lightMagic(m) >= spiderLightNeutral && m.anger == 0 {
+			if !m.hasTarget || h.rng.Intn(spiderDropOdds) == 0 {
+				m.hasTarget = false
+				return
+			}
+		} else if m.anger > 0 {
+			m.anger--
 		}
-		m.anger--
 	}
 	// Endermen also aggro on a STARE (vanilla isBeingStaredBy): a player's
 	// crosshair on their eyes provokes them; a carved pumpkin exempts.
 	if m.etype == entityEnderman && m.anger == 0 && h.staredAt(players, m) {
 		m.anger = 200 // hunts ~20 s per provocation (refreshed while stared at)
+		m.settled = 0 // targetChangeTime: the daylight flight waits 600 ticks from here
 	}
 	// Neutral species (endermen) never START a fight — anger from a hit (or
 	// the stare above) does.

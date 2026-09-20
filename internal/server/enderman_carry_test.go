@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-common/protocol"
@@ -137,4 +138,50 @@ func TestEndermanPlacesBlock(t *testing.T) {
 	if placed != 1 {
 		t.Fatalf("exactly one dirt block should have been placed, found %d", placed)
 	}
+}
+
+// The staring contest: an enderman held in a player's crosshair stops where
+// it is, and blinks away when that player closes to within four blocks.
+func TestEndermanStareFreezesThenBlinks(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[pl.p.eid] = pl
+	lx, lz := h.findLand(20, 20)
+	y := float64(h.world.MobFeet(lx, lz))
+	pl.x, pl.y, pl.z = float64(lx), y, float64(lz)+8
+	m := h.spawnMob(players, entityEnderman, float64(lx), y, float64(lz))
+
+	// Look straight at it from eight blocks: held, not blinking.
+	pl.yaw, pl.pitch = 0, float32(lookPitchTo(pl, m))
+	pl.yaw = float32(lookYawTo(pl, m))
+	if h.starerOf(players, m) == nil {
+		t.Fatal("the player is looking right at it")
+	}
+	sx, sz := m.x, m.z
+	if !h.endermanStareStep(players, m) {
+		t.Error("an enderman stared at from eight blocks freezes")
+	}
+	if m.x != sx || m.z != sz {
+		t.Error("a frozen enderman does not move")
+	}
+	// Step in close and it goes.
+	pl.x, pl.z = m.x, m.z+2
+	pl.yaw = float32(lookYawTo(pl, m))
+	pl.pitch = float32(lookPitchTo(pl, m))
+	h.endermanStareStep(players, m)
+	if m.x == sx && m.z == sz {
+		t.Error("an enderman stared at from two blocks blinks away")
+	}
+}
+
+// The yaw/pitch a player at t would need to look at m (degrees).
+func lookYawTo(t *tracked, m *mob) float64 {
+	dx, dz := m.x-t.x, m.z-t.z
+	return math.Atan2(-dx, dz) * 180 / math.Pi
+}
+
+func lookPitchTo(t *tracked, m *mob) float64 {
+	dx, dy, dz := m.x-t.x, (m.y+2.55)-(t.y+1.62), m.z-t.z
+	return -math.Atan2(dy, math.Sqrt(dx*dx+dz*dz)) * 180 / math.Pi
 }

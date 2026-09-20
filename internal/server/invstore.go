@@ -35,6 +35,11 @@ type savedInv struct {
 	// offers are a function of it, so it has to outlive the session or a
 	// relog would reshuffle a roll the player was saving up for.
 	EnchSeed int32 `json:"ench_seed,omitempty"`
+	// WardenSpawnTracker (warning level, cooldown, quiet time): vanilla keeps
+	// it in the player's data, so a relog does not wipe the deep dark's tally.
+	WardenWarn  int `json:"warden_warn,omitempty"`
+	WardenCool  int `json:"warden_cool,omitempty"`
+	WardenSince int `json:"warden_since,omitempty"`
 
 	// Last position (restored on login, vanilla-style: you log back in where
 	// you logged out). HasPos distinguishes a real saved position from a legacy
@@ -159,6 +164,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	}
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 	t.enchSeed = saved.EnchSeed
+	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
 }
 
 // savedPos returns a player's last saved position (ok=false for a new player
@@ -201,6 +207,7 @@ func (s *invStore) record(name string, t *tracked) {
 	}
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
+		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince,
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true
