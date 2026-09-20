@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/binary"
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
 	"math"
 
@@ -15,10 +16,15 @@ import (
 // opens the exit portal (with the egg), and drops the elytra beside it.
 
 const (
-	dragonHealth   = 200
-	dragonSpeed    = 0.7
-	dragonContact  = 8
-	dragonHealRate = 2 // HP/s while any crystal lives
+	dragonHealth  = 200
+	dragonSpeed   = 0.7
+	dragonContact = 10 // EnderDragon.hurt: the body and head
+	// The wings reach further and hit softer, but they throw you (knockBack).
+	dragonBodyReach  = 4.0
+	dragonWingReach  = 8.0
+	dragonWingDamage = 5
+	dragonWingPush   = 4.0
+	dragonHealRate   = 2 // HP/s while any crystal lives
 )
 
 var (
@@ -110,7 +116,9 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 	}
 	// Contact damage to End players in reach — only while it is flying. A
 	// perched dragon is the fight's one safe window to hit its head, so it
-	// must not still be grinding anyone who stands next to it.
+	// must not still be grinding anyone who stands next to it. Vanilla has
+	// two contacts: the body and head deal 10, and the WINGS deal 5 with a
+	// hard sideways shove (EnderDragon.hurt and knockBack).
 	for _, t := range players {
 		if sitting {
 			break
@@ -118,10 +126,21 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		if t.dim != 2 || t.dead || t.gamemode != gmSurvival || now < t.graceUntil {
 			continue
 		}
-		if dist3(t.x, t.y, t.z, m.x, m.y, m.z) < 4 {
+		d := dist3(t.x, t.y, t.z, m.x, m.y, m.z)
+		switch {
+		case d < dragonBodyReach:
 			h.hurtFrom(players, t, dragonContact, dtMobAttack,
 				deathCause{key: causeDragon, by: "Ender Dragon"}, from(m.x, m.z))
 			h.knockback(t, m.x, m.z)
+		case d < dragonWingReach:
+			// knockBack: push = (dx/d², 0.2, dz/d²)·4, then five damage.
+			dx, dz := t.x-m.x, t.z-m.z
+			d2 := math.Max(dx*dx+dz*dz, 0.1)
+			t.p.trySendEv(attachproto.Velocity{EID: t.p.eid,
+				VX: dx / d2 * dragonWingPush, VY: 0.2, VZ: dz / d2 * dragonWingPush})
+			t.spinUntil = now + windBurstGrace
+			h.hurtFrom(players, t, dragonWingDamage, dtMobAttack,
+				deathCause{key: causeDragon, by: "Ender Dragon"}, from(m.x, m.z))
 		}
 	}
 	// Crystal healing.

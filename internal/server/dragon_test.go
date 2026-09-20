@@ -122,3 +122,15 @@ func TestDragonBossbarLifecycle(t *testing.T) {
 		t.Fatal("no dragon — no bar")
 	}
 }
+
+// The dragon's body deals ten and its wings five with a shove, as vanilla's
+// hurt() and knockBack() do — and a perched one deals nothing.
+func TestDragonContactDamage(t *testing.T) {
+	if dragonContact != 10 || dragonWingDamage != 5 {
+		t.Fatalf("vanilla deals 10 from the body and 5 from a wing, got %v and %v",
+			dragonContact, dragonWingDamage)
+	}
+	if dragonWingReach <= dragonBodyReach {
+		t.Error("the wings reach further than the body")
+	}
+}

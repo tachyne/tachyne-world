@@ -28,6 +28,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The dragon's wings throw you.** Contact with it dealt a flat eight
+  wherever it touched you. Vanilla has two: the body and head deal ten,
+  and the wings deal five with a hard sideways shove — the hit that
+  sends you off the island. A perched dragon still deals nothing, which
+  is what makes the head safe to attack.
 - **The F key works.** Swapping the held item with the off-hand did
   nothing — the action arrived and was dropped. It swaps the two stacks
   whole now, enchantments, damage and all, and shows on every client.
