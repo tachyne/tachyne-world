@@ -222,7 +222,7 @@ func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, aliveN int) {
 		if near {
 			if !r.shown[t.p.eid] {
 				r.shown[t.p.eid] = true
-				t.p.trySendEv(bossBarAdd(r.uuid, title, frac))
+				t.p.trySendEv(bossBarAdd(r.uuid, title, frac, raidBarLook))
 			} else {
 				t.p.trySendEv(bossBarHealth(r.uuid, frac))
 			}

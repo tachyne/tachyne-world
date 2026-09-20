@@ -13,9 +13,31 @@ import (
 const poseSneaking = 5 // (poseStanding comes from bed.go)
 
 // Boss-bar domain events (rendered by render770 / the gateways).
-func bossBarAdd(uuid [16]byte, title string, health float32) attachproto.BossBar {
-	return attachproto.BossBar{UUID: uuid, Op: attachproto.BossBarAdd, Title: title, Health: health}
+// bossBarAdd raises a bar with the look vanilla gives that boss: each
+// ServerBossEvent picks its own colour, overlay and flags, and drawing them
+// all purple and solid made the dragon, the wither and a raid the same bar.
+func bossBarAdd(uuid [16]byte, title string, health float32, look bossLook) attachproto.BossBar {
+	return attachproto.BossBar{UUID: uuid, Op: attachproto.BossBarAdd, Title: title, Health: health,
+		Color: look.colour, Overlay: look.overlay, Flags: look.flags}
 }
+
+// bossLook is one boss's bar, straight from its ServerBossEvent.
+type bossLook struct {
+	colour  int32
+	overlay int32
+	flags   uint8
+}
+
+var (
+	// EndDragonFight: PINK, PROGRESS, boss music and world fog.
+	dragonBarLook = bossLook{attachproto.BossPink, attachproto.BossProgress,
+		attachproto.BossMusic | attachproto.BossWorldFog}
+	// WitherBoss: PURPLE, PROGRESS, darkens the screen.
+	witherBarLook = bossLook{attachproto.BossPurple, attachproto.BossProgress,
+		attachproto.BossDarkenScreen}
+	// Raid: RED, NOTCHED_10 — the notches are the waves.
+	raidBarLook = bossLook{attachproto.BossRed, attachproto.BossNotched10, 0}
+)
 
 func bossBarHealth(uuid [16]byte, health float32) attachproto.BossBar {
 	return attachproto.BossBar{UUID: uuid, Op: attachproto.BossBarHealth, Health: health}
@@ -46,7 +68,7 @@ func (h *hub) updateDragonBar(players map[int32]*tracked) {
 		frac := float32(m.health) / float32(dragonHealth)
 		if !t.bossBarOn {
 			t.bossBarOn = true
-			t.p.trySendEv(bossBarAdd(dragonBarUUID, "Ender Dragon", frac))
+			t.p.trySendEv(bossBarAdd(dragonBarUUID, "Ender Dragon", frac, dragonBarLook))
 			// Boss refresher: whatever the arrival flood did to the original
 			// spawn packet, this player is now settled — give them a clean
 			// destroy+spawn so the dragon exists client-side unconditionally.

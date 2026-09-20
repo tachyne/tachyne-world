@@ -55,3 +55,30 @@ func TestFallDamageSoundSplit(t *testing.T) {
 		}
 	}
 }
+
+// Each boss's bar is its own: the dragon pink with music and world fog, the
+// wither purple and screen-darkening, a raid red and notched into ten. They
+// were all drawn purple and solid, so you could not tell them apart.
+func TestEachBossHasItsOwnBar(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		look bossLook
+		want bossLook
+	}{
+		{"dragon", dragonBarLook, bossLook{0, 0, 0x02 | 0x04}},
+		{"wither", witherBarLook, bossLook{5, 0, 0x01}},
+		{"raid", raidBarLook, bossLook{2, 2, 0}},
+	} {
+		if tc.look != tc.want {
+			t.Errorf("%s bar is %+v, want %+v", tc.name, tc.look, tc.want)
+		}
+	}
+	if dragonBarLook == witherBarLook || witherBarLook == raidBarLook {
+		t.Error("two bosses share a bar")
+	}
+	// …and the frame carries it.
+	ev := bossBarAdd([16]byte{1}, "Ender Dragon", 0.5, dragonBarLook)
+	if ev.Color != dragonBarLook.colour || ev.Overlay != dragonBarLook.overlay || ev.Flags != dragonBarLook.flags {
+		t.Errorf("the frame dropped the look: %+v", ev)
+	}
+}

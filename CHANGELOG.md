@@ -120,6 +120,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The dragon, the wither and a raid each get their own boss bar.** All
+  three were drawn the same purple bar, so the only way to tell which fight
+  you were in was to look at what was hitting you. The dragon's is pink now,
+  with the boss music and the fog it brings; the wither's is purple and
+  darkens the sky; a raid's is red and notched into ten for its waves.
 - **Falling in makes a splash, and landing hard makes a thud.** Entering
   water was silent for players and mobs alike — the game registered it (a
   sculk sensor could hear it) but nothing played. So was every landing that

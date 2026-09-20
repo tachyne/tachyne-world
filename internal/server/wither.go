@@ -113,7 +113,7 @@ func (h *hub) updateBossBar(players map[int32]*tracked, m *mob, title string, ma
 		if near {
 			if !h.bossSeen[key] {
 				h.bossSeen[key] = true
-				t.p.trySendEv(bossBarAdd(m.uuid, title, frac))
+				t.p.trySendEv(bossBarAdd(m.uuid, title, frac, witherBarLook))
 			} else {
 				t.p.trySendEv(bossBarHealth(m.uuid, frac))
 			}
