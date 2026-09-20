@@ -30,6 +30,26 @@ the public history since the project was open-sourced on 2026-07-10.
   villages and swamp huts and jungle temples of the biomes it did not grow up
   in. The map is drawn the moment the trade appears, centred on a real
   structure near the villager, and costs emeralds plus a compass.
+- **The rest of the trade book.** Every kind of offer the real game gives a
+  villager now exists: a leatherworker dyes the leather it sells (one dye,
+  sometimes two, sometimes three, blended); a farmer sells the six suspicious
+  stews; a fletcher's master trade tips arrows with a potion drawn from
+  everything a brewing stand can make; a fisherman buys the boat its home
+  biome calls for; and the trades that ask for an item beside the emeralds —
+  cod for cooked cod, gravel for flint — work as trades rather than as gaps
+  in the list.
+- **The wandering trader stocks what it should.** Its enchanted iron pickaxe
+  and its bottle of Invisibility were missing, and three of the things it
+  buys could be sold to it only once, for double experience, instead of twice
+  for single. It also no longer shows an experience bar it never fills, and
+  it will not wander off while you have its window open.
+
+### Changed
+- **Prices react per trade, the way the real game's do.** Armour, bells,
+  shields, saddles, explorer maps, dyed leather and most enchanted gear
+  respond four times harder to heavy use and to your standing with the
+  village than everything else does — exactly the trades a player grinds.
+  Every offer used to react at the gentler rate.
 - **Potions look like what they are.** Every brew rendered the same default
   purple and its tooltip said nothing about its effects, so a potion of
   Healing and a potion of Poison were indistinguishable in the hand. Potions
