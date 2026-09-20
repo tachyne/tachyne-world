@@ -685,7 +685,10 @@ func (h *hub) removeWhenFarAway(m *mob, d2 float64, now uint64) bool {
 		if m.raidCenter != (blockPos{}) {
 			return false
 		}
-		if m.patrolCaptain { // PatrollingMonster: a patrol despawns only beyond 128
+		// PatrollingMonster.removeWhenFarAway: !patrolling || d > 16384 —
+		// the whole patrol, not only its captain, once the captain has handed
+		// out a waypoint.
+		if m.patrolling || m.patrolCaptain {
 			return d2 > 16384
 		}
 		return true

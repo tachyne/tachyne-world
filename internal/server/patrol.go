@@ -86,6 +86,9 @@ func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
 		}
 		if spawned == 0 { // the first is the captain
 			m.patrolCaptain = true
+			// PatrolSpawner: only the leader is given a target — the rest
+			// start patrolling when it hands them their first waypoint.
+			h.findPatrolTarget(m)
 			banner := invStack{item: itemByName["white_banner"], count: 1}
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, [4]invStack{banner})) // head slot
 		}

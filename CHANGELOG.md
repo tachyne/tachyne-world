@@ -28,6 +28,28 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Glow lichen, vines and sculk veins stop growing a face into thin air.**
+  A newly placed multiface block started from a state that already had
+  every one of its six faces switched on, and placement only ever added
+  one more — so a patch put on a floor came out as a full cube of lichen,
+  with the sides that had nothing behind them hanging in the air. Vanilla's
+  default has no face set at all, and now so does ours. The same wrong
+  default was behind bone-mealing glow lichen across a wall, vines
+  spreading, and the resin a wounded creaking heart bleeds onto its tree.
+- **Pillager patrols actually patrol.** A patrol spawned and then ambled
+  on the ordinary wander goal, so it never crossed the country and never
+  arrived anywhere. The captain now picks a point up to five hundred
+  blocks away and leads the patrol toward it in ten-block legs, handing
+  each leg to the pillagers with it — which is what makes a patrol turn up
+  at a village, or on the road behind you. A patrol that loses its last
+  companion stops being one, and a patrol no longer despawns while you are
+  within a hundred and twenty-eight blocks of it.
+- **A raider that strays comes back to its raid.** A wave only advances
+  once every raider in it is dead, so a pillager that spawned wide of the
+  village, or wandered off after losing sight of you, could stall the raid
+  until it timed out. Raiders with nothing to fight now walk back to the
+  raid they belong to, and gather any idle illager, ravager or witch they
+  pass within sixteen blocks into it on the way.
 - **Blocks stop flickering when you place or break them.** Since 1.19 a
   client applies your dig or placement immediately, tags it with a
   sequence number, and then shows its own guess for that position -
