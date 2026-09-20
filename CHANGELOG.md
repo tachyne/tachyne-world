@@ -88,6 +88,24 @@ the public history since the project was open-sourced on 2026-07-10.
   to whoever it is boosting and softened by distance for anything else within
   five blocks — and a wall between you and the burst still saves you. A plain
   rocket with no star in it stays perfectly safe to fly with.
+- **An enderman only takes a block it can see.** The real game makes one
+  check its line to a block before lifting it; ours did not, so an enderman
+  could reach a block buried in a hillside beside it or on the far side of a
+  wall. That matters more than it sounds: an enderman holding a block never
+  despawns and stops counting towards the monster limit, so every extra
+  pick-up is one more permanent enderman and one more slot for the spawner to
+  fill. (Legion reported endermen crowding up, which is what sent me looking.)
+- **Spawn eggs work.** Right-clicking a block with one did nothing at all —
+  eggs only worked on a monster spawner or fired out of a dispenser — so in
+  creative there was no way to place a mob. The mob now appears on the face
+  you clicked, standing inside a flower or a tuft of grass if that is what you
+  clicked, and it stays put rather than despawning the way a wild one does.
+  (Reported in game by Legion.)
+- **A mace's Wind Burst is a real gust.** It had been a bare upward shove on
+  whoever swung. Now the smash sets off the same burst a wind charge makes,
+  centred on the attacker — it throws back everything within three and a half
+  blocks and flips the levers and buttons it washes over, which is what the
+  enchantment is in the real game.
 - **Raids arm themselves as the waves go on.** Every pillager and vindicator
   in a raid carried plain gear, whatever the omen that called it. From the
   fourth wave a pillager's crossbow may come with Quick Charge — and draws

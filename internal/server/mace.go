@@ -60,16 +60,25 @@ func (h *hub) smashEffects(players map[int32]*tracked, t *tracked, target *mob, 
 
 	h.smashAround(players, t, target.x, target.y, target.z, target.eid, fall)
 
-	// wind_burst: launch the attacker upward like a wind charge to chain smashes.
+	// wind_burst: a real gust centred on the attacker, which is what the
+	// enchantment's post_attack effect is — an explode with radius 3.5 and
+	// block_interaction "trigger", the same burst a wind charge makes. It
+	// shoves everything nearby and flips levers and buttons on the way.
 	if wb := heldStack(t).enchLvl(enchWindBurst); wb > 0 {
+		h.windBurstR(players, t.dim, t.x, t.y, t.z, t.p.eid, windBurstRadius)
+		// The attacker's own launch is sent explicitly: their movement is
+		// their client's to run, so the burst cannot push them the way it
+		// pushes a mob.
 		mult := windBurstMult(wb)
 		t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: 0, VY: maceKnockPower * mult, VZ: 0})
 		now := h.tick.Load()
 		t.spinUntil = now + windBurstGrace // let the launch through the speed check
 		t.moveBudget = budgetCapTicks * spinPerTick
-		h.playSound(players, "minecraft:entity.wind_charge.wind_burst", sndPlayer, t.x, t.y, t.z, 1, 1)
 	}
 }
+
+// windBurstRadius is the enchantment's explode radius.
+const windBurstRadius = 3.5
 
 // windBurstMult is the vanilla wind_burst knockback multiplier per level.
 func windBurstMult(level int) float64 {
