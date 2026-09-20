@@ -23,7 +23,6 @@ const (
 
 	anvilMaxName = 50 // vanilla rename length cap
 
-	grindXPPerLevel = 6 // refund per stripped enchantment level (vanilla-ish mid-roll)
 )
 
 var (
@@ -128,15 +127,27 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 	if a.item == 0 || a.count == 0 {
 		return invStack{}, 0
 	}
-	res, cost := a, 0
+	res, cost, renameCost := a, 0, 0
 	if rename != "" && rename != a.name {
 		res.name = rename
-		cost++
+		cost, renameCost = cost+1, 1
 	}
+	material := false
 	if b.item != 0 && b.count > 0 {
+		// The item's own repair material comes first (AnvilMenu.createResult):
+		// a quarter of the durability back per ingot, gem or plank, one level
+		// each. Enchantments ride along untouched.
+		mended, _, repairCost, ok := anvilMaterialRepair(res, b)
+		material = ok
+		if ok {
+			res = mended
+			cost += repairCost
+		}
 		sameItem := b.item == a.item
 		book := b.item == itemEnchantedBook
-		if !sameItem && !book {
+		if material {
+			sameItem, book = false, false // the sacrifice was spent on durability
+		} else if !sameItem && !book {
 			return invStack{}, 0 // incompatible sacrifice
 		}
 		// AnvilMenu.createResult: each sacrifice enchantment must support the
@@ -145,24 +156,26 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 		// not join Sharpness); an incompatible one costs a level and is
 		// dropped. Levels combine upward when equal, capped at the max; the
 		// price is the enchantment's anvil cost per level, halved for a book.
-		applied := false
+		applied, refused := false, false
 		for _, e := range b.ench {
+			if material {
+				break // a diamond carries no enchantments to merge
+			}
 			if e.lvl <= 0 {
 				continue
 			}
-			if !enchIsSupported(e.id, a.item) {
-				cost++
-				continue
-			}
 			cur := int8(res.enchLvl(e.id))
-			var others enchList // what the target carries besides e itself
-			for i, x := range res.ench {
-				if x.lvl > 0 && x.id != e.id {
-					others[i] = x
+			// An enchanted BOOK takes anything (that is how a book library is
+			// built); anything else takes only what its item supports.
+			ok := a.item == itemEnchantedBook || enchIsSupported(e.id, a.item)
+			for _, x := range res.ench { // …and only what it is compatible with
+				if x.lvl > 0 && x.id != e.id && !enchCompatible(e.id, x.id) {
+					ok = false
+					cost++ // each clash costs a level even though nothing lands
 				}
 			}
-			if !enchCompatibleWith(e.id, others) {
-				cost++
+			if !ok {
+				refused = true
 				continue
 			}
 			lvl := e.lvl
@@ -181,9 +194,12 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 			res = withEnch(res, e.id, lvl)
 			cost += per * int(lvl)
 			applied = true
+			if a.count > 1 {
+				cost = anvilMaxCost // a stack is never worth enchanting
+			}
 		}
-		if book && !applied {
-			return invStack{}, 0 // nothing on the book applies to this item
+		if refused && !applied {
+			return invStack{}, 0 // nothing on the sacrifice applies to this item
 		}
 		if sameItem && a.dmg > 0 {
 			if max, ok := itemMaxDurability[a.item]; ok {
@@ -210,8 +226,17 @@ func anvilResult(a, b invStack, rename string) (invStack, int) {
 			rc = b.repairCost
 		}
 	}
+	onlyRenaming := renameCost > 0 && renameCost == cost
 	cost += prior
-	res.repairCost = rc*2 + 1
+	if onlyRenaming {
+		// A pure rename is the one anvil job that stays affordable forever:
+		// vanilla caps it at 39 and leaves the item's repair cost alone.
+		if cost >= anvilMaxCost {
+			cost = anvilMaxCost - 1
+		}
+	} else {
+		res.repairCost = rc*2 + 1
+	}
 	if cost < 1 {
 		cost = 1
 	}
@@ -235,26 +260,117 @@ func withEnch(st invStack, id, lvl int8) invStack {
 	return st
 }
 
-// grindResult strips enchantments from whichever input holds an item; the
-// second return is the XP refund banked for the take.
+// grindResult is GrindstoneMenu.computeResult: one item comes out stripped
+// of everything but its curses, and two of the same item are merged into
+// one whose durability is what both had left plus five per cent of the
+// maximum. The second return is the XP the grindstone gives back.
 func grindResult(a, b invStack) (invStack, int) {
+	if a.count > 1 || b.count > 1 {
+		return invStack{}, 0 // a stack is never ground
+	}
+	refund := grindXP(a) + grindXP(b)
+	switch {
+	case a.item != 0 && b.item != 0:
+		res, ok := grindMerge(a, b)
+		if !ok {
+			return invStack{}, 0
+		}
+		return res, refund
+	case a.item == 0 && b.item == 0:
+		return invStack{}, 0
+	}
 	src := a
 	if src.item == 0 {
 		src = b
 	}
-	if src.item == 0 || !src.enchanted() {
-		return invStack{}, 0
+	if !src.enchanted() {
+		return invStack{}, 0 // nothing to take off
 	}
-	refund := 0
-	for _, e := range src.ench {
-		refund += int(e.lvl) * grindXPPerLevel
-	}
+	return grindStripped(src), refund
+}
+
+// grindStripped is removeNonCursesFrom: the curses stay, which is the
+// whole reason a cursed helmet cannot be cleaned up on a grindstone.
+func grindStripped(src invStack) invStack {
 	res := src
 	res.ench = enchList{}
-	if res.item == itemEnchantedBook {
+	kept := 0
+	for _, e := range src.ench {
+		if e.lvl > 0 && enchDefs[e.id].flags&enchCurse != 0 {
+			res.ench[kept] = e
+			kept++
+		}
+	}
+	if res.item == itemEnchantedBook && kept == 0 {
 		res.item = itemBook
 	}
-	return res, refund
+	// The prior-work cost is rebuilt from what is left rather than cleared:
+	// one calculateIncreasedRepairCost step per surviving curse, so a clean
+	// item comes off at 0 and a cursed one keeps a small anvil penalty.
+	res.repairCost = 0
+	for i := 0; i < kept; i++ {
+		res.repairCost = res.repairCost*2 + 1
+	}
+	return res
+}
+
+// grindMerge is GrindstoneMenu.mergeItems: two of the same item become one
+// with both their remaining durability and a five-per-cent bonus.
+func grindMerge(a, b invStack) (invStack, bool) {
+	if a.item != b.item {
+		return invStack{}, false
+	}
+	max, damageable := itemMaxDurability[a.item]
+	if !damageable {
+		// Two undamageable copies merge only when they are identical down to
+		// the components and actually stack — then the pair comes out as one
+		// stack of two, stripped.
+		if stackCap(a.item) < 2 || a != b {
+			return invStack{}, false
+		}
+		res := grindMergeEnch(a, b)
+		res.count = 2
+		return res, true
+	}
+	left := (max - a.dmg) + (max - b.dmg) + max*5/100
+	res := grindMergeEnch(a, b)
+	res.dmg = max - left
+	if res.dmg < 0 {
+		res.dmg = 0
+	}
+	res.count = 1
+	return res, true
+}
+
+// grindMergeEnch is mergeEnchantsFrom followed by removeNonCursesFrom: the
+// second item's curses come across too (a cursed sacrifice infects the
+// result), everything else is ground off.
+func grindMergeEnch(a, b invStack) invStack {
+	res := a
+	for _, e := range b.ench {
+		if e.lvl <= 0 || enchDefs[e.id].flags&enchCurse == 0 {
+			continue
+		}
+		if cur := int8(res.enchLvl(e.id)); cur != 0 {
+			continue // upgrade skips a curse the target already carries
+		}
+		res = withEnch(res, e.id, e.lvl)
+	}
+	return grindStripped(res)
+}
+
+// grindXP is getExperienceFromItem: the sum of each non-curse
+// enchantment's minimum cost at the level it sits on, which is what the
+// grindstone hands back (halved and jittered by the caller's roll).
+func grindXP(st invStack) int {
+	n := 0
+	for _, e := range st.ench {
+		if e.lvl <= 0 || enchDefs[e.id].flags&enchCurse != 0 {
+			continue
+		}
+		n += enchDefs[e.id].minCost(int(e.lvl))
+	}
+	return n
 }
 
 // takeTwoSlotResult handles a click on the result slot: enforce the level
@@ -282,19 +398,31 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked, mode int
 			t.xpLevel -= cost
 			h.sendExperience(t)
 		}
+		// AnvilMenu.onTake: a material repair eats only repairItemCountCost of
+		// the stack (three diamonds out of a stack of sixty-four), everything
+		// else eats the whole sacrifice.
+		_, used, _, material := anvilMaterialRepair(t.anvil[0], t.anvil[1])
 		consumed := t.anvil[1].item == itemEnchantedBook || t.anvil[1].item == t.anvil[0].item
 		t.anvil[0] = invStack{}
-		if consumed {
+		switch {
+		case material:
+			if t.anvil[1].count -= used; t.anvil[1].count <= 0 {
+				t.anvil[1] = invStack{}
+			}
+		case consumed:
 			t.anvil[1] = invStack{}
 		}
 		h.wearAnvil(players, t) // AnvilMenu.onTake: one use in eight chips it; the sound rides the event
-	} else { // grindstone: refund XP for the stripped enchantments
-		if t.anvil[0].item != 0 {
-			t.anvil[0] = invStack{}
-		} else {
-			t.anvil[1] = invStack{}
+	} else { // grindstone: both inputs go in, and the XP comes back
+		both := t.anvil[0].item != 0 && t.anvil[1].item != 0
+		t.anvil[0], t.anvil[1] = invStack{}, invStack{}
+		_ = both
+		// getExperienceAmount: half the enchantments' worth, plus a roll of
+		// the same again — so the same gear never pays out quite the same.
+		if cost > 0 {
+			half := (cost + 1) / 2 // ceil(n/2)
+			h.spawnXPOrb(players, half+h.rng.Intn(half), t.x, t.y, t.z)
 		}
-		h.spawnXPOrb(players, cost, t.x, t.y, t.z)
 		h.playSound(players, "minecraft:block.grindstone.use", sndBlock, t.x, t.y, t.z, 1, 1)
 	}
 	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click

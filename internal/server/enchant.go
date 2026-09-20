@@ -1,6 +1,8 @@
 package server
 
 import (
+	"math/rand"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -123,7 +125,13 @@ func (h *hub) countBookshelves(pos simPos) int {
 				continue // only the outer ring counts
 			}
 			for dy := 0; dy <= 1; dy++ {
-				if w.At(pos.x+dx, pos.y+dy, pos.z+dz) == bookshelfState {
+				// EnchantingTableBlock.isValidBookShelf: the shelf counts only
+				// when the cell halfway to it transmits the power, i.e. is
+				// #replaceable — a wall between table and shelf blocks it.
+				if w.At(pos.x+dx, pos.y+dy, pos.z+dz) != bookshelfState {
+					continue
+				}
+				if worldgen.IsReplaceable(w.At(pos.x+dx/2, pos.y+dy, pos.z+dz/2)) {
 					n++
 				}
 			}
@@ -144,16 +152,25 @@ func (h *hub) rollEnchOptions(t *tracked) {
 	// clue is one random member of the selection that row would apply.
 	if enchantabilityOf(item.item) > 0 && item.count > 0 && !item.enchanted() {
 		b := h.countBookshelves(t.winPos)
+		// The offers come from the player's own enchantment seed rather than
+		// the world's rolling one: vanilla holds that seed until something is
+		// enchanted, so closing the table and opening it again shows the same
+		// three offers instead of a fresh set to fish through.
+		if t.enchSeed == 0 {
+			t.enchSeed = int32(h.rng.Intn(1<<30)) + 1
+		}
+		costRNG := rand.New(rand.NewSource(int64(t.enchSeed)))
 		for i := range t.enchOpts {
-			cost := enchTableCost(h.rng, i, b, item.item)
+			cost := enchTableCost(costRNG, i, b, item.item)
 			if cost < i+1 {
 				continue
 			}
-			list := enchSelect(h.rng, item.item, cost, enchTableAllowed)
+			rowRNG := rand.New(rand.NewSource(int64(t.enchSeed) + int64(i)))
+			list := h.enchTableList(rowRNG, item, cost)
 			if len(list) == 0 {
 				continue
 			}
-			clue := list[h.rng.Intn(len(list))]
+			clue := list[rowRNG.Intn(len(list))]
 			t.enchOpts[i] = enchOption{cost: cost, id: clue.id, lvl: clue.lvl}
 			t.enchLists[i] = list
 		}
@@ -170,7 +187,7 @@ func (h *hub) rollEnchOptions(t *tracked) {
 		prop(4+i, hintID)  // 4-6: enchantment hover hint
 		prop(7+i, hintLvl) // 7-9: hint level
 	}
-	prop(3, h.rng.Intn(1<<15)) // seed: drives the galactic glyph animation
+	prop(3, int(t.enchSeed)) // seed: drives the galactic glyph animation
 }
 
 // handleEnchant applies a clicked option: validate, pay, enchant.
@@ -199,9 +216,12 @@ func (h *hub) handleEnchant(players map[int32]*tracked, t *tracked, button int32
 	if item.item == itemBook {                     // a book takes the enchant as a STORED one
 		item.item = itemEnchantedBook
 	}
+	// Player.onEnchantmentPerformed: spending the levels also burns the seed,
+	// so the next item gets a fresh three rather than the same offers again.
+	t.enchSeed = int32(h.rng.Intn(1<<30)) + 1
 	h.sendEnchantWindow(t)
 	h.rollEnchOptions(t) // now enchanted → all rows switch off
-	h.playSound(players, "minecraft:block.enchantment_table.use", sndBlock, t.x, t.y, t.z, 1, 1)
+	h.playSound(players, "minecraft:block.enchantment_table.use", sndBlock, t.x, t.y, t.z, 1, h.rng.Float32()*0.1+0.9)
 	h.advance(players, t, "enchanted_item", advMatch{})
 	h.incCustom(t, "enchant_item", 1)
 	h.bus.publish("enchant", map[string]any{"name": t.p.name, "item": item.item, "ench": int(opt.id), "lvl": int(opt.lvl)})
@@ -229,4 +249,16 @@ func (h *hub) reclaimEnchant(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	t.enchOpts = [3]enchOption{}
+}
+
+// enchTableList is EnchantmentMenu.getEnchantmentList: the selection a row
+// would apply, minus one random member when the item is a plain book (which is
+// why a book's offer is usually a single enchantment).
+func (h *hub) enchTableList(r *rand.Rand, item invStack, cost int) []enchInstance {
+	list := enchSelect(r, item.item, cost, enchTableAllowed)
+	if item.item == itemBook && len(list) > 1 {
+		i := r.Intn(len(list))
+		list = append(list[:i], list[i+1:]...)
+	}
+	return list
 }

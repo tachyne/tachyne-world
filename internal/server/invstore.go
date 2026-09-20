@@ -31,6 +31,10 @@ type savedInv struct {
 	Ender    [27]stackRow `json:"ender,omitempty"`
 	XPLevel  int32        `json:"xp_level,omitempty"`
 	XPPoints int32        `json:"xp_points,omitempty"`
+	// Player.enchantmentSeed (vanilla's XpSeed): the enchanting table's three
+	// offers are a function of it, so it has to outlive the session or a
+	// relog would reshuffle a roll the player was saving up for.
+	EnchSeed int32 `json:"ench_seed,omitempty"`
 
 	// Last position (restored on login, vanilla-style: you log back in where
 	// you logged out). HasPos distinguishes a real saved position from a legacy
@@ -154,6 +158,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 		t.enderChest().slots[i] = unpackStack(row)
 	}
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
+	t.enchSeed = saved.EnchSeed
 }
 
 // savedPos returns a player's last saved position (ok=false for a new player
@@ -195,7 +200,7 @@ func (s *invStore) record(name string, t *tracked) {
 		return
 	}
 	snap := &savedInv{Offhand: packStack(t.offhand),
-		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints),
+		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true

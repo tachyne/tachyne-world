@@ -14,6 +14,26 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Anvils repair with materials, grindstones behave, enchanting offers
+  hold.** Three benches that looked right and quietly were not. An anvil
+  could only ever combine two of the same item, so a half-worn diamond
+  pickaxe could not be mended with diamonds — the ordinary way anyone
+  repairs gear. It now takes the item's own material, a quarter of the
+  bar back per ingot, gem or plank, one level each and only as many as it
+  needs out of the stack; two enchanted books merge into one, which is
+  how a library is built; and a rename on its own is capped at
+  thirty-nine levels and no longer pushes the item further up the
+  prior-work ladder. The grindstone stripped curses along with everything
+  else — a curse surviving the grindstone is the whole point of a curse —
+  dropped the second item's durability instead of merging it with a five
+  per cent bonus, and paid a flat amount of experience. Now curses from
+  both inputs stay, durability combines, and the experience handed back
+  is what the enchantments it removed were worth to begin with. At the
+  enchanting table, a bookshelf only counts when the cell halfway to it is
+  open, so a wall between shelf and table no longer powers it, and the
+  three offers now come from a seed the player keeps: they hold across
+  closing the table and logging out, and are spent only when something is
+  enchanted, instead of reshuffling on every open.
 - **Wild sugar cane, pumpkins, melons, springs and the stone variants.**
   Five families of feature the generator never placed, and their absence
   reached well past the scenery. With no wild cane there was no paper, so
