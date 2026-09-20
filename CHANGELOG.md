@@ -14,6 +14,24 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **Mobs look around, call for help, amble at their own pace, keep to the
+  dark and hunt more than players.** Five defaults that vanilla gives
+  almost every mob were missing, which left eighty-odd species short of
+  their behaviour. Mobs now turn their heads: a cow watches you from six
+  blocks, a zombie from eight, a pillager from fifteen, and between glances
+  they look about at random — the head turns, not the body, as vanilla's
+  look control has it. A blow on a zombie, silverfish, blaze, vex, pillager,
+  wolf, bee or panda rouses its neighbours within follow range, and a
+  husk's cry carries to zombies and drowned (though never to a zombified
+  piglin, the one vanilla excludes by name). An idle amble runs at the
+  stroll goal's own speed, so a ravager lumbers at four tenths of its pace
+  and a horse at seven. Monsters pick their wandering by how dark it is,
+  drifting into the shade rather than out into the torchlight. And the
+  target classes below the player are in: zombies and raiders go for
+  villagers and iron golems, a drowned for axolotls, an enderman for
+  endermites, a guardian for squid, a fox for chickens and fish, a polar
+  bear for foxes, and the skeleton and zombie families for baby turtles
+  caught on land.
 - **The offhand works, and status effects show their icons.** The attach
   frame for a right-click carried no hand, so the gateway's was thrown
   away and everything in the offhand was dead — above all a shield, which

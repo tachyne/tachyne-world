@@ -376,7 +376,7 @@ type mob struct {
 	frozen                          bool       // creaking: a player is watching, so it cannot move
 	tx, tz                          float64    // that target's position (set by acquireTarget)
 	dim                             int        // dimension this mob lives in (0 overworld, 1 nether)
-	villagerTarget                  int32      // zombie: the villager it hunts when no player is near (0 = none)
+	preyTarget                      int32      // the creature it hunts when no player is near (0 = none)
 	converting                      int        // zombie villager: ticks left in its cure (0 = not curing)
 	curer                           string     // zombie villager: who fed it the golden apple
 	gossipAt                        uint64     // villager: tick of its last chat (Villager.lastGossipTime)
@@ -397,6 +397,12 @@ type mob struct {
 	x, y, z     float64
 	yaw         float32
 	syaw        float32 // last broadcast head yaw (only resend on change)
+	headYaw     float32 // where the head is pointed (LookControl); the body yaw when nothing is watched
+	sheadYaw    float32 // last broadcast head yaw
+	lookTicks   int32   // ticks left on a look goal (0 = neither is running)
+	lookEID     int32   // the player being watched (0 = a fixed direction)
+	lookDX      float64 // RandomLookAroundGoal's direction
+	lookDZ      float64
 	vx, vz      float64
 	vy          float64  // vertical velocity (swimmers/fliers only)
 	pushX       float64  // crowding shove (push.go), held apart from the steering
@@ -733,7 +739,14 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			dvx, dvz := m.behavior.steer(h, m)
 			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
 			m.vz = m.vz*0.85 + dvz*0.15
-			if cap := m.moveSpeed(); math.Hypot(m.vx, m.vz) > cap {
+			// An amble runs at the stroll goal's own speed — a ravager
+			// lumbers at 0.4 of its pace, a horse at 0.7 — while a mob with
+			// somewhere to be (a hunt, a mate) moves at its full speed.
+			cap := m.moveSpeed()
+			if !busy {
+				cap *= strollSpeed(m)
+			}
+			if math.Hypot(m.vx, m.vz) > cap {
 				sp := math.Hypot(m.vx, m.vz)
 				m.vx, m.vz = m.vx/sp*cap, m.vz/sp*cap
 			}
@@ -849,6 +862,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
 			}
 		}
+		// LookAtPlayerGoal / RandomLookAroundGoal: the head watches a player
+		// or glances around while the body goes on about its business.
+		h.idleLook(players, m)
 
 		// Only emit when the mob actually moved — broadcasting a no-op move
 		// every tick for every mob overflows slow clients' send queues. The
@@ -874,7 +890,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if math.Abs(float64(m.yaw-m.syaw)) > 8 {
 			m.syaw = m.yaw
 			h.toNearbyEv(players, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-			h.toNearbyEv(players, m.dim, m.x, m.z, entHead(m.eid, m.yaw))
+		}
+		// The head is its own rotation: a mob watching a player turns it
+		// without turning the body (vanilla's ClientboundRotateHeadPacket).
+		if math.Abs(float64(m.headYaw-m.sheadYaw)) > 8 {
+			m.sheadYaw = m.headYaw
+			h.toNearbyEv(players, m.dim, m.x, m.z, entHead(m.eid, m.headYaw))
 		}
 		if m.etype == entityEnderDragon {
 			continue // the dragon flies on its own update (updateDragon)

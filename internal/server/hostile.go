@@ -255,17 +255,19 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	}
 	if t := h.huntTarget(players, m, reach); t != nil { // mustSee: a player it can see, or one remembered
 		m.hasTarget, m.tx, m.tz = true, t.x, t.z
-		m.villagerTarget = 0
+		m.preyTarget = 0
 	} else if tx, tz, ok := h.nearestQuarry(noPlayers, m.dim, m.x, m.z, reach); ok { // a shadow over the seam: no blocks are known across it to see through
 		m.hasTarget, m.tx, m.tz = true, tx, tz
-		m.villagerTarget = 0
-	} else if zombieKind(m.etype) {
-		// No player: a zombie turns on the nearest villager (vanilla's
-		// AbstractVillager target goal sits right below the player one).
-		if v := h.nearestVillager(m, zombieVillagerHunt); v != nil {
-			m.hasTarget, m.tx, m.tz, m.villagerTarget = true, v.x, v.z, v.eid
+		m.preyTarget = 0
+	} else if huntsPrey(m.etype) {
+		// No player: whatever else this species hunts — the villagers and
+		// iron golems a zombie or a raider goes for, an enderman's
+		// endermite, a guardian's squid, a fox's chickens (vanilla's other
+		// NearestAttackableTargetGoals, which sit below the player one).
+		if v := h.nearestPrey(m, preyReach(m)); v != nil {
+			m.hasTarget, m.tx, m.tz, m.preyTarget = true, v.x, v.z, v.eid
 		} else {
-			m.hasTarget, m.villagerTarget = false, 0
+			m.hasTarget, m.preyTarget = false, 0
 		}
 	} else {
 		m.hasTarget = false
@@ -326,8 +328,8 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, attackReach)
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
-		if t == nil && m.villagerTarget != 0 {
-			h.zombieBitesVillager(players, m) // no player in reach: the villager it hunts
+		if t == nil && m.preyTarget != 0 {
+			h.mobBitesPrey(players, m) // no player in reach: the creature it hunts
 		}
 		return
 	}

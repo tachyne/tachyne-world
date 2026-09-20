@@ -54,18 +54,7 @@ func (h *hub) nearestVillager(m *mob, r float64) *mob {
 // zombieBitesVillager is the mob-vs-mob bite: a zombie with a villager
 // target in reach hits it; a killing bite infects on Normal (half the time)
 // and Hard (always), and simply kills on Easy.
-func (h *hub) zombieBitesVillager(players map[int32]*tracked, m *mob) bool {
-	if m.villagerTarget == 0 {
-		return false
-	}
-	v := h.mobs[m.villagerTarget]
-	if v == nil || v.dying > 0 || v.etype != entityVillager {
-		m.villagerTarget = 0
-		return false
-	}
-	if dist3(v.x, v.y, v.z, m.x, m.y, m.z) > attackReach+0.5 {
-		return false
-	}
+func (h *hub) zombieBitesVillager(players map[int32]*tracked, m, v *mob) bool {
 	m.attackCD = attackCooldown
 	h.toNearbyEv(players, m.dim, m.x, m.z, swingArm(m.eid))
 	v.hurt(float64((hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()))
@@ -86,7 +75,7 @@ func (h *hub) zombieBitesVillager(players map[int32]*tracked, m *mob) bool {
 	default:
 		h.killMob(players, v)
 	}
-	m.villagerTarget = 0
+	m.preyTarget = 0
 	return true
 }
 

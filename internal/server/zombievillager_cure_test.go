@@ -23,9 +23,9 @@ func TestZombieVillagerInfectionAndCure(t *testing.T) {
 	if z == nil || v == nil {
 		t.Fatal("spawns")
 	}
-	z.villagerTarget = v.eid
+	z.preyTarget = v.eid
 	v.health = 1
-	if !h.zombieBitesVillager(players, z) {
+	if !h.mobBitesPrey(players, z) {
 		t.Fatal("the zombie should bite the villager in reach")
 	}
 	var zv *mob
@@ -98,9 +98,9 @@ func TestZombieBiteOnEasyAndVillagerFlee(t *testing.T) {
 		t.Errorf("the villager should run west, away from the zombie: fleeing=%v vx=%.2f", fleeing, vx)
 	}
 	z.x = 11.5
-	z.villagerTarget = v.eid
+	z.preyTarget = v.eid
 	v.health = 1
-	h.zombieBitesVillager(players, z)
+	h.mobBitesPrey(players, z)
 	if v.dying == 0 {
 		t.Error("on Easy the villager dies")
 	}

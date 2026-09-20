@@ -66,7 +66,7 @@ func (wanderBehavior) steer(h *hub, m *mob) (float64, float64) {
 	vx := m.vx + (h.rng.Float64()*2-1)*wander
 	vz := m.vz + (h.rng.Float64()*2-1)*wander
 	if math.Hypot(vx, vz) < mobSpeed*0.5 { // nudge so they keep ambling, not freeze
-		ang := h.rng.Float64() * 2 * math.Pi
+		ang := h.strollAngle(m) // a monster's draw leans toward the dark
 		vx += math.Cos(ang) * mobSpeed
 		vz += math.Sin(ang) * mobSpeed
 	}
