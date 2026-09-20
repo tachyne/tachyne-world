@@ -1485,6 +1485,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.handleBugEvent(t, e)
 				}
+			case evTitle:
+				h.onTitle(players, e)
 			case evBugList:
 				if t := players[e.eid]; t != nil {
 					h.showBugList(t)

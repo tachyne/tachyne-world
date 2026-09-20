@@ -34,7 +34,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /bug" +
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /title /bug" +
 			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -55,6 +55,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdParticle(p, fields[1:])
 	case "bug":
 		s.cmdBug(p, fields[1:])
+	case "title":
+		s.cmdTitle(p, fields[1:])
 	case "say":
 		if len(fields) > 1 {
 			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})

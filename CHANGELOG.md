@@ -120,6 +120,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **`/title` works.** The big words across the middle of the screen were the
+  one part of the player-facing display the server could not drive at all.
+  `/title <who> title|subtitle|actionbar <text>`, `times <fade in> <stay>
+  <fade out>`, and `clear`/`reset` — vanilla's own shape, with tab
+  completion.
 - **The dragon, the wither and a raid each get their own boss bar.** All
   three were drawn the same purple bar, so the only way to tell which fight
   you were in was to look at what was hitting you. The dragon's is pink now,
