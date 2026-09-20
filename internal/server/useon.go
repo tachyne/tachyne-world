@@ -21,16 +21,9 @@ var (
 	itemEndCrystal = itemByName["end_crystal"]
 )
 
-// entityNameOf is the registry name of an entity type (the rules file keys
-// spawner choices by name, which survives an id renumbering).
-func entityRegistryName(et int) string {
-	for name, id := range entityByName {
-		if id == et {
-			return name
-		}
-	}
-	return ""
-}
+// entityRegistryName is the registry name of an entity type (the rules file
+// keys spawner choices by name, which survives an id renumbering).
+func entityRegistryName(et int) string { return entityNameByID[et] }
 
 // faceDelta is the unit offset of a clicked face (vanilla direction ids:
 // down, up, north, south, west, east).
@@ -163,6 +156,9 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	}
 	h.rules.SpawnerMobs[spawnerKey(t.dim, e.x, e.y, e.z)] = entityRegistryName(et)
 	h.saveRules()
+	// The cage shows what it will spawn from now on, without waiting for the
+	// spawner's own cadence to come round.
+	h.showSpawner(players, t.dim, blockPos{e.x, e.y, e.z}, et)
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}

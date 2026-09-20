@@ -71,6 +71,8 @@ func (h *hub) updateFortressSpawners(players map[int32]*tracked) {
 			if nw.At(s[0], s[1], s[2]) != spawnerState {
 				continue // mined out
 			}
+			h.showSpawner(players, dimNether, pos,
+				h.spawnerMobFor(dimNether, s[0], s[1], s[2], entityBlaze)) // the blaze turning in the cage
 			key := simPos{dim: dimNether, blockPos: pos}
 			if next, ok := h.spawnerNext[key]; ok && now < next {
 				continue

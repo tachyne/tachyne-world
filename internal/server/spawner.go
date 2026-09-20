@@ -48,7 +48,9 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				if h.world.At(d.X, d.Y, d.Z) != worldgen.BlockBase("spawner") { // mined out → dead spawner
 					continue
 				}
-				key := simPos{blockPos: pos} // dungeons are overworld
+				etype := h.spawnerMobFor(0, d.X, d.Y, d.Z, dungeonMobs[d.Mob%3])
+				h.showSpawner(players, 0, pos, etype) // the mob turning in the cage
+				key := simPos{blockPos: pos}          // dungeons are overworld
 				if next, ok := h.spawnerNext[key]; ok && now < next {
 					continue
 				}
@@ -62,7 +64,6 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				if near >= spawnerMobCap {
 					continue
 				}
-				etype := h.spawnerMobFor(0, d.X, d.Y, d.Z, dungeonMobs[d.Mob%3])
 				for i := 0; i < spawnerCount; i++ { // vanilla: 4 spawn attempts per cycle
 					sx := float64(d.X-d.W) + h.rng.Float64()*float64(2*d.W) + 0.5
 					sz := float64(d.Z-d.D) + h.rng.Float64()*float64(2*d.D) + 0.5

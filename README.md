@@ -371,7 +371,8 @@ multi-pod plan).
 
 **World structures**
 - Surface lakes (water, occasionally lava), buried dungeons — cobblestone
-  spawner rooms with live mob spawners and loot chests — mineshaft networks
+  spawner rooms with live mob spawners (each showing the mob turning in its
+  cage, as vanilla's do) and loot chests — mineshaft networks
   (plank corridors, fence supports, cobwebs, rails) and crumbling surface
   ruins; all pure functions of the seed, so chunks agree without shared state
 - Structure chests fill on first open from the real vanilla loot tables

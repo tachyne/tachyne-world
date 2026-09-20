@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -218,5 +219,84 @@ func TestBootSweepClearsStalePower(t *testing.T) {
 	}
 	if s := w.At(x, y-1, z+1); isPistonBase(s) && boolProp(s, "extended") {
 		t.Error("the piston is still out after the sweep")
+	}
+}
+
+// Legion's report #5, rebuilt from its capture: a LONG dust line with the
+// pistons beside it, fed from one end, and a second lever at the far end.
+// The question the report raises is whether the line decays all the way to
+// nothing when its source goes — a line that settled on a residual gradient
+// would hold the pistons out forever and look exactly like this.
+//
+// Built HIGH on its own platform, not on redSetup's surface pad: replacing a
+// pad cell with a lever opens a hole the sea flows into, and the lever is
+// simply washed away mid-test.
+func TestLongDustLineDecaysToNothing(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.world
+	players := map[int32]*tracked{}
+	const (
+		cells   = 12
+		pistons = 6
+		x, y, z = 40, 180, 40
+	)
+	for i := -2; i <= cells+2; i++ { // the platform the whole rig stands on
+		for dz := -1; dz <= 2; dz++ {
+			w.SetBlock(x+i, y-1, z+dz, worldgen.Stone)
+			for dy := 0; dy <= 2; dy++ {
+				w.SetBlock(x+i, y+dy, z+dz, worldgen.Air)
+			}
+			w.SetBlock(x+i, y-2, z+dz, worldgen.Air) // room under the piston heads
+			w.SetBlock(x+i, y-3, z+dz, worldgen.Air)
+		}
+	}
+	for i := 0; i < cells; i++ {
+		w.SetBlock(x+i, y, z, dust(t))
+	}
+	for i := 0; i < pistons; i++ { // the piston row beside it
+		w.SetBlock(x+i, y, z+1, worldgen.Stone)  // the block over each base
+		w.SetBlock(x+i, y-1, z+1, downPiston(t)) // the piston, facing down
+	}
+	// The source: a lever on the block under the WEST end of the line.
+	west := blockPos{x - 1, y - 1, z}
+	w.SetBlock(west.x, west.y, west.z, wallLever(t, "west"))
+	// …and a second lever at the EAST end, the one being flipped in the report.
+	east := blockPos{x + cells, y - 1, z}
+	w.SetBlock(east.x, east.y, east.z, wallLever(t, "east"))
+
+	h.toggleLever(players, west, w.At(west.x, west.y, west.z))
+	stepTicks(h, players, 30)
+	if p := wirePower(w.At(x, y, z)); p != 15 {
+		t.Fatalf("setup: the first dust cell reads %d, want 15", p)
+	}
+	for i := 0; i < pistons; i++ {
+		if !boolProp(w.At(x+i, y-1, z+1), "extended") {
+			t.Fatalf("setup: piston %d never extended (dust %d)", i, wirePower(w.At(x+i, y, z)))
+		}
+	}
+
+	// Flipping the FAR lever on and off again must leave the line exactly as
+	// the near one drives it — this is the part that looks like a bug in game.
+	h.toggleLever(players, east, w.At(east.x, east.y, east.z))
+	stepTicks(h, players, 30)
+	h.toggleLever(players, east, w.At(east.x, east.y, east.z))
+	stepTicks(h, players, 30)
+	if p := wirePower(w.At(x, y, z)); p != 15 {
+		t.Errorf("after the far lever was flipped and unflipped the line reads %d, want 15", p)
+	}
+
+	// Now the real source goes off: the whole line must reach zero, every
+	// cell of it, and every piston must come back.
+	h.toggleLever(players, west, w.At(west.x, west.y, west.z))
+	stepTicks(h, players, 60)
+	for i := 0; i < cells; i++ {
+		if p := wirePower(w.At(x+i, y, z)); p != 0 {
+			t.Errorf("dust cell %d still carries %d after the source went off", i, p)
+		}
+	}
+	for i := 0; i < pistons; i++ {
+		if s := w.At(x+i, y-1, z+1); isPistonBase(s) && boolProp(s, "extended") {
+			t.Errorf("piston %d is still out", i)
+		}
 	}
 }

@@ -30,6 +30,12 @@ the public history since the project was open-sourced on 2026-07-10.
   kept, and came back when the box was placed, but nothing said so until
   you put it down again. The box now carries its contents to the client, so
   the first few appear under its name in the tooltip the way they should.
+- **Spawners show what they spawn.** A mob spawner is a cage with a little
+  version of its mob turning inside it — that is how you know a dungeon is a
+  skeleton dungeon before anything walks out of it, and how a fortress
+  throne reads as a blaze spawner. Every spawner in the world was an empty
+  box, because nothing ever told the client what was in it. Now it does,
+  including after a spawn egg changes one.
 - **Fireworks have stars.** A rocket was three gunpowder-and-paper and
   nothing else: it always flew the same short hop and always burst as
   nothing. The gunpowder now sets the flight duration it was always meant

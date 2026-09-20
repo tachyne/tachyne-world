@@ -434,6 +434,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgResync, ev)
 	case attachproto.CampfireItems:
 		send(attachproto.MsgCampfireItems, ev)
+	case attachproto.SpawnerData:
+		send(attachproto.MsgSpawnerData, ev)
 	case attachproto.ShelfItems:
 		send(attachproto.MsgShelfItems, ev)
 	case attachproto.MovingPiston:
