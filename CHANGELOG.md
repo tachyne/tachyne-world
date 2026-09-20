@@ -120,6 +120,9 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **A kick tells you why.** Being kicked put a line in chat and then dropped
+  the connection, so what you actually read was "connection lost". The
+  reason now appears on the disconnect screen, where the real game puts it.
 - **`/title` works.** The big words across the middle of the screen were the
   one part of the player-facing display the server could not drive at all.
   `/title <who> title|subtitle|actionbar <text>`, `times <fade in> <stay>

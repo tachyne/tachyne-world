@@ -82,3 +82,36 @@ func TestTitleCommandRefusals(t *testing.T) {
 		}
 	}
 }
+
+// A kick shows the reason on the disconnect screen rather than a chat line
+// the player never gets to read before the socket closes.
+func TestKickSendsADisconnectScreen(t *testing.T) {
+	for _, tc := range []struct {
+		reason string
+		want   string
+	}{
+		{"building in spawn", "building in spawn"},
+		{"   ", "Kicked by an operator"}, // no reason given still says something
+	} {
+		h := newHub(world.New(1))
+		victim := &tracked{p: newPlayer(2, "Legion", [16]byte{})}
+		by := newPlayer(1, "op", [16]byte{})
+		players := map[int32]*tracked{2: victim}
+		drainEvents(victim)
+
+		h.onKick(players, evKick{by: by, name: "legion", reason: tc.reason})
+
+		var got *attachproto.Disconnect
+		for _, ev := range takeEvents(victim) {
+			if d, ok := ev.(attachproto.Disconnect); ok {
+				got = &d
+			}
+		}
+		if got == nil {
+			t.Fatalf("%q: no disconnect frame was sent", tc.reason)
+		}
+		if got.Reason != tc.want {
+			t.Errorf("%q: the screen says %q, want %q", tc.reason, got.Reason, tc.want)
+		}
+	}
+}

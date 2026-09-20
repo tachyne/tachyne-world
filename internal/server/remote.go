@@ -442,6 +442,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgDefaultSpawn, ev)
 	case attachproto.Title:
 		send(attachproto.MsgTitle, ev)
+	case attachproto.Disconnect:
+		send(attachproto.MsgDisconnect, ev)
 	case attachproto.ShelfItems:
 		send(attachproto.MsgShelfItems, ev)
 	case attachproto.MovingPiston:

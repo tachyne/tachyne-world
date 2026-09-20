@@ -1,6 +1,8 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"fmt"
 	"strconv"
 	"strings"
@@ -66,7 +68,14 @@ func (evKick) isHubEvent() {}
 func (h *hub) onKick(players map[int32]*tracked, e evKick) {
 	for _, t := range players {
 		if strings.EqualFold(t.p.name, e.name) {
-			t.p.trySendEv(chatEv("Kicked: " + e.reason))
+			// The disconnect SCREEN, with the reason on it — a chat line
+			// followed by a dropped socket left the player looking at
+			// "connection lost" and none the wiser.
+			reason := strings.TrimSpace(e.reason)
+			if reason == "" {
+				reason = "Kicked by an operator"
+			}
+			t.p.trySendEv(attachproto.Disconnect{Reason: reason})
 			t.p.disconnect()
 			e.by.trySendEv(chatEv("Kicked " + t.p.name + "."))
 			return
