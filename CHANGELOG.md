@@ -120,6 +120,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **It stays light under water and under trees.** Light was being charged
+  twice over for anything you can see through: each block of water or leaves
+  took two levels off instead of one, so a pond or a canopy went dark at half
+  its real depth — and since hostile mobs spawn in the dark, they were
+  spawning where they should not. Both now cost exactly what the real game
+  charges.
 - **Hitting a mob shoves it as hard as it should.** Knockback was landing at
   half strength: the game measures it in blocks per tick, mobs here take a
   step every second tick, and that number had been stored as the per-step

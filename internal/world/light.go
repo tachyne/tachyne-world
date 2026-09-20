@@ -59,8 +59,16 @@ func propagate(op, level []uint8, queue []int32, effTop int) {
 			if op[j] >= worldgen.Opaque {
 				return
 			}
-			if nl := l - 1 - op[j]; nl > level[j] {
-				level[j] = nl
+			// LayerLightEngine: a step costs max(1, opacity), NOT 1 + opacity.
+			// Charging both made every translucent block cost double, so light
+			// fell away twice as fast through water and under a canopy — dark
+			// (and so mob-spawnable) at half the real depth.
+			cost := int(op[j])
+			if cost < 1 {
+				cost = 1
+			}
+			if nl := int(l) - cost; nl > int(level[j]) {
+				level[j] = uint8(nl)
 				queue = append(queue, int32(j))
 			}
 		}

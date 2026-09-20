@@ -74,7 +74,7 @@ Struck-through rows have landed since the audit; the date says when.
 13. Creature brains: villager trading look/follow, POI acquisition and play; ~~frog spawn~~ (2026-09-20); per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
 14. Loot functions ~~(exploration map, set damage)~~ (2026-09-19), copy/set components; advancement predicate fidelity; per-recipe smelting XP
 15. Effect HUD flags ~~(2026-09-20)~~; ~~trading XP~~ (2026-09-20); the mason's trade pool; ~~the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour~~ (2026-09-19/20)
-16. Aquifers, lava lakes, ravines; ~~springs, ore blobs and the ground-cover features~~ (2026-09-20); ~~dust propagation within the tick~~ (2026-09-19); sky light through translucent blocks
+16. Aquifers, lava lakes and ravines (the only substantial world-generation gap left; changing the generator rewrites land under existing builds, so it needs a decision first); ~~springs, ore blobs and the ground-cover features~~ (2026-09-20); ~~dust propagation within the tick~~ (2026-09-19); ~~sky light through translucent blocks~~ (2026-09-20: light was costing double for water and leaves, so everything under them went dark at half the true depth)
 17. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
 
 ## Versions

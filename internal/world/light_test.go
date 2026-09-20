@@ -174,6 +174,22 @@ func TestSkyLightSeepsDownAMineshaft(t *testing.T) {
 		w.SetBlock(lx+dx, y, lz, worldgen.Air)
 		w.SetBlock(lx+dx, y+1, lz, worldgen.Air)
 	}
+	// Seal it. The shaft must be the ONLY way in, or light seeps through
+	// whatever translucent ground happens to lie over the far end and the
+	// gradient is not the shaft's any more — which is exactly what happened
+	// when the per-block light cost was corrected on 2026-09-20.
+	for dx := 1; dx <= 9; dx++ {
+		for dy := -1; dy <= 2; dy++ {
+			for dz := -1; dz <= 1; dz += 2 {
+				w.SetBlock(lx+dx, y+dy, lz+dz, worldgen.Stone)
+			}
+		}
+		w.SetBlock(lx+dx, y-1, lz, worldgen.Stone)
+		w.SetBlock(lx+dx, y+2, lz, worldgen.Stone)
+	}
+	w.SetBlock(lx+9, y, lz, worldgen.Stone)
+	w.SetBlock(lx+9, y+1, lz, worldgen.Stone)
+
 	ld := w.Light(0, 0)
 	for dx := 0; dx <= 8; dx++ {
 		want := uint8(15 - dx)
