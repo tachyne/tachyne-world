@@ -54,6 +54,15 @@ the public history since the project was open-sourced on 2026-07-10.
   blowing up. Landing on a stalagmite is also its own kind of harm now rather
   than a fall with a different name, so it goes through armour and a shield
   the way it should.
+- **Potions last exactly as long as they should.** Durations were written out
+  in whole seconds where the real game counts ticks, so a strong potion of
+  Poison ran 21 seconds instead of 21.6 and strong Regeneration 22 instead of
+  22.5. The whole table is taken from the game now, tick for tick, and the
+  length carries through a tipped arrow's eighth and a splash potion's falloff
+  the same way.
+- **Every injury has its own sound.** Drowning, burning, freezing and a sweet
+  berry bush each make the noise the real game makes for them; before, one
+  sound covered everything.
 - **Difficulty changes what hurts you, and by how much.** The difficulty used
   to multiply a hostile mob's bite and nothing else, so an explosion, an
   arrow, a fall or a lava bath did the same damage on Peaceful as on Hard,
