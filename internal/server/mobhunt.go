@@ -22,6 +22,10 @@ func mobHuntPrey(m, o *mob) bool {
 		return o.etype != entityZoglin && o.etype != entityCreeper && !o.tamed
 	case entityEnderman:
 		return o.etype == entityEndermite
+	case entityVindicator:
+		// VindicatorJohnnyAttackGoal: a vindicator named Johnny goes for every
+		// living thing it can attack, its own kind included.
+		return m.customName == "Johnny" && o.etype != entityVindicator
 	}
 	return false
 }

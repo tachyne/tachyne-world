@@ -28,6 +28,15 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Illagers behave like raiders.** A pillager charged its crossbow at a
+  dead run; vanilla lets it walk at full pace only with an empty one, so
+  it now closes at half speed while the bolt is on the string. An evoker
+  wandered off mid-spell — it stands to cast now, as its caster goal
+  says, and looks for a fight at its own twelve-block range rather than
+  sixteen. A vindicator was the one illager that did not keep away from
+  a creaking; it does now. And a vindicator named Johnny does what he
+  does in vanilla: attacks every living thing in reach, his own kind
+  excepted.
 - **Skeletons fight at vanilla's distances; ghasts stop chasing.** A
   skeleton backed away from anything closer than five blocks and stood
   still past ten — vanilla's bow goal closes while you are outside

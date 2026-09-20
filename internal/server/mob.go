@@ -620,8 +620,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A drowned going back to the water by day, or ashore after dark.
 		case zombieKind(m.etype) && h.villageDriftStep(players, m):
 			// A zombie walking through the village it stands in, after dark.
-		case (m.etype == entityZoglin || m.etype == entityEnderman) && h.mobHuntStep(players, m):
-			// A zoglin after anything living, an enderman after an endermite.
+		case (m.etype == entityZoglin || m.etype == entityEnderman ||
+			(m.etype == entityVindicator && m.customName == "Johnny")) && h.mobHuntStep(players, m):
+			// A zoglin after anything living, an enderman after an endermite,
+			// a vindicator named Johnny after everything.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
 		case m.etype == entityVillager && h.villagerPickupStep(players, m):

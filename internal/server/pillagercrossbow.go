@@ -49,8 +49,13 @@ func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
 	}
 	d2 := dist3sq(t.x, t.y, t.z, m.x, m.y, m.z)
 	closing := d2 > crossbowRadius*crossbowRadius && m.cbTicks == 0
-	if !closing {
+	switch {
+	case !closing:
 		m.vx, m.vz = 0, 0 // within range: it stands to shoot
+	case m.cbState != cbUncharged:
+		// RangedCrossbowAttackGoal.canRun: it only walks at full pace with an
+		// empty crossbow — charging or loaded, it advances at half speed.
+		m.vx, m.vz = m.vx*0.5, m.vz*0.5
 	}
 	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
 	switch m.cbState {

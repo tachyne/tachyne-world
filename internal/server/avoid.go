@@ -79,6 +79,7 @@ func init() {
 	avoidRules[entityRabbit] = []avoidRule{{10, 2.2, 2.2, wolf}, {4, 2.2, 2.2, monster}}
 	avoidRules[entityIllusioner] = []avoidRule{{8, 1.0, 1.2, creaking}}
 	avoidRules[entityPillager] = []avoidRule{{8, 1.0, 1.2, creaking}}
+	avoidRules[entityVindicator] = []avoidRule{{8, 1.0, 1.2, creaking}}
 	avoidRules[entityEvoker] = []avoidRule{{8, 0.6, 1.0, creaking}}
 }
 

@@ -57,8 +57,11 @@ func (h *hub) evokerCast(players map[int32]*tracked, m *mob) {
 	if h.wololoTick(players, m) {
 		return // a wololo warming up lands first
 	}
+	if m.castLeft > 0 {
+		m.vx, m.vz = 0, 0 // SpellcasterCastingSpellGoal: an evoker stands to cast
+	}
 	now := h.tick.Load()
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, 16)
+	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
 	if t == nil {
 		h.wololoStart(players, m) // nobody to fight: a blue sheep will do
 		return
