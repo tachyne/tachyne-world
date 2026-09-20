@@ -93,7 +93,7 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 // particle and, in vanilla, how the AoE scales.
 func potionIsInstant(kind int8) bool {
 	for _, e := range potionEffects(kind) {
-		if e.secs == 0 {
+		if effectIsInstant(e.id) {
 			return true
 		}
 	}
@@ -107,7 +107,7 @@ func (h *hub) applyPotionAoEMob(players map[int32]*tracked, m *mob, effs []potEf
 		prox = 0
 	}
 	for _, e := range effs {
-		if e.secs == 0 { // instant: the magnitude is what proximity scales
+		if effectIsInstant(e.id) { // instant: the magnitude is what proximity scales
 			mag := prox * float64(int(1)<<e.amp)
 			switch e.id {
 			case effInstantHealth:
@@ -127,8 +127,8 @@ func (h *hub) applyPotionAoEMob(players map[int32]*tracked, m *mob, effs []potEf
 			}
 			continue
 		}
-		if secs := int(float64(e.secs) * factor * prox); secs >= 1 {
-			h.applyMobEffect(players, m, e.id, e.amp, secs)
+		if ticks := int(float64(e.ticks) * factor * prox); ticks >= 1 {
+			h.applyMobEffectTicks(players, m, e.id, e.amp, ticks)
 		}
 	}
 }
@@ -140,7 +140,7 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 		prox = 0
 	}
 	for _, e := range effs {
-		if e.secs == 0 { // instant (Healing): magnitude scales with proximity
+		if effectIsInstant(e.id) { // instant (Healing): magnitude scales with proximity
 			if e.id == effInstantHealth {
 				heal := float32(prox) * 4 * float32(int(1)<<e.amp)
 				t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+float64(heal)))
@@ -150,8 +150,8 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 			}
 			continue
 		}
-		if secs := int(float64(e.secs) * factor * prox); secs >= 1 {
-			h.applyEffect(players, t, e.id, e.amp, secs)
+		if ticks := int(float64(e.ticks) * factor * prox); ticks >= 1 {
+			h.applyEffectTicks(players, t, e.id, e.amp, ticks)
 		}
 	}
 }

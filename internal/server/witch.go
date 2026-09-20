@@ -87,7 +87,7 @@ func (h *hub) witchStartDrink(players map[int32]*tracked, m *mob, kind int8) {
 
 func (h *hub) witchFinishDrink(players map[int32]*tracked, m *mob) {
 	for _, e := range potionEffects(m.drinkKind) {
-		h.applyMobEffect(players, m, e.id, e.amp, e.secs)
+		h.applyMobEffectTicks(players, m, e.id, e.amp, e.ticks)
 	}
 	m.drinkTicks, m.drinkKind, m.held = 0, potNone, 0
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, invStack{}, invStack{}, m.gear))

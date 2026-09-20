@@ -418,11 +418,11 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				// POTION_DURATION_SCALE on tipped_arrow is 0.125 — an arrow
 				// gives an eighth of the bottle's duration, not all of it.
 				for _, e := range potionEffects(a.potion) {
-					secs := int(math.Round(float64(e.secs) * tippedArrowScale))
-					if secs < 1 && e.secs > 0 {
-						secs = 1
+					ticks := int(math.Round(float64(e.ticks) * tippedArrowScale))
+					if ticks < 1 && e.ticks > 0 {
+						ticks = 1
 					}
-					h.applyEffect(players, t, e.id, e.amp, secs)
+					h.applyEffectTicks(players, t, e.id, e.amp, ticks)
 				}
 			}
 			if a.fire {

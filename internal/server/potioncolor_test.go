@@ -104,8 +104,8 @@ func TestPotionComponentCarriesEffects(t *testing.T) {
 			if amp != int32(e.amp) {
 				t.Errorf("effect %d: amplifier %d, want %d", j, amp, e.amp)
 			}
-			if ticks != int32(e.secs*20) {
-				t.Errorf("effect %d: %d ticks, want %d", j, ticks, e.secs*20)
+			if ticks != int32(e.ticks) {
+				t.Errorf("effect %d: %d ticks, want %d", j, ticks, e.ticks)
 			}
 			var flags [4]byte
 			r.Read(flags[:])

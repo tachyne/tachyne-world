@@ -19,7 +19,7 @@ func TestTippedArrowGivesAnEighth(t *testing.T) {
 	a.tipped, a.potion, a.dmg, a.mobShot = true, potSwiftness, 1, true
 	full := 0
 	for _, e := range potionEffects(potSwiftness) {
-		full = e.secs
+		full = e.ticks
 	}
 	if full == 0 {
 		t.Fatal("swiftness should have a duration")
@@ -29,9 +29,9 @@ func TestTippedArrowGivesAnEighth(t *testing.T) {
 	if eff == nil {
 		t.Fatal("the arrow should have applied swiftness")
 	}
-	want := full / 8 * 20 // seconds → ticks, an eighth of the bottle
+	want := full / 8 // POTION_DURATION_SCALE: an eighth of the bottle's ticks
 	if eff.left > want+20 || eff.left < want-20 {
-		t.Errorf("a tipped arrow gives about %d ticks, got %d (bottle is %d s)", want, eff.left, full)
+		t.Errorf("a tipped arrow gives about %d ticks, got %d (the bottle is %d)", want, eff.left, full)
 	}
 }
 

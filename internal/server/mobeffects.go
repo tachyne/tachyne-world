@@ -18,6 +18,11 @@ import (
 
 // applyMobEffect starts (or refreshes) an effect on a mob and tells the
 // watching clients so the particle colours show.
+// applyMobEffectTicks is applyMobEffect in vanilla's own unit.
+func (h *hub) applyMobEffectTicks(players map[int32]*tracked, m *mob, id int32, amp, ticks int) {
+	h.applyMobEffect(players, m, id, amp, (ticks+19)/20) // round up: never lose a tick to the floor
+}
+
 func (h *hub) applyMobEffect(players map[int32]*tracked, m *mob, id int32, amp, secs int) {
 	if m == nil || m.dying > 0 {
 		return
@@ -165,7 +170,7 @@ func (h *hub) arrowEffectsOnMob(players map[int32]*tracked, a *arrowEntity, m *m
 	}
 	if a.tipped {
 		for _, e := range potionEffects(a.potion) {
-			h.applyMobEffect(players, m, e.id, e.amp, e.secs)
+			h.applyMobEffectTicks(players, m, e.id, e.amp, e.ticks)
 		}
 	}
 }

@@ -26,11 +26,11 @@ func TestBrewingChainFollowsVanilla(t *testing.T) {
 		t.Fatalf("swiftness: %+v", swift)
 	}
 	long := step(swift, "redstone")
-	if long.potion != potLongSwiftness || potionEffects(long.potion)[0].secs != 480 {
+	if long.potion != potLongSwiftness || potionEffects(long.potion)[0].ticks != 9600 {
 		t.Fatalf("long swiftness: %+v", long)
 	}
 	strong := step(swift, "glowstone_dust")
-	if strong.potion != potStrongSwiftness || potionEffects(strong.potion)[0].amp != 1 || potionEffects(strong.potion)[0].secs != 90 {
+	if strong.potion != potStrongSwiftness || potionEffects(strong.potion)[0].amp != 1 || potionEffects(strong.potion)[0].ticks != 1800 {
 		t.Fatalf("strong swiftness: %+v", strong)
 	}
 	slow := step(swift, "fermented_spider_eye")
@@ -114,5 +114,50 @@ func TestBrewingIsPerBottle(t *testing.T) {
 	outs, ok = brewResult(b)
 	if !ok || outs[0].item != itemSplashPotion || outs[1].item != itemSplashPotion {
 		t.Errorf("gunpowder splashes every bottle: %+v", outs)
+	}
+}
+
+// The potion table is vanilla's, in vanilla's unit. Two brews are not a whole
+// number of seconds, and writing the table in seconds quietly shortened them.
+func TestPotionDurationsAreVanillaTicks(t *testing.T) {
+	for _, tc := range []struct {
+		kind  int8
+		id    int32
+		amp   int
+		ticks int
+	}{
+		{potStrongPoison, effPoison, 1, 432},     // not 21 s = 420
+		{potStrongRegen, effRegen, 1, 450},       // not 22 s = 440
+		{potSwiftness, effSpeed, 0, 3600},        // 3 minutes
+		{potLongSwiftness, effSpeed, 0, 9600},    // 8 minutes
+		{potStrongSwiftness, effSpeed, 1, 1800},  // 1:30
+		{potSlowness, effSlowness, 0, 1800},      // 1:30
+		{potStrongSlowness, effSlowness, 3, 400}, // 20 s at amplifier 3
+		{potLuck, effLuck, 0, 6000},              // 5 minutes
+		{potHealing, effInstantHealth, 0, 1},     // instant: a one-tick instance
+	} {
+		effs := potionEffects(tc.kind)
+		if len(effs) == 0 {
+			t.Errorf("%s has no effects", potionNames[tc.kind])
+			continue
+		}
+		e := effs[0]
+		if e.id != tc.id || e.amp != tc.amp || e.ticks != tc.ticks {
+			t.Errorf("%s is {%d, %d, %d}, want {%d, %d, %d}",
+				potionNames[tc.kind], e.id, e.amp, e.ticks, tc.id, tc.amp, tc.ticks)
+		}
+	}
+	// Turtle Master is the one that carries two.
+	if effs := potionEffects(potTurtleMaster); len(effs) != 2 ||
+		effs[0].ticks != 400 || effs[1].ticks != 400 || effs[0].amp != 3 || effs[1].amp != 2 {
+		t.Errorf("the Turtle Master is %+v, want slowness IV and resistance III for 400 ticks", effs)
+	}
+	// And an instant potion is told apart by its EFFECT, not by a zero
+	// duration — vanilla gives it a one-tick instance.
+	if !potionIsInstant(potHealing) || !potionIsInstant(potStrongHarming) {
+		t.Error("healing and harming are instant")
+	}
+	if potionIsInstant(potSwiftness) {
+		t.Error("swiftness is not instant")
 	}
 }

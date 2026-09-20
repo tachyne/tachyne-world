@@ -60,9 +60,9 @@ func potionComponentBytes(kind int8) []byte {
 	b := []byte{0, 0} // no potion holder, no custom colour
 	b = protocol.AppendVarInt(b, int32(len(effs)))
 	for _, e := range effs {
-		ticks := int32(e.secs * 20)
-		if e.secs == 0 {
-			ticks = 1 // an instant effect: vanilla's own duration for one
+		ticks := int32(e.ticks)
+		if ticks == 0 {
+			ticks = 1 // vanilla never sends a zero duration
 		}
 		b = protocol.AppendVarInt(b, e.id+1) // holder ref = registry id + 1
 		b = protocol.AppendVarInt(b, int32(e.amp))

@@ -136,10 +136,21 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	h.applyEffectFrom(players, t, id, amp, secs, false)
 }
 
+// applyEffectTicks is applyEffect in the unit vanilla actually stores. A
+// potion's duration is a tick count, and rounding it to whole seconds costs
+// the two that are not a round number.
+func (h *hub) applyEffectTicks(players map[int32]*tracked, t *tracked, id int32, amp, ticks int) {
+	h.applyEffectFrom(players, t, id, amp, ticks, false, true)
+}
+
 // applyEffectFrom is applyEffect with MobEffectInstance's ambient flag: a
 // beacon's and a conduit's effects are ambient, which the client draws with
 // fainter particles and a blue-ringed icon.
-func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, amp, secs int, ambient bool) {
+func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, amp, dur int, ambient bool, inTicks ...bool) {
+	ticks := dur * 20
+	if len(inTicks) > 0 && inTicks[0] {
+		ticks = dur
+	}
 	switch id {
 	case effInstantHealth:
 		heal := float32(4 * (int(1) << amp))
@@ -158,10 +169,10 @@ func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, 
 	if t.effects == nil {
 		t.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > secs*20)) {
+	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > ticks)) {
 		return // a stronger/longer instance is already running (vanilla)
 	}
-	t.effects[id] = &activeEffect{amp: amp, left: secs * 20, ambient: ambient}
+	t.effects[id] = &activeEffect{amp: amp, left: ticks, ambient: ambient}
 	t.applyEffectModifiers(id, amp)
 	if id == effAbsorption {
 		// The buffer fills to the new ceiling the moment the effect lands.
@@ -170,7 +181,7 @@ func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, 
 	if id == effInvisibility || id == effGlowing {
 		h.broadcastPlayerFlags(players, t) // other players have to see it too
 	}
-	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20), Ambient: ambient})
+	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(ticks), Ambient: ambient})
 	if id == effHeroOfVillage {
 		h.advance(players, t, "hero_of_the_village", advMatch{})
 	}

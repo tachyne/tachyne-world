@@ -103,55 +103,6 @@ type potionDef struct {
 	effects []potEffect
 }
 
-var potionDefs = map[int8]potionDef{
-	potWater:              {label: "Water"},
-	potMundane:            {label: "Mundane"},
-	potThick:              {label: "Thick"},
-	potAwkward:            {label: "Awkward"},
-	potNightVision:        {"Night Vision", []potEffect{{effNightVision, 0, 180}}},
-	potLongNightVision:    {"Night Vision", []potEffect{{effNightVision, 0, 480}}},
-	potInvisibility:       {"Invisibility", []potEffect{{effInvisibility, 0, 180}}},
-	potLongInvisibility:   {"Invisibility", []potEffect{{effInvisibility, 0, 480}}},
-	potLeaping:            {"Leaping", []potEffect{{effJumpBoost, 0, 180}}},
-	potLongLeaping:        {"Leaping", []potEffect{{effJumpBoost, 0, 480}}},
-	potStrongLeaping:      {"Leaping", []potEffect{{effJumpBoost, 1, 90}}},
-	potFireRes:            {"Fire Resistance", []potEffect{{effFireRes, 0, 180}}},
-	potLongFireRes:        {"Fire Resistance", []potEffect{{effFireRes, 0, 480}}},
-	potSwiftness:          {"Swiftness", []potEffect{{effSpeed, 0, 180}}},
-	potLongSwiftness:      {"Swiftness", []potEffect{{effSpeed, 0, 480}}},
-	potStrongSwiftness:    {"Swiftness", []potEffect{{effSpeed, 1, 90}}},
-	potSlowness:           {"Slowness", []potEffect{{effSlowness, 0, 90}}},
-	potLongSlowness:       {"Slowness", []potEffect{{effSlowness, 0, 240}}},
-	potStrongSlowness:     {"Slowness", []potEffect{{effSlowness, 3, 20}}},
-	potTurtleMaster:       {"the Turtle Master", []potEffect{{effSlowness, 3, 20}, {effResistance, 2, 20}}},
-	potLongTurtleMaster:   {"the Turtle Master", []potEffect{{effSlowness, 3, 40}, {effResistance, 2, 40}}},
-	potStrongTurtleMaster: {"the Turtle Master", []potEffect{{effSlowness, 5, 20}, {effResistance, 3, 20}}},
-	potWaterBreathing:     {"Water Breathing", []potEffect{{effWaterBreathing, 0, 180}}},
-	potLongWaterBreathing: {"Water Breathing", []potEffect{{effWaterBreathing, 0, 480}}},
-	potHealing:            {"Healing", []potEffect{{effInstantHealth, 0, 0}}},
-	potStrongHealing:      {"Healing", []potEffect{{effInstantHealth, 1, 0}}},
-	potHarming:            {"Harming", []potEffect{{effInstantDamage, 0, 0}}},
-	potStrongHarming:      {"Harming", []potEffect{{effInstantDamage, 1, 0}}},
-	potPoison:             {"Poison", []potEffect{{effPoison, 0, 45}}},
-	potLongPoison:         {"Poison", []potEffect{{effPoison, 0, 90}}},
-	potStrongPoison:       {"Poison", []potEffect{{effPoison, 1, 21}}},
-	potRegen:              {"Regeneration", []potEffect{{effRegen, 0, 45}}},
-	potLongRegen:          {"Regeneration", []potEffect{{effRegen, 0, 90}}},
-	potStrongRegen:        {"Regeneration", []potEffect{{effRegen, 1, 22}}},
-	potStrength:           {"Strength", []potEffect{{effStrength, 0, 180}}},
-	potLongStrength:       {"Strength", []potEffect{{effStrength, 0, 480}}},
-	potStrongStrength:     {"Strength", []potEffect{{effStrength, 1, 90}}},
-	potWeakness:           {"Weakness", []potEffect{{effWeakness, 0, 90}}},
-	potLongWeakness:       {"Weakness", []potEffect{{effWeakness, 0, 240}}},
-	potLuck:               {"Luck", []potEffect{{effLuck, 0, 300}}},
-	potSlowFalling:        {"Slow Falling", []potEffect{{effSlowFalling, 0, 90}}},
-	potLongSlowFalling:    {"Slow Falling", []potEffect{{effSlowFalling, 0, 240}}},
-	potWindCharged:        {"Wind Charging", []potEffect{{effWindCharged, 0, 180}}},
-	potWeaving:            {"Weaving", []potEffect{{effWeaving, 0, 180}}},
-	potOozing:             {"Oozing", []potEffect{{effOozing, 0, 180}}},
-	potInfested:           {"Infestation", []potEffect{{effInfested, 0, 180}}},
-}
-
 // potionName is the item's display name for a kind in a container: "Water
 // Bottle" / "Splash Water Bottle", "Awkward Potion", "Potion of Swiftness",
 // "Splash Potion of Harming", "Lingering Potion of Weakness".
@@ -431,9 +382,19 @@ func brewResult(b *bin) (out [3]invStack, ok bool) {
 // potEffect is one effect a potion carries: effect id, 0-based amplifier, and
 // the base duration in seconds (0 = an instant effect like Healing).
 type potEffect struct {
-	id   int32
-	amp  int
-	secs int
+	id  int32
+	amp int
+	// ticks is the duration vanilla stores. It was whole seconds once, which
+	// quietly rounded strong poison (432 ticks) and strong regeneration (450)
+	// down to the nearest second.
+	ticks int
+}
+
+// effectIsInstant is MobEffect.isInstantenous: healing and harming land in
+// one go rather than running for a duration. Vanilla gives them a one-tick
+// instance, so the duration cannot be what tells them apart.
+func effectIsInstant(id int32) bool {
+	return id == effInstantHealth || id == effInstantDamage
 }
 
 // potionEffects is the single source of truth for what each potion kind does —
@@ -448,7 +409,7 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 	*s = invStack{item: itemGlassBottle, count: 1}
 	h.sendSlot(t, slot)
 	for _, e := range potionEffects(p) {
-		h.applyEffect(players, t, e.id, e.amp, e.secs) // instant effects apply at secs 0
+		h.applyEffectTicks(players, t, e.id, e.amp, e.ticks) // instant effects apply at secs 0
 	}
 	h.playSound(players, "minecraft:entity.generic.drink", sndPlayer, t.x, t.y, t.z, 0.6, 1)
 }
