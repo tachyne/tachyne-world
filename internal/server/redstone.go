@@ -337,22 +337,54 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	h.updatePoweredOpenable(players, pos, h.rsWorld().At(x, y, z))
 }
 
-// updatePoweredOpenable syncs an "open" block (iron doors especially) with
-// arriving power. Only flips when the redstone verdict disagrees.
+// updatePoweredOpenable syncs an "open" block (doors, trapdoors, fence gates)
+// with arriving power. Only flips when the redstone verdict disagrees.
+//
+// A door is two blocks and vanilla treats them as one: DoorBlock.neighborChanged
+// reads the signal at BOTH halves, so a lever beside the top half opens the
+// bottom one too, and each half writes its own state. The engine visits one
+// cell, so it has to carry the other half itself — without that, power reached
+// whichever half the redstone touched and left the other standing shut.
 func (h *hub) updatePoweredOpenable(players map[int32]*tracked, pos blockPos, state uint32) {
 	info, ok := worldgen.InfoForState(state)
 	if !ok || !info.HasProperty("open") || !info.HasProperty("powered") {
 		return
 	}
+	other, otherPos, isDoor := h.doorOtherHalf(pos, state, info)
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
+	if isDoor {
+		powered = powered || h.inputPower(otherPos.x, otherPos.y, otherPos.z, false) > 0
+	}
 	if boolProp(state, "powered") == powered {
 		return
 	}
-	ns := setBoolProp(state, "powered", powered)
-	ns = setBoolProp(ns, "open", powered)
-	h.rsSet(players, pos, ns)
-	h.rsSound(players, "minecraft:block.iron_door.open", sndBlock,
+	wasOpen := boolProp(state, "open")
+	h.rsSet(players, pos, setBoolProp(setBoolProp(state, "powered", powered), "open", powered))
+	if isDoor {
+		if oi, ok := worldgen.InfoForState(other); ok && oi.HasProperty("open") && oi.HasProperty("powered") {
+			h.rsSet(players, otherPos, setBoolProp(setBoolProp(other, "powered", powered), "open", powered))
+		}
+	}
+	if wasOpen == powered {
+		return // the state moved but the door did not: vanilla is silent
+	}
+	name, _ := worldgen.StateName(state)
+	h.rsSound(players, openCloseSound(name, powered), sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
+}
+
+// doorOtherHalf is the cell holding a door's other half, if this is a door.
+func (h *hub) doorOtherHalf(pos blockPos, state uint32, info worldgen.BlockInfo) (uint32, blockPos, bool) {
+	if !info.HasProperty("half") || !info.HasProperty("hinge") {
+		return 0, pos, false // a trapdoor has "half" too, but no hinge — it is one block
+	}
+	op := pos
+	if worldgen.GetProperty(info, state, "half") == "upper" {
+		op.y--
+	} else {
+		op.y++
+	}
+	return h.rsWorld().At(op.x, op.y, op.z), op, true
 }
 
 // connectWire stores a dust cell's arms as wireArms computes them, plus the

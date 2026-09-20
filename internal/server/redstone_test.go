@@ -122,3 +122,36 @@ func TestRedstonePrimesTNT(t *testing.T) {
 		t.Fatalf("powered TNT must prime: entities=%d state=%d", len(h.tnt), w.At(x, y, z))
 	}
 }
+
+// A door is two blocks and one thing: power reaching either half opens both,
+// and cutting it closes both. Only one half used to move.
+func TestPoweredDoorMovesBothHalves(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	info, _ := worldgen.InfoForState(worldgen.BlockBase("iron_door"))
+	lower := worldgen.SetProperty(info, worldgen.BlockBase("iron_door"), "half", "lower")
+	lower = setBoolProp(setBoolProp(lower, "open", false), "powered", false)
+	upper := worldgen.SetProperty(info, lower, "half", "upper")
+	w.SetBlock(x, y, z, lower)
+	w.SetBlock(x, y+1, z, upper)
+
+	// A lever on a wall beside the UPPER half only.
+	w.SetBlock(x+1, y+1, z+1, worldgen.Stone)
+	lever := setBoolProp(worldgen.BlockBase("lever")+9, "powered", false)
+	w.SetBlock(x+1, y+1, z, lever)
+	h.toggleLever(players, blockPos{x + 1, y + 1, z}, w.At(x+1, y+1, z))
+	stepTicks(h, players, 12)
+
+	lowOpen := worldgen.GetProperty(info, w.At(x, y, z), "open") == "true"
+	upOpen := worldgen.GetProperty(info, w.At(x, y+1, z), "open") == "true"
+	if !lowOpen || !upOpen {
+		t.Fatalf("both halves should open: lower=%v upper=%v", lowOpen, upOpen)
+	}
+
+	h.toggleLever(players, blockPos{x + 1, y + 1, z}, w.At(x+1, y+1, z))
+	stepTicks(h, players, 12)
+	lowOpen = worldgen.GetProperty(info, w.At(x, y, z), "open") == "true"
+	upOpen = worldgen.GetProperty(info, w.At(x, y+1, z), "open") == "true"
+	if lowOpen || upOpen {
+		t.Fatalf("both halves should close: lower=%v upper=%v", lowOpen, upOpen)
+	}
+}
