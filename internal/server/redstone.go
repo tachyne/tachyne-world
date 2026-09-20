@@ -208,6 +208,13 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, h.connectWire(x, y, z, ns))
 			h.scheduleSignalAround(pos) // the components around hear next tick
 			h.propagateWires(players, pos)
+			break
+		}
+		// updateShape: the CONNECTIONS are recomputed on any neighbour change,
+		// not only when the power moves — dust laid next to unpowered dust
+		// has to join up straight away rather than on the first pulse.
+		if ns := h.connectWire(x, y, z, state); ns != state {
+			h.rsSet(players, pos, ns)
 		}
 	case isRSTorch(state):
 		// The torch inverts its support block (below for floor torches, the
@@ -502,6 +509,11 @@ func (h *hub) propagateWires(players map[int32]*tracked, start blockPos) {
 			}
 			want := h.inputPower(n.x, n.y, n.z, true)
 			if wirePower(st) == want {
+				// The power is settled, but the shape may not be: a dust that
+				// gained or lost a neighbour still has to re-link.
+				if ns := h.connectWire(n.x, n.y, n.z, st); ns != st {
+					h.rsSet(players, n, ns)
+				}
 				continue
 			}
 			info, _ := worldgen.InfoForState(st)

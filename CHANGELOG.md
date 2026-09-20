@@ -28,6 +28,26 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **A torch sticks to the wall you highlighted.** Placement picked the
+  attachment face from the way you were looking and ignored the face you
+  had actually aimed at, so a torch put against a dirt wall could jump to
+  the floor or to the block beside it, and a lever would only take a wall
+  if you stood square to it. The highlighted face now leads the search, as
+  it does in vanilla, for every block that attaches to a surface — torches,
+  levers, buttons, signs, ladders, tripwire hooks, vines and glow lichen.
+  Only a placement that replaced what it landed on (into tall grass, into
+  snow) still goes purely on your look direction.
+- **Redstone dust links up the moment it is laid.** A dust's connection
+  shape was only recomputed when its power level changed, so a fresh line
+  of unpowered dust stayed a row of unconnected dots until something
+  switched it on, and dust that gained or lost a neighbour kept the old
+  shape. Neighbour changes now re-link the dust straight away, powered or
+  not.
+- **Amethyst clusters drop four shards to a pickaxe.** The drop table asks
+  for a tool from a tag, and tags were not resolved, so a fully grown
+  cluster paid two shards whatever you mined it with. Mining one with any
+  pickaxe now gives the full four (and Fortune applies), while breaking it
+  by hand still gives two.
 - **Smelting pays what the recipe says.** Every furnace result banked the
   same experience — seven tenths, or a third for food — so a stack of
   ancient debris was worth no more than a stack of cactus. The cook
