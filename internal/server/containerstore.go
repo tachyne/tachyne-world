@@ -20,6 +20,7 @@ type containerStore struct {
 	mu   sync.Mutex
 	path string
 	m    containerFile
+	bg   bgWriter // the periodic save runs off the hub goroutine
 }
 
 type savedItem struct {
@@ -544,8 +545,18 @@ func (s *containerStore) migrateItemIDs(remap func(int32) int32) int {
 	return n
 }
 
-// flush writes the table to disk atomically.
+// flush writes the table to disk atomically, waiting for any background write
+// first so an explicit save cannot be overtaken by an older snapshot.
 func (s *containerStore) flush() {
+	s.bg.wait()
+	s.writeNow()
+}
+
+// flushAsync is the thirty-second save: the snapshot is already the store's
+// own copy, so the marshal and the write have no business on the hub tick.
+func (s *containerStore) flushAsync() { s.bg.run(s.writeNow) }
+
+func (s *containerStore) writeNow() {
 	s.mu.Lock()
 	data, _ := json.MarshalIndent(s.m, "", "  ")
 	path := s.path

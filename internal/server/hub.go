@@ -1201,7 +1201,7 @@ func (h *hub) run() {
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
-					h.containers.flush()
+					h.containers.flushAsync()
 				}
 				if h.mobstore != nil {
 					h.mobstore.recordVillages(h.villageDone)
@@ -1213,7 +1213,7 @@ func (h *hub) run() {
 					h.mobstore.recordRaids(h.raids)
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
-					h.mobstore.flush()
+					h.mobstore.flushAsync()
 				}
 				h.saveRules() // weather timers ride settings.json (tiny file)
 				if h.plugHost != nil {

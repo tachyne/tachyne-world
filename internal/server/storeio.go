@@ -105,3 +105,64 @@ func writeStore(path string, data []byte) bool {
 	storeOnDisk.Store(path, sum)
 	return true
 }
+
+// bgWriter takes a store's WRITE off the hub goroutine.
+//
+// The thirty-second save was costing the world a ~115 ms tick — two and a half
+// ticks' worth — with nobody online at all. A CPU profile of the live pod put
+// it squarely on the save: a third of the samples in json.MarshalIndent, a
+// fifth in the content hash, the rest in the file writes. None of that reads
+// hub state: record* has already copied everything the store needs into its
+// own map, and flush only touches that copy under the store's own mutex. So
+// the hub keeps the cheap part (walking the live maps into the snapshot) and
+// hands the expensive part to a goroutine.
+//
+// One write runs at a time and a request that arrives mid-write coalesces into
+// a single follow-up run, so a slow disk can never pile up goroutines or write
+// an older snapshot over a newer one. An explicit save waits for the
+// background write first, which is what keeps shutdown honest.
+type bgWriter struct {
+	mu      sync.Mutex
+	running bool
+	pending bool
+	done    chan struct{}
+}
+
+// run starts write in the background, or marks that it must run again.
+func (b *bgWriter) run(write func()) {
+	b.mu.Lock()
+	if b.running {
+		b.pending = true
+		b.mu.Unlock()
+		return
+	}
+	b.running, b.done = true, make(chan struct{})
+	done := b.done
+	b.mu.Unlock()
+	go func() {
+		for {
+			write()
+			b.mu.Lock()
+			if !b.pending {
+				b.running = false
+				b.mu.Unlock()
+				close(done)
+				return
+			}
+			b.pending = false
+			b.mu.Unlock()
+		}
+	}()
+}
+
+// wait blocks until any background write has finished.
+func (b *bgWriter) wait() {
+	b.mu.Lock()
+	if !b.running {
+		b.mu.Unlock()
+		return
+	}
+	done := b.done
+	b.mu.Unlock()
+	<-done
+}

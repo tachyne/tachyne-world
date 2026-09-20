@@ -35,6 +35,7 @@ type mobStore struct {
 	path   string
 	m      mobFile
 	seeded map[[2]int32]bool // chunks already given their one-time chunk-generation herd
+	bg     bgWriter          // the periodic save runs off the hub goroutine
 }
 
 type mobFile struct {
@@ -645,6 +646,14 @@ func parseChunkKey(key string) (cx, cz int, ok bool) {
 
 // flush atomically writes the document (temp + rename), like every other store.
 func (s *mobStore) flush() {
+	s.bg.wait()
+	s.writeNow()
+}
+
+// flushAsync is the thirty-second save; see containerStore.flushAsync.
+func (s *mobStore) flushAsync() { s.bg.run(s.writeNow) }
+
+func (s *mobStore) writeNow() {
 	s.mu.Lock()
 	s.m.Seeded = s.m.Seeded[:0]
 	for k := range s.seeded {
