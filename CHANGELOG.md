@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Tipped arrows are an eighth as long, and netherite shrugs off a
+  hit.** A tipped arrow handed over the full bottle's duration — eight
+  minutes of poison from a single shot; vanilla gives an eighth of it,
+  and now so does this. And netherite armour finally carries the
+  knockback resistance that is the whole reason to wear it: a tenth per
+  piece, four tenths for the set, eating its share of every shove.
 - **The mason sells stone again.** A stonecutter villager was offering
   iron and chainmail armour, a shield, a bell, a clock and a name tag —
   another profession's stock entirely. The generator that bakes the trade

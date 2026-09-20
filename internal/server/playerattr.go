@@ -58,7 +58,7 @@ func (t *tracked) refreshGearIfChanged() {
 }
 
 func (t *tracked) refreshArmorAttrs() {
-	points, tough := 0.0, 0.0
+	points, tough, kb := 0.0, 0.0, 0.0
 	for _, a := range t.armor {
 		if a.count == 0 {
 			continue
@@ -67,10 +67,40 @@ func (t *tracked) refreshArmorAttrs() {
 			points += float64(p.Points)
 			tough += p.Toughness
 		}
+		// Netherite carries KNOCKBACK_RESISTANCE 0.1 a piece — the whole set
+		// is why netherite players barely move when they are hit.
+		if netheritePiece[a.item] {
+			kb += netheriteKnockbackResist
+		}
 	}
 	a := t.playerAttrs()
 	setEquip(a.Get(attr.Armor), points)
 	setEquip(a.Get(attr.ArmorToughness), tough)
+	setEquipKB(a.Get(attr.KnockbackResistance), kb)
+}
+
+// netheriteKnockbackResist is each netherite piece's KNOCKBACK_RESISTANCE.
+const netheriteKnockbackResist = 0.1
+
+// netheritePiece is the four-piece set.
+var netheritePiece = func() map[int32]bool {
+	out := map[int32]bool{}
+	for _, n := range []string{"netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots"} {
+		if id := itemByName[n]; id != 0 {
+			out[id] = true
+		}
+	}
+	return out
+}()
+
+// setEquipKB is setEquip for the knockback modifier, which has its own source
+// so it does not fight the armour one.
+func setEquipKB(in *attribute.Instance, amount float64) {
+	if amount == 0 {
+		in.RemoveModifier(gearKnockbackSource)
+		return
+	}
+	in.AddModifier(attr.Modifier{Source: gearKnockbackSource, Amount: amount, Op: attr.AddValue})
 }
 
 // setEquip applies (or clears) an equipment modifier of the given size.

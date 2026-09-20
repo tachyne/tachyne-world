@@ -406,8 +406,14 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				h.applyEffect(players, t, effLevitation, 0, a.levitate)
 			}
 			if a.tipped { // tipped arrow: its brewed potion effects transfer on a hit
+				// POTION_DURATION_SCALE on tipped_arrow is 0.125 — an arrow
+				// gives an eighth of the bottle's duration, not all of it.
 				for _, e := range potionEffects(a.potion) {
-					h.applyEffect(players, t, e.id, e.amp, e.secs)
+					secs := int(math.Round(float64(e.secs) * tippedArrowScale))
+					if secs < 1 && e.secs > 0 {
+						secs = 1
+					}
+					h.applyEffect(players, t, e.id, e.amp, secs)
 				}
 			}
 			if a.fire {
@@ -418,6 +424,10 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 	}
 	return false
 }
+
+// tippedArrowScale is the tipped arrow's POTION_DURATION_SCALE: an eighth
+// of the potion it was dipped in (a lingering cloud's is a quarter).
+const tippedArrowScale = 0.125
 
 // arrowHitsMob tests a sample point against mob hitboxes (player shots only)
 // and applies the hit through the normal attack bookkeeping.

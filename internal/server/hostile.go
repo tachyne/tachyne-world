@@ -1,6 +1,7 @@
 package server
 
 import (
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -537,6 +538,13 @@ func (h *hub) knockbackScaled(t *tracked, fromX, fromZ, scale float64) {
 	d := math.Hypot(dx, dz)
 	if d < 1e-6 {
 		dx, dz, d = 1, 0, 1
+	}
+	// LivingEntity.knockback: KNOCKBACK_RESISTANCE eats its share of the
+	// shove, which is what a netherite set is for.
+	if r := t.playerAttrs().Value(attr.KnockbackResistance); r > 0 {
+		if scale *= 1 - r; scale <= 0 {
+			return
+		}
 	}
 	t.p.trySendEv(attachproto.Velocity{
 		EID: t.p.eid,

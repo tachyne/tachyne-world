@@ -1477,6 +1477,9 @@ func (m *mob) setMaxHP(v int) { m.mobAttrs().SetBase(attr.MaxHealth, float64(v))
 // base — which is what lets the piece be taken off again without arithmetic.
 const gearArmorSource = "equipment:armor"
 
+// gearKnockbackSource is the netherite set's KNOCKBACK_RESISTANCE modifier.
+const gearKnockbackSource = "equipment:knockback"
+
 // armorValue is the mob's ARMOR: its species base plus whatever it is wearing.
 func (m *mob) armorValue() float64 { return m.mobAttrs().Value(attr.Armor) }
 
