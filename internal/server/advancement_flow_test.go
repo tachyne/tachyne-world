@@ -171,3 +171,29 @@ func TestVariantAdvancementsNeedTheVariant(t *testing.T) {
 		t.Error("a coatless tame must not match a coat criterion")
 	}
 }
+
+// Seven criteria were marked unmatchable only because a stale list said the
+// engine could not observe their triggers; six of those triggers have had
+// live fire sites for a while.
+func TestFormerlyUnobservableTriggersAreLive(t *testing.T) {
+	live := map[string]bool{
+		"channeled_lightning": false, "slide_down_block": false,
+		"thrown_item_picked_up_by_player": false, "thrown_item_picked_up_by_entity": false,
+		"allay_drop_item_on_block": false, "started_riding": false, "avoid_vibration": false,
+	}
+	for _, n := range advTable {
+		for _, c := range n.criteria {
+			if _, watched := live[c.trigger]; watched {
+				if c.unmatchable {
+					t.Errorf("%s (%s) is still marked unmatchable", c.name, c.trigger)
+				}
+				live[c.trigger] = true
+			}
+		}
+	}
+	for trig, seen := range live {
+		if !seen {
+			t.Errorf("no criterion uses %s — the table or the trigger name changed", trig)
+		}
+	}
+}

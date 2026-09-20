@@ -28,6 +28,14 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Seven advancement criteria come off the blocked list.** They were
+  marked unobservable when the mechanics behind them did not exist, and
+  the note outlived the code: the trident's channeling, sliding down a
+  honey block, an allay putting an item on a note block, picking up what
+  you threw, riding what you saddled, and sneaking past a sculk sensor
+  all have working fire sites. Piglins picking up gold they love now fire
+  theirs too, so distracting one counts. Only the wolf-shearing and spear
+  criteria remain unreachable.
 - **The coat advancements need the coat.** Taming a single cat completed
   all eleven criteria of the cat catalogue, taming one wolf finished the
   whole pack, and leashing one frog finished all three variants — the

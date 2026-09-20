@@ -117,6 +117,13 @@ func (h *hub) piglinTakesItem(players map[int32]*tracked, m *mob, it *itemEntity
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.item.pickup", sndNeutral, m.x, m.y, m.z, 0.2, 1)
 	m.persistent = true
+	// nether/distract_piglin: the thrower gets it when an adult piglin picks
+	// up something it loves (the advancement's own predicate checks that the
+	// player is not wearing gold, which the criterion carries).
+	if t := players[it.thrower]; t != nil && !m.baby {
+		h.advance(players, t, "thrown_item_picked_up_by_entity",
+			advMatch{entity: advEntityName[m.etype], baby: m.baby, item: it.item})
+	}
 	return true
 }
 

@@ -407,15 +407,13 @@ def distill(trigger, cond, tags):
 # Triggers with NO engine mechanic behind them (yet). Listed here rather than
 # silently unmatched so the count in the header stays honest.
 NOT_OBSERVABLE = {
-    "channeled_lightning",          # no channeling trident / lightning entity
-    "slide_down_block",             # no honey-block slide
-    "player_sheared_equipment",     # no wolf armour
-    "thrown_item_picked_up_by_entity",  # no piglin bartering
-    "thrown_item_picked_up_by_player",  # no allay behaviour
-    "allay_drop_item_on_block",
-    "started_riding",               # no mob-in-boat (goat) riding
-    "spear_mobs",                   # no spear
-    "avoid_vibration",              # sneaking does not yet suppress vibrations
+    # Six of these had live fire sites by 2026-09-20 and were only held back
+    # by this list: channeled_lightning (trident channeling), slide_down_block
+    # (honey), thrown_item_picked_up_by_player (tosses), allay_drop_item_on_
+    # block, started_riding, avoid_vibration (sneak-suppressed vibrations) —
+    # and thrown_item_picked_up_by_entity now that piglins pick gold up.
+    "player_sheared_equipment",     # shearing wolf armour raises no trigger yet
+    "spear_mobs",                   # no spear (a flagged 1.21.11 extra)
 }
 
 
