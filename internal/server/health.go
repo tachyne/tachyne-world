@@ -173,14 +173,20 @@ func (s *Server) serveHealth(addr string) {
 			http.Error(w, "need {player, text[, bug]}", http.StatusBadRequest)
 			return
 		}
-		done := make(chan bool, 1)
+		type replyResult struct {
+			online bool
+			lines  int
+		}
+		done := make(chan replyResult, 1)
 		h.post(evRunOnHub{fn: func() {
-			done <- h.queueReply(h.playersRef, a.Player, a.Text, a.Bug)
+			ok, n := h.queueReply(h.playersRef, a.Player, a.Text, a.Bug)
+			done <- replyResult{ok, n}
 		}})
 		select {
-		case online := <-done:
+		case res := <-done:
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]any{"delivered": online, "queued": !online})
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"delivered": res.online, "queued": !res.online, "lines": res.lines})
 		case <-time.After(5 * time.Second):
 			http.Error(w, "the world did not answer", http.StatusServiceUnavailable)
 		}

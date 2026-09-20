@@ -286,30 +286,68 @@ func stateFromDescription(d string) uint32 {
 // to be online is not much of a reply. Messages queue against the player name
 // and are delivered the moment they next join.
 
-const bugReplyMax = 300
+// Every chat line the engine sends passes through sanitizeNBT, which caps at
+// 256 characters — so a reply longer than that used to be silently cut, and
+// the caller was told it had been delivered. A message worth sending is worth
+// sending whole: long replies are split across lines instead.
+const (
+	chatLineMax  = 256
+	replyTotpMax = 1200 // a chat window, not an essay
+)
+
+// replyLines splits a reply into chat-sized lines, breaking on spaces so a
+// line never ends mid-word. The first carries the full prefix; the rest are
+// indented so they read as continuations.
+func replyLines(prefix, text string) []string {
+	var out []string
+	for first := true; text != ""; first = false {
+		p := prefix
+		if !first {
+			p = "  "
+		}
+		avail := chatLineMax - len(p)
+		if len(text) <= avail {
+			out = append(out, p+text)
+			break
+		}
+		cut := strings.LastIndex(text[:avail], " ")
+		if cut <= 0 {
+			cut = avail // one enormous word: hard break rather than loop
+		}
+		out = append(out, p+strings.TrimSpace(text[:cut]))
+		text = strings.TrimSpace(text[cut:])
+	}
+	return out
+}
 
 // queueReply delivers a message to a player now if they are here, and holds it
 // for their next join if they are not. bug > 0 also records it against that
-// report, so the report list shows what was answered.
-func (h *hub) queueReply(players map[int32]*tracked, name, text string, bug int) (delivered bool) {
-	if len(text) > bugReplyMax {
-		text = text[:bugReplyMax]
+// report, so the report list shows what was answered. Returns whether it was
+// delivered and how many lines it took.
+func (h *hub) queueReply(players map[int32]*tracked, name, text string, bug int) (delivered bool, lines int) {
+	if len(text) > replyTotpMax {
+		text = text[:replyTotpMax]
 	}
-	msg := "[tachyne] " + text
+	prefix := "[tachyne] "
 	if bug > 0 {
-		msg = fmt.Sprintf("[tachyne] re bug #%d: %s", bug, text)
+		prefix = fmt.Sprintf("[tachyne] re bug #%d: ", bug)
 		h.bugs.note(bug, text)
 	}
+	msgs := replyLines(prefix, text)
 	for _, t := range players {
 		if strings.EqualFold(t.p.name, name) {
-			t.p.tell(msg)
-			log.Printf("reply to %q (online): %s", name, text)
-			return true
+			for _, m := range msgs {
+				t.p.tell(m)
+			}
+			log.Printf("reply to %q (online, %d lines): %s", name, len(msgs), text)
+			return true, len(msgs)
 		}
 	}
-	h.bugs.queue(name, msg)
-	log.Printf("reply to %q queued for their next join: %s", name, text)
-	return false
+	for _, m := range msgs {
+		h.bugs.queue(name, m)
+	}
+	log.Printf("reply to %q queued for their next join (%d lines): %s", name, len(msgs), text)
+	return false, len(msgs)
 }
 
 // deliverQueuedReplies hands a joining player whatever was left for them.

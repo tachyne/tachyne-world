@@ -156,10 +156,10 @@ func TestReplyReachesOnlineAndWaitsForOffline(t *testing.T) {
 	players[here.p.eid] = here
 	here.p.out = make(chan outPkt, 16)
 
-	if delivered := h.queueReply(players, "Here", "fixed, deploying now", 0); !delivered {
+	if delivered, _ := h.queueReply(players, "Here", "fixed, deploying now", 0); !delivered {
 		t.Error("a player who is online should get it straight away")
 	}
-	if delivered := h.queueReply(players, "Away", "fixed that too", 0); delivered {
+	if delivered, _ := h.queueReply(players, "Away", "fixed that too", 0); delivered {
 		t.Error("a player who is not online cannot be delivered to")
 	}
 
@@ -204,5 +204,58 @@ func TestReplyNotesTheReport(t *testing.T) {
 	got := h.bugs.snapshot()
 	if len(got) != 1 || !strings.Contains(got[0].Note, "fence connector") {
 		t.Errorf("the answer should be recorded on the report, got %+v", got)
+	}
+}
+
+// Every chat line the engine sends is capped at 256 characters by
+// sanitizeNBT. A reply longer than that used to be cut there and the caller
+// told it had been delivered — the exact message Legion got ended mid-word at
+// "Put th". Long replies are split across lines now, on word boundaries, and
+// the caller is told how many it took.
+func TestLongReplyIsSplitNotTruncated(t *testing.T) {
+	long := "Checked against the vanilla source - this one is not a bug. Dust powers " +
+		"the block it points INTO (so, the end of the line) and the block directly " +
+		"UNDER it, never the block above. Pistons sitting on top of the line will " +
+		"not fire. Put the dust on TOP of the pistons instead, or run the line into " +
+		"a block touching one. 26.3 behaves the same."
+	if len(long) <= chatLineMax {
+		t.Fatalf("this fixture must exceed one line; it is %d", len(long))
+	}
+	lines := replyLines("[tachyne] re bug #1: ", long)
+	if len(lines) < 2 {
+		t.Fatalf("a %d-character reply should take more than one line, got %d", len(long), len(lines))
+	}
+	var rebuilt string
+	for i, l := range lines {
+		if len(l) > chatLineMax {
+			t.Errorf("line %d is %d characters — sanitizeNBT will cut it", i, len(l))
+		}
+		body := l
+		for _, p := range []string{"[tachyne] re bug #1: ", "  "} {
+			if strings.HasPrefix(body, p) {
+				body = body[len(p):]
+				break
+			}
+		}
+		if rebuilt != "" {
+			rebuilt += " "
+		}
+		rebuilt += body
+	}
+	if rebuilt != long {
+		t.Errorf("the split lost or changed text:\n got %q\nwant %q", rebuilt, long)
+	}
+	// And it must break on spaces, never mid-word.
+	for i, l := range lines[:len(lines)-1] {
+		if !strings.HasSuffix(l, ".") && !strings.HasSuffix(l, ",") &&
+			strings.ContainsAny(l[len(l)-1:], "abcdefghijklmnopqrstuvwxyz") {
+			next := strings.TrimPrefix(lines[i+1], "  ")
+			if next != "" && strings.ContainsAny(next[:1], "abcdefghijklmnopqrstuvwxyz") {
+				// a word may legitimately end a line; check the join is a space break
+				if !strings.Contains(long, l[strings.LastIndex(l, " ")+1:]+" ") {
+					t.Errorf("line %d appears to break mid-word: %q -> %q", i, l, next)
+				}
+			}
+		}
 	}
 }
