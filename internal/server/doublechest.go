@@ -131,6 +131,11 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	if t.inv == nil {
 		return
 	}
+	// DoubleBlockCombiner gives up when EITHER half is blocked, so a block on
+	// one end of a large chest shuts both ends.
+	if h.chestBlockedAt(t.dim, left) || h.chestBlockedAt(t.dim, right) {
+		return
+	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)
 	for _, pos := range [2]simPos{{dim: t.dim, blockPos: left}, {dim: t.dim, blockPos: right}} {

@@ -94,6 +94,10 @@ func (evOpenChest) isHubEvent() {}
 // that is half of a pair opens the combined Large Chest instead.
 func (h *hub) openChest(t *tracked, x, y, z int) {
 	state := h.worldFor(t.dim).At(x, y, z)
+	// A blocked container does not open at all — no menu, no lid, no sound.
+	if h.containerOpenBlocked(t.dim, blockPos{x, y, z}, state) {
+		return
+	}
 	if left, right, paired := h.chestPairPositions(t.dim, x, y, z, state); paired {
 		h.openDoubleChest(t, left, right)
 		return
