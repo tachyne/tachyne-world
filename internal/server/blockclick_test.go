@@ -46,6 +46,10 @@ func TestBlockClicks(t *testing.T) {
 
 	info, _ := worldgen.InfoForState(caveVinesLo)
 	vine := worldgen.SetProperty(info, caveVinesLo, "berries", "true")
+	// Cave vines hang DOWN, so they need something above to hang from —
+	// without it the support sweep takes the vine straight back out, which is
+	// what vanilla does too.
+	w.SetBlock(1, 181, 0, worldgen.Stone)
 	w.SetBlock(1, 180, 0, vine)
 	click(1, 180, 0)
 	if got := w.At(1, 180, 0); worldgen.GetProperty(info, got, "berries") != "false" || have(itemGlowBerries) != 1 {

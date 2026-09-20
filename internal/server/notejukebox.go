@@ -233,6 +233,13 @@ type jukebox struct {
 	length  uint64 // song length in ticks incl. end padding
 }
 
+// playing is JukeboxSongPlayer.isPlaying: a disc is in and the song has not
+// run out. It is what makes the jukebox a redstone source, which is a
+// different thing from the comparator reading of which disc is in it.
+func (j *jukebox) playing(now uint64) bool {
+	return j != nil && j.disc.item != 0 && j.started != 0 && now < j.started+j.length
+}
+
 type evUseJukebox struct {
 	eid     int32
 	x, y, z int

@@ -124,13 +124,12 @@ func (h *hub) triggerBlock(players map[int32]*tracked, dim int, pos blockPos, st
 			h.angerBees(players, t, pos)
 		}
 	case isLever(st):
-		if dim == 0 {
-			h.toggleLever(players, pos, st)
-		}
+		// Redstone runs in every dimension since the simulation learned which
+		// one it is in, so a gust flips a lever in the Nether too — the
+		// overworld-only guard here outlived its reason.
+		h.inDim(dim, func() { h.toggleLever(players, pos, st) })
 	case isButton(st):
-		if dim == 0 {
-			h.pressButton(players, pos, st)
-		}
+		h.inDim(dim, func() { h.pressButton(players, pos, st) })
 	case info.HasProperty("hinge"): // a door: the lower half swings both
 		if isIronDoor(st) || boolProp(st, "powered") || worldgen.GetProperty(info, st, "half") != "lower" {
 			return

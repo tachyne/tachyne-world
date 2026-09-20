@@ -145,6 +145,14 @@ func (h *hub) emitPower(px, py, pz, rx, ry, rz int) int {
 		return 15 // a tripped hook powers every side
 	case isDetectorRail(s) && railPowered(s):
 		return 15
+	case isJukebox(s):
+		// JukeboxBlock.getSignal: a full 15 to every side while a disc is
+		// actually playing, which is separate from the comparator's reading
+		// of WHICH disc it is.
+		if jb := h.jukeboxes[simPos{dim: h.rsDim, blockPos: blockPos{px, py, pz}}]; jb != nil && jb.playing(h.tick.Load()) {
+			return 15
+		}
+		return 0
 	case isAnySensor(s):
 		return sensorPower(s) // active sculk sensor emits its distance-scaled power to all sides
 	}

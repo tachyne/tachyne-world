@@ -131,6 +131,13 @@ the public history since the project was open-sourced on 2026-07-10.
   and big dripleaf stems learned their rules too: a bell hung between two
   walls falls if either one goes, and a stem needs both the ground below and
   the rest of the plant above.
+- **A jukebox powers redstone while it plays.** Vanilla jukeboxes are a
+  redstone source in their own right — a full signal for as long as the disc
+  runs, which is what note-block contraptions and disc-triggered doors are
+  built on. Only the comparator reading of *which* disc was in it worked
+  here. A wind charge also flips levers and presses buttons in the Nether
+  and the End now, not just the overworld; that restriction outlived the
+  reason for it.
 - **A kick tells you why.** Being kicked put a line in chat and then dropped
   the connection, so what you actually read was "connection lost". The
   reason now appears on the disconnect screen, where the real game puts it.

@@ -314,7 +314,7 @@ func (h *hub) isSignalSource(s uint32) bool {
 	return isLever(s) || isButton(s) || isRSTorch(s) || isRepeater(s) || isComparator(s) ||
 		isObserver(s) || s == redstoneBlock || isPlate(s) || isDetectorRail(s) || isLectern(s) ||
 		isTripwireHook(s) || isDaylight(s) || isTarget(s) || isAnySensor(s) || isLightningRod(s) ||
-		isTrappedChest(s)
+		isTrappedChest(s) || isJukebox(s)
 }
 
 // weakSignal is BlockState.getSignal(level, pos, d): what the block at
