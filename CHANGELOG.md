@@ -45,6 +45,34 @@ the public history since the project was open-sourced on 2026-07-10.
   it will not wander off while you have its window open.
 
 ### Changed
+- **Difficulty changes what hurts you, and by how much.** The difficulty used
+  to multiply a hostile mob's bite and nothing else, so an explosion, an
+  arrow, a fall or a lava bath did the same damage on Peaceful as on Hard,
+  while a zombie punching a villager was scaled when it should not have been.
+  Damage now scales where the real game scales it — as it reaches a player,
+  according to what kind of damage it is. Easy no longer simply halves
+  everything either: a small hit comes through whole and a big one is softened,
+  which is the real formula. On Peaceful, the four things that always scale —
+  explosions, a bad respawn point, a warden's boom — do nothing at all.
+- **Villagers level up like villagers.** A trade that promotes one no longer
+  promotes it on the spot: the tier lands a couple of seconds later, with the
+  glow the real game shows, and one trade is worth one tier however much
+  experience it paid. The two trades a tier unlocks are drawn at random rather
+  than in table order, and a librarian's enchanted book is one of the two
+  instead of a third offer nobody else gets.
+- **Restocking follows the day, not the bed.** A villager whose bed was broken
+  — or that never claimed one — stopped restocking for good after its first
+  two. Its trading day now turns over on the clock, catching up the restocks it
+  missed, and the day's budget survives a restart instead of resetting to full.
+- **Fire follows the real game's rule, not an invented one.** The engine kept
+  a `fire_ticks` switch of its own making; the real game replaced that switch
+  in 1.21.9 with `fire_spread_radius_around_player`, a distance. Fire now
+  spreads and burns out only within that distance of somebody — 128 blocks by
+  default — so a forest nobody is standing in does not quietly burn down while
+  the server is empty. Setting it to 0 is the old "off", and -1 is "anywhere".
+- **A villager with nothing to sell says so.** Right-clicking one whose stock
+  is gone opened an empty trade window; it shakes its head now, and a sleeping
+  villager is left alone.
 - **Prices react per trade, the way the real game's do.** Armour, bells,
   shields, saddles, explorer maps, dyed leather and most enchanted gear
   respond four times harder to heavy use and to your standing with the

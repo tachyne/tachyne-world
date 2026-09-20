@@ -24,14 +24,18 @@ command-block/creative-only constructs, or client-side only.
 | Monster AI (goal lists) | 46 | 2 | 41 | 2 | 1 | 4% | 96% |
 | Creature, villager and golem AI (goals and brains) | 48 | 2 | 40 | 5 | 1 | 4% | 89% |
 | Recipes, loot tables, advancements, statistics, tags | 162 | 81 | 44 | 37 | 0 | 50% | 77% |
-| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 286 | 113 | 63 | 16 | 62% | 86% |
+| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 336 | 81 | 45 | 16 | 73% | 90% |
 | World systems and worldgen | 279 | 124 | 88 | 60 | 7 | 46% | 78% |
 | Player mechanics, commands, chat/social, protocol coverage | 356 | 130 | 54 | 150 | 22 | 39% | 55% |
-| **All** | **2413** | **1107** | **809** | **400** | **97** | **48%** | **83%** |
+| **All** | **2413** | **1157** | **777** | **382** | **97** | **50%** | **84%** |
 
-Of 2316 gradeable units, 1107 (48%) are one-for-one with vanilla today, 809 (35%) exist with a
-deviation, and 400 (17%) are absent. The PARTIAL column is where the work is, and most of it
+Of 2316 gradeable units, 1157 (50%) are one-for-one with vanilla today, 777 (34%) exist with a
+deviation, and 382 (16%) are absent. The PARTIAL column is where the work is, and most of it
 traces back to a dozen cross-cutting defects; fixing each moves many rows at once.
+
+Only the rules-and-values row has been re-counted since the audit (2026-09-20, after the
+villager, difficulty-scaling and gamerule work below). The other rows still carry the audit's
+own numbers and read low, since work has landed against them without a recount.
 
 ## Cross-cutting defects
 
@@ -73,9 +77,10 @@ Struck-through rows have landed since the audit; the date says when.
 12. Monster goals: ~~zombie village pathing and targeting~~ (2026-09-20), ~~drowned water goals~~ (2026-09-20), ~~the spider light rule~~ (2026-09-20), ~~skeleton weapon reassessment~~ (2026-09-20), ~~enderman stare and teleport~~ (2026-09-20), ~~ghast flight~~ (2026-09-20) and phantom flight, the raider base goals, wither phases
 13. Creature brains: villager trading look/follow, POI acquisition and play; ~~frog spawn~~ (2026-09-20); per-species panic; head tracking; breeding approach; nautilus, happy ghast and fish AI
 14. Loot functions ~~(exploration map, set damage)~~ (2026-09-19), copy/set components; advancement predicate fidelity; per-recipe smelting XP
-15. Effect HUD flags ~~(2026-09-20)~~; ~~trading XP~~ (2026-09-20); ~~the mason's trade pool~~ (2026-09-20); ~~the villager endgame (enchanted gear) and the cartographer's explorer maps~~ (2026-09-20); dyed leather armour, suspicious stew and tipped-arrow trades remain; ~~the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour~~ (2026-09-19/20)
+15. Effect HUD flags ~~(2026-09-20)~~; ~~trading XP~~ (2026-09-20); ~~the mason's trade pool~~ (2026-09-20); ~~every villager listing type — enchanted gear, explorer maps, dyed leather, suspicious stew, tipped arrows, the biome boat and the combined-cost trades — plus per-listing prices, the shuffled tier draw, the forty-tick level-up and the restock day~~ (2026-09-20); ~~the hunger effect's rate; the enchantment cap; invulnerability frames; Unbreaking on armour~~ (2026-09-19/20)
 16. Aquifers, lava lakes and ravines (the only substantial world-generation gap left; changing the generator rewrites land under existing builds, so it needs a decision first); ~~springs, ore blobs and the ground-cover features~~ (2026-09-20); ~~dust propagation within the tick~~ (2026-09-19); ~~sky light through translucent blocks~~ (2026-09-20: light was costing double for water and leaves, so everything under them went dark at half the true depth)
-17. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
+17. ~~Difficulty scaling: it multiplied a hostile mob's bite and nothing else. It now scales as damage reaches a player, from the damage type's own rule — Easy softens rather than halves, Peaceful erases the four always-scaled types, and mob-on-mob damage is no longer scaled at all~~ (2026-09-20)
+18. Default spawn position; a play-state disconnect; hand swap; explosion, section-update and light packets; elytra start; suffocation; ~~selectors and relative coordinates~~ (2026-09-20) with the brigadier tree still to come; titles, tab list and boss-bar styles
 
 ## Versions
 
