@@ -49,13 +49,15 @@ func convertingMeta(eid int32, on bool) []byte {
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
-// convertMob swaps a mob for its converted type in place, preserving baby state
-// and not healing it. The client sees the old entity vanish and the new appear.
+// convertMob swaps a mob for its converted type in place — Mob.convertTo with
+// ConversionParams.single: baby state, equipment, damage taken, name and
+// persistence all come across, and nothing heals. The client sees the old
+// entity vanish and the new appear.
 func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	h.entityGone(players, m.dim, m.eid)
 	delete(h.mobs, m.eid)
 	h.gridDirty()
-	nm := h.spawnHostileY(players, target, m.x, m.y, m.z)
+	nm := h.spawnHostileYIn(players, target, m.dim, m.x, m.y, m.z)
 	if nm == nil {
 		return
 	}
@@ -70,6 +72,14 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	}
 	if m.health < nm.health {
 		nm.health = m.health // carry damage across; never heal on conversion
+	}
+	// ConversionType.convertCommon copies the mob's IDENTITY over too: a
+	// name-tagged mob keeps its name, and one flagged never to despawn stays
+	// flagged. Without this a named zombie came out of the water anonymous and
+	// back on the despawn clock — the tag was spent for nothing.
+	nm.customName, nm.persistent = m.customName, m.persistent
+	if nm.customName != "" {
+		h.toTracking(players, nm.eid, nm.dim, nm.x, nm.z, metaEv(nameMeta(nm.eid, nm.customName)))
 	}
 	if target == entityDrowned {
 		h.playSoundDim(players, m.dim, "minecraft:entity.zombie.converted_to_drowned", sndHostile, m.x, m.y, m.z, 1, 1)

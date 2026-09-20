@@ -118,6 +118,9 @@ func (h *hub) axolotlStep(players map[int32]*tracked, m *mob) bool {
 	if m.axBiteCD <= 0 {
 		m.axBiteCD = axBiteTicks
 		target.lastAttacker = m.eid
+		// Guardians are on the axolotl's own menu, and biting one with its
+		// spikes out costs the axolotl two points.
+		h.guardianThorns(players, target, m.eid)
 		target.hurtKind(float64(m.attackDamage()), dtMobAttack)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 		h.playSoundDim(players, m.dim, "minecraft:entity.axolotl.attack", sndNeutral, m.x, m.y, m.z, 1, 1)

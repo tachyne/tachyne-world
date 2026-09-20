@@ -56,6 +56,8 @@ type mob struct {
 	submerged       int      // consecutive seconds fully underwater (land mobs drown past maxAir)
 	dryTicks        int      // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
 	convertIn       int      // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
+	snowSecs        int      // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
+	strayIn         int      // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
 	fuse            int      // creeper: ticks left on a lit fuse (0 = not ignited)
 	anger           int      // spider: mob-updates it stays hostile in daylight after a hit
 	stareTicks      int      // enderman: ticks a distant target has gone unwatched (teleportTowards)
