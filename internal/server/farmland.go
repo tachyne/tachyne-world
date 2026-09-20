@@ -42,7 +42,7 @@ func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, s
 	case n > 0:
 		h.setBlockAt(players, dim, blockPos{x, y, z}, farmlandMin+uint32(n-1))
 	case !maintainsFarmland(h.worldFor(dim).At(x, y+1, z)):
-		h.turnFarmlandToDirt(players, x, y, z)
+		h.turnFarmlandToDirt(players, dim, x, y, z)
 	}
 	return true
 }
@@ -72,17 +72,17 @@ func (h *hub) rainingAbove(x, y, z int) bool {
 
 // turnFarmlandToDirt reverts tilled soil to dirt, popping any crop resting on
 // it (FarmBlock.turnToDirt → the crop above loses support and drops).
-func (h *hub) turnFarmlandToDirt(players map[int32]*tracked, x, y, z int) {
-	if above := h.world.At(x, y+1, z); maintainsFarmland(above) {
+func (h *hub) turnFarmlandToDirt(players map[int32]*tracked, dim, x, y, z int) {
+	if above := h.worldFor(dim).At(x, y+1, z); maintainsFarmland(above) {
 		if h.rules.DoTileDrops {
 			for _, d := range h.evalBlockLoot(lootCtx{state: above,
 				rng: h.rng.Intn, randf: h.rng.Float64}) {
-				h.spawnBlockDrop(players, dimOverworld, d.item, d.count, x, y+1, z)
+				h.spawnBlockDrop(players, dim, d.item, d.count, x, y+1, z)
 			}
 		}
-		h.setBlock(players, blockPos{x, y + 1, z}, worldgen.Air)
+		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, worldgen.Air)
 	}
-	h.setBlock(players, blockPos{x, y, z}, worldgen.Dirt)
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Dirt)
 }
 
 // tramplePlayer tramples farmland the player just landed on from `dist` blocks
@@ -92,8 +92,8 @@ func (h *hub) tramplePlayer(players map[int32]*tracked, t *tracked, x, y, z int,
 	if h.rng.Float64() >= dist-0.5 {
 		return
 	}
-	state := h.world.At(x, y, z)
+	state := h.worldFor(t.dim).At(x, y, z)
 	if state >= farmlandMin && state <= farmlandMin+7 {
-		h.turnFarmlandToDirt(players, x, y, z)
+		h.turnFarmlandToDirt(players, t.dim, x, y, z)
 	}
 }

@@ -52,34 +52,37 @@ func clampF(v, lo, hi float64) float64 {
 }
 
 // hitTarget energises a target block struck at (hx,hy,hz). arrow selects the
-// longer 20-tick hold. Overworld only (the reset uses the block-update queue).
-func (h *hub) hitTarget(players map[int32]*tracked, pos blockPos, state uint32, hx, hy, hz float64, arrow bool, a *arrowEntity) {
-	h.setBlock(players, pos, targetWithPower(state, targetStrength(hx, hy, hz)))
+// longer 20-tick hold. Runs in the target's own dimension: the write, the
+// reset record and both schedules used to be the overworld's whatever the
+// projectile had actually hit.
+func (h *hub) hitTarget(players map[int32]*tracked, dim int, pos blockPos, state uint32, hx, hy, hz float64, arrow bool, a *arrowEntity) {
+	h.setBlockAt(players, dim, pos, targetWithPower(state, targetStrength(hx, hy, hz)))
 	ticks := uint64(8)
 	if arrow {
 		ticks = 20
 	}
-	h.targetDue[pos] = h.tick.Load() + ticks
+	h.targetDue[simPos{dim: dim, blockPos: pos}] = h.tick.Load() + ticks
 	if a != nil && a.playerShot {
 		if s := players[a.shooter]; s != nil {
 			h.incCustom(s, "target_hit", 1)
 			h.advance(players, s, "target_hit", advMatch{signal: targetStrength(hx, hy, hz), distH: math.Hypot(a.x-a.ox, a.z-a.oz)})
 		}
 	}
-	h.schedule(pos, ticks)
-	h.scheduleAround(pos, 1) // let neighbours read the new signal
+	h.scheduleIn(dim, pos, ticks)
+	h.scheduleAroundIn(dim, pos, 1) // let neighbours read the new signal
 }
 
 // updateTarget decays a fired target back to 0 once its hold has elapsed. A
 // neighbour update before then leaves it holding.
 func (h *hub) updateTarget(players map[int32]*tracked, pos blockPos, state uint32) {
-	due, ok := h.targetDue[pos]
+	key := simPos{dim: h.rsDim, blockPos: pos}
+	due, ok := h.targetDue[key]
 	if !ok || h.tick.Load() < due {
 		return
 	}
-	delete(h.targetDue, pos)
+	delete(h.targetDue, key)
 	if targetPower(state) > 0 {
-		h.setBlock(players, pos, targetWithPower(state, 0))
-		h.scheduleAround(pos, 1)
+		h.rsSet(players, pos, targetWithPower(state, 0))
+		h.scheduleAroundIn(h.rsDim, pos, 1)
 	}
 }
