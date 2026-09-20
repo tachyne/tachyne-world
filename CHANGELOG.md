@@ -14,6 +14,22 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **Villagers are worth levelling up again.** Four professions — armorer,
+  weaponsmith, toolsmith and fletcher — reached master tier with nothing to
+  sell but raw materials, because the one trade type that puts enchanted gear
+  in a villager's window had never been implemented. A master weaponsmith now
+  sells an enchanted diamond sword, an armorer the enchanted diamond armour,
+  a toolsmith the enchanted tools, a fletcher the enchanted bow and crossbow
+  and a fisherman the enchanted rod. Each is enchanted when the villager
+  unlocks the tier, from the same set the real game draws on, and priced by
+  how good the roll was.
+- **Cartographers sell explorer maps.** The ocean monument, the woodland
+  mansion and the trial chamber had no map to them, which in the real game is
+  the only way to find one without swimming until you trip over it. A
+  cartographer now sells maps to all three, and — at journeyman — maps to the
+  villages and swamp huts and jungle temples of the biomes it did not grow up
+  in. The map is drawn the moment the trade appears, centred on a real
+  structure near the villager, and costs emeralds plus a compass.
 - **Potions look like what they are.** Every brew rendered the same default
   purple and its tooltip said nothing about its effects, so a potion of
   Healing and a potion of Poison were indistinguishable in the hand. Potions
