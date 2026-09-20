@@ -26,8 +26,18 @@ func InfoForState(state uint32) (BlockInfo, bool) {
 // IsHorizontalConnector reports whether a block connects via boolean
 // north/east/south/west (fences, glass panes, iron bars).
 func IsHorizontalConnector(info BlockInfo) bool {
-	return isBoolProp(info, "north") && isBoolProp(info, "east") &&
-		isBoolProp(info, "south") && isBoolProp(info, "west")
+	if !isBoolProp(info, "north") || !isBoolProp(info, "east") ||
+		!isBoolProp(info, "south") || !isBoolProp(info, "west") {
+		return false
+	}
+	// A boolean "up" alongside them means the four sides are FACES, not
+	// connections: glow lichen, vines, sculk veins, resin clumps, chorus
+	// plants, fire and the mushroom blocks all carry the same four names for
+	// something else entirely. Connecting one to its neighbour the way a fence
+	// connects grows a face with nothing behind it — reported in game as
+	// lichen sprouting outcroppings when two are placed side by side. A real
+	// connector (fence, glass pane, iron bars) has no "up".
+	return !isBoolProp(info, "up")
 }
 
 // IsWallConnector reports whether a block is a wall: its sides are the

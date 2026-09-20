@@ -56,6 +56,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **Lichen stops sprouting where two pieces meet.** The connector that
+  joins a fence to its neighbour matched any block with north, east, south
+  and west switches — which is also how glow lichen, vines, sculk veins,
+  resin clumps, chorus plants, fire and the mushroom blocks name their
+  faces. So placing one lichen beside another "connected" the two, and each
+  grew a vertical face with nothing behind it. A real connector has no up
+  switch, which is what tells them apart.
 - **Lichen and vines already in the world get repaired.** Fixing the
   placement only helped blocks put down afterwards; the ones already
   standing kept every face they had been given, including the ones facing

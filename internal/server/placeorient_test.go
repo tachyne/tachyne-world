@@ -314,3 +314,48 @@ func TestGlowLichenTakesTheClickedFace(t *testing.T) {
 		t.Fatal("with nothing to hold it the placement must be refused")
 	}
 }
+
+// Two lichens side by side on a flat floor each stay flat. The fence/pane
+// connector matched anything with boolean north/east/south/west properties,
+// which is also how a multiface block names its FACES — so placing one beside
+// another "connected" them, and each grew a vertical face with nothing behind
+// it. Legion reported it as lichen sprouting outcroppings when two are placed
+// adjacent.
+func TestAdjacentLichenStayFlat(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+	x, y, z := 904, 180, 904
+	for dx := -3; dx <= 3; dx++ {
+		for dy := -2; dy <= 3; dy++ {
+			for dz := -3; dz <= 3; dz++ {
+				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	for dx := -3; dx <= 3; dx++ {
+		for dz := -3; dz <= 3; dz++ {
+			w.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+		}
+	}
+	p.setHotbarSlot(0, itemByName["glow_lichen"])
+	p.held, p.yaw, p.pitch = 0, 0, 45
+
+	s.handlePlace(p, placeBody(x, y-1, z, 1))   // click the floor
+	s.handlePlace(p, placeBody(x, y-1, z+1, 1)) // and the floor beside it
+
+	for _, c := range []blockPos{{x, y, z}, {x, y, z + 1}} {
+		got := w.Block(c.x, c.y, c.z)
+		if !isMultiface(got) {
+			t.Fatalf("no lichen at %v, got %d", c, got)
+		}
+		info, _ := worldgen.InfoForState(got)
+		if worldgen.GetProperty(info, got, "down") != "true" {
+			t.Errorf("the lichen at %v should lie on the floor", c)
+		}
+		for _, f := range []string{"up", "north", "south", "east", "west"} {
+			if worldgen.GetProperty(info, got, f) == "true" {
+				t.Errorf("the lichen at %v grew a %s face with nothing behind it", c, f)
+			}
+		}
+	}
+}
