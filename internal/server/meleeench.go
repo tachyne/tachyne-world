@@ -1,6 +1,10 @@
 package server
 
-import attachproto "github.com/tachyne/tachyne-common/attach"
+import (
+	"math/rand"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+)
 
 // The melee enchantments that were missing: Smite and Bane of Arthropods (both
 // family-specific damage), Fire Aspect (ignite on hit) and Thorns (hurt whoever
@@ -46,16 +50,47 @@ func entityTypeSet(names ...string) map[int]bool {
 	return set
 }
 
-// familyMeleeBonus is the Smite / Bane of Arthropods contribution against one
-// target: 2.5 per level, and only against the family the enchantment names.
+// familyMeleeBonus is the Smite / Bane of Arthropods / Impaling contribution
+// against one target: 2.5 per level, and only against the family each
+// enchantment names. Vanilla applies each `damage` effect on its own terms, so
+// a weapon carrying more than one — which the table will not give you but an
+// anvil or creative will — adds all of them.
 func familyMeleeBonus(weapon invStack, etype int) float64 {
 	lvl := 0
 	if undeadTypes[etype] {
-		lvl = weapon.enchLvl(enchSmite)
-	} else if arthropodTypes[etype] {
-		lvl = weapon.enchLvl(enchBaneOfArthropods)
+		lvl += weapon.enchLvl(enchSmite)
+	}
+	if arthropodTypes[etype] {
+		lvl += weapon.enchLvl(enchBaneOfArthropods)
+	}
+	if sensitiveToImpaling[etype] {
+		// Impaling is not only a thrown trident's: stabbing a dolphin with one
+		// in hand counts too, because the damage effect is on the item.
+		lvl += weapon.enchLvl(enchImpaling)
 	}
 	return familyDamagePerLvl * float64(lvl)
+}
+
+// baneSlownessTicks is Bane of Arthropods' post_attack effect: Slowness IV for
+// somewhere between 1.5 seconds and 1.5 + 0.5·(level−1), rolled per hit.
+func baneSlownessTicks(r *rand.Rand, lvl int) int {
+	lo := 30 // 1.5 s
+	hi := lo + 10*(lvl-1)
+	if hi <= lo {
+		return lo
+	}
+	return lo + r.Intn(hi-lo+1)
+}
+
+// applyBaneSlowness is the post_attack half of Bane of Arthropods, which the
+// damage bonus alone leaves out: a struck arthropod is slowed to a crawl.
+func (h *hub) applyBaneSlowness(players map[int32]*tracked, weapon invStack, m *mob) {
+	if m == nil || !arthropodTypes[m.etype] {
+		return
+	}
+	if lvl := weapon.enchLvl(enchBaneOfArthropods); lvl > 0 {
+		h.applyMobEffectTicks(players, m, effSlowness, 3, baneSlownessTicks(h.rng, lvl))
+	}
 }
 
 // applyFireAspect sets a struck mob alight for 4 seconds per level. Vanilla

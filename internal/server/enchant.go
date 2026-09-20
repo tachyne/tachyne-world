@@ -126,12 +126,14 @@ func (h *hub) countBookshelves(pos simPos) int {
 			}
 			for dy := 0; dy <= 1; dy++ {
 				// EnchantingTableBlock.isValidBookShelf: the shelf counts only
-				// when the cell halfway to it transmits the power, i.e. is
-				// #replaceable — a wall between table and shelf blocks it.
+				// when the cell halfway to it is AIR. Vanilla tests air, not
+				// "replaceable", so a shelf behind a torch or a tuft of grass
+				// does not count — and note the halved offset applies to x and
+				// z only; the height is the shelf's own.
 				if w.At(pos.x+dx, pos.y+dy, pos.z+dz) != bookshelfState {
 					continue
 				}
-				if worldgen.IsReplaceable(w.At(pos.x+dx/2, pos.y+dy, pos.z+dz/2)) {
+				if w.At(pos.x+dx/2, pos.y+dy, pos.z+dz/2) == worldgen.Air {
 					n++
 				}
 			}

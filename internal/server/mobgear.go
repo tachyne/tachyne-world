@@ -149,16 +149,22 @@ func (h *hub) mobEquipItem(players map[int32]*tracked, m *mob, st invStack) int 
 
 // gearDropChance is DropChances.byEquipment for one slot: a guaranteed drop
 // for what the mob picked up, the spawn roll for what it spawned with, and
-// the 8.5 % default otherwise.
+// the 8.5 % default otherwise. Looting adds its own percent per level on top
+// — the enchantment's `equipment_drops` effect, which is why a looting sword
+// pulls armour off mobs more often and not just more drops out of them.
 func (h *hub) gearDropChance(m *mob, slot int) float32 {
+	base := float32(defaultGearDrop)
 	switch {
 	case m.gearSure[slot]:
 		return 1
 	case m.spawnGear:
-		return m.gearDrop
+		base = m.gearDrop
 	}
-	return defaultGearDrop
+	return base + lootingGearBonus*float32(m.looting)
 }
+
+// lootingGearBonus is Looting's equipment_drops contribution, 0.01 per level.
+const lootingGearBonus = 0.01
 
 // dropGearStack puts a replaced piece on the ground with its enchantments
 // and wear.

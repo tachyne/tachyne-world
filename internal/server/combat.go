@@ -367,7 +367,8 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			damageTags: map[string]bool{"mace_smash": smash}, dealt: float64(dmg)})
 	}
 	if t != nil {
-		h.applyFireAspect(players, t, m) // Fire Aspect: 4 s alight per level
+		h.applyFireAspect(players, t, m)              // Fire Aspect: 4 s alight per level
+		h.applyBaneSlowness(players, heldStack(t), m) // Bane of Arthropods: Slowness IV
 	}
 	if smash { // shockwave, fall-damage negation, wind_burst launch
 		h.smashEffects(players, t, m, fall)

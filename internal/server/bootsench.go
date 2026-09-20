@@ -46,7 +46,11 @@ var (
 // but cannot pave a waterfall.
 func (h *hub) frostWalk(players map[int32]*tracked, t *tracked) {
 	lvl := t.armor[3].enchLvl(enchFrostWalker) // boots
-	if lvl == 0 || !t.onGround || t.dim != 0 {
+	// Vanilla's requirements are on the ground and NOT RIDING; there is no
+	// dimension gate, so a water lake in the End freezes the same way. The
+	// engine had one, which meant Frost Walker did nothing outside the
+	// overworld even where there was water to walk on.
+	if lvl == 0 || !t.onGround || t.ridingEID != 0 {
 		return
 	}
 	radius := frostRadiusBase + lvl - 1
@@ -148,13 +152,20 @@ func (h *hub) frostedNeighboursFewerThan(dim int, pos blockPos, want int) bool {
 // position change, which comes to the same thing.
 func (h *hub) refreshSoulSpeed(t *tracked) {
 	in := t.playerAttrs().Get(attr.MovementSpeed)
+	// Vanilla's effect is BOTH modifiers at once: the speed, and
+	// MOVEMENT_EFFICIENCY +1, which is what stops soul sand from slowing the
+	// wearer down in the first place. Without the second one Soul Speed was
+	// paying back only part of the penalty it is meant to cancel outright.
+	eff := t.playerAttrs().Get(attr.MovementEfficiency)
 	lvl := t.armor[3].enchLvl(enchSoulSpeed)
 	if lvl == 0 || !t.onGround || !h.onSoulBlock(t) {
 		in.RemoveModifier(soulSpeedSource)
+		eff.RemoveModifier(soulSpeedSource)
 		return
 	}
 	amount := soulSpeedBase + soulSpeedPerLvl*float64(lvl-1)
 	in.AddModifier(attr.Modifier{Source: soulSpeedSource, Amount: amount, Op: attr.AddValue})
+	eff.AddModifier(attr.Modifier{Source: soulSpeedSource, Amount: 1, Op: attr.AddValue})
 }
 
 // onSoulBlock reports whether the block underfoot is in #soul_speed_blocks.
