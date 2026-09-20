@@ -1123,35 +1123,39 @@ func (h *hub) run() {
 				}
 			}
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)
-				if h.invs != nil {
+				// The per-player stores below marshal and rewrite themselves
+				// WHOLE on every pass, whether or not anything changed. With
+				// nobody online the record loops add nothing, so the write is
+				// pure waste — and it was costing an idle world a ~100 ms tick
+				// twice a minute, on the hub goroutine. Skip them when there
+				// is no player to have changed anything.
+				// Snapshot online loadouts + positions (crash resilience). This
+				// ran TWICE in the same pass — the identical block appeared
+				// again below — so every save marshalled and rewrote the whole
+				// inventory store two times over.
+				if len(players) > 0 && h.invs != nil {
 					for _, t := range players {
 						h.invs.record(t.p.name, t)
 					}
 					h.invs.flush()
 				}
-				if h.advs != nil {
+				if len(players) > 0 && h.advs != nil {
 					for _, t := range players {
 						h.advs.record(t.p.name, t.adv)
 					}
 					h.advs.flush()
 				}
-				if h.statstore != nil {
+				if len(players) > 0 && h.statstore != nil {
 					for _, t := range players {
 						h.statstore.record(t.p.name, t.stats)
 					}
 					h.statstore.flush()
 				}
-				if h.rbstore != nil {
+				if len(players) > 0 && h.rbstore != nil {
 					for _, t := range players {
 						h.rbstore.record(t.p.name, t)
 					}
 					h.rbstore.flush()
-				}
-				if h.invs != nil { // snapshot online loadouts + positions (crash resilience)
-					for _, t := range players {
-						h.invs.record(t.p.name, t)
-					}
-					h.invs.flush()
 				}
 				if h.sbDirty {
 					h.sbDirty = false
