@@ -88,6 +88,11 @@ the public history since the project was open-sourced on 2026-07-10.
   to whoever it is boosting and softened by distance for anything else within
   five blocks — and a wall between you and the burst still saves you. A plain
   rocket with no star in it stays perfectly safe to fly with.
+- **You can sleep through a thunderstorm.** A bed refused you by the clock,
+  so a storm at noon was no help. The real game does not check the clock — it
+  checks how dark the sky is, which a thunderstorm darkens past the threshold
+  and ordinary rain does not quite. Same nights as before, to the tick; storms
+  are new.
 - **An enderman only takes a block it can see.** The real game makes one
   check its line to a block before lifting it; ours did not, so an enderman
   could reach a block buried in a hillside beside it or on the far side of a

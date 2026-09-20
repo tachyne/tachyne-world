@@ -181,3 +181,67 @@ func TestWalkingAwayWakes(t *testing.T) {
 		t.Fatal("walking away should wake the sleeper")
 	}
 }
+
+// Level.isDay is not a clock reading: it is skyDarken < 4, which the weather
+// moves. That is why a thunderstorm lets you sleep at noon and ordinary rain
+// does not — rain darkens the sky, but not far enough.
+func TestSleepWindowFollowsTheSky(t *testing.T) {
+	h := newHub(world.New(79))
+
+	// With a clear sky the window is exactly the pair of constants vanilla's
+	// formula produces, which is what the engine used to hard-code.
+	h.rainLevel, h.thunderLevel = 0, 0
+	for _, tc := range []struct {
+		tick int
+		day  bool
+	}{
+		{6000, true},          // noon
+		{12000, true},         // still afternoon
+		{sleepStart, false},   // dusk: the window is open
+		{18000, false},        // midnight
+		{sleepEnd, false},     // the last sleepable tick
+		{sleepEnd + 60, true}, // dawn: it has closed
+	} {
+		h.dayTime.Store(uint64(tc.tick))
+		if got := h.isDaylight(); got != tc.day {
+			t.Errorf("t=%d isDaylight=%v, want %v (skyDarken %d)",
+				tc.tick, got, tc.day, canonicalSkyDarken(uint64(tc.tick), h.rainLevel, h.thunderLevel))
+		}
+	}
+
+	// The crossings sit on the constants the engine hard-coded, give or take
+	// the one tick that truncating the curve to an int can move them. That
+	// agreement is the check that the formula is vanilla's and not a guess.
+	cross := func(from, to int) int {
+		for tk := from; tk != to; tk++ {
+			if (canonicalSkyDarken(uint64(tk), 0, 0) < 4) != (canonicalSkyDarken(uint64(tk+1), 0, 0) < 4) {
+				return tk + 1
+			}
+		}
+		return -1
+	}
+	if got := cross(11000, 14000); got < sleepStart-1 || got > sleepStart+1 {
+		t.Errorf("the window opens at %d, want within a tick of %d", got, sleepStart)
+	}
+	if got := cross(22000, 23999); got < sleepEnd || got > sleepEnd+2 {
+		t.Errorf("the window closes at %d, want just past %d", got, sleepEnd)
+	}
+
+	// At noon: clear and rainy are both too bright, a thunderstorm is not.
+	h.dayTime.Store(6000)
+	for _, tc := range []struct {
+		name          string
+		rain, thunder float32
+		day           bool
+	}{
+		{"clear", 0, 0, true},
+		{"raining", 1, 0, true},
+		{"thundering", 1, 1, false},
+	} {
+		h.rainLevel, h.thunderLevel = tc.rain, tc.thunder
+		if got := h.isDaylight(); got != tc.day {
+			t.Errorf("noon %s: isDaylight=%v, want %v (skyDarken %d)",
+				tc.name, got, tc.day, canonicalSkyDarken(h.dayTime.Load(), tc.rain, tc.thunder))
+		}
+	}
+}

@@ -265,8 +265,12 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		h.spawns.set(t.p.name, head, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
 	}
-	if dt := h.dayTime.Load() % dayLengthTicks; dt < sleepStart || dt > sleepEnd {
-		t.p.trySendEv(chatEv("You can only sleep at night"))
+	// Player.startSleepInBed refuses only while it is DAY, and Level.isDay is
+	// not a clock reading — it is skyDarken < 4, which a thunderstorm pushes
+	// over the line. That is why you can sleep through one at noon, and why
+	// ordinary rain (which darkens the sky but not enough) will not do.
+	if h.isDaylight() {
+		t.p.trySendEv(chatEv("You can only sleep at night or during a thunderstorm"))
 		return
 	}
 	bx, by, bz := float64(head.x)+0.5, float64(head.y), float64(head.z)+0.5
@@ -462,6 +466,42 @@ func (h *hub) worldSpawn() (x, y, z float64) {
 		return float64(bx) + 0.5, h.world.SurfaceY(bx, bz), float64(bz) + 0.5
 	}
 	return 0.5, h.world.SurfaceY(0, 0), 0.5
+}
+
+// isDaylight is Level.isDay — the test a bed makes before refusing you, and
+// the reason a thunderstorm lets you sleep at noon while ordinary rain does
+// not.
+//
+// It does NOT reuse skyDarken (spawn.go), which models 26.x's Timelines
+// keyframes rather than the canonical 1.21.x curve. The two disagree by
+// about nineteen ticks at dusk and dawn, and — the part that matters — the
+// 26.x curve reaches 4 at noon in plain RAIN, which would let a player sleep
+// through a shower. On canonical 1.21.11 it has to be the cosine.
+func (h *hub) isDaylight() bool {
+	return canonicalSkyDarken(h.dayTime.Load(), h.rainLevel, h.thunderLevel) < 4
+}
+
+// canonicalSkyDarken is Level.updateSkyBrightness on 1.21.x: how dark the sky
+// is on vanilla's 0-11 scale, from the time of day and how hard it is raining
+// and thundering. Its clear-sky crossings land exactly on sleepStart and
+// sleepEnd, which is the check that the port is right.
+func canonicalSkyDarken(dayTime uint64, rainLevel, thunderLevel float32) int {
+	rain := 1 - float64(rainLevel)*5/16
+	thunder := 1 - float64(thunderLevel)*5/16
+	cos := math.Cos(canonicalTimeOfDay(dayTime) * 2 * math.Pi)
+	d := 0.5 + 2*math.Max(-0.25, math.Min(0.25, cos))
+	return int((1 - d*rain*thunder) * 11)
+}
+
+// canonicalTimeOfDay is DimensionType.timeOfDay — NOT a plain fraction of the
+// day. It offsets by a quarter and smooths with a cosine, which is what makes
+// dawn and dusk gradual rather than a step.
+func canonicalTimeOfDay(dayTime uint64) float64 {
+	d := math.Mod(float64(dayTime)/float64(dayLengthTicks)-0.25, 1)
+	if d < 0 {
+		d++
+	}
+	return (d*2 + (0.5 - math.Cos(d*math.Pi)/2)) / 3
 }
 
 // sendDefaultSpawn tells a client where the world's spawn point is. It is
