@@ -654,3 +654,39 @@ var dyeOrdinalByItem = func() map[int32]int8 {
 	}
 	return out
 }()
+
+// advVariantName is the registry name of a mob's variant, without its
+// namespace — what an advancement's `components` predicate compares against
+// (a cat's coat, a wolf's, a frog's). "" for a species with no variant, or
+// one whose variant is not a registry entry.
+func advVariantName(m *mob) string {
+	if m == nil {
+		return ""
+	}
+	switch m.etype {
+	case entityCat:
+		return registryNameOf(catVariantID, m.variant)
+	case entityWolf:
+		return registryNameOf(wolfVariantID, m.variant)
+	case entityFrog:
+		switch m.variant {
+		case frogCold:
+			return "cold"
+		case frogWarm:
+			return "warm"
+		case frogTemperate:
+			return "temperate"
+		}
+	}
+	return ""
+}
+
+// registryNameOf reverses a registry-id map, stripping the namespace.
+func registryNameOf(ids map[string]int32, id int32) string {
+	for name, v := range ids {
+		if v == id {
+			return strings.TrimPrefix(name, "minecraft:")
+		}
+	}
+	return ""
+}

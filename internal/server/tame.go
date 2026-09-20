@@ -105,7 +105,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.etype == entityNautilus {
 		// A tamed nautilus is a mount, not a follower (AbstractNautilus has no
 		// follow-owner goal); its tamed flag rides no metadata yet.
-		h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
+		h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype], variant: advVariantName(m)})
 		return true
 	}
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
@@ -115,7 +115,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if vm := variantMeta(m); vm != nil {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vm)) // the collar appears with the tame
 	}
-	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype]})
+	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype], variant: advVariantName(m)})
 	return true
 }
 

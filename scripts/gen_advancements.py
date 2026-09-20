@@ -128,6 +128,19 @@ def ent_pred(cond_list):
         ts = p.get("type_specific") or {}
         if isinstance(ts, dict) and "variant" in ts:
             var = strip_ns(str(ts["variant"]))
+        # 1.21.5 moved the variant onto the item-component map: a cat's is
+        # "minecraft:cat/variant", a wolf's "minecraft:wolf/variant", a frog's
+        # "minecraft:frog/variant". Without reading these, every criterion of
+        # complete_catalogue / whole_pack / leash_all_frog_variants matched any
+        # animal at all and the advancement fell out on the first tame.
+        comps = p.get("components") or {}
+        if not var and isinstance(comps, dict):
+            for k, v in comps.items():
+                if str(k).endswith("/variant") and isinstance(v, str):
+                    var = strip_ns(v)
+                    if not t:
+                        t = strip_ns(str(k)).split("/")[0]
+                    break
         return t, baby, var
     return "", None, ""
 
@@ -241,9 +254,16 @@ def distill(trigger, cond, tags):
                     d["toolPred"] = list((term["predicate"]["predicates"]).keys())[0].split(":")[-1]
     elif t in ("player_killed_entity", "entity_killed_player", "tame_animal", "summoned_entity",
                "thrown_item_picked_up_by_player"):
-        d["entity"], _, _ = ent_pred(c.get("entity"))
+        # The variant matters here too: complete_catalogue is eleven tame_animal
+        # criteria that differ only by the cat's coat, whole_pack nine by the
+        # wolf's.
+        d["entity"], baby, var = ent_pred(c.get("entity"))
+        if baby is not None: d["baby"] = 1 if baby else 0
+        if var: d["variant"] = var
     elif t == "bred_animals":
-        d["entity"], _, _ = ent_pred(c.get("child"))
+        d["entity"], baby, var = ent_pred(c.get("child"))
+        if baby is not None: d["baby"] = 1 if baby else 0
+        if var: d["variant"] = var
     elif t in ("player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity"):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0

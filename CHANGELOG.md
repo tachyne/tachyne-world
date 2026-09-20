@@ -28,6 +28,13 @@ the public history since the project was open-sourced on 2026-07-10.
   to someone instead of only to numbers.
 
 ### Fixed
+- **The coat advancements need the coat.** Taming a single cat completed
+  all eleven criteria of the cat catalogue, taming one wolf finished the
+  whole pack, and leashing one frog finished all three variants — the
+  generator that bakes the advancement table never read the variant out
+  of the predicate's components, so every criterion matched any animal.
+  Each criterion now names its coat, and the tame, breed and leash hooks
+  pass the animal's own.
 - **The dragon's wings throw you.** Contact with it dealt a flat eight
   wherever it touched you. Vanilla has two: the body and head deal ten,
   and the wings deal five with a hard sideways shove — the hit that

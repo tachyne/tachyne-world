@@ -264,7 +264,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				breeder = players[o.lovedBy]
 			}
 			if breeder != nil {
-				h.advance(players, breeder, "bred_animals", advMatch{entity: advEntityName[m.etype]})
+				h.advance(players, breeder, "bred_animals", advMatch{entity: advEntityName[m.etype], variant: advVariantName(baby)})
 				h.incCustom(breeder, "animals_bred", 1)
 			}
 			break

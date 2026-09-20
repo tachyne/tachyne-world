@@ -129,3 +129,45 @@ func TestAdvStoreRoundTrip(t *testing.T) {
 		t.Fatal("load returned a shared map")
 	}
 }
+
+// The variant-gated advancements need the variant: taming one cat must not
+// complete the eleven-coat catalogue, and leashing one frog must not finish
+// all three.
+func TestVariantAdvancementsNeedTheVariant(t *testing.T) {
+	catCrit, wolfCrit, frogCrit := 0, 0, 0
+	for _, n := range advTable {
+		for _, c := range n.criteria {
+			switch n.id {
+			case "minecraft:husbandry/complete_catalogue":
+				catCrit++
+				if c.entity != "cat" || c.variant == "" {
+					t.Errorf("%s should name a cat coat, got entity=%q variant=%q", c.name, c.entity, c.variant)
+				}
+			case "minecraft:husbandry/whole_pack":
+				wolfCrit++
+				if c.entity != "wolf" || c.variant == "" {
+					t.Errorf("%s should name a wolf coat, got entity=%q variant=%q", c.name, c.entity, c.variant)
+				}
+			case "minecraft:husbandry/leash_all_frog_variants":
+				frogCrit++
+				if c.variant == "" {
+					t.Errorf("%s should name a frog variant", c.name)
+				}
+			}
+		}
+	}
+	if catCrit == 0 || wolfCrit == 0 || frogCrit == 0 {
+		t.Fatalf("expected criteria for all three: cat=%d wolf=%d frog=%d", catCrit, wolfCrit, frogCrit)
+	}
+	// And the matcher distinguishes them.
+	c := &advCriterion{trigger: "tame_animal", entity: "cat", variant: "jellie"}
+	if !(advMatch{entity: "cat", variant: "jellie"}).criterion(c) {
+		t.Error("the right coat should match")
+	}
+	if (advMatch{entity: "cat", variant: "tabby"}).criterion(c) {
+		t.Error("another coat must not")
+	}
+	if (advMatch{entity: "cat"}).criterion(c) {
+		t.Error("a coatless tame must not match a coat criterion")
+	}
+}
