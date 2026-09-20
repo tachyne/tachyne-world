@@ -349,6 +349,11 @@ type mob struct {
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
 	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
+	raidRecruitAt                   uint64     // PathfindToRaidGoal: the tick its next recruitment sweep is due
+	patrolTarget                    blockPos   // LongDistancePatrolGoal: where the patrol is headed (zero = none)
+	patrolLeg                       blockPos   // …and the ten-block waypoint it is walking to right now
+	patrolling                      bool       // PatrollingMonster.patrolling
+	patrolCooldown                  uint64     // NAVIGATION_FAILED_COOLDOWN: no patrol steering until this tick
 	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
 	dolphinSwimmer                  int32      // dolphin: the swimming player it keeps company (0 = none)
 	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
@@ -694,6 +699,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):
 			// A breeze sliding, drawing breath, mid-jump or shooting.
+		case h.raidPathStep(players, m):
+			// A raider walking back to the raid it belongs to, gathering any
+			// idle raider it passes on the way.
+		case h.patrolStep(players, m):
+			// A pillager patrol crossing the country toward its distant
+			// target, the captain plotting the legs.
 		case h.avoidStep(players, m):
 			// Keeping clear of a mob its kind avoids, at the goal's pace.
 		case m.panic > 0:
