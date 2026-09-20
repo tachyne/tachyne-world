@@ -71,6 +71,7 @@ func (h *hub) sensorWithinEarshot(x, y, z int) bool {
 // sendOffhand refreshes the off-hand slot on the client and, since the hand
 // contents show on the model, re-broadcasts the loadout.
 func (h *hub) sendOffhand(t *tracked) {
+	t.p.setOffhand(t.offhand.item) // the session dispatches offhand use from this
 	t.inv.stateId++
 	t.p.trySendEv(attachproto.WindowSlot{ID: 0, StateID: t.inv.stateId, Slot: offhandWindowSlot, Item: stackEv(t.offhand)})
 	h.broadcastEquipment(h.playersRef, t)

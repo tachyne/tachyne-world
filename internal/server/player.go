@@ -42,6 +42,7 @@ type player struct {
 	sneaking      bool // from Entity Action start/stop-sneak (place against usable blocks)
 
 	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
+	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch
 	hmu            sync.Mutex   // guards hotbar (the hub mirrors the survival inventory in)
 	hotbar         [9]int32     // item id per hotbar slot (0 = empty)
 	// hotbarPaint carries the painting/variant component of a creative-menu
@@ -232,6 +233,12 @@ func (p *player) heldItem() int32 {
 	defer p.hmu.Unlock()
 	return p.hotbar[p.held]
 }
+
+// offhandItem mirrors the offhand's item id onto the SESSION side. The hub
+// owns the inventory, but the use-item dispatch runs on the session
+// goroutine and has to know what the offhand holds — a shield lives there.
+func (p *player) setOffhand(item int32) { p.offhandMirror.Store(item) }
+func (p *player) offhandItem() int32    { return p.offhandMirror.Load() }
 
 // digBonus mirrors the Efficiency speed addend of the held tool onto the
 // SESSION side. The hub owns enchantments, but the fast-break check runs on

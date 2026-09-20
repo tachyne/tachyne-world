@@ -34,7 +34,7 @@ func TestAxeDisablesShield(t *testing.T) {
 	}
 	// Down and on cooldown: the next blow lands, and it cannot be raised.
 	hp := pl.health
-	h.raiseShield(pl)
+	h.raiseShield(pl, 0)
 	if pl.blockingSince != 0 {
 		t.Error("the shield came up during its cooldown")
 	}
@@ -43,7 +43,7 @@ func TestAxeDisablesShield(t *testing.T) {
 	}
 	// Cooldown out: it comes up again.
 	h.tick.Store(h.tick.Load() + 100)
-	h.raiseShield(pl)
+	h.raiseShield(pl, 0)
 	if pl.blockingSince == 0 {
 		t.Error("the shield stayed down after its cooldown")
 	}

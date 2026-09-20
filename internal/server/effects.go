@@ -94,8 +94,9 @@ var (
 // vanilla MobEffectInstance.duration — ticked down and consulted at 20 Hz so
 // the regen/poison/wither application cadence is exact; see updateEffects).
 type activeEffect struct {
-	amp  int
-	left int
+	amp     int
+	left    int
+	ambient bool // from a beacon or a conduit: fainter particles, as vanilla's flag
 }
 
 // effectNames maps /effect arguments to ids.
@@ -132,6 +133,13 @@ func (t *tracked) hasEffect(id int32) int {
 // applyEffect starts (or refreshes) an effect and shows it on the client HUD.
 // Instant effects apply immediately and are never stored.
 func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp, secs int) {
+	h.applyEffectFrom(players, t, id, amp, secs, false)
+}
+
+// applyEffectFrom is applyEffect with MobEffectInstance's ambient flag: a
+// beacon's and a conduit's effects are ambient, which the client draws with
+// fainter particles and a blue-ringed icon.
+func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, amp, secs int, ambient bool) {
 	switch id {
 	case effInstantHealth:
 		heal := float32(4 * (int(1) << amp))
@@ -153,7 +161,7 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > secs*20)) {
 		return // a stronger/longer instance is already running (vanilla)
 	}
-	t.effects[id] = &activeEffect{amp: amp, left: secs * 20}
+	t.effects[id] = &activeEffect{amp: amp, left: secs * 20, ambient: ambient}
 	t.applyEffectModifiers(id, amp)
 	if id == effAbsorption {
 		// The buffer fills to the new ceiling the moment the effect lands.
@@ -162,7 +170,7 @@ func (h *hub) applyEffect(players map[int32]*tracked, t *tracked, id int32, amp,
 	if id == effInvisibility || id == effGlowing {
 		h.broadcastPlayerFlags(players, t) // other players have to see it too
 	}
-	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20)})
+	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(amp), Ticks: int32(secs * 20), Ambient: ambient})
 	if id == effHeroOfVillage {
 		h.advance(players, t, "hero_of_the_village", advMatch{})
 	}

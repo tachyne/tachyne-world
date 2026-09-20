@@ -270,9 +270,9 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 			if t.dim != dim || absF(t.x-cx) > rng || absF(t.z-cz) > rng || t.y < float64(pos.y)-rng {
 				continue // vanilla box: ±range horizontally, down range, up to the sky
 			}
-			h.applyEffect(players, t, b.primary-1, amp, secs)
+			h.applyEffectFrom(players, t, b.primary-1, amp, secs, true) // BeaconBlockEntity: ambient
 			if levels >= 4 && b.secondary != 0 && b.secondary != b.primary {
-				h.applyEffect(players, t, b.secondary-1, 0, secs)
+				h.applyEffectFrom(players, t, b.secondary-1, 0, secs, true)
 			}
 		}
 	}

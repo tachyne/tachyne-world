@@ -49,17 +49,27 @@ type dmgFrom struct {
 func from(x, z float64) dmgFrom { return dmgFrom{x: x, z: z, ok: true} }
 
 // evBlockStart raises a player's shield (they right-clicked holding one).
-type evBlockStart struct{ eid int32 }
+type evBlockStart struct {
+	eid  int32
+	hand int32 // InteractionHand: 0 main, 1 off — a shield works in either
+}
 
 func (evBlockStart) isHubEvent() {}
 
 // raiseShield records the tick a shield went up (if the player is actually
 // holding one). isBlockingShield gates on the block delay.
-func (h *hub) raiseShield(t *tracked) {
-	if t.p.heldItem() == itemShield && !h.onCooldown(t, itemShield) { // disabled by an axe: it stays down
-		t.blockingSince = h.tick.Load()
+func (h *hub) raiseShield(t *tracked, hand int32) {
+	item, slot := t.p.heldItem(), t.p.heldSlot()
+	if hand == handOffhand { // where a shield normally lives
+		item, slot = t.offhand.item, offhandSlot
+	}
+	if item == itemShield && !h.onCooldown(t, itemShield) { // disabled by an axe: it stays down
+		t.blockingSince, t.blockingSlot = h.tick.Load(), slot
 	}
 }
+
+// handOffhand is InteractionHand.OFF_HAND as the UseItem frame carries it.
+const handOffhand = 1
 
 // lowerShield drops the shield (release, hotbar switch, or a disabling hit).
 func (h *hub) lowerShield(t *tracked) { t.blockingSince = 0 }
@@ -118,7 +128,7 @@ func (h *hub) shieldBlockFX(players map[int32]*tracked, t *tracked, blocked floa
 		// used to h.post the wear event to itself, which is the one thing a
 		// hub-goroutine caller must not do — the events channel is buffered,
 		// and a full one would have the hub waiting on itself.
-		h.applyToolWear(t, t.p.heldSlot(), n)
+		h.applyToolWear(t, t.blockingSlot, n) // the shield that stopped it, whichever hand it is in
 	}
 }
 

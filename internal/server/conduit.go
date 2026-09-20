@@ -139,7 +139,7 @@ func (h *hub) runConduit(players map[int32]*tracked, dim int, pos blockPos) {
 		if !h.inWater(dim, t.x, t.y, t.z) && !h.raining {
 			continue
 		}
-		h.applyEffect(players, t, effConduitPower, 0, conduitPowerSecs)
+		h.applyEffectFrom(players, t, effConduitPower, 0, conduitPowerSecs, true) // Conduit: ambient
 	}
 	if active < conduitMinKill {
 		return

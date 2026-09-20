@@ -98,11 +98,17 @@ func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
 	switch e := v.(type) {
 	case attachproto.UseItem:
-		if equipSlotOnUse(p.heldItem()) >= 0 { // armour in hand goes on
+		// The client says which hand it used; the offhand is where a shield
+		// lives, and food, rockets and throwables work from it too.
+		item, slot := p.heldItem(), int32(p.held)
+		if e.Hand == handOffhand {
+			item, slot = p.offhandItem(), offhandSlot
+		}
+		if equipSlotOnUse(item) >= 0 { // armour in hand goes on
 			h.post(evEquipHeld{eid: p.eid})
 			return
 		}
-		switch p.heldItem() {
+		switch item {
 		case itemBow:
 			h.post(evBowStart{eid: p.eid})
 		case itemCrossbow:
@@ -112,13 +118,13 @@ func (r *remotePlayer) Action(v any) {
 		case itemFishingRod:
 			h.post(evFishUse{eid: p.eid})
 		case itemBucket: // aiming at a fluid: the client sends plain use_item
-			h.post(evBucketFill{eid: p.eid, slot: int32(p.held)})
+			h.post(evBucketFill{eid: p.eid, slot: slot})
 		case itemShield:
-			h.post(evBlockStart{eid: p.eid})
+			h.post(evBlockStart{eid: p.eid, hand: e.Hand})
 		case itemSnowball, itemEgg:
-			h.post(evThrow{eid: p.eid, item: p.heldItem()})
+			h.post(evThrow{eid: p.eid, item: item})
 		case itemSplashPotion, itemLingerPotion:
-			h.post(evThrowPotion{eid: p.eid, slot: p.held})
+			h.post(evThrowPotion{eid: p.eid, slot: int(slot)})
 		case itemXPBottle:
 			h.post(evThrowXPBottle{eid: p.eid})
 		case itemSpyglass:
@@ -140,7 +146,7 @@ func (r *remotePlayer) Action(v any) {
 		case itemWrittenBook, itemWritableBook:
 			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
 		default:
-			h.post(evEat{eid: p.eid, slot: p.held})
+			h.post(evEat{eid: p.eid, slot: int(slot)})
 		}
 	case attachproto.UseEntity:
 		if e.Attack {

@@ -148,13 +148,13 @@ func TestRaiseShieldRequiresShield(t *testing.T) {
 	h.tick.Store(50)
 	pl := testTracked()
 	pl.p.setHotbarSlot(0, itemShield)
-	h.raiseShield(pl)
+	h.raiseShield(pl, 0)
 	if pl.blockingSince != 50 {
 		t.Fatalf("holding a shield should raise it, blockingSince=%d", pl.blockingSince)
 	}
 	pl2 := testTracked()
 	pl2.p.setHotbarSlot(0, itemBow)
-	h.raiseShield(pl2)
+	h.raiseShield(pl2, 0)
 	if pl2.blockingSince != 0 {
 		t.Fatal("a non-shield item should not raise a block")
 	}

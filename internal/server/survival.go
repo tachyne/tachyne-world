@@ -654,17 +654,18 @@ func eatNearlyTicks(item int32) int { return foodEatTicks(item) - 2 }
 // applies after eatDuration ticks (updateEating), and an early release or a
 // hotbar switch cancels it. Validated here so an invalid start never ticks.
 func (h *hub) startEating(t *tracked, slot int) {
-	if t.gamemode != gmSurvival || t.dead || t.inv == nil || slot < 0 || slot >= 9 {
+	if t.gamemode != gmSurvival || t.dead || t.handStack(slot) == nil {
 		return
 	}
 	// Milk is a drink, not a food: it has no nutrition, so the "already full"
 	// gate below must not stop it — carrying it to cure a poison is the whole
 	// reason to have it.
-	if it := t.inv.slots[slot].item; (it == itemMilkBucket || it == itemOminousBottle) && t.inv.slots[slot].count > 0 {
+	if st := t.handStack(slot); (st.item == itemMilkBucket || st.item == itemOminousBottle) && st.count > 0 {
 		t.eatingSlot, t.eatingAt = slot, h.tick.Load() // drinks: no nutrition, so no "already full" gate
 		return
 	}
-	if _, ok := foodPoints[t.inv.slots[slot].item]; !ok || t.inv.slots[slot].count == 0 || t.food >= maxFood {
+	st := t.handStack(slot)
+	if _, ok := foodPoints[st.item]; !ok || st.count == 0 || t.food >= maxFood {
 		return
 	}
 	t.eatingSlot, t.eatingAt = slot, h.tick.Load()
@@ -696,7 +697,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 			t.eatingSlot = -1
 			continue
 		}
-		if now-t.eatingAt >= uint64(foodEatTicks(t.inv.slots[t.eatingSlot].item)) {
+		if now-t.eatingAt >= uint64(foodEatTicks(t.handStack(t.eatingSlot).item)) {
 			slot := t.eatingSlot
 			t.eatingSlot = -1
 			h.eat(players, t, slot)
@@ -762,4 +763,23 @@ func airMetadata(eid int32, air int) []byte {
 	b = protocol.AppendVarInt(b, metaTypeInt)
 	b = protocol.AppendVarInt(b, int32(air))
 	return protocol.AppendU8(b, 0xff) // metadata list terminator
+}
+
+// offhandSlot names the offhand where a hotbar index is expected: vanilla's
+// inventory slot 40, the number its own menus give the offhand. The use-item
+// dispatch passes it when the client's hand was OFF_HAND.
+const offhandSlot = 40
+
+// handStack points at the stack a use slot names — a hotbar slot or the
+// offhand. nil when the slot names neither (no inventory, out of range).
+func (t *tracked) handStack(slot int) *invStack {
+	switch {
+	case t.inv == nil:
+		return nil
+	case slot == offhandSlot:
+		return &t.offhand
+	case slot >= 0 && slot < 9:
+		return &t.inv.slots[slot]
+	}
+	return nil
 }

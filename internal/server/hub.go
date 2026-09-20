@@ -254,6 +254,7 @@ type tracked struct {
 	lastAttack    uint64 // tick of the last melee swing (attack-cooldown scaling)
 	drawingAt     uint64 // tick a bow draw began (0 = not drawing)
 	blockingSince uint64 // tick a shield was raised (0 = not blocking)
+	blockingSlot  int    // which slot the raised shield is in (a hotbar index, or offhandSlot)
 
 	// Crossbow (two-phase: charge → loaded → fire). xbowAt is the tick a charge
 	// began (0 = not charging); once the charge completes the shot is latched in
@@ -1624,7 +1625,7 @@ func (h *hub) run() {
 				}
 			case evBlockStart:
 				if t := players[e.eid]; t != nil {
-					h.raiseShield(t)
+					h.raiseShield(t, e.hand)
 				}
 			case evThrow:
 				if t := players[e.eid]; t != nil {

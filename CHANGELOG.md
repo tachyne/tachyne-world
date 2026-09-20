@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Fixed
+- **The offhand works, and status effects show their icons.** The attach
+  frame for a right-click carried no hand, so the gateway's was thrown
+  away and everything in the offhand was dead — above all a shield, which
+  is where a shield normally lives. The hand rides the frame now: a
+  shield raises from either hand, wears from what it stops in the hand
+  that held it, and offhand food, buckets and throwables work. Status
+  effects never drew their HUD icon either, because the renderer
+  hard-coded "show particles" for every one; the frame carries
+  MobEffectInstance's own visibility now, so every effect draws its icon,
+  a beacon's and a conduit's read as ambient, and an infinite duration can
+  be expressed.
 - **Damage has vanilla's invulnerability window.** Every source of damage
   landed in full, every time it was applied: standing in fire, in a cactus
   or in a crowd of zombies stacked hits tick after tick, and two blows in

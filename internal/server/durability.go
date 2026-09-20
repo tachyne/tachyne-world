@@ -20,13 +20,13 @@ func (evToolWear) isHubEvent() {}
 
 // applyToolWear adds wear to a hotbar stack, destroying it when it runs out.
 func (h *hub) applyToolWear(t *tracked, slot, n int) {
-	if t.gamemode != gmSurvival || t.dead || t.inv == nil || slot < 0 || slot >= 9 {
+	s := t.handStack(slot) // a hotbar slot, or the offhand a shield was raised in
+	if t.gamemode != gmSurvival || t.dead || s == nil {
 		return
 	}
-	if s := t.inv.slots[slot]; s.item != 0 {
+	if s.item != 0 {
 		h.advance(h.playersRef, t, "item_durability_changed", advMatch{item: s.item})
 	}
-	s := &t.inv.slots[slot]
 	max, ok := itemMaxDurability[s.item]
 	if !ok || s.count == 0 {
 		return
@@ -36,6 +36,10 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 	}
 	if s.dmg += n; s.dmg >= max {
 		*s = invStack{} // the tool breaks
+	}
+	if slot == offhandSlot {
+		h.sendOffhand(t)
+		return
 	}
 	h.sendSlot(t, slot)
 }
