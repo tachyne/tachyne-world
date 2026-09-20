@@ -109,7 +109,7 @@ func (h *hub) mobBitesPrey(players map[int32]*tracked, m *mob) bool {
 	}
 	m.attackCD = attackCooldown
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	v.hurtKind(float64((hostileMelee(m)+mobHeldBonus(m))*h.diffMult()), dtMobAttack)
+	v.hurtKind(float64(hostileMelee(m)+mobHeldBonus(m)), dtMobAttack)
 	h.mobKnockFrom(players, v, m.x, m.z)
 	if v.health <= 0 {
 		h.killMob(players, v)

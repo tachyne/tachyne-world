@@ -123,7 +123,7 @@ func (h *hub) ravagerRoar(players map[int32]*tracked, m *mob) {
 		if dist3(t.x, t.y, t.z, m.x, m.y, m.z) > ravagerRoarReach+1 {
 			continue
 		}
-		h.hurtFrom(players, t, ravagerRoarDamage, dtMobAttack, deathCause{key: causeMob, by: mobDisplayName(m.etype)}, from(m.x, m.z))
+		h.hurtFrom(players, t, ravagerRoarDamage, dtMobAttack, deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
 	}
 	h.grid().nearby(m.dim, m.x, m.z, ravagerRoarReach+1, func(o *mob) {
 		if o == m || o.etype == entityRavager || o.dying > 0 || math.Abs(o.y-m.y) > ravagerRoarReach+1 {

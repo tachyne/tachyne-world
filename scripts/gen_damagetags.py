@@ -152,6 +152,33 @@ def main():
         exh = defs[t].get("exhaustion", 0.0)
         if exh:
             L.append(f"\tdt{camel(t)}: {exh},")
+    L += [
+        "}",
+        "",
+        "// dmgScaling is DamageType.scaling: whether the difficulty multiplies a",
+        "// hit of this type before armour sees it (Player.hurtServer).",
+        "type dmgScaling uint8",
+        "",
+        "const (",
+        "\tscaleNever dmgScaling = iota // the difficulty never touches it",
+        "\tscaleWhenLivingNonPlayer     // only when a LIVING NON-PLAYER dealt it",
+        "\tscaleAlways                  // always, however it was dealt",
+        ")",
+        "",
+        "// dmgTypeScaling is each damage type's scaling rule. Absent types are",
+        "// scaleNever, which is what the vanilla codec has no default for — every",
+        "// type declares one, so every type appears here.",
+        "var dmgTypeScaling = [...]dmgScaling{",
+    ]
+    scale_go = {"never": "scaleNever",
+                "when_caused_by_living_non_player": "scaleWhenLivingNonPlayer",
+                "always": "scaleAlways"}
+    for t in types:
+        sc = defs[t]["scaling"]
+        if sc not in scale_go:
+            raise SystemExit(f"{t}: unknown scaling {sc!r}")
+        if sc != "never":
+            L.append(f"\tdt{camel(t)}: {scale_go[sc]},")
     L += ["}", ""]
 
     with open(OUT, "w") as f:

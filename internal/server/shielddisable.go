@@ -20,6 +20,11 @@ func fromWeapon(x, z float64, weapon int32) dmgFrom {
 	return dmgFrom{x: x, z: z, ok: true, weapon: weapon}
 }
 
+// fromMobWeapon is fromWeapon for a mob's swing: the difficulty may scale it.
+func fromMobWeapon(x, z float64, weapon int32) dmgFrom {
+	return dmgFrom{x: x, z: z, ok: true, weapon: weapon, byMob: true}
+}
+
 // weaponDisableSeconds is LivingEntity.getSecondsToDisableBlocking: the held
 // weapon's disable_blocking_for_seconds (axes 5, everything else 0).
 func weaponDisableSeconds(item int32) float64 {

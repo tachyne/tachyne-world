@@ -396,6 +396,33 @@ func (h *hub) damageOf(players map[int32]*tracked, t *tracked, amount float32, d
 	h.hurtBy(players, t, amount, dt, deathCause{})
 }
 
+// difficultyScaled is Player.hurtServer's difficulty branch: Peaceful takes
+// the blow away entirely, Easy softens it to min(f/2 + 1, f) — which leaves
+// small hits alone rather than halving everything — and Hard adds half again.
+// Normal is untouched. Whether it applies at all is the damage TYPE's
+// business. In 1.21.11 four types scale `always` — explosion, player_explosion,
+// bad_respawn_point and sonic_boom — and the other forty-six scale
+// `when_caused_by_living_non_player`, which is why the caller has to say who
+// dealt it: a skeleton's arrow scales and the same arrow from a player does
+// not. Nothing is tagged `never`, so starving or falling on your own goes
+// unscaled only because nothing living caused it.
+func (h *hub) difficultyScaled(amount float32, dt dmgType, byMob bool) float32 {
+	switch scaling := dmgTypeScaling[dt]; {
+	case scaling == scaleAlways, scaling == scaleWhenLivingNonPlayer && byMob:
+	default:
+		return amount
+	}
+	switch h.rules.Difficulty {
+	case diffPeaceful:
+		return 0
+	case diffEasy:
+		return float32(math.Min(float64(amount)/2+1, float64(amount)))
+	case diffHard:
+		return amount * 3 / 2
+	}
+	return amount
+}
+
 // hurtBy is damageOf plus the CAUSE, which is what a death message is made of.
 // The cause has to ride with the damage: by the time health reaches zero the
 // thing that dealt it is long gone, so it is recorded as the last thing to
@@ -420,6 +447,14 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt 
 // then the protection enchantments), then the absorption buffer.
 func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause, src dmgFrom) bool {
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
+		return false
+	}
+	// Player.hurtServer scales the blow by the difficulty BEFORE anything
+	// mitigates it, and only for the damage types whose `scaling` field says
+	// so. This used to be a flat 0.5/1/1.5 applied at five mob-damage sites,
+	// which both got Easy wrong and left every explosion, every projectile and
+	// every environmental hazard unscaled.
+	if amount = h.difficultyScaled(amount, dt, src.byMob); amount == 0 {
 		return false
 	}
 	t.lastCause = cause // the LAST thing to hurt them is what gets the credit

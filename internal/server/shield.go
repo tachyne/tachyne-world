@@ -43,10 +43,18 @@ type dmgFrom struct {
 	x, z   float64
 	ok     bool
 	weapon int32 // what a melee attacker struck with (0 = none/unknown): an axe disables the shield
+	// byMob marks a hit a LIVING NON-PLAYER dealt — directly or through
+	// something it threw or fired. It is what vanilla's DamageSource asks
+	// (getEntity() instanceof LivingEntity && !(… instanceof Player)) to
+	// decide whether the difficulty scales the blow.
+	byMob bool
 }
 
 // from names a source position for a hit.
 func from(x, z float64) dmgFrom { return dmgFrom{x: x, z: z, ok: true} }
+
+// fromMob is from for a hit a mob dealt, which the difficulty may scale.
+func fromMob(x, z float64) dmgFrom { return dmgFrom{x: x, z: z, ok: true, byMob: true} }
 
 // evBlockStart raises a player's shield (they right-clicked holding one).
 type evBlockStart struct {

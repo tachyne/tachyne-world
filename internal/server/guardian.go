@@ -82,7 +82,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	if elder {
 		magic += 2
 	}
-	melee := hostileMelee(m) * h.diffMult()
+	melee := hostileMelee(m)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
 	// TWO hits, as the attack goal deals them: the beam's indirect_magic, which
@@ -91,7 +91,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	cause := deathCause{key: causeMob, by: mobDisplayName(m.etype)}
 	h.hurtBy(players, t, magic, dtIndirectMagic, cause)
 	if !t.dead {
-		h.hurtFrom(players, t, melee, dtMobAttack, cause, from(m.x, m.z))
+		h.hurtFrom(players, t, melee, dtMobAttack, cause, fromMob(m.x, m.z))
 	}
 	h.guardianRelease(players, m)
 	h.thornsRetaliate(players, t, m)

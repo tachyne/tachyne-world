@@ -245,3 +245,69 @@ var dmgTypeExhaustion = [...]float32{
 	dtWindCharge:           0.1,
 	dtWitherSkull:          0.1,
 }
+
+// dmgScaling is DamageType.scaling: whether the difficulty multiplies a
+// hit of this type before armour sees it (Player.hurtServer).
+type dmgScaling uint8
+
+const (
+	scaleNever               dmgScaling = iota // the difficulty never touches it
+	scaleWhenLivingNonPlayer                   // only when a LIVING NON-PLAYER dealt it
+	scaleAlways                                // always, however it was dealt
+)
+
+// dmgTypeScaling is each damage type's scaling rule. Absent types are
+// scaleNever, which is what the vanilla codec has no default for — every
+// type declares one, so every type appears here.
+var dmgTypeScaling = [...]dmgScaling{
+	dtArrow:                scaleWhenLivingNonPlayer,
+	dtBadRespawnPoint:      scaleAlways,
+	dtCactus:               scaleWhenLivingNonPlayer,
+	dtCampfire:             scaleWhenLivingNonPlayer,
+	dtCramming:             scaleWhenLivingNonPlayer,
+	dtDragonBreath:         scaleWhenLivingNonPlayer,
+	dtDrown:                scaleWhenLivingNonPlayer,
+	dtDryOut:               scaleWhenLivingNonPlayer,
+	dtEnderPearl:           scaleWhenLivingNonPlayer,
+	dtExplosion:            scaleAlways,
+	dtFall:                 scaleWhenLivingNonPlayer,
+	dtFallingAnvil:         scaleWhenLivingNonPlayer,
+	dtFallingBlock:         scaleWhenLivingNonPlayer,
+	dtFallingStalactite:    scaleWhenLivingNonPlayer,
+	dtFireball:             scaleWhenLivingNonPlayer,
+	dtFireworks:            scaleWhenLivingNonPlayer,
+	dtFlyIntoWall:          scaleWhenLivingNonPlayer,
+	dtFreeze:               scaleWhenLivingNonPlayer,
+	dtGeneric:              scaleWhenLivingNonPlayer,
+	dtGenericKill:          scaleWhenLivingNonPlayer,
+	dtHotFloor:             scaleWhenLivingNonPlayer,
+	dtInFire:               scaleWhenLivingNonPlayer,
+	dtInWall:               scaleWhenLivingNonPlayer,
+	dtIndirectMagic:        scaleWhenLivingNonPlayer,
+	dtLava:                 scaleWhenLivingNonPlayer,
+	dtLightningBolt:        scaleWhenLivingNonPlayer,
+	dtMaceSmash:            scaleWhenLivingNonPlayer,
+	dtMagic:                scaleWhenLivingNonPlayer,
+	dtMobAttack:            scaleWhenLivingNonPlayer,
+	dtMobAttackNoAggro:     scaleWhenLivingNonPlayer,
+	dtMobProjectile:        scaleWhenLivingNonPlayer,
+	dtOnFire:               scaleWhenLivingNonPlayer,
+	dtOutOfWorld:           scaleWhenLivingNonPlayer,
+	dtOutsideBorder:        scaleWhenLivingNonPlayer,
+	dtPlayerAttack:         scaleWhenLivingNonPlayer,
+	dtPlayerExplosion:      scaleAlways,
+	dtSonicBoom:            scaleAlways,
+	dtSpear:                scaleWhenLivingNonPlayer,
+	dtSpit:                 scaleWhenLivingNonPlayer,
+	dtStalagmite:           scaleWhenLivingNonPlayer,
+	dtStarve:               scaleWhenLivingNonPlayer,
+	dtSting:                scaleWhenLivingNonPlayer,
+	dtSweetBerryBush:       scaleWhenLivingNonPlayer,
+	dtThorns:               scaleWhenLivingNonPlayer,
+	dtThrown:               scaleWhenLivingNonPlayer,
+	dtTrident:              scaleWhenLivingNonPlayer,
+	dtUnattributedFireball: scaleWhenLivingNonPlayer,
+	dtWindCharge:           scaleWhenLivingNonPlayer,
+	dtWither:               scaleWhenLivingNonPlayer,
+	dtWitherSkull:          scaleWhenLivingNonPlayer,
+}

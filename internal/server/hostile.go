@@ -403,9 +403,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	// Mob.doHurtTarget: ATTACK_DAMAGE (the weapon's included), then the
 	// weapon's Sharpness (EnchantmentHelper.modifyDamage). Smite and Bane never
 	// match a player.
-	dmg := (hostileMelee(m) + mobHeldBonus(m) + mobSharpness(m)) * h.diffMult()
+	dmg := hostileMelee(m) + mobHeldBonus(m) + mobSharpness(m)
 	if m.etype == entityHoglin || m.etype == entityZoglin {
-		dmg = h.hoglinBiteDamage(m) * h.diffMult() // hurtAndThrowTarget: half plus a roll
+		dmg = h.hoglinBiteDamage(m) // hurtAndThrowTarget: half plus a roll
 	}
 	// Plugin damage event (mob → player), before the swing so a cancel makes
 	// the whole bite invisible.
@@ -427,7 +427,7 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		h.hoglinBiteStart(players, m) // doHurtTarget: the animation and the grunt
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
-		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromWeapon(m.x, m.z, m.held))
+		deathCause{key: causeMob, by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))
 	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
 	// top of the 0.4 base (Mob.getKnockback → LivingEntity.knockback).
 	h.knockbackScaled(t, m.x, m.z, 1+1.25*float64(m.heldStack().enchLvl(enchKnockback)))

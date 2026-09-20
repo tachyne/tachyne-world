@@ -370,10 +370,12 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.dmg > 0 {
 			// Whoever loosed it gets the credit, player or mob.
 			shot := deathCause{key: causeArrow}
+			byMob := false
 			if s := players[a.shooter]; s != nil {
 				shot.by = s.p.name
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
+				byMob = true // a skeleton's arrow scales with difficulty; a player's does not
 			}
 			// A piercing bolt goes through a raised shield as though it were
 			// not there, which is what naming no source position means here.
@@ -381,6 +383,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			if a.pierce > 0 {
 				src = dmgFrom{}
 			}
+			src.byMob = byMob
 			landed := h.hurtFrom(players, t, float32(a.dmg), projectileDamageOf(a), shot, src)
 			h.knockback(t, a.x, a.z) // the shove lands even off a shield
 			if !landed {

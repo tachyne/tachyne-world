@@ -57,7 +57,7 @@ func (h *hub) nearestVillager(m *mob, r float64) *mob {
 func (h *hub) zombieBitesVillager(players map[int32]*tracked, m, v *mob) bool {
 	m.attackCD = attackCooldown
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	v.hurt(float64((hostileMelee(m) + mobHeldBonus(m)) * h.diffMult()))
+	v.hurt(float64(hostileMelee(m) + mobHeldBonus(m)))
 	h.mobKnockFrom(players, v, m.x, m.z)
 	if v.health > 0 {
 		v.panic = 60 // the bitten villager runs

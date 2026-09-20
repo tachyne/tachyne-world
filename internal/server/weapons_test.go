@@ -18,10 +18,10 @@ func TestMobWeaponEnchantments(t *testing.T) {
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	z := h.spawnMob(players, entityZombie, 1.2, 180, 0.5)
 	z.held = itemIronSword
-	plain := (hostileMelee(z) + mobHeldBonus(z) + mobSharpness(z)) * h.diffMult()
+	plain := hostileMelee(z) + mobHeldBonus(z) + mobSharpness(z)
 	z.heldEnch = enchList{{id: enchSharpness, lvl: 5}, {id: enchFireAspect, lvl: 2}}
-	sharp := (hostileMelee(z) + mobHeldBonus(z) + mobSharpness(z)) * h.diffMult()
-	if want := plain + 3*h.diffMult(); sharp != want {
+	sharp := hostileMelee(z) + mobHeldBonus(z) + mobSharpness(z)
+	if want := plain + 3; sharp != want {
 		t.Fatalf("Sharpness V adds 3: plain %v sharp %v want %v", plain, sharp, want)
 	}
 	pl.health, pl.fireSecs = 20, 0
