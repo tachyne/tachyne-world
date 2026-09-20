@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-20
 
 ### Added
+- **The Warden's four set pieces.** It simply appeared, chased, and
+  blinked out of existence. Now a warden a shrieker calls rises out of the
+  ground over six and a half seconds before it does anything; it casts
+  about sniffing when somebody is near but nothing has provoked it, and
+  gets angry at whatever that turns up within six blocks; it rears up and
+  roars for four seconds when it fixes on you, and only comes for you when
+  the roar ends; and left alone for a minute it spends five seconds
+  burrowing back into the ground instead of vanishing. Each one roots it to
+  the spot for the length of the animation, exactly as long as vanilla's.
 - **Target selectors and relative coordinates.** Commands took a player
   name and absolute numbers and nothing else, which made half of them
   awkward and some useless. `@s`, `@p`, `@a`, `@r` and `@e` now stand

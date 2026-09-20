@@ -354,6 +354,10 @@ type mob struct {
 	patrolLeg                       blockPos   // …and the ten-block waypoint it is walking to right now
 	patrolling                      bool       // PatrollingMonster.patrolling
 	patrolCooldown                  uint64     // NAVIGATION_FAILED_COOLDOWN: no patrol steering until this tick
+	wardenPose                      int32      // the warden's set-piece animation (0 = none; Pose ids)
+	wardenPoseLeft                  int        // …and the updates left in it
+	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
+	wardenTarget                    int32      // who it last roared at (0 = nobody)
 	trusted                         [2]string  // fox: the players it trusts (DATA_TRUSTED_ID_0/1), by name; persisted
 	dolphinSwimmer                  int32      // dolphin: the swimming player it keeps company (0 = none)
 	dolphinPlayEID                  int32      // dolphin: the floating item it is playing with (0 = none)
@@ -695,6 +699,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A trader drinking by the clock, or leaving when its time is up.
 		case m.etype == entityHoglin && h.hoglinStep(players, m):
 			// A hoglin walking off from warped fungus, or retreating from piglins.
+		case m.etype == entityWarden && h.wardenStep(players, m):
+			// A warden emerging, roaring, sniffing or burrowing stands still.
 		case m.etype == entityRavager && h.ravagerStep(players, m):
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):

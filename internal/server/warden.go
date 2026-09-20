@@ -38,23 +38,53 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 		}
 	}
 
+	// Emerging, roaring, sniffing or burrowing: the warden is rooted to the
+	// spot for the length of the animation and does nothing else.
+	if h.wardenPoseTick(players, m) {
+		return
+	}
+
 	// AngerManagement: it goes for whoever it is angriest at, and only falls
 	// back on what it can sense nearby when nobody has provoked it.
 	t := h.wardenAngerTickOne(players, m)
 	if t == nil {
-		t = h.nearestHuntable(players, m.dim, m.x, m.z, 24)
+		// Nothing has provoked it. Vanilla keeps "somebody is nearby"
+		// (NEAREST_ATTACKABLE) apart from "I am coming for you"
+		// (ATTACK_TARGET), and sniffs the air in between — so sniff first,
+		// and only then fall back on hunting whoever is closest.
+		near := h.nearestHuntable(players, m.dim, m.x, m.z, 24)
+		if near != nil && h.wardenSniffTry(players, m) {
+			return
+		}
+		t = near
 	}
 	if t == nil {
+		m.wardenTarget = 0
 		if m.digClock++; m.digClock >= wardenDigAwayUpd {
-			// Digging.stop removes the warden with RemovalReason.DISCARDED —
-			// it is not a death, so there is no loot and no experience. Going
-			// through despawnMob rolled the full death drop instead, which
-			// handed out a free sculk catalyst for waiting a minute.
-			h.removeMob(players, m)
+			// Digging: it burrows for a hundred ticks and is then DISCARDED —
+			// not a death, so no loot and no experience. Caught off the ground
+			// it just grumbles and goes (Digging.checkExtraStartConditions).
+			if !m.grounded() {
+				h.playSound(players, "minecraft:entity.warden.agitated", sndHostile, m.x, m.y, m.z, 5, 1)
+				h.removeMob(players, m)
+				return
+			}
+			h.wardenPoseStart(players, m, poseDigging, wardenDigUpd, "minecraft:entity.warden.dig", 5)
+			return
 		}
 		return
 	}
 	m.digClock = 0
+	// Roar: a warden that has just fixed on someone rears up and bellows
+	// before it comes for them — the roar target only becomes the attack
+	// target when the roar ends.
+	if m.wardenTarget != t.p.eid {
+		m.wardenTarget = t.p.eid
+		h.wardenAngerAt(m, t.p.eid, 20) // Roar.ROAR_ANGER_INCREASE
+		m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
+		h.wardenPoseStart(players, m, poseRoaring, wardenRoarUpd, "", 0)
+		return
+	}
 	if m.sonicCD > 0 {
 		m.sonicCD--
 		return

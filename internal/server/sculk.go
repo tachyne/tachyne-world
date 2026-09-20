@@ -467,7 +467,11 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32
 	summoned := false
 	if lvl >= wardenWarnMax {
 		if sp := h.wardenSpawnSpot(pos); sp != nil {
-			h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5)
+			// EntitySpawnReason.TRIGGERED: a warden a shrieker calls rises out
+			// of the ground before it does anything (Warden.finalizeSpawn).
+			if w := h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5); w != nil {
+				h.wardenEmerge(players, w)
+			}
 			summoned = true
 		}
 	}
