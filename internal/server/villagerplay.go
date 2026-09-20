@@ -10,8 +10,13 @@ import "math"
 // cannot use.
 
 const (
-	playSeeRange    = 16   // the babies it can see (VillagerBabiesSensor's reach)
-	playSpeed       = 0.6  // CHASE_SPEED_MODIFIER / FLEE_SPEED_MODIFIER
+	playSeeRange = 16 // the babies it can see (VillagerBabiesSensor's reach)
+	// CHASE_SPEED_MODIFIER and FLEE_SPEED_MODIFIER are both 0.6, against the
+	// 0.5 every other villager activity walks at (Villager.registerBrainGoals
+	// passes 0.5f to the play AND idle packages) — so tag is 1.2 times the
+	// ordinary villager pace, not 0.6 of it. The engine's roam has no modifier
+	// at all, which is what corresponds to vanilla's 0.5.
+	playSpeed       = 0.6 / 0.5
 	playFleeXZ      = 20.0 // MAX_FLEE_XZ_DIST
 	playMaxChasers  = 5    // MAX_CHASERS_PER_TARGET
 	playDecideOdds  = 10   // AVERAGE_WAIT_TIME_BETWEEN_RUNS: a 1-in-10 roll
