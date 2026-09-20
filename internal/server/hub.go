@@ -235,6 +235,7 @@ type tracked struct {
 	inForward      float64
 	dim            int              // 0 overworld, 1 nether
 	portalTicks    int              // consecutive dwell passes standing in a portal block
+	xpTakeDelay    int              // Player.takeXpDelay: ticks before the next orb can be taken
 	portalLatch    bool             // just arrived by portal: no re-trigger until they step off
 	rejectStreak   int              // rejections within the rolling window (yields at 40)
 	lastRejectTick uint64           // window anchor for rejectStreak

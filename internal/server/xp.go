@@ -35,6 +35,7 @@ type xpOrb struct {
 	x, y, z    float64
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 	value      int
+	count      int // how many orbs of that value this one entity stands for
 	born       uint64
 }
 
@@ -89,26 +90,110 @@ func (h *hub) spawnXPOrb(players map[int32]*tracked, value int, x, y, z float64)
 	h.spawnXPOrbIn(players, 0, value, x, y, z)
 }
 
-// spawnXPOrbIn drops experience into an explicit dimension.
+// orbValues is the ladder ExperienceOrb.getExperienceValue walks down: an
+// award is paid out in the largest denominations that fit, which is why a
+// 100-point kill leaves a handful of fat orbs rather than a hundred motes.
+var orbValues = [...]int{2477, 1237, 617, 307, 149, 73, 37, 17, 7, 3, 1}
+
+// orbDenomination is the largest ladder value that fits in n.
+func orbDenomination(n int) int {
+	for _, v := range orbValues {
+		if n >= v {
+			return v
+		}
+	}
+	return 1
+}
+
+// orbMergeGroups is vanilla's ORB_GROUPS_PER_AREA. Orbs only merge with orbs
+// whose entity id is congruent to theirs modulo this, which keeps a big award
+// spread over a few groups instead of collapsing into one entity — the pile
+// still looks like a pile.
+const orbMergeGroups = 40
+
+// spawnXPOrbIn drops experience into an explicit dimension, following
+// ExperienceOrb.awardWithDirection: split the award down the value ladder and
+// fold each piece into an orb that is already lying there when one will take
+// it, so a mob farm does not accumulate thousands of entities.
 func (h *hub) spawnXPOrbIn(players map[int32]*tracked, dim, value int, x, y, z float64) {
 	if value <= 0 {
 		return
 	}
 	y = float64(h.worldFor(dim).DropY(int(x), int(math.Ceil(y)), int(z)))
-	eid := h.allocEID()
-	o := &xpOrb{eid: eid, dim: dim, x: x, y: y, z: z, sx: x, sy: y, sz: z, value: value, born: h.tick.Load()}
-	binary.BigEndian.PutUint32(o.uuid[12:], uint32(eid))
-	h.orbs[eid] = o // syncTracking shows it to whoever is near enough
+	for value > 0 {
+		piece := orbDenomination(value)
+		value -= piece
+		if h.mergeIntoNearbyOrb(dim, piece, x, y, z) {
+			continue
+		}
+		eid := h.allocEID()
+		o := &xpOrb{eid: eid, dim: dim, x: x, y: y, z: z, sx: x, sy: y, sz: z,
+			value: piece, count: 1, born: h.tick.Load()}
+		binary.BigEndian.PutUint32(o.uuid[12:], uint32(eid))
+		h.orbs[eid] = o // syncTracking shows it to whoever is near enough
+	}
+}
+
+// mergeIntoNearbyOrb is ExperienceOrb.tryMergeToExisting: an orb of the same
+// value inside a one-block box around the drop point, in a randomly chosen
+// group, takes the new orb as another count and has its despawn clock reset.
+func (h *hub) mergeIntoNearbyOrb(dim, value int, x, y, z float64) bool {
+	group := int32(h.rng.Intn(orbMergeGroups))
+	for _, o := range h.orbs {
+		if o.dim != dim || o.value != value {
+			continue
+		}
+		if (o.eid-group)%orbMergeGroups != 0 {
+			continue
+		}
+		if math.Abs(o.x-x) > 0.5 || math.Abs(o.y-y) > 0.5 || math.Abs(o.z-z) > 0.5 {
+			continue
+		}
+		o.count++
+		o.born = h.tick.Load() // the merged orb starts its six minutes again
+		return true
+	}
+	return false
+}
+
+// scanForOrbMerges is the once-a-second sweep ExperienceOrb.tick runs: orbs
+// that have rolled together since they landed collapse into one entity.
+func (h *hub) scanForOrbMerges(players map[int32]*tracked, o *xpOrb) {
+	for eid, other := range h.orbs {
+		if other == o || other.dim != o.dim || other.value != o.value {
+			continue
+		}
+		if (other.eid-o.eid)%orbMergeGroups != 0 {
+			continue
+		}
+		if math.Abs(other.x-o.x) > 0.5 || math.Abs(other.y-o.y) > 0.5 || math.Abs(other.z-o.z) > 0.5 {
+			continue
+		}
+		o.count += other.count
+		if other.born < o.born {
+			o.born = other.born // vanilla keeps the LOWER age of the two
+		}
+		delete(h.orbs, eid)
+		h.entityGone(players, other.dim, eid)
+	}
 }
 
 // updateOrbs collects orbs into nearby survival players and expires the rest.
 func (h *hub) updateOrbs(players map[int32]*tracked) {
 	now := h.tick.Load()
+	for _, t := range players {
+		if t.xpTakeDelay > 0 {
+			t.xpTakeDelay-- // Player.takeXpDelay: one orb every other tick
+		}
+	}
 	for eid, o := range h.orbs {
 		if now-o.born >= orbDespawnTicks {
 			delete(h.orbs, eid)
 			h.entityGone(players, o.dim, eid)
 			continue
+		}
+		if (now-o.born)%20 == 1 {
+			h.scanForOrbMerges(players, o)
 		}
 		// Orbs drift toward the nearest living survival player (vanilla magnetism).
 		if near := h.nearestHuntable(players, o.dim, o.x, o.z, orbDriftRange); near != nil {
@@ -125,25 +210,31 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 			}
 		}
 		for _, t := range players {
-			if t.gamemode != gmSurvival || t.dead || t.dim != o.dim {
+			if t.gamemode != gmSurvival || t.dead || t.dim != o.dim || t.xpTakeDelay > 0 {
 				continue
 			}
 			if math.Abs(o.x-t.x) > orbPickupDist || math.Abs(o.z-t.z) > orbPickupDist || math.Abs(o.y-t.y) > orbPickupDist {
 				continue
 			}
 			lvl := t.xpLevel
+			t.xpTakeDelay = 2
 			// Mending first: the orb repairs damaged gear before any of it
 			// reaches the bar, and only the remainder is banked.
 			if left := h.mendingRepair(t, o.value); left > 0 {
 				h.addXP(t, left)
 			}
-			delete(h.orbs, eid)
 			snd, pitch := "minecraft:entity.experience_orb.pickup", 0.8+h.rng.Float32()*0.8
 			if t.xpLevel > lvl {
 				snd, pitch = "minecraft:entity.player.levelup", 1
 			}
 			h.playSound(players, snd, sndPlayer, o.x, o.y, o.z, 0.6, pitch)
 			h.toTracking(players, eid, o.dim, o.x, o.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: 1})
+			// A merged orb pays out one of its stack per touch; it only goes
+			// away once the last one has been taken.
+			if o.count--; o.count > 0 {
+				break
+			}
+			delete(h.orbs, eid)
 			h.entityGone(players, o.dim, eid)
 			break
 		}
