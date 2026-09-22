@@ -35,16 +35,16 @@ func doublePlantOf(state uint32) (single int32, lower, ok bool) {
 func (h *hub) specialBlockDrops(state uint32, held int32, silk bool) ([]drop, bool) {
 	if single, _, ok := doublePlantOf(state); ok {
 		if held == int32(itemShears) {
-			return []drop{{single, 2}}, true
+			return []drop{{item: single, count: 2}}, true
 		}
 		return h.rollDrops(state), true
 	}
 	if state >= snowLayer1 && state <= snowLayer1+7 {
 		layers := int(state-snowLayer1) + 1
 		if silk || held == int32(itemShears) {
-			return []drop{{itemSnowLayer, layers}}, true
+			return []drop{{item: itemSnowLayer, count: layers}}, true
 		}
-		return []drop{{itemSnowball, layers}}, true
+		return []drop{{item: itemSnowball, count: layers}}, true
 	}
 	if isChorusFlower(state) {
 		return nil, true
@@ -70,7 +70,7 @@ var (
 func (h *hub) guardianLoot(m *mob) []drop {
 	var out []drop
 	if n := h.rng.Intn(3); n > 0 {
-		out = append(out, drop{itemPrismarineShard, n})
+		out = append(out, drop{item: itemPrismarineShard, count: n})
 	}
 	elder := m.etype == entityElderGuardian
 	codW := 2
@@ -84,16 +84,28 @@ func (h *hub) guardianLoot(m *mob) []drop {
 		if m.burning {
 			fish = itemCookedCodItem
 		}
-		out = append(out, drop{fish, 1})
+		out = append(out, drop{item: fish, count: 1})
 	case r < codW+2:
-		out = append(out, drop{itemPrismarineCrystals, 1})
+		out = append(out, drop{item: itemPrismarineCrystals, count: 1})
 	}
 	if elder {
 		if m.hitByPlayer {
-			out = append(out, drop{itemWetSponge, 1})
+			out = append(out, drop{item: itemWetSponge, count: 1, fixed: true})
 		}
 		if h.rng.Intn(5) == 0 {
-			out = append(out, drop{itemTideTemplate, 1})
+			out = append(out, drop{item: itemTideTemplate, count: 1, fixed: true})
+		}
+	}
+	// Both guardian tables end on a killed_by_player pool that rolls one entry
+	// out of gameplay/fishing/fish at 2.5% — 3.5% with Looting I and a further
+	// 1% a level (random_chance_with_enchanted_bonus).
+	if m.hitByPlayer {
+		chance := 0.025
+		if m.looting > 0 {
+			chance = 0.035 + 0.01*float64(m.looting-1)
+		}
+		if h.rng.Float64() < chance {
+			out = append(out, drop{item: h.rollFish().item, count: 1, fixed: true})
 		}
 	}
 	return out

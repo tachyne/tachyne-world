@@ -27,6 +27,10 @@ var (
 type drop struct {
 	item  int32
 	count int
+	// fixed marks a roll Looting must not touch: an entry whose vanilla table
+	// carries no enchanted_count_increase (a sheep's fleece, an elder
+	// guardian's sponge and tide template, the guardians' rare fish).
+	fixed bool
 }
 
 // rollDrops returns the items a destroyed block yields. Probabilistic entries use
@@ -37,29 +41,29 @@ func (h *hub) rollDrops(state uint32) []drop {
 	switch {
 	case state == worldgen.ShortGrass || state == worldgen.Fern:
 		if h.rng.Intn(8) == 0 { // 1/8 = 12.5% wheat seeds
-			return []drop{{itemWheatSeeds, 1}}
+			return []drop{{item: itemWheatSeeds, count: 1}}
 		}
 		return nil
 	case state == worldgen.Gravel:
 		if h.rng.Intn(10) == 0 { // 1/10 = 10% flint, else gravel
-			return []drop{{itemFlint, 1}}
+			return []drop{{item: itemFlint, count: 1}}
 		}
-		return []drop{{itemGravel, 1}}
+		return []drop{{item: itemGravel, count: 1}}
 	case isAnyLeaf(state):
 		return h.leafDrops() // 5% sapling / 2% sticks / 0.5% apple
 	case state >= snowLayer1 && state <= snowLayer1+7:
-		return []drop{{itemSnowball, int(state-snowLayer1) + 1}} // blocks/snow: a snowball a layer
+		return []drop{{item: itemSnowball, count: int(state-snowLayer1) + 1}} // blocks/snow: a snowball a layer
 	case isChorusFlower(state):
 		return nil // blocks/chorus_flower: nothing
 	}
 	if _, lower, ok := doublePlantOf(state); ok { // blocks/tall_grass, large_fern: seeds 1/8 from the half that breaks
 		if lower && h.rng.Intn(8) == 0 {
-			return []drop{{itemWheatSeeds, 1}}
+			return []drop{{item: itemWheatSeeds, count: 1}}
 		}
 		return nil
 	}
 	if item, ok := generatedDrop(state); ok { // generated default: block drops its item
-		return []drop{{item, 1}}
+		return []drop{{item: item, count: 1}}
 	}
 	return nil
 }
@@ -68,13 +72,13 @@ func (h *hub) rollDrops(state uint32) []drop {
 func (h *hub) leafDrops() []drop {
 	var ds []drop
 	if h.rng.Intn(20) == 0 {
-		ds = append(ds, drop{itemOakSapling, 1})
+		ds = append(ds, drop{item: itemOakSapling, count: 1})
 	}
 	if h.rng.Intn(50) == 0 {
-		ds = append(ds, drop{itemStick, 1 + h.rng.Intn(2)})
+		ds = append(ds, drop{item: itemStick, count: 1 + h.rng.Intn(2)})
 	}
 	if h.rng.Intn(200) == 0 {
-		ds = append(ds, drop{itemApple, 1})
+		ds = append(ds, drop{item: itemApple, count: 1})
 	}
 	return ds
 }

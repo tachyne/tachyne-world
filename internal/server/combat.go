@@ -492,9 +492,6 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	// Gamerule doMobLoot=false silences the roll entirely.
 	var drops []plugin.ItemStack
 	if h.rules.DoMobLoot { // gamerule doMobLoot=false silences the roll
-		if (m.etype == entitySlime || m.etype == entityMagmaCube) && m.size <= 1 && m.frogEaten == 0 {
-			drops = append(drops, plugin.ItemStack{Item: itemSlimeball, Count: h.rng.Intn(3)})
-		}
 		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
 			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
 		}
@@ -557,8 +554,14 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 					loot = loot[1:]
 				}
 				for _, d := range loot {
-					if m.looting > 0 { // Looting: up to +level per roll (vanilla)
+					if m.looting > 0 && !d.fixed { // Looting: up to +level per roll (vanilla)
 						d.count += h.rng.Intn(m.looting + 1)
+					}
+					// A roll may start BELOW zero — the magma cube's set_count
+					// is uniform -2..1, which is what makes it stingy with
+					// cream — so only a positive count is actually a drop.
+					if d.count <= 0 {
+						continue
 					}
 					drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
 				}
@@ -602,66 +605,76 @@ func (h *hub) mobLoot(m *mob) []drop {
 	etype := m.etype
 	switch etype {
 	case entityCow:
-		return []drop{{itemBeef, 1 + h.rng.Intn(3)}, {itemLeather, h.rng.Intn(3)}} // 1-3 beef, 0-2 leather
+		return []drop{{item: itemBeef, count: 1 + h.rng.Intn(3)}, {item: itemLeather, count: h.rng.Intn(3)}} // 1-3 beef, 0-2 leather
 	case entityZombie:
-		return []drop{{itemRottenFlesh, h.rng.Intn(3)}} // 0-2 rotten flesh
+		return []drop{{item: itemRottenFlesh, count: h.rng.Intn(3)}} // 0-2 rotten flesh
 	case entitySkeleton:
-		return []drop{{itemBone, h.rng.Intn(3)}, {itemArrowDrop, h.rng.Intn(3)}} // 0-2 bones + 0-2 arrows
+		return []drop{{item: itemBone, count: h.rng.Intn(3)}, {item: itemArrowDrop, count: h.rng.Intn(3)}} // 0-2 bones + 0-2 arrows
 	case entitySpider:
-		l := []drop{{itemString, h.rng.Intn(3)}} // 0-2 string
+		l := []drop{{item: itemString, count: h.rng.Intn(3)}} // 0-2 string
 		if h.rng.Intn(3) == 0 {
-			l = append(l, drop{itemSpiderEye, 1})
+			l = append(l, drop{item: itemSpiderEye, count: 1})
 		}
 		return l
 	case entityCreeper:
-		l := []drop{{itemGunpowder, h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
+		l := []drop{{item: itemGunpowder, count: h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
 		if k := h.mobs[m.lastAttacker]; k != nil && skeletonFamily(k.etype) {
-			l = append(l, drop{creeperDiscs[h.rng.Intn(len(creeperDiscs))], 1}) // entities/creeper: #creeper_drop_music_discs for a skeleton's kill
+			l = append(l, drop{item: creeperDiscs[h.rng.Intn(len(creeperDiscs))], count: 1}) // entities/creeper: #creeper_drop_music_discs for a skeleton's kill
 		}
 		return l
 	case entityChicken:
-		return []drop{{itemFeather, h.rng.Intn(3)}, {itemRawChicken, 1}}
+		return []drop{{item: itemFeather, count: h.rng.Intn(3)}, {item: itemRawChicken, count: 1}}
 	case entityPig:
-		return []drop{{itemPorkchop, 1 + h.rng.Intn(3)}}
+		return []drop{{item: itemPorkchop, count: 1 + h.rng.Intn(3)}}
 	case entitySheep:
 		meat := itemMutton
 		if m.burning {
 			meat = itemCookedMutton // furnace_smelt: a burning death cooks the meat
 		}
-		return []drop{{sheepWool(m), 1}, {meat, 1 + h.rng.Intn(2)}} // its own fleece
+		// The fleece comes from the per-colour sub-table, which carries no
+		// enchanted_count_increase: Looting gives more mutton, never more wool.
+		return []drop{{item: sheepWool(m), count: 1, fixed: true}, {item: meat, count: 1 + h.rng.Intn(2)}}
 	case entityHusk, entityDrowned:
-		return []drop{{itemRottenFlesh, h.rng.Intn(3)}}
+		return []drop{{item: itemRottenFlesh, count: h.rng.Intn(3)}}
 	case entityStray:
-		return []drop{{itemBone, h.rng.Intn(3)}, {itemArrowDrop, h.rng.Intn(3)}}
+		return []drop{{item: itemBone, count: h.rng.Intn(3)}, {item: itemArrowDrop, count: h.rng.Intn(3)}}
 	case entityEnderman:
-		return []drop{{itemEnderPearl, h.rng.Intn(2)}} // 0-1 pearls
+		return []drop{{item: itemEnderPearl, count: h.rng.Intn(2)}} // 0-1 pearls
 	case entityWitch:
-		return []drop{{[]int32{itemRedstone, itemGlowstone, itemSugar, itemStick}[h.rng.Intn(4)], 1 + h.rng.Intn(2)}}
+		return []drop{{item: []int32{itemRedstone, itemGlowstone, itemSugar, itemStick}[h.rng.Intn(4)], count: 1 + h.rng.Intn(2)}}
 	case entityZombifiedPiglin:
-		d := []drop{{itemRottenFlesh, h.rng.Intn(2)}, {itemGoldNugget, h.rng.Intn(2)}}
+		d := []drop{{item: itemRottenFlesh, count: h.rng.Intn(2)}, {item: itemGoldNugget, count: h.rng.Intn(2)}}
 		if h.rng.Intn(40) == 0 { // rare ingot (vanilla ~2.5%)
-			d = append(d, drop{itemGoldIngot, 1})
+			d = append(d, drop{item: itemGoldIngot, count: 1})
 		}
 		return d
+	case entitySlime:
+		if m.size > 1 {
+			return nil // only the smallest slime leaves a ball behind
+		}
+		return []drop{{item: itemSlimeball, count: h.rng.Intn(3)}} // entities/slime: uniform 0-2
 	case entityMagmaCube:
 		if m.size <= 1 {
-			return nil
+			return nil // a small magma cube drops nothing at all
 		}
-		return []drop{{itemMagmaCream, h.rng.Intn(2)}} // brewing: fire resistance
+		// entities/magma_cube: set_count is uniform -2..1, so the cream comes
+		// off one kill in four — and Looting is added to that negative base,
+		// which is what makes the enchantment matter here.
+		return []drop{{item: itemMagmaCream, count: h.rng.Intn(4) - 2}} // brewing: fire resistance
 	case entityBlaze:
 		if !m.hitByPlayer {
 			return nil // vanilla: rods only on player kills
 		}
-		return []drop{{itemBlazeRod, h.rng.Intn(2)}} // brewing: the fuel + powder
+		return []drop{{item: itemBlazeRod, count: h.rng.Intn(2)}} // brewing: the fuel + powder
 	case entityGuardian, entityElderGuardian:
 		return h.guardianLoot(m)
 	case entityTurtle:
 		l := []drop{}
 		if n := h.rng.Intn(3); n > 0 {
-			l = append(l, drop{itemSeagrassItem, n}) // entities/turtle: 0-2 seagrass
+			l = append(l, drop{item: itemSeagrassItem, count: n}) // entities/turtle: 0-2 seagrass
 		}
 		if m.lastDT == dtLightningBolt {
-			l = append(l, drop{itemBowlItem, 1}) // …and a bowl when lightning did it
+			l = append(l, drop{item: itemBowlItem, count: 1}) // …and a bowl when lightning did it
 		}
 		return l
 	}

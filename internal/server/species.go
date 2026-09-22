@@ -524,7 +524,7 @@ func (h *hub) speciesLoot(d *speciesDef) []drop {
 			n += h.rng.Intn(sd.rnd + 1)
 		}
 		if n > 0 {
-			out = append(out, drop{itemByName[sd.item], n})
+			out = append(out, drop{item: itemByName[sd.item], count: n})
 		}
 	}
 	return out
