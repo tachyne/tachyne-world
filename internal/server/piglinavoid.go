@@ -143,3 +143,55 @@ func (h *hub) alertZombifiedPiglins(from *mob, t *tracked) {
 		h.provoke(o, t)
 	})
 }
+
+// guardedByPiglins is the #guarded_by_piglins block tag: the containers and
+// gold a piglin considers its own. Opening one in front of an idle piglin
+// turns it on you (PiglinAi.angerNearbyPiglins), which is what makes looting
+// a bastion a decision rather than a stroll.
+var guardedByPiglins = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	names := []string{
+		"gold_block", "barrel", "chest", "ender_chest", "gilded_blackstone",
+		"trapped_chest", "raw_gold_block", "gold_ore", "deepslate_gold_ore",
+		"copper_chest", "exposed_copper_chest", "weathered_copper_chest",
+		"oxidized_copper_chest", "waxed_copper_chest", "waxed_exposed_copper_chest",
+		"waxed_weathered_copper_chest", "waxed_oxidized_copper_chest",
+		"shulker_box",
+	}
+	for _, c := range []string{
+		"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+		"light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black",
+	} {
+		names = append(names, c+"_shulker_box")
+	}
+	for _, n := range names {
+		if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
+			for s := lo; s <= hi; s++ {
+				m[s] = true
+			}
+		}
+	}
+	return m
+}()
+
+// piglinGuardRange is the box angerNearbyPiglins searches, inflated 16 from
+// the player.
+const piglinGuardRange = 16.0
+
+// angerNearbyPiglins turns every idle piglin that can see the player. Vanilla
+// only checks sight for the cases that ask for it — opening a container does,
+// so that a piglin around a corner is not offended by a noise.
+func (h *hub) angerNearbyPiglins(players map[int32]*tracked, t *tracked, needSight bool) {
+	h.grid().nearby(t.dim, t.x, t.z, piglinGuardRange, func(m *mob) {
+		if m.etype != entityPiglin || m.dying > 0 || m.baby {
+			return
+		}
+		if m.targetEID != 0 || m.anger > 0 {
+			return // isIdle: one already busy is left to it
+		}
+		if needSight && !h.mobSees(m, t) {
+			return
+		}
+		h.provoke(m, t)
+	})
+}

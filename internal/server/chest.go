@@ -136,6 +136,9 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
 	h.vib(pos.dim, freqContainerOpen, pos.x, pos.y, pos.z, t.p.eid)
+	if guardedByPiglins[state] { // #guarded_by_piglins: a bastion's chests are watched
+		h.angerNearbyPiglins(h.playersRef, t, true)
+	}
 	h.trappedChestChanged(t.dim, pos.blockPos) // a trapped chest's signal is its viewer count
 	title := "Chest"
 	switch { // the opener's statistic (ChestBlock.getOpenChestStat and kin)
