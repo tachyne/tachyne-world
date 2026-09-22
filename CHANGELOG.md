@@ -28,6 +28,12 @@ the public history since the project was open-sourced on 2026-07-10.
   nothing; their corridor pots held air, which cost you one of the two ways a
   trial key enters the world; and three of their barrels were empty too. All
   three now carry what vanilla puts in them.
+- **Powder snow goes in and out of a bucket.** It could be neither poured nor
+  scooped, so the block that freezes you — and the reason leather boots exist
+  — was unobtainable and unplaceable.
+- **Five more `/locate` names**: ruined portals already generate in vanilla's
+  desert, jungle, mountain, ocean and swamp flavours, and each can be found by
+  its own name now.
 - **Wolves have voices and salmon have sizes.** Every wolf sounded the same:
   vanilla registers seven wolf sound variants and gives one to each wolf at
   birth, so a pack is a chorus. Their idle noise is three sounds rather than
@@ -95,6 +101,9 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **An anvil lies across your look**, not facing you, the way vanilla places
+  it; a calibrated sculk sensor's amethyst face was a full 180 degrees out and
+  read its side signal from the wrong block.
 - **Nothing spawns on top of the Nether** any more — a column whose roof was
   exposed could put a mob above the ceiling, standing in the void.
 - **Hit one zombified piglin and the pack comes for you.** They used to get
