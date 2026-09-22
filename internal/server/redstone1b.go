@@ -113,14 +113,14 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 		h.rsSet(players, pos, state)
 	}
 	if boolProp(state, "locked") {
-		delete(h.rsDue, pos) // frozen: a pending tick fires into nothing (DiodeBlock.tick returns)
+		delete(h.rsDue, h.rsKey(pos)) // frozen: a pending tick fires into nothing (DiodeBlock.tick returns)
 		return
 	}
 	in := h.diodeInputSignal(pos, state) > 0 // DiodeBlock.shouldTurnOn
 	cur := boolProp(state, "powered")
 	now := h.tick.Load()
 	delay := uint64(repeaterDelay(state))
-	if due, pending := h.rsDue[pos]; pending {
+	if due, pending := h.rsDue[h.rsKey(pos)]; pending {
 		if now < due {
 			return // a neighbour update while a tick is pending: one tick per position (LevelTicks dedup)
 		}
@@ -128,7 +128,7 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 		// before the tick still turns the output on, and a second tick then
 		// turns it off — a pulse shorter than the delay comes out the
 		// delay long, never lost.
-		delete(h.rsDue, pos)
+		delete(h.rsDue, h.rsKey(pos))
 		switch {
 		case cur && !in:
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
@@ -137,14 +137,14 @@ func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, setBoolProp(state, "powered", true))
 			h.scheduleSignalAround(pos)
 			if !in {
-				h.rsDue[pos] = now + delay
+				h.rsDue[h.rsKey(pos)] = now + delay
 				h.rsSchedule(pos, delay)
 			}
 		}
 		return
 	}
 	if in != cur { // DiodeBlock.checkTickOnNeighbor
-		h.rsDue[pos] = now + delay
+		h.rsDue[h.rsKey(pos)] = now + delay
 		h.rsSchedule(pos, delay)
 	}
 }
@@ -196,7 +196,7 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).
-		if sig := h.analogSignal(simPos{blockPos: blockPos{back.x + dx, back.y, back.z + dz}}); sig > rear {
+		if sig := h.analogSignal(simPos{dim: h.rsDim, blockPos: blockPos{back.x + dx, back.y, back.z + dz}}); sig > rear {
 			rear = sig
 		}
 	}
@@ -215,18 +215,18 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 	// repeaters use. (Was applied immediately.)
 	key := simPos{dim: h.rsDim, blockPos: pos}
 	if h.compOut[key] == out && boolProp(state, "powered") == (out > 0) {
-		delete(h.rsDue, pos) // settled — cancel any pending flip
+		delete(h.rsDue, h.rsKey(pos)) // settled — cancel any pending flip
 		return
 	}
 	now := h.tick.Load()
-	due, pending := h.rsDue[pos]
+	due, pending := h.rsDue[h.rsKey(pos)]
 	if !pending {
-		h.rsDue[pos] = now + comparatorDelay
+		h.rsDue[h.rsKey(pos)] = now + comparatorDelay
 		h.rsSchedule(pos, comparatorDelay)
 		return
 	}
 	if now >= due {
-		delete(h.rsDue, pos)
+		delete(h.rsDue, h.rsKey(pos))
 		h.compOut[key] = out
 		h.rsSet(players, pos, setBoolProp(state, "powered", out > 0))
 		h.scheduleSignalAround(pos)
@@ -240,8 +240,8 @@ const comparatorDelay = 2 // ComparatorBlock.getDelay(): 2 game ticks
 func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uint32) {
 	now := h.tick.Load()
 	if boolProp(state, "powered") {
-		if at, ok := h.obsPulse[pos]; !ok || now >= at+observerPulseTicks {
-			delete(h.obsPulse, pos)
+		if at, ok := h.obsPulse[h.rsKey(pos)]; !ok || now >= at+observerPulseTicks {
+			delete(h.obsPulse, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.scheduleSignalAround(pos)
 		}
@@ -249,10 +249,10 @@ func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uin
 	}
 	dx, dy, dz := obsDelta(state)
 	watched := h.rsWorld().At(pos.x+dx, pos.y+dy, pos.z+dz)
-	prev, seen := h.obsSeen[pos]
-	h.obsSeen[pos] = watched
+	prev, seen := h.obsSeen[h.rsKey(pos)]
+	h.obsSeen[h.rsKey(pos)] = watched
 	if seen && watched != prev {
-		h.obsPulse[pos] = now
+		h.obsPulse[h.rsKey(pos)] = now
 		h.rsSet(players, pos, setBoolProp(state, "powered", true))
 		h.rsSchedule(pos, observerPulseTicks)
 		h.scheduleSignalAround(pos)
@@ -347,18 +347,22 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 			}
 			h.rsSet(players, pos, ns)
 			h.scheduleSignalAround(pos)
-			h.platesOn[pos] = h.tick.Load()
+			h.platesOn[h.rsKey(pos)] = h.tick.Load()
 		} else if platePower(s) > 0 {
-			h.platesOn[pos] = h.tick.Load()
+			h.platesOn[h.rsKey(pos)] = h.tick.Load()
 		}
 	}
-	for pos, last := range h.platesOn {
+	for key, last := range h.platesOn {
+		if key.dim != h.rsDim {
+			continue // another dimension's plates are that dimension's business
+		}
+		pos := key.blockPos
 		// BasePressurePlateBlock.checkPressed schedules the release check
 		// getPressedTime (20) ticks after the last thing stood here.
 		if occupied[pos] > 0 || h.tick.Load() < last+platePressedTicks {
 			continue
 		}
-		delete(h.platesOn, pos)
+		delete(h.platesOn, key)
 		s := h.rsWorld().At(pos.x, pos.y, pos.z)
 		if isPlate(s) && platePower(s) > 0 {
 			h.rsSet(players, pos, plateWith(s, 0))

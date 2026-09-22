@@ -9,19 +9,19 @@ import (
 func TestRailShapesOnPlacement(t *testing.T) {
 	h, w, _, x, y, z := redSetup(t)
 	// Lone rail follows the player's look axis (east-west).
-	got := h.placeRailShape(x, y, z, uint32(railMin+1), 90) // yaw 90 → west
+	got := h.placeRailShape(w, x, y, z, uint32(railMin+1), 90) // yaw 90 → west
 	if railShape(got) != shapeEW {
 		t.Fatalf("lone rail should lie along the look axis, shape %d", railShape(got))
 	}
 	// A rail to the east bends a north-look placement into east-west.
 	w.SetBlock(x+1, y, z, railMin+1)
-	got = h.placeRailShape(x, y, z, uint32(railMin+1), 180) // looking north
+	got = h.placeRailShape(w, x, y, z, uint32(railMin+1), 180) // looking north
 	if railShape(got) != shapeEW {
 		t.Fatalf("neighbour east should force EW, got %d", railShape(got))
 	}
 	// Rails east + south → south_east corner.
 	w.SetBlock(x, y, z+1, railMin+1)
-	got = h.placeRailShape(x, y, z, uint32(railMin+1), 0)
+	got = h.placeRailShape(w, x, y, z, uint32(railMin+1), 0)
 	if railShape(got) != shapeSE {
 		t.Fatalf("east+south neighbours should corner SE, got %d", railShape(got))
 	}
@@ -29,7 +29,7 @@ func TestRailShapesOnPlacement(t *testing.T) {
 	w.SetBlock(x, y, z+1, worldgen.Air)
 	w.SetBlock(x+1, y, z, worldgen.Air)
 	w.SetBlock(x+1, y+1, z, railMin+1)
-	got = h.placeRailShape(x, y, z, uint32(railMin+1), 0)
+	got = h.placeRailShape(w, x, y, z, uint32(railMin+1), 0)
 	if railShape(got) != shapeAscE {
 		t.Fatalf("raised east neighbour should ascend east, got %d", railShape(got))
 	}

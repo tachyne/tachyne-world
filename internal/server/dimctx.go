@@ -28,6 +28,14 @@ func (h *hub) rsSound(players map[int32]*tracked, name string, category int32, x
 	h.playSoundDim(players, h.rsDim, name, category, x, y, z, volume, pitch)
 }
 
+// rsKey is the current simulation dimension's key for the block-keyed state
+// the family carries beside the world itself — a repeater's pending flip, an
+// observer's pulse, a pressed plate, a fire's age. Those maps were keyed by
+// position alone, so the same coordinates in two dimensions shared one entry:
+// a nether fire aged an overworld fire, and a repeater in the End cancelled
+// one at home.
+func (h *hub) rsKey(pos blockPos) simPos { return simPos{dim: h.rsDim, blockPos: pos} }
+
 // inDim runs fn with the block simulation pointed at dim.
 func (h *hub) inDim(dim int, fn func()) {
 	old := h.rsDim

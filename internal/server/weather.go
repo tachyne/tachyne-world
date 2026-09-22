@@ -559,7 +559,7 @@ func (h *hub) rodStruck(players map[int32]*tracked, pos blockPos) {
 	}
 	h.inDim(0, func() {
 		h.rsSet(players, pos, setBoolProp(st, "powered", true))
-		h.rsDue[pos] = h.tick.Load() + 8
+		h.rsDue[simPos{blockPos: pos}] = h.tick.Load() + 8
 		h.rsSchedule(pos, 8)
 		h.scheduleSignalAround(pos)
 	})

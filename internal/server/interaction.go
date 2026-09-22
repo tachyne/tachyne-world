@@ -447,7 +447,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		}
 		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
 		if isAnyRail(state) {
-			state = s.hub.placeRailShape(tx, ty, tz, state, p.yaw)
+			state = s.hub.placeRailShape(s.worldFor(p), tx, ty, tz, state, p.yaw)
 		}
 		if intoWater { // SimpleWaterloggedBlock: the block keeps the water
 			if info, ok := worldgen.InfoForState(state); ok && info.HasProperty("waterlogged") {

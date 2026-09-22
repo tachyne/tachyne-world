@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Block-entity storage used to be keyed by x/y/z alone, so the same
@@ -165,5 +166,34 @@ func TestRenderViewsMigratePreDimensionKeys(t *testing.T) {
 	}
 	if ci, ok := newCampfireStore(cp).get(dimOverworld, 5, 70, 5); !ok || ci.Items[0] == "" {
 		t.Errorf("campfire %+v ok=%v — a pre-dimension campfire was lost", ci, ok)
+	}
+}
+
+// Block simulation used to stop at the overworld for a player EDIT: onBlock
+// returned before it scheduled anything, so nothing a player built in the
+// Nether or the End ever ticked (the simulation itself was already
+// dimension-aware — see TestRedstoneRunsInTheNether). An edit outside the
+// overworld now schedules its own neighbourhood, and only its own.
+func TestNetherEditSchedulesItsOwnDimension(t *testing.T) {
+	h, players, _, _ := dimStoreHub(t)
+	pos := blockPos{7, 50, 7}
+	h.onBlock(players, evBlock{dim: dimNether, x: pos.x, y: pos.y, z: pos.z, state: worldgen.Stone})
+
+	var nether, overworld int
+	for _, batch := range h.pending {
+		for _, p := range batch {
+			switch p.dim {
+			case dimNether:
+				nether++
+			case dimOverworld:
+				overworld++
+			}
+		}
+	}
+	if nether == 0 {
+		t.Fatal("a Nether edit scheduled nothing")
+	}
+	if overworld != 0 {
+		t.Fatalf("a Nether edit scheduled %d overworld updates", overworld)
 	}
 }

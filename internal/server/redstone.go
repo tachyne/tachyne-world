@@ -203,7 +203,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isTripwireHook(state):
 		h.calcHook(players, pos, state) // re-evaluate its line (attached/powered)
 	case isCrafter(state):
-		h.updateCrafter(players, simPos{blockPos: pos}, state) // craft on a rising edge
+		h.updateCrafter(players, simPos{dim: h.rsDim, blockPos: pos}, state) // craft on a rising edge
 
 	case isNoteBlock(state):
 		// Play once on the rising edge of redstone power (NoteBlockBlock).
@@ -266,14 +266,14 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
 	case isLightningRod(state) && boolProp(state, "powered"): // LightningRodBlock.tick: 8 ticks after the strike
-		if due, ok := h.rsDue[pos]; ok && h.tick.Load() >= due {
-			delete(h.rsDue, pos)
+		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
+			delete(h.rsDue, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.scheduleSignalAround(pos)
 		}
 	case isLectern(state) && boolProp(state, "powered"): // LecternBlock.tick: the page-turn pulse ends after 2
-		if due, ok := h.rsDue[pos]; ok && h.tick.Load() >= due {
-			delete(h.rsDue, pos)
+		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
+			delete(h.rsDue, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.scheduleSignalAround(pos)
 		}
@@ -282,15 +282,15 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		// after the power leaves (and stays lit if it comes back first).
 		want := h.inputPower(x, y, z, false) > 0
 		now := h.tick.Load()
-		due, pending := h.rsDue[pos]
+		due, pending := h.rsDue[h.rsKey(pos)]
 		switch {
 		case want && state == lampOff:
 			h.rsSet(players, pos, lampOn)
 		case !want && state == lampOn && !pending:
-			h.rsDue[pos] = now + 4
+			h.rsDue[h.rsKey(pos)] = now + 4
 			h.rsSchedule(pos, 4)
 		case pending && now >= due:
-			delete(h.rsDue, pos)
+			delete(h.rsDue, h.rsKey(pos))
 			if !want && state == lampOn {
 				h.rsSet(players, pos, lampOff)
 			}
@@ -328,11 +328,11 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isMovingPiston(state):
 		h.finishMoving(players, pos)
 	case isDispenser(state) || isDropper(state):
-		h.updateBinTrigger(players, simPos{blockPos: pos}, state)
+		h.updateBinTrigger(players, simPos{dim: h.rsDim, blockPos: pos}, state)
 	case isHopper(state):
-		h.updateHopper(players, simPos{blockPos: pos}, state)
+		h.updateHopper(players, simPos{dim: h.rsDim, blockPos: pos}, state)
 	case isWoodShelf(state):
-		h.updateShelfPower(players, 0, pos, state)
+		h.updateShelfPower(players, h.rsDim, pos, state)
 	case isAnyRail(state):
 		h.updateRail(players, pos, state)
 	case isPortalBlock(state):

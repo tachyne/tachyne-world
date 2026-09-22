@@ -548,15 +548,15 @@ type hub struct {
 	// join sequence sends Change Difficulty outside the hub goroutine).
 	difficultyPub atomic.Int32
 
-	pressedAt map[simPos]uint64   // button-press ticks (for the unpress timer)
-	rsDue     map[blockPos]uint64 // repeater flip due-ticks
-	targetDue map[simPos]uint64   // target-block signal reset ticks, per dimension
-	obsPulse  map[blockPos]uint64 // observer pulse start ticks
-	obsSeen   map[blockPos]uint32 // observer last-seen watched state
-	compOut   map[simPos]int      // comparator output levels (vanilla block entity)
-	platesOn  map[blockPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
-	wiresOn   map[simPos]bool     // currently pressed tripwire strings, by dimension
-	fireAge   map[blockPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
+	rsDue     map[simPos]uint64 // repeater flip due-ticks
+	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
+	obsPulse  map[simPos]uint64 // observer pulse start ticks
+	obsSeen   map[simPos]uint32 // observer last-seen watched state
+	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
+	platesOn  map[simPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
+	wiresOn   map[simPos]bool   // currently pressed tripwire strings, by dimension
+	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -757,14 +757,14 @@ func newHub(w *world.World) *hub {
 		rng:           rand.New(rand.NewSource(1)),
 		rules:         defaultRules(),
 		pressedAt:     map[simPos]uint64{},
-		rsDue:         map[blockPos]uint64{},
+		rsDue:         map[simPos]uint64{},
 		targetDue:     map[simPos]uint64{},
-		obsPulse:      map[blockPos]uint64{},
-		obsSeen:       map[blockPos]uint32{},
+		obsPulse:      map[simPos]uint64{},
+		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
-		platesOn:      map[blockPos]uint64{},
+		platesOn:      map[simPos]uint64{},
 		wiresOn:       map[simPos]bool{},
-		fireAge:       map[blockPos]int{},
+		fireAge:       map[simPos]int{},
 		sculkList:     map[blockPos]bool{},
 		catalysts:     map[blockPos]bool{},
 		sculkVib:      map[blockPos]sculkPending{},
@@ -2511,24 +2511,30 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	h.bannersOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state, e.by)
 	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.state) // a broken container scatters
 	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
-	if e.dim != dimOverworld {
-		return // block SIMULATION (falling/fluids/redstone/sculk) is still overworld-only
-	}
-	h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state)   // lightning-rod POI set
-	h.sculkIndexOnBlockChange(e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
-	// A player edit is a vibration: a break (broken != 0) or a place.
-	if e.broken != 0 {
-		h.gameEvent(freqBlockDestroy, e.x, e.y, e.z, e.by)
-	} else if e.state != worldgen.Air {
-		if at, ok := h.vibQuiet[blockPos{e.x, e.y, e.z}]; ok && at == h.tick.Load() {
-			delete(h.vibQuiet, blockPos{e.x, e.y, e.z}) // a toggle already made its own vibration
-		} else {
-			h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
+	// Lightning rods and sculk are the OVERWORLD's systems: the rod POI set is
+	// where storms look, and the sculk listener index is built from the
+	// overworld's edits, so a vibration has nowhere to travel elsewhere.
+	if e.dim == dimOverworld {
+		h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state)   // lightning-rod POI set
+		h.sculkIndexOnBlockChange(e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
+		// A player edit is a vibration: a break (broken != 0) or a place.
+		if e.broken != 0 {
+			h.gameEvent(freqBlockDestroy, e.x, e.y, e.z, e.by)
+		} else if e.state != worldgen.Air {
+			if at, ok := h.vibQuiet[blockPos{e.x, e.y, e.z}]; ok && at == h.tick.Load() {
+				delete(h.vibQuiet, blockPos{e.x, e.y, e.z}) // a toggle already made its own vibration
+			} else {
+				h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
+			}
 		}
 	}
 	// A player edit can trigger simulation: the block itself (a placed falling
 	// block or fluid) and its neighbours (sand above loses support, fluid flows
-	// into the new gap) all re-evaluate next tick.
+	// into the new gap) all re-evaluate next tick. This runs in EVERY dimension
+	// now — the scheduler, the simulation switch and the state the family keeps
+	// beside the world are all keyed by dimension, so a repeater in the Nether
+	// is a repeater in the Nether and not a write into the overworld at the
+	// same coordinates.
 	pos := blockPos{e.x, e.y, e.z}
 	h.scheduleAroundIn(e.dim, pos, 1)
 	// A signal source that appears or disappears changes the STRONG power of

@@ -1,6 +1,9 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Rails (tier: vehicles). Plain rails bend into corners and slopes; powered/
 // detector/activator rails only run straight or ascending. Shapes are
@@ -92,16 +95,20 @@ func railWith(s uint32, shape int, powered bool) uint32 {
 // computeRailShape picks a rail's shape from its neighbours: prefer two-way
 // connections (straights, then corners for plain rails), then one-way
 // (ascending toward a rail one block up), defaulting to the placer's axis.
-func (h *hub) computeRailShape(x, y, z int, state uint32, defAxis int) int {
+// The world is passed in rather than taken from the hub: this runs both on
+// the hub goroutine (a scheduled update, in whichever dimension the rail is
+// in) and on a connection's goroutine (placing one), so there is no shared
+// dimension state to read.
+func (h *hub) computeRailShape(wld *world.World, x, y, z int, state uint32, defAxis int) int {
 	// Connectivity per cardinal: 0 none, 1 level, 2 one up.
 	conn := [4]int{} // E, W, N, S
 	dirs := [4][2]int{{1, 0}, {-1, 0}, {0, -1}, {0, 1}}
 	for i, d := range dirs {
 		switch {
-		case isAnyRail(h.world.At(x+d[0], y, z+d[1])),
-			isAnyRail(h.world.At(x+d[0], y-1, z+d[1])): // neighbour slopes down to us
+		case isAnyRail(wld.At(x+d[0], y, z+d[1])),
+			isAnyRail(wld.At(x+d[0], y-1, z+d[1])): // neighbour slopes down to us
 			conn[i] = 1
-		case isAnyRail(h.world.At(x+d[0], y+1, z+d[1])):
+		case isAnyRail(wld.At(x+d[0], y+1, z+d[1])):
 			conn[i] = 2
 		}
 	}
@@ -139,24 +146,24 @@ func (h *hub) computeRailShape(x, y, z int, state uint32, defAxis int) int {
 // updateRail is the scheduled step: re-shape from neighbours, and sync the
 // powered bit (powered/activator rails; detector rails are cart-driven).
 func (h *hub) updateRail(players map[int32]*tracked, pos blockPos, state uint32) {
-	shape := h.computeRailShape(pos.x, pos.y, pos.z, state, railShape(state))
+	shape := h.computeRailShape(h.rsWorld(), pos.x, pos.y, pos.z, state, railShape(state))
 	powered := railPowered(state)
 	if isSpecialRail(state) && !isDetectorRail(state) {
 		powered = h.inputPower(pos.x, pos.y, pos.z, false) > 0
 	}
 	if ns := railWith(state, shape, powered); ns != state {
-		h.setBlock(players, pos, ns)
-		h.scheduleAround(pos, 1)
+		h.rsSet(players, pos, ns)
+		h.scheduleAroundIn(h.rsDim, pos, 1)
 	}
 }
 
 // placeRailShape orients a just-placed rail: connect to neighbours, else lie
 // along the player's look axis.
-func (h *hub) placeRailShape(x, y, z int, state uint32, yaw float32) uint32 {
+func (h *hub) placeRailShape(wld *world.World, x, y, z int, state uint32, yaw float32) uint32 {
 	axis := shapeNS
 	f := playerFacing(yaw)
 	if f == "east" || f == "west" {
 		axis = shapeEW
 	}
-	return railWith(state, h.computeRailShape(x, y, z, state, axis), railPowered(state))
+	return railWith(state, h.computeRailShape(wld, x, y, z, state, axis), railPowered(state))
 }

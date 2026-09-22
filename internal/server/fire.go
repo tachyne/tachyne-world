@@ -290,7 +290,7 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 			continue
 		}
 		h.setBlockAt(players, dim, pos, fireDefault)
-		h.fireAge[pos] = 0
+		h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
 		h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
 	}
 }
@@ -392,7 +392,7 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 
 	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
 	infiniburn := below == worldgen.Netherrack // eternal fire on netherrack
-	n := h.fireAge[pos]
+	n := h.fireAge[h.rsKey(pos)]
 
 	// Rain douse (scales with age); doesn't happen on infiniburn.
 	if !infiniburn && h.raining && h.fireNearRain(pos) &&
@@ -404,7 +404,7 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Age up: min(15, n + rand(3)/2) — increases by 0 or 1.
 	if n2 := min(15, n+h.rng.Intn(3)/2); n2 != n {
 		n = n2
-		h.fireAge[pos] = n
+		h.fireAge[h.rsKey(pos)] = n
 	}
 
 	if !infiniburn {
@@ -494,14 +494,14 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 // igniteFire places a fire block of the given age and schedules its first tick.
 func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
 	h.rsSet(players, pos, fireDefault)
-	h.fireAge[pos] = age
+	h.fireAge[h.rsKey(pos)] = age
 	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
 }
 
 // removeFire clears a fire block (and its side-mapped age).
 func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) {
 	h.rsSet(players, pos, worldgen.Air)
-	delete(h.fireAge, pos)
+	delete(h.fireAge, h.rsKey(pos))
 	if doused {
 		h.rsSound(players, "minecraft:block.fire.extinguish", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 0.5, 1.2)
