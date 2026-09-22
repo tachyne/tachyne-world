@@ -342,3 +342,53 @@ func TestBugListSummarises(t *testing.T) {
 		t.Errorf("an empty store listed %d", n)
 	}
 }
+
+// `/bug #15 <…>` is what a player actually types to add to report 15. It used
+// to fall through and file a FRESH report whose text began "#15 …", burying
+// the thread it was meant to join — which is exactly what happened to
+// LegionZA's follow-up on the endermen.
+func TestBugHashNumberAnnotatesInsteadOfFiling(t *testing.T) {
+	s := &Server{hub: newHub(world.New(1))}
+	p := &player{eid: 1, name: "LegionZA"}
+
+	drain := func() hubEvent {
+		t.Helper()
+		select {
+		case ev := <-s.hub.events:
+			return ev
+		default:
+			return nil
+		}
+	}
+
+	s.cmdBug(p, []string{"#15", "please", "clean", "up", "the", "endermen"})
+	ev, ok := drain().(evBug)
+	if !ok {
+		t.Fatal("/bug #15 … posted no report event")
+	}
+	if !ev.reply || ev.on != 15 {
+		t.Errorf("/bug #15 … filed a new report (reply=%v on=%d), want a note on 15", ev.reply, ev.on)
+	}
+	if ev.text != "please clean up the endermen" {
+		t.Errorf("note text = %q, want the text without the #15", ev.text)
+	}
+
+	// The explicit form still works.
+	s.cmdBug(p, []string{"re", "#7", "still", "happening"})
+	if ev, _ := drain().(evBug); !ev.reply || ev.on != 7 {
+		t.Errorf("/bug re #7 … gave reply=%v on=%d, want a note on 7", ev.reply, ev.on)
+	}
+
+	// A BARE leading number is still a report — "2 chests merged wrongly" is
+	// a real thing to say.
+	s.cmdBug(p, []string{"2", "chests", "merged", "wrongly"})
+	if ev, _ := drain().(evBug); ev.reply {
+		t.Error("a bare leading number should file a report, not annotate one")
+	}
+
+	// A hash with nothing after it is a report, not a silent no-op.
+	s.cmdBug(p, []string{"#15"})
+	if ev, _ := drain().(evBug); ev.reply || ev.text != "#15" {
+		t.Errorf("/bug #15 on its own gave reply=%v text=%q, want a plain report", ev.reply, ev.text)
+	}
+}

@@ -312,7 +312,8 @@ func itemRegistryName(id int32) string {
 }
 
 // cmdBug is `/bug <what happened>` to file a report with the world around the
-// reporter attached, and `/bug re [#n] <what you want to add>` to say more
+// reporter attached, and `/bug re [#n] <what you want to add>` (or just
+// `/bug #n <…>`) to say more
 // about one already filed — an answer to a question, a correction, or "still
 // happening after the fix". Without the second form the only way to add
 // anything was to file a fresh report, which buried the thread it belonged to.
@@ -338,9 +339,24 @@ func (s *Server) cmdBug(p *player, args []string) {
 		s.hub.post(evBug{eid: p.eid, text: text, reply: true, on: on})
 		return
 	}
+	// `/bug #15 <…>` is what people actually type when they mean to add to
+	// report 15 — the `re` is easy to miss, and without this the note was
+	// filed as a FRESH report whose text began "#15 …", which buried the very
+	// thread it was meant to join. A leading #<number> is unambiguous, so it
+	// routes to the reply path; a bare leading number still files a report,
+	// because "2 chests merged wrongly" is a real thing to report.
+	if len(args) > 1 && strings.HasPrefix(args[0], "#") {
+		if n, err := strconv.Atoi(args[0][1:]); err == nil && n > 0 {
+			text := strings.TrimSpace(strings.Join(args[1:], " "))
+			if text != "" {
+				s.hub.post(evBug{eid: p.eid, text: text, reply: true, on: n})
+				return
+			}
+		}
+	}
 	text := strings.TrimSpace(strings.Join(args, " "))
 	if text == "" {
-		p.tell("Usage: /bug <what went wrong>, /bug re <more about the last one>, or /bug list.")
+		p.tell("Usage: /bug <what went wrong>, /bug #3 <more about report 3>, or /bug list.")
 		return
 	}
 	s.hub.post(evBug{eid: p.eid, text: text})
