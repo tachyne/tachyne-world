@@ -123,3 +123,25 @@ func TestTilledSoilRevertsUnderASolidBlock(t *testing.T) {
 		}
 	}
 }
+
+// Vanilla's solidity is a threshold on the collision box, not "does it
+// collide": the bounds must average 0.729 of a block or stand a block tall.
+// These are the cases the hand-written list used to get wrong.
+func TestSolidLidFollowsVanillasThreshold(t *testing.T) {
+	for _, c := range []struct {
+		block string
+		lid   bool
+	}{
+		{"stone", true}, {"oak_slab", true}, {"chest", true}, {"oak_door", true},
+		{"ladder", true}, {"cactus", true}, {"cake", true}, // 14/16 x 8/16 x 14/16 averages 0.75
+		{"white_carpet", false}, {"candle", false}, {"player_head", false},
+		{"pitcher_crop", false}, {"lily_pad", false}, {"flower_pot", false},
+		{"comparator", false}, {"repeater", false}, {"sea_pickle", false},
+		{"turtle_egg", false}, {"amethyst_cluster", false}, {"conduit", false},
+		{"shulker_box", false}, // forceSolidOff, whatever its box says
+	} {
+		if got := solidLid(worldgen.BlockBase(c.block)); got != c.lid {
+			t.Errorf("%s: solidLid=%v, want %v", c.block, got, c.lid)
+		}
+	}
+}
