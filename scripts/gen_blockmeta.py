@@ -18,7 +18,7 @@ ranges covers every valid state with no gaps. Scalars go in one table sorted by
 Min for binary search; harvestTools is a second, smaller table (only ~380 blocks
 require a tool).
 
-boundingBox comes from the local extract (see audit/phase0/extractor), which
+boundingBox comes from the local extract (see scripts/extract), which
 asks the game per STATE. minecraft-data's schema carries ONE per block, so
 every open fence gate collided (192 states) and deep snow did not (7) — a mob
 would not walk through a gate it had just opened, and a drift was walked

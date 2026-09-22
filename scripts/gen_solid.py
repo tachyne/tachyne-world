@@ -21,7 +21,7 @@ the wrong answer — closed fence gates, signs, cobwebs and sculk veins among
 them.
 
 So it no longer reimplements anything: the local extract (see
-audit/phase0/extractor) asks the game `state.isSolid()` directly, force flags
+scripts/extract) asks the game `state.isSolid()` directly, force flags
 and threshold already applied.
 
     python3 scripts/gen_solid.py [version]     # default 1.21.11

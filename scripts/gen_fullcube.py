@@ -7,7 +7,7 @@ decides whether a block carries strong redstone power from a source on one
 side to consumers on the others. A double slab is a full cube, a single slab
 is not; a retracted piston base is, an extended one is not.
 
-Source: the local extract (see audit/phase0/extractor), which asks the game
+Source: the local extract (see scripts/extract), which asks the game
 directly. It was minecraft-data's blockCollisionShapes; that produced the
 same answers state for state (verified before the switch), so this change is
 purely about owning the input for every version rather than the newest one a

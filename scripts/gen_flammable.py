@@ -12,7 +12,7 @@ import json
 import os
 import sys
 
-# State ranges come from the local extract (see audit/phase0/extractor); the
+# State ranges come from the local extract (see scripts/extract); the
 # odds themselves are FireBlock.bootStrap's table, transcribed above.
 VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)

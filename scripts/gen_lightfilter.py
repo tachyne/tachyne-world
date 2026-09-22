@@ -8,7 +8,7 @@ three. A double slab is opaque while its halves are not; a waterlogged fence
 dims by 1 while a dry one does not.
 
 Source: the local extract (~/vanilla/extract/<ver>.json), taken by running
-the game — see audit/phase0/extractor. It was minecraft-data, which records
+the game — see scripts/extract. It was minecraft-data, which records
 one filterLight per BLOCK, and that flattening put 10,394 of the 29,671
 states on the wrong value, including 125 where light passed straight through
 a solid block.

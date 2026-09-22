@@ -5,7 +5,7 @@ Emits LightEmission(state) -> the light level a block state emits (0 if none),
 as a sorted, non-overlapping range table with a binary search.
 
 Source: the local extract (~/vanilla/extract/<ver>.json), produced by running
-the game itself — see audit/phase0/extractor. It was minecraft-data, which
+the game itself — see scripts/extract. It was minecraft-data, which
 carries ONE emitLight per block; light is a per-STATE property in vanilla, so
 that flattened 60 blocks onto their default state and got them wrong in both
 directions: a lit furnace emitted 0 instead of 13, a lit redstone lamp 0
