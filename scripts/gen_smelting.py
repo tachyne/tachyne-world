@@ -64,6 +64,17 @@ COOKERS = [  # (recipe type, go map name, default cook ticks, doc)
     ("minecraft:smoking", "smokeResult", 100, "smoker"),
     ("minecraft:campfire_cooking", "campfireResult", 600, "campfire"),
 ]
+
+# The recipe book tab an entry lands on. Ids are the recipe_book_category
+# registry's registration order (crafting_building_blocks 0 … campfire 12);
+# the mapping per cooker is the recipeBookCategory() each cooking recipe
+# class returns, keyed by the recipe json's own "category" field.
+BOOK_CATEGORY = {
+    "minecraft:smelting": {"blocks": 5, "food": 4, "misc": 6},
+    "minecraft:blasting": {"blocks": 7, "food": 8, "misc": 8},
+    "minecraft:smoking": {"blocks": 9, "food": 9, "misc": 9},
+    "minecraft:campfire_cooking": {"blocks": 12, "food": 12, "misc": 12},
+}
 tables = {t: [] for t, _, _, _ in COOKERS}
 for path, r in sorted(recipes.items()):
     for rtype, _, default, _ in COOKERS:
@@ -77,6 +88,7 @@ for path, r in sorted(recipes.items()):
         # 0.7 (0.35 for food), which paid the same for cactus green and
         # ancient debris.
         xp = float(r.get("experience", 0.0))
+        cat = BOOK_CATEGORY[rtype][r.get("category", "misc")]
         ing = r["ingredient"]
         ings = [ing] if isinstance(ing, str) else ing
         names = []
@@ -87,7 +99,7 @@ for path, r in sorted(recipes.items()):
                 names.append(i.removeprefix("minecraft:"))
         for n in names:
             if n in item_id:
-                tables[rtype].append((item_id[n], item_id[result], cook, xp))
+                tables[rtype].append((item_id[n], item_id[result], cook, xp, cat))
 for rows in tables.values():
     rows.sort()
 
@@ -108,12 +120,14 @@ L = [
     "",
     "package server",
     "",
-    "// cookEntry is one cooker recipe: output item, cook time in ticks and",
-    "// the experience it banks (the recipe's own `experience` field).",
+    "// cookEntry is one cooker recipe: output item, cook time in ticks, the",
+    "// experience it banks (the recipe's own `experience` field) and the recipe",
+    "// book tab it is filed under (a recipe_book_category registry index).",
     "type cookEntry struct {",
     "\tOut  int32",
     "\tCook int",
     "\tXP   float64",
+    "\tCat  int32",
     "}",
 ]
 for rtype, goname, _, doc in COOKERS:
@@ -122,8 +136,8 @@ for rtype, goname, _, doc in COOKERS:
         f"// {goname} maps a {doc} input item to its cooked output + cook ticks.",
         f"var {goname} = map[int32]cookEntry{{",
     ]
-    for inp, out, cook, xp in tables[rtype]:
-        L.append(f"\t{inp}: {{{out}, {cook}, {xp:g}}},")
+    for inp, out, cook, xp, cat in tables[rtype]:
+        L.append(f"\t{inp}: {{{out}, {cook}, {xp:g}, {cat}}},")
     L.append("}")
 L += [
     "",

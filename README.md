@@ -166,7 +166,11 @@ multi-pod plan).
   empty and recipes reveal themselves as you first obtain their ingredients,
   with the "new recipes unlocked" toast and the badge; clicking an entry
   auto-fills the crafting grid from your inventory; book tabs' open/filter
-  state and your unlocks persist across sessions
+  state and your unlocks persist across sessions. All four tabs are live: the
+  furnace, blast-furnace and smoker books list their recipes with the cook
+  time and the experience each one banks, filed under the same tabs vanilla
+  files them under, and clicking one loads the ingredient into the open
+  cooker
 - **Advancements**: the complete vanilla advancement tree (story, nether, end,
   adventure, husbandry — 125 advancements) with vanilla semantics end to end:
   the tree reveals itself as you progress (earned advancements plus a two-step

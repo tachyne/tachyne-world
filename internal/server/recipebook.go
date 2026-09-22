@@ -42,7 +42,14 @@ func (evCraftRequest) isHubEvent() {}
 // and every ingredient is available; otherwise it's a no-op (the client keeps
 // its ghost preview).
 func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftRequest) {
-	if t.inv == nil || e.windowID != t.winID || (t.winKind != winPlayer && t.winKind != winCraft) {
+	if t.inv == nil || e.windowID != t.winID {
+		return
+	}
+	if t.winKind == winFurnace {
+		h.placeCookRecipe(t, e.recipeID)
+		return
+	}
+	if t.winKind != winPlayer && t.winKind != winCraft {
 		return
 	}
 	w := gridSize(t)
@@ -114,4 +121,50 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 		h.sendWinSlot(t, int16(i+1), t.craft[i])
 	}
 	h.sendCraftResult(t)
+}
+
+// cookStationItem is the item a cooker kind shows as its station icon — the
+// same value cookBookRecipes files its entries under.
+func cookStationItem(kind int8) int32 {
+	switch kind {
+	case cookBlast:
+		return itemByName["blast_furnace"]
+	case cookSmoker:
+		return itemByName["smoker"]
+	}
+	return itemByName["furnace"]
+}
+
+// placeCookRecipe answers a click on a furnace-book entry. Vanilla's
+// ServerPlaceRecipe for a cooker menu moves ONE of the recipe's ingredient
+// from the inventory into the input slot; it refuses when the open cooker is
+// not the one the entry belongs to (a blasting entry clicked in a smoker), or
+// when the input already holds something else.
+func (h *hub) placeCookRecipe(t *tracked, id int32) {
+	n := int(id - cookBookFirstID)
+	if n < 0 || n >= len(cookBookRecipes) {
+		return
+	}
+	r := cookBookRecipes[n]
+	f := h.furnaces[t.winPos]
+	if f == nil || r.Station != cookStationItem(f.kind) {
+		return
+	}
+	if in := f.slots[0]; in.item != 0 && (in.item != r.Ingredient || in.count >= 64) {
+		return
+	}
+	for i := range t.inv.slots {
+		s := &t.inv.slots[i]
+		if s.item != r.Ingredient || s.count == 0 {
+			continue
+		}
+		if s.count--; s.count == 0 {
+			s.item = 0
+		}
+		h.sendSlot(t, i)
+		f.slots[0].item = r.Ingredient
+		f.slots[0].count++
+		h.sendWinSlot(t, 0, f.slots[0])
+		return
+	}
 }

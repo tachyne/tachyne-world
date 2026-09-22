@@ -18,7 +18,48 @@ import (
 )
 
 // Display ids are canonical recipe indices: shaped recipes first, then
-// shapeless — the same numbering placeRecipe resolves.
+// shapeless — the same numbering placeRecipe resolves — and finally the
+// cooking recipes, which are book-only (a furnace has no craft_recipe_request
+// path, so they sit above the ids placeRecipe will ever be handed).
+
+// cookBookRecipe is one book entry for a cooker recipe, pre-built at init.
+// The four cooker tables are flattened in a fixed order (furnace, blast
+// furnace, smoker, campfire), each sorted by input item, so a display id
+// means the same recipe across restarts — which is what makes a persisted
+// book restore correctly.
+var cookBookRecipes = func() []attachproto.CookingRecipe {
+	tables := []struct {
+		m       map[int32]cookEntry
+		station int32
+	}{
+		{smeltResult, itemByName["furnace"]},
+		{blastResult, itemByName["blast_furnace"]},
+		{smokeResult, itemByName["smoker"]},
+		{campfireResult, itemByName["campfire"]},
+	}
+	id := int32(len(shapedRecipes) + len(shapelessRecipes))
+	var out []attachproto.CookingRecipe
+	for _, t := range tables {
+		inputs := make([]int32, 0, len(t.m))
+		for in := range t.m {
+			inputs = append(inputs, in)
+		}
+		sort.Slice(inputs, func(i, j int) bool { return inputs[i] < inputs[j] })
+		for _, in := range inputs {
+			e := t.m[in]
+			out = append(out, attachproto.CookingRecipe{
+				ID: id, Ingredient: in, Result: e.Out, Count: 1,
+				Cook: int32(e.Cook), XP: float32(e.XP),
+				Station: t.station, Category: e.Cat,
+			})
+			id++
+		}
+	}
+	return out
+}()
+
+// cookBookFirstID is the display id the cooking block starts at.
+var cookBookFirstID = int32(len(shapedRecipes) + len(shapelessRecipes))
 
 // rbIngredientIndex maps an item id to the display ids of every recipe using
 // it as an ingredient (the unlock rule's lookup).
@@ -38,6 +79,10 @@ var rbIngredientIndex = func() map[int32][]int32 {
 	}
 	for i := range shapelessRecipes {
 		add(int32(len(shapedRecipes)+i), shapelessRecipes[i].Ingredients)
+	}
+	// A cooker recipe unlocks on its single input, the same rule.
+	for i := range cookBookRecipes {
+		add(cookBookRecipes[i].ID, []int32{cookBookRecipes[i].Ingredient})
 	}
 	return idx
 }()
@@ -60,6 +105,10 @@ func rbBuildEntries(ids []int32, replace, notify bool, highlighted map[int32]boo
 				ID: id, Ingredients: r.Ingredients,
 				Result: r.Result, Count: int32(r.Count), Notify: notify, Highlight: hl,
 			})
+		} else if n := int(id - cookBookFirstID); n >= 0 && n < len(cookBookRecipes) {
+			r := cookBookRecipes[n]
+			r.Notify, r.Highlight = notify, hl
+			rb.Cooking = append(rb.Cooking, r)
 		}
 	}
 	return rb

@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-22
 
 ### Added
+- **The recipe book's three cooker tabs stop being empty.** The green book only
+  ever listed crafting recipes, so opening a furnace, blast furnace or smoker
+  showed a book with nothing in it. All 236 cooker recipes are book entries
+  now, each carrying the cook time and the experience it banks, filed under the
+  same tab vanilla files it under — a smelted ore on the furnace tab, the same
+  ore blasted on the blast-furnace one. They unlock on the ingredient like
+  every other recipe, and clicking one with a cooker open loads the ingredient
+  into its input slot (and refuses when the entry belongs to a different
+  cooker).
 - **Mobs and dropped items go through nether portals.** Only players could
   travel, so anything that pushes mobs or their drops through a portal simply
   did not work. Everything else now goes through the instant it touches a
