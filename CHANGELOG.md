@@ -35,6 +35,13 @@ the public history since the project was open-sourced on 2026-07-10.
   freezes into a statue, and the way back is an axe — but only while the
   statue is still bright copper. Here it stayed a block forever.
 
+### Changed
+- **Horses have to be tamed.** Anyone could put a saddle on any horse and ride
+  away. Now it is the ritual it should be: climb on a wild one bareback, get
+  thrown, climb on again until it settles — and feeding it apples or carrots
+  along the way makes that shorter. A horse will not take a saddle until it is
+  tamed.
+
 ### Fixed
 - **Hit one zombified piglin and the pack comes for you.** They used to get
   angry and then stand there: nothing ever told them who had done it.
