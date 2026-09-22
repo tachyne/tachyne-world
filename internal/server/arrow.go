@@ -467,9 +467,20 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if m.dying > 0 || m.dim != a.dim || (a.mobShot && m.eid == a.shooter) {
 			continue
 		}
-		ddx, ddz := px-m.x, pz-m.z
-		if ddx*ddx+ddz*ddz > arrowHitRadius*arrowHitRadius || py < m.y-0.1 || py > m.y+2 {
-			continue
+		part := ""
+		if m == h.dragon {
+			// The dragon is eight boxes, not one, and its own is far too big
+			// for the arrow cylinder everything else uses.
+			p, ok := dragonPartAt(m, px, py, pz)
+			if !ok {
+				continue
+			}
+			part = p
+		} else {
+			ddx, ddz := px-m.x, pz-m.z
+			if ddx*ddx+ddz*ddz > arrowHitRadius*arrowHitRadius || py < m.y-0.1 || py > m.y+2 {
+				continue
+			}
 		}
 		if a.hitMobs != nil && a.hitMobs[m.eid] {
 			continue // piercing bolt already struck this mob — pass through
@@ -532,7 +543,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.mobShot {
 				m.lastAttacker = a.shooter // a mob's arrow counts as its blow (the creeper's disc)
 			}
-			m.hurtKind(float64(dmg), projectileDamageOf(a))
+			hit := float64(dmg)
+			if part != "" {
+				// EnderDragon.hurt: anywhere but the head is worth a quarter.
+				hit = dragonPartDamage(part, hit)
+			}
+			m.hurtKind(hit, projectileDamageOf(a))
 			m.lastDirect = a.etype // the blow's direct entity (the ghast's disc asks for its own fireball)
 			if a.playerShot {
 				if s := players[a.shooter]; s != nil {

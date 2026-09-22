@@ -359,7 +359,15 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if m.etype == entityArmadillo {
 		h.armadilloHurtByLiving(players, m) // Armadillo.actuallyHurt: danger, and it rolls up
 	}
-	m.hurtBreach(float64(dmg), breachFrac) // through base armor (zombie family has 2), less breach
+	melee := float64(dmg)
+	if m == h.dragon {
+		// EnderDragon.hurtServer routes a blow with no part attached to the
+		// BODY, which takes a quarter. A melee hit carries no part here — the
+		// engine keeps the dragon as one entity on the wire, so a client can
+		// only ever name the whole dragon — and the body is the honest answer.
+		melee = dragonPartDamage("body", melee)
+	}
+	m.hurtBreach(melee, breachFrac) // through base armor (zombie family has 2), less breach
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
 		if taken := float64(hpBefore - m.health); taken >= 0 && float64(dmg) > taken {

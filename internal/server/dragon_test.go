@@ -134,3 +134,39 @@ func TestDragonContactDamage(t *testing.T) {
 		t.Error("the wings reach further than the body")
 	}
 }
+
+// The dragon is eight boxes, and every one but the head takes a quarter of
+// what lands on it: EnderDragon.hurt's one line is the shape of the fight.
+func TestDragonPartsQuarterEverythingButTheHead(t *testing.T) {
+	if got := dragonPartDamage("head", 8); got != 8 {
+		t.Fatalf("the head takes a blow whole: %v", got)
+	}
+	// 8 → 8/4 + min(8,1) = 3
+	if got := dragonPartDamage("tail", 8); got != 3 {
+		t.Fatalf("the tail should take 3 of 8, got %v", got)
+	}
+	if got := dragonPartDamage("body", 0.5); got != 0.625 {
+		t.Fatalf("a small blow keeps its own size as the floor: %v", got)
+	}
+}
+
+// The parts sit where the dragon is looking: the head well ahead of it, the
+// tail behind, the wings out to the sides.
+func TestDragonPartsLieAlongItsFacing(t *testing.T) {
+	m := &mob{etype: entityEnderDragon, x: 100, y: 80, z: 100, yaw: 0} // yaw 0 is south: +z
+	head, ok := dragonPartAt(m, 100, 80, 106.5)
+	if !ok || head != "head" {
+		t.Fatalf("six and a half blocks ahead should be the head, got %q ok=%v", head, ok)
+	}
+	tail, ok := dragonPartAt(m, 100, 80, 94.5)
+	if !ok || tail != "tail" {
+		t.Fatalf("behind it should be tail, got %q ok=%v", tail, ok)
+	}
+	if _, ok := dragonPartAt(m, 100, 80, 130); ok {
+		t.Fatal("thirty blocks away is not the dragon at all")
+	}
+	// A wing, out to the side and two up.
+	if p, ok := dragonPartAt(m, 104.5, 82, 100); !ok || p != "wing" {
+		t.Fatalf("out to the side should be a wing, got %q ok=%v", p, ok)
+	}
+}
