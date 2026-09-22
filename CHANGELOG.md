@@ -26,6 +26,11 @@ the public history since the project was open-sourced on 2026-07-10.
   unobtainable — the recipes, the clouds and all the rest of it were already
   built and had no way to start. A bottle used beside a cloud the dragon left
   now fills with it, and the cloud shrinks for it.
+- **Sand, clay and gravel patches in the beds under water.** The real game
+  lays flat disks of them in every river, lake and shallow sea; this world had
+  none. Clay is the reason they matter, and clay is not fixed yet: every
+  underwater floor here is gravel or sand, and a clay patch only replaces
+  dirt, so clay stays a cave-only block for now.
 - **An axe wakes a copper golem statue.** A golem that oxidises through
   freezes into a statue, and the way back is an axe — but only while the
   statue is still bright copper. Here it stayed a block forever.
