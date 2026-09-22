@@ -164,3 +164,62 @@ func TestCopperGolemSortsItems(t *testing.T) {
 		t.Error("golem should not be left holding items")
 	}
 }
+
+// An axe taken to a statue that has not started to weather wakes the golem
+// back up, facing the way the statue faced, and costs the axe a point. A
+// statue that has oxidised keeps the axe's ordinary copper behaviour.
+func TestAxeWakesAFreshStatue(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := riderAt(1, 30.5, 70, 31.5)
+	players := map[int32]*tracked{1: pl}
+	bx, by, bz := 30, 70, 30
+
+	info, _ := worldgen.InfoForState(worldgen.BlockBase("copper_golem_statue"))
+	statue := worldgen.SetProperty(info, worldgen.BlockBase("copper_golem_statue"), "facing", "south")
+	statue = worldgen.SetProperty(info, statue, "waterlogged", "false")
+	h.world.SetBlock(bx, by, bz, statue)
+
+	give(pl, itemByName["iron_axe"])
+	h.clickBlock(players, evClickBlock{eid: 1, x: bx, y: by, z: bz})
+
+	if got := h.world.At(bx, by, bz); got != worldgen.Air {
+		t.Fatalf("the statue block should be gone, got state %d", got)
+	}
+	var golem *mob
+	for _, m := range h.mobs {
+		if m.etype == entityCopperGolem {
+			golem = m
+		}
+	}
+	if golem == nil {
+		t.Fatal("a copper golem should be standing there")
+	}
+	if want := facingYaw("south"); golem.yaw != want {
+		t.Fatalf("the golem should face the way the statue did: yaw %v, want %v", golem.yaw, want)
+	}
+	if pl.inv.slots[0].dmg != 1 {
+		t.Fatalf("the axe should have taken a point of wear, got %d", pl.inv.slots[0].dmg)
+	}
+}
+
+// A weathered statue is not woken by an axe — it keeps copper's own rules.
+func TestAxeLeavesAWeatheredStatueToTheCopperRules(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := riderAt(1, 30.5, 70, 31.5)
+	players := map[int32]*tracked{1: pl}
+	bx, by, bz := 30, 70, 30
+	statue := worldgen.BlockBase("weathered_copper_golem_statue")
+	h.world.SetBlock(bx, by, bz, statue)
+
+	give(pl, itemByName["iron_axe"])
+	h.clickBlock(players, evClickBlock{eid: 1, x: bx, y: by, z: bz})
+
+	if h.world.At(bx, by, bz) != statue {
+		t.Fatal("the weathered statue should be left exactly as it was")
+	}
+	for _, m := range h.mobs {
+		if m.etype == entityCopperGolem {
+			t.Fatal("no golem should have woken up")
+		}
+	}
+}

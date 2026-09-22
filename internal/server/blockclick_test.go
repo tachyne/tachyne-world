@@ -70,12 +70,17 @@ func TestBlockClicks(t *testing.T) {
 			t.Fatalf("statue pose %q, want %q", got, p)
 		}
 	}
+	// An axe never cycles the pose. On a weathered statue it does nothing here
+	// at all (the axe's own use scrapes it); on a fresh one it wakes the golem,
+	// which TestAxeWakesAFreshStatue covers.
+	weathered := worldgen.BlockBase("weathered_copper_golem_statue")
+	w.SetBlock(-1, 180, 0, weathered)
 	pl.inv.slots[0] = invStack{item: itemByName["iron_axe"], count: 1}
 	pl.p.setHotbarSlot(0, int32(itemByName["iron_axe"]))
 	pl.p.held = 0
 	click(-1, 180, 0)
-	if got := worldgen.GetProperty(sinfo, w.At(-1, 180, 0), "copper_golem_pose"); got != "standing" {
-		t.Fatalf("an axe click must not cycle the pose (got %q)", got)
+	if got := w.At(-1, 180, 0); got != weathered {
+		t.Fatalf("an axe click must leave a weathered statue alone (state %d)", got)
 	}
 
 	w.SetBlock(0, 180, 2, wireStateMin)

@@ -25,6 +25,31 @@ var (
 	}()
 )
 
+// freshStatueLo/Hi is the unwaxed, unweathered statue — the only one an axe
+// wakes up. The other seven states (three oxidation stages and their four
+// waxed twins) keep the axe's ordinary copper behaviour.
+var freshStatueLo, freshStatueHi = worldgen.BlockRange("copper_golem_statue")
+
+func isFreshGolemStatue(s uint32) bool { return s >= freshStatueLo && s <= freshStatueHi }
+
+// reviveGolemStatue is CopperGolemStatueBlockEntity.removeStatue: the block
+// goes, a golem stands up in its place facing the way the statue faced, and
+// the axe pays a point of durability for it.
+func (h *hub) reviveGolemStatue(players map[int32]*tracked, t *tracked, pos blockPos, state uint32) {
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return
+	}
+	h.setBlockAt(players, t.dim, pos, worldgen.Air)
+	m := h.spawnMobIn(players, entityCopperGolem, t.dim,
+		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+	if m != nil {
+		m.yaw = facingYaw(worldgen.GetProperty(info, state, "facing"))
+	}
+	h.applyToolWear(t, t.p.heldSlot(), 1)
+	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid)
+}
+
 // isCaveVine / isGolemStatue classify the clicked block (isBerryBush lives
 // in entityinside.go).
 func isCaveVine(s uint32) bool {
@@ -82,7 +107,14 @@ func (h *hub) clickBlock(players map[int32]*tracked, e evClickBlock) {
 		h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid)
 	case isGolemStatue(state):
 		if axeItems[heldStack(t).item] {
-			return // an axe scrapes or strips wax instead (Item.useOn runs first)
+			// WeatheringCopperGolemStatueBlock.useItemOn: an axe taken to a
+			// statue that has NOT started to weather wakes the golem back up.
+			// Any other stage falls through to the axe's own use, which
+			// scrapes one stage of oxidation off or strips the wax.
+			if isFreshGolemStatue(state) {
+				h.reviveGolemStatue(players, t, pos, state)
+			}
+			return
 		}
 		info, ok := worldgen.InfoForState(state)
 		if !ok {
