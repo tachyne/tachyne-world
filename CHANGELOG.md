@@ -36,6 +36,22 @@ the public history since the project was open-sourced on 2026-07-10.
   statue is still bright copper. Here it stayed a block forever.
 
 ### Fixed
+- **Hit one zombified piglin and the pack comes for you.** They used to get
+  angry and then stand there: nothing ever told them who had done it.
+- **A creeper you duck away from stands down.** Its fuse watched only the
+  distance, so a wall made no difference and it went off anyway.
+- **Slimes and magma cubes float.** They were walking along the bottom of
+  ponds. So was the creaking.
+- **A mob in armour is worth more experience**, as it should be — a skeleton
+  in full iron paid the same as a bare one.
+- **Six mobs get the attack damage they are meant to have**, and the giant
+  loses the hostile behaviour it was never supposed to have: vanilla's giant
+  has no goals at all and simply stands where it is put. The illusioner also
+  stops speaking with a pillager's voice.
+- **A composter works with hoppers** — one above feeds it, one below empties
+  it, which is the whole composter farm.
+- **A conduit works for creative players**, and an end gateway's cooldown
+  belongs to the gateway rather than to each player.
 - **A guardian shows its spikes, and a freezing skeleton shivers.** The
   guardian's spines never moved, however faithfully they reflected damage, and
   a skeleton turning into a stray in powder snow gave no sign until the
