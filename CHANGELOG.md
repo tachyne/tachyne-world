@@ -72,6 +72,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Two things vanilla does not generate are gone**: the small broken
   stone-brick shells scattered over habitable land, and wild nether wart on
   soul sand. Already-generated ground keeps what it has.
+- **Animals have to meet before they breed.** Two fed at opposite ends of an
+  eight-block pen made a baby without ever walking toward each other. They now
+  head for the nearest courting partner and only breed after sixty ticks
+  within three blocks — and a panda needs bamboo in reach as well as the food.
 - **Iron golems ask the village to have slept.** A golem used to be the
   automatic reward for five villagers sharing a bell, however they lived. It
   now takes five villagers who have been to bed within the last day and who
@@ -101,6 +105,8 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **A grindstone stays on the wall** when the wall behind it goes, and a
+  parrot sets off after its owner from five blocks rather than ten.
 - **An anvil lies across your look**, not facing you, the way vanilla places
   it; a calibrated sculk sensor's amethyst face was a full 180 degrees out and
   read its side signal from the wrong block.

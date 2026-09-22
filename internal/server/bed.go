@@ -425,8 +425,17 @@ func facingStep(facing string) (int, int) {
 
 // respawnPoint resolves where a player comes back after death, and in which
 // dimension: their claimed bed or charged respawn anchor if it still stands and
-// still works where it stands, else world spawn in the overworld.
+// still works where it stands, else world spawn in the overworld. A respawn
+// spends one of an anchor's charges.
 func (h *hub) respawnPoint(players map[int32]*tracked, t *tracked) (float64, float64, float64, int) {
+	return h.respawnPointCharging(players, t, true)
+}
+
+// respawnPointCharging is respawnPoint with a say in whether an anchor pays.
+// Walking out of the End is not a death — ServerPlayer.changeDimension calls
+// findRespawnPositionAndUseSpawnBlock(false), which reads the anchor without
+// spending it.
+func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend bool) (float64, float64, float64, int) {
 	if h.spawns != nil {
 		if pos, dim, ok := h.spawns.get(t.p.name); ok {
 			w := h.worldFor(dim)
@@ -436,8 +445,9 @@ func (h *hub) respawnPoint(players map[int32]*tracked, t *tracked) (float64, flo
 					return float64(pos.x) + 0.5, float64(pos.y) + 0.6, float64(pos.z) + 0.5, dim
 				}
 				if charge := anchorCharge(state); charge > 0 && anchorWorks(dim) {
-					// The anchor spends one charge per respawn.
-					h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+					if spend { // a death costs the anchor a charge; a walk out of the End does not
+						h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+					}
 					return float64(pos.x) + 0.5, float64(pos.y) + 1, float64(pos.z) + 0.5, dim
 				}
 			}

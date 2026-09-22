@@ -20,10 +20,13 @@ const (
 	metaTypeBool   = 8  // metadata value type: boolean (1.21.5)
 	statusInLove   = 18 // entity status: heart particles
 
-	loveTicks     = 600   // 30 s of courting after being fed (vanilla)
-	breedCooldown = 6000  // 5 min before a parent can breed again (vanilla)
-	growUpTicks   = 24000 // babies take 20 min to grow (vanilla)
-	breedRange    = 8.0   // courting partners find each other within this
+	loveTicks        = 600   // 30 s of courting after being fed (vanilla)
+	breedCooldown    = 6000  // 5 min before a parent can breed again (vanilla)
+	growUpTicks      = 24000 // babies take 20 min to grow (vanilla)
+	breedRange       = 8.0   // BreedGoal.PARTNER_SEARCH_RANGE: how far a partner is looked for
+	breedMeetRange   = 3.0   // …and how close the two must actually be to breed (distanceToSqr < 9)
+	breedCourtTicks  = 60    // BreedGoal.tick: sixty ticks together before the baby
+	pandaBambooReach = 8     // PandaBreedGoal.canFindBamboo's horizontal reach
 
 	eggLayMin = 6000 // chickens lay every 5-10 min (vanilla)
 	eggLayMax = 12000
@@ -216,13 +219,44 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			continue
 		}
 		m.loveTicks -= survivalTickN
+		// BreedGoal.getFreePartner: the NEAREST courting animal of the same
+		// kind within eight blocks, not the first one the grid hands back.
 		var partner *mob
+		best := breedRange * breedRange
 		h.grid().nearby(m.dim, m.x, m.z, breedRange, func(o *mob) {
-			if partner != nil || o == m || o.etype != m.etype || o.loveTicks <= 0 || o.dying > 0 {
+			if o == m || o.etype != m.etype || o.loveTicks <= 0 || o.dying > 0 {
 				return
 			}
-			partner = o
+			dx, dz := o.x-m.x, o.z-m.z
+			if d2 := dx*dx + dz*dz; d2 < best {
+				partner, best = o, d2
+			}
 		})
+		if partner == nil {
+			m.breedTime = 0
+			continue
+		}
+		if m.etype == entityPanda && !h.pandaFindsBamboo(m) {
+			// PandaBreedGoal.canUse: a panda with no bamboo in reach sulks
+			// instead of breeding.
+			m.breedTime = 0
+			continue
+		}
+		// BreedGoal.tick: the pair walk TO each other at the goal's speed and
+		// only breed once they have been together for sixty ticks and are
+		// within three blocks. Without this, two animals fed at opposite ends
+		// of a pen made a baby without ever meeting.
+		if best > breedMeetRange*breedMeetRange {
+			m.hasTarget, m.tx, m.tz = true, partner.x, partner.z
+			m.breedTime = 0
+			continue
+		}
+		if m.breedTime += survivalTickN; m.breedTime < breedCourtTicks {
+			m.hasTarget, m.tx, m.tz = true, partner.x, partner.z
+			continue
+		}
+		m.hasTarget = false
+		partner.hasTarget, partner.breedTime = false, 0
 		if o := partner; o != nil {
 			m.loveTicks, o.loveTicks = 0, 0
 			m.breedCD, o.breedCD = breedCooldown, breedCooldown
@@ -287,4 +321,25 @@ func chickenEggFor(variant int32) int32 {
 		return itemBlueEgg
 	}
 	return itemEgg
+}
+
+// pandaFindsBamboo is PandaBreedGoal.canFindBamboo: one bamboo block anywhere
+// within eight blocks horizontally and two above the panda is enough. With
+// none in reach a panda will not breed, whatever it has been fed.
+func (h *hub) pandaFindsBamboo(m *mob) bool {
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return false
+	}
+	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	for dy := 0; dy < 3; dy++ {
+		for dx := -pandaBambooReach; dx <= pandaBambooReach; dx++ {
+			for dz := -pandaBambooReach; dz <= pandaBambooReach; dz++ {
+				if inStates(w.At(bx+dx, by+dy, bz+dz), bambooStates) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

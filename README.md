@@ -207,8 +207,8 @@ multi-pod plan).
 - Farm animals — cows, chickens (eggs, and thrown eggs hatch chicks), pigs,
   sheep (shear for wool, it regrows) — in herds that wander, graze and rest;
   feed a pair anything on their vanilla food list (a pig takes carrots,
-  potatoes or beetroot; a wolf any meat or fish) and they breed a baby
-  that grows up — a fed baby grows faster, a hurt pet or horse eats to
+  potatoes or beetroot; a wolf any meat or fish), walk together and breed a
+  baby that grows up (a panda wants bamboo in reach as well as the food) — a fed baby grows faster, a hurt pet or horse eats to
   heal, and they trot after anyone holding their food (a pig after a
   carrot on a stick, and using it sends the mount sprinting at the cost of the stick)
 - Hostiles: zombies, skeletons (kiting bow AI, real arrows), spiders,

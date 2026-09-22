@@ -39,7 +39,7 @@ func TestFoxTrust(t *testing.T) {
 	a.loveTicks, b.loveTicks = 100, 100
 	a.baby, b.baby = false, false
 	h.gridDirty()
-	h.updateBreeding(players)
+	courtBreeding(h, players) // BreedGoal: sixty ticks together first
 	cub := (*mob)(nil)
 	for _, m := range h.mobs {
 		if m.etype == entityFox && m.baby {

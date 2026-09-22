@@ -139,12 +139,20 @@ func (h *hub) updateEndPortalContact(players map[int32]*tracked) {
 		if feet != worldgen.EndPortalBlock {
 			continue
 		}
-		target := 2
-		if t.dim == 2 {
-			target = 0 // the End's exit portal goes home
-		}
 		t.p.pendingFrom = dimPos{}
+		if t.dim == dimEnd {
+			// The End's exit portal goes HOME, and home is vanilla's
+			// findRespawnPositionAndUseSpawnBlock: the player's own bed or
+			// charged anchor if it still stands, else the world spawn. It
+			// used to drop everyone at the world origin. A walk out is not a
+			// death, so an anchor is read without being spent.
+			sx, sy, sz, sdim := h.respawnPointCharging(players, t, false)
+			t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
+			t.p.pendingDestOK = true
+			t.p.pendingDim.Store(int32(sdim))
+			continue
+		}
 		t.p.pendingDestOK = false
-		t.p.pendingDim.Store(int32(target))
+		t.p.pendingDim.Store(int32(dimEnd))
 	}
 }

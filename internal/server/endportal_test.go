@@ -116,3 +116,52 @@ func TestPlayerBuiltEndPortalOpens(t *testing.T) {
 		}
 	}
 }
+
+// Walking out of the End used to drop everyone at the world origin. Vanilla
+// sends you to your own respawn position — your bed or charged anchor if it
+// still stands, else the world spawn — and reads the anchor without spending
+// a charge, because a walk out is not a death.
+func TestEndExitGoesToYourRespawnPoint(t *testing.T) {
+	ow := world.New(7)
+	h := newHub(ow)
+	ew, err := world.NewEnd(7, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.end = ew
+	pl := testTracked()
+	pl.dim = dimEnd
+	pl.x, pl.y, pl.z = 20.5, 30, 20.5
+	players := map[int32]*tracked{1: pl}
+	ew.SetBlock(20, 30, 20, worldgen.EndPortalBlock)
+
+	h.spawns = newSpawnStore(t.TempDir() + "/spawns.json")
+	// A bed claimed far from the origin.
+	bed := blockPos{900, 70, -400}
+	ow.SetBlock(bed.x, bed.y, bed.z, bedHeadState(t))
+	h.spawns.set(pl.p.name, bed, dimOverworld)
+
+	h.updateEndPortalContact(players)
+	if got := pl.p.pendingDim.Load(); got != dimOverworld {
+		t.Fatalf("the End's exit should flag dim 0, got %d", got)
+	}
+	if !pl.p.pendingDestOK {
+		t.Fatal("the exit should name a destination, not fall back to the origin")
+	}
+	// switchDimensionTo lands at dest + (0.5, 0, 1.5), so dest is the bed
+	// with one taken off z.
+	if want := (blockPos{bed.x, bed.y, bed.z - 1}); pl.p.pendingDest != want {
+		t.Fatalf("exit destination = %v, want %v (the claimed bed)", pl.p.pendingDest, want)
+	}
+}
+
+// bedHeadState builds a bed's head half, which is what claiming a bed records.
+func bedHeadState(t *testing.T) uint32 {
+	t.Helper()
+	base := worldgen.BlockBase("red_bed")
+	info, ok := worldgen.InfoForState(base)
+	if !ok {
+		t.Fatal("no info for a bed")
+	}
+	return worldgen.SetProperty(info, base, "part", "head")
+}

@@ -31,7 +31,7 @@ func TestTurtleEggLifeCycle(t *testing.T) {
 	a.home = blockPos{0, 180, 0}
 	a.loveTicks, b.loveTicks = loveTicks, loveTicks
 	before := len(h.mobs)
-	h.updateBreeding(players)
+	courtBreeding(h, players) // BreedGoal: sixty ticks together first
 	if len(h.mobs) != before || !(a.hasEgg || b.hasEgg) {
 		t.Fatalf("turtles breed an egg, not a hatchling: mobs %d→%d, eggs %v/%v", before, len(h.mobs), a.hasEgg, b.hasEgg)
 	}

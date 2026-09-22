@@ -28,15 +28,28 @@ func TestRosterSpeciesBreed(t *testing.T) {
 		players := map[int32]*tracked{1: pl}
 		a := h.spawnAnimal(players, c.etype, 3, 3)
 		b := h.spawnAnimal(players, c.etype, 5, 3)
+		if c.etype == entityPanda {
+			// PandaBreedGoal wants bamboo in reach as well as the food.
+			h.world.SetBlock(floorInt(a.x), floorInt(a.y), floorInt(a.z)+1, worldgen.BlockBase("bamboo"))
+		}
 		pl.x, pl.y, pl.z = a.x, a.y, a.z
 		if !h.feedAnimal(players, pl, a) || !h.feedAnimal(players, pl, b) {
 			t.Fatalf("etype %d should court on its love-food %d", c.etype, c.food)
 		}
 		before := len(h.mobs)
-		h.updateBreeding(players)
+		// BreedGoal: the pair court for sixty ticks before the baby.
+		courtBreeding(h, players)
 		if len(h.mobs) != before+1 {
 			t.Fatalf("etype %d courting pair should breed: %d mobs, was %d", c.etype, len(h.mobs), before)
 		}
+	}
+}
+
+// courtBreeding runs updateBreeding long enough for a pair standing together
+// to finish BreedGoal's sixty-tick courtship.
+func courtBreeding(h *hub, players map[int32]*tracked) {
+	for i := 0; i <= breedCourtTicks/survivalTickN; i++ {
+		h.updateBreeding(players)
 	}
 }
 
@@ -58,7 +71,12 @@ func TestFeedingPairMakesABaby(t *testing.T) {
 		t.Fatalf("two wheat should be consumed, left %d", pl.inv.slots[0].count)
 	}
 	before := len(h.mobs)
+	// One pass is not enough any more: BreedGoal wants sixty ticks together.
 	h.updateBreeding(players)
+	if len(h.mobs) != before {
+		t.Fatalf("a pair that has only just met should not have bred yet: %d mobs, was %d", len(h.mobs), before)
+	}
+	courtBreeding(h, players)
 	if len(h.mobs) != before+1 {
 		t.Fatalf("courting pair should produce a baby: %d mobs, was %d", len(h.mobs), before)
 	}
@@ -166,5 +184,68 @@ func TestChickensLayEggs(t *testing.T) {
 	}
 	if m.eggIn < eggLayMin-survivalTickN {
 		t.Fatalf("the layer must re-arm, eggIn=%d", m.eggIn)
+	}
+}
+
+// BreedGoal walks the pair together: two animals fed at opposite ends of a pen
+// used to make a baby without ever meeting. They must now close to three
+// blocks and stand together for sixty ticks.
+func TestBreedingPairMustMeetFirst(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.p.setHotbarSlot(0, itemWheat)
+	pl.inv.slots[0] = invStack{item: itemWheat, count: 2}
+	players := map[int32]*tracked{1: pl}
+
+	a := h.spawnAnimal(players, entityCow, 3, 3)
+	b := h.spawnAnimal(players, entityCow, 3, 3)
+	// Seven blocks apart: inside the search range, well outside the meeting one.
+	a.x, a.z = 0, 0
+	b.x, b.z = 7, 0
+	pl.x, pl.y, pl.z = a.x, a.y, a.z
+	if !h.feedAnimal(players, pl, a) || !h.feedAnimal(players, pl, b) {
+		t.Fatal("feeding wheat to adult cows must court them")
+	}
+
+	before := len(h.mobs)
+	courtBreeding(h, players)
+	if len(h.mobs) != before {
+		t.Fatalf("a pair seven blocks apart bred without meeting: %d mobs, was %d", len(h.mobs), before)
+	}
+	// …but they are walking toward each other.
+	if !a.hasTarget || a.tx != b.x || a.tz != b.z {
+		t.Fatalf("a courting cow should be heading for its partner, target=(%v,%v) hasTarget=%v", a.tx, a.tz, a.hasTarget)
+	}
+
+	// Close the gap and they get on with it.
+	b.x, b.z = 2, 0
+	courtBreeding(h, players)
+	if len(h.mobs) != before+1 {
+		t.Fatalf("a pair standing together should breed: %d mobs, was %d", len(h.mobs), before)
+	}
+}
+
+// PandaBreedGoal.canUse: a panda with no bamboo within eight blocks (and two
+// above) sulks instead of breeding, whatever it has been fed.
+func TestPandasNeedBambooToBreed(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	a := h.spawnMob(players, entityPanda, 0.5, 180, 0.5)
+	b := h.spawnMob(players, entityPanda, 1.5, 180, 0.5)
+	a.loveTicks, b.loveTicks = loveTicks, loveTicks
+	h.gridDirty()
+
+	before := len(h.mobs)
+	courtBreeding(h, players)
+	if len(h.mobs) != before {
+		t.Fatalf("pandas bred with no bamboo in reach: %d mobs, was %d", len(h.mobs), before)
+	}
+
+	// One stalk seven blocks away is enough.
+	h.world.SetBlock(7, 180, 0, worldgen.BlockBase("bamboo"))
+	a.loveTicks, b.loveTicks = loveTicks, loveTicks
+	courtBreeding(h, players)
+	if len(h.mobs) != before+1 {
+		t.Fatalf("pandas with bamboo in reach should breed: %d mobs, was %d", len(h.mobs), before)
 	}
 }
