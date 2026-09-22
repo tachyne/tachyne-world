@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-22
 
 ### Added
+- **The server list shows who is playing.** The player count on the multiplayer
+  screen read 0 no matter how many people were in game. No gateway could
+  answer it honestly — each one sees only the clients on its own protocol
+  range, and your client pings whichever gateway matches your version — so the
+  world is asked instead, and it answers with the same roster `/list` reads.
+  The hover card lists names again too. Both editions: the Bedrock list had the
+  same blind spot.
 - **The recipe book's three cooker tabs stop being empty.** The green book only
   ever listed crafting recipes, so opening a furnace, blast furnace or smoker
   showed a book with nothing in it. All 236 cooker recipes are book entries
@@ -89,6 +96,12 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **A block you place is heard by everyone.** Placement was silent to every
+  player but the one placing it — your own client makes the noise when it
+  predicts the placement, so you would never have noticed, while anyone
+  watching saw blocks appear without a sound. Every block now speaks its own
+  voice when it goes down, read off the block that actually landed, so a slab
+  that stacked or a block that waterlogged sounds like what it became.
 - **A hoglin's bite throws you again.** Being tossed is the whole point of a
   hoglin, and the throw was silently doing nothing. Ravagers and wardens also
   hit with their proper weight now rather than shoving like a zombie.

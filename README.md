@@ -285,7 +285,8 @@ multi-pod plan).
 - Sounds throughout — mob growls/hurt/death, combat, explosions (with the
   real boom + mushroom cloud), XP dings, level-ups, chests, enchanting —
   sent inline-by-name so they work identically on every client version
-- Block-break particles + sound for other players (world events)
+- Block-break particles + sound for other players (world events), and each
+  block's own place sound when it goes down
 
 **Redstone (tier 1 + 2)**
 - Power sources (levers, buttons with real press timers, redstone torches
