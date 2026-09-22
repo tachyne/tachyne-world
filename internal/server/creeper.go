@@ -50,6 +50,9 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 		if t == nil || math.Abs(t.y-m.y) > creeperIgniteY {
 			return
 		}
+		if !h.mobSees(m, t) {
+			return // SwellGoal.canUse wants the target in SIGHT, not just in range
+		}
 		if dx, dz := t.x-m.x, t.z-m.z; dx*dx+dz*dz > creeperIgniteRange*creeperIgniteRange {
 			return
 		}
@@ -59,7 +62,10 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 		h.playSound(players, "minecraft:entity.creeper.primed", sndHostile, m.x, m.y, m.z, 1, 1)
 		return
 	}
-	if t == nil { // escaped — stand down
+	// SwellGoal.canContinueToUse: out of range OR out of SIGHT stands it down.
+	// Ducking behind a wall is how you survive one, and it did not work while
+	// the fuse only watched the distance.
+	if t == nil || !h.mobSees(m, t) {
 		m.fuse = 0
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, -1)))
 		return

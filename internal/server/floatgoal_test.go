@@ -78,3 +78,19 @@ func TestFloatersBobInDeepWater(t *testing.T) {
 		t.Error("one block of water is waded, not floated")
 	}
 }
+
+// A slime bobs; a zombie walks the bottom. Slime carries a SlimeFloatGoal
+// (MagmaCube inherits it) and the creaking's brain opens with Swim, so all
+// three float — they were in the sinkers' list.
+func TestCubesAndCreakingFloat(t *testing.T) {
+	for _, etype := range []int{entitySlime, entityMagmaCube, entityCreaking} {
+		if mobSinks[etype] {
+			t.Errorf("etype %d should float, not walk the bottom", etype)
+		}
+	}
+	for _, etype := range []int{entityZombie, entitySkeleton, entityIronGolem} {
+		if !mobSinks[etype] {
+			t.Errorf("etype %d should sink", etype)
+		}
+	}
+}

@@ -22,12 +22,15 @@ const (
 )
 
 // mobSinks are the walkers vanilla gives no FloatGoal or Swim behaviour.
+// A cube and a creaking do NOT belong here: Slime carries a SlimeFloatGoal
+// (and MagmaCube inherits it), and the creaking's brain opens with Swim, so
+// all three bob rather than walking the bottom.
 var mobSinks = map[int]bool{
 	entityZombie: true, entityHusk: true, entityDrowned: true, entityZombieVillager: true,
 	entitySkeleton: true, entityStray: true, entityBogged: true, entityWitherSkeleton: true,
 	entityPiglin: true, entityPiglinBrute: true, entityZombifiedPiglin: true,
-	entityHoglin: true, entityZoglin: true, entityIronGolem: true, entityCreaking: true,
-	entitySlime: true, entityMagmaCube: true, entityShulker: true, entityWither: true,
+	entityHoglin: true, entityZoglin: true, entityIronGolem: true,
+	entityShulker: true, entityWither: true,
 	entityEnderDragon: true, entityStrider: true,
 }
 

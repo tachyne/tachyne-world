@@ -73,3 +73,38 @@ func TestCreeperDefusesWhenTargetEscapes(t *testing.T) {
 		t.Fatal("a fusing creeper must hold still")
 	}
 }
+
+// Ducking behind a wall is how you survive a creeper: SwellGoal wants the
+// target in SIGHT, and stands the fuse down the moment it loses it. The fuse
+// used to watch only the distance.
+func TestCreeperStandsDownWhenItLosesSight(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	x, y, z := 50, 70, 50
+	for dx := -4; dx <= 4; dx++ { // a floor, and open air above it
+		for dz := -4; dz <= 4; dz++ {
+			h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+			for dy := 0; dy < 3; dy++ {
+				h.world.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	pl.x, pl.y, pl.z = float64(x)+0.5, float64(y), float64(z)+2.5
+	m := h.spawnMob(players, entityCreeper, float64(x)+0.5, float64(y), float64(z)+0.5)
+	if m == nil {
+		t.Fatal("the creeper should have spawned")
+	}
+	h.creeperFuse(players, m)
+	if m.fuse == 0 {
+		t.Fatal("in the open and in range, the fuse should have lit")
+	}
+	// Drop a wall between them.
+	for dy := 0; dy < 3; dy++ {
+		h.world.SetBlock(x, y+dy, z+1, worldgen.Stone)
+	}
+	h.creeperFuse(players, m)
+	if m.fuse != 0 {
+		t.Fatalf("out of sight, the creeper should stand down, fuse=%d", m.fuse)
+	}
+}
