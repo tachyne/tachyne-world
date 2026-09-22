@@ -31,6 +31,17 @@ the public history since the project was open-sourced on 2026-07-10.
   statue is still bright copper. Here it stayed a block forever.
 
 ### Fixed
+- **A pale garden turns in a wave.** Eyeblossoms opened one at a time, each on
+  its own clock, so a garden took minutes to change with nothing tying the
+  flowers together. Each flower that turns now wakes the ones near it, sooner
+  the closer they are, and they wake their own neighbours in turn. The flower
+  that started it plays the long sound and the wave plays the short one, which
+  is how the real game does it. A flower in a pot keeps the same hours too —
+  it never switched at all before.
+- **Walking fast no longer carries you through a hazard.** Block contact —
+  magma, a cactus, a berry bush, a wither rose — was sampled once a second for
+  everyone, and a sprint could cross a hazard between two samples without ever
+  being checked. Players are checked every tick now.
 - **The wither fires blue skulls, and its skulls explode.** A wither skull
   never detonated at all, and the blue skull did not exist — so the boss had
   one shot where it should have two. A side head that has been idle too long
