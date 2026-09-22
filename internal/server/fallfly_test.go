@@ -6,6 +6,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // elytraPlayer is a fully-built survival player wearing an elytra —
@@ -227,5 +228,54 @@ func TestRidingAndLevitationEndTheGlide(t *testing.T) {
 	h.tickGliding(players)
 	if !tr.fallFlying {
 		t.Fatal("an ordinary glide should continue")
+	}
+}
+
+// A glide that ends against a wall costs: the speed lost in one tick, times
+// ten less three, as fly_into_wall damage. A glider that merely eases off, or
+// one whose speed drop has no wall behind it, is left alone.
+func TestFlyIntoWallHurts(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := elytraPlayer()
+	players[pl.p.eid] = pl
+	pl.fallFlying = true
+	pl.x, pl.y, pl.z = 100, 100, 100
+
+	// A stone wall just ahead of where the glide stops.
+	for _, dy := range []int{100, 101, 102} {
+		h.worldFor(pl.dim).SetBlock(103, dy, 100, worldgen.BlockBase("stone"))
+	}
+
+	glide := func(dx float64) {
+		e := evMove{eid: pl.p.eid, x: pl.x + dx, y: pl.y, z: pl.z, onGround: false}
+		h.flyIntoWall(players, pl, e)
+		pl.x = e.x
+	}
+
+	before := pl.health
+	glide(1.2) // building speed: nothing to compare against yet
+	glide(1.2) // steady
+	if pl.health != before {
+		t.Fatalf("a steady glide cost %v health", before-pl.health)
+	}
+	glide(0.0) // straight into the wall
+	if pl.health >= before {
+		t.Fatalf("flying into a wall cost nothing (health %v → %v)", before, pl.health)
+	}
+	// (1.2 - 0) * 10 - 3 = 9 damage.
+	if got := before - pl.health; got != 9 {
+		t.Errorf("crash cost %v, want 9", got)
+	}
+
+	// The same speed drop in open air is a glider easing off, not a crash.
+	pl.health = before
+	pl.x, pl.z = 500, 500
+	pl.glideVX, pl.glideVZ = 0, 0
+	glide(1.2)
+	glide(1.2)
+	glide(0.0)
+	if pl.health != before {
+		t.Errorf("easing off in open air cost %v health", before-pl.health)
 	}
 }

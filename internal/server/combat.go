@@ -367,7 +367,14 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		// only ever name the whole dragon — and the body is the honest answer.
 		melee = dragonPartDamage("body", melee)
 	}
-	m.hurtBreach(melee, breachFrac) // through base armor (zombie family has 2), less breach
+	// A mace smash is its OWN damage type (MaceItem.getItemDamageSource →
+	// damageSources().mace), which is what makes the death message read
+	// "was smashed by" instead of the plain player attack.
+	dt := dtPlayerAttack
+	if smash {
+		dt = dtMaceSmash
+	}
+	m.hurtOf(melee, breachFrac, dt) // through base armor (zombie family has 2), less breach
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
 		if taken := float64(hpBefore - m.health); taken >= 0 && float64(dmg) > taken {

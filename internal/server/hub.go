@@ -259,6 +259,10 @@ type tracked struct {
 	// the client's own START_FALL_FLYING, ended by landing or by taking the
 	// elytra off. Falling while wearing one is NOT this.
 	fallFlying bool
+	// glideVX/glideVZ are the previous tick's horizontal travel while gliding
+	// — the server's stand-in for the client's INTENDED movement, which is
+	// what Entity.move compares against to price a crash (flyIntoWall).
+	glideVX, glideVZ float64
 	// glideTicks is LivingEntity.fallFlyTicks: how long the current glide has
 	// run, which is what the elytra is charged for.
 	glideTicks int
@@ -2368,6 +2372,8 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		return // impossible move — not applied, client rubber-banded back
 	}
 	fromX, fromY, fromZ := t.x, t.y, t.z // pre-move position (plugin move event)
+	h.flyIntoWall(players, t, e)         // a glide that ends against a wall costs
+
 	h.onFallAndExhaust(players, t, e)    // fall damage + walking hunger (reads pre-move position)
 	h.moveStats(t, e)                    // the vanilla movement statistics family (cm, teleports excluded)
 	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
