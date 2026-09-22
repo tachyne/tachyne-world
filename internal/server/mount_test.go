@@ -25,6 +25,9 @@ func give(t *tracked, item int32) {
 
 func TestSaddleThenMount(t *testing.T) {
 	h, pl, players, m := ridingSetup(t, entityHorse)
+	// A horse must be TAMED before it can be saddled at all
+	// (AbstractHorse.isSaddleable); the taming ritual is its own test.
+	m.tamed, m.owner = true, pl.p.eid
 	give(pl, itemSaddle)
 	if !h.tryMount(players, pl, m) || !m.saddled {
 		t.Fatalf("holding a saddle should saddle the horse: saddled=%v", m.saddled)

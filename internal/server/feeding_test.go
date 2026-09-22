@@ -94,8 +94,11 @@ func TestPetHealsOnFood(t *testing.T) {
 // a foal, does nothing to a healthy adult; a llama loves only hay.
 func TestHorseMeals(t *testing.T) {
 	h, pl, players, m := feedRig(t, entityHorse, "wheat", 3)
+	// TAMED, because an untamed one takes the wheat for its temper — which is
+	// how you bring a wild horse round (TestFeedingBringsAHorseRound).
+	m.tamed, m.owner = true, pl.p.eid
 	if h.feedAnimal(players, pl, m) || pl.inv.slots[0].count != 3 {
-		t.Fatal("a healthy adult horse has no use for wheat")
+		t.Fatal("a healthy adult TAMED horse has no use for wheat")
 	}
 	m.health = 1
 	if !h.feedAnimal(players, pl, m) || m.health != 3 {

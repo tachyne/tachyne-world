@@ -416,6 +416,7 @@ type mob struct {
 	hasTarget                       bool       // a player is within aggro range this update
 	portalCool                      int        // ticks before it may take a portal again (Entity.portalCooldown)
 	guardMoving                     bool       // guardian: DATA_ID_MOVING as last broadcast (spikes folded)
+	temper                          int        // horse/donkey/mule: how close it is to giving in (0..100)
 	seeTime                         int        // ranged goals: ticks the target has been in (positive) or out of (negative) sight
 	targetEID                       int32      // hostile: the player it hunts (TargetGoal's target; 0 = none)
 	unseenTicks                     int        // hostile: ticks that player has been out of sight
@@ -611,7 +612,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.snowGolemStep(players, m)
 		}
 		if m.rider != 0 || len(m.riders) > 0 {
-			continue // a ridden mount is client-driven (applyMountMove) — AI paused
+			// RunAroundLikeCrazyGoal is the one goal a ridden mount still
+			// runs: an untamed horse is deciding whether to keep its rider.
+			h.horseRideTick(players, m)
+			continue // otherwise a ridden mount is client-driven (applyMountMove)
 		}
 		if m.spawnInvuln > 0 {
 			continue // wither charging its spawn: hold still until updateWithers releases it

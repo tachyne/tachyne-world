@@ -53,6 +53,13 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if isMobFood(m.etype, held) {
 		return false // a meal is never a ride: Pig/AbstractHorse test isFood first
 	}
+	// AbstractHorse.isSaddleable wants a TAMED horse, and an untamed one is
+	// ridden bareback to tame it — which is the whole ritual. Climbing on is
+	// the interaction; RunAroundLikeCrazyGoal decides how it ends.
+	if horseNeedsTaming(m.etype) && !m.tamed {
+		h.mountMob(players, t, m)
+		return true
+	}
 	if !m.saddled {
 		if held != itemSaddle {
 			return false // an unsaddled mount ignores an empty hand

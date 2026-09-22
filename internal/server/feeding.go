@@ -147,6 +147,16 @@ func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int
 		return false
 	}
 	did := false
+	// handleEating's temper column: feeding an untamed horse brings it round
+	// sooner, which is why an apple or two shortens the whole business.
+	if horseNeedsTaming(m.etype) && !m.tamed && m.temper < horseMaxTemper {
+		if n := horseFeedTemper(item); n > 0 {
+			if m.temper += n; m.temper > horseMaxTemper {
+				m.temper = horseMaxTemper
+			}
+			did = true
+		}
+	}
 	if meal.heal > 0 && m.health < m.maxHP() {
 		h.healMob(m, meal.heal)
 		did = true
