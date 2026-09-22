@@ -17,8 +17,13 @@ import (
 var (
 	openEyeblossom   = worldgen.BlockBase("open_eyeblossom")
 	closedEyeblossom = worldgen.BlockBase("closed_eyeblossom")
-	netherPortalBase = worldgen.BlockBase("nether_portal")
-	netherPortalMax  = func() uint32 { _, hi, _ := worldgen.BlockRangeOK("nether_portal"); return hi }()
+	// A potted eyeblossom keeps the same hours. FlowerPotBlock.randomTick
+	// switches it on its own — with the long sound, and without waking
+	// anything: a flower in a pot starts no wave and joins none.
+	pottedOpenEyeblossom   = worldgen.BlockBase("potted_open_eyeblossom")
+	pottedClosedEyeblossom = worldgen.BlockBase("potted_closed_eyeblossom")
+	netherPortalBase       = worldgen.BlockBase("nether_portal")
+	netherPortalMax        = func() uint32 { _, hi, _ := worldgen.BlockRangeOK("nether_portal"); return hi }()
 )
 
 // portalPiglinOdds is vanilla's roll: nextInt(2000) < difficulty id, so easy
@@ -62,6 +67,7 @@ const (
 // its own neighbours in turn — which is how the wave crosses the garden.
 func (h *hub) switchEyeblossom(players map[int32]*tracked, dim, x, y, z int, state uint32, spontaneous bool) bool {
 	var want uint32
+	potted := false
 	switch state {
 	case openEyeblossom, closedEyeblossom:
 		if dim != dimOverworld {
@@ -72,6 +78,16 @@ func (h *hub) switchEyeblossom(players map[int32]*tracked, dim, x, y, z int, sta
 		} else {
 			want = closedEyeblossom
 		}
+	case pottedOpenEyeblossom, pottedClosedEyeblossom:
+		if dim != dimOverworld {
+			return true
+		}
+		potted = true
+		if h.nightNow() {
+			want = pottedOpenEyeblossom
+		} else {
+			want = pottedClosedEyeblossom
+		}
 	default:
 		return false
 	}
@@ -81,16 +97,18 @@ func (h *hub) switchEyeblossom(players map[int32]*tracked, dim, x, y, z int, sta
 	h.setBlockAt(players, dim, blockPos{x, y, z}, want)
 	h.vib(dim, freqBlockChange, x, y, z, 0)
 	kind := "close"
-	if want == openEyeblossom {
+	if want == openEyeblossom || want == pottedOpenEyeblossom {
 		kind = "open"
 	}
 	length := "short"
-	if spontaneous {
+	if spontaneous || potted {
 		length = "long"
 	}
 	h.playSoundDim(players, dim, "minecraft:block.eyeblossom."+kind+"_"+length, sndBlock,
 		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
-	h.wakeEyeblossomsAround(dim, blockPos{x, y, z}, state)
+	if !potted {
+		h.wakeEyeblossomsAround(dim, blockPos{x, y, z}, state)
+	}
 	return true
 }
 

@@ -165,3 +165,29 @@ func TestEyeblossomWakesItsNeighbours(t *testing.T) {
 		t.Fatal("a flower outside the box should not have been woken")
 	}
 }
+
+// A potted eyeblossom keeps the same hours, on its own: it switches with the
+// long sound and neither starts a wave nor joins one.
+func TestPottedEyeblossomKeepsTheHours(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.dayTime.Store(paleNightStart + 10) // night
+
+	x, y, z := 40, 70, 40
+	h.world.SetBlock(x, y-1, z, worldgen.BlockBase("dirt"))
+	h.world.SetBlock(x, y, z, pottedClosedEyeblossom)
+	// A planted flower beside it, which the pot must NOT wake.
+	h.world.SetBlock(x+1, y-1, z, worldgen.BlockBase("dirt"))
+	h.world.SetBlock(x+1, y, z, closedEyeblossom)
+
+	if !h.tickEyeblossom(players, dimOverworld, x, y, z, pottedClosedEyeblossom) {
+		t.Fatal("the potted flower should be handled")
+	}
+	if h.world.At(x, y, z) != pottedOpenEyeblossom {
+		t.Fatalf("the pot should hold an open flower now, got %d", h.world.At(x, y, z))
+	}
+	runTicks(h, players, h.tick.Load(), h.tick.Load()+60)
+	if h.world.At(x+1, y, z) != closedEyeblossom {
+		t.Fatal("a flower in a pot starts no wave")
+	}
+}
