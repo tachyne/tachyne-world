@@ -79,6 +79,12 @@ func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, dim, cat int, c 
 	if dim != 0 {
 		minY = 0 // the nether and the end floor at 0
 	}
+	if dim == dimNether && surface > worldgen.NetherCeiling {
+		// Above the cavern roof is open void, not a floor. SurfaceFeet happily
+		// climbs onto the roof, and a y drawn up there put mobs on top of the
+		// nether — rarely, because it takes a column whose roof is exposed.
+		surface = worldgen.NetherCeiling
+	}
 	if surface+2 <= minY {
 		return
 	}
