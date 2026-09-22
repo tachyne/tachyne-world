@@ -11,6 +11,42 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-22
+
+### Added
+- **Mobs and dropped items go through nether portals.** Only players could
+  travel, so anything that pushes mobs or their drops through a portal simply
+  did not work. Everything else now goes through the instant it touches a
+  portal — no standing and waiting, which is a player's rule — and cannot come
+  straight back for fifteen seconds. It travels to the portal a player's own
+  trip paired it with; an unpaired portal still carries nobody, because the
+  far side only gets built for a player.
+- **A glass bottle can be filled from the dragon's breath.** Nothing in the
+  game could produce the stuff, which quietly made every lingering potion
+  unobtainable — the recipes, the clouds and all the rest of it were already
+  built and had no way to start. A bottle used beside a cloud the dragon left
+  now fills with it, and the cloud shrinks for it.
+- **An axe wakes a copper golem statue.** A golem that oxidises through
+  freezes into a statue, and the way back is an axe — but only while the
+  statue is still bright copper. Here it stayed a block forever.
+
+### Fixed
+- **A glass bottle fills by looking at water, not by clicking it.** It wanted
+  a clicked block, which is not how the real game does it: the bottle follows
+  where you are looking, out to arm's reach, and will not fill from the
+  flowing edge of a stream.
+- **A boat can be put on the water you are looking at.** Boats only went down
+  on a clicked block, so aiming at open water — the one thing everybody does
+  with a boat — did nothing at all.
+- **The world no longer hitches twice a minute.** Every thirty seconds the
+  server pauses to save, and it was doing the whole job on the thread that
+  runs the game: with nobody online at all, a save cost two and a half ticks'
+  worth of time. A profile of the running server put a third of it in
+  formatting the save files and a fifth in checking whether they had changed —
+  none of which needs the game to stand still. The game now takes only the
+  snapshot and hands the writing to a worker. Saving on shutdown still waits
+  for the disk, because that one has to.
+
 ## 2026-09-20
 
 ### Added
