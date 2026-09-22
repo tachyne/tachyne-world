@@ -44,7 +44,7 @@ func (h *hub) witherHeadsTick(players map[int32]*tracked, m *mob) {
 				x := m.x + (h.rng.Float64()*2-1)*witherIdleSpreadX
 				y := m.y + (h.rng.Float64()*2-1)*witherIdleSpreadY
 				z := m.z + (h.rng.Float64()*2-1)*witherIdleSpreadX
-				h.witherSkullAt(players, m, x, y, z)
+				h.witherSkullAt(players, m, x, y, z, true) // a bored head always fires blue
 				m.headIdle[i] = 0
 			}
 		}
@@ -54,7 +54,7 @@ func (h *hub) witherHeadsTick(players map[int32]*tracked, m *mob) {
 				dist3sq(o.x, o.y, o.z, m.x, m.y, m.z) > witherSideRangeSq {
 				m.headTarget[i] = 0
 			} else {
-				h.witherSkullAt(players, m, o.x, o.y+0.5, o.z)
+				h.witherSkullAt(players, m, o.x, o.y+0.5, o.z, false)
 				m.headNext[i] = now + witherSideFireGap + h.rng.Intn(witherSideFireRnd)
 				m.headIdle[i] = 0
 				continue
@@ -86,12 +86,26 @@ func (h *hub) witherPickVictim(m *mob) *mob {
 	return pool[h.rng.Intn(len(pool))]
 }
 
-// witherSkullAt fires one skull from the boss toward a point.
-func (h *hub) witherSkullAt(players map[int32]*tracked, m *mob, x, y, z float64) {
+const (
+	// witherSkullBlast is WitherSkull.onHit's explosion: power one, no fire.
+	witherSkullBlast = 1
+	// witherSkullResistCap is what a BLUE skull holds every breakable block
+	// to, so it goes through obsidian the ordinary one only scorches.
+	witherSkullResistCap = 0.8
+	// witherBlueOdds is the 0.001 roll on the centre head's aimed shot. The
+	// side heads' bored shots are always blue, which is where most of them
+	// come from.
+	witherBlueOdds = 0.001
+)
+
+// witherSkullAt fires one skull from the boss toward a point. A blue skull
+// (WitherSkull.setDangerous) flies slower and blasts harder.
+func (h *hub) witherSkullAt(players map[int32]*tracked, m *mob, x, y, z float64, dangerous bool) {
 	ux, uy, uz := aimAt(m.x, m.y+2, m.z, x, y, z)
 	v := hurtingSpeed
 	a := h.launchProjectileIn(players, entityWitherSkull, m.dim, m.x, m.y+2, m.z, ux*v, uy*v, uz*v)
 	a.shooter, a.dmg, a.wither, a.breaks = m.eid, 8, 10, true
+	a.explode, a.dangerous = witherSkullBlast, dangerous
 	h.playSoundDim(players, m.dim, "minecraft:entity.wither.shoot", sndHostile, m.x, m.y, m.z, 2, 1)
 }
 

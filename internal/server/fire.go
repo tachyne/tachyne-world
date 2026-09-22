@@ -230,27 +230,31 @@ func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64,
 // between "was blown up by Creeper" and "blew up". The attributed type also
 // always scales with the difficulty.
 func (h *hub) explodeBy(players map[int32]*tracked, dim int, cx, cy, cz float64,
-	radius int, power float64, kind blastKind, by string) {
+	radius int, power float64, kind blastKind, by string, opts ...blastOpt) {
 	if by == "" {
-		h.explodeIn(players, dim, cx, cy, cz, radius, power, kind)
+		h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{}, opts...)
 		return
 	}
 	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind,
-		dtPlayerExplosion, deathCause{by: by})
+		dtPlayerExplosion, deathCause{by: by}, opts...)
 }
 
 // explodeTyped is explodeIn with the damage type and death message spelled out
 // — a bed detonating in the Nether is bad_respawn_point, not a generic blast,
 // and the two carry different protection maths and different death messages.
 func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float64,
-	radius int, power float64, kind blastKind, dt dmgType, cause deathCause) {
+	radius int, power float64, kind blastKind, dt dmgType, cause deathCause, opts ...blastOpt) {
+	cfg := blastCfg{resistCap: math.Inf(1)}
+	for _, o := range opts {
+		o(&cfg)
+	}
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
 	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
 	w := h.worldFor(dim)
 	if w != nil && radius > 0 {
-		hit := h.blastPositions(w, cx, cy, cz, float64(radius))
+		hit := h.blastPositionsCapped(w, cx, cy, cz, float64(radius), cfg.resistCap)
 		for pos := range hit {
 			st := w.At(pos.x, pos.y, pos.z)
 			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
@@ -272,6 +276,27 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 // explosion of the given power reaches, before anything is done to them.
 // A TNT blast destroys them; a wind charge only triggers them.
 func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blockPos]bool {
+	return h.blastPositionsCapped(w, cx, cy, cz, radius, math.Inf(1))
+}
+
+// blastCfg is what a caller may vary about one explosion.
+type blastCfg struct {
+	// resistCap is the most any one block is allowed to resist, which is how
+	// a blue wither skull chews through what an ordinary blast cannot:
+	// WitherSkull.getBlockExplosionResistance answers min(0.8, resistance)
+	// for everything the wither is allowed to destroy at all.
+	resistCap float64
+}
+
+type blastOpt func(*blastCfg)
+
+// withResistCap bounds every block's resistance for one explosion.
+func withResistCap(cap float64) blastOpt {
+	return func(c *blastCfg) { c.resistCap = cap }
+}
+
+// blastPositionsCapped is blastPositions with that bound applied.
+func (h *hub) blastPositionsCapped(w *world.World, cx, cy, cz, radius, resistCap float64) map[blockPos]bool {
 	hit := map[blockPos]bool{}
 	{
 		for sx := 0; sx < explodeRays; sx++ {
@@ -296,7 +321,11 @@ func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blo
 						pos := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
 						st := w.At(pos.x, pos.y, pos.z)
 						if st != worldgen.Air {
-							power -= (float64(worldgen.Resistance(st)) + 0.3) * 0.3
+							r := float64(worldgen.Resistance(st))
+							if r > resistCap && !witherImmuneBlock(st) {
+								r = resistCap
+							}
+							power -= (r + 0.3) * 0.3
 						}
 						if power > 0 && st != worldgen.Air && st != worldgen.Bedrock &&
 							!worldgen.IsWater(st) && !worldgen.IsLava(st) {

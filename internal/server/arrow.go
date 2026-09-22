@@ -60,6 +60,7 @@ type arrowEntity struct {
 	breaks     bool     // snowball/egg: shatters on impact instead of sticking
 	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
+	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
 	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
 	pearl      bool     // an ender pearl: teleports its thrower where it lands
@@ -175,6 +176,9 @@ func hurtingMotion(a *arrowEntity, water bool) (accel, inertia float64, ok bool)
 	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
 		if water {
 			return hurtingSpeed, 0.8, true
+		}
+		if a.dangerous {
+			return hurtingSpeed, 0.73, true // WitherSkull.getInertia: a blue skull drags
 		}
 		return hurtingSpeed, 0.95, true
 	case entityWindCharge:
@@ -316,7 +320,14 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				} else if m := h.mobs[a.shooter]; m != nil {
 					by = mobDisplayName(m.etype)
 				}
-				h.explodeBy(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob, by)
+				var opts []blastOpt
+				if a.dangerous {
+					// WitherSkull.getBlockExplosionResistance: a blue skull
+					// holds everything the wither may break to 0.8, which is
+					// what lets it eat through obsidian a black one bounces off.
+					opts = append(opts, withResistCap(witherSkullResistCap))
+				}
+				h.explodeBy(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob, by, opts...)
 			}
 			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing
 				a.returning = true

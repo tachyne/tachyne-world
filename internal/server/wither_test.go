@@ -215,3 +215,65 @@ func TestWitherPhaseTwoAndRegen(t *testing.T) {
 		t.Errorf("a charging wither healed to %d, want 100", m.health)
 	}
 }
+
+// The blue skull. A bored side head always fires one; the centre head's aimed
+// shot is blue once in a thousand. A blue skull drags harder in the air and
+// holds every block it is allowed to break to 0.8 resistance, which is how it
+// eats through obsidian an ordinary one cannot touch.
+func TestWitherFiresBlueSkulls(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	m := h.spawnHostileY(players, entityWither, 100.5, 70, 100.5)
+	if m == nil {
+		t.Fatal("the wither should have spawned")
+	}
+
+	h.witherSkullAt(players, m, 110, 70, 100, true)
+	var blue *arrowEntity
+	for _, a := range h.arrows {
+		blue = a
+	}
+	if blue == nil || !blue.dangerous {
+		t.Fatal("the bored head's skull should be a blue one")
+	}
+	if blue.explode != witherSkullBlast {
+		t.Fatalf("a skull should carry its own blast, got %d", blue.explode)
+	}
+	// WitherSkull.getInertia: 0.73 rather than the ordinary 0.95.
+	if _, inertia, ok := hurtingMotion(blue, false); !ok || inertia != 0.73 {
+		t.Fatalf("a blue skull's inertia is %v, want 0.73", inertia)
+	}
+	for eid := range h.arrows {
+		delete(h.arrows, eid)
+	}
+
+	h.witherSkullAt(players, m, 110, 70, 100, false)
+	for _, a := range h.arrows {
+		if a.dangerous {
+			t.Fatal("an aimed shot asked for black should not be blue")
+		}
+		if _, inertia, _ := hurtingMotion(a, false); inertia != 0.95 {
+			t.Fatalf("a black skull's inertia is %v, want 0.95", inertia)
+		}
+	}
+}
+
+// The resistance cap is what the blue skull is FOR: obsidian resists 1200 and
+// shrugs off an ordinary blast, and goes down to a blue skull.
+func TestBlueSkullBlastEatsObsidian(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	cx, cy, cz := 200, 70, 200
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			w.SetBlock(cx+dx, cy, cz+dz, worldgen.Obsidian)
+		}
+	}
+	plain := h.blastPositions(w, float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5, 3)
+	capped := h.blastPositionsCapped(w, float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5, 3, witherSkullResistCap)
+	if len(capped) <= len(plain) {
+		t.Fatalf("the capped blast should reach further through obsidian: %d vs %d", len(capped), len(plain))
+	}
+	_ = players
+}
