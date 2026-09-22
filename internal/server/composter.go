@@ -138,3 +138,29 @@ func (h *hub) tickComposter(players map[int32]*tracked, dim int, pos blockPos, s
 	}
 	return true
 }
+
+// composterInsert is ComposterBlock's InputContainer: a hopper feeding a
+// composter that is not yet full. The item takes the same chance it would
+// from a hand — an empty composter always accepts the first one — and a
+// composter at level 7 is waiting to become bone meal and takes nothing.
+func (h *hub) composterInsert(target simPos, level int, one invStack) bool {
+	if level >= composterFull {
+		return false
+	}
+	chance, compostable := compostChance[one.item]
+	if !compostable {
+		return false
+	}
+	cx, cy, cz := float64(target.x)+0.5, float64(target.y)+0.5, float64(target.z)+0.5
+	if level != 0 && h.rng.Float64() >= chance {
+		h.playSoundDim(h.playersRef, target.dim, "minecraft:block.composter.fill", sndBlock, cx, cy, cz, 1, 1)
+		return true // the item is spent either way, as it is from a hand
+	}
+	h.setBlockAt(h.playersRef, target.dim, target.blockPos, composterBase+uint32(level)+1)
+	h.vib(target.dim, freqBlockChange, target.x, target.y, target.z, 0)
+	h.playSoundDim(h.playersRef, target.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
+	if level+1 == composterFull {
+		h.scheduleIn(target.dim, target.blockPos, composterDelay)
+	}
+	return true
+}

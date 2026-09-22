@@ -241,7 +241,6 @@ type tracked struct {
 	lastRejectTick uint64           // window anchor for rejectStreak
 	bossBarOn      bool             // dragon bossbar currently shown to this client
 	graceUntil     uint64           // no environmental damage until this tick (portal arrival)
-	gatewayUntil   uint64           // end gateway won't take this player again until this tick
 	cooldowns      map[int32]uint64 // per-item use cooldown: item id → tick it frees up
 	scopeUntil     uint64           // tick a raised spyglass drops on its own (0 = not scoping)
 	// Advancement bookkeeping (advancement_hooks.go): where a levitation began,
@@ -617,8 +616,11 @@ type hub struct {
 	// stalactiteLen remembers how long a falling dripstone column was, so its
 	// tip knows how hard it lands (PointedDripstoneBlock's hurtsEntities).
 	stalactiteLen map[simPos]int
-	bossSeen      map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors     map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
+	// gatewayCool is TheEndGatewayBlockEntity.teleportCooldown, per GATEWAY:
+	// one that has just taken somebody is shut to everyone for forty ticks.
+	gatewayCool map[simPos]uint64
+	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon        *mob                // the ender dragon (nil = none / defeated)
 	crystals      map[int32]*crystal  // end crystals by eid
@@ -799,6 +801,7 @@ func newHub(w *world.World) *hub {
 		brewIng:       map[simPos]int32{},
 		portalLinks:   map[dimPos]dimPos{},
 		stalactiteLen: map[simPos]int{},
+		gatewayCool:   map[simPos]uint64{},
 		bossSeen:      map[[2]int32]bool{},
 		openDoors:     map[blockPos]uint64{},
 		crystals:      map[int32]*crystal{},

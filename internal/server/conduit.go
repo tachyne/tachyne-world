@@ -129,7 +129,10 @@ func (h *hub) runConduit(players map[int32]*tracked, dim int, pos blockPos) {
 	}
 	rangeBlocks := float64(active/7) * conduitRangeStep
 	for _, t := range players {
-		if t.dim != dim || t.dead || t.gamemode != gmSurvival {
+		// ConduitBlockEntity.applyEffects takes every player in range, not
+		// only the ones playing for keeps: a creative build gets Conduit Power
+		// too. A spectator is the one exception the engine makes everywhere.
+		if t.dim != dim || t.dead || t.gamemode == gmSpectator {
 			continue
 		}
 		if dist3(t.x, t.y, t.z, float64(pos.x), float64(pos.y), float64(pos.z)) > rangeBlocks {

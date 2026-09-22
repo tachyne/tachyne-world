@@ -56,7 +56,8 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 	if h.end.At(back.x, back.y, back.z) != endGatewayState {
 		t.Fatalf("no gateway home at %v", back)
 	}
-	pl.gatewayUntil = 0
+	// The cooldown lives on the GATEWAY now, so clear the far one's.
+	h.gatewayCool = map[simPos]uint64{}
 	pl.x, pl.y, pl.z = float64(back.x)+0.5, float64(back.y), float64(back.z)+0.5
 	h.updateEndGateways(players)
 	if r := math.Hypot(pl.x, pl.z); r > 4 {

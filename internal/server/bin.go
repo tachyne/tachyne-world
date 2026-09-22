@@ -669,6 +669,22 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 		return true
 	}
 	above := blockPos{pos.x, pos.y + 1, pos.z}
+	// ComposterBlock is a WorldlyContainerHolder: a READY composter is a
+	// one-slot container holding its bone meal, and taking it empties the bin.
+	// That is what makes the hopper-under-composter farm work.
+	if w := h.worldFor(pos.dim); w != nil {
+		if lvl, ok := composterLevel(w.At(above.x, above.y, above.z)); ok && lvl == composterReady {
+			one := invStack{item: itemBoneMeal, count: 1}
+			if binInsert(c.slots, one) == 0 {
+				h.setBlockAt(h.playersRef, pos.dim, above, composterBase)
+				h.vib(pos.dim, freqBlockChange, above.x, above.y, above.z, 0)
+				h.playSoundDim(h.playersRef, pos.dim, "minecraft:block.composter.empty", sndBlock,
+					float64(above.x)+0.5, float64(above.y)+0.5, float64(above.z)+0.5, 1, 1)
+				return true
+			}
+			return false
+		}
+	}
 	if w := h.worldFor(pos.dim); w != nil && isDecoratedPot(w.At(above.x, above.y, above.z)) {
 		if one, ok := h.potExtract(pos.at(above)); ok {
 			if binInsert(c.slots, one) == 0 {
@@ -899,6 +915,13 @@ func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
 	// can fill it one item at a time, and one underneath empties it.
 	if w != nil && isDecoratedPot(w.At(target.x, target.y, target.z)) {
 		return h.potInsert(target, one)
+	}
+	// ComposterBlock's InputContainer: a hopper aimed at a composter that is
+	// not yet full feeds it, and the item takes the same chance a hand does.
+	if w != nil {
+		if lvl, ok := composterLevel(w.At(target.x, target.y, target.z)); ok {
+			return h.composterInsert(target, lvl, one)
+		}
 	}
 	// ShulkerBoxBlockEntity.canPlaceItemThroughFace: a hopper cannot post a
 	// shulker box into a shulker box either.

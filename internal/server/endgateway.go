@@ -151,10 +151,14 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 		if h.end.At(gx, gy, gz) != endGatewayState {
 			continue
 		}
-		if now < t.gatewayUntil {
+		// TheEndGatewayBlockEntity holds the cooldown, not the player: a
+		// gateway that has just taken someone is shut to EVERYONE for its
+		// forty ticks, which is what stops a queue pouring through at once.
+		gpos := simPos{dim: 2, blockPos: blockPos{gx, gy, gz}}
+		if now < h.gatewayCool[gpos] {
 			continue
 		}
-		t.gatewayUntil = now + endGatewayCooldown
+		h.gatewayCool[gpos] = now + endGatewayCooldown
 		h.gatewayCooldownEvent(players, blockPos{x: gx, y: gy, z: gz})
 		h.advance(players, t, "enter_block", advMatch{blockState: endGatewayState})
 		if math.Hypot(float64(gx), float64(gz)) < endGatewayRing*2 {
