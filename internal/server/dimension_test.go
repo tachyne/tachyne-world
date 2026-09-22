@@ -44,16 +44,30 @@ func TestDimSwitchIsolation(t *testing.T) {
 		t.Fatal("dim not applied")
 	}
 	// Block updates in the nether must not reach overworld players — and the
-	// nether edit must land in the nether world.
+	// nether edit must land in the nether world. Simulation runs in every
+	// dimension now, so what isolation means here is that a nether edit
+	// schedules NETHER updates and nothing else.
+	// (Player isolation is by the t.dim filter; b.dim==0 so b got nothing.)
 	h.onBlock(players, evBlock{x: 10, y: 40, z: 10, dim: 1, state: 1, by: 1})
-	// (isolation is by t.dim filter; b.dim==0 so b got nothing — verified by
-	// the trySend going to a lossy test channel; here we assert the sim gate:)
-	if len(h.pending) != 0 {
-		t.Fatal("nether edits must not schedule overworld simulation")
+	byDim := func() map[int]int {
+		out := map[int]int{}
+		for _, batch := range h.pending {
+			for _, p := range batch {
+				out[p.dim]++
+			}
+		}
+		return out
 	}
-	// An overworld edit still schedules.
+	got := byDim()
+	if got[dimNether] == 0 {
+		t.Fatal("a nether edit should schedule nether simulation")
+	}
+	if got[dimOverworld] != 0 {
+		t.Fatalf("a nether edit scheduled %d overworld updates", got[dimOverworld])
+	}
+	// An overworld edit still schedules its own.
 	h.onBlock(players, evBlock{x: 5, y: 64, z: 5, dim: 0, state: 1, by: 1})
-	if len(h.pending) == 0 {
+	if byDim()[dimOverworld] == 0 {
 		t.Fatal("overworld edits should schedule simulation")
 	}
 }

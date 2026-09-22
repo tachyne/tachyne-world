@@ -141,23 +141,21 @@ func TestWartRespectsRandomTickSpeedZero(t *testing.T) {
 	}
 }
 
-func TestWildWartGeneratesOnSoulSand(t *testing.T) {
+// Nether wart is never found loose: vanilla grows it from what a fortress
+// chest gives you. The engine used to sprout it on any soul-sand floor, which
+// is content Minecraft does not generate.
+func TestNoWildWartOnSoulSand(t *testing.T) {
 	g := worldgen.NewNetherGenerator(7)
-	found := false
-	for cx := int32(-6); cx <= 6 && !found; cx++ {
-		for cz := int32(-6); cz <= 6 && !found; cz++ {
+	for cx := int32(-6); cx <= 6; cx++ {
+		for cz := int32(-6); cz <= 6; cz++ {
 			ch := g.GenerateChunk(cx, cz)
 			for s := range ch.Sections {
 				for _, b := range ch.Sections[s] {
 					if b >= worldgen.NetherWart && b <= worldgen.NetherWart+3 {
-						found = true
-						break
+						t.Fatalf("wild nether wart generated in chunk (%d,%d)", cx, cz)
 					}
 				}
 			}
 		}
-	}
-	if !found {
-		t.Fatal("no wild nether wart in 13x13 chunks")
 	}
 }

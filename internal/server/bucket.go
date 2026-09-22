@@ -12,8 +12,13 @@ import (
 // the player's look ray. Cauldron clicks route to useCauldron instead.
 
 var (
-	itemBucketSnow = itemByName["powder_snow_bucket"]
+	itemBucketSnow               = int32(itemByName["powder_snow_bucket"])
+	powderSnowMin, powderSnowMax = worldgen.BlockRange("powder_snow")
 )
+
+// isPowderSnow: the block an empty bucket can scoop and a powder-snow bucket
+// pours back (vanilla's only SolidBucketItem).
+func isPowderSnow(s uint32) bool { return s >= powderSnowMin && s <= powderSnowMax }
 
 const bucketReach = 4.5 // vanilla player block-interaction range
 
@@ -35,13 +40,22 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 	h.vib(t.dim, freqFluidPlace, x, y, z, t.p.eid)
 	held := t.inv.slots[slot].item
 	mobBucket := isMobBucket(held) // MobBucketItem: water content + a mob to release
-	if held != itemBucketH2O && held != itemBucketLav && !mobBucket {
+	if held != itemBucketH2O && held != itemBucketLav && held != itemBucketSnow && !mobBucket {
 		return
 	}
 	w := h.worldFor(t.dim)
 	if ts := w.At(x, y, z); !worldgen.IsReplaceable(ts) && ts != worldgen.Air &&
 		!worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
 		return // cell filled in since the click
+	}
+	if held == itemBucketSnow {
+		// SolidBucketItem.useOn: the bucket simply places its block, in every
+		// dimension — powder snow is not a fluid and nothing boils it off.
+		h.setBlockLive(players, t.dim, x, y, z, powderSnowBlock)
+		h.playSoundDim(players, t.dim, "minecraft:item.bucket.empty_powder_snow", sndBlock,
+			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+		h.swapBucket(t, slot, itemBucket)
+		return
 	}
 	if held != itemBucketLav && t.dim == 1 {
 		// The nether boils water off the moment it leaves the bucket — and a
@@ -98,6 +112,15 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill_lava", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
 			h.giveFilled(players, t, slot, itemBucketLav)
+			return
+		case isPowderSnow(st):
+			// PowderSnowBlock is a BucketPickup: an empty bucket scoops the
+			// whole block back up. It has to be tested BEFORE the solid stop,
+			// because powder snow is one.
+			h.setBlockLive(players, t.dim, p.x, p.y, p.z, worldgen.Air)
+			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill_powder_snow", sndBlock,
+				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.giveFilled(players, t, slot, itemBucketSnow)
 			return
 		case worldgen.Collides(st):
 			return // hit a solid before any source

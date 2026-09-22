@@ -161,3 +161,43 @@ func TestCauldronRainFill(t *testing.T) {
 		t.Fatalf("rain should eventually fill the cauldron to 3, state=%d", h.world.At(pos.x, pos.y, pos.z))
 	}
 }
+
+// Powder snow is vanilla's only SolidBucketItem: the bucket places the block
+// wherever it is poured, and an empty bucket scoops the whole block back.
+// Neither worked at all before — powder snow could be neither placed nor
+// picked up.
+func TestPowderSnowBucketPlacesAndScoops(t *testing.T) {
+	h, pl, players := bucketSetup(t, invStack{item: itemBucketSnow, count: 1})
+	h.bucketEmpty(players, pl, 0, 499, 201, 500)
+	if !isPowderSnow(h.world.At(499, 201, 500)) {
+		t.Fatalf("pouring should place powder snow, got %d", h.world.At(499, 201, 500))
+	}
+	if pl.inv.slots[0].item != itemBucket {
+		t.Fatalf("pouring should empty the bucket, got item %d", pl.inv.slots[0].item)
+	}
+
+	h.bucketFill(players, pl, 0)
+	if h.world.At(499, 201, 500) != worldgen.Air {
+		t.Fatal("scooping should take the whole block")
+	}
+	if pl.inv.slots[0].item != itemBucketSnow {
+		t.Fatalf("scoop should give a powder snow bucket, got item %d", pl.inv.slots[0].item)
+	}
+}
+
+// The nether boils a water bucket off, but powder snow is not a fluid: it
+// places there like anywhere else.
+func TestPowderSnowBucketWorksInTheNether(t *testing.T) {
+	h, pl, players := bucketSetup(t, invStack{item: itemBucketSnow, count: 1})
+	nw, err := world.NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.nether = nw
+	pl.dim = dimNether
+	nw.SetBlock(499, 60, 500, worldgen.Air) // an empty cell in the caverns
+	h.bucketEmpty(players, pl, 0, 499, 60, 500)
+	if !isPowderSnow(nw.At(499, 60, 500)) {
+		t.Fatalf("powder snow should place in the Nether, got %d", nw.At(499, 60, 500))
+	}
+}
