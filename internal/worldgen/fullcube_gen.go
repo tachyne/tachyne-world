@@ -3,8 +3,8 @@
 package worldgen
 
 // fullCubeRanges lists, as sorted inclusive state-id runs, every block state
-// whose collision shape is exactly the unit cube (minecraft-data 1.21.11
-// blockCollisionShapes). This is vanilla's default isRedstoneConductor rule.
+// whose collision shape is exactly the unit cube, taken from the game
+// itself. This is vanilla's default isRedstoneConductor rule.
 var fullCubeRanges = []struct{ Min, Max uint32 }{
 	{1, 1},
 	{2, 2},

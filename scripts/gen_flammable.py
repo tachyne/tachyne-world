@@ -10,9 +10,12 @@ Emits a sorted, non-overlapping range table + Flammability(state) lookup,
 mirroring light_emission_gen.py. Run OUTSIDE the sandbox (needs network)."""
 import json
 import os
-import urllib.request
+import sys
 
-URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
+# State ranges come from the local extract (see audit/phase0/extractor); the
+# odds themselves are FireBlock.bootStrap's table, transcribed above.
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "flammable_gen.go")
 
 # name -> (igniteOdds, burnOdds), matching vanilla 1.21.5 FireBlock.
@@ -70,7 +73,7 @@ FLAMMABLE = {
 
 def main():
     # minecraft-data blocks.json is a list; index by name → (minStateId, maxStateId).
-    blocks = {b["name"]: b for b in json.load(urllib.request.urlopen(URL))}
+    blocks = {b["name"]: b for b in json.load(open(SRC))["blocks"]}
     rows = []  # (minState, maxState, ignite, burn, name)
     missing = []
     for name, (ig, bu) in FLAMMABLE.items():

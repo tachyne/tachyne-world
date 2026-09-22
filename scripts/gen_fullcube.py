@@ -1,52 +1,32 @@
 #!/usr/bin/env python3
-"""Generate internal/worldgen/fullcube_gen.go from minecraft-data.
+"""Generate internal/worldgen/fullcube_gen.go.
 
 For every block STATE, whether its collision shape is exactly the full unit
-cube. This is vanilla's BlockBehaviour default for isRedstoneConductor
-(BlockStateBase::isCollisionShapeFullBlock): the rule that decides whether a
-block carries strong redstone power from a source on one side to consumers
-on the others. It is a per-state property — a double slab is a full cube,
-a single slab is not; an extended piston base is not, a retracted one is.
+cube — vanilla's BlockStateBase.isCollisionShapeFullBlock, the rule that
+decides whether a block carries strong redstone power from a source on one
+side to consumers on the others. A double slab is a full cube, a single slab
+is not; a retracted piston base is, an extended one is not.
 
-Sources (facts only):
-  blocks.json               state id ranges per block
-  blockCollisionShapes.json shape index per state, shape 1 == [[0,0,0,1,1,1]]
+Source: the local extract (see audit/phase0/extractor), which asks the game
+directly. It was minecraft-data's blockCollisionShapes; that produced the
+same answers state for state (verified before the switch), so this change is
+purely about owning the input for every version rather than the newest one a
+third party happens to cover.
 
-Run outside the sandbox (needs network):  python3 scripts/gen_fullcube.py
-Set MCDATA_CACHE=<dir> to read the two files from a local directory instead.
+    python3 scripts/gen_fullcube.py [version]     # default 1.21.11
 """
-import json, os, urllib.request
+import json, os, sys
 
-VER = "1.21.11"
-BASE = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/{VER}/"
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "fullcube_gen.go")
 
-def load(name):
-    cache = os.environ.get("MCDATA_CACHE")
-    if cache:
-        with open(os.path.join(cache, name)) as f:
-            return json.load(f)
-    with urllib.request.urlopen(BASE + name, timeout=60) as r:
-        return json.load(r)
-
-blocks = load("blocks.json")
-shapes = load("blockCollisionShapes.json")
-full_ids = {int(i) for i, sh in shapes["shapes"].items() if sh == [[0, 0, 0, 1, 1, 1]]}
-per_block = shapes["blocks"]
 
 full_states = []  # (min,max) runs of state ids that are full cubes
-for b in blocks:
-    name, lo, hi = b["name"], b["minStateId"], b["maxStateId"]
-    v = per_block.get(name)
-    if v is None:
-        continue
-    n = hi - lo + 1
-    if isinstance(v, int):
-        flags = [v in full_ids] * n
-    else:
-        if len(v) != n:
-            raise SystemExit(f"{name}: {len(v)} shapes for {n} states")
-        flags = [x in full_ids for x in v]
+for b in json.load(open(SRC))["blocks"]:
+    lo, flags = b["minStateId"], b["isFullCube"]
+    if b["maxStateId"] - lo + 1 != len(flags):
+        raise SystemExit("%s: state count disagrees with isFullCube count" % b["name"])
     run = None
     for i, f in enumerate(flags):
         sid = lo + i
@@ -59,6 +39,7 @@ for b in blocks:
                 run = [sid, sid]
     if run:
         full_states.append(tuple(run))
+
 full_states.sort()
 
 lines = [
@@ -67,8 +48,8 @@ lines = [
     "package worldgen",
     "",
     "// fullCubeRanges lists, as sorted inclusive state-id runs, every block state",
-    f"// whose collision shape is exactly the unit cube (minecraft-data {VER}",
-    "// blockCollisionShapes). This is vanilla's default isRedstoneConductor rule.",
+    "// whose collision shape is exactly the unit cube, taken from the game",
+    "// itself. This is vanilla's default isRedstoneConductor rule.",
     "var fullCubeRanges = []struct{ Min, Max uint32 }{",
 ]
 for lo, hi in full_states:
