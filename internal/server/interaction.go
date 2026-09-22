@@ -978,6 +978,16 @@ func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, cl
 			if defaultState >= observerMin && defaultState <= observerMax {
 				f = playerFacing(yaw) // observers WATCH the player's look direction
 			}
+			switch {
+			case defaultState >= anvilStateMin && defaultState <= anvilStateMax:
+				// AnvilBlock: getHorizontalDirection().getClockWise() — the
+				// anvil lies ACROSS the look, not facing the player.
+				f = clockwiseFacing(playerFacing(yaw))
+			case isCalibSensor(defaultState):
+				// CalibratedSculkSensorBlock: the amethyst face takes the
+				// player's own look direction, not its opposite.
+				f = playerFacing(yaw)
+			}
 			if sixWayFacing(defaultState) { // pistons/droppers/observers go vertical too
 				if pitch > 60 {
 					f = "up" // looking down → block faces up (toward the player)
@@ -1040,6 +1050,19 @@ func playerFacing(yaw float32) string {
 	default:
 		return "east"
 	}
+}
+
+// clockwiseFacing is Direction.getClockWise() on the horizontal ring.
+func clockwiseFacing(f string) string {
+	switch f {
+	case "north":
+		return "east"
+	case "east":
+		return "south"
+	case "south":
+		return "west"
+	}
+	return "north"
 }
 
 func oppositeFacing(f string) string {

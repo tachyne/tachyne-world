@@ -26,6 +26,12 @@ var structureLocators = map[string]structureLocator{
 	"village_savanna": villageVariantLocator("savanna"),
 	"village_snowy":   villageVariantLocator("snowy"),
 	"village_taiga":   villageVariantLocator("taiga"),
+
+	"ruined_portal_desert":   portalVariantLocator("desert"),
+	"ruined_portal_jungle":   portalVariantLocator("jungle"),
+	"ruined_portal_mountain": portalVariantLocator("mountain"),
+	"ruined_portal_ocean":    portalVariantLocator("ocean"),
+	"ruined_portal_swamp":    portalVariantLocator("swamp"),
 	"desert_pyramid": {0, templeCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		d := g.DesertTempleIn(wx, wz)
 		return d.X + templeWidth/2, d.Z + templeDepth/2, d.Exists
@@ -90,8 +96,13 @@ var structureLocators = map[string]structureLocator{
 		t := g.TrailRuinsIn(wx, wz)
 		return t.X, t.Z, t.Exists
 	}},
+	// The plain id is the catch-all it is in the structure registry: the
+	// portals of every biome the five variants below do not claim.
 	"ruined_portal": {0, portalCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		p := g.RuinedPortalIn(wx, wz)
+		if p.Exists && PortalVariantFor(g.BiomeName(p.X, p.Z)) != "" {
+			return 0, 0, false
+		}
 		return p.X, p.Z, p.Exists
 	}},
 	"mineshaft": {0, shaftCell, func(g *Generator, wx, wz int) (int, int, bool) {
@@ -121,6 +132,17 @@ var structureLocators = map[string]structureLocator{
 		c := g.EndCityIn(wx, wz)
 		return c.X, c.Z, c.Exists
 	}},
+}
+
+// portalVariantLocator is the "ruined_portal" locator narrowed to the biome
+// family that vanilla gives its own structure id — ruined_portal_desert and
+// the other four. The plain "ruined_portal" stays the catch-all it is in the
+// structure registry: the portals in every other biome.
+func portalVariantLocator(variant string) structureLocator {
+	return structureLocator{0, portalCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		p := g.RuinedPortalIn(wx, wz)
+		return p.X, p.Z, p.Exists && PortalVariantFor(g.BiomeName(p.X, p.Z)) == variant
+	}}
 }
 
 // villageVariantLocator is the "village" locator narrowed to one village

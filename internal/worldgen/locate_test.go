@@ -57,3 +57,27 @@ func TestNetherFossilIn(t *testing.T) {
 	}
 	t.Skip("no fossil in the scanned cells")
 }
+
+// The five biome families vanilla gives their own ruined-portal structure id
+// are locatable by that id, and the plain "ruined_portal" is the catch-all
+// for everything else rather than a synonym for all of them.
+func TestRuinedPortalVariantsAreLocatable(t *testing.T) {
+	g := NewGenerator(12345)
+	for _, name := range []string{
+		"ruined_portal", "ruined_portal_desert", "ruined_portal_jungle",
+		"ruined_portal_mountain", "ruined_portal_ocean", "ruined_portal_swamp",
+	} {
+		if _, ok := StructureDim(name); !ok {
+			t.Fatalf("%s is not a locatable structure", name)
+		}
+	}
+	// A portal the plain id finds must belong to no variant family.
+	x, z, ok := g.LocateStructure("ruined_portal", 0, 0, 3000)
+	if !ok {
+		t.Skip("no plain ruined portal within reach of the origin")
+	}
+	p := g.RuinedPortalIn(x, z)
+	if v := PortalVariantFor(g.BiomeName(p.X, p.Z)); v != "" {
+		t.Fatalf("the plain id found a %s portal at (%d,%d)", v, x, z)
+	}
+}

@@ -5,6 +5,8 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"testing"
 
+	"github.com/tachyne/tachyne-common/protocol"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
@@ -124,5 +126,53 @@ func TestRodOrientation(t *testing.T) {
 	got = orientState(endRod, 1, 0, 0, 0, stone)
 	if f := worldgen.GetProperty(erInfo, got, "facing"); f != "up" {
 		t.Errorf("end rod on stone: facing %s, want up", f)
+	}
+}
+
+// Two blocks whose placement rotation was wrong: an anvil lies ACROSS the
+// player's look (getHorizontalDirection().getClockWise()), and a calibrated
+// sculk sensor's amethyst face takes the look direction itself rather than
+// its opposite.
+func TestAnvilAndCalibratedSensorFacing(t *testing.T) {
+	yawFor := map[string]float32{"south": 0, "west": 90, "north": 180, "east": -90}
+	facingOf := func(state uint32) string {
+		info, ok := worldgen.InfoForState(state)
+		if !ok {
+			t.Fatalf("no info for state %d", state)
+		}
+		return worldgen.GetProperty(info, state, "facing")
+	}
+
+	// The placement path is handed the vanilla DEFAULT state (what the item
+	// maps to), which is not always the first state of the block.
+	defaultOf := func(item string) uint32 {
+		st, ok := protocol.BlockForItem(int32(itemByName[item]))
+		if !ok {
+			t.Fatalf("no block for %s", item)
+		}
+		return st
+	}
+
+	anvil := defaultOf("anvil")
+	for look, yaw := range yawFor {
+		got := facingOf(orientState(anvil, 1, 0.5, yaw, 0, 0))
+		if want := clockwiseFacing(look); got != want {
+			t.Errorf("anvil placed looking %s faces %s, want %s", look, got, want)
+		}
+	}
+
+	sensor := defaultOf("calibrated_sculk_sensor")
+	for look, yaw := range yawFor {
+		if got := facingOf(orientState(sensor, 1, 0.5, yaw, 0, 0)); got != look {
+			t.Errorf("calibrated sensor placed looking %s faces %s, want %s", look, got, look)
+		}
+	}
+
+	// A furnace still puts its front toward the player.
+	furnace := defaultOf("furnace")
+	for look, yaw := range yawFor {
+		if got := facingOf(orientState(furnace, 1, 0.5, yaw, 0, 0)); got != oppositeFacing(look) {
+			t.Errorf("furnace placed looking %s faces %s, want %s", look, got, oppositeFacing(look))
+		}
 	}
 }

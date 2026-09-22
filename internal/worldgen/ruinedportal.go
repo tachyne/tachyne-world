@@ -60,6 +60,34 @@ var (
 	}
 )
 
+// PortalVariantFor names the vanilla structure a ruined portal in this biome
+// belongs to: desert, jungle, mountain, ocean and swamp each have their own
+// id in the structure registry, and everything else is the plain
+// ruined_portal. It is the same biome table portalSetupsFor uses, so the name
+// and the setups can never disagree.
+func PortalVariantFor(biome string) string {
+	switch {
+	case biome == "minecraft:desert":
+		return "desert"
+	case portalVariantIs(biome, portalJungle):
+		return "jungle"
+	case portalVariantIs(biome, portalSwamp):
+		return "swamp"
+	case portalVariantIs(biome, portalMountain):
+		return "mountain"
+	case portalVariantIs(biome, portalOcean):
+		return "ocean"
+	}
+	return ""
+}
+
+// portalVariantIs compares by the setup list's identity — the map holds the
+// same slice header for every biome in a family.
+func portalVariantIs(biome string, want []portalSetup) bool {
+	got, ok := portalBiomeSets[biome]
+	return ok && len(got) == len(want) && len(got) > 0 && &got[0] == &want[0]
+}
+
 // portalSetupsFor is the ruined_portals structure set's choice by biome.
 func portalSetupsFor(biome string) []portalSetup {
 	if s, ok := portalBiomeSets[biome]; ok {
