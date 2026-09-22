@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Eyeblossoms and nether portals — the two random-tick one-offs left after the
 // plant, melting and geology passes.
@@ -38,6 +42,25 @@ const (
 // Nether or the End there is nothing to tell the flower what hour it is and it
 // keeps whichever face it was planted with, forever.
 func (h *hub) tickEyeblossom(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
+	return h.switchEyeblossom(players, dim, x, y, z, state, true)
+}
+
+// eyeblossomRipple is the box tryChangingState wakes when a flower turns:
+// every eyeblossom still wearing the old face within three blocks across and
+// two up or down is scheduled to follow, at a delay drawn from its distance.
+// That is what makes a pale garden turn in a wave rather than all at once.
+const (
+	eyeblossomRippleXZ  = 3
+	eyeblossomRippleY   = 2
+	eyeblossomDelayLo   = 5  // ticks per block of distance, low end
+	eyeblossomDelayHigh = 10 // …and high
+)
+
+// switchEyeblossom turns one flower if the hour says so. A flower reached by
+// the RANDOM tick is the one that starts a wave: it plays the long sound and
+// wakes its neighbours. A flower that was woken plays the short one, and wakes
+// its own neighbours in turn — which is how the wave crosses the garden.
+func (h *hub) switchEyeblossom(players map[int32]*tracked, dim, x, y, z int, state uint32, spontaneous bool) bool {
 	var want uint32
 	switch state {
 	case openEyeblossom, closedEyeblossom:
@@ -56,12 +79,44 @@ func (h *hub) tickEyeblossom(players map[int32]*tracked, dim, x, y, z int, state
 		return true
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, want)
-	sound := "minecraft:block.eyeblossom.close_long"
+	h.vib(dim, freqBlockChange, x, y, z, 0)
+	kind := "close"
 	if want == openEyeblossom {
-		sound = "minecraft:block.eyeblossom.open_long"
+		kind = "open"
 	}
-	h.playSoundDim(players, dim, sound, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+	length := "short"
+	if spontaneous {
+		length = "long"
+	}
+	h.playSoundDim(players, dim, "minecraft:block.eyeblossom."+kind+"_"+length, sndBlock,
+		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+	h.wakeEyeblossomsAround(dim, blockPos{x, y, z}, state)
 	return true
+}
+
+// wakeEyeblossomsAround schedules every neighbour still wearing `old`.
+func (h *hub) wakeEyeblossomsAround(dim int, from blockPos, old uint32) {
+	w := h.worldFor(dim)
+	for dx := -eyeblossomRippleXZ; dx <= eyeblossomRippleXZ; dx++ {
+		for dy := -eyeblossomRippleY; dy <= eyeblossomRippleY; dy++ {
+			for dz := -eyeblossomRippleXZ; dz <= eyeblossomRippleXZ; dz++ {
+				if dx == 0 && dy == 0 && dz == 0 {
+					continue
+				}
+				p := blockPos{from.x + dx, from.y + dy, from.z + dz}
+				if w.At(p.x, p.y, p.z) != old {
+					continue
+				}
+				d := math.Sqrt(float64(dx*dx + dy*dy + dz*dz))
+				lo, hi := int(d*eyeblossomDelayLo), int(d*eyeblossomDelayHigh)
+				delay := lo
+				if hi > lo {
+					delay += h.rng.Intn(hi - lo + 1)
+				}
+				h.scheduleIn(dim, p, uint64(max(1, delay)))
+			}
+		}
+	}
 }
 
 // nightNow reports whether the sun is down, on the boundary the pale garden

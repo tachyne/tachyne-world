@@ -101,6 +101,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	}
 	state := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
 	switch {
+	case state == openEyeblossom || state == closedEyeblossom:
+		// A flower woken by the one that turned beside it: it switches on the
+		// SHORT sound, and wakes its own neighbours in turn.
+		h.switchEyeblossom(players, dim, pos.x, pos.y, pos.z, state, false)
 	case h.tickFrostedIce(players, dim, pos, state):
 		// Frost Walker's ice ages itself back to water on its own schedule.
 	case worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos):
