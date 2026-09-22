@@ -24,7 +24,11 @@ const bucketReach = 4.5 // vanilla player block-interaction range
 
 type evBucketEmpty struct {
 	eid, slot int32
-	x, y, z   int
+	x, y, z   int // the cell the fluid goes into (the clicked face's neighbour)
+	// cx,cy,cz is the cell actually CLICKED. BucketItem.emptyContents puts
+	// water INTO a waterloggable block rather than beside it, so the handler
+	// has to be able to see what was under the cursor as well as next to it.
+	cx, cy, cz int
 }
 
 type evBucketFill struct{ eid, slot int32 }
@@ -33,7 +37,7 @@ func (evBucketEmpty) isHubEvent() {}
 func (evBucketFill) isHubEvent()  {}
 
 // bucketEmpty pours a full bucket's fluid into a world cell.
-func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x, y, z int) {
+func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x, y, z int, cx, cy, cz int) {
 	if int(slot) != t.p.heldSlot() || t.inv == nil {
 		return
 	}
@@ -44,6 +48,19 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		return
 	}
 	w := h.worldFor(t.dim)
+	// LiquidBlockContainer: a water bucket emptied onto a slab, stair, fence,
+	// sign or any other waterloggable block fills THAT block instead of the
+	// cell beside it. Without this the water went next door and the slab
+	// stayed dry, which is not how anyone expects a bucket to behave.
+	if held == itemBucketH2O {
+		if st := w.At(cx, cy, cz); waterloggable(st) && !isWaterlogged(st) {
+			h.setBlockLive(players, t.dim, cx, cy, cz, withWaterlogged(st, true))
+			h.playSoundDim(players, t.dim, "minecraft:item.bucket.empty", sndBlock,
+				float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5, 1, 1)
+			h.swapBucket(t, slot, itemBucket)
+			return
+		}
+	}
 	if ts := w.At(x, y, z); !worldgen.IsReplaceable(ts) && ts != worldgen.Air &&
 		!worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
 		return // cell filled in since the click
@@ -168,4 +185,29 @@ func (h *hub) giveFilledStack(players map[int32]*tracked, t *tracked, slot int32
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	}
+}
+
+// waterloggable / isWaterlogged / withWaterlogged are the SimpleWaterloggedBlock
+// trio: whether a block carries the property at all, whether it is currently
+// holding water, and the state with that flag set.
+func waterloggable(state uint32) bool {
+	info, ok := worldgen.InfoForState(state)
+	return ok && info.HasProperty("waterlogged")
+}
+
+func isWaterlogged(state uint32) bool {
+	info, ok := worldgen.InfoForState(state)
+	return ok && worldgen.GetProperty(info, state, "waterlogged") == "true"
+}
+
+func withWaterlogged(state uint32, on bool) uint32 {
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return state
+	}
+	v := "false"
+	if on {
+		v = "true"
+	}
+	return worldgen.SetProperty(info, state, "waterlogged", v)
 }

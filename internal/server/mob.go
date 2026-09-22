@@ -851,6 +851,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 
 		h.leapCheck(players, m) // LeapAtTargetGoal: a spider, wolf, cat, ocelot or fox springs at its target
+		h.applyFluidPush(m)     // a current carries whatever is standing in it
 
 		// Move, by locomotion mode: walkers collide with terrain, fliers float
 		// free, swimmers stay inside their water column, anchored mobs hold.

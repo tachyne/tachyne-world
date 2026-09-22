@@ -1709,7 +1709,7 @@ func (h *hub) run() {
 				}
 			case evBucketEmpty:
 				if t := players[e.eid]; t != nil {
-					h.bucketEmpty(players, t, e.slot, e.x, e.y, e.z)
+					h.bucketEmpty(players, t, e.slot, e.x, e.y, e.z, e.cx, e.cy, e.cz)
 				}
 			case evBucketFill:
 				if t := players[e.eid]; t != nil {

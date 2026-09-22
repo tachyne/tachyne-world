@@ -53,7 +53,7 @@ func TestMobBucketReleasesMob(t *testing.T) {
 	give(pl, itemByName["tadpole_bucket"])
 	h.world.SetBlock(32, 70, 30, worldgen.Air)
 
-	h.bucketEmpty(players, pl, 0, 32, 70, 30)
+	h.bucketEmpty(players, pl, 0, 32, 70, 30, 32, 70-1, 30)
 
 	if got := h.world.At(32, 70, 30); got != worldgen.WaterBase {
 		t.Fatalf("cell after pouring is %d, want a water source", got)

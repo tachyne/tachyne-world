@@ -286,7 +286,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	}
 	if p.heldItem() == itemBucketH2O || p.heldItem() == itemBucketLav ||
 		int32(p.heldItem()) == itemBucketSnow || isMobBucket(p.heldItem()) { // pour into the target cell
-		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz})
+		s.hub.post(evBucketEmpty{eid: p.eid, slot: int32(p.held), x: tx, y: ty, z: tz, cx: x, cy: y, cz: z})
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}

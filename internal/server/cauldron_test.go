@@ -30,7 +30,7 @@ func TestBucketScoopAndPour(t *testing.T) {
 	if pl.inv.slots[0].item != itemBucketH2O {
 		t.Fatalf("scoop should fill the bucket, got item %d", pl.inv.slots[0].item)
 	}
-	h.bucketEmpty(players, pl, 0, 499, 201, 500)
+	h.bucketEmpty(players, pl, 0, 499, 201, 500, 499, 201-1, 500)
 	if h.world.At(499, 201, 500) != worldgen.WaterBase {
 		t.Fatal("pouring should place a water source")
 	}
@@ -56,7 +56,7 @@ func TestBucketScoopIgnoresFlowingAndStopsAtSolid(t *testing.T) {
 func TestBucketWaterEvaporatesInNether(t *testing.T) {
 	h, pl, players := bucketSetup(t, invStack{item: itemBucketH2O, count: 1})
 	pl.dim = 1
-	h.bucketEmpty(players, pl, 0, 499, 201, 500)
+	h.bucketEmpty(players, pl, 0, 499, 201, 500, 499, 201-1, 500)
 	if h.worldFor(1).At(499, 201, 500) == worldgen.WaterBase {
 		t.Fatal("water must not survive the nether")
 	}
@@ -168,7 +168,7 @@ func TestCauldronRainFill(t *testing.T) {
 // picked up.
 func TestPowderSnowBucketPlacesAndScoops(t *testing.T) {
 	h, pl, players := bucketSetup(t, invStack{item: itemBucketSnow, count: 1})
-	h.bucketEmpty(players, pl, 0, 499, 201, 500)
+	h.bucketEmpty(players, pl, 0, 499, 201, 500, 499, 201-1, 500)
 	if !isPowderSnow(h.world.At(499, 201, 500)) {
 		t.Fatalf("pouring should place powder snow, got %d", h.world.At(499, 201, 500))
 	}
@@ -196,8 +196,49 @@ func TestPowderSnowBucketWorksInTheNether(t *testing.T) {
 	h.nether = nw
 	pl.dim = dimNether
 	nw.SetBlock(499, 60, 500, worldgen.Air) // an empty cell in the caverns
-	h.bucketEmpty(players, pl, 0, 499, 60, 500)
+	h.bucketEmpty(players, pl, 0, 499, 60, 500, 499, 60-1, 500)
 	if !isPowderSnow(nw.At(499, 60, 500)) {
 		t.Fatalf("powder snow should place in the Nether, got %d", nw.At(499, 60, 500))
+	}
+}
+
+// BucketItem.emptyContents: a water bucket used on a waterloggable block fills
+// THAT block rather than the cell beside it. The water used to go next door
+// and the slab stayed dry.
+func TestWaterBucketWaterlogsTheClickedBlock(t *testing.T) {
+	h, pl, players := bucketSetup(t, invStack{item: itemBucketH2O, count: 1})
+	slab := worldgen.BlockBase("oak_slab")
+	if !waterloggable(slab) {
+		t.Fatal("an oak slab should carry the waterlogged property")
+	}
+	slab = withWaterlogged(slab, false)
+	h.world.SetBlock(500, 200, 500, slab)
+	h.world.SetBlock(500, 201, 500, worldgen.Air) // the cell the fluid would have gone into
+
+	// Clicked the slab; the offset cell is the air above it.
+	h.bucketEmpty(players, pl, 0, 500, 201, 500, 500, 200, 500)
+
+	if !isWaterlogged(h.world.At(500, 200, 500)) {
+		t.Error("the slab should have been waterlogged")
+	}
+	if got := h.world.At(500, 201, 500); got != worldgen.Air {
+		t.Errorf("the cell above should stay empty, got %d", got)
+	}
+	if pl.inv.slots[0].item != itemBucket {
+		t.Errorf("the bucket should have emptied, got item %d", pl.inv.slots[0].item)
+	}
+}
+
+// An already-waterlogged block is not a target: the water goes to the cell
+// beside it as before.
+func TestWaterBucketSkipsAnAlreadyLoggedBlock(t *testing.T) {
+	h, pl, players := bucketSetup(t, invStack{item: itemBucketH2O, count: 1})
+	slab := withWaterlogged(worldgen.BlockBase("oak_slab"), true)
+	h.world.SetBlock(500, 200, 500, slab)
+	h.world.SetBlock(500, 201, 500, worldgen.Air)
+
+	h.bucketEmpty(players, pl, 0, 500, 201, 500, 500, 200, 500)
+	if !worldgen.IsWater(h.world.At(500, 201, 500)) {
+		t.Error("with the slab already logged the water should fill the cell above")
 	}
 }
