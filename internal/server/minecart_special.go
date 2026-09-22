@@ -101,7 +101,14 @@ func slotsSignal(slots []invStack) int {
 
 // cartMaxSpeed is getMaxSpeed per kind: a furnace cart is a slow hauler.
 func cartMaxSpeed(v *vehicle, inWater bool) float64 {
-	s := cartTopSpeed
+	return cartMaxSpeedWith(v, inWater, 8)
+}
+
+// cartMaxSpeedWith is the same cap with the max_minecart_speed gamerule's
+// value: vanilla's default is 8 blocks a second, which is exactly the
+// engine's own top speed of 0.4 a tick, so the ordinary case is unchanged.
+func cartMaxSpeedWith(v *vehicle, inWater bool, ruleBlocksPerSecond int) float64 {
+	s := cartTopSpeed * float64(ruleBlocksPerSecond) / 8
 	if inWater {
 		s = cartTopSpeedWater
 	}

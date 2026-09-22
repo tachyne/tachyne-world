@@ -89,6 +89,16 @@ func init() {
 // orientation (vanilla allows horizontally mirrored placement); shapeless
 // recipes match the multiset of non-empty cells.
 func matchRecipe(grid []invStack, w int) (int32, int) {
+	item, count, _ := matchRecipeID(grid, w)
+	return item, count
+}
+
+// matchRecipeID is matchRecipe plus the recipe's BOOK id — the index into
+// shapedRecipes, then shapelessRecipes after it, which is the same numbering
+// the recipe book and its unlock frames use. limited_crafting needs it to ask
+// whether this player has unlocked what they are trying to make. id is -1
+// when nothing matched.
+func matchRecipeID(grid []invStack, w int) (int32, int, int32) {
 	minR, minC, maxR, maxC, n := w, w, -1, -1, 0
 	for r := 0; r < w; r++ {
 		for c := 0; c < w; c++ {
@@ -110,7 +120,7 @@ func matchRecipe(grid []invStack, w int) (int32, int) {
 		}
 	}
 	if n == 0 {
-		return 0, 0
+		return 0, 0, -1
 	}
 	bw, bh := maxC-minC+1, maxR-minR+1
 
@@ -130,7 +140,7 @@ func matchRecipe(grid []invStack, w int) (int32, int) {
 			}
 		}
 		if direct || mirror {
-			return rec.Result, int(rec.Count)
+			return rec.Result, int(rec.Count), int32(ri)
 		}
 	}
 
@@ -151,10 +161,10 @@ func matchRecipe(grid []invStack, w int) (int32, int) {
 			}
 		}
 		if ok {
-			return rec.Result, int(rec.Count)
+			return rec.Result, int(rec.Count), int32(len(shapedRecipes) + ri)
 		}
 	}
-	return 0, 0
+	return 0, 0, -1
 }
 
 // ---- window slot mapping -------------------------------------------------
@@ -724,6 +734,16 @@ func (h *hub) takeCraftOnce(players map[int32]*tracked, t *tracked, mode int32) 
 	if res.item == 0 {
 		h.sendCraftResult(t) // clicked an empty/stale result — just resync it
 		return false
+	}
+	// limited_crafting: a player may only make what their recipe book has
+	// unlocked. The dynamic recipes (repairs, banner copies, map zooms) carry
+	// no book entry and are always allowed, as they are in vanilla.
+	if h.rules.LimitedCrafting && kind == 0 && t.rbKnown != nil {
+		if _, _, id := matchRecipeID(grid, w); id >= 0 && !t.rbKnown[id] {
+			h.sendCraftResult(t)
+			h.sendCursor(t)
+			return false
+		}
 	}
 	if kind == mapCraftZoom {
 		// The zoomed map is born at take time (the preview shows the source).

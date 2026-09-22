@@ -263,7 +263,7 @@ func (h *hub) cartMoveAlongTrack(players map[int32]*tracked, w *world.World, v *
 	if v.rider != 0 {
 		scale = 0.75
 	}
-	maxSpeed := cartMaxSpeed(v, inWater)
+	maxSpeed := cartMaxSpeedWith(v, inWater, h.rules.MaxCartSpeed)
 	h.cartMove(w, v, clampF(scale*v.vx, -maxSpeed, maxSpeed), 0, clampF(scale*v.vz, -maxSpeed, maxSpeed))
 	if ex[0][1] != 0 && floorInt(v.x)-pos.x == ex[0][0] && floorInt(v.z)-pos.z == ex[0][2] {
 		v.y += float64(ex[0][1])
@@ -316,7 +316,7 @@ func (h *hub) cartMoveAlongTrack(players map[int32]*tracked, w *world.World, v *
 // cartComeOffTrack is AbstractMinecart.comeOffTrack: a cart off the rails
 // falls, skids to a halt on the ground and drifts in the air.
 func (h *hub) cartComeOffTrack(w *world.World, v *vehicle, inWater bool) {
-	maxSpeed := cartMaxSpeed(v, inWater)
+	maxSpeed := cartMaxSpeedWith(v, inWater, h.rules.MaxCartSpeed)
 	v.vx, v.vz = clampF(v.vx, -maxSpeed, maxSpeed), clampF(v.vz, -maxSpeed, maxSpeed)
 	if v.onGround {
 		v.vx, v.vy, v.vz = v.vx*0.5, v.vy*0.5, v.vz*0.5

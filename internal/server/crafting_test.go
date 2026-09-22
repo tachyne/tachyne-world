@@ -534,3 +534,50 @@ func TestCraftShiftClickStopsWhenFull(t *testing.T) {
 		t.Fatalf("only one log should be spent, %d left of 16", pl.craft[0].count)
 	}
 }
+
+// limited_crafting: with the rule on, a player can only make what their
+// recipe book has unlocked. Off by default, as in vanilla.
+func TestLimitedCraftingNeedsTheRecipeUnlocked(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[1] = pl
+	pl.winKind, pl.winID = winCraft, 0
+	log := int32(itemByName["oak_log"])
+	planks := int32(itemByName["oak_planks"])
+
+	_, _, id := matchRecipeID([]invStack{{item: log, count: 1}}, 1)
+	if id < 0 {
+		// The 1x1 grid is not how the engine matches; use the player's 3x3.
+		pl.craft = [9]invStack{{item: log, count: 1}}
+		_, _, id = matchRecipeID(pl.craft[:9], 3)
+	}
+	if id < 0 {
+		t.Fatal("planks from a log should be a book recipe")
+	}
+
+	h.rules.LimitedCrafting = true
+	pl.craft = [9]invStack{{item: log, count: 1}}
+	pl.rbKnown = map[int32]bool{} // knows nothing
+	h.takeCraftResult(players, pl, 0)
+	if pl.cursor.item == planks {
+		t.Fatal("an unknown recipe must not be craftable under limited_crafting")
+	}
+
+	// Unlock it and the same click works.
+	pl.rbKnown[id] = true
+	h.takeCraftResult(players, pl, 0)
+	if pl.cursor.item != planks {
+		t.Fatalf("an unlocked recipe should craft, cursor=%+v", pl.cursor)
+	}
+
+	// With the rule off, the book is irrelevant.
+	h.rules.LimitedCrafting = false
+	pl.cursor = invStack{}
+	pl.craft = [9]invStack{{item: log, count: 1}}
+	pl.rbKnown = map[int32]bool{}
+	h.takeCraftResult(players, pl, 0)
+	if pl.cursor.item != planks {
+		t.Fatal("with the rule off, anything on the grid crafts")
+	}
+}

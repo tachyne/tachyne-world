@@ -42,8 +42,14 @@ type worldRules struct {
 	ShowDeathMsgs bool `json:"showDeathMessages"`
 	ImmediateResp bool `json:"doImmediateRespawn"`
 	RandomTicks   int  `json:"randomTickSpeed"`
-	SleepPercent  int  `json:"playersSleepingPercentage"`
-	LocatorBar    bool `json:"locatorBar"`
+	// MaxCartSpeed is max_minecart_speed: the cap a cart may reach, in blocks
+	// per second. Vanilla's default is 8, which is the engine's own top speed.
+	MaxCartSpeed int `json:"maxMinecartSpeed"`
+	// LimitedCrafting is limited_crafting: a player may only craft what their
+	// recipe book has unlocked. Off by default, as in vanilla.
+	LimitedCrafting bool `json:"doLimitedCrafting"`
+	SleepPercent    int  `json:"playersSleepingPercentage"`
+	LocatorBar      bool `json:"locatorBar"`
 	// Added 2026-07-26. The JSON keys keep the historical spelling so an
 	// existing settings.json still loads; only the COMMAND surface renamed.
 	SpawnPhantoms  bool `json:"spawnPhantoms"`
@@ -115,7 +121,7 @@ func defaultRules() worldRules {
 		MobGriefing: true, DoWeather: true, DoTileDrops: true,
 		DoMobLoot: true, NaturalRegen: true, FallDamage: true, DrownDamage: true,
 		FireDamage: true, AnnounceAdv: true, ShowDeathMsgs: true,
-		RandomTicks: 3, SleepPercent: 100, LocatorBar: true,
+		RandomTicks: 3, SleepPercent: 100, LocatorBar: true, MaxCartSpeed: 8,
 		SpawnPhantoms: true, SpawnPatrols: true, SpawnWardens: true, Raids: true,
 		TNTExplodes: true, WaterSourceCnv: true, LavaSourceCnv: false,
 		MovementCheck: true, ElytraCheck: true, PvP: true,
@@ -360,6 +366,10 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.ImmediateResp = e.on
 	case "random_tick_speed":
 		h.rules.RandomTicks = e.num
+	case "max_minecart_speed":
+		h.rules.MaxCartSpeed = max(1, e.num)
+	case "limited_crafting":
+		h.rules.LimitedCrafting = e.on
 	case "max_entity_cramming":
 		h.rules.MaxCramming = max(0, e.num)
 	case "respawn_radius":
