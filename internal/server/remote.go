@@ -151,6 +151,12 @@ func (r *remotePlayer) Action(v any) {
 		case itemWrittenBook, itemWritableBook:
 			r.emitEvNow(attachproto.OpenBook{Hand: 0}) // the reader/editor UI is client-side
 		default:
+			// BoatItem.use: the crosshair is on water, which the client
+			// reports as a plain use because a fluid is not a clickable block.
+			if _, isVeh := vehicleItems[item]; isVeh {
+				h.post(evPlaceVehicleLook{eid: p.eid, item: item, slot: slot})
+				return
+			}
 			h.post(evEat{eid: p.eid, slot: int(slot)})
 		}
 	case attachproto.UseEntity:

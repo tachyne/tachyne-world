@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -172,4 +173,50 @@ func entityNameOf(id int) string {
 		}
 	}
 	return "?"
+}
+
+// A boat used while aiming at open water goes onto the water. The client
+// reports that as a plain use — a fluid is not a clickable block — which is
+// why it needs the look ray rather than a clicked cell.
+func TestBoatPlacedByLookingAtWater(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	pl.yaw, pl.pitch = 0, 0 // level, along +z
+	boat := int32(itemByName["oak_boat"])
+	pl.inv.slots[0] = invStack{item: boat, count: 1}
+	pl.p.held = 0
+
+	for z := 2; z <= 4; z++ { // a pond at eye level
+		h.world.SetBlock(0, 181, z, worldgen.WaterBase)
+	}
+	h.placeVehicleFromLook(players, pl, boat, 0)
+
+	if len(h.vehicles) != 1 {
+		t.Fatalf("a boat should be floating there, got %d vehicles", len(h.vehicles))
+	}
+	if pl.inv.slots[0].count != 0 {
+		t.Fatalf("the boat item should be spent, %d left", pl.inv.slots[0].count)
+	}
+}
+
+// Aiming at nothing places nothing, and keeps the item.
+func TestBoatNeedsSomethingToLandOn(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	pl.yaw, pl.pitch = 0, -90 // straight up into empty sky
+	boat := int32(itemByName["oak_boat"])
+	pl.inv.slots[0] = invStack{item: boat, count: 1}
+	pl.p.held = 0
+
+	h.placeVehicleFromLook(players, pl, boat, 0)
+	if len(h.vehicles) != 0 {
+		t.Fatal("nothing in the ray: no boat should appear")
+	}
+	if pl.inv.slots[0].count != 1 {
+		t.Fatal("the boat item must not be spent")
+	}
 }

@@ -475,20 +475,15 @@ const bottleFillReach = 4.5
 // ClipContext.Fluid.SOURCE_ONLY means: a bottle cannot be filled from the
 // flowing edge of a stream, and a solid block stops the ray.
 func (h *hub) waterSourceInSight(t *tracked) bool {
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	ox, oy, oz := t.x, t.y+playerEyeHeightStand, t.z
-	w := h.worldFor(t.dim)
-	for d := 0.0; d <= bottleFillReach; d += 0.1 {
-		x, y, z := floorInt(ox+dx*d), floorInt(oy+dy*d), floorInt(oz+dz*d)
-		st := w.At(x, y, z)
+	var found bool
+	h.lookRay(t, bottleFillReach, func(_ blockPos, st uint32) bool {
 		if st == worldgen.WaterBase {
+			found = true
 			return true
 		}
-		if worldgen.Collides(st) {
-			return false // something solid before any water
-		}
-	}
-	return false
+		return rayStopsAt(st) // something solid before any water ends it
+	})
+	return found
 }
 
 // turnBottleInto is Item.turnBottleIntoItem: one bottle out of the stack, the

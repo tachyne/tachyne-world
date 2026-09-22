@@ -1815,6 +1815,10 @@ func (h *hub) run() {
 				} else if !h.attackPlayer(players, e.attacker, e.target) {
 					h.attackMob(players, e.attacker, e.target)
 				}
+			case evPlaceVehicleLook:
+				if t := players[e.eid]; t != nil {
+					h.placeVehicleFromLook(players, t, e.item, e.slot)
+				}
 			case evPlaceVehicle:
 				if t := players[e.eid]; t != nil {
 					h.placeVehicle(players, t, e)

@@ -194,6 +194,40 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz 
 	return true
 }
 
+// evPlaceVehicleLook is a boat used with nothing clicked: the hub walks the
+// look ray to find where it goes.
+type evPlaceVehicleLook struct {
+	eid  int32
+	item int32
+	slot int32
+}
+
+func (evPlaceVehicleLook) isHubEvent() {}
+
+// boatPlaceReach is the interaction range Item.getPlayerPOVHitResult clips a
+// boat's placement ray to.
+const boatPlaceReach = 4.5
+
+// placeVehicleFromLook is BoatItem.use: the client sends a plain use when the
+// crosshair is on a fluid rather than a block, which is exactly the case that
+// matters — putting a boat on open water. The ray takes the first cell that
+// stops it, fluid or solid, and the boat goes there.
+func (h *hub) placeVehicleFromLook(players map[int32]*tracked, t *tracked, item int32, slot int32) {
+	if _, ok := vehicleItems[item]; !ok || t.dead {
+		return
+	}
+	pos, found := h.lookRay(t, boatPlaceReach, func(_ blockPos, st uint32) bool {
+		return worldgen.IsWater(st) || worldgen.IsLava(st) || rayStopsAt(st)
+	})
+	if !found {
+		return
+	}
+	// Straight through the clicked-block path, so the placement, the vibration
+	// and the cost of the item stay in one place.
+	h.placeVehicle(players, t, evPlaceVehicle{eid: t.p.eid, item: item,
+		x: pos.x, y: pos.y, z: pos.z, slot: slot})
+}
+
 // placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
 func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
 	etype, ok := vehicleItems[e.item]
