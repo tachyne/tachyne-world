@@ -239,3 +239,72 @@ func TestLegacyFireTickMigrates(t *testing.T) {
 		}
 	}
 }
+
+// A bed detonating where it must not leaves the crater burning; TNT never
+// does. Vanilla lights one cleared cell in three, where the cell is air and
+// what is under it is solid.
+func TestBadRespawnBlastLightsFires(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	dim := 1 // the Nether, where a bed explodes
+	w := h.worldFor(dim)
+	cx, cy, cz := 300, 70, 300
+	// A BEDROCK floor: the blast cannot take it, so every cleared cell above
+	// it keeps something solid underneath and the fire roll is the only
+	// variable left. (On a stone floor the crater eats its own footing and
+	// the test turns flaky.)
+	for dx := -6; dx <= 6; dx++ {
+		for dz := -6; dz <= 6; dz++ {
+			w.SetBlock(cx+dx, cy-1, cz+dz, worldgen.Bedrock)
+			for dy := 0; dy < 5; dy++ {
+				w.SetBlock(cx+dx, cy+dy, cz+dz, worldgen.Air)
+			}
+		}
+	}
+	// Something for the blast to clear, standing on the floor. Fifty-odd
+	// cells at one-in-three apiece leaves no realistic chance of none.
+	for dx := -4; dx <= 4; dx++ {
+		for dz := -4; dz <= 4; dz++ {
+			w.SetBlock(cx+dx, cy, cz+dz, worldgen.BlockBase("dirt"))
+		}
+	}
+	h.explodeTyped(players, dim, float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5,
+		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{}, withBlastFire())
+
+	fires := 0
+	for dx := -6; dx <= 6; dx++ {
+		for dy := 0; dy < 4; dy++ {
+			for dz := -6; dz <= 6; dz++ {
+				if isFire(w.At(cx+dx, cy+dy, cz+dz)) {
+					fires++
+				}
+			}
+		}
+	}
+	if fires == 0 {
+		t.Fatal("a bad-respawn blast should leave fires behind")
+	}
+}
+
+// TNT leaves no fire: vanilla only sets the flag for a bad respawn point and
+// a ghast's fireball.
+func TestTNTBlastLeavesNoFire(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	cx, cy, cz := 340, 70, 340
+	for dx := -6; dx <= 6; dx++ {
+		for dz := -6; dz <= 6; dz++ {
+			w.SetBlock(cx+dx, cy-1, cz+dz, worldgen.Bedrock)
+			w.SetBlock(cx+dx, cy, cz+dz, worldgen.BlockBase("dirt"))
+		}
+	}
+	h.explodeIn(players, 0, float64(cx)+0.5, float64(cy)+0.5, float64(cz)+0.5, tntRadius, tntRadius, blastTNT)
+	for dx := -6; dx <= 6; dx++ {
+		for dz := -6; dz <= 6; dz++ {
+			if isFire(w.At(cx+dx, cy, cz+dz)) {
+				t.Fatal("TNT must not light fires")
+			}
+		}
+	}
+}

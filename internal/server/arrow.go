@@ -321,6 +321,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					by = mobDisplayName(m.etype)
 				}
 				var opts []blastOpt
+				// LargeFireball: a ghast's blast lights what it clears, when
+				// mobGriefing lets it change the world at all.
+				if a.etype == entityLargeFireball && h.rules.MobGriefing {
+					opts = append(opts, withBlastFire())
+				}
 				if a.dangerous {
 					// WitherSkull.getBlockExplosionResistance: a blue skull
 					// holds everything the wither may break to 0.8, which is

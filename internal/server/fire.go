@@ -253,6 +253,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
 	w := h.worldFor(dim)
+	var cleared []blockPos
 	if w != nil && radius > 0 {
 		hit := h.blastPositionsCapped(w, cx, cy, cz, float64(radius), cfg.resistCap)
 		for pos := range hit {
@@ -267,9 +268,31 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
 			h.dropExploded(players, dim, pos, st, radius, kind)
+			cleared = append(cleared, pos)
+		}
+		if cfg.fire {
+			h.lightBlastFires(players, dim, cleared)
 		}
 	}
 	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
+}
+
+// lightBlastFires is ServerExplosion.createFire: one cell in three of what the
+// blast cleared catches, if it is air now and whatever is under it is solid
+// enough to hold a fire.
+func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blockPos) {
+	w := h.worldFor(dim)
+	for _, pos := range cleared {
+		if h.rng.Intn(3) != 0 {
+			continue
+		}
+		if w.At(pos.x, pos.y, pos.z) != worldgen.Air || !fullCube(w.At(pos.x, pos.y-1, pos.z)) {
+			continue
+		}
+		h.setBlockAt(players, dim, pos, fireDefault)
+		h.fireAge[pos] = 0
+		h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
+	}
 }
 
 // blastPositions is the crater ray-cast on its own: the set of blocks an
@@ -281,6 +304,10 @@ func (h *hub) blastPositions(w *world.World, cx, cy, cz, radius float64) map[blo
 
 // blastCfg is what a caller may vary about one explosion.
 type blastCfg struct {
+	// fire lights what the blast cleared. Vanilla sets it for a bed or a
+	// respawn anchor detonating where it must not, and for a ghast's fireball
+	// when mobGriefing allows — never for TNT, a creeper or an end crystal.
+	fire bool
 	// resistCap is the most any one block is allowed to resist, which is how
 	// a blue wither skull chews through what an ordinary blast cannot:
 	// WitherSkull.getBlockExplosionResistance answers min(0.8, resistance)
@@ -289,6 +316,11 @@ type blastCfg struct {
 }
 
 type blastOpt func(*blastCfg)
+
+// withBlastFire leaves fires in the crater (ServerExplosion.createFire).
+func withBlastFire() blastOpt {
+	return func(c *blastCfg) { c.fire = true }
+}
 
 // withResistCap bounds every block's resistance for one explosion.
 func withResistCap(cap float64) blastOpt {

@@ -375,8 +375,9 @@ func (h *hub) blowUpRespawnBlock(players map[int32]*tracked, t *tracked, pos blo
 	} else {
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 	}
+	// BedBlock/RespawnAnchorBlock detonate with fire: the crater burns.
 	h.explodeTyped(players, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5,
-		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{})
+		badRespawnPower, badRespawnPower, blastBlock, dtBadRespawnPoint, deathCause{}, withBlastFire())
 }
 
 const (
