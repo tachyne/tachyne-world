@@ -180,3 +180,35 @@ func TestOrbsMergeInPlace(t *testing.T) {
 		t.Fatalf("a merged pair of 7s is worth 14, got %d", got)
 	}
 }
+
+// A mob that dies wearing or holding something is worth more: vanilla adds
+// 1-3 per equipped piece on top of the species reward, which is why a
+// skeleton in full iron is worth several times a bare one.
+func TestEquippedMobsPayMoreXP(t *testing.T) {
+	always := func(n int) int { return 0 } // the low end of every 1+rand(3)
+
+	bare := &mob{etype: entityZombie, hostile: true}
+	if got := xpForMob(bare, always); got != hostileXP {
+		t.Fatalf("a bare zombie is worth %d, want %d", got, hostileXP)
+	}
+
+	armed := &mob{etype: entityZombie, hostile: true, held: int32(itemByName["iron_sword"])}
+	if got := xpForMob(armed, always); got != hostileXP+1 {
+		t.Fatalf("a zombie with a sword is worth %d, want %d", got, hostileXP+1)
+	}
+
+	full := &mob{etype: entityZombie, hostile: true, held: int32(itemByName["iron_sword"])}
+	for i := range full.gear {
+		full.gear[i] = invStack{item: int32(itemByName["iron_helmet"]), count: 1}
+	}
+	if got := xpForMob(full, always); got != hostileXP+5 { // hand + four pieces
+		t.Fatalf("a zombie in full iron is worth %d, want %d", got, hostileXP+5)
+	}
+
+	// Something worth nothing to begin with stays worth nothing: vanilla's
+	// loop only runs when the base reward is above zero.
+	golem := &mob{etype: entityIronGolem, held: int32(itemByName["iron_sword"])}
+	if got := xpForMob(golem, always); got != 0 {
+		t.Fatalf("an iron golem pays nothing whatever it holds, got %d", got)
+	}
+}

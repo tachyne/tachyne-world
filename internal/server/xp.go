@@ -246,6 +246,34 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 // override 10, Slime.setSize xpReward=size, baby zombies ×2.5; villagers and
 // iron golems pay nothing. Previously only 4 hostile species paid at all.
 func xpForMob(m *mob, rng func(int) int) int {
+	return xpBaseForMob(m, rng) + equipmentXPBonus(m, rng)
+}
+
+// equipmentXPBonus is the loop at the end of Mob.getBaseExperienceReward: a
+// mob that dies wearing or holding something pays 1-3 extra for each piece.
+// It is why a skeleton in full iron is worth several times a bare one, and
+// the engine paid the bare rate for all of them.
+//
+// A mob worth nothing to begin with (a villager, an iron golem) stays worth
+// nothing: vanilla's loop only runs when the base reward is above zero.
+func equipmentXPBonus(m *mob, rng func(int) int) int {
+	if xpBaseForMob(m, func(int) int { return 0 }) <= 0 {
+		return 0
+	}
+	n := 0
+	if m.held != 0 {
+		n += 1 + rng(3)
+	}
+	for _, g := range m.gear {
+		if g.item != 0 {
+			n += 1 + rng(3)
+		}
+	}
+	return n
+}
+
+// xpBaseForMob is the species' own reward, before anything it is carrying.
+func xpBaseForMob(m *mob, rng func(int) int) int {
 	switch m.etype {
 	case entityCow, entityChicken, entityPig, entitySheep:
 		if m.jockey {
