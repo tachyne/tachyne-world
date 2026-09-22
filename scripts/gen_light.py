@@ -1,21 +1,42 @@
 #!/usr/bin/env python3
-"""Generate internal/worldgen/light_emission_gen.go from minecraft-data blocks.json.
+"""Generate internal/worldgen/light_emission_gen.go.
 
 Emits LightEmission(state) -> the light level a block state emits (0 if none),
-as a sorted, non-overlapping range table with a binary search. Run outside the
-sandbox (needs network):  python3 scripts/gen_light.py
-"""
-import json, urllib.request, os
+as a sorted, non-overlapping range table with a binary search.
 
-URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
+Source: the local extract (~/vanilla/extract/<ver>.json), produced by running
+the game itself — see audit/phase0/extractor. It was minecraft-data, which
+carries ONE emitLight per block; light is a per-STATE property in vanilla, so
+that flattened 60 blocks onto their default state and got them wrong in both
+directions: a lit furnace emitted 0 instead of 13, a lit redstone lamp 0
+instead of 15, glow berries 0 instead of 14 — and an UNLIT redstone torch
+emitted 7 instead of 0, because its default state is the lit one.
+
+    python3 scripts/gen_light.py [version]     # default 1.21.11
+"""
+import json, os, sys
+
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "light_emission_gen.go")
 
-blocks = json.load(urllib.request.urlopen(URL))
+blocks = json.load(open(SRC))["blocks"]
+
+# One row per RUN of equal light within a block, so a block whose states
+# differ (candles, cave vines, copper bulbs) contributes several ranges and
+# each state gets the level vanilla gives it.
 rows = []
 for b in blocks:
-    lvl = b.get("emitLight", 0)
-    if lvl > 0:
-        rows.append((b["minStateId"], b["maxStateId"], lvl, b["name"]))
+    lo = b["minStateId"]
+    levels = b["emitLight"]
+    if b["maxStateId"] - lo + 1 != len(levels):
+        raise SystemExit("%s: %d states but %d light values" % (b["name"], b["maxStateId"] - lo + 1, len(levels)))
+    start = 0
+    for i in range(1, len(levels) + 1):
+        if i == len(levels) or levels[i] != levels[start]:
+            if levels[start] > 0:
+                rows.append((lo + start, lo + i - 1, levels[start], b["name"]))
+            start = i
 rows.sort()
 
 lines = [
@@ -25,17 +46,21 @@ lines = [
     "",
     "// lightRanges maps block-state ID ranges to the light level they emit, sorted",
     "// by lo and non-overlapping so LightEmission can binary-search them.",
+    "//",
+    "// Light is per STATE, not per block: a furnace emits 13 only while lit, a",
+    "// candle 3/6/9/12 by how many are lit, a respawn anchor 3/7/11/15 by charge.",
+    "// So one block can contribute several ranges.",
     "var lightRanges = []struct {",
     "\tlo, hi uint32",
     "\tlvl    uint8",
     "}{",
 ]
-for lo, hi, lvl, name in rows:
-    lines.append(f"\t{{{lo}, {hi}, {lvl}}}, // {name}")
+w = max(len("{%d, %d, %d}," % (a, b, c)) for a, b, c, _ in rows)
+for a, b, c, name in rows:
+    lines.append("\t%-*s // %s" % (w + 1, "{%d, %d, %d}," % (a, b, c), name))
+lines += ["}", ""]
 lines += [
-    "}",
-    "",
-    "// LightEmission returns the block-light level a state emits, 0 if it emits none.",
+    "// LightEmission is the light level a block state emits (0 if none).",
     "func LightEmission(state uint32) uint8 {",
     "\tlo, hi := 0, len(lightRanges)",
     "\tfor lo < hi {",
@@ -54,6 +79,5 @@ lines += [
     "}",
     "",
 ]
-with open(OUT, "w") as f:
-    f.write("\n".join(lines))
-print(f"wrote {OUT} with {len(rows)} emitting block ranges")
+open(OUT, "w").write("\n".join(lines))
+print("%s: %d ranges -> %s" % (VER, len(rows), os.path.normpath(OUT)))

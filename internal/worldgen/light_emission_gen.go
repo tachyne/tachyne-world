@@ -4,6 +4,10 @@ package worldgen
 
 // lightRanges maps block-state ID ranges to the light level they emit, sorted
 // by lo and non-overlapping so LightEmission can binary-search them.
+//
+// Light is per STATE, not per block: a furnace emits 13 only while lit, a
+// candle 3/6/9/12 by how many are lit, a respawn anchor 3/7/11/15 by charge.
+// So one block can contribute several ranges.
 var lightRanges = []struct {
 	lo, hi uint32
 	lvl    uint8
@@ -14,8 +18,17 @@ var lightRanges = []struct {
 	{3170, 3173, 14},   // wall_torch
 	{3174, 3685, 15},   // fire
 	{3686, 3686, 10},   // soul_fire
-	{6684, 6685, 7},    // redstone_torch
-	{6686, 6693, 7},    // redstone_wall_torch
+	{5126, 5126, 13},   // furnace
+	{5128, 5128, 13},   // furnace
+	{5130, 5130, 13},   // furnace
+	{5132, 5132, 13},   // furnace
+	{6680, 6680, 9},    // redstone_ore
+	{6682, 6682, 9},    // deepslate_redstone_ore
+	{6684, 6684, 7},    // redstone_torch
+	{6686, 6686, 7},    // redstone_wall_torch
+	{6688, 6688, 7},    // redstone_wall_torch
+	{6690, 6690, 7},    // redstone_wall_torch
+	{6692, 6692, 7},    // redstone_wall_torch
 	{6805, 6805, 10},   // soul_torch
 	{6806, 6809, 10},   // soul_wall_torch
 	{6810, 6810, 14},   // copper_torch
@@ -23,21 +36,49 @@ var lightRanges = []struct {
 	{6815, 6815, 15},   // glowstone
 	{6816, 6817, 11},   // nether_portal
 	{6822, 6825, 15},   // jack_o_lantern
+	{8189, 8313, 7},    // glow_lichen
+	{8315, 8315, 7},    // glow_lichen
 	{9250, 9250, 7},    // enchanting_table
 	{9251, 9258, 1},    // brewing_stand
 	{9263, 9263, 15},   // lava_cauldron
 	{9267, 9267, 15},   // end_portal
 	{9268, 9275, 1},    // end_portal_frame
 	{9277, 9277, 1},    // dragon_egg
+	{9278, 9278, 15},   // redstone_lamp
 	{9374, 9381, 7},    // ender_chest
 	{9779, 9779, 15},   // beacon
-	{12333, 12364, 15}, // light
+	{12335, 12336, 1},  // light
+	{12337, 12338, 2},  // light
+	{12339, 12340, 3},  // light
+	{12341, 12342, 4},  // light
+	{12343, 12344, 5},  // light
+	{12345, 12346, 6},  // light
+	{12347, 12348, 7},  // light
+	{12349, 12350, 8},  // light
+	{12351, 12352, 9},  // light
+	{12353, 12354, 10}, // light
+	{12355, 12356, 11}, // light
+	{12357, 12358, 12}, // light
+	{12359, 12360, 13}, // light
+	{12361, 12362, 14}, // light
+	{12363, 12364, 15}, // light
 	{12690, 12690, 15}, // sea_lantern
 	{14434, 14439, 14}, // end_rod
 	{14614, 14614, 15}, // end_gateway
 	{14643, 14643, 3},  // magma_block
-	{15065, 15072, 6},  // sea_pickle
+	{15065, 15065, 6},  // sea_pickle
+	{15067, 15067, 9},  // sea_pickle
+	{15069, 15069, 12}, // sea_pickle
+	{15071, 15071, 15}, // sea_pickle
 	{15074, 15075, 15}, // conduit
+	{20552, 20552, 13}, // smoker
+	{20554, 20554, 13}, // smoker
+	{20556, 20556, 13}, // smoker
+	{20558, 20558, 13}, // smoker
+	{20560, 20560, 13}, // blast_furnace
+	{20562, 20562, 13}, // blast_furnace
+	{20564, 20564, 13}, // blast_furnace
+	{20566, 20566, 13}, // blast_furnace
 	{20635, 20638, 15}, // lantern
 	{20639, 20642, 10}, // soul_lantern
 	{20643, 20646, 15}, // copper_lantern
@@ -48,10 +89,105 @@ var lightRanges = []struct {
 	{20663, 20666, 15}, // waxed_exposed_copper_lantern
 	{20667, 20670, 15}, // waxed_weathered_copper_lantern
 	{20671, 20674, 15}, // waxed_oxidized_copper_lantern
-	{20675, 20706, 15}, // campfire
-	{20707, 20738, 10}, // soul_campfire
+	{20675, 20678, 15}, // campfire
+	{20683, 20686, 15}, // campfire
+	{20691, 20694, 15}, // campfire
+	{20699, 20702, 15}, // campfire
+	{20707, 20710, 10}, // soul_campfire
+	{20715, 20718, 10}, // soul_campfire
+	{20723, 20726, 10}, // soul_campfire
+	{20731, 20734, 10}, // soul_campfire
 	{20774, 20774, 15}, // shroomlight
 	{21618, 21618, 10}, // crying_obsidian
+	{21620, 21620, 3},  // respawn_anchor
+	{21621, 21621, 7},  // respawn_anchor
+	{21622, 21622, 11}, // respawn_anchor
+	{21623, 21623, 15}, // respawn_anchor
+	{22894, 22895, 3},  // candle
+	{22898, 22899, 6},  // candle
+	{22902, 22903, 9},  // candle
+	{22906, 22907, 12}, // candle
+	{22910, 22911, 3},  // white_candle
+	{22914, 22915, 6},  // white_candle
+	{22918, 22919, 9},  // white_candle
+	{22922, 22923, 12}, // white_candle
+	{22926, 22927, 3},  // orange_candle
+	{22930, 22931, 6},  // orange_candle
+	{22934, 22935, 9},  // orange_candle
+	{22938, 22939, 12}, // orange_candle
+	{22942, 22943, 3},  // magenta_candle
+	{22946, 22947, 6},  // magenta_candle
+	{22950, 22951, 9},  // magenta_candle
+	{22954, 22955, 12}, // magenta_candle
+	{22958, 22959, 3},  // light_blue_candle
+	{22962, 22963, 6},  // light_blue_candle
+	{22966, 22967, 9},  // light_blue_candle
+	{22970, 22971, 12}, // light_blue_candle
+	{22974, 22975, 3},  // yellow_candle
+	{22978, 22979, 6},  // yellow_candle
+	{22982, 22983, 9},  // yellow_candle
+	{22986, 22987, 12}, // yellow_candle
+	{22990, 22991, 3},  // lime_candle
+	{22994, 22995, 6},  // lime_candle
+	{22998, 22999, 9},  // lime_candle
+	{23002, 23003, 12}, // lime_candle
+	{23006, 23007, 3},  // pink_candle
+	{23010, 23011, 6},  // pink_candle
+	{23014, 23015, 9},  // pink_candle
+	{23018, 23019, 12}, // pink_candle
+	{23022, 23023, 3},  // gray_candle
+	{23026, 23027, 6},  // gray_candle
+	{23030, 23031, 9},  // gray_candle
+	{23034, 23035, 12}, // gray_candle
+	{23038, 23039, 3},  // light_gray_candle
+	{23042, 23043, 6},  // light_gray_candle
+	{23046, 23047, 9},  // light_gray_candle
+	{23050, 23051, 12}, // light_gray_candle
+	{23054, 23055, 3},  // cyan_candle
+	{23058, 23059, 6},  // cyan_candle
+	{23062, 23063, 9},  // cyan_candle
+	{23066, 23067, 12}, // cyan_candle
+	{23070, 23071, 3},  // purple_candle
+	{23074, 23075, 6},  // purple_candle
+	{23078, 23079, 9},  // purple_candle
+	{23082, 23083, 12}, // purple_candle
+	{23086, 23087, 3},  // blue_candle
+	{23090, 23091, 6},  // blue_candle
+	{23094, 23095, 9},  // blue_candle
+	{23098, 23099, 12}, // blue_candle
+	{23102, 23103, 3},  // brown_candle
+	{23106, 23107, 6},  // brown_candle
+	{23110, 23111, 9},  // brown_candle
+	{23114, 23115, 12}, // brown_candle
+	{23118, 23119, 3},  // green_candle
+	{23122, 23123, 6},  // green_candle
+	{23126, 23127, 9},  // green_candle
+	{23130, 23131, 12}, // green_candle
+	{23134, 23135, 3},  // red_candle
+	{23138, 23139, 6},  // red_candle
+	{23142, 23143, 9},  // red_candle
+	{23146, 23147, 12}, // red_candle
+	{23150, 23151, 3},  // black_candle
+	{23154, 23155, 6},  // black_candle
+	{23158, 23159, 9},  // black_candle
+	{23162, 23163, 12}, // black_candle
+	{23166, 23166, 3},  // candle_cake
+	{23168, 23168, 3},  // white_candle_cake
+	{23170, 23170, 3},  // orange_candle_cake
+	{23172, 23172, 3},  // magenta_candle_cake
+	{23174, 23174, 3},  // light_blue_candle_cake
+	{23176, 23176, 3},  // yellow_candle_cake
+	{23178, 23178, 3},  // lime_candle_cake
+	{23180, 23180, 3},  // pink_candle_cake
+	{23182, 23182, 3},  // gray_candle_cake
+	{23184, 23184, 3},  // light_gray_candle_cake
+	{23186, 23186, 3},  // cyan_candle_cake
+	{23188, 23188, 3},  // purple_candle_cake
+	{23190, 23190, 3},  // blue_candle_cake
+	{23192, 23192, 3},  // brown_candle_cake
+	{23194, 23194, 3},  // green_candle_cake
+	{23196, 23196, 3},  // red_candle_cake
+	{23198, 23198, 3},  // black_candle_cake
 	{23202, 23213, 5},  // amethyst_cluster
 	{23214, 23225, 4},  // large_amethyst_bud
 	{23226, 23237, 2},  // medium_amethyst_bud
@@ -59,14 +195,68 @@ var lightRanges = []struct {
 	{24488, 24583, 1},  // sculk_sensor
 	{24584, 24967, 1},  // calibrated_sculk_sensor
 	{25097, 25098, 6},  // sculk_catalyst
+	{26861, 26862, 15}, // copper_bulb
+	{26865, 26866, 12}, // exposed_copper_bulb
+	{26869, 26870, 8},  // weathered_copper_bulb
+	{26873, 26874, 4},  // oxidized_copper_bulb
+	{26877, 26878, 15}, // waxed_copper_bulb
+	{26881, 26882, 12}, // waxed_exposed_copper_bulb
+	{26885, 26886, 8},  // waxed_weathered_copper_bulb
+	{26889, 26890, 4},  // waxed_oxidized_copper_bulb
+	{27554, 27554, 14}, // cave_vines
+	{27556, 27556, 14}, // cave_vines
+	{27558, 27558, 14}, // cave_vines
+	{27560, 27560, 14}, // cave_vines
+	{27562, 27562, 14}, // cave_vines
+	{27564, 27564, 14}, // cave_vines
+	{27566, 27566, 14}, // cave_vines
+	{27568, 27568, 14}, // cave_vines
+	{27570, 27570, 14}, // cave_vines
+	{27572, 27572, 14}, // cave_vines
+	{27574, 27574, 14}, // cave_vines
+	{27576, 27576, 14}, // cave_vines
+	{27578, 27578, 14}, // cave_vines
+	{27580, 27580, 14}, // cave_vines
+	{27582, 27582, 14}, // cave_vines
+	{27584, 27584, 14}, // cave_vines
+	{27586, 27586, 14}, // cave_vines
+	{27588, 27588, 14}, // cave_vines
+	{27590, 27590, 14}, // cave_vines
+	{27592, 27592, 14}, // cave_vines
+	{27594, 27594, 14}, // cave_vines
+	{27596, 27596, 14}, // cave_vines
+	{27598, 27598, 14}, // cave_vines
+	{27600, 27600, 14}, // cave_vines
+	{27602, 27602, 14}, // cave_vines
+	{27604, 27604, 14}, // cave_vines
+	{27606, 27606, 14}, // cave_vines_plant
 	{29380, 29382, 15}, // ochre_froglight
 	{29383, 29385, 15}, // verdant_froglight
 	{29386, 29388, 15}, // pearlescent_froglight
-	{29467, 29498, 6},  // vault
+	{29456, 29456, 4},  // trial_spawner
+	{29457, 29459, 8},  // trial_spawner
+	{29462, 29462, 4},  // trial_spawner
+	{29463, 29465, 8},  // trial_spawner
+	{29467, 29467, 6},  // vault
+	{29468, 29470, 12}, // vault
+	{29471, 29471, 6},  // vault
+	{29472, 29474, 12}, // vault
+	{29475, 29475, 6},  // vault
+	{29476, 29478, 12}, // vault
+	{29479, 29479, 6},  // vault
+	{29480, 29482, 12}, // vault
+	{29483, 29483, 6},  // vault
+	{29484, 29486, 12}, // vault
+	{29487, 29487, 6},  // vault
+	{29488, 29490, 12}, // vault
+	{29491, 29491, 6},  // vault
+	{29492, 29494, 12}, // vault
+	{29495, 29495, 6},  // vault
+	{29496, 29498, 12}, // vault
 	{29670, 29670, 2},  // firefly_bush
 }
 
-// LightEmission returns the block-light level a state emits, 0 if it emits none.
+// LightEmission is the light level a block state emits (0 if none).
 func LightEmission(state uint32) uint8 {
 	lo, hi := 0, len(lightRanges)
 	for lo < hi {

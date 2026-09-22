@@ -92,12 +92,3 @@ func CopperBulbSet(state uint32, lit, powered bool) uint32 {
 	}
 	return l.base + off
 }
-
-// copperBulbEmission is the block-light a bulb state emits (0 for unlit or
-// non-bulb) — used by lightfast.go to patch the emission table.
-func copperBulbEmission(state uint32) uint8 {
-	if l, ok := bulbLineOf(state); ok && state-l.base < 2 {
-		return l.lit
-	}
-	return 0
-}

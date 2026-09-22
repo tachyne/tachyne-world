@@ -96,6 +96,14 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **Lit blocks give off light again.** A lit furnace, a powered redstone lamp,
+  lit redstone ore, a charged respawn anchor, a campfire, glow berries — none
+  of them lit anything, while an *unlit* redstone torch lit the room it was
+  in. Light is a per-state property in vanilla (a candle gives 3, 6, 9 or 12
+  by how many are lit), but the table behind it only had one value per block,
+  taken from that block's default state: unlit for most, lit for a redstone
+  torch. Sixty blocks were affected. The table is per-state now, and every one
+  of the 29,671 block states was checked against vanilla — all of them match.
 - **New blocks on a newer client stop arriving as something else.** A 26.3
   player putting poplar planks in their hotbar had the server store redstone
   ore, and placed redstone ore. Poplar is 26.3 content and the world engine's
