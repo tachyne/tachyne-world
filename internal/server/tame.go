@@ -16,7 +16,7 @@ const (
 	entityStatusTameFail = 6 // smoke puff: taming didn't take
 	entityStatusTameOK   = 7 // hearts: tamed!
 
-	petFollowStart = 10.0 // FollowOwnerGoal's start distance: every pet's is 10
+	petFollowStart = 10.0 // FollowOwnerGoal's start distance for a wolf or a cat
 	petFollowStop  = 2.0  // …the wolf's stop distance; cats and parrots differ
 	petTeleport    = 12.0 // TELEPORT_WHEN_DISTANCE_IS_SQ = 144: blink at twelve blocks
 
@@ -110,7 +110,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	}
 	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
 	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
-	m.setFollowRange(petFollowStart)
+	m.setFollowRange(petStartDistance(m.etype))
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 	if vm := variantMeta(m); vm != nil {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vm)) // the collar appears with the tame
@@ -146,12 +146,22 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		m.hasTarget = false
-	case d > petFollowStart:
+	case d > petStartDistance(m.etype):
 		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z
 	case d < petStopDistance(m.etype):
 		m.hasTarget = false // close enough — mill around
 	}
 	return false
+}
+
+// petStartDistance is FollowOwnerGoal's start distance: ten blocks for a wolf
+// or a cat, but a parrot sets off after five — it is meant to stay on your
+// shoulder, not orbit the neighbourhood.
+func petStartDistance(etype int) float64 {
+	if etype == entityParrot {
+		return 5
+	}
+	return petFollowStart
 }
 
 // petStopDistance is FollowOwnerGoal's per-species stop distance: a wolf

@@ -121,3 +121,23 @@ func TestPetStopDistancePerSpecies(t *testing.T) {
 		t.Error("a wolf four blocks off is still coming")
 	}
 }
+
+// FollowOwnerGoal's start distance is per species: a wolf or a cat sets off
+// after ten blocks, but a parrot after five — it is meant to stay on your
+// shoulder. Every pet was using ten.
+func TestParrotFollowsSooner(t *testing.T) {
+	if got := petStartDistance(entityParrot); got != 5 {
+		t.Errorf("parrot start distance = %v, want 5", got)
+	}
+	for _, e := range []int{entityWolf, entityCat, entityOcelot} {
+		if got := petStartDistance(e); got != petFollowStart {
+			t.Errorf("%s start distance = %v, want %v", entityNameByID[e], got, petFollowStart)
+		}
+	}
+	// The stop distances stay as they were.
+	for e, want := range map[int]float64{entityWolf: 2, entityCat: 5, entityParrot: 1} {
+		if got := petStopDistance(e); got != want {
+			t.Errorf("%s stop distance = %v, want %v", entityNameByID[e], got, want)
+		}
+	}
+}

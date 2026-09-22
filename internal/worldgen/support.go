@@ -54,7 +54,9 @@ var supportNames = map[SupportKind][]string{
 	},
 	SupportFace: {
 		"acacia_button", "bamboo_button", "birch_button", "cherry_button",
-		"crimson_button", "dark_oak_button", "grindstone", "jungle_button",
+		// The grindstone is NOT here: GrindstoneBlock.canSurvive returns true
+		// unconditionally, so one hung on a wall stays when the wall goes.
+		"crimson_button", "dark_oak_button", "jungle_button",
 		"lever", "mangrove_button", "oak_button", "pale_oak_button",
 		"polished_blackstone_button", "spruce_button", "stone_button",
 		"warped_button",

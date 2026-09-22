@@ -226,3 +226,18 @@ func TestColumnPlantsSurviveANeighbourEdit(t *testing.T) {
 		}
 	}
 }
+
+// GrindstoneBlock.canSurvive returns true unconditionally: a grindstone hung
+// on a wall stays there when the wall goes. It was classed with the buttons
+// and levers, which drop.
+func TestGrindstoneNeverDrops(t *testing.T) {
+	w := world.New(1)
+	base := worldgen.BlockBase("grindstone")
+	if got := worldgen.SupportFor(base); got != worldgen.SupportNone {
+		t.Fatalf("grindstone support class = %d, want none", got)
+	}
+	// Nothing around it at all, and it still holds.
+	if !supported(w, blockPos{40, 180, 40}, base) {
+		t.Fatal("a grindstone in mid-air should still survive")
+	}
+}
