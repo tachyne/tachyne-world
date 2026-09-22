@@ -97,53 +97,94 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 }
 
 const (
-	golemVillagersToAgree = 5    // vanilla Villager.spawnGolemIfNeeded villagersNeededToAgree
-	golemNearRange        = 24.0 // an existing golem this close counts as "the village has one"
-	golemRespawnDelay     = 1200 // ticks before a village re-agrees after losing/lacking a golem
+	golemVillagersToAgree = 5     // vanilla Villager.spawnGolemIfNeeded villagersNeededToAgree
+	golemAgreeBox         = 10.0  // the box a villager counts its neighbours in (bounding box inflated 10)
+	golemSleptWithin      = 24000 // golemSpawnConditionsMet: a day's ticks since it last lay down
+	golemDetectedTicks    = 600   // GolemSensor.golemDetected: the memory's life
+	golemSensorRange      = 16.0  // a golem this close is one the villager can see
+	golemSpawnSpread      = 8.0   // SpawnUtil.trySpawnMob's horizontal reach around the villager
 )
 
-// updateVillageGolems is vanilla Villager.spawnGolemIfNeeded, hoisted to the
-// village scale: a meeting point (bell) with at least 5 living villagers and no
-// nearby iron golem grows one, then waits out a cooldown before agreeing again.
-// This replaces the old one-golem-per-village-forever spawn: hamlets under the
-// quorum get none, large villages re-spawn a golem after theirs dies.
+// updateVillageGolems is vanilla Villager.spawnGolemIfNeeded. A villager that
+// has slept within the last day and has not seen a golem lately looks around
+// its own 10-block box for four more in the same state; five that agree grow a
+// golem near them, and every villager in the box then remembers seeing one for
+// thirty seconds.
+//
+// The census used to be per BELL and had no sleep gate, which made a golem the
+// automatic reward for five villagers standing near a meeting point — vanilla
+// asks them to be a village that goes to bed, and asks the five to be in one
+// place rather than spread across a whole town.
 func (h *hub) updateVillageGolems(players map[int32]*tracked) {
-	// Census villagers by their shared meeting point.
-	census := map[blockPos]int{}
+	now := h.tick.Load()
+	// One pass to collect the two short lists this works on; everything below
+	// walks those rather than every mob in the world.
+	var villagers, golems []*mob
 	for _, m := range h.mobs {
-		if m.etype == entityVillager && m.meet != (blockPos{}) && !m.baby {
-			census[m.meet]++
+		switch {
+		case m.etype == entityVillager && !m.baby && m.dying == 0:
+			villagers = append(villagers, m)
+		case m.etype == entityIronGolem && m.dying == 0:
+			golems = append(golems, m)
 		}
 	}
-	for meet, n := range census {
-		if n < golemVillagersToAgree {
-			continue
-		}
-		if now := h.tick.Load(); now < h.villageGolem[meet] {
-			continue // cooling down since the last spawn/agreement
-		}
-		golemNear := false
-		for _, g := range h.mobs {
-			if g.etype == entityIronGolem && g.dim == 0 &&
-				dist3(g.x, g.y, g.z, float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+0.5) < golemNearRange {
-				golemNear = true
+	// GolemSensor: a villager within sight of a golem remembers it, which is
+	// what stops a village that already has one from growing another.
+	for _, m := range villagers {
+		for _, g := range golems {
+			if g.dim == m.dim && dist3(g.x, g.y, g.z, m.x, m.y, m.z) < golemSensorRange {
+				m.golemSeen = now + golemDetectedTicks
 				break
 			}
 		}
-		if golemNear {
+	}
+	for _, m := range villagers {
+		if !h.wantsToSpawnGolem(m, now) {
+			continue
+		}
+		agree := 0
+		for _, o := range villagers {
+			if o.dim != m.dim || !h.wantsToSpawnGolem(o, now) {
+				continue
+			}
+			if abs64(o.x-m.x) <= golemAgreeBox && abs64(o.y-m.y) <= golemAgreeBox && abs64(o.z-m.z) <= golemAgreeBox {
+				if agree++; agree >= golemVillagersToAgree {
+					break // vanilla stops counting at five too
+				}
+			}
+		}
+		if agree < golemVillagersToAgree {
 			continue
 		}
 		g := h.spawnMob(players, entityIronGolem,
-			float64(meet.x)+0.5, float64(meet.y), float64(meet.z)+2.5)
+			m.x+(h.rng.Float64()*2-1)*golemSpawnSpread, m.y,
+			m.z+(h.rng.Float64()*2-1)*golemSpawnSpread)
 		if g == nil {
 			continue // plugin-cancelled spawn
 		}
 		g.health = 100
 		g.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
 		g.behavior = golemBehavior{}
-		g.home = meet
-		h.villageGolem[meet] = h.tick.Load() + golemRespawnDelay
+		g.home = blockPos{floorInt(m.x), floorInt(m.y), floorInt(m.z)}
+		// Everyone in the box now knows the village has a golem.
+		for _, o := range villagers {
+			if o.dim == m.dim &&
+				abs64(o.x-m.x) <= golemAgreeBox && abs64(o.y-m.y) <= golemAgreeBox && abs64(o.z-m.z) <= golemAgreeBox {
+				o.golemSeen = now + golemDetectedTicks
+			}
+		}
 	}
+}
+
+// wantsToSpawnGolem is Villager.wantsToSpawnGolem: an adult villager that lay
+// down within the last day and has not seen a golem in the last thirty
+// seconds.
+func (h *hub) wantsToSpawnGolem(m *mob, now uint64) bool {
+	if m.etype != entityVillager || m.baby || m.dying != 0 || m.lastSlept == 0 {
+		return false // never lay down: no bed, or a villager that has not been home
+	}
+	slept := m.lastSlept - 1 // stored +1 so that zero can mean "never"
+	return now >= slept && now-slept < golemSleptWithin && now >= m.golemSeen
 }
 
 // nearestJobSite returns the profession index + work position of the job-site

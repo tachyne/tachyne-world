@@ -129,6 +129,7 @@ type savedMob struct {
 	HasEgg        bool        `json:"has_egg,omitempty"`        // turtle: carrying an egg home
 	Screaming     bool        `json:"screaming,omitempty"`      // goat: the screaming variant
 	SoundSet      int8        `json:"soundset,omitempty"`       // wolf: its WolfSoundVariant (0 = classic)
+	LastSlept     uint64      `json:"lastslept,omitempty"`      // villager: LAST_SLEPT (the iron-golem quorum)
 	BreaksDoors   bool        `json:"breaks_doors,omitempty"`   // zombie: can break doors
 	PoseTick      int64       `json:"pose_tick,omitempty"`      // camel: LastPoseTick
 	RavStun       int         `json:"rav_stun,omitempty"`       // ravager: StunTick
@@ -686,7 +687,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, SoundSet: m.soundSet, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, TraderDespawn: m.traderDespawn, Lifetime: m.endermiteLife, TadpoleAge: m.tadpoleAge, Trusted: trustedList(m),
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, SoundSet: m.soundSet, LastSlept: m.lastSlept, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, TraderDespawn: m.traderDespawn, Lifetime: m.endermiteLife, TadpoleAge: m.tadpoleAge, Trusted: trustedList(m),
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])

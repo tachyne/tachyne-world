@@ -126,6 +126,7 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 		return false // still walking home to bed
 	}
 	m.sleeping = true
+	m.lastSlept = h.tick.Load() + 1 // LAST_SLEPT: what the iron-golem quorum asks for
 	// Lie down on the HEAD half, wherever worldgen recorded the bed — the same
 	// anchor rule players follow, and for the same rendering reason.
 	head, ok := h.bedHead(m.dim, m.bed)

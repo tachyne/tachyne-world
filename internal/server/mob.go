@@ -228,6 +228,8 @@ type mob struct {
 	jobSearchAt                     uint64      // villager: tick of the next workstation scan
 	meet                            blockPos    // villager: the village meeting point (bell/well)
 	sleeping                        bool        // villager: lying in its bed through the night
+	lastSlept                       uint64      // villager: the tick it last lay down PLUS ONE (LAST_SLEPT; 0 = never)
+	golemSeen                       uint64      // villager: tick the GOLEM_DETECTED_RECENTLY memory runs out
 	swims                           bool        // water-bound: lives inside a water column (fish/squid)
 	flies                           bool        // free flight: no ground collision (bat/phantom/ghast)
 	statik                          bool        // anchored: never walks (shulker)

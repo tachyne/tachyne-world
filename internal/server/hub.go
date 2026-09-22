@@ -626,19 +626,18 @@ type hub struct {
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
 
-	dragon        *mob                // the ender dragon (nil = none / defeated)
-	crystals      map[int32]*crystal  // end crystals by eid
-	dragonRespawn *dragonRespawn      // the respawn ceremony in progress (nil = none)
-	phantomNextAt uint64              // next insomnia check (vanilla PhantomSpawner cadence)
-	catNextAt     uint64              // next village-cat spawner tick
-	villageDone   map[blockPos]bool   // villages populated this session
-	villageGolem  map[blockPos]uint64 // per-meeting-point next-allowed golem spawn tick
-	mansionDone   map[[2]int32]bool   // woodland mansions populated with illagers (persisted)
-	bastionDone   map[[2]int32]bool   // bastion remnants seeded with piglins/hoglins (persisted)
-	hutDone       map[[2]int32]bool   // swamp huts seeded with their witch and cat (persisted)
-	endCityDone   map[[2]int32]bool   // End cities seeded with shulkers + the elytra frame (persisted)
-	oceanRuinDone map[[2]int32]bool   // ocean ruin sites seeded with their drowned (persisted)
-	outpostDone   map[blockPos]bool   // pillager outposts populated this session
+	dragon        *mob               // the ender dragon (nil = none / defeated)
+	crystals      map[int32]*crystal // end crystals by eid
+	dragonRespawn *dragonRespawn     // the respawn ceremony in progress (nil = none)
+	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)
+	catNextAt     uint64             // next village-cat spawner tick
+	villageDone   map[blockPos]bool  // villages populated this session
+	mansionDone   map[[2]int32]bool  // woodland mansions populated with illagers (persisted)
+	bastionDone   map[[2]int32]bool  // bastion remnants seeded with piglins/hoglins (persisted)
+	hutDone       map[[2]int32]bool  // swamp huts seeded with their witch and cat (persisted)
+	endCityDone   map[[2]int32]bool  // End cities seeded with shulkers + the elytra frame (persisted)
+	oceanRuinDone map[[2]int32]bool  // ocean ruin sites seeded with their drowned (persisted)
+	outpostDone   map[blockPos]bool  // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
 	// raining/thundering are the level-derived gameplay booleans the rest of
@@ -810,7 +809,6 @@ func newHub(w *world.World) *hub {
 		openDoors:     map[blockPos]uint64{},
 		crystals:      map[int32]*crystal{},
 		villageDone:   map[blockPos]bool{},
-		villageGolem:  map[blockPos]uint64{},
 		mansionDone:   map[[2]int32]bool{},
 		bastionDone:   map[[2]int32]bool{},
 		hutDone:       map[[2]int32]bool{},
@@ -2374,8 +2372,8 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	fromX, fromY, fromZ := t.x, t.y, t.z // pre-move position (plugin move event)
 	h.flyIntoWall(players, t, e)         // a glide that ends against a wall costs
 
-	h.onFallAndExhaust(players, t, e)    // fall damage + walking hunger (reads pre-move position)
-	h.moveStats(t, e)                    // the vanilla movement statistics family (cm, teleports excluded)
+	h.onFallAndExhaust(players, t, e) // fall damage + walking hunger (reads pre-move position)
+	h.moveStats(t, e)                 // the vanilla movement statistics family (cm, teleports excluded)
 	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting

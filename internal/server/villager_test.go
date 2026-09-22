@@ -31,29 +31,63 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
 	players := map[int32]*tracked{1: pl}
 	h.updateVillages(players)
-	h.updateVillageGolems(players) // golems now spawn via the ≥5-villager census
-	villagers, golems := 0, 0
+	count := func() (villagers, golems int) {
+		for _, m := range h.mobs {
+			switch m.etype {
+			case entityVillager:
+				villagers++
+			case entityIronGolem:
+				golems++
+			}
+		}
+		return
+	}
+
+	// A village that has never slept grows no golem: vanilla's quorum asks for
+	// five villagers who lay down within the last day.
+	h.updateVillageGolems(players)
+	villagers, golems := count()
+	wantVillagers := len(w.Gen().VillageVillagers(v)) // the jigsaw's villager pieces
+	if villagers != wantVillagers {
+		t.Fatalf("want %d villagers, got %d", wantVillagers, villagers)
+	}
+	if golems != 0 {
+		t.Fatalf("a village whose villagers have never slept grew %d golems", golems)
+	}
+
+	// Let them sleep, and gather them at the bell the way the midday segment
+	// does — vanilla's trigger is two villagers gossiping at the meeting
+	// point, so the five that agree are standing together by construction.
+	gathered := 0
 	for _, m := range h.mobs {
-		switch m.etype {
-		case entityVillager:
-			villagers++
-		case entityIronGolem:
-			golems++
+		if m.etype != entityVillager {
+			continue
+		}
+		m.lastSlept = h.tick.Load() + 1
+		if !m.baby && gathered < golemVillagersToAgree {
+			m.x, m.y, m.z = float64(v.X)+float64(gathered), float64(v.Y), float64(v.Z)
+			gathered++
 		}
 	}
-	wantVillagers := len(w.Gen().VillageVillagers(v)) // the jigsaw's villager pieces
-	// The golem appears only if the village met the vanilla 5-villager quorum.
-	wantGolems := 0
-	if wantVillagers >= golemVillagersToAgree {
-		wantGolems = 1
+	h.updateVillageGolems(players)
+	_, golems = count()
+	if gathered >= golemVillagersToAgree && golems == 0 {
+		t.Fatalf("%d rested villagers gathered at the bell grew no golem", gathered)
 	}
-	if villagers != wantVillagers || golems != wantGolems {
-		t.Fatalf("want %d villagers + %d golem, got %d + %d", wantVillagers, wantGolems, villagers, golems)
+	if gathered < golemVillagersToAgree && golems != 0 {
+		t.Fatalf("only %d villagers gathered, under the quorum, but %d golems grew", gathered, golems)
+	}
+
+	// Having one, they do not grow another.
+	before := golems
+	h.updateVillageGolems(players)
+	if _, now := count(); now != before {
+		t.Fatalf("a village with a golem grew %d more", now-before)
 	}
 	// Second pass: no duplicates.
-	before := len(h.mobs)
+	mobsBefore := len(h.mobs)
 	h.updateVillages(players)
-	if len(h.mobs) != before {
+	if len(h.mobs) != mobsBefore {
 		t.Fatal("village must populate once per session")
 	}
 }
@@ -943,5 +977,64 @@ func TestRestockDayRollsOverWithoutABed(t *testing.T) {
 	sm := toSavedMob(m)
 	if sm.Restocks != m.restocksToday || sm.LastStock != m.lastRestockTick {
 		t.Errorf("the restock budget did not reach the store: %+v", sm)
+	}
+}
+
+// The iron-golem quorum is vanilla's, not a bell census: five ADULT villagers
+// within one villager's ten-block box, each of whom lay down within the last
+// day, and none of whom has seen a golem in the last thirty seconds.
+func TestIronGolemQuorum(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	now := h.tick.Load()
+
+	make5 := func(x, y, z float64) []*mob {
+		var out []*mob
+		for i := 0; i < golemVillagersToAgree; i++ {
+			m := h.spawnMob(players, entityVillager, x+float64(i), y, z)
+			m.lastSlept = now + 1
+			out = append(out, m)
+		}
+		return out
+	}
+	golems := func() (n int) {
+		for _, m := range h.mobs {
+			if m.etype == entityIronGolem {
+				n++
+			}
+		}
+		return
+	}
+
+	vs := make5(0, 70, 0)
+	// One of them has never slept: four is under the quorum.
+	vs[0].lastSlept = 0
+	h.updateVillageGolems(players)
+	if n := golems(); n != 0 {
+		t.Fatalf("four rested villagers grew %d golems", n)
+	}
+
+	vs[0].lastSlept = now + 1
+	h.updateVillageGolems(players)
+	if n := golems(); n != 1 {
+		t.Fatalf("five rested villagers grew %d golems, want 1", n)
+	}
+
+	// Having seen it, they do not agree again.
+	h.updateVillageGolems(players)
+	if n := golems(); n != 1 {
+		t.Fatalf("the quorum fired twice: %d golems", n)
+	}
+
+	// A villager who last slept more than a day ago no longer counts, so a
+	// second village of five that stopped going home grows nothing.
+	far := make5(400, 70, 400)
+	for _, m := range far {
+		m.lastSlept = 1 // a day and more ago once the clock is wound on
+	}
+	h.tick.Store(now + golemSleptWithin + 10)
+	h.updateVillageGolems(players)
+	if n := golems(); n != 1 {
+		t.Fatalf("villagers who stopped sleeping still grew a golem: %d", n)
 	}
 }
