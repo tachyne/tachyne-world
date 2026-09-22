@@ -1489,8 +1489,12 @@ func (h *hub) run() {
 					}
 				})
 			case evBlockSound:
+				vol, pitch := e.volume, e.pitch
+				if vol == 0 {
+					vol, pitch = 1, 0.9+h.rng.Float32()*0.1
+				}
 				h.playSoundExcept(players, e.dim, e.eid, e.name, sndBlock,
-					float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 0.9+h.rng.Float32()*0.1)
+					float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, vol, pitch)
 			case evVibration:
 				if t := players[e.eid]; t != nil {
 					if e.quiet {

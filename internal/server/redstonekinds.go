@@ -146,6 +146,10 @@ type evBlockSound struct {
 	dim     int
 	x, y, z int
 	name    string
+	// volume and pitch as the vanilla call site passes them. A zero volume
+	// asks for the door-and-button voice instead — full volume and the
+	// 0.9-1.0 pitch jitter DoorBlock.playSound gives those.
+	volume, pitch float32
 }
 
 func (evBlockSound) isHubEvent() {}

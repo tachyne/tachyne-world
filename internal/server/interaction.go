@@ -470,8 +470,19 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
 	}
-	if placed && s.modes.get(p.name) == gmSurvival { // survival uses up one of the stack
-		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+	if placed {
+		// BlockItem.place: the block that ended up there speaks its sound
+		// type's place event to everyone near it but the placer, whose own
+		// client played it the moment it predicted the placement. Reading
+		// the state back is what vanilla does too — a slab that stacked, a
+		// block that waterlogged or a rail that bent has the final say.
+		if name, vol, pitch := blockPlaceSound(s.worldFor(p).Block(tx, ty, tz)); name != "" {
+			s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: tx, y: ty, z: tz,
+				name: name, volume: vol, pitch: pitch})
+		}
+		if s.modes.get(p.name) == gmSurvival { // survival uses up one of the stack
+			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		}
 	}
 }
 

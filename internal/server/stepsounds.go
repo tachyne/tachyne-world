@@ -14,6 +14,9 @@ import (
 // and a muffled copy of the block beneath), or the mob's own footfall for
 // the species that have one. A mob moving through water splashes instead.
 
+// silentSound is SoundEvents.EMPTY — a registered event that plays nothing.
+const silentSound = "minecraft:intentionally_empty"
+
 // stepSound is a sound type's step voice: volume, pitch, event name.
 type stepSound struct {
 	volume, pitch float32
@@ -75,6 +78,23 @@ func blockStepSound(state uint32) stepSound {
 		t = "STONE"
 	}
 	return soundTypeSteps[t]
+}
+
+// blockPlaceSound is BlockItem.place's voice for a freshly placed block: the
+// sound type's place event, at half again its volume and 0.8 of its pitch.
+// The empty event means the block places in silence (a dried ghast, a cactus
+// flower) and comes back with no name at all.
+func blockPlaceSound(state uint32) (name string, volume, pitch float32) {
+	n, _ := worldgen.StateName(state)
+	t := blockSoundType[n]
+	if t == "" {
+		t = "STONE"
+	}
+	if name = soundTypePlaces[t]; name == silentSound {
+		return "", 0, 0
+	}
+	s := soundTypeSteps[t]
+	return name, (s.volume + 1) / 2, s.pitch * 0.8
 }
 
 // mobFootsteps is Entity.move's step-sound half for one movement: the
