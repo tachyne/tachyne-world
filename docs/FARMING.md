@@ -72,8 +72,9 @@ Current authoritative facts (verified):
   (`NeedsGroundSupport`).
 
 ### 1.3 Maturity-based harvest drops
-- **Where:** `loot.go` `rollDrops` — add a crop switch BEFORE the generic
-  `generatedDrop` fallback (which wrongly yields a single item for the whole range).
+- **Where:** block loot now comes from vanilla's own tables (`blockloot.go`
+  `evalBlockLoot`), which carry the crop age conditions directly; `rollDrops`
+  rolls the same tables for drops with no player tool.
 - **Vanilla drop rules to reproduce** (`cropDrops(state) []stack`):
   | crop | immature | mature |
   |---|---|---|

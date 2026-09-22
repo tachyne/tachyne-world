@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate internal/server/lootdata/entities.json — the vanilla BLOCK loot
 tables baked into a compact IR the engine's data-driven loot evaluator reads,
-keyed by block-state range (binary-searched in Go, like loot_gen.go).
+keyed by block-state range (binary-searched in Go).
 
 Source: the 1.21.11 server jar datapack (data/minecraft/loot_table/blocks/
 *.json); entity names and item names → ids via vanilla's own reports

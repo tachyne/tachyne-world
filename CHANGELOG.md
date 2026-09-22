@@ -96,6 +96,16 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **Leaves and grass drop at vanilla's rates, and leaves drop their own
+  sapling.** Short grass broken by hand dropped seeds 23% of the time instead
+  of 12.5%, and leaves gave saplings and sticks about twice as often as they
+  should: when a loot roll came up empty it was mistaken for a block with no
+  loot table, and a fallback rolled it again. Decaying leaves always dropped
+  an oak sapling and could drop an apple whatever the tree, so a birch or
+  spruce forest could not reseed itself. Every drop that involves no tool —
+  leaf decay, pistons, a block losing its support, banners and pots — now
+  rolls the block's own vanilla loot table, and wall torches, signs, banners
+  and heads use the standing block's table as vanilla has them do.
 - **Mixed materials craft.** A crafting table from two oak and two spruce
   planks, sticks from an oak plank over a spruce one, a furnace ringed with
   cobblestone and cobbled deepslate — none of these crafted, because every

@@ -542,7 +542,7 @@ func (h *hub) tickLeaf(players map[int32]*tracked, dim, x, y, z int, state uint3
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 	h.scheduleAroundIn(dim, blockPos{x, y, z}, fallDelay)
-	h.rollLeafDrops(players, dim, x, y, z)
+	h.rollLeafDrops(players, dim, x, y, z, state)
 }
 
 // leafTrueDistance walks outward through connected leaves for the nearest
@@ -765,9 +765,13 @@ func (h *hub) findSaplingSquare(dim, x, z, y int, rng [2]uint32) (int, int, bool
 	return 0, 0, false
 }
 
-// rollLeafDrops spawns a decaying leaf's loot (5% sapling / 2% sticks / 0.5% apple).
-func (h *hub) rollLeafDrops(players map[int32]*tracked, dim, x, y, z int) {
-	for _, d := range h.leafDrops() {
+// rollLeafDrops spawns a decaying leaf's loot from that leaf's own table, as
+// LeavesBlock does through dropResources: its own sapling (a birch leaf drops a
+// birch sapling, not an oak one; jungle leaves more rarely), sticks, and apples
+// only from oak and dark oak. It used a single generic table before, which gave
+// every kind of leaf an oak sapling and an apple chance.
+func (h *hub) rollLeafDrops(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	for _, d := range h.rollDrops(state) {
 		h.spawnBlockDrop(players, dim, d.item, d.count, x, y, z)
 	}
 }

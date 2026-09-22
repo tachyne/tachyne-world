@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate internal/server/lootdata/blocks.json — the vanilla BLOCK loot
 tables baked into a compact IR the engine's data-driven loot evaluator reads,
-keyed by block-state range (binary-searched in Go, like loot_gen.go).
+keyed by block-state range (binary-searched in Go).
 
 Source: the 1.21.11 server jar datapack (data/minecraft/loot_table/blocks/
 *.json); block names → state ranges and item names → ids via vanilla's own reports
@@ -169,18 +169,24 @@ def table(t):
     return {"pools": pools}
 
 
+# Each block drops from the loot table IT names, which the game reports (see
+# scripts/extract). Usually that is blocks/<its own name>, but a wall torch,
+# wall sign, wall banner or wall head borrows the standing block's table
+# (dropsLike), and pairing tables to blocks by file name left all 61 of those
+# with no table at all — they fell through to a flat one-item fallback.
+# Blocks with no loot table get no row.
+names = set(z.namelist())
+loot_of = {b["name"]: b.get("lootTable")
+           for b in json.load(open(os.path.expanduser("~/vanilla/extract/1.21.11.json")))["blocks"]}
 rows, kept, skipped = [], 0, 0
-for n in sorted(z.namelist()):
-    if not (n.startswith("data/minecraft/loot_table/blocks/") and n.endswith(".json")):
-        continue
-    name = n[len("data/minecraft/loot_table/blocks/"):-len(".json")]
-    if name not in brange:
-        skipped += 1
+for b in blocks:
+    key = loot_of.get(b["name"])
+    path = "data/minecraft/loot_table/%s.json" % key
+    if not key or path not in names:
         continue
     try:
-        tbl = table(json.loads(z.read(n)))
-        lo, hi = brange[name]
-        rows.append({"lo": lo, "hi": hi, "table": tbl})
+        tbl = table(json.loads(z.read(path)))
+        rows.append({"lo": b["minStateId"], "hi": b["maxStateId"], "table": tbl})
         kept += 1
     except Unsupported:
         skipped += 1

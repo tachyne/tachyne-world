@@ -200,13 +200,23 @@ type lootCtx struct {
 	luck float64
 }
 
-// evalBlockLoot rolls the baked table; returns nil if the block has none.
+// evalBlockLoot rolls the baked table. It returns nil ONLY when the block has
+// no table; a table that rolled nothing gives an empty, non-nil result.
+//
+// Callers fall back to hand-written drops on nil, so the difference matters.
+// When "rolled nothing" also came back nil, a failed roll fell through and was
+// rolled again by the fallback: short grass broken by hand dropped seeds 23%
+// of the time instead of vanilla's 12.5%, and leaves their saplings and sticks
+// about twice as often.
 func (h *hub) evalBlockLoot(ctx lootCtx) []drop {
 	tbl := lootFor(ctx.state)
 	if tbl == nil {
 		return nil
 	}
-	return h.evalTable(tbl, ctx)
+	if ds := h.evalTable(tbl, ctx); ds != nil {
+		return ds
+	}
+	return []drop{}
 }
 
 // evalTable rolls every pool of a table under the context.

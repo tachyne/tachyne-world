@@ -330,9 +330,9 @@ mounts are future work.
 | Block | Vanilla | Ours | Status |
 |---|---|---|---|
 | Grass/fern → wheat seeds | 1/8 (12.5%) | `rng(8)==0` | ✅ |
-| Gravel → flint | 1/10 (10%), else gravel | `rng(10)==0` | ✅ |
-| Leaves → sapling / stick / apple | 5% / 2% (1–2) / 0.5% | 1/20 / 1/50 (1–2) / 1/200 | ✅ |
-| Everything else → its item | per block | generated `loot_gen.go` (931 blocks) | ✅ default-drop |
+| Gravel → flint | 1/10 (10%), else gravel | vanilla loot table | ✅ |
+| Leaves → sapling / stick / apple | each leaf's own sapling (jungle rarer), sticks, apples from oak and dark oak only | that leaf's vanilla loot table, broken or decayed | ✅ |
+| Everything else | per block | the block's own vanilla loot table (`lootdata/blocks.json`), including the wall torches, signs, banners and heads that borrow a standing block's table | ✅ data-driven |
 | Correct-tool requirement | stone/ore drop only with the right tool tier | `HarvestableBy` gates `evDrop` via blocks.json `harvestTools` | ✅ data-driven |
 | Ore counts (lapis 4–9, redstone 4–5…) | varied | single item | 🟡 no count/Fortune |
 | Silk Touch / Fortune | modifies drops | — | ❌ |
@@ -388,7 +388,7 @@ into `worldgen/blockmeta_gen.go` by `scripts/gen_blockmeta.py`.
 | `defaultState` / `states` | placement state layout | `block_states_gen.go` + `SetProperty` | ✅ |
 | `filterLight` / `transparent` | light dimming | `lightfilter_gen.go` → `SkyOpacity` | ✅ |
 | `emitLight` | block-light emission | `light_emission_gen.go` | ✅ |
-| `drops` | loot | `loot_gen.go` + `rollDrops` | ✅ |
+| `drops` | loot | vanilla loot tables — `evalBlockLoot`, and `rollDrops` for drops with no tool | ✅ |
 | `diggable` | breakable by mining | `Diggable()` — unbreakable (bedrock/barrier/portal) refused in survival | ✅ |
 | `hardness` | mining time | survival breaks on client `Finish` (timed by hardness); hardness-0 breaks on `Start` | ✅ client-timed |
 | Client-side tool speed (26.x) | mineable/* + needs_*_tool tags | real tag contents sent to 776 (`tags26x`); 775 gets empty tags (wrong-tool 5x penalty persists there) | ✅ 776 |

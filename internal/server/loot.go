@@ -1,7 +1,5 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
-
 // Block drop tables — what a broken or destroyed block yields as item entities,
 // with vanilla probabilities. Rolled on the hub goroutine (uses h.rng). This is
 // the hand-written core for blocks we have item IDs for; a generated table from
@@ -33,28 +31,27 @@ type drop struct {
 	fixed bool
 }
 
-// rollDrops returns the items a destroyed block yields. Probabilistic entries use
-// the hub RNG, so this must run on the hub goroutine. Special probabilistic drops
-// are hand-written here; everything else falls through to the generated default
-// drop table (loot_gen.go).
+// rollDrops returns the items a destroyed block yields when no player tool is
+// involved — a piston, a lost support, a decaying leaf, a banner or pot on its
+// way to picking up its layers. Uses the hub RNG, so it must run on the hub
+// goroutine.
+//
+// It rolls the block's own vanilla loot table with no tool, as
+// Block.dropResources does. A few tables use functions the evaluator does not
+// run, and only those are hand-written here. There used to be a flat
+// "block drops one of its item" table as the fallback, built from a
+// third-party summary; every block it covered now has its real table.
 func (h *hub) rollDrops(state uint32) []drop {
+	if ds := h.evalBlockLoot(lootCtx{state: state, rng: h.rng.Intn, randf: h.rng.Float64}); ds != nil {
+		return ds
+	}
 	switch {
-	case state == worldgen.ShortGrass || state == worldgen.Fern:
-		if h.rng.Intn(8) == 0 { // 1/8 = 12.5% wheat seeds
-			return []drop{{item: itemWheatSeeds, count: 1}}
-		}
-		return nil
-	case state == worldgen.Gravel:
-		if h.rng.Intn(10) == 0 { // 1/10 = 10% flint, else gravel
-			return []drop{{item: itemFlint, count: 1}}
-		}
-		return []drop{{item: itemGravel, count: 1}}
-	case isAnyLeaf(state):
-		return h.leafDrops() // 5% sapling / 2% sticks / 0.5% apple
 	case state >= snowLayer1 && state <= snowLayer1+7:
 		return []drop{{item: itemSnowball, count: int(state-snowLayer1) + 1}} // blocks/snow: a snowball a layer
 	case isChorusFlower(state):
 		return nil // blocks/chorus_flower: nothing
+	case isDecoratedPot(state):
+		return []drop{{item: itemDecoratedPot, count: 1}} // blocks/decorated_pot, unbroken: itself
 	}
 	if _, lower, ok := doublePlantOf(state); ok { // blocks/tall_grass, large_fern: seeds 1/8 from the half that breaks
 		if lower && h.rng.Intn(8) == 0 {
@@ -62,23 +59,5 @@ func (h *hub) rollDrops(state uint32) []drop {
 		}
 		return nil
 	}
-	if item, ok := generatedDrop(state); ok { // generated default: block drops its item
-		return []drop{{item: item, count: 1}}
-	}
 	return nil
-}
-
-// leafDrops rolls a broken/decayed leaf's loot independently.
-func (h *hub) leafDrops() []drop {
-	var ds []drop
-	if h.rng.Intn(20) == 0 {
-		ds = append(ds, drop{item: itemOakSapling, count: 1})
-	}
-	if h.rng.Intn(50) == 0 {
-		ds = append(ds, drop{item: itemStick, count: 1 + h.rng.Intn(2)})
-	}
-	if h.rng.Intn(200) == 0 {
-		ds = append(ds, drop{item: itemApple, count: 1})
-	}
-	return ds
 }

@@ -78,6 +78,10 @@ public class Extract {
                 }
             }
             o.addProperty("blockEntityType", beType);
+            // The loot table the block actually drops from. Usually its own name,
+            // but a wall torch, wall sign, wall banner or wall head borrows the
+            // standing block's (dropsLike), and some blocks have none at all.
+            block.getLootTable().ifPresent(k -> o.addProperty("lootTable", k.identifier().getPath()));
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,
