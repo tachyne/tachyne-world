@@ -29,8 +29,6 @@ const (
 	dungeonOdds = 0.28
 	shaftCell   = 256
 	shaftOdds   = 0.45
-	ruinCell    = 96
-	ruinOdds    = 0.16
 )
 
 // cellOrigin maps a world coordinate to its grid cell corner.
@@ -310,58 +308,11 @@ func (g *Generator) stampArm(ch *Chunk, baseX, baseZ int, a shaftArm) {
 	}
 }
 
-// ---- surface ruins -------------------------------------------------------------
-
-// stampRuins writes small broken stone-brick shells on the surface.
-func (g *Generator) stampRuins(ch *Chunk, cx, cz int32) {
-	baseX, baseZ := int(cx)*16, int(cz)*16
-	for _, off := range [][2]int{{0, 0}, {ruinCell, 0}, {-ruinCell, 0}, {0, ruinCell}, {0, -ruinCell}} {
-		ox, oz := cellOrigin(baseX+8+off[0], ruinCell), cellOrigin(baseZ+8+off[1], ruinCell)
-		if hash01(g.seed, ox, oz, 0x2E11) >= ruinOdds {
-			continue
-		}
-		rx := ox + 12 + int(hash01(g.seed, ox, oz, 0x2E12)*float64(ruinCell-24))
-		rz := oz + 12 + int(hash01(g.seed, ox, oz, 0x2E13)*float64(ruinCell-24))
-		surf := g.Height(rx, rz)
-		if surf <= SeaLevel+1 || surf >= 96 {
-			continue // ruins on habitable land only
-		}
-		half := 2 + int(hash01(g.seed, ox, oz, 0x2E14)*2) // 5x5 or 7x7 shell
-		for lx := 0; lx < 16; lx++ {
-			for lz := 0; lz < 16; lz++ {
-				wx, wz := baseX+lx, baseZ+lz
-				dx, dz := wx-rx, wz-rz
-				if dx < -half || dx > half || dz < -half || dz > half {
-					continue
-				}
-				onWall := dx == -half || dx == half || dz == -half || dz == half
-				if !onWall {
-					continue
-				}
-				// Broken wall: height 0-3 varying along the perimeter.
-				hgt := int(hash01(g.seed, wx, wz, 0x2E15) * 4)
-				floorY := g.Height(wx, wz)
-				for y := 0; y < hgt; y++ {
-					b := StoneBricks
-					switch r := hash01(g.seed, wx, wz+y*31, 0x2E16); {
-					case r < 0.3:
-						b = MossyStoneBricks
-					case r < 0.5:
-						b = CrackedStoneBricks
-					}
-					setSectionBlock(ch, lx, floorY+y, lz, b, true)
-				}
-			}
-		}
-	}
-}
-
 // stampStructures is the decoration entry point for all of the above.
 func (g *Generator) stampStructures(ch *Chunk, cx, cz int32) {
 	g.stampLakes(ch, cx, cz)
 	g.stampMineshafts(ch, cx, cz)
 	g.stampDungeons(ch, cx, cz)
-	g.stampRuins(ch, cx, cz)
 	g.stampVillages(ch, cx, cz)
 	g.stampStrongholds(ch, cx, cz)
 	g.stampDesertTemples(ch, cx, cz)

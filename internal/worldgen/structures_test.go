@@ -52,55 +52,6 @@ func TestMineshaftStamps(t *testing.T) {
 	t.Fatal("no mineshaft cell rolled in 41x41 cells — odds broken")
 }
 
-// TestRuinStamps hunts for a ruin cell on habitable land and expects bricks.
-func TestRuinStamps(t *testing.T) {
-	g := NewGenerator(7)
-	for ox := -ruinCell * 60; ox <= ruinCell*60; ox += ruinCell {
-		for oz := -ruinCell * 60; oz <= ruinCell*60; oz += ruinCell {
-			if hash01(g.seed, ox, oz, 0x2E11) >= ruinOdds {
-				continue
-			}
-			rx := ox + 12 + int(hash01(g.seed, ox, oz, 0x2E12)*float64(ruinCell-24))
-			rz := oz + 12 + int(hash01(g.seed, ox, oz, 0x2E13)*float64(ruinCell-24))
-			surf := g.Height(rx, rz)
-			if surf <= SeaLevel+1 || surf >= 96 {
-				continue
-			}
-			half := 2 + int(hash01(g.seed, ox, oz, 0x2E14)*2)
-			wx, wz := rx+half, rz // a wall column
-			ch := g.GenerateChunk(int32(wx>>4), int32(wz>>4))
-			found := false
-			for s := 0; s < SectionCount && !found; s++ {
-				for i, b := range ch.Sections[s] {
-					if i%16 == wx&15 && (i/16)%16 == wz&15 &&
-						(b == StoneBricks || b == MossyStoneBricks || b == CrackedStoneBricks) {
-						found = true
-						break
-					}
-				}
-			}
-			if !found {
-				// Wall height can roll 0 on this column; try the corner too.
-				wx2, wz2 := rx-half, rz-half
-				ch2 := g.GenerateChunk(int32(wx2>>4), int32(wz2>>4))
-				for s := 0; s < SectionCount && !found; s++ {
-					for i, b := range ch2.Sections[s] {
-						if i%16 == wx2&15 && (i/16)%16 == wz2&15 &&
-							(b == StoneBricks || b == MossyStoneBricks || b == CrackedStoneBricks) {
-							found = true
-							break
-						}
-					}
-				}
-			}
-			if found {
-				return
-			}
-		}
-	}
-	t.Fatal("no ruin stamped anywhere it should be")
-}
-
 func TestStructuresDeterministic(t *testing.T) {
 	a, b := NewGenerator(11), NewGenerator(11)
 	for _, c := range [][2]int32{{0, 0}, {-3, 5}, {17, -9}} {

@@ -74,18 +74,11 @@ func (g *Generator) generateNetherChunk(cx, cz int32) *Chunk {
 	for lx := 0; lx < 16; lx++ {
 		for lz := 0; lz < 16; lz++ {
 			wx, wz := int(cx)*16+lx, int(cz)*16+lz
-			prev := uint32(Bedrock)
 			col := g.netherColumn(wx, wz) // the terrain dressed by its biome's surface rules
 			for s := 0; s < len(ch.Sections); s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
-					b := col[wy-MinY]
-					// Wild nether wart sprouts on soul-sand floors.
-					if b == Air && prev == SoulSand && hash01(g.seed, wx, wz, 0x3A57) < 0.4 {
-						b = NetherWart + uint32(hash01(g.seed, wx, wz, 0x3A58)*4)
-					}
-					ch.Sections[s][(ly*16+lz)*16+lx] = b
-					prev = b
+					ch.Sections[s][(ly*16+lz)*16+lx] = col[wy-MinY]
 				}
 			}
 		}
