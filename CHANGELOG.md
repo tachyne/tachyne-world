@@ -36,6 +36,16 @@ the public history since the project was open-sourced on 2026-07-10.
   statue is still bright copper. Here it stayed a block forever.
 
 ### Fixed
+- **A guardian shows its spikes, and a freezing skeleton shivers.** The
+  guardian's spines never moved, however faithfully they reflected damage, and
+  a skeleton turning into a stray in powder snow gave no sign until the
+  crackle at the end.
+- **The dragon has eight hitboxes, not one.** Only the head takes a blow
+  whole; everything else is worth a quarter, which is the shape of the fight.
+  Before this the dragon was a single box that arrows could barely find.
+- **A note block plays through the game's own signal.** It sent a sound and a
+  particle where the real game sends an event the client plays the note from —
+  so the block never bobbed.
 - **A pale garden turns in a wave.** Eyeblossoms opened one at a time, each on
   its own clock, so a garden took minutes to change with nothing tying the
   flowers together. Each flower that turns now wakes the ones near it, sooner
