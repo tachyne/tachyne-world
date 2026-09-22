@@ -23,6 +23,17 @@ the public history since the project was open-sourced on 2026-07-10.
   every other recipe, and clicking one with a cooker open loads the ingredient
   into its input slot (and refuses when the entry belongs to a different
   cooker).
+- **Trial chambers arm their traps and stock their pots.** Their dispensers
+  were placed empty, so the arrow and fire-charge traps clicked and did
+  nothing; their corridor pots held air, which cost you one of the two ways a
+  trial key enters the world; and three of their barrels were empty too. All
+  three now carry what vanilla puts in them.
+- **Wolves have voices and salmon have sizes.** Every wolf sounded the same:
+  vanilla registers seven wolf sound variants and gives one to each wolf at
+  birth, so a pack is a chorus. Their idle noise is three sounds rather than
+  one as well — a growl when angry, a pant, and a whine when a tamed wolf is
+  hurt. Salmon come small, medium and large now, at vanilla's odds, and the
+  size scales the fish.
 - **Mobs and dropped items go through nether portals.** Only players could
   travel, so anything that pushes mobs or their drops through a portal simply
   did not work. Everything else now goes through the instant it touches a
@@ -45,6 +56,22 @@ the public history since the project was open-sourced on 2026-07-10.
   statue is still bright copper. Here it stayed a block forever.
 
 ### Changed
+- **What you build in the Nether and the End finally ticks.** Redstone,
+  fluids, falling blocks and fire were all inert outside the overworld — not
+  because the simulation could not run there, but because a player's edit
+  never woke it. It does now, in its own dimension: a repeater in the Nether
+  is a repeater in the Nether, and the state the simulation keeps beside the
+  world (a pending flip, an observer's last look, a pressed plate, a fire's
+  age) is no longer shared with whatever sits at the same coordinates at home.
+- **Two things vanilla does not generate are gone**: the small broken
+  stone-brick shells scattered over habitable land, and wild nether wart on
+  soul sand. Already-generated ground keeps what it has.
+- **Iron golems ask the village to have slept.** A golem used to be the
+  automatic reward for five villagers sharing a bell, however they lived. It
+  now takes five villagers who have been to bed within the last day and who
+  are standing together — which in practice is the midday gathering at the
+  meeting point, exactly where vanilla's golems come from. A village with no
+  beds grows none.
 - **Horses have to be tamed.** Anyone could put a saddle on any horse and ride
   away. Now it is the ritual it should be: climb on a wild one bareback, get
   thrown, climb on again until it settles — and feeding it apples or carrots
@@ -52,6 +79,24 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **A hoglin's bite throws you again.** Being tossed is the whole point of a
+  hoglin, and the throw was silently doing nothing. Ravagers and wardens also
+  hit with their proper weight now rather than shoving like a zombie.
+- **Magma cubes were twice as generous with cream, and small ones dropped
+  slimeballs.** A small magma cube should leave nothing at all, and a big one
+  gives up its cream about one kill in four.
+- **Guardians drop the rare fish.** Both guardian tables end on a small chance
+  of a fish, and that pool had never been rolled. Looting also stopped
+  multiplying the things it should not: a sheep's fleece, an elder guardian's
+  sponge and its tide template.
+- **A mace kill says it was a mace.** The death message read like any other
+  hit.
+- **Flying an elytra into a cliff costs something.** It cost nothing at all
+  before.
+- **Mobs no longer all fall like a zombie.** A fox lands from five blocks
+  unhurt and a horse from six, then takes half of what is left.
+- **Nothing spawns on top of the Nether** any more — a column whose roof was
+  exposed could put a mob above the ceiling, standing in the void.
 - **Hit one zombified piglin and the pack comes for you.** They used to get
   angry and then stand there: nothing ever told them who had done it.
 - **A creeper you duck away from stands down.** Its fuse watched only the
