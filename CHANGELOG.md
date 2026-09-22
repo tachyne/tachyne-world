@@ -31,6 +31,22 @@ the public history since the project was open-sourced on 2026-07-10.
   statue is still bright copper. Here it stayed a block forever.
 
 ### Fixed
+- **The wither fires blue skulls, and its skulls explode.** A wither skull
+  never detonated at all, and the blue skull did not exist — so the boss had
+  one shot where it should have two. A side head that has been idle too long
+  always fires blue and the middle head does so once in a thousand shots, and
+  a blue skull goes through obsidian that shrugs off everything else. Bedrock
+  still stands.
+- **A shulker box opens as a shulker box.** It opened as a plain chest, which
+  is not only a matter of the picture: the shulker screen is where the game
+  decides a shulker box cannot go inside a shulker box. With the wrong screen
+  it could, by hand or by hopper, and a whole base could be packed inside a
+  base.
+- **Spawners and end gateways say what they are doing.** A spawner sends the
+  signal that restarts the little turning mob each time it fires, and a
+  gateway the one that draws its beam when it takes someone. Neither did.
+- **An elytra cannot be flown from a seat.** Riding anything, or being under
+  Levitation, ends a glide in the real game; here it carried on.
 - **A glass bottle fills by looking at water, not by clicking it.** It wanted
   a clicked block, which is not how the real game does it: the bottle follows
   where you are looking, out to arm's reach, and will not fill from the
