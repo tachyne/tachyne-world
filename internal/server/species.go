@@ -156,7 +156,7 @@ var speciesTable = map[int]*speciesDef{
 	entityMooshroom: {name: "mooshroom", health: 10, speed: 0.20, arch: archPassive,
 		love: "wheat", soundAs: "cow",
 		drops: []specDrop{{item: "beef", min: 1, rnd: 2}, {item: "leather", rnd: 2}}},
-	entityRabbit: {name: "rabbit", health: 3, speed: 0.30, arch: archSkittish, love: "carrot",
+	entityRabbit: {name: "rabbit", health: 3, speed: 0.30, damage: 3, arch: archSkittish, love: "carrot",
 		drops: []specDrop{{item: "rabbit_hide", rnd: 1}, {item: "rabbit", min: 1},
 			{item: "rabbit_foot", min: 1, chance: 10}}},
 	entityFox: {name: "fox", health: 10, speed: 0.30, damage: 2, follow: 32,
@@ -207,7 +207,7 @@ var speciesTable = map[int]*speciesDef{
 		drops: []specDrop{{item: "leather", rnd: 2}}},
 	entityTurtle: {name: "turtle", health: 30, speed: 0.25, step: 0.05, arch: archPassive,
 		love: "seagrass"}, // loot: mobLoot's turtle case (seagrass, a bowl for lightning)
-	entityFrog: {name: "frog", health: 10, speed: 1.0, step: 0.11, arch: archPassive,
+	entityFrog: {name: "frog", health: 10, speed: 1.0, step: 0.11, damage: 10, arch: archPassive,
 		love: "slime_ball"},
 	entityWanderingTrader: {name: "wandering_trader", health: 20, speed: 0.5, step: 0.135,
 		arch: archPassive, xp: xpNone},
@@ -255,9 +255,9 @@ var speciesTable = map[int]*speciesDef{
 
 	// ── Flyers ───────────────────────────────────────────────────────────
 	entityBat: {name: "bat", health: 6, step: 0.13, arch: archFlyer, hover: 3, xp: xpNone},
-	entityParrot: {name: "parrot", health: 6, step: 0.13, arch: archFlyer, hover: 2,
+	entityParrot: {name: "parrot", health: 6, step: 0.13, damage: 3, arch: archFlyer, hover: 2,
 		drops: []specDrop{{item: "feather", min: 1, rnd: 1}}},
-	entityAllay: {name: "allay", health: 20, step: 0.13, arch: archFlyer, hover: 2,
+	entityAllay: {name: "allay", health: 20, step: 0.13, damage: 2, arch: archFlyer, hover: 2,
 		xp: xpNone}, // ambient: with/without item (mobSoundsFor)
 	entityBee: {name: "bee", health: 10, step: 0.13, damage: 2, arch: archFlyer,
 		// quiet: vanilla bees have NO server ambient (getAmbientSound is null;
@@ -293,13 +293,13 @@ var speciesTable = map[int]*speciesDef{
 		drops: []specDrop{{item: "phantom_membrane", rnd: 1}}},
 	entityCreaking: {name: "creaking", health: 1, speed: 0.40, damage: 3, follow: 32,
 		arch: archHostile, xp: xpNone},
-	entityBreeze: {name: "breeze", health: 30, speed: 0.63, step: 0.16, follow: 24,
+	entityBreeze: {name: "breeze", health: 30, speed: 0.63, step: 0.16, follow: 24, damage: 3,
 		arch: archRanged, drops: []specDrop{{item: "breeze_rod", min: 1, rnd: 1}}},
 	entityWarden: {name: "warden", health: 500, speed: 0.30, damage: 30, follow: 24,
 		arch: archHostile, kbResist: 1, drops: []specDrop{{item: "sculk_catalyst", min: 1}}},
 	entityRavager: {name: "ravager", health: 100, speed: 0.30, damage: 12, follow: 32,
 		arch: archHostile, kbResist: 0.75, xp: 20, drops: []specDrop{{item: "saddle", min: 1}}},
-	entityPillager: {name: "pillager", health: 24, speed: 0.35, follow: 32,
+	entityPillager: {name: "pillager", health: 24, speed: 0.35, follow: 32, damage: 5,
 		arch: archRanged, held: "crossbow"}, // entities/pillager: only a captain's bottle
 	entityVindicator: {name: "vindicator", health: 24, speed: 0.35, damage: 5, follow: 12,
 		arch: archHostile, held: "iron_axe", // ATTACK_DAMAGE base 5 (source)
@@ -308,11 +308,15 @@ var speciesTable = map[int]*speciesDef{
 		arch: archHostile, xp: 10,
 		drops: []specDrop{{item: "totem_of_undying", min: 1}, {item: "emerald", rnd: 1}}},
 	entityIllusioner: {name: "illusioner", health: 32, speed: 0.5, step: 0.15, follow: 18,
-		arch: archRanged, held: "bow", soundAs: "pillager"},
+		arch: archRanged, held: "bow"}, // its own sound events exist: entity.illusioner.*
 	entityVex: {name: "vex", health: 14, damage: 4, step: 0.16, arch: archFlyerHostile,
 		hover: 2, xp: 3},
-	entityGiant: {name: "giant", health: 100, speed: 0.5, step: 0.2, damage: 50,
-		arch: archHostile, soundAs: "zombie"},
+	// A giant is INERT in vanilla — a leftover with an attack attribute and no
+	// goals at all, so it stands where it is summoned and does nothing. The
+	// engine used to give it the full hostile archetype, which made it the
+	// deadliest thing in the game by a distance.
+	entityGiant: {name: "giant", health: 100, speed: 0, step: 0.2, damage: 50,
+		arch: archPassive, soundAs: "zombie"},
 	entityZombieVillager: {name: "zombie_villager", health: 20, speed: 0.23, damage: 3,
 		armor: 2, follow: 35, arch: archHostile, burns: true,
 		drops: []specDrop{{item: "rotten_flesh", rnd: 2}}},

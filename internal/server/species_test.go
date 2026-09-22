@@ -292,3 +292,32 @@ func TestRetaliateWakesThePack(t *testing.T) {
 		t.Fatalf("hitting one wolf must anger the pack: a=%v b=%v", a.hostile, b.hostile)
 	}
 }
+
+// ATTACK_DAMAGE values vanilla declares and the engine had left at zero, and
+// the two species whose entry was simply wrong.
+func TestSpeciesAttackDamageAndOddities(t *testing.T) {
+	for _, c := range []struct {
+		etype int
+		want  float64
+		name  string
+	}{
+		{entityRabbit, 3, "rabbit"}, {entityFrog, 10, "frog"}, {entityAllay, 2, "allay"},
+		{entityParrot, 3, "parrot"}, {entityPillager, 5, "pillager"}, {entityBreeze, 3, "breeze"},
+	} {
+		d := speciesOf(c.etype)
+		if d == nil {
+			t.Fatalf("%s missing from the roster", c.name)
+		}
+		if d.damage != c.want {
+			t.Errorf("%s ATTACK_DAMAGE %v, want %v", c.name, d.damage, c.want)
+		}
+	}
+	// A giant has no goals in vanilla: it stands where it is summoned.
+	if g := speciesOf(entityGiant); g == nil || g.arch == archHostile || g.speed != 0 {
+		t.Errorf("a giant should be inert, got arch %v speed %v", g.arch, g.speed)
+	}
+	// And an illusioner has its own voice.
+	if i := speciesOf(entityIllusioner); i == nil || i.soundAs != "" {
+		t.Errorf("an illusioner should not borrow a voice, got %q", i.soundAs)
+	}
+}
