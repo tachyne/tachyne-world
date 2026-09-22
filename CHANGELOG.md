@@ -105,6 +105,10 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **Walking out of the End sends you home**, to your own bed or charged
+  respawn anchor if it still stands, instead of dropping you at the world
+  origin. (It reads the anchor without spending a charge — a walk out is not
+  a death.)
 - **A grindstone stays on the wall** when the wall behind it goes, and a
   parrot sets off after its owner from five blocks rather than ten.
 - **An anvil lies across your look**, not facing you, the way vanilla places
