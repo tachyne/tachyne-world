@@ -997,6 +997,7 @@ func (h *hub) run() {
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 				h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
 			}
+			h.playerInsideTick(players)   // block contact for players: every tick, or a sprint misses it
 			h.updatePortalTravel(players) // mobs and drops standing in a portal go through
 			h.updateArrows(players)       // every tick: arrows are fast enough to tunnel otherwise
 			h.updateClouds(players)       // lingering-potion clouds: dose, shrink, expire
@@ -1060,7 +1061,7 @@ func (h *hub) run() {
 				h.updateVaults(players)           // …and the vaults they pay you to open
 				h.updateBees(players)             // hive occupants, pollination, honey
 				h.updateLeashes(players)          // leads: pull, snap, and holders that left
-				h.entityInsideTick(players)       // magma/berry bush/wither rose contact
+				h.entityInsideTick(players)       // magma/berry bush/wither rose contact (mobs)
 				h.updateConduits(players)         // player-built conduits: Conduit Power + hunting
 				h.updateVillages(players)         // populate villages on approach
 				h.updateVillageGolems(players)    // census-driven iron golem spawns

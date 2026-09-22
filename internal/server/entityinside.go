@@ -152,7 +152,20 @@ func berryBushRipe(s uint32) bool { return isBerryBush(s) && s > berryBushMin }
 
 // entityInsideTick runs the contact effects for every player and mob. Called
 // from the 1 Hz survival step, alongside the other environmental damage.
+// entityInsideTick runs the MOB half of block contact, on the one-second
+// sweep. Vanilla checks every entity every tick; the mob loop is the one that
+// would cost twenty times as much, and a mob that misses a tick of cactus
+// still walks into it again a second later.
 func (h *hub) entityInsideTick(players map[int32]*tracked) {
+	h.mobsInsideTick(players)
+}
+
+// playerInsideTick is the PLAYER half, and it runs EVERY tick. There are only
+// ever a handful of players, and they are the ones who move fast enough for
+// the difference to show: at one second between samples a sprint through a
+// cactus, a berry bush or a wither rose could pass clean through without ever
+// being looked at.
+func (h *hub) playerInsideTick(players map[int32]*tracked) {
 	for _, t := range players {
 		if t.gamemode != gmSurvival || t.dead {
 			continue
@@ -218,6 +231,11 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 			}
 		})
 	}
+}
+
+// mobsInsideTick is the same contact rules for everything that is not a
+// player.
+func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 	for _, m := range h.mobs {
 		if m.dying > 0 {
 			continue

@@ -19,7 +19,7 @@ func TestMagmaBlockBurns(t *testing.T) {
 	w.SetBlock(0, 179, 0, magmaBlockState)
 
 	pl.health = 20
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health >= 20 {
 		t.Fatalf("standing on magma left health at %v", pl.health)
 	}
@@ -27,7 +27,7 @@ func TestMagmaBlockBurns(t *testing.T) {
 	// Fire resistance spares you.
 	pl.health = 20
 	h.applyEffect(players, pl, effFireRes, 0, 60)
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health != 20 {
 		t.Errorf("fire-resistant player took %v from magma", 20-pl.health)
 	}
@@ -37,7 +37,7 @@ func TestMagmaBlockBurns(t *testing.T) {
 	pl.health = 20
 	pl.armor[3] = invStack{item: itemByName["iron_boots"], count: 1,
 		ench: enchList{{id: enchFrostWalker, lvl: 1}}}
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health != 20 {
 		t.Errorf("Frost Walker boots took %v from magma", 20-pl.health)
 	}
@@ -59,7 +59,7 @@ func TestBerryBushScratchesOnlyWhileMoving(t *testing.T) {
 	w.SetBlock(0, 180, 0, berryBushMin)
 	pl.health = 20
 	pl.x += 0.2
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health != 20 {
 		t.Errorf("an age-0 bush scratched for %v", 20-pl.health)
 	}
@@ -68,14 +68,14 @@ func TestBerryBushScratchesOnlyWhileMoving(t *testing.T) {
 	w.SetBlock(0, 180, 0, berryBushMax)
 	pl.health = 20
 	pl.x += 0.2
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health >= 20 {
 		t.Error("moving through a grown bush did not scratch")
 	}
 
 	// …and not when you stand still.
 	pl.health = 20
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.health != 20 {
 		t.Errorf("standing still in a bush cost %v", 20-pl.health)
 	}
@@ -91,7 +91,7 @@ func TestWitherRoseWithers(t *testing.T) {
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	w.SetBlock(0, 180, 0, witherRoseMin)
 
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if pl.hasEffect(effWither) == 0 {
 		t.Error("a wither rose did not wither the player")
 	}
@@ -102,7 +102,7 @@ func TestWitherRoseWithers(t *testing.T) {
 		t.Fatal("spawn returned nil")
 	}
 	z.x, z.y, z.z = 0.5, 180, 0.5
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if z.hasEffect(effWither) != 0 {
 		t.Error("a wither rose withered a zombie")
 	}
@@ -124,7 +124,7 @@ func TestBerryBushHurtsMobsButNotFoxesOrBees(t *testing.T) {
 	fox.x, fox.y, fox.z = 0.5, 180, 0.5
 	cowHP, foxHP := cow.health, fox.health
 
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if cow.health >= cowHP {
 		t.Error("a cow in a berry bush was unharmed")
 	}
@@ -248,5 +248,35 @@ func TestHoneyBlockSlide(t *testing.T) {
 	h.honeySlide(players, pl, -0.2)
 	if pl.peakY != 190 {
 		t.Fatal("on the ground there is no slide")
+	}
+}
+
+// insideBoth is the contact pass as the tests want to drive it: players and
+// mobs in one call. In the server the two run at different cadences — players
+// every tick, mobs on the one-second sweep — which is a scheduling detail
+// these tests have no reason to care about.
+func (h *hub) insideBoth(players map[int32]*tracked) {
+	h.playerInsideTick(players)
+	h.mobsInsideTick(players)
+}
+
+// The player pass runs every tick, so a sprint cannot carry someone through a
+// hazard between samples. At the old one-second cadence a player crossing a
+// cactus in half a second was never looked at.
+func TestPlayerContactIsCheckedEveryTick(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	x, y, z := 12, 180, 12
+	h.world.SetBlock(x, y-1, z, worldgen.Stone)
+	h.world.SetBlock(x, y, z, worldgen.BlockBase("magma_block"))
+	h.world.SetBlock(x, y-1, z, worldgen.BlockBase("magma_block"))
+	pl.x, pl.y, pl.z = float64(x)+0.5, float64(y), float64(z)+0.5
+	pl.onGround = true
+	before := pl.health
+
+	h.playerInsideTick(players) // one TICK, not one second
+	if pl.health >= before {
+		t.Fatalf("standing on magma should hurt within a tick: %v → %v", before, pl.health)
 	}
 }

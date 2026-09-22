@@ -32,12 +32,12 @@ func TestDripleafTiltsUnderALoad(t *testing.T) {
 	w.SetBlock(0, 179, 0, leaf)
 	pl.x, pl.y, pl.z = 0.5, 179.9375, 0.5
 	pl.onGround = false
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if dripleafTilt(w.At(0, 179, 0)) != "none" {
 		t.Fatal("a player in the air does not tip the leaf")
 	}
 	pl.onGround = true
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if got := dripleafTilt(w.At(0, 179, 0)); got != "unstable" {
 		t.Fatalf("stepped on: tilt %q, want unstable", got)
 	}
@@ -86,7 +86,7 @@ func TestDripleafPinnedByPowerAndShot(t *testing.T) {
 	w.SetBlock(1, 179, 0, worldgen.BlockBase("redstone_block"))
 	pl.x, pl.y, pl.z = 0.5, 179.9375, 0.5
 	pl.onGround = true
-	h.entityInsideTick(players)
+	h.insideBoth(players)
 	if got := dripleafTilt(w.At(0, 179, 0)); got != "none" {
 		t.Fatalf("a powered leaf stays flat, got %q", got)
 	}
