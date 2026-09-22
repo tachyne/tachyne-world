@@ -345,6 +345,11 @@ func (h *hub) rollSpawner(pool []spawnerEntry) (spawnerEntry, bool) {
 // spawnPositionOK is vanilla SpawnPlacements.isSpawnPositionOk: solid ground
 // with two clear cells for land categories, open water for aquatic ones.
 func (h *hub) spawnPositionOK(dim, cat, etype, x, y, z int) bool {
+	// Every SpawnPlacementType begins with the border test, so this belongs
+	// ahead of the rest of the checks rather than beside them.
+	if !h.withinBorder(dim, float64(x)+0.5, float64(z)+0.5) {
+		return false
+	}
 	w := h.worldFor(dim)
 	at := w.At(x, y, z)
 	// Drowned use vanilla's IN_WATER placement even though they are monsters:

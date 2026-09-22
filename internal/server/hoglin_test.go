@@ -121,11 +121,11 @@ func TestHoglinThrowMoves(t *testing.T) {
 func TestStepHeightMatchesVanilla(t *testing.T) {
 	for etype, want := range map[int]float64{
 		entityCamel: 1.5, entityCamelHusk: 1.5, // Camel overrides the horse base
-		entityCreaking:  1.0625,
-		entityHorse:     1, entityDonkey: 1, entityMule: 1, entityLlama: 1,
+		entityCreaking: 1.0625,
+		entityHorse:    1, entityDonkey: 1, entityMule: 1, entityLlama: 1,
 		entityIronGolem: 1, entityCopperGolem: 1, entityEnderman: 1,
-		entityRavager:   1, entityDrowned: 1, entityAxolotl: 1,
-		entityFrog:      1, entityTurtle: 1,
+		entityRavager: 1, entityDrowned: 1, entityAxolotl: 1,
+		entityFrog: 1, entityTurtle: 1,
 		// everything else keeps the registry default
 		entityZombie: 0.6, entityCow: 0.6, entityCreeper: 0.6, entitySheep: 0.6,
 	} {

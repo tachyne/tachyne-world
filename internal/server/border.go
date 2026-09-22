@@ -79,6 +79,21 @@ func (b worldBorder) distanceToBorder(x, z, size float64) float64 {
 	return math.Min(math.Min(x-minX, maxX-x), math.Min(z-minZ, maxZ-z))
 }
 
+// withinBorder is WorldBorder.isWithinBounds for a block column. Every
+// SpawnPlacementType in vanilla opens with this test, so nothing natural
+// appears outside the wall — the engine consulted the border for player damage
+// and the ender egg's teleport and nowhere else, so a shrunken border kept
+// hurting you while mobs carried on spawning past it.
+//
+// Overworld only, matching the convention dragonegg.go already set: the engine
+// keeps one border rather than vanilla's per-dimension pair.
+func (h *hub) withinBorder(dim int, x, z float64) bool {
+	if dim != dimOverworld {
+		return true
+	}
+	return h.border.distanceToBorder(x, z, h.border.sizeAt(h.tick.Load())) >= 0
+}
+
 // borderFrame renders the current state as the attach frame.
 func (h *hub) borderFrame() attachproto.WorldBorder {
 	b := h.border

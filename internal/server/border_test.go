@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The border's size is a DIAMETER, not a radius — getting that backwards
@@ -110,5 +111,49 @@ func TestWorldBorderCommand(t *testing.T) {
 	h.cmdWorldBorder(players, pl, []string{"add", "25"})
 	if h.border.Size != 75 {
 		t.Errorf("add: size=%v, want 75", h.border.Size)
+	}
+}
+
+// Every vanilla SpawnPlacementType opens with WorldBorder.isWithinBounds, so
+// nothing natural appears outside the wall. The engine read the border for
+// player damage and the ender egg's teleport and nowhere else — a shrunken
+// border kept hurting you while mobs carried on spawning past it.
+func TestNothingSpawnsOutsideTheBorder(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.world
+	y := 180
+	// A stone pad well away from the origin, with room for anything to stand.
+	for _, x := range []int{40, 400} {
+		for dy := 0; dy < 4; dy++ {
+			w.SetBlock(x, y+dy, 0, worldgen.Air)
+		}
+		w.SetBlock(x, y-1, 0, worldgen.Stone)
+	}
+
+	// Default border: effectively infinite, so both are fine.
+	if !h.spawnPositionOK(dimOverworld, catMonster, entityZombie, 40, y, 0) {
+		t.Fatal("the near pad should be spawnable with the default border")
+	}
+	if !h.spawnPositionOK(dimOverworld, catMonster, entityZombie, 400, y, 0) {
+		t.Fatal("the far pad should be spawnable with the default border")
+	}
+
+	// Shrink it to 200 wide about the origin: ±100 blocks.
+	h.border.Size, h.border.LerpTicks, h.border.CenterX, h.border.CenterZ = 200, 0, 0, 0
+	if !h.withinBorder(dimOverworld, 40.5, 0.5) {
+		t.Error("40 blocks out should be inside a 200-wide border")
+	}
+	if h.withinBorder(dimOverworld, 400.5, 0.5) {
+		t.Error("400 blocks out should be outside a 200-wide border")
+	}
+	if !h.spawnPositionOK(dimOverworld, catMonster, entityZombie, 40, y, 0) {
+		t.Error("inside the border should still spawn")
+	}
+	if h.spawnPositionOK(dimOverworld, catMonster, entityZombie, 400, y, 0) {
+		t.Error("outside the border must not spawn")
+	}
+	// The Nether keeps its own reckoning (one border, overworld only).
+	if !h.withinBorder(dimNether, 400.5, 0.5) {
+		t.Error("the border is overworld-only here, matching dragonegg.go")
 	}
 }
