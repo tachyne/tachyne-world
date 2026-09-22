@@ -1,6 +1,8 @@
 package server
 
 import (
+	"math"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -415,23 +417,94 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 }
 
 // fillBottle turns a held glass bottle into a water bottle (right-click water).
-func (h *hub) fillBottle(t *tracked, slot int32) {
+// fillBottle is BottleItem.use. The dragon's breath comes first: any living
+// area-effect cloud the dragon left within two blocks of the player fills the
+// bottle with it, and the cloud gives up half a block of radius for the
+// trouble. Failing that the player's look ray is walked out to a water SOURCE
+// — flowing water will not do — and the bottle comes back as water.
+//
+// Without the first branch dragon's breath is unobtainable, and with it the
+// whole lingering-potion half of brewing: everything downstream of it was
+// already built and simply had no way to start.
+func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
 	if t.inv == nil || slot < 0 || slot >= 9 {
 		return
 	}
-	s := &t.inv.slots[slot]
-	if s.item != itemGlassBottle || s.count == 0 {
+	if s := &t.inv.slots[slot]; s.item != itemGlassBottle || s.count == 0 {
 		return
 	}
+	if c := h.dragonBreathNear(t); c != nil {
+		c.radius -= 0.5
+		if c.radius <= 0 {
+			delete(h.clouds, c.eid)
+			h.entityGone(players, c.dim, c.eid)
+		}
+		h.playSound(players, "minecraft:item.bottle.fill_dragonbreath", sndNeutral, t.x, t.y, t.z, 1, 1)
+		h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
+		h.turnBottleInto(t, slot, invStack{item: int32(itemByName["dragon_breath"]), count: 1})
+		return
+	}
+	if !h.waterSourceInSight(t) {
+		return
+	}
+	h.playSound(players, "minecraft:item.bottle.fill", sndNeutral, t.x, t.y, t.z, 1, 1)
+	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
+	h.turnBottleInto(t, slot, potionStack(potWater))
+}
+
+// dragonBreathNear is the AreaEffectCloud search BottleItem.use opens with:
+// a live cloud the DRAGON owns, inside the player's box grown by two.
+func (h *hub) dragonBreathNear(t *tracked) *effectCloud {
+	for _, c := range h.clouds {
+		if !c.breath || c.dim != t.dim || c.ttl <= 0 {
+			continue
+		}
+		if math.Abs(c.x-t.x) <= 2+c.radius && math.Abs(c.z-t.z) <= 2+c.radius &&
+			math.Abs(c.y-t.y) <= 2+playerEyeHeightStand {
+			return c
+		}
+	}
+	return nil
+}
+
+// bottleFillReach is Player.blockInteractionRange, which is what
+// Item.getPlayerPOVHitResult clips to.
+const bottleFillReach = 4.5
+
+// waterSourceInSight walks the look ray for a water SOURCE, which is what
+// ClipContext.Fluid.SOURCE_ONLY means: a bottle cannot be filled from the
+// flowing edge of a stream, and a solid block stops the ray.
+func (h *hub) waterSourceInSight(t *tracked) bool {
+	dx, dy, dz := lookVector(t.yaw, t.pitch)
+	ox, oy, oz := t.x, t.y+playerEyeHeightStand, t.z
+	w := h.worldFor(t.dim)
+	for d := 0.0; d <= bottleFillReach; d += 0.1 {
+		x, y, z := floorInt(ox+dx*d), floorInt(oy+dy*d), floorInt(oz+dz*d)
+		st := w.At(x, y, z)
+		if st == worldgen.WaterBase {
+			return true
+		}
+		if worldgen.Collides(st) {
+			return false // something solid before any water
+		}
+	}
+	return false
+}
+
+// turnBottleInto is Item.turnBottleIntoItem: one bottle out of the stack, the
+// filled thing in, and on the floor if there is nowhere for it.
+func (h *hub) turnBottleInto(t *tracked, slot int32, filled invStack) {
+	s := &t.inv.slots[slot]
 	s.count--
 	if s.count == 0 {
 		*s = invStack{}
 	}
-	wb := potionStack(potWater)
-	if changed, left := t.inv.addStack(wb); left == 0 {
+	if changed, left := t.inv.addStack(filled); left == 0 {
 		for _, sl := range changed {
 			h.sendSlot(t, sl)
 		}
+	} else {
+		h.spawnItemIn(h.playersRef, t.dim, filled.item, left, t.x, t.y, t.z)
 	}
 	h.sendSlot(t, int(slot))
 }

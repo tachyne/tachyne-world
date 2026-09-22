@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func survivalAt(x, y, z float64) *tracked {
@@ -114,5 +115,62 @@ func TestDrinkPotionStillWorks(t *testing.T) {
 	}
 	if pl.inv.slots[0].item != itemGlassBottle {
 		t.Fatalf("drinking should leave a glass bottle, got item %d", pl.inv.slots[0].item)
+	}
+}
+
+// A glass bottle used beside the dragon's breath comes back full of it — the
+// only way to get the stuff, and so the only way into lingering potions.
+func TestBottleFillsFromDragonBreath(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.inv.slots[0] = invStack{item: int32(itemGlassBottle), count: 1}
+
+	h.spawnBreathCloud(pl.dim, pl.x+1, pl.y, pl.z)
+	var c *effectCloud
+	for _, e := range h.clouds {
+		c = e
+	}
+	before := c.radius
+
+	h.fillBottle(players, pl, 0)
+
+	breath := int32(itemByName["dragon_breath"])
+	got := 0
+	for _, s := range pl.inv.slots {
+		if s.item == breath {
+			got += s.count
+		}
+	}
+	if got != 1 {
+		t.Fatalf("the bottle should hold dragon's breath, found %d", got)
+	}
+	if c.radius != before-0.5 {
+		t.Fatalf("the cloud should give up half a block of radius: %v → %v", before, c.radius)
+	}
+}
+
+// Away from any breath, the bottle wants a water SOURCE in the look ray —
+// flowing water will not fill it.
+func TestBottleNeedsAWaterSourceInSight(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	pl.yaw, pl.pitch = 0, 0 // looking level, along +z
+	pl.inv.slots[0] = invStack{item: int32(itemGlassBottle), count: 1}
+
+	// Water further than the interaction range does not count.
+	h.world.SetBlock(0, 181, 10, worldgen.WaterBase)
+	h.fillBottle(players, pl, 0)
+	if pl.inv.slots[0].item != int32(itemGlassBottle) {
+		t.Fatal("water out of reach should leave the bottle empty")
+	}
+
+	// Water at eye height inside the range fills it.
+	h.world.SetBlock(0, 181, 3, worldgen.WaterBase)
+	h.fillBottle(players, pl, 0)
+	if pl.inv.slots[0].item == int32(itemGlassBottle) && pl.inv.slots[0].count == 1 {
+		t.Fatal("a water source in sight should have filled the bottle")
 	}
 }

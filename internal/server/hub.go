@@ -1695,7 +1695,7 @@ func (h *hub) run() {
 				}
 			case evFillBottle:
 				if t := players[e.eid]; t != nil {
-					h.fillBottle(t, e.slot)
+					h.fillBottle(players, t, e.slot)
 				}
 			case evBucketEmpty:
 				if t := players[e.eid]; t != nil {

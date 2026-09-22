@@ -122,6 +122,8 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evSteerBoost{eid: p.eid, slot: int(slot)})
 		case itemBucket: // aiming at a fluid: the client sends plain use_item
 			h.post(evBucketFill{eid: p.eid, slot: slot})
+		case int32(itemGlassBottle): // BottleItem.use: dragon's breath, else water
+			h.post(evFillBottle{eid: p.eid, slot: slot})
 		case itemShield:
 			h.post(evBlockStart{eid: p.eid, hand: e.Hand})
 		case itemSnowball, itemEgg:
