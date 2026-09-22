@@ -162,5 +162,45 @@ func (h *hub) structureBinTable(dim int, pos blockPos) (string, bool) {
 			}
 		}
 	}
+	if name, ok := h.trialChamberLootBlock(pos); ok {
+		return name, true
+	}
 	return "", false
+}
+
+// trialChamberLootBlock is the table a chamber stocks the dispenser or
+// decorated pot at this position from — the templates name it per block
+// (dispensers/trial_chambers/{chamber,corridor}, pots/trial_chambers/corridor).
+func (h *hub) trialChamberLootBlock(pos blockPos) (string, bool) {
+	g := h.world.Gen()
+	t := g.TrialChamberIn(pos.x, pos.z)
+	if !t.Exists {
+		return "", false
+	}
+	for _, c := range g.TrialChamberLootBlocks(t) {
+		if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+			return c.Table, true
+		}
+	}
+	return "", false
+}
+
+// ensurePotLoot stocks a structure's decorated pot the first time anything
+// looks inside it — the pot equivalent of a chest filling on its first open.
+// The entry is left in the map even when the roll came up empty, so a pot
+// that has been emptied is never restocked.
+func (h *hub) ensurePotLoot(key simPos) {
+	if h.pots == nil {
+		h.pots = map[simPos]invStack{}
+	}
+	if _, seen := h.pots[key]; seen || key.dim != dimOverworld {
+		return
+	}
+	name, ok := h.trialChamberLootBlock(key.blockPos)
+	if !ok {
+		return
+	}
+	var one [1]invStack
+	h.fillSlots(one[:], name, key.blockPos)
+	h.pots[key] = one[0]
 }

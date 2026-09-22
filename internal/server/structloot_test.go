@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -87,5 +88,57 @@ func TestVillageHouseChestLoot(t *testing.T) {
 	}
 	if items == 0 {
 		t.Fatal("a village house chest should hold loot")
+	}
+}
+
+// A trial chamber's dispensers and corridor pots fill from their own loot
+// tables the first time anything touches them, and a pot that has been
+// emptied is never restocked.
+func TestTrialChamberDispensersAndPotsFill(t *testing.T) {
+	h := newHub(world.New(1))
+	g := h.world.Gen()
+
+	var dispenser, pot blockPos
+	var haveD, haveP bool
+	for r := 0; r < 12 && !(haveD && haveP); r++ {
+		tc := g.TrialChamberIn(r*1024, r*1024)
+		if !tc.Exists {
+			continue
+		}
+		for _, b := range g.TrialChamberLootBlocks(tc) {
+			switch {
+			case !haveD && strings.HasPrefix(b.Table, "dispensers/"):
+				dispenser, haveD = blockPos{b.X, b.Y, b.Z}, true
+			case !haveP && strings.HasPrefix(b.Table, "pots/"):
+				pot, haveP = blockPos{b.X, b.Y, b.Z}, true
+			}
+		}
+	}
+	if !haveD || !haveP {
+		t.Skip("no trial chamber with both a dispenser and a pot in range")
+	}
+
+	if name, ok := h.structureBinTable(dimOverworld, dispenser); !ok {
+		t.Fatalf("the dispenser at %v names no loot table", dispenser)
+	} else if !strings.HasPrefix(name, "dispensers/trial_chambers/") {
+		t.Fatalf("dispenser table = %q", name)
+	}
+
+	key := simPos{dim: dimOverworld, blockPos: pot}
+	h.ensurePotLoot(key)
+	st, ok := h.pots[key]
+	if !ok {
+		t.Fatal("the pot was not stocked")
+	}
+	if st.item == 0 || st.count == 0 {
+		t.Fatalf("the pot came up empty: %+v (the corridor table has no empty entry)", st)
+	}
+
+	// Emptying it leaves a known-empty entry, and a second look does not
+	// refill it.
+	h.pots[key] = invStack{}
+	h.ensurePotLoot(key)
+	if got := h.pots[key]; got.item != 0 {
+		t.Fatalf("an emptied pot restocked itself with %+v", got)
 	}
 }

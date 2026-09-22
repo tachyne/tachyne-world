@@ -88,3 +88,39 @@ func TestTemplatePropertiesAreNotDropped(t *testing.T) {
 		t.Errorf("%s carries template properties that resolveState will drop", name)
 	}
 }
+
+// A chamber stocks more than its chests: its dispensers are armed from
+// dispensers/trial_chambers/*, its corridor pots from pots/trial_chambers/
+// corridor, and its barrels name their own table instead of inheriting the
+// piece's. All three were placed empty before the templates carried them.
+func TestTrialChamberStocksDispensersPotsAndBarrels(t *testing.T) {
+	g := NewGenerator(12345)
+	chambers := 0
+	tables := map[string]int{}
+	for r := 0; r < 12 && chambers < 4; r++ {
+		tc := g.TrialChamberIn(r*1024, r*1024)
+		if !tc.Exists {
+			continue
+		}
+		chambers++
+		for _, b := range g.TrialChamberLootBlocks(tc) {
+			tables[b.Table]++
+		}
+		for _, c := range g.TrialChamberChests(tc) {
+			tables[c.Table]++
+		}
+	}
+	if chambers == 0 {
+		t.Fatal("no trial chamber generated in the sampled range")
+	}
+	for _, want := range []string{
+		"dispensers/trial_chambers/chamber",
+		"dispensers/trial_chambers/corridor",
+		"pots/trial_chambers/corridor",
+		"chests/trial_chambers/intersection_barrel",
+	} {
+		if tables[want] == 0 {
+			t.Errorf("%d chambers stocked nothing from %s (saw %v)", chambers, want, tables)
+		}
+	}
+}

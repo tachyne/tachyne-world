@@ -268,8 +268,10 @@ func TestDecoratedPotHopperFlow(t *testing.T) {
 		t.Fatalf("extract takes one: %+v left %+v", one, h.pots[pos])
 	}
 	h.potExtract(pos)
-	if _, still := h.pots[pos]; still {
-		t.Error("an emptied pot is forgotten")
+	// The entry STAYS, empty. It is the record that this pot has been looked
+	// in, which is what stops a structure pot restocking itself.
+	if st, still := h.pots[pos]; !still || st.item != 0 {
+		t.Errorf("an emptied pot should be remembered as empty, got %+v (present=%v)", st, still)
 	}
 	if _, ok := h.potExtract(pos); ok {
 		t.Error("an empty pot has nothing to give")

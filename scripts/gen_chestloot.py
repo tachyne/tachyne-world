@@ -203,13 +203,17 @@ def table(t):
     return {"pools": pools}
 
 
-# chests/ is the bulk of it; spawners/ holds what a trial spawner ejects when
+# chests/ is the bulk of it; dispensers/ and pots/ are how a trial chamber arms
+# its arrow and fire-charge traps and stocks its corridor pots; spawners/ holds
+# what a trial spawner ejects when
 # its fight is won, which is the only way a trial key enters the world; and
 # archaeology/ is what a brush turns up out of a suspicious block.
 # gameplay/hero_of_the_village/ is what a grateful villager throws a Hero of
 # the Village after a won raid, per profession.
 PREFIXES = [
     "data/minecraft/loot_table/chests/",
+    "data/minecraft/loot_table/dispensers/",  # a trial chamber arms its dispensers
+    "data/minecraft/loot_table/pots/",        # and stocks its corridor pots
     "data/minecraft/loot_table/spawners/",
     "data/minecraft/loot_table/archaeology/",
     "data/minecraft/loot_table/gameplay/hero_of_the_village/",

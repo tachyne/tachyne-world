@@ -164,6 +164,8 @@ def bake(inner, name):
     blocks = []
     chests = []
     chestloot = []
+    lootblocks = []      # non-chest block entities with a LootTable (dispensers, pots)
+    lootblocktables = []
     mobspawns = []  # [x,y,z,type] illager markers (mansion): 0=evoker 1=vindicator 2=allay
     entity_markers = []  # DATA markers that stand for an entity (end city sentries, the elytra frame)
     spawners = []
@@ -186,7 +188,18 @@ def bake(inner, name):
         if not nbt:
             continue
         bid = nbt.get("id", "")
-        if bid == "minecraft:chest":
+        if bid in ("minecraft:dispenser", "minecraft:decorated_pot") and nbt.get("LootTable"):
+            # Trial chambers arm their dispensers and stock their corridor pots
+            # from loot tables the same way a chest is stocked; the server fills
+            # them on first touch.
+            lootblocks.append([x, y, z])
+            lootblocktables.append(nbt["LootTable"].split(":", 1)[-1])
+        elif bid == "minecraft:barrel" and nbt.get("LootTable"):
+            # A barrel is a chest as far as the engine is concerned (the same
+            # 27-slot window and the same first-open fill).
+            chests.append([x, y, z])
+            chestloot.append(nbt["LootTable"].split(":", 1)[-1])
+        elif bid == "minecraft:chest":
             chests.append([x, y, z])
             # Loot table: the chest's own LootTable (ruined portal), else the
             # DATA marker one above it (shipwreck supply/map/treasure).
@@ -242,6 +255,9 @@ def bake(inner, name):
         t["chests"] = chests
         if any(chestloot):
             t["chestloot"] = chestloot
+    if lootblocks:
+        t["lootblocks"] = lootblocks
+        t["lootblocktables"] = lootblocktables
     if mobspawns:
         t["mobspawns"] = mobspawns
     if spawners:

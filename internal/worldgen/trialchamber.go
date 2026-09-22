@@ -104,10 +104,33 @@ type TrialChamberChest struct {
 func (g *Generator) TrialChamberChests(t TrialChamber) []TrialChamberChest {
 	var out []TrialChamberChest
 	for _, pc := range g.AssembleTrialChamber(t) {
-		tbl := trialChamberTableForPiece(pc.Tmpl.name)
-		for _, c := range pc.Tmpl.Chests {
+		for i, c := range pc.Tmpl.Chests {
+			// A barrel names its own table in the template; a chest takes the
+			// one its piece implies.
+			tbl := trialChamberTableForPiece(pc.Tmpl.name)
+			if i < len(pc.Tmpl.ChestLoot) && pc.Tmpl.ChestLoot[i] != "" {
+				tbl = pc.Tmpl.ChestLoot[i]
+			}
 			rx, ry, rz := pc.Tmpl.rotatePos(c[0], c[1], c[2], pc.Rot)
 			out = append(out, TrialChamberChest{pc.OX + rx, pc.OY + ry, pc.OZ + rz, tbl})
+		}
+	}
+	return out
+}
+
+// TrialChamberLootBlocks returns every dispenser and decorated pot the chamber
+// stocks from a loot table, with the table the template names. Vanilla arms a
+// chamber's dispensers and fills its corridor pots exactly the way it fills a
+// chest, so these carry the same shape as TrialChamberChests.
+func (g *Generator) TrialChamberLootBlocks(t TrialChamber) []TrialChamberChest {
+	var out []TrialChamberChest
+	for _, pc := range g.AssembleTrialChamber(t) {
+		for i, b := range pc.Tmpl.LootBlocks {
+			if i >= len(pc.Tmpl.LootBlockTables) {
+				break
+			}
+			rx, ry, rz := pc.Tmpl.rotatePos(b[0], b[1], b[2], pc.Rot)
+			out = append(out, TrialChamberChest{pc.OX + rx, pc.OY + ry, pc.OZ + rz, pc.Tmpl.LootBlockTables[i]})
 		}
 	}
 	return out

@@ -658,9 +658,10 @@ func (s *containerStore) recordPots(pots map[simPos]invStack) {
 	defer s.mu.Unlock()
 	s.m.Pots = map[string]stackRow{}
 	for pos, st := range pots {
-		if st.item != 0 && st.count > 0 {
-			s.m.Pots[simKey(pos)] = packStack(st)
-		}
+		// Empty pots are kept, the way recordChests keeps an emptied chest:
+		// the key is the record that this pot has been looked in, which is
+		// what stops a structure pot restocking itself after a restart.
+		s.m.Pots[simKey(pos)] = packStack(st)
 	}
 }
 

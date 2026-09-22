@@ -39,6 +39,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 		h.pots = map[simPos]invStack{}
 	}
 	key := simPos{dim: t.dim, blockPos: pos}
+	h.ensurePotLoot(key)
 	held := heldStack(t)
 	stored := h.pots[key]
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
@@ -100,6 +101,7 @@ func (h *hub) spillPot(players map[int32]*tracked, dim int, pos blockPos, newSta
 		return
 	}
 	key := simPos{dim: dim, blockPos: pos}
+	h.ensurePotLoot(key)
 	h.potSherds.remove(key) // the faces go with the block; the DROP carries them
 	st, ok := h.pots[key]
 	if !ok {
@@ -126,9 +128,7 @@ func potStacks(a, b invStack) bool {
 // potInsert is the hopper's side of the pot (ContainerSingleItem accepts one
 // item at a time from above). Reports whether the item went in.
 func (h *hub) potInsert(pos simPos, st invStack) bool {
-	if h.pots == nil {
-		h.pots = map[simPos]invStack{}
-	}
+	h.ensurePotLoot(pos)
 	stored := h.pots[pos]
 	switch {
 	case stored.item == 0:
@@ -146,6 +146,7 @@ func (h *hub) potInsert(pos simPos, st invStack) bool {
 
 // potExtract is the hopper underneath: one item out of the pot at a time.
 func (h *hub) potExtract(pos simPos) (invStack, bool) {
+	h.ensurePotLoot(pos)
 	stored, ok := h.pots[pos]
 	if !ok || stored.item == 0 || stored.count <= 0 {
 		return invStack{}, false
@@ -153,7 +154,10 @@ func (h *hub) potExtract(pos simPos) (invStack, bool) {
 	one := stored
 	one.count = 1
 	if stored.count--; stored.count <= 0 {
-		delete(h.pots, pos)
+		// The entry stays, empty: an emptied pot is a KNOWN-empty pot, so a
+		// structure pot is never restocked (the same rule a looted chest
+		// follows).
+		h.pots[pos] = invStack{}
 	} else {
 		h.pots[pos] = stored
 	}

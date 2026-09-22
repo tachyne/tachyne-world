@@ -47,14 +47,19 @@ type Template struct {
 	Blocks    [][4]int       `json:"blocks"`    // x,y,z,paletteIdx
 	Chests    [][3]int       `json:"chests"`    // template-local chest positions
 	ChestLoot []string       `json:"chestloot"` // per-chest loot table (aligned with Chests; "" = assigned by code)
-	MobSpawns [][4]int       `json:"mobspawns"` // x,y,z,type illager markers (mansion): 0=evoker 1=vindicator 2=allay
-	Beds      [][3]int       `json:"beds"`      // bed HEAD cells → one villager home each
-	JobSites  [][4]int       `json:"jobsites"`  // x,y,z,profession
-	Bells     [][3]int       `json:"bells"`
-	Jigsaws   []jigsawBlock  `json:"jigsaws"`
-	Mobs      []templateMob  `json:"mobs"` // entities embedded in the template (bastion "mobs" pieces)
-	name      string         // the template's location key (set at init; for loot inference)
-	resolved  [4][]uint32
+	// LootBlocks are the non-chest block entities a template stocks from a
+	// loot table — a trial chamber's dispensers and its corridor pots.
+	// LootBlockTables is aligned with it.
+	LootBlocks      [][3]int      `json:"lootblocks"`
+	LootBlockTables []string      `json:"lootblocktables"`
+	MobSpawns       [][4]int      `json:"mobspawns"` // x,y,z,type illager markers (mansion): 0=evoker 1=vindicator 2=allay
+	Beds            [][3]int      `json:"beds"`      // bed HEAD cells → one villager home each
+	JobSites        [][4]int      `json:"jobsites"`  // x,y,z,profession
+	Bells           [][3]int      `json:"bells"`
+	Jigsaws         []jigsawBlock `json:"jigsaws"`
+	Mobs            []templateMob `json:"mobs"` // entities embedded in the template (bastion "mobs" pieces)
+	name            string        // the template's location key (set at init; for loot inference)
+	resolved        [4][]uint32
 }
 
 type poolElement struct {
