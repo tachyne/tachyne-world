@@ -443,6 +443,9 @@ func (h *hub) rollVariant(m *mob) {
 		}
 	case entityWolf:
 		m.variant = h.groupVariant(m, func() int32 { return wolfVariantFor(h.spawnBiome(m)) })
+		// The coat comes from the biome and is shared by a pack; the VOICE is
+		// an independent uniform roll per wolf (pickRandomSoundVariant).
+		m.soundSet = int8(h.rng.Intn(len(wolfSoundSuffixes)))
 	case entityCat:
 		m.variant = h.catVariantRoll(m)
 	case entityHorse:
@@ -468,6 +471,10 @@ func (h *hub) rollVariant(m *mob) {
 		// A school shares its variant (TropicalFishGroupData), so the group
 		// roll is the same one the wolves and rabbits use.
 		m.variant = h.groupVariant(m, h.rollTropicalVariant)
+	case entitySalmon:
+		// Salmon.finalizeSpawn builds its weighted list per FISH, not per
+		// school, so a shoal is a mix of sizes.
+		m.variant = h.rollSalmonSize()
 	case entityPig, entityCow, entityChicken:
 		m.variant = farmVariantFor(m.dim, h.spawnBiome(m))
 	default:
@@ -498,6 +505,11 @@ func (h *hub) inheritVariant(baby, a, b *mob) {
 		}
 	case entityWolf, entityCat, entityFox, entityPig, entityCow, entityChicken:
 		baby.variant = h.pickParent(a, b).variant
+		if baby.etype == entityWolf {
+			// The coat comes from a parent, the voice does not: Wolf's breed
+			// offspring rolls a fresh sound variant.
+			baby.soundSet = int8(h.rng.Intn(len(wolfSoundSuffixes)))
+		}
 	case entitySheep:
 		baby.color = h.mixedFleeceColor(a.color, b.color) // the dye the parents' dyes craft, else a parent's
 	case entityPanda:
@@ -559,7 +571,7 @@ func variantEntryFor(etype int) (variantEntry, bool) {
 		return variantEntry{metaIndexVariant, metaTypeFrogVariant}, true
 	case entityAxolotl, entityRabbit, entityFox, entityMooshroom:
 		return variantEntry{metaIndexVariant, metaTypeVarIntFor}, true
-	case entityTropicalFish:
+	case entityTropicalFish, entitySalmon:
 		return variantEntry{metaIndexFishVariant, metaTypeVarIntFor}, true
 	case entityWolf:
 		return variantEntry{metaIndexWolfVariant, metaTypeWolfVariant}, true

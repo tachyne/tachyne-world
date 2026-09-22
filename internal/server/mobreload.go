@@ -122,6 +122,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.ovrSpeed, m.ovrDamage = sm.OvrSpeed, sm.OvrDamage
 	m.hasEgg = sm.HasEgg
 	m.screaming, m.hornsGone = sm.Screaming, sm.HornsGone
+	m.soundSet = sm.SoundSet
 	m.breaksDoors = sm.BreaksDoors
 	m.poseTick = sm.PoseTick
 	m.ravStunTick, m.ravRoarTick = sm.RavStun, sm.RavRoar

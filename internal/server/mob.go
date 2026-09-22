@@ -88,6 +88,7 @@ type mob struct {
 	sheared         bool     // sheep: fleece off (regrows by grazing)
 	color           int8     // sheep: fleece colour (0 white .. 15 black), dyeable
 	collar          int8     // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
+	soundSet        int8     // wolf: which of the seven WolfSoundVariants it was born with
 	stew            int8     // brown mooshroom: the stew flower it was fed (stew.go), 0 = none
 	customName      string   // name-tagged: shown above the mob, and it never despawns
 	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)

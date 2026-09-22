@@ -179,6 +179,11 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 		}
 	case entitySniffer:
 		ambient = "minecraft:entity.sniffer.idle" // Sniffer.getAmbientSound
+	case entityWolf:
+		// A wolf's voice is its WolfSoundVariant: seven registered sets, each
+		// a suffix on the entity.wolf sound names.
+		v := "minecraft:entity.wolf" + wolfSoundSuffix(m)
+		hurt, death, ambient = v+".hurt", v+".death", v+".ambient"
 	case entityNautilus: // Nautilus: its own voice under water, the land one out of it, the baby's own
 		p := "minecraft:entity.nautilus."
 		if m.baby {
@@ -209,7 +214,11 @@ func (h *hub) mobAmbience(players map[int32]*tracked) {
 			continue
 		}
 		m.ambientTime = -ambientInterval(m)
-		if _, _, ambient := h.mobSoundsFor(m); ambient != "" {
+		_, _, ambient := h.mobSoundsFor(m)
+		if m.etype == entityWolf {
+			ambient = h.wolfAmbient(m)
+		}
+		if ambient != "" {
 			cat := int32(sndNeutral)
 			if m.hostile {
 				cat = sndHostile
@@ -278,4 +287,37 @@ func (h *hub) playSoundGlobal(players map[int32]*tracked, dim int, name string, 
 		}
 		t.p.trySendEv(soundEv(name, category, sx, sy, sz, volume, pitch))
 	}
+}
+
+// wolfSoundSuffixes are the seven WolfSoundVariants in registry order, as the
+// suffix each puts on the entity.wolf sound names: classic carries none.
+var wolfSoundSuffixes = [...]string{"", "_puglin", "_sad", "_angry", "_grumpy", "_big", "_cute"}
+
+// wolfSoundSuffix is one wolf's set, defaulting to classic for a wolf that
+// predates the field.
+func wolfSoundSuffix(m *mob) string {
+	if int(m.soundSet) >= 0 && int(m.soundSet) < len(wolfSoundSuffixes) {
+		return wolfSoundSuffixes[m.soundSet]
+	}
+	return ""
+}
+
+// wolfAmbient is Wolf.getAmbientSound, which is three sounds rather than one:
+// an angry wolf growls; otherwise one idle noise in three is a pant — a whine
+// instead, when a tamed wolf is hurt — and the other two are the plain
+// ambient. All four come from the wolf's own sound variant.
+func (h *hub) wolfAmbient(m *mob) string {
+	v := "minecraft:entity.wolf" + wolfSoundSuffix(m)
+	if m.anger > 0 || m.targetEID != 0 {
+		return v + ".growl"
+	}
+	if h.rng.Intn(3) == 0 {
+		// vanilla's whine is a literal "below 20" on the tamed wolf's 40-point
+		// bar — half health.
+		if m.tamed && m.health < wolfTamedHealth/2 {
+			return v + ".whine"
+		}
+		return v + ".pant"
+	}
+	return v + ".ambient"
 }

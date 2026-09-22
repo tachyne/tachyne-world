@@ -6,6 +6,8 @@ import (
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-common/render770"
+
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestSoundBodyInlineShape(t *testing.T) {
@@ -46,5 +48,56 @@ func TestBlockBreakEventShape(t *testing.T) {
 	}
 	if pkt.Body[3] != 0xD1 { // 2001 = 0x7D1 big-endian i32 low byte
 		t.Fatalf("event id bytes wrong: % x", pkt.Body[:4])
+	}
+}
+
+// A wolf is born with one of seven sound variants and keeps it: its hurt,
+// death and idle noises all come from that set, and the idle roll is vanilla's
+// three-way one (growl when angry, otherwise a pant or whine one time in
+// three).
+func TestWolfSoundVariants(t *testing.T) {
+	h := newHub(world.New(1))
+
+	for i, suffix := range wolfSoundSuffixes {
+		m := &mob{etype: entityWolf, soundSet: int8(i)}
+		hurt, death, ambient := h.mobSoundsFor(m)
+		if hurt != "minecraft:entity.wolf"+suffix+".hurt" {
+			t.Fatalf("variant %d hurt = %q", i, hurt)
+		}
+		if death != "minecraft:entity.wolf"+suffix+".death" {
+			t.Fatalf("variant %d death = %q", i, death)
+		}
+		if ambient != "minecraft:entity.wolf"+suffix+".ambient" {
+			t.Fatalf("variant %d ambient = %q", i, ambient)
+		}
+	}
+
+	// An angry wolf growls, whatever else it would have said.
+	angry := &mob{etype: entityWolf, soundSet: 4, targetEID: 7}
+	for i := 0; i < 20; i++ {
+		if got := h.wolfAmbient(angry); got != "minecraft:entity.wolf_grumpy.growl" {
+			t.Fatalf("an angry wolf said %q", got)
+		}
+	}
+
+	// A hurt tamed wolf whines where a healthy one pants — never both.
+	hurtPet := &mob{etype: entityWolf, tamed: true, health: 5}
+	healthy := &mob{etype: entityWolf, tamed: true, health: wolfTamedHealth}
+	sawWhine, sawPant, sawAmbient := false, false, false
+	for i := 0; i < 200; i++ {
+		switch h.wolfAmbient(hurtPet) {
+		case "minecraft:entity.wolf.whine":
+			sawWhine = true
+		case "minecraft:entity.wolf.ambient":
+			sawAmbient = true
+		case "minecraft:entity.wolf.pant":
+			t.Fatal("a hurt tamed wolf panted instead of whining")
+		}
+		if h.wolfAmbient(healthy) == "minecraft:entity.wolf.pant" {
+			sawPant = true
+		}
+	}
+	if !sawWhine || !sawPant || !sawAmbient {
+		t.Fatalf("idle roll never produced all three (whine=%v pant=%v ambient=%v)", sawWhine, sawPant, sawAmbient)
 	}
 }

@@ -63,3 +63,36 @@ func TestTropicalFishVariantIndex(t *testing.T) {
 		t.Fatalf("variant index %d, want 17", e.idx)
 	}
 }
+
+// A salmon spawns at one of three sizes, weighted 30/50/15, and the size
+// scales its box the way vanilla's getDefaultDimensions does.
+func TestSalmonSizeVariant(t *testing.T) {
+	h := newHub(world.New(1))
+	counts := map[int32]int{}
+	for i := 0; i < 6000; i++ {
+		counts[h.rollSalmonSize()]++
+	}
+	// 30/50/15 of 95 → about 1895 / 3158 / 947 in 6000 draws.
+	for size, want := range map[int32]int{salmonSmall: 1895, salmonMedium: 3158, salmonLarge: 947} {
+		got := counts[size]
+		if got < want*4/5 || got > want*6/5 {
+			t.Errorf("size %d drawn %d times in 6000, want about %d", size, got, want)
+		}
+	}
+
+	medium := (&mob{etype: entitySalmon, variant: salmonMedium}).box()
+	small := (&mob{etype: entitySalmon, variant: salmonSmall}).box()
+	large := (&mob{etype: entitySalmon, variant: salmonLarge}).box()
+	if small.w*2 != medium.w || small.h*2 != medium.h {
+		t.Errorf("a small salmon's box %v is not half a medium one's %v", small, medium)
+	}
+	if large.w != medium.w*1.5 || large.h != medium.h*1.5 {
+		t.Errorf("a large salmon's box %v is not 1.5x a medium one's %v", large, medium)
+	}
+
+	// The size rides the same metadata index the tropical fish's variant does.
+	e, ok := variantEntryFor(entitySalmon)
+	if !ok || e.idx != metaIndexFishVariant {
+		t.Errorf("salmon variant entry = %+v (ok=%v), want index %d", e, ok, metaIndexFishVariant)
+	}
+}

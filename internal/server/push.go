@@ -115,6 +115,13 @@ func (m *mob) box() mobBox {
 		if s := float64(m.size); s > 0 {
 			b.w, b.h = b.w*s, b.h*s
 		}
+	case m.etype == entitySalmon:
+		// Salmon.getDefaultDimensions: the registered box scaled by the size
+		// variant, so a small salmon is half a medium one and a large one is
+		// half again bigger.
+		if s := float64(salmonScale(m.variant)); s > 0 {
+			b.w, b.h = b.w*s, b.h*s
+		}
 	case m.baby:
 		// AgeableMob: every baby box in vanilla is the adult scaled by half
 		// (a cow's 0.9x1.4 becomes exactly 0.45x0.7).
