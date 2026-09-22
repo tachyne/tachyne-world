@@ -113,3 +113,33 @@ func (h *hub) stepAwayFrom(m *mob, x, z float64) bool {
 	m.rest = 0
 	return true
 }
+
+// alertZombifiedPiglins is ZombifiedPiglin.alertOthers: hit one and every
+// other one inside its FOLLOW_RANGE box — thirty-five across, ten up and down
+// — takes the same grudge. This is the rule behind "never hit a zombified
+// piglin", and the engine's version only raised their anger inside a sixteen
+// block sphere without ever telling them WHO to come for, so the pack seethed
+// where it stood.
+//
+// Vanilla only alerts the ones with no target of their own, so a piglin
+// already fighting someone is left to it.
+const (
+	zPiglinAlertRange = 35.0 // FOLLOW_RANGE
+	zPiglinAlertY     = 10.0
+)
+
+func (h *hub) alertZombifiedPiglins(from *mob, t *tracked) {
+	h.grid().nearby(from.dim, from.x, from.z, zPiglinAlertRange, func(o *mob) {
+		if o.eid == from.eid || o.etype != entityZombifiedPiglin || o.dying > 0 {
+			return
+		}
+		if math.Abs(o.x-from.x) > zPiglinAlertRange || math.Abs(o.z-from.z) > zPiglinAlertRange ||
+			math.Abs(o.y-from.y) > zPiglinAlertY {
+			return
+		}
+		if o.targetEID != 0 {
+			return // already has someone of its own
+		}
+		h.provoke(o, t)
+	})
+}

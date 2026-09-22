@@ -385,14 +385,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if smash { // shockwave, fall-damage negation, wind_burst launch
 		h.smashEffects(players, t, m, fall)
 	}
-	h.alertKin(m, t)                      // HurtByTargetGoal.setAlertOthers: the neighbours join in
-	h.zombieReinforce(players, m, t)      // hard mode: a hurt zombie may call for backup
-	if m.etype == entityZombifiedPiglin { // vanilla: one hit angers the pack
-		h.grid().nearby(m.dim, m.x, m.z, 16, func(o *mob) {
-			if o.etype == entityZombifiedPiglin && dist3(o.x, o.y, o.z, m.x, m.y, m.z) < 16 {
-				o.anger = spiderAnger * 4 // piglins hold a long grudge
-			}
-		})
+	h.alertKin(m, t)                 // HurtByTargetGoal.setAlertOthers: the neighbours join in
+	h.zombieReinforce(players, m, t) // hard mode: a hurt zombie may call for backup
+	if m.etype == entityZombifiedPiglin && t != nil {
+		h.alertZombifiedPiglins(m, t)
 	}
 	if m.etype == entityVillager && t != nil {
 		h.villagerHurtBy(players, m, t, m.health <= 0) // VILLAGER_HURT / VILLAGER_KILLED gossip
