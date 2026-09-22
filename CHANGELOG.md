@@ -96,6 +96,16 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **Mixed materials craft.** A crafting table from two oak and two spruce
+  planks, sticks from an oak plank over a spruce one, a furnace ringed with
+  cobblestone and cobbled deepslate — none of these crafted, because every
+  recipe slot matched one exact item and the recipe list held a separate copy
+  of each recipe per material (twelve crafting tables, one per wood). Recipes
+  now come from the game's own recipe files, where a slot takes an ingredient
+  — any planks, any of the stone-like blocks — so they can be mixed as in
+  vanilla, and clicking a recipe in the book fills the grid from whatever mix
+  you are carrying. The book shows one crafting table rather than twelve, as
+  vanilla's does, and every recipe you had already unlocked carries over.
 - **End portals and end gateways are visible.** Neither has a block model —
   the starfield you see is drawn entirely by the block's block entity — and
   the table deciding which blocks carry one was a list of name patterns that

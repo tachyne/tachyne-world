@@ -190,17 +190,13 @@ func TestPlaceRecipeFromBook(t *testing.T) {
 	players[1] = pl
 	pl.inv.slots[3] = invStack{item: tOakLog, count: 2}
 
-	// Find the shapeless oak-log→planks recipe's display id.
-	id := -1
-	for i, r := range shapelessRecipes {
-		if len(r.Ingredients) == 1 && r.Ingredients[0] == tOakLog {
-			id = len(shapedRecipes) + i
-			break
-		}
+	// The oak-log→planks recipe, by its vanilla name. Its one ingredient is
+	// #oak_logs — logs, wood and their stripped forms — not a single item.
+	rid, ok := recipeIDByName["oak_planks"]
+	if !ok {
+		t.Fatal("no oak_planks recipe")
 	}
-	if id < 0 {
-		t.Fatal("no log→planks recipe found")
-	}
+	id := int(rid)
 	h.placeRecipe(players, pl, evCraftRequest{eid: 1, windowID: 0, recipeID: int32(id)})
 	if pl.craft[0].item != tOakLog || pl.craft[0].count != 1 {
 		t.Fatalf("book click should place the log in the grid, got %+v", pl.craft[0])

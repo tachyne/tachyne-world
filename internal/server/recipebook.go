@@ -54,10 +54,11 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 	}
 	w := gridSize(t)
 
-	// Work out which grid cell needs which item (top-left aligned for shaped).
+	// Work out which grid cell needs which ingredient (top-left aligned for
+	// shaped).
 	type needCell struct {
 		cell int
-		item int32
+		set  uint16
 	}
 	var need []needCell
 	switch {
@@ -68,8 +69,8 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 		}
 		for row := 0; row < int(r.H); row++ {
 			for col := 0; col < int(r.W); col++ {
-				if item := r.Cells[row*int(r.W)+col]; item != 0 {
-					need = append(need, needCell{row*w + col, item})
+				if set := r.Cells[row*int(r.W)+col]; set != 0 {
+					need = append(need, needCell{row*w + col, set})
 				}
 			}
 		}
@@ -78,36 +79,41 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 		if len(r.Ingredients) > w*w {
 			return
 		}
-		for i, item := range r.Ingredients {
-			need = append(need, needCell{i, item})
+		for i, set := range r.Ingredients {
+			need = append(need, needCell{i, set})
 		}
 	default:
 		return
 	}
 
-	// Everything must be available: count demand vs inventory supply.
-	demand := map[int32]int{}
-	for _, n := range need {
-		demand[n.item]++
-	}
 	h.reclaimCraft(players, t) // return whatever's in the grid first
-	for item, count := range demand {
-		have := 0
-		for _, s := range t.inv.slots {
-			if s.item == item {
-				have += s.count
+
+	// Choose an item for every cell from what the inventory holds.
+	supply := map[int32]int{}
+	var order []int32 // distinct items, in inventory order
+	for _, s := range t.inv.slots {
+		if s.item != 0 && s.count > 0 {
+			if _, seen := supply[s.item]; !seen {
+				order = append(order, s.item)
 			}
+			supply[s.item] += s.count
 		}
-		if have < count {
-			return // missing ingredients — leave the ghost preview to the client
-		}
+	}
+	sets := make([]uint16, len(need))
+	for i, n := range need {
+		sets[i] = n.set
+	}
+	pick := assignIngredients(sets, order, supply)
+	if pick == nil {
+		return // missing ingredients — leave the ghost preview to the client
 	}
 
 	// Pull one of each needed item out of the inventory into its grid cell.
-	for _, n := range need {
+	for k, n := range need {
+		item := pick[k]
 		for i := range t.inv.slots {
 			s := &t.inv.slots[i]
-			if s.item == n.item && s.count > 0 {
+			if s.item == item && s.count > 0 {
 				if s.count--; s.count == 0 {
 					s.item = 0
 				}
@@ -115,7 +121,7 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 				break
 			}
 		}
-		t.craft[n.cell] = invStack{item: n.item, count: t.craft[n.cell].count + 1}
+		t.craft[n.cell] = invStack{item: item, count: t.craft[n.cell].count + 1}
 	}
 	for i := 0; i < w*w; i++ {
 		h.sendWinSlot(t, int16(i+1), t.craft[i])
@@ -167,4 +173,47 @@ func (h *hub) placeCookRecipe(t *tracked, id int32) {
 		h.sendWinSlot(t, 0, f.slots[0])
 		return
 	}
+}
+
+// assignIngredients picks, for each ingredient in need, an item that set
+// accepts, drawing no item more times than supply holds — the assignment
+// vanilla's StackedItemContents.canCraft solves before ServerPlaceRecipe fills
+// a grid, which is what lets a crafting table be filled from two oak planks
+// and two spruce. It is a small max-flow (Kuhn's augmenting paths, with each
+// item a capacity-limited sink), so a greedy first choice that would strand a
+// later cell is undone rather than failing. Items are tried in order, so the
+// earlier stacks in the inventory are preferred. Returns nil when the recipe
+// cannot be filled.
+func assignIngredients(need []uint16, order []int32, supply map[int32]int) []int32 {
+	pick := make([]int32, len(need))
+	used := map[int32]int{}
+	var augment func(i int, seen map[int32]bool) bool
+	augment = func(i int, seen map[int32]bool) bool {
+		for _, it := range order {
+			if seen[it] || !ingredientAccepts(need[i], it) {
+				continue
+			}
+			seen[it] = true
+			if used[it] < supply[it] {
+				used[it]++
+				pick[i] = it
+				return true
+			}
+			// Every unit of it is taken: see whether one holder can move to
+			// another item, and take its unit if so.
+			for j := range need {
+				if j != i && pick[j] == it && augment(j, seen) {
+					pick[i] = it
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for i := range need {
+		if !augment(i, map[int32]bool{}) {
+			return nil
+		}
+	}
+	return pick
 }

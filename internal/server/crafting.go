@@ -80,8 +80,74 @@ func init() {
 		shapedIndex[k] = append(shapedIndex[k], i)
 	}
 	for i, r := range shapelessRecipes {
+		if r.Transmute { // book-only: transmuteMatch crafts these
+			continue
+		}
 		shapelessIndex[len(r.Ingredients)] = append(shapelessIndex[len(r.Ingredients)], i)
 	}
+}
+
+// ingredientAccepts reports whether item may fill a slot whose ingredient is
+// ingredientSets[set]. Set 0 is the empty set and accepts nothing.
+func ingredientAccepts(set uint16, item int32) bool {
+	s := ingredientSets[set]
+	i := sort.Search(len(s), func(i int) bool { return s[i] >= item })
+	return i < len(s) && s[i] == item
+}
+
+// cellFits is one shaped cell: empty where the pattern is empty, otherwise an
+// item the cell's ingredient accepts — any planks where the recipe says
+// #planks, so oak and spruce may share a grid, as in vanilla.
+func cellFits(set uint16, item int32) bool {
+	if set == 0 {
+		return item == 0
+	}
+	return item != 0 && ingredientAccepts(set, item)
+}
+
+// pairIngredients is vanilla's shapeless test: can the grid's items be paired
+// off one-to-one with the ingredients, each item going to a set that accepts
+// it. It is a matching rather than a sorted compare because one item may suit
+// several ingredients. ings is sorted, so identical ingredients sit together
+// and are tried in order only — they are interchangeable, and trying every
+// ordering of them would make a failing grid of nine planks cost 9! steps.
+func pairIngredients(items []int32, ings []uint16) bool {
+	if len(items) != len(ings) {
+		return false
+	}
+	for _, it := range items { // an item nothing accepts fails at once
+		ok := false
+		for _, set := range ings {
+			if ingredientAccepts(set, it) {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return false
+		}
+	}
+	used := make([]bool, len(ings))
+	var try func(i int) bool
+	try = func(i int) bool {
+		if i == len(items) {
+			return true
+		}
+		for j, set := range ings {
+			if used[j] || (j > 0 && ings[j-1] == set && !used[j-1]) {
+				continue
+			}
+			if ingredientAccepts(set, items[i]) {
+				used[j] = true
+				if try(i + 1) {
+					return true
+				}
+				used[j] = false
+			}
+		}
+		return false
+	}
+	return try(0)
 }
 
 // matchRecipe finds the crafting result for a w×w grid (w = 2 or 3), or (0,0).
@@ -124,17 +190,22 @@ func matchRecipeID(grid []invStack, w int) (int32, int, int32) {
 	}
 	bw, bh := maxC-minC+1, maxR-minR+1
 
-	cell := func(r, c int) int32 { return grid[(minR+r)*w+minC+c].item }
+	cell := func(r, c int) int32 {
+		if s := grid[(minR+r)*w+minC+c]; s.count > 0 {
+			return s.item
+		}
+		return 0
+	}
 	for _, ri := range shapedIndex[uint16(bw)<<8|uint16(bh)] {
 		rec := &shapedRecipes[ri]
 		direct, mirror := true, true
 		for r := 0; r < bh && (direct || mirror); r++ {
 			for c := 0; c < bw; c++ {
 				want := rec.Cells[r*bw+c]
-				if cell(r, c) != want {
+				if !cellFits(want, cell(r, c)) {
 					direct = false
 				}
-				if cell(r, bw-1-c) != want {
+				if !cellFits(want, cell(r, bw-1-c)) {
 					mirror = false
 				}
 			}
@@ -150,17 +221,9 @@ func matchRecipeID(grid []invStack, w int) (int32, int, int32) {
 			ids = append(ids, s.item)
 		}
 	}
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	for _, ri := range shapelessIndex[n] {
 		rec := &shapelessRecipes[ri]
-		ok := true
-		for i, id := range rec.Ingredients {
-			if ids[i] != id {
-				ok = false
-				break
-			}
-		}
-		if ok {
+		if pairIngredients(ids, rec.Ingredients) {
 			return rec.Result, int(rec.Count), int32(len(shapedRecipes) + ri)
 		}
 	}

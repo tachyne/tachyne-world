@@ -74,11 +74,20 @@ var rbIngredientIndex = func() map[int32][]int32 {
 			}
 		}
 	}
+	// Every item an ingredient accepts unlocks the recipe: holding spruce
+	// planks reveals the crafting table as much as oak does.
+	accepted := func(sets []uint16) []int32 {
+		var items []int32
+		for _, set := range sets {
+			items = append(items, ingredientSets[set]...)
+		}
+		return items
+	}
 	for i := range shapedRecipes {
-		add(int32(i), shapedRecipes[i].Cells)
+		add(int32(i), accepted(shapedRecipes[i].Cells))
 	}
 	for i := range shapelessRecipes {
-		add(int32(len(shapedRecipes)+i), shapelessRecipes[i].Ingredients)
+		add(int32(len(shapedRecipes)+i), accepted(shapelessRecipes[i].Ingredients))
 	}
 	// A cooker recipe unlocks on its single input, the same rule.
 	for i := range cookBookRecipes {
@@ -86,6 +95,20 @@ var rbIngredientIndex = func() map[int32][]int32 {
 	}
 	return idx
 }()
+
+// representatives turns ingredient sets into the one item per slot the book
+// frame carries: each set's first item, 0 for an empty cell. Vanilla's book
+// cycles through every item an ingredient accepts; the frame does not carry
+// the whole set yet, so the book shows one — crafting itself accepts them all.
+func representatives(sets []uint16) []int32 {
+	out := make([]int32, len(sets))
+	for i, set := range sets {
+		if s := ingredientSets[set]; len(s) > 0 {
+			out[i] = s[0]
+		}
+	}
+	return out
+}
 
 // rbBuildEntries assembles the attach frame for a set of display ids.
 func rbBuildEntries(ids []int32, replace, notify bool, highlighted map[int32]bool) attachproto.RecipeBook {
@@ -96,13 +119,13 @@ func rbBuildEntries(ids []int32, replace, notify bool, highlighted map[int32]boo
 		if int(id) < len(shapedRecipes) {
 			r := &shapedRecipes[id]
 			rb.Shaped = append(rb.Shaped, attachproto.ShapedRecipe{
-				ID: id, W: int32(r.W), H: int32(r.H), Cells: r.Cells,
+				ID: id, W: int32(r.W), H: int32(r.H), Cells: representatives(r.Cells),
 				Result: r.Result, Count: int32(r.Count), Notify: notify, Highlight: hl,
 			})
 		} else if n := int(id) - len(shapedRecipes); n < len(shapelessRecipes) {
 			r := &shapelessRecipes[n]
 			rb.Shapeless = append(rb.Shapeless, attachproto.ShapelessRecipe{
-				ID: id, Ingredients: r.Ingredients,
+				ID: id, Ingredients: representatives(r.Ingredients),
 				Result: r.Result, Count: int32(r.Count), Notify: notify, Highlight: hl,
 			})
 		} else if n := int(id - cookBookFirstID); n >= 0 && n < len(cookBookRecipes) {
@@ -154,9 +177,69 @@ func (h *hub) recipeUnlocks(t *tracked, invItems []int32) {
 	t.p.trySendEv(rbBuildEntries(fresh, false, true, all))
 }
 
+// A saved book stores recipe NAMES, as vanilla's ServerRecipeBook stores recipe
+// keys; display ids are only what this build hands the client. The book used
+// to store the ids themselves, which were indices into the recipe table — so
+// any change to the table (the 2026-09-22 move to vanilla's own recipes, which
+// folded twelve per-wood crafting tables into one; or a new Minecraft version
+// adding recipes) would have pointed every saved entry at a different recipe.
+
+// recipeNames[id] is the saved name of display id id: a crafting recipe's
+// vanilla name, or a cooking entry's cookRecipeKey.
+var recipeNames = func() []string {
+	names := make([]string, 0, len(shapedRecipes)+len(shapelessRecipes)+len(cookBookRecipes))
+	for _, r := range shapedRecipes {
+		names = append(names, r.Name)
+	}
+	for _, r := range shapelessRecipes {
+		names = append(names, r.Name)
+	}
+	for _, r := range cookBookRecipes {
+		names = append(names, cookRecipeKey(r))
+	}
+	return names
+}()
+
+// recipeIDByName is recipeNames the other way round.
+var recipeIDByName = func() map[string]int32 {
+	m := make(map[string]int32, len(recipeNames))
+	for id, n := range recipeNames {
+		m[n] = int32(id)
+	}
+	return m
+}()
+
+// cookRecipeKey names a cooking entry for the saved book. The engine's cooker
+// tables are keyed by input rather than by vanilla recipe name, so the key is
+// built from names that do not move between versions — station and input,
+// e.g. "cook/furnace/raw_iron". The slash keeps it apart from vanilla's names.
+func cookRecipeKey(r attachproto.CookingRecipe) string {
+	return "cook/" + itemNameOf[r.Station] + "/" + itemNameOf[r.Ingredient]
+}
+
+// legacyRecipeName is the name an id saved by the old index-based book stood
+// for: crafting ids through the frozen legacyRecipeNames, cooking ids by
+// position, since the cooking entries are still built in the same order.
+// "" when the id meant nothing.
+func legacyRecipeName(id int32) string {
+	switch {
+	case id < 0:
+		return ""
+	case id < legacyCraftRecipeCount:
+		return legacyRecipeNames[id]
+	case int(id-legacyCraftRecipeCount) < len(cookBookRecipes):
+		return cookRecipeKey(cookBookRecipes[id-legacyCraftRecipeCount])
+	}
+	return ""
+}
+
 // rbState is one player's persisted book.
 type rbState struct {
-	Known     []int32 `json:"known"`
+	Names          []string `json:"names,omitempty"`
+	HighlightNames []string `json:"highlight_names,omitempty"`
+	// Known and Highlight are the old index-based form. A book saved before
+	// names is read through legacyRecipeName once, and written back as names.
+	Known     []int32 `json:"known,omitempty"`
 	Highlight []int32 `json:"highlight,omitempty"`
 	Open      [4]bool `json:"open"`
 	Filter    [4]bool `json:"filter"`
@@ -185,13 +268,28 @@ func (s *recipeBookStore) loadInto(t *tracked, name string) {
 	s.mu.Lock()
 	st := s.m[name]
 	s.mu.Unlock()
-	t.rbKnown = make(map[int32]bool, len(st.Known))
-	t.rbHighlight = make(map[int32]bool, len(st.Highlight))
-	for _, id := range st.Known {
-		t.rbKnown[id] = true
+	known, highlight := st.Names, st.HighlightNames
+	if len(known) == 0 && len(st.Known) > 0 { // saved by the index-based book
+		for _, id := range st.Known {
+			known = append(known, legacyRecipeName(id))
+		}
+		for _, id := range st.Highlight {
+			highlight = append(highlight, legacyRecipeName(id))
+		}
 	}
-	for _, id := range st.Highlight {
-		t.rbHighlight[id] = true
+	t.rbKnown = make(map[int32]bool, len(known))
+	t.rbHighlight = make(map[int32]bool, len(highlight))
+	// A name this build does not have — a recipe a later version removed — is
+	// dropped, as vanilla drops a recipe key it cannot resolve.
+	for _, n := range known {
+		if id, ok := recipeIDByName[n]; ok {
+			t.rbKnown[id] = true
+		}
+	}
+	for _, n := range highlight {
+		if id, ok := recipeIDByName[n]; ok {
+			t.rbHighlight[id] = true
+		}
 	}
 	t.rbSettings = attachproto.RecipeSettings{Open: st.Open, Filter: st.Filter}
 }
@@ -202,13 +300,17 @@ func (s *recipeBookStore) record(name string, t *tracked) {
 	}
 	st := rbState{Open: t.rbSettings.Open, Filter: t.rbSettings.Filter}
 	for id := range t.rbKnown {
-		st.Known = append(st.Known, id)
+		if int(id) < len(recipeNames) {
+			st.Names = append(st.Names, recipeNames[id])
+		}
 	}
 	for id := range t.rbHighlight {
-		st.Highlight = append(st.Highlight, id)
+		if int(id) < len(recipeNames) {
+			st.HighlightNames = append(st.HighlightNames, recipeNames[id])
+		}
 	}
-	sort.Slice(st.Known, func(i, j int) bool { return st.Known[i] < st.Known[j] })
-	sort.Slice(st.Highlight, func(i, j int) bool { return st.Highlight[i] < st.Highlight[j] })
+	sort.Strings(st.Names)
+	sort.Strings(st.HighlightNames)
 	s.mu.Lock()
 	s.m[name] = st
 	s.mu.Unlock()
