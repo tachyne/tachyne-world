@@ -547,6 +547,7 @@ func (s *Server) Serve() error {
 			Spawn:  attachproto.Pos{X: 0.5, Y: s.world.SurfaceY(0, 0), Z: 0.5},
 			Join:   s.JoinRemote,
 			Resume: s.ResumeRemote,
+			Status: s.statusRoster,
 			Owned:  func(dim, cx, cz int32) bool { return s.hub.serveChunk(cx, cz) }, // stream neighbour border chunks too (seamless overlap)
 			BlockEntities: func(w *world.World, cx, cz int32) []byte {
 				dim := 0

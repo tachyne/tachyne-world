@@ -51,6 +51,10 @@ type Config struct {
 	// boundary. nil = own everything (unsharded/solo/test).
 	Owned func(dim, cx, cz int32) bool
 
+	// Status answers a Hello{Purpose:"status"} with the server-list roster.
+	// nil = report an empty server (solo/test).
+	Status func() proto.Status
+
 	// Resume binds a session to a player migrated here from a neighbour shard,
 	// when Hello.Purpose == "resume" (token = Hello.ResumeToken). nil = resume
 	// unsupported (falls back to a normal Join).
@@ -142,6 +146,19 @@ func session(c net.Conn, cfg Config) {
 		return
 	}
 	c.SetReadDeadline(time.Time{})
+
+	// A status query is not a session: the gateway wants the server-list
+	// roster, which only the world knows, and the connection carries nothing
+	// else. Answer it and hang up before any player machinery is built.
+	if hello.Purpose == "status" {
+		var st proto.Status
+		if cfg.Status != nil {
+			st = cfg.Status()
+		}
+		c.Write(frameJSON(proto.MsgStatus, st))
+		return
+	}
+
 	log.Printf("attach %s: session %q (%s) via %s roles=%v",
 		c.RemoteAddr(), hello.Name, hello.UUID, hello.Gateway, hello.Roles)
 
