@@ -10,7 +10,6 @@ package server
 // in our declared order, so one number works on every version.
 
 import (
-	"math"
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -31,6 +30,18 @@ func noteOf(state uint32) int { return int(state-noteBlockBase) / 2 % 25 }
 func withNote(state uint32, note int) uint32 {
 	off := state - noteBlockBase
 	return noteBlockBase + off - uint32(noteOf(state)*2) + uint32(note*2)
+}
+
+// withInstrument rewrites a note block's instrument, keeping its note and its
+// powered bit. NoteBlock.updateShape does this whenever the block above or
+// below changes; the engine corrects it at the moment the note plays, which
+// is the only moment the value is read.
+func withInstrument(state uint32, name string) uint32 {
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return state
+	}
+	return worldgen.SetProperty(info, state, "instrument", name)
 }
 
 // notePowered reads the note block's powered bit (the low bit; booleans list
@@ -118,6 +129,15 @@ func (h *hub) onNoteBlock(players map[int32]*tracked, e evNoteBlock) {
 // muffled by a solid block above unless a head instrument is at work.
 func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state uint32, by int32) {
 	instr := h.noteInstrument(dim, x, y, z)
+	// The CLIENT plays the note from the block event, reading the instrument
+	// out of the block STATE (NoteBlock.updateShape keeps it current there).
+	// The engine works the instrument out on demand instead, so the state can
+	// lag — correct it here, where it is about to matter, and the event is
+	// right however the block came to be.
+	if fixed := withInstrument(state, instr); fixed != state {
+		h.setBlockLive(players, dim, x, y, z, fixed)
+		state = fixed
+	}
 	if !noteHeadInstruments[instr] && h.worldFor(dim).At(x, y+1, z) != 0 {
 		return // muffled
 	}
@@ -125,25 +145,17 @@ func (h *hub) playNoteBlock(players map[int32]*tracked, dim, x, y, z int, state 
 	// sounds, and for redstone as much as for a fist — a skulk sensor hears a
 	// note block played by a repeater.
 	h.vib(dim, freqNoteBlockPlay, x, y, z, by)
-	sound, ok := noteInstrumentSounds[instr]
-	if !ok {
+	if _, ok := noteInstrumentSounds[instr]; !ok {
 		return // custom_head: no skull sound source in v1
 	}
-	note := noteOf(state)
-	pitch := float32(1)
-	if !noteHeadInstruments[instr] {
-		pitch = float32(math.Pow(2, float64(note-12)/12))
+	// Level.blockEvent(pos, this, 0, 0): the client plays the note and draws
+	// the particle itself, reading both out of the block state. Sending our
+	// own sound on top of it would play the note twice.
+	if id, ok := worldgen.BlockRegistryID("note_block"); ok {
+		h.toNearbyEv(players, dim, float64(x)+0.5, float64(z)+0.5, attachproto.BlockEvent{
+			X: int32(x), Y: int32(y), Z: int32(z), Action: 0, Param: 0, Block: int32(id)})
 	}
-	cx, cy, cz := float64(x)+0.5, float64(y)+0.5, float64(z)+0.5
-	h.playSoundDim(players, dim, sound, sndRecord, cx, cy, cz, 3, pitch)
 	h.allaysHearNote(dim, blockPos{x, y, z})
-	if !noteHeadInstruments[instr] {
-		// The note particle: with count 0 the offset is the hue (note/24).
-		h.toNearbyEv(players, dim, cx, cz, attachproto.Particles{
-			PID: particleNote, X: cx, Y: float64(y) + 1.2, Z: cz,
-			Spread: float32(note) / 24, Speed: 1, Count: 0,
-		})
-	}
 }
 
 // --- jukeboxes ---

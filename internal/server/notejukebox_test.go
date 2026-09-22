@@ -5,6 +5,8 @@ import (
 	"time"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // State math pinned against the vanilla report: note_block base 581 is
@@ -49,10 +51,12 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 	s, h, p := breakPlaceServer(t)
 	w := s.world
 
-	// A note block on stone: tune twice, note advances, sound+particle flow.
+	// A note block on stone: tune twice, the note advances, the event flows.
+	noteY := 0
 	onHub(t, h, func() {
 		tr := h.playersRef[p.eid]
 		sy := int(tr.y)
+		noteY = sy + 1
 		w.SetBlock(4, sy, 0, 1)                 // stone below → basedrum
 		w.SetBlock(4, sy+1, 0, noteBlockBase+1) // note block, default state
 		h.onNoteBlock(h.playersRef, evNoteBlock{eid: p.eid, x: 4, y: sy + 1, z: 0, tune: true})
@@ -65,24 +69,26 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 		}
 	})
 
-	// Sound + note particle reached the player's queue.
+	// The block event reached the player's queue. The note and the particle
+	// are the CLIENT's to make from it, which is why no sound is sent: vanilla
+	// only calls Level.blockEvent here, and sending our own would double it.
 	deadline := time.After(hubTestWait)
-	gotSound, gotParticle := false, false
-	for !(gotSound && gotParticle) {
+	gotEvent := false
+	for !gotEvent {
 		select {
 		case pkt := <-p.out:
 			switch ev := pkt.ev.(type) {
-			case attachproto.Sound:
-				if ev.Name == "minecraft:block.note_block.basedrum" && ev.Category == sndRecord {
-					gotSound = true
+			case attachproto.BlockEvent:
+				if ev.Y == int32(noteY) && ev.Action == 0 {
+					gotEvent = true
 				}
-			case attachproto.Particles:
-				if ev.PID == particleNote {
-					gotParticle = true
+			case attachproto.Sound:
+				if ev.Name == "minecraft:block.note_block.basedrum" {
+					t.Fatal("the server must not play the note itself: the client does, from the event")
 				}
 			}
 		case <-deadline:
-			t.Fatalf("sound=%v particle=%v never arrived", gotSound, gotParticle)
+			t.Fatal("the note block's event never arrived")
 		}
 	}
 
@@ -136,5 +142,26 @@ func TestNoteBlockAndJukeboxFlow(t *testing.T) {
 		case <-deadline:
 			t.Fatalf("play=%v stop=%v never arrived", gotPlay, gotStop)
 		}
+	}
+}
+
+// The client reads the instrument out of the block state, so the state has to
+// be right when the event goes out. The engine works the instrument out on
+// demand, so it corrects the state at the moment the note plays.
+func TestPlayingCorrectsTheStoredInstrument(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	x, y, z := 20, 70, 20
+	h.world.SetBlock(x, y-1, z, worldgen.BlockBase("gold_block")) // bell
+	// A note block whose stored instrument still says harp.
+	st := withInstrument(noteBlockBase+1, "harp")
+	h.world.SetBlock(x, y, z, st)
+	h.world.SetBlock(x, y+1, z, worldgen.Air)
+
+	h.playNoteBlock(players, 0, x, y, z, st, 0)
+
+	info, _ := worldgen.InfoForState(h.world.At(x, y, z))
+	if got := worldgen.GetProperty(info, h.world.At(x, y, z), "instrument"); got != "bell" {
+		t.Fatalf("the stored instrument should have been corrected to bell, got %q", got)
 	}
 }
