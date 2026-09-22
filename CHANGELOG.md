@@ -96,6 +96,14 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **Light passes through what it should and stops at what it should.** A
+  double slab let light straight through as if it were glass, while
+  waterlogged fences, stairs and walls dimmed nothing at all. How much a block
+  dims light is a per-state property in vanilla — a double slab is solid where
+  its halves are not — but the table behind it held one value per block, so
+  10,394 of the 29,671 block states carried the wrong one, 125 of them letting
+  light through a solid block. Every state was re-checked against vanilla and
+  all of them now match.
 - **Lit blocks give off light again.** A lit furnace, a powered redstone lamp,
   lit redstone ore, a charged respawn anchor, a campfire, glow berries — none
   of them lit anything, while an *unlit* redstone torch lit the room it was
