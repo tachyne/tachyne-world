@@ -385,6 +385,38 @@ func (s *mobStore) cullSpawnCows(etype, radius int) (before, after int) {
 	return before, after
 }
 
+// cullSpecies removes the WILD members of the named species from the saved
+// mobs: untamed, unnamed, and not persistence-required (picked-up gear). It is
+// the general form of cullSpawnCows — a one-time maintenance sweep for a
+// species that has built up past what it should be, run once from a flag and
+// then taken back out of the manifest.
+//
+// A culled mob simply stops existing, exactly as a despawn does: vanilla's
+// Mob.checkDespawn discards without drops, so an enderman's carried block is
+// lost the same way it would be if the mob had despawned on its own.
+func (s *mobStore) cullSpecies(etypes map[int]bool) (before, after, removed int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, bucket := range s.m.Chunks {
+		before += len(bucket)
+		out := bucket[:0:0]
+		for _, m := range bucket {
+			if etypes[m.Etype] && !m.Tamed && m.CustomName == "" && !m.Persistent {
+				removed++
+				continue
+			}
+			out = append(out, m)
+		}
+		after += len(out)
+		if len(out) == 0 {
+			delete(s.m.Chunks, key)
+		} else {
+			s.m.Chunks[key] = out
+		}
+	}
+	return before, after, removed
+}
+
 // keepMob reports whether a saved mob survives the wild wipe: the village-tied
 // and player-owned set (mirrors hub.spawnExempt — the vanilla persistence /
 // MISC category that never despawns).

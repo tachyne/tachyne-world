@@ -179,6 +179,10 @@ type Server struct {
 	// boot-seeded "herds" every restart used to add near spawn (removed
 	// 2026-09-19). Tamed and named cows stay. Set once, then clear.
 	CullSpawnCows bool
+	// CullSpecies names species whose WILD members are removed from the saved
+	// mobs at boot — one-time maintenance, set from -cull-species and taken
+	// back out of the manifest once it has run.
+	CullSpecies []string
 
 	// Waves enables the NON-VANILLA cosmetic beach-wave overlay (a client-only
 	// water sheet washing up the shore and rolling back). Off by default — it
@@ -400,6 +404,23 @@ func (s *Server) Serve() error {
 			s.hub.mobstore.flush()
 			log.Printf("wipe-wild: removed all wild mobs (kept village-tied + tamed), persisted mobs %d -> %d",
 				before, after)
+		}
+		if len(s.CullSpecies) > 0 {
+			set := map[int]bool{}
+			var names []string
+			for _, n := range s.CullSpecies {
+				if id, ok := entityByName[n]; ok {
+					set[id], names = true, append(names, n)
+				} else {
+					log.Printf("cull-species: no such entity %q — skipped", n)
+				}
+			}
+			if len(set) > 0 {
+				before, after, removed := s.hub.mobstore.cullSpecies(set)
+				s.hub.mobstore.flush()
+				log.Printf("cull-species %v: removed %d wild (kept tamed/named/persistent), persisted mobs %d -> %d",
+					names, removed, before, after)
+			}
 		}
 		if s.CullSpawnCows {
 			before, after := s.hub.mobstore.cullSpawnCows(entityCow, 160)

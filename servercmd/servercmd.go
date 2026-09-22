@@ -45,6 +45,7 @@ func Main() {
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
 	simRadius := flag.Int("simradius", 4, "chunks around each player that random-tick (crops, grass, ice, fire). Vanilla ticks everything inside its simulation distance, default 10; 4 is what this engine has always run. Raising it roughly doubles the per-tick sweep at 10 — watch the slow-tick log.")
 	spawner := flag.String("spawner", "vanilla", "natural-spawn model: only vanilla (the NaturalSpawner port) exists now; kept so older manifests still parse")
+	cullSpecies := flag.String("cull-species", "", "ONE-TIME maintenance: comma-separated entity names whose WILD members are removed from the saved mobs (tamed, named and gear-carrying ones are kept). Run once, then remove.")
 	cullSpawnCows := flag.Bool("cull-spawn-cows", false, "ONE-TIME maintenance: remove the wild cows within 160 blocks of the origin from the saved mobs (the old boot-seeded herds). Run once, then remove.")
 	waves := flag.Bool("waves", false, "NON-VANILLA eye-candy: a cosmetic water sheet washes up beaches near the shore and rolls back (client-only overlay, never written to the world)")
 	cleanupVillage := flag.String("cleanup-village", "", "ONE-TIME: remove a suppressed village's stranded mobs + crop/door debris near x,z (empty = off)")
@@ -70,6 +71,13 @@ func Main() {
 	srv.WorldFile = *worldFile
 	srv.DisableHUD = !*hud
 	srv.CullSpawnCows = *cullSpawnCows
+	if *cullSpecies != "" {
+		for _, n := range strings.Split(*cullSpecies, ",") {
+			if n = strings.TrimSpace(n); n != "" {
+				srv.CullSpecies = append(srv.CullSpecies, n)
+			}
+		}
+	}
 	switch *spawner {
 	case "vanilla":
 	case "tachyne":
