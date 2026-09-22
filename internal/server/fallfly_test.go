@@ -202,3 +202,30 @@ func TestGlidingRefusedOnASpentElytra(t *testing.T) {
 		t.Error("one point of durability is enough to fly")
 	}
 }
+
+// canGlide's other two refusals: riding something, and Levitation. Either one
+// ends the glide the same way a landing does.
+func TestRidingAndLevitationEndTheGlide(t *testing.T) {
+	h := newHub(world.New(1))
+
+	tr, players := glidingPlayer(h)
+	tr.ridingEID = 99 // sat on a boat mid-flight
+	h.tickGliding(players)
+	if tr.fallFlying {
+		t.Fatal("a passenger cannot glide")
+	}
+
+	tr, players = glidingPlayer(h)
+	h.applyEffect(players, tr, effLevitation, 0, 200)
+	h.tickGliding(players)
+	if tr.fallFlying {
+		t.Fatal("Levitation and a glide do not compete in vanilla")
+	}
+
+	// …and with neither, the glide carries on.
+	tr, players = glidingPlayer(h)
+	h.tickGliding(players)
+	if !tr.fallFlying {
+		t.Fatal("an ordinary glide should continue")
+	}
+}

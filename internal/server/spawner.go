@@ -70,6 +70,7 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 					h.spawnHostileY(players, etype, sx, float64(d.Y), sz)
 				}
 				h.levelEvent(players, 0, worldEventSpawnerSpawn, d.X, d.Y, d.Z, 0) // the smoke and flames
+				h.spawnerReset(players, 0, pos)                                    // …and the caged mob starts its turn again
 				h.playSound(players, "minecraft:block.fire.ambient", sndHostile,
 					float64(d.X)+0.5, float64(d.Y)+0.5, float64(d.Z)+0.5, 0.6, 0.8)
 			}

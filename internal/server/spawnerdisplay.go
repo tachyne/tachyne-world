@@ -1,6 +1,10 @@
 package server
 
-import attachproto "github.com/tachyne/tachyne-common/attach"
+import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // What a spawner LOOKS like. A spawner block on its own draws an empty cage:
 // the little mob turning inside it comes from the block entity's SpawnData,
@@ -54,4 +58,18 @@ func spawnerEntityName(etype int) string {
 		return "minecraft:" + n
 	}
 	return ""
+}
+
+// spawnerReset is BaseSpawner.delay's broadcastEvent(1): a block event with
+// no payload that tells the client the cage has just fired, so the little mob
+// turning inside it starts its spin over. Vanilla sends it every time the
+// spawner re-arms, which is what makes a working spawner look different from
+// one whose cycle has stalled.
+func (h *hub) spawnerReset(players map[int32]*tracked, dim int, pos blockPos) {
+	id, ok := worldgen.BlockRegistryID("spawner")
+	if !ok {
+		return
+	}
+	h.toNearbyEv(players, dim, float64(pos.x), float64(pos.z), attachproto.BlockEvent{
+		X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Action: 1, Param: 0, Block: int32(id)})
 }

@@ -3,6 +3,8 @@ package server
 import (
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -153,6 +155,7 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 			continue
 		}
 		t.gatewayUntil = now + endGatewayCooldown
+		h.gatewayCooldownEvent(players, blockPos{x: gx, y: gy, z: gz})
 		h.advance(players, t, "enter_block", advMatch{blockState: endGatewayState})
 		if math.Hypot(float64(gx), float64(gz)) < endGatewayRing*2 {
 			h.outboundEndGateway(players, t, blockPos{x: gx, y: gy, z: gz})
@@ -160,4 +163,17 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 			h.returnFromGateway(players, t)
 		}
 	}
+}
+
+// gatewayCooldownEvent is TheEndGatewayBlockEntity.triggerCooldown: the block
+// event that puts the gateway on its forty ticks. The client draws the beam
+// from it, which is the visible sign that the gateway has just taken someone
+// and is not ready for the next.
+func (h *hub) gatewayCooldownEvent(players map[int32]*tracked, pos blockPos) {
+	id, ok := worldgen.BlockRegistryID("end_gateway")
+	if !ok {
+		return
+	}
+	h.toNearbyEv(players, 2, float64(pos.x), float64(pos.z), attachproto.BlockEvent{
+		X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Action: 1, Param: 0, Block: int32(id)})
 }

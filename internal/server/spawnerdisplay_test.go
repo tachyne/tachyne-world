@@ -82,3 +82,33 @@ func TestSpawnerEntityNameIsQualified(t *testing.T) {
 		t.Errorf("an unknown type gave %q, want empty", got)
 	}
 }
+
+// Every time a spawner fires it sends the block event that restarts the
+// little mob's spin — the difference between a working spawner and a stalled
+// one, as far as anyone watching can tell.
+func TestSpawnerResetSendsTheBlockEvent(t *testing.T) {
+	h := newHub(world.New(1))
+	near := watcher(1, 0, 10, 70, 10)
+	far := watcher(2, 0, 400, 70, 400)
+	players := map[int32]*tracked{1: near, 2: far}
+
+	h.spawnerReset(players, 0, blockPos{10, 70, 12})
+
+	got := takeEvents(near)
+	if len(got) != 1 {
+		t.Fatalf("the player beside it got %d frames, want 1", len(got))
+	}
+	e, ok := got[0].(attachproto.BlockEvent)
+	if !ok {
+		t.Fatalf("sent %T, want BlockEvent", got[0])
+	}
+	if e.Action != 1 || e.Param != 0 {
+		t.Errorf("action/param %d/%d, want 1/0", e.Action, e.Param)
+	}
+	if e.X != 10 || e.Y != 70 || e.Z != 12 {
+		t.Errorf("position %d,%d,%d, want 10,70,12", e.X, e.Y, e.Z)
+	}
+	if n := len(takeEvents(far)); n != 0 {
+		t.Errorf("a player far away got %d frames, want none", n)
+	}
+}

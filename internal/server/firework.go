@@ -78,7 +78,16 @@ func (t *tracked) gliding() bool {
 	// Both, deliberately: the flag is cleared on landing anyway, but reading
 	// the ground here too means a clear that never arrives cannot leave
 	// somebody gliding along the floor for the rest of the session.
-	return t.fallFlying && !t.onGround && canGlideOn(t.armor[chestArmorSlot])
+	if !t.fallFlying || t.onGround {
+		return false
+	}
+	// canGlide's other two refusals: a passenger has no wings of its own to
+	// spread, and Levitation is already carrying you — vanilla will not let
+	// the two compete.
+	if t.ridingEID != 0 || t.hasEffect(effLevitation) > 0 {
+		return false
+	}
+	return canGlideOn(t.armor[chestArmorSlot])
 }
 
 // canGlideOn is LivingEntity.canGlideUsing for the chest slot: an elytra, and
