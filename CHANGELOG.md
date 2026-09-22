@@ -96,6 +96,13 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **An open fence gate lets you through, and deep snow holds you up.** Whether
+  a block stops an entity is a per-state question — a gate collides when shut
+  and not when open, snow collides from two layers up — but the table behind
+  it held one answer per block, taken from the default state. So every open
+  fence gate still blocked the way (192 states, every wood type), a drift of
+  snow was walked through rather than over, and a tilted big dripleaf, a
+  pitcher crop and some wall shapes were solid when they should not be.
 - **Farmland knows what counts as a lid.** Vanilla turns tilled soil back to
   dirt when something solid sits on it, and 2,809 block states were on the
   wrong side of that test — a closed fence gate, a sign, a cobweb, a turtle

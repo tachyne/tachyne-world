@@ -8,7 +8,9 @@ yet enforcing, so the server can be authoritative about them:
   - resistance   blast resistance (parked: no explosions yet)
   - stackSize    max stack for the block's item (64/16/1)
   - diggable     false => cannot be broken by normal mining (bedrock/barrier/…)
-  - boundingBox  "empty" (pass-through) vs "block" (collides) -> Box 0/1
+  - boundingBox  "empty" (pass-through) vs "block" (collides) -> Box 0/1,
+                 PER STATE: an open fence gate does not collide and a closed
+                 one does, snow collides from two layers up
   - harvestTools set of tool item-ids that yield drops (absent => any/hand drops)
 
 Block states are contiguous per block (minStateId..maxStateId), so the union of
@@ -16,14 +18,31 @@ ranges covers every valid state with no gaps. Scalars go in one table sorted by
 Min for binary search; harvestTools is a second, smaller table (only ~380 blocks
 require a tool).
 
-Run outside the sandbox (needs network):  python3 scripts/gen_blockmeta.py
-"""
-import json, urllib.request, os, subprocess
+boundingBox comes from the local extract (see audit/phase0/extractor), which
+asks the game per STATE. minecraft-data's schema carries ONE per block, so
+every open fence gate collided (192 states) and deep snow did not (7) — a mob
+would not walk through a gate it had just opened, and a drift was walked
+through rather than over.
 
-URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
+The other fields stay on minecraft-data deliberately. They are genuinely
+per-block, they are correct, and deriving them here instead went wrong in two
+ways worth recording: `diggable` is not `hardness >= 0` (air has hardness 0.0
+and is not diggable), and a block's stackSize is not its own item's (a wall
+sign has no item; vanilla takes the sign's 16). Moving them is for the bump,
+with the same byte-comparison this change got.
+
+    python3 scripts/gen_blockmeta.py [version]
+"""
+import json, urllib.request, os, subprocess, sys
+
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
+URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/%s/blocks.json" % VER
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "blockmeta_gen.go")
 
 blocks = json.load(urllib.request.urlopen(URL))
+# Per-STATE collision, the one thing minecraft-data cannot express.
+boxes_by_name = {b["name"]: b["boundingBox"] for b in json.load(open(SRC))["blocks"]}
 
 scalar = []   # (min, max, hardness, resistance, stack, diggable, box)
 harvest = []  # (min, max, [tool item ids])
@@ -31,9 +50,17 @@ tall = []     # (min, max) fences/walls/fence gates — 1.5-block collision heig
 for b in blocks:
     mn, mx = b["minStateId"], b["maxStateId"]
     hardness = b["hardness"] if b["hardness"] is not None else -1.0
-    box = 1 if b["boundingBox"] == "block" else 0
-    scalar.append((mn, mx, float(hardness), float(b["resistance"]),
-                   int(b["stackSize"]), bool(b["diggable"]), box))
+    boxes = [1 if x == "block" else 0 for x in boxes_by_name[b["name"]]]
+    if mx - mn + 1 != len(boxes):
+        raise SystemExit("%s: state count disagrees with boundingBox count" % b["name"])
+    # One row per RUN of equal collision within the block: the other four
+    # fields are per-block, so a block only splits where its box changes.
+    start = 0
+    for i in range(1, len(boxes) + 1):
+        if i == len(boxes) or boxes[i] != boxes[start]:
+            scalar.append((mn + start, mn + i - 1, float(hardness), float(b["resistance"]),
+                           int(b["stackSize"]), bool(b["diggable"]), boxes[start]))
+            start = i
     ht = b.get("harvestTools")
     if ht:
         tools = sorted(int(k) for k in ht.keys())
