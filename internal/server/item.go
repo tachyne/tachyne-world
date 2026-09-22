@@ -28,23 +28,24 @@ var (
 )
 
 type itemEntity struct {
-	dim     int // dimension the drop lives in
-	eid     int32
-	uuid    [16]byte
-	x, y, z float64
-	item    int32
-	count   int
-	dmg     int            // durability damage carried by the dropped stack
-	ench    enchList       // enchantments carried by the dropped stack
-	mapID   int32          // filled_map identity carried by the dropped stack
-	pats    [6]bannerLayer // banner pattern layers carried by the dropped stack
-	trimMat int8           // armor trim carried by the dropped stack (+1 enc)
-	trimPat int8
-	bookID  int32 // book identity carried by the dropped stack
-	boxID   int32 // shulker-box identity carried by the dropped stack
-	color   int32 // dyed_color of leather armour
-	thrower int32 // the player who tossed it (0 = the world did), for the thrower's advancement
-	hiveID  int32 // carried-hive identity (Silk-Touched hive's bees + honey)
+	dim        int // dimension the drop lives in
+	eid        int32
+	uuid       [16]byte
+	x, y, z    float64
+	item       int32
+	count      int
+	dmg        int            // durability damage carried by the dropped stack
+	ench       enchList       // enchantments carried by the dropped stack
+	mapID      int32          // filled_map identity carried by the dropped stack
+	pats       [6]bannerLayer // banner pattern layers carried by the dropped stack
+	trimMat    int8           // armor trim carried by the dropped stack (+1 enc)
+	trimPat    int8
+	bookID     int32 // book identity carried by the dropped stack
+	boxID      int32 // shulker-box identity carried by the dropped stack
+	color      int32 // dyed_color of leather armour
+	thrower    int32 // the player who tossed it (0 = the world did), for the thrower's advancement
+	portalCool int   // ticks before this drop may take a portal again (Entity.portalCooldown)
+	hiveID     int32 // carried-hive identity (Silk-Touched hive's bees + honey)
 	// The five below were missing until 2026-09-05: a dropped bundle lost its
 	// contents, a dropped potion became water, a dropped renamed item lost its
 	// name and prior-work cost, a dropped goat horn forgot its instrument.

@@ -997,10 +997,11 @@ func (h *hub) run() {
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 				h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
 			}
-			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
-			h.updateClouds(players)  // lingering-potion clouds: dose, shrink, expire
-			h.updateBobbers(players) // fishing bobbers: flight, bobbing, the catch timers
-			h.mapsTick(players)      // held filled maps: color scan + holder updates
+			h.updatePortalTravel(players) // mobs and drops standing in a portal go through
+			h.updateArrows(players)       // every tick: arrows are fast enough to tunnel otherwise
+			h.updateClouds(players)       // lingering-potion clouds: dose, shrink, expire
+			h.updateBobbers(players)      // fishing bobbers: flight, bobbing, the catch timers
+			h.mapsTick(players)           // held filled maps: color scan + holder updates
 			if age%10 == 0 {
 				h.mapFramesTick(players) // framed maps: viewers get patches + markers
 			}

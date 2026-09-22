@@ -414,6 +414,7 @@ type mob struct {
 	dmgFrac                         float64    // fractional damage carry (vanilla HP is float, ours int)
 	attackCD                        int        // mob-updates left before this mob can melee again
 	hasTarget                       bool       // a player is within aggro range this update
+	portalCool                      int        // ticks before it may take a portal again (Entity.portalCooldown)
 	seeTime                         int        // ranged goals: ticks the target has been in (positive) or out of (negative) sight
 	targetEID                       int32      // hostile: the player it hunts (TargetGoal's target; 0 = none)
 	unseenTicks                     int        // hostile: ticks that player has been out of sight
