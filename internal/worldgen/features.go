@@ -38,6 +38,7 @@ func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
 			}
 		}
 	}
+	g.decorateDisks(ch, cx, cz)    // sand, clay and gravel in the beds under water
 	g.decorateSeafloor(ch, cx, cz) // seagrass, kelp and sea pickles under the water
 }
 
