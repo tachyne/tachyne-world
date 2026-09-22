@@ -96,6 +96,13 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **End portals and end gateways are visible.** Neither has a block model —
+  the starfield you see is drawn entirely by the block's block entity — and
+  the table deciding which blocks carry one was a list of name patterns that
+  missed them, so a stronghold portal you filled with eyes, or the gateway
+  that opens after the dragon, showed as nothing at all. Weathered and waxed
+  copper golem statues were missing theirs too. The table is now taken from
+  the game rather than guessed.
 - **An open fence gate lets you through, and deep snow holds you up.** Whether
   a block stops an entity is a per-state question — a gate collides when shut
   and not when open, snow collides from two layers up — but the table behind

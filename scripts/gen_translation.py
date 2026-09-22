@@ -17,6 +17,8 @@ Run outside the sandbox (needs network):  python3 scripts/gen_translation.py
 """
 import json, urllib.request, os
 
+import vanillareport
+
 BASE = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/{}/{}.json"
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "translation_gen.go")
 
@@ -98,6 +100,25 @@ def normalize(ver, source, mdfile, viakey, kind):
     return [{"name": name, "id": i} for i, name in enumerate(lst)]
 
 
+# Blocks, items and entities come from vanilla's own reports for EVERY version,
+# canonical and target alike, read through the same adapter. They used to come
+# from minecraft-data up to 1.21.9 and ViaVersion's mappings beyond, which
+# stops wherever either project stops and names things two different ways.
+REPORT_KEY = {"items": "item", "entities": "entity_type"}
+
+
+def load(ver, source, mdfile, viakey, kind, reportkey):
+    if reportkey:
+        return fetch_report(ver, reportkey)
+    if kind == "stateRange":
+        return vanillareport.blocks(ver)
+    if mdfile in REPORT_KEY:
+        return vanillareport.registry(ver, REPORT_KEY[mdfile])
+    if source == "md" or ver == CANON:
+        return fetch(ver, mdfile)          # biomes: no report carries them
+    return normalize(ver, source, mdfile, viakey, kind)
+
+
 def delta_array_flat(canon, version):
     """canon/version: list of {name,id}. Returns {canon_id: delta}."""
     cby = {e["name"]: e["id"] for e in canon}
@@ -171,13 +192,10 @@ data = {}
 absent = {}
 added = {}
 for const, mdfile, viakey, kind, reportkey in REGISTRIES:
-    canon = fetch_report(CANON, reportkey) if reportkey else fetch(CANON, mdfile)
+    canon = load(CANON, "md", mdfile, viakey, kind, reportkey)
     per = {}
     for ver, (dir, source) in sorted(TARGETS.items()):
-        if reportkey:
-            version = fetch_report(dir, reportkey)
-        else:
-            version = normalize(dir, source, mdfile, viakey, kind)
+        version = load(dir, source, mdfile, viakey, kind, reportkey)
         if version is None:
             per[ver] = []
             continue

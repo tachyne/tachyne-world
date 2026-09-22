@@ -7,82 +7,41 @@ renderer: without a block entity present the client draws only the block outline
 each as (packed XZ, Y, block_entity_type id, NBT). For rendering, empty NBT
 (TAG_End) is enough — the type + position instantiate the renderer.
 
-This bakes a block-state-range -> block_entity_type-id table. The type ids are the
-block_entity_type registry order (a static registry the client always knows); the
-block->type association is by name (beds, chest family, sign/hanging_sign, banner,
-skull/head, shulker_box, and the rest of the tile-entity blocks).
+This bakes a block-state-range -> block_entity_type-id table.
 
-CAUTION on sourcing: block_entity_type is a STATIC registry, so its network ids
-are vanilla's REGISTRATION order (furnace=0, chest=1, ..., bed=25). mcmeta's
-summary lists registries ALPHABETICALLY — using it here produced wrong ids. The
-ViaVersion mappings list them in true network order; that's the source of truth.
+The block -> type association comes from the game: the local extract asks each
+block_entity_type which blocks it is valid for (see scripts/extract). The type
+ids come from vanilla's registries report, which gives network order directly —
+block_entity_type is a static registry, so its ids are REGISTRATION order, and
+an alphabetical source once produced wrong ones here.
 
-Run outside the sandbox (needs network):  python3 scripts/gen_blockentities.py
+The association used to be guessed from block names, and the guess missed 12
+blocks at 1.21.11 — among them end_portal and end_gateway, which draw ONLY
+through their block entity (RenderShape.INVISIBLE), so a lit stronghold portal
+or a post-dragon gateway reached clients with nothing to render; and every
+weathered or waxed copper golem statue, where the list knew only the plain one.
+
+    python3 scripts/gen_blockentities.py [version]     # default 1.21.11
 """
-import json, urllib.request, os, subprocess
+import json, os, subprocess, sys
 
-MD = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
-VV = "https://raw.githubusercontent.com/ViaVersion/Mappings/main/mappings/mapping-1.21.11.json"
+import vanillareport
+
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+EXTRACT = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "blockentities_gen.go")
 
-blocks = json.load(urllib.request.urlopen(MD))
-betype = json.load(urllib.request.urlopen(VV))["blockentities"]  # network order
-id_of = {name: i for i, name in enumerate(betype)}
+id_of = {e["name"]: e["id"] for e in vanillareport.registry(VER, "block_entity_type")}
 
-
-def classify(n):
-    """Map a block name to its block_entity_type name (or None if it has none)."""
-    if n.endswith("_bed"):
-        return "bed"
-    if n == "chest" or n.endswith("copper_chest"):  # copper chests share ChestBlockEntity
-        return "chest"
-    if n == "trapped_chest":
-        return "trapped_chest"
-    if n == "ender_chest":
-        return "ender_chest"
-    if n == "barrel":
-        return "barrel"
-    if n.endswith("shulker_box"):  # shulker_box + <color>_shulker_box
-        return "shulker_box"
-    if n.endswith("_hanging_sign"):  # includes *_wall_hanging_sign
-        return "hanging_sign"
-    if n.endswith("_sign"):  # standing + wall signs
-        return "sign"
-    if n.endswith("_banner"):  # standing + wall banners
-        return "banner"
-    if (n.endswith("_skull") or n.endswith("_head")) and n != "piston_head":
-        return "skull"
-    if n in ("campfire", "soul_campfire"):
-        return "campfire"
-    if n in ("beehive", "bee_nest"):
-        return "beehive"
-    if n in ("suspicious_sand", "suspicious_gravel"):
-        return "brushable_block"
-    if n.endswith("command_block"):
-        return "command_block"
-    if n == "spawner":
-        return "mob_spawner"
-    if n.endswith("_shelf"):  # the 1.21.9 wooden shelves (ShelfBlockEntity)
-        return "shelf"
-    if n == "copper_golem_statue":
-        return "copper_golem_statue"
-    exact = {
-        "furnace", "blast_furnace", "smoker", "dispenser", "dropper", "hopper",
-        "brewing_stand", "beacon", "bell", "conduit", "lectern", "enchanting_table",
-        "jukebox", "comparator", "daylight_detector", "decorated_pot", "crafter",
-        "chiseled_bookshelf", "trial_spawner", "vault", "sculk_sensor",
-        "calibrated_sculk_sensor", "sculk_catalyst", "sculk_shrieker",
-        "creaking_heart", "structure_block", "jigsaw",
-    }
-    if n in exact:
-        return n
-    return None
-
+# Left out deliberately. A moving_piston is the transient block a piston leaves
+# while something travels; the engine animates that through its own attach frame
+# rather than a chunk block entity, so it is not listed here.
+SKIP = {"moving_piston"}
 
 rows = []  # (min, max, type_id)
-for b in blocks:
-    be = classify(b["name"])
-    if be is None:
+for b in json.load(open(EXTRACT))["blocks"]:
+    be = b.get("blockEntityType")
+    if be is None or b["name"] in SKIP:
         continue
     if be not in id_of:
         raise SystemExit(f"block_entity_type {be!r} (for {b['name']}) not in registry")

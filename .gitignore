@@ -24,3 +24,4 @@ inventories.json
 npc-mem-*.txt
 players.json
 /bluemap
+__pycache__/

@@ -8,11 +8,14 @@ minStateId and its ordered property list (name + value order). That's enough to
 recompute an oriented/connected state from the default via mixed-radix arithmetic
 (see SetProperty).
 
-Run outside the sandbox (needs network):  python3 scripts/gen_block_states.py
+Source: vanilla's own blocks report via scripts/vanillareport.py, which
+derives property order from the state ids.  python3 scripts/gen_block_states.py [version]
 """
-import json, urllib.request, os
+import json, os, sys
+import vanillareport
 
-URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/blocks.json"
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "block_states_gen.go")
 # Every block with ANY state property goes in the table. It used to hold only
 # blocks with a placement ORIENTATION (axis/facing/half/type) or connections,
@@ -20,7 +23,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "blo
 # rail's shape, snow layers, a trial spawner's state — was absent, and
 # resolveState silently dropped those properties when stamping a template.
 
-blocks = json.load(urllib.request.urlopen(URL))
+blocks = vanillareport.blocks(VER)
 rows = []
 for b in blocks:
     states = b.get("states", [])

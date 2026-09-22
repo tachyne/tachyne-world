@@ -20,6 +20,7 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -67,6 +68,16 @@ public class Extract {
             o.addProperty("minStateId", Block.getId(states.get(0)));
             o.addProperty("maxStateId", Block.getId(states.get(states.size() - 1)));
             o.addProperty("defaultState", Block.getId(block.defaultBlockState()));
+            // Which block entity type, if any, this block carries — asked of each
+            // type's own valid-block set rather than guessed from the block's name.
+            String beType = null;
+            for (BlockEntityType<?> t : BuiltInRegistries.BLOCK_ENTITY_TYPE) {
+                if (t.isValid(block.defaultBlockState())) {
+                    beType = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(t).getPath();
+                    break;
+                }
+            }
+            o.addProperty("blockEntityType", beType);
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,
