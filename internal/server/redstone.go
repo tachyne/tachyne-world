@@ -7,10 +7,16 @@ import (
 
 // Redstone tier 1a: power sources (levers, buttons, torches, redstone
 // blocks), dust that carries decaying power, and consumers (lamps, iron
-// doors, TNT). The simulation is a cellular ripple over the existing
-// scheduled-update system: every change re-evaluates its neighbourhood next
-// tick, so signals propagate one block per tick and converge without a
-// global graph. Wire loops can't self-sustain — the -1 decay kills them.
+// doors, TNT).
+//
+// The simulation is a cellular ripple over the scheduled-update system: a
+// change re-evaluates its neighbourhood, and wire loops cannot self-sustain
+// because the -1 decay kills them. DUST is the exception, and the important
+// one: propagateWires below is RedStoneWireBlock.updatePowerStrength, so a
+// line of dust carries its signal end to end in the tick the source changes
+// — fifteen blocks, all at once, as vanilla does. (This comment used to say
+// a block per tick, which was true before propagateWires and sent a parity
+// audit chasing a bug that was already fixed.)
 
 const ()
 

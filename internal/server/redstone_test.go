@@ -155,3 +155,28 @@ func TestPoweredDoorMovesBothHalves(t *testing.T) {
 		t.Fatalf("both halves should close: lower=%v upper=%v", lowOpen, upOpen)
 	}
 }
+
+// A dust line carries its signal end to end in the tick the source changes,
+// not a block per tick: RedStoneWireBlock.updatePowerStrength re-evaluates
+// every dust it can reach before the tick is over. Fifteen blocks of dust is
+// the longest a signal survives, and all fifteen light at once.
+func TestDustCarriesTheWholeLineInOneTick(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	lever := setBoolProp(worldgen.BlockBase("lever")+9, "powered", false)
+	w.SetBlock(x, y, z+1, worldgen.Stone)
+	w.SetBlock(x, y, z, lever)
+	for i := 1; i <= 15; i++ {
+		w.SetBlock(x+i, y-1, z, worldgen.Stone)
+		w.SetBlock(x+i, y, z, worldgen.BlockBase("redstone_wire")+1160)
+	}
+
+	h.toggleLever(players, blockPos{x, y, z}, w.At(x, y, z))
+	stepTicks(h, players, 1) // ONE tick
+
+	if p := wirePower(w.At(x+1, y, z)); p != 15 {
+		t.Fatalf("the first cell should carry 15 at once, got %d", p)
+	}
+	if p := wirePower(w.At(x+15, y, z)); p != 1 {
+		t.Fatalf("the fifteenth cell should already carry 1, got %d — the line is crawling a block a tick", p)
+	}
+}
