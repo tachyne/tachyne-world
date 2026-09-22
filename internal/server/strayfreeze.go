@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // Skeleton → stray. A skeleton left standing in powder snow freezes into a
 // stray, which is the one conversion the engine never ran: powder snow was a
@@ -43,6 +47,9 @@ func (h *hub) strayFreezeStep(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	if !h.mobInPowderSnow(m) {
+		if m.strayIn > 0 {
+			h.syncStrayShaking(players, m, false)
+		}
 		m.snowSecs, m.strayIn = 0, 0 // out of the snow: both clocks are dropped
 		return false
 	}
@@ -59,6 +66,20 @@ func (h *hub) strayFreezeStep(players map[int32]*tracked, m *mob) bool {
 	}
 	if m.snowSecs++; m.snowSecs >= strayFreezeSecs {
 		m.strayIn = strayConvertSecs
+		h.syncStrayShaking(players, m, true)
 	}
 	return false
+}
+
+// syncStrayShaking is DATA_STRAY_CONVERSION_ID (index 16, BOOLEAN). The client
+// reads it as isShaking() and draws the skeleton shivering for the fifteen
+// seconds the change takes — which is the only sign anything is happening
+// until the crackle at the end. Skeleton is a Monster, so the index is the
+// same on every served client.
+func (h *hub) syncStrayShaking(players map[int32]*tracked, m *mob, on bool) {
+	b := protocol.AppendVarInt(nil, m.eid)
+	b = protocol.AppendU8(b, 16)
+	b = protocol.AppendVarInt(b, 8) // BOOLEAN
+	b = protocol.AppendBool(b, on)
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 }

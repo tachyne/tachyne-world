@@ -464,6 +464,10 @@ func (h *hub) rollVariant(m *mob) {
 	case entityPanda:
 		m.variant = packPandaGenes(pandaGeneRandom(h.rng.Intn), pandaGeneRandom(h.rng.Intn))
 		h.applyPandaGenes(m)
+	case entityTropicalFish:
+		// A school shares its variant (TropicalFishGroupData), so the group
+		// roll is the same one the wolves and rabbits use.
+		m.variant = h.groupVariant(m, h.rollTropicalVariant)
 	case entityPig, entityCow, entityChicken:
 		m.variant = farmVariantFor(m.dim, h.spawnBiome(m))
 	default:
@@ -555,6 +559,8 @@ func variantEntryFor(etype int) (variantEntry, bool) {
 		return variantEntry{metaIndexVariant, metaTypeFrogVariant}, true
 	case entityAxolotl, entityRabbit, entityFox, entityMooshroom:
 		return variantEntry{metaIndexVariant, metaTypeVarIntFor}, true
+	case entityTropicalFish:
+		return variantEntry{metaIndexFishVariant, metaTypeVarIntFor}, true
 	case entityWolf:
 		return variantEntry{metaIndexWolfVariant, metaTypeWolfVariant}, true
 	case entityCat:

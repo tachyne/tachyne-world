@@ -43,6 +43,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 			}
 		}
 	}
+	h.syncGuardianSpikes(players, m)
 	// GuardianAttackGoal: lock on (the client draws the beam from the synced
 	// attack target), let attackTime run from -10 up to the attack duration
 	// while the target stays in reach and sight, then land the two hits and
@@ -101,6 +102,29 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
 	}
+}
+
+// guardianMovingMeta is DATA_ID_MOVING (index 16, BOOLEAN): whether the move
+// control is driving the guardian. The client draws the spikes from it — out
+// when the guardian is still, folded back while it swims — so without it a
+// guardian's spines never move however faithfully the damage is reflected.
+// Guardian is a Monster, so the index is the same on every served client.
+func guardianMovingMeta(eid int32, moving bool) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, 16)
+	b = protocol.AppendVarInt(b, 8) // BOOLEAN
+	b = protocol.AppendBool(b, moving)
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// syncGuardianSpikes broadcasts the flag when it turns over.
+func (h *hub) syncGuardianSpikes(players map[int32]*tracked, m *mob) {
+	moving := !guardianSpikesOut(m)
+	if moving == m.guardMoving {
+		return
+	}
+	m.guardMoving = moving
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(guardianMovingMeta(m.eid, moving)))
 }
 
 // guardianSpikesOut is Guardian's isMoving(), inverted. GuardianMoveControl
