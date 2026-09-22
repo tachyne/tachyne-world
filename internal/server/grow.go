@@ -10,8 +10,24 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 const (
 	randomTickSpeed = 3 // blocks ticked per chunk-section per tick (vanilla default)
-	simRadius       = 4 // chunks around each player that random-tick
+	// defaultSimRadius is how many chunks around a player random-tick. Vanilla
+	// ticks everything inside the SIMULATION DISTANCE, whose own default is
+	// 10; this engine has run at 4 since the beginning.
+	//
+	// The cost of the difference, measured rather than guessed: a sweep over
+	// radius 4 (81 chunks) took 12.5 ms on the dev box, radius 10 (441 chunks)
+	// 26.6 ms — about twice, not the five times the chunk count suggests,
+	// because much of a sweep is fixed overhead. The sweep runs every tick a
+	// player is online, so at 10 it is half a tick's budget on THIS hardware.
+	//
+	// The default stays at 4 rather than quietly doubling the cost of the
+	// running world; -simradius raises it, and the slow-tick log says at once
+	// whether the box can take it.
+	defaultSimRadius = 4
 )
+
+// simRadius is the live value, set once from -simradius before the hub runs.
+var simRadius = defaultSimRadius
 
 // Sugar cane and cactus state ranges, looked up by NAME.
 //
@@ -1078,4 +1094,12 @@ func (h *hub) tickPitcher(players map[int32]*tracked, dim, x, y, z int, state ui
 		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, pitcherUpper(newAge))
 	}
 	return true
+}
+
+// SetSimRadius overrides how far random ticks reach. Called once from the
+// entrypoint before the hub starts; see defaultSimRadius for what it costs.
+func SetSimRadius(n int) {
+	if n > 0 {
+		simRadius = n
+	}
 }

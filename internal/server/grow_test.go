@@ -111,3 +111,24 @@ func TestSpeciesLeavesSurviveNearTheirLog(t *testing.T) {
 		}
 	}
 }
+
+// The random-tick reach is configurable, because vanilla's own default (10,
+// its simulation distance) costs about twice what this engine's 4 does and
+// the box it runs on has to agree to that.
+func TestSimRadiusIsConfigurable(t *testing.T) {
+	old := simRadius
+	defer SetSimRadius(old)
+
+	SetSimRadius(10)
+	if simRadius != 10 {
+		t.Fatalf("simRadius = %d, want 10", simRadius)
+	}
+	SetSimRadius(0) // nonsense is ignored rather than turning growth off
+	if simRadius != 10 {
+		t.Fatalf("a zero should leave it alone, got %d", simRadius)
+	}
+	SetSimRadius(old)
+	if simRadius != defaultSimRadius {
+		t.Fatalf("the default should be %d", defaultSimRadius)
+	}
+}

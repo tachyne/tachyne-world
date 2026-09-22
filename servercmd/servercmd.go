@@ -43,6 +43,7 @@ func Main() {
 	earthVScale := flag.Float64("earth-vscale", 4.5, "earth mode: metres of real elevation per block above sea level")
 	ceiling := flag.Int("ceiling", 0, "TALL WORLD: overworld top build limit (0 = vanilla 320; Java max 2032). Pair with -earth-vscale so the region's summits fit, e.g. -ceiling 1664 -earth-vscale 1")
 	pluginDir := flag.String("plugindir", "plugins", "directory for per-plugin config + data folders")
+	simRadius := flag.Int("simradius", 4, "chunks around each player that random-tick (crops, grass, ice, fire). Vanilla ticks everything inside its simulation distance, default 10; 4 is what this engine has always run. Raising it roughly doubles the per-tick sweep at 10 — watch the slow-tick log.")
 	spawner := flag.String("spawner", "vanilla", "natural-spawn model: only vanilla (the NaturalSpawner port) exists now; kept so older manifests still parse")
 	cullSpawnCows := flag.Bool("cull-spawn-cows", false, "ONE-TIME maintenance: remove the wild cows within 160 blocks of the origin from the saved mobs (the old boot-seeded herds). Run once, then remove.")
 	waves := flag.Bool("waves", false, "NON-VANILLA eye-candy: a cosmetic water sheet washes up beaches near the shore and rolls back (client-only overlay, never written to the world)")
@@ -50,6 +51,10 @@ func Main() {
 	cullAnimals := flag.Int("cull-animals", 0, "ONE-TIME maintenance: cap each species to N per chunk in the saved mobs and thin overgrown cows (0 = off). Run once to undo pre-fix herd doubling, then remove.")
 	wipeWild := flag.Bool("wipe-wild", false, "ONE-TIME maintenance: remove ALL wild mobs (passives + hostiles) from the saved store, keep village-tied + tamed, and mark populated chunks permanently seeded. Run once to undo runaway accumulation, then remove.")
 	flag.Parse()
+
+	if *simRadius > 0 {
+		server.SetSimRadius(*simRadius)
+	}
 
 	if *addr != "" {
 		log.Printf("WARNING: -addr is a no-op — the engine has no Minecraft socket; connect through a gateway")
