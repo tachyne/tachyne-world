@@ -3,8 +3,11 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // TestHoglinZombifiesAndFleesFungus: a hoglin in the overworld turns into a
@@ -68,5 +71,46 @@ func TestHoglinZombifiesAndFleesFungus(t *testing.T) {
 	}
 	if h.mobs[hog3.eid] == nil {
 		t.Fatal("an immune hoglin stays a hoglin")
+	}
+}
+
+// ATTACK_KNOCKBACK was declared and never set, so the four mobs whose whole
+// character is sending you flying hit like anything else — and a hoglin's
+// throw, which reads the attribute directly, did nothing at all.
+func TestAttackKnockbackIsSet(t *testing.T) {
+	for etype, want := range map[int]float64{
+		entityRavager: 1.5, entityWarden: 1.5,
+		entityHoglin: 1, entityZoglin: 1,
+		entityZombie: 0, entityCreeper: 0,
+	} {
+		m := &mob{etype: etype}
+		if got := m.mobAttrs().Value(attr.AttackKnockback); got != want {
+			t.Errorf("%s ATTACK_KNOCKBACK = %v, want %v", entityNameByID[etype], got, want)
+		}
+	}
+}
+
+// A hoglin's throw now actually leaves the ground.
+func TestHoglinThrowMoves(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	m := &mob{etype: entityHoglin, x: 0, y: 70, z: 0}
+	pl.x, pl.y, pl.z = 2, 70, 0
+
+	h.hoglinThrow(pl, m)
+	var thrown bool
+	for {
+		select {
+		case pkt := <-pl.p.out:
+			if v, ok := pkt.ev.(attachproto.Velocity); ok && (v.VX != 0 || v.VY != 0 || v.VZ != 0) {
+				thrown = true
+			}
+			continue
+		default:
+		}
+		break
+	}
+	if !thrown {
+		t.Fatal("a hoglin's bite sent the player nowhere")
 	}
 }

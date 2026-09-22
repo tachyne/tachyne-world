@@ -428,9 +428,12 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))
-	// A caught bite still shoves them; a Knockback weapon adds its 0.5·lvl on
-	// top of the 0.4 base (Mob.getKnockback → LivingEntity.knockback).
-	h.knockbackScaled(t, m.x, m.z, 1+1.25*float64(m.heldStack().enchLvl(enchKnockback)))
+	// A caught bite still shoves them. Mob.getKnockback is ATTACK_KNOCKBACK
+	// plus the weapon's Knockback, halved, on top of the 0.4 the hurt itself
+	// gives — and 0.4 is what a scale of 1 means here, so each unit of the
+	// attribute is worth 1.25 of scale.
+	extraKB := m.mobAttrs().Value(attr.AttackKnockback) + float64(m.heldStack().enchLvl(enchKnockback))
+	h.knockbackScaled(t, m.x, m.z, 1+1.25*extraKB)
 	if landed {
 		t.lastHurtByMob = m.eid // the owner's wolves take note
 		if lvl := m.heldStack().enchLvl(enchFireAspect); lvl > 0 {

@@ -84,3 +84,34 @@ func TestFireImmuneMobsIgnoreLava(t *testing.T) {
 		t.Fatalf("strider should be unharmed in lava: health=%d fireSecs=%d", m.health, m.fireSecs)
 	}
 }
+
+// SAFE_FALL_DISTANCE and FALL_DAMAGE_MULTIPLIER were fixed constants, so every
+// mob fell like a zombie. Vanilla moves two families off the defaults: a fox
+// lands from five blocks unhurt, and an equine from six and then takes half.
+func TestFallToleranceByFamily(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+
+	fall := func(etype int, from float64) int {
+		m := h.spawnMob(players, etype, 0, 80, 0)
+		before := m.health
+		h.mobFall(players, m, from)
+		return before - m.health
+	}
+
+	// Seven blocks: a zombie loses four, a fox two, a horse half of one (so
+	// nothing at all).
+	if got := fall(entityZombie, 7); got != 4 {
+		t.Errorf("a zombie falling 7 lost %d, want 4", got)
+	}
+	if got := fall(entityFox, 7); got != 2 {
+		t.Errorf("a fox falling 7 lost %d, want 2", got)
+	}
+	if got := fall(entityHorse, 7); got != 0 {
+		t.Errorf("a horse falling 7 lost %d, want 0", got)
+	}
+	// Sixteen: the horse's six-block grace then half of the rest.
+	if got := fall(entityHorse, 16); got != 5 {
+		t.Errorf("a horse falling 16 lost %d, want 5", got)
+	}
+}

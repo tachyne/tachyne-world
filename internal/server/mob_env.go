@@ -10,10 +10,11 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 const (
-	mobSafeFall    = 3.0 // SAFE_FALL_DISTANCE — blocks of fall tolerated before damage
+	mobSafeFall    = 3.0 // SAFE_FALL_DISTANCE's registry default — the base for most mobs
 	lavaDmgPerSec  = 4   // Entity.lavaHurt is 4.0 per hit
 	drownDmgPerSec = 2   // LivingEntity drowning damage
 	lavaAfterburn  = 15  // setSecondsOnFire(15) on leaving lava
@@ -125,7 +126,10 @@ func (h *hub) mobFall(players map[int32]*tracked, m *mob, fell float64) {
 	if fallDamageImmune[m.etype] {
 		return
 	}
-	if dmg := math.Floor(fell - mobSafeFall); dmg >= 1 {
+	// calculateFallDamage: (fall − SAFE_FALL_DISTANCE) × FALL_DAMAGE_MULTIPLIER.
+	// Both were fixed constants here, so a horse took a fox's fall and a fox a
+	// zombie's.
+	if dmg := math.Floor((fell - m.safeFallDistance()) * m.fallDamageMultiplier()); dmg >= 1 {
 		h.hurtMobOf(players, m, dmg, dtFall)
 		h.playFallDamageSound(players, m.dim, m.x, m.y, m.z, dmg)
 	}
@@ -228,4 +232,16 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			m.submerged = 0
 		}
 	}
+}
+
+// safeFallDistance and fallDamageMultiplier are the two attributes vanilla's
+// calculateFallDamage reads. Only the fox and the equines move off the
+// registry defaults, but they are attributes rather than constants so an
+// effect, a plugin or /attribute can move them too.
+func (m *mob) safeFallDistance() float64 {
+	return m.mobAttrs().Value(attr.SafeFallDistance)
+}
+
+func (m *mob) fallDamageMultiplier() float64 {
+	return m.mobAttrs().Value(attr.FallDamageMultiplier)
 }

@@ -944,7 +944,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				}
 			} else {
 				m.y = floor
-				if fell := oldY - m.y; fell > mobSafeFall { // the ground dropped out under it
+				if fell := oldY - m.y; fell > m.safeFallDistance() { // the ground dropped out under it
 					h.mobFall(players, m, fell)
 				}
 			}
@@ -1499,7 +1499,46 @@ func newMobAttributes(etype int) *attribute.Map {
 	a.SetBase(attr.MaxHealth, float64(mobHealth(etype)))
 	a.SetBase(attr.MovementSpeed, speedFor(etype))
 	a.SetBase(attr.AttackDamage, meleeDamageFor(etype))
+	if kb := attackKnockbackFor(etype); kb > 0 {
+		a.SetBase(attr.AttackKnockback, kb)
+	}
+	// The two species families that fall better than everything else: a fox
+	// lands from five blocks unhurt, and the equines from six and then take
+	// half of what is left.
+	switch {
+	case etype == entityFox:
+		a.SetBase(attr.SafeFallDistance, 5)
+	case isEquine(etype):
+		a.SetBase(attr.SafeFallDistance, 6)
+		a.SetBase(attr.FallDamageMultiplier, 0.5)
+	}
 	return a
+}
+
+// isEquine is the AbstractHorse family, which shares its fall tolerance.
+func isEquine(etype int) bool {
+	switch etype {
+	case entityHorse, entityDonkey, entityMule, entitySkeletonHorse, entityZombieHorse,
+		entityLlama, entityTraderLlama, entityCamel, entityCamelHusk:
+		return true
+	}
+	return false
+}
+
+// attackKnockbackFor is the species' ATTACK_KNOCKBACK base. Vanilla leaves it
+// at zero for almost everything — the four that set it are the ones whose
+// whole character is sending you flying. It was never set here at all, which
+// among other things made a hoglin's throw (HoglinBase.throwTarget, which
+// reads this attribute directly) a no-op: the hoglin bit you and you stayed
+// exactly where you were.
+func attackKnockbackFor(etype int) float64 {
+	switch etype {
+	case entityRavager, entityWarden:
+		return 1.5
+	case entityHoglin, entityZoglin:
+		return 1
+	}
+	return 0
 }
 
 // mobAttrs returns the mob's attribute map, seeding it from the species if the
