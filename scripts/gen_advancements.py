@@ -10,7 +10,7 @@ Sources (all local, no network):
   - assets/minecraft/lang/en_us.json     same jar (English titles for chat
     announce + Bedrock fallback; Java clients render the translate keys)
   - internal/server/itemnames_gen.go     icon/predicate item ids (the engine's
-    one item-id space, minecraft-data 1.21.11)
+    one item-id space, from vanilla's registries report)
 
 Tree layout (each display's x,y) is computed here the way the vanilla
 server lays out its advancement screen (a Buchheim tidy tree over the

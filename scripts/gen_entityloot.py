@@ -4,21 +4,22 @@ tables baked into a compact IR the engine's data-driven loot evaluator reads,
 keyed by block-state range (binary-searched in Go, like loot_gen.go).
 
 Source: the 1.21.11 server jar datapack (data/minecraft/loot_table/blocks/
-*.json); block names → state ranges and item names → ids via minecraft-data.
+*.json); entity names and item names → ids via vanilla's own reports
+(scripts/vanillareport.py).
 Only the node types the evaluator supports are kept; a table using anything
 else is omitted so the engine falls back to its legacy drop for that block.
 
 Run: python3 scripts/gen_blockloot.py [path-to-server.jar]  (needs network)
 """
-import io, json, sys, os, urllib.request, zipfile
+import io, json, sys, os, zipfile
+import vanillareport
 
-MD = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11"
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUTDIR = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "entities.json")
 
-item_id = {i["name"]: i["id"] for i in json.load(urllib.request.urlopen(MD + "/items.json"))}
-ents = json.load(urllib.request.urlopen(MD + "/entities.json"))
+item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}
+ents = vanillareport.registry("1.21.11", "entity_type")
 ent_id = {e["name"]: e["id"] for e in ents}
 
 outer = zipfile.ZipFile(JAR)

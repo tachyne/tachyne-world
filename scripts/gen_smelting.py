@@ -12,15 +12,15 @@ Fuel burn times are vanilla constants (the furnace block entity's fuel map);
 the common set is emitted by name so the ids stay generated.
 
 Run: python3 scripts/gen_smelting.py [path-to-server.jar]
-(needs network only for the minecraft-data items.json id map)
+(item ids from vanilla's registries report, via scripts/vanillareport.py)
 """
-import io, json, sys, urllib.request, os, subprocess, zipfile
+import io, json, sys, os, subprocess, zipfile
+import vanillareport
 
-ITEMS = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/items.json"
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "smelting_gen.go")
 
-item_id = {i["name"]: i["id"] for i in json.load(urllib.request.urlopen(ITEMS))}
+item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}
 
 # The bundler jar nests the real server jar.
 outer = zipfile.ZipFile(JAR)

@@ -10,13 +10,13 @@ update_recipes item sets AND the engine's menu, so they always agree.
 
 Run: python3 scripts/gen_smithingdata.py [path-to-server.jar]
 """
-import io, json, sys, urllib.request, os, subprocess, zipfile
+import io, json, sys, os, subprocess, zipfile
+import vanillareport
 
-ITEMS = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11/items.json"
 JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "smithing_gen.go")
 
-item_id = {i["name"]: i["id"] for i in json.load(urllib.request.urlopen(ITEMS))}
+item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}  # vanilla's registries report
 outer = zipfile.ZipFile(JAR)
 inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
 z = zipfile.ZipFile(io.BytesIO(outer.read(inner[0]))) if inner else outer
