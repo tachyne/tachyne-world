@@ -105,6 +105,17 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **Tall mobs need room to stand where they spawn.** The spawn test asked for
+  two blocks of headroom whatever the mob was, which is right for a zombie and
+  wrong for an enderman at 2.9 blocks — so every two-high cave pocket was an
+  enderman spawn site vanilla would have refused. Since an enderman holding a
+  block never despawns, each of those became permanent; the live world had
+  collected 198 of them.
+- **You can sit your cat with something in your hand.** It insisted on an
+  empty one; vanilla only excludes a dye and its food.
+- **A pet runs after you instead of blinking.** The follow goal acts on a
+  ten-tick clock and the engine was re-deciding five times as often, so a cat
+  that fell behind teleported every time rather than being seen to run.
 - **Walking out of the End sends you home**, to your own bed or charged
   respawn anchor if it still stands, instead of dropping you at the world
   origin. (It reads the anchor without spending a charge — a walk out is not
