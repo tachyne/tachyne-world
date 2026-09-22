@@ -46,6 +46,11 @@ func TestFoodTagsCourt(t *testing.T) {
 		item  string
 	}{{entityPig, "wheat"}, {entityCow, "carrot"}, {entityHorse, "wheat"}, {entityMule, "golden_carrot"}, {entityHappyGhast, "snowball"}} {
 		h, pl, players, m := feedRig(t, c.etype, c.item, 1)
+		// A TAMED equine, so the food has nothing at all to do: an untamed one
+		// legitimately takes wheat or a carrot for its temper.
+		if horseNeedsTaming(c.etype) {
+			m.tamed, m.owner, m.temper = true, pl.p.eid, horseMaxTemper
+		}
 		if h.feedAnimal(players, pl, m) || m.loveTicks != 0 {
 			t.Errorf("etype %d must not court on %s", c.etype, c.item)
 		}
