@@ -1194,6 +1194,15 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.etype == entityVillager { // HurtBySensor: the villager runs from what hurt it
 		m.villagerHurt = true
 	}
+	if m.etype == entityWitch && dt.has(tagWitchResistantTo) {
+		// Witch.hurtServer: a witch shrugs off #witch_resistant_to — the magic
+		// damage her own potions deal — at fifteen percent. It is why throwing
+		// potions at one barely works.
+		dmg *= 0.15
+	}
+	if m.etype == entityWither && dt.has(tagWitherImmuneTo) {
+		return // WitherBoss.hurtServer: #wither_immune_to never lands
+	}
 	if m.etype == entityArmadillo && m.armState == armScared {
 		dmg = (dmg - 1) / 2 // Armadillo.hurtServer: rolled up, a blow loses a point and halves
 		if dmg < 0 {

@@ -218,3 +218,27 @@ func TestAttackSpeedChangesSwingRecovery(t *testing.T) {
 		t.Errorf("mining-fatigued swing period %d, want longer than %d", tired, base)
 	}
 }
+
+// A witch shrugs off the magic her own potions deal — #witch_resistant_to at
+// fifteen percent — and the wither never takes what #wither_immune_to names.
+func TestWitchResistsMagicAndWitherIgnoresItsOwn(t *testing.T) {
+	w := &mob{etype: entityWitch, health: 26}
+	w.hurtKind(10, dtMagic)
+	if took := 26 - w.health; took > 2 {
+		t.Fatalf("a witch should take about 1.5 of a 10-point magic hit, took %v", took)
+	}
+
+	// The same blow on something else lands whole.
+	z := &mob{etype: entityZombie, health: 20}
+	z.hurtKind(10, dtMagic)
+	if took := 20 - z.health; took < 9 {
+		t.Fatalf("a zombie should take the whole 10, took %v", took)
+	}
+
+	// Drowning is #wither_immune_to.
+	wr := &mob{etype: entityWither, health: 300}
+	wr.hurtKind(10, dtDrown)
+	if wr.health != 300 {
+		t.Fatalf("the wither cannot drown, health %v", wr.health)
+	}
+}
