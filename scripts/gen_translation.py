@@ -121,6 +121,19 @@ def absent_flat(canon, version):
     return sorted(e["id"] for e in canon if e["name"] not in vby)
 
 
+def added_flat(canon, version):
+    """Version ids with NO counterpart in canonical — the SERVERBOUND mirror
+    of absent_flat.
+
+    The reverse shift table has the same blind spot in the other direction: a
+    client id the engine's registry never had still falls inside some range
+    and comes back as whatever canonical entry sits there. That is how a 26.3
+    client putting poplar planks in its hotbar had the world store redstone
+    ore. The receiver has to drop these rather than shift them."""
+    cby = {e["name"] for e in canon}
+    return sorted(e["id"] for e in version if e["name"] not in cby)
+
+
 def delta_array_states(canon, version):
     """blocks.json: each block has min/maxStateId. Every state in a block shifts by
     the same delta = version.min - canon.min. Returns {canon_state: delta}."""
@@ -156,6 +169,7 @@ def rle(deltas):
 # registry const -> version -> ranges
 data = {}
 absent = {}
+added = {}
 for const, mdfile, viakey, kind, reportkey in REGISTRIES:
     canon = fetch_report(CANON, reportkey) if reportkey else fetch(CANON, mdfile)
     per = {}
@@ -174,6 +188,10 @@ for const, mdfile, viakey, kind, reportkey in REGISTRIES:
             if gone:
                 absent.setdefault(const, {})[ver] = gone
                 print(f"{const} 1.21.11->{ver}: {len(gone)} ids ABSENT (dropped, not shifted)")
+            new_ids = added_flat(canon, version)
+            if new_ids:
+                added.setdefault(const, {})[ver] = new_ids
+                print(f"{const} {ver}->1.21.11: {len(new_ids)} ids ADDED (dropped serverbound)")
         print(f"{const} 1.21.11->{ver}: {len(deltas)} ids shifted -> {len(per[ver])} ranges")
     data[const] = per
 
@@ -217,6 +235,23 @@ for const in sorted(absent):
     L.append(f"\t{const}: {{")
     for ver in sorted(absent[const]):
         ids = ", ".join(str(i) for i in absent[const][ver])
+        L.append(f"\t\t{ver}: {{{ids}}},")
+    L.append("\t},")
+L += ["}", ""]
+
+L += [
+    "// addedIDs[registry][clientProtocol] = IDs that exist on that version and have",
+    "// NO canonical counterpart. The serverbound mirror of absentIDs: the reverse",
+    "// shift table can only MOVE an id, so one the engine never had lands on",
+    "// whatever canonical entry now occupies the slot — a 26.3 client's poplar",
+    "// planks arriving as redstone ore. The receiver drops these instead. Sorted",
+    "// for binary search.",
+    "var addedIDs = map[IDSpace]map[int32][]int32{",
+]
+for const in sorted(added):
+    L.append(f"\t{const}: {{")
+    for ver in sorted(added[const]):
+        ids = ", ".join(str(i) for i in added[const][ver])
         L.append(f"\t\t{ver}: {{{ids}}},")
     L.append("\t},")
 L += ["}", ""]

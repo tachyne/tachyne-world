@@ -96,6 +96,16 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **New blocks on a newer client stop arriving as something else.** A 26.3
+  player putting poplar planks in their hotbar had the server store redstone
+  ore, and placed redstone ore. Poplar is 26.3 content and the world engine's
+  registry is 1.21.11, which has no poplar — but an item travels as a number,
+  and 26.3 renumbered nearly every one, so poplar planks (72 there) landed on
+  whatever 72 means here. The engine already refused to *send* content an older
+  client lacks; it had no matching guard for *receiving* content a newer one
+  has. An item the engine does not know now leaves the slot empty instead of
+  becoming a different block — 153 items on 26.3, 32 on 26.2. Reported in game
+  by LegionZA.
 - **A block you place is heard by everyone.** Placement was silent to every
   player but the one placing it — your own client makes the noise when it
   predicts the placement, so you would never have noticed, while anyone
