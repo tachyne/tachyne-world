@@ -4,24 +4,45 @@
 > Microsoft, or Minecraft's developer/publisher in any way. See the
 > Disclaimer at the bottom.
 
+A Minecraft server written from scratch in pure Go, serving **both Java and
+Bedrock** clients. No Paper, no JVM, no protocol libraries — world generation,
+lighting, and the whole game simulation are original code; the only
+third-party runtime dependency is the NATS client behind the optional plugin
+bus.
+
 ## Project status
 
-**Work in progress.** tachyne is young and moving fast: a full survival game
-runs today, but expect rough edges, missing vanilla features, and breaking
-changes between updates. **Bug reports are genuinely useful** — please open a
-GitHub Issue with your client version/edition and what you saw. Contributions
-are welcome too: see [CONTRIBUTING.md](CONTRIBUTING.md).
+**Work in progress, actively developed.** *Status reviewed 2026-09-22.*
+
+A full survival game runs today and is actively played, but tachyne is chasing
+one-for-one vanilla parity and is not there yet. Expect rough edges, missing
+vanilla features, and breaking changes between updates.
+
+**Where parity actually stands.** Vanilla's server-side surface is enumerated
+mechanically — registries, data files, and the behaviour hooks each class
+overrides — and graded unit by unit, rather than estimated:
+
+| Graded units | OK | PARTIAL | MISSING | N-A |
+|---:|---:|---:|---:|---:|
+| 2,413 | 1,172 (51%) | 763 | 381 | 97 |
+
+So **51% of vanilla's surface matches in normal play and 84% is at least
+present**. What the grades mean and how each area scores is in
+[docs/PARITY.md](docs/PARITY.md); [CHANGELOG.md](CHANGELOG.md) is the
+whole-system timeline of what changes, release by release.
+
+**Who can connect.** Java **1.21.5–1.21.8**, Java **26.2–26.3** and
+**Bedrock** (latest) all share one world, no client mods needed. Java
+1.21.9–26.1 are rejected at login — see
+[What to expect](#what-to-expect-vanilla-parity-at-a-glance).
+
+**Bug reports are genuinely useful** — please open a GitHub Issue with your
+client version/edition and what you saw. Contributions are welcome too: see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Just want to run a server?** The [quickstart repo](https://github.com/tachyne/tachyne)
 brings up the whole stack in one command — Docker Compose or Kubernetes,
 classic infinite survival by default, real-Cape-Town earth mode as a variant.
-
-
-
-
-A Minecraft **Java Edition** server written from scratch in pure Go. No Paper,
-no JVM, no protocol libraries — world generation, lighting, and the whole game
-simulation are original code; the only third-party runtime dependency is the NATS client behind the optional plugin bus.
 
 ## What to expect (vanilla parity at a glance)
 
@@ -604,6 +625,10 @@ tuning scorecard; `CHANGELOG.md` is the whole-system timeline.
 
 ## Deployment (this repo IS the world pod)
 
+The manifests under `deploy/` are the ones this project actually runs, so
+treat them as **examples**: substitute your own image registry, hostnames,
+namespaces and secrets before applying them to a cluster of your own.
+
 Consolidated 2026-07-09: the engine source and its cluster deployment are one
 repo. `Dockerfile` builds the local source (`go vet` + `go test` + `go build
 ./cmd/server`) into a scratch image; `deploy/` holds the k8s manifests;
@@ -635,13 +660,6 @@ regenerate deterministically). Nightly backup CronJob `tachyne-world-backup`
 (03:00, keeps 7, excludes `chunks/`). Gateways (`tachyne-gw-*`, separate repos)
 sit behind `tachyne-ingress` (<server-ip>:25565) and render this pod's event
 stream.
-
-## Deployment
-
-`Dockerfile` builds a static Go binary into a minimal image. `deploy/` holds
-working Kubernetes manifests (the ones this project actually runs) — treat
-them as examples: substitute your own image registry, hostnames, namespaces
-and secrets before applying them to your cluster.
 
 ## Credits
 
