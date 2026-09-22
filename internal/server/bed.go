@@ -521,5 +521,7 @@ func canonicalTimeOfDay(dayTime uint64) float64 {
 // pointed at 0,0 no matter where spawn actually was.
 func (h *hub) sendDefaultSpawn(t *tracked) {
 	x, y, z := h.worldSpawn()
+	// Dim is left empty: the world spawn is the overworld's, which is what the
+	// renderer fills in for 1.21.9+, where the packet carries a GlobalPos.
 	t.p.trySendEv(attachproto.DefaultSpawn{X: floorInt(x), Y: floorInt(y), Z: floorInt(z)})
 }
