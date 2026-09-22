@@ -900,6 +900,11 @@ func (h *hub) insertByFace(target simPos, dy int, one invStack) bool {
 	if w != nil && isDecoratedPot(w.At(target.x, target.y, target.z)) {
 		return h.potInsert(target, one)
 	}
+	// ShulkerBoxBlockEntity.canPlaceItemThroughFace: a hopper cannot post a
+	// shulker box into a shulker box either.
+	if w != nil && isShulkerBox(w.At(target.x, target.y, target.z)) && isShulkerBoxItem(one.item) {
+		return false
+	}
 	dst := h.containerSlots(target)
 	return dst != nil && binInsert(dst, one) == 0
 }

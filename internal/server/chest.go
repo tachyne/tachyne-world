@@ -16,6 +16,11 @@ import (
 
 const (
 	menuGeneric9x3 = 2 // minecraft:generic_9x3 menu id (same through 26.2)
+	// minecraft:shulker_box has its own menu: the client draws the box's own
+	// background and, more to the point, applies the slot rule that keeps a
+	// shulker box out of a shulker box. The id is 20 on every version this
+	// server speaks, 1.21.5 through 26.3.
+	menuShulkerBox = 20
 )
 
 var (
@@ -148,7 +153,11 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		h.incCustom(t, "open_chest", 1)
 	}
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: title})
+	menu := menuGeneric9x3
+	if isShulkerBox(state) {
+		menu = menuShulkerBox
+	}
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menu), Title: title})
 	h.sendChestWindow(t, c)
 }
 

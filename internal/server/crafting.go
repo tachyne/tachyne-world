@@ -492,6 +492,19 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		}
 	}
 
+	// ShulkerBoxSlot.mayPlace: a shulker box will not go inside a shulker box.
+	// The client knows the rule from the menu type and will not offer the
+	// move, so this is the guard against a client that does it anyway.
+	if t.winKind == winChest && isShulkerBox(h.worldFor(t.winPos.dim).At(t.winPos.x, t.winPos.y, t.winPos.z)) {
+		for _, ch := range e.changed {
+			if ch.slot >= 0 && ch.slot <= 26 && isShulkerBoxItem(ch.st.item) {
+				h.resyncWindow(t)
+				h.sendCursor(t)
+				return
+			}
+		}
+	}
+
 	tally(t.cursor, +1)
 	tally(e.cursor, -1)
 
