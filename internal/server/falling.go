@@ -69,3 +69,73 @@ func (h *hub) anvilLanded(players map[int32]*tracked, dim int, pos blockPos, sta
 		h.setBlockAt(players, dim, pos, worn) // 0 = the anvil broke, leaving nothing
 	}
 }
+
+// A stalactite that loses its grip comes down whole, and the tip of it is the
+// dangerous end. Vanilla spawns the column as falling blocks and gives the tip
+// hurtsEntities(n, 40), where n is the column's own length with a floor of six
+// — so even a short spike falls hard — and the damage is that per block of the
+// drop, capped at forty.
+const (
+	stalactiteHurtFloor = 6  // the shortest column still hits like six
+	stalactiteHurtMax   = 40 // FallingBlockEntity's cap
+)
+
+// stalactiteFallDamage is what a tip deals after falling `fallen` blocks from
+// a column `length` long.
+func stalactiteFallDamage(length, fallen int) float64 {
+	if fallen <= 0 {
+		return 0
+	}
+	per := float64(max(length, stalactiteHurtFloor))
+	return math.Min(math.Ceil(float64(fallen)*per), stalactiteHurtMax)
+}
+
+// dropStalactite is PointedDripstoneBlock.spawnFallingStalactite: every cell
+// of the hanging column is let go at once, and the tip carries the column's
+// length with it so it knows how hard it lands.
+func (h *hub) dropStalactite(players map[int32]*tracked, dim int, pos blockPos) {
+	length := 0
+	for y := pos.y; h.inWorldY(y); y-- {
+		st := h.worldFor(dim).Block(pos.x, y, pos.z)
+		thick, up, _, ok := dripstoneParts(st)
+		if !ok || up {
+			break // not a stalactite any more
+		}
+		length++
+		h.scheduleIn(dim, blockPos{pos.x, y, pos.z}, 1)
+		if thick == dripTip || thick == dripTipMerge { // the tip: the column ends here
+			break
+		}
+	}
+	if length > 0 {
+		h.stalactiteLen[simPos{dim: dim, blockPos: pos}] = length
+	}
+}
+
+// stalactiteLanded hurts whatever the tip came down on.
+func (h *hub) stalactiteLanded(players map[int32]*tracked, dim int, pos blockPos, length, fallen int) {
+	dmg := stalactiteFallDamage(length, fallen)
+	if dmg <= 0 {
+		return
+	}
+	inCell := func(x, y, z float64) bool {
+		return int(math.Floor(x)) == pos.x && int(math.Floor(z)) == pos.z &&
+			y > float64(pos.y)-1 && y < float64(pos.y)+1
+	}
+	for _, t := range players {
+		if t.dim != dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator {
+			continue
+		}
+		if inCell(t.x, t.y, t.z) {
+			h.damageOf(players, t, float32(dmg), dtFallingStalactite)
+		}
+	}
+	for _, m := range h.mobs {
+		if m.dim != dim || m.dying > 0 {
+			continue
+		}
+		if inCell(m.x, m.y, m.z) {
+			h.hurtMobOf(players, m, dmg, dtFallingStalactite)
+		}
+	}
+}

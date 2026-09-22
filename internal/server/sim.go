@@ -113,7 +113,7 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A leaf whose neighbourhood changed recomputes its trunk distance;
 		// the write schedules ITS neighbours, so a felled trunk sends the
 		// recompute through the canopy as a wave and the rim rots first.
-	case worldgen.IsFalling(state):
+	case worldgen.IsFalling(state) || isStalactite(state):
 		h.updateFalling(players, dim, pos, state)
 	case h.tickBubbleSource(players, dim, pos, state):
 		// Soul sand or magma with water above raises (or drops) its column.
@@ -215,6 +215,10 @@ func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, s
 		h.setBlockAt(players, dim, pos, worldgen.Air)
 		h.setBlockAt(players, dim, below, state)
 		h.fallDist[simPos{dim: dim, blockPos: below}] = fallen
+		if n, ok := h.stalactiteLen[key]; ok { // the column's length travels with its tip
+			delete(h.stalactiteLen, key)
+			h.stalactiteLen[simPos{dim: dim, blockPos: below}] = n
+		}
 		h.scheduleIn(dim, below, fallDelay)     // keep falling
 		h.scheduleAroundIn(dim, pos, fallDelay) // a block resting on it loses support
 		return
@@ -227,6 +231,12 @@ func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, s
 	}
 	if worldgen.IsAnvil(state) && fallen > 0 {
 		h.anvilLanded(players, dim, pos, state, fallen)
+	}
+	if n, ok := h.stalactiteLen[key]; ok {
+		delete(h.stalactiteLen, key)
+		if isStalactite(state) && fallen > 0 {
+			h.stalactiteLanded(players, dim, pos, n, fallen)
+		}
 	}
 }
 

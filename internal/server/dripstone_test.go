@@ -131,3 +131,49 @@ func TestStalagmiteImpales(t *testing.T) {
 		t.Errorf("a stalagmite should hurt more than the same fall onto ground: %v", long)
 	}
 }
+
+// A stalactite whose grip is broken comes down whole and skewers what is
+// under it. The tip carries the column's length, with a floor of six, and
+// deals that per block of the drop up to forty.
+func TestFallingStalactiteSkewers(t *testing.T) {
+	if got := stalactiteFallDamage(1, 3); got != 18 { // max(1,6)=6 per block × 3
+		t.Fatalf("a short spike falling three should deal 18, got %v", got)
+	}
+	if got := stalactiteFallDamage(10, 3); got != 30 { // a ten-long column hits harder
+		t.Fatalf("a long column falling three should deal 30, got %v", got)
+	}
+	if got := stalactiteFallDamage(10, 30); got != stalactiteHurtMax {
+		t.Fatalf("the damage is capped at 40, got %v", got)
+	}
+	if got := stalactiteFallDamage(6, 0); got != 0 {
+		t.Fatalf("a stalactite that has not fallen hurts nobody, got %v", got)
+	}
+}
+
+// It falls rather than breaking: the block is still there, one cell lower.
+func TestUnsupportedStalactiteFallsInsteadOfBreaking(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	tip := dripstoneState(dripTip, false, false) // pointing down
+	w.SetBlock(x, y+6, z, worldgen.BlockBase("dripstone_block"))
+	w.SetBlock(x, y+5, z, tip)
+	for dy := 0; dy <= 4; dy++ {
+		w.SetBlock(x, y+dy, z, worldgen.Air)
+	}
+	// Take its anchor away.
+	h.setBlockAt(players, 0, blockPos{x, y + 6, z}, worldgen.Air)
+	h.dropUnsupported(players, 0, blockPos{x, y + 6, z})
+	runTicks(h, players, h.tick.Load(), h.tick.Load()+40)
+
+	if w.At(x, y+5, z) == tip {
+		t.Fatal("the stalactite should have let go")
+	}
+	landed := false
+	for dy := 0; dy <= 5; dy++ {
+		if w.At(x, y+dy, z) == tip {
+			landed = true
+		}
+	}
+	if !landed {
+		t.Fatal("it should have come to rest lower down, not vanished")
+	}
+}

@@ -409,6 +409,14 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			if worldgen.SupportFor(st) == worldgen.SupportNone || supported(h.worldFor(dim), n, st) {
 				continue
 			}
+			// A stalactite does not break when its grip goes — it FALLS, whole,
+			// and the tip is the end that hurts (PointedDripstoneBlock.tick →
+			// spawnFallingStalactite).
+			if isStalactite(st) {
+				h.dropStalactite(players, dim, n)
+				queue = append(queue, n)
+				continue
+			}
 			h.setBlockAt(players, dim, n, worldgen.Air)
 			h.dropLoose(players, dim, n, st)
 			queue = append(queue, n)

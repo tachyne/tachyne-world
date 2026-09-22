@@ -610,12 +610,15 @@ type hub struct {
 	siegeRolled bool
 	siegeLeft   int
 	siegeCenter blockPos
-	brewProg    map[simPos]int      // brewing stand progress (ticks)
-	brewFuel    map[simPos]int      // brewing stand fuel charges (1 blaze powder = 20)
-	brewIng     map[simPos]int32    // …and the ingredient it started on (swapped out → the brew is lost)
-	portalLinks map[dimPos]dimPos   // sticky portal pairs (both directions)
-	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
+	brewProg    map[simPos]int    // brewing stand progress (ticks)
+	brewFuel    map[simPos]int    // brewing stand fuel charges (1 blaze powder = 20)
+	brewIng     map[simPos]int32  // …and the ingredient it started on (swapped out → the brew is lost)
+	portalLinks map[dimPos]dimPos // sticky portal pairs (both directions)
+	// stalactiteLen remembers how long a falling dripstone column was, so its
+	// tip knows how hard it lands (PointedDripstoneBlock's hurtsEntities).
+	stalactiteLen map[simPos]int
+	bossSeen      map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
+	openDoors     map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
 
 	dragon        *mob                // the ender dragon (nil = none / defeated)
 	crystals      map[int32]*crystal  // end crystals by eid
@@ -795,6 +798,7 @@ func newHub(w *world.World) *hub {
 		brewFuel:      map[simPos]int{},
 		brewIng:       map[simPos]int32{},
 		portalLinks:   map[dimPos]dimPos{},
+		stalactiteLen: map[simPos]int{},
 		bossSeen:      map[[2]int32]bool{},
 		openDoors:     map[blockPos]uint64{},
 		crystals:      map[int32]*crystal{},
