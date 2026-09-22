@@ -105,6 +105,14 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **A current carries mobs, not just the things you drop in it.** A river moved
+  dropped items and left every mob standing still.
+- **A water bucket fills the block you click.** Pour it on a slab, stair or
+  fence and it waterlogs that block instead of putting water down beside it.
+- **Mounts walk over what they should.** Step height was left at the default
+  for every mob; a camel's 1.5 is why it strolls across a fence a horse has to
+  jump, and since the attribute is what the riding client reads, it is the
+  difference you feel in the saddle.
 - **Tall mobs need room to stand where they spawn.** The spawn test asked for
   two blocks of headroom whatever the mob was, which is right for a zombie and
   wrong for an enderman at 2.9 blocks — so every two-high cave pocket was an

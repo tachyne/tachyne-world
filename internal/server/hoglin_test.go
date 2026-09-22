@@ -114,3 +114,28 @@ func TestHoglinThrowMoves(t *testing.T) {
 		t.Fatal("a hoglin's bite sent the player nowhere")
 	}
 }
+
+// STEP_HEIGHT was never set, so every mob sat on the 0.6 default. It is a
+// SYNCED attribute and a ridden mount is moved by the riding client, so a
+// camel on 0.6 has to jump the fence its 1.5 is famous for walking over.
+func TestStepHeightMatchesVanilla(t *testing.T) {
+	for etype, want := range map[int]float64{
+		entityCamel: 1.5, entityCamelHusk: 1.5, // Camel overrides the horse base
+		entityCreaking:  1.0625,
+		entityHorse:     1, entityDonkey: 1, entityMule: 1, entityLlama: 1,
+		entityIronGolem: 1, entityCopperGolem: 1, entityEnderman: 1,
+		entityRavager:   1, entityDrowned: 1, entityAxolotl: 1,
+		entityFrog:      1, entityTurtle: 1,
+		// everything else keeps the registry default
+		entityZombie: 0.6, entityCow: 0.6, entityCreeper: 0.6, entitySheep: 0.6,
+	} {
+		m := &mob{etype: etype}
+		if got := m.mobAttrs().Value(attr.StepHeight); got != want {
+			t.Errorf("%s step height = %v, want %v", entityNameByID[etype], got, want)
+		}
+	}
+	// It has to be in the synced set or the riding client never learns it.
+	if !syncableAttrs[attr.StepHeight] {
+		t.Error("step height must be syncable — the riding client reads it")
+	}
+}

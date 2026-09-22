@@ -1505,6 +1505,9 @@ func newMobAttributes(etype int) *attribute.Map {
 	if kb := attackKnockbackFor(etype); kb > 0 {
 		a.SetBase(attr.AttackKnockback, kb)
 	}
+	if sh := stepHeightFor(etype); sh > 0 {
+		a.SetBase(attr.StepHeight, sh)
+	}
 	// The two species families that fall better than everything else: a fox
 	// lands from five blocks unhurt, and the equines from six and then take
 	// half of what is left.
@@ -1516,6 +1519,28 @@ func newMobAttributes(etype int) *attribute.Map {
 		a.SetBase(attr.FallDamageMultiplier, 0.5)
 	}
 	return a
+}
+
+// stepHeightFor is the species' STEP_HEIGHT, which vanilla moves off the 0.6
+// default for exactly twelve of them. It is a SYNCED attribute, so it is not
+// decoration even though the server's own walkers use a flat one-block climb:
+// a ridden mount is moved by the riding client, and that client reads this to
+// decide what it can walk over. A camel on 0.6 has to jump the fence its 1.5
+// is famous for strolling across.
+func stepHeightFor(etype int) float64 {
+	switch {
+	case etype == entityCamel || etype == entityCamelHusk:
+		return 1.5 // Camel overrides the horse base
+	case etype == entityCreaking:
+		return 1.0625
+	case etype == entityAxolotl, etype == entityFrog, etype == entityTurtle,
+		etype == entityIronGolem, etype == entityCopperGolem, etype == entityEnderman,
+		etype == entityRavager, etype == entityDrowned:
+		return 1
+	case isEquine(etype):
+		return 1 // AbstractHorse.createBaseHorseAttributes
+	}
+	return 0 // the registry default (0.6)
 }
 
 // isEquine is the AbstractHorse family, which shares its fall tolerance.
