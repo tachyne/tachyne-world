@@ -105,6 +105,13 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **`/bug #15 <…>` adds to report 15** instead of filing a new one. The note
+  form was `/bug re #15`, and the `re` is easy to miss — a follow-up became a
+  fresh report with the `#15` still in its text, burying the thread it was
+  about. A bare leading number still files a report.
+- **A species sweep for a backlog that cannot despawn.** `-cull-species` is
+  one-time maintenance: name a species and its wild members are dropped from
+  the saved mobs at boot, keeping anything tamed, named or carrying gear.
 - **Nothing spawns naturally outside the world border.** The border was read for the damage it does you and nothing else, so shrinking it hurt you at the
   wall while mobs carried on appearing past it.
 - **A current carries mobs, not just the things you drop in it.** A river moved
