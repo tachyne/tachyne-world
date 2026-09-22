@@ -105,6 +105,8 @@ the public history since the project was open-sourced on 2026-07-10.
   before.
 - **Mobs no longer all fall like a zombie.** A fox lands from five blocks
   unhurt and a horse from six, then takes half of what is left.
+- **Nothing spawns naturally outside the world border.** The border was read for the damage it does you and nothing else, so shrinking it hurt you at the
+  wall while mobs carried on appearing past it.
 - **A current carries mobs, not just the things you drop in it.** A river moved
   dropped items and left every mob standing still.
 - **A water bucket fills the block you click.** Pour it on a slab, stair or
