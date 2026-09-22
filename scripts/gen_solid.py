@@ -1,90 +1,43 @@
 #!/usr/bin/env python3
-"""Generate internal/worldgen/solid_gen.go from minecraft-data.
+"""Generate internal/worldgen/solid_gen.go.
 
 Vanilla's BlockStateBase.isSolid — the test FarmBlock, DirtPathBlock and
-everything else asking "is the block above me a lid" uses. It is NOT "does it
-collide": the collision shape's BOUNDS must average 0.7291666 of a block
-across the three axes, or stand a full block tall.
+everything else asking "is the block above me a lid" uses.
 
-    private boolean calculateSolid() {
-        if (forceSolidOn)  return true;
-        if (forceSolidOff) return false;
-        if (cache == null) return false;          // dynamically shaped: never solid
-        VoxelShape s = cache.collisionShape;
-        if (s.isEmpty()) return false;
-        AABB b = s.bounds();
-        return b.getSize() >= 0.7291666666666666 || b.getYsize() >= 1.0;
-    }
+It is NOT "does it collide". calculateSolid is:
 
-(AABB.getSize is the MEAN of the three spans.) A carpet, a candle, a skull and
-a pitcher crop all fail it; a slab, a chest, a door and a ladder all pass.
+    if forceSolidOn  -> true
+    if forceSolidOff -> false
+    if no cache      -> false
+    if the collision shape is empty -> false
+    else the bounds must average 0.7291666 across the three axes,
+         or stand a full block tall
 
-Sources (facts only):
-  blocks.json               state id ranges per block
-  blockCollisionShapes.json shape index per state, shapes as [x0,y0,z0,x1,y1,z1]
+The force flags are the trap. This generator used to reimplement the
+threshold from minecraft-data collision shapes and carry the two flag sets by
+hand, with a comment saying "both lists are tiny". Vanilla has **173**
+forceSolidOn registrations; the list had two. That put 2,809 block states on
+the wrong answer — closed fence gates, signs, cobwebs and sculk veins among
+them.
 
-Run outside the sandbox (needs network):  python3 scripts/gen_solid.py
-Set MCDATA_CACHE=<dir> to read the two files from a local directory instead.
+So it no longer reimplements anything: the local extract (see
+audit/phase0/extractor) asks the game `state.isSolid()` directly, force flags
+and threshold already applied.
+
+    python3 scripts/gen_solid.py [version]     # default 1.21.11
 """
-import json, os, subprocess, urllib.request
+import json, os, subprocess, sys
 
-VER = "1.21.11"
-BASE = f"https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/{VER}/"
+VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "solid_gen.go")
-THRESHOLD = 0.7291666666666666
-
-# Blocks vanilla forces solid regardless of shape (Properties.forceSolidOn).
-FORCE_ON = {"honeycomb_block", "leaf_litter"}
-# ...and forceSolidOff. Both lists are tiny and read off the Blocks registrations.
-FORCE_OFF = {"shulker_box", "moving_piston", "pointed_dripstone", "light", "spawner",
-             "trial_spawner", "vault", "creaking_heart"}
-for c in ("white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
-          "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"):
-    FORCE_OFF.add(f"{c}_shulker_box")
-
-
-def load(name):
-    cache = os.environ.get("MCDATA_CACHE")
-    if cache:
-        with open(os.path.join(cache, name)) as f:
-            return json.load(f)
-    with urllib.request.urlopen(BASE + name, timeout=60) as r:
-        return json.load(r)
-
-
-def solid(shape_boxes):
-    """vanilla calculateSolid for one state's collision shape."""
-    if not shape_boxes:
-        return False  # isEmpty
-    x0 = min(b[0] for b in shape_boxes); x1 = max(b[3] for b in shape_boxes)
-    y0 = min(b[1] for b in shape_boxes); y1 = max(b[4] for b in shape_boxes)
-    z0 = min(b[2] for b in shape_boxes); z1 = max(b[5] for b in shape_boxes)
-    dx, dy, dz = x1 - x0, y1 - y0, z1 - z0
-    return (dx + dy + dz) / 3.0 >= THRESHOLD or dy >= 1.0
-
-
-blocks = load("blocks.json")
-shapes = load("blockCollisionShapes.json")
-by_id = {int(i): s for i, s in shapes["shapes"].items()}
-per_block = shapes["blocks"]
 
 runs = []
-for b in blocks:
-    name, lo, hi = b["name"], b["minStateId"], b["maxStateId"]
-    v = per_block.get(name)
-    n = hi - lo + 1
-    if name in FORCE_OFF:
-        flags = [False] * n
-    elif name in FORCE_ON:
-        flags = [True] * n
-    elif v is None:
-        flags = [False] * n
-    elif isinstance(v, int):
-        flags = [solid(by_id.get(v, []))] * n
-    else:
-        if len(v) != n:
-            raise SystemExit(f"{name}: {len(v)} shapes for {n} states")
-        flags = [solid(by_id.get(x, [])) for x in v]
+for b in json.load(open(SRC))["blocks"]:
+    lo = b["minStateId"]
+    flags = b["isSolid"]
+    if b["maxStateId"] - lo + 1 != len(flags):
+        raise SystemExit("%s: state count disagrees with isSolid count" % b["name"])
     run = None
     for i, f in enumerate(flags):
         sid = lo + i
@@ -105,7 +58,7 @@ lines = [
     "package worldgen",
     "",
     "// solidRanges lists, as sorted inclusive state-id runs, every block state",
-    f"// vanilla calls SOLID (minecraft-data {VER} blockCollisionShapes).",
+    "// vanilla calls SOLID, taken from the game itself (state.isSolid()).",
     "//",
     "// BlockStateBase.calculateSolid is a THRESHOLD on the collision shape's",
     "// bounds, not a yes/no on whether the block collides at all: the bounds must",

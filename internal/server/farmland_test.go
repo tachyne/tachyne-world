@@ -133,12 +133,21 @@ func TestSolidLidFollowsVanillasThreshold(t *testing.T) {
 		lid   bool
 	}{
 		{"stone", true}, {"oak_slab", true}, {"chest", true}, {"oak_door", true},
-		{"ladder", true}, {"cactus", true}, {"cake", true}, // 14/16 x 8/16 x 14/16 averages 0.75
+		{"cactus", true}, {"cake", true}, // 14/16 x 8/16 x 14/16 averages 0.75
 		{"white_carpet", false}, {"candle", false}, {"player_head", false},
 		{"pitcher_crop", false}, {"lily_pad", false}, {"flower_pot", false},
 		{"comparator", false}, {"repeater", false}, {"sea_pickle", false},
-		{"turtle_egg", false}, {"amethyst_cluster", false}, {"conduit", false},
-		{"shulker_box", false}, // forceSolidOff, whatever its box says
+
+		// The force flags beat the threshold, and these five were all on the
+		// wrong side of it until the table started asking the game instead of
+		// reimplementing calculateSolid with a hand-kept list of two. Each is
+		// read straight off its registration in vanilla's Blocks:
+		{"ladder", false},            // forceSolidOff — despite a 0.729 average
+		{"turtle_egg", true},         // forceSolidOn — despite a tiny box
+		{"amethyst_cluster", true},   // forceSolidOn
+		{"conduit", true},            // forceSolidOn
+		{"shulker_box", true},        // forceSolidOn, via shulkerBoxProperties —
+		{"purple_shulker_box", true}, // the old list had this one backwards
 	} {
 		if got := solidLid(worldgen.BlockBase(c.block)); got != c.lid {
 			t.Errorf("%s: solidLid=%v, want %v", c.block, got, c.lid)

@@ -96,6 +96,12 @@ the public history since the project was open-sourced on 2026-07-10.
   tamed.
 
 ### Fixed
+- **Farmland knows what counts as a lid.** Vanilla turns tilled soil back to
+  dirt when something solid sits on it, and 2,809 block states were on the
+  wrong side of that test — a closed fence gate, a sign, a cobweb, a turtle
+  egg, a conduit or a shulker box did not squash a field, while a ladder did.
+  Vanilla marks 173 blocks solid outright regardless of their shape; the table
+  behind this knew about two of them, and had shulker boxes backwards.
 - **Light passes through what it should and stops at what it should.** A
   double slab let light straight through as if it were glass, while
   waterlogged fences, stairs and walls dimmed nothing at all. How much a block
