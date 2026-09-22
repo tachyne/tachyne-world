@@ -16,9 +16,10 @@ const (
 	entityStatusTameFail = 6 // smoke puff: taming didn't take
 	entityStatusTameOK   = 7 // hearts: tamed!
 
-	petFollowStart = 10.0 // FollowOwnerGoal's start distance for a wolf or a cat
-	petFollowStop  = 2.0  // …the wolf's stop distance; cats and parrots differ
-	petTeleport    = 12.0 // TELEPORT_WHEN_DISTANCE_IS_SQ = 144: blink at twelve blocks
+	petFollowStart  = 10.0 // FollowOwnerGoal's start distance for a wolf or a cat
+	petFollowStop   = 2.0  // …the wolf's stop distance; cats and parrots differ
+	petTeleport     = 12.0 // TELEPORT_WHEN_DISTANCE_IS_SQ = 144: blink at twelve blocks
+	petFollowRecalc = 10   // FollowOwnerGoal.timeToRecalcPath: ticks between decisions
 
 	metaIndexTameFlags = 17 // TamableAnimal flags byte: 0x01 sitting, 0x04 tamed
 )
@@ -77,8 +78,15 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(variantMeta(m)))
 			return true
 		}
-		// The owner toggles sit/stand with an empty hand; anyone else is ignored.
-		if m.owner != t.p.eid || heldStack(t).item != 0 {
+		// Cat/Wolf.mobInteract: a dye recolours (above), food feeds, and
+		// ANYTHING ELSE toggles sit — including a full hand. Requiring an
+		// empty one meant a player carrying a sword could not sit their own
+		// cat (LegionZA #17). Food is left to feedAnimal, which is the heal
+		// and the breeding path and runs after this one.
+		if m.owner != t.p.eid {
+			return false
+		}
+		if held := heldStack(t).item; held != 0 && isLoveFood(m.etype, held) {
 			return false
 		}
 		m.sitting = !m.sitting
@@ -134,8 +142,22 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	d := math.Hypot(owner.x-m.x, owner.z-m.z)
+	if m.followClock > 0 {
+		m.followClock -= mobMoveInterval
+	}
 	switch {
 	case d > petTeleport: // blink to the owner's side (vanilla pet teleport)
+		// FollowOwnerGoal.tick only ACTS every ten ticks (timeToRecalcPath);
+		// the start/stop decisions below still run every update. petAcquire
+		// runs on the mob-update cadence, so without this a pet that fell
+		// behind blinked five times as often as vanilla's — it never looked
+		// like it was running after you (LegionZA #17). Until the clock comes
+		// round it walks, which is what you are meant to see.
+		if m.followClock > 0 {
+			m.hasTarget, m.tx, m.tz = true, owner.x, owner.z
+			break
+		}
+		m.followClock = petFollowRecalc
 		// tryToTeleportToOwner lands two to three blocks off, not underfoot.
 		off := 2 + h.rng.Float64()
 		if h.rng.Intn(2) == 0 {

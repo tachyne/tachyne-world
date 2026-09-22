@@ -362,12 +362,33 @@ func (h *hub) spawnPositionOK(dim, cat, etype, x, y, z int) bool {
 	case catAxolotls: // IN_WATER placement: water here, no conductor above
 		return worldgen.HoldsWater(at) && !worldgen.Collides(w.At(x, y+1, z))
 	}
-	if worldgen.HoldsWater(at) || worldgen.IsLava(at) ||
-		worldgen.Collides(at) || worldgen.Collides(w.At(x, y+1, z)) {
+	if worldgen.HoldsWater(at) || worldgen.IsLava(at) {
 		return false
+	}
+	// vanilla isSpawnPositionOk ends in level.noCollision(getSpawnAABB(...)) —
+	// the mob's WHOLE box has to fit. This used to test two cells flat, which
+	// is right for the 1.95-high zombie family and wrong for everything
+	// taller: an enderman is 2.9 blocks and needs three. Two-high pockets are
+	// most of every cave system, so the short test made every one of them an
+	// enderman spawn site that vanilla would have refused — which is why they
+	// built up far past anything a vanilla world shows.
+	for dy := 0; dy < spawnClearCells(etype); dy++ {
+		if worldgen.Collides(w.At(x, y+dy, z)) {
+			return false
+		}
 	}
 	below := w.At(x, y-1, z)
 	return worldgen.Collides(below) && !worldgen.IsThinFloor(below)
+}
+
+// spawnClearCells is how many blocks of headroom a species needs: its own
+// height rounded up, and never fewer than the two the old test assumed.
+func spawnClearCells(etype int) int {
+	h := defaultMobBox.h
+	if b, ok := mobBoxes[etype]; ok {
+		h = b.h
+	}
+	return max(2, int(math.Ceil(h)))
 }
 
 // skyDarken is how much the sky's contribution to brightness is reduced by

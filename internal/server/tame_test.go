@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -139,5 +140,84 @@ func TestParrotFollowsSooner(t *testing.T) {
 		if got := petStopDistance(e); got != want {
 			t.Errorf("%s stop distance = %v, want %v", entityNameByID[e], got, want)
 		}
+	}
+}
+
+// Cat/Wolf.mobInteract toggles sit with ANYTHING in hand that is not a dye
+// and not food — an empty hand was never the requirement. A player carrying a
+// sword could not sit their own cat (LegionZA #17).
+func TestSittingAPetDoesNotNeedAnEmptyHand(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pl := testTracked()
+	players[pl.p.eid] = pl
+	cat := h.spawnMob(players, entityCat, pl.x+1, pl.y, pl.z)
+	cat.tamed, cat.owner = true, pl.p.eid
+
+	sit := func(item int32, want bool, why string) {
+		t.Helper()
+		pl.p.setHotbarSlot(0, item)
+		pl.inv.slots[0] = invStack{item: item, count: 1}
+		before := cat.sitting
+		h.tryTame(players, pl, cat)
+		if (cat.sitting != before) != want {
+			t.Errorf("%s: sitting %v -> %v, wanted a change = %v", why, before, cat.sitting, want)
+		}
+	}
+
+	sit(0, true, "empty hand")
+	sit(int32(itemByName["wooden_sword"]), true, "holding a sword")
+	sit(int32(itemByName["dirt"]), true, "holding a block")
+	// Food is the feed/breed path, not a sit.
+	sit(int32(itemByName["cod"]), false, "holding its food")
+	// Someone else's click does nothing.
+	other := testTracked()
+	other.p.eid = 99
+	players[99] = other
+	other.p.setHotbarSlot(0, 0)
+	before := cat.sitting
+	h.tryTame(players, other, cat)
+	if cat.sitting != before {
+		t.Error("a stranger must not be able to sit someone else's cat")
+	}
+}
+
+// FollowOwnerGoal acts on a ten-tick clock (timeToRecalcPath): a pet beyond
+// the teleport distance walks toward its owner and only blinks when the clock
+// comes round. petAcquire runs five times as often as that, so without the
+// gate a cat that fell behind teleported every update and was never seen to
+// run (LegionZA #17).
+func TestPetWalksBetweenTeleports(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	m := h.spawnSpecies(players, entityCat, 0, 100.5, 70, 100.5)
+	m.tamed, m.owner = true, pl.p.eid
+	pl.x = 130.5 // well past the twelve-block teleport distance
+
+	h.petAcquire(players, m) // first look: it blinks
+	if math.Hypot(pl.x-m.x, pl.z-m.z) > petTeleport {
+		t.Fatal("the first update should have teleported the cat to its owner")
+	}
+
+	// Put it far away again; the next few updates must WALK, not blink.
+	m.x, m.z = 100.5, 100.5
+	blinked := 0
+	for i := 0; i < petFollowRecalc/mobMoveInterval-1; i++ {
+		h.petAcquire(players, m)
+		if math.Hypot(pl.x-m.x, pl.z-m.z) <= petTeleport {
+			blinked++
+		}
+		if !m.hasTarget || m.tx != pl.x {
+			t.Fatalf("update %d: the cat should be heading for its owner", i)
+		}
+	}
+	if blinked != 0 {
+		t.Fatalf("the cat blinked %d times inside one recalc window, want 0", blinked)
+	}
+	// …and when the clock comes round it blinks.
+	h.petAcquire(players, m)
+	if math.Hypot(pl.x-m.x, pl.z-m.z) > petTeleport {
+		t.Fatal("once the recalc clock runs out the cat should teleport")
 	}
 }

@@ -81,6 +81,7 @@ type mob struct {
 	growLeft        int      // ticks until a baby matures
 	loveTicks       int      // courting window after love-food (hearts)
 	breedTime       int      // BreedGoal.loveTime: ticks this pair has spent together
+	followClock     int      // pet: ticks until FollowOwnerGoal re-decides (timeToRecalcPath)
 	lovedBy         int32    // who fed the love-food (advancement credit)
 	breedCD         int      // ticks before this parent may breed again
 	parent          int32    // baby: the adult it is following (FollowParentGoal), 0 = none
