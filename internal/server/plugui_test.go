@@ -70,6 +70,9 @@ func drainWindow(t *testing.T, p *player) (opens []attachproto.WindowOpen, items
 			case attachproto.WindowOpen:
 				opens = append(opens, ev)
 			case attachproto.WindowItems:
+				if ev.ID == 0 {
+					continue // the player's own inventory (sent on join), not the browser
+				}
 				items = append(items, ev)
 				if len(items) >= 2 { // loading fill + data fill
 					return
