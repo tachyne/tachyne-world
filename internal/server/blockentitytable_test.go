@@ -21,7 +21,8 @@ func TestBlocksThatRenderThroughABlockEntityCarryOne(t *testing.T) {
 		"waxed_copper_golem_statue", "waxed_exposed_copper_golem_statue",
 		"waxed_weathered_copper_golem_statue", "waxed_oxidized_copper_golem_statue",
 		// and a few the guess always had, so the table cannot lose them either
-		"chest", "white_bed", "oak_sign", "oak_hanging_sign", "white_banner", "shulker_box",
+		// (not beds: 26.3 draws a bed without one, and has no bed block entity)
+		"chest", "furnace", "oak_sign", "oak_hanging_sign", "white_banner", "shulker_box",
 	} {
 		if _, ok := protocol.BlockEntityType(worldgen.BlockID(name)); !ok {
 			t.Errorf("%s has no block entity entry — the client has nothing to draw it with", name)
