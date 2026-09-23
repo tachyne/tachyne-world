@@ -342,9 +342,25 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 	if pick.tree == nil && pick.mush == mushNone && pick.fallen == "" {
 		return
 	}
+	if (pick.mush != mushNone || pick.fallen != "") && g.groundEdited(wx, surfaceH, wz) {
+		return // stands on a player's floor or path (treeguard.go)
+	}
 	rng := newTreeRNG(g.seed, wx, wz)
+	// Every in-chunk write is journalled with what it replaced, so a tree
+	// that turns out to grow into a player's build can be taken back out
+	// (treeguard.go); fp is what the tree attempted, in or out of this chunk.
+	type undo struct {
+		lx, y, lz int
+		prev      uint32
+	}
+	var journal []undo
+	fp := newTreeFootprint()
 	set := func(x, y, z int, state uint32, leaf bool) {
+		fp.note(x, y, z, state, leaf)
 		lx, lz := x-baseX, z-baseZ
+		if lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && y >= MinY && y < MinY+len(ch.Sections)*16 {
+			journal = append(journal, undo{lx, y, lz, sectionBlockAt(ch, lx, y, lz)})
+		}
 		if leaf {
 			// Leaves take air, and leaves take LEAVES: the distance-seeding
 			// pass rewrites cells this same tree just filled, and a plain
@@ -417,6 +433,12 @@ func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kin
 		PlaceFallenTree(FallenTrees[pick.fallen], wx, surfaceH, wz, rng, drv)
 	default:
 		PlaceTree(pick.tree, wx, surfaceH, wz, rng, drv)
+		if g.collidesWithBuild(fp, wx, surfaceH, wz) {
+			for i := len(journal) - 1; i >= 0; i-- {
+				u := journal[i]
+				setSectionBlock(ch, u.lx, u.y, u.lz, u.prev, true)
+			}
+		}
 	}
 }
 

@@ -27,4 +27,9 @@ package worldgen
 //
 // v15: the canonical content version moved to 26.3, which renumbers block
 // states — every cached chunk holds the old ids.
-const GenVersion = 15
+//
+// v16: generated trees no longer grow into player builds (treeguard.go).
+// Generation now reads the edit overlay for that one decision, so a cached
+// chunk reflects the edits of when it was made — a tree already generated
+// stays, as in vanilla; only a fresh generation leaves it out.
+const GenVersion = 16

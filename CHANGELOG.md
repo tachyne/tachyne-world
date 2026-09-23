@@ -23,6 +23,13 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Trees no longer grow inside player builds.** tachyne keeps a player's
+  builds and generates the land around them afresh, so whenever
+  generation changed, a tree could grow where someone had built: up
+  through a castle's floor, with its canopy in the rooms. A generated tree
+  whose trunk would stand on a player's floor or pass through a wall or
+  roof, or whose canopy runs into a build, is now left out, in every
+  chunk it would reach. A block or two in a canopy doesn't count.
 - **26.2 players see 26.3's blocks as something of the same shape.** A block
   a 26.2 client doesn't have used to reach it under its 26.3 number, which on
   26.2 is some other block: a white wool slab showed as fire. Each one is now

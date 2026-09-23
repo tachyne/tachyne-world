@@ -44,6 +44,12 @@ type Generator struct {
 	// world); earth mode raises it (SetCeiling) so real mountains fit at true
 	// vertical scale. Nether/End generators are never raised.
 	sections int
+
+	// editAt answers whether a player has edited a cell (and to what): the
+	// world's edit overlay. Generation reads it for one thing only — a
+	// generated tree that would grow into a player's build is not grown
+	// (treeguard.go). nil = no edits (tests, tools).
+	editAt func(x, y, z int) (uint32, bool)
 }
 
 // SetCeiling raises the world ceiling to maxY (exclusive top build limit,
@@ -59,6 +65,9 @@ func (g *Generator) SetCeiling(maxY int) {
 	}
 	g.sections = s
 }
+
+// SetEditLookup gives generation the world's edit overlay (see editAt).
+func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) { g.editAt = f }
 
 // SectionCount is the world's column height in 16-block sections.
 func (g *Generator) SectionCount() int { return g.sections }
