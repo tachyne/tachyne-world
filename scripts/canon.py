@@ -20,7 +20,7 @@ import io
 import os
 import zipfile
 
-VERSION = os.environ.get("TACHYNE_CANON", "1.21.11")
+VERSION = os.environ.get("TACHYNE_CANON", "26.3")
 
 # The version the engine's BEHAVIOUR data is read from — loot, recipes,
 # advancements, trees, structures, spawn pools, enchantments, damage types,
