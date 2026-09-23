@@ -14,6 +14,21 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Added
+- **Poplar trees and the dappled forest.** Poplars grow in red, orange and
+  yellow: tall trunks with a ring of short branches and a narrow rhombus
+  canopy braced by log spokes, with shelf mushrooms low on the trunk.
+  Poplar saplings grow one of the three colours. The dappled forest, 26.3's
+  new biome, takes vanilla's coldest, driest plains: poplars, the odd spruce
+  and fallen poplars on grass with coarse-dirt patches, red shrubs and
+  brown mushrooms. Farm animals there take their cold look. A 26.2 client
+  sees it as forest, a Bedrock client as forest too.
+- **Explorer maps, as 26.3 has them.** Each is its own item (buried treasure
+  map, ocean explorer map, and fourteen more) from shipwrecks, ocean ruins,
+  camps and cartographers. They are maps in every way: held, framed,
+  cloned and locked. A 26.2 player sees a filled map, the same map.
+- **Abandoned camps.** A tent and a campsite in the style of eighteen
+  biomes, with a campfire, seats, camp loot and their trees, set onto
+  the ground the way vanilla's terrain adaptation does.
 - **26.3's new building blocks.** Wool and concrete stairs and slabs in all
   sixteen colours, the poplar wood set (logs, planks, stairs, slabs, fences,
   gates, doors, trapdoors, buttons, pressure plates, signs, hanging signs, a
@@ -23,6 +38,10 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **26.2 players see 26.3's items.** An item a 26.2 client doesn't have
+  used to be an empty slot. Poplar and the wool and concrete stairs and
+  slabs now show as the item of their stand-in block, and explorer maps as
+  filled maps.
 - **Trees no longer grow inside player builds.** tachyne keeps a player's
   builds and generates the land around them afresh, so whenever
   generation changed, a tree could grow where someone had built: up
