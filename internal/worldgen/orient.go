@@ -60,3 +60,27 @@ func SetProperty(info BlockInfo, state uint32, name, value string) uint32 {
 	}
 	return state
 }
+
+// StateWith is the state of the named block with the given properties set
+// and the rest at their first value (as BlockBase). It is for facts fixed in
+// code and tests, which must name a state rather than write its id: ids move
+// whenever the canonical version does. It panics on an unknown block or
+// property rather than hand back some other block.
+func StateWith(name string, props map[string]string) uint32 {
+	lo, _, ok := BlockRangeOK(name)
+	if !ok {
+		panic("worldgen.StateWith: no block " + name)
+	}
+	s := lo
+	info, hasInfo := InfoForState(s)
+	for k, v := range props {
+		if !hasInfo || !info.HasProperty(k) {
+			panic("worldgen.StateWith: " + name + " has no property " + k)
+		}
+		s = SetProperty(info, s, k, v)
+		if GetProperty(info, s, k) != v {
+			panic("worldgen.StateWith: " + name + "[" + k + "] has no value " + v)
+		}
+	}
+	return s
+}

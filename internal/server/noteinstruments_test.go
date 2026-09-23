@@ -2,7 +2,11 @@
 
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // TestNoteInstrumentSpotChecks pins well-known block -> instrument
 // mappings via each block's default state id (canonical 1.21.11).
@@ -12,25 +16,25 @@ func TestNoteInstrumentSpotChecks(t *testing.T) {
 		state uint32
 		want  uint8
 	}{
-		{"stone", 1, 1},             // basedrum
-		{"oak_planks", 15, 4},       // bass
-		{"sand", 118, 2},            // snare
-		{"glass", 562, 3},           // hat
-		{"gold_block", 2137, 6},     // bell
-		{"clay", 6745, 5},           // flute
-		{"packed_ice", 12712, 8},    // chime
-		{"white_wool", 2093, 7},     // guitar
-		{"bone_block", 14647, 9},    // xylophone
-		{"iron_block", 2138, 10},    // iron_xylophone
-		{"soul_sand", 6797, 11},     // cow_bell
-		{"pumpkin", 8131, 12},       // didgeridoo
-		{"emerald_block", 9526, 13}, // bit
-		{"hay_block", 12692, 14},    // banjo
-		{"glowstone", 6815, 15},     // pling
-		{"zombie_head", 10809, 16},  // zombie
-		{"player_head", 10849, 22},  // custom_head
-		{"dirt", 10, 0},             // harp
-		{"grass_block", 9, 0},       // harp
+		{"stone", worldgen.BlockID("stone"), noteInstrIndex(t, "basedrum")},
+		{"oak_planks", worldgen.BlockID("oak_planks"), noteInstrIndex(t, "bass")},
+		{"sand", worldgen.BlockID("sand"), noteInstrIndex(t, "snare")},
+		{"glass", worldgen.BlockID("glass"), noteInstrIndex(t, "hat")},
+		{"gold_block", worldgen.BlockID("gold_block"), noteInstrIndex(t, "bell")},
+		{"clay", worldgen.BlockID("clay"), noteInstrIndex(t, "flute")},
+		{"packed_ice", worldgen.BlockID("packed_ice"), noteInstrIndex(t, "chime")},
+		{"white_wool", worldgen.BlockID("white_wool"), noteInstrIndex(t, "guitar")},
+		{"bone_block", worldgen.BlockID("bone_block"), noteInstrIndex(t, "xylophone")},
+		{"iron_block", worldgen.BlockID("iron_block"), noteInstrIndex(t, "iron_xylophone")},
+		{"soul_sand", worldgen.BlockID("soul_sand"), noteInstrIndex(t, "cow_bell")},
+		{"pumpkin", worldgen.BlockID("pumpkin"), noteInstrIndex(t, "didgeridoo")},
+		{"emerald_block", worldgen.BlockID("emerald_block"), noteInstrIndex(t, "bit")},
+		{"hay_block", worldgen.BlockID("hay_block"), noteInstrIndex(t, "banjo")},
+		{"glowstone", worldgen.BlockID("glowstone"), noteInstrIndex(t, "pling")},
+		{"zombie_head", worldgen.BlockID("zombie_head"), noteInstrIndex(t, "zombie")},
+		{"player_head", worldgen.BlockID("player_head"), noteInstrIndex(t, "custom_head")},
+		{"dirt", worldgen.BlockID("dirt"), noteInstrIndex(t, "harp")},
+		{"grass_block", worldgen.BlockID("grass_block"), noteInstrIndex(t, "harp")},
 	}
 	for _, c := range cases {
 		if got := noteInstrumentFor(c.state); got != c.want {
@@ -39,4 +43,17 @@ func TestNoteInstrumentSpotChecks(t *testing.T) {
 				c.want, noteInstrumentNames[c.want])
 		}
 	}
+}
+
+// noteInstrIndex is an instrument's index by name: indexes follow the note
+// block's own instrument list, which grows (26.3 put four trumpets before
+// the mob heads), so a test names the instrument rather than its number.
+func noteInstrIndex(t *testing.T, name string) uint8 {
+	for i, n := range noteInstrumentNames {
+		if n == name {
+			return uint8(i)
+		}
+	}
+	t.Fatalf("no instrument %q", name)
+	return 0
 }

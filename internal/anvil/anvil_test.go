@@ -28,18 +28,19 @@ func TestDecodeState(t *testing.T) {
 	if e := decodeState(1); e.name != "minecraft:stone" {
 		t.Fatalf("state 1 = %+v", e)
 	}
-	// oak_stairs 3706 = facing north, half top, shape straight, waterlogged true.
-	e := decodeState(3706)
+	// The anvil palette decodes a state the way worldgen's own state maths
+	// builds it — two tables that must agree.
+	e := decodeState(worldgen.StateWith("oak_stairs", map[string]string{"facing": "north", "half": "top", "shape": "straight", "waterlogged": "true"}))
 	if e.name != "minecraft:oak_stairs" {
-		t.Fatalf("state 3706 = %+v", e)
+		t.Fatalf("oak_stairs decoded as %+v", e)
 	}
 	m := propsMap(e)
 	if m["facing"] != "north" || m["half"] != "top" || m["shape"] != "straight" || m["waterlogged"] != "true" {
 		t.Fatalf("oak_stairs props %v", m)
 	}
-	// chest 3790 = facing north, type right, waterlogged true (alphabetical
-	// enumeration — the property order in the block definition differs).
-	m = propsMap(decodeState(3790))
+	// A chest (alphabetical enumeration — the property order in the block
+	// definition differs).
+	m = propsMap(decodeState(worldgen.StateWith("chest", map[string]string{"facing": "north", "type": "right", "waterlogged": "true"})))
 	if m["facing"] != "north" || m["type"] != "right" || m["waterlogged"] != "true" {
 		t.Fatalf("chest props %v", m)
 	}
@@ -193,7 +194,7 @@ func TestChunkNBTReparse(t *testing.T) {
 	for i := range secs[0] {
 		secs[0][i] = 1 // stone
 	}
-	secs[0][0] = 3706 // oak_stairs at local (0, 0, 0)
+	secs[0][0] = worldgen.StateWith("oak_stairs", map[string]string{"facing": "north", "half": "top", "shape": "straight", "waterlogged": "true"}) // oak_stairs at local (0, 0, 0)
 	biomes := []string{"minecraft:desert", "minecraft:plains"}
 	var hm [256]int16
 	for i := range hm {

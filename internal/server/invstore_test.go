@@ -36,7 +36,7 @@ func TestInventoryPersistRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "inv.json")
 	st := newInvStore(path)
 	pl := testTracked()
-	pl.inv.add(35, 64)                                                           // a stack of cobblestone
+	pl.inv.add(itemByName["cobblestone"], 64)                                    // a stack of cobblestone
 	pl.inv.add(itemByName["apple"], 3)                                           // some apples
 	pl.armor = [4]invStack{{item: itemByName["stone_shovel"], count: 1, dmg: 9}} // a worn helmet stays worn
 	pl.offhand = invStack{item: itemByName["wheat_seeds"], count: 4}             // torches in the offhand

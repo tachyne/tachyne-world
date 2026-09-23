@@ -14,18 +14,21 @@ import (
 // nest.
 
 const (
-	turtleEggBase   = 14888 // turtle_egg: base + (eggs-1)*3 + hatch
-	turtleHomeReach = 9.0   // closerToCenterThan(homePos, 9)
-	turtleLayTicks  = 200   // layEggCounter > adjustedTickDelay(200)
-	turtleEggHatchP = 500   // shouldUpdateHatchLevel: 1 in 500 outside the dusk window
-	turtleLoveAfter = 600   // setInLoveTime(600) after laying — a fresh courtship cooldown
-	turtleHomeSpeed = 1.0   // MoveToBlockGoal speed for the egg goal
+	turtleHomeReach = 9.0 // closerToCenterThan(homePos, 9)
+	turtleLayTicks  = 200 // layEggCounter > adjustedTickDelay(200)
+	turtleEggHatchP = 500 // shouldUpdateHatchLevel: 1 in 500 outside the dusk window
+	turtleLoveAfter = 600 // setInLoveTime(600) after laying — a fresh courtship cooldown
+	turtleHomeSpeed = 1.0 // MoveToBlockGoal speed for the egg goal
 	turtleEggSpread = 0.2
 )
 
+// turtleEggBase is the first turtle_egg state (eggs=1, hatch=0); a state
+// is base + (eggs-1)*3 + hatch.
+var turtleEggBase, _ = worldgen.BlockRange("turtle_egg")
+
 // turtleEggState builds an egg block state.
 func turtleEggState(eggs, hatch int) uint32 {
-	return uint32(turtleEggBase + (eggs-1)*3 + hatch)
+	return turtleEggBase + uint32((eggs-1)*3+hatch)
 }
 
 // turtleEggOf decodes an egg block state.

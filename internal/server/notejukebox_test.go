@@ -9,11 +9,11 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// State math pinned against the vanilla report: note_block base 581 is
-// harp/note0/powered-true; radices instrument(23) × note(25) × powered(2).
+// State math pinned against the vanilla report: the note block's first
+// state is harp/note0/powered-true; radices instrument × note(25) × powered(2).
 func TestNoteStateMath(t *testing.T) {
-	if noteBlockBase != 581 {
-		t.Fatalf("note_block base %d", noteBlockBase)
+	if want := worldgen.StateWith("note_block", map[string]string{"instrument": "harp", "note": "0", "powered": "true"}); noteBlockBase != want {
+		t.Fatalf("note_block base %d, want %d", noteBlockBase, want)
 	}
 	def := noteBlockBase + 1 // harp, note 0, powered false (the default state)
 	if noteOf(def) != 0 {

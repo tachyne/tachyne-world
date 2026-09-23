@@ -7,13 +7,14 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-const (
-	oakSignRot0  = 5135 // oak_sign rotation=0 waterlogged=false
-	oakWallNorth = 5627 // oak_wall_sign facing=north waterlogged=false
-	oakCeilHang  = 5739 // oak_hanging_sign attached=false rotation=0
-	oakWallHangN = 6475 // oak_wall_hanging_sign facing=north
+var (
+	oakSignRot0  = worldgen.StateWith("oak_sign", map[string]string{"rotation": "0", "waterlogged": "false"})
+	oakWallNorth = worldgen.StateWith("oak_wall_sign", map[string]string{"facing": "north", "waterlogged": "false"})
+	oakCeilHang  = worldgen.StateWith("oak_hanging_sign", map[string]string{"attached": "false", "rotation": "0", "waterlogged": "false"})
+	oakWallHangN = worldgen.StateWith("oak_wall_hanging_sign", map[string]string{"facing": "north", "waterlogged": "false"})
 )
 
 func drainSign(pl *tracked) (texts []attachproto.SignText, editors []attachproto.SignEditor) {

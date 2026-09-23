@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // TestMapColorSpotChecks pins mapColorFor against known vanilla base map
 // colors, probed at each block's default state id (canonical 1.21.11).
@@ -10,17 +14,17 @@ func TestMapColorSpotChecks(t *testing.T) {
 		state uint32 // default state id
 		want  uint8  // vanilla base map color id
 	}{
-		{"grass_block", 9, 1},           // GRASS
-		{"stone", 1, 11},                // STONE
-		{"water", 86, 12},               // WATER
-		{"sand", 118, 2},                // SAND
-		{"oak_planks", 15, 13},          // WOOD
-		{"white_wool", 2093, 8},         // SNOW
-		{"red_wool", 2107, 28},          // COLOR_RED
-		{"snow", 6718, 8},               // SNOW
-		{"dirt", 10, 10},                // DIRT
-		{"oak_leaves", 279, 7},          // PLANT
-		{"white_terracotta", 11242, 36}, // TERRACOTTA_WHITE
+		{"grass_block", worldgen.BlockID("grass_block"), 1},            // GRASS
+		{"stone", worldgen.BlockID("stone"), 11},                       // STONE
+		{"water", worldgen.BlockID("water"), 12},                       // WATER
+		{"sand", worldgen.BlockID("sand"), 2},                          // SAND
+		{"oak_planks", worldgen.BlockID("oak_planks"), 13},             // WOOD
+		{"white_wool", worldgen.BlockID("white_wool"), 8},              // SNOW
+		{"red_wool", worldgen.BlockID("red_wool"), 28},                 // COLOR_RED
+		{"snow", worldgen.BlockID("snow"), 8},                          // SNOW
+		{"dirt", worldgen.BlockID("dirt"), 10},                         // DIRT
+		{"oak_leaves", worldgen.BlockID("oak_leaves"), 7},              // PLANT
+		{"white_terracotta", worldgen.BlockID("white_terracotta"), 36}, // TERRACOTTA_WHITE
 	}
 	for _, c := range cases {
 		if got := mapColorFor(c.state); got != c.want {
