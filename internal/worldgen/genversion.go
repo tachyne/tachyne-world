@@ -39,4 +39,8 @@ package worldgen
 // surface counting water, houses placed at the street jigsaw's surface,
 // streets terrain_matching, dirt beards under rigid pieces — and every
 // jigsaw block becomes its final_state instead of a hole.
-const GenVersion = 17
+//
+// v18: a chopped tree grows again with its chopped logs left out, rather
+// than not at all — the tree guard counts only a player block in a log cell,
+// not the air a chopped log leaves.
+const GenVersion = 18

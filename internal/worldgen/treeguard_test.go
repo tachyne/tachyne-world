@@ -127,6 +127,14 @@ func TestGeneratedTreesAvoidBuilds(t *testing.T) {
 		t.Error("one block in the canopy removed the whole tree")
 	}
 
+	// A tree a player has chopped part of: air where two of its logs were.
+	// It is still grown — the edit overlay removes those two logs, and the
+	// rest of the trunk and all its leaves stand, as in vanilla.
+	g = with(map[[3]int]uint32{{x, y + 1, z}: Air, {x, y + 2, z}: Air})
+	if got := g.GenerateChunk(cx, cz); !IsLog(sectionBlockAt(got, lx, y, lz)) || leavesIn(got) != leavesIn(base) {
+		t.Error("a partly chopped tree was not grown")
+	}
+
 	// A castle: a stone ceiling across the whole chunk three blocks up,
 	// through the trunk. The tree does not grow up through the rooms.
 	roof := map[[3]int]uint32{}

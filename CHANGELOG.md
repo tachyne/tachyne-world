@@ -38,6 +38,12 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Chopped trees stand again.** Since the tree guard landed earlier today, a
+  tree a player had chopped part of was not generated at all, so the rest
+  of its trunk and all its leaves disappeared. Near spawn that took many
+  oaks, birches and jungle trees, and the vines that had grown on the
+  jungle trees. A chopped tree now stands as the player left it, as in
+  vanilla. A generated tree still makes way for a player's build.
 - **The game no longer stalls to generate land nobody is near.** Growth,
   natural spawning, held maps and scheduled block updates (flowing water,
   falling sand) now run only in loaded chunks, as vanilla's do. A chunk

@@ -13,8 +13,11 @@ package worldgen
 // the tree's own footprint against the edit overlay:
 //
 //   - an edit on the ground cell under its trunk (a floor, a path, a dug
-//     hole) or on any cell its trunk or branches would occupy (a roof or a
-//     wall it would pass through, or a log a player already chopped);
+//     hole), or a player block on any cell its trunk or branches would
+//     occupy (a roof or a wall it would pass through). Air there is not a
+//     build: it is where a player chopped this tree's logs, and a chopped
+//     tree keeps standing as the player left it, as in vanilla — skipping
+//     it took the rest of its trunk, its leaves and the vines on them;
 //   - or a player block where at least a quarter of its leaves would go (a
 //     roof or wall cutting through the canopy). A block or two placed in a
 //     canopy (a torch, a bridge) does not count.
@@ -58,7 +61,7 @@ func (g *Generator) collidesWithBuild(f *treeFootprint, x, y, z int) bool {
 		return true
 	}
 	for p := range f.logs {
-		if _, ok := g.editAt(p[0], p[1], p[2]); ok {
+		if s, ok := g.editAt(p[0], p[1], p[2]); ok && s != Air {
 			return true
 		}
 	}
