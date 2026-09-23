@@ -31,5 +31,7 @@ package worldgen
 // v16: generated trees no longer grow into player builds (treeguard.go).
 // Generation now reads the edit overlay for that one decision, so a cached
 // chunk reflects the edits of when it was made — a tree already generated
-// stays, as in vanilla; only a fresh generation leaves it out.
+// stays, as in vanilla; only a fresh generation leaves it out. The same
+// release adds 26.3's dappled forest (cold, driest plains become forest) and
+// the poplar trees.
 const GenVersion = 16
