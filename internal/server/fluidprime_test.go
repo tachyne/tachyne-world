@@ -50,3 +50,35 @@ func TestGeneratedSpringsRun(t *testing.T) {
 		t.Errorf("the spring at %v (%d) did not run: %d openings before, %d after", spring, fluid, before, after)
 	}
 }
+
+// A restart drops every scheduled tick, and what was moving froze: bug #20
+// caught flowing lava hanging where a burned tree's leaves had been, beside
+// fire with nothing left to burn. Priming the chunk wakes its saved fluid
+// and fire edits, and they settle as vanilla's would have.
+func TestPrimingWakesFrozenLavaAndFire(t *testing.T) {
+	w := world.New(1)
+	x, y, z := 3000, 170, 3000
+	w.ForceLoad(x, z, 1)
+	for dx := -3; dx <= 3; dx++ { // open air all round, well above the terrain
+		for dz := -3; dz <= 3; dz++ {
+			for dy := -4; dy <= 3; dy++ {
+				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	flowing := worldgen.LavaBase + 2 // flowing lava, no source, nothing under it
+	w.SetBlock(x, y, z, flowing)
+	w.SetBlock(x+2, y, z, fireDefault) // fire with nothing flammable about
+	h := newHub(w)
+	tr := testTracked()
+	tr.x, tr.y, tr.z = float64(x)+0.5, float64(y), float64(z)+0.5
+	players := map[int32]*tracked{1: tr}
+	h.primeFluids(players)
+	runTicks(h, players, 1, 200)
+	if got := w.Block(x, y, z); got == flowing {
+		t.Error("the flowing lava is still hanging where it froze")
+	}
+	if isFire(w.Block(x+2, y, z)) {
+		t.Error("the fire is still burning with nothing to burn")
+	}
+}
