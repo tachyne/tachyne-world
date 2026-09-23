@@ -12,10 +12,14 @@ else is omitted so the engine falls back to its legacy drop for that block.
 Run: python3 scripts/gen_blockloot.py [path-to-server.jar]  (needs network)
 """
 import canon
+import loot26
 import io, json, sys, os, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+# Loot moved off canon.DATA once loot26 could read 26.x's format: the tables
+# the two versions share normalise to exactly their 1.21.11 form.
+LOOT = canon.VERSION
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(LOOT)
 OUTDIR = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "entities.json")
 
@@ -190,7 +194,7 @@ for n in sorted(z.namelist()):
         skipped += 1
         continue
     try:
-        rows[str(ent_id[name])] = table(json.loads(z.read(n)))
+        rows[str(ent_id[name])] = table(loot26.read(z, n, LOOT))
         kept += 1
     except Unsupported:
         skipped += 1
