@@ -420,7 +420,10 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		placed = s.placeBed(p, info, defState, tx, ty, tz, p.yaw, seq)
 	default:
 		target := s.worldFor(p).Block(tx, ty, tz)
-		intoWater := worldgen.IsWater(target) // waterlog when placed into water
+		// Waterlogged only when placed into a water SOURCE, as vanilla's
+		// getFluidState().getType() == Fluids.WATER is; a block dropped into a
+		// stream stays dry, or every slab in a river would become a new source.
+		intoWater := worldgen.IsFluidSource(target, worldgen.WaterBase)
 		var state uint32
 		lookPlaced := true
 		// The face you clicked comes first (getNearestLookingDirections), so

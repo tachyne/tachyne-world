@@ -145,11 +145,6 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		}
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
-	case worldgen.IsWaterlogged(state):
-		// A waterlogged block holds a water source, and it runs like one out
-		// of any face its shape leaves open (bug #25: water in a stair poured
-		// out of the step's open side in vanilla, and nowhere here).
-		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
 		h.inDim(dim, func() { h.updateFire(players, pos) })
 	case h.tickFrogspawn(players, dim, pos, state):
@@ -166,6 +161,15 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A big dripleaf tipping under a load, or pinned flat by a signal.
 	default:
 		h.inDim(dim, func() { h.updateRedstone(players, pos, state) })
+	}
+	// A waterlogged block's water has its own tick in vanilla, beside the
+	// block's: it runs as a source out of any face the block's shape leaves
+	// open (bug #25). It follows the block's own update rather than replacing
+	// it — dispatched in the switch above, it took the place of a dripleaf's
+	// tilt, a trapdoor's or rail's redstone and a rod's power, and a
+	// waterlogged leaf's distance update kept its water still.
+	if now := h.worldFor(dim).Block(pos.x, pos.y, pos.z); worldgen.IsWaterlogged(now) && !worldgen.IsFluid(now) {
+		h.updateFluid(players, dim, pos, now)
 	}
 }
 

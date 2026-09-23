@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -54,6 +55,56 @@ func TestWaterloggedStairPoursOutItsOpenSides(t *testing.T) {
 	for _, p := range [][3]int{{x + 1, y, z}, {x, y, z + 1}, {x + 2, y, z}} {
 		if worldgen.IsWater(w.Block(p[0], p[1], p[2])) {
 			t.Errorf("water at %v stayed after the stair was drained", p)
+		}
+	}
+}
+
+// A block's own update and its water's both run: a waterlogged trapdoor
+// beside a redstone block still opens. The water tick used to replace the
+// block's own update, so waterlogged trapdoors, rails and rods ignored
+// redstone. (Waterlogged leaves keep their water: a full-block shape lets
+// none out, in vanilla too.)
+func TestWaterloggedTrapdoorStillAnswersRedstone(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	td := worldgen.BlockBase("oak_trapdoor")
+	info, _ := worldgen.InfoForState(td)
+	for k, v := range map[string]string{"open": "false", "powered": "false", "half": "bottom", "facing": "north", "waterlogged": "true"} {
+		td = worldgen.SetProperty(info, td, k, v)
+	}
+	w.SetBlock(x, y, z, td)
+	w.SetBlock(x+1, y, z, worldgen.BlockBase("redstone_block"))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	runTicks(h, players, h.tick.Load(), h.tick.Load()+20)
+	got := w.At(x, y, z)
+	if gi, ok := worldgen.InfoForState(got); !ok || worldgen.GetProperty(gi, got, "open") != "true" {
+		t.Fatalf("a powered waterlogged trapdoor did not open (state %d)", got)
+	}
+}
+
+// Placing a waterloggable block waterlogs it only in a water source, as
+// vanilla does: dropped into a stream it stays dry, so no new source appears.
+func TestPlacingIntoFlowingWaterStaysDry(t *testing.T) {
+	s, h, p := breakPlaceServer(t)
+	w := h.world
+	slab := itemByName["oak_slab"]
+	p.setHotbarSlot(0, int32(slab))
+	p.held = 0
+	for i, c := range []struct {
+		fluid uint32
+		want  bool
+	}{{worldgen.WaterBase + 3, false}, {worldgen.WaterBase, true}} {
+		x, y, z := 3+i*3, 70, 6
+		w.SetBlock(x, y, z, worldgen.Stone)
+		w.SetBlock(x, y+1, z, c.fluid)
+		w.SetBlock(x, y+2, z, worldgen.Air)
+		s.handlePlace(p, placeBody(x, y, z, 1))
+		time.Sleep(150 * time.Millisecond)
+		got := w.Block(x, y+1, z)
+		if name, _ := worldgen.StateName(got); name != "oak_slab" {
+			t.Fatalf("case %d: placed %s, want an oak slab", i, name)
+		}
+		if worldgen.IsWaterlogged(got) != c.want {
+			t.Errorf("case %d (fluid %d): waterlogged=%v, want %v", i, c.fluid, worldgen.IsWaterlogged(got), c.want)
 		}
 	}
 }
