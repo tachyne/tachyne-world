@@ -38,6 +38,10 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Creative players keep their hotbar when they rejoin.** The server kept
+  a creative player's inventory but sent it back on joining only in
+  survival, so a creative player came back to an empty hotbar, and the
+  first thing they changed overwrote what the server had kept.
 - **Observers, pistons, dispensers, droppers and barrels face up or down as
   vanilla's do.** They turn to face up or down once the player looks more
   than 45° up or down (sooner when looking diagonally), from whichever way

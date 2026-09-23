@@ -2315,10 +2315,16 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		}
 	}
 	h.sendDefaultSpawn(nt)         // the compass's north, before anything else uses it
-	if nt.gamemode == gmSurvival { // sync the survival HUD (hearts/hunger + inventory)
+	if nt.gamemode == gmSurvival { // sync the survival HUD (hearts/hunger)
 		h.sendHealth(nt)
-		h.sendInventory(nt)
 	}
+	// The saved inventory goes to every player, in every game mode, as
+	// vanilla's does on join. It used to go to survival players only, so a
+	// creative player rejoined to an empty hotbar, and the first changes they
+	// made overwrote what the server had kept (bug #24). A second push a
+	// second later heals one dropped under a busy join.
+	h.sendInventory(nt)
+	nt.resyncInvAt = h.tick.Load() + 20
 	if h.advs != nil { // advancement state + the tree (a resume reloads this pod's store)
 		nt.adv = h.advs.load(e.p.name)
 	} else {
