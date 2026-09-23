@@ -1,122 +1,67 @@
 #!/usr/bin/env python3
-"""Generate internal/protocol/translation_gen.go: the unified multi-version registry
-translation tables (ViaVersion-style MappingData).
+"""Generate tachyne-common/protocol/translation_gen.go: the multi-version
+registry translation tables (ViaVersion-style MappingData).
 
-Newer versions insert blocks/entities/items earlier in their registries, shifting
-the IDs of everything after them. We send the world in canonical 1.21.5 (770) IDs;
-a translated client decodes them against its own registry. This emits, per registry
-and per client protocol version, the ID delta for each run of canonical IDs that
-moved — so the translation layer can rewrite IDs in either direction with one API.
+The engine's ids are its canonical content version's (CANON). A client on
+another version numbers the same things differently — newer versions insert
+entries earlier in a registry, shifting everything after them — so for each
+registry and each served protocol this emits the id delta for every run of
+canonical ids that moved, run-length-encoded into (min, max, delta) ranges,
+and the translation layer rewrites ids in either direction with one API.
 
-Every registry is reduced to the same shape: a canonical-ID → delta array, run-
-length-encoded into (min, max, delta) ranges. "Ranged" registries (block states)
-get their delta from each block's state-range shift; "flat" registries (entities,
-items, biomes) get it per ID by resource name.
+Every registry, for every version, comes from vanilla's own data reports
+(~/vanilla/reports/<version>/, the server's --reports output), read through
+scripts/vanillareport.py. Block states are "ranged" — a block's whole state
+range shifts by one delta — and everything else is "flat", matched per id by
+name. An entry that exists on only one side cannot be shifted: it is listed
+in absentIDs (canonical ids a client lacks) or addedIDs (client ids the
+canonical registry lacks), so it is dropped rather than turned into something
+else.
 
-Run outside the sandbox (needs network):  python3 scripts/gen_translation.py
+    python3 scripts/gen_translation.py [canonical-version]     # default 1.21.11
 """
-import json, urllib.request, os
+import json, os, sys
 
 import vanillareport
 
-BASE = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/{}/{}.json"
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "translation_gen.go")
 
-CANON = "1.21.11"  # engine content is 1.21.11 (proto 774); wire LAYOUT stays 770
-# version -> (source dir/version, source kind). "md" = minecraft-data (one JSON per
-# registry); "via" = ViaVersion Mappings (one JSON, list-index = ID) for the 26.x
-# versions minecraft-data doesn't cover yet. The ViaVersion files are factual
-# ID↔name dumps (used to derive our own delta tables, not their code).
-TARGETS = {
-    770: ("1.21.5", "md"), 771: ("1.21.6", "md"), 772: ("1.21.8", "md"),
-    773: ("1.21.9", "md"), 775: ("26.1", "via"), 776: ("26.2", "via"), 777: ("26.3", "via"),
-    # 774 = 1.21.11 = canonical id version → identity, no table.
+# client protocol -> the version whose reports describe it.
+PROTOCOLS = {
+    770: "1.21.5", 771: "1.21.6", 772: "1.21.8", 773: "1.21.9",
+    774: "1.21.11", 775: "26.1", 776: "26.2", 777: "26.3",
 }
-VIA = "https://raw.githubusercontent.com/ViaVersion/Mappings/main/mappings/mapping-{}.json"
+CANON = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"  # content ids; the wire LAYOUT stays 770
+CANON_PROTO = next(p for p, v in PROTOCOLS.items() if v == CANON)
+# The canonical version is the identity and gets no table.
+TARGETS = {p: v for p, v in PROTOCOLS.items() if v != CANON}
 
-# registry Go const name -> (minecraft-data file, ViaVersion key, kind, report key)
-# A report key switches the source to local vanilla datagen reports
-# (~/vanilla/reports/<version>/registries.json — protocol-ordered, authoritative;
-# regenerate with `java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar
-# --reports`). Used for registries the community datasets don't carry.
+# (Go const, kind, report registry). The order fixes the IDSpace numbering.
 REGISTRIES = [
-    ("RegBlockState", "blocks", "blockstates", "stateRange", None),
-    ("RegEntity", "entities", "entities", "flat", None),
-    ("RegItem", "items", "items", "flat", None),
-    ("RegBiome", "biomes", None, "flat", None),  # ViaVersion mappings carry no biomes
+    ("RegBlockState", "stateRange", "block"),
+    ("RegEntity", "flat", "entity_type"),
+    ("RegItem", "flat", "item"),
+    # Biome ids never need translating: a client learns them from the biome
+    # registry the server itself sends at configuration, so they mean the same
+    # thing on every version by construction. The IDSpace stays so the
+    # numbering does not move; its table is always empty.
+    ("RegBiome", "flat", None),
     # award_stats key registries (see render770/stats.go):
-    ("RegBlock", None, None, "flat", "minecraft:block"),
-    ("RegCustomStat", None, None, "flat", "minecraft:custom_stat"),
+    ("RegBlock", "flat", "block"),
+    ("RegCustomStat", "flat", "custom_stat"),
     # update_attributes carries attribute registry ids, and the registry grew
     # between served versions (32 on 770, 35 canonical, 40 on 776) — so the ids
     # shift and the packet is meaningless to a client without this table.
-    ("RegAttribute", None, None, "flat", "minecraft:attribute"),
+    ("RegAttribute", "flat", "attribute"),
 ]
-REPORTS = os.path.expanduser("~/vanilla/reports/{}/registries.json")
 
 
-def fetch_report(ver, key):
-    with open(REPORTS.format(ver)) as f:
-        r = json.load(f)
-    return [{"name": k, "id": v["protocol_id"]} for k, v in r[key]["entries"].items()]
-
-
-def fetch(ver, name):
-    with urllib.request.urlopen(BASE.format(ver, name)) as r:
-        return json.load(r)
-
-
-_via_cache = {}
-
-
-def fetch_via(ver):
-    if ver not in _via_cache:
-        with urllib.request.urlopen(VIA.format(ver)) as r:
-            _via_cache[ver] = json.load(r)
-    return _via_cache[ver]
-
-
-def normalize(ver, source, mdfile, viakey, kind):
-    """Return the version's registry in a uniform shape: stateRange -> list of
-    {name,minStateId,maxStateId}; flat -> list of {name,id}. None if unavailable."""
-    if source == "md":
-        data = fetch(ver, mdfile)
-        return data  # minecraft-data already has the right fields
-    # ViaVersion: list where index = ID, value = name (block states are "name[props]").
-    if viakey is None:
-        return None
-    lst = fetch_via(ver).get(viakey)
-    if lst is None:
-        return None
-    if kind == "stateRange":
-        rng = {}
-        for i, entry in enumerate(lst):
-            name = entry.split("[")[0]
-            if name in rng:
-                rng[name]["maxStateId"] = i
-            else:
-                rng[name] = {"name": name, "minStateId": i, "maxStateId": i}
-        return list(rng.values())
-    return [{"name": name, "id": i} for i, name in enumerate(lst)]
-
-
-# Blocks, items and entities come from vanilla's own reports for EVERY version,
-# canonical and target alike, read through the same adapter. They used to come
-# from minecraft-data up to 1.21.9 and ViaVersion's mappings beyond, which
-# stops wherever either project stops and names things two different ways.
-REPORT_KEY = {"items": "item", "entities": "entity_type"}
-
-
-def load(ver, source, mdfile, viakey, kind, reportkey):
-    if reportkey:
-        return fetch_report(ver, reportkey)
+def load(ver, kind, registry):
+    if registry is None:
+        return []
     if kind == "stateRange":
         return vanillareport.blocks(ver)
-    if mdfile in REPORT_KEY:
-        return vanillareport.registry(ver, REPORT_KEY[mdfile])
-    if source == "md" or ver == CANON:
-        return fetch(ver, mdfile)          # biomes: no report carries them
-    return normalize(ver, source, mdfile, viakey, kind)
+    return vanillareport.registry(ver, registry)
 
 
 def delta_array_flat(canon, version):
@@ -191,26 +136,23 @@ def rle(deltas):
 data = {}
 absent = {}
 added = {}
-for const, mdfile, viakey, kind, reportkey in REGISTRIES:
-    canon = load(CANON, "md", mdfile, viakey, kind, reportkey)
+for const, kind, registry in REGISTRIES:
+    canon = load(CANON, kind, registry)
     per = {}
-    for ver, (dir, source) in sorted(TARGETS.items()):
-        version = load(dir, source, mdfile, viakey, kind, reportkey)
-        if version is None:
-            per[ver] = []
-            continue
+    for ver, dir in sorted(TARGETS.items()):
+        version = load(dir, kind, registry)
         deltas = delta_array_states(canon, version) if kind == "stateRange" else delta_array_flat(canon, version)
         per[ver] = rle(deltas)
         if kind != "stateRange":
             gone = absent_flat(canon, version)
             if gone:
                 absent.setdefault(const, {})[ver] = gone
-                print(f"{const} 1.21.11->{ver}: {len(gone)} ids ABSENT (dropped, not shifted)")
+                print(f"{const} {CANON}->{ver}: {len(gone)} ids ABSENT (dropped, not shifted)")
             new_ids = added_flat(canon, version)
             if new_ids:
                 added.setdefault(const, {})[ver] = new_ids
-                print(f"{const} {ver}->1.21.11: {len(new_ids)} ids ADDED (dropped serverbound)")
-        print(f"{const} 1.21.11->{ver}: {len(deltas)} ids shifted -> {len(per[ver])} ranges")
+                print(f"{const} {ver}->{CANON}: {len(new_ids)} ids ADDED (dropped serverbound)")
+        print(f"{const} {CANON}->{ver}: {len(deltas)} ids shifted -> {len(per[ver])} ranges")
     data[const] = per
 
 L = [
@@ -221,17 +163,17 @@ L = [
     "// IDSpace identifiers for multi-version ID translation.",
     "const (",
 ]
-for i, (const, _, _, _, _) in enumerate(REGISTRIES):
+for i, (const, _, _) in enumerate(REGISTRIES):
     L.append(f"\t{const} IDSpace = {i}")
 L += [
     "\tnumRegistries = " + str(len(REGISTRIES)),
     ")",
     "",
     "// translationTables[registry][clientProtocol] = forward ID-shift ranges (canonical",
-    "// 1.21.11(774) -> client version). Sorted by Min for binary search.",
+    f"// {CANON}({CANON_PROTO}) -> client version). Sorted by Min for binary search.",
     "var translationTables = map[IDSpace]map[int32][]idRange{",
 ]
-for const, _, _, _, _ in REGISTRIES:
+for const, _, _ in REGISTRIES:
     L.append(f"\t{const}: {{")
     for ver in sorted(data[const]):
         ranges = data[const][ver]
