@@ -34,6 +34,9 @@ func (h *hub) primeFluids(players map[int32]*tracked) {
 				if done[c] {
 					continue
 				}
+				if !w.Loaded(x, z) {
+					continue // primed when it loads, not generated here
+				}
 				if budget <= 0 {
 					return
 				}

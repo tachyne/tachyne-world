@@ -73,8 +73,8 @@ func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, dim, cat int, c 
 		return // canSpawnForCategoryLocal: every player near this chunk is at the category's cap
 	}
 	w := h.worldFor(dim)
-	if !w.Loaded(c[0], c[1]) {
-		return // only loaded chunks spawn
+	if !w.Ticking(c[0], c[1]) {
+		return // only ticking chunks spawn (the light check reads the neighbours)
 	}
 	x := int(c[0])*16 + h.rng.Intn(16)
 	z := int(c[1])*16 + h.rng.Intn(16)
@@ -130,7 +130,7 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, dim, cat, ax, ay, az i
 			}
 			// isRightDistanceToPlayerAndSpawnPoint: a member scattered into
 			// another chunk needs that chunk loaded (canSpawnEntitiesInChunk).
-			if !h.worldFor(dim).Loaded(int32(x>>4), int32(z>>4)) {
+			if !h.worldFor(dim).Ticking(int32(x>>4), int32(z>>4)) {
 				continue
 			}
 			d := h.nearestPlayerSq(players, dim, float64(x)+0.5, float64(ay), float64(z)+0.5)

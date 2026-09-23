@@ -37,6 +37,7 @@ func TestGeneratedSpringsRun(t *testing.T) {
 	if before == 0 {
 		t.Fatalf("spring at %v has no opening", spring)
 	}
+	w.ForceLoad(spring[0], spring[2], 1) // the player's view around it
 	h := newHub(w)
 	tr := testTracked()
 	tr.x, tr.y, tr.z = float64(spring[0]), float64(spring[1]), float64(spring[2])

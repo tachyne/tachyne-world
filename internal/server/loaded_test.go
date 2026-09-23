@@ -24,8 +24,19 @@ func TestHubLeavesUnloadedChunksAlone(t *testing.T) {
 		t.Fatalf("random ticks generated %d chunks on the hub", got-before)
 	}
 
+	// A chunk that is loaded but not ticking (nothing loaded around it) is
+	// left alone too: its lighting would read, and generate, its neighbours.
+	w.ForceLoad(5000, 5000, 0)
+	before = w.CacheLen()
+	for i := 0; i < 20; i++ {
+		h.runRandomTicks(players)
+	}
+	if got := w.CacheLen(); got != before {
+		t.Fatalf("random ticks at the edge of what is loaded generated %d chunks", got-before)
+	}
+
 	// Sand hanging over air in an unloaded chunk: its fall waits.
-	x, y, z := 5000, 150, 5000
+	x, y, z := 5100, 150, 5100
 	w.SetBlock(x, y, z, worldgen.Sand)
 	w.SetBlock(x, y-1, z, worldgen.Air)
 	h.scheduleIn(0, blockPos{x, y, z}, 1)

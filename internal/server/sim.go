@@ -92,7 +92,7 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 		}
 		seen[sp] = struct{}{}
 		// A scheduled tick runs only where blocks can tick: its chunk and
-		// the four beside it loaded (a flowing fluid reads one block over).
+		// all eight around it loaded (a flowing fluid reads one block over).
 		// Elsewhere it waits, as vanilla's ticks wait with their chunk,
 		// instead of generating a chunk here on the hub.
 		if !h.canTickBlocksAt(sp) {
@@ -107,12 +107,9 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 // is looked at again (a second).
 const unloadedRetry = 20
 
-// canTickBlocksAt reports whether an update's chunk and its four neighbours
-// are loaded.
+// canTickBlocksAt reports whether an update's chunk is ticking.
 func (h *hub) canTickBlocksAt(sp simPos) bool {
-	w := h.worldFor(sp.dim)
-	cx, cz := int32(sp.x>>4), int32(sp.z>>4)
-	return w.Loaded(cx, cz) && w.Loaded(cx+1, cz) && w.Loaded(cx-1, cz) && w.Loaded(cx, cz+1) && w.Loaded(cx, cz-1)
+	return h.worldFor(sp.dim).Ticking(int32(sp.x>>4), int32(sp.z>>4))
 }
 
 func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {

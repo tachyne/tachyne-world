@@ -379,6 +379,23 @@ type ChunkReader struct {
 	ch     *worldgen.Chunk
 }
 
+// Ticking reports whether a chunk and all eight around it are loaded, so
+// anything simulated there reads only loaded chunks. Lighting, for one,
+// reads a chunk's whole 3×3 neighbourhood. It is vanilla's ticking chunk:
+// the ring at the edge of what is loaded is loaded but does not tick.
+func (w *World) Ticking(cx, cz int32) bool {
+	w.genMu.Lock()
+	defer w.genMu.Unlock()
+	for dx := int32(-1); dx <= 1; dx++ {
+		for dz := int32(-1); dz <= 1; dz++ {
+			if _, ok := w.cache[chunkPos{cx + dx, cz + dz}]; !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // ForceLoad brings the chunks within r chunks of a block into memory now, on
 // the calling goroutine — vanilla's forceload ticket, for a caller that is
 // not the hub (a tool, a test fixture). The chunks stay only as long as the
