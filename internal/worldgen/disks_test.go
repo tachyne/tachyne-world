@@ -6,29 +6,30 @@ import "testing"
 // only clay in the overworld was the floor of a lush cave.
 func TestDisksPutClayInRiverAndSeaBeds(t *testing.T) {
 	g := NewGenerator(1)
-	clay, sand, gravel := 0, 0, 0
-	// A wide sweep so the sample crosses real water somewhere.
-	for cx := int32(-24); cx < 24; cx++ {
-		for cz := int32(-24); cz < 24; cz++ {
-			ch := g.GenerateChunk(cx, cz)
-			for si := range ch.Sections {
-				for _, s := range ch.Sections[si] {
-					switch s {
-					case Clay:
-						clay++
-					case Sand:
-						sand++
-					case Gravel:
-						gravel++
+	// Rings outward from the origin, stopping at the first clay: the claim is
+	// only that disks place clay somewhere, and water is near. The sweep used
+	// to generate all 48×48 chunks, nearly five minutes under -race — the
+	// longest test in the suite by far. The reach is unchanged, so "no clay
+	// anywhere in 48x48 chunks" still fails the same way.
+	for r := int32(0); r < 24; r++ {
+		for cx := -r; cx <= r; cx++ {
+			for cz := -r; cz <= r; cz++ {
+				if abs32(cx) != r && abs32(cz) != r {
+					continue // the ring only; the inside was done
+				}
+				ch := g.GenerateChunk(cx, cz)
+				for si := range ch.Sections {
+					for _, s := range ch.Sections[si] {
+						if s == Clay {
+							t.Logf("first clay in chunk %d,%d (ring %d)", cx, cz, r)
+							return
+						}
 					}
 				}
 			}
 		}
 	}
-	if clay == 0 {
-		t.Fatal("no clay anywhere in 48x48 chunks: the disks are not placing")
-	}
-	t.Logf("clay=%d sand=%d gravel=%d", clay, sand, gravel)
+	t.Fatal("no clay anywhere in 48x48 chunks: the disks are not placing")
 }
 
 // A disk is a circle of the sampled radius, and it only replaces what its
