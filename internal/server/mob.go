@@ -111,7 +111,6 @@ type mob struct {
 	schoolLeader    int32         // fish: the leader it follows (FollowFlockLeaderGoal)
 	schoolFollowers int           // …or how many follow IT
 	schoolNext      int           // …and the ticks before it looks for a school again
-	bedSearchAt     uint64        // villager: the tick its next AcquirePoi(HOME) scan is due
 	turtleHoming    bool          // turtle: swimming back to the beach it was born on
 	phantomRadius   float64       // phantom: the circle it flies around its anchor
 	phantomHigh     float64       // …how far above the target that anchor sits
@@ -227,69 +226,72 @@ type mob struct {
 	breedAt                         uint64      // villager: VillagerMakeLove birthTimestamp
 	breedLead                       bool        // villager: this half runs the courtship clock
 	jobPos                          blockPos    // villager: POTENTIAL_JOB_SITE (zero = none)
-	jobSearchAt                     uint64      // villager: tick of the next workstation scan
-	meet                            blockPos    // villager: the village meeting point (bell/well)
-	sleeping                        bool        // villager: lying in its bed through the night
-	lastSlept                       uint64      // villager: the tick it last lay down PLUS ONE (LAST_SLEPT; 0 = never)
-	golemSeen                       uint64      // villager: tick the GOLEM_DETECTED_RECENTLY memory runs out
-	swims                           bool        // water-bound: lives inside a water column (fish/squid)
-	flies                           bool        // free flight: no ground collision (bat/phantom/ghast)
-	statik                          bool        // anchored: never walks (shulker)
-	climbing                        bool        // spider: clinging to a wall right now (synced state)
-	skittish                        bool        // bolts from any close player (fox/ocelot/rabbit)
-	hover                           float64     // fliers: preferred altitude above the terrain
-	held                            int32       // rendered main-hand item (0 = empty)
-	heldEnch                        enchList    // enchantments on that item (spawn gear rolls them)
-	heldDmg                         int         // wear on that item
-	heldCount                       int         // how many it holds (0 = one): a hand takes a whole stack
-	gearSure                        [5]bool     // setGuaranteedDrop per slot (0-3 armour, 4 hand): picked up, so it always drops
-	carry                           invStack    // allay: the stack it has collected for its liked player
-	allayPickupCD                   int         // allay: ticks before it collects again (60 after a throw)
-	allayNoteCD                     int         // allay: ticks it keeps delivering to the liked note block (600 per note)
-	allayNote                       blockPos    // allay: that note block
-	dupCD                           int         // allay: ticks until it may duplicate again (6000)
-	dancing                         bool        // allay: a jukebox plays within earshot
-	frogEaten                       int8        // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
-	sneezeAt                        uint64      // baby panda: the tick its sneeze lands (0 = not sneezing)
-	pandaFlags                      byte        // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)
-	rollLeft                        int         // panda: updates left in a roll
-	rollDX, rollDZ                  float64     // panda: the roll's heading
-	lieCD                           uint64      // panda: the tick it may lie on its back again
-	dashCD                          int         // camel: ticks left on the dash cooldown (flag drops at 50)
-	poseTick                        int64       // camel: LAST_POSE_CHANGE_TICK (negative while sitting; persisted)
-	dashing                         bool        // camel: the DASH flag is up
-	puff                            int8        // pufferfish: PUFF_STATE 0-2
-	hasEgg                          bool        // turtle: carrying an egg home (Turtle.HAS_EGG)
-	carrotTicks                     int         // rabbit: moreCarrotTicks (full after a bite)
-	screaming                       bool        // goat: the screaming variant (2% at spawn)
-	breaksDoors                     bool        // zombie: spawned able to break doors (f×10%)
-	hidePos                         blockPos    // skeleton: the shade it is heading for out of the sun (zero = none)
-	begging                         bool        // wolf: INTERESTED flag (head tilt) is up
-	begTicks                        int         // wolf: ticks of begging left
-	begPlayer                       int32       // wolf: who it is begging from
-	begCalm                         int         // wolf: updates until the goal is reconsidered
-	sitPose                         bool        // cat: setInSittingPose (sat on a chest/bed/furnace, not ordered)
-	sitBlock                        blockPos    // cat: the block it is heading for or sat on (zero = none)
-	sitTry                          int         // cat: MoveToBlockGoal tryTicks (up while walking, down while sat)
-	sitStay                         int         // cat: maxStayTicks
-	sitNext                         int         // cat: nextStartTick
-	lying                           bool        // cat: IS_LYING (on a bed)
-	relaxOne                        bool        // cat: RELAX_STATE_ONE (watching its owner before lying)
-	relaxTicks                      int         // cat: CatRelaxOnOwnerGoal onBedTicks (0 = goal idle)
-	lieBlock                        blockPos    // cat: CatLieOnBedGoal target (zero = none)
-	lieTry, lieStay, lieNext        int         // cat: CatLieOnBedGoal tryTicks / maxStayTicks / nextStartTick
-	pandaEat                        int         // panda: EAT_COUNTER (0 = not chewing)
-	pandaSitCD                      uint64      // panda: the tick PandaSitGoal may start again
-	avoidEID                        int32       // AvoidEntityGoal: the mob being kept clear of
-	avoidX, avoidZ                  float64     // AvoidEntityGoal: the spot it is walking to
-	avoidLeft                       int         // AvoidEntityGoal: updates left on that path (0 = idle)
-	avoidWalk, avoidSprint          float64     // AvoidEntityGoal: the rule's speed modifiers
-	avoidPlayer                     bool        // AvoidEntityGoal: avoidEID is a player, not a mob
-	brzState                        int8        // breeze: standing / inhaling / jumping / shooting
-	brzTicks                        int         // breeze: ticks into the inhale or the shot
-	brzJumpCD, brzShootCD           int         // breeze: BREEZE_JUMP_COOLDOWN / BREEZE_SHOOT_COOLDOWN
-	brzShootWindow                  int         // breeze: BREEZE_SHOOT memory ticks left
-	brzJumpX, brzJumpY              float64     // breeze: BREEZE_JUMP_TARGET
+	poiAt                           [poiGroups]uint64
+	poiRetries                      [poiGroups]map[blockPos]*poiRetry // AcquirePoi's batch cache, per claim
+	cantReachSince                  [poiGroups]uint64                 // CANT_REACH_WALK_TARGET_SINCE, per claim
+	pathReached                     bool                              // the last planned path reached its goal
+	meet                            blockPos                          // villager: the village meeting point (bell/well)
+	sleeping                        bool                              // villager: lying in its bed through the night
+	lastSlept                       uint64                            // villager: the tick it last lay down PLUS ONE (LAST_SLEPT; 0 = never)
+	golemSeen                       uint64                            // villager: tick the GOLEM_DETECTED_RECENTLY memory runs out
+	swims                           bool                              // water-bound: lives inside a water column (fish/squid)
+	flies                           bool                              // free flight: no ground collision (bat/phantom/ghast)
+	statik                          bool                              // anchored: never walks (shulker)
+	climbing                        bool                              // spider: clinging to a wall right now (synced state)
+	skittish                        bool                              // bolts from any close player (fox/ocelot/rabbit)
+	hover                           float64                           // fliers: preferred altitude above the terrain
+	held                            int32                             // rendered main-hand item (0 = empty)
+	heldEnch                        enchList                          // enchantments on that item (spawn gear rolls them)
+	heldDmg                         int                               // wear on that item
+	heldCount                       int                               // how many it holds (0 = one): a hand takes a whole stack
+	gearSure                        [5]bool                           // setGuaranteedDrop per slot (0-3 armour, 4 hand): picked up, so it always drops
+	carry                           invStack                          // allay: the stack it has collected for its liked player
+	allayPickupCD                   int                               // allay: ticks before it collects again (60 after a throw)
+	allayNoteCD                     int                               // allay: ticks it keeps delivering to the liked note block (600 per note)
+	allayNote                       blockPos                          // allay: that note block
+	dupCD                           int                               // allay: ticks until it may duplicate again (6000)
+	dancing                         bool                              // allay: a jukebox plays within earshot
+	frogEaten                       int8                              // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
+	sneezeAt                        uint64                            // baby panda: the tick its sneeze lands (0 = not sneezing)
+	pandaFlags                      byte                              // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)
+	rollLeft                        int                               // panda: updates left in a roll
+	rollDX, rollDZ                  float64                           // panda: the roll's heading
+	lieCD                           uint64                            // panda: the tick it may lie on its back again
+	dashCD                          int                               // camel: ticks left on the dash cooldown (flag drops at 50)
+	poseTick                        int64                             // camel: LAST_POSE_CHANGE_TICK (negative while sitting; persisted)
+	dashing                         bool                              // camel: the DASH flag is up
+	puff                            int8                              // pufferfish: PUFF_STATE 0-2
+	hasEgg                          bool                              // turtle: carrying an egg home (Turtle.HAS_EGG)
+	carrotTicks                     int                               // rabbit: moreCarrotTicks (full after a bite)
+	screaming                       bool                              // goat: the screaming variant (2% at spawn)
+	breaksDoors                     bool                              // zombie: spawned able to break doors (f×10%)
+	hidePos                         blockPos                          // skeleton: the shade it is heading for out of the sun (zero = none)
+	begging                         bool                              // wolf: INTERESTED flag (head tilt) is up
+	begTicks                        int                               // wolf: ticks of begging left
+	begPlayer                       int32                             // wolf: who it is begging from
+	begCalm                         int                               // wolf: updates until the goal is reconsidered
+	sitPose                         bool                              // cat: setInSittingPose (sat on a chest/bed/furnace, not ordered)
+	sitBlock                        blockPos                          // cat: the block it is heading for or sat on (zero = none)
+	sitTry                          int                               // cat: MoveToBlockGoal tryTicks (up while walking, down while sat)
+	sitStay                         int                               // cat: maxStayTicks
+	sitNext                         int                               // cat: nextStartTick
+	lying                           bool                              // cat: IS_LYING (on a bed)
+	relaxOne                        bool                              // cat: RELAX_STATE_ONE (watching its owner before lying)
+	relaxTicks                      int                               // cat: CatRelaxOnOwnerGoal onBedTicks (0 = goal idle)
+	lieBlock                        blockPos                          // cat: CatLieOnBedGoal target (zero = none)
+	lieTry, lieStay, lieNext        int                               // cat: CatLieOnBedGoal tryTicks / maxStayTicks / nextStartTick
+	pandaEat                        int                               // panda: EAT_COUNTER (0 = not chewing)
+	pandaSitCD                      uint64                            // panda: the tick PandaSitGoal may start again
+	avoidEID                        int32                             // AvoidEntityGoal: the mob being kept clear of
+	avoidX, avoidZ                  float64                           // AvoidEntityGoal: the spot it is walking to
+	avoidLeft                       int                               // AvoidEntityGoal: updates left on that path (0 = idle)
+	avoidWalk, avoidSprint          float64                           // AvoidEntityGoal: the rule's speed modifiers
+	avoidPlayer                     bool                              // AvoidEntityGoal: avoidEID is a player, not a mob
+	brzState                        int8                              // breeze: standing / inhaling / jumping / shooting
+	brzTicks                        int                               // breeze: ticks into the inhale or the shot
+	brzJumpCD, brzShootCD           int                               // breeze: BREEZE_JUMP_COOLDOWN / BREEZE_SHOOT_COOLDOWN
+	brzShootWindow                  int                               // breeze: BREEZE_SHOOT memory ticks left
+	brzJumpX, brzJumpY              float64                           // breeze: BREEZE_JUMP_TARGET
 	brzJumpZ                        float64
 	brzVX, brzVY, brzVZ             float64 // breeze: the jump's motion, per tick
 	brzSlide                        bool    // breeze: Slide walk target set

@@ -190,7 +190,7 @@ func TestSixWayPlacementFollowsTheNearestLookingDirection(t *testing.T) {
 		return worldgen.GetProperty(info, s, "facing")
 	}
 	cases := []struct {
-		yaw, pitch float32
+		yaw, pitch  float32
 		obs, piston string
 	}{
 		{0, 0, "south", "north"},

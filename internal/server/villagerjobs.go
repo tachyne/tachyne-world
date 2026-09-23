@@ -16,9 +16,6 @@ import (
 // handed a profession at the village's birth and never changed.
 
 const (
-	jobSearchRange  = 16  // horizontal half-range of the workstation scan (vanilla's POI search reaches 48)
-	jobSearchRangeY = 4   //
-	jobSearchEvery  = 200 // ticks between scans for an unemployed villager (vanilla: 20–40 with a retry backoff per site)
 	jobWalkSpeed    = 0.5 // GoToPotentialJobSite speedModifier
 	jobClaimDist    = 2.0 // AssignProfessionFromJobSite: closerToCenterThan(pos, 2.0)
 	jobValidateDist = 16.0
@@ -94,7 +91,6 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 		return
 	}
 	w := h.worldFor(m.dim)
-	now := h.tick.Load()
 	// A held workstation that is gone, or the wrong block, is lost; a
 	// villager that never traded is unemployed again.
 	if m.work != (blockPos{}) {
@@ -120,36 +116,7 @@ func (h *hub) villagerJobTick(players map[int32]*tracked, m *mob) {
 		}
 		return
 	}
-	if now < m.jobSearchAt {
-		return
-	}
-	m.jobSearchAt = now + jobSearchEvery + uint64(h.rng.Intn(jobSearchEvery/2))
-	// AcquirePoi: the nearest free workstation (of its own profession, if it
-	// has one) within the scan.
-	mx, my, mz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
-	best, bestD := blockPos{}, math.MaxFloat64
-	for dx := -jobSearchRange; dx <= jobSearchRange; dx++ {
-		for dz := -jobSearchRange; dz <= jobSearchRange; dz++ {
-			for dy := -jobSearchRangeY; dy <= jobSearchRangeY; dy++ {
-				p := jobBlockProfession(w.At(mx+dx, my+dy, mz+dz))
-				if p < 0 || (m.profession >= 0 && p != m.profession) {
-					continue
-				}
-				d := float64(dx*dx + dy*dy + dz*dz)
-				if d >= bestD {
-					continue
-				}
-				pos := blockPos{mx + dx, my + dy, mz + dz}
-				if h.jobSiteClaimed(pos, m) {
-					continue
-				}
-				best, bestD = pos, d
-			}
-		}
-	}
-	if bestD < math.MaxFloat64 {
-		m.jobPos = best
-	}
+	h.acquirePoi(players, m, poiJob) // AcquirePoi(acquirableJobSite → POTENTIAL_JOB_SITE)
 }
 
 // villagerJobWalk is GoToPotentialJobSite + AssignProfessionFromJobSite,
@@ -205,18 +172,11 @@ func (h *hub) yieldJobSite(m *mob, prof int) {
 	}
 }
 
-// AcquirePoi(HOME) — claiming a bed at runtime. A villager born without one,
-// or one whose bed was broken, looks for a free bed nearby and takes it, so
-// building a house for the village actually houses somebody.
-const (
-	bedSearchRange  = 16  // the same scan the workstation search uses
-	bedSearchRangeY = 4   //
-	bedSearchEvery  = 400 // ticks between scans (vanilla retries on a backoff)
-)
-
-// villagerBedTick gives a bedless villager a bed when one is free nearby.
-func (h *hub) villagerBedTick(m *mob) {
-	if m.etype != entityVillager || m.dying > 0 || m.baby {
+// villagerBedTick is the bed half of the villager's POI life: its held bed is
+// dropped when the block is gone (ValidateNearbyPoi), and a villager with no
+// bed, child or adult, claims one (AcquirePoi(HOME), acquirepoi.go).
+func (h *hub) villagerBedTick(players map[int32]*tracked, m *mob) {
+	if m.etype != entityVillager || m.dying > 0 {
 		return
 	}
 	w := h.worldFor(m.dim)
@@ -224,42 +184,72 @@ func (h *hub) villagerBedTick(m *mob) {
 		return
 	}
 	if m.bed != (blockPos{}) {
-		if !isBedBlock(w.Block(m.bed.x, m.bed.y, m.bed.z)) {
-			m.bed, m.home = blockPos{}, blockPos{} // somebody took the bed away
+		if w.Loaded(int32(m.bed.x>>4), int32(m.bed.z>>4)) && !isBedBlock(w.At(m.bed.x, m.bed.y, m.bed.z)) {
+			m.releasePoi(poiHome) // somebody took the bed away
 		}
 		return
 	}
-	now := h.tick.Load()
-	if now < m.bedSearchAt {
-		return
-	}
-	m.bedSearchAt = now + bedSearchEvery + uint64(h.rng.Intn(bedSearchEvery/2))
-	mx, my, mz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
-	best, bestD := blockPos{}, math.MaxFloat64
-	for dx := -bedSearchRange; dx <= bedSearchRange; dx++ {
-		for dz := -bedSearchRange; dz <= bedSearchRange; dz++ {
-			for dy := -bedSearchRangeY; dy <= bedSearchRangeY; dy++ {
-				pos := blockPos{mx + dx, my + dy, mz + dz}
-				if !isBedBlock(w.Block(pos.x, pos.y, pos.z)) || h.bedClaimed(pos, m) {
-					continue
-				}
-				if d := float64(dx*dx + dy*dy + dz*dz); d < bestD {
-					best, bestD = pos, d
-				}
-			}
-		}
-	}
-	if bestD < math.MaxFloat64 {
-		m.bed, m.home = best, best
-	}
+	h.acquirePoi(players, m, poiHome)
 }
 
-// bedClaimed reports whether another villager already sleeps in this bed.
+// bedClaimed reports whether another villager already sleeps in this bed,
+// by either half: HOME is the head, but older saves hold whichever half the
+// old scan found.
 func (h *hub) bedClaimed(pos blockPos, self *mob) bool {
+	other, hasOther := bedOtherHalf(h.worldFor(self.dim), pos)
 	for _, o := range h.mobs {
-		if o != self && o.etype == entityVillager && o.dying == 0 && o.bed == pos {
+		if o != self && o.etype == entityVillager && o.dying == 0 && (o.bed == pos || (hasOther && o.bed == other)) {
 			return true
 		}
 	}
 	return false
+}
+
+// bedOtherHalf is the other half of the bed at pos: the foot is behind the
+// head along the bed's facing.
+func bedOtherHalf(w interface{ At(x, y, z int) uint32 }, pos blockPos) (blockPos, bool) {
+	if w == nil {
+		return blockPos{}, false
+	}
+	s := w.At(pos.x, pos.y, pos.z)
+	info, ok := worldgen.InfoForState(s)
+	if !ok || !isBed(info) {
+		return blockPos{}, false
+	}
+	dx, dz := 0, 0
+	switch worldgen.GetProperty(info, s, "facing") {
+	case "north":
+		dz = -1
+	case "south":
+		dz = 1
+	case "west":
+		dx = -1
+	case "east":
+		dx = 1
+	}
+	if worldgen.GetProperty(info, s, "part") == "head" {
+		return blockPos{pos.x - dx, pos.y, pos.z - dz}, true
+	}
+	return blockPos{pos.x + dx, pos.y, pos.z + dz}, true
+}
+
+// villagerMeetTick is the meeting point's POI life: a bell that is gone is
+// let go (ValidateNearbyPoi), and an adult with none claims one
+// (AcquirePoi(MEETING)). Villagers used to be handed the village's first
+// bell at birth and keep it for life.
+func (h *hub) villagerMeetTick(players map[int32]*tracked, m *mob) {
+	if m.etype != entityVillager || m.dying > 0 {
+		return
+	}
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return
+	}
+	if m.meet != (blockPos{}) {
+		if w.Loaded(int32(m.meet.x>>4), int32(m.meet.z>>4)) && !isBell(w.At(m.meet.x, m.meet.y, m.meet.z)) {
+			m.releasePoi(poiMeet)
+		}
+		return
+	}
+	h.acquirePoi(players, m, poiMeet)
 }

@@ -67,6 +67,7 @@ type World struct {
 	seed  int64
 	mu    sync.RWMutex
 	edits map[chunkPos]map[int]uint32 // chunk -> local block index -> state
+	poi   poiIndex                    // points of interest (poi.go)
 
 	genMu sync.Mutex
 	cache map[chunkPos]cacheEntry
@@ -782,6 +783,7 @@ func (w *World) RevertEdit(x, y, z int) {
 	w.mu.Unlock()
 	w.dirty.Store(true)
 	w.invalidateLight(x, z)
+	w.poiInvalidate(key[0], key[1])
 }
 
 func (w *World) SetBlock(x, y, z int, state uint32) {
@@ -805,6 +807,7 @@ func (w *World) SetBlock(x, y, z int, state uint32) {
 	w.mu.Unlock()
 	w.dirty.Store(true)
 	w.invalidateLight(x, z) // cached chunk light is stale for this 3×3
+	w.poiInvalidate(key[0], key[1])
 }
 
 // Block returns the block state at a world coordinate: an edit if one exists,

@@ -193,7 +193,7 @@ func (h *hub) villagerGiveBirth(players map[int32]*tracked, m, o *mob) {
 	h.initVillagerTrades(child, profUnemployed) // born unemployed: it takes a workstation when it grows
 	h.sendVillagerData(players, child)
 	h.toTracking(players, child.eid, child.dim, child.x, child.z, metaEv(babyMeta(child.eid, true)))
-	child.home, child.bed, child.meet = bed, bed, m.meet
+	child.home, child.bed = bed, bed // VillagerMakeLove: the bed they found; a baby claims no bell (onlyIfAdult)
 	child.behavior = villagerBehavior{}
 	child.usesDoors = true
 	h.toTracking(players, child.eid, child.dim, child.x, child.z, entityStatus(child.eid, entityStatusVillagerHappy))

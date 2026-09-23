@@ -192,9 +192,8 @@ func (h *hub) setTemplateVillagerData(m *mob, vm worldgen.VillageMob) {
 
 // spawnTemplateVillager places one of the village's villagers (one per
 // villagers piece) as its template has it: unemployed, a nitwit, or a baby.
-// Nothing is handed to it. Like vanilla's brain, it claims a bed
-// (villagerBedTick) and, if unemployed, a workstation (villagerJobTick).
-// The meeting point is the bell nearest to it.
+// Nothing is handed to it: like vanilla's brain it claims a bed, a
+// workstation and a meeting bell itself (acquirepoi.go).
 func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
 	m := h.spawnMob(players, entityVillager, vm.X, vm.Y, vm.Z)
 	if m == nil {
@@ -212,13 +211,6 @@ func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Villa
 		h.initVillagerTrades(m, profUnemployed)
 	}
 	h.sendVillagerData(players, m)
-	m.meet = blockPos{v.X, v.Y, v.Z}
-	best := math.MaxFloat64
-	for _, b := range h.world.Gen().VillageBells(v) {
-		if d := math.Hypot(float64(b[0]-vm.BX), float64(b[2]-vm.BZ)); d < best {
-			best, m.meet = d, blockPos{b[0], b[1], b[2]}
-		}
-	}
 	m.behavior = villagerBehavior{} // path home/around + open doors
 	m.usesDoors = true
 }

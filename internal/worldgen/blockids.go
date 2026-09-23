@@ -99,3 +99,12 @@ func StateProps(state uint32) map[string]string {
 	}
 	return out
 }
+
+// MaxState is the highest block state id, for tables indexed by state.
+func MaxState() uint32 {
+	stateRangesOnce.Do(buildStateRanges)
+	if len(stateRanges) == 0 {
+		return 0
+	}
+	return stateRanges[len(stateRanges)-1].hi
+}

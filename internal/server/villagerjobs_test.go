@@ -25,7 +25,8 @@ func TestVillagerTakesAndLosesAJob(t *testing.T) {
 	h.dayTime.Store(3000)
 	h.tick.Store(1000)
 	v := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
-	v.profession, v.work, v.jobSearchAt = profUnemployed, blockPos{}, 0
+	v.profession, v.work = profUnemployed, blockPos{}
+	poiDue(h, v)
 	lectern := worldgen.BlockID("lectern")
 	w.SetBlock(5, 180, 0, lectern)
 	h.villagerJobTick(players, v)
@@ -42,7 +43,8 @@ func TestVillagerTakesAndLosesAJob(t *testing.T) {
 	}
 	// A second villager finds the lectern taken.
 	u := h.spawnMob(players, entityVillager, 0.5, 180, 2.5)
-	u.profession, u.work, u.jobSearchAt = profUnemployed, blockPos{}, 0
+	u.profession, u.work = profUnemployed, blockPos{}
+	poiDue(h, u)
 	h.villagerJobTick(players, u)
 	if u.jobPos != (blockPos{}) {
 		t.Error("a second villager claimed a held lectern")
@@ -55,7 +57,7 @@ func TestVillagerTakesAndLosesAJob(t *testing.T) {
 	}
 	// One with experience keeps the trade.
 	w.SetBlock(5, 180, 0, lectern)
-	v.jobSearchAt = 0
+	poiDue(h, v)
 	h.villagerJobTick(players, v)
 	v.x = 4.5
 	h.villagerJobWalk(players, v)
@@ -86,7 +88,8 @@ func TestVillagerYieldsJobSite(t *testing.T) {
 	composter := worldgen.BlockID("composter")
 	w.SetBlock(5, 180, 0, composter)
 	u := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
-	u.profession, u.work, u.jobSearchAt = profUnemployed, blockPos{}, 0
+	u.profession, u.work = profUnemployed, blockPos{}
+	poiDue(h, u)
 	h.villagerJobTick(players, u)
 	if u.jobPos != (blockPos{5, 180, 0}) {
 		t.Fatalf("no potential job site: %+v", u.jobPos)
@@ -129,7 +132,8 @@ func TestNitwitNeverWorks(t *testing.T) {
 	w.SetBlock(5, 180, 0, worldgen.BlockID("lectern"))
 	n := h.spawnMob(players, entityVillager, 0.5, 180, 0.5)
 	h.initVillagerTrades(n, profNitwit)
-	n.work, n.jobSearchAt = blockPos{}, 0
+	n.work = blockPos{}
+	poiDue(h, n)
 	h.villagerJobTick(players, n)
 	if n.jobPos != (blockPos{}) || n.profession != profNitwit || len(n.offers) != 0 {
 		t.Fatalf("a nitwit went for the lectern: jobPos %+v profession %d offers %d", n.jobPos, n.profession, len(n.offers))

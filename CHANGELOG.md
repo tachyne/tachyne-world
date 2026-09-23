@@ -171,6 +171,19 @@ the public history since the project was open-sourced on 2026-07-10.
   the last half-minute came back nameless.
 
 ### Changed
+- **Villagers find their beds, workstations and bells as vanilla's do.**
+  Every second or two a villager without one looks at the free ones within
+  48 blocks and claims the closest it can actually walk to, upstairs and
+  indoors included. It lets go of one it has been unable to reach for a
+  minute (a bell after ten seconds). A bell placed later gets used, and a
+  broken one is let go. They used to look only 16 blocks around, never
+  checked they could get there, and were handed the village's first bell
+  for life.
+- **Village golems, cats and sieges follow vanilla.** Golems are asked for
+  when villagers gossip or panic, and land on solid ground rather than in
+  walls. Cats come only to villages with more than four lived-in homes,
+  and to swamp huts. Zombie sieges start at midnight around a player
+  standing in a village, one zombie every few ticks.
 - **Villages bring their own creatures.** A village is populated from what
   its pieces carry, as vanilla places a structure's entities: the town
   centre's iron golem, the cats, the animals in the pens, the desert's

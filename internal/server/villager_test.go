@@ -323,30 +323,37 @@ func TestTradingVillagerStandsAndFaces(t *testing.T) {
 func TestVillagerClaimsAPlacedBed(t *testing.T) {
 	h := newHub(world.New(7))
 	players := map[int32]*tracked{}
-	m := h.spawnSpecies(players, entityVillager, 0, 0.5, 70, 0.5)
+	for x := -4; x <= 8; x++ { // a floor in open air, so the path search has ground
+		for z := -4; z <= 4; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			h.world.SetBlock(x, 180, z, worldgen.Air)
+			h.world.SetBlock(x, 181, z, worldgen.Air)
+		}
+	}
+	m := h.spawnSpecies(players, entityVillager, 0, 0.5, 180, 0.5)
 	if m == nil {
 		t.Fatal("no villager")
 	}
 	m.bed, m.home = blockPos{}, blockPos{}
-	bed := blockPos{3, 70, 0}
-	h.world.SetBlock(bed.x, bed.y, bed.z, worldgen.BlockBase("red_bed"))
-	if !isBedBlock(h.world.At(bed.x, bed.y, bed.z)) {
-		t.Fatal("test fixture: that is not a bed")
-	}
-	h.villagerBedTick(m)
+	bed := blockPos{3, 180, 0}
+	h.world.SetBlock(bed.x, bed.y, bed.z, freeBed())
+	h.world.SetBlock(bed.x-1, bed.y, bed.z, worldgen.SetProperty(mustInfo(t, freeBed()), freeBed(), "part", "foot"))
+	poiDue(h, m)
+	h.villagerBedTick(players, m)
 	if m.bed != bed {
-		t.Fatalf("a bedless villager should claim the bed, got %+v", m.bed)
+		t.Fatalf("a bedless villager should claim the bed's head, got %+v", m.bed)
 	}
-	// Another villager cannot take the same bed.
-	o := h.spawnSpecies(players, entityVillager, 0, 1.5, 70, 0.5)
-	o.bed, o.home, o.bedSearchAt = blockPos{}, blockPos{}, 0
-	h.villagerBedTick(o)
-	if o.bed == bed {
-		t.Error("two villagers must not share a bed")
+	// Another villager cannot take the same bed, by either half.
+	o := h.spawnSpecies(players, entityVillager, 0, 1.5, 180, 0.5)
+	o.bed, o.home = blockPos{}, blockPos{}
+	poiDue(h, o)
+	h.villagerBedTick(players, o)
+	if o.bed != (blockPos{}) {
+		t.Errorf("two villagers must not share a bed: the second took %+v", o.bed)
 	}
 	// Break it and the claim goes.
 	h.world.SetBlock(bed.x, bed.y, bed.z, worldgen.Air)
-	h.villagerBedTick(m)
+	h.villagerBedTick(players, m)
 	if m.bed != (blockPos{}) {
 		t.Errorf("a broken bed should be forgotten, still %+v", m.bed)
 	}

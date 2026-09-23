@@ -51,7 +51,7 @@ func (h *hub) pathSteer(m *mob, gx, gz float64) (float64, float64) {
 		if m.usesDoors {
 			pw = doorPather{h.worldFor(m.dim)} // route through closed wooden doors
 		}
-		m.path = findPath(pw, malusFor(m.etype), sxi, szi, gxi, gzi)
+		m.path, m.pathReached = findPathLimits(pw, malusFor(m.etype), sxi, szi, gxi, gzi, pathMaxRange, pathMaxNodes)
 		m.pathIdx = 0
 		m.pathGoal = [2]int{gxi, gzi}
 		m.pathAt = now
@@ -116,8 +116,16 @@ func (p *pathHeap) Pop() any {
 // path to the explored column closest to the goal, so the mob still makes
 // progress rather than freezing.
 func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
+	path, _ := findPathLimits(w, prof, sx, sz, gx, gz, pathMaxRange, pathMaxNodes)
+	return path
+}
+
+// findPathLimits is findPath with its reach and node budget given, and
+// whether the goal itself was reached (false: the path ends at the closest
+// column the search found). It never steps into an unloaded chunk.
+func findPathLimits(w pather, prof malusProfile, sx, sz, gx, gz, maxRange, maxNodes int) ([]pathPoint, bool) {
 	if sx == gx && sz == gz {
-		return nil
+		return nil, true
 	}
 	key := func(x, z int) int64 { return int64(x)<<32 | int64(uint32(z)) }
 	h := func(x, z int) float64 { // octile-ish distance to the goal
@@ -138,7 +146,7 @@ func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
 	bestH := h(sx, sz)
 	expanded := 0
 
-	for open.Len() > 0 && expanded < pathMaxNodes {
+	for open.Len() > 0 && expanded < maxNodes {
 		cur := heap.Pop(open).(pathNode)
 		ck := key(cur.x, cur.z)
 		if closed[ck] {
@@ -148,7 +156,7 @@ func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
 		expanded++
 
 		if cur.x == gx && cur.z == gz {
-			return reconstruct(came, pathPoint{gx, gz})
+			return reconstruct(came, pathPoint{gx, gz}), true
 		}
 		if hc := h(cur.x, cur.z); hc < bestH {
 			bestH, bestKey = hc, ck
@@ -161,7 +169,7 @@ func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
 					continue
 				}
 				nx, nz := cur.x+dx, cur.z+dz
-				if maxi(abs(nx-sx), abs(nz-sz)) > pathMaxRange {
+				if maxi(abs(nx-sx), abs(nz-sz)) > maxRange || !pathLoaded(w, nx, nz) {
 					continue
 				}
 				if !stepOK(pw, cur.x, cur.z, nx, nz, curFeet, dx != 0 && dz != 0) {
@@ -191,9 +199,21 @@ func findPath(w pather, prof malusProfile, sx, sz, gx, gz int) []pathPoint {
 	}
 	// Goal unreachable within budget: walk toward the closest column we saw.
 	if bestKey == key(sx, sz) {
-		return nil
+		return nil, false
 	}
-	return reconstruct(came, pathPoint{int(bestKey >> 32), int(int32(bestKey))})
+	return reconstruct(came, pathPoint{int(bestKey >> 32), int(int32(bestKey))}), false
+}
+
+// pathLoaded reports whether a column's chunk is loaded, for the pathers that
+// know (the world and its door-aware wrapper); a search never generates.
+func pathLoaded(w pather, x, z int) bool {
+	switch p := w.(type) {
+	case *world.World:
+		return p.Loaded(int32(x>>4), int32(z>>4))
+	case doorPather:
+		return p.w.Loaded(int32(x>>4), int32(z>>4))
+	}
+	return true
 }
 
 func isCactus(s uint32) bool { return s >= worldgen.Cactus && s <= worldgen.Cactus+15 }

@@ -72,15 +72,21 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 				h.shouldRestock(m) {
 				h.restockOffers(m)
 			}
-			return h.pathSteer(m, float64(m.work.x)+0.5, float64(m.work.z)+0.5)
+			vx, vz := h.pathSteer(m, float64(m.work.x)+0.5, float64(m.work.z)+0.5)
+			h.noteWalkToPoi(m, poiJob, m.work)
+			return vx, vz
 		}
 	case vsGather:
 		if m.meet != (blockPos{}) {
-			return h.pathSteer(m, float64(m.meet.x)+0.5, float64(m.meet.z)+0.5)
+			vx, vz := h.pathSteer(m, float64(m.meet.x)+0.5, float64(m.meet.z)+0.5)
+			h.noteWalkToPoi(m, poiMeet, m.meet)
+			return vx, vz
 		}
 	case vsSleep:
 		if m.bed != (blockPos{}) {
-			return h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
+			vx, vz := h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
+			h.noteWalkToPoi(m, poiHome, m.bed)
+			return vx, vz
 		}
 	}
 	// Roam: vanilla's VillageBoundRandomStroll (and GoToClosestVillage for a
