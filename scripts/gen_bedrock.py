@@ -2,20 +2,23 @@
 """Regenerate ../tachyne-gw-bedrock/internal/gw/bedrock_*_gen.go — the
 Java-canonical → Bedrock mapping tables for the Bedrock gateway.
 
-Sources (all fetched; MIT-licensed GeyserMC data consumed as facts):
-  - GeyserMC/mappings @ PIN (last Java 1.21.11 commit): blocks.nbt is a
-    gzipped big-endian NBT whose "bedrock_mappings" list is POSITIONAL by
-    Java block-state ID — index i maps canonical state i to a Bedrock
-    {name, states} pair (empty entry = same-named stateless block).
-    items.json / biomes.json are keyed by Java identifier.
+Sources:
+  - GeyserMC/mappings @ the pin for the canonical Java version (MIT data,
+    consumed as facts): blocks.nbt is a gzipped big-endian NBT whose
+    "bedrock_mappings" list is POSITIONAL by Java block-state ID — index i
+    maps canonical state i to a Bedrock {name, states} pair (empty entry =
+    same-named stateless block) — so the pin must be a commit for exactly
+    the canonical version. items.json / biomes.json / particles.json are
+    keyed by Java identifier.
   - GeyserMC/Geyser master bedrock/ resources for the Bedrock 1.26.30 side:
     runtime_item_states.26_30.json (item registry for StartGame),
     entity_identifiers.dat (AvailableActorIdentifiers payload, sent verbatim).
-  - PrismarineJS/minecraft-data 1.21.11 blocks.json (state-ID → Java block
-    name, for blocks.nbt entries that omit bedrock_identifier), items.json +
-    entities.json (canonical NETWORK id order — the engine's ID space; NOTE
-    mcmeta's registries list is ALPHABETICAL, which is NOT network order for
-    entities: player/fishing_bobber sit at the END of the real registry).
+  - The Java side is vanilla's own, for the canonical version: the reports
+    (~/vanilla/reports/<version>, via scripts/vanillareport.py) give each
+    block's state range (for blocks.nbt entries that omit
+    bedrock_identifier, and the banner ranges) and the item, entity-type and
+    particle registries in network-id order — the engine's id spaces — and
+    the server jar's en_us.json gives the advancement text.
 
 Block runtime IDs are HASHED network IDs (StartGame UseBlockNetworkIDHashes):
 fnv1a-32 over the canonical little-endian NBT of {name, states} with state
@@ -26,9 +29,9 @@ Entity identifiers default to "minecraft:<java name>"; the exception table
 below is derived from Geyser's EntityDefinitions.java. Identifiers absent
 from entity_identifiers.dat are emitted as "" (gateway skips rendering them).
 
-Run from the repo root, OUTSIDE the sandbox (needs network):
+Run from the repo root (fetches the Geyser side):
 
-    python3 scripts/gen_bedrock.py
+    python3 scripts/gen_bedrock.py [canonical-version]     # default 1.21.11
 
 Stdlib only.
 """
@@ -38,16 +41,32 @@ import json
 import os
 import struct
 import subprocess
+import sys
 import urllib.request
 import zipfile
 
-PIN = "2f0a8da2"  # GeyserMC/mappings: last Java 1.21.11 commit
+import vanillareport
+
+CANON = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+# canonical Java version -> (GeyserMC/mappings commit, the Java version that
+# commit maps). blocks.nbt is positional in the pin's own Java state ids, so
+# it is re-indexed onto the canonical states by (block, properties); a pin
+# one version behind still maps every block the two share, and a block new
+# in the canonical version renders as the fallback until Geyser maps it.
+GEYSER_PINS = {
+    "1.21.11": ("2f0a8da2", "1.21.11"),  # last Java 1.21.11 commit
+    # No Java 26.3 mappings yet: 26.2's, less 90 blocks new in 26.3 (wool
+    # and concrete stairs/slabs, the poplar set). Re-pin when Geyser has 26.3.
+    "26.3": ("0fd435d3", "26.2"),
+}
+if CANON not in GEYSER_PINS:
+    raise SystemExit(f"no GeyserMC/mappings pin for Java {CANON}: add one to GEYSER_PINS")
+PIN, GEYSER_JAVA = GEYSER_PINS[CANON]
 MAPPINGS = f"https://raw.githubusercontent.com/GeyserMC/mappings/{PIN}"
 GEYSER = "https://raw.githubusercontent.com/GeyserMC/Geyser/master/core/src/main/resources/bedrock"
-MCDATA = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.21.11"
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SERVER_JAR = os.path.expanduser("~/vanilla/server-1.21.11.jar")  # en_us.json lives in the bundled inner jar
+SERVER_JAR = os.path.expanduser(f"~/vanilla/server-{CANON}.jar")  # en_us.json lives in the bundled inner jar
 OUT = os.path.join(REPO, "..", "tachyne-gw-bedrock", "internal", "gw")
 
 # Geyser EntityDefinitions.java: Java entity-type name → Bedrock identifier
@@ -83,7 +102,7 @@ ENTITY_EXCEPTIONS = {
 # Java has one entity type per boat wood; Bedrock has a single boat (+ chest
 # boat) with the wood as a variant (cosmetic metadata, not the identifier).
 for _wood in ("oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
-              "mangrove", "cherry", "pale_oak"):
+              "mangrove", "cherry", "pale_oak", "poplar"):
     ENTITY_EXCEPTIONS[f"{_wood}_boat"] = "boat"
     ENTITY_EXCEPTIONS[f"{_wood}_chest_boat"] = "chest_boat"
 ENTITY_EXCEPTIONS["bamboo_raft"] = "boat"
@@ -247,38 +266,61 @@ def net_parse(data):
 
 def header(w, script):
     w(f"// Code generated by scripts/{script}; DO NOT EDIT.\n")
-    w("// Sources: GeyserMC/mappings @" + PIN + " (Java 1.21.11) + Geyser core\n")
-    w("// bedrock/ resources (Bedrock 1.26.30) + mcmeta 1.21.11 registries. MIT.\n\n")
+    w(f"// Sources: GeyserMC/mappings @{PIN} (Java {GEYSER_JAVA}) + Geyser core\n")
+    w(f"// bedrock/ resources (Bedrock 1.26.30), MIT; vanilla {CANON} reports.\n\n")
     w("package gw\n\n")
+
+
+def state_keys(ver):
+    """[state id] -> (block name, sorted properties) from the blocks report."""
+    keys = {}
+    for name, b in vanillareport._load(ver, "blocks.json").items():
+        for st in b["states"]:
+            keys[st["id"]] = (name.removeprefix("minecraft:"), tuple(sorted(st.get("properties", {}).items())))
+    if sorted(keys) != list(range(len(keys))):
+        raise SystemExit(f"Java {ver} state ids are not dense from 0")
+    return [keys[i] for i in range(len(keys))]
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
 
     # ---- blocks -------------------------------------------------------------
-    print("fetching blocks.nbt + minecraft-data blocks.json …")
+    print("fetching blocks.nbt …")
     _, root = be_parse(gzip.decompress(fetch(f"{MAPPINGS}/blocks.nbt")))
     entries = root["bedrock_mappings"][1]
-    mcblocks = json.loads(fetch(f"{MCDATA}/blocks.json"))
+    mcblocks = vanillareport.blocks(CANON)
     state_owner = {}
     for b in mcblocks:
         for sid in range(b["minStateId"], b["maxStateId"] + 1):
             state_owner[sid] = b["name"]
-    n = len(entries)
-    print(f"  {n} block states (minecraft-data max {max(state_owner)})")
+    pin_keys = state_keys(GEYSER_JAVA)
+    if len(entries) != len(pin_keys):
+        raise SystemExit(f"state count mismatch: geyser {len(entries)} vs Java {GEYSER_JAVA} {len(pin_keys)}")
+    by_key = {k: e for k, (_, e) in zip(pin_keys, entries)}
+    canon_keys = state_keys(CANON)
+    n = len(canon_keys)
     if n != max(state_owner) + 1:
-        raise SystemExit(f"state count mismatch: geyser {n} vs minecraft-data {max(state_owner)+1}")
-
-    rids = []
-    for sid, (_, e) in enumerate(entries):
-        ident = e.get("bedrock_identifier", (8, state_owner[sid]))[1]
-        states = e.get("state", (10, {}))[1]
-        rids.append(block_hash("minecraft:" + ident, states))
+        raise SystemExit(f"state count mismatch: blocks report {n} vs Java {CANON} {max(state_owner)+1}")
+    print(f"  {n} block states (Geyser maps Java {GEYSER_JAVA}: {len(entries)})")
 
     air = block_hash("minecraft:air", {})
     assert air == 3690217760, air  # cross-check vs dragonfly's known value
     fallback = block_hash("minecraft:info_update", {})
+    rids = []
+    unmapped = {}
+    for sid, key in enumerate(canon_keys):
+        e = by_key.get(key)
+        if e is None:
+            unmapped[key[0]] = unmapped.get(key[0], 0) + 1
+            rids.append(fallback)
+            continue
+        ident = e.get("bedrock_identifier", (8, state_owner[sid]))[1]
+        states = e.get("state", (10, {}))[1]
+        rids.append(block_hash("minecraft:" + ident, states))
     assert rids[0] == air  # canonical state 0 is air
+    if unmapped:
+        print(f"  {sum(unmapped.values())} states of {len(unmapped)} blocks have no Geyser mapping -> fallback: {sorted(unmapped)}")
 
     with open(os.path.join(OUT, "bedrock_blocks_gen.go"), "w") as f:
         header(f.write, "gen_bedrock.py")
@@ -305,12 +347,12 @@ def main():
     print(f"  bedrock_biomes_gen.go: {len(biomes)} biomes")
 
     # ---- items --------------------------------------------------------------
-    # Canonical order from minecraft-data (id field = network id, the engine's
+    # Canonical order from the registries report (network ids, the engine's
     # item ID space).
     print("fetching item registries …")
-    mcitems = sorted(json.loads(fetch(f"{MCDATA}/items.json")), key=lambda i: i["id"])
+    mcitems = vanillareport.registry(CANON, "item")
     if [i["id"] for i in mcitems] != list(range(len(mcitems))):
-        raise SystemExit("minecraft-data item ids are not dense from 0")
+        raise SystemExit("item ids are not dense from 0")
     ritems = json.loads(fetch(f"{GEYSER}/runtime_item_states.26_30.json"))
     jitems = json.loads(fetch(f"{MAPPINGS}/items.json"))
     with open(os.path.join(OUT, "bedrock_items_gen.go"), "w") as f:
@@ -362,9 +404,9 @@ def main():
     print(f"  bedrock_banners_gen.go: {nb} banner blocks")
 
     # ---- entities -----------------------------------------------------------
-    mcents = sorted(json.loads(fetch(f"{MCDATA}/entities.json")), key=lambda e: e["id"])
+    mcents = vanillareport.registry(CANON, "entity_type")
     if [e["id"] for e in mcents] != list(range(len(mcents))):
-        raise SystemExit("minecraft-data entity ids are not dense from 0")
+        raise SystemExit("entity ids are not dense from 0")
     if mcents[-2]["name"] != "player":
         raise SystemExit(f"expected player second-to-last, got {mcents[-2]['name']}")
     dat = fetch(f"{GEYSER}/entity_identifiers.dat")
@@ -376,7 +418,7 @@ def main():
         header(f.write, "gen_bedrock.py")
         f.write("// bedrockEntityIDs[canonical Java entity-type ID] = Bedrock actor\n")
         f.write("// identifier (Geyser's mapping; \"\" = no Bedrock equivalent, skip).\n")
-        f.write("// Index order is minecraft-data NETWORK ids (player second-to-last).\n")
+        f.write("// Index order is NETWORK ids (player second-to-last).\n")
         f.write("var bedrockEntityIDs = []string{\n")
         for e in mcents:
             name = e["name"]
@@ -398,9 +440,9 @@ def main():
     # Geyser's particle mappings name a Bedrock particle (a named particle
     # effect) and/or a level event for each Java particle; the named ones are
     # what the gateway spawns. "geyseropt:" ids need Geyser's optional pack.
-    mcparts = sorted(json.loads(fetch(f"{MCDATA}/particles.json")), key=lambda e: e["id"])
+    mcparts = vanillareport.registry(CANON, "particle_type")
     if [e["id"] for e in mcparts] != list(range(len(mcparts))):
-        raise SystemExit("minecraft-data particle ids are not dense from 0")
+        raise SystemExit("particle ids are not dense from 0")
     pmap = json.loads(fetch(f"{MAPPINGS}/particles.json"))
     named = 0
     with open(os.path.join(OUT, "bedrock_particles_gen.go"), "w") as f:
@@ -433,7 +475,7 @@ def main():
     with open(os.path.join(OUT, "bedrock_lang_gen.go"), "w") as f:
         header(f.write, "gen_bedrock.py")
         f.write("// advLangEN: English text for the advancement translate keys (vanilla\n")
-        f.write("// 1.21.11 en_us.json), for the Bedrock toast.\n")
+        f.write(f"// {CANON} en_us.json), for the Bedrock toast.\n")
         f.write("var advLangEN = map[string]string{\n")
         for k in keys:
             f.write(f"\t{json.dumps(k)}: {json.dumps(lang[k])},\n")
