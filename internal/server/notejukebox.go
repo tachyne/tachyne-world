@@ -68,6 +68,8 @@ var noteInstrumentSounds = map[string]string{
 	"iron_xylophone": "minecraft:block.note_block.iron_xylophone", "cow_bell": "minecraft:block.note_block.cow_bell",
 	"didgeridoo": "minecraft:block.note_block.didgeridoo", "bit": "minecraft:block.note_block.bit",
 	"banjo": "minecraft:block.note_block.banjo", "pling": "minecraft:block.note_block.pling",
+	"trumpet": "minecraft:block.note_block.trumpet", "trumpet_exposed": "minecraft:block.note_block.trumpet_exposed",
+	"trumpet_weathered": "minecraft:block.note_block.trumpet_weathered", "trumpet_oxidized": "minecraft:block.note_block.trumpet_oxidized",
 	"zombie": "minecraft:block.note_block.imitate.zombie", "skeleton": "minecraft:block.note_block.imitate.skeleton",
 	"creeper": "minecraft:block.note_block.imitate.creeper", "dragon": "minecraft:block.note_block.imitate.ender_dragon",
 	"wither_skeleton": "minecraft:block.note_block.imitate.wither_skeleton", "piglin": "minecraft:block.note_block.imitate.piglin",

@@ -157,6 +157,8 @@ public class Extract {
             o.addProperty("isAir", block.defaultBlockState().isAir());
             // The block's sound type (its default state's), by SoundType constant.
             o.addProperty("sound", soundNames.getOrDefault(block.defaultBlockState().getSoundType(), null));
+            // The note-block instrument this block gives a note block above it.
+            o.addProperty("instrument", block.defaultBlockState().instrument().getSerializedName());
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,
