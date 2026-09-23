@@ -92,6 +92,10 @@ var structureLocators = map[string]structureLocator{
 		r := g.OceanRuinsIn(wx, wz)
 		return r.X, r.Z, r.Exists && !r.Warm
 	}},
+	"abandoned_camp": {0, campCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		c := g.AbandonedCampIn(wx, wz)
+		return c.X, c.Z, c.Exists
+	}},
 	"trail_ruins": {0, trailRuinsCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		t := g.TrailRuinsIn(wx, wz)
 		return t.X, t.Z, t.Exists

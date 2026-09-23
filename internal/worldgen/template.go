@@ -63,6 +63,9 @@ type Template struct {
 }
 
 type poolElement struct {
+	// Feature names a tree feature grown at the element's jigsaw instead of
+	// a template (vanilla's feature_pool_element); Location is then empty.
+	Feature    string `json:"feature"`
 	Location   string `json:"location"`
 	Weight     int    `json:"weight"`
 	Projection string `json:"projection"`

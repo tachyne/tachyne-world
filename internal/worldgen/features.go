@@ -354,7 +354,12 @@ func treeFeatureFor(k treeKind, seed int64, wx, wz int) *TreeConfig {
 // structures overwrite. The sapling grower, which CAN see the world, is the
 // path where growing into a house matters, and it gets the real check.
 func (g *Generator) stampTree(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, kind treeKind) {
-	pick := pickFeature(kind, g.seed, wx, wz)
+	g.stampPick(ch, baseX, baseZ, wx, wz, surfaceH, pickFeature(kind, g.seed, wx, wz))
+}
+
+// stampPick grows one picked feature (a tree, huge mushroom or fallen log)
+// rooted at (wx, surfaceH, wz), clipped to this chunk.
+func (g *Generator) stampPick(ch *Chunk, baseX, baseZ, wx, wz, surfaceH int, pick featurePick) {
 	if pick.tree == nil && pick.mush == mushNone && pick.fallen == "" {
 		return
 	}

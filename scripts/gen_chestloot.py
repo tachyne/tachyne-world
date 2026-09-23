@@ -71,6 +71,8 @@ def cond(c):
     if t == "random_chance":
         ch = c["chance"]
         return {"c": "chance", "p": float(ch if isinstance(ch, (int, float)) else ch["value"])}
+    if t == "inverted":
+        return {"c": "not", "term": cond(c["term"])}
     if t == "location_check" and set(c.get("predicate", {})) == {"biomes"}:
         # LocationCheck on the biome alone (26.3: the bounce disc in a
         # sulfur-caves mineshaft).
@@ -235,6 +237,7 @@ def table(t):
 # the Village after a won raid, per profession.
 PREFIXES = [
     "data/minecraft/loot_table/chests/",
+    "data/minecraft/loot_table/barrels/",     # 26.3: the abandoned camp's barrels
     "data/minecraft/loot_table/dispensers/",  # a trial chamber arms its dispensers
     "data/minecraft/loot_table/pots/",        # and stocks its corridor pots
     "data/minecraft/loot_table/spawners/",

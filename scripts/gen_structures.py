@@ -86,6 +86,14 @@ POOL_ROOTS = [
 ]
 
 
+# 26.3's abandoned camps: one start pool per biome variant.
+CAMP_BIOMES = ["bamboo_jungle", "birch_forest", "cherry_grove", "dappled_forest", "flower_forest", "forest",
+               "meadow", "old_growth_birch_forest", "old_growth_pine_taiga", "old_growth_spruce_taiga",
+               "pale_garden", "savanna", "snowy_taiga", "sparse_jungle", "swamp", "taiga",
+               "windswept_forest", "wooded_badlands"]
+CAMP_ROOTS = ["abandoned_camp/tent/" + b for b in CAMP_BIOMES]
+
+
 class R:
     def __init__(s, b): s.b = b; s.i = 0
     def u1(s): v = s.b[s.i]; s.i += 1; return v
@@ -286,12 +294,22 @@ def elem_location(el):
     return None
 
 
-def load_pool(inner, name):
-    """Parse a template_pool JSON → {elements:[{location,weight,projection}], fallback}."""
+def load_pool(inner, name, features=False):
+    """Parse a template_pool JSON → {elements:[{location,weight,projection}], fallback}.
+    With features, a feature_pool_element becomes {feature, weight}: the
+    placed feature's own feature (oak_checked → oak), grown at the element's
+    jigsaw (only the 26.3-baked pools ask for this so far)."""
     j = json.loads(inner.read("data/minecraft/worldgen/template_pool/%s.json" % name))
     out = {"elements": [], "fallback": j.get("fallback", "minecraft:empty").split(":", 1)[-1]}
     for e in j.get("elements", []):
         el = e["element"]
+        if features and el.get("element_type") == "minecraft:feature_pool_element":
+            placed = json.loads(inner.read("data/minecraft/worldgen/placed_feature/%s.json" % strip_ns(el["feature"])))
+            base = placed["feature"]
+            if not isinstance(base, str):
+                raise SystemExit(f"{name}: inline feature in {el['feature']}")
+            out["elements"].append({"feature": strip_ns(base), "weight": e.get("weight", 1)})
+            continue
         loc = elem_location(el)
         if not loc:  # feature/empty pool elements — skip for now
             continue
@@ -437,15 +455,15 @@ def load_aliases(inner, name):
     return out
 
 
-def collect(inner):
-    """Bake POOL_ROOTS: their pools + every template reachable through jigsaws."""
+def collect(inner, roots=POOL_ROOTS, features=False, alias_structures=None):
+    """Bake the root pools: their pools + every template reachable through jigsaws."""
     pools, templates = {}, {}
-    pool_queue = list(POOL_ROOTS)
+    pool_queue = list(roots)
     # Alias TARGETS are never reached by walking jigsaws (the jigsaw names the
     # alias, not the target), so they have to be seeded explicitly or their
     # templates — the actual spawner pieces — are simply never baked.
     aliases = {}
-    for sname in ALIAS_STRUCTURES:
+    for sname in (ALIAS_STRUCTURES if alias_structures is None else alias_structures):
         aliases[sname] = load_aliases(inner, sname)
         for entry in aliases[sname]:
             for opt in entry["options"]:
@@ -457,11 +475,14 @@ def collect(inner):
             continue
         seen_pools.add(pn)
         try:
-            pool = load_pool(inner, pn)
+            pool = load_pool(inner, pn, features)
         except KeyError:
             continue
         kept = []
         for el in pool["elements"]:
+            if "feature" in el:
+                kept.append(el)
+                continue
             loc = el["location"]
             if loc not in templates:
                 try:
@@ -488,6 +509,12 @@ def main():
     out = {name: bake(inner, name) for name in TEMPLATES}
     pools, jig_templates, aliases, processors = collect(inner)
     out.update(jig_templates)
+    # 26.3's structures come from its own jar: their pools use its format
+    # and grow trees from feature elements.
+    p26, t26, _, pr26 = collect(canon.inner_jar(canon.VERSION), CAMP_ROOTS, features=True, alias_structures=[])
+    pools.update(p26)
+    out.update(t26)
+    processors.update(pr26)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         json.dump({"templates": out, "pools": pools, "aliases": aliases, "processors": processors}, f, separators=(",", ":"))

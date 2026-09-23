@@ -1,5 +1,7 @@
 package worldgen
 
+import "strings"
+
 // Jigsaw structure assembly, ported from JigsawPlacement + JigsawBlock. A
 // structure grows from a start pool: each placed piece exposes jigsaw blocks;
 // for each, a connecting piece is drawn from the block's target pool and rotated
@@ -9,7 +11,9 @@ package worldgen
 
 // PlacedPiece is one template placed in the world at a rotation.
 type PlacedPiece struct {
-	Tmpl            *Template
+	Tmpl            *Template // nil for a feature piece
+	Feature         string    // a feature piece's tree feature (Tmpl nil)
+	Beard           bool      // fill the ground up to the piece's underside (terrain_adaptation beard)
 	OX, OY, OZ, Rot int
 	Proc            string    // processor list the pool applies to this piece ("" = none)
 	SkipAir         bool      // the template's air keeps the world's blocks (vanilla's STRUCTURE_AND_AIR ignore)
@@ -186,6 +190,31 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 
 		placed := false
 		for _, loc := range weightedOrder(pool, prng) {
+			if feat, ok := strings.CutPrefix(loc, featureLoc); ok {
+				// FeaturePoolElement: a zero-size piece whose one jigsaw faces
+				// down with no name (it takes any target), grown right where
+				// the source's jigsaw points.
+				if want != "down" {
+					continue
+				}
+				clash := false
+				for _, p := range pieces {
+					if p == cur.piece {
+						continue
+					}
+					bx0, by0, bz0, bx1, by1, bz1 := p.bbox()
+					if overlaps(tx, ty, tz, tx+1, ty+1, tz+1, bx0, by0, bz0, bx1, by1, bz1) {
+						clash = true
+						break
+					}
+				}
+				if clash {
+					continue
+				}
+				pieces = append(pieces, &PlacedPiece{Feature: feat, OX: tx, OY: ty, OZ: tz, x1: tx + 1, y1: ty + 1, z1: tz + 1})
+				placed = true
+				break
+			}
 			cand := templates[loc]
 			if cand == nil {
 				continue
@@ -265,6 +294,10 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 	var chests [][3]int
 	for i := range pieces {
 		p := &pieces[i]
+		if p.Feature != "" {
+			g.stampFeaturePiece(ch, cx, cz, p)
+			continue
+		}
 		var sus map[[3]int]uint32
 		if len(p.Sus) > 0 {
 			sus = make(map[[3]int]uint32, len(p.Sus))
@@ -273,8 +306,52 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 			}
 		}
 		chests = append(chests, p.Tmpl.StampTemplateProcSus(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc], p.SkipAir, sus)...)
+		if p.Beard {
+			beardUnder(ch, cx, cz, p)
+		}
 	}
 	return chests
+}
+
+// beardMax is how far below a piece the beard fills.
+const beardMax = 8
+
+// beardUnder is the support half of vanilla's beard terrain adaptation: the
+// ground rises to meet a piece's underside, so a piece set on a slope does
+// not hang over air or water. Under every solid cell of the piece's bottom
+// layer, air and water are filled with dirt down to the ground (at most
+// beardMax). Column by column, so every chunk agrees.
+func beardUnder(ch *Chunk, cx, cz int32, p *PlacedPiece) {
+	for _, b := range p.Tmpl.Blocks {
+		if b[1] != 0 {
+			continue
+		}
+		rx, _, rz := p.Tmpl.rotatePos(b[0], b[1], b[2], p.Rot)
+		lx, lz := p.OX+rx-int(cx)*16, p.OZ+rz-int(cz)*16
+		if lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || sectionBlockAt(ch, lx, p.OY, lz) == Air {
+			continue
+		}
+		for y := p.OY - 1; y >= p.OY-beardMax && y >= MinY; y-- {
+			if s := sectionBlockAt(ch, lx, y, lz); s != Air && s != Water {
+				break
+			}
+			setSectionBlock(ch, lx, y, lz, Dirt, true)
+		}
+	}
+}
+
+// featureLoc marks a feature element in a pool's weighted order.
+const featureLoc = "feature:"
+
+// stampFeaturePiece grows a feature piece's tree in this chunk (clipped, and
+// drawn from its own position like any generated tree, so every chunk it
+// reaches agrees). A feature the engine has no tree for is skipped.
+func (g *Generator) stampFeaturePiece(ch *Chunk, cx, cz int32, p *PlacedPiece) {
+	c := TreeFeatures[p.Feature]
+	if c == nil {
+		return
+	}
+	g.stampPick(ch, int(cx)*16, int(cz)*16, p.OX, p.OZ, p.OY, featurePick{tree: c})
 }
 
 // ---- deterministic RNG + weighted selection ---------------------------------
@@ -323,7 +400,11 @@ func weightedOrder(p *templatePool, r *jigsawRNG) []string {
 			w = 1
 		}
 		// Smaller key sorts first; dividing the draw by weight biases high weights early.
-		list = append(list, wl{e.Location, r.next() / uint64(w)})
+		loc := e.Location
+		if e.Feature != "" {
+			loc = featureLoc + e.Feature
+		}
+		list = append(list, wl{loc, r.next() / uint64(w)})
 	}
 	for i := 1; i < len(list); i++ { // insertion sort (pools are tiny)
 		for j := i; j > 0 && list[j].key < list[j-1].key; j-- {

@@ -67,6 +67,11 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 	if d := g.DungeonIn(pos.x, pos.z); d.Exists && pos.x == d.ChestX && pos.y == d.Y && pos.z == d.ChestZ {
 		return "chests/simple_dungeon", true
 	}
+	for _, c := range g.AbandonedCampChests(pos.x, pos.z) {
+		if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+			return c.Table, true
+		}
+	}
 	if t := g.DesertTempleIn(pos.x, pos.z); t.Exists {
 		for _, ch := range t.Chests() {
 			if pos.x == ch[0] && pos.y == ch[1] && pos.z == ch[2] {
