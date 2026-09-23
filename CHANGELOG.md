@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Wood, copper, wool, glass and 380 other blocks sound like themselves.**
+  Each block's sound type — its footsteps and the sound of placing it — was
+  read out of the server's source, which only sees a block that names its
+  sound on its own line. Every block that copies another's properties, or is
+  built by a helper or a colour set, fell through to stone: wooden stairs and
+  slabs, fences and doors, cut copper, wool and carpet, glass panes, candles,
+  lanterns and more. The sounds now come from the game itself, for every
+  block.
 - **Firework stars are the colours of their dyes.** Each dye's firework
   colour was taken from the wrong column of vanilla's dye table — its text
   colour — so white stars burst pure white instead of vanilla's soft grey,

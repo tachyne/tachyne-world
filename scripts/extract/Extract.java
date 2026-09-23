@@ -24,6 +24,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -31,7 +32,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.io.FileWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.List;
 
 public class Extract {
@@ -100,6 +105,26 @@ public class Extract {
         Bootstrap.bootStrap();
         bindItemComponents();
 
+        // SoundType's constants by identity, so a block's sound can be named:
+        // blocks share these instances (copied properties carry the same one).
+        Map<SoundType, String> soundNames = new IdentityHashMap<>();
+        JsonArray soundTypes = new JsonArray();
+        for (Field f : SoundType.class.getFields()) {
+            if (!Modifier.isStatic(f.getModifiers()) || f.getType() != SoundType.class) continue;
+            SoundType t = (SoundType) f.get(null);
+            if (soundNames.putIfAbsent(t, f.getName()) != null) continue;
+            JsonObject so = new JsonObject();
+            so.addProperty("name", f.getName());
+            so.addProperty("volume", t.getVolume());
+            so.addProperty("pitch", t.getPitch());
+            so.addProperty("break", BuiltInRegistries.SOUND_EVENT.getKey(t.getBreakSound()).getPath());
+            so.addProperty("step", BuiltInRegistries.SOUND_EVENT.getKey(t.getStepSound()).getPath());
+            so.addProperty("place", BuiltInRegistries.SOUND_EVENT.getKey(t.getPlaceSound()).getPath());
+            so.addProperty("hit", BuiltInRegistries.SOUND_EVENT.getKey(t.getHitSound()).getPath());
+            so.addProperty("fall", BuiltInRegistries.SOUND_EVENT.getKey(t.getFallSound()).getPath());
+            soundTypes.add(so);
+        }
+
         JsonArray blocks = new JsonArray();
         for (Block block : BuiltInRegistries.BLOCK) {
             List<BlockState> states = block.getStateDefinition().getPossibleStates();
@@ -130,6 +155,8 @@ public class Extract {
             o.addProperty("item", BuiltInRegistries.ITEM.getKey(block.asItem()).getPath());
             o.addProperty("requiresTool", block.defaultBlockState().requiresCorrectToolForDrops());
             o.addProperty("isAir", block.defaultBlockState().isAir());
+            // The block's sound type (its default state's), by SoundType constant.
+            o.addProperty("sound", soundNames.getOrDefault(block.defaultBlockState().getSoundType(), null));
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,
@@ -212,6 +239,7 @@ public class Extract {
         JsonObject root = new JsonObject();
         root.add("blocks", blocks);
         root.add("items", items);
+        root.add("soundTypes", soundTypes);
         try (Writer w = new FileWriter(args[0])) {
             new GsonBuilder().create().toJson(root, w);
         }

@@ -83,3 +83,18 @@ func TestFootstepCadence(t *testing.T) {
 		t.Fatal("a mob in the air makes no footsteps")
 	}
 }
+
+// Blocks that copy another block's properties, or come from a helper or a
+// colour set, have that block's sound: the table once read them out of the
+// source and missed 383, which then stepped and placed like stone.
+func TestBlockSoundTypesCoverCopiedBlocks(t *testing.T) {
+	for name, want := range map[string]string{
+		"oak_stairs": "WOOD", "oak_slab": "WOOD", "white_wool": "WOOL", "white_carpet": "WOOL",
+		"cut_copper": "COPPER", "glass_pane": "GLASS", "candle": "CANDLE",
+		"cobbled_deepslate_wall": "DEEPSLATE", "stone_bricks": "",
+	} {
+		if got := blockSoundType[name]; got != want {
+			t.Errorf("%s: sound %q, want %q", name, got, want)
+		}
+	}
+}
