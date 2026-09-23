@@ -1,15 +1,17 @@
 package server
 
 import (
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Villagers, trading, and the iron golem. Villages are pure functions of the
-// seed (worldgen.VillageIn): when a player first comes near one this session,
-// the hub populates it — one villager per house plus a golem by the well.
+// seed (worldgen.VillageIn): each creature its pieces carry is placed once,
+// when its part of the village first comes into view (placeVillageMobs).
 // Right-clicking a villager opens the merchant screen; the offer list depends
 // on the villager's deterministic profession, and the trade result slot is
 // server-owned like every other window.
@@ -17,8 +19,6 @@ import (
 const (
 	menuMerchant       = 19
 	playServerSelTrade = 0x31
-
-	villageRange = 72 // populate when a player gets this close to the well
 )
 
 var (
@@ -29,6 +29,9 @@ var (
 func (h *hub) updateVillages(players map[int32]*tracked) {
 	gen := h.world.Gen()
 	for _, t := range players {
+		if t.dim != dimOverworld {
+			continue
+		}
 		px, pz := int(t.x), int(t.z)
 		for dx := -1; dx <= 1; dx++ {
 			for dz := -1; dz <= 1; dz++ {
@@ -37,63 +40,187 @@ func (h *hub) updateVillages(players map[int32]*tracked) {
 					continue
 				}
 				well := blockPos{v.X, v.Y, v.Z}
-				if h.villageDone[well] {
+				if h.villageSettled[well] {
 					continue
 				}
-				if math.Hypot(t.x-float64(v.X), t.z-float64(v.Z)) > villageRange {
+				// Only villages whose pieces can reach this player's view.
+				if reach := villageReach + float64(t.p.radius()*16); math.Hypot(t.x-float64(v.X), t.z-float64(v.Z)) > reach {
 					continue
 				}
-				h.villageDone[well] = true
-				// The villagers are the ones the jigsaw placed (the villagers
-				// pool: unemployed, a nitwit or a baby one in twelve each), as
-				// vanilla's Villager entities baked in the pieces. Each takes the
-				// nearest free BED as home; an unemployed one's profession is
-				// claimed from the nearest JOB-SITE block; the town-centre BELL
-				// is the shared meeting point.
-				jobs := gen.VillageJobSites(v)
-				beds := gen.VillageBeds(v)
-				meet := blockPos{v.X, v.Y, v.Z}
-				if bells := gen.VillageBells(v); len(bells) > 0 {
-					meet = blockPos{bells[0][0], bells[0][1], bells[0][2]}
-				}
-				usedJobs, usedBeds := map[blockPos]bool{}, map[blockPos]bool{}
-				for _, sp := range gen.VillageVillagers(v) {
-					m := h.spawnMob(players, entityVillager, float64(sp.X)+0.5, float64(sp.Y), float64(sp.Z)+0.5)
-					if m == nil {
-						continue // plugin-cancelled spawn
-					}
-					m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED (vanilla 1.21.5)
-					bed, hasBed := nearestFreeBed([3]int{sp.X, sp.Y, sp.Z}, beds, usedBeds)
-					if hasBed {
-						m.home = blockPos{bed[0], bed[1], bed[2]}
-						m.bed = m.home
-					}
-					switch sp.Kind {
-					case "nitwit":
-						h.initVillagerTrades(m, profNitwit)
-					case "baby":
-						m.baby, m.growLeft = true, growUpTicks
-						h.initVillagerTrades(m, profUnemployed)
-						h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
-					default:
-						prof, work := nearestJobSite(bed, jobs, usedJobs)
-						if !hasBed {
-							prof, work = nearestJobSite([3]int{sp.X, sp.Y, sp.Z}, jobs, usedJobs)
-						}
-						h.initVillagerTrades(m, prof)
-						m.work = work
-					}
-					h.sendVillagerData(players, m)
-					m.meet = meet
-					m.behavior = villagerBehavior{} // path home/around + open doors
-					m.usesDoors = true
-				}
-				// The golem is NOT spawned here unconditionally — vanilla spawns
-				// one only once ≥5 villagers "agree", and re-spawns as the village
-				// grows or its golem dies. updateVillageGolems drives that census.
+				h.placeVillageMobs(players, v, well)
 			}
 		}
 	}
+}
+
+// villageReach is how far a village's pieces reach from its centre
+// (max_distance_from_center).
+const villageReach = 80
+
+// placeVillageMobs is StructureTemplate.placeEntities for a village: every
+// entity its pieces carry is placed once, when the chunk holding it is first
+// in a player's view — tachyne's moment of chunk generation, when vanilla
+// places a structure's entities. What has been placed persists by entity
+// (type and block), so a village is populated once and only once.
+//
+// A village the older path populated (villageDone, no placed record) had its
+// villagers spawned all at once and nothing else, so its villagers count as
+// placed and the rest (the animals, and the golem and cats if it has none)
+// come now.
+func (h *hub) placeVillageMobs(players map[int32]*tracked, v worldgen.Village, well blockPos) {
+	gen := h.world.Gen()
+	mobs := gen.VillageMobs(v)
+	placed := h.villagePlaced[well]
+	if placed == nil {
+		placed = map[string]bool{}
+		if h.villageDone[well] {
+			// Its golem came from the census and its cats from the cat
+			// spawner; where those already live, the template's are not
+			// added on top.
+			hasGolem, hasCat := false, false
+			for _, o := range h.mobs {
+				if o.dim != dimOverworld || math.Hypot(o.x-float64(v.X), o.z-float64(v.Z)) > villageReach {
+					continue
+				}
+				hasGolem = hasGolem || o.etype == entityIronGolem
+				hasCat = hasCat || o.etype == entityCat
+			}
+			for _, vm := range mobs {
+				if vm.Type == "villager" || vm.Type == "iron_golem" && hasGolem || vm.Type == "cat" && hasCat {
+					placed[vm.Key()] = true
+				}
+			}
+		}
+		h.villagePlaced[well] = placed
+	}
+	h.villageDone[well] = true
+	all := true
+	for _, vm := range mobs {
+		if placed[vm.Key()] {
+			continue
+		}
+		if !h.chunkInView(players, dimOverworld, int32(vm.BX>>4), int32(vm.BZ>>4)) {
+			all = false
+			continue
+		}
+		placed[vm.Key()] = true
+		h.spawnVillageMob(players, v, vm)
+	}
+	if all {
+		h.villageSettled[well] = true
+	}
+}
+
+// chunkInView reports whether a chunk is in some player's view window.
+func (h *hub) chunkInView(players map[int32]*tracked, dim int, cx, cz int32) bool {
+	for _, t := range players {
+		if t.dim != dim {
+			continue
+		}
+		r := t.p.radius()
+		pcx, pcz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
+		if cx >= pcx-r && cx <= pcx+r && cz >= pcz-r && cz <= pcz+r {
+			return true
+		}
+	}
+	return false
+}
+
+// spawnVillageMob places one of a village's template entities: created as
+// the template's NBT has it, then finalizeSpawn(STRUCTURE) — the species'
+// own spawn rolls (a cat's coat by the biome and the moon, a horse's coat,
+// a sheep's fleece, a farm animal's climate variant, a zombie's equipment).
+func (h *hub) spawnVillageMob(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
+	etype, ok := entityByName[vm.Type]
+	if !ok {
+		return
+	}
+	switch vm.Type {
+	case "villager":
+		h.spawnTemplateVillager(players, v, vm)
+		return
+	case "armor_stand":
+		return // not a mob: the taiga armourer's stand is a block-entity stand-in here
+	}
+	var m *mob
+	switch vm.Type {
+	case "zombie_villager":
+		m = h.spawnHostileY(players, etype, vm.X, vm.Y, vm.Z)
+		if m != nil {
+			h.setTemplateVillagerData(m, vm)
+			h.sendVillagerData(players, m)
+		}
+	case "iron_golem":
+		m = h.spawnMob(players, etype, vm.X, vm.Y, vm.Z)
+		if m != nil { // the village's own golem (PlayerCreated false)
+			m.health = 100
+			m.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
+			m.behavior = golemBehavior{}
+			m.home = blockPos{v.X, v.Y, v.Z}
+		}
+	default:
+		m = h.spawnSpecies(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
+		if m != nil && vm.Age < 0 {
+			m.baby, m.growLeft = true, -vm.Age
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+		}
+	}
+	if m != nil && vm.Persist {
+		m.persistent = true
+	}
+}
+
+// setTemplateVillagerData applies a template entity's VillagerData.
+func (h *hub) setTemplateVillagerData(m *mob, vm worldgen.VillageMob) {
+	switch vm.Prof {
+	case "nitwit":
+		m.profession = profNitwit
+	case "none", "":
+		m.profession = profUnemployed
+	default:
+		m.profession = profUnemployed
+		for i, n := range professionNames {
+			if n == vm.Prof {
+				m.profession = i
+			}
+		}
+	}
+	if vm.Level > 0 {
+		m.tradeLevel = vm.Level
+	}
+}
+
+// spawnTemplateVillager places one of the village's villagers (one per
+// villagers piece) as its template has it: unemployed, a nitwit, or a baby.
+// Nothing is handed to it. Like vanilla's brain, it claims a bed
+// (villagerBedTick) and, if unemployed, a workstation (villagerJobTick).
+// The meeting point is the bell nearest to it.
+func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
+	m := h.spawnMob(players, entityVillager, vm.X, vm.Y, vm.Z)
+	if m == nil {
+		return // plugin-cancelled spawn
+	}
+	m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED
+	switch {
+	case vm.Prof == "nitwit":
+		h.initVillagerTrades(m, profNitwit)
+	case vm.Age < 0:
+		m.baby, m.growLeft = true, -vm.Age
+		h.initVillagerTrades(m, profUnemployed)
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+	default:
+		h.initVillagerTrades(m, profUnemployed)
+	}
+	h.sendVillagerData(players, m)
+	m.meet = blockPos{v.X, v.Y, v.Z}
+	best := math.MaxFloat64
+	for _, b := range h.world.Gen().VillageBells(v) {
+		if d := math.Hypot(float64(b[0]-vm.BX), float64(b[2]-vm.BZ)); d < best {
+			best, m.meet = d, blockPos{b[0], b[1], b[2]}
+		}
+	}
+	m.behavior = villagerBehavior{} // path home/around + open doors
+	m.usesDoors = true
 }
 
 const (
@@ -185,27 +312,6 @@ func (h *hub) wantsToSpawnGolem(m *mob, now uint64) bool {
 	}
 	slept := m.lastSlept - 1 // stored +1 so that zero can mean "never"
 	return now >= slept && now-slept < golemSleptWithin && now >= m.golemSeen
-}
-
-// nearestJobSite returns the profession index + work position of the job-site
-// block nearest a villager's bed (a village with no job sites leaves it a farmer
-// working at its bed).
-func nearestJobSite(bed [3]int, jobs [][4]int, used map[blockPos]bool) (int, blockPos) {
-	prof, work, best := profUnemployed, blockPos{}, 1<<30
-	for _, j := range jobs {
-		pos := blockPos{j[0], j[1], j[2]}
-		if used[pos] {
-			continue // one villager per workstation (PoiManager occupancy)
-		}
-		dx, dy, dz := j[0]-bed[0], j[1]-bed[1], j[2]-bed[2]
-		if d := dx*dx + dy*dy + dz*dz; d < best {
-			best, prof, work = d, j[3], pos
-		}
-	}
-	if work != (blockPos{}) {
-		used[work] = true
-	}
-	return prof, work
 }
 
 // golemBehavior walks the village guardian toward the nearest hostile, or
@@ -532,24 +638,3 @@ type evSelTrade struct {
 }
 
 func (evSelTrade) isHubEvent() {}
-
-// nearestFreeBed is the unclaimed village bed nearest a villager's spawn
-// (its home, as vanilla's villagers claim the nearest free bed).
-func nearestFreeBed(at [3]int, beds [][3]int, used map[blockPos]bool) ([3]int, bool) {
-	var best [3]int
-	bestD, found := 1<<30, false
-	for _, b := range beds {
-		p := blockPos{b[0], b[1], b[2]}
-		if used[p] {
-			continue
-		}
-		dx, dy, dz := b[0]-at[0], b[1]-at[1], b[2]-at[2]
-		if d := dx*dx + dy*dy + dz*dz; d < bestD {
-			best, bestD, found = b, d, true
-		}
-	}
-	if found {
-		used[blockPos{best[0], best[1], best[2]}] = true
-	}
-	return best, found
-}

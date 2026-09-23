@@ -76,6 +76,16 @@ type poolElement struct {
 type templateMob struct {
 	Pos  [3]int `json:"pos"`
 	Type string `json:"type"` // entity name without namespace
+	// From the template's entity NBT (StructureTemplate.placeEntities keeps
+	// it; finalizeSpawn rolls the rest): the exact position, villager data,
+	// age (negative = a baby), persistence, a cat's collar colour.
+	At      []float64 `json:"at"`
+	Prof    string    `json:"prof"`
+	VType   string    `json:"vtype"`
+	Level   int       `json:"level"`
+	Age     int       `json:"age"`
+	Persist bool      `json:"persist"`
+	Collar  *int      `json:"collar"`
 }
 
 // procRule is one rule of a vanilla RuleProcessor: a block that matches the

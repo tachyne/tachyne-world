@@ -30,6 +30,7 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
 	players := map[int32]*tracked{1: pl}
+	pl.p.viewDist.Store(viewRadius) // the whole village is in view
 	h.updateVillages(players)
 	count := func() (villagers, golems int) {
 		for _, m := range h.mobs {
@@ -43,15 +44,42 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 		return
 	}
 
-	// A village that has never slept grows no golem: vanilla's quorum asks for
-	// five villagers who lay down within the last day.
-	h.updateVillageGolems(players)
+	// Every entity the pieces carry is placed, as StructureTemplate
+	// .placeEntities does: the villagers, and the golem a village's
+	// centre piece brings with it.
+	var wantVillagers, wantGolems int
+	for _, vm := range w.Gen().VillageMobs(v) {
+		switch vm.Type {
+		case "villager":
+			wantVillagers++
+		case "iron_golem":
+			wantGolems++
+		}
+	}
 	villagers, golems := count()
-	wantVillagers := len(w.Gen().VillageVillagers(v)) // the jigsaw's villager pieces
-	if villagers != wantVillagers {
+	if villagers != wantVillagers || villagers == 0 {
 		t.Fatalf("want %d villagers, got %d", wantVillagers, villagers)
 	}
-	if golems != 0 {
+	if golems != wantGolems {
+		t.Fatalf("want the %d golem(s) the pieces carry, got %d", wantGolems, golems)
+	}
+	// Placed as the template has them: nobody is handed a bed or a job.
+	for _, m := range h.mobs {
+		if m.etype == entityVillager && (m.bed != (blockPos{}) || m.work != (blockPos{})) {
+			t.Fatalf("villager %d spawned with a bed %v or a job %v; it should claim them", m.eid, m.bed, m.work)
+		}
+	}
+
+	// The census: take the template golems away. A village that has never
+	// slept grows none (vanilla's quorum asks for five villagers who lay
+	// down within the last day).
+	for _, m := range h.mobs {
+		if m.etype == entityIronGolem {
+			h.despawnMob(players, m)
+		}
+	}
+	h.updateVillageGolems(players)
+	if _, golems = count(); golems != 0 {
 		t.Fatalf("a village whose villagers have never slept grew %d golems", golems)
 	}
 
@@ -88,7 +116,7 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 	mobsBefore := len(h.mobs)
 	h.updateVillages(players)
 	if len(h.mobs) != mobsBefore {
-		t.Fatal("village must populate once per session")
+		t.Fatal("a village's entities are placed once")
 	}
 }
 
@@ -1037,5 +1065,89 @@ func TestIronGolemQuorum(t *testing.T) {
 	h.updateVillageGolems(players)
 	if n := golems(); n != 1 {
 		t.Fatalf("villagers who stopped sleeping still grew a golem: %d", n)
+	}
+}
+
+// VillageBoundRandomStroll: a villager two sections out from the nearest
+// claimed POI steps toward it; inside the village it strolls at random.
+func TestVillageStrollHeadsBackToTheVillage(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	anchor := h.spawnMob(players, entityVillager, 8.5, 180, 8.5)
+	anchor.bed = blockPos{8, 180, 8} // a claimed bed makes section (0,11,0) a village centre
+	m := h.spawnMob(players, entityVillager, 8.5+64, 180, 8.5)
+	// Each leg is aimed within a quarter turn of the heading to a section
+	// nearer the village, so the legs trend toward it.
+	sum := 0.0
+	for i := 0; i < 200; i++ {
+		x, _ := h.villageStroll(m)
+		sum += x - m.x
+	}
+	if mean := sum / 200; mean > -2 {
+		t.Fatalf("strolls averaged %.1f blocks along x; they should head west to the village", mean)
+	}
+	m.x = 12.5 // now inside it: a random stroll either way
+	var west, east bool
+	for i := 0; i < 200; i++ {
+		x, _ := h.villageStroll(m)
+		west, east = west || x < m.x, east || x > m.x
+	}
+	if !west || !east {
+		t.Fatal("inside the village the stroll should go every way")
+	}
+}
+
+// A village the older code populated keeps its villagers, golem and cats;
+// only what it never had (the pen animals) is placed.
+func TestPreviouslyPopulatedVillageGetsOnlyWhatItLacks(t *testing.T) {
+	w := world.New(7)
+	h := newHub(w)
+	v, ok := findTestVillage(w)
+	if !ok {
+		t.Skip("no village near origin")
+	}
+	well := blockPos{v.X, v.Y, v.Z}
+	h.villageDone[well] = true
+	pl := testTracked()
+	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
+	pl.p.viewDist.Store(viewRadius)
+	players := map[int32]*tracked{1: pl}
+	h.spawnMob(players, entityIronGolem, float64(v.X), float64(v.Y), float64(v.Z))
+	var wantOthers int
+	for _, vm := range w.Gen().VillageMobs(v) {
+		switch vm.Type {
+		case "villager", "iron_golem", "armor_stand":
+		default:
+			if vm.Type != "cat" {
+				wantOthers++
+			}
+		}
+	}
+	before := len(h.mobs)
+	h.updateVillages(players)
+	var villagers, golems int
+	for _, m := range h.mobs {
+		switch m.etype {
+		case entityVillager:
+			villagers++
+		case entityIronGolem:
+			golems++
+		}
+	}
+	if villagers != 0 || golems != 1 {
+		t.Fatalf("an already-populated village got %d more villagers and has %d golems", villagers, golems)
+	}
+	// Cats come too when it has none (no cats lived there).
+	var cats int
+	for _, vm := range w.Gen().VillageMobs(v) {
+		if vm.Type == "cat" {
+			cats++
+		}
+	}
+	if got := len(h.mobs) - before; got != wantOthers+cats {
+		t.Fatalf("placed %d creatures, want %d animals and %d cats", got, wantOthers, cats)
+	}
+	if !h.villageSettled[well] {
+		t.Fatal("with everything in view the village should be settled")
 	}
 }

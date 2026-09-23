@@ -52,7 +52,6 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.sleeping {
 		return 0, 0 // in bed — held still by villagerSleep, but be defensive
 	}
-	homeX, homeZ := float64(m.home.x), float64(m.home.z)
 	if vx, vz, fleeing := h.villagerFlee(m); fleeing {
 		return vx, vz // a zombie within eight blocks: run
 	}
@@ -84,18 +83,98 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 			return h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
 		}
 	}
-	// Roam: re-pick a nearby stroll target on a timer, or head home if adrift.
+	// Roam: vanilla's VillageBoundRandomStroll (and GoToClosestVillage for a
+	// villager with no bed at rest), re-picked on a timer. A villager with
+	// no home used to head for its zero home — the world origin — and leave.
 	now := h.tick.Load()
-	switch {
-	case math.Hypot(homeX-m.x, homeZ-m.z) > villagerRoam+8:
-		m.roamX, m.roamZ, m.roamAt = homeX, homeZ, now+60
-	case now >= m.roamAt:
-		ang := h.rng.Float64() * 2 * math.Pi
-		r := 2 + h.rng.Float64()*villagerRoam
-		m.roamX, m.roamZ = homeX+math.Cos(ang)*r, homeZ+math.Sin(ang)*r
+	if now >= m.roamAt {
+		m.roamX, m.roamZ = h.villageStroll(m)
 		m.roamAt = now + uint64(80+h.rng.Intn(160)) // 4-12 s per leg
 	}
 	return h.pathSteer(m, m.roamX, m.roamZ)
+}
+
+// Villages are where villagers' claimed POIs are (PoiManager.sectionsToVillage):
+// a 16-block section holding an OCCUPIED village POI — a claimed bed, job
+// site or meeting bell — is a village centre; every other section is its
+// distance in sections (a 3x3x3 step) from the nearest centre, up to 7.
+// ServerLevel.isVillage is a distance of at most one.
+const maxVillageDistance = 7
+
+// villageCentres returns the sections holding a claimed village POI.
+func (h *hub) villageCentres(dim int) map[[3]int]bool {
+	out := map[[3]int]bool{}
+	for _, o := range h.mobs {
+		if o.etype != entityVillager || o.dim != dim || o.dying > 0 {
+			continue
+		}
+		for _, p := range [3]blockPos{o.bed, o.work, o.meet} {
+			if p != (blockPos{}) {
+				out[[3]int{p.x >> 4, p.y >> 4, p.z >> 4}] = true
+			}
+		}
+	}
+	return out
+}
+
+// sectionsToVillage is the section's distance to the nearest centre.
+func sectionsToVillage(centres map[[3]int]bool, s [3]int) int {
+	best := maxVillageDistance
+	for c := range centres {
+		d := max(abs(c[0]-s[0]), abs(c[1]-s[1]), abs(c[2]-s[2]))
+		if d < best {
+			best = d
+		}
+	}
+	return best
+}
+
+// villageStroll is VillageBoundRandomStroll's walk target: inside a village a
+// random spot within ten blocks; outside one, a spot up to ten blocks toward
+// the section within two that is closest to a village
+// (BehaviorUtils.findSectionClosestToVillage: only a section strictly closer
+// than this one); with no village about, a
+// random spot where it stands.
+func (h *hub) villageStroll(m *mob) (float64, float64) {
+	here := [3]int{floorInt(m.x) >> 4, floorInt(m.y) >> 4, floorInt(m.z) >> 4}
+	centres := h.villageCentres(m.dim)
+	d := sectionsToVillage(centres, here)
+	random := func() (float64, float64) {
+		return m.x + float64(h.rng.Intn(2*villagerRoam+1)-villagerRoam), m.z + float64(h.rng.Intn(2*villagerRoam+1)-villagerRoam)
+	}
+	if d <= 1 {
+		return random()
+	}
+	best, bestD := here, d
+	// SectionPos.cube's order (x fastest, then y, then z): the first of
+	// several equally close sections wins, as Stream.min keeps it.
+	for dz := -2; dz <= 2; dz++ {
+		for dy := -2; dy <= 2; dy++ {
+			for dx := -2; dx <= 2; dx++ {
+				s := [3]int{here[0] + dx, here[1] + dy, here[2] + dz}
+				if sd := sectionsToVillage(centres, s); sd < bestD {
+					best, bestD = s, sd
+				}
+			}
+		}
+	}
+	if best == here {
+		return random()
+	}
+	// DefaultRandomPos.getPosTowards (RandomPos.generateRandomDirectionWithin
+	// Radians): a heading within a quarter turn either side of the one to the
+	// section's centre, a distance of sqrt(u)·√2 times ten, kept only inside
+	// the ten-block box; ten tries.
+	tx, tz := float64(best[0]*16+8)+0.5, float64(best[2]*16+8)+0.5 // Vec3.atBottomCenterOf
+	for try := 0; try < 10; try++ {
+		head := math.Atan2(tz-m.z, tx-m.x) + (2*h.rng.Float64()-1)*math.Pi/2
+		r := math.Sqrt(h.rng.Float64()) * villagerRoam * math.Sqrt2
+		dx, dz := math.Cos(head)*r, math.Sin(head)*r
+		if math.Abs(dx) <= villagerRoam && math.Abs(dz) <= villagerRoam {
+			return m.x + math.Floor(dx), m.z + math.Floor(dz)
+		}
+	}
+	return m.x, m.z
 }
 
 // villagerSleep lies a villager down in its bed once it's night and the villager

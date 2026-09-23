@@ -79,3 +79,29 @@ func TestVillageVillagers(t *testing.T) {
 	}
 	t.Logf("%d villages: %v", seen, kinds)
 }
+
+// Every entity a village carries has its own key, so each is placed once and
+// none is mistaken for another — a pen's two sheep share a block.
+func TestVillageMobKeysAreUnique(t *testing.T) {
+	g := NewGenerator(7)
+	found := 0
+	for x := -5000; x <= 5000 && found < 6; x += 384 {
+		for z := -5000; z <= 5000 && found < 6; z += 384 {
+			v := g.VillageIn(x, z)
+			if !v.Exists {
+				continue
+			}
+			found++
+			keys := map[string]bool{}
+			for _, m := range g.VillageMobs(v) {
+				if keys[m.Key()] {
+					t.Fatalf("village at %d,%d: two entities share the key %s", v.X, v.Z, m.Key())
+				}
+				keys[m.Key()] = true
+			}
+		}
+	}
+	if found == 0 {
+		t.Skip("no village found")
+	}
+}

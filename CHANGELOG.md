@@ -134,6 +134,19 @@ the public history since the project was open-sourced on 2026-07-10.
   the last half-minute came back nameless.
 
 ### Changed
+- **Villages bring their own creatures.** A village is populated from what
+  its pieces carry, as vanilla places a structure's entities: the town
+  centre's iron golem, the cats, the animals in the pens, the desert's
+  camels, a zombie village's zombie villagers, and one villager per house
+  slot. Each creature appears when its part of the village first comes into
+  view, and only once, across restarts too. Villagers spawn with neither a
+  bed nor a job, then claim them the way vanilla's villagers do. Villages
+  populated before this get their animals now, and a golem or cats only if
+  they have none.
+- **Villagers stay in their village.** A wandering villager walks back
+  toward the nearest village, measured from the beds, workstations and bells
+  villagers hold, as vanilla's do. A villager without a home no longer heads
+  for the world's origin.
 - **The world now speaks 26.3.** Every block, item and entity the engine
   keeps is numbered as Minecraft 26.3 numbers it, and the world's saves were
   carried across on the first start — block edits, inventories, ender chests,

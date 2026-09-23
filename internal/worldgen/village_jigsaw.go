@@ -1,6 +1,7 @@
 package worldgen
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -96,6 +97,69 @@ func (g *Generator) VillageVillagers(v Village) []VillagerSpawn {
 			}
 			w := wp(p, m.Pos[0], m.Pos[1], m.Pos[2])
 			out = append(out, VillagerSpawn{w[0], w[1], w[2], kind})
+		}
+	}
+	return out
+}
+
+// VillageMob is one entity a village's pieces carry, as vanilla's
+// StructureTemplate.placeEntities places it: the villagers (one per villagers
+// piece: unemployed, nitwit or baby), the town centre's iron golem, the cats,
+// the pen animals and the desert's camels, and a zombie village's zombie
+// villagers — with what the template's NBT says (villager data, age,
+// persistence, collar). finalizeSpawn rolls the rest when it is spawned.
+type VillageMob struct {
+	Type       string  // entity name without namespace
+	X, Y, Z    float64 // where it stands
+	BX, BY, BZ int     // its block (which chunk places it)
+	Prof       string  // villager data (villagers, zombie villagers)
+	VType      string
+	Level      int
+	Age        int  // negative: a baby
+	Persist    bool // PersistenceRequired
+	Collar     int  // a cat's collar colour (-1: none given)
+	N          int  // how many of the same type share its block before it (a pen's two sheep)
+}
+
+// Key identifies a placed entity across restarts: its type and block, and
+// its ordinal when several of a type share a block.
+func (m VillageMob) Key() string {
+	k := m.Type + "@" + strconv.Itoa(m.BX) + "," + strconv.Itoa(m.BY) + "," + strconv.Itoa(m.BZ)
+	if m.N > 0 {
+		k += "#" + strconv.Itoa(m.N)
+	}
+	return k
+}
+
+// VillageMobs returns every entity the village's pieces carry.
+func (g *Generator) VillageMobs(v Village) []VillageMob {
+	var out []VillageMob
+	seen := map[string]int{}
+	pieces := g.AssembleVillage(v)
+	for i := range pieces {
+		p := &pieces[i]
+		if p.Tmpl == nil {
+			continue
+		}
+		for _, m := range p.Tmpl.Mobs {
+			w := wp(p, m.Pos[0], m.Pos[1], m.Pos[2])
+			y := float64(w[1])
+			if len(m.At) == 3 {
+				y = float64(p.OY) + m.At[1]
+			}
+			collar := -1
+			if m.Collar != nil {
+				collar = *m.Collar
+			}
+			vm := VillageMob{
+				Type: m.Type, X: float64(w[0]) + 0.5, Y: y, Z: float64(w[2]) + 0.5,
+				BX: w[0], BY: w[1], BZ: w[2],
+				Prof: m.Prof, VType: m.VType, Level: m.Level, Age: m.Age, Persist: m.Persist, Collar: collar,
+			}
+			base := vm.Key() // N is still 0: the type and block alone
+			vm.N = seen[base]
+			seen[base]++
+			out = append(out, vm)
 		}
 	}
 	return out

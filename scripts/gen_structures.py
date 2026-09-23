@@ -254,7 +254,25 @@ def bake(inner, name):
         eid = (e.get("nbt") or {}).get("id", "")
         bp = e.get("blockPos")
         if eid and bp:
-            mobs.append({"pos": [bp[0], bp[1], bp[2]], "type": eid.split(":", 1)[-1]})
+            nbt = e.get("nbt") or {}
+            mob = {"pos": [bp[0], bp[1], bp[2]], "type": eid.split(":", 1)[-1]}
+            # What StructureTemplate.placeEntities carries over from the
+            # template's entity NBT (the rest finalizeSpawn rolls): the exact
+            # position, villager data, age, persistence, a cat's collar.
+            if isinstance(e.get("pos"), list):
+                mob["at"] = [round(v, 4) for v in e["pos"]]
+            vd = nbt.get("VillagerData")
+            if isinstance(vd, dict):
+                mob["prof"] = vd.get("profession", "minecraft:none").split(":", 1)[-1]
+                mob["vtype"] = vd.get("type", "minecraft:plains").split(":", 1)[-1]
+                mob["level"] = vd.get("level", 1)
+            if nbt.get("Age"):
+                mob["age"] = nbt["Age"]
+            if nbt.get("PersistenceRequired"):
+                mob["persist"] = True
+            if "CollarColor" in nbt:
+                mob["collar"] = nbt["CollarColor"]
+            mobs.append(mob)
     t = {"size": d["size"], "palette": palette, "blocks": blocks}
     if mobs:
         t["mobs"] = mobs

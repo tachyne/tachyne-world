@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +49,9 @@ type mobFile struct {
 	// Villages lists the wells of villages already populated, so a restart
 	// does not spawn a second population on top of the reloaded one.
 	Villages [][3]int `json:"villages,omitempty"`
+	// VillagePlaced lists, per village well ("x,y,z"), the template entities
+	// already placed (type@x,y,z), so each is placed once.
+	VillagePlaced map[string][]string `json:"villagePlaced,omitempty"`
 	// Mansions lists the (x,z) of woodland mansions already populated with
 	// illagers, so a cleared mansion stays cleared across restarts.
 	Mansions [][2]int `json:"mansions,omitempty"`
@@ -490,14 +495,43 @@ func (s *mobStore) bucketLive(mobs map[int32]*mob, keep func(*mob) bool, active 
 }
 
 // recordVillages snapshots the populated-village set for the next flush.
-func (s *mobStore) recordVillages(done map[blockPos]bool) {
+func (s *mobStore) recordVillages(done map[blockPos]bool, placed map[blockPos]map[string]bool) {
 	vs := make([][3]int, 0, len(done))
 	for w := range done {
 		vs = append(vs, packPos(w))
 	}
+	pl := make(map[string][]string, len(placed))
+	for w, keys := range placed {
+		ks := make([]string, 0, len(keys))
+		for k := range keys {
+			ks = append(ks, k)
+		}
+		sort.Strings(ks)
+		pl[fmt.Sprintf("%d,%d,%d", w.x, w.y, w.z)] = ks
+	}
 	s.mu.Lock()
 	s.m.Villages = vs
+	s.m.VillagePlaced = pl
 	s.mu.Unlock()
+}
+
+// villagePlaced returns the persisted placed-entity record (boot restore).
+func (s *mobStore) villagePlaced() map[blockPos]map[string]bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := map[blockPos]map[string]bool{}
+	for k, keys := range s.m.VillagePlaced {
+		var w blockPos
+		if _, err := fmt.Sscanf(k, "%d,%d,%d", &w.x, &w.y, &w.z); err != nil {
+			continue
+		}
+		m := map[string]bool{}
+		for _, key := range keys {
+			m[key] = true
+		}
+		out[w] = m
+	}
+	return out
 }
 
 // villages returns the persisted populated-village wells (boot restore).

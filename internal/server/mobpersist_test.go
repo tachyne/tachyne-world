@@ -284,12 +284,19 @@ func TestNPCMobNotPersisted(t *testing.T) {
 func TestVillageMarkersPersist(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mobs.json")
 	s := newMobStore(path)
-	s.recordVillages(map[blockPos]bool{{100, 64, -200}: true})
+	well := blockPos{100, 64, -200}
+	s.recordVillages(map[blockPos]bool{well: true},
+		map[blockPos]map[string]bool{well: {"cat@103.5,65,-198.5": true, "villager@99.5,64,-201.5": true}})
 	s.flush()
 	s2 := newMobStore(path)
 	vs := s2.villages()
-	if len(vs) != 1 || unpackPos(vs[0]) != (blockPos{100, 64, -200}) {
+	if len(vs) != 1 || unpackPos(vs[0]) != well {
 		t.Fatalf("village markers lost: %v", vs)
+	}
+	// …and which of its template entities were placed, so none is placed twice.
+	pl := s2.villagePlaced()
+	if len(pl[well]) != 2 || !pl[well]["cat@103.5,65,-198.5"] || !pl[well]["villager@99.5,64,-201.5"] {
+		t.Fatalf("placed template entities lost: %v", pl)
 	}
 }
 

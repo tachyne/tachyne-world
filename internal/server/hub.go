@@ -633,12 +633,17 @@ type hub struct {
 	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)
 	catNextAt     uint64             // next village-cat spawner tick
 	villageDone   map[blockPos]bool  // villages populated this session
-	mansionDone   map[[2]int32]bool  // woodland mansions populated with illagers (persisted)
-	bastionDone   map[[2]int32]bool  // bastion remnants seeded with piglins/hoglins (persisted)
-	hutDone       map[[2]int32]bool  // swamp huts seeded with their witch and cat (persisted)
-	endCityDone   map[[2]int32]bool  // End cities seeded with shulkers + the elytra frame (persisted)
-	oceanRuinDone map[[2]int32]bool  // ocean ruin sites seeded with their drowned (persisted)
-	outpostDone   map[blockPos]bool  // pillager outposts populated this session
+	// villagePlaced records, per village well, the template entities already
+	// placed (VillageMob.Key); villageSettled marks a village with all of
+	// them placed (derived, per session).
+	villagePlaced  map[blockPos]map[string]bool
+	villageSettled map[blockPos]bool
+	mansionDone    map[[2]int32]bool // woodland mansions populated with illagers (persisted)
+	bastionDone    map[[2]int32]bool // bastion remnants seeded with piglins/hoglins (persisted)
+	hutDone        map[[2]int32]bool // swamp huts seeded with their witch and cat (persisted)
+	endCityDone    map[[2]int32]bool // End cities seeded with shulkers + the elytra frame (persisted)
+	oceanRuinDone  map[[2]int32]bool // ocean ruin sites seeded with their drowned (persisted)
+	outpostDone    map[blockPos]bool // pillager outposts populated this session
 
 	// Weather (hub-goroutine-only): the vanilla two-timer cycle + lightning.
 	// raining/thundering are the level-derived gameplay booleans the rest of
@@ -796,26 +801,28 @@ func newHub(w *world.World) *hub {
 		cfStore:       newCampfireStore(""), // replaced by Run when CampfireFile is set
 		banners:       newBannerStore(""),
 
-		detectorsOn:   map[simPos]uint64{},
-		spawnerNext:   map[simPos]uint64{},
-		raids:         map[blockPos]*raid{},
-		brewProg:      map[simPos]int{},
-		brewFuel:      map[simPos]int{},
-		brewIng:       map[simPos]int32{},
-		portalLinks:   map[dimPos]dimPos{},
-		stalactiteLen: map[simPos]int{},
-		gatewayCool:   map[simPos]uint64{},
-		bossSeen:      map[[2]int32]bool{},
-		openDoors:     map[blockPos]uint64{},
-		crystals:      map[int32]*crystal{},
-		villageDone:   map[blockPos]bool{},
-		mansionDone:   map[[2]int32]bool{},
-		bastionDone:   map[[2]int32]bool{},
-		hutDone:       map[[2]int32]bool{},
-		endCityDone:   map[[2]int32]bool{},
-		oceanRuinDone: map[[2]int32]bool{},
-		outpostDone:   map[blockPos]bool{},
-		rods:          map[blockPos]struct{}{},
+		detectorsOn:    map[simPos]uint64{},
+		spawnerNext:    map[simPos]uint64{},
+		raids:          map[blockPos]*raid{},
+		brewProg:       map[simPos]int{},
+		brewFuel:       map[simPos]int{},
+		brewIng:        map[simPos]int32{},
+		portalLinks:    map[dimPos]dimPos{},
+		stalactiteLen:  map[simPos]int{},
+		gatewayCool:    map[simPos]uint64{},
+		bossSeen:       map[[2]int32]bool{},
+		openDoors:      map[blockPos]uint64{},
+		crystals:       map[int32]*crystal{},
+		villageDone:    map[blockPos]bool{},
+		villagePlaced:  map[blockPos]map[string]bool{},
+		villageSettled: map[blockPos]bool{},
+		mansionDone:    map[[2]int32]bool{},
+		bastionDone:    map[[2]int32]bool{},
+		hutDone:        map[[2]int32]bool{},
+		endCityDone:    map[[2]int32]bool{},
+		oceanRuinDone:  map[[2]int32]bool{},
+		outpostDone:    map[blockPos]bool{},
+		rods:           map[blockPos]struct{}{},
 		// Weather timers start at zero: the first tick rolls fresh vanilla
 		// delays (rain 12000–180000, thunder likewise), like a new world.
 	}
@@ -1218,7 +1225,7 @@ func (h *hub) run() {
 					h.containers.flushAsync()
 				}
 				if h.mobstore != nil {
-					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordVillages(h.villageDone, h.villagePlaced)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordHuts(h.hutDone)
@@ -2240,7 +2247,7 @@ func (h *hub) run() {
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
-					h.mobstore.recordVillages(h.villageDone)
+					h.mobstore.recordVillages(h.villageDone, h.villagePlaced)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
 					h.mobstore.recordHuts(h.hutDone)

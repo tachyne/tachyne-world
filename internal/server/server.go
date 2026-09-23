@@ -486,6 +486,9 @@ func (s *Server) Serve() error {
 		for _, w := range s.hub.mobstore.villages() {
 			s.hub.villageDone[unpackPos(w)] = true // populated villages stay populated
 		}
+		for w, keys := range s.hub.mobstore.villagePlaced() {
+			s.hub.villagePlaced[w] = keys // …and each template entity is placed once
+		}
 		for _, mn := range s.hub.mobstore.mansions() {
 			s.hub.mansionDone[[2]int32{int32(mn[0]), int32(mn[1])}] = true // cleared mansions stay cleared
 		}
