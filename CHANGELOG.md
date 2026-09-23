@@ -13,7 +13,37 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-23
 
+### Added
+- **26.3's new building blocks.** Wool and concrete stairs and slabs in all
+  sixteen colours, the poplar wood set (logs, planks, stairs, slabs, fences,
+  gates, doors, trapdoors, buttons, pressure plates, signs, hanging signs, a
+  shelf, poplar boats and chest boats) and poplar leaves in red, orange and
+  yellow. They craft, cut on the stonecutter, drop and burn as vanilla's do,
+  and burn in a furnace. Poplar saplings can be planted but don't grow yet;
+  poplar trees arrive with 26.3's worldgen.
+
 ### Fixed
+- **26.2 players see 26.3's blocks as something of the same shape.** A block
+  a 26.2 client doesn't have used to reach it under its 26.3 number, which on
+  26.2 is some other block: a white wool slab showed as fire. Each one is now
+  shown as a block of the same shape and about the same colour: poplar as
+  birch, and a wool or concrete slab as a stone or wood slab of its colour.
+  Bedrock players, who saw them as the "update!" block, get the same
+  stand-ins. Recipes that need an item a 26.2 client doesn't have are
+  left out of its recipe book, where they would have disconnected it.
+- **A coal smelts 8 items in a blast furnace or smoker, not 16.** Both burn
+  fuel for half as long as a furnace while cooking twice as fast, so a fuel
+  smelts the same count in all three. The halving had been taken out.
+- **Pistons pop what vanilla's pop.** Leaves, buttons, beds, candles,
+  pumpkins, melons, flower pots and amethyst buds break when pushed instead
+  of sliding along. The list was kept by hand and had missed every block
+  that inherits this from a family of blocks; the game's own answer is used
+  now.
+- **Bamboo rafts can be placed again.** The raft item was looked up under a
+  name that doesn't exist.
+- **Azalea leaves decay** like every other leaf once their tree is gone.
+- **Shelves burn, and waterlogged blocks don't.** Fire's odds for each block
+  now come from the game itself, per state.
 - **Water inside waterlogged blocks shows on 26.x.** The newer clients are
   told how much fluid each chunk section holds, and the count only knew
   water and lava blocks — so a section whose only water sat in waterlogged
@@ -63,11 +93,11 @@ the public history since the project was open-sourced on 2026-07-10.
   keeps is numbered as Minecraft 26.3 numbers it, and the world's saves were
   carried across on the first start — block edits, inventories, ender chests,
   mobs and their gear and trades, statistics — each checked by name to be
-  exactly what it was. The game itself plays as before: its loot, recipes,
-  worldgen and advancements are still 1.21.11's while 26.3's reworked data
-  arrives piece by piece, each with the content it brings. A 26.2 client sees
-  26.3-only things as their nearest 26.2 equivalent — a poplar boat as an oak
-  one — or not at all.
+  exactly what it was. Loot, recipes and fuel now read 26.3's data (the
+  new blocks above came with them); worldgen and advancements are still
+  1.21.11's while the rest of 26.3's reworked data arrives piece by piece. A
+  26.2 client sees 26.3-only things as their nearest 26.2 equivalent: a
+  poplar boat as an oak one, poplar planks as birch.
 - **Java 1.21.5–1.21.8 are no longer served.** Java 26.2 and 26.3 (and
   Bedrock) are; an older client is told at login which versions to use.
 - **The game's facts come from the game.** The generated tables that
