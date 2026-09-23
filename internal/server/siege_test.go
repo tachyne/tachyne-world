@@ -1,88 +1,131 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Daylight wipes the siege state so the next dusk rolls afresh (vanilla resets
-// the state machine whenever it is day).
-func TestVillageSiegeDayResets(t *testing.T) {
+// siegeVillage builds a loaded stone pad in open air with villagers holding
+// beds across it, so every section of the pad counts as a village.
+func siegeVillage(t *testing.T) (*hub, map[int32]*tracked, *tracked, int) {
+	t.Helper()
 	h := newHub(world.New(1))
+	const cx, cz, fy = 5000, 5000, 200
+	h.world.ForceLoad(cx, cz, 5)
+	for x := cx - 60; x <= cx+60; x++ {
+		for z := cz - 60; z <= cz+60; z++ {
+			h.world.SetBlock(x, fy-1, z, worldgen.Stone)
+		}
+	}
 	players := map[int32]*tracked{}
-	h.siegeState, h.siegeRolled, h.siegeLeft = siegeActive, true, 5
-	h.dayTime.Store(1000) // broad daylight
+	for x := cx - 48; x <= cx+48; x += 16 {
+		for z := cz - 48; z <= cz+48; z += 16 {
+			m := h.spawnMob(players, entityVillager, float64(x)+0.5, fy, float64(z)+0.5)
+			m.bed, m.home = blockPos{x, fy, z}, blockPos{x, fy, z}
+		}
+	}
+	pl := testTracked()
+	pl.x, pl.y, pl.z = cx+0.5, fy, cz+0.5
+	players[1] = pl
+	h.dayTime.Store(siegeRollAt + 1) // the dark of the night
+	return h, players, pl, fy
+}
 
-	h.updateVillageSiege(players)
-	if h.siegeState != siegeDone || h.siegeRolled || h.siegeLeft != 0 {
-		t.Fatalf("daylight should clear the siege: state=%d rolled=%v left=%d",
-			h.siegeState, h.siegeRolled, h.siegeLeft)
+func zombiesIn(h *hub) (out []*mob) {
+	for _, m := range h.mobs {
+		if m.etype == entityZombie {
+			out = append(out, m)
+		}
+	}
+	return
+}
+
+// Light clears the night's state, as isBrightOutside does.
+func TestVillageSiegeClearsInTheLight(t *testing.T) {
+	h := newHub(world.New(1))
+	h.siegeState, h.siegeSetUp, h.siegeLeft = siegeTonight, true, 5
+	h.dayTime.Store(6000) // noon
+	h.updateVillageSiege(nil)
+	if h.siegeState != siegeDone || h.siegeSetUp {
+		t.Fatalf("daylight left the siege at state=%d setUp=%v", h.siegeState, h.siegeSetUp)
 	}
 }
 
-// The nightly roll happens once, and only in the dusk window.
-func TestVillageSiegeRollsOnceAtDusk(t *testing.T) {
+// The night is rolled at the siege marker, midnight, and nowhere else.
+func TestVillageSiegeRollsAtMidnight(t *testing.T) {
 	h := newHub(world.New(1))
-	players := map[int32]*tracked{}
-
-	// Deep night, past the dusk window: no roll is made.
-	h.dayTime.Store(nightStart + siegeDuskWindow + 500)
-	h.updateVillageSiege(players)
-	if h.siegeRolled {
-		t.Fatal("a siege may only be rolled during the dusk window")
+	for _, d := range []uint64{13000, 14000, 17999, 18001, 22000} {
+		h.dayTime.Store(d)
+		for i := 0; i < 200; i++ {
+			h.updateVillageSiege(nil)
+		}
+		if h.siegeState != siegeDone {
+			t.Fatalf("a siege was rolled at %d, not at the marker", d)
+		}
 	}
-
-	// At dusk it rolls; with no players there is no village, so tonight passes.
-	h.dayTime.Store(nightStart + 100)
-	h.updateVillageSiege(players)
-	if !h.siegeRolled {
-		t.Fatal("dusk should make tonight's roll")
+	rolled := 0
+	for i := 0; i < 400; i++ {
+		h.siegeState = siegeDone
+		h.dayTime.Store(siegeRollAt)
+		h.updateVillageSiege(nil)
+		if h.siegeState == siegeTonight {
+			rolled++
+		}
 	}
-	if h.siegeState != siegeDone {
-		t.Fatalf("with no village to besiege the night should pass, got state %d", h.siegeState)
+	if rolled < 15 || rolled > 80 {
+		t.Fatalf("%d sieges in 400 rolls, want about one in ten", rolled)
 	}
 }
 
-// An active siege releases its zombies around the village and then finishes.
+// A siege night with a player standing in the village releases up to twenty
+// zombies, one every three ticks, around a point 32 blocks from the player,
+// each inside the village.
 func TestVillageSiegeReleasesZombies(t *testing.T) {
-	h := newHub(world.New(1))
-	players := map[int32]*tracked{}
-	lx, lz := h.findLand(0, 0) // put the village on real ground
-	h.siegeCenter = blockPos{lx, h.world.SurfaceFeet(lx, lz), lz}
-	h.siegeState, h.siegeLeft = siegeActive, 4
-	h.dayTime.Store(nightStart + 2000) // night
-
-	before := len(h.mobs)
-	for i := 0; i < 20 && h.siegeState == siegeActive; i++ {
+	h, players, pl, fy := siegeVillage(t)
+	h.siegeState = siegeTonight
+	h.updateVillageSiege(players)
+	if !h.siegeSetUp {
+		t.Fatal("a player standing in the village did not set the siege up")
+	}
+	c := h.siegeCenter
+	if d := math.Hypot(float64(c.x)-pl.x, float64(c.z)-pl.z); d < 30 || d > 34 {
+		t.Fatalf("the siege point is %.1f blocks from the player, want 32", d)
+	}
+	for i := 0; i < 5; i++ { // five ticks: at most two zombies, not ten
 		h.updateVillageSiege(players)
 	}
-	if h.siegeState != siegeDone {
-		t.Fatalf("the siege should finish once its zombies are out, state=%d left=%d",
-			h.siegeState, h.siegeLeft)
+	if n := len(zombiesIn(h)); n > 2 {
+		t.Fatalf("%d zombies after six ticks, want one every three", n)
 	}
-	if len(h.mobs) <= before {
-		t.Fatal("an active siege should have spawned zombies")
+	for i := 0; i < 80; i++ {
+		h.updateVillageSiege(players)
+	}
+	zs := zombiesIn(h)
+	if len(zs) == 0 || len(zs) > siegeZombies {
+		t.Fatalf("%d zombies, want some and at most %d", len(zs), siegeZombies)
+	}
+	for _, z := range zs {
+		if math.Abs(z.x-float64(c.x)) > siegeSpread+1 || math.Abs(z.z-float64(c.z)) > siegeSpread+1 || floorInt(z.y) != fy {
+			t.Fatalf("zombie at %.1f,%.1f,%.1f is off the siege point %v", z.x, z.y, z.z, c)
+		}
+	}
+	if h.siegeState != siegeDone {
+		t.Fatal("the siege should be done once all twenty have had their turn")
 	}
 }
 
-// A village with no villagers left is not besieged.
-func TestVillageSiegeCountsVillagers(t *testing.T) {
-	h := newHub(world.New(1))
-	players := map[int32]*tracked{}
-	c := blockPos{100, 70, 100}
-
-	if n := h.countVillagersNear(c, siegeRadius); n != 0 {
-		t.Fatalf("an empty village should count 0 villagers, got %d", n)
+// With nobody standing in a village the siege waits, and nothing spawns.
+func TestVillageSiegeWaitsForAPlayerInAVillage(t *testing.T) {
+	h, players, pl, _ := siegeVillage(t)
+	pl.x, pl.z = pl.x+400, pl.z+400 // well outside it
+	h.siegeState = siegeTonight
+	for i := 0; i < 100; i++ {
+		h.updateVillageSiege(players)
 	}
-	if m := h.spawnMob(players, entityVillager, float64(c.x)+2, float64(c.y), float64(c.z)+2); m == nil {
-		t.Fatal("failed to spawn the test villager")
-	}
-	if n := h.countVillagersNear(c, siegeRadius); n != 1 {
-		t.Fatalf("a villager beside the centre should be counted, got %d", n)
-	}
-	// Far outside the radius it must not count toward the village.
-	if n := h.countVillagersNear(blockPos{c.x + 10*siegeRadius, c.y, c.z}, siegeRadius); n != 0 {
-		t.Fatalf("a distant villager should not count, got %d", n)
+	if h.siegeSetUp || len(zombiesIn(h)) != 0 {
+		t.Fatalf("a siege set up with nobody in a village (setUp=%v, zombies=%d)", h.siegeSetUp, len(zombiesIn(h)))
 	}
 }

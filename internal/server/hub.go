@@ -608,10 +608,10 @@ type hub struct {
 	raids        map[blockPos]*raid // active village raids by centre
 
 	// Zombie siege (siege.go, vanilla VillageSiege): one state machine for the
-	// world. siegeRolled marks tonight's 1-in-10 roll as already made; dawn
-	// clears all of it so the next dusk rolls afresh.
+	// world, rolled at midnight and cleared by light.
 	siegeState  int
-	siegeRolled bool
+	siegeSetUp  bool
+	siegeNext   int // ticks to the next zombie
 	siegeLeft   int
 	siegeCenter blockPos
 	brewProg    map[simPos]int    // brewing stand progress (ticks)
@@ -1075,7 +1075,6 @@ func (h *hub) run() {
 				h.updatePatrols(players)      // roaming pillager patrols (day 5+, throttled)
 				h.catSpawner(players)         // village cats (vanilla CustomSpawner)
 				h.updateRaids(players)        // active village raids: waves, bar, win/timeout
-				h.updateVillageSiege(players) // vanilla VillageSiege: a nightly zombie horde
 				for _, t := range players {
 					h.checkRaidTrigger(players, t) // Bad Omen + village → start a raid
 				}
@@ -1118,12 +1117,13 @@ func (h *hub) run() {
 			}
 			h.updateBolts(players) // despawn finished lightning flashes
 			h.updateTNT(players)
-			h.validateWindows(players) // AbstractContainerMenu.stillValid, every tick
-			h.updateFangs(players)     // evoker fangs: bite once, then sink
-			h.updateVexLife(players)   // summoned vexes expire   // primed charges burn their fuses
-			h.tickBrushes(players)     // half-brushed suspicious blocks settle back
-			h.updateHearts(players)    // creaking hearts: wake at dusk, send out a creaking
-			h.updateCreakings(players) // …and the creaking freezes while it is watched
+			h.updateVillageSiege(players) // vanilla VillageSiege, every tick: a nightly zombie horde
+			h.validateWindows(players)    // AbstractContainerMenu.stillValid, every tick
+			h.updateFangs(players)        // evoker fangs: bite once, then sink
+			h.updateVexLife(players)      // summoned vexes expire   // primed charges burn their fuses
+			h.tickBrushes(players)        // half-brushed suspicious blocks settle back
+			h.updateHearts(players)       // creaking hearts: wake at dusk, send out a creaking
+			h.updateCreakings(players)    // …and the creaking freezes while it is watched
 			h.updatePlates(players)
 			h.updateTripwires(players)
 			h.tickSculk(players) // vibration delivery + sculk phase timers + STEP events
