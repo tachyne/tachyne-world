@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate ../tachyne-common/protocol/smithing_gen.go.
 
-Smithing data from the vanilla 1.21.11 jar: the 12 transform recipes
+Smithing data from the canonical version's jar: the 12 transform recipes
 (diamond -> netherite, base components carried), the 18 trim templates
 (template item -> trim_pattern id in OUR declared alphabetical registry
 order), the trim materials (addition item -> trim_material id, same order
@@ -10,13 +10,14 @@ update_recipes item sets AND the engine's menu, so they always agree.
 
 Run: python3 scripts/gen_smithingdata.py [path-to-server.jar]
 """
+import canon
 import io, json, sys, os, subprocess, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "smithing_gen.go")
 
-item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}  # vanilla's registries report
+item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}  # vanilla's registries report
 outer = zipfile.ZipFile(JAR)
 inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
 z = zipfile.ZipFile(io.BytesIO(outer.read(inner[0]))) if inner else outer

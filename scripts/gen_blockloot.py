@@ -3,7 +3,7 @@
 tables baked into a compact IR the engine's data-driven loot evaluator reads,
 keyed by block-state range (binary-searched in Go).
 
-Source: the 1.21.11 server jar datapack (data/minecraft/loot_table/blocks/
+Source: the canonical version's server jar datapack (data/minecraft/loot_table/blocks/
 *.json); block names → state ranges and item names → ids via vanilla's own reports
 (scripts/vanillareport.py).
 Only the node types the evaluator supports are kept; a table using anything
@@ -11,15 +11,16 @@ else is omitted so the engine falls back to its legacy drop for that block.
 
 Run: python3 scripts/gen_blockloot.py [path-to-server.jar]  (needs network)
 """
+import canon
 import io, json, sys, os, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUTDIR = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "blocks.json")
 
-item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}
-blocks = vanillareport.blocks("1.21.11")
+item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}
+blocks = vanillareport.blocks(canon.VERSION)
 brange = {b["name"]: (b["minStateId"], b["maxStateId"]) for b in blocks}
 
 outer = zipfile.ZipFile(JAR)
@@ -177,7 +178,7 @@ def table(t):
 # Blocks with no loot table get no row.
 names = set(z.namelist())
 loot_of = {b["name"]: b.get("lootTable")
-           for b in json.load(open(os.path.expanduser("~/vanilla/extract/1.21.11.json")))["blocks"]}
+           for b in json.load(open(canon.extract()))["blocks"]}
 rows, kept, skipped = [], 0, 0
 for b in blocks:
     key = loot_of.get(b["name"])

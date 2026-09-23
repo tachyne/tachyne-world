@@ -21,13 +21,14 @@ through their block entity (RenderShape.INVISIBLE), so a lit stronghold portal
 or a post-dragon gateway reached clients with nothing to render; and every
 weathered or waxed copper golem statue, where the list knew only the plain one.
 
-    python3 scripts/gen_blockentities.py [version]     # default 1.21.11
+    python3 scripts/gen_blockentities.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, subprocess, sys
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 EXTRACT = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "blockentities_gen.go")
 

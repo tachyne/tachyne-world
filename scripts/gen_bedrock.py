@@ -34,7 +34,7 @@ from entity_identifiers.dat are emitted as "" (gateway skips rendering them).
 
 Run from the repo root (fetches the Geyser side):
 
-    python3 scripts/gen_bedrock.py [canonical-version]     # default 1.21.11
+    python3 scripts/gen_bedrock.py [canonical-version]     # default: scripts/canon.py
 
 Stdlib only.
 """
@@ -48,9 +48,10 @@ import sys
 import urllib.request
 import zipfile
 
+import canon
 import vanillareport
 
-CANON = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+CANON = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 # canonical Java version -> (GeyserMC/mappings commit, the Java version that
 # commit maps). blocks.nbt is positional in the pin's own Java state ids, so
 # it is re-indexed onto the canonical states by (block, properties); a pin

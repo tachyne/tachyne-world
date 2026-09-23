@@ -11,10 +11,11 @@ recompute an oriented/connected state from the default via mixed-radix arithmeti
 Source: vanilla's own blocks report via scripts/vanillareport.py, which
 derives property order from the state ids.  python3 scripts/gen_block_states.py [version]
 """
+import canon
 import json, os, sys
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "block_states_gen.go")
 # Every block with ANY state property goes in the table. It used to hold only

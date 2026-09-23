@@ -13,11 +13,12 @@ same answers state for state (verified before the switch), so this change is
 purely about owning the input for every version rather than the newest one a
 third party happens to cover.
 
-    python3 scripts/gen_fullcube.py [version]     # default 1.21.11
+    python3 scripts/gen_fullcube.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "fullcube_gen.go")
 

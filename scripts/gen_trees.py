@@ -15,9 +15,10 @@ No network — reads the local server jar.
 
 Run: python3 scripts/gen_trees.py [path-to-server.jar]
 """
+import canon
 import io, json, os, re, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, "..", "internal", "worldgen", "trees_gen.go")
 
@@ -73,7 +74,7 @@ def rng_range(v, default=(0, 0)):
 # providers name an EXACT state, not a block: oak leaves are placed at
 # distance=7 persistent=false, and using the block's base state instead gives a
 # state no client renders as ordinary leaves and no decay rule recognises.
-REPORT = os.path.expanduser("~/vanilla/reports/1.21.11/blocks.json")
+REPORT = canon.report("blocks.json")
 report = json.load(open(REPORT))
 
 

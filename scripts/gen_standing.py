@@ -4,11 +4,12 @@ for banners (16 colors) and mob heads/skulls (7 kinds) — the sign-style
 placement family (16-way rotation on the ground, facing on a wall). Signs
 have their own tables in signs_gen.go (they also carry the edit machinery).
 
-Reads the local datagen report: ~/vanilla/reports/1.21.11/blocks.json
+Reads the local datagen report: ~/vanilla/reports/<canonical>/blocks.json
 """
+import canon
 import json, os
 
-SRC = os.path.expanduser("~/vanilla/reports/1.21.11/blocks.json")
+SRC = canon.report("blocks.json")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "standing_gen.go")
 
 blocks = json.load(open(SRC))

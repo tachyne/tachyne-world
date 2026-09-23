@@ -21,12 +21,13 @@ Run from the repo root:  python3 scripts/gen_damagetags.py
 
 Stdlib only.
 """
+import canon
 import io
 import json
 import os
 import zipfile
 
-VERSION = "1.21.11"
+VERSION = canon.VERSION
 JAR = os.path.expanduser(f"~/vanilla/server-{VERSION}.jar")
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

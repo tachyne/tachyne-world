@@ -24,11 +24,12 @@ So it no longer reimplements anything: the local extract (see
 scripts/extract) asks the game `state.isSolid()` directly, force flags
 and threshold already applied.
 
-    python3 scripts/gen_solid.py [version]     # default 1.21.11
+    python3 scripts/gen_solid.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, subprocess, sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "solid_gen.go")
 

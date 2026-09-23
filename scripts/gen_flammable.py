@@ -8,13 +8,14 @@ tachyne block-state id ranges via minecraft-data (canonical version's blocks.jso
 
 Emits a sorted, non-overlapping range table + Flammability(state) lookup,
 mirroring light_emission_gen.py. Run OUTSIDE the sandbox (needs network)."""
+import canon
 import json
 import os
 import sys
 
 # State ranges come from the local extract (see scripts/extract); the
 # odds themselves are FireBlock.bootStrap's table, transcribed above.
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "flammable_gen.go")
 

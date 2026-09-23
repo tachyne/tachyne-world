@@ -9,10 +9,10 @@ reference source, reimplemented here, never copied.
 
 Run: python3 scripts/gen_effectcolors.py [path-to-MobEffects.java]
 """
+import canon
 import os, re, sys
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser(
-    "~/DecompilerMC/src/1.21.11/server/net/minecraft/world/effect/MobEffects.java")
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(canon.src(), "net/minecraft/world/effect/MobEffects.java")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "effectcolors_gen.go")
 
 # register("name", new SomethingMobEffect(MobEffectCategory.X, 1234567)

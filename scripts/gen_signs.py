@@ -8,11 +8,12 @@ but only the standing/ceiling blocks have items. Emit:
   - hangingWallVariant: ceiling default state   -> wall-hanging default state
   - signKindRanges:     state-range classification for every sign block
 
-Reads the local datagen report (no network): ~/vanilla/reports/1.21.11/blocks.json
+Reads the local datagen report (no network): ~/vanilla/reports/<canonical>/blocks.json
 """
+import canon
 import json, os
 
-SRC = os.path.expanduser("~/vanilla/reports/1.21.11/blocks.json")
+SRC = canon.report("blocks.json")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "signs_gen.go")
 
 blocks = json.load(open(SRC))

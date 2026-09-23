@@ -3,13 +3,14 @@
 Source: vanilla's registries report for the canonical version, read through
 scripts/vanillareport.py. Ids are the item registry's protocol ids.
 
-    python3 scripts/gen_itemnames.py [version]     # default 1.21.11
+    python3 scripts/gen_itemnames.py [version]     # default: scripts/canon.py
 """
+import canon
 import sys
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 OUT = "internal/server/itemnames_gen.go"
 
 items = vanillareport.registry(VER, "item")

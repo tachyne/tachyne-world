@@ -3,9 +3,10 @@
 "spawners" + creature_spawn_probability) from the canonical server jar into
 internal/server/spawnpools_gen.go. Facts only: the biome data is what
 vanilla's NaturalSpawner draws from (MobSpawnSettings)."""
+import canon
 import io, json, os, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "spawnpools_gen.go")
 
 outer = zipfile.ZipFile(JAR)

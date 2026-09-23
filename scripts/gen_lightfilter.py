@@ -13,11 +13,12 @@ one filterLight per BLOCK, and that flattening put 10,394 of the 29,671
 states on the wrong value, including 125 where light passed straight through
 a solid block.
 
-    python3 scripts/gen_lightfilter.py [version]     # default 1.21.11
+    python3 scripts/gen_lightfilter.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "lightfilter_gen.go")
 

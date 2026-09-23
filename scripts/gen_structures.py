@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bake vanilla structure NBT templates into a compact JSON the engine embeds.
 
-Reads the structure templates from the (bundled) 1.21.11 server jar and emits
+Reads the structure templates from the canonical version's server jar and emits
 internal/worldgen/structdata/structures.json. The palette is kept as
 {name, properties} pairs — the Go loader resolves each to a canonical state id
 and rotates directional properties at stamp time, where tachyne's block-state
@@ -10,9 +10,10 @@ tables live. Block-entity chests keep their LootTable ref for loot routing.
 Run outside nothing special (all inputs are local):
     python3 scripts/gen_structures.py
 """
+import canon
 import zipfile, io, gzip, os, struct, json
 
-JAR = os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "structdata", "structures.json")
 
 # Standalone templates to bake (non-jigsaw, placed by code).
@@ -26,16 +27,12 @@ RUINED_PORTAL = ["ruined_portal/portal_%d" % i for i in range(1, 11)] + \
     ["ruined_portal/giant_portal_%d" % i for i in range(1, 4)]
 import zipfile as _zf, io as _io, os as _os
 def _mansion_names():
-    jar=_os.path.expanduser("~/vanilla/server-1.21.11.jar")
-    z=_zf.ZipFile(jar); inner=[n for n in z.namelist() if n.endswith("server-1.21.11.jar") and "versions" in n]
-    zz=_zf.ZipFile(_io.BytesIO(z.read(inner[0]))) if inner else z
+    zz=canon.inner_jar()
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/woodland_mansion/" in n and n.endswith(".nbt"))
 MANSION = _mansion_names()
 def _jar_names(prefix):
-    jar=_os.path.expanduser("~/vanilla/server-1.21.11.jar")
-    z=_zf.ZipFile(jar); inner=[n for n in z.namelist() if n.endswith("server-1.21.11.jar") and "versions" in n]
-    zz=_zf.ZipFile(_io.BytesIO(z.read(inner[0]))) if inner else z
+    zz=canon.inner_jar()
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/" + prefix in n and n.endswith(".nbt"))
 # Ocean ruins: 8 warm + 8 each of brick/cracked/mossy small pieces, 4 big of
@@ -485,8 +482,7 @@ def collect(inner):
 
 
 def main():
-    outer = zipfile.ZipFile(JAR)
-    inner = zipfile.ZipFile(io.BytesIO(outer.read("META-INF/versions/1.21.11/server-1.21.11.jar")))
+    inner = canon.inner_jar()
     out = {name: bake(inner, name) for name in TEMPLATES}
     pools, jig_templates, aliases, processors = collect(inner)
     out.update(jig_templates)

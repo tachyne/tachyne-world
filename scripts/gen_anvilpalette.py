@@ -9,12 +9,12 @@ every state's palette entry exactly.
 
 Input: a local datagen report (blocks.json). No network needed.
 
-  python3 scripts/gen_anvilpalette.py ~/vanilla/reports/1.21.11/blocks.json
+  python3 scripts/gen_anvilpalette.py ~/vanilla/reports/<canonical>/blocks.json
 """
+import canon
 import json, os, sys
 
-IN = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser(
-    "~/vanilla/reports/1.21.11/blocks.json")
+IN = sys.argv[1] if len(sys.argv) > 1 else canon.report("blocks.json")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "anvil",
                    "palette_gen.go")
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate ../tachyne-common/protocol/stonecutting_gen.go.
 
-Stonecutting recipes from the vanilla 1.21.11 server jar's datapack
+Stonecutting recipes from the canonical version's server jar datapack
 (recipe/*.json, type minecraft:stonecutting). Multi-item ingredients expand
 to one row per input item. Order is the sorted recipe path (deterministic):
 the SAME slice drives both the gateway's update_recipes packet and the
@@ -11,13 +11,14 @@ agree by construction.
 Run: python3 scripts/gen_stonecutting.py [path-to-server.jar]
 (item ids from vanilla's registries report, via scripts/vanillareport.py)
 """
+import canon
 import io, json, sys, os, subprocess, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "stonecutting_gen.go")
 
-item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}
+item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}
 
 outer = zipfile.ZipFile(JAR)
 inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]

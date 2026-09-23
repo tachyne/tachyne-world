@@ -8,10 +8,11 @@ churn every version). Emits:
 Both from minecraft-data's canonical-version blocks.json. Source: vanilla's own blocks report via scripts/vanillareport.py, which
 derives property order from the state ids.  python3 scripts/gen_blockids.py [version]
 """
+import canon
 import json, os, sys
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "blockids_gen.go")
 

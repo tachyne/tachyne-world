@@ -10,6 +10,7 @@ engine's declared enchantment registry order (alphabetical).
 
 Run: python3 scripts/gen_enchantments.py [path-to-server.jar]
 """
+import canon
 import io
 import json
 import os
@@ -18,7 +19,7 @@ import subprocess
 import sys
 import zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = "internal/server/enchantments_gen.go"
 
 

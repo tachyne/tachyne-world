@@ -7,11 +7,12 @@ player can place comes from tags/painting_variant/placeable.json. The engine
 needs sizes for the placement/survival math; wire ids are the gateway's
 concern (index into the synced registry list).
 
-Reads the local jar (no network): ~/vanilla/server-1.21.11.jar
+Reads the local jar (no network): ~/vanilla/server-<canonical>.jar
 """
+import canon
 import io, json, os, zipfile
 
-SRC = os.path.expanduser("~/vanilla/server-1.21.11.jar")
+SRC = canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "paintings_gen.go")
 
 z = zipfile.ZipFile(SRC)

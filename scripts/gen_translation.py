@@ -18,8 +18,9 @@ in absentIDs (canonical ids a client lacks) or addedIDs (client ids the
 canonical registry lacks), so it is dropped rather than turned into something
 else.
 
-    python3 scripts/gen_translation.py [canonical-version]     # default 1.21.11
+    python3 scripts/gen_translation.py [canonical-version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
 
 import vanillareport
@@ -31,7 +32,7 @@ PROTOCOLS = {
     770: "1.21.5", 771: "1.21.6", 772: "1.21.8", 773: "1.21.9",
     774: "1.21.11", 775: "26.1", 776: "26.2", 777: "26.3",
 }
-CANON = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"  # content ids; the wire LAYOUT stays 770
+CANON = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION  # content ids; the wire LAYOUT stays 770
 CANON_PROTO = next(p for p, v in PROTOCOLS.items() if v == CANON)
 # The canonical version is the identity and gets no table.
 TARGETS = {p: v for p, v in PROTOCOLS.items() if v != CANON}

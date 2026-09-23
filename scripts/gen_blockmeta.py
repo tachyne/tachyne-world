@@ -43,9 +43,10 @@ structure block — all unbreakable) gets no harvest row, as before.
 
     python3 scripts/gen_blockmeta.py [version]
 """
+import canon
 import io, json, os, subprocess, sys, zipfile
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 JAR = os.path.expanduser("~/vanilla/server-%s.jar" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "blockmeta_gen.go")

@@ -5,7 +5,7 @@ keyed by table name ("simple_dungeon", "village/village_plains_house", …).
 
 Unlike the block/entity bakers this one needs NO network: item names → ids come
 from the engine's own internal/server/itemnames_gen.go (the canonical id space),
-and the tables come from the local 1.21.11 server jar. A function the evaluator
+and the tables come from the canonical version's server jar. A function the evaluator
 does not support is DROPPED (graceful degradation → a plainer item) rather than
 omitting the whole table; an entry whose item id is unknown is skipped.
 
@@ -13,7 +13,9 @@ Run: python3 scripts/gen_chestloot.py [path-to-server.jar]
 """
 import io, json, os, re, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+import canon
+
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 HERE = os.path.dirname(__file__)
 OUTDIR = os.path.join(HERE, "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "chests.json")

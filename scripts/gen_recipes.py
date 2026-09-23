@@ -21,8 +21,9 @@ decorated pot are code, not data, and are handled in craftspecial.go.
 crafting_transmute recipes are listed here for the recipe book, but crafting
 one is resolved by transmuteMatch first, which carries the contents across.
 
-    python3 scripts/gen_recipes.py [version]     # default 1.21.11
+    python3 scripts/gen_recipes.py [version]     # default: scripts/canon.py
 """
+import canon
 import io
 import json
 import os
@@ -32,7 +33,7 @@ import zipfile
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 JAR = os.path.expanduser("~/vanilla/server-%s.jar" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "recipes_gen.go")
 

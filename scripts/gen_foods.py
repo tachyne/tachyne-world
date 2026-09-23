@@ -10,11 +10,12 @@ rescaled by hand — and at 26.1 one of them changed meaning to the bare
 modifier, which would have made every food restore about an eighth of its
 saturation. Reading the game avoids guessing at a third party's units.
 
-    python3 scripts/gen_foods.py [version]     # default 1.21.11
+    python3 scripts/gen_foods.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 EXTRACT = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "foods_gen.go")
 

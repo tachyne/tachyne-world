@@ -13,11 +13,12 @@ Three facts come out of the reference sources:
 
 Usage: gen_blocksounds.py [<reference server source root>]
 """
+import canon
 import re
 import sys
 import os
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/DecompilerMC/src/1.21.11/server")
+SRC = sys.argv[1] if len(sys.argv) > 1 else canon.src()
 
 
 def statements(path):

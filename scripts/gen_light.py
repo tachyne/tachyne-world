@@ -12,11 +12,12 @@ directions: a lit furnace emitted 0 instead of 13, a lit redstone lamp 0
 instead of 15, glow berries 0 instead of 14 — and an UNLIT redstone torch
 emitted 7 instead of 0, because its default state is the lit one.
 
-    python3 scripts/gen_light.py [version]     # default 1.21.11
+    python3 scripts/gen_light.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "light_emission_gen.go")
 

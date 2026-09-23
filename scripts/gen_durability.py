@@ -12,14 +12,15 @@
 Durability and stack size are the game's own answers (the MAX_DAMAGE and
 MAX_STACK_SIZE item components), read by running it.
 
-    python3 scripts/gen_durability.py [version]     # default 1.21.11
+    python3 scripts/gen_durability.py [version]     # default: scripts/canon.py
 """
 
+import canon
 import json
 import os
 import sys
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 EXTRACT = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 
 # Vanilla armor points/toughness by material: (helmet, chest, leggings, boots).

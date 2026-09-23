@@ -5,10 +5,11 @@ So the engine names entities instead of hard-coding numeric type ids that churn
 every version. From vanilla's own registries report for the canonical version
 (~/vanilla/reports/<ver>/registries.json).
 
-    python3 scripts/gen_entityids.py [version]     # default 1.21.11
+    python3 scripts/gen_entityids.py [version]     # default: scripts/canon.py
 """
+import canon
 import json, os, sys
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 REPORT = os.path.expanduser("~/vanilla/reports/%s/registries.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "entityids_gen.go")
 entries = json.load(open(REPORT))["minecraft:entity_type"]["entries"]

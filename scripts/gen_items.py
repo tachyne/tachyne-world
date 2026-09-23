@@ -12,12 +12,13 @@ Run from the repo root, OUTSIDE the sandbox (needs network):
 
 Stdlib only.
 """
+import canon
 import os
 import sys
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(REPO, "..", "tachyne-common", "protocol", "items_gen.go")
 

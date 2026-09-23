@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate internal/server/smelting_gen.go: cooker recipes + fuel burn times.
 
-Recipes come from the vanilla 1.21.11 server jar's datapack (recipe/*.json) —
+Recipes come from the canonical version's server jar datapack (recipe/*.json) —
 four cooker types: minecraft:smelting (furnace), minecraft:blasting (blast
 furnace), minecraft:smoking (smoker), minecraft:campfire_cooking (campfire).
 Ingredients may be item names or #tags; tags resolve transitively via the
@@ -14,13 +14,14 @@ the common set is emitted by name so the ids stay generated.
 Run: python3 scripts/gen_smelting.py [path-to-server.jar]
 (item ids from vanilla's registries report, via scripts/vanillareport.py)
 """
+import canon
 import io, json, sys, os, subprocess, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/server-1.21.11.jar")
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "smelting_gen.go")
 
-item_id = {i["name"]: i["id"] for i in vanillareport.registry("1.21.11", "item")}
+item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}
 
 # The bundler jar nests the real server jar.
 outer = zipfile.ZipFile(JAR)

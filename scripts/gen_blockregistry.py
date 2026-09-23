@@ -5,12 +5,13 @@ registries report. Block-event frames carry this id.
 
 Run: python3 scripts/gen_blockregistry.py [path-to-registries.json]
 """
+import canon
 import json
 import os
 import subprocess
 import sys
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/vanilla/reports/1.21.11/registries.json")
+SRC = sys.argv[1] if len(sys.argv) > 1 else canon.report("registries.json")
 OUT = "internal/worldgen/blockregistry_gen.go"
 
 entries = json.load(open(SRC))["minecraft:block"]["entries"]
