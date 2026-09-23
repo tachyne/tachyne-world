@@ -83,7 +83,11 @@ func (b *stubDaemonBus) requestMany(subject string, data any, _ time.Duration) (
 func TestDaemonFleetCommand(t *testing.T) {
 	s, h, p := breakPlaceServer(t)
 	stub := &stubDaemonBus{replies: []string{`{"ok":true,"manager":"shard-0"}`}}
-	h.bus = stub
+	// The hub is already running: the bus is its field, so swap it on the
+	// hub goroutine (a spring washing a plant out publishes a drop).
+	if !h.runOnHub(func() { h.bus = stub }) {
+		t.Fatal("hub did not take the stub bus")
+	}
 
 	// Not an op: refused before any bus traffic.
 	s.handleCommand(p, "plugin list")

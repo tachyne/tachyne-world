@@ -2,6 +2,7 @@ package server
 
 import (
 	"testing"
+	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -175,5 +176,38 @@ func TestUnsupportedStalactiteFallsInsteadOfBreaking(t *testing.T) {
 	}
 	if !landed {
 		t.Fatal("it should have come to rest lower down, not vanished")
+	}
+}
+
+// Two stalactites side by side, both let go in the same tick: each is still
+// in place (it falls on a later tick), and each is the other's neighbour. The
+// support sweep once re-queued them after each other forever and stalled the
+// hub until the liveness probe killed the pod (2026-09-23).
+func TestSideBySideStalactitesLetGoWithoutStallingTheSweep(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	tip := dripstoneState(dripTip, false, false)
+	for dx := 0; dx <= 1; dx++ {
+		w.SetBlock(x+dx, y+6, z, worldgen.BlockBase("dripstone_block"))
+		w.SetBlock(x+dx, y+5, z, tip)
+		for dy := 0; dy <= 4; dy++ {
+			w.SetBlock(x+dx, y+dy, z, worldgen.Air)
+		}
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.setBlockAt(players, 0, blockPos{x, y + 6, z}, worldgen.Air)
+		h.setBlockAt(players, 0, blockPos{x + 1, y + 6, z}, worldgen.Air)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the support sweep never finished")
+	}
+	runTicks(h, players, h.tick.Load(), h.tick.Load()+40)
+	for dx := 0; dx <= 1; dx++ {
+		if w.At(x+dx, y+5, z) == tip {
+			t.Errorf("stalactite %d should have let go", dx)
+		}
 	}
 }

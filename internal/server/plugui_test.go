@@ -86,7 +86,11 @@ func TestPluginUIBrowseAndAct(t *testing.T) {
 	stub := &stubDaemonBus{replies: []string{
 		`{"ok":true,"manager":"shard-0","daemons":[{"manager":"shard-0","name":"webmap","module":"github.com/x/mapd","built":"v1.0.0","latest":"v1.1.0","outdated":true,"status":"running","restarts":0}]}`,
 	}}
-	h.bus = stub
+	// The hub is already running: the bus is its field, so swap it on the
+	// hub goroutine (a spring washing a plant out publishes a drop).
+	if !h.runOnHub(func() { h.bus = stub }) {
+		t.Fatal("hub did not take the stub bus")
+	}
 
 	s.Ops[p.name] = true
 	s.handleCommand(p, "plugin") // bare /plugin opens the browser

@@ -38,6 +38,11 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **The world no longer freezes when two stalactites let go together.** When
+  the ceiling under two side-by-side stalactites was removed, the check for
+  what had lost its support passed the two back and forth for ever. The game
+  stalled, the pod was restarted, and every player was disconnected. Both
+  now fall as they should.
 - **26.2 players see 26.3's items.** An item a 26.2 client doesn't have
   used to be an empty slot. Poplar and the wool and concrete stairs and
   slabs now show as the item of their stand-in block, and explorer maps as

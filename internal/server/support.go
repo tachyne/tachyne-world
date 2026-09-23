@@ -354,7 +354,11 @@ func oppositeOf(facing string) string {
 // or a stack of torches goes all the way.
 func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos) {
 	queue := []blockPos{pos}
-	for len(queue) > 0 && len(queue) < 512 {
+	// Bounded by the work done, not only the queue's length: a queue that
+	// pops one cell and pushes one back never grows, and two cells handing
+	// each other back once spun the hub until the liveness probe killed the
+	// pod (2026-09-23).
+	for steps := 0; len(queue) > 0 && len(queue) < 512 && steps < 4096; steps++ {
 		p := queue[0]
 		queue = queue[1:]
 		for _, d := range supportNeighbours {
@@ -412,9 +416,12 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			// A stalactite does not break when its grip goes — it FALLS, whole,
 			// and the tip is the end that hurts (PointedDripstoneBlock.tick →
 			// spawnFallingStalactite).
+			// Nothing changes here this tick — the fall is a scheduled update,
+			// and its own write sweeps around it — so the cell is not queued:
+			// a stalactite still hanging beside it would find it unsupported
+			// again, and the two would re-queue each other for ever.
 			if isStalactite(st) {
 				h.dropStalactite(players, dim, n)
-				queue = append(queue, n)
 				continue
 			}
 			h.setBlockAt(players, dim, n, worldgen.Air)
