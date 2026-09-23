@@ -19,6 +19,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "pro
 items = vanillareport.registry(canon.VERSION, "item")
 blocks = vanillareport.blocks(canon.VERSION)
 ents = vanillareport.registry(canon.VERSION, "entity_type")
+attrs = vanillareport.registry(canon.VERSION, "attribute")
 if [e["id"] for e in ents] != list(range(len(ents))):
     raise SystemExit("entity ids are not dense from 0")
 
@@ -45,6 +46,12 @@ L += ["}",
       "// canonicalBlockStates is every block's canonical DEFAULT state id, by name.",
       "var canonicalBlockStates = map[string]int32{"]
 L += ['\t"%s": %d,' % (b["name"], b["defaultState"]) for b in sorted(blocks, key=lambda b: b["name"])]
+L += ["}",
+      "",
+      "// canonicalAttributeIDs is every attribute's canonical registry id, by its",
+      "// namespaced name (update_attributes carries these).",
+      "var canonicalAttributeIDs = map[string]int32{"]
+L += ['\t"minecraft:%s": %d,' % (e["name"], e["id"]) for e in sorted(attrs, key=lambda e: e["name"])]
 L += ["}", ""]
 with open(OUT, "w") as f:
     f.write("\n".join(L))
