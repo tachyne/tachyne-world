@@ -38,6 +38,13 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Sprinting and sneaking on 26.x clients.** 1.21.6 dropped the two sneak
+  actions from the client's movement command, so every later action arrived
+  two places off: starting to sprint read as "leave bed" and stopping read
+  as nothing. Sprinting was never seen, so there were no sprint jumps, no
+  faster hunger and no sprint knockback. Sneaking now comes from the
+  client's input packet the way vanilla reads it, and sprinting is carried
+  on every move.
 - **Eating from the offhand works, and no longer crashes the server.**
   Letting go of food held in the offhand could crash the whole world, and
   offhand food was never actually eaten. Food, potions, milk and ominous

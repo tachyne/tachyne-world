@@ -24,10 +24,11 @@ overrides — and graded unit by unit, rather than estimated:
 
 | Graded units | OK | PARTIAL | MISSING | N-A |
 |---:|---:|---:|---:|---:|
-| 2,413 | 1,172 (51%) | 763 | 381 | 97 |
+| 2,413 | 1,316 (57%) | 749 | 260 | 88 |
 
-So **51% of vanilla's surface matches in normal play and 84% is at least
-present**. What the grades mean and how each area scores is in
+So **57% of vanilla's surface matches in normal play and 89% is at least
+present** (re-graded against 26.3 on 2026-09-23; it was 51% and 84% on
+2026-09-19). What the grades mean and how each area scores is in
 [docs/PARITY.md](docs/PARITY.md); [CHANGELOG.md](CHANGELOG.md) is the
 whole-system timeline of what changes, release by release.
 

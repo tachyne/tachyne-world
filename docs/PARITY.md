@@ -1,7 +1,7 @@
-# Vanilla parity — where tachyne stands (scorecard, 2026-09-19; defects updated 2026-09-20)
+# Vanilla parity — where tachyne stands (re-graded 2026-09-23)
 
 The goal is one-for-one behavioural parity with vanilla Java (the engine's canonical
-content version is 1.21.11; the reference behaviour is 26.2) *before* anything that is not
+content version is 26.3, and so is the reference behaviour) *before* anything that is not
 vanilla is added. This page is the scorecard: every unit of vanilla's server-side surface,
 enumerated mechanically (registries, data files, and the behaviour hooks each class
 overrides), graded against the engine as it stands today. It replaces the 2026-07 plan
@@ -16,26 +16,48 @@ command-block/creative-only constructs, or client-side only.
 
 | Dimension | Units | OK | PARTIAL | MISSING | N-A | OK share | OK+PARTIAL |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Block behaviour hooks A (random tick, scheduled tick, neighbour change, use, place, entity inside, comparator read) | 297 | 138 | 119 | 27 | 13 | 49% | 90% |
-| Block behaviour hooks B (signals, projectile hit, removal, step/fall, survival, drops, explosions, placement state, shape updates) | 412 | 214 | 141 | 49 | 8 | 53% | 88% |
-| Block entities (49) and menus (25) | 75 | 37 | 29 | 0 | 9 | 56% | 100% |
-| Item behaviours and item components | 103 | 57 | 28 | 6 | 12 | 63% | 93% |
-| Entity roster (attributes, spawn rules, drops, sounds, signature mechanics) | 157 | 36 | 112 | 1 | 8 | 24% | 99% |
-| Monster AI (goal lists) | 46 | 2 | 41 | 2 | 1 | 4% | 96% |
-| Creature, villager and golem AI (goals and brains) | 48 | 2 | 40 | 5 | 1 | 4% | 89% |
-| Recipes, loot tables, advancements, statistics, tags | 162 | 81 | 44 | 37 | 0 | 50% | 77% |
-| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 351 | 67 | 44 | 16 | 76% | 90% |
-| World systems and worldgen | 279 | 124 | 88 | 60 | 7 | 46% | 78% |
-| Player mechanics, commands, chat/social, protocol coverage | 356 | 130 | 54 | 150 | 22 | 39% | 55% |
-| **All** | **2413** | **1172** | **763** | **381** | **97** | **51%** | **84%** |
+| Block behaviour hooks A (random tick, scheduled tick, neighbour change, use, place, entity inside, comparator read) | 297 | 149 | 123 | 13 | 12 | 52% | 95% |
+| Block behaviour hooks B (signals, projectile hit, removal, step/fall, survival, drops, explosions, placement state, shape updates) | 412 | 237 | 147 | 21 | 7 | 59% | 95% |
+| Block entities (49) and menus (25) | 75 | 44 | 21 | 0 | 10 | 68% | 100% |
+| Item behaviours and item components | 103 | 62 | 28 | 2 | 11 | 67% | 98% |
+| Entity roster (attributes, spawn rules, drops, sounds, signature mechanics) | 157 | 56 | 93 | 0 | 8 | 38% | 100% |
+| Monster AI (goal lists) | 46 | 2 | 41 | 3 | 0 | 4% | 93% |
+| Creature, villager and golem AI (goals and brains) | 48 | 1 | 44 | 3 | 0 | 2% | 94% |
+| Recipes, loot tables, advancements, statistics, tags | 162 | 116 | 37 | 9 | 0 | 72% | 94% |
+| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 378 | 62 | 25 | 13 | 81% | 95% |
+| World systems and worldgen | 279 | 130 | 98 | 46 | 5 | 47% | 83% |
+| Player mechanics, commands, chat/social, protocol coverage | 356 | 141 | 55 | 138 | 22 | 42% | 59% |
+| **All** | **2413** | **1316** | **749** | **260** | **88** | **57%** | **89%** |
 
-Of 2316 gradeable units, 1172 (51%) are one-for-one with vanilla today, 763 (33%) exist with a
-deviation, and 381 (16%) are absent. The PARTIAL column is where the work is, and most of it
-traces back to a dozen cross-cutting defects; fixing each moves many rows at once.
+Of 2325 gradeable units, 1316 (57%) are one-for-one with vanilla today, 749 (32%) exist with a
+deviation, and 260 (11%) are absent. On 2026-09-19 it was 51%, 33% and 16%.
 
-Only the rules-and-values row has been re-counted since the audit (2026-09-20, after the
-villager, difficulty-scaling and gamerule work below). The other rows still carry the audit's
-own numbers and read low, since work has landed against them without a recount.
+Every dimension was re-graded against 26.3 on 2026-09-23. Every PARTIAL and MISSING row was
+re-read against the engine and vanilla, and OK rows were spot-checked for regressions. Some OK
+rows turned out not to be, and 26.3 content that is now in scope (the sulfur cube, spears, the
+camel husk) counts as MISSING, so the gain is smaller than the raw count of fixes.
+
+## Largest remaining gaps (2026-09-23)
+
+1. **Movement input from 26.x clients.** player_command actions arrived two numbers off,
+   which broke elytra rocket boosts. Sprinting never reached the game loop (no sprint hunger,
+   wrong sprint combat rules), and the shift key never made anyone crouch. Fixed on
+   2026-09-23; deploying.
+2. **Item data lost on pickup.** Picking an item up keeps only a few of its components, so
+   shulker contents, potions, bundle contents and dye colours are stripped.
+3. **Other dimensions.** Nether and End dispensers, TNT, note blocks and bells act on the
+   overworld, and block removal there never tells neighbouring redstone.
+4. **Mob combat.** Ranged mobs never attack non-player targets, armed mobs hit one point too
+   hard, and panic ignores each species' rules. This is the last gap on most farm animals.
+5. **26.3 data still read from 1.21.11.** Villager trades (26.3 moved them to data files and
+   changed values) and advancements. Seven advancements cannot be earned.
+6. **World generation.** There are no aquifers or underground water (lush-cave water floats
+   over carved air), no mineshaft or stronghold rooms, and many ground-cover features are
+   missing.
+7. **26.3 content with no behaviour yet.** The sulfur cube, spears and lunge, and the camel
+   husk.
+8. **Players seeing each other.** Arm swings, mining cracks and the explosion packet are not
+   broadcast.
 
 ## Cross-cutting defects
 

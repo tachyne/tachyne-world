@@ -170,6 +170,13 @@ func (r *remotePlayer) Action(v any) {
 	case attachproto.SelTrade:
 		h.post(evSelTrade{eid: p.eid, slot: e.Slot})
 	case attachproto.Input:
+		// Since 1.21.6 the shift key comes only in player_input (the sneak
+		// actions left player_command): it is what crouches, and what makes a
+		// click place against a chest instead of opening it.
+		if e.Sneak != p.sneaking {
+			p.sneaking = e.Sneak
+			h.post(evSneak{eid: p.eid, sneaking: e.Sneak})
+		}
 		h.post(evInput{eid: p.eid, in: e})
 	case attachproto.WindowClick:
 		ev := evClick{eid: p.eid, windowID: e.ID, slot: int16(e.Slot), mode: e.Mode, button: e.Button,
@@ -199,10 +206,12 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evEditBook{eid: p.eid, slot: e.Slot, pages: e.Pages, title: e.Title, hasTitle: e.HasTitle})
 	case attachproto.PlayerAction:
 		switch e.Action { // 0 sneak, 1 unsneak, 2 leave bed, 3/4 sprint
-		case 0:
+		case 0: // PRESS_SHIFT_KEY (1.21.5 clients; later ones send the shift bit)
 			p.sneaking = true
+			h.post(evSneak{eid: p.eid, sneaking: true})
 		case 1:
 			p.sneaking = false
+			h.post(evSneak{eid: p.eid, sneaking: false})
 		case 2:
 			h.post(evStopSleep{eid: p.eid})
 		case 3:
@@ -241,7 +250,10 @@ func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) 
 	// the domain-events refactor, freezing p.yaw at 0 — every yaw-derived
 	// placement silently faced the yaw-0 direction until this line.
 	r.p.yaw, r.p.pitch = yaw, pitch
-	r.s.hub.post(evMove{eid: r.p.eid, x: x, y: y, z: z, yaw: yaw, pitch: pitch, onGround: onGround})
+	// sprinting rides the move: player_command's start/stop sprint set it,
+	// and the hub reads it for sprint hunger, knockback and the crit/sweep
+	// rules. It was never passed, so the hub always saw a walking player.
+	r.s.hub.post(evMove{eid: r.p.eid, x: x, y: y, z: z, yaw: yaw, pitch: pitch, onGround: onGround, sprinting: r.p.sprinting})
 	r.s.checkPendingDim(r.p) // portal dwell fires on the movement cadence, like playLoop
 }
 
