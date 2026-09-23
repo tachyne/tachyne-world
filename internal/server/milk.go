@@ -67,15 +67,15 @@ func (h *hub) tryMilkStew(players map[int32]*tracked, t *tracked, m *mob) bool {
 // left holding the bucket. Unlike food it can be drunk on a full stomach —
 // which is the whole point of carrying it.
 func (h *hub) drinkMilk(t *tracked, slot int) {
-	s := &t.inv.slots[slot]
-	if s.item != itemMilkBucket || s.count == 0 {
+	s := t.handStack(slot)
+	if s == nil || s.item != itemMilkBucket || s.count == 0 {
 		return
 	}
 	h.clearEffects(t)
 	h.incStat(t, attachproto.StatUsed, s.item, 1)
 	if t.gamemode != gmCreative {
 		s.item, s.count = itemBucket, 1
-		h.sendSlot(t, slot)
+		h.sendHandSlot(t, slot)
 	}
 	t.p.trySendEv(soundEv("minecraft:entity.player.burp", sndPlayer, t.x, t.y, t.z, 1, 1))
 }

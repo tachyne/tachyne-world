@@ -744,7 +744,9 @@ func (h *hub) stopEating(players map[int32]*tracked, t *tracked) {
 	slot := t.eatingSlot
 	elapsed := h.tick.Load() - t.eatingAt
 	t.eatingSlot = -1
-	if elapsed >= uint64(eatNearlyTicks(t.inv.slots[slot].item)) {
+	// handStack, not inv.slots: the offhand is slot 40 of a 36-slot array,
+	// and reading it directly panicked the hub when an offhand eat was let go.
+	if s := t.handStack(slot); s != nil && elapsed >= uint64(eatNearlyTicks(s.item)) {
 		h.eat(players, t, slot)
 	}
 }
@@ -772,10 +774,10 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 // hunger + saturation. Survival only, and only when not already full. Reached
 // via the eat-hold state machine above (use_item starts, eatDuration applies).
 func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
-	if t.gamemode != gmSurvival || t.dead || t.inv == nil || slot < 0 || slot >= invSize {
-		return
+	if t.gamemode != gmSurvival || t.dead || t.inv == nil || t.handStack(slot) == nil {
+		return // either hand: a hotbar slot or the offhand, which eats as vanilla's does
 	}
-	s := &t.inv.slots[slot]
+	s := t.handStack(slot)
 	if s.item != itemPotion && s.count > 0 {
 		h.vibAt(t.dim, freqEat, t.x, t.y, t.z, t.p.eid)
 	}
@@ -791,7 +793,7 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 		h.drinkOminousBottle(players, t, slot)
 		return
 	}
-	s = &t.inv.slots[slot]
+	s = t.handStack(slot)
 	pts, ok := foodPoints[s.item]
 	if !ok || s.count == 0 || (t.food >= maxFood && !alwaysEdible[s.item]) {
 		return // vanilla canEat: full players may still eat the can_always_eat foods
@@ -812,7 +814,7 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	h.giveUseRemainder(t, slot, eaten)
 	h.sendHealth(t)
-	h.sendSlot(t, slot)
+	h.sendHandSlot(t, slot)
 	t.p.trySendEv(soundEv("minecraft:entity.player.burp", sndPlayer, t.x, t.y, t.z, 1, 1))
 }
 
@@ -842,7 +844,7 @@ func (h *hub) giveUseRemainder(t *tracked, slot int, eaten int32) {
 	if !ok {
 		return
 	}
-	if s := &t.inv.slots[slot]; s.item == 0 {
+	if s := t.handStack(slot); s != nil && s.item == 0 {
 		*s = invStack{item: left, count: 1}
 		return
 	}

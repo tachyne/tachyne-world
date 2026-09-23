@@ -47,8 +47,8 @@ func ominousBottleLevel(st invStack) int {
 // drinkOminousBottle applies the bottle's Bad Omen (amplifier = level-1)
 // and spends it.
 func (h *hub) drinkOminousBottle(players map[int32]*tracked, t *tracked, slot int) {
-	s := &t.inv.slots[slot]
-	if s.item != itemOminousBottle || s.count == 0 {
+	s := t.handStack(slot)
+	if s == nil || s.item != itemOminousBottle || s.count == 0 {
 		return
 	}
 	level := ominousBottleLevel(*s)
@@ -57,7 +57,7 @@ func (h *hub) drinkOminousBottle(players map[int32]*tracked, t *tracked, slot in
 	if s.count == 0 {
 		*s = invStack{}
 	}
-	h.sendSlot(t, slot)
+	h.sendHandSlot(t, slot)
 	h.applyEffect(players, t, effBadOmen, level-1, badOmenBottleSecs)
 }
 

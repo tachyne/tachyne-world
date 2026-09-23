@@ -38,6 +38,10 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Eating from the offhand works, and no longer crashes the server.**
+  Letting go of food held in the offhand could crash the whole world, and
+  offhand food was never actually eaten. Food, potions, milk and ominous
+  bottles now work from either hand, as in vanilla.
 - **Water in a waterlogged block flows out, as vanilla's does.** A
   waterlogged stair, slab, fence or other block holds a water source, and
   now pours it out of every side its shape leaves open. A stair pours out

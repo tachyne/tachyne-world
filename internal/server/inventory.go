@@ -316,6 +316,16 @@ func (h *hub) sendSlot(t *tracked, logical int) {
 	}
 }
 
+// sendHandSlot resyncs a hand's stack: a hotbar slot, or the offhand
+// (offhandSlot is not a main-inventory index).
+func (h *hub) sendHandSlot(t *tracked, slot int) {
+	if slot == offhandSlot {
+		h.sendOffhand(t)
+		return
+	}
+	h.sendSlot(t, slot)
+}
+
 // syncHotbar mirrors all hotbar slots into the player (so survival placement can
 // read the held item connection-side).
 func (h *hub) syncHotbar(t *tracked) {
