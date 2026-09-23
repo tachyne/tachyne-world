@@ -22,63 +22,86 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
-// idSpaceVersion marks which block-state id space the persisted edits use. Bump
-// it (and migrateEditsIDSpace remaps) whenever the canonical version changes.
+// idSpaceVersion is the canonical content version: the id space every
+// persisted block state, item, entity type and statistic is written in. Bump
+// it with the canonical version and the migrations below carry saves across.
 const idSpaceVersion = "1.21.11"
 
-// migrateEditsIDSpace remaps every persisted block edit from the previous
-// canonical id space (1.21.5 / proto 770) to the current one, exactly once. The
-// marker file records the id space already applied, so subsequent restarts skip.
+// savedIDSpace reads the id space a marker file records. No marker means a
+// save from before markers existed: the 1.21.5 canonical.
+func savedIDSpace(marker string) string {
+	b, err := os.ReadFile(marker)
+	if err != nil {
+		return "1.21.5"
+	}
+	return strings.TrimSpace(string(b))
+}
+
+// migrateEditsIDSpace remaps every persisted block edit from the id space its
+// marker records to the canonical one, exactly once. Every state is checked
+// before any is changed, so a state with no canonical counterpart leaves the
+// world as it was rather than half migrated.
 func (s *Server) migrateEditsIDSpace() error {
 	marker := filepath.Join(filepath.Dir(s.WorldFile), ".idspace")
-	if b, _ := os.ReadFile(marker); strings.TrimSpace(string(b)) == idSpaceVersion {
+	from := savedIDSpace(marker)
+	if from == idSpaceVersion {
 		return nil
 	}
-	// UnmapID(RegBlockState, 770, id) maps a 1.21.5 client id back to the 1.21.11
-	// canonical id (reverseTables invert the 1.21.11→1.21.5 forward table).
-	remap := func(state uint32) uint32 {
-		return uint32(protocol.UnmapID(protocol.RegBlockState, 770, int32(state)))
-	}
-	total := 0
-	for _, w := range []*world.World{s.world, s.nether, s.end} {
-		if w == nil {
-			continue
-		}
-		n, err := w.MigrateEdits(remap)
+	worlds := []*world.World{s.world, s.nether, s.end}
+	for _, pass := range []string{"check", "apply"} {
+		m, err := newContentMigrator(from)
 		if err != nil {
 			return err
 		}
-		total += n
+		remap := func(state uint32) uint32 {
+			if state == 0 {
+				return 0
+			}
+			n := uint32(m.remap(protocol.RegBlockState, int64(state)))
+			if pass == "check" {
+				return state
+			}
+			return n
+		}
+		total := 0
+		for _, w := range worlds {
+			if w == nil {
+				continue
+			}
+			n, err := w.MigrateEdits(remap)
+			if err != nil {
+				return err
+			}
+			total += n
+		}
+		if m.err != nil {
+			return m.err
+		}
+		if pass == "apply" {
+			log.Printf("id-space migration: remapped %d block edits %s→%s", total, from, idSpaceVersion)
+		}
 	}
-	log.Printf("id-space migration: remapped %d block edits 1.21.5→%s", total, idSpaceVersion)
 	return writeAtomic(marker, []byte(idSpaceVersion+"\n"))
 }
 
-// migrateItemIDSpace remaps persisted ITEM ids (survival inventories + world
-// containers) from 1.21.5 to the current canonical version, exactly once. Guarded
-// by its own marker, independent of the block-edit migration above.
-func (s *Server) migrateItemIDSpace() error {
+// migrateContentIDSpace carries every JSON store holding built-in registry
+// ids — inventories, containers, mobs, statistics — from the id space its
+// marker records to the canonical one, exactly once, before any store loads
+// (see contentmigrate.go).
+func (s *Server) migrateContentIDSpace() error {
 	marker := filepath.Join(filepath.Dir(s.WorldFile), ".itemspace")
-	if b, _ := os.ReadFile(marker); strings.TrimSpace(string(b)) == idSpaceVersion {
+	from := savedIDSpace(marker)
+	if from == idSpaceVersion {
 		return nil
 	}
-	remap := func(id int32) int32 { return protocol.UnmapID(protocol.RegItem, 770, id) }
-	n := 0
-	if s.hub.invs != nil {
-		n += s.hub.invs.migrateItemIDs(remap)
+	n, err := migrateContent(contentFiles{
+		Inventories: s.InventoryFile, Containers: s.ContainerFile,
+		Mobs: s.MobFile, Stats: s.StatsFile,
+	}, from, idSpaceVersion)
+	if err != nil {
+		return err
 	}
-	if s.hub.containers != nil {
-		n += s.hub.containers.migrateItemIDs(remap)
-	}
-	if n > 0 {
-		if s.hub.invs != nil {
-			s.hub.invs.flush()
-		}
-		if s.hub.containers != nil {
-			s.hub.containers.flush()
-		}
-	}
-	log.Printf("item id-space migration: remapped %d item ids 1.21.5→%s", n, idSpaceVersion)
+	logContentMigration(n, from, idSpaceVersion)
 	return writeAtomic(marker, []byte(idSpaceVersion+"\n"))
 }
 
@@ -353,6 +376,9 @@ func (s *Server) Serve() error {
 		if err := s.migrateEditsIDSpace(); err != nil {
 			log.Printf("WARNING: world id-space migration failed: %v", err)
 		}
+		if err := s.migrateContentIDSpace(); err != nil {
+			log.Fatalf("content id-space migration failed, nothing written: %v", err)
+		}
 	}
 	s.resolveSpawn() // fix an auto (x,z) spawn Y before anything reads it
 	if s.gate == nil {
@@ -465,11 +491,6 @@ func (s *Server) Serve() error {
 		s.hub.restoreRaids(s.hub.mobstore.raids()) // raids in progress pick up mid-wave
 		// One-time ITEM id-space migration for persisted inventories + containers
 		// (before the hub loads them in run()), mirroring the block-edit migration.
-		if s.WorldFile != "" {
-			if err := s.migrateItemIDSpace(); err != nil {
-				log.Printf("WARNING: item id-space migration failed: %v", err)
-			}
-		}
 		s.hub.spawns = newSpawnStore(s.SpawnPointFile)
 		s.hub.hivestore = newHiveStore(hivesPathFor(s.SpawnPointFile))
 		s.hub.hivesLoad()

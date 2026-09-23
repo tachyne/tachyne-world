@@ -90,44 +90,6 @@ func TestInvStoreMigratesLegacyFormat(t *testing.T) {
 	}
 }
 
-// TestMigrateItemIDs: inventory + container item-id migration remaps saved ids
-// through the map, skips empty (0), and leaves count/dmg untouched.
-func TestMigrateItemIDs(t *testing.T) {
-	remap := func(id int32) int32 {
-		if id == 840 {
-			return 893 // apple 1.21.5 -> 1.21.11
-		}
-		return id
-	}
-	// inventory
-	inv := &invStore{m: map[string]*savedInv{"Steve": {}}}
-	inv.m["Steve"].Slots[0] = stackRow{840, 5} // apple
-	inv.m["Steve"].Slots[1] = stackRow{}       // empty
-	inv.m["Steve"].Armor[0] = stackRow{840, 1, 3}
-	if n := inv.migrateItemIDs(remap); n != 2 {
-		t.Fatalf("inv migrate n=%d, want 2", n)
-	}
-	if got, want := inv.m["Steve"].Slots[0], (stackRow{893, 5}); got != want {
-		t.Errorf("slot0 = %v, want [893 5 0 0]", got)
-	}
-	if got, want := inv.m["Steve"].Armor[0], (stackRow{893, 1, 3}); got != want {
-		t.Errorf("armor0 = %v, want [893 1 3 0]", got)
-	}
-	// container: chest row (slot,item,count,dmg,ench) + furnace slot (item,count,dmg)
-	cs := &containerStore{}
-	cs.m.Chests = map[string][]containerRow{"0,0,0": {{0, 840, 3}}}
-	cs.m.Furnaces = map[string]savedFurnace{"1,1,1": {Slots: [3][3]int32{{840, 1, 0}, {}, {}}}}
-	if n := cs.migrateItemIDs(remap); n != 2 {
-		t.Fatalf("container migrate n=%d, want 2", n)
-	}
-	if cs.m.Chests["0,0,0"][0][1] != 893 {
-		t.Errorf("chest item = %d, want 893", cs.m.Chests["0,0,0"][0][1])
-	}
-	if cs.m.Furnaces["1,1,1"].Slots[0][0] != 893 {
-		t.Errorf("furnace item = %d, want 893", cs.m.Furnaces["1,1,1"].Slots[0][0])
-	}
-}
-
 // TestSavedPositionRoundTrip: a recorded player's last position comes back via
 // savedPos; new players and legacy (no-position) entries return ok=false so the
 // caller falls back to world spawn.

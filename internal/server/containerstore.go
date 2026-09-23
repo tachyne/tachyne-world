@@ -28,7 +28,7 @@ type savedItem struct {
 	X     float64  `json:"x"`
 	Y     float64  `json:"y"`
 	Z     float64  `json:"z"`
-	Item  int32    `json:"item"`
+	Item  int32    `json:"item" mig:"item"`
 	Count int      `json:"count"`
 	Dmg   int      `json:"dmg,omitempty"`
 	Ench  int32    `json:"ench,omitempty"`
@@ -157,7 +157,7 @@ type savedBin struct {
 }
 
 type savedFurnace struct {
-	Slots    [3][3]int32 `json:"slots"` // (item,count,dmg) — input, fuel, output
+	Slots    [3][3]int32 `json:"slots" mig:"item0"` // (item,count,dmg) — input, fuel, output
 	BurnLeft int         `json:"burnLeft,omitempty"`
 	BurnMax  int         `json:"burnMax,omitempty"`
 	Cook     int         `json:"cook,omitempty"`
@@ -306,7 +306,7 @@ func parseSimKey(k string) (simPos, bool) {
 // one-line change, where a [N]int32 literal silently TRUNCATES the copy in
 // slotRow when the stack pack outgrows it (which is how hiveID nearly got
 // dropped from chest rows).
-type containerRow = [1 + len(stackRow{})]int32
+type containerRow [1 + len(stackRow{})]int32
 
 // slotRow packs a slot index + stack into a sparse container row.
 func slotRow(i int, st invStack) containerRow {
@@ -508,43 +508,6 @@ func (s *containerStore) recordFurnaces(furnaces map[simPos]*furnace) {
 	s.mu.Unlock()
 }
 
-// migrateItemIDs rewrites every saved item id (furnaces, chests, bins, dropped
-// items) through remap — one-time id-space migration after a canonical bump.
-// Returns the count changed; item 0 (empty) is skipped.
-func (s *containerStore) migrateItemIDs(remap func(int32) int32) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	n := 0
-	mig := func(id *int32) {
-		if *id != 0 {
-			if ns := remap(*id); ns != *id {
-				*id = ns
-				n++
-			}
-		}
-	}
-	for k, f := range s.m.Furnaces { // savedFurnace is a value copy → write back
-		for i := range f.Slots {
-			mig(&f.Slots[i][0])
-		}
-		s.m.Furnaces[k] = f
-	}
-	for _, rows := range s.m.Chests { // slice shares backing → in place
-		for i := range rows {
-			mig(&rows[i][1])
-		}
-	}
-	for _, b := range s.m.Bins { // b.Slots slice shares backing → in place
-		for i := range b.Slots {
-			mig(&b.Slots[i][1])
-		}
-	}
-	for i := range s.m.Items {
-		mig(&s.m.Items[i].Item)
-	}
-	return n
-}
-
 // flush writes the table to disk atomically, waiting for any background write
 // first so an explicit save cannot be overtaken by an older snapshot.
 func (s *containerStore) flush() {
@@ -607,7 +570,7 @@ func (s *containerStore) loadJukeboxes() map[simPos]*jukebox {
 type savedBrew struct {
 	BrewTime int   `json:"brew_time,omitempty"`
 	Fuel     int   `json:"fuel,omitempty"`
-	Ing      int32 `json:"ing,omitempty"`
+	Ing      int32 `json:"ing,omitempty" mig:"item"`
 }
 
 // recordBrews snapshots every brewing stand's clock. Without it a restart

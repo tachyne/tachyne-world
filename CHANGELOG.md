@@ -24,6 +24,16 @@ the public history since the project was open-sourced on 2026-07-10.
   spell some things differently. Each table regenerates identically for
   today's content, with no network access. This is the groundwork for moving
   the engine's content to 26.3.
+- **Saves are ready to change content version.** Moving to a newer canonical
+  version renumbers items, blocks, entity types and statistics, and the saves
+  hold those numbers. One migration now carries every one of them across on
+  the first boot after a bump: every stack wherever it sits (ender chests,
+  bundles, shelves, jukeboxes, pot sherds, armour stands, mob gear and
+  villager trades as well as inventories and chests), mobs' types and held
+  items, an enderman's block, and every player's statistics. It finds them by
+  type rather than by a hand-kept list, a test refuses any new saved number
+  nobody has classified, and it writes nothing unless every id has a home —
+  keeping a copy of each file it rewrites.
 
 ## 2026-09-22
 

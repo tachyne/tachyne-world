@@ -107,7 +107,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow = [36]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds; older rows load with the tail zero
+type stackRow [36]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -257,33 +257,6 @@ func (s *invStore) record(name string, t *tracked) {
 	s.mu.Lock()
 	s.m[name] = snap
 	s.mu.Unlock()
-}
-
-// migrateItemIDs rewrites every saved item id (main slots, armor, offhand)
-// through remap — for a one-time id-space migration after a canonical version
-// bump. Returns the count changed. Item 0 (empty) is left alone.
-func (s *invStore) migrateItemIDs(remap func(int32) int32) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	n := 0
-	mig := func(id *int32) {
-		if *id != 0 {
-			if ns := remap(*id); ns != *id {
-				*id = ns
-				n++
-			}
-		}
-	}
-	for _, inv := range s.m {
-		for i := range inv.Slots {
-			mig(&inv.Slots[i][0])
-		}
-		for i := range inv.Armor {
-			mig(&inv.Armor[i][0])
-		}
-		mig(&inv.Offhand[0])
-	}
-	return n
 }
 
 // flush writes the table to disk atomically.

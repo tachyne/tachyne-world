@@ -73,7 +73,7 @@ type mobFile struct {
 // savedMob is the flattened, scalar/packed twin of *mob (cf. savedStand). Item
 // stacks ride through packStack (stackRow); the owner is a hex UUID string.
 type savedMob struct {
-	Etype   int     `json:"t"`
+	Etype   int     `json:"t" mig:"entity"`
 	Dim     int     `json:"d,omitempty"`
 	X       float64 `json:"x"`
 	Y       float64 `json:"y"`
@@ -109,7 +109,7 @@ type savedMob struct {
 	Anger         int    `json:"anger,omitempty"`
 	Neutral       bool   `json:"neut,omitempty"`
 	PatrolCaptain bool   `json:"capt,omitempty"`
-	CarriedBlk    uint32 `json:"eblk,omitempty"` // enderman: held block state
+	CarriedBlk    uint32 `json:"eblk,omitempty" mig:"state"` // enderman: held block state
 
 	Oxidation     int         `json:"ox,omitempty"`
 	Waxed         bool        `json:"wax,omitempty"`
@@ -123,7 +123,7 @@ type savedMob struct {
 	Chested       bool        `json:"chd,omitempty"`
 	Chest         []stackRow  `json:"chest,omitempty"`
 	Strength      int8        `json:"str,omitempty"`
-	Held          int32       `json:"held,omitempty"`
+	Held          int32       `json:"held,omitempty" mig:"item"`
 	HSpeed        float64     `json:"hspeed,omitempty"`         // horse family: rolled MOVEMENT_SPEED base (per-step units)
 	HJump         float64     `json:"hjump,omitempty"`          // horse family: rolled JUMP_STRENGTH base
 	HasEgg        bool        `json:"has_egg,omitempty"`        // turtle: carrying an egg home
@@ -147,7 +147,7 @@ type savedMob struct {
 	DupCD         int         `json:"dupcd,omitempty"`          // allay: duplication cooldown
 	SniffCD       int         `json:"sniffcd,omitempty"`        // sniffer: ticks until the next dig
 	Hoard         []stackRow  `json:"hoard,omitempty"`          // piglin: the gold it keeps (its off-hand item folded in)
-	Harness       int32       `json:"harn,omitempty"`
+	Harness       int32       `json:"harn,omitempty" mig:"item"`
 	// A lead tied to a FENCE survives a restart; one held by a player does not,
 	// because the leash drops the moment its holder disconnects (vanilla's
 	// tickLeash gives up as soon as the two cannot interact). So the only thing
@@ -194,15 +194,15 @@ type savedMob struct {
 // below; UnmarshalJSON still accepts either legacy array, so existing worlds
 // load unchanged.
 type savedOffer struct {
-	In      int32   `json:"i"`
+	In      int32   `json:"i" mig:"item"`
 	InN     int32   `json:"ic"`
-	Out     int32   `json:"o"`
+	Out     int32   `json:"o" mig:"item"`
 	OutN    int32   `json:"oc"`
 	MaxUses int32   `json:"mu"`
 	XP      int32   `json:"xp"`
 	Uses    int32   `json:"u,omitempty"`
 	Demand  int32   `json:"d,omitempty"`
-	C2Item  int32   `json:"c2,omitempty"`
+	C2Item  int32   `json:"c2,omitempty" mig:"item"`
 	C2N     int32   `json:"c2n,omitempty"`
 	Ench    []int32 `json:"e,omitempty"`   // one id<<8|lvl per enchantment
 	MapID   int32   `json:"m,omitempty"`   // a treasure map's map id
