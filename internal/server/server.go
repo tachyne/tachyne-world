@@ -49,6 +49,19 @@ func (s *Server) migrateEditsIDSpace() error {
 	}
 	worlds := []*world.World{s.world, s.nether, s.end}
 	for _, pass := range []string{"check", "apply"} {
+		if pass == "apply" {
+			// The edits are rewritten in place: keep each dimension's file as
+			// it was, as the JSON stores keep theirs.
+			dir := filepath.Dir(s.WorldFile)
+			for _, f := range []string{s.WorldFile, filepath.Join(dir, "nether.gob"), filepath.Join(dir, "end.gob")} {
+				if _, err := os.Stat(f); err != nil {
+					continue
+				}
+				if err := copyFile(f, f+".pre-"+idSpaceVersion); err != nil {
+					return fmt.Errorf("id-space migration: backing up %s: %w", f, err)
+				}
+			}
+		}
 		m, err := newContentMigrator(from)
 		if err != nil {
 			return err
