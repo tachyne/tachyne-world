@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Water inside waterlogged blocks shows on 26.x.** The newer clients are
+  told how much fluid each chunk section holds, and the count only knew
+  water and lava blocks — so a section whose only water sat in waterlogged
+  stairs, slabs, kelp or seagrass was sent as dry.
 - **Shulker boxes show up again on 26.2 and 26.3.** The newer clients
   numbering block entities one lower than 1.21.11 was handled from the wrong
   place: shulker boxes arrived without the block entity they are drawn

@@ -165,10 +165,13 @@ public class Extract {
             // solidity and the full-cube test all vary with a block's state.
             JsonArray emit = new JsonArray(), filter = new JsonArray(), box = new JsonArray();
             JsonArray solid = new JsonArray(), fullCube = new JsonArray(), solidRender = new JsonArray();
-            JsonArray bounds = new JsonArray(), mapColor = new JsonArray();
+            JsonArray bounds = new JsonArray(), mapColor = new JsonArray(), fluid = new JsonArray();
             for (BlockState st : states) {
                 // The state's map colour id (a bed's halves differ).
                 mapColor.add(st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id);
+                // Whether the state holds a fluid — water and lava, and every
+                // waterlogged block, kelp and seagrass (LevelChunkSection's fluidCount).
+                fluid.add(!st.getFluidState().isEmpty());
                 emit.add(st.getLightEmission());
                 filter.add(dampening(st));
                 VoxelShape shape = st.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
@@ -196,6 +199,7 @@ public class Extract {
             o.add("isSolidRender", solidRender);
             o.add("collisionBounds", bounds);
             o.add("mapColor", mapColor);
+            o.add("fluid", fluid);
             blocks.add(o);
         }
 
