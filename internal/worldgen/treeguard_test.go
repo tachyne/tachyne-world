@@ -135,6 +135,20 @@ func TestGeneratedTreesAvoidBuilds(t *testing.T) {
 		t.Error("a partly chopped tree was not grown")
 	}
 
+	// The grass under the trunk turned to dirt, as grass under a log does:
+	// the world did that too, and the tree still grows.
+	g = with(map[[3]int]uint32{{x, y - 1, z}: Dirt})
+	if got := g.GenerateChunk(cx, cz); !IsLog(sectionBlockAt(got, lx, y, lz)) {
+		t.Error("a tree whose ground turned to dirt was not grown")
+	}
+
+	// A tree that caught fire: fire in one log cell, lava in another. The
+	// world did that, not a player: the tree still grows.
+	g = with(map[[3]int]uint32{{x, y + 1, z}: fireStateForTest(), {x, y + 2, z}: LavaBase})
+	if got := g.GenerateChunk(cx, cz); !IsLog(sectionBlockAt(got, lx, y, lz)) || leavesIn(got) != leavesIn(base) {
+		t.Error("a tree with fire and lava in its cells was not grown")
+	}
+
 	// A castle: a stone ceiling across the whole chunk three blocks up,
 	// through the trunk. The tree does not grow up through the rooms.
 	roof := map[[3]int]uint32{}
@@ -164,4 +178,9 @@ func sameChunk(a, b *Chunk) bool {
 		}
 	}
 	return true
+}
+
+func fireStateForTest() uint32 {
+	lo, _, _ := BlockRangeOK("fire")
+	return lo
 }

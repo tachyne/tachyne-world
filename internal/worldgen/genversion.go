@@ -43,4 +43,9 @@ package worldgen
 // v18: a chopped tree grows again with its chopped logs left out, rather
 // than not at all — the tree guard counts only a player block in a log cell,
 // not the air a chopped log leaves.
-const GenVersion = 18
+//
+// v19: nor the fire, lava, water or plants the world leaves in a tree's
+// cells — a tree that caught fire was dropped whole on regeneration — nor
+// the soil under a trunk turning from grass to dirt and back, which dropped
+// nearly every tree anyone had lived near.
+const GenVersion = 19

@@ -38,6 +38,16 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Trees stop vanishing near where people play.** The tree guard also
+  counted what the world does by itself as a build: grass under a trunk
+  turning to dirt, and fire or lava left in a burning tree's cells. Nearly
+  every tree anyone had lived near, and every tree that caught fire, was
+  dropped when its chunk regenerated. That left bee nests, vines, fire and
+  lava hanging in the air. Only a player's own blocks move a tree aside now.
+- **Fire and flowing water or lava no longer freeze after a restart.** A
+  restart used to drop every pending block update, so a fire caught
+  mid-burn or lava caught mid-flow stopped where it was. They now pick up
+  again when a player comes near.
 - **No more Nether mobs above the ceiling.** Where the Nether's roof is open to
   the void above, natural spawning could still put a mob one block above
   the ceiling.

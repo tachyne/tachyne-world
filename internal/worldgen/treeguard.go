@@ -12,12 +12,17 @@ package worldgen
 // So a generated tree that collides with a build is not grown. The test is
 // the tree's own footprint against the edit overlay:
 //
-//   - an edit on the ground cell under its trunk (a floor, a path, a dug
-//     hole), or a player block on any cell its trunk or branches would
+//   - a floor, a path or a dug hole on the ground cell under its trunk (not
+//     soil the world turned from grass to dirt and back: groundBuilt), or a
+//     player block on any cell its trunk or branches would
 //     occupy (a roof or a wall it would pass through). Air there is not a
 //     build: it is where a player chopped this tree's logs, and a chopped
 //     tree keeps standing as the player left it, as in vanilla — skipping
-//     it took the rest of its trunk, its leaves and the vines on them;
+//     it took the rest of its trunk, its leaves and the vines on them.
+//     Nor is fire, lava, water or a plant (isBuildBlock): a tree that
+//     caught fire left fire and lava in its cells, and the guard read them
+//     as a build and dropped the tree, leaving the fire, the lava and its
+//     bee nest hanging in the air (bugs #19-21);
 //   - or a player block where at least a quarter of its leaves would go (a
 //     roof or wall cutting through the canopy). A block or two placed in a
 //     canopy (a torch, a bridge) does not count.
@@ -57,11 +62,11 @@ func (g *Generator) collidesWithBuild(f *treeFootprint, x, y, z int) bool {
 	if g.editAt == nil {
 		return false
 	}
-	if _, ok := g.editAt(x, y-1, z); ok {
+	if s, ok := g.editAt(x, y-1, z); ok && groundBuilt(s) {
 		return true
 	}
 	for p := range f.logs {
-		if s, ok := g.editAt(p[0], p[1], p[2]); ok && s != Air {
+		if s, ok := g.editAt(p[0], p[1], p[2]); ok && isBuildBlock(s) {
 			return true
 		}
 	}
@@ -70,7 +75,7 @@ func (g *Generator) collidesWithBuild(f *treeFootprint, x, y, z int) bool {
 	}
 	hits := 0
 	for p := range f.leaves {
-		if s, ok := g.editAt(p[0], p[1], p[2]); ok && s != Air {
+		if s, ok := g.editAt(p[0], p[1], p[2]); ok && isBuildBlock(s) {
 			hits++
 		}
 	}
@@ -85,6 +90,35 @@ func (g *Generator) groundEdited(x, y, z int) bool {
 	if g.editAt == nil {
 		return false
 	}
-	_, ok := g.editAt(x, y-1, z)
-	return ok
+	s, ok := g.editAt(x, y-1, z)
+	return ok && groundBuilt(s)
 }
+
+// groundBuilt reports whether an edit on the ground under a trunk is a
+// player's doing: a dug hole (air) or a floor or path (a build block that is
+// not natural soil). Soil the world changed by itself is not. Grass under a
+// trunk decays to dirt and spreads back, each change saved as an edit, and
+// counting those dropped almost every tree near anyone who had been about.
+func groundBuilt(s uint32) bool {
+	return s == Air || (isBuildBlock(s) && !IsDirtTag(s))
+}
+
+// isBuildBlock reports whether an edit is something a player built with, as
+// opposed to what the world did on its own: air, a fluid, fire, or a plant
+// or anything else vanilla counts as replaceable (fire and soul fire are
+// replaceable in vanilla too; IsReplaceable leaves them to the fire code).
+func isBuildBlock(s uint32) bool {
+	return s != Air && !IsReplaceable(s) && !IsFluid(s) && !fireStates[s]
+}
+
+var fireStates = func() map[uint32]bool {
+	m := map[uint32]bool{}
+	for _, name := range []string{"fire", "soul_fire"} {
+		if lo, hi, ok := BlockRangeOK(name); ok {
+			for s := lo; s <= hi; s++ {
+				m[s] = true
+			}
+		}
+	}
+	return m
+}()
