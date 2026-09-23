@@ -633,6 +633,7 @@ type hub struct {
 	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)
 	catNextAt     uint64             // next village-cat spawner tick
 	villageDone   map[blockPos]bool  // villages populated this session
+	phases        tickPhases         // this tick's time by phase (tickphase.go)
 	// villagePlaced records, per village well, the template entities already
 	// placed (VillageMob.Key); villageSettled marks a village with all of
 	// them placed (derived, per session).
@@ -970,6 +971,7 @@ func (h *hub) run() {
 		select {
 		case <-ticker.C:
 			tickStart := time.Now()
+			h.phases.start(tickStart)
 			age := h.tick.Add(1) // world age; drives day/night
 			h.world.Tick()       // LRU epoch: cached chunks promote at most once per tick
 			if h.nether != nil {
@@ -996,12 +998,17 @@ func (h *hub) run() {
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
 			}
-			h.campfireTick(players)     // per-tick cook progress (vanilla cookTick)
-			h.psched.run(age)           // plugin-scheduled tasks see the previous tick's world
-			h.runUpdates(players, age)  // falling blocks, fluid flow
+			h.phases.lap(phaseClock)
+			h.campfireTick(players) // per-tick cook progress (vanilla cookTick)
+			h.psched.run(age)       // plugin-scheduled tasks see the previous tick's world
+			h.phases.lap(phaseScheduled)
+			h.runUpdates(players, age) // falling blocks, fluid flow
+			h.phases.lap(phaseBlockUpdates)
 			h.runBinFires(players, age) // dispenser/dropper ejections due this tick (4-tick delay)
 			h.updateFurnaces(players)   // smelting progress + lit state + viewer sync
-			h.runRandomTicks(players)   // growth: crops, cane, cactus, saplings, grass, leaves
+			h.phases.lap(phaseMachines)
+			h.runRandomTicks(players) // growth: crops, cane, cactus, saplings, grass, leaves
+			h.phases.lap(phaseRandomTicks)
 			// Vanilla ticks entities only in loaded chunks, and chunks load around
 			// players — so an empty server ticks no mobs at all. Gated here at the
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
@@ -1013,6 +1020,7 @@ func (h *hub) run() {
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
 				h.syncTracking(players)    // per-viewer entity tracking: what came into view, what left
 			}
+			h.phases.lap(phaseMobs)
 			h.playerInsideTick(players)   // block contact for players: every tick, or a sprint misses it
 			h.updatePortalTravel(players) // mobs and drops standing in a portal go through
 			h.updateArrows(players)       // every tick: arrows are fast enough to tunnel otherwise
@@ -1058,6 +1066,7 @@ func (h *hub) run() {
 			if age%10 == 0 {
 				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
 			}
+			h.phases.lap(phaseEntities)
 			if age%survivalTickN == 0 {
 				h.survivalTick(players)       // health regen, hunger, starvation, void
 				h.tickWardenTrackers(players) // WardenSpawnTracker: warning cooldown + decay
@@ -1097,9 +1106,12 @@ func (h *hub) run() {
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
 			}
-			h.mobAmbience(players)   // Mob.baseTick: the idle-voice roll runs every tick
-			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
-			h.primeFluids(players)   // generated springs start running (fluidprime.go)
+			h.phases.lap(phaseSecondly)
+			h.mobAmbience(players)  // Mob.baseTick: the idle-voice roll runs every tick
+			h.naturalSpawn(players) // vanilla NaturalSpawner port: all categories, all heights
+			h.phases.lap(phaseSpawning)
+			h.primeFluids(players) // generated springs start running (fluidprime.go)
+			h.phases.lap(phaseSprings)
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
 			if h.waves && age%waveCadence == 0 {
 				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
@@ -1147,6 +1159,7 @@ func (h *hub) run() {
 					}
 				}
 			}
+			h.phases.lap(phaseWorld)
 			if age%600 == 0 { // persist inventories + containers every 30s (crash window)
 				persistStart := time.Now()
 				// The per-player stores below marshal and rewrite themselves
@@ -1251,6 +1264,7 @@ func (h *hub) run() {
 				}
 			}
 
+			h.phases.lap(phaseSaving)
 			if len(h.hud) > 0 && age%hudRefresh == 0 {
 				for _, t := range players {
 					if !t.hudOn {
@@ -1278,6 +1292,7 @@ func (h *hub) run() {
 					t.p.sendEv(attachproto.BlockAck{Seq: seq})
 				}
 			}
+			h.phases.lap(phaseFlush)
 			h.noteTick(tickStart, players, dueNow)
 
 		case <-h.stop:

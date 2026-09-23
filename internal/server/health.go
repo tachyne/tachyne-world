@@ -216,8 +216,8 @@ func (h *hub) noteTick(started time.Time, players map[int32]*tracked, due int) {
 	h.tickStats.observe(d)
 	h.lastTick.Store(now.UnixNano())
 	if d > slowTickLog && h.tickStats.shouldLogSlow(now) {
-		log.Printf("slow tick: %s (players=%d mobs=%d items=%d block_updates=%d pending=%d)",
-			d.Round(time.Millisecond), len(players), len(h.mobs), len(h.items), due, len(h.pending))
+		log.Printf("slow tick: %s (players=%d mobs=%d items=%d block_updates=%d pending=%d) %s",
+			d.Round(time.Millisecond), len(players), len(h.mobs), len(h.items), due, len(h.pending), h.phases.top())
 	}
 }
 
