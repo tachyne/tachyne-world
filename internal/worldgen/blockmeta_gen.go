@@ -2,7 +2,7 @@
 
 package worldgen
 
-// blockMeta carries the per-block fields from minecraft-data blocks.json that
+// blockMeta carries the per-block facts, taken from the game itself, that
 // the server enforces: hardness (mining-time basis; -1 = unbreakable),
 // resistance (blast; currently unused), Stack (max stack of the block item),
 // Diggable (false => unbreakable by normal mining), and Box (1 = collides,

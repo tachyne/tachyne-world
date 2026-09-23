@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Generate internal/worldgen/blockmeta_gen.go from minecraft-data blocks.json.
+"""Generate internal/worldgen/blockmeta_gen.go.
 
-This bakes the remaining per-block fields blocks.json provides that we were not
-yet enforcing, so the server can be authoritative about them:
+This bakes the per-block facts the server is authoritative about:
 
   - hardness     mining time basis (-1.0 = unbreakable)
   - resistance   blast resistance (parked: no explosions yet)
@@ -24,33 +23,85 @@ every open fence gate collided (192 states) and deep snow did not (7) — a mob
 would not walk through a gate it had just opened, and a drift was walked
 through rather than over.
 
-The other fields stay on minecraft-data deliberately. They are genuinely
-per-block, they are correct, and deriving them here instead went wrong in two
-ways worth recording: `diggable` is not `hardness >= 0` (air has hardness 0.0
-and is not diggable), and a block's stackSize is not its own item's (a wall
-sign has no item; vanilla takes the sign's 16). Moving them is for the bump,
-with the same byte-comparison this change got.
+Every field comes from the game itself, through the local extract (see
+scripts/extract), read by running the server rather than taken from a
+third-party summary:
+
+  hardness, resistance   Block.defaultDestroyTime / getExplosionResistance
+  diggable               breakable (hardness >= 0) and not air — air has
+                         hardness 0.0 and is not dug
+  stackSize              the stack size of the block's ITEM as the game maps
+                         it (Block.asItem): a wall sign is the sign item, 16
+  harvestTools           for a block that needs the right tool
+                         (requiresCorrectToolForDrops), every tool whose TOOL
+                         component calls it correct — evaluated the way
+                         Tool.isCorrectForDrops does, first rule with a verdict
+                         that holds the block, tags resolved from the jar
+
+A block that needs a tool no tool satisfies (command blocks, the jigsaw, the
+structure block — all unbreakable) gets no harvest row, as before.
 
     python3 scripts/gen_blockmeta.py [version]
 """
-import json, urllib.request, os, subprocess, sys
+import io, json, os, subprocess, sys, zipfile
 
 VER = sys.argv[1] if len(sys.argv) > 1 else "1.21.11"
 SRC = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
-URL = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/%s/blocks.json" % VER
+JAR = os.path.expanduser("~/vanilla/server-%s.jar" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "blockmeta_gen.go")
 
-blocks = json.load(urllib.request.urlopen(URL))
-# Per-STATE collision, the one thing minecraft-data cannot express.
-boxes_by_name = {b["name"]: b["boundingBox"] for b in json.load(open(SRC))["blocks"]}
+
+def block_tags():
+    """Resolve a block tag (nested tags included) from the jar's datapack."""
+    outer = zipfile.ZipFile(JAR)
+    inner = zipfile.ZipFile(io.BytesIO(outer.read(next(
+        n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")))))
+    pre = "data/minecraft/tags/block/"
+    raw = {n[len(pre):-len(".json")]: json.loads(inner.read(n))["values"]
+           for n in inner.namelist() if n.startswith(pre) and n.endswith(".json")}
+    memo = {}
+
+    def resolve(tag):
+        if tag in memo:
+            return memo[tag]
+        memo[tag] = set()  # guards a cycle
+        out = set()
+        for v in raw.get(tag, []):
+            ref = v["id"] if isinstance(v, dict) else v
+            name = ref.lstrip("#").removeprefix("minecraft:")
+            out |= resolve(name) if ref.startswith("#") else {name}
+        memo[tag] = out
+        return out
+    return resolve
+
+
+extract = json.load(open(SRC))
+blocks = extract["blocks"]
+item_stack = {i["name"]: i["stackSize"] for i in extract["items"]}
+tags = block_tags()
+tools = [i for i in extract["items"] if i.get("toolRules")]
+
+
+def harvest_tools(block):
+    ok = []
+    for t in tools:
+        for r in t["toolRules"]:
+            if block in (tags(r["tag"]) if "tag" in r else set(r["blocks"])):
+                if r["correct"]:
+                    ok.append(t["id"])
+                break
+    return sorted(ok)
+
 
 scalar = []   # (min, max, hardness, resistance, stack, diggable, box)
 harvest = []  # (min, max, [tool item ids])
 tall = []     # (min, max) fences/walls/fence gates — 1.5-block collision height
 for b in blocks:
     mn, mx = b["minStateId"], b["maxStateId"]
-    hardness = b["hardness"] if b["hardness"] is not None else -1.0
-    boxes = [1 if x == "block" else 0 for x in boxes_by_name[b["name"]]]
+    hardness = b["hardness"]
+    diggable = hardness >= 0 and not b["isAir"]
+    stack = item_stack[b["item"]]
+    boxes = [1 if x == "block" else 0 for x in b["boundingBox"]]
     if mx - mn + 1 != len(boxes):
         raise SystemExit("%s: state count disagrees with boundingBox count" % b["name"])
     # One row per RUN of equal collision within the block: the other four
@@ -59,12 +110,12 @@ for b in blocks:
     for i in range(1, len(boxes) + 1):
         if i == len(boxes) or boxes[i] != boxes[start]:
             scalar.append((mn + start, mn + i - 1, float(hardness), float(b["resistance"]),
-                           int(b["stackSize"]), bool(b["diggable"]), boxes[start]))
+                           int(stack), bool(diggable), boxes[start]))
             start = i
-    ht = b.get("harvestTools")
-    if ht:
-        tools = sorted(int(k) for k in ht.keys())
-        harvest.append((mn, mx, tools))
+    if b["requiresTool"]:
+        ht = harvest_tools(b["name"])
+        if ht:
+            harvest.append((mn, mx, ht))
     # Fences, fence gates and walls have a 1.5-block-tall collision box in vanilla,
     # so mobs (and players) can't step or jump over a single one. Detect by name
     # suffix: barrier "*_wall" blocks all end in _wall (wall_torch/_sign/_banner
@@ -88,7 +139,7 @@ L = [
     "",
     "package worldgen",
     "",
-    "// blockMeta carries the per-block fields from minecraft-data blocks.json that",
+    "// blockMeta carries the per-block facts, taken from the game itself, that",
     "// the server enforces: hardness (mining-time basis; -1 = unbreakable),",
     "// resistance (blast; currently unused), Stack (max stack of the block item),",
     "// Diggable (false => unbreakable by normal mining), and Box (1 = collides,",

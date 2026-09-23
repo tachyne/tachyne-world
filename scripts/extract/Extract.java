@@ -21,6 +21,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -123,6 +124,12 @@ public class Extract {
             // but a wall torch, wall sign, wall banner or wall head borrows the
             // standing block's (dropsLike), and some blocks have none at all.
             block.getLootTable().ifPresent(k -> o.addProperty("lootTable", k.identifier().getPath()));
+            // The item this block is, as the game maps it: a wall sign is the sign
+            // item, a wall torch the torch. And whether it needs the right tool
+            // to drop anything at all (Player.hasCorrectToolForDrops).
+            o.addProperty("item", BuiltInRegistries.ITEM.getKey(block.asItem()).getPath());
+            o.addProperty("requiresTool", block.defaultBlockState().requiresCorrectToolForDrops());
+            o.addProperty("isAir", block.defaultBlockState().isAir());
 
             // One entry per STATE, in state-id order. These are the facts a
             // per-block dataset flattens: light, light filtering, collision,
@@ -169,6 +176,30 @@ public class Extract {
             Integer maxDamage = item.components().get(DataComponents.MAX_DAMAGE);
             if (maxDamage != null) {
                 o.addProperty("maxDurability", maxDamage);
+            }
+            // A tool's rules, as Tool.isCorrectForDrops reads them: the first rule
+            // that states a verdict and holds the block decides. Blocks are named
+            // by tag where the rule uses one, so the caller can resolve them from
+            // the jar's tag files — the tags need not be bound here.
+            Tool tool = item.components().get(DataComponents.TOOL);
+            if (tool != null) {
+                JsonArray rules = new JsonArray();
+                for (Tool.Rule r : tool.rules()) {
+                    if (r.correctForDrops().isEmpty()) {
+                        continue;
+                    }
+                    JsonObject jr = new JsonObject();
+                    r.blocks().unwrap()
+                            .ifLeft(tag -> jr.addProperty("tag", tag.location().getPath()))
+                            .ifRight(list -> {
+                                JsonArray names = new JsonArray();
+                                list.forEach(h -> names.add(BuiltInRegistries.BLOCK.getKey(h.value()).getPath()));
+                                jr.add("blocks", names);
+                            });
+                    jr.addProperty("correct", r.correctForDrops().get());
+                    rules.add(jr);
+                }
+                o.add("toolRules", rules);
             }
             FoodProperties food = item.components().get(DataComponents.FOOD);
             if (food != null) {

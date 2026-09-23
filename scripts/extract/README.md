@@ -4,8 +4,9 @@ Several generators under `scripts/` read `~/vanilla/extract/<version>.json`
 instead of a third-party dataset. This directory produces it: `Extract.java`
 bootstraps the server's registries and asks each block state and item what
 it is — light emission and filtering, collision, solidity, the full-cube
-test, hardness, resistance, loot table, block entity, stack size,
-durability and food.
+test, hardness, resistance, loot table, block entity, the block's item and
+whether it needs the right tool; and for items, stack size, durability, food
+and each tool's rules for which blocks it is correct for.
 
 It exists because the dataset we used before records one value per *block*
 for facts vanilla computes per *state*, and stops at 26.1. Building tables
