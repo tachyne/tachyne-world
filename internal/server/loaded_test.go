@@ -52,3 +52,25 @@ func TestHubLeavesUnloadedChunksAlone(t *testing.T) {
 		t.Fatal("the sand's update never ran after its chunk loaded")
 	}
 }
+
+// A beehive in a chunk nobody has loaded is left alone, as vanilla's block
+// entity is: its bees do not age inside it, and reading it does not generate
+// the chunk. 103 hives across the world once made the first tick after a
+// boot take a second and a half.
+func TestHivesTickOnlyInLoadedChunks(t *testing.T) {
+	w := world.New(1)
+	h := newHub(w)
+	players := map[int32]*tracked{}
+	far := blockPos{8000, 90, 8000}
+	h.hives = map[blockPos][]hiveOccupant{far: {{SecsLeft: 50}}}
+	before := w.CacheLen()
+	for i := 0; i < 5; i++ {
+		h.updateBees(players)
+	}
+	if got := w.CacheLen(); got != before {
+		t.Fatalf("updating a far hive generated %d chunks on the hub", got-before)
+	}
+	if occ := h.hives[far]; len(occ) != 1 || occ[0].SecsLeft != 50 {
+		t.Fatalf("a bee in an unloaded hive aged: %+v", occ)
+	}
+}

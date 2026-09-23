@@ -19,6 +19,7 @@ func beeWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	h.hivesLoad()
 	players := map[int32]*tracked{}
 	nest := blockPos{2000, 200, 2000}
+	h.world.ForceLoad(nest.x, nest.z, 1) // a hive ticks only in a loaded chunk
 	for dx := -6; dx <= 6; dx++ {
 		for dz := -6; dz <= 6; dz++ {
 			h.world.SetBlock(nest.x+dx, nest.y-2, nest.z+dz, worldgen.Dirt)

@@ -40,6 +40,7 @@ func TestBrewingStandTick(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	pos := simPos{dim: 0, blockPos: blockPos{6, 70, 6}}
+	h.world.ForceLoad(pos.x, pos.z, 1) // a stand brews only in a loaded chunk
 	h.world.SetBlock(pos.x, pos.y, pos.z, worldgen.BlockBase("brewing_stand"))
 	b := &bin{slots: make([]invStack, 5)}
 	h.bins[pos] = b

@@ -265,6 +265,9 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 		if len(b.slots) != 5 || w == nil {
 			continue
 		}
+		if !w.Ticking(int32(pos.x>>4), int32(pos.z>>4)) {
+			continue // a stand brews only in a loaded chunk, as vanilla's does
+		}
 		state := w.At(pos.x, pos.y, pos.z)
 		if !isBrewStand(state) {
 			continue

@@ -99,6 +99,9 @@ func (h *hub) noteConduitBlock(dim int, pos blockPos, state uint32) {
 // care. Anything whose block has gone is forgotten as it is found.
 func (h *hub) updateConduits(players map[int32]*tracked) {
 	for key := range h.conduits {
+		if !h.worldFor(key.dim).Ticking(int32(key.x>>4), int32(key.z>>4)) {
+			continue // only in a loaded chunk; never generate one here
+		}
 		if h.worldFor(key.dim).At(key.x, key.y, key.z) != conduitState {
 			delete(h.conduits, key) // mined out, or the position was never one
 			continue

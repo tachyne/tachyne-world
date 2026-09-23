@@ -226,6 +226,13 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 	day, raining := h.dayLight(), h.raining
 	changed := false
 	for pos, occ := range h.hives {
+		// A beehive ticks only in a loaded chunk, as vanilla's block entity
+		// does: its bees wait inside until someone is near. Reading one in an
+		// unloaded chunk generated that chunk on the hub — 103 hives made the
+		// first tick after a boot take a second and a half.
+		if !h.world.Ticking(int32(pos.x>>4), int32(pos.z>>4)) {
+			continue
+		}
 		cur := h.world.At(pos.x, pos.y, pos.z)
 		if !isBeeHome(cur) {
 			// The hive block is gone: its bees tumble out where it stood.

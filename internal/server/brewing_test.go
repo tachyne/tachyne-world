@@ -12,6 +12,7 @@ func brewSetup(t *testing.T) (*hub, map[int32]*tracked, blockPos, *bin) {
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	pos := blockPos{10, 70, 10}
+	h.world.ForceLoad(pos.x, pos.z, 1) // a stand brews only in a loaded chunk
 	h.world.SetBlock(pos.x, pos.y, pos.z, brewStandMax)
 	b := &bin{slots: make([]invStack, 5)}
 	h.bins[simPos{blockPos: pos}] = b
