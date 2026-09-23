@@ -14,7 +14,10 @@ Run locally (vanilla reference source + itemnames_gen.go on disk; set VANILLA_SR
 import os
 import re
 
-SRC = os.environ.get("VANILLA_SRC", "")  # path to a vanilla VillagerTrades.java reference
+import canon
+
+SRC = os.environ.get("VANILLA_SRC", os.path.join(  # behaviour data: canon.py
+    canon.src(canon.DATA), "net/minecraft/world/entity/npc/villager/VillagerTrades.java"))
 NAMES = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "itemnames_gen.go")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "villager_trades_gen.go")
 
