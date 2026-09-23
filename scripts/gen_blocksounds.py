@@ -40,7 +40,7 @@ def statements(path):
 # SoundEvents: constant -> resource name.
 events = {}
 for s in statements("net/minecraft/sounds/SoundEvents.java"):
-    m = re.match(r'public static final SoundEvent (\w+) = SoundEvents\.register\("([^"]+)"', s)
+    m = re.match(r'public static final SoundEvent (\w+) = (?:SoundEvents\.)?register\("([^"]+)"', s)  # 26.x: unqualified
     if m:
         events[m.group(1)] = m.group(2)
 

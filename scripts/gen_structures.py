@@ -13,7 +13,7 @@ Run outside nothing special (all inputs are local):
 import canon
 import zipfile, io, gzip, os, struct, json
 
-JAR = canon.jar()
+JAR = canon.jar(canon.DATA)  # behaviour data: canon.py
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "structdata", "structures.json")
 
 # Standalone templates to bake (non-jigsaw, placed by code).
@@ -27,12 +27,12 @@ RUINED_PORTAL = ["ruined_portal/portal_%d" % i for i in range(1, 11)] + \
     ["ruined_portal/giant_portal_%d" % i for i in range(1, 4)]
 import zipfile as _zf, io as _io, os as _os
 def _mansion_names():
-    zz=canon.inner_jar()
+    zz=canon.inner_jar(canon.DATA)
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/woodland_mansion/" in n and n.endswith(".nbt"))
 MANSION = _mansion_names()
 def _jar_names(prefix):
-    zz=canon.inner_jar()
+    zz=canon.inner_jar(canon.DATA)
     return sorted(n.split("/structure/")[1][:-4] for n in zz.namelist()
                   if "/structure/" + prefix in n and n.endswith(".nbt"))
 # Ocean ruins: 8 warm + 8 each of brick/cracked/mossy small pieces, 4 big of
@@ -484,7 +484,7 @@ def collect(inner):
 
 
 def main():
-    inner = canon.inner_jar()
+    inner = canon.inner_jar(canon.DATA)
     out = {name: bake(inner, name) for name in TEMPLATES}
     pools, jig_templates, aliases, processors = collect(inner)
     out.update(jig_templates)

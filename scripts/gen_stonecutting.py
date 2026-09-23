@@ -15,7 +15,7 @@ import canon
 import io, json, sys, os, subprocess, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "stonecutting_gen.go")
 
 item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}

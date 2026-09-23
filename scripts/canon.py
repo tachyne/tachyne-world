@@ -22,6 +22,16 @@ import zipfile
 
 VERSION = os.environ.get("TACHYNE_CANON", "1.21.11")
 
+# The version the engine's BEHAVIOUR data is read from — loot, recipes,
+# advancements, trees, structures, spawn pools, enchantments, damage types,
+# potions — as opposed to its registries and per-block/per-item facts, which
+# are always VERSION's. Names in that data resolve to VERSION's ids, so the
+# two can differ: the engine then plays DATA's game in VERSION's numbering.
+# 26.x rewrote most of these formats (predicates, worldgen features, loot
+# conditions); a generator moves to VERSION's data once it reads the new
+# format, and brings that version's content with it.
+DATA = os.environ.get("TACHYNE_DATA", "1.21.11")
+
 # The protocol whose clients number things exactly as the canonical content
 # does — the translation tables' identity.
 PROTOCOLS = {"1.21.5": 770, "1.21.11": 774, "26.1": 775, "26.2": 776, "26.3": 777}

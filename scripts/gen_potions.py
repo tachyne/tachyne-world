@@ -22,9 +22,9 @@ import os
 import re
 import zipfile
 
-VERSION = canon.VERSION
+VERSION = canon.DATA  # behaviour data: canon.py
 JAR = os.path.expanduser(f"~/vanilla/server-{VERSION}.jar")
-SRC = os.environ.get("VANILLA_POTIONS", os.path.join(canon.src(), "net/minecraft/world/item/alchemy/Potions.java"))
+SRC = os.environ.get("VANILLA_POTIONS", os.path.join(canon.src(canon.DATA), "net/minecraft/world/item/alchemy/Potions.java"))
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(REPO, "internal", "server", "potions_gen.go")

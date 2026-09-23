@@ -12,7 +12,7 @@ Reads the local jar (no network): ~/vanilla/server-<canonical>.jar
 import canon
 import io, json, os, zipfile
 
-SRC = canon.jar()
+SRC = canon.jar(canon.DATA)  # behaviour data: canon.py
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "paintings_gen.go")
 
 z = zipfile.ZipFile(SRC)

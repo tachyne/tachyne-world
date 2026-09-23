@@ -10,7 +10,7 @@ Run: python3 scripts/gen_dyecolors.py [path-to-DyeColor.java]
 import canon
 import os, re, sys
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(canon.src(), "net/minecraft/world/item/DyeColor.java")
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(canon.src(canon.DATA), "net/minecraft/world/item/DyeColor.java")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "dyecolors_gen.go")
 
 # NAME(id, "name", textureDiffuse, MapColor.X, [MapColor.TERRACOTTA_X,] fireworkColor, textColor)

@@ -18,7 +18,7 @@ Run: python3 scripts/gen_trees.py [path-to-server.jar]
 import canon
 import io, json, os, re, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, "..", "internal", "worldgen", "trees_gen.go")
 

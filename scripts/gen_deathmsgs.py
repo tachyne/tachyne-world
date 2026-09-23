@@ -25,7 +25,7 @@ import json
 import os
 import zipfile
 
-VERSION = canon.VERSION
+VERSION = canon.DATA  # behaviour data: canon.py
 JAR = os.path.expanduser(f"~/vanilla/server-{VERSION}.jar")
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

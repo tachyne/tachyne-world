@@ -33,7 +33,7 @@ import zipfile
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.DATA  # the recipes: behaviour data, canon.py
 JAR = os.path.expanduser("~/vanilla/server-%s.jar" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "recipes_gen.go")
 
@@ -41,7 +41,7 @@ outer = zipfile.ZipFile(JAR)
 inner = zipfile.ZipFile(io.BytesIO(outer.read(
     next(n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")))))
 
-item_id = {e["name"]: e["id"] for e in vanillareport.registry(VER, "item")}
+item_id = {e["name"]: e["id"] for e in vanillareport.registry(canon.VERSION, "item")}
 
 
 def ns(ref):

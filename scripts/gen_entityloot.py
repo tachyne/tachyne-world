@@ -15,7 +15,7 @@ import canon
 import io, json, sys, os, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
 OUTDIR = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "entities.json")
 

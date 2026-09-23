@@ -6,7 +6,7 @@ vanilla's NaturalSpawner draws from (MobSpawnSettings)."""
 import canon
 import io, json, os, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "spawnpools_gen.go")
 
 outer = zipfile.ZipFile(JAR)
