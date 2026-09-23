@@ -5,11 +5,16 @@ Recipes come from the canonical version's server jar datapack (recipe/*.json) �
 four cooker types: minecraft:smelting (furnace), minecraft:blasting (blast
 furnace), minecraft:smoking (smoker), minecraft:campfire_cooking (campfire).
 Ingredients may be item names or #tags; tags resolve transitively via the
-jar's tags/item/*.json. Result counts are always 1; per-recipe cook time is
-kept (defaults 200/100/100/600 ticks).
+jar's tags/item/*.json. Result counts are always 1; each recipe's cook time
+(`cookingtime`, required since 26.x) is kept as written — blasting and smoking
+recipes say 200 like smelting, and the fast cookers' 2x speed comes from the
+fuel.
 
-Fuel burn times are vanilla constants (the furnace block entity's fuel map);
-the common set is emitted by name so the ids stay generated.
+Fuel is an item component since 26.x (`minecraft:cooking_fuel`, in the items'
+component reports): a burn time and a speed multiplier, each a context
+provider resolved against the cooker block — a blast furnace or smoker
+(the `block/fast_cooking` predicate) halves the burn time and doubles the
+speed. Both are resolved here for each of the three furnace blocks.
 
 Run: python3 scripts/gen_smelting.py [path-to-server.jar]
 (item ids from vanilla's registries report, via scripts/vanillareport.py)
@@ -18,7 +23,7 @@ import canon
 import io, json, sys, os, subprocess, zipfile
 import vanillareport
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "smelting_gen.go")
 
 item_id = {i["name"]: i["id"] for i in vanillareport.registry(canon.VERSION, "item")}
@@ -59,11 +64,11 @@ def resolve_tag(name, depth=0):
     return out
 
 
-COOKERS = [  # (recipe type, go map name, default cook ticks, doc)
-    ("minecraft:smelting", "smeltResult", 200, "furnace"),
-    ("minecraft:blasting", "blastResult", 100, "blast furnace"),
-    ("minecraft:smoking", "smokeResult", 100, "smoker"),
-    ("minecraft:campfire_cooking", "campfireResult", 600, "campfire"),
+COOKERS = [  # (recipe type, go map name, unused, doc)
+    ("minecraft:smelting", "smeltResult", None, "furnace"),
+    ("minecraft:blasting", "blastResult", None, "blast furnace"),
+    ("minecraft:smoking", "smokeResult", None, "smoker"),
+    ("minecraft:campfire_cooking", "campfireResult", None, "campfire"),
 ]
 
 # The recipe book tab an entry lands on. Ids are the recipe_book_category
@@ -84,7 +89,7 @@ for path, r in sorted(recipes.items()):
         result = r["result"]["id"].removeprefix("minecraft:")
         if result not in item_id:
             continue
-        cook = r.get("cookingtime", default)
+        cook = r["cookingtime"]
         # Each recipe carries its own experience; the engine used to guess
         # 0.7 (0.35 for food), which paid the same for cactus green and
         # ancient debris.
@@ -104,16 +109,57 @@ for path, r in sorted(recipes.items()):
 for rows in tables.values():
     rows.sort()
 
-# Vanilla fuel burn times (ticks), by item name family.
-FUELS = {"coal": 1600, "charcoal": 1600, "coal_block": 16000, "blaze_rod": 2400,
-         "lava_bucket": 20000, "stick": 100, "crafting_table": 300, "bamboo": 50,
-         "dried_kelp_block": 4000}
+# Fuel: each item's cooking_fuel component, resolved per furnace block.
+# The order is the engine's cooker kinds (cookFurnace, cookBlast, cookSmoker).
+FURNACES = ["furnace", "blast_furnace", "smoker"]
+
+
+def data(kind, key):
+    ns, _, path = key.partition(":")
+    return json.loads(z.read(f"data/{ns}/{kind}/{path}.json"))
+
+
+def condition(c, block):
+    if isinstance(c, str):
+        c = data("predicate", c)
+    if c.get("type") != "minecraft:match_block":
+        raise SystemExit(f"cooking fuel: unhandled condition {c}")
+    blocks = c["blocks"]
+    blocks = [blocks] if isinstance(blocks, str) else blocks
+    if any(b.startswith("#") for b in blocks):
+        raise SystemExit(f"cooking fuel: block tag in {c}")
+    return "minecraft:" + block in blocks
+
+
+def provide(p, kind, block):
+    """A context_int/float_provider's value with the cooker block as context."""
+    if isinstance(p, (int, float)):
+        return p
+    if isinstance(p, str):
+        return provide(data(kind, p), kind, block)
+    t = p.get("type")
+    if t == "minecraft:constant":
+        return p["value"]
+    if t == "minecraft:div":
+        l, r = provide(p["left"], kind, block), provide(p["right"], kind, block)
+        return int(l / r) if kind == "context_int_provider" else l / r  # Java int division
+    if t == "minecraft:conditional":
+        return provide(p["on_true" if condition(p["condition"], block) else "on_false"], kind, block)
+    raise SystemExit(f"cooking fuel: unhandled provider {p}")
+
+
+COMPONENTS = canon.report("reports/minecraft/components/item")
+if not os.path.isdir(COMPONENTS):
+    raise SystemExit(f"{COMPONENTS}: no item component reports (run the server's --reports)")
 fuel_rows = []
 for name, iid in item_id.items():
-    if name in FUELS:
-        fuel_rows.append((iid, FUELS[name]))
-    elif name.endswith("_planks") or name.endswith("_log") or name.endswith("_wood") or name.endswith("_sapling"):
-        fuel_rows.append((iid, 300 if not name.endswith("_sapling") else 100))
+    comps = json.load(open(os.path.join(COMPONENTS, name + ".json")))["components"]
+    fuel = comps.get("minecraft:cooking_fuel")
+    if fuel is None:
+        continue
+    burn = [provide(fuel["burn_time"], "context_int_provider", b) for b in FURNACES]
+    speed = [provide(fuel["speed_multiplier"], "context_float_provider", b) for b in FURNACES]
+    fuel_rows.append((iid, burn, speed))
 fuel_rows.sort()
 
 L = [
@@ -142,11 +188,19 @@ for rtype, goname, _, doc in COOKERS:
     L.append("}")
 L += [
     "",
-    "// fuelTicks maps a fuel item to how long one of it burns (ticks).",
-    "var fuelTicks = map[int32]int{",
+    "// cookingFuel is a fuel item's cooking_fuel component, resolved for each",
+    "// furnace block (indexed by cooker kind: furnace, blast furnace, smoker):",
+    "// how long one burns (ticks) and how much faster it cooks.",
+    "type cookingFuel struct {",
+    "\tBurn  [3]int",
+    "\tSpeed [3]float32",
+    "}",
+    "",
+    "// fuels maps a fuel item to its cooking_fuel component.",
+    "var fuels = map[int32]cookingFuel{",
 ]
-for iid, t in fuel_rows:
-    L.append(f"\t{iid}: {t},")
+for iid, burn, speed in fuel_rows:
+    L.append("\t%d: {[3]int{%s}, [3]float32{%s}}," % (iid, ", ".join(map(str, burn)), ", ".join("%g" % s for s in speed)))
 L += ["}", ""]
 with open(OUT, "w") as f:
     f.write("\n".join(L))

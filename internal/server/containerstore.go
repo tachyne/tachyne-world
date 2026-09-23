@@ -168,6 +168,7 @@ type savedFurnace struct {
 	BurnMax  int         `json:"burnMax,omitempty"`
 	Cook     int         `json:"cook,omitempty"`
 	CookMax  int         `json:"cookMax,omitempty"`
+	Speed    float32     `json:"speed,omitempty"` // the lit fuel's speed multiplier
 }
 
 // savedStand is one placed armor stand (equipment rows = the stack pack).
@@ -359,7 +360,7 @@ func (s *containerStore) loadFurnaces() map[simPos]*furnace {
 		if !ok {
 			continue
 		}
-		f := &furnace{burnLeft: sf.BurnLeft, burnMax: sf.BurnMax, cook: sf.Cook, cookMax: sf.CookMax}
+		f := &furnace{burnLeft: sf.BurnLeft, burnMax: sf.BurnMax, cook: sf.Cook, cookMax: sf.CookMax, speed: sf.Speed}
 		if f.cookMax == 0 {
 			f.cookMax = 200
 		}
@@ -503,7 +504,7 @@ func (s *containerStore) recordChests(chests map[simPos]*chest) {
 func (s *containerStore) recordFurnaces(furnaces map[simPos]*furnace) {
 	snap := map[string]savedFurnace{}
 	for pos, f := range furnaces {
-		sf := savedFurnace{BurnLeft: f.burnLeft, BurnMax: f.burnMax, Cook: f.cook, CookMax: f.cookMax}
+		sf := savedFurnace{BurnLeft: f.burnLeft, BurnMax: f.burnMax, Cook: f.cook, CookMax: f.cookMax, Speed: f.speed}
 		for i, st := range f.slots {
 			sf.Slots[i] = [3]int32{st.item, int32(st.count), int32(st.dmg)}
 		}

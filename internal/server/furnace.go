@@ -3,6 +3,7 @@ package server
 import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
+	"math"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -78,13 +79,27 @@ func cookerRecipe(kind int8, item int32) (cookEntry, bool) {
 	return e, ok
 }
 
-// cookerFuelTicks is one fuel item's burn time in this cooker.
+// cookerFuelTicks is one fuel item's burn time in this cooker: its
+// cooking_fuel component resolved against the block, so a blast furnace or
+// smoker burns it for half as long — and cooks twice as fast
+// (cookerFuelSpeed), which leaves a fuel smelting the same number of items in
+// every furnace.
 func cookerFuelTicks(kind int8, item int32) int {
-	// A fuel item burns for the same duration in every furnace type (vanilla
-	// getBurnDuration ignores the block); the 2× speed of blast furnaces/smokers
-	// comes ENTIRELY from their 100-tick cook time, so a fuel smelts twice as
-	// many items there — it must NOT also be halved.
-	return fuelTicks[item]
+	return fuels[item].Burn[kind]
+}
+
+// cookerFuelSpeed is how much faster a fuel item cooks in this cooker.
+func cookerFuelSpeed(kind int8, item int32) float32 {
+	return fuels[item].Speed[kind]
+}
+
+// cookTotal is a recipe's cook time at the lit fuel's speed (vanilla
+// getTotalCookTime: rounded up; a zero speed leaves it as written).
+func cookTotal(cook int, speed float32) int {
+	if speed <= 0 {
+		return cook
+	}
+	return int(math.Ceil(float64(float32(cook) / speed)))
 }
 
 type furnace struct {
@@ -93,7 +108,8 @@ type furnace struct {
 	burnLeft int         // ticks of current fuel remaining
 	burnMax  int         // total ticks of the current fuel (for the flame bar)
 	cook     int         // progress toward the current smelt
-	cookMax  int         // the current recipe's cook time
+	cookMax  int         // the current recipe's cook time, at the fuel's speed
+	speed    float32     // the lit fuel's speed multiplier (0 = as written)
 	xpBank   float64     // smelting XP owed, paid out when the output is taken
 	viewer   int32       // eid of the player with the window open (0 = none)
 	resync   int         // ticks until the lit-state block update is re-broadcast
@@ -161,6 +177,13 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 		if f.burnLeft == 0 && canCook {
 			if ticks := cookerFuelTicks(f.kind, f.slots[furnaceFuel].item); ticks > 0 && f.slots[furnaceFuel].count > 0 {
 				f.burnLeft, f.burnMax = ticks, ticks
+				// A new fuel brings its own speed; progress keeps its fraction.
+				f.speed = cookerFuelSpeed(f.kind, f.slots[furnaceFuel].item)
+				if f.cookMax > 0 && f.cook < f.cookMax {
+					ratio := float32(f.cook) / float32(f.cookMax)
+					f.cookMax = cookTotal(out.Cook, f.speed)
+					f.cook = int(math.Ceil(float64(ratio * float32(f.cookMax))))
+				}
 				if f.slots[furnaceFuel].count--; f.slots[furnaceFuel].count == 0 {
 					f.slots[furnaceFuel].item = 0
 				}
@@ -169,7 +192,7 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 		}
 		switch {
 		case f.burnLeft > 0 && canCook:
-			f.cookMax = out.Cook
+			f.cookMax = cookTotal(out.Cook, f.speed)
 			if f.cook++; f.cook >= f.cookMax {
 				f.cook = 0
 				f.slots[furnaceOutput].item = out.Out

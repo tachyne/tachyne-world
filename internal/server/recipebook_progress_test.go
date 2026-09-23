@@ -141,8 +141,10 @@ func TestCookingRecipesEnterTheBook(t *testing.T) {
 	if !ok {
 		t.Fatal("no blast-furnace entry")
 	}
-	if b.Cook != 100 {
-		t.Fatalf("blast cook time = %d, want 100", b.Cook)
+	// The book shows the recipe's own cook time, which since 26.x is 200 for
+	// blasting too — the fuel, not the recipe, makes the blast furnace fast.
+	if b.Cook != 200 {
+		t.Fatalf("blast cook time = %d, want 200", b.Cook)
 	}
 	if b.Category != 8 { // blast_furnace_misc
 		t.Fatalf("blast category = %d, want 8 (blast_furnace_misc)", b.Category)

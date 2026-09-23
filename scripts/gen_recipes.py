@@ -33,7 +33,7 @@ import zipfile
 
 import vanillareport
 
-VER = sys.argv[1] if len(sys.argv) > 1 else canon.DATA  # the recipes: behaviour data, canon.py
+VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION  # recipes read 26.x as is (only defaults are omitted)
 JAR = os.path.expanduser("~/vanilla/server-%s.jar" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "recipes_gen.go")
 

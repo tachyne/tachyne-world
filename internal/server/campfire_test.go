@@ -10,30 +10,42 @@ func TestCookerTables(t *testing.T) {
 	beef := int32(itemByName["beef"])
 	ironOre := int32(itemByName["iron_ore"])
 
+	coal := int32(itemByName["coal"])
+	// The specialists' recipes say 200 ticks like the furnace's; their fuel
+	// cooks twice as fast there (the cooking_fuel speed multiplier), so they
+	// run at 100.
+	fast := func(kind int8, cook int) int { return cookTotal(cook, cookerFuelSpeed(kind, coal)) }
+
 	// The smoker cooks food at 100 ticks, refuses ore.
-	if e, ok := cookerRecipe(cookSmoker, beef); !ok || e.Out != int32(itemByName["cooked_beef"]) || e.Cook != 100 {
+	if e, ok := cookerRecipe(cookSmoker, beef); !ok || e.Out != int32(itemByName["cooked_beef"]) || e.Cook != 200 || fast(cookSmoker, e.Cook) != 100 {
 		t.Errorf("smoker beef: %+v %v", e, ok)
 	}
 	if _, ok := cookerRecipe(cookSmoker, ironOre); ok {
 		t.Error("smoker must refuse iron ore")
 	}
 	// The blast furnace smelts ore at 100 ticks, refuses food.
-	if e, ok := cookerRecipe(cookBlast, ironOre); !ok || e.Out != int32(itemByName["iron_ingot"]) || e.Cook != 100 {
+	if e, ok := cookerRecipe(cookBlast, ironOre); !ok || e.Out != int32(itemByName["iron_ingot"]) || e.Cook != 200 || fast(cookBlast, e.Cook) != 100 {
 		t.Errorf("blast iron: %+v %v", e, ok)
 	}
 	if _, ok := cookerRecipe(cookBlast, beef); ok {
 		t.Error("blast furnace must refuse beef")
 	}
 	// The plain furnace does both, at 200.
-	if e, ok := cookerRecipe(cookFurnace, beef); !ok || e.Cook != 200 {
+	if e, ok := cookerRecipe(cookFurnace, beef); !ok || e.Cook != 200 || fast(cookFurnace, e.Cook) != 200 {
 		t.Errorf("furnace beef: %+v %v", e, ok)
 	}
-	// A fuel item burns the same duration in every furnace type (vanilla
-	// getBurnDuration is block-independent); the specialists' 2x speed is the
-	// 100-tick cook time, so a fuel smelts twice as many items there.
-	coal := int32(itemByName["coal"])
-	if cookerFuelTicks(cookFurnace, coal) != 1600 || cookerFuelTicks(cookBlast, coal) != 1600 {
-		t.Errorf("fuel: furnace %d blast %d", cookerFuelTicks(cookFurnace, coal), cookerFuelTicks(cookBlast, coal))
+	// ...and burns for half as long there, so a coal smelts 8 items in every
+	// furnace (1.21.x halved getBurnDuration in the specialists too).
+	for kind, want := range map[int8]int{cookFurnace: 1600, cookBlast: 800, cookSmoker: 800} {
+		if got := cookerFuelTicks(kind, coal); got != want {
+			t.Errorf("coal in cooker %d burns %d, want %d", kind, got, want)
+		}
+	}
+	// Fuels the old hand-kept table never had, and the odd tick it had wrong.
+	for name, want := range map[string]int{"white_wool": 100, "oak_boat": 1200, "dried_kelp_block": 4001, "white_wool_slab": 50} {
+		if got := cookerFuelTicks(cookFurnace, int32(itemByName[name])); got != want {
+			t.Errorf("%s burns %d, want %d", name, got, want)
+		}
 	}
 	// Campfire recipes cook at 600.
 	if e, ok := campfireResult[beef]; !ok || e.Cook != 600 {

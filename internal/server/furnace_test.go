@@ -51,6 +51,24 @@ func TestFurnaceSmeltsIron(t *testing.T) {
 	}
 }
 
+// A blast furnace burns a coal for half as long and cooks twice as fast, so
+// the coal smelts the same 8 items it would in a furnace, at 100 ticks each.
+func TestBlastFurnaceCoalSmeltsEight(t *testing.T) {
+	h, players, _, f := furnaceSetup()
+	f.kind = cookBlast
+	f.slots[furnaceInput] = invStack{item: tRawIron, count: 16}
+	f.slots[furnaceFuel] = invStack{item: tCoal, count: 1}
+	for i := 1; i <= 900; i++ {
+		h.updateFurnaces(players)
+		if i == 100 && f.slots[furnaceOutput].count != 1 {
+			t.Fatalf("first ingot should finish at tick 100, output=%+v cookMax=%d", f.slots[furnaceOutput], f.cookMax)
+		}
+	}
+	if f.slots[furnaceOutput].count != 8 || f.slots[furnaceInput].count != 8 {
+		t.Fatalf("one coal should smelt 8: out=%+v in=%+v", f.slots[furnaceOutput], f.slots[furnaceInput])
+	}
+}
+
 func TestFurnaceNeedsFuel(t *testing.T) {
 	h, players, _, f := furnaceSetup()
 	f.slots[furnaceInput] = invStack{item: tRawIron, count: 1}
@@ -166,7 +184,7 @@ func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 	in := map[simPos]*furnace{
 		{blockPos: blockPos{10, 64, -3}}: {
 			slots:    [3]invStack{{item: tRawIron, count: 5}, {item: itemByName["leather_chestplate"], count: 2}, {item: tIronIngot, count: 7}},
-			burnLeft: 123, burnMax: 1600, cook: 42, cookMax: 200,
+			burnLeft: 123, burnMax: 800, cook: 42, cookMax: 100, speed: 2,
 		},
 	}
 	s.recordFurnaces(in)
@@ -180,7 +198,7 @@ func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 	if f.slots != in[simPos{blockPos: blockPos{10, 64, -3}}].slots {
 		t.Fatalf("slots mismatch: %+v", f.slots)
 	}
-	if f.burnLeft != 123 || f.burnMax != 1600 || f.cook != 42 || f.cookMax != 200 {
+	if f.burnLeft != 123 || f.burnMax != 800 || f.cook != 42 || f.cookMax != 100 || f.speed != 2 {
 		t.Fatalf("progress mismatch: %+v", f)
 	}
 	if f.viewer != 0 {
