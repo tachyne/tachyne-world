@@ -14,14 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Changed
-- **The game's facts come from the game.** Every generated table the engine
-  and gateways ship — block states and their light, collision and harvest
+- **The game's facts come from the game.** The generated tables that
+  describe game content — block states and their light, collision and harvest
   tools, items with their stack sizes, durability and food, entity and
-  particle ids, and the id translation between client versions — is now read
+  particle ids, and the id translation between client versions — are now read
   from the vanilla server itself: its data reports, plus a small extractor
   (`scripts/extract`) that loads the server and asks it per block and per
   item. They used to come from community datasets that stop at 26.1 and
-  spell some things differently. Every table regenerates identically for
+  spell some things differently. Each table regenerates identically for
   today's content, with no network access. This is the groundwork for moving
   the engine's content to 26.3.
 
