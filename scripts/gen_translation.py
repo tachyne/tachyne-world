@@ -23,6 +23,7 @@ else.
 import canon
 import json, os, sys
 
+import standins
 import vanillareport
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "tachyne-common", "protocol", "translation_gen.go")
@@ -121,6 +122,47 @@ def delta_array_states(canon, version):
     return out
 
 
+def report_states(ver):
+    """{block name: ([(state id, {prop: value})], default state id)} from blocks.json."""
+    raw = json.load(open(canon.report("blocks.json", ver)))
+    out = {}
+    for key, b in raw.items():
+        sts = [(st["id"], st.get("properties", {})) for st in b["states"]]
+        out[key.removeprefix("minecraft:")] = (sts, next(st["id"] for st in b["states"] if st.get("default")))
+    return out
+
+
+def absent_states(canon_states, version_blocks):
+    """For each canonical block the version lacks: its states and what each is
+    shown as — a canonical state of the stand-in (it then shifts like any other
+    state), or None for air. The stand-in takes every property value it shares
+    and its own default for the rest. Returns [(lo, hi, delta or None)] runs,
+    where a state s is shown as s + delta."""
+    have = {b["name"] for b in version_blocks}
+    subs = {}
+    for name, (sts, _) in canon_states.items():
+        if name in have:
+            continue
+        stand = standins.BLOCKS.get(name)
+        if stand is not None and stand not in have:
+            stand = None  # an older client lacks the stand-in too: air
+        for sid, props in sts:
+            if stand is None:
+                subs[sid] = None
+                continue
+            ssts, sdef = canon_states[stand]
+            want = standins.props(props, [p for _, p in ssts], next(p for i, p in ssts if i == sdef))
+            subs[sid] = next(i for i, p in ssts if p == want) - sid
+    runs = []
+    for sid in sorted(subs):
+        d = subs[sid]
+        if runs and runs[-1][1] == sid - 1 and runs[-1][2] == d:
+            runs[-1][1] = sid
+        else:
+            runs.append([sid, sid, d])
+    return runs
+
+
 def rle(deltas):
     """{id: delta} -> sorted [(min, max, delta)] merging consecutive ids w/ same delta."""
     ranges = []
@@ -137,6 +179,8 @@ def rle(deltas):
 data = {}
 absent = {}
 added = {}
+absent_state_runs = {}  # version -> [(lo, hi, delta or None)]
+canon_states = report_states(CANON)
 for const, kind, registry in REGISTRIES:
     canon = load(CANON, kind, registry)
     per = {}
@@ -144,6 +188,13 @@ for const, kind, registry in REGISTRIES:
         version = load(dir, kind, registry)
         deltas = delta_array_states(canon, version) if kind == "stateRange" else delta_array_flat(canon, version)
         per[ver] = rle(deltas)
+        if kind == "stateRange":
+            runs = absent_states(canon_states, version)
+            if runs:
+                absent_state_runs[ver] = runs
+                n = sum(b - a + 1 for a, b, _ in runs)
+                air = sum(b - a + 1 for a, b, d in runs if d is None)
+                print(f"{const} {CANON}->{ver}: {n} states ABSENT ({n - air} shown as a stand-in, {air} as air)")
         if kind != "stateRange":
             gone = absent_flat(canon, version)
             if gone:
@@ -198,6 +249,19 @@ for const in sorted(absent):
         ids = ", ".join(str(i) for i in absent[const][ver])
         L.append(f"\t\t{ver}: {{{ids}}},")
     L.append("\t},")
+L += ["}", ""]
+
+L += [
+    "// absentStates[clientProtocol] = runs of canonical block states that version",
+    "// does not have, with what each is shown as instead: state s becomes the",
+    "// canonical state s+Delta (a stand-in of the same shape, which then shifts",
+    "// like any other), or air when Air is set. Sorted by Lo.",
+    "var absentStates = map[int32][]absentStateRun{",
+]
+for ver in sorted(absent_state_runs):
+    inner = ", ".join(f"{{{a}, {b}, {0 if d is None else d}, {'true' if d is None else 'false'}}}"
+                      for a, b, d in absent_state_runs[ver])
+    L.append(f"\t{ver}: {{{inner}}},")
 L += ["}", ""]
 
 L += [

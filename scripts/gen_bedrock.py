@@ -49,6 +49,7 @@ import urllib.request
 import zipfile
 
 import canon
+import standins
 import vanillareport
 
 CANON = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
@@ -318,15 +319,31 @@ def main():
     air = block_hash("minecraft:air", {})
     assert air == 3690217760, air  # cross-check vs dragonfly's known value
     fallback = block_hash("minecraft:info_update", {})
+    # A block Geyser does not map yet is shown as its stand-in (scripts/standins.py),
+    # which keeps its shape, before the fallback block.
+    states_of, default_of = {}, {}
+    for name, b in vanillareport._load(CANON, "blocks.json").items():
+        name = name.removeprefix("minecraft:")
+        states_of[name] = [st.get("properties", {}) for st in b["states"]]
+        default_of[name] = next(st.get("properties", {}) for st in b["states"] if st.get("default"))
     rids = []
     unmapped = {}
+    stood_in = 0
     for sid, key in enumerate(canon_keys):
         e = by_key.get(key)
+        owner = state_owner[sid]
+        stand = standins.BLOCKS.get(owner)
+        if e is None and stand is not None:
+            want = standins.props(dict(key[1]), states_of[stand], default_of[stand])
+            e = by_key.get((stand, tuple(sorted(want.items()))))
+            if e is not None:
+                stood_in += 1
+                owner = stand
         if e is None:
             unmapped[key[0]] = unmapped.get(key[0], 0) + 1
             rids.append(fallback)
             continue
-        ident = e.get("bedrock_identifier", (8, state_owner[sid]))[1]
+        ident = e.get("bedrock_identifier", (8, owner))[1]
         states = e.get("state", (10, {}))[1]
         rids.append(block_hash("minecraft:" + ident, states))
     assert rids[0] == air  # canonical state 0 is air
@@ -339,6 +356,7 @@ def main():
     if stale:
         raise SystemExit(f"{len(stale)} Bedrock block states are not in the {BEDROCK} palette "
                          f"({sum(r in stale for r in rids)} Java states): re-pin GEYSER_PINS")
+    print(f"  {stood_in} states shown as a stand-in")
     if unmapped:
         print(f"  {sum(unmapped.values())} states of {len(unmapped)} blocks have no Geyser mapping -> fallback: {sorted(unmapped)}")
 
