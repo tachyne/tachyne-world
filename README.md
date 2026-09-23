@@ -31,9 +31,9 @@ present**. What the grades mean and how each area scores is in
 [docs/PARITY.md](docs/PARITY.md); [CHANGELOG.md](CHANGELOG.md) is the
 whole-system timeline of what changes, release by release.
 
-**Who can connect.** Java **1.21.5–1.21.8**, Java **26.2–26.3** and
-**Bedrock** (latest) all share one world, no client mods needed. Java
-1.21.9–26.1 are rejected at login — see
+**Who can connect.** Java **26.2–26.3** and **Bedrock** (latest) share one
+world, no client mods needed. Older Java clients are told at login which
+versions are served — see
 [What to expect](#what-to-expect-vanilla-parity-at-a-glance).
 
 **Bug reports are genuinely useful** — please open a GitHub Issue with your
@@ -93,8 +93,8 @@ detailed inventory follows in [What works today](#what-works-today).
 | Raids | 🟡 | Killing a pillager-patrol captain grants Bad Omen; carrying it into a village converts it to Raid Omen — vanilla's thirty-second fuse — and the raid starts when that runs out. Vanilla's wave tables and per-difficulty wave counts (3/5/7), all five raider types with their mounted riders, and the raid boss bar; winning grants Hero of the Village (40 min), which discounts villager trades. Vanilla's per-difficulty bonus spawns pad the waves, a Raid Omen above level one brings the bonus wave and a stronger Hero of the Village, villagers ring the village bell while the raid is on (lighting the raiders up) and, once it is won, walk up to the heroes and throw them gifts from their profession's tables, and a raid in progress survives a restart with its raiders. |
 | Online-mode auth / chat signing | ❌ | Run offline-mode behind your own access control (the cluster setup ships one: `tachyne-access`). |
 
-Multi-version is a headline feature: **Java 1.21.5–1.21.8, 26.2 and 26.3** clients
-share one world (1.21.9–26.1 are currently rejected at login), and **Bedrock**
+Multi-version is a headline feature: **Java 26.2 and 26.3** clients share one
+world (older Java clients are told at login which versions are served), and **Bedrock**
 (latest release) joins through its own gateway — survival HUD, every
 container and workstation screen (crafting, furnaces, anvil, enchanting,
 trading, smithing, loom, stonecutter, beacon…), the creative inventory,
@@ -102,16 +102,19 @@ portal travel and Bedrock-to-Bedrock skins all bridged, with a short list
 of remaining Bedrock-specific limits in that gateway's README. Content newer than a client's own version is
 downgraded rather than sent regardless: blocks and items it has never heard of
 arrive as air, and newer mobs as their nearest sensible stand-in, so an older
-client is never handed an id its registry cannot resolve.
+client is never handed an id its registry cannot resolve. The engine's content
+ids are 26.3's; its gameplay data (loot, recipes, worldgen, advancements) is
+still 1.21.11's while 26.3's reworked data formats are brought in piece by
+piece, each with the content it adds.
 
 This repo is the **world engine** of the *tachyne* cluster: it speaks **no
 Minecraft wire format at all** ("worlds are versionless"). It emits typed
 domain events over the **attach protocol** (`-attach :25500`); per-protocol
 **gateway pods** terminate real clients, render events into canonical **1.21.5
 (770)** wire via the shared `tachyne-common/render770` package, and apply a
-translation chain for newer clients. Deployed today: 1.21.5–1.21.8 clients via
-`tachyne-gw-java-770`, 26.2 and 26.3 (776–777) via `tachyne-gw-java-776`, both behind the
-version-routing `tachyne-ingress` front door. See `docs/DOMAIN-EVENTS.md`
+translation chain to the clients served. Deployed today: 26.2 and 26.3
+(776–777) via `tachyne-gw-java-776`, behind the version-routing
+`tachyne-ingress` front door. See `docs/DOMAIN-EVENTS.md`
 (the architecture and how it got this way) and `docs/SHARDING.md` (the
 multi-pod plan).
 
@@ -472,7 +475,7 @@ ATTACH_TOKEN=dev go run ./cmd/server         # attach-only engine on :25500
 ```
 
 The engine has **no Minecraft port** (`-addr` is a deprecated no-op). A real
-client connects through a gateway: run `tachyne-gw-java-770` against
+client connects through a gateway: run `tachyne-gw-java-776` against
 `localhost:25500` with the same token, or use the cluster entry
 (`<server-ip>:25565` → ingress → gateways → world pod).
 

@@ -85,11 +85,11 @@ func WriteRegion(path string, chunks map[[2]int][]byte, stamps map[[2]int]uint32
 func WriteLevelDat(path, name string, spawnX, spawnY, spawnZ int32) error {
 	b := nbtCompound(nil, "")
 	b = nbtCompound(b, "Data")
-	b = nbtInt(b, "DataVersion", DataVersion1_21_11)
+	b = nbtInt(b, "DataVersion", DataVersion)
 	b = nbtInt(b, "version", 19133) // Anvil format marker
 	b = nbtCompound(b, "Version")
-	b = nbtInt(b, "Id", DataVersion1_21_11)
-	b = nbtString(b, "Name", "1.21.11")
+	b = nbtInt(b, "Id", DataVersion)
+	b = nbtString(b, "Name", "26.3")
 	b = nbtString(b, "Series", "main")
 	b = nbtByte(b, "Snapshot", 0)
 	b = end(b)

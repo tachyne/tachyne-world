@@ -5,74 +5,76 @@ package server
 // bannerWallVariant maps a banner item's standing default state to the
 // same color's wall-banner default state.
 var bannerWallVariant = map[uint32]uint32{
-	12725: 12981, // white
-	12741: 12985, // orange
-	12757: 12989, // magenta
-	12773: 12993, // light_blue
-	12789: 12997, // yellow
-	12805: 13001, // lime
-	12821: 13005, // pink
-	12837: 13009, // gray
-	12853: 13013, // light_gray
-	12869: 13017, // cyan
-	12885: 13021, // purple
-	12901: 13025, // blue
-	12917: 13029, // brown
-	12933: 13033, // green
-	12949: 13037, // red
-	12965: 13041, // black
+	14782: 15030, // white
+	14798: 15034, // orange
+	14814: 15038, // magenta
+	14830: 15042, // light_blue
+	14846: 15046, // yellow
+	14862: 15050, // lime
+	14878: 15054, // pink
+	14894: 15058, // gray
+	14910: 15062, // light_gray
+	14926: 15066, // cyan
+	14942: 15070, // purple
+	14958: 15074, // blue
+	14974: 15078, // brown
+	14990: 15082, // green
+	15006: 15086, // red
+	15022: 15090, // black
 }
 
 // headWallVariant maps a mob head/skull item's standing default state to
 // its wall variant. Heads need no support block (vanilla SkullBlock).
 var headWallVariant = map[uint32]uint32{
-	10889: 10906, // creeper_head
-	10929: 10946, // dragon_head
-	10969: 10986, // piglin_head
-	10849: 10866, // player_head
-	10729: 10746, // skeleton_skull
-	10769: 10786, // wither_skeleton_skull
-	10809: 10826, // zombie_head
+	12858: 12875, // creeper_head
+	12898: 12915, // dragon_head
+	12938: 12955, // piglin_head
+	12818: 12835, // player_head
+	12698: 12715, // skeleton_skull
+	12738: 12755, // wither_skeleton_skull
+	12778: 12795, // zombie_head
 }
 
 // pottedPlantState maps a plant ITEM name to its potted block's default
 // state (right-clicking a flower pot with the item swaps the pot for it).
 var pottedPlantState = map[string]uint32{
-	"acacia_sapling":     10434, // potted_acacia_sapling
-	"allium":             10443, // potted_allium
-	"azalea":             29378, // potted_azalea_bush
-	"azure_bluet":        10444, // potted_azure_bluet
-	"bamboo":             15089, // potted_bamboo
-	"birch_sapling":      10432, // potted_birch_sapling
-	"blue_orchid":        10442, // potted_blue_orchid
-	"brown_mushroom":     10454, // potted_brown_mushroom
-	"cactus":             10456, // potted_cactus
-	"cherry_sapling":     10435, // potted_cherry_sapling
-	"closed_eyeblossom":  29669, // potted_closed_eyeblossom
-	"cornflower":         10450, // potted_cornflower
-	"crimson_fungus":     21624, // potted_crimson_fungus
-	"crimson_roots":      21626, // potted_crimson_roots
-	"dandelion":          10440, // potted_dandelion
-	"dark_oak_sapling":   10436, // potted_dark_oak_sapling
-	"dead_bush":          10455, // potted_dead_bush
-	"fern":               10439, // potted_fern
-	"flowering_azalea":   29379, // potted_flowering_azalea_bush
-	"jungle_sapling":     10433, // potted_jungle_sapling
-	"lily_of_the_valley": 10451, // potted_lily_of_the_valley
-	"mangrove_propagule": 10438, // potted_mangrove_propagule
-	"oak_sapling":        10430, // potted_oak_sapling
-	"open_eyeblossom":    29668, // potted_open_eyeblossom
-	"orange_tulip":       10446, // potted_orange_tulip
-	"oxeye_daisy":        10449, // potted_oxeye_daisy
-	"pale_oak_sapling":   10437, // potted_pale_oak_sapling
-	"pink_tulip":         10448, // potted_pink_tulip
-	"poppy":              10441, // potted_poppy
-	"red_mushroom":       10453, // potted_red_mushroom
-	"red_tulip":          10445, // potted_red_tulip
-	"spruce_sapling":     10431, // potted_spruce_sapling
-	"torchflower":        10429, // potted_torchflower
-	"warped_fungus":      21625, // potted_warped_fungus
-	"warped_roots":       21627, // potted_warped_roots
-	"white_tulip":        10447, // potted_white_tulip
-	"wither_rose":        10452, // potted_wither_rose
+	"acacia_sapling":     12377, // potted_acacia_sapling
+	"allium":             12388, // potted_allium
+	"azalea":             35430, // potted_azalea_bush
+	"azure_bluet":        12389, // potted_azure_bluet
+	"bamboo":             18648, // potted_bamboo
+	"birch_sapling":      12375, // potted_birch_sapling
+	"blue_orchid":        12387, // potted_blue_orchid
+	"brown_mushroom":     12399, // potted_brown_mushroom
+	"cactus":             12401, // potted_cactus
+	"cherry_sapling":     12378, // potted_cherry_sapling
+	"closed_eyeblossom":  35721, // potted_closed_eyeblossom
+	"cornflower":         12395, // potted_cornflower
+	"crimson_fungus":     25183, // potted_crimson_fungus
+	"crimson_roots":      25185, // potted_crimson_roots
+	"dandelion":          12384, // potted_dandelion
+	"dark_oak_sapling":   12379, // potted_dark_oak_sapling
+	"dead_bush":          12400, // potted_dead_bush
+	"fern":               12383, // potted_fern
+	"flowering_azalea":   35431, // potted_flowering_azalea_bush
+	"golden_dandelion":   12385, // potted_golden_dandelion
+	"jungle_sapling":     12376, // potted_jungle_sapling
+	"lily_of_the_valley": 12396, // potted_lily_of_the_valley
+	"mangrove_propagule": 12382, // potted_mangrove_propagule
+	"oak_sapling":        12373, // potted_oak_sapling
+	"open_eyeblossom":    35720, // potted_open_eyeblossom
+	"orange_tulip":       12391, // potted_orange_tulip
+	"oxeye_daisy":        12394, // potted_oxeye_daisy
+	"pale_oak_sapling":   12380, // potted_pale_oak_sapling
+	"pink_tulip":         12393, // potted_pink_tulip
+	"poplar_sapling":     12381, // potted_poplar_sapling
+	"poppy":              12386, // potted_poppy
+	"red_mushroom":       12398, // potted_red_mushroom
+	"red_tulip":          12390, // potted_red_tulip
+	"spruce_sapling":     12374, // potted_spruce_sapling
+	"torchflower":        12372, // potted_torchflower
+	"warped_fungus":      25184, // potted_warped_fungus
+	"warped_roots":       25186, // potted_warped_roots
+	"white_tulip":        12392, // potted_white_tulip
+	"wither_rose":        12397, // potted_wither_rose
 }

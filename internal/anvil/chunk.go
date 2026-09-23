@@ -2,9 +2,9 @@ package anvil
 
 import "math/bits"
 
-// DataVersion1_21_11 is the world DataVersion of Minecraft 1.21.11 (from the
-// server jar's version.json), the engine's canonical version.
-const DataVersion1_21_11 = 4671
+// DataVersion is the world DataVersion of the engine's canonical version,
+// 26.3 (from the server jar's version.json).
+const DataVersion = 5023
 
 // pack packs values little-endian-within-long at the given bit width, no
 // value straddling longs — the 1.16+ Anvil packing.
@@ -86,7 +86,7 @@ func ChunkNBT(cx, cz int32, minY int, secs [][4096]uint32, biomes []string,
 	hm [256]int16, sky, blk [][4096]uint8) []byte {
 
 	b := nbtCompound(nil, "")
-	b = nbtInt(b, "DataVersion", DataVersion1_21_11)
+	b = nbtInt(b, "DataVersion", DataVersion)
 	b = nbtInt(b, "xPos", cx)
 	b = nbtInt(b, "yPos", int32(minY>>4))
 	b = nbtInt(b, "zPos", cz)

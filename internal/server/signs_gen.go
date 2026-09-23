@@ -13,35 +13,37 @@ const (
 // signWallVariant maps a sign item's standing default state (what
 // BlockForItem returns) to the same wood's wall-sign default state.
 var signWallVariant = map[uint32]uint32{
-	5231:  5651,  // acacia
-	5423:  5699,  // bamboo
-	5199:  5643,  // birch
-	5263:  5659,  // cherry
-	21441: 21505, // crimson
-	5327:  5675,  // dark_oak
-	5295:  5667,  // jungle
-	5391:  5691,  // mangrove
-	5135:  5627,  // oak
-	5359:  5683,  // pale_oak
-	5167:  5635,  // spruce
-	21473: 21513, // warped
+	7004:  7440,  // acacia
+	7228:  7496,  // bamboo
+	6972:  7432,  // birch
+	7036:  7448,  // cherry
+	25016: 25064, // crimson
+	7100:  7464,  // dark_oak
+	7068:  7456,  // jungle
+	7164:  7480,  // mangrove
+	6908:  7416,  // oak
+	7132:  7472,  // pale_oak
+	7196:  7488,  // poplar
+	6940:  7424,  // spruce
+	25048: 25072, // warped
 }
 
 // hangingWallVariant maps a hanging-sign item's ceiling default state to
 // the same wood's wall-hanging default state.
 var hangingWallVariant = map[uint32]uint32{
-	5931: 6499, // acacia
-	6443: 6563, // bamboo
-	5867: 6491, // birch
-	5995: 6507, // cherry
-	6251: 6547, // crimson
-	6123: 6523, // dark_oak
-	6059: 6515, // jungle
-	6379: 6539, // mangrove
-	5739: 6475, // oak
-	6187: 6531, // pale_oak
-	5803: 6483, // spruce
-	6315: 6555, // warped
+	7744: 8360, // acacia
+	8320: 8432, // bamboo
+	7680: 8352, // birch
+	7808: 8368, // cherry
+	8064: 8416, // crimson
+	7936: 8384, // dark_oak
+	7872: 8376, // jungle
+	8192: 8400, // mangrove
+	7552: 8336, // oak
+	8000: 8392, // pale_oak
+	8256: 8408, // poplar
+	7616: 8344, // spruce
+	8128: 8424, // warped
 }
 
 // signKindRanges classifies any sign block state (sorted by Min).
@@ -49,54 +51,58 @@ var signKindRanges = []struct {
 	Min, Max uint32
 	Kind     int
 }{
-	{5134, 5165, signStanding},       // oak
-	{5166, 5197, signStanding},       // spruce
-	{5198, 5229, signStanding},       // birch
-	{5230, 5261, signStanding},       // acacia
-	{5262, 5293, signStanding},       // cherry
-	{5294, 5325, signStanding},       // jungle
-	{5326, 5357, signStanding},       // dark_oak
-	{5358, 5389, signStanding},       // pale_oak
-	{5390, 5421, signStanding},       // mangrove
-	{5422, 5453, signStanding},       // bamboo
-	{5626, 5633, signWall},           // oak
-	{5634, 5641, signWall},           // spruce
-	{5642, 5649, signWall},           // birch
-	{5650, 5657, signWall},           // acacia
-	{5658, 5665, signWall},           // cherry
-	{5666, 5673, signWall},           // jungle
-	{5674, 5681, signWall},           // dark_oak
-	{5682, 5689, signWall},           // pale_oak
-	{5690, 5697, signWall},           // mangrove
-	{5698, 5705, signWall},           // bamboo
-	{5706, 5769, signHangingCeiling}, // oak
-	{5770, 5833, signHangingCeiling}, // spruce
-	{5834, 5897, signHangingCeiling}, // birch
-	{5898, 5961, signHangingCeiling}, // acacia
-	{5962, 6025, signHangingCeiling}, // cherry
-	{6026, 6089, signHangingCeiling}, // jungle
-	{6090, 6153, signHangingCeiling}, // dark_oak
-	{6154, 6217, signHangingCeiling}, // pale_oak
-	{6218, 6281, signHangingCeiling}, // crimson
-	{6282, 6345, signHangingCeiling}, // warped
-	{6346, 6409, signHangingCeiling}, // mangrove
-	{6410, 6473, signHangingCeiling}, // bamboo
-	{6474, 6481, signHangingWall},    // oak
-	{6482, 6489, signHangingWall},    // spruce
-	{6490, 6497, signHangingWall},    // birch
-	{6498, 6505, signHangingWall},    // acacia
-	{6506, 6513, signHangingWall},    // cherry
-	{6514, 6521, signHangingWall},    // jungle
-	{6522, 6529, signHangingWall},    // dark_oak
-	{6530, 6537, signHangingWall},    // pale_oak
-	{6538, 6545, signHangingWall},    // mangrove
-	{6546, 6553, signHangingWall},    // crimson
-	{6554, 6561, signHangingWall},    // warped
-	{6562, 6569, signHangingWall},    // bamboo
-	{21440, 21471, signStanding},     // crimson
-	{21472, 21503, signStanding},     // warped
-	{21504, 21511, signWall},         // crimson
-	{21512, 21519, signWall},         // warped
+	{6891, 6922, signStanding},       // oak
+	{6923, 6954, signStanding},       // spruce
+	{6955, 6986, signStanding},       // birch
+	{6987, 7018, signStanding},       // acacia
+	{7019, 7050, signStanding},       // cherry
+	{7051, 7082, signStanding},       // jungle
+	{7083, 7114, signStanding},       // dark_oak
+	{7115, 7146, signStanding},       // pale_oak
+	{7147, 7178, signStanding},       // mangrove
+	{7179, 7210, signStanding},       // poplar
+	{7211, 7242, signStanding},       // bamboo
+	{7415, 7422, signWall},           // oak
+	{7423, 7430, signWall},           // spruce
+	{7431, 7438, signWall},           // birch
+	{7439, 7446, signWall},           // acacia
+	{7447, 7454, signWall},           // cherry
+	{7455, 7462, signWall},           // jungle
+	{7463, 7470, signWall},           // dark_oak
+	{7471, 7478, signWall},           // pale_oak
+	{7479, 7486, signWall},           // mangrove
+	{7487, 7494, signWall},           // poplar
+	{7495, 7502, signWall},           // bamboo
+	{7503, 7566, signHangingCeiling}, // oak
+	{7567, 7630, signHangingCeiling}, // spruce
+	{7631, 7694, signHangingCeiling}, // birch
+	{7695, 7758, signHangingCeiling}, // acacia
+	{7759, 7822, signHangingCeiling}, // cherry
+	{7823, 7886, signHangingCeiling}, // jungle
+	{7887, 7950, signHangingCeiling}, // dark_oak
+	{7951, 8014, signHangingCeiling}, // pale_oak
+	{8015, 8078, signHangingCeiling}, // crimson
+	{8079, 8142, signHangingCeiling}, // warped
+	{8143, 8206, signHangingCeiling}, // mangrove
+	{8207, 8270, signHangingCeiling}, // poplar
+	{8271, 8334, signHangingCeiling}, // bamboo
+	{8335, 8342, signHangingWall},    // oak
+	{8343, 8350, signHangingWall},    // spruce
+	{8351, 8358, signHangingWall},    // birch
+	{8359, 8366, signHangingWall},    // acacia
+	{8367, 8374, signHangingWall},    // cherry
+	{8375, 8382, signHangingWall},    // jungle
+	{8383, 8390, signHangingWall},    // dark_oak
+	{8391, 8398, signHangingWall},    // pale_oak
+	{8399, 8406, signHangingWall},    // mangrove
+	{8407, 8414, signHangingWall},    // poplar
+	{8415, 8422, signHangingWall},    // crimson
+	{8423, 8430, signHangingWall},    // warped
+	{8431, 8438, signHangingWall},    // bamboo
+	{24999, 25030, signStanding},     // crimson
+	{25031, 25062, signStanding},     // warped
+	{25063, 25070, signWall},         // crimson
+	{25071, 25078, signWall},         // warped
 }
 
 // signKind classifies a block state as a sign kind; ok=false if not a sign.

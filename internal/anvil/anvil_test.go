@@ -209,7 +209,7 @@ func TestChunkNBTReparse(t *testing.T) {
 
 	root := parseNBT(t, ChunkNBT(-3, 7, worldgen.MinY, secs, biomes, hm, sky, blk))
 
-	if v := root["DataVersion"].(int32); v != DataVersion1_21_11 {
+	if v := root["DataVersion"].(int32); v != DataVersion {
 		t.Fatalf("DataVersion %d", v)
 	}
 	if root["xPos"].(int32) != -3 || root["zPos"].(int32) != 7 || root["yPos"].(int32) != -4 {

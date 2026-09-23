@@ -25,7 +25,7 @@ import (
 // idSpaceVersion is the canonical content version: the id space every
 // persisted block state, item, entity type and statistic is written in. Bump
 // it with the canonical version and the migrations below carry saves across.
-const idSpaceVersion = "1.21.11"
+const idSpaceVersion = "26.3"
 
 // savedIDSpace reads the id space a marker file records. No marker means a
 // save from before markers existed: the 1.21.5 canonical.

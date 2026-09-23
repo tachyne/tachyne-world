@@ -59,6 +59,17 @@ the public history since the project was open-sourced on 2026-07-10.
   the last half-minute came back nameless.
 
 ### Changed
+- **The world now speaks 26.3.** Every block, item and entity the engine
+  keeps is numbered as Minecraft 26.3 numbers it, and the world's saves were
+  carried across on the first start — block edits, inventories, ender chests,
+  mobs and their gear and trades, statistics — each checked by name to be
+  exactly what it was. The game itself plays as before: its loot, recipes,
+  worldgen and advancements are still 1.21.11's while 26.3's reworked data
+  arrives piece by piece, each with the content it brings. A 26.2 client sees
+  26.3-only things as their nearest 26.2 equivalent — a poplar boat as an oak
+  one — or not at all.
+- **Java 1.21.5–1.21.8 are no longer served.** Java 26.2 and 26.3 (and
+  Bedrock) are; an older client is told at login which versions to use.
 - **The game's facts come from the game.** The generated tables that
   describe game content — block states and their light, collision and harvest
   tools, items with their stack sizes, durability and food, entity and

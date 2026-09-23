@@ -124,7 +124,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.adventuring_time.title", desc: "advancements.adventure.adventuring_time.description",
 			titleEN: "Adventuring Time", descEN: "Discover every biome",
-			icon: 973, frame: 1, background: "",
+			icon: 1087, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 18.5,
 		},
@@ -132,7 +132,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/arbalistic", parent: "minecraft:adventure/ol_betsy", xp: 85,
 		criteria: []advCriterion{
-			{name: "arbalistic", trigger: "killed_by_arrow", items: [][]int32{{1339}}, minUnique: 5},
+			{name: "arbalistic", trigger: "killed_by_arrow", items: [][]int32{{1491}}, minUnique: 5},
 		},
 		reqs: [][]string{
 			{"arbalistic"},
@@ -140,7 +140,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.arbalistic.title", desc: "advancements.adventure.arbalistic.description",
 			titleEN: "Arbalistic", descEN: "Kill five unique mobs with one crossbow shot",
-			icon: 1339, frame: 1, background: "",
+			icon: 1491, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 2.0, y: 14.5,
 		},
@@ -156,7 +156,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.avoid_vibration.title", desc: "advancements.adventure.avoid_vibration.description",
 			titleEN: "Sneak 100", descEN: "Sneak near a Sculk Sensor or Warden to prevent it from detecting you",
-			icon: 742, frame: 0, background: "",
+			icon: 849, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 0.0,
 		},
@@ -172,7 +172,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.blowback.title", desc: "advancements.adventure.blowback.description",
 			titleEN: "Blowback", descEN: "Kill a Breeze with a deflected Breeze-shot Wind Charge",
-			icon: 1219, frame: 1, background: "",
+			icon: 1370, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 9.5,
 		},
@@ -180,7 +180,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/brush_armadillo", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "brush_armadillo", trigger: "player_interacted_with_entity", entity: "armadillo", items: [][]int32{{1425}}},
+			{name: "brush_armadillo", trigger: "player_interacted_with_entity", entity: "armadillo", items: [][]int32{{1578}}},
 		},
 		reqs: [][]string{
 			{"brush_armadillo"},
@@ -188,7 +188,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.brush_armadillo.title", desc: "advancements.adventure.brush_armadillo.description",
 			titleEN: "Isn't It Scute?", descEN: "Get Armadillo Scutes from an Armadillo using a Brush",
-			icon: 889, frame: 0, background: "",
+			icon: 1003, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 1.0,
 		},
@@ -204,7 +204,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.bullseye.title", desc: "advancements.adventure.bullseye.description",
 			titleEN: "Bullseye", descEN: "Hit the bullseye of a Target block from at least 30 meters away",
-			icon: 731, frame: 1, background: "",
+			icon: 838, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 5.0,
 		},
@@ -212,7 +212,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/craft_decorated_pot_using_only_sherds", parent: "minecraft:adventure/salvage_sherd", xp: 0,
 		criteria: []advCriterion{
-			{name: "pot_crafted_using_only_sherds", trigger: "recipe_crafted", ingredients: [][]int32{{1445, 1446, 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467}, {1445, 1446, 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467}, {1445, 1446, 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467}, {1445, 1446, 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467}}, recipe: "decorated_pot"},
+			{name: "pot_crafted_using_only_sherds", trigger: "recipe_crafted", ingredients: [][]int32{{1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620}, {1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620}, {1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620}, {1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620}}, recipe: "decorated_pot"},
 		},
 		reqs: [][]string{
 			{"pot_crafted_using_only_sherds"},
@@ -220,7 +220,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.craft_decorated_pot_using_only_sherds.title", desc: "advancements.adventure.craft_decorated_pot_using_only_sherds.description",
 			titleEN: "Careful Restoration", descEN: "Make a Decorated Pot out of 4 Pottery Sherds",
-			icon: 319, frame: 0, background: "",
+			icon: 392, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 17.5,
 		},
@@ -236,7 +236,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.crafters_crafting_crafters.title", desc: "advancements.adventure.crafters_crafting_crafters.description",
 			titleEN: "Crafters Crafting Crafters", descEN: "Be near a Crafter when it crafts a Crafter",
-			icon: 1103, frame: 0, background: "",
+			icon: 1237, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 2.0,
 		},
@@ -252,7 +252,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.fall_from_world_height.title", desc: "advancements.adventure.fall_from_world_height.description",
 			titleEN: "Caves & Cliffs", descEN: "Free fall from the top of the world (build limit) to the bottom of the world and survive",
-			icon: 1013, frame: 0, background: "",
+			icon: 1129, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 3.0,
 		},
@@ -270,7 +270,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.heart_transplanter.title", desc: "advancements.adventure.heart_transplanter.description",
 			titleEN: "Heart Transplanter", descEN: "Place a Creaking Heart with the correct alignment between two Pale Oak Log blocks",
-			icon: 330, frame: 0, background: "",
+			icon: 403, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 4.0,
 		},
@@ -286,7 +286,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.hero_of_the_village.title", desc: "advancements.adventure.hero_of_the_village.description",
 			titleEN: "Hero of the Village", descEN: "Successfully defend a village from a raid",
-			icon: 1266, frame: 1, background: "",
+			icon: 1417, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 2.0, y: 26.5,
 		},
@@ -302,7 +302,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.honey_block_slide.title", desc: "advancements.adventure.honey_block_slide.description",
 			titleEN: "Sticky Situation", descEN: "Jump into a Honey Block to break your fall",
-			icon: 725, frame: 0, background: "",
+			icon: 832, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 5.0,
 		},
@@ -358,7 +358,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.kill_a_mob.title", desc: "advancements.adventure.kill_a_mob.description",
 			titleEN: "Monster Hunter", descEN: "Kill any hostile monster",
-			icon: 931, frame: 0, background: "",
+			icon: 1045, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 6.0,
 		},
@@ -454,7 +454,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.kill_all_mobs.title", desc: "advancements.adventure.kill_all_mobs.description",
 			titleEN: "Monsters Hunted", descEN: "Kill one of every hostile monster",
-			icon: 936, frame: 1, background: "",
+			icon: 1050, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 3.5,
 		},
@@ -470,7 +470,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.kill_mob_near_sculk_catalyst.title", desc: "advancements.adventure.kill_mob_near_sculk_catalyst.description",
 			titleEN: "It Spreads", descEN: "Kill a mob near a Sculk Catalyst",
-			icon: 431, frame: 1, background: "",
+			icon: 505, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 4.5,
 		},
@@ -478,7 +478,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/lighten_up", parent: "minecraft:adventure/minecraft_trials_edition", xp: 0,
 		criteria: []advCriterion{
-			{name: "lighten_up", trigger: "item_used_on_block", items: [][]int32{{914, 919, 924, 929, 934, 939, 944}}, blocks: []string{"oxidized_copper_bulb", "weathered_copper_bulb", "exposed_copper_bulb", "waxed_oxidized_copper_bulb", "waxed_weathered_copper_bulb", "waxed_exposed_copper_bulb"}, props: map[string]string{"lit": "true"}},
+			{name: "lighten_up", trigger: "item_used_on_block", items: [][]int32{{1028, 1033, 1038, 1043, 1048, 1053, 1058}}, blocks: []string{"oxidized_copper_bulb", "weathered_copper_bulb", "exposed_copper_bulb", "waxed_oxidized_copper_bulb", "waxed_weathered_copper_bulb", "waxed_exposed_copper_bulb"}, props: map[string]string{"lit": "true"}},
 		},
 		reqs: [][]string{
 			{"lighten_up"},
@@ -486,7 +486,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.lighten_up.title", desc: "advancements.adventure.lighten_up.description",
 			titleEN: "Lighten Up", descEN: "Scrape a Copper Bulb with an Axe to make it brighter",
-			icon: 1476, frame: 0, background: "",
+			icon: 1629, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 10.5,
 		},
@@ -502,7 +502,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.lightning_rod_with_villager_no_fire.title", desc: "advancements.adventure.lightning_rod_with_villager_no_fire.description",
 			titleEN: "Surge Protector", descEN: "Protect a Villager from an undesired shock without starting a fire",
-			icon: 733, frame: 0, background: "",
+			icon: 840, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 8.75,
 		},
@@ -526,7 +526,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/ol_betsy", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "shot_crossbow", trigger: "shot_crossbow", items: [][]int32{{1339}}},
+			{name: "shot_crossbow", trigger: "shot_crossbow", items: [][]int32{{1491}}},
 		},
 		reqs: [][]string{
 			{"shot_crossbow"},
@@ -534,7 +534,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.ol_betsy.title", desc: "advancements.adventure.ol_betsy.description",
 			titleEN: "Ol' Betsy", descEN: "Shoot a Crossbow",
-			icon: 1339, frame: 0, background: "",
+			icon: 1491, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 15.5,
 		},
@@ -542,7 +542,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/overoverkill", parent: "minecraft:adventure/minecraft_trials_edition", xp: 50,
 		criteria: []advCriterion{
-			{name: "overoverkill", trigger: "player_hurt_entity", mainhand: []int32{1223}, damageTag: "mace_smash", damageDirect: []string{"player"}, minDealt: 100.0},
+			{name: "overoverkill", trigger: "player_hurt_entity", mainhand: []int32{1374}, damageTag: "mace_smash", damageDirect: []string{"player"}, minDealt: 100.0},
 		},
 		reqs: [][]string{
 			{"overoverkill"},
@@ -550,7 +550,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.overoverkill.title", desc: "advancements.adventure.overoverkill.description",
 			titleEN: "Over-Overkill", descEN: "Deal 50 hearts of damage in a single hit using the Mace",
-			icon: 1223, frame: 1, background: "",
+			icon: 1374, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 11.5,
 		},
@@ -566,7 +566,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.play_jukebox_in_meadows.title", desc: "advancements.adventure.play_jukebox_in_meadows.description",
 			titleEN: "Sound of Music", descEN: "Make the Meadows come alive with the sound of music from a Jukebox",
-			icon: 343, frame: 0, background: "",
+			icon: 416, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 19.5,
 		},
@@ -583,7 +583,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.read_power_from_chiseled_bookshelf.title", desc: "advancements.adventure.read_power_from_chiseled_bookshelf.description",
 			titleEN: "The Power of Books", descEN: "Read the power signal of a Chiseled Bookshelf using a Comparator",
-			icon: 318, frame: 0, background: "",
+			icon: 391, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 16.5,
 		},
@@ -591,7 +591,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/revaulting", parent: "minecraft:adventure/under_lock_and_key", xp: 0,
 		criteria: []advCriterion{
-			{name: "revaulting", trigger: "item_used_on_block", items: [][]int32{{1502}}, blocks: []string{"vault"}, props: map[string]string{"ominous": "true"}},
+			{name: "revaulting", trigger: "item_used_on_block", items: [][]int32{{1655}}, blocks: []string{"vault"}, props: map[string]string{"ominous": "true"}},
 		},
 		reqs: [][]string{
 			{"revaulting"},
@@ -599,7 +599,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.revaulting.title", desc: "advancements.adventure.revaulting.description",
 			titleEN: "Revaulting", descEN: "Unlock an Ominous Vault with an Ominous Trial Key",
-			icon: 1502, frame: 2, background: "",
+			icon: 1655, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 12.5,
 		},
@@ -616,7 +616,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.root.title", desc: "advancements.adventure.root.description",
 			titleEN: "Adventure", descEN: "Adventure, exploration and combat",
-			icon: 1231, frame: 0, background: "gui/advancements/backgrounds/adventure",
+			icon: 1382, frame: 0, background: "gui/advancements/backgrounds/adventure",
 			showToast: false, announceChat: false, hidden: false,
 			x: 0.0, y: 13.25,
 		},
@@ -626,7 +626,7 @@ var advTable = []advNode{
 		criteria: []advCriterion{
 			{name: "desert_pyramid", trigger: "player_generates_container_loot", lootTable: "archaeology/desert_pyramid"},
 			{name: "desert_well", trigger: "player_generates_container_loot", lootTable: "archaeology/desert_well"},
-			{name: "has_sherd", trigger: "inventory_changed", items: [][]int32{{1445, 1446, 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467}}},
+			{name: "has_sherd", trigger: "inventory_changed", items: [][]int32{{1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620}}},
 			{name: "ocean_ruin_cold", trigger: "player_generates_container_loot", lootTable: "archaeology/ocean_ruin_cold"},
 			{name: "ocean_ruin_warm", trigger: "player_generates_container_loot", lootTable: "archaeology/ocean_ruin_warm"},
 			{name: "trail_ruins_common", trigger: "player_generates_container_loot", lootTable: "archaeology/trail_ruins_common"},
@@ -639,7 +639,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.salvage_sherd.title", desc: "advancements.adventure.salvage_sherd.description",
 			titleEN: "Respecting the Remnants", descEN: "Brush a Suspicious block to obtain a Pottery Sherd",
-			icon: 1425, frame: 0, background: "",
+			icon: 1578, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 17.5,
 		},
@@ -655,7 +655,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.shoot_arrow.title", desc: "advancements.adventure.shoot_arrow.description",
 			titleEN: "Take Aim", descEN: "Shoot something with an Arrow",
-			icon: 894, frame: 0, background: "",
+			icon: 1008, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 5.5,
 		},
@@ -671,7 +671,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.sleep_in_bed.title", desc: "advancements.adventure.sleep_in_bed.description",
 			titleEN: "Sweet Dreams", descEN: "Sleep in a Bed to change your respawn point",
-			icon: 1100, frame: 0, background: "",
+			icon: 1233, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 19.5,
 		},
@@ -687,7 +687,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.sniper_duel.title", desc: "advancements.adventure.sniper_duel.description",
 			titleEN: "Sniper Duel", descEN: "Kill a Skeleton from at least 50 meters away",
-			icon: 895, frame: 1, background: "",
+			icon: 1009, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 6.0,
 		},
@@ -703,7 +703,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.spear_many_mobs.title", desc: "advancements.adventure.spear_many_mobs.description",
 			titleEN: "Mob Kabob", descEN: "Hit five mobs in the same Charge attack using the Spear",
-			icon: 1299, frame: 2, background: "",
+			icon: 1450, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 6.5,
 		},
@@ -711,7 +711,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/spyglass_at_dragon", parent: "minecraft:adventure/spyglass_at_ghast", xp: 0,
 		criteria: []advCriterion{
-			{name: "spyglass_at_dragon", trigger: "using_item", items: [][]int32{{1055}}, lookingAt: "ender_dragon"},
+			{name: "spyglass_at_dragon", trigger: "using_item", items: [][]int32{{1188}}, lookingAt: "ender_dragon"},
 		},
 		reqs: [][]string{
 			{"spyglass_at_dragon"},
@@ -719,7 +719,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.spyglass_at_dragon.title", desc: "advancements.adventure.spyglass_at_dragon.description",
 			titleEN: "Is It a Plane?", descEN: "Look at the Ender Dragon through a Spyglass",
-			icon: 1055, frame: 0, background: "",
+			icon: 1188, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 21.5,
 		},
@@ -727,7 +727,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/spyglass_at_ghast", parent: "minecraft:adventure/spyglass_at_parrot", xp: 0,
 		criteria: []advCriterion{
-			{name: "spyglass_at_ghast", trigger: "using_item", items: [][]int32{{1055}}, lookingAt: "ghast"},
+			{name: "spyglass_at_ghast", trigger: "using_item", items: [][]int32{{1188}}, lookingAt: "ghast"},
 		},
 		reqs: [][]string{
 			{"spyglass_at_ghast"},
@@ -735,7 +735,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.spyglass_at_ghast.title", desc: "advancements.adventure.spyglass_at_ghast.description",
 			titleEN: "Is It a Balloon?", descEN: "Look at a Ghast through a Spyglass",
-			icon: 1055, frame: 0, background: "",
+			icon: 1188, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 21.5,
 		},
@@ -743,7 +743,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/spyglass_at_parrot", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "spyglass_at_parrot", trigger: "using_item", items: [][]int32{{1055}}, lookingAt: "parrot"},
+			{name: "spyglass_at_parrot", trigger: "using_item", items: [][]int32{{1188}}, lookingAt: "parrot"},
 		},
 		reqs: [][]string{
 			{"spyglass_at_parrot"},
@@ -751,7 +751,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.spyglass_at_parrot.title", desc: "advancements.adventure.spyglass_at_parrot.description",
 			titleEN: "Is It a Bird?", descEN: "Look at a Parrot through a Spyglass",
-			icon: 1055, frame: 0, background: "",
+			icon: 1188, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 21.5,
 		},
@@ -767,7 +767,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.summon_iron_golem.title", desc: "advancements.adventure.summon_iron_golem.description",
 			titleEN: "Hired Help", descEN: "Summon an Iron Golem to help defend a village",
-			icon: 357, frame: 2, background: "",
+			icon: 431, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 22.5,
 		},
@@ -783,7 +783,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.throw_trident.title", desc: "advancements.adventure.throw_trident.description",
 			titleEN: "A Throwaway Joke", descEN: "Throw a Trident at something.\nNote: Throwing away your only weapon is not a good idea.",
-			icon: 1331, frame: 0, background: "",
+			icon: 1483, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 7.5,
 		},
@@ -791,7 +791,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/totem_of_undying", parent: "minecraft:adventure/kill_a_mob", xp: 0,
 		criteria: []advCriterion{
-			{name: "used_totem", trigger: "used_totem", items: [][]int32{{1303}}},
+			{name: "used_totem", trigger: "used_totem", items: [][]int32{{1454}}},
 		},
 		reqs: [][]string{
 			{"used_totem"},
@@ -799,7 +799,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.totem_of_undying.title", desc: "advancements.adventure.totem_of_undying.description",
 			titleEN: "Postmortal", descEN: "Use a Totem of Undying to cheat death",
-			icon: 1303, frame: 2, background: "",
+			icon: 1454, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 8.5,
 		},
@@ -815,7 +815,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.trade.title", desc: "advancements.adventure.trade.description",
 			titleEN: "What a Deal!", descEN: "Successfully trade with a Villager",
-			icon: 899, frame: 0, background: "",
+			icon: 1013, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 23.0,
 		},
@@ -831,7 +831,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.trade_at_world_height.title", desc: "advancements.adventure.trade_at_world_height.description",
 			titleEN: "Star Trader", descEN: "Trade with a Villager at the build height limit",
-			icon: 899, frame: 0, background: "",
+			icon: 1013, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 23.5,
 		},
@@ -861,7 +861,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.trim_with_all_exclusive_armor_patterns.title", desc: "advancements.adventure.trim_with_all_exclusive_armor_patterns.description",
 			titleEN: "Smithing with Style", descEN: "Apply these smithing templates at least once: Spire, Snout, Rib, Ward, Silence, Vex, Tide, Wayfinder",
-			icon: 1440, frame: 1, background: "",
+			icon: 1593, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 24.5,
 		},
@@ -894,7 +894,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.trim_with_any_armor_pattern.title", desc: "advancements.adventure.trim_with_any_armor_pattern.description",
 			titleEN: "Crafting a New Look", descEN: "Craft trimmed armor at a Smithing Table",
-			icon: 1428, frame: 0, background: "",
+			icon: 1581, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 24.5,
 		},
@@ -902,7 +902,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/two_birds_one_arrow", parent: "minecraft:adventure/ol_betsy", xp: 65,
 		criteria: []advCriterion{
-			{name: "two_birds", trigger: "killed_by_arrow", items: [][]int32{{1339}}, victims: []string{"phantom", "phantom"}},
+			{name: "two_birds", trigger: "killed_by_arrow", items: [][]int32{{1491}}, victims: []string{"phantom", "phantom"}},
 		},
 		reqs: [][]string{
 			{"two_birds"},
@@ -910,7 +910,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.two_birds_one_arrow.title", desc: "advancements.adventure.two_birds_one_arrow.description",
 			titleEN: "Two Birds, One Arrow", descEN: "Kill two Phantoms with a piercing Arrow",
-			icon: 1339, frame: 1, background: "",
+			icon: 1491, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 15.5,
 		},
@@ -918,7 +918,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/under_lock_and_key", parent: "minecraft:adventure/minecraft_trials_edition", xp: 0,
 		criteria: []advCriterion{
-			{name: "under_lock_and_key", trigger: "item_used_on_block", items: [][]int32{{1501}}, blocks: []string{"vault"}, props: map[string]string{"ominous": "false"}},
+			{name: "under_lock_and_key", trigger: "item_used_on_block", items: [][]int32{{1654}}, blocks: []string{"vault"}, props: map[string]string{"ominous": "false"}},
 		},
 		reqs: [][]string{
 			{"under_lock_and_key"},
@@ -926,7 +926,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.under_lock_and_key.title", desc: "advancements.adventure.under_lock_and_key.description",
 			titleEN: "Under Lock and Key", descEN: "Unlock a Vault with a Trial Key",
-			icon: 1501, frame: 0, background: "",
+			icon: 1654, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 12.5,
 		},
@@ -934,7 +934,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/use_lodestone", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "use_lodestone", trigger: "item_used_on_block", items: [][]int32{{1034}}, blocks: []string{"lodestone"}},
+			{name: "use_lodestone", trigger: "item_used_on_block", items: [][]int32{{1151}}, blocks: []string{"lodestone"}},
 		},
 		reqs: [][]string{
 			{"use_lodestone"},
@@ -942,7 +942,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.use_lodestone.title", desc: "advancements.adventure.use_lodestone.description",
 			titleEN: "Country Lode, Take Me Home", descEN: "Use a Compass on a Lodestone",
-			icon: 1383, frame: 0, background: "",
+			icon: 1535, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 25.5,
 		},
@@ -958,7 +958,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.very_very_frightening.title", desc: "advancements.adventure.very_very_frightening.description",
 			titleEN: "Very Very Frightening", descEN: "Strike a Villager with lightning",
-			icon: 1331, frame: 0, background: "",
+			icon: 1483, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 7.5,
 		},
@@ -974,7 +974,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.voluntary_exile.title", desc: "advancements.adventure.voluntary_exile.description",
 			titleEN: "Voluntary Exile", descEN: "Kill a raid captain.\nMaybe consider staying away from villages for the time being...",
-			icon: 1266, frame: 0, background: "",
+			icon: 1417, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 1.0, y: 26.5,
 		},
@@ -982,7 +982,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/walk_on_powder_snow_with_leather_boots", parent: "minecraft:adventure/sleep_in_bed", xp: 0,
 		criteria: []advCriterion{
-			{name: "walk_on_powder_snow_with_leather_boots", trigger: "location", equipFeet: []int32{957}, blocks: []string{"powder_snow"}},
+			{name: "walk_on_powder_snow_with_leather_boots", trigger: "location", equipFeet: []int32{1071}, blocks: []string{"powder_snow"}},
 		},
 		reqs: [][]string{
 			{"walk_on_powder_snow_with_leather_boots"},
@@ -990,7 +990,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.walk_on_powder_snow_with_leather_boots.title", desc: "advancements.adventure.walk_on_powder_snow_with_leather_boots.description",
 			titleEN: "Light as a Rabbit", descEN: "Walk on Powder Snow... without sinking in it",
-			icon: 957, frame: 0, background: "",
+			icon: 1071, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 20.5,
 		},
@@ -1006,7 +1006,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.who_needs_rockets.title", desc: "advancements.adventure.who_needs_rockets.description",
 			titleEN: "Who Needs Rockets?", descEN: "Use a Wind Charge to launch yourself upward 8 blocks",
-			icon: 1219, frame: 0, background: "",
+			icon: 1370, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 13.5,
 		},
@@ -1014,7 +1014,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/whos_the_pillager_now", parent: "minecraft:adventure/ol_betsy", xp: 0,
 		criteria: []advCriterion{
-			{name: "kill_pillager", trigger: "killed_by_arrow", items: [][]int32{{1339}}, victims: []string{"pillager"}},
+			{name: "kill_pillager", trigger: "killed_by_arrow", items: [][]int32{{1491}}, victims: []string{"pillager"}},
 		},
 		reqs: [][]string{
 			{"kill_pillager"},
@@ -1022,7 +1022,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.adventure.whos_the_pillager_now.title", desc: "advancements.adventure.whos_the_pillager_now.description",
 			titleEN: "Who's the Pillager Now?", descEN: "Give a Pillager a taste of their own medicine",
-			icon: 1339, frame: 0, background: "",
+			icon: 1491, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 16.5,
 		},
@@ -1030,7 +1030,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:end/dragon_breath", parent: "minecraft:end/kill_dragon", xp: 0,
 		criteria: []advCriterion{
-			{name: "dragon_breath", trigger: "inventory_changed", items: [][]int32{{1290}}},
+			{name: "dragon_breath", trigger: "inventory_changed", items: [][]int32{{1441}}},
 		},
 		reqs: [][]string{
 			{"dragon_breath"},
@@ -1038,7 +1038,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.dragon_breath.title", desc: "advancements.end.dragon_breath.description",
 			titleEN: "You Need a Mint", descEN: "Collect Dragon's Breath in a Glass Bottle",
-			icon: 1290, frame: 2, background: "",
+			icon: 1441, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 0.0,
 		},
@@ -1046,7 +1046,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:end/dragon_egg", parent: "minecraft:end/kill_dragon", xp: 0,
 		criteria: []advCriterion{
-			{name: "dragon_egg", trigger: "inventory_changed", items: [][]int32{{437}}},
+			{name: "dragon_egg", trigger: "inventory_changed", items: [][]int32{{511}}},
 		},
 		reqs: [][]string{
 			{"dragon_egg"},
@@ -1054,7 +1054,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.dragon_egg.title", desc: "advancements.end.dragon_egg.description",
 			titleEN: "The Next Generation", descEN: "Hold the Dragon Egg",
-			icon: 437, frame: 2, background: "",
+			icon: 511, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 1.0,
 		},
@@ -1062,7 +1062,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:end/elytra", parent: "minecraft:end/find_end_city", xp: 0,
 		criteria: []advCriterion{
-			{name: "elytra", trigger: "inventory_changed", items: [][]int32{{862}}},
+			{name: "elytra", trigger: "inventory_changed", items: [][]int32{{974}}},
 		},
 		reqs: [][]string{
 			{"elytra"},
@@ -1070,7 +1070,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.elytra.title", desc: "advancements.end.elytra.description",
 			titleEN: "Sky's the Limit", descEN: "Find Elytra",
-			icon: 862, frame: 2, background: "",
+			icon: 974, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 1.5,
 		},
@@ -1086,7 +1086,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.enter_end_gateway.title", desc: "advancements.end.enter_end_gateway.description",
 			titleEN: "Remote Getaway", descEN: "Escape the island",
-			icon: 1115, frame: 0, background: "",
+			icon: 1265, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 2.0,
 		},
@@ -1102,7 +1102,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.find_end_city.title", desc: "advancements.end.find_end_city.description",
 			titleEN: "The City at the End of the Game", descEN: "Go on in, what could happen?",
-			icon: 326, frame: 0, background: "",
+			icon: 399, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 2.0,
 		},
@@ -1118,7 +1118,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.kill_dragon.title", desc: "advancements.end.kill_dragon.description",
 			titleEN: "Free the End", descEN: "Good luck",
-			icon: 1238, frame: 0, background: "",
+			icon: 1389, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 1.5,
 		},
@@ -1134,7 +1134,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.levitate.title", desc: "advancements.end.levitate.description",
 			titleEN: "Great View From Up Here", descEN: "Levitate up 50 blocks from the attacks of a Shulker",
-			icon: 1304, frame: 1, background: "",
+			icon: 1455, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 2.5,
 		},
@@ -1150,7 +1150,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.respawn_dragon.title", desc: "advancements.end.respawn_dragon.description",
 			titleEN: "The End... Again...", descEN: "Respawn the Ender Dragon",
-			icon: 1282, frame: 2, background: "",
+			icon: 1433, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 3.0,
 		},
@@ -1166,7 +1166,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.end.root.title", desc: "advancements.end.root.description",
 			titleEN: "The End", descEN: "Or the beginning?",
-			icon: 435, frame: 0, background: "gui/advancements/backgrounds/end",
+			icon: 509, frame: 0, background: "gui/advancements/backgrounds/end",
 			showToast: false, announceChat: false, hidden: false,
 			x: 0.0, y: 1.5,
 		},
@@ -1174,7 +1174,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/allay_deliver_cake_to_note_block", parent: "minecraft:husbandry/allay_deliver_item_to_player", xp: 0,
 		criteria: []advCriterion{
-			{name: "allay_deliver_cake_to_note_block", trigger: "allay_drop_item_on_block", items: [][]int32{{1085}}, blocks: []string{"note_block"}},
+			{name: "allay_deliver_cake_to_note_block", trigger: "allay_drop_item_on_block", items: [][]int32{{1218}}, blocks: []string{"note_block"}},
 		},
 		reqs: [][]string{
 			{"allay_deliver_cake_to_note_block"},
@@ -1182,7 +1182,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.allay_deliver_cake_to_note_block.title", desc: "advancements.husbandry.allay_deliver_cake_to_note_block.description",
 			titleEN: "Birthday Song", descEN: "Have an Allay drop a Cake at a Note Block",
-			icon: 748, frame: 0, background: "",
+			icon: 855, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 2.0, y: 0.0,
 		},
@@ -1198,7 +1198,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.allay_deliver_item_to_player.title", desc: "advancements.husbandry.allay_deliver_item_to_player.description",
 			titleEN: "You've Got a Friend in Me", descEN: "Have an Allay deliver items to you",
-			icon: 1102, frame: 0, background: "",
+			icon: 1236, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 1.0, y: 0.0,
 		},
@@ -1206,7 +1206,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/axolotl_in_a_bucket", parent: "minecraft:husbandry/tactical_fishing", xp: 0,
 		criteria: []advCriterion{
-			{name: "axolotl_bucket", trigger: "filled_bucket", items: [][]int32{{1023}}},
+			{name: "axolotl_bucket", trigger: "filled_bucket", items: [][]int32{{1139}}},
 		},
 		reqs: [][]string{
 			{"axolotl_bucket"},
@@ -1214,7 +1214,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.axolotl_in_a_bucket.title", desc: "advancements.husbandry.axolotl_in_a_bucket.description",
 			titleEN: "The Cutest Predator", descEN: "Catch an Axolotl in a Bucket",
-			icon: 1023, frame: 0, background: "",
+			icon: 1139, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 2.0,
 		},
@@ -1222,46 +1222,46 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/balanced_diet", parent: "minecraft:husbandry/plant_seed", xp: 100,
 		criteria: []advCriterion{
-			{name: "apple", trigger: "consume_item", items: [][]int32{{893}}},
-			{name: "baked_potato", trigger: "consume_item", items: [][]int32{{1229}}},
-			{name: "beef", trigger: "consume_item", items: [][]int32{{1110}}},
-			{name: "beetroot", trigger: "consume_item", items: [][]int32{{1287}}},
-			{name: "beetroot_soup", trigger: "consume_item", items: [][]int32{{1289}}},
-			{name: "bread", trigger: "consume_item", items: [][]int32{{953}}},
-			{name: "carrot", trigger: "consume_item", items: [][]int32{{1227}}},
-			{name: "chicken", trigger: "consume_item", items: [][]int32{{1112}}},
-			{name: "chorus_fruit", trigger: "consume_item", items: [][]int32{{1283}}},
-			{name: "cod", trigger: "consume_item", items: [][]int32{{1057}}},
-			{name: "cooked_beef", trigger: "consume_item", items: [][]int32{{1111}}},
-			{name: "cooked_chicken", trigger: "consume_item", items: [][]int32{{1113}}},
-			{name: "cooked_cod", trigger: "consume_item", items: [][]int32{{1061}}},
-			{name: "cooked_mutton", trigger: "consume_item", items: [][]int32{{1265}}},
-			{name: "cooked_porkchop", trigger: "consume_item", items: [][]int32{{984}}},
-			{name: "cooked_rabbit", trigger: "consume_item", items: [][]int32{{1250}}},
-			{name: "cooked_salmon", trigger: "consume_item", items: [][]int32{{1062}}},
-			{name: "cookie", trigger: "consume_item", items: [][]int32{{1102}}},
-			{name: "dried_kelp", trigger: "consume_item", items: [][]int32{{1107}}},
-			{name: "enchanted_golden_apple", trigger: "consume_item", items: [][]int32{{987}}},
-			{name: "glow_berries", trigger: "consume_item", items: [][]int32{{1374}}},
-			{name: "golden_apple", trigger: "consume_item", items: [][]int32{{986}}},
-			{name: "golden_carrot", trigger: "consume_item", items: [][]int32{{1232}}},
-			{name: "honey_bottle", trigger: "consume_item", items: [][]int32{{1381}}},
-			{name: "melon_slice", trigger: "consume_item", items: [][]int32{{1106}}},
-			{name: "mushroom_stew", trigger: "consume_item", items: [][]int32{{947}}},
-			{name: "mutton", trigger: "consume_item", items: [][]int32{{1264}}},
-			{name: "poisonous_potato", trigger: "consume_item", items: [][]int32{{1230}}},
-			{name: "porkchop", trigger: "consume_item", items: [][]int32{{983}}},
-			{name: "potato", trigger: "consume_item", items: [][]int32{{1228}}},
-			{name: "pufferfish", trigger: "consume_item", items: [][]int32{{1060}}},
-			{name: "pumpkin_pie", trigger: "consume_item", items: [][]int32{{1241}}},
-			{name: "rabbit", trigger: "consume_item", items: [][]int32{{1249}}},
-			{name: "rabbit_stew", trigger: "consume_item", items: [][]int32{{1251}}},
-			{name: "rotten_flesh", trigger: "consume_item", items: [][]int32{{1114}}},
-			{name: "salmon", trigger: "consume_item", items: [][]int32{{1058}}},
-			{name: "spider_eye", trigger: "consume_item", items: [][]int32{{1122}}},
-			{name: "suspicious_stew", trigger: "consume_item", items: [][]int32{{1340}}},
-			{name: "sweet_berries", trigger: "consume_item", items: [][]int32{{1373}}},
-			{name: "tropical_fish", trigger: "consume_item", items: [][]int32{{1059}}},
+			{name: "apple", trigger: "consume_item", items: [][]int32{{1007}}},
+			{name: "baked_potato", trigger: "consume_item", items: [][]int32{{1380}}},
+			{name: "beef", trigger: "consume_item", items: [][]int32{{1260}}},
+			{name: "beetroot", trigger: "consume_item", items: [][]int32{{1438}}},
+			{name: "beetroot_soup", trigger: "consume_item", items: [][]int32{{1440}}},
+			{name: "bread", trigger: "consume_item", items: [][]int32{{1067}}},
+			{name: "carrot", trigger: "consume_item", items: [][]int32{{1378}}},
+			{name: "chicken", trigger: "consume_item", items: [][]int32{{1262}}},
+			{name: "chorus_fruit", trigger: "consume_item", items: [][]int32{{1434}}},
+			{name: "cod", trigger: "consume_item", items: [][]int32{{1190}}},
+			{name: "cooked_beef", trigger: "consume_item", items: [][]int32{{1261}}},
+			{name: "cooked_chicken", trigger: "consume_item", items: [][]int32{{1263}}},
+			{name: "cooked_cod", trigger: "consume_item", items: [][]int32{{1194}}},
+			{name: "cooked_mutton", trigger: "consume_item", items: [][]int32{{1416}}},
+			{name: "cooked_porkchop", trigger: "consume_item", items: [][]int32{{1098}}},
+			{name: "cooked_rabbit", trigger: "consume_item", items: [][]int32{{1401}}},
+			{name: "cooked_salmon", trigger: "consume_item", items: [][]int32{{1195}}},
+			{name: "cookie", trigger: "consume_item", items: [][]int32{{1236}}},
+			{name: "dried_kelp", trigger: "consume_item", items: [][]int32{{1257}}},
+			{name: "enchanted_golden_apple", trigger: "consume_item", items: [][]int32{{1101}}},
+			{name: "glow_berries", trigger: "consume_item", items: [][]int32{{1526}}},
+			{name: "golden_apple", trigger: "consume_item", items: [][]int32{{1100}}},
+			{name: "golden_carrot", trigger: "consume_item", items: [][]int32{{1383}}},
+			{name: "honey_bottle", trigger: "consume_item", items: [][]int32{{1533}}},
+			{name: "melon_slice", trigger: "consume_item", items: [][]int32{{1256}}},
+			{name: "mushroom_stew", trigger: "consume_item", items: [][]int32{{1061}}},
+			{name: "mutton", trigger: "consume_item", items: [][]int32{{1415}}},
+			{name: "poisonous_potato", trigger: "consume_item", items: [][]int32{{1381}}},
+			{name: "porkchop", trigger: "consume_item", items: [][]int32{{1097}}},
+			{name: "potato", trigger: "consume_item", items: [][]int32{{1379}}},
+			{name: "pufferfish", trigger: "consume_item", items: [][]int32{{1193}}},
+			{name: "pumpkin_pie", trigger: "consume_item", items: [][]int32{{1392}}},
+			{name: "rabbit", trigger: "consume_item", items: [][]int32{{1400}}},
+			{name: "rabbit_stew", trigger: "consume_item", items: [][]int32{{1402}}},
+			{name: "rotten_flesh", trigger: "consume_item", items: [][]int32{{1264}}},
+			{name: "salmon", trigger: "consume_item", items: [][]int32{{1191}}},
+			{name: "spider_eye", trigger: "consume_item", items: [][]int32{{1272}}},
+			{name: "suspicious_stew", trigger: "consume_item", items: [][]int32{{1492}}},
+			{name: "sweet_berries", trigger: "consume_item", items: [][]int32{{1525}}},
+			{name: "tropical_fish", trigger: "consume_item", items: [][]int32{{1192}}},
 		},
 		reqs: [][]string{
 			{"apple"},
@@ -1308,7 +1308,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.balanced_diet.title", desc: "advancements.husbandry.balanced_diet.description",
 			titleEN: "A Balanced Diet", descEN: "Eat everything that is edible, even if it's not good for you",
-			icon: 893, frame: 1, background: "",
+			icon: 1007, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 5.5,
 		},
@@ -1374,7 +1374,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.breed_all_animals.title", desc: "advancements.husbandry.breed_all_animals.description",
 			titleEN: "Two by Two", descEN: "Breed all the animals!",
-			icon: 1232, frame: 1, background: "",
+			icon: 1383, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 1.0,
 		},
@@ -1390,7 +1390,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.breed_an_animal.title", desc: "advancements.husbandry.breed_an_animal.description",
 			titleEN: "The Parrots and the Bats", descEN: "Breed two animals together",
-			icon: 952, frame: 0, background: "",
+			icon: 1066, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 1.0,
 		},
@@ -1426,7 +1426,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.complete_catalogue.title", desc: "advancements.husbandry.complete_catalogue.description",
 			titleEN: "A Complete Catalogue", descEN: "Tame all Cat variants!",
-			icon: 1057, frame: 1, background: "",
+			icon: 1190, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 11.0,
 		},
@@ -1434,7 +1434,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/feed_snifflet", parent: "minecraft:husbandry/obtain_sniffer_egg", xp: 0,
 		criteria: []advCriterion{
-			{name: "feed_snifflet", trigger: "player_interacted_with_entity", entity: "sniffer", items: [][]int32{{1285}}, baby: 1, hasBaby: true},
+			{name: "feed_snifflet", trigger: "player_interacted_with_entity", entity: "sniffer", items: [][]int32{{1436}}, baby: 1, hasBaby: true},
 		},
 		reqs: [][]string{
 			{"feed_snifflet"},
@@ -1442,7 +1442,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.feed_snifflet.title", desc: "advancements.husbandry.feed_snifflet.description",
 			titleEN: "Little Sniffs", descEN: "Feed a Snifflet",
-			icon: 1285, frame: 0, background: "",
+			icon: 1436, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 2.0, y: 4.0,
 		},
@@ -1450,10 +1450,10 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/fishy_business", parent: "minecraft:husbandry/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "cod", trigger: "fishing_rod_hooked", items: [][]int32{{1057}}},
-			{name: "pufferfish", trigger: "fishing_rod_hooked", items: [][]int32{{1060}}},
-			{name: "salmon", trigger: "fishing_rod_hooked", items: [][]int32{{1058}}},
-			{name: "tropical_fish", trigger: "fishing_rod_hooked", items: [][]int32{{1059}}},
+			{name: "cod", trigger: "fishing_rod_hooked", items: [][]int32{{1190}}},
+			{name: "pufferfish", trigger: "fishing_rod_hooked", items: [][]int32{{1193}}},
+			{name: "salmon", trigger: "fishing_rod_hooked", items: [][]int32{{1191}}},
+			{name: "tropical_fish", trigger: "fishing_rod_hooked", items: [][]int32{{1192}}},
 		},
 		reqs: [][]string{
 			{"cod", "tropical_fish", "pufferfish", "salmon"},
@@ -1461,7 +1461,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.fishy_business.title", desc: "advancements.husbandry.fishy_business.description",
 			titleEN: "Fishy Business", descEN: "Catch a fish",
-			icon: 1053, frame: 0, background: "",
+			icon: 1186, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 2.0,
 		},
@@ -1469,7 +1469,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/froglights", parent: "minecraft:husbandry/leash_all_frog_variants", xp: 0,
 		criteria: []advCriterion{
-			{name: "froglights", trigger: "inventory_changed", items: [][]int32{{1420}, {1422}, {1421}}},
+			{name: "froglights", trigger: "inventory_changed", items: [][]int32{{1573}, {1575}, {1574}}},
 		},
 		reqs: [][]string{
 			{"froglights"},
@@ -1477,7 +1477,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.froglights.title", desc: "advancements.husbandry.froglights.description",
 			titleEN: "With Our Powers Combined!", descEN: "Have all Froglights in your inventory",
-			icon: 1421, frame: 1, background: "",
+			icon: 1574, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 10.0,
 		},
@@ -1493,7 +1493,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.kill_axolotl_target.title", desc: "advancements.husbandry.kill_axolotl_target.description",
 			titleEN: "The Healing Power of Friendship!", descEN: "Team up with an Axolotl and win a fight",
-			icon: 1022, frame: 0, background: "",
+			icon: 1138, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 2.0,
 		},
@@ -1501,9 +1501,9 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/leash_all_frog_variants", parent: "minecraft:husbandry/tadpole_in_a_bucket", xp: 0,
 		criteria: []advCriterion{
-			{name: "minecraft:cold", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1261}}, variant: "cold"},
-			{name: "minecraft:temperate", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1261}}, variant: "temperate"},
-			{name: "minecraft:warm", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1261}}, variant: "warm"},
+			{name: "minecraft:cold", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1412}}, variant: "cold"},
+			{name: "minecraft:temperate", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1412}}, variant: "temperate"},
+			{name: "minecraft:warm", trigger: "player_interacted_with_entity", entity: "frog", items: [][]int32{{1412}}, variant: "warm"},
 		},
 		reqs: [][]string{
 			{"minecraft:cold"},
@@ -1513,7 +1513,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.leash_all_frog_variants.title", desc: "advancements.husbandry.leash_all_frog_variants.description",
 			titleEN: "When the Squad Hops into Town", descEN: "Get each Frog variant on a Lead",
-			icon: 1261, frame: 0, background: "",
+			icon: 1412, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 10.0,
 		},
@@ -1521,7 +1521,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/make_a_sign_glow", parent: "minecraft:husbandry/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "make_a_sign_glow", trigger: "item_used_on_block", items: [][]int32{{1064}}, blocks: []string{"oak_sign", "spruce_sign", "birch_sign", "acacia_sign", "jungle_sign", "dark_oak_sign", "pale_oak_sign", "crimson_sign", "warped_sign", "mangrove_sign", "bamboo_sign", "cherry_sign", "oak_wall_sign", "spruce_wall_sign", "birch_wall_sign", "acacia_wall_sign", "jungle_wall_sign", "dark_oak_wall_sign", "pale_oak_wall_sign", "crimson_wall_sign", "warped_wall_sign", "mangrove_wall_sign", "bamboo_wall_sign", "cherry_wall_sign", "oak_hanging_sign", "spruce_hanging_sign", "birch_hanging_sign", "acacia_hanging_sign", "cherry_hanging_sign", "jungle_hanging_sign", "dark_oak_hanging_sign", "pale_oak_hanging_sign", "crimson_hanging_sign", "warped_hanging_sign", "mangrove_hanging_sign", "bamboo_hanging_sign", "oak_wall_hanging_sign", "spruce_wall_hanging_sign", "birch_wall_hanging_sign", "acacia_wall_hanging_sign", "cherry_wall_hanging_sign", "jungle_wall_hanging_sign", "dark_oak_wall_hanging_sign", "pale_oak_wall_hanging_sign", "crimson_wall_hanging_sign", "warped_wall_hanging_sign", "mangrove_wall_hanging_sign", "bamboo_wall_hanging_sign"}},
+			{name: "make_a_sign_glow", trigger: "item_used_on_block", items: [][]int32{{1197}}, blocks: []string{"oak_sign", "spruce_sign", "birch_sign", "acacia_sign", "jungle_sign", "dark_oak_sign", "pale_oak_sign", "crimson_sign", "warped_sign", "mangrove_sign", "bamboo_sign", "cherry_sign", "oak_wall_sign", "spruce_wall_sign", "birch_wall_sign", "acacia_wall_sign", "jungle_wall_sign", "dark_oak_wall_sign", "pale_oak_wall_sign", "crimson_wall_sign", "warped_wall_sign", "mangrove_wall_sign", "bamboo_wall_sign", "cherry_wall_sign", "oak_hanging_sign", "spruce_hanging_sign", "birch_hanging_sign", "acacia_hanging_sign", "cherry_hanging_sign", "jungle_hanging_sign", "dark_oak_hanging_sign", "pale_oak_hanging_sign", "crimson_hanging_sign", "warped_hanging_sign", "mangrove_hanging_sign", "bamboo_hanging_sign", "oak_wall_hanging_sign", "spruce_wall_hanging_sign", "birch_wall_hanging_sign", "acacia_wall_hanging_sign", "cherry_wall_hanging_sign", "jungle_wall_hanging_sign", "dark_oak_wall_hanging_sign", "pale_oak_wall_hanging_sign", "crimson_wall_hanging_sign", "warped_wall_hanging_sign", "mangrove_wall_hanging_sign", "bamboo_wall_hanging_sign"}},
 		},
 		reqs: [][]string{
 			{"make_a_sign_glow"},
@@ -1529,7 +1529,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.make_a_sign_glow.title", desc: "advancements.husbandry.make_a_sign_glow.description",
 			titleEN: "Glow and Behold!", descEN: "Make the text of any kind of sign glow",
-			icon: 1064, frame: 0, background: "",
+			icon: 1197, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 3.0,
 		},
@@ -1537,7 +1537,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/obtain_netherite_hoe", parent: "minecraft:husbandry/plant_seed", xp: 100,
 		criteria: []advCriterion{
-			{name: "netherite_hoe", trigger: "inventory_changed", items: [][]int32{{945}}},
+			{name: "netherite_hoe", trigger: "inventory_changed", items: [][]int32{{1059}}},
 		},
 		reqs: [][]string{
 			{"netherite_hoe"},
@@ -1545,7 +1545,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.netherite_hoe.title", desc: "advancements.husbandry.netherite_hoe.description",
 			titleEN: "Serious Dedication", descEN: "Use a Netherite Ingot to upgrade a Hoe, and then reevaluate your life choices",
-			icon: 945, frame: 1, background: "",
+			icon: 1059, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 6.5,
 		},
@@ -1553,7 +1553,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/obtain_sniffer_egg", parent: "minecraft:husbandry/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "obtain_sniffer_egg", trigger: "inventory_changed", items: [][]int32{{647}}},
+			{name: "obtain_sniffer_egg", trigger: "inventory_changed", items: [][]int32{{754}}},
 		},
 		reqs: [][]string{
 			{"obtain_sniffer_egg"},
@@ -1561,7 +1561,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.obtain_sniffer_egg.title", desc: "advancements.husbandry.obtain_sniffer_egg.description",
 			titleEN: "Smells Interesting", descEN: "Obtain a Sniffer Egg",
-			icon: 647, frame: 0, background: "",
+			icon: 754, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 1.0, y: 4.0,
 		},
@@ -1577,7 +1577,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.place_dried_ghast_in_water.title", desc: "advancements.husbandry.place_dried_ghast_in_water.description",
 			titleEN: "Stay Hydrated!", descEN: "Place a Dried Ghast block into water",
-			icon: 648, frame: 0, background: "",
+			icon: 755, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 5.0,
 		},
@@ -1594,7 +1594,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.plant_any_sniffer_seed.title", desc: "advancements.husbandry.plant_any_sniffer_seed.description",
 			titleEN: "Planting the Past", descEN: "Plant any Sniffer seed",
-			icon: 1286, frame: 0, background: "",
+			icon: 1437, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 3.0, y: 4.0,
 		},
@@ -1616,7 +1616,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.plant_seed.title", desc: "advancements.husbandry.plant_seed.description",
 			titleEN: "A Seedy Place", descEN: "Plant a seed and watch it grow",
-			icon: 952, frame: 0, background: "",
+			icon: 1066, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 6.0,
 		},
@@ -1624,7 +1624,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/remove_wolf_armor", parent: "minecraft:husbandry/tame_an_animal", xp: 0,
 		criteria: []advCriterion{
-			{name: "remove_wolf_armor", trigger: "player_sheared_equipment", unmatchable: true, entity: "wolf", items: [][]int32{{890}}},
+			{name: "remove_wolf_armor", trigger: "player_sheared_equipment", unmatchable: true, entity: "wolf", items: [][]int32{{1004}}},
 		},
 		reqs: [][]string{
 			{"remove_wolf_armor"},
@@ -1632,7 +1632,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.remove_wolf_armor.title", desc: "advancements.husbandry.remove_wolf_armor.description",
 			titleEN: "Shear Brilliance", descEN: "Remove Wolf Armor from a Wolf using Shears",
-			icon: 1105, frame: 0, background: "",
+			icon: 1255, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 12.0,
 		},
@@ -1640,7 +1640,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/repair_wolf_armor", parent: "minecraft:husbandry/tame_an_animal", xp: 0,
 		criteria: []advCriterion{
-			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{889}}},
+			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{1003}}},
 		},
 		reqs: [][]string{
 			{"repair_wolf_armor"},
@@ -1648,7 +1648,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.repair_wolf_armor.title", desc: "advancements.husbandry.repair_wolf_armor.description",
 			titleEN: "Good as New", descEN: "Fully repair damaged Wolf Armor using Armadillo Scutes",
-			icon: 890, frame: 0, background: "",
+			icon: 1004, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 13.0,
 		},
@@ -1664,7 +1664,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.ride_a_boat_with_a_goat.title", desc: "advancements.husbandry.ride_a_boat_with_a_goat.description",
 			titleEN: "Whatever Floats Your Goat!", descEN: "Get in a Boat and float with a Goat",
-			icon: 863, frame: 0, background: "",
+			icon: 975, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 7.0,
 		},
@@ -1680,7 +1680,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.root.title", desc: "advancements.husbandry.root.description",
 			titleEN: "Husbandry", descEN: "The world is full of friends and food",
-			icon: 504, frame: 0, background: "gui/advancements/backgrounds/husbandry",
+			icon: 579, frame: 0, background: "gui/advancements/backgrounds/husbandry",
 			showToast: false, announceChat: false, hidden: false,
 			x: 0.0, y: 6.25,
 		},
@@ -1688,7 +1688,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/safely_harvest_honey", parent: "minecraft:husbandry/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "safely_harvest_honey", trigger: "item_used_on_block", items: [][]int32{{1120}}, blocks: []string{"bee_nest", "beehive"}, smokey: true},
+			{name: "safely_harvest_honey", trigger: "item_used_on_block", items: [][]int32{{1270}}, blocks: []string{"bee_nest", "beehive"}, smokey: true},
 		},
 		reqs: [][]string{
 			{"safely_harvest_honey"},
@@ -1696,7 +1696,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.safely_harvest_honey.title", desc: "advancements.husbandry.safely_harvest_honey.description",
 			titleEN: "Bee Our Guest", descEN: "Use a Campfire to collect Honey from a Beehive using a Glass Bottle without aggravating the Bees",
-			icon: 1381, frame: 0, background: "",
+			icon: 1533, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 8.0,
 		},
@@ -1712,7 +1712,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.silk_touch_nest.title", desc: "advancements.husbandry.silk_touch_nest.description",
 			titleEN: "Total Beelocation", descEN: "Move a Bee Nest or Beehive, with 3 Bees inside, using Silk Touch",
-			icon: 1379, frame: 0, background: "",
+			icon: 1531, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 9.0,
 		},
@@ -1720,10 +1720,10 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/tactical_fishing", parent: "minecraft:husbandry/fishy_business", xp: 0,
 		criteria: []advCriterion{
-			{name: "cod_bucket", trigger: "filled_bucket", items: [][]int32{{1021}}},
-			{name: "pufferfish_bucket", trigger: "filled_bucket", items: [][]int32{{1019}}},
-			{name: "salmon_bucket", trigger: "filled_bucket", items: [][]int32{{1020}}},
-			{name: "tropical_fish_bucket", trigger: "filled_bucket", items: [][]int32{{1022}}},
+			{name: "cod_bucket", trigger: "filled_bucket", items: [][]int32{{1137}}},
+			{name: "pufferfish_bucket", trigger: "filled_bucket", items: [][]int32{{1135}}},
+			{name: "salmon_bucket", trigger: "filled_bucket", items: [][]int32{{1136}}},
+			{name: "tropical_fish_bucket", trigger: "filled_bucket", items: [][]int32{{1138}}},
 		},
 		reqs: [][]string{
 			{"cod_bucket", "tropical_fish_bucket", "pufferfish_bucket", "salmon_bucket"},
@@ -1731,7 +1731,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.tactical_fishing.title", desc: "advancements.husbandry.tactical_fishing.description",
 			titleEN: "Tactical Fishing", descEN: "Catch a Fish... without a Fishing Rod!",
-			icon: 1019, frame: 0, background: "",
+			icon: 1135, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 2.0,
 		},
@@ -1739,7 +1739,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/tadpole_in_a_bucket", parent: "minecraft:husbandry/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "tadpole_bucket", trigger: "filled_bucket", items: [][]int32{{1024}}},
+			{name: "tadpole_bucket", trigger: "filled_bucket", items: [][]int32{{1141}}},
 		},
 		reqs: [][]string{
 			{"tadpole_bucket"},
@@ -1747,7 +1747,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.tadpole_in_a_bucket.title", desc: "advancements.husbandry.tadpole_in_a_bucket.description",
 			titleEN: "Bukkit Bukkit", descEN: "Catch a Tadpole in a Bucket",
-			icon: 1024, frame: 0, background: "",
+			icon: 1141, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 10.0,
 		},
@@ -1763,7 +1763,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.tame_an_animal.title", desc: "advancements.husbandry.tame_an_animal.description",
 			titleEN: "Best Friends Forever", descEN: "Tame an animal",
-			icon: 1261, frame: 0, background: "",
+			icon: 1412, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 12.5,
 		},
@@ -1771,7 +1771,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/wax_off", parent: "minecraft:husbandry/wax_on", xp: 0,
 		criteria: []advCriterion{
-			{name: "wax_off", trigger: "item_used_on_block", items: [][]int32{{914, 919, 924, 929, 934, 939, 944}}, blocks: []string{"waxed_copper_block", "waxed_exposed_copper", "waxed_weathered_copper", "waxed_oxidized_copper", "waxed_cut_copper", "waxed_exposed_cut_copper", "waxed_weathered_cut_copper", "waxed_oxidized_cut_copper", "waxed_cut_copper_slab", "waxed_exposed_cut_copper_slab", "waxed_weathered_cut_copper_slab", "waxed_oxidized_cut_copper_slab", "waxed_cut_copper_stairs", "waxed_exposed_cut_copper_stairs", "waxed_weathered_cut_copper_stairs", "waxed_oxidized_cut_copper_stairs", "waxed_chiseled_copper", "waxed_exposed_chiseled_copper", "waxed_weathered_chiseled_copper", "waxed_oxidized_chiseled_copper", "waxed_copper_door", "waxed_exposed_copper_door", "waxed_weathered_copper_door", "waxed_oxidized_copper_door", "waxed_copper_trapdoor", "waxed_exposed_copper_trapdoor", "waxed_weathered_copper_trapdoor", "waxed_oxidized_copper_trapdoor", "waxed_copper_bars", "waxed_exposed_copper_bars", "waxed_weathered_copper_bars", "waxed_oxidized_copper_bars", "waxed_copper_grate", "waxed_exposed_copper_grate", "waxed_weathered_copper_grate", "waxed_oxidized_copper_grate", "waxed_copper_bulb", "waxed_exposed_copper_bulb", "waxed_weathered_copper_bulb", "waxed_oxidized_copper_bulb", "waxed_copper_chest", "waxed_exposed_copper_chest", "waxed_weathered_copper_chest", "waxed_oxidized_copper_chest", "waxed_copper_golem_statue", "waxed_exposed_copper_golem_statue", "waxed_weathered_copper_golem_statue", "waxed_oxidized_copper_golem_statue", "waxed_lightning_rod", "waxed_exposed_lightning_rod", "waxed_weathered_lightning_rod", "waxed_oxidized_lightning_rod", "waxed_copper_lantern", "waxed_exposed_copper_lantern", "waxed_weathered_copper_lantern", "waxed_oxidized_copper_lantern", "waxed_copper_chain", "waxed_exposed_copper_chain", "waxed_weathered_copper_chain", "waxed_oxidized_copper_chain"}},
+			{name: "wax_off", trigger: "item_used_on_block", items: [][]int32{{1028, 1033, 1038, 1043, 1048, 1053, 1058}}, blocks: []string{"waxed_copper_block", "waxed_exposed_copper", "waxed_weathered_copper", "waxed_oxidized_copper", "waxed_cut_copper", "waxed_exposed_cut_copper", "waxed_weathered_cut_copper", "waxed_oxidized_cut_copper", "waxed_cut_copper_slab", "waxed_exposed_cut_copper_slab", "waxed_weathered_cut_copper_slab", "waxed_oxidized_cut_copper_slab", "waxed_cut_copper_stairs", "waxed_exposed_cut_copper_stairs", "waxed_weathered_cut_copper_stairs", "waxed_oxidized_cut_copper_stairs", "waxed_chiseled_copper", "waxed_exposed_chiseled_copper", "waxed_weathered_chiseled_copper", "waxed_oxidized_chiseled_copper", "waxed_copper_door", "waxed_exposed_copper_door", "waxed_weathered_copper_door", "waxed_oxidized_copper_door", "waxed_copper_trapdoor", "waxed_exposed_copper_trapdoor", "waxed_weathered_copper_trapdoor", "waxed_oxidized_copper_trapdoor", "waxed_copper_bars", "waxed_exposed_copper_bars", "waxed_weathered_copper_bars", "waxed_oxidized_copper_bars", "waxed_copper_grate", "waxed_exposed_copper_grate", "waxed_weathered_copper_grate", "waxed_oxidized_copper_grate", "waxed_copper_bulb", "waxed_exposed_copper_bulb", "waxed_weathered_copper_bulb", "waxed_oxidized_copper_bulb", "waxed_copper_chest", "waxed_exposed_copper_chest", "waxed_weathered_copper_chest", "waxed_oxidized_copper_chest", "waxed_copper_golem_statue", "waxed_exposed_copper_golem_statue", "waxed_weathered_copper_golem_statue", "waxed_oxidized_copper_golem_statue", "waxed_lightning_rod", "waxed_exposed_lightning_rod", "waxed_weathered_lightning_rod", "waxed_oxidized_lightning_rod", "waxed_copper_lantern", "waxed_exposed_copper_lantern", "waxed_weathered_copper_lantern", "waxed_oxidized_copper_lantern", "waxed_copper_chain", "waxed_exposed_copper_chain", "waxed_weathered_copper_chain", "waxed_oxidized_copper_chain"}},
 		},
 		reqs: [][]string{
 			{"wax_off"},
@@ -1779,7 +1779,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.wax_off.title", desc: "advancements.husbandry.wax_off.description",
 			titleEN: "Wax Off", descEN: "Scrape Wax off of a Copper block!",
-			icon: 924, frame: 0, background: "",
+			icon: 1038, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 8.0,
 		},
@@ -1787,7 +1787,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/wax_on", parent: "minecraft:husbandry/safely_harvest_honey", xp: 0,
 		criteria: []advCriterion{
-			{name: "wax_on", trigger: "item_used_on_block", items: [][]int32{{1378}}, blocks: []string{"copper_block", "exposed_copper", "weathered_copper", "oxidized_copper", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper", "cut_copper_slab", "exposed_cut_copper_slab", "weathered_cut_copper_slab", "oxidized_cut_copper_slab", "cut_copper_stairs", "exposed_cut_copper_stairs", "weathered_cut_copper_stairs", "oxidized_cut_copper_stairs", "chiseled_copper", "exposed_chiseled_copper", "weathered_chiseled_copper", "oxidized_chiseled_copper", "copper_door", "exposed_copper_door", "weathered_copper_door", "oxidized_copper_door", "copper_trapdoor", "exposed_copper_trapdoor", "weathered_copper_trapdoor", "oxidized_copper_trapdoor", "copper_bars", "exposed_copper_bars", "weathered_copper_bars", "oxidized_copper_bars", "copper_grate", "exposed_copper_grate", "weathered_copper_grate", "oxidized_copper_grate", "copper_bulb", "exposed_copper_bulb", "weathered_copper_bulb", "oxidized_copper_bulb", "copper_chest", "exposed_copper_chest", "weathered_copper_chest", "oxidized_copper_chest", "copper_golem_statue", "exposed_copper_golem_statue", "weathered_copper_golem_statue", "oxidized_copper_golem_statue", "lightning_rod", "exposed_lightning_rod", "weathered_lightning_rod", "oxidized_lightning_rod", "copper_lantern", "exposed_copper_lantern", "weathered_copper_lantern", "oxidized_copper_lantern", "copper_chain", "exposed_copper_chain", "weathered_copper_chain", "oxidized_copper_chain"}},
+			{name: "wax_on", trigger: "item_used_on_block", items: [][]int32{{1530}}, blocks: []string{"copper_block", "exposed_copper", "weathered_copper", "oxidized_copper", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper", "cut_copper_slab", "exposed_cut_copper_slab", "weathered_cut_copper_slab", "oxidized_cut_copper_slab", "cut_copper_stairs", "exposed_cut_copper_stairs", "weathered_cut_copper_stairs", "oxidized_cut_copper_stairs", "chiseled_copper", "exposed_chiseled_copper", "weathered_chiseled_copper", "oxidized_chiseled_copper", "copper_door", "exposed_copper_door", "weathered_copper_door", "oxidized_copper_door", "copper_trapdoor", "exposed_copper_trapdoor", "weathered_copper_trapdoor", "oxidized_copper_trapdoor", "copper_bars", "exposed_copper_bars", "weathered_copper_bars", "oxidized_copper_bars", "copper_grate", "exposed_copper_grate", "weathered_copper_grate", "oxidized_copper_grate", "copper_bulb", "exposed_copper_bulb", "weathered_copper_bulb", "oxidized_copper_bulb", "copper_chest", "exposed_copper_chest", "weathered_copper_chest", "oxidized_copper_chest", "copper_golem_statue", "exposed_copper_golem_statue", "weathered_copper_golem_statue", "oxidized_copper_golem_statue", "lightning_rod", "exposed_lightning_rod", "weathered_lightning_rod", "oxidized_lightning_rod", "copper_lantern", "exposed_copper_lantern", "weathered_copper_lantern", "oxidized_copper_lantern", "copper_chain", "exposed_copper_chain", "weathered_copper_chain", "oxidized_copper_chain"}},
 		},
 		reqs: [][]string{
 			{"wax_on"},
@@ -1795,7 +1795,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.wax_on.title", desc: "advancements.husbandry.wax_on.description",
 			titleEN: "Wax On", descEN: "Apply Honeycomb to a Copper block!",
-			icon: 1378, frame: 0, background: "",
+			icon: 1530, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 8.0,
 		},
@@ -1827,7 +1827,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.husbandry.whole_pack.title", desc: "advancements.husbandry.whole_pack.description",
 			titleEN: "The Whole Pack", descEN: "Tame one of each Wolf variant",
-			icon: 1083, frame: 1, background: "",
+			icon: 1216, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 14.0,
 		},
@@ -1843,7 +1843,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.all_effects.title", desc: "advancements.nether.all_effects.description",
 			titleEN: "How Did We Get Here?", descEN: "Have every effect applied at the same time",
-			icon: 1012, frame: 1, background: "",
+			icon: 1128, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: true,
 			x: 5.0, y: 4.0,
 		},
@@ -1859,7 +1859,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.all_potions.title", desc: "advancements.nether.all_potions.description",
 			titleEN: "A Furious Cocktail", descEN: "Have every potion effect applied at the same time",
-			icon: 1018, frame: 1, background: "",
+			icon: 1134, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 4.0,
 		},
@@ -1875,7 +1875,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.brew_potion.title", desc: "advancements.nether.brew_potion.description",
 			titleEN: "Local Brewery", descEN: "Brew a Potion",
-			icon: 1121, frame: 0, background: "",
+			icon: 1271, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 4.0,
 		},
@@ -1883,7 +1883,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/charge_respawn_anchor", parent: "minecraft:nether/obtain_crying_obsidian", xp: 0,
 		criteria: []advCriterion{
-			{name: "charge_respawn_anchor", trigger: "item_used_on_block", items: [][]int32{{367}}, blocks: []string{"respawn_anchor"}, props: map[string]string{"charges": "4"}},
+			{name: "charge_respawn_anchor", trigger: "item_used_on_block", items: [][]int32{{441}}, blocks: []string{"respawn_anchor"}, props: map[string]string{"charges": "4"}},
 		},
 		reqs: [][]string{
 			{"charge_respawn_anchor"},
@@ -1891,7 +1891,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.charge_respawn_anchor.title", desc: "advancements.nether.charge_respawn_anchor.description",
 			titleEN: "Not Quite \"Nine\" Lives", descEN: "Charge a Respawn Anchor to the maximum",
-			icon: 1397, frame: 0, background: "",
+			icon: 1549, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 6.0,
 		},
@@ -1907,7 +1907,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.create_beacon.title", desc: "advancements.nether.create_beacon.description",
 			titleEN: "Bring Home the Beacon", descEN: "Construct and place a Beacon",
-			icon: 455, frame: 0, background: "",
+			icon: 530, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 3.0,
 		},
@@ -1923,7 +1923,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.create_full_beacon.title", desc: "advancements.nether.create_full_beacon.description",
 			titleEN: "Beaconator", descEN: "Bring a Beacon to full power",
-			icon: 455, frame: 2, background: "",
+			icon: 530, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 5.0, y: 3.0,
 		},
@@ -1931,8 +1931,8 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/distract_piglin", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{70, 71, 80, 86, 92, 765, 907, 908, 926, 927, 928, 929, 930, 974, 975, 976, 977, 986, 987, 1054, 1129, 1232, 1257, 1300, 1334, 1362, 1388}}, baby: 0, hasBaby: true},
-			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{908}}, baby: 0, hasBaby: true},
+			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{99, 100, 109, 115, 128, 873, 1021, 1022, 1040, 1041, 1042, 1043, 1044, 1088, 1089, 1090, 1091, 1100, 1101, 1187, 1279, 1383, 1408, 1451, 1486, 1514, 1540}}, baby: 0, hasBaby: true},
+			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{1022}}, baby: 0, hasBaby: true},
 		},
 		reqs: [][]string{
 			{"distract_piglin", "distract_piglin_directly"},
@@ -1940,7 +1940,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.distract_piglin.title", desc: "advancements.nether.distract_piglin.description",
 			titleEN: "Oh Shiny", descEN: "Distract Piglins with gold",
-			icon: 908, frame: 0, background: "",
+			icon: 1022, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 0.0,
 		},
@@ -1964,7 +1964,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.explore_nether.title", desc: "advancements.nether.explore_nether.description",
 			titleEN: "Hot Tourist Destinations", descEN: "Explore all Nether biomes",
-			icon: 981, frame: 1, background: "",
+			icon: 1095, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 8.0,
 		},
@@ -1980,7 +1980,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.fast_travel.title", desc: "advancements.nether.fast_travel.description",
 			titleEN: "Subspace Bubble", descEN: "Use the Nether to travel 7 km in the Overworld",
-			icon: 1231, frame: 1, background: "",
+			icon: 1382, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 1.0,
 		},
@@ -1996,7 +1996,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.find_bastion.title", desc: "advancements.nether.find_bastion.description",
 			titleEN: "Those Were the Days", descEN: "Enter a Bastion Remnant",
-			icon: 1393, frame: 0, background: "",
+			icon: 1545, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 2.0,
 		},
@@ -2012,7 +2012,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.find_fortress.title", desc: "advancements.nether.find_fortress.description",
 			titleEN: "A Terrible Fortress", descEN: "Break your way into a Nether Fortress",
-			icon: 424, frame: 0, background: "",
+			icon: 498, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 3.5,
 		},
@@ -2020,7 +2020,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/get_wither_skull", parent: "minecraft:nether/find_fortress", xp: 0,
 		criteria: []advCriterion{
-			{name: "wither_skull", trigger: "inventory_changed", items: [][]int32{{1234}}},
+			{name: "wither_skull", trigger: "inventory_changed", items: [][]int32{{1385}}},
 		},
 		reqs: [][]string{
 			{"wither_skull"},
@@ -2028,7 +2028,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.get_wither_skull.title", desc: "advancements.nether.get_wither_skull.description",
 			titleEN: "Spooky Scary Skeleton", descEN: "Obtain a Wither Skeleton's skull",
-			icon: 1234, frame: 0, background: "",
+			icon: 1385, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 3.0,
 		},
@@ -2047,7 +2047,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.loot_bastion.title", desc: "advancements.nether.loot_bastion.description",
 			titleEN: "War Pigs", descEN: "Loot a Chest in a Bastion Remnant",
-			icon: 331, frame: 0, background: "",
+			icon: 404, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 2.0,
 		},
@@ -2055,7 +2055,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/netherite_armor", parent: "minecraft:nether/obtain_ancient_debris", xp: 100,
 		criteria: []advCriterion{
-			{name: "netherite_armor", trigger: "inventory_changed", items: [][]int32{{978}, {979}, {980}, {981}}},
+			{name: "netherite_armor", trigger: "inventory_changed", items: [][]int32{{1092}, {1093}, {1094}, {1095}}},
 		},
 		reqs: [][]string{
 			{"netherite_armor"},
@@ -2063,7 +2063,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.netherite_armor.title", desc: "advancements.nether.netherite_armor.description",
 			titleEN: "Cover Me in Debris", descEN: "Get a full suit of Netherite armor",
-			icon: 979, frame: 1, background: "",
+			icon: 1093, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 5.0,
 		},
@@ -2071,7 +2071,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/obtain_ancient_debris", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "ancient_debris", trigger: "inventory_changed", items: [][]int32{{82}}},
+			{name: "ancient_debris", trigger: "inventory_changed", items: [][]int32{{111}}},
 		},
 		reqs: [][]string{
 			{"ancient_debris"},
@@ -2079,7 +2079,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.obtain_ancient_debris.title", desc: "advancements.nether.obtain_ancient_debris.description",
 			titleEN: "Hidden in the Depths", descEN: "Obtain Ancient Debris",
-			icon: 82, frame: 0, background: "",
+			icon: 111, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 5.0,
 		},
@@ -2087,7 +2087,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/obtain_blaze_rod", parent: "minecraft:nether/find_fortress", xp: 0,
 		criteria: []advCriterion{
-			{name: "blaze_rod", trigger: "inventory_changed", items: [][]int32{{1116}}},
+			{name: "blaze_rod", trigger: "inventory_changed", items: [][]int32{{1266}}},
 		},
 		reqs: [][]string{
 			{"blaze_rod"},
@@ -2095,7 +2095,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.obtain_blaze_rod.title", desc: "advancements.nether.obtain_blaze_rod.description",
 			titleEN: "Into Fire", descEN: "Relieve a Blaze of its rod",
-			icon: 1116, frame: 0, background: "",
+			icon: 1266, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 4.0,
 		},
@@ -2103,7 +2103,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/obtain_crying_obsidian", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "crying_obsidian", trigger: "inventory_changed", items: [][]int32{{1384}}},
+			{name: "crying_obsidian", trigger: "inventory_changed", items: [][]int32{{1536}}},
 		},
 		reqs: [][]string{
 			{"crying_obsidian"},
@@ -2111,7 +2111,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.obtain_crying_obsidian.title", desc: "advancements.nether.obtain_crying_obsidian.description",
 			titleEN: "Who is Cutting Onions?", descEN: "Obtain Crying Obsidian",
-			icon: 1384, frame: 0, background: "",
+			icon: 1536, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 6.0,
 		},
@@ -2127,7 +2127,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.return_to_sender.title", desc: "advancements.nether.return_to_sender.description",
 			titleEN: "Return to Sender", descEN: "Destroy a Ghast with a fireball",
-			icon: 1218, frame: 1, background: "",
+			icon: 1369, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 7.0,
 		},
@@ -2135,7 +2135,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/ride_strider", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "used_warped_fungus_on_a_stick", trigger: "item_durability_changed", items: [][]int32{{860}}, vehicle: "strider"},
+			{name: "used_warped_fungus_on_a_stick", trigger: "item_durability_changed", items: [][]int32{{972}}, vehicle: "strider"},
 		},
 		reqs: [][]string{
 			{"used_warped_fungus_on_a_stick"},
@@ -2143,7 +2143,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.ride_strider.title", desc: "advancements.nether.ride_strider.description",
 			titleEN: "This Boat Has Legs", descEN: "Ride a Strider with a Warped Fungus on a Stick",
-			icon: 860, frame: 0, background: "",
+			icon: 972, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 8.5,
 		},
@@ -2159,7 +2159,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.ride_strider_in_overworld_lava.title", desc: "advancements.nether.ride_strider_in_overworld_lava.description",
 			titleEN: "Feels Like Home", descEN: "Take a Strider for a loooong ride on a lava lake in the Overworld",
-			icon: 860, frame: 0, background: "",
+			icon: 972, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 9.0,
 		},
@@ -2175,7 +2175,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.root.title", desc: "advancements.nether.root.description",
 			titleEN: "Nether", descEN: "Bring summer clothes",
-			icon: 578, frame: 0, background: "gui/advancements/backgrounds/nether",
+			icon: 653, frame: 0, background: "gui/advancements/backgrounds/nether",
 			showToast: false, announceChat: false, hidden: false,
 			x: 0.0, y: 4.25,
 		},
@@ -2191,7 +2191,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.summon_wither.title", desc: "advancements.nether.summon_wither.description",
 			titleEN: "Withering Heights", descEN: "Summon the Wither",
-			icon: 1240, frame: 0, background: "",
+			icon: 1391, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 3.0,
 		},
@@ -2207,7 +2207,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.nether.uneasy_alliance.title", desc: "advancements.nether.uneasy_alliance.description",
 			titleEN: "Uneasy Alliance", descEN: "Rescue a Ghast from the Nether, bring it safely home to the Overworld... and then kill it",
-			icon: 1117, frame: 1, background: "",
+			icon: 1267, frame: 1, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 7.0,
 		},
@@ -2223,7 +2223,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.cure_zombie_villager.title", desc: "advancements.story.cure_zombie_villager.description",
 			titleEN: "Zombie Doctor", descEN: "Weaken and then cure a Zombie Villager",
-			icon: 986, frame: 2, background: "",
+			icon: 1100, frame: 2, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 7.0, y: 1.5,
 		},
@@ -2239,7 +2239,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.deflect_arrow.title", desc: "advancements.story.deflect_arrow.description",
 			titleEN: "Not Today, Thank You", descEN: "Deflect a projectile with a Shield",
-			icon: 1295, frame: 0, background: "",
+			icon: 1446, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 5.0, y: 3.0,
 		},
@@ -2255,7 +2255,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.enchant_item.title", desc: "advancements.story.enchant_item.description",
 			titleEN: "Enchanter", descEN: "Enchant an item at an Enchanting Table",
-			icon: 1244, frame: 0, background: "",
+			icon: 1395, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 6.0, y: 0.0,
 		},
@@ -2271,7 +2271,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.enter_the_end.title", desc: "advancements.story.enter_the_end.description",
 			titleEN: "The End?", descEN: "Enter the End Portal",
-			icon: 435, frame: 0, background: "",
+			icon: 509, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 8.0, y: 2.5,
 		},
@@ -2287,7 +2287,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.enter_the_nether.title", desc: "advancements.story.enter_the_nether.description",
 			titleEN: "We Need to Go Deeper", descEN: "Build, light and enter a Nether Portal",
-			icon: 891, frame: 0, background: "",
+			icon: 1005, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 6.0, y: 2.0,
 		},
@@ -2303,7 +2303,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.follow_ender_eye.title", desc: "advancements.story.follow_ender_eye.description",
 			titleEN: "Eye Spy", descEN: "Follow an Eye of Ender",
-			icon: 1128, frame: 0, background: "",
+			icon: 1278, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 7.0, y: 2.5,
 		},
@@ -2311,7 +2311,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/form_obsidian", parent: "minecraft:story/lava_bucket", xp: 0,
 		criteria: []advCriterion{
-			{name: "obsidian", trigger: "inventory_changed", items: [][]int32{{321}}},
+			{name: "obsidian", trigger: "inventory_changed", items: [][]int32{{394}}},
 		},
 		reqs: [][]string{
 			{"obsidian"},
@@ -2319,7 +2319,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.form_obsidian.title", desc: "advancements.story.form_obsidian.description",
 			titleEN: "Ice Bucket Challenge", descEN: "Obtain a block of Obsidian",
-			icon: 321, frame: 0, background: "",
+			icon: 394, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 5.0, y: 2.0,
 		},
@@ -2327,7 +2327,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/iron_tools", parent: "minecraft:story/smelt_iron", xp: 0,
 		criteria: []advCriterion{
-			{name: "iron_pickaxe", trigger: "inventory_changed", items: [][]int32{{933}}},
+			{name: "iron_pickaxe", trigger: "inventory_changed", items: [][]int32{{1047}}},
 		},
 		reqs: [][]string{
 			{"iron_pickaxe"},
@@ -2335,7 +2335,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.iron_tools.title", desc: "advancements.story.iron_tools.description",
 			titleEN: "Isn't It Iron Pick", descEN: "Upgrade your Pickaxe",
-			icon: 933, frame: 0, background: "",
+			icon: 1047, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 0.5,
 		},
@@ -2343,7 +2343,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/lava_bucket", parent: "minecraft:story/smelt_iron", xp: 0,
 		criteria: []advCriterion{
-			{name: "lava_bucket", trigger: "inventory_changed", items: [][]int32{{1014}}},
+			{name: "lava_bucket", trigger: "inventory_changed", items: [][]int32{{1130}}},
 		},
 		reqs: [][]string{
 			{"lava_bucket"},
@@ -2351,7 +2351,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.lava_bucket.title", desc: "advancements.story.lava_bucket.description",
 			titleEN: "Hot Stuff", descEN: "Fill a Bucket with lava",
-			icon: 1014, frame: 0, background: "",
+			icon: 1130, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 2.0,
 		},
@@ -2359,7 +2359,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/mine_diamond", parent: "minecraft:story/iron_tools", xp: 0,
 		criteria: []advCriterion{
-			{name: "diamond", trigger: "inventory_changed", items: [][]int32{{898}}},
+			{name: "diamond", trigger: "inventory_changed", items: [][]int32{{1012}}},
 		},
 		reqs: [][]string{
 			{"diamond"},
@@ -2367,7 +2367,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.mine_diamond.title", desc: "advancements.story.mine_diamond.description",
 			titleEN: "Diamonds!", descEN: "Acquire diamonds",
-			icon: 898, frame: 0, background: "",
+			icon: 1012, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 5.0, y: 0.5,
 		},
@@ -2375,7 +2375,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/mine_stone", parent: "minecraft:story/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "get_stone", trigger: "inventory_changed", items: [][]int32{{9, 35, 1385}}},
+			{name: "get_stone", trigger: "inventory_changed", items: [][]int32{{9, 62, 1537}}},
 		},
 		reqs: [][]string{
 			{"get_stone"},
@@ -2383,7 +2383,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.mine_stone.title", desc: "advancements.story.mine_stone.description",
 			titleEN: "Stone Age", descEN: "Mine Stone with your new Pickaxe",
-			icon: 913, frame: 0, background: "",
+			icon: 1027, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 1.0, y: 1.75,
 		},
@@ -2391,10 +2391,10 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/obtain_armor", parent: "minecraft:story/smelt_iron", xp: 0,
 		criteria: []advCriterion{
-			{name: "iron_boots", trigger: "inventory_changed", items: [][]int32{{969}}},
-			{name: "iron_chestplate", trigger: "inventory_changed", items: [][]int32{{967}}},
-			{name: "iron_helmet", trigger: "inventory_changed", items: [][]int32{{966}}},
-			{name: "iron_leggings", trigger: "inventory_changed", items: [][]int32{{968}}},
+			{name: "iron_boots", trigger: "inventory_changed", items: [][]int32{{1083}}},
+			{name: "iron_chestplate", trigger: "inventory_changed", items: [][]int32{{1081}}},
+			{name: "iron_helmet", trigger: "inventory_changed", items: [][]int32{{1080}}},
+			{name: "iron_leggings", trigger: "inventory_changed", items: [][]int32{{1082}}},
 		},
 		reqs: [][]string{
 			{"iron_helmet", "iron_chestplate", "iron_leggings", "iron_boots"},
@@ -2402,7 +2402,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.obtain_armor.title", desc: "advancements.story.obtain_armor.description",
 			titleEN: "Suit Up", descEN: "Protect yourself with a piece of iron armor",
-			icon: 967, frame: 0, background: "",
+			icon: 1081, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 4.0, y: 3.0,
 		},
@@ -2410,7 +2410,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/root", parent: "", xp: 0,
 		criteria: []advCriterion{
-			{name: "crafting_table", trigger: "inventory_changed", items: [][]int32{{332}}},
+			{name: "crafting_table", trigger: "inventory_changed", items: [][]int32{{405}}},
 		},
 		reqs: [][]string{
 			{"crafting_table"},
@@ -2418,7 +2418,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.root.title", desc: "advancements.story.root.description",
 			titleEN: "Minecraft", descEN: "The heart and story of the game",
-			icon: 27, frame: 0, background: "gui/advancements/backgrounds/stone",
+			icon: 54, frame: 0, background: "gui/advancements/backgrounds/stone",
 			showToast: false, announceChat: false, hidden: false,
 			x: 0.0, y: 1.75,
 		},
@@ -2426,10 +2426,10 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/shiny_gear", parent: "minecraft:story/mine_diamond", xp: 0,
 		criteria: []advCriterion{
-			{name: "diamond_boots", trigger: "inventory_changed", items: [][]int32{{973}}},
-			{name: "diamond_chestplate", trigger: "inventory_changed", items: [][]int32{{971}}},
-			{name: "diamond_helmet", trigger: "inventory_changed", items: [][]int32{{970}}},
-			{name: "diamond_leggings", trigger: "inventory_changed", items: [][]int32{{972}}},
+			{name: "diamond_boots", trigger: "inventory_changed", items: [][]int32{{1087}}},
+			{name: "diamond_chestplate", trigger: "inventory_changed", items: [][]int32{{1085}}},
+			{name: "diamond_helmet", trigger: "inventory_changed", items: [][]int32{{1084}}},
+			{name: "diamond_leggings", trigger: "inventory_changed", items: [][]int32{{1086}}},
 		},
 		reqs: [][]string{
 			{"diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots"},
@@ -2437,7 +2437,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.shiny_gear.title", desc: "advancements.story.shiny_gear.description",
 			titleEN: "Cover Me with Diamonds", descEN: "Diamond armor saves lives",
-			icon: 971, frame: 0, background: "",
+			icon: 1085, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 6.0, y: 1.0,
 		},
@@ -2445,7 +2445,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/smelt_iron", parent: "minecraft:story/upgrade_tools", xp: 0,
 		criteria: []advCriterion{
-			{name: "iron", trigger: "inventory_changed", items: [][]int32{{904}}},
+			{name: "iron", trigger: "inventory_changed", items: [][]int32{{1018}}},
 		},
 		reqs: [][]string{
 			{"iron"},
@@ -2453,7 +2453,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.smelt_iron.title", desc: "advancements.story.smelt_iron.description",
 			titleEN: "Acquire Hardware", descEN: "Smelt an Iron Ingot",
-			icon: 904, frame: 0, background: "",
+			icon: 1018, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 3.0, y: 1.75,
 		},
@@ -2461,7 +2461,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:story/upgrade_tools", parent: "minecraft:story/mine_stone", xp: 0,
 		criteria: []advCriterion{
-			{name: "stone_pickaxe", trigger: "inventory_changed", items: [][]int32{{923}}},
+			{name: "stone_pickaxe", trigger: "inventory_changed", items: [][]int32{{1037}}},
 		},
 		reqs: [][]string{
 			{"stone_pickaxe"},
@@ -2469,7 +2469,7 @@ var advTable = []advNode{
 		display: &advDisplay{
 			title: "advancements.story.upgrade_tools.title", desc: "advancements.story.upgrade_tools.description",
 			titleEN: "Getting an Upgrade", descEN: "Construct a better Pickaxe",
-			icon: 923, frame: 0, background: "",
+			icon: 1037, frame: 0, background: "",
 			showToast: true, announceChat: true, hidden: false,
 			x: 2.0, y: 1.75,
 		},

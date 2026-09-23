@@ -24,4 +24,7 @@ package worldgen
 //
 // v14: mangrove swamps grow seagrass too (seagrass_swamp is in their feature
 // list as well).
-const GenVersion = 14
+//
+// v15: the canonical content version moved to 26.3, which renumbers block
+// states — every cached chunk holds the old ids.
+const GenVersion = 15
