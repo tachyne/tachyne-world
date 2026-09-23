@@ -13,10 +13,13 @@ import os, re, sys
 SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(canon.src(), "net/minecraft/world/item/DyeColor.java")
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "dyecolors_gen.go")
 
-# NAME(id, "name", textureDiffuse, MapColor.X, textColor, fireworkColor),
+# NAME(id, "name", textureDiffuse, MapColor.X, [MapColor.TERRACOTTA_X,] fireworkColor, textColor)
+# — the constructor stores fireworkColor from the argument BEFORE textColor
+# (26.x adds the terracotta map colour after the first). Until 2026-09-23 this
+# took the last argument, so every firework star wore the dyes' text colours.
 PAT = re.compile(
     r'^\s+[A-Z_]+\((\d+),\s*"([a-z_]+)",\s*(0[xX][0-9a-fA-F]+|\d+),\s*MapColor\.\w+,\s*'
-    r'(?:0[xX][0-9a-fA-F]+|\d+),\s*(0[xX][0-9a-fA-F]+|\d+)\)', re.M)
+    r'(?:MapColor\.\w+,\s*)?(0[xX][0-9a-fA-F]+|\d+),\s*(?:0[xX][0-9a-fA-F]+|\d+)\)', re.M)
 
 rows = [(int(i), n, int(c, 0) & 0xFFFFFF) for i, n, _, c in PAT.findall(open(SRC).read())]
 if len(rows) != 16:

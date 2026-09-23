@@ -232,3 +232,14 @@ func TestRocketEntityCarriesItsStack(t *testing.T) {
 		t.Error("the stack on the entity carries no fireworks component")
 	}
 }
+
+// A dye's firework colour is DyeColor's fireworkColor, not its text colour:
+// the table took the text colours for a long time (white stars drew pure
+// 0xFFFFFF, orange 0xFF681F), and the tests above only read the table back.
+func TestDyeFireworkColoursAreVanillas(t *testing.T) {
+	for dye, want := range map[int]int32{0: 0xF0F0F0, 1: 0xEB8844, 14: 0xB3312C, 15: 0x1E1B1B} {
+		if got := dyeFireworkColor[dye]; got != want {
+			t.Errorf("dye %d firework colour %#06x, want %#06x", dye, got, want)
+		}
+	}
+}

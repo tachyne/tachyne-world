@@ -7,20 +7,20 @@ package server
 // Indexed by the DyeColor id, which is what the wire and the loom use.
 
 var dyeFireworkColor = [16]int32{
-	0xFFFFFF, // 0 white
-	0xFF681F, // 1 orange
-	0xFF00FF, // 2 magenta
-	0x9AC0CD, // 3 light_blue
-	0xFFFF00, // 4 yellow
-	0xBFFF00, // 5 lime
-	0xFF69B4, // 6 pink
-	0x808080, // 7 gray
-	0xD3D3D3, // 8 light_gray
-	0x00FFFF, // 9 cyan
-	0xA020F0, // 10 purple
-	0x0000FF, // 11 blue
-	0x8B4513, // 12 brown
-	0x00FF00, // 13 green
-	0xFF0000, // 14 red
-	0x000000, // 15 black
+	0xF0F0F0, // 0 white
+	0xEB8844, // 1 orange
+	0xC354CD, // 2 magenta
+	0x6689D3, // 3 light_blue
+	0xDECF2A, // 4 yellow
+	0x41CD34, // 5 lime
+	0xD88198, // 6 pink
+	0x434343, // 7 gray
+	0xABABAB, // 8 light_gray
+	0x287697, // 9 cyan
+	0x7B2FBE, // 10 purple
+	0x253192, // 11 blue
+	0x51301A, // 12 brown
+	0x3B511A, // 13 green
+	0xB3312C, // 14 red
+	0x1E1B1B, // 15 black
 }

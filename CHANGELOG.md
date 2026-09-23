@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Firework stars are the colours of their dyes.** Each dye's firework
+  colour was taken from the wrong column of vanilla's dye table — its text
+  colour — so white stars burst pure white instead of vanilla's soft grey,
+  and every other colour was off the same way (orange, magenta, …). They use
+  the firework colours now.
 - **Bedrock players on a current client can join again.** The Bedrock
   gateway spoke only Bedrock 1.26.30, and Bedrock updates itself — through
   1.26.40, .44, .45 and now 1.26.50 — so every up-to-date phone, console and
