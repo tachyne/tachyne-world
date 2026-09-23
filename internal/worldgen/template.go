@@ -110,6 +110,17 @@ type procPos struct {
 }
 
 // procFor names the processor list a pool applies to a template location.
+// terrainMatching reports whether the pool places this element with
+// terrain_matching projection (each column follows the ground: streets).
+func (p *templatePool) terrainMatching(loc string) bool {
+	for _, e := range p.Elements {
+		if e.Location == loc {
+			return e.Projection == "terrain_matching" || e.Projection == "minecraft:terrain_matching"
+		}
+	}
+	return false
+}
+
 func (p *templatePool) procFor(loc string) string {
 	for _, e := range p.Elements {
 		if e.Location == loc {

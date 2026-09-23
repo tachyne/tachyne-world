@@ -83,7 +83,7 @@ func (g *Generator) AssembleAbandonedCamp(c AbandonedCamp) []PlacedPiece {
 	// way the camps' terrain adaptation meets the land in vanilla.
 	p = g.AssembleJigsawTerrain("abandoned_camp/tent/"+c.Biome, c.X, c.Y, c.Z, rng, campDepth)
 	for i := range p {
-		p[i].Beard = p[i].Tmpl != nil
+		p[i].Beard = p[i].Tmpl != nil && !p[i].TerrainMatch
 	}
 	campMu.Lock()
 	campCache[k] = p

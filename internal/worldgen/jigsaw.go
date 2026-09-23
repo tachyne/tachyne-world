@@ -14,6 +14,7 @@ type PlacedPiece struct {
 	Tmpl            *Template // nil for a feature piece
 	Feature         string    // a feature piece's tree feature (Tmpl nil)
 	Beard           bool      // fill the ground up to the piece's underside (terrain_adaptation beard)
+	TerrainMatch    bool      // terrain_matching projection: each column follows the surface (streets)
 	OX, OY, OZ, Rot int
 	Proc            string    // processor list the pool applies to this piece ("" = none)
 	SkipAir         bool      // the template's air keeps the world's blocks (vanilla's STRUCTURE_AND_AIR ignore)
@@ -157,10 +158,10 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 	}
 	sw, sh, sd := start.rotatedSize(0)
 	if terrain {
-		sy = g.Height(sx+sw/2, sz+sd/2) - 1
+		sy = g.SurfaceWG(sx+sw/2, sz+sd/2) - 1
 	}
 	pieces := []*PlacedPiece{{Tmpl: start, OX: sx, OY: sy, OZ: sz, Rot: 0, Proc: sp.procFor(startLoc),
-		x1: sx + sw, y1: sy + sh, z1: sz + sd}}
+		TerrainMatch: terrain && sp.terrainMatching(startLoc), x1: sx + sw, y1: sy + sh, z1: sz + sd}}
 
 	q := make([]queued, 0, 16)
 	for _, j := range start.Jigsaws {
@@ -233,8 +234,14 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 					crx, cry, crz := cand.rotatePos(cj.Pos[0], cj.Pos[1], cj.Pos[2], rot)
 					ox, oy, oz := tx-crx, ty-cry, tz-crz
 					cw, chh, cdd := cand.rotatedSize(rot)
-					if terrain {
-						oy = g.Height(ox+cw/2, oz+cdd/2) - 1 // drape onto the local surface
+					if terrain && (cur.piece.TerrainMatch || pool.terrainMatching(loc)) {
+						// JigsawPlacement: a rigid piece on a rigid parent keeps the
+						// strict alignment above; otherwise the child's box stands at
+						// the surface AT THE PARENT'S JIGSAW (WORLD_SURFACE_WG, water
+						// included) less its own jigsaw's height — a house's door
+						// meets the street, and over a pond the house stands at the
+						// water's surface, bearded down to the bed.
+						oy = g.SurfaceWG(sxp, szp) - cry
 					}
 					nx1, ny1, nz1 := ox+cw, oy+chh, oz+cdd
 					clash := false
@@ -261,7 +268,7 @@ func (g *Generator) assembleJigsawAliased(startPool string, sx, sy, sz int, prng
 						continue
 					}
 					np := &PlacedPiece{Tmpl: cand, OX: ox, OY: oy, OZ: oz, Rot: rot, Proc: pool.procFor(loc),
-						x1: nx1, y1: ny1, z1: nz1}
+						TerrainMatch: terrain && pool.terrainMatching(loc), x1: nx1, y1: ny1, z1: nz1}
 					pieces = append(pieces, np)
 					for _, nj := range cand.Jigsaws {
 						if nj.Pos == cj.Pos {
@@ -305,7 +312,13 @@ func (g *Generator) StampPieces(ch *Chunk, cx, cz int32, pieces []PlacedPiece) [
 				sus[[3]int{s.X, s.Y, s.Z}] = s.State
 			}
 		}
+		if p.TerrainMatch {
+			chests = append(chests, g.stampTerrainMatching(ch, cx, cz, p, processors[p.Proc], sus)...)
+			g.stampJigsawFinals(ch, cx, cz, p)
+			continue
+		}
 		chests = append(chests, p.Tmpl.StampTemplateProcSus(ch, cx, cz, p.OX, p.OY, p.OZ, p.Rot, processors[p.Proc], p.SkipAir, sus)...)
+		g.stampJigsawFinals(ch, cx, cz, p)
 		if p.Beard {
 			beardUnder(ch, cx, cz, p)
 		}
@@ -338,6 +351,102 @@ func beardUnder(ch *Chunk, cx, cz int32, p *PlacedPiece) {
 			setSectionBlock(ch, lx, y, lz, Dirt, true)
 		}
 	}
+}
+
+// stampJigsawFinals is JigsawReplacementProcessor: once a piece is placed,
+// each of its jigsaw blocks becomes its final_state (a bastion wall's
+// blackstone, a trial chamber's tuff bricks, a street's dirt path) — they
+// were being skipped, which left one-block holes. structure_void places
+// nothing.
+func (g *Generator) stampJigsawFinals(ch *Chunk, cx, cz int32, p *PlacedPiece) {
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	for _, j := range p.Tmpl.Jigsaws {
+		st, ok := jigsawFinalState(j.Final)
+		if !ok {
+			continue
+		}
+		rx, ry, rz := p.Tmpl.rotatePos(j.Pos[0], j.Pos[1], j.Pos[2], p.Rot)
+		wx, wy, wz := p.OX+rx, p.OY+ry, p.OZ+rz
+		if wx-baseX < 0 || wx-baseX >= 16 || wz-baseZ < 0 || wz-baseZ >= 16 {
+			continue
+		}
+		if p.TerrainMatch {
+			wy = g.SurfaceWG(wx, wz) - 1 + ry
+		}
+		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, st, true)
+	}
+}
+
+// jigsawFinalState resolves a jigsaw's final_state ("minecraft:dirt_path",
+// or with properties "name[k=v,…]"); ok=false for structure_void or a block
+// the tables lack.
+func jigsawFinalState(final string) (uint32, bool) {
+	name, props := final, ""
+	if i := strings.IndexByte(final, '['); i >= 0 {
+		name, props = final[:i], strings.TrimSuffix(final[i+1:], "]")
+	}
+	name = strings.TrimPrefix(name, "minecraft:")
+	if name == "" || name == "structure_void" {
+		return 0, false
+	}
+	st, ok := blockDefaultState[name] // a bare name is the block's default state
+	if !ok {
+		return 0, false
+	}
+	if props != "" {
+		info, ok := InfoForState(st)
+		if !ok {
+			return st, true
+		}
+		for _, kv := range strings.Split(props, ",") {
+			if k, v, ok := strings.Cut(kv, "="); ok && info.HasProperty(k) {
+				st = SetProperty(info, st, k, v)
+			}
+		}
+	}
+	return st, true
+}
+
+// SurfaceWG is vanilla's WORLD_SURFACE_WG heightmap for a column: the first
+// empty cell above the terrain OR the water on it — generated water fills to
+// sea level, so a column under the sea surfaces at SeaLevel.
+func (g *Generator) SurfaceWG(x, z int) int {
+	if h := g.Height(x, z); h > SeaLevel {
+		return h
+	}
+	return SeaLevel
+}
+
+// stampTerrainMatching stamps a terrain_matching piece: every template cell
+// lands at its column's surface less one plus its height in the template
+// (vanilla's GravityProcessor on WORLD_SURFACE_WG, offset -1), so a street
+// follows the ground instead of floating or burying itself on a slope.
+func (g *Generator) stampTerrainMatching(ch *Chunk, cx, cz int32, p *PlacedPiece, rules []procRule, sus map[[3]int]uint32) [][3]int {
+	t := p.Tmpl
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	var chests [][3]int
+	for _, b := range t.Blocks {
+		state := t.resolved[p.Rot&3][b[3]]
+		if state == tmplSkip || (p.SkipAir && state == Air) {
+			continue
+		}
+		rx, ry, rz := t.rotatePos(b[0], b[1], b[2], p.Rot)
+		wx, wz := p.OX+rx, p.OZ+rz
+		if wx-baseX < 0 || wx-baseX >= 16 || wz-baseZ < 0 || wz-baseZ >= 16 {
+			continue
+		}
+		wy := g.SurfaceWG(wx, wz) - 1 + ry
+		state = applyRules(rules, state, wx, wy, wz, p.OX, p.OY, p.OZ)
+		if s, ok := sus[[3]int{wx, wy, wz}]; ok {
+			state = s
+		}
+		setSectionBlock(ch, wx-baseX, wy, wz-baseZ, state, true)
+	}
+	for _, c := range t.Chests {
+		rx, ry, rz := t.rotatePos(c[0], c[1], c[2], p.Rot)
+		chests = append(chests, [3]int{p.OX + rx, g.SurfaceWG(p.OX+rx, p.OZ+rz) - 1 + ry, p.OZ + rz})
+	}
+	return chests
 }
 
 // featureLoc marks a feature element in a pool's weighted order.

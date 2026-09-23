@@ -34,4 +34,9 @@ package worldgen
 // stays, as in vanilla; only a fresh generation leaves it out. The same
 // release adds 26.3's dappled forest (cold, driest plains become forest) and
 // the poplar trees.
-const GenVersion = 16
+//
+// v17: villages meet the ground as vanilla's do — pieces projected to the
+// surface counting water, houses placed at the street jigsaw's surface,
+// streets terrain_matching, dirt beards under rigid pieces — and every
+// jigsaw block becomes its final_state instead of a hole.
+const GenVersion = 17
