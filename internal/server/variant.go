@@ -230,11 +230,12 @@ var (
 	}
 	// coldFarmBiomes is #spawns_cold_variant_farm_animals beyond the frog's
 	// cold list (which it includes, plus #is_end): the cold oceans, every
-	// taiga, the windswept family and stony peaks.
+	// taiga, the windswept family, stony peaks and the dappled forest.
 	coldFarmBiomes = map[string]bool{
 		"minecraft:cold_ocean": true, "minecraft:deep_cold_ocean": true, "minecraft:old_growth_pine_taiga": true,
 		"minecraft:old_growth_spruce_taiga": true, "minecraft:taiga": true, "minecraft:windswept_forest": true,
 		"minecraft:windswept_gravelly_hills": true, "minecraft:windswept_hills": true, "minecraft:stony_peaks": true,
+		"minecraft:dappled_forest": true, // 26.3
 	}
 	// warmFarmBiomes is #spawns_warm_variant_farm_animals beyond the frog's
 	// warm list (which it includes, plus the jungle/savanna/badlands/nether

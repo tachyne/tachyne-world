@@ -42,3 +42,10 @@ def props(have, stand_states, stand_default):
     want = dict(stand_default)
     want.update({k: v for k, v in have.items() if k in want and any(p.get(k) == v for p in stand_states)})
     return want
+
+
+# biome -> its stand-in, for a client that lacks the biome (the Java side
+# keeps the same pairing in tachyne-common's protocol.biomesAdded).
+BIOMES = {
+    "dappled_forest": "forest",
+}

@@ -6,12 +6,43 @@ vanilla's NaturalSpawner draws from (MobSpawnSettings)."""
 import canon
 import io, json, os, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "spawnpools_gen.go")
 
 outer = zipfile.ZipFile(JAR)
 inner = [n for n in outer.namelist() if n.startswith("META-INF/versions/") and n.endswith(".jar")]
 z = zipfile.ZipFile(io.BytesIO(outer.read(inner[0]))) if inner else outer
+
+def biome_spawns(b):
+    """A biome's (creature probability, {category: [(type, weight, min,
+    max)]}, spawn costs). 26.x moved all three into environment attributes:
+    natural_mob_spawns (an overlay whose argument holds spawns_by_category
+    and spawn_costs, a count an int or a uniform range) and
+    creature_world_gen_spawn_probability (default 0.1)."""
+    if "attributes" not in b:  # 1.21.x
+        cats = {cat: [(e["type"], e["weight"], e["minCount"], e["maxCount"]) for e in es]
+                for cat, es in b.get("spawners", {}).items()}
+        return b.get("creature_spawn_probability", 0.1), cats, b.get("spawn_costs", {})
+    at = b["attributes"]
+    spawns = at.get("minecraft:gameplay/natural_mob_spawns")
+    cats, costs = {}, {}
+    if spawns is not None:
+        if spawns.get("modifier") != "overlay":
+            raise SystemExit(f"natural_mob_spawns modifier {spawns.get('modifier')} not handled")
+        arg = spawns["argument"]
+        costs = arg.get("spawn_costs", {})
+        for cat, es in arg.get("spawns_by_category", {}).items():
+            out = []
+            for e in es:
+                c = e["count"]
+                lo, hi = (c, c) if isinstance(c, int) else (c["min_inclusive"], c["max_inclusive"])
+                out.append((e["type"], e["weight"], lo, hi))
+            cats[cat] = out
+    prob = at.get("minecraft:gameplay/creature_world_gen_spawn_probability", 0.1)
+    if not isinstance(prob, (int, float)):
+        raise SystemExit(f"creature probability {prob} not handled")
+    return prob, cats, costs
+
 
 rows = []
 for n in sorted(z.namelist()):
@@ -19,14 +50,14 @@ for n in sorted(z.namelist()):
         continue
     b = json.loads(z.read(n))
     name = "minecraft:" + n.split("/")[-1][:-5]
-    prob = b.get("creature_spawn_probability", 0.1)
+    prob, cats, spawn_costs = biome_spawns(b)
     costs = []
-    for et, c in sorted(b.get("spawn_costs", {}).items()):
+    for et, c in sorted(spawn_costs.items()):
         costs.append((et.removeprefix("minecraft:"), c["charge"], c["energy_budget"]))
     entries = []
-    for cat, es in sorted(b.get("spawners", {}).items()):
-        for e in es:
-            entries.append((cat, e["type"].removeprefix("minecraft:"), e["weight"], e["minCount"], e["maxCount"]))
+    for cat, es in sorted(cats.items()):
+        for t, w, lo, hi in es:
+            entries.append((cat, t.removeprefix("minecraft:"), w, lo, hi))
     rows.append((name, prob, entries, costs))
 
 with open(OUT, "w") as f:

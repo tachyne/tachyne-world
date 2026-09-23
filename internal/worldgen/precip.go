@@ -35,6 +35,7 @@ var biomeBaseTemp = map[string]float32{
 	"minecraft:meadow":                   0.5,
 	"minecraft:cherry_grove":             0.5,
 	"minecraft:forest":                   0.7,
+	"minecraft:dappled_forest":           0.6,
 	"minecraft:flower_forest":            0.7,
 	"minecraft:birch_forest":             0.6,
 	"minecraft:old_growth_birch_forest":  0.6,

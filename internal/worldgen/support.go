@@ -115,7 +115,7 @@ var supportNames = map[SupportKind][]string{
 	SupportSoil: {
 		"acacia_sapling", "allium", "attached_melon_stem",
 		"attached_pumpkin_stem", "azalea", "azure_bluet", "bamboo",
-		"bamboo_sapling", "birch_sapling", "blue_orchid", "bush", "cactus",
+		"bamboo_sapling", "birch_sapling", "blue_orchid", "bush", "red_shrub", "cactus",
 		"cactus_flower", "cherry_sapling", "closed_eyeblossom", "cornflower",
 		"crimson_fungus", "crimson_roots", "dandelion", "dark_oak_sapling",
 		"dead_bush", "fern", "firefly_bush", "flowering_azalea",

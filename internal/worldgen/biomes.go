@@ -41,6 +41,7 @@ const (
 	treeSparseJungle   // sparse jungle: bushes and jungle trees, no megas
 	treeBambooJungle   // bamboo jungle: mostly mega jungle trees
 	treeWoodedBadlands // wooded badlands: littered oaks only
+	treeDappled        // dappled forest: red/orange/yellow poplars, the odd spruce and fallen poplar
 )
 
 // floraKind selects the ground-cover style stampGroundCover paints.
@@ -60,6 +61,7 @@ const (
 	floraPaleGarden // pale moss, closed eyeblossoms
 	floraMushroom
 	floraSnowy
+	floraDappled // dappled forest: grass, red shrubs, brown mushrooms
 )
 
 // Biome is a resolved biome: its name plus the generation data for its columns.
@@ -75,10 +77,12 @@ type Biome struct {
 // Names not present fall back to a plains-like default (grass + sparse oak).
 var biomeReg = map[string]*Biome{
 	// ── Temperate/plains family ──────────────────────────────────────────
-	"minecraft:plains":                  {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraPlains},
-	"minecraft:sunflower_plains":        {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraFlower},
-	"minecraft:meadow":                  {Top: GrassBlock, Sub: Dirt, Tree: treeMeadow, TreeDensity: 0.05, Flora: floraFlower},
-	"minecraft:forest":                  {Top: GrassBlock, Sub: Dirt, Tree: treeForest, TreeDensity: 1.6, Flora: floraPlains},
+	"minecraft:plains":           {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraPlains},
+	"minecraft:sunflower_plains": {Top: GrassBlock, Sub: Dirt, Tree: treeOak, TreeDensity: 0.3, Flora: floraFlower},
+	"minecraft:meadow":           {Top: GrassBlock, Sub: Dirt, Tree: treeMeadow, TreeDensity: 0.05, Flora: floraFlower},
+	"minecraft:forest":           {Top: GrassBlock, Sub: Dirt, Tree: treeForest, TreeDensity: 1.6, Flora: floraPlains},
+	// 26.3: six trees a chunk to the forest's ten (trees_dappled_forest).
+	"minecraft:dappled_forest":          {Top: GrassBlock, Sub: Dirt, Tree: treeDappled, TreeDensity: 0.96, Flora: floraDappled},
 	"minecraft:flower_forest":           {Top: GrassBlock, Sub: Dirt, Tree: treeFlowerForest, TreeDensity: 1.2, Flora: floraFlower},
 	"minecraft:birch_forest":            {Top: GrassBlock, Sub: Dirt, Tree: treeBirch, TreeDensity: 1.6, Flora: floraPlains},
 	"minecraft:old_growth_birch_forest": {Top: GrassBlock, Sub: Dirt, Tree: treeBirchTall, TreeDensity: 2.0, Flora: floraPlains},
@@ -224,7 +228,11 @@ func landBiome(ti, hi int, variety float64) string {
 		}
 	case 1: // cold
 		switch hi {
-		case 0, 1:
+		case 0:
+			// 26.3 gave vanilla's coldest-driest middle-biome cell to the
+			// dappled forest (it was plains).
+			return "minecraft:dappled_forest"
+		case 1:
 			return "minecraft:plains"
 		case 2:
 			return "minecraft:forest"

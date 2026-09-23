@@ -15,19 +15,21 @@ package worldgen
 type surfaceNoises struct {
 	surface, powder, packedIce, ice, calcite, gravel, swamp *Perlin
 	frozenA, frozenB                                        *Perlin // the frozen oceans' open-water patches
+	smallPatch                                              *Perlin // SMALL_PATCH (26.3): the dappled forest's coarse dirt
 }
 
 func newSurfaceNoises(seed int64) *surfaceNoises {
 	return &surfaceNoises{
-		surface:   NewPerlin(seed ^ 0x5F01),
-		powder:    NewPerlin(seed ^ 0x5F02),
-		packedIce: NewPerlin(seed ^ 0x5F03),
-		ice:       NewPerlin(seed ^ 0x5F04),
-		calcite:   NewPerlin(seed ^ 0x5F05),
-		gravel:    NewPerlin(seed ^ 0x5F06),
-		swamp:     NewPerlin(seed ^ 0x5F07),
-		frozenA:   NewPerlin(seed ^ 0x5F08),
-		frozenB:   NewPerlin(seed ^ 0x5F09),
+		surface:    NewPerlin(seed ^ 0x5F01),
+		powder:     NewPerlin(seed ^ 0x5F02),
+		packedIce:  NewPerlin(seed ^ 0x5F03),
+		ice:        NewPerlin(seed ^ 0x5F04),
+		calcite:    NewPerlin(seed ^ 0x5F05),
+		gravel:     NewPerlin(seed ^ 0x5F06),
+		swamp:      NewPerlin(seed ^ 0x5F07),
+		frozenA:    NewPerlin(seed ^ 0x5F08),
+		frozenB:    NewPerlin(seed ^ 0x5F09),
+		smallPatch: NewPerlin(seed ^ 0x5F0A),
 	}
 }
 
@@ -59,6 +61,12 @@ func (n *surfaceNoises) calciteIn(x, z int, lo, hi float64) bool { // CALCITE -9
 func (n *surfaceNoises) gravelIn(x, z int, lo, hi float64) bool { // GRAVEL -8
 	v := n.gravel.FBm(float64(x)/256, float64(z)/256, 4, 2, 1) / 2.6
 	return v >= lo && v < hi
+}
+
+// smallPatchAbove is SMALL_PATCH ≥ t: one octave at -3 with amplitude 3, so
+// vanilla's normal noise spans about ±6.7 where this one spans ±1.
+func (n *surfaceNoises) smallPatchAbove(x, z int, t float64) bool {
+	return n.smallPatch.Noise2(float64(x)/8, float64(z)/8) >= t/6.67
 }
 func (n *surfaceNoises) swampAbove(x, z int, t float64) bool { // SWAMP -2
 	return n.swamp.Noise2(float64(x)/4, float64(z)/4) > t
@@ -192,6 +200,10 @@ func (g *Generator) surfaceFor(b *Biome, x, z, h int) surface {
 			s.top = CoarseDirt
 		case n.surfaceAbove(x, z, -0.95):
 			s.top = Podzol
+		}
+	case "minecraft:dappled_forest": // 26.3: coarse dirt in small patches
+		if n.smallPatchAbove(x, z, 1.2) {
+			s.top = CoarseDirt
 		}
 	case "minecraft:ice_spikes":
 		if aboveWater {

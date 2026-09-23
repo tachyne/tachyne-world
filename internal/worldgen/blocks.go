@@ -19,6 +19,7 @@ var (
 	OakLog     = blockBase("oak_log") + 1
 	OakLeaves  = blockBase("oak_leaves") + 27
 	ShortGrass = blockBase("short_grass")
+	RedShrub   = blockBase("red_shrub") // 26.3: the dappled forest's undergrowth
 	Fern       = blockBase("fern")
 	Dandelion  = blockBase("dandelion")
 	Poppy      = blockBase("poppy")

@@ -106,6 +106,22 @@ func pickFeature(k treeKind, seed int64, wx, wz int) featurePick {
 		default:
 			return tree("oak_bees_005")
 		}
+	case treeDappled:
+		// trees_dappled_forest: a weighted selector — red 200, orange 240 and
+		// yellow 90 leaf-littered poplars, spruce 27, fallen poplar 120.
+		u := hash01(seed, wx, wz, 0x7230) * 677
+		switch {
+		case u < 200:
+			return tree("red_poplar_leaf_litter")
+		case u < 440:
+			return tree("orange_poplar_leaf_litter")
+		case u < 530:
+			return tree("yellow_poplar_leaf_litter")
+		case u < 557:
+			return tree("spruce")
+		default:
+			return fallen("fallen_poplar_tree")
+		}
 	case treeMeadow:
 		// trees_meadow: half large bee oaks, half lone super birches.
 		if roll(0x7207, 0.5) {
@@ -543,6 +559,17 @@ func (g *Generator) stampGroundCover(ch *Chunk, lx, lz, surfaceH, wx, wz int, fl
 	case floraSavanna:
 		if r < 0.28 {
 			put(ShortGrass)
+		}
+	case floraDappled:
+		// patch_grass_forest (two patches of 32), patch_red_shrub (one of
+		// eight), and brown_mushroom_dappled_forest under the canopy.
+		switch {
+		case r < 0.16:
+			put(ShortGrass)
+		case r < 0.18:
+			put(RedShrub)
+		case r < 0.19:
+			put(BrownMushroom)
 		}
 	case floraDarkForest:
 		switch {

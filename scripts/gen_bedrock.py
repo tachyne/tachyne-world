@@ -375,6 +375,11 @@ def main():
 
     # ---- biomes -------------------------------------------------------------
     biomes = json.loads(fetch(f"{MAPPINGS}/biomes.json"))
+    # A canonical biome Geyser does not map yet is shown as its stand-in.
+    for name, stand in standins.BIOMES.items():
+        key, skey = "minecraft:" + name, "minecraft:" + stand
+        if key not in biomes and skey in biomes:
+            biomes[key] = biomes[skey]
     with open(os.path.join(OUT, "bedrock_biomes_gen.go"), "w") as f:
         header(f.write, "gen_bedrock.py")
         f.write("// bedrockBiomeIDs: Java biome identifier → Bedrock numeric biome ID.\n")
