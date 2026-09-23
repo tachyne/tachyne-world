@@ -838,3 +838,10 @@ func floorDiv(a, b int) int {
 	}
 	return q
 }
+
+// UnstableFluids is the generated chunk's fluid sources with open air beside
+// or below them (worldgen.UnstableFluids): what the server ticks once when it
+// first loads the chunk, as vanilla ticks a spring it has just placed.
+func (w *World) UnstableFluids(cx, cz int32) [][3]int {
+	return worldgen.UnstableFluids(w.generated(cx, cz), cx, cz)
+}

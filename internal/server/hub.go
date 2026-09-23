@@ -415,6 +415,7 @@ type hub struct {
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
 	seededNether map[[2]int32]bool // nether chunks given their one-time strider packs this pod lifetime
 	seededChunks map[[2]int32]bool
+	fluidPrimed  map[int]map[[2]int32]bool   // per dimension: chunks whose generated fluid has been ticked
 	hives        map[blockPos][]hiveOccupant // known hives and their occupants
 	hivestore    *hiveStore                  // hives.json persistence
 
@@ -1091,6 +1092,7 @@ func (h *hub) run() {
 			}
 			h.mobAmbience(players)   // Mob.baseTick: the idle-voice roll runs every tick
 			h.naturalSpawn(players)  // vanilla NaturalSpawner port: all categories, all heights
+			h.primeFluids(players)   // generated springs start running (fluidprime.go)
 			h.updateWeather(players) // vanilla per-tick cycle: timers, level ramps, lightning
 			if h.waves && age%waveCadence == 0 {
 				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
