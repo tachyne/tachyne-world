@@ -18,7 +18,9 @@ const (
 
 var (
 	horizNeighbors = [4]blockPos{{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}}
-	allNeighbors   = [6]blockPos{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}
+	// horizFaces are horizNeighbors' directions as faces, for the fluid face test.
+	horizFaces   = [4]int{worldgen.FaceEast, worldgen.FaceWest, worldgen.FaceSouth, worldgen.FaceNorth}
+	allNeighbors = [6]blockPos{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}
 )
 
 func (h *hub) inWorldY(y int) bool { return h.inWorldYIn(0, y) }
@@ -142,6 +144,11 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 			h.updateFluid(players, dim, pos, h.worldFor(dim).Block(pos.x, pos.y, pos.z))
 		}
 	case worldgen.IsFluid(state):
+		h.updateFluid(players, dim, pos, state)
+	case worldgen.IsWaterlogged(state):
+		// A waterlogged block holds a water source, and it runs like one out
+		// of any face its shape leaves open (bug #25: water in a stair poured
+		// out of the step's open side in vanilla, and nowhere here).
 		h.updateFluid(players, dim, pos, state)
 	case isFire(state):
 		h.inDim(dim, func() { h.updateFire(players, pos) })
@@ -273,7 +280,8 @@ func (h *hub) powderTouchesWater(dim int, pos blockPos) bool {
 // then the cell spreads down and to the sides (the spread half). Levels:
 // base+0 source, base+1..7 flowing (1 strongest), base+8 falling.
 func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	water := worldgen.IsWater(state)
+	logged := worldgen.IsWaterlogged(state) && !worldgen.IsFluid(state)
+	water := worldgen.IsWater(state) || logged
 	base, delay, dropOff, slopeFind := worldgen.WaterBase, uint64(waterDelay), 1, 4
 	if !water {
 		base, delay, dropOff, slopeFind = worldgen.LavaBase, uint64(lavaDelay), 2, 2
@@ -285,6 +293,9 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 		return worldgen.IsLava(s)
 	}
 	level := worldgen.FluidLevel(state, base)
+	if logged {
+		level = 0 // the block's water is a source
+	}
 
 	// Water/lava contact solidifies (LiquidBlock.shouldSpreadLiquid + LavaFluid.
 	// spreadTo). Lava touched by water above or beside it turns to obsidian
@@ -333,7 +344,7 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	}
 	// Flow straight down into an open cell (never into existing same-fluid — that
 	// cell turns to falling on its own tick via getNewLiquid's "fluid above" rule).
-	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) {
+	if h.inWorldY(below.y) && fluidPassable(belowB) && !same(belowB) && worldgen.FluidPassesFace(worldgen.FaceDown, state, belowB) {
 		h.fluidInto(players, dim, below, base+8, water) // falling
 		h.scheduleIn(dim, below, delay)
 		if water {
@@ -366,13 +377,24 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 		}
 		return worldgen.IsLava(s)
 	}
+	cell := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
 	sourceCount, maxAmount := 0, 0
-	for _, d := range horizNeighbors {
+	for i, d := range horizNeighbors {
 		nb := h.worldFor(dim).Block(pos.x+d.x, pos.y, pos.z+d.z)
-		if !same(nb) {
+		// The neighbour's fluid reaches this cell only through the faces the
+		// two blocks turn to each other (canPassThroughWall); a waterlogged
+		// neighbour holds a water source.
+		logged := water && worldgen.IsWaterlogged(nb) && !worldgen.IsFluid(nb)
+		if !same(nb) && !logged {
+			continue
+		}
+		if !worldgen.FluidPassesFace(worldgen.OppositeFace(horizFaces[i]), nb, cell) {
 			continue
 		}
 		nl := worldgen.FluidLevel(nb, base)
+		if logged {
+			nl = 0
+		}
 		amt := 8 - nl
 		if nl == 0 || nl == 8 { // source or falling = full strength
 			amt = 8
@@ -387,11 +409,13 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 	// Infinite sources: vanilla gates each fluid on its own conversion rule.
 	// Water converts by default, lava does not (it is an experimental rule).
 	if sourceCount >= 2 && ((water && h.rules.WaterSourceCnv) || (!water && h.rules.LavaSourceCnv)) {
-		if belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z); worldgen.IsSolidFull(belowB) || worldgen.IsFluidSource(belowB, base) {
+		if belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z); worldgen.IsSolidFull(belowB) || worldgen.IsFluidSource(belowB, base) ||
+			(water && worldgen.IsWaterlogged(belowB)) {
 			return base, true
 		}
 	}
-	if same(h.worldFor(dim).Block(pos.x, pos.y+1, pos.z)) { // fluid above → falling
+	above := h.worldFor(dim).Block(pos.x, pos.y+1, pos.z)
+	if (same(above) || (water && worldgen.IsWaterlogged(above))) && worldgen.FluidPassesFace(worldgen.FaceDown, above, cell) { // fluid above → falling
 		return base + 8, true
 	}
 	if newAmount := maxAmount - dropOff; newAmount > 0 {
@@ -405,7 +429,8 @@ func (h *hub) getNewLiquid(dim int, pos blockPos, water bool, base uint32, dropO
 func (h *hub) sourceNeighborCount(dim int, pos blockPos, base uint32) int {
 	n := 0
 	for _, d := range horizNeighbors {
-		if worldgen.IsFluidSource(h.worldFor(dim).Block(pos.x+d.x, pos.y, pos.z+d.z), base) {
+		nb := h.worldFor(dim).Block(pos.x+d.x, pos.y, pos.z+d.z)
+		if worldgen.IsFluidSource(nb, base) || (base == worldgen.WaterBase && worldgen.IsWaterlogged(nb) && !worldgen.IsFluid(nb)) {
 			n++
 		}
 	}
@@ -417,6 +442,9 @@ func (h *hub) sourceNeighborCount(dim int, pos blockPos, base uint32) int {
 // feed downward rather than spread sideways.
 func (h *hub) fluidHoleBelow(dim int, pos blockPos, same func(uint32) bool) bool {
 	belowB := h.worldFor(dim).Block(pos.x, pos.y-1, pos.z)
+	if !worldgen.FluidPassesFace(worldgen.FaceDown, h.worldFor(dim).Block(pos.x, pos.y, pos.z), belowB) {
+		return false // isWaterHole asks canPassThroughWall(DOWN) first
+	}
 	return same(belowB) || worldgen.IsReplaceable(belowB)
 }
 
@@ -503,10 +531,12 @@ func (h *hub) fizz(players map[int32]*tracked, dim int, pos blockPos) {
 func (h *hub) flowDirections(dim int, pos blockPos, findDist int) []blockPos {
 	var dist [4]int
 	best := 1 << 30
+	src := h.worldFor(dim).Block(pos.x, pos.y, pos.z)
 	for i, d := range horizNeighbors {
 		n := blockPos{pos.x + d.x, pos.y, pos.z + d.z}
-		if !fluidPassable(h.worldFor(dim).Block(n.x, n.y, n.z)) {
-			dist[i] = 1 << 30 // impassable — never a candidate
+		nb := h.worldFor(dim).Block(n.x, n.y, n.z)
+		if !fluidPassable(nb) || !worldgen.FluidPassesFace(horizFaces[i], src, nb) {
+			dist[i] = 1 << 30 // impassable, or a face the source's block closes
 			continue
 		}
 		if h.fluidHole(dim, n) {

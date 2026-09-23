@@ -56,7 +56,7 @@ func (h *hub) primeFluids(players map[int32]*tracked) {
 					h.scheduleIn(t.dim, blockPos{p[0], p[1], p[2]}, 1)
 				}
 				for _, e := range w.EditedBlocks(x, z) {
-					if worldgen.IsFluid(e.State) || isFire(e.State) || worldgen.IsFalling(e.State) {
+					if worldgen.IsFluid(e.State) || worldgen.IsWaterlogged(e.State) || isFire(e.State) || worldgen.IsFalling(e.State) {
 						h.scheduleIn(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ}, 1)
 					}
 				}

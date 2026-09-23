@@ -127,7 +127,8 @@ func TestHopperSucksItemEntities(t *testing.T) {
 
 func TestComparatorReadsContainer(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
-	w.SetBlock(x, y, z, chestStateMin)
+	ci, _ := worldgen.InfoForState(chestStateMin)
+	w.SetBlock(x, y, z, worldgen.SetProperty(ci, chestStateMin, "waterlogged", "false")) // the first state is waterlogged, and would pour
 	c := &chest{}
 	for i := 0; i < 27; i++ { // stuffed chest → signal 15
 		c.slots[i] = invStack{item: 35, count: 64}

@@ -15,6 +15,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -180,6 +181,7 @@ public class Extract {
             JsonArray solid = new JsonArray(), fullCube = new JsonArray(), solidRender = new JsonArray();
             JsonArray bounds = new JsonArray(), mapColor = new JsonArray(), fluid = new JsonArray();
             JsonArray push = new JsonArray(), ignite = new JsonArray(), burn = new JsonArray();
+            JsonArray faces = new JsonArray();
             for (BlockState st : states) {
                 // The state's map colour id (a bed's halves differ).
                 mapColor.add(st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id);
@@ -208,6 +210,38 @@ public class Extract {
                     }
                 }
                 bounds.add(aabb);
+                // The collision shape's cross-section on each face, for the
+                // fluid face test (FlowingFluid.canPassThroughWall →
+                // Shapes.mergedFaceOccludes): per direction in Direction order
+                // (down, up, north, south, west, east), the face shape's boxes
+                // flattened onto the face's two axes as [a0, b0, a1, b1].
+                // Empty and full-block shapes, the common cases, record null.
+                if (shape.isEmpty() || st.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
+                    faces.add(com.google.gson.JsonNull.INSTANCE);
+                } else {
+                    JsonArray perDir = new JsonArray();
+                    for (Direction d : Direction.values()) {
+                        JsonArray rects = new JsonArray();
+                        VoxelShape face = shape.getFaceShape(d);
+                        if (!face.isEmpty()) {
+                            for (AABB r : face.toAabbs()) {
+                                double[] q;
+                                switch (d.getAxis()) {
+                                    case X: q = new double[]{r.minY, r.minZ, r.maxY, r.maxZ}; break;
+                                    case Y: q = new double[]{r.minX, r.minZ, r.maxX, r.maxZ}; break;
+                                    default: q = new double[]{r.minX, r.minY, r.maxX, r.maxY}; break;
+                                }
+                                JsonArray rr = new JsonArray();
+                                for (double v : q) {
+                                    rr.add(v);
+                                }
+                                rects.add(rr);
+                            }
+                        }
+                        perDir.add(rects);
+                    }
+                    faces.add(perDir);
+                }
             }
             o.add("emitLight", emit);
             o.add("filterLight", filter);
@@ -221,6 +255,7 @@ public class Extract {
             o.add("pushReaction", push);
             o.add("igniteOdds", ignite);
             o.add("burnOdds", burn);
+            o.add("collisionFaces", faces);
             blocks.add(o);
         }
 

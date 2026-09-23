@@ -38,6 +38,12 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Water in a waterlogged block flows out, as vanilla's does.** A
+  waterlogged stair, slab, fence or other block holds a water source, and
+  now pours it out of every side its shape leaves open. A stair pours out
+  of the open side of its step but not through its back, and a slab
+  spills sideways but not downward. It feeds the water next to it too.
+  Waterlogged blocks used to hold their water and do nothing with it.
 - **Creative players keep their hotbar when they rejoin.** The server kept
   a creative player's inventory but sent it back on joining only in
   survival, so a creative player came back to an empty hotbar, and the
