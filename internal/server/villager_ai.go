@@ -59,7 +59,7 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 		return vx, vz // a Hero of the Village nearby: bring it a gift
 	}
 	if h.tick.Load() < m.hideUntil && m.bed != (blockPos{}) { // a rung bell: hide at the bed
-		return h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
+		return h.pathSteerTo(m, m.bed, poiValidRange[poiHome])
 	}
 	switch villagerSegment(h.dayTime.Load()) {
 	case vsWork:
@@ -72,19 +72,19 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 				h.shouldRestock(m) {
 				h.restockOffers(m)
 			}
-			vx, vz := h.pathSteer(m, float64(m.work.x)+0.5, float64(m.work.z)+0.5)
+			vx, vz := h.pathSteerTo(m, m.work, poiValidRange[poiJob])
 			h.noteWalkToPoi(m, poiJob, m.work)
 			return vx, vz
 		}
 	case vsGather:
 		if m.meet != (blockPos{}) {
-			vx, vz := h.pathSteer(m, float64(m.meet.x)+0.5, float64(m.meet.z)+0.5)
+			vx, vz := h.pathSteerTo(m, m.meet, poiValidRange[poiMeet])
 			h.noteWalkToPoi(m, poiMeet, m.meet)
 			return vx, vz
 		}
 	case vsSleep:
 		if m.bed != (blockPos{}) {
-			vx, vz := h.pathSteer(m, float64(m.bed.x)+0.5, float64(m.bed.z)+0.5)
+			vx, vz := h.pathSteerTo(m, m.bed, poiValidRange[poiHome])
 			h.noteWalkToPoi(m, poiHome, m.bed)
 			return vx, vz
 		}

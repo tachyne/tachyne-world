@@ -125,3 +125,42 @@ func TestUnreachableClaimIsLetGo(t *testing.T) {
 		t.Error("a reachable bed must keep its claim and clear the clock")
 	}
 }
+
+// A bed upstairs: the ground floor, a staircase of full blocks up the side,
+// and a second floor with the bed. A villager's plan to its bed climbs the
+// stairs (search3D) and reaches it. The column search saw only one height
+// per column and could not tell the floors apart.
+func TestVillagerPlansUpstairsToItsBed(t *testing.T) {
+	h := newHub(world.New(1))
+	x, y, z := 5000, 180, 5000
+	h.world.ForceLoad(x, z, 2)
+	for dx := -2; dx <= 10; dx++ { // ground floor, cleared above
+		for dz := -2; dz <= 4; dz++ {
+			h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+			for dy := 0; dy <= 8; dy++ {
+				h.world.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	for dx := 0; dx <= 8; dx++ { // the upper floor, one storey up (y+3), over the ground floor
+		for dz := 0; dz <= 2; dz++ {
+			if dx >= 6 && dz == 2 {
+				continue // the stairwell
+			}
+			h.world.SetBlock(x+dx, y+3, z+dz, worldgen.Stone)
+		}
+	}
+	for i := 0; i < 3; i++ { // a staircase of full blocks up to the upper floor
+		h.world.SetBlock(x+8-i, y+i, z+2, worldgen.Stone)
+	}
+	bed := blockPos{x + 2, y + 4, z + 1}
+	h.world.SetBlock(bed.x, bed.y, bed.z, freeBed())
+	m := h.spawnMob(map[int32]*tracked{}, entityVillager, float64(x)+0.5, float64(y), float64(z)+0.5)
+	h.pathSteerTo(m, bed, poiValidRange[poiHome])
+	if !m.pathReached {
+		t.Fatalf("no plan reached the bed upstairs (path %d steps)", len(m.path))
+	}
+	if !h.poiReachable(m, bed, poiValidRange[poiHome]) {
+		t.Fatal("the bed upstairs should count as reachable")
+	}
+}

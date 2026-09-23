@@ -184,7 +184,8 @@ the public history since the project was open-sourced on 2026-07-10.
   minute (a bell after ten seconds). A bell placed later gets used, and a
   broken one is let go. They used to look only 16 blocks around, never
   checked they could get there, and were handed the village's first bell
-  for life.
+  for life. They now plan their way block by block, so they take the
+  stairs to a bed upstairs and the door into a house.
 - **Village golems, cats and sieges follow vanilla.** Golems are asked for
   when villagers gossip or panic, and land on solid ground rather than in
   walls. Cats come only to villages with more than four lived-in homes,

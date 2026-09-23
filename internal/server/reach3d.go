@@ -2,6 +2,7 @@ package server
 
 import (
 	"container/heap"
+	"math"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -45,11 +46,19 @@ func (p *reachHeap) Pop() any {
 // within validRange (horizontally, and one more vertically) of target, in
 // at most maxNodes expansions and never more than maxRange from start.
 func reach3D(w *world.World, doors bool, start, target blockPos, validRange, maxRange, maxNodes int) bool {
+	_, reached := search3D(w, doors, start, target, validRange, maxRange, maxNodes)
+	return reached
+}
+
+// search3D is the cell search itself. It returns the path's cells after
+// start: to the goal when reached, otherwise to the cell it found closest to
+// the goal, so a mob still heads the right way.
+func search3D(w *world.World, doors bool, start, target blockPos, validRange, maxRange, maxNodes int) ([]blockPos, bool) {
 	within := func(p blockPos) bool {
 		return max(abs(p.x-target.x), abs(p.z-target.z)) <= validRange && abs(p.y-target.y) <= validRange+1
 	}
 	if within(start) {
-		return true
+		return nil, true
 	}
 	loaded := func(x, z int) bool { return w.Loaded(int32(x>>4), int32(z>>4)) }
 	open := func(x, y, z int) bool { // a cell a body passes through
@@ -69,7 +78,20 @@ func reach3D(w *world.World, doors bool, start, target blockPos, validRange, max
 		return float64(max(dx, dz)) + 0.41*float64(min(dx, dz)) + float64(dy)
 	}
 	g := map[blockPos]float64{start: 0}
+	came := map[blockPos]blockPos{}
 	closed := map[blockPos]bool{}
+	best, bestH := start, hDist(start)
+	path := func(end blockPos) []blockPos {
+		var rev []blockPos
+		for p := end; p != start; p = came[p] {
+			rev = append(rev, p)
+		}
+		out := make([]blockPos, len(rev))
+		for i := range rev {
+			out[i] = rev[len(rev)-1-i]
+		}
+		return out
+	}
 	q := &reachHeap{{start.x, start.y, start.z, hDist(start)}}
 	for expanded := 0; q.Len() > 0 && expanded < maxNodes; {
 		n := heap.Pop(q).(reachNode)
@@ -80,7 +102,10 @@ func reach3D(w *world.World, doors bool, start, target blockPos, validRange, max
 		closed[cur] = true
 		expanded++
 		if within(cur) {
-			return true
+			return path(cur), true
+		}
+		if hc := hDist(cur); hc < bestH {
+			best, bestH = cur, hc
 		}
 		for dx := -1; dx <= 1; dx++ {
 			for dz := -1; dz <= 1; dz++ {
@@ -121,9 +146,59 @@ func reach3D(w *world.World, doors bool, start, target blockPos, validRange, max
 					continue
 				}
 				g[next] = cost
+				came[next] = cur
 				heap.Push(q, reachNode{next.x, next.y, next.z, cost + hDist(next)})
 			}
 		}
 	}
-	return false
+	if best == start {
+		return nil, false
+	}
+	return path(best), false
 }
+
+// pathSteerTo is pathSteer for a goal that has a height: a villager walking
+// to its bed, workstation or bell plans over cells (search3D), so it finds
+// the stairs to a bed upstairs and the door into a house rather than the
+// column under its target. It records whether the plan reached the goal
+// (MoveToTargetSink's CANT_REACH, for noteWalkToPoi).
+func (h *hub) pathSteerTo(m *mob, goal blockPos, validRange int) (float64, float64) {
+	gx, gz := float64(goal.x)+0.5, float64(goal.z)+0.5
+	now := h.tick.Load()
+	stale := m.path == nil || m.pathIdx >= len(m.path) || now-m.pathAt > pathRefresh ||
+		m.pathGoal != [2]int{goal.x, goal.z}
+	if stale {
+		w := h.worldFor(m.dim)
+		start := blockPos{floorInt(m.x), floorInt(m.y + 0.01), floorInt(m.z)}
+		cells, reached := search3D(w, true, start, goal, validRange, steer3DRange, steer3DNodes)
+		m.path = m.path[:0]
+		for _, c := range cells {
+			m.path = append(m.path, pathPoint{c.x, c.z})
+		}
+		m.pathReached = reached
+		m.pathIdx = 0
+		m.pathGoal = [2]int{goal.x, goal.z}
+		m.pathAt = now
+	}
+	if len(m.path) == 0 {
+		return straightSteer(m, gx, gz, standoffDist)
+	}
+	for m.pathIdx < len(m.path) {
+		wp := m.path[m.pathIdx]
+		if math.Hypot((float64(wp.x)+0.5)-m.x, (float64(wp.z)+0.5)-m.z) <= pathReach {
+			m.pathIdx++
+			continue
+		}
+		break
+	}
+	if m.pathIdx >= len(m.path) {
+		return straightSteer(m, gx, gz, standoffDist)
+	}
+	wp := m.path[m.pathIdx]
+	return straightSteer(m, float64(wp.x)+0.5, float64(wp.z)+0.5, 0.05)
+}
+
+const (
+	steer3DRange = 32  // blocks a villager's plan may reach from where it stands
+	steer3DNodes = 800 // cells expanded per plan (a plan is kept for pathRefresh ticks)
+)

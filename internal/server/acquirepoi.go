@@ -275,8 +275,8 @@ func (h *hub) noteWalkToPoi(m *mob, g int, pos blockPos) {
 		m.cantReachSince[g] = 0
 		return
 	}
-	if math.Hypot(float64(pos.x)-m.x, float64(pos.z)-m.z) > pathMaxRange {
-		return
+	if math.Hypot(float64(pos.x)-m.x, float64(pos.z)-m.z) > steer3DRange {
+		return // beyond the plan's reach a partial path toward it is normal
 	}
 	now := h.tick.Load()
 	if m.pathReached {
