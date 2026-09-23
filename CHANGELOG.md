@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Shulker boxes show up again on 26.2 and 26.3.** The newer clients
+  numbering block entities one lower than 1.21.11 was handled from the wrong
+  place: shulker boxes arrived without the block entity they are drawn
+  through, and beds were sent one that called them shulker boxes.
 - **Maps paint blocks the way vanilla's do.** Each block had one map
   colour, where vanilla colours some by state: an upright log shows its end
   grain and a fallen one its bark, a bed's head is wool and its foot the
