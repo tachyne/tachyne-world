@@ -1000,16 +1000,15 @@ func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, cl
 				// player's own look direction, not its opposite.
 				f = playerFacing(yaw)
 			}
-			if sixWayFacing(defaultState) { // pistons/droppers/observers go vertical too
-				if pitch > 60 {
-					f = "up" // looking down → block faces up (toward the player)
-				} else if pitch < -60 {
-					f = "down"
-				}
-				if defaultState >= observerMin && defaultState <= observerMax && pitch > 60 {
-					f = "down" // observer watches the look direction, so it inverts
-				} else if defaultState >= observerMin && defaultState <= observerMax && pitch < -60 {
-					f = "up"
+			if sixWayFacing(defaultState) {
+				// BlockPlaceContext.getNearestLookingDirection: the dominant axis
+				// of the look. An observer watches it; pistons, dispensers,
+				// droppers and barrels face back along it, toward the player.
+				// This used to switch to up/down only past 60° of pitch, where
+				// vanilla switches at 45° (less when looking diagonally).
+				f = nearestLookingDirection(yaw, pitch)
+				if !(defaultState >= observerMin && defaultState <= observerMax) {
+					f = oppositeFace6(f)
 				}
 			}
 			state = worldgen.SetProperty(info, state, "facing", f)
@@ -1139,4 +1138,36 @@ func oppositeFace6(f string) string {
 		return "up"
 	}
 	return oppositeFacing(f)
+}
+
+// nearestLookingDirection is Direction.orderedByNearest(entity)[0]: the
+// direction whose axis the look vector points along most.
+func nearestLookingDirection(yaw, pitch float32) string {
+	p := float64(pitch) * math.Pi / 180
+	y := -float64(yaw) * math.Pi / 180
+	pitchSin, pitchCos := math.Sin(p), math.Cos(p)
+	yawSin, yawCos := math.Sin(y), math.Cos(y)
+	xPos, yPos, zPos := yawSin > 0, pitchSin < 0, yawCos > 0
+	xYaw, yMag, zYaw := math.Abs(yawSin), math.Abs(pitchSin), math.Abs(yawCos)
+	xMag, zMag := xYaw*pitchCos, zYaw*pitchCos
+	axisX, axisY, axisZ := "west", "down", "north"
+	if xPos {
+		axisX = "east"
+	}
+	if yPos {
+		axisY = "up"
+	}
+	if zPos {
+		axisZ = "south"
+	}
+	if xYaw > zYaw {
+		if yMag > xMag {
+			return axisY
+		}
+		return axisX
+	}
+	if yMag > zMag {
+		return axisY
+	}
+	return axisZ
 }

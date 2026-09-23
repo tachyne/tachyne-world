@@ -176,3 +176,37 @@ func TestAnvilAndCalibratedSensorFacing(t *testing.T) {
 		}
 	}
 }
+
+// Observers, pistons, dispensers, droppers and barrels take vanilla's
+// getNearestLookingDirection: the dominant axis of the look, so up or down
+// from 45° of pitch looking straight along an axis, and sooner looking
+// diagonally. An observer watches that way; the others face back at you.
+func TestSixWayPlacementFollowsTheNearestLookingDirection(t *testing.T) {
+	obs, _ := protocol.BlockForItem(int32(itemByName["observer"])) // what a placement starts from
+	piston, _ := protocol.BlockForItem(int32(itemByName["piston"]))
+	stone := worldgen.Stone
+	facing := func(s uint32) string {
+		info, _ := worldgen.InfoForState(s)
+		return worldgen.GetProperty(info, s, "facing")
+	}
+	cases := []struct {
+		yaw, pitch float32
+		obs, piston string
+	}{
+		{0, 0, "south", "north"},
+		{90, 0, "west", "east"},
+		{-1799.1, 4.8, "south", "north"}, // bug #23: a wound-up yaw, looking level
+		{0, 40, "south", "north"},        // under 45° looking straight: still level
+		{0, 50, "down", "up"},            // over 45°: down, where the old rule said south until 60°
+		{45, 40, "down", "up"},           // diagonal: the horizontal part is smaller, so 40° is down
+		{180, -50, "up", "down"},
+	}
+	for _, c := range cases {
+		if got := facing(orientState(obs, 1, 0.5, c.yaw, c.pitch, stone)); got != c.obs {
+			t.Errorf("observer yaw %v pitch %v faces %s, want %s", c.yaw, c.pitch, got, c.obs)
+		}
+		if got := facing(orientState(piston, 1, 0.5, c.yaw, c.pitch, stone)); got != c.piston {
+			t.Errorf("piston yaw %v pitch %v faces %s, want %s", c.yaw, c.pitch, got, c.piston)
+		}
+	}
+}

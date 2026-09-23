@@ -38,6 +38,10 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **Observers, pistons, dispensers, droppers and barrels face up or down as
+  vanilla's do.** They turn to face up or down once the player looks more
+  than 45° up or down (sooner when looking diagonally), from whichever way
+  the look points most. They used to wait until 60°.
 - **Trees stop vanishing near where people play.** The tree guard also
   counted what the world does by itself as a build: grass under a trunk
   turning to dirt, and fire or lava left in a burning tree's cells. Nearly
