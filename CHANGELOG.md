@@ -43,6 +43,20 @@ the public history since the project was open-sourced on 2026-07-10.
   what had lost its support passed the two back and forth for ever. The game
   stalled, the pod was restarted, and every player was disconnected. Both
   now fall as they should.
+- **Villages sit on the land.** Houses no longer stand in ponds with the
+  water above their floors, hang off slopes or cut into hillsides. Each
+  house is placed at the surface where it meets its street, water
+  included, as vanilla places them; streets follow the ground block by
+  block; and the ground is built up under a house that overhangs, through
+  water too, as vanilla's dirt pillars. Every village regenerates this
+  way, settled ones included.
+- **Structures have no more one-block holes.** The connection points
+  between a structure's pieces are now filled with the block vanilla puts
+  there (a bastion wall's blackstone, a trial chamber's tuff bricks, a
+  street's path) instead of being left empty.
+- **Springs run.** Water and lava springs in cave walls start flowing when
+  their chunk loads, as vanilla's do, instead of hanging in the air as a
+  single still block.
 - **26.2 players see 26.3's items.** An item a 26.2 client doesn't have
   used to be an empty slot. Poplar and the wool and concrete stairs and
   slabs now show as the item of their stand-in block, and explorer maps as
