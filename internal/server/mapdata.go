@@ -256,6 +256,12 @@ func (h *hub) mapUpdateHeld(md *mapData, t *tracked) {
 			}
 			dx, dz := imgX-pImgX, imgZ-pImgZ
 			distSqr := dx*dx + dz*dz
+			// MapItem.update skips a pixel whose chunk is empty; an unloaded
+			// chunk is left for when it loads, rather than generated here.
+			scale := 1 << md.Scale
+			if !w.Loaded(int32(((int(md.CenterX)/scale+imgX-64)*scale)>>4), int32(((int(md.CenterZ)/scale+imgZ-64)*scale)>>4)) {
+				continue
+			}
 			s := mapSamplePixel(w, md, imgX, imgZ)
 			if imgZ < 0 { // priming row: sets the slope baseline only
 				prevHeight = s.height

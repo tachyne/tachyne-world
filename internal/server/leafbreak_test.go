@@ -14,6 +14,7 @@ func TestFelledTrunkRotsCanopy(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 700, 200, 700
+	h.world.ForceLoad(x, z, 1)
 	h.world.SetBlock(x, y, z, worldgen.OakLog)
 	for i := 1; i <= 3; i++ {
 		leafAt(h.world, x+i, y, z, i)

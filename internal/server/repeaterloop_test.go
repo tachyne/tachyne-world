@@ -22,6 +22,8 @@ func TestRepeaterFedByItsOwnOutputLatchesOn(t *testing.T) {
 	players := map[int32]*tracked{}
 	const y, z = 180, 40
 	const x0, x1 = 40, 54 // the main line
+	h.world.ForceLoad(x0, z, 1)
+	h.world.ForceLoad(x1, z, 1)
 	for x := x0 - 2; x <= x1+2; x++ {
 		for dz := -2; dz <= 2; dz++ {
 			w.SetBlock(x, y-1, z+dz, worldgen.Stone)

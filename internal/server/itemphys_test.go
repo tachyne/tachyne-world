@@ -84,6 +84,7 @@ func TestWaterCurrentCarriesItem(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 1040, 180, 1040
+	h.world.ForceLoad(x, z, 1)
 	flatFloor(h.world, x, y, z, 8)
 	for dx := -1; dx <= 8; dx++ { // a walled channel running east
 		h.world.SetBlock(x+dx, y, z-1, worldgen.Stone)

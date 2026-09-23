@@ -73,6 +73,9 @@ func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, dim, cat int, c 
 		return // canSpawnForCategoryLocal: every player near this chunk is at the category's cap
 	}
 	w := h.worldFor(dim)
+	if !w.Loaded(c[0], c[1]) {
+		return // only loaded chunks spawn
+	}
 	x := int(c[0])*16 + h.rng.Intn(16)
 	z := int(c[1])*16 + h.rng.Intn(16)
 	minY, surface := worldgen.MinY, w.SurfaceFeet(x, z)
@@ -123,6 +126,11 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, dim, cat, ax, ay, az i
 			x += h.rng.Intn(6) - h.rng.Intn(6) // ±5 scatter, same Y across the pack
 			z += h.rng.Intn(6) - h.rng.Intn(6)
 			if !h.ownedBlock(x, z) {
+				continue
+			}
+			// isRightDistanceToPlayerAndSpawnPoint: a member scattered into
+			// another chunk needs that chunk loaded (canSpawnEntitiesInChunk).
+			if !h.worldFor(dim).Loaded(int32(x>>4), int32(z>>4)) {
 				continue
 			}
 			d := h.nearestPlayerSq(players, dim, float64(x)+0.5, float64(ay), float64(z)+0.5)

@@ -16,6 +16,8 @@ const fluidTestY = 180 // well above terrain + sea level, below the ceiling
 
 // clearAir empties a box to air so the scenario sits in a vacuum.
 func clearAir(w *world.World, x0, x1, y0, y1, z0, z1 int) {
+	w.ForceLoad(x0, z0, 1) // the fixture's chunks, loaded as a player's view would
+	w.ForceLoad(x1, z1, 1)
 	for x := x0; x <= x1; x++ {
 		for y := y0; y <= y1; y++ {
 			for z := z0; z <= z1; z++ {

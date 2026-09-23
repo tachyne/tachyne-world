@@ -379,6 +379,31 @@ type ChunkReader struct {
 	ch     *worldgen.Chunk
 }
 
+// ForceLoad brings the chunks within r chunks of a block into memory now, on
+// the calling goroutine — vanilla's forceload ticket, for a caller that is
+// not the hub (a tool, a test fixture). The chunks stay only as long as the
+// cache keeps them.
+func (w *World) ForceLoad(x, z, r int) {
+	cx, cz := x>>4, z>>4
+	for dx := -r; dx <= r; dx++ {
+		for dz := -r; dz <= r; dz++ {
+			w.generated(int32(cx+dx), int32(cz+dz))
+		}
+	}
+}
+
+// Loaded reports whether a chunk's generated base is in memory — vanilla's
+// loaded chunk: one a player's view has brought in. It never loads or
+// generates anything, so the hub can ask it mid-tick. Simulation that
+// would otherwise pull a chunk in (random ticks) skips one that is not
+// loaded, as vanilla ticks only loaded chunks.
+func (w *World) Loaded(cx, cz int32) bool {
+	w.genMu.Lock()
+	_, ok := w.cache[chunkPos{cx, cz}]
+	w.genMu.Unlock()
+	return ok
+}
+
 // Reader returns a ChunkReader for chunk (cx,cz), generating it if needed.
 func (w *World) Reader(cx, cz int32) ChunkReader {
 	return ChunkReader{w: w, cx: cx, cz: cz, ch: w.generated(cx, cz)}

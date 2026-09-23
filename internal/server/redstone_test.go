@@ -22,6 +22,7 @@ func redSetup(t *testing.T) (*hub, *world.World, map[int32]*tracked, int, int, i
 	players := map[int32]*tracked{}
 	lx, lz := h.findLand(60, 60)
 	y := h.world.SurfaceFeet(lx, lz)
+	w.ForceLoad(lx, lz, 1) // the pad's chunks, loaded as a player's view would load them
 	// A flat stone pad so dust has support and geometry is known.
 	for dx := -1; dx < 8; dx++ {
 		for dz := -1; dz < 2; dz++ {

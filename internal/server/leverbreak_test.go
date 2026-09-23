@@ -240,6 +240,8 @@ func TestLongDustLineDecaysToNothing(t *testing.T) {
 		pistons = 6
 		x, y, z = 40, 180, 40
 	)
+	w.ForceLoad(x, z, 1)
+	w.ForceLoad(x+cells+2, z, 1)
 	for i := -2; i <= cells+2; i++ { // the platform the whole rig stands on
 		for dz := -1; dz <= 2; dz++ {
 			w.SetBlock(x+i, y-1, z+dz, worldgen.Stone)

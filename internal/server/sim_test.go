@@ -20,6 +20,7 @@ func TestFallingBlock(t *testing.T) {
 	players := map[int32]*tracked{}
 
 	x, z := h.findLand(100, 100) // dry ground: sand sinks through water now, as vanilla's does
+	w.ForceLoad(x, z, 1)
 	surf := int(w.SurfaceY(x, z))
 	for y := surf; y <= surf+10; y++ { // clear a column
 		w.SetBlock(x, y, z, worldgen.Air)
@@ -40,6 +41,7 @@ func TestWaterSpreadAndRecede(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
 	players := map[int32]*tracked{}
+	w.ForceLoad(0, 0, 2) // the floor straddles chunks 0 and -1; their neighbours load too, so both tick
 
 	const fy = 100
 	for dx := -3; dx <= 3; dx++ {

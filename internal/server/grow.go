@@ -163,6 +163,11 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 }
 
 func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {
+	// Only a loaded chunk ticks. Asking for one that is not would generate it
+	// here on the hub, mid-tick: a whole chunk of noise, caves and structures.
+	if !h.worldFor(dim).Loaded(int32(cx), int32(cz)) {
+		return
+	}
 	if h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled
 		h.precipTick(players, dim, cx, cz)
 	}

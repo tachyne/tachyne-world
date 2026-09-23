@@ -75,6 +75,7 @@ func TestScheduledTickRespectsDimension(t *testing.T) {
 	h := dimHub()
 
 	x, y, z := 400, 70, 400
+	h.nether.ForceLoad(x, z, 1)
 	// Sand floating in the Nether should fall when its scheduled tick runs.
 	h.nether.SetBlock(x, y, z, worldgen.Sand)
 	h.nether.SetBlock(x, y-1, z, worldgen.Air)

@@ -142,6 +142,7 @@ func TestOrphanPortalBlocksPop(t *testing.T) {
 	players := map[int32]*tracked{}
 	x, y, z := 400, 80, 400
 	buildFrame(w, x, y, z)
+	w.ForceLoad(x, z, 1)
 	for j := 0; j < 3; j++ {
 		w.SetBlock(x, y+j, z, portalX)
 		w.SetBlock(x+1, y+j, z, portalX)

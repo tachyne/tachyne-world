@@ -38,6 +38,16 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **The game no longer stalls to generate land nobody is near.** Growth,
+  natural spawning, held maps and scheduled block updates (flowing water,
+  falling sand) now run only in loaded chunks, as vanilla's do. A chunk
+  nobody has loaded is left alone, and an update waiting there runs once
+  it loads. Before, any of these could generate a whole chunk in the
+  middle of a tick, stalling the game for everyone.
+- **26.3 players are no longer disconnected by particles.** 26.3 changed
+  how a particle packet carries its count, and the gateway still sent it
+  the 26.2 way, so the first particle the server sent (a potion's swirl, a
+  villager's hearts) dropped a 26.3 client. 26.2 players were unaffected.
 - **The world no longer freezes when two stalactites let go together.** When
   the ceiling under two side-by-side stalactites was removed, the check for
   what had lost its support passed the two back and forth for ever. The game

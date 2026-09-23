@@ -13,6 +13,7 @@ func TestWaterWashesCropAndDropsIt(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	x, y, z := 900, 180, 900
+	h.world.ForceLoad(x, z, 1)
 	for dx := -6; dx <= 6; dx++ { // wide enough that no drop lies within slope reach on any side
 		for dz := -6; dz <= 6; dz++ {
 			h.world.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)

@@ -42,6 +42,7 @@ func breakPlaceServer(t *testing.T) (*Server, *hub, *player) {
 	h.plugHost = &pluginHost{h: h, cmds: map[string]*plugin.Command{}}
 	s := &Server{world: w, hub: h, modes: newModeStore("", gmCreative), Ops: map[string]bool{}}
 	h.plugHost.s = s
+	w.ForceLoad(0, 0, 2) // the player's surroundings, as its view would load them
 	startHub(t, h)
 
 	p := newPlayer(h.allocEID(), "digger", [16]byte{1})

@@ -23,6 +23,7 @@ func TestRedstoneRunsInTheNether(t *testing.T) {
 	pl.dim = dimNether
 	players := map[int32]*tracked{1: pl}
 	x, y, z := 40, 200, 40 // a pad in the Nether's empty air, well above its terrain
+	nw.ForceLoad(x, z, 1)
 	for dx := -1; dx < 8; dx++ {
 		for dz := -1; dz < 2; dz++ {
 			nw.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)

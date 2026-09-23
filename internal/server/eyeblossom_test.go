@@ -127,6 +127,7 @@ func TestEyeblossomWakesItsNeighbours(t *testing.T) {
 	h.dayTime.Store(paleNightStart + 10) // night: closed flowers want to open
 
 	x, y, z := 20, 70, 20
+	h.world.ForceLoad(x, z, 1)
 	plant := func(p blockPos) { // a flower needs ground under it to survive
 		h.world.SetBlock(p.x, p.y-1, p.z, worldgen.BlockBase("dirt"))
 		h.world.SetBlock(p.x, p.y, p.z, closedEyeblossom)

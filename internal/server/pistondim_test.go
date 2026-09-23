@@ -26,6 +26,7 @@ func TestPistonRunsInTheNether(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 
 	x, y, z := 60, 200, 60 // a pad in the Nether's empty air
+	nw.ForceLoad(x, z, 1)
 	for dx := -1; dx < 8; dx++ {
 		for dz := -1; dz < 2; dz++ {
 			nw.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
