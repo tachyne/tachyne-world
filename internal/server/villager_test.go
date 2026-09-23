@@ -70,48 +70,9 @@ func TestVillagePopulatesOnApproach(t *testing.T) {
 		}
 	}
 
-	// The census: take the template golems away. A village that has never
-	// slept grows none (vanilla's quorum asks for five villagers who lay
-	// down within the last day).
-	for _, m := range h.mobs {
-		if m.etype == entityIronGolem {
-			h.despawnMob(players, m)
-		}
-	}
-	h.updateVillageGolems(players)
-	if _, golems = count(); golems != 0 {
-		t.Fatalf("a village whose villagers have never slept grew %d golems", golems)
-	}
+	// (The golem the village grows later, by gossip or panic, is
+	// TestIronGolemQuorum's.)
 
-	// Let them sleep, and gather them at the bell the way the midday segment
-	// does — vanilla's trigger is two villagers gossiping at the meeting
-	// point, so the five that agree are standing together by construction.
-	gathered := 0
-	for _, m := range h.mobs {
-		if m.etype != entityVillager {
-			continue
-		}
-		m.lastSlept = h.tick.Load() + 1
-		if !m.baby && gathered < golemVillagersToAgree {
-			m.x, m.y, m.z = float64(v.X)+float64(gathered), float64(v.Y), float64(v.Z)
-			gathered++
-		}
-	}
-	h.updateVillageGolems(players)
-	_, golems = count()
-	if gathered >= golemVillagersToAgree && golems == 0 {
-		t.Fatalf("%d rested villagers gathered at the bell grew no golem", gathered)
-	}
-	if gathered < golemVillagersToAgree && golems != 0 {
-		t.Fatalf("only %d villagers gathered, under the quorum, but %d golems grew", gathered, golems)
-	}
-
-	// Having one, they do not grow another.
-	before := golems
-	h.updateVillageGolems(players)
-	if _, now := count(); now != before {
-		t.Fatalf("a village with a golem grew %d more", now-before)
-	}
 	// Second pass: no duplicates.
 	mobsBefore := len(h.mobs)
 	h.updateVillages(players)
@@ -1016,55 +977,101 @@ func TestIronGolemQuorum(t *testing.T) {
 	h := newHub(world.New(7))
 	players := map[int32]*tracked{}
 	now := h.tick.Load()
-
-	make5 := func(x, y, z float64) []*mob {
+	// A stone pad high in open air, loaded as a player's view would load it,
+	// so where the golem lands can be checked.
+	const fy = 180
+	pad := func(cx, cz int) {
+		h.world.ForceLoad(cx, cz, 1)
+		for x := cx - 12; x <= cx+12; x++ {
+			for z := cz - 12; z <= cz+12; z++ {
+				h.world.SetBlock(x, fy-1, z, worldgen.Stone)
+				for y := fy; y <= fy+8; y++ {
+					h.world.SetBlock(x, y, z, worldgen.Air)
+				}
+			}
+		}
+	}
+	make5 := func(x, z float64) []*mob {
 		var out []*mob
 		for i := 0; i < golemVillagersToAgree; i++ {
-			m := h.spawnMob(players, entityVillager, x+float64(i), y, z)
+			m := h.spawnMob(players, entityVillager, x+float64(i), fy, z)
 			m.lastSlept = now + 1
 			out = append(out, m)
 		}
 		return out
 	}
-	golems := func() (n int) {
+	golems := func() (out []*mob) {
 		for _, m := range h.mobs {
 			if m.etype == entityIronGolem {
-				n++
+				out = append(out, m)
 			}
 		}
 		return
 	}
 
-	vs := make5(0, 70, 0)
-	// One of them has never slept: four is under the quorum.
+	pad(8, 8)
+	vs := make5(8, 8)
+	// One of them has never slept: four is under gossip's quorum of five.
 	vs[0].lastSlept = 0
-	h.updateVillageGolems(players)
-	if n := golems(); n != 0 {
+	h.spawnGolemIfNeeded(players, vs[1], golemVillagersToAgree)
+	if n := len(golems()); n != 0 {
 		t.Fatalf("four rested villagers grew %d golems", n)
 	}
 
+	// Five rested villagers, asked as gossip asks: one golem, standing on the
+	// pad with room above it (SpawnUtil's floor and IronGolem's obstruction
+	// check), not in a wall or in the air.
 	vs[0].lastSlept = now + 1
-	h.updateVillageGolems(players)
-	if n := golems(); n != 1 {
-		t.Fatalf("five rested villagers grew %d golems, want 1", n)
+	h.spawnGolemIfNeeded(players, vs[1], golemVillagersToAgree)
+	gs := golems()
+	if len(gs) != 1 {
+		t.Fatalf("five rested villagers grew %d golems, want 1", len(gs))
+	}
+	g := gs[0]
+	gx, gy, gz := floorInt(g.x), floorInt(g.y), floorInt(g.z)
+	if gy != fy || !worldgen.Collides(h.world.At(gx, gy-1, gz)) || worldgen.Collides(h.world.At(gx, gy, gz)) || worldgen.Collides(h.world.At(gx, gy+1, gz)) {
+		t.Fatalf("the golem was placed at %d,%d,%d, not standing on the pad", gx, gy, gz)
 	}
 
 	// Having seen it, they do not agree again.
-	h.updateVillageGolems(players)
-	if n := golems(); n != 1 {
+	h.spawnGolemIfNeeded(players, vs[2], golemVillagersToAgree)
+	if n := len(golems()); n != 1 {
 		t.Fatalf("the quorum fired twice: %d golems", n)
 	}
 
 	// A villager who last slept more than a day ago no longer counts, so a
-	// second village of five that stopped going home grows nothing.
-	far := make5(400, 70, 400)
+	// second group of five that stopped going home grows nothing.
+	pad(408, 408)
+	far := make5(408, 408)
 	for _, m := range far {
 		m.lastSlept = 1 // a day and more ago once the clock is wound on
 	}
 	h.tick.Store(now + golemSleptWithin + 10)
-	h.updateVillageGolems(players)
-	if n := golems(); n != 1 {
+	h.spawnGolemIfNeeded(players, far[0], golemVillagersToAgree)
+	if n := len(golems()); n != 1 {
 		t.Fatalf("villagers who stopped sleeping still grew a golem: %d", n)
+	}
+
+	// Panic asks with three (VillagerPanicTrigger): three rested villagers
+	// with a zombie among them grow one where gossip's five would not.
+	pad(808, 808)
+	var three []*mob
+	for i := 0; i < golemPanicAgree; i++ {
+		m := h.spawnMob(players, entityVillager, 808+float64(i), fy, 808)
+		m.lastSlept = h.tick.Load() + 1
+		three = append(three, m)
+	}
+	h.spawnGolemIfNeeded(players, three[0], golemVillagersToAgree)
+	if n := len(golems()); n != 1 {
+		t.Fatalf("three villagers met gossip's quorum of five: %d golems", n)
+	}
+	h.spawnMob(players, entityZombie, 812, fy, 808)
+	if !h.villagerPanicking(three[0]) {
+		t.Fatal("a zombie four blocks off should panic a villager")
+	}
+	h.spawnGolemIfNeeded(players, three[0], golemPanicAgree)
+	if n := len(golems()); n != 2 {
+		t.Fatalf("three panicking villagers grew %d golems in all, want 2", n)
 	}
 }
 

@@ -231,6 +231,7 @@ func (h *hub) villagerGossipTick(players map[int32]*tracked, m *mob) {
 	}
 	h.villagerShareFood(players, m, partner) // the same chat hands over surplus food and wanted goods
 	m.gossipAt, partner.gossipAt = now, now
+	h.spawnGolemIfNeeded(players, m, golemVillagersToAgree) // Villager.gossip asks for a golem
 }
 
 // golemGrudge is DefendVillageTargetGoal: a survival player within ten

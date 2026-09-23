@@ -246,19 +246,12 @@ func (h *hub) finishCure(players map[int32]*tracked, m *mob) {
 	h.toNearbyEv(players, v.dim, v.x, v.z, attachproto.WorldFX{Event: worldEventCured, X: floorInt(v.x), Y: floorInt(v.y), Z: floorInt(v.z)})
 }
 
-// villagerFlee: a villager within eight blocks of a zombie runs from it
-// (VillagerPanicTrigger / the zombie-avoidance walk target).
+// villagerFlee: a villager runs from the nearest hostile the villager
+// hostiles sensor sees (VillagerPanicTrigger / the avoidance walk target).
 func (h *hub) villagerFlee(m *mob) (float64, float64, bool) {
-	var threat *mob
-	best := 8.0
-	h.grid().nearby(m.dim, m.x, m.z, 8, func(c *mob) {
-		if !zombieKind(c.etype) || c.dying > 0 {
-			return
-		}
-		if d := dist3(c.x, c.y, c.z, m.x, m.y, m.z); d < best {
-			threat, best = c, d
-		}
-	})
+	// VillagerHostilesSensor: zombies, illagers, vexes, ravagers and zoglins,
+	// each within its own distance (a pillager at 15, a zombie at 8).
+	threat := h.villagerNearestHostile(m)
 	if threat == nil {
 		return 0, 0, false
 	}

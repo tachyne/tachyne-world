@@ -194,6 +194,11 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			continue // the cure may have replaced the mob
 		}
 		if m.etype == entityVillager {
+			// VillagerPanicTrigger: a panicking villager asks for a golem with
+			// three agreeing, on the tick that is a multiple of a hundred.
+			if h.tick.Load()%golemPanicEvery < survivalTickN && h.villagerPanicking(m) {
+				h.spawnGolemIfNeeded(players, m, golemPanicAgree)
+			}
 			h.villagerGossipTick(players, m)
 			h.villagerJobTick(players, m) // workstations: validate the held one, look for a free one
 			h.villagerBedTick(m)          // …and a bed for whoever has none
