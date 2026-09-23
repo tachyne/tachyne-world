@@ -51,7 +51,7 @@ for s in statements("net/minecraft/world/level/block/SoundType.java"):
     if not m:
         continue
     args = [a.strip() for a in m.group(2).split(",")]
-    vol, pitch = float(args[0].rstrip("f")), float(args[1].rstrip("f"))
+    vol, pitch = float(args[0].rstrip("fF")), float(args[1].rstrip("fF"))
     step, place = args[3].split(".")[-1], args[4].split(".")[-1]
     types[m.group(1)] = (vol, pitch, events[step], events[place])
 

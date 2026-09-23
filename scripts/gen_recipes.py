@@ -119,6 +119,12 @@ for path in sorted(n for n in inner.namelist() if n.startswith(prefix) and n.end
     kind = r["type"].removeprefix("minecraft:")
     if kind not in ("crafting_shaped", "crafting_shapeless", "crafting_transmute"):
         continue
+    if kind == "crafting_transmute" and not r.get("result"):
+        # 26.3's map cloning: a transmute whose result is a copy of its input.
+        # The engine crafts it as code (craftspecial.go), as it did the
+        # special recipe it replaced.
+        skipped.append((name, "result copies the input (craftspecial.go)"))
+        continue
     res, count = result_of(r)
     if res not in item_id:
         skipped.append((name, "result " + res))

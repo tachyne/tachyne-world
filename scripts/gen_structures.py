@@ -143,9 +143,11 @@ def bake(inner, name):
     pal_src = d.get("palette") or d["palettes"][0]
     palette = []
     for p in pal_src:
-        entry = {"name": p["Name"]}
-        if "Properties" in p:
-            entry["props"] = p["Properties"]
+        # 26.3 renamed the palette's keys: Name -> id, Properties -> properties.
+        entry = {"name": p["Name"] if "Name" in p else p["id"]}
+        props = p.get("Properties", p.get("properties"))
+        if props is not None:
+            entry["props"] = props
         palette.append(entry)
     # structure_block DATA markers set the loot table of the chest ONE BELOW them
     # (vanilla handleDataMarker on blockPos.below): "supply_chest"/"map_chest"/
