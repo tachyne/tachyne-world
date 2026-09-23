@@ -13,6 +13,18 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-23
 
+### Fixed
+- **What lies on the ground survives a restart whole.** A dropped item was
+  saved as a hand-kept list of its fields, and the list was short: dyed
+  leather lost its colour, a firework rocket its flight and bursts, a
+  decorated pot its four faces. Drops now save the whole stack, packed exactly
+  as a chest slot is.
+- **A freshly renamed item keeps its name through a restart.** Names are
+  stored once in a shared table, and the last save before a restart wrote
+  that table before item frames, armour stands, hoppers, shelves, lecterns
+  and mob gear had added theirs — so an item renamed and put in any of them in
+  the last half-minute came back nameless.
+
 ### Changed
 - **The game's facts come from the game.** The generated tables that
   describe game content — block states and their light, collision and harvest

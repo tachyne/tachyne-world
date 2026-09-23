@@ -677,15 +677,7 @@ func newHerd(x, z float64) *herd { return &herd{x: x, z: z, hx: x, hz: z} }
 func (h *hub) snapshotItems() []savedItem {
 	out := make([]savedItem, 0, len(h.items))
 	for _, it := range h.items {
-		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z,
-			Item: it.item, Count: it.count, Dmg: it.dmg, Ench: packEnch(it.ench), Ench2: packEnchHi(it.ench), Ench3: packEnch3(it.ench), Ench4: packEnch4(it.ench),
-			MapID: it.mapID, Trim: int32(it.trimMat)<<8 | int32(it.trimPat), Book: it.bookID,
-			Box: it.boxID, Hive: it.hiveID, Bundle: it.bundleID,
-			Potion: it.potion, Repair: it.repairCost, Instr: it.instrument, Name: it.name, Lode: packLode(it.lode), Stew: it.stew, Shield: it.shieldBase}
-		for i, l := range it.pats {
-			si.Pats[i] = int32(l.patPlus1)<<8 | int32(l.color)
-		}
-		out = append(out, si)
+		out = append(out, savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z, St: packStack(it.stack())})
 	}
 	return out
 }
@@ -695,6 +687,13 @@ func (h *hub) snapshotItems() []savedItem {
 func (h *hub) restoreItems(saved []savedItem) {
 	none := map[int32]*tracked{}
 	for _, si := range saved {
+		if si.St[0] != 0 {
+			st := unpackStack(si.St)
+			if it := h.spawnItemIn(none, si.Dim, st.item, st.count, si.X, si.Y, si.Z); it != nil {
+				it.setFrom(st)
+			}
+			continue
+		}
 		if it := h.spawnItemIn(none, si.Dim, si.Item, si.Count, si.X, si.Y, si.Z); it != nil {
 			it.dmg, it.ench, it.mapID = si.Dmg, unpackEnch4(si.Ench, si.Ench2, si.Ench3, si.Ench4), si.MapID
 			for i, p := range si.Pats {
@@ -1194,7 +1193,6 @@ func (h *hub) run() {
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBundles(h.bundles)
-					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
@@ -1212,6 +1210,9 @@ func (h *hub) run() {
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
+					// Names are interned as stacks are packed, so the table
+					// goes in after every record* above has packed its own.
+					h.containers.recordNames(h.names)
 					h.containers.flushAsync()
 				}
 				if h.mobstore != nil {
@@ -2216,7 +2217,6 @@ func (h *hub) run() {
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
 					h.containers.recordBundles(h.bundles)
-					h.containers.recordNames(h.names)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
 					h.containers.recordVaults(h.vaults)
@@ -2234,6 +2234,7 @@ func (h *hub) run() {
 					h.containers.recordLecterns(h.lecterns)
 					h.containers.recordShelves(h.bookshelves, h.shelfLast)
 					h.containers.recordWoodShelves(h.woodShelves)
+					h.containers.recordNames(h.names) // after every stack is packed; see the autosave
 					h.containers.flush()
 				}
 				if h.mobstore != nil {
@@ -2247,6 +2248,13 @@ func (h *hub) run() {
 					h.mobstore.recordSeeded(h.seededChunks)
 					h.mobstore.bucketLive(h.mobs, h.persistMob, h.activeChunks)
 					h.mobstore.flush()
+				}
+				if h.containers != nil {
+					// Mob gear was packed after the containers were written, and
+					// a name it interned lives in their table. The autosave picks
+					// that up next cycle; the last save has no next cycle.
+					h.containers.recordNames(h.names)
+					h.containers.flush()
 				}
 				h.signs.flushIfDirty()
 				h.bugs.flushIfDirty()

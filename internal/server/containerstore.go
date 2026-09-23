@@ -24,12 +24,18 @@ type containerStore struct {
 }
 
 type savedItem struct {
-	Dim   int      `json:"dim,omitempty"`
-	X     float64  `json:"x"`
-	Y     float64  `json:"y"`
-	Z     float64  `json:"z"`
-	Item  int32    `json:"item" mig:"item"`
-	Count int      `json:"count"`
+	Dim int     `json:"dim,omitempty"`
+	X   float64 `json:"x"`
+	Y   float64 `json:"y"`
+	Z   float64 `json:"z"`
+	// St is the whole stack, packed as a slot packs it, so everything a stack
+	// carries survives the floor. The flat columns below are how drops were
+	// saved before (they held a hand-kept subset: dyed colour, a rocket's
+	// flight and bursts, and a pot's faces were lost on every restart); they
+	// are only read, for files written then.
+	St    stackRow `json:"st,omitempty"`
+	Item  int32    `json:"item,omitempty" mig:"item"`
+	Count int      `json:"count,omitempty"`
 	Dmg   int      `json:"dmg,omitempty"`
 	Ench  int32    `json:"ench,omitempty"`
 	Ench2 int32    `json:"ench2,omitempty"` // enchantments 3-4 (2026-09-06)
