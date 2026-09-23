@@ -59,7 +59,7 @@ var washedSmallStates = func() [][2]uint32 {
 		names = append(names, c+"_carpet")
 	}
 	for _, p := range []string{"torchflower", "oak_sapling", "spruce_sapling", "birch_sapling", "jungle_sapling", "acacia_sapling",
-		"cherry_sapling", "dark_oak_sapling", "pale_oak_sapling", "mangrove_propagule", "fern", "dandelion", "poppy", "blue_orchid",
+		"cherry_sapling", "dark_oak_sapling", "pale_oak_sapling", "poplar_sapling", "mangrove_propagule", "fern", "dandelion", "poppy", "blue_orchid",
 		"allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "oxeye_daisy", "cornflower",
 		"lily_of_the_valley", "wither_rose", "open_eyeblossom", "closed_eyeblossom", "red_mushroom", "brown_mushroom",
 		"dead_bush", "cactus", "bamboo", "azalea_bush", "flowering_azalea_bush", "crimson_fungus", "warped_fungus",

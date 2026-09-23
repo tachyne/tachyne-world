@@ -35,16 +35,10 @@ var (
 // boat a sniffer and a mangrove boat a llama).
 var boatEntities = func() map[string]int {
 	m := map[string]int{}
-	for _, wood := range []string{"oak", "spruce", "birch", "jungle", "acacia",
-		"dark_oak", "cherry", "mangrove", "pale_oak", "bamboo"} {
-		name, chestName := wood+"_boat", wood+"_chest_boat"
-		if wood == "bamboo" {
-			name, chestName = "bamboo_raft", "bamboo_chest_raft" // bamboo floats a raft, not a boat
-		}
-		m[wood+"_boat"] = entityID(name)
-		if id, ok := entityByName[chestName]; ok { // the chest variant: item and entity share the name
-			m[chestName] = id
-		}
+	// Vanilla's #boats (chest boats and rafts included): each item places the
+	// entity of its own name.
+	for _, name := range worldgen.ItemTag("boats") {
+		m[name] = entityID(name)
 	}
 	return m
 }()

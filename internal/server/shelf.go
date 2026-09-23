@@ -20,8 +20,7 @@ import (
 
 const shelfMaxChain = 3
 
-var woodShelfRanges = rangesOf([]string{"oak_shelf", "spruce_shelf", "birch_shelf", "jungle_shelf", "acacia_shelf",
-	"dark_oak_shelf", "mangrove_shelf", "cherry_shelf", "pale_oak_shelf", "bamboo_shelf", "crimson_shelf", "warped_shelf"})
+var woodShelfRanges = rangesOf(worldgen.BlockTagNames("wooden_shelves"))
 
 func isWoodShelf(s uint32) bool { return inRanges(woodShelfRanges, s) }
 

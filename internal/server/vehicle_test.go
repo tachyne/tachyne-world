@@ -147,18 +147,21 @@ func TestBoatPlacesOnWater(t *testing.T) {
 // llama. Pin every wood so a future canonical bump can't repeat it.
 func TestBoatEntityIDsTrackTheRegistry(t *testing.T) {
 	for _, wood := range []string{"oak", "spruce", "birch", "jungle", "acacia",
-		"dark_oak", "cherry", "mangrove", "pale_oak", "bamboo"} {
+		"dark_oak", "cherry", "mangrove", "pale_oak", "poplar", "bamboo"} {
+		// Bamboo floats a raft; every other wood has a boat of its own name.
 		item := wood + "_boat"
+		if wood == "bamboo" {
+			item = "bamboo_raft"
+		}
 		got, ok := boatEntities[item]
 		if !ok {
 			t.Errorf("%s has no boat entity", item)
 			continue
 		}
-		// Bamboo floats a raft; every other wood has a boat of its own name.
-		want := entityByName[wood+"_boat"]
-		if wood == "bamboo" {
-			want = entityByName["bamboo_raft"]
+		if _, ok := vehicleItems[int32(itemByName[item])]; !ok {
+			t.Errorf("the %s item places nothing", item)
 		}
+		want := entityByName[item]
 		if got != want {
 			t.Errorf("%s spawns entity %d (%s), want %d", item, got, entityNameOf(got), want)
 		}

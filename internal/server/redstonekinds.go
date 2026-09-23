@@ -14,15 +14,9 @@ import (
 // living things, wooden and weighted plates feel everything, weighted
 // plates count it), and whether a door opens by hand (iron does not).
 
-var buttonRanges = blockRangeOK("stone_button", "polished_blackstone_button", "oak_button", "spruce_button",
-	"birch_button", "jungle_button", "acacia_button", "dark_oak_button", "mangrove_button", "cherry_button",
-	"bamboo_button", "crimson_button", "warped_button", "pale_oak_button")
+var buttonRanges = worldgen.BlockTag("buttons")
 
-var plateRanges = blockRangeOK("stone_pressure_plate", "polished_blackstone_pressure_plate",
-	"light_weighted_pressure_plate", "heavy_weighted_pressure_plate", "oak_pressure_plate",
-	"spruce_pressure_plate", "birch_pressure_plate", "jungle_pressure_plate", "acacia_pressure_plate",
-	"dark_oak_pressure_plate", "mangrove_pressure_plate", "cherry_pressure_plate", "bamboo_pressure_plate",
-	"crimson_pressure_plate", "warped_pressure_plate", "pale_oak_pressure_plate")
+var plateRanges = worldgen.BlockTag("pressure_plates")
 
 func isButton(s uint32) bool { return inRanges2(s, buttonRanges) }
 func isPlate(s uint32) bool  { return inRanges2(s, plateRanges) }

@@ -1,6 +1,10 @@
 package server
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // What repairs what on an anvil — the items' `repairable` component. A tool
 // or a piece of armour takes its own tier's material, and each one put in
@@ -36,9 +40,7 @@ var repairsExact = map[string][]string{
 	"shield":        planksList,
 }
 
-var planksList = []string{"oak_planks", "spruce_planks", "birch_planks", "jungle_planks",
-	"acacia_planks", "dark_oak_planks", "mangrove_planks", "cherry_planks", "pale_oak_planks",
-	"bamboo_planks", "crimson_planks", "warped_planks"}
+var planksList = worldgen.ItemTag("wooden_tool_materials") // the wooden items' repairable component
 
 // repairMaterials maps an item to the items that mend it.
 var repairMaterials = func() map[int32]map[int32]bool {

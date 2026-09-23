@@ -24,6 +24,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.FireBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -125,6 +127,14 @@ public class Extract {
             soundTypes.add(so);
         }
 
+        // Fire's odds for a state, asked of the fire block itself (its
+        // setFlammable table, and the rule that a waterlogged state never burns).
+        java.lang.reflect.Method igniteOdds = FireBlock.class.getDeclaredMethod("getIgniteOdds", BlockState.class);
+        java.lang.reflect.Method burnOdds = FireBlock.class.getDeclaredMethod("getBurnOdds", BlockState.class);
+        igniteOdds.setAccessible(true);
+        burnOdds.setAccessible(true);
+        FireBlock fire = (FireBlock) Blocks.FIRE;
+
         JsonArray blocks = new JsonArray();
         for (Block block : BuiltInRegistries.BLOCK) {
             List<BlockState> states = block.getStateDefinition().getPossibleStates();
@@ -145,6 +155,9 @@ public class Extract {
                 }
             }
             o.addProperty("blockEntityType", beType);
+            // What PistonBaseBlock.isPushable asks: does the state carry a block
+            // entity at all (such blocks never move).
+            o.addProperty("hasBlockEntity", block.defaultBlockState().hasBlockEntity());
             // The loot table the block actually drops from. Usually its own name,
             // but a wall torch, wall sign, wall banner or wall head borrows the
             // standing block's (dropsLike), and some blocks have none at all.
@@ -166,12 +179,17 @@ public class Extract {
             JsonArray emit = new JsonArray(), filter = new JsonArray(), box = new JsonArray();
             JsonArray solid = new JsonArray(), fullCube = new JsonArray(), solidRender = new JsonArray();
             JsonArray bounds = new JsonArray(), mapColor = new JsonArray(), fluid = new JsonArray();
+            JsonArray push = new JsonArray(), ignite = new JsonArray(), burn = new JsonArray();
             for (BlockState st : states) {
                 // The state's map colour id (a bed's halves differ).
                 mapColor.add(st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id);
                 // Whether the state holds a fluid — water and lava, and every
                 // waterlogged block, kelp and seagrass (LevelChunkSection's fluidCount).
                 fluid.add(!st.getFluidState().isEmpty());
+                // How a piston treats it: NORMAL, DESTROY, BLOCK, IGNORE, PUSH_ONLY.
+                push.add(st.getPistonPushReaction().name());
+                ignite.add((int) igniteOdds.invoke(fire, st));
+                burn.add((int) burnOdds.invoke(fire, st));
                 emit.add(st.getLightEmission());
                 filter.add(dampening(st));
                 VoxelShape shape = st.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
@@ -200,6 +218,9 @@ public class Extract {
             o.add("collisionBounds", bounds);
             o.add("mapColor", mapColor);
             o.add("fluid", fluid);
+            o.add("pushReaction", push);
+            o.add("igniteOdds", ignite);
+            o.add("burnOdds", burn);
             blocks.add(o);
         }
 

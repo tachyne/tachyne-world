@@ -315,20 +315,7 @@ var (
 // name. Walls and fence gates are deliberately absent: vanilla's LeadItem
 // checks BlockTags.FENCES, which excludes both, so you cannot tie a mob to a
 // cobblestone wall.
-var fenceRanges = func() [][2]uint32 {
-	names := []string{
-		"oak_fence", "spruce_fence", "birch_fence", "jungle_fence", "acacia_fence",
-		"dark_oak_fence", "pale_oak_fence", "mangrove_fence", "cherry_fence",
-		"bamboo_fence", "crimson_fence", "warped_fence", "nether_brick_fence",
-	}
-	out := make([][2]uint32, 0, len(names))
-	for _, n := range names {
-		if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
-			out = append(out, [2]uint32{lo, hi})
-		}
-	}
-	return out
-}()
+var fenceRanges = worldgen.BlockTag("fences")
 
 // isFence reports whether a block state is in #minecraft:fences.
 func isFence(s uint32) bool {

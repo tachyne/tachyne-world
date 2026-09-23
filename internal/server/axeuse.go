@@ -47,18 +47,7 @@ var strippables = buildStrippables()
 
 func buildStrippables() map[uint32]uint32 {
 	m := map[uint32]uint32{}
-	var pairs [][2]string
-	for _, sp := range []string{"oak", "spruce", "birch", "jungle", "acacia",
-		"dark_oak", "pale_oak", "mangrove", "cherry"} {
-		pairs = append(pairs, [2]string{sp + "_log", "stripped_" + sp + "_log"},
-			[2]string{sp + "_wood", "stripped_" + sp + "_wood"})
-	}
-	for _, sp := range []string{"crimson", "warped"} {
-		pairs = append(pairs, [2]string{sp + "_stem", "stripped_" + sp + "_stem"},
-			[2]string{sp + "_hyphae", "stripped_" + sp + "_hyphae"})
-	}
-	pairs = append(pairs, [2]string{"bamboo_block", "stripped_bamboo_block"})
-	for _, pr := range pairs {
+	for _, pr := range stripPairs {
 		lo, hi, ok := worldgen.BlockRangeOK(pr[0])
 		slo, _, sok := worldgen.BlockRangeOK(pr[1])
 		if !ok || !sok {

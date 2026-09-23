@@ -21,52 +21,10 @@ const (
 // compostChance is the item→chance table, keyed by name because ids move
 // between versions.
 var compostChance = func() map[int32]float64 {
-	tiers := []struct {
-		chance float64
-		items  []string
-	}{
-		{0.3, []string{
-			"jungle_leaves", "oak_leaves", "spruce_leaves", "dark_oak_leaves",
-			"pale_oak_leaves", "acacia_leaves", "cherry_leaves", "birch_leaves",
-			"azalea_leaves", "mangrove_leaves", "oak_sapling", "spruce_sapling",
-			"birch_sapling", "jungle_sapling", "acacia_sapling", "cherry_sapling",
-			"dark_oak_sapling", "pale_oak_sapling", "mangrove_propagule", "beetroot_seeds",
-			"dried_kelp", "short_grass", "kelp", "melon_seeds", "pumpkin_seeds",
-			"seagrass", "sweet_berries", "glow_berries", "wheat_seeds", "moss_carpet",
-			"pale_moss_carpet", "pale_hanging_moss", "pink_petals", "wildflowers",
-			"leaf_litter", "small_dripleaf", "hanging_roots", "mangrove_roots",
-			"torchflower_seeds", "pitcher_pod", "firefly_bush", "bush", "cactus_flower",
-			"short_dry_grass", "tall_dry_grass",
-		}},
-		{0.5, []string{
-			"dried_kelp_block", "tall_grass", "flowering_azalea_leaves", "cactus",
-			"sugar_cane", "vine", "nether_sprouts", "weeping_vines", "twisting_vines",
-			"melon_slice", "glow_lichen",
-		}},
-		{0.65, []string{
-			"sea_pickle", "lily_pad", "pumpkin", "carved_pumpkin", "melon", "apple",
-			"beetroot", "carrot", "cocoa_beans", "potato", "wheat", "brown_mushroom",
-			"red_mushroom", "mushroom_stem", "crimson_fungus", "warped_fungus",
-			"nether_wart", "crimson_roots", "warped_roots", "shroomlight", "dandelion",
-			"poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip",
-			"white_tulip", "pink_tulip", "oxeye_daisy", "cornflower", "lily_of_the_valley",
-			"wither_rose", "open_eyeblossom", "closed_eyeblossom", "fern", "sunflower",
-			"lilac", "rose_bush", "peony", "large_fern", "spore_blossom", "azalea",
-			"moss_block", "pale_moss_block", "big_dripleaf",
-		}},
-		{0.85, []string{
-			"hay_block", "brown_mushroom_block", "red_mushroom_block", "nether_wart_block",
-			"warped_wart_block", "flowering_azalea", "bread", "baked_potato", "cookie",
-			"torchflower", "pitcher_plant",
-		}},
-		{1.0, []string{"cake", "pumpkin_pie"}},
-	}
 	out := map[int32]float64{}
-	for _, tier := range tiers {
-		for _, name := range tier.items {
-			if id, ok := itemByName[name]; ok {
-				out[int32(id)] = tier.chance
-			}
+	for name, chance := range compostChances {
+		if id, ok := itemByName[name]; ok {
+			out[int32(id)] = chance
 		}
 	}
 	return out

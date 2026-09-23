@@ -108,12 +108,9 @@ var saplingSpecies = func() []saplingSpec {
 	return out
 }()
 
-// leafRanges are the leaf families we generate; the persistent property means
-// player-placed leaves never decay. All species are listed so the distance
-// rule and the drops behave consistently across every canopy.
-var leafRanges = blockRange("oak_leaves", "spruce_leaves", "birch_leaves",
-	"jungle_leaves", "acacia_leaves", "cherry_leaves", "dark_oak_leaves",
-	"pale_oak_leaves", "mangrove_leaves")
+// leafRanges are vanilla's #leaves (every species, azalea and poplar
+// included); the persistent property means player-placed leaves never decay.
+var leafRanges = worldgen.BlockTag("leaves")
 
 func inRange(s uint32, r [2]uint32) bool { return s >= r[0] && s <= r[1] }
 
@@ -473,8 +470,8 @@ func leafDistanceAt(state uint32) int {
 	return 7
 }
 
-// isTrunkBlock is vanilla's prevents_nearby_leaf_decay — the LOGS tag: every
-// log, wood, stem and hyphae, stripped or not.
+// isTrunkBlock is vanilla's #prevents_nearby_leaf_decay (the logs: every log,
+// wood, stem and hyphae, stripped or not).
 func isTrunkBlock(state uint32) bool {
 	for _, r := range trunkRanges {
 		if inRange(state, r) {
@@ -484,17 +481,7 @@ func isTrunkBlock(state uint32) bool {
 	return false
 }
 
-var trunkRanges = func() [][2]uint32 {
-	names := []string{}
-	for _, sp := range []string{"oak", "spruce", "birch", "jungle", "acacia",
-		"dark_oak", "pale_oak", "mangrove", "cherry"} {
-		names = append(names, sp+"_log", sp+"_wood", "stripped_"+sp+"_log", "stripped_"+sp+"_wood")
-	}
-	for _, sp := range []string{"crimson", "warped"} {
-		names = append(names, sp+"_stem", sp+"_hyphae", "stripped_"+sp+"_stem", "stripped_"+sp+"_hyphae")
-	}
-	return blockRange(names...)
-}()
+var trunkRanges = worldgen.BlockTag("prevents_nearby_leaf_decay")
 
 // updateLeafDistance is the neighbour-change half: recompute this leaf's
 // distance from its six neighbours and write it if it moved, which schedules

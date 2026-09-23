@@ -67,7 +67,7 @@ func IsLog(state uint32) bool {
 
 var logFamilies = []string{
 	"oak_log", "spruce_log", "birch_log", "jungle_log", "acacia_log",
-	"dark_oak_log", "pale_oak_log", "mangrove_log", "cherry_log",
+	"dark_oak_log", "pale_oak_log", "mangrove_log", "cherry_log", "poplar_log",
 }
 
 // IsDirtTag is vanilla's #dirt block tag — the ground the podzol decorator
