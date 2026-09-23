@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Bedrock players on a current client can join again.** The Bedrock
+  gateway spoke only Bedrock 1.26.30, and Bedrock updates itself — through
+  1.26.40, .44, .45 and now 1.26.50 — so every up-to-date phone, console and
+  PC was turned away at login. It speaks 1.26.50 now. Its block and item
+  tables moved with it: the older mappings named 511 block states that 1.26.50
+  no longer has, which would have drawn the wrong blocks, and the generator now
+  refuses to write any block or item the target Bedrock version does not know.
 - **What lies on the ground survives a restart whole.** A dropped item was
   saved as a hand-kept list of its fields, and the list was short: dyed
   leather lost its colour, a firework rocket its flight and bursts, a
