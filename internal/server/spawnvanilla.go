@@ -86,7 +86,9 @@ func (h *hub) spawnCategoryForChunk(players map[int32]*tracked, dim, cat int, c 
 		// Above the cavern roof is open void, not a floor. SurfaceFeet happily
 		// climbs onto the roof, and a y drawn up there put mobs on top of the
 		// nether — rarely, because it takes a column whose roof is exposed.
-		surface = worldgen.NetherCeiling
+		// The draw below reaches surface+1, so the clamp is one under the
+		// ceiling: clamped to the ceiling itself it still reached 121.
+		surface = worldgen.NetherCeiling - 1
 	}
 	if surface+2 <= minY {
 		return

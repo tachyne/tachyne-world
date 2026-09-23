@@ -38,6 +38,9 @@ the public history since the project was open-sourced on 2026-07-10.
   poplar trees arrive with 26.3's worldgen.
 
 ### Fixed
+- **No more Nether mobs above the ceiling.** Where the Nether's roof is open to
+  the void above, natural spawning could still put a mob one block above
+  the ceiling.
 - **Chopped trees stand again.** Since the tree guard landed earlier today, a
   tree a player had chopped part of was not generated at all, so the rest
   of its trunk and all its leaves disappeared. Near spawn that took many
