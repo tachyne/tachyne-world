@@ -15,8 +15,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.Bootstrap;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Block;
@@ -54,9 +57,47 @@ public class Extract {
         }
     }
 
+    // 26.x keeps an item's stack size, durability and food in data components
+    // that the server binds while loading resources, after the registry
+    // bootstrap: BuiltInRegistries.DATA_COMPONENT_INITIALIZERS built against a
+    // full registry lookup, then applied. A bare Bootstrap never does it, so
+    // this does, against the data generator's lookup. 1.21.x has no such step —
+    // its items carry their components already — so it is found by reflection
+    // and skipped when absent.
+    private static void bindItemComponents() throws Exception {
+        java.lang.reflect.Field field;
+        try {
+            field = BuiltInRegistries.class.getField("DATA_COMPONENT_INITIALIZERS");
+        } catch (NoSuchFieldException e) {
+            return;
+        }
+        Class<?> vanilla = Class.forName("net.minecraft.data.registries.VanillaRegistries");
+        Method lookup = null;
+        for (String n : new String[]{"createWorldLookup", "createLookup"}) {
+            try {
+                lookup = vanilla.getMethod(n);
+                break;
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+        if (lookup == null) {
+            throw new IllegalStateException("no registry lookup on VanillaRegistries");
+        }
+        Object initializers = field.get(null);
+        List<?> pending = (List<?>) initializers.getClass()
+                .getMethod("build", HolderLookup.Provider.class)
+                .invoke(initializers, lookup.invoke(null));
+        Method apply = Class.forName("net.minecraft.core.component.DataComponentInitializers$PendingComponents")
+                .getMethod("apply");
+        for (Object p : pending) {
+            apply.invoke(p);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        bindItemComponents();
 
         JsonArray blocks = new JsonArray();
         for (Block block : BuiltInRegistries.BLOCK) {
@@ -124,14 +165,16 @@ public class Extract {
             JsonObject o = new JsonObject();
             o.addProperty("name", BuiltInRegistries.ITEM.getKey(item).getPath());
             o.addProperty("id", BuiltInRegistries.ITEM.getId(item));
-            // 26.x keeps stack size in data components, which a bare bootstrap
-            // does not bind; -1 marks that rather than failing the whole run.
-            int stack = -1;
-            try {
-                stack = item.getDefaultMaxStackSize();
-            } catch (Throwable ignored) {
+            o.addProperty("stackSize", item.getDefaultMaxStackSize());
+            Integer maxDamage = item.components().get(DataComponents.MAX_DAMAGE);
+            if (maxDamage != null) {
+                o.addProperty("maxDurability", maxDamage);
             }
-            o.addProperty("stackSize", stack);
+            FoodProperties food = item.components().get(DataComponents.FOOD);
+            if (food != null) {
+                o.addProperty("nutrition", food.nutrition());
+                o.addProperty("saturation", food.saturation());
+            }
             items.add(o);
         }
 

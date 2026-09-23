@@ -4,7 +4,8 @@ Several generators under `scripts/` read `~/vanilla/extract/<version>.json`
 instead of a third-party dataset. This directory produces it: `Extract.java`
 bootstraps the server's registries and asks each block state and item what
 it is — light emission and filtering, collision, solidity, the full-cube
-test, hardness, resistance, stack size.
+test, hardness, resistance, loot table, block entity, stack size,
+durability and food.
 
 It exists because the dataset we used before records one value per *block*
 for facts vanilla computes per *state*, and stops at 26.1. Building tables
@@ -32,8 +33,12 @@ it, repeat that: add the field, compare against an independent source where
 one exists, and regenerate the existing tables to confirm nothing moved that
 was not meant to.
 
-## Known gap
+## Item components on 26.x
 
-On 26.x, item stack sizes live in data components, which a bare registry
-bootstrap does not bind; those items record `stackSize: -1`. 1.21.11 is
-unaffected.
+26.x keeps an item's stack size, durability and food in data components that
+the server binds while loading resources, which a bare registry bootstrap never
+does. Extract.java binds them itself, against the data generator's registry
+lookup, before reading any item. Checked at 26.1 against the old dataset:
+stack size and durability exact for all 1,506 items, food points exact for all
+44 foods — and saturation equal to nutrition × modifier × 2 for every one,
+which is also exactly what the engine ships at 1.21.11.
