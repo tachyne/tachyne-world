@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-23
 
 ### Fixed
+- **Maps paint blocks the way vanilla's do.** Each block had one map
+  colour, where vanilla colours some by state: an upright log shows its end
+  grain and a fallen one its bark, a bed's head is wool and its foot the
+  dye, ripe wheat turns yellow, waterlogged barriers read as water, and
+  signs take the upright log's colour. 46 blocks now match.
 - **Wood, copper, wool, glass and 380 other blocks sound like themselves.**
   Each block's sound type — its footsteps and the sound of placing it — was
   read out of the server's source, which only sees a block that names its

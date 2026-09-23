@@ -46,7 +46,7 @@ func TestInventoryPersistRoundTrip(t *testing.T) {
 	reloaded := newInvStore(path)
 	got := testTracked()
 	reloaded.loadInto(got, "Steve")
-	if got.inv.slots[0] != (invStack{item: 35, count: 64}) || got.inv.slots[1] != (invStack{item: itemByName["apple"], count: 3}) {
+	if got.inv.slots[0] != (invStack{item: itemByName["cobblestone"], count: 64}) || got.inv.slots[1] != (invStack{item: itemByName["apple"], count: 3}) {
 		t.Fatalf("inventory did not survive round-trip: %+v", got.inv.slots[:2])
 	}
 	if got.armor[0] != pl.armor[0] {
@@ -71,7 +71,7 @@ func TestInvStoreMigratesLegacyFormat(t *testing.T) {
 	// keep the slots and default armor/offhand to empty — NOT error out and
 	// silently wipe everyone's inventory.
 	path := filepath.Join(t.TempDir(), "inv.json")
-	legacy := fmt.Sprintf(`{"Steve": [[35,64,0],[%d,3,0]`, itemByName["apple"]) // 2 filled + 34 empty rows
+	legacy := fmt.Sprintf(`{"Steve": [[%d,64,0],[%d,3,0]`, itemByName["cobblestone"], itemByName["apple"]) // 2 filled + 34 empty rows
 	for i := 0; i < 34; i++ {
 		legacy += `,[0,0,0]`
 	}
@@ -82,7 +82,7 @@ func TestInvStoreMigratesLegacyFormat(t *testing.T) {
 	st := newInvStore(path)
 	got := testTracked()
 	st.loadInto(got, "Steve")
-	if got.inv.slots[0] != (invStack{item: 35, count: 64}) || got.inv.slots[1] != (invStack{item: itemByName["apple"], count: 3}) {
+	if got.inv.slots[0] != (invStack{item: itemByName["cobblestone"], count: 64}) || got.inv.slots[1] != (invStack{item: itemByName["apple"], count: 3}) {
 		t.Fatalf("legacy inventory not migrated: %+v", got.inv.slots[:2])
 	}
 	if got.armor[0].item != 0 || got.offhand.item != 0 {

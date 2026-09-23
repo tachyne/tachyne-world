@@ -165,8 +165,10 @@ public class Extract {
             // solidity and the full-cube test all vary with a block's state.
             JsonArray emit = new JsonArray(), filter = new JsonArray(), box = new JsonArray();
             JsonArray solid = new JsonArray(), fullCube = new JsonArray(), solidRender = new JsonArray();
-            JsonArray bounds = new JsonArray();
+            JsonArray bounds = new JsonArray(), mapColor = new JsonArray();
             for (BlockState st : states) {
+                // The state's map colour id (a bed's halves differ).
+                mapColor.add(st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).id);
                 emit.add(st.getLightEmission());
                 filter.add(dampening(st));
                 VoxelShape shape = st.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
@@ -193,6 +195,7 @@ public class Extract {
             o.add("isFullCube", fullCube);
             o.add("isSolidRender", solidRender);
             o.add("collisionBounds", bounds);
+            o.add("mapColor", mapColor);
             blocks.add(o);
         }
 
