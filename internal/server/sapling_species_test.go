@@ -153,3 +153,37 @@ func TestGrowingTreeDoesNotOverwriteBlocks(t *testing.T) {
 		t.Errorf("tree overwrote a placed block: state %d, want stone", got)
 	}
 }
+
+// The poplar sapling (26.3's TreeGrower: a weighted list) grows a poplar in
+// one of its three leaf colours.
+func TestPoplarSaplingGrowsAPoplar(t *testing.T) {
+	logLo, logHi := worldgen.BlockRange("poplar_log")
+	colours := map[string]bool{}
+	h := newHub(world.New(1)) // one hub: its seeded draws differ sapling to sapling
+	players := map[int32]*tracked{}
+	for i := 0; i < 9; i++ {
+		x, y, z := 100+i*32, 200, 100
+		lo, hi := worldgen.BlockRange("poplar_sapling")
+		h.world.SetBlock(x, y-1, z, worldgen.Dirt)
+		h.world.SetBlock(x, y, z, lo)
+		if !growUntilGone(h, players, x, y, z, lo, hi) {
+			t.Fatalf("poplar sapling %d never grew", i)
+		}
+		if s := h.world.At(x, y, z); s < logLo || s > logHi {
+			t.Fatalf("poplar sapling %d: trunk state %d, not a poplar log", i, s)
+		}
+		for _, c := range []string{"red", "orange", "yellow"} {
+			lLo, lHi := worldgen.BlockRange(c + "_poplar_leaves")
+			for dy := 3; dy <= 20; dy++ {
+				for dx := -1; dx <= 1; dx++ {
+					if s := h.world.At(x+dx, y+dy, z); s >= lLo && s <= lHi {
+						colours[c] = true
+					}
+				}
+			}
+		}
+	}
+	if len(colours) < 2 {
+		t.Errorf("nine poplar saplings grew only %v", colours)
+	}
+}

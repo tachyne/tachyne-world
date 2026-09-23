@@ -78,6 +78,9 @@ type saplingSpec struct {
 	// 5x5x3 box around the sapling (TreeGrower.hasFlowers) — the tree comes
 	// up carrying a bee nest.
 	flowers, secondaryFlowers string
+	// pick is a 26.x grower's tree list, equally weighted: the poplar
+	// sapling grows a red, orange or yellow poplar, one draw.
+	pick []string
 }
 
 // saplingSpecies is TreeGrower's table: species, features and odds are
@@ -98,6 +101,9 @@ var saplingSpecies = func() []saplingSpec {
 		// Vanilla's PALE_OAK grower uses the BONEMEAL feature: the bare tree,
 		// no moss and never a heart — those belong to the wild ones.
 		{"pale_oak_sapling", saplingSpec{mega: "pale_oak_bonemeal"}},
+		// 26.3's TreeGrower is a weighted list: no mega tree, no flower
+		// variant, the three poplar colours at weight 1 each.
+		{"poplar_sapling", saplingSpec{pick: []string{"red_poplar", "orange_poplar", "yellow_poplar"}}},
 	}
 	out := make([]saplingSpec, 0, len(rows))
 	for _, r := range rows {
@@ -637,6 +643,9 @@ func (h *hub) growSapling(players map[int32]*tracked, dim, x, y, z int, state ui
 		}
 	}
 	feature := sp.single
+	if len(sp.pick) > 0 {
+		feature = sp.pick[h.rng.Intn(len(sp.pick))]
+	}
 	flowers := sp.flowers != "" && h.flowersNear(dim, x, y, z)
 	if sp.secondary != "" && h.rng.Float64() < sp.secondaryChance {
 		feature = sp.secondary

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate internal/worldgen/trees_gen.go — every vanilla tree feature's
-parameters, straight out of the jar's worldgen/configured_feature JSONs.
+parameters, straight out of the jar's worldgen/feature JSONs (26.x, read
+through features26.py into the 1.21.x configured_feature shape).
 
 The ALGORITHMS live in treeplacer.go / treefoliage.go as ports of the placer
 classes; this bakes only the numbers those placers are configured with, so a
@@ -16,9 +17,10 @@ No network — reads the local server jar.
 Run: python3 scripts/gen_trees.py [path-to-server.jar]
 """
 import canon
+import features26
 import io, json, os, re, sys, zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()  # 26.x features, via features26
 HERE = os.path.dirname(__file__)
 OUT = os.path.join(HERE, "..", "internal", "worldgen", "trees_gen.go")
 
@@ -36,6 +38,7 @@ TRUNK = {
     "upwards_branching_trunk_placer": "TrunkUpwardsBranching",
     "cherry_trunk_placer": "TrunkCherry",
     "fancy_trunk_placer": "TrunkFancy",
+    "poplar_trunk_placer": "TrunkPoplar",
 }
 FOLIAGE = {
     "blob_foliage_placer": "FoliageBlob",
@@ -48,6 +51,7 @@ FOLIAGE = {
     "mega_pine_foliage_placer": "FoliageMegaPine",
     "mega_jungle_foliage_placer": "FoliageMegaJungle",
     "jungle_foliage_placer": "FoliageMegaJungle",  # same class in vanilla
+    "poplar_foliage_placer": "FoliagePoplar",
     "random_spread_foliage_placer": "FoliageRandomSpread",
     "cherry_foliage_placer": "FoliageCherry",
 }
@@ -95,17 +99,21 @@ def state_of(prov):
     return name, None
 
 
-pre = "data/minecraft/worldgen/configured_feature/"
+# 26.x keeps features in worldgen/feature/ in a reworked format;
+# features26 maps each onto the 1.21.x configured_feature shape parsed below.
+pre = "data/minecraft/worldgen/feature/"
+reader = features26.Reader(z, json.load(open(canon.report("blocks.json"))))
 feats, fallen_feats = {}, {}
 for n in sorted(z.namelist()):
     if not n.startswith(pre) or not n.endswith(".json"):
         continue
-    d = json.loads(z.read(n))
-    if d.get("type") == "minecraft:fallen_tree":
-        fallen_feats[n[len(pre):-len(".json")]] = d["config"]
-    if d.get("type") != "minecraft:tree":
+    d = reader.any(n[len(pre):-len(".json")])
+    if d is None:
         continue
-    feats[n[len(pre):-len(".json")]] = d["config"]
+    if d["type"] == "minecraft:fallen_tree":
+        fallen_feats[n[len(pre):-len(".json")]] = d["config"]
+    else:
+        feats[n[len(pre):-len(".json")]] = d["config"]
 
 # Block name -> MIN state id, from the engine's own generated table.
 #
@@ -157,7 +165,8 @@ for name, c in feats.items():
         skipped.append((name, "unknown placer"))
         continue
 
-    rmin, rmax = rng_range(fp.get("radius"))
+    rad = fp.get("radius")
+    rmin, rmax = rng_range(rad)
     omin, omax = rng_range(fp.get("offset"))
     f = {
         "Log": base_id[log], "Leaves": leaf_state,
@@ -166,6 +175,14 @@ for name, c in feats.items():
         "Foliage": fk, "RadiusMin": rmin, "RadiusMax": rmax,
         "OffsetMin": omin, "OffsetMax": omax,
     }
+    if isinstance(rad, dict) and rad.get("type") == "minecraft:weighted_list":
+        dist = rad["distribution"]
+        if not all(isinstance(e["data"], int) for e in dist):
+            raise SystemExit(f"{name}: weighted radius of non-constant entries: {rad}")
+        f["RadiusVals"] = "[]int{%s}" % ", ".join(str(e["data"]) for e in dist)
+        f["RadiusWeights"] = "[]int{%s}" % ", ".join(str(e["weight"]) for e in dist)
+    if "side_hole_chance" in fp:
+        f["SideHoleChance"] = fp["side_hole_chance"]
     if leaf2_state is not None:
         f["Leaves2"] = leaf2_state
         f["Leaves2Chance"] = leaf2_chance
@@ -200,6 +217,10 @@ for name, c in feats.items():
         f["ExtraBranchLenMin"], f["ExtraBranchLenMax"] = rng_range(tp["extra_branch_length"])
     if "branch_count" in tp:
         f["BranchCountMin"], f["BranchCountMax"] = rng_range(tp["branch_count"])
+    if "branch_amount" in tp:  # poplar's branch ring
+        f["BranchCountMin"], f["BranchCountMax"] = rng_range(tp["branch_amount"])
+    if "trunk_height_above_branches" in tp:
+        f["AboveBranchesMin"], f["AboveBranchesMax"] = rng_range(tp["trunk_height_above_branches"])
     if "branch_horizontal_length" in tp:
         f["BranchHorizMin"], f["BranchHorizMax"] = rng_range(tp["branch_horizontal_length"])
     if "branch_start_offset_from_top" in tp:
@@ -241,6 +262,8 @@ for name, c in feats.items():
             f["BeehiveProb"] = dec["probability"]
         elif dt == "creaking_heart":
             f["HeartProb"] = dec["probability"]
+        elif dt == "shelf_mushroom":
+            f["ShelfMushroomProb"] = dec["probability"]
         elif dt == "place_on_ground":
             # Leaf litter: the provider must be the uniform facing x segment
             # weighted list the Go side draws with a single roll.
@@ -337,11 +360,12 @@ ORDER = ["Log", "Leaves", "Leaves2", "Leaves2Chance",
          "BranchEndMin", "BranchEndMax", "HangingLeavesChance",
          "HangingExtChance", "WideBottomHoleChance", "CornerHoleChance",
          "TrunkHeightMin", "TrunkHeightMax", "LeafPlacementAttempts",
+         "RadiusVals", "RadiusWeights", "AboveBranchesMin", "AboveBranchesMax", "SideHoleChance",
          "SizeThreeLayer", "SizeLimit", "SizeLower", "SizeMiddle",
          "SizeUpperLimit", "SizeUpper", "MinClippedHeight",
          "TrunkVine", "LeaveVineProb", "CocoaProb", "HeartProb", "AlterGround",
          "PropaguleProb", "PropaguleExclXZ", "PropaguleExclY", "PropaguleEmpty",
-         "PaleMossLeaves", "PaleMossTrunk", "PaleMossGround", "BeehiveProb",
+         "PaleMossLeaves", "PaleMossTrunk", "PaleMossGround", "BeehiveProb", "ShelfMushroomProb",
          "DirtState", "ForceDirt", "LitterPasses",
          "RootTrunkOffMin", "RootTrunkOffMax", "RootMaxLength", "RootMaxWidth",
          "RootSkewChance", "RootState", "RootMuddyState",
@@ -359,14 +383,29 @@ for name, c in sorted(fallen_feats.items()):
     if sd not in ([], ["trunk_vine"]):
         raise SystemExit(f"{name}: unexpected stump decorators {sd}")
     ld = c["log_decorators"]
+    shelf = None
+    if len(ld) == 2 and ld[1]["type"] == "minecraft:shelf_mushroom":
+        shelf = ld[1]["probability"]
+        ld = ld[:1]
     if len(ld) != 1 or ld[0]["type"] != "minecraft:attached_to_logs" or \
             ld[0]["directions"] != ["up"]:
         raise SystemExit(f"{name}: unexpected log decorators {ld}")
-    ents = {e["data"]["Name"]: e.get("weight", 1) for e in ld[0]["block_provider"]["entries"]}
-    if ents != {"minecraft:red_mushroom": 2, "minecraft:brown_mushroom": 1}:
-        raise SystemExit(f"{name}: mushroom provider changed: {ents}")
+    bp = ld[0]["block_provider"]
+    brown_only = False
+    if bp["type"] == "minecraft:simple_state_provider":
+        if bp["state"]["Name"] != "minecraft:brown_mushroom":
+            raise SystemExit(f"{name}: mushroom provider changed: {bp}")
+        brown_only = True
+    else:
+        ents = {e["data"]["Name"]: e.get("weight", 1) for e in bp["entries"]}
+        if ents != {"minecraft:red_mushroom": 2, "minecraft:brown_mushroom": 1}:
+            raise SystemExit(f"{name}: mushroom provider changed: {ents}")
     row = {"Log": base_id[log], "LenMin": lmin, "LenMax": lmax,
            "MushProb": ld[0]["probability"]}
+    if brown_only:
+        row["MushBrownOnly"] = "true"
+    if shelf is not None:
+        row["ShelfProb"] = shelf
     if sd:
         row["StumpVine"] = "true"
     fallen_rows[name] = row
@@ -398,7 +437,7 @@ L += ["// FallenTrees are the fallen-log features: a stump and a sideways run,",
       "// mushrooms on top at the probability (red 2 : brown 1, asserted at",
       "// generation), trunk vines on the stumps that carry them.",
       "var FallenTrees = map[string]*FallenTree{"]
-FORDER = ["Log", "LenMin", "LenMax", "StumpVine", "MushProb"]
+FORDER = ["Log", "LenMin", "LenMax", "StumpVine", "MushProb", "MushBrownOnly", "ShelfProb"]
 for name in sorted(fallen_rows):
     f = fallen_rows[name]
     fields = ", ".join(f"{k}: {f[k]}" for k in FORDER if k in f)

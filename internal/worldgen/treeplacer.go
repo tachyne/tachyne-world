@@ -79,6 +79,7 @@ const (
 	TrunkUpwardsBranching
 	TrunkCherry
 	TrunkFancy
+	TrunkPoplar
 )
 
 // FoliageKind selects one of vanilla's foliage placers.
@@ -96,6 +97,7 @@ const (
 	FoliageMegaJungle
 	FoliageRandomSpread
 	FoliageCherry
+	FoliagePoplar
 )
 
 // TreeConfig is one configured_feature: the blocks, the two placers, and the
@@ -112,10 +114,13 @@ type TreeConfig struct {
 
 	Foliage              FoliageKind
 	RadiusMin, RadiusMax int
-	OffsetMin, OffsetMax int
-	FoliageH             int // blob/bush/mega_jungle fixed height
-	FoliageHMin          int // sampled heights (pine/cherry/mega_pine)
-	FoliageHMax          int
+	// A weighted-list radius (poplar: 5 or 6 mostly, 7 and 8 rarely): the
+	// values and their weights, in list order. Overrides RadiusMin/Max.
+	RadiusVals, RadiusWeights []int
+	OffsetMin, OffsetMax      int
+	FoliageH                  int // blob/bush/mega_jungle fixed height
+	FoliageHMin               int // sampled heights (pine/cherry/mega_pine)
+	FoliageHMax               int
 
 	// bending
 	MinHeightForLeaves           int
@@ -133,6 +138,10 @@ type TreeConfig struct {
 	WideBottomHoleChance, CornerHoleChance float64
 	// spruce
 	TrunkHeightMin, TrunkHeightMax int
+	// poplar: how far below the top the branch layer sits, and the chance a
+	// canopy cell on a row's side is knocked out.
+	AboveBranchesMin, AboveBranchesMax int
+	SideHoleChance                     float64
 	// random_spread
 	LeafPlacementAttempts int
 
@@ -157,6 +166,8 @@ type TreeConfig struct {
 	PaleMossLeaves, PaleMossTrunk, PaleMossGround float64
 	// beehive — a bee nest hung off the trunk at the canopy's bottom row.
 	BeehiveProb float64
+	// shelf_mushroom — bracket fungi on the lower trunk (poplar).
+	ShelfMushroomProb float64
 
 	// dirt_provider / force_dirt — what a trunk placer sets the ground to.
 	// Every placer converts the block under the trunk (setDirtAt) unless it
@@ -370,9 +381,16 @@ func PlaceTree(c *TreeConfig, x, y, z int, rng TreeRNG, d TreeDriver) bool {
 		}
 	}
 
+	// ownLeaf answers "is this tree's own leaf here, as placed": the poplar
+	// canopy's log spokes replace only those. Own cells, so every chunk pass
+	// answers alike.
+	ownLeaf := func(px, py, pz int) bool {
+		st, ok := leaves[[3]int{px, py, pz}]
+		return ok && st == c.Leaves
+	}
 	atts := c.placeTrunk(rng, x, ty, z, treeHeight, recording, trunkFree, dirt)
 	for _, a := range atts {
-		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording)
+		c.createFoliage(rng, a, treeHeight, foliageHeight, leafRadius, offset, recording, ownLeaf)
 	}
 	c.seedLeafDistances(logs, leaves, set)
 	// Vanilla's TreeDecorator.Context hands decorators the log and leaf lists
@@ -699,6 +717,9 @@ func (c *TreeConfig) decorate(ctx *decoCtx) {
 			}
 		}
 	}
+	if c.ShelfMushroomProb > 0 {
+		shelfMushrooms(ctx, c.ShelfMushroomProb)
+	}
 }
 
 // vineAt rolls each horizontal side of a block for a vine, hanging it down.
@@ -828,6 +849,9 @@ func (c *TreeConfig) placeTrunk(rng TreeRNG, x, y, z, h int, set TreeSetter, fre
 
 	case TrunkFancy:
 		return c.fancyTrunk(rng, x, y, z, h, set, free)
+
+	case TrunkPoplar:
+		return c.poplarTrunk(rng, x, y, z, h, log, logAxis)
 	}
 	return nil
 }

@@ -16,6 +16,8 @@ type FallenTree struct {
 	LenMin, LenMax int
 	StumpVine      bool
 	MushProb       float64
+	MushBrownOnly  bool    // the mushroom provider is brown alone (fallen poplar)
+	ShelfProb      float64 // shelf_mushroom on the log's flanks (fallen poplar)
 }
 
 // PlaceFallenTree places one fallen tree with its stump at (x,y,z).
@@ -81,16 +83,29 @@ func PlaceFallenTree(c *FallenTree, x, y, z int, rng TreeRNG, d TreeDriver) {
 	}
 	mushRed := blockBase("red_mushroom")
 	mushBrown := blockBase("brown_mushroom")
+	own := map[[3]int]bool{}
+	var run [][3]int
 	for i := 0; i < length; i++ {
 		cx, cz := sx+dir[0]*i, sz+dir[1]*i
 		d.Set(cx, sy, cz, axisLog(c.Log, axis), false)
-		// attached_to_logs, upward: red twice as often as brown.
+		own[[3]int{cx, sy, cz}] = true
+		run = append(run, [3]int{cx, sy, cz})
+		// attached_to_logs, upward: red twice as often as brown (or brown
+		// alone, where the provider is).
 		if r := rolls[i]; r.mush <= c.MushProb && d.Free(cx, sy+1, cz) {
 			m := mushRed
-			if r.pick == 2 {
+			if r.pick == 2 || c.MushBrownOnly {
 				m = mushBrown
 			}
 			d.Set(cx, sy+1, cz, m, true)
+			own[[3]int{cx, sy + 1, cz}] = true
 		}
+	}
+	// shelf_mushroom, the next log decorator: brackets on the log's flanks.
+	if c.ShelfProb > 0 {
+		shelfMushrooms(&decoCtx{
+			rng: rng, logList: run, read: d.Read, set: d.Set,
+			isAir: func(q [3]int) bool { return !own[q] && d.Free(q[0], q[1], q[2]) },
+		}, c.ShelfProb)
 	}
 }

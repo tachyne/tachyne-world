@@ -30,7 +30,7 @@ func (c *TreeConfig) foliageHeightOf(rng TreeRNG, treeHeight int) int {
 		return 0
 	case FoliageSpruce:
 		return max(4, treeHeight-sampleInt(rng, c.TrunkHeightMin, c.TrunkHeightMax))
-	case FoliagePine, FoliageMegaPine, FoliageCherry, FoliageRandomSpread:
+	case FoliagePine, FoliageMegaPine, FoliageCherry, FoliageRandomSpread, FoliagePoplar:
 		return sampleInt(rng, c.FoliageHMin, c.FoliageHMax)
 	}
 	return c.FoliageH
@@ -39,6 +39,9 @@ func (c *TreeConfig) foliageHeightOf(rng TreeRNG, treeHeight int) int {
 // foliageRadiusOf is FoliagePlacer.foliageRadius. Only pine overrides it, and
 // its extra term is why a tall pine wears a wider crown than a short one.
 func (c *TreeConfig) foliageRadiusOf(rng TreeRNG, trunkHeight int) int {
+	if len(c.RadiusVals) > 0 {
+		return weightedInt(rng, c.RadiusVals, c.RadiusWeights)
+	}
 	r := sampleInt(rng, c.RadiusMin, c.RadiusMax)
 	if c.Foliage == FoliagePine {
 		r += rng.Intn(max(trunkHeight+1, 1))
@@ -47,7 +50,7 @@ func (c *TreeConfig) foliageRadiusOf(rng TreeRNG, trunkHeight int) int {
 }
 
 // createFoliage grows one blob from one attachment.
-func (c *TreeConfig) createFoliage(rng TreeRNG, a foliageAttachment, treeHeight, foliageHeight, leafRadius, offset int, set TreeSetter) {
+func (c *TreeConfig) createFoliage(rng TreeRNG, a foliageAttachment, treeHeight, foliageHeight, leafRadius, offset int, set TreeSetter, ownLeaf func(x, y, z int) bool) {
 	row := func(ox, oy, oz, radius, y int) {
 		c.placeLeavesRow(rng, ox, oy, oz, radius, y, a.doubleTrunk, set)
 	}
@@ -162,6 +165,9 @@ func (c *TreeConfig) createFoliage(rng TreeRNG, a foliageAttachment, treeHeight,
 		}
 		c.cherryHangingRow(rng, a.x, y, a.z, r, -1, a.doubleTrunk, set)
 		c.cherryHangingRow(rng, a.x, y, a.z, r-1, -2, a.doubleTrunk, set)
+
+	case FoliagePoplar:
+		c.poplarFoliage(rng, a, foliageHeight, leafRadius, offset, set, ownLeaf)
 	}
 }
 
