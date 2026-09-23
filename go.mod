@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/nats-io/nats.go v1.52.0
-	github.com/tachyne/tachyne-common v0.1.1-0.20260923113417-97c95bb5e83b
+	github.com/tachyne/tachyne-common v0.1.1-0.20260923114818-f01c9804dc89
 )
 
 require (

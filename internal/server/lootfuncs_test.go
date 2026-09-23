@@ -77,15 +77,16 @@ func TestShipwreckMapLeadsToBuriedTreasure(t *testing.T) {
 	h.fillSlots(slots[:], "chests/shipwreck_map", blockPos{tx + 40, 40, tz - 40})
 	var got invStack
 	for _, st := range slots {
-		if st.item == itemFilledMap {
+		if isMapItem(st.item) {
 			got = st
 		}
 	}
-	if got.item == 0 || got.mapID == 0 {
-		t.Fatalf("the shipwreck map chest should hold a filled treasure map, slots %v", slots)
+	// 26.3: the treasure map is its own item, named by the item.
+	if got.item != int32(itemByName["buried_treasure_map"]) || got.mapID == 0 {
+		t.Fatalf("the shipwreck map chest should hold a buried treasure map, slots %v", slots)
 	}
-	if got.name != "Buried Treasure Map" {
-		t.Fatalf("the map is named: %q", got.name)
+	if got.name != "" {
+		t.Fatalf("the map carries a custom name %q; the item names itself", got.name)
 	}
 	md := h.maps.get(got.mapID)
 	if md == nil || len(md.Marks) != 1 || md.Marks[0].Type != decorRedX || md.Marks[0].X != int32(tx) || md.Marks[0].Z != int32(tz) {
@@ -93,5 +94,28 @@ func TestShipwreckMapLeadsToBuriedTreasure(t *testing.T) {
 	}
 	if decs := mapMarkDecorations(md); len(decs) != 1 || decs[0].Type != decorRedX {
 		t.Fatalf("the cross should render on the map (centre %d,%d scale %d): %v", md.CenterX, md.CenterZ, md.Scale, decs)
+	}
+}
+
+// An explorer map is a map: it clones as itself, takes a cartography lock,
+// but cannot be extended (only the filled map is #extendable_maps).
+func TestExplorerMapsAreMaps(t *testing.T) {
+	em := int32(itemByName["ocean_monument_map"])
+	if !isMapItem(em) || !isMapItem(itemFilledMap) || isMapItem(itemEmptyMap) {
+		t.Fatal("isMapItem must be #clonable_maps")
+	}
+	grid := make([]invStack, 9)
+	grid[0] = invStack{item: em, count: 1, mapID: 7}
+	grid[1] = invStack{item: itemEmptyMap, count: 1}
+	if res, kind := mapCraftMatch(grid, 3); kind != mapCraftClone || res.item != em || res.count != 2 || res.mapID != 7 {
+		t.Errorf("cloning an explorer map gave %+v kind %d, want two of the same explorer map", res, kind)
+	}
+	grid = make([]invStack, 9)
+	for i := range grid {
+		grid[i] = invStack{item: itemPaper, count: 1}
+	}
+	grid[4] = invStack{item: em, count: 1, mapID: 7}
+	if _, kind := mapCraftMatch(grid, 3); kind == mapCraftZoom {
+		t.Error("an explorer map must not extend")
 	}
 }

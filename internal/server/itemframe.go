@@ -256,7 +256,7 @@ func (h *hub) framesOnBlockChange(players map[int32]*tracked, dim, x, y, z int) 
 // markFrameMapsDirty pokes every holder of a framed map so decoration sets
 // refresh promptly after frame changes.
 func (h *hub) markFrameMapsDirty(f *itemFrame) {
-	if h.maps == nil || f.held.item != itemFilledMap || f.held.mapID == 0 {
+	if h.maps == nil || !isMapItem(f.held.item) || f.held.mapID == 0 {
 		return
 	}
 	if md := h.maps.get(f.held.mapID); md != nil {
@@ -291,7 +291,7 @@ func (h *hub) mapFramesTick(players map[int32]*tracked) {
 	}
 	decorFor := map[int32][]attachproto.MapDecoration{}
 	for _, f := range h.itemFrames {
-		if f.held.item != itemFilledMap || f.held.mapID == 0 {
+		if !isMapItem(f.held.item) || f.held.mapID == 0 {
 			continue
 		}
 		md := h.maps.get(f.held.mapID)

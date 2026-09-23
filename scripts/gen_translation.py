@@ -180,6 +180,7 @@ data = {}
 absent = {}
 added = {}
 absent_state_runs = {}  # version -> [(lo, hi, delta or None)]
+item_stand_ins = {}     # version -> {canonical absent item id: canonical stand-in id}
 canon_states = report_states(CANON)
 for const, kind, registry in REGISTRIES:
     canon = load(CANON, kind, registry)
@@ -195,6 +196,16 @@ for const, kind, registry in REGISTRIES:
                 n = sum(b - a + 1 for a, b, _ in runs)
                 air = sum(b - a + 1 for a, b, d in runs if d is None)
                 print(f"{const} {CANON}->{ver}: {n} states ABSENT ({n - air} shown as a stand-in, {air} as air)")
+        if const == "RegItem":
+            cid = {e["name"]: e["id"] for e in canon}
+            have = {e["name"] for e in version}
+            subs = {}  # registry names are bare ("stone")
+            for a, b in standins.items_for(set(cid)).items():
+                if a in cid and a not in have and b in have:
+                    subs[cid[a]] = cid[b]
+            if subs:
+                item_stand_ins[ver] = subs
+                print(f"RegItem {CANON}->{ver}: {len(subs)} absent items shown as a stand-in")
         if kind != "stateRange":
             gone = absent_flat(canon, version)
             if gone:
@@ -261,6 +272,17 @@ L += [
 for ver in sorted(absent_state_runs):
     inner = ", ".join(f"{{{a}, {b}, {0 if d is None else d}, {'true' if d is None else 'false'}}}"
                       for a, b, d in absent_state_runs[ver])
+    L.append(f"\t{ver}: {{{inner}}},")
+L += ["}", ""]
+
+L += [
+    "// absentItemStandIns[clientProtocol] = for an item that version lacks, the",
+    "// canonical item shown in its place (an explorer map as a filled map, a",
+    "// poplar plank as a birch one); RemapID shifts it like any other.",
+    "var absentItemStandIns = map[int32]map[int32]int32{",
+]
+for ver in sorted(item_stand_ins):
+    inner = ", ".join(f"{a}: {b}" for a, b in sorted(item_stand_ins[ver].items()))
     L.append(f"\t{ver}: {{{inner}}},")
 L += ["}", ""]
 

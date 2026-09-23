@@ -590,8 +590,9 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 		t.Error("a rolled offer must not roll again")
 	}
 	st := o.output()
-	if st.item != itemFilledMap || st.mapID == 0 || st.name != "Ocean Explorer Map" {
-		t.Fatalf("offer hands over %+v, want a named filled map", st)
+	// 26.3: the ocean explorer map is its own item, named by the item.
+	if st.item != int32(itemByName["ocean_monument_map"]) || st.mapID == 0 || st.name != "" {
+		t.Fatalf("offer hands over %+v, want an ocean monument map", st)
 	}
 	md := h.maps.get(st.mapID)
 	if md == nil || len(md.Marks) != 1 || md.Marks[0].Type != 9 ||

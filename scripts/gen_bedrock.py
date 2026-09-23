@@ -414,8 +414,14 @@ def main():
         f.write("var javaItemBedrock = []bedrockItemRef{\n")
         missing, absent = 0, []
         registry = {it["name"] for it in ritems}
+        # An item Geyser does not map yet is shown as its stand-in
+        # (standins.py): an explorer map as a filled map (its map id rides
+        # the components, so it is the same map), poplar as birch.
+        stand = standins.items_for({i["name"] for i in mcitems})
         for it in mcitems:
             j = jitems.get("minecraft:" + it["name"])
+            if j is None and it["name"] in stand:
+                j = jitems.get("minecraft:" + stand[it["name"]])
             if j is None:
                 missing += 1
                 f.write("\t{},\n")

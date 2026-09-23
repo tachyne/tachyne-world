@@ -24,7 +24,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "tag
 
 TAGS = {
     "block": ["buttons", "fences", "leaves", "pressure_plates", "prevents_nearby_leaf_decay", "wooden_shelves"],
-    "item": ["boats", "wooden_tool_materials"],
+    "item": ["boats", "clonable_maps", "wooden_tool_materials"],
 }
 
 z = canon.inner_jar()

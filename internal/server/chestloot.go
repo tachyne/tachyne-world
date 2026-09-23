@@ -49,7 +49,7 @@ func (h *hub) fillSlots(slots []invStack, name string, pos blockPos) {
 		return
 	}
 	r := rand.New(rand.NewSource(chestSeed(h.world.Seed(), pos, name)))
-	ctx := &lootCtx{rng: r.Intn, randf: r.Float64, pos: pos, located: true}
+	ctx := &lootCtx{rng: r.Intn, randf: r.Float64, pos: pos, located: true, biomeAt: h.world.BiomeAt3D}
 	stacks := h.evalChestStacks(tbl, ctx, 0)
 
 	// Split oversized stacks to their per-item cap (vanilla createStackSplitter).

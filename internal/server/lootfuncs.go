@@ -88,7 +88,16 @@ func (h *hub) applyChestExtraFn(c *lootCtx, f *lootFn, st invStack) invStack {
 		}
 		md.Marks = append(md.Marks, mapMark{X: int32(x), Z: int32(z), Type: typ})
 		h.maps.markDirty()
-		st.item, st.mapID = itemFilledMap, md.ID
+		// 26.x explorer maps (buried_treasure_map …) keep their own item; the
+		// older tables drew a plain map and made it a filled one.
+		if !isMapItem(st.item) {
+			st.item = itemFilledMap
+		}
+		st.mapID = md.ID
+	case "require_map": // FilteredFunction on map_id, discarding: no map found, no item
+		if st.mapID == 0 {
+			st.count = 0
+		}
 	}
 	return st
 }

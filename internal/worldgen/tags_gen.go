@@ -15,5 +15,6 @@ var blockTags = map[string][]string{
 // itemTags are vanilla item tags (canonical 26.3), flattened.
 var itemTags = map[string][]string{
 	"boats":                 {"oak_boat", "spruce_boat", "birch_boat", "jungle_boat", "acacia_boat", "dark_oak_boat", "pale_oak_boat", "mangrove_boat", "bamboo_raft", "cherry_boat", "poplar_boat", "oak_chest_boat", "spruce_chest_boat", "birch_chest_boat", "jungle_chest_boat", "acacia_chest_boat", "dark_oak_chest_boat", "pale_oak_chest_boat", "mangrove_chest_boat", "bamboo_chest_raft", "cherry_chest_boat", "poplar_chest_boat"},
+	"clonable_maps":         {"filled_map", "ocean_monument_map", "woodland_mansion_map", "buried_trial_chambers_map", "jungle_pyramid_map", "swamp_hut_map", "desert_village_map", "plains_village_map", "savanna_village_map", "snowy_village_map", "taiga_village_map", "buried_treasure_map", "buried_ancient_city_map", "buried_mineshaft_map", "desert_pyramid_map", "abandoned_camp_map", "warm_ocean_ruins_map"},
 	"wooden_tool_materials": {"oak_planks", "spruce_planks", "birch_planks", "jungle_planks", "acacia_planks", "dark_oak_planks", "pale_oak_planks", "crimson_planks", "warped_planks", "mangrove_planks", "bamboo_planks", "cherry_planks", "poplar_planks"},
 }

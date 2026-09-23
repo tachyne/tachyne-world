@@ -28,7 +28,7 @@ func (h *hub) openCartography(t *tracked) {
 // slot predicates in its own menu, but a hacked client can put anything in
 // the inputs — everything is re-validated here.
 func (h *hub) cartoResult(a, b invStack) invStack {
-	if h.maps == nil || a.item != itemFilledMap || a.count <= 0 || a.mapID == 0 ||
+	if h.maps == nil || !isMapItem(a.item) || a.count <= 0 || a.mapID == 0 ||
 		b.item == 0 || b.count <= 0 {
 		return invStack{}
 	}
@@ -39,8 +39,8 @@ func (h *hub) cartoResult(a, b invStack) invStack {
 	res := a
 	res.count = 1
 	switch b.item {
-	case itemPaper: // zoom out — refused at the scale cap or on locked maps
-		if src.Locked || src.Scale >= mapMaxScale {
+	case itemPaper: // zoom out — the filled map only (#extendable_maps), refused at the scale cap or when locked
+		if a.item != itemFilledMap || src.Locked || src.Scale >= mapMaxScale {
 			return invStack{}
 		}
 	case itemGlassPane: // lock — already-locked maps have nothing to lock

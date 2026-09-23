@@ -14,8 +14,9 @@ Run: python3 scripts/gen_chestloot.py [path-to-server.jar]
 import io, json, os, re, sys, zipfile
 
 import canon
+import loot26
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar()  # 26.x loot, via loot26
 HERE = os.path.dirname(__file__)
 OUTDIR = os.path.join(HERE, "..", "internal", "server", "lootdata")
 OUT = os.path.join(OUTDIR, "chests.json")
@@ -70,6 +71,14 @@ def cond(c):
     if t == "random_chance":
         ch = c["chance"]
         return {"c": "chance", "p": float(ch if isinstance(ch, (int, float)) else ch["value"])}
+    if t == "location_check" and set(c.get("predicate", {})) == {"biomes"}:
+        # LocationCheck on the biome alone (26.3: the bounce disc in a
+        # sulfur-caves mineshaft).
+        bs = c["predicate"]["biomes"]
+        bs = [bs] if isinstance(bs, str) else bs
+        if any(b.startswith("#") for b in bs):
+            raise Unsupported("cond location_check on a biome tag")
+        return {"c": "biome", "biomes": bs}
     raise Unsupported("cond " + t)
 
 
@@ -115,12 +124,24 @@ def func(f):
     if t == "set_ominous_bottle_amplifier":
         return {"f": "set_ominous", "np": num(f["amplifier"])}
     if t == "exploration_map":
-        # The destination is a structure tag; on_treasure_maps = buried treasure.
-        dest = f.get("destination", "#minecraft:on_treasure_maps").removeprefix("#minecraft:").removeprefix("minecraft:")
-        if dest == "on_treasure_maps":
-            dest = "buried_treasure"
+        # The destination is a structure tag (#on_treasure_maps is buried
+        # treasure): each names one structure, the locator's name for it.
+        dest = f.get("destination", "#minecraft:on_treasure_maps")
+        if dest.startswith("#"):
+            vals = json.loads(z.read("data/minecraft/tags/worldgen/structure/%s.json" % dest[1:].removeprefix("minecraft:")))["values"]
+            if len(vals) != 1:
+                raise Unsupported(f"map destination {dest} names {len(vals)} structures")
+            dest = vals[0]
+        dest = dest.removeprefix("minecraft:")
         return {"f": "exploration_map", "dest": dest, "zoom": int(f.get("zoom", 2)),
                 "decoration": f.get("decoration", "minecraft:red_x").removeprefix("minecraft:")}
+    if t == "filtered":
+        # 26.x follows exploration_map with "keep it only if it now has a map
+        # id": a map that found nothing is discarded, not handed out blank.
+        if f.get("item_filter") == {"predicates": {"minecraft:map_id": {}}} and \
+                f.get("on_fail", {}).get("type", f.get("on_fail", {}).get("function")) in ("minecraft:discard",):
+            return {"f": "require_map"}
+        raise Unsupported(f"filtered {f}")
     if t == "set_components":
         # The only component any 1.21.11 loot table sets is the armour trim on
         # the trial chamber's equipment; anything else is still dropped.
@@ -229,7 +250,7 @@ for n in sorted(z.namelist()):
     name = pre[len("data/minecraft/loot_table/"):] + n[len(pre):-len(".json")]
     try:
         CURRENT[0] = name
-        out[name] = table(json.loads(z.read(n)))
+        out[name] = table(loot26.read(z, n, canon.VERSION))
         kept += 1
     except Unsupported as ex:
         skipped += 1

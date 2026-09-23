@@ -25,7 +25,22 @@ var (
 	itemEmptyMap  = int32(itemByName["map"])
 	itemFilledMap = int32(itemByName["filled_map"])
 	itemPaper     = int32(itemByName["paper"])
+
+	// mapItems are the items that ARE a map (vanilla's #clonable_maps): the
+	// filled map and 26.3's explorer maps, which carry a map id the same way.
+	mapItems = func() map[int32]bool {
+		m := map[int32]bool{}
+		for _, n := range worldgen.ItemTag("clonable_maps") {
+			if id, ok := itemByName[n]; ok {
+				m[int32(id)] = true
+			}
+		}
+		return m
+	}()
 )
+
+// isMapItem reports an item that is a map with an id: a filled or explorer map.
+func isMapItem(item int32) bool { return mapItems[item] }
 
 // Base map color ids the scan refers to directly (full table in
 // mapcolors_gen.go).
@@ -303,7 +318,7 @@ func (h *hub) mapDecorations(md *mapData, players map[int32]*tracked) []attachpr
 	// Item frames holding this map pin the green FRAME marker, rotated by
 	// the frame's facing (vanilla: direction 2D value × 90°).
 	for _, f := range h.itemFrames {
-		if f.held.item != itemFilledMap || f.held.mapID != md.ID || f.dim != md.Dim {
+		if !isMapItem(f.held.item) || f.held.mapID != md.ID || f.dim != md.Dim {
 			continue
 		}
 		xd := (float64(f.x) + 0.5 - float64(md.CenterX)) / float64(scale)
@@ -395,7 +410,7 @@ func (h *hub) mapsTick(players map[int32]*tracked) {
 			continue
 		}
 		st := heldStack(t)
-		if st.item != itemFilledMap || st.mapID == 0 {
+		if !isMapItem(st.item) || st.mapID == 0 {
 			continue
 		}
 		md := h.maps.get(st.mapID)
@@ -457,7 +472,7 @@ func mapCraftMatch(grid []invStack, w int) (invStack, int) {
 	for i, st := range grid {
 		switch {
 		case st.item == 0 || st.count == 0:
-		case st.item == itemFilledMap && st.mapID != 0:
+		case isMapItem(st.item) && st.mapID != 0:
 			maps++
 			src = st
 			mapPos = i
@@ -473,10 +488,12 @@ func mapCraftMatch(grid []invStack, w int) (invStack, int) {
 		return invStack{}, mapCraftNone
 	}
 	if empties >= 1 && paper == 0 {
-		return invStack{item: itemFilledMap, count: empties + 1, mapID: src.mapID}, mapCraftClone
+		// map_cloning keeps the input item: an explorer map copies as itself.
+		return invStack{item: src.item, count: empties + 1, mapID: src.mapID}, mapCraftClone
 	}
-	// Zoom: full 3×3, paper on the ring, the map in the middle.
-	if paper == 8 && empties == 0 && w == 3 && mapPos == 4 {
+	// Zoom: full 3×3, paper on the ring, the map in the middle — the filled
+	// map only (#extendable_maps).
+	if paper == 8 && empties == 0 && w == 3 && mapPos == 4 && src.item == itemFilledMap {
 		return invStack{item: itemFilledMap, count: 1, mapID: src.mapID}, mapCraftZoom
 	}
 	return invStack{}, mapCraftNone

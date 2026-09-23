@@ -151,7 +151,21 @@ func (h *hub) rollMapOffer(m *mob, t vTrade) (mobOffer, bool) {
 	h.maps.markDirty()
 	o := offerFrom(t)
 	o.outMapID, o.outName = md.ID, l.label
+	// 26.3 sells each destination's own explorer map item, named by the item.
+	if id, ok := itemByName[explorerMapItem[l.dest]]; ok {
+		o.trade.outItem, o.outName = int32(id), ""
+	}
 	return o, true
+}
+
+// explorerMapItem is the item 26.3's cartographer hands over for each
+// destination (villager_trade/cartographer/*: gives *_map).
+var explorerMapItem = map[string]string{
+	"village_desert": "desert_village_map", "village_plains": "plains_village_map",
+	"village_savanna": "savanna_village_map", "village_snowy": "snowy_village_map",
+	"village_taiga": "taiga_village_map", "swamp_hut": "swamp_hut_map",
+	"jungle_pyramid": "jungle_pyramid_map", "monument": "ocean_monument_map",
+	"trial_chambers": "buried_trial_chambers_map", "mansion": "woodland_mansion_map",
 }
 
 // rollDyedOffer is VillagerTrades.DyedArmorForEmeralds.getOffer: one leather

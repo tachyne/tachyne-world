@@ -38,7 +38,8 @@ type lootCond struct {
 	Props   map[string]string `json:"props"`
 	Silk    bool              `json:"silk"`
 	Item    string            `json:"item"`
-	Items   []string          `json:"items"` // an expanded tool tag (#cluster_max_harvestables …)
+	Biomes  []string          `json:"biomes"` // location_check: the roll's biome is one of these
+	Items   []string          `json:"items"`  // an expanded tool tag (#cluster_max_harvestables …)
 	Tag     string            `json:"tag"`
 	Term    *lootCond         `json:"term"`
 	Terms   []lootCond        `json:"terms"`
@@ -183,6 +184,7 @@ type lootCtx struct {
 	// searches from here). located=false when no position applies.
 	pos     blockPos
 	located bool
+	biomeAt func(x, y, z int) string // the biome at a position (nil: none known)
 
 	// Entity-death context (unused for block loot).
 	looting        int
@@ -397,6 +399,17 @@ func (c *lootCtx) cond(cd *lootCond) bool {
 		return true
 	case "chance":
 		return c.randf() < cd.P
+	case "biome": // LocationCheck on the biome
+		if !c.located || c.biomeAt == nil {
+			return false
+		}
+		b := c.biomeAt(c.pos.x, c.pos.y, c.pos.z)
+		for _, want := range cd.Biomes {
+			if b == want {
+				return true
+			}
+		}
+		return false
 	case "table_bonus":
 		lvl := 0
 		if cd.Ench == "fortune" {

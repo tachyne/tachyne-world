@@ -49,3 +49,24 @@ def props(have, stand_states, stand_default):
 BIOMES = {
     "dappled_forest": "forest",
 }
+
+
+# item -> its stand-in, for a client that lacks the item. A block's item
+# stands in as its block stand-in's item (items_for below); these are the
+# rest. An explorer map is a filled map carrying the same map id, so a 26.2
+# player sees the very map.
+ITEMS = {m: "filled_map" for m in (
+    "ocean_monument_map", "woodland_mansion_map", "buried_trial_chambers_map", "jungle_pyramid_map",
+    "swamp_hut_map", "desert_village_map", "plains_village_map", "savanna_village_map",
+    "snowy_village_map", "taiga_village_map", "buried_treasure_map", "buried_ancient_city_map",
+    "buried_mineshaft_map", "desert_pyramid_map", "abandoned_camp_map", "warm_ocean_ruins_map")}
+ITEMS.update({"poplar_boat": "birch_boat", "poplar_chest_boat": "birch_chest_boat"})
+
+
+def items_for(item_names):
+    """ITEMS plus each stand-in block's item, for the items that exist."""
+    out = dict(ITEMS)
+    for b, s in BLOCKS.items():
+        if b in item_names and s in item_names and b not in out:
+            out[b] = s
+    return out

@@ -51,7 +51,7 @@ func (h *hub) toggleMapBanner(players map[int32]*tracked, e evMapBanner) {
 		return
 	}
 	st := heldStack(t)
-	if st.item != itemFilledMap || st.mapID == 0 {
+	if !isMapItem(st.item) || st.mapID == 0 {
 		return
 	}
 	md := h.maps.get(st.mapID)
