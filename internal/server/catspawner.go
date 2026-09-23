@@ -1,21 +1,25 @@
 package server
 
-// The village cat spawner.
-//
-// Cats existed as a tameable species and nothing ever spawned one — `spawn.go`
-// never mentioned them — so the only cats in the world were summoned ones.
-// Vanilla runs them as a CustomSpawner rather than through the biome pools:
-// every minute it picks a player, throws a point somewhere nearby, and if that
-// point falls in a village with room for another cat, one appears.
-//
-// Vanilla's second half spawns a persistent black cat at a swamp hut. tachyne
-// generates no swamp huts at all, so there is nothing for that branch to
-// attach to and it is deliberately absent rather than approximated.
+// The village cat spawner: vanilla's CatSpawner, a CustomSpawner rather than
+// a biome pool. Every minute it picks a player and throws a point 8-31
+// blocks out on each axis at the player's own height. If the chunks around
+// the point are loaded and a cat could stand there:
+//   - near a village (within two sections of a claimed bed, workstation or
+//     bell), with more than four claimed beds within 48 and fewer than five
+//     cats in a 48×8×48 box, a cat appears;
+//   - otherwise, inside a swamp hut with no cat within 16×8×16, a persistent
+//     one appears (all black, by the structure check in catVariantRoll).
+// It used to measure a radius around the well, drop the cat at the surface
+// with no vertical limit, ignore whether anyone lived there, and skip the
+// swamp hut, which it said did not exist.
 
 const (
 	catSpawnInterval = 1200 // vanilla's TICK_DELAY: once a minute
-	catVillageRadius = 48   // the radius its village and cat counts both use
-	catVillageMax    = 5    // no more than this many cats around one village
+	catVillageRadius = 48   // spawnInVillage's radius: homes and cats
+	catVillageMax    = 5    // fewer than this many cats in the box
+	catHomesNeeded   = 4    // more than this many occupied homes
+	catHutRadius     = 16   // spawnInHut's box
+	catBoxHalfHeight = 8
 )
 
 // catSpawner is vanilla's CustomSpawner tick, rate-limiting itself.
@@ -32,28 +36,73 @@ func (h *hub) catSpawner(players map[int32]*tracked) {
 	if t == nil || t.dim != 0 {
 		return
 	}
-	// Vanilla's offset: 8-31 blocks out on each axis, either side.
-	x := int(t.x) + (8+h.rng.Intn(24))*h.randSign()
-	z := int(t.z) + (8+h.rng.Intn(24))*h.randSign()
-	h.catSpawnAt(players, x, z)
+	x := floorInt(t.x) + (8+h.rng.Intn(24))*h.randSign()
+	z := floorInt(t.z) + (8+h.rng.Intn(24))*h.randSign()
+	h.catSpawnAt(players, x, floorInt(t.y), z)
 }
 
-// catSpawnAt is the per-candidate-point decision: a cat appears only if that
-// point sits in a village that is not already full of cats.
-//
-// The cap is measured around the POINT, not around the village centre — which
-// is vanilla's rule, and means a village can end up holding more than
-// catVillageMax cats overall as the candidate point wanders with the player.
-// That is the behaviour, not a bug in it.
-func (h *hub) catSpawnAt(players map[int32]*tracked, x, z int) bool {
-	if !h.nearVillage(x, z, catVillageRadius) {
+// catSpawnAt is the per-point decision; true when a cat appeared.
+func (h *hub) catSpawnAt(players map[int32]*tracked, x, y, z int) bool {
+	w := h.world
+	for cx := (x - 10) >> 4; cx <= (x+10)>>4; cx++ { // level.hasChunksAt(±10)
+		for cz := (z - 10) >> 4; cz <= (z+10)>>4; cz++ {
+			if !w.Loaded(int32(cx), int32(cz)) {
+				return false
+			}
+		}
+	}
+	if !h.spawnPositionOK(0, catCreature, entityCat, x, y, z) {
 		return false
 	}
-	if h.countMobsNear(entityCat, 0, float64(x), float64(z), catVillageRadius) >= catVillageMax {
-		return false // this corner of the village has all the cats it needs
+	switch {
+	case sectionsToVillage(h.villageCentres(0), [3]int{x >> 4, y >> 4, z >> 4}) <= 2:
+		if h.occupiedHomesNear(x, y, z, catVillageRadius) <= catHomesNeeded ||
+			h.countCatsInBox(x, y, z, catVillageRadius) >= catVillageMax {
+			return false
+		}
+		return h.spawnSpecies(players, entityCat, 0, float64(x)+0.5, float64(y), float64(z)+0.5) != nil
+	case w.Gen().SwampHutIn(x, z).Contains(x, y, z):
+		if h.countCatsInBox(x, y, z, catHutRadius) > 0 {
+			return false
+		}
+		m := h.spawnSpecies(players, entityCat, 0, float64(x)+0.5, float64(y), float64(z)+0.5)
+		if m != nil {
+			m.persistent = true
+		}
+		return m != nil
 	}
-	y := h.world.SurfaceY(x, z)
-	return h.spawnSpecies(players, entityCat, 0, float64(x)+0.5, y, float64(z)+0.5) != nil
+	return false
+}
+
+// occupiedHomesNear counts the claimed beds within r of a point: PoiManager
+// getCountInRange(HOME, IS_OCCUPIED).
+func (h *hub) occupiedHomesNear(x, y, z, r int) int {
+	seen := map[blockPos]bool{}
+	for _, m := range h.mobs {
+		if m.etype != entityVillager || m.dim != 0 || m.dying > 0 || m.bed == (blockPos{}) || seen[m.bed] {
+			continue
+		}
+		dx, dy, dz := m.bed.x-x, m.bed.y-y, m.bed.z-z
+		if dx*dx+dy*dy+dz*dz <= r*r {
+			seen[m.bed] = true
+		}
+	}
+	return len(seen)
+}
+
+// countCatsInBox counts cats in the AABB of a block inflated r across and
+// eight up and down.
+func (h *hub) countCatsInBox(x, y, z, r int) (n int) {
+	cx, cy, cz := float64(x)+0.5, float64(y)+0.5, float64(z)+0.5
+	for _, m := range h.mobs {
+		if m.etype != entityCat || m.dim != 0 || m.dying > 0 {
+			continue
+		}
+		if absF(m.x-cx) <= float64(r)+0.5 && absF(m.y-cy) <= catBoxHalfHeight+0.5 && absF(m.z-cz) <= float64(r)+0.5 {
+			n++
+		}
+	}
+	return n
 }
 
 // randomPlayer picks one player at random, as vanilla's getRandomPlayer does.

@@ -112,3 +112,17 @@ func (s *pieceStamp) buildSwampHut() {
 		}
 	}
 }
+
+// Contains reports whether a block lies inside the hut's piece (7 wide, 7
+// high, 9 deep before rotation) — StructureManager.getStructureWithPieceAt,
+// which CatSpawner asks of #cats_spawn_in structures.
+func (t SwampHut) Contains(x, y, z int) bool {
+	if !t.Exists {
+		return false
+	}
+	sx, sz := t.W, t.D
+	if t.Dir >= 2 {
+		sx, sz = t.D, t.W
+	}
+	return x >= t.X && x < t.X+sx && z >= t.Z && z < t.Z+sz && y >= t.Y && y < t.Y+7
+}
