@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Crossbow shots scatter like vanilla's.** Crossbow bolts flew in a
+  perfectly straight line. Now they have the small random spread vanilla
+  gives them. Multishot's side bolts stay 10 degrees either side of your
+  aim even when you shoot steeply up or down, and each bolt plays its own
+  shot sound at vanilla's pitch.
 - **Dispensed projectiles hit mobs.** Snowballs, eggs and fire charges
   fired from a dispenser flew straight through mobs. They now hit them as
   in vanilla: a snowball stings a blaze, and a fire charge sets a zombie
