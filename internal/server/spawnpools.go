@@ -124,7 +124,8 @@ func maxSpawnClusterFor(etype int) int {
 // member of a natural pack, each further ageable animal is born a baby at
 // this chance — one in twenty by default, every rabbit after the first,
 // and never for the species whose group data says no babies (axolotl, fox,
-// wolf, parrot). Monsters and the non-ageable are 0.
+// wolf, parrot). Monsters and the non-ageable are 0 — bar the sulfur cube,
+// a monster by category but an AgeableMob by class.
 func packBabyChance(etype int) float32 {
 	if etype == entityRabbit {
 		return 1
@@ -142,5 +143,5 @@ var packBabySpecies = map[int]bool{
 	entityCow: true, entityPig: true, entitySheep: true, entityChicken: true, entityMooshroom: true,
 	entityHorse: true, entityDonkey: true, entityLlama: true, entityGoat: true, entityPanda: true,
 	entityPolarBear: true, entityTurtle: true, entityFrog: true, entityArmadillo: true, entityCamel: true,
-	entityStrider: true,
+	entityStrider: true, entitySulfurCube: true,
 }

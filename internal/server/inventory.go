@@ -73,6 +73,15 @@ type invStack struct {
 	// store. Same indirection again — and the reason a bundle can be dropped,
 	// chested or put inside another bundle without losing what it holds.
 	bundleID int32
+	// A sulfur cube bucket's cube: the block it had swallowed and its age
+	// (sulfur_cube_content + bucket_entity_data). Zero for everything else.
+	cube cubeContent
+}
+
+// cubeContent is what a sulfur cube bucket holds besides the cube itself.
+type cubeContent struct {
+	item int32 // the swallowed block (0 = none)
+	age  int32 // AgeableMob age: negative for a baby
 }
 
 // bannerLayer is one loom-applied pattern layer (wire encoding: id+1, dye).

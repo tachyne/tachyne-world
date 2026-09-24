@@ -1137,6 +1137,9 @@ func (h *hub) run() {
 			}
 			h.updateBolts(players) // despawn finished lightning flashes
 			h.updateTNT(players)
+			if len(players) > 0 { // entities tick only in loaded chunks (see updateMobs)
+				h.updateSulfurCubes(players) // fuses, pickups, and the cubes carrying a block rolling about
+			}
 			h.updateVillageSiege(players) // vanilla VillageSiege, every tick: a nightly zombie horde
 			h.validateWindows(players)    // AbstractContainerMenu.stillValid, every tick
 			h.updateFangs(players)        // evoker fangs: bite once, then sink
@@ -1983,14 +1986,7 @@ func (h *hub) run() {
 					}
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
-						held := heldStack(t).item
-						if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, e.sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
-							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
-							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
-							h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
-							h.tryBrush(players, t, m) || h.tryWolfArmor(players, t, m) || h.tryAllay(players, t, m) || h.tryBarter(players, t, m) || h.tryFeedDolphin(players, t, m) || h.tryIgniteCreeper(players, t, m) || h.tryRepairGolem(players, t, m) || h.tryPoisonParrot(players, t, m) || h.tryShearOther(players, t, m) || h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
-							h.advance(players, t, "player_interacted_with_entity", advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held, variant: advVariantName(m)})
-						}
+						h.interactMob(players, t, m, e.sneak)
 					}
 				}
 			case evClick:

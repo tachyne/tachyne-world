@@ -158,6 +158,7 @@ type mob struct {
 	flyGoal                         blockPos
 	flyStale                        int         // mob-updates since the path was computed
 	size                            int         // slime: 4/2/1 (splits in half on death)
+	cube                            sulfurState // sulfur cube: the swallowed block and what it does (sulfurcube.go)
 	neutral                         bool        // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock                    uint32      // enderman: the block state it's holding (0 = none)
 	witherHealFrac                  float32     // wither: the part of a health point its regen has banked
@@ -520,6 +521,9 @@ func (h *hub) spawnMobCause(players map[int32]*tracked, etype, dim int, x, y, z 
 		m.color = h.rollSheepColor() // vanilla's spread: mostly white, pink 1-in-600
 	}
 	h.rollVariant(m) // frog by biome, axolotl by the 1-in-1200 blue roll
+	if etype == entitySulfurCube && !h.reloading {
+		h.initSulfurCube(m, false) // setSpawnSize, whatever brought it (an egg, /summon, a split resizes it after)
+	}
 	h.mobs[eid] = m
 	h.gridDirty()
 
@@ -604,6 +608,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.x, m.y, m.z, m.dim = v.x, v.y+cartRideHeight, v.z, v.dim
 				continue
 			}
+		}
+		if m.hasBody() {
+			continue // a sulfur cube carrying a block has no goals: it is a ball (updateSulfurCubes moves it)
 		}
 		if m.etype == entityCamel && m.dashCD > 0 {
 			h.camelDashTick(players, m)
@@ -690,6 +697,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vz *= 0.6
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
+		case m.etype == entitySulfurCube:
+			h.sulfurHop(players, m) // the same hops, steered by its tempt and block-seeking goals
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
 		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
@@ -1189,6 +1198,9 @@ func (m *mob) hurtBreach(dmg, breachFrac float64) { m.hurtOf(dmg, breachFrac, dt
 func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	if m.spawnInvuln > 0 {
 		return // wither spawn-charge: immune while it powers up
+	}
+	if m.sulfurHurtGate(dt) {
+		return // a lit sulfur cube, or one whose block shrugs this off (sulfurcube.go)
 	}
 	m.lastDT, m.lastDirect = dt, 0 // what the loot tables ask of the killing blow (damage_source_properties)
 	// A creaking with a standing heart cannot be hurt: the blow goes to the

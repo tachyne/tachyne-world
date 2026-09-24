@@ -154,7 +154,14 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if m.sheared {
 		t.p.trySendEv(metaEv(sheepMeta(m, true)))
 	}
-	if m.size > 0 {
+	if m.etype == entitySulfurCube {
+		// Its own fields at their 26.x indices (size 18, not the slime's
+		// canonical 16), and the block it has swallowed.
+		t.p.trySendEv(metaEv(sulfurMeta(m)))
+		if m.hasBody() {
+			t.p.trySendEv(cubeBodyEquip(m))
+		}
+	} else if m.size > 0 {
 		t.p.trySendEv(metaEv(slimeMeta(m.eid, m.size)))
 	}
 	if vm := variantMeta(m); vm != nil {

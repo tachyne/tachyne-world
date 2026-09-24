@@ -555,12 +555,10 @@ NOT_OBSERVABLE = {
 }
 
 # 26.3 content the engine does not simulate yet. Criteria naming it stay
-# unmatchable, so the advancements needing them (husbandry/uh_oh, and
-# adventuring_time's every-biome requirement) stay unobtainable until it
-# lands.
-ABSENT_ENTITIES = {
-    "sulfur_cube",   # no sulfur cube mob (uh_oh: have one absorb TNT)
-}
+# unmatchable, so the advancements needing them (adventuring_time's
+# every-biome requirement) stay unobtainable until it lands. The sulfur cube
+# left this list when it arrived (sulfurcube.go fires uh_oh's two criteria).
+ABSENT_ENTITIES = set()
 ABSENT_BIOMES = {
     "sulfur_caves",  # the cave-biome picker places deep_dark/lush/dripstone only
 }

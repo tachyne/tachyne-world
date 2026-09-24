@@ -48,6 +48,18 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 		return
 	}
 	w := h.worldFor(t.dim)
+	if held == itemSulfurCubeBucket {
+		// A MobBucketItem whose content is no fluid: nothing is poured (and
+		// nothing boils off in the nether) — the cube just comes out.
+		if ts := w.At(x, y, z); !worldgen.IsReplaceable(ts) && ts != worldgen.Air &&
+			!worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
+			return
+		}
+		st := t.inv.slots[slot]
+		h.swapBucket(t, slot, itemBucket)
+		h.releaseSulfurBucket(players, t.dim, st, x, y, z)
+		return
+	}
 	// LiquidBlockContainer: a water bucket emptied onto a slab, stair, fence,
 	// sign or any other waterloggable block fills THAT block instead of the
 	// cell beside it. Without this the water went next door and the slab

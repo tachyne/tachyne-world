@@ -84,7 +84,7 @@ var mobBoxes = map[int]mobBox{
 	entityPolarBear: {1.4, 1.4}, entityPufferfish: {0.7, 0.7}, entityRabbit: {0.49, 0.6},
 	entityRavager: {1.95, 2.2}, entitySalmon: {0.7, 0.4}, entitySheep: {0.9, 1.3},
 	entityShulker: {1, 1}, entitySilverfish: {0.4, 0.3}, entitySkeleton: {0.6, 1.99},
-	entitySkeletonHorse: {1.3964844, 1.6}, entitySlime: {0.52, 0.52},
+	entitySkeletonHorse: {1.3964844, 1.6}, entitySlime: {0.52, 0.52}, entitySulfurCube: {0.49, 0.49},
 	entitySniffer: {1.9, 1.75}, entitySnowGolem: {0.7, 1.9}, entitySpider: {1.4, 0.9},
 	entitySquid: {0.8, 0.8}, entityStray: {0.6, 1.99}, entityStrider: {0.9, 1.7},
 	entityTadpole: {0.4, 0.3}, entityTraderLlama: {0.9, 1.87},
@@ -109,7 +109,7 @@ func (m *mob) box() mobBox {
 		b = defaultMobBox
 	}
 	switch {
-	case m.etype == entitySlime || m.etype == entityMagmaCube:
+	case m.etype == entitySlime || m.etype == entityMagmaCube || m.etype == entitySulfurCube:
 		// AbstractCubeMob.getDefaultDimensions: the registered box scaled by
 		// the cube's size, so a big slime really is a big box.
 		if s := float64(m.size); s > 0 {

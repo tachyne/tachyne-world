@@ -216,6 +216,11 @@ var speciesTable = map[int]*speciesDef{
 	// copper block + carved pumpkin (see coppergolem.go). Wanders; later sorts
 	// items between copper and wooden chests and oxidizes into a statue. Renders
 	// as a Frog on pre-1.21.9 clients (entity substitution guard).
+	// sulfur_cube (26.3): a MONSTER-category cube that never attacks. Its
+	// health and speed follow its size (applyCubeSize: 4/size, 0.2+0.1×size),
+	// so the row's numbers are the grown cube's; everything else is
+	// sulfurcube.go. Its loot table is empty — it drops only what it swallowed.
+	entitySulfurCube: {name: "sulfur_cube", health: 8, speed: 0.4, arch: archPassive, quiet: true}, // no ambient voice
 	entityCopperGolem: {name: "copper_golem", health: 12, speed: 0.20, arch: archPassive,
 		xp: xpNone}, // MOVEMENT_SPEED 0.2, MAX_HEALTH 12 (vanilla CopperGolem.createAttributes)
 

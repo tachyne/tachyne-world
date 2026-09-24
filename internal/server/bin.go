@@ -359,6 +359,13 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// config: power 0.5) and climbs from there.
 		r := h.spawnRocket(players, pos.dim, fx, fy, fz, 0, *st)
 		r.vx, r.vy, r.vz = float64(dx)*0.5, float64(dy)*0.5, float64(dz)*0.5
+	case dispense && item == itemSulfurCubeBucket:
+		// The sulfur cube bucket holds no fluid: only the cube comes out.
+		took = false
+		if ts := w.At(front.x, front.y, front.z); ts == worldgen.Air || worldgen.IsReplaceable(ts) || worldgen.IsWater(ts) {
+			h.releaseSulfurBucket(players, pos.dim, *st, front.x, front.y, front.z)
+			*st = invStack{item: itemBucket, count: 1}
+		}
 	case dispense && isMobBucket(item):
 		// A mob bucket pours its water and its passenger into the cell ahead
 		// and leaves an empty bucket (DispensibleContainerItem.emptyContents).

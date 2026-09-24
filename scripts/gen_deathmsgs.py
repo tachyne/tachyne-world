@@ -25,7 +25,7 @@ import json
 import os
 import zipfile
 
-VERSION = canon.DATA  # behaviour data: canon.py
+VERSION = canon.VERSION  # the canonical content version (the damage types are its: gen_damagetags.py)
 JAR = os.path.expanduser(f"~/vanilla/server-{VERSION}.jar")
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -13,7 +13,7 @@ var mobEyeHeights = map[string]float64{
 	"magma_cube": 0.325, "mooshroom": 1.3, "mule": 1.52, "nautilus": 0.2751, "parched": 1.74,
 	"parrot": 0.54, "phantom": 0.175, "piglin": 1.79, "piglin_brute": 1.79, "pufferfish": 0.455,
 	"salmon": 0.26, "sheep": 1.235, "shulker": 0.5, "silverfish": 0.13, "skeleton": 1.74,
-	"skeleton_horse": 1.52, "slime": 0.325, "sniffer": 1.05, "snow_golem": 1.7, "spider": 0.65,
+	"skeleton_horse": 1.52, "slime": 0.325, "sniffer": 1.05, "sulfur_cube": 0.175, "snow_golem": 1.7, "spider": 0.65,
 	"squid": 0.4, "stray": 1.74, "tadpole": 0.195, "trader_llama": 1.7765, "tropical_fish": 0.26,
 	"vex": 0.51875, "villager": 1.62, "wandering_trader": 1.62, "witch": 1.62,
 	"wither_skeleton": 2.1, "wolf": 0.68, "zombie": 1.74, "zombie_horse": 1.52,
@@ -25,7 +25,7 @@ var mobEyeHeights = map[string]float64{
 func mobEyeHeight(m *mob) float64 {
 	if e, ok := mobEyeHeights[entityNameByID[m.etype]]; ok {
 		switch {
-		case m.etype == entitySlime || m.etype == entityMagmaCube:
+		case m.etype == entitySlime || m.etype == entityMagmaCube || m.etype == entitySulfurCube:
 			if m.size > 0 {
 				e *= float64(m.size)
 			}

@@ -16,6 +16,7 @@ const (
 	tagBurnFromStepping
 	tagBurnsArmorStands
 	tagBypassesArmor
+	tagBypassesCooldown
 	tagBypassesEffects
 	tagBypassesEnchantments
 	tagBypassesInvulnerability
@@ -37,8 +38,10 @@ const (
 	tagNoAnger
 	tagNoImpact
 	tagNoKnockback
+	tagNoWolfRetaliation
 	tagPanicCauses
 	tagPanicEnvironmentalCauses
+	tagSulfurCubeWithBlockImmuneTo
 	tagWitchResistantTo
 	tagWitherImmuneTo
 )
@@ -91,6 +94,7 @@ const (
 	dtStalagmite
 	dtStarve
 	dtSting
+	dtSulfurCubeHot
 	dtSweetBerryBush
 	dtThorns
 	dtThrown
@@ -145,6 +149,7 @@ var dmgTypeNames = [...]string{
 	dtStalagmite:           "stalagmite",
 	dtStarve:               "starve",
 	dtSting:                "sting",
+	dtSulfurCubeHot:        "sulfur_cube_hot",
 	dtSweetBerryBush:       "sweet_berry_bush",
 	dtThorns:               "thorns",
 	dtThrown:               "thrown",
@@ -157,53 +162,55 @@ var dmgTypeNames = [...]string{
 
 // dmgTypeTags is the tag set of each damage type.
 var dmgTypeTags = [...]dmgTag{
-	dtArrow:                tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses,
-	dtBadRespawnPoint:      tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagNoKnockback,
-	dtCactus:               tagBypassesShield | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
+	dtArrow:                tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtBadRespawnPoint:      tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagNoKnockback | tagSulfurCubeWithBlockImmuneTo,
+	dtCactus:               tagBypassesShield | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtCampfire:             tagBurnFromStepping | tagBypassesShield | tagIgnitesArmorStands | tagIsFire | tagNoKnockback,
 	dtCramming:             tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
 	dtDragonBreath:         tagBypassesArmor | tagBypassesShield | tagNoKnockback | tagPanicCauses,
 	dtDrown:                tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagIsDrowning | tagNoImpact | tagNoKnockback | tagWitherImmuneTo,
-	dtDryOut:               tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
+	dtDryOut:               tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback | tagSulfurCubeWithBlockImmuneTo,
 	dtEnderPearl:           tagBypassesArmor | tagBypassesShield | tagIsFall | tagNoKnockback,
-	dtExplosion:            tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagNoKnockback | tagPanicCauses,
-	dtFall:                 tagBypassesArmor | tagBypassesShield | tagIsFall | tagNoKnockback,
-	dtFallingAnvil:         tagBypassesShield | tagDamagesHelmet,
-	dtFallingBlock:         tagDamagesHelmet,
-	dtFallingStalactite:    tagBypassesShield | tagDamagesHelmet,
+	dtExplosion:            tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagNoKnockback | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtFall:                 tagBypassesArmor | tagBypassesShield | tagIsFall | tagNoKnockback | tagSulfurCubeWithBlockImmuneTo,
+	dtFallingAnvil:         tagBypassesShield | tagDamagesHelmet | tagSulfurCubeWithBlockImmuneTo,
+	dtFallingBlock:         tagDamagesHelmet | tagSulfurCubeWithBlockImmuneTo,
+	dtFallingStalactite:    tagBypassesShield | tagDamagesHelmet | tagSulfurCubeWithBlockImmuneTo,
 	dtFireball:             tagAlwaysKillsArmorStands | tagIsFire | tagIsProjectile | tagPanicCauses,
-	dtFireworks:            tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagPanicCauses,
+	dtFireworks:            tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagIsExplosion | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtFlyIntoWall:          tagBypassesArmor | tagBypassesShield | tagNoKnockback,
-	dtFreeze:               tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagIsFreezing | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
+	dtFreeze:               tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagIsFreezing | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtGeneric:              tagBypassesArmor | tagBypassesShield | tagNoKnockback,
 	dtGenericKill:          tagBypassesArmor | tagBypassesInvulnerability | tagBypassesResistance | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
-	dtHotFloor:             tagBurnFromStepping | tagBypassesShield | tagIsFire | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
+	dtHotFloor:             tagBurnFromStepping | tagBypassesShield | tagIsFire | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtInFire:               tagBypassesShield | tagIgnitesArmorStands | tagIsFire | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
 	dtInWall:               tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
 	dtIndirectMagic:        tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagPanicCauses | tagWitchResistantTo,
 	dtLava:                 tagBypassesShield | tagIsFire | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
 	dtLightningBolt:        tagBypassesShield | tagIsLightning | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
-	dtMaceSmash:            tagCanBreakArmorStand | tagIsPlayerAttack | tagMaceSmash | tagPanicCauses,
+	dtMaceSmash:            tagCanBreakArmorStand | tagIsPlayerAttack | tagMaceSmash | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtMagic:                tagAlwaysTriggersSilverfish | tagAvoidsGuardianThorns | tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback | tagPanicCauses | tagWitchResistantTo,
-	dtMobAttack:            tagPanicCauses,
-	dtMobAttackNoAggro:     tagNoAnger,
-	dtMobProjectile:        tagIsProjectile | tagPanicCauses,
+	dtMobAttack:            tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtMobAttackNoAggro:     tagNoAnger | tagSulfurCubeWithBlockImmuneTo,
+	dtMobProjectile:        tagIsProjectile | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtOnFire:               tagBurnsArmorStands | tagBypassesArmor | tagBypassesShield | tagIsFire | tagNoKnockback | tagPanicCauses | tagPanicEnvironmentalCauses,
 	dtOutOfWorld:           tagAlwaysMostSignificantFall | tagBypassesArmor | tagBypassesInvulnerability | tagBypassesResistance | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
 	dtOutsideBorder:        tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
-	dtPlayerAttack:         tagCanBreakArmorStand | tagIsPlayerAttack | tagPanicCauses,
-	dtPlayerExplosion:      tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagCanBreakArmorStand | tagIsExplosion | tagNoKnockback | tagPanicCauses,
+	dtPlayerAttack:         tagCanBreakArmorStand | tagIsPlayerAttack | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtPlayerExplosion:      tagAlwaysHurtsEnderDragons | tagAvoidsGuardianThorns | tagCanBreakArmorStand | tagIsExplosion | tagNoKnockback | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtSonicBoom:            tagBypassesArmor | tagBypassesEnchantments | tagBypassesShield | tagPanicCauses | tagWitchResistantTo,
-	dtSpear:                tagCanBreakArmorStand | tagIsPlayerAttack | tagNoKnockback | tagPanicCauses,
-	dtStalagmite:           tagBypassesArmor | tagBypassesShield | tagIsFall | tagNoKnockback,
+	dtSpear:                tagCanBreakArmorStand | tagIsPlayerAttack | tagNoKnockback | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtSpit:                 tagSulfurCubeWithBlockImmuneTo,
+	dtStalagmite:           tagBypassesArmor | tagBypassesShield | tagIsFall | tagNoKnockback | tagSulfurCubeWithBlockImmuneTo,
 	dtStarve:               tagBypassesArmor | tagBypassesEffects | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback,
-	dtSting:                tagPanicCauses,
-	dtSweetBerryBush:       tagBypassesShield | tagNoKnockback,
+	dtSting:                tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtSulfurCubeHot:        tagBurnFromStepping | tagBypassesShield | tagIsFire | tagNoKnockback | tagNoWolfRetaliation | tagPanicCauses | tagPanicEnvironmentalCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtSweetBerryBush:       tagBypassesShield | tagNoKnockback | tagSulfurCubeWithBlockImmuneTo,
 	dtThorns:               tagAvoidsGuardianThorns | tagBypassesWolfArmor | tagWitchResistantTo,
-	dtThrown:               tagIsProjectile | tagPanicCauses,
-	dtTrident:              tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses,
+	dtThrown:               tagIsProjectile | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
+	dtTrident:              tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtUnattributedFireball: tagIsFire | tagIsProjectile | tagPanicCauses,
-	dtWindCharge:           tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses,
+	dtWindCharge:           tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses | tagSulfurCubeWithBlockImmuneTo,
 	dtWither:               tagBypassesArmor | tagBypassesShield | tagBypassesWolfArmor | tagNoKnockback | tagPanicCauses,
 	dtWitherSkull:          tagAlwaysKillsArmorStands | tagIsProjectile | tagPanicCauses,
 }
@@ -237,6 +244,7 @@ var dmgTypeExhaustion = [...]float32{
 	dtSpear:                0.1,
 	dtSpit:                 0.1,
 	dtSting:                0.1,
+	dtSulfurCubeHot:        0.1,
 	dtSweetBerryBush:       0.1,
 	dtThorns:               0.1,
 	dtThrown:               0.1,
@@ -258,6 +266,7 @@ var dmgTypeHurtSound = [...]string{
 	dtInFire:               "minecraft:entity.player.hurt_on_fire",
 	dtLava:                 "minecraft:entity.player.hurt_on_fire",
 	dtOnFire:               "minecraft:entity.player.hurt_on_fire",
+	dtSulfurCubeHot:        "minecraft:entity.player.hurt_on_fire",
 	dtSweetBerryBush:       "minecraft:entity.player.hurt_sweet_berry_bush",
 	dtUnattributedFireball: "minecraft:entity.player.hurt_on_fire",
 }
@@ -318,6 +327,7 @@ var dmgTypeScaling = [...]dmgScaling{
 	dtStalagmite:           scaleWhenLivingNonPlayer,
 	dtStarve:               scaleWhenLivingNonPlayer,
 	dtSting:                scaleWhenLivingNonPlayer,
+	dtSulfurCubeHot:        scaleWhenLivingNonPlayer,
 	dtSweetBerryBush:       scaleWhenLivingNonPlayer,
 	dtThorns:               scaleWhenLivingNonPlayer,
 	dtThrown:               scaleWhenLivingNonPlayer,

@@ -134,6 +134,21 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **The sulfur cube.** 26.3's block-swallowing cube is in the game. Empty,
+  it hops about like a slime and never attacks: size 2 grown, size 1 as a
+  baby (a slime ball helps it grow), 4 health per size, and it dies into
+  two babies. Hand it a block — or throw one near it — and it swallows it
+  and turns into a ball. The block's archetype decides how it bounces,
+  slides, drags and floats and how far a hit or a push sends it, and blows
+  knock it about instead of hurting it. A swallowed TNT lights from flint
+  and steel, a fire charge, fire, a burning arrow or a redstone signal
+  (short from a blast) and goes off 6 seconds later with a power-3
+  explosion. A swallowed magma block burns whatever touches it. Shears pop
+  the block back out, and an empty bucket scoops the cube, block and all.
+  Giving one TNT, or letting it take TNT you threw, earns Uh Oh. It spawns
+  in the sulfur caves' pool, but that biome is not generated yet, so for
+  now it comes from spawn eggs, `/summon` and buckets. 26.2 clients see it
+  too (26.2 already knew the mob), and Bedrock shows its block.
 - **Boats seat two, and pick up mobs.** An empty boat takes aboard a
   villager, goat or other mob that bumps into it, the vanilla way to move
   villagers about. You can climb in beside it. Mobs as wide as a boat

@@ -115,6 +115,15 @@ func slimeSpeed(size int) float64 {
 // Every place that assigns a size has to call this — which is the point of
 // having it in one function rather than four half-copies.
 func (m *mob) applyCubeSize() {
+	if m.etype == entitySulfurCube {
+		// SulfurCube.setCubeMobHealth: four per size, not size squared; and
+		// it has no attack at all (canDealDamage is false).
+		m.setMaxHP(4 * m.size)
+		m.health = m.maxHP()
+		m.setMoveSpeed(slimeSpeed(m.size))
+		m.setAttackDamage(0)
+		return
+	}
 	m.setMaxHP(m.size * m.size)
 	m.health = m.maxHP()
 	m.setMoveSpeed(slimeSpeed(m.size))

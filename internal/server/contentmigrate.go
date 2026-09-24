@@ -83,7 +83,7 @@ var (
 )
 
 // stackItemCols are the stackRow columns that hold item ids (packStack).
-var stackItemCols = []int{0, 32, 33, 34, 35}
+var stackItemCols = []int{0, 32, 33, 34, 35, 36}
 
 // walk rewrites every id reachable from v, which must be addressable.
 func (m *contentMigrator) walk(v reflect.Value) {

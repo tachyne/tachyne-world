@@ -179,6 +179,9 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			if m.growLeft -= survivalTickN; m.growLeft <= 0 {
 				m.baby = false
 				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, false)))
+				if m.etype == entitySulfurCube {
+					h.sulfurGrewUp(players, m) // ageBoundaryReached: size 2 again
+				}
 				if m.etype == entityTurtle {
 					// Turtle.ageBoundaryReached drops gameplay/turtle_grow —
 					// the only source of turtle scute in the game.

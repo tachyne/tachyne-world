@@ -111,6 +111,13 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		b := om.box()
 		exposure := h.seenPercent(dim, cx, cy, cz, om.x-b.w/2, om.y, om.z-b.w/2, om.x+b.w/2, om.y+b.h, om.z+b.w/2)
 		impact := explosionImpact(power, cx, cy, cz, om.x, om.y, om.z, exposure)
+		if om.hasBody() {
+			// A sulfur cube's block: the blast lights TNT short and does no
+			// damage, and the shove is three-dimensional, as vanilla's is.
+			om.hurtKind(explosionDamage(power, impact), dt)
+			h.cubeBlastPush(om, cx, cy, cz, impact)
+			continue
+		}
 		om.hurtKind(explosionDamage(power, impact), dt)
 		if om.health <= 0 {
 			h.killMob(players, om)

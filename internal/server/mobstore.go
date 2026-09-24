@@ -161,6 +161,13 @@ type savedMob struct {
 	// nothing tied to it.
 	LeashPos *[3]int `json:"leash,omitempty"`
 
+	// Sulfur cube: the swallowed block (nil = none), a lit fuse's ticks left
+	// plus one (0 = unlit) and the fuse it was lit with, and the pickup timer.
+	CubeBody    *stackRow `json:"cube,omitempty"`
+	CubeFuse    int       `json:"cfuse,omitempty"`
+	CubeMaxFuse int       `json:"cmaxfuse,omitempty"`
+	CubePickup  int       `json:"cpick,omitempty"`
+
 	Tamed     bool    `json:"tame,omitempty"`
 	Sitting   bool    `json:"sit,omitempty"`
 	OwnerUUID string  `json:"owner,omitempty"`
@@ -757,6 +764,16 @@ func toSavedMob(m *mob) savedMob {
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])
+	}
+	if m.etype == entitySulfurCube {
+		if m.cube.body.item != 0 {
+			r := packStack(m.cube.body)
+			sm.CubeBody = &r
+		}
+		if m.cube.lit {
+			sm.CubeFuse, sm.CubeMaxFuse = m.cube.fuse+1, m.cube.maxFuse
+		}
+		sm.CubePickup = m.cube.pickup
 	}
 	if m.held != 0 {
 		sm.HeldSt = packStack(m.heldStack()) // its enchantments, wear and count

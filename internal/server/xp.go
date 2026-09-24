@@ -277,6 +277,8 @@ func xpBaseForMob(m *mob, rng func(int) int) int {
 		return 1 + rng(3) // Animal: 1-3
 	case entitySlime, entityMagmaCube:
 		return m.size // Slime: xpReward = size (4/2/1 as it splits down)
+	case entitySulfurCube:
+		return sulfurXP(m, rng)
 	case entityBlaze:
 		return 10
 	case entityIronGolem, entityVillager:

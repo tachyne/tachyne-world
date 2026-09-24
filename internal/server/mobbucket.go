@@ -42,6 +42,10 @@ func init() {
 	add(entityTropicalFish, "tropical_fish_bucket", "fish", "fish")
 	add(entityAxolotl, "axolotl_bucket", "axolotl", "axolotl")
 	add(entityTadpole, "tadpole_bucket", "tadpole", "tadpole")
+	// The sulfur cube bucket is scooped with an EMPTY bucket and pours no
+	// fluid, so its two ends are sulfurcube.go's; it is listed here so the
+	// use routing knows it for a mob bucket.
+	add(entitySulfurCube, "sulfur_cube_bucket", "sulfur_cube", "sulfur_cube")
 }
 
 // isMobBucket reports whether an item is one of the six mob buckets.

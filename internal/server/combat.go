@@ -285,6 +285,17 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.weak", sndPlayer, m.x, m.y, m.z, 1, 1)
 	}
 
+	// A sulfur cube carrying a block is a ball: the blow goes through its own
+	// knockback model (and, mostly, its immunity) rather than the mob's.
+	if m.hasBody() && t != nil {
+		dt := dtPlayerAttack
+		if smash {
+			dt = dtMaceSmash
+		}
+		h.cubeStruckByPlayer(players, m, t, float64(dmg), dt)
+		return
+	}
+
 	// Real knockback: shove the mob away from the attacker (server physics —
 	// the impulse rides out uncapped for a few updates). Sprinting hits harder.
 	if t != nil {
@@ -506,6 +517,9 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	if m.etype == entitySlime || m.etype == entityMagmaCube {
 		h.splitSlime(players, m) // halves pop out
 	}
+	if m.etype == entitySulfurCube {
+		h.splitSulfurCube(players, m) // two babies, unless its fuse was burning
+	}
 
 	// Roll everything the death yields FIRST, so the plugin death event can
 	// mutate the drop list and XP before anything hits the ground.
@@ -547,6 +561,9 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		}
 		if m.offhand.item != 0 {
 			drops = append(drops, plugin.ItemStack{Item: m.offhand.item, Count: m.offhand.count})
+		}
+		if m.hasBody() { // setItemSlotAndDropWhenKilled: the swallowed block always comes back
+			dropGear(m.cube.body)
 		}
 		if m.frogEaten > 0 {
 			// Eaten by a frog (the magma_cube loot table's frog branch): a

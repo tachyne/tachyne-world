@@ -150,3 +150,20 @@ func (h *hub) tryPoisonParrot(players map[int32]*tracked, t *tracked, m *mob) bo
 	h.hurtMobOf(players, m, math.MaxFloat32, dtPlayerAttack)
 	return true
 }
+
+// interactMob is a right-click on a mob in reach (Mob.interact): each
+// species' own interaction is tried in turn, and the first that takes the
+// click raises player_interacted_with_entity with the item that was in hand
+// before it (PlayerInteractTrigger reads the stack as it was).
+func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak bool) bool {
+	held := heldStack(t).item
+	if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.trySulfurCube(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+		h.tryHorseScreen(players, t, m, sneak) || h.tryHappyGhast(players, t, m) ||
+		h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
+		h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
+		h.tryBrush(players, t, m) || h.tryWolfArmor(players, t, m) || h.tryAllay(players, t, m) || h.tryBarter(players, t, m) || h.tryFeedDolphin(players, t, m) || h.tryIgniteCreeper(players, t, m) || h.tryRepairGolem(players, t, m) || h.tryPoisonParrot(players, t, m) || h.tryShearOther(players, t, m) || h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
+		h.advance(players, t, "player_interacted_with_entity", advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held, variant: advVariantName(m)})
+		return true
+	}
+	return false
+}

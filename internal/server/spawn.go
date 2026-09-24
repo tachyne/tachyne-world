@@ -137,6 +137,8 @@ func mobSpawnCategory(m *mob) int {
 		return catUndergroundWater
 	case entityCod, entitySalmon, entityTropicalFish, entityPufferfish:
 		return catWaterAmbient
+	case entitySulfurCube:
+		return catMonster // MobCategory.MONSTER, though it never hunts
 	}
 	if m.hostile {
 		return catMonster
@@ -469,6 +471,8 @@ func (h *hub) spawnRulesOK(dim, cat, etype, x, y, z int, sky, block uint8) bool 
 		return h.rules.Difficulty != diffPeaceful && h.rng.Intn(20) == 0
 	case entityMagmaCube, entityBlaze: // checkMagmaCubeSpawnRules / checkAnyLightMonsterSpawnRules
 		return h.rules.Difficulty != diffPeaceful
+	case entitySulfurCube: // checkSulfurCubeSpawnRules: always — any light, any difficulty
+		return true
 	case entityZombifiedPiglin, entityPiglin, entityHoglin: // never on a nether wart block, any light
 		return h.rules.Difficulty != diffPeaceful && w.At(x, y-1, z) != worldgen.NetherWartBlock
 	case entityStrider: // Strider.checkStriderSpawnRules: air above the lava column
@@ -572,6 +576,15 @@ func isSlimeChunk(seed int64, cx, cz int32) bool {
 func (h *hub) spawnNatural(players map[int32]*tracked, dim, cat, etype, x, y, z int) {
 	fx, fy, fz := float64(x)+0.5, float64(y), float64(z)+0.5
 	switch {
+	case etype == entitySulfurCube: // a monster that is no hunter: its own setup, never the hostile stance
+		// AgeableMob.finalizeSpawn's group data, then setSpawnSize: after the
+		// first of a pack, one in twenty is born a baby, and a baby is size 1.
+		if m := h.spawnSulfurCube(players, dim, fx, fy, fz, false); m != nil {
+			h.rollPackBaby(players, m)
+			if m.baby {
+				h.initSulfurCube(m, true)
+			}
+		}
 	case dim == dimNether && netherConfigured(etype): // the nether's own kit (piglin family, cubes, blazes, ghasts, striders)
 		m := h.spawnMobIn(players, etype, dim, fx, fy, fz)
 		h.configureNetherMob(players, m)
@@ -737,6 +750,8 @@ func (h *hub) requiresCustomPersistence(m *mob) bool {
 		return m.tamed
 	case entityEnderman:
 		return m.carriedBlock != 0
+	case entitySulfurCube:
+		return m.hasBody() // SulfurCube: a cube carrying a block stays
 	}
 	return (isIllager(m.etype) || m.etype == entityRavager || m.etype == entityWitch) && m.raidCenter != (blockPos{})
 }

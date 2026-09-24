@@ -509,6 +509,10 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
 			return true
 		}
+		if m.hasBody() { // a sulfur cube's block: its own knockback, a burning arrow lights TNT
+			h.cubeStruckByProjectile(players, a, m, float64(projectileHitDamage(a, m)), projectileDamageOf(a))
+			return true
+		}
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
 			if a.playerShot {
 				m.hitByPlayer = true

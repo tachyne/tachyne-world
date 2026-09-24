@@ -82,6 +82,9 @@ func canBeLeashed(m *mob) bool {
 	if m == nil || m.dying > 0 || m.hostile || isEnemyType(m.etype) {
 		return false
 	}
+	if m.etype == entitySulfurCube {
+		return m.hasBody() // SulfurCube.canBeLeashed: only a cube carrying a block
+	}
 	return !noLeashSpecies[m.etype]
 }
 
@@ -271,6 +274,12 @@ func (h *hub) updateLeashes(players map[int32]*tracked) {
 		// angular momentum; this is its translational half, which is the part
 		// that actually drags a mob along behind you.
 		pull := (d - leashElasticDist) * leashStiffness
+		if m.hasBody() && d > 1e-6 { // a sulfur cube's ball is towed through its own motion
+			m.cube.vx += (hx - m.x) / d * pull
+			m.cube.vy += (hy - m.y) / d * pull
+			m.cube.vz += (hz - m.z) / d * pull
+			continue
+		}
 		if d > 1e-6 {
 			m.vx += (hx - m.x) / d * pull
 			m.vz += (hz - m.z) / d * pull

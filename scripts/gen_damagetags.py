@@ -13,9 +13,10 @@ wrong things, so they are generated from the vanilla data instead.
 Tag values may reference OTHER tags (bypasses_shield contains #bypasses_armor),
 so references are resolved transitively before the bits are emitted.
 
-Reads the canonical server jar's built-in datapack — no network. Behaviour is
-audited against the newest tree, but these tags are identical there bar one
-entry for content that does not exist canonically, so canonical wins.
+Reads the canonical version's server jar (canon.VERSION) — no network. It
+read the behaviour-data jar (canon.DATA, 1.21.11) until the sulfur cube
+landed: 26.3 adds the sulfur_cube_hot type and the tag of what a cube
+carrying a block shrugs off, and the rest of the set is unchanged.
 
 Run from the repo root:  python3 scripts/gen_damagetags.py
 
@@ -27,7 +28,7 @@ import json
 import os
 import zipfile
 
-VERSION = canon.DATA  # behaviour data: canon.py
+VERSION = canon.VERSION  # the canonical content version: canon.py
 JAR = os.path.expanduser(f"~/vanilla/server-{VERSION}.jar")
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

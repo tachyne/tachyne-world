@@ -29,7 +29,16 @@ TAGS = {
               "sword_efficient", "sword_instantly_mines", "shears_extreme_breaking_speed",
               "shears_major_breaking_speed", "shears_minor_breaking_speed"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
-             "piglin_loved", "piglin_safe_armor"],  # piglin.go: admire, barter, distract_piglin
+             "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
+             # sulfurcube.go: what a sulfur cube swallows, what a baby eats,
+             # and which archetype each swallowed block gives it.
+             "sulfur_cube_food", "sulfur_cube_swallowable",
+             "sulfur_cube_archetype/bouncy", "sulfur_cube_archetype/regular",
+             "sulfur_cube_archetype/slow_bouncy", "sulfur_cube_archetype/slow_flat",
+             "sulfur_cube_archetype/fast_flat", "sulfur_cube_archetype/light",
+             "sulfur_cube_archetype/fast_sliding", "sulfur_cube_archetype/slow_sliding",
+             "sulfur_cube_archetype/sticky", "sulfur_cube_archetype/high_resistance",
+             "sulfur_cube_archetype/explosive", "sulfur_cube_archetype/hot"],
 }
 
 z = canon.inner_jar()

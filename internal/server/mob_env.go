@@ -215,7 +215,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			}
 			continue
 		}
-		if worldgen.HoldsWater(head) && !waterBreathers[m.etype] {
+		if worldgen.HoldsWater(head) && !waterBreathers[m.etype] && !m.hasBody() { // a cube carrying a block breathes underwater
 			m.submerged++
 			if _, ok := waterConvert[m.etype]; ok {
 				if m.submerged >= drownConvertSecs {

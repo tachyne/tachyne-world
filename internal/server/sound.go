@@ -147,6 +147,10 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 		if m.size == 1 {
 			hurt, death = hurt+"_small", death+"_small"
 		}
+	case entitySulfurCube: // SulfurCube.getHurtSound/getDeathSound: the tiny one is its own event
+		if m.size <= 1 {
+			hurt, death = "minecraft:entity.small_sulfur_cube.hurt", "minecraft:entity.small_sulfur_cube.death"
+		}
 	case entityCreaking:
 		hurt = "minecraft:entity.creaking.sway" // Creaking.getHurtSound
 	case entityTurtle:

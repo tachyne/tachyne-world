@@ -13,15 +13,15 @@ func TestAdv263Table(t *testing.T) {
 	if len(advTable) != 126 {
 		t.Errorf("advTable has %d advancements, 26.3 has 126", len(advTable))
 	}
-	// uh_oh needs a sulfur cube, which the engine does not have: visible in
-	// the tree, unobtainable, and never indexed for matching.
+	// uh_oh needs a sulfur cube, which the engine has had since 2026-09-24:
+	// both criteria are live and name an adult cube and TNT.
 	n := advByID["minecraft:husbandry/uh_oh"]
 	if n == nil || n.display == nil {
 		t.Fatal("husbandry/uh_oh missing or undisplayed")
 	}
 	for _, c := range n.criteria {
-		if !c.unmatchable || c.entity != "sulfur_cube" {
-			t.Errorf("uh_oh/%s: unmatchable=%v entity=%q", c.name, c.unmatchable, c.entity)
+		if c.unmatchable || c.entity != "sulfur_cube" || !c.hasBaby || c.baby != 0 {
+			t.Errorf("uh_oh/%s: unmatchable=%v entity=%q baby=%v/%d", c.name, c.unmatchable, c.entity, c.hasBaby, c.baby)
 		}
 	}
 	for _, ref := range advByTrigger["location"] {

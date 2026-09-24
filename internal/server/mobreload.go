@@ -86,6 +86,16 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.saddled = sm.Saddled
 	m.saddleSt, m.armorSt = unpackStack(sm.SaddleSt), unpackStack(sm.ArmorSt)
 	m.carry, m.dupCD, m.sniffCD = unpackStack(sm.Carry), sm.DupCD, sm.SniffCD
+	if m.etype == entitySulfurCube {
+		m.cube.maxFuse = -1
+		if sm.CubeBody != nil {
+			h.setCubeBody(players, m, unpackStack(*sm.CubeBody)) // the archetype's modifiers go back on
+		}
+		if sm.CubeFuse > 0 {
+			m.cube.lit, m.cube.fuse, m.cube.maxFuse = true, sm.CubeFuse-1, sm.CubeMaxFuse
+		}
+		m.cube.pickup = sm.CubePickup
+	}
 	for _, r := range sm.Hoard {
 		m.hoard = append(m.hoard, unpackStack(r))
 	}

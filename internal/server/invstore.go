@@ -107,7 +107,7 @@ func newInvStore(path string) *invStore {
 // name, repairCost and instrument existed on invStack but never reached the
 // row, so every rollout turned potions into water bottles, stripped anvil
 // names, reset the prior-work cost and made every goat horn play ponder.
-type stackRow [36]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds; older rows load with the tail zero
+type stackRow [38]int32 // 28 → 30 on 2026-09-19 for enchantments 5-8, 32 on 2026-09-20 for a firework's flight and bursts, 36 for a pot's four sherds, 38 on 2026-09-24 for a sulfur cube bucket's block and age; older rows load with the tail zero
 
 func packStack(st invStack) stackRow {
 	r := stackRow{st.item, int32(st.count), int32(st.dmg), packEnch(st.ench), st.mapID}
@@ -136,6 +136,8 @@ func packStack(st invStack) stackRow {
 	r[30] = int32(st.flight)     // a rocket's flight duration (column 30)
 	r[31] = st.starID            // a firework's bursts (column 31)
 	copy(r[32:36], st.sherds[:]) // a decorated pot's four faces (columns 32-35)
+	r[36] = st.cube.item         // a sulfur cube bucket's swallowed block (column 36)
+	r[37] = st.cube.age          // …and the cube's age (column 37)
 	return r
 }
 
@@ -160,6 +162,7 @@ func unpackStack(r stackRow) invStack {
 	st.flight = int8(r[30])
 	st.starID = r[31]
 	copy(st.sherds[:], r[32:36])
+	st.cube = cubeContent{item: r[36], age: r[37]}
 	return st
 }
 
