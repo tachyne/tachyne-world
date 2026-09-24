@@ -199,7 +199,7 @@ func (h *hub) primeCart(players map[int32]*tracked, v *vehicle, fuse int) {
 // of speed (capped at five), and the blast leaves the rails alone. With
 // tnt_explodes off a lit cart just goes and an unlit one stays. It reports
 // whether the cart is gone.
-func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float64) bool {
+func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float64, causer int32) bool {
 	if !h.rules.TNTExplodes && v.fuse < 0 {
 		return false
 	}
@@ -216,8 +216,11 @@ func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float
 	}
 	speed := math.Min(math.Sqrt(speedSqr), 5)
 	power := 4 + h.rng.Float64()*1.5*speed
+	// DamageSources.explosion(cart, whoever lit it): theirs to answer for.
+	by, cause := h.blastCauseOf(players, causer)
 	h.blastSpareRails = true
-	h.explodeIn(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), power, blastTNT, withHiveRelease())
+	h.explodeBy(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), power, blastTNT, by,
+		withHiveRelease(), withBlastDirect(entityTntMinecart), cause)
 	h.blastSpareRails = false
 	return true
 }
@@ -234,14 +237,14 @@ func (h *hub) tickSpecialCart(players map[int32]*tracked, v *vehicle) bool {
 		if v.fuse > 0 {
 			v.fuse--
 			h.spawnParticles(players, v.dim, particleSmoke, v.x, v.y+0.5, v.z, 0, 0, 1)
-		} else if v.fuse == 0 && h.explodeCart(players, v, v.vx*v.vx+v.vz*v.vz) {
+		} else if v.fuse == 0 && h.explodeCart(players, v, v.vx*v.vx+v.vz*v.vz, v.igniter) {
 			return false
 		}
-		if v.hitWall && v.hitSpeedSqr >= 0.01 && h.explodeCart(players, v, v.hitSpeedSqr) {
+		if v.hitWall && v.hitSpeedSqr >= 0.01 && h.explodeCart(players, v, v.hitSpeedSqr, v.igniter) {
 			return false
 		}
 		if v.landedFall >= 3 { // causeFallDamage: a drop of three or more sets it off
-			if p := v.landedFall / 10; h.explodeCart(players, v, p*p) {
+			if p := v.landedFall / 10; h.explodeCart(players, v, p*p, v.igniter) {
 				return false
 			}
 		}

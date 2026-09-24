@@ -18,8 +18,10 @@ import (
 type vehHit struct {
 	dmg float64
 	dt  dmgType
-	// by is the causing player (DamageSource.getEntity), nil when none.
-	by *tracked
+	// by is the causing player (DamageSource.getEntity), nil when none;
+	// causer is that causing entity's eid whether player or mob.
+	by     *tracked
+	causer int32
 	// proj is the direct entity when it is a projectile.
 	proj *arrowEntity
 }
@@ -43,7 +45,7 @@ func (h *hub) damageVehicle(players map[int32]*tracked, v *vehicle, src vehHit) 
 		// MinecartTNT.hurtServer: a burning arrow sets it off on the spot,
 		// the blast growing with the arrow's speed.
 		a := src.proj
-		h.explodeCart(players, v, a.vx*a.vx+a.vy*a.vy+a.vz*a.vz)
+		h.explodeCart(players, v, a.vx*a.vx+a.vy*a.vy+a.vz*a.vz, src.causer)
 		if h.vehicles[v.eid] != v {
 			return false
 		}
@@ -90,7 +92,7 @@ func (src vehHit) ignitesTNT() bool {
 // random fuse instead of dropping (MinecartTNT.destroy).
 func (h *hub) destroyVehicle(players map[int32]*tracked, v *vehicle, src vehHit) {
 	if v.etype == entityTntMinecart && (src.ignitesTNT() || v.vx*v.vx+v.vz*v.vz >= 0.01) {
-		h.lightBrokenCart(players, v)
+		h.lightBrokenCart(players, v, src.causer)
 		return
 	}
 	h.breakVehicle(players, v)
@@ -98,9 +100,12 @@ func (h *hub) destroyVehicle(players map[int32]*tracked, v *vehicle, src vehHit)
 
 // lightBrokenCart is the lighting half of MinecartTNT.destroy: primeFuse,
 // then a fuse of 0-38 ticks in place of the usual 80.
-func (h *hub) lightBrokenCart(players map[int32]*tracked, v *vehicle) {
+func (h *hub) lightBrokenCart(players map[int32]*tracked, v *vehicle, causer int32) {
 	if v.fuse >= 0 {
 		return
+	}
+	if v.igniter == 0 && h.rules.TNTExplodes { // primeFuse keeps the first ignition source
+		v.igniter = causer
 	}
 	fuse := h.rng.Intn(20) + h.rng.Intn(20)
 	h.primeCart(players, v, fuse)
@@ -154,7 +159,7 @@ func (h *hub) arrowHitsVehicle(players map[int32]*tracked, a *arrowEntity, px, p
 		if s := players[a.shooter]; s != nil {
 			by = s
 		}
-		h.damageVehicle(players, v, vehHit{dmg: dmg, dt: projectileDamageOf(a), by: by, proj: a})
+		h.damageVehicle(players, v, vehHit{dmg: dmg, dt: projectileDamageOf(a), by: by, causer: a.shooter, proj: a})
 		if a.knock > 0 {
 			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
 		}
@@ -258,10 +263,7 @@ func (h *hub) explosionHurtsVehicles(players map[int32]*tracked, dim int, cx, cy
 	if h.blastSrc.causerMob && !h.rules.MobGriefing {
 		return // VehicleEntity.ignoreExplosion: a mob's blast with griefing off
 	}
-	var by *tracked
-	if !h.blastSrc.causerMob {
-		by = players[h.blastSrc.causer]
-	}
+	by := h.blastPlayer(players)
 	for _, v := range h.vehicles {
 		if v.dim != dim || dist3(v.x, v.y, v.z, cx, cy, cz) > power*2 {
 			continue
@@ -269,7 +271,8 @@ func (h *hub) explosionHurtsVehicles(players map[int32]*tracked, dim int, cx, cy
 		bw, ht := v.box()
 		exposure := h.seenPercent(dim, cx, cy, cz, v.x-bw/2, v.y, v.z-bw/2, v.x+bw/2, v.y+ht, v.z+bw/2)
 		impact := explosionImpact(power, cx, cy, cz, v.x, v.y, v.z, exposure)
-		if !h.damageVehicle(players, v, vehHit{dmg: explosionDamage(power, impact), dt: dt, by: by}) || v.isBoat() {
+		hit := vehHit{dmg: explosionDamage(power, impact), dt: dt, by: by, causer: h.blastSrc.causer}
+		if !h.damageVehicle(players, v, hit) || v.isBoat() {
 			continue
 		}
 		ex, ey, ez := v.x-cx, v.y+ht*0.85-cy, v.z-cz

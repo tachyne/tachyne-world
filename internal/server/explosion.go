@@ -114,9 +114,21 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 			h.cubeBlastPush(om, cx, cy, cz, impact)
 			continue
 		}
-		om.hurtKind(explosionDamage(power, impact), dt)
+		byPlayer := h.blastPlayer(players)
+		dmg := explosionDamage(power, impact)
+		if om.etype == entityGhast && h.blastSrc.direct == entityLargeFireball && byPlayer != nil {
+			dmg = reflectedFireballDamage // the returned fireball's blast is as deadly to it as the hit
+		}
+		om.hurtKind(dmg, dt)
+		om.lastDirect = h.blastSrc.direct
+		if byPlayer != nil { // resolvePlayerResponsibleForDamage: the kill is theirs
+			om.hitByPlayer, om.lastAttacker = true, byPlayer.p.eid
+		}
 		if om.health <= 0 {
 			h.killMob(players, om)
+			if byPlayer != nil {
+				h.creditPlayerKill(players, byPlayer, om)
+			}
 			if h.blastChargedCreeper {
 				h.chargedHeadDrop(players, om) // charged_creeper/<victim>: its head
 			}
@@ -142,4 +154,12 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		}
 	}
 	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
+}
+
+// blastPlayer is the player behind the explosion being resolved, if any.
+func (h *hub) blastPlayer(players map[int32]*tracked) *tracked {
+	if h.blastSrc.causer == 0 || h.blastSrc.causerMob {
+		return nil
+	}
+	return players[h.blastSrc.causer]
 }

@@ -58,6 +58,16 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Kills you cause indirectly now count as yours.** A mob killed by TNT
+  you lit (with flint and steel, a fire charge, a flaming arrow, or in a
+  chain from your own blast), by a TNT minecart you set off, by an end
+  crystal you broke, by your Thorns armour, or by the blast of a ghast
+  fireball you knocked back now counts toward your kill statistics,
+  scoreboards and advancements such as Monster Hunter. The blast also names
+  you in death messages. A ghast's own fireball knocked back into it now
+  kills it outright, as in vanilla, which is what Return to Sender needs.
+  A fire charge used on TNT lights it, and an end crystal now goes off
+  with a real explosion.
 - **A vehicle that was just hit looks hit to players who arrive.** Someone
   joining or coming into a dimension while a boat or minecart was still
   rocking from a blow, or a boat was on fire, saw it sitting still and

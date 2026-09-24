@@ -49,7 +49,7 @@ func TestCrystalsHealAndDie(t *testing.T) {
 	}
 	// Pop every crystal; healing stops.
 	for eid := range h.crystals {
-		if !h.hitCrystal(players, eid) {
+		if !h.hitCrystal(players, eid, pl) {
 			t.Fatal("crystal hit should register")
 		}
 	}

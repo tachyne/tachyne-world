@@ -116,6 +116,7 @@ type vehicle struct {
 	lit          bool    // furnace cart: synced fuel flag
 	fuse         int     // TNT cart: ticks to the blast (-1 = not primed)
 	disabled     bool    // hopper cart: switched off by a live activator rail
+	igniter      int32   // TNT cart: who lit it (ignitionSource's causing entity), 0 for none
 	// A structure's chest cart (a mineshaft's): the loot table it still
 	// holds unrolled, and the cell it was placed on (the roll's seed) —
 	// RandomizableContainer's lootTable, unpacked on first use.
@@ -344,7 +345,7 @@ func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if sw.raw <= 0 {
 		return
 	}
-	h.damageVehicle(players, v, vehHit{dmg: sw.raw, dt: dtPlayerAttack, by: t})
+	h.damageVehicle(players, v, vehHit{dmg: sw.raw, dt: dtPlayerAttack, by: t, causer: t.p.eid})
 }
 
 // tickVehicleHurt drains the hurt state a tick (AbstractBoat/AbstractMinecart
@@ -394,7 +395,7 @@ func (h *hub) spillVehicleCargo(players map[int32]*tracked, v *vehicle) {
 func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	if v.etype == entityTntMinecart && v.vx*v.vx+v.vz*v.vz >= 0.01 {
 		// MinecartTNT.destroy: a moving TNT cart that is broken lights instead.
-		h.lightBrokenCart(players, v)
+		h.lightBrokenCart(players, v, 0)
 		return
 	}
 	if v.rider != 0 {

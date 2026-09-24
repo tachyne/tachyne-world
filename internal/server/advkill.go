@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+)
 
 // playerKilledEntity fires PLAYER_KILLED_ENTITY for t's kill of m with the
 // facts its criteria test (KilledTrigger.TriggerInstance): the victim's type,
@@ -10,6 +14,17 @@ import "math"
 // Exile each ask for one of these beyond the victim's type.
 func (h *hub) playerKilledEntity(players map[int32]*tracked, t *tracked, m *mob) {
 	h.advance(players, t, "player_killed_entity", killMatch(t, m))
+}
+
+// creditPlayerKill is ServerPlayer.awardKillScore for a mob t is credited
+// with however it died (LivingEntity.die hands the kill to whoever the damage
+// source's causing entity was): the trigger, the killed statistic, mob_kills
+// and the totalKillCount scoreboard criterion.
+func (h *hub) creditPlayerKill(players map[int32]*tracked, t *tracked, m *mob) {
+	h.playerKilledEntity(players, t, m)
+	h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
+	h.incCustom(t, "mob_kills", 1)
+	h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 }
 
 // killMatch is the trigger payload for t's kill of m. The killing blow is
