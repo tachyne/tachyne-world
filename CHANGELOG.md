@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Decorated pots shatter.** A pot broken with a tool, or by an arrow or
+  a trident, cracks and drops its sherds, with a brick for each plain side,
+  as in vanilla. Break it by hand or with Silk Touch to keep the pot whole.
 - **Blocks place the way vanilla places them.**
   - A crafter faces the way you look.
   - Bamboo goes down as a shoot, or extends a stalk.

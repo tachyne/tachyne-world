@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"sync"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -253,5 +254,39 @@ func (s *potSherdStore) restore(m map[string]potSherds) {
 		if !v.empty() {
 			s.m[k] = v
 		}
+	}
+}
+
+// breaksDecoratedPots is #breaks_decorated_pots.
+var breaksDecoratedPots = func() map[int32]bool {
+	out := map[int32]bool{itemByName["trident"]: true, itemByName["mace"]: true}
+	for name, id := range itemByName {
+		for _, kind := range []string{"_sword", "_axe", "_pickaxe", "_shovel", "_hoe"} {
+			if strings.HasSuffix(name, kind) {
+				out[id] = true
+			}
+		}
+	}
+	return out
+}()
+
+// potCracksUnder is DecoratedPotBlock.playerWillDestroy's test: a tool from
+// #breaks_decorated_pots with nothing from
+// #prevents_decorated_pot_shattering (Silk Touch) on it.
+func potCracksUnder(held invStack) bool {
+	return breaksDecoratedPots[held.item] && held.enchLvl(enchSilkTouch) == 0
+}
+
+// dropPotShards is the cracked pot's drop: its four faces in order (back,
+// left, right, front), a brick for every plain side.
+func (h *hub) dropPotShards(players map[int32]*tracked, dim int, pos blockPos, sh potSherds) {
+	if !h.rules.DoTileDrops {
+		return
+	}
+	for _, face := range sh {
+		if face == 0 {
+			face = itemByName["brick"]
+		}
+		h.spawnBlockDrop(players, dim, face, 1, pos.x, pos.y, pos.z)
 	}
 }

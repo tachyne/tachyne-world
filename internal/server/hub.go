@@ -1638,6 +1638,13 @@ func (h *hub) run() {
 					// (Vanilla does this with copy_components; the faces are
 					// held aside for the same moment the banner's layers are.)
 					sh, _ := h.potSherds.get(e.dim, e.x, e.y, e.z)
+					if t := players[e.by]; t != nil && potCracksUnder(heldStack(t)) {
+						// playerWillDestroy: a sword, axe, pickaxe, shovel, hoe,
+						// trident or mace without Silk Touch cracks it, and a
+						// cracked pot drops its faces instead of itself.
+						h.dropPotShards(players, e.dim, blockPos{e.x, e.y, e.z}, sh)
+						break
+					}
 					for _, d := range h.rollDrops(e.state) {
 						if it := h.spawnItemIn(players, e.dim, d.item, d.count,
 							float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5); it != nil {

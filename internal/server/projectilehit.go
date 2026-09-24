@@ -140,10 +140,10 @@ func projectileSpeed(a *arrowEntity) float64 {
 
 // breakPotByProjectile shatters a decorated pot, spilling what it held.
 func (h *hub) breakPotByProjectile(players map[int32]*tracked, dim int, pos blockPos) {
-	state := h.worldFor(dim).At(pos.x, pos.y, pos.z)
+	sh, _ := h.potSherds.get(dim, pos.x, pos.y, pos.z)
 	h.spillContainer(players, dim, pos.x, pos.y, pos.z, worldgen.Air)
 	h.setBlockAt(players, dim, pos, worldgen.Air)
-	h.dropLoose(players, dim, pos, state)
+	h.dropPotShards(players, dim, pos, sh) // cracked: the loot table's dynamic sherds entry
 	h.playSoundDim(players, dim, "minecraft:block.decorated_pot.shatter", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 }
