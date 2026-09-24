@@ -25,6 +25,8 @@ the public history since the project was open-sourced on 2026-07-10.
   - A crit, the strong-hit sound and a sweep need a swing more than 90%
     charged.
   - Breach cuts through armour on every mace hit, not only smash attacks.
+  - A sword sweep reaches what vanilla's does (beside the target and within
+    three blocks of you), and never reaches into another dimension.
   - Mending repairs only what you are holding or wearing, including the
     offhand, and the repaired durability now shows straight away.
 - **More things work outside the overworld.** Trapped chests give a

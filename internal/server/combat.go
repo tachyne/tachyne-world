@@ -334,10 +334,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			}
 			sweep := int(math.Max(1, math.Round(sweepDmg)))
 			for _, om := range h.mobs {
-				if om == m || om.dying > 0 {
+				if om == m || om.dying > 0 || om.dim != m.dim {
 					continue
 				}
-				if dist3(om.x, om.y, om.z, m.x, m.y, m.z) > 1.5 {
+				ob := om.box()
+				if !sweepCatches(m, om.x, om.y, om.z, ob.w, ob.h) || dist3sq(om.x, om.y, om.z, t.x, t.y, t.z) >= 9 {
 					continue
 				}
 				om.hitByPlayer = true
@@ -358,7 +359,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					if o == t || o.dead || o.dim != t.dim || o.gamemode != gmSurvival {
 						continue
 					}
-					if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > 1.5 {
+					if !sweepCatches(m, o.x, o.y, o.z, 0.6, 1.8) || dist3sq(o.x, o.y, o.z, t.x, t.y, t.z) >= 9 {
 						continue
 					}
 					h.hurtFrom(players, o, float32(sweep), dtPlayerAttack,
@@ -804,4 +805,14 @@ func deathDropsAllowed(m *mob) (loot, xp bool) {
 		return true, true // Monster overrides both
 	}
 	return false, false
+}
+
+// sweepCatches is Player.doSweepAttack's reach: a body whose box touches the
+// target's box inflated by one block sideways and a quarter up and down
+// (the caller also keeps it within three blocks of the swinger).
+func sweepCatches(target *mob, x, y, z, w, h float64) bool {
+	tb := target.box()
+	reach := tb.w/2 + 1 + w/2
+	return math.Abs(x-target.x) < reach && math.Abs(z-target.z) < reach &&
+		y < target.y+tb.h+0.25 && y+h > target.y-0.25
 }

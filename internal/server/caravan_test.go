@@ -190,3 +190,18 @@ func TestToolAndWeaponWear(t *testing.T) {
 		}
 	}
 }
+
+// Player.doSweepAttack's reach: the target's box inflated (1, 0.25, 1),
+// within three of the swinger, and in the same dimension.
+func TestSweepReach(t *testing.T) {
+	target := &mob{etype: entityZombie, x: 0.5, y: 100, z: 0.5}
+	if !sweepCatches(target, 1.9, 100, 0.5, 0.6, 1.95) {
+		t.Error("a zombie beside the target is not caught")
+	}
+	if sweepCatches(target, 3.0, 100, 0.5, 0.6, 1.95) {
+		t.Error("a zombie two and a half blocks off is caught")
+	}
+	if sweepCatches(target, 0.5, 102.5, 0.5, 0.6, 1.95) {
+		t.Error("a zombie standing on the target's head height + 0.5 is caught")
+	}
+}
