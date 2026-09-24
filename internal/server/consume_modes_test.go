@@ -236,3 +236,25 @@ func TestFrogCroaks(t *testing.T) {
 		t.Errorf("the croak lasted %d updates (want %d)", n, frogCroakTicks/mobMoveInterval-1)
 	}
 }
+
+// FollowPlayerRiddenEntityGoal: a dolphin near a boat a player is rowing
+// swims after it, and stops when the boat stops.
+func TestDolphinFollowsARowedBoat(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	d := h.spawnMob(players, entityDolphin, 0.5, 199, 0.5)
+	boat := &vehicle{eid: h.allocEID(), etype: vehicleItems[itemByName["oak_boat"]], x: 3.5, y: 200, z: 0.5, rider: pl.p.eid}
+	h.vehicles[boat.eid] = boat
+	pl.x, pl.y, pl.z = boat.x, boat.y+0.6, boat.z
+	boat.movedAt, boat.moveDX = h.tick.Load(), 0.3
+	if !h.dolphinFollowBoat(players, d) || d.followBoat != boat.eid || d.vx <= 0 {
+		t.Fatalf("the dolphin did not take after the boat (follow %d, vx %v)", d.followBoat, d.vx)
+	}
+	h.tick.Add(10) // the boat has stopped
+	if h.dolphinFollowBoat(players, d) {
+		t.Error("the dolphin kept following a boat that stopped")
+	}
+}

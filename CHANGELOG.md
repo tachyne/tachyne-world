@@ -22,8 +22,10 @@ the public history since the project was open-sourced on 2026-07-10.
   do.
 - **Frogs croak.** An idle frog on land stops now and then and croaks for
   three seconds, throat puffing, as vanilla's do.
-- **Dolphins leap.** A dolphin swimming along the surface of open water
-  now and then jumps clear of it and splashes back down, as vanilla's do.
+- **Dolphins leap and race boats.** A dolphin swimming along the surface
+  of open water now and then jumps clear of it and splashes back down, and
+  a dolphin near a boat you are rowing swims alongside and races ahead of
+  it, as vanilla's do.
   Leaping mobs (spiders, wolves, cats and foxes) now feel air drag, so
   their pounces are vanilla's length instead of nearly twice it.
 - **Buckets drain waterlogged blocks.** An empty bucket used on a

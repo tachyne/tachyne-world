@@ -82,18 +82,23 @@ func vehicleItemFor(etype int) int32 {
 }
 
 type vehicle struct {
-	eid        int32
-	dim        int // the dimension it floats or rolls in
-	uuid       [16]byte
-	etype      int
-	x, y, z    float64
-	yaw        float32
-	rider      int32   // player eid, 0 when empty
-	mobRider   int32   // a mob aboard: scooped up by a rolling cart (minecart.go) or a boat (boatseats.go), 0 when none
-	mobFirst   bool    // the mob boarded before the player: it has the front seat
-	sx, sy, sz float64 // last broadcast position (relative-move baseline)
-	syaw       float32 // last broadcast facing
-	chest      *chest  // a chest boat's 27 slots (nil for the rest)
+	eid     int32
+	dim     int // the dimension it floats or rolls in
+	uuid    [16]byte
+	etype   int
+	x, y, z float64
+	yaw     float32
+	rider   int32 // player eid, 0 when empty
+	// movedAt is the tick a rider last moved the boat horizontally, and
+	// moveDX/DZ the step it took (Entity.lastKnownSpeed): what a dolphin
+	// following the boat reads (FollowPlayerRiddenEntityGoal).
+	movedAt        uint64
+	moveDX, moveDZ float64
+	mobRider       int32   // a mob aboard: scooped up by a rolling cart (minecart.go) or a boat (boatseats.go), 0 when none
+	mobFirst       bool    // the mob boarded before the player: it has the front seat
+	sx, sy, sz     float64 // last broadcast position (relative-move baseline)
+	syaw           float32 // last broadcast facing
+	chest          *chest  // a chest boat's 27 slots (nil for the rest)
 	// Minecart motion state (the server rolls carts; see minecart.go).
 	vx, vy, vz  float64
 	yawO        float32 // facing at the previous tick
@@ -331,7 +336,10 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 		return
 	}
 	h.vehicleStats(t, v, math.Hypot(e.x-v.x, e.z-v.z))
-	h.noteKnownMove(t, e.x-v.x, e.y-v.y, e.z-v.z) // the boat's movement is the rider's
+	h.noteKnownMove(t, e.x-v.x, e.y-v.y, e.z-v.z)        // the boat's movement is the rider's
+	if dx, dz := e.x-v.x, e.z-v.z; dx*dx+dz*dz > 1e-10 { // hasMovedHorizontallyRecently
+		v.movedAt, v.moveDX, v.moveDZ = h.tick.Load(), dx, dz
+	}
 	v.x, v.y, v.z, v.yaw = e.x, e.y, e.z, e.yaw
 	// The rider rides along: hub position drives chunk streaming + interest.
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z

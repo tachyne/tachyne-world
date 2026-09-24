@@ -353,6 +353,9 @@ type mob struct {
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
 	croakLeft                       int      // frog: ticks of the CROAKING pose still to run
+	followBoat                      int32    // dolphin: the boat whose rider it keeps pace with (0 = none)
+	followAhead                     bool     // …heading past the boat rather than to its stern
+	followRecalc                    int      // …mob updates to the next re-aim
 	slimeHeading                    float64  // slime/magma cube: SlimeRandomDirectionGoal's chosen heading (radians)
 	llamaWolf                       int32    // llama: the wild wolf LlamaAttackWolfGoal has it spitting at
 	slimeHeadingLeft                int      // …ticks before it picks another
@@ -838,6 +841,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A dolphin at the surface leaping clear of the water.
 		case m.etype == entityDolphin && h.dolphinPlay(players, m):
 			// A dolphin tossing a floating item about.
+		case m.etype == entityDolphin && h.dolphinFollowBoat(players, m):
+			// A dolphin racing a boat a player is rowing.
 		case m.etype == entityFox && h.foxStep(players, m):
 			// A fox asleep, stalking prey, or after a dropped item.
 		case m.etype == entityArmadillo && m.armState != 0:

@@ -108,3 +108,49 @@ func (h *hub) dolphinJumpStart(players map[int32]*tracked, m *mob) bool {
 	h.playSoundDim(players, m.dim, "minecraft:entity.dolphin.jump", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
+
+// dolphinFollowBoat is FollowPlayerRiddenEntityGoal(AbstractBoat): a boat
+// within five blocks that a player is rowing draws the dolphin in — to the
+// cell behind the rower until within four blocks, then ten blocks ahead in
+// the boat's line of travel until it falls twelve behind — while the boat
+// keeps moving. It re-aims every ten ticks.
+func (h *hub) dolphinFollowBoat(players map[int32]*tracked, m *mob) bool {
+	now := h.tick.Load()
+	moving := func(v *vehicle) bool {
+		return v != nil && v.isBoat() && v.rider != 0 && players[v.rider] != nil && v.dim == m.dim && now-v.movedAt <= 2
+	}
+	v := h.vehicles[m.followBoat]
+	if !moving(v) {
+		m.followBoat, v = 0, nil
+		for _, c := range h.vehicles {
+			if moving(c) && math.Abs(c.x-m.x) <= 5+1.4 && math.Abs(c.z-m.z) <= 5+1.4 && math.Abs(c.y-m.y) <= 5+1 {
+				v = c
+				break
+			}
+		}
+		if v == nil {
+			return false
+		}
+		m.followBoat, m.followAhead, m.followRecalc = v.eid, false, 0
+	}
+	t := players[v.rider]
+	if m.followRecalc--; m.followRecalc <= 0 {
+		m.followRecalc = 5 // adjustedTickDelay(10), in mob updates
+		d := dist3(m.x, m.y, m.z, t.x, t.y, t.z)
+		if !m.followAhead && d < 4 {
+			m.followAhead, m.followRecalc = true, 0
+		} else if m.followAhead && d > 12 {
+			m.followAhead, m.followRecalc = false, 0
+		}
+	}
+	var tx, tz float64
+	if m.followAhead {
+		n := math.Hypot(v.moveDX, v.moveDZ)
+		tx, tz = t.x+v.moveDX/n*10, t.z+v.moveDZ/n*10 // ten ahead in its motion direction
+	} else {
+		fx, _, fz := lookVector(t.yaw, 0)
+		tx, tz = t.x-fx, t.z-fz // the cell behind the rower
+	}
+	h.steerTo(m, tx, tz, 1.0)
+	return true
+}
