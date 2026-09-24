@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Sculk hears more of what changes around it.** Ringing a bell, a big
+  dripleaf tipping or springing back, laying food on a campfire (and the
+  food finishing), filling or knocking a decorated pot, and adding or taking
+  a book from a chiseled bookshelf are all block changes a sculk sensor now
+  picks up, as in vanilla. A comparator reading a decorated pot now updates
+  as the pot fills.
 - **Repeater, comparator and daylight sensor clicks behave as in
   vanilla.** A comparator clicks lower going to subtract mode and lower
   still going back. A repeater changes its delay silently. An inverted

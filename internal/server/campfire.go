@@ -204,6 +204,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 		h.sendSlot(t, t.p.heldSlot())
 	}
 	h.campfireSync(players, pos, cf)
+	h.vib(pos.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // placeFood: BLOCK_CHANGE
 	h.incCustom(t, "interact_with_campfire", 1)
 }
 
@@ -258,6 +259,7 @@ func (h *hub) campfireTick(players map[int32]*tracked) {
 				}
 				cf.items[i], cf.prog[i] = 0, 0
 				changed = true
+				h.vib(pos.dim, freqBlockChange, pos.x, pos.y, pos.z, 0) // cookTick: the food is done
 			}
 		}
 		if changed {

@@ -99,6 +99,7 @@ func (h *hub) ringBell(players map[int32]*tracked, dim int, pos blockPos, dir in
 		X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Action: 1, Param: dirParam(dir), Block: bellRegistryID})
 	h.playSoundDim(players, dim, "minecraft:block.bell.use", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, bellSoundVolume, 1)
+	h.vib(dim, freqBlockChange, pos.x, pos.y, pos.z, 0) // BellBlock.attemptToRing: sculk hears the bell
 	h.bellRevealRaiders(players, dim, pos)
 	return true
 }

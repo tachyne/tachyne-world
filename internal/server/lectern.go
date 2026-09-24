@@ -339,6 +339,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	// a comparator beside the shelf reads (slot + 1); persisted with the shelf.
 	h.shelfLast[pos] = slot
 	h.shelfSyncState(players, t.dim, pos.blockPos, state, shelf)
+	h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid) // ChiseledBookShelfBlockEntity.updateState: BLOCK_CHANGE
 	h.scheduleSignalAround(players, pos.blockPos)
 }
 

@@ -51,6 +51,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 		// the only way to empty a pot is to break it.
 		h.playSoundDim(players, t.dim, "minecraft:block.decorated_pot.insert_fail", sndBlock, cx, cy, cz, 1, 1)
 		h.potWobble(players, key, potWobbleNegative)
+		h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // useWithoutItem: BLOCK_CHANGE
 		return true
 	}
 	one := held
@@ -78,6 +79,10 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	h.toNearbyEv(players, key.dim, cx, cz, attachproto.Particles{
 		PID: particleDustPlume, X: cx, Y: float64(key.y) + 1.2, Z: cz, Count: potPlumeCount})
 	h.potWobble(players, key, potWobblePositive)
+	// setChanged → a comparator reading the pot sees it fill; and the
+	// insert is a BLOCK_CHANGE for sculk.
+	h.inDim(t.dim, func() { h.updateNeighbourForOutputSignal(players, pos); h.nbRun(players) })
+	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid)
 	return true
 }
 
