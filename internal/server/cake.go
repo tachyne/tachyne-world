@@ -32,7 +32,7 @@ var (
 const (
 	cakeMaxBites = 6   // vanilla MAX_BITES: the seventh bite finishes it
 	cakeFood     = 2   // food per slice
-	cakeSat      = 0.1 // saturation per slice
+	cakeSat      = 0.4 // saturation per slice: FoodData.eat(2, 0.1F) → saturationByModifier = 2 × 0.1 × 2
 )
 
 // cakeBites reports whether a state is a cake, and how many bites it has lost.

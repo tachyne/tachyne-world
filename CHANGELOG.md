@@ -58,6 +58,8 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Cake is as filling as in vanilla.** A slice of cake, or the first
+  slice of a candle cake, gave a quarter of vanilla's saturation.
 - **Weighted pressure plates release at vanilla speed.** Light and heavy
   weighted plates held their signal for a second after the last thing left,
   like the other plates; in vanilla they let go after half a second.
