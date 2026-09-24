@@ -23,6 +23,7 @@ const (
 	shapeGate               // FenceGateBlock: in_wall
 	shapeAttached           // AttachedStemBlock: back to a grown stem without its fruit
 	shapeMushroom           // HugeMushroomBlock: faces against more of itself
+	shapeCopperChest        // CopperChestBlock: one half follows the other's weathering and wax
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -50,6 +51,9 @@ var shapeKinds = func() map[uint32]shapeKind {
 	for _, n := range worldgen.AllBlockNames() {
 		if strings.HasSuffix(n, "_fence_gate") {
 			add(n, shapeGate)
+		}
+		if strings.HasSuffix(n, "copper_chest") {
+			add(n, shapeCopperChest)
 		}
 	}
 	return out
@@ -112,6 +116,26 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 		return stem + 7, true
 	case shapeMushroom:
 		return mushroomFaceOnNeighbor(info, st, nb, d), true
+	case shapeCopperChest:
+		// CopperChestBlock.updateShape: when the half it is paired with (on
+		// its connected side) becomes another copper chest — it weathered,
+		// was waxed or was scraped — this half turns into that block too,
+		// keeping its own facing and type.
+		ps, pw, _, pok := copperChestOf(nb)
+		_, _, so, sok := copperChestOf(st)
+		facing, ctype := chestFacingType(st)
+		dir, paired := connectedDir(facing, ctype)
+		if !pok || !sok || !paired {
+			return st, true
+		}
+		if dx, dz := facingDelta(dir); d != [3]int{dx, 0, dz} {
+			return st, true
+		}
+		i := ps
+		if pw {
+			i += 4
+		}
+		return copperChestBases[i] + so, true
 	}
 	return st, true
 }

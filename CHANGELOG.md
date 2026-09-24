@@ -22,7 +22,8 @@ the public history since the project was open-sourced on 2026-07-10.
     a hive empties it.
   - A chorus flower drops itself when shot or broken by a player.
   - Boats break the lily pads they run into.
-  - Copper chests pair whatever their oxidation.
+  - Copper chests pair whatever their oxidation, and the two halves
+    weather, wax and scrape together.
   - A head can be placed on top of a note block.
   - A powered dragon head moves its jaw and a piglin head flaps its ears.
 - **Decorated pots shatter.** A pot broken with a tool, or by an arrow or

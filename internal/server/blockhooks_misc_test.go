@@ -323,3 +323,20 @@ func TestSkullPoweredFollowsSignal(t *testing.T) {
 		}
 	})
 }
+
+// CopperChestBlock.updateShape: when one half of a pair weathers (or is
+// waxed or scraped), the other half becomes the same block.
+func TestCopperChestHalvesWeatherTogether(t *testing.T) {
+	w := world.New(1)
+	w.ForceLoad(0, 0, 1)
+	left := copperChest(t, "copper_chest", "north", "left")
+	w.SetBlock(0, 64, 0, left)
+	w.SetBlock(1, 64, 0, copperChest(t, "exposed_copper_chest", "north", "right"))
+	got, ok := shapeUpdated(w, blockPos{0, 64, 0}, left, [3]int{1, 0, 0})
+	if !ok || got != copperChest(t, "exposed_copper_chest", "north", "left") {
+		t.Errorf("the left half did not follow its partner: %d", got)
+	}
+	if got, _ := shapeUpdated(w, blockPos{0, 64, 0}, left, [3]int{-1, 0, 0}); got != left {
+		t.Error("a change on the unpaired side changed the chest")
+	}
+}
