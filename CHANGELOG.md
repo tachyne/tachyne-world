@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **Online mode for Java players (not switched on yet).** The Java gateway
+  can now log players in the way vanilla does with online mode on. The
+  connection is encrypted, and Mojang's session service confirms the
+  player owns the account. The player then joins as that account's real
+  UUID, with the name spelled as the account spells it and their skin
+  attached. A spoofed name gets "Failed to verify username!". When Mojang
+  is unreachable, everyone is refused, as vanilla does. It is off
+  (`TACHYNE_ONLINE_MODE`) until player data moves to the real UUIDs.
 - **Parrots ride on your shoulder.** A tamed parrot that is not sitting and
   has been around for five seconds lands on its owner's shoulder when it
   touches them. The left shoulder fills first, then the right. It chatters
