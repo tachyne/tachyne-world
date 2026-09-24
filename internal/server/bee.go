@@ -109,7 +109,29 @@ func newHiveStore(path string) *hiveStore {
 	return s
 }
 
-func hiveKey(p blockPos) string { return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z) }
+// hiveKey names a hive in hives.json. An overworld hive keeps the plain
+// "x,y,z" every save before dimensions were known wrote; a Nether or End hive
+// is prefixed with its dimension ("1:x,y,z").
+func hiveKey(p simPos) string {
+	if p.dim == dimOverworld {
+		return fmt.Sprintf("%d,%d,%d", p.x, p.y, p.z)
+	}
+	return fmt.Sprintf("%d:%d,%d,%d", p.dim, p.x, p.y, p.z)
+}
+
+// parseHiveKey reads either form back; a key with no dimension is the
+// overworld's.
+func parseHiveKey(k string) (simPos, bool) {
+	var p simPos
+	if _, err := fmt.Sscanf(k, "%d:%d,%d,%d", &p.dim, &p.x, &p.y, &p.z); err == nil {
+		return p, true
+	}
+	p = simPos{}
+	if _, err := fmt.Sscanf(k, "%d,%d,%d", &p.x, &p.y, &p.z); err == nil {
+		return p, true
+	}
+	return simPos{}, false
+}
 
 func (s *hiveStore) save() {
 	s.mu.Lock()
@@ -126,14 +148,13 @@ func (s *hiveStore) save() {
 // hivesLoad rebuilds the hub's live hive map from the store at boot.
 func (h *hub) hivesLoad() {
 	if h.hives == nil {
-		h.hives = map[blockPos][]hiveOccupant{}
+		h.hives = map[simPos][]hiveOccupant{}
 	}
 	if h.hivestore == nil {
 		return
 	}
 	for k, occ := range h.hivestore.m {
-		var p blockPos
-		if _, err := fmt.Sscanf(k, "%d,%d,%d", &p.x, &p.y, &p.z); err == nil {
+		if p, ok := parseHiveKey(k); ok {
 			h.hives[p] = occ
 		}
 	}
@@ -154,11 +175,12 @@ func (h *hub) hivesMark() {
 	h.hivestore.mu.Unlock()
 }
 
-// registerHive makes a hive known to the bees (idempotent).
-func (h *hub) registerHive(p blockPos) {
+// registerHive makes a hive in dim known to the bees (idempotent).
+func (h *hub) registerHive(dim int, pos blockPos) {
 	if h.hives == nil {
-		h.hives = map[blockPos][]hiveOccupant{}
+		h.hives = map[simPos][]hiveOccupant{}
 	}
+	p := simPos{dim: dim, blockPos: pos}
 	if _, ok := h.hives[p]; !ok {
 		h.hives[p] = nil
 	}
@@ -221,7 +243,7 @@ func beeWander(h *hub, m *mob) (float64, float64) {
 // NECTAR finishes its stay and leaves.
 func (h *hub) updateBees(players map[int32]*tracked) {
 	if h.hives == nil {
-		h.hives = map[blockPos][]hiveOccupant{}
+		h.hives = map[simPos][]hiveOccupant{}
 	}
 	day, raining := h.dayLight(), h.raining
 	changed := false
@@ -230,14 +252,15 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 		// does: its bees wait inside until someone is near. Reading one in an
 		// unloaded chunk generated that chunk on the hub — 103 hives made the
 		// first tick after a boot take a second and a half.
-		if !h.world.Ticking(int32(pos.x>>4), int32(pos.z>>4)) {
+		w := h.worldFor(pos.dim)
+		if !w.Ticking(int32(pos.x>>4), int32(pos.z>>4)) {
 			continue
 		}
-		cur := h.world.At(pos.x, pos.y, pos.z)
+		cur := w.At(pos.x, pos.y, pos.z)
 		if !isBeeHome(cur) {
 			// The hive block is gone: its bees tumble out where it stood.
 			for range occ {
-				h.beeOut(players, pos, false)
+				h.beeOut(players, pos.dim, pos.blockPos, false)
 			}
 			delete(h.hives, pos)
 			changed = true
@@ -246,23 +269,25 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 		for i := 0; i < len(occ); {
 			occ[i].SecsLeft--
 			changed = true
-			if occ[i].SecsLeft > 0 || !day || raining {
+			// BeehiveBlockEntity.releaseOccupant: night and rain keep the
+			// bees in only where there is a sky to have them.
+			if occ[i].SecsLeft > 0 || (pos.dim == dimOverworld && (!day || raining)) {
 				i++
 				continue
 			}
 			if occ[i].Nectar {
 				if lvl := honeyLevel(cur); lvl < beeMaxHoney {
-					h.setBlockAt(players, 0, pos, withHoney(cur, lvl+1))
-					cur = h.world.At(pos.x, pos.y, pos.z)
+					h.setBlockAt(players, pos.dim, pos.blockPos, withHoney(cur, lvl+1))
+					cur = w.At(pos.x, pos.y, pos.z)
 				}
 			}
-			h.beeOut(players, pos, false)
+			h.beeOut(players, pos.dim, pos.blockPos, false)
 			occ = append(occ[:i], occ[i+1:]...)
 		}
 		h.hives[pos] = occ
 	}
 	for _, m := range h.mobs {
-		if m.etype != entityBee || m.dim != 0 || m.dying > 0 {
+		if m.etype != entityBee || m.dying > 0 {
 			continue
 		}
 		h.updateBee(players, m, day, raining)
@@ -275,13 +300,14 @@ func (h *hub) updateBees(players map[int32]*tracked) {
 	}
 }
 
-// beeOut spawns a bee just outside a hive, fresh from inside.
-func (h *hub) beeOut(players map[int32]*tracked, pos blockPos, angry bool) *mob {
-	m := h.spawnAnimal(players, entityBee, pos.x, pos.z)
+// beeOut spawns a bee just outside a hive, fresh from inside, in the hive's
+// own dimension.
+func (h *hub) beeOut(players map[int32]*tracked, dim int, pos blockPos, angry bool) *mob {
+	m := h.spawnMobIn(players, entityBee, dim, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+1.2) // the south face
 	if m == nil {
-		return nil
+		return nil // plugin-cancelled spawn
 	}
-	m.x, m.y, m.z = float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+1.2 // the south face
+	h.applySpecies(players, m)
 	m.beeHome, m.beeHasHome = pos, true
 	m.beeNoEnter = beeReenterSecs
 	if angry {
@@ -313,6 +339,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 		m.beeNoNectar++
 	}
 	h.syncBeeLook(players, m)
+	w := h.worldFor(m.dim) // the bee's flowers and hive are in its own world
 	// The pollen coat at work — even while flying home, and regardless of a
 	// fight: the nectar drips (vanilla aiStep, 5% per tick) and crops below
 	// get a boost until ten have grown this trip.
@@ -326,7 +353,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 		if drips > 0 {
 			h.spawnParticles(players, m.dim, particleNectar, m.x, m.y+0.4, m.z, 0.3, 0, drips)
 		}
-		if m.beeHasHome && isBeeHome(h.world.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) &&
+		if m.beeHasHome && isBeeHome(w.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) &&
 			h.rng.Float64() < beeCropBoostProb {
 			h.beeGrowCropsBelow(players, m)
 		}
@@ -337,7 +364,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	}
 	// Hovering at a flower.
 	if m.beePollinate > 0 {
-		if !worldgen.IsFlower(h.world.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
+		if !worldgen.IsFlower(w.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
 			m.beePollinate, m.beeGoalKind = 0, beeGoalKindNone
 			return // the flower is gone
 		}
@@ -361,7 +388,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 		// Bee.isHiveValid: a hive stops being one when the block is gone. Being
 		// FULL is not the same thing and must not drop it here — that is what
 		// sent a bee with nectar wandering off instead of flying home.
-		if m.beeHasHome && !isBeeHome(h.world.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) {
+		if m.beeHasHome && !isBeeHome(w.At(m.beeHome.x, m.beeHome.y, m.beeHome.z)) {
 			m.beeHasHome, m.beeTravel = false, 0
 			m.flyClearPath()
 		}
@@ -387,7 +414,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 				// drops it (hivePos = null) — the bee does not queue. It is not
 				// blacklisted: a busy hive is a perfectly good hive, so the
 				// locate cooldown lets it try again rather than writing it off.
-				if !h.hiveHasRoom(m.beeHome) {
+				if !h.hiveHasRoom(m.dim, m.beeHome) {
 					m.beeHasHome, m.beeTravel = false, 0
 					m.beeGoalKind = beeGoalKindNone
 					m.flyClearPath()
@@ -415,7 +442,7 @@ func (h *hub) updateBee(players map[int32]*tracked, m *mob, day, raining bool) {
 	if m.beeGoalKind == beeGoalKindFlower {
 		if h.beeNear(m, m.beeGoal) {
 			m.beePollinate = beePollinateSecs
-		} else if !worldgen.IsFlower(h.world.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
+		} else if !worldgen.IsFlower(w.At(m.beeGoal.x, m.beeGoal.y, m.beeGoal.z)) {
 			m.beeGoalKind = beeGoalKindNone
 			m.flyClearPath()
 		}
@@ -504,11 +531,11 @@ func (h *hub) beeNear(m *mob, p blockPos) bool {
 		math.Abs(float64(p.y)+0.5-m.y) <= 2
 }
 
-func (h *hub) hiveHasRoom(p blockPos) bool {
-	if !isBeeHome(h.world.At(p.x, p.y, p.z)) {
+func (h *hub) hiveHasRoom(dim int, p blockPos) bool {
+	if !isBeeHome(h.worldFor(dim).At(p.x, p.y, p.z)) {
 		return false
 	}
-	return len(h.hives[p]) < beeMaxOccupants
+	return len(h.hives[simPos{dim: dim, blockPos: p}]) < beeMaxOccupants
 }
 
 // enterHive folds a live bee into the hive's occupant list.
@@ -517,10 +544,11 @@ func (h *hub) enterHive(players map[int32]*tracked, m *mob) {
 	if m.beeNectar {
 		stay = beeOccupySecs
 	}
-	h.registerHive(m.beeHome)
+	h.registerHive(m.dim, m.beeHome)
 	m.beeTravel, m.beeBanned, m.beeNoNectar = 0, nil, 0
 	m.flyClearPath()
-	h.hives[m.beeHome] = append(h.hives[m.beeHome], hiveOccupant{SecsLeft: stay, Nectar: m.beeNectar})
+	home := simPos{dim: m.dim, blockPos: m.beeHome}
+	h.hives[home] = append(h.hives[home], hiveOccupant{SecsLeft: stay, Nectar: m.beeNectar})
 	h.hivesMark()
 	h.removeMob(players, m)
 }
@@ -535,8 +563,13 @@ func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
 	bestD, banD := math.MaxFloat64, math.MaxFloat64
 	var best, ban blockPos
 	found, banned := false, false
-	for p := range h.hives {
-		if len(h.hives[p]) >= beeMaxOccupants || !isBeeHome(h.world.At(p.x, p.y, p.z)) {
+	w := h.worldFor(m.dim)
+	for sp, occ := range h.hives {
+		if sp.dim != m.dim {
+			continue // a hive in another world is no home to this bee
+		}
+		p := sp.blockPos
+		if len(occ) >= beeMaxOccupants || !isBeeHome(w.At(p.x, p.y, p.z)) {
 			continue
 		}
 		d := dist3(m.x, m.y, m.z, float64(p.x), float64(p.y), float64(p.z))
@@ -569,9 +602,9 @@ func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
 		for dx := -beeSeekScan; dx <= beeSeekScan; dx++ {
 			for dz := -beeSeekScan; dz <= beeSeekScan; dz++ {
 				p := blockPos{bx + dx, by + dy, bz + dz}
-				if isBeeHome(h.world.At(p.x, p.y, p.z)) && len(h.hives[p]) < beeMaxOccupants &&
+				if isBeeHome(w.At(p.x, p.y, p.z)) && len(h.hives[simPos{dim: m.dim, blockPos: p}]) < beeMaxOccupants &&
 					!m.beeHiveBanned(p) {
-					h.registerHive(p)
+					h.registerHive(m.dim, p)
 					return p, true
 				}
 			}
@@ -584,6 +617,7 @@ func (h *hub) findHiveFor(m *mob) (blockPos, bool) {
 // blocks (BeePollinateGoal's reach, scanned exhaustively), then a handful of
 // wider random samples for the stragglers.
 func (h *hub) findFlowerFor(m *mob) (blockPos, bool) {
+	w := h.worldFor(m.dim)
 	bx, by, bz := int(m.x), int(m.y), int(m.z)
 	bestD := math.MaxFloat64
 	var best blockPos
@@ -592,7 +626,7 @@ func (h *hub) findFlowerFor(m *mob) (blockPos, bool) {
 		for dx := -5; dx <= 5; dx++ {
 			for dz := -5; dz <= 5; dz++ {
 				p := blockPos{bx + dx, by + dy, bz + dz}
-				if !worldgen.IsFlower(h.world.At(p.x, p.y, p.z)) {
+				if !worldgen.IsFlower(w.At(p.x, p.y, p.z)) {
 					continue
 				}
 				if d := float64(dx*dx + dy*dy + dz*dz); d < bestD {
@@ -608,7 +642,7 @@ func (h *hub) findFlowerFor(m *mob) (blockPos, bool) {
 		p := blockPos{bx + h.rng.Intn(2*beeSeekScan+1) - beeSeekScan,
 			by + h.rng.Intn(9) - 4,
 			bz + h.rng.Intn(2*beeSeekScan+1) - beeSeekScan}
-		if worldgen.IsFlower(h.world.At(p.x, p.y, p.z)) {
+		if worldgen.IsFlower(w.At(p.x, p.y, p.z)) {
 			return p, true
 		}
 	}
@@ -617,22 +651,23 @@ func (h *hub) findFlowerFor(m *mob) (blockPos, bool) {
 
 // robHive throws every occupant out angry at the robber — the price of
 // harvesting without smoke.
-func (h *hub) robHive(players map[int32]*tracked, t *tracked, pos blockPos) {
-	h.releaseHiveBees(players, pos, t)
+func (h *hub) robHive(players map[int32]*tracked, t *tracked, dim int, pos blockPos) {
+	h.releaseHiveBees(players, dim, pos, t)
 }
 
 // releaseHiveBees empties a hive's occupants into the world: angry at t when a
 // robbery or a bare break sets them off, calm when t is nil — a dispenser's
 // shears or bottle has nobody to blame (BeeReleaseStatus.BEE_RELEASED).
-func (h *hub) releaseHiveBees(players map[int32]*tracked, pos blockPos, t *tracked) {
-	occ := h.hives[pos]
+func (h *hub) releaseHiveBees(players map[int32]*tracked, dim int, pos blockPos, t *tracked) {
+	sp := simPos{dim: dim, blockPos: pos}
+	occ := h.hives[sp]
 	for range occ {
-		if m := h.beeOut(players, pos, t != nil); m != nil && t != nil {
+		if m := h.beeOut(players, dim, pos, t != nil); m != nil && t != nil {
 			h.provoke(m, t)
 		}
 	}
 	if len(occ) > 0 {
-		h.hives[pos] = nil
+		h.hives[sp] = nil
 		h.hivesMark()
 	}
 }
@@ -640,17 +675,17 @@ func (h *hub) releaseHiveBees(players map[int32]*tracked, pos blockPos, t *track
 // fireBesideHives is BeehiveBlock.updateShape: fire appearing beside a hive
 // or nest is an emergency, and every bee inside comes out. The check is for
 // plain fire only — soul fire is a different block class and does not count.
-// Nobody is to blame, so the bees come out calm. Hives are an overworld
-// store, keyed by position alone.
+// Nobody is to blame, so the bees come out calm. Hives are keyed by
+// dimension, so a Nether fire empties the Nether hive beside it.
 func (h *hub) fireBesideHives(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	if dim != dimOverworld || state < fireStateMin || state > fireStateMax || len(h.hives) == 0 {
+	if state < fireStateMin || state > fireStateMax || len(h.hives) == 0 {
 		return
 	}
 	w := h.worldFor(dim)
 	for _, d := range supportNeighbours {
 		n := blockPos{pos.x + d[0], pos.y + d[1], pos.z + d[2]}
-		if len(h.hives[n]) > 0 && isBeeHome(w.At(n.x, n.y, n.z)) {
-			h.releaseHiveBees(players, n, nil)
+		if len(h.hives[simPos{dim: dim, blockPos: n}]) > 0 && isBeeHome(w.At(n.x, n.y, n.z)) {
+			h.releaseHiveBees(players, dim, n, nil)
 		}
 	}
 }
@@ -662,16 +697,14 @@ func (h *hub) fireBesideHives(players map[int32]*tracked, dim int, pos blockPos,
 // takes them with the hive; without forgetting them here, the hive sweep
 // would find the block gone and tip them out a second later anyway.
 func (h *hub) explodedHive(players map[int32]*tracked, dim int, pos blockPos, release bool) {
-	if dim != dimOverworld {
-		return
-	}
-	if _, known := h.hives[pos]; !known {
+	sp := simPos{dim: dim, blockPos: pos}
+	if _, known := h.hives[sp]; !known {
 		return
 	}
 	if release {
-		h.releaseHiveBees(players, pos, nil)
+		h.releaseHiveBees(players, dim, pos, nil)
 	}
-	delete(h.hives, pos)
+	delete(h.hives, sp)
 	h.hivesMark()
 }
 
@@ -740,12 +773,12 @@ func (h *hub) beeGrowCropsBelow(players map[int32]*tracked, m *mob) {
 	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
 	for i := 1; i <= 2; i++ {
 		p := blockPos{bx, by - i, bz}
-		next, ok := beeGrowTarget(h.world.At(p.x, p.y, p.z))
+		next, ok := beeGrowTarget(h.worldFor(m.dim).At(p.x, p.y, p.z))
 		if !ok {
 			continue
 		}
-		h.setBlockAt(players, 0, p, next)
-		h.levelEvent(players, 0, worldEventBeeGrowth, p.x, p.y, p.z, 15) // the green burst over the plant
+		h.setBlockAt(players, m.dim, p, next)
+		h.levelEvent(players, m.dim, worldEventBeeGrowth, p.x, p.y, p.z, 15) // the green burst over the plant
 		m.beeCropsGrown++
 	}
 }
@@ -810,9 +843,10 @@ type hiveStow struct {
 
 // stowHiveItem moves a broken hive's occupants + honey level under a fresh
 // hiveID for the dropped item to carry (0 = nothing worth carrying).
-func (h *hub) stowHiveItem(pos blockPos, honey int) int32 {
-	occ := h.hives[pos]
-	delete(h.hives, pos)
+func (h *hub) stowHiveItem(dim int, pos blockPos, honey int) int32 {
+	sp := simPos{dim: dim, blockPos: pos}
+	occ := h.hives[sp]
+	delete(h.hives, sp)
 	h.hivesMark()
 	if len(occ) == 0 && honey == 0 {
 		return 0
@@ -836,9 +870,9 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, dim int, state u
 		item = int32(itemByName["bee_nest"])
 	}
 	if t != nil && heldStack(t).enchLvl(enchSilkTouch) > 0 {
-		h.advance(players, t, "bee_nest_destroyed", advMatch{blockState: state, count: len(h.hives[pos]), enchant: "silk_touch"})
+		h.advance(players, t, "bee_nest_destroyed", advMatch{blockState: state, count: len(h.hives[simPos{dim: dim, blockPos: pos}]), enchant: "silk_touch"})
 		if it := h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
-			it.hiveID = h.stowHiveItem(pos, honeyLevel(state))
+			it.hiveID = h.stowHiveItem(dim, pos, honeyLevel(state))
 		}
 		return
 	}
@@ -846,17 +880,17 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, dim int, state u
 	// decision (BeehiveBlockEntity.emptyAllLivingFromHive): a sedated hive's
 	// bees have nobody to blame, and are simply barred from going back in
 	// while they settle.
-	if sedated := h.campfireUnder(pos); sedated {
-		h.releaseHiveBees(players, pos, nil)
+	if sedated := h.campfireUnder(dim, pos); sedated {
+		h.releaseHiveBees(players, dim, pos, nil)
 		for _, m := range h.mobs {
-			if m.etype == entityBee && m.beeHasHome && m.beeHome == pos {
+			if m.etype == entityBee && m.dim == dim && m.beeHasHome && m.beeHome == pos {
 				m.beeStayOut = beeStayOutSecs
 			}
 		}
 	} else {
-		h.releaseHiveBees(players, pos, t)
+		h.releaseHiveBees(players, dim, pos, t)
 		if t != nil {
-			h.angerBees(players, t, pos)
+			h.angerBees(players, t, dim, pos)
 		}
 	}
 	if beeHomeBase(state) != beeNestMin {
@@ -866,7 +900,7 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, dim int, state u
 
 // restoreBeeHome is the other half: a placed hive takes back the bees and
 // honey its stack carried.
-func (h *hub) restoreBeeHome(players map[int32]*tracked, pos blockPos, hiveID int32) {
+func (h *hub) restoreBeeHome(players map[int32]*tracked, dim int, pos blockPos, hiveID int32) {
 	if hiveID == 0 {
 		return
 	}
@@ -875,13 +909,14 @@ func (h *hub) restoreBeeHome(players map[int32]*tracked, pos blockPos, hiveID in
 		return
 	}
 	delete(h.hiveItems, hiveID)
-	h.registerHive(pos)
+	h.registerHive(dim, pos)
+	sp := simPos{dim: dim, blockPos: pos}
 	if len(st.Occ) > 0 {
-		h.hives[pos] = append(h.hives[pos], st.Occ...)
+		h.hives[sp] = append(h.hives[sp], st.Occ...)
 		h.hivesMark()
 	}
-	if cur := h.world.At(pos.x, pos.y, pos.z); isBeeHome(cur) && st.Honey > 0 {
-		h.setBlockAt(players, 0, pos, withHoney(cur, st.Honey))
+	if cur := h.worldFor(dim).At(pos.x, pos.y, pos.z); isBeeHome(cur) && st.Honey > 0 {
+		h.setBlockAt(players, dim, pos, withHoney(cur, st.Honey))
 	}
 }
 

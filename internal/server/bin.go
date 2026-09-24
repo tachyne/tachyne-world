@@ -445,7 +445,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// source is not drained). Otherwise toss like the default.
 		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
 			took = false
-			h.releaseHiveBees(players, front, nil)
+			h.releaseHiveBees(players, h.rsDim, front, nil)
 			h.rsSet(players, front, withHoney(fs, 0))
 			hb := invStack{item: itemHoneyBottle, count: 1}
 			if st.count <= 1 {
@@ -567,7 +567,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5, 1, 1)
 			h.spawnItemIn(players, h.rsDim, int32(itemHoneycomb), beeHoneycombYield,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5)
-			h.releaseHiveBees(players, front, nil)
+			h.releaseHiveBees(players, h.rsDim, front, nil)
 			h.rsSet(players, front, withHoney(fs, 0))
 			sheared = true
 		} else {

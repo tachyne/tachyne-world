@@ -40,6 +40,7 @@ var resinClump = multifaceBase("resin_clump")
 // heartLink is one creaking heart and the creaking it currently owns.
 type heartLink struct {
 	pos      blockPos
+	dim      int    // the world the heart stands in
 	creaking int32  // eid of its protector (0 = none out)
 	nextAt   uint64 // tick of the heart's next self-check
 	hurtLeft int    // remaining resin-spread calls in this bout
@@ -56,17 +57,61 @@ func creakingHeartState(state uint32) (awake, ok bool) {
 	return (state-base)%6/2 == 2, true
 }
 
+func isCreakingHeartBlock(s uint32) bool { _, ok := creakingHeartState(s); return ok }
+
+// Creaking heart states, in the order the block lists them.
+const (
+	heartUprooted = 0
+	heartDormant  = 1
+	heartAwake    = 2
+)
+
+// heartWith is the same heart (axis and natural kept) in another state: a
+// heart a player laid on its side stays on its side when it wakes.
+func heartWith(state uint32, st int) uint32 {
+	off := state - worldgen.CreakingHeartBase
+	return worldgen.CreakingHeartBase + off/6*6 + uint32(st)*2 + off%2
+}
+
+// heartAxisDelta is the unit step along a heart's own axis (x, y or z).
+func heartAxisDelta(state uint32) (int, int, int) {
+	switch (state - worldgen.CreakingHeartBase) / 6 {
+	case 0:
+		return 1, 0, 0
+	case 2:
+		return 0, 0, 1
+	}
+	return 0, 1, 0
+}
+
+// heartIndexOnBlockChange registers a creaking heart wherever one is placed,
+// in whichever dimension, so a heart a player builds ticks like a grown one.
+// A heart that is removed drops out on its next update.
+func (h *hub) heartIndexOnBlockChange(dim, x, y, z int, state uint32) {
+	if _, ok := creakingHeartState(state); !ok {
+		return
+	}
+	if h.hearts == nil {
+		h.hearts = map[simPos]*heartLink{}
+	}
+	p := simPos{dim: dim, blockPos: blockPos{x, y, z}}
+	if _, known := h.hearts[p]; !known {
+		h.hearts[p] = &heartLink{pos: p.blockPos, dim: dim}
+	}
+}
+
 // heartStanding reports whether a heart at pos still has the pale oak logs it
 // needs — vanilla hasRequiredLogs, which checks BOTH neighbours along the
-// heart's own axis. Every heart the generator plants is upright, so the axis
-// is Y: cut the trunk above or below it and the heart uproots.
+// heart's own axis. Every heart the generator plants is upright, so for those
+// the axis is Y: cut the trunk above or below it and the heart uproots.
 func (h *hub) heartStanding(dim int, pos blockPos) bool {
 	w := h.worldFor(dim)
 	if w == nil {
 		return false
 	}
-	above := w.At(pos.x, pos.y+1, pos.z)
-	below := w.At(pos.x, pos.y-1, pos.z)
+	dx, dy, dz := heartAxisDelta(w.At(pos.x, pos.y, pos.z))
+	above := w.At(pos.x+dx, pos.y+dy, pos.z+dz)
+	below := w.At(pos.x-dx, pos.y-dy, pos.z-dz)
 	return isPaleOakLog(above) && isPaleOakLog(below)
 }
 
@@ -85,12 +130,12 @@ func (h *hub) registerHeartChunks(players map[int32]*tracked) {
 		h.heartScanned = map[[2]int32]bool{}
 	}
 	if h.hearts == nil {
-		h.hearts = map[blockPos]*heartLink{}
+		h.hearts = map[simPos]*heartLink{}
 	}
 	scanned := 0
 	for _, t := range players {
-		if t.dim != 0 {
-			continue
+		if t.dim != dimOverworld {
+			continue // pale gardens grow only in the overworld; built hearts register as placed
 		}
 		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
 		for dx := int32(-2); dx <= 2 && scanned < 4; dx++ {
@@ -115,11 +160,8 @@ func (h *hub) scanChunkHearts(cx, cz int32) {
 		for lz := 0; lz < 16; lz++ {
 			for wy := worldgen.SeaLevel; wy < worldgen.SeaLevel+96; wy++ {
 				x, z := bx+lx, bz+lz
-				if _, ok := creakingHeartState(h.world.At(x, wy, z)); ok {
-					p := blockPos{x, wy, z}
-					if _, known := h.hearts[p]; !known {
-						h.hearts[p] = &heartLink{pos: p}
-					}
+				if st := h.world.At(x, wy, z); isCreakingHeartBlock(st) {
+					h.heartIndexOnBlockChange(dimOverworld, x, wy, z, st)
 				}
 			}
 		}
@@ -133,32 +175,38 @@ func (h *hub) updateHearts(players map[int32]*tracked) {
 		return
 	}
 	now := h.tick.Load()
-	night := h.nightNow()
-	for pos, link := range h.hearts {
+	overworldNight := h.nightNow()
+	for key, link := range h.hearts {
 		if now < link.nextAt {
 			continue
 		}
 		link.nextAt = now + creakingHeartUpdate + uint64(h.rng.Intn(5))
+		pos := key.blockPos
+		// CREAKING_ACTIVE rides the overworld's day timeline: the Nether and
+		// the End have no night, so a heart built there sleeps for good.
+		night := overworldNight && key.dim == dimOverworld
 
-		state := h.world.At(pos.x, pos.y, pos.z)
+		state := h.worldFor(key.dim).At(pos.x, pos.y, pos.z)
 		if _, ok := creakingHeartState(state); !ok {
 			h.loseCreaking(players, link) // the heart is gone: so is its creaking
-			delete(h.hearts, pos)
+			delete(h.hearts, key)
 			continue
 		}
 		// A heart whose tree has been cut out of from under it uproots, and an
 		// uprooted heart neither wakes nor spawns.
-		if !h.heartStanding(0, pos) {
-			h.setBlockAt(players, 0, pos, worldgen.CreakingHeartUproot)
+		if !h.heartStanding(key.dim, pos) {
+			if up := heartWith(state, heartUprooted); state != up {
+				h.setBlockAt(players, key.dim, pos, up)
+			}
 			h.loseCreaking(players, link)
 			continue
 		}
-		want := worldgen.CreakingHeartDormant
+		want := heartWith(state, heartDormant)
 		if night {
-			want = worldgen.CreakingHeartAwake
+			want = heartWith(state, heartAwake)
 		}
 		if state != want {
-			h.setBlockAt(players, 0, pos, want)
+			h.setBlockAt(players, key.dim, pos, want)
 		}
 
 		if link.creaking == 0 {
@@ -186,33 +234,33 @@ func (h *hub) updateHearts(players map[int32]*tracked) {
 // worth haunting and somewhere to stand can be found.
 func (h *hub) trySpawnCreaking(players map[int32]*tracked, link *heartLink) {
 	px, py, pz := float64(link.pos.x), float64(link.pos.y), float64(link.pos.z)
-	if h.nearestHuntable(players, 0, px, pz, creakingHeartRange) == nil {
+	if h.nearestHuntable(players, link.dim, px, pz, creakingHeartRange) == nil {
 		return
 	}
 	for i := 0; i < creakingSpawnTries; i++ {
 		x := link.pos.x + h.rng.Intn(2*creakingSpawnXZ+1) - creakingSpawnXZ
 		z := link.pos.z + h.rng.Intn(2*creakingSpawnXZ+1) - creakingSpawnXZ
 		y := link.pos.y + h.rng.Intn(2*creakingSpawnY+1) - creakingSpawnY
-		if !h.standableAt(x, y, z) {
+		if !h.standableAt(link.dim, x, y, z) {
 			continue
 		}
-		m := h.spawnMobIn(players, entityCreaking, dimOverworld, float64(x)+0.5, float64(y), float64(z)+0.5)
+		m := h.spawnMobIn(players, entityCreaking, link.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 		if m == nil {
 			return // a plugin cancelled the spawn
 		}
 		m.home = link.pos
 		m.heartBound = true
 		link.creaking = m.eid
-		h.playSoundDim(players, dimOverworld, "minecraft:entity.creaking.spawn", sndHostile, px, py, pz, 1, 1)
-		h.playSoundDim(players, dimOverworld, "minecraft:block.creaking_heart.spawn", sndBlock, px, py, pz, 1, 1)
+		h.playSoundDim(players, link.dim, "minecraft:entity.creaking.spawn", sndHostile, px, py, pz, 1, 1)
+		h.playSoundDim(players, link.dim, "minecraft:block.creaking_heart.spawn", sndBlock, px, py, pz, 1, 1)
 		return
 	}
 }
 
 // standableAt reports whether a mob can stand in this cell (air with a solid
-// floor and headroom).
-func (h *hub) standableAt(x, y, z int) bool {
-	w := h.worldFor(0)
+// floor and headroom) in dim.
+func (h *hub) standableAt(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
 	if w == nil {
 		return false
 	}
@@ -239,7 +287,7 @@ func (h *hub) heartOf(m *mob) *heartLink {
 	if m.etype != entityCreaking {
 		return nil
 	}
-	if link, ok := h.hearts[m.home]; ok && link.creaking == m.eid {
+	if link, ok := h.hearts[simPos{dim: m.dim, blockPos: m.home}]; ok && link.creaking == m.eid {
 		return link
 	}
 	return nil
@@ -280,14 +328,14 @@ func (h *hub) spreadResin(players map[int32]*tracked, link *heartLink) {
 		y := link.pos.y + h.rng.Intn(5) - 2
 		z := link.pos.z + h.rng.Intn(5) - 2
 		p := blockPos{x, y, z}
-		if h.world.At(p.x, p.y, p.z) != worldgen.Air {
+		if h.worldFor(link.dim).At(p.x, p.y, p.z) != worldgen.Air {
 			continue
 		}
-		if !h.nextToLog(p) {
+		if !h.nextToLog(link.dim, p) {
 			continue
 		}
-		h.setBlockAt(players, 0, p, resinClump)
-		h.playSoundDim(players, dimOverworld, "minecraft:block.resin.place", sndBlock,
+		h.setBlockAt(players, link.dim, p, resinClump)
+		h.playSoundDim(players, link.dim, "minecraft:block.resin.place", sndBlock,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 		return
 	}
@@ -295,9 +343,10 @@ func (h *hub) spreadResin(players map[int32]*tracked, link *heartLink) {
 
 // nextToLog reports whether a cell has a pale oak log beside it — resin grows
 // on the tree, not in mid-air.
-func (h *hub) nextToLog(p blockPos) bool {
+func (h *hub) nextToLog(dim int, p blockPos) bool {
+	w := h.worldFor(dim)
 	for _, d := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
-		if isPaleOakLog(h.world.At(p.x+d[0], p.y+d[1], p.z+d[2])) {
+		if isPaleOakLog(w.At(p.x+d[0], p.y+d[1], p.z+d[2])) {
 			return true
 		}
 	}

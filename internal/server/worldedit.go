@@ -197,10 +197,10 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 	case e.single && changed == 0:
 		tell("Could not set the block")
 	case e.single:
-		tell(fmt.Sprintf("Changed the block at %d, %d, %d", e.from.x, e.from.y, e.from.z))
+		h.cmdOK(players, e.eid)(fmt.Sprintf("Changed the block at %d, %d, %d", e.from.x, e.from.y, e.from.z))
 	case changed == 0:
 		tell("No blocks were filled")
 	default:
-		tell(fmt.Sprintf("Successfully filled %d block(s)", changed))
+		h.cmdOK(players, e.eid)(fmt.Sprintf("Successfully filled %d block(s)", changed))
 	}
 }

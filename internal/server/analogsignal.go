@@ -58,7 +58,7 @@ func (h *hub) analogSignal(pos simPos) int {
 		if !awake {
 			return 0 // uprooted or dormant: no protector out
 		}
-		link := h.hearts[pos.blockPos]
+		link := h.hearts[pos]
 		if link == nil || link.creaking == 0 {
 			return 0
 		}

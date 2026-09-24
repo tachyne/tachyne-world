@@ -92,7 +92,7 @@ func (h *hub) applyRandomCommand(players map[int32]*tracked, e evRandomCmd) int 
 	if e.announce {
 		h.broadcastChat(players, fmt.Sprintf("%s rolled %d (from %d to %d)", e.name, v, e.min, e.max))
 	} else {
-		cmdTeller(players, e.by)(fmt.Sprintf("Randomized value: %d", v))
+		h.cmdInfo(players, e.by)(fmt.Sprintf("Randomized value: %d", v))
 	}
 	return v
 }
@@ -138,6 +138,7 @@ func (s *Server) cmdSwing(p *player, args []string) {
 // target: everyone watching sees the arm go, a player's own client included.
 func (h *hub) applySwingCommand(players map[int32]*tracked, e evSwingCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	ens := h.commandEntities(players, e.by, e.target)
 	if len(ens) == 0 {
 		tell("No living entities were found to swing")
@@ -153,9 +154,9 @@ func (h *hub) applySwingCommand(players map[int32]*tracked, e evSwingCmd) {
 		}
 	}
 	if len(ens) == 1 {
-		tell("Made " + ens[0].name() + " swing an arm")
+		okTell("Made " + ens[0].name() + " swing an arm")
 	} else {
-		tell(fmt.Sprintf("Made %d entities swing their arms", len(ens)))
+		okTell(fmt.Sprintf("Made %d entities swing their arms", len(ens)))
 	}
 }
 

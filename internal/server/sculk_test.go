@@ -20,11 +20,11 @@ func TestSculkSensorActivatesAndDecays(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1 // default: inactive, power 0
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
 	w.SetBlock(x+1, y, z, worldgen.BlockBase("redstone_wire")+1160)
 
 	// A frequency-10 event 3 blocks away (delay 3 ticks; power falls with range).
-	h.gameEvent(10, x+3, y, z, 0)
+	h.gameEvent(0, 10, x+3, y, z, 0)
 	stepSculk(h, players, 8)
 
 	s := w.At(x, y, z)
@@ -38,8 +38,8 @@ func TestSculkSensorActivatesAndDecays(t *testing.T) {
 	if p := wirePower(w.At(x+1, y, z)); p != wantPower {
 		t.Fatalf("adjacent wire should carry the sensor power %d, got %d", wantPower, p)
 	}
-	if h.sculkFreq[blockPos{x, y, z}] != 10 {
-		t.Fatalf("sensor comparator frequency = %d, want 10", h.sculkFreq[blockPos{x, y, z}])
+	if h.sculkFreq[simPos{blockPos: blockPos{x, y, z}}] != 10 {
+		t.Fatalf("sensor comparator frequency = %d, want 10", h.sculkFreq[simPos{blockPos: blockPos{x, y, z}}])
 	}
 
 	// ACTIVE 30 + COOLDOWN 10 → back to inactive, wire dead.
@@ -56,19 +56,19 @@ func TestCalibratedSensorFrequencyFilter(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	calib := worldgen.BlockBase("calibrated_sculk_sensor") + 1 // default: facing north
 	w.SetBlock(x, y, z, calib)
-	h.sculkIndexOnBlockChange(x, y, z, calib)
+	h.sculkIndexOnBlockChange(0, x, y, z, calib)
 	// facing north → back is south (z+1); a redstone block there sets back signal 15.
 	bdx, bdz := calibBackDelta(calib)
 	w.SetBlock(x+bdx, y, z+bdz, redstoneBlock)
 
 	// Wrong frequency (1) is filtered out.
-	h.gameEvent(1, x+2, y, z, 0)
+	h.gameEvent(0, 1, x+2, y, z, 0)
 	stepSculk(h, players, 6)
 	if sensorPhase(w.At(x, y, z)) != sculkPhaseInactive {
 		t.Fatal("calibrated sensor must ignore a frequency != its back signal")
 	}
 	// Matching frequency (15) activates it.
-	h.gameEvent(15, x+2, y, z, 0)
+	h.gameEvent(0, 15, x+2, y, z, 0)
 	stepSculk(h, players, 6)
 	if sensorPhase(w.At(x, y, z)) != sculkPhaseActive {
 		t.Fatal("calibrated sensor should activate on its tuned frequency")
@@ -79,7 +79,7 @@ func TestSculkCatalystSpreadsOnDeath(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	cat := worldgen.BlockBase("sculk_catalyst") + 1
 	w.SetBlock(x, y, z, cat)
-	h.sculkIndexOnBlockChange(x, y, z, cat)
+	h.sculkIndexOnBlockChange(0, x, y, z, cat)
 	// A patch of stone around the death spot for the bloom to convert.
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
@@ -112,8 +112,8 @@ func TestMechanicsRaiseVibrations(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
-	pos := blockPos{x, y, z}
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
+	pos := simPos{blockPos: blockPos{x, y, z}}
 	heard := func() int {
 		v, ok := h.sculkVib[pos]
 		if !ok {
@@ -152,7 +152,7 @@ func TestMechanicsRaiseVibrations(t *testing.T) {
 	}
 	// A toggle marked quiet suppresses the placement vibration of the block
 	// change that follows it in the same tick.
-	h.vibQuiet[blockPos{x + 4, y, z}] = h.tick.Load()
+	h.vibQuiet[simPos{blockPos: blockPos{x + 4, y, z}}] = h.tick.Load()
 	h.onBlock(players, evBlock{x: x + 4, y: y, z: z, state: lever, by: pl.p.eid})
 	if f := heard(); f != 0 {
 		t.Fatalf("a toggled block should not count as placed: heard %d", f)
@@ -169,8 +169,8 @@ func TestMobFootstepsAreVibrations(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
-	pos := blockPos{x, y, z}
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
+	pos := simPos{blockPos: blockPos{x, y, z}}
 	walk := func(m *mob) (steps int) {
 		m.vx, m.kb = 0.25, 3 // a shove carries it: no steering in the way
 		for i := 0; i < 8; i++ {
@@ -206,7 +206,7 @@ func TestShriekerWarnsThenSummons(t *testing.T) {
 	pl := testTracked()
 	pl.x, pl.y, pl.z = float64(x)+1, float64(y), float64(z)
 	players[pl.p.eid] = pl
-	pos := blockPos{x, y, z}
+	pos := simPos{blockPos: blockPos{x, y, z}}
 	// can_summon true (property index 0), not shrieking, not waterlogged.
 	shrieker := shriekerWith(worldgen.BlockBase("sculk_shrieker"), false)
 	w.SetBlock(x, y, z, shrieker)
@@ -261,7 +261,7 @@ func TestSculkSensorHearsARedstoneNoteBlock(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
 
 	nb := worldgen.BlockBase("note_block")
 	w.SetBlock(x+2, y, z, nb)
@@ -272,7 +272,7 @@ func TestSculkSensorHearsARedstoneNoteBlock(t *testing.T) {
 	if s := w.At(x, y, z); sensorPhase(s) != sculkPhaseActive {
 		t.Fatalf("the sensor should have heard the note: phase=%d", sensorPhase(s))
 	}
-	if f := h.sculkFreq[blockPos{x, y, z}]; f != freqNoteBlockPlay {
+	if f := h.sculkFreq[simPos{blockPos: blockPos{x, y, z}}]; f != freqNoteBlockPlay {
 		t.Fatalf("frequency = %d, want note_block_play %d", f, freqNoteBlockPlay)
 	}
 }
@@ -282,7 +282,7 @@ func TestMuffledNoteBlockIsSilentToSculk(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
 
 	nb := worldgen.BlockBase("note_block")
 	w.SetBlock(x+2, y, z, nb)

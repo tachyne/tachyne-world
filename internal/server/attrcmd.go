@@ -167,6 +167,8 @@ func modifierAmount(m attr.Modifier, unit float64) float64 {
 // applyAttributeCommand runs /attribute on the hub.
 func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by)     // sendSuccess(…, true)
+	infoTell := h.cmdInfo(players, e.by) // sendSuccess(…, false)
 	targets := h.commandEntities(players, e.by, e.target)
 	switch {
 	case len(targets) == 0:
@@ -182,17 +184,17 @@ func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd
 	name, who := attrDisplayName(e.id), en.name()
 	switch e.op {
 	case "get":
-		tell(fmt.Sprintf("The value of attribute %s for entity %s is %s", name, who, jDouble(fromEngine(in.Value(), unit))))
+		infoTell(fmt.Sprintf("The value of attribute %s for entity %s is %s", name, who, jDouble(fromEngine(in.Value(), unit))))
 	case "base get":
-		tell(fmt.Sprintf("The base value of attribute %s for entity %s is %s", name, who, jDouble(fromEngine(in.Base(), unit))))
+		infoTell(fmt.Sprintf("The base value of attribute %s for entity %s is %s", name, who, jDouble(fromEngine(in.Base(), unit))))
 	case "base set":
 		in.SetBase(e.value * unit)
 		h.attrChanged(players, en, e.id)
-		tell(fmt.Sprintf("The base value for attribute %s for entity %s set to %s", name, who, jDouble(e.value)))
+		okTell(fmt.Sprintf("The base value for attribute %s for entity %s set to %s", name, who, jDouble(e.value)))
 	case "base reset":
 		in.SetBase(attrDefaultBase(en, e.id))
 		h.attrChanged(players, en, e.id)
-		tell(fmt.Sprintf("The base value for attribute %s for entity %s reset to default %s", name, who, jDouble(fromEngine(in.Base(), unit))))
+		okTell(fmt.Sprintf("The base value for attribute %s for entity %s reset to default %s", name, who, jDouble(fromEngine(in.Base(), unit))))
 	case "modifier add":
 		if in.HasModifier(e.mod) {
 			tell(fmt.Sprintf("Modifier %s is already present on attribute %s for entity %s", e.mod, name, who))
@@ -204,7 +206,7 @@ func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd
 		}
 		in.AddModifier(attr.Modifier{Source: e.mod, Amount: amount, Op: e.modOp})
 		h.attrChanged(players, en, e.id)
-		tell(fmt.Sprintf("Added modifier %s to attribute %s for entity %s", e.mod, name, who))
+		okTell(fmt.Sprintf("Added modifier %s to attribute %s for entity %s", e.mod, name, who))
 	case "modifier remove":
 		if !in.HasModifier(e.mod) {
 			tell(fmt.Sprintf("Attribute %s for entity %s has no modifier %s", name, who, e.mod))
@@ -212,11 +214,11 @@ func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd
 		}
 		in.RemoveModifier(e.mod)
 		h.attrChanged(players, en, e.id)
-		tell(fmt.Sprintf("Removed modifier %s from attribute %s for entity %s", e.mod, name, who))
+		okTell(fmt.Sprintf("Removed modifier %s from attribute %s for entity %s", e.mod, name, who))
 	case "modifier get":
 		for _, m := range in.Modifiers() {
 			if m.Source == e.mod {
-				tell(fmt.Sprintf("The value of modifier %s on attribute %s for entity %s is %s", e.mod, name, who, jDouble(modifierAmount(m, unit))))
+				infoTell(fmt.Sprintf("The value of modifier %s on attribute %s for entity %s is %s", e.mod, name, who, jDouble(modifierAmount(m, unit))))
 				return
 			}
 		}

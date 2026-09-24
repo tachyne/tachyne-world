@@ -108,6 +108,25 @@ the public history since the project was open-sourced on 2026-07-10.
   leaves it smouldering, and a snowball only rocks it. A creeper's blast
   spares vehicles when mob griefing is off, and a rider's own arrow never
   hits the vehicle they are sitting in.
+- **Piglins fight with their golden spears.** The one piglin in ten that
+  carries a golden spear now uses it as vanilla does. It closes in, lowers
+  the spear and charges, then wheels away for another pass. It used to swing
+  the spear like a sword. It still leaves anyone wearing gold alone.
+- **The `send_command_feedback` and `log_admin_commands` gamerules work.**
+  With `send_command_feedback` off, a command no longer tells you it worked.
+  Errors still show. While it is on, the other operators online see what an
+  operator changed, as a gray italic "[Name: message]" line. With
+  `log_admin_commands` on, the server log records the same line. Questions
+  such as `/time query` and `/locate` answer only whoever asked.
+- **Sculk, bees, villager doors and creaking hearts work in the Nether and
+  the End.** A sculk sensor, shrieker or catalyst built there now hears and
+  answers that dimension's own vibrations, and a shrieker's Warden rises
+  beside it. It no longer reacts to what happens at the same spot in the
+  overworld. Bees live in their own world's hives, which keep their bees
+  across a restart. They come and go at any hour where there is no night.
+  Villagers open and shut the doors of the world they are in. A creaking
+  heart a player builds now ticks wherever it stands, including one laid
+  on its side. In the Nether and the End it sleeps, as in vanilla.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

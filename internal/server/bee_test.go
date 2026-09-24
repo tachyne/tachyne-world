@@ -26,7 +26,7 @@ func beeWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 		}
 	}
 	h.world.SetBlock(nest.x, nest.y, nest.z, worldgen.BlockBase("bee_nest")+6)
-	h.registerHive(nest)
+	h.registerHive(dimOverworld, nest)
 	return h, players, nest
 }
 
@@ -55,14 +55,14 @@ func TestBeeCycleFillsTheHive(t *testing.T) {
 	if h.mobs[m.eid] != nil {
 		t.Fatal("the bee never entered its hive")
 	}
-	if len(h.hives[nest]) != 1 || !h.hives[nest][0].Nectar {
-		t.Fatalf("hive occupants %v, want one carrying nectar", h.hives[nest])
+	if len(h.hives[simPos{blockPos: nest}]) != 1 || !h.hives[simPos{blockPos: nest}][0].Nectar {
+		t.Fatalf("hive occupants %v, want one carrying nectar", h.hives[simPos{blockPos: nest}])
 	}
 	// The stay: it leaves with the honey delivered.
-	for i := 0; i < beeOccupySecs+5 && len(h.hives[nest]) > 0; i++ {
+	for i := 0; i < beeOccupySecs+5 && len(h.hives[simPos{blockPos: nest}]) > 0; i++ {
 		h.updateBees(players)
 	}
-	if len(h.hives[nest]) != 0 {
+	if len(h.hives[simPos{blockPos: nest}]) != 0 {
 		t.Fatal("the occupant never finished its stay")
 	}
 	if lvl := honeyLevel(h.world.At(nest.x, nest.y, nest.z)); lvl != 1 {
@@ -82,7 +82,7 @@ func TestBeeCycleFillsTheHive(t *testing.T) {
 func TestRobbedHiveThrowsAngryBeesOut(t *testing.T) {
 	h, players, nest := beeWorld(t)
 	h.world.SetBlock(nest.x, nest.y, nest.z, withHoney(worldgen.BlockBase("bee_nest")+6, beeMaxHoney))
-	h.hives[nest] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 100, Nectar: true}}
+	h.hives[simPos{blockPos: nest}] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 100, Nectar: true}}
 	t2 := survPlayer(h)
 	players[t2.p.eid] = t2
 	t2.x, t2.y, t2.z = float64(nest.x), float64(nest.y), float64(nest.z)+2
@@ -90,8 +90,8 @@ func TestRobbedHiveThrowsAngryBeesOut(t *testing.T) {
 	if !h.harvestBeeHome(players, t2, nest) {
 		t.Fatal("harvest did nothing on a full hive")
 	}
-	if len(h.hives[nest]) != 0 {
-		t.Fatalf("robbed hive still holds %v", h.hives[nest])
+	if len(h.hives[simPos{blockPos: nest}]) != 0 {
+		t.Fatalf("robbed hive still holds %v", h.hives[simPos{blockPos: nest}])
 	}
 	angry := 0
 	for _, m := range h.mobs {
@@ -227,7 +227,7 @@ func TestDispenserWorksAFullHive(t *testing.T) {
 	fire := func(item int32) *bin {
 		h.world.SetBlock(pos.x, pos.y, pos.z, state)
 		h.world.SetBlock(front.x, front.y, front.z, full)
-		h.hives[front] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 100, Nectar: true}}
+		h.hives[simPos{blockPos: front}] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 100, Nectar: true}}
 		b := &bin{slots: make([]invStack, 9)}
 		b.slots[0] = invStack{item: item, count: 1}
 		h.bins[simPos{blockPos: pos}] = b
@@ -282,7 +282,7 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	h, players, nest := beeWorld(t)
 	state := withHoney(worldgen.BlockBase("bee_nest"), 4)
 	h.world.SetBlock(nest.x, nest.y, nest.z, state)
-	h.hives[nest] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 50, Nectar: true}}
+	h.hives[simPos{blockPos: nest}] = []hiveOccupant{{SecsLeft: 100}, {SecsLeft: 50, Nectar: true}}
 	t2 := survPlayer(h)
 	players[t2.p.eid] = t2
 	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["diamond_pickaxe"]),
@@ -290,8 +290,8 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 
 	h.world.SetBlock(nest.x, nest.y, nest.z, worldgen.Air)
 	h.dropBeeHome(players, t2.p.eid, dimOverworld, state, nest)
-	if len(h.hives[nest]) != 0 {
-		t.Fatalf("stowed hive still has occupants at the old position: %v", h.hives[nest])
+	if len(h.hives[simPos{blockPos: nest}]) != 0 {
+		t.Fatalf("stowed hive still has occupants at the old position: %v", h.hives[simPos{blockPos: nest}])
 	}
 	var carried *itemEntity
 	for _, it := range h.items {
@@ -311,9 +311,9 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	// Place it back somewhere else: the bees and honey come with it.
 	dst := blockPos{nest.x + 20, nest.y, nest.z}
 	h.world.SetBlock(dst.x, dst.y, dst.z, worldgen.BlockBase("bee_nest"))
-	h.restoreBeeHome(players, dst, carried.hiveID)
-	if len(h.hives[dst]) != 2 {
-		t.Fatalf("restored hive holds %v, want the two carried bees", h.hives[dst])
+	h.restoreBeeHome(players, dimOverworld, dst, carried.hiveID)
+	if len(h.hives[simPos{blockPos: dst}]) != 2 {
+		t.Fatalf("restored hive holds %v, want the two carried bees", h.hives[simPos{blockPos: dst}])
 	}
 	if lvl := honeyLevel(h.world.At(dst.x, dst.y, dst.z)); lvl != 4 {
 		t.Fatalf("restored hive honey %d, want 4", lvl)
@@ -325,8 +325,8 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	// Without Silk Touch: a nest drops NOTHING and its bees come out angry.
 	nest2 := blockPos{nest.x + 40, nest.y, nest.z}
 	state2 := withHoney(worldgen.BlockBase("bee_nest"), 2)
-	h.registerHive(nest2)
-	h.hives[nest2] = []hiveOccupant{{SecsLeft: 100}}
+	h.registerHive(dimOverworld, nest2)
+	h.hives[simPos{blockPos: nest2}] = []hiveOccupant{{SecsLeft: 100}}
 	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["diamond_pickaxe"]), count: 1}
 	before := len(h.items)
 	h.world.SetBlock(nest2.x, nest2.y, nest2.z, worldgen.Air)

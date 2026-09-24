@@ -524,7 +524,7 @@ func (s *Server) cmdWeather(p *player, args []string) {
 		dur = d
 	}
 	s.hub.post(evSetWeather{kind: args[0], duration: dur})
-	p.tell(fmt.Sprintf("Weather set to %s", args[0]))
+	s.ok(p, fmt.Sprintf("Weather set to %s", args[0]))
 }
 
 // parseTimeArg parses vanilla's TimeArgument: an integer with an optional

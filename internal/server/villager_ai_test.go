@@ -43,7 +43,7 @@ func TestVillagerOpensAndClosesDoor(t *testing.T) {
 	if worldgen.IsClosedDoor(w.At(dx, dy+1, dz)) {
 		t.Fatal("both door halves should open together")
 	}
-	if _, ok := h.openDoors[blockPos{dx, dy, dz}]; !ok {
+	if _, ok := h.openDoors[simPos{blockPos: blockPos{dx, dy, dz}}]; !ok {
 		t.Fatal("opened door should be recorded for auto-close")
 	}
 

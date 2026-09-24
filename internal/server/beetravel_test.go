@@ -18,11 +18,11 @@ func beeTravelWorld(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	h.playersRef = players
-	h.hives = map[blockPos][]hiveOccupant{}
+	h.hives = map[simPos][]hiveOccupant{}
 	airBox(t, h.world, -4, 70, -4, 30, 90, 12)
 	hive := blockPos{20, 78, 2} // up in the air, as a nest in a tree is
 	h.world.SetBlock(hive.x, hive.y, hive.z, beeNestMin)
-	h.registerHive(hive)
+	h.registerHive(dimOverworld, hive)
 	return h, players, hive
 }
 
@@ -71,7 +71,7 @@ func TestBeeWithNectarFliesHomeAndEnters(t *testing.T) {
 	startD := dist3(m.x, m.y, m.z, float64(hive.x), float64(hive.y), float64(hive.z))
 	flyBee(h, players, m, 60)
 
-	if len(h.hives[hive]) > 0 {
+	if len(h.hives[simPos{blockPos: hive}]) > 0 {
 		return // went in: the errand completed
 	}
 	endD := dist3(m.x, m.y, m.z, float64(hive.x), float64(hive.y), float64(hive.z))
@@ -92,7 +92,7 @@ func TestBeeClimbsToAHiveAboveIt(t *testing.T) {
 	m.beeNectar = true
 
 	flyBee(h, players, m, 60)
-	if len(h.hives[hive]) > 0 {
+	if len(h.hives[simPos{blockPos: hive}]) > 0 {
 		return
 	}
 	if m.y < float64(hive.y)-2 {

@@ -51,6 +51,7 @@ func (s *Server) cmdRecipe(p *player, args []string) {
 // applyRecipeCommand runs /recipe on the hub.
 func (h *hub) applyRecipeCommand(players map[int32]*tracked, e evRecipeCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	targets := h.commandTargets(players, e.by, e.target)
 	if len(targets) == 0 {
 		tell("No player was found")
@@ -75,13 +76,13 @@ func (h *hub) applyRecipeCommand(players map[int32]*tracked, e evRecipeCmd) {
 	case tally.nonZero == 0:
 		tell("No recipes could be forgotten")
 	case who != "" && e.give:
-		tell(fmt.Sprintf("Unlocked %d recipe(s) for %s", tally.total, who))
+		okTell(fmt.Sprintf("Unlocked %d recipe(s) for %s", tally.total, who))
 	case who != "":
-		tell(fmt.Sprintf("Took %d recipe(s) from %s", tally.total, who))
+		okTell(fmt.Sprintf("Took %d recipe(s) from %s", tally.total, who))
 	case e.give:
-		tell(fmt.Sprintf("Unlocked %d recipe(s) for %d players", tally.total, tally.nonZero))
+		okTell(fmt.Sprintf("Unlocked %d recipe(s) for %d players", tally.total, tally.nonZero))
 	default:
-		tell(fmt.Sprintf("Took %d recipe(s) from %d players", tally.total, tally.nonZero))
+		okTell(fmt.Sprintf("Took %d recipe(s) from %d players", tally.total, tally.nonZero))
 	}
 }
 

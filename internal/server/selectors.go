@@ -400,5 +400,5 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 	me.p.x, me.p.y, me.p.z = x, y, z
 	me.p.setHubPos(x, z)
 	me.p.sendEv(teleportEv(x, y, z, me.yaw, me.pitch))
-	me.p.tell("Teleported.")
+	h.cmdSuccess(players, me.p, "Teleported.", true)
 }

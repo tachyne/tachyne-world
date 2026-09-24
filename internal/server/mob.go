@@ -743,8 +743,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
 			// A piglin backing away from a soul light or a zombified piglin.
 		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
-			// A zombie or zombified piglin with a spear: closing, charging
-			// with the spear lowered, and wheeling off for the next pass.
+			// A zombie, zombified piglin or piglin with a spear: closing,
+			// charging with the spear lowered, and wheeling off for the next pass.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
 			// A stranded water animal heading back to the water, or a strider
 			// off the lava heading back to it.
@@ -1184,6 +1184,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 					h.piglinCrossbowTick(players, m) // CrossbowAttack: a crossbow piglin never melees
 				case m.baby:
 					// StartAttacking is gated on isAdult: a baby piglin never fights
+				case spearOf(m.held) != nil:
+					// SpearAttack's lowered spear is the whole attack: MeleeAttack
+					// skips a piglin holding a kinetic weapon (canUseNonMeleeWeapon).
+					h.mobSpearTick(players, m)
 				default:
 					h.mobMelee(players, m)
 				}

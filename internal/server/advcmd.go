@@ -145,6 +145,7 @@ func (s advState) revoke(n *advNode, crit string) bool {
 // applyAdvancementCommand runs /advancement on the hub.
 func (h *hub) applyAdvancementCommand(players map[int32]*tracked, e evAdvancementCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	targets := h.commandTargets(players, e.by, e.target)
 	if len(targets) == 0 {
 		tell("No player was found")
@@ -173,9 +174,9 @@ func (h *hub) applyAdvancementCommand(players map[int32]*tracked, e evAdvancemen
 		}
 		Verb := advPastTense(e.grant)
 		if who := tally.single(true); who != "" {
-			tell(fmt.Sprintf("%s criterion '%s' of advancement %s %s %s", Verb, e.crit, name, prep, who))
+			okTell(fmt.Sprintf("%s criterion '%s' of advancement %s %s %s", Verb, e.crit, name, prep, who))
 		} else {
-			tell(fmt.Sprintf("%s criterion '%s' of advancement %s %s %d players", Verb, e.crit, name, prep, tally.n(true)))
+			okTell(fmt.Sprintf("%s criterion '%s' of advancement %s %s %d players", Verb, e.crit, name, prep, tally.n(true)))
 		}
 		return
 	}
@@ -197,9 +198,9 @@ func (h *hub) applyAdvancementCommand(players map[int32]*tracked, e evAdvancemen
 		case tally.total == 0:
 			tell(fmt.Sprintf("Couldn't %s advancement %s %s %d players as they %s", verb, name, prep, tally.n(false), advAlready(e.grant)))
 		case who != "":
-			tell(fmt.Sprintf("%s the advancement %s %s %s", Verb, name, prep, who))
+			okTell(fmt.Sprintf("%s the advancement %s %s %s", Verb, name, prep, who))
 		default:
-			tell(fmt.Sprintf("%s the advancement %s %s %d players", Verb, name, prep, tally.n(true)))
+			okTell(fmt.Sprintf("%s the advancement %s %s %d players", Verb, name, prep, tally.n(true)))
 		}
 		return
 	}
@@ -210,9 +211,9 @@ func (h *hub) applyAdvancementCommand(players map[int32]*tracked, e evAdvancemen
 	case tally.total == 0:
 		tell(fmt.Sprintf("Couldn't %s %d advancements %s %d players as they %s", verb, len(set), prep, tally.n(false), them))
 	case who != "":
-		tell(fmt.Sprintf("%s %d advancements %s %s", Verb, len(set), prep, who))
+		okTell(fmt.Sprintf("%s %d advancements %s %s", Verb, len(set), prep, who))
 	default:
-		tell(fmt.Sprintf("%s %d advancements %s %d players", Verb, len(set), prep, tally.n(true)))
+		okTell(fmt.Sprintf("%s %d advancements %s %d players", Verb, len(set), prep, tally.n(true)))
 	}
 }
 

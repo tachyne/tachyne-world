@@ -230,12 +230,13 @@ func (h *hub) villagerSleep(players map[int32]*tracked, m *mob) bool {
 // from updateMobs BEFORE the mob steps, so the door is already open when the
 // walk collision test runs this tick and the villager passes through cleanly.
 func (h *hub) villagerDoors(players map[int32]*tracked, m *mob) {
+	w := h.worldFor(m.dim) // the doors of the villager's own world
 	fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
 	for dx := -1; dx <= 1; dx++ {
 		for dz := -1; dz <= 1; dz++ {
 			for dy := -1; dy <= 1; dy++ {
 				x, y, z := fx+dx, fy+dy, fz+dz
-				s := h.world.Block(x, y, z)
+				s := w.Block(x, y, z)
 				if !worldgen.IsClosedDoor(s) || !worldgen.IsWoodenDoor(s) {
 					continue
 				}
@@ -244,8 +245,8 @@ func (h *hub) villagerDoors(players map[int32]*tracked, m *mob) {
 				if worldgen.GetProperty(info, s, "half") != "lower" {
 					continue
 				}
-				if h.setDoorOpen(players, blockPos{x, y, z}, s, true) {
-					h.openDoors[blockPos{x, y, z}] = h.tick.Load()
+				if h.setDoorOpen(players, m.dim, blockPos{x, y, z}, s, true) {
+					h.openDoors[simPos{dim: m.dim, blockPos: blockPos{x, y, z}}] = h.tick.Load()
 				}
 			}
 		}
@@ -264,24 +265,25 @@ func (h *hub) updateOpenDoors(players map[int32]*tracked) {
 		if now-opened < doorCloseGrace {
 			continue
 		}
-		if h.villagerNear(pos, doorReach) {
+		if h.villagerNear(pos.dim, pos.blockPos, doorReach) {
 			h.openDoors[pos] = now // still passing through — hold it open
 			continue
 		}
-		s := h.world.Block(pos.x, pos.y, pos.z)
+		s := h.worldFor(pos.dim).Block(pos.x, pos.y, pos.z)
 		if worldgen.IsWoodenDoor(s) && boolProp(s, "open") {
-			h.setDoorOpen(players, pos, s, false)
+			h.setDoorOpen(players, pos.dim, pos.blockPos, s, false)
 		}
 		delete(h.openDoors, pos)
 	}
 }
 
 // villagerNear reports whether a live door-using mob stands within r (per-axis)
-// of a door column — so a door isn't slammed on a villager mid-threshold.
-func (h *hub) villagerNear(pos blockPos, r float64) bool {
+// of a door column in dim — so a door isn't slammed on a villager
+// mid-threshold.
+func (h *hub) villagerNear(dim int, pos blockPos, r float64) bool {
 	cx, cz := float64(pos.x)+0.5, float64(pos.z)+0.5
 	for _, m := range h.mobs {
-		if !m.usesDoors || m.dying > 0 {
+		if !m.usesDoors || m.dying > 0 || m.dim != dim {
 			continue
 		}
 		if math.Abs(m.x-cx) <= r && math.Abs(m.z-cz) <= r && math.Abs(m.y-float64(pos.y)) <= 2 {
@@ -293,27 +295,26 @@ func (h *hub) villagerNear(pos blockPos, r float64) bool {
 
 // setDoorOpen flips a door's open state (both halves) and broadcasts it, playing
 // the wooden-door sound. Returns whether it actually changed (false = already in
-// the requested state, so callers don't re-record a no-op). Overworld-only, like
-// the rest of the hub's block simulation.
-func (h *hub) setDoorOpen(players map[int32]*tracked, pos blockPos, state uint32, open bool) bool {
+// the requested state, so callers don't re-record a no-op). The door is in dim.
+func (h *hub) setDoorOpen(players map[int32]*tracked, dim int, pos blockPos, state uint32, open bool) bool {
 	info, ok := worldgen.InfoForState(state)
 	if !ok || !info.HasProperty("open") || boolProp(state, "open") == open {
 		return false
 	}
-	h.setBlockAt(players, dimOverworld, pos, setBoolProp(state, "open", open))
+	h.setBlockAt(players, dim, pos, setBoolProp(state, "open", open))
 	// The paired half shares the open state (a door is two blocks).
 	oy := pos.y + 1
 	if worldgen.GetProperty(info, state, "half") == "upper" {
 		oy = pos.y - 1
 	}
-	other := h.world.Block(pos.x, oy, pos.z)
+	other := h.worldFor(dim).Block(pos.x, oy, pos.z)
 	if oi, ok := worldgen.InfoForState(other); ok && oi.HasProperty("open") {
-		h.setBlockAt(players, dimOverworld, blockPos{pos.x, oy, pos.z}, setBoolProp(other, "open", open))
+		h.setBlockAt(players, dim, blockPos{pos.x, oy, pos.z}, setBoolProp(other, "open", open))
 	}
 	snd := "minecraft:block.wooden_door.open"
 	if !open {
 		snd = "minecraft:block.wooden_door.close"
 	}
-	h.playSoundDim(players, dimOverworld, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.9, 1)
+	h.playSoundDim(players, dim, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.9, 1)
 	return true
 }

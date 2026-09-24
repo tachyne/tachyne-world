@@ -165,6 +165,7 @@ func (h *hub) teamOf(name string) string {
 // applySpreadCommand runs /spreadplayers on the hub.
 func (h *hub) applySpreadCommand(players map[int32]*tracked, e evSpreadCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	var ents []cmdEntity
 	for _, en := range h.commandEntities(players, e.by, e.target) {
 		if en.dim() == e.dim {
@@ -253,7 +254,7 @@ func (h *hub) applySpreadCommand(players map[int32]*tracked, e evSpreadCmd) {
 	} else {
 		avg /= float64(len(ents))
 	}
-	tell(fmt.Sprintf("Spread %d %s around %s, %s with an average distance of %.2f block(s) apart",
+	okTell(fmt.Sprintf("Spread %d %s around %s, %s with an average distance of %.2f block(s) apart",
 		n, what, jFloat(float32(e.cx)), jFloat(float32(e.cz)), avg))
 }
 

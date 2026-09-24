@@ -20,8 +20,8 @@ func paleTrunk(t *testing.T) (*hub, blockPos, *heartLink) {
 		h.world.SetBlock(pos.x, pos.y+dy, pos.z, worldgen.PaleOakLog)
 	}
 	h.world.SetBlock(pos.x, pos.y, pos.z, worldgen.CreakingHeartDormant)
-	h.hearts = map[blockPos]*heartLink{pos: {pos: pos}}
-	return h, pos, h.hearts[pos]
+	h.hearts = map[simPos]*heartLink{{blockPos: pos}: {pos: pos}}
+	return h, pos, h.hearts[simPos{blockPos: pos}]
 }
 
 // nightHub sets the clock after dusk, which is the only time a heart is awake.

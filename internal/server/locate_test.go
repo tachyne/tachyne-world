@@ -3,6 +3,7 @@ package server
 import (
 	"strings"
 	"testing"
+	"time"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -12,6 +13,7 @@ import (
 // unknown id, and is for operators only.
 func TestCommandLocate(t *testing.T) {
 	s := &Server{hub: newHub(world.New(1)), Ops: map[string]bool{"tester": true}}
+	startHub(t, s.hub) // a found structure is a command success, which the hub delivers
 	p := newPlayer(1, "tester", [16]byte{})
 	g := s.hub.worldFor(p.dim).Gen()
 	x, z, ok := g.LocateStructure("village", 0, 0, 100*16)
@@ -27,7 +29,7 @@ func TestCommandLocate(t *testing.T) {
 				return c.Text
 			}
 			t.Fatalf("got %T, want a Chat event", pkt.ev)
-		default:
+		case <-time.After(hubTestWait):
 			t.Fatal("no reply sent")
 		}
 		return ""

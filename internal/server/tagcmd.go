@@ -114,6 +114,8 @@ func tagSet(list []string) map[string]bool {
 // applyTagCommand runs /tag on the hub.
 func (h *hub) applyTagCommand(players map[int32]*tracked, e evTagCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by)     // sendSuccess(…, true)
+	infoTell := h.cmdInfo(players, e.by) // sendSuccess(…, false)
 	targets := h.commandEntities(players, e.by, e.target)
 	if len(targets) == 0 {
 		tell("No entity was found")
@@ -138,13 +140,13 @@ func (h *hub) applyTagCommand(players map[int32]*tracked, e evTagCmd) {
 		case tally.nonZero == 0:
 			tell("Target does not have this tag")
 		case who != "" && e.op == "add":
-			tell(fmt.Sprintf("Added tag '%s' to %s", e.name, who))
+			okTell(fmt.Sprintf("Added tag '%s' to %s", e.name, who))
 		case who != "":
-			tell(fmt.Sprintf("Removed tag '%s' from %s", e.name, who))
+			okTell(fmt.Sprintf("Removed tag '%s' from %s", e.name, who))
 		case e.op == "add":
-			tell(fmt.Sprintf("Added tag '%s' to %d entities", e.name, tally.nonZero))
+			okTell(fmt.Sprintf("Added tag '%s' to %d entities", e.name, tally.nonZero))
 		default:
-			tell(fmt.Sprintf("Removed tag '%s' from %d entities", e.name, tally.nonZero))
+			okTell(fmt.Sprintf("Removed tag '%s' from %d entities", e.name, tally.nonZero))
 		}
 	case "list":
 		all := map[string]bool{}
@@ -157,17 +159,17 @@ func (h *hub) applyTagCommand(players map[int32]*tracked, e evTagCmd) {
 		}
 		if len(all) == 0 { // the no-tags line names what was asked about
 			if who := tally.single(false); who != "" {
-				tell(who + " has no tags")
+				infoTell(who + " has no tags")
 			} else {
-				tell(fmt.Sprintf("There are no tags on the %d entities", tally.count))
+				infoTell(fmt.Sprintf("There are no tags on the %d entities", tally.count))
 			}
 			return
 		}
 		list := strings.Join(sortedTags(all), ", ")
 		if who := tally.single(true); who != "" {
-			tell(fmt.Sprintf("%s has %d tag(s): %s", who, len(all), list))
+			infoTell(fmt.Sprintf("%s has %d tag(s): %s", who, len(all), list))
 		} else {
-			tell(fmt.Sprintf("The %d entities have %d total tag(s): %s", tally.nonZero, len(all), list))
+			infoTell(fmt.Sprintf("The %d entities have %d total tag(s): %s", tally.nonZero, len(all), list))
 		}
 	}
 }
