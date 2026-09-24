@@ -350,7 +350,7 @@ func (h *hub) ventNausea(players map[int32]*tracked, dim int, w *world.World, po
 		if t.dim != dim || t.dead || t.gamemode == gmSpectator {
 			continue
 		}
-		if !psBoxHits(lo, hi, t.x, t.y, t.z, psPlayerWidth, playerHeight(t)) {
+		if !psBoxHits(lo, hi, t.x, t.y, t.z, playerWidth(t), playerHeight(t)) {
 			continue
 		}
 		if h.psGasReaches(dim, w, src, t.x, playerEyeY(t), t.z) {
@@ -373,10 +373,13 @@ func (h *hub) ventNausea(players map[int32]*tracked, dim int, w *world.World, po
 
 func playerHeight(t *tracked) float64 {
 	if t.p.sneaking {
-		return psPlayerSneakHeight
+		return psPlayerSneakHeight * t.scale()
 	}
-	return psPlayerHeight
+	return psPlayerHeight * t.scale()
 }
+
+// playerWidth is the player's box width, scaled.
+func playerWidth(t *tracked) float64 { return psPlayerWidth * t.scale() }
 
 // psBoxHits is AABB.intersects between [lo, hi] and an entity's box of the
 // given width and height standing at (x, y, z).
@@ -428,7 +431,7 @@ func (h *hub) ventLaunch(players map[int32]*tracked, dim int, w *world.World, po
 		if t.dim != dim || t.dead || t.gamemode == gmSpectator {
 			continue
 		}
-		if !psBoxHits(lo, hi, t.x, t.y, t.z, psPlayerWidth, playerHeight(t)) {
+		if !psBoxHits(lo, hi, t.x, t.y, t.z, playerWidth(t), playerHeight(t)) {
 			continue
 		}
 		// checkFallDistanceAccumulation: rising (or falling slower than 0.5)

@@ -284,7 +284,7 @@ func (h *hub) rocketBlast(players map[int32]*tracked, r *rocketEntity) {
 			continue
 		}
 		d := dist3(t.x, t.y, t.z, r.x, r.y, r.z)
-		if d > fireworkBlastRange || !seen(t.x, t.y, t.z, playerEyeHeightStand) {
+		if d > fireworkBlastRange || !seen(t.x, t.y, t.z, t.eyeHeight()) {
 			continue
 		}
 		h.hurtFrom(players, t, scaled(d), dtFireworks, cause, from(r.x, r.z))

@@ -96,7 +96,7 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	// Noclip: the destination may not put the hitbox inside solid blocks —
 	// unless the player is ALREADY inside one (sand fell on them; they must
 	// always be able to dig/walk their way out).
-	if t.gamemode != gmSpectator && h.insideSolid(t.dim, e.x, e.y, e.z) && !h.insideSolid(t.dim, t.x, t.y, t.z) {
+	if s := t.scale(); t.gamemode != gmSpectator && h.insideSolidScaled(t.dim, e.x, e.y, e.z, s) && !h.insideSolidScaled(t.dim, t.x, t.y, t.z, s) {
 		w := h.worldFor(t.dim)
 		fx, fz := int(math.Floor(e.x)), int(math.Floor(e.z))
 		h.rubberBand2(t, now, e, fmt.Sprintf("noclip dim=%d feet=%d head=%d",

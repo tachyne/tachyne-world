@@ -58,6 +58,16 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The Scale attribute changes an entity's size in the world.** A mob
+  or player resized with /attribute already looked bigger or smaller,
+  but the server still treated them as normal size. Now a scaled mob
+  takes up its new size: blocks can't be placed inside it, and it is
+  reached, pushed and hit at its new size. A scaled player's eyes and
+  body move with them, so reach, explosions, wind charges and block
+  placement use their real size. A shrunk player can walk under a
+  one-block gap without being pulled back. Shulkers stop growing at three
+  times their size, happy ghasts never grow bigger, and the ender dragon
+  keeps its size, as in vanilla.
 - **The Gravity attribute works.** Changing an entity's gravity with
   /attribute used to do nothing. Now a mob with no gravity stays in the
   air when the ground under it is dug out. The arcs of leaping wolves,

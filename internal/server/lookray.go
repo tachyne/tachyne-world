@@ -16,7 +16,7 @@ import (
 // any angle, and the loop stops at the first cell either way.
 func (h *hub) lookRay(t *tracked, reach float64, hit func(pos blockPos, state uint32) bool) (blockPos, bool) {
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	ox, oy, oz := t.x, t.y+playerEyeHeightStand, t.z
+	ox, oy, oz := t.x, t.y+t.eyeHeight(), t.z
 	w := h.worldFor(t.dim)
 	if w == nil {
 		return blockPos{}, false

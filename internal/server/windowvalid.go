@@ -62,7 +62,7 @@ func (h *hub) validateWindows(players map[int32]*tracked) {
 func (h *hub) withinEntityReach(t *tracked, m *mob) bool {
 	reach := t.playerAttrs().Value(attr.EntityInteractionRange) + menuReachSlack
 	b := m.box()
-	ex, ey, ez := t.x, t.y+playerEyeHeightStand, t.z
+	ex, ey, ez := t.x, t.y+t.eyeHeight(), t.z
 	dx := math.Max(0, math.Max(m.x-b.w/2-ex, ex-(m.x+b.w/2)))
 	dy := math.Max(0, math.Max(m.y-ey, ey-(m.y+b.h)))
 	dz := math.Max(0, math.Max(m.z-b.w/2-ez, ez-(m.z+b.w/2)))
@@ -83,7 +83,7 @@ func (h *hub) menuBlockPresent(t *tracked) bool {
 // eye position to the block's box, against block_interaction_range + 4.
 func (h *hub) withinMenuReach(t *tracked) bool {
 	reach := t.playerAttrs().Value(attr.BlockInteractionRange) + menuReachSlack
-	ex, ey, ez := t.x, t.y+playerEyeHeightStand, t.z
+	ex, ey, ez := t.x, t.y+t.eyeHeight(), t.z
 	bx, by, bz := float64(t.winPos.x), float64(t.winPos.y), float64(t.winPos.z)
 	dx := math.Max(0, math.Max(bx-ex, ex-(bx+1)))
 	dy := math.Max(0, math.Max(by-ey, ey-(by+1)))

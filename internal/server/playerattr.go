@@ -138,6 +138,18 @@ func (t *tracked) movementFactor() float64 {
 	return in.Value() / in.Base()
 }
 
+// scale is the player's SCALE (LivingEntity.getScale): what their box, their
+// eye height and so their reach are multiplied by. Read without adding it to
+// the attribute sync, where it only goes once something sets it.
+func (t *tracked) scale() float64 { return t.playerAttrs().Peek(attr.Scale) }
+
+// eyeHeight is the standing eye height the player sees and reaches from,
+// scaled with the rest of them.
+func (t *tracked) eyeHeight() float64 { return playerEyeHeightStand * t.scale() }
+
+// halfWidth is half the player's box width, scaled.
+func (t *tracked) halfWidth() float64 { return playerHalfWidth * t.scale() }
+
 // luck is the player's LUCK, which shifts weighted loot-table rolls.
 func (t *tracked) luck() float64 { return t.playerAttrs().Value(attr.Luck) }
 

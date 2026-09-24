@@ -84,7 +84,7 @@ func (h *hub) windPush(players map[int32]*tracked, dim int, cx, cy, cz, radius f
 		if dist > 1 {
 			continue
 		}
-		ex, ey, ez := t.x-cx, t.y+playerEyeHeightStand-cy, t.z-cz
+		ex, ey, ez := t.x-cx, t.y+t.eyeHeight()-cy, t.z-cz
 		n := math.Sqrt(ex*ex + ey*ey + ez*ez)
 		if n < 1e-9 {
 			continue

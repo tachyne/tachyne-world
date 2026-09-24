@@ -543,7 +543,7 @@ type cubeHitSource struct {
 
 func playerHitSource(t *tracked) *cubeHitSource {
 	lx, ly, lz := lookVector(t.yaw, t.pitch)
-	return &cubeHitSource{t.x, t.y + playerEyeHeightStand, t.z, lx, ly, lz, t.x, t.y, t.z}
+	return &cubeHitSource{t.x, t.y + t.eyeHeight(), t.z, lx, ly, lz, t.x, t.y, t.z}
 }
 
 // rotate2 is Vec2.rotate.

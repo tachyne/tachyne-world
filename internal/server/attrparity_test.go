@@ -4,6 +4,8 @@ import (
 	"math"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
@@ -204,5 +206,67 @@ func TestSlowFallingMobTakesNoFallDamage(t *testing.T) {
 	}
 	if hurt(true) {
 		t.Fatal("a pig under Slow Falling took fall damage")
+	}
+}
+
+// /attribute scale grows a mob's box: a block that clears a zombie's head
+// is refused over a zombie twice the size, and the change reaches the
+// players watching so their clients draw it that size.
+func TestScaleAttributeGrowsTheMob(t *testing.T) {
+	obstructed := func(scale float64) (bool, bool) {
+		h, pl, players := cmdHub()
+		h.world.ForceLoad(0, 0, 2)
+		m := h.spawnMob(players, entityZombie, 8.5, 180, 8.5)
+		drainEvs(pl.p)
+		if scale != 1 {
+			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=zombie]", id: attr.Scale, op: "base set", value: scale})
+		}
+		synced := false
+		for _, ev := range drainEvs(pl.p) {
+			if fr, ok := ev.(attachproto.EntityAttributes); ok && fr.EID == m.eid {
+				for _, a := range fr.Attrs {
+					if a.Name == string(attr.Scale) && a.Base == scale {
+						synced = true
+					}
+				}
+			}
+		}
+		h.publishBodies(players)
+		return h.placeObstructed(dimOverworld, 8, 182, 8, worldgen.BlockBase("stone")), synced
+	}
+	if blocked, _ := obstructed(1); blocked {
+		t.Fatal("a block over a normal zombie's head was refused")
+	}
+	blocked, synced := obstructed(2)
+	if !blocked {
+		t.Fatal("a block inside a double-size zombie was allowed")
+	}
+	if !synced {
+		t.Fatal("the new scale was not sent to the watching player")
+	}
+}
+
+// A player shrunk with /attribute scale may walk under a one-block gap;
+// the server must not take their head for being inside the ceiling.
+func TestSmallPlayerWalksUnderALowCeiling(t *testing.T) {
+	moved := func(scale float64) bool {
+		h := newHub(world.New(1))
+		pl, players := walkSetup(h)
+		h.world.ForceLoad(0, 0, 1)
+		y := pl.y
+		h.world.SetBlock(1, int(math.Floor(y))+1, 0, worldgen.BlockBase("stone")) // a ceiling one block up
+		h.world.SetBlock(1, int(math.Floor(y)), 0, 0)
+		if scale != 1 {
+			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@s", id: attr.Scale, op: "base set", value: scale})
+		}
+		h.tick.Store(101)
+		h.onMove(players, pl, evMove{eid: 1, x: 1.5, y: y, z: 0.5, onGround: true})
+		return pl.x == 1.5
+	}
+	if moved(1) {
+		t.Fatal("a full-size player walked into a one-block gap")
+	}
+	if !moved(0.5) {
+		t.Fatal("a half-size player was stopped at a one-block gap")
 	}
 }

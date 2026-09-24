@@ -27,7 +27,7 @@ func (h *hub) throwWindCharge(players map[int32]*tracked, t *tracked) {
 		h.consumeHeld(t)
 	}
 	vx, vy, vz := h.throwFromRotation(t, 0, 1.5, throwUncertainty) // WindChargeItem.use
-	a := h.launchProjectileIn(players, entityWindCharge, t.dim, t.x, t.y+playerEyeHeightStand, t.z, vx, vy, vz)
+	a := h.launchProjectileIn(players, entityWindCharge, t.dim, t.x, t.y+t.eyeHeight(), t.z, vx, vy, vz)
 	a.shooter = t.p.eid
 	a.noHitUntil = h.tick.Load() + arrowNoSelfHT
 	a.playerShot = true

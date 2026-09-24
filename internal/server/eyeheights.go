@@ -32,7 +32,7 @@ func mobEyeHeight(m *mob) float64 {
 		case m.baby:
 			e /= 2
 		}
-		return e
+		return e * m.scale() // the eyes move with the box
 	}
 	return m.box().h * 0.85
 }
