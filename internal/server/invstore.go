@@ -51,6 +51,8 @@ type savedInv struct {
 	// Active status effects: vanilla keeps them in the player's data, so a
 	// relog does not strip a brewed potion or a beacon's gift.
 	Effects []savedEffect `json:"effects,omitempty"`
+	// ShoulderEntityLeft/Right: parrots riding the player, as saved mobs.
+	Shoulders [2]*savedMob `json:"shoulders,omitempty"`
 
 	WardenWarn  int `json:"warden_warn,omitempty"`
 	WardenCool  int `json:"warden_cool,omitempty"`
@@ -195,6 +197,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
 	t.tags = tagSet(saved.Tags)
 	restoreSavedEffects(t, saved.Effects)
+	t.shoulders = saved.Shoulders
 }
 
 // restoreSavedEffects is savedEffectsOf's other half.
@@ -253,7 +256,7 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince,
-		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags),
+		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders,
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true

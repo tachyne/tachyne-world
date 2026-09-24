@@ -455,6 +455,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
 		return false
 	}
+	h.dropShoulderParrots(players, t) // hurtServer: any blow that gets this far shakes them off
 	// Player.hurtServer scales the blow by the difficulty BEFORE anything
 	// mitigates it, and only for the damage types whose `scaling` field says
 	// so. This used to be a flat 0.5/1/1.5 applied at five mob-damage sites,
@@ -553,7 +554,8 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if t.health <= 0 {
 		t.health = 0
 		t.dead = true
-		h.recordDeath(t) // ServerPlayer.die: the last death location
+		h.dropShoulderParrots(players, t) // ServerPlayer.die
+		h.recordDeath(t)                  // ServerPlayer.die: the last death location
 		h.deathForgiveness(players, t)
 		h.ominousOnDeath(players, t) // wind burst / cobwebs / slimes, at the spot
 		h.incCustom(t, "deaths", 1)

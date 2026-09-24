@@ -318,18 +318,20 @@ type tracked struct {
 	exhaustion    float32
 	dead          bool
 	airborne      bool
-	wasInWater    bool       // last move's water state, for the SPLASH vibration on entry
-	peakY         float64    // highest y since leaving the ground (for fall damage)
-	air           int        // remaining breath in ticks (maxAir underwater→0 = drowning)
-	inv           *inventory // survival inventory (picked-up drops)
-	eatingSlot    int        // hotbar slot being eaten from (-1 = not eating)
-	eatingAt      uint64     // tick the eat-hold started (applies after eatDuration)
-	resyncInvAt   uint64     // tick to re-push the inventory (self-heal a dropped one-shot)
-	sleeping      bool       // in bed, waiting for everyone else (skips night when all sleep)
-	lastHurtByMob int32      // the mob whose bite last landed on them (a tamed wolf's OwnerHurtByTargetGoal)
-	lastHitMob    int32      // the mob they last struck (OwnerHurtTargetGoal)
-	sleepPos      blockPos   // the bed being slept in (drifting away wakes)
-	sleepingAt    uint64     // tick they lay down (night turns after sleepSkipTicks)
+	wasInWater    bool         // last move's water state, for the SPLASH vibration on entry
+	peakY         float64      // highest y since leaving the ground (for fall damage)
+	air           int          // remaining breath in ticks (maxAir underwater→0 = drowning)
+	inv           *inventory   // survival inventory (picked-up drops)
+	eatingSlot    int          // hotbar slot being eaten from (-1 = not eating)
+	eatingAt      uint64       // tick the eat-hold started (applies after eatDuration)
+	resyncInvAt   uint64       // tick to re-push the inventory (self-heal a dropped one-shot)
+	sleeping      bool         // in bed, waiting for everyone else (skips night when all sleep)
+	shoulders     [2]*savedMob // parrots riding the left and right shoulder (shoulder.go)
+	shoulderAt    uint64       // the tick the last one landed (removeEntitiesOnShoulder waits 20)
+	lastHurtByMob int32        // the mob whose bite last landed on them (a tamed wolf's OwnerHurtByTargetGoal)
+	lastHitMob    int32        // the mob they last struck (OwnerHurtTargetGoal)
+	sleepPos      blockPos     // the bed being slept in (drifting away wakes)
+	sleepingAt    uint64       // tick they lay down (night turns after sleepSkipTicks)
 
 	// Raid Omen: where the Bad Omen was converted, and therefore where the
 	// raid lands when the omen's 30-second fuse burns out.
@@ -1107,6 +1109,7 @@ func (h *hub) run() {
 				}
 			}
 			h.updateEffects(players)      // status effects at 20 Hz (vanilla per-effect cadence)
+			h.shoulderTick(players)       // shoulder parrots: chatter, and what knocks them off
 			h.updateMobEffects(players)   // …and the mobs', on the same cadence
 			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
 			if age%10 == 0 {
@@ -1493,7 +1496,10 @@ func (h *hub) run() {
 					fmt.Sprintf("Players online (%d): %s", len(names), strings.Join(names, ", "))))
 			case evSetGamemode:
 				for _, t := range h.commandTargets(players, e.eid, e.name) {
-					t.gamemode = e.mode         // the hub's authoritative copy (pickup/survival sim read this)
+					t.gamemode = e.mode // the hub's authoritative copy (pickup/survival sim read this)
+					if e.mode == gmSpectator {
+						h.dropShoulderParrots(players, t) // ServerPlayer.setGameMode(SPECTATOR)
+					}
 					for _, o := range players { // UPDATE_GAME_MODE: the tab list, and a spectator's look
 						o.p.trySendEv(attachproto.PlayerInfoMode{UUID: t.p.uuid, Gamemode: int32(e.mode)})
 					}
@@ -2481,8 +2487,17 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		if t.sleeping { // …lying down, if they're mid-sleep
 			e.p.trySendEv(metaEv(sleepMetadata(t.p.eid, t.sleepPos)))
 		}
+		if t.shoulderOccupied() { // …and their parrots
+			e.p.trySendEv(metaEv(shoulderMeta(t)))
+		}
+		if nt.shoulderOccupied() {
+			t.p.trySendEv(metaEv(shoulderMeta(nt)))
+		}
 	}
 	players[e.p.eid] = nt
+	if nt.shoulderOccupied() { // a relog keeps the parrots where they were
+		e.p.trySendEv(metaEv(shoulderMeta(nt)))
+	}
 	if e.resume != nil {
 		// A crossing completed: this player was rendered here as an inbound shadow
 		// while it approached. The real entity (same eid) now supersedes it — drop

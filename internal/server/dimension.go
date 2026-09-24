@@ -138,6 +138,12 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 			t.p.sendEv(entAdd(o.p.eid, playerEntityType, o.p.uuid, o.x, o.y, o.z, o.yaw, o.pitch))
 			t.p.sendEv(equipEv(o.p.eid, heldStack(o), o.offhand, o.armor))
 			sendAttrsTo(t, playerAttrFrame(o))
+			if t.shoulderOccupied() {
+				o.p.trySendEv(metaEv(shoulderMeta(t)))
+			}
+			if o.shoulderOccupied() {
+				t.p.sendEv(metaEv(shoulderMeta(o)))
+			}
 		}
 	}
 	// Swap entity views: hide the old dimension's mobs/items/projectiles,
@@ -155,6 +161,9 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 	h.sendHealth(t)
 	h.sendExperience(t)
 	h.resendEffects(t)
+	if t.shoulderOccupied() { // the respawn rebuilt their own player entity too
+		t.p.sendEv(metaEv(shoulderMeta(t)))
+	}
 
 	h.dropTracked(t)
 	for eid, c := range h.crystals {

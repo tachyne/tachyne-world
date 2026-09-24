@@ -122,6 +122,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.gearSure = sm.GearSure
 	m.harness = sm.Harness
 	m.tamed, m.sitting = sm.Tamed, sm.Sitting
+	if m.tamed && tameable(m.etype) && !nautilusKind(m.etype) {
+		petStance(m) // a pet comes back following its owner, not wandering off
+	}
 	if sm.OwnerUUID != "" {
 		if b, err := hex.DecodeString(sm.OwnerUUID); err == nil && len(b) == 16 {
 			copy(m.ownerUUID[:], b) // owner eid re-resolves when that player joins

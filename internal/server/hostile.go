@@ -91,7 +91,11 @@ func (hostileBehavior) steer(h *hub, m *mob) (float64, float64) {
 		return wanderBehavior{}.steer(h, m)
 	}
 	if m.flies || m.swims {
-		return straightSteer(m, m.tx, m.tz, standoffDist) // airborne/aquatic: no ground path
+		stop := standoffDist
+		if m.tamed {
+			stop = 0.1 // a pet flier following its owner flies right up to them
+		}
+		return straightSteer(m, m.tx, m.tz, stop) // airborne/aquatic: no ground path
 	}
 	// A* around obstacles toward the target instead of walking straight into
 	// walls, water and cliffs (which just made the mob jitter in place).

@@ -85,13 +85,24 @@ func (h *hub) batStep(players map[int32]*tracked, m *mob) bool {
 
 // parrotImitateTick is the ambient mimicry.
 func (h *hub) parrotImitateTick(players map[int32]*tracked, m *mob) bool {
-	if h.rng.Intn(parrotImitateOdds/mobMoveInterval) != 0 || h.rng.Intn(2) != 0 {
+	if h.rng.Intn(parrotImitateOdds/mobMoveInterval) != 0 {
+		return false
+	}
+	return h.parrotImitateNearby(players, m.dim, m.x, m.y, m.z, sndNeutral)
+}
+
+// parrotImitateNearby is Parrot.imitateNearbyMobs, from wherever the parrot
+// is — flying, or riding a shoulder, where the player is the one it sounds
+// from: one time in two, a random mob within twenty blocks that a parrot can
+// imitate (NOT_PARROT_PREDICATE: one in MOB_SOUND_MAP) has its call copied.
+func (h *hub) parrotImitateNearby(players map[int32]*tracked, dim int, x, y, z float64, src int32) bool {
+	if h.rng.Intn(2) != 0 {
 		return false
 	}
 	var pick *mob
 	n := 0
-	h.grid().nearby(m.dim, m.x, m.z, parrotImitateRange, func(o *mob) {
-		if o == m || o.etype == entityParrot || o.dying > 0 || math.Abs(o.y-m.y) > parrotImitateRange {
+	h.grid().nearby(dim, x, z, parrotImitateRange, func(o *mob) {
+		if _, ok := parrotImitates[o.etype]; !ok || o.dying > 0 || math.Abs(o.y-y) > parrotImitateRange {
 			return
 		}
 		n++
@@ -102,10 +113,9 @@ func (h *hub) parrotImitateTick(players map[int32]*tracked, m *mob) bool {
 	if pick == nil {
 		return false
 	}
-	sound, ok := parrotImitates[pick.etype]
-	if !ok {
-		return false
-	}
-	h.playSoundDim(players, m.dim, sound, sndNeutral, m.x, m.y, m.z, 0.7, (h.rng.Float32()-h.rng.Float32())*0.2+1)
+	h.playSoundDim(players, dim, parrotImitates[pick.etype], src, x, y, z, 0.7, parrotPitch(h))
 	return true
 }
+
+// parrotPitch is Parrot.getPitch.
+func parrotPitch(h *hub) float32 { return (h.rng.Float32()-h.rng.Float32())*0.2 + 1 }

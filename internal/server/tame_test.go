@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func TestTameWolfWithBone(t *testing.T) {
@@ -219,5 +220,48 @@ func TestPetWalksBetweenTeleports(t *testing.T) {
 	h.petAcquire(players, m)
 	if math.Hypot(pl.x-m.x, pl.z-m.z) > petTeleport {
 		t.Fatal("once the recalc clock runs out the cat should teleport")
+	}
+}
+
+// Through the mob tick: a tamed wolf eleven blocks off (past FollowOwnerGoal's
+// ten, short of the twelve-block teleport) WALKS after its owner. It used to
+// park in the idle cycle and only ever caught up by teleporting.
+func TestPetWalksAfterOwnerThroughMobTick(t *testing.T) {
+	h, players, pl := shoulderFixture(t)
+	for x := -6; x <= 14; x++ {
+		for z := -3; z <= 3; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	h.world.ForceLoad(0, 0, 2)
+	m := h.spawnSpecies(players, entityWolf, dimOverworld, 11.5, 180, 0.5)
+	m.tamed, m.owner = true, pl.p.eid
+	petStance(m)
+	start := m.x
+	for i := 0; i < 40; i++ {
+		h.tick.Add(1)
+		h.updateMobs(players)
+	}
+	if m.x > start-2 {
+		t.Errorf("after 40 ticks the wolf is at x=%.2f (from %.2f), want it walking toward its owner at 0.5", m.x, start)
+	}
+}
+
+// A pet reloaded after a restart follows its owner again.
+func TestReloadedPetFollows(t *testing.T) {
+	h, players, pl := shoulderFixture(t)
+	m := h.spawnSpecies(players, entityWolf, dimOverworld, 3.5, 180, 0.5)
+	m.tamed, m.owner, m.ownerUUID = true, pl.p.eid, pl.p.uuid
+	petStance(m)
+	sm := toSavedMob(m)
+	h.removeMob(players, m)
+	h.reloading = true
+	back := h.reloadMob(players, &sm)
+	h.reloading = false
+	if back == nil || !back.tamed {
+		t.Fatal("no tamed wolf came back")
+	}
+	if _, ok := back.behavior.(hostileBehavior); !ok || back.hostile {
+		t.Errorf("reloaded pet behaviour %T hostile=%v, want the follow stance", back.behavior, back.hostile)
 	}
 }

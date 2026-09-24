@@ -77,6 +77,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	if riptide > 3 {
 		riptide = 3
 	}
+	h.dropShoulderParrots(players, t) // startAutoSpinAttack
 	if t.gamemode == gmSurvival {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}

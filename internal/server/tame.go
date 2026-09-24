@@ -115,15 +115,22 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype], variant: advVariantName(m)})
 		return true
 	}
-	m.hostile, m.neutral, m.retaliates = false, false, false // a pet no longer hunts on its own
-	m.behavior = Behavior(hostileBehavior{})                 // …it "hunts" the owner to follow
-	m.setFollowRange(petStartDistance(m.etype))
+	petStance(m)
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(petMeta(m)))
 	if vm := variantMeta(m); vm != nil {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vm)) // the collar appears with the tame
 	}
 	h.advance(players, t, "tame_animal", advMatch{entity: advEntityName[m.etype], variant: advVariantName(m)})
 	return true
+}
+
+// petStance is a tamed follower's standing: no longer hunting on its own, it
+// "hunts" its owner to follow them (FollowOwnerGoal), from its species' start
+// distance. Taming sets it, and so does every reload of a pet.
+func petStance(m *mob) {
+	m.hostile, m.neutral, m.retaliates = false, false, false
+	m.behavior = Behavior(hostileBehavior{})
+	m.setFollowRange(petStartDistance(m.etype))
 }
 
 // petAcquire steers a tamed pet toward its owner: it targets the owner's
@@ -167,10 +174,21 @@ func (h *hub) petAcquire(players map[int32]*tracked, m *mob) bool {
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		m.hasTarget = false
+	case h.shoulderBound(m, owner):
+		// A parrot with a free shoulder to take does not stop a block off:
+		// vanilla's flight carries it on into its owner, and the touch is
+		// what LandOnOwnersShoulderGoal waits for.
+		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z
 	case d > petStartDistance(m.etype):
 		m.hasTarget, m.tx, m.tz = true, owner.x, owner.z
 	case d < petStopDistance(m.etype):
 		m.hasTarget = false // close enough — mill around
+	}
+	if m.hasTarget && m.flies {
+		// A flier's FollowOwnerGoal paths to the owner's own position, not
+		// its cruising height over them: that is how a parrot comes down to
+		// a shoulder instead of circling overhead.
+		m.ty = owner.y
 	}
 	return false
 }

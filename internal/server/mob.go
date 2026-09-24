@@ -903,7 +903,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// chase/breed goals outrank RandomStroll). Hostiles without a
 			// target rest twice as long (vanilla unaggroed hostiles barely
 			// drift at all).
-			busy := (m.hostile && m.hasTarget) || m.loveTicks > 0
+			// A pet after its owner is on FollowOwnerGoal, which outranks
+			// strolling just as a hunt does; left out, a pet parked in the
+			// idle cycle and only caught up through the teleport.
+			busy := (m.hostile && m.hasTarget) || m.loveTicks > 0 || (m.tamed && m.hasTarget)
 			if m.stroll <= 0 && !busy {
 				m.rest = restMin + h.rng.Intn(restMax-restMin)
 				if m.etype == entityFrog {
@@ -1111,6 +1114,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityParrot {
 			h.parrotImitateTick(players, m) // a monster's call, now and then
+			if h.parrotLandOnShoulder(players, m) {
+				continue // it rides its owner's shoulder now, not the world
+			}
 		}
 		if m.etype == entityTadpole {
 			h.tadpoleTick(players, m) // growing up

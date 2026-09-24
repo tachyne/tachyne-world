@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **Parrots ride on your shoulder.** A tamed parrot that is not sitting and
+  has been around for five seconds lands on its owner's shoulder when it
+  touches them. The left shoulder fills first, then the right. It chatters
+  there and copies the calls of nearby mobs. It stays on through a relog or
+  a portal, and every client sees it. It hops off, owned and named as
+  before, when you jump or fall, go into water or powder snow, sleep, get
+  hurt, die, switch to spectator or use riptide.
 - **`/effect` works as in 26.3.** `/effect give` takes `infinite` in place of
   seconds and a hideParticles flag. An infinite effect never runs down,
   survives a relog, and still heals or hurts on schedule. It comes back when
@@ -23,6 +30,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Tamed pets walk after you.** A wolf, cat or parrot following its owner
+  used to stall in the idle cycle. It only caught up by teleporting once it
+  was more than twelve blocks behind. It now walks or flies after you as
+  vanilla's do. Pets reloaded after a restart also follow again, instead of
+  wandering off like wild animals.
+- **Parrots copy only the mobs they know.** A parrot picks the mob to imitate
+  from those whose call it has, as vanilla's does. It no longer goes quiet
+  when a cow or a pig happens to be the nearest mob.
 - **Nautiluses, zombie nautiluses and sniffers behave as in 26.3.** A
   nautilus follows its food, courts its mate, and charges whoever hurt it
   or a pufferfish now and then. It then waits out a cooldown before it
