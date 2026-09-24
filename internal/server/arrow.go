@@ -26,6 +26,11 @@ const (
 	boggedPoisonSecs    = 5  // Bogged.getArrow: POISON 100 ticks
 )
 
+const (
+	entityStatusProjectileBreak = 3    // Snowball/ThrownEgg: the item breaks into bits
+	worldEventDragonBreath      = 2006 // DragonFireball.onHit: the breath's burst
+)
+
 var (
 	entityArrow         = entityID("arrow")          // minecraft:entity_type "arrow" (1.21.5)
 	entitySpectralArrow = entityID("spectral_arrow") // …and the glowing one
@@ -359,7 +364,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					if a.etype == entitySmallFireball {
 						h.smallFireballLights(players, a, bp, struckFace(a.x, a.y, a.z, px, py, pz, bp))
 					}
-					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
+					if a.etype == entityShulkerBullet { // ShulkerBullet.onHitBlock: a small burst and its thud
+						h.spawnParticles(players, a.dim, particleExplosion, a.x, a.y, a.z, 0.2, 0, 2)
+						h.playSoundDim(players, a.dim, "minecraft:entity.shulker_bullet.hit", sndHostile, a.x, a.y, a.z, 1, 1)
+					}
 					if a.pearl {
 						h.pearlLand(players, a)
 					}
@@ -389,13 +397,23 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			h.shulkerBulletReplan(a, bulletTarget) // a new leg when this one ends or runs into a wall
 		}
 		if hit {
+			// Snowball / ThrownEgg.onHit broadcast entity event 3, which the
+			// client draws as the item breaking into bits. Nothing else that
+			// breaks shows a burst of its own: fireballs and skulls end in
+			// their explosion, a dragon fireball in its breath, a potion or
+			// a bottle in its splash, a pearl, a spit or a small fireball in
+			// nothing at all.
+			if a.etype == entitySnowball || a.etype == entityEggProj {
+				h.toNearbyEv(players, a.dim, a.x, a.z, entityStatus(eid, entityStatusProjectileBreak))
+			}
 			if a.egg { // ThrownEgg.onHit: whatever it struck, block or creature
 				h.hatchEgg(players, a)
 			}
 			if a.xpBottle { // a bottle o' enchanting pays out where it broke
 				h.breakXPBottle(players, a)
 			}
-			if a.breath { // a dragon fireball bursts into its breath
+			if a.breath { // a dragon fireball bursts into its breath (levelEvent 2006: the purple burst and its sound)
+				h.levelEvent(players, a.dim, worldEventDragonBreath, floorInt(a.x), floorInt(a.y), floorInt(a.z), 1)
 				h.spawnBreathCloud(a.dim, a.x, a.y, a.z)
 			}
 			if a.splash { // a thrown potion shatters into its area-of-effect

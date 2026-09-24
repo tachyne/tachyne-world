@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Projectiles break with their own effects.** Snowballs and eggs now
+  break into bits of themselves, where every projectile used to show the
+  same generic puff of smoke. Fireballs, wither skulls, ender pearls and
+  llama spit no longer puff at all. A shulker bullet that hits a wall now
+  gives a small burst and a thud. A dragon fireball now bursts into its
+  purple cloud with its sound.
 - **Breezes handle projectiles like vanilla's.** A breeze now turns
   arrows and other projectiles back at half speed instead of being hit by
   them. Wind charges still hit it. A breeze's wind charge now hits other
