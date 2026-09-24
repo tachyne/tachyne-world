@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **No snow under roofs.** Snow and ice now form only on the top block of
+  a column, as vanilla's weather does. A floor under a roof stays clear
+  however high the roof is. Before, a roof more than six blocks up counted
+  as open sky, so snow piled up indoors. A spot lit to block light 10 or
+  more never collects snow, and snow settles only where a snow layer could
+  stand.
 - **No more floating dripstone in regenerated caves.** When the cave
   generator changed, dripstone and cave vines that had grown in the old
   caves were kept, while the rock around them regenerated. Some were left

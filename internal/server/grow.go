@@ -852,81 +852,96 @@ var (
 	iceBlock   = worldgen.BlockBase("ice")
 )
 
-// precipTick freezes exposed water to ice and accumulates snow layers in cold
-// biomes, a port of ServerLevel.tickPrecipitation restricted to one sampled
-// column. Ice forms whenever a snowy column's surface water is exposed at an
-// edge; snow only while it is actually snowing (raining in a cold biome).
+// precipTick is ServerLevel.tickPrecipitation for one sampled column. The
+// only cell weather touches is the top of the column's MOTION_BLOCKING
+// heightmap — the air (or snow) above its highest block that blocks motion
+// or holds a fluid — so nothing under a roof, however high, ever freezes or
+// gathers snow (bug #29: a roof 47 blocks up read as open sky, and snow
+// piled on the floor beneath it). Under it: water freezes (Biome.shouldFreeze:
+// a cold biome, block light under 10, an edge); while it rains, snow settles
+// (Biome.shouldSnow: snowing there, block light under 10, air or snow in the
+// cell, and a floor snow can stand on) up to max_snow_accumulation_height;
+// and a cauldron catches the rain or snow (handlePrecipitation).
 func (h *hub) precipTick(players map[int32]*tracked, dim, cx, cz int) {
+	w := h.worldFor(dim)
 	x := cx*16 + h.rng.Intn(16)
 	z := cz*16 + h.rng.Intn(16)
-	// Find the topmost non-air near the surface (water sits above the
-	// terrain; a snow layer or a cauldron on the ground sits above GroundY,
-	// which counts only what collides).
-	start := worldgen.SeaLevel + 4
-	if g := h.worldFor(dim).GroundY(x, z) + 2; g > start {
-		start = g
-	}
-	topY, top := 0, uint32(0)
-	for y := start; y >= h.worldFor(dim).GroundY(x, z)-1 && h.inWorldY(y); y-- {
-		if s := h.worldFor(dim).At(x, y, z); s != worldgen.Air {
-			topY, top = y, s
-			break
-		}
-	}
-	if top == 0 {
+	topY := h.motionBlockingTop(dim, x, z)
+	belowY := topY - 1
+	if !h.inWorldY(belowY) {
 		return
 	}
-	snowing := worldgen.PrecipitationAt(h.worldFor(dim).BiomeAt(x, z), topY) == worldgen.PrecipSnow
-	if _, _, isCauldron := cauldronOf(top); isCauldron {
-		if h.raining && h.skyExposedColumn(x, z) {
-			h.cauldronPrecip(players, blockPos{x, topY, z}, top, snowing)
-		}
-		return
-	}
-	if !snowing {
-		return // not cold enough to snow/freeze here
-	}
-	if !h.skyExposedColumn(x, z) {
-		return // sheltered columns don't freeze or accumulate
-	}
-	// Freeze: an exposed water SOURCE with a non-water edge neighbour becomes
-	// ice (vanilla freezes edges first, so open water stays liquid). Biome
-	// .shouldFreeze also needs block light < 10, so a torch beside a pond keeps
-	// it liquid — that gate was missing.
-	if top == worldgen.WaterBase {
-		if h.blockLight(dim, x, topY, z) >= 10 {
-			return
-		}
-		edge := false
+	at, below := w.At(x, topY, z), w.At(x, belowY, z)
+	biome := w.BiomeAt(x, z)
+	// Biome.shouldFreeze(belowPos): exposed still water beside a non-water
+	// edge, where it is cold and dark enough.
+	if below == worldgen.WaterBase && worldgen.PrecipitationAt(biome, belowY) == worldgen.PrecipSnow &&
+		h.blockLight(dim, x, belowY, z) < 10 {
 		for _, d := range horizNeighbors {
-			if !worldgen.IsWater(h.worldFor(dim).At(x+d.x, topY, z+d.z)) {
-				edge = true
+			if !worldgen.IsWater(w.At(x+d.x, belowY, z+d.z)) {
+				h.setBlockAt(players, dim, blockPos{x, belowY, z}, iceBlock)
 				break
 			}
 		}
-		if edge {
-			h.setBlockAt(players, dim, blockPos{x, topY, z}, iceBlock)
+	}
+	if !h.raining {
+		return
+	}
+	snowing := worldgen.PrecipitationAt(biome, topY) == worldgen.PrecipSnow
+	if maxLayers := h.rules.MaxSnowHeight; maxLayers > 0 && snowing && h.blockLight(dim, x, topY, z) < 10 {
+		switch {
+		case at >= snowLayer1 && at <= snowLayer1+7:
+			if layers := int(at-snowLayer1) + 1; layers < min(maxLayers, 8) {
+				h.setBlockAt(players, dim, blockPos{x, topY, z}, snowLayer1+uint32(layers))
+			}
+		case at == worldgen.Air && snowCanStandOn(below):
+			h.setBlockAt(players, dim, blockPos{x, topY, z}, snowLayer1)
 		}
-		return
 	}
-	// Snow: while snowing, lay a snow layer on a solid, snow-free surface,
-	// or pile another on the layers there up to max_snow_accumulation_height
-	// (Biome.shouldSnow also wants block light under 10).
-	maxLayers := h.rules.MaxSnowHeight
-	if !h.raining || maxLayers <= 0 {
-		return
-	}
-	if top >= snowLayer1 && top <= snowLayer1+7 {
-		if layers := int(top-snowLayer1) + 1; layers < maxLayers && h.blockLight(dim, x, topY, z) < 10 {
-			h.setBlockAt(players, dim, blockPos{x, topY, z}, snowLayer1+uint32(layers))
-		}
-		return
-	}
-	if worldgen.IsSolidFull(top) && top != iceBlock &&
-		h.worldFor(dim).At(x, topY+1, z) == worldgen.Air && h.blockLight(dim, x, topY+1, z) < 10 {
-		h.setBlockAt(players, dim, blockPos{x, topY + 1, z}, snowLayer1)
+	// Block.handlePrecipitation on the block under the top: a cauldron fills.
+	if _, _, isCauldron := cauldronOf(below); isCauldron {
+		h.cauldronPrecip(players, blockPos{x, belowY, z}, below, worldgen.PrecipitationAt(biome, belowY) == worldgen.PrecipSnow)
 	}
 }
+
+// motionBlockingTop is getHeightmapPos(MOTION_BLOCKING) for a column: the
+// cell above its highest block that blocks motion or holds a fluid. A snow
+// layer does not count, so snow thickens where it lies.
+func (h *hub) motionBlockingTop(dim, x, z int) int {
+	w := h.worldFor(dim)
+	for y := w.Ceiling() - 1; y >= worldgen.MinY; y-- {
+		st := w.At(x, y, z)
+		if st == worldgen.Air || (st >= snowLayer1 && st <= snowLayer1+7) {
+			continue
+		}
+		if worldgen.Collides(st) || worldgen.IsFluid(st) || worldgen.IsWaterlogged(st) {
+			return y + 1
+		}
+	}
+	return worldgen.MinY
+}
+
+// snowCanStandOn is SnowLayerBlock.canSurvive's floor test: never ice, packed
+// ice or a barrier; always honey or soul sand; otherwise a full top face, or
+// a full stack of snow.
+func snowCanStandOn(below uint32) bool {
+	switch below {
+	case iceBlock, packedIceBlock, barrierBlock:
+		return false
+	case honeyBlockState, soulSandState:
+		return true
+	case snowLayer1 + 7:
+		return true
+	}
+	return worldgen.IsSturdyTop(below)
+}
+
+var (
+	packedIceBlock  = worldgen.BlockBase("packed_ice")
+	barrierBlock    = worldgen.BlockBase("barrier")
+	honeyBlockState = worldgen.BlockBase("honey_block")
+	soulSandState   = worldgen.BlockBase("soul_sand")
+)
 
 var (
 	melonStemBase       = worldgen.BlockBase("melon_stem")            // age 0..7
