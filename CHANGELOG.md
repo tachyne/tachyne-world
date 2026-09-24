@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Droppers keep what items carry.** A dropper feeding a chest or
+  throwing an item out passes on its potion, name, enchantments and
+  contents. Before, only the bare item got through (a thrown item kept its
+  damage and enchantments). The container insert is also silent now, as in
+  vanilla.
 - **Lava fuel gives the bucket back.** A lava bucket burnt in a furnace
   leaves its empty bucket in the fuel slot. Before, the bucket was lost.
 - **`/gamerule <rule>` shows the current value**, as vanilla's does, and

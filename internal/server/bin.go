@@ -315,15 +315,17 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	// (vanilla DropperBlock): the redstone-driven item pipe.
 	if !dispense {
 		if dst := h.containerSlots(pos.at(front)); dst != nil {
-			if h.insertByFace(pos.at(front), dy, invStack{item: item, count: 1}) {
+			// HopperBlockEntity.addItem with stack.copyWithCount(1): the item
+			// goes in whole, data and all, and quietly — no dispense sound or
+			// smoke for a container insert.
+			one := *st
+			one.count = 1
+			if h.insertByFace(pos.at(front), dy, one) {
 				if st.count--; st.count <= 0 {
 					*st = invStack{}
 				}
 				h.refreshBinViewers(players, pos.at(front)) // update anyone viewing the target
 			}
-			h.rsSound(players, "minecraft:block.dispenser.dispense", sndBlock,
-				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1)
-			h.levelEvent(players, pos.dim, worldEventDispenserSmoke, pos.x, pos.y, pos.z, dir3D(dx, dy, dz))
 			h.refreshBinViewers(players, pos)
 			return
 		}
@@ -627,7 +629,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		}
 	default: // dropper (or a dispenser with a plain item): toss it out
 		if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+			one := *st
+			one.count = 1
+			it.setFrom(one) // the whole stack's data: a potion, a named sword, a filled bundle
+			h.refreshItemMeta(players, it)
 		}
 	}
 	if took {

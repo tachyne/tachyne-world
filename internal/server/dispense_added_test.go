@@ -88,3 +88,24 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		}
 	})
 }
+
+// DropperBlock: a potion a dropper pushes into a chest keeps its brew.
+func TestDropperKeepsItemData(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	info, _ := worldgen.InfoForState(dropperMin)
+	state := worldgen.SetProperty(info, dropperMin, "facing", "east")
+	pos, front := blockPos{5, 70, 5}, blockPos{6, 70, 5}
+	onHub(t, h, func() {
+		w.SetBlock(pos.x, pos.y, pos.z, state)
+		w.SetBlock(front.x, front.y, front.z, worldgen.BlockID("chest"))
+		b := &bin{slots: make([]invStack, 9)}
+		b.slots[0] = invStack{item: itemByName["potion"], count: 2, potion: potPoison}
+		h.bins[simPos{blockPos: pos}] = b
+		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
+		got := h.containerSlots(simPos{blockPos: front})
+		if got == nil || got[0].item != itemByName["potion"] || got[0].potion != potPoison {
+			t.Errorf("the chest received %+v, want a poison potion", got)
+		}
+	})
+}
