@@ -54,8 +54,8 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 	case entityBlaze:
 		m.hostile = true
 		m.health = blazeHealth
-		m.behavior = Behavior(rangedBehavior{}) // speed from speedFor (attr 0.23)
-		m.setFollowRange(48)                    // Blaze FOLLOW_RANGE (vanilla 1.21.5)
+		m.behavior = Behavior(blazeBehavior{}) // speed from speedFor (attr 0.23)
+		m.setFollowRange(48)                   // Blaze FOLLOW_RANGE (vanilla 1.21.5)
 	default:
 		h.applySpecies(players, m) // roster nether species (piglin/hoglin/strider/…)
 		h.rollStriderRider(players, m)

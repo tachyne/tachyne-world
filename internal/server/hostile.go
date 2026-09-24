@@ -143,6 +143,29 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	return (sx + fx) * sp, (sz + fz) * sp
 }
 
+// blazeBehavior is BlazeAttackGoal's movement: a blaze that can see its
+// target holds its ground and fires from wherever it is, closing only to
+// within two blocks for a punch and, for a few ticks after losing sight, on
+// the spot it last saw the target. It never backs off or strafes.
+type blazeBehavior struct{}
+
+func (blazeBehavior) name() string { return "blaze" }
+func (blazeBehavior) steer(h *hub, m *mob) (float64, float64) {
+	if !m.hasTarget {
+		return wanderBehavior{}.steer(h, m)
+	}
+	dx, dz := m.tx-m.x, m.tz-m.z
+	d := math.Hypot(dx, dz)
+	if d < 1e-6 {
+		return 0, 0
+	}
+	lost := m.unseenTicks > 0 && m.unseenTicks < 5 // lastSeen < 5
+	if d >= 2 && !lost {
+		return 0, 0
+	}
+	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
+}
+
 // holdRangedBehavior is vanilla's plain RangedAttackGoal: walk in until the
 // target is inside the attack radius, then stand and throw. A trident drowned
 // uses it — it does not kite or strafe the way a skeleton does.

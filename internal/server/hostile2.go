@@ -92,7 +92,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		m.neutral = true     // holds its peace until hit
 		m.setFollowRange(64) // EnderMan FOLLOW_RANGE (vanilla 1.21.5)
 	case entityWitch:
-		m.behavior = rangedBehavior{} // keeps her distance like a skeleton
+		m.behavior = holdRangedBehavior{radius: witchRange} // RangedAttackGoal(1.0, 60, 10): walks in, then stands and throws
 	default:
 		return false
 	}

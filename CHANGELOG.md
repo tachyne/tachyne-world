@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Witches and blazes hold their ground.** A witch walks up to throwing
+  range and stands there to throw. A blaze that can see you hovers where it
+  is and fires. Neither backs off and circles like a skeleton any more.
 - **Vexes fly like vexes.** A vex now drifts between random spots near
   where it was summoned, then darts at its target, charging and crying out,
   and strikes when it touches them. It passes through walls, as in vanilla.
