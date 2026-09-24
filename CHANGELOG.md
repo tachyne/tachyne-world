@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Mob drops follow vanilla's odds.** A polar bear now drops cod three
+  times as often as salmon, and a witch drops sticks twice as often as
+  each of her other drops. Every choice in a mob's drop table was being
+  drawn evenly.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

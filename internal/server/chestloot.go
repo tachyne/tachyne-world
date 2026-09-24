@@ -150,26 +150,39 @@ func entryWeight(e *lootEntry, luck float64) int {
 	return 0
 }
 
-// collectLeaves appends the pickable leaves of one entry whose conditions pass.
-func (c *lootCtx) collectLeaves(e *lootEntry, out *[]*lootEntry) {
+// collectLeaves appends the pickable leaves of one entry and reports whether
+// it expanded, as vanilla LootPoolEntryContainer.expand: a leaf expands when
+// its conditions pass; alternatives take the first child that expands; a
+// sequence adds children until one does not; a group adds every child.
+func (c *lootCtx) collectLeaves(e *lootEntry, out *[]*lootEntry) bool {
 	if !c.condsPass(e.Conditions) {
-		return
+		return false
 	}
 	switch e.Type {
 	case "item", "empty", "ref":
 		*out = append(*out, e)
-	case "alternatives", "sequence":
-		for i := range e.Children { // first child whose conditions pass
-			if c.condsPass(e.Children[i].Conditions) {
-				c.collectLeaves(&e.Children[i], out)
-				return
+		return true
+	case "alternatives", "alt":
+		for i := range e.Children {
+			if c.collectLeaves(&e.Children[i], out) {
+				return true
 			}
 		}
+		return false
+	case "sequence":
+		for i := range e.Children {
+			if !c.collectLeaves(&e.Children[i], out) {
+				return false
+			}
+		}
+		return true
 	case "group":
 		for i := range e.Children {
 			c.collectLeaves(&e.Children[i], out)
 		}
+		return true
 	}
+	return false
 }
 
 // emitChestEntry turns a chosen leaf into its stacks: empties yield nothing,

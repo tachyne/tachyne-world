@@ -160,16 +160,26 @@ def func(f):
     raise Unsupported("func " + t)
 
 
+def weighed(e, out):
+    """A leaf's pool weight and quality (LootPool draws by max(0, floor(weight +
+    quality*luck))); the defaults 1 and 0 are left out and read back as such."""
+    if e.get("weight", 1) != 1:
+        out["w"] = int(e["weight"])
+    if e.get("quality", 0) != 0:
+        out["q"] = int(e["quality"])
+    return out
+
+
 def entry(e):
     t = e["type"].removeprefix("minecraft:")
     conds = [cond(c) for c in e.get("conditions", [])]
     funcs = [x for x in (func(f) for f in e.get("functions", [])) if x is not None]
     if t == "item":
-        return {"type": "item", "id": iid(e["name"]), "conditions": conds, "functions": funcs}
+        return weighed(e, {"type": "item", "id": iid(e["name"]), "conditions": conds, "functions": funcs})
     if t in ("alternatives", "group", "sequence"):
         return {"type": t, "children": [entry(c) for c in e["children"]], "conditions": conds}
     if t == "empty":
-        return {"type": "empty", "conditions": conds}
+        return weighed(e, {"type": "empty", "conditions": conds})
     raise Unsupported("entry " + t)
 
 
