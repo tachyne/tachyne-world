@@ -623,6 +623,10 @@ type hub struct {
 	bins         map[simPos]*bin           // dispenser/dropper/hopper storage
 	binFire      map[simPos]uint64         // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
+	// blastSrc is the explosion being resolved (set around explodeHurt): who
+	// is behind it, for the vehicles it may spare and the kills it credits.
+	blastSrc blastCfg
+
 	vehicles        map[int32]*vehicle // minecarts + boats
 	blastSpareRails bool
 	// A charged creeper's blast: whatever it kills drops its own head, which

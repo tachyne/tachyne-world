@@ -282,7 +282,10 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			h.lightBlastFires(players, dim, cleared)
 		}
 	}
+	prevSrc := h.blastSrc
+	h.blastSrc = cfg
 	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
+	h.blastSrc = prevSrc
 	// Vanilla hurts entities before it touches blocks, so bees a hive lets
 	// out are not caught in the blast that freed them.
 	for _, pos := range hives {
@@ -330,6 +333,11 @@ type blastCfg struct {
 	// (BeehiveBlock.getDrops names the sources: primed TNT, a TNT cart, a
 	// creeper, the wither and its skulls).
 	hiveRelease bool
+	// causer is the blast's indirect source entity (Explosion.
+	// getIndirectSourceEntity: whoever lit the TNT, shot the fireball, or the
+	// creeper itself), and causerMob says it is a mob rather than a player.
+	causer    int32
+	causerMob bool
 }
 
 type blastOpt func(*blastCfg)
@@ -343,6 +351,11 @@ func withBlastFire() blastOpt {
 // destroys.
 func withHiveRelease() blastOpt {
 	return func(c *blastCfg) { c.hiveRelease = true }
+}
+
+// withBlastCause names the blast's indirect source: a player or a mob.
+func withBlastCause(eid int32, mob bool) blastOpt {
+	return func(c *blastCfg) { c.causer, c.causerMob = eid, mob }
 }
 
 // withResistCap bounds every block's resistance for one explosion.

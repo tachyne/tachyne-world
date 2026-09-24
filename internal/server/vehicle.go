@@ -128,6 +128,10 @@ type vehicle struct {
 	hurtTime    int
 	hurtDirFlip bool
 	damage      float64
+	// A boat's fire (remainingFireTicks) and the synced burning flag; a
+	// minecart never burns down its fire (vehicle_damage.go).
+	fireTicks int
+	burning   bool
 }
 
 func (v *vehicle) isBoat() bool { return !cartTypes[v.etype] }
@@ -323,11 +327,11 @@ func vehicleHurtMeta(v *vehicle) []byte {
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
-// hurtVehicle is a player's blow on a boat or minecart (VehicleEntity.
-// hurtServer): the vehicle rocks, the blow's worth ×10 builds up as damage,
-// and it breaks only once that passes 40 — a bare fist takes several quick
-// punches, since a point of damage drains away every tick. A creative
-// player's blow removes it on the spot with nothing dropped.
+// hurtVehicle is a player's blow on a boat or minecart (Player.attack into
+// VehicleEntity.hurtServer): the vehicle rocks, the blow's worth ×10 builds
+// up as damage, and it breaks only once that passes 40 — a bare fist takes
+// several quick punches, since a point of damage drains away every tick. A
+// creative player's blow removes it on the spot with nothing dropped.
 func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if t == nil || t.dim != v.dim {
 		return
@@ -340,19 +344,7 @@ func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if sw.raw <= 0 {
 		return
 	}
-	v.hurtDirFlip = !v.hurtDirFlip
-	v.hurtTime = vehHurtTicks
-	v.damage += sw.raw * 10
-	creative := t.gamemode == gmCreative
-	if !creative && v.damage <= vehBreakDamage {
-		h.toTracking(players, v.eid, v.dim, v.x, v.z, metaEv(vehicleHurtMeta(v)))
-		return
-	}
-	if creative {
-		h.discardVehicle(players, v)
-		return
-	}
-	h.breakVehicle(players, v)
+	h.damageVehicle(players, v, vehHit{dmg: sw.raw, dt: dtPlayerAttack, by: t})
 }
 
 // tickVehicleHurt drains the hurt state a tick (AbstractBoat/AbstractMinecart
@@ -465,6 +457,9 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 func (h *hub) updateVehicles(players map[int32]*tracked) {
 	for _, v := range h.vehicles {
 		v.tickVehicleHurt()
+		if !h.vehicleHazards(players, v) {
+			continue // burnt up in lava or fire
+		}
 		if !v.isBoat() {
 			h.tickMinecart(players, v)
 		} else {

@@ -79,6 +79,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 	if power < 1e-5 {
 		return
 	}
+	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
 	for _, t := range players {
 		if t.dim != dim || t.dead {
 			continue

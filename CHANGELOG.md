@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Boats and minecarts take damage from more than fists.** Arrows and
+  other projectiles, explosions, lava and fire now hurt them the way they do
+  in vanilla: the vehicle rocks, and enough damage breaks it into its item.
+  Lava breaks one almost at once, fire burns a boat down in moments and
+  leaves it smouldering, and a snowball only rocks it. A creeper's blast
+  spares vehicles when mob griefing is off, and a rider's own arrow never
+  hits the vehicle they are sitting in.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is
