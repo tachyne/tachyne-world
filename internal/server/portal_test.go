@@ -252,3 +252,41 @@ func TestNetherPortalDemolishCascades(t *testing.T) {
 		}
 	}
 }
+
+// A lit Nether-side portal survives the updates that reach it. The frame test
+// read the overworld, so any neighbour update popped a Nether portal whose
+// coordinates held no overworld frame.
+func TestNetherPortalSurvivesItsUpdates(t *testing.T) {
+	h := newHub(world.New(1))
+	nw, err := world.NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.nether = nw
+	x, y, z := 8, 70, 8
+	nw.ForceLoad(0, 0, 1)
+	h.world.ForceLoad(0, 0, 1)
+	buildFrame(nw, x, y, z)
+	for j := 0; j < 3; j++ {
+		nw.SetBlock(x, y+j, z, portalX)
+		nw.SetBlock(x+1, y+j, z, portalX)
+	}
+	for j := -1; j <= 3; j++ { // nothing of the kind in the overworld
+		for i := -1; i <= 2; i++ {
+			h.world.SetBlock(x+i, y+j, z, worldgen.Air)
+		}
+	}
+	players := map[int32]*tracked{}
+	h.scheduleAroundIn(dimNether, blockPos{x, y + 1, z}, 1)
+	stepTicks(h, players, 3)
+	if got := nw.At(x, y+1, z); got != portalX {
+		t.Fatalf("the Nether portal popped on an update (cell holds %d)", got)
+	}
+	// It still pops when its own frame goes.
+	nw.SetBlock(x, y+3, z, worldgen.Air)
+	h.scheduleAroundIn(dimNether, blockPos{x, y + 2, z}, 1)
+	stepTicks(h, players, 6)
+	if nw.At(x, y+2, z) == portalX {
+		t.Error("a Nether portal with a broken frame did not pop")
+	}
+}

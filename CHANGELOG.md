@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Nether portals stay lit in the Nether.** A portal block on the Nether
+  side checked its obsidian frame in the overworld, at the same
+  coordinates, and went out whenever a block beside it updated. It now
+  checks its own frame.
 - **No snow under roofs.** Snow and ice now form only on the top block of
   a column, as vanilla's weather does. A floor under a roof stays clear
   however high the roof is. Before, a roof more than six blocks up counted

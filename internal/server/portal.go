@@ -347,10 +347,10 @@ func portalIntact(w *world.World, x, y, z int, state uint32) bool {
 	return holds(w.At(x, y, z-1)) && holds(w.At(x, y, z+1))
 }
 
-// updatePortalBlock is the scheduled step for portal blocks (overworld sim):
+// updatePortalBlock is the scheduled step for portal blocks (any dimension):
 // orphans pop, and the pop cascades through the rest of the sheet.
 func (h *hub) updatePortalBlock(players map[int32]*tracked, pos blockPos, state uint32) {
-	if !portalIntact(h.world, pos.x, pos.y, pos.z, state) {
+	if !portalIntact(h.rsWorld(), pos.x, pos.y, pos.z, state) { // the portal's own dimension: h.world is the overworld
 		h.setBlockAt(players, h.rsDim, pos, worldgen.Air)
 		h.scheduleAroundIn(h.rsDim, pos, 1)
 	}
