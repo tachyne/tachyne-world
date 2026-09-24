@@ -64,3 +64,26 @@ func TestFillModes(t *testing.T) {
 		t.Errorf("the replace filter touched the wrong blocks: centre %d (dirt %d), glass %d", h.world.At(1, 201, 1), worldgen.Dirt, count(glass))
 	}
 }
+
+// EnchantCommand: the held item takes a supported, compatible enchantment;
+// an unsupported or conflicting one leaves it alone.
+func TestEnchantCommand(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	sword := itemByName["diamond_sword"]
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: sword, count: 1}
+	h.applyEnchantCommand(players, evEnchantCmd{by: pl.p.eid, target: "@s", ench: enchByName["sharpness"], lvl: 5})
+	if pl.inv.slots[pl.p.heldSlot()].enchLvl(enchByName["sharpness"]) != 5 {
+		t.Fatal("the sword did not take Sharpness V")
+	}
+	h.applyEnchantCommand(players, evEnchantCmd{by: pl.p.eid, target: "@s", ench: enchByName["smite"], lvl: 1})
+	if pl.inv.slots[pl.p.heldSlot()].enchLvl(enchByName["smite"]) != 0 {
+		t.Error("Smite joined Sharpness")
+	}
+	h.applyEnchantCommand(players, evEnchantCmd{by: pl.p.eid, target: "@s", ench: enchByName["efficiency"], lvl: 1})
+	if pl.inv.slots[pl.p.heldSlot()].enchLvl(enchByName["efficiency"]) != 0 {
+		t.Error("a sword took Efficiency")
+	}
+}

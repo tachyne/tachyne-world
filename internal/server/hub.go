@@ -1604,6 +1604,8 @@ func (h *hub) run() {
 				h.applyRule(players, e)
 			case evSetBlocks:
 				h.applySetBlocks(players, e)
+			case evEnchantCmd:
+				h.applyEnchantCommand(players, e)
 			case evSetWeather:
 				h.applyWeatherCommand(e)
 			case evSetHud:

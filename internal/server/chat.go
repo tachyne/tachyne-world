@@ -34,7 +34,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /setblock /fill /seed /me /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /title /bug" +
+		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /title /bug" +
 			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -158,6 +158,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdSummon(p, fields[1:])
 	case "setblock":
 		s.cmdSetblock(p, fields[1:])
+	case "enchant":
+		s.cmdEnchant(p, fields[1:])
 	case "fill":
 		s.cmdFill(p, fields[1:])
 	case "seed":

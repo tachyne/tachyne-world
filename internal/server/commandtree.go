@@ -154,6 +154,7 @@ func modelledCommands() []cmdNode {
 		lit("setblock", false, argVec3("pos", false, argGreedy("block", true))),
 		lit("fill", false, argVec3("from", false, argVec3("to", false, argGreedy("block", true)))),
 		lit("seed", true),
+		lit("enchant", false, argEntity("targets", 0, false, argWord("enchantment", true, argInt("level", 0, 255, true)))),
 		lit("me", false, argGreedy("action", true)),
 		lit("whitelist", false, append(lits("on", "off", "list"),
 			lit("add", false, argProfile("player", true)),
