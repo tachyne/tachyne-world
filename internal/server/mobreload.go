@@ -127,7 +127,8 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	}
 	if sm.OwnerUUID != "" {
 		if b, err := hex.DecodeString(sm.OwnerUUID); err == nil && len(b) == 16 {
-			copy(m.ownerUUID[:], b) // owner eid re-resolves when that player joins
+			copy(m.ownerUUID[:], b)                  // owner eid re-resolves when that player joins
+			m.ownerUUID = ids.remapUUID(m.ownerUUID) // uuidmap.json: the owner moved to a new UUID
 		}
 	}
 	h.restoreLeash(players, m, sm.LeashPos)    // re-tie to its fence knot, rebuilding it

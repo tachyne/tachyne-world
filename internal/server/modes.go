@@ -38,12 +38,14 @@ func newModeStore(path string, def int) *modeStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
 
 // get returns name's stored mode, or the server default.
 func (s *modeStore) get(name string) int {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if mode, ok := s.m[name]; ok {
@@ -56,6 +58,7 @@ func (s *modeStore) get(name string) int {
 // for the first time — so a later change of default (/defaultgamemode) moves
 // only players who are new to the server, as vanilla's does.
 func (s *modeStore) pin(name string) int {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	mode, ok := s.m[name]
 	def := s.def
@@ -76,6 +79,7 @@ func (s *modeStore) setDefault(mode int) {
 
 // set records name's mode and persists the table atomically.
 func (s *modeStore) set(name string, mode int) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	s.m[name] = mode
 	data, _ := json.MarshalIndent(s.m, "", "  ")

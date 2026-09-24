@@ -19,6 +19,7 @@ import (
 // every other player and mob, chat included). emit receives domain frames.
 func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	name := id.Name
+	ids.learn(name, id.UUID) // usercache.json: this name is this UUID now
 	p := newPlayer(s.hub.mintPlayerEID(), name, id.UUID)
 	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
@@ -28,14 +29,14 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	// nether/end (a fresh join into another dimension needs the dimension-switch
 	// machinery), uses world spawn instead. Bed/anchor is a DEATH concern.
 	if s.hub.invs != nil {
-		if px, py, pz, pyaw, ppitch, pdim, ok := s.hub.invs.savedPos(name); ok && pdim == 0 {
+		if px, py, pz, pyaw, ppitch, pdim, ok := s.hub.invs.savedPos(p.key()); ok && pdim == 0 {
 			x, y, z, yaw, pitch = px, py, pz, pyaw, ppitch
 		}
 	}
 	p.x, p.y, p.z, p.yaw, p.pitch = x, y, z, yaw, pitch
 	r := &remotePlayer{s: s, p: p, emit: emit, x: x, y: y, z: z, gm: -1}
 	go r.decodeLoop()
-	mode := s.modes.pin(name) // a later /defaultgamemode is for new players only
+	mode := s.modes.pin(p.key()) // a later /defaultgamemode is for new players only
 	// Join-time extras the TCP path sends in handlePlay: tab-completion tree
 	// and the mode's abilities (creative flight).
 	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})
@@ -54,12 +55,12 @@ type remotePlayer struct {
 
 func (r *remotePlayer) EID() int32                   { return r.p.eid }
 func (r *remotePlayer) Spawn() (x, y, z float64)     { return r.x, r.y, r.z }
-func (r *remotePlayer) Death() *attachproto.DeathPos { return r.s.deathOf(r.p.name) }
+func (r *remotePlayer) Death() *attachproto.DeathPos { return r.s.deathOf(r.p.key()) }
 func (r *remotePlayer) Gamemode() int32 {
 	if r.gm >= 0 {
 		return r.gm
 	}
-	return int32(r.s.modes.get(r.p.name))
+	return int32(r.s.modes.get(r.p.key()))
 }
 
 // ResumeRemote binds a reconnecting gateway session to a player that was migrated
@@ -69,6 +70,7 @@ func (r *remotePlayer) Gamemode() int32 {
 // gamemode come from the snapshot, not the on-disk store.
 func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	name, uuid := id.Name, id.UUID
+	ids.learn(name, uuid)
 	ps, ok := s.hub.claimPending(token)
 	if !ok {
 		return nil, fmt.Errorf("resume: no pending handover for token %q", token)
@@ -241,7 +243,7 @@ func (r *remotePlayer) Action(v any) {
 	case attachproto.SignUpdate:
 		h.post(evSignUpdate{eid: p.eid, x: int(e.X), y: int(e.Y), z: int(e.Z), front: e.Front, lines: e.Lines})
 	case attachproto.CreativeSlot:
-		if r.s.modes.get(p.name) != gmCreative {
+		if r.s.modes.get(p.key()) != gmCreative {
 			return
 		}
 		r.s.applyCreativeSlot(p, int16(e.Slot), e.Item.ID, int(e.Item.Count), e.PaintingVariant)

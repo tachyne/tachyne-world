@@ -8,7 +8,8 @@ import (
 )
 
 func testTracked() *tracked {
-	t := &tracked{p: newPlayer(1, "tester", [16]byte{}), gamemode: gmSurvival}
+	u, _ := parseUUIDString(offlineUUIDString("tester")) // the UUID an offline gateway gives "tester"
+	t := &tracked{p: newPlayer(1, "tester", u), gamemode: gmSurvival}
 	initSurvival(t)
 	return t
 }

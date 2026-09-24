@@ -203,12 +203,14 @@ func newAdvStore(path string) *advStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
 
 // load returns a player's state as a fresh mutable copy for the hub to own.
 func (s *advStore) load(name string) advState {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	st := advState{}
@@ -224,6 +226,7 @@ func (s *advStore) load(name string) advState {
 
 // record snapshots the live state back into the store (no write).
 func (s *advStore) record(name string, st advState) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	if st == nil {
 		return
 	}
@@ -254,6 +257,7 @@ func (s *advStore) flush() {
 
 // save records and immediately flushes one player's state (on disconnect).
 func (s *advStore) save(name string, st advState) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.record(name, st)
 	s.flush()
 }

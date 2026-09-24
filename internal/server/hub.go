@@ -1249,25 +1249,25 @@ func (h *hub) run() {
 				// inventory store two times over.
 				if len(players) > 0 && h.invs != nil {
 					for _, t := range players {
-						h.invs.record(t.p.name, t)
+						h.invs.record(t.p.key(), t)
 					}
 					h.invs.flush()
 				}
 				if len(players) > 0 && h.advs != nil {
 					for _, t := range players {
-						h.advs.record(t.p.name, t.adv)
+						h.advs.record(t.p.key(), t.adv)
 					}
 					h.advs.flush()
 				}
 				if len(players) > 0 && h.statstore != nil {
 					for _, t := range players {
-						h.statstore.record(t.p.name, t.stats)
+						h.statstore.record(t.p.key(), t.stats)
 					}
 					h.statstore.flush()
 				}
 				if len(players) > 0 && h.rbstore != nil {
 					for _, t := range players {
-						h.rbstore.record(t.p.name, t)
+						h.rbstore.record(t.p.key(), t)
 					}
 					h.rbstore.flush()
 				}
@@ -1525,7 +1525,7 @@ func (h *hub) run() {
 						o.p.trySendEv(attachproto.PlayerInfoMode{UUID: t.p.uuid, Gamemode: int32(e.mode)})
 					}
 					if e.modes != nil {
-						e.modes.set(t.p.name, e.mode) // by name, never the selector (it saved "@a" once)
+						e.modes.set(t.p.key(), e.mode) // by the player, never the selector (it saved "@a" once)
 					}
 					t.p.trySendEv(attachproto.GameEvent{Event: gameEventChangeGameMode, Value: float32(e.mode)})
 					t.p.trySendEv(abilitiesFor(e.mode))
@@ -2373,7 +2373,7 @@ func (h *hub) run() {
 			case evSaveState:
 				if h.invs != nil {
 					for _, t := range players {
-						h.invs.record(t.p.name, t)
+						h.invs.record(t.p.key(), t)
 					}
 					h.invs.flush()
 				}
@@ -2452,7 +2452,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	} else {
 		initSurvival(nt)
 		if h.invs != nil { // restore a persisted inventory
-			h.invs.loadInto(nt, e.p.name)
+			h.invs.loadInto(nt, e.p.key())
 			h.sendExperience(nt) // restore the XP bar with the loadout
 			h.resendEffects(nt)  // …and the potion effects it was carrying
 		}
@@ -2469,17 +2469,17 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendInventory(nt)
 	nt.resyncInvAt = h.tick.Load() + 20
 	if h.advs != nil { // advancement state + the tree (a resume reloads this pod's store)
-		nt.adv = h.advs.load(e.p.name)
+		nt.adv = h.advs.load(e.p.key())
 	} else {
 		nt.adv = advState{}
 	}
 	h.advSendAll(nt)
 	h.deliverQueuedReplies(nt) // anything answered while they were away
 	if h.statstore != nil {
-		nt.stats = h.statstore.load(e.p.name)
+		nt.stats = h.statstore.load(e.p.key())
 	}
 	if h.rbstore != nil {
-		h.rbstore.loadInto(nt, e.p.name)
+		h.rbstore.loadInto(nt, e.p.key())
 	} else {
 		nt.rbKnown, nt.rbHighlight = map[int32]bool{}, map[int32]bool{}
 	}
@@ -2628,10 +2628,10 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 		h.reclaimAnvil(players, t)
 	}
 	if h.invs != nil { // persist the survival loadout on disconnect
-		h.invs.save(p.name, t)
+		h.invs.save(p.key(), t)
 	}
 	if h.advs != nil {
-		h.advs.save(p.name, t.adv)
+		h.advs.save(p.key(), t.adv)
 	}
 	h.incCustom(t, "leave_game", 1)
 	for k, eid := range h.signMayEdit { // release any sign edit lock they held
@@ -2645,10 +2645,10 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	delete(h.sculkLastX, p.eid)
 	delete(h.sculkLastZ, p.eid)
 	if h.statstore != nil {
-		h.statstore.save(p.name, t.stats)
+		h.statstore.save(p.key(), t.stats)
 	}
 	if h.rbstore != nil {
-		h.rbstore.save(p.name, t)
+		h.rbstore.save(p.key(), t)
 	}
 	for _, v := range h.vehicles { // a leaver stands up first
 		if v.rider == p.eid {

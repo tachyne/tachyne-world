@@ -122,11 +122,13 @@ func newStatsStore(path string) *statsStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
 
 func (s *statsStore) load(name string) map[statKey]int32 {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	out := map[statKey]int32{}
@@ -146,6 +148,7 @@ func (s *statsStore) load(name string) map[statKey]int32 {
 }
 
 func (s *statsStore) record(name string, st map[statKey]int32) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	if st == nil {
 		return
 	}
@@ -170,6 +173,7 @@ func (s *statsStore) flush() {
 }
 
 func (s *statsStore) save(name string, st map[statKey]int32) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.record(name, st)
 	s.flush()
 }

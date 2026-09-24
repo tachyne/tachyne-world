@@ -64,7 +64,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 		return // this pod does not own the target chunk (finite world / cross-shard)
 	}
 	broken := s.worldFor(p).Block(x, y, z)
-	mode := s.modes.get(p.name)
+	mode := s.modes.get(p.key())
 	// Player.blockActionRestricted: an adventure or spectator player cannot
 	// break anything. The client predicts the break regardless, so the block
 	// has to be sent back.
@@ -220,7 +220,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// ServerPlayerGameMode.useItemOn: a spectator's click does nothing to the
 	// world. (Vanilla does let one open a container's menu to look inside;
 	// this stops short of that rather than open doors and place blocks too.)
-	placeMode := s.modes.get(p.name)
+	placeMode := s.modes.get(p.key())
 	if placeMode == gmSpectator {
 		s.sendBlockChange(p, x, y, z, s.worldFor(p).Block(x, y, z), seq)
 		return
@@ -321,7 +321,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if p.heldItem() == itemNetherWart {
 		if s.worldFor(p).At(tx, ty-1, tz) == worldgen.SoulSand {
 			s.putBlock(p, tx, ty, tz, netherWartMin, true, seq)
-			if s.modes.get(p.name) == gmSurvival {
+			if s.modes.get(p.key()) == gmSurvival {
 				s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 			}
 		} else {
@@ -399,31 +399,31 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	defState = pev.State
 
 	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
-		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
-		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
-		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.name) == gmSurvival {
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && s.modes.get(p.name) == gmSurvival {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && s.modes.get(p.key()) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && s.modes.get(p.name) == gmSurvival {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && s.modes.get(p.key()) == gmSurvival {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
@@ -539,7 +539,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: tx, y: ty, z: tz,
 				name: name, volume: vol, pitch: pitch})
 		}
-		if s.modes.get(p.name) == gmSurvival { // survival uses up one of the stack
+		if s.modes.get(p.key()) == gmSurvival { // survival uses up one of the stack
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 	}

@@ -18,7 +18,7 @@ func TestCreativeRejoinGetsTheSavedInventory(t *testing.T) {
 		saved := &tracked{p: p}
 		initSurvival(saved)
 		saved.inv.slots[0] = invStack{item: itemByName["observer"], count: 12}
-		h.invs.record("builder", saved)
+		h.invs.record(p.key(), saved)
 
 		h.onJoin(players, evJoin{p: p, x: 0.5, y: 80, z: 0.5, gamemode: mode})
 		var got *attachproto.WindowItems

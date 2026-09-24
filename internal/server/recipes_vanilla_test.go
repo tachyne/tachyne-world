@@ -174,7 +174,7 @@ func TestLegacyRecipeBookMigrates(t *testing.T) {
 	cook := cookBookRecipes[0]
 	oldCook := legacyCraftRecipeCount + int32(0)
 	st := newRecipeBookStore(filepath.Join(t.TempDir(), "recipebook.json"))
-	st.m["legion"] = rbState{Known: append(append([]int32{}, old...), oldCook), Highlight: []int32{old[3]}}
+	st.m[ids.key("legion")] = rbState{Known: append(append([]int32{}, old...), oldCook), Highlight: []int32{old[3]}}
 
 	pl := testTracked()
 	st.loadInto(pl, "legion")
@@ -186,7 +186,7 @@ func TestLegacyRecipeBookMigrates(t *testing.T) {
 		t.Fatalf("highlight = %v, want the crafting table", pl.rbHighlight)
 	}
 	st.record("legion", pl)
-	saved := st.m["legion"]
+	saved := st.m[ids.key("legion")]
 	if len(saved.Known) != 0 || len(saved.Highlight) != 0 {
 		t.Fatal("the book was written back in the old index form")
 	}

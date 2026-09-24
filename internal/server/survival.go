@@ -663,7 +663,7 @@ func (h *hub) respawn(t *tracked) {
 	initSurvival(t)
 	sx, sy, sz, sdim := h.respawnPoint(h.playersRef, t)
 	t.x, t.y, t.z = sx, sy, sz
-	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode), Death: h.deathOf(t.p.name)})
+	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode), Death: h.deathOf(t.p.key())})
 	t.p.trySendEv(teleportEv(sx, sy, sz, t.yaw, t.pitch))
 	t.p.trySendEv(abilitiesFor(t.gamemode))
 	h.sendHealth(t)

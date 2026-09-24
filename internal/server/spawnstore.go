@@ -27,12 +27,14 @@ func newSpawnStore(path string) *spawnStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
 
 // get returns name's claimed respawn block and the dimension it stands in.
 func (s *spawnStore) get(name string) (blockPos, int, bool) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	p, ok := s.m[name]
@@ -41,6 +43,7 @@ func (s *spawnStore) get(name string) (blockPos, int, bool) {
 
 // set records name's respawn block and persists the table atomically.
 func (s *spawnStore) set(name string, pos blockPos, dim int) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	s.m[name] = [4]int{pos.x, pos.y, pos.z, dim}
 	data, _ := json.MarshalIndent(s.m, "", "  ")

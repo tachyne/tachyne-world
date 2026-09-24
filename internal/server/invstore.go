@@ -93,6 +93,7 @@ func newInvStore(path string) *invStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
@@ -176,6 +177,7 @@ func unpackStack(r stackRow) invStack {
 // loadInto fills the player's inventory, armor and offhand from their saved
 // loadout (no-op if none saved).
 func (s *invStore) loadInto(t *tracked, name string) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	saved, ok := s.m[name]
@@ -219,6 +221,7 @@ func restoreSavedEffects(t *tracked, saved []savedEffect) {
 // or a legacy entry without one). Safe to call off the hub goroutine.
 // setDeath records where name last died (the block they were standing in).
 func (s *invStore) setDeath(name string, d attachproto.DeathPos) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	sv := s.m[name]
@@ -231,6 +234,7 @@ func (s *invStore) setDeath(name string, d attachproto.DeathPos) {
 
 // death returns name's last death location, nil if they never died.
 func (s *invStore) death(name string) *attachproto.DeathPos {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if sv, has := s.m[name]; has && sv.HasDeath {
@@ -240,6 +244,7 @@ func (s *invStore) death(name string) *attachproto.DeathPos {
 }
 
 func (s *invStore) savedPos(name string) (x, y, z float64, yaw, pitch float32, dim int32, ok bool) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if sv, has := s.m[name]; has && sv.HasPos {
@@ -250,6 +255,7 @@ func (s *invStore) savedPos(name string) (x, y, z float64, yaw, pitch float32, d
 
 // record updates name's in-memory snapshot from the live loadout (no write).
 func (s *invStore) record(name string, t *tracked) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	if t.inv == nil {
 		return
 	}
@@ -291,6 +297,7 @@ func (s *invStore) flush() {
 
 // save records and immediately flushes one player's loadout (on disconnect).
 func (s *invStore) save(name string, t *tracked) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.record(name, t)
 	s.flush()
 }

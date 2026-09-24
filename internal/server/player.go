@@ -89,6 +89,9 @@ type outPkt struct {
 	ev any
 }
 
+// key is the player's store key: its UUID (playerkeys.go).
+func (p *player) key() string { return uuidString(p.uuid) }
+
 func newPlayer(eid int32, name string, uuid [16]byte) *player {
 	p := &player{
 		eid:      eid,

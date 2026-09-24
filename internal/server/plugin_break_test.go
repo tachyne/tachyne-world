@@ -45,7 +45,8 @@ func breakPlaceServer(t *testing.T) (*Server, *hub, *player) {
 	w.ForceLoad(0, 0, 2) // the player's surroundings, as its view would load them
 	startHub(t, h)
 
-	p := newPlayer(h.allocEID(), "digger", [16]byte{1})
+	u, _ := parseUUIDString(offlineUUIDString("digger")) // the UUID an offline gateway gives "digger"
+	p := newPlayer(h.allocEID(), "digger", u)
 	sy := w.SurfaceY(0, 0)
 	p.x, p.y, p.z = 0.5, sy, 0.5
 	h.post(evJoin{p: p, x: 0.5, y: sy, z: 0.5, gamemode: gmCreative})

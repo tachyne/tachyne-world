@@ -262,7 +262,7 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		return // half a bed: nothing to lie in
 	}
 	if h.spawns != nil { // clicking a bed claims it as home (vanilla)
-		h.spawns.set(t.p.name, head, t.dim)
+		h.spawns.set(t.p.key(), head, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
 	}
 	// Player.startSleepInBed refuses only while it is DAY, and Level.isDay is
@@ -437,7 +437,7 @@ func (h *hub) respawnPoint(players map[int32]*tracked, t *tracked) (float64, flo
 // spending it.
 func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend bool) (float64, float64, float64, int) {
 	if h.spawns != nil {
-		if pos, dim, ok := h.spawns.get(t.p.name); ok {
+		if pos, dim, ok := h.spawns.get(t.p.key()); ok {
 			w := h.worldFor(dim)
 			if w != nil {
 				state := w.Block(pos.x, pos.y, pos.z)

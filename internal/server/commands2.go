@@ -164,7 +164,7 @@ func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
 		return
 	}
 	pos := blockPos{int(t.x), int(t.y), int(t.z)}
-	h.spawns.set(t.p.name, pos, t.dim)
+	h.spawns.set(t.p.key(), pos, t.dim)
 	t.p.trySendEv(chatEv(fmt.Sprintf("Spawn point set to %d, %d, %d.", pos.x, pos.y, pos.z)))
 }
 

@@ -76,7 +76,7 @@ func (h *hub) handleUseAnchor(players map[int32]*tracked, t *tracked, pos blockP
 		return
 	}
 	if h.spawns != nil {
-		h.spawns.set(t.p.name, pos, t.dim)
+		h.spawns.set(t.p.key(), pos, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
 		h.playSoundDim(players, t.dim, "minecraft:block.respawn_anchor.set_spawn", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)

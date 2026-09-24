@@ -408,6 +408,11 @@ func (s *Server) Serve() error {
 	if s.gate == nil {
 		s.gate = newGatekeeper("gatekeeper.json")
 	}
+	if s.PlayerDataFile != "" {
+		// Before any player store loads: they key players by UUID, and
+		// convert name-keyed files through this (playerkeys.go).
+		ids = loadPlayerIDs(filepath.Dir(s.PlayerDataFile))
+	}
 	if s.modes == nil {
 		s.modes = newModeStore(s.PlayerDataFile, s.DefaultGamemode)
 	}

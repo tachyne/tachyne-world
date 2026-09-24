@@ -16,7 +16,7 @@ func (h *hub) recordDeath(t *tracked) {
 	if h.invs == nil {
 		return
 	}
-	h.invs.setDeath(t.p.name, attachproto.DeathPos{Dim: int32(t.dim),
+	h.invs.setDeath(t.p.key(), attachproto.DeathPos{Dim: int32(t.dim),
 		X: int32(math.Floor(t.x)), Y: int32(math.Floor(t.y)), Z: int32(math.Floor(t.z))})
 }
 

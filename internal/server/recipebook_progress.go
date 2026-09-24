@@ -263,12 +263,14 @@ func newRecipeBookStore(path string) *recipeBookStore {
 		if err := loadStore(path, &s.m); err != nil {
 			log.Fatal(err)
 		}
+		s.m = rekeyPlayers(path, s.m)
 	}
 	return s
 }
 
 // loadInto restores a player's book state (fresh maps when unknown).
 func (s *recipeBookStore) loadInto(t *tracked, name string) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.mu.Lock()
 	st := s.m[name]
 	s.mu.Unlock()
@@ -308,6 +310,7 @@ func (s *recipeBookStore) loadInto(t *tracked, name string) {
 }
 
 func (s *recipeBookStore) record(name string, t *tracked) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	if t.rbKnown == nil {
 		return
 	}
@@ -347,6 +350,7 @@ func (s *recipeBookStore) flush() {
 }
 
 func (s *recipeBookStore) save(name string, t *tracked) {
+	name = ids.key(name) // a UUID, or a name to resolve (playerkeys.go)
 	s.record(name, t)
 	s.flush()
 }
