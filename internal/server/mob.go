@@ -352,6 +352,8 @@ type mob struct {
 	batResting                      bool     // bat: DATA_ID_FLAGS resting (hanging under a block)
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
+	slimeHeading                    float64  // slime/magma cube: SlimeRandomDirectionGoal's chosen heading (radians)
+	slimeHeadingLeft                int      // …ticks before it picks another
 	vexWant                         bool     // vex: VexMoveControl has a wanted point (vex.go)
 	vexWX, vexWY, vexWZ, vexSpeed   float64  // …the point and the speed modifier
 	vexVX, vexVY, vexVZ             float64  // …its per-tick velocity

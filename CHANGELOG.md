@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Shulkers and slimes.** A shulker now picks targets within four blocks
+  above or below it, as vanilla's does, not from any height inside a
+  twenty-block circle. A slime with nothing to chase keeps one heading for
+  two to five seconds instead of changing direction every hop.
 - **Witches and blazes hold their ground.** A witch walks up to throwing
   range and stands there to throw. A blaze that can see you hovers where it
   is and fires. Neither backs off and circles like a skeleton any more.

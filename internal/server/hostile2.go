@@ -138,6 +138,7 @@ func (m *mob) applyCubeSize() {
 // rand(20)+10 ticks (a magma cube's four times that), ÷3 while hunting; each launch rides a jump impulse to
 // the client so the arc animates (jump power 0.42, pure visual).
 func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
+	m.slimeHeadingLeft -= mobMoveInterval
 	if m.hopTicks > 0 {
 		m.hopTicks-- // sailing: keep the launch heading
 		return
@@ -163,8 +164,12 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	if m.hasTarget {
 		dx, dz = m.tx-m.x, m.tz-m.z
 	} else {
-		ang := h.rng.Float64() * 2 * math.Pi
-		dx, dz = math.Cos(ang), math.Sin(ang)
+		// SlimeRandomDirectionGoal: one heading, held for 40 to 100 ticks.
+		if m.slimeHeadingLeft <= 0 {
+			m.slimeHeadingLeft = 40 + h.rng.Intn(60)
+			m.slimeHeading = float64(h.rng.Intn(360)) * math.Pi / 180
+		}
+		dx, dz = math.Cos(m.slimeHeading), math.Sin(m.slimeHeading)
 	}
 	if d := math.Hypot(dx, dz); d > 1e-6 {
 		m.vx, m.vz = dx/d*m.moveSpeed(), dz/d*m.moveSpeed()

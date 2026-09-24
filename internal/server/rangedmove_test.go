@@ -35,3 +35,20 @@ func TestWitchAndBlazeStandTheirGround(t *testing.T) {
 		t.Error("a witch out of range does not close in")
 	}
 }
+
+// SlimeRandomDirectionGoal: a slime with nothing to chase keeps one heading
+// for 40 to 100 ticks, hop after hop.
+func TestSlimeKeepsItsHeading(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	m := h.spawnMob(players, entitySlime, 0.5, 180, 0.5)
+	h.slimeHop(players, m)
+	first := m.slimeHeading
+	for i := 0; i < 15; i++ { // 30 ticks: inside the shortest hold
+		h.slimeHop(players, m)
+		if m.slimeHeading != first {
+			t.Fatalf("heading changed after %d ticks", (i+1)*mobMoveInterval)
+		}
+	}
+}

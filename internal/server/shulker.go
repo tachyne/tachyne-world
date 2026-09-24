@@ -72,8 +72,8 @@ func (h *hub) shulkerTick(players map[int32]*tracked, m *mob) {
 	if m.shAttack > 0 {
 		m.shAttack -= mobMoveInterval
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, 20)
-	if t != nil && h.rules.Difficulty != diffPeaceful {
+	t := h.shulkerQuarry(players, m)
+	if t != nil && h.rules.Difficulty != diffPeaceful && dist3(t.x, t.y, t.z, m.x, m.y, m.z) < shulkerFireRange {
 		// ShulkerAttackGoal: open wide, a bullet every 20 + nextInt(10)·10 ticks.
 		m.shPeekTicks = 0
 		h.setShulkerPeek(players, m, shulkerPeekOpen)
@@ -154,4 +154,38 @@ func (h *hub) shulkerBulletHit(players map[int32]*tracked, m *mob) {
 	if nm := h.spawnSpecies(players, entityShulker, m.dim, ox, oy, oz); nm != nil {
 		nm.variant, nm.variantSet = m.variant, m.variantSet
 	}
+}
+
+const (
+	shulkerFollow    = 16.0 // the default FOLLOW_RANGE
+	shulkerSlab      = 4.0  // getTargetSearchArea's inflate along the attach axis
+	shulkerFireRange = 20.0 // ShulkerAttackGoal.tick: distance < 400
+)
+
+// shulkerQuarry is ShulkerNearestAttackGoal: a new target is looked for in
+// the shulker's box inflated by the follow range sideways and only four
+// blocks along the axis of the face it clings to (the floor, here), and the
+// one it has is kept while it stays within the follow range.
+func (h *hub) shulkerQuarry(players map[int32]*tracked, m *mob) *tracked {
+	ok := func(t *tracked) bool {
+		return t != nil && t.gamemode == gmSurvival && !t.dead && t.dim == m.dim
+	}
+	if t := players[m.targetEID]; ok(t) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= shulkerFollow {
+		return t
+	}
+	var best *tracked
+	bestD := math.MaxFloat64
+	for _, t := range players {
+		if !ok(t) || math.Abs(t.x-m.x) > shulkerFollow+0.8 || math.Abs(t.z-m.z) > shulkerFollow+0.8 ||
+			t.y > m.y+1+shulkerSlab || t.y+1.8 < m.y-shulkerSlab {
+			continue
+		}
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD {
+			best, bestD = t, d
+		}
+	}
+	if best != nil {
+		m.targetEID = best.p.eid
+	}
+	return best
 }
