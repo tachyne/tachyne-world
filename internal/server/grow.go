@@ -60,6 +60,8 @@ func blockRange(names ...string) [][2]uint32 {
 
 var cropRanges = blockRange("wheat", "carrots", "potatoes", "beetroots")
 
+var beetrootRange = cropRanges[3]
+
 // saplingSpecies pairs each sapling's state range with its TreeGrower — which
 // vanilla features it grows, single and mega, and at what odds. The trees
 // themselves come from the same PlaceTree the world generator uses, so a
@@ -427,6 +429,9 @@ func (h *hub) cropGrows(dim, x, y, z int, r [2]uint32) bool {
 func (h *hub) tickCrop(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	for _, r := range cropRanges {
 		if inRange(state, r) {
+			if r == beetrootRange && h.rng.Intn(3) == 0 {
+				return true // BeetrootBlock.randomTick: a third of its ticks do nothing
+			}
 			if state < r[1] && h.plantBrightness(dim, x, y, z, 0) >= 9 && h.cropGrows(dim, x, y, z, r) {
 				h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
 			}

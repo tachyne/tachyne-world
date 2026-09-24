@@ -132,3 +132,28 @@ func TestSimRadiusIsConfigurable(t *testing.T) {
 		t.Fatalf("the default should be %d", defaultSimRadius)
 	}
 }
+
+// TestBeetrootGrowsTwoThirdsAsOften: BeetrootBlock.randomTick lets only two
+// random ticks in three reach the crop rule, so beetroot grows at two thirds
+// of wheat's rate under the same conditions.
+func TestBeetrootGrowsTwoThirdsAsOften(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	grows := func(name string) int {
+		x, y, z := 5, 200, 5
+		base := worldgen.BlockBase(name)
+		n := 0
+		for i := 0; i < 40000; i++ {
+			h.world.SetBlock(x, y, z, base)
+			h.tickCrop(players, 0, x, y, z, base)
+			if h.world.At(x, y, z) != base {
+				n++
+			}
+		}
+		return n
+	}
+	wheat, beet := grows("wheat"), grows("beetroots")
+	if r := float64(beet) / float64(wheat); r < 0.55 || r > 0.78 {
+		t.Fatalf("beetroot grew %d times to wheat's %d (ratio %.2f), want about 2/3", beet, wheat, r)
+	}
+}

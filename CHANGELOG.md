@@ -58,6 +58,8 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Beetroot grows at vanilla speed.** It grew as fast as wheat; in
+  vanilla it grows at two thirds of that rate.
 - **Opening a shulker box trips observers and lifts what is on it.** As in
   vanilla, a shulker box's lid now updates the blocks around it when it
   starts and stops moving, so an observer watching the box pulses when
