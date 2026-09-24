@@ -305,6 +305,7 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 	} else {
 		t.wasInWater = false
 	}
+	h.trackClimbable(t, e.x, e.y, e.z, e.onGround)
 	if !e.onGround {
 		// Touching water cancels accumulated fall distance (vanilla resets fall
 		// distance each tick you are in a liquid), so falling THROUGH or INTO
@@ -377,7 +378,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 					dt = dtStalagmite
 				}
 				dmg := math.Floor(hurt)
+				t.landingFall = dist // the combat log's fallDistance for this hit
 				h.hurtBy(players, t, float32(dmg), dt, deathCause{})
+				t.landingFall = 0
 				h.playFallDamageSound(players, t.dim, t.x, t.y, t.z, dmg)
 			}
 		}
@@ -471,6 +474,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		cause.credit = t.killCredit
 	}
 	t.lastCause = cause
+	h.recordCombat(t, cause, amount, t.landingFall)
 	blocked := h.shieldBlocked(t, amount, dt, src)
 	if blocked > 0 {
 		h.shieldBlockFX(players, t, blocked)
@@ -557,9 +561,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.resetCustom(t, "time_since_death")
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
 		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
-			deathMessage(t.p.name, t.lastCause))
+			h.combatDeathMessage(t))
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages
-			body := chatEv(deathMessage(t.p.name, t.lastCause))
+			body := chatEv(h.combatDeathMessage(t))
 			for _, o := range players {
 				o.p.trySendEv(body)
 			}
@@ -568,7 +572,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 			h.dropInventory(players, t)
 			h.dropDeathXP(players, t) // 7×level as an orb at the death spot, bar zeroed
 		}
-		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: deathMessage(t.p.name, t.lastCause)})
+		t.p.trySendEv(attachproto.Death{EID: t.p.eid, Message: h.combatDeathMessage(t)})
 		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
 			h.post(evRespawn{eid: t.p.eid})
 		}
@@ -650,6 +654,7 @@ func (h *hub) dropInventory(players map[int32]*tracked, t *tracked) {
 // they never slept or the bed is gone).
 func (h *hub) respawn(t *tracked) {
 	t.lastCause = deathCause{} // a fresh life owes its death to nothing yet
+	t.combat = combatLog{}
 	if !t.dead {
 		return
 	}

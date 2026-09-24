@@ -77,7 +77,7 @@ var dmgTypeDeathKind = [...]deathMsgKind{
 	dtFall:            deathMsgFallVariants,
 }
 
-// deathMsgText is the English of every death.attack.* string, vanilla's
+// deathMsgText is the English of every death.attack.* and death.fell.* string, vanilla's
 // own, with its %1$s (victim) / %2$s (killer) / %3$s (weapon) placeholders
 // left in place for deathMessage to fill.
 var deathMsgText = map[string]string{
@@ -175,4 +175,16 @@ var deathMsgText = map[string]string{
 	"death.attack.wither.player":            "%1$s withered away while fighting %2$s",
 	"death.attack.witherSkull":              "%1$s was shot by a skull from %2$s",
 	"death.attack.witherSkull.item":         "%1$s was shot by a skull from %2$s using %3$s",
+	"death.fell.accident.generic":           "%1$s fell from a high place",
+	"death.fell.accident.ladder":            "%1$s fell off a ladder",
+	"death.fell.accident.other_climbable":   "%1$s fell while climbing",
+	"death.fell.accident.scaffolding":       "%1$s fell off scaffolding",
+	"death.fell.accident.twisting_vines":    "%1$s fell off some twisting vines",
+	"death.fell.accident.vines":             "%1$s fell off some vines",
+	"death.fell.accident.weeping_vines":     "%1$s fell off some weeping vines",
+	"death.fell.assist":                     "%1$s was doomed to fall by %2$s",
+	"death.fell.assist.item":                "%1$s was doomed to fall by %2$s using %3$s",
+	"death.fell.finish":                     "%1$s fell too far and was finished by %2$s",
+	"death.fell.finish.item":                "%1$s fell too far and was finished by %2$s using %3$s",
+	"death.fell.killer":                     "%1$s was doomed to fall",
 }

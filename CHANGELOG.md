@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Fall deaths say how you fell.** Death messages for falls now come from
+  vanilla's combat log. A long fall reads "fell from a high place", and one
+  off a ladder, vines or scaffolding says so. If something knocked you off,
+  it reads "was doomed to fall by Zombie", or "fell too far and was finished
+  by …" when the same attacker finished you. Every fall used to read "hit
+  the ground too hard".
+- **Tempting range is an attribute.** Animals follow food from ten blocks,
+  happy ghasts from sixteen and sulfur cubes from eight, and effects and
+  plugins that change the range now apply.
 - **Shulkers and slimes.** A shulker now picks targets within four blocks
   above or below it, as vanilla's does, not from any height inside a
   twenty-block circle. A slime with nothing to chase keeps one heading for

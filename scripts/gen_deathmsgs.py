@@ -58,7 +58,7 @@ def main():
             types[name] = json.loads(z.read(p))
 
     lang = json.loads(z.read("assets/minecraft/lang/en_us.json"))
-    msgs = {k: v for k, v in lang.items() if k.startswith("death.attack.")}
+    msgs = {k: v for k, v in lang.items() if k.startswith(("death.attack.", "death.fell."))}  # the fall family too (CombatTracker)
 
     for name, d in types.items():
         key = "death.attack." + d["message_id"]
@@ -101,7 +101,7 @@ def main():
     L += [
         "}",
         "",
-        "// deathMsgText is the English of every death.attack.* string, vanilla's",
+        "// deathMsgText is the English of every death.attack.* and death.fell.* string, vanilla's",
         "// own, with its %1$s (victim) / %2$s (killer) / %3$s (weapon) placeholders",
         "// left in place for deathMessage to fill.",
         "var deathMsgText = map[string]string{",

@@ -255,6 +255,8 @@ type tracked struct {
 	hasNetherEntry bool
 	launchCause    string     // "wind_charge" until the next landing (fall_after_explosion)
 	lastCause      deathCause // what last hurt them — the death message is made of this
+	combat         combatLog  // CombatTracker: the hits behind a fall's death message (combattracker.go)
+	landingFall    float64    // the fall distance of the landing being hurt, while it is
 	killCredit     string     // who they were last fighting (LivingEntity.getKillCredit)
 	killCreditAt   uint64     // and when, so the credit expires after 100 ticks
 	onGround       bool
