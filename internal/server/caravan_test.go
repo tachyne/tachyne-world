@@ -108,3 +108,27 @@ func TestLlamaSpitsAtWildWolves(t *testing.T) {
 		t.Fatal("a llama never spat at a wild wolf beside it")
 	}
 }
+
+// Efficiency and Sweeping Edge on the held item are attribute modifiers the
+// client reads: level² + 1 mining efficiency, level / (level + 1) sweep.
+func TestHeldEnchantAttributes(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pick := invStack{item: itemByName["diamond_pickaxe"], count: 1}
+	pick.ench = enchSetLevel(pick.ench, enchEfficiency, 5)
+	pl.inv.slots[pl.p.heldSlot()] = pick
+	pl.refreshGearIfChanged()
+	if got := pl.playerAttrs().Value(attr.MiningEfficiency); got != 26 {
+		t.Errorf("Efficiency V: mining efficiency %v, want 26", got)
+	}
+	sword := invStack{item: itemByName["diamond_sword"], count: 1}
+	sword.ench = enchSetLevel(sword.ench, enchSweepingEdge, 3)
+	pl.inv.slots[pl.p.heldSlot()] = sword
+	pl.refreshGearIfChanged()
+	if got := pl.playerAttrs().Value(attr.MiningEfficiency); got != 0 {
+		t.Errorf("mining efficiency stayed at %v after switching to a sword", got)
+	}
+	if got := pl.playerAttrs().Value(attr.SweepingDamageRatio); got != 0.75 {
+		t.Errorf("Sweeping Edge III: ratio %v, want 0.75", got)
+	}
+}

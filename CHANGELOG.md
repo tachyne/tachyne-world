@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Efficiency digs faster on your screen too.** In 1.21 and later the
+  game client works out digging speed from an attribute the server sends,
+  and tachyne never sent Efficiency's share of it. So an Efficiency
+  pickaxe dug at a plain pickaxe's pace for the player. The held item's
+  Efficiency and Sweeping Edge now reach the client, and update whenever
+  you switch items.
 - **More blocks behave as in vanilla.**
   - A comparator reads a candle cake as a whole cake.
   - Ravagers trample pitcher crops.

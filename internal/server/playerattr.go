@@ -49,12 +49,21 @@ func (t *tracked) maxHP() float32 { return float32(t.playerAttrs().Value(attr.Ma
 // whichever path changed the slot (equip, break, durability, creative set,
 // inventory load).
 func (t *tracked) refreshGearIfChanged() {
-	if t.gearSynced && t.armor == t.lastArmor {
+	held := t.mainHand()
+	if t.gearSynced && t.armor == t.lastArmor && held == t.lastHeld {
 		return
 	}
-	t.lastArmor, t.gearSynced = t.armor, true
+	t.lastArmor, t.lastHeld, t.gearSynced = t.armor, held, true
 	t.refreshArmorAttrs()
 	t.refreshEnchantAttrs()
+}
+
+// mainHand is the stack in the selected hotbar slot.
+func (t *tracked) mainHand() invStack {
+	if t.p == nil {
+		return invStack{}
+	}
+	return t.inv.slots[t.p.heldSlot()]
 }
 
 func (t *tracked) refreshArmorAttrs() {

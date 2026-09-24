@@ -368,6 +368,7 @@ type tracked struct {
 	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
 	// compares against it so gear attributes recompute on change, not per tick.
 	lastArmor  [4]invStack
+	lastHeld   invStack // …and the main hand, for Efficiency and Sweeping Edge
 	gearSynced bool
 	offhand    invStack
 

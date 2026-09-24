@@ -143,6 +143,26 @@ func (t *tracked) refreshEnchantAttrs() {
 			in.AddModifier(attr.Modifier{Source: src, Amount: m.perLvl * float64(lvl), Op: m.op})
 		}
 	}
+	// The main-hand half: Efficiency adds level² + 1 to MINING_EFFICIENCY and
+	// Sweeping Edge sets SWEEPING_DAMAGE_RATIO to level / (level + 1). The
+	// client works out its own digging speed from the synced value, so
+	// without these an Efficiency pickaxe dug at a plain one's pace on screen.
+	held := t.mainHand()
+	for _, m := range []struct {
+		ench int8
+		id   attr.ID
+		amt  func(l float64) float64
+	}{
+		{enchEfficiency, attr.MiningEfficiency, func(l float64) float64 { return l*l + 1 }},
+		{enchSweepingEdge, attr.SweepingDamageRatio, func(l float64) float64 { return l / (l + 1) }},
+	} {
+		in, src := a.Get(m.id), enchantSource(int(m.ench))
+		if lvl := held.enchLvl(m.ench); held.count > 0 && lvl > 0 {
+			in.AddModifier(attr.Modifier{Source: src, Amount: m.amt(float64(lvl)), Op: attr.AddValue})
+		} else {
+			in.RemoveModifier(src)
+		}
+	}
 }
 
 // explosionKnockScale is the fraction of a blast's shove that gets through —
