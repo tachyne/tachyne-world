@@ -1201,3 +1201,30 @@ func TestPreviouslyPopulatedVillageGetsOnlyWhatItLacks(t *testing.T) {
 		t.Fatal("with everything in view the village should be settled")
 	}
 }
+
+// MerchantMenu.tryMoveItems: choosing an offer fills the payment slot from
+// the inventory, and puts back what was there before.
+func TestTradeSelectMovesPayment(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	v := h.spawnMob(players, entityVillager, 0.5, 70, 0.5)
+	h.initVillagerTrades(v, 4) // librarian
+	cost := v.offers[0].trade.inItem
+	pl.inv.slots[12] = invStack{item: cost, count: 20}
+	pl.trade[0] = invStack{item: itemByName["dirt"], count: 3} // something left in the slot
+	h.tradeMoveItems(pl, v, 0)
+	if pl.trade[0].item != cost || pl.trade[0].count != 20 {
+		t.Errorf("payment slot %+v, want 20 of the offer's cost", pl.trade[0])
+	}
+	found := false
+	for _, s := range pl.inv.slots {
+		if s.item == itemByName["dirt"] && s.count == 3 {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the dirt that was in the payment slot did not go back to the inventory")
+	}
+}

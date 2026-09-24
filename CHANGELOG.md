@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Picking a trade fills the payment slots.** Choosing an offer in the
+  villager screen moves the items it costs from your inventory into the
+  trade slots, and puts back whatever was there before, as in vanilla.
 - **Ender chests follow chest rules.** A solid block on top keeps an ender
   chest shut, and opening one near piglins angers them, as opening a chest
   does.

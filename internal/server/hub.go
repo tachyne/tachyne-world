@@ -2256,6 +2256,7 @@ func (h *hub) run() {
 			case evSelTrade:
 				if t := players[e.eid]; t != nil && t.winKind == winTrade {
 					t.tradeSel = int(e.slot)
+					h.tradeMoveItems(t, h.mobs[t.tradeWith], t.tradeSel)
 					h.sendTradeWindow(t)
 				}
 			case evEnchant: // container_button_click: enchant option or stonecutter row

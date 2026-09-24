@@ -588,3 +588,66 @@ type evSelTrade struct {
 }
 
 func (evSelTrade) isHubEvent() {}
+
+// tradeMoveItems is MerchantMenu.tryMoveItems, run when the player picks an
+// offer: whatever sits in the two payment slots goes back into the
+// inventory, and then, if both are empty, the offer's costs are gathered
+// from the inventory into them (menu order: the main inventory, then the
+// hotbar), up to a stack each.
+func (h *hub) tradeMoveItems(t *tracked, m *mob, idx int) {
+	if m == nil || idx < 0 || idx >= len(m.offers) || t.inv == nil {
+		return
+	}
+	for i := range t.trade {
+		if t.trade[i].count == 0 {
+			continue
+		}
+		_, left := t.inv.addStack(t.trade[i])
+		if left == t.trade[i].count {
+			return // no room for it: vanilla gives up here
+		}
+		t.trade[i].count = left
+		if left == 0 {
+			t.trade[i] = invStack{}
+		}
+	}
+	if t.trade[0].count != 0 || t.trade[1].count != 0 {
+		return
+	}
+	o := m.offers[idx]
+	gather := func(pay int, item int32) {
+		if item == 0 {
+			return
+		}
+		cap := stackCap(item)
+		for k := 0; k < 36; k++ {
+			slot := 9 + k // menu slots 3..29 are the main inventory…
+			if k >= 27 {
+				slot = k - 27 // …and 30..38 the hotbar
+			}
+			inv := &t.inv.slots[slot]
+			if inv.count == 0 || inv.item != item {
+				continue
+			}
+			cur := t.trade[pay]
+			if cur.count != 0 && !sameItemComponents(*inv, cur) {
+				continue
+			}
+			move := min(cap-cur.count, inv.count)
+			if move <= 0 {
+				break
+			}
+			next := *inv
+			next.count = cur.count + move
+			t.trade[pay] = next
+			if inv.count -= move; inv.count == 0 {
+				*inv = invStack{}
+			}
+			if t.trade[pay].count >= cap {
+				break
+			}
+		}
+	}
+	gather(0, o.trade.inItem)
+	gather(1, o.cost2Item)
+}
