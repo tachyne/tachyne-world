@@ -227,8 +227,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	}
 
 	// Right-clicking an interactive block (door/gate/trapdoor) operates it instead
-	// of placing — unless the player is sneaking.
-	if !p.sneaking && s.tryUseBlock(p, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
+	// of placing — unless the player is sneaking with something in a hand
+	// (ServerPlayerGameMode.useItemOn: suppressUsingBlock = isSecondaryUseActive
+	// && either hand holds an item). Sneaking empty-handed still opens a door.
+	holding := p.heldItem() != 0 || p.offhandItem() != 0
+	if !(p.sneaking && holding) && s.tryUseBlock(p, x, y, z, seq, dir, cursorX, cursorY, cursorZ) {
 		return
 	}
 
