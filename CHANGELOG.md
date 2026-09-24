@@ -63,7 +63,9 @@ the public history since the project was open-sourced on 2026-07-10.
   and a few other details. A potion became water, a shulker box or bundle
   lost its contents, dyed armour lost its colour, and a lodestone compass
   forgot its target. Swapping two different potions could also swap their
-  types. A moved or thrown item now keeps its whole stack.
+  types. A moved or thrown item now keeps its whole stack. The same holds
+  for what you drop on death, what you throw with Q, what a closed crafting
+  grid or enchanting table hands back, and gear a mob picks up or drops.
 - **Burning animals run for water again, and fish flee.** Since an earlier
   change today, a burning animal ignored the water it had found, and a
   fish or squid panicking in open water froze in place. A burning animal

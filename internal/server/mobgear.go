@@ -139,7 +139,8 @@ func (h *hub) mobEquipItem(players map[int32]*tracked, m *mob, st invStack) int 
 		taken = st.count
 		m.held, m.heldEnch, m.heldDmg, m.heldCount = st.item, st.ench, st.dmg, st.count
 	} else {
-		m.gear[slot] = invStack{item: st.item, count: 1, dmg: st.dmg, ench: st.ench, name: st.name}
+		m.gear[slot] = st // the whole piece: dye, trim and all
+		m.gear[slot].count = 1
 		m.refreshGearArmor() // worn armour is a modifier on ARMOR, re-derived from the slots
 	}
 	m.gearSure[slot] = true // setItemSlotAndDropWhenKilled
@@ -170,7 +171,7 @@ const lootingGearBonus = 0.01
 // and wear.
 func (h *hub) dropGearStack(players map[int32]*tracked, m *mob, st invStack) {
 	if it := h.spawnItemIn(players, m.dim, st.item, st.count, m.x, m.y, m.z); it != nil {
-		it.ench, it.dmg, it.name = st.ench, st.dmg, st.name
+		it.setFrom(st) // the whole stack it wore or held
 		h.refreshItemMeta(players, it)
 	}
 }

@@ -258,7 +258,8 @@ func (h *hub) copperGolemSort(players map[int32]*tracked, m *mob) {
 			if n > copperSortMax {
 				n = copperSortMax
 			}
-			m.carrying = invStack{item: st.item, count: n, dmg: st.dmg, ench: st.ench}
+			m.carrying = *st // the whole stack: what it carries is what it took
+			m.carrying.count = n
 			if st.count -= n; st.count == 0 {
 				*st = invStack{}
 			}

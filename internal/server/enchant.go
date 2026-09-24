@@ -245,8 +245,8 @@ func (h *hub) reclaimEnchant(players map[int32]*tracked, t *tracked) {
 		if leftover > 0 && players != nil {
 			st.count = leftover
 			if it := h.spawnItemIn(players, t.dim, st.item, st.count, t.x, t.y, t.z); it != nil {
-				it.dmg = st.dmg
-				it.ench = st.ench
+				it.setFrom(st)
+				h.refreshItemMeta(players, it)
 			}
 		}
 	}

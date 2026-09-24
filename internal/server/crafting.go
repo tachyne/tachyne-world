@@ -681,8 +681,8 @@ func (h *hub) tossHeld(players map[int32]*tracked, t *tracked, slot int, all boo
 	if all {
 		n = s.count
 	}
-	st := invStack{item: s.item, count: n, dmg: s.dmg, ench: s.ench, mapID: s.mapID,
-		pats: s.pats, trimMat: s.trimMat, trimPat: s.trimPat, bookID: s.bookID}
+	st := *s // the whole stack, so a potion or a full shulker box drops as itself
+	st.count = n
 	if s.count -= n; s.count == 0 {
 		*s = invStack{}
 	}
@@ -905,9 +905,8 @@ func (h *hub) reclaimCraft(players map[int32]*tracked, t *tracked) {
 		}
 		if leftover > 0 && players != nil {
 			if it := h.spawnItemIn(players, t.dim, st.item, leftover, t.x, t.y, t.z); it != nil {
-				it.dmg = st.dmg
-				it.ench = st.ench
-				it.mapID = st.mapID
+				it.setFrom(*st)
+				h.refreshItemMeta(players, it)
 			}
 			leftover = 0
 		}

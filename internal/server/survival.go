@@ -641,8 +641,8 @@ func (h *hub) dropInventory(players map[int32]*tracked, t *tracked) {
 		// In the player's OWN dimension: spawnItem defaults to the overworld,
 		// which used to scatter a Nether or End death across the wrong world.
 		if it := h.spawnItemIn(players, t.dim, s.item, s.count, jx, t.y, jz); it != nil {
-			it.dmg = s.dmg // worn tools keep their wear through the death drop
-			it.ench = s.ench
+			it.setFrom(*s)                 // the whole stack: wear, potions, contents, dye…
+			h.refreshItemMeta(players, it) // the spawn broadcast went out bare
 		}
 		*s = invStack{}
 		dropped = true

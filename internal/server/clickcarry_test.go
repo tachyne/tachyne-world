@@ -97,3 +97,37 @@ func TestClickThrowKeepsPotion(t *testing.T) {
 		t.Errorf("thrown potion %+v, want the type-7 potion", thrown)
 	}
 }
+
+// A death scatters whole stacks: a potion stays a potion, a full shulker box
+// keeps its contents (vanilla drops the ItemStacks themselves).
+func TestDeathDropKeepsItemData(t *testing.T) {
+	h, players, pl := clickRig(t)
+	h.world.ForceLoad(0, 0, 1)
+	box := itemByName["shulker_box"]
+	pl.inv.slots[3] = invStack{item: potionItem, count: 1, potion: 7}
+	pl.inv.slots[4] = invStack{item: box, count: 1, boxID: 41}
+	h.dropInventory(players, pl)
+	var potion, full bool
+	for _, it := range h.items {
+		potion = potion || (it.item == potionItem && it.potion == 7)
+		full = full || (it.item == box && it.boxID == 41)
+	}
+	if !potion || !full {
+		t.Errorf("death drops: potion kept %v, shulker contents kept %v", potion, full)
+	}
+}
+
+// Q with no window open throws the held stack whole.
+func TestTossHeldKeepsItemData(t *testing.T) {
+	h, players, pl := clickRig(t)
+	h.world.ForceLoad(0, 0, 1)
+	pl.inv.slots[0] = invStack{item: potionItem, count: 1, potion: 9}
+	h.tossHeld(players, pl, 0, false)
+	var got *itemEntity
+	for _, it := range h.items {
+		got = it
+	}
+	if got == nil || got.potion != 9 {
+		t.Errorf("Q-thrown potion %+v, want type 9", got)
+	}
+}
