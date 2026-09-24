@@ -176,6 +176,32 @@ type advMatch struct {
 	noFire                bool
 	cause                 string
 	enchant               string
+	ominousBanner         bool // player_killed_entity: the victim wore the ominous banner
+
+	// The player the trigger fires for (advance fills these): their feet
+	// height and the armour they wear, for criteria with a player predicate.
+	playerY     float64
+	playerArmor [4]int32
+
+	body int32 // player_interacted_with_entity: the entity's body armour after the click
+	// bred_animals: the parents (entity is the child, "" when the species
+	// lays an egg or spawn instead)
+	parent, partner string
+	bodyDmg         int
+}
+
+// playerMatches is the criterion's player predicate (every trigger's
+// optional "player" condition) against the player the trigger fired for.
+func (m advMatch) playerMatches(c *advCriterion) bool {
+	if c.playerMinY != 0 && m.playerY < c.playerMinY {
+		return false
+	}
+	for _, it := range m.playerArmor {
+		if it != 0 && containsID(c.playerNotWearing, it) {
+			return false
+		}
+	}
+	return true
 }
 
 // advBlockSets resolves every criterion's block list to state ranges once.
@@ -255,6 +281,9 @@ func (m advMatch) entityIs(c *advCriterion) bool {
 }
 
 func (m advMatch) criterion(c *advCriterion) bool {
+	if !m.playerMatches(c) {
+		return false
+	}
 	switch c.trigger {
 	case "inventory_changed":
 		for _, pred := range c.items {
@@ -267,10 +296,40 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		return m.itemIn(c)
 	case "item_durability_changed":
 		return m.itemIn(c) && (c.vehicle == "" || c.vehicle == m.vehicle)
-	case "player_killed_entity", "entity_killed_player", "bred_animals", "tame_animal",
-		"summoned_entity", "thrown_item_picked_up_by_player":
+	case "player_killed_entity", "entity_killed_player":
+		// KilledTrigger.TriggerInstance.matches: the entity predicate (type or
+		// type tag, horizontal distance from the player, dimension, a banner
+		// on its head) and the killing blow's damage-source predicate.
+		if !m.entityIs(c) || (len(c.entities) > 0 && !containsStr(c.entities, m.entity)) {
+			return false
+		}
+		if (c.hasDim && c.dim != m.dim) || m.distH < c.minDistH || (c.ominousBanner && !m.ominousBanner) {
+			return false
+		}
+		if len(c.damageDirect) > 0 && !containsStr(c.damageDirect, m.damageDirect) {
+			return false
+		}
+		return c.damageTag == "" || m.damageTags[c.damageTag]
+	case "bred_animals":
+		// BredAnimalsTrigger.TriggerInstance.matches: a named child needs a
+		// child, and the parent/partner predicates hold either way round.
+		if (c.entity != "" || c.hasBaby || c.variant != "") && m.entity == "" {
+			return false
+		}
+		if !m.entityIs(c) {
+			return false
+		}
+		is := func(want, have string) bool { return want == "" || want == have }
+		return is(c.parent, m.parent) && is(c.partner, m.partner) || is(c.parent, m.partner) && is(c.partner, m.parent)
+	case "tame_animal", "summoned_entity", "thrown_item_picked_up_by_player":
 		return m.entityIs(c)
 	case "player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity":
+		if len(c.bodyItems) > 0 && !containsID(c.bodyItems, m.body) {
+			return false
+		}
+		if c.hasBodyDamage && (m.body == 0 || m.bodyDmg != c.bodyDamage) {
+			return false
+		}
 		return m.entityIs(c) && m.itemIn(c)
 	case "placed_block":
 		if len(c.locChecks) > 0 {
@@ -335,8 +394,20 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		if c.recipe != "" && c.recipe != m.recipe {
 			return false
 		}
-		for _, set := range c.ingredients { // each predicate set must be satisfied by one input
-			if !containsAny(m.ingredients, set) {
+		// RecipeCraftedTrigger.matches: each ingredient predicate, in order,
+		// takes the first still-unclaimed input it accepts, so four sherd
+		// predicates need four sherds, not one.
+		remaining := append([]int32(nil), m.ingredients...)
+		for _, set := range c.ingredients {
+			found := false
+			for i, it := range remaining {
+				if containsID(set, it) {
+					remaining = append(remaining[:i], remaining[i+1:]...)
+					found = true
+					break
+				}
+			}
+			if !found {
 				return false
 			}
 		}

@@ -35,6 +35,12 @@ func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m 
 	}
 	var granted []*advNode
 	var completed []*advNode
+	m.playerY = t.y
+	for i := range t.armor {
+		if t.armor[i].count > 0 {
+			m.playerArmor[i] = t.armor[i].item
+		}
+	}
 	for _, ref := range advByTrigger[trigger] {
 		if !m.criterion(ref.crit) {
 			continue

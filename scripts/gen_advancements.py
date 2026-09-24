@@ -343,6 +343,108 @@ def rng_min(v, key=None):
     return float(v)
 
 
+OMINOUS_BANNER = "block.minecraft.ominous_banner"
+
+
+def body_pred(d, c, tags):
+    """An interacted entity's body armour after the interaction: its item
+    and exact damage (repair_wolf_armor: wolf_armor at damage 0, i.e. the
+    scute finished the repair). Other equipment shapes stop the generator."""
+    for pc in c.get("entity") or []:
+        eq = (pc.get("predicate") or {}).get("equipment")
+        if eq is None:
+            continue
+        body = eq.get("body") or {}
+        comps = body.get("components") or {}
+        if set(eq) != {"body"} or not set(body) <= {"items", "components"} or not set(comps) <= {"minecraft:damage"}:
+            raise SystemExit(f"gen_advancements: interacted entity equipment {eq}")
+        if "items" in body:
+            d["bodyItems"] = names_of(body["items"], tags, "item")
+        if "minecraft:damage" in comps:
+            d["bodyDamage"] = int(comps["minecraft:damage"])
+ARMOR_SLOTS = {"head", "chest", "legs", "feet"}
+
+
+def player_pred(d, c, tags):
+    """The criterion's player predicate, in the two shapes 26.3 gives these
+    triggers: standing at or above a height (trade_at_world_height), and
+    wearing none of an item set in any armour slot (distract_piglin's
+    not-any_of over the four slots, which the normaliser splits into four
+    inverted terms). Anything else stops the generator."""
+    avoid = {}
+    for pc in c.get("player") or []:
+        cond = strip_ns(pc.get("condition", ""))
+        if cond == "entity_properties":
+            p = pc.get("predicate") or {}
+            pos = (p.get("location") or {}).get("position") or {}
+            if set(p) != {"location"} or set(p["location"]) != {"position"} or set(pos) != {"y"} \
+                    or set(pos["y"]) != {"min"}:
+                raise SystemExit(f"gen_advancements: player predicate {p}")
+            d["playerMinY"] = rng_min(pos["y"])
+        elif cond == "inverted":
+            term = pc.get("term") or {}
+            eq = (term.get("predicate") or {}).get("equipment") or {}
+            if strip_ns(term.get("condition", "")) != "entity_properties" or set(term["predicate"]) != {"equipment"} \
+                    or len(eq) != 1 or not set(eq) <= ARMOR_SLOTS:
+                raise SystemExit(f"gen_advancements: inverted player predicate {term}")
+            (slot, want), = eq.items()
+            if set(want) != {"items"}:
+                raise SystemExit(f"gen_advancements: inverted player equipment {want}")
+            avoid[slot] = tuple(names_of(want["items"], tags, "item"))
+        else:
+            raise SystemExit(f"gen_advancements: player condition {cond}")
+    if avoid:
+        if set(avoid) != ARMOR_SLOTS or len(set(avoid.values())) != 1:
+            raise SystemExit(f"gen_advancements: player armour predicate {avoid}")
+        d["playerNotWearing"] = list(next(iter(avoid.values())))
+
+
+def kill_pred(d, c, tags):
+    """The parts of a kill criterion (Player/EntityKilled... TriggerInstance:
+    entity + killing_blow) beyond the entity's type: a type tag, the entity's
+    horizontal distance from the player and its dimension, an ominous banner
+    on its head (a raid captain), and the killing blow's direct entity and
+    damage-type tag. A shape outside these stops the generator rather than
+    matching loosely."""
+    for pc in c.get("entity") or []:
+        p = pc.get("predicate") or {}
+        for k, v in p.items():
+            if k in ("type", "flags", "type_specific", "components"):
+                continue  # ent_pred reads these
+            if k == "distance":
+                if set(v) != {"horizontal"} or set(v["horizontal"]) != {"min"}:
+                    raise SystemExit(f"gen_advancements: kill distance {v}")
+                d["minDistH"] = rng_min(v["horizontal"])
+            elif k == "location":
+                if set(v) != {"dimension"}:
+                    raise SystemExit(f"gen_advancements: kill location {v}")
+                d["dim"] = DIMS[v["dimension"]]
+            elif k == "equipment":
+                head = v.get("head") or {}
+                name = ((head.get("components") or {}).get("minecraft:item_name") or {}).get("translate")
+                if set(v) != {"head"} or strip_ns(str(head.get("items"))) != "white_banner" or name != OMINOUS_BANNER:
+                    raise SystemExit(f"gen_advancements: kill equipment {v}")
+                d["ominousBanner"] = True
+            else:
+                raise SystemExit(f"gen_advancements: kill entity predicate field {k}")
+        ty = p.get("type")
+        if isinstance(ty, str) and ty.startswith("#"):
+            d["entities"] = names_of(ty, tags, "entity_type")
+    kb = c.get("killing_blow") or {}
+    for k, v in kb.items():
+        if k == "direct_entity":
+            if set(v) != {"type"}:
+                raise SystemExit(f"gen_advancements: killing_blow direct_entity {v}")
+            d["damageDirect"] = names_of(v["type"], tags, "entity_type")
+        elif k == "tags":
+            want = [tg for tg in v if tg.get("expected", True)]
+            if len(want) != 1 or len(want) != len(v):
+                raise SystemExit(f"gen_advancements: killing_blow tags {v}")
+            d["damageTag"] = strip_ns(want[0]["id"])
+        else:
+            raise SystemExit(f"gen_advancements: killing_blow field {k}")
+
+
 def distill(trigger, cond, tags):
     """Reduce a criterion to the engine-matchable schema: a dict of non-default
     fields. `unmatchable` is set only where the engine has no way to observe
@@ -395,14 +497,25 @@ def distill(trigger, cond, tags):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        if t in ("player_killed_entity", "entity_killed_player"):
+            kill_pred(d, c, tags)
     elif t == "bred_animals":
         d["entity"], baby, var = ent_pred(c.get("child"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        # The egg-layers' criteria (frog, sniffer, turtle) name the parents,
+        # not a child: BredAnimalsTrigger fires for them with no offspring.
+        for key in ("parent", "partner"):
+            et, pb, pv = ent_pred(c.get(key))
+            if pb is not None or pv:
+                raise SystemExit(f"gen_advancements: bred_animals {key} predicate beyond a type")
+            if et: d[key] = et
     elif t in ("player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity"):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        if t == "player_interacted_with_entity":
+            body_pred(d, c, tags)
         p = items_pred(c.get("item", {}), tags)
         if p: d["items"] = [p]
     elif t == "changed_dimension":
@@ -540,6 +653,8 @@ def distill(trigger, cond, tags):
     # never spawns, a biome its generator never places.
     if d.get("entity") in ABSENT_ENTITIES or d.get("biome") in ABSENT_BIOMES:
         d["unmatchable"] = True
+    if t in ("villager_trade", "thrown_item_picked_up_by_entity", "player_interacted_with_entity"):
+        player_pred(d, c, tags)
     return d
 
 
@@ -822,7 +937,7 @@ def main():
                 f.append("locChecks: [][]advLocCheck{%s}" % ", ".join(groups))
             for key in ("structure", "recipe", "lootTable", "sourceEntity", "damageTag",
                         "lookingAt", "vehicle", "passenger", "bystander", "cause", "variant",
-                        "enchant", "toolPred"):
+                        "enchant", "toolPred", "parent", "partner"):
                 if c.get(key):
                     f.append(f"{key}: {gstr(c[key])}")
             if c.get("damageDirect"):
@@ -831,6 +946,16 @@ def main():
                 f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
             if c.get("vehicles"):
                 f.append("vehicles: []string{%s}" % ", ".join(gstr(x) for x in c["vehicles"]))
+            if c.get("bodyItems"):
+                ids = sorted(set(item_ids[x] for x in c["bodyItems"] if x in item_ids))
+                f.append("bodyItems: []int32{%s}" % ", ".join(map(str, ids)))
+            if "bodyDamage" in c:
+                f.append(f"bodyDamage: {c['bodyDamage']}, hasBodyDamage: true")
+            if c.get("playerNotWearing"):
+                ids = sorted(set(item_ids[x] for x in c["playerNotWearing"] if x in item_ids))
+                f.append("playerNotWearing: []int32{%s}" % ", ".join(map(str, ids)))
+            if c.get("entities"):
+                f.append("entities: []string{%s}" % ", ".join(gstr(x) for x in c["entities"]))
             if c.get("effects"):
                 f.append("effects: []string{%s}" % ", ".join(gstr(x) for x in c["effects"]))
             for key in ("minUnique", "minCount", "signal"):
@@ -838,10 +963,11 @@ def main():
                     f.append(f"{key}: {c[key]}")
             if "baby" in c:
                 f.append(f"baby: {c['baby']}, hasBaby: true")
-            for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax"):
+            for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax",
+                        "playerMinY"):
                 if key in c:
                     f.append(f"{key}: {c[key]}")
-            for key in ("smokey", "blocked", "noFire"):
+            for key in ("smokey", "blocked", "noFire", "ominousBanner"):
                 if c.get(key):
                     f.append(f"{key}: true")
             w.append("\t\t\t{%s}," % ", ".join(f))

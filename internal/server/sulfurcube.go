@@ -672,7 +672,7 @@ func (h *hub) cubeStruckByPlayer(players map[int32]*tracked, m *mob, t *tracked,
 	}
 	if m.health <= 0 {
 		h.killMob(players, m)
-		h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+		h.playerKilledEntity(players, t, m)
 		h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
 		h.incCustom(t, "mob_kills", 1)
 	}

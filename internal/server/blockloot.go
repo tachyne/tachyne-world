@@ -244,42 +244,37 @@ func (h *hub) evalTable(tbl *lootTable, ctx lootCtx) []drop {
 	return out
 }
 
-// pick chooses one entry from a pool by weight (block/mob luck=0 → raw weight
-// 1 each), skipping entries whose conditions fail; composite entries resolve
-// to their first passing leaf.
+// pick chooses one entry from a pool as vanilla LootPool.addRandomItem does:
+// every entry whose conditions pass expands into its leaves (an alternatives
+// entry into its first passing child; an empty entry is a leaf that drops
+// nothing), each leaf weighs max(0, floor(weight + quality·luck)), and one is
+// drawn by weight — a lone leaf without a draw. The polar bear's cod (3)
+// against salmon (1) and the witch's stick (2) against its five other drops
+// come from these weights.
 func (c *lootCtx) pick(entries []lootEntry) *lootEntry {
-	var eligible []*lootEntry
+	var leaves []*lootEntry
+	total := 0
 	for i := range entries {
-		if leaf := c.resolve(&entries[i]); leaf != nil {
-			eligible = append(eligible, leaf)
-		}
-	}
-	if len(eligible) == 0 {
-		return nil
-	}
-	return eligible[c.rng(len(eligible))] // all weights are 1 for block loot
-}
-
-// resolve turns an entry into a single droppable leaf (or nil): item entries
-// pass through their conditions; alternatives return the first passing child.
-func (c *lootCtx) resolve(e *lootEntry) *lootEntry {
-	if !c.condsPass(e.Conditions) {
-		return nil
-	}
-	switch e.Type {
-	case "item":
-		return e
-	case "alt", "alternatives", "sequence":
-		for i := range e.Children {
-			if leaf := c.resolve(&e.Children[i]); leaf != nil {
-				return leaf
+		var got []*lootEntry
+		c.collectLeaves(&entries[i], &got)
+		for _, e := range got {
+			if w := entryWeight(e, c.luck); w > 0 {
+				leaves = append(leaves, e)
+				total += w
 			}
 		}
-	case "group":
-		for i := range e.Children {
-			if leaf := c.resolve(&e.Children[i]); leaf != nil {
-				return leaf
-			}
+	}
+	switch {
+	case total == 0 || len(leaves) == 0:
+		return nil
+	case len(leaves) == 1:
+		return leaves[0]
+	}
+	r := c.rng(total)
+	for _, e := range leaves {
+		r -= entryWeight(e, c.luck)
+		if r < 0 {
+			return e
 		}
 	}
 	return nil

@@ -113,6 +113,37 @@ the public history since the project was open-sourced on 2026-07-10.
   first hit. As in vanilla, each blow now rocks the vehicle and adds to its
   damage, which drains away over time, so a bare fist needs a quick run of
   punches. A creative player still breaks one at once, and gets no item.
+- **"Surge Protector" needs a villager close to the bolt.** A villager up
+  to 30 blocks away in any direction counted, and so did one in another
+  dimension. As in vanilla, the villager must now be within 15 blocks
+  across, not struck by the bolt, and in the same world.
+- **"Two by Two" needs real frogs, sniffers and turtles.** Breeding any
+  animal ticked off the frog, sniffer and turtle entries, because those
+  three lay eggs or spawn instead of having babies. Each now needs its own
+  pair to breed.
+- **"Good as New" needs the wolf armour fully mended.** Any scute given
+  to a wolf in worn armour granted it. As in vanilla, it now counts only
+  when the scute leaves the armour with no damage.
+- **"Oh Shiny" and "Star Trader" check the player.** Distracting a piglin
+  with gold now counts only when you wear no gold armour, as in vanilla.
+  Star Trader now needs you to trade at the build limit (y 319 or higher),
+  not anywhere.
+- **Kill advancements check how the kill was made.** Sniper Duel now
+  needs a skeleton shot from at least 50 blocks away. Return to Sender
+  needs a ghast killed by its own fireball, and Uneasy Alliance a ghast
+  killed in the Overworld. Blowback needs a breeze killed by a breeze's
+  wind charge batted back at it. Voluntary Exile needs a raider wearing the
+  ominous banner, not just any kill. Before, any kill of the right mob,
+  or for Voluntary Exile any kill at all, granted them. A mob killed by a
+  player's wind charge now counts as that player's kill.
+- **"Careful Restoration" needs four sherds.** Crafting a decorated pot
+  from one pottery sherd and three bricks granted the advancement for a
+  pot made only of sherds. As in vanilla, each sherd the advancement asks
+  for now has to be a different item in the grid.
+- **Mob drops follow vanilla's odds.** A polar bear now drops cod three
+  times as often as salmon, and a witch drops sticks twice as often as
+  each of her other drops. Every choice in a mob's drop table was being
+  drawn evenly.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

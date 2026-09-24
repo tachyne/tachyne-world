@@ -165,7 +165,11 @@ func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak 
 		h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 		h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
 		h.tryBrush(players, t, m) || h.tryWolfArmor(players, t, m) || h.tryAllay(players, t, m) || h.tryBarter(players, t, m) || h.tryFeedDolphin(players, t, m) || h.tryIgniteCreeper(players, t, m) || h.tryRepairGolem(players, t, m) || h.tryPoisonParrot(players, t, m) || h.tryShearOther(players, t, m) || h.tryTame(players, t, m) || h.shearSheep(players, t, m) || h.feedAnimal(players, t, m) {
-		h.advance(players, t, "player_interacted_with_entity", advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held, variant: advVariantName(m)})
+		im := advMatch{entity: advEntityName[m.etype], baby: m.baby, item: held, variant: advVariantName(m)}
+		if m.armorSt.count > 0 { // the entity as the click left it (repair_wolf_armor asks for a mended coat)
+			im.body, im.bodyDmg = m.armorSt.item, m.armorSt.dmg
+		}
+		h.advance(players, t, "player_interacted_with_entity", im)
 		return true
 	}
 	return false

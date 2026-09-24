@@ -58,6 +58,7 @@ type arrowEntity struct {
 	playerShot bool     // player-fired: hits mobs, and is retrievable once stuck
 	breaks     bool     // snowball/egg: shatters on impact instead of sticking
 	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
+	breezeBorn bool     // a breeze's wind charge (vanilla's breeze_wind_charge), even once batted back
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
 	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
@@ -573,8 +574,15 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			}
 			h.windChargeShoveMob(players, a, m)
 			m.hurtKind(windChargeHitDamage, dtWindCharge)
+			m.lastDirect = windChargeDirect(a) // the killing blow's direct entity (Blowback)
 			if m.health <= 0 {
 				h.killMob(players, m)
+				if shooter := players[a.shooter]; shooter != nil && a.playerShot {
+					h.playerKilledEntity(players, shooter, m)
+					h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
+					h.incCustom(shooter, "mob_kills", 1)
+					h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
+				}
 			}
 			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
 			return true
@@ -648,7 +656,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				a.victims = append(a.victims, advEntityName[m.etype])
 				if a.playerShot {
 					if shooter := players[a.shooter]; shooter != nil {
-						h.advance(players, shooter, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+						h.playerKilledEntity(players, shooter, m)
 						h.advance(players, shooter, "killed_by_arrow", advMatch{item: a.weapon, victims: a.victims})
 						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
 						h.incCustom(shooter, "mob_kills", 1)

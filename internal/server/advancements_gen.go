@@ -168,7 +168,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/blowback", parent: "minecraft:adventure/minecraft_trials_edition", xp: 40,
 		criteria: []advCriterion{
-			{name: "blowback", trigger: "player_killed_entity", entity: "breeze"},
+			{name: "blowback", trigger: "player_killed_entity", entity: "breeze", damageTag: "is_projectile", damageDirect: []string{"breeze_wind_charge"}},
 		},
 		reqs: [][]string{
 			{"blowback"},
@@ -683,7 +683,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/sniper_duel", parent: "minecraft:adventure/shoot_arrow", xp: 50,
 		criteria: []advCriterion{
-			{name: "killed_skeleton", trigger: "player_killed_entity", entity: "skeleton"},
+			{name: "killed_skeleton", trigger: "player_killed_entity", entity: "skeleton", damageTag: "is_projectile", minDistH: 50.0},
 		},
 		reqs: [][]string{
 			{"killed_skeleton"},
@@ -827,7 +827,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/trade_at_world_height", parent: "minecraft:adventure/trade", xp: 0,
 		criteria: []advCriterion{
-			{name: "trade_at_world_height", trigger: "villager_trade"},
+			{name: "trade_at_world_height", trigger: "villager_trade", playerMinY: 319.0},
 		},
 		reqs: [][]string{
 			{"trade_at_world_height"},
@@ -970,7 +970,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/voluntary_exile", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "voluntary_exile", trigger: "player_killed_entity"},
+			{name: "voluntary_exile", trigger: "player_killed_entity", entities: []string{"evoker", "pillager", "ravager", "vindicator", "illusioner", "witch"}, ominousBanner: true},
 		},
 		reqs: [][]string{
 			{"voluntary_exile"},
@@ -1329,7 +1329,7 @@ var advTable = []advNode{
 			{name: "minecraft:cow", trigger: "bred_animals", entity: "cow"},
 			{name: "minecraft:donkey", trigger: "bred_animals", entity: "donkey"},
 			{name: "minecraft:fox", trigger: "bred_animals", entity: "fox"},
-			{name: "minecraft:frog", trigger: "bred_animals"},
+			{name: "minecraft:frog", trigger: "bred_animals", parent: "frog", partner: "frog"},
 			{name: "minecraft:goat", trigger: "bred_animals", entity: "goat"},
 			{name: "minecraft:hoglin", trigger: "bred_animals", entity: "hoglin"},
 			{name: "minecraft:horse", trigger: "bred_animals", entity: "horse"},
@@ -1342,9 +1342,9 @@ var advTable = []advNode{
 			{name: "minecraft:pig", trigger: "bred_animals", entity: "pig"},
 			{name: "minecraft:rabbit", trigger: "bred_animals", entity: "rabbit"},
 			{name: "minecraft:sheep", trigger: "bred_animals", entity: "sheep"},
-			{name: "minecraft:sniffer", trigger: "bred_animals"},
+			{name: "minecraft:sniffer", trigger: "bred_animals", parent: "sniffer", partner: "sniffer"},
 			{name: "minecraft:strider", trigger: "bred_animals", entity: "strider"},
-			{name: "minecraft:turtle", trigger: "bred_animals"},
+			{name: "minecraft:turtle", trigger: "bred_animals", parent: "turtle", partner: "turtle"},
 			{name: "minecraft:wolf", trigger: "bred_animals", entity: "wolf"},
 		},
 		reqs: [][]string{
@@ -1644,7 +1644,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/repair_wolf_armor", parent: "minecraft:husbandry/tame_an_animal", xp: 0,
 		criteria: []advCriterion{
-			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{1003}}},
+			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{1003}}, bodyItems: []int32{1004}, bodyDamage: 0, hasBodyDamage: true},
 		},
 		reqs: [][]string{
 			{"repair_wolf_armor"},
@@ -1952,8 +1952,8 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/distract_piglin", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{99, 100, 109, 115, 128, 299, 873, 1021, 1022, 1040, 1041, 1042, 1043, 1044, 1088, 1089, 1090, 1091, 1100, 1101, 1187, 1279, 1383, 1408, 1451, 1486, 1514, 1540}}, baby: 0, hasBaby: true},
-			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{1022}}, baby: 0, hasBaby: true},
+			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{99, 100, 109, 115, 128, 299, 873, 1021, 1022, 1040, 1041, 1042, 1043, 1044, 1088, 1089, 1090, 1091, 1100, 1101, 1187, 1279, 1383, 1408, 1451, 1486, 1514, 1540}}, playerNotWearing: []int32{1088, 1089, 1090, 1091}, baby: 0, hasBaby: true},
+			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{1022}}, playerNotWearing: []int32{1088, 1089, 1090, 1091}, baby: 0, hasBaby: true},
 		},
 		reqs: [][]string{
 			{"distract_piglin", "distract_piglin_directly"},
@@ -2140,7 +2140,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/return_to_sender", parent: "minecraft:nether/root", xp: 50,
 		criteria: []advCriterion{
-			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast"},
+			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast", damageTag: "is_projectile", damageDirect: []string{"fireball"}},
 		},
 		reqs: [][]string{
 			{"killed_ghast"},
@@ -2220,7 +2220,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/uneasy_alliance", parent: "minecraft:nether/return_to_sender", xp: 100,
 		criteria: []advCriterion{
-			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast"},
+			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast", dim: 0, hasDim: true},
 		},
 		reqs: [][]string{
 			{"killed_ghast"},

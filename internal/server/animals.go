@@ -327,7 +327,13 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				breeder = players[o.lovedBy]
 			}
 			if breeder != nil {
-				h.advance(players, breeder, "bred_animals", advMatch{entity: advEntityName[m.etype], variant: advVariantName(baby)})
+				// The child, when one is born (a turtle, sniffer or frog
+				// breeds into an egg or spawn: no offspring, only parents).
+				bred := advMatch{parent: advEntityName[m.etype], partner: advEntityName[o.etype], variant: advVariantName(baby)}
+				if baby != nil {
+					bred.entity = advEntityName[baby.etype]
+				}
+				h.advance(players, breeder, "bred_animals", bred)
 				h.incCustom(breeder, "animals_bred", 1)
 			}
 			break

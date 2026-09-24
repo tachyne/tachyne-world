@@ -74,12 +74,29 @@ type advCriterion struct {
 	vehicle      string
 	passenger    string
 	vehicles     []string // started_riding: the vehicle types that match (a tag, expanded)
-	lookingAt    string
-	bystander    string
-	noFire       bool
-	cause        string
-	enchant      string
-	toolPred     string
+	entities     []string // player_killed_entity: the entity types that match (a tag, expanded)
+	// The criterion's player predicate: standing at or above a height
+	// (trade_at_world_height), wearing none of these in any armour slot
+	// (distract_piglin: no gold).
+	playerMinY       float64
+	playerNotWearing []int32
+	// player_interacted_with_entity: the entity's body armour after the
+	// interaction (repair_wolf_armor: wolf armour at exactly zero damage)
+	bodyItems []int32
+	// bred_animals: the two parents' types (the egg-layers' criteria name
+	// these, not a child), matched either way round
+	parent, partner string
+	bodyDamage      int
+	hasBodyDamage   bool
+	// player_killed_entity: the entity wears the ominous banner on its head
+	// (a raid captain, voluntary_exile)
+	ominousBanner bool
+	lookingAt     string
+	bystander     string
+	noFire        bool
+	cause         string
+	enchant       string
+	toolPred      string
 
 	unmatchable bool // trigger/conditions the engine can't observe yet
 }

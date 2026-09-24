@@ -387,7 +387,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				if om.health <= 0 {
 					h.killMob(players, om)
-					h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[om.etype]})
+					h.playerKilledEntity(players, t, om)
 					h.incStat(t, attachproto.StatKilled, int32(om.etype), 1)
 					h.incCustom(t, "mob_kills", 1)
 					h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
@@ -476,7 +476,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 	if m.health <= 0 {
 		h.killMob(players, m)
 		if t != nil {
-			h.advance(players, t, "player_killed_entity", advMatch{entity: advEntityName[m.etype]})
+			h.playerKilledEntity(players, t, m)
 			h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
 			h.incCustom(t, "mob_kills", 1)
 			h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
@@ -628,7 +628,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			if ds, ok := h.evalEntityLoot(int32(m.etype), lootCtx{
 				looting: m.looting, killedByPlayer: m.hitByPlayer, onFire: m.burning,
 				direct: advEntityName[m.lastDirect], source: h.blowSourceName(players, m), dt: m.lastDT,
-				rng: h.rng.Intn, randf: h.rng.Float64}); ok {
+				luck: killerLuck(players, m), rng: h.rng.Intn, randf: h.rng.Float64}); ok {
 				if m.etype == entitySheep && m.sheared {
 					ds = nil // no wool off a sheared sheep (handled outside the table)
 				}
@@ -858,4 +858,17 @@ func sweepCatches(target *mob, x, y, z, w, h float64) bool {
 	reach := tb.w/2 + 1 + w/2
 	return math.Abs(x-target.x) < reach && math.Abs(z-target.z) < reach &&
 		y < target.y+tb.h+0.25 && y+h > target.y-0.25
+}
+
+// killerLuck is the LUCK of the player who killed a mob, which vanilla hands
+// the death table (LivingEntity.dropFromLootTable: withLuck when killed by a
+// player) to shift entry weights by their quality; 0 for any other death.
+func killerLuck(players map[int32]*tracked, m *mob) float64 {
+	if !m.hitByPlayer {
+		return 0
+	}
+	if t := players[m.lastAttacker]; t != nil {
+		return t.luck()
+	}
+	return 0
 }
