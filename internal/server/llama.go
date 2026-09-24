@@ -4,7 +4,7 @@ import "math"
 
 // The llama's spit.
 //
-// Llamas were rideable, formed caravans and joined wandering traders, but the
+// Llamas were rideable, formed caravans (caravan.go) and joined wandering traders, but the
 // one thing everybody knows a llama for was missing: it never spat. A provoked
 // llama simply bit, which is doubly wrong — vanilla llamas carry no attack
 // damage attribute at all, so the single point of damage a llama can do IS the

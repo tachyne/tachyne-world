@@ -181,6 +181,9 @@ type mob struct {
 	cart                            int32       // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
 	mobRider                        int32       // eid of the MOB riding this one (the reverse of mount); 0 = none
 	mobRider2                       int32       // a camel's back seat: the second MOB aboard (a camel husk's parched); 0 = none
+	caravanHead, caravanTail        int32       // llama caravans (caravan.go): the llama followed, and the one following
+	caravanSpeed                    float64     // …the goal's speed modifier, 2.1 rising while it lags
+	caravanGrace                    int         // …mob updates left to catch up once past 26 blocks
 	navMount                        *mob        // the vehicle this rider steers (Mob.getNavigation hands a driver its vehicle's), nil = on foot
 	mountDrives                     bool        // this rider's AI leads and its mount follows (a chicken jockey's zombie)
 	jockey                          bool        // a chicken carrying a jockey: no eggs, despawns, ten experience
@@ -703,6 +706,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case m.etype == entitySulfurCube:
 			h.sulfurHop(players, m) // the same hops, steered by its tempt and block-seeking goals
+		case isLlama(m.etype) && h.caravanStep(m):
+			// A llama following the one ahead of it in a caravan (priority 2,
+			// above its panic).
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
 		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):

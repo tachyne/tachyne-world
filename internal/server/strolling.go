@@ -15,7 +15,7 @@ var strollSpeeds = func() map[int]float64 {
 	m := map[int]float64{}
 	for name, mul := range map[string]float64{
 		"horse": 0.7, "donkey": 0.7, "mule": 0.7, "skeleton_horse": 0.7, "zombie_horse": 0.7,
-		"llama": 0.7, "trader_llama": 0.7,
+		"llama": 0.7, "trader_llama": 0.7, "camel": 2.0, "camel_husk": 2.0, // CamelAi: RandomStroll.stroll(2.0F)
 		"creeper": 0.8, "spider": 0.8, "cave_spider": 0.8,
 		"rabbit": 0.6, "ravager": 0.4, "wandering_trader": 0.35,
 		"evoker": 0.6, "illusioner": 0.6, "pillager": 0.6, "vindicator": 0.6,

@@ -147,6 +147,13 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **Llama caravans.** Put a lead on a llama and the free llamas within nine
+  blocks fall in behind it, each two blocks behind the one ahead, as in
+  vanilla. A llama that falls more than 26 blocks behind speeds up, and
+  leaves the line if it still can't catch up. The caravan breaks up when
+  nobody at the front is on a lead any more. A wandering trader's llamas
+  now spit at whoever hurts the trader. Camels stroll at their vanilla
+  pace.
 - **The camel husk (26.3).** One naturally spawned husk in ten, given room
   for a camel, rides out on a camel husk:
   - the husk sits in front and drives, with an iron spear, and its spear

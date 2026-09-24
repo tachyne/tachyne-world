@@ -438,6 +438,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 	// off and keeps hunting (it doesn't flee its prey).
 	yaw := m.yaw
 	if t != nil {
+		h.traderLlamasDefend(m, t)
 		if m.etype == entityIronGolem {
 			// IronGolem's HurtByTargetGoal: it does not flee and it does not
 			// need a grudge — hit it and it comes after you.

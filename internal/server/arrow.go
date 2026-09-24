@@ -522,6 +522,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
 				h.mobKnockVelocity(players, m)
 			}
+			if shooter := players[a.shooter]; shooter != nil && a.playerShot {
+				h.traderLlamasDefend(m, shooter)
+			}
 			if m.retaliates && a.playerShot {
 				if shooter := players[a.shooter]; shooter != nil {
 					h.provoke(m, shooter)
