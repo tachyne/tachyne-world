@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **"Surge Protector" needs a villager close to the bolt.** A villager up
+  to 30 blocks away in any direction counted, and so did one in another
+  dimension. As in vanilla, the villager must now be within 15 blocks
+  across, not struck by the bolt, and in the same world.
 - **"Two by Two" needs real frogs, sniffers and turtles.** Breeding any
   animal ticked off the frog, sniffer and turtle entries, because those
   three lay eggs or spawn instead of having babies. Each now needs its own

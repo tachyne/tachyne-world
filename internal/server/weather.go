@@ -430,9 +430,19 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	lit := h.strikeFire(players, int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z)))
 	// LightningStrikeTrigger: every player within reach sees the bolt, with
 	// whether a villager stood by and whether anything caught fire.
+	// The bystanders are LightningBolt's: the living entities whose boxes
+	// touch a box 15 out and from 15 below to 21 above the bolt, less those
+	// it struck.
+	hit := make(map[int32]bool, len(struck))
+	for _, m := range struck {
+		hit[m.eid] = true
+	}
 	villagerBy := false
 	for _, m := range h.mobs {
-		if m.etype == entityVillager && m.dying == 0 && dist3(m.x, m.y, m.z, x, y, z) <= 30 {
+		if m.etype != entityVillager || m.dying != 0 || m.dim != dimOverworld || hit[m.eid] {
+			continue
+		}
+		if b := m.box(); math.Abs(m.x-x) <= 15+b.w/2 && math.Abs(m.z-z) <= 15+b.w/2 && m.y <= y+21 && m.y+b.h >= y-15 {
 			villagerBy = true
 			break
 		}
