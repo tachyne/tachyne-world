@@ -1,4 +1,4 @@
-# Vanilla parity — where tachyne stands (re-graded 2026-09-23)
+# Vanilla parity — where tachyne stands (re-graded 2026-09-24)
 
 The goal is one-for-one behavioural parity with vanilla Java (the engine's canonical
 content version is 26.3, and so is the reference behaviour) *before* anything that is not
@@ -9,60 +9,62 @@ that used to live here; the per-unit ledgers with file-and-line evidence are kep
 the repository and refreshed the same way (re-enumerate, re-grade, diff).
 
 **Grades.** OK — matches vanilla in normal play. PARTIAL — exists, but a rule, branch or
-value differs (the row says which). MISSING — not implemented. N-A — 26.2-only content,
-command-block/creative-only constructs, or client-side only.
+value differs (the row says which). MISSING — not implemented. N-A — command-block or
+creative-only constructs, or client-side only.
 
 ## Totals
 
 | Dimension | Units | OK | PARTIAL | MISSING | N-A | OK share | OK+PARTIAL |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Block behaviour hooks A (random tick, scheduled tick, neighbour change, use, place, entity inside, comparator read) | 297 | 149 | 123 | 13 | 12 | 52% | 95% |
-| Block behaviour hooks B (signals, projectile hit, removal, step/fall, survival, drops, explosions, placement state, shape updates) | 412 | 237 | 147 | 21 | 7 | 59% | 95% |
-| Block entities (49) and menus (25) | 75 | 44 | 21 | 0 | 10 | 68% | 100% |
-| Item behaviours and item components | 103 | 62 | 28 | 2 | 11 | 67% | 98% |
-| Entity roster (attributes, spawn rules, drops, sounds, signature mechanics) | 157 | 56 | 93 | 0 | 8 | 38% | 100% |
-| Monster AI (goal lists) | 46 | 2 | 41 | 3 | 0 | 4% | 93% |
-| Creature, villager and golem AI (goals and brains) | 48 | 1 | 44 | 3 | 0 | 2% | 94% |
-| Recipes, loot tables, advancements, statistics, tags | 162 | 116 | 37 | 9 | 0 | 72% | 94% |
-| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 378 | 62 | 25 | 13 | 81% | 95% |
-| World systems and worldgen | 279 | 130 | 98 | 46 | 5 | 47% | 83% |
-| Player mechanics, commands, chat/social, protocol coverage | 356 | 141 | 55 | 138 | 22 | 42% | 59% |
-| **All** | **2413** | **1316** | **749** | **260** | **88** | **57%** | **89%** |
+| Block behaviour hooks A (random tick, scheduled tick, neighbour change, use, place, entity inside, comparator read) | 297 | 155 | 127 | 3 | 12 | 54% | 99% |
+| Block behaviour hooks B (signals, projectile hit, removal, step/fall, survival, drops, explosions, placement state, shape updates) | 412 | 320 | 84 | 1 | 7 | 79% | 100% |
+| Block entities (49) and menus (25) | 75 | 51 | 14 | 0 | 10 | 78% | 100% |
+| Item behaviours and item components | 103 | 67 | 24 | 1 | 11 | 73% | 99% |
+| Entity roster (attributes, spawn rules, drops, sounds, signature mechanics) | 157 | 62 | 87 | 0 | 8 | 42% | 100% |
+| Monster AI (goal lists) | 46 | 4 | 42 | 0 | 0 | 9% | 100% |
+| Creature, villager and golem AI (goals and brains) | 48 | 0 | 48 | 0 | 0 | 0% | 100% |
+| Recipes, loot tables, advancements, statistics, tags | 162 | 125 | 35 | 2 | 0 | 77% | 99% |
+| Game rules, enchantments, effects, attributes, damage types, brewing, villagers, small registries | 478 | 409 | 44 | 14 | 11 | 88% | 97% |
+| World systems and worldgen | 279 | 134 | 101 | 39 | 5 | 49% | 86% |
+| Player mechanics, commands, chat/social, protocol coverage | 356 | 166 | 51 | 117 | 22 | 50% | 65% |
+| **All** | **2413** | **1493** | **657** | **177** | **86** | **64%** | **92%** |
 
-Of 2325 gradeable units, 1316 (57%) are one-for-one with vanilla today, 749 (32%) exist with a
-deviation, and 260 (11%) are absent. On 2026-09-19 it was 51%, 33% and 16%.
+Of 2327 gradeable units, 1493 (64%) are one-for-one with vanilla today, 657 (28%) exist
+with a deviation, and 177 (8%) are absent. On 2026-09-23 it was 57%, 32% and 11%.
 
-Every dimension was re-graded against 26.3 on 2026-09-23. Every PARTIAL and MISSING row was
-re-read against the engine and vanilla, and OK rows were spot-checked for regressions. Some OK
-rows turned out not to be, and 26.3 content that is now in scope (the sulfur cube, spears, the
-camel husk) counts as MISSING, so the gain is smaller than the raw count of fixes.
+Every dimension was re-graded on 2026-09-24 against the current engine and 26.3. Every
+PARTIAL, MISSING and N-A row was re-read in the code, and OK rows were re-checked where
+their code had changed. The rest keep their earlier evidence. About one in five of the
+OK rows that were re-checked turned out to be PARTIAL, so the OK count is an upper bound
+until the unchecked rows are swept too.
 
-## Largest remaining gaps (2026-09-23)
+## Largest remaining gaps (2026-09-24)
 
-1. **Movement input from 26.x clients.** player_command actions arrived two numbers off,
-   which broke elytra rocket boosts. Sprinting never reached the game loop (no sprint hunger,
-   wrong sprint combat rules), and the shift key never made anyone crouch. Fixed on
-   2026-09-23; deploying.
-2. **Item data lost on pickup.** Picking an item up keeps only a few of its components, so
-   shulker contents, potions, bundle contents and dye colours are stripped.
-3. **Other dimensions.** Nether and End dispensers, TNT, note blocks and bells act on the
-   overworld, and block removal there never tells neighbouring redstone.
-4. **Mob combat.** Ranged mobs never attack non-player targets, armed mobs hit one point too
-   hard, and panic ignores each species' rules. This is the last gap on most farm animals.
-5. **26.3 data still read from 1.21.11.** Villager trades (26.3 moved them to data files and
-   changed values) and advancements. Seven advancements cannot be earned.
-6. **World generation.** There are no aquifers or underground water (lush-cave water floats
-   over carved air), and many ground-cover features are missing.
-7. **26.3 content.** Closed on 2026-09-24: spears and the lunge enchantment, the sulfur
-   cube and the sulfur caves, and the camel husk with its husk-and-parched riders.
-8. **Players seeing each other.** Arm swings, mining cracks and the explosion packet are not
-   broadcast.
+1. **Item data through menus.** A click in an inventory window rebuilds the stack from
+   the item and count and restores only a few components. So potions, shulker and bundle
+   contents, dye colours, lodestone targets and prior-work cost can be lost when an item is
+   moved. Dropped items and death drops keep only damage and enchantments.
+2. **Creature and monster AI.** Almost every goal list is PARTIAL: villager work and
+   social behaviours, the wandering trader's avoid goals, fox behaviours, the raider base
+   goals, the warden's melee, the piglin brain's crossbow and hunting. Hostile mobs ignore
+   adventure-mode players, and only the zombie family shows its attack pose.
+3. **Protocol coverage.** Other players do not see a player crouch or swim. There are no
+   explosion or bulk block-update packets. Creative inventory items arrive without their
+   components, chat is not signed, and keep-alive replies are not read, so latency shows 0.
+4. **World generation.** No aquifers or ravines, and many ground-cover features. The Nether
+   lava sea sits too low and has no bedrock roof. Changing the generator rewrites unedited
+   terrain under existing builds, so these need a decision first.
+5. **Shape updates and placement.** Connections re-wire only on player edits. Some
+   blocks never recompute their shape (cut kelp and vines, dripleaf, bamboo, dripstone
+   thickness). Several placements face the wrong way, and the soil and light rules for
+   plants are too loose.
+6. **Adventure mode and the sneak rule.** Adventure players can use redstone controls and
+   sign editors. They cannot pick items up, and they use throwables without spending them.
 
 ## Cross-cutting defects
 
 Each of these marks dozens of otherwise-correct units PARTIAL, so they are worked first.
-The totals above are the 2026-09-19 audit's; the fixes dated below landed after it and are
-not yet re-graded (a re-grade means re-enumerating, not editing the numbers by hand).
+The totals above are the 2026-09-24 re-grade's; the fixes dated below are counted in them.
 
 1. ~~**Overworld hard-wiring.**~~ **Fixed 2026-09-19.** Block use, redstone, comparators, lecterns, tripwires, plates and detector rails run in the dimension the block is in; redstone works in the Nether and the End, and a scheduled update no longer writes overworld blocks from Nether coordinates.
 2. ~~**Support loss reacts only to a player's edit.**~~ **Fixed 2026-09-19.** Every block change — pistons, explosions, fluids, falling blocks, mobs, worldgen — drops what it was holding up.
@@ -106,7 +108,10 @@ Struck-through rows have landed since the audit; the date says when.
 
 ## Versions
 
-The engine's content is canonical 1.21.11; clients on 1.21.5–1.21.8, 26.2 and 26.3 are served through the translation chain (26.3 since 2026-09-19). Moving canonical to 26.2 was sized alongside this audit: it is a content move (most block-state and item ids renumber, forty generated tables regenerate, the translation direction flips for older clients) with one unconfirmed dependency in the Bedrock gateway's block map; it is independent of serving 26.3 and is deferred until that dependency is confirmed.
+The engine's canonical content version is 26.3, and Java clients on 26.2 and 26.3 are served
+through the translation chain. Bedrock clients are served at the current Bedrock release. The
+gameplay data (loot, recipes, advancements, worldgen) is still partly 1.21.11's; where 26.3
+changed it, the grades above say so.
 
 ## Method, kept
 
