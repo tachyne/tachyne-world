@@ -10,9 +10,8 @@ package server
 // (Mob.checkDespawn honours requiresCustomPersistence/persistenceRequired,
 // which setFromBucket sets on every Bucketable).
 //
-// Nothing else rides the bucket: this engine's fish and axolotls carry no
-// variant and tadpoles no age yet, and a bucketed mob's Health is the only
-// other saved datum — a released mob is simply spawned fresh at full health.
+// The bucket carries the mob's variant (an axolotl's colour) and a baby's
+// age; its Health is not carried, so a released mob comes out at full health.
 
 // mobBucketOf maps a bucketable species to its bucket item and the two
 // sounds (getPickupSound / MobBucketItem.emptySound).
@@ -65,7 +64,14 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 		return false
 	}
 	h.playSoundDim(players, m.dim, mb.fill, sndNeutral, m.x, m.y, m.z, 1, 1)
-	h.giveFilled(players, t, int32(t.p.heldSlot()), mb.item)
+	filled := invStack{item: mb.item, count: 1}
+	if m.variantSet { // saveToBucketTag: the axolotl's colour rides in the bucket
+		filled.cube.variant = m.variant + 1
+	}
+	if m.baby {
+		filled.cube.age = -int32(max(1, m.growLeft))
+	}
+	h.giveFilledStack(players, t, int32(t.p.heldSlot()), filled)
 	h.advance(players, t, "filled_bucket", advMatch{item: mb.item})
 	h.dropLeash(players, m, true) // Leashable.dropLeash: the lead pops out
 	h.removeMob(players, m)
@@ -75,12 +81,23 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 // releaseBucketMob is MobBucketItem.checkExtraContent: after the bucket's
 // water has been poured (or boiled off), spawn the mob in the cell with the
 // bucket's empty sound in place of the water one.
-func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, item int32, x, y, z int) {
+func (h *hub) releaseBucketMob(players map[int32]*tracked, dim int, item int32, data cubeContent, x, y, z int) {
 	etype := speciesByMobBucket[item]
 	mb := mobBucketBySpecies[etype]
 	m := h.spawnSpecies(players, etype, dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 	if m != nil {
 		m.fromBucket = true
+		// loadFromBucketTag: the variant and age it went in with.
+		if data.variant > 0 {
+			m.variant, m.variantSet = data.variant-1, true
+			if meta := variantMeta(m); meta != nil {
+				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(meta))
+			}
+		}
+		if data.age < 0 && !m.baby {
+			m.baby, m.growLeft = true, int(-data.age)
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
+		}
 	}
 	h.playSoundDim(players, dim, mb.empty, sndNeutral, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 }

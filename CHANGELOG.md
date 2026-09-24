@@ -20,6 +20,8 @@ the public history since the project was open-sourced on 2026-07-10.
   Adventure players eat and drink as survival players do. Creative players
   can eat on a full hunger bar, and keep the food or potion as vanilla's
   do.
+- **A bucketed axolotl keeps its colour.** The bucket now remembers the
+  axolotl's variant and a baby's age, so a blue axolotl comes back out blue.
 - **Eggs hatch properly.**
   - Brown and blue eggs can be thrown (before, only white ones could).
   - Chicks hatch where the egg broke, in any dimension, and hatch warm or

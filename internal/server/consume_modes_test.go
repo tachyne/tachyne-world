@@ -128,3 +128,32 @@ func TestEggsHatchTheirOwnVariant(t *testing.T) {
 		}
 	}
 }
+
+// saveToBucketTag / loadFromBucketTag: a blue axolotl comes out of its
+// bucket blue, and the bucket survives a save.
+func TestAxolotlBucketKeepsItsColour(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	ax := h.spawnMob(players, entityAxolotl, 0.5, 200, 0.5)
+	ax.variant, ax.variantSet = axolotlBlue, true
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemBucketH2O, count: 1}
+	if !h.tryBucketMob(players, pl, ax) {
+		t.Fatal("the axolotl was not scooped")
+	}
+	st := pl.inv.slots[pl.p.heldSlot()]
+	if st.cube.variant != axolotlBlue+1 {
+		t.Fatalf("the bucket carries variant %d", st.cube.variant)
+	}
+	if back := unpackStack(packStack(st)); back != st {
+		t.Errorf("the bucket did not survive a save: %+v vs %+v", back, st)
+	}
+	h.releaseBucketMob(players, 0, st.item, st.cube, 3, 200, 3)
+	for _, m := range h.mobs {
+		if m.etype == entityAxolotl && (m.variant != axolotlBlue || !m.variantSet) {
+			t.Errorf("the axolotl came back variant %d", m.variant)
+		}
+	}
+}
