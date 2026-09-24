@@ -164,4 +164,20 @@ func TestJukeboxComparatorReadsTheSong(t *testing.T) {
 	if got := h.analogSignal(simPos{blockPos: pos}); got != 1 {
 		t.Fatalf("disc 13 should read 1, got %d", got)
 	}
+	// Every song's comparator_output, from the 26.3 jukebox_song data.
+	want := map[string]int{"11": 11, "13": 1, "5": 15, "blocks": 3, "bounce": 8, "cat": 2, "chirp": 4,
+		"creator": 12, "creator_music_box": 11, "far": 5, "lava_chicken": 9, "mall": 6, "mellohi": 7,
+		"otherside": 14, "pigstep": 13, "precipice": 13, "relic": 14, "stal": 8, "strad": 9, "tears": 10,
+		"wait": 12, "ward": 10}
+	for song, w := range want {
+		id, ok := itemByName["music_disc_"+song]
+		if !ok {
+			t.Errorf("no music_disc_%s item", song)
+			continue
+		}
+		h.jukeboxes[simPos{blockPos: pos}] = &jukebox{disc: invStack{item: int32(id), count: 1}}
+		if got := h.analogSignal(simPos{blockPos: pos}); got != w {
+			t.Errorf("music_disc_%s reads %d, want %d", song, got, w)
+		}
+	}
 }

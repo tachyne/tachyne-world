@@ -103,6 +103,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The newest music discs give their vanilla comparator signal.** A
+  comparator reading a jukebox playing Bounce, Lava Chicken or Tears gave
+  the wrong strength; they now give 8, 9 and 10.
 - **Comparators read a double chest as one chest.** A comparator next to
   a large chest read only the half it touched, and still read a chest whose
   lid was blocked. As in vanilla it now reads both halves together, and

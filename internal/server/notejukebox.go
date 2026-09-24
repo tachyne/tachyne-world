@@ -210,7 +210,7 @@ var jukeboxSongs = []struct {
 	{"precipice", 299, 13}, {"relic", 218, 14}, {"stal", 150, 8}, {"strad", 188, 9},
 	{"wait", 238, 12}, {"ward", 251, 10},
 	// Appended for 26.x clients (older clients lack these registry entries).
-	{"bounce", 234, 6}, {"lava_chicken", 134, 4}, {"tears", 175, 15},
+	{"bounce", 234, 8}, {"lava_chicken", 134, 9}, {"tears", 175, 10},
 }
 
 // jukeboxSignal is the comparator read of a playing jukebox: the song's own
