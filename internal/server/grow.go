@@ -294,7 +294,7 @@ func (h *hub) randomTickBlockState(players map[int32]*tracked, dim, x, y, z int,
 	case inRange(state, [2]uint32{caneMin, caneMax}):
 		h.tickStackPlant(players, dim, x, y, z, state, caneMin)
 	case inRange(state, [2]uint32{cactusMin, cactusMax}):
-		h.tickStackPlant(players, dim, x, y, z, state, cactusMin)
+		h.tickCactus(players, dim, x, y, z, state)
 	default:
 		if h.tickSpread(players, dim, x, y, z, state) {
 			return
@@ -309,6 +309,46 @@ func (h *hub) randomTickBlockState(players map[int32]*tracked, dim, x, y, z int,
 			return
 		}
 		h.tickLeaf(players, dim, x, y, z, state)
+	}
+}
+
+// tickCactus is CactusBlock.randomTick: the top stalk (open above) keeps
+// ageing; at age 8 it may put out a cactus flower (a tenth of the time, a
+// quarter on a full three-tall column), at 15 a column under three grows a
+// stalk, and a three-tall column stops for good only once its top is 15.
+func (h *hub) tickCactus(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	w := h.worldFor(dim)
+	if w.At(x, y+1, z) != worldgen.Air {
+		return
+	}
+	age := int(state - cactusMin)
+	height := 1
+	for {
+		s := w.At(x, y-height, z)
+		if s < cactusMin || s > cactusMax {
+			break
+		}
+		if height++; height == 3 && age == 15 {
+			return
+		}
+	}
+	above := blockPos{x, y + 1, z}
+	switch {
+	case age == 8 && supported(w, above, cactusMin):
+		chance := 0.1
+		if height >= 3 {
+			chance = 0.25
+		}
+		if h.rng.Float64() <= chance {
+			h.setBlockAt(players, dim, above, cactusFlowerState)
+		}
+	case age == 15 && height < 3:
+		h.setBlockAt(players, dim, above, cactusMin)
+		h.setBlockAt(players, dim, blockPos{x, y, z}, cactusMin)
+		h.scheduleAroundIn(dim, above, fallDelay) // the new stalk checks its neighbours
+	}
+	if age < 15 {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, cactusMin+uint32(age)+1)
 	}
 }
 

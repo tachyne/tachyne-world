@@ -52,10 +52,11 @@ var plantSoils = func() map[uint32]bool {
 // solid neighbour. Enforcing those here would delete every farm built while
 // this engine allowed them, so that tightening is a separate, announced call.
 var (
-	caneStates      = plantStates("sugar_cane")
-	cactusStates    = plantStates("cactus")
-	bambooStates    = plantStates("bamboo")
-	bambooSapStates = plantStates("bamboo_sapling")
+	caneStates        = plantStates("sugar_cane")
+	cactusStates      = plantStates("cactus")
+	cactusFlowerState = worldgen.BlockBase("cactus_flower")
+	bambooStates      = plantStates("bamboo")
+	bambooSapStates   = plantStates("bamboo_sapling")
 )
 
 // plantStates is a block name's state span; an unknown name yields an empty
@@ -153,6 +154,10 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 				}
 			}
 			return false
+		}
+		if state == cactusFlowerState { // CactusFlowerBlock.mayPlaceOn: #support_override_cactus_flower, or a sturdy centre
+			b := below()
+			return inStates(b, cactusStates) || (b >= farmlandMin && b <= farmlandMin+7) || holdsBlock(b)
 		}
 		if inStates(state, cactusStates) { // CactusBlock.canSurvive
 			for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {

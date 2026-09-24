@@ -157,3 +157,41 @@ func TestBeetrootGrowsTwoThirdsAsOften(t *testing.T) {
 		t.Fatalf("beetroot grew %d times to wheat's %d (ratio %.2f), want about 2/3", beet, wheat, r)
 	}
 }
+
+// TestCactusAgesAndFlowers: CactusBlock.randomTick keeps a full-height
+// column ageing (it stops only at height 3 AND age 15), grows a cactus
+// flower from age 8, and the flower stands on the cactus.
+func TestCactusAgesAndFlowers(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	x, y, z := 5, 200, 5
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			for dy := -1; dy <= 4; dy++ {
+				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	w.SetBlock(x, y-1, z, worldgen.BlockID("sand"))
+	w.SetBlock(x, y, z, cactusMin)
+	w.SetBlock(x, y+1, z, cactusMin)
+	w.SetBlock(x, y+2, z, cactusMin+9) // three tall, past the flowering age
+	h.tickCactus(players, 0, x, y+2, z, w.At(x, y+2, z))
+	if got := w.At(x, y+2, z) - cactusMin; got != 10 {
+		t.Fatalf("a three-tall cactus below age 15 keeps ageing: age %d, want 10", got)
+	}
+	flowered := false
+	for i := 0; i < 400 && !flowered; i++ {
+		w.SetBlock(x, y+3, z, worldgen.Air)
+		w.SetBlock(x, y+2, z, cactusMin+8)
+		h.tickCactus(players, 0, x, y+2, z, cactusMin+8)
+		flowered = w.At(x, y+3, z) == cactusFlowerState
+	}
+	if !flowered {
+		t.Fatal("a cactus at age 8 should put out a flower now and then")
+	}
+	if !supported(w, blockPos{x, y + 3, z}, cactusFlowerState) {
+		t.Fatal("a cactus flower stands on a cactus (#support_override_cactus_flower)")
+	}
+}

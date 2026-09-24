@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Cactus flowers.** A cactus now grows a cactus flower on top now and
+  then, more often on a full three-tall column, as in vanilla. The flower
+  stays put on the cactus, where it used to pop off because it looked for
+  soil beneath it.
 - **Cactus and campfires hurt mobs, and cactus destroys items.** Only
   players took damage from cactus and lit campfires. Now mobs pressed
   against a cactus or standing in a lit campfire are hurt too (fire-immune
