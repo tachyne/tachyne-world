@@ -155,4 +155,7 @@ var enchDefs = [...]enchDef{
 	41: {name: "wind_burst", weight: 2, maxLevel: 3, minBase: 15, minPer: 9, maxBase: 65, maxPer: 9, anvilCost: 4, flags: enchTreasure | enchDoubleTradePrice,
 		supported: []string{"mace"},
 	},
+	42: {name: "lunge", weight: 5, maxLevel: 3, minBase: 5, minPer: 8, maxBase: 25, maxPer: 8, anvilCost: 2, flags: enchInTable | enchTradeable | enchOnRandomLoot | enchOnTradedEquipment | enchOnMobEquipment,
+		supported: []string{"diamond_spear", "stone_spear", "golden_spear", "netherite_spear", "wooden_spear", "iron_spear", "copper_spear"},
+	},
 }

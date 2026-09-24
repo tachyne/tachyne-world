@@ -157,8 +157,11 @@ the public history since the project was open-sourced on 2026-07-10.
     with an iron spear (one armed zombie in six). Zombified piglins carry a
     golden sword, or one time in twenty a golden spear. A mob with a spear
     closes in, lowers it and charges, then wheels off and comes round again.
-  - **Still to come.** Other clients don't see the stab animation yet, and
-    the Lunge enchantment isn't in the registry clients get yet.
+  - **Lunge** can be enchanted onto spears, from the table, books, trades
+    and loot. Each level jolts you forward 0.46 blocks on a jab, for four
+    points of exhaustion and a point of durability, when you have the
+    hunger to spare and aren't riding, gliding or swimming.
+  - **Still to come.** Other clients don't see the stab animation yet.
 - **Strongholds are whole strongholds.** The portal room no longer sits
   alone underground. It is at the far end of vanilla's maze: a spiral
   staircase down, then corridors behind wooden doors, iron doors and

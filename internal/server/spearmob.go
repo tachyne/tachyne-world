@@ -294,8 +294,8 @@ func (h *hub) lunge(players map[int32]*tracked, t *tracked) {
 }
 
 const (
-	// enchLunge is the id Lunge will have once it is appended to the declared
-	// enchantment registry (after wind_burst, 41).
+	// enchLunge is Lunge's id: appended after the 1.21.5 registry's 42
+	// (tachyne-common's extra26xEntries), so 42 everywhere.
 	enchLunge       int8 = 42
 	lungeImpulse         = 0.458 // ApplyEntityImpulse magnitude per level
 	lungeExhaustion      = 4.0   // ApplyExhaustion per level

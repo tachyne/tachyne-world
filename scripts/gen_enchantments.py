@@ -19,7 +19,7 @@ import subprocess
 import sys
 import zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.VERSION)  # 26.3: lunge and its tags
 OUT = "internal/server/enchantments_gen.go"
 
 
@@ -85,7 +85,15 @@ def declared_registry():
     m = re.search(r'ID: "minecraft:enchantment", Entries: \[\]string\{(.*?)\}\}', src, re.S)
     if not m:
         sys.exit("enchantment registry not found in tachyne-common registries_gen.go")
-    return [strip_ns(x) for x in re.findall(r'"([a-z_:]+)"', m.group(1))]
+    names = [strip_ns(x) for x in re.findall(r'"([a-z_:]+)"', m.group(1))]
+    # 26.x clients get entries APPENDED to the 1.21.5 list (configpackets.go
+    # extra26xEntries), so an appended enchantment's network id is its place
+    # after the declared ones: lunge is 42.
+    cfg = open(os.path.join(mod, "protocol", "configpackets.go")).read()
+    m = re.search(r'"minecraft:enchantment":\s*\{(.*?)\}', cfg, re.S)
+    if m:
+        names += [strip_ns(x) for x in re.findall(r'"([a-z_:]+)"', m.group(1))]
+    return names
 
 
 def main():
