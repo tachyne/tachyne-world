@@ -179,21 +179,24 @@ func TestBellNeedsWhateverItHangsFrom(t *testing.T) {
 }
 
 // BigDripleafStemBlock.canSurvive: a stem is the middle of a plant, so it
-// needs something to root in below AND the rest of the plant above.
+// needs #supports_big_dripleaf (or more stem) below AND the rest of the
+// plant above.
 func TestDripleafStemNeedsBothEnds(t *testing.T) {
 	w := world.New(1)
 	const x, y, z = 46, 180, 46
 	stem := worldgen.BlockBase("big_dripleaf_stem")
 	leaf := worldgen.BlockBase("big_dripleaf")
+	clay := worldgen.BlockBase("clay")
 	for _, tc := range []struct {
 		name         string
 		below, above uint32
 		want         bool
 	}{
-		{"rooted, leaf on top", worldgen.Stone, leaf, true},
-		{"rooted, stem on top", worldgen.Stone, stem, true},
+		{"rooted, leaf on top", clay, leaf, true},
+		{"rooted, stem on top", clay, stem, true},
+		{"on stone, leaf on top", worldgen.Stone, leaf, false}, // not #supports_big_dripleaf
 		{"stem on stem, leaf above", stem, leaf, true},
-		{"rooted, nothing above", worldgen.Stone, worldgen.Air, false},
+		{"rooted, nothing above", clay, worldgen.Air, false},
 		{"nothing below", worldgen.Air, leaf, false},
 	} {
 		w.SetBlock(x, y-1, z, tc.below)

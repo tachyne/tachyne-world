@@ -175,7 +175,16 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	case worldgen.SupportWall:
 		return holdsBlock(behind())
 	case worldgen.SupportCeiling:
-		return holdsBlock(above())
+		a := above()
+		if k, ok := signKind(state); ok && k == signHangingCeiling {
+			// CeilingHangingSignBlock.canSurvive is a sturdy CENTER on the face
+			// above, and a hanging sign's support shape is its own outline —
+			// which is how signs chain one under another.
+			if ak, ok := signKind(a); ok && (ak == signHangingCeiling || ak == signHangingWall) {
+				return true
+			}
+		}
+		return holdsBlock(a)
 	case worldgen.SupportFace:
 		switch prop("face") {
 		case "floor":
@@ -236,12 +245,16 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			return holdsBlock(behind())
 		}
 	case worldgen.SupportStem:
-		// BigDripleafStemBlock.canSurvive: rooted below AND carrying the rest
-		// of the plant above.
-		b, a := below(), above()
-		rooted := worldgen.SupportFor(b) == worldgen.SupportStem || holdsBlock(b)
-		carries := worldgen.SupportFor(a) == worldgen.SupportStem || isBigDripleaf(a)
-		return rooted && carries
+		// BigDripleafBlock / BigDripleafStemBlock.canSurvive: the plant roots
+		// in #supports_big_dripleaf or stands on more of itself — a leaf on
+		// its stem, which has no collision and so is no floor — and a stem
+		// also carries the rest of the plant above.
+		b := below()
+		if isBigDripleaf(state) { // a leaf stands on a leaf, a stem or the ground
+			return worldgen.SupportFor(b) == worldgen.SupportStem || supportsBigDripleaf[b]
+		}
+		rooted := (worldgen.SupportFor(b) == worldgen.SupportStem && !isBigDripleaf(b)) || supportsBigDripleaf[b]
+		return rooted && worldgen.SupportFor(above()) == worldgen.SupportStem // a stem or the leaf above
 	case worldgen.SupportSpawn:
 		// FrogspawnBlock.mayPlaceOn: water under it, and not under water
 		// itself — a clutch floats ON the surface.

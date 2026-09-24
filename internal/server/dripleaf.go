@@ -14,6 +14,20 @@ var bigDripleafMin, bigDripleafMax = worldgen.BlockRange("big_dripleaf")
 
 func isBigDripleaf(s uint32) bool { return s >= bigDripleafMin && s <= bigDripleafMax }
 
+// supportsBigDripleaf is #supports_big_dripleaf with #supports_small_dripleaf
+// flattened in: the ground a big dripleaf roots in.
+var supportsBigDripleaf = func() map[uint32]bool {
+	out := map[uint32]bool{}
+	for _, n := range []string{"clay", "moss_block", "dirt", "grass_block", "podzol", "coarse_dirt", "mycelium",
+		"rooted_dirt", "mud", "muddy_mangrove_roots", "farmland"} {
+		lo, hi := worldgen.BlockRange(n)
+		for s := lo; s <= hi; s++ {
+			out[s] = true
+		}
+	}
+	return out
+}()
+
 // dripleafDelay is DELAY_UNTIL_NEXT_TILT_STATE: ticks each tilt lasts.
 var dripleafDelay = map[string]uint64{"unstable": 10, "partial": 10, "full": 100}
 

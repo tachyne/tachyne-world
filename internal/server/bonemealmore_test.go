@@ -123,13 +123,15 @@ func TestBoneMealMoreTargets(t *testing.T) {
 	if apply(-4, 177, -4) {
 		t.Error("fruited cave vines took more meal")
 	}
-	// Big dripleaf: stem below, leaf above.
+	// Big dripleaf: stem below, leaf above (rooted in clay, #supports_big_dripleaf).
+	w.SetBlock(5, 179, -3, worldgen.BlockBase("clay"))
 	w.SetBlock(5, 180, -3, bigDripleafState("north", false))
 	if !apply(5, 180, -3) || !inRange(w.At(5, 180, -3), dripleafStemRng) || !inRange(w.At(5, 181, -3), bigDripleafRange) {
 		t.Error("big dripleaf did not grow")
 	}
 	// Small dripleaf becomes a big one, two to five tall.
 	small := worldgen.BlockID("small_dripleaf")
+	w.SetBlock(-5, 179, 3, worldgen.BlockBase("clay"))
 	w.SetBlock(-5, 180, 3, withProp(small, "half", "lower"))
 	w.SetBlock(-5, 181, 3, withProp(small, "half", "upper"))
 	if !apply(-5, 181, 3) {

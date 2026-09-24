@@ -34,7 +34,7 @@ const (
 	SupportGrowsDown              // …and off what is ABOVE it (cave vines, weeping vines)
 	SupportSpawn                  // frogspawn: water below, open air above
 	SupportBell                   // its own "attachment" picks floor, ceiling or a wall
-	SupportStem                   // a big dripleaf stem: held at BOTH ends
+	SupportStem                   // a big dripleaf, leaf or stem: rooted in its own ground (the stem held at BOTH ends)
 	SupportMossCarpet             // pale moss carpet: on anything if it is the base, else on a base
 )
 
@@ -67,7 +67,7 @@ var supportNames = map[SupportKind][]string{
 	},
 	SupportFloor: {
 		"acacia_door", "acacia_pressure_plate", "acacia_sign", "activator_rail",
-		"bamboo_door", "bamboo_pressure_plate", "bamboo_sign", "big_dripleaf",
+		"bamboo_door", "bamboo_pressure_plate", "bamboo_sign",
 		"birch_door", "birch_pressure_plate", "birch_sign", "black_banner",
 		"black_candle", "black_candle_cake", "black_carpet", "blue_banner",
 		"blue_candle", "blue_candle_cake", "blue_carpet", "brain_coral",
@@ -154,7 +154,7 @@ var supportNames = map[SupportKind][]string{
 	// BigDripleafStemBlock.canSurvive: something to root in below AND the
 	// rest of the plant above — a stem is the middle of a thing, not an end.
 	SupportStem: {
-		"big_dripleaf_stem",
+		"big_dripleaf", "big_dripleaf_stem",
 	},
 	// MossyCarpetBlock.canSurvive: the BASE layer sits on anything that is
 	// not air (it is a carpet, not a plant), and a layer above it needs a

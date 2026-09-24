@@ -435,3 +435,38 @@ func (h *hub) onSignUpdate(players map[int32]*tracked, e evSignUpdate) {
 	h.signs.set(t.dim, e.x, e.y, e.z, sd)
 	h.signBroadcast(players, t.dim, e.x, e.y, e.z, sd)
 }
+
+// chainsHangingSign is shouldTryToChainAnotherHangingSign: a hanging sign
+// clicked with a hanging sign in hand passes the click on, so the new sign
+// is placed against it instead of the old one's editor opening — under a
+// ceiling sign from its bottom face, beside a wall sign from any face off
+// its text axis. (tachyne signs carry no click commands, the rule's other
+// condition.)
+func chainsHangingSign(kind int, state uint32, held int32, face int32) bool {
+	if !hangingSignItems[held] { // HangingSignItem
+		return false
+	}
+	switch kind {
+	case signHangingCeiling:
+		return face == 0 // Direction.DOWN
+	case signHangingWall:
+		info, _ := worldgen.InfoForState(state)
+		facing := worldgen.GetProperty(info, state, "facing")
+		textOnZ := facing == "north" || facing == "south"
+		hitOnZ := face == 2 || face == 3
+		hitOnX := face == 4 || face == 5
+		return !(textOnZ && hitOnZ || !textOnZ && hitOnX) // !isHittingEditableSide
+	}
+	return false
+}
+
+// hangingSignItems is every HangingSignItem, by id.
+var hangingSignItems = func() map[int32]bool {
+	out := map[int32]bool{}
+	for name, id := range itemByName {
+		if strings.HasSuffix(name, "_hanging_sign") {
+			out[id] = true
+		}
+	}
+	return out
+}()

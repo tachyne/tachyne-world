@@ -793,7 +793,7 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	if s.usePot(p, x, y, z, state, seq) { // flower pot: pot / un-pot a plant
 		return true
 	}
-	if _, isSign := signKind(state); isSign { // edit the sign / apply dye, ink, wax
+	if kind, isSign := signKind(state); isSign && !chainsHangingSign(kind, state, p.heldItem(), face) { // edit the sign / apply dye, ink, wax
 		s.hub.post(evUseSign{eid: p.eid, x: x, y: y, z: z, item: p.heldItem(), slot: int32(p.held)})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

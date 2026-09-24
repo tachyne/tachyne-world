@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Big dripleaf stays up.** A big dripleaf's leaf used to pop off its own
+  stem, because the stem has no collision. It now follows vanilla's rule:
+  the leaf stands on a stem, another leaf, or the plant's ground (clay, moss,
+  dirt and the other #supports_big_dripleaf blocks). A stem likewise no
+  longer takes root on stone.
+- **Hanging signs chain.** Clicking a hanging sign while holding another
+  one now places the new sign against it instead of opening the editor. It
+  works on a ceiling sign's underside and on any face of a wall sign except
+  its two text faces. The new sign hangs from the one above.
 - **Items keep everything they carry when picked up.** Picking up a potion,
   a shulker box, a bundle, dyed leather, a firework rocket, a goat horn, a
   decorated pot, a suspicious stew or a silk-touched hive used to strip it
