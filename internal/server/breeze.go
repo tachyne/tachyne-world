@@ -212,7 +212,7 @@ func (h *hub) breezeJumpVector(m *mob, tx, ty, tz float64) (float64, float64, fl
 func (h *hub) breezeFlight(players map[int32]*tracked, m *mob) {
 	w := h.worldFor(m.dim)
 	for i := 0; i < mobMoveInterval; i++ {
-		m.brzVY -= mobGravity
+		m.brzVY -= m.effectiveGravity(m.brzVY)
 		nx, nz := m.x+m.brzVX, m.z+m.brzVZ
 		if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
 			m.x, m.z = nx, nz

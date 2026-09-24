@@ -113,7 +113,7 @@ func babySpeedBonus(etype int) float64 {
 func (h *hub) piglinCrossbowTick(players map[int32]*tracked, m *mob) {
 	var t *tracked
 	if !m.baby && m.admireUntil == 0 {
-		t = h.nearestPiglinPrey(players, m, m.followRange())
+		t = h.piglinTarget(players, m, m.followRange())
 	}
 	if t == nil {
 		if m.cbState == cbCharging {

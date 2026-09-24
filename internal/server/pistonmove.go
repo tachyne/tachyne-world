@@ -335,7 +335,7 @@ func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]
 		if t.sneaking {
 			height = 1.5
 		}
-		if d := clear(t.x, t.y, t.z, playerHalfWidth, height); d > 0 {
+		if d := clear(t.x, t.y, t.z, t.halfWidth(), height*t.scale()); d > 0 {
 			h.teleportPlayer(players, t, t.x+d*float64(dir[0]), t.y+d*float64(dir[1]), t.z+d*float64(dir[2]))
 			if dir[1] > 0 {
 				t.peakY = t.y // lifted, not thrown: no fall damage for the rise

@@ -105,7 +105,7 @@ func (h *hub) parrotLandOnShoulder(players map[int32]*tracked, m *mob) bool {
 	b := m.box()
 	lo := [3]float64{m.x - b.w/2, m.y, m.z - b.w/2}
 	hi := [3]float64{m.x + b.w/2, m.y + b.h, m.z + b.w/2}
-	if !psBoxHits(lo, hi, t.x, t.y, t.z, psPlayerWidth, playerHeight(t)) {
+	if !psBoxHits(lo, hi, t.x, t.y, t.z, playerWidth(t), playerHeight(t)) {
 		return false
 	}
 	// ServerPlayer.setEntityOnShoulder.

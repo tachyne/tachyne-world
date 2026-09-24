@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // How fast a player breaks a block, as vanilla works it out every tick of a
@@ -107,6 +108,9 @@ func (h *hub) destroyProgress(t *tracked, state uint32) float64 {
 	if f := t.hasEffect(effMiningFatigue); f > 0 {
 		speed *= math.Pow(0.3, float64(f))
 	}
+	// BLOCK_BREAK_SPEED multiplies whatever the tool and effects made of it
+	// (1 unless a command, an item or a plugin has changed it).
+	speed *= t.playerAttrs().Value(attr.BlockBreakSpeed)
 	// SUBMERGED_MINING_SPEED is 0.2 unless the helmet has Aqua Affinity.
 	if h.inWater(t.dim, t.x, t.y+1.62, t.z) && t.armor[0].enchLvl(enchAquaAffinity) == 0 {
 		speed *= 0.2

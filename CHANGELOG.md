@@ -88,6 +88,45 @@ the public history since the project was open-sourced on 2026-07-10.
   starts and stops moving, so an observer watching the box pulses when
   someone opens or closes it. The rising lid also pushes mobs and dropped
   items sitting on it out of the way.
+- **Piglins only attack the player they are after.** A piglin chasing
+  someone could hit a player in gold armour who was standing next to it.
+  Now it only swings at its own target. If you anger piglins, by hitting
+  one or opening a chest they guard, they come for you even in gold
+  armour. Before, they forgot about you as soon as they saw the gold.
+  When their anger runs out, they go back to leaving gold-wearers alone.
+- **The Scale attribute changes an entity's size in the world.** A mob
+  or player resized with /attribute already looked bigger or smaller,
+  but the server still treated them as normal size. Now a scaled mob
+  takes up its new size: blocks can't be placed inside it, and it is
+  reached, pushed and hit at its new size. A scaled player's eyes and
+  body move with them, so reach, explosions, wind charges and block
+  placement use their real size. A shrunk player can walk under a
+  one-block gap without being pulled back. Shulkers stop growing at three
+  times their size, happy ghasts never grow bigger, and the ender dragon
+  keeps its size, as in vanilla.
+- **The Gravity attribute works.** Changing an entity's gravity with
+  /attribute used to do nothing. Now a mob with no gravity stays in the
+  air when the ground under it is dug out. The arcs of leaping wolves,
+  jumping goats and breezes, and mobs thrown up by a geyser, rise and fall
+  by their own gravity. A player whose gravity is lowered is no longer
+  pulled to the ground for floating. Slow Falling now slows those mob arcs
+  on the way down, and a mob under Slow Falling or Levitation takes no
+  fall damage, as in vanilla.
+- **The Flying Speed attribute works.** Bees, parrots, allays, ghasts,
+  happy ghasts and the Wither now fly faster or slower when their flying
+  speed is changed with /attribute. Reading it with /attribute now shows
+  each species' own speed, not a generic one. At their normal speed they
+  fly as before.
+- **Zombie reinforcements follow vanilla's rules.** A zombie's chance to
+  call for backup on Hard is now its Zombie Reinforcements attribute, so
+  /attribute changes it. Zombie leaders now appear only as often as the
+  local difficulty allows. They also get their extra health and can break
+  doors. A zombie called in as backup rolls its own chance instead of
+  copying its caller's. A zombie that keeps calling for backup becomes
+  less likely to do it again with each zombie it brings.
+- **The Block Break Speed attribute works.** Setting a player's block
+  break speed with /attribute did nothing. It now multiplies how fast they
+  mine, as in vanilla, and the cracks other players see keep pace.
 - **Endermen teleport the way they do in vanilla.** Every enderman
   teleport landed on the top of the ground, so endermen in the sun
   teleported from one sunny spot to another and gathered in the open. Cave

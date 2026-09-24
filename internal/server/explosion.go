@@ -89,7 +89,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		// does not add the ordinary one): from the eyes, scaled by what
 		// Blast Protection's resistance buys.
 		kb := impact * t.explosionKnockScale()
-		ex, ey, ez := t.x-cx, t.y+playerEyeHeightStand-cy, t.z-cz
+		ex, ey, ez := t.x-cx, t.y+t.eyeHeight()-cy, t.z-cz
 		n := math.Sqrt(ex*ex + ey*ey + ez*ez)
 		if kb <= 0 || n < 1e-9 || t.gamemode == gmSpectator {
 			continue

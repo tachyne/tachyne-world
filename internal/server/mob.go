@@ -170,7 +170,6 @@ type mob struct {
 	patrolCaptain                   bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
-	reinf                           float64     // zombie SPAWN_REINFORCEMENTS_CHANCE (0 for non-zombies)
 	hopTicks                        int         // slime: updates left mid-bound (traveling)
 	hopDelay                        int         // slime: updates until the next bound (grounded, still)
 	strafeCW                        bool        // skeleton: current circling direction while shooting
@@ -957,6 +956,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			sf = h.mobSpeedFactor(m)
 		}
 		sf *= h.webFactor(m)
+		if m.flies {
+			sf *= m.flyingFactor() // FlyingMoveControl: airborne, FLYING_SPEED sets the pace
+		}
 		nx, nz := m.x+m.vx*sf+m.pushX, m.z+m.vz*sf+m.pushZ
 		fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 		switch {
@@ -1041,6 +1043,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				} else {
 					m.y = fl
 				}
+			} else if floor < m.y && m.gravity() <= 0 {
+				// No GRAVITY (or less than none): nothing pulls it down onto
+				// the lower floor, so it stays where it is, as a vanilla mob
+				// on /attribute gravity 0 hangs in the air.
 			} else {
 				m.y = floor
 				if fell := oldY - m.y; fell > m.safeFallDistance() { // the ground dropped out under it
@@ -1675,6 +1681,9 @@ func newMobAttributes(etype int) *attribute.Map {
 		a.SetBase(attr.SafeFallDistance, 6)
 		a.SetBase(attr.FallDamageMultiplier, 0.5)
 	}
+	if fs := flyingSpeedFor(etype); fs > 0 {
+		a.SetBase(attr.FlyingSpeed, fs)
+	}
 	// TEMPT_RANGE: ten for the animals (the attribute's default), sixteen for
 	// the happy ghast, eight for the sulfur cube.
 	switch etype {
@@ -1684,6 +1693,43 @@ func newMobAttributes(etype int) *attribute.Map {
 		a.SetBase(attr.TemptRange, sulfurTemptRange)
 	}
 	return a
+}
+
+// flyingSpeedFor is the species' FLYING_SPEED, for the six that carry one:
+// the fliers FlyingMoveControl moves (bee, parrot, allay, wither) and the two
+// ghasts, whose own move controls read it. Every other flier moves by rules
+// of its own and never looks at the attribute.
+func flyingSpeedFor(etype int) float64 {
+	switch etype {
+	case entityBee, entityWither:
+		return 0.6
+	case entityParrot:
+		return 0.4
+	case entityAllay:
+		return 0.1
+	case entityGhast:
+		return 0.06
+	case entityHappyGhast:
+		return 0.05
+	}
+	return 0
+}
+
+// flyingFactor is how much faster or slower than its species a flier moves
+// through the air: FLYING_SPEED over the species' own figure. The engine's
+// flight is calibrated per species in its step units, so the attribute acts
+// as the ratio vanilla's speed × FLYING_SPEED would give — exactly 1 until a
+// command, an effect or a plugin changes it.
+func (m *mob) flyingFactor() float64 {
+	def := flyingSpeedFor(m.etype)
+	if def == 0 || m.attrs == nil {
+		return 1
+	}
+	v := m.attrs.Peek(attr.FlyingSpeed)
+	if v == def {
+		return 1
+	}
+	return v / def
 }
 
 // stepHeightFor is the species' STEP_HEIGHT, which vanilla moves off the 0.6

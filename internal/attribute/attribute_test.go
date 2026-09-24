@@ -173,3 +173,20 @@ func TestEveryPublicIDHasADefinition(t *testing.T) {
 		t.Errorf("%d definitions, want the registry's 40", len(api.Defs))
 	}
 }
+
+// Peek reads the default without adding the attribute to the map.
+func TestPeekDoesNotCreate(t *testing.T) {
+	m := NewMap()
+	if got := m.Peek(api.Gravity); !near(got, 0.08) {
+		t.Errorf("gravity peek %v, want 0.08", got)
+	}
+	n := 0
+	m.Each(func(api.ID, *Instance) { n++ })
+	if n != 0 {
+		t.Errorf("a peek created %d instances", n)
+	}
+	m.SetBase(api.Gravity, 0.04)
+	if got := m.Peek(api.Gravity); !near(got, 0.04) {
+		t.Errorf("gravity peek after a set %v, want 0.04", got)
+	}
+}

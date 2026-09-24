@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
+)
 
 // Mob crowding — the shove that keeps two mobs from standing in one another.
 //
@@ -127,7 +131,31 @@ func (m *mob) box() mobBox {
 		// (a cow's 0.9x1.4 becomes exactly 0.45x0.7).
 		b.w, b.h = b.w/2, b.h/2
 	}
+	// LivingEntity.getDimensions: the default box scaled by SCALE.
+	if s := m.scale(); s != 1 {
+		b.w, b.h = b.w*s, b.h*s
+	}
 	return b
+}
+
+// scale is the mob's SCALE (LivingEntity.getScale), as the species lets it
+// be: a shulker grows to three times at most, a happy ghast never beyond
+// its own size, and the ender dragon not at all. Read without adding it to
+// the attribute sync.
+func (m *mob) scale() float64 {
+	if m.attrs == nil {
+		return 1
+	}
+	s := m.attrs.Peek(attr.Scale)
+	switch m.etype {
+	case entityShulker:
+		return math.Min(s, 3)
+	case entityHappyGhast:
+		return math.Min(s, 1)
+	case entityEnderDragon:
+		return 1
+	}
+	return s
 }
 
 // vehicle reports whether something is riding this mob. Entity.push refuses to

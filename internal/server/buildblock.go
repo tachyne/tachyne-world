@@ -50,7 +50,7 @@ func (h *hub) publishBodies(players map[int32]*tracked) {
 		if t.sneaking {
 			ht = 1.5
 		}
-		out = append(out, bodyBox{t.dim, t.x, t.y, t.z, playerHalfWidth, ht})
+		out = append(out, bodyBox{t.dim, t.x, t.y, t.z, t.halfWidth(), ht * t.scale()})
 	}
 	for _, v := range h.vehicles {
 		hw, ht := boatBoxHalfWidth, boatBoxHeight
@@ -85,7 +85,7 @@ func (h *hub) placeObstructed(dim, x, y, z int, state uint32) bool {
 	const eps = 1e-7 // touching a face is not overlapping it
 	fx, fz := float64(x), float64(z)
 	for _, b := range *bodies {
-		if b.dim != dim || math.Abs(b.x-fx-0.5) > 2 || math.Abs(b.z-fz-0.5) > 2 {
+		if b.dim != dim || math.Abs(b.x-fx-0.5) > 2+b.hw || math.Abs(b.z-fz-0.5) > 2+b.hw {
 			continue
 		}
 		if b.x+b.hw > fx+eps && b.x-b.hw < fx+1-eps &&

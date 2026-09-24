@@ -100,7 +100,7 @@ func (h *hub) leapFlight(players map[int32]*tracked, m *mob) {
 		// LivingEntity.travelInAir: gravity, then air drag — 0.91 across,
 		// 0.98 down — every tick the leap is in the air.
 		m.leapVX, m.leapVZ = m.leapVX*0.91, m.leapVZ*0.91
-		m.leapVY = (m.leapVY - mobGravity) * 0.98
+		m.leapVY = (m.leapVY - m.effectiveGravity(m.leapVY)) * 0.98
 		if m.swims && m.leapVY < 0 && worldgen.HoldsWater(w.At(floorInt(m.x), floorInt(m.y), floorInt(m.z))) {
 			m.leaping, m.leapVX, m.leapVY, m.leapVZ = false, 0, 0, 0 // a leaping swimmer is home again
 			return

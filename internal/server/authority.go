@@ -36,16 +36,23 @@ func fullCube(state uint32) bool {
 // overworld froze all nether movement and suffocated nether players against
 // phantom overworld terrain.)
 func (h *hub) insideSolid(dim int, x, y, z float64) bool {
+	return h.insideSolidScaled(dim, x, y, z, 1)
+}
+
+// insideSolidScaled is insideSolid for a player of the given SCALE: the head
+// cell is where a player that size has its head, so a small player walking
+// under a one-block gap is not taken for one walking through the ceiling.
+func (h *hub) insideSolidScaled(dim int, x, y, z, scale float64) bool {
 	fx, fz := int(math.Floor(x)), int(math.Floor(z))
 	w := h.worldFor(dim)
 	return fullCube(w.At(fx, int(math.Floor(y+0.1)), fz)) ||
-		fullCube(w.At(fx, int(math.Floor(y+1.6)), fz))
+		fullCube(w.At(fx, int(math.Floor(y+1.6*scale)), fz))
 }
 
 // suffocate applies burial damage (1 Hz, from the survival tick).
 func (h *hub) suffocate(players map[int32]*tracked, t *tracked) {
 	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
-	if fullCube(h.worldFor(t.dim).At(fx, int(math.Floor(t.y+1.5)), fz)) {
+	if fullCube(h.worldFor(t.dim).At(fx, int(math.Floor(t.y+1.5*t.scale())), fz)) { // the eyes, scaled
 		h.damageOf(players, t, suffocateDamagePerSec, dtInWall)
 	}
 }

@@ -357,10 +357,10 @@ func (h *hub) honeySlide(players map[int32]*tracked, t *tracked, fellY float64) 
 			}
 			bx, bz := fx+dx, fz+dz
 			ox, oz := math.Abs(float64(bx)+0.5-t.x), math.Abs(float64(bz)+0.5-t.z)
-			if ox >= 0.5+playerHalfWidth || oz >= 0.5+playerHalfWidth {
+			if ox >= 0.5+t.halfWidth() || oz >= 0.5+t.halfWidth() {
 				continue // the player's box does not reach into that cell
 			}
-			if ox+1e-7 <= honeyFaceInset+playerHalfWidth && oz+1e-7 <= honeyFaceInset+playerHalfWidth {
+			if ox+1e-7 <= honeyFaceInset+t.halfWidth() && oz+1e-7 <= honeyFaceInset+t.halfWidth() {
 				continue // inside the face, not against it
 			}
 			for _, by := range []int{feet, feet + 1} {

@@ -70,7 +70,8 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	}
 	// Vertical spring toward the desired altitude — but never into a ceiling
 	// (the unchecked spring carried cave bats up through solid rock).
-	ny := m.y + math.Max(-m.moveSpeed(), math.Min(m.moveSpeed(), (want-m.y)*0.1))
+	climb := m.moveSpeed() * m.flyingFactor()
+	ny := m.y + math.Max(-climb, math.Min(climb, (want-m.y)*0.1))
 	if !worldgen.Collides(w.At(int(math.Floor(m.x)), int(math.Floor(ny)), int(math.Floor(m.z)))) {
 		m.y = ny
 	}

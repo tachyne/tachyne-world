@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // TestEndermanStareAggro: looking straight at an enderman's eyes provokes it
@@ -67,30 +68,49 @@ func TestZombieReinforcements(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(px)+0.5, h.world.SurfaceY(px, pz), float64(pz)+0.5
 	players := map[int32]*tracked{pl.p.eid: pl}
 	m := h.spawnHostile(players, entityZombie, px+2, pz)
-	m.reinf = 1.0 // guaranteed call
+	if c := m.reinforcementChance(); c < 0 || c >= 0.1+0.75 {
+		t.Fatalf("a fresh zombie's reinforcement chance is %v, outside vanilla's roll", c)
+	}
+	// /attribute sets the chance the call reads.
+	h.applyAttributeCommand(players, evAttributeCmd{by: pl.p.eid, target: "@e[type=zombie]", id: attr.SpawnReinforcements, op: "base set", value: 1})
 	before := len(h.mobs)
 
-	h.zombieReinforce(players, m, pl)
+	h.mobStruck(players, m, pl, dtPlayerAttack) // the player's blow lands
 	if len(h.mobs) != before+1 {
 		t.Fatalf("reinforcement should have spawned: %d mobs, want %d", len(h.mobs), before+1)
 	}
-	if m.reinf != 0.95 {
-		t.Fatalf("caller charge should drop 0.05: got %v", m.reinf)
+	if c := m.reinforcementChance(); math.Abs(c-0.95) > 1e-9 {
+		t.Fatalf("caller charge should drop 0.05: got %v", c)
 	}
 	for _, o := range h.mobs {
-		if o != m && o.etype == entityZombie && o != nil {
-			if o.reinf != 0.95 {
-				t.Fatalf("recruit charge should be caller-0.05: got %v", o.reinf)
+		if o != m && o.etype == entityZombie {
+			in := o.mobAttrs().Get(attr.SpawnReinforcements)
+			if !in.HasModifier(reinforceCalleeSource) {
+				t.Fatal("the recruit must start 0.05 down on its own chance")
+			}
+			if in.Value() >= 0.05+0.75 {
+				t.Fatalf("the recruit's chance %v was copied from its caller, not rolled", in.Value())
 			}
 			if !o.hasTarget {
 				t.Fatal("the recruit must already hunt the attacker")
 			}
 		}
 	}
+	// A second recruit: the caller's charge grows, it does not reset.
+	m.mobAttrs().SetBase(attr.SpawnReinforcements, 5) // still certain after the charge
+	before = len(h.mobs)
+	h.zombieReinforce(players, m, pl)
+	if len(h.mobs) != before+1 {
+		t.Fatal("the second call summoned nobody")
+	}
+	for _, mod := range m.mobAttrs().Get(attr.SpawnReinforcements).Modifiers() {
+		if mod.Source == reinforceCallerSource && math.Abs(mod.Amount+0.10) > 1e-9 {
+			t.Fatalf("after two recruits the caller's charge is %v, want -0.10", mod.Amount)
+		}
+	}
 
 	// Never on normal difficulty.
 	h.rules.Difficulty = diffNormal
-	m.reinf = 1.0
 	before = len(h.mobs)
 	h.zombieReinforce(players, m, pl)
 	if len(h.mobs) != before {
