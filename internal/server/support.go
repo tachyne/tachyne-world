@@ -157,7 +157,7 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		if inStates(state, cactusStates) { // CactusBlock.canSurvive
 			for _, d := range [4][3]int{{0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}} {
 				n := w.At(pos.x+d[0], pos.y, pos.z+d[2])
-				if worldgen.Collides(n) || worldgen.IsLava(n) {
+				if worldgen.IsSolid(n) || worldgen.IsLava(n) { // isSolid: a carpet, candle or pot beside it is harmless
 					return false
 				}
 			}

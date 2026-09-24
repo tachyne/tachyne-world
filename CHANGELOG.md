@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Carpets and candles no longer kill cactus.** A cactus broke when any
+  block touched its side. As in vanilla, only a solid block does, so a
+  carpet, candle, pot or lantern beside a cactus leaves it standing.
 - **Soul fire burns harder than fire.** Standing in soul fire now does
   twice the damage of ordinary fire, as in vanilla.
 - **Cake is as filling as in vanilla.** A slice of cake, or the first
