@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Water and lava wash away exactly what they do in vanilla.** Flowing
+  water and lava used to break any block without a solid shape. They now
+  follow vanilla's list: pressure plates and banners hold water back;
+  buttons, levers, chorus plants, end rods and snow of any depth are washed
+  away. Waterlogged blocks, kelp and seagrass take the water in and stay.
 - **Pistons no longer lose blocks next to water.** While a piston slides a
   block, the cell it is moving through is solid in vanilla, and water
   cannot flow into it. Ours let water flow in and replace it, so a block

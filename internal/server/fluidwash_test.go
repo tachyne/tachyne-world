@@ -53,9 +53,15 @@ func TestWaterWashesCropAndDropsIt(t *testing.T) {
 }
 
 // The washing rule follows vanilla's motion-blocking test, not collision.
-func TestFluidWashesByVanillaSolidity(t *testing.T) {
-	washed := []string{"wheat", "torch", "redstone_wire", "white_carpet", "flower_pot", "repeater", "oak_pressure_plate", "cobweb", "skeleton_skull"}
-	kept := []string{"stone", "oak_slab", "oak_fence", "oak_door", "sugar_cane", "oak_sign", "rail", "ladder", "iron_chain", "lantern", "anvil", "cake", "oak_trapdoor"}
+// TestFluidWashesByTheTag: 26.3 decides by #washed_away_by_fluids, not by
+// shape — a pressure plate or a banner holds water back, a chorus flower or
+// a full stack of snow layers is washed; waterloggables (rails, lanterns,
+// corals) and kelp take the water in and stay.
+func TestFluidWashesByTheTag(t *testing.T) {
+	washed := []string{"wheat", "torch", "redstone_wire", "white_carpet", "flower_pot", "repeater", "cobweb", "skeleton_skull",
+		"stone_button", "lever", "chorus_flower", "end_rod", "cocoa"}
+	kept := []string{"stone", "oak_slab", "oak_fence", "oak_door", "sugar_cane", "oak_sign", "rail", "ladder", "iron_chain", "lantern", "anvil", "cake", "oak_trapdoor",
+		"oak_pressure_plate", "white_banner", "moving_piston", "kelp", "seagrass", "tube_coral"}
 	for _, n := range washed {
 		if !fluidWashes(worldgen.BlockID(n)) {
 			t.Errorf("%s should be washed away by flowing fluid", n)
@@ -65,6 +71,9 @@ func TestFluidWashesByVanillaSolidity(t *testing.T) {
 		if fluidWashes(worldgen.BlockID(n)) {
 			t.Errorf("%s should stop (or hold) flowing fluid", n)
 		}
+	}
+	if deep := worldgen.BlockBase("snow") + 7; !fluidWashes(deep) { // layers=8
+		t.Error("eight snow layers are still in the tag: washed")
 	}
 	if !worldgen.IsReplaceable(worldgen.BlockID("vine")) || !worldgen.IsReplaceable(worldgen.BlockID("dead_bush")) {
 		t.Error("vines and dead bushes are replaceable")

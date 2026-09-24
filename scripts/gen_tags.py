@@ -27,7 +27,9 @@ TAGS = {
               # Tool rules (Player.getDestroySpeed via the tool component)
               "mineable/axe", "mineable/hoe", "mineable/pickaxe", "mineable/shovel",
               "sword_efficient", "sword_instantly_mines", "shears_extreme_breaking_speed",
-              "shears_major_breaking_speed", "shears_minor_breaking_speed"],
+              "shears_major_breaking_speed", "shears_minor_breaking_speed",
+              # fluidwash.go: FlowingFluid.canHoldAnyFluid
+              "washed_away_by_fluids"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
              # sulfurcube.go: what a sulfur cube swallows, what a baby eats,
