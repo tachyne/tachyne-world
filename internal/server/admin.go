@@ -114,6 +114,15 @@ type worldRules struct {
 	UniversalAnger    bool  `json:"universalAnger"`
 	TraderSpawnDelay  int   `json:"wanderingTraderSpawnDelay,omitempty"`
 	TraderSpawnChance int   `json:"wanderingTraderSpawnChance,omitempty"`
+	// Forced is /forceload's chunks, every dimension's (ForcedChunksSavedData).
+	Forced []forcedChunk `json:"forcedChunks,omitempty"`
+	// WorldSpawn is /setworldspawn's point (LevelData's respawn data). It
+	// outranks the -spawn flag: a flag is where a fresh world starts, the
+	// command is where the running one was moved to.
+	WorldSpawn *worldSpawnSave `json:"worldSpawn,omitempty"`
+	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
+	// the -gamemode flag's.
+	DefaultGamemode *int `json:"defaultGamemode,omitempty"`
 }
 
 func defaultRules() worldRules {

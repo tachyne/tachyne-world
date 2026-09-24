@@ -19,11 +19,15 @@ import "github.com/tachyne/tachyne-common/protocol"
 // parsers, which completes better anyway.
 const (
 	parserBool      = 0
+	parserFloat     = 1
 	parserInteger   = 3
 	parserString    = 5
 	parserEntity    = 6
 	parserProfile   = 7
+	parserBlockPos  = 8
+	parserColumnPos = 9
 	parserVec3      = 10
+	parserVec2      = 11
 	parserItemStack = 14
 )
 
@@ -79,6 +83,24 @@ func argInt(name string, min, max int32, exec bool, kids ...cmdNode) cmdNode {
 }
 func argVec3(name string, exec bool, kids ...cmdNode) cmdNode {
 	return argN(name, parserVec3, nil, exec, kids...)
+}
+func argVec2(name string, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserVec2, nil, exec, kids...)
+}
+func argBlockPos(name string, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserBlockPos, nil, exec, kids...)
+}
+func argColumnPos(name string, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserColumnPos, nil, exec, kids...)
+}
+func argBool(name string, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserBool, nil, exec, kids...)
+}
+
+// argFloat is brigadier:float with a lower bound: the flags byte (0x01, a
+// minimum) and the bound as a big-endian float32.
+func argFloat(name string, min float32, exec bool, kids ...cmdNode) cmdNode {
+	return argN(name, parserFloat, protocol.AppendF32([]byte{0x01}, min), exec, kids...)
 }
 func argItem(name string, exec bool, kids ...cmdNode) cmdNode {
 	return argN(name, parserItemStack, nil, exec, kids...)
@@ -186,6 +208,43 @@ func modelledCommands() []cmdNode {
 		lit("refresh", true),
 		lit("rescue", true),
 		lit("spawnpoint", true, argVec3("pos", true)),
+		lit("advancement", false, litsWith([]string{"grant", "revoke"},
+			argEntity("targets", entityPlayers, false,
+				lit("everything", true),
+				// Advancement ids carry ':' and '/', which a word refuses.
+				lit("only", false, argGreedy("advancement [criterion]", true)),
+				lit("from", false, argGreedy("advancement", true)),
+				lit("through", false, argGreedy("advancement", true)),
+				lit("until", false, argGreedy("advancement", true))))...),
+		lit("attribute", false, argEntity("target", entitySingle, false, argGreedy("attribute", true))),
+		lit("recipe", false, litsWith([]string{"give", "take"},
+			argEntity("targets", entityPlayers, false, argGreedy("recipe", true)))...),
+		lit("tag", false, argEntity("targets", 0, false,
+			lit("add", false, argWord("name", true)),
+			lit("remove", false, argWord("name", true)),
+			lit("list", true))),
+		lit("ride", false, argEntity("target", entitySingle, false,
+			lit("mount", false, argEntity("vehicle", entitySingle, true)),
+			lit("dismount", true))),
+		lit("damage", false, argEntity("target", entitySingle, false,
+			argFloat("amount", 0, true, argGreedy("damageType", true)))),
+		lit("spreadplayers", false, argVec2("center", false,
+			argFloat("spreadDistance", 0, false, argFloat("maxRange", 1, false,
+				argBool("respectTeams", false, argEntity("targets", 0, true)),
+				lit("under", false, argInt("maxHeight", -64, 4064, false,
+					argBool("respectTeams", false, argEntity("targets", 0, true)))))))),
+		lit("forceload", false,
+			lit("add", false, argColumnPos("from", true, argColumnPos("to", true))),
+			lit("remove", false, lit("all", true), argColumnPos("from", true, argColumnPos("to", true))),
+			lit("query", true, argColumnPos("pos", true))),
+		lit("setworldspawn", true, argBlockPos("pos", true, argGreedy("rotation", true))),
+		lit("defaultgamemode", false, lits(gamemodes...)...),
+		lit("random", false,
+			lit("value", false, argWord("range", true)),
+			lit("roll", false, argWord("range", true))),
+		lit("swing", true, argEntity("targets", 0, true, lits("mainhand", "offhand")...)),
+		lit("teammsg", false, argGreedy("message", true)),
+		lit("tm", false, argGreedy("message", true)),
 	}
 }
 

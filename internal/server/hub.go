@@ -229,6 +229,7 @@ type tracked struct {
 	stats          map[statKey]int32 // statistics counters (canonical 774 keys)
 	rbKnown        map[int32]bool    // recipe book: unlocked display ids
 	rbHighlight    map[int32]bool    // recipe book: "new" badges not yet viewed
+	rbTaken        map[int32]bool    // recipe book: taken by /recipe take — the ingredient poll leaves them out until given back
 	rbSettings     attachproto.RecipeSettings
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
@@ -429,6 +430,10 @@ type hub struct {
 	// point inside this shard's own region so a death never lands you off-shard.
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
 	hasWorldSpawn                         bool
+	// The facing /setworldspawn gave the spawn, and the spawn as a joining
+	// session reads it (nil until the command, or its saved value, sets one).
+	worldSpawnYaw, worldSpawnPitch float32
+	spawnPub                       atomic.Pointer[[3]float64]
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -1620,6 +1625,32 @@ func (h *hub) run() {
 				h.applySetBlocks(players, e)
 			case evEnchantCmd:
 				h.applyEnchantCommand(players, e)
+			case evAdvancementCmd:
+				h.applyAdvancementCommand(players, e)
+			case evAttributeCmd:
+				h.applyAttributeCommand(players, e)
+			case evRecipeCmd:
+				h.applyRecipeCommand(players, e)
+			case evTagCmd:
+				h.applyTagCommand(players, e)
+			case evRideCmd:
+				h.applyRideCommand(players, e)
+			case evDamageCmd:
+				h.applyDamageCommand(players, e)
+			case evSpreadCmd:
+				h.applySpreadCommand(players, e)
+			case evForceLoadCmd:
+				h.applyForceLoadCommand(players, e)
+			case evSetWorldSpawn:
+				h.applySetWorldSpawn(players, e)
+			case evDefaultGamemode:
+				h.applyDefaultGamemode(players, e)
+			case evRandomCmd:
+				h.applyRandomCommand(players, e)
+			case evSwingCmd:
+				h.applySwingCommand(players, e)
+			case evTeamMsg:
+				h.applyTeamMsg(players, e)
 			case evSetWeather:
 				h.applyWeatherCommand(e)
 			case evSetHud:

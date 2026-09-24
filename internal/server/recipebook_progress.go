@@ -160,7 +160,7 @@ func (h *hub) recipeUnlocks(t *tracked, invItems []int32) {
 	var fresh []int32
 	for _, item := range invItems {
 		for _, id := range rbIngredientIndex[item] {
-			if !t.rbKnown[id] {
+			if !t.rbKnown[id] && !t.rbTaken[id] {
 				t.rbKnown[id] = true
 				t.rbHighlight[id] = true
 				fresh = append(fresh, id)
@@ -241,8 +241,12 @@ type rbState struct {
 	// names is read through legacyRecipeName once, and written back as names.
 	Known     []int32 `json:"known,omitempty"`
 	Highlight []int32 `json:"highlight,omitempty"`
-	Open      [4]bool `json:"open"`
-	Filter    [4]bool `json:"filter"`
+	// TakenNames are recipes /recipe take removed: vanilla's recipe
+	// advancement stays done, so holding the ingredients again does not
+	// bring them back. Only /recipe give does.
+	TakenNames []string `json:"taken_names,omitempty"`
+	Open       [4]bool  `json:"open"`
+	Filter     [4]bool  `json:"filter"`
 }
 
 // recipeBookStore persists per-player books (recipebook.json), the same
@@ -291,6 +295,15 @@ func (s *recipeBookStore) loadInto(t *tracked, name string) {
 			t.rbHighlight[id] = true
 		}
 	}
+	t.rbTaken = nil
+	for _, n := range st.TakenNames {
+		if id, ok := recipeIDByName[n]; ok {
+			if t.rbTaken == nil {
+				t.rbTaken = map[int32]bool{}
+			}
+			t.rbTaken[id] = true
+		}
+	}
 	t.rbSettings = attachproto.RecipeSettings{Open: st.Open, Filter: st.Filter}
 }
 
@@ -309,8 +322,14 @@ func (s *recipeBookStore) record(name string, t *tracked) {
 			st.HighlightNames = append(st.HighlightNames, recipeNames[id])
 		}
 	}
+	for id := range t.rbTaken {
+		if int(id) < len(recipeNames) {
+			st.TakenNames = append(st.TakenNames, recipeNames[id])
+		}
+	}
 	sort.Strings(st.Names)
 	sort.Strings(st.HighlightNames)
+	sort.Strings(st.TakenNames)
 	s.mu.Lock()
 	s.m[name] = st
 	s.mu.Unlock()

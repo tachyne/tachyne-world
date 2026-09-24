@@ -160,6 +160,21 @@ func (h *hub) runRandomTicks(players map[int32]*tracked) {
 			}
 		}
 	}
+	// Force-loaded chunks (/forceload) tick with nobody near them, as
+	// vanilla's forced tickets keep a chunk block-ticking.
+	for dim := dimOverworld; dim <= dimEnd; dim++ {
+		w := h.worldFor(dim)
+		if (dim != dimOverworld && w == h.world) || w.ForcedCount() == 0 {
+			continue // no such dimension, or nothing forced in it
+		}
+		for _, fc := range w.ForcedChunks() {
+			c := [3]int{dim, int(fc[0]), int(fc[1])}
+			if !seen[c] {
+				seen[c] = true
+				h.randomTickChunk(players, dim, c[1], c[2])
+			}
+		}
+	}
 }
 
 func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {

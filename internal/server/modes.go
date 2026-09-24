@@ -52,6 +52,28 @@ func (s *modeStore) get(name string) int {
 	return s.def
 }
 
+// pin returns name's mode, recording the server default for a player seen
+// for the first time — so a later change of default (/defaultgamemode) moves
+// only players who are new to the server, as vanilla's does.
+func (s *modeStore) pin(name string) int {
+	s.mu.Lock()
+	mode, ok := s.m[name]
+	def := s.def
+	s.mu.Unlock()
+	if ok {
+		return mode
+	}
+	s.set(name, def)
+	return def
+}
+
+// setDefault changes the mode new players get.
+func (s *modeStore) setDefault(mode int) {
+	s.mu.Lock()
+	s.def = mode
+	s.mu.Unlock()
+}
+
 // set records name's mode and persists the table atomically.
 func (s *modeStore) set(name string, mode int) {
 	s.mu.Lock()

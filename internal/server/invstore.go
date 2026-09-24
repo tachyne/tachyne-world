@@ -71,6 +71,9 @@ type savedInv struct {
 	DeathDim int32    `json:"death_dim,omitempty"`
 	DeathPos [3]int32 `json:"death_pos,omitempty"`
 	HasDeath bool     `json:"has_death,omitempty"`
+
+	// Scoreboard tags (/tag): vanilla keeps them in the player's data.
+	Tags []string `json:"tags,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -189,6 +192,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 	t.enchSeed = saved.EnchSeed
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
+	t.tags = tagSet(saved.Tags)
 	if len(saved.Effects) > 0 {
 		t.effects = map[int32]*activeEffect{}
 		for _, e := range saved.Effects {
@@ -242,8 +246,8 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince,
-		Effects: savedEffectsOf(t),
-		X:       t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
+		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags),
+		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true
 	}

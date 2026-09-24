@@ -16,6 +16,10 @@ type living struct {
 	attrs    *attribute.Map          // entity attributes (base + modifiers)
 	effects  map[int32]*activeEffect // active status effects, ticked by the hub
 	attrSent uint64                  // fingerprint of the last attribute frame sent (attrsync.go)
+	// tags is Entity.tags — the scoreboard tags /tag adds and the selector's
+	// tag= predicate reads. Vanilla keeps them on every entity; here only the
+	// living ones (players and mobs) can be selected, so they live here.
+	tags map[string]bool
 }
 
 // hasEffect returns the 1-based level of an active effect (0 = none).

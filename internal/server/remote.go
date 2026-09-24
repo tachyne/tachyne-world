@@ -19,10 +19,7 @@ import (
 // every other player and mob, chat included). emit receives domain frames.
 func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	p := newPlayer(s.hub.mintPlayerEID(), name, uuid)
-	x, y, z := 0.5, s.world.SurfaceY(0, 0), 0.5
-	if s.SpawnSet {
-		x, y, z = s.SpawnX, s.SpawnY, s.SpawnZ
-	}
+	x, y, z := s.joinSpawn()
 	var yaw, pitch float32
 	// Vanilla logs a returning player back in where they logged out. Restore
 	// their last OVERWORLD position; a new player, or one who logged out in the
@@ -36,7 +33,7 @@ func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payl
 	p.x, p.y, p.z, p.yaw, p.pitch = x, y, z, yaw, pitch
 	r := &remotePlayer{s: s, p: p, emit: emit, x: x, y: y, z: z, gm: -1}
 	go r.decodeLoop()
-	mode := s.modes.get(name)
+	mode := s.modes.pin(name) // a later /defaultgamemode is for new players only
 	// Join-time extras the TCP path sends in handlePlay: tab-completion tree
 	// and the mode's abilities (creative flight).
 	r.emitEvNow(attachproto.CommandTree{Data: r.s.commandTreeBytes()})

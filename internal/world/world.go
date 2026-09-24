@@ -72,6 +72,8 @@ type World struct {
 	genMu sync.Mutex
 	cache map[chunkPos]cacheEntry
 	lru   *list.List // front = most recently used; values are chunkPos
+	// forced is the force-loaded chunks (forced.go): the LRU passes over them.
+	forced map[chunkPos]bool
 	// epoch is bumped once per hub tick (Tick). A cached chunk is moved to the
 	// LRU front at most once per epoch, so the hot read path — thousands of
 	// block reads a tick — is a lookup with no list write.
@@ -331,6 +333,9 @@ func (w *World) generated(cx, cz int32) *worldgen.Chunk {
 	w.cache[key] = cacheEntry{ch: ch, elem: w.lru.PushFront(key), touched: ep}
 	for len(w.cache) > w.cacheCap() {
 		oldest := w.lru.Back()
+		for oldest != nil && w.forced[oldest.Value.(chunkPos)] {
+			oldest = oldest.Prev() // a forced chunk stays loaded
+		}
 		if oldest == nil {
 			break
 		}

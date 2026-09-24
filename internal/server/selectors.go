@@ -27,6 +27,8 @@ type targetSpec struct {
 	limit    int     // limit=, 0 = unlimited
 	nearest  bool    // sort=nearest (the default for @p, and for a limit on @e)
 	hasDist  bool
+	tags     []string // tag=… each one required ("" = no tags at all)
+	notTags  []string // tag=!… each one forbidden ("" = at least one tag)
 }
 
 // parseTargetSpec reads one selector argument. A bare word is a player name,
@@ -72,6 +74,12 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 			}
 		case "name":
 			spec.name = strings.Trim(v, `"`)
+		case "tag":
+			if strings.HasPrefix(v, "!") {
+				spec.notTags = append(spec.notTags, v[1:])
+			} else {
+				spec.tags = append(spec.tags, v)
+			}
 		case "limit", "c":
 			n, err := strconv.Atoi(v)
 			if err != nil {
@@ -198,6 +206,9 @@ func (spec targetSpec) matchesPlayer(t, from *tracked) bool {
 	if spec.notEtype == "player" {
 		return false
 	}
+	if !spec.tagsMatch(t.tags) {
+		return false
+	}
 	if spec.hasDist {
 		if from == nil || t.dim != from.dim {
 			return false
@@ -225,6 +236,9 @@ func (h *hub) selectMobs(from *tracked, spec targetSpec) []*mob {
 			continue
 		}
 		if spec.notEtype != "" && name == spec.notEtype {
+			continue
+		}
+		if !spec.tagsMatch(m.tags) {
 			continue
 		}
 		if spec.hasDist {

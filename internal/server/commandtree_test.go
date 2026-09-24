@@ -63,6 +63,21 @@ func decodeCommandTree(t *testing.T, body []byte) ([]treeNode, int32) {
 				_, err = protocol.ReadVarInt(r)
 			case parserEntity:
 				_, err = r.ReadByte()
+			case parserFloat:
+				// FloatArgumentInfo: a flags byte then the present bounds,
+				// each a big-endian float32.
+				var fl byte
+				if fl, err = r.ReadByte(); err == nil {
+					for _, bit := range []byte{0x01, 0x02} {
+						if fl&bit == 0 {
+							continue
+						}
+						var skip [4]byte
+						if _, err = io.ReadFull(r, skip[:]); err != nil {
+							break
+						}
+					}
+				}
 			case parserInteger:
 				// IntegerArgumentInfo: a flags byte then the bounds that are
 				// present, each a plain big-endian int32 — NOT a VarInt.

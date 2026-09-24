@@ -23,11 +23,13 @@ const (
 // The tree is advisory — it buys client-side tab-completion and un-reddened
 // input; execution still validates ops and arguments server-side.
 var commandNames = []string{
-	"ban", "bug", "clear", "difficulty", "effect", "end", "gamemode", "gamerule",
+	"advancement", "attribute", "ban", "bug", "clear", "damage", "defaultgamemode",
+	"difficulty", "effect", "end", "forceload", "gamemode", "gamerule",
 	"give", "gm", "help", "hud", "kick", "kill", "list", "locate", "msg", "nether",
-	"pardon", "particle", "playsound", "plugin", "refresh", "rescue", "say",
-	"scoreboard", "spawnpoint", "summon", "team", "teleport", "tell", "time",
-	"tp", "w", "weather", "where", "whitelist", "worldborder", "xp",
+	"pardon", "particle", "playsound", "plugin", "random", "recipe", "refresh",
+	"rescue", "ride", "say", "scoreboard", "setworldspawn", "spawnpoint",
+	"spreadplayers", "summon", "swing", "tag", "team", "teammsg", "teleport",
+	"tell", "time", "tm", "tp", "w", "weather", "where", "whitelist", "worldborder", "xp",
 }
 
 // commandTreeBody is the Commands packet body sent at join.

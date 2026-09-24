@@ -513,6 +513,14 @@ func (s *Server) Serve() error {
 		s.hub.rulesPath = "settings.json"
 		s.hub.opsRef = s.Ops // read-only after this point (announce targeting)
 		s.hub.loadRules()
+		if s.restoreWorldSpawn() { // a /setworldspawn outranks -spawn
+			log.Printf("world spawn from settings: (%.1f, %.0f, %.1f)", s.SpawnX, s.SpawnY, s.SpawnZ)
+		}
+		if gm := s.hub.rules.DefaultGamemode; gm != nil { // a /defaultgamemode outranks -gamemode
+			s.DefaultGamemode = *gm
+			s.modes.setDefault(*gm)
+		}
+		s.hub.restoreForced()
 		// Rebuild the lightning-rod POI set from the persisted edits, so rods
 		// placed before a restart keep attracting storms.
 		s.hub.world.ForEachEdit(func(x, y, z int, state uint32) {

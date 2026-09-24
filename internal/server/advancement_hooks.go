@@ -48,6 +48,13 @@ func (h *hub) advance(players map[int32]*tracked, t *tracked, trigger string, m 
 			completed = append(completed, ref.node)
 		}
 	}
+	h.advDeliver(players, t, granted, completed)
+}
+
+// advDeliver is what follows a batch of grants: reveal the tree nodes they
+// made visible, stream the progress, then announce and pay each advancement
+// the batch completed. The trigger path and /advancement grant share it.
+func (h *hub) advDeliver(players map[int32]*tracked, t *tracked, granted, completed []*advNode) {
 	if len(granted) == 0 {
 		return
 	}

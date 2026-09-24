@@ -34,8 +34,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /playsound /difficulty /gamerule /gamemode /hud /worldborder /locate /title /bug" +
-			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=), coordinates take ~ and ^." +
+		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /swing /bug" +
+			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=, tag=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
 			help += s.hub.plugHost.pluginHelp()
@@ -180,6 +180,32 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdGamemode(p, fields[1:])
 	case "hud":
 		s.cmdHud(p, fields[1:])
+	case "advancement":
+		s.cmdAdvancement(p, fields[1:])
+	case "attribute":
+		s.cmdAttribute(p, fields[1:])
+	case "recipe":
+		s.cmdRecipe(p, fields[1:])
+	case "tag":
+		s.cmdTag(p, fields[1:])
+	case "ride":
+		s.cmdRide(p, fields[1:])
+	case "damage":
+		s.cmdDamage(p, fields[1:])
+	case "spreadplayers":
+		s.cmdSpreadPlayers(p, fields[1:])
+	case "forceload":
+		s.cmdForceLoad(p, fields[1:])
+	case "setworldspawn":
+		s.cmdSetWorldSpawn(p, fields[1:])
+	case "defaultgamemode":
+		s.cmdDefaultGamemode(p, fields[1:])
+	case "random":
+		s.cmdRandom(p, fields[1:])
+	case "swing":
+		s.cmdSwing(p, fields[1:])
+	case "teammsg", "tm":
+		s.cmdTeamMsg(p, fields[1:])
 	default:
 		p.tell("Unknown command: /" + fields[0] + " (try /help)")
 	}
