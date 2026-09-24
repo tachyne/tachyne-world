@@ -257,6 +257,13 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **Potent sulfur and geysers (26.3).** Potent sulfur under water bubbles
+  and makes swimmers and mobs near it nauseous. Over a magma block it
+  becomes a geyser that sleeps and erupts on vanilla's timing; over lava it
+  erupts without stopping. Each eruption launches mobs, dropped items and
+  primed TNT up the column, taller for deeper water, with the eruption
+  sounds and animation. The sulfur caves' pools are gas vents; a geyser is
+  something you build.
 - **`/setblock`, `/fill`, `/enchant`, `/seed` and `/me`.** Operators can set a single
   block or fill a box (up to 32,768 blocks), naming the block as vanilla
   does, e.g. `oak_stairs[facing=north]`. Both take vanilla's modes: destroy
