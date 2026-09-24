@@ -191,11 +191,6 @@ func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, 
 	case effInstantDamage:
 		h.damageOf(players, t, float32(6*(int(1)<<amp)), dtMagic)
 		return
-	case effSaturation:
-		// SaturationMobEffect: 1 food + 2 saturation per level, every tick it
-		// applies — but the whole point is that it fills you instantly, so the
-		// grant tops both up here and applyEffectTick keeps them there.
-		h.feedSaturation(t, amp)
 	}
 	if t.effects == nil {
 		t.effects = map[int32]*activeEffect{}

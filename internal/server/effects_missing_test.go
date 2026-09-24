@@ -128,9 +128,10 @@ func TestSaturationFeeds(t *testing.T) {
 	players[pl.p.eid] = pl
 	pl.food, pl.saturation = 10, 0
 
-	h.applyEffect(players, pl, effSaturation, 0, 30)
+	h.applyEffectTicks(players, pl, effSaturation, 0, 1) // one tick of it: one feeding
+	h.updateEffects(players)
 	if pl.food != 11 || pl.saturation != 2 {
-		t.Errorf("food/saturation %d/%v after one application, want 11/2", pl.food, pl.saturation)
+		t.Errorf("food/saturation %d/%v after one tick, want 11/2", pl.food, pl.saturation)
 	}
 	pl.food, pl.saturation = maxFood, float32(maxFood)
 	h.feedSaturation(pl, 0) // already full — must not overflow
