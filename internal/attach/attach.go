@@ -44,7 +44,7 @@ type Config struct {
 
 	// Join gives the session hub presence (multiplayer): emit receives domain
 	// frames (entities/chat) to forward to the gateway. nil = solo walk-around.
-	Join func(name string, uuid [16]byte, emit func(typ byte, payload []byte)) (Remote, error)
+	Join func(id Identity, emit func(typ byte, payload []byte)) (Remote, error)
 
 	// Owned reports whether this pod owns a chunk in a sharded world; the Want
 	// handler serves only owned chunks, so the world ends at the pod's region
@@ -58,7 +58,18 @@ type Config struct {
 	// Resume binds a session to a player migrated here from a neighbour shard,
 	// when Hello.Purpose == "resume" (token = Hello.ResumeToken). nil = resume
 	// unsupported (falls back to a normal Join).
-	Resume func(name string, uuid [16]byte, token string, emit func(typ byte, payload []byte)) (Remote, error)
+	Resume func(id Identity, token string, emit func(typ byte, payload []byte)) (Remote, error)
+}
+
+// Identity is who a session is, as its gateway authenticated and authorized
+// it: the name and UUID it plays as, the tachyne-access roles it holds, its
+// game-profile properties (the skin, in online mode) and its edition.
+type Identity struct {
+	Name    string
+	UUID    [16]byte
+	Roles   []string
+	Props   []proto.Property
+	Edition string
 }
 
 // Remote is a hub-attached player, as the attach layer sees it.
@@ -204,8 +215,8 @@ func session(c net.Conn, cfg Config) {
 	var pre [][]byte
 	welcomed := false
 	if cfg.Join != nil || cfg.Resume != nil {
-		var uuid [16]byte
-		parseUUID(hello.UUID, &uuid)
+		id := Identity{Name: hello.Name, Roles: hello.Roles, Props: hello.Props, Edition: hello.Edition}
+		parseUUID(hello.UUID, &id.UUID)
 		emit := func(typ byte, payload []byte) {
 			b := frame(typ, payload)
 			preMu.Lock()
@@ -221,9 +232,9 @@ func session(c net.Conn, cfg Config) {
 		var err error
 		switch {
 		case hello.Purpose == "resume" && cfg.Resume != nil:
-			r, err = cfg.Resume(hello.Name, uuid, hello.ResumeToken, emit)
+			r, err = cfg.Resume(id, hello.ResumeToken, emit)
 		case cfg.Join != nil:
-			r, err = cfg.Join(hello.Name, uuid, emit)
+			r, err = cfg.Join(id, emit)
 		default:
 			err = fmt.Errorf("attach: no handler for purpose %q", hello.Purpose)
 		}

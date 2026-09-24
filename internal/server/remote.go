@@ -17,8 +17,10 @@ import (
 
 // JoinRemote gives an attach session full hub presence (visible to and seeing
 // every other player and mob, chat included). emit receives domain frames.
-func (s *Server) JoinRemote(name string, uuid [16]byte, emit func(typ byte, payload []byte)) (attach.Remote, error) {
-	p := newPlayer(s.hub.mintPlayerEID(), name, uuid)
+func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []byte)) (attach.Remote, error) {
+	name := id.Name
+	p := newPlayer(s.hub.mintPlayerEID(), name, id.UUID)
+	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
 	var yaw, pitch float32
 	// Vanilla logs a returning player back in where they logged out. Restore
@@ -65,12 +67,14 @@ func (r *remotePlayer) Gamemode() int32 {
 // recreates the player with the SAME session-stable eid, and resumes it — no
 // fresh spawn, no "joined" broadcast; health/food/effects/inventory/xp and
 // gamemode come from the snapshot, not the on-disk store.
-func (s *Server) ResumeRemote(name string, uuid [16]byte, token string, emit func(typ byte, payload []byte)) (attach.Remote, error) {
+func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ byte, payload []byte)) (attach.Remote, error) {
+	name, uuid := id.Name, id.UUID
 	ps, ok := s.hub.claimPending(token)
 	if !ok {
 		return nil, fmt.Errorf("resume: no pending handover for token %q", token)
 	}
 	p := newPlayer(ps.EID, name, uuid)
+	s.adoptIdentity(p, id)
 	p.x, p.y, p.z = ps.X, ps.Y, ps.Z
 	r := &remotePlayer{s: s, p: p, emit: emit, x: ps.X, y: ps.Y, z: ps.Z, gm: ps.Gamemode}
 	go r.decodeLoop()
@@ -505,4 +509,24 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 // quietly: dev builds log it (a missing case = an invisible feature).
 func emitUnhandled(ev any) {
 	log.Printf("emitEv: BUG — no attach frame for %T (dropped)", ev)
+}
+
+// adoptIdentity gives a joining player what its gateway vouched for: the
+// profile properties other clients draw its skin from, and its tachyne-access
+// roles — "op" makes it an operator, alongside the -ops list.
+func (s *Server) adoptIdentity(p *player, id attach.Identity) {
+	for _, pr := range id.Props {
+		p.props = append(p.props, skinProperty{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
+	}
+	op := false
+	for _, r := range id.Roles {
+		if r == roleOp {
+			op = true
+		}
+	}
+	if op {
+		s.roleOps.Store(id.Name, true)
+	} else {
+		s.roleOps.Delete(id.Name)
+	}
 }

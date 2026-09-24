@@ -507,7 +507,7 @@ type hub struct {
 	spawnCause plugin.SpawnReason // in-force MobSpawnEvent reason (zero = SpawnNatural)
 	rsDim      int                // the dimension the block simulation is evaluating in (dimctx.go)
 	spawnGroup *spawnGroup        // in-force natural pack sharing a variant (variant.go); nil = none
-	opsRef     map[string]bool    // Server.Ops, read-only after Serve (announce targeting)
+	isOp       func(string) bool  // Server.isOp (announce targeting); nil = nobody
 
 	invs       *invStore        // survival inventory persistence (nil = in-memory only)
 	advs       *advStore        // advancement grant persistence (nil = in-memory only)
@@ -1488,7 +1488,7 @@ func (h *hub) run() {
 			case evAnnounce:
 				line := chatEv("[" + e.name + "] " + e.text)
 				for _, t := range players {
-					if h.opsRef[t.p.name] {
+					if h.isOp != nil && h.isOp(t.p.name) {
 						t.p.trySendEv(line)
 					}
 				}

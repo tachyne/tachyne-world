@@ -174,7 +174,7 @@ func TestWelcomeIsFirstFrame(t *testing.T) {
 		Time:  func() int64 { return 6000 },
 		Token: "secret",
 		Spawn: proto.Pos{X: 0.5, Y: w.SurfaceY(0, 0), Z: 0.5},
-		Join: func(name string, uuid [16]byte, emit func(byte, []byte)) (Remote, error) {
+		Join: func(id Identity, emit func(byte, []byte)) (Remote, error) {
 			emit(proto.MsgCommandTree, []byte(`{"data":"AQID"}`)) // command tree
 			emit(proto.MsgAbilities, []byte(`{"may_fly":true}`))  // abilities
 			return mockRemote{}, nil
@@ -255,7 +255,7 @@ func TestUseItemKeepsHandAndSequence(t *testing.T) {
 		Time:  func() int64 { return 6000 },
 		Token: "secret",
 		Spawn: proto.Pos{X: 0.5, Y: w.SurfaceY(0, 0), Z: 0.5},
-		Join: func(name string, uuid [16]byte, emit func(byte, []byte)) (Remote, error) {
+		Join: func(id Identity, emit func(byte, []byte)) (Remote, error) {
 			return rec, nil
 		},
 	})
@@ -274,5 +274,45 @@ func TestUseItemKeepsHandAndSequence(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the use_item frame never reached the engine")
+	}
+}
+
+// The identity the gateway vouched for reaches Join whole: the UUID, the
+// access roles and the profile properties (the skin in online mode).
+func TestJoinReceivesIdentity(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make(chan Identity, 1)
+	w := world.New(1)
+	go Serve(ln, Config{
+		World: w, Time: func() int64 { return 0 }, Token: "secret",
+		Join: func(id Identity, emit func(byte, []byte)) (Remote, error) {
+			got <- id
+			return mockRemote{}, nil
+		},
+	})
+	t.Cleanup(func() { ln.Close() })
+	c, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	c.SetDeadline(time.Now().Add(30 * time.Second))
+	proto.WriteJSON(c, proto.MsgHello, proto.Hello{
+		Token: "secret", Gateway: "gw-java-776/0", Name: "EdgeZA", Edition: "java",
+		UUID: "430803e4-3068-442f-9f47-e0fd6ee57e3c", Roles: []string{"op"},
+		Props: []proto.Property{{Name: "textures", Value: "dGV4", Signature: "c2ln"}},
+	})
+	select {
+	case id := <-got:
+		want := [16]byte{0x43, 0x08, 0x03, 0xe4, 0x30, 0x68, 0x44, 0x2f, 0x9f, 0x47, 0xe0, 0xfd, 0x6e, 0xe5, 0x7e, 0x3c}
+		if id.Name != "EdgeZA" || id.UUID != want || len(id.Roles) != 1 || id.Roles[0] != "op" ||
+			len(id.Props) != 1 || id.Props[0].Value != "dGV4" || id.Edition != "java" {
+			t.Errorf("Join got %+v", id)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Join never ran")
 	}
 }

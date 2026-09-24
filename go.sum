@@ -26,6 +26,8 @@ github.com/tachyne/tachyne-common v0.1.1-0.20260924063354-ab35ec003234 h1:002Pch
 github.com/tachyne/tachyne-common v0.1.1-0.20260924063354-ab35ec003234/go.mod h1:0fDSCW2H9ZkF560RmWM3DFEPmW0PCdlvWdmxVVaINXU=
 github.com/tachyne/tachyne-common v0.1.1-0.20260924133351-df26078af99c h1:XJPuzmy52Aqa3iPy2BBXtv1RAQbNGeN66FP7tcsjiLY=
 github.com/tachyne/tachyne-common v0.1.1-0.20260924133351-df26078af99c/go.mod h1:0fDSCW2H9ZkF560RmWM3DFEPmW0PCdlvWdmxVVaINXU=
+github.com/tachyne/tachyne-common v0.1.1-0.20260924141349-20d3d7f5ecce h1:pQDP6uiQyv9dRacI+w8JOdIesRd2fe5WTkl+sV+v4A8=
+github.com/tachyne/tachyne-common v0.1.1-0.20260924141349-20d3d7f5ecce/go.mod h1:0fDSCW2H9ZkF560RmWM3DFEPmW0PCdlvWdmxVVaINXU=
 golang.org/x/crypto v0.53.0 h1:QZ4Muo8THX6CizN2vPPd5fBGHyogrdK9fG4wLPFUsto=
 golang.org/x/crypto v0.53.0/go.mod h1:DNLU434OwVakk9PzuwV8w62mAJpRJL3vsgcfp4Qnsio=
 golang.org/x/sys v0.46.0 h1:noSf2Fq6F8DBgS+LysIkx7rIExoNHJsxOAtPp4rthXw=

@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -197,6 +198,7 @@ type Server struct {
 	ContainerFile   string // persists furnace/chest contents (empty = in-memory only)
 	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
 	Ops             map[string]bool
+	roleOps         sync.Map // names of players online now whose access roles include op
 
 	// PluginDataDir is where compiled-in plugins keep per-plugin config +
 	// data folders (default "plugins", cwd-relative like settings.json).
@@ -288,7 +290,16 @@ func (s *Server) commandTreeBytes() []byte {
 }
 
 // isOp reports whether a player name may run privileged commands.
-func (s *Server) isOp(name string) bool { return s.Ops[name] }
+func (s *Server) isOp(name string) bool {
+	if s.Ops[name] {
+		return true
+	}
+	_, ok := s.roleOps.Load(name)
+	return ok
+}
+
+// roleOp is the tachyne-access role that makes a player an operator.
+const roleOp = "op"
 
 // New returns a Server with sensible defaults.
 func New() *Server {
@@ -511,7 +522,7 @@ func (s *Server) Serve() error {
 		s.hub.hivestore = newHiveStore(hivesPathFor(s.SpawnPointFile))
 		s.hub.hivesLoad()
 		s.hub.rulesPath = "settings.json"
-		s.hub.opsRef = s.Ops // read-only after this point (announce targeting)
+		s.hub.isOp = s.isOp // announce targeting: the -ops list and the op role
 		s.hub.loadRules()
 		if s.restoreWorldSpawn() { // a /setworldspawn outranks -spawn
 			log.Printf("world spawn from settings: (%.1f, %.0f, %.1f)", s.SpawnX, s.SpawnY, s.SpawnZ)
