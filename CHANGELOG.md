@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Repeater, comparator and daylight sensor clicks behave as in
+  vanilla.** A comparator clicks lower going to subtract mode and lower
+  still going back. A repeater changes its delay silently. An inverted
+  daylight sensor updates its signal at once. Players in adventure mode can
+  no longer change any of the three.
 - **Food goes on an unlit campfire.** As in vanilla, you can lay food on a
   campfire that is out; it waits there and cooks once the fire is lit.
 - **Carpets and candles no longer kill cactus.** A cactus broke when any

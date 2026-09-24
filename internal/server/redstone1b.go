@@ -450,9 +450,7 @@ func (h *hub) useRedstone1b(players map[int32]*tracked, pos blockPos, state uint
 		info, _ := worldgen.InfoForState(state)
 		d := worldgen.GetProperty(info, state, "delay")[0] - '0'
 		next := d%4 + 1
-		h.rsSet(players, pos, worldgen.SetProperty(info, state, "delay", string(rune('0'+next))))
-		h.rsSound(players, "minecraft:block.lever.click", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, 1.2)
+		h.rsSet(players, pos, worldgen.SetProperty(info, state, "delay", string(rune('0'+next)))) // RepeaterBlock: silent
 	case isComparator(state):
 		info, _ := worldgen.InfoForState(state)
 		mode := "subtract"
@@ -461,14 +459,22 @@ func (h *hub) useRedstone1b(players map[int32]*tracked, pos blockPos, state uint
 		}
 		ns := worldgen.SetProperty(info, state, "mode", mode)
 		h.rsSet(players, pos, ns)
+		pitch := float32(0.5)
+		if mode == "subtract" {
+			pitch = 0.55
+		}
 		h.rsSound(players, "minecraft:block.comparator.click", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, 1.1)
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, pitch)
 		// ComparatorBlock.useWithoutItem: the output refreshes at once.
 		h.comparatorRefresh(players, pos, ns)
 		h.nbRun(players)
 	case isDaylight(state):
-		h.rsSet(players, pos, daylightWith(!daylightInverted(state), daylightPower(state)))
-		h.rsSchedule(pos, 1)
+		// DaylightDetectorBlock.useWithoutItem: flip, BLOCK_CHANGE, and the
+		// signal re-read at once (updateSignalStrength), not a tick later.
+		ns := daylightWith(!daylightInverted(state), daylightPower(state))
+		h.rsSet(players, pos, ns)
+		h.vib(h.rsDim, freqBlockChange, pos.x, pos.y, pos.z, 0)
+		h.updateDaylight(players, pos, ns)
 	default:
 		return false
 	}

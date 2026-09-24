@@ -1650,7 +1650,11 @@ func (h *hub) run() {
 					case isLever(st):
 						h.toggleLever(players, pos, st)
 					default:
-						h.useRedstone1b(players, pos, st)
+						// Repeaters, comparators and daylight detectors PASS for
+						// a player who may not build (adventure, spectator).
+						if t := players[e.eid]; t == nil || mayBuild(t.gamemode) {
+							h.useRedstone1b(players, pos, st)
+						}
 					}
 				})
 			case evBug:

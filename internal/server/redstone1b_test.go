@@ -185,10 +185,9 @@ func TestDaylightDetectorFollowsSun(t *testing.T) {
 	if p := daylightPower(w.At(x, y, z)); p != 15 {
 		t.Fatalf("noon should read 15, got %d", p)
 	}
-	// Invert: noon reads 0.
+	// Invert: noon reads 0 — at once (updateSignalStrength in the click).
 	h.useRedstone1b(players, blockPos{x, y, z}, w.At(x, y, z))
-	stepTicks(h, players, 3)
 	if p := daylightPower(w.At(x, y, z)); p != 0 {
-		t.Fatalf("inverted noon should read 0, got %d", p)
+		t.Fatalf("inverted noon should read 0 at once, got %d", p)
 	}
 }
