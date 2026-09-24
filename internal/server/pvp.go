@@ -75,7 +75,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	// A weapon with a name of its own gets named in the death message, which
 	// is the only case vanilla names one (getLocalizedDeathMessage's .item
 	// branch tests for CUSTOM_NAME).
-	cause := deathCause{by: t.p.name}
+	cause := deathCause{by: t.p.name, byEID: t.p.eid}
 	if held := t.inv.slots[t.p.heldSlot()]; held.count > 0 {
 		cause.weapon = held.name
 	}
@@ -108,16 +108,8 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	// …and the victim's Thorns bites back. Both sit AFTER the hurt because
 	// vanilla only runs post-attack effects when the blow actually landed.
 	h.thornsRetaliatePlayer(players, v, t)
-
-	if v.dead {
-		h.incCustom(t, "player_kills", 1)
-		// Player.awardKillScore: a player kill counts on BOTH criteria —
-		// playerKillCount for player victims, totalKillCount for any. Only the
-		// statistic was being kept, so a scoreboard tracking either read zero
-		// no matter how the fight went.
-		h.sbCriteria(players, "playerKillCount", t.p.name, 1, false)
-		h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
-	}
+	// A fatal blow's kill credit is settled where the victim dies
+	// (creditPlayerDeath).
 	return true
 }
 

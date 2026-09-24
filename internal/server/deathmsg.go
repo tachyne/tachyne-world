@@ -29,6 +29,10 @@ type deathCause struct {
 	// an impersonal death into "while trying to escape X".
 	weapon string
 	credit string
+	// byEID is the player to blame, when a player is (resolvePlayerResponsibleForDamage):
+	// the victim remembers them for 100 ticks, and a death inside that is
+	// their kill.
+	byEID int32
 }
 
 // killCreditTicks is how long vanilla remembers who a victim was last

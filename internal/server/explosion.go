@@ -75,6 +75,9 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		return
 	}
 	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
+	if bp := h.blastPlayer(players); bp != nil {
+		cause.byEID = bp.p.eid // the player behind the blast is who its victims remember
+	}
 	for _, t := range players {
 		if t.dim != dim || t.dead {
 			continue
@@ -122,13 +125,11 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		om.hurtKind(dmg, dt)
 		om.lastDirect = h.blastSrc.direct
 		if byPlayer != nil { // resolvePlayerResponsibleForDamage: the kill is theirs
-			om.hitByPlayer, om.lastAttacker = true, byPlayer.p.eid
+			h.hurtByPlayerOn(om, byPlayer)
+			om.lastAttacker = byPlayer.p.eid
 		}
 		if om.health <= 0 {
 			h.killMob(players, om)
-			if byPlayer != nil {
-				h.creditPlayerKill(players, byPlayer, om)
-			}
 			if h.blastChargedCreeper {
 				h.chargedHeadDrop(players, om) // charged_creeper/<victim>: its head
 			}

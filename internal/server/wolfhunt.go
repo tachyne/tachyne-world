@@ -74,6 +74,7 @@ func (h *hub) wolfHuntStep(players map[int32]*tracked, m *mob) bool {
 	if m.wolfBiteCD <= 0 {
 		m.wolfBiteCD = wolfBiteTicks
 		target.lastAttacker = m.eid
+		h.hurtByPet(target, m) // a tamed wolf's bite is its owner's hurt
 		target.hurtKind(float64(m.attackDamage()), dtMobAttack)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 		if target.health <= 0 {

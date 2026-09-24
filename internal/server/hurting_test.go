@@ -12,6 +12,7 @@ import (
 // on a level line. A wind charge coasts at the speed it left with.
 func TestHurtingProjectileMotion(t *testing.T) {
 	h := newHub(world.New(1))
+	h.world.ForceLoad(40, 0, 3) // the fireball's whole flight is in loaded chunks
 	players := map[int32]*tracked{}
 	fb := h.launchProjectileIn(players, entityLargeFireball, 0, 0, 200, 0, hurtingSpeed, 0, 0)
 	wc := h.launchProjectileIn(players, entityWindCharge, 0, 0, 200, 0, 0.7, 0, 0)

@@ -79,7 +79,9 @@ type mob struct {
 	wololoWarm      int     // evoker: wololo warm-up ticks left
 	wololoNextAt    uint64  // evoker: tick the wololo comes off cooldown
 	vexLife         int     // summoned vex: ticks left before it expires (0 = unlimited)
-	hitByPlayer     bool    // a player has hit it — its death pays XP (vanilla rule)
+	hitByPlayer     bool    // died within 100 ticks of a player's hurt: pays XP and player-kill loot (set by killMob)
+	hurtByPlayer    int32   // LivingEntity.lastHurtByPlayer: the player it remembers hurting it (0 = an offline owner)
+	hurtByPlayerTil uint64  // …remembered until this tick (lastHurtByPlayerMemoryTime); 0 = no memory
 	lastAttacker    int32   // eid of the last entity that hurt it (plugin death event)
 	lastDT          dmgType // the last damage type it took (the killing blow's, for loot conditions)
 	lastDirect      int     // entity type of the projectile that struck the last blow (0 = none)

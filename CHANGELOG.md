@@ -211,6 +211,54 @@ the public history since the project was open-sourced on 2026-07-10.
 - **The Block Break Speed attribute works.** Setting a player's block
   break speed with /attribute did nothing. It now multiplies how fast they
   mine, as in vanilla, and the cracks other players see keep pace.
+- **Thrown tridents are no longer lost when they hit something.** A
+  trident without Loyalty vanished when it hit a mob, a player or a
+  vehicle, and one lying in the ground vanished after ten seconds. Now,
+  as in vanilla, it bounces off what it hit and drops, and it stays there
+  until you pick it up.
+- **Flint and steel wears out lighting TNT.** Lighting TNT with flint
+  and steel didn't use up any durability. It now uses one point, as
+  lighting anything else does.
+- **Breaking the dragon's healing crystal hurts the dragon.** The ender
+  dragon healed as long as any end crystal was left anywhere. Now, as in
+  vanilla, it heals only from the nearest crystal within reach.
+  Destroying that crystal while it is healing costs the dragon 10 health.
+- **Kills count for the player who started the fight.** A mob you hurt
+  that died moments later from a fall, fire, lava or another mob gave you
+  nothing. Now, as in vanilla, a mob that dies within five seconds of
+  your last hit is your kill. It drops experience and player-only loot,
+  and it counts for your kill statistics and advancements. A tamed
+  wolf's bite counts for its owner. Mobs killed only by a dispenser's
+  arrows no longer drop as player kills. Killing another player with TNT,
+  an arrow or Thorns now counts as a player kill, as punching them to
+  death already did.
+- **Crossbow shots scatter like vanilla's.** Crossbow bolts flew in a
+  perfectly straight line. Now they have the small random spread vanilla
+  gives them. Multishot's side bolts stay 10 degrees either side of your
+  aim even when you shoot steeply up or down, and each bolt plays its own
+  shot sound at vanilla's pitch.
+- **Dispensed projectiles hit mobs.** Snowballs, eggs and fire charges
+  fired from a dispenser flew straight through mobs. They now hit them as
+  in vanilla: a snowball stings a blaze, and a fire charge sets a zombie
+  alight.
+- **Bottles o' enchanting splash, and potions break with one sound.** A
+  thrown bottle o' enchanting broke with no splash at all. It now bursts
+  in green, as in vanilla. Splash and lingering potions sent their
+  breaking sound twice in different ways. Now the sound is sent once, the
+  way current clients expect.
+- **Fireballs, wither skulls and shulker bullets no longer vanish
+  after ten seconds.** Every projectile disappeared ten seconds after it
+  was fired. Now, as in vanilla, a fireball, wither skull or wind charge
+  flies until it hits something or leaves the loaded world, even if
+  whoever fired it has died. A wind charge that climbs far above the
+  build limit bursts up there. A shulker bullet keeps homing until it
+  hits, and disappears when the difficulty is set to peaceful.
+- **A breeze's wind charge is its own kind of projectile.** A breeze
+  shot an ordinary wind charge. It now shoots the breeze wind charge, as
+  in vanilla, with its own burst sound. A player can still bat it back,
+  its burst is still the wider one, and it still leaves other breezes
+  alone. Because it is not a player's wind charge, it now also hurts a
+  wither that is below half health.
 - **Endermen teleport the way they do in vanilla.** Every enderman
   teleport landed on the top of the ground, so endermen in the sun
   teleported from one sunny spot to another and gathered in the open. Cave

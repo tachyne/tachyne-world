@@ -470,7 +470,8 @@ func (h *hub) stabMobByPlayer(players map[int32]*tracked, t *tracked, m *mob, to
 			total = math.Max(0, dev.Damage)
 		}
 		t.lastHitMob = m.eid
-		m.hitByPlayer, m.lastAttacker = true, t.p.eid
+		h.hurtByPlayerOn(m, t)
+		m.lastAttacker = t.p.eid
 		m.looting = st.enchLvl(enchLooting)
 		if m.etype == entityPiglin {
 			h.piglinHurtByPlayer(players, m)
@@ -530,7 +531,7 @@ func (h *hub) stabPlayerByPlayer(players map[int32]*tracked, t, v *tracked, tota
 			}
 			total = math.Max(0, dev.Damage)
 		}
-		cause := deathCause{by: t.p.name}
+		cause := deathCause{by: t.p.name, byEID: t.p.eid}
 		if st.count > 0 {
 			cause.weapon = st.name
 		}
@@ -541,11 +542,6 @@ func (h *hub) stabPlayerByPlayer(players map[int32]*tracked, t, v *tracked, tota
 			h.incCustom(t, "damage_dealt", tenths(float32(total)))
 			if lvl := st.enchLvl(enchFireAspect); lvl > 0 && v.hasEffect(effFireRes) == 0 {
 				v.fireSecs = max(v.fireSecs, 4*lvl)
-			}
-			if v.dead {
-				h.incCustom(t, "player_kills", 1)
-				h.sbCriteria(players, "playerKillCount", t.p.name, 1, false)
-				h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
 			}
 		}
 	}

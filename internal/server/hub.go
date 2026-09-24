@@ -261,6 +261,8 @@ type tracked struct {
 	landingFall    float64    // the fall distance of the landing being hurt, while it is
 	killCredit     string     // who they were last fighting (LivingEntity.getKillCredit)
 	killCreditAt   uint64     // and when, so the credit expires after 100 ticks
+	pvpBy          int32      // lastHurtByPlayer: the player whose hurt they remember
+	pvpByTil       uint64     // …until this tick (0 = none); a death inside it is that player's kill
 	onGround       bool
 	// fallFlying is elytra flight proper (Entity FLAG_FALL_FLYING): begun by
 	// the client's own START_FALL_FLYING, ended by landing or by taking the
@@ -693,6 +695,7 @@ type hub struct {
 	digs        map[int32]*digCrack // players' digs in progress, for the cracks others see (digcracks.go)
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
+	dragonCrystal int32              // EnderDragon.nearestCrystal: the crystal healing it (0 = none)
 	crystals      map[int32]*crystal // end crystals by eid
 	dragonRespawn *dragonRespawn     // the respawn ceremony in progress (nil = none)
 	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)

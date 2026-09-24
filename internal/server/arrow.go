@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
-
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -92,6 +90,7 @@ type arrowEntity struct {
 	impaling    int      // thrown-trident impaling: bonus damage to #sensitive_to_impaling mobs
 	channeling  bool     // thrown-trident channeling: a storm bolt on whatever it hits under open sky
 	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
+	spent       bool     // a trident that has struck something (dealtDamage): it falls away and strikes nothing more
 	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
 }
 
@@ -220,8 +219,9 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.vibAt(dim, freqProjectileShoot, x, y, z, 0)
 	switch etype {
-	case entityWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
+	case entityWindCharge, entityBreezeWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
 		a.knock, a.breaks = 1.5, true
+		a.breezeBorn = etype == entityBreezeWindCharge
 	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
 		// AbstractHurtingProjectile: whatever it hits, block or creature, ends
 		// it (a ghast's fireball explodes on a wall; none lodge like an arrow).
@@ -252,10 +252,64 @@ func hurtingMotion(a *arrowEntity, water bool) (accel, inertia float64, ok bool)
 			return hurtingSpeed, 0.73, true // WitherSkull.getInertia: a blue skull drags
 		}
 		return hurtingSpeed, 0.95, true
-	case entityWindCharge:
+	case entityWindCharge, entityBreezeWindCharge:
 		return 0, 1, true
 	}
 	return 0, 0, false
+}
+
+// isHurting reports the AbstractHurtingProjectile family: fireballs, the
+// dragon's fireball, wither skulls and wind charges.
+func isHurting(etype int) bool {
+	switch etype {
+	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
+		return true
+	}
+	return isWindCharge(etype)
+}
+
+// projectileEnds decides whether a projectile leaves the world this tick
+// before it moves. Each family ends on its own terms:
+//
+//   - AbstractHurtingProjectile.tick has no age at all, and outlives its
+//     owner (the owner lookup never yields a removed entity, so the "owner
+//     removed" test there never fires): it is discarded only when it has
+//     flown into a chunk that is not loaded. A wind charge that climbs
+//     thirty blocks past the build limit bursts up there
+//     (AbstractWindCharge.tick).
+//   - ShulkerBullet has no age either; it is discarded on peaceful
+//     (checkDespawn), and otherwise flies or falls until it hits something.
+//     Here it also ends in an unloaded chunk, where vanilla would freeze it.
+//   - Everything else keeps the short transient lifetime.
+func (h *hub) projectileEnds(players map[int32]*tracked, a *arrowEntity, now uint64) bool {
+	switch {
+	case isHurting(a.etype):
+		if !h.projectileChunkLoaded(a) {
+			return true
+		}
+		if isWindCharge(a.etype) && floorInt(a.y) > h.worldFor(a.dim).Ceiling()-1+30 {
+			h.chargeBurst(players, a, a.x, a.y, a.z)
+			return true
+		}
+		return false
+	case a.etype == entityShulkerBullet:
+		return h.rules.Difficulty == diffPeaceful || !h.projectileChunkLoaded(a)
+	case a.etype == entityTrident && a.pickupStack.item != 0 && !a.noPickup:
+		return false // ThrownTrident.tickDespawn: a trident its thrower can pick up never despawns
+	}
+	return now-a.born >= arrowLifeTicks
+}
+
+// projectileAges reports whether a projectile keeps the transient
+// lifetime; the ageless ones end at the edge of the loaded world instead.
+func (h *hub) projectileAges(a *arrowEntity) bool {
+	return !isHurting(a.etype) && a.etype != entityShulkerBullet
+}
+
+// projectileChunkLoaded is Level.hasChunkAt for the projectile's block.
+func (h *hub) projectileChunkLoaded(a *arrowEntity) bool {
+	w := h.worldFor(a.dim)
+	return w != nil && w.Loaded(int32(floorInt(a.x)>>4), int32(floorInt(a.z)>>4))
 }
 
 // retrieveProjectile restores a stuck projectile to a survival player's
@@ -280,7 +334,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			continue
 		}
-		if now-a.born >= arrowLifeTicks {
+		if h.projectileEnds(players, a, now) {
 			delete(h.arrows, eid)
 			h.entityGone(players, a.dim, eid)
 			continue
@@ -330,7 +384,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		// blocks/tick can pass clean through a one-block wall, and a bow's
 		// 3-a-tick arrow through a player. Samples measure from where the
 		// tick began, so the move is exactly one velocity a tick.
-		hit := false
+		hit, offWorld := false, false
 		bx, by, bz := a.x, a.y, a.z
 		n := 2
 		if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); sp > 1 {
@@ -339,9 +393,15 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		for i := 1; i <= n; i++ {
 			f := float64(i) / float64(n)
 			px, py, pz := bx+a.vx*f, by+a.vy*f, bz+a.vz*f
-			if h.arrowHitsPlayer(players, a, px, py, pz) ||
-				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) ||
-				h.arrowHitsVehicle(players, a, px, py, pz) {
+			if !h.projectileAges(a) && !h.worldFor(a.dim).Loaded(int32(floorInt(px)>>4), int32(floorInt(pz)>>4)) {
+				// An ageless projectile flying out of the loaded world ends
+				// at its edge; reading the blocks there would generate them.
+				offWorld = true
+				break
+			}
+			if !a.spent && (h.arrowHitsPlayer(players, a, px, py, pz) ||
+				((a.playerShot || a.mobShot || a.shooter == 0) && h.arrowHitsMob(players, a, px, py, pz)) ||
+				h.arrowHitsVehicle(players, a, px, py, pz)) {
 				hit = true
 				break
 			}
@@ -354,7 +414,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				if a.breaks { // snowballs/eggs shatter
 					hit = true
 					if a.knock > 0 { // a wind charge bursts a quarter block off the face it struck
-						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
+						h.chargeBurst(players, a, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25)
 						break
 					}
 					// Projectile.onHitBlock runs the block's onProjectileHit for
@@ -385,6 +445,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				break
 			}
 			a.x, a.y, a.z = px, py, pz
+		}
+		if offWorld {
+			delete(h.arrows, eid)
+			h.entityGone(players, a.dim, eid)
+			continue
 		}
 		// LlamaSpit.tick: after its hit test, a gob whose box touches any
 		// block that is not air — water, grass, a flower — is simply gone,
@@ -452,6 +517,14 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				a.returning = true
 				continue
 			}
+			if a.etype == entityTrident {
+				// ThrownTrident.onHitEntity: it is not used up by the blow —
+				// it bounces back off what it struck (REVERSE at 0.02/0.2/0.02,
+				// halved) and falls, to land and be picked up like any other.
+				a.spent = true
+				a.vx, a.vy, a.vz = -a.vx*0.01, -a.vy*0.1, -a.vz*0.01
+				continue
+			}
 			delete(h.arrows, eid)
 			h.entityGone(players, a.dim, eid)
 			continue
@@ -509,7 +582,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
 			h.knockback(t, a.x, a.z)
 			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
-			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+			h.chargeBurst(players, a, px, py, pz)
 			return true
 		}
 		if a.dmg > 0 {
@@ -517,7 +590,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			shot := deathCause{}
 			byMob := false
 			if s := players[a.shooter]; s != nil {
-				shot.by = s.p.name
+				shot.by, shot.byEID = s.p.name, s.p.eid
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
 				byMob = true // a skeleton's arrow scales with difficulty; a player's does not
@@ -650,25 +723,17 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			// Breeze.isInvulnerableTo: nothing a breeze owns can hurt a
 			// breeze — the burst still goes off.
 			if m.etype == entityBreeze && h.breezeOwned(a) {
-				h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+				h.chargeBurst(players, a, px, py, pz)
 				return true
 			}
-			if a.playerShot {
-				m.hitByPlayer = true
-			}
+			h.hurtByShot(players, m, a)
 			h.windChargeShoveMob(players, a, m)
 			m.hurtKind(windChargeHitDamage, dtWindCharge)
 			m.lastDirect = windChargeDirect(a) // the killing blow's direct entity (Blowback)
 			if m.health <= 0 {
-				h.killMob(players, m)
-				if shooter := players[a.shooter]; shooter != nil && a.playerShot {
-					h.playerKilledEntity(players, shooter, m)
-					h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
-					h.incCustom(shooter, "mob_kills", 1)
-					h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
-				}
+				h.killMob(players, m) // the shooter's kill credit settles there
 			}
-			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+			h.chargeBurst(players, a, px, py, pz)
 			return true
 		}
 		if m.hasBody() { // a sulfur cube's block: its own knockback, a burning arrow lights TNT
@@ -676,9 +741,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			return true
 		}
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
-			if a.playerShot {
-				m.hitByPlayer = true
-			}
+			h.hurtByShot(players, m, a)
 			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && m.kbScale() > 0 { // ride the arrow's momentum
 				kbp := (0.5 + 0.6*float64(a.punch)) * m.kbScale() // Punch adds 0.6/level
 				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
@@ -748,13 +811,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				h.witherSkullHeal(a)
 				h.killMob(players, m)
 				a.victims = append(a.victims, advEntityName[m.etype])
-				if a.playerShot {
+				if a.playerShot { // the kill itself was credited by killMob
 					if shooter := players[a.shooter]; shooter != nil {
-						h.playerKilledEntity(players, shooter, m)
 						h.advance(players, shooter, "killed_by_arrow", advMatch{item: a.weapon, victims: a.victims})
-						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
-						h.incCustom(shooter, "mob_kills", 1)
-						h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
 					}
 				}
 			}
@@ -804,7 +863,7 @@ func projectileDamage(etype int) dmgType {
 		return dtMobProjectile
 	case entityLlamaSpit:
 		return dtSpit
-	case entityWindCharge:
+	case entityWindCharge, entityBreezeWindCharge:
 		return dtWindCharge
 	case entityPearlProj:
 		return dtEnderPearl

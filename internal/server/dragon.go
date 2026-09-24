@@ -24,7 +24,13 @@ const (
 	dragonWingReach  = 8.0
 	dragonWingDamage = 5
 	dragonWingPush   = 4.0
-	dragonHealRate   = 2 // HP/s while any crystal lives
+	dragonHealRate   = 2 // HP/s while it has a crystal to heal from (one every 10 ticks)
+	// dragonCrystalReach is how far past its 16×8 box the dragon looks for a
+	// crystal (checkCrystals: the bounding box inflated by 32).
+	dragonCrystalReach = 32.0
+	// dragonCrystalLoss is what the dragon takes when the crystal healing it
+	// is destroyed (onCrystalDestroyed: 10 to the head).
+	dragonCrystalLoss = 10
 )
 
 var (
@@ -143,10 +149,15 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 				deathCause{by: "Ender Dragon"}, fromMob(m.x, m.z))
 		}
 	}
-	// Crystal healing.
-	if now%20 == 0 && len(h.crystals) > 0 && m.health < dragonHealth {
+	// Crystal healing (checkCrystals): only from its nearest crystal, one
+	// point every 10 ticks — this runs once a second, so two at a time —
+	// and it looks again for the nearest crystal around it.
+	if h.crystals[h.dragonCrystal] == nil {
+		h.dragonCrystal = 0
+	} else if now%20 == 0 && m.health < dragonHealth {
 		m.health = min(dragonHealth, m.health+dragonHealRate)
 	}
+	h.dragonCrystal = h.nearestDragonCrystal(m)
 	if now%200 == 0 { // ~10s heartbeat while the fight is being debugged
 		log.Printf("end: dragon at (%.1f,%.1f,%.1f) hp=%d players-in-end=%d", m.x, m.y, m.z, m.health, func() (n int) {
 			for _, t := range players {
@@ -187,7 +198,59 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32, by *tracked) boo
 	}
 	h.explodeBy(players, dimEnd, c.x, c.y, c.z, endCrystalBlastPower, endCrystalBlastPower, blastBlock, name,
 		withBlastDirect(entityEndCrystal), cause)
+	h.dragonCrystalDestroyed(players, c, by) // onDestroyedBy, after the blast
 	return true
+}
+
+// nearestDragonCrystal is the closest crystal inside the dragon's box grown
+// by 32 blocks (0 when there is none).
+func (h *hub) nearestDragonCrystal(m *mob) int32 {
+	best, bestD := int32(0), math.MaxFloat64
+	for eid, c := range h.crystals {
+		if math.Abs(c.x-m.x) > 8+dragonCrystalReach || math.Abs(c.z-m.z) > 8+dragonCrystalReach ||
+			c.y < m.y-dragonCrystalReach || c.y > m.y+8+dragonCrystalReach {
+			continue
+		}
+		if d := dist3sq(c.x, c.y, c.z, m.x, m.y, m.z); d < bestD {
+			best, bestD = eid, d
+		}
+	}
+	return best
+}
+
+// dragonCrystalDestroyed is EnderDragon.onCrystalDestroyed: losing the
+// crystal it is healing from costs the dragon 10 to the head, an explosion
+// that is the destroying player's — or, when no player destroyed it, the
+// nearest player's within 64.
+func (h *hub) dragonCrystalDestroyed(players map[int32]*tracked, c *crystal, by *tracked) {
+	m := h.dragon
+	if m == nil || m.dying > 0 || c.eid != h.dragonCrystal {
+		return
+	}
+	h.dragonCrystal = 0
+	if by == nil {
+		best := 64.0 * 64.0
+		for _, t := range players {
+			if t.dim != dimEnd || t.dead || !isSurvival(t.gamemode) {
+				continue
+			}
+			if d := dist3sq(t.x, t.y, t.z, c.x, c.y, c.z); d <= best {
+				by, best = t, d
+			}
+		}
+	}
+	dt := dtExplosion
+	if by != nil {
+		dt = dtPlayerExplosion
+		h.hurtByPlayerOn(m, by)
+		m.lastAttacker = by.p.eid
+	}
+	m.hurtKind(dragonCrystalLoss, dt)
+	m.lastDirect = entityEndCrystal
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	if m.health <= 0 {
+		h.killMob(players, m)
+	}
 }
 
 // endCrystalBlastPower is EndCrystal's level.explode radius.

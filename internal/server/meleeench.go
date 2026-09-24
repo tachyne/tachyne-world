@@ -147,12 +147,11 @@ func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
 	for _, hit := range h.thornsRolls(t) {
 		m.hurtKind(hit.dmg, dtThorns)
 		m.lastAttacker = t.p.eid
-		m.hitByPlayer = true // the kill still pays experience
+		h.hurtByPlayerOn(m, t) // thorns(t): the wearer is the source, and the kill is theirs
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 		h.wearArmorSlot(players, t, hit.slot, thornsWear, dtThorns)
 		if m.health <= 0 {
 			h.killMob(players, m)
-			h.creditPlayerKill(players, t, m) // thorns(t): the wearer is the source
 			return
 		}
 	}
@@ -175,7 +174,7 @@ func (h *hub) thornsRetaliatePlayer(players map[int32]*tracked, victim, attacker
 	for _, hit := range h.thornsRolls(victim) {
 		dmg := float32(hit.dmg)
 		h.hurtFrom(players, attacker, dmg, dtThorns,
-			deathCause{by: victim.p.name}, from(victim.x, victim.z))
+			deathCause{by: victim.p.name, byEID: victim.p.eid}, from(victim.x, victim.z))
 		h.wearArmorSlot(players, victim, hit.slot, thornsWear, dtThorns)
 		if attacker.dead {
 			return

@@ -18,6 +18,7 @@ func killRig(t *testing.T) (*hub, *tracked, map[int32]*tracked) {
 	players := map[int32]*tracked{pl.p.eid: pl}
 	h.playersRef = players
 	w := h.worldFor(0)
+	w.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 12; z++ {
 			w.SetBlock(x, 179, z, worldgen.BlockBase("stone"))
@@ -142,9 +143,13 @@ func TestKillCriteriaBlowback(t *testing.T) {
 		h, pl, players := killRig(t)
 		br := h.spawnMob(players, entityBreeze, 0, 180, 6)
 		br.health = 1
-		a := h.launchProjectileIn(players, entityWindCharge, 0, 0, 181, 2, 0, 0, -0.9)
+		et := entityWindCharge
 		if breezeBorn {
-			a.shooter, a.breezeBorn, a.mobShot = br.eid, true, true
+			et = entityBreezeWindCharge
+		}
+		a := h.launchProjectileIn(players, et, 0, 0, 181, 2, 0, 0, -0.9)
+		if breezeBorn {
+			a.shooter, a.mobShot = br.eid, true
 			if !h.deflectProjectile(players, pl, a) {
 				t.Fatal("the wind charge was not deflected")
 			}

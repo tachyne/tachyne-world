@@ -60,5 +60,12 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 func (h *hub) breakXPBottle(players map[int32]*tracked, a *arrowEntity) {
 	xp := xpBottleBase + h.rng.Intn(xpBottleRoll) + h.rng.Intn(xpBottleRoll)
 	h.spawnXPOrbIn(players, a.dim, xp, a.x, a.y, a.z)
-	h.playSoundDim(players, a.dim, "minecraft:entity.splash_potion.break", sndNeutral, a.x, a.y, a.z, 1, 1)
+	// ThrownExperienceBottle.onHit: the spell-splash burst in the bottle's
+	// green (0xFF385DC6), then the breaking-glass sound event.
+	bx, by, bz := floorInt(a.x), floorInt(a.y), floorInt(a.z)
+	h.levelEvent(players, a.dim, worldEventPotionSplash, bx, by, bz, xpBottleSplashColor)
+	h.levelEvent(players, a.dim, worldEventSplashSound, bx, by, bz, 0)
 }
+
+// xpBottleSplashColor is the bottle's splash tint, as a signed ARGB int.
+const xpBottleSplashColor = -13083194

@@ -161,7 +161,7 @@ func (h *hub) arrowHitsVehicle(players map[int32]*tracked, a *arrowEntity, px, p
 		}
 		h.damageVehicle(players, v, vehHit{dmg: dmg, dt: projectileDamageOf(a), by: by, causer: a.shooter, proj: a})
 		if a.knock > 0 {
-			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+			h.chargeBurst(players, a, px, py, pz)
 		}
 		return true
 	}

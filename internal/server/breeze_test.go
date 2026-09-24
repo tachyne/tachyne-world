@@ -58,6 +58,12 @@ func TestBreezeJumpsThenShoots(t *testing.T) {
 	if len(h.arrows) != before+1 {
 		t.Fatalf("one wind charge in the air: %d", len(h.arrows)-before)
 	}
+	for _, a := range h.arrows {
+		// Breeze.Shoot fires a BreezeWindCharge, its own entity type.
+		if a.etype != entityBreezeWindCharge || !a.breezeBorn {
+			t.Fatalf("the breeze's charge flies as entity type %d, want breeze_wind_charge (%d)", a.etype, entityBreezeWindCharge)
+		}
+	}
 	if b.brzState != brzStanding || b.brzShootCD != breezeShootCD {
 		t.Fatalf("recovered with the cooldown set: state %d cd %d", b.brzState, b.brzShootCD)
 	}
