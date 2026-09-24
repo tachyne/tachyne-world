@@ -1446,7 +1446,10 @@ func (h *hub) run() {
 					fmt.Sprintf("Players online (%d): %s", len(names), strings.Join(names, ", "))))
 			case evSetGamemode:
 				for _, t := range h.commandTargets(players, e.eid, e.name) {
-					t.gamemode = e.mode // the hub's authoritative copy (pickup/survival sim read this)
+					t.gamemode = e.mode         // the hub's authoritative copy (pickup/survival sim read this)
+					for _, o := range players { // UPDATE_GAME_MODE: the tab list, and a spectator's look
+						o.p.trySendEv(attachproto.PlayerInfoMode{UUID: t.p.uuid, Gamemode: int32(e.mode)})
+					}
 					if e.modes != nil {
 						e.modes.set(t.p.name, e.mode) // by name, never the selector (it saved "@a" once)
 					}
@@ -2365,8 +2368,8 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	for _, t := range players {
 		// Tab-list entries are global; entity visibility is per-dimension
 		// (cross-dim views swap on dimension switch, not at join).
-		t.p.trySendEv(infoAdd(e.p))
-		e.p.trySendEv(infoAdd(t.p))
+		t.p.trySendEv(infoAdd(e.p, nt.gamemode))
+		e.p.trySendEv(infoAdd(t.p, t.gamemode))
 		if t.dim != nt.dim {
 			continue
 		}
@@ -2742,9 +2745,11 @@ func entGone(eids ...int32) attachproto.EntityRemove {
 }
 
 // infoAdd announces a player to the tab list / entity renderer, with the
-// game-profile textures blob (skins) when online mode supplied one.
-func infoAdd(p *player) attachproto.PlayerInfo {
-	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name}
+// game-profile textures blob (skins) when online mode supplied one, and the
+// player's game mode (every client reads a spectator from this entry, its
+// own included).
+func infoAdd(p *player, mode int) attachproto.PlayerInfo {
+	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name, Gamemode: int32(mode)}
 	for _, pr := range p.props {
 		pi.Props = append(pi.Props, attachproto.Property{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

@@ -350,6 +350,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgRehome, ev)
 	case attachproto.PlayerInfo:
 		send(attachproto.MsgPlayerInfo, ev)
+	case attachproto.PlayerInfoMode:
+		send(attachproto.MsgPlayerInfoMode, ev)
 	case attachproto.PlayerGone:
 		send(attachproto.MsgPlayerGone, ev)
 	case attachproto.EntityAdd:

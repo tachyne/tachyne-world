@@ -134,7 +134,7 @@ const critCap = 8192
 func isLifecycleFrame(ev any) bool {
 	switch e := ev.(type) {
 	case attachproto.EntityAdd, attachproto.EntityRemove,
-		attachproto.PlayerInfo, attachproto.PlayerGone:
+		attachproto.PlayerInfo, attachproto.PlayerInfoMode, attachproto.PlayerGone:
 		return true
 	case attachproto.BlockAck:
 		// A dropped acknowledgement leaves the client showing its own guess
