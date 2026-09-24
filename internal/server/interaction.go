@@ -454,6 +454,19 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			state, lookPlaced = faceAttachedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, order, p.yaw)
 		case isMultiface(defState): // vines, lichen, sculk veins, resin: a face that something holds
 			state, lookPlaced = multifacePlacement(s.worldFor(p), blockPos{tx, ty, tz}, defState, target, order)
+		case isCrafter(defState): // crafter: front and top from the look
+			state = crafterPlacedState(defState, p.yaw, p.pitch)
+		case isBamboo(defState): // bamboo: a sapling on soil, a stalk on a stalk
+			state, lookPlaced = bambooPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, target)
+		case defState == dirtPathState: // a covered path goes down as dirt
+			state = dirtPathPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState)
+		case isGrowingPlantHead(defState): // kelp and the vines: head or body by the plant ahead
+			g, _ := growingPlantOf(defState)
+			state, lookPlaced = growingPlantPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, g, target)
+		case isHugeMushroom(defState): // mushroom blocks: skin on faces that meet no twin
+			state = hugeMushroomPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState)
+		case isPaleMossCarpet(defState): // pale moss carpet: sides up the walls beside it
+			state = mossCarpetUpdated(s.worldFor(p), blockPos{tx, ty, tz}, defState, true)
 		default:
 			state = orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		}
@@ -496,6 +509,18 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
+		if at, body, ok := growingPlantAnchorBody(s.worldFor(p), blockPos{tx, ty, tz}, state); ok {
+			s.putBlock(p, at.x, at.y, at.z, body, false, seq) // the head it was set on is now body
+		}
+		if isPaleMossCarpet(state) { // MossyCarpetBlock.setPlacedBy: maybe a layer above
+			if top, ok := mossCarpetTopper(s.worldFor(p), blockPos{tx, ty, tz}); ok {
+				s.putBlock(p, tx, ty+1, tz, top, false, seq)
+				// The layer above turns the carpet's low sides beneath it tall.
+				if st := mossCarpetUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, false); st != state {
+					s.putBlock(p, tx, ty, tz, st, false, seq)
+				}
+			}
+		}
 	}
 	if placed {
 		// BlockItem.place: the block that ended up there speaks its sound

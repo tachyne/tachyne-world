@@ -86,7 +86,7 @@ func placeOrder(face int32, replacingClicked bool, yaw, pitch float32) [6]int32 
 
 // placeAlias maps items whose block carries a different name — the item
 // table pairs items with same-named blocks only. Seeds go through
-// cropForSeed (they need soil rules); these two need no more than the alias.
+// cropForSeed (they need soil rules); these need no more than the alias.
 var placeAlias = func() map[int32]uint32 {
 	m := map[int32]uint32{}
 	add := func(item, block string) {
@@ -97,6 +97,7 @@ var placeAlias = func() map[int32]uint32 {
 	}
 	add("redstone", "redstone_wire")
 	add("cocoa_beans", "cocoa")
+	add("glow_berries", "cave_vines")
 	return m
 }()
 

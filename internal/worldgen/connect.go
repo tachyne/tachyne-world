@@ -77,8 +77,13 @@ func IsHorizontalConnector(info BlockInfo) bool {
 }
 
 // IsWallConnector reports whether a block is a wall: its sides are the
-// three-valued none/low/tall enum (plus an "up" center-post boolean).
+// three-valued none/low/tall enum plus an "up" center-post boolean. The post
+// is what tells a wall from the pale moss carpet, whose sides use the same
+// enum for how far it climbs the blocks beside it.
 func IsWallConnector(info BlockInfo) bool {
+	if !isBoolProp(info, "up") {
+		return false
+	}
 	for _, p := range info.Props {
 		if p.Name == "north" {
 			return len(p.Vals) == 3 && p.Vals[0] == "none"
