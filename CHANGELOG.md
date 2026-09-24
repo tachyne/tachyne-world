@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **No more "chat messages can't be verified".** With online mode on, the
+  gateway tells clients and the server list that the server enforces
+  secure chat, as a vanilla online server does. The warning toast no
+  longer appears when you join. Chat still arrives as server messages, so
+  every client shows it, whatever its secure-chat setting.
 - **Hoppers keep vanilla time.** Each hopper now ticks once per game tick
   with its own eight-tick cooldown. An idle hopper takes an item the tick
   after one arrives. It pushes before it pulls, and one fed by another
