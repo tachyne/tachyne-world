@@ -115,6 +115,7 @@ const (
 	snifferSearchOdds = 60 // ticks between scent checks, on average (Sniffing/Scenting 40-80)
 	snifferReach      = 1.5
 	poseSniffing      = 12
+	snifferScentSpeed = 1.25 // SnifferAi: the walk to a scented block
 	poseDigging       = 14
 )
 
@@ -172,7 +173,7 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		tx, tz := float64(m.sniffTarget.x)+0.5, float64(m.sniffTarget.z)+0.5
 		dx, dz := tx-m.x, tz-m.z
 		if hd := math.Hypot(dx, dz); hd > snifferReach {
-			sp := m.moveSpeed()
+			sp := m.moveSpeed() * snifferScentSpeed // SPEED_MULTIPLIER_WHEN_SNIFFING
 			m.vx, m.vz = dx/hd*sp, dz/hd*sp
 			m.rest = 0
 			return true
