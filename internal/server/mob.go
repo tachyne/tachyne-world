@@ -1585,6 +1585,14 @@ func newMobAttributes(etype int) *attribute.Map {
 		a.SetBase(attr.SafeFallDistance, 6)
 		a.SetBase(attr.FallDamageMultiplier, 0.5)
 	}
+	// TEMPT_RANGE: ten for the animals (the attribute's default), sixteen for
+	// the happy ghast, eight for the sulfur cube.
+	switch etype {
+	case entityHappyGhast:
+		a.SetBase(attr.TemptRange, 16)
+	case entitySulfurCube:
+		a.SetBase(attr.TemptRange, sulfurTemptRange)
+	}
 	return a
 }
 

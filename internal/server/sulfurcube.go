@@ -862,7 +862,8 @@ func (h *hub) sulfurGoal(players map[int32]*tracked, m *mob) (gx, gz float64, ok
 	if m.baby {
 		want = sulfurFood
 	}
-	best := sulfurTemptRange * sulfurTemptRange
+	r := m.mobAttrs().Value(attr.TemptRange)
+	best := r * r
 	for _, t := range players {
 		if t.dim != m.dim || t.dead || t.gamemode == gmSpectator {
 			continue

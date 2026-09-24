@@ -4,19 +4,19 @@ import (
 	"math"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Tempting: an animal walks after a player holding its food (TemptGoal for
 // the goal-driven species, FollowTemptation for the brain-driven ones). The
-// nearest player within TEMPT_RANGE (10) with the item in either hand is
+// nearest player within the mob's TEMPT_RANGE attribute (10 for animals) with the item in either hand is
 // followed at the species' speed modifier, stopping short at its close-enough
 // distance; when the player puts the food away the animal calms down for
 // 100 ticks before it can be tempted again.
 
 const (
-	temptRange = 10.0 // Animal's TEMPT_RANGE attribute
-	temptStop  = 2.5  // TemptGoal's 6.25 sq / FollowTemptation's default
-	temptCalm  = 100 / mobMoveInterval
+	temptStop = 2.5 // TemptGoal's 6.25 sq / FollowTemptation's default
+	temptCalm = 100 / mobMoveInterval
 )
 
 // temptSpeed is the per-species speed modifier; a species not listed is
@@ -81,7 +81,8 @@ func isTemptItem(etype int, item int32) bool {
 // holding the species' tempt item in either hand.
 func (h *hub) temptingPlayer(players map[int32]*tracked, m *mob) *tracked {
 	var best *tracked
-	bestD2 := temptRange * temptRange
+	r := m.mobAttrs().Value(attr.TemptRange) // TemptGoal / TemptingSensor read the attribute
+	bestD2 := r * r
 	for _, t := range players {
 		if t.dim != m.dim || t.dead || t.gamemode == gmSpectator {
 			continue

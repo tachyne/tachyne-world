@@ -5,6 +5,7 @@ import (
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // LlamaFollowCaravanGoal: free llamas near a led one fall in behind it in a
@@ -67,5 +68,19 @@ func TestTraderLlamasDefendTheirTrader(t *testing.T) {
 	}
 	if stray.hostile {
 		t.Error("a llama on nobody's lead defended the trader")
+	}
+}
+
+// TEMPT_RANGE is an attribute: ten for an animal, sixteen for a happy ghast,
+// eight for a sulfur cube.
+func TestTemptRangeAttribute(t *testing.T) {
+	for _, tc := range []struct {
+		etype int
+		want  float64
+	}{{entityCow, 10}, {entityHappyGhast, 16}, {entitySulfurCube, 8}} {
+		m := &mob{etype: tc.etype}
+		if got := m.mobAttrs().Value(attr.TemptRange); got != tc.want {
+			t.Errorf("%s tempt range %v, want %v", advEntityName[tc.etype], got, tc.want)
+		}
 	}
 }
