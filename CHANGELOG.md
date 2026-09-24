@@ -20,8 +20,12 @@ the public history since the project was open-sourced on 2026-07-10.
   player owns the account. The player then joins as that account's real
   UUID, with the name spelled as the account spells it and their skin
   attached. A spoofed name gets "Failed to verify username!". When Mojang
-  is unreachable, everyone is refused, as vanilla does. It is off
-  (`TACHYNE_ONLINE_MODE`) until player data moves to the real UUIDs.
+  is unreachable, everyone is refused, as vanilla does. Other players see
+  the skin too. It is off (`TACHYNE_ONLINE_MODE`) until player data moves
+  to the real UUIDs.
+- **Operators from tachyne-access.** A player granted the `op` role in
+  tachyne-access is now an operator in game, along with the `-ops` list.
+  Once online mode is on, that role is tied to the player's own account.
 - **Parrots ride on your shoulder.** A tamed parrot that is not sitting and
   has been around for five seconds lands on its owner's shoulder when it
   touches them. The left shoulder fills first, then the right. It chatters
