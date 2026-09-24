@@ -119,6 +119,9 @@ the public history since the project was open-sourced on 2026-07-10.
   - A pumpkin or melon stem lets go when its fruit is picked.
   - Huge mushroom blocks close the faces that touch their own kind.
   - A piston head passes neighbour updates to its piston.
+- **Absorption ends with its hearts.** Once the golden hearts are used up,
+  the Absorption effect goes too, instead of sitting on the effect list for
+  the rest of its time.
 - **A stronger potion no longer wipes out a longer one.** Drink Speed II
   while Speed I has a minute left, and Speed I comes back with the rest of
   its time once Speed II wears off. Before, the weaker effect was lost.

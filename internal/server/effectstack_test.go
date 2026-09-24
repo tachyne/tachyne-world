@@ -36,3 +36,20 @@ func TestHiddenEffectComesBack(t *testing.T) {
 		t.Errorf("Strength I did not wait under Strength II: %+v", s)
 	}
 }
+
+// AbsorptionMobEffect: once the golden hearts are spent the effect ends.
+func TestAbsorptionEndsWithItsHearts(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.applyEffect(players, pl, effAbsorption, 0, 120)
+	if pl.absorption <= 0 {
+		t.Fatal("absorption gave no hearts")
+	}
+	pl.absorption = 0
+	h.updateEffects(players)
+	if pl.effects[effAbsorption] != nil {
+		t.Error("the absorption effect outlived its hearts")
+	}
+}

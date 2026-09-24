@@ -340,6 +340,13 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				if survival {
 					h.feedSaturation(t, e.amp)
 				}
+			case effAbsorption:
+				// AbsorptionMobEffect.applyEffectTick: the effect lasts only as
+				// long as the golden hearts do.
+				if t.absorption <= 0 {
+					h.removeEffect(t, id)
+					continue
+				}
 			case effRaidOmen:
 				// RaidOmenMobEffect fires on its LAST tick, and that is the
 				// raid horn.
