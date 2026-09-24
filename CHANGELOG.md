@@ -77,6 +77,12 @@ the public history since the project was open-sourced on 2026-07-10.
   its gear, a wolf answers only to its owner, and Curse of Binding holds a
   piece on outside creative. The piece drops with everything it carries,
   and taking a wolf's armour off earns Snip Snap.
+- **Crossbows fire rockets.** A firework rocket held in the off hand
+  loads, as vanilla allows (not one from the backpack). It flies straight
+  at the aim, and goes off on the first mob or player in its path, or on a
+  block if it carries stars. The blast does 5 + 2 per star within 5
+  blocks. Each rocket costs the crossbow 3 durability. Every projectile now
+  costs its own wear, so a multishot arrow volley takes 3, as in vanilla.
 - **Bows and crossbows shoot any arrow.**
   - Tipped and spectral arrows fire from a bow or crossbow as themselves,
     drawn from the off hand first, then the inventory.

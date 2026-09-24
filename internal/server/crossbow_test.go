@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -139,5 +140,46 @@ func TestCrossbowPiercingPassesThrough(t *testing.T) {
 	}
 	if !second.hitByPlayer {
 		t.Fatal("the second mob should have been struck")
+	}
+}
+
+// A firework rocket in the off hand loads, flies straight and level from the
+// crossbow, strikes the zombie in its path and blasts it, and costs the
+// crossbow three durability; a rocket in the backpack is never loaded.
+func TestCrossbowFiresRockets(t *testing.T) {
+	h, pl, players := xbowSetup()
+	pl.inv.slots[1] = invStack{}
+	pl.inv.slots[9] = invStack{item: itemFireworkRocket, count: 1}
+	if xbowAmmoSlot(pl) >= 0 {
+		t.Fatal("a rocket in the inventory was taken as crossbow ammo")
+	}
+	pl.inv.slots[9] = invStack{}
+	pl.offhand = invStack{item: itemFireworkRocket, count: 2}
+	h.useXbow(players, pl)
+	h.tick.Add(xbowBaseCharge)
+	h.finishXbowCharge(players, pl)
+	if !pl.xbowLoaded || pl.xbowAmmo.item != itemFireworkRocket || pl.offhand.count != 1 {
+		t.Fatalf("loaded=%v ammo=%d offhand=%d", pl.xbowLoaded, pl.xbowAmmo.item, pl.offhand.count)
+	}
+	z := h.spawnMob(players, entityZombie, 0.5, 80, 8.5)
+	z.health = 100
+	h.useXbow(players, pl)
+	if len(h.rockets) != 1 || len(h.arrows) != 0 {
+		t.Fatalf("rockets %d arrows %d, want one rocket", len(h.rockets), len(h.arrows))
+	}
+	for _, r := range h.rockets {
+		if !r.angled || r.vz < 1.5 || math.Abs(r.vy) > 0.01 {
+			t.Fatalf("rocket %+v: want level flight at 1.6 along +z", r)
+		}
+		r.explosions = 1 // a one-star rocket: 7 at the burst
+	}
+	for i := 0; i < 20 && len(h.rockets) > 0; i++ {
+		h.updateRockets(players)
+	}
+	if len(h.rockets) != 0 || z.health >= 100 {
+		t.Fatalf("the rocket did not strike the zombie: rockets %d, health %v", len(h.rockets), z.health)
+	}
+	if pl.inv.slots[0].dmg != 3 {
+		t.Errorf("crossbow wear %d, want 3 for a rocket", pl.inv.slots[0].dmg)
 	}
 }

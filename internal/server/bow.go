@@ -84,6 +84,37 @@ func ammoSlot(t *tracked) int {
 	return -1
 }
 
+// xbowAmmoSlot is Player.getProjectile for a crossbow: a held arrow or
+// firework rocket first (CrossbowItem's supported held projectiles), then
+// arrows from the inventory; a rocket is loaded only from the hands.
+func xbowAmmoSlot(t *tracked) int {
+	if t.inv == nil {
+		return -1
+	}
+	if o := t.offhand; o.count > 0 && (isArrowAmmo(o.item) || o.item == itemFireworkRocket) {
+		return offhandSlot
+	}
+	for i, s := range t.inv.slots {
+		if isArrowAmmo(s.item) && s.count > 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// takeAmmo removes one from a slot found by ammoSlot or xbowAmmoSlot and
+// returns it (count 1).
+func (h *hub) takeAmmo(t *tracked, i int) invStack {
+	s := t.handOrSlot(i)
+	one := *s
+	one.count = 1
+	if s.count--; s.count == 0 {
+		*s = invStack{}
+	}
+	h.sendHandSlot(t, i)
+	return one
+}
+
 // peekAmmo is the arrow a shot would use (count 1), or a plain arrow when
 // there is none (a creative draw).
 func peekAmmo(t *tracked) invStack {

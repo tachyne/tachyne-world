@@ -55,6 +55,8 @@ type rocketEntity struct {
 	lifetime   int
 	attached   int32 // eid of the gliding player being boosted (0 = loose)
 	explosions int   // how many stars it carries — what its blast is worth
+	angled     bool  // shot from a crossbow (DATA_SHOT_AT_ANGLE): flies straight, no climb
+	shooter    int32 // who shot it, whom it will not strike
 }
 
 type evUseFirework struct{ eid int32 }
@@ -173,6 +175,10 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 		} else if r.attached != 0 {
 			h.popRocket(players, r) // the player it was boosting is gone
 			continue
+		} else if r.angled {
+			if h.flyAngledRocket(players, r) {
+				continue // it struck something and went off
+			}
 		} else {
 			r.vx, r.vz = r.vx*fireworkAccel, r.vz*fireworkAccel
 			r.vy += fireworkClimb
@@ -191,6 +197,50 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 			r.sx, r.sy, r.sz = r.x, r.y, r.z
 		}
 	}
+}
+
+// flyAngledRocket is a crossbow rocket's tick: straight on at its launch
+// velocity (no acceleration, no climb), exploding on the first mob or player
+// in its path, or on a block when it carries stars; a starless one that hits
+// a block stops there until its time runs out. Reports whether it went off.
+func (h *hub) flyAngledRocket(players map[int32]*tracked, r *rocketEntity) bool {
+	w := h.worldFor(r.dim)
+	const samples = 4
+	for i := 1; i <= samples; i++ {
+		f := float64(i) / samples
+		px, py, pz := r.x+r.vx*f, r.y+r.vy*f, r.z+r.vz*f
+		for _, t := range players {
+			if t.p.eid == r.shooter || t.dim != r.dim || t.dead || t.gamemode == gmSpectator {
+				continue
+			}
+			if math.Abs(t.x-px) < 0.425 && math.Abs(t.z-pz) < 0.425 && py >= t.y-0.125 && py <= t.y+1.925 {
+				r.x, r.y, r.z = px, py, pz
+				h.popRocket(players, r)
+				return true
+			}
+		}
+		for _, m := range h.mobs {
+			if m.dim != r.dim || m.dying > 0 {
+				continue
+			}
+			if math.Abs(m.x-px) < 0.6 && math.Abs(m.z-pz) < 0.6 && py >= m.y-0.125 && py <= m.y+1.9 {
+				r.x, r.y, r.z = px, py, pz
+				h.popRocket(players, r)
+				return true
+			}
+		}
+		if worldgen.Collides(w.At(int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz)))) {
+			if r.explosions > 0 {
+				r.x, r.y, r.z = px, py, pz
+				h.popRocket(players, r)
+				return true
+			}
+			r.vx, r.vy, r.vz = 0, 0, 0 // nothing to set off: it stops against the block
+			return false
+		}
+	}
+	r.x, r.y, r.z = r.x+r.vx, r.y+r.vy, r.z+r.vz
+	return false
 }
 
 // popRocket detonates and removes one.
