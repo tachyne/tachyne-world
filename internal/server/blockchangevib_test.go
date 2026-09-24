@@ -38,3 +38,43 @@ func TestSculkHearsABell(t *testing.T) {
 		t.Fatalf("the sensor heard frequency %d, want the bell's BLOCK_CHANGE %d", f, freqBlockChange)
 	}
 }
+
+// TestCakeBiteVibratesOnlyWhenEaten: CakeBlock.eat returns PASS before its
+// EAT game event when the player cannot eat, so a full player's refused
+// bite is silent to sculk; a taken bite is heard.
+func TestCakeBiteVibratesOnlyWhenEaten(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.world
+	x, y, z := 4, 180, 4
+	w.ForceLoad(x, z, 2)
+	for dx := -2; dx <= 6; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			w.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+			w.SetBlock(x+dx, y, z+dz, worldgen.Air)
+			w.SetBlock(x+dx, y+1, z+dz, worldgen.Air)
+		}
+	}
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.onBlock(players, evBlock{dim: dimOverworld, x: x, y: y, z: z, state: sensor})
+	w.SetBlock(x+3, y, z, cakeBase)
+	stepSculk(h, players, sensorActiveTicks+sensorCooldownTicks+2)
+	key := simPos{dim: dimOverworld, blockPos: blockPos{x, y, z}}
+	delete(h.sculkFreq, key)
+
+	pl.food = maxFood // full: the bite is refused
+	h.eatCake(players, pl, blockPos{x + 3, y, z})
+	stepSculk(h, players, 5)
+	if f := h.sculkFreq[key]; f != 0 {
+		t.Fatalf("a refused bite made a vibration (frequency %d)", f)
+	}
+	pl.food = 10
+	h.eatCake(players, pl, blockPos{x + 3, y, z})
+	stepSculk(h, players, 5)
+	if f := h.sculkFreq[key]; f != freqEat {
+		t.Fatalf("a bite taken should be heard as EAT (%d), got %d", freqEat, f)
+	}
+}

@@ -62,7 +62,6 @@ func (h *hub) eatCake(players map[int32]*tracked, t *tracked, pos blockPos) {
 	if !ok {
 		return
 	}
-	h.vib(t.dim, freqEat, pos.x, pos.y, pos.z, t.p.eid) // CakeBlock.eat
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 	if base, isCandle := candleCakeBases[heldStack(t).item]; isCandle && bites == 0 {
 		h.setBlockAt(players, t.dim, pos, base+1) // +1 = unlit, as a placed candle starts
@@ -80,10 +79,12 @@ func (h *hub) eatCake(players map[int32]*tracked, t *tracked, pos blockPos) {
 		t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+cakeSat))
 		h.sendHealth(t)
 	}
+	h.vib(t.dim, freqEat, pos.x, pos.y, pos.z, t.p.eid) // CakeBlock.eat: only a bite actually taken
 	if bites < cakeMaxBites {
 		h.setBlockAt(players, t.dim, pos, cakeBase+uint32(bites)+1)
 	} else {
 		h.setBlockAt(players, t.dim, pos, worldgen.Air)
+		h.vib(t.dim, freqBlockDestroy, pos.x, pos.y, pos.z, t.p.eid) // the last slice: BLOCK_DESTROY
 	}
 	h.incCustom(t, "eat_cake_slice", 1)
 }

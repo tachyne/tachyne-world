@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Cake is quiet to sculk when you are full.** Trying to eat cake while
+  full, or putting a candle on it, set off sculk sensors as if you had
+  eaten. Now only a bite actually taken is heard, and eating the last slice
+  also counts as the block being destroyed, as in vanilla.
 - **Sculk hears more of what changes around it.** Ringing a bell, a big
   dripleaf tipping or springing back, laying food on a campfire (and the
   food finishing), filling or knocking a decorated pot, and adding or taking
