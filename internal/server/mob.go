@@ -1491,6 +1491,21 @@ func (h *hub) toNearbyEv(players map[int32]*tracked, dim int, x, z float64, ev a
 	}
 }
 
+// toOthersNear is toNearbyEv for something a player did that their own
+// client has already drawn (ChunkMap.broadcast, which leaves the entity
+// itself out): an arm swing, the cracks of their own dig.
+func (h *hub) toOthersNear(players map[int32]*tracked, self int32, dim int, x, z float64, ev any) {
+	cx, cz := chunkFloor(x), chunkFloor(z)
+	for eid, t := range players {
+		if eid == self || t.dim != dim {
+			continue
+		}
+		if abs(chunkFloor(t.x)-cx) <= viewRadius && abs(chunkFloor(t.z)-cz) <= viewRadius {
+			t.p.trySendEv(ev)
+		}
+	}
+}
+
 // newMobAttributes is Mob.createMobAttributes for one species: the per-entity
 // starting point, which is NOT the attribute registry's own defaults. Every one
 // of these differs from the registry — follow range is 32 there but 16 on a

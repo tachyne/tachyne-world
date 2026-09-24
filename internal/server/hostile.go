@@ -522,6 +522,24 @@ func swingArm(eid int32) attachproto.Swing {
 	return attachproto.Swing{EID: eid}
 }
 
+// evArmSwing is a player's own swing, from the client (at air, a block, a
+// mob): shown to everyone watching them, as LivingEntity.swing broadcasts
+// it. The swinger's client has drawn it already.
+type evArmSwing struct {
+	eid  int32
+	hand int32
+}
+
+func (evArmSwing) isHubEvent() {}
+
+func (h *hub) onArmSwing(players map[int32]*tracked, e evArmSwing) {
+	t := players[e.eid]
+	if t == nil || t.dead {
+		return
+	}
+	h.toOthersNear(players, e.eid, t.dim, t.x, t.z, attachproto.Swing{EID: e.eid, Hand: e.hand})
+}
+
 // mobKnockVelocity animates a mob's knockback impulse client-side: vanilla
 // sends set_entity_velocity on every hit so the client plays the shove (and
 // hit-hop) between our relative moves. The moves stay authoritative — the

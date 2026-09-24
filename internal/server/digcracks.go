@@ -83,6 +83,6 @@ func (h *hub) sendDigStage(players map[int32]*tracked, eid int32, d *digCrack, s
 	if t != nil {
 		x, z = t.x, t.z
 	}
-	h.toTracking(players, eid, d.dim, x, z, attachproto.BlockBreakProgress{
+	h.toOthersNear(players, eid, d.dim, x, z, attachproto.BlockBreakProgress{
 		EID: eid, X: int32(d.pos.x), Y: int32(d.pos.y), Z: int32(d.pos.z), Progress: stage})
 }

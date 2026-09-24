@@ -1490,6 +1490,8 @@ func (h *hub) run() {
 					}
 					h.sendExperience(t)
 				}
+			case evArmSwing:
+				h.onArmSwing(players, e)
 			case evDigStart:
 				h.startDig(players, e)
 			case evDigStop:

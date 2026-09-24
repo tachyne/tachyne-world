@@ -97,6 +97,8 @@ func (r *remotePlayer) Command(cmd string) { r.s.handleCommand(r.p, cmd) }
 func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
 	switch e := v.(type) {
+	case attachproto.SwingAction:
+		h.post(evArmSwing{eid: p.eid, hand: e.Hand}) // handleAnimate → LivingEntity.swing
 	case attachproto.UseItem:
 		p.noteAck(e.Seq) // vanilla acks use_item's prediction sequence too
 		// The client says which hand it used; the offhand is where a shield

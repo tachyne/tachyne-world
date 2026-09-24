@@ -72,9 +72,41 @@ func TestOthersSeeTheCracks(t *testing.T) {
 	if len(stages) < 3 || stages[0] != 0 || stages[len(stages)-1] < 4 {
 		t.Fatalf("the watcher saw stages %v over 12 ticks, want 0 rising to about 5", stages)
 	}
+	for _, ev := range drainEvs(digger.p) {
+		if _, ok := ev.(attachproto.BlockBreakProgress); ok {
+			t.Fatal("the digger was sent its own cracks; its client draws them")
+		}
+	}
 	h.stopDig(players, digger.p.eid)
 	collect()
 	if stages[len(stages)-1] != -1 {
 		t.Fatalf("an abort did not clear the cracks: %v", stages)
+	}
+}
+
+// A player's swing is shown to the others, not echoed to the swinger.
+func TestArmSwingReachesOthersOnly(t *testing.T) {
+	h := newHub(world.New(1))
+	swinger := survPlayer(h)
+	watcher := &tracked{p: newPlayer(2, "watcher", [16]byte{}), gamemode: gmSurvival}
+	initSurvival(watcher)
+	players := map[int32]*tracked{swinger.p.eid: swinger, watcher.p.eid: watcher}
+	watcher.x = 3
+	drainEvs(swinger.p)
+	drainEvs(watcher.p)
+	h.onArmSwing(players, evArmSwing{eid: swinger.p.eid, hand: 1})
+	saw := false
+	for _, ev := range drainEvs(watcher.p) {
+		if sw, ok := ev.(attachproto.Swing); ok && sw.EID == swinger.p.eid && sw.Hand == 1 {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Error("the watcher never saw the off-hand swing")
+	}
+	for _, ev := range drainEvs(swinger.p) {
+		if _, ok := ev.(attachproto.Swing); ok {
+			t.Error("the swinger was sent its own swing")
+		}
 	}
 }

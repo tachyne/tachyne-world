@@ -52,8 +52,10 @@ the public history since the project was open-sourced on 2026-07-10.
     skeleton can kill a creeper for its music disc again.
 
 ### Added
-- **Others see you mine.** The cracks spreading across a block now show to
-  everyone watching, stage by stage at vanilla's pace, and clear when you
+- **Others see you swing and mine.** Other players now see your arm swing,
+  with either hand: at air, at a block you're mining or placing against,
+  at a mob. Before this, it moved only on a hit against a player. The
+  cracks spreading across a block now show to everyone watching, stage by stage at vanilla's pace, and clear when you
   stop. The pace takes in the tool and which blocks it is made for,
   Efficiency, Haste, Mining Fatigue, being underwater without Aqua Affinity
   and being off the ground.

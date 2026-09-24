@@ -391,6 +391,8 @@ func session(c net.Conn, cfg Config) {
 			actTo(remote, payload, proto.UseItem{})
 		case proto.MsgUseEntity:
 			actTo(remote, payload, proto.UseEntity{})
+		case proto.MsgSwingAction:
+			actTo(remote, payload, proto.SwingAction{})
 		case proto.MsgSelTrade:
 			actTo(remote, payload, proto.SelTrade{})
 		case proto.MsgInput:
