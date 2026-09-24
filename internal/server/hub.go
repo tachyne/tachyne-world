@@ -367,10 +367,12 @@ type tracked struct {
 	armor   [4]invStack // window-0 armor slots — worn, applied, persisted
 	// lastArmor is what the attribute pipeline last saw; refreshGearIfChanged
 	// compares against it so gear attributes recompute on change, not per tick.
-	lastArmor  [4]invStack
-	lastHeld   invStack // …and the main hand, for Efficiency and Sweeping Edge
-	gearSynced bool
-	offhand    invStack
+	lastArmor [4]invStack
+	lastHeld  invStack // …and the main hand, for Efficiency and Sweeping Edge
+	// heldAttackMod is the held weapon's ATTACK_SPEED modifier as applied.
+	heldAttackMod float64
+	gearSynced    bool
+	offhand       invStack
 
 	plugUI *plugUIState // plugin-browser window state (nil until first opened)
 

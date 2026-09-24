@@ -163,7 +163,22 @@ func (t *tracked) refreshEnchantAttrs() {
 			in.RemoveModifier(src)
 		}
 	}
+	// The held weapon's own ATTACK_SPEED modifier (its attribute_modifiers
+	// component): the client draws the attack-cooldown indicator from the
+	// synced value, which sat at a bare hand's four for every weapon.
+	t.heldAttackMod = 0
+	if held.count > 0 {
+		t.heldAttackMod = weaponAttackSpeed[held.item]
+	}
+	if in := a.Get(attr.AttackSpeed); t.heldAttackMod != 0 {
+		in.AddModifier(attr.Modifier{Source: heldWeaponSource, Amount: t.heldAttackMod, Op: attr.AddValue})
+	} else {
+		in.RemoveModifier(heldWeaponSource)
+	}
 }
+
+// heldWeaponSource owns the held weapon's attribute modifiers.
+const heldWeaponSource = "item:mainhand"
 
 // explosionKnockScale is the fraction of a blast's shove that gets through —
 // Blast Protection braces you against being thrown as well as burned.

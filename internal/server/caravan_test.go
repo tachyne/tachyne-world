@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -130,5 +131,29 @@ func TestHeldEnchantAttributes(t *testing.T) {
 	}
 	if got := pl.playerAttrs().Value(attr.SweepingDamageRatio); got != 0.75 {
 		t.Errorf("Sweeping Edge III: ratio %v, want 0.75", got)
+	}
+}
+
+// A held weapon's ATTACK_SPEED reaches the attribute the client draws its
+// cooldown from, copper tools included, and the server's period is unchanged.
+func TestWeaponAttackSpeed(t *testing.T) {
+	if p := attackPeriod(itemByName["copper_axe"]); p != 25 {
+		t.Errorf("copper axe period %d, want 25 (speed 0.8)", p)
+	}
+	if p := attackPeriod(itemByName["iron_hoe"]); p != 7 {
+		t.Errorf("iron hoe period %d, want 7", p)
+	}
+	if p := attackPeriod(itemByName["diamond_sword"]); p != 12 {
+		t.Errorf("sword period %d, want 12", p)
+	}
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["diamond_sword"], count: 1}
+	pl.refreshGearIfChanged()
+	if got := pl.playerAttrs().Value(attr.AttackSpeed); math.Abs(got-1.6) > 1e-9 {
+		t.Errorf("sword in hand: attack speed %v, want 1.6", got)
+	}
+	if got := pl.attackPeriodTicks(attackPeriod(itemByName["diamond_sword"])); got != 12 {
+		t.Errorf("sword period through the attribute %d, want 12", got)
 	}
 }

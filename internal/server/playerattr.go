@@ -153,7 +153,10 @@ func (t *tracked) breathesUnderwater() bool {
 // shortens it, Mining Fatigue (−10%/level) drags it out. The registry default
 // is 4.0, which is the unmodified case.
 func (t *tracked) attackPeriodTicks(base int) int {
-	def := attr.Defs[attr.AttackSpeed].Default
+	// The weapon's own share of the attribute is already in base (the
+	// weapon's period), so only the effects scale it: take the weapon's
+	// modifier back out of the ratio.
+	def := attr.Defs[attr.AttackSpeed].Default + t.heldAttackMod
 	speed := t.playerAttrs().Value(attr.AttackSpeed)
 	if def <= 0 || speed <= 0 {
 		return base

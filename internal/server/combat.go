@@ -750,38 +750,36 @@ func itemSet(names ...string) map[int32]bool {
 // → 5t; swords 1.6 → 12t; axes are PER-TIER (wood/stone 0.8 → 25t, iron 0.9
 // → 22t, gold/diamond/netherite 1.0 → 20t); pickaxes 1.2 → 17t; shovels 20t.
 func attackPeriod(item int32) int {
-	if swordPeriod[item] {
-		return 12
-	}
-	switch item {
-	case itemByName["wooden_axe"], itemByName["stone_axe"]:
-		return 25
-	case itemByName["iron_axe"]:
-		return 22
-	case itemByName["golden_axe"], itemByName["diamond_axe"], itemByName["netherite_axe"]:
-		return 20
-	case itemByName["wooden_pickaxe"], itemByName["stone_pickaxe"], itemByName["iron_pickaxe"],
-		itemByName["golden_pickaxe"], itemByName["diamond_pickaxe"], itemByName["netherite_pickaxe"]:
-		return 17
-	case itemByName["wooden_shovel"], itemByName["stone_shovel"], itemByName["iron_shovel"],
-		itemByName["golden_shovel"], itemByName["diamond_shovel"], itemByName["netherite_shovel"]:
-		return 20
-	case itemByName["mace"]: // attack speed 0.6 (heavy, slow) → ceil(20/0.6 − 0.5)
-		return 33
-	case itemByName["wooden_hoe"], itemByName["golden_hoe"]: // attack speed 1.0
-		return 20
-	case itemByName["stone_hoe"]: // 2.0
-		return 10
-	case itemByName["iron_hoe"]: // 3.0
-		return 7
-	case itemByName["diamond_hoe"], itemByName["netherite_hoe"]: // 4.0 — as fast as a fist
-		return 5
-	}
 	if sp := spearOf(item); sp != nil {
 		return sp.period // attack speed 1/attack_duration
 	}
-	return 5 // bare hand
+	return int(math.Ceil(20/(attr.Defs[attr.AttackSpeed].Default+weaponAttackSpeed[item]) - 0.5))
 }
+
+// weaponAttackSpeed is the ATTACK_SPEED modifier each weapon's default
+// attribute_modifiers adds in the main hand (Item.Properties.sword/axe/
+// pickaxe/shovel/hoe/spear, MaceItem, TridentItem). The attack period is
+// ceil(20 / speed − 0.5) ticks: a sword's 1.6 is twelve, a fist's 4 is five.
+var weaponAttackSpeed = func() map[int32]float64 {
+	out := map[int32]float64{itemByName["mace"]: -3.4, itemByName["trident"]: -2.9}
+	mats := []string{"wooden", "stone", "copper", "iron", "golden", "diamond", "netherite"}
+	per := map[string][7]float64{ // in mats order
+		"sword":   {-2.4, -2.4, -2.4, -2.4, -2.4, -2.4, -2.4},
+		"pickaxe": {-2.8, -2.8, -2.8, -2.8, -2.8, -2.8, -2.8},
+		"shovel":  {-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0},
+		"axe":     {-3.2, -3.2, -3.2, -3.1, -3.0, -3.0, -3.0},
+		"hoe":     {-3.0, -2.0, -2.0, -1.0, -3.0, 0, 0},
+		"spear":   {1/0.65 - 4, 1/0.75 - 4, 1/0.85 - 4, 1/0.95 - 4, 1/0.95 - 4, 1/1.05 - 4, 1/1.15 - 4},
+	}
+	for kind, v := range per {
+		for i, m := range mats {
+			if id, ok := itemByName[m+"_"+kind]; ok && v[i] != 0 {
+				out[id] = v[i]
+			}
+		}
+	}
+	return out
+}()
 
 // deathDropsAllowed is LivingEntity.shouldDropLoot / shouldDropExperience:
 // a baby drops no loot and pays no experience — except that every Monster

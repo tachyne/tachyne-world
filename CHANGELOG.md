@@ -19,7 +19,10 @@ the public history since the project was open-sourced on 2026-07-10.
   and tachyne never sent Efficiency's share of it. So an Efficiency
   pickaxe dug at a plain pickaxe's pace for the player. The held item's
   Efficiency and Sweeping Edge now reach the client, and update whenever
-  you switch items.
+  you switch items. So does the held weapon's attack speed, which drives
+  the attack-cooldown indicator: it showed a bare hand's instant recharge
+  for every weapon. Copper tools also have their own attack cooldowns now
+  instead of a fist's.
 - **More blocks behave as in vanilla.**
   - A comparator reads a candle cake as a whole cake.
   - Ravagers trample pitcher crops.
