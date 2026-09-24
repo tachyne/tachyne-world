@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -205,5 +206,36 @@ func TestTNTCartLitByBlast(t *testing.T) {
 	h.explodeCreeper(players, h.spawnMob(players, entityCreeper, 2.5, 180, 0.5))
 	if v.fuse >= 0 {
 		t.Fatal("a creeper blast lit a TNT cart with mobGriefing off")
+	}
+}
+
+// A player who arrives while a vehicle is still rocking is shown the wobble:
+// the spawn carries the hurt state that is off its default.
+func TestVehicleHurtStateOnJoin(t *testing.T) {
+	h, pl, players := vehRig(t)
+	v := rigVehicle(t, h, players, "minecart")
+	h.damageVehicle(players, v, vehHit{dmg: 2, dt: dtGeneric})
+	drainEvs(pl.p)
+	h.sendVehiclesTo(pl)
+	var meta []byte
+	for _, ev := range drainEvs(pl.p) {
+		if m, ok := ev.(attachproto.EntityMeta); ok && m.EID == v.eid {
+			meta = m.Meta
+		}
+	}
+	want := metaEv(vehicleHurtMeta(v)).Meta
+	if meta == nil || string(meta) != string(want) {
+		t.Fatalf("the joining player got hurt metadata %x, want %x", meta, want)
+	}
+
+	// Untouched, the defaults need no metadata.
+	h, pl, players = vehRig(t)
+	v = rigVehicle(t, h, players, "minecart")
+	drainEvs(pl.p)
+	h.sendVehiclesTo(pl)
+	for _, ev := range drainEvs(pl.p) {
+		if m, ok := ev.(attachproto.EntityMeta); ok && m.EID == v.eid {
+			t.Fatal("an unhurt vehicle's spawn sent hurt metadata")
+		}
 	}
 }

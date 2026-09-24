@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **A vehicle that was just hit looks hit to players who arrive.** Someone
+  joining or coming into a dimension while a boat or minecart was still
+  rocking from a blow, or a boat was on fire, saw it sitting still and
+  unharmed. They now see the same wobble and flames as everyone else.
 - **TNT minecarts go off the way they should.** A flaming arrow now blows
   one up on the spot, and fire, lava or any explosion that reaches it lights
   its fuse instead of knocking it back into an item, however little the

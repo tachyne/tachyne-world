@@ -508,6 +508,15 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 			continue
 		}
 		t.p.trySendEv(entAdd(v.eid, v.etype, v.uuid, v.x, v.y, v.z, v.yaw, 0))
+		// The spawn carries the synced state that is off its default
+		// (ServerEntity.sendPairingData): a wobble still in progress, the
+		// damage not yet drained, the side it last rocked to, a boat alight.
+		if v.hurtTime > 0 || v.damage > 0 || v.hurtDirFlip {
+			t.p.trySendEv(metaEv(vehicleHurtMeta(v)))
+		}
+		if v.burning {
+			t.p.trySendEv(metaEv(fireMetadata(v.eid, true)))
+		}
 		if v.lit {
 			t.p.trySendEv(metaEv(cartFuelMeta(v.eid, true)))
 		}
