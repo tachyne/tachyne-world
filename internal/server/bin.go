@@ -524,7 +524,15 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 		}
 	case dispense && item == itemTNTBlock:
-		h.primeTNT(players, front.x, front.y, front.z, tntFuseTicks)
+		// The TNT behaviour spawns a lit charge in the cell ahead and leaves
+		// whatever block stands there alone; with tnt_explodes off it
+		// dispenses nothing.
+		if !h.rules.TNTExplodes {
+			took = false
+			break
+		}
+		h.spawnPrimedTNT(players, h.rsDim, front.x, front.y, front.z, tntFuseTicks)
+		h.vib(h.rsDim, freqEntityPlace, front.x, front.y, front.z, 0)
 	case dispense && item == itemFlintSteel:
 		if fs := w.At(front.x, front.y, front.z); fs == worldgen.Air {
 			h.igniteFire(players, front, 0) // light a fire in the cell ahead

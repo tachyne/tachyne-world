@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Dispensed TNT no longer deletes the block in front.** A dispenser firing
+  TNT turned whatever block stood in front of it into air. It now drops a
+  lit charge there and leaves the block alone, as in vanilla. With TNT
+  explosions switched off, the dispenser keeps its TNT.
 - **A parched's kill makes a creeper drop a music disc.** Since 26.3 the
   parched counts as a skeleton, so a creeper it shoots dead drops a disc,
   as one killed by any other skeleton does. Wolves now hunt the parched too.
