@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Lingering potions fly as lingering potions.** A thrown, dispensed or
+  trial-spawner lingering potion now appears as its own kind of thrown
+  potion rather than as a splash potion, as it does in vanilla.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

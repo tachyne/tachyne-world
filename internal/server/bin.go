@@ -421,9 +421,9 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && (item == itemSplashPotion || item == itemLingerPotion):
 		// Thrown-potion projectile: shatters into a splash / lingering cloud
 		// carrying this stack's potion kind.
-		a := h.launchProjectileIn(players, entitySplashProj, h.rsDim, fx, fy, fz, vx, vy, vz)
-		a.splash, a.breaks, a.potion = true, true, st.potion
-		a.lingering = item == itemLingerPotion
+		lingering := item == itemLingerPotion
+		a := h.launchProjectileIn(players, thrownPotionType(lingering), h.rsDim, fx, fy, fz, vx, vy, vz)
+		a.splash, a.breaks, a.potion, a.lingering = true, true, st.potion, lingering
 	case dispense && item == itemPotion && st.potion == potWater:
 		// Vanilla POTION behaviour: a WATER bottle onto a CONVERTABLE_TO_MUD block
 		// (dirt / coarse dirt / rooted dirt) turns it to mud and empties the

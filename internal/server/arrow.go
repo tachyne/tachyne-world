@@ -167,7 +167,7 @@ func projectileGravity(etype int) float64 {
 // before moving rather than after as an arrow does.
 func isThrowable(etype int) bool {
 	switch etype {
-	case entitySnowball, entityEggProj, entityPearlProj, entityXPBottle, entitySplashProj:
+	case entitySnowball, entityEggProj, entityPearlProj, entityXPBottle, entitySplashProj, entityLingerProj:
 		return true
 	}
 	return false

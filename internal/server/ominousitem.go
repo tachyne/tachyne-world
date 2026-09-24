@@ -157,7 +157,7 @@ func (h *hub) dropOminousItem(players map[int32]*tracked, e *itemSpawnerEnt) {
 	for i := 0; i < n; i++ {
 		switch e.drop.item {
 		case "lingering_potion":
-			a := h.launchProjectileIn(players, entitySplashProj, e.dim, e.x, e.y, e.z, 0, -0.5, 0)
+			a := h.launchProjectileIn(players, entityLingerProj, e.dim, e.x, e.y, e.z, 0, -0.5, 0)
 			a.splash, a.breaks, a.potion, a.lingering = true, true, e.drop.potion, true
 		case "arrow":
 			a := h.launchProjectileIn(players, entityArrow, e.dim, e.x, e.y, e.z, 0, -1.2, 0)
