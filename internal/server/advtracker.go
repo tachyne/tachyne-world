@@ -183,8 +183,11 @@ type advMatch struct {
 	playerY     float64
 	playerArmor [4]int32
 
-	body    int32 // player_interacted_with_entity: the entity's body armour after the click
-	bodyDmg int
+	body int32 // player_interacted_with_entity: the entity's body armour after the click
+	// bred_animals: the parents (entity is the child, "" when the species
+	// lays an egg or spawn instead)
+	parent, partner string
+	bodyDmg         int
 }
 
 // playerMatches is the criterion's player predicate (every trigger's
@@ -307,7 +310,18 @@ func (m advMatch) criterion(c *advCriterion) bool {
 			return false
 		}
 		return c.damageTag == "" || m.damageTags[c.damageTag]
-	case "bred_animals", "tame_animal", "summoned_entity", "thrown_item_picked_up_by_player":
+	case "bred_animals":
+		// BredAnimalsTrigger.TriggerInstance.matches: a named child needs a
+		// child, and the parent/partner predicates hold either way round.
+		if (c.entity != "" || c.hasBaby || c.variant != "") && m.entity == "" {
+			return false
+		}
+		if !m.entityIs(c) {
+			return false
+		}
+		is := func(want, have string) bool { return want == "" || want == have }
+		return is(c.parent, m.parent) && is(c.partner, m.partner) || is(c.parent, m.partner) && is(c.partner, m.parent)
+	case "tame_animal", "summoned_entity", "thrown_item_picked_up_by_player":
 		return m.entityIs(c)
 	case "player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity":
 		if len(c.bodyItems) > 0 && !containsID(c.bodyItems, m.body) {

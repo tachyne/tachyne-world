@@ -503,6 +503,13 @@ def distill(trigger, cond, tags):
         d["entity"], baby, var = ent_pred(c.get("child"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        # The egg-layers' criteria (frog, sniffer, turtle) name the parents,
+        # not a child: BredAnimalsTrigger fires for them with no offspring.
+        for key in ("parent", "partner"):
+            et, pb, pv = ent_pred(c.get(key))
+            if pb is not None or pv:
+                raise SystemExit(f"gen_advancements: bred_animals {key} predicate beyond a type")
+            if et: d[key] = et
     elif t in ("player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity"):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0
@@ -930,7 +937,7 @@ def main():
                 f.append("locChecks: [][]advLocCheck{%s}" % ", ".join(groups))
             for key in ("structure", "recipe", "lootTable", "sourceEntity", "damageTag",
                         "lookingAt", "vehicle", "passenger", "bystander", "cause", "variant",
-                        "enchant", "toolPred"):
+                        "enchant", "toolPred", "parent", "partner"):
                 if c.get(key):
                     f.append(f"{key}: {gstr(c[key])}")
             if c.get("damageDirect"):

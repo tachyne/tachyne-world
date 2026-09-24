@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **"Two by Two" needs real frogs, sniffers and turtles.** Breeding any
+  animal ticked off the frog, sniffer and turtle entries, because those
+  three lay eggs or spawn instead of having babies. Each now needs its own
+  pair to breed.
 - **"Good as New" needs the wolf armour fully mended.** Any scute given
   to a wolf in worn armour granted it. As in vanilla, it now counts only
   when the scute leaves the armour with no damage.
