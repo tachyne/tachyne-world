@@ -58,6 +58,15 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Sculk, bees, villager doors and creaking hearts work in the Nether and
+  the End.** A sculk sensor, shrieker or catalyst built there now hears and
+  answers that dimension's own vibrations, and a shrieker's Warden rises
+  beside it. It no longer reacts to what happens at the same spot in the
+  overworld. Bees live in their own world's hives, which keep their bees
+  across a restart. They come and go at any hour where there is no night.
+  Villagers open and shut the doors of the world they are in. A creaking
+  heart a player builds now ticks wherever it stands, including one laid
+  on its side. In the Nether and the End it sleeps, as in vanilla.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

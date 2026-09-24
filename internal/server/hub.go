@@ -444,9 +444,9 @@ type hub struct {
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
 	seededNether map[[2]int32]bool // nether chunks given their one-time strider packs this pod lifetime
 	seededChunks map[[2]int32]bool
-	fluidPrimed  map[int]map[[2]int32]bool   // per dimension: chunks whose generated fluid has been ticked
-	hives        map[blockPos][]hiveOccupant // known hives and their occupants
-	hivestore    *hiveStore                  // hives.json persistence
+	fluidPrimed  map[int]map[[2]int32]bool // per dimension: chunks whose generated fluid has been ticked
+	hives        map[simPos][]hiveOccupant // known hives (by dimension) and their occupants
+	hivestore    *hiveStore                // hives.json persistence
 
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
 	// sheet of water washes up the beach and rolls back. It is a pure client
@@ -585,12 +585,12 @@ type hub struct {
 	npcs map[int32]*npc // LLM-driven villagers (the differentiator)
 	llm  *llmClient     // nil = NPCs disabled
 
-	tnt          []*primedTNT            // lit TNT charges counting down
-	fangs        []*evokerFang           // conjured evoker fangs waiting to bite
-	snifferEggs  map[simPos]uint64       // egg position -> tick its next crack is due
-	brushes      map[blockPos]*brushing  // suspicious blocks part-way brushed (not persisted)
-	hearts       map[blockPos]*heartLink // creaking hearts and the creaking each owns
-	heartScanned map[[2]int32]bool       // chunks already searched for worldgen hearts
+	tnt          []*primedTNT           // lit TNT charges counting down
+	fangs        []*evokerFang          // conjured evoker fangs waiting to bite
+	snifferEggs  map[simPos]uint64      // egg position -> tick its next crack is due
+	brushes      map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
+	hearts       map[simPos]*heartLink  // creaking hearts (by dimension) and the creaking each owns
+	heartScanned map[[2]int32]bool      // chunks already searched for worldgen hearts
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
 	rulesPath string
@@ -609,19 +609,19 @@ type hub struct {
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
-	sculkList    map[blockPos]bool         // sensor + shrieker listener positions
-	catalysts    map[blockPos]bool         // sculk catalyst positions
-	sculkVib     map[blockPos]sculkPending // one in-flight vibration per listener
-	vibQuiet     map[blockPos]uint64       // block toggles this tick: no placement vibration for them
-	sculkDue     map[blockPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
-	sculkFreq    map[blockPos]int          // sensor last-vibration frequency (comparator out)
-	sculkWarn    map[blockPos]int          // shrieker warning level toward a Warden
-	sculkStep    map[int32]uint64          // per-player STEP-event throttle (next-allowed tick)
-	sculkLastX   map[int32]float64         // per-player last X, for step-movement detection
-	sculkLastZ   map[int32]float64         // per-player last Z
-	sculkScanned map[[2]int32]bool         // chunks already scanned for worldgen sculk listeners
-	bins         map[simPos]*bin           // dispenser/dropper/hopper storage
-	binFire      map[simPos]uint64         // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
+	sculkList    map[simPos]bool         // sensor + shrieker listener positions
+	catalysts    map[simPos]bool         // sculk catalyst positions
+	sculkVib     map[simPos]sculkPending // one in-flight vibration per listener
+	vibQuiet     map[simPos]uint64       // block toggles this tick: no placement vibration for them
+	sculkDue     map[simPos]uint64       // phase deadline (sensor cooldown, shrieker respond)
+	sculkFreq    map[simPos]int          // sensor last-vibration frequency (comparator out)
+	sculkWarn    map[simPos]int          // shrieker warning level toward a Warden
+	sculkStep    map[int32]uint64        // per-player STEP-event throttle (next-allowed tick)
+	sculkLastX   map[int32]float64       // per-player last X, for step-movement detection
+	sculkLastZ   map[int32]float64       // per-player last Z
+	sculkScanned map[[2]int32]bool       // chunks already scanned for worldgen sculk listeners
+	bins         map[simPos]*bin         // dispenser/dropper/hopper storage
+	binFire      map[simPos]uint64       // scheduled dispenser/dropper ejections (due tick) — vanilla's 4-tick delay
 
 	vehicles        map[int32]*vehicle // minecarts + boats
 	blastSpareRails bool
@@ -679,7 +679,7 @@ type hub struct {
 	// one that has just taken somebody is shut to everyone for forty ticks.
 	gatewayCool map[simPos]uint64
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
-	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
+	openDoors   map[simPos]uint64   // wooden doors a villager opened (by dimension) → tick opened (auto-close)
 	digs        map[int32]*digCrack // players' digs in progress, for the cracks others see (digcracks.go)
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
@@ -825,13 +825,13 @@ func newHub(w *world.World) *hub {
 		platesOn:      map[simPos]uint64{},
 		wiresOn:       map[simPos]bool{},
 		fireAge:       map[simPos]int{},
-		sculkList:     map[blockPos]bool{},
-		catalysts:     map[blockPos]bool{},
-		sculkVib:      map[blockPos]sculkPending{},
-		vibQuiet:      map[blockPos]uint64{},
-		sculkDue:      map[blockPos]uint64{},
-		sculkFreq:     map[blockPos]int{},
-		sculkWarn:     map[blockPos]int{},
+		sculkList:     map[simPos]bool{},
+		catalysts:     map[simPos]bool{},
+		sculkVib:      map[simPos]sculkPending{},
+		vibQuiet:      map[simPos]uint64{},
+		sculkDue:      map[simPos]uint64{},
+		sculkFreq:     map[simPos]int{},
+		sculkWarn:     map[simPos]int{},
 		sculkStep:     map[int32]uint64{},
 		sculkLastX:    map[int32]float64{},
 		sculkLastZ:    map[int32]float64{},
@@ -866,7 +866,7 @@ func newHub(w *world.World) *hub {
 		stalactiteLen:  map[simPos]int{},
 		gatewayCool:    map[simPos]uint64{},
 		bossSeen:       map[[2]int32]bool{},
-		openDoors:      map[blockPos]uint64{},
+		openDoors:      map[simPos]uint64{},
 		digs:           map[int32]*digCrack{},
 		crystals:       map[int32]*crystal{},
 		villageDone:    map[blockPos]bool{},
@@ -1436,7 +1436,7 @@ func (h *hub) run() {
 					// A hive placed from a Silk-Touched stack takes its bees and
 					// honey back (same FIFO reasoning as the box above).
 					if t := players[e.by]; t != nil {
-						h.restoreBeeHome(players, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
+						h.restoreBeeHome(players, e.dim, blockPos{e.x, e.y, e.z}, heldStack(t).hiveID)
 					}
 				}
 				h.checkWitherBuild(players, e.by, e.dim, e.x, e.y, e.z, e.state)
@@ -1620,7 +1620,7 @@ func (h *hub) run() {
 			case evVibration:
 				if t := players[e.eid]; t != nil {
 					if e.quiet {
-						h.vibQuiet[blockPos{e.x, e.y, e.z}] = h.tick.Load()
+						h.vibQuiet[simPos{dim: t.dim, blockPos: blockPos{e.x, e.y, e.z}}] = h.tick.Load()
 					}
 					h.vib(t.dim, e.freq, e.x, e.y, e.z, e.eid)
 				}
@@ -2707,21 +2707,24 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	h.bannersOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state, e.by)
 	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.broken, e.state) // a broken container scatters
 	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
-	// Lightning rods and sculk are the OVERWORLD's systems: the rod POI set is
-	// where storms look, and the sculk listener index is built from the
-	// overworld's edits, so a vibration has nowhere to travel elsewhere.
+	// Lightning rods are the OVERWORLD's system: the rod POI set is where
+	// storms look, and only the overworld has weather.
 	if e.dim == dimOverworld {
-		h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state)   // lightning-rod POI set
-		h.sculkIndexOnBlockChange(e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
-		// A player edit is a vibration: a break (broken != 0) or a place.
-		if e.broken != 0 {
-			h.gameEvent(freqBlockDestroy, e.x, e.y, e.z, e.by)
-		} else if e.state != worldgen.Air {
-			if at, ok := h.vibQuiet[blockPos{e.x, e.y, e.z}]; ok && at == h.tick.Load() {
-				delete(h.vibQuiet, blockPos{e.x, e.y, e.z}) // a toggle already made its own vibration
-			} else {
-				h.gameEvent(freqBlockPlace, e.x, e.y, e.z, e.by)
-			}
+		h.rodIndexOnBlockChange(e.x, e.y, e.z, e.state) // lightning-rod POI set
+	}
+	// Sculk listens in every dimension: a sensor built in the Nether hears
+	// the Nether's vibrations, keyed apart from the overworld's.
+	h.sculkIndexOnBlockChange(e.dim, e.x, e.y, e.z, e.state) // sculk listener/catalyst sets
+	h.heartIndexOnBlockChange(e.dim, e.x, e.y, e.z, e.state) // a built creaking heart starts ticking
+	// A player edit is a vibration: a break (broken != 0) or a place.
+	if e.broken != 0 {
+		h.gameEvent(e.dim, freqBlockDestroy, e.x, e.y, e.z, e.by)
+	} else if e.state != worldgen.Air {
+		qk := simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}
+		if at, ok := h.vibQuiet[qk]; ok && at == h.tick.Load() {
+			delete(h.vibQuiet, qk) // a toggle already made its own vibration
+		} else {
+			h.gameEvent(e.dim, freqBlockPlace, e.x, e.y, e.z, e.by)
 		}
 	}
 	// A player edit can trigger simulation: the block itself (a placed falling

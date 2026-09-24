@@ -120,7 +120,7 @@ func (h *hub) triggerBlock(players map[int32]*tracked, dim int, pos blockPos, st
 		}
 	case isBeeHome(st):
 		if t := players[shooter]; t != nil {
-			h.angerBees(players, t, pos)
+			h.angerBees(players, t, dim, pos)
 		}
 	case isLever(st):
 		// Redstone runs in every dimension since the simulation learned which

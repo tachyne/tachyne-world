@@ -39,8 +39,8 @@ func TestSplashVibrationOnEnteringWater(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	sensor := worldgen.BlockBase("sculk_sensor") + 1
 	w.SetBlock(x, y, z, sensor)
-	h.sculkIndexOnBlockChange(x, y, z, sensor)
-	pos := blockPos{x, y, z}
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
+	pos := simPos{blockPos: blockPos{x, y, z}}
 	pl := survPlayer(h)
 	players[pl.p.eid] = pl
 	h.playersRef = players

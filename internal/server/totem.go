@@ -52,10 +52,14 @@ func (h *hub) totemSaves(players map[int32]*tracked, t *tracked, dt dmgType) boo
 }
 
 // sensorWithinEarshot reports whether any sculk sensor could hear a
-// vibration from (x,y,z) — the condition for the "avoid vibration" award.
-func (h *hub) sensorWithinEarshot(x, y, z int) bool {
+// vibration from (x,y,z) in dim — the condition for the "avoid vibration" award.
+func (h *hub) sensorWithinEarshot(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
 	for pos := range h.sculkList {
-		s := h.world.At(pos.x, pos.y, pos.z)
+		if pos.dim != dim {
+			continue
+		}
+		s := w.At(pos.x, pos.y, pos.z)
 		if !isAnySensor(s) {
 			continue
 		}

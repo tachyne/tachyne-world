@@ -670,7 +670,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	}
 	// A death is a frequency-15 vibration; a nearby sculk catalyst consumes the
 	// XP into a bloom instead of dropping orbs.
-	h.gameEvent(freqEntityDie, floorInt(m.x), floorInt(m.y), floorInt(m.z), m.eid)
+	h.gameEvent(m.dim, freqEntityDie, floorInt(m.x), floorInt(m.y), floorInt(m.z), m.eid)
 	if xp > 0 && h.catalystConsume(players, m, xp) {
 		if k := players[m.lastAttacker]; k != nil {
 			h.advance(players, k, "kill_mob_near_sculk_catalyst", advMatch{})

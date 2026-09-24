@@ -57,16 +57,13 @@ const (
 	freqExplode         = 15
 )
 
-// vib is gameEvent for a dimension: sculk listening is overworld-only (the
-// block simulation is), so a Nether or End event reaches no listener.
+// vib is a game event in a dimension: the listeners there hear it, and a
+// sensor built in the Nether or the End works as it does at home.
 func (h *hub) vib(dim int, freq int, x, y, z int, src int32) {
-	if dim != dimOverworld {
-		return
-	}
 	// A Warden is a listener in its own right: what it hears within sixteen
 	// blocks it takes personally (Warden's VibrationUser).
 	h.wardenHeard(dim, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, src)
-	h.gameEvent(freq, x, y, z, src)
+	h.gameEvent(dim, freq, x, y, z, src)
 }
 
 // vibAt is vib at an entity's feet.
@@ -197,10 +194,10 @@ func isSculkListener(s uint32) bool { return isAnySensor(s) || isShrieker(s) }
 // ---- listener index (maintained like the lightning-rod POI set) -------------
 
 // sculkIndexOnBlockChange keeps the listener/catalyst sets current as blocks
-// change (overworld only). Also clears per-block sculk state when a listener is
-// removed so a rebuilt block starts fresh.
-func (h *hub) sculkIndexOnBlockChange(x, y, z int, state uint32) {
-	pos := blockPos{x, y, z}
+// change, in whichever dimension the block is. Also clears per-block sculk
+// state when a listener is removed so a rebuilt block starts fresh.
+func (h *hub) sculkIndexOnBlockChange(dim, x, y, z int, state uint32) {
+	pos := simPos{dim: dim, blockPos: blockPos{x, y, z}}
 	if isSculkListener(state) {
 		h.sculkList[pos] = true
 	} else {
@@ -226,8 +223,8 @@ func (h *hub) sculkIndexOnBlockChange(x, y, z int, state uint32) {
 func (h *hub) registerSculkChunks(players map[int32]*tracked) {
 	scanned := 0
 	for _, t := range players {
-		if t.dim != 0 {
-			continue
+		if t.dim != dimOverworld {
+			continue // the deep dark is the overworld's; elsewhere sculk is built, and indexed as it is placed
 		}
 		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
 		for dx := int32(-2); dx <= 2 && scanned < 4; dx++ {
@@ -255,9 +252,9 @@ func (h *hub) scanChunkSculk(cx, cz int32) {
 				x, z := bx+lx, bz+lz
 				s := h.world.At(x, wy, z)
 				if isSculkListener(s) {
-					h.sculkList[blockPos{x, wy, z}] = true
+					h.sculkList[simPos{blockPos: blockPos{x, wy, z}}] = true
 				} else if isCatalyst(s) {
-					h.catalysts[blockPos{x, wy, z}] = true
+					h.catalysts[simPos{blockPos: blockPos{x, wy, z}}] = true
 				}
 			}
 		}
@@ -274,16 +271,20 @@ type sculkPending struct {
 
 // ---- game-event emission + dispatch -----------------------------------------
 
-// gameEvent broadcasts a vibration of the given frequency at (x,y,z). Every
-// sculk listener within its radius that can currently receive it schedules the
+// gameEvent broadcasts a vibration of the given frequency at (x,y,z) in dim.
+// Every sculk listener of that dimension within its radius that can currently receive it schedules the
 // signal to arrive after `distance` ticks (vanilla 1 tick/block).
-func (h *hub) gameEvent(freq, x, y, z int, src int32) {
+func (h *hub) gameEvent(dim, freq, x, y, z int, src int32) {
 	if len(h.sculkList) == 0 {
 		return // cheap fast path: no listeners anywhere
 	}
 	now := h.tick.Load()
+	w := h.worldFor(dim)
 	for pos := range h.sculkList {
-		s := h.world.At(pos.x, pos.y, pos.z)
+		if pos.dim != dim {
+			continue
+		}
+		s := w.At(pos.x, pos.y, pos.z)
 		r := 8
 		if isAnySensor(s) {
 			r = sensorRadius(s)
@@ -305,7 +306,7 @@ func (h *hub) gameEvent(freq, x, y, z int, src int32) {
 }
 
 // sculkCanReceive is the listener's filter at dispatch time.
-func (h *hub) sculkCanReceive(pos blockPos, s uint32, freq int) bool {
+func (h *hub) sculkCanReceive(pos simPos, s uint32, freq int) bool {
 	switch {
 	case isCalibSensor(s):
 		if sensorPhase(s) != sculkPhaseInactive {
@@ -314,7 +315,8 @@ func (h *hub) sculkCanReceive(pos blockPos, s uint32, freq int) bool {
 		// Calibrated: if the back is redstone-powered, only its exact frequency.
 		bdx, bdz := calibBackDelta(s)
 		bx, bz := pos.x+bdx, pos.z+bdz
-		back := h.emitPower(bx, pos.y, bz, pos.x, pos.y, pos.z)
+		back := 0
+		h.inDim(pos.dim, func() { back = h.emitPower(bx, pos.y, bz, pos.x, pos.y, pos.z) })
 		return back == 0 || back == freq
 	case isSculkSensor(s):
 		return sensorPhase(s) == sculkPhaseInactive
@@ -335,7 +337,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			continue
 		}
 		delete(h.sculkVib, pos)
-		s := h.world.At(pos.x, pos.y, pos.z)
+		s := h.worldFor(pos.dim).At(pos.x, pos.y, pos.z)
 		switch {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseInactive:
 			h.activateSensor(players, pos, s, v)
@@ -349,18 +351,18 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		if now < due {
 			continue
 		}
-		s := h.world.At(pos.x, pos.y, pos.z)
+		s := h.worldFor(pos.dim).At(pos.x, pos.y, pos.z)
 		switch {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseActive:
-			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseCooldown))
+			h.setBlockAt(players, pos.dim, pos.blockPos, sensorWith(s, 0, sculkPhaseCooldown))
 			h.sculkDue[pos] = now + sculkCooldownTicks()
-			h.inDim(dimOverworld, func() { h.scheduleSignalAround(players, pos) }) // redstone drops
+			h.inDim(pos.dim, func() { h.scheduleSignalAround(players, pos.blockPos) }) // redstone drops
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseCooldown:
-			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseInactive))
+			h.setBlockAt(players, pos.dim, pos.blockPos, sensorWith(s, 0, sculkPhaseInactive))
 			delete(h.sculkDue, pos)
 		case isShrieker(s) && shriekerShrieking(s):
 			h.shriekerRespond(players, pos, s)
-			h.setBlockAt(players, dimOverworld, pos, shriekerWith(s, false))
+			h.setBlockAt(players, pos.dim, pos.blockPos, shriekerWith(s, false))
 			delete(h.sculkDue, pos)
 		default:
 			delete(h.sculkDue, pos)
@@ -369,7 +371,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 
 	// 3. STEP events: players moving on the ground, throttled per player.
 	for _, t := range players {
-		if t.dim != 0 || !t.p.onGround {
+		if !t.p.onGround {
 			continue
 		}
 		if nxt, ok := h.sculkStep[t.p.eid]; ok && now < nxt {
@@ -383,7 +385,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			// VibrationSystem: a sneaking entity makes no step vibration
 			// (#ignore_vibrations_sneaking), and a sensor that would have
 			// heard it awards "Sneak 100" instead.
-			if h.sensorWithinEarshot(floorInt(t.x), floorInt(t.y), floorInt(t.z)) {
+			if h.sensorWithinEarshot(t.dim, floorInt(t.x), floorInt(t.y), floorInt(t.z)) {
 				h.advance(players, t, "avoid_vibration", advMatch{})
 			}
 			continue
@@ -412,14 +414,14 @@ func (h *hub) playerMovedHoriz(t *tracked) bool {
 
 // activateSensor makes a sensor ACTIVE: redstone power falls with distance, the
 // comparator signal is the event frequency (VibrationSystem numbers).
-func (h *hub) activateSensor(players map[int32]*tracked, pos blockPos, s uint32, v sculkPending) {
+func (h *hub) activateSensor(players map[int32]*tracked, pos simPos, s uint32, v sculkPending) {
 	power := redstoneForDistance(v.dist, sensorRadius(s))
 	h.sculkFreq[pos] = v.freq
-	h.setBlockAt(players, dimOverworld, pos, sensorWith(s, power, sculkPhaseActive))
+	h.setBlockAt(players, pos.dim, pos.blockPos, sensorWith(s, power, sculkPhaseActive))
 	h.sculkDue[pos] = h.tick.Load() + sensorActiveTicks
-	h.inDim(dimOverworld, func() { h.scheduleSignalAround(players, pos) }) // neighbours read the new redstone
+	h.inDim(pos.dim, func() { h.scheduleSignalAround(players, pos.blockPos) }) // neighbours read the new redstone
 	if snd := "minecraft:block.sculk_sensor.clicking"; !sensorWaterlogged(s) {
-		h.playSoundDim(players, dimOverworld, snd, sndBlock,
+		h.playSoundDim(players, pos.dim, snd, sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, h.hurtPitch())
 	}
 }
@@ -437,27 +439,27 @@ func redstoneForDistance(distance float64, radius int) int {
 
 // shriek sets a shrieker SHRIEKING for 90 ticks and, if it can summon, builds
 // its warning level toward a Warden.
-func (h *hub) shriek(players map[int32]*tracked, pos blockPos, s uint32, by int32) {
+func (h *hub) shriek(players map[int32]*tracked, pos simPos, s uint32, by int32) {
 	// SculkShriekerBlockEntity.tryShriek: a shrieker that can summon asks the
 	// players around it to take a warning first, and stays silent if the
 	// warning cannot land (a Warden already about, or someone warned in the
 	// last ten seconds). Only a player sets one off.
 	h.sculkWarn[pos] = 0
 	if shriekerCanSummon(s) && h.rules.Difficulty != diffPeaceful && h.rules.SpawnWardens {
-		lvl, warned := h.tryWarnWarden(players, pos, 0, by)
+		lvl, warned := h.tryWarnWarden(players, pos.blockPos, pos.dim, by)
 		if !warned {
 			return
 		}
 		h.sculkWarn[pos] = lvl
 	}
-	h.setBlockAt(players, dimOverworld, pos, shriekerWith(s, true))
+	h.setBlockAt(players, pos.dim, pos.blockPos, shriekerWith(s, true))
 	h.sculkDue[pos] = h.tick.Load() + shriekingTicks
-	h.playSoundDim(players, dimOverworld, "minecraft:block.sculk_shrieker.shriek", sndBlock,
+	h.playSoundDim(players, pos.dim, "minecraft:block.sculk_shrieker.shriek", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 2, 1)
 }
 
 // shriekerRespond fires when a shriek ends: at max warning a Warden emerges.
-func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32) {
+func (h *hub) shriekerRespond(players map[int32]*tracked, pos simPos, s uint32) {
 	lvl := h.sculkWarn[pos]
 	delete(h.sculkWarn, pos)
 	if !shriekerCanSummon(s) || lvl <= 0 || h.rules.Difficulty == diffPeaceful || !h.rules.SpawnWardens {
@@ -469,7 +471,7 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32
 		if sp := h.wardenSpawnSpot(pos); sp != nil {
 			// EntitySpawnReason.TRIGGERED: a warden a shrieker calls rises out
 			// of the ground before it does anything (Warden.finalizeSpawn).
-			if w := h.spawnMobIn(players, entityWarden, 0, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5); w != nil {
+			if w := h.spawnMobIn(players, entityWarden, pos.dim, float64(sp.x)+0.5, float64(sp.y), float64(sp.z)+0.5); w != nil {
 				h.wardenEmerge(players, w)
 			}
 			summoned = true
@@ -479,21 +481,23 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32
 		// playWardenReplySound: the growl from somewhere below that tells you
 		// how close you are — the warning that is the whole point of the
 		// first three shrieks.
-		h.playSoundDim(players, dimOverworld, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
+		h.playSoundDim(players, pos.dim, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
 	}
 	// Every response darkens the room, summon or not.
-	h.darknessAround(players, 0, cx, cy, cz, wardenDarknessRing)
+	h.darknessAround(players, pos.dim, cx, cy, cz, wardenDarknessRing)
 }
 
 // wardenSpawnSpot finds a 2-tall air gap on solid ground within a few blocks of
-// the shrieker for the Warden to emerge, or nil if none fits.
-func (h *hub) wardenSpawnSpot(pos blockPos) *blockPos {
+// the shrieker, in the shrieker's own dimension, for the Warden to emerge, or
+// nil if none fits.
+func (h *hub) wardenSpawnSpot(at simPos) *blockPos {
+	w, pos := h.worldFor(at.dim), at.blockPos
 	for _, d := range [][2]int{{0, 0}, {2, 0}, {-2, 0}, {0, 2}, {0, -2}, {2, 2}, {-2, -2}} {
 		x, z := pos.x+d[0], pos.z+d[1]
 		for dy := -2; dy <= 2; dy++ {
 			y := pos.y + dy
-			if worldgen.IsSolidFull(h.world.At(x, y-1, z)) &&
-				h.world.At(x, y, z) == worldgen.Air && h.world.At(x, y+1, z) == worldgen.Air {
+			if worldgen.IsSolidFull(w.At(x, y-1, z)) &&
+				w.At(x, y, z) == worldgen.Air && w.At(x, y+1, z) == worldgen.Air {
 				return &blockPos{x, y, z}
 			}
 		}
@@ -507,13 +511,16 @@ func (h *hub) wardenSpawnSpot(pos blockPos) *blockPos {
 // one is found it consumes the mob's XP into a sculk bloom and returns true (the
 // caller then skips the normal XP-orb drop).
 func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
-	if m.dim != 0 || xp <= 0 || len(h.catalysts) == 0 {
+	if xp <= 0 || len(h.catalysts) == 0 {
 		return false
 	}
 	mx, my, mz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
 	var best *blockPos
 	bestD := 8*8 + 1
 	for pos := range h.catalysts {
+		if pos.dim != m.dim {
+			continue
+		}
 		dx, dy, dz := pos.x-mx, pos.y-my, pos.z-mz
 		if d := dx*dx + dy*dy + dz*dz; d <= 64 && d < bestD {
 			bestD, best = d, &blockPos{pos.x, pos.y, pos.z}
@@ -522,11 +529,11 @@ func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
 	if best == nil {
 		return false
 	}
-	if s := h.world.At(best.x, best.y, best.z); isCatalyst(s) {
+	if s := h.worldFor(m.dim).At(best.x, best.y, best.z); isCatalyst(s) {
 		h.setBlockAt(players, m.dim, *best, catalystWith(true)) // bloom particle
-		h.sculkDue[*best] = h.tick.Load() + 8
+		h.sculkDue[simPos{dim: m.dim, blockPos: *best}] = h.tick.Load() + 8
 	}
-	h.spreadSculk(players, blockPos{mx, my, mz}, xp)
+	h.spreadSculk(players, m.dim, blockPos{mx, my, mz}, xp)
 	return true
 }
 
@@ -534,7 +541,8 @@ func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
 // air-exposed blocks near `origin` to sculk (up to the charge), then studs the
 // exposed faces of the new sculk with sculk_vein. Faithful in appearance, not in
 // the per-tick cursor charge model.
-func (h *hub) spreadSculk(players map[int32]*tracked, origin blockPos, charge int) {
+func (h *hub) spreadSculk(players map[int32]*tracked, dim int, origin blockPos, charge int) {
+	w := h.worldFor(dim)
 	cap := charge
 	if cap > 12 {
 		cap = 12 // avoid runaway conversion from a high-XP death
@@ -549,16 +557,16 @@ func (h *hub) spreadSculk(players map[int32]*tracked, origin blockPos, charge in
 						continue // one Manhattan shell per radius
 					}
 					p := blockPos{origin.x + dx, origin.y + dy, origin.z + dz}
-					s := h.world.At(p.x, p.y, p.z)
+					s := w.At(p.x, p.y, p.z)
 					if !worldgen.IsSolidFull(s) || isSculkFamily(s) {
 						continue
 					}
-					if !h.airExposed(p) {
+					if !h.airExposed(dim, p) {
 						continue
 					}
-					h.setBlockAt(players, dimOverworld, p, sculkBlockState)
+					h.setBlockAt(players, dim, p, sculkBlockState)
 					placed++
-					h.veinExposedFaces(players, p)
+					h.veinExposedFaces(players, dim, p)
 				}
 			}
 		}
@@ -573,9 +581,10 @@ func isSculkFamily(s uint32) bool {
 }
 
 // airExposed reports whether any of a block's six faces touches air.
-func (h *hub) airExposed(p blockPos) bool {
+func (h *hub) airExposed(dim int, p blockPos) bool {
+	w := h.worldFor(dim)
 	for _, d := range sixDirs {
-		if h.world.At(p.x+d.x, p.y+d.y, p.z+d.z) == worldgen.Air {
+		if w.At(p.x+d.x, p.y+d.y, p.z+d.z) == worldgen.Air {
 			return true
 		}
 	}
@@ -584,15 +593,16 @@ func (h *hub) airExposed(p blockPos) bool {
 
 // veinExposedFaces places sculk_vein in the air cells directly touching a newly
 // grown sculk block, with the face toward the sculk set.
-func (h *hub) veinExposedFaces(players map[int32]*tracked, p blockPos) {
+func (h *hub) veinExposedFaces(players map[int32]*tracked, dim int, p blockPos) {
+	w := h.worldFor(dim)
 	for _, d := range sixDirs {
 		np := blockPos{p.x + d.x, p.y + d.y, p.z + d.z}
-		if h.world.At(np.x, np.y, np.z) != worldgen.Air {
+		if w.At(np.x, np.y, np.z) != worldgen.Air {
 			continue
 		}
 		// The vein clings to the face pointing back at the sculk block.
 		if face := veinFaceBit(-d.x, -d.y, -d.z); face != 0 {
-			h.setBlockAt(players, dimOverworld, np, sculkVeinBase+veinStateForFaces(face))
+			h.setBlockAt(players, dim, np, sculkVeinBase+veinStateForFaces(face))
 		}
 	}
 }

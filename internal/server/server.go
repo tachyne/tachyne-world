@@ -546,8 +546,19 @@ func (s *Server) Serve() error {
 			if state == beaconState { // beacons rebuild from edits; powers re-attach from containers
 				s.hub.beacons[simPos{blockPos: blockPos{x, y, z}}] = &beacon{}
 			}
-			s.hub.sculkIndexOnBlockChange(x, y, z, state) // sculk listener/catalyst POI sets
+			s.hub.sculkIndexOnBlockChange(dimOverworld, x, y, z, state) // sculk listener/catalyst POI sets
+			s.hub.heartIndexOnBlockChange(dimOverworld, x, y, z, state) // built creaking hearts
 		})
+		// Sculk and hearts built in the Nether and the End register from those
+		// worlds' own edits, so they keep working across a restart.
+		for _, dim := range []int{dimNether, dimEnd} {
+			if w := s.hub.worldFor(dim); w != s.hub.world {
+				w.ForEachEdit(func(x, y, z int, state uint32) {
+					s.hub.sculkIndexOnBlockChange(dim, x, y, z, state)
+					s.hub.heartIndexOnBlockChange(dim, x, y, z, state)
+				})
+			}
+		}
 		if s.LLMAddr != "" {
 			s.hub.llm = newLLMClient(s.LLMAddr, s.LLMModel)
 			log.Printf("LLM NPCs enabled: %s (model %q)", s.LLMAddr, s.LLMModel)

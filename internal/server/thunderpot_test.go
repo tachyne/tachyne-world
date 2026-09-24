@@ -48,9 +48,9 @@ func TestComparatorPotAndHeart(t *testing.T) {
 	}
 	c := h.spawnMob(players, entityCreaking, 26.5, 180.5, 0.5) // 16 blocks off
 	if h.hearts == nil {
-		h.hearts = map[blockPos]*heartLink{}
+		h.hearts = map[simPos]*heartLink{}
 	}
-	h.hearts[heart] = &heartLink{pos: heart, creaking: c.eid}
+	h.hearts[simPos{blockPos: heart}] = &heartLink{pos: heart, creaking: c.eid}
 	if got := h.analogSignal(simPos{blockPos: heart}); got != 8 { // 15 - floor(16/32 × 15)
 		t.Fatalf("a creaking 16 blocks out reads 8, got %d", got)
 	}

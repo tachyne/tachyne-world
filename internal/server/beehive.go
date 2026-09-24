@@ -62,7 +62,7 @@ func withHoney(s uint32, level int) uint32 {
 // harvestBeeHome is the right-click: shears cut honeycomb, a bottle draws
 // honey, and either empties the hive. Reports whether it did anything.
 func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPos) bool {
-	cur := h.world.At(pos.x, pos.y, pos.z)
+	cur := h.worldFor(t.dim).At(pos.x, pos.y, pos.z)
 	if !isBeeHome(cur) || t.inv == nil {
 		return false
 	}
@@ -92,23 +92,23 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 
 	changed, left := t.inv.addStack(give)
 	// ItemUsedOnBlockTrigger (safely_harvest_honey wants a smoked hive + bottle).
-	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(pos.x, pos.y, pos.z), item: tool, smokey: h.campfireUnder(pos)})
+	h.advance(players, t, "item_used_on_block", advMatch{blockState: h.worldFor(t.dim).At(pos.x, pos.y, pos.z), item: tool, smokey: h.campfireUnder(t.dim, pos)})
 	for _, sl := range changed {
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
 		h.spawnItemIn(players, t.dim, give.item, left, t.x, t.y, t.z)
 	}
-	h.setBlockAt(players, 0, pos, withHoney(cur, 0))
+	h.setBlockAt(players, t.dim, pos, withHoney(cur, 0))
 	h.playSoundDim(players, t.dim, sound, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 
 	// Robbing a hive turns the bees on you — the ones inside come OUT angry —
 	// unless smoke is keeping them calm.
-	h.registerHive(pos)
-	if !h.campfireUnder(pos) {
-		h.robHive(players, t, pos)
-		h.angerBees(players, t, pos)
+	h.registerHive(t.dim, pos)
+	if !h.campfireUnder(t.dim, pos) {
+		h.robHive(players, t, t.dim, pos)
+		h.angerBees(players, t, t.dim, pos)
 	}
 	return true
 }
@@ -122,9 +122,10 @@ func (h *hub) dayLight() bool {
 
 // campfireUnder looks for a LIT campfire in the few blocks below a hive: the
 // smoke is what lets you take the honey and walk away.
-func (h *hub) campfireUnder(pos blockPos) bool {
+func (h *hub) campfireUnder(dim int, pos blockPos) bool {
+	w := h.worldFor(dim)
 	for dy := 1; dy <= beeCampfireDepth; dy++ {
-		s := h.world.At(pos.x, pos.y-dy, pos.z)
+		s := w.At(pos.x, pos.y-dy, pos.z)
 		if isCampfireBlock(s) {
 			return boolProp(s, "lit")
 		}
@@ -132,10 +133,11 @@ func (h *hub) campfireUnder(pos blockPos) bool {
 	return false
 }
 
-// angerBees sets the hive's neighbours on the robber.
-func (h *hub) angerBees(players map[int32]*tracked, t *tracked, pos blockPos) {
+// angerBees sets the hive's neighbours — the bees of its own dimension — on
+// the robber.
+func (h *hub) angerBees(players map[int32]*tracked, t *tracked, dim int, pos blockPos) {
 	for _, m := range h.mobs {
-		if m.etype != entityBee || m.dim != 0 || m.dying > 0 {
+		if m.etype != entityBee || m.dim != dim || m.dying > 0 {
 			continue
 		}
 		if dist3(m.x, m.y, m.z, float64(pos.x), float64(pos.y), float64(pos.z)) > beeWorkRange*2 {

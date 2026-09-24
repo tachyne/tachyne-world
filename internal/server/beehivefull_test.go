@@ -13,9 +13,9 @@ import (
 
 // fillHive parks n idle occupants in a hive.
 func fillHive(h *hub, p blockPos, n int) {
-	h.registerHive(p)
+	h.registerHive(dimOverworld, p)
 	for i := 0; i < n; i++ {
-		h.hives[p] = append(h.hives[p], hiveOccupant{SecsLeft: 1 << 20})
+		h.hives[simPos{blockPos: p}] = append(h.hives[simPos{blockPos: p}], hiveOccupant{SecsLeft: 1 << 20})
 	}
 }
 
@@ -71,7 +71,7 @@ func TestABeeEntersOnceTheHiveHasRoomAgain(t *testing.T) {
 		t.Fatal("expected the full hive to be dropped first")
 	}
 	m.beeHome, m.beeHasHome = hive, true // it re-adopts once there is space
-	h.hives[hive] = h.hives[hive][:beeMaxOccupants-1]
+	h.hives[simPos{blockPos: hive}] = h.hives[simPos{blockPos: hive}][:beeMaxOccupants-1]
 
 	h.updateBee(players, m, true, false)
 	if _, still := h.mobs[m.eid]; still {
@@ -117,7 +117,7 @@ func TestHiveSearchIsRateLimited(t *testing.T) {
 		t.Errorf("cooldown %d after %d passes, want it counting down", m.beeLocateCD, beeLocateCD-1)
 	}
 	// Room appears; the search is allowed again once the cooldown runs out.
-	h.hives[hive] = nil
+	h.hives[simPos{blockPos: hive}] = nil
 	for i := 0; i < 3 && !m.beeHasHome; i++ {
 		h.updateBee(players, m, true, false)
 	}
@@ -156,7 +156,7 @@ func TestAnUnblacklistedHiveIsPreferred(t *testing.T) {
 
 	other := blockPos{6, 78, 2} // nearer than `hive` at x=20
 	h.world.SetBlock(other.x, other.y, other.z, beeNestMin)
-	h.registerHive(other)
+	h.registerHive(dimOverworld, other)
 	h.beeBanHive(m, other)
 
 	p, ok := h.findHiveFor(m)

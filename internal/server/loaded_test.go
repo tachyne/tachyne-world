@@ -62,7 +62,7 @@ func TestHivesTickOnlyInLoadedChunks(t *testing.T) {
 	h := newHub(w)
 	players := map[int32]*tracked{}
 	far := blockPos{8000, 90, 8000}
-	h.hives = map[blockPos][]hiveOccupant{far: {{SecsLeft: 50}}}
+	h.hives = map[simPos][]hiveOccupant{{blockPos: far}: {{SecsLeft: 50}}}
 	before := w.CacheLen()
 	for i := 0; i < 5; i++ {
 		h.updateBees(players)
@@ -70,7 +70,7 @@ func TestHivesTickOnlyInLoadedChunks(t *testing.T) {
 	if got := w.CacheLen(); got != before {
 		t.Fatalf("updating a far hive generated %d chunks on the hub", got-before)
 	}
-	if occ := h.hives[far]; len(occ) != 1 || occ[0].SecsLeft != 50 {
+	if occ := h.hives[simPos{blockPos: far}]; len(occ) != 1 || occ[0].SecsLeft != 50 {
 		t.Fatalf("a bee in an unloaded hive aged: %+v", occ)
 	}
 }

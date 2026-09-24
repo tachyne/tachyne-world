@@ -109,9 +109,9 @@ func hiveFixture(t *testing.T) (*hub, map[int32]*tracked, blockPos) {
 
 func placeHive(h *hub, pos blockPos, bees int) {
 	h.world.SetBlock(pos.x, pos.y, pos.z, worldgen.BlockBase("beehive"))
-	h.registerHive(pos)
+	h.registerHive(dimOverworld, pos)
 	for i := 0; i < bees; i++ {
-		h.hives[pos] = append(h.hives[pos], hiveOccupant{SecsLeft: 100})
+		h.hives[simPos{blockPos: pos}] = append(h.hives[simPos{blockPos: pos}], hiveOccupant{SecsLeft: 100})
 	}
 }
 
@@ -127,7 +127,7 @@ func TestExplosionReleasesHiveBees(t *testing.T) {
 	if n := countMobs(h, entityBee); n != 2 {
 		t.Fatalf("TNT should let both bees out, got %d", n)
 	}
-	if _, known := h.hives[pos]; known {
+	if _, known := h.hives[simPos{blockPos: pos}]; known {
 		t.Fatal("the destroyed hive is still on the books")
 	}
 
@@ -139,7 +139,7 @@ func TestExplosionReleasesHiveBees(t *testing.T) {
 	if n := countMobs(h, entityBee); n != 0 {
 		t.Fatalf("a bed's blast takes the bees with the hive, %d came out", n)
 	}
-	if _, known := h.hives[pos]; known {
+	if _, known := h.hives[simPos{blockPos: pos}]; known {
 		t.Fatal("a hive lost to a bed blast would tip its bees out on the next sweep")
 	}
 }
@@ -156,7 +156,7 @@ func TestFireBesideHiveEmptiesIt(t *testing.T) {
 	if n := countMobs(h, entityBee); n != 3 {
 		t.Fatalf("fire beside the hive should turn all three out, got %d", n)
 	}
-	if len(h.hives[pos]) != 0 {
+	if len(h.hives[simPos{blockPos: pos}]) != 0 {
 		t.Fatal("the hive should be empty")
 	}
 }

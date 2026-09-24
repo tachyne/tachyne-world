@@ -213,7 +213,7 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 		}
 	} else if isAnySensor(bs) {
 		if sensorPhase(bs) == sculkPhaseActive { // active sensor: comparator reads the frequency
-			if f := h.sculkFreq[back]; f > rear {
+			if f := h.sculkFreq[simPos{dim: h.rsDim, blockPos: back}]; f > rear {
 				rear = f
 			}
 		}
