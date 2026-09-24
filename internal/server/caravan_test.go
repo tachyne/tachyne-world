@@ -205,3 +205,21 @@ func TestSweepReach(t *testing.T) {
 		t.Error("a zombie standing on the target's head height + 0.5 is caught")
 	}
 }
+
+// Lightning belongs to the overworld: a bolt strikes what is there, not a
+// mob at the same coordinates in the Nether.
+func TestLightningStaysInTheOverworld(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	near := h.spawnMobIn(players, entityZombie, dimNether, 0.5, 100, 0.5)
+	here := h.spawnMobIn(players, entityZombie, dimOverworld, 0.5, 100, 0.5)
+	hpN, hpO := near.health, here.health
+	h.strikeLightning(players, 0.5, 100, 0.5, false)
+	if near.health != hpN || near.fireSecs != 0 {
+		t.Error("an overworld bolt struck a zombie in the Nether")
+	}
+	if here.health == hpO && here.fireSecs == 0 {
+		t.Error("the bolt missed the zombie it landed on")
+	}
+}

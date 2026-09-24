@@ -403,7 +403,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	// Entity.thunderHit: eight seconds alight (unless already burning), then
 	// the five of damage.
 	for _, t := range players {
-		if math.Abs(t.x-x) <= 3 && math.Abs(t.z-z) <= 3 && math.Abs(t.y-y) <= 6 {
+		if t.dim == dimOverworld && math.Abs(t.x-x) <= 3 && math.Abs(t.z-z) <= 3 && math.Abs(t.y-y) <= 6 {
 			if t.fireSecs == 0 {
 				h.setBurning(players, t, lightningFireSecs)
 			}
@@ -412,7 +412,7 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	}
 	var struck []*mob
 	for _, m := range h.mobs {
-		if m.dying == 0 && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
+		if m.dying == 0 && m.dim == dimOverworld && math.Abs(m.x-x) <= 3 && math.Abs(m.z-z) <= 3 && math.Abs(m.y-y) <= 6 {
 			if m.fireSecs == 0 {
 				m.ignite(lightningFireSecs)
 			}
