@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/clone.** Operators can copy a box of blocks somewhere else, up to
+  32,768 blocks at a time, as vanilla does. Chests, barrels, shulker boxes,
+  furnaces, hoppers, dispensers, brewing stands and the other containers
+  keep what is inside them, and signs, banners, lecterns, jukeboxes,
+  shelves, decorated pots and campfires keep theirs too. It supports
+  replace, masked (skip air) and filtered (only one block, or a block tag),
+  and normal, force (allow the copy to overlap its source) and move (empty
+  the source without dropping anything). `strict` stops attached blocks
+  from popping off afterwards, and `from`/`to` copy between dimensions.
 - **Online mode for Java players.** The Java gateway
   can now log players in the way vanilla does with online mode on. The
   connection is encrypted, and Mojang's session service confirms the

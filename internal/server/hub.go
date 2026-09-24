@@ -1394,6 +1394,8 @@ func (h *hub) run() {
 				h.onJoin(players, e)
 			case evRunOnHub:
 				e.fn() // a barrier/query from another goroutine, in event order
+			case evHubCmd:
+				e.fn(players) // a command's hub half (cmdhub.go)
 			case evMove:
 				if t := players[e.eid]; t != nil {
 					h.onMove(players, t, e)
