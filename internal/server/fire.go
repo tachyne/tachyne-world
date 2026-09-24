@@ -579,11 +579,6 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 	if t.fireSecs <= 0 {
 		return
 	}
-	if t.hasEffect(effFireRes) > 0 {
-		t.fireSecs = 0 // fire resistance snuffs the burn outright
-		h.broadcastPlayerFlags(players, t)
-		return
-	}
 	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
 	feet := int(math.Floor(t.y))
 	// Still standing in the source: contact damage already applied this second
@@ -599,7 +594,11 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		t.fireSecs = 0
 	} else {
 		t.fireSecs--
-		h.hurtBy(players, t, fireDamagePerSec, dtOnFire, deathCause{}) // the afterburn bypasses armour
+		// Fire Resistance leaves the burn to run its course (the flames still
+		// show) and only turns the damage away, as LivingEntity.hurtServer does.
+		if t.hasEffect(effFireRes) == 0 {
+			h.hurtBy(players, t, fireDamagePerSec, dtOnFire, deathCause{}) // the afterburn bypasses armour
+		}
 	}
 	if t.fireSecs <= 0 && !t.dead {
 		h.broadcastPlayerFlags(players, t)

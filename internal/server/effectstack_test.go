@@ -53,3 +53,21 @@ func TestAbsorptionEndsWithItsHearts(t *testing.T) {
 		t.Error("the absorption effect outlived its hearts")
 	}
 }
+
+// Fire Resistance turns the burn's damage away but leaves the burn itself
+// to run its course.
+func TestFireResistanceBlocksBurnDamageOnly(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.x, pl.y, pl.z = 0.5, 250, 0.5
+	h.applyEffect(players, pl, effFireRes, 0, 60)
+	pl.fireSecs = 5
+	hp := pl.health
+	h.tickBurning(players, pl)
+	if pl.fireSecs != 4 || pl.health != hp {
+		t.Errorf("with Fire Resistance: burn %d s (want 4), health %v → %v", pl.fireSecs, hp, pl.health)
+	}
+}

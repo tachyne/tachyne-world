@@ -57,8 +57,6 @@ func (h *hub) applyMobEffectDur(players map[int32]*tracked, m *mob, id int32, am
 		if ignoresPoisonAndRegen(m.etype) {
 			return // #ignores_poison_and_regen: the undead are unmoved
 		}
-	case effFireRes:
-		m.fireSecs = 0 // as on a player: the burn is snuffed outright
 	}
 	if !m.startEffectTicks(id, amp, ticks) {
 		return // a stronger or longer instance is already running

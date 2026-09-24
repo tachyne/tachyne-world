@@ -186,7 +186,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, true)))
 			}
 			m.fireSecs--
-			if !inLava && !inFire { // lava/fire already dealt this second's damage
+			if !inLava && !inFire && m.hasEffect(effFireRes) == 0 { // lava/fire already dealt this second's damage; Fire Resistance turns it away
 				h.hurtMobOf(players, m, burnDamagePerSec, dtOnFire)
 				if m.health <= 0 {
 					continue
