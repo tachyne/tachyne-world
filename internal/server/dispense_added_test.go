@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -131,4 +133,26 @@ func TestEnderChestBlockedByConductor(t *testing.T) {
 	if pl.winID == 0 {
 		t.Error("a clear ender chest did not open")
 	}
+}
+
+// A banner blown up (or knocked off its wall) still drops with its layers:
+// the loot table copies them from the block entity.
+func TestExplodedBannerKeepsPattern(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	pos := blockPos{0, 100, 0}
+	st := worldgen.BlockID("white_banner")
+	h.world.SetBlock(pos.x, pos.y, pos.z, st)
+	h.banners.set(simPos{blockPos: pos}, []attachproto.BannerLayer{{Pattern: "minecraft:stripe_bottom", Color: "red"}})
+	h.dropExploded(players, 0, pos, st, 4, blastTNT)
+	for _, it := range h.items {
+		if it.item == itemByName["white_banner"] && it.pats[0].patPlus1 != 0 {
+			return
+		}
+		if it.item == itemByName["white_banner"] {
+			t.Fatal("the exploded banner dropped plain")
+		}
+	}
+	t.Fatal("no banner dropped")
 }

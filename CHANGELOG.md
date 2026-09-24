@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Banners keep their patterns however they break.** A banner blown up,
+  knocked off its wall or broken by a piston drops with its pattern, as one
+  broken by hand does.
 - **Bookshelves count through grass and snow.** As in 26.3, a bookshelf
   powers an enchanting table even with short grass, snow, water or anything
   else from `#replaceable` in the gap between them. A torch still blocks

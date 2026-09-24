@@ -145,7 +145,16 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 	px := float64(x) + 0.5 + off()
 	py := float64(y) + 0.5 + off() - 0.125 // minus half the item's height
 	pz := float64(z) + 0.5 + off()
-	h.spawnItemAt(players, dim, item, count, px, py, pz, h.rng.Float64()*0.2-0.1, 0.2, h.rng.Float64()*0.2-0.1)
+	it := h.spawnItemAt(players, dim, item, count, px, py, pz, h.rng.Float64()*0.2-0.1, 0.2, h.rng.Float64()*0.2-0.1)
+	// A banner broken any other way than by a player's hand (a blast, a lost
+	// wall, a piston) still drops patterned: the loot table copies the block
+	// entity's layers, which the store holds until then.
+	if it != nil && bannerItems[item] {
+		if layers := h.banners.get(dim, x, y, z); len(layers) > 0 {
+			h.stampBannerLayers(players, it, layers)
+			h.banners.remove(simPos{dim: dim, blockPos: blockPos{x, y, z}})
+		}
+	}
 }
 
 // updateItems despawns dropped items past their lifetime and merges nearby

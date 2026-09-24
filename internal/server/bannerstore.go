@@ -169,6 +169,11 @@ func (h *hub) dropBannerLayers(players map[int32]*tracked, pos simPos, it *itemE
 	}
 	layers := h.lastBannerLayers
 	h.lastBannerPos, h.lastBannerLayers = simPos{}, nil
+	h.stampBannerLayers(players, it, layers)
+}
+
+// stampBannerLayers writes stored banner layers onto a dropped banner item.
+func (h *hub) stampBannerLayers(players map[int32]*tracked, it *itemEntity, layers []attachproto.BannerLayer) {
 	n := 0
 	for _, l := range layers {
 		id, ok := bannerPatternIDs[bannerPatternQualified(l.Pattern)]
