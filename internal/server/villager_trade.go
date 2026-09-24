@@ -368,18 +368,21 @@ func (h *hub) resolveOffer(m *mob, t vTrade) (mobOffer, bool) {
 }
 
 // awardTradeXP is Villager.rewardTradeXp's bookkeeping half: credit the trade
-// and, if that crossed the next tier's threshold, ARM the level-up rather than
-// applying it. Vanilla waits forty ticks (Villager.updateMerchantTimer) before
-// the villager actually gains the tier, which is what the pause and the
-// sparkle after a promoting trade are. It returns whether the trade armed one,
-// because that is also what adds five to the experience orb.
-func (h *hub) awardTradeXP(m *mob, xp int32) bool {
+// and, if that crossed the next tier's threshold, promote the villager one
+// tier. It returns whether the trade promoted, because that is also what adds
+// five to the experience orb.
+func (h *hub) awardTradeXP(players map[int32]*tracked, m *mob, xp int32) bool {
 	m.tradeXP += int(xp)
 	if !shouldIncreaseLevel(m) {
 		return false
 	}
-	m.merchantTimer = merchantUpdateDelay
-	m.levelUpPending = true
+	// 26.3 Villager.rewardTradeXp: the tier, its new offers and the
+	// Regeneration sparkle land at once (increaseMerchantCareer); the old
+	// forty-tick updateMerchantTimer pause is gone.
+	m.tradeLevel++
+	h.unlockTier(m, m.tradeLevel)
+	h.sendVillagerData(players, m)
+	h.applyMobEffect(players, m, effRegen, 0, 10) // REGENERATION 200 ticks, amp 0
 	return true
 }
 

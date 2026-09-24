@@ -178,11 +178,8 @@ func TestVillagerPersistRoundTrip(t *testing.T) {
 	h := newHub(world.New(1))
 	h.mobstore = newMobStore(path)
 	v := h.spawnMob(players, entityVillager, 10.5, 70, 10.5)
-	h.initVillagerTrades(v, 4) // librarian
-	h.awardTradeXP(v, 15)      // novice → apprentice, unlocks tier-2 stock
-	for i := 0; i < merchantUpdateDelay/mobMoveInterval; i++ {
-		h.villagerMerchantTick(players, v) // the tier lands forty ticks later
-	}
+	h.initVillagerTrades(v, 4)     // librarian
+	h.awardTradeXP(players, v, 15) // novice → apprentice, unlocks tier-2 stock
 	v.offers[0].uses = 3
 	wantOffers := append([]mobOffer(nil), v.offers...)
 	v.home, v.bed, v.work, v.meet = blockPos{10, 70, 10}, blockPos{9, 70, 10}, blockPos{11, 70, 9}, blockPos{40, 70, 40}

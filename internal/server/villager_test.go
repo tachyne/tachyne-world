@@ -167,24 +167,13 @@ func TestVillagerLevelsUp(t *testing.T) {
 	if base == 0 {
 		t.Fatal("a novice should already have tier-1 offers")
 	}
-	// Vanilla does not promote on the trade itself: rewardTradeXp arms
-	// updateMerchantTimer and the tier lands forty ticks later, along with the
-	// Regeneration that draws the sparkle. That pause is visible in game.
-	if !h.awardTradeXP(m, 10) { // vanilla threshold to apprentice
-		t.Fatal("10 XP should arm a promotion")
+	// 26.3 promotes on the trade itself (increaseMerchantCareer in
+	// rewardTradeXp): the tier, the offers and the Regeneration at once.
+	if !h.awardTradeXP(players, m, 10) { // vanilla threshold to apprentice
+		t.Fatal("10 XP should promote")
 	}
-	if m.tradeLevel != 1 || !m.levelUpPending {
-		t.Fatalf("the tier must wait for the timer: level %d pending %v", m.tradeLevel, m.levelUpPending)
-	}
-	for i := 0; i < merchantUpdateDelay/mobMoveInterval-1; i++ {
-		h.villagerMerchantTick(players, m)
-	}
-	if m.tradeLevel != 1 {
-		t.Fatalf("promoted %d ticks early", merchantUpdateDelay)
-	}
-	h.villagerMerchantTick(players, m)
 	if m.tradeLevel != 2 {
-		t.Fatalf("10 XP should promote to tier 2 after the delay, got %d", m.tradeLevel)
+		t.Fatalf("10 XP should promote to tier 2 at once, got %d", m.tradeLevel)
 	}
 	if len(m.offers) <= base {
 		t.Fatal("leveling up should unlock more offers")
@@ -194,25 +183,18 @@ func TestVillagerLevelsUp(t *testing.T) {
 	}
 
 	// And only ONE tier per trade, however much experience it paid.
-	if !h.awardTradeXP(m, 500) {
-		t.Fatal("500 XP should arm another promotion")
+	if !h.awardTradeXP(players, m, 500) {
+		t.Fatal("500 XP should promote again")
 	}
-	runMerchantTimer := func() {
-		for i := 0; i < merchantUpdateDelay/mobMoveInterval; i++ {
-			h.villagerMerchantTick(players, m)
-		}
-	}
-	runMerchantTimer()
 	if m.tradeLevel != 3 {
 		t.Fatalf("one trade promotes one tier; got %d", m.tradeLevel)
 	}
 	for m.tradeLevel < maxTradeTier {
-		if !h.awardTradeXP(m, 0) {
+		if !h.awardTradeXP(players, m, 0) {
 			t.Fatalf("stuck at tier %d with %d XP", m.tradeLevel, m.tradeXP)
 		}
-		runMerchantTimer()
 	}
-	if h.awardTradeXP(m, 500) {
+	if h.awardTradeXP(players, m, 500) {
 		t.Fatalf("master is the cap, got %d", m.tradeLevel)
 	}
 }

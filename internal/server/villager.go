@@ -536,7 +536,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32
 	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
 	o.uses++                   // toward this offer's lock
 	if m := h.mobs[t.tradeWith]; m != nil {
-		promoted := h.awardTradeXP(m, o.trade.xp) // may promote the villager + unlock trades
+		promoted := h.awardTradeXP(players, m, o.trade.xp) // may promote the villager + unlock trades
 		// Villager.rewardTradeXp: the trader hands the PLAYER 3-6 experience
 		// for the trade, and five more when that trade levelled them up.
 		xp := 3 + h.rng.Intn(4)

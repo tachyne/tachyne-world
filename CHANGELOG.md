@@ -124,6 +124,9 @@ the public history since the project was open-sourced on 2026-07-10.
   - A pumpkin or melon stem lets go when its fruit is picked.
   - Huge mushroom blocks close the faces that touch their own kind.
   - A piston head passes neighbour updates to its piston.
+- **Villagers level up on the trade.** As in 26.3, a villager takes its new
+  tier, its new offers and its level-up sparkle the moment the promoting
+  trade is made, with no two-second pause.
 - **Water Breathing protects mobs.** A mob with Water Breathing or Conduit
   Power no longer drowns.
 - **Fire Resistance works as in vanilla.** You still burn, and others see
