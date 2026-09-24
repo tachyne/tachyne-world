@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Breezes handle projectiles like vanilla's.** A breeze now turns
+  arrows and other projectiles back at half speed instead of being hit by
+  them. Wind charges still hit it. A breeze's wind charge now hits other
+  mobs in its way, but never hurts another breeze. It also bursts with its
+  full, wider blast, even after a player hits it back.
 - **Thrown things carry your motion and a little wobble.** Snowballs,
   eggs, ender pearls, bottles o' enchanting, thrown potions, wind charges,
   tridents and bow shots now add the thrower's own movement, as in

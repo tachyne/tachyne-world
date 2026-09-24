@@ -53,6 +53,8 @@ type arrowEntity struct {
 	breaks     bool     // snowball/egg: shatters on impact instead of sticking
 	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
 	breezeBorn bool     // a breeze's wind charge (vanilla's breeze_wind_charge), even once batted back
+	turnedBy   int32    // the breeze that last turned this projectile back (lastDeflectedBy)
+	turnedNow  bool     // turned back during this sample: stop the move where it is
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
 	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
@@ -337,6 +339,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				hit = true
 				break
 			}
+			if a.turnedNow { // a breeze sent it back: it flies off on its new course next tick
+				a.turnedNow = false
+				break
+			}
 			if worldgen.Collides(h.worldFor(a.dim).At(int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz)))) {
 				h.vibAt(a.dim, freqProjectileLand, px, py, pz, a.shooter)
 				if a.breaks { // snowballs/eggs shatter
@@ -592,6 +598,18 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if a.hitMobs != nil && a.hitMobs[m.eid] {
 			continue // piercing bolt already struck this mob — pass through
 		}
+		if m.etype == entityBreeze && a.knock == 0 {
+			// Breeze.deflection (#deflects_projectiles): anything but a wind
+			// charge is turned back at half speed, once per breeze; after
+			// that it passes the breeze by. It never lands.
+			if a.turnedBy != m.eid {
+				a.vx, a.vy, a.vz = -a.vx*0.5, -a.vy*0.5, -a.vz*0.5
+				a.turnedBy, a.turnedNow = m.eid, true
+				h.playSoundDim(players, m.dim, "minecraft:entity.breeze.deflect", sndHostile, m.x, m.y, m.z, 1, 1)
+				return false
+			}
+			continue
+		}
 		if m.etype == entityShulker && m.shulkerClosed() && a.etype != entityShulkerBullet {
 			continue // a closed shell: arrows glance off (Shulker.hurtServer)
 		}
@@ -605,6 +623,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.wardenAngerAt(m, a.shooter, wardenAngerShot) // PROJECTILE_ANGER
 		}
 		if a.knock > 0 { // a wind charge: one point of damage, a shove and the burst
+			// Breeze.isInvulnerableTo: nothing a breeze owns can hurt a
+			// breeze — the burst still goes off.
+			if m.etype == entityBreeze && h.breezeOwned(a) {
+				h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+				return true
+			}
 			if a.playerShot {
 				m.hitByPlayer = true
 			}
