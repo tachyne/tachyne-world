@@ -103,6 +103,9 @@ func (h *hub) spillPot(players map[int32]*tracked, dim int, pos blockPos, newSta
 	}
 	key := simPos{dim: dim, blockPos: pos}
 	h.ensurePotLoot(key)
+	if sh, ok := h.potSherds.get(dim, pos.x, pos.y, pos.z); ok && !sh.empty() {
+		h.lastPotPos, h.lastPotSherds = key, sh // held for the drop that follows the removal
+	}
 	h.potSherds.remove(key) // the faces go with the block; the DROP carries them
 	st, ok := h.pots[key]
 	if !ok {

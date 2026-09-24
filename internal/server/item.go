@@ -149,6 +149,13 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 	// A banner broken any other way than by a player's hand (a blast, a lost
 	// wall, a piston) still drops patterned: the loot table copies the block
 	// entity's layers, which the store holds until then.
+	// A decorated pot's faces ride any drop of it the same way (copy_components
+	// from the block entity), held by spillPot for the drop that follows.
+	if it != nil && item == itemDecoratedPot && h.lastPotPos == (simPos{dim: dim, blockPos: blockPos{x, y, z}}) {
+		it.sherds = h.lastPotSherds
+		h.lastPotPos, h.lastPotSherds = simPos{}, potSherds{}
+		h.refreshItemMeta(players, it)
+	}
 	if it != nil && bannerItems[item] {
 		if layers := h.banners.get(dim, x, y, z); len(layers) > 0 {
 			h.stampBannerLayers(players, it, layers)

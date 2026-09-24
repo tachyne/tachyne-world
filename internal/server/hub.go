@@ -629,6 +629,8 @@ type hub struct {
 	// The layers of the banner that was broken a moment ago, waiting for its
 	// drop (the block change lands one event ahead of the drop).
 	lastBannerPos    simPos
+	lastPotPos       simPos    // a decorated pot just removed…
+	lastPotSherds    potSherds // …and its faces, for the drop that follows
 	lastBannerLayers []attachproto.BannerLayer
 	books            *bookStore              // books.json (contents by book id, the map model)
 	lecterns         map[simPos]*lectern     // held books + open pages (persisted with containers)
@@ -1689,6 +1691,10 @@ func (h *hub) run() {
 					// (Vanilla does this with copy_components; the faces are
 					// held aside for the same moment the banner's layers are.)
 					sh, _ := h.potSherds.get(e.dim, e.x, e.y, e.z)
+					if here := (simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}); h.lastPotPos == here {
+						sh = h.lastPotSherds // the evBlock just ahead spilled the pot and held its faces
+						h.lastPotPos, h.lastPotSherds = simPos{}, potSherds{}
+					}
 					if t := players[e.by]; t != nil && potCracksUnder(heldStack(t)) {
 						// playerWillDestroy: a sword, axe, pickaxe, shovel, hoe,
 						// trident or mace without Silk Touch cracks it, and a

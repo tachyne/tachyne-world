@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Decorated pots keep their sherds.** A pot broken by hand without a
+  tool, or blown up, drops with the sherds on its faces. Before, the pot's
+  record of its sherds was cleared just before the drop was made, so it
+  came out plain.
 - **Banners keep their patterns however they break.** A banner blown up,
   knocked off its wall or broken by a piston drops with its pattern, as one
   broken by hand does.

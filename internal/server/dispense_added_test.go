@@ -156,3 +156,27 @@ func TestExplodedBannerKeepsPattern(t *testing.T) {
 	}
 	t.Fatal("no banner dropped")
 }
+
+// A decorated pot blown up keeps its faces: the removal holds them for the
+// drop that follows.
+func TestExplodedPotKeepsSherds(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	pos := blockPos{0, 100, 0}
+	st := worldgen.BlockID("decorated_pot")
+	h.world.SetBlock(pos.x, pos.y, pos.z, st)
+	angler := itemByName["angler_pottery_sherd"]
+	h.potSherds.set(simPos{blockPos: pos}, potSherds{angler, 0, 0, 0})
+	h.setBlockAt(players, 0, pos, worldgen.Air) // the blast clears the cell first…
+	h.dropExploded(players, 0, pos, st, 4, blastTNT)
+	for _, it := range h.items {
+		if it.item == itemDecoratedPot {
+			if it.sherds[0] != angler {
+				t.Fatalf("the exploded pot dropped with sherds %v", it.sherds)
+			}
+			return
+		}
+	}
+	t.Fatal("no pot dropped")
+}
