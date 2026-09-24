@@ -96,6 +96,13 @@ the public history since the project was open-sourced on 2026-07-10.
     saved under "@a".
   - /time takes vanilla's forms (set, add, query, with d/s/t units) and,
     like /say, needs op.
+- **No more stalls when flying over new ground.** Moss patches in caves
+  were planted a block above their floor, floating, and fell to thousands
+  of dropped items as soon as anything beside them changed. The pile of
+  items then made each server tick slow. Patches now sit on their floor.
+  Nearby dropped items merge far faster, and a hot block-state lookup that
+  villagers' pathing leaned on is much quicker, which removes the
+  multi-second spikes.
 - **No more snap-backs in fast flight.** The movement check now uses
   vanilla's rule: a single move may carry you up to 10 blocks. It replaces
   a stricter speed budget of the engine's own, which hitched fast creative

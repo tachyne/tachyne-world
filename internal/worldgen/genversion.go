@@ -48,4 +48,9 @@ package worldgen
 // cells — a tree that caught fire was dropped whole on regeneration — nor
 // the soil under a trunk turning from grass to dirt and back, which dropped
 // nearly every tree anyone had lived near.
-const GenVersion = 19
+//
+// v20: a vegetation patch (moss floors, lush-cave clay pools) plants on its
+// ground, not a block above it: every moss patch's carpets, grass and azaleas
+// used to float, and fell to items the first time anything beside them
+// changed.
+const GenVersion = 20

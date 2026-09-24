@@ -333,29 +333,42 @@ func (g *Generator) vegetationPatch(r TreeRNG, reg *owRegion, x, y, z int, c pat
 				placed = true
 				gy += inward
 			}
-			if placed {
-				surface = append(surface, [3]int{px, py - inward, pz})
+			if placed { // the GROUND cell (VegetationPatchFeature's groundPos)
+				surface = append(surface, [3]int{px, py + inward, pz})
 			}
 		}
 	}
-	if c.pool { // WaterloggedVegetationPatchFeature: the surface cells become water where enclosed
+	if c.pool { // WaterloggedVegetationPatchFeature: a ground cell closed in on its four sides and below becomes water
+		var water [][3]int
 		for _, s := range surface {
-			px, py, pz := s[0], s[1]+outward, s[2]
-			enclosed := true
+			px, py, pz := s[0], s[1], s[2]
+			enclosed := solid(reg.read(px, py+inward, pz))
 			for _, o := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				if n := reg.read(px+o[0], py, pz+o[1]); n == Air {
+				if !solid(reg.read(px+o[0], py, pz+o[1])) {
 					enclosed = false
 					break
 				}
 			}
 			if enclosed {
-				reg.set(px, py, pz, Water)
+				water = append(water, s)
 			}
 		}
+		for _, s := range water {
+			reg.set(s[0], s[1], s[2], Water)
+		}
 	}
+	// Vegetation stands one step out from the ground cell; a pool's goes into
+	// the ground cell itself, waterlogged where it turned to water. Planting
+	// one step further out (as this did until 2026-09-24) left every patch
+	// floating a block above its floor, and each patch fell to items the
+	// first time anything beside it changed.
 	for _, s := range surface {
 		if c.vegetation > 0 && r.Float64() < c.vegetation {
-			c.plant(r, reg, s[0], s[1]+outward, s[2])
+			y := s[1] + outward
+			if c.pool {
+				y = s[1]
+			}
+			c.plant(r, reg, s[0], y, s[2])
 		}
 	}
 }

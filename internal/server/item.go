@@ -149,28 +149,51 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 // identical stacks (vanilla: ground items within ~0.5 blocks combine).
 func (h *hub) updateItems(players map[int32]*tracked) {
 	now := h.tick.Load()
+	type cell struct {
+		dim  int
+		x, z int
+	}
+	// Items bucketed by the block column they are in: a merge partner lies
+	// within 0.75 horizontally, so only the 3×3 columns around an item can
+	// hold one. Comparing every item with every other (as this did until
+	// 2026-09-24) took most of a second once a few thousand lay about, and
+	// the stalled tick held back everyone's movement.
+	buckets := map[cell][]int32{}
 	for eid, it := range h.items {
 		if now-it.born >= itemDespawnTicks {
 			delete(h.items, eid)
 			h.entityGone(players, it.dim, eid)
 			continue
 		}
-		for oid, other := range h.items {
-			if oid == eid || !sameItemComponents(it.stack(), other.stack()) ||
-				it.count+other.count > stackCap(it.item) {
-				continue
+		c := cell{it.dim, floorInt(it.x), floorInt(it.z)}
+		buckets[c] = append(buckets[c], eid)
+	}
+	for eid, it := range h.items {
+		if h.items[eid] == nil {
+			continue // absorbed into another this pass
+		}
+		cx, cz := floorInt(it.x), floorInt(it.z)
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				for _, oid := range buckets[cell{it.dim, cx + dx, cz + dz}] {
+					other := h.items[oid]
+					if oid == eid || other == nil || !sameItemComponents(it.stack(), other.stack()) ||
+						it.count+other.count > stackCap(it.item) {
+						continue
+					}
+					// Vanilla merges within the item's bbox inflated 0.5 horizontally,
+					// 0 vertically — a flat horizontal AABB (~0.75 wide, ~0.25 tall), not
+					// a 1.0 sphere: items on different shelves/levels don't merge.
+					ox, oy, oz := other.x-it.x, other.y-it.y, other.z-it.z
+					if math.Abs(ox) > 0.75 || math.Abs(oz) > 0.75 || math.Abs(oy) > 0.25 {
+						continue
+					}
+					it.count += other.count // absorb the other into this one
+					delete(h.items, oid)
+					h.entityGone(players, other.dim, oid)
+					h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))
+				}
 			}
-			// Vanilla merges within the item's bbox inflated 0.5 horizontally,
-			// 0 vertically — a flat horizontal AABB (~0.75 wide, ~0.25 tall), not
-			// a 1.0 sphere: items on different shelves/levels don't merge.
-			dx, dy, dz := other.x-it.x, other.y-it.y, other.z-it.z
-			if math.Abs(dx) > 0.75 || math.Abs(dz) > 0.75 || math.Abs(dy) > 0.25 {
-				continue
-			}
-			it.count += other.count // absorb the newer into this one
-			delete(h.items, oid)
-			h.entityGone(players, other.dim, oid)
-			h.toNearbyEv(players, it.dim, it.x, it.z, metaEv(itemMetadata(eid, it.stack())))
 		}
 	}
 }

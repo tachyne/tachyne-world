@@ -1,5 +1,10 @@
 package worldgen
 
+import (
+	"sort"
+	"sync"
+)
+
 // Horizontal connection support for multi-block "connecting" blocks — fences,
 // glass panes, and iron bars, which carry boolean north/east/south/west state.
 // Placement and neighbour updates use these to compute a block's connection
@@ -8,19 +13,50 @@ package worldgen
 
 // InfoForState returns the state layout for the block that owns `state` — any
 // state in its range, not just its default (a neighbouring fence already has its
-// connections set). Scans blockInfo by range; the table is small and this only
-// runs on placement / neighbour updates.
+// connections set). A binary search over the ranges, sorted once: it runs in
+// hot loops (a villager's path search asks it of every cell for doors), and
+// the old scan of all blockInfo entries per call was the largest single CPU
+// cost in the hub.
 func InfoForState(state uint32) (BlockInfo, bool) {
-	for _, info := range blockInfo {
-		size := uint32(1)
-		for _, p := range info.Props {
-			size *= uint32(len(p.Vals))
-		}
-		if state >= info.Min && state < info.Min+size {
-			return info, true
+	rs := infoRanges()
+	lo, hi := 0, len(rs)-1
+	for lo <= hi {
+		mid := (lo + hi) / 2
+		switch r := &rs[mid]; {
+		case state < r.min:
+			hi = mid - 1
+		case state >= r.end:
+			lo = mid + 1
+		default:
+			return r.info, true
 		}
 	}
 	return BlockInfo{}, false
+}
+
+type infoRange struct {
+	min, end uint32 // [min, end)
+	info     BlockInfo
+}
+
+var (
+	infoOnce   sync.Once
+	infoSorted []infoRange
+)
+
+// infoRanges is blockInfo as sorted state ranges, built on first use.
+func infoRanges() []infoRange {
+	infoOnce.Do(func() {
+		for _, info := range blockInfo {
+			size := uint32(1)
+			for _, p := range info.Props {
+				size *= uint32(len(p.Vals))
+			}
+			infoSorted = append(infoSorted, infoRange{info.Min, info.Min + size, info})
+		}
+		sort.Slice(infoSorted, func(i, j int) bool { return infoSorted[i].min < infoSorted[j].min })
+	})
+	return infoSorted
 }
 
 // IsHorizontalConnector reports whether a block connects via boolean
