@@ -237,7 +237,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla. A llama that falls more than 26 blocks behind speeds up, and
   leaves the line if it still can't catch up. The caravan breaks up when
   nobody at the front is on a lead any more. A wandering trader's llamas
-  now spit at whoever hurts the trader. Camels stroll at their vanilla
+  now spit at whoever hurts the trader, and any llama spits at a wild wolf
+  within ten blocks. Camels stroll at their vanilla
   pace.
 - **The camel husk (26.3).** One naturally spawned husk in ten, given room
   for a camel, rides out on a camel husk:
