@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **`/gamerule <rule>` shows the current value**, as vanilla's does, and
+  `limited_crafting` can be set with `/gamerule`.
 - **Dispensed spectral arrows glow.** A spectral arrow fired from a
   dispenser flies as a spectral arrow and makes what it hits glow, like one
   shot from a bow.

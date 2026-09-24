@@ -264,6 +264,15 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
+	if len(args) == 1 { // the query form: "Gamerule <rule> is currently set to: <value>"
+		rule, ok := canonicalRule(args[0])
+		if !ok {
+			p.tell("Unknown gamerule: " + args[0])
+			return
+		}
+		s.hub.post(evRuleQuery{eid: p.eid, rule: rule})
+		return
+	}
 	if len(args) != 2 {
 		p.tell("Gamerules: " + strings.Join(append(append([]string{}, booleanRules...), numericRules...), " "))
 		return

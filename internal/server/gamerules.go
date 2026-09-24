@@ -1,5 +1,11 @@
 package server
 
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
 // Game-rule names.
 //
 // Vanilla renamed the whole set to snake_case — doDaylightCycle became
@@ -48,6 +54,7 @@ var gameruleAlias = map[string]string{
 	"spawnRadius":               "respawn_radius",
 	"snowAccumulationHeight":    "max_snow_accumulation_height",
 	"universalAnger":            "universal_anger",
+	"doLimitedCrafting":         "limited_crafting",
 }
 
 // booleanRules is every boolean rule tachyne enforces, canonical names.
@@ -69,7 +76,7 @@ var booleanRules = []string{
 	"tnt_explosion_drop_decay", "spawn_wandering_traders", "universal_anger",
 	// Added 2026-09-20 — vanilla rules the engine has a mechanic for.
 	"allow_entering_nether_using_portals", "projectiles_can_break_blocks",
-	"global_sound_events",
+	"global_sound_events", "limited_crafting",
 }
 
 // numericRules is the same for the rules that take a number.
@@ -108,4 +115,47 @@ func isNumericRule(name string) bool {
 		}
 	}
 	return false
+}
+
+// evRuleQuery is /gamerule <rule> with no value: its current value.
+type evRuleQuery struct {
+	eid  int32
+	rule string
+}
+
+func (evRuleQuery) isHubEvent() {}
+
+// ruleValueText reads a rule's current value off the rules as they are
+// persisted: the struct's JSON keys are the legacy camelCase names, which
+// is what the alias table maps back to (a rule vanilla never renamed is its
+// snake_case name in camelCase).
+func (h *hub) ruleValueText(rule string) (string, bool) {
+	raw, err := json.Marshal(h.rules)
+	if err != nil {
+		return "", false
+	}
+	var m map[string]any
+	if json.Unmarshal(raw, &m) != nil {
+		return "", false
+	}
+	// The key is the rule's camelCase name, or, for a field that kept its
+	// pre-rename spelling, the legacy name the alias table maps from.
+	parts := strings.Split(rule, "_")
+	for i := 1; i < len(parts); i++ {
+		if parts[i] != "" {
+			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		}
+	}
+	keys := []string{strings.Join(parts, "")}
+	for legacy, canon := range gameruleAlias {
+		if canon == rule {
+			keys = append(keys, legacy)
+		}
+	}
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			return fmt.Sprint(v), true
+		}
+	}
+	return "", false
 }

@@ -176,3 +176,16 @@ func TestGlobalSoundReachesEveryone(t *testing.T) {
 	far.dim = 1
 	h.playSoundGlobal(players, 0, "minecraft:entity.wither.spawn", sndHostile, 0, 70, 0, 4, 1)
 }
+
+// /gamerule <rule>: every rule the command lists can be read back.
+func TestEveryGameruleQueries(t *testing.T) {
+	h := newHub(world.New(1))
+	for _, r := range append(append([]string{}, booleanRules...), numericRules...) {
+		if _, ok := h.ruleValueText(r); !ok {
+			t.Errorf("%s has no readable value", r)
+		}
+	}
+	if v, _ := h.ruleValueText("limited_crafting"); v != "false" {
+		t.Errorf("limited_crafting reads %q, want false", v)
+	}
+}

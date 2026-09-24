@@ -1621,6 +1621,12 @@ func (h *hub) run() {
 				}
 			case evSetRule:
 				h.applyRule(players, e)
+			case evRuleQuery:
+				if t := players[e.eid]; t != nil {
+					if v, ok := h.ruleValueText(e.rule); ok {
+						t.p.trySendEv(chatEv(fmt.Sprintf("Gamerule %s is currently set to: %s", e.rule, v)))
+					}
+				}
 			case evSetBlocks:
 				h.applySetBlocks(players, e)
 			case evEnchantCmd:
