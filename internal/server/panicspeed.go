@@ -97,7 +97,15 @@ func (h *hub) panicTarget(m *mob) (float64, float64, bool) {
 	if w == nil {
 		return 0, 0, false
 	}
+	// PanicGoal.canUse: a mob on fire makes for water within five blocks
+	// (lookForWater) before any random spot.
+	if x, z, ok := h.panicWaterNear(m); ok {
+		return x, z, true
+	}
 	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	if m.swims || m.flies {
+		return h.panicTargetFree(m, bx, by, bz)
+	}
 	best, found := -1e9, false
 	var tx, tz float64
 	for i := 0; i < 10; i++ {
@@ -126,4 +134,32 @@ func (h *hub) panicTarget(m *mob) (float64, float64, bool) {
 		}
 	}
 	return tx, tz, found
+}
+
+// panicTargetFree is the random panic spot for a mob whose navigation is not
+// the ground's: a swimmer takes any water cell (WaterBoundPathNavigation's
+// isStableDestination), a flier any open cell with something under it
+// (FlyingPathNavigation's). Requiring a floor froze fish in open water and
+// fliers in the air for the whole panic.
+func (h *hub) panicTargetFree(m *mob, bx, by, bz int) (float64, float64, bool) {
+	w := h.worldFor(m.dim)
+	for i := 0; i < 10; i++ {
+		x := bx + h.rng.Intn(11) - 5
+		y := by + h.rng.Intn(9) - 4
+		z := bz + h.rng.Intn(11) - 5
+		if !w.Loaded(int32(x>>4), int32(z>>4)) {
+			continue
+		}
+		at := w.At(x, y, z)
+		if worldgen.Collides(at) {
+			continue
+		}
+		if m.swims && worldgen.IsWater(at) {
+			return float64(x) + 0.5, float64(z) + 0.5, true
+		}
+		if m.flies && !worldgen.IsFluid(at) && w.At(x, y-1, z) != worldgen.Air {
+			return float64(x) + 0.5, float64(z) + 0.5, true
+		}
+	}
+	return 0, 0, false
 }

@@ -58,6 +58,16 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Burning animals run for water again, and fish flee.** Since an earlier
+  change today, a burning animal ignored the water it had found, and a
+  fish or squid panicking in open water froze in place. A burning animal
+  now heads for water within five blocks first, as vanilla's panic does. A
+  panicking fish swims to another spot in the water, and a panicking flier
+  flies to one.
+- **Shift-clicking with a block in hand places it.** Sneaking and
+  right-clicking a door, chest or lever with a block in hand places the
+  block against it, as vanilla does. Sneaking empty-handed still opens a
+  door, where before sneaking always stopped you using it.
 - **Nether portals stay lit in the Nether.** A portal block on the Nether
   side checked its obsidian frame in the overworld, at the same
   coordinates, and went out whenever a block beside it updated. It now

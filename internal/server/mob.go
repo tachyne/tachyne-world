@@ -817,7 +817,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.panicTX, m.panicTZ, m.panicHasT = h.panicTarget(m)
 			}
 			if m.panicHasT {
-				vx, vz := h.pathSteer(m, m.panicTX, m.panicTZ)
+				var vx, vz float64
+				if m.flies || m.swims {
+					vx, vz = straightSteer(m, m.panicTX, m.panicTZ, 0.1) // no ground path through water or air
+				} else {
+					vx, vz = h.pathSteer(m, m.panicTX, m.panicTZ)
+				}
 				m.vx, m.vz = vx*panicSpeed(m.etype), vz*panicSpeed(m.etype)
 			} else {
 				m.vx, m.vz = 0, 0 // nowhere to run: it stands (the goal has no target)

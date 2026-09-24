@@ -181,3 +181,45 @@ func TestArmadilloPanicsAtTheEnvironment(t *testing.T) {
 		t.Errorf("after lava: panic %d, state %d; want running and unrolled", m.panic, m.armState)
 	}
 }
+
+// PanicGoal: a burning animal makes for water within five blocks, and a fish
+// in open water flees through the water. Since the random-spot rewrite the
+// burning cow ran anywhere and a panicking fish froze where it was.
+func TestPanicSeeksWaterAndSwims(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 186; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	h.world.SetBlock(4, 180, 0, worldgen.Water) // a pond cell four blocks off
+	players := map[int32]*tracked{}
+	cow := h.spawnMob(players, entityCow, 0.5, 180, 0.5)
+	cow.burning = true
+	if x, z, ok := h.panicTarget(cow); !ok || x != 4.5 || z != 0.5 {
+		t.Errorf("a burning cow ran for (%v, %v), want the water at (4.5, 0.5)", x, z)
+	}
+
+	// Open water, no floor within reach: a cod still finds somewhere to go.
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			for y := 170; y <= 186; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Water)
+			}
+		}
+	}
+	cod := h.spawnSpecies(players, entityCod, dimOverworld, 0.5, 178, 0.5)
+	found := 0
+	for i := 0; i < 20; i++ {
+		if _, _, ok := h.panicTarget(cod); ok {
+			found++
+		}
+	}
+	if found == 0 {
+		t.Error("a cod in open water found nowhere to flee to")
+	}
+}
