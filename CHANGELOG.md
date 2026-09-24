@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Thrown things fly as far as they do in vanilla.** Every thrown
+  projectile fell as fast as an arrow, so snowballs, eggs and ender pearls
+  landed well short. Each now falls at its own vanilla rate, and a bottle
+  o' enchanting drops faster. Splash potions, lingering potions and bottles
+  o' enchanting leave the hand tilted upward, at vanilla's speeds. Llama
+  spit falls a little faster, and a shulker bullet whose target is gone now
+  drops to the ground.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

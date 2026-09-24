@@ -228,6 +228,13 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 	}
 }
 
+// A thrown potion's throw (ThrowablePotionItem.use): a −20° lift on the
+// pitch and power 0.5.
+const (
+	potionThrowLift  = -20.0
+	potionThrowPower = 0.5
+)
+
 // throwSplashPotion launches a thrown-potion projectile from a player (use_item
 // on a splash/lingering potion), consuming one from the slot.
 func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int) {
@@ -240,15 +247,10 @@ func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int
 	}
 	lingering := s.item == itemLingerPotion
 	kind := s.potion
-	// Aim from the eyes along the look vector (vanilla throw power 0.5, downward
-	// -20° pitch offset folded into the client's aim — we approximate with the
-	// player's own pitch).
-	yaw, pitch := float64(t.yaw)*math.Pi/180, float64(t.pitch)*math.Pi/180
-	dx := -math.Sin(yaw) * math.Cos(pitch)
-	dy := -math.Sin(pitch)
-	dz := math.Cos(yaw) * math.Cos(pitch)
-	const v = 0.5
-	a := h.launchProjectileIn(players, entitySplashProj, t.dim, t.x, t.y+1.4, t.z, dx*v, dy*v, dz*v)
+	// ThrowablePotionItem.use: from the eyes (less 0.1), shootFromRotation
+	// with a −20° lift on the pitch at power 0.5.
+	vx, vy, vz := throwVector(t.yaw, t.pitch, potionThrowLift, potionThrowPower)
+	a := h.launchProjectileIn(players, entitySplashProj, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.splash, a.breaks, a.potion, a.lingering = t.p.eid, true, true, kind, lingering
 	a.playerShot, a.noHitUntil = true, h.tick.Load()+2 // don't shatter on the thrower at launch
 	h.playSoundDim(players, t.dim, "minecraft:entity.splash_potion.throw", sndPlayer, t.x, t.y, t.z, 0.5, 1)
