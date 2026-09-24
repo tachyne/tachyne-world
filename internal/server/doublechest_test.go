@@ -59,7 +59,7 @@ func TestDoubleChestPairing(t *testing.T) {
 
 		// Breaking the right half reverts the left half to a single chest.
 		h.setBlock(h.playersRef, blockPos{1, 64, 0}, worldgen.Air)
-		h.spillContainer(h.playersRef, 0, 1, 64, 0, worldgen.Air)
+		h.spillContainer(h.playersRef, 0, 1, 64, 0, 0, worldgen.Air)
 		if got := chestType(w.At(0, 64, 0)); got != "single" {
 			t.Fatalf("survivor chest type %q, want single after partner broke", got)
 		}
@@ -117,7 +117,7 @@ func TestDoubleChestContentsAndBreak(t *testing.T) {
 		// Break the RIGHT half: its items spill (storage deleted), the LEFT half
 		// keeps its items and reverts to a single chest.
 		h.setBlock(h.playersRef, right, worldgen.Air)
-		h.spillContainer(h.playersRef, 0, right.x, right.y, right.z, worldgen.Air)
+		h.spillContainer(h.playersRef, 0, right.x, right.y, right.z, 0, worldgen.Air)
 		if h.chests[simPos{blockPos: right}] != nil {
 			t.Error("broken half's storage not cleared")
 		}

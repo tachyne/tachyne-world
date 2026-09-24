@@ -192,7 +192,7 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // storage and the block there is no longer that container, the contents
 // scatter as item drops and the state is forgotten. Anyone still viewing it
 // gets a resync on their next click (stale window id path).
-func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newState uint32) {
+func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, old, newState uint32) {
 	h.spillJukebox(players, dim, x, y, z, newState)
 	h.spillPot(players, dim, blockPos{x, y, z}, newState)
 	h.spillCampfire(players, dim, x, y, z, newState)
@@ -217,7 +217,12 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, newSt
 	if !isChestBlock(newState) && !isBarrel(newState) {
 		// A removed chest half releases its partner back to a single chest.
 		h.unpairChestNeighbors(players, dim, x, y, z)
-		if c := h.chests[pos]; c != nil {
+		if c := h.chests[pos]; c != nil && isShulkerBox(old) && !isShulkerBox(newState) {
+			// A shulker box never spills: its contents ride the box item
+			// (the loot table's copy_components), held for the drop that
+			// follows the removal, however the box was removed.
+			h.lastBoxPos, h.lastBoxID = pos, h.stowShulkerBox(pos)
+		} else if c != nil {
 			spill(c.slots[:])
 			delete(h.chests, pos)
 		}

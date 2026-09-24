@@ -631,6 +631,8 @@ type hub struct {
 	lastBannerPos    simPos
 	lastPotPos       simPos    // a decorated pot just removed…
 	lastPotSherds    potSherds // …and its faces, for the drop that follows
+	lastBoxPos       simPos    // a shulker box just removed…
+	lastBoxID        int32     // …and the stowed contents its drop carries
 	lastBannerLayers []attachproto.BannerLayer
 	books            *bookStore              // books.json (contents by book id, the map model)
 	lecterns         map[simPos]*lectern     // held books + open pages (persisted with containers)
@@ -2675,7 +2677,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// chest scatters its own contents.
 	h.beaconsOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state)
 	h.bannersOnBlockChange(players, e.dim, e.x, e.y, e.z, e.state, e.by)
-	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.state) // a broken container scatters
+	h.spillContainer(players, e.dim, e.x, e.y, e.z, e.broken, e.state) // a broken container scatters
 	h.bus.publish("block_change", map[string]any{"x": e.x, "y": e.y, "z": e.z, "state": e.state, "by": e.by})
 	// Lightning rods and sculk are the OVERWORLD's systems: the rod POI set is
 	// where storms look, and the sculk listener index is built from the

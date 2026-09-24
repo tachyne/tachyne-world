@@ -156,6 +156,10 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 		h.lastPotPos, h.lastPotSherds = simPos{}, potSherds{}
 		h.refreshItemMeta(players, it)
 	}
+	if it != nil && isShulkerBoxItem(item) && h.lastBoxPos == (simPos{dim: dim, blockPos: blockPos{x, y, z}}) {
+		it.boxID = h.takeStowedBox(h.lastBoxPos) // a blast or a lost support: the box keeps its contents
+		h.refreshItemMeta(players, it)
+	}
 	if it != nil && bannerItems[item] {
 		if layers := h.banners.get(dim, x, y, z); len(layers) > 0 {
 			h.stampBannerLayers(players, it, layers)

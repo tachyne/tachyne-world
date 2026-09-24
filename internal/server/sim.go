@@ -194,7 +194,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	old := w.At(pos.x, pos.y, pos.z)
 	w.SetBlock(pos.x, pos.y, pos.z, state)
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
-	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
+	h.spillContainer(players, dim, pos.x, pos.y, pos.z, old, state)
 	h.afterRemoval(players, dim, pos, old, state)
 	h.potentSulfurChanged(players, dim, pos, old, state) // the block entity: registry, reset, onPlace
 	// Vanilla's setBlock notifies the neighbours, and a block that just lost

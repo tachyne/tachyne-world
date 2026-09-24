@@ -88,9 +88,21 @@ func (h *hub) dropShulkerBox(players map[int32]*tracked, dim int, state uint32, 
 		return
 	}
 	item := ds[0].item
-	boxID := h.stowShulkerBox(simPos{dim: dim, blockPos: pos})
+	boxID := h.takeStowedBox(simPos{dim: dim, blockPos: pos})
 	it := h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	if it != nil {
 		it.boxID = boxID
 	}
+}
+
+// takeStowedBox is the contents id for a box drop at pos: the one the removal
+// just stowed (spillContainer runs on the block change, before the drop), or,
+// when nothing stowed it yet, the storage still standing there.
+func (h *hub) takeStowedBox(pos simPos) int32 {
+	if h.lastBoxPos == pos && h.lastBoxID != 0 {
+		id := h.lastBoxID
+		h.lastBoxPos, h.lastBoxID = simPos{}, 0
+		return id
+	}
+	return h.stowShulkerBox(pos)
 }
