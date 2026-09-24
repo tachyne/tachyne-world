@@ -126,14 +126,14 @@ func (h *hub) countBookshelves(pos simPos) int {
 			}
 			for dy := 0; dy <= 1; dy++ {
 				// EnchantingTableBlock.isValidBookShelf: the shelf counts only
-				// when the cell halfway to it is AIR. Vanilla tests air, not
-				// "replaceable", so a shelf behind a torch or a tuft of grass
-				// does not count — and note the halved offset applies to x and
-				// z only; the height is the shelf's own.
+				// when the cell halfway to it is in #enchantment_power_transmitter
+				// (26.3: #replaceable — air, grass, snow, water and the like; a
+				// torch still blocks it). The halved offset applies to x and z
+				// only; the height is the shelf's own.
 				if w.At(pos.x+dx, pos.y+dy, pos.z+dz) != bookshelfState {
 					continue
 				}
-				if w.At(pos.x+dx/2, pos.y+dy, pos.z+dz/2) == worldgen.Air {
+				if inRanges2(w.At(pos.x+dx/2, pos.y+dy, pos.z+dz/2), powerTransmitters) {
 					n++
 				}
 			}
@@ -264,3 +264,11 @@ func (h *hub) enchTableList(r *rand.Rand, item invStack, cost int) []enchInstanc
 	}
 	return list
 }
+
+// powerTransmitters is #enchantment_power_transmitter, which 26.3 defines
+// as #replaceable.
+var powerTransmitters = blockRangeOK("air", "water", "lava", "short_grass", "fern", "dead_bush", "bush",
+	"red_shrub", "short_dry_grass", "tall_dry_grass", "seagrass", "tall_seagrass", "fire", "soul_fire",
+	"snow", "vine", "glow_lichen", "resin_clump", "light", "tall_grass", "large_fern", "structure_void",
+	"void_air", "cave_air", "bubble_column", "warped_roots", "nether_sprouts", "crimson_roots",
+	"leaf_litter", "hanging_roots")

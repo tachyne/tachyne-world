@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Bookshelves count through grass and snow.** As in 26.3, a bookshelf
+  powers an enchanting table even with short grass, snow, water or anything
+  else from `#replaceable` in the gap between them. A torch still blocks
+  it.
 - **Picking a trade fills the payment slots.** Choosing an offer in the
   villager screen moves the items it costs from your inventory into the
   trade slots, and puts back whatever was there before, as in vanilla.

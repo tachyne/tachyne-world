@@ -93,3 +93,27 @@ func TestMendingOnlyEquipped(t *testing.T) {
 		t.Errorf("the offhand item was not mended (dmg %d)", pl.offhand.dmg)
 	}
 }
+
+// isValidBookShelf (26.3): the cell between the table and a shelf may hold
+// anything in #replaceable — grass counts, a torch still blocks.
+func TestBookshelfTransmitter(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			for y := 100; y <= 101; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	h.world.SetBlock(2, 100, 0, bookshelfState) // one shelf, due east
+	pos := simPos{blockPos: blockPos{0, 100, 0}}
+	h.world.SetBlock(1, 100, 0, worldgen.BlockBase("short_grass"))
+	if n := h.countBookshelves(pos); n != 1 {
+		t.Errorf("a shelf behind short grass counts %d, want 1", n)
+	}
+	h.world.SetBlock(1, 100, 0, worldgen.BlockBase("torch"))
+	if n := h.countBookshelves(pos); n != 0 {
+		t.Errorf("a shelf behind a torch counts %d, want 0", n)
+	}
+}
