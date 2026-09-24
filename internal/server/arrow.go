@@ -259,6 +259,58 @@ func hurtingMotion(a *arrowEntity, water bool) (accel, inertia float64, ok bool)
 	return 0, 0, false
 }
 
+// isHurting reports the AbstractHurtingProjectile family: fireballs, the
+// dragon's fireball, wither skulls and wind charges.
+func isHurting(etype int) bool {
+	switch etype {
+	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
+		return true
+	}
+	return isWindCharge(etype)
+}
+
+// projectileEnds decides whether a projectile leaves the world this tick
+// before it moves. Each family ends on its own terms:
+//
+//   - AbstractHurtingProjectile.tick has no age at all, and outlives its
+//     owner (the owner lookup never yields a removed entity, so the "owner
+//     removed" test there never fires): it is discarded only when it has
+//     flown into a chunk that is not loaded. A wind charge that climbs
+//     thirty blocks past the build limit bursts up there
+//     (AbstractWindCharge.tick).
+//   - ShulkerBullet has no age either; it is discarded on peaceful
+//     (checkDespawn), and otherwise flies or falls until it hits something.
+//     Here it also ends in an unloaded chunk, where vanilla would freeze it.
+//   - Everything else keeps the short transient lifetime.
+func (h *hub) projectileEnds(players map[int32]*tracked, a *arrowEntity, now uint64) bool {
+	switch {
+	case isHurting(a.etype):
+		if !h.projectileChunkLoaded(a) {
+			return true
+		}
+		if isWindCharge(a.etype) && floorInt(a.y) > h.worldFor(a.dim).Ceiling()-1+30 {
+			h.chargeBurst(players, a, a.x, a.y, a.z)
+			return true
+		}
+		return false
+	case a.etype == entityShulkerBullet:
+		return h.rules.Difficulty == diffPeaceful || !h.projectileChunkLoaded(a)
+	}
+	return now-a.born >= arrowLifeTicks
+}
+
+// projectileAges reports whether a projectile keeps the transient
+// lifetime; the ageless ones end at the edge of the loaded world instead.
+func (h *hub) projectileAges(a *arrowEntity) bool {
+	return !isHurting(a.etype) && a.etype != entityShulkerBullet
+}
+
+// projectileChunkLoaded is Level.hasChunkAt for the projectile's block.
+func (h *hub) projectileChunkLoaded(a *arrowEntity) bool {
+	w := h.worldFor(a.dim)
+	return w != nil && w.Loaded(int32(floorInt(a.x)>>4), int32(floorInt(a.z)>>4))
+}
+
 // retrieveProjectile restores a stuck projectile to a survival player's
 // inventory: a thrown trident hands back its exact stack (enchantments intact),
 // everything else hands back a plain arrow.
@@ -281,7 +333,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			continue
 		}
-		if now-a.born >= arrowLifeTicks {
+		if h.projectileEnds(players, a, now) {
 			delete(h.arrows, eid)
 			h.entityGone(players, a.dim, eid)
 			continue
@@ -331,7 +383,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		// blocks/tick can pass clean through a one-block wall, and a bow's
 		// 3-a-tick arrow through a player. Samples measure from where the
 		// tick began, so the move is exactly one velocity a tick.
-		hit := false
+		hit, offWorld := false, false
 		bx, by, bz := a.x, a.y, a.z
 		n := 2
 		if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); sp > 1 {
@@ -340,6 +392,12 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		for i := 1; i <= n; i++ {
 			f := float64(i) / float64(n)
 			px, py, pz := bx+a.vx*f, by+a.vy*f, bz+a.vz*f
+			if !h.projectileAges(a) && !h.worldFor(a.dim).Loaded(int32(floorInt(px)>>4), int32(floorInt(pz)>>4)) {
+				// An ageless projectile flying out of the loaded world ends
+				// at its edge; reading the blocks there would generate them.
+				offWorld = true
+				break
+			}
 			if h.arrowHitsPlayer(players, a, px, py, pz) ||
 				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) ||
 				h.arrowHitsVehicle(players, a, px, py, pz) {
@@ -386,6 +444,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				break
 			}
 			a.x, a.y, a.z = px, py, pz
+		}
+		if offWorld {
+			delete(h.arrows, eid)
+			h.entityGone(players, a.dim, eid)
+			continue
 		}
 		// LlamaSpit.tick: after its hit test, a gob whose box touches any
 		// block that is not air — water, grass, a flower — is simply gone,

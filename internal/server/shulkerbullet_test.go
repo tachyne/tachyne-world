@@ -12,6 +12,7 @@ import (
 // fall — vanilla ShulkerBullet steers its motion each tick and has no gravity.
 func TestShulkerBulletHomes(t *testing.T) {
 	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 20, 80, 0 // target off to the +x
 	players := map[int32]*tracked{1: pl}
@@ -40,6 +41,7 @@ func TestShulkerBulletHomes(t *testing.T) {
 // A shulker bullet hit inflicts Levitation (vanilla LEVITATION I, 10 s).
 func TestShulkerBulletLevitatesOnHit(t *testing.T) {
 	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	pl := testTracked()
 	pl.gamemode = gmSurvival
 	pl.x, pl.y, pl.z = 5, 80, 0
@@ -111,9 +113,6 @@ func TestShulkerBulletFliesAxisByAxis(t *testing.T) {
 	}
 	for i := 0; i < 400 && len(h.arrows) > 0; i++ {
 		h.tick.Add(1)
-		if a.born+arrowLifeTicks <= h.tick.Load() {
-			a.born = h.tick.Load() // this test is about the course, not the litter timer
-		}
 		h.updateArrows(players)
 	}
 	if len(h.arrows) != 0 || pl.hasEffect(effLevitation) == 0 {

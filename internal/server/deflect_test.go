@@ -16,6 +16,7 @@ func TestDeflectFireball(t *testing.T) {
 	pl.x, pl.y, pl.z, pl.yaw, pl.pitch = 0, 180, 0, 0, 0 // looking +z
 	players := map[int32]*tracked{pl.p.eid: pl}
 	w := h.worldFor(0)
+	w.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	for x := -3; x <= 3; x++ {
 		for z := -3; z <= 12; z++ {
 			w.SetBlock(x, 179, z, worldgen.BlockBase("stone"))

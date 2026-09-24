@@ -9,6 +9,7 @@ import "testing"
 func skullHub(t *testing.T) (*hub, map[int32]*tracked, *mob) {
 	t.Helper()
 	h, players := pushWorld(t)
+	h.world.ForceLoad(0, 0, 2) // projectiles fly only through loaded chunks
 	w := putMob(t, h, players, entityWither, 0.5, 70, 0.5)
 	w.health = 10 // wounded, with room to heal
 	return h, players, w

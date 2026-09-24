@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Fireballs, wither skulls and shulker bullets no longer vanish
+  after ten seconds.** Every projectile disappeared ten seconds after it
+  was fired. Now, as in vanilla, a fireball, wither skull or wind charge
+  flies until it hits something or leaves the loaded world, even if
+  whoever fired it has died. A wind charge that climbs far above the
+  build limit bursts up there. A shulker bullet keeps homing until it
+  hits, and disappears when the difficulty is set to peaceful.
 - **A breeze's wind charge is its own kind of projectile.** A breeze
   shot an ordinary wind charge. It now shoots the breeze wind charge, as
   in vanilla, with its own burst sound. A player can still bat it back,
