@@ -58,6 +58,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Thrown things carry your motion and a little wobble.** Snowballs,
+  eggs, ender pearls, bottles o' enchanting, thrown potions, wind charges,
+  tridents and bow shots now add the thrower's own movement, as in
+  vanilla. Upward or downward movement only counts while off the ground.
+  Each throw also has vanilla's small random scatter instead of flying a
+  perfect line. Dispensers now shoot from vanilla's spot at vanilla's
+  strength and spread. Potions and bottles fly faster and straighter than
+  snowballs and arrows. Fire and wind charges leave a full block out.
 - **Shulker bullets fly and break like vanilla's.** A shulker's bullet
   now zig-zags toward its target one direction at a time, turning when it
   lines up with the target or meets a wall, instead of curving smoothly

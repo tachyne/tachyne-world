@@ -257,8 +257,8 @@ func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int
 	lingering := s.item == itemLingerPotion
 	kind := s.potion
 	// ThrowablePotionItem.use: from the eyes (less 0.1), shootFromRotation
-	// with a −20° lift on the pitch at power 0.5.
-	vx, vy, vz := throwVector(t.yaw, t.pitch, potionThrowLift, potionThrowPower)
+	// with a −20° lift on the pitch at power 0.5, the thrower's motion added.
+	vx, vy, vz := h.throwFromRotation(t, potionThrowLift, potionThrowPower, throwUncertainty)
 	a := h.launchProjectileIn(players, thrownPotionType(lingering), t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.splash, a.breaks, a.potion, a.lingering = t.p.eid, true, true, kind, lingering
 	a.playerShot, a.noHitUntil = true, h.tick.Load()+2 // don't shatter on the thrower at launch

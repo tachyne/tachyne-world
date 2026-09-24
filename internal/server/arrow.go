@@ -168,22 +168,29 @@ func isThrowable(etype int) bool {
 	return false
 }
 
-// throwVector is Projectile.shootFromRotation's heading at power pow: the
-// look direction, with yOffset degrees added to the pitch in the vertical
-// component only (the potions' and the bottle o' enchanting's −20° lift),
-// normalized and scaled. The thrower's own motion is not added.
-func throwVector(yaw, pitch float32, yOffset, pow float64) (float64, float64, float64) {
-	ry := float64(yaw) * math.Pi / 180
-	rp := float64(pitch) * math.Pi / 180
+// throwFromRotation is Projectile.shootFromRotation for a player's throw at
+// power pow: the look direction, with yOffset degrees added to the pitch in
+// the vertical component only (the potions' and the bottle o' enchanting's
+// −20° lift), shot with the given uncertainty (getMovementToShoot), and then
+// the thrower's own movement added — the vertical part only while they are
+// off the ground.
+func (h *hub) throwFromRotation(t *tracked, yOffset, pow, uncertainty float64) (float64, float64, float64) {
+	ry := float64(t.yaw) * math.Pi / 180
+	rp := float64(t.pitch) * math.Pi / 180
 	x := -math.Sin(ry) * math.Cos(rp)
 	y := -math.Sin(rp + yOffset*math.Pi/180)
 	z := math.Cos(ry) * math.Cos(rp)
-	d := math.Sqrt(x*x + y*y + z*z)
-	if d < 1e-9 {
-		return 0, 0, 0
+	vx, vy, vz := h.shootVector(x, y, z, pow, uncertainty)
+	mx, my, mz := h.knownMove(t)
+	if t.onGround {
+		my = 0
 	}
-	return x / d * pow, y / d * pow, z / d * pow
+	return vx + mx, vy + my, vz + mz
 }
+
+// throwUncertainty is the uncertainty every player throw and bow shot is
+// made with (spawnProjectileFromRotation's 1.0).
+const throwUncertainty = 1.0
 
 // shootVector is Projectile.getMovementToShoot: the direction normalized,
 // each axis nudged by a triangle-distributed 0.0172275 × uncertainty, then

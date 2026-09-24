@@ -280,6 +280,13 @@ func convertableToMud(s uint32) bool {
 	return s == worldgen.Dirt || s == worldgen.CoarseDirt || s == rootedDirtBlock
 }
 
+// ProjectileItem.DispenseConfig's defaults, and the charges' own uncertainty.
+const (
+	dispenseShotPower         = 1.1
+	dispenseShotUncertainty   = 6.0
+	chargeDispenseUncertainty = 6.6666665
+)
+
 // ejectFromBin fires/drops the first non-empty slot's item out of the face.
 func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32) {
 	// Every block this behaviour table touches is in the dispenser's OWN world.
@@ -311,7 +318,20 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	}
 	dx, dy, dz := pistonDelta(state) // same 6-way facing math
 	fx, fy, fz := float64(pos.x)+0.5+float64(dx)*0.7, float64(pos.y)+0.5+float64(dy)*0.7, float64(pos.z)+0.5+float64(dz)*0.7
-	vx, vy, vz := float64(dx)*1.1, float64(dy)*1.1+0.05, float64(dz)*1.1 // dispenser projectile power 1.1
+	// ProjectileDispenseBehavior: a projectile leaves from its DispenseConfig
+	// position — by default 0.7 out of the face and 0.1 up — and is shot
+	// along the facing at its power with its uncertainty (default 1.1 and 6).
+	shotFrom := func(scale, lift float64) (float64, float64, float64) {
+		return float64(pos.x) + 0.5 + float64(dx)*scale, float64(pos.y) + 0.5 + float64(dy)*scale + lift, float64(pos.z) + 0.5 + float64(dz)*scale
+	}
+	shot := func(pow, uncertainty float64) (float64, float64, float64) {
+		return h.shootVector(float64(dx), float64(dy), float64(dz), pow, uncertainty)
+	}
+	shoot := func(etype, dim int, pow, uncertainty float64) *arrowEntity {
+		px, py, pz := shotFrom(0.7, 0.1)
+		vx, vy, vz := shot(pow, uncertainty)
+		return h.launchProjectileIn(players, etype, dim, px, py, pz, vx, vy, vz)
+	}
 	front := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 	item := st.item
 	dispense := isDispenser(state)
@@ -345,23 +365,27 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// hit, a spectral one makes what it hits glow (SpectralArrow).
 		one := *st
 		one.count = 1
-		a := h.launchProjectileIn(players, arrowEntityFor(one), h.rsDim, fx, fy, fz, vx, vy, vz)
+		a := shoot(arrowEntityFor(one), h.rsDim, dispenseShotPower, dispenseShotUncertainty)
 		a.dmg, a.playerShot = arrowDamage, true // hits mobs; retrievable when stuck
 		loadArrow(a, one)
 	case dispense && item == itemSnowball:
-		h.launchProjectileIn(players, entitySnowball, h.rsDim, fx, fy, fz, vx, vy, vz).breaks = true
+		shoot(entitySnowball, h.rsDim, dispenseShotPower, dispenseShotUncertainty).breaks = true
 	case dispense && (item == itemEgg || item == itemBlueEgg || item == itemBrownEgg):
 		// All three egg variants throw as an egg projectile (vanilla registers
 		// BLUE_EGG/BROWN_EGG alongside EGG).
-		a := h.launchProjectileIn(players, entityEggProj, h.rsDim, fx, fy, fz, vx, vy, vz)
+		a := shoot(entityEggProj, h.rsDim, dispenseShotPower, dispenseShotUncertainty)
 		a.breaks, a.egg, a.eggItem = true, true, item // a dispensed egg hatches too
 	case dispense && item == itemFireCharge:
-		// An ownerless small fireball: the same burn and 5 damage as a blaze's.
-		a := h.launchProjectileIn(players, entitySmallFireball, h.rsDim, fx, fy, fz, vx, vy, vz)
+		// An ownerless small fireball: the same burn and 5 damage as a blaze's,
+		// from a full block out, at power 1 (FireChargeItem's config).
+		px, py, pz := shotFrom(1, 0)
+		vx, vy, vz := shot(1, chargeDispenseUncertainty)
+		a := h.launchProjectileIn(players, entitySmallFireball, h.rsDim, px, py, pz, vx, vy, vz)
 		a.dmg, a.fire = blazeFireballDmg, true
 	case dispense && item == itemXPBottle:
 		// Vanilla registerProjectileBehavior: the bottle flies and shatters.
-		a := h.launchProjectileIn(players, entityXPBottle, pos.dim, fx, fy, fz, vx, vy, vz)
+		// ExperienceBottleItem's config: half the scatter, a quarter more power.
+		a := shoot(entityXPBottle, pos.dim, dispenseShotPower*1.25, dispenseShotUncertainty*0.5)
 		a.breaks, a.xpBottle = true, true
 	case dispense && item == itemFireworkRocket:
 		// A rocket leaves along the facing (FireworkRocketItem's projectile
@@ -419,12 +443,16 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == itemWindCharge:
 		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
 		// throws, launched out of the face.
-		h.launchProjectileIn(players, entityWindCharge, h.rsDim, fx, fy, fz, vx, vy, vz)
+		// WindChargeItem's config, like the fire charge's: a block out, power 1.
+		px, py, pz := shotFrom(1, 0)
+		vx, vy, vz := shot(1, chargeDispenseUncertainty)
+		h.launchProjectileIn(players, entityWindCharge, h.rsDim, px, py, pz, vx, vy, vz)
 	case dispense && (item == itemSplashPotion || item == itemLingerPotion):
 		// Thrown-potion projectile: shatters into a splash / lingering cloud
 		// carrying this stack's potion kind.
 		lingering := item == itemLingerPotion
-		a := h.launchProjectileIn(players, thrownPotionType(lingering), h.rsDim, fx, fy, fz, vx, vy, vz)
+		// ThrowablePotionItem's config: half the scatter, a quarter more power.
+		a := shoot(thrownPotionType(lingering), h.rsDim, dispenseShotPower*1.25, dispenseShotUncertainty*0.5)
 		a.splash, a.breaks, a.potion, a.lingering = true, true, st.potion, lingering
 	case dispense && item == itemPotion && st.potion == potWater:
 		// Vanilla POTION behaviour: a WATER bottle onto a CONVERTABLE_TO_MUD block

@@ -70,7 +70,7 @@ func TestDispensedFireChargeBurnsAndHurts(t *testing.T) {
 	h.arrows = map[int32]*arrowEntity{}
 	info, _ := worldgen.InfoForState(dispenserMin)
 	state := worldgen.SetProperty(info, dispenserMin, "facing", "north") // toward −z, at the player
-	pos := blockPos{0, 181, 4}
+	pos := blockPos{0, 181, 2}
 	h.world.SetBlock(pos.x, pos.y, pos.z, state)
 	b := &bin{slots: make([]invStack, 9)}
 	b.slots[0] = invStack{item: itemFireCharge, count: 1}

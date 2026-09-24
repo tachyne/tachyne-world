@@ -30,13 +30,15 @@ func TestXPBottleShattersIntoExperience(t *testing.T) {
 
 	before := len(h.orbs)
 	h.breakXPBottle(players, a)
-	if len(h.orbs) != before+1 {
+	if len(h.orbs) <= before {
 		t.Fatal("a broken bottle awarded no experience")
 	}
+	total := 0 // a payout of 10 or 11 splits into more than one orb
 	for _, o := range h.orbs {
-		if o.value < xpBottleBase || o.value > xpBottleBase+2*(xpBottleRoll-1) {
-			t.Fatalf("payout %d outside 3-11", o.value)
-		}
+		total += o.value
+	}
+	if total < xpBottleBase || total > xpBottleBase+2*(xpBottleRoll-1) {
+		t.Fatalf("payout %d outside 3-11", total)
 	}
 }
 
