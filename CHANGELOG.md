@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Pistons no longer lose blocks next to water.** While a piston slides a
+  block, the cell it is moving through is solid in vanilla, and water
+  cannot flow into it. Ours let water flow in and replace it, so a block
+  pushed or pulled beside flowing water vanished and left water behind.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

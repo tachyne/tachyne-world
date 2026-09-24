@@ -27,6 +27,9 @@ func fluidWashes(state uint32) bool {
 	if state == worldgen.Air || worldgen.IsFluid(state) || worldgen.IsReplaceable(state) {
 		return false
 	}
+	if isMovingPiston(state) {
+		return false // forceSolidOn, and never #washed_away_by_fluids: a sliding block is not washed
+	}
 	info, ok := worldgen.InfoForState(state)
 	if ok && info.HasProperty("waterlogged") {
 		return false // LiquidBlockContainer: would take the fluid in, not be washed

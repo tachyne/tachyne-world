@@ -150,3 +150,33 @@ func TestPistonShovesAWideMobClear(t *testing.T) {
 		t.Fatalf("sheep box %.3f..%.3f still overlaps the stone at %d..%d", s.x-half, s.x+half, x+2, x+3)
 	}
 }
+
+// TestWaterDoesNotWashAMovingBlock (bug #34): a block sliding in a piston's
+// moving cell is not something water can flow into (the cell is forced
+// solid, and not #washed_away_by_fluids). Our water treated the shapeless
+// cell as washable, replaced it, and the block it carried was never laid.
+func TestWaterDoesNotWashAMovingBlock(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z, pistonEast(false))
+	w.SetBlock(x+1, y, z, worldgen.Stone)
+	for dx := 0; dx <= 3; dx++ {
+		w.SetBlock(x+dx, y-1, z+1, worldgen.Stone)
+		w.SetBlock(x+dx, y, z+2, worldgen.Stone)
+	}
+	w.SetBlock(x+2, y, z+1, worldgen.WaterBase) // a source beside where the stone lands
+	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	moving := false
+	for i := 0; i < 6 && !moving; i++ {
+		stepTicks(h, players, 1)
+		moving = isMovingPiston(w.At(x+2, y, z))
+	}
+	if !moving {
+		t.Fatalf("the stone never started moving: %d", w.At(x+2, y, z))
+	}
+	h.scheduleIn(0, blockPos{x + 2, y, z + 1}, 1) // the water ticks while the stone slides
+	stepTicks(h, players, 6)
+	if got := w.At(x+2, y, z); got != worldgen.Stone {
+		t.Fatalf("the pushed stone should land beside the water, got %d", got)
+	}
+}
