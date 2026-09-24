@@ -157,3 +157,10 @@ func TestWeaponAttackSpeed(t *testing.T) {
 		t.Errorf("sword period through the attribute %d, want 12", got)
 	}
 }
+
+// A trident swung in melee hits for vanilla's nine (TridentItem: +8).
+func TestTridentMeleeDamage(t *testing.T) {
+	if d := meleeDamage[itemByName["trident"]]; d != 9 {
+		t.Errorf("trident melee %d, want 9", d)
+	}
+}

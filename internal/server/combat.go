@@ -31,6 +31,7 @@ var meleeDamage = itemIntMap(map[string]int{
 	"wooden_pickaxe": 2, "golden_pickaxe": 2, "stone_pickaxe": 3, "copper_pickaxe": 3, "iron_pickaxe": 4, "diamond_pickaxe": 5, "netherite_pickaxe": 6,
 	"wooden_shovel": 2, "golden_shovel": 2, "stone_shovel": 3, "copper_shovel": 3, "iron_shovel": 4, "diamond_shovel": 5, "netherite_shovel": 6,
 	"mace": 6, // vanilla: +5 attack-damage modifier over the player's base 1
+	"trident": 9, // TridentItem: +8 over the base 1, the same in melee as thrown
 	// Spears (Item.Properties.spear): the base 1 plus the material's attack
 	// bonus and nothing else — the jab is light; the charge is the weapon.
 	"wooden_spear": 1, "golden_spear": 1, "stone_spear": 2, "copper_spear": 2, "iron_spear": 3, "diamond_spear": 4, "netherite_spear": 5,

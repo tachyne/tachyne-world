@@ -22,7 +22,7 @@ the public history since the project was open-sourced on 2026-07-10.
   you switch items. So does the held weapon's attack speed, which drives
   the attack-cooldown indicator: it showed a bare hand's instant recharge
   for every weapon. Copper tools also have their own attack cooldowns now
-  instead of a fist's.
+  instead of a fist's, and a trident swung in melee hits for nine, not one.
 - **More blocks behave as in vanilla.**
   - A comparator reads a candle cake as a whole cake.
   - Ravagers trample pitcher crops.
