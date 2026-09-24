@@ -217,18 +217,36 @@ func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int,
 // Mending was in the treasure pools, the fishing pools and the anvil's tables
 // and was wired to nothing — the single most valuable enchantment in the game
 // did not repair anything. Vanilla picks ONE damaged item carrying it at
-// random from the held slots and the armour, mends two points per experience
+// random from the equipped slots (both hands and the armour), mends two points per experience
 // point, and recurses with whatever is left so a single orb can finish one
 // item and start on the next.
 func (h *hub) mendingRepair(t *tracked, xp int) int {
 	if t.inv == nil {
 		return xp
 	}
+	mended := false
+	defer func() {
+		if !mended {
+			return
+		}
+		// The client sees the repair: the two hands, and the worn pieces in
+		// the player's own window.
+		if t.p != nil {
+			h.sendHandSlot(t, t.p.heldSlot())
+			h.sendHandSlot(t, offhandSlot)
+		}
+		if t.winID == 0 {
+			for i := range t.armor {
+				h.sendWinSlot(t, int16(5+i), t.armor[i])
+			}
+		}
+	}()
 	for xp > 0 {
 		s := h.pickMendable(t)
 		if s == nil {
 			return xp
 		}
+		mended = true
 		repair := min(xp*mendingPerPoint, s.dmg)
 		s.dmg -= repair
 		// Experience is spent in proportion to what it actually mended, so a
@@ -248,9 +266,12 @@ const mendingPerPoint = 2
 // pickMendable chooses a damaged Mending item at random from the held slots
 // and the worn armour, as vanilla's getRandomItemWith does.
 func (h *hub) pickMendable(t *tracked) *invStack {
+	// EnchantmentHelper.getRandomItemWith: EQUIPPED items only — the main
+	// hand, the offhand and the armour. A tool idling elsewhere on the hotbar
+	// is not mended.
 	var found []*invStack
-	for i := range t.inv.slots[:9] {
-		if s := &t.inv.slots[i]; s.count > 0 && s.dmg > 0 && s.enchLvl(enchMending) > 0 {
+	for _, slot := range []int{t.p.heldSlot(), offhandSlot} {
+		if s := t.handStack(slot); s != nil && s.count > 0 && s.dmg > 0 && s.enchLvl(enchMending) > 0 {
 			found = append(found, s)
 		}
 	}

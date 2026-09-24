@@ -76,3 +76,20 @@ func TestNoMendingNoRepair(t *testing.T) {
 		t.Error("gear without Mending was repaired anyway")
 	}
 }
+
+// getRandomItemWith(REPAIR_WITH_XP): only EQUIPPED items are mended — both
+// hands and the armour — not a tool lying idle on the hotbar.
+func TestMendingOnlyEquipped(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pick := invStack{item: itemByName["diamond_pickaxe"], count: 1, dmg: 100, ench: enchList{{id: enchMending, lvl: 1}}}
+	pl.inv.slots[5] = pick // not the held slot
+	if got := h.mendingRepair(pl, 10); got != 10 || pl.inv.slots[5].dmg != 100 {
+		t.Errorf("an idle hotbar tool was mended (%d xp left, dmg %d)", got, pl.inv.slots[5].dmg)
+	}
+	pl.offhand = pick
+	h.mendingRepair(pl, 10)
+	if pl.offhand.dmg != 80 {
+		t.Errorf("the offhand item was not mended (dmg %d)", pl.offhand.dmg)
+	}
+}

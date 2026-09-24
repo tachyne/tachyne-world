@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Enchantment maths as in vanilla.**
+  - Sharpness, Smite and Bane of Arthropods now scale with how charged the
+    swing is, not with the squared curve the base damage uses.
+  - A crit, the strong-hit sound and a sweep need a swing more than 90%
+    charged.
+  - Breach cuts through armour on every mace hit, not only smash attacks.
+  - Mending repairs only what you are holding or wearing, including the
+    offhand, and the repaired durability now shows straight away.
 - **More things work outside the overworld.** Trapped chests give a
   redstone signal in the Nether and the End, endermen there pick up and
   put down blocks, copper golems can be built there, and a zombie can call

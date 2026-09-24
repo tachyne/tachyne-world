@@ -157,6 +157,7 @@ type swing struct {
 	dmg        int
 	base       float64
 	charge     float64
+	full       bool // attackStrengthScale > 0.9: a crit, the strong sound and a sweep need it
 	crit       bool
 	smash      bool
 	fall       float64
@@ -169,7 +170,7 @@ type swing struct {
 func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 	base := float64(fistDamage)
 	sharpBonus := 0.0 // enchantment damage (Sharpness): added AFTER crit, not multiplied
-	charge, crit := 1.0, false
+	charge, scale, crit := 1.0, 1.0, false
 	smash, fall := false, 0.0 // mace smash attack + its fall distance
 	var breachFrac float64
 	if t != nil {
@@ -199,22 +200,25 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 		// and Mining Fatigue modify — the effects set the attribute and nothing
 		// read it before, so neither changed a swing.
 		period := t.attackPeriodTicks(attackPeriod(held))
+		// getAttackStrengthScale(0.5): (ticks since the swing + 0.5) over the
+		// weapon's delay, capped at one. The base damage takes 0.2 + 0.8×scale²,
+		// the enchantments' bonus the scale itself.
 		if dt := now - t.lastAttack; t.lastAttack != 0 && dt < uint64(period) {
-			c := float64(dt) / float64(period)
-			charge = 0.2 + 0.8*c*c
+			scale = math.Min(1, (float64(dt)+0.5)/float64(period))
+			charge = 0.2 + 0.8*scale*scale
 		}
 		t.lastAttack = now
 		// Critical: full-charge, falling, not sprinting, not in water, not blind
 		// (vanilla Player.attack crit gate). ×1.5 on the base+strength portion.
-		if charge >= 0.9 && t.airborne && t.y < t.peakY && !t.sprinting &&
+		if scale > 0.9 && t.airborne && t.y < t.peakY && !t.sprinting &&
 			!h.inWater(t.dim, t.x, t.y, t.z) && t.hasEffect(effBlindness) == 0 {
 			crit = true
 		}
 		// Mace smash: falling past the threshold adds fall-distance bonus damage
-		// (density scales it), and breach lets the hit ignore some armour.
-		if smash, fall = maceSmashing(t); smash {
-			breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
-		}
+		// (density scales it). Breach is armor_effectiveness −0.15 a level on
+		// every blow the weapon deals, smash or not.
+		smash, fall = maceSmashing(t)
+		breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
 		if t.gamemode == gmSurvival {
 			t.exhaust(attackExhaustion)                 // vanilla: attacking burns food
 			if n := attackWear(t.p.heldItem()); n > 0 { // Weapon.itemDamagePerAttack
@@ -229,9 +233,9 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 	if crit {
 		dmgF *= 1.5
 	}
-	dmgF += sharpBonus * charge // Sharpness: cooldown-scaled, added after crit (vanilla)
+	dmgF += sharpBonus * scale // magicBoost: the enchantments' bonus times the raw scale, added after crit
 	dmg := int(math.Max(1, math.Round(dmgF)))
-	return swing{dmg: dmg, base: base, charge: charge, crit: crit,
+	return swing{dmg: dmg, base: base, charge: charge, full: scale > 0.9, crit: crit,
 		smash: smash, fall: fall, breachFrac: breachFrac}
 }
 
@@ -259,7 +263,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		family = familyMeleeBonus(heldStack(t), m.etype)
 	}
 	sw := h.meleeSwing(t, family)
-	base, charge, crit := sw.base, sw.charge, sw.crit
+	base, full, crit := sw.base, sw.full, sw.crit
 	smash, fall, breachFrac := sw.smash, sw.fall, sw.breachFrac
 	dmg := sw.dmg
 	_ = fall
@@ -282,7 +286,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if crit {
 		h.spawnParticles(players, m.dim, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
 		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
-	} else if charge >= 0.9 {
+	} else if full {
 		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.strong", sndPlayer, m.x, m.y, m.z, 1, 1)
 	} else {
 		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.weak", sndPlayer, m.x, m.y, m.z, 1, 1)
@@ -323,7 +327,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		// Sweep: a full-charge, grounded, non-sprinting sword swing clips
 		// everything beside the target. Vanilla damage = 1 + sweepingEdgeRatio·
 		// base (ratio = lvl/(lvl+1)); without Sweeping Edge it is a flat 1.
-		if _, sword := swordPeriod[t.p.heldItem()]; sword && charge >= 0.9 && !crit && t.onGround && !t.sprinting {
+		if _, sword := swordPeriod[t.p.heldItem()]; sword && full && !crit && t.onGround && !t.sprinting {
 			sweepDmg := 1.0
 			if se := heldStack(t).enchLvl(enchSweepingEdge); se > 0 {
 				sweepDmg += float64(se) / float64(se+1) * base
