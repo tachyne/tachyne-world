@@ -177,6 +177,28 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 				continue
 			}
 		}
+		// CampfireBlock.entityInside: a lit campfire burns any living thing
+		// standing in it (1, soul 2) — fire, so the fire-immune walk over it.
+		if feet != 0 && isCampfireBlock(feet) && boolProp(feet, "lit") && h.rules.FireDamage &&
+			!fireImmune[m.etype] && !m.resistsFire() {
+			dmg := 1.0
+			if isSoulCampfire(feet) {
+				dmg = 2
+			}
+			h.hurtMobOf(players, m, dmg, dtCampfire)
+			if m.health <= 0 {
+				continue
+			}
+		}
+		// CactusBlock.entityInside: every entity whose box reaches a cactus
+		// takes 1 — the cactus's collision is inset a sixteenth, so a mob
+		// pressed against its side is inside its cell.
+		if b := m.box(); h.boxTouchesCactus(m.dim, m.x, m.y, m.z, b.w/2, b.h) {
+			h.hurtMobOf(players, m, cactusDamagePerSec, dtCactus)
+			if m.health <= 0 {
+				continue
+			}
+		}
 
 		// Afterburn clock (lava/fire/daylight all feed it). Water or rain douses.
 		doused := worldgen.HoldsWater(feet) || worldgen.HoldsWater(head) ||

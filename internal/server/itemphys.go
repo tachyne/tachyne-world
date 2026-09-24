@@ -51,14 +51,25 @@ var (
 
 // tickItems runs every dropped item's physics for one tick.
 func (h *hub) tickItems(players map[int32]*tracked) {
-	for _, it := range h.items {
+	for eid, it := range h.items {
 		w := h.worldFor(it.dim)
 		if w == nil {
 			continue
 		}
 		h.tickItem(players, w, it)
+		// CactusBlock.entityInside hurts the item 1 a tick; an ItemEntity
+		// has 5 health, so five ticks on (or against) a cactus and it is gone.
+		if h.boxTouchesCactus(it.dim, it.x, it.y, it.z, itemHalfHeight, 2*itemHalfHeight) {
+			if it.cactusHurt++; it.cactusHurt >= itemHealth {
+				delete(h.items, eid)
+				h.entityGone(players, it.dim, eid)
+			}
+		}
 	}
 }
+
+// itemHealth is ItemEntity's health: 5.
+const itemHealth = 5
 
 // itemGrounded reports an item resting exactly on the block under it.
 func itemGrounded(w *world.World, it *itemEntity) bool {

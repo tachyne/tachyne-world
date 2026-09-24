@@ -263,6 +263,27 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	}
 }
 
+// cactusInset is the cactus's collision inset (a sixteenth on each side):
+// what presses against it is inside its cell by that much.
+const cactusInset = 1.0 / 16
+
+// boxTouchesCactus reports whether an entity box (feet centre, half width,
+// height) reaches into a cactus cell — up to the inset past each face.
+func (h *hub) boxTouchesCactus(dim int, x, y, z, hw, ht float64) bool {
+	w := h.worldFor(dim)
+	r := hw + cactusInset
+	for cx := int(math.Floor(x - r)); cx <= int(math.Floor(x+r-1e-7)); cx++ {
+		for cz := int(math.Floor(z - r)); cz <= int(math.Floor(z+r-1e-7)); cz++ {
+			for cy := int(math.Floor(y - cactusInset)); cy <= int(math.Floor(y+ht-1e-7)); cy++ {
+				if s := w.At(cx, cy, cz); s >= cactusMin && s <= cactusMax {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // touchingCactus reports whether a cactus occupies any of the four horizontal
 // neighbours at the player's feet or body height (approximates hitbox overlap).
 func (h *hub) touchingCactus(dim, fx, feet, fz int) bool {

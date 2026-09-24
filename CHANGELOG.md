@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Cactus and campfires hurt mobs, and cactus destroys items.** Only
+  players took damage from cactus and lit campfires. Now mobs pressed
+  against a cactus or standing in a lit campfire are hurt too (fire-immune
+  mobs walk over campfires unharmed), and a dropped item that lands on or
+  against a cactus is destroyed, as in vanilla.
 - **Containers sound once, however many people open them.** Each extra
   player opening a chest, barrel or ender chest replayed its open sound, and
   each one leaving played the close. As in vanilla, the sound (and the

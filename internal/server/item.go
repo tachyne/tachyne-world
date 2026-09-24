@@ -28,6 +28,7 @@ var (
 )
 
 type itemEntity struct {
+	cactusHurt int // ticks spent against a cactus (tickItems: five and it is gone)
 	dim        int // dimension the drop lives in
 	eid        int32
 	uuid       [16]byte
