@@ -30,7 +30,7 @@ var meleeDamage = itemIntMap(map[string]int{
 	"wooden_axe": 7, "golden_axe": 7, "stone_axe": 9, "copper_axe": 9, "iron_axe": 9, "diamond_axe": 9, "netherite_axe": 10,
 	"wooden_pickaxe": 2, "golden_pickaxe": 2, "stone_pickaxe": 3, "copper_pickaxe": 3, "iron_pickaxe": 4, "diamond_pickaxe": 5, "netherite_pickaxe": 6,
 	"wooden_shovel": 2, "golden_shovel": 2, "stone_shovel": 3, "copper_shovel": 3, "iron_shovel": 4, "diamond_shovel": 5, "netherite_shovel": 6,
-	"mace": 6, // vanilla: +5 attack-damage modifier over the player's base 1
+	"mace":    6, // vanilla: +5 attack-damage modifier over the player's base 1
 	"trident": 9, // TridentItem: +8 over the base 1, the same in melee as thrown
 	// Spears (Item.Properties.spear): the base 1 plus the material's attack
 	// bonus and nothing else — the jab is light; the charge is the weapon.
@@ -216,7 +216,7 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 			breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
 		}
 		if t.gamemode == gmSurvival {
-			t.exhaust(attackExhaustion) // vanilla: attacking burns food
+			t.exhaust(attackExhaustion)                 // vanilla: attacking burns food
 			if n := attackWear(t.p.heldItem()); n > 0 { // Weapon.itemDamagePerAttack
 				h.applyToolWear(t, t.p.heldSlot(), n)
 			}
