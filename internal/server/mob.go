@@ -262,6 +262,7 @@ type mob struct {
 	allayPickupCD                   int                               // allay: ticks before it collects again (60 after a throw)
 	allayNoteCD                     int                               // allay: ticks it keeps delivering to the liked note block (600 per note)
 	allayNote                       blockPos                          // allay: that note block
+	allayNoteDim                    int                               // …in this dimension (vanilla keeps a GlobalPos)
 	dupCD                           int                               // allay: ticks until it may duplicate again (6000)
 	dancing                         bool                              // allay: a jukebox plays within earshot
 	frogEaten                       int8                              // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)

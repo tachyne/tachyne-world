@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Allays in any dimension.** An allay delivers to a note block it heard in
+  the Nether or the End as well as the overworld. It only brings items to
+  its player while that player is in survival or creative and within 64
+  blocks, as vanilla's does.
 - **Potions can be drunk.** Using a drinkable potion took the path for
   food, which turned it away, so no potion could ever be drunk; they only
   worked when splashed. They now take their 32 ticks and leave the bottle.

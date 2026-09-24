@@ -258,3 +258,24 @@ func TestDolphinFollowsARowedBoat(t *testing.T) {
 		t.Error("the dolphin kept following a boat that stopped")
 	}
 }
+
+// AllayAi.getLikedPlayer: an adventure or spectator player, or one more
+// than 64 blocks off, is no delivery point.
+func TestAllayLikedPlayerRules(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	a := &mob{etype: entityAllay, owner: pl.p.eid, x: 0.5, y: 100, z: 0.5}
+	pl.x, pl.y, pl.z = 10.5, 100, 0.5
+	if _, _, _, ok := h.allayDeposit(players, a); !ok {
+		t.Fatal("a survival player ten blocks off is no delivery point")
+	}
+	pl.gamemode = gmAdventure
+	if _, _, _, ok := h.allayDeposit(players, a); ok {
+		t.Error("an adventure player is a delivery point")
+	}
+	pl.gamemode, pl.x = gmSurvival, 80.5
+	if _, _, _, ok := h.allayDeposit(players, a); ok {
+		t.Error("a player 80 blocks off is a delivery point")
+	}
+}

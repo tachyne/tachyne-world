@@ -96,7 +96,7 @@ func (h *hub) allayStep(players map[int32]*tracked, m *mob) bool {
 				h.allayThrow(players, m, tx, ty, tz)
 				if toNote { // "Birthday Song": the liked player's allay dropped onto a note block
 					if t := players[m.owner]; t != nil {
-						h.advance(players, t, "allay_drop_item_on_block", advMatch{blockState: h.world.At(m.allayNote.x, m.allayNote.y, m.allayNote.z), item: item})
+						h.advance(players, t, "allay_drop_item_on_block", advMatch{blockState: h.worldFor(m.dim).At(m.allayNote.x, m.allayNote.y, m.allayNote.z), item: item})
 					}
 				}
 				return true
@@ -119,10 +119,13 @@ func (h *hub) allayStep(players map[int32]*tracked, m *mob) bool {
 // allayDeposit is AllayAi.getItemDepositPosition: the liked note block while
 // its memory lasts, otherwise the liked player.
 func (h *hub) allayDeposit(players map[int32]*tracked, m *mob) (x, y, z float64, ok bool) {
-	if m.allayNoteCD > 0 && m.dim == 0 {
+	if m.allayNoteCD > 0 && m.dim == m.allayNoteDim {
 		return float64(m.allayNote.x) + 0.5, float64(m.allayNote.y) + 0.5, float64(m.allayNote.z) + 0.5, true
 	}
-	if t := players[m.owner]; t != nil && t.dim == m.dim && !t.dead {
+	// AllayAi.getLikedPlayer: only a survival or creative player within 64
+	// blocks counts; anyone else, or anyone further, is no liked player.
+	if t := players[m.owner]; t != nil && t.dim == m.dim && !t.dead &&
+		(t.gamemode == gmSurvival || t.gamemode == gmCreative) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) < 64 {
 		return t.x, t.y + 1, t.z, true
 	}
 	return 0, 0, 0, false
@@ -209,7 +212,7 @@ func (h *hub) allaysHearNote(dim int, pos blockPos) {
 			continue
 		}
 		if dist3(float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, m.x, m.y, m.z) <= allayHearRange {
-			m.allayNote, m.allayNoteCD = pos, allayNoteCD
+			m.allayNote, m.allayNoteDim, m.allayNoteCD = pos, dim, allayNoteCD
 		}
 	}
 }
