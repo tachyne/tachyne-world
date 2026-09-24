@@ -119,7 +119,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			if !h.world.Spawnable(x, z) {
 				continue
 			}
-			m := h.spawnHostileY(players, etype,
+			m := h.spawnHostileYIn(players, etype, dimOverworld,
 				float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
 			if m == nil {
 				continue
@@ -133,7 +133,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			// vindicator (the rest) on wave 7+.
 			if etype == entityRavager {
 				if rt := raidRiderType(r.wave, ravagerN); rt != 0 {
-					if rd := h.spawnHostileY(players, rt, m.x, m.y, m.z); rd != nil {
+					if rd := h.spawnHostileYIn(players, rt, m.dim, m.x, m.y, m.z); rd != nil {
 						rd.raidCenter = r.center
 						rd.mount, m.mobRider = m.eid, rd.eid
 						r.alive[rd.eid] = true

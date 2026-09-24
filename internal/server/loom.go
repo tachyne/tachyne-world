@@ -157,7 +157,7 @@ func (h *hub) takeLoomResult(players map[int32]*tracked, t *tracked, mode int32)
 		if t.anvil[0].item == 0 || t.anvil[1].item == 0 {
 			t.stoneSel = -1
 		}
-		h.playSound(players, "minecraft:ui.loom.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:ui.loom.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
 		if mode != 1 {
 			break
 		}

@@ -175,7 +175,7 @@ func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
+	h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
 	return true
 }
 

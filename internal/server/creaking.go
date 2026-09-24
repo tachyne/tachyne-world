@@ -196,15 +196,15 @@ func (h *hub) trySpawnCreaking(players map[int32]*tracked, link *heartLink) {
 		if !h.standableAt(x, y, z) {
 			continue
 		}
-		m := h.spawnMob(players, entityCreaking, float64(x)+0.5, float64(y), float64(z)+0.5)
+		m := h.spawnMobIn(players, entityCreaking, dimOverworld, float64(x)+0.5, float64(y), float64(z)+0.5)
 		if m == nil {
 			return // a plugin cancelled the spawn
 		}
 		m.home = link.pos
 		m.heartBound = true
 		link.creaking = m.eid
-		h.playSound(players, "minecraft:entity.creaking.spawn", sndHostile, px, py, pz, 1, 1)
-		h.playSound(players, "minecraft:block.creaking_heart.spawn", sndBlock, px, py, pz, 1, 1)
+		h.playSoundDim(players, dimOverworld, "minecraft:entity.creaking.spawn", sndHostile, px, py, pz, 1, 1)
+		h.playSoundDim(players, dimOverworld, "minecraft:block.creaking_heart.spawn", sndBlock, px, py, pz, 1, 1)
 		return
 	}
 }
@@ -228,7 +228,7 @@ func (h *hub) loseCreaking(players map[int32]*tracked, link *heartLink) {
 		return
 	}
 	if m := h.mobs[link.creaking]; m != nil {
-		h.playSound(players, "minecraft:entity.creaking.death", sndHostile, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.creaking.death", sndHostile, m.x, m.y, m.z, 1, 1)
 		h.removeMob(players, m)
 	}
 	link.creaking = 0
@@ -263,7 +263,7 @@ func (h *hub) creakingHurt(players map[int32]*tracked, m *mob) {
 	m.spawnInvuln = creakingInvulnTicks
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusShake)) // the invulnerability shudder
-	h.playSound(players, "minecraft:entity.creaking.sway", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.creaking.sway", sndHostile, m.x, m.y, m.z, 1, 1)
 	if link.hurtLeft <= 0 {
 		link.hurtLeft = creakingHurtCalls
 	}
@@ -287,7 +287,7 @@ func (h *hub) spreadResin(players map[int32]*tracked, link *heartLink) {
 			continue
 		}
 		h.setBlockAt(players, 0, p, resinClump)
-		h.playSound(players, "minecraft:block.resin.place", sndBlock,
+		h.playSoundDim(players, dimOverworld, "minecraft:block.resin.place", sndBlock,
 			float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 		return
 	}
@@ -347,7 +347,7 @@ func (h *hub) updateCreakings(players map[int32]*tracked) {
 			// Its heart is gone. Vanilla sets health to 0 on the spot; the
 			// creaking simply comes apart, which is what the player sees.
 			m.heartBound = false
-			h.playSound(players, "minecraft:entity.creaking.death", sndHostile, m.x, m.y, m.z, 1, 1)
+			h.playSoundDim(players, m.dim, "minecraft:entity.creaking.death", sndHostile, m.x, m.y, m.z, 1, 1)
 			h.removeMob(players, m)
 			continue
 		}

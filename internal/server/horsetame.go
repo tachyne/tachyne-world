@@ -52,7 +52,7 @@ func (h *hub) horseRideTick(players map[int32]*tracked, m *mob) bool {
 		m.temper = horseMaxTemper
 	}
 	h.dismountMob(players, t)
-	h.playSound(players, "minecraft:entity.horse.angry", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.horse.angry", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))
 	return true
 }
@@ -62,7 +62,7 @@ func (h *hub) horseRideTick(players map[int32]*tracked, m *mob) bool {
 func (h *hub) tameHorse(players map[int32]*tracked, m *mob, t *tracked) {
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
 	m.temper = horseMaxTemper
-	h.playSound(players, "minecraft:entity.horse.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.horse.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 }
 

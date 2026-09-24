@@ -65,7 +65,7 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 			// not a death, so no loot and no experience. Caught off the ground
 			// it just grumbles and goes (Digging.checkExtraStartConditions).
 			if !m.grounded() {
-				h.playSound(players, "minecraft:entity.warden.agitated", sndHostile, m.x, m.y, m.z, 5, 1)
+				h.playSoundDim(players, m.dim, "minecraft:entity.warden.agitated", sndHostile, m.x, m.y, m.z, 5, 1)
 				h.removeMob(players, m)
 				return
 			}
@@ -101,7 +101,7 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 // and shields, plus knockback.
 func (h *hub) wardenSonicBoom(players map[int32]*tracked, m *mob, t *tracked) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	h.playSound(players, "minecraft:entity.warden.sonic_boom", sndHostile, m.x, m.y, m.z, 3, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.warden.sonic_boom", sndHostile, m.x, m.y, m.z, 3, 1)
 	h.damageOf(players, t, wardenSonicDmg, dtSonicBoom)
 	h.wardenSonicKnock(m, t) // SonicBoom's own push: 2.5 along the beam, 0.5 up
 	if t.dead {

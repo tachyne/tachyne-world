@@ -88,7 +88,7 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	}
 	melee := hostileMelee(m)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	h.playSound(players, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
 	// TWO hits, as the attack goal deals them: the beam's indirect_magic, which
 	// armour does not stop, and then an ordinary bite, which it does. Folding
 	// them into one number would have to pick a single answer to that question.
@@ -197,12 +197,12 @@ func (h *hub) populateMonuments(players map[int32]*tracked) {
 		cy := float64(mn.Y + 7) // inside the hall
 		for i, off := range [][2]float64{{0, 0}, {6, 6}, {-6, -6}} {
 			_ = i
-			h.spawnMob(players, entityElderGuardian, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
+			h.spawnMobIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
 		}
 		for i := 0; i < 8; i++ {
 			ox := float64((i%4)*3 - 4)
 			oz := float64((i/4)*6 - 3)
-			h.spawnMob(players, entityGuardian, float64(mn.X)+ox, cy, float64(mn.Z)+oz)
+			h.spawnMobIn(players, entityGuardian, dimOverworld, float64(mn.X)+ox, cy, float64(mn.Z)+oz)
 		}
 	}
 }
@@ -235,7 +235,7 @@ func (h *hub) populateMansions(players map[int32]*tracked) {
 			if s.Type < 0 || s.Type > 2 {
 				continue
 			}
-			h.spawnMob(players, illager[s.Type], float64(s.X)+0.5, float64(s.Y), float64(s.Z)+0.5)
+			h.spawnMobIn(players, illager[s.Type], dimOverworld, float64(s.X)+0.5, float64(s.Y), float64(s.Z)+0.5)
 		}
 	}
 }

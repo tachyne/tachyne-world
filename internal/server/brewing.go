@@ -315,7 +315,7 @@ func (h *hub) finishBrew(players map[int32]*tracked, pos simPos, b *bin, outs [3
 		b.slots[3] = invStack{}
 	}
 	delete(h.brewIng, pos)
-	h.playSound(players, "minecraft:block.brewing_stand.brew", sndBlock,
+	h.playSoundDim(players, pos.dim, "minecraft:block.brewing_stand.brew", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 	h.refreshBinViewers(players, pos)
 	for _, t := range players {
@@ -419,7 +419,7 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 	for _, e := range potionEffects(p) {
 		h.applyEffectTicks(players, t, e.id, e.amp, e.ticks) // instant effects apply at secs 0
 	}
-	h.playSound(players, "minecraft:entity.generic.drink", sndPlayer, t.x, t.y, t.z, 0.6, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.generic.drink", sndPlayer, t.x, t.y, t.z, 0.6, 1)
 }
 
 // fillBottle turns a held glass bottle into a water bottle (right-click water).
@@ -445,7 +445,7 @@ func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
 			delete(h.clouds, c.eid)
 			h.entityGone(players, c.dim, c.eid)
 		}
-		h.playSound(players, "minecraft:item.bottle.fill_dragonbreath", sndNeutral, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:item.bottle.fill_dragonbreath", sndNeutral, t.x, t.y, t.z, 1, 1)
 		h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 		h.turnBottleInto(t, slot, invStack{item: int32(itemByName["dragon_breath"]), count: 1})
 		return
@@ -453,7 +453,7 @@ func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
 	if !h.waterSourceInSight(t) {
 		return
 	}
-	h.playSound(players, "minecraft:item.bottle.fill", sndNeutral, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.bottle.fill", sndNeutral, t.x, t.y, t.z, 1, 1)
 	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 	h.turnBottleInto(t, slot, potionStack(potWater))
 }

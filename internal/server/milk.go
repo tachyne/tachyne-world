@@ -42,7 +42,7 @@ func (h *hub) tryMilk(players map[int32]*tracked, t *tracked, m *mob) bool {
 	default:
 		return false
 	}
-	h.playSound(players, milkSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, milkSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.giveFilled(players, t, int32(t.p.heldSlot()), itemMilkBucket)
 	return true
 }
@@ -53,7 +53,7 @@ func (h *hub) tryMilkStew(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if heldStack(t).item != itemBowlEmpty || m.etype != entityMooshroom || m.baby {
 		return false
 	}
-	h.playSound(players, "minecraft:entity.mooshroom.milk", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.milk", sndNeutral, m.x, m.y, m.z, 1, 1)
 	if m.stew != 0 { // a brown mooshroom fed a flower: suspicious stew, once
 		h.giveFilledStack(players, t, int32(t.p.heldSlot()), invStack{item: itemSuspiciousStew, count: 1, stew: m.stew})
 		m.stew = 0

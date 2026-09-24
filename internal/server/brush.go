@@ -147,7 +147,7 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 		return
 	}
 	b.coolUntil = now + brushCooldown
-	h.playSound(players, "minecraft:item.brush.brushing.sand", sndBlock,
+	h.playSoundDim(players, t.dim, "minecraft:item.brush.brushing.sand", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 
 	was := dustedStage(b.count)

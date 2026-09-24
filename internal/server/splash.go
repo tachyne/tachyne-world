@@ -45,7 +45,7 @@ type effectCloud struct {
 
 // splashPotion resolves a thrown potion at its impact point.
 func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64, kind int8, lingering bool) {
-	h.playSound(players, "minecraft:entity.splash_potion.break", sndNeutral, x, y, z, 1, 1)
+	h.playSoundDim(players, dim, "minecraft:entity.splash_potion.break", sndNeutral, x, y, z, 1, 1)
 	// The burst is a level event carrying the brew's colour, not a generic
 	// water splash: the client draws the bottle shards and a hundred effect
 	// particles tinted like the liquid (AbstractThrownPotion.onHit). Instant
@@ -251,7 +251,7 @@ func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int
 	a := h.launchProjectileIn(players, entitySplashProj, t.dim, t.x, t.y+1.4, t.z, dx*v, dy*v, dz*v)
 	a.shooter, a.splash, a.breaks, a.potion, a.lingering = t.p.eid, true, true, kind, lingering
 	a.playerShot, a.noHitUntil = true, h.tick.Load()+2 // don't shatter on the thrower at launch
-	h.playSound(players, "minecraft:entity.splash_potion.throw", sndPlayer, t.x, t.y, t.z, 0.5, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.splash_potion.throw", sndPlayer, t.x, t.y, t.z, 0.5, 1)
 	if t.gamemode != gmCreative {
 		if s.count--; s.count <= 0 {
 			*s = invStack{}

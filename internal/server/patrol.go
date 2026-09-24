@@ -80,7 +80,7 @@ func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
 		if !h.world.Spawnable(x, z) {
 			continue
 		}
-		m := h.spawnHostileY(players, entityPillager,
+		m := h.spawnHostileYIn(players, entityPillager, dimOverworld,
 			float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
 		if m == nil {
 			continue
@@ -144,7 +144,7 @@ func (h *hub) updateOutposts(players map[int32]*tracked) {
 					if !h.world.Spawnable(x, z) {
 						continue
 					}
-					m := h.spawnHostileY(players, entityPillager,
+					m := h.spawnHostileYIn(players, entityPillager, dimOverworld,
 						float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
 					if m == nil {
 						continue

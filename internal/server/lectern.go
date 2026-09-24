@@ -318,7 +318,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 			}
 			h.sendSlot(t, t.p.heldSlot())
 		}
-		h.playSound(players, "minecraft:block.chiseled_bookshelf.insert", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.chiseled_bookshelf.insert", sndBlock,
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	} else if held.item == 0 && shelf[slot].item != 0 {
 		book := shelf[slot]
@@ -330,7 +330,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 		if leftover > 0 {
 			h.tossItem(players, t, book)
 		}
-		h.playSound(players, "minecraft:block.chiseled_bookshelf.pickup", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.chiseled_bookshelf.pickup", sndBlock,
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	} else {
 		return

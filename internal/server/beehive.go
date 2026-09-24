@@ -97,10 +97,10 @@ func (h *hub) harvestBeeHome(players map[int32]*tracked, t *tracked, pos blockPo
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
-		h.spawnItem(players, give.item, left, t.x, t.y, t.z)
+		h.spawnItemIn(players, t.dim, give.item, left, t.x, t.y, t.z)
 	}
 	h.setBlockAt(players, 0, pos, withHoney(cur, 0))
-	h.playSound(players, sound, sndBlock,
+	h.playSoundDim(players, t.dim, sound, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 
 	// Robbing a hive turns the bees on you — the ones inside come OUT angry —

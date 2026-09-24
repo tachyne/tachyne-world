@@ -68,7 +68,7 @@ func loveFood(etype int) int32 {
 // spawnAnimal creates a passive species with its stats (health set by
 // mobHealth) and species quirks (chickens dawdle, sheep pick a fleece).
 func (h *hub) spawnAnimal(players map[int32]*tracked, etype, x, z int) *mob {
-	m := h.spawnMob(players, etype, float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
+	m := h.spawnMobIn(players, etype, dimOverworld, float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
 	if m == nil {
 		return nil // plugin-cancelled spawn
 	}
@@ -121,14 +121,14 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 		}
 		h.healMob(m, n)
 		h.consumeFed(t, item)
-		h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	if m.baby {
 		// getSpeedUpSecondsWhenFeeding: a tenth of the remaining time, in whole seconds.
 		h.ageUp(m, m.growLeft/200*20)
 		h.consumeFed(t, item)
-		h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	if neverLoves[m.etype] || m.loveTicks > 0 || m.breedCD > 0 || m.hasEgg { // Turtle.canFallInLove: not while carrying an egg
@@ -136,7 +136,7 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 	}
 	h.consumeFed(t, item)
 	h.setInLove(players, t, m)
-	h.playSound(players, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 
@@ -149,8 +149,8 @@ func (h *hub) shearMob(players map[int32]*tracked, m *mob) bool {
 	m.sheared = true
 	h.vibAt(m.dim, freqShear, m.x, m.y, m.z, m.eid)
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, true)))
-	h.spawnItem(players, sheepWool(m), 1+h.rng.Intn(3), m.x, m.y, m.z) // its own fleece
-	h.playSound(players, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.spawnItemIn(players, m.dim, sheepWool(m), 1+h.rng.Intn(3), m.x, m.y, m.z) // its own fleece
+	h.playSoundDim(players, m.dim, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 
@@ -217,8 +217,8 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		if m.etype == entityChicken && !m.baby && !m.jockey {
 			if m.eggIn -= survivalTickN; m.eggIn <= 0 {
 				m.eggIn = eggLayMin + h.rng.Intn(eggLayMax-eggLayMin)
-				h.spawnItem(players, chickenEggFor(m.variant), 1, m.x, m.y, m.z)
-				h.playSound(players, "minecraft:entity.chicken.egg", sndNeutral, m.x, m.y, m.z, 1, 1)
+				h.spawnItemIn(players, m.dim, chickenEggFor(m.variant), 1, m.x, m.y, m.z)
+				h.playSoundDim(players, m.dim, "minecraft:entity.chicken.egg", sndNeutral, m.x, m.y, m.z, 1, 1)
 			}
 		}
 		if m.loveTicks <= 0 {
@@ -298,7 +298,7 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 				}
 				h.toTracking(players, baby.eid, 0, baby.x, baby.z, metaEv(babyMeta(baby.eid, true)))
 			}
-			h.spawnXPOrb(players, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
+			h.spawnXPOrbIn(players, m.dim, 1+h.rng.Intn(7), m.x, m.y, m.z) // breeding XP (vanilla 1-7)
 			breeder := players[m.lovedBy]
 			if breeder == nil {
 				breeder = players[o.lovedBy]

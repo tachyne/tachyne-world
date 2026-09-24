@@ -85,11 +85,6 @@ func (h *hub) sendExperience(t *tracked) {
 	})
 }
 
-// spawnXPOrb drops an experience orb at (x,y,z), resting it on the local floor.
-func (h *hub) spawnXPOrb(players map[int32]*tracked, value int, x, y, z float64) {
-	h.spawnXPOrbIn(players, 0, value, x, y, z)
-}
-
 // orbValues is the ladder ExperienceOrb.getExperienceValue walks down: an
 // award is paid out in the largest denominations that fit, which is why a
 // 100-point kill leaves a handful of fat orbs rather than a hundred motes.
@@ -227,7 +222,7 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 			if t.xpLevel > lvl {
 				snd, pitch = "minecraft:entity.player.levelup", 1
 			}
-			h.playSound(players, snd, sndPlayer, o.x, o.y, o.z, 0.6, pitch)
+			h.playSoundDim(players, o.dim, snd, sndPlayer, o.x, o.y, o.z, 0.6, pitch)
 			h.toTracking(players, eid, o.dim, o.x, o.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: 1})
 			// A merged orb pays out one of its stack per touch; it only goes
 			// away once the last one has been taken.

@@ -275,11 +275,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 
 	if crit {
 		h.spawnParticles(players, m.dim, particleCrit, m.x, m.y+1, m.z, 0.4, 0.2, 8)
-		h.playSound(players, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.crit", sndPlayer, m.x, m.y, m.z, 1, 1)
 	} else if charge >= 0.9 {
-		h.playSound(players, "minecraft:entity.player.attack.strong", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.strong", sndPlayer, m.x, m.y, m.z, 1, 1)
 	} else {
-		h.playSound(players, "minecraft:entity.player.attack.weak", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.player.attack.weak", sndPlayer, m.x, m.y, m.z, 1, 1)
 	}
 
 	// Real knockback: shove the mob away from the attacker (server physics —
@@ -345,7 +345,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				}
 			}
-			h.playSound(players, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
+			h.playSoundDim(players, t.dim, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
 		}
 	}
 
@@ -441,7 +441,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: yaw})
 	if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
-		h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
+		h.playSoundDim(players, m.dim, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
 }
 
@@ -461,7 +461,7 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
 	if _, death, _ := h.mobSoundsFor(m); death != "" {
-		h.playSound(players, death, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
+		h.playSoundDim(players, m.dim, death, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
 }
 

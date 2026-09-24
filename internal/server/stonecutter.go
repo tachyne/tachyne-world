@@ -107,7 +107,7 @@ func (h *hub) takeStonecutResult(players map[int32]*tracked, t *tracked, mode in
 			t.anvil[0] = invStack{}
 			t.stoneSel = -1 // vanilla: empty input resets the recipe list
 		}
-		h.playSound(players, "minecraft:ui.stonecutter.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:ui.stonecutter.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
 		if mode != 1 {
 			break
 		}

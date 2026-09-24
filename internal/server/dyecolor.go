@@ -80,7 +80,7 @@ func (h *hub) dyeSheep(players map[int32]*tracked, m *mob, item int32) bool {
 	}
 	m.color = color
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(sheepFleeceMeta(m.eid, m.color, m.sheared)))
-	h.playSound(players, "minecraft:item.dye.use", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:item.dye.use", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 

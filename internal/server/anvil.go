@@ -421,9 +421,9 @@ func (h *hub) takeTwoSlotResult(players map[int32]*tracked, t *tracked, mode int
 		// the same again — so the same gear never pays out quite the same.
 		if cost > 0 {
 			half := (cost + 1) / 2 // ceil(n/2)
-			h.spawnXPOrb(players, half+h.rng.Intn(half), t.x, t.y, t.z)
+			h.spawnXPOrbIn(players, t.dim, half+h.rng.Intn(half), t.x, t.y, t.z)
 		}
-		h.playSound(players, "minecraft:block.grindstone.use", sndBlock, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:block.grindstone.use", sndBlock, t.x, t.y, t.z, 1, 1)
 	}
 	h.resultTake(t, res, mode) // onto the cursor, or into the inventory on a shift-click
 	h.sendCursor(t)
@@ -446,7 +446,7 @@ func (h *hub) reclaimAnvil(players map[int32]*tracked, t *tracked) {
 		}
 		if leftover > 0 && players != nil {
 			st.count = leftover
-			if it := h.spawnItem(players, st.item, st.count, t.x, t.y, t.z); it != nil {
+			if it := h.spawnItemIn(players, t.dim, st.item, st.count, t.x, t.y, t.z); it != nil {
 				it.setFrom(st)
 				h.refreshItemMeta(players, it) // the spawn broadcast went out bare; show the real stack
 			}

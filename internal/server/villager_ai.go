@@ -300,7 +300,7 @@ func (h *hub) setDoorOpen(players map[int32]*tracked, pos blockPos, state uint32
 	if !ok || !info.HasProperty("open") || boolProp(state, "open") == open {
 		return false
 	}
-	h.setBlock(players, pos, setBoolProp(state, "open", open))
+	h.setBlockAt(players, dimOverworld, pos, setBoolProp(state, "open", open))
 	// The paired half shares the open state (a door is two blocks).
 	oy := pos.y + 1
 	if worldgen.GetProperty(info, state, "half") == "upper" {
@@ -308,12 +308,12 @@ func (h *hub) setDoorOpen(players map[int32]*tracked, pos blockPos, state uint32
 	}
 	other := h.world.Block(pos.x, oy, pos.z)
 	if oi, ok := worldgen.InfoForState(other); ok && oi.HasProperty("open") {
-		h.setBlock(players, blockPos{pos.x, oy, pos.z}, setBoolProp(other, "open", open))
+		h.setBlockAt(players, dimOverworld, blockPos{pos.x, oy, pos.z}, setBoolProp(other, "open", open))
 	}
 	snd := "minecraft:block.wooden_door.open"
 	if !open {
 		snd = "minecraft:block.wooden_door.close"
 	}
-	h.playSound(players, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.9, 1)
+	h.playSoundDim(players, dimOverworld, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.9, 1)
 	return true
 }

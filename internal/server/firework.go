@@ -139,7 +139,7 @@ func (h *hub) spawnRocket(players map[int32]*tracked, dim int, x, y, z float64, 
 	if st.item != 0 {
 		h.toNearbyEv(players, dim, x, z, metaEv(itemMetadata(eid, st)))
 	}
-	h.playSound(players, "minecraft:entity.firework_rocket.launch", sndAmbient, x, y, z, 3, 1)
+	h.playSoundDim(players, dim, "minecraft:entity.firework_rocket.launch", sndAmbient, x, y, z, 3, 1)
 	return r
 }
 
@@ -197,7 +197,7 @@ func (h *hub) updateRockets(players map[int32]*tracked) {
 func (h *hub) popRocket(players map[int32]*tracked, r *rocketEntity) {
 	delete(h.rockets, r.eid)
 	h.toTracking(players, r.eid, r.dim, r.x, r.z, entityStatus(r.eid, entityStatusFireworks)) // FireworkRocketEntity.explode
-	h.playSound(players, "minecraft:entity.firework_rocket.blast", sndAmbient, r.x, r.y, r.z, 3, 1)
+	h.playSoundDim(players, r.dim, "minecraft:entity.firework_rocket.blast", sndAmbient, r.x, r.y, r.z, 3, 1)
 	h.rocketBlast(players, r)
 	h.entityGone(players, r.dim, r.eid)
 }

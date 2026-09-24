@@ -176,13 +176,6 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 	}
 }
 
-// explodeAt is the shared blast: crater (respecting blast resistance,
-// chain-priming TNT), boom + particle, and falloff damage with knockback for
-// players and mobs. Creepers and TNT both detonate through here.
-func (h *hub) explodeAt(players map[int32]*tracked, cx, cy, cz float64, radius int, power float64, kind blastKind) {
-	h.explodeIn(players, 0, cx, cy, cz, radius, power, kind)
-}
-
 // blastKind is what set the blast off, for the drop-decay rules (Level.
 // ExplosionInteraction): a TNT blast drops everything by default, a mob's
 // or a block's one in `radius`.

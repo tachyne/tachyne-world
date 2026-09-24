@@ -124,7 +124,7 @@ func (h *hub) beaconsOnBlockChange(players map[int32]*tracked, dim, x, y, z int,
 	if b := h.beacons[pos]; b != nil {
 		delete(h.beacons, pos)
 		if b.levels > 0 {
-			h.playSound(players, "minecraft:block.beacon.deactivate", sndBlock,
+			h.playSoundDim(players, dim, "minecraft:block.beacon.deactivate", sndBlock,
 				float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
 		}
 	}
@@ -217,7 +217,7 @@ func (h *hub) onSetBeacon(players map[int32]*tracked, t *tracked, primary, secon
 	if pay.count--; pay.count <= 0 { // vanilla consumes the payment in every mode
 		*pay = invStack{}
 	}
-	h.playSound(players, "minecraft:block.beacon.power_select", sndBlock,
+	h.playSoundDim(players, t.dim, "minecraft:block.beacon.power_select", sndBlock,
 		float64(t.winPos.x)+0.5, float64(t.winPos.y)+0.5, float64(t.winPos.z)+0.5, 1, 1)
 	h.sendBeaconWindow(t)
 }
@@ -242,9 +242,9 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 		prev := b.levels
 		b.levels = levels
 		if prev == 0 && levels > 0 {
-			h.playSound(players, "minecraft:block.beacon.activate", sndBlock, cx, cy, cz, 1, 1)
+			h.playSoundDim(players, dim, "minecraft:block.beacon.activate", sndBlock, cx, cy, cz, 1, 1)
 		} else if prev > 0 && levels == 0 {
-			h.playSound(players, "minecraft:block.beacon.deactivate", sndBlock, cx, cy, cz, 1, 1)
+			h.playSoundDim(players, dim, "minecraft:block.beacon.deactivate", sndBlock, cx, cy, cz, 1, 1)
 		}
 		if levels > prev { // vanilla: the trigger fires on tier growth, nearby players
 			for _, t := range players {
@@ -256,7 +256,7 @@ func (h *hub) beaconTick(players map[int32]*tracked) {
 		if levels == 0 {
 			continue
 		}
-		h.playSound(players, "minecraft:block.beacon.ambient", sndBlock, cx, cy, cz, 1, 1)
+		h.playSoundDim(players, dim, "minecraft:block.beacon.ambient", sndBlock, cx, cy, cz, 1, 1)
 		if b.primary == 0 {
 			continue
 		}

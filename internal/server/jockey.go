@@ -58,7 +58,7 @@ func (h *hub) rollSpiderJockey(players map[int32]*tracked, m *mob) {
 	if h.rng.Intn(spiderJockeyOdds) != 0 {
 		return
 	}
-	if sk := h.spawnHostileY(players, entitySkeleton, m.x, m.y, m.z); sk != nil {
+	if sk := h.spawnHostileYIn(players, entitySkeleton, m.dim, m.x, m.y, m.z); sk != nil {
 		h.mountMobOn(players, sk, m, false)
 	}
 }

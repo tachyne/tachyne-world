@@ -129,7 +129,7 @@ func (h *hub) spawnSiegeZombie(players map[int32]*tracked) {
 	if !ok {
 		return
 	}
-	if m := h.spawnHostileY(players, entityZombie, float64(p.x)+0.5, float64(p.y), float64(p.z)+0.5); m != nil {
+	if m := h.spawnHostileYIn(players, entityZombie, dimOverworld, float64(p.x)+0.5, float64(p.y), float64(p.z)+0.5); m != nil {
 		m.yaw = float32(h.rng.Float64() * 360)
 	}
 }

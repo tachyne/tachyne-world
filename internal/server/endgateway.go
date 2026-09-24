@@ -133,7 +133,7 @@ func (h *hub) returnFromGateway(players map[int32]*tracked, t *tracked) {
 func (h *hub) teleportInEnd(players map[int32]*tracked, t *tracked, to blockPos) {
 	t.x, t.y, t.z = float64(to.x)+0.5, float64(to.y), float64(to.z)+0.5
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
-	h.playSound(players, "minecraft:block.end_gateway.teleport", sndBlock, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:block.end_gateway.teleport", sndBlock, t.x, t.y, t.z, 1, 1)
 }
 
 // updateEndGateways carries anyone standing in a gateway. A gateway near the

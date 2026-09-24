@@ -65,10 +65,10 @@ func witherPatternAt(w *world.World, cx, topY, cz int, ax [2]int) bool {
 func (h *hub) spawnWitherFrom(players map[int32]*tracked, by int32, dim, cx, topY, cz int, ax [2]int) {
 	for j := -1; j <= 1; j++ {
 		x, z := cx+j*ax[0], cz+j*ax[1]
-		h.setBlock(players, blockPos{x, topY, z}, worldgen.Air)     // skull
-		h.setBlock(players, blockPos{x, topY - 1, z}, worldgen.Air) // arm
+		h.setBlockAt(players, dim, blockPos{x, topY, z}, worldgen.Air)     // skull
+		h.setBlockAt(players, dim, blockPos{x, topY - 1, z}, worldgen.Air) // arm
 	}
-	h.setBlock(players, blockPos{cx, topY - 2, cz}, worldgen.Air) // stem
+	h.setBlockAt(players, dim, blockPos{cx, topY - 2, cz}, worldgen.Air) // stem
 
 	m := h.spawnSpecies(players, entityWither, dim, float64(cx)+0.5, float64(topY-2), float64(cz)+0.5)
 	if t := players[by]; t != nil && m != nil {

@@ -23,7 +23,7 @@ func (h *hub) raiseSpyglass(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	t.scopeUntil = h.tick.Load() + spyglassUseTicks
-	h.playSound(players, "minecraft:item.spyglass.use", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.spyglass.use", sndPlayer, t.x, t.y, t.z, 1, 1)
 	h.advance(players, t, "using_item", advMatch{item: itemSpyglass, lookingAt: h.mobInSightName(t, 256)})
 }
 
@@ -34,7 +34,7 @@ func (h *hub) lowerSpyglass(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	t.scopeUntil = 0
-	h.playSound(players, "minecraft:item.spyglass.stop_using", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.spyglass.stop_using", sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // expireSpyglass drops a scope that has run its full duration.

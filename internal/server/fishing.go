@@ -397,9 +397,9 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 					it.dmg, it.ench = st.dmg, st.ench
 				}
 			}
-			h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, t.x, t.y, t.z, 0.4, 1.5)
+			h.playSoundDim(players, t.dim, "minecraft:entity.item.pickup", sndPlayer, t.x, t.y, t.z, 0.4, 1.5)
 		}
-		h.spawnXPOrb(players, h.rng.Intn(6)+1, t.x, t.y+0.5, t.z+0.5)
+		h.spawnXPOrbIn(players, t.dim, h.rng.Intn(6)+1, t.x, t.y+0.5, t.z+0.5)
 		if isFish {
 			h.incCustom(t, "fish_caught", 1)
 			h.advance(players, t, "fishing_rod_hooked", advMatch{item: st.item})

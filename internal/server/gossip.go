@@ -287,7 +287,7 @@ func (h *hub) golemPunchPlayer(players map[int32]*tracked, m *mob) bool {
 	}
 	m.attackCD = 5
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	h.playSound(players, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.hurtFrom(players, t, float32(7.5+float64(h.rng.Intn(15))), mobMeleeDamage(m.etype),
 		deathCause{by: mobDisplayName(m.etype)}, fromMob(m.x, m.z))
 	h.knockback(t, m.x, m.z)

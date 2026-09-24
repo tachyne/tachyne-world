@@ -41,7 +41,7 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 	if s.dmg += n; s.dmg >= max {
 		// Stats.ITEM_BROKEN, and the snap everyone nearby hears.
 		h.incStat(t, attachproto.StatBroken, s.item, 1)
-		h.playSound(h.playersRef, "minecraft:entity.item.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
+		h.playSoundDim(h.playersRef, t.dim, "minecraft:entity.item.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
 		*s = invStack{} // the tool breaks
 	}
 	if slot == offhandSlot {

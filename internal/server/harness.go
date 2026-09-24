@@ -60,10 +60,10 @@ func (h *hub) tryHappyGhast(players map[int32]*tracked, t *tracked, m *mob) bool
 			h.consumeHeld(t)
 		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
-		h.playSound(players, "minecraft:item.armor.equip_generic", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:item.armor.equip_generic", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	case m.harness != 0 && held == itemShears:
-		h.spawnItem(players, m.harness, 1, m.x, m.y, m.z) // pop the harness off
+		h.spawnItemIn(players, m.dim, m.harness, 1, m.x, m.y, m.z) // pop the harness off
 		m.harness = 0
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, 0))
 		return true

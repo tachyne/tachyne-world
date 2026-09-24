@@ -43,9 +43,6 @@ type simPos struct {
 // a dispenser faces) and must not stray into another world's copy of it.
 func (p simPos) at(b blockPos) simPos { return simPos{dim: p.dim, blockPos: b} }
 
-// schedule queues an OVERWORLD block update `delay` ticks from now.
-func (h *hub) schedule(pos blockPos, delay uint64) { h.scheduleIn(0, pos, delay) }
-
 // scheduleIn queues a block update in a specific dimension.
 func (h *hub) scheduleIn(dim int, pos blockPos, delay uint64) {
 	if dim == 0 && !h.ownedBlock(pos.x, pos.z) {
@@ -54,9 +51,6 @@ func (h *hub) scheduleIn(dim int, pos blockPos, delay uint64) {
 	due := h.tick.Load() + delay
 	h.pending[due] = append(h.pending[due], simPos{dim: dim, blockPos: pos})
 }
-
-// scheduleAround queues a block and its six neighbours in the overworld.
-func (h *hub) scheduleAround(pos blockPos, delay uint64) { h.scheduleAroundIn(0, pos, delay) }
 
 // scheduleAroundIn queues a block and its six neighbours in a dimension.
 func (h *hub) scheduleAroundIn(dim int, pos blockPos, delay uint64) {
@@ -173,11 +167,6 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 	}
 }
 
-// setBlock applies an OVERWORLD simulation change and broadcasts it.
-func (h *hub) setBlock(players map[int32]*tracked, pos blockPos, state uint32) {
-	h.setBlockAt(players, 0, pos, state)
-}
-
 // setBlockAt applies a simulation-driven change in a dimension and broadcasts
 // it to the players standing in that dimension.
 func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
@@ -205,11 +194,6 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	if len(h.knots) > 0 && !isFence(state) {
 		h.cutLeashesAt(players, dim, pos)
 	}
-}
-
-// broadcastBlock sends a Block Update to overworld players tracking the chunk.
-func (h *hub) broadcastBlock(players map[int32]*tracked, x, y, z int, state uint32) {
-	h.broadcastBlockIn(players, 0, x, y, z, state)
 }
 
 // broadcastBlockIn sends a Block Update to players in `dim` tracking the chunk.
@@ -524,7 +508,7 @@ func (h *hub) lavaSolidify(players map[int32]*tracked, dim int, pos blockPos, le
 
 // fizz plays the lava-quench sound where a fluid solidified (vanilla levelEvent 1501).
 func (h *hub) fizz(players map[int32]*tracked, dim int, pos blockPos) {
-	h.playSound(players, "minecraft:block.lava.extinguish", sndBlock,
+	h.playSoundDim(players, dim, "minecraft:block.lava.extinguish", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 2.6)
 }
 

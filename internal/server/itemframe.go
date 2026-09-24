@@ -205,7 +205,7 @@ func (h *hub) hitFrame(players map[int32]*tracked, attacker *tracked, f *itemFra
 		f.rot = 0
 		h.markFrameMapsDirty(f)
 		if !creative {
-			if it := h.spawnItem(players, dropped.item, dropped.count,
+			if it := h.spawnItemIn(players, f.dim, dropped.item, dropped.count,
 				float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5); it != nil {
 				it.dmg, it.ench, it.mapID = dropped.dmg, dropped.ench, dropped.mapID
 			}
@@ -227,9 +227,9 @@ func (h *hub) breakFrame(players map[int32]*tracked, f *itemFrame, creative bool
 		if f.glow {
 			frameItem = itemGlowItemFrame
 		}
-		h.spawnItem(players, frameItem, 1, float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5)
+		h.spawnItemIn(players, f.dim, frameItem, 1, float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5)
 		if f.held.count > 0 {
-			if it := h.spawnItem(players, f.held.item, f.held.count,
+			if it := h.spawnItemIn(players, f.dim, f.held.item, f.held.count,
 				float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5); it != nil {
 				it.dmg, it.ench, it.mapID = f.held.dmg, f.held.ench, f.held.mapID
 			}

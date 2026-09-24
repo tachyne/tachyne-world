@@ -30,9 +30,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	x, y, z := sm.X, sm.Y, sm.Z
 	var m *mob
 	if sm.Hostile {
-		m = h.spawnHostileY(players, sm.Etype, x, y, z) // hostile stance + per-species quirks
+		m = h.spawnHostileYIn(players, sm.Etype, sm.Dim, x, y, z) // hostile stance + per-species quirks
 	} else {
-		m = h.spawnMob(players, sm.Etype, x, y, z)
+		m = h.spawnMobIn(players, sm.Etype, sm.Dim, x, y, z)
 		h.applySpecies(players, m) // roster stance/quirks (no-op for the legacy animals)
 	}
 	if m == nil {

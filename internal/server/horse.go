@@ -98,7 +98,7 @@ func (h *hub) equipChest(players map[int32]*tracked, m *mob) {
 	}
 	m.chested = true
 	m.chest = make([]invStack, horseColumns(m)*3)
-	h.playSound(players, "minecraft:entity.donkey.chest", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.donkey.chest", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 
 // openHorseScreen opens the mount window: its own open packet, then the
@@ -188,7 +188,7 @@ func (h *hub) spillHorse(players map[int32]*tracked, m *mob) {
 		if st.item == 0 || st.count <= 0 {
 			return
 		}
-		if it := h.spawnItem(players, st.item, st.count, m.x, m.y+0.5, m.z); it != nil {
+		if it := h.spawnItemIn(players, m.dim, st.item, st.count, m.x, m.y+0.5, m.z); it != nil {
 			it.setFrom(st)
 			h.refreshItemMeta(players, it) // the spawn broadcast went out bare; show the real stack
 		}

@@ -123,7 +123,7 @@ func (h *hub) placeVillageGolem(players map[int32]*tracked, m *mob) *mob {
 		if !found || !golemUnobstructed(w.At(x, y-1, z), w.At(x, y, z), w.At(x, y+1, z), w.At(x, y+2, z)) {
 			continue
 		}
-		g := h.spawnMob(players, entityIronGolem, float64(x)+0.5, float64(y), float64(z)+0.5)
+		g := h.spawnMobIn(players, entityIronGolem, m.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 		if g == nil {
 			return nil // plugin-cancelled spawn
 		}

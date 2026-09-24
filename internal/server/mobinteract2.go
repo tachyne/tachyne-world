@@ -41,9 +41,9 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 		if m.variant == mooshroomBrown {
 			mush = itemBrownMushroom
 		}
-		h.playSound(players, "minecraft:entity.mooshroom.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		for i := 0; i < 5; i++ {
-			h.spawnItem(players, mush, 1, m.x, m.y+1, m.z)
+			h.spawnItemIn(players, m.dim, mush, 1, m.x, m.y+1, m.z)
 		}
 		h.convertMob(players, m, entityCow)
 	case entitySnowGolem:
@@ -51,22 +51,22 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 			return false
 		}
 		m.sheared = true
-		h.playSound(players, "minecraft:entity.snow_golem.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.snow_golem.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(snowGolemMeta(m)))
-		h.spawnItem(players, itemCarvedPumpkin, 1, m.x, m.y+1.7, m.z)
+		h.spawnItemIn(players, m.dim, itemCarvedPumpkin, 1, m.x, m.y+1.7, m.z)
 	case entityBogged:
 		if m.sheared {
 			return false
 		}
 		m.sheared = true
-		h.playSound(players, "minecraft:entity.bogged.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.bogged.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, boggedShearedMeta, true)))
 		for i := 0; i < 2; i++ { // shearing/bogged: two rolls, red or brown each
 			mush := itemRedMushroom
 			if h.rng.Intn(2) == 0 {
 				mush = itemBrownMushroom
 			}
-			h.spawnItem(players, mush, 1, m.x, m.y+1.99, m.z)
+			h.spawnItemIn(players, m.dim, mush, 1, m.x, m.y+1.99, m.z)
 		}
 	default:
 		return false
@@ -101,7 +101,7 @@ func (h *hub) tryRepairGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 		return false
 	}
 	m.health = min(maxHP, m.health+golemRepairHeal)
-	h.playSound(players, "minecraft:entity.iron_golem.repair", sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
+	h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.repair", sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
@@ -122,7 +122,7 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 	if held == itemFireCharge {
 		sound = "minecraft:item.firecharge.use"
 	}
-	h.playSound(players, sound, sndHostile, m.x, m.y, m.z, 1, h.rng.Float32()*0.4+0.8)
+	h.playSoundDim(players, m.dim, sound, sndHostile, m.x, m.y, m.z, 1, h.rng.Float32()*0.4+0.8)
 	if m.fuse == 0 {
 		m.fuse = creeperFuseTicks
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))

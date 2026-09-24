@@ -116,7 +116,7 @@ func (h *hub) becomeOminous(players map[int32]*tracked, ts *trialSpawner) {
 		ts.state = trialActive
 	}
 	h.showTrialState(players, ts)
-	h.playSound(players, "minecraft:block.trial_spawner.ominous_activate", sndBlock, ts.fx(), ts.fy(), ts.fz(), 1, 1)
+	h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.ominous_activate", sndBlock, ts.fx(), ts.fy(), ts.fz(), 1, 1)
 }
 
 // trialRewardTable picks the one table an ejection pays from

@@ -63,7 +63,7 @@ func (h *hub) handleUseAnchor(players map[int32]*tracked, t *tracked, pos blockP
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}
-		h.playSound(players, "minecraft:block.respawn_anchor.charge", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.respawn_anchor.charge", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 		h.advance(players, t, "charge_respawn_anchor", advMatch{})
 		return
@@ -78,7 +78,7 @@ func (h *hub) handleUseAnchor(players map[int32]*tracked, t *tracked, pos blockP
 	if h.spawns != nil {
 		h.spawns.set(t.p.name, pos, t.dim)
 		t.p.trySendEv(chatEv("Respawn point set"))
-		h.playSound(players, "minecraft:block.respawn_anchor.set_spawn", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.respawn_anchor.set_spawn", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	}
 }

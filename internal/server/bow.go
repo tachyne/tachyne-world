@@ -126,7 +126,7 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 		a.noPickup = true // an infinite arrow is never retrievable
 	}
 	a.playerShot = true
-	h.playSound(players, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
+	h.playSoundDim(players, t.dim, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
 }
 
 // consumeArrow removes one arrow from the inventory (first stack found).
@@ -180,5 +180,5 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks = true, true // throwables shatter on impact, never stick
 	a.egg = item == itemEgg
-	h.playSound(players, "minecraft:entity.snowball.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
+	h.playSoundDim(players, t.dim, "minecraft:entity.snowball.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
 }

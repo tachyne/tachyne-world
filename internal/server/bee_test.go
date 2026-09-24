@@ -289,7 +289,7 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 		count: 1, ench: enchList{{enchSilkTouch, 1}}}
 
 	h.world.SetBlock(nest.x, nest.y, nest.z, worldgen.Air)
-	h.dropBeeHome(players, t2.p.eid, state, nest)
+	h.dropBeeHome(players, t2.p.eid, dimOverworld, state, nest)
 	if len(h.hives[nest]) != 0 {
 		t.Fatalf("stowed hive still has occupants at the old position: %v", h.hives[nest])
 	}
@@ -330,7 +330,7 @@ func TestSilkTouchCarriesTheHive(t *testing.T) {
 	t2.inv.slots[t2.p.heldSlot()] = invStack{item: int32(itemByName["diamond_pickaxe"]), count: 1}
 	before := len(h.items)
 	h.world.SetBlock(nest2.x, nest2.y, nest2.z, worldgen.Air)
-	h.dropBeeHome(players, t2.p.eid, state2, nest2)
+	h.dropBeeHome(players, t2.p.eid, dimOverworld, state2, nest2)
 	if len(h.items) != before {
 		t.Fatal("a bee nest without Silk Touch dropped an item")
 	}

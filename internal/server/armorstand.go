@@ -80,7 +80,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
 	h.vibAt(st.dim, freqEntityPlace, st.x, st.y, st.z, t.p.eid)
-	h.playSound(players, "minecraft:entity.armor_stand.place", sndBlock, st.x, st.y, st.z, 0.75, 0.8)
+	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.place", sndBlock, st.x, st.y, st.z, 0.75, 0.8)
 }
 
 func (h *hub) standAddEv(st *armorStand) attachproto.EntityAdd {
@@ -165,7 +165,7 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 		}
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standEquipEv(st))
-	h.playSound(players, "minecraft:entity.armor_stand.hit", sndBlock, st.x, st.y, st.z, 0.3, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.armor_stand.hit", sndBlock, st.x, st.y, st.z, 0.3, 1)
 }
 
 // hitStand: the vanilla double-punch — a lone hit wobbles, a second within
@@ -183,17 +183,17 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 		return // gamerule entity_drops
 	}
 	if t == nil || t.gamemode != gmCreative {
-		if it := h.spawnItem(players, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil {
+		if it := h.spawnItemIn(players, t.dim, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil {
 			_ = it
 		}
 	}
 	for _, s := range st.equip {
 		if s.item != 0 {
-			if it := h.spawnItem(players, s.item, s.count, st.x, st.y+1, st.z); it != nil {
+			if it := h.spawnItemIn(players, t.dim, s.item, s.count, st.x, st.y+1, st.z); it != nil {
 				it.dmg, it.ench = s.dmg, s.ench
 				it.trimMat, it.trimPat = s.trimMat, s.trimPat
 			}
 		}
 	}
-	h.playSound(players, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
 }

@@ -352,15 +352,15 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		s := h.world.At(pos.x, pos.y, pos.z)
 		switch {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseActive:
-			h.setBlock(players, pos, sensorWith(s, 0, sculkPhaseCooldown))
+			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseCooldown))
 			h.sculkDue[pos] = now + sculkCooldownTicks()
-			h.scheduleAround(pos, 1) // redstone drops
+			h.scheduleAroundIn(dimOverworld, pos, 1) // redstone drops
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseCooldown:
-			h.setBlock(players, pos, sensorWith(s, 0, sculkPhaseInactive))
+			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseInactive))
 			delete(h.sculkDue, pos)
 		case isShrieker(s) && shriekerShrieking(s):
 			h.shriekerRespond(players, pos, s)
-			h.setBlock(players, pos, shriekerWith(s, false))
+			h.setBlockAt(players, dimOverworld, pos, shriekerWith(s, false))
 			delete(h.sculkDue, pos)
 		default:
 			delete(h.sculkDue, pos)
@@ -415,11 +415,11 @@ func (h *hub) playerMovedHoriz(t *tracked) bool {
 func (h *hub) activateSensor(players map[int32]*tracked, pos blockPos, s uint32, v sculkPending) {
 	power := redstoneForDistance(v.dist, sensorRadius(s))
 	h.sculkFreq[pos] = v.freq
-	h.setBlock(players, pos, sensorWith(s, power, sculkPhaseActive))
+	h.setBlockAt(players, dimOverworld, pos, sensorWith(s, power, sculkPhaseActive))
 	h.sculkDue[pos] = h.tick.Load() + sensorActiveTicks
-	h.scheduleAround(pos, 1) // neighbours read the new redstone
+	h.scheduleAroundIn(dimOverworld, pos, 1) // neighbours read the new redstone
 	if snd := "minecraft:block.sculk_sensor.clicking"; !sensorWaterlogged(s) {
-		h.playSound(players, snd, sndBlock,
+		h.playSoundDim(players, dimOverworld, snd, sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, h.hurtPitch())
 	}
 }
@@ -450,9 +450,9 @@ func (h *hub) shriek(players map[int32]*tracked, pos blockPos, s uint32, by int3
 		}
 		h.sculkWarn[pos] = lvl
 	}
-	h.setBlock(players, pos, shriekerWith(s, true))
+	h.setBlockAt(players, dimOverworld, pos, shriekerWith(s, true))
 	h.sculkDue[pos] = h.tick.Load() + shriekingTicks
-	h.playSound(players, "minecraft:block.sculk_shrieker.shriek", sndBlock,
+	h.playSoundDim(players, dimOverworld, "minecraft:block.sculk_shrieker.shriek", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 2, 1)
 }
 
@@ -479,7 +479,7 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos blockPos, s uint32
 		// playWardenReplySound: the growl from somewhere below that tells you
 		// how close you are — the warning that is the whole point of the
 		// first three shrieks.
-		h.playSound(players, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
+		h.playSoundDim(players, dimOverworld, "minecraft:entity.warden.nearby_closer", sndHostile, cx, cy, cz, 5, 1)
 	}
 	// Every response darkens the room, summon or not.
 	h.darknessAround(players, 0, cx, cy, cz, wardenDarknessRing)
@@ -523,7 +523,7 @@ func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
 		return false
 	}
 	if s := h.world.At(best.x, best.y, best.z); isCatalyst(s) {
-		h.setBlock(players, *best, catalystWith(true)) // bloom particle
+		h.setBlockAt(players, m.dim, *best, catalystWith(true)) // bloom particle
 		h.sculkDue[*best] = h.tick.Load() + 8
 	}
 	h.spreadSculk(players, blockPos{mx, my, mz}, xp)
@@ -556,7 +556,7 @@ func (h *hub) spreadSculk(players map[int32]*tracked, origin blockPos, charge in
 					if !h.airExposed(p) {
 						continue
 					}
-					h.setBlock(players, p, sculkBlockState)
+					h.setBlockAt(players, dimOverworld, p, sculkBlockState)
 					placed++
 					h.veinExposedFaces(players, p)
 				}
@@ -592,7 +592,7 @@ func (h *hub) veinExposedFaces(players map[int32]*tracked, p blockPos) {
 		}
 		// The vein clings to the face pointing back at the sculk block.
 		if face := veinFaceBit(-d.x, -d.y, -d.z); face != 0 {
-			h.setBlock(players, np, sculkVeinBase+veinStateForFaces(face))
+			h.setBlockAt(players, dimOverworld, np, sculkVeinBase+veinStateForFaces(face))
 		}
 	}
 }

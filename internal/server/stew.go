@@ -132,7 +132,7 @@ func (h *hub) tryFlowerMooshroom(players map[int32]*tracked, t *tracked, m *mob)
 			h.consumeHeld(t)
 		}
 		m.stew = idx
-		h.playSound(players, "minecraft:entity.mooshroom.eat", sndNeutral, m.x, m.y, m.z, 2, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.eat", sndNeutral, m.x, m.y, m.z, 2, 1)
 	}
 	return true
 }

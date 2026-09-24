@@ -175,7 +175,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 		// A player with infinite materials keeps the lead (removeLeash);
 		// everyone else gets the item back (dropLeash).
 		h.dropLeash(players, m, t.gamemode == gmSurvival)
-		h.playSound(players, "minecraft:entity.lead.untied", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.lead.untied", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	if heldStack(t).item != itemLead || !canBeLeashed(m) {
@@ -193,7 +193,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if t.gamemode == gmSurvival {
 		h.consumeHeld(t)
 	}
-	h.playSound(players, "minecraft:entity.lead.tied", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.lead.tied", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 
@@ -214,7 +214,7 @@ func (h *hub) leashToFence(players map[int32]*tracked, t *tracked, pos blockPos)
 	for _, m := range carried {
 		h.setLeash(players, m, k.eid)
 	}
-	h.playSound(players, "minecraft:entity.leash_knot.place", sndNeutral,
+	h.playSoundDim(players, t.dim, "minecraft:entity.leash_knot.place", sndNeutral,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	return true
 }
@@ -259,7 +259,7 @@ func (h *hub) updateLeashes(players map[int32]*tracked) {
 			h.camelStandUp(players, m) // handleLeashAtDistance: led past six blocks, it gets up
 		}
 		if d > leashSnapDist {
-			h.playSound(players, "minecraft:entity.lead.break", sndNeutral, m.x, m.y, m.z, 1, 1)
+			h.playSoundDim(players, m.dim, "minecraft:entity.lead.break", sndNeutral, m.x, m.y, m.z, 1, 1)
 			h.dropLeash(players, m, true)
 			continue
 		}
@@ -382,7 +382,7 @@ func (h *hub) interactKnot(players map[int32]*tracked, t *tracked, k *leashKnot,
 		h.knotIfUnused(players, k.eid)
 	}
 	if tied {
-		h.playSound(players, "minecraft:entity.lead.tied", sndNeutral,
+		h.playSoundDim(players, t.dim, "minecraft:entity.lead.tied", sndNeutral,
 			float64(k.pos.x)+0.5, float64(k.pos.y)+0.5, float64(k.pos.z)+0.5, 1, 1)
 	}
 	return tied

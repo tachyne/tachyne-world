@@ -59,7 +59,7 @@ func (h *hub) creeperFuse(players map[int32]*tracked, m *mob) {
 		m.fuse = creeperFuseTicks
 		m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // stare down the target
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
-		h.playSound(players, "minecraft:entity.creeper.primed", sndHostile, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.creeper.primed", sndHostile, m.x, m.y, m.z, 1, 1)
 		return
 	}
 	// SwellGoal.canContinueToUse: out of range OR out of SIGHT stands it down.

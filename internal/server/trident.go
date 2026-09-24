@@ -86,7 +86,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	now := h.tick.Load()
 	t.spinUntil, t.spinSpent = now+tridentSpinTicks, false
 	t.moveBudget = budgetCapTicks * spinPerTick // let the launch through the speed check
-	h.playSound(players, riptideSound(riptide), sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, riptideSound(riptide), sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // throwTrident looses the trident as a projectile carrying the whole stack (so
@@ -109,7 +109,7 @@ func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) 
 	} else {
 		a.noPickup = true // creative tridents are throw-only (vanilla CREATIVE_ONLY)
 	}
-	h.playSound(players, "minecraft:item.trident.throw", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.trident.throw", sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // updateReturningTrident steers a loyal trident home and auto-collects it when
@@ -131,7 +131,7 @@ func (h *hub) updateReturningTrident(players map[int32]*tracked, a *arrowEntity)
 				return false // inventory full — keep circling until there's room
 			}
 		}
-		h.playSound(players, "minecraft:item.trident.return", sndPlayer, a.x, a.y, a.z, 1, 1)
+		h.playSoundDim(players, a.dim, "minecraft:item.trident.return", sndPlayer, a.x, a.y, a.z, 1, 1)
 		return true
 	}
 	if dist > 1e-6 { // accelerate toward the owner (vanilla loyalty pull)

@@ -160,7 +160,7 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
 		EID: m.eid, VX: m.vx / mobMoveInterval, VY: 0.42, VZ: m.vz / mobMoveInterval})
-	h.playSound(players, "minecraft:entity.slime.jump", sndHostile, m.x, m.y, m.z, 0.4, 0.8+h.rng.Float32()*0.4)
+	h.playSoundDim(players, m.dim, "minecraft:entity.slime.jump", sndHostile, m.x, m.y, m.z, 0.4, 0.8+h.rng.Float32()*0.4)
 }
 
 // slimeMeta builds the slime size metadata (the client scales the cube).
@@ -181,7 +181,7 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 	for i := 0; i < 2+h.rng.Intn(3); i++ {
 		var s *mob
 		if m.dim == 0 {
-			s = h.spawnHostile(players, m.etype, int(m.x)+h.rng.Intn(3)-1, int(m.z)+h.rng.Intn(3)-1)
+			s = h.spawnHostileIn(players, m.etype, m.dim, int(m.x)+h.rng.Intn(3)-1, int(m.z)+h.rng.Intn(3)-1)
 		} else { // nether magma cubes split in place, in their own world
 			s = h.spawnMobIn(players, m.etype, m.dim, m.x+float64(h.rng.Intn(3)-1), m.y, m.z+float64(h.rng.Intn(3)-1))
 			if s != nil {
@@ -208,7 +208,7 @@ func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
 		if w == nil || !w.Spawnable(x, z) {
 			continue
 		}
-		h.playSound(players, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 		m.x, m.z = float64(x)+0.5, float64(z)+0.5
 		m.y = float64(w.MobFeet(x, z))
 		m.sx, m.sy, m.sz = m.x, m.y, m.z
@@ -250,7 +250,7 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 	a.shooter, a.breaks, a.pearl = t.p.eid, true, true
 	a.noHitUntil = h.tick.Load() + arrowNoSelfHT
 	a.playerShot = true
-	h.playSound(players, "minecraft:entity.ender_pearl.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
+	h.playSoundDim(players, t.dim, "minecraft:entity.ender_pearl.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
 	h.setCooldown(t, itemEnderPearl, pearlCooldown)
 }
 
@@ -269,7 +269,7 @@ func (h *hub) pearlLand(players map[int32]*tracked, a *arrowEntity) {
 	}
 	t.x, t.y, t.z = a.x, float64(w.DropY(int(a.x), int(math.Ceil(a.y)), int(a.z))), a.z
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
-	h.playSound(players, "minecraft:entity.enderman.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, a.dim, "minecraft:entity.enderman.teleport", sndPlayer, t.x, t.y, t.z, 1, 1)
 	h.vibAt(t.dim, freqTeleport, t.x, t.y, t.z, t.p.eid)
 	h.damageOf(players, t, pearlDamage, dtEnderPearl)
 	h.pearlEndermite(players, a) // one pearl in twenty leaves an endermite behind
@@ -367,7 +367,7 @@ func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z flo
 	m.x, m.z = float64(bx)+0.5, float64(bz)+0.5
 	m.y = float64(w.MobFeet(bx, bz))
 	m.sx, m.sy, m.sz = m.x, m.y, m.z
-	h.playSound(players, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport))
 	h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)

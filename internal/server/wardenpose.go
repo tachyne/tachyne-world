@@ -38,7 +38,7 @@ func (h *hub) wardenPoseStart(players map[int32]*tracked, m *mob, pose int32, up
 	m.wardenPose, m.wardenPoseLeft = pose, upd
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, pose)))
 	if sound != "" {
-		h.playSound(players, sound, sndHostile, m.x, m.y, m.z, vol, 1)
+		h.playSoundDim(players, m.dim, sound, sndHostile, m.x, m.y, m.z, vol, 1)
 	}
 }
 
@@ -51,7 +51,7 @@ func (h *hub) wardenStand(players map[int32]*tracked, m *mob) {
 // wardenEmerge is Warden.finalizeSpawn's TRIGGERED branch: a warden a shrieker
 // called rises out of the ground before it does anything else.
 func (h *hub) wardenEmerge(players map[int32]*tracked, m *mob) {
-	h.playSound(players, "minecraft:entity.warden.agitated", sndHostile, m.x, m.y, m.z, 5, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.warden.agitated", sndHostile, m.x, m.y, m.z, 5, 1)
 	h.wardenPoseStart(players, m, poseEmerging, wardenEmergeUpd, "minecraft:entity.warden.emerge", 5)
 }
 
@@ -63,7 +63,7 @@ func (h *hub) wardenPoseTick(players map[int32]*tracked, m *mob) bool {
 	}
 	m.wardenPoseLeft--
 	if m.wardenPose == poseRoaring && m.wardenPoseLeft == wardenRoarUpd-wardenRoarSoundUpd {
-		h.playSound(players, "minecraft:entity.warden.roar", sndHostile, m.x, m.y, m.z, 3, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.warden.roar", sndHostile, m.x, m.y, m.z, 3, 1)
 	}
 	if m.wardenPoseLeft > 0 {
 		return true

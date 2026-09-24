@@ -159,6 +159,6 @@ func (h *hub) smashAround(players map[int32]*tracked, t *tracked, cx, cy, cz flo
 	if fall > maceHeavyThreshold {
 		snd = "minecraft:item.mace.smash_ground_heavy"
 	}
-	h.playSound(players, snd, sndPlayer, cx, cy, cz, 1, 1)
+	h.playSoundDim(players, t.dim, snd, sndPlayer, cx, cy, cz, 1, 1)
 	h.spawnParticles(players, t.dim, particlePoof, cx, cy, cz, maceKnockRadius/2, 0.1, 40)
 }

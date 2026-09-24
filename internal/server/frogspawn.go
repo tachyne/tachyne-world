@@ -88,7 +88,7 @@ func (h *hub) tickFrogspawn(players map[int32]*tracked, dim int, pos blockPos, s
 		return true
 	}
 	h.setBlockAt(players, dim, pos, worldgen.Air)
-	h.playSound(players, "minecraft:block.frogspawn.hatch", sndBlock,
+	h.playSoundDim(players, dim, "minecraft:block.frogspawn.hatch", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	for i, n := 0, 2+h.rng.Intn(4); i < n; i++ {
 		x := float64(pos.x) + 0.1 + h.rng.Float64()*0.8
@@ -121,7 +121,7 @@ func (h *hub) frogLaySpawn(players map[int32]*tracked, m *mob) {
 		}
 		h.setBlockAt(players, m.dim, blockPos{x, by + 1, z}, frogspawnBlock)
 		h.scheduleFrogspawn(m.dim, blockPos{x, by + 1, z})
-		h.playSound(players, "minecraft:entity.frog.lay_spawn", sndBlock, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.frog.lay_spawn", sndBlock, m.x, m.y, m.z, 1, 1)
 		m.pregnant = false
 		return
 	}

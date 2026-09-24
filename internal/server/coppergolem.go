@@ -93,9 +93,9 @@ func (h *hub) copperGolemToStatue(players map[int32]*tracked, m *mob, x, y, z in
 		state = worldgen.SetProperty(info, statue, "copper_golem_pose", poses[h.rng.Intn(len(poses))])
 		state = worldgen.SetProperty(info, state, "facing", yawFacing(m.yaw))
 	}
-	h.setBlock(players, blockPos{x, y, z}, state)
+	h.setBlockAt(players, m.dim, blockPos{x, y, z}, state)
 	h.despawnMob(players, m)
-	h.playSound(players, "minecraft:entity.copper_golem.become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem.become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 
 // tryCopperGolem: honeycomb waxes the golem (stops oxidation); an axe un-waxes or
@@ -111,17 +111,17 @@ func (h *hub) tryCopperGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)
 		}
-		h.playSound(players, "minecraft:item.honeycomb.wax_on", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:item.honeycomb.wax_on", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	case axeItems[held] && m.waxed:
 		m.waxed = false
-		h.playSound(players, "minecraft:item.axe.wax_off", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:item.axe.wax_off", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	case axeItems[held] && m.oxidation > 0:
 		m.oxidation--
 		m.oxidizeAt = h.tick.Load() + h.copperWeatherDelay()
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
-		h.playSound(players, "minecraft:item.axe.scrape", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:item.axe.scrape", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	return false
@@ -183,14 +183,14 @@ func (h *hub) checkCopperGolemBuild(players map[int32]*tracked, dim, x, y, z int
 	if info, ok := worldgen.InfoForState(chest); ok {
 		chest = worldgen.SetProperty(info, chest, "facing", facing)
 	}
-	h.setBlock(players, blockPos{x, y, z}, worldgen.Air) // pumpkin consumed; golem spawns here
-	h.setBlock(players, blockPos{x, y - 1, z}, chest)    // copper block -> copper chest
-	m := h.spawnSpecies(players, entityCopperGolem, 0, float64(x)+0.5, float64(y)+0.05, float64(z)+0.5)
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air) // pumpkin consumed; golem spawns here
+	h.setBlockAt(players, dim, blockPos{x, y - 1, z}, chest)    // copper block -> copper chest
+	m := h.spawnSpecies(players, entityCopperGolem, dim, float64(x)+0.5, float64(y)+0.05, float64(z)+0.5)
 	if m == nil {
 		return
 	}
 	m.yaw, m.syaw = 0, 0 // vanilla snapTo yaw 0
-	h.playSound(players, "minecraft:block.copper.place", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
+	h.playSoundDim(players, dim, "minecraft:block.copper.place", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
 }
 
 // Item sorting (vanilla TransportItemsBetweenContainers). The golem carries

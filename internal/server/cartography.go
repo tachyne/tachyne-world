@@ -71,7 +71,7 @@ func (h *hub) takeCartoResult(players map[int32]*tracked, t *tracked, res invSta
 			t.anvil[i] = invStack{}
 		}
 	}
-	h.playSound(players, "minecraft:ui.cartography_table.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:ui.cartography_table.take_result", sndBlock, t.x, t.y, t.z, 1, 1)
 	t.cursor = res
 	h.sendCursor(t)
 	h.sendTwoSlotWindow(t)

@@ -79,7 +79,7 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	t.xbowLoaded = true
 	t.xbowMulti = st.enchLvl(enchMultishot) > 0
 	t.xbowPierce = st.enchLvl(enchPiercing)
-	h.playSound(players, "minecraft:item.crossbow.loading_end", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.crossbow.loading_end", sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // fireXbow looses the loaded bolt(s) (vanilla performShooting): one bolt, or a
@@ -111,5 +111,5 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 		}
 		a.noPickup = multi && i != 1 // multishot side bolts are creative-only pickup
 	}
-	h.playSound(players, "minecraft:item.crossbow.shoot", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.crossbow.shoot", sndPlayer, t.x, t.y, t.z, 1, 1)
 }

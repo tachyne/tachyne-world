@@ -572,10 +572,10 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		if h.rules.ImmediateResp { // gamerule doImmediateRespawn skips the death screen
 			h.post(evRespawn{eid: t.p.eid})
 		}
-		h.playSound(players, "minecraft:entity.player.death", sndPlayer, t.x, t.y, t.z, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:entity.player.death", sndPlayer, t.x, t.y, t.z, 1, 1)
 	} else {
 		t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
-		h.playSound(players, hurtSoundFor(dt), sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
+		h.playSoundDim(players, t.dim, hurtSoundFor(dt), sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
 	}
 	h.sendHealth(t)
 	return true

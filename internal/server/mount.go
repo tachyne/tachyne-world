@@ -81,7 +81,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 				snd = "minecraft:item.nautilus_saddle_underwater_equip"
 			}
 		}
-		h.playSound(players, snd, sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, snd, sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	// Saddled: mount (unless the player is placing a block / feeding — a held

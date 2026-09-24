@@ -60,7 +60,7 @@ func (h *hub) tryBucketMob(players map[int32]*tracked, t *tracked, m *mob) bool 
 	if !ok {
 		return false
 	}
-	h.playSound(players, mb.fill, sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, mb.fill, sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.giveFilled(players, t, int32(t.p.heldSlot()), mb.item)
 	h.advance(players, t, "filled_bucket", advMatch{item: mb.item})
 	h.dropLeash(players, m, true) // Leashable.dropLeash: the lead pops out

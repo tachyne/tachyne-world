@@ -48,7 +48,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	if held.item == 0 || held.count == 0 || !fits {
 		// useWithoutItem: the pot rocks back and refuses. Nothing comes out —
 		// the only way to empty a pot is to break it.
-		h.playSound(players, "minecraft:block.decorated_pot.insert_fail", sndBlock, cx, cy, cz, 1, 1)
+		h.playSoundDim(players, t.dim, "minecraft:block.decorated_pot.insert_fail", sndBlock, cx, cy, cz, 1, 1)
 		h.potWobble(players, key, potWobbleNegative)
 		return true
 	}
@@ -71,7 +71,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	// The insert sound rises with how full the pot is, so you can hear a pot
 	// filling up without opening anything.
 	fill := float32(stored.count) / float32(stackCap(stored.item))
-	h.playSound(players, "minecraft:block.decorated_pot.insert", sndBlock, cx, cy, cz, 1, 0.7+0.5*fill)
+	h.playSoundDim(players, t.dim, "minecraft:block.decorated_pot.insert", sndBlock, cx, cy, cz, 1, 0.7+0.5*fill)
 	// DecoratedPotBlock.useItemOn: seven dust motes puff off the rim. Sent in
 	// the pot's own dimension, not the overworld.
 	h.toNearbyEv(players, key.dim, cx, cz, attachproto.Particles{

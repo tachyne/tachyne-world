@@ -97,7 +97,7 @@ func (h *hub) onEquipHeld(players map[int32]*tracked, e evEquipHeld) {
 				h.sendSlot(t, s)
 			}
 			if leftover > 0 {
-				h.spawnItem(players, worn.item, leftover, t.x, t.y, t.z)
+				h.spawnItemIn(players, t.dim, worn.item, leftover, t.x, t.y, t.z)
 			}
 		}
 	}
@@ -106,5 +106,5 @@ func (h *hub) onEquipHeld(players map[int32]*tracked, e evEquipHeld) {
 	t.p.trySendEv(attachproto.WindowSlot{ID: 0, StateID: t.inv.stateId, Slot: int32(5 + slot), Item: stackEv(t.armor[slot])})
 	t.refreshArmorAttrs()
 	h.broadcastEquipment(players, t)
-	h.playSound(players, equipSound(one.item), sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, equipSound(one.item), sndPlayer, t.x, t.y, t.z, 1, 1)
 }

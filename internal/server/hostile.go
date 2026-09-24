@@ -175,7 +175,7 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 		return // RangedBowAttackGoal: the shot needs line of sight
 	}
 	h.spawnArrow(players, m, t)
-	h.playSound(players, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 	// RangedBowAttackGoal cadence (AbstractSkeleton.getAttackInterval): 40
 	// ticks on easy/normal, 20 on hard; a parched draws slower, 70 and 50.
 	// attackCD counts mob-updates (2 ticks) incl. this one.
@@ -235,7 +235,7 @@ func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *trac
 		if h.nearestPlayer(players, float64(sx), float64(sz), 7) != nil {
 			continue // vanilla: reinforcements never appear within 7 blocks
 		}
-		r := h.spawnHostile(players, m.etype, sx, sz)
+		r := h.spawnHostileIn(players, m.etype, m.dim, sx, sz)
 		if r == nil {
 			return // plugin-cancelled spawn
 		}
@@ -573,22 +573,19 @@ func (h *hub) knockbackScaled(t *tracked, fromX, fromZ, scale float64) {
 
 // spawnZombie creates a hostile zombie at a column and returns it.
 func (h *hub) spawnZombie(players map[int32]*tracked, x, z int) *mob {
-	return h.spawnHostile(players, entityZombie, x, z)
+	return h.spawnHostileIn(players, entityZombie, dimOverworld, x, z)
 }
 
-// spawnHostile creates a night mob of the given type at a column, wiring its
-// species-specific behavior, speed and daylight rules.
-func (h *hub) spawnHostile(players map[int32]*tracked, etype, x, z int) *mob {
-	return h.spawnHostileY(players, etype, float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
+// spawnHostileIn stands a hostile on the surface of column (x, z) in dim.
+func (h *hub) spawnHostileIn(players map[int32]*tracked, etype, dim, x, z int) *mob {
+	w := h.worldFor(dim)
+	if w == nil {
+		return nil
+	}
+	return h.spawnHostileYIn(players, etype, dim, float64(x)+0.5, float64(w.SurfaceFeet(x, z)), float64(z)+0.5)
 }
 
-// spawnHostileY spawns a configured hostile at an explicit position (dungeon
-// spawners put mobs underground, not on the surface).
-func (h *hub) spawnHostileY(players map[int32]*tracked, etype int, x, y, z float64) *mob {
-	return h.spawnHostileYIn(players, etype, 0, x, y, z)
-}
-
-// spawnHostileYIn is spawnHostileY in any dimension.
+// spawnHostileYIn spawns a hostile at an exact position in a dimension.
 func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {
 	m := h.spawnMobIn(players, etype, dim, x, y, z)
 	if m == nil {

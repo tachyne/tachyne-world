@@ -52,7 +52,7 @@ func (h *hub) flyIntoWall(players map[int32]*tracked, t *tracked, e evMove) {
 		return
 	}
 	// Entity.move plays the generic hurt fall alongside the damage.
-	h.playSound(players, "minecraft:entity.player.hurt", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.player.hurt", sndPlayer, t.x, t.y, t.z, 1, 1)
 	h.damageOf(players, t, dmg, dtFlyIntoWall)
 }
 

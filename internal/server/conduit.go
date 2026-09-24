@@ -162,7 +162,7 @@ func (h *hub) runConduit(players map[int32]*tracked, dim int, pos blockPos) {
 			continue
 		}
 		h.hurtMobEffect(players, m, conduitAttackDmg)
-		h.playSound(players, "minecraft:block.conduit.attack.target", sndBlock,
+		h.playSoundDim(players, dim, "minecraft:block.conduit.attack.target", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 		return // vanilla attacks one target per cycle
 	}

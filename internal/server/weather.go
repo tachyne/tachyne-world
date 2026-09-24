@@ -296,7 +296,7 @@ func (h *hub) tickLightning(players map[int32]*tracked) {
 		visualOnly := false
 		if h.rules.DoMobSpawning && !onRod &&
 			h.rng.Float64() < float64(h.effectiveDifficulty())*0.01 {
-			if horse := h.spawnMob(players, entitySkeletonHorse, float64(sx)+0.5, float64(sy), float64(sz)+0.5); horse != nil {
+			if horse := h.spawnMobIn(players, entitySkeletonHorse, dimOverworld, float64(sx)+0.5, float64(sy), float64(sz)+0.5); horse != nil {
 				horse.trap = true // SkeletonHorse.setTrap: springs on approach (skeletontrap.go)
 			}
 			visualOnly = true
@@ -394,8 +394,8 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	}
 	// Thunder is heard far beyond the chunk-tracking radius in vanilla; the
 	// crack at volume 10 carries like the real thing.
-	h.playSound(players, "minecraft:entity.lightning_bolt.thunder", sndBlock, x, y, z, 10, 0.8+h.rng.Float32()*0.4)
-	h.playSound(players, "minecraft:entity.lightning_bolt.impact", sndBlock, x, y, z, 2, 1)
+	h.playSoundDim(players, dimOverworld, "minecraft:entity.lightning_bolt.thunder", sndBlock, x, y, z, 10, 0.8+h.rng.Float32()*0.4)
+	h.playSoundDim(players, dimOverworld, "minecraft:entity.lightning_bolt.impact", sndBlock, x, y, z, 2, 1)
 	h.bus.publish("lightning", map[string]any{"x": x, "y": y, "z": z})
 	if visualOnly {
 		return

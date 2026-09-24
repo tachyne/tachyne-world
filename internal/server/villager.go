@@ -145,13 +145,13 @@ func (h *hub) spawnVillageMob(players map[int32]*tracked, v worldgen.Village, vm
 	var m *mob
 	switch vm.Type {
 	case "zombie_villager":
-		m = h.spawnHostileY(players, etype, vm.X, vm.Y, vm.Z)
+		m = h.spawnHostileYIn(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
 		if m != nil {
 			h.setTemplateVillagerData(m, vm)
 			h.sendVillagerData(players, m)
 		}
 	case "iron_golem":
-		m = h.spawnMob(players, etype, vm.X, vm.Y, vm.Z)
+		m = h.spawnMobIn(players, etype, dimOverworld, vm.X, vm.Y, vm.Z)
 		if m != nil { // the village's own golem (PlayerCreated false)
 			m.health = 100
 			m.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
@@ -195,7 +195,7 @@ func (h *hub) setTemplateVillagerData(m *mob, vm worldgen.VillageMob) {
 // Nothing is handed to it: like vanilla's brain it claims a bed, a
 // workstation and a meeting bell itself (acquirepoi.go).
 func (h *hub) spawnTemplateVillager(players map[int32]*tracked, v worldgen.Village, vm worldgen.VillageMob) {
-	m := h.spawnMob(players, entityVillager, vm.X, vm.Y, vm.Z)
+	m := h.spawnMobIn(players, entityVillager, dimOverworld, vm.X, vm.Y, vm.Z)
 	if m == nil {
 		return // plugin-cancelled spawn
 	}
@@ -322,7 +322,7 @@ func (h *hub) golemMelee(players map[int32]*tracked, m *mob) {
 			o.kb = 4
 			h.mobKnockVelocity(players, o)
 		}
-		h.playSound(players, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.attack", sndNeutral, m.x, m.y, m.z, 1, 1)
 		// vanilla IronGolem.doHurtTarget: ATTACK_DAMAGE 15 → 15/2 + nextInt(15)
 		// = 7.5–21.5 per punch. Golem punches respect the target's armor.
 		o.hurt(7.5 + float64(h.rng.Intn(15)))
@@ -551,7 +551,7 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32
 		if m.etype == entityWanderingTrader {
 			yes = "minecraft:entity.wandering_trader.yes"
 		}
-		h.playSound(players, yes, sndNeutral, m.x, m.y, m.z, 0.7, 1)
+		h.playSoundDim(players, t.dim, yes, sndNeutral, m.x, m.y, m.z, 0.7, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusVillagerHappy)) // Villager.customServerAiStep after a trade
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
@@ -573,7 +573,7 @@ func (h *hub) reclaimTrade(players map[int32]*tracked, t *tracked) {
 			h.sendSlot(t, slot)
 		}
 		if leftover > 0 && players != nil {
-			h.spawnItem(players, st.item, leftover, t.x, t.y, t.z)
+			h.spawnItemIn(players, t.dim, st.item, leftover, t.x, t.y, t.z)
 		}
 	}
 	if m := h.mobs[t.tradeWith]; m != nil {

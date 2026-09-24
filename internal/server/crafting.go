@@ -593,7 +593,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		// pop when you collect, not when the smelt finishes).
 		if t.winKind == winFurnace && ch.slot == 2 && ch.st.count < ptr.count {
 			if f := h.furnaces[t.winPos]; f != nil && f.xpBank >= 1 {
-				h.spawnXPOrb(players, int(f.xpBank), t.x, t.y, t.z)
+				h.spawnXPOrbIn(players, t.dim, int(f.xpBank), t.x, t.y, t.z)
 				f.xpBank -= float64(int(f.xpBank))
 			}
 		}
@@ -838,7 +838,7 @@ func (h *hub) takeCraftOnce(players map[int32]*tracked, t *tracked, mode int32) 
 			h.sendSlot(t, slot)
 		}
 		if leftover > 0 {
-			h.spawnItem(players, item, leftover, t.x, t.y, t.z)
+			h.spawnItemIn(players, t.dim, item, leftover, t.x, t.y, t.z)
 		}
 	case t.cursor.item == 0:
 		t.cursor = res
@@ -881,7 +881,7 @@ func (h *hub) takeCraftOnce(players map[int32]*tracked, t *tracked, mode int32) 
 				h.sendSlot(t, slot)
 			}
 			if leftover > 0 {
-				h.spawnItem(players, back, leftover, t.x, t.y, t.z)
+				h.spawnItemIn(players, t.dim, back, leftover, t.x, t.y, t.z)
 			}
 		}
 	}
@@ -971,7 +971,7 @@ func (h *hub) reclaimCraft(players map[int32]*tracked, t *tracked) {
 			h.sendSlot(t, slot)
 		}
 		if leftover > 0 && players != nil {
-			if it := h.spawnItem(players, st.item, leftover, t.x, t.y, t.z); it != nil {
+			if it := h.spawnItemIn(players, t.dim, st.item, leftover, t.x, t.y, t.z); it != nil {
 				it.dmg = st.dmg
 				it.ench = st.ench
 				it.mapID = st.mapID

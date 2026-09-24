@@ -791,7 +791,7 @@ func (h *hub) stowHiveItem(pos blockPos, honey int) int32 {
 // Silk Touch keeps the bees and honey on the dropped item; anything else
 // spills the occupants angry at the breaker — and a bee nest without Silk
 // Touch drops nothing at all (its loot table is silk-only).
-func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, pos blockPos) {
+func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, dim int, state uint32, pos blockPos) {
 	t := players[by]
 	item := int32(itemByName["beehive"])
 	if beeHomeBase(state) == beeNestMin {
@@ -799,7 +799,7 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, po
 	}
 	if t != nil && heldStack(t).enchLvl(enchSilkTouch) > 0 {
 		h.advance(players, t, "bee_nest_destroyed", advMatch{blockState: state, count: len(h.hives[pos]), enchant: "silk_touch"})
-		if it := h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
+		if it := h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5); it != nil {
 			it.hiveID = h.stowHiveItem(pos, honeyLevel(state))
 		}
 		return
@@ -822,7 +822,7 @@ func (h *hub) dropBeeHome(players map[int32]*tracked, by int32, state uint32, po
 		}
 	}
 	if beeHomeBase(state) != beeNestMin {
-		h.spawnItem(players, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+		h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	}
 }
 

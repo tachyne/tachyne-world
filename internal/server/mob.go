@@ -480,14 +480,13 @@ type mob struct {
 	nextStep    float32  // Entity.nextStep: the moveDist at which the next footstep plays (0 = fresh: 1)
 }
 
-// spawnMob creates a server-controlled entity and shows it to nearby players.
-// It defaults to neutral wander; callers (or the bus) assign a group behavior.
-// Returns nil when a plugin MobSpawnEvent handler cancels the spawn.
-func (h *hub) spawnMob(players map[int32]*tracked, etype int, x, y, z float64) *mob {
-	return h.spawnMobIn(players, etype, 0, x, y, z)
-}
-
-// spawnMobIn spawns into an explicit dimension (nether mobs). The reported
+// spawnMobIn creates a server-controlled entity in a dimension and shows it
+// to nearby players. It defaults to neutral wander; callers (or the bus)
+// assign a group behavior. Returns nil when a plugin MobSpawnEvent handler
+// cancels the spawn. There is no overworld shorthand: the ones this and its
+// siblings had (spawnMob, spawnItem, playSound, spawnXPOrb) put Nether and
+// End mobs, drops and sounds in the overworld wherever a caller forgot it
+// was not there. Tests keep them as overworld fixtures (overworld_test.go). The reported
 // cause is h.spawnCause, whose zero value is SpawnNatural — command/bus entry
 // points scope it with withSpawnCause so deep helpers report correctly.
 func (h *hub) spawnMobIn(players map[int32]*tracked, etype, dim int, x, y, z float64) *mob {

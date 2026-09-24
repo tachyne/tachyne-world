@@ -163,12 +163,12 @@ func (h *hub) cauldronPrecip(players map[int32]*tracked, pos blockPos, st uint32
 	}
 	switch {
 	case !snowing && kind == cauldronEmpty && h.rng.Float32() < 0.05:
-		h.setBlock(players, pos, waterCauldronBase)
+		h.setBlockAt(players, dimOverworld, pos, waterCauldronBase)
 	case !snowing && kind == cauldronWater && level < 3 && h.rng.Float32() < 0.05:
-		h.setBlock(players, pos, waterCauldronBase+uint32(level))
+		h.setBlockAt(players, dimOverworld, pos, waterCauldronBase+uint32(level))
 	case snowing && kind == cauldronEmpty && h.rng.Float32() < 0.1:
-		h.setBlock(players, pos, powderCauldronBase)
+		h.setBlockAt(players, dimOverworld, pos, powderCauldronBase)
 	case snowing && kind == cauldronSnow && level < 3 && h.rng.Float32() < 0.1:
-		h.setBlock(players, pos, powderCauldronBase+uint32(level))
+		h.setBlockAt(players, dimOverworld, pos, powderCauldronBase+uint32(level))
 	}
 }

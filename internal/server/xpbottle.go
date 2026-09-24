@@ -45,7 +45,7 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 		dx*throwSpeed, dy*throwSpeed, dz*throwSpeed)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks, a.xpBottle = true, true, true
-	h.playSound(players, "minecraft:entity.experience_bottle.throw", sndNeutral,
+	h.playSoundDim(players, t.dim, "minecraft:entity.experience_bottle.throw", sndNeutral,
 		t.x, t.y, t.z, 0.5, 0.4/(h.rng.Float32()*0.4+0.8))
 }
 
@@ -53,5 +53,5 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 func (h *hub) breakXPBottle(players map[int32]*tracked, a *arrowEntity) {
 	xp := xpBottleBase + h.rng.Intn(xpBottleRoll) + h.rng.Intn(xpBottleRoll)
 	h.spawnXPOrbIn(players, a.dim, xp, a.x, a.y, a.z)
-	h.playSound(players, "minecraft:entity.splash_potion.break", sndNeutral, a.x, a.y, a.z, 1, 1)
+	h.playSoundDim(players, a.dim, "minecraft:entity.splash_potion.break", sndNeutral, a.x, a.y, a.z, 1, 1)
 }

@@ -32,8 +32,8 @@ func (h *hub) insertEye(players map[int32]*tracked, t *tracked, pos blockPos, st
 	if frameHasEye(state) {
 		return
 	}
-	h.setBlock(players, pos, state-frameEyeStride)
-	h.playSound(players, "minecraft:block.end_portal_frame.fill", sndBlock,
+	h.setBlockAt(players, t.dim, pos, state-frameEyeStride)
+	h.playSoundDim(players, t.dim, "minecraft:block.end_portal_frame.fill", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	// Any complete 12-frame eyed ring around a 3x3 interior opens — the
 	// stronghold's own ring and player-built rings alike (vanilla parity;
@@ -48,7 +48,7 @@ func (h *hub) insertEye(players map[int32]*tracked, t *tracked, pos blockPos, st
 			for dx := -1; dx <= 1; dx++ {
 				for dz := -1; dz <= 1; dz++ {
 					if worldgen.IsReplaceable(h.world.At(cx+dx, pos.y, cz+dz)) {
-						h.setBlock(players, blockPos{cx + dx, pos.y, cz + dz}, worldgen.EndPortalBlock)
+						h.setBlockAt(players, t.dim, blockPos{cx + dx, pos.y, cz + dz}, worldgen.EndPortalBlock)
 					}
 				}
 			}
@@ -115,7 +115,7 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 	a := h.launchProjectileIn(players, entityEyeProj, t.dim, t.x, t.y+1.6, t.z,
 		dx/d*0.7, 0.25, dz/d*0.7)
 	a.dmg = 0
-	h.playSound(players, "minecraft:entity.ender_eye.launch", sndPlayer, t.x, t.y, t.z, 0.6, 1)
+	h.playSoundDim(players, t.dim, "minecraft:entity.ender_eye.launch", sndPlayer, t.x, t.y, t.z, 0.6, 1)
 }
 
 type evInsertEye struct {

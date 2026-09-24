@@ -101,7 +101,7 @@ func (h *hub) crushTurtleEgg(players map[int32]*tracked, dim, x, y, z int, s uin
 	if !ok {
 		return
 	}
-	h.playSound(players, "minecraft:block.turtle_egg.break", sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.7, 0.9+h.rng.Float32()*0.2)
+	h.playSoundDim(players, dim, "minecraft:block.turtle_egg.break", sndBlock, float64(x)+0.5, float64(y), float64(z)+0.5, 0.7, 0.9+h.rng.Float32()*0.2)
 	eggs := 1
 	if n, err := strconv.Atoi(worldgen.GetProperty(info, s, "eggs")); err == nil {
 		eggs = n

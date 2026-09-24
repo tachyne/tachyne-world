@@ -101,12 +101,6 @@ func (h *hub) refreshItemMeta(players map[int32]*tracked, it *itemEntity) {
 	h.toTracking(players, it.eid, it.dim, it.x, it.z, metaEv(itemMetadata(it.eid, it.stack())))
 }
 
-// spawnItem creates a dropped-item entity at (x,y,z) and shows it to nearby
-// players. Returns nil for an empty drop.
-func (h *hub) spawnItem(players map[int32]*tracked, item int32, count int, x, y, z float64) *itemEntity {
-	return h.spawnItemIn(players, 0, item, count, x, y, z)
-}
-
 // spawnItemIn drops into an explicit dimension.
 func (h *hub) spawnItemIn(players map[int32]*tracked, dim int, item int32, count int, x, y, z float64) *itemEntity {
 	if item == 0 || count <= 0 {

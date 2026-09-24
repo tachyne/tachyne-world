@@ -78,7 +78,7 @@ func (npcBehavior) steer(h *hub, m *mob) (float64, float64) {
 // spawnNPC creates a villager driven by the model.
 func (h *hub) spawnNPC(players map[int32]*tracked, name, persona string, x, z float64) *npc {
 	y := float64(h.world.SurfaceFeet(int(math.Floor(x)), int(math.Floor(z))))
-	m := h.spawnMob(players, entityVillager, x, y, z)
+	m := h.spawnMobIn(players, entityVillager, dimOverworld, x, y, z)
 	if m == nil {
 		return nil // plugin-cancelled spawn
 	}

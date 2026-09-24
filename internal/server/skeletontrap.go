@@ -39,7 +39,7 @@ func (h *hub) springSkeletonTrap(players map[int32]*tracked, horse *mob) {
 		h.mountMobOn(players, sk, horse, false)
 	}
 	for i := 0; i < 3; i++ {
-		other := h.spawnMob(players, entitySkeletonHorse, horse.x, horse.y, horse.z)
+		other := h.spawnMobIn(players, entitySkeletonHorse, horse.dim, horse.x, horse.y, horse.z)
 		if other == nil {
 			continue
 		}
@@ -56,7 +56,7 @@ func (h *hub) springSkeletonTrap(players map[int32]*tracked, horse *mob) {
 // trapSkeleton is createSkeleton: a finalized skeleton, persistent, in an
 // iron helmet unless it already wears one, the helmet enchanted.
 func (h *hub) trapSkeleton(players map[int32]*tracked, horse *mob) *mob {
-	sk := h.spawnHostileY(players, entitySkeleton, horse.x, horse.y, horse.z)
+	sk := h.spawnHostileYIn(players, entitySkeleton, horse.dim, horse.x, horse.y, horse.z)
 	if sk == nil {
 		return nil
 	}

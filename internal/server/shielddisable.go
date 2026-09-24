@@ -43,5 +43,5 @@ func (h *hub) disableShield(players map[int32]*tracked, t *tracked, seconds floa
 	}
 	h.setCooldown(t, itemShield, ticks)
 	h.lowerShield(t)
-	h.playSound(players, "minecraft:item.shield.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
+	h.playSoundDim(players, t.dim, "minecraft:item.shield.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
 }

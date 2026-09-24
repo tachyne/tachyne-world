@@ -319,9 +319,7 @@ func (h *hub) jukeboxTick(players map[int32]*tracked) {
 	for pos, jb := range h.jukeboxes {
 		if jb.started != 0 && now-jb.started >= jb.length {
 			jb.started = 0
-			// Dim isn't stored per jukebox: overworld-only placement (block
-			// sim v1), matching containers.
-			h.toNearbyEv(players, 0, float64(pos.x), float64(pos.z), attachproto.WorldFX{
+			h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 				Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
 		}
 	}

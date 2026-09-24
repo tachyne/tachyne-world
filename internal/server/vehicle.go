@@ -286,7 +286,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	if !h.rules.EntityDrops {
 		return // gamerule entity_drops: nothing is left behind
 	}
-	h.spawnItem(players, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
+	h.spawnItemIn(players, v.dim, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
 	if slots := v.cartSlots(); slots != nil { // ChestBoat.destroy: the cargo spills
 		for _, st := range slots {
 			if st.item == 0 || st.count == 0 {

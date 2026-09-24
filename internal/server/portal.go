@@ -351,8 +351,8 @@ func portalIntact(w *world.World, x, y, z int, state uint32) bool {
 // orphans pop, and the pop cascades through the rest of the sheet.
 func (h *hub) updatePortalBlock(players map[int32]*tracked, pos blockPos, state uint32) {
 	if !portalIntact(h.world, pos.x, pos.y, pos.z, state) {
-		h.setBlock(players, pos, worldgen.Air)
-		h.scheduleAround(pos, 1)
+		h.setBlockAt(players, h.rsDim, pos, worldgen.Air)
+		h.scheduleAroundIn(h.rsDim, pos, 1)
 	}
 }
 

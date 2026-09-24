@@ -254,10 +254,11 @@ func (s *Server) cmdParticle(p *player, args []string) {
 			count = c
 		}
 	}
-	s.hub.post(evParticleCmd{pid: int32(pid), x: x, y: y, z: z, count: int32(count)})
+	s.hub.post(evParticleCmd{dim: p.dim, pid: int32(pid), x: x, y: y, z: z, count: int32(count)})
 }
 
 type evParticleCmd struct {
+	dim     int // the operator's dimension
 	pid     int32
 	x, y, z float64
 	count   int32

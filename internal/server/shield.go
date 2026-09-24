@@ -130,7 +130,7 @@ func (h *hub) shieldBlocked(t *tracked, amount float32, dt dmgType, src dmgFrom)
 // Vanilla scales the wear with the hit rather than charging a flat point, so a
 // shield survives a swarm of weak blows and not a charged one.
 func (h *hub) shieldBlockFX(players map[int32]*tracked, t *tracked, blocked float32) {
-	h.playSound(players, "minecraft:item.shield.block", sndPlayer, t.x, t.y, t.z, 0.8, 0.9)
+	h.playSoundDim(players, t.dim, "minecraft:item.shield.block", sndPlayer, t.x, t.y, t.z, 0.8, 0.9)
 	if n := shieldWear(blocked); n > 0 {
 		// Called on the hub goroutine, so this wears the stack directly. It
 		// used to h.post the wear event to itself, which is the one thing a

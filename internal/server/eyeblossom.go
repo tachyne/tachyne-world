@@ -175,6 +175,6 @@ func (h *hub) tickNetherPortal(players map[int32]*tracked, dim, x, y, z int, sta
 	if !worldgen.IsSolidFull(h.worldFor(dim).At(x, fy-1, z)) {
 		return true
 	}
-	h.spawnHostileY(players, entityZombifiedPiglin, float64(x)+0.5, float64(fy), float64(z)+0.5)
+	h.spawnHostileYIn(players, entityZombifiedPiglin, dim, float64(x)+0.5, float64(fy), float64(z)+0.5)
 	return true
 }

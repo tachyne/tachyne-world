@@ -1510,7 +1510,7 @@ func (h *hub) run() {
 					case isRosterPassive(e.etype):
 						h.spawnAnimal(players, e.etype, e.x, e.z) // wolves/horses/fish/… spawn peaceful
 					default:
-						h.spawnHostile(players, e.etype, e.x, e.z)
+						h.spawnHostileIn(players, e.etype, dimOverworld, e.x, e.z)
 					}
 				})
 			case evBlockSound:
@@ -1616,7 +1616,7 @@ func (h *hub) run() {
 					// Hives write their own break rules: Silk Touch carries the
 					// bees and honey on the item, anything else spills the
 					// occupants angry — and a nest then drops nothing at all.
-					h.dropBeeHome(players, e.by, e.state, blockPos{e.x, e.y, e.z})
+					h.dropBeeHome(players, e.by, e.dim, e.state, blockPos{e.x, e.y, e.z})
 					break
 				}
 				var silk, fortune int
@@ -2099,7 +2099,7 @@ func (h *hub) run() {
 			case evPlaysound:
 				h.onPlaysound(players, e)
 			case evParticleCmd:
-				h.toNearbyEv(players, 0, e.x, e.z, attachproto.Particles{
+				h.toNearbyEv(players, e.dim, e.x, e.z, attachproto.Particles{
 					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
@@ -2641,7 +2641,7 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
-		h.spawnItem(players, item, left, t.x, t.y, t.z)
+		h.spawnItemIn(players, t.dim, item, left, t.x, t.y, t.z)
 	}
 }
 
@@ -2664,7 +2664,7 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	h.beaconsOnBlockChange(players, dim, x, y, z, state)
 	if dim == dimOverworld {
 		h.rodIndexOnBlockChange(x, y, z, state)
-		h.scheduleAround(blockPos{x, y, z}, 1)
+		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
 	}
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})

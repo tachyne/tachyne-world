@@ -110,7 +110,7 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 	}
 	h.ejectCrafted(players, pos, state, res)
 	h.refreshBinViewers(players, pos)
-	h.playSound(players, "minecraft:block.crafter.craft", sndBlock,
+	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.craft", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 }
 
@@ -316,7 +316,7 @@ func crafterComparator(c *bin) int {
 }
 
 func (h *hub) craftFail(players map[int32]*tracked, pos simPos) {
-	h.playSound(players, "minecraft:block.crafter.fail", sndBlock,
+	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.fail", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 }
 
@@ -343,7 +343,7 @@ func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32,
 	fx := float64(pos.x) + 0.5 + float64(dx)*0.7
 	fy := float64(pos.y) + 0.5 + float64(dy)*0.7
 	fz := float64(pos.z) + 0.5 + float64(dz)*0.7
-	if it := h.spawnItem(players, st.item, st.count, fx, fy, fz); it != nil && st.stew != 0 {
+	if it := h.spawnItemIn(players, pos.dim, st.item, st.count, fx, fy, fz); it != nil && st.stew != 0 {
 		it.stew = st.stew // the ejected stew keeps its flower
 		h.refreshItemMeta(players, it)
 	}

@@ -38,11 +38,6 @@ func soundEv(name string, category int32, x, y, z float64, volume, pitch float32
 	return attachproto.Sound{Name: name, Category: category, X: x, Y: y, Z: z, Volume: volume, Pitch: pitch}
 }
 
-// playSound plays a named sound at a position for everyone tracking it.
-func (h *hub) playSound(players map[int32]*tracked, name string, category int32, x, y, z float64, volume, pitch float32) {
-	h.playSoundDim(players, 0, name, category, x, y, z, volume, pitch)
-}
-
 // playSoundDim is playSound routed to one dimension's players.
 func (h *hub) playSoundDim(players map[int32]*tracked, dim int, name string, category int32, x, y, z float64, volume, pitch float32) {
 	h.toNearbyEv(players, dim, x, z, soundEv(name, category, x, y, z, volume, pitch))

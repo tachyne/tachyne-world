@@ -135,11 +135,6 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
 }
 
-// launchProjectile spawns any arrow-physics projectile (arrow/snowball/egg).
-func (h *hub) launchProjectile(players map[int32]*tracked, etype int, x, y, z, vx, vy, vz float64) *arrowEntity {
-	return h.launchProjectileIn(players, etype, 0, x, y, z, vx, vy, vz)
-}
-
 // launchProjectileIn launches into an explicit dimension.
 func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, y, z, vx, vy, vz float64) *arrowEntity {
 	eid := h.allocEID()
@@ -224,7 +219,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						}
 						delete(h.arrows, eid)
 						h.entityGone(players, a.dim, eid)
-						h.playSound(players, "minecraft:entity.item.pickup", sndPlayer, a.x, a.y, a.z, 0.4, 1.5)
+						h.playSoundDim(players, a.dim, "minecraft:entity.item.pickup", sndPlayer, a.x, a.y, a.z, 0.4, 1.5)
 						break
 					}
 				}
@@ -292,7 +287,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				} else {
 					a.stuck = true // freeze just short of the face it struck
 				}
-				h.playSound(players, "minecraft:entity.arrow.hit", sndNeutral, a.x, a.y, a.z, 1, 1.2)
+				h.playSoundDim(players, a.dim, "minecraft:entity.arrow.hit", sndNeutral, a.x, a.y, a.z, 1, 1.2)
 				break
 			}
 			a.x, a.y, a.z = px, py, pz
@@ -525,7 +520,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			}
 			if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
-				h.playSound(players, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
+				h.playSoundDim(players, a.dim, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 			}
 			dmg := dmg0
 			if a.impaling > 0 && sensitiveToImpaling[m.etype] {

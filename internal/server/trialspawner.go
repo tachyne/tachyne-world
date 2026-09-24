@@ -228,7 +228,7 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 				ts.nextEject = now + trialEjectDelay
 				ts.spawned, ts.nextSpawn = 0, 0
 				ts.state = trialWaitingEjection
-				h.playSound(players, "minecraft:block.trial_spawner.open_shutter", sndBlock,
+				h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.open_shutter", sndBlock,
 					ts.fx(), ts.fy(), ts.fz(), 1, 1)
 			}
 			return
@@ -251,7 +251,7 @@ func (h *hub) tickTrialSpawner(players map[int32]*tracked, ts *trialSpawner) {
 			return
 		}
 		if len(ts.detected) == 0 {
-			h.playSound(players, "minecraft:block.trial_spawner.close_shutter", sndBlock,
+			h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.close_shutter", sndBlock,
 				ts.fx(), ts.fy(), ts.fz(), 1, 1)
 			ts.state = trialCooldown
 			return
@@ -339,7 +339,7 @@ func (h *hub) spawnTrialMob(players map[int32]*tracked, ts *trialSpawner) *mob {
 		if !h.spawnableAt(int(math.Floor(x)), y, int(math.Floor(z))) {
 			continue
 		}
-		m := h.spawnHostileY(players, etype, x, float64(y), z)
+		m := h.spawnHostileYIn(players, etype, dimOverworld, x, float64(y), z)
 		if m == nil {
 			return nil // plugin-cancelled
 		}
@@ -351,7 +351,7 @@ func (h *hub) spawnTrialMob(players map[int32]*tracked, ts *trialSpawner) *mob {
 		if ts.ominous {
 			h.equipTrialMob(players, m, ts.kind) // the ominous configs' equipment tables
 		}
-		h.playSound(players, "minecraft:block.trial_spawner.spawn_mob", sndBlock,
+		h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.spawn_mob", sndBlock,
 			ts.fx(), ts.fy(), ts.fz(), 1, 1)
 		h.levelEvent(players, 0, worldEventTrialSpawn, ts.pos.x, ts.pos.y, ts.pos.z, boolInt32(ts.ominous))
 		return m
@@ -381,10 +381,10 @@ func (h *hub) ejectTrialReward(players map[int32]*tracked, ts *trialSpawner) {
 			if st.item == 0 || st.count <= 0 {
 				continue
 			}
-			h.spawnItem(players, st.item, st.count, ts.fx(), ts.fy()+1, ts.fz())
+			h.spawnItemIn(players, dimOverworld, st.item, st.count, ts.fx(), ts.fy()+1, ts.fz())
 		}
 	}
-	h.playSound(players, "minecraft:block.trial_spawner.eject_item", sndBlock,
+	h.playSoundDim(players, dimOverworld, "minecraft:block.trial_spawner.eject_item", sndBlock,
 		ts.fx(), ts.fy(), ts.fz(), 1, 1)
 	h.levelEvent(players, 0, worldEventTrialEject, ts.pos.x, ts.pos.y, ts.pos.z, boolInt32(ts.ominous))
 }

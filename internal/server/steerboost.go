@@ -141,7 +141,7 @@ func (h *hub) wearSteerStick(players map[int32]*tracked, t *tracked, slot int, m
 	}
 	if s.dmg += steerWear[s.item]; s.dmg >= max {
 		h.incStat(t, attachproto.StatBroken, s.item, 1)
-		h.playSound(players, "minecraft:entity.item.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
+		h.playSoundDim(players, m.dim, "minecraft:entity.item.break", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
 		*s = invStack{item: itemFishingRod, count: 1}
 	}
 	if slot == offhandSlot {

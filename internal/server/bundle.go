@@ -283,7 +283,7 @@ func (h *hub) tryBundleClick(players map[int32]*tracked, t *tracked, e evClick) 
 		// Left-click a stack with the pouch in hand: as much as fits goes in.
 		n, id := h.bundleInsert(cursor.bundleID, *slot)
 		if n == 0 {
-			h.playSound(players, "minecraft:item.bundle.insert_fail", sndPlayer, t.x, t.y, t.z, 0.8, 1)
+			h.playSoundDim(players, t.dim, "minecraft:item.bundle.insert_fail", sndPlayer, t.x, t.y, t.z, 0.8, 1)
 			h.resyncWindow(t)
 			return true
 		}
@@ -292,7 +292,7 @@ func (h *hub) tryBundleClick(players map[int32]*tracked, t *tracked, e evClick) 
 		if slot.count -= n; slot.count <= 0 {
 			*slot = invStack{}
 		}
-		h.playSound(players, "minecraft:item.bundle.insert", sndPlayer, t.x, t.y, t.z, 0.8, 1)
+		h.playSoundDim(players, t.dim, "minecraft:item.bundle.insert", sndPlayer, t.x, t.y, t.z, 0.8, 1)
 
 	case isBundle(cursor.item) && cursor.count == 1 && e.button == 1 && slot.count == 0:
 		// Right-click an empty slot with the pouch in hand: one stack comes out.
@@ -301,13 +301,13 @@ func (h *hub) tryBundleClick(players map[int32]*tracked, t *tracked, e evClick) 
 			return false
 		}
 		*slot = out
-		h.playSound(players, "minecraft:item.bundle.remove_one", sndPlayer, t.x, t.y, t.z, 0.8, 1)
+		h.playSoundDim(players, t.dim, "minecraft:item.bundle.remove_one", sndPlayer, t.x, t.y, t.z, 0.8, 1)
 
 	case isBundle(slot.item) && slot.count == 1 && e.button == 0 && cursor.count > 0:
 		// Pouch sitting in a slot, item on the cursor: the cursor's stack goes in.
 		n, id := h.bundleInsert(slot.bundleID, cursor)
 		if n == 0 {
-			h.playSound(players, "minecraft:item.bundle.insert_fail", sndPlayer, t.x, t.y, t.z, 0.8, 1)
+			h.playSoundDim(players, t.dim, "minecraft:item.bundle.insert_fail", sndPlayer, t.x, t.y, t.z, 0.8, 1)
 			h.resyncWindow(t)
 			return true
 		}
@@ -316,7 +316,7 @@ func (h *hub) tryBundleClick(players map[int32]*tracked, t *tracked, e evClick) 
 			cursor = invStack{}
 		}
 		t.cursor = cursor
-		h.playSound(players, "minecraft:item.bundle.insert", sndPlayer, t.x, t.y, t.z, 0.8, 1)
+		h.playSoundDim(players, t.dim, "minecraft:item.bundle.insert", sndPlayer, t.x, t.y, t.z, 0.8, 1)
 
 	default:
 		return false

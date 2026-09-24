@@ -57,9 +57,9 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state
 	wet := h.waterAdjacent(x, y, z)
 	switch {
 	case wet && hyd >= 3:
-		h.hatchGhastling(players, x, y, z, state)
+		h.hatchGhastling(players, dim, x, y, z, state)
 	case wet && hyd < 3:
-		h.playSound(players, "minecraft:block.dried_ghast.transition", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
+		h.playSoundDim(players, dim, "minecraft:block.dried_ghast.transition", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd+1))))
 	case !wet && hyd > 0:
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
@@ -72,9 +72,9 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state
 // It matures into an adult via updateBreeding. The baby flag is metadata index
 // 16 — stable through 26.2 (renders a small ghastling); on pre-1.21.6 clients the
 // mob is a substituted Ghast and the gateway drops the flag.
-func (h *hub) hatchGhastling(players map[int32]*tracked, x, y, z int, state uint32) {
-	h.setBlock(players, blockPos{x, y, z}, worldgen.Air)
-	m := h.spawnSpecies(players, entityHappyGhast, 0, float64(x)+0.5, float64(y), float64(z)+0.5)
+func (h *hub) hatchGhastling(players map[int32]*tracked, dim, x, y, z int, state uint32) {
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	m := h.spawnSpecies(players, entityHappyGhast, dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 	if m == nil {
 		return
 	}
@@ -84,7 +84,7 @@ func (h *hub) hatchGhastling(players map[int32]*tracked, x, y, z int, state uint
 		m.syaw = m.yaw
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
-	h.playSound(players, "minecraft:entity.ghastling.spawn", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
+	h.playSoundDim(players, dim, "minecraft:entity.ghastling.spawn", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
 }
 
 // facingYaw maps a horizontal facing property to a Minecraft yaw (Direction.getYRot).

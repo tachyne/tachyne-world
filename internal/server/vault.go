@@ -222,13 +222,13 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 	}
 	if v.hasRewarded(t.p.uuid) {
 		// VAULT_REJECT_REWARDED_PLAYER: you have had your share of this one.
-		h.playSound(players, "minecraft:block.vault.reject_rewarded_player", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.vault.reject_rewarded_player", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 		return
 	}
 	held := heldStack(t)
 	if held.item != vaultKeyFor(v.ominous) || held.count <= 0 {
-		h.playSound(players, "minecraft:block.vault.insert_item_fail", sndBlock,
+		h.playSoundDim(players, t.dim, "minecraft:block.vault.insert_item_fail", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 		return
 	}
@@ -244,7 +244,7 @@ func (h *hub) useVault(players map[int32]*tracked, t *tracked, pos blockPos) {
 
 	v.addRewarded(t.p.uuid)
 	v.state, v.until = vaultUnlocking, h.tick.Load()+vaultUnlockTicks
-	h.playSound(players, "minecraft:block.vault.insert_item", sndBlock,
+	h.playSoundDim(players, t.dim, "minecraft:block.vault.insert_item", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 1, 1)
 	h.advance(players, t, "item_used_on_block", advMatch{blockState: cur, item: held.item})
 	if next := vaultBlock(cur, v.ominous, v.state); next != cur {
@@ -263,13 +263,13 @@ func (h *hub) ejectVaultReward(players map[int32]*tracked, v *vaultRecord) {
 		if st.item == 0 || st.count <= 0 {
 			continue
 		}
-		it := h.spawnItem(players, st.item, st.count,
+		it := h.spawnItemIn(players, dimOverworld, st.item, st.count,
 			float64(v.pos.x)+0.5, float64(v.pos.y)+1, float64(v.pos.z)+0.5)
 		if it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	}
-	h.playSound(players, "minecraft:block.vault.eject_item", sndBlock,
+	h.playSoundDim(players, dimOverworld, "minecraft:block.vault.eject_item", sndBlock,
 		float64(v.pos.x)+0.5, float64(v.pos.y), float64(v.pos.z)+0.5, 1, 1)
 	h.levelEvent(players, 0, worldEventVaultEject, v.pos.x, v.pos.y, v.pos.z, boolInt32(v.ominous))
 }

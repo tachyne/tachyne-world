@@ -63,11 +63,11 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	switch {
 	case sw.crit:
 		h.spawnParticles(players, v.dim, particleCrit, v.x, v.y+1, v.z, 0.4, 0.2, 8)
-		h.playSound(players, "minecraft:entity.player.attack.crit", sndPlayer, v.x, v.y, v.z, 1, 1)
+		h.playSoundDim(players, v.dim, "minecraft:entity.player.attack.crit", sndPlayer, v.x, v.y, v.z, 1, 1)
 	case sw.charge >= 0.9:
-		h.playSound(players, "minecraft:entity.player.attack.strong", sndPlayer, v.x, v.y, v.z, 1, 1)
+		h.playSoundDim(players, v.dim, "minecraft:entity.player.attack.strong", sndPlayer, v.x, v.y, v.z, 1, 1)
 	default:
-		h.playSound(players, "minecraft:entity.player.attack.weak", sndPlayer, v.x, v.y, v.z, 1, 1)
+		h.playSoundDim(players, v.dim, "minecraft:entity.player.attack.weak", sndPlayer, v.x, v.y, v.z, 1, 1)
 	}
 
 	h.incCustom(t, "damage_dealt", tenths(dmg))

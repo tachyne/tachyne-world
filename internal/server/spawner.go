@@ -67,11 +67,11 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 				for i := 0; i < spawnerCount; i++ { // vanilla: 4 spawn attempts per cycle
 					sx := float64(d.X-d.W) + h.rng.Float64()*float64(2*d.W) + 0.5
 					sz := float64(d.Z-d.D) + h.rng.Float64()*float64(2*d.D) + 0.5
-					h.spawnHostileY(players, etype, sx, float64(d.Y), sz)
+					h.spawnHostileYIn(players, etype, dimOverworld, sx, float64(d.Y), sz)
 				}
 				h.levelEvent(players, 0, worldEventSpawnerSpawn, d.X, d.Y, d.Z, 0) // the smoke and flames
 				h.spawnerReset(players, 0, pos)                                    // …and the caged mob starts its turn again
-				h.playSound(players, "minecraft:block.fire.ambient", sndHostile,
+				h.playSoundDim(players, dimOverworld, "minecraft:block.fire.ambient", sndHostile,
 					float64(d.X)+0.5, float64(d.Y)+0.5, float64(d.Z)+0.5, 0.6, 0.8)
 			}
 		}
