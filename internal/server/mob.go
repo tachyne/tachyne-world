@@ -833,6 +833,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A fed dolphin leading the way to a shipwreck.
 		case m.etype == entityDolphin && h.dolphinSwimWithPlayer(players, m):
 			// A dolphin keeping a swimmer company, Dolphin's Grace and all.
+		case m.etype == entityDolphin && h.dolphinJumpStart(players, m):
+			// A dolphin at the surface leaping clear of the water.
 		case m.etype == entityDolphin && h.dolphinPlay(players, m):
 			// A dolphin tossing a floating item about.
 		case m.etype == entityFox && h.foxStep(players, m):

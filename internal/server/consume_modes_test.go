@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -175,5 +176,41 @@ func TestBucketDrainsWaterloggedBlock(t *testing.T) {
 	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
 	if isWaterlogged(h.world.At(0, 199, 2)) || pl.inv.slots[pl.p.heldSlot()].item != itemBucketH2O {
 		t.Errorf("slab still wet: %v, bucket %d", isWaterlogged(h.world.At(0, 199, 2)), pl.inv.slots[pl.p.heldSlot()].item)
+	}
+}
+
+// DolphinJumpGoal: a dolphin swimming along the surface of open water leaps
+// out and comes back down into it.
+func TestDolphinLeaps(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	for x := -2; x <= 12; x++ {
+		for z := -2; z <= 2; z++ {
+			h.world.SetBlock(x, 195, z, worldgen.Stone)
+			for y := 196; y <= 199; y++ {
+				h.world.SetBlock(x, y, z, worldgen.WaterBase)
+			}
+			for y := 200; y <= 205; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	d := h.spawnMob(players, entityDolphin, 0.5, 199, 0.5)
+	jumped := false
+	for i := 0; i < 200 && !jumped; i++ {
+		d.vx, d.vz = 0.1, 0
+		jumped = h.dolphinJumpStart(players, d)
+	}
+	if !jumped {
+		t.Fatal("a dolphin at the surface of open water never leapt")
+	}
+	peak := d.y
+	for i := 0; i < 40 && d.leaping; i++ {
+		h.leapFlight(players, d)
+		peak = math.Max(peak, d.y)
+	}
+	if peak < 200 || d.leaping || !worldgen.HoldsWater(h.world.At(floorInt(d.x), floorInt(d.y), floorInt(d.z))) {
+		t.Errorf("the leap peaked at %.2f and ended leaping=%v at y %.2f", peak, d.leaping, d.y)
 	}
 }
