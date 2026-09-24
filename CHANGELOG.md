@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Piglins spawn as vanilla's do.** Every piglin used to be grown and carry
+  a golden sword. Now a fifth are babies that hold nothing and fight no one.
+  Half the grown ones carry a crossbow and shoot from range, and some of the
+  rest carry a golden spear; some wear gold armour. A bastion's piglins hold
+  the crossbow or sword their spot in the bastion gives them.
 - **Boats and minecarts take several punches to break.** They broke on the
   first hit. As in vanilla, each blow now rocks the vehicle and adds to its
   damage, which drains away over time, so a bare fist needs a quick run of

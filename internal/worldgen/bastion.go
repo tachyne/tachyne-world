@@ -114,6 +114,7 @@ func (g *Generator) BastionChests(b Bastion) []BastionChest {
 type BastionMob struct {
 	X, Y, Z int
 	Type    string
+	Piece   string // the "mobs" template it came from (bastion/mobs/crossbow_piglin, …): what it holds
 }
 
 // BastionMobs returns the bastion's baked entity positions.
@@ -122,7 +123,7 @@ func (g *Generator) BastionMobs(b Bastion) []BastionMob {
 	for _, pc := range g.AssembleBastion(b) {
 		for _, m := range pc.Tmpl.Mobs {
 			rx, ry, rz := pc.Tmpl.rotatePos(m.Pos[0], m.Pos[1], m.Pos[2], pc.Rot)
-			out = append(out, BastionMob{pc.OX + rx, pc.OY + ry, pc.OZ + rz, m.Type})
+			out = append(out, BastionMob{pc.OX + rx, pc.OY + ry, pc.OZ + rz, m.Type, pc.Tmpl.name})
 		}
 	}
 	return out

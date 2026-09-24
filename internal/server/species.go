@@ -335,7 +335,7 @@ var speciesTable = map[int]*speciesDef{
 		arch: archFlyerHostile, hover: 10,
 		drops: []specDrop{{item: "ghast_tear", rnd: 1}, {item: "gunpowder", rnd: 2}}},
 	entityPiglin: {name: "piglin", health: 16, speed: 0.35, damage: 5,
-		arch: archHostile, held: "golden_sword"}, // ATTACK_DAMAGE base 5 (source)
+		arch: archHostile}, // ATTACK_DAMAGE base 5 (source); the weapon is finalizePiglin's roll
 	entityPiglinBrute: {name: "piglin_brute", health: 50, speed: 0.35, damage: 7,
 		follow: 12, arch: archHostile, xp: 20, held: "golden_axe"}, // ATTACK_DAMAGE 7 (source)
 	entityHoglin: {name: "hoglin", health: 40, speed: 0.30, damage: 6, arch: archHostile,
@@ -456,6 +456,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d.held != "" {
 		m.held = itemByName[d.held]
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
+	}
+	if m.etype == entityPiglin {
+		h.finalizePiglin(players, m, h.structureSpawn.on, h.structureSpawn.hand)
 	}
 }
 

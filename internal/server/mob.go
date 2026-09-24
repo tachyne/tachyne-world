@@ -1178,6 +1178,15 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				} else {
 					h.mobMelee(players, m)
 				}
+			case entityPiglin:
+				switch {
+				case m.held == itemCrossbow:
+					h.piglinCrossbowTick(players, m) // CrossbowAttack: a crossbow piglin never melees
+				case m.baby:
+					// StartAttacking is gated on isAdult: a baby piglin never fights
+				default:
+					h.mobMelee(players, m)
+				}
 			default:
 				if m.spearGoal != nil {
 					h.mobSpearTick(players, m) // SpearUseGoal outranks the melee goal: the charge is its attack
@@ -1826,7 +1835,7 @@ func (m *mob) setBabySpeed(on bool) {
 		in.RemoveModifier(babySpeedSource)
 		return
 	}
-	in.AddModifier(attr.Modifier{Source: babySpeedSource, Amount: 0.5, Op: attr.AddMultipliedBase})
+	in.AddModifier(attr.Modifier{Source: babySpeedSource, Amount: babySpeedBonus(m.etype), Op: attr.AddMultipliedBase})
 }
 
 // kbResist is the mob's KNOCKBACK_RESISTANCE: the FRACTION of an incoming

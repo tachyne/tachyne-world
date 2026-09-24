@@ -149,7 +149,7 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 		t.p.trySendEv(skeletonEquip(m.eid))
 	}
 	if m.baby {
-		t.p.trySendEv(metaEv(babyMeta(m.eid, true)))
+		t.p.trySendEv(metaEv(mobBabyMeta(m, true)))
 	}
 	if m.sheared {
 		t.p.trySendEv(metaEv(sheepMeta(m, true)))

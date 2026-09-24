@@ -354,7 +354,8 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.etype == entityPiglin {
 		// PiglinAi: a player in a piece of gold armour is left alone, and an
 		// admiring piglin has eyes only for its gold.
-		if t := h.nearestPiglinPrey(players, m, reach); t != nil && m.admireUntil == 0 {
+		// StartAttacking is gated on isAdult: a baby piglin hunts nobody.
+		if t := h.nearestPiglinPrey(players, m, reach); t != nil && m.admireUntil == 0 && !m.baby {
 			m.hasTarget, m.tx, m.tz = true, t.x, t.z
 		} else {
 			m.hasTarget = false

@@ -11,6 +11,13 @@ var bastionMobTypes = map[string]int{
 	"hoglin":       entityHoglin,
 }
 
+// bastionPieceHand is the main-hand item each piglin "mobs" template's
+// entity NBT carries.
+var bastionPieceHand = map[string]int32{
+	"bastion/mobs/crossbow_piglin": itemByName["crossbow"],
+	"bastion/mobs/sword_piglin":    itemByName["golden_sword"],
+}
+
 // populateBastions seeds the garrison of any bastion a Nether player has
 // reached (once per bastion, persisted).
 func (h *hub) populateBastions(players map[int32]*tracked) {
@@ -41,7 +48,11 @@ func (h *hub) populateBastions(players map[int32]*tracked) {
 			if !ok {
 				continue
 			}
+			// A template mob is a STRUCTURE spawn: its piece's NBT puts the
+			// weapon in a piglin's hand, and finalizeSpawn rolls no baby.
+			h.structureSpawn.on, h.structureSpawn.hand = true, bastionPieceHand[s.Piece]
 			h.spawnSpecies(players, et, dimNether, float64(s.X)+0.5, float64(s.Y), float64(s.Z)+0.5)
+			h.structureSpawn.on, h.structureSpawn.hand = false, 0
 		}
 	}
 }

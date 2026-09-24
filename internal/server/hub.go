@@ -468,6 +468,13 @@ type hub struct {
 	// it suppresses MobSpawnEvent (these entities already existed — they are being
 	// restored, not spawned) while still reusing the normal spawn setup paths.
 	reloading bool
+	// structureSpawn is set while a structure's template mob is being
+	// spawned (EntitySpawnReason.STRUCTURE): finalizeSpawn skips the rolls
+	// the template's own NBT answers, and hand is the item it holds.
+	structureSpawn struct {
+		on   bool
+		hand int32
+	}
 
 	// pendingResume holds migrated player state waiting for the gateway to
 	// reconnect with Hello{Purpose:"resume", token}. Written on the hub goroutine
