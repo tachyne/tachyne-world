@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Comparators read a double chest as one chest.** A comparator next to
+  a large chest read only the half it touched, and still read a chest whose
+  lid was blocked. As in vanilla it now reads both halves together, and
+  reads nothing while a solid block or a sitting cat keeps either half shut.
 - **Cactus flowers.** A cactus now grows a cactus flower on top now and
   then, more often on a full three-tall column, as in vanilla. The flower
   stays put on the cactus, where it used to pop off because it looked for

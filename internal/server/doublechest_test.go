@@ -156,3 +156,34 @@ func TestDoubleChestWindowSlots(t *testing.T) {
 		}
 	})
 }
+
+// TestDoubleChestComparatorReadsBothHalves: ChestBlock.getAnalogOutputSignal
+// reads the pair as one 54-slot container, and a blocked half (a solid
+// block on its lid) makes the whole pair read 0.
+func TestDoubleChestComparatorReadsBothHalves(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		left, right := blockPos{0, 64, 0}, blockPos{1, 64, 0}
+		w.SetBlock(left.x, left.y, left.z, chestState(t, "north", "single"))
+		w.SetBlock(right.x, right.y, right.z, chestState(t, "north", "single"))
+		w.SetBlock(left.x, left.y+1, left.z, worldgen.Air)
+		w.SetBlock(right.x, right.y+1, right.z, worldgen.Air)
+		if _, _, ok := h.formChestPair(0, left.x, left.y, left.z, w.At(left.x, left.y, left.z)); !ok {
+			t.Error("fixture: no pair")
+			return
+		}
+		lc := &chest{}
+		for i := range lc.slots {
+			lc.slots[i] = invStack{item: int32(itemByName["cobblestone"]), count: 64}
+		}
+		h.chests[simPos{blockPos: left}], h.chests[simPos{blockPos: right}] = lc, &chest{}
+		if got := h.containerSignal(simPos{blockPos: left}); got != 8 {
+			t.Errorf("a full left half of a double chest reads %d, want 8 (half of 54 slots)", got)
+		}
+		w.SetBlock(right.x, right.y+1, right.z, worldgen.Stone)
+		if got := h.containerSignal(simPos{blockPos: left}); got != 0 {
+			t.Errorf("a pair with a blocked half reads %d, want 0", got)
+		}
+	})
+}

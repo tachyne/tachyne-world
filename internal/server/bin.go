@@ -970,6 +970,26 @@ func (h *hub) containerSignal(pos simPos) int {
 		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
 	}
 	slots := h.containerSlots(pos)
+	// ChestBlock.getAnalogOutputSignal reads getContainer(…, ignoreBlocked
+	// false): a blocked chest (a solid block or a sitting cat on its lid)
+	// has no container and reads 0, and a pair reads as one 54-slot chest —
+	// blocked if either half is.
+	if w := h.worldFor(pos.dim); w != nil && slots != nil {
+		if st := w.At(pos.x, pos.y, pos.z); isChestBlock(st) || isTrappedChest(st) {
+			left, right, paired := h.chestPairPositions(pos.dim, pos.x, pos.y, pos.z, st)
+			if !paired {
+				if h.chestBlockedAt(pos.dim, pos.blockPos) {
+					return 0
+				}
+			} else {
+				if h.chestBlockedAt(pos.dim, left) || h.chestBlockedAt(pos.dim, right) {
+					return 0
+				}
+				a, b := h.containerSlots(pos.at(left)), h.containerSlots(pos.at(right))
+				slots = append(append(make([]invStack, 0, len(a)+len(b)), a...), b...)
+			}
+		}
+	}
 	// A decorated pot reads as a one-slot container (DecoratedPotBlock's
 	// getRedstoneSignalFromBlockEntity); its storage is read-only here so a
 	// hopper never writes into a copy.
