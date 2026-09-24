@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Piglins fight with their golden spears.** The one piglin in ten that
+  carries a golden spear now uses it as vanilla does. It closes in, lowers
+  the spear and charges, then wheels away for another pass. It used to swing
+  the spear like a sword. It still leaves anyone wearing gold alone.
 - **The `send_command_feedback` and `log_admin_commands` gamerules work.**
   With `send_command_feedback` off, a command no longer tells you it worked.
   Errors still show. While it is on, the other operators online see what an

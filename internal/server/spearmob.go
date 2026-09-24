@@ -9,7 +9,9 @@ import (
 )
 
 // Mobs with spears (SpearUseGoal, on Zombie — and so on the husk and the
-// zombie villager — and on ZombifiedPiglin). With a target and a spear in
+// zombie villager — and on ZombifiedPiglin; and the piglin brain's
+// SpearApproach, SpearAttack and SpearRetreat, which run the same three
+// phases with the same distances and timings). With a target and a spear in
 // hand the goal outranks the melee goal: the mob walks up to within ten
 // blocks, lowers the spear for the weapon's charge window (the delay plus the
 // damage window), runs at its target, and on getting within two blocks picks
@@ -35,19 +37,31 @@ type spearGoalState struct {
 	done         bool
 }
 
-// spearWielder is whether the mob runs SpearUseGoal and holds a spear now.
+// spearWielder is whether the mob runs the spear behaviour and holds a
+// spear now.
 func spearWielder(m *mob) bool {
 	switch m.etype {
 	case entityZombie, entityHusk, entityZombieVillager, entityZombifiedPiglin:
 		return spearOf(m.held) != nil
+	case entityPiglin:
+		// PiglinAi's fight activity: only an adult ever has an attack target.
+		return !m.baby && spearOf(m.held) != nil
 	}
 	return false
 }
 
 // spearQuarry is the goal's target: the hunted player, when the mob has one.
+// A piglin's is the one its brain would pick — nobody in gold, and nobody at
+// all while it admires an ingot.
 func (h *hub) spearQuarry(players map[int32]*tracked, m *mob) *tracked {
 	if !m.hasTarget || m.preyTarget != 0 || m.dying > 0 {
 		return nil
+	}
+	if m.etype == entityPiglin {
+		if m.admireUntil != 0 {
+			return nil
+		}
+		return h.nearestPiglinPrey(players, m, m.followRange())
 	}
 	return h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
 }
