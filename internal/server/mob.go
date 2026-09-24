@@ -170,7 +170,6 @@ type mob struct {
 	patrolCaptain                   bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
-	reinf                           float64     // zombie SPAWN_REINFORCEMENTS_CHANCE (0 for non-zombies)
 	hopTicks                        int         // slime: updates left mid-bound (traveling)
 	hopDelay                        int         // slime: updates until the next bound (grounded, still)
 	strafeCW                        bool        // skeleton: current circling direction while shooting

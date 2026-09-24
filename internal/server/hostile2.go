@@ -59,7 +59,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	case entityHusk: // desert zombie: immune to daylight (not in #burn_in_daylight)
 		m.setFollowRange(35) // zombie-family FOLLOW_RANGE (vanilla 1.21.5)
 		m.setBaseArmor(2)    // zombie-family base ARMOR
-		m.reinf = h.rollReinforcements()
+		h.rollReinforcements(m)
 		h.rollZombieBaby(players, m)
 	case entityStray, entityDrowned: // cold skeleton / wet zombie: burn like their cousins
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
@@ -69,7 +69,7 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		} else {
 			m.setFollowRange(35) // drowned are zombies too
 			m.setBaseArmor(2)
-			m.reinf = h.rollReinforcements()
+			h.rollReinforcements(m)
 			h.rollZombieBaby(players, m)
 			// Drowned.populateDefaultEquipmentSlots: one in ten spawns armed,
 			// ten of sixteen of those with a trident, the rest a fishing rod.

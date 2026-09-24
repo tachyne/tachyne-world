@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Zombie reinforcements follow vanilla's rules.** A zombie's chance to
+  call for backup on Hard is now its Zombie Reinforcements attribute, so
+  /attribute changes it. Zombie leaders now appear only as often as the
+  local difficulty allows. They also get their extra health and can break
+  doors. A zombie called in as backup rolls its own chance instead of
+  copying its caller's. A zombie that keeps calling for backup becomes
+  less likely to do it again with each zombie it brings.
 - **The Block Break Speed attribute works.** Setting a player's block
   break speed with /attribute did nothing. It now multiplies how fast they
   mine, as in vanilla, and the cracks other players see keep pace.

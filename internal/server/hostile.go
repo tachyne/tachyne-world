@@ -240,31 +240,67 @@ func (h *hub) rollZombieBaby(players map[int32]*tracked, m *mob) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 }
 
-// rollReinforcements gives a fresh zombie its SPAWN_REINFORCEMENTS_CHANCE
-// (vanilla Zombie.finalizeSpawn): random 0..0.1, and 5% are "leaders"
-// carrying an extra 0.5..0.75 — the zombies that summon whole sieges.
-func (h *hub) rollReinforcements() float64 {
-	c := h.rng.Float64() * 0.1
-	if h.rng.Float64() < 0.05 {
-		c += 0.5 + h.rng.Float64()*0.25
+// The SPAWN_REINFORCEMENTS_CHANCE modifiers Zombie keeps: the leader's
+// bonus, the charge a caller pays for each recruit it summons, and the one
+// every recruit starts with.
+const (
+	leaderZombieBonusSource  = "minecraft:leader_zombie_bonus"
+	reinforceCallerSource    = "minecraft:reinforcement_caller_charge"
+	reinforceCalleeSource    = "minecraft:reinforcement_callee_charge"
+	reinforcementCharge      = -0.05
+	zombieLeaderChance       = 0.05
+	reinforcementAttempts    = 50
+	reinforcementRangeMin    = 7
+	reinforcementRangeSpread = 34 // 7..40 inclusive
+)
+
+// reinforcementChance is the zombie's SPAWN_REINFORCEMENTS_CHANCE (0 for
+// every species that never rolled one).
+func (m *mob) reinforcementChance() float64 {
+	return m.mobAttrs().Value(attr.SpawnReinforcements)
+}
+
+// rollReinforcements is the reinforcement half of Zombie.handleAttributes
+// at spawn: a base chance of 0..0.1 (randomizeReinforcementsChance), and a
+// leader roll at 5% of the special multiplier. A leader carries 0.5..0.75
+// extra chance — the zombies that summon whole sieges — 1..4 times more
+// MAX_HEALTH on top of its own, and can break doors. It runs after the
+// door roll, as vanilla's does, so a leader always breaks doors.
+func (h *hub) rollReinforcements(m *mob) {
+	a := m.mobAttrs()
+	a.SetBase(attr.SpawnReinforcements, h.rng.Float64()*0.1)
+	if h.rng.Float64() >= h.specialMultiplier()*zombieLeaderChance {
+		return
 	}
-	return c
+	a.Get(attr.SpawnReinforcements).AddModifier(attr.Modifier{Source: leaderZombieBonusSource,
+		Amount: h.rng.Float64()*0.25 + 0.5, Op: attr.AddValue})
+	a.Get(attr.MaxHealth).AddModifier(attr.Modifier{Source: leaderZombieBonusSource,
+		Amount: h.rng.Float64()*3 + 1, Op: attr.AddMultipliedTotal})
+	if !h.reloading { // a reload keeps the health it was saved with
+		m.health = m.maxHP()
+	}
+	m.breaksDoors = true
 }
 
 // zombieReinforce implements Zombie.hurtServer's reinforcement call
-// (vanilla behavior): HARD difficulty only, doMobSpawning on, chance = the zombie's
-// SPAWN_REINFORCEMENTS_CHANCE. On success a fresh same-species zombie appears
-// 7-40 blocks away (never within 7 of a player), already hunting the
-// attacker; caller and recruit each lose 0.05 chance.
+// (vanilla behavior): HARD difficulty only, doMobSpawning on, chance = the
+// zombie's SPAWN_REINFORCEMENTS_CHANCE. On success a fresh same-species
+// zombie appears 7-40 blocks away (never within 7 of a player), already
+// hunting the attacker. The recruit rolls its own chance as any new zombie
+// does and starts 0.05 down on it; the caller's charge grows by 0.05 with
+// every recruit it summons.
 func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *tracked) {
-	if m.reinf <= 0 || h.rules.Difficulty != diffHard || !h.rules.DoMobSpawning {
+	chance := m.reinforcementChance()
+	if chance <= 0 || h.rules.Difficulty != diffHard || !h.rules.DoMobSpawning {
 		return
 	}
-	if h.rng.Float64() >= m.reinf {
+	if h.rng.Float64() >= chance {
 		return
 	}
-	for i := 0; i < 50; i++ {
-		off := func() int { return (7 + h.rng.Intn(34)) * (h.rng.Intn(3) - 1) }
+	for i := 0; i < reinforcementAttempts; i++ {
+		off := func() int {
+			return (reinforcementRangeMin + h.rng.Intn(reinforcementRangeSpread)) * (h.rng.Intn(3) - 1)
+		}
 		sx, sz := int(m.x)+off(), int(m.z)+off()
 		if !h.worldFor(m.dim).Spawnable(sx, sz) {
 			continue
@@ -276,11 +312,20 @@ func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *trac
 		if r == nil {
 			return // plugin-cancelled spawn
 		}
-		r.reinf = math.Max(0, m.reinf-0.05)
 		if attacker != nil {
 			r.hasTarget, r.tx, r.tz = true, attacker.x, attacker.z
 		}
-		m.reinf = math.Max(0, m.reinf-0.05)
+		r.mobAttrs().Get(attr.SpawnReinforcements).AddModifier(attr.Modifier{Source: reinforceCalleeSource,
+			Amount: reinforcementCharge, Op: attr.AddValue})
+		in := m.mobAttrs().Get(attr.SpawnReinforcements)
+		charge := reinforcementCharge
+		for _, mod := range in.Modifiers() {
+			if mod.Source == reinforceCallerSource {
+				charge += mod.Amount
+			}
+		}
+		in.RemoveModifier(reinforceCallerSource)
+		in.AddModifier(attr.Modifier{Source: reinforceCallerSource, Amount: charge, Op: attr.AddValue})
 		return
 	}
 }
@@ -657,12 +702,12 @@ func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, 
 		if etype == entityZombie {
 			m.setFollowRange(35) // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
 			m.setBaseArmor(2)    // Zombie base ARMOR attribute (vanilla 1.21.5)
-			m.reinf = h.rollReinforcements()
 			h.rollZombieBaby(players, m)
 			if !h.reloading { // finalizeSpawn extras roll once, never on a chunk reload
 				h.rollChickenJockey(players, m)
 				m.breaksDoors = h.rng.Float64() < h.specialMultiplier()*0.1 // setCanBreakDoors(random < f × 0.1)
 			}
+			h.rollReinforcements(m) // handleAttributes, after the door roll
 		}
 		if etype == entitySkeleton {
 			m.behavior = rangedBehavior{}
