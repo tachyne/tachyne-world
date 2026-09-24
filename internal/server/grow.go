@@ -432,16 +432,21 @@ func (h *hub) blockLight(dim, x, y, z int) int {
 	return int(block)
 }
 
-// tickThaw ports IceBlock.randomTick and SnowLayerBlock.randomTick: both melt
-// when the BLOCK light exceeds 11. Ice becomes water, except where water
-// evaporates (the Nether), where it simply goes.
+// tickThaw ports IceBlock.randomTick and SnowLayerBlock.randomTick. Snow
+// melts when the BLOCK light exceeds 11; ice when it exceeds 11 less the
+// ice's own light dampening (1), so above 10. Ice becomes water, except where
+// water evaporates (the Nether only), where it simply goes.
 func (h *hub) tickThaw(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	isIce := state == iceBlock
 	isSnow := state >= snowLayer1 && state <= snowLayer1+7
 	if !isIce && !isSnow {
 		return false
 	}
-	if h.blockLight(dim, x, y, z) <= 11 {
+	limit := 11
+	if isIce {
+		limit = 11 - iceLightDampening
+	}
+	if h.blockLight(dim, x, y, z) <= limit {
 		return true
 	}
 	if isSnow {
@@ -450,14 +455,19 @@ func (h *hub) tickThaw(players map[int32]*tracked, dim, x, y, z int, state uint3
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 		return true
 	}
-	melted := worldgen.WaterBase
-	if dim != 0 { // water evaporates in the Nether; the End has no water either
-		melted = worldgen.Air
+	if dim == dimNether { // WATER_EVAPORATES: the Nether's attribute alone
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+		return true
 	}
-	h.setBlockAt(players, dim, blockPos{x, y, z}, melted)
+	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.WaterBase)
 	h.scheduleAroundIn(dim, blockPos{x, y, z}, waterDelay)
+	h.vib(dim, freqBlockDestroy, x, y, z, 0) // IceBlock.melt: BLOCK_DESTROY
 	return true
 }
+
+// iceLightDampening is the ice block's getLightDampening: not a solid
+// render, not sky-transparent — 1.
+const iceLightDampening = 1
 
 // cropGrows rolls the vanilla growth gate: random.nextInt((int)(25/speed)+1)==0.
 func (h *hub) cropGrows(dim, x, y, z int, r [2]uint32) bool {

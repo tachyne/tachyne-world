@@ -103,6 +103,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Ice melts at vanilla light levels, and stays water in the End.** Ice
+  needed one more level of block light than vanilla to melt. Ice melted in
+  the End vanished as if it were the Nether; now it leaves water, and only
+  Nether ice evaporates.
 - **The newest music discs give their vanilla comparator signal.** A
   comparator reading a jukebox playing Bounce, Lava Chicken or Tears gave
   the wrong strength; they now give 8, 9 and 10.

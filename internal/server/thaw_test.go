@@ -125,3 +125,42 @@ func TestIceEvaporatesInTheNether(t *testing.T) {
 		t.Errorf("nether ice left state %d, want air (water evaporates)", got)
 	}
 }
+
+// TestIceMeltsAtElevenAndInTheEnd: IceBlock.randomTick melts when block
+// light exceeds 11 less the ice's dampening of 1, so light 11 is enough; and
+// only the Nether evaporates water, so End ice becomes water.
+func TestIceMeltsAtElevenAndInTheEnd(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	x, y, z := 40, 40, 40
+	for dx := -2; dx <= 6; dx++ {
+		for dy := -2; dy <= 2; dy++ {
+			for dz := -2; dz <= 2; dz++ {
+				h.world.SetBlock(x+dx, y+dy, z+dz, worldgen.Stone)
+			}
+		}
+	}
+	for dx := 0; dx <= 3; dx++ {
+		h.world.SetBlock(x+dx, y, z, worldgen.Air)
+	}
+	h.world.SetBlock(x+4, y, z, worldgen.BlockID("glowstone"))
+	h.world.SetBlock(x, y, z, iceBlock)
+	if bl := h.blockLight(0, x, y, z); bl != 11 {
+		t.Skipf("test setup: block light %d at the ice, want 11", bl)
+	}
+	h.tickThaw(players, 0, x, y, z, iceBlock)
+	if got := h.world.At(x, y, z); got != worldgen.WaterBase {
+		t.Errorf("ice at block light 11 is state %d, want water", got)
+	}
+
+	h.end = world.New(3)
+	h.end.SetBlock(x, y, z, iceBlock)
+	h.end.SetBlock(x+1, y, z, worldgen.BlockID("glowstone"))
+	if bl := h.blockLight(2, x, y, z); bl <= 10 {
+		t.Skipf("End test setup: block light %d", bl)
+	}
+	h.tickThaw(players, 2, x, y, z, iceBlock)
+	if got := h.end.At(x, y, z); got != worldgen.WaterBase {
+		t.Errorf("End ice left state %d, want water (only the Nether evaporates it)", got)
+	}
+}
