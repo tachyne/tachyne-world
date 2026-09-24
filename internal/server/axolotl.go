@@ -22,6 +22,7 @@ const (
 	axDetectSq           = 64.0 // AxolotlAttackablesSensor: within 8
 	axBiteTicks          = 20   // MeleeAttack(20)
 	axChaseSpeed         = 0.6  // getSpeedModifierChasing in water
+	axLandSpeed          = 0.15 // …and out of it (AxolotlAi's modifiers all drop to 0.15 ashore)
 	axSupportRange       = 20.0
 	axRegenCap           = 2400 // applySupportingEffects: up to 2400 ticks
 	axRegenAdd           = 100
@@ -110,6 +111,9 @@ func (h *hub) axolotlStep(players map[int32]*tracked, m *mob) bool {
 	dx, dy, dz := target.x-m.x, target.y-m.y, target.z-m.z
 	if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > 1.5 {
 		sp := m.moveSpeed() * axChaseSpeed
+		if !h.inWater(m.dim, m.x, m.y, m.z) {
+			sp = m.moveSpeed() * axLandSpeed // getSpeedModifierChasing: 0.15 ashore
+		}
 		m.vx, m.vy, m.vz = dx/d*sp, dy/d*sp*0.5, dz/d*sp
 		m.rest = 0
 		return true

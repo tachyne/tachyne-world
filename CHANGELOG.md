@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Armadillos, tadpoles and axolotls panic and chase as in 26.3.** An
+  armadillo now runs from fire, lava and the other environmental hazards,
+  unrolling first; a blow still just rolls it up. Tadpoles flee at vanilla's
+  pace, and an axolotl chasing prey on land slows to its land speed.
 - **Big dripleaf stays up.** A big dripleaf's leaf used to pop off its own
   stem, because the stem has no collision. It now follows vanilla's rule:
   the leaf stands on a stem, another leaf, or the plant's ground (clay, moss,

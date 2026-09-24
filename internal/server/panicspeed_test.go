@@ -54,10 +54,14 @@ func TestPanicCauses(t *testing.T) {
 	if panicsAt(&mob{etype: entityPolarBear}, dtMobAttack) {
 		t.Error("an adult polar bear stands its ground")
 	}
-	// An armadillo rolls up and a skeleton horse plods: neither has a panic
-	// goal. A goat does (GoatAi's AnimalPanic).
-	if panicsAt(&mob{etype: entitySkeletonHorse}, dtMobAttack) || panicsAt(&mob{etype: entityArmadillo}, dtLava) {
-		t.Error("these species never panic in vanilla")
+	// A skeleton horse plods: it has no panic goal. A goat does (GoatAi's
+	// AnimalPanic), and an armadillo runs from the environment only
+	// (ArmadilloPanic) — a blow rolls it up.
+	if panicsAt(&mob{etype: entitySkeletonHorse}, dtMobAttack) {
+		t.Error("a skeleton horse never panics in vanilla")
+	}
+	if panicsAt(&mob{etype: entityArmadillo}, dtMobAttack) || !panicsAt(&mob{etype: entityArmadillo}, dtLava) {
+		t.Error("an armadillo panics at lava, not at a blow")
 	}
 	if !panicsAt(&mob{etype: entityGoat}, dtMobAttack) {
 		t.Error("a struck goat runs")
@@ -160,5 +164,20 @@ func TestPanicRunsToRandomSpots(t *testing.T) {
 	}
 	if grass == 0 {
 		t.Error("the grass patch was never chosen over bare stone")
+	}
+}
+
+// ArmadilloPanic: the environment unrolls a scared armadillo and sets it
+// running; a blow only rolls it up.
+func TestArmadilloPanicsAtTheEnvironment(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.world.ForceLoad(0, 0, 2)
+	m := h.spawnMob(players, entityArmadillo, 0.5, 180, 0.5)
+	m.health = 1000
+	h.armadilloSetState(players, m, armScared)
+	h.hurtMobOf(players, m, 1, dtLava)
+	if m.panic == 0 || m.armState != armIdle {
+		t.Errorf("after lava: panic %d, state %d; want running and unrolled", m.panic, m.armState)
 	}
 }

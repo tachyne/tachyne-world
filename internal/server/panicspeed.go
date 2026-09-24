@@ -12,7 +12,7 @@ var panicSpeeds = func() map[int]float64 {
 	for name, sp := range map[string]float64{
 		"cow": 2.0, "mooshroom": 2.0, "trader_llama": 2.0, "panda": 2.0, "rabbit": 2.2,
 		"sheep": 1.25, "pig": 1.25, "cod": 1.25, "salmon": 1.25, "tropical_fish": 1.25,
-		"pufferfish": 1.25, "tadpole": 1.25, "chicken": 1.4, "llama": 1.2, "turtle": 1.2,
+		"pufferfish": 1.25, "tadpole": 2.0, "chicken": 1.4, "llama": 1.2, "turtle": 1.2,
 		"strider": 1.65, "wandering_trader": 0.5, "camel": 4.0, "camel_husk": 4.0, "allay": 2.5,
 		"wolf": 1.5, "polar_bear": 2.0, "goat": 2.0, "cat": 1.5, "parrot": 1.25, "fox": 2.2,
 		"horse": 1.2, "donkey": 1.2, "mule": 1.2, // AbstractHorse's MountPanicGoal
@@ -42,7 +42,10 @@ func panicSpeed(etype int) float64 {
 // floor, freezing and lightning.
 func panicsAt(m *mob, dt dmgType) bool {
 	if panicNever[m.etype] {
-		return false // an armadillo rolls up, a zombie or skeleton horse plods
+		return false // a zombie or skeleton horse plods
+	}
+	if m.etype == entityArmadillo {
+		return dt.has(tagPanicEnvironmentalCauses) // ArmadilloPanic: a blow rolls it up instead
 	}
 	if m.etype == entityCamelHusk && m.mobRider != 0 {
 		return false // CamelPanic: never while a mob holds the reins
@@ -57,11 +60,11 @@ func panicsAt(m *mob, dt dmgType) bool {
 
 // panicNever is the roster with no PanicGoal at all. A blow or an arrow
 // consults it too: until 2026-09-24 any struck non-hostile bolted, so a hit
-// ocelot, snow golem or zombie horse ran and an armadillo fled instead of
-// rolling up.
+// ocelot, snow golem or zombie horse ran. (The armadillo has a panic goal,
+// but for the environment only: a blow rolls it up.)
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
-	for _, n := range []string{"armadillo", "zombie_horse", "skeleton_horse", "ocelot", "snow_golem"} {
+	for _, n := range []string{"zombie_horse", "skeleton_horse", "ocelot", "snow_golem"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}
