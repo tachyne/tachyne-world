@@ -71,7 +71,7 @@ type arrowEntity struct {
 	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
 	lingering  bool     // a lingering potion: leaves an effect cloud instead of an instant splash
 	fire       bool     // blaze fireball: sets its target burning
-	wither     int      // wither skull: seconds of wither effect on a hit
+	withers    bool     // wither skull: Wither II on a hit, for as long as the difficulty says (witherSkullSecs)
 	weaken     int      // parched arrow: seconds of weakness effect on a hit
 	slow       int      // stray arrow: seconds of slowness effect on a hit
 
@@ -481,8 +481,8 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			if a.poison > 0 {
 				h.applyEffect(players, t, effPoison, 0, a.poison)
 			}
-			if a.wither > 0 {
-				h.applyEffect(players, t, effWither, 0, a.wither)
+			if secs := h.witherSkullSecs(a); secs > 0 {
+				h.applyEffect(players, t, effWither, 1, secs)
 			}
 			if a.weaken > 0 {
 				h.applyEffect(players, t, effWeakness, 0, a.weaken)

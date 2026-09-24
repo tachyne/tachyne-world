@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Wither skulls wither by difficulty.** A wither skull gave a weak,
+  ten-second Wither on every difficulty. It now gives Wither II, for ten
+  seconds on normal and forty on hard, and none on easy, as in vanilla.
 - **Thrown things fly as far as they do in vanilla.** Every thrown
   projectile fell as fast as an arrow, so snowballs, eggs and ender pearls
   landed well short. Each now falls at its own vanilla rate, and a bottle

@@ -102,3 +102,47 @@ func TestAnOwnerlessSkullFeedsNobody(t *testing.T) {
 		t.Errorf("an ownerless skull healed a bystanding wither to %d", w.health)
 	}
 }
+
+// WitherSkull.onHitEntity: Wither II for 10 s on normal and 40 s on hard,
+// and nothing at all on easy — fired by a wither and flown to the hit.
+func TestWitherSkullWitherByDifficulty(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		diff  int
+		ticks int
+	}{
+		{"easy", diffEasy, 0},
+		{"normal", diffNormal, 200},
+		{"hard", diffHard, 800},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			h, players, w := skullHub(t)
+			h.rules.Difficulty = c.diff
+			pl := survPlayer(h)
+			pl.x, pl.y, pl.z = 6.5, 70, 0.5
+			pl.health = 1000 // survive the skull and its blast
+			players[pl.p.eid] = pl
+			h.witherSkullAt(players, w, pl.x, pl.y+1, pl.z, false)
+			for i := 0; i < 60 && len(h.arrows) > 0; i++ {
+				h.tick.Add(1)
+				h.updateArrows(players)
+			}
+			if len(h.arrows) != 0 {
+				t.Fatal("the skull never struck")
+			}
+			if pl.health >= 1000 {
+				t.Fatal("the skull missed the player")
+			}
+			e := pl.effects[effWither]
+			if c.ticks == 0 {
+				if e != nil {
+					t.Fatalf("a skull on easy withered the player: %+v", *e)
+				}
+				return
+			}
+			if e == nil || e.amp != 1 || e.left != c.ticks {
+				t.Fatalf("wither effect %+v, want Wither II for %d ticks", e, c.ticks)
+			}
+		})
+	}
+}
