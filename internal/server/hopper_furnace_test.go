@@ -23,7 +23,9 @@ func TestHopperUnderFurnacePullsOutputOnly(t *testing.T) {
 
 		hopper := hopperMin // enabled, facing down (into air → no push)
 		w.SetBlock(hopperPos.x, hopperPos.y, hopperPos.z, hopper)
-		h.updateHopper(h.playersRef, simPos{blockPos: hopperPos}, hopper)
+		h.updateHopper(h.playersRef, simPos{blockPos: hopperPos}, hopper) // joins the tickers…
+		h.tick.Add(1)
+		h.tickHoppers(h.playersRef) // …and pulls on its first tick
 
 		b := h.bins[simPos{blockPos: hopperPos}]
 		if b == nil || b.slots[0].item != ingot || b.slots[0].count != 1 {

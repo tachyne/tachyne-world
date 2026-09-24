@@ -88,6 +88,11 @@ func hopperDelta(s uint32) (int, int, int) {
 type bin struct {
 	slots    []invStack
 	disabled [9]bool // crafter only: grid slots toggled off (hoppers skip; recipe holes)
+	// Hopper only (HopperBlockEntity): the transfer cooldown, counted down
+	// every tick, and the game tick it last ticked on (tickedGameTime), which
+	// decides whether a hopper fed by another waits eight ticks or seven.
+	cooldown int
+	ticked   uint64
 }
 
 // binAt is the storage behind a dispenser/dropper/hopper block, created on
@@ -96,7 +101,7 @@ type bin struct {
 func (h *hub) binAt(pos simPos, state uint32) *bin {
 	c := h.bins[pos]
 	if c == nil {
-		c = &bin{slots: make([]invStack, binSizeFor(state))}
+		c = &bin{slots: make([]invStack, binSizeFor(state)), cooldown: -1}
 		if name, ok := h.structureBinTable(pos.dim, pos.blockPos); ok {
 			h.fillSlots(c.slots, name, pos.blockPos)
 		}
@@ -662,25 +667,114 @@ func (h *hub) hopperPowerCheck(players map[int32]*tracked, pos simPos, state uin
 	}
 }
 
-// updateHopper: sync enabled with (inverse) power; move one item on the
-// 8-tick cadence; self-reschedule while the hopper exists.
+// updateHopper is the hopper's scheduled/neighbour update: ENABLED follows
+// the inverse of power, and the hopper joins the block-entity tickers. Item
+// movement is tickHoppers' business alone — driving it from here gave every
+// block update beside a hopper a transfer chain of its own, and they stacked.
 func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32) {
 	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
 	if hopperEnabled(state) == powered { // enabled must be the inverse of powered
 		state = hopperWith(state, !powered)
 		h.setBlockAt(players, pos.dim, pos.blockPos, state)
 	}
-	if hopperEnabled(state) {
+	h.binAt(pos, state)
+	h.registerHopper(pos)
+}
+
+// registerHopper adds a hopper to the block-entity tickers, once, in the
+// order hoppers appear (vanilla ticks block entities in the order they were
+// added).
+func (h *hub) registerHopper(pos simPos) {
+	if h.hopperTicking == nil {
+		h.hopperTicking = map[simPos]bool{}
+	}
+	if !h.hopperTicking[pos] {
+		h.hopperTicking[pos] = true
+		h.hopperOrder = append(h.hopperOrder, pos)
+	}
+}
+
+// tickHoppers is every hopper's HopperBlockEntity.pushItemsTick, once per
+// game tick: the cooldown counts down, and a hopper off cooldown and enabled
+// pushes one item out (ejectItems) and, unless full, takes one in
+// (suckInItems); if either moved anything it waits eight ticks. An idle
+// hopper so answers on the very next tick, not on an eight-tick beat.
+func (h *hub) tickHoppers(players map[int32]*tracked) {
+	now := h.tick.Load()
+	keep := h.hopperOrder[:0]
+	for _, pos := range h.hopperOrder {
+		w := h.worldFor(pos.dim)
+		if w == nil {
+			delete(h.hopperTicking, pos)
+			continue
+		}
+		if !w.Loaded(int32(pos.x>>4), int32(pos.z>>4)) {
+			keep = append(keep, pos) // an unloaded hopper waits, as vanilla's does
+			continue
+		}
+		state := w.At(pos.x, pos.y, pos.z)
+		if !isHopper(state) {
+			delete(h.hopperTicking, pos) // the block went: its ticker goes with it
+			continue
+		}
+		keep = append(keep, pos)
 		c := h.binAt(pos, state)
-		moved := h.hopperPull(players, pos, c)
-		if h.hopperPush(players, pos, state, c) {
+		c.cooldown--
+		c.ticked = now
+		if c.cooldown > 0 {
+			continue
+		}
+		c.cooldown = 0
+		if !hopperEnabled(state) {
+			continue
+		}
+		moved := false
+		if !binEmpty(c.slots) {
+			moved = h.hopperPush(players, pos, state, c)
+		}
+		if !binFull(c.slots) && h.hopperPull(players, pos, c) {
 			moved = true
 		}
 		if moved {
+			c.cooldown = hopperCadence
 			h.refreshBinViewers(players, pos)
 		}
 	}
-	h.scheduleIn(pos.dim, pos.blockPos, hopperCadence)
+	h.hopperOrder = keep
+}
+
+// hopperFed is tryMoveInItem's wasEmpty rule: a hopper that was empty and
+// receives an item waits eight ticks before passing it on — seven when the
+// hopper feeding it has not ticked yet this tick — unless it is on a longer
+// cooldown already.
+func (h *hub) hopperFed(dst *bin, src *bin) {
+	if dst.cooldown > hopperCadence {
+		return
+	}
+	skip := 0
+	if src != nil && dst.ticked >= src.ticked {
+		skip = 1
+	}
+	dst.cooldown = hopperCadence - skip
+}
+
+// binEmpty and binFull are Container.isEmpty and HopperBlockEntity.inventoryFull.
+func binEmpty(slots []invStack) bool {
+	for _, st := range slots {
+		if st.item != 0 && st.count > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func binFull(slots []invStack) bool {
+	for _, st := range slots {
+		if st.item == 0 || st.count <= 0 || st.count != stackCap(st.item) {
+			return false
+		}
+	}
+	return true
 }
 
 // hopperPull takes one item from the container above, or sucks up item
@@ -774,6 +868,12 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 		return false
 	}
 	cb := h.crafterBinAt(pos.at(target)) // non-nil → fill via the disabled-aware rule
+	var fed *bin                         // a hopper downstream, and whether it was empty before this item
+	if w := h.worldFor(pos.dim); w != nil && isHopper(w.At(target.x, target.y, target.z)) {
+		if b := h.bins[pos.at(target)]; b != nil && binEmpty(b.slots) {
+			fed = b
+		}
+	}
 	for i := range c.slots {
 		s := &c.slots[i]
 		if s.item == 0 || s.count == 0 {
@@ -791,6 +891,9 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 			s.count--
 			if s.count <= 0 {
 				*s = invStack{}
+			}
+			if fed != nil {
+				h.hopperFed(fed, c)
 			}
 			h.refreshBinViewers(players, pos.at(target))
 			return true

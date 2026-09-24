@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -631,10 +632,12 @@ type hub struct {
 	// The layers of the banner that was broken a moment ago, waiting for its
 	// drop (the block change lands one event ahead of the drop).
 	lastBannerPos    simPos
-	lastPotPos       simPos    // a decorated pot just removed…
-	lastPotSherds    potSherds // …and its faces, for the drop that follows
-	lastBoxPos       simPos    // a shulker box just removed…
-	lastBoxID        int32     // …and the stowed contents its drop carries
+	lastPotPos       simPos          // a decorated pot just removed…
+	lastPotSherds    potSherds       // …and its faces, for the drop that follows
+	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
+	hopperOrder      []simPos        // …in the order they joined
+	lastBoxPos       simPos          // a shulker box just removed…
+	lastBoxID        int32           // …and the stowed contents its drop carries
 	lastBannerLayers []attachproto.BannerLayer
 	books            *bookStore              // books.json (contents by book id, the map model)
 	lecterns         map[simPos]*lectern     // held books + open pages (persisted with containers)
@@ -976,10 +979,27 @@ func (h *hub) run() {
 			h.shelfView.set(pos, shelfViewOf(sh))
 		}
 		h.loadCampfires()
-		for pos := range h.bins { // restart hoppers' self-scheduling chains
+		hoppers := make([]simPos, 0)
+		for pos := range h.bins { // the hoppers rejoin the block-entity tickers
 			if w := h.worldFor(pos.dim); w != nil && isHopper(w.At(pos.x, pos.y, pos.z)) {
-				h.scheduleIn(pos.dim, pos.blockPos, hopperCadence)
+				hoppers = append(hoppers, pos)
 			}
+		}
+		sort.Slice(hoppers, func(i, j int) bool { // a fixed order: map iteration is random
+			a, b := hoppers[i], hoppers[j]
+			if a.dim != b.dim {
+				return a.dim < b.dim
+			}
+			if a.x != b.x {
+				return a.x < b.x
+			}
+			if a.y != b.y {
+				return a.y < b.y
+			}
+			return a.z < b.z
+		})
+		for _, pos := range hoppers {
+			h.registerHopper(pos)
 		}
 	}
 	h.reconcileFurnaceBlocks()
@@ -1110,6 +1130,7 @@ func (h *hub) run() {
 			}
 			h.updateEffects(players)      // status effects at 20 Hz (vanilla per-effect cadence)
 			h.shoulderTick(players)       // shoulder parrots: chatter, and what knocks them off
+			h.tickHoppers(players)        // HopperBlockEntity.pushItemsTick, every hopper, every tick
 			h.updateMobEffects(players)   // …and the mobs', on the same cadence
 			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
 			if age%10 == 0 {

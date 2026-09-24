@@ -30,6 +30,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Hoppers keep vanilla time.** Each hopper now ticks once per game tick
+  with its own eight-tick cooldown. An idle hopper takes an item the tick
+  after one arrives. It pushes before it pulls, and one fed by another
+  hopper waits its eight ticks before passing the item on. Before, every
+  block update next to a hopper started another transfer loop, so a busy
+  hopper could run several times faster than vanilla's.
 - **Tamed pets walk after you.** A wolf, cat or parrot following its owner
   used to stall in the idle cycle. It only caught up by teleporting once it
   was more than twelve blocks behind. It now walks or flies after you as
