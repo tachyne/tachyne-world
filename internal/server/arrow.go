@@ -480,9 +480,20 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				src = dmgFrom{}
 			}
 			src.byMob = byMob
+			// A burning arrow and a blaze's fireball set the target alight
+			// BEFORE the blow lands, and put its old fire back if the blow
+			// fails (AbstractArrow / SmallFireball.onHitEntity).
+			ignite, oldFire := ignitesOnHit(a), t.fireSecs
+			if ignite {
+				h.setBurning(players, t, 5)
+			}
 			landed := h.hurtFrom(players, t, float32(a.dmg), projectileDamageOf(a), shot, src)
 			h.knockback(t, a.x, a.z) // the shove lands even off a shield
 			if !landed {
+				if ignite && t.fireSecs != oldFire {
+					t.fireSecs = oldFire
+					h.broadcastPlayerFlags(players, t)
+				}
 				return true // caught on the shield: no venom, no thorns, no fire
 			}
 			if t.dead {
@@ -518,13 +529,18 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 					h.applyEffectTicks(players, t, e.id, e.amp, ticks)
 				}
 			}
-			if a.fire {
-				h.setBurning(players, t, 5)
-			}
 		}
 		return true
 	}
 	return false
+}
+
+// ignitesOnHit reports whether a projectile sets what it strikes alight: a
+// burning arrow, or a small fireball (SmallFireball.onHitEntity). A ghast's
+// large fireball is itself burning — it still lights a campfire, a candle or
+// TNT it strikes — but its hit only deals damage (LargeFireball.onHitEntity).
+func ignitesOnHit(a *arrowEntity) bool {
+	return a.fire && a.etype != entityLargeFireball
 }
 
 // tippedArrowScale is the tipped arrow's POTION_DURATION_SCALE: an eighth
@@ -634,7 +650,17 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				// EnderDragon.hurt: anywhere but the head is worth a quarter.
 				hit = dragonPartDamage(part, hit)
 			}
+			// Set alight before the blow; a blow that does nothing puts the
+			// old fire back (as on a player, above).
+			ignite := ignitesOnHit(a) && !fireImmune[m.etype]
+			oldFire, before := m.fireSecs, m.health
+			if ignite {
+				m.ignite(5)
+			}
 			m.hurtKind(hit, projectileDamageOf(a))
+			if ignite && m.health >= before {
+				m.fireSecs = oldFire
+			}
 			m.lastDirect = a.etype // the blow's direct entity (the ghast's disc asks for its own fireball)
 			if a.playerShot {
 				if s := players[a.shooter]; s != nil {

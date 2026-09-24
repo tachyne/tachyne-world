@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Fireballs burn the way vanilla's do.** A ghast's fireball no longer
+  sets the player it hits on fire; it only hurts. A blaze's fireball, or
+  a fire charge from a dispenser, sets the target alight and hurts it. A
+  blow that fails leaves the target's old fire as it was. Fire Resistance
+  now also stops fireball damage. Burning arrows and fireballs now set
+  mobs on fire as well as players.
 - **Lingering potions fly as lingering potions.** A thrown, dispensed or
   trial-spawner lingering potion now appears as its own kind of thrown
   potion rather than as a splash potion, as it does in vanilla.

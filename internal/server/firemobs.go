@@ -74,6 +74,8 @@ func (h *hub) ghastTick(players map[int32]*tracked, m *mob) {
 			if m.ghastCharge == ghastChargeFire {
 				ux, uy, uz := aimAt(m.x, m.y+2, m.z, t.x, t.y+0.5, t.z)
 				a := h.launchProjectileIn(players, entityLargeFireball, m.dim, m.x+ux*4, m.y+2, m.z+uz*4, ux*hurtingSpeed, uy*hurtingSpeed, uz*hurtingSpeed)
+				// The fireball burns (it lights a campfire or TNT it strikes), but its
+				// hit only deals damage: see ignitesOnHit.
 				a.shooter, a.dmg, a.explode, a.fire = m.eid, 6, 1, true
 				h.playSoundDim(players, m.dim, "minecraft:entity.ghast.shoot", sndHostile, m.x, m.y, m.z, 3, 1)
 				m.ghastCharge = ghastChargeRest

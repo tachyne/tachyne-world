@@ -356,7 +356,9 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		a := h.launchProjectileIn(players, entityEggProj, h.rsDim, fx, fy, fz, vx, vy, vz)
 		a.breaks, a.egg, a.eggItem = true, true, item // a dispensed egg hatches too
 	case dispense && item == itemFireCharge:
-		h.launchProjectileIn(players, entitySmallFireball, h.rsDim, fx, fy, fz, vx, vy, vz)
+		// An ownerless small fireball: the same burn and 5 damage as a blaze's.
+		a := h.launchProjectileIn(players, entitySmallFireball, h.rsDim, fx, fy, fz, vx, vy, vz)
+		a.dmg, a.fire = blazeFireballDmg, true
 	case dispense && item == itemXPBottle:
 		// Vanilla registerProjectileBehavior: the bottle flies and shatters.
 		a := h.launchProjectileIn(players, entityXPBottle, pos.dim, fx, fy, fz, vx, vy, vz)
