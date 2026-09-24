@@ -84,8 +84,14 @@ func (h *hub) tickGrowingPlant(players map[int32]*tracked, dim, x, y, z int, sta
 		}
 		berries := g.berryChance > 0 && h.rng.Float64() < g.berryChance
 		h.setBlockAt(players, dim, blockPos{x, ny, z}, g.headAt(age+1, berries))
-		// The cell we grew out of is no longer the tip.
-		h.setBlockAt(players, dim, blockPos{x, y, z}, g.body)
+		// The cell we grew out of is no longer the tip. A cave vine's body
+		// keeps the berries the head had (updateBodyAfterConvertedFromHead);
+		// the body's first state is the berried one, so it must be set.
+		body := g.body
+		if g.berryStride == 2 {
+			body = setBoolProp(body, "berries", (state-g.headLo)%2 == 0)
+		}
+		h.setBlockAt(players, dim, blockPos{x, y, z}, body)
 		return true
 	}
 	return false

@@ -14,6 +14,18 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Blocks place the way vanilla places them.**
+  - A crafter faces the way you look.
+  - Bamboo goes down as a shoot, or extends a stalk.
+  - A dirt path placed under a solid block comes out as dirt.
+  - Kelp needs a water source, and kelp or vines placed on the same plant
+    extend it.
+  - Glow berries plant cave vines.
+  - Huge mushroom blocks join up with their neighbours.
+  - Pale moss carpet climbs the walls beside it, and is no longer treated
+    as a wall.
+  - A cave vine keeps its berries on the segment that had them, instead of
+    fruiting all the way down as it grows.
 - **Blocks react to their neighbours.**
   - Grass, podzol and mycelium turn snowy when snow lands on them, and back
     when it goes.
