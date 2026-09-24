@@ -180,3 +180,30 @@ func TestWaterDoesNotWashAMovingBlock(t *testing.T) {
 		t.Fatalf("the pushed stone should land beside the water, got %d", got)
 	}
 }
+
+// TestPushedRodStillTurnsOff: a lightning rod pushed mid-pulse lands still
+// powered, and its off tick stayed with the cell it left. LightningRodBlock.
+// onPlace schedules a fresh one; without it the rod stayed powered forever.
+func TestPushedRodStillTurnsOff(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z, pistonEast(false))
+	rod := worldgen.BlockBase("lightning_rod")
+	info, _ := worldgen.InfoForState(rod)
+	rod = worldgen.SetProperty(info, rod, "facing", "up")
+	rod = setBoolProp(rod, "powered", false)
+	w.SetBlock(x+1, y, z, rod)
+	h.rodStruck(players, blockPos{x + 1, y, z})
+	if !boolProp(w.At(x+1, y, z), "powered") {
+		t.Fatal("the struck rod should be powered")
+	}
+	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	stepTicks(h, players, 30)
+	got := w.At(x+2, y, z)
+	if !isLightningRod(got) {
+		t.Fatalf("the rod should have been pushed to x+2: %d", got)
+	}
+	if boolProp(got, "powered") {
+		t.Fatal("the pushed rod is still powered long after its eight ticks")
+	}
+}

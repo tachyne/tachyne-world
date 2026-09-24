@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **A lightning rod moved by a piston still switches off.** A rod pushed
+  while a strike was still powering it stayed powered for good. It now
+  switches off eight ticks after it lands, as in vanilla.
 - **Water and lava wash away exactly what they do in vanilla.** Flowing
   water and lava used to break any block without a solid shape. They now
   follow vanilla's list: pressure plates and banners hold water back;

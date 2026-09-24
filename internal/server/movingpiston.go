@@ -140,6 +140,7 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 		final = landedStateOf(mb.moved)
 	}
 	h.rsSet(players, pos, final)
+	h.rodOnPlace(pos, final)
 	h.notifyAround(players, h.rsDim, pos)
 	if ok && isPistonBase(final) {
 		h.scheduleSignalAround(players, pos)
@@ -160,7 +161,23 @@ func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
 		h.rsSet(players, pos, worldgen.Air)
 	} else {
 		h.rsSet(players, pos, landedStateOf(mb.moved))
+		h.rodOnPlace(pos, landedStateOf(mb.moved))
 	}
 	h.notifyAround(players, h.rsDim, pos)
 	return true
+}
+
+// rodOnPlace is LightningRodBlock.onPlace: a rod put down still POWERED (a
+// piston carried it mid-pulse) with no tick of its own due schedules one
+// eight ticks out, or it would stay powered: its pending tick stayed with
+// the cell it left.
+func (h *hub) rodOnPlace(pos blockPos, state uint32) {
+	if !isLightningRod(state) || !boolProp(state, "powered") {
+		return
+	}
+	if _, ok := h.rsDue[h.rsKey(pos)]; ok {
+		return
+	}
+	h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
+	h.rsSchedule(pos, 8)
 }
