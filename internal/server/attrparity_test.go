@@ -270,3 +270,59 @@ func TestSmallPlayerWalksUnderALowCeiling(t *testing.T) {
 		t.Fatal("a half-size player was stopped at a one-block gap")
 	}
 }
+
+// piglinFixture is a sword piglin on a stone floor with a gold-clad player
+// beside it and a player in no gold ten blocks off.
+func piglinFixture(t *testing.T) (*hub, map[int32]*tracked, *mob, *tracked, *tracked) {
+	t.Helper()
+	h, far, players := cmdHub()
+	h.world.ForceLoad(0, 0, 2)
+	for x := -8; x < 24; x++ {
+		for z := -8; z < 24; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.BlockBase("stone"))
+		}
+	}
+	gold := cmdSecondPlayer(players, 2, "golden")
+	gold.armor[3] = invStack{item: int32(itemByName["golden_helmet"]), count: 1}
+	pg := h.spawnSpecies(players, entityPiglin, 0, 8.5, 180, 8.5)
+	if pg == nil {
+		t.Fatal("no piglin")
+	}
+	pg.held, pg.baby, pg.attackCD = int32(itemByName["golden_sword"]), false, 0
+	gold.x, gold.y, gold.z = 9.5, 180, 8.5
+	far.x, far.y, far.z = 18.5, 180, 8.5
+	return h, players, pg, gold, far
+}
+
+// A piglin hunting a player in no gold does not cut down the gold-clad
+// player standing beside it on the way.
+func TestPiglinMeleeSparesGold(t *testing.T) {
+	h, players, pg, gold, _ := piglinFixture(t)
+	for i := 0; i < 6; i++ {
+		pg.x, pg.y, pg.z = 8.5, 180, 8.5 // held in place beside the bystander
+		h.updateMobs(players)
+		if gold.health < 20 {
+			t.Fatalf("the piglin hit the player in gold (update %d)", i)
+		}
+	}
+	if !pg.hasTarget {
+		t.Fatal("the piglin was not hunting the player in no gold")
+	}
+}
+
+// Hit a piglin while wearing gold and it fights back: the one it is angry
+// at is its target, gold or not.
+func TestPiglinRetaliatesAgainstGold(t *testing.T) {
+	h, players, pg, gold, far := piglinFixture(t)
+	far.x = 400 // nobody else about
+	h.attackMob(players, gold.p.eid, pg.eid)
+	hp := gold.health
+	for i := 0; i < 20 && gold.health >= hp; i++ {
+		pg.x, pg.y, pg.z = 8.5, 180, 8.5
+		pg.attackCD = 0
+		h.updateMobs(players)
+	}
+	if gold.health >= hp {
+		t.Fatal("the piglin never hit back at the player in gold who struck it")
+	}
+}

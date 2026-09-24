@@ -94,6 +94,39 @@ func (h *hub) nearestPiglinPrey(players map[int32]*tracked, m *mob, maxDist floa
 	return best
 }
 
+// piglinTarget is PiglinAi.findNearestValidAttackTarget over players: the
+// player it is angry at comes first, gold armour or not, for as long as the
+// anger lasts; under universal anger, whoever is nearest; otherwise the
+// nearest player not wearing gold. Every piglin attack — the sword, the
+// spear and the crossbow — goes for this one.
+func (h *hub) piglinTarget(players map[int32]*tracked, m *mob, maxDist float64) *tracked {
+	if m.anger > 0 {
+		if m.targetEID != 0 {
+			t := players[m.targetEID]
+			if t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim &&
+				(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) < maxDist*maxDist {
+				return t
+			}
+			if t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim {
+				return nil // angry at someone out of reach: nobody else is fought meanwhile
+			}
+		} else if h.rules.UniversalAnger {
+			return h.nearestHuntable(players, m.dim, m.x, m.z, maxDist)
+		}
+	}
+	return h.nearestPiglinPrey(players, m, maxDist)
+}
+
+// piglinCoolDown runs the anger clock down one mob-update; spent, the grudge
+// is forgotten.
+func (m *mob) piglinCoolDown() {
+	if m.anger > 0 {
+		if m.anger--; m.anger == 0 {
+			m.targetEID = 0
+		}
+	}
+}
+
 // canAdmire is PiglinAi.canAdmire for a gold ingot.
 func (m *mob) canAdmire(now uint64) bool {
 	return !m.baby && m.admireUntil == 0 && now >= m.admireOffUntil

@@ -61,7 +61,7 @@ func (h *hub) spearQuarry(players map[int32]*tracked, m *mob) *tracked {
 		if m.admireUntil != 0 {
 			return nil
 		}
-		return h.nearestPiglinPrey(players, m, m.followRange())
+		return h.piglinTarget(players, m, m.followRange())
 	}
 	return h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
 }

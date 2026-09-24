@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Piglins only attack the player they are after.** A piglin chasing
+  someone could hit a player in gold armour who was standing next to it.
+  Now it only swings at its own target. If you anger piglins, by hitting
+  one or opening a chest they guard, they come for you even in gold
+  armour. Before, they forgot about you as soon as they saw the gold.
+  When their anger runs out, they go back to leaving gold-wearers alone.
 - **The Scale attribute changes an entity's size in the world.** A mob
   or player resized with /attribute already looked bigger or smaller,
   but the server still treated them as normal size. Now a scaled mob

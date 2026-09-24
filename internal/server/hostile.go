@@ -400,7 +400,8 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 		// PiglinAi: a player in a piece of gold armour is left alone, and an
 		// admiring piglin has eyes only for its gold.
 		// StartAttacking is gated on isAdult: a baby piglin hunts nobody.
-		if t := h.nearestPiglinPrey(players, m, reach); t != nil && m.admireUntil == 0 && !m.baby {
+		m.piglinCoolDown()
+		if t := h.piglinTarget(players, m, reach); t != nil && m.admireUntil == 0 && !m.baby {
 			m.hasTarget, m.tx, m.tz = true, t.x, t.z
 		} else {
 			m.hasTarget = false
@@ -484,6 +485,11 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		return
 	}
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, attackReach)
+	if m.etype == entityPiglin {
+		// A piglin swings only at its own target (PiglinAi's attack target):
+		// never at a bystander in gold who happens to be standing close.
+		t = h.piglinTarget(players, m, attackReach)
+	}
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
 		if t == nil && m.preyTarget != 0 {
 			h.mobBitesPrey(players, m) // no player in reach: the creature it hunts
