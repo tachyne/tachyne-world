@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -120,6 +121,13 @@ type vehicle struct {
 	// RandomizableContainer's lootTable, unpacked on first use.
 	loot    string
 	lootPos blockPos
+	// VehicleEntity's synced hurt state: hurtTime counts the wobble down
+	// from 10, hurtDirFlip is the side it rocks to (DATA_ID_HURTDIR starts
+	// at 1 and flips on every blow), damage is what has built up (a blow
+	// adds ten times its worth, one drains away a tick, past 40 it breaks).
+	hurtTime    int
+	hurtDirFlip bool
+	damage      float64
 }
 
 func (v *vehicle) isBoat() bool { return !cartTypes[v.etype] }
@@ -282,7 +290,115 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 	}
 }
 
-// breakVehicle pops it back into an item (any punch — vanilla-lite).
+// Vehicle hurt metadata (VehicleEntity): Entity's 8 fields, then these three.
+const (
+	vehMetaHurt    = 8  // DATA_ID_HURT: INT, the wobble's ticks left
+	vehMetaHurtDir = 9  // DATA_ID_HURTDIR: INT, ±1
+	vehMetaDamage  = 10 // DATA_ID_DAMAGE: FLOAT
+	metaTypeFloat  = 3  // EntityDataSerializers.FLOAT
+	vehHurtTicks   = 10 // setHurtTime(10)
+	vehBreakDamage = 40 // destroyed once the built-up damage passes this
+)
+
+func (v *vehicle) hurtDir() int32 {
+	if v.hurtDirFlip {
+		return -1
+	}
+	return 1
+}
+
+// vehicleHurtMeta is the three synced hurt fields: the client rocks the
+// model from them (and counts them down itself, as its own tick does).
+func vehicleHurtMeta(v *vehicle) []byte {
+	b := protocol.AppendVarInt(nil, v.eid)
+	b = protocol.AppendU8(b, vehMetaHurt)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(v.hurtTime))
+	b = protocol.AppendU8(b, vehMetaHurtDir)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, v.hurtDir())
+	b = protocol.AppendU8(b, vehMetaDamage)
+	b = protocol.AppendVarInt(b, metaTypeFloat)
+	b = protocol.AppendF32(b, float32(v.damage))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// hurtVehicle is a player's blow on a boat or minecart (VehicleEntity.
+// hurtServer): the vehicle rocks, the blow's worth ×10 builds up as damage,
+// and it breaks only once that passes 40 — a bare fist takes several quick
+// punches, since a point of damage drains away every tick. A creative
+// player's blow removes it on the spot with nothing dropped.
+func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
+	if t == nil || t.dim != v.dim {
+		return
+	}
+	dx, dy, dz := t.x-v.x, t.y-v.y, t.z-v.z
+	if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+		return
+	}
+	sw := h.meleeSwing(t, 0) // Player.attack: no crit on a non-living target
+	if sw.raw <= 0 {
+		return
+	}
+	v.hurtDirFlip = !v.hurtDirFlip
+	v.hurtTime = vehHurtTicks
+	v.damage += sw.raw * 10
+	creative := t.gamemode == gmCreative
+	if !creative && v.damage <= vehBreakDamage {
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, metaEv(vehicleHurtMeta(v)))
+		return
+	}
+	if creative {
+		h.discardVehicle(players, v)
+		return
+	}
+	h.breakVehicle(players, v)
+}
+
+// tickVehicleHurt drains the hurt state a tick (AbstractBoat/AbstractMinecart
+// .tick). The client runs the same count-down on its copy, so nothing is sent.
+func (v *vehicle) tickVehicleHurt() {
+	if v.hurtTime > 0 {
+		v.hurtTime--
+	}
+	if v.damage > 0 {
+		v.damage--
+	}
+}
+
+// discardVehicle is a creative player's blow (Entity.discard): the vehicle
+// goes without its item, though a container's cargo still spills
+// (remove(DISCARDED) drops the contents).
+func (h *hub) discardVehicle(players map[int32]*tracked, v *vehicle) {
+	if v.rider != 0 {
+		if t := players[v.rider]; t != nil {
+			h.dismount(players, t)
+		}
+		v.rider = 0
+	}
+	h.releaseCartMob(players, v)
+	delete(h.vehicles, v.eid)
+	h.entityGone(players, v.dim, v.eid)
+	h.spillVehicleCargo(players, v)
+}
+
+func (h *hub) spillVehicleCargo(players map[int32]*tracked, v *vehicle) {
+	h.unpackCartLoot(v)                       // a structure cart broken unopened spills its loot
+	if slots := v.cartSlots(); slots != nil { // ChestBoat.destroy: the cargo spills
+		for _, st := range slots {
+			if st.item == 0 || st.count == 0 {
+				continue
+			}
+			if it := h.spawnItemIn(players, v.dim, st.item, st.count, v.x, v.y, v.z); it != nil {
+				it.setFrom(st)
+				h.refreshItemMeta(players, it)
+			}
+		}
+	}
+}
+
+// breakVehicle destroys it (VehicleEntity.destroy): it pops back into its
+// item and a container's cargo spills.
 func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	if v.etype == entityTntMinecart && v.vx*v.vx+v.vz*v.vz >= 0.01 {
 		// MinecartTNT.destroy: a moving TNT cart that is broken lights instead.
@@ -302,18 +418,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 		return // gamerule entity_drops: nothing is left behind
 	}
 	h.spawnItemIn(players, v.dim, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
-	h.unpackCartLoot(v)                       // a structure cart broken unopened spills its loot
-	if slots := v.cartSlots(); slots != nil { // ChestBoat.destroy: the cargo spills
-		for _, st := range slots {
-			if st.item == 0 || st.count == 0 {
-				continue
-			}
-			if it := h.spawnItemIn(players, v.dim, st.item, st.count, v.x, v.y, v.z); it != nil {
-				it.setFrom(st)
-				h.refreshItemMeta(players, it)
-			}
-		}
-	}
+	h.spillVehicleCargo(players, v)
 	h.playSoundDim(players, v.dim, "minecraft:entity.minecart.riding", sndNeutral, v.x, v.y, v.z, 0.4, 1.6)
 }
 
@@ -359,6 +464,7 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 // them, and release after.
 func (h *hub) updateVehicles(players map[int32]*tracked) {
 	for _, v := range h.vehicles {
+		v.tickVehicleHurt()
 		if !v.isBoat() {
 			h.tickMinecart(players, v)
 		} else {

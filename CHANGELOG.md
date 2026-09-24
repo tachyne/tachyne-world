@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Boats and minecarts take several punches to break.** They broke on the
+  first hit. As in vanilla, each blow now rocks the vehicle and adds to its
+  damage, which drains away over time, so a bare fist needs a quick run of
+  punches. A creative player still breaks one at once, and gets no item.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

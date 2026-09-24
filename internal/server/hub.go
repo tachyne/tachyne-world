@@ -1974,37 +1974,7 @@ func (h *hub) run() {
 					h.placeFrogspawn(players, t)
 				}
 			case evAttack:
-				// A spear does not swing: the server ignores an attack with a
-				// piercing weapon in hand, and the jab is the STAB action. A
-				// gateway whose client only says "attack" still gets the jab.
-				if t := players[e.attacker]; t != nil && spearOf(t.p.heldItem()) != nil {
-					h.spearStab(players, t)
-					break
-				}
-				if h.hitCrystal(players, e.target) {
-					break
-				}
-				if pt := h.paintings[e.target]; pt != nil {
-					h.breakPainting(players, pt, players[e.attacker])
-					break
-				}
-				if st := h.armorStands[e.target]; st != nil {
-					h.hitStand(players, players[e.attacker], st)
-					break
-				}
-				if f := h.itemFrames[e.target]; f != nil {
-					h.hitFrame(players, players[e.attacker], f)
-					break
-				}
-				if a := h.arrows[e.target]; a != nil {
-					h.deflectProjectile(players, players[e.attacker], a)
-					break
-				}
-				if v := h.vehicles[e.target]; v != nil {
-					h.breakVehicle(players, v)
-				} else if !h.attackPlayer(players, e.attacker, e.target) {
-					h.attackMob(players, e.attacker, e.target)
-				}
+				h.onAttack(players, e)
 			case evPlaceVehicleLook:
 				if t := players[e.eid]; t != nil {
 					h.placeVehicleFromLook(players, t, e.item, e.slot)
