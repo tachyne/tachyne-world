@@ -190,6 +190,19 @@ func throwVector(yaw, pitch float32, yOffset, pow float64) (float64, float64, fl
 	return x / d * pow, y / d * pow, z / d * pow
 }
 
+// shootVector is Projectile.getMovementToShoot: the direction normalized,
+// each axis nudged by a triangle-distributed 0.0172275 × uncertainty, then
+// scaled to the launch power.
+func (h *hub) shootVector(dx, dy, dz, pow, uncertainty float64) (float64, float64, float64) {
+	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
+	if d < 1e-9 {
+		return 0, 0, 0
+	}
+	dev := 0.0172275 * uncertainty
+	tri := func() float64 { return dev * (h.rng.Float64() - h.rng.Float64()) }
+	return (dx/d + tri()) * pow, (dy/d + tri()) * pow, (dz/d + tri()) * pow
+}
+
 // launchProjectileIn launches into an explicit dimension.
 func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, y, z, vx, vy, vz float64) *arrowEntity {
 	eid := h.allocEID()
@@ -364,6 +377,14 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				break
 			}
 			a.x, a.y, a.z = px, py, pz
+		}
+		// LlamaSpit.tick: after its hit test, a gob whose box touches any
+		// block that is not air — water, grass, a flower — is simply gone,
+		// where it was when the tick began.
+		if !hit && a.etype == entityLlamaSpit && h.spitTouchesNonAir(a.dim, bx, by, bz) {
+			delete(h.arrows, eid)
+			h.entityGone(players, a.dim, eid)
+			continue
 		}
 		if hit {
 			if a.egg { // ThrownEgg.onHit: whatever it struck, block or creature

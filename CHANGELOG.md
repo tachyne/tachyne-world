@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Llama spit flies like vanilla's.** A llama now spits from its mouth
+  with vanilla's aim scatter instead of a perfect shot every time. Spit
+  that touches water, grass or any other block now vanishes where it is.
 - **Blaze fireballs start fires.** A small fireball that hits a block now
   lights a fire in the empty space in front of the face it hit, as in
   vanilla. A blaze's fireball only does this with mobGriefing on. One from
