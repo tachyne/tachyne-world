@@ -96,7 +96,38 @@ var (
 type activeEffect struct {
 	amp     int
 	left    int
-	ambient bool // from a beacon or a conduit: fainter particles, as vanilla's flag
+	ambient bool          // from a beacon or a conduit: fainter particles, as vanilla's flag
+	hidden  *activeEffect // hiddenEffect: a weaker, longer instance waiting under this one
+}
+
+// update is MobEffectInstance.update: a stronger instance takes over (the
+// current one, if it would outlast it, is kept hidden underneath); an equal
+// one extends the duration; a weaker but longer one goes into the hidden
+// stack. Reports whether what is showing changed.
+func (e *activeEffect) update(o activeEffect) bool {
+	changed := false
+	switch {
+	case o.amp > e.amp:
+		if o.left < e.left {
+			prev := *e
+			e.hidden = &prev
+		}
+		e.amp, e.left, changed = o.amp, o.left, true
+	case e.left < o.left:
+		if o.amp == e.amp {
+			e.left, changed = o.left, true
+		} else if e.hidden == nil {
+			h := o
+			h.hidden = nil
+			e.hidden = &h
+		} else {
+			e.hidden.update(o)
+		}
+	}
+	if (!o.ambient && e.ambient) || changed {
+		e.ambient, changed = o.ambient, true
+	}
+	return changed
 }
 
 // effectNames maps /effect arguments to ids.
@@ -169,10 +200,14 @@ func (h *hub) applyEffectFrom(players map[int32]*tracked, t *tracked, id int32, 
 	if t.effects == nil {
 		t.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := t.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > ticks)) {
-		return // a stronger/longer instance is already running (vanilla)
+	if cur, ok := t.effects[id]; ok {
+		if !cur.update(activeEffect{amp: amp, left: ticks, ambient: ambient}) {
+			return // nothing showing changed: a weaker one went into the hidden stack, if anywhere
+		}
+		amp, ticks, ambient = cur.amp, cur.left, cur.ambient
+	} else {
+		t.effects[id] = &activeEffect{amp: amp, left: ticks, ambient: ambient}
 	}
-	t.effects[id] = &activeEffect{amp: amp, left: ticks, ambient: ambient}
 	t.applyEffectModifiers(id, amp)
 	if id == effAbsorption {
 		// The buffer fills to the new ceiling the moment the effect lands.
@@ -315,7 +350,16 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 			if t.dead { // a wither tick may have killed — stop touching effects
 				break
 			}
+			for hid := e.hidden; hid != nil; hid = hid.hidden {
+				hid.left-- // tickDownDuration: the hidden stack runs down too
+			}
 			if e.left--; e.left <= 0 {
+				if hid := e.hidden; hid != nil && hid.left > 0 { // downgradeToHiddenEffect
+					*e = *hid
+					t.applyEffectModifiers(id, e.amp)
+					t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Amp: int32(e.amp), Ticks: int32(e.left), Ambient: e.ambient})
+					continue
+				}
 				h.removeEffect(t, id)
 			}
 		}

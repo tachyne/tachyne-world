@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **A stronger potion no longer wipes out a longer one.** Drink Speed II
+  while Speed I has a minute left, and Speed I comes back with the rest of
+  its time once Speed II wears off. Before, the weaker effect was lost.
 - **Fall deaths say how you fell.** Death messages for falls now come from
   vanilla's combat log. A long fall reads "fell from a high place", and one
   off a ladder, vines or scaffolding says so. If something knocked you off,
