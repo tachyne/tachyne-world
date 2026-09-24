@@ -705,7 +705,8 @@ func (h *hub) mobLoot(m *mob) []drop {
 		return l
 	case entityCreeper:
 		l := []drop{{item: itemGunpowder, count: h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
-		if k := h.mobs[m.lastAttacker]; k != nil && skeletonFamily(k.etype) {
+		// entity_properties: the attacker is in #skeletons (the parched too).
+		if k := h.mobs[m.lastAttacker]; k != nil && skeletonsTag[k.etype] {
 			l = append(l, drop{item: creeperDiscs[h.rng.Intn(len(creeperDiscs))], count: 1}) // entities/creeper: #creeper_drop_music_discs for a skeleton's kill
 		}
 		return l

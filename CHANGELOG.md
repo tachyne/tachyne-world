@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **A parched's kill makes a creeper drop a music disc.** Since 26.3 the
+  parched counts as a skeleton, so a creeper it shoots dead drops a disc,
+  as one killed by any other skeleton does. Wolves now hunt the parched too.
 - **Piglins spawn as vanilla's do.** Every piglin used to be grown and carry
   a golden sword. Now a fifth are babies that hold nothing and fight no one.
   Half the grown ones carry a crossbow and shoot from range, and some of the
