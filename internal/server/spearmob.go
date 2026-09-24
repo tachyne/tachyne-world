@@ -290,7 +290,6 @@ func (h *hub) lunge(players map[int32]*tracked, t *tracked) {
 	mag := lungeImpulse * float64(lvl)
 	kx, ky, kz := h.knownMove(t)
 	t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: kx + lx*mag, VY: ky, VZ: kz + lz*mag})
-	t.moveBudget = budgetCapTicks * spinPerTick // applyPostImpulseGraceTime: let the lunge through
 	h.playSoundDim(players, t.dim, lungeSound(lvl), sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
