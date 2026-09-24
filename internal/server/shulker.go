@@ -101,13 +101,14 @@ func (h *hub) shulkerTick(players map[int32]*tracked, m *mob) {
 	}
 }
 
-// shulkerFire is the bullet: homing, Levitation on a hit.
+// shulkerFire is ShulkerAttackGoal's shot: a bullet from the middle of the
+// shulker's box, at rest, that picks its first leg away from the axis the
+// shell is attached along (a shulker here always sits on a floor: Y).
 func (h *hub) shulkerFire(players map[int32]*tracked, m *mob, t *tracked) {
-	ux, uy, uz := aimAt(m.x, m.y+0.5, m.z, t.x, t.y+1, t.z)
-	v := shulkerBulletSpeed
-	a := h.launchProjectileIn(players, entityShulkerBullet, m.dim, m.x, m.y+0.5, m.z, ux*v, uy*v, uz*v)
+	a := h.launchProjectileIn(players, entityShulkerBullet, m.dim, m.x, m.y+0.5, m.z, 0, 0, 0)
 	a.shooter, a.dmg, a.breaks = m.eid, 4, true
 	a.homing, a.levitate = t.p.eid, 10
+	h.shulkerBulletSelect(a, axisY, t)
 	h.playSoundDim(players, m.dim, "minecraft:entity.shulker.shoot", sndHostile, m.x, m.y, m.z, 2, (h.rng.Float32()-h.rng.Float32())*0.2+1)
 }
 

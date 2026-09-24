@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Shulker bullets fly and break like vanilla's.** A shulker's bullet
+  now zig-zags toward its target one direction at a time, turning when it
+  lines up with the target or meets a wall, instead of curving smoothly
+  straight at it. Hitting a bullet now destroys it.
 - **Llama spit flies like vanilla's.** A llama now spits from its mouth
   with vanilla's aim scatter instead of a perfect shot every time. Spit
   that touches water, grass or any other block now vanishes where it is.
