@@ -187,8 +187,8 @@ func (h *hub) cartActivate(players map[int32]*tracked, v *vehicle, powered bool)
 // primeCart lights a TNT cart's fuse (primeFuse): the client plays the
 // flashing from the entity event.
 func (h *hub) primeCart(players map[int32]*tracked, v *vehicle, fuse int) {
-	if v.etype != entityTntMinecart || v.fuse >= 0 {
-		return
+	if v.etype != entityTntMinecart || v.fuse >= 0 || !h.rules.TNTExplodes {
+		return // gamerule tnt_explodes off: primeFuse does nothing
 	}
 	v.fuse = fuse
 	h.toTracking(players, v.eid, v.dim, v.x, v.z, attachproto.EntityStatus{EID: v.eid, Status: cartPrimeEvent})
@@ -196,8 +196,13 @@ func (h *hub) primeCart(players map[int32]*tracked, v *vehicle, fuse int) {
 }
 
 // explodeCart is MinecartTNT.explode: power 4 plus up to 1.5 per block/tick
-// of speed (capped at five), and the blast leaves the rails alone.
-func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float64) {
+// of speed (capped at five), and the blast leaves the rails alone. With
+// tnt_explodes off a lit cart just goes and an unlit one stays. It reports
+// whether the cart is gone.
+func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float64, causer int32) bool {
+	if !h.rules.TNTExplodes && v.fuse < 0 {
+		return false
+	}
 	if v.rider != 0 {
 		if t := players[v.rider]; t != nil {
 			h.dismount(players, t)
@@ -206,11 +211,18 @@ func (h *hub) explodeCart(players map[int32]*tracked, v *vehicle, speedSqr float
 	h.releaseCartMob(players, v)
 	delete(h.vehicles, v.eid)
 	h.entityGone(players, v.dim, v.eid)
+	if !h.rules.TNTExplodes {
+		return true
+	}
 	speed := math.Min(math.Sqrt(speedSqr), 5)
 	power := 4 + h.rng.Float64()*1.5*speed
+	// DamageSources.explosion(cart, whoever lit it): theirs to answer for.
+	by, cause := h.blastCauseOf(players, causer)
 	h.blastSpareRails = true
-	h.explodeIn(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), power, blastTNT, withHiveRelease())
+	h.explodeBy(players, v.dim, v.x, v.y, v.z, int(math.Round(power)), power, blastTNT, by,
+		withHiveRelease(), withBlastDirect(entityTntMinecart), cause)
 	h.blastSpareRails = false
+	return true
 }
 
 // tickSpecialCart is the per-kind part of the tick, after the cart moved.
@@ -225,18 +237,16 @@ func (h *hub) tickSpecialCart(players map[int32]*tracked, v *vehicle) bool {
 		if v.fuse > 0 {
 			v.fuse--
 			h.spawnParticles(players, v.dim, particleSmoke, v.x, v.y+0.5, v.z, 0, 0, 1)
-		} else if v.fuse == 0 {
-			h.explodeCart(players, v, v.vx*v.vx+v.vz*v.vz)
+		} else if v.fuse == 0 && h.explodeCart(players, v, v.vx*v.vx+v.vz*v.vz, v.igniter) {
 			return false
 		}
-		if v.hitWall && v.hitSpeedSqr >= 0.01 {
-			h.explodeCart(players, v, v.hitSpeedSqr)
+		if v.hitWall && v.hitSpeedSqr >= 0.01 && h.explodeCart(players, v, v.hitSpeedSqr, v.igniter) {
 			return false
 		}
-		if v.landedFall >= 3 {
-			p := v.landedFall / 10
-			h.explodeCart(players, v, p*p)
-			return false
+		if v.landedFall >= 3 { // causeFallDamage: a drop of three or more sets it off
+			if p := v.landedFall / 10; h.explodeCart(players, v, p*p, v.igniter) {
+				return false
+			}
 		}
 	case entityFurnaceMinecart:
 		if v.fuel > 0 {

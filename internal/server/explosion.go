@@ -67,18 +67,14 @@ func (h *hub) seenPercent(dim int, cx, cy, cz, minX, minY, minZ, maxX, maxY, max
 	return float64(hits) / float64(count)
 }
 
-// explodeHurt is the blast's second half: the TNT carts it lights and the
-// damage and shove on everything within reach.
+// explodeHurt is the blast's second half: the damage and shove on
+// everything within reach (a TNT cart it reaches is lit by the damage).
 func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power float64, dt dmgType, cause deathCause) {
 	dr := power * 2
-	for _, v := range h.vehicles { // a blast lights the TNT carts it reaches
-		if v.dim == dim && v.etype == entityTntMinecart && v.fuse < 0 && dist3(v.x, v.y, v.z, cx, cy, cz) < dr+1 {
-			h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
-		}
-	}
 	if power < 1e-5 {
 		return
 	}
+	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
 	for _, t := range players {
 		if t.dim != dim || t.dead {
 			continue
@@ -118,9 +114,21 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 			h.cubeBlastPush(om, cx, cy, cz, impact)
 			continue
 		}
-		om.hurtKind(explosionDamage(power, impact), dt)
+		byPlayer := h.blastPlayer(players)
+		dmg := explosionDamage(power, impact)
+		if om.etype == entityGhast && h.blastSrc.direct == entityLargeFireball && byPlayer != nil {
+			dmg = reflectedFireballDamage // the returned fireball's blast is as deadly to it as the hit
+		}
+		om.hurtKind(dmg, dt)
+		om.lastDirect = h.blastSrc.direct
+		if byPlayer != nil { // resolvePlayerResponsibleForDamage: the kill is theirs
+			om.hitByPlayer, om.lastAttacker = true, byPlayer.p.eid
+		}
 		if om.health <= 0 {
 			h.killMob(players, om)
+			if byPlayer != nil {
+				h.creditPlayerKill(players, byPlayer, om)
+			}
 			if h.blastChargedCreeper {
 				h.chargedHeadDrop(players, om) // charged_creeper/<victim>: its head
 			}
@@ -146,4 +154,12 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		}
 	}
 	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
+}
+
+// blastPlayer is the player behind the explosion being resolved, if any.
+func (h *hub) blastPlayer(players map[int32]*tracked) *tracked {
+	if h.blastSrc.causer == 0 || h.blastSrc.causerMob {
+		return nil
+	}
+	return players[h.blastSrc.causer]
 }

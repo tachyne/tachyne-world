@@ -82,6 +82,32 @@ the public history since the project was open-sourced on 2026-07-10.
   block, the cell it is moving through is solid in vanilla, and water
   cannot flow into it. Ours let water flow in and replace it, so a block
   pushed or pulled beside flowing water vanished and left water behind.
+- **Kills you cause indirectly now count as yours.** A mob killed by TNT
+  you lit (with flint and steel, a fire charge, a flaming arrow, or in a
+  chain from your own blast), by a TNT minecart you set off, by an end
+  crystal you broke, by your Thorns armour, or by the blast of a ghast
+  fireball you knocked back now counts toward your kill statistics,
+  scoreboards and advancements such as Monster Hunter. The blast also names
+  you in death messages. A ghast's own fireball knocked back into it now
+  kills it outright, as in vanilla, which is what Return to Sender needs.
+  A fire charge used on TNT lights it, and an end crystal now goes off
+  with a real explosion.
+- **A vehicle that was just hit looks hit to players who arrive.** Someone
+  joining or coming into a dimension while a boat or minecart was still
+  rocking from a blow, or a boat was on fire, saw it sitting still and
+  unharmed. They now see the same wobble and flames as everyone else.
+- **TNT minecarts go off the way they should.** A flaming arrow now blows
+  one up on the spot, and fire, lava or any explosion that reaches it lights
+  its fuse instead of knocking it back into an item, however little the
+  blast hurt it. A creeper's blast leaves it alone when mob griefing is off,
+  and with TNT explosions switched off a cart no longer lights at all.
+- **Boats and minecarts take damage from more than fists.** Arrows and
+  other projectiles, explosions, lava and fire now hurt them the way they do
+  in vanilla: the vehicle rocks, and enough damage breaks it into its item.
+  Lava breaks one almost at once, fire burns a boat down in moments and
+  leaves it smouldering, and a snowball only rocks it. A creeper's blast
+  spares vehicles when mob griefing is off, and a rider's own arrow never
+  hits the vehicle they are sitting in.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

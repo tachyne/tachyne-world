@@ -7,6 +7,12 @@ package server
 // fireball is a player's kill by a fireball, which is what its music disc
 // and Return to Sender ask for.
 
+// reflectedFireballDamage is what a ghast takes from a large fireball a
+// player is behind (Ghast.isReflectedFireball: the fireball as the direct
+// entity, a player as the cause) — the hit or its blast — which no ghast
+// survives.
+const reflectedFireballDamage = 1000
+
 // redirectable is the #redirectable_projectile tag.
 func redirectable(etype int) bool {
 	return etype == entityLargeFireball || etype == entityWindCharge

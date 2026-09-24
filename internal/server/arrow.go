@@ -327,7 +327,8 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			f := float64(i) / float64(n)
 			px, py, pz := bx+a.vx*f, by+a.vy*f, bz+a.vz*f
 			if h.arrowHitsPlayer(players, a, px, py, pz) ||
-				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) {
+				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) ||
+				h.arrowHitsVehicle(players, a, px, py, pz) {
 				hit = true
 				break
 			}
@@ -383,6 +384,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					by = mobDisplayName(m.etype)
 				}
 				var opts []blastOpt
+				if a.shooter != 0 { // the fireball's owner is the blast's cause
+					opts = append(opts, withBlastCause(a.shooter, players[a.shooter] == nil))
+				}
+				opts = append(opts, withBlastDirect(a.etype))
 				// LargeFireball: a ghast's blast lights what it clears, when
 				// mobGriefing lets it change the world at all.
 				if a.etype == entityLargeFireball && h.rules.MobGriefing {
@@ -766,6 +771,9 @@ const witherSkullHealHP = 5
 // own damage, except a snowball, which does nothing to anyone but a blaze
 // (Snowball.onHitEntity: 3 to a blaze, 0 otherwise).
 func projectileHitDamage(a *arrowEntity, m *mob) int {
+	if m.etype == entityGhast && a.etype == entityLargeFireball && a.playerShot {
+		return reflectedFireballDamage // Ghast.hurtServer: its own fireball, returned by a player
+	}
 	if a.etype == entitySnowball {
 		if m.etype == entityBlaze {
 			return 3

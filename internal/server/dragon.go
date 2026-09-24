@@ -170,25 +170,28 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 	}
 }
 
-// hitCrystal detonates an end crystal (any player hit or arrow).
-func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
+// hitCrystal detonates an end crystal struck by a player (EndCrystal.
+// hurtServer): a power-6 blast that breaks blocks, hurts everything in reach
+// as any explosion does, and is the player's — explosion(crystal, player) —
+// so what it kills is theirs.
+func (h *hub) hitCrystal(players map[int32]*tracked, eid int32, by *tracked) bool {
 	c := h.crystals[eid]
 	if c == nil {
 		return false
 	}
 	delete(h.crystals, eid)
 	h.toDimEv(players, 2, entGone(eid))
-	h.playSoundDim(players, 2, "minecraft:entity.generic.explode", sndBlock, c.x, c.y, c.z, 1, 1)
-	h.spawnParticles(players, dimEnd, particleExplosionEmitter, c.x, c.y, c.z, 1, 0.5, 4)
-	for _, t := range players { // the blast bites anyone on the pillar
-		if t.dim == 2 && !t.dead && isSurvival(t.gamemode) &&
-			dist3(t.x, t.y, t.z, c.x, c.y, c.z) < 5 {
-			h.hurtFrom(players, t, 6, dtExplosion,
-				deathCause{by: "an End Crystal"}, from(c.x, c.z))
-		}
+	name, cause := "", func(*blastCfg) {}
+	if by != nil {
+		name, cause = h.blastCauseOf(players, by.p.eid)
 	}
+	h.explodeBy(players, dimEnd, c.x, c.y, c.z, endCrystalBlastPower, endCrystalBlastPower, blastBlock, name,
+		withBlastDirect(entityEndCrystal), cause)
 	return true
 }
+
+// endCrystalBlastPower is EndCrystal's level.explode radius.
+const endCrystalBlastPower = 6
 
 // dragonDefeated: XP shower, exit portal + egg, the elytra, eternal glory.
 func (h *hub) dragonDefeated(players map[int32]*tracked) {

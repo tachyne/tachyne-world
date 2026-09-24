@@ -91,7 +91,7 @@ func (h *hub) explodeCreeper(players map[int32]*tracked, m *mob) {
 		radius = 0 // gamerule: creepers hurt but leave the terrain alone
 	}
 	h.blastChargedCreeper = m.charged
-	h.explodeBy(players, m.dim, m.x, m.y+0.5, m.z, radius, power, blastMob, mobDisplayName(m.etype), withHiveRelease())
+	h.explodeBy(players, m.dim, m.x, m.y+0.5, m.z, radius, power, blastMob, mobDisplayName(m.etype), withHiveRelease(), withBlastCause(m.eid, true))
 	h.blastChargedCreeper = false
 }
 

@@ -63,6 +63,7 @@ type primedTNT struct {
 	vx, vy, vz float64 // PrimedTnt's own motion: the hop when lit, gravity, what blasts push it
 	onGround   bool
 	fuse       int
+	owner      int32 // who lit it (PrimedTnt.owner): a player or a mob, 0 for none
 }
 
 // useFlintSteel handles a flint-&-steel click on (x,y,z): prime TNT, or set
@@ -76,7 +77,7 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 		return true
 	}
 	if isTNT(target) {
-		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z})
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
@@ -99,6 +100,12 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 // in place or starts a fire in the empty cell in front, spending the charge.
 func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
 	target := s.worldFor(p).Block(x, y, z)
+	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
+		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+		s.sendBlockChange(p, x, y, z, target, seq)
+		return
+	}
 	if canLightBlock(target) {
 		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFireChargeUse})
 		s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
@@ -114,7 +121,10 @@ func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
 	s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 }
 
-type evPrimeTNT struct{ dim, x, y, z int }
+type evPrimeTNT struct {
+	dim, x, y, z int
+	by           int32 // the player who lit it
+}
 
 func (evPrimeTNT) isHubEvent() {}
 
@@ -127,22 +137,31 @@ func (h *hub) primeTNT(players map[int32]*tracked, x, y, z int, fuse int) {
 
 // primeTNTIn lights TNT in the dimension it actually stands in. A chain
 // reaction inside an explosion has to carry the dimension through.
-func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int) {
+func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int) *primedTNT {
+	return h.primeTNTBy(players, dim, x, y, z, fuse, 0)
+}
+
+// primeTNTBy is TntBlock.prime with an igniter: the player or mob it names
+// is the owner the blast is blamed on (and credited with what it kills).
+func (h *hub) primeTNTBy(players map[int32]*tracked, dim, x, y, z int, fuse int, owner int32) *primedTNT {
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	h.spawnPrimedTNT(players, dim, x, y, z, fuse)
-	h.vib(dim, freqPrimeFuse, x, y, z, 0)
+	pt := h.spawnPrimedTNT(players, dim, x, y, z, fuse)
+	pt.owner = owner
+	h.vib(dim, freqPrimeFuse, x, y, z, owner)
+	return pt
 }
 
 // spawnPrimedTNT adds the lit charge entity centred on a cell, touching no
 // block (a dispenser's TNT: the cell ahead may hold anything).
-func (h *hub) spawnPrimedTNT(players map[int32]*tracked, dim, x, y, z int, fuse int) {
+func (h *hub) spawnPrimedTNT(players map[int32]*tracked, dim, x, y, z int, fuse int) *primedTNT {
 	eid := h.allocEID()
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
 	rot := h.rng.Float64() * 2 * math.Pi // PrimedTnt(): a small hop in a random direction
-	h.tnt = append(h.tnt, &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz,
-		vx: -math.Sin(rot) * tntHopH, vy: tntHopV, vz: -math.Cos(rot) * tntHopH, fuse: fuse})
+	pt := &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz,
+		vx: -math.Sin(rot) * tntHopH, vy: tntHopV, vz: -math.Cos(rot) * tntHopH, fuse: fuse}
+	h.tnt = append(h.tnt, pt)
 	h.toNearbyEv(players, dim, cx, cz, entAdd(eid, entityTNT, uuid, cx, cy, cz, 0, 0))
 	b := protocol.AppendVarInt(nil, eid) // fuse metadata: the client renders the flash timing
 	b = protocol.AppendU8(b, metaIndexTNTFuse)
@@ -150,6 +169,7 @@ func (h *hub) spawnPrimedTNT(players map[int32]*tracked, dim, x, y, z int, fuse 
 	b = protocol.AppendVarInt(b, int32(fuse))
 	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 	h.playSoundDim(players, dim, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
+	return pt
 }
 
 // updateTNT ticks the fuses (every tick).
@@ -178,8 +198,28 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 		if !h.rules.TNTExplodes {
 			continue // gamerule tnt_explodes: the fuse burns out and nothing happens
 		}
-		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius, blastTNT, withHiveRelease())
+		// DamageSources.explosion(tnt, owner): lit by someone, the blast is
+		// theirs — its damage type, its death message and its kills.
+		by, cause := h.blastCauseOf(players, t.owner)
+		h.explodeBy(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius, blastTNT, by,
+			withHiveRelease(), withBlastDirect(entityTNT), cause)
 	}
+}
+
+// blastCauseOf names a blast's indirect source for its death message and
+// carries it into the blast, if that entity is still in the world (vanilla
+// resolves the owner when it goes off: a player who left, or a creeper that
+// has already blown up, is no one).
+func (h *hub) blastCauseOf(players map[int32]*tracked, eid int32) (string, blastOpt) {
+	if eid != 0 {
+		if t := players[eid]; t != nil {
+			return t.p.name, withBlastCause(eid, false)
+		}
+		if m := h.mobs[eid]; m != nil && m.dying == 0 {
+			return mobDisplayName(m.etype), withBlastCause(eid, true)
+		}
+	}
+	return "", func(*blastCfg) {}
 }
 
 // blastKind is what set the blast off, for the drop-decay rules (Level.
@@ -266,8 +306,8 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
 				continue // a primed TNT cart's blast leaves the track and its bed alone
 			}
-			if isTNT(st) { // chain reaction: light it, don't vaporize it
-				h.primeTNTIn(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20))
+			if isTNT(st) { // chain reaction: light it, don't vaporize it (owned by the blast's cause)
+				h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer)
 				continue
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
@@ -282,7 +322,10 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			h.lightBlastFires(players, dim, cleared)
 		}
 	}
+	prevSrc := h.blastSrc
+	h.blastSrc = cfg
 	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
+	h.blastSrc = prevSrc
 	// Vanilla hurts entities before it touches blocks, so bees a hive lets
 	// out are not caught in the blast that freed them.
 	for _, pos := range hives {
@@ -330,6 +373,14 @@ type blastCfg struct {
 	// (BeehiveBlock.getDrops names the sources: primed TNT, a TNT cart, a
 	// creeper, the wither and its skulls).
 	hiveRelease bool
+	// causer is the blast's indirect source entity (Explosion.
+	// getIndirectSourceEntity: whoever lit the TNT, shot the fireball, or the
+	// creeper itself), and causerMob says it is a mob rather than a player.
+	causer    int32
+	causerMob bool
+	// direct is the blast's direct source entity type (the TNT, the cart,
+	// the crystal, the fireball): the killing blow's direct entity.
+	direct int
 }
 
 type blastOpt func(*blastCfg)
@@ -343,6 +394,16 @@ func withBlastFire() blastOpt {
 // destroys.
 func withHiveRelease() blastOpt {
 	return func(c *blastCfg) { c.hiveRelease = true }
+}
+
+// withBlastCause names the blast's indirect source: a player or a mob.
+func withBlastCause(eid int32, mob bool) blastOpt {
+	return func(c *blastCfg) { c.causer, c.causerMob = eid, mob }
+}
+
+// withBlastDirect names the entity type that went off.
+func withBlastDirect(etype int) blastOpt {
+	return func(c *blastCfg) { c.direct = etype }
 }
 
 // withResistCap bounds every block's resistance for one explosion.

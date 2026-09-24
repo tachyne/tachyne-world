@@ -97,7 +97,7 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		}
 	case isTNT(state): // TntBlock.onProjectileHit: a burning projectile primes it
 		if a.fire {
-			h.primeTNTIn(players, a.dim, pos.x, pos.y, pos.z, 80)
+			h.primeTNTBy(players, a.dim, pos.x, pos.y, pos.z, 80, a.shooter) // the shooter owns it
 		}
 	case isCampfireBlock(state): // CampfireBlock.onProjectileHit: a burning projectile lights it
 		if a.fire {

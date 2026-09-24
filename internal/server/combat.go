@@ -254,7 +254,7 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		h.spearStab(players, t)
 		return
 	}
-	if h.hitCrystal(players, e.target) {
+	if h.hitCrystal(players, e.target, players[e.attacker]) {
 		return
 	}
 	if pt := h.paintings[e.target]; pt != nil {

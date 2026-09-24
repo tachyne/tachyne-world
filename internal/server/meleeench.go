@@ -152,6 +152,7 @@ func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
 		h.wearArmorSlot(players, t, hit.slot, thornsWear, dtThorns)
 		if m.health <= 0 {
 			h.killMob(players, m)
+			h.creditPlayerKill(players, t, m) // thorns(t): the wearer is the source
 			return
 		}
 	}

@@ -755,7 +755,7 @@ func (h *hub) sulfurExplode(players map[int32]*tracked, m *mob) {
 	if !h.rules.MobGriefing {
 		radius = 0 // ExplosionInteraction.NONE
 	}
-	h.explodeBy(players, m.dim, m.x, m.y+0.0625*m.box().h, m.z, radius, sulfurBlastPower, blastTNT, mobDisplayName(m.etype))
+	h.explodeBy(players, m.dim, m.x, m.y+0.0625*m.box().h, m.z, radius, sulfurBlastPower, blastTNT, mobDisplayName(m.etype), withBlastCause(m.eid, true))
 }
 
 // ---- the tick ------------------------------------------------------------

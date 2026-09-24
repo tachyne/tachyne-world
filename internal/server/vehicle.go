@@ -116,6 +116,7 @@ type vehicle struct {
 	lit          bool    // furnace cart: synced fuel flag
 	fuse         int     // TNT cart: ticks to the blast (-1 = not primed)
 	disabled     bool    // hopper cart: switched off by a live activator rail
+	igniter      int32   // TNT cart: who lit it (ignitionSource's causing entity), 0 for none
 	// A structure's chest cart (a mineshaft's): the loot table it still
 	// holds unrolled, and the cell it was placed on (the roll's seed) —
 	// RandomizableContainer's lootTable, unpacked on first use.
@@ -128,6 +129,10 @@ type vehicle struct {
 	hurtTime    int
 	hurtDirFlip bool
 	damage      float64
+	// A boat's fire (remainingFireTicks) and the synced burning flag; a
+	// minecart never burns down its fire (vehicle_damage.go).
+	fireTicks int
+	burning   bool
 }
 
 func (v *vehicle) isBoat() bool { return !cartTypes[v.etype] }
@@ -323,11 +328,11 @@ func vehicleHurtMeta(v *vehicle) []byte {
 	return protocol.AppendU8(b, itemMetaEnd)
 }
 
-// hurtVehicle is a player's blow on a boat or minecart (VehicleEntity.
-// hurtServer): the vehicle rocks, the blow's worth ×10 builds up as damage,
-// and it breaks only once that passes 40 — a bare fist takes several quick
-// punches, since a point of damage drains away every tick. A creative
-// player's blow removes it on the spot with nothing dropped.
+// hurtVehicle is a player's blow on a boat or minecart (Player.attack into
+// VehicleEntity.hurtServer): the vehicle rocks, the blow's worth ×10 builds
+// up as damage, and it breaks only once that passes 40 — a bare fist takes
+// several quick punches, since a point of damage drains away every tick. A
+// creative player's blow removes it on the spot with nothing dropped.
 func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if t == nil || t.dim != v.dim {
 		return
@@ -340,19 +345,7 @@ func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if sw.raw <= 0 {
 		return
 	}
-	v.hurtDirFlip = !v.hurtDirFlip
-	v.hurtTime = vehHurtTicks
-	v.damage += sw.raw * 10
-	creative := t.gamemode == gmCreative
-	if !creative && v.damage <= vehBreakDamage {
-		h.toTracking(players, v.eid, v.dim, v.x, v.z, metaEv(vehicleHurtMeta(v)))
-		return
-	}
-	if creative {
-		h.discardVehicle(players, v)
-		return
-	}
-	h.breakVehicle(players, v)
+	h.damageVehicle(players, v, vehHit{dmg: sw.raw, dt: dtPlayerAttack, by: t, causer: t.p.eid})
 }
 
 // tickVehicleHurt drains the hurt state a tick (AbstractBoat/AbstractMinecart
@@ -402,7 +395,7 @@ func (h *hub) spillVehicleCargo(players map[int32]*tracked, v *vehicle) {
 func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	if v.etype == entityTntMinecart && v.vx*v.vx+v.vz*v.vz >= 0.01 {
 		// MinecartTNT.destroy: a moving TNT cart that is broken lights instead.
-		h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
+		h.lightBrokenCart(players, v, 0)
 		return
 	}
 	if v.rider != 0 {
@@ -465,6 +458,9 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 func (h *hub) updateVehicles(players map[int32]*tracked) {
 	for _, v := range h.vehicles {
 		v.tickVehicleHurt()
+		if !h.vehicleHazards(players, v) {
+			continue // burnt up in lava or fire
+		}
 		if !v.isBoat() {
 			h.tickMinecart(players, v)
 		} else {
@@ -513,6 +509,15 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 			continue
 		}
 		t.p.trySendEv(entAdd(v.eid, v.etype, v.uuid, v.x, v.y, v.z, v.yaw, 0))
+		// The spawn carries the synced state that is off its default
+		// (ServerEntity.sendPairingData): a wobble still in progress, the
+		// damage not yet drained, the side it last rocked to, a boat alight.
+		if v.hurtTime > 0 || v.damage > 0 || v.hurtDirFlip {
+			t.p.trySendEv(metaEv(vehicleHurtMeta(v)))
+		}
+		if v.burning {
+			t.p.trySendEv(metaEv(fireMetadata(v.eid, true)))
+		}
 		if v.lit {
 			t.p.trySendEv(metaEv(cartFuelMeta(v.eid, true)))
 		}
