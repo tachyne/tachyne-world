@@ -74,10 +74,28 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Others see you swing and mine.** Other players now see your arm swing,
   with either hand: at air, at a block you're mining or placing against,
   at a mob. Before this, it moved only on a hit against a player. The
-  cracks spreading across a block now show to everyone watching, stage by stage at vanilla's pace, and clear when you
-  stop. The pace takes in the tool and which blocks it is made for,
-  Efficiency, Haste, Mining Fatigue, being underwater without Aqua Affinity
-  and being off the ground.
+  cracks spreading across a block now show to everyone watching, stage by
+  stage at vanilla's pace, and clear when you stop. The pace takes in the
+  tool and which blocks it is made for, Efficiency, Haste, Mining Fatigue,
+  being underwater without Aqua Affinity and being off the ground.
+
+### Changed
+- **Villager and wandering-trader trades come from 26.3's trade data.**
+  26.3 turned the trade tables into data — each offer a villager trade, each
+  career level a trade set naming its offers and how many to draw — and the
+  engine now reads that data out of the vanilla jar instead of a transcribed
+  table. What changed for players: a master librarian sells red and yellow
+  candles, and the name tag moved to the wandering trader, which also sells
+  poplar logs and saplings, golden dandelions, shelf mushrooms and sulfur
+  spikes; the farmer's cake costs three emeralds; the novice weaponsmith's
+  enchanted iron sword can be bought twelve times and reacts harder to
+  demand; the leatherworker's master dyed helmet pays five trade XP, not
+  thirty; the farmer's stew is one offer hiding one of six effects rather
+  than six offers; dyed leather takes one to three dyes as 26.3 rolls them;
+  and for cooked fish and flint the raw fish or gravel is now the price that
+  demand and reputation move, the emerald the fixed extra. The fisherman's
+  biome boats are five offers, each for its own villager types. Villagers
+  keep the trades they already have.
 
 ## 2026-09-23
 

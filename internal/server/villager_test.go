@@ -91,8 +91,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0, defaultPriceMult100}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -416,7 +416,10 @@ func TestVillagerSellsEnchantedGear(t *testing.T) {
 						professionNames[prof], tr)
 				}
 				for i := 0; i < 40; i++ {
-					o := h.rollGearOffer(tr)
+					o, ok := h.rollGearOffer(tr)
+					if !ok {
+						t.Fatalf("%s: gear at level 5..19 always takes an enchantment", professionNames[prof])
+					}
 					rolled++
 					if o.trade.kind != vTradeFixed {
 						t.Fatal("a rolled offer must not roll again")
@@ -522,11 +525,11 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 		if !known[l.dest] {
 			t.Errorf("listing %d points at %q, which the generator cannot locate", i, l.dest)
 		}
-		if l.decor < 4 || l.decor > 34 {
+		if l.decor < 4 || l.decor > 39 {
 			t.Errorf("listing %d has decoration %d, outside the registry", i, l.decor)
 		}
-		if l.label == "" {
-			t.Errorf("listing %d has no name", i)
+		if l.radius != 100 {
+			t.Errorf("listing %d searches %d chunks; the cartographer's maps search 100", i, l.radius)
 		}
 	}
 	// Every map listing is reachable from the cartographer's table.
@@ -541,8 +544,9 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 		for _, tr := range pool {
 			if tr.kind == vTradeTreasureMap {
 				seen++
-				if tr.inItem != itemByName["emerald"] || tr.outItem != itemFilledMap {
-					t.Errorf("a treasure map listing sells a filled map for emeralds, got %+v", tr)
+				if tr.inItem != itemByName["emerald"] || !isMapItem(tr.outItem) || tr.outItem == itemFilledMap ||
+					tr.c2Item != itemByName["compass"] {
+					t.Errorf("a treasure map listing sells its own explorer map for emeralds and a compass, got %+v", tr)
 				}
 			}
 		}
@@ -602,21 +606,23 @@ func TestCartographerSellsExplorerMaps(t *testing.T) {
 
 	// A listing meant for other villager types yields nothing at all.
 	typ := h.villagerType(m)
-	for i, l := range villagerMapListings {
-		if l.forTypes == 0 || l.forTypes&(1<<uint(typ)) != 0 {
-			continue
+	for _, pool := range villagerTrades[cartographer] {
+		for _, tr := range pool {
+			if tr.kind != vTradeTreasureMap || tr.forTypes == 0 || tr.forTypes&(1<<uint(typ)) != 0 {
+				continue
+			}
+			if _, ok := h.resolveOffer(m, tr); ok {
+				t.Errorf("the %s map is not offered to villager type %d", villagerMapListings[tr.aux-1].dest, typ)
+			}
 		}
-		if _, ok := h.rollMapOffer(m, vTrade{kind: vTradeTreasureMap, aux: int32(i + 1)}); ok {
-			t.Errorf("%s is not offered to villager type %d", l.label, typ)
-		}
-		break
 	}
 }
 
-// The four remaining vanilla listing types, which between them finish the
-// trade map: a leatherworker's dyed armour, a farmer's suspicious stew, a
-// fletcher's tipped arrows and a fisherman's biome boat — plus
-// ItemsAndEmeraldsToItems, whose second item cost rides the plain path.
+// The remaining rolled and predicated listings: a leatherworker's dyed
+// armour (set_random_dyes), a farmer's suspicious stew (set_stew_effect), a
+// fletcher's tipped arrows (set_random_potion), a fisherman's biome boats
+// (merchant_predicate on villager/variant) — plus the additional_wants
+// listings, whose second item cost rides the plain path.
 func TestRemainingVillagerListingTypes(t *testing.T) {
 	w := world.New(13)
 	h := newHub(w)
@@ -660,58 +666,69 @@ func TestRemainingVillagerListingTypes(t *testing.T) {
 		t.Errorf("only %d distinct colours in 60 rolls — the dye is not random", len(colors))
 	}
 
-	// Suspicious stew: every listing must resolve to a stew table row, and
-	// the stack must carry the effect vanilla's listing names.
-	stews := 0
-	for i, l := range villagerStewListings {
-		code, ok := stewCodeFor(l.effect, l.ticks)
-		if !ok {
-			t.Errorf("listing %d (%s %d ticks) has no suspicious-stew row; add one to stewEffects",
-				i, l.effect, l.ticks)
-			continue
+	// Suspicious stew: one listing whose set_stew_effect names six effects;
+	// every effect must resolve to a stew table row, and rolling the listing
+	// must hand over each of them in turn.
+	stew, ok := find(prof("farmer"), vTradeStew)
+	if !ok {
+		t.Fatal("the farmer has no suspicious-stew listing")
+	}
+	effs := villagerStewListings[stew.aux-1]
+	for _, e := range effs {
+		if _, ok := stewCodeFor(e.effect, e.ticks); !ok {
+			t.Errorf("%s %d ticks has no suspicious-stew row; add one to stewEffects", e.effect, e.ticks)
 		}
-		stews++
-		o, ok := h.rollStewOffer(vTrade{inItem: itemByName["emerald"], inCount: 1,
-			outItem: itemSuspiciousStew, outCount: 1, maxUses: 12, xp: 15,
-			kind: vTradeStew, aux: int32(i + 1)})
+	}
+	sold := map[int32]bool{}
+	for i := 0; i < 120; i++ {
+		o, ok := h.rollStewOffer(stew)
 		if !ok {
-			t.Fatalf("listing %d did not roll", i)
+			t.Fatalf("roll %d: the stew listing did not roll", i)
 		}
 		st := o.output()
 		eff, found := stewEffectOf(st.stew)
-		if st.item != itemSuspiciousStew || !found || eff.effect != effectNames[l.effect] {
-			t.Errorf("listing %d sold %+v, want a stew of %s", i, st, l.effect)
+		if st.item != itemSuspiciousStew || !found {
+			t.Fatalf("roll %d sold %+v, want a suspicious stew", i, st)
 		}
-		if code != st.stew {
-			t.Errorf("listing %d resolved to %d but sold %d", i, code, st.stew)
-		}
+		sold[int32(eff.effect)] = true
 	}
-	if stews != len(villagerStewListings) {
-		t.Errorf("%d of %d stew listings resolved", stews, len(villagerStewListings))
+	if len(sold) != len(effs) {
+		t.Errorf("%d distinct stew effects in 120 rolls, want all %d", len(sold), len(effs))
 	}
 
-	// Tipped arrows: a brewable potion with effects, never a plain bottle.
-	arrow, ok := find(prof("fletcher"), vTradeTippedArrow)
-	if !ok {
+	// Tipped arrows: set_random_potion over the #tradeable potion tag — never
+	// a plain bottle, never Luck.
+	arrow := vTrade{}
+	for tier := 1; tier <= maxTradeTier; tier++ {
+		for _, tr := range villagerTrades[prof("fletcher")][tier] {
+			if tr.kind == vTradePotion && tr.outItem == itemTippedArrow {
+				arrow = tr
+			}
+		}
+	}
+	if arrow.kind != vTradePotion {
 		t.Fatal("the fletcher has no tipped-arrow listing")
 	}
-	brewable := map[int8]bool{}
-	for _, p := range brewablePotions() {
-		brewable[p] = true
+	tradeable := map[int8]bool{}
+	for _, n := range villagerPotionPools[arrow.aux-1] {
+		id, ok := potionByVanillaName[n]
+		if !ok {
+			t.Errorf("potion %q in #tradeable has no engine id", n)
+		}
+		tradeable[id] = true
 	}
-	if brewable[potLuck] {
-		t.Error("Luck cannot be brewed, so a villager cannot tip an arrow with it")
+	if tradeable[potLuck] || tradeable[potWater] || tradeable[potAwkward] {
+		t.Error("#tradeable holds no Luck and no effectless base")
 	}
 	kinds := map[int8]bool{}
 	for i := 0; i < 60; i++ {
-		o, ok := h.rollArrowOffer(arrow)
+		o, ok := h.rollPotionOffer(arrow)
 		if !ok {
 			t.Fatal("the tipped-arrow listing must always roll")
 		}
 		st := o.output()
-		if st.item != itemTippedArrow || !brewable[st.potion] ||
-			len(potionDefs[st.potion].effects) == 0 {
-			t.Fatalf("roll %d gave %+v, want a tipped arrow of a brewable potion", i, st)
+		if st.item != itemTippedArrow || !tradeable[st.potion] || len(potionDefs[st.potion].effects) == 0 {
+			t.Fatalf("roll %d gave %+v, want a tipped arrow of a tradeable potion", i, st)
 		}
 		if o.cost2Item != itemByName["arrow"] || o.cost2Count != 5 {
 			t.Fatalf("second cost %d×%d, want five arrows", o.cost2Item, o.cost2Count)
@@ -722,19 +739,47 @@ func TestRemainingVillagerListingTypes(t *testing.T) {
 		t.Errorf("only %d distinct potions in 60 rolls", len(kinds))
 	}
 
-	// The biome boat: the villager buys the boat its own birth biome names.
-	boat, ok := find(prof("fisherman"), vTradeTypeItem)
-	if !ok {
-		t.Fatal("the fisherman has no villager-type listing")
+	// The biome boat: five master-fisherman listings, each behind a
+	// merchant_predicate on villager/variant. Every villager type is offered
+	// exactly one of them, and only that one resolves for it.
+	var boats []vTrade
+	for _, tr := range villagerTrades[prof("fisherman")][5] {
+		if tr.forTypes != 0 {
+			boats = append(boats, tr)
+		}
+	}
+	if len(boats) != 5 {
+		t.Fatalf("the master fisherman has %d villager-type listings, want 5 boats", len(boats))
 	}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
-	o, ok := h.typeItemOffer(m, boat)
-	if !ok {
-		t.Fatal("the boat listing must roll for any villager type")
+	wantBoat := map[int32]string{
+		villagerTypeDesert: "jungle_boat", villagerTypeJungle: "jungle_boat", villagerTypePlains: "oak_boat",
+		villagerTypeSavanna: "acacia_boat", villagerTypeSnow: "spruce_boat", villagerTypeSwamp: "dark_oak_boat",
+		villagerTypeTaiga: "spruce_boat",
 	}
-	want := villagerTypeItems[boat.aux-1][h.villagerType(m)]
-	if o.trade.inItem != want || o.trade.outItem != itemByName["emerald"] {
-		t.Errorf("buys %d for %d, want %d for an emerald", o.trade.inItem, o.trade.outItem, want)
+	for typ, boat := range wantBoat {
+		m.variant, m.variantSet = typ, true
+		got := 0
+		for _, tr := range boats {
+			o, ok := h.resolveOffer(m, tr)
+			if !ok {
+				continue
+			}
+			got++
+			if o.trade.inItem != itemByName[boat] || o.trade.outItem != itemByName["emerald"] {
+				t.Errorf("type %d buys %d for %d, want a %s for an emerald", typ, o.trade.inItem, o.trade.outItem, boat)
+			}
+		}
+		if got != 1 {
+			t.Errorf("villager type %d is offered %d boat listings, want 1", typ, got)
+		}
+	}
+	// A wandering trader has no villager type: no predicated listing is its.
+	trader := h.spawnMob(players, entityWanderingTrader, pl.x+2, pl.y, pl.z)
+	for _, tr := range boats {
+		if _, ok := h.resolveOffer(trader, tr); ok {
+			t.Error("a villager/variant listing must not resolve for a wandering trader")
+		}
 	}
 
 	// ItemsAndEmeraldsToItems: a plain offer that carries a second item cost
@@ -814,7 +859,7 @@ func TestPerListingPriceMultiplier(t *testing.T) {
 }
 
 // The librarian's enchanted book is one of the tier's listings, not an extra
-// on top: vanilla's EnchantBookForEmeralds sits in the pool and competes for
+// on top: the enchant_randomly listing sits in the trade set and competes for
 // the two slots. Appending it gave librarians three offers a tier where every
 // other profession gets two.
 func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
@@ -837,8 +882,17 @@ func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
 	if books != 4 {
 		t.Errorf("%d book listings, want one each for tiers 1-4", books)
 	}
-	if len(villagerTrades[librarianProfession][5]) != 1 {
-		t.Error("a master librarian's only listing is the name tag")
+	// 26.3: the master librarian sells candles (the name tag moved to the
+	// wandering trader), and its trade set asks for three offers from two.
+	master := map[int32]bool{}
+	for _, tr := range villagerTrades[librarianProfession][5] {
+		master[tr.outItem] = true
+	}
+	if len(master) != 2 || !master[itemByName["red_candle"]] || !master[itemByName["yellow_candle"]] {
+		t.Errorf("a master librarian sells red and yellow candles, got %v", master)
+	}
+	if villagerTradeAmount[librarianProfession][5] != 3 {
+		t.Errorf("the master librarian's trade set draws %d, want 3", villagerTradeAmount[librarianProfession][5])
 	}
 
 	w := world.New(29)
@@ -848,8 +902,8 @@ func TestLibrarianBookIsOneOfTheTierListings(t *testing.T) {
 	for i := 0; i < 40; i++ {
 		m := h.spawnMob(players, entityVillager, float64(i), 70, 0)
 		h.initVillagerTrades(m, librarianProfession)
-		if len(m.offers) != offersPerTier {
-			t.Fatalf("a novice librarian has %d offers, want %d", len(m.offers), offersPerTier)
+		if want := villagerTradeAmount[librarianProfession][1]; len(m.offers) != want {
+			t.Fatalf("a novice librarian has %d offers, want %d", len(m.offers), want)
 		}
 		for _, o := range m.offers {
 			if o.trade.outItem == itemEnchantedBook {

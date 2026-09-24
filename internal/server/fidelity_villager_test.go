@@ -14,7 +14,7 @@ func vTradeVillager(t *testing.T) (*hub, *tracked, *mob, map[int32]*tracked) {
 	pl := testTracked()
 	players := map[int32]*tracked{1: pl}
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
-	m.offers = []mobOffer{{trade: vTrade{itemByName["wheat"], 4, itemByName["emerald"], 1, 12, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100}}}
+	m.offers = []mobOffer{{trade: vTrade{itemByName["wheat"], 4, itemByName["emerald"], 1, 12, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}}}
 	return h, pl, m, players
 }
 

@@ -2,11 +2,12 @@ package server
 
 import "math"
 
-// Villager trade leveling — reimplemented from the vanilla 1.21.5 Villager /
-// VillagerData. A villager starts at tier 1 (novice) offering a couple of its
-// profession's tier-1 trades; using its trades earns it XP, and crossing the
-// tier thresholds promotes it (up to master) and unlocks a couple more trades
-// from the new tier. The full offer table lives in villager_trades_gen.go.
+// Villager trade leveling — reimplemented from the vanilla Villager /
+// VillagerData / AbstractVillager. A villager starts at level 1 (novice)
+// holding a couple of its profession's level-1 offers; using its trades
+// earns it XP, and crossing the level thresholds promotes it (up to master)
+// and draws that level's trade_set. The listings, and how many offers each
+// level draws, are the vanilla trade data in villager_trades_gen.go.
 
 // mobOffer is one active merchant offer: the generated trade plus its live
 // economy state — how many times it's been used this restock (locked once uses
@@ -20,19 +21,19 @@ type mobOffer struct {
 	specialPrice int32 // vanilla specialPriceDiff; per-viewer, not persisted
 	// The optional second ItemCost (a librarian's book beside the emeralds)
 	// and the enchantments on the output — one for an enchanted book, several
-	// for a piece of EnchantedItemForEmeralds gear. Both persist; the second
-	// cost takes no demand or reputation adjustment (vanilla adjusts costA
-	// only).
+	// for a piece of enchanted gear. Both persist; the second cost takes no
+	// demand or reputation adjustment (vanilla adjusts costA only).
 	cost2Item, cost2Count int32
 	outEnchs              enchList
-	// A treasure map's output: which map the stack shows and the name it
-	// carries ("Ocean Explorer Map"). Both persist — the map is located once,
-	// when the offer is rolled.
+	// A treasure map's output: which map the stack shows and, for an offer
+	// rolled before 26.3's per-destination map items, the name it carries
+	// ("Ocean Explorer Map"). Both persist — the map is located once, when the
+	// offer is rolled.
 	outMapID int32
 	outName  string
 	// A rolled output's extra component: the blended dye on a leatherworker's
-	// armour, the effect hidden in a farmer's stew, the potion a fletcher's
-	// arrows are tipped with. All persist — every roll happens once.
+	// armour, the effect hidden in a farmer's stew, the potion on a bottle or
+	// a fletcher's arrows. All persist — every roll happens once.
 	outColor  int32
 	outStew   int8
 	outPotion int8
@@ -49,12 +50,13 @@ func (o *mobOffer) output() invStack {
 
 // offerFrom starts a live offer from a generated row. The row's listing-only
 // columns are consumed here — the second item cost moves into the offer's own
-// fields, and kind/aux are cleared — so a resolved offer carries its result
-// and no longer remembers which listing produced it. That is what makes a
-// rolled offer stable: nothing downstream can roll it again.
+// fields, and kind/aux/forTypes are cleared — so a resolved offer carries its
+// result and no longer remembers which listing produced it. That is what
+// makes a rolled offer stable: nothing downstream can roll it again.
 func offerFrom(t vTrade) mobOffer {
 	o := mobOffer{trade: t, cost2Item: t.c2Item, cost2Count: t.c2Count}
 	o.trade.kind, o.trade.aux, o.trade.c2Item, o.trade.c2Count = vTradeFixed, 0, 0, 0
+	o.trade.forTypes = 0
 	return o
 }
 
@@ -68,13 +70,28 @@ var librarianProfession = func() int {
 	return -1
 }()
 
-// rollBookOffer is VillagerTrades.EnchantBookForEmeralds.getOffer: a random
-// #tradeable enchantment at a level drawn uniformly from its own range; the
-// price is 2 + nextInt(5 + 10·level) + 3·level emeralds, doubled for a
-// double-price enchantment and capped at 64, plus one book. With no tradeable
-// enchantment at all vanilla sells a plain book for one emerald.
-func (h *hub) rollBookOffer(t vTrade) mobOffer {
-	o := offerFrom(t)
+// tradeCostCap is TradeCost.toItemCost's clamp: a cost never exceeds the
+// wanted item's stack size (64 emeralds).
+func tradeCostCap(item int32, n int) int32 {
+	if c := stackCap(item); n > c {
+		n = c
+	}
+	if n < 0 {
+		n = 0
+	}
+	return int32(n)
+}
+
+// rollBookOffer is a villager_trade whose given_item_modifier is
+// enchant_randomly over #tradeable (EnchantRandomlyFunction with the
+// additional-cost component): a random tradeable enchantment at a level drawn
+// uniformly from its own range, whose ADDITIONAL_TRADE_COST is
+// 2 + nextInt(5 + 10·level) + 3·level. VillagerTrade.getOffer doubles that
+// when the listing's double_trade_price_enchantments holds the enchantment
+// (aux = 1), adds the wanted count, and clamps to the emerald stack. With no
+// tradeable enchantment at all the book stays unenchanted, the filter
+// discards it, and there is no offer.
+func (h *hub) rollBookOffer(t vTrade) (mobOffer, bool) {
 	var pool []int8
 	for i := range enchDefs {
 		if enchTradeAllowed(int8(i)) {
@@ -82,67 +99,59 @@ func (h *hub) rollBookOffer(t vTrade) mobOffer {
 		}
 	}
 	if len(pool) == 0 {
-		o.trade.inCount, o.trade.outItem = 1, itemByName["book"]
-		return o
+		return mobOffer{}, false
 	}
+	o := offerFrom(t)
 	id := pool[h.rng.Intn(len(pool))]
 	lvl := 1 + h.rng.Intn(enchDefs[id].maxLevel)
-	price := 2 + h.rng.Intn(5+lvl*10) + 3*lvl
-	if enchDefs[id].flags&enchDoubleTradePrice != 0 {
-		price *= 2
+	extra := 2 + h.rng.Intn(5+lvl*10) + 3*lvl
+	if t.aux == 1 && enchDefs[id].flags&enchDoubleTradePrice != 0 {
+		extra *= 2
 	}
-	if price > 64 {
-		price = 64
-	}
-	o.trade.inCount = int32(price)
+	o.trade.inCount = tradeCostCap(t.inItem, int(t.inCount)+extra)
 	o.outEnchs = enchList{{id: id, lvl: int8(lvl)}}
-	return o
+	return o, true
 }
 
 // enchGearAllowed is EnchantmentTags.ON_TRADED_EQUIPMENT — the set a villager
 // may put on the gear it sells.
 func enchGearAllowed(id int8) bool { return enchDefs[id].flags&enchOnTradedEquipment != 0 }
 
-// rollGearOffer is VillagerTrades.EnchantedItemForEmeralds.getOffer: the
-// villager sells one piece of equipment enchanted as if at level 5..19, and the
-// same roll tops its price up from the listing's base cost (capped at 64
-// emeralds). The enchantments are rolled ONCE, when the tier unlocks, and
-// persist with the offer — restocking never re-rolls them.
-func (h *hub) rollGearOffer(t vTrade) mobOffer {
+// rollGearOffer is a villager_trade whose given_item_modifier is
+// enchant_with_levels uniform(5, 19) over #on_traded_equipment: the gear is
+// enchanted as if at that level, and the level is its ADDITIONAL_TRADE_COST,
+// added to the wanted emeralds (clamped to the stack). The filter after it
+// discards a piece that came out bare — no offer. The enchantments are rolled
+// ONCE, when the level unlocks, and persist with the offer — restocking never
+// re-rolls them.
+func (h *hub) rollGearOffer(t vTrade) (mobOffer, bool) {
 	lvl := 5 + h.rng.Intn(15)
 	o := offerFrom(t)
-	if cost := int(t.inCount) + lvl; cost < 64 {
-		o.trade.inCount = int32(cost)
-	} else {
-		o.trade.inCount = 64
-	}
+	o.trade.inCount = tradeCostCap(t.inItem, int(t.inCount)+lvl)
 	o.outEnchs = enchApplyList(enchSelect(h.rng, t.outItem, lvl, enchGearAllowed))
-	return o
+	if o.outEnchs[0].lvl == 0 {
+		return mobOffer{}, false
+	}
+	return o, true
 }
 
-// explorerMapSearch is the radius vanilla's TreasureMapForEmeralds searches —
-// findNearestMapStructure(..., 100, true), 100 chunks — in blocks.
-const explorerMapSearch = 100 * 16
-
-// rollMapOffer is VillagerTrades.TreasureMapForEmeralds.getOffer: find the
-// nearest site of the listing's structure to the villager, draw a map centred
-// on it, mark it, and name it. The villager sells it for emeralds plus a
-// compass. ok=false when the listing is not for this villager's type or
-// nothing is within reach — vanilla returns no offer in both cases, and the
-// caller draws another listing instead.
+// rollMapOffer is a villager_trade whose given_item_modifier is
+// exploration_map (ExplorationMapFunction): find the nearest site of the
+// listing's structure to the villager within its search radius, draw a map
+// centred on it and mark it. The given item is the destination's own
+// explorer map (ocean_monument_map, …), sold for emeralds plus a compass.
+// ok=false when nothing is within reach — the filter discards the unmapped
+// item, vanilla returns no offer, and the caller draws another listing.
 func (h *hub) rollMapOffer(m *mob, t vTrade) (mobOffer, bool) {
 	if t.aux <= 0 || int(t.aux) > len(villagerMapListings) {
 		return mobOffer{}, false
 	}
 	l := villagerMapListings[t.aux-1]
-	if l.forTypes != 0 && l.forTypes&(1<<uint(h.villagerType(m))) == 0 {
-		return mobOffer{}, false
-	}
 	w := h.worldFor(m.dim)
 	if w == nil || h.maps == nil {
 		return mobOffer{}, false
 	}
-	x, z, ok := w.Gen().LocateStructure(l.dest, floorInt(m.x), floorInt(m.z), explorerMapSearch)
+	x, z, ok := w.Gen().LocateStructure(l.dest, floorInt(m.x), floorInt(m.z), int(l.radius)*16)
 	if !ok {
 		return mobOffer{}, false
 	}
@@ -150,49 +159,39 @@ func (h *hub) rollMapOffer(m *mob, t vTrade) (mobOffer, bool) {
 	md.Marks = append(md.Marks, mapMark{X: int32(x), Z: int32(z), Type: l.decor})
 	h.maps.markDirty()
 	o := offerFrom(t)
-	o.outMapID, o.outName = md.ID, l.label
-	// 26.3 sells each destination's own explorer map item, named by the item.
-	if id, ok := itemByName[explorerMapItem[l.dest]]; ok {
-		o.trade.outItem, o.outName = int32(id), ""
-	}
+	o.outMapID = md.ID
 	return o, true
 }
 
-// explorerMapItem is the item 26.3's cartographer hands over for each
-// destination (villager_trade/cartographer/*: gives *_map).
-var explorerMapItem = map[string]string{
-	"village_desert": "desert_village_map", "village_plains": "plains_village_map",
-	"village_savanna": "savanna_village_map", "village_snowy": "snowy_village_map",
-	"village_taiga": "taiga_village_map", "swamp_hut": "swamp_hut_map",
-	"jungle_pyramid": "jungle_pyramid_map", "monument": "ocean_monument_map",
-	"trial_chambers": "buried_trial_chambers_map", "mansion": "woodland_mansion_map",
-}
-
-// rollDyedOffer is VillagerTrades.DyedArmorForEmeralds.getOffer: one leather
-// piece dyed with a random dye, a second 30% of the time and a third 20% of
-// that, blended the way a crafting grid blends them.
+// rollDyedOffer is a villager_trade whose given_item_modifier is
+// set_random_dyes (SetRandomDyesFunction): dyedArmorBaseDyes random dyes
+// plus one more for each of dyedArmorDyeTrials that comes up under
+// dyedArmorDyeChance, blended the way a crafting grid blends them.
 func (h *hub) rollDyedOffer(t vTrade) mobOffer {
 	o := offerFrom(t)
-	dyes := []int32{randomDyeRGB(h.rng)}
-	if h.rng.Float32() > 0.7 {
-		dyes = append(dyes, randomDyeRGB(h.rng))
+	n := dyedArmorBaseDyes
+	for i := 0; i < dyedArmorDyeTrials; i++ { // BinomialDistributionGenerator
+		if h.rng.Float32() < dyedArmorDyeChance {
+			n++
+		}
 	}
-	if h.rng.Float32() > 0.8 {
-		dyes = append(dyes, randomDyeRGB(h.rng))
+	dyes := make([]int32, n)
+	for i := range dyes {
+		dyes[i] = randomDyeRGB(h.rng)
 	}
 	o.outColor = blendDyes(0, dyes)
 	return o
 }
 
-// randomDyeRGB is DyeItem.byColor(DyeColor.byId(nextInt(16))) as a colour.
+// randomDyeRGB is Util.getRandom(DyeColor.VALUES) as a colour.
 func randomDyeRGB(r enchRand) int32 {
 	return dyeRGB[int32(itemByName[dyeOrder[r.Intn(len(dyeOrder))]+"_dye"])]
 }
 
-// stewCodeFor resolves one villagerStewListings row to a suspicious-stew table
-// code. Vanilla stores the effect and duration on the stack directly; tachyne
+// stewCodeFor resolves one stew effect to a suspicious-stew table code.
+// Vanilla stores the effect and duration on the stack directly; tachyne
 // stores an index into stewEffects, so a trade's pair has to appear there —
-// TestFarmerSellsSuspiciousStew fails loudly if one does not.
+// TestRemainingVillagerListingTypes fails loudly if one does not.
 func stewCodeFor(effect string, ticks int) (int8, bool) {
 	id, ok := effectNames[effect]
 	if !ok {
@@ -206,16 +205,19 @@ func stewCodeFor(effect string, ticks int) (int8, bool) {
 	return 0, false
 }
 
-// rollStewOffer is VillagerTrades.SuspiciousStewForEmerald.getOffer: one
-// emerald for a bowl of stew hiding the listing's effect. Nothing is random
-// about it — the effect is fixed per listing — but it resolves like the other
-// rolled kinds so the stored offer carries the stew, not the listing.
+// rollStewOffer is a villager_trade whose given_item_modifier is
+// set_stew_effect (SetStewEffectFunction): the stew hides one of the
+// listing's effects, picked at random.
 func (h *hub) rollStewOffer(t vTrade) (mobOffer, bool) {
 	if t.aux <= 0 || int(t.aux) > len(villagerStewListings) {
 		return mobOffer{}, false
 	}
-	l := villagerStewListings[t.aux-1]
-	code, ok := stewCodeFor(l.effect, l.ticks)
+	effs := villagerStewListings[t.aux-1]
+	if len(effs) == 0 {
+		return mobOffer{}, false
+	}
+	e := effs[h.rng.Intn(len(effs))]
+	code, ok := stewCodeFor(e.effect, e.ticks)
 	if !ok {
 		return mobOffer{}, false
 	}
@@ -224,51 +226,25 @@ func (h *hub) rollStewOffer(t vTrade) (mobOffer, bool) {
 	return o, true
 }
 
-// rollArrowOffer is VillagerTrades.TippedArrowForItemsAndEmeralds.getOffer:
-// emeralds and plain arrows for the same number tipped with a potion drawn at
-// random from everything the brewing stand can make.
-func (h *hub) rollArrowOffer(t vTrade) (mobOffer, bool) {
-	pool := brewablePotions()
+// rollPotionOffer is a villager_trade whose given_item_modifier is
+// set_potion or set_random_potion: the bottle — or a fletcher's tipped
+// arrows — carries one potion from the listing's pool (the #tradeable potion
+// tag for the arrows), picked at random.
+func (h *hub) rollPotionOffer(t vTrade) (mobOffer, bool) {
+	if t.aux <= 0 || int(t.aux) > len(villagerPotionPools) {
+		return mobOffer{}, false
+	}
+	var pool []int8
+	for _, n := range villagerPotionPools[t.aux-1] {
+		if id, ok := potionByVanillaName[n]; ok {
+			pool = append(pool, id)
+		}
+	}
 	if len(pool) == 0 {
 		return mobOffer{}, false
 	}
 	o := offerFrom(t)
 	o.outPotion = pool[h.rng.Intn(len(pool))]
-	return o, true
-}
-
-// brewablePotions is the set vanilla draws the tipped arrow from: every potion
-// with effects that the brewing recipes can actually produce, in a stable
-// order. That excludes Luck (no recipe brews it) and the effectless bases, the
-// same two exclusions vanilla's isBrewablePotion + getEffects filter makes.
-// Recomputed per call: brewMixes is filled in an init, so a package-level
-// initializer here would read it empty.
-func brewablePotions() []int8 {
-	seen := map[int8]bool{}
-	var out []int8
-	for _, mx := range brewMixes {
-		if seen[mx.to] || len(potionDefs[mx.to].effects) == 0 {
-			continue
-		}
-		seen[mx.to] = true
-		out = append(out, mx.to)
-	}
-	return out
-}
-
-// typeItemOffer is VillagerTrades.EmeraldsForVillagerTypeItem.getOffer: the
-// villager buys the item its own birth biome calls for (a fisherman's boat).
-func (h *hub) typeItemOffer(m *mob, t vTrade) (mobOffer, bool) {
-	if t.aux <= 0 || int(t.aux) > len(villagerTypeItems) {
-		return mobOffer{}, false
-	}
-	row := villagerTypeItems[t.aux-1]
-	typ := int(h.villagerType(m))
-	if typ < 0 || typ >= len(row) || row[typ] == 0 {
-		return mobOffer{}, false
-	}
-	o := offerFrom(t)
-	o.trade.inItem = row[typ]
 	return o, true
 }
 
@@ -313,10 +289,6 @@ var tierMinXP = [6]int{0, 0, 10, 70, 150, 250}
 
 const maxTradeTier = 5
 
-// offersPerTier is how many new trades unlock when a villager reaches a tier
-// (vanilla adds up to 2 random trades per level).
-const offersPerTier = 2
-
 // initVillagerTrades sets a fresh villager's profession + tier-1 offers.
 func (h *hub) initVillagerTrades(m *mob, profession int) {
 	m.profession = profession % len(professionNames)
@@ -326,22 +298,24 @@ func (h *hub) initVillagerTrades(m *mob, profession int) {
 	h.unlockTier(m, 1)
 }
 
-// unlockTier appends up to offersPerTier trades from the villager's profession
-// at the given tier (deterministic pick keyed off eid so it's stable per mob).
+// unlockTier is Villager.updateTrades for one level: add that level's
+// trade_set to the villager's offers.
 func (h *hub) unlockTier(m *mob, tier int) {
-	pool := villagerTrades[m.profession][tier]
-	if len(pool) == 0 {
-		return
-	}
-	// Villager.addOffersFromItemListings: draw listings at random WITHOUT
-	// replacement until the tier has offersPerTier OFFERS. Two things follow
-	// from "offers", not "listings": a listing that yields none (a treasure
-	// map for another villager type, or one whose structure is out of reach)
-	// is skipped rather than costing a slot, and the librarian's enchanted
-	// book competes for a slot like everything else instead of being extra.
+	h.addOffersFromTradeSet(m, villagerTrades[m.profession][tier], villagerTradeAmount[m.profession][tier])
+}
+
+// addOffersFromTradeSet is AbstractVillager.addOffersFromTradeSet with
+// addOffersFromItemListingsWithoutDuplicates (no vanilla trade set allows
+// duplicates): draw listings at random WITHOUT replacement until amount
+// OFFERS are made or the listings run out. Two things follow from "offers",
+// not "listings": a listing that yields none (a merchant_predicate for
+// another villager type, a map whose structure is out of reach) is skipped
+// rather than costing a slot, and the librarian's enchanted book competes for
+// a slot like everything else instead of being extra.
+func (h *hub) addOffersFromTradeSet(m *mob, pool []vTrade, amount int) {
 	added := 0
 	for _, i := range h.rng.Perm(len(pool)) {
-		if added >= offersPerTier {
+		if added >= amount {
 			break
 		}
 		o, ok := h.resolveOffer(m, pool[i])
@@ -353,26 +327,42 @@ func (h *hub) unlockTier(m *mob, tier int) {
 	}
 }
 
-// resolveOffer turns a generated listing into a live offer, rolling whatever
-// its kind rolls. ok=false is vanilla's null offer: the listing yields nothing
-// for this villager (wrong type, structure out of reach), so the caller draws
-// another one.
+// villagerTypeAllows is a listing's merchant_predicate (an entity_properties
+// test on villager/variant): true when the listing has none, or names this
+// villager's type. A wandering trader has no villager type, so a predicated
+// listing never matches it.
+func (h *hub) villagerTypeAllows(m *mob, t vTrade) bool {
+	if t.forTypes == 0 {
+		return true
+	}
+	if m.etype != entityVillager {
+		return false
+	}
+	return t.forTypes&(1<<uint(h.villagerType(m))) != 0
+}
+
+// resolveOffer is VillagerTrade.getOffer: test the merchant_predicate, then
+// turn the listing into a live offer, rolling whatever its kind rolls.
+// ok=false is vanilla's null offer: the listing yields nothing for this
+// merchant (wrong villager type, structure out of reach, a roll the filter
+// discards), so the caller draws another one.
 func (h *hub) resolveOffer(m *mob, t vTrade) (mobOffer, bool) {
+	if !h.villagerTypeAllows(m, t) {
+		return mobOffer{}, false
+	}
 	switch t.kind {
 	case vTradeEnchantedGear:
-		return h.rollGearOffer(t), true
+		return h.rollGearOffer(t)
 	case vTradeDyedArmor:
 		return h.rollDyedOffer(t), true
 	case vTradeTreasureMap:
 		return h.rollMapOffer(m, t)
 	case vTradeStew:
 		return h.rollStewOffer(t)
-	case vTradeTippedArrow:
-		return h.rollArrowOffer(t)
-	case vTradeTypeItem:
-		return h.typeItemOffer(m, t)
+	case vTradePotion:
+		return h.rollPotionOffer(t)
 	case vTradeEnchantedBook:
-		return h.rollBookOffer(t), true
+		return h.rollBookOffer(t)
 	}
 	return offerFrom(t), true
 }
