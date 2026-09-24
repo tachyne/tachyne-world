@@ -45,16 +45,19 @@ type effectCloud struct {
 
 // splashPotion resolves a thrown potion at its impact point.
 func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64, kind int8, lingering bool) {
-	h.playSoundDim(players, dim, "minecraft:entity.splash_potion.break", sndNeutral, x, y, z, 1, 1)
 	// The burst is a level event carrying the brew's colour, not a generic
 	// water splash: the client draws the bottle shards and a hundred effect
 	// particles tinted like the liquid (AbstractThrownPotion.onHit). Instant
 	// potions get the other of the pair, which uses the sharper particle.
-	ev := int32(worldEventPotionSplash)
+	// The breaking-glass sound is a level event of its own that follows it;
+	// the particle events are silent.
+	ev, snd := int32(worldEventPotionSplash), int32(worldEventSplashSound)
 	if potionIsInstant(kind) {
-		ev = worldEventInstantSplash
+		ev, snd = worldEventInstantSplash, worldEventInstantSound
 	}
-	h.levelEvent(players, dim, ev, floorInt(x), floorInt(y), floorInt(z), potionColor(kind))
+	bx, by, bz := floorInt(x), floorInt(y), floorInt(z)
+	h.levelEvent(players, dim, ev, bx, by, bz, potionColor(kind))
+	h.levelEvent(players, dim, snd, bx, by, bz, 0)
 	if lingering {
 		h.spawnPotionCloud(dim, x, y, z, kind)
 		return

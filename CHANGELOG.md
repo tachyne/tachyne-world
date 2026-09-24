@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Bottles o' enchanting splash, and potions break with one sound.** A
+  thrown bottle o' enchanting broke with no splash at all. It now bursts
+  in green, as in vanilla. Splash and lingering potions sent their
+  breaking sound twice in different ways. Now the sound is sent once, the
+  way current clients expect.
 - **Fireballs, wither skulls and shulker bullets no longer vanish
   after ten seconds.** Every projectile disappeared ten seconds after it
   was fired. Now, as in vanilla, a fireball, wither skull or wind charge

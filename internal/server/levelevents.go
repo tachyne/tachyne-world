@@ -12,6 +12,8 @@ const (
 	worldEventSpawnerSpawn   = 2004 // PARTICLES_MOBBLOCK_SPAWN
 	worldEventPotionSplash   = 2002 // PARTICLES_SPELL_POTION_SPLASH, data: the liquid's rgb
 	worldEventInstantSplash  = 2007 // PARTICLES_INSTANT_POTION_SPLASH, data: the liquid's rgb
+	worldEventSplashSound    = 1053 // SOUND_SPELL_POTION_SPLASH: the bottle breaking (2002 is silent)
+	worldEventInstantSound   = 1054 // SOUND_INSTANT_POTION_SPLASH: the same, for an instant brew
 	worldEventBeeGrowth      = 2011 // PARTICLES_BEE_GROWTH, data: particle count
 	worldEventTurtleEggPlace = 2012 // PARTICLES_TURTLE_EGG_PLACEMENT
 	worldEventBoneMeal       = 1505 // PARTICLES_AND_SOUND_PLANT_GROWTH, data: count
