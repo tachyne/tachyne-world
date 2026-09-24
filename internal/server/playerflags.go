@@ -11,6 +11,9 @@ import (
 // place is now load-bearing rather than tidy.
 const (
 	entFlagOnFire     = 0x01
+	entFlagCrouching  = 0x02 // shift held: others' clients pose the player crouching
+	entFlagSprinting  = 0x08
+	entFlagSwimming   = 0x10 // others' clients pose the player swimming
 	entFlagInvisible  = 0x20
 	entFlagGlowing    = 0x40
 	entFlagFallFlying = 0x80 // an elytra actually in flight (Entity FLAG_FALL_FLYING)
@@ -21,6 +24,18 @@ func playerEntityFlags(t *tracked) byte {
 	var f byte
 	if t.fireSecs > 0 {
 		f |= entFlagOnFire
+	}
+	// The client derives every other player's pose from these bits each tick
+	// (Player.updatePlayerPose → getDesiredPose): a pose sent without them is
+	// overwritten at once.
+	if t.sneaking {
+		f |= entFlagCrouching
+	}
+	if t.sprinting {
+		f |= entFlagSprinting
+	}
+	if t.swimming {
+		f |= entFlagSwimming
 	}
 	if t.hasEffect(effInvisibility) > 0 {
 		f |= entFlagInvisible

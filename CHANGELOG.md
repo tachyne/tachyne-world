@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **You see other players crouch, sprint and swim.** Other players stood
+  upright while crouching and never showed a swim. Their clients draw
+  those poses from a set of flags the server never set. It now sets them,
+  so crouching, sprinting and swimming show as they do in vanilla.
 - **Eyes of ender lead to the stronghold's entrance.** Since the full
   stronghold mazes landed, an eye of ender flew toward the portal room,
   which can be a hundred blocks inside the maze. As in vanilla, it now

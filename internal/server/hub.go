@@ -274,6 +274,8 @@ type tracked struct {
 	// run, which is what the elytra is charged for.
 	glideTicks int
 	sprinting  bool // last reported sprint state (crit/knockback modifiers)
+	sneaking   bool // shift held (shared flag 1: others see the crouch)
+	swimming   bool // Player.updateSwimming (shared flag 4: others see the swim)
 	gamemode   int
 	hudOn      bool
 
@@ -2330,6 +2332,10 @@ func (h *hub) run() {
 				}
 			case evSneak:
 				if t := players[e.eid]; t != nil {
+					if t.sneaking != e.sneaking {
+						t.sneaking = e.sneaking
+						h.broadcastPlayerFlags(players, t) // the crouch the other clients draw
+					}
 					pose := int32(poseStanding)
 					if e.sneaking {
 						pose = poseSneaking
@@ -2577,7 +2583,18 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 		h.noteKnownMove(t, e.x-t.x, e.y-t.y, e.z-t.z) // what a spear's charge reads
 	}
 	t.x, t.y, t.z = e.x, e.y, e.z
+	wasSprint, wasSwim := t.sprinting, t.swimming
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
+	// Player.updateSwimming: a sprint with the eyes under water starts a swim,
+	// which lasts while the sprint does and the player is in water at all.
+	if t.swimming {
+		t.swimming = t.sprinting && t.ridingEID == 0 && h.inWater(t.dim, t.x, t.y, t.z)
+	} else {
+		t.swimming = t.sprinting && t.ridingEID == 0 && h.inWater(t.dim, t.x, t.y+playerEyeStand, t.z)
+	}
+	if t.sprinting != wasSprint || t.swimming != wasSwim {
+		h.broadcastPlayerFlags(players, t) // others draw the sprint and the swim from these bits
+	}
 	// LivingEntity.updateFallFlying: touching the ground ends the glide, and
 	// so does losing the elytra mid-air.
 	if t.fallFlying && (t.onGround || t.armor[1].item != itemElytra) {
