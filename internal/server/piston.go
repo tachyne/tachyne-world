@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -57,6 +58,29 @@ func pistonDelta(s uint32) (int, int, int) {
 	}
 	dx, dz := facingDelta(stateFacing(s))
 	return dx, 0, dz
+}
+
+// pistonHeadBase is where a head's base stands, when the head is still on it
+// (PistonHeadBlock.canSurvive): an extended piston of the head's own type
+// and facing, or the moving_piston cell of one mid-retraction.
+func pistonHeadBase(w *world.World, pos blockPos, head uint32) (blockPos, bool) {
+	dx, dy, dz := pistonDelta(head)
+	at := blockPos{pos.x - dx, pos.y - dy, pos.z - dz}
+	base := w.At(at.x, at.y, at.z)
+	switch {
+	case isPistonBase(base):
+		ok := isSticky(base) == headIsSticky(head) && boolProp(base, "extended") && stateFacing(base) == stateFacing(head)
+		return at, ok
+	case isMovingPiston(base):
+		return at, stateFacing(base) == stateFacing(head)
+	}
+	return at, false
+}
+
+// headIsSticky reads a piston head's type: sticky or normal.
+func headIsSticky(head uint32) bool {
+	info, ok := worldgen.InfoForState(head)
+	return ok && worldgen.GetProperty(info, head, "type") == "sticky"
 }
 
 // headFor builds the piston_head state matching a base: [facing(6), short(2),

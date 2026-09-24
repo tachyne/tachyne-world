@@ -303,6 +303,13 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 	if isHopper(st) {
 		h.hopperPowerCheck(players, sp, st) // HopperBlock.neighborChanged: ENABLED follows power at once
 	}
+	if isPistonHead(st) {
+		// PistonHeadBlock.neighborChanged: the head passes the update on to
+		// the base it belongs to, which reads its power around the head too.
+		if base, ok := pistonHeadBase(w, sp.blockPos, st); ok {
+			h.inDim(sp.dim, func() { h.nbAdd(base) })
+		}
+	}
 	h.scheduleIn(sp.dim, sp.blockPos, 1)
 	// The quasi-connectivity relay (updateRedstone does the same for the
 	// redstone blocks): an update at the cell above a piston reaches it.

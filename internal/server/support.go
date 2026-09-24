@@ -397,6 +397,14 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				queue = append(queue, n)
 				continue
 			}
+			// A block whose state follows this neighbour takes the new state
+			// first (shapeupdate.go), then answers the survival question as
+			// that state.
+			if ns, ok := shapeUpdated(h.worldFor(dim), n, st, [3]int{-d[0], -d[1], -d[2]}); ok && ns != st {
+				h.setBlockAt(players, dim, n, ns)
+				queue = append(queue, n)
+				st = h.worldFor(dim).At(n.x, n.y, n.z) // the write's own sweep may have moved it on
+			}
 			// Multiface blocks and scaffolding update their STATE on a neighbour
 			// change (a lost face, a new distance) and only drop past the last
 			// face / at distance 7 — vanilla's updateShape for both.
