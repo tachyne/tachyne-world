@@ -84,3 +84,27 @@ func TestTemptRangeAttribute(t *testing.T) {
 		}
 	}
 }
+
+// LlamaAttackWolfGoal: a llama spits at a wild wolf within ten blocks, and
+// leaves a tamed one alone.
+func TestLlamaSpitsAtWildWolves(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	l := h.spawnMob(players, entityLlama, 0.5, 200, 0.5)
+	wolf := h.spawnMob(players, entityWolf, 6.5, 200, 0.5)
+	wolf.tamed = true
+	for i := 0; i < 100; i++ {
+		h.llamaWolfTick(players, l)
+	}
+	if len(h.arrows) != 0 {
+		t.Fatal("a llama spat at a tamed wolf")
+	}
+	wolf.tamed = false
+	for i := 0; i < 100 && len(h.arrows) == 0; i++ {
+		h.llamaWolfTick(players, l)
+	}
+	if len(h.arrows) == 0 || l.llamaWolf != wolf.eid {
+		t.Fatal("a llama never spat at a wild wolf beside it")
+	}
+}

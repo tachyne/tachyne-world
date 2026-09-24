@@ -353,6 +353,7 @@ type mob struct {
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
 	slimeHeading                    float64  // slime/magma cube: SlimeRandomDirectionGoal's chosen heading (radians)
+	llamaWolf                       int32    // llama: the wild wolf LlamaAttackWolfGoal has it spitting at
 	slimeHeadingLeft                int      // …ticks before it picks another
 	vexWant                         bool     // vex: VexMoveControl has a wanted point (vex.go)
 	vexWX, vexWY, vexWZ, vexSpeed   float64  // …the point and the speed modifier
@@ -1084,6 +1085,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			if h.mobs[m.eid] == nil {
 				continue
 			}
+		}
+		if !m.hostile && isLlama(m.etype) {
+			h.llamaWolfTick(players, m) // LlamaAttackWolfGoal: spits at wild wolves
 		}
 		if m.hostile {
 			switch m.etype {

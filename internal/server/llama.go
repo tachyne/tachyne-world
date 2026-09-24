@@ -42,16 +42,64 @@ func (h *hub) llamaSpit(players map[int32]*tracked, m *mob) {
 		return // RangedAttackGoal: no spit without line of sight
 	}
 	m.attackCD = llamaSpitCooldown
+	h.spitAt(players, m, t.x, t.y+0.6, t.z)
+}
+
+// spitAt is Llama.spit: the gob aimed a third of the way up the target, with
+// the lob. It strikes whatever living thing it meets but its own llama.
+func (h *hub) spitAt(players map[int32]*tracked, m *mob, tx, ty, tz float64) {
 	ox, oy, oz := m.x, m.y+1.4, m.z
-	dx, dy, dz := t.x-ox, (t.y+0.6)-oy, t.z-oz
+	dx, dy, dz := tx-ox, ty-oy, tz-oz
 	dy += math.Hypot(dx, dz) * 0.2 // the lob
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d < 1e-6 {
 		return
 	}
-	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // face the shot
+	m.yaw = float32(math.Atan2(-(tx-m.x), tz-m.z) * 180 / math.Pi) // face the shot
 	a := h.launchProjectileIn(players, entityLlamaSpit, m.dim, ox, oy, oz,
 		dx/d*llamaSpitSpeed, dy/d*llamaSpitSpeed, dz/d*llamaSpitSpeed)
-	a.shooter, a.dmg, a.breaks = m.eid, llamaSpitDmg, true
+	a.shooter, a.dmg, a.breaks, a.mobShot = m.eid, llamaSpitDmg, true, true
 	h.playSoundDim(players, m.dim, "minecraft:entity.llama.spit", sndNeutral, m.x, m.y, m.z, 1, 1)
+}
+
+// llamaWolfRange is LlamaAttackWolfGoal's follow distance: a quarter of the
+// llama's forty.
+const llamaWolfRange = 10.0
+
+// llamaWolfTick is LlamaAttackWolfGoal driving the llama's RangedAttackGoal:
+// now and then (one in sixteen ticks) a llama picks the nearest wild wolf
+// within ten blocks and spits at it on the ranged cadence while it stays in
+// reach and in sight.
+func (h *hub) llamaWolfTick(players map[int32]*tracked, m *mob) {
+	if m.hostile || m.dying > 0 || m.rider != 0 {
+		return
+	}
+	if m.attackCD > 0 {
+		m.attackCD--
+		return
+	}
+	w := h.mobs[m.llamaWolf]
+	if w == nil || w.dying > 0 || w.tamed || w.dim != m.dim || dist3(w.x, w.y, w.z, m.x, m.y, m.z) > llamaWolfRange {
+		m.llamaWolf, w = 0, nil
+		if h.rng.Intn(16/mobMoveInterval) != 0 {
+			return
+		}
+		best := llamaWolfRange
+		h.grid().nearby(m.dim, m.x, m.z, llamaWolfRange, func(o *mob) {
+			if o.etype == entityWolf && !o.tamed && o.dying == 0 {
+				if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < best {
+					w, best = o, d
+				}
+			}
+		})
+		if w == nil {
+			return
+		}
+		m.llamaWolf = w.eid
+	}
+	if !h.mobSeesMob(m, w) {
+		return
+	}
+	m.attackCD = llamaSpitCooldown
+	h.spitAt(players, m, w.x, w.y+0.3, w.z)
 }
