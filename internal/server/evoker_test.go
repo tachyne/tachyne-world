@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -146,5 +147,44 @@ func TestEvokerSummonsVexesThatExpire(t *testing.T) {
 	}
 	if one.dying == 0 {
 		t.Error("an expired vex should waste away and die")
+	}
+}
+
+// EvokerFangs.tick broadcasts entity event 4 the tick its warmup runs out:
+// without it a client never draws the fang. Cast for real, then ticked.
+func TestFangsSendTheirAttackEvent(t *testing.T) {
+	h, m, pl, players := evokerSetup(t)
+	m.fangNextAt, m.vexNextAt = 0, ^uint64(0)
+	h.evokerCast(players, m)
+	if len(h.fangs) == 0 {
+		t.Fatal("the evoker cast no fangs")
+	}
+	first := h.fangs[0]
+	firstDelay := first.delay
+	drainEvents(pl)
+
+	seen := map[int32]int{} // fang eid → the tick its event 4 arrived
+	for tick := 1; tick <= firstDelay+2; tick++ {
+		h.updateFangs(players)
+		for done := false; !done; {
+			select {
+			case pkt := <-pl.p.out:
+				if st, ok := pkt.ev.(attachproto.EntityStatus); ok && st.Status == entityStatusFangAttack {
+					if _, dup := seen[st.EID]; dup {
+						t.Fatalf("fang %d sent event 4 twice", st.EID)
+					}
+					seen[st.EID] = tick
+				}
+			default:
+				done = true
+			}
+		}
+	}
+	// Vanilla: --warmupDelayTicks < 0 first holds on tick warmup+1.
+	if got, ok := seen[first.eid]; !ok || got != firstDelay+1 {
+		t.Fatalf("first fang's event 4 on tick %d (sent %v), want tick %d", got, ok, firstDelay+1)
+	}
+	if first.bit {
+		t.Fatal("the fang bit before (or as) it rose; the bite comes 8 ticks later")
 	}
 }

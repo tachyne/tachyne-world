@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Evoker fangs can be seen.** An evoker's fangs bit, but Java players
+  never saw them rise. The client only draws a fang once the server says
+  its attack has started, and that signal was never sent. It now goes out
+  at the vanilla moment, with the snap played by the client as in vanilla.
 - **Mob blasts respect mobGriefing, and fireballs burst on walls.** With
   mobGriefing off, a ghast's fireball, a wither skull and the wither's
   spawn blast still broke blocks. Now they keep every block and only hurt
