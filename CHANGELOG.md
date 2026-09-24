@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/save-all, /save-off and /save-on.** Operators can save the world on
+  demand and pause the automatic saves, with vanilla's messages. While
+  saving is off, the blocks, containers and mobs stop being written, but
+  player data is still saved, as in vanilla. /save-all saves everything
+  even then, and the server still saves when it shuts down. Saving comes
+  back on after a restart.
 - **/bossbar.** Operators can make their own boss bars and show them to
   chosen players: add, remove, list, get, and set the name, colour, style,
   value, maximum, visibility and players, with vanilla's messages. The bars

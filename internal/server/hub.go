@@ -599,6 +599,10 @@ type hub struct {
 	// join sequence sends Change Difficulty outside the hub goroutine).
 	difficultyPub atomic.Int32
 
+	// saveOff is /save-off: the periodic saves of the world's block and
+	// chunk data (edits, containers, mobs) pause until /save-on (savecmd.go).
+	saveOff atomic.Bool
+
 	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
 	rsDue     map[simPos]uint64 // repeater flip due-ticks
 	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
@@ -1298,7 +1302,7 @@ func (h *hub) run() {
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
-				if h.containers != nil {
+				if h.containers != nil && !h.saveOff.Load() { // /save-off holds chunk data
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
@@ -1327,7 +1331,7 @@ func (h *hub) run() {
 					h.containers.recordNames(h.names)
 					h.containers.flushAsync()
 				}
-				if h.mobstore != nil {
+				if h.mobstore != nil && !h.saveOff.Load() {
 					h.mobstore.recordVillages(h.villageDone, h.villagePlaced)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)

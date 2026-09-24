@@ -745,6 +745,9 @@ func (s *Server) autosave() {
 	last := s.world.EditCount()
 	lastNether := 0
 	for range t.C {
+		if s.hub != nil && s.hub.saveOff.Load() {
+			continue // /save-off
+		}
 		if err := s.world.Save(); err != nil {
 			log.Printf("world autosave failed: %v", err)
 			continue
