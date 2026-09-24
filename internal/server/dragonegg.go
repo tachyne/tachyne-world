@@ -42,7 +42,9 @@ func (h *hub) dragonEggTarget(dim int, from blockPos) (blockPos, bool) {
 			from.y + h.rng.Intn(8) - h.rng.Intn(8),
 			from.z + h.rng.Intn(16) - h.rng.Intn(16),
 		}
-		if !h.inWorldYIn(dim, to.y) || w.At(to.x, to.y, to.z) != worldgen.Air {
+		// isAir (air, cave air, void air) at the target, and NOT air under
+		// it: the egg lands on something rather than hanging in mid-air.
+		if !h.inWorldYIn(dim, to.y) || !isAnyAir(w.At(to.x, to.y, to.z)) || isAnyAir(w.At(to.x, to.y-1, to.z)) {
 			continue
 		}
 		if dim == dimOverworld && h.border.distanceToBorder(float64(to.x)+0.5, float64(to.z)+0.5, size) < 0 {
@@ -52,3 +54,6 @@ func (h *hub) dragonEggTarget(dim int, from blockPos) (blockPos, bool) {
 	}
 	return blockPos{}, false
 }
+
+// isAnyAir is BlockState.isAir: air, cave air and void air.
+func isAnyAir(s uint32) bool { return s == worldgen.Air || s == caveAirState || s == voidAirState }

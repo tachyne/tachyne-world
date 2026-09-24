@@ -103,6 +103,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The dragon egg lands on something when it teleports.** Clicking the
+  dragon egg could send it to a spot in mid-air. As in vanilla, it now only
+  moves to a free spot with a block beneath it.
 - **Ice melts at vanilla light levels, and stays water in the End.** Ice
   needed one more level of block light than vanilla to melt. Ice melted in
   the End vanished as if it were the Nether; now it leaves water, and only

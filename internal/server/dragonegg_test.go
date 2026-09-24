@@ -15,7 +15,7 @@ func TestDragonEggBlinks(t *testing.T) {
 	pl := testTracked()
 	players[pl.p.eid] = pl
 	x, z := h.findLand(60, 60)
-	y := h.world.SurfaceFeet(x, z) + 20 // up in the air, where every cell around is empty
+	y := h.world.SurfaceFeet(x, z) + 3 // above the ground: vanilla lands the egg on something within 7 below
 	h.world.SetBlock(x, y, z, worldgen.DragonEgg)
 	h.onDragonEgg(players, evDragonEgg{eid: pl.p.eid, x: x, y: y, z: z})
 	if h.world.At(x, y, z) != worldgen.Air {
