@@ -215,7 +215,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		if a.stuck {
 			if a.playerShot && !a.noPickup { // stuck player projectiles are retrievable
 				for _, t := range players {
-					if t.gamemode != gmSurvival || t.dead || t.inv == nil {
+					if t.gamemode != gmSurvival || t.dead || t.inv == nil || t.dim != a.dim {
 						continue
 					}
 					if math.Abs(a.x-t.x) > 1 || math.Abs(a.z-t.z) > 1 || math.Abs(a.y-t.y) > 1.5 {
