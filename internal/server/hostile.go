@@ -41,11 +41,12 @@ const (
 	skeletonKite = bowRadius * 0.5   // √0.25 · radius: back off inside this
 	skeletonHold = bowRadius * 0.866 // √0.75 · radius: close in again past this
 
-	aggroRange     = 16.0 // default FOLLOW_RANGE (vanilla Mob base; species override via m.aggro)
-	deaggroSlack   = 8.0  // keep chasing this far past aggro before giving up (edge hysteresis)
-	attackReach    = 2.0  // horizontal distance at which a bite lands
-	attackReachY   = 2.0  // vertical tolerance (can't hit a player up a cliff)
-	attackCooldown = 9    // mob-updates between bites; +the biting update = 20 ticks
+	aggroRange       = 16.0 // default FOLLOW_RANGE (vanilla Mob base; species override via m.aggro)
+	deaggroSlack     = 8.0  // keep chasing this far past aggro before giving up (edge hysteresis)
+	attackReach      = 2.0  // horizontal distance at which a bite lands
+	attackReachY     = 2.0  // vertical tolerance (can't hit a player up a cliff)
+	attackCooldown   = 9    // mob-updates between bites; +the biting update = 20 ticks
+	creakingAttackCD = 19   // the creaking's 40 ticks, counted the same way
 	//                          (vanilla-measured 995 ms cadence; 10 gave 1.1 s)
 	standoffDist = 1.1 // stop closing here so it bites from the front, not buried
 	//                       inside the player (where the player couldn't click it)
@@ -182,6 +183,9 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	m.attackCD = 19
 	if h.rules.Difficulty == diffHard {
 		m.attackCD = 9
+	}
+	if m.etype == entityIllusioner {
+		m.attackCD = 9 // Illusioner's RangedBowAttackGoal(this, 0.5, 20, 15): twenty ticks, any difficulty
 	}
 	if m.etype == entityParched {
 		m.attackCD = 34
@@ -461,6 +465,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	if m.etype == entityHoglin || m.etype == entityZoglin {
 		defer func() { m.attackCD = hoglinAttackCD(m) }() // ATTACK_INTERVAL 40 (15 for a piglet)
+	}
+	if m.etype == entityCreaking {
+		defer func() { m.attackCD = creakingAttackCD }() // Creaking.ATTACK_INTERVAL: 40 ticks between blows
 	}
 	if !landed {
 		// A raised shield facing the attacker catches the whole bite, and with

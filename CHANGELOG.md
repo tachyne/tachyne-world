@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Four monsters fight on vanilla's timing.**
+  - Magma cubes wait four times as long between hops and jump higher the
+    bigger they are.
+  - An illusioner fires once a second on every difficulty.
+  - A creaking strikes every two seconds.
+  - A zoglin goes for whatever living thing is closest, a pet included, and
+    sticks with it.
 - **Armadillos, tadpoles and axolotls panic and chase as in 26.3.** An
   armadillo now runs from fire, lava and the other environmental hazards,
   unrolling first; a blow still just rolls it up. Tadpoles flee at vanilla's

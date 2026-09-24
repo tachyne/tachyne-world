@@ -135,7 +135,7 @@ func (m *mob) applyCubeSize() {
 
 // slimeHop is vanilla SlimeMoveControl adapted to our step model: a slime
 // travels ONLY mid-bound and sits still between hops. jumpDelay is
-// rand(20)+10 ticks, ÷3 while hunting; each launch rides a jump impulse to
+// rand(20)+10 ticks (a magma cube's four times that), ÷3 while hunting; each launch rides a jump impulse to
 // the client so the arc animates (jump power 0.42, pure visual).
 func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	if m.hopTicks > 0 {
@@ -146,7 +146,11 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	if m.hopDelay--; m.hopDelay > 0 {
 		return
 	}
-	delay := (10 + h.rng.Intn(20)) / mobMoveInterval
+	delay := 10 + h.rng.Intn(20) // Slime.getJumpDelay
+	if m.etype == entityMagmaCube {
+		delay *= 4 // MagmaCube.getJumpDelay: four times the wait
+	}
+	delay /= mobMoveInterval
 	if m.hasTarget {
 		delay /= 3
 	}
@@ -165,8 +169,12 @@ func (h *hub) slimeHop(players map[int32]*tracked, m *mob) {
 	if d := math.Hypot(dx, dz); d > 1e-6 {
 		m.vx, m.vz = dx/d*m.moveSpeed(), dz/d*m.moveSpeed()
 	}
+	vy := 0.42
+	if m.etype == entityMagmaCube {
+		vy += float64(m.size) * 0.1 // MagmaCube.jumpFromGround: bigger cubes jump higher
+	}
 	h.toNearbyEv(players, m.dim, m.x, m.z, attachproto.Velocity{
-		EID: m.eid, VX: m.vx / mobMoveInterval, VY: 0.42, VZ: m.vz / mobMoveInterval})
+		EID: m.eid, VX: m.vx / mobMoveInterval, VY: vy, VZ: m.vz / mobMoveInterval})
 	h.playSoundDim(players, m.dim, "minecraft:entity.slime.jump", sndHostile, m.x, m.y, m.z, 0.4, 0.8+h.rng.Float32()*0.4)
 }
 

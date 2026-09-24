@@ -19,7 +19,7 @@ const (
 func mobHuntPrey(m, o *mob) bool {
 	switch m.etype {
 	case entityZoglin:
-		return o.etype != entityZoglin && o.etype != entityCreeper && !o.tamed
+		return o.etype != entityZoglin && o.etype != entityCreeper // Zoglin's findClosest: tamed or not
 	case entityEnderman:
 		return o.etype == entityEndermite
 	case entityVindicator:
@@ -32,10 +32,21 @@ func mobHuntPrey(m, o *mob) bool {
 
 // mobHuntStep runs each mob update. Returns whether it holds the mob.
 func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
-	if m.hasTarget { // a player in reach outranks the mob hunt (StartAttacking picks the nearest; players first here)
+	if m.hasTarget { // a player in reach outranks the mob hunt…
 		if t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange()); t != nil {
-			m.wolfPrey = 0
-			return false
+			// …except for a zoglin, whose StartAttacking takes the closest
+			// living thing, player or mob, and keeps it while it is valid.
+			if m.etype != entityZoglin {
+				m.wolfPrey = 0
+				return false
+			}
+			if p := h.mobs[m.wolfPrey]; p == nil || p.dying > 0 {
+				prey, d := h.nearestHuntPrey(m)
+				if prey == nil || d >= dist3(t.x, t.y, t.z, m.x, m.y, m.z) {
+					m.wolfPrey = 0
+					return false
+				}
+			}
 		}
 	}
 	if m.wolfBiteCD > 0 {
@@ -46,15 +57,7 @@ func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
 		target, m.wolfPrey = nil, 0
 	}
 	if target == nil {
-		bestD := m.followRange()
-		h.grid().nearby(m.dim, m.x, m.z, bestD, func(o *mob) {
-			if o == m || o.dying > 0 || !mobHuntPrey(m, o) {
-				return
-			}
-			if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < bestD {
-				target, bestD = o, d
-			}
-		})
+		target, _ = h.nearestHuntPrey(m)
 		if target == nil {
 			return false
 		}
@@ -91,4 +94,19 @@ func (h *hub) mobHuntStep(players map[int32]*tracked, m *mob) bool {
 		}
 	}
 	return true
+}
+
+// nearestHuntPrey is the closest mob within follow range the species hunts.
+func (h *hub) nearestHuntPrey(m *mob) (*mob, float64) {
+	var target *mob
+	bestD := m.followRange()
+	h.grid().nearby(m.dim, m.x, m.z, bestD, func(o *mob) {
+		if o == m || o.dying > 0 || !mobHuntPrey(m, o) {
+			return
+		}
+		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < bestD {
+			target, bestD = o, d
+		}
+	})
+	return target, bestD
 }
