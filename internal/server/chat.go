@@ -34,7 +34,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	}
 	switch fields[0] {
 	case "help":
-		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /swing /bug" +
+		help := "Commands: /help /say /msg /teammsg /list /time /tp /weather /effect /give /kill /clear /kick /xp /summon /enchant /setblock /fill /seed /me /spawnpoint /setworldspawn /playsound /difficulty /gamerule /gamemode /defaultgamemode /hud /worldborder /locate /title /advancement /attribute /recipe /tag /ride /damage /spreadplayers /forceload /random /swing /clone /bossbar /save-all /save-off /save-on /version /stop /item /loot /bug" +
 			" — targets take @s @p @a @r @e (with type=, distance=, limit=, name=, tag=), coordinates take ~ and ^." +
 			" /bug <what went wrong> reports something with the blocks around you attached; /bug list shows the last few and /bug re <text> adds to one."
 		if s.hub.plugHost != nil {
@@ -162,6 +162,24 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdEnchant(p, fields[1:])
 	case "fill":
 		s.cmdFill(p, fields[1:])
+	case "clone":
+		s.cmdClone(p, fields[1:])
+	case "bossbar":
+		s.cmdBossbar(p, fields[1:])
+	case "save-all":
+		s.cmdSaveAll(p, fields[1:])
+	case "save-off":
+		s.cmdSaveOff(p, fields[1:])
+	case "save-on":
+		s.cmdSaveOn(p, fields[1:])
+	case "version":
+		s.cmdVersion(p, fields[1:])
+	case "item":
+		s.cmdItem(p, fields[1:])
+	case "loot":
+		s.cmdLoot(p, fields[1:])
+	case "stop":
+		s.cmdStop(p, fields[1:])
 	case "seed":
 		if !s.isOp(p.name) { // SeedCommand: gamemasters on a dedicated server
 			p.tell("You don't have permission.")

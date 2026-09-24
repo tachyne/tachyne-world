@@ -14,6 +14,51 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/loot.** Operators can roll a loot table and send the result to
+  players, into a container, onto the ground, or into chosen slots. The
+  source can be a named table (the chest, barrel, dispenser, archaeology,
+  equipment and gameplay tables), a mob's drops as if the operator had
+  killed it (their Looting counts), or a block's drops as if mined, with an
+  optional tool (Silk Touch and Fortune count). Containers only take what
+  their slots accept. Fishing loot, and mobs as targets, are not supported
+  yet.
+- **/item.** Operators can put items straight into a chest, barrel,
+  shulker box, furnace, hopper, dispenser, dropper, brewing stand or
+  crafter, or into a player's hotbar, inventory, hands, armour, ender chest,
+  cursor or crafting grid. An item can be named with a count, or copied from
+  another container's or player's slots. replace fills the slots in order,
+  fill repeats the items across every slot, and override also empties the
+  slots left over, as in 26.3. Changing items with loot modifiers, using
+  item components, and targeting mobs are not supported yet.
+- **/version and /stop.** /version shows operators which game version the
+  server speaks, laid out as vanilla lays it out. /stop saves everything and
+  shuts the server down cleanly, the same way as stopping it from outside.
+  On the cluster the server then starts again by itself, so there /stop
+  works as a clean restart. Everyone online is disconnected while it
+  happens.
+- **/save-all, /save-off and /save-on.** Operators can save the world on
+  demand and pause the automatic saves, with vanilla's messages. While
+  saving is off, the blocks, containers and mobs stop being written, but
+  player data is still saved, as in vanilla. /save-all saves everything
+  even then, and the server still saves when it shuts down. Saving comes
+  back on after a restart.
+- **/bossbar.** Operators can make their own boss bars and show them to
+  chosen players: add, remove, list, get, and set the name, colour, style,
+  value, maximum, visibility and players, with vanilla's messages. The bars
+  are saved with the world, so they survive a restart, and a player who
+  was on a bar sees it again when they rejoin. A bar's name can be plain
+  text or a styled text component with named colours, bold, italic and the
+  like. Components that need translating, scores or hex colours are refused
+  for now, not shown wrongly.
+- **/clone.** Operators can copy a box of blocks somewhere else, up to
+  32,768 blocks at a time, as vanilla does. Chests, barrels, shulker boxes,
+  furnaces, hoppers, dispensers, brewing stands and the other containers
+  keep what is inside them, and signs, banners, lecterns, jukeboxes,
+  shelves, decorated pots and campfires keep theirs too. It supports
+  replace, masked (skip air) and filtered (only one block, or a block tag),
+  and normal, force (allow the copy to overlap its source) and move (empty
+  the source without dropping anything). `strict` stops attached blocks
+  from popping off afterwards, and `from`/`to` copy between dimensions.
 - **Online mode for Java players.** The Java gateway
   can now log players in the way vanilla does with online mode on. The
   connection is encrypted, and Mojang's session service confirms the

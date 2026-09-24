@@ -600,6 +600,10 @@ type hub struct {
 	// join sequence sends Change Difficulty outside the hub goroutine).
 	difficultyPub atomic.Int32
 
+	// saveOff is /save-off: the periodic saves of the world's block and
+	// chunk data (edits, containers, mobs) pause until /save-on (savecmd.go).
+	saveOff atomic.Bool
+
 	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
 	rsDue     map[simPos]uint64 // repeater flip due-ticks
 	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
@@ -1300,7 +1304,7 @@ func (h *hub) run() {
 				if h.maps != nil {
 					h.maps.flushIfDirty()
 				}
-				if h.containers != nil {
+				if h.containers != nil && !h.saveOff.Load() { // /save-off holds chunk data
 					h.containers.recordFurnaces(h.furnaces)
 					h.containers.recordChests(h.chests)
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
@@ -1329,7 +1333,7 @@ func (h *hub) run() {
 					h.containers.recordNames(h.names)
 					h.containers.flushAsync()
 				}
-				if h.mobstore != nil {
+				if h.mobstore != nil && !h.saveOff.Load() {
 					h.mobstore.recordVillages(h.villageDone, h.villagePlaced)
 					h.mobstore.recordMansions(h.mansionDone)
 					h.mobstore.recordBastions(h.bastionDone)
@@ -1396,6 +1400,8 @@ func (h *hub) run() {
 				h.onJoin(players, e)
 			case evRunOnHub:
 				e.fn() // a barrier/query from another goroutine, in event order
+			case evHubCmd:
+				e.fn(players) // a command's hub half (cmdhub.go)
 			case evMove:
 				if t := players[e.eid]; t != nil {
 					h.onMove(players, t, e)
@@ -2533,6 +2539,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendStandsTo(nt)
 	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
+	h.bossbarsOnJoin(nt) // the custom bars this player is on (bossbar.go)
 	// The newcomer's mobs, items and orbs arrive with the next tracking
 	// pass (entityview.go), which spawns each one for them in full.
 	h.showShadowsTo(nt)  // …and every cross-seam shadow (neighbour entities near the border).

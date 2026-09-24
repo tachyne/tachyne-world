@@ -157,6 +157,13 @@ func Main() {
 		}
 		os.Exit(0)
 	}()
+	// /stop takes the same path as a signal.
+	srv.Stop = func() {
+		select {
+		case sigs <- syscall.SIGTERM:
+		default: // a shutdown is already under way
+		}
+	}
 
 	log.Fatal(srv.Run())
 }
