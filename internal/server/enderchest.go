@@ -31,6 +31,11 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	if t.inv == nil {
 		return
 	}
+	// EnderChestBlock.useWithoutItem: a redstone conductor on the lid keeps
+	// it shut (no sitting-cat rule here, unlike a chest).
+	if conducts(h.worldFor(t.dim).At(x, y+1, z)) {
+		return
+	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(players, t)
 	h.nextWin++
@@ -46,6 +51,7 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3),
 		Title: "Ender Chest"})
 	h.sendChestWindow(t, t.viewChest)
+	h.angerNearbyPiglins(players, t, true) // PiglinAi.angerNearbyPiglins: an opened ender chest is a guarded container too
 }
 
 // evOpenEnder asks the hub to show a player their ender inventory.

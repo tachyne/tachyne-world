@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
+
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -108,4 +110,25 @@ func TestDropperKeepsItemData(t *testing.T) {
 			t.Errorf("the chest received %+v, want a poison potion", got)
 		}
 	})
+}
+
+// EnderChestBlock.useWithoutItem: a solid block on the lid keeps an ender
+// chest shut.
+func TestEnderChestBlockedByConductor(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.SetBlock(0, 100, 0, worldgen.BlockID("ender_chest"))
+	h.world.SetBlock(0, 101, 0, worldgen.Stone)
+	h.openEnderChest(players, pl, 0, 100, 0)
+	if pl.winID != 0 {
+		t.Error("an ender chest opened under a stone block")
+	}
+	h.world.SetBlock(0, 101, 0, worldgen.Air)
+	h.openEnderChest(players, pl, 0, 100, 0)
+	if pl.winID == 0 {
+		t.Error("a clear ender chest did not open")
+	}
 }

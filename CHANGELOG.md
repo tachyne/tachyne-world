@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Ender chests follow chest rules.** A solid block on top keeps an ender
+  chest shut, and opening one near piglins angers them, as opening a chest
+  does.
 - **Droppers keep what items carry.** A dropper feeding a chest or
   throwing an item out passes on its potion, name, enchantments and
   contents. Before, only the bare item got through (a thrown item kept its
