@@ -98,7 +98,7 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 			}
 			changed = true
 		}
-	case entitySkeleton, entityStray, entityBogged:
+	case entitySkeleton, entityStray, entityBogged, entityParched:
 		if m.held == 0 {
 			m.held = itemBow
 			changed = true

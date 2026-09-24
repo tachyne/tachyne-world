@@ -20,7 +20,7 @@ var equipCapable = map[int]bool{}
 
 func init() {
 	for _, e := range []int{entityZombie, entityHusk, entityDrowned, entitySkeleton,
-		entityStray, entityBogged, entityWitherSkeleton, entityPiglin, entityZombifiedPiglin, entityPiglinBrute} {
+		entityStray, entityBogged, entityParched, entityWitherSkeleton, entityPiglin, entityZombifiedPiglin, entityPiglinBrute} {
 		equipCapable[e] = true
 	}
 }
@@ -46,7 +46,7 @@ func (h *hub) rollCanPickup(m *mob) {
 // anything else (0 = no preference).
 func preferredWeapon(etype int) int32 {
 	switch etype {
-	case entitySkeleton, entityStray, entityBogged: // SKELETON_PREFERRED_WEAPONS
+	case entitySkeleton, entityStray, entityBogged, entityParched: // SKELETON_PREFERRED_WEAPONS
 		return int32(itemByName["bow"])
 	case entityDrowned: // DROWNED_PREFERRED_WEAPONS
 		return int32(itemByName["trident"])
@@ -232,11 +232,14 @@ func enchCount(e enchList) int {
 	return n
 }
 
-// mobHeldBonus is the extra melee damage a mob's held weapon adds.
+// mobHeldBonus is the extra melee damage a mob's held weapon adds: the
+// item's ATTACK_DAMAGE modifier, which is its meleeDamage less the player's
+// own base of 1. Adding the whole meleeDamage made every armed mob hit one
+// point too hard (a vindicator 14 for vanilla's 13) until 2026-09-24.
 func mobHeldBonus(m *mob) float32 {
 	if m.held != 0 {
 		if d, ok := meleeDamage[m.held]; ok {
-			return float32(d)
+			return float32(d - 1)
 		}
 	}
 	return 0

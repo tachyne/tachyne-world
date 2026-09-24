@@ -154,7 +154,10 @@ func (h *hub) tickNetherPortal(players map[int32]*tracked, dim, x, y, z int, sta
 	if netherPortalMax == 0 || state < netherPortalBase || state > netherPortalMax {
 		return false
 	}
-	if dim != 1 || h.rules.Difficulty == diffPeaceful || !h.rules.DoMobSpawning {
+	// Only the overworld's dimension type sets nether_portal_spawns_piglin:
+	// a portal breeds zombified piglins at home, never inside the Nether
+	// (this read dim != 1, the other way round, until 2026-09-24).
+	if dim != dimOverworld || h.rules.Difficulty == diffPeaceful || !h.rules.DoMobSpawning {
 		return true
 	}
 	if h.rng.Intn(portalPiglinOdds) >= h.rules.Difficulty {

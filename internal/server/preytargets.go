@@ -26,7 +26,11 @@ func (h *hub) preyOf(hunter, o *mob) bool {
 			o.etype == entityIronGolem || babyTurtleOnLand ||
 			(hunter.etype == entityDrowned && o.etype == entityAxolotl)
 	case illagerKind(hunter.etype):
-		// Raider: the village's people and its guardian.
+		// Raider: the village's people and its guardian. The ravager's
+		// villager goal takes adults only (Ravager.registerGoals).
+		if hunter.etype == entityRavager && o.baby && o.etype == entityVillager {
+			return false
+		}
 		return o.etype == entityVillager || o.etype == entityWanderingTrader || o.etype == entityIronGolem
 	case hunter.etype == entitySlime || hunter.etype == entityMagmaCube:
 		return o.etype == entityIronGolem
@@ -51,11 +55,12 @@ func (h *hub) preyOf(hunter, o *mob) bool {
 	return false
 }
 
-// illagerKind is the raider family, which all carry the villager and
-// iron-golem target goals.
+// illagerKind is the raiders that carry the villager and iron-golem target
+// goals. The witch is a raider but not one of them: Witch.registerGoals
+// targets players only (and raiders, to heal them).
 func illagerKind(etype int) bool {
 	switch etype {
-	case entityPillager, entityVindicator, entityEvoker, entityIllusioner, entityRavager, entityWitch:
+	case entityPillager, entityVindicator, entityEvoker, entityIllusioner, entityRavager:
 		return true
 	}
 	return false

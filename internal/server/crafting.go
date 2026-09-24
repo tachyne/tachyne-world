@@ -843,7 +843,7 @@ func (h *hub) takeCraftOnce(players map[int32]*tracked, t *tracked, mode int32) 
 	case t.cursor.item == 0:
 		t.cursor = res
 		h.incStat(t, attachproto.StatCrafted, item, int32(count))
-	case t.cursor.item == item && t.cursor.mapID == res.mapID && t.cursor.count+count <= stackCap(item):
+	case sameItemComponents(t.cursor, res) && t.cursor.count+count <= stackCap(item):
 		t.cursor.count += count
 		h.incStat(t, attachproto.StatCrafted, item, int32(count))
 	default: // cursor holds something else — vanilla refuses the take

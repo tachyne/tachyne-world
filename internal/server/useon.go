@@ -199,7 +199,7 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 		dx, dy, dz := faceDelta(e.face)
 		x, y, z = x+dx, y+dy, z+dz
 	}
-	m := h.spawnMob(players, et, float64(x)+0.5, float64(y), float64(z)+0.5)
+	m := h.spawnMobIn(players, et, t.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 	if m == nil {
 		return // a plugin refused it, or the species has no spawn path
 	}

@@ -33,8 +33,9 @@ func TestEyeblossomFollowsTheSun(t *testing.T) {
 	}
 }
 
-// A nether portal breeds zombified piglins — but only in the Nether, and never
-// on peaceful.
+// A nether portal breeds zombified piglins in the overworld, the one
+// dimension type that sets nether_portal_spawns_piglin: never inside the
+// Nether, and never on peaceful.
 func TestNetherPortalBreedsPiglins(t *testing.T) {
 	h := newHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
@@ -42,27 +43,30 @@ func TestNetherPortalBreedsPiglins(t *testing.T) {
 	players := map[int32]*tracked{}
 	h.rules.DoMobSpawning = true
 	h.rules.Difficulty = diffHard
-	pos := blockPos{0, 80, 0}
-	nw.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase("netherrack"))
-	nw.SetBlock(pos.x, pos.y, pos.z, netherPortalBase)
-
-	spawned := false
-	for i := 0; i < 40000 && !spawned; i++ {
+	pos := blockPos{0, 180, 0}
+	for _, w := range []*world.World{h.world, nw} {
+		w.ForceLoad(0, 0, 1)
+		w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase("obsidian"))
+		w.SetBlock(pos.x, pos.y, pos.z, netherPortalBase)
+	}
+	breeds := func(dim, tries int) bool {
 		before := len(h.mobs)
-		h.tickNetherPortal(players, 1, pos.x, pos.y, pos.z, netherPortalBase)
-		spawned = len(h.mobs) > before
+		for i := 0; i < tries; i++ {
+			h.tickNetherPortal(players, dim, pos.x, pos.y, pos.z, netherPortalBase)
+			if len(h.mobs) > before {
+				return true
+			}
+		}
+		return false
 	}
-	if !spawned {
-		t.Error("a nether portal on hard never bred a piglin")
+	if !breeds(dimOverworld, 40000) {
+		t.Error("an overworld portal on hard never bred a piglin")
 	}
-
-	// Peaceful breeds nothing.
+	if breeds(1, 40000) {
+		t.Error("a portal inside the Nether bred a piglin")
+	}
 	h.rules.Difficulty = diffPeaceful
-	before := len(h.mobs)
-	for i := 0; i < 20000; i++ {
-		h.tickNetherPortal(players, 1, pos.x, pos.y, pos.z, netherPortalBase)
-	}
-	if len(h.mobs) != before {
+	if breeds(dimOverworld, 20000) {
 		t.Error("a portal bred piglins on peaceful")
 	}
 }

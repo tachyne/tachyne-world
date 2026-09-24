@@ -107,7 +107,7 @@ func TestLodestoneTrackerRoundTrips(t *testing.T) {
 	// Two compasses with different targets never merge into one stack.
 	other := st
 	other.lode.x = 6
-	if st.sameExtras(other) {
+	if sameItemComponents(st, other) {
 		t.Error("different lodestone targets must not be mergeable")
 	}
 	// The component reaches the wire: lodestone_tracker with the end's key.

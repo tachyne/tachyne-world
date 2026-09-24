@@ -53,6 +53,7 @@ func TestNetherPlayerTicksTheNether(t *testing.T) {
 	// Sugar cane is the probe: it advances on a random tick with NO light gate,
 	// which matters because the Nether has no skylight at all — a sapling would
 	// never grow there and would prove nothing.
+	h.nether.ForceLoad(x, z, 2) // random ticks run in ticking chunks only
 	h.nether.SetBlock(x, y-1, z, worldgen.Dirt)
 	h.nether.SetBlock(x, y, z, caneMin)
 	h.nether.SetBlock(x, y+1, z, worldgen.Air)

@@ -91,11 +91,15 @@ func (st invStack) patCount() int {
 	return len(st.pats)
 }
 
-// sameExtras reports whether two stacks match on the components that gate
-// stacking (patterns + trim; ids/counts checked by callers).
-func (st invStack) sameExtras(o invStack) bool {
-	return st.pats == o.pats && st.trimMat == o.trimMat && st.trimPat == o.trimPat &&
-		st.bookID == o.bookID && st.lode == o.lode
+// sameItemComponents is ItemStack.isSameItemSameComponents: the same item
+// carrying the same data in every field, whatever the counts. It is the one
+// test for whether two stacks may merge. Each merge site used to list the
+// fields it remembered, and a field added later (a potion, a shulker box's
+// contents, a bundle, a dye colour) was dropped by every site that did not
+// list it: picking a potion up turned it into a plain one.
+func sameItemComponents(a, b invStack) bool {
+	a.count, b.count = 0, 0
+	return a == b
 }
 
 // enchanted reports whether the stack carries any enchantment.
@@ -186,15 +190,24 @@ func stackCap(item int32) int {
 	return stackMax
 }
 
-// add inserts up to count of item, filling existing stacks then empty slots.
-// Returns the changed slot indices and any leftover that didn't fit.
+// add inserts up to count of a plain item (no stored data), filling
+// matching stacks then empty slots. Returns the changed slot indices and any
+// leftover that didn't fit.
 func (inv *inventory) add(item int32, count int) (changed []int, leftover int) {
-	cap := stackCap(item)
+	return inv.addStack(invStack{item: item, count: count})
+}
+
+// addStack inserts a whole stack (Inventory.add → addResource): it tops up
+// stacks that are the same item with the same data, then fills empty slots
+// with copies of it, so whatever the stack carries goes in with it.
+func (inv *inventory) addStack(st invStack) (changed []int, leftover int) {
+	count := st.count
+	cap := stackCap(st.item)
 	for i := range inv.slots {
 		if count == 0 {
 			break
 		}
-		if s := &inv.slots[i]; s.item == item && s.count < cap {
+		if s := &inv.slots[i]; s.count > 0 && s.count < cap && sameItemComponents(*s, st) {
 			n := min(cap-s.count, count)
 			s.count += n
 			count -= n
@@ -207,30 +220,13 @@ func (inv *inventory) add(item int32, count int) (changed []int, leftover int) {
 		}
 		if s := &inv.slots[i]; s.count == 0 {
 			n := min(cap, count)
-			s.item, s.count = item, n
+			*s = st
+			s.count = n
 			count -= n
 			changed = append(changed, i)
 		}
 	}
 	return changed, count
-}
-
-// addStack inserts a stack preserving its durability damage and enchantments:
-// a damaged/enchanted item must not merge into a pristine stack (and tools
-// don't stack anyway), so it takes its own empty slot; plain stacks go
-// through the normal merge path.
-func (inv *inventory) addStack(st invStack) (changed []int, leftover int) {
-	if st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 &&
-		st.sameExtras(invStack{}) {
-		return inv.add(st.item, st.count)
-	}
-	for i := range inv.slots {
-		if s := &inv.slots[i]; s.count == 0 {
-			*s = st
-			return []int{i}, 0
-		}
-	}
-	return nil, st.count
 }
 
 // hasRoomFor reports whether at least part of a stack would fit. Vanilla's
@@ -240,15 +236,13 @@ func (inv *inventory) hasRoomFor(st invStack) bool {
 	if st.count == 0 {
 		return true
 	}
-	mergeable := st.dmg == 0 && !st.enchanted() && st.name == "" && st.mapID == 0 &&
-		st.sameExtras(invStack{})
 	cap := stackCap(st.item)
 	for i := range inv.slots {
 		s := &inv.slots[i]
 		if s.count == 0 {
 			return true
 		}
-		if mergeable && s.item == st.item && s.count < cap {
+		if s.count < cap && sameItemComponents(*s, st) {
 			return true
 		}
 	}

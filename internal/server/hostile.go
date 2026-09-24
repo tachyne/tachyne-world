@@ -176,11 +176,18 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	}
 	h.spawnArrow(players, m, t)
 	h.playSound(players, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
-	// RangedBowAttackGoal cadence (vanilla behavior): 40 ticks on easy/normal,
-	// 20 on hard. attackCD counts mob-updates (2 ticks) incl. this one.
+	// RangedBowAttackGoal cadence (AbstractSkeleton.getAttackInterval): 40
+	// ticks on easy/normal, 20 on hard; a parched draws slower, 70 and 50.
+	// attackCD counts mob-updates (2 ticks) incl. this one.
 	m.attackCD = 19
 	if h.rules.Difficulty == diffHard {
 		m.attackCD = 9
+	}
+	if m.etype == entityParched {
+		m.attackCD = 34
+		if h.rules.Difficulty == diffHard {
+			m.attackCD = 24
+		}
 	}
 }
 

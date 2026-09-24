@@ -329,7 +329,7 @@ func (h *hub) findSortTarget(m *mob) (simPos, bool) {
 // chestHasRoom reports whether a stack can be (partly) placed in a chest.
 func chestHasRoom(c *chest, s invStack) bool {
 	for _, slot := range c.slots {
-		if slot.item == 0 || (slot.item == s.item && slot.dmg == s.dmg && slot.ench == s.ench && slot.count < 64) {
+		if slot.item == 0 || (sameItemComponents(slot, s) && slot.count < stackCap(s.item)) {
 			return true
 		}
 	}
@@ -340,8 +340,8 @@ func chestHasRoom(c *chest, s invStack) bool {
 func depositIntoChest(c *chest, s invStack) invStack {
 	for i := range c.slots { // top up matching stacks first
 		d := &c.slots[i]
-		if d.item == s.item && d.dmg == s.dmg && d.ench == s.ench && d.count < 64 {
-			room := 64 - d.count
+		if d.count > 0 && sameItemComponents(*d, s) && d.count < stackCap(s.item) {
+			room := stackCap(s.item) - d.count
 			n := min(room, s.count)
 			d.count += n
 			if s.count -= n; s.count == 0 {

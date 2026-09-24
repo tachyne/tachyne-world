@@ -48,10 +48,13 @@ func panicsAt(m *mob, dt dmgType) bool {
 	return dt.has(tagPanicCauses)
 }
 
-// panicNever is the roster with no PanicGoal at all.
+// panicNever is the roster with no PanicGoal at all. A blow or an arrow
+// consults it too: until 2026-09-24 any struck non-hostile bolted, so a hit
+// ocelot, snow golem or zombie horse ran and an armadillo fled instead of
+// rolling up.
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
-	for _, n := range []string{"goat", "armadillo", "zombie_horse"} {
+	for _, n := range []string{"goat", "armadillo", "zombie_horse", "ocelot", "snow_golem"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}

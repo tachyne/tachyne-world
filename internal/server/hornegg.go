@@ -99,7 +99,7 @@ func speciesStateMeta(m *mob) []byte {
 		if m.cbState == cbCharging {
 			return pillagerChargingMeta(m)
 		}
-	case entitySkeleton, entityStray, entityBogged, entityIllusioner:
+	case entitySkeleton, entityStray, entityBogged, entityParched, entityIllusioner:
 		if m.handActive {
 			return livingFlagsMeta(m.eid, true)
 		}

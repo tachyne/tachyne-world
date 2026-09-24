@@ -76,7 +76,7 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 		return true
 	}
 	if isTNT(target) {
-		s.hub.post(evPrimeTNT{x: x, y: y, z: z})
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
@@ -114,19 +114,19 @@ func (s *Server) useFireCharge(p *player, x, y, z, dx, dy, dz int, seq int32) {
 	s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 }
 
-type evPrimeTNT struct{ x, y, z int }
+type evPrimeTNT struct{ dim, x, y, z int }
 
 func (evPrimeTNT) isHubEvent() {}
 
-// primeTNT swaps a TNT block for the ticking entity.
+// primeTNT swaps a TNT block for the ticking entity, in the dimension the
+// block simulation is running in (redstone, fire, dispensers). It lit the
+// overworld's coordinates until 2026-09-24, so Nether TNT went off at home.
 func (h *hub) primeTNT(players map[int32]*tracked, x, y, z int, fuse int) {
-	h.primeTNTIn(players, 0, x, y, z, fuse)
+	h.primeTNTIn(players, h.rsDim, x, y, z, fuse)
 }
 
-// primeTNTIn lights TNT in the dimension it actually stands in. The overworld
-// wrapper above is what the redstone and dispenser paths use; a chain reaction
-// inside an explosion has to carry the dimension through, or nether TNT would
-// go off in the overworld.
+// primeTNTIn lights TNT in the dimension it actually stands in. A chain
+// reaction inside an explosion has to carry the dimension through.
 func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int) {
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
 	eid := h.allocEID()
@@ -142,7 +142,7 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	b = protocol.AppendVarInt(b, metaTypeInt)
 	b = protocol.AppendVarInt(b, int32(fuse))
 	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
-	h.rsSound(players, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
+	h.playSoundDim(players, dim, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
 	h.vib(dim, freqPrimeFuse, x, y, z, 0)
 }
 

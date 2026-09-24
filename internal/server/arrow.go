@@ -110,7 +110,7 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	vx := (dx/d + tri()) * arrowSpeed
 	vy := (dy/d + tri()) * arrowSpeed
 	vz := (dz/d + tri()) * arrowSpeed
-	a := h.launchArrow(players, ox, oy, oz, vx, vy, vz)
+	a := h.launchProjectileIn(players, entityArrow, m.dim, ox, oy, oz, vx, vy, vz)
 	a.shooter, a.dmg = m.eid, arrowDamage
 	// ProjectileUtil.getMobArrow carries the bow's enchantments: Power adds
 	// 0.5·lvl+0.5 to the base damage (before ×speed), Punch its knockback,
@@ -133,12 +133,6 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 		a.poison = boggedPoisonSecs // Bogged.getArrow: POISON, 100 ticks
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
-}
-
-// launchArrow spawns an arrow projectile with a velocity; callers stamp
-// shooter/damage on the returned entity.
-func (h *hub) launchArrow(players map[int32]*tracked, x, y, z, vx, vy, vz float64) *arrowEntity {
-	return h.launchProjectileIn(players, entityArrow, 0, x, y, z, vx, vy, vz)
 }
 
 // launchProjectile spawns any arrow-physics projectile (arrow/snowball/egg).
@@ -522,7 +516,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				if shooter := players[a.shooter]; shooter != nil {
 					h.provoke(m, shooter)
 				}
-			} else if !m.hostile {
+			} else if !m.hostile && panicsAt(m, projectileDamageOf(a)) {
 				m.panic, m.fleeX, m.fleeZ = panicTicks, a.x, a.z
 			} else {
 				m.anger = spiderAnger

@@ -281,8 +281,9 @@ var speciesTable = map[int]*speciesDef{
 		held: "bow", drops: []specDrop{{item: "bone", rnd: 2}, {item: "arrow", rnd: 2}}},
 	// parched (1.21.11): a desert skeleton whose arrows inflict Weakness (see
 	// spawnArrow). AbstractSkeleton stats + MAX_HEALTH 16 (vanilla Parched).
-	// Renders as a plain Skeleton on pre-1.21.11 clients.
-	entityParched: {name: "parched", health: 16, speed: 0.25, arch: archRanged, burns: true,
+	// Renders as a plain Skeleton on pre-1.21.11 clients. It does not burn:
+	// 26.3's #burn_in_daylight leaves it out.
+	entityParched: {name: "parched", health: 16, speed: 0.25, arch: archRanged,
 		held: "bow", drops: []specDrop{{item: "bone", rnd: 2}, {item: "arrow", rnd: 2}}},
 	entityWitherSkeleton: {name: "wither_skeleton", health: 20, speed: 0.25, damage: 4,
 		arch: archHostile, wither: 10, held: "stone_sword", // ATTACK_DAMAGE base 4 (source)

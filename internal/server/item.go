@@ -162,14 +162,7 @@ func (h *hub) updateItems(players map[int32]*tracked) {
 			continue
 		}
 		for oid, other := range h.items {
-			if oid == eid || other.item != it.item || other.dmg != 0 || it.dmg != 0 ||
-				other.ench != it.ench || other.mapID != it.mapID ||
-				other.pats != it.pats || other.trimMat != it.trimMat || other.trimPat != it.trimPat ||
-				other.bookID != it.bookID || other.boxID != it.boxID ||
-				other.hiveID != it.hiveID ||
-				other.bundleID != it.bundleID || other.potion != it.potion || other.repairCost != it.repairCost ||
-				other.instrument != it.instrument || other.name != it.name ||
-				other.lode != it.lode ||
+			if oid == eid || !sameItemComponents(it.stack(), other.stack()) ||
 				it.count+other.count > stackCap(it.item) {
 				continue
 			}

@@ -11,6 +11,38 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-24
+
+### Fixed
+- **Items keep everything they carry when picked up.** Picking up a potion,
+  a shulker box, a bundle, dyed leather, a firework rocket, a goat horn, a
+  decorated pot, a suspicious stew or a silk-touched hive used to strip it
+  back to the plain item, and a box or bundle lost what was inside. This
+  included items dropped on death. Every place that decides whether two
+  stacks merge now uses vanilla's single rule, "same item, same data":
+  inventories, hoppers, dispensers, pots, crafting results and items lying
+  on the ground.
+- **The Nether and the End act in their own dimension.** Several actions
+  there used to happen at the same coordinates in the overworld instead:
+  - redstone-lit, dispensed and flint-and-steel TNT;
+  - everything a dispenser throws or drops;
+  - spawn eggs;
+  - note blocks and bells;
+  - arrows from skeletons.
+  Redstone now hears about blocks removed in the Nether and End. Nether
+  portals breed zombified piglins in the overworld, as in vanilla, and no
+  longer inside the Nether.
+- **Mob combat closer to vanilla.**
+  - Armed mobs hit one point too hard. A weapon now adds only its own
+    bonus, so a vindicator hits for 13, not 14.
+  - Blazes hit for 6 in melee, not 3.
+  - Witches no longer hunt villagers and iron golems, and ravagers leave
+    baby villagers alone.
+  - The parched now shoots its Weakness arrows, on its slower 70-tick draw,
+    and no longer burns in daylight.
+  - Hitting an ocelot, a snow golem, a zombie horse or an armadillo no
+    longer sends it running.
+
 ## 2026-09-23
 
 ### Added

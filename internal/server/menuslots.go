@@ -100,8 +100,7 @@ func (h *hub) resultTake(t *tracked, res invStack, mode int32) bool {
 	switch {
 	case t.cursor.item == 0:
 		t.cursor = res
-	case t.cursor.item == res.item && t.cursor.dmg == res.dmg && t.cursor.ench == res.ench && t.cursor.name == res.name &&
-		t.cursor.mapID == res.mapID && t.cursor.count+res.count <= stackCap(res.item):
+	case sameItemComponents(t.cursor, res) && t.cursor.count+res.count <= stackCap(res.item):
 		t.cursor.count += res.count
 	default:
 		return false
@@ -118,7 +117,7 @@ func (inv *inventory) roomFor(st invStack) int {
 		switch {
 		case s.item == 0 || s.count == 0:
 			room += cap
-		case s.item == st.item && s.dmg == st.dmg && s.ench == st.ench && s.name == st.name && s.mapID == st.mapID:
+		case sameItemComponents(*s, st):
 			room += cap - s.count
 		}
 	}
@@ -132,6 +131,5 @@ func (h *hub) canTakeResult(t *tracked, res invStack, mode int32) bool {
 	if mode == 1 {
 		return t.inv.roomFor(res) >= res.count
 	}
-	return t.cursor.item == 0 || (t.cursor.item == res.item && t.cursor.dmg == res.dmg && t.cursor.ench == res.ench &&
-		t.cursor.name == res.name && t.cursor.mapID == res.mapID && t.cursor.count+res.count <= stackCap(res.item))
+	return t.cursor.item == 0 || (sameItemComponents(t.cursor, res) && t.cursor.count+res.count <= stackCap(res.item))
 }

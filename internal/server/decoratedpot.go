@@ -44,7 +44,7 @@ func (h *hub) usePot(players map[int32]*tracked, t *tracked, pos blockPos) bool 
 	stored := h.pots[key]
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
 
-	fits := stored.item == 0 || (potStacks(stored, held) && stored.count < stackCap(stored.item))
+	fits := stored.item == 0 || (sameItemComponents(stored, held) && stored.count < stackCap(stored.item))
 	if held.item == 0 || held.count == 0 || !fits {
 		// useWithoutItem: the pot rocks back and refuses. Nothing comes out —
 		// the only way to empty a pot is to break it.
@@ -117,14 +117,6 @@ func (h *hub) spillPot(players map[int32]*tracked, dim int, pos blockPos, newSta
 	}
 }
 
-// potStacks is ItemStack.isSameItemSameComponents for what a pot cares
-// about: the same item, same damage, same enchantments, same name, same
-// extras — a pot will not mix two different swords into one pile.
-func potStacks(a, b invStack) bool {
-	return a.item == b.item && a.dmg == b.dmg && a.ench == b.ench &&
-		a.name == b.name && a.sameExtras(b) && a.potion == b.potion
-}
-
 // potInsert is the hopper's side of the pot (ContainerSingleItem accepts one
 // item at a time from above). Reports whether the item went in.
 func (h *hub) potInsert(pos simPos, st invStack) bool {
@@ -135,7 +127,7 @@ func (h *hub) potInsert(pos simPos, st invStack) bool {
 		one := st
 		one.count = 1
 		h.pots[pos] = one
-	case potStacks(stored, st) && stored.count < stackCap(stored.item):
+	case sameItemComponents(stored, st) && stored.count < stackCap(stored.item):
 		stored.count++
 		h.pots[pos] = stored
 	default:

@@ -1046,7 +1046,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.hostile {
 			switch m.etype {
-			case entitySkeleton, entityStray, entityBogged:
+			case entitySkeleton, entityStray, entityBogged, entityParched:
 				h.bowDrawTick(players, m)   // the pull before the shot
 				h.skeletonShoot(players, m) // ranged: arrows from bow distance
 			case entityPillager:

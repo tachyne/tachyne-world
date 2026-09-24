@@ -190,7 +190,7 @@ func binInsert(slots []invStack, st invStack) int {
 		if left == 0 {
 			break
 		}
-		if s.item == st.item && s.count > 0 && s.dmg == st.dmg && s.ench == st.ench && s.name == st.name && s.color == st.color {
+		if s.count > 0 && sameItemComponents(*s, st) {
 			room := stackCap(s.item) - s.count // per-item cap: 16 for eggs, 1 for tools, not a flat 64
 			if room <= 0 {
 				continue
@@ -337,19 +337,19 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// all fire as an arrow. A tipped arrow carries its potion's effects onto
 		// a hit; spectral's glow tag has no engine effect, so it flies as a plain
 		// arrow.
-		a := h.launchArrow(players, fx, fy, fz, vx, vy, vz)
+		a := h.launchProjectileIn(players, entityArrow, h.rsDim, fx, fy, fz, vx, vy, vz)
 		a.dmg, a.playerShot = arrowDamage, true // hits mobs; retrievable when stuck
 		if item == itemTippedArrow {
 			a.tipped, a.potion = true, st.potion
 		}
 	case dispense && item == itemSnowball:
-		h.launchProjectileIn(players, entitySnowball, 0, fx, fy, fz, vx, vy, vz).breaks = true
+		h.launchProjectileIn(players, entitySnowball, h.rsDim, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && (item == itemEgg || item == itemBlueEgg || item == itemBrownEgg):
 		// All three egg variants throw as an egg projectile (vanilla registers
 		// BLUE_EGG/BROWN_EGG alongside EGG).
-		h.launchProjectileIn(players, entityEggProj, 0, fx, fy, fz, vx, vy, vz).breaks = true
+		h.launchProjectileIn(players, entityEggProj, h.rsDim, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && item == itemFireCharge:
-		h.launchProjectileIn(players, entitySmallFireball, 0, fx, fy, fz, vx, vy, vz)
+		h.launchProjectileIn(players, entitySmallFireball, h.rsDim, fx, fy, fz, vx, vy, vz)
 	case dispense && item == itemXPBottle:
 		// Vanilla registerProjectileBehavior: the bottle flies and shatters.
 		a := h.launchProjectileIn(players, entityXPBottle, pos.dim, fx, fy, fz, vx, vy, vz)
@@ -403,11 +403,11 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && item == itemWindCharge:
 		// Vanilla WindChargeItem projectile behaviour — the same burst the Breeze
 		// throws, launched out of the face.
-		h.launchProjectileIn(players, entityWindCharge, 0, fx, fy, fz, vx, vy, vz)
+		h.launchProjectileIn(players, entityWindCharge, h.rsDim, fx, fy, fz, vx, vy, vz)
 	case dispense && (item == itemSplashPotion || item == itemLingerPotion):
 		// Thrown-potion projectile: shatters into a splash / lingering cloud
 		// carrying this stack's potion kind.
-		a := h.launchProjectileIn(players, entitySplashProj, 0, fx, fy, fz, vx, vy, vz)
+		a := h.launchProjectileIn(players, entitySplashProj, h.rsDim, fx, fy, fz, vx, vy, vz)
 		a.splash, a.breaks, a.potion = true, true, st.potion
 		a.lingering = item == itemLingerPotion
 	case dispense && item == itemPotion && st.potion == potWater:
@@ -421,7 +421,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 				float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			*st = invStack{item: itemGlassBottle, count: 1}
 			took = false
-		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && item == itemGlassBottle:
@@ -439,7 +439,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			} else {
 				st.count--
 				if binInsert(c.slots, hb) > 0 {
-					h.spawnItem(players, itemHoneyBottle, 1, fx, fy, fz) // no room: pop the bottle out
+					h.spawnItemIn(players, h.rsDim, itemHoneyBottle, 1, fx, fy, fz) // no room: pop the bottle out
 				}
 			}
 		} else if worldgen.IsWater(w.At(front.x, front.y, front.z)) {
@@ -450,10 +450,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			} else {
 				st.count--
 				if binInsert(c.slots, wb) > 0 {
-					h.spawnItem(players, itemGlassBottle, 1, fx, fy, fz) // no room: refund a bottle
+					h.spawnItemIn(players, h.rsDim, itemGlassBottle, 1, fx, fy, fz) // no room: refund a bottle
 				}
 			}
-		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && item == itemWitherSkull:
@@ -463,7 +463,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// (skull kept, like OptionalDispenseItemBehavior).
 		if w.At(front.x, front.y, front.z) == worldgen.Air {
 			h.rsSet(players, front, witherSkullBlock)
-			h.checkWitherBuild(players, 0, 0, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
+			h.checkWitherBuild(players, 0, pos.dim, front.x, front.y, front.z, witherSkullBlock) // no builder: a machine placed the skull
 		} else {
 			took = false
 		}
@@ -485,7 +485,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			h.armorStands[sd.eid] = sd
 			h.toNearbyEv(players, sd.dim, sd.x, sd.z, h.standAddEv(sd))
 			h.rsSound(players, "minecraft:entity.armor_stand.place", sndBlock, sd.x, sd.y, sd.z, 0.75, 0.8)
-		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && standSlotFor(item) >= 0:
@@ -505,7 +505,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 		}
 		if !equipped {
-			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 				it.dmg, it.ench = st.dmg, st.ench
 			}
 		}
@@ -523,16 +523,16 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			*st = invStack{} // worn out
 		}
 	case dispense && item == itemBoneMeal:
-		if !h.applyBoneMeal(players, 0, front.x, front.y, front.z, w.At(front.x, front.y, front.z)) {
+		if !h.applyBoneMeal(players, pos.dim, front.x, front.y, front.z, w.At(front.x, front.y, front.z)) {
 			// nothing growable ahead → fall back to tossing the meal out
-			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 				it.dmg, it.ench = st.dmg, st.ench
 			}
 		}
 	case dispense && isEgg:
 		// Spawn the egg's mob in the block ahead (facing offset so it clears
 		// the dispenser); vanilla consumes the egg whether or not it takes.
-		h.spawnMob(players, eggEnt, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
+		h.spawnMobIn(players, eggEnt, h.rsDim, float64(front.x)+0.5, float64(front.y), float64(front.z)+0.5)
 	case dispense && item == int32(itemShears):
 		// A full hive ahead is sheared first (tryShearBeehive): three honeycomb
 		// pop out and the bees are released CALM — a dispenser has nobody to
@@ -543,7 +543,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		if fs := w.At(front.x, front.y, front.z); isBeeHome(fs) && honeyLevel(fs) >= beeMaxHoney {
 			h.rsSound(players, "minecraft:block.beehive.shear", sndBlock,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5, 1, 1)
-			h.spawnItem(players, int32(itemHoneycomb), beeHoneycombYield,
+			h.spawnItemIn(players, h.rsDim, int32(itemHoneycomb), beeHoneycombYield,
 				float64(front.x)+0.5, float64(front.y)+0.5, float64(front.z)+0.5)
 			h.releaseHiveBees(players, front, nil)
 			h.rsSet(players, front, withHoney(fs, 0))
@@ -566,7 +566,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// Place a boat/minecart in the cell ahead (rail for carts, water for
 		// boats); if it can't be placed, toss the item like the default.
 		if !h.spawnVehicleAt(players, pos.dim, vehEt, front.x, front.y, front.z) {
-			if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+			if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 				it.dmg, it.ench = st.dmg, st.ench
 			}
 		}
@@ -574,7 +574,7 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 		// Wax the copper block ahead (HoneycombItem.getWaxed); otherwise toss.
 		if ws, ok := waxedCopper(w.At(front.x, front.y, front.z)); ok {
 			h.rsSet(players, front, ws)
-		} else if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+		} else if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	case dispense && (item == itemBucketH2O || item == itemBucketLav):
@@ -614,12 +614,12 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			} else { // empty buckets stack — the filled one finds its own slot
 				st.count--
 				if binInsert(c.slots, invStack{item: filled, count: 1}) > 0 {
-					h.spawnItem(players, filled, 1, fx, fy, fz)
+					h.spawnItemIn(players, h.rsDim, filled, 1, fx, fy, fz)
 				}
 			}
 		}
 	default: // dropper (or a dispenser with a plain item): toss it out
-		if it := h.spawnItem(players, item, 1, fx, fy, fz); it != nil {
+		if it := h.spawnItemIn(players, h.rsDim, item, 1, fx, fy, fz); it != nil {
 			it.dmg, it.ench = st.dmg, st.ench
 		}
 	}
@@ -734,7 +734,7 @@ func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, ab
 			} else {
 				it.count = left
 			}
-			h.playSound(players, "minecraft:entity.item.pickup", sndBlock,
+			h.playSoundDim(players, it.dim, "minecraft:entity.item.pickup", sndBlock,
 				it.x, it.y, it.z, 0.2, 1.4)
 			return true
 		}

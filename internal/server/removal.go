@@ -80,9 +80,6 @@ func (h *hub) afterRemovalIn(players map[int32]*tracked, dim int, pos blockPos, 
 			h.setBlockAt(players, dim, front, worldgen.Air)
 		}
 	}
-	if dim != dimOverworld {
-		return // redstone and comparators simulate the overworld only
-	}
 	if signalSource(old) {
 		h.scheduleSignalAround(pos)
 	}

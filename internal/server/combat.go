@@ -112,7 +112,9 @@ func meleeDamageFor(etype int) float64 {
 	case entityEnderman:
 		return endermanDamage
 	case entityZombifiedPiglin:
-		return 5 // gold sword swing
+		return 5 // ZombifiedPiglin.createAttributes; the golden sword adds its +3
+	case entityBlaze:
+		return 6 // Blaze.createAttributes ATTACK_DAMAGE (it fell through to the zombie's 3)
 	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return float64(d.damage)
@@ -420,7 +422,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			m.golemGrudgeEID, m.golemGrudgeLeft = t.p.eid, golemGrudgeTicks
 		} else if m.retaliates { // wolf/goat/bee/llama: a hit turns the herd hostile
 			h.provoke(m, t)
-		} else if !m.hostile {
+		} else if !m.hostile && panicsAt(m, dt) { // the species' own PanicGoal, if it has one
 			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, t.x, t.z, 0
 		} else {
 			if m.etype == entityWarden {

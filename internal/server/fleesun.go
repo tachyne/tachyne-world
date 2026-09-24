@@ -18,7 +18,7 @@ const (
 
 // skeletonKind reports the AbstractSkeleton family that carries FleeSunGoal.
 func skeletonKind(etype int) bool {
-	return etype == entitySkeleton || etype == entityStray || etype == entityBogged
+	return etype == entitySkeleton || etype == entityStray || etype == entityBogged || etype == entityParched
 }
 
 // fleeSunStep is the goal's tick: returns whether it is steering the
