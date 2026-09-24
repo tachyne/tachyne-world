@@ -132,7 +132,7 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evFillBottle{eid: p.eid, slot: slot})
 		case itemShield:
 			h.post(evBlockStart{eid: p.eid, hand: e.Hand})
-		case itemSnowball, itemEgg:
+		case itemSnowball, itemEgg, itemBlueEgg, itemBrownEgg:
 			h.post(evThrow{eid: p.eid, item: item})
 		case itemSplashPotion, itemLingerPotion:
 			h.post(evThrowPotion{eid: p.eid, slot: int(slot)})

@@ -246,7 +246,7 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 	switch item {
 	case itemSnowball:
 		etype = entitySnowball
-	case itemEgg:
+	case itemEgg, itemBlueEgg, itemBrownEgg:
 		etype = entityEggProj
 	default:
 		return
@@ -272,6 +272,10 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 	a := h.launchProjectileIn(players, etype, t.dim, t.x, t.y+1.5, t.z, dx*throwSpeed, dy*throwSpeed, dz*throwSpeed)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks = true, true // throwables shatter on impact, never stick
-	a.egg = item == itemEgg
-	h.playSoundDim(players, t.dim, "minecraft:entity.snowball.throw", sndPlayer, t.x, t.y, t.z, 0.5, 0.6+h.rng.Float32()*0.4)
+	snd := "minecraft:entity.snowball.throw"
+	if etype == entityEggProj {
+		a.egg, a.eggItem = true, item
+		snd = "minecraft:entity.egg.throw" // EggItem.use
+	}
+	h.playSoundDim(players, t.dim, snd, sndPlayer, t.x, t.y, t.z, 0.5, 0.4/(h.rng.Float32()*0.4+0.8))
 }

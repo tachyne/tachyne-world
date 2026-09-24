@@ -62,6 +62,7 @@ type arrowEntity struct {
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
 	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
+	eggItem    int32    // …which egg: white, brown or blue (the chick's variant)
 	xpBottle   bool     // a bottle o' enchanting: shatters into experience orbs
 	pearl      bool     // an ender pearl: teleports its thrower where it lands
 	poison     int      // seconds of poison on a hit: a witch's splash, a bogged's arrow
@@ -279,13 +280,6 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					if a.pearl {
 						h.pearlLand(players, a)
 					}
-					if a.egg && h.rng.Intn(8) == 0 { // the classic egg-machine gamble
-						chick := h.spawnAnimal(players, entityChicken, int(a.x), int(a.z))
-						if chick != nil {
-							chick.baby, chick.growLeft = true, growUpTicks
-							h.toTracking(players, chick.eid, 0, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
-						}
-					}
 					break
 				}
 				bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
@@ -301,6 +295,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			a.x, a.y, a.z = px, py, pz
 		}
 		if hit {
+			if a.egg { // ThrownEgg.onHit: whatever it struck, block or creature
+				h.hatchEgg(players, a)
+			}
 			if a.xpBottle { // a bottle o' enchanting pays out where it broke
 				h.breakXPBottle(players, a)
 			}
@@ -704,4 +701,36 @@ func projectileHitDamage(a *arrowEntity, m *mob) int {
 		return 0
 	}
 	return a.dmg
+}
+
+// hatchEgg is ThrownEgg.onHit: one egg in eight hatches a chick where it
+// broke, and one of those in thirty-two hatches four. The chick is the
+// variant its egg was laid by: brown warm, blue cold, white temperate.
+func (h *hub) hatchEgg(players map[int32]*tracked, a *arrowEntity) {
+	if h.rng.Intn(8) != 0 {
+		return
+	}
+	n := 1
+	if h.rng.Intn(32) == 0 {
+		n = 4
+	}
+	variant := int32(tempTemperate)
+	switch a.eggItem {
+	case itemBrownEgg:
+		variant = tempWarm
+	case itemBlueEgg:
+		variant = tempCold
+	}
+	for i := 0; i < n; i++ {
+		chick := h.spawnSpecies(players, entityChicken, a.dim, a.x, a.y, a.z)
+		if chick == nil {
+			break
+		}
+		chick.baby, chick.growLeft = true, growUpTicks
+		chick.variant, chick.variantSet = variant, true
+		h.toTracking(players, chick.eid, chick.dim, chick.x, chick.z, metaEv(babyMeta(chick.eid, true)))
+		if meta := variantMeta(chick); meta != nil {
+			h.toTracking(players, chick.eid, chick.dim, chick.x, chick.z, metaEv(meta))
+		}
+	}
 }

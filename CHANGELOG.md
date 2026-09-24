@@ -20,6 +20,12 @@ the public history since the project was open-sourced on 2026-07-10.
   Adventure players eat and drink as survival players do. Creative players
   can eat on a full hunger bar, and keep the food or potion as vanilla's
   do.
+- **Eggs hatch properly.**
+  - Brown and blue eggs can be thrown (before, only white ones could).
+  - Chicks hatch where the egg broke, in any dimension, and hatch warm or
+    cold to match the egg.
+  - One hatching in thirty-two gives four chicks.
+  - Eggs hatch when they hit a creature and when fired from a dispenser.
 - **Bundles empty when you hold them.** Using a bundle tips its contents
   out one at a time, as in vanilla. Before, holding a bundle did nothing.
 - **Tools wear at vanilla's rates.**

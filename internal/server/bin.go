@@ -347,7 +347,8 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	case dispense && (item == itemEgg || item == itemBlueEgg || item == itemBrownEgg):
 		// All three egg variants throw as an egg projectile (vanilla registers
 		// BLUE_EGG/BROWN_EGG alongside EGG).
-		h.launchProjectileIn(players, entityEggProj, h.rsDim, fx, fy, fz, vx, vy, vz).breaks = true
+		a := h.launchProjectileIn(players, entityEggProj, h.rsDim, fx, fy, fz, vx, vy, vz)
+		a.breaks, a.egg, a.eggItem = true, true, item // a dispensed egg hatches too
 	case dispense && item == itemFireCharge:
 		h.launchProjectileIn(players, entitySmallFireball, h.rsDim, fx, fy, fz, vx, vy, vz)
 	case dispense && item == itemXPBottle:

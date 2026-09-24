@@ -98,3 +98,33 @@ func TestBundleEmptiesWhileHeld(t *testing.T) {
 		t.Errorf("the bundle did not empty and stop: %d left, using %d", n, pl.eatingSlot)
 	}
 }
+
+// ThrownEgg.onHit: chicks hatch where the egg broke, in its dimension, and
+// take the egg's variant; a brown or blue egg can be thrown at all.
+func TestEggsHatchTheirOwnVariant(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.inv.slots[0] = invStack{item: itemBlueEgg, count: 4}
+	h.throwProjectile(players, pl, itemBlueEgg)
+	var thrown *arrowEntity
+	for _, a := range h.arrows {
+		thrown = a
+	}
+	if thrown == nil || !thrown.egg || thrown.eggItem != itemBlueEgg {
+		t.Fatalf("a blue egg did not fly as an egg: %+v", thrown)
+	}
+	a := &arrowEntity{dim: dimNether, x: 10.5, y: 70, z: 10.5, egg: true, eggItem: itemBrownEgg}
+	for i := 0; i < 400 && len(h.mobs) == 0; i++ {
+		h.hatchEgg(players, a)
+	}
+	if len(h.mobs) == 0 {
+		t.Fatal("no chick in 400 eggs")
+	}
+	for _, m := range h.mobs {
+		if m.etype != entityChicken || !m.baby || m.dim != dimNether || m.variant != tempWarm || m.y != 70 {
+			t.Errorf("hatched %+v, want a warm baby chicken at the egg in the Nether", m)
+		}
+	}
+}
