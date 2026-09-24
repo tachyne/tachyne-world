@@ -20,9 +20,12 @@ import (
 // every other player and mob, chat included). emit receives domain frames.
 func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	name := id.Name
-	ids.learn(name, id.UUID) // usercache.json: this name is this UUID now
+	ids.learn(name, id.UUID, id.Edition) // usercache.json: this name is this UUID now
 	p := newPlayer(s.hub.mintPlayerEID(), name, id.UUID)
 	s.claimLegacyData(name, p.key())
+	if id.Edition == "bedrock" {
+		s.claimBedrockRename(name, p.key())
+	}
 	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
 	var yaw, pitch float32
@@ -72,7 +75,7 @@ func (r *remotePlayer) Gamemode() int32 {
 // gamemode come from the snapshot, not the on-disk store.
 func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ byte, payload []byte)) (attach.Remote, error) {
 	name, uuid := id.Name, id.UUID
-	ids.learn(name, uuid)
+	ids.learn(name, uuid, id.Edition)
 	ps, ok := s.hub.claimPending(token)
 	if !ok {
 		return nil, fmt.Errorf("resume: no pending handover for token %q", token)
@@ -566,5 +569,30 @@ func (s *Server) claimLegacyData(name, key string) {
 	}
 	if len(moved) > 0 {
 		log.Printf("player %s (%s): moved their %s from the name key to the UUID", name, key, strings.Join(moved, ", "))
+	}
+}
+
+// claimBedrockRename carries a Bedrock player across the gateway's move to
+// Floodgate's identity ("." + gamertag, the XUID UUID): what was saved under
+// the bare gamertag, and under the UUID that gamertag last joined with, is
+// theirs, and the old UUID is recorded as moved so their pets follow.
+func (s *Server) claimBedrockRename(name, key string) {
+	bare := strings.TrimPrefix(name, ".")
+	if bare == name {
+		return // not a prefixed name: nothing was renamed
+	}
+	for _, old := range []string{bare, strings.ReplaceAll(bare, "_", " ")} {
+		u, known := ids.cached(old)
+		// A Java player who has joined with the bare name owns it. Entries
+		// from before editions were cached are told apart by the UUID: a
+		// Java player's (offline) one is derived from the name.
+		if known && (u.Edition == "java" || (u.Edition == "" && u.UUID == offlineUUIDString(old))) {
+			continue
+		}
+		s.claimLegacyData(old, key)
+		if known && u.UUID != key {
+			s.claimLegacyData(u.UUID, key)
+			ids.recordMove(u.UUID, key)
+		}
 	}
 }

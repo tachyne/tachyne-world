@@ -190,3 +190,91 @@ func keysOf(m map[string]json.RawMessage) []string {
 	}
 	return out
 }
+
+// bedrockRig is a world whose stores hold EdgeZA1951's data the way the
+// switch found it.
+func bedrockRig(t *testing.T) (*Server, string) {
+	t.Helper()
+	dir := t.TempDir()
+	useIDs(t, loadPlayerIDs(dir))
+	modes := filepath.Join(dir, "players.json")
+	writeJSONFile(t, modes, map[string]int{"EdgeZA1951": gmCreative})
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	inv := filepath.Join(dir, "inventories.json")
+	writeJSONFile(t, inv, map[string]*savedInv{"EdgeZA1951": {XPLevel: 7}})
+	s.hub.invs = newInvStore(inv)
+	return s, dir
+}
+
+// Floodgate's identity renames a Bedrock player (".EdgeZA1951", the XUID
+// UUID): what was saved under the bare gamertag follows them.
+func TestBedrockRenameClaimsNameKeyedData(t *testing.T) {
+	s, _ := bedrockRig(t)
+	u, _ := parseUUIDString(bedrockXUID)
+	p := newPlayer(1, ".EdgeZA1951", u)
+	ids.learn(p.name, p.uuid, "bedrock")
+	s.claimLegacyData(p.name, p.key())
+	s.claimBedrockRename(p.name, p.key())
+	pl := testTracked()
+	s.hub.invs.loadInto(pl, p.key())
+	if pl.xpLevel != 7 || s.modes.get(p.key()) != gmCreative {
+		t.Errorf("the renamed Bedrock player lost their data (xp %d, mode %d)", pl.xpLevel, s.modes.get(p.key()))
+	}
+}
+
+// One who joined under the old identity since the switch (data and a pet
+// under that UUID) keeps both after the rename.
+func TestBedrockRenameFollowsTheOldUUID(t *testing.T) {
+	s, dir := bedrockRig(t)
+	oldU, _ := parseUUIDString(bedrockOld)
+	before := newPlayer(1, "EdgeZA1951", oldU)
+	ids.learn(before.name, before.uuid, "bedrock")
+	s.claimLegacyData(before.name, before.key()) // their join under the old scheme
+	h := s.hub
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	cat := h.spawnSpecies(players, entityCat, dimOverworld, 0.5, 180, 0.5)
+	cat.tamed, cat.ownerUUID = true, oldU
+
+	newU, _ := parseUUIDString(bedrockXUID)
+	after := newPlayer(2, ".EdgeZA1951", newU)
+	ids.learn(after.name, after.uuid, "bedrock")
+	s.claimLegacyData(after.name, after.key())
+	s.claimBedrockRename(after.name, after.key())
+	pl := testTracked()
+	h.invs.loadInto(pl, after.key())
+	if pl.xpLevel != 7 || s.modes.get(after.key()) != gmCreative {
+		t.Errorf("data under the old identity did not follow (xp %d)", pl.xpLevel)
+	}
+	tr := &tracked{p: after}
+	h.resolvePetOwners(tr)
+	if cat.owner != after.eid || cat.ownerUUID != newU {
+		t.Errorf("the cat still belongs to %x", cat.ownerUUID)
+	}
+	if again := loadPlayerIDs(dir); uuidString(again.remapUUID(oldU)) != bedrockXUID {
+		t.Error("the move was not recorded for pets still in unloaded chunks")
+	}
+}
+
+// A Java player who joined with the bare name keeps it: a Bedrock ".Steve"
+// takes nothing of Steve's.
+func TestBedrockRenameLeavesJavaNamesAlone(t *testing.T) {
+	dir := t.TempDir()
+	useIDs(t, loadPlayerIDs(dir))
+	modes := filepath.Join(dir, "players.json")
+	writeJSONFile(t, modes, map[string]int{"Steve": gmCreative})
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	javaU, _ := parseUUIDString(offlineUUIDString("Steve"))
+	java := newPlayer(1, "Steve", javaU)
+	ids.learn(java.name, java.uuid, "java")
+	s.claimLegacyData(java.name, java.key())
+
+	bu, _ := parseUUIDString(bedrockXUID)
+	br := newPlayer(2, ".Steve", bu)
+	ids.learn(br.name, br.uuid, "bedrock")
+	s.claimLegacyData(br.name, br.key())
+	s.claimBedrockRename(br.name, br.key())
+	if s.modes.get(java.key()) != gmCreative || s.modes.get(br.key()) == gmCreative {
+		t.Error("the Bedrock .Steve took the Java Steve's game mode")
+	}
+}

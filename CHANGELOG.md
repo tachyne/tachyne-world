@@ -33,6 +33,12 @@ the public history since the project was open-sourced on 2026-07-10.
   as vanilla keeps one). For the move to online mode, a `uuidmap.json`
   beside the world moves each listed player's data, and the pets they own,
   to their real account.
+- **Bedrock players have a stable identity.** A Bedrock player's UUID now
+  comes from their Xbox account, the way Floodgate builds it. Their name
+  shows to Java players with a `.` in front (spaces become `_`), so it can
+  never clash with a Java player's name. Their saved data and their pets
+  follow them to the new identity on their next join. A Java player who
+  already joined with the same bare name keeps their own data.
 - **Operators from tachyne-access.** A player granted the `op` role in
   tachyne-access is now an operator in game, along with the `-ops` list.
   Once online mode is on, that role is tied to the player's own account.

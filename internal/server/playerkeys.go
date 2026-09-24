@@ -36,17 +36,20 @@ import (
 // playerIDs resolves store keys. One per process: the stores are reached from
 // the hub and from session goroutines alike, hence the lock.
 type playerIDs struct {
-	mu     sync.Mutex
-	path   string                // usercache.json ("" = remember in memory only)
-	byName map[string]cachedUser // lower-case name → the last profile seen with it
-	names  map[string]string     // uuidmap "names": lower-case name → UUID
-	remap  map[string]string     // uuidmap "uuids" (+ each name's offline UUID) → UUID
+	mu        sync.Mutex
+	path      string                // usercache.json ("" = remember in memory only)
+	movesPath string                // uuidmoves.json: moves the world made itself (a Bedrock rename)
+	moves     map[string]string     // …as recorded there, already folded into remap
+	byName    map[string]cachedUser // lower-case name → the last profile seen with it
+	names     map[string]string     // uuidmap "names": lower-case name → UUID
+	remap     map[string]string     // uuidmap "uuids" (+ each name's offline UUID) → UUID
 }
 
 // cachedUser is one usercache.json entry.
 type cachedUser struct {
-	Name string `json:"name"`
-	UUID string `json:"uuid"`
+	Name    string `json:"name"`
+	UUID    string `json:"uuid"`
+	Edition string `json:"edition,omitempty"` // "java" / "bedrock": whose name this is
 }
 
 // uuidMap is uuidmap.json.
@@ -58,7 +61,7 @@ type uuidMap struct {
 var ids = newPlayerIDs()
 
 func newPlayerIDs() *playerIDs {
-	return &playerIDs{byName: map[string]cachedUser{}, names: map[string]string{}, remap: map[string]string{}}
+	return &playerIDs{byName: map[string]cachedUser{}, names: map[string]string{}, remap: map[string]string{}, moves: map[string]string{}}
 }
 
 // loadPlayerIDs reads dir's usercache.json and uuidmap.json (both optional).
@@ -74,7 +77,7 @@ func loadPlayerIDs(dir string) *playerIDs {
 	}
 	for _, u := range cache {
 		if id, ok := normUUID(u.UUID); ok && u.Name != "" {
-			p.byName[strings.ToLower(u.Name)] = cachedUser{Name: u.Name, UUID: id}
+			p.byName[strings.ToLower(u.Name)] = cachedUser{Name: u.Name, UUID: id, Edition: u.Edition}
 		}
 	}
 	var m uuidMap
@@ -98,6 +101,15 @@ func loadPlayerIDs(dir string) *playerIDs {
 			log.Fatalf("uuidmap.json: bad uuid pair %q → %q", from, to)
 		}
 		p.remap[f] = t
+	}
+	p.movesPath = dir + "/uuidmoves.json"
+	if err := loadStore(p.movesPath, &p.moves); err != nil {
+		log.Fatal(err)
+	}
+	for from, to := range p.moves {
+		if _, set := p.remap[from]; !set { // the operator's map wins
+			p.remap[from] = to
+		}
 	}
 	if len(p.names)+len(p.remap) > 0 {
 		log.Printf("uuidmap.json: %d name(s) and %d uuid(s) to move", len(p.names), len(p.remap))
@@ -150,15 +162,19 @@ func (p *playerIDs) remapUUID(u [16]byte) [16]byte {
 
 // learn records that name joined as uuid (usercache.json), so a command
 // naming that player finds their data, whatever mode the world is in.
-func (p *playerIDs) learn(name string, u [16]byte) {
+func (p *playerIDs) learn(name string, u [16]byte, edition ...string) {
 	id := uuidString(u)
+	ed := ""
+	if len(edition) > 0 {
+		ed = edition[0]
+	}
 	p.mu.Lock()
 	lower := strings.ToLower(name)
-	if cur, ok := p.byName[lower]; ok && cur.UUID == id && cur.Name == name {
+	if cur, ok := p.byName[lower]; ok && cur.UUID == id && cur.Name == name && cur.Edition == ed {
 		p.mu.Unlock()
 		return
 	}
-	p.byName[lower] = cachedUser{Name: name, UUID: id}
+	p.byName[lower] = cachedUser{Name: name, UUID: id, Edition: ed}
 	var out []cachedUser
 	for _, u := range p.byName {
 		out = append(out, u)
@@ -313,4 +329,30 @@ func claimName[T any](mu *sync.Mutex, path string, m map[string]T, name, key str
 		writeStore(path, data)
 	}
 	return true
+}
+
+// cached is the name cache's entry for a name.
+func (p *playerIDs) cached(name string) (cachedUser, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	u, ok := p.byName[strings.ToLower(name)]
+	return u, ok
+}
+
+// recordMove notes that a player's UUID changed from → to (uuidmoves.json),
+// so whatever still names the old one — a pet's owner — follows.
+func (p *playerIDs) recordMove(from, to string) {
+	p.mu.Lock()
+	if p.moves[from] == to {
+		p.mu.Unlock()
+		return
+	}
+	p.moves[from] = to
+	p.remap[from] = to
+	data, _ := json.MarshalIndent(p.moves, "", "  ")
+	path := p.movesPath
+	p.mu.Unlock()
+	if path != "" {
+		writeStore(path, data)
+	}
 }

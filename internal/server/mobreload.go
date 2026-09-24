@@ -220,8 +220,10 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 // persisted owner eid was discarded — pets carry the owner's stable UUID).
 func (h *hub) resolvePetOwners(t *tracked) {
 	for _, m := range h.mobs {
-		if (m.tamed || m.etype == entityAllay) && m.owner == 0 && m.ownerUUID != ([16]byte{}) && m.ownerUUID == t.p.uuid {
-			m.owner = t.p.eid
+		if (m.tamed || m.etype == entityAllay) && m.owner == 0 && m.ownerUUID != ([16]byte{}) {
+			if moved := ids.remapUUID(m.ownerUUID); moved == t.p.uuid {
+				m.owner, m.ownerUUID = t.p.eid, moved // an owner whose UUID moved takes their pets along
+			}
 		}
 	}
 }
