@@ -74,3 +74,31 @@ func (h *hub) frogEat(players map[int32]*tracked, m, meal *mob) {
 	h.killMob(players, meal)
 	h.playSoundDim(players, m.dim, "minecraft:entity.frog.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
+
+const (
+	frogCroakTicks = 60 // Croak.CROAK_TICKS
+	poseCroaking   = 8  // Pose.CROAKING
+)
+
+// frogIdleCroak is the idle RunOne's choice when a frog's stroll ends and
+// it would stand: Croak (weight 3) against a plain pause (weight 2). A frog
+// in water or with somewhere to be does not croak.
+func (h *hub) frogIdleCroak(players map[int32]*tracked, m *mob) {
+	if m.baby || m.tempted || m.loveTicks > 0 || m.croakLeft > 0 || h.inWater(m.dim, m.x, m.y, m.z) || h.rng.Intn(5) >= 3 {
+		return
+	}
+	m.croakLeft = frogCroakTicks
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseCroaking)))
+}
+
+// frogCroakStep holds a croaking frog still until the sixty ticks are up
+// (or something sends it running), then stands it back up.
+func (h *hub) frogCroakStep(players map[int32]*tracked, m *mob) bool {
+	if m.croakLeft -= mobMoveInterval; m.croakLeft <= 0 || m.panic > 0 || m.hasTarget {
+		m.croakLeft = 0
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
+		return false
+	}
+	m.vx, m.vz = 0, 0
+	return true
+}

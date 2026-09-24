@@ -352,6 +352,7 @@ type mob struct {
 	batResting                      bool     // bat: DATA_ID_FLAGS resting (hanging under a block)
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
+	croakLeft                       int      // frog: ticks of the CROAKING pose still to run
 	slimeHeading                    float64  // slime/magma cube: SlimeRandomDirectionGoal's chosen heading (radians)
 	llamaWolf                       int32    // llama: the wild wolf LlamaAttackWolfGoal has it spitting at
 	slimeHeadingLeft                int      // …ticks before it picks another
@@ -845,6 +846,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A sniffer walking to, or digging at, a scent.
 		case m.etype == entityFrog && h.frogStep(players, m):
 			// A frog after a small slime or magma cube (FrogAi's tongue).
+		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):
+			// A frog croaking, still, for its sixty ticks (FrogAi's Croak).
 		case m.etype == entityAllay && h.allayStep(players, m):
 			// An allay with a job: collecting matching drops, delivering them,
 			// or keeping near the player who handed it its item.
@@ -875,6 +878,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			busy := (m.hostile && m.hasTarget) || m.loveTicks > 0
 			if m.stroll <= 0 && !busy {
 				m.rest = restMin + h.rng.Intn(restMax-restMin)
+				if m.etype == entityFrog {
+					h.frogIdleCroak(players, m) // the idle RunOne's pick: croak or just pause
+				}
 				if m.hostile {
 					m.rest *= 2
 				}

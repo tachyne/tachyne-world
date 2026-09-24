@@ -20,6 +20,8 @@ the public history since the project was open-sourced on 2026-07-10.
   Adventure players eat and drink as survival players do. Creative players
   can eat on a full hunger bar, and keep the food or potion as vanilla's
   do.
+- **Frogs croak.** An idle frog on land stops now and then and croaks for
+  three seconds, throat puffing, as vanilla's do.
 - **Dolphins leap.** A dolphin swimming along the surface of open water
   now and then jumps clear of it and splashes back down, as vanilla's do.
   Leaping mobs (spiders, wolves, cats and foxes) now feel air drag, so

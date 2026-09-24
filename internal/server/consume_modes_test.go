@@ -214,3 +214,25 @@ func TestDolphinLeaps(t *testing.T) {
 		t.Errorf("the leap peaked at %.2f and ended leaping=%v at y %.2f", peak, d.leaping, d.y)
 	}
 }
+
+// FrogAi's Croak: an idle frog on land croaks for sixty ticks, holding
+// still, then stands.
+func TestFrogCroaks(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	f := h.spawnMob(players, entityFrog, 0.5, 200, 0.5)
+	for i := 0; i < 100 && f.croakLeft == 0; i++ {
+		h.frogIdleCroak(players, f)
+	}
+	if f.croakLeft != frogCroakTicks {
+		t.Fatal("an idle frog never croaked")
+	}
+	n := 0
+	for h.frogCroakStep(players, f) {
+		n++
+	}
+	if f.croakLeft != 0 || n != frogCroakTicks/mobMoveInterval-1 {
+		t.Errorf("the croak lasted %d updates (want %d)", n, frogCroakTicks/mobMoveInterval-1)
+	}
+}
