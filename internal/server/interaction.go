@@ -517,6 +517,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			s.abortPlace(p, tx, ty, tz, seq)
 			return
 		}
+		if s.hub.placeObstructed(p.dim, tx, ty, tz, state) {
+			// BlockItem.canPlace: isUnobstructed — not into a mob, a player
+			// (the placer too) or a vehicle.
+			s.abortPlace(p, tx, ty, tz, seq)
+			return
+		}
 		s.putBlock(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
 		if at, body, ok := growingPlantAnchorBody(s.worldFor(p), blockPos{tx, ty, tz}, state); ok {
@@ -577,6 +583,10 @@ func (s *Server) placeTwoTall(p *player, info worldgen.BlockInfo, defState uint3
 	}
 	lower = worldgen.SetProperty(info, lower, "half", "lower")
 	upper := worldgen.SetProperty(info, lower, "half", "upper")
+	if s.hub.placeObstructed(p.dim, x, y, z, lower) || s.hub.placeObstructed(p.dim, x, y+1, z, upper) {
+		s.abortPlace(p, x, y, z, seq) // isUnobstructed, for both halves
+		return false
+	}
 	s.putBlock(p, x, y, z, lower, true, seq)
 	s.putBlock(p, x, y+1, z, upper, false, seq)
 	return true
@@ -594,6 +604,10 @@ func (s *Server) placeBed(p *player, info worldgen.BlockInfo, defState uint32, x
 	foot := worldgen.SetProperty(info, defState, "facing", facing)
 	foot = worldgen.SetProperty(info, foot, "part", "foot")
 	head := worldgen.SetProperty(info, foot, "part", "head")
+	if s.hub.placeObstructed(p.dim, x, y, z, foot) || s.hub.placeObstructed(p.dim, x+hx, y, z+hz, head) {
+		s.abortPlace(p, x, y, z, seq) // isUnobstructed, for both ends
+		return false
+	}
 	s.putBlock(p, x, y, z, foot, true, seq)
 	s.putBlock(p, x+hx, y, z+hz, head, false, seq)
 	return true

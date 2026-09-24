@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **You can't place a block inside a mob.** A block could go where a mob,
+  another player, a boat or a minecart was standing, which left the mob
+  standing inside the block. As in vanilla, a block that would overlap
+  anything standing there, including yourself, is not placed.
 - **A lightning rod moved by a piston still switches off.** A rod pushed
   while a strike was still powering it stayed powered for good. It now
   switches off eight ticks after it lands, as in vanilla.

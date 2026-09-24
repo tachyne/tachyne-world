@@ -439,6 +439,7 @@ type hub struct {
 	// session reads it (nil until the command, or its saved value, sets one).
 	worldSpawnYaw, worldSpawnPitch float32
 	spawnPub                       atomic.Pointer[[3]float64]
+	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -1119,6 +1120,7 @@ func (h *hub) run() {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
 			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
+			h.publishBodies(players)    // the boxes a block placement must not overlap
 			h.pickupItems(players)      // collect dropped items into survival inventories
 			h.tickDigCracks(players)    // the cracks other players see on a dig
 			h.updateOrbs(players)       // collect experience orbs / expire old ones
