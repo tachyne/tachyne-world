@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Endermen no longer pile up.** An enderman carrying a block never
+  despawns, in vanilla as here. But vanilla's idle clock keeps running
+  while it carries, so once it sets the block down far from everyone it
+  can despawn straight away. Ours restarted that clock, and the enderman
+  picked up the next block first, so carriers never left and gathered
+  around the spawn area. The ones already there will thin out as they set
+  their blocks down.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

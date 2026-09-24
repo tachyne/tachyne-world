@@ -672,10 +672,6 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 		if m.dying > 0 || h.spawnExempt(m) {
 			continue
 		}
-		if m.named() || m.persistent || h.requiresCustomPersistence(m) {
-			m.idleSecs = 0
-			continue
-		}
 		cat := mobSpawnCategory(m)
 		if m.jockey {
 			cat = catMonster // Chicken.removeWhenFarAway: a jockey's chicken goes like its rider
@@ -690,15 +686,24 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 				best = d
 			}
 		}
+		// noActionTime runs whether or not the mob is persistent (serverAiStep
+		// counts it every tick) and only a player within 32 blocks resets it.
+		// Resetting it while persistent kept an enderman that set its block
+		// down from ever despawning: it picks the next one up long before a
+		// fresh 30-second clock runs out, and the carriers piled up (bug #31).
+		if best < 32*32 {
+			m.idleSecs = 0
+		} else {
+			m.idleSecs++
+		}
+		if m.named() || m.persistent || h.requiresCustomPersistence(m) {
+			continue
+		}
 		switch {
 		case best > float64(dist*dist) && h.removeWhenFarAway(m, best, now): // includes "no player in this dimension"
 			h.removeMob(players, m)
-		case best > 32*32:
-			if m.idleSecs++; m.idleSecs > 30 && h.rng.Intn(40) == 0 && h.removeWhenFarAway(m, best, now) {
-				h.removeMob(players, m)
-			}
-		default:
-			m.idleSecs = 0
+		case best > 32*32 && m.idleSecs > 30 && h.rng.Intn(40) == 0 && h.removeWhenFarAway(m, best, now):
+			h.removeMob(players, m)
 		}
 	}
 }
