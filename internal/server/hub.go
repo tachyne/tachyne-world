@@ -2529,6 +2529,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendStandsTo(nt)
 	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
+	h.bossbarsOnJoin(nt) // the custom bars this player is on (bossbar.go)
 	// The newcomer's mobs, items and orbs arrive with the next tracking
 	// pass (entityview.go), which spawns each one for them in full.
 	h.showShadowsTo(nt)  // …and every cross-seam shadow (neighbour entities near the border).

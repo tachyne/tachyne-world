@@ -128,6 +128,9 @@ type worldRules struct {
 	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
 	// the -gamemode flag's.
 	DefaultGamemode *int `json:"defaultGamemode,omitempty"`
+	// Bossbars are /bossbar's custom bars by id (CustomBossEvents, which
+	// vanilla keeps in the level data).
+	Bossbars map[string]*customBossbar `json:"customBossEvents,omitempty"`
 }
 
 func defaultRules() worldRules {

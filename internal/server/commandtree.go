@@ -176,6 +176,14 @@ func modelledCommands() []cmdNode {
 		lit("summon", false, argWord("entity", true, argVec3("pos", true))),
 		lit("setblock", false, argVec3("pos", false, argGreedy("block", true))),
 		lit("fill", false, argVec3("from", false, argVec3("to", false, argGreedy("block", true)))),
+		// Bar ids carry ':', which a word refuses, so the id and what follows
+		// it ride one greedy argument.
+		lit("bossbar", false,
+			lit("add", false, argGreedy("id name", true)),
+			lit("remove", false, argGreedy("id", true)),
+			lit("list", true),
+			lit("get", false, argGreedy("id value|max|visible|players", true)),
+			lit("set", false, argGreedy("id name|color|style|value|max|visible|players …", true))),
 		lit("clone", false,
 			lit("from", false, argGreedy("sourceDimension begin end destination", true)),
 			argBlockPos("begin", false, argBlockPos("end", false,

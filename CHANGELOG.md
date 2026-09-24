@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/bossbar.** Operators can make their own boss bars and show them to
+  chosen players: add, remove, list, get, and set the name, colour, style,
+  value, maximum, visibility and players, with vanilla's messages. The bars
+  are saved with the world, so they survive a restart, and a player who
+  was on a bar sees it again when they rejoin. A bar's name can be plain
+  text or a styled text component with named colours, bold, italic and the
+  like. Components that need translating, scores or hex colours are refused
+  for now, not shown wrongly.
 - **/clone.** Operators can copy a box of blocks somewhere else, up to
   32,768 blocks at a time, as vanilla does. Chests, barrels, shulker boxes,
   furnaces, hoppers, dispensers, brewing stands and the other containers
