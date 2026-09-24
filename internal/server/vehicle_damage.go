@@ -39,6 +39,15 @@ func (h *hub) damageVehicle(players map[int32]*tracked, v *vehicle, src vehHit) 
 	if h.vehicles[v.eid] != v {
 		return false // already gone (isRemoved)
 	}
+	if v.etype == entityTntMinecart && src.proj != nil && isAbstractArrow(src.proj.etype) && projectileOnFire(src.proj) {
+		// MinecartTNT.hurtServer: a burning arrow sets it off on the spot,
+		// the blast growing with the arrow's speed.
+		a := src.proj
+		h.explodeCart(players, v, a.vx*a.vx+a.vy*a.vy+a.vz*a.vz)
+		if h.vehicles[v.eid] != v {
+			return false
+		}
+	}
 	v.hurtDirFlip = !v.hurtDirFlip
 	v.hurtTime = vehHurtTicks
 	v.damage += src.dmg * 10
@@ -60,15 +69,42 @@ func (h *hub) damageVehicle(players map[int32]*tracked, v *vehicle, src vehHit) 
 	return h.vehicles[v.eid] == v
 }
 
-// sourceDestroysVehicle is shouldSourceDestroy: false for every vehicle but
-// the TNT cart.
+// sourceDestroysVehicle is shouldSourceDestroy: only a TNT cart has one —
+// anything that would light it destroys it (and so lights it) whatever the
+// blow was worth.
 func (h *hub) sourceDestroysVehicle(v *vehicle, src vehHit) bool {
-	return false
+	return v.etype == entityTntMinecart && src.ignitesTNT()
 }
 
-// destroyVehicle is VehicleEntity.destroy(level, source).
+// ignitesTNT is MinecartTNT.damageSourceIgnitesTnt: a projectile when it is
+// burning, otherwise any fire or explosion damage.
+func (src vehHit) ignitesTNT() bool {
+	if src.proj != nil {
+		return projectileOnFire(src.proj)
+	}
+	return src.dt.has(tagIsFire) || src.dt.has(tagIsExplosion)
+}
+
+// destroyVehicle is VehicleEntity.destroy(level, source). A TNT cart that
+// is moving, or destroyed by something that lights it, starts a short
+// random fuse instead of dropping (MinecartTNT.destroy).
 func (h *hub) destroyVehicle(players map[int32]*tracked, v *vehicle, src vehHit) {
+	if v.etype == entityTntMinecart && (src.ignitesTNT() || v.vx*v.vx+v.vz*v.vz >= 0.01) {
+		h.lightBrokenCart(players, v)
+		return
+	}
 	h.breakVehicle(players, v)
+}
+
+// lightBrokenCart is the lighting half of MinecartTNT.destroy: primeFuse,
+// then a fuse of 0-38 ticks in place of the usual 80.
+func (h *hub) lightBrokenCart(players map[int32]*tracked, v *vehicle) {
+	if v.fuse >= 0 {
+		return
+	}
+	fuse := h.rng.Intn(20) + h.rng.Intn(20)
+	h.primeCart(players, v, fuse)
+	v.fuse = fuse // set even when tnt_explodes kept the fuse unlit: it then burns out quietly
 }
 
 // isAbstractArrow: the projectiles vanilla builds on AbstractArrow.
@@ -227,9 +263,6 @@ func (h *hub) explosionHurtsVehicles(players map[int32]*tracked, dim int, cx, cy
 		by = players[h.blastSrc.causer]
 	}
 	for _, v := range h.vehicles {
-		if v.etype == entityTntMinecart {
-			continue // lit by the blast instead (explodeHurt)
-		}
 		if v.dim != dim || dist3(v.x, v.y, v.z, cx, cy, cz) > power*2 {
 			continue
 		}

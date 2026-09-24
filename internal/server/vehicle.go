@@ -394,7 +394,7 @@ func (h *hub) spillVehicleCargo(players map[int32]*tracked, v *vehicle) {
 func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 	if v.etype == entityTntMinecart && v.vx*v.vx+v.vz*v.vz >= 0.01 {
 		// MinecartTNT.destroy: a moving TNT cart that is broken lights instead.
-		h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
+		h.lightBrokenCart(players, v)
 		return
 	}
 	if v.rider != 0 {

@@ -67,15 +67,10 @@ func (h *hub) seenPercent(dim int, cx, cy, cz, minX, minY, minZ, maxX, maxY, max
 	return float64(hits) / float64(count)
 }
 
-// explodeHurt is the blast's second half: the TNT carts it lights and the
-// damage and shove on everything within reach.
+// explodeHurt is the blast's second half: the damage and shove on
+// everything within reach (a TNT cart it reaches is lit by the damage).
 func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power float64, dt dmgType, cause deathCause) {
 	dr := power * 2
-	for _, v := range h.vehicles { // a blast lights the TNT carts it reaches
-		if v.dim == dim && v.etype == entityTntMinecart && v.fuse < 0 && dist3(v.x, v.y, v.z, cx, cy, cz) < dr+1 {
-			h.primeCart(players, v, h.rng.Intn(20)+h.rng.Intn(20))
-		}
-	}
 	if power < 1e-5 {
 		return
 	}

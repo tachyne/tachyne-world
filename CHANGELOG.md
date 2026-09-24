@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **TNT minecarts go off the way they should.** A flaming arrow now blows
+  one up on the spot, and fire, lava or any explosion that reaches it lights
+  its fuse instead of knocking it back into an item, however little the
+  blast hurt it. A creeper's blast leaves it alone when mob griefing is off,
+  and with TNT explosions switched off a cart no longer lights at all.
 - **Boats and minecarts take damage from more than fists.** Arrows and
   other projectiles, explosions, lava and fire now hurt them the way they do
   in vanilla: the vehicle rocks, and enough damage breaks it into its item.

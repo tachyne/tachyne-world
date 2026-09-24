@@ -152,3 +152,58 @@ func TestVehicleLavaAndFire(t *testing.T) {
 		t.Fatal("fire did not burn the boat down")
 	}
 }
+
+// A burning arrow sets a TNT cart off where it stands; a plain one only
+// breaks it back into its item.
+func TestTNTCartBurningArrow(t *testing.T) {
+	for _, burning := range []bool{true, false} {
+		h, pl, players := vehRig(t)
+		rigVehicle(t, h, players, "tnt_minecart")
+		a := h.launchProjectileIn(players, entityArrow, 0, 0.5, 180.3, -2, 0, 0, 1)
+		a.shooter, a.playerShot, a.dmg, a.fire = pl.p.eid, true, 6, burning
+		for i := 0; i < 6 && len(h.vehicles) == 1; i++ {
+			h.updateArrows(players)
+		}
+		if len(h.vehicles) != 0 {
+			t.Fatalf("burning=%v: the arrow left the TNT cart standing", burning)
+		}
+		if dropped := vehicleItemDropped(h, "tnt_minecart"); dropped == burning {
+			t.Errorf("burning=%v: item dropped=%v (a burning arrow blows it up, a plain one breaks it)", burning, dropped)
+		}
+	}
+}
+
+// Fire and lava light a standing TNT cart instead of breaking it.
+func TestTNTCartLitByFireAndLava(t *testing.T) {
+	for _, hazard := range []uint32{fireDefault, worldgen.LavaBase} {
+		h, _, players := vehRig(t)
+		v := rigVehicle(t, h, players, "tnt_minecart")
+		h.worldFor(0).SetBlock(0, 180, 0, hazard)
+		h.updateVehicles(players)
+		if len(h.vehicles) != 1 || v.fuse < 0 {
+			t.Fatalf("hazard %d: the cart should stand lit: vehicles=%d fuse=%d", hazard, len(h.vehicles), v.fuse)
+		}
+		if vehicleItemDropped(h, "tnt_minecart") {
+			t.Fatalf("hazard %d: a lit cart dropped as an item", hazard)
+		}
+	}
+}
+
+// Any blast that reaches a TNT cart lights it, even at the edge where it
+// does almost nothing — unless it is a creeper's with mobGriefing off.
+func TestTNTCartLitByBlast(t *testing.T) {
+	h, _, players := vehRig(t)
+	v := rigVehicle(t, h, players, "tnt_minecart")
+	h.explodeIn(players, 0, 7.5, 180, 0.5, 0, 4, blastTNT)
+	if len(h.vehicles) != 1 || v.fuse < 0 {
+		t.Fatalf("a blast at the edge of reach should light the cart: vehicles=%d fuse=%d", len(h.vehicles), v.fuse)
+	}
+
+	h, _, players = vehRig(t)
+	h.rules.MobGriefing = false
+	v = rigVehicle(t, h, players, "tnt_minecart")
+	h.explodeCreeper(players, h.spawnMob(players, entityCreeper, 2.5, 180, 0.5))
+	if v.fuse >= 0 {
+		t.Fatal("a creeper blast lit a TNT cart with mobGriefing off")
+	}
+}
