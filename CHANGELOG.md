@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Tools wear at vanilla's rates.**
+  - A sword, mace or trident loses two points per block it breaks; a
+    pickaxe, axe, shovel or hoe loses one.
+  - Hitting something costs a pickaxe, axe, shovel or hoe two, and a sword,
+    spear, mace or trident one.
+  - Shears wear on every block they cut, grass included.
+  - Blocks that break instantly cost nothing, and items that aren't tools
+    (a flint and steel, a bow) no longer wear from digging or hitting.
+  Before, every item lost one point either way.
 - **Efficiency digs faster on your screen too.** In 1.21 and later the
   game client works out digging speed from an attribute the server sends,
   and tachyne never sent Efficiency's share of it. So an Efficiency

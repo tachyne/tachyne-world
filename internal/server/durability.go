@@ -2,12 +2,14 @@ package server
 
 import (
 	"math"
+	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Durability + armor. Tools wear one point per mined block (hardness > 0) and
-// per melee hit, breaking (vanishing) at their items.json max. Armor absorbs
+// Durability + armor. Tools wear by vanilla's per-family rates (mineWear,
+// attackWear), breaking (vanishing) at their items.json max. Armor absorbs
 // mob damage with the vanilla 1.9+ formula — reduction from total defense
 // points, softened by how hard the hit is, capped at 80% — and every hit wears
 // each worn piece. The damage value rides the minecraft:damage component so
@@ -18,6 +20,56 @@ import (
 type evToolWear struct {
 	eid  int32
 	slot int
+	n    int // points of wear; 0 means 1
+}
+
+// toolKind is which tool family an item belongs to, by its registry name.
+func toolKind(item int32) string {
+	name := itemNameOf[item]
+	for _, k := range []string{"_sword", "_pickaxe", "_axe", "_shovel", "_hoe", "_spear"} {
+		if strings.HasSuffix(name, k) {
+			return k[1:]
+		}
+	}
+	return name
+}
+
+// mineWear is what breaking a block costs the item that broke it:
+// Item.mineBlock's Tool.damagePerBlock — one for a pickaxe, axe, shovel or
+// hoe, two for a sword, a mace or a trident — on any block that is not
+// broken instantly; ShearsItem.mineBlock's one on anything but fire. An item
+// with no TOOL component (a spear, a flint and steel, a bow) is not worn by
+// digging at all.
+func mineWear(item int32, broken uint32) int {
+	switch kind := toolKind(item); kind {
+	case "shears":
+		if isFire(broken) {
+			return 0
+		}
+		return 1
+	case "pickaxe", "axe", "shovel", "hoe", "sword", "mace", "trident":
+		if worldgen.Hardness(broken) == 0 {
+			return 0
+		}
+		if kind == "sword" || kind == "mace" || kind == "trident" {
+			return 2
+		}
+		return 1
+	}
+	return 0
+}
+
+// attackWear is Weapon.itemDamagePerAttack: two for a pickaxe, axe, shovel or
+// hoe (ToolMaterial's tools), one for a sword, spear, mace or trident, and
+// nothing for an item that is no weapon.
+func attackWear(item int32) int {
+	switch toolKind(item) {
+	case "pickaxe", "axe", "shovel", "hoe":
+		return 2
+	case "sword", "spear", "mace", "trident":
+		return 1
+	}
+	return 0
 }
 
 func (evToolWear) isHubEvent() {}

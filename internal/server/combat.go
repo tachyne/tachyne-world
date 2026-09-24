@@ -217,7 +217,9 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 		}
 		if t.gamemode == gmSurvival {
 			t.exhaust(attackExhaustion) // vanilla: attacking burns food
-			h.applyToolWear(t, t.p.heldSlot(), 1)
+			if n := attackWear(t.p.heldItem()); n > 0 { // Weapon.itemDamagePerAttack
+				h.applyToolWear(t, t.p.heldSlot(), n)
+			}
 		}
 	}
 	dmgF := base * charge

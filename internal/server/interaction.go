@@ -152,8 +152,8 @@ func (s *Server) handleDig(p *player, data []byte) {
 	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: after, by: p.eid, broken: broken})
 	if mode == gmSurvival { // survival drops loot (tool-gated); creative drops nothing
 		s.hub.post(evDrop{dim: p.dim, x: x, y: y, z: z, state: broken, held: uint16(p.heldItem()), by: p.eid})
-		if worldgen.Hardness(broken) > 0 { // real blocks wear the tool (vanilla)
-			s.hub.post(evToolWear{eid: p.eid, slot: p.held})
+		if n := mineWear(p.heldItem(), broken); n > 0 { // Item/ShearsItem.mineBlock
+			s.hub.post(evToolWear{eid: p.eid, slot: p.held, n: n})
 		}
 	}
 	s.breakPairedHalf(p, x, y, z, broken)                   // remove the other half of a door/bed

@@ -2235,7 +2235,7 @@ func (h *hub) run() {
 				}
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
-					h.applyToolWear(t, e.slot, 1)
+					h.applyToolWear(t, e.slot, max(1, e.n))
 				}
 			case evSteerBoost:
 				if t := players[e.eid]; t != nil {

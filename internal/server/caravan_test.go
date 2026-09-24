@@ -164,3 +164,29 @@ func TestTridentMeleeDamage(t *testing.T) {
 		t.Errorf("trident melee %d, want 9", d)
 	}
 }
+
+// Tool.damagePerBlock and Weapon.itemDamagePerAttack by family.
+func TestToolAndWeaponWear(t *testing.T) {
+	id := func(n string) int32 { return itemByName[n] }
+	grass := worldgen.BlockBase("short_grass")
+	for _, c := range []struct {
+		item        string
+		block       uint32
+		mine, fight int
+	}{
+		{"iron_pickaxe", worldgen.Stone, 1, 2},
+		{"iron_sword", worldgen.Stone, 2, 1},
+		{"iron_sword", grass, 0, 1},
+		{"shears", grass, 1, 0},
+		{"mace", worldgen.Stone, 2, 1},
+		{"iron_spear", worldgen.Stone, 0, 1},
+		{"flint_and_steel", worldgen.Stone, 0, 0},
+	} {
+		if got := mineWear(id(c.item), c.block); got != c.mine {
+			t.Errorf("%s mining: wear %d, want %d", c.item, got, c.mine)
+		}
+		if got := attackWear(id(c.item)); got != c.fight {
+			t.Errorf("%s hitting: wear %d, want %d", c.item, got, c.fight)
+		}
+	}
+}
