@@ -190,8 +190,12 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 					f.cookMax = cookTotal(out.Cook, f.speed)
 					f.cook = int(math.Ceil(float64(ratio * float32(f.cookMax))))
 				}
+				burnt := f.slots[furnaceFuel].item
 				if f.slots[furnaceFuel].count--; f.slots[furnaceFuel].count == 0 {
-					f.slots[furnaceFuel].item = 0
+					f.slots[furnaceFuel] = invStack{}
+					if burnt == itemBucketLav { // consumeFuel: the crafting remainder takes the slot
+						f.slots[furnaceFuel] = invStack{item: itemBucket, count: 1}
+					}
 				}
 				changedSlots = true
 			}

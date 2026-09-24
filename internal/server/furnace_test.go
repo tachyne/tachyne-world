@@ -284,3 +284,15 @@ func TestFurnaceFeedsEveryViewer(t *testing.T) {
 		}
 	}
 }
+
+// consumeFuel: a lava bucket burnt as fuel leaves its empty bucket in the
+// fuel slot.
+func TestLavaFuelLeavesTheBucket(t *testing.T) {
+	h, players, _, f := furnaceSetup()
+	f.slots[furnaceInput] = invStack{item: tRawIron, count: 1}
+	f.slots[furnaceFuel] = invStack{item: itemBucketLav, count: 1}
+	h.updateFurnaces(players)
+	if f.slots[furnaceFuel].item != itemBucket || f.slots[furnaceFuel].count != 1 {
+		t.Errorf("fuel slot after the lava burned: %+v, want an empty bucket", f.slots[furnaceFuel])
+	}
+}

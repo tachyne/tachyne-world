@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Lava fuel gives the bucket back.** A lava bucket burnt in a furnace
+  leaves its empty bucket in the fuel slot. Before, the bucket was lost.
 - **`/gamerule <rule>` shows the current value**, as vanilla's does, and
   `limited_crafting` can be set with `/gamerule`.
 - **Dispensed spectral arrows glow.** A spectral arrow fired from a
