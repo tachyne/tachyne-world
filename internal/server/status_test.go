@@ -3,9 +3,28 @@ package server
 import (
 	"strings"
 	"testing"
+	"time"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 )
+
+// rosterOnline asks for the roster until it reports want players online, or
+// 30 s pass. statusRoster gives up after a few seconds when the hub is slow
+// to answer — under a loaded -race gate it is — and reports an empty server,
+// which is the gateway's cue to show the last count it had; one such answer
+// is not the roster being wrong.
+func rosterOnline(t *testing.T, s *Server, want int) attachproto.Status {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		got := s.statusRoster()
+		if got.Online == want || time.Now().After(deadline) {
+			return got
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
 
 // The server list showed 0/100 with a player in game: the gateway answered
 // from its own books, which hold only the clients on its protocol range.
@@ -27,7 +46,7 @@ func TestStatusRosterCountsPlayers(t *testing.T) {
 		waitJoined(t, h, name)
 	}
 
-	got := s.statusRoster()
+	got := rosterOnline(t, s, 2)
 	if got.Online != 2 {
 		t.Errorf("two players in game report %d online", got.Online)
 	}
@@ -61,7 +80,7 @@ func TestStatusSampleCapped(t *testing.T) {
 		h.post(evJoin{p: p, x: p.x, y: p.y, z: p.z, gamemode: gmCreative})
 		waitJoined(t, h, p.name)
 	}
-	got := s.statusRoster()
+	got := rosterOnline(t, s, statusSampleLimit+5)
 	if got.Online != statusSampleLimit+5 {
 		t.Errorf("%d online, want %d", got.Online, statusSampleLimit+5)
 	}
