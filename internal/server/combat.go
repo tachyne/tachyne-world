@@ -504,9 +504,6 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 			m.anger = spiderAnger                   // a hit spider/enderman retaliates
 			m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
 			m.settled = 0                           // a new target restarts the enderman's daylight clock
-			if m.etype == entityEnderman {
-				h.endermanTeleport(players, m) // blinks away from the blow
-			}
 		}
 		if dx, dz := m.x-t.x, m.z-t.z; dx != 0 || dz != 0 {
 			yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)

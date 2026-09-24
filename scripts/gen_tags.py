@@ -29,7 +29,9 @@ TAGS = {
               "sword_efficient", "sword_instantly_mines", "shears_extreme_breaking_speed",
               "shears_major_breaking_speed", "shears_minor_breaking_speed",
               # fluidwash.go: FlowingFluid.canHoldAnyFluid
-              "washed_away_by_fluids"],
+              "washed_away_by_fluids",
+              # hostile2.go: LivingEntity.randomTeleport + Enderman.teleport
+              "entities_can_teleport_to", "enderman_does_not_teleport_to"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
              # sulfurcube.go: what a sulfur cube swallows, what a baby eats,

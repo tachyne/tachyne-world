@@ -58,6 +58,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Endermen teleport the way they do in vanilla.** Every enderman
+  teleport landed on the top of the ground, so endermen in the sun
+  teleported from one sunny spot to another and gathered in the open. Cave
+  endermen were pulled up to the surface, and some landed half inside
+  blocks. Now an enderman lands within 32 blocks above or below where it
+  was, on solid ground, with room for its whole body. In sunlight it can
+  land in shade or a cave and wander off from there. Hitting one no longer
+  makes it teleport away, as in vanilla; arrows still never land.
 - **You can't place a block inside a mob.** A block could go where a mob,
   another player, a boat or a minecart was standing, which left the mob
   standing inside the block. As in vanilla, a block that would overlap

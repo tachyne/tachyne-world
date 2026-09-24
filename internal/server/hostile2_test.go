@@ -37,7 +37,7 @@ func TestSlimeSplitsOnDeath(t *testing.T) {
 	}
 }
 
-func TestEndermanNeutralUntilHitThenBlinks(t *testing.T) {
+func TestEndermanNeutralUntilHitThenHunts(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := testTracked()
 	pl.x, pl.y, pl.z = 0.5, 70, 0.5
@@ -53,8 +53,8 @@ func TestEndermanNeutralUntilHitThenBlinks(t *testing.T) {
 	if m.anger == 0 {
 		t.Fatal("a hit enderman must anger")
 	}
-	if m.x == ox && m.z == oz {
-		t.Fatal("a hit enderman should have teleported away")
+	if m.x != ox || m.z != oz {
+		t.Fatal("a player's blow does not teleport an enderman (Enderman.hurtServer: only a source with no living attacker does)")
 	}
 	h.acquireTarget(players, m)
 	if !m.hasTarget && dist3(m.x, 0, m.z, pl.x, 0, pl.z) < m.followRange()+deaggroSlack {

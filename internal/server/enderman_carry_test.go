@@ -169,7 +169,10 @@ func TestEndermanStareFreezesThenBlinks(t *testing.T) {
 	pl.x, pl.z = m.x, m.z+2
 	pl.yaw = float32(lookYawTo(pl, m))
 	pl.pitch = float32(lookPitchTo(pl, m))
-	h.endermanStareStep(players, m)
+	for i := 0; i < 20 && m.x == sx && m.z == sz; i++ { // one try a step, which may find nowhere to land
+		pl.x, pl.z = m.x, m.z+2
+		h.endermanStareStep(players, m)
+	}
 	if m.x == sx && m.z == sz {
 		t.Error("an enderman stared at from two blocks blinks away")
 	}

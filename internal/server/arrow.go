@@ -560,9 +560,10 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			continue // a closed shell: arrows glance off (Shulker.hurtServer)
 		}
 		if m.etype == entityEnderman {
-			// Vanilla EnderMan.hurtServer: projectiles NEVER land — the
-			// enderman teleports out from under them, taking no damage.
-			h.endermanTeleport(players, m)
+			// Vanilla Enderman.hurtServer: projectiles NEVER land — the
+			// enderman teleports out from under them (up to 64 tries),
+			// taking no damage.
+			h.endermanTeleportHard(players, m)
 			continue
 		}
 		if m.etype == entityWarden && a.shooter != 0 {

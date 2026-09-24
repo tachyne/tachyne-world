@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Hostile pack 2: biome variants (husk/stray/drowned), slimes that split,
@@ -217,25 +218,23 @@ func (h *hub) splitSlime(players map[int32]*tracked, m *mob) {
 	}
 }
 
-// endermanTeleport blinks an enderman to a random nearby spot (on being hit,
-// or when rained on) with the vanilla warp sound.
-func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) {
-	for try := 0; try < 16; try++ {
-		// Vanilla EnderMan.teleport(): ±32 blocks on each horizontal axis.
-		x := int(m.x) + h.rng.Intn(65) - 32
-		z := int(m.z) + h.rng.Intn(65) - 32
-		w := h.worldFor(m.dim)
-		if w == nil || !w.Spawnable(x, z) {
-			continue
+// endermanTeleport is Enderman.teleport(): a random point within 32 blocks
+// on each horizontal axis and 32 up or down, landed by randomTeleport's
+// rule (endermanTeleportTo). One try; the callers that must get away
+// (a projectile, a splash) retry with endermanTeleportHard.
+func (h *hub) endermanTeleport(players map[int32]*tracked, m *mob) bool {
+	x := m.x + (h.rng.Float64()-0.5)*64
+	y := m.y + float64(h.rng.Intn(64)-32)
+	z := m.z + (h.rng.Float64()-0.5)*64
+	return h.endermanTeleportTo(players, m, x, y, z)
+}
+
+// endermanTeleportHard is repeatedlyTryToTeleport: up to 64 tries.
+func (h *hub) endermanTeleportHard(players map[int32]*tracked, m *mob) {
+	for i := 0; i < 64; i++ {
+		if h.endermanTeleport(players, m) {
+			return
 		}
-		h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
-		m.x, m.z = float64(x)+0.5, float64(z)+0.5
-		m.y = float64(w.MobFeet(x, z))
-		m.sx, m.sy, m.sz = m.x, m.y, m.z
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport)) // LivingEntity.randomTeleport showParticles
-		h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)
-		return
 	}
 }
 
@@ -376,19 +375,63 @@ func climbsWalls(etype int) bool {
 // drowned is not.
 func isAmphibious(etype int) bool { return etype == entityDrowned }
 
-// endermanTeleportTo is EnderMan.teleport(x,y,z): the blink only lands on a
-// spot that can actually hold it — otherwise the enderman stays put.
-func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z float64) {
-	bx, bz := floorInt(x), floorInt(z)
+// endermanTeleportTo is Enderman.teleport(x,y,z) over LivingEntity.
+// randomTeleport: from the point it drops to the first block entities can
+// teleport onto (#entities_can_teleport_to, i.e. anything that blocks
+// motion), keeping the point's height above it; the ground must not be in
+// #enderman_does_not_teleport_to, the whole 2.9-block box must be free of
+// blocks and liquid, and the block under it must not be water. Otherwise
+// the enderman stays put. It never goes looking for the surface: an
+// enderman in a cave blinks about the cave, one in the sun may land in
+// shade — which is how daylight clears them.
+func (h *hub) endermanTeleportTo(players map[int32]*tracked, m *mob, x, y, z float64) bool {
 	w := h.worldFor(m.dim)
-	if w == nil || !w.Spawnable(bx, bz) {
-		return
+	if w == nil || m.mount != 0 { // isPassenger
+		return false
 	}
-	m.x, m.z = float64(bx)+0.5, float64(bz)+0.5
-	m.y = float64(w.MobFeet(bx, bz))
-	m.sx, m.sy, m.sz = m.x, m.y, m.z
-	h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport))
-	h.vibAt(m.dim, freqTeleport, m.x, m.y, m.z, m.eid)
+	bx, bz := floorInt(x), floorInt(z)
+	py := floorInt(y)
+	if !h.inWorldYIn(m.dim, py) {
+		return false
+	}
+	for py > worldgen.MinY {
+		py--
+		ground := w.At(bx, py, bz)
+		if !inRanges2(ground, canTeleportOnto) {
+			y-- // the point sinks with the search, a cell per miss
+			continue
+		}
+		if inRanges2(ground, endermanNoTeleport) {
+			return false
+		}
+		b := m.box()
+		hw := b.w / 2
+		for cx := floorInt(x - hw); cx <= floorInt(x+hw-1e-7); cx++ {
+			for cz := floorInt(z - hw); cz <= floorInt(z+hw-1e-7); cz++ {
+				for cy := floorInt(y); cy <= floorInt(y+b.h-1e-7); cy++ {
+					if s := w.At(cx, cy, cz); worldgen.Collides(s) || worldgen.IsFluid(s) {
+						return false
+					}
+				}
+			}
+		}
+		if worldgen.IsWater(w.At(bx, floorInt(y)-1, bz)) { // canRandomlyTeleportTo
+			return false
+		}
+		ox, oy, oz := m.x, m.y, m.z
+		m.x, m.y, m.z = x, y, z
+		m.sx, m.sy, m.sz = m.x, m.y, m.z
+		h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, ox, oy, oz, 1, 1)
+		h.playSoundDim(players, m.dim, "minecraft:entity.enderman.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTeleport))
+		h.vibAt(m.dim, freqTeleport, ox, oy, oz, m.eid)
+		return true
+	}
+	return false
 }
+
+var (
+	canTeleportOnto    = worldgen.BlockTag("entities_can_teleport_to")
+	endermanNoTeleport = worldgen.BlockTag("enderman_does_not_teleport_to")
+)
