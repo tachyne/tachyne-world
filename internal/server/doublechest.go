@@ -158,15 +158,26 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
+	// Each half keeps its own opener count: a half's 0→1 edge sends its
+	// CONTAINER_OPEN, and the pair plays one sound if either half opened.
+	firstL := h.chestViewers(simPos{dim: t.dim, blockPos: left}, t) == 0
+	firstR := h.chestViewers(simPos{dim: t.dim, blockPos: right}, t) == 0
 	t.winID, t.winKind = h.nextWin, winDoubleChest
 	t.winPos = simPos{dim: t.dim, blockPos: left}
-	h.vib(t.dim, freqContainerOpen, left.x, left.y, left.z, t.p.eid)
+	if firstL {
+		h.vib(t.dim, freqContainerOpen, left.x, left.y, left.z, t.p.eid)
+	}
+	if firstR {
+		h.vib(t.dim, freqContainerOpen, right.x, right.y, right.z, t.p.eid)
+	}
 	t.winPos2 = simPos{dim: t.dim, blockPos: right}
 	h.trappedChestChanged(t.dim, left) // a trapped pair: both halves signal their viewers
 	h.trappedChestChanged(t.dim, right)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
 	h.sendDoubleChestWindow(t)
-	h.containerSoundAt(h.playersRef, simPos{dim: t.dim, blockPos: left}, true)
+	if firstL || firstR {
+		h.containerSoundAt(h.playersRef, simPos{dim: t.dim, blockPos: left}, true)
+	}
 	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: left}) // both halves' lids rise
 	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: right})
 }

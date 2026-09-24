@@ -42,11 +42,13 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	if h.nextWin > 100 {
 		h.nextWin = 1
 	}
+	first := h.chestViewers(simPos{dim: t.dim, blockPos: blockPos{x, y, z}}, t) == 0 // this block's opener count
 	t.winID, t.winPos, t.winKind = h.nextWin, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}, winChest
-	h.vib(t.dim, freqContainerOpen, x, y, z, t.p.eid)
 	t.viewChest = t.enderChest()
-
-	h.containerSoundAt(players, t.winPos, true)
+	if first {
+		h.vib(t.dim, freqContainerOpen, x, y, z, t.p.eid)
+		h.containerSoundAt(players, t.winPos, true)
+	}
 	h.lidEvent(players, t.winPos)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3),
 		Title: "Ender Chest"})

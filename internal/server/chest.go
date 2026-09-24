@@ -116,8 +116,11 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		return
 	}
 	openPos := simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
-	defer h.containerSoundAt(h.playersRef, openPos, true) // everyone hears a chest open (Level.playSound(null, …))
-	defer h.lidEvent(h.playersRef, openPos)               // and sees its lid rise
+	first := h.chestViewers(openPos, t) == 0 // the counter's 0→1 edge: sound and CONTAINER_OPEN
+	if first {
+		defer h.containerSoundAt(h.playersRef, openPos, true) // everyone hears a chest open (Level.playSound(null, …))
+	}
+	defer h.lidEvent(h.playersRef, openPos) // and sees its lid rise
 	if t.inv == nil {
 		return
 	}
@@ -141,7 +144,9 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		h.nextWin = 1
 	}
 	t.winID, t.winPos, t.winKind, t.viewChest = h.nextWin, pos, winChest, c
-	h.vib(pos.dim, freqContainerOpen, pos.x, pos.y, pos.z, t.p.eid)
+	if first {
+		h.vib(pos.dim, freqContainerOpen, pos.x, pos.y, pos.z, t.p.eid)
+	}
 	if guardedByPiglins[state] { // #guarded_by_piglins: a bastion's chests are watched
 		h.angerNearbyPiglins(h.playersRef, t, true)
 	}

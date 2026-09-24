@@ -850,20 +850,26 @@ func (h *hub) openCraftingTable(t *tracked) {
 // A furnace/chest keeps its contents (only the cursor is reclaimed) and loses
 // its viewer, so a furnace smelts on unwatched.
 func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
-	switch t.winKind {
-	case winChest, winDoubleChest, winBin, winFurnace:
-		if t.winPos != (simPos{}) {
-			h.vib(t.winPos.dim, freqContainerClose, t.winPos.x, t.winPos.y, t.winPos.z, t.p.eid)
-		}
-	}
 	h.reclaimAnvil(players, t)
 	h.reclaimTrade(players, t)
 	var closedChest []simPos // lids to drop and trapped chests to re-evaluate once this viewer is gone
-	if t.winKind == winChest || t.winKind == winDoubleChest {
-		h.containerSoundAt(players, t.winPos, false)
+	if (t.winKind == winChest || t.winKind == winDoubleChest) && t.winPos != (simPos{}) {
 		closedChest = append(closedChest, t.winPos)
 		if t.winKind == winDoubleChest {
 			closedChest = append(closedChest, t.winPos2)
+		}
+		// The counter's 1→0 edge, per half: CONTAINER_CLOSE and the sound
+		// (a barrel's is closeBarrel's). Furnaces and dispensers have no
+		// counter and send nothing.
+		last := false
+		for _, p := range closedChest {
+			if h.chestViewers(p, t) == 0 {
+				last = true
+				h.vib(p.dim, freqContainerClose, p.x, p.y, p.z, t.p.eid)
+			}
+		}
+		if last && !isBarrel(h.worldFor(t.winPos.dim).At(t.winPos.x, t.winPos.y, t.winPos.z)) {
+			h.containerSoundAt(players, t.winPos, false)
 		}
 	}
 	h.releaseContainerView(t)

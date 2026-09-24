@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Containers sound once, however many people open them.** Each extra
+  player opening a chest, barrel or ender chest replayed its open sound, and
+  each one leaving played the close. As in vanilla, the sound (and the
+  vibration sculk hears) now comes only when the first player opens it and
+  the last one closes it. Barrels no longer play their close sound twice,
+  and furnaces, dispensers and droppers no longer set off sculk sensors when
+  opened, since they don't in vanilla.
 - **Cake is quiet to sculk when you are full.** Trying to eat cake while
   full, or putting a candle on it, set off sculk sensors as if you had
   eaten. Now only a bite actually taken is heard, and eating the last slice

@@ -59,3 +59,20 @@ func (h *hub) containerSoundAt(players map[int32]*tracked, pos simPos, open bool
 	h.playSoundDim(players, pos.dim, containerSound(st, open), sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.9+h.rng.Float32()*0.1)
 }
+
+// chestViewers counts the players other than except with the container at
+// pos open — ContainerOpenersCounter's count. Its 0→1 and 1→0 edges are
+// the only times the block plays its sound and sends CONTAINER_OPEN or
+// CONTAINER_CLOSE; openers in between change nothing but the lid event.
+func (h *hub) chestViewers(pos simPos, except *tracked) int {
+	n := 0
+	for _, o := range h.playersRef {
+		if o == except {
+			continue
+		}
+		if o.winKind == winChest && o.winPos == pos || o.winKind == winDoubleChest && (o.winPos == pos || o.winPos2 == pos) {
+			n++
+		}
+	}
+	return n
+}
