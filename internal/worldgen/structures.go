@@ -1,25 +1,10 @@
 package worldgen
 
-// Structures: surface lakes, buried dungeons, mineshaft networks and surface
-// ruins. Same philosophy as features.go — every structure is a pure function
-// of (seed, world coordinates) placed on a sparse grid, and each chunk stamps
-// only its own intersection, so neighbours agree with no shared state.
-
-// Structure block states (1.21.5).
-var (
-	OakPlanks          = blockBase("oak_planks")
-	Lava               = blockBase("lava")
-	Cobblestone        = blockBase("cobblestone")
-	Cobweb             = blockBase("cobweb")
-	MossyCobblestone   = blockBase("mossy_cobblestone")
-	Spawner            = blockBase("spawner")
-	ChestNorth         = blockBase("chest") + 1
-	RailFlat           = blockBase("rail") + 1 // north_south, dry
-	OakFence           = blockBase("oak_fence") + 31
-	StoneBricks        = blockBase("stone_bricks")
-	MossyStoneBricks   = blockBase("mossy_stone_bricks")
-	CrackedStoneBricks = blockBase("cracked_stone_bricks")
-)
+// Structures: surface lakes and buried dungeons, and the entry point that
+// stamps every structure (mineshafts live in mineshaft.go, strongholds in
+// stronghold.go). Same philosophy as features.go — every structure is a pure
+// function of (seed, world coordinates), and each chunk stamps only its own
+// intersection, so neighbours agree with no shared state.
 
 // Grid cell sizes (blocks) and per-cell odds.
 const (
@@ -27,8 +12,6 @@ const (
 	lakeOdds    = 0.10
 	dungeonCell = 48
 	dungeonOdds = 0.28
-	shaftCell   = 256
-	shaftOdds   = 0.45
 )
 
 // cellOrigin maps a world coordinate to its grid cell corner.
@@ -217,93 +200,6 @@ func (g *Generator) stampDungeons(ch *Chunk, cx, cz int32) {
 					setSectionBlock(ch, lx, d.Y, lz, ChestNorth, true)
 				}
 			}
-		}
-	}
-}
-
-// ---- mineshafts ---------------------------------------------------------------
-
-type shaftArm struct {
-	x, y, z int // start
-	dx, dz  int // direction (unit)
-	length  int
-}
-
-// shaftArms builds the deterministic corridor set for the cell at (wx,wz).
-func (g *Generator) shaftArms(wx, wz int) []shaftArm {
-	ox, oz := cellOrigin(wx, shaftCell), cellOrigin(wz, shaftCell)
-	if hash01(g.seed, ox, oz, 0x111E) >= shaftOdds {
-		return nil
-	}
-	cx := ox + shaftCell/4 + int(hash01(g.seed, ox, oz, 0x51)*float64(shaftCell/2))
-	cz := oz + shaftCell/4 + int(hash01(g.seed, ox, oz, 0x52)*float64(shaftCell/2))
-	y := -30 + int(hash01(g.seed, ox, oz, 0x53)*25) // -30..-5: deepslate/stone band
-	dirs := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
-	var arms []shaftArm
-	for i, d := range dirs {
-		if hash01(g.seed, ox+i, oz, 0x54) < 0.75 { // ~3 of 4 arms
-			ln := 40 + int(hash01(g.seed, ox, oz+i, 0x55)*80)
-			arms = append(arms, shaftArm{cx, y, cz, d[0], d[1], ln})
-			// One branch partway along, perpendicular.
-			if hash01(g.seed, ox+i, oz+i, 0x56) < 0.5 {
-				at := ln / 2
-				arms = append(arms, shaftArm{cx + d[0]*at, y, cz + d[1]*at, d[1], d[0],
-					30 + int(hash01(g.seed, ox-i, oz, 0x57)*40)})
-			}
-		}
-	}
-	return arms
-}
-
-// stampMineshafts carves corridor cross-sections that pass through this chunk.
-func (g *Generator) stampMineshafts(ch *Chunk, cx, cz int32) {
-	baseX, baseZ := int(cx)*16, int(cz)*16
-	for ddx := -1; ddx <= 1; ddx++ {
-		for ddz := -1; ddz <= 1; ddz++ {
-			for _, a := range g.shaftArms(baseX+8+ddx*shaftCell, baseZ+8+ddz*shaftCell) {
-				g.stampArm(ch, baseX, baseZ, a)
-			}
-		}
-	}
-}
-
-func (g *Generator) stampArm(ch *Chunk, baseX, baseZ int, a shaftArm) {
-	for i := 0; i <= a.length; i++ {
-		wx, wz := a.x+a.dx*i, a.z+a.dz*i
-		lx, lz := wx-baseX, wz-baseZ
-		if lx < -1 || lx > 16 || lz < -1 || lz > 16 {
-			continue
-		}
-		// 3-wide corridor: centre + both sides, 3 high.
-		px, pz := a.dz, a.dx // perpendicular
-		for w := -1; w <= 1; w++ {
-			clx, clz := wx+px*w-baseX, wz+pz*w-baseZ
-			setSectionBlock(ch, clx, a.y-1, clz, OakPlanks, true) // floor
-			for h := 0; h < 3; h++ {
-				setSectionBlock(ch, clx, a.y+h, clz, Air, true)
-			}
-			// Cobwebs in corners now and then.
-			if w != 0 && hash01(g.seed, wx*3+w, wz*5, 0x58) < 0.04 {
-				setSectionBlock(ch, clx, a.y+2, clz, Cobweb, true)
-			}
-		}
-		// Support frame every 6 blocks: fence posts + plank beam.
-		if i%6 == 3 {
-			for _, w := range []int{-1, 1} {
-				setSectionBlock(ch, wx+px*w-baseX, a.y, wz+pz*w-baseZ, OakFence, true)
-				setSectionBlock(ch, wx+px*w-baseX, a.y+1, wz+pz*w-baseZ, OakFence, true)
-			}
-			for w := -1; w <= 1; w++ {
-				setSectionBlock(ch, wx+px*w-baseX, a.y+2, wz+pz*w-baseZ, OakPlanks, true)
-			}
-		}
-		// A stretch of rail along the middle.
-		if hash01(g.seed, wx, wz, 0x59) < 0.5 {
-			shape := RailFlat // north_south
-			if a.dx != 0 {
-				shape = RailFlat + 2 // east_west
-			}
-			setSectionBlock(ch, lx, a.y, lz, shape, true)
 		}
 	}
 }

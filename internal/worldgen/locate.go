@@ -109,12 +109,14 @@ var structureLocators = map[string]structureLocator{
 		}
 		return p.X, p.Z, p.Exists
 	}},
-	"mineshaft": {0, shaftCell, func(g *Generator, wx, wz int) (int, int, bool) {
-		arms := g.shaftArms(wx, wz)
-		if len(arms) == 0 {
-			return 0, 0, false
-		}
-		return arms[0].x, arms[0].z, true
+	// Mineshafts may start in any chunk, so their cell is the chunk.
+	"mineshaft": {0, 16, func(g *Generator, wx, wz int) (int, int, bool) {
+		m := g.MineshaftIn(wx, wz)
+		return m.X, m.Z, m.Exists && !m.Mesa
+	}},
+	"mineshaft_mesa": {0, 16, func(g *Generator, wx, wz int) (int, int, bool) {
+		m := g.MineshaftIn(wx, wz)
+		return m.X, m.Z, m.Exists && m.Mesa
 	}},
 	"ruined_portal_nether": {1, portalCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		p := g.RuinedPortalNetherIn(wx, wz)

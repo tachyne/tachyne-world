@@ -53,4 +53,9 @@ package worldgen
 // ground, not a block above it: every moss patch's carpets, grass and azaleas
 // used to float, and fell to items the first time anything beside them
 // changed.
-const GenVersion = 20
+//
+// v21: strongholds are vanilla's whole maze of pieces around the portal
+// room, and mineshafts vanilla's rooms, corridors, crossings and stairs,
+// started from any chunk (the old 256-block grid is gone), with the dark oak
+// mesa variant in the badlands.
+const GenVersion = 21

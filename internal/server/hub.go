@@ -1108,6 +1108,8 @@ func (h *hub) run() {
 				h.updateVillages(players)         // populate villages on approach
 				h.updateVillageGolems(players)    // census-driven iron golem spawns
 				h.updateOutposts(players)         // populate pillager outposts on approach
+				// The strongholds' silverfish and the mineshafts' cave spiders.
+				h.updateStructureSpawners(players)
 				h.updatePortalDwell(players)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands

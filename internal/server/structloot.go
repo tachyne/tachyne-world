@@ -141,6 +141,13 @@ func (h *hub) structureChestTable(pos blockPos) (string, bool) {
 			}
 		}
 	}
+	for _, st := range g.StrongholdsNear(pos.x, pos.z) {
+		for _, c := range st.Chests() {
+			if pos.x == c.X && pos.y == c.Y && pos.z == c.Z {
+				return c.Table, true
+			}
+		}
+	}
 	if b := g.BuriedTreasureIn(pos.x, pos.z); b.Exists && pos.x == b.X && pos.y == b.Y && pos.z == b.Z {
 		return "chests/buried_treasure", true
 	}

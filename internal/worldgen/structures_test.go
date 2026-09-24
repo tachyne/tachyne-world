@@ -26,32 +26,6 @@ func TestStructuresAppear(t *testing.T) {
 	}
 }
 
-// TestMineshaftStamps hunts the grid for a real shaft cell, then generates the
-// chunk holding its centre and expects corridor blocks.
-func TestMineshaftStamps(t *testing.T) {
-	g := NewGenerator(7)
-	for ox := -shaftCell * 20; ox <= shaftCell*20; ox += shaftCell {
-		for oz := -shaftCell * 20; oz <= shaftCell*20; oz += shaftCell {
-			arms := g.shaftArms(ox+8, oz+8)
-			if len(arms) == 0 {
-				continue
-			}
-			a := arms[0]
-			mid := a.length / 2
-			wx, wz := a.x+a.dx*mid, a.z+a.dz*mid
-			ch := g.GenerateChunk(int32(wx>>4), int32(wz>>4))
-			lx, lz := wx&15, wz&15
-			sec := (a.y - 1 - MinY) / 16
-			ly := (a.y - 1 - MinY) % 16
-			if got := ch.Sections[sec][(ly*16+lz)*16+lx]; got != OakPlanks {
-				t.Fatalf("corridor floor at (%d,%d,%d) should be planks, got %d", wx, a.y-1, wz, got)
-			}
-			return
-		}
-	}
-	t.Fatal("no mineshaft cell rolled in 41x41 cells — odds broken")
-}
-
 func TestStructuresDeterministic(t *testing.T) {
 	a, b := NewGenerator(11), NewGenerator(11)
 	for _, c := range [][2]int32{{0, 0}, {-3, 5}, {17, -9}} {
@@ -66,7 +40,34 @@ func TestStructuresDeterministic(t *testing.T) {
 
 func TestDungeonQueryMatchesStamp(t *testing.T) {
 	g := NewGenerator(7)
-	x, y, z, ok := findWith(g, 8, func(b uint32) bool { return b == Spawner })
+	// The first spawner that is no mineshaft nest's (those are the
+	// mineshafts' own, queried through MineshaftSpawners).
+	nest := map[[3]int]bool{}
+	for cx := -8; cx <= 8; cx += 4 {
+		for cz := -8; cz <= 8; cz += 4 {
+			for _, m := range g.MineshaftsNear(cx*16, cz*16) {
+				for _, s := range g.MineshaftSpawners(m) {
+					nest[s] = true
+				}
+			}
+		}
+	}
+	var x, y, z int
+	ok := false
+	for cx := int32(-8); cx <= 8 && !ok; cx++ {
+		for cz := int32(-8); cz <= 8 && !ok; cz++ {
+			ch := g.GenerateChunk(cx, cz)
+			for s := 0; s < SectionCount && !ok; s++ {
+				for i, b := range ch.Sections[s] {
+					px, py, pz := int(cx)*16+i%16, MinY+s*16+i/256, int(cz)*16+(i/16)%16
+					if b == Spawner && !nest[[3]int{px, py, pz}] {
+						x, y, z, ok = px, py, pz, true
+						break
+					}
+				}
+			}
+		}
+	}
 	if !ok {
 		t.Skip("no dungeon in range")
 	}

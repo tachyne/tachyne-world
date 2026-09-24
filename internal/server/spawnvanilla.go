@@ -229,6 +229,7 @@ func (h *hub) seedChunkGeneration(players map[int32]*tracked, dim int, chunkSet 
 		budget--
 		h.seedChunkAnimals(players, c, counts)
 		h.seedChunkBees(players, c)
+		h.seedChunkCarts(players, c) // mineshaft chest minecarts
 	}
 }
 

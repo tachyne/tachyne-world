@@ -417,6 +417,9 @@ type savedVehicle struct {
 	PushZ    float64 `json:"push_z,omitempty"`
 	Fuse     int     `json:"fuse,omitempty"` // fuse+1 (0 = not primed)
 	Disabled bool    `json:"disabled,omitempty"`
+	// A structure cart's unrolled loot table and the cell that seeds it.
+	Loot    string `json:"loot,omitempty"`
+	LootPos [3]int `json:"loot_pos,omitempty"`
 }
 
 func (s *containerStore) recordVehicles(v []savedVehicle) {

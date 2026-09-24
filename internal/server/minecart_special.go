@@ -75,6 +75,7 @@ func (v *vehicle) cartSlots() []invStack {
 func (h *hub) vehicleContainerAt(pos simPos) []invStack {
 	for _, v := range h.vehicles {
 		if v.dim == pos.dim && floorInt(v.x) == pos.x && floorInt(v.y) == pos.y && floorInt(v.z) == pos.z {
+			h.unpackCartLoot(v) // a hopper or comparator reaching in unpacks it first
 			if s := v.cartSlots(); s != nil {
 				return s
 			}

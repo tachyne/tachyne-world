@@ -52,8 +52,7 @@ camel husk) counts as MISSING, so the gain is smaller than the raw count of fixe
 5. **26.3 data still read from 1.21.11.** Villager trades (26.3 moved them to data files and
    changed values) and advancements. Seven advancements cannot be earned.
 6. **World generation.** There are no aquifers or underground water (lush-cave water floats
-   over carved air), no mineshaft or stronghold rooms, and many ground-cover features are
-   missing.
+   over carved air), and many ground-cover features are missing.
 7. **26.3 content with no behaviour yet.** The sulfur cube, the lunge enchantment (spears
    themselves work since 2026-09-24), and the camel husk.
 8. **Players seeing each other.** Arm swings, mining cracks and the explosion packet are not

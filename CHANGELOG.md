@@ -157,9 +157,26 @@ the public history since the project was open-sourced on 2026-07-10.
     with an iron spear (one armed zombie in six). Zombified piglins carry a
     golden sword, or one time in twenty a golden spear. A mob with a spear
     closes in, lowers it and charges, then wheels off and comes round again.
-  - **Still to come.** Other clients don't see the stab animation yet. The
-    Lunge enchantment isn't in the registry clients get yet. 26.3 clients
-    need a gateway update before their jab reaches the server.
+  - **Still to come.** Other clients don't see the stab animation yet, and
+    the Lunge enchantment isn't in the registry clients get yet.
+- **Strongholds are whole strongholds.** The portal room no longer sits
+  alone underground. It is at the far end of vanilla's maze: a spiral
+  staircase down, then corridors behind wooden doors, iron doors and
+  grates, prison cells, turns, fountain and pillar rooms, galleries,
+  staircases, five-way crossings and libraries. The walls are weathered
+  stone bricks, some cracked, mossy or infested with silverfish. Chest
+  corridors, galleries and libraries hold chests with the vanilla
+  stronghold loot. The portal room has its lava pools, its barred windows
+  and a silverfish spawner on the stairs up to the frames.
+- **Mineshafts are vanilla's mineshafts.** Each one starts from a domed
+  room and spreads out as corridors, one- and two-storey crossings and
+  staircases, the way vanilla lays them out. Corridors have timber supports,
+  torches, cobwebs and rail lines. Plank bridges cross ravines, with log
+  pillars or chains holding them up. Cave spider nests have a spawner
+  buried in webs, and chest minecarts carry the abandoned-mineshaft loot. A
+  mineshaft can now start in any chunk, as often as in vanilla. In the
+  badlands they are built from dark oak and sit higher up, often breaking
+  out into the canyons. `/locate structure mineshaft_mesa` finds them.
 
 ### Changed
 - **Villager and wandering-trader trades come from 26.3's trade data.**

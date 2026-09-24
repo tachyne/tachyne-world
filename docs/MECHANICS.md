@@ -598,7 +598,7 @@ elytra.
 | Mechanic | Vanilla | Ours | Status |
 |---|---|---|---|
 | Dimension | the_end effects, void, fixed time | third world (end.gob, own cache namespace), main island lens + 10-pillar ring, void beyond r=95; vanilla spawn platform at (100,49,0); /end op command | 🟡 |
-| Stronghold | full maze, libraries, silverfish spawner | portal room only (15x15 shell, lava dais, 12-frame ring, ~10%% pre-filled eyes), 1536-cell grid, never near spawn (GenVersion 4→5, underground-only change) | 🟡 |
+| Stronghold | full maze, libraries, silverfish spawner | vanilla StrongholdPieces port: full piece graph (corridors, doors, prison halls, turns, room crossings, stairs, five crossings, chest corridors, libraries, portal room), stone-brick selector, corridor/crossing/library loot, silverfish spawner; placement still the 1536-cell grid, not concentric rings (GenVersion 20) | 🟡 |
 | Eyes of ender | fly + drop/shatter, 20%% break | fly toward the nearest stronghold, always consumed, no drop | 🟡 |
 | End portal | filling animation, per-frame checks | server recomputes the ring from the seed on every eye (the click is a wish); 12 eyes fill the 3x3 instantly | ✅ |
 | Dragon | phases (circling/strafing/perching), breath, bossbar, crystal beams | 200 HP flyer: circles the ring, 12s swoop cycles at survival players, 8 contact damage, +2 HP/s while any crystal lives; no perch/breath/bossbar/beam visuals | 🟡 |
@@ -645,7 +645,7 @@ elytra.
 |---|---|---|---|
 | Dungeons | 1-2 chests, cobble/mossy floor mix, spawner w/ spinning mob | one chest, mossy shell mix, live spawner (200-800t delay, 16-block activation, cap 6) — no spinning-mob display (needs block-entity data packet) | 🟡 |
 | Spawner | block entity, XP on break, silk-touch rules | pure-seed lookup (no block entity); mine it → dead | 🟡 |
-| Mineshafts | vast nets, corridors+stairs, cave spider spawners, loot carts | straight arms + one branch per arm, supports/cobwebs/rails; no stairs/spiders/carts | 🟡 |
+| Mineshafts | vast nets, corridors+stairs, cave spider spawners, loot carts | vanilla MineshaftPieces port: rooms, corridors, crossings, stairs, supports, cobwebs, rails, pillars/chains, cave spider nests + spawners, chest minecarts (abandoned_mineshaft), mesa variant; per-chunk 0.004 placement (GenVersion 20) | ✅ |
 | Lakes |水 both types, underground too | surface bowls only, 20%% lava | 🟡 |
 | Ruins | (n/a — flavor) | small broken stone-brick shells | ✅ |
 | GenVersion | — | bumped 1→2 (2026-07-04): terrain regenerates under existing builds; VM state backed up to ~/backups/20260704-1807 first | ⚠️ |

@@ -110,6 +110,11 @@ type vehicle struct {
 	lit          bool    // furnace cart: synced fuel flag
 	fuse         int     // TNT cart: ticks to the blast (-1 = not primed)
 	disabled     bool    // hopper cart: switched off by a live activator rail
+	// A structure's chest cart (a mineshaft's): the loot table it still
+	// holds unrolled, and the cell it was placed on (the roll's seed) —
+	// RandomizableContainer's lootTable, unpacked on first use.
+	loot    string
+	lootPos blockPos
 }
 
 func (v *vehicle) isBoat() bool { return !cartTypes[v.etype] }
@@ -292,6 +297,7 @@ func (h *hub) breakVehicle(players map[int32]*tracked, v *vehicle) {
 		return // gamerule entity_drops: nothing is left behind
 	}
 	h.spawnItemIn(players, v.dim, vehicleItemFor(v.etype), 1, v.x, v.y, v.z)
+	h.unpackCartLoot(v)                       // a structure cart broken unopened spills its loot
 	if slots := v.cartSlots(); slots != nil { // ChestBoat.destroy: the cargo spills
 		for _, st := range slots {
 			if st.item == 0 || st.count == 0 {
@@ -423,6 +429,9 @@ func (h *hub) snapshotVehicles() []savedVehicle {
 			sv.Chest = append(sv.Chest, packStack(st))
 		}
 		sv.Fuel, sv.PushX, sv.PushZ, sv.Disabled = v.fuel, v.pushX, v.pushZ, v.disabled
+		if v.loot != "" {
+			sv.Loot, sv.LootPos = v.loot, [3]int{v.lootPos.x, v.lootPos.y, v.lootPos.z}
+		}
 		if v.etype == entityTntMinecart && v.fuse >= 0 {
 			sv.Fuse = v.fuse + 1
 		}
@@ -452,6 +461,7 @@ func (h *hub) restoreVehicles(saved []savedVehicle) {
 			}
 		}
 		v.fuel, v.pushX, v.pushZ, v.disabled = sv.Fuel, sv.PushX, sv.PushZ, sv.Disabled
+		v.loot, v.lootPos = sv.Loot, blockPos{sv.LootPos[0], sv.LootPos[1], sv.LootPos[2]}
 		if sv.Fuse > 0 {
 			v.fuse = sv.Fuse - 1
 		}
@@ -465,6 +475,10 @@ func (h *hub) restoreVehicles(saved []savedVehicle) {
 func (h *hub) openVehicleChest(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if t.inv == nil || v.chest == nil {
 		return
+	}
+	if name := h.unpackCartLoot(v); name != "" {
+		// RandomizableContainer.unpackLootTable: the opener generates it.
+		h.advance(players, t, "player_generates_container_loot", advMatch{lootTable: name})
 	}
 	h.releaseContainerView(t)
 	h.reclaimCraft(nil, t)

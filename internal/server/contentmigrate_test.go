@@ -134,6 +134,7 @@ var notIDs = map[string]string{
 	"server.containerFile.Vehicles[].Dim":             whyPos,
 	"server.containerFile.Vehicles[].Fuel":            whyCount,
 	"server.containerFile.Vehicles[].Fuse":            whyCount,
+	"server.containerFile.Vehicles[].LootPos[]":       whyPos,
 	"server.mobFile.Bastions[][]":                     whyPos,
 	"server.mobFile.Chunks{}[].Anger":                 whyCount,
 	"server.mobFile.Chunks{}[].Bed[]":                 whyPos,
