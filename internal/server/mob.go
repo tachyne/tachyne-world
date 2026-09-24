@@ -35,6 +35,11 @@ var (
 )
 
 type mob struct {
+	// SpearUseGoal (spearmob.go): the goal's state while it runs, the tick the
+	// spear was lowered (0 = raised) and who that charge has struck.
+	spearGoal       *spearGoalState
+	spearUseAt      uint64
+	spearHits       map[int32]uint64
 	invulnTicks     int32   // LivingEntity.invulnerableTime: 20 after a landed blow, counting down
 	lastHurt        float64 // the raw amount of that blow: only a bigger blow's excess lands while > 10
 	eid             int32
@@ -689,6 +694,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A squid jetting away from whatever hurt it.
 		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
 			// A piglin backing away from a soul light or a zombified piglin.
+		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
+			// A zombie or zombified piglin with a spear: closing, charging
+			// with the spear lowered, and wheeling off for the next pass.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
 			// A stranded water animal heading back to the water, or a strider
 			// off the lava heading back to it.
@@ -1088,7 +1096,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 					h.mobMelee(players, m)
 				}
 			default:
-				h.mobMelee(players, m) // bite a player in reach (on cooldown)
+				if m.spearGoal != nil {
+					h.mobSpearTick(players, m) // SpearUseGoal outranks the melee goal: the charge is its attack
+				} else {
+					h.mobMelee(players, m) // bite a player in reach (on cooldown)
+				}
 			}
 		}
 	}

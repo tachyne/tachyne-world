@@ -325,6 +325,7 @@ func (h *hub) applyVehicleMove(players map[int32]*tracked, t *tracked, e evVehic
 		return
 	}
 	h.vehicleStats(t, v, math.Hypot(e.x-v.x, e.z-v.z))
+	h.noteKnownMove(t, e.x-v.x, e.y-v.y, e.z-v.z) // the boat's movement is the rider's
 	v.x, v.y, v.z, v.yaw = e.x, e.y, e.z, e.yaw
 	// The rider rides along: hub position drives chunk streaming + interest.
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z

@@ -551,7 +551,7 @@ NOT_OBSERVABLE = {
     # (honey), thrown_item_picked_up_by_player (tosses), allay_drop_item_on_
     # block, started_riding, avoid_vibration (sneak-suppressed vibrations) —
     # and thrown_item_picked_up_by_entity now that piglins pick gold up.
-    "spear_mobs",                   # no spear (a flagged 1.21.11 extra)
+    # spear_mobs left it with the spear's charge (spear.go).
 }
 
 # 26.3 content the engine does not simulate yet. Criteria naming it stay

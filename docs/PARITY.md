@@ -54,8 +54,8 @@ camel husk) counts as MISSING, so the gain is smaller than the raw count of fixe
 6. **World generation.** There are no aquifers or underground water (lush-cave water floats
    over carved air), no mineshaft or stronghold rooms, and many ground-cover features are
    missing.
-7. **26.3 content with no behaviour yet.** The sulfur cube, spears and lunge, and the camel
-   husk.
+7. **26.3 content with no behaviour yet.** The sulfur cube, the lunge enchantment (spears
+   themselves work since 2026-09-24), and the camel husk.
 8. **Players seeing each other.** Arm swings, mining cracks and the explosion packet are not
    broadcast.
 

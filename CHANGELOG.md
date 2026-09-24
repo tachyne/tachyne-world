@@ -139,6 +139,27 @@ the public history since the project was open-sourced on 2026-07-10.
   stage at vanilla's pace, and clear when you stop. The pace takes in the
   tool and which blocks it is made for, Efficiency, Haste, Mining Fatigue,
   being underwater without Aqua Affinity and being off the ground.
+- **Spears work.** Before this, a spear hit like a bare fist.
+  - **The jab.** A left-click hits everything on a short line in front of
+    you, from 2 to 4.5 blocks out (6.5 in creative). It does the spear's
+    attack damage: 1 for wood and gold, 2 for stone and copper, 3 for iron,
+    4 for diamond and 5 for netherite, plus Sharpness and similar. It needs
+    a full charge, and it knocks back what it hits.
+  - **The charge.** Hold use to lower the spear. After a short delay
+    (0.4 to 0.75 s, depending on the material), whatever you run into is hit
+    for 1 plus your closing speed in blocks per second times the spear's
+    multiplier (0.7 to 1.2). Moving fast enough also knocks the target back,
+    and faster still pulls a rider off its mount. The time you can hold each
+    of these effects for runs out one after another. A charge on horseback
+    is what the spear is built for, and striking five mobs in one charge
+    earns the advancement for it.
+  - **Mobs use them too.** Zombies, husks and zombie villagers can spawn
+    with an iron spear (one armed zombie in six). Zombified piglins carry a
+    golden sword, or one time in twenty a golden spear. A mob with a spear
+    closes in, lowers it and charges, then wheels off and comes round again.
+  - **Still to come.** Other clients don't see the stab animation yet. The
+    Lunge enchantment isn't in the registry clients get yet. 26.3 clients
+    need a gateway update before their jab reaches the server.
 
 ### Changed
 - **Villager and wandering-trader trades come from 26.3's trade data.**

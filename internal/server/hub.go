@@ -295,7 +295,16 @@ type tracked struct {
 	spinUntil uint64
 	// spinSpent marks the one strike a riptide gets as used.
 	spinSpent bool
-	fireSecs  int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
+	// Spear (spear.go): spearAt is the tick a spear was lowered for the
+	// charge (0 = not charging); spearHits is who the charge has struck and
+	// when (the ten-tick contact cooldown, and the spear_mobs count).
+	spearAt   uint64
+	spearHits map[int32]uint64
+	// kv* is the last movement the client reported (ServerPlayer's known
+	// movement), blocks per tick, and the tick it came in.
+	kvx, kvy, kvz float64
+	kvAt          uint64
+	fireSecs      int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
 	// Survival state — simulated only while gamemode == gmSurvival.
 	living        // attributes + status effects, shared with mobs
@@ -1050,17 +1059,18 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
-			h.tickItems(players)      // item physics: gravity, sliding, floating, currents
-			h.pickupItems(players)    // collect dropped items into survival inventories
-			h.tickDigCracks(players)  // the cracks other players see on a dig
-			h.updateOrbs(players)     // collect experience orbs / expire old ones
-			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
-			h.tickGliding(players)    // elytra wear: a point a second, and the glide ends with the wing
-			h.tickBoosts(players)     // a food-on-a-stick sprint runs down while its mount is ridden
-			h.expireSpyglass(players) // a scope held to its full duration drops
-			h.updateEating(players)   // apply finished eat-holds (32-tick chew)
-			h.borderDamage(players)   // outside the world border hurts (players only)
-			h.updateSleep(players)    // turn the night once everyone's slept ~5s
+			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
+			h.pickupItems(players)      // collect dropped items into survival inventories
+			h.tickDigCracks(players)    // the cracks other players see on a dig
+			h.updateOrbs(players)       // collect experience orbs / expire old ones
+			h.updateRockets(players)    // firework rockets climb, boost gliders, pop
+			h.tickGliding(players)      // elytra wear: a point a second, and the glide ends with the wing
+			h.tickBoosts(players)       // a food-on-a-stick sprint runs down while its mount is ridden
+			h.expireSpyglass(players)   // a scope held to its full duration drops
+			h.updateEating(players)     // apply finished eat-holds (32-tick chew)
+			h.tickSpearCharges(players) // lowered spears strike what they run into
+			h.borderDamage(players)     // outside the world border hurts (players only)
+			h.updateSleep(players)      // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
@@ -1784,6 +1794,7 @@ func (h *hub) run() {
 					h.stopEating(players, t)
 					h.lowerShield(t)            // release / hotbar switch also drops a shield
 					h.lowerSpyglass(players, t) // …and takes a spyglass from the eye
+					stopSpearCharge(t)          // …and raises a lowered spear
 					if e.fire {                 // release_use_item looses a drawn bow / finishes a crossbow load / throws a trident…
 						h.releaseDraw(players, t)
 						h.finishXbowCharge(players, t)
@@ -1806,6 +1817,12 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.startTridentCharge(t)
 				}
+			case evSpearUse:
+				if t := players[e.eid]; t != nil {
+					h.startSpearCharge(players, t)
+				}
+			case evSpearStab:
+				h.spearStab(players, players[e.eid])
 			case evBowStart:
 				if t := players[e.eid]; t != nil {
 					h.startDraw(t)
@@ -1851,6 +1868,13 @@ func (h *hub) run() {
 					h.placeFrogspawn(players, t)
 				}
 			case evAttack:
+				// A spear does not swing: the server ignores an attack with a
+				// piercing weapon in hand, and the jab is the STAB action. A
+				// gateway whose client only says "attack" still gets the jab.
+				if t := players[e.attacker]; t != nil && spearOf(t.p.heldItem()) != nil {
+					h.spearStab(players, t)
+					break
+				}
 				if h.hitCrystal(players, e.target) {
 					break
 				}
@@ -2438,6 +2462,9 @@ func (h *hub) onMove(players map[int32]*tracked, t *tracked, e evMove) {
 	h.onFallAndExhaust(players, t, e) // fall damage + walking hunger (reads pre-move position)
 	h.moveStats(t, e)                 // the vanilla movement statistics family (cm, teleports excluded)
 	wpMoved := int32(t.x) != int32(e.x) || int32(t.y) != int32(e.y) || int32(t.z) != int32(e.z)
+	if !e.teleport {
+		h.noteKnownMove(t, e.x-t.x, e.y-t.y, e.z-t.z) // what a spear's charge reads
+	}
 	t.x, t.y, t.z = e.x, e.y, e.z
 	t.yaw, t.pitch, t.onGround, t.sprinting = e.yaw, e.pitch, e.onGround, e.sprinting
 	// LivingEntity.updateFallFlying: touching the ground ends the glide, and

@@ -18,6 +18,7 @@ const (
 	digDropOne     = 4 // Q: drop one of the held item
 	digReleaseUse  = 5 // released right-click (ends an eat-hold / bow draw)
 	digSwapHands   = 6 // F: swap the held item with the off-hand
+	digStab        = 7 // 26.x STAB: a spear's jab (the next action after SWAP, as 26.2 numbers it)
 
 	gameEventChangeGameMode = 3 // change game mode (value = mode)
 

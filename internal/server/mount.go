@@ -148,6 +148,7 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 			h.advance(players, t, "ride_entity_in_lava", advMatch{}) // "Feels like home"
 		}
 	}
+	h.noteKnownMove(t, e.x-m.x, e.y-m.y, e.z-m.z) // a rider's known movement is its mount's
 	m.x, m.y, m.z, m.yaw = e.x, e.y, e.z, e.yaw
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z // the rider rides along (chunk streaming)
 	t.p.setHubPos(e.x, e.z)

@@ -111,6 +111,10 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evEquipHeld{eid: p.eid})
 			return
 		}
+		if spearOf(item) != nil && e.Hand != handOffhand { // a spear is lowered for the charge
+			h.post(evSpearUse{eid: p.eid})
+			return
+		}
 		switch item {
 		case itemBow:
 			h.post(evBowStart{eid: p.eid})

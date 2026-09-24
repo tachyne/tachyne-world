@@ -31,6 +31,9 @@ var meleeDamage = itemIntMap(map[string]int{
 	"wooden_pickaxe": 2, "golden_pickaxe": 2, "stone_pickaxe": 3, "copper_pickaxe": 3, "iron_pickaxe": 4, "diamond_pickaxe": 5, "netherite_pickaxe": 6,
 	"wooden_shovel": 2, "golden_shovel": 2, "stone_shovel": 3, "copper_shovel": 3, "iron_shovel": 4, "diamond_shovel": 5, "netherite_shovel": 6,
 	"mace": 6, // vanilla: +5 attack-damage modifier over the player's base 1
+	// Spears (Item.Properties.spear): the base 1 plus the material's attack
+	// bonus and nothing else — the jab is light; the charge is the weapon.
+	"wooden_spear": 1, "golden_spear": 1, "stone_spear": 2, "copper_spear": 2, "iron_spear": 3, "diamond_spear": 4, "netherite_spear": 5,
 })
 
 // itemIntMap / itemFloatMap resolve name-keyed tables to id-keyed (version-independent).
@@ -394,6 +397,14 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	if smash { // shockwave, fall-damage negation, wind_burst launch
 		h.smashEffects(players, t, m, fall)
 	}
+	h.mobStruck(players, m, t, dt)
+}
+
+// mobStruck is what follows a player's blow landing on a mob, whatever the
+// weapon: the kin and reinforcements it alerts, the kill and its credit, or
+// the hurt flash and the mob's answer (panic, a grudge, a retaliation). The
+// melee swing and the spear's stab and charge all end here.
+func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgType) {
 	h.alertKin(m, t)                 // HurtByTargetGoal.setAlertOthers: the neighbours join in
 	h.zombieReinforce(players, m, t) // hard mode: a hurt zombie may call for backup
 	if m.etype == entityZombifiedPiglin && t != nil {
@@ -748,6 +759,9 @@ func attackPeriod(item int32) int {
 		return 7
 	case itemByName["diamond_hoe"], itemByName["netherite_hoe"]: // 4.0 — as fast as a fist
 		return 5
+	}
+	if sp := spearOf(item); sp != nil {
+		return sp.period // attack speed 1/attack_duration
 	}
 	return 5 // bare hand
 }

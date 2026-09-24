@@ -41,6 +41,7 @@ func (h *hub) configureNetherMob(players map[int32]*tracked, m *mob) {
 		m.behavior = Behavior(hostileBehavior{}) // speed from speedFor (attr 0.23)
 		m.setFollowRange(35)                     // zombie-family FOLLOW_RANGE (vanilla behavior)
 		m.setBaseArmor(2)
+		h.zombifiedPiglinWeapon(players, m)
 	case entityMagmaCube:
 		m.hostile = true
 		m.size = 1 + h.rng.Intn(3)*1 // 1/2/4-ish

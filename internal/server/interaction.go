@@ -49,6 +49,10 @@ func (s *Server) handleDig(p *player, data []byte) {
 		s.hub.post(evDigStop{eid: p.eid}) // ABORT_DESTROY_BLOCK: the cracks go
 		return
 	}
+	if status == digStab {
+		s.hub.post(evSpearStab{eid: p.eid}) // STAB: the jab of a held spear
+		return
+	}
 	if status == digFinishBreak {
 		s.hub.post(evDigStop{eid: p.eid}) // STOP_DESTROY_BLOCK: broken or refused, the cracks go
 	}

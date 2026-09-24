@@ -12,7 +12,9 @@ import (
 // chain, iron, diamond — the tier rolls up three times at 9.5% each), the
 // head first and each further piece kept only while a stop roll fails
 // (25%, or 10% on hard). Zombies also have a 1% (hard 5%) chance of an
-// iron sword (one in three) or shovel; skeletons and their kin carry a bow,
+// iron sword (one in six), an iron spear (one in six) or a shovel;
+// zombified piglins carry a golden sword, one in twenty a golden spear
+// (zombifiedPiglinWeapon); skeletons and their kin carry a bow,
 // wither skeletons a stone sword. Armour pieces are enchanted with
 // probability 0.5×f each and the weapon at 0.25×f, at a cost of 5 plus up to
 // 17×f, drawn from the on_mob_spawn_equipment set. What spawned on a mob drops at 8.5%.
@@ -47,6 +49,9 @@ func init() {
 var (
 	itemIronSword  = int32(itemByName["iron_sword"])
 	itemIronShovel = int32(itemByName["iron_shovel"])
+	itemIronSpear  = itemByName["iron_spear"]
+	itemGoldSword  = itemByName["golden_sword"]
+	itemGoldSpear  = itemByName["golden_spear"]
 	itemStoneSword = int32(itemByName["stone_sword"])
 )
 
@@ -91,9 +96,12 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 			chance = 0.05
 		}
 		if m.held == 0 && h.rng.Float64() < chance {
-			if h.rng.Intn(3) == 0 {
+			switch h.rng.Intn(6) { // one in six a sword, one in six a spear, else a shovel
+			case 0:
 				m.held = itemIronSword
-			} else {
+			case 1:
+				m.held = itemIronSpear
+			default:
 				m.held = itemIronShovel
 			}
 			changed = true
@@ -138,6 +146,21 @@ func (h *hub) spawnGear(players map[int32]*tracked, m *mob) {
 	m.refreshGearArmor()
 	h.reassessWeapon(m) // a skeleton that rolled a sword melees instead of shooting
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
+}
+
+// zombifiedPiglinWeapon is ZombifiedPiglin.populateDefaultEquipmentSlots: a
+// golden sword, or one time in twenty a golden spear. Not on a reload (the
+// saved weapon comes back instead) and not over something already held (a
+// converted piglin keeps its own).
+func (h *hub) zombifiedPiglinWeapon(players map[int32]*tracked, m *mob) {
+	if h.reloading || m.held != 0 {
+		return
+	}
+	m.held = itemGoldSword
+	if h.rng.Intn(20) == 0 {
+		m.held = itemGoldSpear
+	}
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
 }
 
 // wearsAnything reports whether the mob shows any equipment.
