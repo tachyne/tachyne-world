@@ -77,7 +77,7 @@ func (h *hub) onKick(players map[int32]*tracked, e evKick) {
 			}
 			t.p.trySendEv(attachproto.Disconnect{Reason: reason})
 			t.p.disconnect()
-			e.by.trySendEv(chatEv("Kicked " + t.p.name + "."))
+			h.cmdSuccess(players, e.by, "Kicked "+t.p.name+".", true)
 			return
 		}
 	}
@@ -142,7 +142,7 @@ func (h *hub) onClearInv(players map[int32]*tracked, e evClearInv) {
 		h.sendInventory(t)
 		h.sendCursor(t)
 		h.broadcastEquipment(players, t)
-		e.by.trySendEv(chatEv(fmt.Sprintf("Removed %d item(s) from %s.", n, t.p.name)))
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from %s.", n, t.p.name), true)
 	}
 }
 
@@ -165,7 +165,7 @@ func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
 	}
 	pos := blockPos{int(t.x), int(t.y), int(t.z)}
 	h.spawns.set(t.p.key(), pos, t.dim)
-	t.p.trySendEv(chatEv(fmt.Sprintf("Spawn point set to %d, %d, %d.", pos.x, pos.y, pos.z)))
+	h.cmdSuccess(players, t.p, fmt.Sprintf("Spawn point set to %d, %d, %d.", pos.x, pos.y, pos.z), true)
 }
 
 // cmdPlaysound plays a named sound at the caller (or a target player).

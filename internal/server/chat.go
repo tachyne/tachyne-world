@@ -167,7 +167,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 			p.tell("You don't have permission.")
 			break
 		}
-		p.tell(fmt.Sprintf("Seed: [%d]", s.Seed))
+		s.info(p, fmt.Sprintf("Seed: [%d]", s.Seed))
 	case "me":
 		if len(fields) > 1 { // EmoteCommands: "* name action" to everyone
 			s.hub.post(evChat{text: fmt.Sprintf("* %s %s", p.name, strings.Join(fields[1:], " "))})
@@ -255,11 +255,11 @@ func (s *Server) cmdTime(p *player, args []string) {
 		}
 		switch args[1] {
 		case "daytime":
-			p.tell(fmt.Sprintf("The time is %d", now%dayLengthTicks))
+			s.info(p, fmt.Sprintf("The time is %d", now%dayLengthTicks))
 		case "gametime":
-			p.tell(fmt.Sprintf("The time is %d", s.hub.tick.Load()))
+			s.info(p, fmt.Sprintf("The time is %d", s.hub.tick.Load()))
 		case "day":
-			p.tell(fmt.Sprintf("The time is %d", now/dayLengthTicks))
+			s.info(p, fmt.Sprintf("The time is %d", now/dayLengthTicks))
 		default:
 			p.tell(usage)
 		}
@@ -272,7 +272,7 @@ func (s *Server) cmdTime(p *player, args []string) {
 		}
 		t := uint64(int64(now) + n)
 		s.hub.post(evSetTime{t: t})
-		p.tell(fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
+		s.ok(p, fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
 		return
 	case "set":
 		args = args[1:] // the marker or number follows
@@ -300,7 +300,7 @@ func (s *Server) cmdTime(p *player, args []string) {
 		t = uint64(n)
 	}
 	s.hub.post(evSetTime{t: t}) // through the hub so the plugin TimeSetEvent fires
-	p.tell(fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
+	s.ok(p, fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
 }
 
 // parseTimeTicks is TimeArgument: a number of ticks, or with a unit suffix
@@ -347,7 +347,7 @@ func (s *Server) cmdTeleport(p *player, args []string) {
 	p.setHubPos(p.x, p.z)
 	p.sendEv(teleportEv(p.x, p.y, p.z, p.yaw, p.pitch))
 	s.hub.post(evMove{eid: p.eid, x: x, y: y, z: z, yaw: p.yaw, pitch: p.pitch, onGround: false, teleport: true})
-	p.tell(fmt.Sprintf("Teleported to %.1f %.1f %.1f", x, y, z))
+	s.ok(p, fmt.Sprintf("Teleported to %.1f %.1f %.1f", x, y, z))
 }
 
 // cmdGamemode changes a player's game mode and persists it, so a mixed
@@ -381,9 +381,9 @@ func (s *Server) cmdGamemode(p *player, args []string) {
 	// so a player who switched themselves to survival still couldn't pick up items.)
 	s.hub.post(evSetGamemode{name: target, mode: mode, by: p.name, eid: p.eid, modes: s.modes})
 	if target == p.name {
-		p.tell("Set own game mode to " + args[0])
+		s.ok(p, "Set own game mode to "+args[0])
 	} else {
-		p.tell("Set " + target + "'s game mode to " + args[0])
+		s.ok(p, "Set "+target+"'s game mode to "+args[0])
 	}
 }
 

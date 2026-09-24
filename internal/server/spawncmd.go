@@ -72,6 +72,7 @@ func (s *Server) cmdSetWorldSpawn(p *player, args []string) {
 // join position and every client's compass move to the new point.
 func (h *hub) applySetWorldSpawn(players map[int32]*tracked, e evSetWorldSpawn) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	if e.dim != dimOverworld {
 		tell("Can only set the world spawn for the Overworld")
 		return
@@ -83,7 +84,7 @@ func (h *hub) applySetWorldSpawn(players map[int32]*tracked, e evSetWorldSpawn) 
 	for _, t := range players {
 		h.sendDefaultSpawn(t)
 	}
-	tell(fmt.Sprintf("Set the world spawn point to %d, %d, %d [%s]", e.x, e.y, e.z, jFloat(e.yaw)))
+	okTell(fmt.Sprintf("Set the world spawn point to %d, %d, %d [%s]", e.x, e.y, e.z, jFloat(e.yaw)))
 }
 
 // setWorldSpawn installs a world spawn: the hub's respawn fallback, and the
@@ -175,5 +176,5 @@ func (h *hub) applyDefaultGamemode(players map[int32]*tracked, e evDefaultGamemo
 	mode := e.mode
 	h.rules.DefaultGamemode = &mode
 	h.saveRules()
-	cmdTeller(players, e.by)("The default game mode is now " + gameModeLongName(e.mode))
+	h.cmdOK(players, e.by)("The default game mode is now " + gameModeLongName(e.mode))
 }

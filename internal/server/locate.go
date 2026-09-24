@@ -45,5 +45,5 @@ func (s *Server) cmdLocate(p *player, args []string) {
 	}
 	dx, dz := float64(x-px), float64(z-pz)
 	dist := int(math.Floor(math.Sqrt(dx*dx + dz*dz)))
-	p.tell(fmt.Sprintf("The nearest minecraft:%s is at [%d, ~, %d] (%d blocks away)", id, x, z, dist))
+	s.info(p, fmt.Sprintf("The nearest minecraft:%s is at [%d, ~, %d] (%d blocks away)", id, x, z, dist))
 }

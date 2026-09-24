@@ -86,6 +86,8 @@ func chunkPosString(cx, cz int) string { return fmt.Sprintf("[%d, %d]", cx, cz) 
 // applyForceLoadCommand runs /forceload on the hub.
 func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by)     // sendSuccess(…, true)
+	infoTell := h.cmdInfo(players, e.by) // sendSuccess(…, false)
 	w := h.worldFor(e.dim)
 	dimName := dimRegistryName(e.dim)
 	switch e.op {
@@ -97,19 +99,19 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 		}
 		switch len(cs) {
 		case 0:
-			tell("No force loaded chunks were found in " + dimName)
+			infoTell("No force loaded chunks were found in " + dimName)
 		case 1:
-			tell(fmt.Sprintf("A force loaded chunk was found in %s at: %s", dimName, names[0]))
+			infoTell(fmt.Sprintf("A force loaded chunk was found in %s at: %s", dimName, names[0]))
 		default:
-			tell(fmt.Sprintf("%d force loaded chunks were found in %s at: %s", len(cs), dimName, strings.Join(names, ", ")))
+			infoTell(fmt.Sprintf("%d force loaded chunks were found in %s at: %s", len(cs), dimName, strings.Join(names, ", ")))
 		}
 		return
 	case "query":
 		cx, cz := e.x0>>4, e.z0>>4
 		if w.Forced(int32(cx), int32(cz)) {
-			tell(fmt.Sprintf("Chunk at %s in %s is marked for force loading", chunkPosString(cx, cz), dimName))
+			infoTell(fmt.Sprintf("Chunk at %s in %s is marked for force loading", chunkPosString(cx, cz), dimName))
 		} else {
-			tell(fmt.Sprintf("Chunk at %s in %s is not marked for force loading", chunkPosString(cx, cz), dimName))
+			infoTell(fmt.Sprintf("Chunk at %s in %s is not marked for force loading", chunkPosString(cx, cz), dimName))
 		}
 		return
 	case "remove all":
@@ -117,7 +119,7 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 			w.SetForced(c[0], c[1], false)
 		}
 		h.saveForced()
-		tell("Unmarked all force loaded chunks in " + dimName)
+		okTell("Unmarked all force loaded chunks in " + dimName)
 		return
 	}
 	add := e.op == "add"
@@ -154,13 +156,13 @@ func (h *hub) applyForceLoadCommand(players map[int32]*tracked, e evForceLoadCmd
 	case tally.nonZero == 0:
 		tell("No chunks were removed from force loading")
 	case who != "" && add:
-		tell(fmt.Sprintf("Marked chunk %s in %s to be force loaded", who, dimName))
+		okTell(fmt.Sprintf("Marked chunk %s in %s to be force loaded", who, dimName))
 	case who != "":
-		tell(fmt.Sprintf("Unmarked chunk %s in %s for force loading", who, dimName))
+		okTell(fmt.Sprintf("Unmarked chunk %s in %s for force loading", who, dimName))
 	case add:
-		tell(fmt.Sprintf("Marked %d chunks in %s from %s to %s to be force loaded", tally.nonZero, dimName, from, to))
+		okTell(fmt.Sprintf("Marked %d chunks in %s from %s to %s to be force loaded", tally.nonZero, dimName, from, to))
 	default:
-		tell(fmt.Sprintf("Unmarked %d chunks in %s from %s to %s for force loading", tally.nonZero, dimName, from, to))
+		okTell(fmt.Sprintf("Unmarked %d chunks in %s from %s to %s for force loading", tally.nonZero, dimName, from, to))
 	}
 }
 

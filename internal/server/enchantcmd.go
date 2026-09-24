@@ -86,8 +86,8 @@ func (h *hub) applyEnchantCommand(players map[int32]*tracked, e evEnchantCmd) {
 	case done == 0:
 		tell("Nothing changed. Targets either have no item in their hands or the enchantment could not be applied")
 	case len(targets) == 1:
-		tell(fmt.Sprintf("Applied enchantment %s to %s's item", name, targets[0].p.name))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Applied enchantment %s to %s's item", name, targets[0].p.name))
 	default:
-		tell(fmt.Sprintf("Applied enchantment %s to %d entities", name, done))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Applied enchantment %s to %d entities", name, done))
 	}
 }

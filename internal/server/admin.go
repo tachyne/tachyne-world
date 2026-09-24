@@ -110,10 +110,15 @@ type worldRules struct {
 	// LegacyFireTick is the boolean doFireTick a world saved before the switch.
 	// loadRules folds a stored false into FireSpreadRadius 0 and drops it, so a
 	// server that had fire turned off keeps it off. Never written back.
-	LegacyFireTick    *bool `json:"doFireTick,omitempty"`
-	UniversalAnger    bool  `json:"universalAnger"`
-	TraderSpawnDelay  int   `json:"wanderingTraderSpawnDelay,omitempty"`
-	TraderSpawnChance int   `json:"wanderingTraderSpawnChance,omitempty"`
+	LegacyFireTick *bool `json:"doFireTick,omitempty"`
+	UniversalAnger bool  `json:"universalAnger"`
+	// send_command_feedback / log_admin_commands: whether a command's
+	// success line reaches its caller and the other operators, and whether
+	// the server log records what an operator changed (cmdfeedback.go).
+	SendCommandFeedback bool `json:"sendCommandFeedback"`
+	LogAdminCommands    bool `json:"logAdminCommands"`
+	TraderSpawnDelay    int  `json:"wanderingTraderSpawnDelay,omitempty"`
+	TraderSpawnChance   int  `json:"wanderingTraderSpawnChance,omitempty"`
 	// Forced is /forceload's chunks, every dimension's (ForcedChunksSavedData).
 	Forced []forcedChunk `json:"forcedChunks,omitempty"`
 	// WorldSpawn is /setworldspawn's point (LevelData's respawn data). It
@@ -140,7 +145,8 @@ func defaultRules() worldRules {
 		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1,
 		FireSpreadRadius: defaultFireSpreadRadius,
 		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 1,
-		ProjectilesBreak: true, GlobalSounds: true}
+		ProjectilesBreak: true, GlobalSounds: true,
+		SendCommandFeedback: true, LogAdminCommands: true}
 }
 
 // summonable maps /summon names to entity types.
@@ -173,7 +179,7 @@ func (s *Server) cmdGive(p *player, args []string) {
 		}
 	}
 	s.hub.post(evGive{target: args[0], by: p.eid, item: item, count: count})
-	p.tell(fmt.Sprintf("Gave %d × %s to %s", count, args[1], args[0]))
+	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, args[1], args[0]))
 }
 
 func (s *Server) cmdKill(p *player, args []string) {
@@ -203,7 +209,7 @@ func (s *Server) cmdXP(p *player, args []string) {
 		return
 	}
 	s.hub.post(evXPLevels{target: args[1], by: p.eid, levels: n})
-	p.tell(fmt.Sprintf("Gave %d levels to %s", n, args[1]))
+	s.ok(p, fmt.Sprintf("Gave %d levels to %s", n, args[1]))
 }
 
 func (s *Server) cmdSummon(p *player, args []string) {
@@ -237,7 +243,7 @@ func (s *Server) cmdSummon(p *player, args []string) {
 		}
 	}
 	s.hub.post(evSummon{etype: et, x: int(x), z: int(z), dim: p.dim, y: y})
-	p.tell("Summoned " + args[0])
+	s.ok(p, "Summoned "+args[0])
 }
 
 func (s *Server) cmdDifficulty(p *player, args []string) {
@@ -256,7 +262,7 @@ func (s *Server) cmdDifficulty(p *player, args []string) {
 		return
 	}
 	s.hub.post(evSetRule{rule: "difficulty", num: v})
-	p.tell("Difficulty set to " + args[0])
+	s.ok(p, "Difficulty set to "+args[0])
 }
 
 func (s *Server) cmdGamerule(p *player, args []string) {
@@ -298,7 +304,7 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 		s.hub.post(evSetRule{rule: rule, on: args[1] == "true"})
 	}
 	args[0] = rule
-	p.tell(fmt.Sprintf("Gamerule %s = %s", args[0], args[1]))
+	s.ok(p, fmt.Sprintf("Gamerule %s = %s", args[0], args[1]))
 }
 
 type evGive struct {
@@ -402,6 +408,10 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.AllowNether = e.on
 	case "projectiles_can_break_blocks":
 		h.rules.ProjectilesBreak = e.on
+	case "send_command_feedback":
+		h.rules.SendCommandFeedback = e.on
+	case "log_admin_commands":
+		h.rules.LogAdminCommands = e.on
 	case "global_sound_events":
 		h.rules.GlobalSounds = e.on
 	case "max_snow_accumulation_height":

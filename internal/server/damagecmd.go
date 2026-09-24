@@ -65,6 +65,7 @@ func (s *Server) cmdDamage(p *player, args []string) {
 // applyDamageCommand runs /damage on the hub.
 func (h *hub) applyDamageCommand(players map[int32]*tracked, e evDamageCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	en, ok := h.singleEntity(players, e.by, e.target, tell)
 	if !ok {
 		return
@@ -74,7 +75,7 @@ func (h *hub) applyDamageCommand(players map[int32]*tracked, e evDamageCmd) {
 		tell("Target is invulnerable to the given damage type")
 		return
 	}
-	tell(fmt.Sprintf("Applied %s damage to %s", jFloat(e.amount), name))
+	okTell(fmt.Sprintf("Applied %s damage to %s", jFloat(e.amount), name))
 }
 
 // commandHurt deals the damage and reports whether it landed

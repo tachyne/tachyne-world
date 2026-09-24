@@ -1504,6 +1504,8 @@ func (h *hub) run() {
 				log.Printf("plugin announce [%s] %s", e.name, e.text)
 			case evCommand:
 				e.reply <- h.runPluginCommand(e.p, e.line)
+			case evCmdSuccess:
+				h.cmdSuccess(players, e.p, e.text, e.broadcast)
 			case evOpenPluginUI:
 				if t := players[e.eid]; t != nil {
 					h.openPluginUI(t, e.query)
@@ -1547,7 +1549,7 @@ func (h *hub) run() {
 					}
 					h.sendInventory(t)
 					t.resyncInvAt = h.tick.Load() + 20
-					if e.by != "" && e.by != e.name {
+					if e.by != "" && e.by != e.name && h.rules.SendCommandFeedback { // GameModeCommand: gameMode.changed
 						t.p.trySendEv(chatEv("An operator changed your game mode."))
 					}
 				}
@@ -1656,10 +1658,8 @@ func (h *hub) run() {
 			case evSetRule:
 				h.applyRule(players, e)
 			case evRuleQuery:
-				if t := players[e.eid]; t != nil {
-					if v, ok := h.ruleValueText(e.rule); ok {
-						t.p.trySendEv(chatEv(fmt.Sprintf("Gamerule %s is currently set to: %s", e.rule, v)))
-					}
+				if v, ok := h.ruleValueText(e.rule); ok {
+					h.cmdInfo(players, e.eid)(fmt.Sprintf("Gamerule %s is currently set to: %s", e.rule, v))
 				}
 			case evSetBlocks:
 				h.applySetBlocks(players, e)

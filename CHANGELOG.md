@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The `send_command_feedback` and `log_admin_commands` gamerules work.**
+  With `send_command_feedback` off, a command no longer tells you it worked.
+  Errors still show. While it is on, the other operators online see what an
+  operator changed, as a gray italic "[Name: message]" line. With
+  `log_admin_commands` on, the server log records the same line. Questions
+  such as `/time query` and `/locate` answer only whoever asked.
 - **Sculk, bees, villager doors and creaking hearts work in the Nether and
   the End.** A sculk sensor, shrieker or catalyst built there now hears and
   answers that dimension's own vibrations, and a shrieker's Warden rises

@@ -666,17 +666,17 @@ func (h *hub) effectCommand(players map[int32]*tracked, e evEffect) {
 	case done == 0:
 		tell("Target has no effects to remove")
 	case !e.clear && total == 1:
-		tell(fmt.Sprintf("Applied effect %s to %s", title, name))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Applied effect %s to %s", title, name))
 	case !e.clear:
-		tell(fmt.Sprintf("Applied effect %s to %d targets", title, done))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Applied effect %s to %d targets", title, done))
 	case e.one && total == 1:
-		tell(fmt.Sprintf("Removed effect %s from %s", title, name))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Removed effect %s from %s", title, name))
 	case e.one:
-		tell(fmt.Sprintf("Removed effect %s from %d targets", title, done))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Removed effect %s from %d targets", title, done))
 	case total == 1:
-		tell("Removed every effect from " + name)
+		h.cmdOK(players, e.by)("Removed every effect from " + name)
 	default:
-		tell(fmt.Sprintf("Removed every effect from %d targets", done))
+		h.cmdOK(players, e.by)(fmt.Sprintf("Removed every effect from %d targets", done))
 	}
 }
 

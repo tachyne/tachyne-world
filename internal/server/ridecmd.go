@@ -70,6 +70,7 @@ func (h *hub) singleEntity(players map[int32]*tracked, by int32, arg string, tel
 // applyRideCommand runs /ride on the hub.
 func (h *hub) applyRideCommand(players map[int32]*tracked, e evRideCmd) {
 	tell := cmdTeller(players, e.by)
+	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
 	target, ok := h.singleEntity(players, e.by, e.target, tell)
 	if !ok {
 		return
@@ -87,7 +88,7 @@ func (h *hub) applyRideCommand(players map[int32]*tracked, e evRideCmd) {
 		} else {
 			h.unseatMob(players, target.m)
 		}
-		tell(fmt.Sprintf("%s stopped riding %s", target.name(), was))
+		okTell(fmt.Sprintf("%s stopped riding %s", target.name(), was))
 		return
 	}
 	vehicle, ok := h.singleEntity(players, e.by, e.vehicle, tell)
@@ -115,7 +116,7 @@ func (h *hub) applyRideCommand(players map[int32]*tracked, e evRideCmd) {
 		tell(fmt.Sprintf("%s couldn't start riding %s", target.name(), vehicle.name()))
 		return
 	}
-	tell(fmt.Sprintf("%s started riding %s", target.name(), vehicle.name()))
+	okTell(fmt.Sprintf("%s started riding %s", target.name(), vehicle.name()))
 }
 
 // carries reports whether v is m or rides somewhere on m's stack of

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"testing"
+	"time"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 )
@@ -48,13 +49,14 @@ func TestCommandTime(t *testing.T) {
 
 	s.handleCommand(p, "time night")
 	waitDayTime(t, s.hub, 13000)
-	// The player should have received a confirmation system-chat packet.
+	// The player should have received a confirmation system-chat packet
+	// (a command success, which the hub delivers after the change).
 	select {
 	case pkt := <-p.out:
 		if _, ok := pkt.ev.(attachproto.Chat); !ok {
 			t.Errorf("got %T, want a Chat event", pkt.ev)
 		}
-	default:
+	case <-time.After(hubTestWait):
 		t.Error("no confirmation message sent")
 	}
 }

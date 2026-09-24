@@ -54,6 +54,8 @@ var gameruleAlias = map[string]string{
 	"spawnRadius":               "respawn_radius",
 	"snowAccumulationHeight":    "max_snow_accumulation_height",
 	"universalAnger":            "universal_anger",
+	"sendCommandFeedback":       "send_command_feedback",
+	"logAdminCommands":          "log_admin_commands",
 	"doLimitedCrafting":         "limited_crafting",
 }
 
@@ -77,6 +79,8 @@ var booleanRules = []string{
 	// Added 2026-09-20 — vanilla rules the engine has a mechanic for.
 	"allow_entering_nether_using_portals", "projectiles_can_break_blocks",
 	"global_sound_events", "limited_crafting",
+	// Added 2026-09-24 — command feedback (cmdfeedback.go).
+	"send_command_feedback", "log_admin_commands",
 }
 
 // numericRules is the same for the rules that take a number.
