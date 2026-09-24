@@ -58,6 +58,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Mobs no longer walk into tall walls.** A wall more than eight blocks high
+  looked like flat ground to a walking mob, so a sheep could wander into a
+  player's wall and turn black inside it. Mobs now step only where their
+  whole body fits.
+- **A piston pushes every mob its block touches.** A block moved by a piston
+  used to push only a mob whose centre was in its path, so a wide mob could
+  be left half inside the block. Now any mob or player the block overlaps is
+  moved clear of it, as in vanilla.
 - **Sheep graze on every plant vanilla lets them.** They ate only short
   grass or a grass block; ferns and short and tall dry grass now feed them
   too. With mob griefing off, the plant they eat stays, as in vanilla.

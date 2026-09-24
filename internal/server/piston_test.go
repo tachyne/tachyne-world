@@ -123,3 +123,30 @@ func TestLeverUnderAPistonPopsOnRetractOnly(t *testing.T) {
 		t.Fatalf("the lever should have popped off the moving base, got %d", w.At(x, y, z))
 	}
 }
+
+// TestPistonShovesAWideMobClear (bug #32): a sheep is 0.9 wide, so its
+// box can straddle the cell a pushed block lands in while its centre is
+// outside it. Vanilla moves every entity whose box meets the moving block
+// until it is clear; we once checked only the centre, leaving the sheep
+// half inside the wall — drawn black by the client.
+func TestPistonShovesAWideMobClear(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z, pistonEast(false))
+	w.SetBlock(x+1, y, z, worldgen.Stone)
+	for dx := 1; dx <= 5; dx++ {
+		w.SetBlock(x+dx, y-1, z, worldgen.Stone)
+	}
+	s := h.spawnMob(players, entitySheep, float64(x)+3.2, float64(y), float64(z)+0.5)
+	s.baby = false
+	s.rest = 1000
+	w.SetBlock(x, y, z-1, worldgen.BlockBase("redstone_block"))
+	h.scheduleAround(blockPos{x, y, z}, 1)
+	stepTicks(h, players, 4)
+	if w.At(x+2, y, z) != worldgen.Stone {
+		t.Fatalf("the stone should land at x+2: %d", w.At(x+2, y, z))
+	}
+	half := s.box().w / 2
+	if s.x-half < float64(x+3)-1e-9 && s.x+half > float64(x+2) {
+		t.Fatalf("sheep box %.3f..%.3f still overlaps the stone at %d..%d", s.x-half, s.x+half, x+2, x+3)
+	}
+}

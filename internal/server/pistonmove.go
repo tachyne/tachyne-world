@@ -1,8 +1,6 @@
 package server
 
 import (
-	"math"
-
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -289,25 +287,56 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 	return true
 }
 
-// shoveOutOfBlocks carries whoever stands where a block just arrived: a
-// player or mob whose feet are now inside a moved block (or the new head)
-// is pushed one cell along the move, as vanilla's moving piston does.
+// shoveOutOfBlocks is PistonMovingBlockEntity.moveCollidedEntities: any
+// player or mob whose bounding box overlaps a block that just arrived (or
+// the new head) is moved along the push just far enough to clear it, plus
+// vanilla's 0.01 — not only one whose feet are in the cell, so a wide mob
+// half across the destination is not left standing in the wall.
 func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]uint32, dir [3]int) {
-	inside := func(x, y, z float64) (blockPos, bool) {
-		for _, dy := range []float64{0.05, 1.0} {
-			p := blockPos{int(math.Floor(x)), int(math.Floor(y + dy)), int(math.Floor(z))}
-			if st, ok := arrived[p]; ok && worldgen.Collides(st) {
-				return p, true
+	// clear is getMovement against the arrived cells the box overlaps: how
+	// far the box must move along dir to be outside every one of them.
+	clear := func(x, y, z, half, height float64) float64 {
+		need := 0.0
+		for p, st := range arrived {
+			if !worldgen.Collides(st) {
+				continue
 			}
+			bx, by, bz := float64(p.x), float64(p.y), float64(p.z)
+			if x+half <= bx || x-half >= bx+1 || y+height <= by || y >= by+1 || z+half <= bz || z-half >= bz+1 {
+				continue
+			}
+			var d float64
+			switch dir {
+			case [3]int{1, 0, 0}:
+				d = bx + 1 - (x - half)
+			case [3]int{-1, 0, 0}:
+				d = x + half - bx
+			case [3]int{0, 0, 1}:
+				d = bz + 1 - (z - half)
+			case [3]int{0, 0, -1}:
+				d = z + half - bz
+			case [3]int{0, -1, 0}:
+				d = y + height - by
+			default: // up
+				d = by + 1 - y
+			}
+			need = max(need, d)
 		}
-		return blockPos{}, false
+		if need <= 0 {
+			return 0
+		}
+		return min(need, 1) + 0.01
 	}
 	for _, t := range players {
 		if t.dim != h.rsDim || t.dead {
 			continue
 		}
-		if _, ok := inside(t.x, t.y, t.z); ok {
-			h.teleportPlayer(players, t, t.x+float64(dir[0]), t.y+float64(dir[1]), t.z+float64(dir[2]))
+		height := psPlayerHeight
+		if t.sneaking {
+			height = 1.5
+		}
+		if d := clear(t.x, t.y, t.z, playerHalfWidth, height); d > 0 {
+			h.teleportPlayer(players, t, t.x+d*float64(dir[0]), t.y+d*float64(dir[1]), t.z+d*float64(dir[2]))
 			if dir[1] > 0 {
 				t.peakY = t.y // lifted, not thrown: no fall damage for the rise
 			}
@@ -317,8 +346,9 @@ func (h *hub) shoveOutOfBlocks(players map[int32]*tracked, arrived map[blockPos]
 		if m.dim != h.rsDim || m.dying > 0 {
 			continue
 		}
-		if _, ok := inside(m.x, m.y, m.z); ok {
-			m.x, m.y, m.z = m.x+float64(dir[0]), m.y+float64(dir[1]), m.z+float64(dir[2])
+		b := m.box()
+		if d := clear(m.x, m.y, m.z, b.w/2, b.h); d > 0 {
+			m.x, m.y, m.z = m.x+d*float64(dir[0]), m.y+d*float64(dir[1]), m.z+d*float64(dir[2])
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
 		}
 	}

@@ -1216,7 +1216,26 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	if h.floatSwims(m, fnx, fnz) {
 		return hazardOK && !w.TallObstacle(fnx, fnz) // afloat: the water at its level is the floor it steps on
 	}
-	return destOK && hazardOK && step <= 1 && step >= -1 && !w.TallObstacle(fnx, fnz)
+	// Room for the body where it would stand. MobFeetFrom gives up on a
+	// column buried eight deep and answers the mob's own height — a flat
+	// step, straight into a tall wall, where the client draws it black. A
+	// mob already wedged somewhere may still leave.
+	fy := int(math.Floor(m.y))
+	roomOK := h.bodyFits(m, fnx, fy+step, fnz) || !h.bodyFits(m, cx, fy, cz)
+	return destOK && hazardOK && roomOK && step <= 1 && step >= -1 && !w.TallObstacle(fnx, fnz)
+}
+
+// bodyFits reports whether this mob's height of cells from feet y up is
+// clear of anything solid in column (x, z).
+func (h *hub) bodyFits(m *mob, x, y, z int) bool {
+	w := h.worldFor(m.dim)
+	top := y + max(1, int(math.Ceil(m.box().h))) - 1
+	for cy := y; cy <= top; cy++ {
+		if worldgen.Collides(w.At(x, cy, z)) {
+			return false
+		}
+	}
+	return true
 }
 
 // speedFor derives a species' per-step speed from its vanilla MOVEMENT_SPEED
