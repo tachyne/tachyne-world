@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Potions can be drunk.** Using a drinkable potion took the path for
+  food, which turned it away, so no potion could ever be drunk; they only
+  worked when splashed. They now take their 32 ticks and leave the bottle.
+  Adventure players eat and drink as survival players do. Creative players
+  can eat on a full hunger bar, and keep the food or potion as vanilla's
+  do.
 - **Tools wear at vanilla's rates.**
   - A sword, mace or trident loses two points per block it breaks; a
     pickaxe, axe, shovel or hoe loses one.

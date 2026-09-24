@@ -53,11 +53,13 @@ func (h *hub) drinkOminousBottle(players map[int32]*tracked, t *tracked, slot in
 	}
 	level := ominousBottleLevel(*s)
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
-	s.count--
-	if s.count == 0 {
-		*s = invStack{}
+	if t.gamemode != gmCreative {
+		s.count--
+		if s.count == 0 {
+			*s = invStack{}
+		}
+		h.sendHandSlot(t, slot)
 	}
-	h.sendHandSlot(t, slot)
 	h.applyEffect(players, t, effBadOmen, level-1, badOmenBottleSecs)
 }
 

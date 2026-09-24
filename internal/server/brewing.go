@@ -419,8 +419,10 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	p := s.potion
 	h.vibAt(t.dim, freqDrink, t.x, t.y, t.z, t.p.eid)
-	*s = invStack{item: itemGlassBottle, count: 1}
-	h.sendHandSlot(t, slot)
+	if t.gamemode != gmCreative { // PotionItem: a creative player keeps the potion and gets no bottle
+		*s = invStack{item: itemGlassBottle, count: 1}
+		h.sendHandSlot(t, slot)
+	}
 	for _, e := range potionEffects(p) {
 		h.applyEffectTicks(players, t, e.id, e.amp, e.ticks) // instant effects apply at secs 0
 	}

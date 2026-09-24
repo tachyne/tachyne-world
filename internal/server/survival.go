@@ -722,21 +722,31 @@ func eatNearlyTicks(item int32) int { return foodEatTicks(item) - 2 }
 // applies after eatDuration ticks (updateEating), and an early release or a
 // hotbar switch cancels it. Validated here so an invalid start never ticks.
 func (h *hub) startEating(t *tracked, slot int) {
-	if t.gamemode != gmSurvival || t.dead || t.handStack(slot) == nil {
+	if !t.canConsume() || t.dead || t.handStack(slot) == nil {
 		return
 	}
 	// Milk is a drink, not a food: it has no nutrition, so the "already full"
 	// gate below must not stop it — carrying it to cure a poison is the whole
 	// reason to have it.
-	if st := t.handStack(slot); (st.item == itemMilkBucket || st.item == itemOminousBottle) && st.count > 0 {
+	if st := t.handStack(slot); (st.item == itemMilkBucket || st.item == itemOminousBottle || st.item == itemPotion) && st.count > 0 {
 		t.eatingSlot, t.eatingAt = slot, h.tick.Load() // drinks: no nutrition, so no "already full" gate
 		return
 	}
 	st := t.handStack(slot)
-	if _, ok := foodPoints[st.item]; !ok || st.count == 0 || t.food >= maxFood {
+	if _, ok := foodPoints[st.item]; !ok || st.count == 0 || !t.canEat(st.item) {
 		return
 	}
 	t.eatingSlot, t.eatingAt = slot, h.tick.Load()
+}
+
+// canConsume is who may eat and drink at all: every game mode but
+// spectator (adventure eats as survival does; creative can always eat).
+func (t *tracked) canConsume() bool { return t.gamemode != gmSpectator }
+
+// canEat is Player.canEat: invulnerable (creative) players and the
+// can_always_eat foods ignore a full hunger bar.
+func (t *tracked) canEat(item int32) bool {
+	return t.gamemode == gmCreative || alwaysEdible[item] || t.food < maxFood
 }
 
 // stopEating handles a release_use_item or hotbar switch: cancel the hold — or
@@ -763,7 +773,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 		if t.eatingSlot < 0 {
 			continue
 		}
-		if t.dead || t.gamemode != gmSurvival {
+		if t.dead || !t.canConsume() {
 			t.eatingSlot = -1
 			continue
 		}
@@ -779,7 +789,7 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 // hunger + saturation. Survival only, and only when not already full. Reached
 // via the eat-hold state machine above (use_item starts, eatDuration applies).
 func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
-	if t.gamemode != gmSurvival || t.dead || t.inv == nil || t.handStack(slot) == nil {
+	if !t.canConsume() || t.dead || t.inv == nil || t.handStack(slot) == nil {
 		return // either hand: a hotbar slot or the offhand, which eats as vanilla's does
 	}
 	s := t.handStack(slot)
@@ -800,7 +810,7 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	}
 	s = t.handStack(slot)
 	pts, ok := foodPoints[s.item]
-	if !ok || s.count == 0 || (t.food >= maxFood && !alwaysEdible[s.item]) {
+	if !ok || s.count == 0 || !t.canEat(s.item) {
 		return // vanilla canEat: full players may still eat the can_always_eat foods
 	}
 	h.advance(players, t, "consume_item", advMatch{item: s.item})
@@ -813,11 +823,13 @@ func (h *hub) eat(players map[int32]*tracked, t *tracked, slot int) {
 	// Saturation gained per the food's value, capped at the new food level (vanilla).
 	t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+float64(foodSaturation[s.item])))
 	eaten := s.item
-	s.count--
-	if s.count == 0 {
-		s.item = 0
+	if t.gamemode != gmCreative { // ItemStack.consume: infinite materials keep the stack
+		s.count--
+		if s.count == 0 {
+			s.item = 0
+		}
+		h.giveUseRemainder(t, slot, eaten)
 	}
-	h.giveUseRemainder(t, slot, eaten)
 	h.sendHealth(t)
 	h.sendHandSlot(t, slot)
 	t.p.trySendEv(soundEv("minecraft:entity.player.burp", sndPlayer, t.x, t.y, t.z, 1, 1))
