@@ -111,9 +111,13 @@ type furnace struct {
 	cookMax  int         // the current recipe's cook time, at the fuel's speed
 	speed    float32     // the lit fuel's speed multiplier (0 = as written)
 	xpBank   float64     // smelting XP owed, paid out when the output is taken
-	viewer   int32       // eid of the player with the window open (0 = none)
-	resync   int         // ticks until the lit-state block update is re-broadcast
-	lastBars [4]int      // last progress-bar values sent (only send on change)
+	// viewers are the players with the window open, each with the bar values
+	// last sent to them (a bar is sent only when it changes). Every open
+	// AbstractFurnaceMenu shares the one dataAccess and broadcasts its own
+	// changes, so each viewer is fed; a second viewer used to take the feed
+	// from the first, whose window froze.
+	viewers map[int32]*[4]int
+	resync  int // ticks until the lit-state block update is re-broadcast
 }
 
 type evOpenFurnace struct {
@@ -144,8 +148,10 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winPos, t.winKind = h.nextWin, pos, winFurnace
 	h.vib(pos.dim, freqContainerOpen, pos.x, pos.y, pos.z, t.p.eid)
-	f.viewer = t.p.eid
-	f.lastBars = [4]int{-1, -1, -1, -1} // force a full bar sync to the new window
+	if f.viewers == nil {
+		f.viewers = map[int32]*[4]int{}
+	}
+	f.viewers[t.p.eid] = &[4]int{-1, -1, -1, -1} // a full bar sync to the new window
 
 	menu, title := int32(menuFurnace), "Furnace"
 	switch kind {
@@ -221,16 +227,16 @@ func (h *hub) updateFurnaces(players map[int32]*tracked) {
 			}
 		}
 		// Idle, empty, unlit, unwatched furnaces are dropped from the tick set.
-		if f.burnLeft == 0 && f.cook == 0 && f.viewer == 0 &&
+		if f.burnLeft == 0 && f.cook == 0 && len(f.viewers) == 0 &&
 			f.slots[0].item == 0 && f.slots[1].item == 0 && f.slots[2].item == 0 {
 			delete(h.furnaces, pos)
 			continue
 		}
 
-		if f.viewer != 0 {
-			t := players[f.viewer]
+		for eid := range f.viewers {
+			t := players[eid]
 			if t == nil || t.winKind != winFurnace || t.winPos != pos {
-				f.viewer = 0
+				delete(f.viewers, eid)
 				continue
 			}
 			if changedSlots {
@@ -308,11 +314,15 @@ func (h *hub) setFurnaceLit(players map[int32]*tracked, pos simPos, lit bool) {
 // burning one doesn't flood the send queue (dropped packets there are what made
 // stale lit-states possible in the first place).
 func (h *hub) sendFurnaceBars(t *tracked, f *furnace) {
+	last := f.viewers[t.p.eid]
+	if last == nil {
+		return
+	}
 	send := func(prop, val int) {
-		if f.lastBars[prop] == val {
+		if last[prop] == val {
 			return
 		}
-		f.lastBars[prop] = val
+		last[prop] = val
 		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: int32(prop), Value: int32(val)})
 	}
 	send(propBurnLeft, f.burnLeft)

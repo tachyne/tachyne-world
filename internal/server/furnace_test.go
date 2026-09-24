@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
@@ -104,8 +106,8 @@ func TestFurnaceKeepsContentsOnClose(t *testing.T) {
 	if f2 == nil || f2.slots[furnaceInput].count != 3 {
 		t.Fatalf("furnace must keep its contents after close, got %+v", f2)
 	}
-	if f2.viewer != 0 {
-		t.Fatalf("viewer should be released, got %d", f2.viewer)
+	if len(f2.viewers) != 0 {
+		t.Fatalf("viewer should be released, got %v", f2.viewers)
 	}
 }
 
@@ -201,8 +203,8 @@ func TestContainerStoreFurnaceRoundTrip(t *testing.T) {
 	if f.burnLeft != 123 || f.burnMax != 800 || f.cook != 42 || f.cookMax != 100 || f.speed != 2 {
 		t.Fatalf("progress mismatch: %+v", f)
 	}
-	if f.viewer != 0 {
-		t.Fatalf("viewer must reset on load, got %d", f.viewer)
+	if len(f.viewers) != 0 {
+		t.Fatalf("viewers must reset on load, got %v", f.viewers)
 	}
 }
 
@@ -250,5 +252,35 @@ func TestSmeltXPIsPerRecipe(t *testing.T) {
 	// Something no recipe produces banks nothing.
 	if got := smeltXP(itemByName["dirt"]); got != 0 {
 		t.Errorf("dirt is not a smelting result: %v", got)
+	}
+}
+
+// Two players watching one furnace both see it cook: the first's window no
+// longer freezes when the second opens it.
+func TestFurnaceFeedsEveryViewer(t *testing.T) {
+	h, players, pl, f := furnaceSetup()
+	other := &tracked{p: newPlayer(2, "other", [16]byte{}), gamemode: gmSurvival}
+	initSurvival(other)
+	other.x, other.y, other.z = pl.x, pl.y, pl.z
+	other.dim = pl.dim
+	players[other.p.eid] = other
+	h.openFurnace(other, 10, 70, 10)
+	f.slots[furnaceInput] = invStack{item: tRawIron, count: 2}
+	f.slots[furnaceFuel] = invStack{item: tCoal, count: 1}
+	drainEvs(pl.p)
+	drainEvs(other.p)
+	for i := 0; i < 20; i++ {
+		h.updateFurnaces(players)
+	}
+	for _, v := range []*tracked{pl, other} {
+		bars := 0
+		for _, ev := range drainEvs(v.p) {
+			if _, ok := ev.(attachproto.WindowData); ok {
+				bars++
+			}
+		}
+		if bars == 0 {
+			t.Errorf("%s saw no furnace progress", v.p.name)
+		}
 	}
 }

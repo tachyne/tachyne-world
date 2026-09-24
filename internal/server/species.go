@@ -135,7 +135,6 @@ type speciesDef struct {
 	follow    float64 // FOLLOW_RANGE override (0 = Mob default 16)
 	arch      archetype
 	retaliate bool    // peaceful until hit, then hunts the attacker (wolf/goat/bee)
-	burns     bool    // undead: daylight sets it on fire
 	kbResist  float64 // KNOCKBACK_RESISTANCE 0..1: the fraction of a shove it shrugs off
 	hover     float64 // flyers: preferred altitude above the ground
 	xp        int     // xpReward override (0 = derive from category; xpNone = nothing)
@@ -277,7 +276,7 @@ var speciesTable = map[int]*speciesDef{
 		drops: []specDrop{{item: "string", rnd: 2}, {item: "spider_eye", min: 1, chance: 3}}},
 	entitySilverfish: {name: "silverfish", health: 8, speed: 0.25, damage: 1, arch: archHostile},
 	entityEndermite:  {name: "endermite", health: 8, speed: 0.25, damage: 2, arch: archHostile},
-	entityBogged: {name: "bogged", health: 16, speed: 0.25, arch: archRanged, burns: true,
+	entityBogged: {name: "bogged", health: 16, speed: 0.25, arch: archRanged,
 		held: "bow", drops: []specDrop{{item: "bone", rnd: 2}, {item: "arrow", rnd: 2}}},
 	// parched (1.21.11): a desert skeleton whose arrows inflict Weakness (see
 	// spawnArrow). AbstractSkeleton stats + MAX_HEALTH 16 (vanilla Parched).
@@ -290,7 +289,7 @@ var speciesTable = map[int]*speciesDef{
 		drops: []specDrop{{item: "coal", rnd: 1}, {item: "bone", rnd: 2},
 			{item: "wither_skeleton_skull", min: 1, chance: 40}}},
 	entityPhantom: {name: "phantom", health: 20, damage: 6, step: 0.16,
-		arch: archFlyerHostile, burns: true, hover: 12,
+		arch: archFlyerHostile, hover: 12,
 		drops: []specDrop{{item: "phantom_membrane", rnd: 1}}},
 	entityCreaking: {name: "creaking", health: 1, speed: 0.40, damage: 3, follow: 32,
 		arch: archHostile, xp: xpNone},
@@ -319,7 +318,7 @@ var speciesTable = map[int]*speciesDef{
 	entityGiant: {name: "giant", health: 100, speed: 0, step: 0.2, damage: 50,
 		arch: archPassive, soundAs: "zombie"},
 	entityZombieVillager: {name: "zombie_villager", health: 20, speed: 0.23, damage: 3,
-		armor: 2, follow: 35, arch: archHostile, burns: true,
+		armor: 2, follow: 35, arch: archHostile,
 		drops: []specDrop{{item: "rotten_flesh", rnd: 2}}},
 	entityShulker: {name: "shulker", health: 30, arch: archStatic,
 		drops: []specDrop{{item: "shulker_shell", min: 1, chance: 2}}},
@@ -441,9 +440,8 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d.retaliate {
 		m.retaliates = true
 	}
-	if d.burns {
-		m.burns = true
-		m.burnDelay = h.rng.Intn(burnStaggerMax)
+	if burnsInDaylight[m.etype] {
+		m.burnDelay = h.rng.Intn(burnStaggerMax) // its slice of the dawn ramp
 	}
 	if d.held != "" {
 		m.held = itemByName[d.held]

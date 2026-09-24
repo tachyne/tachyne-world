@@ -949,8 +949,8 @@ func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
 func (h *hub) releaseContainerView(t *tracked) {
 	switch t.winKind {
 	case winFurnace:
-		if f := h.furnaces[t.winPos]; f != nil && f.viewer == t.p.eid {
-			f.viewer = 0
+		if f := h.furnaces[t.winPos]; f != nil {
+			delete(f.viewers, t.p.eid)
 		}
 	case winChest:
 		h.closeBarrel(t)

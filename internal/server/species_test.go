@@ -13,22 +13,22 @@ func TestSpawnHostileSpecies(t *testing.T) {
 	players := map[int32]*tracked{}
 
 	z := h.spawnHostile(players, entityZombie, 0, 0)
-	if !z.burns || !z.hostile || z.health != zombieHealth {
+	if !burnsInDaylight[z.etype] || !z.hostile || z.health != zombieHealth {
 		t.Fatalf("zombie config wrong: %+v", z)
 	}
 	sk := h.spawnHostile(players, entitySkeleton, 2, 0)
-	if !sk.burns || sk.health != skeletonHealth {
+	if !burnsInDaylight[sk.etype] || sk.health != skeletonHealth {
 		t.Fatalf("skeleton config wrong: %+v", sk)
 	}
 	if _, ok := sk.behavior.(rangedBehavior); !ok {
 		t.Fatal("skeleton must kite (rangedBehavior)")
 	}
 	sp := h.spawnHostile(players, entitySpider, 4, 0)
-	if sp.burns || sp.moveSpeed() != speedFor(entitySpider) || sp.health != spiderHealth {
+	if burnsInDaylight[sp.etype] || sp.moveSpeed() != speedFor(entitySpider) || sp.health != spiderHealth {
 		t.Fatalf("spider config wrong: %+v", sp)
 	}
 	c := h.spawnHostile(players, entityCreeper, 6, 0)
-	if c.burns || c.health != creeperHealth {
+	if burnsInDaylight[c.etype] || c.health != creeperHealth {
 		t.Fatalf("creeper config wrong: %+v", c)
 	}
 	if _, ok := c.behavior.(creeperBehavior); !ok {

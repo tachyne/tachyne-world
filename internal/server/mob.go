@@ -49,7 +49,6 @@ type mob struct {
 	rest            int      // grazing pause: updates left standing still (passive idling)
 	fleeX, fleeZ    float64  // the threat to flee away from while panicking
 	hostile         bool     // hunts + attacks players (zombies) rather than grazing
-	burns           bool     // undead: catches fire in daylight (zombie/skeleton)
 	burning         bool     // on fire — rendered via entity flags (any ignite source)
 	burnDelay       int      // seconds of dawn-ramp grace before this mob ignites
 	fireSecs        int      // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears

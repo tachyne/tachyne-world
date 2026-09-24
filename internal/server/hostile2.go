@@ -54,14 +54,12 @@ func isSwampBiome(b string) bool  { return strings.Contains(b, "swamp") }
 // setup. Returns false for species it doesn't know.
 func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 	switch m.etype {
-	case entityHusk: // desert zombie: immune to daylight
-		m.burns = false
+	case entityHusk: // desert zombie: immune to daylight (not in #burn_in_daylight)
 		m.setFollowRange(35) // zombie-family FOLLOW_RANGE (vanilla 1.21.5)
 		m.setBaseArmor(2)    // zombie-family base ARMOR
 		m.reinf = h.rollReinforcements()
 		h.rollZombieBaby(players, m)
 	case entityStray, entityDrowned: // cold skeleton / wet zombie: burn like their cousins
-		m.burns = true
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if m.etype == entityStray {
 			m.behavior = rangedBehavior{}

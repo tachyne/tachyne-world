@@ -57,7 +57,7 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 	if !skeletonKind(entityParched) {
 		t.Fatal("parched is not in the skeleton family")
 	}
-	if speciesOf(entityParched).burns {
+	if burnsInDaylight[entityParched] {
 		t.Error("a parched burns in daylight; 26.3's #burn_in_daylight leaves it out")
 	}
 	h := newHub(world.New(83))

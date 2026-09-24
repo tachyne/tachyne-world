@@ -96,6 +96,10 @@ the public history since the project was open-sourced on 2026-07-10.
     saved under "@a".
   - /time takes vanilla's forms (set, add, query, with d/s/t units) and,
     like /say, needs op.
+- **Two players at one furnace** both see it cook. The first player's
+  window used to freeze when the second opened it.
+- **Daylight burns by 26.3's list.** Zombie horses and zombie nautili burn in
+  the sun; the parched does not.
 - **Raids can be lost.** A raid whose village is gone after a wave has come
   ends in defeat ("Raid - Defeat" on the bar for thirty seconds). No raid
   outlasts 48,000 ticks, and the bar reads "Raiders Remaining" when two or

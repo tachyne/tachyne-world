@@ -66,11 +66,11 @@ func TestBiomeVariantsConfigured(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	husk := h.spawnHostile(players, entityHusk, 1, 1)
-	if husk.burns {
+	if burnsInDaylight[husk.etype] {
 		t.Fatal("husks must not burn in daylight")
 	}
 	stray := h.spawnHostile(players, entityStray, 3, 3)
-	if !stray.burns {
+	if !burnsInDaylight[stray.etype] {
 		t.Fatal("strays burn like skeletons")
 	}
 	if _, ok := stray.behavior.(rangedBehavior); !ok {

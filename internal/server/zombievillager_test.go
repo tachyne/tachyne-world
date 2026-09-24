@@ -16,7 +16,7 @@ func TestZombieVillagerBurnsInDaylight(t *testing.T) {
 	players[1] = pl
 	lx, lz := h.findLand(0, 0)
 	m := h.spawnHostileY(players, entityZombieVillager, float64(lx), float64(h.world.SurfaceFeet(lx, lz)), float64(lz))
-	if !m.burns {
+	if !burnsInDaylight[m.etype] {
 		t.Fatal("zombie villager must carry the daylight-burn flag (vanilla parity)")
 	}
 	m.burnDelay = 0

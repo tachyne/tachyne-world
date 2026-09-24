@@ -191,6 +191,12 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	}
 }
 
+// burnsInDaylight is 26.3's #burn_in_daylight (Mob.isSunBurnTick's gate):
+// the zombie horse and the zombie nautilus burn too, the parched and the husk
+// do not. It replaced a per-species flag that only hostiles carried.
+var burnsInDaylight = entitySet("skeleton", "stray", "wither_skeleton", "bogged", "zombie", "zombie_horse",
+	"zombie_villager", "drowned", "zombie_nautilus", "phantom")
+
 // rollZombieBaby applies vanilla's getSpawnAsBabyOdds: 5% of zombie-family
 // spawns are babies — half-size, 1.5× speed (SPEED_MODIFIER_BABY +0.5
 // multiplied-base), never maturing, and worth 2.5× XP (already in xpForMob).
@@ -612,7 +618,6 @@ func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, 
 	m.hostile, m.behavior = true, Behavior(hostileBehavior{}) // speed from speedFor
 	switch etype {
 	case entityZombie, entitySkeleton:
-		m.burns = true // the undead burn at dawn
 		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if etype == entityZombie {
 			m.setFollowRange(35) // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
@@ -682,7 +687,7 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 	// few seconds after they reach cover. Spiders/creepers don't burn.
 	if day < nightStart && !h.raining { // rain shields the undead (vanilla)
 		for _, m := range h.mobs {
-			if !m.hostile || !m.burns || m.dim != 0 {
+			if !burnsInDaylight[m.etype] || fireImmune[m.etype] || m.dim != 0 {
 				continue
 			}
 			if h.skyExposed(m) {
