@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The Block Break Speed attribute works.** Setting a player's block
+  break speed with /attribute did nothing. It now multiplies how fast they
+  mine, as in vanilla, and the cracks other players see keep pace.
 - **Endermen teleport the way they do in vanilla.** Every enderman
   teleport landed on the top of the ground, so endermen in the sun
   teleported from one sunny spot to another and gathered in the open. Cave
