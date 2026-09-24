@@ -45,15 +45,12 @@ func killMatch(t *tracked, m *mob) advMatch {
 	return km
 }
 
-// entityBreezeWindCharge is the breeze's own wind charge, a type of its own
-// in vanilla; here it flies as a wind charge marked breezeBorn.
+// entityBreezeWindCharge is the breeze's own wind charge (BreezeWindCharge),
+// a type of its own; it flies marked breezeBorn.
 var entityBreezeWindCharge = entityID("breeze_wind_charge")
 
 // windChargeDirect is the entity type a wind charge strikes as: the breeze's
 // charge keeps its type when a player bats it back (Blowback asks for it).
 func windChargeDirect(a *arrowEntity) int {
-	if a.breezeBorn {
-		return entityBreezeWindCharge
-	}
 	return a.etype
 }

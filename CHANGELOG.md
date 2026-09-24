@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **A breeze's wind charge is its own kind of projectile.** A breeze
+  shot an ordinary wind charge. It now shoots the breeze wind charge, as
+  in vanilla, with its own burst sound. A player can still bat it back,
+  its burst is still the wider one, and it still leaves other breezes
+  alone. Because it is not a player's wind charge, it now also hurts a
+  wither that is below half health.
 - **Endermen teleport the way they do in vanilla.** Every enderman
   teleport landed on the top of the ground, so endermen in the sun
   teleported from one sunny spot to another and gathered in the open. Cave

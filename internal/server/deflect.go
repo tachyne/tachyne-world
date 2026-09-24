@@ -15,7 +15,7 @@ const reflectedFireballDamage = 1000
 
 // redirectable is the #redirectable_projectile tag.
 func redirectable(etype int) bool {
-	return etype == entityLargeFireball || etype == entityWindCharge
+	return etype == entityLargeFireball || isWindCharge(etype)
 }
 
 // deflectProjectile is the swing; it reports whether the projectile took it.

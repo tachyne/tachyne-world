@@ -21,14 +21,11 @@ const (
 	windChargeKnockback = 1.22 // SimpleExplosionDamageCalculator knockbackMultiplier
 )
 
-// windChargeBurstRadius is the gust's radius by what the charge is: a
-// breeze's charge (BreezeWindCharge) keeps its wider burst even after a
-// player has batted it back.
-func windChargeBurstRadius(a *arrowEntity) float64 {
-	if a.breezeBorn {
-		return breezeChargeRadius
-	}
-	return windChargeRadius
+// isWindCharge reports the AbstractWindCharge family: a player's or a
+// dispenser's wind_charge and a breeze's breeze_wind_charge. A breeze's
+// charge keeps its type (and its wider burst) after a player bats it back.
+func isWindCharge(etype int) bool {
+	return etype == entityWindCharge || etype == entityBreezeWindCharge
 }
 
 // breezeOwned reports whether a projectile's owner is a breeze, which a
@@ -54,9 +51,24 @@ func (h *hub) windBurst(players map[int32]*tracked, dim int, cx, cy, cz float64,
 	h.windBurstR(players, dim, cx, cy, cz, shooter, windChargeRadius)
 }
 
+// chargeBurst is a wind charge's own burst where it struck: a breeze's
+// charge (BreezeWindCharge.explode) bursts wider and with its own sound.
+func (h *hub) chargeBurst(players map[int32]*tracked, a *arrowEntity, cx, cy, cz float64) {
+	if a.breezeBorn {
+		h.windBurstSnd(players, a.dim, cx, cy, cz, a.shooter, breezeChargeRadius, "minecraft:entity.breeze_wind_charge.burst")
+		return
+	}
+	h.windBurstR(players, a.dim, cx, cy, cz, a.shooter, windChargeRadius)
+}
+
 // windBurstR is the gust at a given radius (the breeze's is wider).
 func (h *hub) windBurstR(players map[int32]*tracked, dim int, cx, cy, cz float64, shooter int32, radius float64) {
-	h.playSoundDim(players, dim, "minecraft:entity.wind_charge.wind_burst", sndNeutral, cx, cy, cz, 1, 1)
+	h.windBurstSnd(players, dim, cx, cy, cz, shooter, radius, "minecraft:entity.wind_charge.wind_burst")
+}
+
+// windBurstSnd is the gust with the burst sound its source makes.
+func (h *hub) windBurstSnd(players map[int32]*tracked, dim int, cx, cy, cz float64, shooter int32, radius float64, sound string) {
+	h.playSoundDim(players, dim, sound, sndNeutral, cx, cy, cz, 1, 1)
 	h.spawnParticles(players, dim, particlePoof, cx, cy, cz, 0.4, 0.1, 12)
 	h.windPush(players, dim, cx, cy, cz, radius)
 	w := h.worldFor(dim)

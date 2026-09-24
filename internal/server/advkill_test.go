@@ -142,9 +142,13 @@ func TestKillCriteriaBlowback(t *testing.T) {
 		h, pl, players := killRig(t)
 		br := h.spawnMob(players, entityBreeze, 0, 180, 6)
 		br.health = 1
-		a := h.launchProjectileIn(players, entityWindCharge, 0, 0, 181, 2, 0, 0, -0.9)
+		et := entityWindCharge
 		if breezeBorn {
-			a.shooter, a.breezeBorn, a.mobShot = br.eid, true, true
+			et = entityBreezeWindCharge
+		}
+		a := h.launchProjectileIn(players, et, 0, 0, 181, 2, 0, 0, -0.9)
+		if breezeBorn {
+			a.shooter, a.mobShot = br.eid, true
 			if !h.deflectProjectile(players, pl, a) {
 				t.Fatal("the wind charge was not deflected")
 			}

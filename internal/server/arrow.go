@@ -220,8 +220,9 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.vibAt(dim, freqProjectileShoot, x, y, z, 0)
 	switch etype {
-	case entityWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
+	case entityWindCharge, entityBreezeWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
 		a.knock, a.breaks = 1.5, true
+		a.breezeBorn = etype == entityBreezeWindCharge
 	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
 		// AbstractHurtingProjectile: whatever it hits, block or creature, ends
 		// it (a ghast's fireball explodes on a wall; none lodge like an arrow).
@@ -252,7 +253,7 @@ func hurtingMotion(a *arrowEntity, water bool) (accel, inertia float64, ok bool)
 			return hurtingSpeed, 0.73, true // WitherSkull.getInertia: a blue skull drags
 		}
 		return hurtingSpeed, 0.95, true
-	case entityWindCharge:
+	case entityWindCharge, entityBreezeWindCharge:
 		return 0, 1, true
 	}
 	return 0, 0, false
@@ -354,7 +355,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				if a.breaks { // snowballs/eggs shatter
 					hit = true
 					if a.knock > 0 { // a wind charge bursts a quarter block off the face it struck
-						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
+						h.chargeBurst(players, a, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25)
 						break
 					}
 					// Projectile.onHitBlock runs the block's onProjectileHit for
@@ -509,7 +510,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.knock > 0 { // wind charge: a shove, no damage (vanilla breeze)
 			h.knockback(t, a.x, a.z)
 			t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
-			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+			h.chargeBurst(players, a, px, py, pz)
 			return true
 		}
 		if a.dmg > 0 {
@@ -650,7 +651,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			// Breeze.isInvulnerableTo: nothing a breeze owns can hurt a
 			// breeze — the burst still goes off.
 			if m.etype == entityBreeze && h.breezeOwned(a) {
-				h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+				h.chargeBurst(players, a, px, py, pz)
 				return true
 			}
 			if a.playerShot {
@@ -668,7 +669,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 					h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
 				}
 			}
-			h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+			h.chargeBurst(players, a, px, py, pz)
 			return true
 		}
 		if m.hasBody() { // a sulfur cube's block: its own knockback, a burning arrow lights TNT
@@ -804,7 +805,7 @@ func projectileDamage(etype int) dmgType {
 		return dtMobProjectile
 	case entityLlamaSpit:
 		return dtSpit
-	case entityWindCharge:
+	case entityWindCharge, entityBreezeWindCharge:
 		return dtWindCharge
 	case entityPearlProj:
 		return dtEnderPearl
