@@ -8,7 +8,7 @@ import (
 )
 
 // Sheep graze (EatBlockGoal + Sheep.ate): one tick in a thousand (fifty
-// for a lamb) a sheep standing on a grass block, or in short grass, lowers
+// for a lamb) a sheep standing on a grass block, or in grass or fern, lowers
 // its head for forty ticks and eats — the grass at its feet gone, or the
 // grass block under it turned to dirt — growing its wool back and, for a
 // lamb, growing up a little. Striders shiver (Strider.tick setSuffocating):
@@ -38,7 +38,7 @@ func (h *hub) grazeStep(players map[int32]*tracked, m *mob) bool {
 		if h.rng.Intn(odds/mobMoveInterval) != 0 || m.panic > 0 || m.loveTicks > 0 {
 			return false
 		}
-		if w.At(bx, by, bz) != worldgen.ShortGrass && !isGrassBlock(w.At(bx, by-1, bz)) {
+		if !sheepEdible(w.At(bx, by, bz)) && !isGrassBlock(w.At(bx, by-1, bz)) {
 			return false
 		}
 		m.grazeTicks = grazeTicks
@@ -53,8 +53,12 @@ func (h *hub) grazeStep(players map[int32]*tracked, m *mob) bool {
 	}
 	if was > grazeBiteAt && m.grazeTicks <= grazeBiteAt { // the bite
 		ate := false
-		if w.At(bx, by, bz) == worldgen.ShortGrass {
-			h.setBlockAt(players, m.dim, blockPos{bx, by, bz}, worldgen.Air) // destroyBlock(pos, false)
+		if sheepEdible(w.At(bx, by, bz)) {
+			if h.rules.MobGriefing {
+				s := w.At(bx, by, bz) // destroyBlock(pos, false): particles, no drop
+				h.toNearbyEv(players, m.dim, m.x, m.z, blockBreakEvent(bx, by, bz, s))
+				h.setBlockAt(players, m.dim, blockPos{bx, by, bz}, worldgen.Air)
+			}
 			ate = true
 		} else if s := w.At(bx, by-1, bz); isGrassBlock(s) && h.rules.MobGriefing {
 			h.toNearbyEv(players, m.dim, m.x, m.z, blockBreakEvent(bx, by-1, bz, s))
@@ -69,6 +73,16 @@ func (h *hub) grazeStep(players map[int32]*tracked, m *mob) bool {
 	}
 	m.vx, m.vz = 0, 0
 	return m.grazeTicks > 0
+}
+
+// sheepEdible is #edible_for_sheep: short grass, short and tall dry grass, fern.
+func sheepEdible(s uint32) bool {
+	for _, n := range [...]string{"short_grass", "short_dry_grass", "tall_dry_grass", "fern"} {
+		if lo, hi := worldgen.BlockRange(n); s >= lo && s <= hi {
+			return true
+		}
+	}
+	return false
 }
 
 func isGrassBlock(s uint32) bool {

@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Sheep graze on every plant vanilla lets them.** They ate only short
+  grass or a grass block; ferns and short and tall dry grass now feed them
+  too. With mob griefing off, the plant they eat stays, as in vanilla.
 - **Endermen no longer pile up.** An enderman carrying a block never
   despawns, in vanilla as here. But vanilla's idle clock keeps running
   while it carries, so once it sets the block down far from everyone it

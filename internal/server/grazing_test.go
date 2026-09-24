@@ -54,3 +54,42 @@ func TestSheepGrazeAndStriderShiver(t *testing.T) {
 		t.Fatal("warm again on lava")
 	}
 }
+
+// TestSheepEatsFernAndDryGrass: #edible_for_sheep is more than short grass —
+// a sheared sheep in a fern on stone grazes it; with mobGriefing off the
+// fern stays but the wool still grows back.
+func TestSheepEatsFernAndDryGrass(t *testing.T) {
+	for _, grief := range []bool{true, false} {
+		h := newHub(world.New(1))
+		h.rules.MobGriefing = grief
+		pl := survPlayer(h)
+		players := map[int32]*tracked{pl.p.eid: pl}
+		h.playersRef = players
+		w := h.worldFor(0)
+		fern := worldgen.BlockBase("fern")
+		w.SetBlock(0, 179, 0, worldgen.Stone)
+		w.SetBlock(0, 180, 0, fern)
+		s := h.spawnMob(players, entitySheep, 0.5, 180, 0.5)
+		s.baby, s.sheared = false, true
+		started := false
+		for i := 0; i < 20000 && !started; i++ {
+			started = h.grazeStep(players, s)
+		}
+		if !started {
+			t.Fatalf("griefing %v: a sheep in a fern should graze", grief)
+		}
+		for i := 0; i < 30 && s.grazeTicks > 0; i++ {
+			h.grazeStep(players, s)
+		}
+		want := worldgen.Air
+		if !grief {
+			want = fern
+		}
+		if got := w.At(0, 180, 0); got != want || s.sheared {
+			t.Fatalf("griefing %v: fern cell %d want %d, sheared %v", grief, got, want, s.sheared)
+		}
+	}
+	if !sheepEdible(worldgen.BlockBase("short_dry_grass")) || !sheepEdible(worldgen.BlockBase("tall_dry_grass")) || sheepEdible(worldgen.BlockBase("dandelion")) {
+		t.Fatal("#edible_for_sheep: short/tall dry grass yes, flowers no")
+	}
+}
