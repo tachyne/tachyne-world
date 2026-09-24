@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **No more floating dripstone in regenerated caves.** When the cave
+  generator changed, dripstone and cave vines that had grown in the old
+  caves were kept, while the rock around them regenerated. Some were left
+  hanging in open air. Now, when a chunk comes into range, any such growth
+  that has lost its support breaks, and a hanging one falls, as vanilla
+  does when support goes.
 - **Waves only on the coast.** The optional beach waves treated any water
   at sea level as the ocean, so river banks, lakes and swamp edges waved
   too. A wave now starts only where the water is ocean or the shore is a

@@ -47,6 +47,7 @@ func (h *hub) reconcileMobChunks(players map[int32]*tracked, chunkSet map[[2]int
 		}
 		budget--
 		h.activeChunks[c] = true
+		h.settleChunkEdits(players, dimOverworld, c[0], c[1]) // edits the regenerated ground no longer holds
 		byOld := map[int32]*mob{}
 		var riders []*mob
 		for _, sm := range h.mobstore.take(c[0], c[1]) {
