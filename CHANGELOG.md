@@ -58,6 +58,15 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Kills count for the player who started the fight.** A mob you hurt
+  that died moments later from a fall, fire, lava or another mob gave you
+  nothing. Now, as in vanilla, a mob that dies within five seconds of
+  your last hit is your kill. It drops experience and player-only loot,
+  and it counts for your kill statistics and advancements. A tamed
+  wolf's bite counts for its owner. Mobs killed only by a dispenser's
+  arrows no longer drop as player kills. Killing another player with TNT,
+  an arrow or Thorns now counts as a player kill, as punching them to
+  death already did.
 - **Crossbow shots scatter like vanilla's.** Crossbow bolts flew in a
   perfectly straight line. Now they have the small random spread vanilla
   gives them. Multishot's side bolts stay 10 degrees either side of your

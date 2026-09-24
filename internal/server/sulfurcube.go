@@ -653,7 +653,8 @@ func (h *hub) cubeKnockback(players map[int32]*tracked, m *mob, power, xd, zd fl
 // knockback runs through the cube's own model, and the extra knockback a
 // sprint or the Knockback enchantment adds follows as an effect.
 func (h *hub) cubeStruckByPlayer(players map[int32]*tracked, m *mob, t *tracked, dmg float64, dt dmgType) {
-	m.hitByPlayer, m.lastAttacker = true, t.p.eid
+	h.hurtByPlayerOn(m, t)
+	m.lastAttacker = t.p.eid
 	before := m.health
 	m.hurtOf(dmg, 0, dt)
 	if !dt.has(tagNoKnockback) {
@@ -671,10 +672,7 @@ func (h *hub) cubeStruckByPlayer(players map[int32]*tracked, m *mob, t *tracked,
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
 	}
 	if m.health <= 0 {
-		h.killMob(players, m)
-		h.playerKilledEntity(players, t, m)
-		h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
-		h.incCustom(t, "mob_kills", 1)
+		h.killMob(players, m) // credits t
 	}
 }
 
@@ -686,9 +684,7 @@ func (h *hub) cubeStruckByProjectile(players map[int32]*tracked, a *arrowEntity,
 	if a.fire && m.canExplode() {
 		h.primeSulfurCube(players, m, false)
 	}
-	if a.playerShot {
-		m.hitByPlayer = true
-	}
+	h.hurtByShot(players, m, a)
 	before := m.health
 	m.hurtOf(dmg, 0, dt)
 	if !dt.has(tagNoKnockback) {

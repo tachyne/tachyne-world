@@ -78,7 +78,7 @@ func TestNetherCatalystBloomsOnDeath(t *testing.T) {
 	if m == nil {
 		t.Fatal("no blaze")
 	}
-	m.hitByPlayer = true
+	h.hurtByEID(m, 0) // a player hurt it just now
 	h.killMob(players, m)
 	for i := 0; i < deathAnimTicks+2 && h.mobs[m.eid] != nil; i++ {
 		h.tick.Add(1)

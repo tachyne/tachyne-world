@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
-
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -581,7 +579,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			shot := deathCause{}
 			byMob := false
 			if s := players[a.shooter]; s != nil {
-				shot.by = s.p.name
+				shot.by, shot.byEID = s.p.name, s.p.eid
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
 				byMob = true // a skeleton's arrow scales with difficulty; a player's does not
@@ -717,20 +715,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				h.chargeBurst(players, a, px, py, pz)
 				return true
 			}
-			if a.playerShot {
-				m.hitByPlayer = true
-			}
+			h.hurtByShot(players, m, a)
 			h.windChargeShoveMob(players, a, m)
 			m.hurtKind(windChargeHitDamage, dtWindCharge)
 			m.lastDirect = windChargeDirect(a) // the killing blow's direct entity (Blowback)
 			if m.health <= 0 {
-				h.killMob(players, m)
-				if shooter := players[a.shooter]; shooter != nil && a.playerShot {
-					h.playerKilledEntity(players, shooter, m)
-					h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
-					h.incCustom(shooter, "mob_kills", 1)
-					h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
-				}
+				h.killMob(players, m) // the shooter's kill credit settles there
 			}
 			h.chargeBurst(players, a, px, py, pz)
 			return true
@@ -740,9 +730,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			return true
 		}
 		if dmg0 := projectileHitDamage(a, m); dmg0 > 0 {
-			if a.playerShot {
-				m.hitByPlayer = true
-			}
+			h.hurtByShot(players, m, a)
 			if d := math.Hypot(a.vx, a.vz); d > 1e-6 && m.kbScale() > 0 { // ride the arrow's momentum
 				kbp := (0.5 + 0.6*float64(a.punch)) * m.kbScale() // Punch adds 0.6/level
 				m.vx, m.vz, m.kb, m.reroute = a.vx/d*kbp, a.vz/d*kbp, 3, 0
@@ -812,13 +800,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				h.witherSkullHeal(a)
 				h.killMob(players, m)
 				a.victims = append(a.victims, advEntityName[m.etype])
-				if a.playerShot {
+				if a.playerShot { // the kill itself was credited by killMob
 					if shooter := players[a.shooter]; shooter != nil {
-						h.playerKilledEntity(players, shooter, m)
 						h.advance(players, shooter, "killed_by_arrow", advMatch{item: a.weapon, victims: a.victims})
-						h.incStat(shooter, attachproto.StatKilled, int32(m.etype), 1)
-						h.incCustom(shooter, "mob_kills", 1)
-						h.sbCriteria(players, "totalKillCount", shooter.p.name, 1, false)
 					}
 				}
 			}

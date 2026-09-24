@@ -479,6 +479,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		// LivingEntity.getKillCredit: still counts as dying in a fight.
 		cause.credit = t.killCredit
 	}
+	if cause.byEID != 0 {
+		t.pvpBy, t.pvpByTil = cause.byEID, h.tick.Load()+hurtByPlayerMemory
+	}
 	t.lastCause = cause
 	h.recordCombat(t, cause, amount, t.landingFall)
 	blocked := h.shieldBlocked(t, amount, dt, src)
@@ -567,6 +570,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book
 		h.resetCustom(t, "time_since_death")
 		h.sbCriteria(players, "deaths", t.p.name, 1, false)
+		h.creditPlayerDeath(players, t)
 		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
 			h.combatDeathMessage(t))
 		if h.rules.ShowDeathMsgs { // gamerule showDeathMessages

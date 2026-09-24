@@ -195,7 +195,7 @@ func (h *hub) riptideSpinAttacks(players map[int32]*tracked) {
 			if dist3(m.x, m.y, m.z, t.x, t.y, t.z) > spinAttackReach {
 				continue
 			}
-			m.hitByPlayer = true // the kill pays experience and drops as a player kill
+			h.hurtByPlayerOn(m, t) // the kill pays experience and drops as a player kill
 			h.hurtMobOf(players, m, spinAttackDamage, dtPlayerAttack)
 			// Vanilla ends the spin here (autoSpinAttackTicks = 0) and bounces
 			// the attacker off what they hit. The engine cannot bounce a

@@ -386,15 +386,11 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				if !sweepCatches(m, om.x, om.y, om.z, ob.w, ob.h) || dist3sq(om.x, om.y, om.z, t.x, t.y, t.z) >= 9 {
 					continue
 				}
-				om.hitByPlayer = true
+				h.hurtByPlayerOn(om, t)
 				om.hurt(float64(sweep))
 				h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				if om.health <= 0 {
-					h.killMob(players, om)
-					h.playerKilledEntity(players, t, om)
-					h.incStat(t, attachproto.StatKilled, int32(om.etype), 1)
-					h.incCustom(t, "mob_kills", 1)
-					h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
+					h.killMob(players, om) // credits t
 				}
 			}
 			// The sweep reaches every LIVING thing beside the target, which
@@ -408,7 +404,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 						continue
 					}
 					h.hurtFrom(players, o, float32(sweep), dtPlayerAttack,
-						deathCause{by: t.p.name}, from(t.x, t.z))
+						deathCause{by: t.p.name, byEID: t.p.eid}, from(t.x, t.z))
 					h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
 				}
 			}
@@ -416,7 +412,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		}
 	}
 
-	m.hitByPlayer = true // its death now pays XP (vanilla: player-caused only)
+	h.hurtByPlayerOn(m, t) // its death now pays XP (vanilla: player-caused only)
 	m.lastAttacker = attacker
 	if t != nil {
 		m.looting = heldStack(t).enchLvl(enchLooting)
@@ -478,13 +474,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 		h.villagerHurtBy(players, m, t, m.health <= 0) // VILLAGER_HURT / VILLAGER_KILLED gossip
 	}
 	if m.health <= 0 {
-		h.killMob(players, m)
-		if t != nil {
-			h.playerKilledEntity(players, t, m)
-			h.incStat(t, attachproto.StatKilled, int32(m.etype), 1)
-			h.incCustom(t, "mob_kills", 1)
-			h.sbCriteria(players, "totalKillCount", t.p.name, 1, false)
-		}
+		h.killMob(players, m) // credits t, whose blow it remembers
 		return
 	}
 	// Hurt flash. A passive mob bolts away in panic; a hostile one shrugs the hit
@@ -528,7 +518,8 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 		return // already dying
 	}
 	m.dying = deathAnimTicks
-	m.vx, m.vz, m.panic = 0, 0, 0   // stop moving while it dies
+	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies
+	h.settleKillCredit(players, m)
 	h.ominousOnMobDeath(players, m) // wind-charged, weaving and oozing are LivingEntity-wide
 	if m.patrolCaptain {            // entities/pillager: a raid captain's death drops its ominous bottle, however it died
 		h.dropOminousBottle(players, m)

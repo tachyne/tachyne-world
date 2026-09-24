@@ -68,7 +68,7 @@ func TestDragonDeathOpensExitAndDropsElytra(t *testing.T) {
 	h, pl, players := endHub(t)
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	m := h.dragon
-	m.hitByPlayer = true
+	h.hurtByEID(m, 0) // a player hurt it just now
 	h.killMob(players, m)
 	m.dying = 1
 	h.despawnMob(players, m)
