@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Items keep everything when moved in a menu.** Moving an item in an
+  inventory or container window kept only its damage, enchantments, name
+  and a few other details. A potion became water, a shulker box or bundle
+  lost its contents, dyed armour lost its colour, and a lodestone compass
+  forgot its target. Swapping two different potions could also swap their
+  types. A moved or thrown item now keeps its whole stack.
 - **Burning animals run for water again, and fish flee.** Since an earlier
   change today, a burning animal ignored the water it had found, and a
   fish or squid panicking in open water froze in place. A burning animal

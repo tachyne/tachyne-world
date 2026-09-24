@@ -481,48 +481,12 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		}
 	}
 
-	// Conservation tally: items that net-disappear across this click's declared
-	// changes were thrown out of the window (Q over a slot, or a click outside
-	// the window at slot -999) — spawn them as drops or they vanish entirely.
-	// dmgOf remembers durability wear on the stacks being moved: the client's
-	// declared slot states carry no components, so without this a damaged tool
-	// would come out of any inventory move fully repaired. (Keyed by item id —
-	// tools don't stack, and moving two identical damaged tools in ONE click
-	// isn't a thing a vanilla client does.)
-	loss := map[int32]int{}
-	dmgOf := map[int32]int{}
-	enchOf := map[int32]enchList{}       // enchantments ride along like wear does
-	nameOf := map[int32]string{}         // …and anvil names
-	mapOf := map[int32]int32{}           // …and filled-map identities
-	patsOf := map[int32][6]bannerLayer{} // …and banner layers
-	trimOf := map[int32][2]int8{}        // …and armor trims
-	bookOf := map[int32]int32{}          // …and book identities
-	tally := func(st invStack, sign int) {
-		if st.item != 0 && st.count > 0 {
-			loss[st.item] += sign * st.count
-			if st.dmg > 0 {
-				dmgOf[st.item] = st.dmg
-			}
-			if st.enchanted() {
-				enchOf[st.item] = st.ench
-			}
-			if st.name != "" {
-				nameOf[st.item] = st.name
-			}
-			if st.mapID != 0 {
-				mapOf[st.item] = st.mapID
-			}
-			if st.patCount() > 0 {
-				patsOf[st.item] = st.pats
-			}
-			if st.trimMat != 0 || st.trimPat != 0 {
-				trimOf[st.item] = [2]int8{st.trimMat, st.trimPat}
-			}
-			if st.bookID != 0 {
-				bookOf[st.item] = st.bookID
-			}
-		}
-	}
+	// The client declares each changed slot as an item and a count only: every
+	// other part of a stack (a potion's type, a shulker box's contents, dye,
+	// wear, enchantments…) is the server's to carry. clickCarry pairs each
+	// destination with the stack it came from, and whatever no destination
+	// takes was thrown out of the window (Q over a slot, or a click outside
+	// it at slot -999) and drops, whole.
 	// AUTHORITY: pre-check the declared changes for item FABRICATION before
 	// applying anything. Every legitimate non-creative click conserves items
 	// (crafting-result takes never reach this path), so a net GAIN of any item
@@ -578,17 +542,28 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		}
 	}
 
-	tally(t.cursor, +1)
-	tally(e.cursor, -1)
+	// Pair every declared destination with the stack it came from, so the
+	// data the client never declares rides along (clickCarry).
+	var dests []invStack
+	var locs []int16
+	var srcs []*clickSource
+	srcs = append(srcs, &clickSource{loc: -1, st: t.cursor, left: stackCount(t.cursor)})
+	for _, ch := range e.changed {
+		dests, locs = append(dests, ch.st), append(locs, ch.slot)
+		if ptr, _ := h.winSlotPtr(t, ch.slot); ptr != nil {
+			srcs = append(srcs, &clickSource{loc: ch.slot, st: *ptr, left: stackCount(*ptr)})
+		}
+	}
+	dests, locs = append(dests, e.cursor), append(locs, -1)
+	carried := clickCarry(srcs, dests, locs)
+	placed, placedCursor := carried[:len(e.changed)], carried[len(e.changed)]
 
 	gridTouched, enchTouched, crafterTouched := false, false, false
-	for _, ch := range e.changed {
+	for i, ch := range e.changed {
 		ptr, hot := h.winSlotPtr(t, ch.slot)
 		if ptr == nil {
 			continue
 		}
-		tally(*ptr, +1)
-		tally(ch.st, -1)
 		// Taking smelted output pays the furnace's banked XP (vanilla: orbs
 		// pop when you collect, not when the smelt finishes).
 		if t.winKind == winFurnace && ch.slot == 2 && ch.st.count < ptr.count {
@@ -597,28 +572,7 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 				f.xpBank -= float64(int(f.xpBank))
 			}
 		}
-		*ptr = ch.st
-		if d, ok := dmgOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.dmg = d // carry the wear along with the move
-		}
-		if e, ok := enchOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.ench = e // …and the enchantments (declared slots carry no components)
-		}
-		if n, ok := nameOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.name = n
-		}
-		if m, ok := mapOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.mapID = m
-		}
-		if p, ok := patsOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.pats = p
-		}
-		if tr, ok := trimOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.trimMat, ptr.trimPat = tr[0], tr[1]
-		}
-		if bid, ok := bookOf[ch.st.item]; ok && ch.st.item != 0 {
-			ptr.bookID = bid
-		}
+		*ptr = placed[i]
 		if hot >= 0 {
 			t.p.setHotbarSlot(hot, ch.st.item)
 		}
@@ -648,33 +602,12 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 			crafterTouched = true // grid changed — refresh the result preview
 		}
 	}
-	t.cursor = e.cursor
-	if d, ok := dmgOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.dmg = d
-	}
-	if en, ok := enchOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.ench = en
-	}
-	if n, ok := nameOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.name = n
-	}
-	if m, ok := mapOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.mapID = m
-	}
-	if p, ok := patsOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.pats = p
-	}
-	if tr, ok := trimOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.trimMat, t.cursor.trimPat = tr[0], tr[1]
-	}
-	if bid, ok := bookOf[t.cursor.item]; ok && t.cursor.item != 0 {
-		t.cursor.bookID = bid
-	}
-	for item, n := range loss {
-		if n > 0 {
-			tr := trimOf[item]
-			h.tossItem(players, t, invStack{item: item, count: n, dmg: dmgOf[item], ench: enchOf[item],
-				mapID: mapOf[item], pats: patsOf[item], trimMat: tr[0], trimPat: tr[1], bookID: bookOf[item]})
+	t.cursor = placedCursor
+	for _, s := range srcs { // what no destination took was thrown out: it drops, whole
+		if s.left > 0 {
+			st := s.st
+			st.count = s.left
+			h.tossItem(players, t, st)
 		}
 	}
 	if gridTouched {
