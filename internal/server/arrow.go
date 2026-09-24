@@ -344,6 +344,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					// campfire, a snowball rings a bell or scores on a target.
 					bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
 					h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
+					if a.etype == entitySmallFireball {
+						h.smallFireballLights(players, a, bp, struckFace(a.x, a.y, a.z, px, py, pz, bp))
+					}
 					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
 					if a.pearl {
 						h.pearlLand(players, a)

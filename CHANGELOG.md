@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Blaze fireballs start fires.** A small fireball that hits a block now
+  lights a fire in the empty space in front of the face it hit, as in
+  vanilla. A blaze's fireball only does this with mobGriefing on. One from
+  a dispenser, or one a player has hit back, always does.
 - **Fireballs burn the way vanilla's do.** A ghast's fireball no longer
   sets the player it hits on fire; it only hurts. A blaze's fireball, or
   a fire charge from a dispenser, sets the target alight and hurts it. A

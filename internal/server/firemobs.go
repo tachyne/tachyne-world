@@ -5,6 +5,8 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // The ghast's charge (GhastShootFireballGoal) and the blaze's volleys
@@ -154,4 +156,64 @@ func (h *hub) blazeTick(players map[int32]*tracked, m *mob) {
 // triangle is RandomSource.triangle: mode ± deviation × (r − r).
 func (h *hub) triangle(mode, dev float64) float64 {
 	return mode + dev*(h.rng.Float64()-h.rng.Float64())
+}
+
+// smallFireballLights is SmallFireball.onHitBlock: fire in the cell on the
+// struck face, if that cell is empty. A mob's fireball needs mobGriefing; a
+// dispensed or batted-back one does not.
+func (h *hub) smallFireballLights(players map[int32]*tracked, a *arrowEntity, hit, cell blockPos) {
+	if _, byMob := h.mobs[a.shooter]; byMob && !h.rules.MobGriefing {
+		return
+	}
+	if cell == hit {
+		return
+	}
+	if st := h.worldFor(a.dim).At(cell.x, cell.y, cell.z); st != worldgen.Air && st != caveAirState {
+		return
+	}
+	// BaseFireBlock.getState: soul fire over #soul_fire_base_blocks.
+	if below := h.worldFor(a.dim).At(cell.x, cell.y-1, cell.z); below == worldgen.SoulSand || below == soulSoilBase {
+		h.setBlockAt(players, a.dim, cell, soulFire)
+		return
+	}
+	h.inDim(a.dim, func() { h.igniteFire(players, cell, 0) })
+}
+
+// struckFace is the cell against the face a segment from (x0,y0,z0) to
+// (x1,y1,z1) enters block hit through: the face whose plane the segment
+// crosses last on its way in.
+func struckFace(x0, y0, z0, x1, y1, z1 float64, hit blockPos) blockPos {
+	from := [3]float64{x0, y0, z0}
+	d := [3]float64{x1 - x0, y1 - y0, z1 - z0}
+	lo := [3]float64{float64(hit.x), float64(hit.y), float64(hit.z)}
+	axis, best := -1, math.Inf(-1)
+	for i := 0; i < 3; i++ {
+		if d[i] == 0 {
+			continue
+		}
+		plane := lo[i]
+		if d[i] < 0 {
+			plane++
+		}
+		if t := (plane - from[i]) / d[i]; t > best {
+			axis, best = i, t
+		}
+	}
+	out := hit
+	if axis < 0 {
+		return out
+	}
+	step := 1
+	if d[axis] > 0 {
+		step = -1
+	}
+	switch axis {
+	case 0:
+		out.x += step
+	case 1:
+		out.y += step
+	case 2:
+		out.z += step
+	}
+	return out
 }
