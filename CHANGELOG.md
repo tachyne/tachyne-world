@@ -58,6 +58,13 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Mob blasts respect mobGriefing, and fireballs burst on walls.** With
+  mobGriefing off, a ghast's fireball, a wither skull and the wither's
+  spawn blast still broke blocks. Now they keep every block and only hurt
+  what stands in the blast. A ghast's fireball also lodged in a wall like
+  an arrow instead of exploding, and blaze fireballs stuck there for ten
+  seconds. Every fireball and skull now ends where it hits, and a blaze's
+  fireball primes TNT or lights a campfire it strikes.
 - **Wither skulls wither by difficulty.** A wither skull gave a weak,
   ten-second Wither on every difficulty. It now gives Wither II, for ten
   seconds on normal and forty on hard, and none on easy, as in vanilla.

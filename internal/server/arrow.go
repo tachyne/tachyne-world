@@ -196,8 +196,13 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 		born: h.tick.Load(), sx: x, sy: y, sz: z, ox: x, oz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.vibAt(dim, freqProjectileShoot, x, y, z, 0)
-	if etype == entityWindCharge { // a gust, not a dart: shoves, bursts on contact, never sticks
+	switch etype {
+	case entityWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
 		a.knock, a.breaks = 1.5, true
+	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
+		// AbstractHurtingProjectile: whatever it hits, block or creature, ends
+		// it (a ghast's fireball explodes on a wall; none lodge like an arrow).
+		a.breaks = true
 	}
 	h.arrows[eid] = a
 	add := entAdd(eid, etype, a.uuid, x, y, z, arrowYaw(a), arrowPitch(a))
@@ -333,6 +338,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
 						break
 					}
+					// Projectile.onHitBlock runs the block's onProjectileHit for
+					// every projectile: a blaze's fireball primes TNT and lights a
+					// campfire, a snowball rings a bell or scores on a target.
+					bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+					h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
 					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
 					if a.pearl {
 						h.pearlLand(players, a)
