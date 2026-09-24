@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // MobEffectInstance's hidden stack: a stronger, shorter effect over a weaker,
@@ -69,5 +70,25 @@ func TestFireResistanceBlocksBurnDamageOnly(t *testing.T) {
 	h.tickBurning(players, pl)
 	if pl.fireSecs != 4 || pl.health != hp {
 		t.Errorf("with Fire Resistance: burn %d s (want 4), health %v → %v", pl.fireSecs, hp, pl.health)
+	}
+}
+
+// MobEffectUtil.hasWaterBreathing: a cow under water with Water Breathing
+// does not drown.
+func TestMobWaterBreathing(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	for y := 199; y <= 203; y++ {
+		h.world.SetBlock(0, y, 0, worldgen.WaterBase)
+	}
+	cow := h.spawnMob(players, entityCow, 0.5, 200, 0.5)
+	h.applyMobEffect(players, cow, effWaterBreathing, 0, 600)
+	hp := cow.health
+	for i := 0; i < 60; i++ {
+		h.mobEnvironment(players)
+	}
+	if cow.health != hp {
+		t.Errorf("a cow with Water Breathing drowned (%v → %v)", hp, cow.health)
 	}
 }

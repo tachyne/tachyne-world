@@ -227,7 +227,9 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 					m.convertIn = drownShakeSecs
 					h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(convertingMeta(m.eid, true)))
 				}
-			} else if m.submerged > mobMaxAir(m)/20 { // air is in ticks; /20 = seconds
+			} else if m.submerged > mobMaxAir(m)/20 && m.hasEffect(effWaterBreathing) == 0 && m.hasEffect(effConduitPower) == 0 {
+				// air is in ticks; /20 = seconds. MobEffectUtil.hasWaterBreathing:
+				// Water Breathing or Conduit Power keeps a mob's air topped up.
 				h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDrown))
 				h.hurtMobOf(players, m, drownDmgPerSec, dtDrown)
 			}

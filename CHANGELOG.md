@@ -124,6 +124,8 @@ the public history since the project was open-sourced on 2026-07-10.
   - A pumpkin or melon stem lets go when its fruit is picked.
   - Huge mushroom blocks close the faces that touch their own kind.
   - A piston head passes neighbour updates to its piston.
+- **Water Breathing protects mobs.** A mob with Water Breathing or Conduit
+  Power no longer drowns.
 - **Fire Resistance works as in vanilla.** You still burn, and others see
   the flames, but the fire does no damage. Before, drinking the potion put
   the fire out at once.
