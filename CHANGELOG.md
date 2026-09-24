@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Thrown tridents are no longer lost when they hit something.** A
+  trident without Loyalty vanished when it hit a mob, a player or a
+  vehicle, and one lying in the ground vanished after ten seconds. Now,
+  as in vanilla, it bounces off what it hit and drops, and it stays there
+  until you pick it up.
 - **Flint and steel wears out lighting TNT.** Lighting TNT with flint
   and steel didn't use up any durability. It now uses one point, as
   lighting anything else does.

@@ -90,6 +90,7 @@ type arrowEntity struct {
 	impaling    int      // thrown-trident impaling: bonus damage to #sensitive_to_impaling mobs
 	channeling  bool     // thrown-trident channeling: a storm bolt on whatever it hits under open sky
 	returning   bool     // a loyal trident on its way home (no collisions, steers to the owner)
+	spent       bool     // a trident that has struck something (dealtDamage): it falls away and strikes nothing more
 	pickupStack invStack // the exact stack a retrieved/returned projectile restores (0 item = plain arrow)
 }
 
@@ -293,6 +294,8 @@ func (h *hub) projectileEnds(players map[int32]*tracked, a *arrowEntity, now uin
 		return false
 	case a.etype == entityShulkerBullet:
 		return h.rules.Difficulty == diffPeaceful || !h.projectileChunkLoaded(a)
+	case a.etype == entityTrident && a.pickupStack.item != 0 && !a.noPickup:
+		return false // ThrownTrident.tickDespawn: a trident its thrower can pick up never despawns
 	}
 	return now-a.born >= arrowLifeTicks
 }
@@ -396,9 +399,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				offWorld = true
 				break
 			}
-			if h.arrowHitsPlayer(players, a, px, py, pz) ||
+			if !a.spent && (h.arrowHitsPlayer(players, a, px, py, pz) ||
 				((a.playerShot || a.mobShot || a.shooter == 0) && h.arrowHitsMob(players, a, px, py, pz)) ||
-				h.arrowHitsVehicle(players, a, px, py, pz) {
+				h.arrowHitsVehicle(players, a, px, py, pz)) {
 				hit = true
 				break
 			}
@@ -512,6 +515,14 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing
 				a.returning = true
+				continue
+			}
+			if a.etype == entityTrident {
+				// ThrownTrident.onHitEntity: it is not used up by the blow —
+				// it bounces back off what it struck (REVERSE at 0.02/0.2/0.02,
+				// halved) and falls, to land and be picked up like any other.
+				a.spent = true
+				a.vx, a.vy, a.vz = -a.vx*0.01, -a.vy*0.1, -a.vz*0.01
 				continue
 			}
 			delete(h.arrows, eid)
