@@ -11,6 +11,29 @@ import (
 // the edit overlay at sea level and assert the wave washes up, rolls back, ties
 // itself to real ocean, and NEVER writes to the world (it is a client overlay).
 
+// biomeSpot finds a column near (from, from) whose biome satisfies want, a
+// few blocks to its west as well (the fixture's water lies west of cx) — the
+// waves only start where the water is ocean or the shore is a beach.
+func biomeSpot(t *testing.T, w *world.World, from int, want func(string) bool) (int, int) {
+	t.Helper()
+	for r := 0; r < 200; r++ {
+		for _, d := range [][2]int{{r, 0}, {0, r}, {-r, 0}, {0, -r}, {r, r}, {-r, -r}} {
+			x, z := from+d[0]*32, from+d[1]*32
+			ok := true
+			for dx := -4; dx <= 4 && ok; dx++ {
+				for dz := -3; dz <= 3 && ok; dz++ {
+					ok = want(w.BiomeAt(x+dx, z+dz))
+				}
+			}
+			if ok {
+				return x, z
+			}
+		}
+	}
+	t.Fatalf("no spot near %d found", from)
+	return 0, 0
+}
+
 // buildBeach lays a deterministic shoreline: an ocean strip DIRECTLY beside a
 // beach that slopes up one block per column (so the flood-fill can climb it a
 // step at a time), spanning the whole wash band. The shore cell (sheet
@@ -53,7 +76,7 @@ func TestWaveWashesUpAndRollsBack(t *testing.T) {
 	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
-	cx, cz := 200, 200
+	cx, cz := biomeSpot(t, h.world, 200, isOceanBiome)
 	sheets := buildBeach(h.world, cx, cz)
 	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
@@ -91,7 +114,7 @@ func TestWaveNeverWritesWorld(t *testing.T) {
 	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
-	cx, cz := 400, 400
+	cx, cz := biomeSpot(t, h.world, 400, isOceanBiome)
 	sheets := buildBeach(h.world, cx, cz)
 	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
@@ -116,7 +139,7 @@ func TestWaveCannotClimbTwoBlockStep(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
-	cx, cz := 800, 800
+	cx, cz := biomeSpot(t, h.world, 800, isOceanBiome)
 	for x := cx - 4; x <= cx+4; x++ { // clear
 		for z := cz - 3; z <= cz+3; z++ {
 			for y := sl - 4; y <= waveBandHigh+1; y++ {
@@ -159,7 +182,7 @@ func TestWaveEdgesAreFlowing(t *testing.T) {
 	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
-	cx, cz := 1000, 1000
+	cx, cz := biomeSpot(t, h.world, 1000, isOceanBiome)
 	buildBeach(h.world, cx, cz)
 	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
@@ -188,7 +211,7 @@ func TestWaveNeedsOcean(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
-	cx, cz := 600, 600
+	cx, cz := biomeSpot(t, h.world, 600, isOceanBiome)
 	// An inland sand flat at sea level with NO ocean anywhere in scan range: the
 	// patch must cover the full radius so no generated water leaks into the
 	// shoreline check (which reads y=sea-1 across the whole window).
@@ -247,7 +270,7 @@ func TestWaveWaterIsThin(t *testing.T) {
 	skipHeavy(t)
 	h := newHub(world.New(1))
 	h.waves = true
-	cx, cz := 1600, 1600
+	cx, cz := biomeSpot(t, h.world, 1600, isOceanBiome)
 	buildBeach(h.world, cx, cz)
 	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
@@ -272,7 +295,7 @@ func TestWaveFrontIsGradualOnFlat(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
 	sl := worldgen.SeaLevel
-	cx, cz := 1800, 1800
+	cx, cz := biomeSpot(t, h.world, 1800, isOceanBiome)
 	for x := cx - 2; x <= cx+9; x++ { // clear the band
 		for z := cz - 2; z <= cz+2; z++ {
 			for y := sl - 4; y <= waveBandHigh+1; y++ {
@@ -327,7 +350,7 @@ func TestWaveFrontIsGradualOnFlat(t *testing.T) {
 func TestWaveRecedesFully(t *testing.T) {
 	h := newHub(world.New(1))
 	h.waves = true
-	cx, cz := 1400, 1400
+	cx, cz := biomeSpot(t, h.world, 1400, isOceanBiome)
 	buildBeach(h.world, cx, cz)
 	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
 	players := map[int32]*tracked{1: pl}
@@ -344,5 +367,28 @@ func TestWaveRecedesFully(t *testing.T) {
 	}
 	if !pausedEmpty {
 		t.Fatal("never observed a pause tick")
+	}
+}
+
+// Sea-level water that is not the sea — a river bank, a lake, a swamp edge —
+// gets no waves (bug #28): only an ocean, or a beach, has a coast.
+func TestWaveOnlyOnCoasts(t *testing.T) {
+	skipHeavy(t)
+	h := newHub(world.New(1))
+	h.waves = true
+	inland := func(b string) bool {
+		return !isOceanBiome(b) && b != "minecraft:beach" && b != "minecraft:snowy_beach" && b != "minecraft:stony_shore"
+	}
+	cx, cz := biomeSpot(t, h.world, 3000, inland)
+	sheets := buildBeach(h.world, cx, cz) // the same shore, but beside a lake
+	pl := riderAt(1, float64(cx)+0.5, float64(worldgen.SeaLevel)+1, float64(cz)+0.5)
+	players := map[int32]*tracked{1: pl}
+	for tick := uint64(0); tick < 400; tick += 5 {
+		tg := h.waveTargets(players, tick) // a real coast within view may wave: only this shore matters
+		for _, cell := range sheets {
+			if _, wet := tg[cell]; wet {
+				t.Fatalf("waves on a lake shore (%s) at %v, tick %d", h.world.BiomeAt(cx-2, cz), cell, tick)
+			}
+		}
 	}
 }

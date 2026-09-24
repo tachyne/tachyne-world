@@ -122,6 +122,21 @@ func (h *hub) beachSheet(x, z int) (int, bool) {
 	return 0, false // nothing but air/plants through the band → no ground here
 }
 
+// isCoast reports whether a shore cell beside sea-level water is coastline:
+// the water is ocean, or the shore is a beach (shallow water at a beach can
+// sit in the beach biome itself). A river bank, a lake or a swamp edge sits at
+// sea level too, and gets no waves.
+func isCoast(waterBiome, shoreBiome string) bool {
+	if isOceanBiome(waterBiome) {
+		return true
+	}
+	switch shoreBiome {
+	case "minecraft:beach", "minecraft:snowy_beach", "minecraft:stony_shore":
+		return true
+	}
+	return false
+}
+
 // waveHoriz are the four horizontal steps the flood-fill spreads across.
 var waveHoriz = [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 
@@ -193,9 +208,21 @@ func (h *hub) waveTargets(players map[int32]*tracked, t uint64) map[blockPos]uin
 			dist[k] = d
 			queue = append(queue, k)
 		}
+		biomes := map[[2]int]string{} // BiomeAt memo for this pass
+		biome := func(x, z int) string {
+			k := [2]int{x, z}
+			b, ok := biomes[k]
+			if !ok {
+				b = h.world.BiomeAt(x, z)
+				biomes[k] = b
+			}
+			return b
+		}
 		for k := range beach { // seeds: shore cells beside the ocean, distance 1
 			for _, d := range waveHoriz {
-				if worldgen.IsWater(h.world.Block(k[0]+d[0], worldgen.SeaLevel-1, k[1]+d[1])) {
+				wx, wz := k[0]+d[0], k[1]+d[1]
+				if worldgen.IsWater(h.world.Block(wx, worldgen.SeaLevel-1, wz)) &&
+					isCoast(biome(wx, wz), biome(k[0], k[1])) {
 					visit(k[0], k[1], worldgen.SeaLevel-1, 1)
 					break
 				}

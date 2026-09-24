@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Waves only on the coast.** The optional beach waves treated any water
+  at sea level as the ocean, so river banks, lakes and swamp edges waved
+  too. A wave now starts only where the water is ocean or the shore is a
+  beach.
 - **You see your own skin.** A joining player was never sent their own
   tab-list entry. Their client had no skin data for them and drew a
   default skin, and they were missing from their own tab list. Every
