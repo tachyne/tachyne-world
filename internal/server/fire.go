@@ -547,6 +547,9 @@ func (h *hub) igniteOddsAt(pos blockPos) int {
 // fireNearRain reports whether rain is falling on the fire's column or any of
 // its four horizontal neighbours (a nearby downpour still snuffs it).
 func (h *hub) fireNearRain(pos blockPos) bool {
+	if h.rsDim != dimOverworld {
+		return false // no weather outside the overworld: its rain is not falling here
+	}
 	return h.skyExposedColumn(pos.x, pos.z) ||
 		h.skyExposedColumn(pos.x-1, pos.z) || h.skyExposedColumn(pos.x+1, pos.z) ||
 		h.skyExposedColumn(pos.x, pos.z-1) || h.skyExposedColumn(pos.x, pos.z+1)

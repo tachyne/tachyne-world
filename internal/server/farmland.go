@@ -35,7 +35,7 @@ func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, s
 	}
 	n := int(state - farmlandMin) // moisture 0..7
 	switch {
-	case h.farmlandNearWater(x, y, z) || h.rainingAbove(x, y, z):
+	case h.farmlandNearWater(dim, x, y, z) || h.rainingAbove(dim, x, y, z):
 		if n < 7 {
 			h.setBlockAt(players, dim, blockPos{x, y, z}, farmlandMin+7)
 		}
@@ -49,11 +49,12 @@ func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, s
 
 // farmlandNearWater reports water within the vanilla scan box: horizontally
 // ±4, vertically the soil's own level and the one above (FarmBlock.isNearWater).
-func (h *hub) farmlandNearWater(x, y, z int) bool {
+func (h *hub) farmlandNearWater(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
 	for dy := 0; dy <= 1; dy++ {
 		for dx := -4; dx <= 4; dx++ {
 			for dz := -4; dz <= 4; dz++ {
-				if worldgen.IsWater(h.world.At(x+dx, y+dy, z+dz)) {
+				if worldgen.IsWater(w.At(x+dx, y+dy, z+dz)) {
 					return true
 				}
 			}
@@ -65,8 +66,9 @@ func (h *hub) farmlandNearWater(x, y, z int) bool {
 // rainingAbove reports whether rain is falling on the block above the soil —
 // raining, the column is open to the sky, and this biome/height gets rain (not
 // snow). Mirrors ServerLevel.isRainingAt(pos.above()).
-func (h *hub) rainingAbove(x, y, z int) bool {
-	return h.raining && h.skyExposedColumn(x, z) &&
+func (h *hub) rainingAbove(dim, x, y, z int) bool {
+	// Only the overworld has weather: a Nether or End farm is never rained on.
+	return dim == dimOverworld && h.raining && h.skyExposedColumn(x, z) &&
 		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y+1) == worldgen.PrecipRain
 }
 

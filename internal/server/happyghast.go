@@ -17,9 +17,10 @@ func isDriedGhast(state uint32) bool { return state >= driedGhastBase && state <
 // waterAdjacent reports whether any of the six neighbours of a cell is water —
 // our stand-in for vanilla's "waterlogged" hydration source, since placement
 // doesn't waterlog blocks here.
-func (h *hub) waterAdjacent(x, y, z int) bool {
+func (h *hub) waterAdjacent(dim, x, y, z int) bool {
+	w := h.worldFor(dim)
 	for _, d := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
-		if worldgen.IsWater(h.world.At(x+d[0], y+d[1], z+d[2])) {
+		if worldgen.IsWater(w.At(x+d[0], y+d[1], z+d[2])) {
 			return true
 		}
 	}
@@ -54,7 +55,7 @@ func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state
 	if v := worldgen.GetProperty(info, state, "hydration"); v != "" {
 		hyd = int(v[0] - '0')
 	}
-	wet := h.waterAdjacent(x, y, z)
+	wet := h.waterAdjacent(dim, x, y, z)
 	switch {
 	case wet && hyd >= 3:
 		h.hatchGhastling(players, dim, x, y, z, state)

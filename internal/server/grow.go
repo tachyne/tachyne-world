@@ -184,7 +184,7 @@ func (h *hub) randomTickChunk(players map[int32]*tracked, dim, cx, cz int) {
 	if !h.worldFor(dim).Ticking(int32(cx), int32(cz)) {
 		return
 	}
-	if h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled
+	if dim == dimOverworld && h.rng.Intn(16) == 0 { // vanilla tickPrecipitation: ~1 column/chunk sampled (the only dimension with weather; Nether and End biomes never freeze or snow)
 		h.precipTick(players, dim, cx, cz)
 	}
 	// One chunk resolution for the whole chunk's reads (see world.ChunkReader):

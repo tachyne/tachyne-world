@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **The overworld's weather stays in the overworld.** When it rained in
+  the overworld, a Nether farm was watered, a Nether fire was put out and a
+  Nether cauldron filled, if the overworld column at the same coordinates
+  saw the sky. Nether farmland and dried ghasts also looked for water in the
+  overworld. All of these now read their own dimension.
 - **Allays in any dimension.** An allay delivers to a note block it heard in
   the Nether or the End as well as the overworld. It only brings items to
   its player while that player is in survival or creative and within 64
