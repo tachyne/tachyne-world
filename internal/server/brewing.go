@@ -358,6 +358,11 @@ func (h *hub) sendBrewBars(players map[int32]*tracked, pos simPos) {
 		}
 		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 0, Value: int32(h.brewProg[pos])})
 		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 1, Value: int32(h.brewFuel[pos])})
+		// 26.3's DATA_TOTAL_BREW_TIME and DATA_TOTAL_FUEL_USES: what the two
+		// bars are measured against (a brew is 400 ticks, blaze powder 20
+		// uses). The gateway keeps them from clients whose menu lacks them.
+		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 2, Value: 400})
+		t.p.trySendEv(attachproto.WindowData{ID: int32(t.winID), Prop: 3, Value: 20})
 	}
 }
 

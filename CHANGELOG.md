@@ -77,6 +77,9 @@ the public history since the project was open-sourced on 2026-07-10.
   its gear, a wolf answers only to its owner, and Curse of Binding holds a
   piece on outside creative. The piece drops with everything it carries,
   and taking a wolf's armour off earns Snip Snap.
+- **26.3 brewing stand bars.** A 26.3 client is sent the brew and fuel
+  totals its brewing stand measures its bars against. A 26.2 client, whose
+  menu has no such slots, never sees them.
 - **Crossbows fire rockets.** A firework rocket held in the off hand
   loads, as vanilla allows (not one from the backpack). It flies straight
   at the aim, and goes off on the first mob or player in its path, or on a
