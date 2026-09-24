@@ -206,7 +206,7 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 		t.p.trySendEv(passengersBody(m.eid, m.riders...))
 	}
 	if m.mobRider != 0 {
-		t.p.trySendEv(passengersBody(m.eid, m.mobRider))
+		t.p.trySendEv(passengersBody(m.eid, m.mobPassengers()...))
 	}
 }
 

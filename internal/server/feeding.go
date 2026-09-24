@@ -83,6 +83,9 @@ var horseMeals = map[string]map[string]horseMeal{
 	},
 	"llama": {"wheat": {2, 10, false}, "hay_block": {10, 90, true}},
 	"camel": {"cactus": {2, 10, true}},
+	// #camel_husk_food. A husk never courts and is never a calf, so a
+	// rabbit's foot only heals.
+	"camel_husk": {"rabbit_foot": {2, 10, false}},
 }
 
 // horseMealFor resolves the family branch and the held item to a meal row.
@@ -95,6 +98,8 @@ func horseMealFor(etype int, item int32) (horseMeal, bool) {
 		branch = "llama"
 	case entityCamel:
 		branch = "camel"
+	case entityCamelHusk:
+		branch = "camel_husk"
 	default:
 		return horseMeal{}, false
 	}
@@ -132,6 +137,8 @@ func eatSound(etype int) string {
 		return "minecraft:entity.llama.eat"
 	case entityCamel:
 		return "minecraft:entity.camel.eat"
+	case entityCamelHusk:
+		return "minecraft:entity.camel_husk.eat"
 	case entityCat:
 		return "minecraft:entity.cat.eat"
 	}

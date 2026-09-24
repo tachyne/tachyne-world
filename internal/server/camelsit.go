@@ -65,7 +65,7 @@ func (h *hub) camelSitDown(players map[int32]*tracked, m *mob) {
 	if m.camelSitting() {
 		return
 	}
-	h.playSoundDim(players, m.dim, "minecraft:entity.camel.sit", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity."+entityNameByID[m.etype]+".sit", sndNeutral, m.x, m.y, m.z, 1, 1)
 	m.poseTick = -int64(h.tick.Load())
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(camelPoseMeta(m)))
 }
@@ -74,7 +74,7 @@ func (h *hub) camelStandUp(players map[int32]*tracked, m *mob) {
 	if !m.camelSitting() {
 		return
 	}
-	h.playSoundDim(players, m.dim, "minecraft:entity.camel.stand", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity."+entityNameByID[m.etype]+".stand", sndNeutral, m.x, m.y, m.z, 1, 1)
 	m.poseTick = int64(h.tick.Load())
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(camelPoseMeta(m)))
 }
@@ -118,8 +118,12 @@ func (h *hub) camelRiderForward(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	m := h.mobs[t.ridingEID]
-	if m == nil || m.etype != entityCamel || !m.camelSitting() || m.camelInTransition(h.tick.Load()) {
+	if m == nil || !isCamelKind(m.etype) || !m.camelSitting() || m.camelInTransition(h.tick.Load()) {
 		return
 	}
 	h.camelStandUp(players, m)
 }
+
+// isCamelKind is the Camel class and its CamelHusk subclass, which share
+// sitting, dashing and the two-seat back.
+func isCamelKind(etype int) bool { return etype == entityCamel || etype == entityCamelHusk }

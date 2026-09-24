@@ -53,9 +53,8 @@ camel husk) counts as MISSING, so the gain is smaller than the raw count of fixe
    changed values) and advancements. Seven advancements cannot be earned.
 6. **World generation.** There are no aquifers or underground water (lush-cave water floats
    over carved air), and many ground-cover features are missing.
-7. **26.3 content with no behaviour yet.** The lunge enchantment (spears themselves work
-   since 2026-09-24) and the camel husk. The sulfur cube arrived on 2026-09-24; the sulfur caves
-   it spawns in are not generated yet.
+7. **26.3 content.** Closed on 2026-09-24: spears and the lunge enchantment, the sulfur
+   cube and the sulfur caves, and the camel husk with its husk-and-parched riders.
 8. **Players seeing each other.** Arm swings, mining cracks and the explosion packet are not
    broadcast.
 

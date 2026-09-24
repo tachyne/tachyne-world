@@ -27,7 +27,7 @@ var temptSpeed = map[int]float64{
 	entityBee: 1.25, entityHorse: 1.25, entityDonkey: 1.25, entityMule: 1.25,
 	entitySkeletonHorse: 1.25, entityZombieHorse: 1.25, entityLlama: 1.25,
 	entityTraderLlama: 1.25, entityStrider: 1.4, entityGoat: 1.25,
-	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5,
+	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5, entityCamelHusk: 2.5,
 	entitySniffer: 1.25, entityTadpole: 1.25,
 	entityCat: 0.6, entityOcelot: 0.6, // the scare-able creep (CatTemptGoal / OcelotTemptGoal)
 }
@@ -45,7 +45,7 @@ func temptStopFor(m *mob) float64 {
 			return 1
 		}
 		return 2
-	case entityCamel, entitySniffer:
+	case entityCamel, entityCamelHusk, entitySniffer:
 		if m.baby {
 			return 2.5
 		}
@@ -71,6 +71,8 @@ func isTemptItem(etype int, item int32) bool {
 		}
 	case entityMule, entitySkeletonHorse, entityZombieHorse:
 		return breedFoods[entityHorse][item] // #horse_tempt_items for the whole family
+	case entityCamelHusk:
+		return item == itemByName["rabbit_foot"] // FollowTemptation reads isFood: #camel_husk_food
 	}
 	return isLoveFood(etype, item)
 }

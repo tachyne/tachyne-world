@@ -70,11 +70,12 @@ func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
 	if m.mount != 0 {
 		mount = 2 // a mounted spearman keeps two blocks further off
 	}
+	speed := spearGoalSpeed * h.chargeSpeedModifier(m) // a mounted charge takes its vehicle's modifier
 	d := dist3(m.x, m.y, m.z, target.x, target.y, target.z)
 	m.headYaw = float32(math.Atan2(-(target.x-m.x), target.z-m.z) * 180 / math.Pi)
 	if g.engage < 0 {
 		if d > spearApproachDist {
-			h.steerTo(m, target.x, target.z, spearGoalSpeed)
+			h.steerTo(m, target.x, target.z, speed)
 			return true
 		}
 		g.engage = (sp.useTicks() + 1) / 2 // reducedTickDelay: goals tick every other tick
@@ -97,7 +98,7 @@ func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
 	if !timedOut {
 		switch {
 		case g.hasAway:
-			h.steerTo(m, g.awayX, g.awayZ, spearGoalSpeed)
+			h.steerTo(m, g.awayX, g.awayZ, speed)
 			if math.Hypot(g.awayX-m.x, g.awayZ-m.z) < 1 { // the path is done
 				if g.flee > 0 {
 					g.done = true
@@ -106,7 +107,7 @@ func (h *hub) spearGoalStep(players map[int32]*tracked, m *mob) bool {
 				}
 			}
 		default:
-			h.steerTo(m, target.x, target.z, spearGoalSpeed)
+			h.steerTo(m, target.x, target.z, speed)
 			if d < spearInRangeDist {
 				g.awayX, g.awayZ, g.hasAway = h.spearPosAway(m, target, 6+mount-d, 7+mount-d)
 			}

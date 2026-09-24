@@ -27,7 +27,7 @@ const (
 // head on its own.
 var lookRanges = map[string]float64{
 	"cow": 6, "mooshroom": 6, "pig": 6, "sheep": 6, "chicken": 6, "horse": 6, "donkey": 6,
-	"mule": 6, "skeleton_horse": 6, "zombie_horse": 6, "camel": 6, "llama": 6, "trader_llama": 6,
+	"mule": 6, "skeleton_horse": 6, "zombie_horse": 6, "camel": 6, "camel_husk": 6, "llama": 6, "trader_llama": 6,
 	"polar_bear": 6, "iron_golem": 6, "snow_golem": 6, "copper_golem": 6, "dolphin": 6, "ravager": 6,
 	"cat": 10, "ocelot": 10, "rabbit": 10,
 	"pillager": 15,

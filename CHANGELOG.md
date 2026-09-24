@@ -134,6 +134,23 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **The camel husk (26.3).** One naturally spawned husk in ten, given room
+  for a camel, rides out on a camel husk:
+  - the husk sits in front and drives, with an iron spear, and its spear
+    charges run at four times the pace;
+  - a parched rides in the back seat and shoots; if the husk dies, it moves
+    up and takes the reins.
+
+  The camel husk otherwise behaves like a camel: it sits, dashes, carries a
+  saddled player and makes its own camel-husk sounds. It heals on rabbit's
+  feet but never breeds. It cannot be led on a lead and never panics while
+  a mob is riding it. Like a monster, it despawns unless a player has
+  interacted with it. Other changes that came with it:
+  - a mob riding another mob moves at its mount's pace, as in vanilla, so a
+    chicken jockey is as quick as its chicken;
+  - zombie horses and zombie nautiluses count as monsters for spawning, as
+    in 26.3;
+  - pigs, striders and camels play their own saddle sounds.
 - **The sulfur cube.** 26.3's block-swallowing cube is in the game. Empty,
   it hops about like a slime and never attacks: size 2 grown, size 1 as a
   baby (a slime ball helps it grow), 4 health per size, and it dies into

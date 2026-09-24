@@ -494,8 +494,7 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	h.gridDirty()
 	if m.mount != 0 { // a mob rider died — detach it from its vehicle's view
 		if v := h.mobs[m.mount]; v != nil {
-			v.mobRider = 0
-			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+			h.freeMobSeat(players, v, m.eid)
 		}
 	}
 	if m.cart != 0 { // died in a cart or a boat: its seat is free, whoever else is aboard stays

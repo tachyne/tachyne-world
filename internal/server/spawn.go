@@ -137,8 +137,8 @@ func mobSpawnCategory(m *mob) int {
 		return catUndergroundWater
 	case entityCod, entitySalmon, entityTropicalFish, entityPufferfish:
 		return catWaterAmbient
-	case entitySulfurCube:
-		return catMonster // MobCategory.MONSTER, though it never hunts
+	case entitySulfurCube, entityCamelHusk, entityZombieHorse, entityZombieNautilus:
+		return catMonster // MobCategory.MONSTER, though none of them hunts
 	}
 	if m.hostile {
 		return catMonster
@@ -590,7 +590,10 @@ func (h *hub) spawnNatural(players map[int32]*tracked, dim, cat, etype, x, y, z 
 		h.configureNetherMob(players, m)
 		h.rollPackBaby(players, m)
 	case cat == catMonster && etype != entityOcelot: // the ocelot is listed under the jungle's monsters but is no monster
-		h.spawnHostileYIn(players, etype, dim, fx, fy, fz)
+		m := h.spawnHostileYIn(players, etype, dim, fx, fy, fz)
+		if etype == entityHusk {
+			h.rollCamelHusk(players, m) // Husk.finalizeSpawn: NATURAL spawns only
+		}
 	case cat == catWaterCreature || cat == catWaterAmbient || cat == catAxolotls || cat == catUndergroundWater:
 		h.spawnSpecies(players, etype, dim, fx, fy+0.5, fz)
 	default:

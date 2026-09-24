@@ -20,11 +20,11 @@ func (evRidingJump) isHubEvent() {}
 // camelDashStart is handleStartJump for the camel the player rides.
 func (h *hub) camelDashStart(players map[int32]*tracked, t *tracked) {
 	m := h.mobs[t.ridingEID]
-	if m == nil || m.etype != entityCamel || m.dying > 0 || !m.saddled || m.dashCD > 0 {
+	if m == nil || !isCamelKind(m.etype) || m.dying > 0 || !m.saddled || m.dashCD > 0 {
 		return
 	}
 	m.dashCD, m.dashing = camelDashCooldown, true
-	h.playSoundDim(players, m.dim, "minecraft:entity.camel.dash", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity."+entityNameByID[m.etype]+".dash", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCamelDash, true)))
 }
 

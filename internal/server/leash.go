@@ -85,6 +85,9 @@ func canBeLeashed(m *mob) bool {
 	if m.etype == entitySulfurCube {
 		return m.hasBody() // SulfurCube.canBeLeashed: only a cube carrying a block
 	}
+	if m.etype == entityCamelHusk && m.mobRider != 0 {
+		return false // CamelHusk.canBeLeashed: not while a mob holds the reins
+	}
 	return !noLeashSpecies[m.etype]
 }
 
@@ -258,7 +261,7 @@ func (h *hub) updateLeashes(players map[int32]*tracked) {
 			continue
 		}
 		d := dist3(m.x, m.y, m.z, hx, hy, hz)
-		if m.etype == entityCamel && d > 6 && m.camelSitting() && !m.camelInTransition(h.tick.Load()) {
+		if isCamelKind(m.etype) && d > 6 && m.camelSitting() && !m.camelInTransition(h.tick.Load()) {
 			h.camelStandUp(players, m) // handleLeashAtDistance: led past six blocks, it gets up
 		}
 		if d > leashSnapDist {

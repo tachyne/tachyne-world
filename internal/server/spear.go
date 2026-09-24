@@ -577,9 +577,8 @@ func (h *hub) unseatMob(players map[int32]*tracked, m *mob) bool {
 		return false
 	}
 	if v := h.mobs[m.mount]; v != nil {
-		v.mobRider = 0
-		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+		h.freeMobSeat(players, v, m.eid)
 	}
-	m.mount, m.mountDrives = 0, false
+	m.mount, m.mountDrives, m.navMount = 0, false, nil
 	return true
 }

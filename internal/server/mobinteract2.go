@@ -157,6 +157,9 @@ func (h *hub) tryPoisonParrot(players map[int32]*tracked, t *tracked, m *mob) bo
 // before it (PlayerInteractTrigger reads the stack as it was).
 func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak bool) bool {
 	held := heldStack(t).item
+	if m.etype == entityCamelHusk {
+		m.persistent = true // CamelHusk.interact: any click keeps it
+	}
 	if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.trySulfurCube(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 		h.tryHorseScreen(players, t, m, sneak) || h.tryHappyGhast(players, t, m) ||
 		h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||

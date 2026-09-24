@@ -19,7 +19,7 @@ const menuHorseColumnsDonkey = 5
 // horseFamily: mounts with the inventory screen.
 func horseFamily(etype int) bool {
 	switch etype {
-	case entityHorse, entityDonkey, entityMule, entityCamel,
+	case entityHorse, entityDonkey, entityMule, entityCamel, entityCamelHusk,
 		entitySkeletonHorse, entityZombieHorse, entityLlama, entityTraderLlama:
 		return true
 	}

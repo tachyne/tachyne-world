@@ -158,9 +158,9 @@ func footstepsFor(w *world.World, m *mob, fx, onY, fz int) []stepSound {
 		}
 		below := w.At(fx, onY, fz)
 		switch name {
-		case "camel": // Camel: sand and concrete powder underfoot
+		case "camel", "camel_husk": // sand and concrete powder underfoot
 			if bn, _ := worldgen.StateName(below); camelSandBlocks[bn] || worldgen.IsConcretePowder(below) {
-				v.name = "minecraft:entity.camel.step_sand"
+				v.name = "minecraft:entity." + name + ".step_sand"
 			}
 		case "strider":
 			if worldgen.IsLava(w.At(fx, int(math.Floor(m.y)), fz)) {

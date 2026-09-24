@@ -25,7 +25,7 @@ var (
 // fungus on a stick.
 func rideable(etype int) (ok bool, steerItem int32) {
 	switch etype {
-	case entityHorse, entityDonkey, entityMule, entityCamel,
+	case entityHorse, entityDonkey, entityMule, entityCamel, entityCamelHusk,
 		entitySkeletonHorse, entityZombieHorse:
 		return true, 0
 	case entityPig:
@@ -43,8 +43,8 @@ func rideable(etype int) (ok bool, steerItem int32) {
 // the interaction was consumed.
 func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	ok, _ := rideable(m.etype)
-	if !ok || m.dying > 0 || m.baby {
-		return false
+	if !ok || m.dying > 0 || m.baby || m.mobRider != 0 {
+		return false // a mob aboard has the seat (a camel husk's husk and parched fill both)
 	}
 	if m.etype == entityNautilus && !m.tamed {
 		return false // isSaddleable: only a tamed nautilus takes a saddle or a rider
@@ -74,8 +74,11 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		} else {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, saddleEquip(m.eid))
 		}
-		snd := "minecraft:entity.horse.saddle"
-		if m.etype == entityNautilus {
+		snd := "minecraft:entity.horse.saddle" // AbstractHorse.getEquipSound
+		switch m.etype {
+		case entityPig, entityStrider, entityCamel, entityCamelHusk: // their own getEquipSound(SADDLE)
+			snd = "minecraft:entity." + entityNameByID[m.etype] + ".saddle"
+		case entityNautilus:
 			snd = "minecraft:item.nautilus_saddle_equip"
 			if h.inWater(m.dim, m.x, m.y, m.z) {
 				snd = "minecraft:item.nautilus_saddle_underwater_equip"

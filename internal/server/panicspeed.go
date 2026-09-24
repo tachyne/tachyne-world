@@ -13,7 +13,7 @@ var panicSpeeds = func() map[int]float64 {
 		"cow": 2.0, "mooshroom": 2.0, "trader_llama": 2.0, "panda": 2.0, "rabbit": 2.2,
 		"sheep": 1.25, "pig": 1.25, "cod": 1.25, "salmon": 1.25, "tropical_fish": 1.25,
 		"pufferfish": 1.25, "tadpole": 1.25, "chicken": 1.4, "llama": 1.2, "turtle": 1.2,
-		"strider": 1.65, "wandering_trader": 0.5, "camel": 4.0, "allay": 2.5,
+		"strider": 1.65, "wandering_trader": 0.5, "camel": 4.0, "camel_husk": 4.0, "allay": 2.5,
 		"wolf": 1.5, "polar_bear": 2.0, "goat": 2.0, "cat": 1.5, "parrot": 1.25, "fox": 2.2,
 		"horse": 1.2, "donkey": 1.2, "mule": 1.2, // AbstractHorse's MountPanicGoal
 		"copper_golem": 1.5, "nautilus": 1.6,
@@ -43,6 +43,9 @@ func panicSpeed(etype int) float64 {
 func panicsAt(m *mob, dt dmgType) bool {
 	if panicNever[m.etype] {
 		return false // an armadillo rolls up, a zombie or skeleton horse plods
+	}
+	if m.etype == entityCamelHusk && m.mobRider != 0 {
+		return false // CamelPanic: never while a mob holds the reins
 	}
 	// PolarBear's goal takes the environmental tag for an adult and the full
 	// one for a cub, which is why a mother stands her ground and a cub bolts.

@@ -180,6 +180,8 @@ type mob struct {
 	mount                           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
 	cart                            int32       // eid of the MINECART carrying this mob (scooped up by a rolling cart); 0 = none
 	mobRider                        int32       // eid of the MOB riding this one (the reverse of mount); 0 = none
+	mobRider2                       int32       // a camel's back seat: the second MOB aboard (a camel husk's parched); 0 = none
+	navMount                        *mob        // the vehicle this rider steers (Mob.getNavigation hands a driver its vehicle's), nil = on foot
 	mountDrives                     bool        // this rider's AI leads and its mount follows (a chicken jockey's zombie)
 	jockey                          bool        // a chicken carrying a jockey: no eggs, despawns, ten experience
 	spawnTick                       uint64      // Entity.tickCount's origin: the world tick it was created (resets on a reload, as vanilla's does)
@@ -577,13 +579,14 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.mount != 0 { // riding another mob (raid ravager rider, jockey)
 			v := h.mobs[m.mount]
 			if v == nil || v.dying > 0 {
-				m.mount, m.mountDrives = 0, false // vehicle gone — dismount and resume as a normal mob
+				m.mount, m.mountDrives, m.navMount = 0, false, nil // vehicle gone — dismount and resume as a normal mob
 			} else if !m.mountDrives {
 				// Glued to the vehicle: the client renders us seated from the
 				// passengers frame, so the server just keeps us co-located and
-				// skips independent movement — a skeleton jockey still shoots.
+				// skips independent movement — a skeleton jockey (or a camel
+				// husk's parched) still shoots.
 				m.x, m.y, m.z, m.dim = v.x, v.y+mountRideHeight, v.z, v.dim
-				if m.hostile && (m.etype == entitySkeleton || m.etype == entityStray || m.etype == entityBogged) {
+				if m.hostile && skeletonKind(m.etype) {
 					h.acquireTarget(players, m)
 					h.skeletonShoot(players, m)
 				}
@@ -591,11 +594,12 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 		}
 		if m.mobRider != 0 { // carrying a mob
-			r := h.mobs[m.mobRider]
-			if r == nil || r.dying > 0 || r.mount != m.eid {
-				m.mobRider = 0
-				h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid))
-			} else if r.mountDrives {
+			for _, id := range m.mobPassengers() {
+				if r := h.mobs[id]; r == nil || r.dying > 0 || r.mount != m.eid {
+					h.freeMobSeat(players, m, id)
+				}
+			}
+			if r := h.mobs[m.mobRider]; r != nil && r.mountDrives {
 				m.x, m.y, m.z, m.dim = r.x, r.y, r.z, r.dim // the rider leads: carried under it
 				continue
 			}
@@ -612,7 +616,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.hasBody() {
 			continue // a sulfur cube carrying a block has no goals: it is a ball (updateSulfurCubes moves it)
 		}
-		if m.etype == entityCamel && m.dashCD > 0 {
+		if isCamelKind(m.etype) && m.dashCD > 0 {
 			h.camelDashTick(players, m)
 			h.nautilusDashTick(players, m)
 		}
@@ -622,7 +626,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				continue
 			}
 		}
-		if m.etype == entityCamel && m.rider == 0 && h.camelSitStep(players, m) {
+		if isCamelKind(m.etype) && m.rider == 0 && m.mobRider == 0 && h.camelSitStep(players, m) {
 			continue // sat, folding or rising: refuseToMove (a ridden camel's client does this itself)
 		}
 		if m.etype == entityPufferfish {
@@ -1343,7 +1347,7 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))
 		}
 		if m.mobRider != 0 { // a mob rider (raid ravager) — re-assert for late joiners
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.mobRider))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.mobPassengers()...))
 		}
 		if m.harness != 0 {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))
@@ -1727,7 +1731,12 @@ const babySpeedSource = "baby"
 // unaffected by the choice: vanilla's speed modifiers are proportional
 // (multiply-base or multiply-total), so they mean the same thing in either
 // scale.
-func (m *mob) moveSpeed() float64 { return m.mobAttrs().Value(attr.MovementSpeed) }
+func (m *mob) moveSpeed() float64 {
+	if v := m.navMount; v != nil {
+		return v.mobAttrs().Value(attr.MovementSpeed) // a driving rider moves at its vehicle's pace
+	}
+	return m.mobAttrs().Value(attr.MovementSpeed)
+}
 
 // setMoveSpeed sets the base MOVEMENT_SPEED, in per-update blocks.
 func (m *mob) setMoveSpeed(v float64) { m.mobAttrs().SetBase(attr.MovementSpeed, v) }
