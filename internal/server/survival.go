@@ -240,10 +240,9 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 		}
 	}
 	// Fire blocks: contact damage + a shorter afterburn.
-	if h.rules.FireDamage &&
-		(isFire(h.worldFor(t.dim).At(fx, feet, fz)) || isFire(h.worldFor(t.dim).At(fx, feet+1, fz))) {
+	if dmg := fireContactDamage(h.worldFor(t.dim).At(fx, feet, fz), h.worldFor(t.dim).At(fx, feet+1, fz)); h.rules.FireDamage && dmg > 0 {
 		h.setBurning(players, t, fireContactSecs)
-		if h.hurtBy(players, t, fireDamagePerSec, dtInFire, deathCause{}); t.dead {
+		if h.hurtBy(players, t, float32(dmg), dtInFire, deathCause{}); t.dead {
 			return
 		}
 	}

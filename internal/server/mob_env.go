@@ -167,7 +167,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			}
 		} else if inFire {
 			m.ignite(fireAfterburn)
-			h.hurtMobOf(players, m, fireDamagePerSec, dtInFire)
+			h.hurtMobOf(players, m, fireContactDamage(feet, head), dtInFire) // soul fire burns 2
 			if m.health <= 0 {
 				continue
 			}

@@ -58,6 +58,8 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Soul fire burns harder than fire.** Standing in soul fire now does
+  twice the damage of ordinary fire, as in vanilla.
 - **Cake is as filling as in vanilla.** A slice of cake, or the first
   slice of a candle cake, gave a quarter of vanilla's saturation.
 - **Weighted pressure plates release at vanilla speed.** Light and heavy

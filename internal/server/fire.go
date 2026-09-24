@@ -49,6 +49,18 @@ var (
 	entityTNT      = entityID("tnt") // minecraft:entity_type "tnt" (1.21.5)
 )
 
+// fireContactDamage is BaseFireBlock's fireDamage for whichever of the two
+// cells is burning: 2 for soul fire, 1 for fire (0 when neither is).
+func fireContactDamage(a, b uint32) float64 {
+	switch {
+	case a == soulFire || b == soulFire:
+		return 2
+	case isFire(a) || isFire(b):
+		return fireDamagePerSec
+	}
+	return 0
+}
+
 func isFire(state uint32) bool {
 	return (state >= fireStateMin && state <= fireStateMax) || state == soulFire
 }
