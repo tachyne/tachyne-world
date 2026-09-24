@@ -251,11 +251,13 @@ var speciesTable = map[int]*speciesDef{
 	// (vanilla AbstractNautilus.createAttributes). Squid on pre-1.21.11.
 	entityNautilus: {name: "nautilus", health: 15, speed: 1.0, step: 0.10, damage: 3, arch: archWater, kbResist: 0.3,
 		drops: []specDrop{{item: "nautilus_shell", rnd: 1}}}, // speed 1.0 is the synced MOVEMENT_SPEED the riding client scales (0.0325×)
-	// zombie_nautilus (1.21.11): the drowned-analogue hostile nautilus variant.
-	// Same body as the nautilus but hunts (createAttributes + MOVEMENT_SPEED
-	// 1.1). Glow squid on pre-1.21.11.
+	// zombie_nautilus (1.21.11): the undead nautilus a drowned rides. Same
+	// body (createAttributes + MOVEMENT_SPEED 1.1), and like the nautilus an
+	// Animal, not a Monster: it fights only what angers it or a pufferfish
+	// (ZombieNautilusAi, nautilus.go), stays in peaceful and pays an animal's
+	// experience, though it despawns as the MONSTER category it spawns in.
 	entityZombieNautilus: {name: "zombie_nautilus", health: 15, step: 0.11, damage: 3,
-		arch: archWaterHostile, kbResist: 0.3, xp: 5},
+		arch: archWater, kbResist: 0.3},
 
 	// ── Flyers ───────────────────────────────────────────────────────────
 	entityBat: {name: "bat", health: 6, step: 0.13, arch: archFlyer, hover: 3, xp: xpNone},
@@ -428,6 +430,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	}
 	if m.etype == entityCopperGolem {
 		m.behavior = copperGolemBehavior{} // walks to containers to sort items
+	}
+	if nautilusKind(m.etype) {
+		h.nautilusSpawned(m)
 	}
 	if m.etype == entityBee {
 		m.behavior = beeBehavior{} // flies its flower-and-hive errands

@@ -524,6 +524,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			}
 			if shooter := players[a.shooter]; shooter != nil && a.playerShot {
 				h.traderLlamasDefend(m, shooter)
+				h.nautilusAngerAt(m, shooter)
 			}
 			if m.retaliates && a.playerShot {
 				if shooter := players[a.shooter]; shooter != nil {

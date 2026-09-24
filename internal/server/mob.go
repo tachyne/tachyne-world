@@ -444,6 +444,14 @@ type mob struct {
 	sniffCD                         int        // sniffer: ticks before it sniffs again (9600 after a dig)
 	sniffTarget                     blockPos   // sniffer: the block it digs (the floor block)
 	sniffExplored                   []blockPos // sniffer: the last 20 dig sites, never dug twice
+	nautAngryAt                     int32      // nautilus: ANGRY_AT, whoever last hurt it (player or mob eid)
+	nautAngryUntil                  uint64     // nautilus: the tick ANGRY_AT expires
+	nautTarget                      int32      // nautilus: ATTACK_TARGET (player or mob eid; 0 = none)
+	nautTargetCD                    int        // nautilus: ATTACK_TARGET_COOLDOWN, ticks before it looks for a pufferfish
+	chargeCD                        int        // nautilus: CHARGE_COOLDOWN_TICKS
+	charging                        bool       // nautilus: mid-ChargeAttack
+	chargeSX, chargeSY, chargeSZ    float64    // nautilus: where the charge began
+	chargeVX, chargeVY, chargeVZ    float64    // nautilus: the charge's fixed velocity, per tick
 	ty                              float64    // hunted target's feet height (fliers dive to it)
 	living                                     // attributes + status effects, shared with players
 	dmgFrac                         float64    // fractional damage carry (vanilla HP is float, ours int)
@@ -586,6 +594,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityArmadillo && m.dying == 0 {
 			h.armadilloTick(players, m)
 		}
+		if m.etype == entitySniffer && m.dying == 0 {
+			h.snifferInterrupt(players, m) // a panic, a temptation or courting ends a sniff or a dig
+		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
 			//          shared gravity/ground-snap would pin it into the island
@@ -669,7 +680,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vx, m.vz = 0, 0
 			continue // a watched creaking is a statue
 		}
-		if m.tamed { // a pet follows its owner (or sits)
+		if m.tamed && !nautilusKind(m.etype) { // a pet follows its owner (or sits); a nautilus has no FollowOwner
 			if h.petAcquire(players, m) {
 				m.vx, m.vz = 0, 0 // sitting: stay put
 				continue
@@ -792,6 +803,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// target, the captain plotting the legs.
 		case h.avoidStep(players, m):
 			// Keeping clear of a mob its kind avoids, at the goal's pace.
+		case nautilusKind(m.etype) && h.nautilusFightStep(players, m):
+			// A nautilus charging whoever hurt it, or a pufferfish: the FIGHT
+			// activity outranks its panic, which only walks it away.
 		case m.panic > 0:
 			// Spooked: PanicGoal runs to one random spot after another
 			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed,
@@ -815,6 +829,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A turtle carrying an egg home, or digging its nest.
 		case m.etype == entityCat && h.catRelaxStep(players, m):
 			// A cat settling at the foot of its sleeping owner's bed.
+		case m.etype == entityNautilus && h.nautilusLoveStep(m):
+			// A courting nautilus swimming to its mate (AnimalMakeLove, 0.4),
+			// ahead of its temptation.
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.
@@ -853,7 +870,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityArmadillo && m.armState != 0:
 			m.vx, m.vz = 0, 0 // rolled up: it stays where it is
 		case m.etype == entitySniffer && h.snifferStep(players, m):
-			// A sniffer walking to, or digging at, a scent.
+			// A sniffer scenting, sniffing, walking to a scent, digging at it
+			// or getting up again.
 		case m.etype == entityFrog && h.frogStep(players, m):
 			// A frog after a small slime or magma cube (FrogAi's tongue).
 		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):

@@ -61,10 +61,11 @@ func panicsAt(m *mob, dt dmgType) bool {
 // panicNever is the roster with no PanicGoal at all. A blow or an arrow
 // consults it too: until 2026-09-24 any struck non-hostile bolted, so a hit
 // ocelot, snow golem or zombie horse ran. (The armadillo has a panic goal,
-// but for the environment only: a blow rolls it up.)
+// but for the environment only: a blow rolls it up. ZombieNautilusAi's core
+// has no AnimalPanic: a struck zombie nautilus turns on you instead.)
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
-	for _, n := range []string{"zombie_horse", "skeleton_horse", "ocelot", "snow_golem"} {
+	for _, n := range []string{"zombie_horse", "skeleton_horse", "ocelot", "snow_golem", "zombie_nautilus"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}

@@ -204,13 +204,20 @@ func (h *hub) setInLove(players map[int32]*tracked, t *tracked, m *mob) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, statusInLove))
 }
 
+// nautilusBucketFood is #nautilus_bucket_food: the fish buckets, which (like
+// the axolotl's tropical fish) are eaten out of the bucket.
+var nautilusBucketFood = map[int32]bool{
+	itemByName["pufferfish_bucket"]: true, itemByName["cod_bucket"]: true,
+	itemByName["salmon_bucket"]: true, itemByName["tropical_fish_bucket"]: true,
+}
+
 // consumeFed spends the held food; a fish bucket leaves the water behind
-// (Axolotl.usePlayerItem).
+// (Axolotl and AbstractNautilus.usePlayerItem).
 func (h *hub) consumeFed(t *tracked, item int32) {
 	if t.gamemode != gmSurvival {
 		return
 	}
-	if item == itemByName["tropical_fish_bucket"] {
+	if nautilusBucketFood[item] {
 		slot := t.p.heldSlot()
 		t.inv.slots[slot] = invStack{item: itemByName["water_bucket"], count: 1}
 		h.sendSlot(t, slot)

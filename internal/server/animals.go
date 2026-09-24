@@ -109,14 +109,18 @@ func (h *hub) feedAnimal(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if !isLoveFood(m.etype, item) {
 		return false
 	}
-	// A tamed wolf eats to heal (any player); a cat only from its owner.
-	// The meal heals its nutrition (twice that for a wolf), 1 for a non-food.
-	if m.tamed && (m.etype == entityWolf || (m.etype == entityCat && m.owner == t.p.eid)) && m.health < m.maxHP() {
+	if m.etype == entityNautilus && !m.tamed && !m.baby {
+		return false // AbstractNautilus.isFood: a wild adult takes only its taming pufferfish (tryTame)
+	}
+	// A tamed wolf or nautilus eats to heal (any player); a cat only from its
+	// owner. The meal heals its nutrition (twice that for a wolf or a
+	// nautilus: TamableAnimal.feed's factor 2), 1 for a non-food.
+	if m.tamed && (m.etype == entityWolf || m.etype == entityNautilus || (m.etype == entityCat && m.owner == t.p.eid)) && m.health < m.maxHP() {
 		n := foodPoints[item]
 		if n == 0 {
 			n = 1
 		}
-		if m.etype == entityWolf {
+		if m.etype == entityWolf || m.etype == entityNautilus {
 			n *= 2
 		}
 		h.healMob(m, n)
@@ -236,6 +240,9 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			if o == m || o.etype != m.etype || o.loveTicks <= 0 || o.dying > 0 {
 				return
 			}
+			if m.etype == entitySniffer && (!snifferMates(m) || !snifferMates(o)) {
+				return // Sniffer.canMate: never mid-sniff, mid-search or mid-dig
+			}
 			dx, dz := o.x-m.x, o.z-m.z
 			if d2 := dx*dx + dz*dz; d2 < best {
 				partner, best = o, d2
@@ -273,6 +280,19 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 			if m.etype == entityTurtle {
 				m.hasEgg = true // TurtleBreedGoal.breed: an egg to carry home, no hatchling yet
 				h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(turtleMeta(m)))
+			} else if m.etype == entitySniffer {
+				// Sniffer.spawnChildFromBreeding: no snifflet, an egg dropped
+				// where the parent stands.
+				h.spawnItemIn(players, m.dim, itemByName["sniffer_egg"], 1, m.x, m.y, m.z)
+				h.playSoundDim(players, m.dim, "minecraft:block.sniffer_egg.plop", sndNeutral, m.x, m.y, m.z, 1, (h.rng.Float32()-h.rng.Float32())*0.2+0.5)
+			} else if m.etype == entityNautilus {
+				// The calf comes where its parent swims, not on the ground
+				// above; a tamed parent's is born tamed to the same owner
+				// (Nautilus.getBreedOffspring).
+				baby = h.spawnSpecies(players, m.etype, m.dim, m.x, m.y, m.z)
+				if baby != nil && m.tamed {
+					baby.tamed, baby.owner, baby.ownerUUID = true, m.owner, m.ownerUUID
+				}
 			} else if m.etype == entityFrog {
 				// FrogAi: frogs do not have babies, they go IS_PREGNANT and
 				// lay a clutch of frogspawn on the nearest water.

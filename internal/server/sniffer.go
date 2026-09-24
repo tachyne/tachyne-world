@@ -99,24 +99,53 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 	return true
 }
 
-// Digging (vanilla Sniffer + SnifferAi): a grown sniffer that is not busy
-// picks a scent — a reachable patch of diggable ground within ten to
-// eighteen blocks it has not dug before — walks to it, digs for 160-180
-// ticks with its nose down, drops a torchflower seed or a pitcher pod two
-// seconds in, and then leaves the spot alone for eight minutes (and never
-// digs the same block twice, remembering its last twenty).
+// The sniffer's day (vanilla Sniffer + SnifferAi). Idle, now and then it
+// lifts its nose to the air (SCENTING) or — grown, dry and off its cooldown
+// — sniffs (SNIFFING); a sniff that runs its full course finds a scent: a
+// reachable patch of diggable ground ten to eighteen blocks off that it has
+// not dug before. It walks there (SEARCHING), digs for 160-180 ticks with its
+// nose down (DIGGING: a torchflower seed or a pitcher pod two seconds in),
+// gets up (RISING, forty ticks), remembers the spot (its last twenty, never
+// the same block twice) and is pleased with itself (FEELING_HAPPY, 40-100
+// ticks). A dig that ran its course leaves the sniffer eight minutes before
+// the next sniff. A panic or a tempting player breaks off whatever it was
+// at (resetSniffing); courting or water break off a sniff, a search or a
+// dig (canSniff); and only a sniffer idling, scenting or happy will mate.
+//
+// The client animates these from the sniffer's DATA_STATE, which the
+// gateways cannot render yet (it needs the SNIFFER_STATE serializer); the
+// states run here with their timing and sounds, and the pose flags the
+// search and the dig always sent are unchanged.
 
 const (
-	snifferDigMin     = 160
-	snifferDigJitter  = 20
-	snifferSeedAt     = 120  // DIGGING_DROP_SEED_OFFSET_TICKS
-	snifferSniffCD    = 9600 // SNIFFING_COOLDOWN_TICKS
-	snifferExploredN  = 20
-	snifferSearchOdds = 60 // ticks between scent checks, on average (Sniffing/Scenting 40-80)
-	snifferReach      = 1.5
-	poseSniffing      = 12
-	snifferScentSpeed = 1.25 // SnifferAi: the walk to a scented block
-	poseDigging       = 14
+	snifferDigMin      = 160
+	snifferDigJitter   = 20
+	snifferSeedAt      = 120  // DIGGING_DROP_SEED_OFFSET_TICKS
+	snifferSniffCD     = 9600 // SNIFFING_COOLDOWN_TICKS
+	snifferExploredN   = 20
+	snifferReach       = 1.5
+	poseSniffing       = 12
+	snifferScentSpeed  = 1.25 // SnifferAi: the walk to a scented block
+	poseDigging        = 14
+	snifferRiseTicks   = 40  // FinishedDigging(40)
+	snifferSearchTicks = 600 // Searching's longest run
+	// The idle RunOne draws one of eight weights about every nineteen ticks
+	// (the mean length of what it draws); scenting and sniffing are one
+	// weight each, so each starts about once in 150 ticks: one mob update
+	// in 76.
+	snifferIdleOdds = 76
+)
+
+// Sniffer.State, in the engine's numbering (idle, searching and digging
+// kept the values they always had).
+const (
+	sniffIdling int8 = iota
+	sniffSearching
+	sniffDigging
+	sniffRising
+	sniffHappy
+	sniffScenting
+	sniffSniffing
 )
 
 // snifferDiggable is #minecraft:sniffer_diggable_block.
@@ -134,29 +163,98 @@ func (m *mob) sniffExploredHas(p blockPos) bool {
 	return false
 }
 
-// snifferStep is the dig state machine. Returns true while it owns the
-// sniffer's movement.
+// snifferFor is a Behavior's run length: min plus a roll up to max.
+func (h *hub) snifferFor(lo, hi int) uint64 { return uint64(lo + h.rng.Intn(hi-lo+1)) }
+
+// snifferCanSniff is Sniffer.canSniff: not tempted, panicking, courting, in
+// the water or carried.
+func (h *hub) snifferCanSniff(m *mob) bool {
+	return !m.tempted && m.panic == 0 && m.loveTicks == 0 && m.mount == 0 && m.cart == 0 && m.leash == 0 &&
+		!h.inWater(m.dim, m.x, m.y, m.z)
+}
+
+// snifferMates is Sniffer.canMate's own half: only a sniffer idling,
+// scenting or feeling happy.
+func snifferMates(m *mob) bool {
+	return m.sniffState == sniffIdling || m.sniffState == sniffScenting || m.sniffState == sniffHappy
+}
+
+// snifferInterrupt is resetSniffing where vanilla calls it: AnimalPanic and
+// FollowTemptation break off whatever the sniffer was at when they start,
+// and a sniff, a search or a dig also end the moment canSniff fails.
+func (h *hub) snifferInterrupt(players map[int32]*tracked, m *mob) {
+	st := m.sniffState
+	if st == sniffIdling {
+		return
+	}
+	stop := m.panic > 0 || m.tempted
+	if !stop && (st == sniffSniffing || st == sniffSearching || st == sniffDigging) {
+		stop = !h.snifferCanSniff(m)
+	}
+	if !stop {
+		return
+	}
+	if st == sniffSearching || st == sniffDigging {
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
+	}
+	m.sniffState = sniffIdling
+}
+
+// snifferStep runs the states. Returns true while they hold the sniffer
+// still or walking.
 func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 	now := h.tick.Load()
-	if m.sniffCD > 0 {
-		m.sniffCD -= mobMoveInterval
-		return false
-	}
+	m.sniffCD = max(0, m.sniffCD-mobMoveInterval)
 	w := h.worldFor(m.dim)
 	if w == nil {
 		return false
 	}
 	switch m.sniffState {
-	case 0:
-		if m.baby || m.panic > 0 || m.loveTicks > 0 || h.rng.Intn(snifferSearchOdds/mobMoveInterval) != 0 {
+	case sniffIdling:
+		if m.tempted || m.panic > 0 || m.loveTicks > 0 {
 			return false
 		}
-		// Sniffer.calculateDigPosition: five tries at growing radii.
+		switch h.rng.Intn(snifferIdleOdds) {
+		case 0: // Scenting(40, 80)
+			m.sniffState, m.sniffUntil = sniffScenting, now+h.snifferFor(40, 80)
+			pitch := float32(1)
+			if m.baby {
+				pitch = 1.3
+			}
+			h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.scenting", sndNeutral, m.x, m.y, m.z, 1, pitch)
+			m.vx, m.vz = 0, 0
+			return true
+		case 1: // Sniffing(40, 80): a grown sniffer off its cooldown
+			if m.baby || m.sniffCD > 0 || !h.snifferCanSniff(m) {
+				return false
+			}
+			m.sniffState, m.sniffUntil = sniffSniffing, now+h.snifferFor(40, 80)
+			h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.sniffing", sndNeutral, m.x, m.y, m.z, 1, 1)
+			m.vx, m.vz = 0, 0
+			return true
+		}
+		return false
+	case sniffScenting:
+		if now < m.sniffUntil {
+			m.vx, m.vz = 0, 0 // RunOne holds its other draws off while it runs
+			return true
+		}
+		m.sniffState = sniffIdling
+		return false
+	case sniffSniffing:
+		if now < m.sniffUntil {
+			m.vx, m.vz = 0, 0
+			return true
+		}
+		// Sniffing.stop, run to its end: calculateDigPosition, five tries at
+		// growing radii, each within three blocks of its own height
+		// (LandRandomPos.getPos(mob, 10+2n, 3)).
+		m.sniffState = sniffIdling
 		for n := 0; n < 5; n++ {
 			r := 10 + 2*n
 			x := int(math.Floor(m.x)) + h.rng.Intn(2*r+1) - r
 			z := int(math.Floor(m.z)) + h.rng.Intn(2*r+1) - r
-			y := w.MobFeet(x, z)
+			y := w.MobFeetFrom(x, z, int(math.Floor(m.y)))
 			if math.Abs(float64(y)-m.y) > 3 {
 				continue
 			}
@@ -164,12 +262,17 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 			if !inRanges(snifferDiggable, w.At(floor.x, floor.y, floor.z)) || m.sniffExploredHas(floor) {
 				continue
 			}
-			m.sniffTarget, m.sniffState = floor, 1
+			m.sniffTarget, m.sniffState, m.sniffStart = floor, sniffSearching, now
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseSniffing)))
 			return true
 		}
 		return false
-	case 1:
+	case sniffSearching:
+		if now >= m.sniffStart+snifferSearchTicks {
+			m.sniffState = sniffIdling // Searching runs out: the scent is lost
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
+			return false
+		}
 		tx, tz := float64(m.sniffTarget.x)+0.5, float64(m.sniffTarget.z)+0.5
 		dx, dz := tx-m.x, tz-m.z
 		if hd := math.Hypot(dx, dz); hd > snifferReach {
@@ -179,18 +282,18 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 			return true
 		}
 		if !inRanges(snifferDiggable, w.At(m.sniffTarget.x, m.sniffTarget.y, m.sniffTarget.z)) {
-			m.sniffState = 0 // the ground changed under it
+			m.sniffState = sniffIdling // the ground changed under it
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
 			return false
 		}
-		m.sniffState, m.sniffStart = 2, now
-		m.sniffUntil = now + snifferDigMin + uint64(h.rng.Intn(snifferDigJitter+1))
+		m.sniffState, m.sniffStart = sniffDigging, now
+		m.sniffUntil = now + h.snifferFor(snifferDigMin, snifferDigMin+snifferDigJitter)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusSnifferDig)) // onDiggingStart
 		m.vx, m.vz = 0, 0
 		h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.digging", sndNeutral, m.x, m.y, m.z, 1, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseDigging)))
 		return true
-	default:
+	case sniffDigging:
 		m.vx, m.vz = 0, 0
 		if m.sniffStart != 0 && now >= m.sniffStart+snifferSeedAt {
 			m.sniffStart = 0
@@ -198,16 +301,34 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 				seed := snifferSeeds[h.rng.Intn(len(snifferSeeds))]
 				h.spawnItemIn(players, m.dim, seed, 1, float64(m.sniffTarget.x)+0.5, float64(m.sniffTarget.y)+1, float64(m.sniffTarget.z)+0.5)
 			}
+			h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.drop_seed", sndNeutral, m.x, m.y, m.z, 1, 1)
 		}
 		if now >= m.sniffUntil {
+			// Digging ran its course: SNIFF_COOLDOWN, and FinishedDigging
+			// gets it up (RISING).
+			m.sniffCD = snifferSniffCD
+			m.sniffState, m.sniffUntil = sniffRising, now+snifferRiseTicks
 			h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.digging_stop", sndNeutral, m.x, m.y, m.z, 1, 1)
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(poseMeta(m.eid, poseStanding)))
-			m.sniffExplored = append(m.sniffExplored, m.sniffTarget)
-			if len(m.sniffExplored) > snifferExploredN {
-				m.sniffExplored = m.sniffExplored[len(m.sniffExplored)-snifferExploredN:]
-			}
-			m.sniffState, m.sniffCD = 0, snifferSniffCD
 		}
 		return true
+	case sniffRising:
+		m.vx, m.vz = 0, 0
+		if now < m.sniffUntil {
+			return true
+		}
+		// onDiggingComplete(true): the spot is remembered; then SNIFFER_HAPPY.
+		m.sniffExplored = append(m.sniffExplored, m.sniffTarget)
+		if len(m.sniffExplored) > snifferExploredN {
+			m.sniffExplored = m.sniffExplored[len(m.sniffExplored)-snifferExploredN:]
+		}
+		m.sniffState, m.sniffUntil = sniffHappy, now+h.snifferFor(40, 100) // FeelingHappy(40, 100)
+		h.playSoundDim(players, m.dim, "minecraft:entity.sniffer.happy", sndNeutral, m.x, m.y, m.z, 1, 1)
+		return false
+	default: // sniffHappy: it goes about its idling meanwhile
+		if now >= m.sniffUntil {
+			m.sniffState = sniffIdling
+		}
+		return false
 	}
 }

@@ -61,8 +61,8 @@ const tameOdds = 3
 
 // tryTame handles a right-click on a tameable mob. Returns true if consumed.
 func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
-	if !tameable(m.etype) || m.dying > 0 {
-		return false
+	if !tameable(m.etype) || m.dying > 0 || (m.etype == entityNautilus && m.baby) {
+		return false // a baby nautilus eats its pufferfish as food (AbstractNautilus.mobInteract)
 	}
 	if m.tamed {
 		// A dye in the owner's hand recolours the collar (Wolf/Cat.mobInteract);
@@ -83,8 +83,8 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 		// empty one meant a player carrying a sword could not sit their own
 		// cat (LegionZA #17). Food is left to feedAnimal, which is the heal
 		// and the breeding path and runs after this one.
-		if m.owner != t.p.eid {
-			return false
+		if m.owner != t.p.eid || m.etype == entityNautilus {
+			return false // a nautilus never sits: AbstractNautilus.mobInteract rides or feeds instead
 		}
 		if held := heldStack(t).item; held != 0 && isLoveFood(m.etype, held) {
 			return false
@@ -96,10 +96,9 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if !isTameFood(m.etype, heldStack(t).item) {
 		return false
 	}
-	if t.gamemode == gmSurvival {
-		h.consumeHeld(t)
-	}
-	if h.rng.Intn(tameOdds) != 0 { // didn't take this time
+	h.consumeFed(t, heldStack(t).item) // a pufferfish bucket leaves its water
+	if h.rng.Intn(tameOdds) != 0 {
+		// Didn't take this time.
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))
 		return true
 	}

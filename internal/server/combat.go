@@ -447,6 +447,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 	yaw := m.yaw
 	if t != nil {
 		h.traderLlamasDefend(m, t)
+		h.nautilusAngerAt(m, t) // AbstractNautilus.hurtServer: ANGRY_AT the attacker, beside any panic
 		if m.etype == entityIronGolem {
 			// IronGolem's HurtByTargetGoal: it does not flee and it does not
 			// need a grudge — hit it and it comes after you.

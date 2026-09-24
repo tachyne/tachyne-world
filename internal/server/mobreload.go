@@ -29,7 +29,9 @@ func (h *hub) persistMob(m *mob) bool {
 func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	x, y, z := sm.X, sm.Y, sm.Z
 	var m *mob
-	if sm.Hostile {
+	// A zombie nautilus saved while the engine still ran it as a monster
+	// comes back as the animal it is.
+	if sm.Hostile && sm.Etype != entityZombieNautilus {
 		m = h.spawnHostileYIn(players, sm.Etype, sm.Dim, x, y, z) // hostile stance + per-species quirks
 	} else {
 		m = h.spawnMobIn(players, sm.Etype, sm.Dim, x, y, z)
