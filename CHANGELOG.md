@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Nautiluses, zombie nautiluses and sniffers behave as in 26.3.** A
+  nautilus follows its food, courts its mate, and charges whoever hurt it
+  or a pufferfish now and then. It then waits out a cooldown before it
+  charges again. The zombie nautilus is an animal, not a monster. It no
+  longer hunts players, and it stays in peaceful. A tamed nautilus no
+  longer sends a sit flag, which on 26.x clients landed on another field.
+  Sniffers now scent, sniff, rise and look happy between digs, as in
+  vanilla. Two sniffers that mate lay an egg.
 - **Full shulker boxes keep their contents when broken.** Breaking one by
   hand dropped an empty box and scattered everything that was inside it. A
   blast did the same. The box now comes back with its contents, however it
