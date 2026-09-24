@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"strconv"
-	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -521,21 +519,13 @@ func (s *Server) cmdWeather(p *player, args []string) {
 
 // parseTimeArg parses vanilla's TimeArgument: an integer with an optional
 // unit suffix (t = ticks, s = seconds, d = in-game days; bare = ticks).
+// A weather duration must be at least a tick.
 func parseTimeArg(s string) (int, error) {
-	mult := 1
-	switch {
-	case strings.HasSuffix(s, "t"):
-		s = strings.TrimSuffix(s, "t")
-	case strings.HasSuffix(s, "s"):
-		s, mult = strings.TrimSuffix(s, "s"), 20
-	case strings.HasSuffix(s, "d"):
-		s, mult = strings.TrimSuffix(s, "d"), 24000
-	}
-	n, err := strconv.Atoi(s)
-	if err != nil || n < 1 {
+	n, ok := parseTimeTicks([]string{s})
+	if !ok || n < 1 {
 		return 0, fmt.Errorf("bad time %q", s)
 	}
-	return n * mult, nil
+	return int(n), nil
 }
 
 type evSetWeather struct {

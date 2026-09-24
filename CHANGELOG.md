@@ -77,6 +77,25 @@ the public history since the project was open-sourced on 2026-07-10.
   its gear, a wolf answers only to its owner, and Curse of Binding holds a
   piece on outside creative. The piece drops with everything it carries,
   and taking a wolf's armour off earns Snip Snap.
+- **Bows and crossbows shoot any arrow.**
+  - Tipped and spectral arrows fire from a bow or crossbow as themselves,
+    drawn from the off hand first, then the inventory.
+  - A spectral arrow makes what it hits glow.
+  - A tipped arrow gives mobs an eighth of the potion's time, as it does
+    players.
+  - Picking an arrow back up returns the same kind.
+  - Infinity spares plain arrows only.
+- **Smaller fixes.**
+  - Fish buckets can't be eaten.
+  - A boat placed from the off hand is used up, instead of coming back
+    free.
+  - A brush wears once per block brushed clean, not once per stroke.
+  - The dragon and the Wither can be named, and a name tag keeps any mob
+    for good.
+  - /gamemode with a selector is remembered for each player it reached, not
+    saved under "@a".
+  - /time takes vanilla's forms (set, add, query, with d/s/t units) and,
+    like /say, needs op.
 - **Raids can be lost.** A raid whose village is gone after a wave has come
   ends in defeat ("Raid - Defeat" on the bar for thirty seconds). No raid
   outlasts 48,000 ticks, and the bar reads "Raiders Remaining" when two or

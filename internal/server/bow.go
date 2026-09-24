@@ -60,14 +60,74 @@ func (h *hub) startDraw(t *tracked) {
 }
 
 // hasArrow reports whether the inventory holds any arrows.
-func (h *hub) hasArrow(t *tracked) bool {
-	for _, s := range t.inv.slots {
-		if s.item == itemArrowAmmo && s.count > 0 {
-			return true
+func (h *hub) hasArrow(t *tracked) bool { return ammoSlot(t) >= 0 }
+
+// isArrowAmmo is #arrows: what a bow or crossbow draws.
+func isArrowAmmo(item int32) bool {
+	return item == itemArrowAmmo || item == itemTippedArrow || item == itemSpectralArr
+}
+
+// ammoSlot is Player.getProjectile for a bow or crossbow: an arrow held in
+// the off hand first, then the inventory in slot order. -1 when there is none.
+func ammoSlot(t *tracked) int {
+	if t.inv == nil {
+		return -1
+	}
+	if isArrowAmmo(t.offhand.item) && t.offhand.count > 0 {
+		return offhandSlot
+	}
+	for i, s := range t.inv.slots {
+		if isArrowAmmo(s.item) && s.count > 0 {
+			return i
 		}
 	}
-	return false
+	return -1
 }
+
+// peekAmmo is the arrow a shot would use (count 1), or a plain arrow when
+// there is none (a creative draw).
+func peekAmmo(t *tracked) invStack {
+	if i := ammoSlot(t); i >= 0 {
+		st := *t.handOrSlot(i)
+		st.count = 1
+		return st
+	}
+	return invStack{item: itemArrowAmmo, count: 1}
+}
+
+// handOrSlot is the stack at an inventory index or the off hand.
+func (t *tracked) handOrSlot(i int) *invStack {
+	if i == offhandSlot {
+		return &t.offhand
+	}
+	return &t.inv.slots[i]
+}
+
+// arrowEntityFor is the entity an arrow item flies as.
+func arrowEntityFor(ammo invStack) int {
+	if ammo.item == itemSpectralArr {
+		return entitySpectralArrow
+	}
+	return entityArrow
+}
+
+// loadArrow gives a launched arrow what it was made from: a spectral arrow
+// makes what it hits glow, a tipped one carries its potion.
+func loadArrow(a *arrowEntity, ammo invStack) {
+	switch ammo.item {
+	case itemSpectralArr:
+		a.glow = spectralGlowSecs
+	case itemTippedArrow:
+		a.tipped, a.potion = true, ammo.potion
+	default:
+		return
+	}
+	a.pickupStack = ammo // picked back up as itself (AbstractArrow.pickupItemStack)
+	a.pickupStack.count = 1
+}
+
+// spectralGlowSecs is SpectralArrow.duration: 200 ticks of Glowing.
+const spectralGlowSecs = 10
 
 // releaseDraw fires the arrow if the bow was held long enough, consuming ammo
 // and durability. Called from the release_use_item path (shared with eating).
@@ -90,10 +150,10 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	if power < 0.1 {
 		return // vanilla: too weak to loose
 	}
-	// Infinity: the shot costs no arrow, but the bow still needs one to draw.
-	// (Vanilla exempts tipped arrows; tachyne's consumeArrow takes the first
-	// stack it finds, so the exemption is noted rather than enforced.)
-	infinite := heldStack(t).enchLvl(enchInfinity) > 0
+	// Infinity: a plain arrow costs nothing, though the bow still needs one
+	// to draw; tipped and spectral arrows are spent all the same.
+	ammo := peekAmmo(t)
+	infinite := heldStack(t).enchLvl(enchInfinity) > 0 && ammo.item == itemArrowAmmo
 	if t.gamemode == gmSurvival && !infinite {
 		if !h.consumeArrow(t) {
 			return
@@ -113,7 +173,8 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 		dmg += h.rng.Intn(dmg/2 + 2)
 	}
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
+	a := h.launchProjectileIn(players, arrowEntityFor(ammo), t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
+	loadArrow(a, ammo)
 	a.weapon = itemBow
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
 	a.punch = heldStack(t).enchLvl(enchPunch) // Punch: extra hit knockback
@@ -129,18 +190,19 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	h.playSoundDim(players, t.dim, "minecraft:entity.arrow.shoot", sndPlayer, t.x, t.y, t.z, 1, 0.8+float32(power)*0.4)
 }
 
-// consumeArrow removes one arrow from the inventory (first stack found).
+// consumeArrow takes one arrow from where the shot draws it (the off hand,
+// else the first stack) and reports whether there was one.
 func (h *hub) consumeArrow(t *tracked) bool {
-	for i := range t.inv.slots {
-		if s := &t.inv.slots[i]; s.item == itemArrowAmmo && s.count > 0 {
-			if s.count--; s.count == 0 {
-				*s = invStack{}
-			}
-			h.sendSlot(t, i)
-			return true
-		}
+	i := ammoSlot(t)
+	if i < 0 {
+		return false
 	}
-	return false
+	s := t.handOrSlot(i)
+	if s.count--; s.count == 0 {
+		*s = invStack{}
+	}
+	h.sendHandSlot(t, i)
+	return true
 }
 
 // throwProjectile flings a snowball/egg: an instant, flat-damage projectile

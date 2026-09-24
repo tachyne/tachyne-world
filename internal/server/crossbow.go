@@ -72,11 +72,12 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	if held < xbowChargeTicks(t) {
 		return // released before the crossbow finished charging — no load
 	}
+	ammo := peekAmmo(t)
 	if t.gamemode == gmSurvival && !h.consumeArrow(t) {
 		return
 	}
 	st := heldStack(t)
-	t.xbowLoaded = true
+	t.xbowLoaded, t.xbowAmmo = true, ammo
 	t.xbowMulti = st.enchLvl(enchMultishot) > 0
 	t.xbowPierce = st.enchLvl(enchPiercing)
 	h.playSoundDim(players, t.dim, "minecraft:item.crossbow.loading_end", sndPlayer, t.x, t.y, t.z, 1, 1)
@@ -101,8 +102,9 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 	}
 	for i, off := range offsets {
 		dx, dy, dz := lookVector(t.yaw+float32(off), t.pitch)
-		a := h.launchProjectileIn(players, entityArrow, t.dim, t.x, t.y+1.5, t.z,
+		a := h.launchProjectileIn(players, arrowEntityFor(t.xbowAmmo), t.dim, t.x, t.y+1.5, t.z,
 			dx*xbowSpeed, dy*xbowSpeed, dz*xbowSpeed)
+		loadArrow(a, t.xbowAmmo)
 		a.weapon = itemCrossbow
 		a.shooter, a.dmg, a.noHitUntil = t.p.eid, xbowDamage, h.tick.Load()+arrowNoSelfHT
 		a.playerShot = true

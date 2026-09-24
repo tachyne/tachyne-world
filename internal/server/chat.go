@@ -58,6 +58,10 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	case "title":
 		s.cmdTitle(p, fields[1:])
 	case "say":
+		if !s.isOp(p.name) { // SayCommand requires LEVEL_GAMEMASTERS
+			p.tell("You don't have permission to use /say.")
+			break
+		}
 		if len(fields) > 1 {
 			s.hub.post(evChat{text: fmt.Sprintf("[%s] %s", p.name, strings.Join(fields[1:], " "))})
 		}
@@ -190,12 +194,53 @@ func (s *Server) cmdHud(p *player, args []string) {
 
 // cmdTime sets or queries the day/night clock.
 func (s *Server) cmdTime(p *player, args []string) {
+	// TimeCommand requires LEVEL_GAMEMASTERS.
+	if !s.isOp(p.name) {
+		p.tell("You don't have permission to change the time.")
+		return
+	}
+	now := s.hub.dayTime.Load()
+	usage := "Usage: /time set <time|day|noon|night|midnight> | /time add <time> | /time query <daytime|gametime|day>"
 	if len(args) == 0 {
-		p.tell(fmt.Sprintf("Time of day: %d", s.hub.dayTime.Load()%dayLengthTicks))
+		p.tell(usage)
+		return
+	}
+	switch args[0] {
+	case "query":
+		if len(args) < 2 {
+			p.tell(usage)
+			return
+		}
+		switch args[1] {
+		case "daytime":
+			p.tell(fmt.Sprintf("The time is %d", now%dayLengthTicks))
+		case "gametime":
+			p.tell(fmt.Sprintf("The time is %d", s.hub.tick.Load()))
+		case "day":
+			p.tell(fmt.Sprintf("The time is %d", now/dayLengthTicks))
+		default:
+			p.tell(usage)
+		}
+		return
+	case "add":
+		n, ok := parseTimeTicks(args[1:])
+		if !ok {
+			p.tell(usage)
+			return
+		}
+		t := uint64(int64(now) + n)
+		s.hub.post(evSetTime{t: t})
+		p.tell(fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
+		return
+	case "set":
+		args = args[1:] // the marker or number follows
+	}
+	if len(args) == 0 {
+		p.tell(usage)
 		return
 	}
 	var t uint64
-	switch args[0] {
+	switch args[0] { // the overworld clock's time markers
 	case "day":
 		t = 1000
 	case "noon":
@@ -205,15 +250,37 @@ func (s *Server) cmdTime(p *player, args []string) {
 	case "midnight":
 		t = 18000
 	default:
-		n, err := strconv.Atoi(args[0])
-		if err != nil || n < 0 {
-			p.tell("Usage: /time <day|night|noon|midnight|N>")
+		n, ok := parseTimeTicks(args)
+		if !ok || n < 0 {
+			p.tell(usage)
 			return
 		}
 		t = uint64(n)
 	}
 	s.hub.post(evSetTime{t: t}) // through the hub so the plugin TimeSetEvent fires
 	p.tell(fmt.Sprintf("Set the time to %d", t%dayLengthTicks))
+}
+
+// parseTimeTicks is TimeArgument: a number of ticks, or with a unit suffix
+// d (a day, 24000 ticks), s (a second, 20) or t (a tick); fractions round.
+func parseTimeTicks(args []string) (int64, bool) {
+	if len(args) == 0 || args[0] == "" {
+		return 0, false
+	}
+	a, mul := args[0], 1.0
+	switch a[len(a)-1] {
+	case 'd':
+		a, mul = a[:len(a)-1], dayLengthTicks
+	case 's':
+		a, mul = a[:len(a)-1], 20
+	case 't':
+		a = a[:len(a)-1]
+	}
+	f, err := strconv.ParseFloat(a, 64)
+	if err != nil {
+		return 0, false
+	}
+	return int64(math.Round(f * mul)), true
 }
 
 // cmdTeleport moves the player to absolute coordinates and re-streams chunks.
@@ -263,12 +330,14 @@ func (s *Server) cmdGamemode(p *player, args []string) {
 	if len(args) == 2 {
 		target = args[1]
 	}
-	s.modes.set(target, mode) // persist for next join too
+	if !strings.HasPrefix(target, "@") {
+		s.modes.set(target, mode) // a named player who is offline still gets it at their next join
+	}
 
 	// Always apply via the hub: it owns the authoritative tracked.gamemode that
 	// pickup and the survival sim read. (The old self path only updated the client,
 	// so a player who switched themselves to survival still couldn't pick up items.)
-	s.hub.post(evSetGamemode{name: target, mode: mode, by: p.name, eid: p.eid})
+	s.hub.post(evSetGamemode{name: target, mode: mode, by: p.name, eid: p.eid, modes: s.modes})
 	if target == p.name {
 		p.tell("Set own game mode to " + args[0])
 	} else {

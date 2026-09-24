@@ -154,12 +154,14 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 	b.count++
 	if b.count >= brushesToBreak {
 		h.finishBrush(players, t, pos, state, turnsInto, b)
+		// BrushItem: the brush wears once, when the block is finished
+		// (BrushableBlockEntity.brush returns true), not on every stroke.
+		h.applyToolWear(t, t.p.heldSlot(), 1)
 		return
 	}
 	if stage := dustedStage(b.count); stage != was {
 		h.setBlockAt(players, t.dim, pos, suspiciousBase(state)+uint32(stage))
 	}
-	h.applyToolWear(t, t.p.heldSlot(), 1)
 }
 
 // suspiciousBase strips the dusted stage back off a state.

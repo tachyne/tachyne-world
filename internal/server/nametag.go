@@ -39,10 +39,8 @@ func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if held.item != int32(itemByName["name_tag"]) || held.name == "" {
 		return false
 	}
-	if m.etype == entityEnderDragon || m.etype == entityWither {
-		return false // vanilla refuses the bosses
-	}
 	m.customName = held.name
+	m.persistent = true // NameTagItem: setPersistenceRequired
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
 	if t.gamemode == gmSurvival {
 		slot := t.p.heldSlot()

@@ -96,6 +96,9 @@ type evSetGamemode struct {                 // apply a game-mode change to a nam
 	mode int
 	by   string // who initiated it ("" or self = no "operator changed" notice)
 	eid  int32  // …and their entity id, so @s and distance predicates resolve
+	// modes, when set, remembers each resolved player's new mode for their
+	// next join. The selector resolves here, so this is where the names are.
+	modes *modeStore
 }
 type evSetHud struct { // toggle a player's HUD
 	eid int32
@@ -281,6 +284,7 @@ type tracked struct {
 	// crossbow carried at load time (vanilla stores these on the item stack).
 	xbowAt     uint64
 	xbowLoaded bool
+	xbowAmmo   invStack // what is loaded (CHARGED_PROJECTILES): a tipped or spectral arrow flies as one
 	xbowMulti  bool
 	xbowPierce int
 
@@ -1443,6 +1447,9 @@ func (h *hub) run() {
 			case evSetGamemode:
 				for _, t := range h.commandTargets(players, e.eid, e.name) {
 					t.gamemode = e.mode // the hub's authoritative copy (pickup/survival sim read this)
+					if e.modes != nil {
+						e.modes.set(t.p.name, e.mode) // by name, never the selector (it saved "@a" once)
+					}
 					t.p.trySendEv(attachproto.GameEvent{Event: gameEventChangeGameMode, Value: float32(e.mode)})
 					t.p.trySendEv(abilitiesFor(e.mode))
 					// Modes share ONE inventory (vanilla): push it on EVERY switch so

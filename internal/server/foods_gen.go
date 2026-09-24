@@ -11,10 +11,6 @@ var foodPoints = map[int32]int{
 	1098: 8,  // cooked_porkchop
 	1100: 4,  // golden_apple
 	1101: 4,  // enchanted_golden_apple
-	1135: 1,  // pufferfish_bucket
-	1136: 2,  // salmon_bucket
-	1137: 2,  // cod_bucket
-	1138: 1,  // tropical_fish_bucket
 	1190: 2,  // cod
 	1191: 2,  // salmon
 	1192: 1,  // tropical_fish
@@ -60,10 +56,6 @@ var foodSaturation = map[int32]float32{
 	1098: 12.8, // cooked_porkchop
 	1100: 9.6,  // golden_apple
 	1101: 9.6,  // enchanted_golden_apple
-	1135: 0.2,  // pufferfish_bucket
-	1136: 0.4,  // salmon_bucket
-	1137: 0.4,  // cod_bucket
-	1138: 0.2,  // tropical_fish_bucket
 	1190: 0.4,  // cod
 	1191: 0.4,  // salmon
 	1192: 0.2,  // tropical_fish

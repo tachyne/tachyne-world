@@ -178,9 +178,16 @@ func (h *hub) arrowEffectsOnMob(players map[int32]*tracked, a *arrowEntity, m *m
 	if a.levitate > 0 {
 		h.applyMobEffect(players, m, effLevitation, 0, a.levitate)
 	}
-	if a.tipped {
+	if a.glow > 0 {
+		h.applyMobEffect(players, m, effGlowing, 0, a.glow)
+	}
+	if a.tipped { // an eighth of the bottle's time, as for a player
 		for _, e := range potionEffects(a.potion) {
-			h.applyMobEffectTicks(players, m, e.id, e.amp, e.ticks)
+			ticks := int(math.Round(float64(e.ticks) * tippedArrowScale))
+			if ticks < 1 && e.ticks > 0 {
+				ticks = 1
+			}
+			h.applyMobEffectTicks(players, m, e.id, e.amp, ticks)
 		}
 	}
 }

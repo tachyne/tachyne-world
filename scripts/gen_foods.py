@@ -19,7 +19,11 @@ VER = sys.argv[1] if len(sys.argv) > 1 else canon.VERSION
 EXTRACT = os.path.expanduser("~/vanilla/extract/%s.json" % VER)
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "server", "foods_gen.go")
 
-foods = [i for i in json.load(open(EXTRACT))["items"] if "nutrition" in i]
+# Edible means FOOD *and* CONSUMABLE: Item.Properties.food() adds both, but
+# the fish buckets carry FOOD alone (component(DataComponents.FOOD, …)) and
+# cannot be eaten. The extract records FOOD only, so they are named here.
+NOT_CONSUMABLE = {"pufferfish_bucket", "salmon_bucket", "cod_bucket", "tropical_fish_bucket"}
+foods = [i for i in json.load(open(EXTRACT))["items"] if "nutrition" in i and i["name"] not in NOT_CONSUMABLE]
 rows = sorted((f["id"], f["nutrition"], f["saturation"], f["name"]) for f in foods)
 
 lines = [

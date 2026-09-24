@@ -67,6 +67,7 @@ type arrowEntity struct {
 	poison     int      // seconds of poison on a hit: a witch's splash, a bogged's arrow
 	splash     bool     // a thrown potion: shatters on any impact into an AoE (see splashPotion)
 	tipped     bool     // a tipped arrow: applies its potion's effects to the player it hits
+	glow       int      // a spectral arrow: seconds of Glowing on what it hits
 	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
 	lingering  bool     // a lingering potion: leaves an effect cloud instead of an instant splash
 	fire       bool     // blaze fireball: sets its target burning
@@ -431,6 +432,9 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			}
 			if a.levitate > 0 { // shulker bullet: LEVITATION I (vanilla 10 s)
 				h.applyEffect(players, t, effLevitation, 0, a.levitate)
+			}
+			if a.glow > 0 { // SpectralArrow.doPostHurtEffects
+				h.applyEffect(players, t, effGlowing, 0, a.glow)
 			}
 			if a.tipped { // tipped arrow: its brewed potion effects transfer on a hit
 				// POTION_DURATION_SCALE on tipped_arrow is 0.125 — an arrow
