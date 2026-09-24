@@ -191,6 +191,12 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **`/setblock`, `/fill`, `/seed` and `/me`.** Operators can set a single
+  block or fill a box (up to 32,768 blocks), naming the block as vanilla
+  does, e.g. `oak_stairs[facing=north]`. Both take vanilla's modes: destroy
+  (drops what was there), keep (only fills air), hollow, outline, and
+  replace with an optional filter. `/seed` shows the world seed and `/me`
+  sends an emote.
 - **Llama caravans.** Put a lead on a llama and the free llamas within nine
   blocks fall in behind it, each two blocks behind the one ahead, as in
   vanilla. A llama that falls more than 26 blocks behind speeds up, and
