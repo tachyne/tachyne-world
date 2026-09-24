@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func TestRaidWavesAndVictory(t *testing.T) {
@@ -16,6 +17,7 @@ func TestRaidWavesAndVictory(t *testing.T) {
 	pl.x, pl.y, pl.z = float64(center.x), float64(center.y), float64(center.z)
 	players[pl.p.eid] = pl
 	h.rules.Difficulty = diffNormal
+	raidVillage(h, center)
 
 	h.startRaid(players, center)
 	r := h.raids[center]
@@ -121,5 +123,55 @@ func TestRaidBuffsArmTheLaterWaves(t *testing.T) {
 	plain.heldEnch = enchApplyList([]enchInstance{{id: enchQuickCharge, lvl: 2}})
 	if got := mobCrossbowCharge(plain); got != crossbowChargeTicks-10 {
 		t.Errorf("Quick Charge II charges in %d ticks, want %d", got, crossbowChargeTicks-10)
+	}
+}
+
+// raidVillage gives a test raid its village: a bell (a meeting point of
+// interest) over the centre, so ServerLevel.isVillage holds.
+func raidVillage(h *hub, center blockPos) {
+	h.world.ForceLoad(center.x, center.z, 2)
+	h.poiWorld(dimOverworld)
+	h.world.SetBlock(center.x, center.y+3, center.z, worldgen.BlockBase("bell"))
+}
+
+// A raid whose village is gone is lost once a wave has come: the bar reads
+// "Raid - Defeat" for thirty seconds and the raid ends.
+func TestRaidLostWhenTheVillageIsGone(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	center := blockPos{64, 100, 64}
+	h.world.ForceLoad(center.x, center.z, 2)
+	h.poiWorld(dimOverworld)
+	h.raids[center] = &raid{center: center, uuid: raidUUID(center), wave: 1, numGroups: 5,
+		alive: map[int32]bool{}, shown: map[int32]bool{}}
+	h.updateRaids(players)
+	r := h.raids[center]
+	if r == nil || r.lostLeft != raidDefeatSecs || r.title != "Raid - Defeat" {
+		t.Fatalf("a raid with no village: %+v, want it lost", r)
+	}
+	for i := 0; i < raidDefeatSecs; i++ {
+		h.updateRaids(players)
+	}
+	if h.raids[center] != nil {
+		t.Fatal("the lost raid never ended")
+	}
+}
+
+// With its village standing the raid goes on, and a raid never outlasts
+// 48000 ticks.
+func TestRaidKeepsItsVillageAndTimesOut(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	center := blockPos{64, 100, 64}
+	raidVillage(h, center)
+	h.raids[center] = &raid{center: center, uuid: raidUUID(center), wave: 1, numGroups: 5,
+		alive: map[int32]bool{}, shown: map[int32]bool{}, pending: 1, secsActive: raidTimeoutSecs - 2}
+	h.updateRaids(players)
+	if r := h.raids[center]; r == nil || r.lostLeft != 0 {
+		t.Fatal("a raid with its village was lost")
+	}
+	h.updateRaids(players)
+	if h.raids[center] != nil {
+		t.Fatal("the raid outlasted 48000 ticks")
 	}
 }

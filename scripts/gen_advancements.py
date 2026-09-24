@@ -373,7 +373,7 @@ def distill(trigger, cond, tags):
     elif t == "started_riding":
         for pl in c.get("player", []) or []:
             v = (pl.get("predicate") or {}).get("vehicle") or {}
-            if v.get("type"): d["vehicle"] = names_of(v["type"], tags, "entity_type")[0] if names_of(v["type"], tags, "entity_type") else ""
+            if v.get("type"): d["vehicles"] = names_of(v["type"], tags, "entity_type")  # a tag keeps every member (#boat)
             if (v.get("passenger") or {}).get("type"): d["passenger"] = strip_ns(v["passenger"]["type"])
     elif t == "spear_mobs":
         d["minCount"] = int(rng_min(c.get("count")))
@@ -412,7 +412,6 @@ NOT_OBSERVABLE = {
     # (honey), thrown_item_picked_up_by_player (tosses), allay_drop_item_on_
     # block, started_riding, avoid_vibration (sneak-suppressed vibrations) —
     # and thrown_item_picked_up_by_entity now that piglins pick gold up.
-    "player_sheared_equipment",     # shearing wolf armour raises no trigger yet
     "spear_mobs",                   # no spear (a flagged 1.21.11 extra)
 }
 
@@ -684,6 +683,8 @@ def main():
                 f.append("damageDirect: []string{%s}" % ", ".join(gstr(x) for x in c["damageDirect"]))
             if c.get("victims"):
                 f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
+            if c.get("vehicles"):
+                f.append("vehicles: []string{%s}" % ", ".join(gstr(x) for x in c["vehicles"]))
             if c.get("effects"):
                 f.append("effects: []string{%s}" % ", ".join(gstr(x) for x in c["effects"]))
             for key in ("minUnique", "minCount", "signal"):

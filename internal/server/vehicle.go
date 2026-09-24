@@ -89,7 +89,8 @@ type vehicle struct {
 	x, y, z    float64
 	yaw        float32
 	rider      int32   // player eid, 0 when empty
-	mobRider   int32   // a mob scooped up by a rolling cart (minecart.go), 0 when none
+	mobRider   int32   // a mob aboard: scooped up by a rolling cart (minecart.go) or a boat (boatseats.go), 0 when none
+	mobFirst   bool    // the mob boarded before the player: it has the front seat
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 	syaw       float32 // last broadcast facing
 	chest      *chest  // a chest boat's 27 slots (nil for the rest)
@@ -242,13 +243,14 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 
 // mountVehicle seats a player (interact with an empty vehicle).
 func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
-	if !v.rideable() || v.rider != 0 || v.mobRider != 0 || dist3(t.x, t.y, t.z, v.x, v.y, v.z) > maxMeleeReach+1 {
+	if !v.rideable() || v.rider != 0 || v.aboard() >= v.seats() || dist3(t.x, t.y, t.z, v.x, v.y, v.z) > maxMeleeReach+1 {
 		return
 	}
 	v.rider = t.p.eid
 	t.ridingEID = v.eid
 	h.vibAt(v.dim, freqMount, v.x, v.y, v.z, t.p.eid)
-	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.rider))
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
+	h.startedRiding(players, v)
 }
 
 // dismount stands the rider up beside the vehicle.
@@ -259,8 +261,9 @@ func (h *hub) dismount(players map[int32]*tracked, t *tracked) {
 		}
 		v.rider = 0
 		t.ridingEID = 0
+		v.mobFirst = v.mobRider != 0 // whoever stays aboard has the front seat
 		h.vibAt(v.dim, freqDismount, v.x, v.y, v.z, t.p.eid)
-		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		t.x, t.y, t.z = v.x+0.9, v.y+0.6, v.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 		return
@@ -341,6 +344,8 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 	for _, v := range h.vehicles {
 		if !v.isBoat() {
 			h.tickMinecart(players, v)
+		} else {
+			h.boatPickup(players, v)
 		}
 	}
 	occupied := map[simPos]bool{}
@@ -387,11 +392,8 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 		if v.lit {
 			t.p.trySendEv(metaEv(cartFuelMeta(v.eid, true)))
 		}
-		if v.mobRider != 0 {
-			t.p.trySendEv(passengersBody(v.eid, v.mobRider))
-		}
-		if v.rider != 0 {
-			t.p.trySendEv(passengersBody(v.eid, v.rider))
+		if v.aboard() > 0 {
+			t.p.trySendEv(passengersBody(v.eid, v.passengers()...))
 		}
 	}
 }

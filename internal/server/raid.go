@@ -2,8 +2,11 @@ package server
 
 import (
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math"
+
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // Raids — a faithful core of the vanilla 1.21.5 Raid.java. Killing a
@@ -43,6 +46,28 @@ type raid struct {
 	alive       map[int32]bool // raider eids currently spawned
 	shown       map[int32]bool // player eids currently shown the bar
 	idleTicks   int            // ticks with no player near
+	secsActive  int            // Raid.ticksActive, in the 1 Hz updates (48000 ticks = 2400)
+	lostLeft    int            // seconds the defeat bar still shows (0 = not lost)
+	title       string         // the bar's current name
+}
+
+// raidTimeoutSecs is Raid.tick's 48000-tick limit, in 1 Hz updates.
+const raidTimeoutSecs = 48000 / 20
+
+// raidDefeatSecs is how long the defeat bar stays up (postRaidTicks ≥ 600).
+const raidDefeatSecs = 600 / 20
+
+// isVillage is ServerLevel.isVillage: a village point of interest (a bed,
+// a bell, a workstation) in the centre's section or one next to it.
+func (h *hub) isVillage(center blockPos) bool {
+	w := h.poiWorld(dimOverworld)
+	if w == nil {
+		return false
+	}
+	cx, cy, cz := center.x>>4, center.y>>4, center.z>>4
+	return len(w.POIsNear(center.x, center.y, center.z, 32, func(p world.POI) bool {
+		return abs(p.X>>4-cx) <= 1 && abs(p.Y>>4-cy) <= 1 && abs(p.Z>>4-cz) <= 1
+	})) > 0
 }
 
 // raidUUID is the raid's boss-bar identity, stable per village centre.
@@ -176,6 +201,35 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 				aliveN++
 			}
 		}
+		if r.lostLeft > 0 { // Raid.tick after a LOSS: the defeat bar, then gone
+			if r.lostLeft--; r.lostLeft == 0 {
+				h.endRaid(players, r)
+				delete(h.raids, center)
+			}
+			continue
+		}
+		// Raid.tick: a raid whose village is gone is lost once a wave has
+		// come (stopped quietly before), and every raid ends at 48000 ticks.
+		if !h.isVillage(center) {
+			if r.wave > 0 {
+				r.lostLeft = raidDefeatSecs
+				h.retitleRaid(players, r, "Raid - Defeat", aliveN)
+			} else {
+				h.endRaid(players, r)
+				delete(h.raids, center)
+			}
+			continue
+		}
+		if r.secsActive++; r.secsActive >= raidTimeoutSecs {
+			h.endRaid(players, r)
+			delete(h.raids, center)
+			continue
+		}
+		title := "Raid"
+		if aliveN > 0 && aliveN <= 2 {
+			title = fmt.Sprintf("Raid - Raiders Remaining: %d", aliveN)
+		}
+		h.retitleRaid(players, r, title, aliveN)
 		h.showRaidBar(players, r, aliveN)
 		if !h.anyPlayerNear(players, center, raidBarRange) {
 			if r.idleTicks++; r.idleTicks > raidNoPlayerTimeout {
@@ -217,7 +271,10 @@ func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, aliveN int) {
 	if r.waveSpawned > 0 {
 		frac = float32(aliveN) / float32(r.waveSpawned)
 	}
-	title := "Raid"
+	title := r.title
+	if title == "" {
+		title = "Raid"
+	}
 	for _, t := range players {
 		near := t.dim == 0 && dist3(t.x, t.y, t.z, float64(r.center.x), float64(r.center.y), float64(r.center.z)) <= raidBarRange
 		if near {
@@ -230,6 +287,26 @@ func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, aliveN int) {
 		} else if r.shown[t.p.eid] {
 			delete(r.shown, t.p.eid)
 			t.p.trySendEv(bossBarRemove(r.uuid))
+		}
+	}
+}
+
+// retitleRaid renames the bar (re-raising it for those who see it: the
+// attach bar has no rename op). A no-op when the name is unchanged.
+func (h *hub) retitleRaid(players map[int32]*tracked, r *raid, title string, aliveN int) {
+	if r.title == title || (r.title == "" && title == "Raid") {
+		r.title = title
+		return
+	}
+	r.title = title
+	frac := float32(0)
+	if r.waveSpawned > 0 {
+		frac = float32(aliveN) / float32(r.waveSpawned)
+	}
+	for eid := range r.shown {
+		if t := players[eid]; t != nil {
+			t.p.trySendEv(bossBarRemove(r.uuid))
+			t.p.trySendEv(bossBarAdd(r.uuid, title, frac, raidBarLook))
 		}
 	}
 }

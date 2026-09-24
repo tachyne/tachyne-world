@@ -380,9 +380,9 @@ func (h *hub) cartPickup(players map[int32]*tracked, v *vehicle) {
 		if math.Abs(m.x-v.x) > 0.9 || math.Abs(m.z-v.z) > 0.9 || m.y > v.y+0.7 || m.y+1 < v.y {
 			continue
 		}
-		m.cart, v.mobRider = v.eid, m.eid
+		m.cart, v.mobRider, v.mobFirst = v.eid, m.eid, true
 		m.vx, m.vz, m.hasTarget = 0, 0, false
-		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, m.eid))
+		h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		return
 	}
 }
@@ -395,6 +395,6 @@ func (h *hub) releaseCartMob(players map[int32]*tracked, v *vehicle) {
 	if m := h.mobs[v.mobRider]; m != nil {
 		m.cart = 0
 	}
-	v.mobRider = 0
-	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+	v.mobRider, v.mobFirst = 0, false
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 }

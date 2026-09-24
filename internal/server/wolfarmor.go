@@ -106,20 +106,6 @@ func (h *hub) tryWolfArmor(players map[int32]*tracked, t *tracked, m *mob) bool 
 		m.refreshGearArmor()
 		h.petEquipSync(players, m)
 		return true
-	case held.item == itemShears && m.armorSt.item != 0:
-		if t.gamemode == gmSurvival {
-			h.applyToolWear(t, t.p.heldSlot(), 1)
-		}
-		h.playSoundDim(players, m.dim, "minecraft:item.armor.unequip_wolf", sndNeutral, m.x, m.y, m.z, 1, 1)
-		piece := m.armorSt
-		m.armorSt = invStack{}
-		m.refreshGearArmor()
-		h.petEquipSync(players, m)
-		if it := h.spawnItemIn(players, m.dim, piece.item, 1, m.x, m.y+0.5, m.z); it != nil {
-			it.dmg, it.ench, it.color, it.name, it.repairCost = piece.dmg, piece.ench, piece.color, piece.name, piece.repairCost
-			h.refreshItemMeta(players, it)
-		}
-		return true
 	case held.item == itemArmadilloScute && m.sitting && m.armorSt.item == itemWolfArmor && m.armorSt.dmg > 0:
 		if t.gamemode == gmSurvival {
 			h.consumeHeld(t)

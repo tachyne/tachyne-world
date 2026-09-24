@@ -69,8 +69,27 @@ the public history since the project was open-sourced on 2026-07-10.
     open of an unlooted container does).
   An allay now also hands over everything the item carries, not five
   fields of it.
+- **Shears take gear off a mob**, as in 26.x:
+  - saddles from pigs, striders, horses and other mounts;
+  - horse, wolf and nautilus armour;
+  - llama carpets and happy-ghast harnesses.
+  The body slot comes off before the saddle. A mob carrying someone keeps
+  its gear, a wolf answers only to its owner, and Curse of Binding holds a
+  piece on outside creative. The piece drops with everything it carries,
+  and taking a wolf's armour off earns Snip Snap.
+- **Raids can be lost.** A raid whose village is gone after a wave has come
+  ends in defeat ("Raid - Defeat" on the bar for thirty seconds). No raid
+  outlasts 48,000 ticks, and the bar reads "Raiders Remaining" when two or
+  fewer are left.
 
 ### Added
+- **Boats seat two, and pick up mobs.** An empty boat takes aboard a
+  villager, goat or other mob that bumps into it, the vanilla way to move
+  villagers about. You can climb in beside it. Mobs as wide as a boat
+  (horses, iron golems, spiders…) and fish, squid and the like stay out,
+  and a boat you are steering picks up nothing. Whoever boarded first sits
+  in front and steers. Riding a boat with a goat earns Whatever Floats Your
+  Goat!
 - **Others see you swing and mine.** Other players now see your arm swing,
   with either hand: at air, at a block you're mining or placing against,
   at a mob. Before this, it moved only on a hit against a player. The

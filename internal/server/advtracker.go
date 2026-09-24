@@ -418,7 +418,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 	case "allay_drop_item_on_block":
 		return c.blockMatches(m.blockState) && m.itemIn(c)
 	case "started_riding":
-		return (c.vehicle == "" || c.vehicle == m.vehicle) && (c.passenger == "" || c.passenger == m.passenger)
+		return (len(c.vehicles) == 0 || containsStr(c.vehicles, m.vehicle)) && (c.passenger == "" || c.passenger == m.passenger)
 	case "spear_mobs":
 		return m.count >= c.minCount
 	case "slept_in_bed", "villager_trade", "enchanted_item", "brewed_potion",

@@ -476,10 +476,10 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
 		}
 	}
-	if m.cart != 0 { // died in a minecart — the cart is empty again
+	if m.cart != 0 { // died in a cart or a boat: its seat is free, whoever else is aboard stays
 		if v := h.vehicles[m.cart]; v != nil {
-			v.mobRider = 0
-			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+			v.mobRider, v.mobFirst = 0, false
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		}
 	}
 	h.spillHorse(players, m) // a mount's saddle/armor/chest drop with it

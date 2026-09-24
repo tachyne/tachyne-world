@@ -73,6 +73,7 @@ type advCriterion struct {
 	endYMax      float64
 	vehicle      string
 	passenger    string
+	vehicles     []string // started_riding: the vehicle types that match (a tag, expanded)
 	lookingAt    string
 	bystander    string
 	noFire       bool

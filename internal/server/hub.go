@@ -1947,7 +1947,7 @@ func (h *hub) run() {
 					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
 						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
 						held := heldStack(t).item
-						if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+						if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, e.sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 							h.tryHorseScreen(players, t, m, e.sneak) || h.tryHappyGhast(players, t, m) ||
 							h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 							h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||
@@ -2508,7 +2508,8 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	for _, v := range h.vehicles { // a leaver stands up first
 		if v.rider == p.eid {
 			v.rider = 0
-			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid))
+			v.mobFirst = v.mobRider != 0 // a mob left aboard keeps its seat
+			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		}
 	}
 	for _, m := range h.mobs { // a leaver aboard a happy ghast steps off

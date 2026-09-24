@@ -55,7 +55,7 @@ func TestWolfArmor(t *testing.T) {
 	pl.inv.slots[0] = invStack{item: itemShears, count: 1}
 	pl.p.setHotbarSlot(0, itemShears)
 	items := len(h.items)
-	if !h.tryWolfArmor(players, pl, w) || w.armorSt.item != 0 || len(h.items) != items+1 {
+	if !h.tryShearEquipment(players, pl, w, false) || w.armorSt.item != 0 || len(h.items) != items+1 {
 		t.Fatal("shears should strip the armour and drop it")
 	}
 	// A stranger cannot: the wolf belongs to someone else now.
