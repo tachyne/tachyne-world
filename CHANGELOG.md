@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Dispensed projectiles hit mobs.** Snowballs, eggs and fire charges
+  fired from a dispenser flew straight through mobs. They now hit them as
+  in vanilla: a snowball stings a blaze, and a fire charge sets a zombie
+  alight.
 - **Bottles o' enchanting splash, and potions break with one sound.** A
   thrown bottle o' enchanting broke with no splash at all. It now bursts
   in green, as in vanilla. Splash and lingering potions sent their

@@ -399,7 +399,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				break
 			}
 			if h.arrowHitsPlayer(players, a, px, py, pz) ||
-				((a.playerShot || a.mobShot) && h.arrowHitsMob(players, a, px, py, pz)) ||
+				((a.playerShot || a.mobShot || a.shooter == 0) && h.arrowHitsMob(players, a, px, py, pz)) ||
 				h.arrowHitsVehicle(players, a, px, py, pz) {
 				hit = true
 				break
