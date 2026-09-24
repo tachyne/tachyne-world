@@ -134,6 +134,16 @@ the public history since the project was open-sourced on 2026-07-10.
   demand and reputation move, the emerald the fixed extra. The fisherman's
   biome boats are five offers, each for its own villager types. Villagers
   keep the trades they already have.
+- **Advancements come from 26.3's data.** The tree gains Uh Oh (it stays
+  locked until sulfur cubes arrive). Adventuring Time now asks for the
+  dappled forest, and for the sulfur caves, which can't be earned until they
+  generate. Goat-boat rides count in poplar boats, and glow ink counts on
+  poplar signs. Piglins now love golden dandelions, so tossing one earns Oh
+  Shiny. Biome advancements could not be earned before: Adventuring Time,
+  Hot Tourist Destinations and Sound of Music never matched the world's
+  biome names, and cave and Nether biomes were not checked. Now the biome
+  at your feet counts, in every dimension. Placing a chiseled bookshelf no
+  longer earns The Power of Books without a comparator reading it.
 
 ## 2026-09-23
 

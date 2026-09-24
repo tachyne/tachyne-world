@@ -6,6 +6,7 @@ package server
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	attach "github.com/tachyne/tachyne-common/attach"
@@ -232,6 +233,13 @@ func (c *advCriterion) blockMatches(state uint32) bool {
 	return stateHasProps(state, c.props)
 }
 
+// biomeMatches: the criterion names no biome, or the site's biome is it. The
+// world reports registry names ("minecraft:meadow"); criteria carry the bare
+// path ("meadow").
+func (c *advCriterion) biomeMatches(biome string) bool {
+	return c.biome == "" || c.biome == strings.TrimPrefix(biome, "minecraft:")
+}
+
 func (m advMatch) itemIn(c *advCriterion) bool {
 	return len(c.items) == 0 || containsID(c.items[0], m.item)
 }
@@ -290,7 +298,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		if !c.blockMatches(m.blockState) || !m.itemIn(c) {
 			return false
 		}
-		if c.biome != "" && c.biome != m.biome {
+		if !c.biomeMatches(m.biome) {
 			return false
 		}
 		if c.smokey && !m.smokey {
@@ -300,7 +308,7 @@ func (m advMatch) criterion(c *advCriterion) bool {
 	case "changed_dimension":
 		return !c.hasDim || c.dim == m.dim
 	case "location":
-		if c.biome != "" && c.biome != m.biome {
+		if !c.biomeMatches(m.biome) {
 			return false
 		}
 		if c.structure != "" && c.structure != m.structure {

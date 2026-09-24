@@ -1,6 +1,6 @@
 package server
 
-// Advancements: the vanilla 1.21.11 tree (advancements_gen.go, distilled by
+// Advancements: the vanilla 26.3 tree (advancements_gen.go, distilled by
 // scripts/gen_advancements.py) + the engine-side criteria tracker. The engine
 // owns criteria evaluation, grant state, persistence, and chat announcements;
 // the display tree crosses the attach protocol once per join (MsgAdvTree) and

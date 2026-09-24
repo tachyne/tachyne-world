@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Piglins and gold (vanilla PiglinAi): a piglin leaves alone any player
 // wearing a piece of gold armour; it picks up the gold it loves, and a gold
@@ -17,30 +21,23 @@ const (
 )
 
 var (
-	// piglinLoved is #minecraft:piglin_loved.
-	piglinLoved = func() map[int32]bool {
-		out := map[int32]bool{}
-		for _, n := range []string{"gold_ore", "deepslate_gold_ore", "nether_gold_ore", "gold_block", "gilded_blackstone",
-			"light_weighted_pressure_plate", "gold_ingot", "bell", "clock", "golden_carrot", "glistering_melon_slice",
-			"golden_apple", "enchanted_golden_apple", "golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots",
-			"golden_horse_armor", "golden_sword", "golden_pickaxe", "golden_shovel", "golden_axe", "golden_hoe", "raw_gold", "raw_gold_block"} {
-			if id, ok := itemByName[n]; ok {
-				out[int32(id)] = true
-			}
-		}
-		return out
-	}()
+	// piglinLoved is #minecraft:piglin_loved (26.3 adds the golden dandelion).
+	piglinLoved = itemTagSet("piglin_loved")
 	// piglinSafeArmor is #minecraft:piglin_safe_armor.
-	piglinSafeArmor = func() map[int32]bool {
-		out := map[int32]bool{}
-		for _, n := range []string{"golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots"} {
-			if id, ok := itemByName[n]; ok {
-				out[int32(id)] = true
-			}
-		}
-		return out
-	}()
+	piglinSafeArmor = itemTagSet("piglin_safe_armor")
 )
+
+// itemTagSet is a generated vanilla item tag as an item-id set; names the
+// item table doesn't know are skipped.
+func itemTagSet(tag string) map[int32]bool {
+	out := map[int32]bool{}
+	for _, n := range worldgen.ItemTag(tag) {
+		if id, ok := itemByName[n]; ok {
+			out[int32(id)] = true
+		}
+	}
+	return out
+}
 
 // barterEntry is one line of the piglin_bartering table.
 type barterEntry struct {

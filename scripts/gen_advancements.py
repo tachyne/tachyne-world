@@ -26,8 +26,11 @@ import re
 import sys
 import zipfile
 
-JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.DATA)  # behaviour data: canon.py
+JAR = sys.argv[1] if len(sys.argv) > 1 else canon.jar(canon.VERSION)  # reads 26.x shapes: normalize()
 OUT = "internal/server/advancements_gen.go"
+# The version named in the generated header: the jar's, from its file name.
+_m = re.search(r"server-(.+)\.jar$", os.path.basename(JAR))
+SOURCE = _m.group(1) if _m else "vanilla"
 
 DIMS = {"minecraft:overworld": 0, "minecraft:the_nether": 1, "minecraft:the_end": 2}
 FRAMES = {"task": 0, "challenge": 1, "goal": 2}
@@ -163,38 +166,170 @@ def loc_of(pred):
 
 
 def loc_checks(terms, tags):
-    """placed_block's location list: any_of(all_of(location_check...)) ->
-    OR-groups of (offset, blocks, props). A bare location_check is one group;
-    a block_state_property term checks the placed block itself."""
-    def one(term):
+    """placed_block's location list -> OR-groups of AND-ed (offset, blocks,
+    props) checks. The list itself is an AND (a context predicate), any_of
+    and all_of nest freely, so the result is the disjunctive normal form: a
+    location_check is one offset check, a block_state_property checks the
+    placed block itself. Other condition kinds are ignored (they constrain
+    nothing the engine can see)."""
+    def dnf(term):  # -> list of alternatives, each a list of checks
         c = term.get("condition", "")
         if c == "minecraft:location_check":
-            p = term.get("predicate") or {}
-            l = loc_of(p)
-            return [{"dx": term.get("offsetX", 0), "dy": term.get("offsetY", 0),
-                     "dz": term.get("offsetZ", 0),
-                     "blocks": names_of(l.get("blocks"), tags, "block"),
-                     "props": l.get("props", {})}]
+            l = loc_of(term.get("predicate") or {})
+            return [[{"dx": term.get("offsetX", 0), "dy": term.get("offsetY", 0),
+                      "dz": term.get("offsetZ", 0),
+                      "blocks": names_of(l.get("blocks"), tags, "block"),
+                      "props": l.get("props", {})}]]
         if c == "minecraft:block_state_property":
-            return [{"dx": 0, "dy": 0, "dz": 0,
-                     "blocks": [strip_ns(term["block"])],
-                     "props": {k: str(v) for k, v in (term.get("properties") or {}).items()}}]
+            return [[{"dx": 0, "dy": 0, "dz": 0,
+                      "blocks": names_of(term["block"], tags, "block"),
+                      "props": {k: str(v) for k, v in (term.get("properties") or {}).items()}}]]
+        if c == "minecraft:any_of":
+            return [g for t in term.get("terms", []) for g in dnf(t)]
         if c == "minecraft:all_of":
-            out = []
-            for t in term.get("terms", []):
-                out += one(t)
-            return out
-        return []
-    groups = []
-    for term in terms or []:
-        if term.get("condition") == "minecraft:any_of":
-            for alt in term.get("terms", []):
-                groups.append(one(alt))
-        else:
-            g = one(term)
-            if g:
-                groups.append(g)
-    return groups
+            return conj(term.get("terms", []))
+        return [[]]
+
+    def conj(ts):  # AND of terms: every combination of their alternatives
+        out = [[]]
+        for t in ts:
+            out = [g + h for g in out for h in dnf(t)]
+        return out
+
+    return [g for g in conj(terms or []) if g]
+
+
+# ---- 26.x condition shapes -> the shape distill() reads ----
+#
+# 26.x rewrote the predicate formats: a context predicate (player, entity,
+# child, location, ...) is one condition object rather than a list of them
+# (a top-level all_of stands for the old implicit AND), a condition names
+# itself with "type" rather than "condition", block_state_property became
+# match_block {blocks, state}, entity-predicate fields are namespaced
+# ("minecraft:entity_type", "minecraft:flags", "minecraft:type_specific/
+# player"), damage-type tag ids carry a '#', and a few trigger fields were
+# renamed (recipe_id -> recipes, loot_table -> loot_tables, block -> blocks).
+# normalize() rewrites a criterion's conditions into the older shape, so
+# distill() reads either version's data and gives the same answer wherever
+# the two versions mean the same thing. Older data passes through unchanged.
+
+LOOT_CONDITIONS = {"minecraft:entity_properties", "minecraft:inverted", "minecraft:any_of",
+                   "minecraft:all_of", "minecraft:location_check", "minecraft:match_block",
+                   "minecraft:match_tool", "minecraft:block_state_property"}
+
+# Entity-predicate fields whose values are themselves entity predicates.
+NESTED_ENTITY = {"vehicle", "passenger", "targeted_entity", "looking_at",
+                 "direct_entity", "source_entity"}
+
+
+def is_condition(v):
+    """A 26.x condition object (the older shape names itself "condition")."""
+    return isinstance(v, dict) and v.get("type") in LOOT_CONDITIONS
+
+
+def norm_entity(p):
+    """An entity predicate (26.x namespaced fields) -> the older field names."""
+    if not isinstance(p, dict):
+        return p
+    out = {}
+    for k, v in p.items():
+        if k == "minecraft:entity_type":
+            out["type"] = v
+            continue
+        if k.startswith("minecraft:type_specific/"):
+            ts = {"type": "minecraft:" + k.split("/", 1)[1]}
+            for kk, vv in (v or {}).items():
+                ts[kk] = norm_entity(vv) if kk in NESTED_ENTITY else vv
+            out["type_specific"] = ts
+            continue
+        k = strip_ns(k) if k.startswith("minecraft:") else k
+        out[k] = norm_entity(v) if k in NESTED_ENTITY else v
+    return out
+
+
+def norm_damage(d):
+    """A damage-source predicate: nested entity predicates + '#'-less tag ids."""
+    if not isinstance(d, dict):
+        return d
+    out = {}
+    for k, v in d.items():
+        if k in ("direct_entity", "source_entity"):
+            v = norm_entity(v)
+        elif k == "tags":
+            v = [{**t, "id": t["id"].lstrip("#")} for t in v]
+        out[k] = v
+    return out
+
+
+def norm_cond(c):
+    """One loot condition -> the older {"condition": ...} shape."""
+    if "condition" in c:  # already the older shape
+        return c
+    t = c["type"]
+    out = {"condition": t}
+    if t == "minecraft:match_block":
+        out["condition"] = "minecraft:block_state_property"
+        out["block"] = c["blocks"]
+        if c.get("state"):
+            out["properties"] = c["state"]
+        return out
+    for k, v in c.items():
+        if k == "type":
+            continue
+        if k == "predicate" and t == "minecraft:entity_properties":
+            v = norm_entity(v)
+        elif k == "terms":
+            v = [norm_cond(x) for x in v]
+        elif k == "term":
+            v = norm_cond(v)
+        out[k] = v
+    return out
+
+
+def norm_context(c):
+    """A context predicate -> the older list-of-conditions (an implicit AND).
+    not(any_of(a, b)) is the older not(a), not(b)."""
+    if isinstance(c, list):
+        return [norm_cond(x) for x in c]
+    if c.get("type") == "minecraft:all_of":
+        return [norm_cond(x) for x in c["terms"]]
+    if c.get("type") == "minecraft:inverted" and (c.get("term") or {}).get("type") == "minecraft:any_of":
+        return [{"condition": "minecraft:inverted", "term": norm_cond(x)} for x in c["term"]["terms"]]
+    return [norm_cond(c)]
+
+
+def single(v, what):
+    """A 26.x one-or-list id field -> the one id the engine matches on."""
+    if isinstance(v, list):
+        if len(v) != 1:
+            raise SystemExit(f"gen_advancements: {what} lists {len(v)} ids; the engine matches one")
+        return v[0]
+    return v
+
+
+def normalize(trigger, cond):
+    """A criterion's conditions, either version's shape, in the older shape."""
+    if not cond:
+        return cond
+    t = strip_ns(trigger)
+    out = {}
+    for k, v in cond.items():
+        if k == "recipes" and t in ("recipe_crafted", "crafter_recipe_crafted"):
+            k, v = "recipe_id", single(v, k)
+        elif k == "loot_tables" and t == "player_generates_container_loot":
+            k, v = "loot_table", single(v, k)
+        elif k == "blocks" and t in ("enter_block", "slide_down_block", "bee_nest_destroyed"):
+            k = "block"
+        elif k == "killing_blow":
+            v = norm_damage(v)
+        elif k == "damage" and isinstance(v, dict) and "type" in v:
+            v = {**v, "type": norm_damage(v["type"])}
+        elif is_condition(v):
+            v = norm_context(v)
+        elif isinstance(v, list) and v and all(is_condition(x) for x in v):
+            v = [norm_context(x) for x in v]  # victims: a list of context predicates
+        out[k] = v
+    return out
 
 
 def rng_min(v, key=None):
@@ -401,6 +536,10 @@ def distill(trigger, cond, tags):
     # the tree keeps telling the truth about what is obtainable.
     if t in NOT_OBSERVABLE:
         d["unmatchable"] = True
+    # So do criteria naming content the engine does not have yet: a mob it
+    # never spawns, a biome its generator never places.
+    if d.get("entity") in ABSENT_ENTITIES or d.get("biome") in ABSENT_BIOMES:
+        d["unmatchable"] = True
     return d
 
 
@@ -413,6 +552,17 @@ NOT_OBSERVABLE = {
     # block, started_riding, avoid_vibration (sneak-suppressed vibrations) —
     # and thrown_item_picked_up_by_entity now that piglins pick gold up.
     "spear_mobs",                   # no spear (a flagged 1.21.11 extra)
+}
+
+# 26.3 content the engine does not simulate yet. Criteria naming it stay
+# unmatchable, so the advancements needing them (husbandry/uh_oh, and
+# adventuring_time's every-biome requirement) stay unobtainable until it
+# lands.
+ABSENT_ENTITIES = {
+    "sulfur_cube",   # no sulfur cube mob (uh_oh: have one absorb TNT)
+}
+ABSENT_BIOMES = {
+    "sulfur_caves",  # the cave-biome picker places deep_dark/lush/dripstone only
 }
 
 
@@ -567,7 +717,7 @@ def main():
         crits = []
         for cname, c in d["criteria"].items():
             crits.append({"name": cname,
-                          **distill(c["trigger"], c.get("conditions"), tags)})
+                          **distill(c["trigger"], normalize(c["trigger"], c.get("conditions")), tags)})
         reqs = d.get("requirements") or [[k] for k in d["criteria"]]
         disp = None
         if "display" in d:
@@ -613,7 +763,7 @@ def main():
 
     w = []
     w.append("// Code generated by scripts/gen_advancements.py. DO NOT EDIT.")
-    w.append(f"// Source: {canon.DATA} server jar data/minecraft/advancement (recipe")
+    w.append(f"// Source: {SOURCE} server jar data/minecraft/advancement (recipe")
     w.append("// unlocks excluded) + tags/item + en_us.json; layout matches the")
     w.append("// vanilla tidy tree. %d advancements, %d criteria (%d not yet" % (
         len(nodes), total, unmatch))

@@ -148,12 +148,17 @@ func (h *hub) advTick(players map[int32]*tracked) {
 		// LocationTrigger (polled): biome, the structure the player stands in,
 		// the block underfoot and the boots worn — one payload, every criterion
 		// checks only the fields it names.
-		loc := advMatch{feet: t.armor[3].item}
+		// The biome is the one at the player's block, in every dimension
+		// (LocationPredicate: level.getBiome(pos)) — the cave biomes of
+		// adventuring_time lie under the surface, explore_nether's in the
+		// Nether.
+		bx, by, bz := int(math.Floor(t.x)), int(math.Floor(t.y)), int(math.Floor(t.z))
+		w := h.worldFor(t.dim)
+		loc := advMatch{feet: t.armor[3].item, biome: w.BiomeAt3D(bx, by, bz)}
 		if t.dim == 0 {
-			loc.biome = h.worldFor(t.dim).BiomeAt(int(t.x), int(t.z))
-			loc.structure = h.structureAt(int(math.Floor(t.x)), int(math.Floor(t.z)))
+			loc.structure = h.structureAt(bx, bz)
 		}
-		loc.blockState = h.worldFor(t.dim).At(int(math.Floor(t.x)), int(math.Floor(t.y))-1, int(math.Floor(t.z)))
+		loc.blockState = w.At(bx, by-1, bz)
 		h.advance(players, t, "location", loc)
 	}
 }

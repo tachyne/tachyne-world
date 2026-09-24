@@ -184,7 +184,8 @@ func TestFormerlyUnobservableTriggersAreLive(t *testing.T) {
 	for _, n := range advTable {
 		for _, c := range n.criteria {
 			if _, watched := live[c.trigger]; watched {
-				if c.unmatchable {
+				// uh_oh's sulfur cube is absent content, not an unobserved trigger.
+				if c.unmatchable && c.entity != "sulfur_cube" {
 					t.Errorf("%s (%s) is still marked unmatchable", c.name, c.trigger)
 				}
 				live[c.trigger] = true

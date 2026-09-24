@@ -28,7 +28,8 @@ TAGS = {
               "mineable/axe", "mineable/hoe", "mineable/pickaxe", "mineable/shovel",
               "sword_efficient", "sword_instantly_mines", "shears_extreme_breaking_speed",
               "shears_major_breaking_speed", "shears_minor_breaking_speed"],
-    "item": ["boats", "clonable_maps", "wooden_tool_materials"],
+    "item": ["boats", "clonable_maps", "wooden_tool_materials",
+             "piglin_loved", "piglin_safe_armor"],  # piglin.go: admire, barter, distract_piglin
 }
 
 z = canon.inner_jar()
