@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/item.** Operators can put items straight into a chest, barrel,
+  shulker box, furnace, hopper, dispenser, dropper, brewing stand or
+  crafter, or into a player's hotbar, inventory, hands, armour, ender chest,
+  cursor or crafting grid. An item can be named with a count, or copied from
+  another container's or player's slots. replace fills the slots in order,
+  fill repeats the items across every slot, and override also empties the
+  slots left over, as in 26.3. Changing items with loot modifiers, using
+  item components, and targeting mobs are not supported yet.
 - **/version and /stop.** /version shows operators which game version the
   server speaks, laid out as vanilla lays it out. /stop saves everything and
   shuts the server down cleanly, the same way as stopping it from outside.
