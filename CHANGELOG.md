@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Flint and steel wears out lighting TNT.** Lighting TNT with flint
+  and steel didn't use up any durability. It now uses one point, as
+  lighting anything else does.
 - **Breaking the dragon's healing crystal hurts the dragon.** The ender
   dragon healed as long as any end crystal was left anywhere. Now, as in
   vanilla, it heals only from the nearest crystal within reach.

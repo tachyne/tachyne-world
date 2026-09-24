@@ -76,8 +76,9 @@ func (s *Server) useFlintSteel(p *player, x, y, z, dx, dy, dz int, seq int32) bo
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
-	if isTNT(target) {
+	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point, as it does lighting anything
 		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
+		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
