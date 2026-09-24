@@ -354,7 +354,7 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseActive:
 			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseCooldown))
 			h.sculkDue[pos] = now + sculkCooldownTicks()
-			h.scheduleAroundIn(dimOverworld, pos, 1) // redstone drops
+			h.inDim(dimOverworld, func() { h.scheduleSignalAround(players, pos) }) // redstone drops
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseCooldown:
 			h.setBlockAt(players, dimOverworld, pos, sensorWith(s, 0, sculkPhaseInactive))
 			delete(h.sculkDue, pos)
@@ -417,7 +417,7 @@ func (h *hub) activateSensor(players map[int32]*tracked, pos blockPos, s uint32,
 	h.sculkFreq[pos] = v.freq
 	h.setBlockAt(players, dimOverworld, pos, sensorWith(s, power, sculkPhaseActive))
 	h.sculkDue[pos] = h.tick.Load() + sensorActiveTicks
-	h.scheduleAroundIn(dimOverworld, pos, 1) // neighbours read the new redstone
+	h.inDim(dimOverworld, func() { h.scheduleSignalAround(players, pos) }) // neighbours read the new redstone
 	if snd := "minecraft:block.sculk_sensor.clicking"; !sensorWaterlogged(s) {
 		h.playSoundDim(players, dimOverworld, snd, sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, h.hurtPitch())

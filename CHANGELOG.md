@@ -34,6 +34,17 @@ the public history since the project was open-sourced on 2026-07-10.
   one now places the new sign against it instead of opening the editor. It
   works on a ceiling sign's underside and on any face of a wall sign except
   its two text faces. The new sign hangs from the one above.
+- **Redstone keeps vanilla's time.** A block change now reaches its
+  neighbours in the same tick, and components wait on scheduled ticks run in
+  vanilla's order, instead of every step waiting an extra tick. A lamp at the
+  end of dust lights the moment the lever is flipped (it used to take 2
+  ticks), a line of repeaters runs 2 ticks a stage instead of 3, torches
+  switch after 2 ticks instead of 1, and observers pulse 2 ticks after the
+  change they see. Dispensers fire after 4 ticks instead of 5, crafters now
+  wait their 4 ticks, a comparator's mode click takes effect at once, and
+  pistons move at the end of the tick, their blocks landing 2 ticks later.
+  Clocks run at their vanilla period, and a torch clock that is too fast
+  burns its torch out as it does in vanilla.
 - **Items keep everything they carry when picked up.** Picking up a potion,
   a shulker box, a bundle, dyed leather, a firework rocket, a goat horn, a
   decorated pot, a suspicious stew or a silk-touched hive used to strip it

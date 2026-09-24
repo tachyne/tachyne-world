@@ -80,8 +80,8 @@ func TestDustIntoBlockPowersLampButNotDust(t *testing.T) {
 	// the block itself could feed it: still 0.
 	w.SetBlock(x+3, y+1, z, worldgen.Air)
 	w.SetBlock(x+4, y, z, dust(t))
-	h.scheduleSignalAround(blockPos{x + 3, y + 1, z})
-	h.scheduleSignalAround(blockPos{x + 4, y, z})
+	h.scheduleSignalAround(players, blockPos{x + 3, y + 1, z})
+	h.scheduleSignalAround(players, blockPos{x + 4, y, z})
 	stepTicks(h, players, 8)
 	if p := wirePower(w.At(x+4, y, z)); p != 0 {
 		t.Fatalf("dust beyond a dust-powered block must stay 0, has %d", p)
@@ -96,7 +96,7 @@ func TestTorchPowersBlockAboveNotBelow(t *testing.T) {
 	w.SetBlock(x, y+1, z, worldgen.Stone)
 	w.SetBlock(x+1, y+1, z, lampOff) // beside the block above the torch
 	w.SetBlock(x+1, y-1, z, lampOff) // beside the block the torch stands on
-	h.scheduleSignalAround(blockPos{x, y, z})
+	h.scheduleSignalAround(players, blockPos{x, y, z})
 	stepTicks(h, players, 8)
 	if w.At(x+1, y+1, z) != lampOn {
 		t.Fatal("lamp beside the block above a torch should light: the torch drives that block strongly")
@@ -117,7 +117,7 @@ func TestRedstoneBlockDoesNotPowerThroughSolid(t *testing.T) {
 	w.SetBlock(x+1, y, z, worldgen.Stone)
 	w.SetBlock(x+2, y, z, lampOff)
 	w.SetBlock(x, y+1, z, lampOff) // touching the redstone block itself
-	h.scheduleSignalAround(blockPos{x, y, z})
+	h.scheduleSignalAround(players, blockPos{x, y, z})
 	stepTicks(h, players, 8)
 	if w.At(x, y+1, z) != lampOn {
 		t.Fatal("lamp touching a redstone block should light")

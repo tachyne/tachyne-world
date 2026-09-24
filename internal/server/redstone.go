@@ -9,16 +9,77 @@ import (
 // blocks), dust that carries decaying power, and consumers (lamps, iron
 // doors, TNT).
 //
-// The simulation is a cellular ripple over the scheduled-update system: a
-// change re-evaluates its neighbourhood, and wire loops cannot self-sustain
-// because the -1 decay kills them. DUST is the exception, and the important
-// one: propagateWires below is RedStoneWireBlock.updatePowerStrength, so a
-// line of dust carries its signal end to end in the tick the source changes
-// — fifteen blocks, all at once, as vanilla does. (This comment used to say
-// a block per tick, which was true before propagateWires and sent a parity
-// audit chasing a bug that was already fixed.)
+// The simulation follows vanilla's split (blockticks.go): a change notifies
+// its neighbours at once — updateRedstone is their neighborChanged — and a
+// component that waits schedules a tick, which redstoneTick runs. Dust
+// re-evaluates inside the cascade, so a line of dust carries its signal end
+// to end in the tick the source changes — fifteen blocks, all at once — and
+// a lamp at its end lights in that same tick.
 
-const ()
+const (
+	torchDelay   = 2 // RedstoneTorchBlock.neighborChanged: scheduleTick(pos, this, 2)
+	lampOffDelay = 4 // RedstoneLampBlock.neighborChanged: scheduleTick(pos, this, 4)
+)
+
+// redstoneTick is a scheduled tick (Block.tick) for the redstone family.
+// Members without a tick of their own — the older timers that still ride
+// the simulation queue — never get here.
+func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	switch {
+	case isRSTorch(state):
+		h.torchTick(players, pos, state)
+	case isLamp(state):
+		// RedstoneLampBlock.tick: dark only if the power is still gone.
+		if state == lampOn && h.inputPower(pos.x, pos.y, pos.z, false) == 0 {
+			h.rsSet(players, pos, lampOff)
+		}
+	case isRepeater(state):
+		h.repeaterTick(players, pos, state)
+	case isComparator(state):
+		h.comparatorRefresh(players, pos, state)
+	case isObserver(state):
+		h.observerTick(players, pos, state)
+	case isCrafter(state):
+		h.crafterTick(players, simPos{dim: h.rsDim, blockPos: pos}, state)
+	}
+	h.nbRun(players)
+}
+
+// torchSupport is the block a torch hangs on or stands on.
+func torchSupport(pos blockPos, state uint32) blockPos {
+	if state >= rsWallTorchMin && state <= rsWallTorchMax {
+		dx, dy, dz := rsWallTorchDir(state).delta()
+		return blockPos{pos.x - dx, pos.y - dy, pos.z - dz}
+	}
+	return blockPos{pos.x, pos.y - 1, pos.z}
+}
+
+// torchSupportPowered is RedstoneTorchBlock.hasNeighborSignal (and the wall
+// torch's): the torch inverts its support.
+func (h *hub) torchSupportPowered(pos blockPos, state uint32) bool {
+	s := torchSupport(pos, state)
+	return h.supportPowered(s.x, s.y, s.z, pos.x, pos.y, pos.z)
+}
+
+// torchTick is RedstoneTorchBlock.tick: flip to match the support, logging
+// each lit→unlit flip; the eighth inside 60 ticks burns it out (fizz, and
+// look again in 160 ticks).
+func (h *hub) torchTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	powered := h.torchSupportPowered(pos, state)
+	h.pruneTorchToggles()
+	switch {
+	case torchLit(state) && powered:
+		h.rsSet(players, pos, torchWithLit(state, false))
+		if h.torchToggledTooOften(pos, true) {
+			h.toNearbyEv(players, h.rsDim, float64(pos.x), float64(pos.z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: pos.x, Y: pos.y, Z: pos.z})
+			h.scheduleTick(pos, torchRestartDelay, tickNormal)
+		}
+		h.notifyTwoDeep(players, pos)
+	case !torchLit(state) && !powered && !h.torchToggledTooOften(pos, false):
+		h.rsSet(players, pos, torchWithLit(state, true))
+		h.notifyTwoDeep(players, pos)
+	}
+}
 
 var (
 	wireStateMin = worldgen.BlockBase("redstone_wire") // redstone_wire (east×north×power×south×west)
@@ -189,14 +250,19 @@ func (h *hub) supportPowered(sx, sy, sz, tx, ty, tz int) bool {
 	return h.signal(sx, sy, sz, d) > 0
 }
 
-// updateRedstone is the scheduled step for any redstone-ish cell.
+// updateRedstone is a redstone-ish cell's neighborChanged: what it does when
+// a neighbour tells it something changed. It runs inside the neighbour
+// cascade (blockticks.go) — immediately, in the tick of the change — and,
+// for the family members vanilla keeps on a timer, only decides whether to
+// schedule a tick; redstoneTick is what then happens.
 func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uint32) {
 	x, y, z := pos.x, pos.y, pos.z
 	// Quasi-connectivity relay: a redstone update at this cell re-evaluates a
 	// piston directly below, which reads power through this block (Java QC).
 	if pb := (blockPos{x, y - 1, z}); !isPistonBase(state) && isPistonBase(h.rsWorld().At(pb.x, pb.y, pb.z)) {
-		h.rsSchedule(pb, 1)
+		h.nbAdd(pb)
 	}
+	defer h.nbRun(players)
 	switch {
 	case isTarget(state):
 		h.updateTarget(players, pos, state)
@@ -215,13 +281,16 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, noteWithPowered(state, powered))
 		}
 	case isWire(state):
+		// DefaultRedstoneWireEvaluator.updatePowerStrength: a changed cell
+		// tells everything within two of it, and the dust among them re-
+		// evaluates in the same cascade — a line of dust carries a signal end
+		// to end in the tick it changes, fifteen blocks at once.
 		want := h.inputPower(x, y, z, true)
 		if wirePower(state) != want {
 			info, _ := worldgen.InfoForState(state)
 			ns := worldgen.SetProperty(info, state, "power", itoa(want))
 			h.rsSet(players, pos, h.connectWire(x, y, z, ns))
-			h.scheduleSignalAround(pos) // the components around hear next tick
-			h.propagateWires(players, pos)
+			h.notifyTwoDeep(players, pos)
 			break
 		}
 		// updateShape: the CONNECTIONS are recomputed on any neighbour change,
@@ -231,29 +300,10 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, ns)
 		}
 	case isRSTorch(state):
-		// The torch inverts its support block (below for floor torches, the
-		// block behind for wall torches): support powered → torch off.
-		// (redstone_torch isn't in the orientable-block property table, so its
-		// tiny state layout is inlined: lit is the low bit, even = lit.)
-		sx, sy, sz := x, y-1, z
-		if state >= rsWallTorchMin && state <= rsWallTorchMax {
-			facing := []string{"north", "south", "west", "east"}[(state-rsWallTorchMin)/2]
-			dx, dz := facingDelta(facing)
-			sx, sy, sz = x-dx, y, z-dz
-		}
-		powered := h.supportPowered(sx, sy, sz, x, y, z)
-		h.pruneTorchToggles()
-		switch {
-		case torchLit(state) && powered:
-			h.rsSet(players, pos, torchWithLit(state, false))
-			h.scheduleSignalAround(pos)
-			if h.torchToggledTooOften(pos, true) { // burn out: fizz, and try again in 160 ticks
-				h.toNearbyEv(players, h.rsDim, float64(x), float64(z), attachproto.WorldFX{Event: worldEventTorchBurnout, X: x, Y: y, Z: z})
-				h.rsSchedule(pos, torchRestartDelay)
-			}
-		case !torchLit(state) && !powered && !h.torchToggledTooOften(pos, false):
-			h.rsSet(players, pos, torchWithLit(state, true))
-			h.scheduleSignalAround(pos)
+		// RedstoneTorchBlock.neighborChanged: a torch whose state disagrees
+		// with its support schedules its tick, 2 later.
+		if torchLit(state) == h.torchSupportPowered(pos, state) && !h.willTickThisTick(pos) {
+			h.scheduleTick(pos, torchDelay, tickNormal)
 		}
 	case worldgen.IsCopperBulb(state):
 		h.updateCopperBulb(players, pos, state)
@@ -269,31 +319,24 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
 			delete(h.rsDue, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(pos)
+			h.scheduleSignalAround(players, pos)
 		}
 	case isLectern(state) && boolProp(state, "powered"): // LecternBlock.tick: the page-turn pulse ends after 2
 		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
 			delete(h.rsDue, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(pos)
+			h.scheduleSignalAround(players, pos)
 		}
 	case isLamp(state):
-		// RedstoneLampBlock: lights at once, goes dark a scheduled 4 ticks
-		// after the power leaves (and stays lit if it comes back first).
+		// RedstoneLampBlock.neighborChanged: lights at once, and schedules
+		// going dark 4 ticks after the power leaves (the tick checks again,
+		// so power back in time keeps it lit).
 		want := h.inputPower(x, y, z, false) > 0
-		now := h.tick.Load()
-		due, pending := h.rsDue[h.rsKey(pos)]
 		switch {
 		case want && state == lampOff:
 			h.rsSet(players, pos, lampOn)
-		case !want && state == lampOn && !pending:
-			h.rsDue[h.rsKey(pos)] = now + 4
-			h.rsSchedule(pos, 4)
-		case pending && now >= due:
-			delete(h.rsDue, h.rsKey(pos))
-			if !want && state == lampOn {
-				h.rsSet(players, pos, lampOff)
-			}
+		case !want && state == lampOn:
+			h.scheduleTick(pos, lampOffDelay, tickNormal)
 		}
 	case isButton(state) && boolProp(state, "powered"):
 		// Scheduled unpress: only past the press window (neighbor updates land
@@ -309,7 +352,7 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 			h.rsSound(players, off, sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
-			h.scheduleSignalAround(pos)
+			h.scheduleSignalAround(players, pos)
 		}
 	case isTNT(state):
 		if h.inputPower(x, y, z, false) > 0 {
@@ -326,7 +369,11 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 	case isPistonBase(state):
 		h.updatePiston(players, pos, state)
 	case isMovingPiston(state):
-		h.finishMoving(players, pos)
+		// A live moving cell lands on its own clock (landMovingBlocks); one
+		// with no record — left over from before a restart — clears now.
+		if _, live := h.movingBlocks[h.rsKey(pos)]; !live {
+			h.finishMoving(players, pos)
+		}
 	case isDispenser(state) || isDropper(state):
 		h.updateBinTrigger(players, simPos{dim: h.rsDim, blockPos: pos}, state)
 	case isHopper(state):
@@ -446,7 +493,7 @@ func (h *hub) pressButton(players map[int32]*tracked, pos blockPos, state uint32
 	h.rsSet(players, pos, setBoolProp(state, "powered", true))
 	h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 	h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
-	h.scheduleSignalAround(pos)
+	h.scheduleSignalAround(players, pos)
 	h.rsSchedule(pos, uint64(ticks)) // the unpress timer
 }
 
@@ -464,7 +511,7 @@ func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32
 	}
 	h.rsSound(players, "minecraft:block.lever.click", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, pitch)
-	h.scheduleSignalAround(pos)
+	h.scheduleSignalAround(players, pos)
 }
 
 type evUseRedstone struct {
@@ -534,58 +581,3 @@ func (h *hub) arrowInCell(dim int, pos blockPos) bool {
 	}
 	return false
 }
-
-// propagateWires is RedStoneWireBlock.updatePowerStrength's reach within
-// one tick: a dust whose power changed notifies every block within two of
-// it, and every dust among them re-evaluates at once — so a line of dust
-// carries a signal end to end in the tick it changes, not a block per
-// tick. Turning off converges the way vanilla's does: each pass lowers a
-// stale dust by at least one, so the worklist runs until nothing moves
-// (bounded, for a pathological web).
-func (h *hub) propagateWires(players map[int32]*tracked, start blockPos) {
-	queue := []blockPos{start}
-	for work := 0; len(queue) > 0 && work < 1<<16; work++ {
-		p := queue[0]
-		queue = queue[1:]
-		for _, o := range wireReach {
-			n := blockPos{p.x + o[0], p.y + o[1], p.z + o[2]}
-			st := h.rsWorld().At(n.x, n.y, n.z)
-			if !isWire(st) {
-				continue
-			}
-			want := h.inputPower(n.x, n.y, n.z, true)
-			if wirePower(st) == want {
-				// The power is settled, but the shape may not be: a dust that
-				// gained or lost a neighbour still has to re-link.
-				if ns := h.connectWire(n.x, n.y, n.z, st); ns != st {
-					h.rsSet(players, n, ns)
-				}
-				continue
-			}
-			info, _ := worldgen.InfoForState(st)
-			ns := worldgen.SetProperty(info, st, "power", itoa(want))
-			h.rsSet(players, n, h.connectWire(n.x, n.y, n.z, ns))
-			h.scheduleSignalAround(n)
-			queue = append(queue, n)
-		}
-	}
-}
-
-// wireReach is every offset within two steps of a dust (its neighbours and
-// their neighbours): the blocks vanilla's dust update notifies.
-var wireReach = func() [][3]int {
-	seen := map[[3]int]bool{}
-	var out [][3]int
-	dirs := [][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}
-	for _, a := range dirs {
-		for _, b := range append(dirs, [3]int{0, 0, 0}) {
-			o := [3]int{a[0] + b[0], a[1] + b[1], a[2] + b[2]}
-			if o == [3]int{} || seen[o] {
-				continue
-			}
-			seen[o] = true
-			out = append(out, o)
-		}
-	}
-	return out
-}()

@@ -31,6 +31,7 @@ func TestPistonQuasiConnectivity(t *testing.T) {
 		// even though no direct neighbour of the piston is powered.
 		w.SetBlock(0, 72, 0, redstoneBlock)
 		h.updatePiston(h.playersRef, p, w.At(p.x, p.y, p.z))
+		h.runBlockEvents(h.playersRef) // the piston moves on its block event (end of the tick's block updates)
 		if !boolProp(w.At(p.x, p.y, p.z), "extended") {
 			t.Fatal("piston did not extend via quasi-connectivity")
 		}

@@ -60,9 +60,22 @@ func (h *hub) scheduleAroundIn(dim int, pos blockPos, delay uint64) {
 	}
 }
 
-// runUpdates processes the block updates due this tick (capped; overflow rolls
-// to the next tick so a large flood spreads its cost instead of stalling).
+// runUpdates is a tick's block-update phase, in vanilla's order: the
+// scheduled block ticks (blockticks.go), then the simulation queue below
+// (fluids, falling blocks, fire, growth…), then the block events (pistons),
+// then the moving pistons' own tick, which vanilla runs with the block
+// entities after all of that.
 func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
+	h.runBlockTicks(players, age)
+	h.runSimUpdates(players, age)
+	h.runBlockEvents(players)
+	h.landMovingBlocks(players, age)
+}
+
+// runSimUpdates processes the simulation updates due this tick (capped;
+// overflow rolls to the next tick so a large flood spreads its cost instead
+// of stalling).
+func (h *hub) runSimUpdates(players map[int32]*tracked, age uint64) {
 	due := h.pending[age]
 	if due == nil {
 		return
@@ -96,6 +109,7 @@ func (h *hub) runUpdates(players map[int32]*tracked, age uint64) {
 			continue
 		}
 		h.processUpdate(players, sp.dim, sp.blockPos)
+		h.nbRun(players) // any neighbour updates it queued
 	}
 }
 
@@ -187,6 +201,9 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 		h.supportSweep = true
 		h.dropUnsupported(players, dim, pos)
 		h.supportSweep = false
+	}
+	if old != state {
+		h.observersSee(players, dim, pos, state) // the shape update an observer watches for
 	}
 	// Break the fence and the knot goes with it, dropping whatever it held.
 	// Guarded on there being any knot at all: this is the choke point every

@@ -104,49 +104,72 @@ func (h *hub) repeaterLocked(pos blockPos, state uint32) bool {
 	return h.diodeSideSignal(pos, state, true) > 0
 }
 
-// updateRepeater: reads the cell behind (facing side), flips `powered` after
-// the configured delay, emits 15 out the front. rsDue holds the pending flip.
-// A locked repeater (a powered diode facing its side) holds its output.
+// updateRepeater is DiodeBlock.neighborChanged for a repeater: the LOCKED
+// property follows the side inputs (RepeaterBlock.updateShape), and an
+// unlocked repeater whose output disagrees with its input schedules its tick
+// delay×2 later (checkTickOnNeighbor) — at a priority that runs the end of a
+// diode chain first, and turning off before turning on.
 func (h *hub) updateRepeater(players map[int32]*tracked, pos blockPos, state uint32) {
 	if locked := h.repeaterLocked(pos, state); locked != boolProp(state, "locked") {
 		state = setBoolProp(state, "locked", locked)
 		h.rsSet(players, pos, state)
 	}
 	if boolProp(state, "locked") {
-		delete(h.rsDue, h.rsKey(pos)) // frozen: a pending tick fires into nothing (DiodeBlock.tick returns)
 		return
 	}
-	in := h.diodeInputSignal(pos, state) > 0 // DiodeBlock.shouldTurnOn
-	cur := boolProp(state, "powered")
-	now := h.tick.Load()
-	delay := uint64(repeaterDelay(state))
-	if due, pending := h.rsDue[h.rsKey(pos)]; pending {
-		if now < due {
-			return // a neighbour update while a tick is pending: one tick per position (LevelTicks dedup)
+	on := boolProp(state, "powered")
+	if on != (h.diodeInputSignal(pos, state) > 0) && !h.willTickThisTick(pos) {
+		prio := tickHigh
+		if h.diodePrioritized(pos, state) {
+			prio = tickExtremelyHigh
+		} else if on {
+			prio = tickVeryHigh
 		}
-		// The scheduled tick (DiodeBlock.tick): an input that went away
-		// before the tick still turns the output on, and a second tick then
-		// turns it off — a pulse shorter than the delay comes out the
-		// delay long, never lost.
-		delete(h.rsDue, h.rsKey(pos))
-		switch {
-		case cur && !in:
-			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(pos)
-		case !cur:
-			h.rsSet(players, pos, setBoolProp(state, "powered", true))
-			h.scheduleSignalAround(pos)
-			if !in {
-				h.rsDue[h.rsKey(pos)] = now + delay
-				h.rsSchedule(pos, delay)
-			}
-		}
+		h.scheduleTick(pos, uint64(repeaterDelay(state)), prio)
+	}
+}
+
+// repeaterTick is DiodeBlock.tick: an input that went away before the tick
+// still turns the output on, and a second tick then turns it off — a pulse
+// shorter than the delay comes out the delay long, never lost. A locked
+// repeater's tick does nothing.
+func (h *hub) repeaterTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if h.repeaterLocked(pos, state) {
 		return
 	}
-	if in != cur { // DiodeBlock.checkTickOnNeighbor
-		h.rsDue[h.rsKey(pos)] = now + delay
-		h.rsSchedule(pos, delay)
+	on := boolProp(state, "powered")
+	in := h.diodeInputSignal(pos, state) > 0
+	switch {
+	case on && !in:
+		state = setBoolProp(state, "powered", false)
+	case !on:
+		state = setBoolProp(state, "powered", true)
+		if !in {
+			h.scheduleTick(pos, uint64(repeaterDelay(state)), tickVeryHigh)
+		}
+	default:
+		return
 	}
+	h.rsSet(players, pos, state)
+	h.updateNeighborsInFront(players, pos, state) // DiodeBlock.onPlace
+}
+
+// diodePrioritized is DiodeBlock.shouldPrioritize: the block the output
+// faces is a diode that does not face the same way (it is not the next link
+// of a straight chain).
+func (h *hub) diodePrioritized(pos blockPos, state uint32) bool {
+	f, ok := propDir(state, "facing")
+	if !ok {
+		return false
+	}
+	out := f.opposite()
+	dx, dy, dz := out.delta()
+	fs := h.rsWorld().At(pos.x+dx, pos.y+dy, pos.z+dz)
+	if !isRepeater(fs) && !isComparator(fs) {
+		return false
+	}
+	ff, ok := propDir(fs, "facing")
+	return ok && ff != out
 }
 
 // updateCopperBulb latches like vanilla CopperBulbBlock: on the RISING edge of
@@ -168,13 +191,14 @@ func (h *hub) updateCopperBulb(players map[int32]*tracked, pos blockPos, state u
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
 	}
 	h.rsSet(players, pos, worldgen.CopperBulbSet(state, lit, powered))
-	h.scheduleSignalAround(pos) // relight + let an adjacent comparator re-read
+	h.scheduleSignalAround(players, pos) // relight + let an adjacent comparator re-read
 }
 
-// updateComparator: output = rear if rear >= strongest side (compare mode),
-// or rear - strongest side (subtract). The level lives in h.compOut (vanilla
-// keeps it in a block entity).
-func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state uint32) {
+// comparatorOutput is ComparatorBlock.calculateOutputSignal: the rear (with
+// the analog readings of containers and the like, through one solid block)
+// against the strongest side — compare passes the rear if no side is
+// stronger, subtract takes the side off.
+func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 	dx, dz := facingDelta(stateFacing(state))
 	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
@@ -200,63 +224,87 @@ func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state u
 			rear = sig
 		}
 	}
+	if rear == 0 {
+		return 0
+	}
 	side := h.diodeSideSignal(pos, state, false) // any source on a comparator's sides
-	out := 0
+	if side > rear {
+		return 0
+	}
 	info, _ := worldgen.InfoForState(state)
 	if worldgen.GetProperty(info, state, "mode") == "subtract" {
-		if out = rear - side; out < 0 {
-			out = 0
+		return rear - side
+	}
+	return rear
+}
+
+// updateComparator is ComparatorBlock.checkTickOnNeighbor: when its output
+// or its powered flag would change, it schedules its 2-tick refresh
+// (ComparatorBlock.getDelay) — HIGH when its output faces a diode side-on.
+func (h *hub) updateComparator(players map[int32]*tracked, pos blockPos, state uint32) {
+	if h.willTickThisTick(pos) {
+		return
+	}
+	out := h.comparatorOutput(pos, state)
+	if out != h.compOut[h.rsKey(pos)] || boolProp(state, "powered") != (out > 0) {
+		prio := tickNormal
+		if h.diodePrioritized(pos, state) {
+			prio = tickHigh
 		}
-	} else if rear >= side {
-		out = rear
+		h.scheduleTick(pos, comparatorDelay, prio)
 	}
-	// Vanilla ComparatorBlock.getDelay() = 2: the output change lands two game
-	// ticks after the input settles, via the same delayed-flip (rsDue) mechanism
-	// repeaters use. (Was applied immediately.)
-	key := simPos{dim: h.rsDim, blockPos: pos}
-	if h.compOut[key] == out && boolProp(state, "powered") == (out > 0) {
-		delete(h.rsDue, h.rsKey(pos)) // settled — cancel any pending flip
-		return
-	}
-	now := h.tick.Load()
-	due, pending := h.rsDue[h.rsKey(pos)]
-	if !pending {
-		h.rsDue[h.rsKey(pos)] = now + comparatorDelay
-		h.rsSchedule(pos, comparatorDelay)
-		return
-	}
-	if now >= due {
-		delete(h.rsDue, h.rsKey(pos))
+}
+
+// comparatorRefresh is ComparatorBlock.refreshOutputState — the tick, and
+// the mode click, which runs it at once. (Output > 0 is exactly
+// shouldTurnOn: compare needs rear ≥ side, subtract rear > side.)
+func (h *hub) comparatorRefresh(players map[int32]*tracked, pos blockPos, state uint32) {
+	key := h.rsKey(pos)
+	out := h.comparatorOutput(pos, state)
+	old := h.compOut[key]
+	if out == 0 {
+		delete(h.compOut, key)
+	} else {
 		h.compOut[key] = out
-		h.rsSet(players, pos, setBoolProp(state, "powered", out > 0))
-		h.scheduleSignalAround(pos)
 	}
+	info, _ := worldgen.InfoForState(state)
+	if old == out && worldgen.GetProperty(info, state, "mode") != "compare" {
+		return
+	}
+	if on := out > 0; boolProp(state, "powered") != on {
+		state = setBoolProp(state, "powered", on)
+		h.rsSet(players, pos, state)
+	}
+	h.updateNeighborsInFront(players, pos, state)
 }
 
 const comparatorDelay = 2 // ComparatorBlock.getDelay(): 2 game ticks
 
-// updateObserver: pulse 15 out the back for 2 ticks when the watched block
-// changes state (obsSeen remembers the last look).
+// updateObserver is the observer's side of a neighbour update. Vanilla's
+// observer reacts to the SHAPE update its watched block sends
+// (observersSee, from every block write); this catches the edits that do
+// not come through setBlockAt, by comparing what it sees with what it saw.
 func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uint32) {
-	now := h.tick.Load()
-	if boolProp(state, "powered") {
-		if at, ok := h.obsPulse[h.rsKey(pos)]; !ok || now >= at+observerPulseTicks {
-			delete(h.obsPulse, h.rsKey(pos))
-			h.rsSet(players, pos, setBoolProp(state, "powered", false))
-			h.scheduleSignalAround(pos)
-		}
-		return
-	}
 	dx, dy, dz := obsDelta(state)
 	watched := h.rsWorld().At(pos.x+dx, pos.y+dy, pos.z+dz)
 	prev, seen := h.obsSeen[h.rsKey(pos)]
 	h.obsSeen[h.rsKey(pos)] = watched
-	if seen && watched != prev {
-		h.obsPulse[h.rsKey(pos)] = now
-		h.rsSet(players, pos, setBoolProp(state, "powered", true))
-		h.rsSchedule(pos, observerPulseTicks)
-		h.scheduleSignalAround(pos)
+	if seen && watched != prev && !boolProp(state, "powered") {
+		h.observerStart(pos)
 	}
+}
+
+// observerTick is ObserverBlock.tick: the first tick raises the pulse and
+// schedules its end 2 later; the second ends it.
+func (h *hub) observerTick(players map[int32]*tracked, pos blockPos, state uint32) {
+	if boolProp(state, "powered") {
+		state = setBoolProp(state, "powered", false)
+	} else {
+		state = setBoolProp(state, "powered", true)
+		h.scheduleTick(pos, observerPulseTicks, tickNormal)
+	}
+	h.rsSet(players, pos, state)
+	h.updateNeighborsInFront(players, pos, state)
 }
 
 // updateDaylight is DaylightDetectorBlock.updateSignalStrength: the sky
@@ -286,7 +334,7 @@ func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uin
 	}
 	if daylightPower(state) != n {
 		h.rsSet(players, pos, daylightWith(daylightInverted(state), n))
-		h.scheduleSignalAround(pos)
+		h.scheduleSignalAround(players, pos)
 	}
 	h.rsSchedule(pos, 20) // vanilla re-checks every 20 ticks
 }
@@ -346,7 +394,7 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 				h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 			}
 			h.rsSet(players, pos, ns)
-			h.scheduleSignalAround(pos)
+			h.scheduleSignalAround(players, pos)
 			h.platesOn[h.rsKey(pos)] = h.tick.Load()
 		} else if platePower(s) > 0 {
 			h.platesOn[h.rsKey(pos)] = h.tick.Load()
@@ -369,7 +417,7 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 			_, _, _, _, off := plateKind(s)
 			h.rsSound(players, off, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
-			h.scheduleSignalAround(pos)
+			h.scheduleSignalAround(players, pos)
 		}
 	}
 }
@@ -391,10 +439,13 @@ func (h *hub) useRedstone1b(players map[int32]*tracked, pos blockPos, state uint
 		if worldgen.GetProperty(info, state, "mode") == "subtract" {
 			mode = "compare"
 		}
-		h.rsSet(players, pos, worldgen.SetProperty(info, state, "mode", mode))
+		ns := worldgen.SetProperty(info, state, "mode", mode)
+		h.rsSet(players, pos, ns)
 		h.rsSound(players, "minecraft:block.comparator.click", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, 1.1)
-		h.rsSchedule(pos, 1)
+		// ComparatorBlock.useWithoutItem: the output refreshes at once.
+		h.comparatorRefresh(players, pos, ns)
+		h.nbRun(players)
 	case isDaylight(state):
 		h.rsSet(players, pos, daylightWith(!daylightInverted(state), daylightPower(state)))
 		h.rsSchedule(pos, 1)

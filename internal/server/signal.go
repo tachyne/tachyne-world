@@ -607,16 +607,33 @@ func (h *hub) pistonHasSignal(pos blockPos, push rsDir) bool {
 
 // ---- scheduling -----------------------------------------------------------
 
-// scheduleSignalAround re-evaluates everything a signal change at pos can
-// reach next tick: the six neighbours as before, and — because direct power
-// crosses a conductor — the neighbours of every conducting neighbour too.
-func (h *hub) scheduleSignalAround(pos blockPos) {
-	h.scheduleAroundIn(h.rsDim, pos, 1)
+// scheduleSignalAround is a signal change's neighbour updates, delivered
+// at once (blockticks.go): the cell and its six neighbours, and — because
+// direct power crosses a conductor — the neighbours of every conducting
+// neighbour too (a lever's or button's updateNeighbours covers the block it
+// hangs on the same way).
+func (h *hub) scheduleSignalAround(players map[int32]*tracked, pos blockPos) {
+	h.nbAdd(pos)
+	h.nbAround(pos, 0, false)
 	for d := dDown; d <= dEast; d++ {
 		dx, dy, dz := d.delta()
 		n := blockPos{pos.x + dx, pos.y + dy, pos.z + dz}
 		if conducts(h.rsWorld().At(n.x, n.y, n.z)) {
-			h.scheduleAroundIn(h.rsDim, n, 1)
+			h.nbAround(n, 0, false)
 		}
 	}
+	h.nbRun(players)
+}
+
+// notifyTwoDeep is the update a changed dust cell (DefaultRedstoneWire-
+// Evaluator.updatePowerStrength) or torch (RedstoneTorchBlock.onPlace plus
+// its own block update) sends: the neighbours of each of its neighbours,
+// then its own neighbours.
+func (h *hub) notifyTwoDeep(players map[int32]*tracked, pos blockPos) {
+	for _, d := range updateOrder {
+		dx, dy, dz := d.delta()
+		h.nbAround(blockPos{pos.x + dx, pos.y + dy, pos.z + dz}, 0, false)
+	}
+	h.nbAround(pos, 0, false)
+	h.nbRun(players)
 }

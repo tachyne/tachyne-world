@@ -32,11 +32,14 @@ func TestComparatorThroughBlock(t *testing.T) {
 		}
 
 		// Fill the chest → the comparator reads it through the stone, after its
-		// vanilla 2-tick delay (first call schedules the flip, the second applies).
+		// vanilla 2-tick delay: the neighbour update schedules the refresh, and
+		// the refresh (its scheduled tick) applies it.
 		h.chests[simPos{blockPos: far}].slots[0] = invStack{item: 1, count: 64}
 		h.updateComparator(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
-		h.tick.Store(h.tick.Load() + comparatorDelay)
-		h.updateComparator(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
+		if h.compOut[simPos{blockPos: pos}] != 0 || !h.hasScheduledTick(pos) {
+			t.Errorf("the change should wait for the comparator's tick: out %d, scheduled %v", h.compOut[simPos{blockPos: pos}], h.hasScheduledTick(pos))
+		}
+		h.redstoneTick(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
 		if h.compOut[simPos{blockPos: pos}] <= 0 {
 			t.Errorf("comparator read %d through a solid block, want > 0", h.compOut[simPos{blockPos: pos}])
 		}

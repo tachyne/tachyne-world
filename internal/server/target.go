@@ -69,7 +69,7 @@ func (h *hub) hitTarget(players map[int32]*tracked, dim int, pos blockPos, state
 		}
 	}
 	h.scheduleIn(dim, pos, ticks)
-	h.scheduleAroundIn(dim, pos, 1) // let neighbours read the new signal
+	h.inDim(dim, func() { h.scheduleSignalAround(players, pos) }) // neighbours read the new signal at once
 }
 
 // updateTarget decays a fired target back to 0 once its hold has elapsed. A
@@ -83,6 +83,6 @@ func (h *hub) updateTarget(players map[int32]*tracked, pos blockPos, state uint3
 	delete(h.targetDue, key)
 	if targetPower(state) > 0 {
 		h.rsSet(players, pos, targetWithPower(state, 0))
-		h.scheduleAroundIn(h.rsDim, pos, 1)
+		h.scheduleSignalAround(players, pos)
 	}
 }

@@ -174,7 +174,7 @@ func (h *hub) useWoodShelf(players map[int32]*tracked, e evUseWoodShelf) {
 			h.playSoundDim(players, t.dim, "minecraft:block.shelf.place_item", sndBlock, cx, cy, cz, 1, 1)
 		}
 		h.shelfSync(players, pos)
-		h.scheduleSignalAround(pos.blockPos)
+		h.scheduleSignalAround(players, pos.blockPos)
 		return
 	}
 	// Powered: the chain's slots against hotbar slots 9 - (n-i)*3 + slot.
@@ -201,7 +201,7 @@ func (h *hub) useWoodShelf(players map[int32]*tracked, e evUseWoodShelf) {
 			swapped = true
 		}
 		h.shelfSync(players, sp)
-		h.scheduleSignalAround(cp)
+		h.scheduleSignalAround(players, cp)
 	}
 	if swapped {
 		h.playSoundDim(players, t.dim, "minecraft:block.shelf.multi_swap", sndBlock, cx, cy, cz, 1, 1)

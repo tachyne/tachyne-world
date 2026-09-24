@@ -126,6 +126,6 @@ func (h *hub) calcHook(players map[int32]*tracked, pos blockPos, state uint32) {
 	ns := setBoolProp(setBoolProp(state, "attached", attached), "powered", powered)
 	if ns != state {
 		h.rsSet(players, pos, ns)
-		h.scheduleAroundIn(h.rsDim, pos, 1) // a powered hook drives its neighbours
+		h.scheduleSignalAround(players, pos) // a powered hook drives its neighbours (TripWireHookBlock.notifyNeighbors)
 	}
 }

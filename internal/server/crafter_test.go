@@ -54,6 +54,11 @@ func TestCrafter(t *testing.T) {
 		if crafterTriggered(w.At(pos.x, pos.y, pos.z)) != true {
 			t.Error("crafter did not latch triggered on a rising edge")
 		}
+		// CrafterBlock crafts on the tick it scheduled (4 later), not at the edge.
+		if c.slots[0].count != 1 || !h.hasScheduledTick(pos) {
+			t.Errorf("the craft should wait for the crafter's tick: ingredient %d, scheduled %v", c.slots[0].count, h.hasScheduledTick(pos))
+		}
+		h.redstoneTick(h.playersRef, pos, w.At(pos.x, pos.y, pos.z))
 		if c.slots[0].count != 0 {
 			t.Errorf("edge-triggered craft left %d ingredient, want 0", c.slots[0].count)
 		}

@@ -280,7 +280,7 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 			movingBlock{moved: head, facing: dir, extending: true, source: true})
 	}
 	for _, p := range r.toPush {
-		h.scheduleAroundIn(h.rsDim, p, 1)
+		h.notifyAround(players, h.rsDim, p)
 	}
 	h.shoveOutOfBlocks(players, dest, r.push)
 	return true

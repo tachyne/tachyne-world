@@ -469,6 +469,14 @@ type hub struct {
 	pending map[uint64][]simPos
 	// movingBlocks are the moving_piston cells mid-animation (movingpiston.go).
 	movingBlocks map[simPos]movingBlock
+	movingOrder  []simPos // moving cells in the order they were made (their landing order)
+
+	// Vanilla's two update kinds for the redstone family (blockticks.go):
+	// scheduled ticks, the immediate neighbour-update cascade, and the
+	// block events (pistons) run after a tick's block updates.
+	bticks      blockTickQueue
+	nb          neighborUpdater
+	blockEvents []blockEvent
 	// fallDist counts the cells a falling block has dropped so far (falling.go).
 	fallDist map[simPos]int
 
@@ -566,7 +574,6 @@ type hub struct {
 	pressedAt map[simPos]uint64 // button-press ticks (for the unpress timer)
 	rsDue     map[simPos]uint64 // repeater flip due-ticks
 	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
-	obsPulse  map[simPos]uint64 // observer pulse start ticks
 	obsSeen   map[simPos]uint32 // observer last-seen watched state
 	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
 	platesOn  map[simPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
@@ -780,7 +787,6 @@ func newHub(w *world.World) *hub {
 		pressedAt:     map[simPos]uint64{},
 		rsDue:         map[simPos]uint64{},
 		targetDue:     map[simPos]uint64{},
-		obsPulse:      map[simPos]uint64{},
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
 		platesOn:      map[simPos]uint64{},
@@ -1018,7 +1024,7 @@ func (h *hub) run() {
 			h.campfireTick(players) // per-tick cook progress (vanilla cookTick)
 			h.psched.run(age)       // plugin-scheduled tasks see the previous tick's world
 			h.phases.lap(phaseScheduled)
-			h.runUpdates(players, age) // falling blocks, fluid flow
+			h.runUpdates(players, age) // scheduled ticks, falling blocks, fluid flow, block events
 			h.phases.lap(phaseBlockUpdates)
 			h.runBinFires(players, age) // dispenser/dropper ejections due this tick (4-tick delay)
 			h.updateFurnaces(players)   // smelting progress + lit state + viewer sync
@@ -2625,7 +2631,8 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// is a repeater in the Nether and not a write into the overworld at the
 	// same coordinates.
 	pos := blockPos{e.x, e.y, e.z}
-	h.scheduleAroundIn(e.dim, pos, 1)
+	h.observersSee(players, e.dim, pos, e.state)
+	h.notifyAround(players, e.dim, pos)
 	// A signal source that appears or disappears changes the STRONG power of
 	// the block it hangs on, and what that block drives can sit two cells away
 	// — dust on the far side of the block a lever is mounted to is the usual
@@ -2634,7 +2641,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// LeverBlock.affectNeighborsAfterRemoval updates the neighbours of the
 	// attached block as well as its own).
 	if h.isSignalSource(e.state) || h.isSignalSource(e.broken) {
-		h.inDim(e.dim, func() { h.scheduleSignalAround(pos) })
+		h.inDim(e.dim, func() { h.scheduleSignalAround(players, pos) })
 	}
 }
 

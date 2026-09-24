@@ -153,7 +153,7 @@ func (h *hub) updateRail(players map[int32]*tracked, pos blockPos, state uint32)
 	}
 	if ns := railWith(state, shape, powered); ns != state {
 		h.rsSet(players, pos, ns)
-		h.scheduleAroundIn(h.rsDim, pos, 1)
+		h.notifyAround(players, h.rsDim, pos)
 	}
 }
 

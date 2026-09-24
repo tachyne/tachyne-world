@@ -366,7 +366,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 				if !railPowered(h.rsWorld().At(pos.x, pos.y, pos.z)) {
 					s := h.rsWorld().At(pos.x, pos.y, pos.z)
 					h.rsSet(players, pos, railWith(s, railShape(s), true))
-					h.scheduleAroundIn(h.rsDim, pos, 1)
+					h.scheduleSignalAround(players, pos)
 					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
 				} else {
 					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
@@ -385,7 +385,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			pos := sp.blockPos
 			if s := h.rsWorld().At(pos.x, pos.y, pos.z); isDetectorRail(s) && railPowered(s) {
 				h.rsSet(players, pos, railWith(s, railShape(s), false))
-				h.scheduleAroundIn(h.rsDim, pos, 1)
+				h.scheduleSignalAround(players, pos)
 			}
 		})
 	}

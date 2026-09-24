@@ -95,6 +95,7 @@ func TestRedstoneTorchBurnsOutWhenToggledTooOften(t *testing.T) {
 	if !torchLit(torch) {
 		torch++
 	}
+	h.world.ForceLoad(10, 10, 1) // the torch's scheduled ticks run where blocks tick
 	h.world.SetBlock(10, 70, 10, worldgen.Stone)
 	h.world.SetBlock(10, 71, 10, torch)
 	h.world.SetBlock(10, 69, 10, worldgen.Air)
@@ -105,6 +106,7 @@ func TestRedstoneTorchBurnsOutWhenToggledTooOften(t *testing.T) {
 		lever := withProps(t, worldgen.BlockBase("lever"), map[string]string{"face": "wall", "facing": "east", "powered": map[bool]string{true: "true", false: "false"}[powered]})
 		h.world.SetBlock(11, 70, 10, lever)
 		h.updateRedstone(players, torchPos, h.world.At(10, 71, 10))
+		stepTicks(h, players, torchDelay) // the torch acts on its scheduled tick, 2 later
 	}
 	onceIsTheBaseline := func() bool { return torchLit(h.world.At(10, 71, 10)) }
 	flip(true)

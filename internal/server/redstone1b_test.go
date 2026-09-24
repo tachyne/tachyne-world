@@ -92,7 +92,9 @@ func TestObserverPulsesOnChange(t *testing.T) {
 	stepTicks(h, players, 3) // seed obsSeen
 	w.SetBlock(x-1, y, z, worldgen.Stone)
 	h.scheduleAround(blockPos{x - 1, y, z}, 1)
-	stepTicks(h, players, 2)
+	// The raw SetBlock is seen on the next tick's update; the pulse starts
+	// 2 ticks after that (ObserverBlock.startSignal: scheduleTick 2).
+	stepTicks(h, players, 3)
 	if !boolProp(w.At(x, y, z), "powered") {
 		t.Fatal("observer must pulse when the watched block changes")
 	}

@@ -81,29 +81,32 @@ func (h *hub) afterRemovalIn(players map[int32]*tracked, dim int, pos blockPos, 
 		}
 	}
 	if signalSource(old) {
-		h.scheduleSignalAround(pos)
+		h.scheduleSignalAround(players, pos)
 	}
 	if isAnyRail(old) && railShape(old) >= 2 && railShape(old) <= 5 {
 		h.scheduleAroundIn(h.rsDim, blockPos{pos.x, pos.y + 1, pos.z}, 1) // the rail this slope climbed to
 	}
 	if hasComparatorOutput(old) {
-		h.updateNeighbourForOutputSignal(pos)
+		h.updateNeighbourForOutputSignal(players, pos)
 	}
 }
 
 // updateNeighbourForOutputSignal is Level.updateNeighbourForOutputSignal:
 // each horizontal neighbour hears of the change, and a comparator one
 // block further on, behind a solid neighbour, does too.
-func (h *hub) updateNeighbourForOutputSignal(pos blockPos) {
+// Like every neighbour update these arrive at once; a comparator then takes
+// its own 2 ticks.
+func (h *hub) updateNeighbourForOutputSignal(players map[int32]*tracked, pos blockPos) {
 	for d := dNorth; d <= dEast; d++ {
 		dx, _, dz := d.delta()
 		n := blockPos{pos.x + dx, pos.y, pos.z + dz}
-		h.rsSchedule(n, 1)
+		h.nbAdd(n)
 		if conducts(h.rsWorld().At(n.x, n.y, n.z)) {
 			beyond := blockPos{n.x + dx, n.y, n.z + dz}
 			if isComparator(h.rsWorld().At(beyond.x, beyond.y, beyond.z)) {
-				h.rsSchedule(beyond, 1)
+				h.nbAdd(beyond)
 			}
 		}
 	}
+	h.nbRun(players)
 }

@@ -83,7 +83,7 @@ func (h *hub) trappedChestChanged(dim int, pos blockPos) {
 	if dim != dimOverworld || !isTrappedChest(h.worldFor(dim).At(pos.x, pos.y, pos.z)) {
 		return
 	}
-	h.scheduleSignalAround(pos)
+	h.inDim(dim, func() { h.scheduleSignalAround(h.playersRef, pos) })
 }
 
 type chest struct {

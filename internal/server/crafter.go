@@ -58,7 +58,12 @@ func crafterFront(s uint32) (int, int, int) {
 	return 0, 0, 1 // south_up
 }
 
-// updateCrafter tracks the redstone edge; a rising edge crafts once.
+// crafterDelay is CrafterBlock.neighborChanged's scheduleTick(pos, this, 4):
+// a crafter crafts 4 ticks after its rising edge.
+const crafterDelay = 4
+
+// updateCrafter is CrafterBlock.neighborChanged: a rising edge latches
+// TRIGGERED and schedules the craft; a falling edge clears the latch.
 func (h *hub) updateCrafter(players map[int32]*tracked, pos simPos, state uint32) {
 	// A crafting=true state is the animation flag — settle it back to false.
 	if (state-crafterMin)/24 == 0 {
@@ -69,15 +74,19 @@ func (h *hub) updateCrafter(players map[int32]*tracked, pos simPos, state uint32
 	if powered == crafterTriggered(state) {
 		return
 	}
-	state = crafterWithTriggered(state, powered)
 	if powered {
-		state = crafterWithCrafting(state, true) // brief craft animation
-		h.setBlockAt(players, pos.dim, pos.blockPos, state)
-		h.crafterCraft(players, pos, state)
-		h.scheduleIn(pos.dim, pos.blockPos, 4) // clear the animation shortly after
-		return
+		h.inDim(pos.dim, func() { h.scheduleTick(pos.blockPos, crafterDelay, tickNormal) })
 	}
+	h.setBlockAt(players, pos.dim, pos.blockPos, crafterWithTriggered(state, powered))
+}
+
+// crafterTick is CrafterBlock.tick → dispenseFrom: the craft itself, which
+// does not look at the power again (a pulse shorter than 4 still crafts).
+func (h *hub) crafterTick(players map[int32]*tracked, pos simPos, state uint32) {
+	state = crafterWithCrafting(state, true) // brief craft animation
 	h.setBlockAt(players, pos.dim, pos.blockPos, state)
+	h.crafterCraft(players, pos, state)
+	h.scheduleIn(pos.dim, pos.blockPos, 4) // clear the animation shortly after
 }
 
 // crafterCraft matches the 3×3 grid and, on a hit, consumes one of each

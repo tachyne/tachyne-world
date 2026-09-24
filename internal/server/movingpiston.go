@@ -57,9 +57,44 @@ func legacyDirID(d [3]int) int32 {
 func (h *hub) placeMoving(players map[int32]*tracked, pos blockPos, moving uint32, mb movingBlock) {
 	h.rsSet(players, pos, moving)
 	mb.due = h.tick.Load() + movingPistonTicks
-	h.movingBlocks[simPos{dim: h.rsDim, blockPos: pos}] = mb
+	key := simPos{dim: h.rsDim, blockPos: pos}
+	h.movingBlocks[key] = mb
+	h.movingOrder = append(h.movingOrder, key)
 	h.toNearbyEv(players, h.rsDim, float64(pos.x), float64(pos.z), h.movingFrame(pos, mb))
-	h.rsSchedule(pos, movingPistonTicks)
+}
+
+// landMovingBlocks is the moving cells' block-entity tick, which vanilla
+// runs after the tick's block events: each cell whose two ticks are up lays
+// its block down, in the order the cells were made.
+func (h *hub) landMovingBlocks(players map[int32]*tracked, age uint64) {
+	if len(h.movingOrder) == 0 {
+		return
+	}
+	order := h.movingOrder
+	h.movingOrder = nil
+	var keep []simPos
+	for i, key := range order {
+		mb, ok := h.movingBlocks[key]
+		if !ok {
+			continue // finished early (finalTickMoving) or replaced
+		}
+		if mb.due > age {
+			keep = append(keep, key)
+			continue
+		}
+		if h.worldFor(key.dim) == nil || !h.canTickBlocksAt(key) {
+			keep = append(keep, order[i])
+			continue
+		}
+		h.inDim(key.dim, func() {
+			if isMovingPiston(h.rsWorld().At(key.x, key.y, key.z)) {
+				h.finishMoving(players, key.blockPos)
+			} else {
+				delete(h.movingBlocks, key) // the cell was broken meanwhile
+			}
+		})
+	}
+	h.movingOrder = append(keep, h.movingOrder...)
 }
 
 // movingFrame is the cell's block-entity update for viewers.
@@ -89,9 +124,7 @@ func landedStateOf(state uint32) uint32 {
 
 // finishMoving is the block entity's last tick: the carried block replaces
 // the moving cell (air when the record is gone — a cell left over from
-// before a restart) and the neighbours hear about it. A neighbour's block
-// update reaching the cell early changes nothing; the cell lands on its
-// own schedule.
+// before a restart) and the neighbours hear about it at once.
 func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	key := simPos{dim: h.rsDim, blockPos: pos}
 	mb, ok := h.movingBlocks[key]
@@ -104,9 +137,9 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 		final = landedStateOf(mb.moved)
 	}
 	h.rsSet(players, pos, final)
-	h.scheduleAroundIn(h.rsDim, pos, 1)
+	h.notifyAround(players, h.rsDim, pos)
 	if ok && isPistonBase(final) {
-		h.scheduleSignalAround(pos)
+		h.scheduleSignalAround(players, pos)
 	}
 }
 
@@ -125,6 +158,6 @@ func (h *hub) finalTickMoving(players map[int32]*tracked, pos blockPos) bool {
 	} else {
 		h.rsSet(players, pos, landedStateOf(mb.moved))
 	}
-	h.scheduleAroundIn(h.rsDim, pos, 1)
+	h.notifyAround(players, h.rsDim, pos)
 	return true
 }

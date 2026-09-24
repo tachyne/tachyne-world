@@ -191,8 +191,8 @@ func (h *hub) lecternPulse(players map[int32]*tracked, pos simPos) {
 		}
 		h.rsDue[pos] = h.tick.Load() + 2
 		h.rsSchedule(pos.blockPos, 2)
-		h.scheduleSignalAround(pos.blockPos)
-		h.updateNeighbourForOutputSignal(pos.blockPos)
+		h.scheduleSignalAround(players, pos.blockPos)
+		h.updateNeighbourForOutputSignal(players, pos.blockPos)
 	})
 }
 
@@ -339,7 +339,7 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	// a comparator beside the shelf reads (slot + 1); persisted with the shelf.
 	h.shelfLast[pos] = slot
 	h.shelfSyncState(players, t.dim, pos.blockPos, state, shelf)
-	h.scheduleSignalAround(pos.blockPos)
+	h.scheduleSignalAround(players, pos.blockPos)
 }
 
 // shelfSyncState mirrors slot occupancy into the block-state bools.

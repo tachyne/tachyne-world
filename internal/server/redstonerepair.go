@@ -21,7 +21,7 @@ func (h *hub) rescheduleRedstone() {
 	if w == nil {
 		return
 	}
-	wires, pistons := 0, 0
+	wires, pistons, components := 0, 0, 0
 	for _, c := range w.EditedChunks() {
 		for _, e := range w.EditedBlocks(c[0], c[1]) {
 			switch {
@@ -29,13 +29,19 @@ func (h *hub) rescheduleRedstone() {
 				wires++
 			case isPistonBase(e.State):
 				pistons++
+			case isRSTorch(e.State), isRepeater(e.State), isComparator(e.State), isLamp(e.State), isObserver(e.State):
+				// Scheduled ticks are not saved: a torch, diode or lamp that was
+				// waiting on one re-checks itself (and schedules it again if it
+				// still disagrees with its input), and an observer takes its
+				// first look at what it watches.
+				components++
 			default:
 				continue
 			}
 			h.scheduleIn(dimOverworld, blockPos{int(c[0])*16 + e.LX, e.Y, int(c[1])*16 + e.LZ}, 1)
 		}
 	}
-	if wires > 0 || pistons > 0 {
-		log.Printf("redstone sweep: re-evaluating %d powered dust cell(s) and %d piston(s)", wires, pistons)
+	if wires > 0 || pistons > 0 || components > 0 {
+		log.Printf("redstone sweep: re-evaluating %d powered dust cell(s), %d piston(s) and %d component(s)", wires, pistons, components)
 	}
 }

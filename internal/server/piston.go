@@ -70,19 +70,65 @@ func headFor(base uint32) uint32 {
 	return head
 }
 
-// updatePiston reacts to power: extend when powered, retract when not.
-func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint32) {
+// pistonPowered is PistonBaseBlock.getNeighborSignal (signal.go): any side
+// but the push face, then quasi-connectivity through the block above.
+func (h *hub) pistonPowered(pos blockPos, state uint32) bool {
 	dx, dy, dz := pistonDelta(state)
-	// PistonBaseBlock.getNeighborSignal (signal.go): any side but the push
-	// face, then quasi-connectivity through the block above.
-	powered := false
 	if push, ok := dirFromDelta(dx, dy, dz); ok {
-		powered = h.pistonHasSignal(pos, push)
+		return h.pistonHasSignal(pos, push)
 	}
+	return false
+}
+
+// updatePiston is PistonBaseBlock.checkIfExtend: a piston whose power and
+// extension disagree queues a block event — extend or retract — and moves
+// when the block events run, at the end of the tick's block updates
+// (queueBlockEvent). An extension that cannot move its blocks is not queued.
+func (h *hub) updatePiston(players map[int32]*tracked, pos blockPos, state uint32) {
+	powered := h.pistonPowered(pos, state)
 	extended := boolProp(state, "extended")
-	if powered && !extended {
+	switch {
+	case powered && !extended:
+		dx, dy, dz := pistonDelta(state)
+		if h.pistonCanMove(pos, [3]int{dx, dy, dz}) {
+			h.queueBlockEvent(pos, true)
+		}
+	case !powered && extended:
+		h.queueBlockEvent(pos, false)
+	}
+}
+
+// pistonCanMove is checkIfExtend's PistonStructureResolver.resolve: would
+// an extension move (or break) what is in front, without doing it.
+func (h *hub) pistonCanMove(pos blockPos, dir [3]int) bool {
+	r := &pistonResolver{h: h, pistonPos: pos, startPos: stepPos(pos, dir, 1), push: dir, extending: true}
+	return r.resolve()
+}
+
+// pistonEvent is PistonBaseBlock.triggerEvent: the power is read again, so
+// an extension whose power is already gone does nothing, and a retraction
+// whose power came back leaves the piston out.
+func (h *hub) pistonEvent(players map[int32]*tracked, pos blockPos, extend bool) {
+	state := h.rsWorld().At(pos.x, pos.y, pos.z)
+	if !isPistonBase(state) {
+		return
+	}
+	powered := h.pistonPowered(pos, state)
+	extended := boolProp(state, "extended")
+	dx, dy, dz := pistonDelta(state)
+	// The move writes many cells; like vanilla's moveBlocks (which sets them
+	// without neighbour updates and updates afterwards), nothing reacts to a
+	// half-moved structure: the updates it causes are held until it is done.
+	held := h.nb.running
+	h.nb.running = true
+	defer func() {
+		h.nb.running = held
+		h.nbRun(players)
+	}()
+	switch {
+	case extend && powered && !extended:
 		h.extendPiston(players, pos, state, [3]int{dx, dy, dz})
-	} else if !powered && extended {
+	case !extend && !powered && extended:
 		h.retractPiston(players, pos, state, [3]int{dx, dy, dz})
 	}
 }
@@ -95,7 +141,7 @@ func (h *hub) extendPiston(players map[int32]*tracked, pos blockPos, state uint3
 	h.rsSet(players, pos, setBoolProp(state, "extended", true))
 	h.rsSound(players, "minecraft:block.piston.extend", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
-	h.scheduleSignalAround(pos)
+	h.scheduleSignalAround(players, pos)
 }
 
 // retractPiston pulls the head back into the base (the base itself is a
@@ -127,5 +173,5 @@ func (h *hub) retractPiston(players map[int32]*tracked, pos blockPos, state uint
 	}
 	h.rsSound(players, "minecraft:block.piston.contract", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.7)
-	h.scheduleSignalAround(pos)
+	h.scheduleSignalAround(players, pos)
 }
