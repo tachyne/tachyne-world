@@ -253,7 +253,7 @@ func (h *hub) rollReinforcements() float64 {
 // 7-40 blocks away (never within 7 of a player), already hunting the
 // attacker; caller and recruit each lose 0.05 chance.
 func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *tracked) {
-	if m.reinf <= 0 || m.dim != 0 || h.rules.Difficulty != diffHard || !h.rules.DoMobSpawning {
+	if m.reinf <= 0 || h.rules.Difficulty != diffHard || !h.rules.DoMobSpawning {
 		return
 	}
 	if h.rng.Float64() >= m.reinf {
@@ -262,7 +262,7 @@ func (h *hub) zombieReinforce(players map[int32]*tracked, m *mob, attacker *trac
 	for i := 0; i < 50; i++ {
 		off := func() int { return (7 + h.rng.Intn(34)) * (h.rng.Intn(3) - 1) }
 		sx, sz := int(m.x)+off(), int(m.z)+off()
-		if !h.world.Spawnable(sx, sz) {
+		if !h.worldFor(m.dim).Spawnable(sx, sz) {
 			continue
 		}
 		if h.nearestPlayer(players, float64(sx), float64(sz), 7) != nil {

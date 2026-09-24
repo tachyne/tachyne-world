@@ -80,7 +80,7 @@ func (h *hub) chestOpenCount(dim int, pos blockPos) int {
 // trappedChestChanged re-evaluates the redstone around a trapped chest whose
 // viewer count just changed (open or close) — its signal is that count.
 func (h *hub) trappedChestChanged(dim int, pos blockPos) {
-	if dim != dimOverworld || !isTrappedChest(h.worldFor(dim).At(pos.x, pos.y, pos.z)) {
+	if !isTrappedChest(h.worldFor(dim).At(pos.x, pos.y, pos.z)) {
 		return
 	}
 	h.inDim(dim, func() { h.scheduleSignalAround(h.playersRef, pos) })

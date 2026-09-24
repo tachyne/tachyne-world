@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **More things work outside the overworld.** Trapped chests give a
+  redstone signal in the Nether and the End, endermen there pick up and
+  put down blocks, copper golems can be built there, and a zombie can call
+  reinforcements in any dimension.
 - **The overworld's weather stays in the overworld.** When it rained in
   the overworld, a Nether farm was watered, a Nether fire was put out and a
   Nether cauldron filled, if the overworld column at the same coordinates

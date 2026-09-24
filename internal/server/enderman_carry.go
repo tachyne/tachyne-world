@@ -84,10 +84,10 @@ func enderCarryMeta(eid int32, state uint32) []byte {
 }
 
 // endermanCarry advances one enderman's pick-up/put-down behaviour. Like
-// vanilla, it needs the mobGriefing gamerule and only touches the overworld
-// (the hub simulates block edits there).
+// vanilla, it needs the mobGriefing gamerule, and it works in any dimension:
+// a Nether enderman lifts nylium and fungi (#enderman_holdable).
 func (h *hub) endermanCarry(players map[int32]*tracked, m *mob) {
-	if m.dim != 0 || m.dying != 0 || !h.rules.MobGriefing {
+	if m.dying != 0 || !h.rules.MobGriefing {
 		return
 	}
 	if m.carriedBlock == 0 {

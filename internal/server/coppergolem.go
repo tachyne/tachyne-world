@@ -73,7 +73,7 @@ func (h *hub) updateCopperGolems(players map[int32]*tracked) {
 			}
 			if m.oxidation >= 3 {
 				bx, by, bz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
-				if h.world.At(bx, by, bz) == worldgen.Air && h.rng.Float32() <= copperStatueChance {
+				if h.worldFor(m.dim).At(bx, by, bz) == worldgen.Air && h.rng.Float32() <= copperStatueChance {
 					h.copperGolemToStatue(players, m, bx, by, bz)
 					continue
 				}
@@ -170,7 +170,7 @@ func isCarvedPumpkin(state uint32) bool {
 // is consumed and the golem spawns there, the copper block below becomes a copper
 // chest facing the pumpkin.
 func (h *hub) checkCopperGolemBuild(players map[int32]*tracked, dim, x, y, z int, state uint32) {
-	if dim != 0 || !isCarvedPumpkin(state) || !copperBlockStates[h.world.At(x, y-1, z)] {
+	if !isCarvedPumpkin(state) || !copperBlockStates[h.worldFor(dim).At(x, y-1, z)] {
 		return
 	}
 	facing := "north"
