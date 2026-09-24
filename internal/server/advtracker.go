@@ -335,8 +335,20 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		if c.recipe != "" && c.recipe != m.recipe {
 			return false
 		}
-		for _, set := range c.ingredients { // each predicate set must be satisfied by one input
-			if !containsAny(m.ingredients, set) {
+		// RecipeCraftedTrigger.matches: each ingredient predicate, in order,
+		// takes the first still-unclaimed input it accepts, so four sherd
+		// predicates need four sherds, not one.
+		remaining := append([]int32(nil), m.ingredients...)
+		for _, set := range c.ingredients {
+			found := false
+			for i, it := range remaining {
+				if containsID(set, it) {
+					remaining = append(remaining[:i], remaining[i+1:]...)
+					found = true
+					break
+				}
+			}
+			if !found {
 				return false
 			}
 		}

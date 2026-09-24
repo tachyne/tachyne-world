@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **"Careful Restoration" needs four sherds.** Crafting a decorated pot
+  from one pottery sherd and three bricks granted the advancement for a
+  pot made only of sherds. As in vanilla, each sherd the advancement asks
+  for now has to be a different item in the grid.
 - **Mob drops follow vanilla's odds.** A polar bear now drops cod three
   times as often as salmon, and a witch drops sticks twice as often as
   each of her other drops. Every choice in a mob's drop table was being
