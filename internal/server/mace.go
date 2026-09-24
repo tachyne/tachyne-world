@@ -73,7 +73,6 @@ func (h *hub) smashEffects(players map[int32]*tracked, t *tracked, target *mob, 
 		t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: 0, VY: maceKnockPower * mult, VZ: 0})
 		now := h.tick.Load()
 		t.spinUntil = now + windBurstGrace // let the launch through the speed check
-		t.moveBudget = budgetCapTicks * spinPerTick
 	}
 }
 

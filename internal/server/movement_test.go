@@ -11,14 +11,13 @@ import (
 // impossible position claim (AUTHORITY) while never tripping on vanilla play.
 
 // walkSetup places a survival player on the surface at (0.5, 0.5) with an
-// empty movement budget and the clock at a known tick.
+// the clock at a known tick.
 func walkSetup(h *hub) (*tracked, map[int32]*tracked) {
 	pl := testTracked()
 	pl.x, pl.z = 0.5, 0.5
 	pl.y = float64(h.world.SurfaceFeet(0, 0))
 	h.tick.Store(100)
 	pl.lastMoveTick = 100
-	pl.moveBudget = 0
 	return pl, map[int32]*tracked{1: pl}
 }
 
@@ -40,22 +39,6 @@ func TestLegitWalkIsNeverRejected(t *testing.T) {
 	}
 }
 
-func TestDiagonalMotionCostsEuclideanNotAxisSum(t *testing.T) {
-	// Regression (live bug): moving forward AND up at once was charged
-	// hypot(dx,dz)+dy — an axis SUM — so uphill sprint-jumping drained the
-	// budget ~40% faster than flat sprinting and rubber-banded legit climbing.
-	h := newHub(world.New(1))
-	pl, players := walkSetup(h)
-	pl.moveBudget = 1.0
-	pl.lastMoveTick = 101 // no replenish on this event: the budget is exactly 1.0
-	h.tick.Store(101)
-	// Euclidean cost √(0.6²+0.6²)=0.85 fits the budget; the old sum (1.2) didn't.
-	h.onMove(players, pl, evMove{eid: 1, x: pl.x + 0.6, y: pl.y + 0.6, z: pl.z})
-	if math.Abs(pl.x-(0.5+0.6)) > 0.01 { // relative-move fixed point quantizes slightly
-		t.Fatalf("diagonal up+forward move within Euclidean budget was rejected (x=%v)", pl.x)
-	}
-}
-
 func TestSustainedUphillSprintIsNeverRejected(t *testing.T) {
 	h := newHub(world.New(1))
 	pl, players := walkSetup(h)
@@ -73,19 +56,32 @@ func TestSustainedUphillSprintIsNeverRejected(t *testing.T) {
 	}
 }
 
-func TestSpeedHackOutrunsItsBudget(t *testing.T) {
+// Vanilla's "moved too quickly": a packet may carry the player up to 10
+// blocks (squared 100) from the last good position, per move packet seen in
+// the tick; sustained fast motion within that is never refused.
+func TestMovedTooQuicklyIsVanillas(t *testing.T) {
 	h := newHub(world.New(1))
 	pl, players := walkSetup(h)
-	start := pl.x
-	// 3 blocks per tick = 60 m/s, eight times sprint speed.
-	for i := 1; i <= 40; i++ {
-		h.tick.Store(100 + uint64(i))
-		h.onMove(players, pl, evMove{eid: 1, x: pl.x + 3, y: pl.y, z: pl.z, onGround: true})
+	pl.gamemode = gmCreative
+	pl.y += 30
+	x := pl.x
+	h.tick.Store(101)
+	h.onMove(players, pl, evMove{eid: 1, x: x + 9.9, y: pl.y, z: pl.z})
+	if pl.x != x+9.9 {
+		t.Fatalf("a 9.9-block packet was refused (x=%v)", pl.x)
 	}
-	// A compliant server would have moved 120 blocks; the budget (0.5/tick +
-	// burst bank) must cap the actual advance far below that.
-	if got := pl.x - start; got > 40 {
-		t.Fatalf("speed hack advanced %.1f blocks in 2s (budget should cap near ~30)", got)
+	h.tick.Store(102)
+	h.onMove(players, pl, evMove{eid: 1, x: pl.x + 10.1, y: pl.y, z: pl.z})
+	if pl.x != x+9.9 {
+		t.Fatalf("a 10.1-block packet was applied (x=%v)", pl.x)
+	}
+	// Fast creative flight, 3 blocks a tick for ten seconds: never refused.
+	for i := 1; i <= 200; i++ {
+		h.tick.Store(200 + uint64(i))
+		h.onMove(players, pl, evMove{eid: 1, x: pl.x + 3, y: pl.y, z: pl.z})
+	}
+	if pl.x < x+9.9+3*199 {
+		t.Fatalf("fast flight was throttled: x=%.1f", pl.x)
 	}
 }
 
@@ -158,8 +154,7 @@ func TestCreativeMayFly(t *testing.T) {
 	pl.y = surface + 30
 	// Sustained diagonal ascending SPRINT-fly: ~1.09 blocks/tick horizontal
 	// (double-tap sprint while flying, vanilla's fastest creative motion) plus
-	// 0.38/tick up — legitimate, must never hitch. This is the case that
-	// rubber-banded at flyPerTick=1.0 (it drained the bank over a few seconds).
+	// 0.38/tick up — legitimate, must never hitch.
 	for i := 1; i <= 400; i++ {
 		h.tick.Store(100 + uint64(i))
 		h.onMove(players, pl, evMove{eid: 1, x: pl.x + 1.09, y: pl.y + 0.38, z: pl.z})

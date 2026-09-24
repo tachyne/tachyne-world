@@ -1,5 +1,7 @@
 package server
 
+import "github.com/tachyne/tachyne-world/internal/worldgen"
+
 // PanicGoal's speed modifier, per species. Vanilla registers the goal
 // separately on each animal with its own number — a cow bolts at twice its
 // walking speed, a llama barely picks up the pace, a wandering trader
@@ -12,7 +14,9 @@ var panicSpeeds = func() map[int]float64 {
 		"sheep": 1.25, "pig": 1.25, "cod": 1.25, "salmon": 1.25, "tropical_fish": 1.25,
 		"pufferfish": 1.25, "tadpole": 1.25, "chicken": 1.4, "llama": 1.2, "turtle": 1.2,
 		"strider": 1.65, "wandering_trader": 0.5, "camel": 4.0, "allay": 2.5,
-		"wolf": 1.5, "polar_bear": 2.0,
+		"wolf": 1.5, "polar_bear": 2.0, "goat": 2.0, "cat": 1.5, "parrot": 1.25, "fox": 2.2,
+		"horse": 1.2, "donkey": 1.2, "mule": 1.2, // AbstractHorse's MountPanicGoal
+		"copper_golem": 1.5, "nautilus": 1.6,
 	} {
 		if id, ok := entityByName[name]; ok {
 			out[id] = sp
@@ -38,7 +42,7 @@ func panicSpeed(etype int) float64 {
 // floor, freezing and lightning.
 func panicsAt(m *mob, dt dmgType) bool {
 	if panicNever[m.etype] {
-		return false // a goat rams, an armadillo rolls up, a zombie horse plods
+		return false // an armadillo rolls up, a zombie or skeleton horse plods
 	}
 	// PolarBear's goal takes the environmental tag for an adult and the full
 	// one for a cub, which is why a mother stands her ground and a cub bolts.
@@ -54,7 +58,7 @@ func panicsAt(m *mob, dt dmgType) bool {
 // rolling up.
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
-	for _, n := range []string{"goat", "armadillo", "zombie_horse", "ocelot", "snow_golem"} {
+	for _, n := range []string{"armadillo", "zombie_horse", "skeleton_horse", "ocelot", "snow_golem"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}
@@ -74,3 +78,45 @@ var panicEnvironmentalOnly = func() map[int]bool {
 	}
 	return out
 }()
+
+// panicTarget is PanicGoal.findRandomPosition → DefaultRandomPos.getPos(mob,
+// 5, 4): ten random tries within five blocks sideways and four up or down,
+// each landing on a spot the mob could stand, keeping the one it values
+// most (PathfinderMob.getWalkTargetValue: an animal favours grass, 10 over
+// the brightness it otherwise weighs). The panic used to run in a straight
+// line away from the attacker, which vanilla never does.
+func (h *hub) panicTarget(m *mob) (float64, float64, bool) {
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return 0, 0, false
+	}
+	bx, by, bz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
+	best, found := -1e9, false
+	var tx, tz float64
+	for i := 0; i < 10; i++ {
+		x := bx + h.rng.Intn(11) - 5
+		y := by + h.rng.Intn(9) - 4
+		z := bz + h.rng.Intn(11) - 5
+		if !w.Loaded(int32(x>>4), int32(z>>4)) {
+			continue
+		}
+		// Settle onto the ground within the vertical window.
+		for dy := 0; dy < 8 && y > by-4 && !worldgen.Collides(w.At(x, y-1, z)); dy++ {
+			y--
+		}
+		below := w.At(x, y-1, z)
+		if !worldgen.Collides(below) || worldgen.Collides(w.At(x, y, z)) || worldgen.Collides(w.At(x, y+1, z)) ||
+			worldgen.IsLava(w.At(x, y, z)) {
+			continue
+		}
+		v := 0.0
+		if !m.hostile && below == worldgen.GrassBlock {
+			v = 10
+		}
+		if v > best {
+			best, found = v, true
+			tx, tz = float64(x)+0.5, float64(z)+0.5
+		}
+	}
+	return tx, tz, found
+}

@@ -96,6 +96,15 @@ the public history since the project was open-sourced on 2026-07-10.
     saved under "@a".
   - /time takes vanilla's forms (set, add, query, with d/s/t units) and,
     like /say, needs op.
+- **No more snap-backs in fast flight.** The movement check now uses
+  vanilla's rule: a single move may carry you up to 10 blocks. It replaces
+  a stricter speed budget of the engine's own, which hitched fast creative
+  flight every few seconds whenever the server ran a slow tick.
+- **Panicking animals run like vanilla's**, to one random spot nearby after
+  another, preferring grass, rather than straight away from whoever hit
+  them. Goats panic when struck; skeleton horses never do. Only dolphins
+  and axolotls walk back to the water; stranded squid and fish flop where
+  they lie.
 - **The tab list shows each player's game mode.** Everyone was listed as
   creative. A spectator now looks like one to everyone else, and to their
   own client, which reads it from the same entry.

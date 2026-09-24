@@ -100,7 +100,6 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		}
 		t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: ex / n * kb, VY: ey / n * kb, VZ: ez / n * kb})
 		t.spinUntil = h.tick.Load() + windBurstGrace // let the launch through the speed check
-		t.moveBudget = budgetCapTicks * spinPerTick
 	}
 	for _, om := range h.mobs {
 		if om.dim != dim || om.dying > 0 {

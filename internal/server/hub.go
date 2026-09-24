@@ -329,7 +329,8 @@ type tracked struct {
 	xpPoints int // points into the current level (bar = points/xpToNext)
 
 	// Movement authority (validateMove) — zero values are correct at join.
-	moveBudget         float64 // banked movement allowance in blocks (accrues per tick)
+	moveTickSeen       uint64  // the tick movePackets counts in
+	movePackets        int     // move packets received this tick (vanilla's receivedMovePacketCount)
 	lastMoveTick       uint64  // tick of the last vetted move event
 	contactX, contactZ float64 // position at the last contact check (berry bushes hurt only while you move)
 	contactY           float64 // …and its height (a honey slide is a slow fall against the block)

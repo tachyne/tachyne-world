@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -53,12 +54,14 @@ func TestHitCowPanicsAndFlees(t *testing.T) {
 	if m.panic != panicTicks || m.fleeX != atk.x {
 		t.Fatalf("hit cow should panic away from attacker: panic=%d fleeX=%v", m.panic, m.fleeX)
 	}
-	x0 := m.x
+	// PanicGoal runs to random spots nearby, not away from the attacker:
+	// the cow must be running somewhere.
+	x0, z0 := m.x, m.z
 	for i := 0; i < 20; i++ {
 		h.updateMobs(players)
 	}
-	if m.x > x0+0.01 { // attacker is to the +x side, so the cow must flee toward -x
-		t.Errorf("fleeing cow drifted toward the attacker: x0=%v x=%v", x0, m.x)
+	if math.Hypot(m.x-x0, m.z-z0) < 0.5 {
+		t.Errorf("a panicking cow barely moved: (%v,%v) -> (%v,%v)", x0, z0, m.x, m.z)
 	}
 }
 

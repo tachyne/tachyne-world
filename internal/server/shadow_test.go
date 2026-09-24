@@ -236,7 +236,6 @@ func TestWorldEdgeClamp(t *testing.T) {
 	}
 	// Moves INSIDE the world still work (seed the movement budget — the test
 	// hub's tick clock never runs, so the per-tick allowance can't accrue).
-	pl.moveBudget = 10
 	if !hubA.validateMove(pl, evMove{eid: eid, x: -249, y: 80, z: 0}) {
 		t.Error("legal in-world move rejected")
 	}

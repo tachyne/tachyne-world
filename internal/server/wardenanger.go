@@ -102,5 +102,4 @@ func (h *hub) wardenSonicKnock(m *mob, t *tracked) {
 	ver := wardenSonicKBVert * (1 - resist)
 	t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: dx / n * hor, VY: dy / n * ver, VZ: dz / n * hor})
 	t.spinUntil = h.tick.Load() + windBurstGrace // let the launch past the speed check
-	t.moveBudget = budgetCapTicks * spinPerTick
 }

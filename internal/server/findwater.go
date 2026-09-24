@@ -16,12 +16,12 @@ const (
 	striderLavaFind = 8.0  // StriderGoToLavaGoal's MoveToBlockGoal(…, 8, 2)
 )
 
-// findsWater is the set that runs TryFindWaterGoal — the water animals that
-// suffocate on land.
+// findsWater is who walks back to the water when stranded: the dolphin
+// (TryFindLiquidGoal) and the axolotl (its brain). Squid, fish and tadpoles
+// have no such goal; on land they flop where they lie.
 var findsWater = func() map[int]bool {
 	out := map[int]bool{}
-	for _, n := range []string{"dolphin", "squid", "glow_squid", "cod", "salmon",
-		"tropical_fish", "pufferfish", "tadpole", "axolotl"} {
+	for _, n := range []string{"dolphin", "axolotl"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}

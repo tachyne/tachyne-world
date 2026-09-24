@@ -167,8 +167,8 @@ var speciesTable = map[int]*speciesDef{
 	entityWolf: {name: "wolf", health: 8, speed: 0.30, damage: 4,
 		arch: archPassive, retaliate: true, love: "beef"},
 	entityGoat: {name: "goat", health: 10, speed: 0.20, damage: 2,
-		// A goat has no HurtByTargetGoal in vanilla and no PanicGoal either:
-		// hit one and it does nothing about it — until it decides to ram.
+		// A goat has no HurtByTargetGoal in vanilla: hit one and it runs
+		// (GoatAi's AnimalPanic 2.0), and rams only on its own schedule.
 		arch: archPassive, love: "wheat"},
 	entityPanda: {name: "panda", health: 20, speed: 0.15, damage: 6,
 		arch: archPassive, retaliate: true, love: "bamboo",

@@ -83,8 +83,7 @@ func (h *hub) windPush(players map[int32]*tracked, dim int, cx, cy, cz, radius f
 		}
 		t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: ex / n * power, VY: ey / n * power, VZ: ez / n * power})
 		t.spinUntil = now + windBurstGrace // let the launch through the speed check
-		t.moveBudget = budgetCapTicks * spinPerTick
-		t.launchCause = "wind_charge" // fall_after_explosion, until the next landing
+		t.launchCause = "wind_charge"      // fall_after_explosion, until the next landing
 	}
 	for _, m := range h.mobs {
 		if m.dim != dim || m.dying > 0 {

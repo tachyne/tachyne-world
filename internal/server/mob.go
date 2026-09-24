@@ -47,59 +47,62 @@ type mob struct {
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)
 	rest            int      // grazing pause: updates left standing still (passive idling)
-	fleeX, fleeZ    float64  // the threat to flee away from while panicking
-	hostile         bool     // hunts + attacks players (zombies) rather than grazing
-	burning         bool     // on fire — rendered via entity flags (any ignite source)
-	burnDelay       int      // seconds of dawn-ramp grace before this mob ignites
-	fireSecs        int      // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
-	submerged       int      // consecutive seconds fully underwater (land mobs drown past maxAir)
-	dryTicks        int      // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
-	convertIn       int      // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
-	snowSecs        int      // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
-	strayIn         int      // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
-	fuse            int      // creeper: ticks left on a lit fuse (0 = not ignited)
-	anger           int      // spider: mob-updates it stays hostile in daylight after a hit
-	stareTicks      int      // enderman: ticks a distant target has gone unwatched (teleportTowards)
-	settled         int      // enderman: ticks since its target last changed (the daylight flight waits 600)
-	dragonPhase     int      // ender dragon: which phase of the fight it is in
-	dragonPhaseTick int      // ticks spent in the current phase
-	dragonFlames    int      // breaths taken this perch
-	dragonCharge    int      // ticks of fireball aim built up
-	fangNextAt      uint64   // evoker: tick its fang spell comes off cooldown
-	vexNextAt       uint64   // evoker: tick its summon spell comes off cooldown
-	wololoTarget    int32    // evoker: the blue sheep its wololo is aimed at
-	wololoWarm      int      // evoker: wololo warm-up ticks left
-	wololoNextAt    uint64   // evoker: tick the wololo comes off cooldown
-	vexLife         int      // summoned vex: ticks left before it expires (0 = unlimited)
-	hitByPlayer     bool     // a player has hit it — its death pays XP (vanilla rule)
-	lastAttacker    int32    // eid of the last entity that hurt it (plugin death event)
-	lastDT          dmgType  // the last damage type it took (the killing blow's, for loot conditions)
-	lastDirect      int      // entity type of the projectile that struck the last blow (0 = none)
-	looting         int      // killer's Looting level (stamped per hit, used at drop time)
-	baby            bool     // ageable: half-size, grows up, no drops/XP
-	growLeft        int      // ticks until a baby matures
-	loveTicks       int      // courting window after love-food (hearts)
-	breedTime       int      // BreedGoal.loveTime: ticks this pair has spent together
-	followClock     int      // pet: ticks until FollowOwnerGoal re-decides (timeToRecalcPath)
-	lovedBy         int32    // who fed the love-food (advancement credit)
-	breedCD         int      // ticks before this parent may breed again
-	parent          int32    // baby: the adult it is following (FollowParentGoal), 0 = none
-	parentRecalc    int      // mob updates until the parent search runs again
-	stroll          int      // wander spell: updates left walking before the next rest
-	sheared         bool     // sheep: fleece off (regrows by grazing)
-	color           int8     // sheep: fleece colour (0 white .. 15 black), dyeable
-	collar          int8     // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
-	soundSet        int8     // wolf: which of the seven WolfSoundVariants it was born with
-	stew            int8     // brown mooshroom: the stew flower it was fed (stew.go), 0 = none
-	customName      string   // name-tagged: shown above the mob, and it never despawns
-	fromBucket      bool     // released from a mob bucket: persistent (Bucketable.setFromBucket)
-	persistent      bool     // Mob.persistenceRequired: picked up gear (never despawns)
-	pregnant        bool     // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
-	aggressive      bool     // Mob.setAggressive: the zombie family's raised arms while it chases
-	drifting        bool     // MoveThroughVillageGoal: walking to a spot in the village, not chasing
-	drownedGoal     bool     // drowned: walking to water (by day) or to the beach (at night)
-	strafeBack      bool     // RangedBowAttackGoal.strafingBackwards: drifting away while circling
-	floatX          float64  // RandomFloatAroundGoal's wanted position (ghast)
+	fleeX, fleeZ    float64  // the threat that set it panicking
+	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
+	panicTZ         float64
+	panicHasT       bool
+	hostile         bool    // hunts + attacks players (zombies) rather than grazing
+	burning         bool    // on fire — rendered via entity flags (any ignite source)
+	burnDelay       int     // seconds of dawn-ramp grace before this mob ignites
+	fireSecs        int     // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
+	submerged       int     // consecutive seconds fully underwater (land mobs drown past maxAir)
+	dryTicks        int     // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)
+	convertIn       int     // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
+	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
+	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
+	fuse            int     // creeper: ticks left on a lit fuse (0 = not ignited)
+	anger           int     // spider: mob-updates it stays hostile in daylight after a hit
+	stareTicks      int     // enderman: ticks a distant target has gone unwatched (teleportTowards)
+	settled         int     // enderman: ticks since its target last changed (the daylight flight waits 600)
+	dragonPhase     int     // ender dragon: which phase of the fight it is in
+	dragonPhaseTick int     // ticks spent in the current phase
+	dragonFlames    int     // breaths taken this perch
+	dragonCharge    int     // ticks of fireball aim built up
+	fangNextAt      uint64  // evoker: tick its fang spell comes off cooldown
+	vexNextAt       uint64  // evoker: tick its summon spell comes off cooldown
+	wololoTarget    int32   // evoker: the blue sheep its wololo is aimed at
+	wololoWarm      int     // evoker: wololo warm-up ticks left
+	wololoNextAt    uint64  // evoker: tick the wololo comes off cooldown
+	vexLife         int     // summoned vex: ticks left before it expires (0 = unlimited)
+	hitByPlayer     bool    // a player has hit it — its death pays XP (vanilla rule)
+	lastAttacker    int32   // eid of the last entity that hurt it (plugin death event)
+	lastDT          dmgType // the last damage type it took (the killing blow's, for loot conditions)
+	lastDirect      int     // entity type of the projectile that struck the last blow (0 = none)
+	looting         int     // killer's Looting level (stamped per hit, used at drop time)
+	baby            bool    // ageable: half-size, grows up, no drops/XP
+	growLeft        int     // ticks until a baby matures
+	loveTicks       int     // courting window after love-food (hearts)
+	breedTime       int     // BreedGoal.loveTime: ticks this pair has spent together
+	followClock     int     // pet: ticks until FollowOwnerGoal re-decides (timeToRecalcPath)
+	lovedBy         int32   // who fed the love-food (advancement credit)
+	breedCD         int     // ticks before this parent may breed again
+	parent          int32   // baby: the adult it is following (FollowParentGoal), 0 = none
+	parentRecalc    int     // mob updates until the parent search runs again
+	stroll          int     // wander spell: updates left walking before the next rest
+	sheared         bool    // sheep: fleece off (regrows by grazing)
+	color           int8    // sheep: fleece colour (0 white .. 15 black), dyeable
+	collar          int8    // tamed wolf/cat: collar dye (DyeColor ordinal; red when tamed)
+	soundSet        int8    // wolf: which of the seven WolfSoundVariants it was born with
+	stew            int8    // brown mooshroom: the stew flower it was fed (stew.go), 0 = none
+	customName      string  // name-tagged: shown above the mob, and it never despawns
+	fromBucket      bool    // released from a mob bucket: persistent (Bucketable.setFromBucket)
+	persistent      bool    // Mob.persistenceRequired: picked up gear (never despawns)
+	pregnant        bool    // frog: IS_PREGNANT — carrying a clutch until it finds water to lay on
+	aggressive      bool    // Mob.setAggressive: the zombie family's raised arms while it chases
+	drifting        bool    // MoveThroughVillageGoal: walking to a spot in the village, not chasing
+	drownedGoal     bool    // drowned: walking to water (by day) or to the beach (at night)
+	strafeBack      bool    // RangedBowAttackGoal.strafingBackwards: drifting away while circling
+	floatX          float64 // RandomFloatAroundGoal's wanted position (ghast)
 	floatY          float64
 	floatZ          float64
 	floatSet        bool
@@ -745,14 +748,20 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case h.avoidStep(players, m):
 			// Keeping clear of a mob its kind avoids, at the goal's pace.
 		case m.panic > 0:
-			// Spooked: bolt directly away from the threat at PanicGoal's
-			// vanilla 2.0× speed modifier (chickens flap off at 1.4×),
+			// Spooked: PanicGoal runs to one random spot after another
+			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed,
 			// ignoring herd steering until the panic wears off.
-			m.panic--
-			flee := m.moveSpeed() * panicSpeed(m.etype)
-			dx, dz := m.x-m.fleeX, m.z-m.fleeZ
-			if d := math.Hypot(dx, dz); d > 1e-6 {
-				m.vx, m.vz = dx/d*flee, dz/d*flee
+			if m.panic--; m.panic == 0 {
+				m.panicHasT = false
+			}
+			if !m.panicHasT || math.Hypot(m.panicTX-m.x, m.panicTZ-m.z) < 1 {
+				m.panicTX, m.panicTZ, m.panicHasT = h.panicTarget(m)
+			}
+			if m.panicHasT {
+				vx, vz := h.pathSteer(m, m.panicTX, m.panicTZ)
+				m.vx, m.vz = vx*panicSpeed(m.etype), vz*panicSpeed(m.etype)
+			} else {
+				m.vx, m.vz = 0, 0 // nowhere to run: it stands (the goal has no target)
 			}
 		case m.etype == entityPanda && h.pandaStep(players, m):
 			// A panda held by its personality: sitting out a storm, lying

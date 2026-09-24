@@ -7,7 +7,6 @@ import (
 
 	"github.com/tachyne/tachyne-common/shard"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
-	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Movement authority: the client streams Set Player Position packets and the
@@ -15,12 +14,8 @@ import (
 // that a client can never override the server). Three checks, all tuned to
 // never trip on legitimate vanilla play:
 //
-//   - Budgeted speed: movement spends a per-tick allowance (horizontal distance
-//     plus upward gain; falling is free). The budget accrues while idle up to a
-//     burst cap, so jumps, knockback and latency bunching never trip it, but a
-//     sustained speed hack outruns it within a second.
-//   - Teleport cap: a single event moving farther than any packet gap could
-//     legitimately cover is discarded outright.
+//   - Too quickly: vanilla's per-packet distance limit (10 blocks, 17.3 while
+//     gliding, scaled by the move packets seen this tick).
 //   - Floating: a survival/adventure player who spends floatLimit ticks neither
 //     descending nor near ANY block (the vanilla no-blocks-around test — water,
 //     ladders, jumps and wall-hugs all reset it) is a fly hack; they are snapped
@@ -32,19 +27,7 @@ import (
 // validation; respawn/bed set the tracked position directly, so a stale
 // in-flight client position after those simply rubber-bands to the right spot.
 const (
-	walkPerTick = 0.6 // survival/adventure allowance: 12 blocks/s — sustained sprint-jumping
-	//                   UPHILL legitimately reaches ~0.51/tick diagonal (7.1 m/s
-	//                   forward + step-ups); hacks run 2-10× sprint and still trip
-	flyPerTick = 1.5 // creative allowance: 30 blocks/s. Vanilla creative SPRINT-fly
-	//                      is ~21.9 m/s (1.09 blocks/tick) — double the base fly speed —
-	//                      and vertical ascent (~0.38/tick) co-occurs, so sustained
-	//                      diagonal sprint-fly costs ~1.15/tick. 1.0 (base-fly only)
-	//                      slowly drained the bank and hitched every few seconds; 1.5
-	//                      clears sprint-fly + vertical + latency bunching with margin.
-	spinPerTick    = 4.0  // riptide auto-spin-attack: brief high-speed travel (trident.go)
-	budgetCapTicks = 30   // burst headroom: up to 1.5 s of allowance banked while idle
-	teleportCap    = 12.0 // single-event displacement no legitimate packet gap can cover
-	floatLimit     = 80   // ticks floating before the snap-down (vanilla's kick threshold)
+	floatLimit     = 80 // ticks floating before the snap-down (vanilla's kick threshold)
 	floatDescend   = -0.03
 	rubberCooldown = 20 // min ticks between correction teleports (drains packet storms)
 )
@@ -83,53 +66,31 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	dt := now - t.lastMoveTick
 	t.lastMoveTick = now
 
-	perTick := walkPerTick
-	if !t.onGround && t.armor[1].item == itemElytra {
-		perTick = 3.0 // elytra glide: the client's fall-flying physics is fast
+	// ServerGamePacketListenerImpl.handleMovePlayer's "moved too quickly":
+	// the squared distance from the last good position, less the player's
+	// own squared velocity, may not exceed 100 per move packet received this
+	// tick (300 while gliding); more than five in one tick count as one. The
+	// server does not model the player's velocity, so that term is 0 here.
+	// This replaced a per-tick speed budget of the engine's own that vanilla
+	// never had, which snapped creative players back every few seconds of
+	// fast flight whenever a slow tick held the budget back.
+	if t.moveTickSeen != now {
+		t.moveTickSeen, t.movePackets = now, 0
 	}
-	if t.gamemode == gmCreative {
-		perTick = flyPerTick
+	t.movePackets++
+	packets := t.movePackets
+	if packets > 5 {
+		packets = 1
 	}
-	if now < t.spinUntil && perTick < spinPerTick {
-		perTick = spinPerTick // riptide launch: fast travel until the spin-attack ends
+	limit := 100.0
+	if t.gliding() {
+		limit = 300
 	}
-	// Speed and Slowness are MOVEMENT_SPEED modifiers, so the budget scales by
-	// whatever the attribute says rather than by a per-effect branch. Slowness
-	// only ever widens the allowance here — the client is what actually slows,
-	// and an anti-cheat that tightened on a debuff would flag its own victim.
-	if f := t.movementFactor(); f > 1 {
-		perTick *= f
-	}
-	if eff := t.playerAttrs().Value(attr.WaterMovementEfficiency); eff > 0 {
-		// Depth Strider: vanilla applies WATER_MOVEMENT_EFFICIENCY inside the
-		// swimming physics, so the authority only has to make room for it.
-		perTick *= 1 + eff
-	}
-	if t.hasEffect(effDolphinsGrace) > 0 {
-		// Vanilla applies Dolphin's Grace inside the swimming physics rather
-		// than as an attribute, and it is a large boost — the authority just
-		// needs room for it, not a model of it.
-		perTick *= 2
-	}
-	t.moveBudget = math.Min(t.moveBudget+float64(dt)*perTick, budgetCapTicks*perTick)
-
 	dx, dy, dz := e.x-t.x, e.y-t.y, e.z-t.z
-	if dx*dx+dy*dy+dz*dz > teleportCap*teleportCap {
-		h.rubberBand2(t, now, e, "teleport-cap")
+	if dx*dx+dy*dy+dz*dz > limit*float64(packets) {
+		h.rubberBand2(t, now, e, "too quickly")
 		return false
 	}
-	// Cost is the EUCLIDEAN length of the motion with the downward component
-	// zeroed (falling is free). Summing axes instead would over-charge diagonal
-	// motion — sprint-jumping uphill (forward AND up at once) drained the
-	// budget ~40% faster than the same speed on the flat and rubber-banded
-	// legitimate climbing.
-	up := math.Max(0, dy)
-	cost := math.Sqrt(dx*dx + dz*dz + up*up)
-	if cost > t.moveBudget {
-		h.rubberBand2(t, now, e, "budget")
-		return false
-	}
-	t.moveBudget -= cost
 
 	// Noclip: the destination may not put the hitbox inside solid blocks —
 	// unless the player is ALREADY inside one (sand fell on them; they must
@@ -215,7 +176,6 @@ func (h *hub) rubberBand2(t *tracked, now uint64, e evMove, why string) {
 		t.rejectStreak = 0
 		t.x, t.y, t.z = e.x, e.y, e.z
 		t.p.setHubPos(e.x, e.z) // the yield must also reopen the chunk-stream gate
-		t.moveBudget = budgetCapTicks * walkPerTick
 		t.peakY = t.y
 		return
 	}
@@ -223,8 +183,8 @@ func (h *hub) rubberBand2(t *tracked, now uint64, e evMove, why string) {
 		return
 	}
 	t.lastRubber = now
-	log.Printf("movement: rejected %q (%s): client at (%.1f,%.1f,%.1f), server at (%.1f,%.1f,%.1f), budget %.1f",
-		t.p.name, why, e.x, e.y, e.z, t.x, t.y, t.z, t.moveBudget)
+	log.Printf("movement: rejected %q (%s): client at (%.1f,%.1f,%.1f), server at (%.1f,%.1f,%.1f)",
+		t.p.name, why, e.x, e.y, e.z, t.x, t.y, t.z)
 	log.Printf("movement: rejected impossible move from %q — snapping back to (%.1f, %.1f, %.1f)",
 		t.p.name, t.x, t.y, t.z)
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))

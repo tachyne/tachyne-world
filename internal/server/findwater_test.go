@@ -37,6 +37,12 @@ func TestStrandedAnimalsHeadHome(t *testing.T) {
 		t.Error("a dolphin in the water has nowhere to go")
 	}
 
+	// A squid has no such goal: stranded, it flops where it lies.
+	sq := h.spawnMob(players, entitySquid, 0.5, 70, 0.5)
+	if h.findWaterStep(sq) {
+		t.Error("a squid on land walked for the water")
+	}
+
 	s := h.spawnMob(players, entityStrider, 0.5, 70, 0.5)
 	s.setMoveSpeed(0.1)
 	if !h.findWaterStep(s) {

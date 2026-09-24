@@ -54,9 +54,13 @@ func TestPanicCauses(t *testing.T) {
 	if panicsAt(&mob{etype: entityPolarBear}, dtMobAttack) {
 		t.Error("an adult polar bear stands its ground")
 	}
-	// A goat rams and an armadillo rolls up: neither has a panic goal.
-	if panicsAt(&mob{etype: entityGoat}, dtMobAttack) || panicsAt(&mob{etype: entityArmadillo}, dtLava) {
+	// An armadillo rolls up and a skeleton horse plods: neither has a panic
+	// goal. A goat does (GoatAi's AnimalPanic).
+	if panicsAt(&mob{etype: entitySkeletonHorse}, dtMobAttack) || panicsAt(&mob{etype: entityArmadillo}, dtLava) {
 		t.Error("these species never panic in vanilla")
+	}
+	if !panicsAt(&mob{etype: entityGoat}, dtMobAttack) {
+		t.Error("a struck goat runs")
 	}
 }
 
@@ -122,5 +126,39 @@ func TestEffectsPersistAndTickOutsideSurvival(t *testing.T) {
 	h.updateEffects(players)
 	if back.effects[effSpeed].left >= before {
 		t.Error("effects tick in creative as well")
+	}
+}
+
+// A panicking cow runs to random spots within five blocks (PanicGoal), not
+// in a straight line away from whoever hit it, and prefers grass.
+func TestPanicRunsToRandomSpots(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 183; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	h.world.SetBlock(3, 179, 3, worldgen.GrassBlock) // the one patch of grass
+	players := map[int32]*tracked{}
+	cow := h.spawnMob(players, entityCow, 0.5, 180, 0.5)
+	grass := 0
+	for i := 0; i < 200; i++ {
+		x, z, ok := h.panicTarget(cow)
+		if !ok {
+			t.Fatal("no spot found on an open floor")
+		}
+		if abs64(x-cow.x) > 5.5 || abs64(z-cow.z) > 5.5 {
+			t.Fatalf("spot (%v, %v) is beyond five blocks", x, z)
+		}
+		if x == 3.5 && z == 3.5 {
+			grass++
+		}
+	}
+	if grass == 0 {
+		t.Error("the grass patch was never chosen over bare stone")
 	}
 }
