@@ -94,7 +94,7 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 			if !st.Exists {
 				continue
 			}
-			if d := math.Hypot(float64(st.X)-t.x, float64(st.Z)-t.z); d < bd {
+			if d := math.Hypot(float64(st.LocX)-t.x, float64(st.LocZ)-t.z); d < bd {
 				best, bd = st, d
 			}
 		}
@@ -110,7 +110,9 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 		}
 		h.sendSlot(t, t.p.heldSlot())
 	}
-	dx, dz := float64(best.X)-t.x, float64(best.Z)-t.z
+	// EnderEyeItem: the eye flies at the structure's locate position (the
+	// start chunk's corner), as /locate reports it — not the portal room.
+	dx, dz := float64(best.LocX)-t.x, float64(best.LocZ)-t.z
 	d := math.Hypot(dx, dz)
 	a := h.launchProjectileIn(players, entityEyeProj, t.dim, t.x, t.y+1.6, t.z,
 		dx/d*0.7, 0.25, dz/d*0.7)

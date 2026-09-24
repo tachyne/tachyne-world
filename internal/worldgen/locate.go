@@ -70,7 +70,7 @@ var structureLocators = map[string]structureLocator{
 	}},
 	"stronghold": {0, strongholdCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		s := g.StrongholdIn(wx, wz)
-		return s.X, s.Z, s.Exists
+		return s.LocX, s.LocZ, s.Exists // getLocatePos: the start chunk, not the portal room
 	}},
 	"shipwreck": {0, shipwreckCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		s := g.ShipwreckIn(wx, wz)

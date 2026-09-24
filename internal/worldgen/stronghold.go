@@ -411,11 +411,15 @@ func assembleStronghold(seed int64, cx, cz int) []*shPiece {
 
 // Stronghold describes one generated stronghold, located by its portal room.
 type Stronghold struct {
-	X, Z   int // portal-room centre (the 3x3 portal interior centre)
-	Y      int // the frame ring's level
-	Exists bool
-	room   *shPiece
-	pieces []*shPiece
+	X, Z int // portal-room centre (the 3x3 portal interior centre)
+	Y    int // the frame ring's level
+	// LocX, LocZ are StructurePlacement.getLocatePos: the minimum corner of
+	// the chunk the stronghold starts in (its staircase), which is where an
+	// eye of ender flies and what /locate reports — not the portal room.
+	LocX, LocZ int
+	Exists     bool
+	room       *shPiece
+	pieces     []*shPiece
 }
 
 type strongholdKey struct {
@@ -459,7 +463,7 @@ func (g *Generator) StrongholdIn(wx, wz int) Stronghold {
 	x := ox + 200 + int(hash01(g.seed, ox, oz, 0x5702)*float64(strongholdCell-400))
 	z := oz + 200 + int(hash01(g.seed, ox, oz, 0x5703)*float64(strongholdCell-400))
 	pieces := g.strongholdPieces(x>>4, z>>4)
-	st := Stronghold{Exists: true, pieces: pieces}
+	st := Stronghold{Exists: true, pieces: pieces, LocX: (x >> 4) << 4, LocZ: (z >> 4) << 4}
 	for _, p := range pieces {
 		if p.kind == shPortalRoom {
 			st.room = p

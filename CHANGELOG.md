@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Eyes of ender lead to the stronghold's entrance.** Since the full
+  stronghold mazes landed, an eye of ender flew toward the portal room,
+  which can be a hundred blocks inside the maze. As in vanilla, it now
+  leads to where the stronghold starts, and `/locate stronghold` reports
+  the same place.
 - **Adventure mode is survival without building, as in vanilla.** Many
   survival rules applied only to survival mode, so adventure players were
   never hurt, never hunted by monsters, never got hungry, didn't use up
