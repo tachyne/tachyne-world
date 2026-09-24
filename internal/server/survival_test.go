@@ -9,6 +9,7 @@ import (
 
 func testTracked() *tracked {
 	u, _ := parseUUIDString(offlineUUIDString("tester")) // the UUID an offline gateway gives "tester"
+	ids.learn("tester", u)                               // as its join would: the name resolves to it
 	t := &tracked{p: newPlayer(1, "tester", u), gamemode: gmSurvival}
 	initSurvival(t)
 	return t

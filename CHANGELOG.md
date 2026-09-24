@@ -26,12 +26,13 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Player data is keyed by account, not by name.** Inventories, game
   modes, advancements, stats, recipe books and spawn points are now saved
   under each player's UUID, as vanilla saves them. A player who renames
-  their Minecraft account keeps everything. Existing name-keyed files
-  convert once on start-up, and each original is kept as `<file>.pre-uuid`.
-  Commands that name an offline player still find them, through a name
-  cache (`usercache.json`, as vanilla keeps one). For the move to online
-  mode, a `uuidmap.json` beside the world moves each listed player's data,
-  and the pets they own, to their real account.
+  their Minecraft account keeps everything. What was saved under a name
+  moves to the UUID that player next joins with, Java and Bedrock alike.
+  Each original file is kept as `<file>.pre-uuid`. Commands that name an
+  offline player still find them, through a name cache (`usercache.json`,
+  as vanilla keeps one). For the move to online mode, a `uuidmap.json`
+  beside the world moves each listed player's data, and the pets they own,
+  to their real account.
 - **Operators from tachyne-access.** A player granted the `op` role in
   tachyne-access is now an operator in game, along with the `-ops` list.
   Once online mode is on, that role is tied to the player's own account.

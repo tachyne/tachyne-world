@@ -53,3 +53,6 @@ func (s *spawnStore) set(name string, pos blockPos, dim int) {
 		writeStore(path, data)
 	}
 }
+
+// claim moves an entry saved under name to the joining player's UUID key.
+func (s *spawnStore) claim(name, key string) bool { return claimName(&s.mu, s.path, s.m, name, key) }

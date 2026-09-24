@@ -182,3 +182,6 @@ func (s *statsStore) save(name string, st map[statKey]int32) {
 type evStatsReq struct{ eid int32 }
 
 func (evStatsReq) isHubEvent() {}
+
+// claim moves an entry saved under name to the joining player's UUID key.
+func (s *statsStore) claim(name, key string) bool { return claimName(&s.mu, s.path, s.m, name, key) }

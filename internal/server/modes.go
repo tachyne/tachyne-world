@@ -103,3 +103,6 @@ func abilitiesFor(mode int) attachproto.Abilities {
 		return attachproto.Abilities{}
 	}
 }
+
+// claim moves an entry saved under name to the joining player's UUID key.
+func (s *modeStore) claim(name, key string) bool { return claimName(&s.mu, s.path, s.m, name, key) }

@@ -29,8 +29,9 @@ import (
 // Each name there moves to the account's real UUID, and so does the offline
 // UUID that name used to play under (so pets and anything else already keyed
 // by UUID follow); "uuids" moves any other identity (a Bedrock player whose
-// UUID scheme changed). Without the map a name keeps its offline UUID, which
-// is exactly the UUID an offline-mode gateway gives that player.
+// UUID scheme changed). A name nobody can resolve stays as it is until a
+// player joins with it: the join claims it for the UUID that player actually
+// has, whatever the gateway's identity scheme (claimName).
 
 // playerIDs resolves store keys. One per process: the stores are reached from
 // the hub and from session goroutines alike, hence the lock.
@@ -117,7 +118,11 @@ func (p *playerIDs) key(k string) string {
 	if id, ok := p.names[strings.ToLower(k)]; ok {
 		return id
 	}
-	return p.moved(offlineUUIDString(k))
+	// Nobody this world knows: the name stays the key until a player joins
+	// with it and claims the entry (claimName) for the UUID they really have.
+	// Guessing here — the offline UUID — strands a Bedrock player, whose
+	// UUID is not derived from the name.
+	return k
 }
 
 // moved follows the uuid map (once: a map is a list of moves, not a chain).
@@ -197,16 +202,23 @@ func rekeyPlayers[T any](path string, m map[string]T) map[string]T {
 	}
 	if changed > 0 {
 		log.Printf("%s: %d player key(s) moved to UUIDs", path, changed)
-		if path != "" {
-			backup := path + ".pre-uuid"
-			if _, err := os.Stat(backup); os.IsNotExist(err) {
-				if data, err := os.ReadFile(path); err == nil {
-					writeStore(backup, data)
-				}
-			}
-		}
+		keepPreUUID(path)
 	}
 	return out
+}
+
+// keepPreUUID copies a store file to <file>.pre-uuid before the switch to
+// UUID keys first changes it (once: an existing copy is the original).
+func keepPreUUID(path string) {
+	if path == "" {
+		return
+	}
+	backup := path + ".pre-uuid"
+	if _, err := os.Stat(backup); os.IsNotExist(err) {
+		if data, err := os.ReadFile(path); err == nil {
+			writeStore(backup, data)
+		}
+	}
 }
 
 // uuidString is the dashed lower-case form stores are keyed by.
@@ -260,4 +272,45 @@ func offlineUUIDString(name string) string {
 	sum[6] = (sum[6] & 0x0f) | 0x30
 	sum[8] = (sum[8] & 0x3f) | 0x80
 	return uuidString(sum)
+}
+
+// claimName is the join-time half of the switch: an entry still keyed by the
+// name this player joined with (nobody could resolve it at load) moves to
+// their UUID, unless they already have one. Case-insensitive, as vanilla
+// matches names; a UUID-shaped key is never a name. The store's file is
+// rewritten when anything moves. Reports whether it did.
+func claimName[T any](mu *sync.Mutex, path string, m map[string]T, name, key string) bool {
+	mu.Lock()
+	if _, ok := m[key]; ok || name == key {
+		mu.Unlock()
+		return false
+	}
+	from := ""
+	if _, ok := m[name]; ok {
+		from = name
+	} else {
+		var cands []string
+		for k := range m {
+			if _, isID := normUUID(k); !isID && strings.EqualFold(k, name) {
+				cands = append(cands, k)
+			}
+		}
+		sort.Strings(cands)
+		if len(cands) > 0 {
+			from = cands[0]
+		}
+	}
+	if from == "" {
+		mu.Unlock()
+		return false
+	}
+	m[key] = m[from]
+	delete(m, from)
+	data, _ := json.MarshalIndent(m, "", "  ")
+	mu.Unlock()
+	if path != "" {
+		keepPreUUID(path)
+		writeStore(path, data)
+	}
+	return true
 }

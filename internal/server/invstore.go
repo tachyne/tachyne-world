@@ -319,3 +319,6 @@ func savedEffectsOf(t *tracked) []savedEffect {
 	}
 	return out
 }
+
+// claim moves an entry saved under name to the joining player's UUID key.
+func (s *invStore) claim(name, key string) bool { return claimName(&s.mu, s.path, s.m, name, key) }

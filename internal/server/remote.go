@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/attach"
 
@@ -21,6 +22,7 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	name := id.Name
 	ids.learn(name, id.UUID) // usercache.json: this name is this UUID now
 	p := newPlayer(s.hub.mintPlayerEID(), name, id.UUID)
+	s.claimLegacyData(name, p.key())
 	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
 	var yaw, pitch float32
@@ -530,5 +532,39 @@ func (s *Server) adoptIdentity(p *player, id attach.Identity) {
 		s.roleOps.Store(id.Name, true)
 	} else {
 		s.roleOps.Delete(id.Name)
+	}
+}
+
+// claimLegacyData gives a joining player whatever was saved under their name
+// before the stores were keyed by UUID (playerkeys.go).
+func (s *Server) claimLegacyData(name, key string) {
+	var moved []string
+	claim := func(what string, ok bool) {
+		if ok {
+			moved = append(moved, what)
+		}
+	}
+	if s.modes != nil {
+		claim("game mode", s.modes.claim(name, key))
+	}
+	if h := s.hub; h != nil {
+		if h.invs != nil {
+			claim("inventory", h.invs.claim(name, key))
+		}
+		if h.advs != nil {
+			claim("advancements", h.advs.claim(name, key))
+		}
+		if h.statstore != nil {
+			claim("stats", h.statstore.claim(name, key))
+		}
+		if h.rbstore != nil {
+			claim("recipe book", h.rbstore.claim(name, key))
+		}
+		if h.spawns != nil {
+			claim("spawn point", h.spawns.claim(name, key))
+		}
+	}
+	if len(moved) > 0 {
+		log.Printf("player %s (%s): moved their %s from the name key to the UUID", name, key, strings.Join(moved, ", "))
 	}
 }

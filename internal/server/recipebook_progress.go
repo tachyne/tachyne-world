@@ -371,3 +371,8 @@ type evRecipeSeen struct {
 }
 
 func (evRecipeSeen) isHubEvent() {}
+
+// claim moves an entry saved under name to the joining player's UUID key.
+func (s *recipeBookStore) claim(name, key string) bool {
+	return claimName(&s.mu, s.path, s.m, name, key)
+}

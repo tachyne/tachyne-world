@@ -46,6 +46,7 @@ func breakPlaceServer(t *testing.T) (*Server, *hub, *player) {
 	startHub(t, h)
 
 	u, _ := parseUUIDString(offlineUUIDString("digger")) // the UUID an offline gateway gives "digger"
+	ids.learn("digger", u)                               // as its join would: the name resolves to it
 	p := newPlayer(h.allocEID(), "digger", u)
 	sy := w.SurfaceY(0, 0)
 	p.x, p.y, p.z = 0.5, sy, 0.5

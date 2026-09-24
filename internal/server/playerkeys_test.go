@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 // useIDs installs a resolver for one test and puts the old one back.
@@ -33,15 +35,12 @@ const (
 	bedrockXUID = "00000000-0000-0000-0009-01f2a3b4c5d6"
 )
 
-// Offline (no map): a name is its offline UUID, the one an offline gateway
-// gives that player — the same player, before and after the switch.
-func TestPlayerKeyOffline(t *testing.T) {
+// With nothing to go on, a name stays the key (a join claims it later); a
+// UUID in any spelling keys as itself.
+func TestPlayerKeyUnresolved(t *testing.T) {
 	useIDs(t, newPlayerIDs())
-	if got, want := ids.key("EdgeZA"), offlineUUIDString("EdgeZA"); got != want {
-		t.Errorf("key(EdgeZA) = %s, want the offline UUID %s", got, want)
-	}
-	if ids.key("EdgeZA") == ids.key("edgeza") {
-		t.Error("offline UUIDs are case-sensitive, as vanilla's are")
+	if got := ids.key("EdgeZA"); got != "EdgeZA" {
+		t.Errorf("key(EdgeZA) = %s, want the name kept until a join claims it", got)
 	}
 	if got := ids.key("430803E4306844 2F9F47E0FD6EE57E3C"); got == edgeReal {
 		t.Error("a malformed UUID was taken as one")
@@ -68,7 +67,7 @@ func TestPlayerKeyUUIDMap(t *testing.T) {
 		bedrockOld:                       bedrockXUID,
 		edgeReal:                         edgeReal,
 		offlineUUIDString("asananica81"): offlineUUIDString("asananica81"),
-		"asananica81":                    offlineUUIDString("asananica81"),
+		"asananica81":                    "asananica81", // not in the map: left for the join to claim
 	} {
 		if got := ids.key(in); got != want {
 			t.Errorf("key(%s) = %s, want %s", in, got, want)
@@ -123,38 +122,63 @@ func TestInvStoreMovesToUUIDs(t *testing.T) {
 	if _, ok := back["EdgeZA"]; ok {
 		t.Error("the name key survived the move")
 	}
-	if _, ok := back[offlineUUIDString("probe")]; !ok {
-		t.Error("a name not in the map should keep its offline UUID")
+	if _, ok := back["probe"]; !ok {
+		t.Error("a name not in the map should stay as it is, for its player's join to claim")
 	}
 	if _, err := os.Stat(path + ".pre-uuid"); err != nil {
 		t.Error("no .pre-uuid copy of the file as it was")
 	}
 }
 
-// Offline mode keeps working across the switch: a name-keyed file loads for
-// a player an offline gateway identifies by its name-derived UUID.
-func TestOfflinePlayerFindsNameKeyedData(t *testing.T) {
+// The join claims what was saved under the joining name, for whatever UUID
+// the gateway gives the player: the offline UUID of a Java player in offline
+// mode, or a Bedrock identity that has nothing to do with the name.
+func TestJoinClaimsNameKeyedData(t *testing.T) {
 	dir := t.TempDir()
 	useIDs(t, loadPlayerIDs(dir))
-	path := filepath.Join(dir, "players.json")
-	writeJSONFile(t, path, map[string]int{"LegionZA": gmCreative})
-	s := newModeStore(path, gmSurvival)
-	p := newPlayer(1, "LegionZA", [16]byte{})
-	p.uuid, _ = parseUUIDString(offlineUUIDString("LegionZA"))
-	if got := s.get(p.key()); got != gmCreative {
-		t.Errorf("LegionZA's saved game mode is %d after the switch, want creative", got)
+	modes := filepath.Join(dir, "players.json")
+	writeJSONFile(t, modes, map[string]int{"LegionZA": gmCreative, "EdgeZA1951": gmCreative})
+	s := &Server{modes: newModeStore(modes, gmSurvival), hub: newHub(world.New(1))}
+	invPath := filepath.Join(dir, "inventories.json")
+	writeJSONFile(t, invPath, map[string]*savedInv{"EdgeZA1951": {XPLevel: 12}})
+	s.hub.invs = newInvStore(invPath)
+
+	offline, _ := parseUUIDString(offlineUUIDString("LegionZA"))
+	java := newPlayer(1, "LegionZA", offline)
+	ids.learn(java.name, java.uuid)
+	s.claimLegacyData(java.name, java.key())
+	if got := s.modes.get(java.key()); got != gmCreative {
+		t.Errorf("LegionZA's saved game mode is %d after joining, want creative", got)
 	}
-	if got := s.get("LegionZA"); got != gmCreative {
+	if got := s.modes.get("LegionZA"); got != gmCreative {
 		t.Error("a name (an offline /gamemode target) no longer finds the player")
+	}
+
+	bedrock, _ := parseUUIDString(bedrockOld)
+	br := newPlayer(2, "EdgeZA1951", bedrock)
+	ids.learn(br.name, br.uuid)
+	s.claimLegacyData(br.name, br.key())
+	pl := testTracked()
+	s.hub.invs.loadInto(pl, br.key())
+	if pl.xpLevel != 12 || s.modes.get(br.key()) != gmCreative {
+		t.Errorf("the Bedrock player's data did not follow them to their UUID (xp %d)", pl.xpLevel)
+	}
+	if _, err := os.Stat(invPath + ".pre-uuid"); err != nil {
+		t.Error("claiming rewrote inventories.json without keeping the original")
+	}
+	// A second join claims nothing and keeps what the UUID already has.
+	if s.hub.invs.claim("EdgeZA1951", br.key()) {
+		t.Error("a claim ran twice")
 	}
 }
 
 // Two keys for one player: the entry already keyed by UUID is kept.
 func TestRekeyCollisionKeepsUUIDEntry(t *testing.T) {
-	useIDs(t, newPlayerIDs())
-	off := offlineUUIDString("EdgeZA")
-	got := rekeyPlayers("", map[string]int{"EdgeZA": 1, off: 2})
-	if len(got) != 1 || got[off] != 2 {
+	dir := t.TempDir()
+	writeJSONFile(t, filepath.Join(dir, "uuidmap.json"), uuidMap{Names: map[string]string{"EdgeZA": edgeReal}})
+	useIDs(t, loadPlayerIDs(dir))
+	got := rekeyPlayers("", map[string]int{"EdgeZA": 1, edgeReal: 2})
+	if len(got) != 1 || got[edgeReal] != 2 {
 		t.Errorf("rekeyed %v, want only the UUID-keyed entry", got)
 	}
 }
