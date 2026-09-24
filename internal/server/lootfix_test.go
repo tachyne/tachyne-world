@@ -46,8 +46,8 @@ func TestSpecialBlockDrops(t *testing.T) {
 	if ds := h.rollDrops(three); ds[0].item != itemSnowball || ds[0].count != 3 {
 		t.Fatalf("snow in the fallback path: %+v", ds)
 	}
-	if ds, ok := h.specialBlockDrops(worldgen.BlockBase("chorus_flower"), 0, false); !ok || len(ds) != 0 {
-		t.Fatalf("a chorus flower drops nothing: %+v", ds)
+	if ds, ok := h.specialBlockDrops(worldgen.BlockBase("chorus_flower"), 0, false); !ok || len(ds) != 1 || ds[0].item != itemChorusFlower {
+		t.Fatalf("a chorus flower a player breaks drops itself: %+v", ds)
 	}
 	if _, ok := h.specialBlockDrops(worldgen.Stone, 0, false); ok {
 		t.Fatal("stone is not special")

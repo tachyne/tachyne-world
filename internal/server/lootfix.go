@@ -30,7 +30,8 @@ func doublePlantOf(state uint32) (single int32, lower, ok bool) {
 // breaks them: shears cut a two-tall plant into two of its small kind
 // (blocks/tall_grass, blocks/large_fern), shears or Silk Touch lift snow
 // layers as layers and anything else as one snowball a layer
-// (blocks/snow), and a chorus flower drops nothing (blocks/chorus_flower).
+// (blocks/snow), and a chorus flower broken by a player drops itself
+// (blocks/chorus_flower).
 // ok reports the block is one of these; the no-tool cases fall to rollDrops.
 func (h *hub) specialBlockDrops(state uint32, held int32, silk bool) ([]drop, bool) {
 	if single, _, ok := doublePlantOf(state); ok {
@@ -47,7 +48,10 @@ func (h *hub) specialBlockDrops(state uint32, held int32, silk bool) ([]drop, bo
 		return []drop{{item: itemSnowball, count: layers}}, true
 	}
 	if isChorusFlower(state) {
-		return nil, true
+		// blocks/chorus_flower: the flower itself, on condition there is a
+		// breaking entity — a player's break qualifies; the flower falling
+		// with the plant under it does not (that path never comes here).
+		return []drop{{item: itemChorusFlower, count: 1}}, true
 	}
 	return nil, false
 }

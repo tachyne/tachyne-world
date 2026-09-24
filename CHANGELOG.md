@@ -20,7 +20,7 @@ the public history since the project was open-sourced on 2026-07-10.
   - Breaking a clutch of turtle eggs takes one egg at a time.
   - TNT, creepers and withers let a hive's bees out, and a fire lit beside
     a hive empties it.
-  - A shot chorus flower breaks and drops.
+  - A chorus flower drops itself when shot or broken by a player.
   - Boats break the lily pads they run into.
   - Copper chests pair whatever their oxidation.
   - A head can be placed on top of a note block.
