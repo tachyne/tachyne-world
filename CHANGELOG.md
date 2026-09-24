@@ -45,6 +45,9 @@ the public history since the project was open-sourced on 2026-07-10.
   pistons move at the end of the tick, their blocks landing 2 ticks later.
   Clocks run at their vanilla period, and a torch clock that is too fast
   burns its torch out as it does in vanilla.
+  A powered note block sounds at the end of the tick, a hopper switches off
+  the moment power reaches it, and a crafter animates for six ticks, and
+  only when a craft succeeds.
 - **Items keep everything they carry when picked up.** Picking up a potion,
   a shulker box, a bundle, dyed leather, a firework rocket, a goat horn, a
   decorated pot, a suspicious stew or a silk-touched hive used to strip it

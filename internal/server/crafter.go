@@ -83,24 +83,32 @@ func (h *hub) updateCrafter(players map[int32]*tracked, pos simPos, state uint32
 // crafterTick is CrafterBlock.tick → dispenseFrom: the craft itself, which
 // does not look at the power again (a pulse shorter than 4 still crafts).
 func (h *hub) crafterTick(players map[int32]*tracked, pos simPos, state uint32) {
-	state = crafterWithCrafting(state, true) // brief craft animation
-	h.setBlockAt(players, pos.dim, pos.blockPos, state)
-	h.crafterCraft(players, pos, state)
-	h.scheduleIn(pos.dim, pos.blockPos, 4) // clear the animation shortly after
+	if !h.crafterCraft(players, pos, state) {
+		return // a failed craft only clicks: no animation
+	}
+	// setCraftingTicksRemaining(6) + CRAFTING: the arm animates for six
+	// ticks, and the block entity's countdown settles it back.
+	if cur := h.worldFor(pos.dim).At(pos.x, pos.y, pos.z); isCrafter(cur) {
+		h.setBlockAt(players, pos.dim, pos.blockPos, crafterWithCrafting(cur, true))
+	}
+	h.scheduleIn(pos.dim, pos.blockPos, crafterAnimTicks)
 }
+
+// crafterAnimTicks is CrafterBlock.MAX_CRAFTING_TICKS.
+const crafterAnimTicks = 6
 
 // crafterCraft matches the 3×3 grid and, on a hit, consumes one of each
 // ingredient and ejects the result.
-func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32) {
+func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32) bool {
 	c := h.bins[pos]
 	if c == nil || len(c.slots) < 9 {
 		h.craftFail(players, pos)
-		return
+		return false
 	}
 	res := h.crafterResult(c) // the same match the preview shows: a suspicious stew keeps its flower
 	if res.item == 0 || res.count == 0 {
 		h.craftFail(players, pos)
-		return
+		return false
 	}
 	item := res.item
 	for i := 0; i < 9; i++ {
@@ -121,6 +129,7 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 	h.refreshBinViewers(players, pos)
 	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.craft", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	return true
 }
 
 // ---- crafter menu (crafter_3x3): result preview + disabled slots -----------

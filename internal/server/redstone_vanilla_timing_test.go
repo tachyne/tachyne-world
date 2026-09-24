@@ -441,3 +441,33 @@ func TestVanillaTimingCopperBulb(t *testing.T) {
 		t.Errorf("copper bulb lit at tick %d, vanilla 0", n)
 	}
 }
+
+// HopperBlock.neighborChanged flips ENABLED at once; NoteBlock.playNote is a
+// block event, so the note sounds at the end of the tick's updates.
+func TestVanillaTimingHopperAndNoteBlock(t *testing.T) {
+	h, w, players, x, y, z := timingSetup(t)
+	w.SetBlock(x, y, z, timingLever(t))
+	w.SetBlock(x+1, y, z, worldgen.BlockBase("hopper"))
+	hs := w.At(x+1, y, z)
+	if !hopperEnabled(hs) {
+		hs = hopperWith(hs, true)
+		w.SetBlock(x+1, y, z, hs)
+	}
+	w.SetBlock(x, y, z+1, noteWithPowered(worldgen.BlockBase("note_block"), false)) // BlockBase is powered
+	lever := blockPos{x, y, z}
+	h.toggleLever(players, lever, w.At(x, y, z))
+	if hopperEnabled(w.At(x+1, y, z)) {
+		t.Error("the powered hopper is still enabled when the click returns; vanilla disables it at once")
+	}
+	queued := false
+	for _, e := range h.blockEvents {
+		queued = queued || (e.note && e.pos.blockPos == blockPos{x, y, z + 1})
+	}
+	if !queued {
+		t.Fatal("the powered note block queued no block event")
+	}
+	stepTicks(h, players, 1)
+	if len(h.blockEvents) != 0 {
+		t.Error("the note block's event did not run in the next tick")
+	}
+}

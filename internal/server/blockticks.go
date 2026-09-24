@@ -300,6 +300,9 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 		}
 		return
 	}
+	if isHopper(st) {
+		h.hopperPowerCheck(players, sp, st) // HopperBlock.neighborChanged: ENABLED follows power at once
+	}
 	h.scheduleIn(sp.dim, sp.blockPos, 1)
 	// The quasi-connectivity relay (updateRedstone does the same for the
 	// redstone blocks): an update at the cell above a piston reaches it.
@@ -376,10 +379,12 @@ func (h *hub) observerStart(pos blockPos) {
 
 // ---- block events -----------------------------------------------------------
 
-// blockEvent is a queued Level.blockEvent — pistons' only use of it here.
+// blockEvent is a queued Level.blockEvent: a piston's move, or a powered
+// note block's note.
 type blockEvent struct {
 	pos    simPos
 	extend bool
+	note   bool
 }
 
 // queueBlockEvent is Level.blockEvent: it runs at the end of the tick's
@@ -404,9 +409,29 @@ func (h *hub) runBlockEvents(players map[int32]*tracked) {
 		if !h.inWorldYIn(ev.pos.dim, ev.pos.y) || h.worldFor(ev.pos.dim) == nil || !h.canTickBlocksAt(ev.pos) {
 			continue
 		}
+		if ev.note {
+			// NoteBlock.triggerEvent: the note sounds as the event runs, from
+			// whatever note block is there by then.
+			if s := h.worldFor(ev.pos.dim).At(ev.pos.x, ev.pos.y, ev.pos.z); isNoteBlock(s) {
+				h.playNoteBlock(players, ev.pos.dim, ev.pos.x, ev.pos.y, ev.pos.z, s, 0)
+			}
+			continue
+		}
 		h.inDim(ev.pos.dim, func() { h.pistonEvent(players, ev.pos.blockPos, ev.extend) })
 	}
 	if len(h.blockEvents) == 0 {
 		h.blockEvents = nil
 	}
+}
+
+// queueNoteEvent is NoteBlock.playNote's level.blockEvent: the note plays at
+// the end of the tick's block updates.
+func (h *hub) queueNoteEvent(pos blockPos) {
+	ev := blockEvent{pos: h.rsKey(pos), note: true}
+	for _, e := range h.blockEvents {
+		if e == ev {
+			return
+		}
+	}
+	h.blockEvents = append(h.blockEvents, ev)
 }

@@ -646,6 +646,17 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	h.refreshBinViewers(players, pos)
 }
 
+// hopperPowerCheck is HopperBlock.checkPoweredState: ENABLED is the inverse
+// of power, flipped the moment a neighbour changes. Item transfers stay on
+// the hopper's own cadence (updateHopper).
+func (h *hub) hopperPowerCheck(players map[int32]*tracked, pos simPos, state uint32) {
+	var powered bool
+	h.inDim(pos.dim, func() { powered = h.inputPower(pos.x, pos.y, pos.z, false) > 0 })
+	if hopperEnabled(state) == powered {
+		h.setBlockAt(players, pos.dim, pos.blockPos, hopperWith(state, !powered))
+	}
+}
+
 // updateHopper: sync enabled with (inverse) power; move one item on the
 // 8-tick cadence; self-reschedule while the hopper exists.
 func (h *hub) updateHopper(players map[int32]*tracked, pos simPos, state uint32) {
