@@ -172,7 +172,7 @@ func (h *hub) updateTNT(players map[int32]*tracked) {
 		if !h.rules.TNTExplodes {
 			continue // gamerule tnt_explodes: the fuse burns out and nothing happens
 		}
-		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius, blastTNT)
+		h.explodeIn(players, t.dim, t.x, t.y+tntBlastYOffset, t.z, tntRadius, tntRadius, blastTNT, withHiveRelease())
 	}
 }
 
@@ -213,8 +213,8 @@ func (h *hub) dropDecay(kind blastKind) bool {
 // radius is the crater's power (0: no crater — mobGriefing off, or a purely
 // cosmetic blast); power is the explosion's vanilla radius for what it does
 // to entities (TNT 4, a creeper 3, a bed 5; 0 hurts nothing).
-func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64, kind blastKind) {
-	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{})
+func (h *hub) explodeIn(players map[int32]*tracked, dim int, cx, cy, cz float64, radius int, power float64, kind blastKind, opts ...blastOpt) {
+	h.explodeTyped(players, dim, cx, cy, cz, radius, power, kind, dtExplosion, deathCause{}, opts...)
 }
 
 // explodeBy is an explosion something is to blame for. Vanilla splits these:
@@ -246,7 +246,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
 	w := h.worldFor(dim)
-	var cleared []blockPos
+	var cleared, hives []blockPos
 	if w != nil && radius > 0 {
 		hit := h.blastPositionsCapped(w, cx, cy, cz, float64(radius), cfg.resistCap)
 		for pos := range hit {
@@ -262,12 +262,20 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			h.scheduleIn(dim, pos, 1)
 			h.dropExploded(players, dim, pos, st, radius, kind)
 			cleared = append(cleared, pos)
+			if isBeeHome(st) {
+				hives = append(hives, pos)
+			}
 		}
 		if cfg.fire {
 			h.lightBlastFires(players, dim, cleared)
 		}
 	}
 	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
+	// Vanilla hurts entities before it touches blocks, so bees a hive lets
+	// out are not caught in the blast that freed them.
+	for _, pos := range hives {
+		h.explodedHive(players, dim, pos, cfg.hiveRelease)
+	}
 }
 
 // lightBlastFires is ServerExplosion.createFire: one cell in three of what the
@@ -306,6 +314,10 @@ type blastCfg struct {
 	// WitherSkull.getBlockExplosionResistance answers min(0.8, resistance)
 	// for everything the wither is allowed to destroy at all.
 	resistCap float64
+	// hiveRelease turns a destroyed hive's bees out instead of losing them
+	// (BeehiveBlock.getDrops names the sources: primed TNT, a TNT cart, a
+	// creeper, the wither and its skulls).
+	hiveRelease bool
 }
 
 type blastOpt func(*blastCfg)
@@ -313,6 +325,12 @@ type blastOpt func(*blastCfg)
 // withBlastFire leaves fires in the crater (ServerExplosion.createFire).
 func withBlastFire() blastOpt {
 	return func(c *blastCfg) { c.fire = true }
+}
+
+// withHiveRelease marks a blast whose source lets bees out of the hives it
+// destroys.
+func withHiveRelease() blastOpt {
+	return func(c *blastCfg) { c.hiveRelease = true }
 }
 
 // withResistCap bounds every block's resistance for one explosion.

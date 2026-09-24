@@ -307,6 +307,13 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 		}
 	case worldgen.IsCopperBulb(state):
 		h.updateCopperBulb(players, pos, state)
+	case isSkullBlock(state):
+		// AbstractSkullBlock.neighborChanged: POWERED follows the signal.
+		// Clients read it — a powered dragon head works its jaw, a piglin
+		// head flaps its ears.
+		if want := h.inputPower(x, y, z, false) > 0; boolProp(state, "powered") != want {
+			h.rsSet(players, pos, setBoolProp(state, "powered", want))
+		}
 	case isBell(state): // BellBlock.neighborChanged: rings on the rising edge of its input
 		want := h.inputPower(x, y, z, false) > 0
 		if boolProp(state, "powered") != want {

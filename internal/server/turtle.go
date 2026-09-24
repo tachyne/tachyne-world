@@ -40,6 +40,31 @@ func turtleEggOf(s uint32) (eggs, hatch int, ok bool) {
 	return n/3 + 1, n % 3, true
 }
 
+// turtleEggAfterPlayerBreak is TurtleEggBlock.playerDestroy → decreaseEggs:
+// a survival player mining a clutch takes ONE egg and leaves the rest, so the
+// cell comes back with a count one lower (hatch progress kept). A single egg
+// just goes. ok is false for anything that is not a clutch of two or more.
+func turtleEggAfterPlayerBreak(broken uint32) (uint32, bool) {
+	eggs, hatch, ok := turtleEggOf(broken)
+	if !ok || eggs <= 1 {
+		return 0, false
+	}
+	return turtleEggState(eggs-1, hatch), true
+}
+
+// turtleEggPlayerBroken is the sound half of decreaseEggs, which plays for
+// every egg a survival player breaks — the last one included.
+func (h *hub) turtleEggPlayerBroken(players map[int32]*tracked, e evBlock) {
+	if !isTurtleEgg(e.broken) {
+		return
+	}
+	if t := players[e.by]; t == nil || t.gamemode != gmSurvival {
+		return // creative skips playerDestroy
+	}
+	h.playSoundDim(players, e.dim, "minecraft:block.turtle_egg.break", sndBlock,
+		float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 0.7, 0.9+h.rng.Float32()*0.2)
+}
+
 const (
 	turtleWaterSearch = 24.0 // TurtleGoToWaterGoal's MoveToBlockGoal(…, 24)
 	turtleHomeFar     = 64.0 // GoHome: only from more than this far out

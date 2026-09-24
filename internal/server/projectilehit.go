@@ -124,6 +124,16 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 		// projectiles_can_break_blocks allows it (Projectile.canBreakBlocks).
 		h.breakPotByProjectile(players, a.dim, pos)
 
+	case isChorusFlower(state) && h.projectileMayBreak(players, a):
+		// ChorusFlowerBlock.onProjectileHit: destroyBlock with the projectile
+		// as the breaker, which is what satisfies the loot table's "this"
+		// entity condition — so a shot flower drops itself.
+		h.toNearbyEv(players, a.dim, float64(pos.x), float64(pos.z), blockBreakEvent(pos.x, pos.y, pos.z, state))
+		h.setBlockAt(players, a.dim, pos, worldgen.Air)
+		if h.rules.DoTileDrops {
+			h.spawnBlockDrop(players, a.dim, itemChorusFlower, 1, pos.x, pos.y, pos.z)
+		}
+
 	case pointedDripHi > 0 && state >= pointedDripLo && state <= pointedDripHi:
 		// Only a THROWN TRIDENT, and only one still travelling, shears
 		// dripstone off — an arrow just sticks in it.
@@ -131,6 +141,38 @@ func (h *hub) projectileHitBlock(players map[int32]*tracked, a *arrowEntity, pos
 			h.breakBlockDrop(players, a.dim, pos, state)
 		}
 	}
+}
+
+// impactProjectiles is #impact_projectiles: the projectiles Projectile.mayBreak
+// lets break a block at all.
+var impactProjectiles = func() map[int]bool {
+	out := map[int]bool{}
+	for _, n := range []string{"arrow", "spectral_arrow", "firework_rocket", "snowball",
+		"fireball", "small_fireball", "egg", "trident", "dragon_fireball", "wither_skull",
+		"wind_charge", "breeze_wind_charge"} {
+		out[entityID(n)] = true
+	}
+	return out
+}()
+
+var itemChorusFlower = int32(itemByName["chorus_flower"])
+
+// projectileMayBreak is Projectile.mayInteract && mayBreak: an impact
+// projectile, projectiles_can_break_blocks on, and an owner allowed to change
+// the world — a player who is not in adventure mode (there is no can_break
+// component here to let one through), a mob only under mobGriefing. A
+// projectile with no owner, or one whose owner is gone, passes.
+func (h *hub) projectileMayBreak(players map[int32]*tracked, a *arrowEntity) bool {
+	if !impactProjectiles[a.etype] || !h.rules.ProjectilesBreak {
+		return false
+	}
+	if t := players[a.shooter]; t != nil {
+		return t.gamemode != gmAdventure
+	}
+	if a.shooter != 0 && h.mobs[a.shooter] != nil {
+		return h.rules.MobGriefing
+	}
+	return true
 }
 
 // projectileSpeed is how fast the projectile is travelling this tick.

@@ -22,6 +22,19 @@ import (
 // alphabetically — instrument(23) × note(25) × powered(2).
 var noteBlockBase, noteBlockMax = worldgen.BlockRange("note_block")
 
+// skullRanges are every head and skull block, floor and wall.
+var skullRanges = blockRange(
+	"skeleton_skull", "wither_skeleton_skull", "zombie_head", "player_head", "creeper_head", "dragon_head", "piglin_head",
+	"skeleton_wall_skull", "wither_skeleton_wall_skull", "zombie_wall_head", "player_wall_head", "creeper_wall_head",
+	"dragon_wall_head", "piglin_wall_head")
+
+func isSkullBlock(s uint32) bool { return inRanges2(s, skullRanges) }
+
+// noteBlockTopInstruments is #noteblock_top_instruments: the heads a note
+// block lets through when one is clicked onto its top face.
+var noteBlockTopInstruments = itemSet("zombie_head", "skeleton_skull", "creeper_head",
+	"dragon_head", "wither_skeleton_skull", "piglin_head", "player_head")
+
 func isNoteBlock(state uint32) bool { return state >= noteBlockBase && state <= noteBlockMax }
 
 func noteOf(state uint32) int { return int(state-noteBlockBase) / 2 % 25 }

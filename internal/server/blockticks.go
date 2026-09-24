@@ -262,7 +262,7 @@ func reactsToNeighbors(s uint32) bool {
 	case isWire(s), isRSTorch(s), isLamp(s), isButton(s), isTNT(s),
 		isRepeater(s), isComparator(s), isObserver(s), isPistonBase(s),
 		isDispenser(s), isDropper(s), isNoteBlock(s), isCrafter(s),
-		worldgen.IsCopperBulb(s), isBell(s), isAnyRail(s):
+		worldgen.IsCopperBulb(s), isBell(s), isAnyRail(s), isSkullBlock(s):
 		return true
 	}
 	return isPowerOpenable(s)

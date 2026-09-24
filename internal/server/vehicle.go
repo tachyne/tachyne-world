@@ -355,6 +355,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			h.tickMinecart(players, v)
 		} else {
 			h.boatPickup(players, v)
+			h.boatCrushesLilyPads(players, v)
 		}
 	}
 	occupied := map[simPos]bool{}

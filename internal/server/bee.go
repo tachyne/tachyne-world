@@ -637,6 +637,44 @@ func (h *hub) releaseHiveBees(players map[int32]*tracked, pos blockPos, t *track
 	}
 }
 
+// fireBesideHives is BeehiveBlock.updateShape: fire appearing beside a hive
+// or nest is an emergency, and every bee inside comes out. The check is for
+// plain fire only — soul fire is a different block class and does not count.
+// Nobody is to blame, so the bees come out calm. Hives are an overworld
+// store, keyed by position alone.
+func (h *hub) fireBesideHives(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	if dim != dimOverworld || state < fireStateMin || state > fireStateMax || len(h.hives) == 0 {
+		return
+	}
+	w := h.worldFor(dim)
+	for _, d := range supportNeighbours {
+		n := blockPos{pos.x + d[0], pos.y + d[1], pos.z + d[2]}
+		if len(h.hives[n]) > 0 && isBeeHome(w.At(n.x, n.y, n.z)) {
+			h.releaseHiveBees(players, n, nil)
+		}
+	}
+}
+
+// explodedHive is BeehiveBlock.getDrops for a hive a blast destroyed. When
+// the blast came from primed TNT, a TNT cart, a creeper, the wither or a
+// wither skull, the occupants are turned out (an EMERGENCY release, nobody to
+// blame). Any other blast — a bed, an anchor, a crystal, a ghast's fireball —
+// takes them with the hive; without forgetting them here, the hive sweep
+// would find the block gone and tip them out a second later anyway.
+func (h *hub) explodedHive(players map[int32]*tracked, dim int, pos blockPos, release bool) {
+	if dim != dimOverworld {
+		return
+	}
+	if _, known := h.hives[pos]; !known {
+		return
+	}
+	if release {
+		h.releaseHiveBees(players, pos, nil)
+	}
+	delete(h.hives, pos)
+	h.hivesMark()
+}
+
 // The client-visible bee: vanilla syncs a flags byte (bit 2 rolling, bit 4
 // stung, bit 8 nectar — the pollen coat on the texture) and the remaining
 // anger time (>0 = red eyes) as entity metadata. Both are diffed once a

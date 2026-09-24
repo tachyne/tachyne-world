@@ -24,12 +24,17 @@ var (
 	horizCounterClockwise = map[string]string{"north": "west", "west": "south", "south": "east", "east": "north"}
 )
 
-// chestBlockBase identifies which chest BLOCK a state belongs to (chests only
-// pair with the same block — a copper chest never pairs with wood or a
-// different oxidation stage). Returns the block's min state, or 0 if not a chest.
+// chestBlockBase identifies which chests a state may pair with (ChestBlock.
+// chestCanConnectTo): a wooden or trapped chest only with its own block, but a
+// copper chest with any of #copper_chests, whatever its oxidation or waxing
+// (CopperChestBlock.chestCanConnectTo). Returns the block's min state — the
+// first copper chest's for the whole copper family — or 0 if not a chest.
 func chestBlockBase(state uint32) uint32 {
 	if !isChestBlock(state) {
 		return 0
+	}
+	if isCopperChest(state) {
+		return copperChestMin
 	}
 	if info, ok := worldgen.InfoForState(state); ok {
 		return info.Min
@@ -218,8 +223,11 @@ func (s *Server) pairChestOnPlace(p *player, x, y, z int, state uint32) uint32 {
 			return 0, false
 		}
 		pinfo, _ := worldgen.InfoForState(ps)
-		s.setPartnerChest(p, pp, worldgen.SetProperty(pinfo, ps, "type", partnerType))
-		return worldgen.SetProperty(info, state, "type", selfType), true
+		self := worldgen.SetProperty(info, state, "type", selfType)
+		partner := worldgen.SetProperty(pinfo, ps, "type", partnerType)
+		self, partner = copperChestPairBlocks(self, partner)
+		s.setPartnerChest(p, pp, partner)
+		return self, true
 	}
 	if ns, ok := try("cw", "left", "right"); ok {
 		return ns
@@ -228,6 +236,56 @@ func (s *Server) pairChestOnPlace(p *player, x, y, z int, state uint32) uint32 {
 		return ns
 	}
 	return state
+}
+
+// copperChestNames are the #copper_chests, unwaxed then waxed, each run
+// unaffected → oxidized. All eight share one property layout.
+var copperChestNames = [8]string{
+	"copper_chest", "exposed_copper_chest", "weathered_copper_chest", "oxidized_copper_chest",
+	"waxed_copper_chest", "waxed_exposed_copper_chest", "waxed_weathered_copper_chest", "waxed_oxidized_copper_chest",
+}
+
+var copperChestBases = func() (out [8]uint32) {
+	for i, n := range copperChestNames {
+		out[i] = worldgen.BlockBase(n)
+	}
+	return out
+}()
+
+// copperChestOf splits a copper chest state into its weathering stage, its
+// waxing, and its offset inside the block (facing/type/waterlogged).
+func copperChestOf(s uint32) (stage int, waxed bool, off uint32, ok bool) {
+	if !isCopperChest(s) {
+		return 0, false, 0, false
+	}
+	info, iok := worldgen.InfoForState(s)
+	if !iok {
+		return 0, false, 0, false
+	}
+	for i, base := range copperChestBases {
+		if info.Min == base {
+			return i % 4, i >= 4, s - base, true
+		}
+	}
+	return 0, false, 0, false
+}
+
+// copperChestPairBlocks is CopperChestBlock.getLeastOxidizedChestOfConnected-
+// Blocks plus the partner's updateShape that follows it: two copper chests
+// joining become ONE block — the less oxidized of the two, and unwaxed unless
+// both halves were waxed — each keeping its own facing and type. Anything
+// other than two copper chests is returned as it came.
+func copperChestPairBlocks(self, partner uint32) (uint32, uint32) {
+	ss, sw, so, ok1 := copperChestOf(self)
+	ps, pw, po, ok2 := copperChestOf(partner)
+	if !ok1 || !ok2 {
+		return self, partner
+	}
+	i := min(ss, ps)
+	if sw && pw {
+		i += 4
+	}
+	return copperChestBases[i] + so, copperChestBases[i] + po
 }
 
 func horizSide(side, facing string) string {

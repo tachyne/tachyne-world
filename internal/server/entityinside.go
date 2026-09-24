@@ -268,6 +268,10 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 			case !onFloor && m.etype == entityRavager && isCropState(s) && h.rules.MobGriefing:
 				// CropBlock.entityInside: a ravager tramples crops flat.
 				h.breakBlockDrop(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
+			case !onFloor && m.etype == entityRavager && isPitcherCrop(s) && h.rules.MobGriefing:
+				// PitcherCropBlock.entityInside: the pitcher is not a CropBlock,
+				// but it carries the same rule.
+				h.tramplePitcher(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla).
 				if m.etype == entityFox || m.etype == entityBee {
@@ -405,6 +409,69 @@ func isCropState(s uint32) bool {
 		}
 	}
 	return false
+}
+
+var lilyPadMin, lilyPadMax = worldgen.BlockRange("lily_pad")
+
+func isLilyPad(s uint32) bool { return s >= lilyPadMin && s <= lilyPadMax }
+
+// Boat box (AbstractBoat's entity dimensions), deflated by the 1e-5 that
+// Entity.checkInsideBlocks takes off before it looks.
+const (
+	boatHalfWidth = 1.375/2 - 1e-5
+	boatHeight    = 0.5625 - 1e-5
+)
+
+// boatCrushesLilyPads is LilyPadBlock.entityInside: a boat breaks every lily
+// pad its box reaches into, dropping it. Vanilla runs the check each tick a
+// boat moves (AbstractBoat.tick → move → applyEffectsFromBlocks), still or
+// steered, so this runs from the vehicle sweep rather than from the rider's
+// move packets.
+func (h *hub) boatCrushesLilyPads(players map[int32]*tracked, v *vehicle) {
+	if !v.isBoat() {
+		return
+	}
+	w := h.worldFor(v.dim)
+	if w == nil {
+		return
+	}
+	x0, x1 := floorInt(v.x-boatHalfWidth), floorInt(v.x+boatHalfWidth)
+	z0, z1 := floorInt(v.z-boatHalfWidth), floorInt(v.z+boatHalfWidth)
+	y0, y1 := floorInt(v.y+1e-5), floorInt(v.y+boatHeight)
+	for x := x0; x <= x1; x++ {
+		for z := z0; z <= z1; z++ {
+			if !w.Loaded(int32(x>>4), int32(z>>4)) {
+				continue
+			}
+			for y := y0; y <= y1; y++ {
+				if s := w.At(x, y, z); isLilyPad(s) {
+					h.toNearbyEv(players, v.dim, float64(x), float64(z), blockBreakEvent(x, y, z, s))
+					h.breakBlockDrop(players, v.dim, blockPos{x, y, z}, s)
+				}
+			}
+		}
+	}
+}
+
+// isPitcherCrop reports either half of a pitcher crop.
+func isPitcherCrop(s uint32) bool { return s >= pitcherCropMin && s <= pitcherCropMax }
+
+// tramplePitcher is destroyBlock on one cell of a pitcher crop. The loot
+// table pays out on the lower half only; the upper half is dropped by the
+// support sweep once its lower half goes, and a lower half whose upper half
+// was the one struck goes with it, dropping nothing (DoublePlantBlock.
+// updateShape turns it to air).
+func (h *hub) tramplePitcher(players map[int32]*tracked, dim int, pos blockPos, s uint32) {
+	h.breakBlockDrop(players, dim, pos, s)
+	if _, lower := pitcherAgeHalf(s); lower {
+		return
+	}
+	below := blockPos{pos.x, pos.y - 1, pos.z}
+	if bs := h.worldFor(dim).At(below.x, below.y, below.z); isPitcherCrop(bs) {
+		if _, lower := pitcherAgeHalf(bs); lower {
+			h.setBlockAt(players, dim, below, worldgen.Air)
+		}
+	}
 }
 
 // cellWith is the feet or body cell holding state s — blocksTouching reports

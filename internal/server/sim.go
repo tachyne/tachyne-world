@@ -204,6 +204,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	}
 	if old != state {
 		h.observersSee(players, dim, pos, state) // the shape update an observer watches for
+		h.fireBesideHives(players, dim, pos, state)
 	}
 	// Break the fence and the knot goes with it, dropping whatever it held.
 	// Guarded on there being any knot at all: this is the choke point every

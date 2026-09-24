@@ -329,6 +329,9 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					// what lets it eat through obsidian a black one bounces off.
 					opts = append(opts, withResistCap(witherSkullResistCap))
 				}
+				if a.etype == entityWitherSkull {
+					opts = append(opts, withHiveRelease())
+				}
 				h.explodeBy(players, a.dim, a.x, a.y, a.z, a.explode+2, float64(a.explode), blastMob, by, opts...)
 			}
 			if a.loyalty > 0 { // a loyal trident returns after striking rather than vanishing

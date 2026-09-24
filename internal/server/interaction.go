@@ -142,6 +142,11 @@ func (s *Server) handleDig(p *player, data []byte) {
 	if worldgen.IsWaterlogged(broken) { // the water source stays when the block goes
 		after = worldgen.WaterBase
 	}
+	if mode == gmSurvival { // a clutch loses one egg, not all of them
+		if left, ok := turtleEggAfterPlayerBreak(broken); ok {
+			after = left
+		}
+	}
 	s.worldFor(p).SetBlock(x, y, z, after)
 	s.sendBlockChange(p, x, y, z, after, seq)
 	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: after, by: p.eid, broken: broken})
@@ -786,6 +791,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		return true
 	}
 	if isNoteBlock(state) {
+		// NoteBlock.useItemOn: a head clicked onto the TOP face passes, so it
+		// is placed there (and sets the instrument) instead of tuning.
+		if face == 1 && noteBlockTopInstruments[p.heldItem()] { // 1 = up
+			return false
+		}
 		s.hub.post(evNoteBlock{eid: p.eid, x: x, y: y, z: z, tune: true})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

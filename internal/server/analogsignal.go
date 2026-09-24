@@ -37,6 +37,9 @@ func (h *hub) analogSignal(pos simPos) int {
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}
+	if _, isCandleCake := candleCakeOf(st); isCandleCake {
+		return cakeSignal(0) // CandleCakeBlock: always a whole cake, lit or not
+	}
 	if isLectern(st) {
 		return h.lecternSignal(pos)
 	}

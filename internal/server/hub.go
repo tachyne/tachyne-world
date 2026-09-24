@@ -1358,6 +1358,8 @@ func (h *hub) run() {
 					h.soakSponge(players, e.dim, blockPos{e.x + d[0], e.y + d[1], e.z + d[2]})
 				}
 				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
+				h.turtleEggPlayerBroken(players, e)
+				h.fireBesideHives(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				if e.broken == 0 && isWoodShelf(e.state) {
 					h.shelfPlaced(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				}
