@@ -2488,6 +2488,10 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 
 	// (The newcomer's initial world clock is sent reliably in handlePlay, as part
 	// of the join stream, so it isn't dropped in the join packet flood.)
+	// Their own tab-list entry first: PlayerList.placeNewPlayer sends the
+	// newcomer every player, itself included, and the client draws its own
+	// skin from that entry's textures — without it, a default skin.
+	e.p.trySendEv(infoAdd(e.p, nt.gamemode))
 	for _, t := range players {
 		// Tab-list entries are global; entity visibility is per-dimension
 		// (cross-dim views swap on dimension switch, not at join).

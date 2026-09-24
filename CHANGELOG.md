@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **You see your own skin.** A joining player was never sent their own
+  tab-list entry. Their client had no skin data for them and drew a
+  default skin, and they were missing from their own tab list. Every
+  player now gets their own entry when they join, with their skin, as
+  vanilla sends it.
 - **No more "chat messages can't be verified".** With online mode on, the
   gateway tells clients and the server list that the server enforces
   secure chat, as a vanilla online server does. The warning toast no
