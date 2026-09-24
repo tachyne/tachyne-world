@@ -116,6 +116,9 @@ type itemTarget struct {
 	pos     *blockPos // a block's position
 	slotAt  func(id int) *slotAccess
 	changed func(players map[int32]*tracked)
+	// canPlace is Container.canPlaceItem, which /loot honours and /item
+	// does not (nil: anything goes).
+	canPlace func(id int, st invStack) bool
 }
 
 func (t itemTarget) slots(ids []int) []slotAccess {
@@ -147,6 +150,7 @@ func (h *hub) blockItemTarget(dim int, pos blockPos) (itemTarget, bool) {
 	sp := simPos{dim: dim, blockPos: pos}
 	st := h.worldFor(dim).At(pos.x, pos.y, pos.z)
 	var slots []*invStack
+	var canPlace func(id int, s invStack) bool
 	switch {
 	case isChestBlock(st) || isBarrel(st) || isShulkerBox(st):
 		c := h.chests[sp]
@@ -163,6 +167,12 @@ func (h *hub) blockItemTarget(dim int, pos blockPos) (itemTarget, bool) {
 		for i := range b.slots {
 			slots = append(slots, &b.slots[i])
 		}
+		switch {
+		case isBrewStand(st):
+			canPlace = func(id int, s invStack) bool { return brewCanPlace(b, id, s.item) }
+		case isCrafter(st):
+			canPlace = func(id int, s invStack) bool { return crafterCanPlace(b, id, s) }
+		}
 	default:
 		kind, ok := furnaceKindOf(st)
 		if !ok {
@@ -176,6 +186,16 @@ func (h *hub) blockItemTarget(dim int, pos blockPos) (itemTarget, bool) {
 		for i := range f.slots {
 			slots = append(slots, &f.slots[i])
 		}
+		canPlace = func(id int, s invStack) bool { // AbstractFurnaceBlockEntity.canPlaceItem
+			switch id {
+			case furnaceFuel:
+				return cookerFuelTicks(cookFurnace, s.item) > 0 ||
+					(s.item == itemBucket && f.slots[furnaceFuel].item != itemBucket)
+			case 2:
+				return false
+			}
+			return true
+		}
 	}
 	p := pos
 	return itemTarget{pos: &p,
@@ -185,8 +205,40 @@ func (h *hub) blockItemTarget(dim int, pos blockPos) (itemTarget, bool) {
 			}
 			return stackSlot(slots[id], true)
 		},
-		changed: func(players map[int32]*tracked) { h.refreshBinViewers(players, sp) },
+		changed:  func(players map[int32]*tracked) { h.refreshBinViewers(players, sp) },
+		canPlace: canPlace,
 	}, true
+}
+
+// crafterCanPlace is CrafterBlockEntity.canPlaceItem: not a disabled slot,
+// not a full one, and an occupied slot only while no later enabled slot is
+// emptier (or holds fewer of the same item).
+func crafterCanPlace(b *bin, slot int, _ invStack) bool {
+	if slot < 0 || slot >= 9 || b.disabled[slot] {
+		return false
+	}
+	cur := b.slots[slot]
+	if cur.item == 0 || cur.count <= 0 {
+		return true
+	}
+	if cur.count >= stackCap(cur.item) {
+		return false
+	}
+	for i := slot + 1; i < 9; i++ {
+		if b.disabled[i] {
+			continue
+		}
+		o := b.slots[i]
+		if o.item == 0 || o.count <= 0 {
+			return false
+		}
+		probe := o
+		probe.count = cur.count
+		if o.count < cur.count && probe == cur {
+			return false
+		}
+	}
+	return true
 }
 
 // playerItemTarget is Player.getSlot over the engine's player model.

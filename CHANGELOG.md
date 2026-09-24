@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/loot.** Operators can roll a loot table and send the result to
+  players, into a container, onto the ground, or into chosen slots. The
+  source can be a named table (the chest, barrel, dispenser, archaeology,
+  equipment and gameplay tables), a mob's drops as if the operator had
+  killed it (their Looting counts), or a block's drops as if mined, with an
+  optional tool (Silk Touch and Fortune count). Containers only take what
+  their slots accept. Fishing loot, and mobs as targets, are not supported
+  yet.
 - **/item.** Operators can put items straight into a chest, barrel,
   shulker box, furnace, hopper, dispenser, dropper, brewing stand or
   crafter, or into a player's hotbar, inventory, hands, armour, ender chest,

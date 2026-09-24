@@ -1,7 +1,6 @@
 package server
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -74,7 +73,7 @@ func TestCommandItem(t *testing.T) {
 			t.Errorf("missing %q in %q", want, a)
 		}
 	}
-	if c := linesBetween(logs["carol"], "I2", "I3"); len(c) != 1 || !strings.Contains(c[0], "permission") {
+	if c := linesBetween(logs["carol"], "I2", "I3"); permissionRefusals(c) != 1 {
 		t.Errorf("non-op: %q", c)
 	}
 }

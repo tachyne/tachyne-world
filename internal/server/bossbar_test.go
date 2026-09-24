@@ -128,7 +128,7 @@ func TestCommandBossbar(t *testing.T) {
 			t.Errorf("missing %q in %q", want, a)
 		}
 	}
-	if c := linesBetween(logs["carol"], "B1", "B2"); len(c) != 1 || !strings.Contains(c[0], "permission") {
+	if c := linesBetween(logs["carol"], "B1", "B2"); permissionRefusals(c) != 1 {
 		t.Errorf("non-op: %q", c)
 	}
 

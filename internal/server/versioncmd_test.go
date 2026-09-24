@@ -1,7 +1,6 @@
 package server
 
 import (
-	"strings"
 	"testing"
 	"time"
 )
@@ -36,7 +35,7 @@ func TestCommandVersionAndStop(t *testing.T) {
 		t.Errorf("other operators are told: %q", b)
 	}
 	c := linesBetween(logs["carol"], "V1", "V2")
-	if len(c) != 2 || !strings.Contains(c[0], "permission") || !strings.Contains(c[1], "permission") {
+	if permissionRefusals(c) != 2 {
 		t.Errorf("non-op: %q", c)
 	}
 	select {

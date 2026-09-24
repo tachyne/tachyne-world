@@ -3,7 +3,6 @@ package server
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -55,7 +54,7 @@ func TestCommandSave(t *testing.T) {
 			t.Errorf("missing %q in %q", want, a)
 		}
 	}
-	if c := linesBetween(logs["carol"], "S2", "S3"); len(c) != 1 || !strings.Contains(c[0], "permission") {
+	if c := linesBetween(logs["carol"], "S2", "S3"); permissionRefusals(c) != 1 {
 		t.Errorf("non-op: %q", c)
 	}
 }

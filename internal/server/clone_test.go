@@ -96,7 +96,7 @@ func TestCommandClone(t *testing.T) {
 	if a := linesBetween(logs["alice"], "C3", "C4"); !hasLine(a, "No blocks were cloned") {
 		t.Errorf("masked air: %q", a)
 	}
-	if c := linesBetween(logs["carol"], "C3", "C4"); len(c) != 1 || !strings.Contains(c[0], "permission") {
+	if c := linesBetween(logs["carol"], "C3", "C4"); permissionRefusals(c) != 1 {
 		t.Errorf("non-op: %q", c)
 	}
 }
@@ -117,4 +117,16 @@ func TestCloneParse(t *testing.T) {
 	if _, msg := parseClone(strings.Fields("from mars 0 0 0 1 1 1 5 5 5"), p); msg != "Unknown dimension 'mars'" {
 		t.Errorf("unknown dimension: %q", msg)
 	}
+}
+
+// permissionRefusals counts the permission refusals among a player's lines
+// (the HUD's action-bar refresh may land in between).
+func permissionRefusals(lines []string) int {
+	n := 0
+	for _, l := range lines {
+		if strings.Contains(l, "permission") {
+			n++
+		}
+	}
+	return n
 }
