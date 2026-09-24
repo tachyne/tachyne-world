@@ -80,6 +80,11 @@ type advCriterion struct {
 	// (distract_piglin: no gold).
 	playerMinY       float64
 	playerNotWearing []int32
+	// player_interacted_with_entity: the entity's body armour after the
+	// interaction (repair_wolf_armor: wolf armour at exactly zero damage)
+	bodyItems     []int32
+	bodyDamage    int
+	hasBodyDamage bool
 	// player_killed_entity: the entity wears the ominous banner on its head
 	// (a raid captain, voluntary_exile)
 	ominousBanner bool

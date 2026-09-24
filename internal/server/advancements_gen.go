@@ -1644,7 +1644,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:husbandry/repair_wolf_armor", parent: "minecraft:husbandry/tame_an_animal", xp: 0,
 		criteria: []advCriterion{
-			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{1003}}},
+			{name: "repair_wolf_armor", trigger: "player_interacted_with_entity", entity: "wolf", items: [][]int32{{1003}}, bodyItems: []int32{1004}, bodyDamage: 0, hasBodyDamage: true},
 		},
 		reqs: [][]string{
 			{"repair_wolf_armor"},

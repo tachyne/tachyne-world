@@ -344,6 +344,24 @@ def rng_min(v, key=None):
 
 
 OMINOUS_BANNER = "block.minecraft.ominous_banner"
+
+
+def body_pred(d, c, tags):
+    """An interacted entity's body armour after the interaction: its item
+    and exact damage (repair_wolf_armor: wolf_armor at damage 0, i.e. the
+    scute finished the repair). Other equipment shapes stop the generator."""
+    for pc in c.get("entity") or []:
+        eq = (pc.get("predicate") or {}).get("equipment")
+        if eq is None:
+            continue
+        body = eq.get("body") or {}
+        comps = body.get("components") or {}
+        if set(eq) != {"body"} or not set(body) <= {"items", "components"} or not set(comps) <= {"minecraft:damage"}:
+            raise SystemExit(f"gen_advancements: interacted entity equipment {eq}")
+        if "items" in body:
+            d["bodyItems"] = names_of(body["items"], tags, "item")
+        if "minecraft:damage" in comps:
+            d["bodyDamage"] = int(comps["minecraft:damage"])
 ARMOR_SLOTS = {"head", "chest", "legs", "feet"}
 
 
@@ -489,6 +507,8 @@ def distill(trigger, cond, tags):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        if t == "player_interacted_with_entity":
+            body_pred(d, c, tags)
         p = items_pred(c.get("item", {}), tags)
         if p: d["items"] = [p]
     elif t == "changed_dimension":
@@ -919,6 +939,11 @@ def main():
                 f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
             if c.get("vehicles"):
                 f.append("vehicles: []string{%s}" % ", ".join(gstr(x) for x in c["vehicles"]))
+            if c.get("bodyItems"):
+                ids = sorted(set(item_ids[x] for x in c["bodyItems"] if x in item_ids))
+                f.append("bodyItems: []int32{%s}" % ", ".join(map(str, ids)))
+            if "bodyDamage" in c:
+                f.append(f"bodyDamage: {c['bodyDamage']}, hasBodyDamage: true")
             if c.get("playerNotWearing"):
                 ids = sorted(set(item_ids[x] for x in c["playerNotWearing"] if x in item_ids))
                 f.append("playerNotWearing: []int32{%s}" % ", ".join(map(str, ids)))

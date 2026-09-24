@@ -182,6 +182,9 @@ type advMatch struct {
 	// height and the armour they wear, for criteria with a player predicate.
 	playerY     float64
 	playerArmor [4]int32
+
+	body    int32 // player_interacted_with_entity: the entity's body armour after the click
+	bodyDmg int
 }
 
 // playerMatches is the criterion's player predicate (every trigger's
@@ -307,6 +310,12 @@ func (m advMatch) criterion(c *advCriterion) bool {
 	case "bred_animals", "tame_animal", "summoned_entity", "thrown_item_picked_up_by_player":
 		return m.entityIs(c)
 	case "player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity":
+		if len(c.bodyItems) > 0 && !containsID(c.bodyItems, m.body) {
+			return false
+		}
+		if c.hasBodyDamage && (m.body == 0 || m.bodyDmg != c.bodyDamage) {
+			return false
+		}
 		return m.entityIs(c) && m.itemIn(c)
 	case "placed_block":
 		if len(c.locChecks) > 0 {
