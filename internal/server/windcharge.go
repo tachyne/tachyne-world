@@ -21,12 +21,24 @@ const (
 	windChargeKnockback = 1.22 // SimpleExplosionDamageCalculator knockbackMultiplier
 )
 
-// windChargeBurstRadius is the gust's radius by who threw it.
+// windChargeBurstRadius is the gust's radius by what the charge is: a
+// breeze's charge (BreezeWindCharge) keeps its wider burst even after a
+// player has batted it back.
 func windChargeBurstRadius(a *arrowEntity) float64 {
-	if a.mobShot {
+	if a.breezeBorn {
 		return breezeChargeRadius
 	}
 	return windChargeRadius
+}
+
+// breezeOwned reports whether a projectile's owner is a breeze, which a
+// breeze is invulnerable to (Breeze.isInvulnerableTo).
+func (h *hub) breezeOwned(a *arrowEntity) bool {
+	if a.playerShot {
+		return false // a player's, or one a player batted back
+	}
+	m := h.mobs[a.shooter]
+	return m != nil && m.etype == entityBreeze
 }
 
 var (

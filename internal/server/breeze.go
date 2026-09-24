@@ -257,7 +257,7 @@ func (h *hub) breezeFire(players map[int32]*tracked, m *mob, t *tracked) {
 	uy += h.rng.NormFloat64() * spread
 	uz += h.rng.NormFloat64() * spread
 	a := h.launchProjectileIn(players, entityWindCharge, m.dim, m.x, m.y+1, m.z, ux*v, uy*v, uz*v)
-	a.shooter, a.breezeBorn = m.eid, true
+	a.shooter, a.breezeBorn, a.mobShot = m.eid, true, true // it strikes other mobs, not its breeze
 	h.playSoundDim(players, m.dim, "minecraft:entity.breeze.shoot", sndHostile, m.x, m.y, m.z, 1.5, 1)
 }
 

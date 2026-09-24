@@ -455,6 +455,11 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if !isSurvival(t.gamemode) || t.dead || t.health <= 0 {
 		return false
 	}
+	// LivingEntity.hurtServer: Fire Resistance turns away every is_fire blow
+	// outright — a blaze's fireball included — before anything else runs.
+	if dt.has(tagIsFire) && t.hasEffect(effFireRes) > 0 {
+		return false
+	}
 	h.dropShoulderParrots(players, t) // hurtServer: any blow that gets this far shakes them off
 	// Player.hurtServer scales the blow by the difficulty BEFORE anything
 	// mitigates it, and only for the damage types whose `scaling` field says

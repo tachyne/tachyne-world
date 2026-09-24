@@ -23,6 +23,7 @@ const (
 	// Canonical (770) ids of the payload-free particles we emit.
 	particleCrit             = 5
 	particleExplosionEmitter = 21
+	particleExplosion        = 22
 	particlePoof             = 56
 	particleBubble           = 3  // stable across every served version
 	particleFishing          = 30 // the bobber wake (31 on 773+, 38 on 776)

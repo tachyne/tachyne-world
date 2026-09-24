@@ -48,7 +48,7 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 		h.sendSlot(t, slot)
 	}
 	// ExperienceBottleItem.use: shootFromRotation with a −20° lift at 0.7.
-	vx, vy, vz := throwVector(t.yaw, t.pitch, xpBottleThrowLift, xpBottleThrowPower)
+	vx, vy, vz := h.throwFromRotation(t, xpBottleThrowLift, xpBottleThrowPower, throwUncertainty)
 	a := h.launchProjectileIn(players, entityXPBottle, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks, a.xpBottle = true, true, true

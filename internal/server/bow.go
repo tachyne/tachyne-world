@@ -203,8 +203,8 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	if power >= 1 {
 		dmg += h.rng.Intn(dmg/2 + 2)
 	}
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	a := h.launchProjectileIn(players, arrowEntityFor(ammo), t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
+	vx, vy, vz := h.throwFromRotation(t, 0, v, throwUncertainty) // BowItem.shootProjectile
+	a := h.launchProjectileIn(players, arrowEntityFor(ammo), t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	loadArrow(a, ammo)
 	a.weapon = itemBow
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
@@ -268,8 +268,8 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 			h.sendSlot(t, slot)
 		}
 	}
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	a := h.launchProjectileIn(players, etype, t.dim, t.x, t.y+1.5, t.z, dx*throwSpeed, dy*throwSpeed, dz*throwSpeed)
+	vx, vy, vz := h.throwFromRotation(t, 0, throwSpeed, throwUncertainty) // Snowball/EggItem.use
+	a := h.launchProjectileIn(players, etype, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks = true, true // throwables shatter on impact, never stick
 	snd := "minecraft:entity.snowball.throw"

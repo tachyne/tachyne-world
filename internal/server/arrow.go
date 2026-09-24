@@ -22,14 +22,13 @@ const (
 	arrowLifeTicks = 200  // flying or stuck, gone after 10 s (transient litter)
 	arrowHitRadius = 0.5  // horizontal hit cylinder (player 0.3 + arrow slack)
 
-	// Shulker bullet: a slow homing projectile that curves toward its victim
-	// (vanilla ShulkerBullet steers its motion each tick) rather than flying a
-	// fixed arc, and gives Levitation on a hit.
-	shulkerBulletSpeed = 0.4 // target flight speed, blocks/tick
-	shulkerBulletSteer = 0.2 // how hard it turns toward the target each tick
-
 	parchedWeaknessSecs = 30 // Parched arrows: WEAKNESS 600 ticks (vanilla behavior)
 	boggedPoisonSecs    = 5  // Bogged.getArrow: POISON 100 ticks
+)
+
+const (
+	entityStatusProjectileBreak = 3    // Snowball/ThrownEgg: the item breaks into bits
+	worldEventDragonBreath      = 2006 // DragonFireball.onHit: the breath's burst
 )
 
 var (
@@ -59,6 +58,8 @@ type arrowEntity struct {
 	breaks     bool     // snowball/egg: shatters on impact instead of sticking
 	mobShot    bool     // shot by a mob at mobs (a snow golem's snowball): may hit mobs other than its shooter
 	breezeBorn bool     // a breeze's wind charge (vanilla's breeze_wind_charge), even once batted back
+	turnedBy   int32    // the breeze that last turned this projectile back (lastDeflectedBy)
+	turnedNow  bool     // turned back during this sample: stop the move where it is
 	breath     bool     // dragon fireball: bursts into a breath cloud where it lands
 	dangerous  bool     // wither skull: the blue one — slower, and it chews through what the black one cannot
 	egg        bool     // an egg: 1-in-8 chance to hatch a chick where it lands
@@ -76,11 +77,12 @@ type arrowEntity struct {
 	weaken     int      // parched arrow: seconds of weakness effect on a hit
 	slow       int      // stray arrow: seconds of slowness effect on a hit
 
-	homing   int32   // shulker bullet: eid of the target it curves toward (0 = straight)
-	levitate int     // shulker bullet: seconds of Levitation applied on a hit
-	explode  int     // ghast/wither fireball: explosion power on impact (0 = none)
-	knock    float64 // wind charge: pure knockback impulse, no damage
-	punch    int     // bow Punch enchant: +0.6/level extra hit knockback
+	homing   int32      // shulker bullet: eid of the target it curves toward (0 = straight)
+	bullet   bulletPlan // shulker bullet: its axis-by-axis course (shulkerbullet.go)
+	levitate int        // shulker bullet: seconds of Levitation applied on a hit
+	explode  int        // ghast/wither fireball: explosion power on impact (0 = none)
+	knock    float64    // wind charge: pure knockback impulse, no damage
+	punch    int        // bow Punch enchant: +0.6/level extra hit knockback
 
 	pierce   int            // crossbow piercing: remaining pass-throughs (0 = stop on first mob)
 	hitMobs  map[int32]bool // mobs already struck (piercing: never the same one twice; nil when not piercing)
@@ -167,27 +169,47 @@ func projectileGravity(etype int) float64 {
 // before moving rather than after as an arrow does.
 func isThrowable(etype int) bool {
 	switch etype {
-	case entitySnowball, entityEggProj, entityPearlProj, entityXPBottle, entitySplashProj:
+	case entitySnowball, entityEggProj, entityPearlProj, entityXPBottle, entitySplashProj, entityLingerProj:
 		return true
 	}
 	return false
 }
 
-// throwVector is Projectile.shootFromRotation's heading at power pow: the
-// look direction, with yOffset degrees added to the pitch in the vertical
-// component only (the potions' and the bottle o' enchanting's −20° lift),
-// normalized and scaled. The thrower's own motion is not added.
-func throwVector(yaw, pitch float32, yOffset, pow float64) (float64, float64, float64) {
-	ry := float64(yaw) * math.Pi / 180
-	rp := float64(pitch) * math.Pi / 180
+// throwFromRotation is Projectile.shootFromRotation for a player's throw at
+// power pow: the look direction, with yOffset degrees added to the pitch in
+// the vertical component only (the potions' and the bottle o' enchanting's
+// −20° lift), shot with the given uncertainty (getMovementToShoot), and then
+// the thrower's own movement added — the vertical part only while they are
+// off the ground.
+func (h *hub) throwFromRotation(t *tracked, yOffset, pow, uncertainty float64) (float64, float64, float64) {
+	ry := float64(t.yaw) * math.Pi / 180
+	rp := float64(t.pitch) * math.Pi / 180
 	x := -math.Sin(ry) * math.Cos(rp)
 	y := -math.Sin(rp + yOffset*math.Pi/180)
 	z := math.Cos(ry) * math.Cos(rp)
-	d := math.Sqrt(x*x + y*y + z*z)
+	vx, vy, vz := h.shootVector(x, y, z, pow, uncertainty)
+	mx, my, mz := h.knownMove(t)
+	if t.onGround {
+		my = 0
+	}
+	return vx + mx, vy + my, vz + mz
+}
+
+// throwUncertainty is the uncertainty every player throw and bow shot is
+// made with (spawnProjectileFromRotation's 1.0).
+const throwUncertainty = 1.0
+
+// shootVector is Projectile.getMovementToShoot: the direction normalized,
+// each axis nudged by a triangle-distributed 0.0172275 × uncertainty, then
+// scaled to the launch power.
+func (h *hub) shootVector(dx, dy, dz, pow, uncertainty float64) (float64, float64, float64) {
+	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d < 1e-9 {
 		return 0, 0, 0
 	}
-	return x / d * pow, y / d * pow, z / d * pow
+	dev := 0.0172275 * uncertainty
+	tri := func() float64 { return dev * (h.rng.Float64() - h.rng.Float64()) }
+	return (dx/d + tri()) * pow, (dy/d + tri()) * pow, (dz/d + tri()) * pow
 }
 
 // launchProjectileIn launches into an explicit dimension.
@@ -286,20 +308,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			continue
 		}
-		// Shulker bullet: curve toward its live target each tick (it homes on its
-		// victim rather than flying a fixed arc). ShulkerBullet.tick: once the
-		// target is gone (dead, left, a spectator) it only falls, at 0.04.
+		// Shulker bullet: steer along its course toward a live target, or fall
+		// once the target is gone (ShulkerBullet.tick).
+		var bulletTarget *tracked
 		if a.homing != 0 {
-			if tgt := players[a.homing]; tgt != nil && !tgt.dead && tgt.dim == a.dim && tgt.gamemode != gmSpectator {
-				dx, dy, dz := tgt.x-a.x, (tgt.y+1)-a.y, tgt.z-a.z
-				if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > 1e-6 {
-					a.vx += (dx/d*shulkerBulletSpeed - a.vx) * shulkerBulletSteer
-					a.vy += (dy/d*shulkerBulletSpeed - a.vy) * shulkerBulletSteer
-					a.vz += (dz/d*shulkerBulletSpeed - a.vz) * shulkerBulletSteer
-				}
-			} else {
-				a.vy -= projectileGravity(a.etype)
-			}
+			bulletTarget = h.shulkerBulletSteer(players, a)
 		}
 		// ThrowableProjectile.tick integrates BEFORE it moves: gravity, then
 		// inertia (0.99 in air, 0.8 in water), then the step along the result.
@@ -332,6 +345,10 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				hit = true
 				break
 			}
+			if a.turnedNow { // a breeze sent it back: it flies off on its new course next tick
+				a.turnedNow = false
+				break
+			}
 			if worldgen.Collides(h.worldFor(a.dim).At(int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz)))) {
 				h.vibAt(a.dim, freqProjectileLand, px, py, pz, a.shooter)
 				if a.breaks { // snowballs/eggs shatter
@@ -345,7 +362,13 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 					// campfire, a snowball rings a bell or scores on a target.
 					bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
 					h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
-					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
+					if a.etype == entitySmallFireball {
+						h.smallFireballLights(players, a, bp, struckFace(a.x, a.y, a.z, px, py, pz, bp))
+					}
+					if a.etype == entityShulkerBullet { // ShulkerBullet.onHitBlock: a small burst and its thud
+						h.spawnParticles(players, a.dim, particleExplosion, a.x, a.y, a.z, 0.2, 0, 2)
+						h.playSoundDim(players, a.dim, "minecraft:entity.shulker_bullet.hit", sndHostile, a.x, a.y, a.z, 1, 1)
+					}
 					if a.pearl {
 						h.pearlLand(players, a)
 					}
@@ -363,14 +386,35 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			}
 			a.x, a.y, a.z = px, py, pz
 		}
+		// LlamaSpit.tick: after its hit test, a gob whose box touches any
+		// block that is not air — water, grass, a flower — is simply gone,
+		// where it was when the tick began.
+		if !hit && a.etype == entityLlamaSpit && h.spitTouchesNonAir(a.dim, bx, by, bz) {
+			delete(h.arrows, eid)
+			h.entityGone(players, a.dim, eid)
+			continue
+		}
+		if !hit && bulletTarget != nil {
+			h.shulkerBulletReplan(a, bulletTarget) // a new leg when this one ends or runs into a wall
+		}
 		if hit {
+			// Snowball / ThrownEgg.onHit broadcast entity event 3, which the
+			// client draws as the item breaking into bits. Nothing else that
+			// breaks shows a burst of its own: fireballs and skulls end in
+			// their explosion, a dragon fireball in its breath, a potion or
+			// a bottle in its splash, a pearl, a spit or a small fireball in
+			// nothing at all.
+			if a.etype == entitySnowball || a.etype == entityEggProj {
+				h.toNearbyEv(players, a.dim, a.x, a.z, entityStatus(eid, entityStatusProjectileBreak))
+			}
 			if a.egg { // ThrownEgg.onHit: whatever it struck, block or creature
 				h.hatchEgg(players, a)
 			}
 			if a.xpBottle { // a bottle o' enchanting pays out where it broke
 				h.breakXPBottle(players, a)
 			}
-			if a.breath { // a dragon fireball bursts into its breath
+			if a.breath { // a dragon fireball bursts into its breath (levelEvent 2006: the purple burst and its sound)
+				h.levelEvent(players, a.dim, worldEventDragonBreath, floorInt(a.x), floorInt(a.y), floorInt(a.z), 1)
 				h.spawnBreathCloud(a.dim, a.x, a.y, a.z)
 			}
 			if a.splash { // a thrown potion shatters into its area-of-effect
@@ -485,9 +529,20 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 				src = dmgFrom{}
 			}
 			src.byMob = byMob
+			// A burning arrow and a blaze's fireball set the target alight
+			// BEFORE the blow lands, and put its old fire back if the blow
+			// fails (AbstractArrow / SmallFireball.onHitEntity).
+			ignite, oldFire := ignitesOnHit(a), t.fireSecs
+			if ignite {
+				h.setBurning(players, t, 5)
+			}
 			landed := h.hurtFrom(players, t, float32(a.dmg), projectileDamageOf(a), shot, src)
 			h.knockback(t, a.x, a.z) // the shove lands even off a shield
 			if !landed {
+				if ignite && t.fireSecs != oldFire {
+					t.fireSecs = oldFire
+					h.broadcastPlayerFlags(players, t)
+				}
 				return true // caught on the shield: no venom, no thorns, no fire
 			}
 			if t.dead {
@@ -523,13 +578,18 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 					h.applyEffectTicks(players, t, e.id, e.amp, ticks)
 				}
 			}
-			if a.fire {
-				h.setBurning(players, t, 5)
-			}
 		}
 		return true
 	}
 	return false
+}
+
+// ignitesOnHit reports whether a projectile sets what it strikes alight: a
+// burning arrow, or a small fireball (SmallFireball.onHitEntity). A ghast's
+// large fireball is itself burning — it still lights a campfire, a candle or
+// TNT it strikes — but its hit only deals damage (LargeFireball.onHitEntity).
+func ignitesOnHit(a *arrowEntity) bool {
+	return a.fire && a.etype != entityLargeFireball
 }
 
 // tippedArrowScale is the tipped arrow's POTION_DURATION_SCALE: an eighth
@@ -561,6 +621,18 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 		if a.hitMobs != nil && a.hitMobs[m.eid] {
 			continue // piercing bolt already struck this mob — pass through
 		}
+		if m.etype == entityBreeze && a.knock == 0 {
+			// Breeze.deflection (#deflects_projectiles): anything but a wind
+			// charge is turned back at half speed, once per breeze; after
+			// that it passes the breeze by. It never lands.
+			if a.turnedBy != m.eid {
+				a.vx, a.vy, a.vz = -a.vx*0.5, -a.vy*0.5, -a.vz*0.5
+				a.turnedBy, a.turnedNow = m.eid, true
+				h.playSoundDim(players, m.dim, "minecraft:entity.breeze.deflect", sndHostile, m.x, m.y, m.z, 1, 1)
+				return false
+			}
+			continue
+		}
 		if m.etype == entityShulker && m.shulkerClosed() && a.etype != entityShulkerBullet {
 			continue // a closed shell: arrows glance off (Shulker.hurtServer)
 		}
@@ -575,6 +647,12 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			h.wardenAngerAt(m, a.shooter, wardenAngerShot) // PROJECTILE_ANGER
 		}
 		if a.knock > 0 { // a wind charge: one point of damage, a shove and the burst
+			// Breeze.isInvulnerableTo: nothing a breeze owns can hurt a
+			// breeze — the burst still goes off.
+			if m.etype == entityBreeze && h.breezeOwned(a) {
+				h.windBurstR(players, a.dim, px, py, pz, a.shooter, windChargeBurstRadius(a))
+				return true
+			}
 			if a.playerShot {
 				m.hitByPlayer = true
 			}
@@ -640,7 +718,17 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				// EnderDragon.hurt: anywhere but the head is worth a quarter.
 				hit = dragonPartDamage(part, hit)
 			}
+			// Set alight before the blow; a blow that does nothing puts the
+			// old fire back (as on a player, above).
+			ignite := ignitesOnHit(a) && !fireImmune[m.etype]
+			oldFire, before := m.fireSecs, m.health
+			if ignite {
+				m.ignite(5)
+			}
 			m.hurtKind(hit, projectileDamageOf(a))
+			if ignite && m.health >= before {
+				m.fireSecs = oldFire
+			}
 			m.lastDirect = a.etype // the blow's direct entity (the ghast's disc asks for its own fireball)
 			if a.playerShot {
 				if s := players[a.shooter]; s != nil {

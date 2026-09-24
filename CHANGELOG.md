@@ -127,6 +127,45 @@ the public history since the project was open-sourced on 2026-07-10.
   Villagers open and shut the doors of the world they are in. A creaking
   heart a player builds now ticks wherever it stands, including one laid
   on its side. In the Nether and the End it sleeps, as in vanilla.
+- **Projectiles break with their own effects.** Snowballs and eggs now
+  break into bits of themselves, where every projectile used to show the
+  same generic puff of smoke. Fireballs, wither skulls, ender pearls and
+  llama spit no longer puff at all. A shulker bullet that hits a wall now
+  gives a small burst and a thud. A dragon fireball now bursts into its
+  purple cloud with its sound.
+- **Breezes handle projectiles like vanilla's.** A breeze now turns
+  arrows and other projectiles back at half speed instead of being hit by
+  them. Wind charges still hit it. A breeze's wind charge now hits other
+  mobs in its way, but never hurts another breeze. It also bursts with its
+  full, wider blast, even after a player hits it back.
+- **Thrown things carry your motion and a little wobble.** Snowballs,
+  eggs, ender pearls, bottles o' enchanting, thrown potions, wind charges,
+  tridents and bow shots now add the thrower's own movement, as in
+  vanilla. Upward or downward movement only counts while off the ground.
+  Each throw also has vanilla's small random scatter instead of flying a
+  perfect line. Dispensers now shoot from vanilla's spot at vanilla's
+  strength and spread. Potions and bottles fly faster and straighter than
+  snowballs and arrows. Fire and wind charges leave a full block out.
+- **Shulker bullets fly and break like vanilla's.** A shulker's bullet
+  now zig-zags toward its target one direction at a time, turning when it
+  lines up with the target or meets a wall, instead of curving smoothly
+  straight at it. Hitting a bullet now destroys it.
+- **Llama spit flies like vanilla's.** A llama now spits from its mouth
+  with vanilla's aim scatter instead of a perfect shot every time. Spit
+  that touches water, grass or any other block now vanishes where it is.
+- **Blaze fireballs start fires.** A small fireball that hits a block now
+  lights a fire in the empty space in front of the face it hit, as in
+  vanilla. A blaze's fireball only does this with mobGriefing on. One from
+  a dispenser, or one a player has hit back, always does.
+- **Fireballs burn the way vanilla's do.** A ghast's fireball no longer
+  sets the player it hits on fire; it only hurts. A blaze's fireball, or
+  a fire charge from a dispenser, sets the target alight and hurts it. A
+  blow that fails leaves the target's old fire as it was. Fire Resistance
+  now also stops fireball damage. Burning arrows and fireballs now set
+  mobs on fire as well as players.
+- **Lingering potions fly as lingering potions.** A thrown, dispensed or
+  trial-spawner lingering potion now appears as its own kind of thrown
+  potion rather than as a splash potion, as it does in vanilla.
 - **Dropped items work their way out of blocks.** An item lying where a
   block was then placed stayed buried inside it. As in vanilla, it now
   slides out of the nearest open side, or rises out of the top if it is

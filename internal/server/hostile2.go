@@ -33,8 +33,9 @@ var (
 	entityStray    = entityID("stray")
 	entityWitch    = entityID("witch")
 
-	entityPearlProj  = entityID("ender_pearl")   // thrown ender pearl
-	entitySplashProj = entityID("splash_potion") // witch's splash potion
+	entityPearlProj  = entityID("ender_pearl")      // thrown ender pearl
+	entitySplashProj = entityID("splash_potion")    // witch's splash potion
+	entityLingerProj = entityID("lingering_potion") // a thrown lingering potion: its own entity type
 
 	itemSlimeball  = itemByName["slime_ball"]
 	itemEnderPearl = itemByName["ender_pearl"]
@@ -263,9 +264,8 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 			h.sendSlot(t, slot)
 		}
 	}
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	v := 1.5
-	a := h.launchProjectileIn(players, entityPearlProj, t.dim, t.x, t.y+1.5, t.z, dx*v, dy*v, dz*v)
+	vx, vy, vz := h.throwFromRotation(t, 0, 1.5, throwUncertainty) // EnderpearlItem.use
+	a := h.launchProjectileIn(players, entityPearlProj, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.breaks, a.pearl = t.p.eid, true, true
 	a.noHitUntil = h.tick.Load() + arrowNoSelfHT
 	a.playerShot = true

@@ -38,7 +38,7 @@ func TestShulkerShell(t *testing.T) {
 	}
 	pl.x = 40
 	h.shulkerTick(players, s)
-	if !s.shulkerClosed() {
+	if s.shPeek == shulkerPeekOpen { // closed, or at most an idle peek (ShulkerPeekGoal may roll at once)
 		t.Fatal("closed again once the target is gone")
 	}
 	s.health = 10

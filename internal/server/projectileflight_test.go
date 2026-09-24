@@ -90,7 +90,10 @@ func TestBottleAndPotionThrowsLiftTwentyDegrees(t *testing.T) {
 			h, players, pl := flightHub(t)
 			c.throw(h, players, pl)
 			a := onlyProjectile(t, h)
-			if math.Abs(a.vy-c.pow*s/n) > 1e-6 || math.Abs(a.vz-c.pow/n) > 1e-6 || math.Abs(a.vx) > 1e-6 {
+			// The throw's uncertainty (1.0) nudges each axis by up to
+			// 0.0172275 before the power scales it.
+			tol := 0.0172275*c.pow + 1e-9
+			if math.Abs(a.vy-c.pow*s/n) > tol || math.Abs(a.vz-c.pow/n) > tol || math.Abs(a.vx) > tol {
 				t.Fatalf("launch (%.4f, %.4f, %.4f), want (0, %.4f, %.4f)", a.vx, a.vy, a.vz, c.pow*s/n, c.pow/n)
 			}
 		})
@@ -122,5 +125,70 @@ func TestSpitAndOrphanBulletGravity(t *testing.T) {
 	}
 	if want := -0.04; math.Abs(bullet.vy-want) > flightEps {
 		t.Fatalf("orphan bullet vy %.6f, want %.6f", bullet.vy, want)
+	}
+}
+
+// Projectile.shootFromRotation: a throw carries the thrower's own movement —
+// all of it in the air, only the horizontal part on the ground — and
+// getMovementToShoot scatters it by the throw's uncertainty.
+func TestThrowsCarryTheThrowersMotionAndScatter(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		onGround bool
+		wantVY   float64
+	}{{"on the ground", true, 0}, {"in the air", false, 0.4}} {
+		t.Run(c.name, func(t *testing.T) {
+			h, players, pl := flightHub(t)
+			h.tick.Store(100)
+			pl.onGround = c.onGround
+			h.noteKnownMove(pl, 0.3, 0.4, 0) // strafing east while moving up
+			h.throwProjectile(players, pl, itemSnowball)
+			a := onlyProjectile(t, h)
+			tol := 0.0172275*throwSpeed + 1e-9
+			if math.Abs(a.vx-0.3) > tol || math.Abs(a.vy-c.wantVY) > tol || math.Abs(a.vz-throwSpeed) > tol {
+				t.Fatalf("snowball launched (%.3f, %.3f, %.3f), want about (0.3, %.1f, 1.5)", a.vx, a.vy, a.vz, c.wantVY)
+			}
+		})
+	}
+
+	h, players, pl := flightHub(t)
+	seen := map[[3]float64]bool{}
+	for i := 0; i < 20; i++ {
+		h.arrows = map[int32]*arrowEntity{}
+		h.throwProjectile(players, pl, itemSnowball)
+		a := onlyProjectile(t, h)
+		seen[[3]float64{a.vx, a.vy, a.vz}] = true
+	}
+	if len(seen) < 10 {
+		t.Errorf("20 snowballs flew only %d distinct lines: no throw scatter", len(seen))
+	}
+}
+
+// ProjectileDispenseBehavior: a dispensed snowball leaves 0.7 out of the face
+// and 0.1 up at power 1.1; a thrown potion at 1.375 with half the scatter.
+func TestDispenserShotPowerAndMouth(t *testing.T) {
+	for _, c := range []struct {
+		item int32
+		pow  float64
+		unc  float64
+	}{{itemSnowball, 1.1, 6}, {itemSplashPotion, 1.375, 3}} {
+		h := newHub(world.New(1))
+		h.world.ForceLoad(0, 0, 1)
+		h.arrows = map[int32]*arrowEntity{}
+		state := eastDispenser(t)
+		pos := blockPos{5, 180, 5}
+		h.world.SetBlock(pos.x, pos.y, pos.z, state)
+		b := &bin{slots: make([]invStack, 9)}
+		b.slots[0] = invStack{item: c.item, count: 1, potion: potPoison}
+		h.bins[simPos{blockPos: pos}] = b
+		h.ejectFromBin(map[int32]*tracked{}, simPos{blockPos: pos}, state)
+		a := onlyProjectile(t, h)
+		if math.Abs(a.x-6.2) > 1e-9 || math.Abs(a.y-180.6) > 1e-9 || math.Abs(a.z-5.5) > 1e-9 {
+			t.Errorf("item %d left from (%.2f, %.2f, %.2f), want (6.2, 180.6, 5.5)", c.item, a.x, a.y, a.z)
+		}
+		tol := 0.0172275*c.unc*c.pow + 1e-9
+		if math.Abs(a.vx-c.pow) > tol || math.Abs(a.vy) > tol || math.Abs(a.vz) > tol {
+			t.Errorf("item %d launched (%.3f, %.3f, %.3f), want about (%.3f, 0, 0)", c.item, a.vx, a.vy, a.vz, c.pow)
+		}
 	}
 }

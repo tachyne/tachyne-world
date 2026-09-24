@@ -270,6 +270,10 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		return
 	}
 	if a := h.arrows[e.target]; a != nil {
+		if a.etype == entityShulkerBullet && players[e.attacker] != nil {
+			h.shootDownShulkerBullet(players, a) // a blow destroys it
+			return
+		}
 		h.deflectProjectile(players, players[e.attacker], a)
 		return
 	}

@@ -92,9 +92,8 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 // throwTrident looses the trident as a projectile carrying the whole stack (so
 // it returns enchanted), consuming it from a survival hand.
 func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) {
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	a := h.launchProjectileIn(players, entityTrident, t.dim, t.x, t.y+1.5, t.z,
-		dx*tridentSpeed, dy*tridentSpeed, dz*tridentSpeed)
+	vx, vy, vz := h.throwFromRotation(t, 0, tridentSpeed, throwUncertainty) // TridentItem.releaseUsing
+	a := h.launchProjectileIn(players, entityTrident, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, tridentDamage, h.tick.Load()+arrowNoSelfHT
 	a.playerShot = true
 	a.loyalty = st.enchLvl(enchLoyalty)
