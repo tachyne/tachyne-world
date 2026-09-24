@@ -128,7 +128,7 @@ func (h *hub) goatJumpStep(players map[int32]*tracked, m *mob) bool {
 func (h *hub) goatFlight(players map[int32]*tracked, m *mob) {
 	w := h.worldFor(m.dim)
 	for i := 0; i < mobMoveInterval; i++ {
-		m.goatVY -= mobGravity
+		m.goatVY -= m.effectiveGravity(m.goatVY)
 		nx, nz := m.x+m.goatVX, m.z+m.goatVZ
 		if h.ownedAt(nx, nz) && !worldgen.Collides(w.At(int(math.Floor(nx)), int(math.Floor(m.y)), int(math.Floor(nz)))) {
 			m.x, m.z = nx, nz
@@ -177,7 +177,7 @@ func jumpVectorFor(m *mob, tx, ty, tz float64, angles []int, maxV float64, intn 
 		d2 := hx*hx + hz*hz
 		d3 := math.Sqrt(d2)
 		d4 := ty - m.y
-		d12 := d2 * mobGravity / (d3*math.Sin(2*f2) - 2*d4*math.Pow(math.Cos(f2), 2))
+		d12 := d2 * m.gravity() / (d3*math.Sin(2*f2) - 2*d4*math.Pow(math.Cos(f2), 2))
 		if d12 < 0 {
 			continue
 		}

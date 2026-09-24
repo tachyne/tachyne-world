@@ -7,6 +7,7 @@ import (
 
 	"github.com/tachyne/tachyne-common/shard"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Movement authority: the client streams Set Player Position packets and the
@@ -115,7 +116,8 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	if dt > 20 {
 		dt = 20 // a long event gap (join, lag spike) counts as at most one second
 	}
-	if t.floatTicks += int(dt); t.floatTicks < floatLimit {
+	floatMax := t.maxFloatTicks()
+	if t.floatTicks += int(dt); t.floatTicks < floatMax {
 		return true
 	}
 	// Hovering with nothing to hold them up: put them on the local floor. The
@@ -124,10 +126,22 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	t.x, t.z = e.x, e.z
 	t.y = float64(h.worldFor(t.dim).DropY(int(math.Floor(e.x)), int(math.Floor(e.y)), int(math.Floor(e.z))))
 	log.Printf("movement: %q floated %d ticks with no support — grounding at (%.1f, %.1f, %.1f)",
-		t.p.name, floatLimit, t.x, t.y, t.z)
+		t.p.name, floatMax, t.x, t.y, t.z)
 	t.lastRubber = now
 	t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 	return false
+}
+
+// maxFloatTicks is getMaximumFlyingTicks: the eighty ticks a player may
+// hang unsupported, stretched by how much lighter than normal their GRAVITY
+// is (0.08 / gravity, never shortened), and without end when it is all but
+// zero — their client floats them, and that is not a cheat.
+func (t *tracked) maxFloatTicks() int {
+	g := t.playerAttrs().Peek(attr.Gravity)
+	if g < 1e-5 {
+		return math.MaxInt
+	}
+	return int(math.Ceil(floatLimit * math.Max(mobGravity/g, 1)))
 }
 
 // nearAnyBlock reports whether any non-air block sits in the 2×2 columns the

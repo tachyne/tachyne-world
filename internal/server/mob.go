@@ -1043,6 +1043,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				} else {
 					m.y = fl
 				}
+			} else if floor < m.y && m.gravity() <= 0 {
+				// No GRAVITY (or less than none): nothing pulls it down onto
+				// the lower floor, so it stays where it is, as a vanilla mob
+				// on /attribute gravity 0 hangs in the air.
 			} else {
 				m.y = floor
 				if fell := oldY - m.y; fell > m.safeFallDistance() { // the ground dropped out under it

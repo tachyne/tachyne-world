@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
@@ -75,5 +76,133 @@ func TestFlyingSpeedAttributeMovesFliers(t *testing.T) {
 	}
 	if got := m.mobAttrs().Value(attr.FlyingSpeed); got != 0.4 {
 		t.Fatalf("a parrot's flying speed resets to %v, want its species' 0.4", got)
+	}
+}
+
+// A player on /attribute gravity 0 floats because their client floats them;
+// the float check must not ground them. At half gravity it allows twice
+// the time, as getMaximumFlyingTicks does.
+func TestLowGravityPlayerIsNotGrounded(t *testing.T) {
+	hover := func(gravity float64, ticks int) (grounded bool) {
+		h := newHub(world.New(1))
+		pl, players := walkSetup(h)
+		pl.p.eid = 1
+		surface := pl.y
+		pl.y = surface + 20
+		h.tick.Store(1000)
+		pl.lastMoveTick = 1000
+		if gravity >= 0 {
+			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@s", id: attr.Gravity, op: "base set", value: gravity})
+		}
+		for i := 1; i <= ticks/5; i++ {
+			h.tick.Store(1000 + uint64(i*5))
+			h.onMove(players, pl, evMove{eid: 1, x: 0.5, y: surface + 20, z: 0.5})
+		}
+		return pl.y < surface+2
+	}
+	if !hover(-1, 150) {
+		t.Fatal("at normal gravity a 150-tick hover was not grounded")
+	}
+	if hover(0, 600) {
+		t.Fatal("a player with no gravity was grounded for floating")
+	}
+	if hover(0.04, 150) {
+		t.Fatal("at half gravity a 150-tick hover was grounded; the limit is 160")
+	}
+	if !hover(0.04, 200) {
+		t.Fatal("at half gravity a 200-tick hover was not grounded")
+	}
+}
+
+// A zombie on /attribute gravity 0 stays put when the ground under it is
+// dug out; at the default it drops to the new floor.
+func TestZeroGravityMobHangsInTheAir(t *testing.T) {
+	drop := func(zero bool) float64 {
+		h, _, players := cmdHub()
+		h.world.ForceLoad(0, 0, 2)
+		for x := -8; x < 24; x++ {
+			for z := -8; z < 24; z++ {
+				h.world.SetBlock(x, 170, z, worldgen.BlockBase("stone"))
+			}
+		}
+		h.world.SetBlock(10, 179, 10, worldgen.BlockBase("stone"))
+		m := h.spawnMob(players, entityPig, 10.5, 180, 10.5)
+		m.vx, m.vz, m.reroute = 0, 0, 1000
+		if zero {
+			h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=pig]", id: attr.Gravity, op: "base set", value: 0})
+		}
+		h.world.SetBlock(10, 179, 10, 0) // dig it out
+		h.updateMobs(players)
+		return m.y
+	}
+	if y := drop(false); y > 172 {
+		t.Fatalf("at normal gravity the pig stayed at y=%v over a dug-out floor", y)
+	}
+	if y := drop(true); y != 180 {
+		t.Fatalf("with no gravity the pig fell to y=%v", y)
+	}
+}
+
+// The arc of a leap follows GRAVITY, and Slow Falling caps it on the way
+// down: the leap comes down later on both.
+func TestLeapArcFollowsGravity(t *testing.T) {
+	airTime := func(setup func(h *hub, players map[int32]*tracked, m *mob)) int {
+		h, _, players := cmdHub()
+		h.world.ForceLoad(0, 0, 2)
+		for x := -8; x < 24; x++ {
+			for z := -8; z < 24; z++ {
+				h.world.SetBlock(x, 179, z, worldgen.BlockBase("stone"))
+			}
+		}
+		m := h.spawnMob(players, entityWolf, 8.5, 180, 8.5)
+		if setup != nil {
+			setup(h, players, m)
+		}
+		m.leaping, m.leapVX, m.leapVY, m.leapVZ = true, 0, 0.4, 0
+		for i := 1; i <= 200; i++ {
+			h.leapFlight(players, m)
+			if !m.leaping {
+				return i
+			}
+		}
+		return 200
+	}
+	base := airTime(nil)
+	light := airTime(func(h *hub, players map[int32]*tracked, m *mob) {
+		h.applyAttributeCommand(players, evAttributeCmd{by: 1, target: "@e[type=wolf]", id: attr.Gravity, op: "base set", value: 0.02})
+	})
+	slow := airTime(func(h *hub, players map[int32]*tracked, m *mob) { m.startEffect(effSlowFalling, 0, 30) })
+	if light <= base || slow <= base {
+		t.Fatalf("a leap lasted %d updates at normal gravity, %d at a quarter, %d under Slow Falling", base, light, slow)
+	}
+}
+
+// Slow Falling keeps a mob's fall distance at nothing, so the drop when its
+// floor is dug out does not hurt it.
+func TestSlowFallingMobTakesNoFallDamage(t *testing.T) {
+	hurt := func(slow bool) bool {
+		h, _, players := cmdHub()
+		h.world.ForceLoad(0, 0, 2)
+		for x := -8; x < 24; x++ {
+			for z := -8; z < 24; z++ {
+				h.world.SetBlock(x, 160, z, worldgen.BlockBase("stone"))
+			}
+		}
+		h.world.SetBlock(10, 179, 10, worldgen.BlockBase("stone"))
+		m := h.spawnMob(players, entityPig, 10.5, 180, 10.5)
+		m.vx, m.vz, m.reroute = 0, 0, 1000
+		if slow {
+			m.startEffect(effSlowFalling, 0, 30)
+		}
+		before := m.health
+		h.world.SetBlock(10, 179, 10, 0)
+		h.updateMobs(players)
+		return m.health < before
+	}
+	if !hurt(false) {
+		t.Fatal("a nineteen-block drop did not hurt the pig")
+	}
+	if hurt(true) {
+		t.Fatal("a pig under Slow Falling took fall damage")
 	}
 }

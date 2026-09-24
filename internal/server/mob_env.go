@@ -129,6 +129,11 @@ func (h *hub) mobFall(players map[int32]*tracked, m *mob, fell float64) {
 	if fallDamageImmune[m.etype] {
 		return
 	}
+	// Slow Falling (and Levitation) reset the fall distance every tick of
+	// travel, so a mob under either lands without a scratch.
+	if m.hasEffect(effSlowFalling) > 0 || m.hasEffect(effLevitation) > 0 {
+		return
+	}
 	// calculateFallDamage: (fall − SAFE_FALL_DISTANCE) × FALL_DAMAGE_MULTIPLIER.
 	// Both were fixed constants here, so a horse took a fox's fall and a fox a
 	// zombie's.
@@ -250,3 +255,27 @@ func (m *mob) safeFallDistance() float64 {
 func (m *mob) fallDamageMultiplier() float64 {
 	return m.mobAttrs().Value(attr.FallDamageMultiplier)
 }
+
+// gravity is the mob's GRAVITY (LivingEntity.getDefaultGravity): 0.08 a
+// tick unless something changed it. Read without adding it to the mob's
+// attribute sync.
+func (m *mob) gravity() float64 {
+	if m.attrs == nil {
+		return mobGravity
+	}
+	return m.attrs.Peek(attr.Gravity)
+}
+
+// effectiveGravity is getEffectiveGravity for a mob whose vertical speed is
+// vy: Slow Falling caps it at 0.01 while it is coming down (vy ≤ 0), and
+// leaves it alone on the way up.
+func (m *mob) effectiveGravity(vy float64) float64 {
+	g := m.gravity()
+	if vy <= 0 && m.hasEffect(effSlowFalling) > 0 {
+		return math.Min(g, slowFallingGravity)
+	}
+	return g
+}
+
+// slowFallingGravity is Slow Falling's ceiling on a falling entity's gravity.
+const slowFallingGravity = 0.01

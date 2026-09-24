@@ -540,13 +540,13 @@ func (h *hub) geyserFlights(players map[int32]*tracked) {
 		m.y = ny
 		if worldgen.HoldsWater(w.At(fx, floorInt(m.y), fz)) {
 			m.geyserFall = 0
-			m.geyserVY = m.geyserVY*0.8 - mobGravity/16
+			m.geyserVY = m.geyserVY*0.8 - m.effectiveGravity(m.geyserVY)/16
 			if m.geyserVY <= 0 {
 				h.endGeyserFlight(m) // back in the pool, rising no more
 			}
 			continue
 		}
-		m.geyserVY = (m.geyserVY - mobGravity) * 0.98
+		m.geyserVY = (m.geyserVY - m.effectiveGravity(m.geyserVY)) * 0.98
 	}
 }
 

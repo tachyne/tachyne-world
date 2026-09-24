@@ -58,6 +58,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The Gravity attribute works.** Changing an entity's gravity with
+  /attribute used to do nothing. Now a mob with no gravity stays in the
+  air when the ground under it is dug out. The arcs of leaping wolves,
+  jumping goats and breezes, and mobs thrown up by a geyser, rise and fall
+  by their own gravity. A player whose gravity is lowered is no longer
+  pulled to the ground for floating. Slow Falling now slows those mob arcs
+  on the way down, and a mob under Slow Falling or Levitation takes no
+  fall damage, as in vanilla.
 - **The Flying Speed attribute works.** Bees, parrots, allays, ghasts,
   happy ghasts and the Wither now fly faster or slower when their flying
   speed is changed with /attribute. Reading it with /attribute now shows
