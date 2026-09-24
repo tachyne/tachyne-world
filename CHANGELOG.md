@@ -20,6 +20,9 @@ the public history since the project was open-sourced on 2026-07-10.
   Adventure players eat and drink as survival players do. Creative players
   can eat on a full hunger bar, and keep the food or potion as vanilla's
   do.
+- **Buckets drain waterlogged blocks.** An empty bucket used on a
+  waterlogged slab, stair or fence takes the water and leaves the block
+  dry.
 - **A bucketed axolotl keeps its colour.** The bucket now remembers the
   axolotl's variant and a baby's age, so a blue axolotl comes back out blue.
 - **Eggs hatch properly.**

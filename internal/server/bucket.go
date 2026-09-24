@@ -152,6 +152,15 @@ func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
 				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
 			h.giveFilled(players, t, slot, itemBucketSnow)
 			return
+		case waterloggable(st) && isWaterlogged(st):
+			// SimpleWaterloggedBlock.pickupBlock: the ray stops at the water
+			// source in a waterlogged slab, stair or fence, and the bucket
+			// takes it, leaving the block dry.
+			h.setBlockLive(players, t.dim, p.x, p.y, p.z, withWaterlogged(st, false))
+			h.playSoundDim(players, t.dim, "minecraft:item.bucket.fill", sndBlock,
+				float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5, 1, 1)
+			h.giveFilled(players, t, slot, itemBucketH2O)
+			return
 		case worldgen.Collides(st):
 			return // hit a solid before any source
 		}

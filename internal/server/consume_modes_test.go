@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Drinking a potion through the eat-hold: use, hold for 32 ticks, and the
@@ -155,5 +156,24 @@ func TestAxolotlBucketKeepsItsColour(t *testing.T) {
 		if m.etype == entityAxolotl && (m.variant != axolotlBlue || !m.variantSet) {
 			t.Errorf("the axolotl came back variant %d", m.variant)
 		}
+	}
+}
+
+// SimpleWaterloggedBlock.pickupBlock: an empty bucket drains a waterlogged
+// slab and comes back full.
+func TestBucketDrainsWaterloggedBlock(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	slab := withWaterlogged(withProp(worldgen.BlockBase("oak_slab"), "type", "bottom"), true)
+	h.world.SetBlock(0, 199, 2, slab)
+	pl.x, pl.y, pl.z = 0.5, 200, 0.5
+	pl.yaw, pl.pitch = 0, 45 // looking down and ahead (+z)
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemBucket, count: 1}
+	h.bucketFill(players, pl, int32(pl.p.heldSlot()))
+	if isWaterlogged(h.world.At(0, 199, 2)) || pl.inv.slots[pl.p.heldSlot()].item != itemBucketH2O {
+		t.Errorf("slab still wet: %v, bucket %d", isWaterlogged(h.world.At(0, 199, 2)), pl.inv.slots[pl.p.heldSlot()].item)
 	}
 }
