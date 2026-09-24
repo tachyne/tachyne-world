@@ -47,6 +47,17 @@ var (
 // detector rail's: the release check runs this long after the last press.
 const platePressedTicks = 20
 
+// weightedPlatePressedTicks is WeightedPressurePlateBlock.getPressedTime.
+const weightedPlatePressedTicks = 10
+
+// platePressedTime is the plate's getPressedTime.
+func platePressedTime(s uint32) uint64 {
+	if s >= lightPlateMin && s <= lightPlateMax || s >= heavyPlateMin && s <= heavyPlateMax {
+		return weightedPlatePressedTicks
+	}
+	return platePressedTicks
+}
+
 func isRepeater(s uint32) bool   { return s >= repeaterMin && s <= repeaterMax }
 func isComparator(s uint32) bool { return s >= comparatorMin && s <= comparatorMax }
 func isObserver(s uint32) bool   { return s >= observerMin && s <= observerMax }
@@ -414,8 +425,9 @@ func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
 		}
 		pos := key.blockPos
 		// BasePressurePlateBlock.checkPressed schedules the release check
-		// getPressedTime (20) ticks after the last thing stood here.
-		if occupied[pos] > 0 || h.tick.Load() < last+platePressedTicks {
+		// getPressedTime ticks after the last thing stood here: 20, or 10
+		// for the weighted plates.
+		if occupied[pos] > 0 || h.tick.Load() < last+platePressedTime(h.rsWorld().At(pos.x, pos.y, pos.z)) {
 			continue
 		}
 		delete(h.platesOn, key)

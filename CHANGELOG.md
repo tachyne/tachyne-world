@@ -58,6 +58,9 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Weighted pressure plates release at vanilla speed.** Light and heavy
+  weighted plates held their signal for a second after the last thing left,
+  like the other plates; in vanilla they let go after half a second.
 - **Beetroot grows at vanilla speed.** It grew as fast as wheat; in
   vanilla it grows at two thirds of that rate.
 - **Opening a shulker box trips observers and lifts what is on it.** As in

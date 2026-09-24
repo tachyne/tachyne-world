@@ -73,26 +73,32 @@ func TestLampGoesDarkFourTicksLater(t *testing.T) {
 	}
 }
 
-// A pressure plate releases twenty ticks after the last thing stood on it.
-func TestPlateReleasesAfterTwentyTicks(t *testing.T) {
-	h, w, players, x, y, z := redSetup(t)
-	w.SetBlock(x, y, z, worldgen.BlockID("oak_pressure_plate"))
-	it := h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y), float64(z)+0.5, 0, 0, 0)
-	h.inDim(0, func() { h.updatePlatesIn(players, 0) })
-	if platePower(w.At(x, y, z)) == 0 {
-		t.Fatal("the item presses the plate")
-	}
-	delete(h.items, it.eid)
-	for i := 0; i < 19; i++ {
-		h.tick.Add(1)
+// A pressure plate releases getPressedTime after the last thing stood on
+// it: twenty ticks, or ten for the weighted plates.
+func TestPlateReleasesAfterPressedTime(t *testing.T) {
+	for _, c := range []struct {
+		plate string
+		ticks int
+	}{{"oak_pressure_plate", 20}, {"light_weighted_pressure_plate", 10}, {"heavy_weighted_pressure_plate", 10}} {
+		h, w, players, x, y, z := redSetup(t)
+		w.SetBlock(x, y, z, worldgen.BlockID(c.plate))
+		it := h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y), float64(z)+0.5, 0, 0, 0)
 		h.inDim(0, func() { h.updatePlatesIn(players, 0) })
 		if platePower(w.At(x, y, z)) == 0 {
-			t.Fatalf("the plate released %d ticks after the item left, want 20", i+1)
+			t.Fatalf("%s: the item presses the plate", c.plate)
 		}
-	}
-	h.tick.Add(1)
-	h.inDim(0, func() { h.updatePlatesIn(players, 0) })
-	if platePower(w.At(x, y, z)) != 0 {
-		t.Fatal("the plate should release at twenty ticks")
+		delete(h.items, it.eid)
+		for i := 0; i < c.ticks-1; i++ {
+			h.tick.Add(1)
+			h.inDim(0, func() { h.updatePlatesIn(players, 0) })
+			if platePower(w.At(x, y, z)) == 0 {
+				t.Fatalf("%s released %d ticks after the item left, want %d", c.plate, i+1, c.ticks)
+			}
+		}
+		h.tick.Add(1)
+		h.inDim(0, func() { h.updatePlatesIn(players, 0) })
+		if platePower(w.At(x, y, z)) != 0 {
+			t.Fatalf("%s should release at %d ticks", c.plate, c.ticks)
+		}
 	}
 }
