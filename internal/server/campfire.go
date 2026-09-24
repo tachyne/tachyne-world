@@ -171,7 +171,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 		return
 	}
 	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
-	if !isCampfireBlock(state) || !boolProp(state, "lit") {
+	if !isCampfireBlock(state) { // CampfireBlockEntity.placeFood: lit or not — it cooks once lit
 		return
 	}
 	held := t.inv.slots[t.p.heldSlot()]

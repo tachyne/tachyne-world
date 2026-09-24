@@ -132,3 +132,31 @@ func TestCampfireFlow(t *testing.T) {
 		}
 	})
 }
+
+// TestUnlitCampfireTakesFood: CampfireBlockEntity.placeFood has no lit
+// check — food goes on an unlit campfire and waits there, uncooked.
+func TestUnlitCampfireTakesFood(t *testing.T) {
+	_, h, p := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		bx, bz, by := int(tr.x)+3, int(tr.z), int(tr.y)
+		info, _ := worldgen.InfoForState(campfireMin)
+		unlit := worldgen.SetProperty(info, campfireMin, "lit", "false")
+		w.SetBlock(bx, by, bz, unlit)
+		beef := int32(itemByName["beef"])
+		tr.inv.slots[tr.p.heldSlot()] = invStack{item: beef, count: 1}
+		h.onCampfireAdd(h.playersRef, evCampfireAdd{eid: p.eid, x: bx, y: by, z: bz})
+		cf := h.campfires[simPos{blockPos: blockPos{bx, by, bz}}]
+		if cf == nil || cf.items[0] != beef {
+			t.Errorf("an unlit campfire should take the beef: %+v", cf)
+			return
+		}
+		for i := 0; i < 700; i++ {
+			h.campfireTick(h.playersRef)
+		}
+		if cf.items[0] != beef {
+			t.Error("an unlit campfire must not cook it")
+		}
+	})
+}

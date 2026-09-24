@@ -58,6 +58,8 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Food goes on an unlit campfire.** As in vanilla, you can lay food on a
+  campfire that is out; it waits there and cooks once the fire is lit.
 - **Carpets and candles no longer kill cactus.** A cactus broke when any
   block touched its side. As in vanilla, only a solid block does, so a
   carpet, candle, pot or lantern beside a cactus leaves it standing.
