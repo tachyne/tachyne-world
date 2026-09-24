@@ -344,6 +344,41 @@ def rng_min(v, key=None):
 
 
 OMINOUS_BANNER = "block.minecraft.ominous_banner"
+ARMOR_SLOTS = {"head", "chest", "legs", "feet"}
+
+
+def player_pred(d, c, tags):
+    """The criterion's player predicate, in the two shapes 26.3 gives these
+    triggers: standing at or above a height (trade_at_world_height), and
+    wearing none of an item set in any armour slot (distract_piglin's
+    not-any_of over the four slots, which the normaliser splits into four
+    inverted terms). Anything else stops the generator."""
+    avoid = {}
+    for pc in c.get("player") or []:
+        cond = strip_ns(pc.get("condition", ""))
+        if cond == "entity_properties":
+            p = pc.get("predicate") or {}
+            pos = (p.get("location") or {}).get("position") or {}
+            if set(p) != {"location"} or set(p["location"]) != {"position"} or set(pos) != {"y"} \
+                    or set(pos["y"]) != {"min"}:
+                raise SystemExit(f"gen_advancements: player predicate {p}")
+            d["playerMinY"] = rng_min(pos["y"])
+        elif cond == "inverted":
+            term = pc.get("term") or {}
+            eq = (term.get("predicate") or {}).get("equipment") or {}
+            if strip_ns(term.get("condition", "")) != "entity_properties" or set(term["predicate"]) != {"equipment"} \
+                    or len(eq) != 1 or not set(eq) <= ARMOR_SLOTS:
+                raise SystemExit(f"gen_advancements: inverted player predicate {term}")
+            (slot, want), = eq.items()
+            if set(want) != {"items"}:
+                raise SystemExit(f"gen_advancements: inverted player equipment {want}")
+            avoid[slot] = tuple(names_of(want["items"], tags, "item"))
+        else:
+            raise SystemExit(f"gen_advancements: player condition {cond}")
+    if avoid:
+        if set(avoid) != ARMOR_SLOTS or len(set(avoid.values())) != 1:
+            raise SystemExit(f"gen_advancements: player armour predicate {avoid}")
+        d["playerNotWearing"] = list(next(iter(avoid.values())))
 
 
 def kill_pred(d, c, tags):
@@ -591,6 +626,8 @@ def distill(trigger, cond, tags):
     # never spawns, a biome its generator never places.
     if d.get("entity") in ABSENT_ENTITIES or d.get("biome") in ABSENT_BIOMES:
         d["unmatchable"] = True
+    if t in ("villager_trade", "thrown_item_picked_up_by_entity", "player_interacted_with_entity"):
+        player_pred(d, c, tags)
     return d
 
 
@@ -882,6 +919,9 @@ def main():
                 f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
             if c.get("vehicles"):
                 f.append("vehicles: []string{%s}" % ", ".join(gstr(x) for x in c["vehicles"]))
+            if c.get("playerNotWearing"):
+                ids = sorted(set(item_ids[x] for x in c["playerNotWearing"] if x in item_ids))
+                f.append("playerNotWearing: []int32{%s}" % ", ".join(map(str, ids)))
             if c.get("entities"):
                 f.append("entities: []string{%s}" % ", ".join(gstr(x) for x in c["entities"]))
             if c.get("effects"):
@@ -891,7 +931,8 @@ def main():
                     f.append(f"{key}: {c[key]}")
             if "baby" in c:
                 f.append(f"baby: {c['baby']}, hasBaby: true")
-            for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax"):
+            for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax",
+                        "playerMinY"):
                 if key in c:
                     f.append(f"{key}: {c[key]}")
             for key in ("smokey", "blocked", "noFire", "ominousBanner"):

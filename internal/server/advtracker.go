@@ -177,6 +177,25 @@ type advMatch struct {
 	cause                 string
 	enchant               string
 	ominousBanner         bool // player_killed_entity: the victim wore the ominous banner
+
+	// The player the trigger fires for (advance fills these): their feet
+	// height and the armour they wear, for criteria with a player predicate.
+	playerY     float64
+	playerArmor [4]int32
+}
+
+// playerMatches is the criterion's player predicate (every trigger's
+// optional "player" condition) against the player the trigger fired for.
+func (m advMatch) playerMatches(c *advCriterion) bool {
+	if c.playerMinY != 0 && m.playerY < c.playerMinY {
+		return false
+	}
+	for _, it := range m.playerArmor {
+		if it != 0 && containsID(c.playerNotWearing, it) {
+			return false
+		}
+	}
+	return true
 }
 
 // advBlockSets resolves every criterion's block list to state ranges once.
@@ -256,6 +275,9 @@ func (m advMatch) entityIs(c *advCriterion) bool {
 }
 
 func (m advMatch) criterion(c *advCriterion) bool {
+	if !m.playerMatches(c) {
+		return false
+	}
 	switch c.trigger {
 	case "inventory_changed":
 		for _, pred := range c.items {

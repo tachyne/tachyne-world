@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **"Oh Shiny" and "Star Trader" check the player.** Distracting a piglin
+  with gold now counts only when you wear no gold armour, as in vanilla.
+  Star Trader now needs you to trade at the build limit (y 319 or higher),
+  not anywhere.
 - **Kill advancements check how the kill was made.** Sniper Duel now
   needs a skeleton shot from at least 50 blocks away. Return to Sender
   needs a ghast killed by its own fireball, and Uneasy Alliance a ghast

@@ -827,7 +827,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/trade_at_world_height", parent: "minecraft:adventure/trade", xp: 0,
 		criteria: []advCriterion{
-			{name: "trade_at_world_height", trigger: "villager_trade"},
+			{name: "trade_at_world_height", trigger: "villager_trade", playerMinY: 319.0},
 		},
 		reqs: [][]string{
 			{"trade_at_world_height"},
@@ -1952,8 +1952,8 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/distract_piglin", parent: "minecraft:nether/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{99, 100, 109, 115, 128, 299, 873, 1021, 1022, 1040, 1041, 1042, 1043, 1044, 1088, 1089, 1090, 1091, 1100, 1101, 1187, 1279, 1383, 1408, 1451, 1486, 1514, 1540}}, baby: 0, hasBaby: true},
-			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{1022}}, baby: 0, hasBaby: true},
+			{name: "distract_piglin", trigger: "thrown_item_picked_up_by_entity", entity: "piglin", items: [][]int32{{99, 100, 109, 115, 128, 299, 873, 1021, 1022, 1040, 1041, 1042, 1043, 1044, 1088, 1089, 1090, 1091, 1100, 1101, 1187, 1279, 1383, 1408, 1451, 1486, 1514, 1540}}, playerNotWearing: []int32{1088, 1089, 1090, 1091}, baby: 0, hasBaby: true},
+			{name: "distract_piglin_directly", trigger: "player_interacted_with_entity", entity: "piglin", items: [][]int32{{1022}}, playerNotWearing: []int32{1088, 1089, 1090, 1091}, baby: 0, hasBaby: true},
 		},
 		reqs: [][]string{
 			{"distract_piglin", "distract_piglin_directly"},

@@ -75,6 +75,11 @@ type advCriterion struct {
 	passenger    string
 	vehicles     []string // started_riding: the vehicle types that match (a tag, expanded)
 	entities     []string // player_killed_entity: the entity types that match (a tag, expanded)
+	// The criterion's player predicate: standing at or above a height
+	// (trade_at_world_height), wearing none of these in any armour slot
+	// (distract_piglin: no gold).
+	playerMinY       float64
+	playerNotWearing []int32
 	// player_killed_entity: the entity wears the ominous banner on its head
 	// (a raid captain, voluntary_exile)
 	ominousBanner bool
