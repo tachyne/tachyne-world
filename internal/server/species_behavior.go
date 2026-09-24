@@ -74,24 +74,24 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	}
 }
 
-// mobRanged is the shared ranged-attack gate: cools down, finds a huntable
-// player in range, faces it, and returns it (nil = hold fire). period is in
-// mob-updates (2 ticks each).
-func (h *hub) mobRanged(players map[int32]*tracked, m *mob, rng, period int) *tracked {
+// mobRanged is the shared ranged-attack gate: cools down, finds its target
+// in range (a player, or the prey its target goal picked), faces it, and
+// returns it (false = hold fire). period is in mob-updates (2 ticks each).
+func (h *hub) mobRanged(players map[int32]*tracked, m *mob, rng, period int) (quarry, bool) {
 	if m.attackCD > 0 {
 		m.attackCD--
-		return nil
+		return quarry{}, false
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, float64(rng))
-	if t == nil {
-		return nil
+	t, ok := h.rangedQuarry(players, m, float64(rng))
+	if !ok {
+		return quarry{}, false
 	}
-	if !h.seeTimeTick(m, t, false) {
-		return nil // RangedAttackGoal: no shot without line of sight
+	if !h.seesQuarry(m, t, false) {
+		return quarry{}, false // RangedAttackGoal: no shot without line of sight
 	}
 	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
 	m.attackCD = period
-	return t
+	return t, true
 }
 
 // aimAt returns a unit vector from (ox,oy,oz) to a target point (0,0,0 on a
@@ -107,8 +107,8 @@ func aimAt(ox, oy, oz, tx, ty, tz float64) (float64, float64, float64) {
 
 // witherShoot fires a wither skull (dark damage + the wither effect).
 func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
-	t := h.mobRanged(players, m, 40, 8)
-	if t == nil {
+	t, ok := h.mobRanged(players, m, 40, 8)
+	if !ok {
 		return
 	}
 	// performRangedAttack(0, target): the centre head's aimed shot is blue

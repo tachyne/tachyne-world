@@ -49,18 +49,22 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	// while the target stays in reach and sight, then land the two hits and
 	// let go — the goal restarts at once, so the cycle is ~90 ticks.
 	if m.beamTarget == 0 {
-		t := h.nearestHuntable(players, m.dim, m.x, m.z, guardianBeamR)
-		if t == nil {
+		q, ok := h.rangedQuarry(players, m, guardianBeamR) // a player, or the squid it hunts
+		if !ok {
 			return
 		}
-		if dx, dz := t.x-m.x, t.z-m.z; dx*dx+dz*dz <= 9 { // the beam only fires past 3 blocks
+		if dx, dz := q.x-m.x, q.z-m.z; dx*dx+dz*dz <= 9 { // the beam only fires past 3 blocks
 			return
 		}
-		if !h.mobSees(m, t) {
-			return // its target goal must see the player
+		if (q.t != nil && !h.mobSees(m, q.t)) || (q.o != nil && !h.mobSeesMob(m, q.o)) {
+			return // its target goal must see the target
 		}
-		m.beamTarget, m.beamTicks = t.p.eid, -10
+		m.beamTarget, m.beamTicks = q.eid(), -10
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(guardianTargetMeta(m.eid, m.beamTarget)))
+		return
+	}
+	if o := h.mobs[m.beamTarget]; o != nil && players[m.beamTarget] == nil {
+		h.guardianBeamMob(players, m, o, elder)
 		return
 	}
 	t := players[m.beamTarget]
@@ -101,6 +105,42 @@ func (h *hub) guardianTick(players map[int32]*tracked, m *mob) {
 	h.thornsRetaliate(players, t, m)
 	if t.dead {
 		h.advance(players, t, "entity_killed_player", advMatch{entity: advEntityName[m.etype]})
+	}
+}
+
+// guardianBeamMob is the attack goal against a mob target: the same lock,
+// the same wait, the same two hits.
+func (h *hub) guardianBeamMob(players map[int32]*tracked, m, o *mob, elder bool) {
+	if o.dying > 0 || o.dim != m.dim || dist3(o.x, o.y, o.z, m.x, m.y, m.z) > guardianBeamR || !h.mobSeesMob(m, o) {
+		h.guardianRelease(players, m)
+		return
+	}
+	m.beamTicks += mobMoveInterval
+	m.yaw = float32(math.Atan2(-(o.x-m.x), o.z-m.z) * 180 / math.Pi)
+	duration := 80
+	if elder {
+		duration = 60
+	}
+	if m.beamTicks < duration {
+		return
+	}
+	magic := 1.0
+	if h.rules.Difficulty == diffHard {
+		magic += 2
+	}
+	if elder {
+		magic += 2
+	}
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
+	h.playSoundDim(players, m.dim, "minecraft:entity.guardian.attack", sndHostile, m.x, m.y, m.z, 1, 1)
+	o.lastAttacker = m.eid
+	o.hurtKind(magic, dtIndirectMagic)
+	if o.health > 0 {
+		o.hurtKind(float64(hostileMelee(m)), dtMobAttack)
+	}
+	h.guardianRelease(players, m)
+	if o.health <= 0 {
+		h.killMob(players, o)
 	}
 }
 

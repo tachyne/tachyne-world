@@ -42,6 +42,21 @@ the public history since the project was open-sourced on 2026-07-10.
     and no longer burns in daylight.
   - Hitting an ocelot, a snow golem, a zombie horse or an armadillo no
     longer sends it running.
+  - Ranged mobs now attack the creatures they hunt, not only players:
+    - pillagers and illusioners shoot villagers and iron golems, and
+      evokers bite them with fangs;
+    - skeletons shoot baby turtles;
+    - guardians beam squid;
+    - the wither's centre head fires at whatever it targets.
+  - A mob's arrow or wither skull now hits any mob in its path, so a
+    skeleton can kill a creeper for its music disc again.
+
+### Added
+- **Others see you mine.** The cracks spreading across a block now show to
+  everyone watching, stage by stage at vanilla's pace, and clear when you
+  stop. The pace takes in the tool and which blocks it is made for,
+  Efficiency, Haste, Mining Fatigue, being underwater without Aqua Affinity
+  and being off the ground.
 
 ## 2026-09-23
 

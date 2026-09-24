@@ -73,21 +73,23 @@ func (h *hub) illusionerTick(players map[int32]*tracked, m *mob) {
 		case spellBlindness:
 			if t := players[m.illBlindLast]; t != nil && !t.dead && t.dim == m.dim {
 				h.applyEffect(players, t, effBlindness, 0, blindTicks/20)
+			} else if o := h.mobs[m.illBlindLast]; o != nil && o.dying == 0 && o.dim == m.dim {
+				h.applyMobEffect(players, o, effBlindness, 0, blindTicks/20) // the spell blinds whatever it targets
 			}
 		}
 		m.illSpell = spellNone
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
-	if t != nil && m.castLeft == 0 {
+	t, ok := h.rangedQuarry(players, m, m.followRange())
+	if ok && m.castLeft == 0 {
 		switch {
 		case now >= m.illMirrorNext && m.hasEffect(effInvisibility) == 0:
 			m.illSpell, m.illWarmup, m.illMirrorNext = spellDisappear, spellWarmup, now+mirrorInterval
 			h.setSpell(players, m, spellDisappear, spellCastAnim)
 			h.playSoundDim(players, m.dim, "minecraft:entity.illusioner.prepare_mirror", sndHostile, m.x, m.y, m.z, 1, 1)
 			return
-		case now >= m.illBlindNext && t.p.eid != m.illBlindLast && h.rules.Difficulty > diffNormal:
-			m.illSpell, m.illWarmup, m.illBlindNext, m.illBlindLast = spellBlindness, spellWarmup, now+blindInterval, t.p.eid
+		case now >= m.illBlindNext && t.eid() != m.illBlindLast && h.rules.Difficulty > diffNormal:
+			m.illSpell, m.illWarmup, m.illBlindNext, m.illBlindLast = spellBlindness, spellWarmup, now+blindInterval, t.eid()
 			h.setSpell(players, m, spellBlindness, spellCastAnim)
 			h.playSoundDim(players, m.dim, "minecraft:entity.illusioner.prepare_blindness", sndHostile, m.x, m.y, m.z, 1, 1)
 			return

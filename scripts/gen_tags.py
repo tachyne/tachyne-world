@@ -23,7 +23,11 @@ import canon
 OUT = os.path.join(os.path.dirname(__file__), "..", "internal", "worldgen", "tags_gen.go")
 
 TAGS = {
-    "block": ["buttons", "fences", "leaves", "pressure_plates", "prevents_nearby_leaf_decay", "wooden_shelves"],
+    "block": ["buttons", "fences", "leaves", "pressure_plates", "prevents_nearby_leaf_decay", "wooden_shelves",
+              # Tool rules (Player.getDestroySpeed via the tool component)
+              "mineable/axe", "mineable/hoe", "mineable/pickaxe", "mineable/shovel",
+              "sword_efficient", "sword_instantly_mines", "shears_extreme_breaking_speed",
+              "shears_major_breaking_speed", "shears_minor_breaking_speed"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials"],
 }
 

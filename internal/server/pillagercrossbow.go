@@ -51,8 +51,8 @@ func mobCrossbowCharge(m *mob) int {
 }
 
 func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
-	if t == nil {
+	t, ok := h.rangedQuarry(players, m, m.followRange()) // a player, or the villager or golem it hunts
+	if !ok {
 		if m.cbState != cbUncharged {
 			h.setCrossbowState(players, m, cbUncharged)
 		}
@@ -88,10 +88,10 @@ func (h *hub) pillagerTick(players map[int32]*tracked, m *mob) {
 			h.setCrossbowState(players, m, cbReady)
 		}
 	case cbReady:
-		if !h.seeTimeTick(m, t, true) {
+		if !h.seesQuarry(m, t, true) {
 			return // READY_TO_ATTACK waits for line of sight
 		}
-		h.spawnArrow(players, m, t) // performCrossbowAttack at 1.6
+		h.spawnArrowAt(players, m, t.x, t.aimY, t.z) // performCrossbowAttack at 1.6
 		h.playSoundDim(players, m.dim, "minecraft:item.crossbow.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 		h.setCrossbowState(players, m, cbUncharged)
 	}

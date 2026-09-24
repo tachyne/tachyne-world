@@ -12,6 +12,7 @@ import (
 
 const (
 	digStartBreak  = 0 // creative: break immediately
+	digAbortBreak  = 1 // survival: let go of the mouse before the block broke
 	digFinishBreak = 2 // survival: finished breaking
 	digDropStack   = 3 // ctrl+Q: drop the whole held stack
 	digDropOne     = 4 // Q: drop one of the held item

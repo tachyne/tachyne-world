@@ -98,8 +98,15 @@ type arrowEntity struct {
 // noise per axis, inacc = 14 − 4×difficulty (easy 10, normal 6, hard 2).
 // Vanilla skeletons MISS; aimbot skeletons were harder than vanilla hard.
 func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
+	h.spawnArrowAt(players, m, t.x, t.y+0.6, t.z) // a player's bbox is 1.8 → getY(1/3) = y+0.6
+}
+
+// spawnArrowAt looses a mob's arrow at a point (the target's getY(1/3)). It is
+// a mob's shot, so it can strike other mobs: a skeleton's arrow kills the
+// creeper that drops a music disc, and a stray one starts a fight.
+func (h *hub) spawnArrowAt(players map[int32]*tracked, m *mob, tx, ty, tz float64) {
 	ox, oy, oz := m.x, m.y+1.4, m.z
-	dx, dy, dz := t.x-ox, (t.y+0.6)-oy, t.z-oz // a player's bbox is 1.8 → getY(1/3) = y+0.6
+	dx, dy, dz := tx-ox, ty-oy, tz-oz
 	dy += math.Hypot(dx, dz) * 0.2
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d < 1e-6 {
@@ -111,7 +118,7 @@ func (h *hub) spawnArrow(players map[int32]*tracked, m *mob, t *tracked) {
 	vy := (dy/d + tri()) * arrowSpeed
 	vz := (dz/d + tri()) * arrowSpeed
 	a := h.launchProjectileIn(players, entityArrow, m.dim, ox, oy, oz, vx, vy, vz)
-	a.shooter, a.dmg = m.eid, arrowDamage
+	a.shooter, a.dmg, a.mobShot = m.eid, arrowDamage, true
 	// ProjectileUtil.getMobArrow carries the bow's enchantments: Power adds
 	// 0.5·lvl+0.5 to the base damage (before ×speed), Punch its knockback,
 	// Flame sets the arrow alight.

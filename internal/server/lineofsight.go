@@ -112,7 +112,11 @@ func ddaAxis(o, d float64) (step int, tMax, tDelta float64) {
 // count up seen, down unseen (a bow held past -60 is let go). Returns whether
 // the target is seen now.
 func (h *hub) seeTimeTick(m *mob, t *tracked, bow bool) bool {
-	los := h.mobSees(m, t)
+	return h.seeTimeTickLOS(m, h.mobSees(m, t), bow)
+}
+
+// seeTimeTickLOS is seeTimeTick with the sight test already made (a mob target).
+func (h *hub) seeTimeTickLOS(m *mob, los bool, bow bool) bool {
 	switch {
 	case !bow && los:
 		m.seeTime += mobMoveInterval

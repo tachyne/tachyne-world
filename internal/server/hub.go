@@ -626,6 +626,7 @@ type hub struct {
 	gatewayCool map[simPos]uint64
 	bossSeen    map[[2]int32]bool   // {playerEID, bossEID} pairs currently shown a boss bar
 	openDoors   map[blockPos]uint64 // wooden doors a villager opened → tick opened (auto-close)
+	digs        map[int32]*digCrack // players' digs in progress, for the cracks others see (digcracks.go)
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
 	crystals      map[int32]*crystal // end crystals by eid
@@ -813,6 +814,7 @@ func newHub(w *world.World) *hub {
 		gatewayCool:    map[simPos]uint64{},
 		bossSeen:       map[[2]int32]bool{},
 		openDoors:      map[blockPos]uint64{},
+		digs:           map[int32]*digCrack{},
 		crystals:       map[int32]*crystal{},
 		villageDone:    map[blockPos]bool{},
 		villagePlaced:  map[blockPos]map[string]bool{},
@@ -1045,6 +1047,7 @@ func (h *hub) run() {
 			}
 			h.tickItems(players)      // item physics: gravity, sliding, floating, currents
 			h.pickupItems(players)    // collect dropped items into survival inventories
+			h.tickDigCracks(players)  // the cracks other players see on a dig
 			h.updateOrbs(players)     // collect experience orbs / expire old ones
 			h.updateRockets(players)  // firework rockets climb, boost gliders, pop
 			h.tickGliding(players)    // elytra wear: a point a second, and the glide ends with the wing
@@ -1312,6 +1315,7 @@ func (h *hub) run() {
 			case evPeerFrame:
 				h.handlePeerFrame(players, e.from, e.typ, e.payload)
 			case evLeave:
+				h.stopDig(players, e.p.eid)
 				h.onLeave(players, e.p)
 			case evBlock:
 				h.onBlock(players, e)
@@ -1486,6 +1490,10 @@ func (h *hub) run() {
 					}
 					h.sendExperience(t)
 				}
+			case evDigStart:
+				h.startDig(players, e)
+			case evDigStop:
+				h.stopDig(players, e.eid)
 			case evSwapHands:
 				h.onSwapHands(players, e)
 			case evTeleportTo:

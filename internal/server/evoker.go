@@ -61,8 +61,8 @@ func (h *hub) evokerCast(players map[int32]*tracked, m *mob) {
 		m.vx, m.vz = 0, 0 // SpellcasterCastingSpellGoal: an evoker stands to cast
 	}
 	now := h.tick.Load()
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
-	if t == nil {
+	t, ok := h.rangedQuarry(players, m, m.followRange()) // a player, or the villager or golem it hunts
+	if !ok {
 		h.wololoStart(players, m) // nobody to fight: a blue sheep will do
 		return
 	}
@@ -84,7 +84,7 @@ func (h *hub) evokerCast(players map[int32]*tracked, m *mob) {
 // castFangs lays the fang pattern. Close in it is two rings around the
 // evoker; at range it is a line walking out toward the target, each fang
 // delayed a tick more than the last so the strike travels.
-func (h *hub) castFangs(players map[int32]*tracked, m *mob, t *tracked) {
+func (h *hub) castFangs(players map[int32]*tracked, m *mob, t quarry) {
 	minY := math.Min(t.y, m.y)
 	maxY := math.Max(t.y, m.y) + 1
 	bearing := math.Atan2(t.z-m.z, t.x-m.x)

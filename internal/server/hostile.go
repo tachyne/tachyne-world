@@ -166,15 +166,15 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 		m.attackCD--
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, shootRange)
-	if t == nil {
+	q, ok := h.rangedQuarry(players, m, shootRange)
+	if !ok {
 		return
 	}
-	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // face the shot
-	if !h.seeTimeTick(m, t, true) {
+	m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi) // face the shot
+	if !h.seesQuarry(m, q, true) {
 		return // RangedBowAttackGoal: the shot needs line of sight
 	}
-	h.spawnArrow(players, m, t)
+	h.spawnArrowAt(players, m, q.x, q.aimY, q.z)
 	h.playSoundDim(players, m.dim, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 	// RangedBowAttackGoal cadence (AbstractSkeleton.getAttackInterval): 40
 	// ticks on easy/normal, 20 on hard; a parched draws slower, 70 and 50.
