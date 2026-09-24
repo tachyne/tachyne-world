@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
+- **/version and /stop.** /version shows operators which game version the
+  server speaks, laid out as vanilla lays it out. /stop saves everything and
+  shuts the server down cleanly, the same way as stopping it from outside.
+  On the cluster the server then starts again by itself, so there /stop
+  works as a clean restart. Everyone online is disconnected while it
+  happens.
 - **/save-all, /save-off and /save-on.** Operators can save the world on
   demand and pause the automatic saves, with vanilla's messages. While
   saving is off, the blocks, containers and mobs stop being written, but

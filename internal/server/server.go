@@ -131,6 +131,10 @@ type Server struct {
 	MaxPlayers int
 	Seed       int64
 
+	// Stop is /stop: the engine's graceful shutdown (save, then exit). Nil
+	// where there is no process to stop (tests, embedding).
+	Stop func()
+
 	// Spawn overrides the join position when SpawnSet is true; otherwise players
 	// spawn on the surface at (0,0). A dev affordance for dropping into a chosen
 	// spot (e.g. a cave) until commands/teleport exist. SpawnAuto resolves Y to
