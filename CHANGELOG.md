@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Vexes fly like vexes.** A vex now drifts between random spots near
+  where it was summoned, then darts at its target, charging and crying out,
+  and strikes when it touches them. It passes through walls, as in vanilla.
+  Before, it chased like any other flyer, at a walking pace.
 - **Four monsters fight on vanilla's timing.**
   - Magma cubes wait four times as long between hops and jump higher the
     bigger they are.

@@ -31,15 +31,4 @@ func TestTadpoleGrowsAndVexCharges(t *testing.T) {
 	if h.mobs[tp.eid] != nil || frogs != 1 {
 		t.Fatalf("grown into a frog: tadpole %v frogs %d", h.mobs[tp.eid] != nil, frogs)
 	}
-	v := h.spawnMob(players, entityVex, 0.5, 180, 0.5)
-	v.hasTarget = true
-	h.vexChargeTick(players, v)
-	if !v.vexCharging {
-		t.Fatal("charging with a target")
-	}
-	v.hasTarget = false
-	h.vexChargeTick(players, v)
-	if v.vexCharging {
-		t.Fatal("and not without")
-	}
 }

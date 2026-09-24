@@ -200,6 +200,7 @@ func (h *hub) summonVexes(players map[int32]*tracked, m *mob) {
 			continue
 		}
 		v.hostile = true
+		v.vexOrigin, v.vexHasOrigin = blockPos{floorInt(x), floorInt(m.y) + 1, floorInt(z)}, true // setBoundOrigin
 		// Vanilla's setLimitedLife: 30-119 seconds, so a vex outlives the
 		// fight it was summoned for but not the day.
 		v.vexLife = 20 * (30 + h.rng.Intn(90))

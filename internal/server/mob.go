@@ -310,48 +310,53 @@ type mob struct {
 	brzSlide                        bool    // breeze: Slide walk target set
 	brzSlideX, brzSlideZ            float64
 	brzSlideTicks                   int
-	drinkTicks                      int        // witch: ticks left on the bottle (0 = not drinking)
-	drinkKind                       int8       // witch: the potion being drunk
-	ravAttackTick                   int        // ravager: AttackTick (a bite\'s pause)
-	ravStunTick                     int        // ravager: StunTick (a shield stopped it)
-	ravRoarTick                     int        // ravager: RoarTick (the roar lands at 10)
-	overworldTicks                  int        // piglin/brute/hoglin: TimeInOverworld (zombifies past 300)
-	immuneZombify                   bool       // piglin/brute/hoglin: IsImmuneToZombification
-	hogPacified                     int        // hoglin: ticks of REPELLENT_PACIFY left
-	hogRetreat                      int        // hoglin: AVOID_TARGET ticks left
-	hogRetreatX, hogRetreatZ        float64    // hoglin: what it retreats from
-	hogRepellent                    blockPos   // hoglin: NEAREST_REPELLENT
-	hogRepelled                     bool       // hoglin: a repellent is in range
-	castLeft                        int        // spellcaster: casting-arms ticks left (DATA_SPELL_CASTING_ID)
-	illSpell                        int8       // illusioner: the spell warming up
-	illWarmup                       int        // illusioner: ticks until it lands
-	illMirrorNext, illBlindNext     uint64     // illusioner: the tick each spell may next start
-	illBlindLast                    int32      // illusioner: the last target blinded (never twice)
-	traderDespawn                   int        // wandering trader + its llamas: DespawnDelay ticks left (0 = none)
-	traderDrink                     int8       // wandering trader: what it is drinking (potion / milk)
-	axDead                          int        // axolotl: PLAY_DEAD_TICKS left (0 = not playing dead)
-	axHurt                          bool       // axolotl: a blow landed since the last update (hurtServer's roll pending)
-	axHurtDmg                       float64    // axolotl: that blow's damage
-	axHuntCD                        uint64     // axolotl: HAS_HUNTING_COOLDOWN until this tick
-	axTarget                        int32      // axolotl: ATTACK_TARGET
-	axBiteCD                        int        // axolotl: ticks until the next bite
-	silverHurt                      bool       // silverfish: hurt since the last update (notifyHurt pending)
-	silverWake                      int        // silverfish: lookForFriends ticks
-	bearStanding                    bool       // polar bear: DATA_STANDING_ID (rearing up before a bite)
-	squidHurt                       bool       // squid: hurt since the last update (spawnInk pending)
-	glowDark                        int        // glow squid: DATA_DARK_TICKS_REMAINING
-	endermiteLife                   int        // endermite: Lifetime ticks (discarded at 2400 unless persistent)
-	shPeek                          int8       // shulker: DATA_PEEK_ID (0 closed, 30 a glimpse, 100 open)
-	shPeekTicks                     int        // shulker: ShulkerPeekGoal ticks left
-	shAttack                        int        // shulker: ShulkerAttackGoal attackTime
-	shHurt                          bool       // shulker: hurt since the last update (the teleport roll)
-	shArmored                       bool       // shulker: the covered armour has been installed once
-	grazeTicks                      int        // sheep: EatBlockGoal eatAnimationTick
-	striderCold                     bool       // strider: DATA_SUFFOCATING (off lava)
-	golemFlower                     int        // iron golem: offerFlowerTick
-	batResting                      bool       // bat: DATA_ID_FLAGS resting (hanging under a block)
-	tadpoleAge                      int        // tadpole: Age (a frog at 24000)
-	vexCharging                     bool       // vex: DATA_FLAGS charging
+	drinkTicks                      int      // witch: ticks left on the bottle (0 = not drinking)
+	drinkKind                       int8     // witch: the potion being drunk
+	ravAttackTick                   int      // ravager: AttackTick (a bite\'s pause)
+	ravStunTick                     int      // ravager: StunTick (a shield stopped it)
+	ravRoarTick                     int      // ravager: RoarTick (the roar lands at 10)
+	overworldTicks                  int      // piglin/brute/hoglin: TimeInOverworld (zombifies past 300)
+	immuneZombify                   bool     // piglin/brute/hoglin: IsImmuneToZombification
+	hogPacified                     int      // hoglin: ticks of REPELLENT_PACIFY left
+	hogRetreat                      int      // hoglin: AVOID_TARGET ticks left
+	hogRetreatX, hogRetreatZ        float64  // hoglin: what it retreats from
+	hogRepellent                    blockPos // hoglin: NEAREST_REPELLENT
+	hogRepelled                     bool     // hoglin: a repellent is in range
+	castLeft                        int      // spellcaster: casting-arms ticks left (DATA_SPELL_CASTING_ID)
+	illSpell                        int8     // illusioner: the spell warming up
+	illWarmup                       int      // illusioner: ticks until it lands
+	illMirrorNext, illBlindNext     uint64   // illusioner: the tick each spell may next start
+	illBlindLast                    int32    // illusioner: the last target blinded (never twice)
+	traderDespawn                   int      // wandering trader + its llamas: DespawnDelay ticks left (0 = none)
+	traderDrink                     int8     // wandering trader: what it is drinking (potion / milk)
+	axDead                          int      // axolotl: PLAY_DEAD_TICKS left (0 = not playing dead)
+	axHurt                          bool     // axolotl: a blow landed since the last update (hurtServer's roll pending)
+	axHurtDmg                       float64  // axolotl: that blow's damage
+	axHuntCD                        uint64   // axolotl: HAS_HUNTING_COOLDOWN until this tick
+	axTarget                        int32    // axolotl: ATTACK_TARGET
+	axBiteCD                        int      // axolotl: ticks until the next bite
+	silverHurt                      bool     // silverfish: hurt since the last update (notifyHurt pending)
+	silverWake                      int      // silverfish: lookForFriends ticks
+	bearStanding                    bool     // polar bear: DATA_STANDING_ID (rearing up before a bite)
+	squidHurt                       bool     // squid: hurt since the last update (spawnInk pending)
+	glowDark                        int      // glow squid: DATA_DARK_TICKS_REMAINING
+	endermiteLife                   int      // endermite: Lifetime ticks (discarded at 2400 unless persistent)
+	shPeek                          int8     // shulker: DATA_PEEK_ID (0 closed, 30 a glimpse, 100 open)
+	shPeekTicks                     int      // shulker: ShulkerPeekGoal ticks left
+	shAttack                        int      // shulker: ShulkerAttackGoal attackTime
+	shHurt                          bool     // shulker: hurt since the last update (the teleport roll)
+	shArmored                       bool     // shulker: the covered armour has been installed once
+	grazeTicks                      int      // sheep: EatBlockGoal eatAnimationTick
+	striderCold                     bool     // strider: DATA_SUFFOCATING (off lava)
+	golemFlower                     int      // iron golem: offerFlowerTick
+	batResting                      bool     // bat: DATA_ID_FLAGS resting (hanging under a block)
+	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
+	vexCharging                     bool     // vex: DATA_FLAGS charging
+	vexWant                         bool     // vex: VexMoveControl has a wanted point (vex.go)
+	vexWX, vexWY, vexWZ, vexSpeed   float64  // …the point and the speed modifier
+	vexVX, vexVY, vexVZ             float64  // …its per-tick velocity
+	vexOrigin                       blockPos // …the bound origin its drift circles (the summoning evoker)
+	vexHasOrigin                    bool
 	vexExpired                      bool       // vex: limited life run out (now taking damage)
 	phantomCatAt                    uint64     // phantom: the tick of the next cat search
 	phantomScared                   bool       // phantom: a cat was within sixteen at the last search
@@ -913,6 +918,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.goatFlight(players, m) // the long jump's arc
 		case m.etype == entityBreeze && m.brzState == brzJumping:
 			h.breezeFlight(players, m) // the long jump's arc, gravity and all
+		case m.etype == entityVex:
+			h.vexFlight(players, m) // wanted-point flight through blocks, charges and drifts
 		case m.flies:
 			h.flyMove(m, nx, nz, fnx, fnz)
 		case m.swims:
@@ -1067,9 +1074,6 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				continue
 			}
 		}
-		if m.etype == entityVex {
-			h.vexChargeTick(players, m) // the charging flag
-		}
 		if m.etype == entityPhantom && m.hasTarget && h.phantomFearsCats(players, m) {
 			m.hasTarget = false // PhantomSweepAttackGoal: a cat about, the swoop is off
 		}
@@ -1100,6 +1104,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.llamaSpit(players, m) // ranged: the spit IS the llama's only attack
 			case entityEvoker:
 				h.evokerCast(players, m) // fangs + vex summoning
+			case entityVex:
+				// VexChargeAttackGoal: the blow lands in vexFlight, on contact.
 			case entityWarden:
 				h.wardenTick(players, m) // darkness aura + sonic boom + dig-away
 			case entityGuardian, entityElderGuardian:

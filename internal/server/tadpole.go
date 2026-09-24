@@ -64,13 +64,3 @@ func vexFlagsMeta(m *mob) []byte {
 	b = protocol.AppendU8(b, f)
 	return protocol.AppendU8(b, itemMetaEnd)
 }
-
-// vexChargeTick keeps the charging flag in step with the hunt.
-func (h *hub) vexChargeTick(players map[int32]*tracked, m *mob) {
-	charging := m.hasTarget
-	if charging == m.vexCharging {
-		return
-	}
-	m.vexCharging = charging
-	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vexFlagsMeta(m)))
-}
