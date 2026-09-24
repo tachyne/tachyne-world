@@ -20,7 +20,7 @@ func (h *hub) throwWindCharge(players map[int32]*tracked, t *tracked) {
 	if h.onCooldown(t, itemWindCharge) {
 		return
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if s := heldStack(t); s.item != itemWindCharge || s.count <= 0 {
 			return
 		}

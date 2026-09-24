@@ -180,7 +180,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.leash != 0 && m.leash == t.p.eid {
 		// A player with infinite materials keeps the lead (removeLeash);
 		// everyone else gets the item back (dropLeash).
-		h.dropLeash(players, m, t.gamemode == gmSurvival)
+		h.dropLeash(players, m, isSurvival(t.gamemode))
 		h.playSoundDim(players, m.dim, "minecraft:entity.lead.untied", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
@@ -196,7 +196,7 @@ func (h *hub) tryLeash(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.dropLeash(players, m, true) // re-tying returns the old lead
 	}
 	h.setLeash(players, m, t.p.eid)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.lead.tied", sndNeutral, m.x, m.y, m.z, 1, 1)

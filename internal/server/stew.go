@@ -128,7 +128,7 @@ func (h *hub) tryFlowerMooshroom(players map[int32]*tracked, t *tracked, m *mob)
 		return false
 	}
 	if m.stew == 0 {
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		m.stew = idx

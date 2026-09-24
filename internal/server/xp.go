@@ -205,7 +205,7 @@ func (h *hub) updateOrbs(players map[int32]*tracked) {
 			}
 		}
 		for _, t := range players {
-			if t.gamemode != gmSurvival || t.dead || t.dim != o.dim || t.xpTakeDelay > 0 {
+			if !isSurvival(t.gamemode) || t.dead || t.dim != o.dim || t.xpTakeDelay > 0 {
 				continue
 			}
 			if math.Abs(o.x-t.x) > orbPickupDist || math.Abs(o.z-t.z) > orbPickupDist || math.Abs(o.y-t.y) > orbPickupDist {

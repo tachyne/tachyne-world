@@ -75,7 +75,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 	st := &armorStand{eid: h.allocEID(), dim: t.dim,
 		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw}
 	h.armorStands[st.eid] = st
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))

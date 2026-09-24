@@ -132,7 +132,7 @@ func (h *hub) cureZombieVillager(players map[int32]*tracked, t *tracked, m *mob)
 	if m.hasEffect(effWeakness) == 0 || m.converting > 0 {
 		return true
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		st.count--
 		if st.count == 0 {
 			*st = invStack{}

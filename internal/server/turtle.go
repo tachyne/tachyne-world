@@ -58,7 +58,7 @@ func (h *hub) turtleEggPlayerBroken(players map[int32]*tracked, e evBlock) {
 	if !isTurtleEgg(e.broken) {
 		return
 	}
-	if t := players[e.by]; t == nil || t.gamemode != gmSurvival {
+	if t := players[e.by]; t == nil || !isSurvival(t.gamemode) {
 		return // creative skips playerDestroy
 	}
 	h.playSoundDim(players, e.dim, "minecraft:block.turtle_egg.break", sndBlock,

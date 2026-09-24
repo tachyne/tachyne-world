@@ -99,7 +99,7 @@ func (h *hub) tryWolfArmor(players map[int32]*tracked, t *tracked, m *mob) bool 
 		piece := held
 		piece.count = 1
 		m.armorSt = piece
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.armor.equip_wolf", sndNeutral, m.x, m.y, m.z, 1, 1)
@@ -107,7 +107,7 @@ func (h *hub) tryWolfArmor(players map[int32]*tracked, t *tracked, m *mob) bool 
 		h.petEquipSync(players, m)
 		return true
 	case held.item == itemArmadilloScute && m.sitting && m.armorSt.item == itemWolfArmor && m.armorSt.dmg > 0:
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.wolf_armor.repair", sndNeutral, m.x, m.y, m.z, 1, 1)

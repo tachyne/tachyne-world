@@ -84,7 +84,7 @@ func (h *hub) nearestPiglinPrey(players map[int32]*tracked, m *mob, maxDist floa
 	var best *tracked
 	bestD2 := maxDist * maxDist
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.dim != m.dim || wearsGold(t) {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != m.dim || wearsGold(t) {
 			continue
 		}
 		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 {
@@ -142,7 +142,7 @@ func (h *hub) tryBarter(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if m.etype != entityPiglin || m.dying > 0 || heldStack(t).item != itemGoldIngot || !m.canAdmire(h.tick.Load()) {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.piglinAdmire(players, m, invStack{item: itemGoldIngot, count: 1})

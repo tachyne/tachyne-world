@@ -253,7 +253,7 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 			break
 		}
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if slot < 0 {
 			return
 		}
@@ -307,7 +307,7 @@ var itemJackOLantern = int32(itemByName["jack_o_lantern"])
 func (h *hub) staredAt(players map[int32]*tracked, m *mob) bool {
 	reach := m.followRange() // endermen carry FOLLOW_RANGE 64
 	for _, t := range players {
-		if t.dim != m.dim || t.gamemode != gmSurvival || t.dead {
+		if t.dim != m.dim || !isSurvival(t.gamemode) || t.dead {
 			continue
 		}
 		if t.armor[0].item == itemCarvedPumpkin {

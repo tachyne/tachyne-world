@@ -164,7 +164,7 @@ func (h *hub) updateFangs(players map[int32]*tracked) {
 func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
 	h.playSoundDim(players, f.dim, "minecraft:entity.evoker_fangs.attack", sndHostile, f.x, f.y, f.z, 1, 1)
 	for _, t := range players {
-		if t.dim != f.dim || t.dead || t.gamemode != gmSurvival {
+		if t.dim != f.dim || t.dead || !isSurvival(t.gamemode) {
 			continue
 		}
 		if math.Abs(t.x-f.x) <= 0.7 && math.Abs(t.z-f.z) <= 0.7 && math.Abs(t.y-f.y) <= 2 {

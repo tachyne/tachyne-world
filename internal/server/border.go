@@ -133,7 +133,7 @@ func (h *hub) borderDamage(players map[int32]*tracked) {
 	}
 	size := b.sizeAt(h.tick.Load())
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead {
+		if !isSurvival(t.gamemode) || t.dead {
 			continue
 		}
 		d := b.distanceToBorder(t.x, t.z, size) + b.SafeZone

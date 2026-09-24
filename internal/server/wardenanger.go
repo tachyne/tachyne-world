@@ -80,7 +80,7 @@ func (h *hub) wardenAngerTickOne(players map[int32]*tracked, m *mob) *tracked {
 	bestN := wardenAngerAngry - 1
 	for eid, n := range m.wardenAnger {
 		t := players[eid]
-		if t == nil || t.dead || t.dim != m.dim || t.gamemode != gmSurvival {
+		if t == nil || t.dead || t.dim != m.dim || !isSurvival(t.gamemode) {
 			continue
 		}
 		if n > bestN {

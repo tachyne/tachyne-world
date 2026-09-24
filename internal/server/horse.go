@@ -80,7 +80,7 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 	// Chest-equip: a held chest on an unchested donkey/mule/llama.
 	if heldStack(t).item == int32(itemByName["chest"]) && chestedFamily(m.etype) && !m.chested {
 		h.equipChest(players, m)
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		return true

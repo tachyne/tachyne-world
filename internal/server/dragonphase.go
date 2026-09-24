@@ -191,7 +191,7 @@ func (h *hub) dragonTarget(players map[int32]*tracked, m *mob) *tracked {
 	var best *tracked
 	bestD := math.MaxFloat64
 	for _, t := range players {
-		if t.dim != 2 || t.dead || t.gamemode != gmSurvival {
+		if t.dim != 2 || t.dead || !isSurvival(t.gamemode) {
 			continue
 		}
 		if d := dist2(t.x, t.z, m.x, m.z); d < bestD {

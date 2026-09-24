@@ -108,7 +108,7 @@ func (h *hub) tryBrush(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if heldStack(t).item != itemBrush || !h.brushArmadillo(players, m) {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 16)
 	}
 	return true

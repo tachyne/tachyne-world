@@ -53,7 +53,7 @@ func (h *hub) startDraw(t *tracked) {
 	if t.dead || heldStack(t).item != itemBow {
 		return
 	}
-	if t.gamemode == gmSurvival && !h.hasArrow(t) {
+	if isSurvival(t.gamemode) && !h.hasArrow(t) {
 		return // nothing to nock
 	}
 	t.drawingAt = h.tick.Load()
@@ -185,7 +185,7 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	// to draw; tipped and spectral arrows are spent all the same.
 	ammo := peekAmmo(t)
 	infinite := heldStack(t).enchLvl(enchInfinity) > 0 && ammo.item == itemArrowAmmo
-	if t.gamemode == gmSurvival && !infinite {
+	if isSurvival(t.gamemode) && !infinite {
 		if !h.consumeArrow(t) {
 			return
 		}
@@ -257,7 +257,7 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 			break
 		}
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if slot < 0 {
 			return
 		}

@@ -168,7 +168,7 @@ const (
 // one it has is kept while it stays within the follow range.
 func (h *hub) shulkerQuarry(players map[int32]*tracked, m *mob) *tracked {
 	ok := func(t *tracked) bool {
-		return t != nil && t.gamemode == gmSurvival && !t.dead && t.dim == m.dim
+		return t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim
 	}
 	if t := players[m.targetEID]; ok(t) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= shulkerFollow {
 		return t

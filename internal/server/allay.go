@@ -125,7 +125,7 @@ func (h *hub) allayDeposit(players map[int32]*tracked, m *mob) (x, y, z float64,
 	// AllayAi.getLikedPlayer: only a survival or creative player within 64
 	// blocks counts; anyone else, or anyone further, is no liked player.
 	if t := players[m.owner]; t != nil && t.dim == m.dim && !t.dead &&
-		(t.gamemode == gmSurvival || t.gamemode == gmCreative) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) < 64 {
+		(isSurvival(t.gamemode) || t.gamemode == gmCreative) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) < 64 {
 		return t.x, t.y + 1, t.z, true
 	}
 	return 0, 0, 0, false
@@ -236,14 +236,14 @@ func (h *hub) tryAllay(players map[int32]*tracked, t *tracked, m *mob) bool {
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, metaIndexCanDupe, false)))
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK)) // hearts (event 18)
 		h.playSoundDim(players, m.dim, "minecraft:block.amethyst_block.chime", sndNeutral, m.x, m.y, m.z, 2, 1)
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		return true
 	case m.held == 0 && held.item != 0:
 		m.held = held.item
 		m.owner, m.ownerUUID = t.p.eid, t.p.uuid
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:entity.allay.item_given", sndNeutral, m.x, m.y, m.z, 2, 1)

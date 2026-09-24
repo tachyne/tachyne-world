@@ -215,7 +215,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 		if a.stuck {
 			if a.playerShot && !a.noPickup { // stuck player projectiles are retrievable
 				for _, t := range players {
-					if t.gamemode != gmSurvival || t.dead || t.inv == nil || t.dim != a.dim {
+					if !isSurvival(t.gamemode) || t.dead || t.inv == nil || t.dim != a.dim {
 						continue
 					}
 					if math.Abs(a.x-t.x) > 1 || math.Abs(a.z-t.z) > 1 || math.Abs(a.y-t.y) > 1.5 {
@@ -365,7 +365,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py, pz float64) bool {
 	now := h.tick.Load()
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.dim != a.dim {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != a.dim {
 			continue // arrows pass through creative/spectator observers + other dims
 		}
 		if a.playerShot && t.p.eid == a.shooter && now < a.noHitUntil {

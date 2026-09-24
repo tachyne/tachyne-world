@@ -142,7 +142,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 	if worldgen.IsWaterlogged(broken) { // the water source stays when the block goes
 		after = worldgen.WaterBase
 	}
-	if mode == gmSurvival { // a clutch loses one egg, not all of them
+	if isSurvival(mode) { // a clutch loses one egg, not all of them
 		if left, ok := turtleEggAfterPlayerBreak(broken); ok {
 			after = left
 		}
@@ -150,7 +150,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 	s.worldFor(p).SetBlock(x, y, z, after)
 	s.sendBlockChange(p, x, y, z, after, seq)
 	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: after, by: p.eid, broken: broken})
-	if mode == gmSurvival { // survival drops loot (tool-gated); creative drops nothing
+	if isSurvival(mode) { // survival drops loot (tool-gated); creative drops nothing
 		s.hub.post(evDrop{dim: p.dim, x: x, y: y, z: z, state: broken, held: uint16(p.heldItem()), by: p.eid})
 		if n := mineWear(p.heldItem(), broken); n > 0 { // Item/ShearsItem.mineBlock
 			s.hub.post(evToolWear{eid: p.eid, slot: p.held, n: n})
@@ -324,7 +324,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if p.heldItem() == itemNetherWart {
 		if s.worldFor(p).At(tx, ty-1, tz) == worldgen.SoulSand {
 			s.putBlock(p, tx, ty, tz, netherWartMin, true, seq)
-			if s.modes.get(p.key()) == gmSurvival {
+			if isSurvival(s.modes.get(p.key())) {
 				s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 			}
 		} else {
@@ -402,31 +402,31 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	defState = pev.State
 
 	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
-		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
+		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
-		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
-		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && s.modes.get(p.key()) == gmSurvival {
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && s.modes.get(p.key()) == gmSurvival {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && s.modes.get(p.key()) == gmSurvival {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 		return
@@ -542,7 +542,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: tx, y: ty, z: tz,
 				name: name, volume: vol, pitch: pitch})
 		}
-		if s.modes.get(p.key()) == gmSurvival { // survival uses up one of the stack
+		if isSurvival(s.modes.get(p.key())) { // survival uses up one of the stack
 			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
 		}
 	}

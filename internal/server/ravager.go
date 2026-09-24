@@ -117,7 +117,7 @@ func (h *hub) ravagerHurlPlayer(m *mob, t *tracked) {
 // an illager, and a strong shove for every mob (players are only hurt).
 func (h *hub) ravagerRoar(players map[int32]*tracked, m *mob) {
 	for _, t := range players {
-		if t.dim != m.dim || t.dead || t.gamemode != gmSurvival && t.gamemode != gmAdventure {
+		if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) && t.gamemode != gmAdventure {
 			continue
 		}
 		if dist3(t.x, t.y, t.z, m.x, m.y, m.z) > ravagerRoarReach+1 {

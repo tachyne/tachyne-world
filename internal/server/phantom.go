@@ -44,7 +44,7 @@ func (h *hub) phantomSpawner(players map[int32]*tracked) {
 	}
 	h.phantomNextAt = now + h.phantomNextDelay()
 	for _, t := range players {
-		if t.dim != 0 || t.dead || t.gamemode != gmSurvival {
+		if t.dim != 0 || t.dead || !isSurvival(t.gamemode) {
 			continue
 		}
 		// Vanilla requires open sky at or above sea level: phantoms do not

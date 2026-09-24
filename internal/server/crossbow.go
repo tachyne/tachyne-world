@@ -52,7 +52,7 @@ func (h *hub) startXbowCharge(t *tracked) {
 	if t.dead || heldStack(t).item != itemCrossbow || t.xbowLoaded {
 		return
 	}
-	if t.gamemode == gmSurvival && xbowAmmoSlot(t) < 0 {
+	if isSurvival(t.gamemode) && xbowAmmoSlot(t) < 0 {
 		return // nothing to load
 	}
 	t.xbowAt = h.tick.Load()
@@ -74,13 +74,13 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	}
 	ammo := invStack{item: itemArrowAmmo, count: 1} // a creative load with nothing to hand
 	if i := xbowAmmoSlot(t); i >= 0 {
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			ammo = h.takeAmmo(t, i)
 		} else {
 			ammo = *t.handOrSlot(i)
 			ammo.count = 1
 		}
-	} else if t.gamemode == gmSurvival {
+	} else if isSurvival(t.gamemode) {
 		return
 	}
 	st := heldStack(t)
@@ -111,7 +111,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 	for i, off := range offsets {
 		// CrossbowItem.getDurabilityUse: each projectile costs its own wear,
 		// three for a rocket and one for an arrow.
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			wear := 1
 			if rocket {
 				wear = 3

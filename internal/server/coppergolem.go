@@ -108,7 +108,7 @@ func (h *hub) tryCopperGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 	switch {
 	case held == itemHoneycomb && !m.waxed:
 		m.waxed = true
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.playSoundDim(players, m.dim, "minecraft:item.honeycomb.wax_on", sndNeutral, m.x, m.y, m.z, 1, 1)

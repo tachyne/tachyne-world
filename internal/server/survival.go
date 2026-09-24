@@ -79,7 +79,7 @@ func (t *tracked) exhaust(f float32) {
 
 func (h *hub) fastRegen(players map[int32]*tracked) {
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
+		if !isSurvival(t.gamemode) || t.dead || t.health <= 0 {
 			continue
 		}
 		if !h.rules.NaturalRegen {
@@ -105,7 +105,7 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 	now := h.tick.Load()
 	slow := now%regenPeriod == 0 // 80-tick (4s) regen/starve cadence
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead {
+		if !isSurvival(t.gamemode) || t.dead {
 			continue
 		}
 		// Peaceful (vanilla's tickRegeneration): with natural regeneration on,
@@ -287,7 +287,7 @@ func (h *hub) inWater(dim int, x, y, z float64) bool {
 // onFallAndExhaust updates fall-damage tracking and walking exhaustion from a
 // movement event (called from onMove before the position is advanced).
 func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove) {
-	if t.gamemode != gmSurvival || t.dead {
+	if !isSurvival(t.gamemode) || t.dead {
 		return
 	}
 	if e.sprinting { // vanilla: only sprinting drains food from movement; walking is free
@@ -452,7 +452,7 @@ func (h *hub) hurtBy(players map[int32]*tracked, t *tracked, amount float32, dt 
 // falling anvil, then armour absorption, then magic absorption (Resistance,
 // then the protection enchantments), then the absorption buffer.
 func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, dt dmgType, cause deathCause, src dmgFrom) bool {
-	if t.gamemode != gmSurvival || t.dead || t.health <= 0 {
+	if !isSurvival(t.gamemode) || t.dead || t.health <= 0 {
 		return false
 	}
 	h.dropShoulderParrots(players, t) // hurtServer: any blow that gets this far shakes them off

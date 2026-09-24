@@ -242,7 +242,7 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 	h.vib(t.dim, freqEntityPlace, e.x, e.y, e.z, t.p.eid) // ENTITY_PLACE
 	// Either hand: a boat placed from the off hand is paid for too (it came
 	// back free until 2026-09-24).
-	if t.gamemode == gmSurvival && t.inv != nil && ((e.slot >= 0 && e.slot < 9) || e.slot == offhandSlot) {
+	if isSurvival(t.gamemode) && t.inv != nil && ((e.slot >= 0 && e.slot < 9) || e.slot == offhandSlot) {
 		if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 {
 			sl.count--
 			if sl.count == 0 {

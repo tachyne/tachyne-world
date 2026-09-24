@@ -104,7 +104,7 @@ func (h *hub) validateMove(t *tracked, e evMove) bool {
 	}
 	t.p.setHubPos(e.x, e.z) // the connection streams chunks only near HERE
 
-	if t.gamemode != gmSurvival && t.gamemode != gmAdventure {
+	if !isSurvival(t.gamemode) && t.gamemode != gmAdventure {
 		t.floatTicks = 0
 		return true
 	}

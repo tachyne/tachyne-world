@@ -52,7 +52,7 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 		fx, fy, fz = e.x+e.dx, e.y+e.dy, e.z+e.dz
 	}
 	h.vib(t.dim, freqBlockChange, fx, fy, fz, t.p.eid) // BoneMealItem: BLOCK_CHANGE
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		s := &t.inv.slots[e.slot]
 		if s.item == itemBoneMeal {
 			if s.count--; s.count <= 0 {

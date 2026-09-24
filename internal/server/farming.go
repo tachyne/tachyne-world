@@ -98,7 +98,7 @@ func (s *Server) tryTill(p *player, x, y, z int, dir int32, seq int32) bool {
 		s.hub.post(evPopItem{item: res.drop, count: 1, dim: p.dim,
 			x: float64(x) + 0.5, y: float64(y) + 0.5, z: float64(z) + 0.5})
 	}
-	if s.modes.get(p.key()) == gmSurvival {
+	if isSurvival(s.modes.get(p.key())) {
 		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 	}
 	return true
@@ -164,7 +164,7 @@ func (s *Server) tryFlatten(p *player, x, y, z int, dir int32, seq int32) bool {
 	}
 
 	s.putBlock(p, x, y, z, into, true, seq)
-	if s.modes.get(p.key()) == gmSurvival {
+	if isSurvival(s.modes.get(p.key())) {
 		s.hub.post(evToolWear{eid: p.eid, slot: p.held})
 	}
 	return true

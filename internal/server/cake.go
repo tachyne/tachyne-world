@@ -67,12 +67,12 @@ func (h *hub) eatCake(players map[int32]*tracked, t *tracked, pos blockPos) {
 	if base, isCandle := candleCakeBases[heldStack(t).item]; isCandle && bites == 0 {
 		h.setBlockAt(players, t.dim, pos, base+1) // +1 = unlit, as a placed candle starts
 		h.playSoundDim(players, t.dim, "minecraft:block.cake.add_candle", sndBlock, cx, cy, cz, 1, 1)
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		return
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if t.food >= maxFood {
 			return // vanilla canEat(false): a full player cannot take a slice
 		}

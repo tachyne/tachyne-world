@@ -42,7 +42,7 @@ func (h *hub) tryNameTag(players map[int32]*tracked, t *tracked, m *mob) bool {
 	m.customName = held.name
 	m.persistent = true // NameTagItem: setPersistenceRequired
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(nameMeta(m.eid, m.customName)))
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		slot := t.p.heldSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}

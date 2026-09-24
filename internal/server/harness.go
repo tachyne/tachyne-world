@@ -56,7 +56,7 @@ func (h *hub) tryHappyGhast(players map[int32]*tracked, t *tracked, m *mob) bool
 	switch {
 	case m.harness == 0 && isHarness(held):
 		m.harness = held
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, ghastHarnessEquip(m.eid, m.harness))

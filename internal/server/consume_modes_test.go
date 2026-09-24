@@ -259,8 +259,9 @@ func TestDolphinFollowsARowedBoat(t *testing.T) {
 	}
 }
 
-// AllayAi.getLikedPlayer: an adventure or spectator player, or one more
-// than 64 blocks off, is no delivery point.
+// AllayAi.getLikedPlayer: gameMode.isSurvival() || isCreative() — survival,
+// adventure (isSurvival covers it) and creative count; a spectator, or a
+// player more than 64 blocks off, is no delivery point.
 func TestAllayLikedPlayerRules(t *testing.T) {
 	h := newHub(world.New(1))
 	pl := survPlayer(h)
@@ -271,8 +272,12 @@ func TestAllayLikedPlayerRules(t *testing.T) {
 		t.Fatal("a survival player ten blocks off is no delivery point")
 	}
 	pl.gamemode = gmAdventure
+	if _, _, _, ok := h.allayDeposit(players, a); !ok {
+		t.Error("an adventure player is no delivery point (GameType.isSurvival covers adventure)")
+	}
+	pl.gamemode = gmSpectator
 	if _, _, _, ok := h.allayDeposit(players, a); ok {
-		t.Error("an adventure player is a delivery point")
+		t.Error("a spectator is a delivery point")
 	}
 	pl.gamemode, pl.x = gmSurvival, 80.5
 	if _, _, _, ok := h.allayDeposit(players, a); ok {

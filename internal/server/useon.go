@@ -113,7 +113,7 @@ func (h *hub) trimPlant(players map[int32]*tracked, e evTrimPlant) {
 	berries := g.berryStride == 2 && (state-g.headLo)%2 == 0
 	h.setBlockLive(players, t.dim, e.x, e.y, e.z, g.headAt(growingPlantMaxAge, berries))
 	h.playSoundDim(players, t.dim, "minecraft:block.growing_plant.crop", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
 }
@@ -133,7 +133,7 @@ func (h *hub) mudBottle(players map[int32]*tracked, e evMudBottle) {
 	h.playSoundDim(players, t.dim, "minecraft:entity.generic.splash", sndBlock, x, y, z, 1, 1)
 	h.playSoundDim(players, t.dim, "minecraft:item.bottle.empty", sndBlock, x, y, z, 1, 1)
 	h.spawnParticles(players, t.dim, particleSplash, x, y, z, 0.5, 0, 5)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 		if changed, left := t.inv.addStack(invStack{item: itemGlassBottle, count: 1}); left == 0 {
 			for _, sl := range changed {
@@ -168,7 +168,7 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	// The cage shows what it will spawn from now on, without waiting for the
 	// spawner's own cadence to come round.
 	h.showSpawner(players, t.dim, blockPos{e.x, e.y, e.z}, et)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.playSoundDim(players, t.dim, "minecraft:block.metal.place", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
@@ -208,7 +208,7 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 	m.persistent = true
 	h.playSoundDim(players, t.dim, "minecraft:entity.egg.throw", sndPlayer,
 		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 1)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 }
@@ -254,7 +254,7 @@ func (h *hub) placeCrystal(players map[int32]*tracked, e evPlaceCrystal) {
 	binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 	h.crystals[c.eid] = c
 	h.toDimEv(players, 2, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.tryRespawnDragon(players)
@@ -302,7 +302,7 @@ func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 	y := float64(e.y) + float64(e.cy) + float64(dy)*0.15
 	z := float64(e.z) + float64(e.cz) + float64(dz)*0.15
 	st := heldStack(t)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.spawnRocket(players, t.dim, x, y, z, 0, st)

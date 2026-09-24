@@ -346,7 +346,7 @@ func (h *hub) trySulfurCube(players map[int32]*tracked, t *tracked, m *mob) bool
 		st := c.body
 		h.shearSulfurCube(players, m)
 		h.vibAt(m.dim, freqShear, m.x, m.y, m.z, t.p.eid)
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.applyToolWear(t, t.p.heldSlot(), 1)
 		}
 		h.advance(players, t, "player_sheared_equipment", advMatch{entity: advEntityName[m.etype], item: st.item})

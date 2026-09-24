@@ -21,7 +21,7 @@ var noPlayers = map[int32]*tracked{}
 // the nearest huntable player it can see. nil = nobody.
 func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tracked {
 	if m.targetEID != 0 {
-		if t := players[m.targetEID]; t != nil && t.gamemode == gmSurvival && !t.dead && t.dim == m.dim &&
+		if t := players[m.targetEID]; t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim &&
 			(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) <= reach*reach &&
 			(m.etype != entityDrowned || m.anger > 0 || h.drownedOKTarget(t)) {
 			memory := targetUnseenMemory
@@ -42,7 +42,7 @@ func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tra
 	var best *tracked
 	bestD2 := reach * reach
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.dim != m.dim {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != m.dim {
 			continue
 		}
 		// Drowned.okTarget: by daylight a drowned only comes for somebody who

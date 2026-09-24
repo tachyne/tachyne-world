@@ -64,7 +64,7 @@ func (h *hub) splashPotion(players map[int32]*tracked, dim int, x, y, z float64,
 		return
 	}
 	for _, t := range players {
-		if t.dim != dim || t.gamemode != gmSurvival || t.dead {
+		if t.dim != dim || !isSurvival(t.gamemode) || t.dead {
 			continue
 		}
 		d := dist3(t.x, t.y+1, t.z, x, y, z)
@@ -212,7 +212,7 @@ func (h *hub) updateClouds(players map[int32]*tracked) {
 			})
 		}
 		for _, t := range players {
-			if t.dim != c.dim || t.gamemode != gmSurvival || t.dead {
+			if t.dim != c.dim || !isSurvival(t.gamemode) || t.dead {
 				continue
 			}
 			if dist3(t.x, t.y+1, t.z, c.x, c.y, c.z) > c.radius {

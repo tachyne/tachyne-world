@@ -179,7 +179,7 @@ func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int
 	if !did {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
@@ -214,7 +214,7 @@ var nautilusBucketFood = map[int32]bool{
 // consumeFed spends the held food; a fish bucket leaves the water behind
 // (Axolotl and AbstractNautilus.usePlayerItem).
 func (h *hub) consumeFed(t *tracked, item int32) {
-	if t.gamemode != gmSurvival {
+	if !isSurvival(t.gamemode) {
 		return
 	}
 	if nautilusBucketFood[item] {

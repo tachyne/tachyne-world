@@ -58,6 +58,12 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Adventure mode is survival without building, as in vanilla.** Many
+  survival rules applied only to survival mode, so adventure players were
+  never hurt, never hunted by monsters, never got hungry, didn't use up
+  arrows, food or other items, and couldn't pick things up. They now play
+  exactly like survival players, except that they cannot break or place
+  blocks.
 - **Observers no longer stay stuck on.** An observer that a piston moved
   mid-pulse, or that was saved mid-pulse over a restart, came back powered
   with nothing to switch it off. As in vanilla, it now switches off when

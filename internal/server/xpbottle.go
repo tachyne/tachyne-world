@@ -30,7 +30,7 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 			break
 		}
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if slot < 0 {
 			return
 		}

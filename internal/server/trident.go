@@ -78,7 +78,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 		riptide = 3
 	}
 	h.dropShoulderParrots(players, t) // startAutoSpinAttack
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
 	power := 3.0 * float64(1+riptide) / 4.0 // vanilla riptide impulse magnitude
@@ -100,7 +100,7 @@ func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) 
 	a.loyalty = st.enchLvl(enchLoyalty)
 	a.impaling = st.enchLvl(enchImpaling)
 	a.channeling = st.enchLvl(enchChanneling) > 0
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		slot := t.p.heldSlot()
 		st.dmg++           // one durability point of wear rides with the thrown stack
 		a.pickupStack = st // retrieved / returned trident restores this exact stack
@@ -122,7 +122,7 @@ func (h *hub) updateReturningTrident(players map[int32]*tracked, a *arrowEntity)
 	dx, dy, dz := owner.x-a.x, (owner.y+1)-a.y, owner.z-a.z
 	dist := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if dist < riptideReach { // caught
-		if owner.gamemode == gmSurvival && owner.inv != nil && a.pickupStack.item != 0 {
+		if isSurvival(owner.gamemode) && owner.inv != nil && a.pickupStack.item != 0 {
 			if changed, left := owner.inv.addStack(a.pickupStack); left == 0 {
 				for _, sl := range changed {
 					h.sendSlot(owner, sl)
@@ -186,7 +186,7 @@ const spinAttackReach = 1.2
 func (h *hub) riptideSpinAttacks(players map[int32]*tracked) {
 	now := h.tick.Load()
 	for _, t := range players {
-		if t.dead || t.gamemode != gmSurvival || now >= t.spinUntil || t.spinSpent {
+		if t.dead || !isSurvival(t.gamemode) || now >= t.spinUntil || t.spinSpent {
 			continue
 		}
 		for _, m := range h.mobs {

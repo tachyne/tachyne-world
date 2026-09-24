@@ -34,7 +34,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	if t.dim != v.dim {
 		return true
 	}
-	if t.gamemode != gmSurvival && t.gamemode != gmAdventure {
+	if !isSurvival(t.gamemode) && t.gamemode != gmAdventure {
 		return true // creative/spectator swings do not hurt (vanilla: creative does, but
 	} //           tachyne has no creative-damage path and silently no-ops rather than guessing)
 	if v.gamemode == gmCreative || v.gamemode == gmSpectator {

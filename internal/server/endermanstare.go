@@ -67,7 +67,7 @@ func (h *hub) starerOf(players map[int32]*tracked, m *mob) *tracked {
 		return nil
 	}
 	for _, t := range players {
-		if t.dim != m.dim || t.gamemode != gmSurvival || t.dead || t.armor[0].item == itemCarvedPumpkin {
+		if t.dim != m.dim || !isSurvival(t.gamemode) || t.dead || t.armor[0].item == itemCarvedPumpkin {
 			continue
 		}
 		ex, ey, ez := m.x-t.x, (m.y+2.55)-(t.y+1.62), m.z-t.z

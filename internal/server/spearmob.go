@@ -229,7 +229,7 @@ func (h *hub) mobSpearTick(players map[int32]*tracked, m *mob) {
 
 // stabPlayerByMob is LivingEntity.stabAttack from a mob onto a player.
 func (h *hub) stabPlayerByMob(players map[int32]*tracked, m *mob, v *tracked, b spearBlow) bool {
-	if v.dead || (v.gamemode != gmSurvival && v.gamemode != gmAdventure) {
+	if v.dead || (!isSurvival(v.gamemode) && v.gamemode != gmAdventure) {
 		return false
 	}
 	landed := false
@@ -284,7 +284,7 @@ func (h *hub) lunge(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	h.applyToolWear(t, t.p.heldSlot(), 1)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		t.exhaust(lungeExhaustion * float32(lvl))
 	}
 	lx, _, lz := lookVector(t.yaw, t.pitch)

@@ -219,7 +219,7 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 		// every blow the weapon deals, smash or not.
 		smash, fall = maceSmashing(t)
 		breachFrac = 0.15 * float64(heldStack(t).enchLvl(enchBreach))
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			t.exhaust(attackExhaustion)                 // vanilla: attacking burns food
 			if n := attackWear(t.p.heldItem()); n > 0 { // Weapon.itemDamagePerAttack
 				h.applyToolWear(t, t.p.heldSlot(), n)
@@ -356,7 +356,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			// includes other players — it had only ever touched mobs.
 			if h.rules.PvP {
 				for _, o := range players {
-					if o == t || o.dead || o.dim != t.dim || o.gamemode != gmSurvival {
+					if o == t || o.dead || o.dim != t.dim || !isSurvival(o.gamemode) {
 						continue
 					}
 					if !sweepCatches(m, o.x, o.y, o.z, 0.6, 1.8) || dist3sq(o.x, o.y, o.z, t.x, t.y, t.z) >= 9 {

@@ -123,7 +123,7 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		if sitting {
 			break
 		}
-		if t.dim != 2 || t.dead || t.gamemode != gmSurvival || now < t.graceUntil {
+		if t.dim != 2 || t.dead || !isSurvival(t.gamemode) || now < t.graceUntil {
 			continue
 		}
 		d := dist3(t.x, t.y, t.z, m.x, m.y, m.z)
@@ -181,7 +181,7 @@ func (h *hub) hitCrystal(players map[int32]*tracked, eid int32) bool {
 	h.playSoundDim(players, 2, "minecraft:entity.generic.explode", sndBlock, c.x, c.y, c.z, 1, 1)
 	h.spawnParticles(players, dimEnd, particleExplosionEmitter, c.x, c.y, c.z, 1, 0.5, 4)
 	for _, t := range players { // the blast bites anyone on the pillar
-		if t.dim == 2 && !t.dead && t.gamemode == gmSurvival &&
+		if t.dim == 2 && !t.dead && isSurvival(t.gamemode) &&
 			dist3(t.x, t.y, t.z, c.x, c.y, c.z) < 5 {
 			h.hurtFrom(players, t, 6, dtExplosion,
 				deathCause{by: "an End Crystal"}, from(c.x, c.z))

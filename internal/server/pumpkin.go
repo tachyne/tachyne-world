@@ -44,7 +44,7 @@ func (h *hub) carvePumpkin(players map[int32]*tracked, e evCarvePumpkin) {
 	h.setBlockAt(players, t.dim, pos, worldgen.SetProperty(info, carvedPumpkinBase, "facing", facing))
 	dx, dz := facingDelta(facing)
 	h.spawnItemIn(players, t.dim, itemPumpkinSeeds, 4, cx+float64(dx)*0.65, float64(e.y)+0.1, cz+float64(dz)*0.65)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
 	h.incStat(t, attachproto.StatUsed, itemShears, 1)

@@ -35,7 +35,7 @@ func (h *hub) tryFeedDolphin(players map[int32]*tracked, t *tracked, m *mob) boo
 		return false
 	}
 	h.playSoundDim(players, m.dim, "minecraft:entity.dolphin.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	if m.baby {

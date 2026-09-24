@@ -65,7 +65,7 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 	if !compostable || level >= composterFull {
 		return
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	// Vanilla's roll: an empty composter always takes the first item, and

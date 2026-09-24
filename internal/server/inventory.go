@@ -272,7 +272,7 @@ func windowSlot(logical int) int16 {
 func (h *hub) pickupItems(players map[int32]*tracked) {
 	now := h.tick.Load()
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.inv == nil {
+		if !isSurvival(t.gamemode) || t.dead || t.inv == nil {
 			continue
 		}
 		for eid, it := range h.items {

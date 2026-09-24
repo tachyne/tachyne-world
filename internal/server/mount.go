@@ -66,7 +66,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		}
 		m.saddled = true
 		m.saddleSt = invStack{item: itemSaddle, count: 1}
-		if t.gamemode == gmSurvival {
+		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
 		}
 		if horseFamily(m.etype) {

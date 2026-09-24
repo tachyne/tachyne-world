@@ -163,7 +163,7 @@ func (h *hub) shearSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if heldStack(t).item != itemShears || !h.shearMob(players, m) {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
 	return true

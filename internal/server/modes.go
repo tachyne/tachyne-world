@@ -22,6 +22,12 @@ const (
 // the engine has no such component, so for us the restriction is absolute.
 func mayBuild(mode int) bool { return mode == gmSurvival || mode == gmCreative }
 
+// isSurvival is GameType.isSurvival: survival AND adventure. Adventure is
+// survival without building (mayBuild) — it is hurt, hunted, gets hungry,
+// uses up what it uses and picks things up. Every "survival only" rule in the
+// engine reads this, not gmSurvival.
+func isSurvival(mode int) bool { return mode == gmSurvival || mode == gmAdventure }
+
 // modeStore remembers each player's game mode by name so a mixed survival/
 // creative server keeps who-is-who across restarts. Plain JSON so an admin can
 // hand-edit who's creative. Unknown players get the server default.

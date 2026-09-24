@@ -310,7 +310,7 @@ type tracked struct {
 	kvAt          uint64
 	fireSecs      int // seconds of afterburn left (lava/fire) — 1 dmg/s, water clears
 
-	// Survival state — simulated only while gamemode == gmSurvival.
+	// Survival state — simulated only while gameisSurvival(mode).
 	living        // attributes + status effects, shared with mobs
 	health        float32
 	absorption    float32 // extra damage buffer from the Absorption effect (soaked first)
@@ -1533,7 +1533,7 @@ func (h *hub) run() {
 					// the client's view matches the server in both directions, and
 					// re-push a second later — a mode switch is one-shot un-resent
 					// state on a lossy send (the stuck-furnace packet-drop class).
-					if e.mode == gmSurvival {
+					if isSurvival(e.mode) {
 						h.sendHealth(t) // (state already exists from join — don't reset it)
 					}
 					h.sendInventory(t)
@@ -1789,7 +1789,7 @@ func (h *hub) run() {
 					h.iceMeltsOnBreak(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				}
 				// Ore XP: only for an actual survival miner (never creative/world).
-				if t := players[e.by]; t != nil && t.gamemode == gmSurvival {
+				if t := players[e.by]; t != nil && isSurvival(t.gamemode) {
 					t.exhaust(0.005) // vanilla: mining a block
 					if xp := xpForBlock(e.state, h.rng.Intn); xp > 0 && silk == 0 {
 						h.spawnXPOrbIn(players, e.dim, xp, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
@@ -2095,7 +2095,7 @@ func (h *hub) run() {
 					h.closeWindow(players, t)
 				}
 			case evTossHeld:
-				if t := players[e.eid]; t != nil && t.gamemode == gmSurvival {
+				if t := players[e.eid]; t != nil && isSurvival(t.gamemode) {
 					h.tossHeld(players, t, e.slot, e.all)
 					h.incCustom(t, "drop", 1)
 				}
@@ -2361,7 +2361,7 @@ func (h *hub) run() {
 					}
 				}
 			case evConsume:
-				if t := players[e.eid]; t != nil && t.gamemode == gmSurvival && t.inv != nil && e.slot >= 0 && e.slot < 9 {
+				if t := players[e.eid]; t != nil && isSurvival(t.gamemode) && t.inv != nil && e.slot >= 0 && e.slot < 9 {
 					if sl := &t.inv.slots[e.slot]; sl.count > 0 {
 						sl.count--
 						if sl.count == 0 {
@@ -2457,8 +2457,8 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			h.resendEffects(nt)  // …and the potion effects it was carrying
 		}
 	}
-	h.sendDefaultSpawn(nt)         // the compass's north, before anything else uses it
-	if nt.gamemode == gmSurvival { // sync the survival HUD (hearts/hunger)
+	h.sendDefaultSpawn(nt)       // the compass's north, before anything else uses it
+	if isSurvival(nt.gamemode) { // sync the survival HUD (hearts/hunger)
 		h.sendHealth(nt)
 	}
 	// The saved inventory goes to every player, in every game mode, as

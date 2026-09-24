@@ -302,7 +302,7 @@ func (h *hub) onSignPlaced(players map[int32]*tracked, e evSignPlaced) {
 
 // signConsume uses up one of the applied item (dye/ink/honeycomb), survival only.
 func (h *hub) signConsume(t *tracked, slot int32) {
-	if t.gamemode != gmSurvival || t.inv == nil || slot < 0 || slot >= 9 {
+	if !isSurvival(t.gamemode) || t.inv == nil || slot < 0 || slot >= 9 {
 		return
 	}
 	if sl := &t.inv.slots[slot]; sl.count > 0 {

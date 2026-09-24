@@ -504,7 +504,7 @@ func (h *hub) stabMobByPlayer(players map[int32]*tracked, t *tracked, m *mob, to
 	if !landed && !b.knock && !dismounted {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		t.exhaust(attackExhaustion)
 		h.applyToolWear(t, t.p.heldSlot(), 1) // Weapon: one point per enemy struck
 	}
@@ -515,7 +515,7 @@ func (h *hub) stabMobByPlayer(players map[int32]*tracked, t *tracked, m *mob, to
 }
 
 func (h *hub) stabPlayerByPlayer(players map[int32]*tracked, t, v *tracked, total float64, b spearBlow) bool {
-	if !h.rules.PvP || v.dead || (t.gamemode != gmSurvival && t.gamemode != gmAdventure) ||
+	if !h.rules.PvP || v.dead || (!isSurvival(t.gamemode) && t.gamemode != gmAdventure) ||
 		v.gamemode == gmCreative || v.gamemode == gmSpectator {
 		return false // Player.canHarmPlayer, and nothing to hurt
 	}
@@ -563,7 +563,7 @@ func (h *hub) stabPlayerByPlayer(players map[int32]*tracked, t, v *tracked, tota
 	if !landed && !b.knock && !dismounted {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		t.exhaust(attackExhaustion)
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}

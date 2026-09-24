@@ -397,7 +397,7 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 		// but the periodic damage and healing are a survival concern — a
 		// creative player's Night Vision still runs out, their Poison still
 		// does nothing.
-		survival := t.gamemode == gmSurvival && t.health > 0
+		survival := isSurvival(t.gamemode) && t.health > 0
 		for id, e := range t.effects {
 			switch id {
 			case effRegen:

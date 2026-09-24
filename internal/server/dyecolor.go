@@ -100,7 +100,7 @@ func (h *hub) tryDyeSheep(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if !h.dyeSheep(players, m, held.item) {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		slot := t.p.heldSlot()
 		if held.count--; held.count <= 0 {
 			held = invStack{}

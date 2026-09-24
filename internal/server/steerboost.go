@@ -120,7 +120,7 @@ func (m *mob) boostFactor() float64 {
 // stick takes its wear and, when that spends it, becomes the undamaged fishing
 // rod it was built on rather than snapping to nothing like a tool.
 func (h *hub) wearSteerStick(players map[int32]*tracked, t *tracked, slot int, m *mob) {
-	if t.gamemode != gmSurvival {
+	if !isSurvival(t.gamemode) {
 		return // hasInfiniteMaterials: no wear, and so no durability criterion
 	}
 	s := t.handStack(slot)

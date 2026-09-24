@@ -54,7 +54,7 @@ func (h *hub) tickGliding(players map[int32]*tracked) {
 // so it is spared at the tool rate — lvl/(lvl+1) — not the armour one. It can
 // never break here: the glide ends a point before that.
 func (h *hub) wearElytra(players map[int32]*tracked, t *tracked) {
-	if t.gamemode != gmSurvival {
+	if !isSurvival(t.gamemode) {
 		return // hasInfiniteMaterials: creative flies for free
 	}
 	a := &t.armor[chestArmorSlot]

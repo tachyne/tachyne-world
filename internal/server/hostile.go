@@ -401,7 +401,7 @@ func (h *hub) nearestQuarry(players map[int32]*tracked, dim int, x, z, maxDist f
 		bestD2 = (t.x-x)*(t.x-x) + (t.z-z)*(t.z-z)
 	}
 	for _, se := range h.shadowIn {
-		if se.kind != handover.KindPlayer || se.dim != dim || se.gamemode != gmSurvival {
+		if se.kind != handover.KindPlayer || se.dim != dim || !isSurvival(se.gamemode) {
 			continue // only survival players are hunted (dead ones cast no shadow at all)
 		}
 		if d2 := (se.x-x)*(se.x-x) + (se.z-z)*(se.z-z); d2 < bestD2 {
@@ -417,7 +417,7 @@ func (h *hub) nearestHuntable(players map[int32]*tracked, dim int, x, z, maxDist
 	var best *tracked
 	bestD2 := maxDist * maxDist
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead || t.dim != dim {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != dim {
 			continue // hunt only in the mob's own dimension
 		}
 		if d2 := (t.x-x)*(t.x-x) + (t.z-z)*(t.z-z); d2 < bestD2 {

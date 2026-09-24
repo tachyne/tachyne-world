@@ -167,7 +167,7 @@ func (h *hub) entityInsideTick(players map[int32]*tracked) {
 // being looked at.
 func (h *hub) playerInsideTick(players map[int32]*tracked) {
 	for _, t := range players {
-		if t.gamemode != gmSurvival || t.dead {
+		if !isSurvival(t.gamemode) || t.dead {
 			continue
 		}
 		// Remember where they were BEFORE overwriting it, or the comparison

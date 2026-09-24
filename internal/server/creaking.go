@@ -312,7 +312,7 @@ func (h *hub) nextToLog(p blockPos) bool {
 // once, and the answer only differs at the very edge of the cone.
 func (h *hub) creakingFrozen(players map[int32]*tracked, m *mob) bool {
 	for _, t := range players {
-		if t.dim != m.dim || t.dead || t.gamemode != gmSurvival {
+		if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) {
 			continue
 		}
 		dx, dy, dz := m.x-t.x, (m.y+1)-(t.y+1.62), m.z-t.z

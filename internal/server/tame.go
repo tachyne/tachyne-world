@@ -72,7 +72,7 @@ func (h *hub) tryTame(players map[int32]*tracked, t *tracked, m *mob) bool {
 				return false
 			}
 			m.collar = dye
-			if t.gamemode == gmSurvival {
+			if isSurvival(t.gamemode) {
 				h.consumeHeld(t)
 			}
 			h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(variantMeta(m)))

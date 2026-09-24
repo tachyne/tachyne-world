@@ -71,7 +71,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 	default:
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.applyToolWear(t, t.p.heldSlot(), 1)
 	}
 	return true
@@ -102,7 +102,7 @@ func (h *hub) tryRepairGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 	}
 	m.health = min(maxHP, m.health+golemRepairHeal)
 	h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.repair", sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	return true
@@ -127,7 +127,7 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 		m.fuse = creeperFuseTicks
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if held == itemFireCharge {
 			h.consumeHeld(t)
 		} else {
@@ -143,7 +143,7 @@ func (h *hub) tryPoisonParrot(players map[int32]*tracked, t *tracked, m *mob) bo
 	if m.etype != entityParrot || heldStack(t).item != itemCookie || m.dying > 0 {
 		return false
 	}
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.applyMobEffect(players, m, effPoison, 0, 45)

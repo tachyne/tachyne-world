@@ -147,7 +147,7 @@ func (h *hub) useCandle(players map[int32]*tracked, e evUseCandle) {
 	}
 	// CandleCakeBlock.useWithoutItem: CakeBlock.eat on a whole cake, then the
 	// candle drops.
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		if t.food >= maxFood {
 			return
 		}

@@ -111,7 +111,7 @@ func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	st := heldStack(t)
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
 	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, st)

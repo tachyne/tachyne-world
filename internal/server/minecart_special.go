@@ -358,7 +358,7 @@ func (h *hub) fuelCart(players map[int32]*tracked, t *tracked, v *vehicle) {
 	}
 	v.fuel += cartFuelPerItem
 	v.pushX, v.pushZ = v.x-t.x, v.z-t.z
-	if t.gamemode == gmSurvival {
+	if isSurvival(t.gamemode) {
 		st.count--
 		if st.count == 0 {
 			*st = invStack{}

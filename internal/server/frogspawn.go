@@ -52,7 +52,7 @@ func (h *hub) placeFrogspawn(players map[int32]*tracked, t *tracked) {
 			h.scheduleFrogspawn(t.dim, blockPos{p.x, p.y + 1, p.z})
 			h.playSoundDim(players, t.dim, "minecraft:block.frogspawn.place", sndBlock,
 				float64(p.x)+0.5, float64(p.y)+1.5, float64(p.z)+0.5, 1, 1)
-			if t.gamemode == gmSurvival {
+			if isSurvival(t.gamemode) {
 				h.consumeHeld(t)
 			}
 			return
