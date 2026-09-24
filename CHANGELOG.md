@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Opening a shulker box trips observers and lifts what is on it.** As in
+  vanilla, a shulker box's lid now updates the blocks around it when it
+  starts and stops moving, so an observer watching the box pulses when
+  someone opens or closes it. The rising lid also pushes mobs and dropped
+  items sitting on it out of the way.
 - **Endermen teleport the way they do in vanilla.** Every enderman
   teleport landed on the top of the ground, so endermen in the sun
   teleported from one sunny spot to another and gathered in the open. Cave

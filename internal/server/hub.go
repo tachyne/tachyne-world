@@ -440,6 +440,7 @@ type hub struct {
 	worldSpawnYaw, worldSpawnPitch float32
 	spawnPub                       atomic.Pointer[[3]float64]
 	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
+	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -1125,6 +1126,7 @@ func (h *hub) run() {
 			}
 			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
 			h.publishBodies(players)    // the boxes a block placement must not overlap
+			h.tickShulkerLids(players)  // shulker box lids: neighbour updates and the push
 			h.pickupItems(players)      // collect dropped items into survival inventories
 			h.tickDigCracks(players)    // the cracks other players see on a dig
 			h.updateOrbs(players)       // collect experience orbs / expire old ones

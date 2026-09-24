@@ -28,6 +28,9 @@ func (h *hub) lidEvent(players map[int32]*tracked, pos simPos) {
 			n++
 		}
 	}
+	if isShulkerBox(st) {
+		h.shulkerLidEvent(pos, n) // the server runs the lid too (shulkerlid.go)
+	}
 	h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.BlockEvent{
 		X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), Action: 1, Param: uint8(n), Block: int32(id)})
 }
