@@ -42,7 +42,9 @@ func TestCrystalsHealAndDie(t *testing.T) {
 	h, pl, players := endHub(t)
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	h.dragon.health = 100
-	h.tick.Store(20) // now%20==0 heal beat
+	h.tick.Store(20) // it finds its nearest crystal…
+	h.updateDragon(players)
+	h.tick.Store(40) // …and heals from it on the next beat
 	h.updateDragon(players)
 	if h.dragon.health <= 100 {
 		t.Fatal("living crystals should heal the dragon")
@@ -168,5 +170,41 @@ func TestDragonPartsLieAlongItsFacing(t *testing.T) {
 	// A wing, out to the side and two up.
 	if p, ok := dragonPartAt(m, 104.5, 82, 100); !ok || p != "wing" {
 		t.Fatalf("out to the side should be a wing, got %q ok=%v", p, ok)
+	}
+}
+
+// EnderDragon.onCrystalDestroyed: destroying the crystal the dragon is
+// healing from costs it 10; any other crystal costs it nothing.
+func TestDragonHurtWhenItsHealingCrystalBreaks(t *testing.T) {
+	h, pl, players := endHub(t)
+	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
+	pl.x, pl.y, pl.z = 300, 60, 300 // far from every blast
+	m := h.dragon
+	var near, far *crystal
+	for _, c := range h.crystals {
+		if near == nil {
+			near = c
+		} else if far == nil || dist3sq(c.x, c.y, c.z, near.x, near.y, near.z) > dist3sq(far.x, far.y, far.z, near.x, near.y, near.z) {
+			far = c
+		}
+	}
+	m.x, m.y, m.z = near.x, near.y+20, near.z // in reach of it, out of its blast
+	h.tick.Store(20)
+	h.updateDragon(players)
+	if h.dragonCrystal != near.eid {
+		t.Fatalf("the dragon beside a crystal heals from %d, want %d", h.dragonCrystal, near.eid)
+	}
+	m.health = 100
+	h.onAttack(players, evAttack{attacker: pl.p.eid, target: far.eid})
+	if m.health != 100 {
+		t.Fatalf("breaking a crystal the dragon is not healing from cost it %d", 100-m.health)
+	}
+	h.tick.Add(40) // past the hurt cooldown
+	h.onAttack(players, evAttack{attacker: pl.p.eid, target: near.eid})
+	if m.health != 100-dragonCrystalLoss {
+		t.Fatalf("breaking its healing crystal left the dragon at %d, want %d", m.health, 100-dragonCrystalLoss)
+	}
+	if h.dragonCrystal != 0 {
+		t.Fatal("the dragon still heals from a destroyed crystal")
 	}
 }

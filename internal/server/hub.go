@@ -690,6 +690,7 @@ type hub struct {
 	digs        map[int32]*digCrack // players' digs in progress, for the cracks others see (digcracks.go)
 
 	dragon        *mob               // the ender dragon (nil = none / defeated)
+	dragonCrystal int32              // EnderDragon.nearestCrystal: the crystal healing it (0 = none)
 	crystals      map[int32]*crystal // end crystals by eid
 	dragonRespawn *dragonRespawn     // the respawn ceremony in progress (nil = none)
 	phantomNextAt uint64             // next insomnia check (vanilla PhantomSpawner cadence)

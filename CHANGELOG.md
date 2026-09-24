@@ -58,6 +58,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Breaking the dragon's healing crystal hurts the dragon.** The ender
+  dragon healed as long as any end crystal was left anywhere. Now, as in
+  vanilla, it heals only from the nearest crystal within reach.
+  Destroying that crystal while it is healing costs the dragon 10 health.
 - **Kills count for the player who started the fight.** A mob you hurt
   that died moments later from a fall, fire, lava or another mob gave you
   nothing. Now, as in vanilla, a mob that dies within five seconds of
