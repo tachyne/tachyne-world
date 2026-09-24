@@ -93,7 +93,7 @@ func (h *hub) darknessAround(players map[int32]*tracked, dim int, x, y, z float6
 		if dist3(t.x, t.y, t.z, x, y, z) > radius {
 			continue
 		}
-		if e, on := t.effects[effDarkness]; on && e.left > wardenDarknessKeep {
+		if e, on := t.effects[effDarkness]; on && !e.endsWithin(wardenDarknessKeep) {
 			continue // MobEffectUtil: a fresh one is left alone
 		}
 		h.applyEffect(players, t, effDarkness, 0, wardenDarknessSecs)

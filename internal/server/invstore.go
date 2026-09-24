@@ -27,10 +27,11 @@ type invStore struct {
 // they migrate on load.
 // savedEffect is one active effect, with its remaining time in TICKS.
 type savedEffect struct {
-	ID      int32 `json:"id"`
-	Amp     int   `json:"amp,omitempty"`
-	Left    int   `json:"left"`
-	Ambient bool  `json:"ambient,omitempty"`
+	ID          int32 `json:"id"`
+	Amp         int   `json:"amp,omitempty"`
+	Left        int   `json:"left"`
+	Ambient     bool  `json:"ambient,omitempty"`
+	NoParticles bool  `json:"noParticles,omitempty"` // /effect … hideParticles
 }
 
 type savedInv struct {
@@ -193,15 +194,21 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.enchSeed = saved.EnchSeed
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
 	t.tags = tagSet(saved.Tags)
-	if len(saved.Effects) > 0 {
-		t.effects = map[int32]*activeEffect{}
-		for _, e := range saved.Effects {
-			if e.Left <= 0 {
-				continue
-			}
-			t.effects[e.ID] = &activeEffect{amp: e.Amp, left: e.Left, ambient: e.Ambient}
-			t.applyEffectModifiers(e.ID, e.Amp) // the attribute side comes back too
+	restoreSavedEffects(t, saved.Effects)
+}
+
+// restoreSavedEffects is savedEffectsOf's other half.
+func restoreSavedEffects(t *tracked, saved []savedEffect) {
+	if len(saved) == 0 {
+		return
+	}
+	t.effects = map[int32]*activeEffect{}
+	for _, e := range saved {
+		if e.Left <= 0 && e.Left != effInfinite {
+			continue
 		}
+		t.effects[e.ID] = &activeEffect{amp: e.Amp, left: e.Left, ambient: e.Ambient, noParticles: e.NoParticles}
+		t.applyEffectModifiers(e.ID, e.Amp) // the attribute side comes back too
 	}
 }
 
@@ -298,7 +305,7 @@ func savedEffectsOf(t *tracked) []savedEffect {
 	out := make([]savedEffect, 0, len(ids))
 	for _, id := range ids {
 		e := t.effects[id]
-		out = append(out, savedEffect{ID: id, Amp: e.amp, Left: e.left, Ambient: e.ambient})
+		out = append(out, savedEffect{ID: id, Amp: e.amp, Left: e.left, Ambient: e.ambient, NoParticles: e.noParticles})
 	}
 	return out
 }

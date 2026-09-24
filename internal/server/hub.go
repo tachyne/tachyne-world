@@ -1518,13 +1518,7 @@ func (h *hub) run() {
 			case evPrimeTNT:
 				h.primeTNTIn(players, e.dim, e.x, e.y, e.z, tntFuseTicks)
 			case evEffect:
-				for _, t := range h.commandTargets(players, e.by, e.target) {
-					if e.clear {
-						h.clearEffects(t)
-					} else {
-						h.applyEffect(players, t, e.id, e.amp, e.secs)
-					}
-				}
+				h.effectCommand(players, e)
 			case evPopItem:
 				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:

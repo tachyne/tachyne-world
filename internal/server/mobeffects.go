@@ -31,11 +31,19 @@ func (h *hub) applyMobEffect(players map[int32]*tracked, m *mob, id int32, amp, 
 
 func (h *hub) applyMobEffectDur(players map[int32]*tracked, m *mob, id int32, amp, dur int, inTicks bool) {
 	ticks := dur * 20
-	if inTicks {
+	if inTicks || dur == effInfinite {
 		ticks = dur
 	}
+	h.addMobEffect(players, m, id, activeEffect{amp: amp, left: ticks})
+}
+
+// addMobEffect is LivingEntity.addEffect for a mob. Reports whether it took:
+// the undead shrug off poison and regeneration, and a stronger or longer
+// instance already running keeps its place.
+func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in activeEffect) bool {
+	amp := in.amp
 	if m == nil || m.dying > 0 {
-		return
+		return false
 	}
 	switch id {
 	case effInstantHealth:
@@ -45,27 +53,28 @@ func (h *hub) applyMobEffectDur(players map[int32]*tracked, m *mob, id int32, am
 		} else {
 			h.healMob(m, 4*(int(1)<<amp))
 		}
-		return
+		return true
 	case effInstantDamage:
 		if ignoresPoisonAndRegen(m.etype) {
 			h.healMob(m, 6*(int(1)<<amp))
 		} else {
 			h.hurtMobEffect(players, m, float64(6*(int(1)<<amp)))
 		}
-		return
+		return true
 	case effPoison, effRegen:
 		if ignoresPoisonAndRegen(m.etype) {
-			return // #ignores_poison_and_regen: the undead are unmoved
+			return false // #ignores_poison_and_regen: the undead are unmoved
 		}
 	}
-	if !m.startEffectTicks(id, amp, ticks) {
-		return // a stronger or longer instance is already running
+	if !m.startEffectInstance(id, in) {
+		return false // a stronger or longer instance is already running
 	}
 	m.installEffectModifiers(id, amp)
 	if id == effInvisibility || id == effGlowing {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Amp: int32(amp), Ticks: int32(ticks)})
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, effectEv(m.eid, id, m.effects[id]))
+	return true
 }
 
 // removeMobEffect ends one effect on a mob.
@@ -92,23 +101,23 @@ func (h *hub) updateMobEffects(players map[int32]*tracked) {
 		for id, e := range m.effects {
 			switch id {
 			case effRegen:
-				if applyEffectTickNow(e.left, 50, e.amp) && m.health < m.maxHP() {
+				if applyEffectTickNow(e.clock(h.tick.Load()), 50, e.amp) && m.health < m.maxHP() {
 					h.healMob(m, 1)
 				}
 			case effPoison:
 				// Poison never kills: it stops at one hit point.
-				if applyEffectTickNow(e.left, 25, e.amp) && m.health > 1 {
+				if applyEffectTickNow(e.clock(h.tick.Load()), 25, e.amp) && m.health > 1 {
 					h.hurtMobEffect(players, m, 1)
 				}
 			case effWither:
-				if applyEffectTickNow(e.left, 40, e.amp) {
+				if applyEffectTickNow(e.clock(h.tick.Load()), 40, e.amp) {
 					h.hurtMobEffect(players, m, 1)
 				}
 			}
 			if m.dying > 0 { // a wither tick killed it — stop touching its effects
 				break
 			}
-			if e.left--; e.left <= 0 {
+			if e.tickDown(); e.expired() {
 				h.removeMobEffect(players, m, id)
 			}
 		}

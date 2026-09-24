@@ -48,13 +48,20 @@ func (l *living) startEffect(id int32, amp, secs int) bool {
 // startEffectTicks is startEffect in the unit vanilla stores, for the effects
 // whose duration is not a whole number of seconds.
 func (l *living) startEffectTicks(id int32, amp, ticks int) bool {
+	return l.startEffectInstance(id, activeEffect{amp: amp, left: ticks})
+}
+
+// startEffectInstance is startEffectTicks for a whole instance, carrying its
+// particle flag; an infinite duration outlasts every other.
+func (l *living) startEffectInstance(id int32, in activeEffect) bool {
 	if l.effects == nil {
 		l.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := l.effects[id]; ok && (cur.amp > amp || (cur.amp == amp && cur.left > ticks)) {
+	if cur, ok := l.effects[id]; ok && (cur.amp > in.amp || (cur.amp == in.amp && in.shorterThan(cur))) {
 		return false
 	}
-	l.effects[id] = &activeEffect{amp: amp, left: ticks}
+	in.hidden = nil
+	l.effects[id] = &in
 	return true
 }
 

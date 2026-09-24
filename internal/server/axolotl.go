@@ -138,11 +138,11 @@ func (h *hub) axolotlStep(players map[int32]*tracked, m *mob) bool {
 // axolotlSupport is applySupportingEffects: regeneration topped up to
 // forty seconds at most, and mining fatigue lifted.
 func (h *hub) axolotlSupport(players map[int32]*tracked, t *tracked) {
-	left := 0
+	left, due := 0, true
 	if e := t.effects[effRegen]; e != nil {
-		left = e.left
+		left, due = e.left, e.endsWithin(axRegenCap-1)
 	}
-	if left <= axRegenCap-1 {
+	if due {
 		n2 := min(axRegenCap, axRegenAdd+left)
 		h.applyEffect(players, t, effRegen, 0, n2/20)
 	}

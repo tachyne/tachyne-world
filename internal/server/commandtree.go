@@ -146,9 +146,10 @@ func modelledCommands() []cmdNode {
 	}
 	_ = gmNode
 
+	ampTail := argInt("amplifier", 0, 255, true, argBool("hideParticles", true))
 	effectName := argWord("effect", true,
-		argInt("seconds", 0, 1000000, true,
-			argInt("amplifier", 0, 255, true)))
+		argInt("seconds", 1, 1000000, true, ampTail),
+		lit("infinite", true, ampTail))
 
 	return []cmdNode{
 		gm("gamemode"),
@@ -163,7 +164,7 @@ func modelledCommands() []cmdNode {
 		lit("teleport", true, argEntity("destination", entitySingle, true), argVec3("location", true)),
 		lit("effect", false,
 			lit("give", false, argEntity("targets", 0, false, effectName)),
-			lit("clear", false, argEntity("targets", 0, true))),
+			lit("clear", true, argEntity("targets", 0, true, argWord("effect", true)))),
 		lit("time", true, append(lits("day", "noon", "night", "midnight"),
 			argInt("value", 0, 24000000, true))...),
 		lit("weather", false,

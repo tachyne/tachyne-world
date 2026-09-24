@@ -13,6 +13,15 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-24
 
+### Added
+- **`/effect` works as in 26.3.** `/effect give` takes `infinite` in place of
+  seconds and a hideParticles flag. An infinite effect never runs down,
+  survives a relog, and still heals or hurts on schedule. It comes back when
+  a stronger potion wears off. Entity selectors reach mobs. `/effect clear`
+  can remove one named effect. The feedback now matches vanilla, including
+  "Unable to apply this effect" when a stronger effect is already running
+  or the target is immune.
+
 ### Fixed
 - **Nautiluses, zombie nautiluses and sniffers behave as in 26.3.** A
   nautilus follows its food, courts its mate, and charges whoever hurt it
