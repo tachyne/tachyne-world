@@ -76,6 +76,27 @@ the public history since the project was open-sourced on 2026-07-10.
   picked up the next block first, so carriers never left and gathered
   around the spawn area. The ones already there will thin out as they set
   their blocks down.
+- **Evoker fangs can be seen.** An evoker's fangs bit, but Java players
+  never saw them rise. The client only draws a fang once the server says
+  its attack has started, and that signal was never sent. It now goes out
+  at the vanilla moment, with the snap played by the client as in vanilla.
+- **Mob blasts respect mobGriefing, and fireballs burst on walls.** With
+  mobGriefing off, a ghast's fireball, a wither skull and the wither's
+  spawn blast still broke blocks. Now they keep every block and only hurt
+  what stands in the blast. A ghast's fireball also lodged in a wall like
+  an arrow instead of exploding, and blaze fireballs stuck there for ten
+  seconds. Every fireball and skull now ends where it hits, and a blaze's
+  fireball primes TNT or lights a campfire it strikes.
+- **Wither skulls wither by difficulty.** A wither skull gave a weak,
+  ten-second Wither on every difficulty. It now gives Wither II, for ten
+  seconds on normal and forty on hard, and none on easy, as in vanilla.
+- **Thrown things fly as far as they do in vanilla.** Every thrown
+  projectile fell as fast as an arrow, so snowballs, eggs and ender pearls
+  landed well short. Each now falls at its own vanilla rate, and a bottle
+  o' enchanting drops faster. Splash potions, lingering potions and bottles
+  o' enchanting leave the hand tilted upward, at vanilla's speeds. Llama
+  spit falls a little faster, and a shulker bullet whose target is gone now
+  drops to the ground.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

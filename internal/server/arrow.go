@@ -17,7 +17,6 @@ import (
 
 const (
 	arrowSpeed     = 1.6  // launch speed, blocks/tick (vanilla skeleton bow)
-	arrowGravity   = 0.05 // blocks/tick² (vanilla projectile gravity)
 	arrowDrag      = 0.99 // per-tick air drag
 	arrowDamage    = 3    // hearts×2 before armor (vanilla skeleton ~1-4)
 	arrowLifeTicks = 200  // flying or stuck, gone after 10 s (transient litter)
@@ -72,7 +71,7 @@ type arrowEntity struct {
 	potion     int8     // the potion kind a splash/lingering/tipped projectile carries
 	lingering  bool     // a lingering potion: leaves an effect cloud instead of an instant splash
 	fire       bool     // blaze fireball: sets its target burning
-	wither     int      // wither skull: seconds of wither effect on a hit
+	withers    bool     // wither skull: Wither II on a hit, for as long as the difficulty says (witherSkullSecs)
 	weaken     int      // parched arrow: seconds of weakness effect on a hit
 	slow       int      // stray arrow: seconds of slowness effect on a hit
 
@@ -144,6 +143,52 @@ func (h *hub) spawnArrowAt(players map[int32]*tracked, m *mob, tx, ty, tz float6
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid)) // the draw is visible
 }
 
+// projectileGravity is each projectile's getDefaultGravity, blocks/tick²:
+// the item throwables (ThrowableProjectile) 0.03 except the bottle o'
+// enchanting's 0.07 and a thrown potion's 0.05, llama spit 0.06, a
+// target-less shulker bullet 0.04, arrows and tridents (AbstractArrow) 0.05.
+func projectileGravity(etype int) float64 {
+	switch etype {
+	case entitySnowball, entityEggProj, entityPearlProj:
+		return 0.03
+	case entityXPBottle:
+		return 0.07
+	case entityLlamaSpit:
+		return 0.06
+	case entityShulkerBullet:
+		return 0.04
+	}
+	return 0.05
+}
+
+// isThrowable reports the ThrowableProjectile family (snowball, egg, ender
+// pearl, bottle o' enchanting, thrown potions), which integrates its motion
+// before moving rather than after as an arrow does.
+func isThrowable(etype int) bool {
+	switch etype {
+	case entitySnowball, entityEggProj, entityPearlProj, entityXPBottle, entitySplashProj:
+		return true
+	}
+	return false
+}
+
+// throwVector is Projectile.shootFromRotation's heading at power pow: the
+// look direction, with yOffset degrees added to the pitch in the vertical
+// component only (the potions' and the bottle o' enchanting's −20° lift),
+// normalized and scaled. The thrower's own motion is not added.
+func throwVector(yaw, pitch float32, yOffset, pow float64) (float64, float64, float64) {
+	ry := float64(yaw) * math.Pi / 180
+	rp := float64(pitch) * math.Pi / 180
+	x := -math.Sin(ry) * math.Cos(rp)
+	y := -math.Sin(rp + yOffset*math.Pi/180)
+	z := math.Cos(ry) * math.Cos(rp)
+	d := math.Sqrt(x*x + y*y + z*z)
+	if d < 1e-9 {
+		return 0, 0, 0
+	}
+	return x / d * pow, y / d * pow, z / d * pow
+}
+
 // launchProjectileIn launches into an explicit dimension.
 func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, y, z, vx, vy, vz float64) *arrowEntity {
 	eid := h.allocEID()
@@ -151,8 +196,13 @@ func (h *hub) launchProjectileIn(players map[int32]*tracked, etype, dim int, x, 
 		born: h.tick.Load(), sx: x, sy: y, sz: z, ox: x, oz: z}
 	binary.BigEndian.PutUint32(a.uuid[12:], uint32(eid))
 	h.vibAt(dim, freqProjectileShoot, x, y, z, 0)
-	if etype == entityWindCharge { // a gust, not a dart: shoves, bursts on contact, never sticks
+	switch etype {
+	case entityWindCharge: // a gust, not a dart: shoves, bursts on contact, never sticks
 		a.knock, a.breaks = 1.5, true
+	case entityLargeFireball, entitySmallFireball, entityDragonFireball, entityWitherSkull:
+		// AbstractHurtingProjectile: whatever it hits, block or creature, ends
+		// it (a ghast's fireball explodes on a wall; none lodge like an arrow).
+		a.breaks = true
 	}
 	h.arrows[eid] = a
 	add := entAdd(eid, etype, a.uuid, x, y, z, arrowYaw(a), arrowPitch(a))
@@ -236,17 +286,29 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 			continue
 		}
 		// Shulker bullet: curve toward its live target each tick (it homes on its
-		// victim rather than flying a fixed arc). If the target is gone it keeps
-		// its heading; either way a homing bullet never falls.
+		// victim rather than flying a fixed arc). ShulkerBullet.tick: once the
+		// target is gone (dead, left, a spectator) it only falls, at 0.04.
 		if a.homing != 0 {
-			if tgt := players[a.homing]; tgt != nil && !tgt.dead && tgt.dim == a.dim {
+			if tgt := players[a.homing]; tgt != nil && !tgt.dead && tgt.dim == a.dim && tgt.gamemode != gmSpectator {
 				dx, dy, dz := tgt.x-a.x, (tgt.y+1)-a.y, tgt.z-a.z
 				if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > 1e-6 {
 					a.vx += (dx/d*shulkerBulletSpeed - a.vx) * shulkerBulletSteer
 					a.vy += (dy/d*shulkerBulletSpeed - a.vy) * shulkerBulletSteer
 					a.vz += (dz/d*shulkerBulletSpeed - a.vz) * shulkerBulletSteer
 				}
+			} else {
+				a.vy -= projectileGravity(a.etype)
 			}
+		}
+		// ThrowableProjectile.tick integrates BEFORE it moves: gravity, then
+		// inertia (0.99 in air, 0.8 in water), then the step along the result.
+		if isThrowable(a.etype) {
+			a.vy -= projectileGravity(a.etype)
+			in := arrowDrag
+			if h.inWater(a.dim, a.x, a.y, a.z) {
+				in = 0.8
+			}
+			a.vx, a.vy, a.vz = a.vx*in, a.vy*in, a.vz*in
 		}
 
 		// Sample the step every half block along the tick's move (at least
@@ -276,6 +338,11 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 						h.windBurstR(players, a.dim, a.x-a.vx*0.25, a.y-a.vy*0.25, a.z-a.vz*0.25, a.shooter, windChargeBurstRadius(a))
 						break
 					}
+					// Projectile.onHitBlock runs the block's onProjectileHit for
+					// every projectile: a blaze's fireball primes TNT and lights a
+					// campfire, a snowball rings a bell or scores on a target.
+					bp := blockPos{int(math.Floor(px)), int(math.Floor(py)), int(math.Floor(pz))}
+					h.projectileHitBlock(players, a, bp, h.worldFor(a.dim).At(bp.x, bp.y, bp.z))
 					h.spawnParticles(players, a.dim, particlePoof, a.x, a.y, a.z, 0.1, 0.05, 6)
 					if a.pearl {
 						h.pearlLand(players, a)
@@ -348,9 +415,12 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				}
 				a.vx, a.vy, a.vz = a.vx*inertia, a.vy*inertia, a.vz*inertia
 			}
-		} else if !a.stuck && a.homing == 0 { // homing bullets steer themselves, no gravity/drag
-			a.vy -= arrowGravity
+		} else if !a.stuck && a.homing == 0 && !isThrowable(a.etype) {
+			// AbstractArrow and LlamaSpit: after the move, air drag and then
+			// gravity. (Throwables integrated before their move, above;
+			// homing bullets steer themselves.)
 			a.vx, a.vy, a.vz = a.vx*arrowDrag, a.vy*arrowDrag, a.vz*arrowDrag
+			a.vy -= projectileGravity(a.etype)
 		}
 		if a.x != a.sx || a.y != a.sy || a.z != a.sz {
 			a.sx, a.sy, a.sz = a.x, a.y, a.z
@@ -421,8 +491,8 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			if a.poison > 0 {
 				h.applyEffect(players, t, effPoison, 0, a.poison)
 			}
-			if a.wither > 0 {
-				h.applyEffect(players, t, effWither, 0, a.wither)
+			if secs := h.witherSkullSecs(a); secs > 0 {
+				h.applyEffect(players, t, effWither, 1, secs)
 			}
 			if a.weaken > 0 {
 				h.applyEffect(players, t, effWeakness, 0, a.weaken)

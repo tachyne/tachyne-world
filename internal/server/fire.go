@@ -245,6 +245,12 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
 	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
 
+	// ServerLevel.explode: a MOB interaction (a creeper, a ghast's fireball,
+	// the wither and its skulls) keeps every block when mobGriefing is off;
+	// the blast still hurts what stands in it.
+	if kind == blastMob && !h.rules.MobGriefing {
+		radius = 0
+	}
 	w := h.worldFor(dim)
 	var cleared, hives []blockPos
 	if w != nil && radius > 0 {

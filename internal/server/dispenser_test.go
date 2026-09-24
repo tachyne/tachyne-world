@@ -50,14 +50,15 @@ func TestDispenserBehaviors(t *testing.T) {
 			}
 		}
 
-		// Fire charge → a (non-breakable) fireball flies out.
+		// Fire charge → a fireball flies out, and like every hurting
+		// projectile it ends on whatever it hits rather than lodging.
 		fire(itemFireCharge, 0)
 		if len(h.arrows) != 1 {
 			t.Fatalf("fire charge: %d projectiles, want 1", len(h.arrows))
 		}
 		for _, a := range h.arrows {
-			if a.breaks {
-				t.Error("fire charge projectile should not be marked breakable")
+			if !a.breaks || a.etype != entitySmallFireball {
+				t.Error("fire charge should fly as a small fireball that ends on impact")
 			}
 		}
 

@@ -17,6 +17,13 @@ type evThrowXPBottle struct{ eid int32 }
 
 func (evThrowXPBottle) isHubEvent() {}
 
+// The bottle o' enchanting's throw (ExperienceBottleItem.use): a −20° lift
+// on the pitch and power 0.7.
+const (
+	xpBottleThrowLift  = -20.0
+	xpBottleThrowPower = 0.7
+)
+
 // throwXPBottle flings one on the throw arc. It is a shattering projectile
 // like a snowball; the payout happens where it lands.
 func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
@@ -40,9 +47,9 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 		}
 		h.sendSlot(t, slot)
 	}
-	dx, dy, dz := lookVector(t.yaw, t.pitch)
-	a := h.launchProjectileIn(players, entityXPBottle, t.dim, t.x, t.y+1.5, t.z,
-		dx*throwSpeed, dy*throwSpeed, dz*throwSpeed)
+	// ExperienceBottleItem.use: shootFromRotation with a −20° lift at 0.7.
+	vx, vy, vz := throwVector(t.yaw, t.pitch, xpBottleThrowLift, xpBottleThrowPower)
+	a := h.launchProjectileIn(players, entityXPBottle, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, 0, h.tick.Load()+arrowNoSelfHT
 	a.playerShot, a.breaks, a.xpBottle = true, true, true
 	h.playSoundDim(players, t.dim, "minecraft:entity.experience_bottle.throw", sndNeutral,

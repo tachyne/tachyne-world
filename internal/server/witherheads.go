@@ -98,13 +98,29 @@ const (
 	witherBlueOdds = 0.001
 )
 
+// witherSkullSecs is how long a skull's Wither II lasts on what it hurts
+// (WitherSkull.onHitEntity): ten seconds on normal, forty on hard, and none
+// at all on easy or peaceful.
+func (h *hub) witherSkullSecs(a *arrowEntity) int {
+	if !a.withers {
+		return 0
+	}
+	switch h.rules.Difficulty {
+	case diffNormal:
+		return 10
+	case diffHard:
+		return 40
+	}
+	return 0
+}
+
 // witherSkullAt fires one skull from the boss toward a point. A blue skull
 // (WitherSkull.setDangerous) flies slower and blasts harder.
 func (h *hub) witherSkullAt(players map[int32]*tracked, m *mob, x, y, z float64, dangerous bool) {
 	ux, uy, uz := aimAt(m.x, m.y+2, m.z, x, y, z)
 	v := hurtingSpeed
 	a := h.launchProjectileIn(players, entityWitherSkull, m.dim, m.x, m.y+2, m.z, ux*v, uy*v, uz*v)
-	a.shooter, a.dmg, a.wither, a.breaks, a.mobShot = m.eid, 8, 10, true, true // a skull strikes whatever it meets
+	a.shooter, a.dmg, a.withers, a.breaks, a.mobShot = m.eid, 8, true, true, true // a skull strikes whatever it meets
 	a.explode, a.dangerous = witherSkullBlast, dangerous
 	h.playSoundDim(players, m.dim, "minecraft:entity.wither.shoot", sndHostile, m.x, m.y, m.z, 2, 1)
 }

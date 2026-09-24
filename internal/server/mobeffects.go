@@ -173,8 +173,8 @@ func (h *hub) arrowEffectsOnMob(players map[int32]*tracked, a *arrowEntity, m *m
 	if a.poison > 0 {
 		h.applyMobEffect(players, m, effPoison, 0, a.poison)
 	}
-	if a.wither > 0 {
-		h.applyMobEffect(players, m, effWither, 0, a.wither)
+	if secs := h.witherSkullSecs(a); secs > 0 {
+		h.applyMobEffect(players, m, effWither, 1, secs)
 	}
 	if a.weaken > 0 {
 		h.applyMobEffect(players, m, effWeakness, 0, a.weaken)

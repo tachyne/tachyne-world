@@ -34,8 +34,11 @@ const (
 	vexInterval     = 340 // between summonings
 	fangLife        = 22  // how long a fang stands before sinking
 	fangStrikeAfter = 8   // ticks after its own delay that a fang bites
-	fangCloseRange  = 9.0 // squared: inside this the fangs come up in rings
-	vexSummonCount  = 3
+	// entityStatusFangAttack is EvokerFangs' entity event 4: the client only
+	// draws a fang, and plays its attack sound, once this arrives.
+	entityStatusFangAttack = 4
+	fangCloseRange         = 9.0 // squared: inside this the fangs come up in rings
+	vexSummonCount         = 3
 )
 
 // evokerFang is one conjured fang: it waits out its delay, bites once, and
@@ -46,6 +49,7 @@ type evokerFang struct {
 	x, y, z float64
 	delay   int  // ticks until it bites (vanilla's per-fang warmup)
 	bit     bool // it has already taken its one bite
+	spiked  bool // entity event 4 has gone out: the client shows the fang
 	life    int
 	owner   int32
 }
@@ -147,6 +151,13 @@ func (h *hub) updateFangs(players map[int32]*tracked) {
 	h.fangs = nil
 	for _, f := range current {
 		f.delay--
+		// EvokerFangs.tick: the first tick its warmup runs out it broadcasts
+		// event 4, which is what makes the fang rise on the client (and play
+		// its snap there); until then it is present but unseen.
+		if !f.spiked && f.delay < 0 {
+			f.spiked = true
+			h.toTracking(players, f.eid, f.dim, f.x, f.z, entityStatus(f.eid, entityStatusFangAttack))
+		}
 		if !f.bit && f.delay <= -fangStrikeAfter {
 			f.bit = true
 			h.fangBite(players, f)
@@ -160,9 +171,9 @@ func (h *hub) updateFangs(players map[int32]*tracked) {
 }
 
 // fangBite hurts whatever is standing on the fang — players and mobs alike,
-// but never the evoker that conjured it.
+// but never the evoker that conjured it. The attack sound is the client's, played on event 4 (EvokerFangs.
+// handleEntityEvent), so the server sends none.
 func (h *hub) fangBite(players map[int32]*tracked, f *evokerFang) {
-	h.playSoundDim(players, f.dim, "minecraft:entity.evoker_fangs.attack", sndHostile, f.x, f.y, f.z, 1, 1)
 	for _, t := range players {
 		if t.dim != f.dim || t.dead || !isSurvival(t.gamemode) {
 			continue
