@@ -428,9 +428,16 @@ func (h *hub) updatePoweredOpenable(players map[int32]*tracked, pos blockPos, st
 	if wasOpen == powered {
 		return // the state moved but the door did not: vanilla is silent
 	}
+	// DoorBlock / TrapDoorBlock / FenceGateBlock.neighborChanged: the sound
+	// at full volume, pitch 0.9–1.0, and BLOCK_OPEN or BLOCK_CLOSE for sculk.
 	name, _ := worldgen.StateName(state)
 	h.rsSound(players, openCloseSound(name, powered), sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.6, 1)
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 0.9+h.rng.Float32()*0.1)
+	freq := freqBlockClose
+	if powered {
+		freq = freqBlockOpen
+	}
+	h.vib(h.rsDim, freq, pos.x, pos.y, pos.z, 0)
 }
 
 // doorOtherHalf is the cell holding a door's other half, if this is a door.

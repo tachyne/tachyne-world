@@ -103,6 +103,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Redstone-driven doors, trapdoors and gates sound and vibrate as in
+  vanilla.** Opened or shut by a redstone signal they played too quietly,
+  at one fixed pitch, and sculk sensors never heard them. They now play at
+  full volume with vanilla's slight pitch variation, and sensors pick them
+  up.
 - **The dragon egg lands on something when it teleports.** Clicking the
   dragon egg could send it to a spot in mid-air. As in vanilla, it now only
   moves to a free spot with a block beneath it.
