@@ -18,12 +18,12 @@ import (
 type shapeKind uint8
 
 const (
-	shapeNone     shapeKind = iota
-	shapeSnowy              // SnowyBlock: grass, podzol, mycelium
-	shapeGate               // FenceGateBlock: in_wall
-	shapeAttached           // AttachedStemBlock: back to a grown stem without its fruit
-	shapeMushroom           // HugeMushroomBlock: faces against more of itself
-	shapeCopperChest        // CopperChestBlock: one half follows the other's weathering and wax
+	shapeNone        shapeKind = iota
+	shapeSnowy                 // SnowyBlock: grass, podzol, mycelium
+	shapeGate                  // FenceGateBlock: in_wall
+	shapeAttached              // AttachedStemBlock: back to a grown stem without its fruit
+	shapeMushroom              // HugeMushroomBlock: faces against more of itself
+	shapeCopperChest           // CopperChestBlock: one half follows the other's weathering and wax
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
