@@ -14,15 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Added
-- **Online mode for Java players (not switched on yet).** The Java gateway
+- **Online mode for Java players.** The Java gateway
   can now log players in the way vanilla does with online mode on. The
   connection is encrypted, and Mojang's session service confirms the
   player owns the account. The player then joins as that account's real
   UUID, with the name spelled as the account spells it and their skin
   attached. A spoofed name gets "Failed to verify username!". When Mojang
   is unreachable, everyone is refused, as vanilla does. Other players see
-  the skin too. It is off (`TACHYNE_ONLINE_MODE`) until player data moves
-  to the real UUIDs.
+  the skin too. It is set with `TACHYNE_ONLINE_MODE=on`, and it is on for
+  the cluster.
 - **Player data is keyed by account, not by name.** Inventories, game
   modes, advancements, stats, recipe books and spawn points are now saved
   under each player's UUID, as vanilla saves them. A player who renames
