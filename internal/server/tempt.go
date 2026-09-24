@@ -2,6 +2,7 @@ package server
 
 import (
 	"math"
+	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
@@ -27,7 +28,7 @@ var temptSpeed = map[int]float64{
 	entityBee: 1.25, entityHorse: 1.25, entityDonkey: 1.25, entityMule: 1.25,
 	entitySkeletonHorse: 1.25, entityZombieHorse: 1.25, entityLlama: 1.25,
 	entityTraderLlama: 1.25, entityStrider: 1.4, entityGoat: 1.25,
-	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5, entityCamelHusk: 2.5,
+	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5, entityCamelHusk: 2.5, entityHappyGhast: 1.25,
 	entitySniffer: 1.25, entityTadpole: 1.25,
 	entityCat: 0.6, entityOcelot: 0.6, // the scare-able creep (CatTemptGoal / OcelotTemptGoal)
 }
@@ -45,6 +46,8 @@ func temptStopFor(m *mob) float64 {
 			return 1
 		}
 		return 2
+	case entityHappyGhast:
+		return 3 // HappyGhastAi: FollowTemptation stops three blocks off
 	case entityCamel, entityCamelHusk, entitySniffer:
 		if m.baby {
 			return 2.5
@@ -73,6 +76,8 @@ func isTemptItem(etype int, item int32) bool {
 		return breedFoods[entityHorse][item] // #horse_tempt_items for the whole family
 	case entityCamelHusk:
 		return item == itemByName["rabbit_foot"] // FollowTemptation reads isFood: #camel_husk_food
+	case entityHappyGhast: // #happy_ghast_tempt_items: its food (snowballs) and every harness
+		return item == itemByName["snowball"] || strings.HasSuffix(itemRegistryName(item), "_harness")
 	}
 	return isLoveFood(etype, item)
 }
@@ -134,6 +139,9 @@ func (h *hub) temptStep(players map[int32]*tracked, m *mob) bool {
 	}
 	m.tempted = true
 	m.rest = 0
+	if m.flies {
+		m.flyAim(h.tick.Load(), t.y) // a flier comes to the player's height
+	}
 	dx, dz := t.x-m.x, t.z-m.z
 	if dist3(t.x, t.y, t.z, m.x, m.y, m.z) < temptStopFor(m) {
 		m.vx, m.vz = 0, 0

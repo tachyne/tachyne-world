@@ -16,7 +16,7 @@ var panicSpeeds = func() map[int]float64 {
 		"strider": 1.65, "wandering_trader": 0.5, "camel": 4.0, "camel_husk": 4.0, "allay": 2.5,
 		"wolf": 1.5, "polar_bear": 2.0, "goat": 2.0, "cat": 1.5, "parrot": 1.25, "fox": 2.2,
 		"horse": 1.2, "donkey": 1.2, "mule": 1.2, // AbstractHorse's MountPanicGoal
-		"copper_golem": 1.5, "nautilus": 1.6,
+		"copper_golem": 1.5, "nautilus": 1.6, "happy_ghast": 2.0,
 	} {
 		if id, ok := entityByName[name]; ok {
 			out[id] = sp

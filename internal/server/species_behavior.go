@@ -50,6 +50,8 @@ func (h *hub) flyMove(m *mob, nx, nz float64, fnx, fnz int) {
 	want := ground + m.hover
 	if y, ok := m.phantomAltitude(); ok { // circling high, or diving at the target
 		want = y
+	} else if y, ok := m.flyAimed(h.tick.Load()); ok { // led somewhere: a tempting player, a ghastling's player
+		want = y
 	} else if m.hasTarget && m.ty != 0 { // diving on prey: aim at the target's level
 		want = m.ty + m.hover*0.3
 	}

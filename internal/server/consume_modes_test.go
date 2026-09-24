@@ -310,3 +310,28 @@ func TestNoOverworldWeatherInTheNether(t *testing.T) {
 		t.Error("the overworld's own water no longer counts")
 	}
 }
+
+// HappyGhastAi: tempted by a snowball or a harness (and it rises to the
+// player), panics at 2.0, and a ghastling follows the nearest player.
+func TestHappyGhastBrain(t *testing.T) {
+	if !isTemptItem(entityHappyGhast, itemByName["snowball"]) || !isTemptItem(entityHappyGhast, itemByName["red_harness"]) {
+		t.Error("a happy ghast ignores snowballs or harnesses")
+	}
+	if panicSpeed(entityHappyGhast) != 2.0 {
+		t.Error("happy ghast panic speed")
+	}
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	g := h.spawnMob(players, entityHappyGhast, 0.5, 200, 0.5)
+	g.baby = true
+	pl.x, pl.y, pl.z = 10.5, 190, 0.5
+	if !h.ghastlingFollowPlayer(players, g) || g.vx <= 0 {
+		t.Fatal("a ghastling does not drift after a player ten blocks off")
+	}
+	if y, ok := g.flyAimed(h.tick.Load()); !ok || y != 190 {
+		t.Errorf("the ghastling is not coming to the player's height (%v %v)", y, ok)
+	}
+}

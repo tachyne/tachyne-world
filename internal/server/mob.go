@@ -354,6 +354,8 @@ type mob struct {
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
 	croakLeft                       int      // frog: ticks of the CROAKING pose still to run
+	flyAimY                         float64  // a flier being led somewhere: the height it rises or sinks to
+	flyAimAt                        uint64   // …the tick that was last set (stale after a few ticks)
 	followBoat                      int32    // dolphin: the boat whose rider it keeps pace with (0 = none)
 	followAhead                     bool     // …heading past the boat rather than to its stern
 	followRecalc                    int      // …mob updates to the next re-aim
@@ -816,6 +818,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case h.temptStep(players, m):
 			// Walking after a player's held food (TemptGoal / FollowTemptation):
 			// behind panic, ahead of a baby's parent and the species' own errands.
+		case m.etype == entityHappyGhast && h.ghastlingFollowPlayer(players, m):
+			// A ghastling drifting after the nearest player (HappyGhastAi).
 		case m.etype == entityRabbit && h.rabbitStep(players, m):
 			// A rabbit after a grown carrot in somebody's garden.
 		case m.etype == entityGoat && h.goatStep(players, m):

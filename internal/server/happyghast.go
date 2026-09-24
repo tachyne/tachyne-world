@@ -102,3 +102,41 @@ func facingYaw(facing string) float32 {
 	}
 	return 0
 }
+
+// flyAim sets the height a flier is being led to this update.
+func (m *mob) flyAim(now uint64, y float64) { m.flyAimY, m.flyAimAt = y, now+1 } // +1: zero means never
+
+// flyAimed is the height a flier was led to within the last few ticks.
+func (m *mob) flyAimed(now uint64) (float64, bool) {
+	return m.flyAimY, m.flyAimAt != 0 && now+1-m.flyAimAt <= 4
+}
+
+// ghastlingFollowPlayer is HappyGhastAi's BabyFollowAdult on
+// NEAREST_VISIBLE_PLAYER: a ghastling keeps near the nearest player within
+// sixteen blocks, closing to three, at 1.1 times its speed — before it
+// looks for a grown happy ghast to follow.
+func (h *hub) ghastlingFollowPlayer(players map[int32]*tracked, m *mob) bool {
+	if !m.baby {
+		return false
+	}
+	var best *tracked
+	bestD := 16.0
+	for _, t := range players {
+		if t.dim != m.dim || t.dead || t.gamemode == gmSpectator {
+			continue
+		}
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD {
+			best, bestD = t, d
+		}
+	}
+	if best == nil {
+		return false
+	}
+	m.flyAim(h.tick.Load(), best.y)
+	if bestD <= 3 {
+		m.vx, m.vz = 0, 0
+		return true
+	}
+	h.steerTo(m, best.x, best.z, 1.1)
+	return true
+}

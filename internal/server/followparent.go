@@ -33,10 +33,12 @@ var followParentSpeed = map[int]float64{
 	// Brain-driven: BabyFollowAdult with ADULT_FOLLOW_RANGE 5..16. The
 	// axolotl's speed depends on where it is (0.6 in water, 0.15 ashore).
 	entityGoat: 1.25, entityAxolotl: 0.15, entityArmadillo: 1.25, entityCamel: 2.5, entityHoglin: 0.6,
+	entityHappyGhast: 1.1,
 }
 
 var followAdultBrain = map[int]bool{
 	entityGoat: true, entityAxolotl: true, entityArmadillo: true, entityCamel: true, entityHoglin: true,
+	entityHappyGhast: true,
 }
 
 // followParentStep steers a baby toward its parent for this update and

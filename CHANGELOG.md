@@ -283,6 +283,10 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **Happy ghasts follow you.** A happy ghast drifts after anyone holding a
+  snowball or a harness, rising or sinking to their height and stopping
+  three blocks off. A ghastling keeps near the nearest player. Both panic
+  when hurt, as vanilla's do.
 - **Thirteen more commands.**
   - `/advancement` grants and revokes.
   - `/attribute` reads and sets attribute values, bases and modifiers.
