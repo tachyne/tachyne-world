@@ -129,6 +129,13 @@ func (h *hub) primeTNT(players map[int32]*tracked, x, y, z int, fuse int) {
 // reaction inside an explosion has to carry the dimension through.
 func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int) {
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	h.spawnPrimedTNT(players, dim, x, y, z, fuse)
+	h.vib(dim, freqPrimeFuse, x, y, z, 0)
+}
+
+// spawnPrimedTNT adds the lit charge entity centred on a cell, touching no
+// block (a dispenser's TNT: the cell ahead may hold anything).
+func (h *hub) spawnPrimedTNT(players map[int32]*tracked, dim, x, y, z int, fuse int) {
 	eid := h.allocEID()
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
@@ -143,7 +150,6 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	b = protocol.AppendVarInt(b, int32(fuse))
 	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 	h.playSoundDim(players, dim, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
-	h.vib(dim, freqPrimeFuse, x, y, z, 0)
 }
 
 // updateTNT ticks the fuses (every tick).

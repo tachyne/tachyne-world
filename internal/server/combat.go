@@ -162,6 +162,10 @@ type swing struct {
 	smash      bool
 	fall       float64
 	breachFrac float64
+	// raw is the swing's worth before rounding and without the crit
+	// multiplier: what a non-living target takes (Player.attack only lets
+	// a LivingEntity be crit, and a vehicle keeps its damage as a float).
+	raw float64
 }
 
 // meleeSwing works out what the attacker's swing is worth. familyBonus is the
@@ -230,13 +234,50 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 	if smash { // vanilla adds the fall bonus after the cooldown scale, before the crit ×1.5
 		dmgF += maceFallBonus(fall) + 0.5*float64(heldStack(t).enchLvl(enchDensity))*fall
 	}
+	raw := dmgF + sharpBonus*scale
 	if crit {
 		dmgF *= 1.5
 	}
 	dmgF += sharpBonus * scale // magicBoost: the enchantments' bonus times the raw scale, added after crit
 	dmg := int(math.Max(1, math.Round(dmgF)))
 	return swing{dmg: dmg, base: base, charge: charge, full: scale > 0.9, crit: crit,
-		smash: smash, fall: fall, breachFrac: breachFrac}
+		smash: smash, fall: fall, breachFrac: breachFrac, raw: raw}
+}
+
+// onAttack routes a player's melee hit (the evAttack event) to whatever
+// the target is.
+func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
+	// A spear does not swing: the server ignores an attack with a
+	// piercing weapon in hand, and the jab is the STAB action. A
+	// gateway whose client only says "attack" still gets the jab.
+	if t := players[e.attacker]; t != nil && spearOf(t.p.heldItem()) != nil {
+		h.spearStab(players, t)
+		return
+	}
+	if h.hitCrystal(players, e.target) {
+		return
+	}
+	if pt := h.paintings[e.target]; pt != nil {
+		h.breakPainting(players, pt, players[e.attacker])
+		return
+	}
+	if st := h.armorStands[e.target]; st != nil {
+		h.hitStand(players, players[e.attacker], st)
+		return
+	}
+	if f := h.itemFrames[e.target]; f != nil {
+		h.hitFrame(players, players[e.attacker], f)
+		return
+	}
+	if a := h.arrows[e.target]; a != nil {
+		h.deflectProjectile(players, players[e.attacker], a)
+		return
+	}
+	if v := h.vehicles[e.target]; v != nil {
+		h.hurtVehicle(players, players[e.attacker], v)
+	} else if !h.attackPlayer(players, e.attacker, e.target) {
+		h.attackMob(players, e.attacker, e.target)
+	}
 }
 
 func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
@@ -664,7 +705,8 @@ func (h *hub) mobLoot(m *mob) []drop {
 		return l
 	case entityCreeper:
 		l := []drop{{item: itemGunpowder, count: h.rng.Intn(3)}} // 0-2 gunpowder (killed BEFORE the bang)
-		if k := h.mobs[m.lastAttacker]; k != nil && skeletonFamily(k.etype) {
+		// entity_properties: the attacker is in #skeletons (the parched too).
+		if k := h.mobs[m.lastAttacker]; k != nil && skeletonsTag[k.etype] {
 			l = append(l, drop{item: creeperDiscs[h.rng.Intn(len(creeperDiscs))], count: 1}) // entities/creeper: #creeper_drop_music_discs for a skeleton's kill
 		}
 		return l

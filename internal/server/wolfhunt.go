@@ -21,9 +21,15 @@ func wolfPrey(o *mob) bool { // PREY_SELECTOR
 	return o.etype == entitySheep || o.etype == entityRabbit || o.etype == entityFox
 }
 
-func skeletonFamily(etype int) bool { // AbstractSkeleton
-	return etype == entitySkeleton || etype == entityStray || etype == entityBogged || etype == entityWitherSkeleton
+func skeletonFamily(etype int) bool { // AbstractSkeleton (the parched is one since 26.3)
+	return etype == entitySkeleton || etype == entityStray || etype == entityBogged || etype == entityWitherSkeleton ||
+		etype == entityParched
 }
+
+// skeletonsTag is 26.3's #skeletons entity tag: AbstractSkeleton's family
+// plus the skeleton horse. The creeper's loot table gates its music disc on
+// the killer being one.
+var skeletonsTag = entitySet("skeleton", "stray", "wither_skeleton", "skeleton_horse", "bogged", "parched")
 
 // wolfWantsToAttack is Wolf.wantsToAttack: never creepers or ghasts, never
 // a fellow pet of the same owner.

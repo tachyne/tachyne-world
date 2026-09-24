@@ -97,6 +97,22 @@ the public history since the project was open-sourced on 2026-07-10.
   o' enchanting leave the hand tilted upward, at vanilla's speeds. Llama
   spit falls a little faster, and a shulker bullet whose target is gone now
   drops to the ground.
+- **Dispensed TNT no longer deletes the block in front.** A dispenser firing
+  TNT turned whatever block stood in front of it into air. It now drops a
+  lit charge there and leaves the block alone, as in vanilla. With TNT
+  explosions switched off, the dispenser keeps its TNT.
+- **A parched's kill makes a creeper drop a music disc.** Since 26.3 the
+  parched counts as a skeleton, so a creeper it shoots dead drops a disc,
+  as one killed by any other skeleton does. Wolves now hunt the parched too.
+- **Piglins spawn as vanilla's do.** Every piglin used to be grown and carry
+  a golden sword. Now a fifth are babies that hold nothing and fight no one.
+  Half the grown ones carry a crossbow and shoot from range, and some of the
+  rest carry a golden spear; some wear gold armour. A bastion's piglins hold
+  the crossbow or sword their spot in the bastion gives them.
+- **Boats and minecarts take several punches to break.** They broke on the
+  first hit. As in vanilla, each blow now rocks the vehicle and adds to its
+  damage, which drains away over time, so a bare fist needs a quick run of
+  punches. A creative player still breaks one at once, and gets no item.
 - **You see other players crouch, sprint and swim.** Other players stood
   upright while crouching and never showed a swim. Their clients draw
   those poses from a set of flags the server never set. It now sets them,

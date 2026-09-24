@@ -26,7 +26,11 @@ const (
 )
 
 func pillagerChargingMeta(m *mob) []byte {
-	return boolMeta(m.eid, metaIndexPillagerCharging, m.cbState == cbCharging)
+	idx := metaIndexPillagerCharging
+	if m.etype == entityPiglin { // the piglin's own charging flag (piglinspawn.go)
+		idx = metaIndexPiglinCharging
+	}
+	return boolMeta(m.eid, uint8(idx), m.cbState == cbCharging)
 }
 
 func (h *hub) setCrossbowState(players map[int32]*tracked, m *mob, st int8) {
