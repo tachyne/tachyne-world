@@ -270,6 +270,19 @@ the public history since the project was open-sourced on 2026-07-10.
   fewer are left.
 
 ### Added
+- **Thirteen more commands.**
+  - `/advancement` grants and revokes.
+  - `/attribute` reads and sets attribute values, bases and modifiers.
+  - `/recipe` gives and takes recipe-book entries.
+  - `/tag` adds entity tags, and selectors now take `tag=`.
+  - `/ride` mounts and dismounts.
+  - `/damage` deals damage by type.
+  - `/spreadplayers` scatters players.
+  - `/forceload` keeps chunks loaded and ticking.
+  - `/setworldspawn` and `/defaultgamemode` persist across restarts.
+  - `/random`, `/swing` and `/teammsg` (`/tm`) complete the batch.
+  - A player's game mode is now recorded on their first join, so changing
+    the default only affects new players, as in vanilla.
 - **Potent sulfur and geysers (26.3).** Potent sulfur under water bubbles
   and makes swimmers and mobs near it nauseous. Over a magma block it
   becomes a geyser that sleeps and erupts on vanilla's timing; over lava it
