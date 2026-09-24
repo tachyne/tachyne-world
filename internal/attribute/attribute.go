@@ -154,6 +154,16 @@ func (a *Map) Get(id api.ID) *Instance {
 // Value is the computed value of an attribute, or its default if untouched.
 func (a *Map) Value(id api.ID) float64 { return a.Get(id).Value() }
 
+// Peek is the attribute's value without creating it: the registry default
+// when the map has never held it. A reader that runs for every entity every
+// tick uses it, so asking does not add the attribute to the entity's sync.
+func (a *Map) Peek(id api.ID) float64 {
+	if in, ok := a.m[id]; ok {
+		return in.Value()
+	}
+	return api.Defs[id].Default
+}
+
 // SetBase sets an attribute's base value.
 func (a *Map) SetBase(id api.ID, v float64) { a.Get(id).SetBase(v) }
 

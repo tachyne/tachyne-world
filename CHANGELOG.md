@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **The Flying Speed attribute works.** Bees, parrots, allays, ghasts,
+  happy ghasts and the Wither now fly faster or slower when their flying
+  speed is changed with /attribute. Reading it with /attribute now shows
+  each species' own speed, not a generic one. At their normal speed they
+  fly as before.
 - **Zombie reinforcements follow vanilla's rules.** A zombie's chance to
   call for backup on Hard is now its Zombie Reinforcements attribute, so
   /attribute changes it. Zombie leaders now appear only as often as the
