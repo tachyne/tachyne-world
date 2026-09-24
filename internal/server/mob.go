@@ -1235,12 +1235,14 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 }
 
 // bodyFits reports whether this mob's height of cells from feet y up is
-// clear of anything solid in column (x, z).
+// free of full cubes in column (x, z). Only whole blocks count: a door,
+// gate or slab is the other step rules' business, and a full cube is
+// what the body must never stand inside.
 func (h *hub) bodyFits(m *mob, x, y, z int) bool {
 	w := h.worldFor(m.dim)
 	top := y + max(1, int(math.Ceil(m.box().h))) - 1
 	for cy := y; cy <= top; cy++ {
-		if worldgen.Collides(w.At(x, cy, z)) {
+		if worldgen.IsFullCube(w.At(x, cy, z)) {
 			return false
 		}
 	}
