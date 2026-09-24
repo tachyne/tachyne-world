@@ -109,7 +109,8 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Full shulker boxes keep their contents when broken.** Breaking one by
   hand dropped an empty box and scattered everything that was inside it. A
   blast did the same. The box now comes back with its contents, however it
-  was removed.
+  was removed, including when a piston breaks it. An earlier version of
+  this fix lost the contents entirely on the piston path.
 - **Decorated pots keep their sherds.** A pot broken by hand without a
   tool, or blown up, drops with the sherds on its faces. Before, the pot's
   record of its sherds was cleared just before the drop was made, so it

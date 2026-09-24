@@ -239,14 +239,17 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 	if !r.resolve() {
 		return false
 	}
-	// What breaks drops its loot and goes.
+	// What breaks goes, then drops its loot (Block.dropResources with its
+	// block entity): clearing it first is what holds a shulker box's
+	// contents, a pot's faces and a banner's layers aside for spawnBlockDrop
+	// to put back on the item.
 	for i := len(r.toDestroy) - 1; i >= 0; i-- {
 		p := r.toDestroy[i]
 		s := h.rsWorld().At(p.x, p.y, p.z)
-		for _, d := range h.rollDrops(s) {
-			h.spawnItemIn(players, h.rsDim, d.item, d.count, float64(p.x)+0.5, float64(p.y)+0.5, float64(p.z)+0.5)
-		}
 		h.rsSet(players, p, worldgen.Air)
+		for _, d := range h.rollDrops(s) {
+			h.spawnBlockDrop(players, h.rsDim, d.item, d.count, p.x, p.y, p.z)
+		}
 	}
 	// What moves: take every state first, clear the sources, then lay them
 	// down one cell along; a source that is also a destination keeps its
