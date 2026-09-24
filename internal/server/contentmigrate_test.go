@@ -208,6 +208,17 @@ var notIDs = map[string]string{
 	"server.mobFile.Villages[][]":                     whyPos,
 }
 
+// A parrot riding a player's shoulder is a saved mob inside the player's
+// row: every mob field is classified there exactly as it is in mobs.json.
+func init() {
+	const mobRow, shoulderRow = "server.mobFile.Chunks{}[].", "map[string]*server.savedInv{}[].Shoulders[][]."
+	for p, why := range notIDs {
+		if strings.HasPrefix(p, mobRow) {
+			notIDs[shoulderRow+strings.TrimPrefix(p, mobRow)] = why
+		}
+	}
+}
+
 func TestContentMigratorClassifiesEveryInt(t *testing.T) {
 	var got []string
 	for _, root := range []any{map[string]*savedInv{}, containerFile{}, mobFile{}} {
