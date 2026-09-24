@@ -334,14 +334,13 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 	switch {
 	case dispense && (item == itemArrowAmmo || item == itemSpectralArr || item == itemTippedArrow):
 		// Vanilla registerProjectileBehavior: plain, spectral and tipped arrows
-		// all fire as an arrow. A tipped arrow carries its potion's effects onto
-		// a hit; spectral's glow tag has no engine effect, so it flies as a plain
-		// arrow.
-		a := h.launchProjectileIn(players, entityArrow, h.rsDim, fx, fy, fz, vx, vy, vz)
+		// each fire as themselves — a tipped arrow carries its potion onto a
+		// hit, a spectral one makes what it hits glow (SpectralArrow).
+		one := *st
+		one.count = 1
+		a := h.launchProjectileIn(players, arrowEntityFor(one), h.rsDim, fx, fy, fz, vx, vy, vz)
 		a.dmg, a.playerShot = arrowDamage, true // hits mobs; retrievable when stuck
-		if item == itemTippedArrow {
-			a.tipped, a.potion = true, st.potion
-		}
+		loadArrow(a, one)
 	case dispense && item == itemSnowball:
 		h.launchProjectileIn(players, entitySnowball, h.rsDim, fx, fy, fz, vx, vy, vz).breaks = true
 	case dispense && (item == itemEgg || item == itemBlueEgg || item == itemBrownEgg):

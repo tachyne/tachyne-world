@@ -35,7 +35,7 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 			}
 		}
 
-		// A spectral arrow flies as an ordinary (non-tipped) arrow.
+		// A spectral arrow flies as itself and makes what it hits glow.
 		h.arrows = map[int32]*arrowEntity{}
 		load(invStack{item: itemSpectralArr, count: 1})
 		h.ejectFromBin(h.playersRef, simPos{blockPos: pos}, state)
@@ -45,6 +45,9 @@ func TestDispenseAddedBehaviors(t *testing.T) {
 		for _, a := range h.arrows {
 			if a.tipped {
 				t.Error("a spectral arrow should not be tipped")
+			}
+			if a.etype != entitySpectralArrow || a.glow != spectralGlowSecs {
+				t.Errorf("a dispensed spectral arrow flew as %d with glow %d", a.etype, a.glow)
 			}
 		}
 

@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **Dispensed spectral arrows glow.** A spectral arrow fired from a
+  dispenser flies as a spectral arrow and makes what it hits glow, like one
+  shot from a bow.
 - **Enchantment maths as in vanilla.**
   - Sharpness, Smite and Bane of Arthropods now scale with how charged the
     swing is, not with the squared curve the base damage uses.
