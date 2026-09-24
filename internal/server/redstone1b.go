@@ -285,6 +285,14 @@ const comparatorDelay = 2 // ComparatorBlock.getDelay(): 2 game ticks
 // (observersSee, from every block write); this catches the edits that do
 // not come through setBlockAt, by comparing what it sees with what it saw.
 func (h *hub) updateObserver(players map[int32]*tracked, pos blockPos, state uint32) {
+	// ObserverBlock.onPlace: a POWERED observer with no tick coming to end
+	// the pulse — moved by a piston, or saved mid-pulse over a restart (ticks
+	// are not saved) — is put right, or it stays powered for good.
+	if boolProp(state, "powered") && !h.hasScheduledTick(pos) {
+		state = setBoolProp(state, "powered", false)
+		h.rsSet(players, pos, state)
+		h.updateNeighborsInFront(players, pos, state)
+	}
 	dx, dy, dz := obsDelta(state)
 	watched := h.rsWorld().At(pos.x+dx, pos.y+dy, pos.z+dz)
 	prev, seen := h.obsSeen[h.rsKey(pos)]

@@ -17,28 +17,31 @@ import "log"
 // line settles over the next few ticks. A world with nothing wrong pays one
 // pass over its edits and a handful of updates that change nothing.
 func (h *hub) rescheduleRedstone() {
-	w := h.world // dust and pistons simulate in the overworld
-	if w == nil {
-		return
-	}
 	wires, pistons, components := 0, 0, 0
-	for _, c := range w.EditedChunks() {
-		for _, e := range w.EditedBlocks(c[0], c[1]) {
-			switch {
-			case isWire(e.State) && wirePower(e.State) > 0:
-				wires++
-			case isPistonBase(e.State):
-				pistons++
-			case isRSTorch(e.State), isRepeater(e.State), isComparator(e.State), isLamp(e.State), isObserver(e.State):
-				// Scheduled ticks are not saved: a torch, diode or lamp that was
-				// waiting on one re-checks itself (and schedules it again if it
-				// still disagrees with its input), and an observer takes its
-				// first look at what it watches.
-				components++
-			default:
-				continue
+	for _, dim := range []int{dimOverworld, dimNether, dimEnd} { // redstone runs in every dimension
+		w := h.worldFor(dim)
+		if w == nil || (dim != dimOverworld && w == h.world) {
+			continue // no such dimension here (worldFor falls back to the overworld)
+		}
+		for _, c := range w.EditedChunks() {
+			for _, e := range w.EditedBlocks(c[0], c[1]) {
+				switch {
+				case isWire(e.State) && wirePower(e.State) > 0:
+					wires++
+				case isPistonBase(e.State):
+					pistons++
+				case isRSTorch(e.State), isRepeater(e.State), isComparator(e.State), isLamp(e.State), isObserver(e.State):
+					// Scheduled ticks are not saved: a torch, diode or lamp that
+					// was waiting on one re-checks itself (and schedules it again
+					// if it still disagrees with its input), and an observer
+					// takes its first look at what it watches — or, powered with
+					// no tick to end the pulse, switches off (ObserverBlock.onPlace).
+					components++
+				default:
+					continue
+				}
+				h.scheduleIn(dim, blockPos{int(c[0])*16 + e.LX, e.Y, int(c[1])*16 + e.LZ}, 1)
 			}
-			h.scheduleIn(dimOverworld, blockPos{int(c[0])*16 + e.LX, e.Y, int(c[1])*16 + e.LZ}, 1)
 		}
 	}
 	if wires > 0 || pistons > 0 || components > 0 {

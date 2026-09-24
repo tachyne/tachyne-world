@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Observers no longer stay stuck on.** An observer that a piston moved
+  mid-pulse, or that was saved mid-pulse over a restart, came back powered
+  with nothing to switch it off. As in vanilla, it now switches off when
+  it has no pulse to finish. The restart check now covers redstone in the
+  Nether and the End too.
 - **Items keep everything when moved in a menu.** Moving an item in an
   inventory or container window kept only its damage, enchantments, name
   and a few other details. A potion became water, a shulker box or bundle

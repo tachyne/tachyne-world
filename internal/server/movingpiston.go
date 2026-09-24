@@ -107,7 +107,8 @@ func (h *hub) movingFrame(pos blockPos, mb movingBlock) attachproto.MovingPiston
 	}
 }
 
-// landedStateOf is SculkSensorBlock.onPlace and TargetBlock.onPlace: a block
+// landedStateOf is SculkSensorBlock.onPlace, TargetBlock.onPlace and
+// ObserverBlock.onPlace: a block
 // that carries a redstone power but has no scheduled tick to clear it again
 // is put down with that power zeroed. Vanilla's guard exists for exactly this
 // case — a piston carrying a live sensor or a freshly shot target — because
@@ -118,6 +119,8 @@ func landedStateOf(state uint32) uint32 {
 		return sensorWith(state, 0, sensorPhase(state))
 	case isTarget(state) && targetPower(state) > 0:
 		return targetMin
+	case isObserver(state) && boolProp(state, "powered"): // ObserverBlock.onPlace
+		return setBoolProp(state, "powered", false)
 	}
 	return state
 }
