@@ -733,6 +733,12 @@ func (h *hub) startEating(t *tracked, slot int) {
 		return
 	}
 	st := t.handStack(slot)
+	if isBundle(st.item) && st.count > 0 {
+		if st.bundleID != 0 && len(h.bundles.get(st.bundleID)) > 0 {
+			t.eatingSlot, t.eatingAt = slot, h.tick.Load() // BundleItem.use: startUsingItem, emptied by the tick
+		}
+		return
+	}
 	if _, ok := foodPoints[st.item]; !ok || st.count == 0 || !t.canEat(st.item) {
 		return
 	}
@@ -759,6 +765,9 @@ func (h *hub) stopEating(players map[int32]*tracked, t *tracked) {
 	slot := t.eatingSlot
 	elapsed := h.tick.Load() - t.eatingAt
 	t.eatingSlot = -1
+	if s := t.handStack(slot); s != nil && isBundle(s.item) {
+		return // letting go of a bundle just stops the emptying
+	}
 	// handStack, not inv.slots: the offhand is slot 40 of a 36-slot array,
 	// and reading it directly panicked the hub when an offhand eat was let go.
 	if s := t.handStack(slot); s != nil && elapsed >= uint64(eatNearlyTicks(s.item)) {
@@ -775,6 +784,10 @@ func (h *hub) updateEating(players map[int32]*tracked) {
 		}
 		if t.dead || !t.canConsume() {
 			t.eatingSlot = -1
+			continue
+		}
+		if s := t.handStack(t.eatingSlot); s != nil && isBundle(s.item) {
+			h.bundleUseTick(players, t, t.eatingSlot, now-t.eatingAt)
 			continue
 		}
 		if now-t.eatingAt >= uint64(foodEatTicks(t.handStack(t.eatingSlot).item)) {

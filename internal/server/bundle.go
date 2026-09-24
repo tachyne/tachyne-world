@@ -4,6 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 )
 
@@ -344,4 +345,33 @@ func (h *hub) selectBundleItem(t *tracked, slot, selected int32) {
 		return
 	}
 	h.bundles.setSel(st.bundleID, int(selected))
+}
+
+// bundleUseTicks is BundleItem.getUseDuration.
+const bundleUseTicks = 200
+
+// bundleUseTick is BundleItem.onUseTick for a bundle held in use: one item
+// tumbles out on the first tick, then one every other tick from the tenth,
+// thrown as a drop is, until the bundle is empty or the 200 ticks run out.
+func (h *hub) bundleUseTick(players map[int32]*tracked, t *tracked, slot int, elapsed uint64) {
+	s := t.handStack(slot)
+	if elapsed >= bundleUseTicks || s == nil || s.bundleID == 0 {
+		t.eatingSlot = -1
+		return
+	}
+	if elapsed != 0 && (elapsed <= 10 || elapsed%2 != 0) {
+		return
+	}
+	out, ok := h.bundleRemoveOne(s.bundleID, h.bundles.sel(s.bundleID))
+	if !ok {
+		t.eatingSlot = -1
+		return
+	}
+	h.tossItem(players, t, out)
+	h.sendHandSlot(t, slot)
+	h.incStat(t, attachproto.StatUsed, s.item, 1)
+	h.playSoundDim(players, t.dim, "minecraft:item.bundle.drop_contents", sndPlayer, t.x, t.y, t.z, 0.8, 0.8+h.rng.Float32()*0.4)
+	if len(h.bundles.get(s.bundleID)) == 0 {
+		t.eatingSlot = -1
+	}
 }

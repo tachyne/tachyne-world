@@ -20,6 +20,8 @@ the public history since the project was open-sourced on 2026-07-10.
   Adventure players eat and drink as survival players do. Creative players
   can eat on a full hunger bar, and keep the food or potion as vanilla's
   do.
+- **Bundles empty when you hold them.** Using a bundle tips its contents
+  out one at a time, as in vanilla. Before, holding a bundle did nothing.
 - **Tools wear at vanilla's rates.**
   - A sword, mace or trident loses two points per block it breaks; a
     pickaxe, axe, shovel or hoe loses one.

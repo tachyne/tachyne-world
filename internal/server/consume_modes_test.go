@@ -64,3 +64,37 @@ func TestEatingInAdventureAndCreative(t *testing.T) {
 		}
 	}
 }
+
+// BundleItem.use + onUseTick, through the use path: holding a bundle
+// tosses its contents out one at a time, the first at once, then one
+// every other tick after the tenth.
+func TestBundleEmptiesWhileHeld(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.x, pl.y, pl.z = 0.5, 200, 0.5
+	id := h.newBundleID()
+	h.bundles.set(id, []invStack{{item: itemByName["stone"], count: 1}, {item: itemByName["dirt"], count: 1}, {item: itemByName["sand"], count: 1}})
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["bundle"], count: 1, bundleID: id}
+	h.startEating(pl, pl.p.heldSlot())
+	h.updateEating(players) // the first tick of use
+	if n := len(h.bundles.get(id)); n != 2 || len(h.items) != 1 {
+		t.Fatalf("after the first tick: %d left in the bundle, %d on the ground", n, len(h.items))
+	}
+	for i := 0; i < 11; i++ {
+		h.tick.Add(1)
+		h.updateEating(players)
+	}
+	if n := len(h.bundles.get(id)); n != 2 {
+		t.Errorf("tick 11: %d left, want 2 (the next goes at tick 12)", n)
+	}
+	for i := 0; i < 4; i++ {
+		h.tick.Add(1)
+		h.updateEating(players)
+	}
+	if n := len(h.bundles.get(id)); n != 0 || pl.eatingSlot != -1 {
+		t.Errorf("the bundle did not empty and stop: %d left, using %d", n, pl.eatingSlot)
+	}
+}
