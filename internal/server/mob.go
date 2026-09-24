@@ -866,6 +866,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if !m.flies && !m.swims {
 			sf = h.mobSpeedFactor(m)
 		}
+		sf *= h.webFactor(m)
 		nx, nz := m.x+m.vx*sf+m.pushX, m.z+m.vz*sf+m.pushZ
 		fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 		switch {

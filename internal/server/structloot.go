@@ -7,27 +7,30 @@ package server
 // portal/outpost chests carry real vanilla loot (weights, enchanted gear).
 
 // fillStructureChest fills a first-opened structure chest if its position
-// matches a generated structure's chest cell.
-func (h *hub) fillStructureChest(pos blockPos, c *chest) {
+// matches a generated structure's chest cell, and names the table it used
+// ("" for none): the opener's player_generates_container_loot.
+func (h *hub) fillStructureChest(pos blockPos, c *chest) string {
 	if name, ok := h.structureChestTable(pos); ok {
 		h.fillChest(c, name, pos)
+		return name
 	}
+	return ""
 }
 
 // fillStructureChestIn is fillStructureChest for any dimension: the
 // overworld's full table, the Nether's ruined portals (the same loot as the
 // surface ones — vanilla's ruined_portal table serves every variant).
-func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
+func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) string {
 	switch dim {
 	case dimOverworld:
-		h.fillStructureChest(pos, c)
+		return h.fillStructureChest(pos, c)
 	case dimNether:
 		g := h.worldFor(dim).Gen()
 		if p := g.RuinedPortalNetherIn(pos.x, pos.z); p.Exists {
 			for _, cp := range p.Chests {
 				if pos.x == cp[0] && pos.y == cp[1] && pos.z == cp[2] {
 					h.fillChest(c, "chests/ruined_portal", pos)
-					return
+					return "chests/ruined_portal"
 				}
 			}
 		}
@@ -35,7 +38,7 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 			for _, bc := range g.BastionChests(b) {
 				if pos.x == bc.X && pos.y == bc.Y && pos.z == bc.Z {
 					h.fillChest(c, bc.Table, pos)
-					return
+					return bc.Table
 				}
 			}
 		}
@@ -43,7 +46,7 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 			for _, fc := range g.FortressChests(f) {
 				if pos.x == fc[0] && pos.y == fc[1] && pos.z == fc[2] {
 					h.fillChest(c, "chests/nether_bridge", pos)
-					return
+					return "chests/nether_bridge"
 				}
 			}
 		}
@@ -53,11 +56,12 @@ func (h *hub) fillStructureChestIn(dim int, pos blockPos, c *chest) {
 			for _, cc := range g.EndCityChests(ec) {
 				if pos.x == cc.X && pos.y == cc.Y && pos.z == cc.Z {
 					h.fillChest(c, cc.Table, pos)
-					return
+					return cc.Table
 				}
 			}
 		}
 	}
+	return ""
 }
 
 // structureChestTable reports the loot-table name for a structure chest at pos

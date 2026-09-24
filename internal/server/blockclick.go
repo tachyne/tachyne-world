@@ -50,6 +50,22 @@ func (h *hub) reviveGolemStatue(players map[int32]*tracked, t *tracked, pos bloc
 	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid)
 }
 
+// berriesClaimClick is whether a right-click on a berry bush or cave vine is
+// the plant's own use (picking) rather than the held item's. A bush gives
+// berries from age 2, but bone meal on a bush below age 3 passes through to
+// grow it; a cave vine gives them only while it bears them.
+func berriesClaimClick(state uint32, held int32) bool {
+	if isBerryBush(state) {
+		age := int(state - berryBase)
+		if age < 3 && held == itemBoneMeal {
+			return false
+		}
+		return age >= 2
+	}
+	info, ok := worldgen.InfoForState(state)
+	return ok && worldgen.GetProperty(info, state, "berries") == "true"
+}
+
 // isCaveVine / isGolemStatue classify the clicked block (isBerryBush lives
 // in entityinside.go).
 func isCaveVine(s uint32) bool {

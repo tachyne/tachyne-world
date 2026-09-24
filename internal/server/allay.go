@@ -176,7 +176,8 @@ func (h *hub) allayThrow(players map[int32]*tracked, m *mob, x, y, z float64) {
 		dx, dz = dx/hd, dz/hd
 	}
 	if it := h.spawnItemIn(players, m.dim, st.item, st.count, m.x+dx*0.5, m.y+0.5, m.z+dz*0.5); it != nil {
-		it.dmg, it.ench, it.potion, it.name, it.color = st.dmg, st.ench, st.potion, st.name, st.color
+		it.setFrom(st)     // everything the stack carries, not five fields of it
+		it.thrower = m.eid // Allay.throwItem: the allay owns what it throws
 		h.refreshItemMeta(players, it)
 	}
 	pitch := allayThrowPitches[h.rng.Intn(len(allayThrowPitches))]

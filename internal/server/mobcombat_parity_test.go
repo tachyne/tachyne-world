@@ -102,3 +102,26 @@ func TestStruckMobPanicsOnlyIfItsSpeciesDoes(t *testing.T) {
 		}
 	}
 }
+
+// The target classes vanilla hangs on these species besides players.
+func TestMoreTargetClasses(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.world.ForceLoad(0, 0, 2)
+	spawn := func(et int, x float64) *mob { return h.spawnMob(players, et, x, 180, 0.5) }
+	golem := spawn(entityIronGolem, 0.5)
+	skel := spawn(entitySkeleton, 2.5)
+	wsk := spawn(entityWitherSkeleton, 4.5)
+	piglin := spawn(entityPiglin, 6.5)
+	guardian := spawn(entityGuardian, 8.5)
+	axolotl := spawn(entityAxolotl, 10.5)
+	if !h.preyOf(skel, golem) || !h.preyOf(wsk, golem) {
+		t.Error("skeletons hunt iron golems")
+	}
+	if !h.preyOf(wsk, piglin) || h.preyOf(skel, piglin) {
+		t.Error("a wither skeleton hunts piglins; a plain skeleton does not")
+	}
+	if !h.preyOf(guardian, axolotl) {
+		t.Error("a guardian hunts axolotls")
+	}
+}

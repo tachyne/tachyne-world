@@ -51,6 +51,25 @@ the public history since the project was open-sourced on 2026-07-10.
   - A mob's arrow or wither skull now hits any mob in its path, so a
     skeleton can kill a creeper for its music disc again.
 
+- **Blocks.**
+  - Bone meal grows a sweet berry bush or a cave vine; picking happens only
+    when there are berries.
+  - Leaves you place are persistent and never decay.
+  - A sign placed in water stays waterlogged.
+  - Cobwebs slow mobs to a quarter (spiders pass through).
+- **More hunting targets.**
+  - Skeletons and spiders go after iron golems; spiders only in the dark.
+  - Wither skeletons fight piglins.
+  - Guardians hunt axolotls.
+- **Advancements that could not be earned:**
+  - Very Very Frightening (a channeled bolt on a villager);
+  - Birthday Song (an allay drops a cake on a note block);
+  - You've Got a Friend in Me (you pick up an allay's delivery);
+  - War Pigs (opening a bastion's loot chests counts, as vanilla's first
+    open of an unlooted container does).
+  An allay now also hands over everything the item carries, not five
+  fields of it.
+
 ### Added
 - **Others see you swing and mine.** Other players now see your arm swing,
   with either hand: at air, at a block you're mining or placing against,

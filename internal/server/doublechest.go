@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strings"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -141,7 +143,9 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	for _, pos := range [2]simPos{{dim: t.dim, blockPos: left}, {dim: t.dim, blockPos: right}} {
 		if h.chests[pos] == nil {
 			c := &chest{}
-			h.fillStructureChestIn(pos.dim, pos.blockPos, c)
+			if name := h.fillStructureChestIn(pos.dim, pos.blockPos, c); name != "" {
+				h.advance(h.playersRef, t, "player_generates_container_loot", advMatch{lootTable: strings.TrimPrefix(name, "minecraft:")})
+			}
 			h.chests[pos] = c
 		}
 	}

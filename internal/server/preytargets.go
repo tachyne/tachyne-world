@@ -41,9 +41,18 @@ func (h *hub) preyOf(hunter, o *mob) bool {
 	case hunter.etype == entityEnderman:
 		return o.etype == entityEndermite
 	case hunter.etype == entityGuardian || hunter.etype == entityElderGuardian:
-		return o.etype == entitySquid || o.etype == entityGlowSquid // GuardianAttackSelector
-	case skeletonKind(hunter.etype):
-		return babyTurtleOnLand
+		// GuardianAttackSelector: squid and axolotls, besides players.
+		return o.etype == entitySquid || o.etype == entityGlowSquid || o.etype == entityAxolotl
+	case skeletonKind(hunter.etype) || hunter.etype == entityWitherSkeleton:
+		// AbstractSkeleton: iron golems and a baby turtle on land; a wither
+		// skeleton adds the piglins (WitherSkeleton.registerGoals).
+		if hunter.etype == entityWitherSkeleton && (o.etype == entityPiglin || o.etype == entityPiglinBrute) {
+			return true
+		}
+		return o.etype == entityIronGolem || babyTurtleOnLand
+	case hunter.etype == entitySpider || hunter.etype == entityCaveSpider:
+		// SpiderTargetGoal<IronGolem>: only while the spider stands in the dark.
+		return o.etype == entityIronGolem && h.lightMagic(hunter) < spiderLightNeutral
 	case hunter.etype == entityFox:
 		return o.etype == entityChicken || o.etype == entityRabbit || babyTurtleOnLand ||
 			o.etype == entityCod || o.etype == entitySalmon || o.etype == entityTropicalFish
@@ -70,6 +79,7 @@ func illagerKind(etype int) bool {
 // the cheap gate before the grid search.
 func huntsPrey(etype int) bool {
 	return zombieKind(etype) || illagerKind(etype) || skeletonKind(etype) || etype == entityWither ||
+		etype == entityWitherSkeleton || etype == entitySpider || etype == entityCaveSpider ||
 		etype == entitySlime || etype == entityMagmaCube || etype == entityEnderman ||
 		etype == entityGuardian || etype == entityElderGuardian ||
 		etype == entityFox || etype == entityOcelot || etype == entityPolarBear

@@ -165,3 +165,24 @@ func TestPlacedBlockOffsetChecks(t *testing.T) {
 		t.Error("comparator facing a stone block must not match")
 	}
 }
+
+// The advancements that could not be earned: each criterion now matches
+// what its fire site sends.
+func TestFormerlyUnobtainableCriteria(t *testing.T) {
+	if !(advMatch{victims: []string{"villager"}}).criterion(critOf(t, "minecraft:adventure/very_very_frightening", "struck_villager")) {
+		t.Error("channeled_lightning: a struck villager does not match")
+	}
+	if (advMatch{victims: []string{"pig"}}).criterion(critOf(t, "minecraft:adventure/very_very_frightening", "struck_villager")) {
+		t.Error("channeled_lightning: a struck pig matches")
+	}
+	cake := critOf(t, "minecraft:husbandry/allay_deliver_cake_to_note_block", "allay_deliver_cake_to_note_block")
+	if !(advMatch{blockState: worldgen.BlockBase("note_block"), item: itemByName["cake"]}).criterion(cake) {
+		t.Error("allay_drop_item_on_block: cake on a note block does not match")
+	}
+	if !(advMatch{entity: "allay", item: itemByName["cookie"]}).criterion(critOf(t, "minecraft:husbandry/allay_deliver_item_to_player", "allay_deliver_item_to_player")) {
+		t.Error("thrown_item_picked_up_by_player: an allay's item does not match")
+	}
+	if !(advMatch{lootTable: "chests/bastion_treasure"}).criterion(critOf(t, "minecraft:nether/loot_bastion", "loot_bastion_treasure")) {
+		t.Error("player_generates_container_loot: a bastion treasure chest does not match")
+	}
+}

@@ -307,14 +307,23 @@ func (h *hub) blocksTouching(dim int, x, y, z float64, fn func(state uint32, onF
 	fn(w.At(fx, feet-1, fz), true)
 }
 
-// cobwebSlow reports whether an entity is caught in a cobweb. Movement itself
-// is the client's business — this exists so the movement authority does not
-// mistake the crawl for a stall, and so mobs in a web stop chasing.
+// cobwebSlow reports whether an entity is caught in a cobweb: a mob's step
+// is cut to a quarter (mob.go). A player's crawl is their own client's.
 func (h *hub) cobwebSlow(dim int, x, y, z float64) bool {
 	w := h.worldFor(dim)
 	fx, fz := int(math.Floor(x)), int(math.Floor(z))
 	feet := int(math.Floor(y))
 	return w.At(fx, feet, fz) == cobwebState || w.At(fx, feet+1, fz) == cobwebState
+}
+
+// webFactor is WebBlock.entityInside → makeStuckInBlock(0.25, 0.05, 0.25)
+// on a mob's horizontal step: a quarter in a web, for anything but a spider
+// (Spider.makeStuckInBlock skips cobweb).
+func (h *hub) webFactor(m *mob) float64 {
+	if m.etype == entitySpider || m.etype == entityCaveSpider || !h.cobwebSlow(m.dim, m.x, m.y, m.z) {
+		return 1
+	}
+	return 0.25
 }
 
 // Honey block sliding (vanilla HoneyBlock.entityInside / isSlidingDown): a

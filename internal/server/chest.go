@@ -1,6 +1,8 @@
 package server
 
 import (
+	"strings"
+
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -127,7 +129,11 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 		c = &chest{}
 		// Structure loot is a pure function of each dimension's generator, so
 		// a Nether chest never inherits an overworld dungeon's table.
-		h.fillStructureChestIn(pos.dim, pos.blockPos, c)
+		if name := h.fillStructureChestIn(pos.dim, pos.blockPos, c); name != "" {
+			// RandomizableContainer.unpackLootTable: the player who opens
+			// an unlooted container generates its loot.
+			h.advance(h.playersRef, t, "player_generates_container_loot", advMatch{lootTable: strings.TrimPrefix(name, "minecraft:")})
+		}
 		h.chests[pos] = c
 	}
 	h.nextWin++

@@ -466,6 +466,18 @@ func (s *Server) handlePlace(p *player, data []byte) {
 				state = worldgen.SetProperty(info, state, "waterlogged", "true")
 			}
 		}
+		if base, _, _, ok := leafInfo(state); ok {
+			// LeavesBlock.getStateForPlacement: a placed leaf is PERSISTENT (a
+			// hedge never decays) and takes its distance from its neighbours.
+			d := 7
+			for _, o := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
+				d = min(d, leafDistanceAt(s.worldFor(p).Block(tx+o[0], ty+o[1], tz+o[2]))+1)
+			}
+			state = leafWithDistance(state, base, d)
+			if info, ok := worldgen.InfoForState(state); ok {
+				state = worldgen.SetProperty(info, state, "persistent", "true")
+			}
+		}
 		if isChestBlock(state) { // pair with an adjacent single chest → double chest
 			state = s.pairChestOnPlace(p, tx, ty, tz, state)
 		}
@@ -759,7 +771,11 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
-	if isBerryBush(state) || isCaveVine(state) || isGolemStatue(state) || isWire(state) { // the block's own use (blockclick.go)
+	// A berry plant uses the click only when there is something to pick
+	// (SweetBerryBushBlock.useItemOn / CaveVines.use); otherwise it passes
+	// to the item, which is how bone meal grows a bush.
+	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, p.heldItem())
+	if plant || isGolemStatue(state) || isWire(state) { // the block's own use (blockclick.go)
 		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

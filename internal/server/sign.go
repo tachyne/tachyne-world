@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -105,6 +106,18 @@ func faceName(dir int32) string {
 
 func facingAxisX(f string) bool { return f == "west" || f == "east" }
 
+// waterlogPlaced is SimpleWaterloggedBlock's getStateForPlacement step: a
+// block that can hold water, placed into a water source, keeps it.
+func waterlogPlaced(w *world.World, x, y, z int, state uint32) uint32 {
+	if !worldgen.IsFluidSource(w.Block(x, y, z), worldgen.WaterBase) {
+		return state
+	}
+	if info, ok := worldgen.InfoForState(state); ok && info.HasProperty("waterlogged") {
+		return worldgen.SetProperty(info, state, "waterlogged", "true")
+	}
+	return state
+}
+
 // placeStandingOrWall places a sign-family item (signs, banners, mob heads)
 // as its standing block (top face clicked; 16-way rotation faces the player,
 // vanilla StandingAndWallBlockItem) or its wall variant (side face).
@@ -137,6 +150,7 @@ func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx,
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
+	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
 	s.putBlock(p, tx, ty, tz, state, true, seq)
 	return true
 }
@@ -190,6 +204,7 @@ func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty,
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
+	state = waterlogPlaced(w, tx, ty, tz, state) // a sign placed under water keeps it
 	s.putBlock(p, tx, ty, tz, state, true, seq)
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim, hanging: true})
 	return true

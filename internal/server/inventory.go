@@ -281,10 +281,10 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 				h.sendSlot(t, slot)
 			}
 			h.incStat(t, attachproto.StatPickedUp, it.item, int32(picked))
-			if it.thrower != 0 && it.thrower != t.p.eid { // ItemEntity.playerTouch: the THROWER's trigger
-				if thrower := players[it.thrower]; thrower != nil {
-					h.advance(players, thrower, "thrown_item_picked_up_by_player", advMatch{item: it.item})
-				}
+			// ServerPlayer.onItemPickup: the PICKER's trigger, naming whoever
+			// threw it (a player, or an allay delivering).
+			if name := h.throwerName(players, it.thrower); name != "" {
+				h.advance(players, t, "thrown_item_picked_up_by_player", advMatch{item: it.item, entity: name})
 			}
 			h.toTracking(players, eid, it.dim, it.x, it.z, attachproto.Collect{Collected: eid, Collector: t.p.eid, Count: int32(picked)})
 			h.playSoundDim(players, it.dim, "minecraft:entity.item.pickup", sndPlayer, it.x, it.y, it.z, 0.4, 1+h.rng.Float32())
@@ -297,6 +297,21 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			}
 		}
 	}
+}
+
+// throwerName is the advancement entity type of an item's thrower ("" when
+// nobody threw it, or the thrower is gone).
+func (h *hub) throwerName(players map[int32]*tracked, eid int32) string {
+	if eid == 0 {
+		return ""
+	}
+	if players[eid] != nil {
+		return "player"
+	}
+	if m := h.mobs[eid]; m != nil {
+		return advEntityName[m.etype]
+	}
+	return ""
 }
 
 // sendSlot updates one inventory slot on the client.

@@ -406,6 +406,17 @@ func (m advMatch) criterion(c *advCriterion) bool {
 			return false
 		}
 		return !c.noFire || m.noFire
+	case "channeled_lightning":
+		// ChanneledLightningTrigger: each victim predicate is met by some
+		// entity the bolt struck.
+		for _, want := range c.victims {
+			if !containsStr(m.victims, want) {
+				return false
+			}
+		}
+		return true
+	case "allay_drop_item_on_block":
+		return c.blockMatches(m.blockState) && m.itemIn(c)
 	case "started_riding":
 		return (c.vehicle == "" || c.vehicle == m.vehicle) && (c.passenger == "" || c.passenger == m.passenger)
 	case "spear_mobs":
