@@ -168,7 +168,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/blowback", parent: "minecraft:adventure/minecraft_trials_edition", xp: 40,
 		criteria: []advCriterion{
-			{name: "blowback", trigger: "player_killed_entity", entity: "breeze"},
+			{name: "blowback", trigger: "player_killed_entity", entity: "breeze", damageTag: "is_projectile", damageDirect: []string{"breeze_wind_charge"}},
 		},
 		reqs: [][]string{
 			{"blowback"},
@@ -683,7 +683,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/sniper_duel", parent: "minecraft:adventure/shoot_arrow", xp: 50,
 		criteria: []advCriterion{
-			{name: "killed_skeleton", trigger: "player_killed_entity", entity: "skeleton"},
+			{name: "killed_skeleton", trigger: "player_killed_entity", entity: "skeleton", damageTag: "is_projectile", minDistH: 50.0},
 		},
 		reqs: [][]string{
 			{"killed_skeleton"},
@@ -970,7 +970,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:adventure/voluntary_exile", parent: "minecraft:adventure/root", xp: 0,
 		criteria: []advCriterion{
-			{name: "voluntary_exile", trigger: "player_killed_entity"},
+			{name: "voluntary_exile", trigger: "player_killed_entity", entities: []string{"evoker", "pillager", "ravager", "vindicator", "illusioner", "witch"}, ominousBanner: true},
 		},
 		reqs: [][]string{
 			{"voluntary_exile"},
@@ -2140,7 +2140,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/return_to_sender", parent: "minecraft:nether/root", xp: 50,
 		criteria: []advCriterion{
-			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast"},
+			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast", damageTag: "is_projectile", damageDirect: []string{"fireball"}},
 		},
 		reqs: [][]string{
 			{"killed_ghast"},
@@ -2220,7 +2220,7 @@ var advTable = []advNode{
 	{
 		id: "minecraft:nether/uneasy_alliance", parent: "minecraft:nether/return_to_sender", xp: 100,
 		criteria: []advCriterion{
-			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast"},
+			{name: "killed_ghast", trigger: "player_killed_entity", entity: "ghast", dim: 0, hasDim: true},
 		},
 		reqs: [][]string{
 			{"killed_ghast"},

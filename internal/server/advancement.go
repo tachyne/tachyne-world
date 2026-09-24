@@ -74,12 +74,16 @@ type advCriterion struct {
 	vehicle      string
 	passenger    string
 	vehicles     []string // started_riding: the vehicle types that match (a tag, expanded)
-	lookingAt    string
-	bystander    string
-	noFire       bool
-	cause        string
-	enchant      string
-	toolPred     string
+	entities     []string // player_killed_entity: the entity types that match (a tag, expanded)
+	// player_killed_entity: the entity wears the ominous banner on its head
+	// (a raid captain, voluntary_exile)
+	ominousBanner bool
+	lookingAt     string
+	bystander     string
+	noFire        bool
+	cause         string
+	enchant       string
+	toolPred      string
 
 	unmatchable bool // trigger/conditions the engine can't observe yet
 }

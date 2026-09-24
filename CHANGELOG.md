@@ -58,6 +58,14 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Kill advancements check how the kill was made.** Sniper Duel now
+  needs a skeleton shot from at least 50 blocks away. Return to Sender
+  needs a ghast killed by its own fireball, and Uneasy Alliance a ghast
+  killed in the Overworld. Blowback needs a breeze killed by a breeze's
+  wind charge batted back at it. Voluntary Exile needs a raider wearing the
+  ominous banner, not just any kill. Before, any kill of the right mob,
+  or for Voluntary Exile any kill at all, granted them. A mob killed by a
+  player's wind charge now counts as that player's kill.
 - **"Careful Restoration" needs four sherds.** Crafting a decorated pot
   from one pottery sherd and three bricks granted the advancement for a
   pot made only of sherds. As in vanilla, each sherd the advancement asks

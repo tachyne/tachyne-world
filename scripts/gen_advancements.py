@@ -343,6 +343,55 @@ def rng_min(v, key=None):
     return float(v)
 
 
+OMINOUS_BANNER = "block.minecraft.ominous_banner"
+
+
+def kill_pred(d, c, tags):
+    """The parts of a kill criterion (Player/EntityKilled... TriggerInstance:
+    entity + killing_blow) beyond the entity's type: a type tag, the entity's
+    horizontal distance from the player and its dimension, an ominous banner
+    on its head (a raid captain), and the killing blow's direct entity and
+    damage-type tag. A shape outside these stops the generator rather than
+    matching loosely."""
+    for pc in c.get("entity") or []:
+        p = pc.get("predicate") or {}
+        for k, v in p.items():
+            if k in ("type", "flags", "type_specific", "components"):
+                continue  # ent_pred reads these
+            if k == "distance":
+                if set(v) != {"horizontal"} or set(v["horizontal"]) != {"min"}:
+                    raise SystemExit(f"gen_advancements: kill distance {v}")
+                d["minDistH"] = rng_min(v["horizontal"])
+            elif k == "location":
+                if set(v) != {"dimension"}:
+                    raise SystemExit(f"gen_advancements: kill location {v}")
+                d["dim"] = DIMS[v["dimension"]]
+            elif k == "equipment":
+                head = v.get("head") or {}
+                name = ((head.get("components") or {}).get("minecraft:item_name") or {}).get("translate")
+                if set(v) != {"head"} or strip_ns(str(head.get("items"))) != "white_banner" or name != OMINOUS_BANNER:
+                    raise SystemExit(f"gen_advancements: kill equipment {v}")
+                d["ominousBanner"] = True
+            else:
+                raise SystemExit(f"gen_advancements: kill entity predicate field {k}")
+        ty = p.get("type")
+        if isinstance(ty, str) and ty.startswith("#"):
+            d["entities"] = names_of(ty, tags, "entity_type")
+    kb = c.get("killing_blow") or {}
+    for k, v in kb.items():
+        if k == "direct_entity":
+            if set(v) != {"type"}:
+                raise SystemExit(f"gen_advancements: killing_blow direct_entity {v}")
+            d["damageDirect"] = names_of(v["type"], tags, "entity_type")
+        elif k == "tags":
+            want = [tg for tg in v if tg.get("expected", True)]
+            if len(want) != 1 or len(want) != len(v):
+                raise SystemExit(f"gen_advancements: killing_blow tags {v}")
+            d["damageTag"] = strip_ns(want[0]["id"])
+        else:
+            raise SystemExit(f"gen_advancements: killing_blow field {k}")
+
+
 def distill(trigger, cond, tags):
     """Reduce a criterion to the engine-matchable schema: a dict of non-default
     fields. `unmatchable` is set only where the engine has no way to observe
@@ -395,6 +444,8 @@ def distill(trigger, cond, tags):
         d["entity"], baby, var = ent_pred(c.get("entity"))
         if baby is not None: d["baby"] = 1 if baby else 0
         if var: d["variant"] = var
+        if t in ("player_killed_entity", "entity_killed_player"):
+            kill_pred(d, c, tags)
     elif t == "bred_animals":
         d["entity"], baby, var = ent_pred(c.get("child"))
         if baby is not None: d["baby"] = 1 if baby else 0
@@ -831,6 +882,8 @@ def main():
                 f.append("victims: []string{%s}" % ", ".join(gstr(x) for x in c["victims"]))
             if c.get("vehicles"):
                 f.append("vehicles: []string{%s}" % ", ".join(gstr(x) for x in c["vehicles"]))
+            if c.get("entities"):
+                f.append("entities: []string{%s}" % ", ".join(gstr(x) for x in c["entities"]))
             if c.get("effects"):
                 f.append("effects: []string{%s}" % ", ".join(gstr(x) for x in c["effects"]))
             for key in ("minUnique", "minCount", "signal"):
@@ -841,7 +894,7 @@ def main():
             for key in ("minDealt", "minDistH", "minDistY", "minDistAbs", "maxDistAbs", "startYMin", "endYMax"):
                 if key in c:
                     f.append(f"{key}: {c[key]}")
-            for key in ("smokey", "blocked", "noFire"):
+            for key in ("smokey", "blocked", "noFire", "ominousBanner"):
                 if c.get(key):
                     f.append(f"{key}: true")
             w.append("\t\t\t{%s}," % ", ".join(f))

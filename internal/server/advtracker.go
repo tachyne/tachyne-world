@@ -176,6 +176,7 @@ type advMatch struct {
 	noFire                bool
 	cause                 string
 	enchant               string
+	ominousBanner         bool // player_killed_entity: the victim wore the ominous banner
 }
 
 // advBlockSets resolves every criterion's block list to state ranges once.
@@ -267,8 +268,21 @@ func (m advMatch) criterion(c *advCriterion) bool {
 		return m.itemIn(c)
 	case "item_durability_changed":
 		return m.itemIn(c) && (c.vehicle == "" || c.vehicle == m.vehicle)
-	case "player_killed_entity", "entity_killed_player", "bred_animals", "tame_animal",
-		"summoned_entity", "thrown_item_picked_up_by_player":
+	case "player_killed_entity", "entity_killed_player":
+		// KilledTrigger.TriggerInstance.matches: the entity predicate (type or
+		// type tag, horizontal distance from the player, dimension, a banner
+		// on its head) and the killing blow's damage-source predicate.
+		if !m.entityIs(c) || (len(c.entities) > 0 && !containsStr(c.entities, m.entity)) {
+			return false
+		}
+		if (c.hasDim && c.dim != m.dim) || m.distH < c.minDistH || (c.ominousBanner && !m.ominousBanner) {
+			return false
+		}
+		if len(c.damageDirect) > 0 && !containsStr(c.damageDirect, m.damageDirect) {
+			return false
+		}
+		return c.damageTag == "" || m.damageTags[c.damageTag]
+	case "bred_animals", "tame_animal", "summoned_entity", "thrown_item_picked_up_by_player":
 		return m.entityIs(c)
 	case "player_interacted_with_entity", "player_sheared_equipment", "thrown_item_picked_up_by_entity":
 		return m.entityIs(c) && m.itemIn(c)
