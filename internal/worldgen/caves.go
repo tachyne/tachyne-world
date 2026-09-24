@@ -59,6 +59,16 @@ func (g *Generator) caveBiomeAt(x, y, z int) string {
 	return g.resolveBiome(x, z).Name
 }
 
+// CaveBiomeAt is caveBiomeAt for callers outside the package: the biome at
+// a cell by the generator's rule, without generating its chunk. (A chunk's
+// biome array samples this at its centre column, a section's centre y.)
+func (g *Generator) CaveBiomeAt(x, y, z int) string {
+	if g.nether || g.end {
+		return g.BiomeName(x, z)
+	}
+	return g.caveBiomeAt(x, y, z)
+}
+
 // decorateCaves stamps the 3×3 chunks' cave features into this chunk.
 func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32) {
 	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
@@ -177,6 +187,9 @@ func (g *Generator) caveChunkFeatures(reg *owRegion, ncx, ncz int32) {
 	// Surface mushrooms in the dark, and magma in the underwater caves.
 	g.overworldMushrooms(r, reg, ox, oz)
 	g.underwaterMagma(r, reg, ox, oz)
+	// The sulfur caves' springs, pools and spikes (their own draws, so a
+	// chunk without them decorates exactly as it did).
+	g.sulfurFeatures(reg, ox, oz)
 	// The dripstone caves' clusters, large dripstone and pointed dripstone.
 	g.dripstoneFeatures(r, reg, ox, oz)
 	// GLOW_LICHEN ×104–157, at least thirteen blocks under the ground.
@@ -453,9 +466,6 @@ func (g *Generator) rootSystem(r TreeRNG, reg *owRegion, x, y, z int) {
 	if !ok {
 		return
 	}
-	azaleaRootReplaceable := func(s uint32) bool {
-		return inAnyRange(s, caveBaseStone) || IsDirtTag(s) || inAnyRange(s, caveTerracotta) || s == RedSand || s == Clay || s == Gravel || s == Sand || s == SnowBlock || s == PowderSnow
-	}
 	treeY := -1
 	for i := 1; i <= 100; i++ {
 		py := y + i
@@ -502,6 +512,13 @@ func (g *Generator) rootSystem(r TreeRNG, reg *owRegion, x, y, z int) {
 			reg.set(px, py, pz, HangingRoots)
 		}
 	}
+}
+
+// azaleaRootReplaceable is #azalea_root_replaceable: what a root system's
+// roots grow through (the rooted azalea's dirt, the rooted sulfur spring's
+// sulfur).
+func azaleaRootReplaceable(s uint32) bool {
+	return inAnyRange(s, caveBaseStone) || IsDirtTag(s) || inAnyRange(s, caveTerracotta) || s == RedSand || s == Clay || s == Gravel || s == Sand || s == SnowBlock || s == PowderSnow
 }
 
 // placeTreeInRegion grows a tree feature through the region.

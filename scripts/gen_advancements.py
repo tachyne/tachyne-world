@@ -555,13 +555,11 @@ NOT_OBSERVABLE = {
 }
 
 # 26.3 content the engine does not simulate yet. Criteria naming it stay
-# unmatchable, so the advancements needing them (adventuring_time's
-# every-biome requirement) stay unobtainable until it lands. The sulfur cube
-# left this list when it arrived (sulfurcube.go fires uh_oh's two criteria).
+# unmatchable, so the advancements needing them stay unobtainable until it
+# lands. Empty since 2026-09-24: the sulfur cube fires uh_oh's two criteria
+# (sulfurcube.go) and sulfur_caves generates.
 ABSENT_ENTITIES = set()
-ABSENT_BIOMES = {
-    "sulfur_caves",  # the cave-biome picker places deep_dark/lush/dripstone only
-}
+ABSENT_BIOMES = set()
 
 
 # ---- vanilla TreeNodePosition (Buchheim tidy tree), x = depth, y = row ----

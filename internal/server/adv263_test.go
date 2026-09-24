@@ -24,10 +24,20 @@ func TestAdv263Table(t *testing.T) {
 			t.Errorf("uh_oh/%s: unmatchable=%v entity=%q baby=%v/%d", c.name, c.unmatchable, c.entity, c.hasBaby, c.baby)
 		}
 	}
+	// The sulfur caves generate, so adventuring_time's criterion for them
+	// is live: indexed for matching, and met in the biome.
+	indexed := false
 	for _, ref := range advByTrigger["location"] {
 		if ref.crit.biome == "sulfur_caves" {
-			t.Error("sulfur_caves is indexed, but the generator never places it")
+			indexed = true
 		}
+	}
+	if !indexed {
+		t.Error("adventuring_time's sulfur_caves criterion is not indexed")
+	}
+	c := critOf(t, "minecraft:adventure/adventuring_time", "minecraft:sulfur_caves")
+	if !(advMatch{biome: "minecraft:sulfur_caves"}).criterion(c) {
+		t.Error("standing in minecraft:sulfur_caves does not meet its adventuring_time criterion")
 	}
 }
 

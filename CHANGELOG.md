@@ -204,6 +204,20 @@ the public history since the project was open-sourced on 2026-07-10.
   mineshaft can now start in any chunk, as often as in vanilla. In the
   badlands they are built from dark oak and sit higher up, often breaking
   out into the canyons. `/locate structure mineshaft_mesa` finds them.
+- **Sulfur caves generate.** 26.3's new cave biome now appears where
+  vanilla puts it: 26 to 115 blocks under flat land (the highest erosion)
+  between the coast and inland, where the weirdness runs furthest
+  negative. It is rare, about one column in 170. Its rock is banded with
+  sulfur and cinnabar, and on it grow sulfur spike clusters and single
+  spikes, pools of water rimmed in sulfur with wet potent sulfur on their
+  beds, and now and then a rooted sulfur spring: one of vanilla's ten
+  spring templates, stamped on the first flat, open ground above the
+  cave, with tuff scattered around it and sulfur roots running back down.
+  The world reports the biome underground, so the natural spawner uses
+  its pool (sulfur cubes will spawn there once the mob exists), and its
+  Adventuring Time criterion can now be met. Chunks over the new biome
+  regenerate with it underground; what players have built or dug there
+  stays.
 
 ### Changed
 - **Villager and wandering-trader trades come from 26.3's trade data.**

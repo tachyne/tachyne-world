@@ -93,6 +93,12 @@ CAMP_BIOMES = ["bamboo_jungle", "birch_forest", "cherry_grove", "dappled_forest"
                "windswept_forest", "wooded_badlands"]
 CAMP_ROOTS = ["abandoned_camp/tent/" + b for b in CAMP_BIOMES]
 
+# 26.3's sulfur springs: the templates the sulfur caves' rooted springs
+# stamp (sulfur_spring's TemplateFeature), read from the canonical jar.
+SULFUR_SPRING = ["spring/sulfur_spring_%s" % n for n in (
+    "small_1", "small_2", "small_3", "small_4", "medium_1", "medium_2", "medium_3",
+    "large_1", "large_2", "extra_large_1")]
+
 
 class R:
     def __init__(s, b): s.b = b; s.i = 0
@@ -533,6 +539,9 @@ def main():
     pools.update(p26)
     out.update(t26)
     processors.update(pr26)
+    inner26 = canon.inner_jar(canon.VERSION)
+    for name in SULFUR_SPRING:
+        out[name] = bake(inner26, name)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         json.dump({"templates": out, "pools": pools, "aliases": aliases, "processors": processors}, f, separators=(",", ":"))

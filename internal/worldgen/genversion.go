@@ -58,4 +58,9 @@ package worldgen
 // room, and mineshafts vanilla's rooms, corridors, crossings and stairs,
 // started from any chunk (the old 256-block grid is gone), with the dark oak
 // mesa variant in the badlands.
-const GenVersion = 21
+//
+// v22: 26.3's sulfur caves generate — a cave biome under flat, far-weird
+// land, its rock banded with sulfur and cinnabar, with sulfur spikes,
+// sulfur pools and rooted sulfur springs. The underground of every chunk in
+// that climate changes (and dripstone/lush caves there give way to it).
+const GenVersion = 22

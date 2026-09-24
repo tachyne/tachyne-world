@@ -568,7 +568,8 @@ func (w *World) BiomeAt(x, z int) string { return w.gen.BiomeName(x, z) }
 
 // BiomeAt3D reports the biome at a position: the generated chunk's
 // per-section biome, which is a cave biome (lush_caves, dripstone_caves,
-// deep_dark) well below the surface and the column's surface biome above.
+// deep_dark, sulfur_caves) well below the surface and the column's surface
+// biome above.
 // Falls back to the surface biome outside the vertical range.
 func (w *World) BiomeAt3D(x, y, z int) string {
 	if !w.inBounds(y) {

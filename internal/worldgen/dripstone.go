@@ -18,7 +18,7 @@ var (
 )
 
 func dripstoneReplaceable(s uint32) bool { return inAnyRange(s, caveBaseStone) } // #dripstone_replaceable = #base_stone_overworld
-func isDripBase(s uint32) bool           { return s == DripstoneBlock || dripstoneReplaceable(s) }
+func isDripBase(s uint32) bool           { return dripstoneCfg.isBase(s) }
 func emptyOrWater(s uint32) bool         { return s == Air || s == Water }
 func emptyOrWaterOrLava(s uint32) bool   { return s == Air || s == Water || s == Lava }
 
@@ -58,6 +58,33 @@ func (reg *owRegion) columnScan(x, y, z, rng int, inside, edge func(uint32) bool
 	return floor, ceiling, hasFloor, hasCeil, true
 }
 
+// speleothemCfg is what SpeleothemFeature and SpeleothemClusterFeature are
+// configured with: the base block, the pointed block's states, the blocks
+// the base may replace, and the cluster's height and wetness draws. The
+// dripstone caves grow dripstone from #base_stone_overworld; 26.3's sulfur
+// caves grow sulfur spikes from sulfur and cinnabar with the same code.
+type speleothemCfg struct {
+	base        uint32
+	pointed     [2][2][5]uint32 // [down][waterlogged][thickness]
+	pLo, pHi    uint32          // the pointed block's state range
+	replaceable func(uint32) bool
+	height      func(TreeRNG) int     // the cluster's height provider
+	wetness     func(TreeRNG) float64 // the cluster's wetness provider
+}
+
+func (c *speleothemCfg) isBase(s uint32) bool { return s == c.base || c.replaceable(s) }
+
+// dripstoneCfg is DRIPSTONE_CLUSTER / POINTED_DRIPSTONE's configuration.
+var dripstoneCfg = &speleothemCfg{
+	base:        DripstoneBlock,
+	pointed:     pointedStatesOf("pointed_dripstone"),
+	pLo:         pointedLo,
+	pHi:         pointedHi,
+	replaceable: dripstoneReplaceable,
+	height:      func(r TreeRNG) int { return 3 + r.Intn(4) },                            // uniform 3–6
+	wetness:     func(r TreeRNG) float64 { return clampedNormal(r, 0.1, 0.3, 0.1, 0.9) }, // clamped normal
+}
+
 // dripstoneFeatures adds the dripstone caves' features to a chunk's draws.
 func (g *Generator) dripstoneFeatures(r TreeRNG, reg *owRegion, ox, oz int) {
 	if !reg.chunkHasCaveBiome(ox, oz, "minecraft:dripstone_caves") {
@@ -68,7 +95,7 @@ func (g *Generator) dripstoneFeatures(r TreeRNG, reg *owRegion, ox, oz int) {
 	for i, n := 0, 48+r.Intn(49); i < n; i++ { // DRIPSTONE_CLUSTER
 		x, y, z := ox+r.Intn(16), rangeY(), oz+r.Intn(16)
 		if drip(x, y, z) {
-			g.speleothemCluster(r, reg, x, y, z)
+			g.speleothemCluster(dripstoneCfg, r, reg, x, y, z)
 		}
 	}
 	for i, n := 0, 10+r.Intn(39); i < n; i++ { // LARGE_DRIPSTONE
@@ -88,11 +115,11 @@ func (g *Generator) dripstoneFeatures(r TreeRNG, reg *owRegion, ox, oz int) {
 			}
 			if r.Intn(2) == 0 { // the selector: a spike on the floor
 				if fy, ok := reg.scanForWet(px, py, pz, -1, 12); ok {
-					g.pointedDripstone(r, reg, px, fy+1, pz)
+					g.pointedDripstone(dripstoneCfg, r, reg, px, fy+1, pz)
 				}
 			} else { // or under the ceiling
 				if cy, ok := reg.scanForWet(px, py, pz, +1, 12); ok {
-					g.pointedDripstone(r, reg, px, cy-1, pz)
+					g.pointedDripstone(dripstoneCfg, r, reg, px, cy-1, pz)
 				}
 			}
 		}
@@ -122,25 +149,25 @@ func (reg *owRegion) scanForWet(x, y, z, dy, max int) (int, bool) {
 	return 0, false
 }
 
-// pointedStates holds every pointed dripstone state the features place:
-// [down][wet][thickness], built once (a property lookup per block was a
-// fifth of a chunk's time).
-var pointedStates = func() (t [2][2][5]uint32) {
+// pointedStatesOf holds every state of a pointed block (pointed dripstone,
+// the sulfur spike) the features place: [down][wet][thickness], built once
+// (a property lookup per block was a fifth of a chunk's time).
+func pointedStatesOf(name string) (t [2][2][5]uint32) {
 	names := [5]string{"tip_merge", "tip", "frustum", "middle", "base"}
 	for d, dir := range [2]string{"up", "down"} {
 		for w, wet := range [2]string{"false", "true"} {
 			for i, th := range names {
-				t[d][w][i] = withProps("pointed_dripstone", "vertical_direction", dir, "thickness", th, "waterlogged", wet)
+				t[d][w][i] = withProps(name, "vertical_direction", dir, "thickness", th, "waterlogged", wet)
 			}
 		}
 	}
 	return t
-}()
+}
 
 var thicknessIndex = map[string]int{"tip_merge": 0, "tip": 1, "frustum": 2, "middle": 3, "base": 4}
 
 // pointedState is createPointedBlock, waterlogged where the cell is water.
-func (reg *owRegion) pointedState(x, y, z int, down bool, thickness string) uint32 {
+func (reg *owRegion) pointedState(c *speleothemCfg, x, y, z int, down bool, thickness string) uint32 {
 	d, w := 0, 0
 	if down {
 		d = 1
@@ -148,18 +175,18 @@ func (reg *owRegion) pointedState(x, y, z int, down bool, thickness string) uint
 	if reg.read(x, y, z) == Water {
 		w = 1
 	}
-	return pointedStates[d][w][thicknessIndex[thickness]]
+	return c.pointed[d][w][thicknessIndex[thickness]]
 }
 
 // growSpeleothem is SpeleothemUtils.growSpeleothem: from start toward the
 // tip, base and middles, a frustum, and the tip (merged or not), given a
 // base block behind the start.
-func (g *Generator) growSpeleothem(reg *owRegion, x, y, z int, down bool, height int, merged bool) {
+func (g *Generator) growSpeleothem(c *speleothemCfg, reg *owRegion, x, y, z int, down bool, height int, merged bool) {
 	dy := 1
 	if down {
 		dy = -1
 	}
-	if !isDripBase(reg.read(x, y-dy, z)) {
+	if !c.isBase(reg.read(x, y-dy, z)) {
 		return
 	}
 	var parts []string
@@ -180,30 +207,31 @@ func (g *Generator) growSpeleothem(reg *owRegion, x, y, z int, down bool, height
 		}
 	}
 	for _, t := range parts {
-		reg.set(x, y, z, reg.pointedState(x, y, z, down, t))
+		reg.set(x, y, z, reg.pointedState(c, x, y, z, down, t))
 		y += dy
 	}
 }
 
-// placeBaseIfPossible turns replaceable rock into dripstone block.
-func (reg *owRegion) placeBaseIfPossible(x, y, z int) bool {
-	if dripstoneReplaceable(reg.read(x, y, z)) {
-		reg.set(x, y, z, DripstoneBlock)
+// placeBaseIfPossible turns replaceable rock into the base block.
+func (reg *owRegion) placeBaseIfPossible(c *speleothemCfg, x, y, z int) bool {
+	if c.replaceable(reg.read(x, y, z)) {
+		reg.set(x, y, z, c.base)
 		return true
 	}
 	return false
 }
 
-// speleothemCluster is SpeleothemClusterFeature with DRIPSTONE_CLUSTER's
-// configuration (search 12, height 3–6, radius 2–8, height diff 1,
-// deviation 3, layer 2–4, density 0.3–0.7, wetness N(0.1..0.3), chance at
-// the edge 0.1 over 3, height bias over 8).
-func (g *Generator) speleothemCluster(r TreeRNG, reg *owRegion, x, y, z int) {
+// speleothemCluster is SpeleothemClusterFeature with the configuration
+// DRIPSTONE_CLUSTER and SULFUR_SPIKE_CLUSTER share (search 12, radius 2–8,
+// height diff 1, deviation 3, layer 2–4, density 0.3–0.7, chance at the
+// edge 0.1 over 3, height bias over 8); the height and wetness are the
+// cfg's (dripstone 3–6 and N(0.1..0.3), sulfur 1–4 and none).
+func (g *Generator) speleothemCluster(c *speleothemCfg, r TreeRNG, reg *owRegion, x, y, z int) {
 	if !emptyOrWater(reg.read(x, y, z)) {
 		return
 	}
-	height := 3 + r.Intn(4)
-	wetness := clampedNormal(r, 0.1, 0.3, 0.1, 0.9)
+	height := c.height(r)
+	wetness := c.wetness(r)
 	density := 0.3 + r.Float64()*0.4
 	xr, zr := 2+r.Intn(7), 2+r.Intn(7)
 	chanceAt := func(dx, dz int) float64 { // getChanceOfStalagmiteOrStalactite
@@ -237,14 +265,14 @@ func (g *Generator) speleothemCluster(r TreeRNG, reg *owRegion, x, y, z int) {
 			if !ok || (!hasFloor && !hasCeil) {
 				continue
 			}
-			if r.Float64() < wetness && hasFloor && g.canPlacePool(reg, px, floor, pz) { // a pool in the floor
+			if r.Float64() < wetness && hasFloor && g.canPlacePool(c, reg, px, floor, pz) { // a pool in the floor
 				reg.set(px, floor, pz, Water)
 				floor--
 			}
 			stalactite := 0
 			if hasCeil && r.Float64() < chance && reg.read(px, ceil, pz) != Lava {
 				for i, n := 0, 2+r.Intn(3); i < n; i++ { // the ceiling turns to dripstone
-					if !reg.placeBaseIfPossible(px, ceil+i, pz) {
+					if !reg.placeBaseIfPossible(c, px, ceil+i, pz) {
 						break
 					}
 				}
@@ -257,7 +285,7 @@ func (g *Generator) speleothemCluster(r TreeRNG, reg *owRegion, x, y, z int) {
 			stalagmite := 0
 			if hasFloor && r.Float64() < chance && reg.read(px, floor, pz) != Lava {
 				for i, n := 0, 2+r.Intn(3); i < n; i++ {
-					if !reg.placeBaseIfPossible(px, floor-i, pz) {
+					if !reg.placeBaseIfPossible(c, px, floor-i, pz) {
 						break
 					}
 				}
@@ -285,10 +313,10 @@ func (g *Generator) speleothemCluster(r TreeRNG, reg *owRegion, x, y, z int) {
 			}
 			merge := r.Intn(2) == 0 && stalactite > 0 && stalagmite > 0 && hasCeil && hasFloor && stalactite+stalagmite == ceil-floor-1
 			if hasCeil {
-				g.growSpeleothem(reg, px, ceil-1, pz, true, stalactite, merge)
+				g.growSpeleothem(c, reg, px, ceil-1, pz, true, stalactite, merge)
 			}
 			if hasFloor {
-				g.growSpeleothem(reg, px, floor+1, pz, false, stalagmite, merge)
+				g.growSpeleothem(c, reg, px, floor+1, pz, false, stalagmite, merge)
 			}
 		}
 	}
@@ -297,9 +325,9 @@ func (g *Generator) speleothemCluster(r TreeRNG, reg *owRegion, x, y, z int) {
 // canPlacePool is SpeleothemClusterFeature.canPlacePool: a floor cell that
 // is not water or dripstone, no water above, stone or water on all four
 // sides and below.
-func (g *Generator) canPlacePool(reg *owRegion, x, y, z int) bool {
+func (g *Generator) canPlacePool(c *speleothemCfg, reg *owRegion, x, y, z int) bool {
 	s := reg.read(x, y, z)
-	if s == Water || s == DripstoneBlock || (s >= pointedLo && s <= pointedHi) {
+	if s == Water || s == c.base || (s >= c.pLo && s <= c.pHi) {
 		return false
 	}
 	if reg.read(x, y+1, z) == Water {
@@ -318,14 +346,14 @@ func (g *Generator) canPlacePool(reg *owRegion, x, y, z int) bool {
 }
 
 // pointedDripstone is SpeleothemFeature: a spike where a base lies above
-// or below, its root patch spreading dripstone into the rock (0.7 a side,
-// 0.5 further, 0.5 further), two tall one time in five when the way is
-// clear.
-func (g *Generator) pointedDripstone(r TreeRNG, reg *owRegion, x, y, z int) {
+// or below, its root patch spreading the base block into the rock (0.7 a
+// side, 0.5 further, 0.5 further), two tall one time in five when the way
+// is clear.
+func (g *Generator) pointedDripstone(c *speleothemCfg, r TreeRNG, reg *owRegion, x, y, z int) {
 	if !emptyOrWater(reg.read(x, y, z)) {
 		return
 	}
-	above, below := isDripBase(reg.read(x, y+1, z)), isDripBase(reg.read(x, y-1, z))
+	above, below := c.isBase(reg.read(x, y+1, z)), c.isBase(reg.read(x, y-1, z))
 	var down bool
 	switch {
 	case above && below:
@@ -341,25 +369,25 @@ func (g *Generator) pointedDripstone(r TreeRNG, reg *owRegion, x, y, z int) {
 	if !down {
 		ry = y - 1
 	}
-	reg.placeBaseIfPossible(x, ry, z)
+	reg.placeBaseIfPossible(c, x, ry, z)
 	dirs := [6][3]int{{0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}}
 	for _, o := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
 		if r.Float64() > 0.7 {
 			continue
 		}
 		p1 := [3]int{x + o[0], ry, z + o[1]}
-		reg.placeBaseIfPossible(p1[0], p1[1], p1[2])
+		reg.placeBaseIfPossible(c, p1[0], p1[1], p1[2])
 		if r.Float64() > 0.5 {
 			continue
 		}
 		d := dirs[r.Intn(6)]
 		p2 := [3]int{p1[0] + d[0], p1[1] + d[1], p1[2] + d[2]}
-		reg.placeBaseIfPossible(p2[0], p2[1], p2[2])
+		reg.placeBaseIfPossible(c, p2[0], p2[1], p2[2])
 		if r.Float64() > 0.5 {
 			continue
 		}
 		d = dirs[r.Intn(6)]
-		reg.placeBaseIfPossible(p2[0]+d[0], p2[1]+d[1], p2[2]+d[2])
+		reg.placeBaseIfPossible(c, p2[0]+d[0], p2[1]+d[1], p2[2]+d[2])
 	}
 	height := 1
 	ty := y - 1
@@ -369,7 +397,7 @@ func (g *Generator) pointedDripstone(r TreeRNG, reg *owRegion, x, y, z int) {
 	if r.Float64() < 0.2 && emptyOrWater(reg.read(x, ty, z)) {
 		height = 2
 	}
-	g.growSpeleothem(reg, x, y, z, down, height, false)
+	g.growSpeleothem(c, reg, x, y, z, down, height, false)
 }
 
 // largeDripstone is LargeDripstoneFeature with LARGE_DRIPSTONE's

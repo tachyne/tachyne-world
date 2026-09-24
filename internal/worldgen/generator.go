@@ -26,6 +26,7 @@ type Generator struct {
 	variety   *Perlin        // biome sub-variant selector (plains↔sunflower, forest↔flower)
 	river     *Perlin        // river channels (low-|value| bands carve to sea level)
 	cave      *Perlin        // underground biome selector (dripstone/lush/deep_dark)
+	sulfurN   [4]*Perlin     // SULFUR_CAVE_GRADIENT: the sulfur caves' cinnabar/sulfur bands
 	netherN   *netherNoises  // nether surface-rule noises (nil in the overworld)
 	surfN     *surfaceNoises // overworld surface-rule noises
 	caveA     *Perlin        // 3D cave field A
@@ -93,6 +94,7 @@ func NewGenerator(seed int64) *Generator {
 		caveA:     NewPerlin(seed ^ 0x8),
 		caveB:     NewPerlin(seed ^ 0x9),
 		surfN:     newSurfaceNoises(seed),
+		sulfurN:   [4]*Perlin{NewPerlin(seed ^ 0x5A1F0), NewPerlin(seed ^ 0x5A1F1), NewPerlin(seed ^ 0x5A1F2), NewPerlin(seed ^ 0x5A1F3)},
 	}
 }
 
@@ -337,14 +339,21 @@ func (g *Generator) riverDepth(wx, wz, baseH int) int {
 // column is the resolved surface description for one world column: its height
 // and the biome that lays its surface blocks.
 type column struct {
-	h     int
-	biome *Biome
-	surf  surface // the surface rules' picks for this column
+	h      int
+	biome  *Biome
+	surf   surface // the surface rules' picks for this column
+	sulfur bool    // the sulfur caves' climate holds here (sulfurClimate)
 }
 
 func (g *Generator) columnAt(wx, wz int) column {
 	h, b := g.Height(wx, wz), g.resolveBiome(wx, wz)
-	return column{h: h, biome: b, surf: g.surfaceFor(b, wx, wz, h)}
+	return column{h: h, biome: b, surf: g.surfaceFor(b, wx, wz, h), sulfur: g.sulfurClimate(wx, wz)}
+}
+
+// terrainCell is a column's generated block at y before any feature: the
+// noise fill, carved, with the sulfur caves' underground bands laid in.
+func (g *Generator) terrainCell(c column, x, y, z int) uint32 {
+	return g.sulfurBand(g.carve(c.block(y), x, y, z, c.h), c, x, y, z)
 }
 
 // top/sub read the biome's surface blocks (badlands bands its terracotta).
@@ -549,7 +558,7 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 			for s := 0; s < g.sections; s++ {
 				for ly := 0; ly < 16; ly++ {
 					wy := MinY + s*16 + ly
-					ch.Sections[s][(ly*16+lz)*16+lx] = g.carve(col.block(wy), wx, wy, wz, col.h)
+					ch.Sections[s][(ly*16+lz)*16+lx] = g.terrainCell(col, wx, wy, wz)
 				}
 			}
 		}
@@ -567,15 +576,16 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.freezeTopLayer(ch, cx, cz)  // TOP_LAYER_MODIFICATION: ice on cold water, snow on cold ground
 
 	// One biome per section, sampled at the section's centre column. Sections
-	// well below the surface take an underground biome (dripstone/lush/deep_dark)
-	// instead of the surface biome, so caves tint correctly.
+	// well below the surface take an underground biome (dripstone/lush/
+	// deep_dark/sulfur) instead of the surface biome, so caves tint correctly.
 	cxw, czw := int(cx)*16+8, int(cz)*16+8
 	surface := g.resolveBiome(cxw, czw)
 	surfaceH := g.Height(cxw, czw)
+	sulfur := g.sulfurClimate(cxw, czw)
 	for s := 0; s < g.sections; s++ {
 		cy := MinY + s*16 + 8
 		if cy < surfaceH-24 && cy < SeaLevel {
-			ch.Biomes[s] = g.caveBiome(cxw, czw, cy)
+			ch.Biomes[s] = g.caveBiomeIn(cxw, czw, cy, surfaceH, sulfur)
 		} else {
 			ch.Biomes[s] = surface.Name
 		}
@@ -623,7 +633,7 @@ func (g *Generator) BlockAt(x, y, z int) uint32 {
 		return g.endBlock(x, y, z)
 	}
 	col := g.columnAt(x, z)
-	return g.carve(col.block(y), x, y, z, col.h)
+	return g.terrainCell(col, x, y, z)
 }
 
 func clampInt(v, lo, hi int) int {

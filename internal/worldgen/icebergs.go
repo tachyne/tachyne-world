@@ -68,7 +68,7 @@ func (r *owRegion) read(x, y, z int) uint32 {
 	}
 	if col[y-MinY] == unknownCell {
 		c := r.col(x, z)
-		col[y-MinY] = r.g.carve(c.block(y), x, y, z, c.h)
+		col[y-MinY] = r.g.terrainCell(c, x, y, z)
 	}
 	return col[y-MinY]
 }
@@ -104,7 +104,7 @@ func (r *owRegion) col(x, z int) column {
 func (r *owRegion) caveBiomeAt(x, y, z int) string {
 	c := r.col(x, z)
 	if y < c.h-24 && y < SeaLevel {
-		return r.g.caveBiome(x, z, y)
+		return r.g.caveBiomeIn(x, z, y, c.h, c.sulfur)
 	}
 	return c.biome.Name
 }
@@ -123,7 +123,7 @@ func (r *owRegion) chunkHasCaveBiome(ox, oz int, biome string) bool {
 		for _, dz := range [2]int{4, 12} {
 			c := r.col(ox+dx, oz+dz)
 			for _, y := range [3]int{-50, -20, 10} {
-				if y < c.h-24 && y < SeaLevel && r.g.caveBiome(ox+dx, oz+dz, y) == biome {
+				if y < c.h-24 && y < SeaLevel && r.g.caveBiomeIn(ox+dx, oz+dz, y, c.h, c.sulfur) == biome {
 					found = true
 				}
 			}

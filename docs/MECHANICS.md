@@ -471,7 +471,7 @@ colours/fog from it), surface blocks, and tree + flora kinds.
 | Ground flora | tall grass, flowers, cactus, bamboo, mushrooms, berries, lily pads | per-biome `floraKind` in `stampGroundCover` | ✅ (single-block placements) |
 | Rivers | noise-carved channels | `riverDepth` carves lowland channels to the waterline → river/frozen_river | ✅ |
 | Ocean variants | frozen/cold/lukewarm/warm + deep | temperature × depth in `resolveBiome` | ✅ |
-| Cave biomes | dripstone/lush/deep_dark by 3D noise | per-section (vertical) below the surface via `caveBiome` | 🟡 no cave features yet |
+| Cave biomes | dripstone/lush/deep_dark/sulfur_caves by multi-noise climate + depth | per-section (vertical) below the surface via `caveBiome`; sulfur_caves at vanilla's parameter box (weirdness ≤ -0.85, erosion ≥ 0.45, continentalness -0.19..0.55, depth 0.2–0.9) on the engine's climate fields | 🟡 lush/dripstone/deep_dark by engine noise, not vanilla's parameters |
 | Nether/End biomes | full sub-biomes | `netherBiome`/`endBiome` split by noise/distance (biome tint only) | 🟡 no sub-biome terrain |
 | Biome resolution | 4×4×4 cells | one biome per chunk section (16×16 horizontal) | 🟡 coarser |
 

@@ -157,6 +157,7 @@ var biomeReg = map[string]*Biome{
 	"minecraft:dripstone_caves": {Top: Stone, Sub: Stone, Tree: treeNone, Flora: floraNone},
 	"minecraft:lush_caves":      {Top: GrassBlock, Sub: Dirt, Tree: treeNone, Flora: floraNone},
 	"minecraft:deep_dark":       {Top: Stone, Sub: Stone, Tree: treeNone, Flora: floraNone},
+	"minecraft:sulfur_caves":    {Top: Stone, Sub: Stone, Tree: treeNone, Flora: floraNone},
 }
 
 // init stamps each biome's registry name from its map key, so the Biome struct
@@ -507,12 +508,28 @@ func (g *Generator) endBiome(wx, wz int) string {
 
 // caveBiome returns the underground biome for a section whose centre is at
 // world-Y cy, well below the surface. Deep, quiet regions become deep_dark;
-// damp regions lush_caves; the rest dripstone_caves.
+// the sulfur caves' climate at their depth sulfur_caves; damp regions
+// lush_caves; the rest dripstone_caves.
 func (g *Generator) caveBiome(wx, wz, cy int) string {
+	return g.caveBiomeIn(wx, wz, cy, -1, g.sulfurClimate(wx, wz))
+}
+
+// caveBiomeIn is caveBiome with the column's surface height h (-1: look it
+// up when needed) and its sulfurClimate answer already in hand.
+func (g *Generator) caveBiomeIn(wx, wz, cy, h int, sulfur bool) string {
 	n := g.cave.FBm(float64(wx)/260, float64(cy)/120, 2, 2, 0.5) + g.cave.FBm(float64(wz)/260, 0, 1, 2, 0.5)
-	switch {
-	case cy < -32 && n > 0.35:
+	if cy < -32 && n > 0.35 {
 		return "minecraft:deep_dark"
+	}
+	if sulfur {
+		if h < 0 {
+			h = g.Height(wx, wz)
+		}
+		if sulfurDepth(h, cy) {
+			return "minecraft:sulfur_caves"
+		}
+	}
+	switch {
 	case n < -0.35:
 		return "minecraft:lush_caves"
 	default:
