@@ -544,6 +544,11 @@ type hub struct {
 	chests   map[simPos]*chest   // chest storage (hub-goroutine-only)
 	// Every placed conduit, so none has to be found by scanning blocks.
 	conduits map[simPos]bool
+	// Potent sulfur block entities (potentsulfur.go): registered when a chunk
+	// first loads or a cell changes, ticked in loaded chunks. geyserFliers are
+	// the mobs a geyser has lifted, moved each tick until they come down.
+	vents        map[simPos]*sulfurVent
+	geyserFliers map[int32]*mob
 	// Trial spawners currently awake, keyed by position.
 	trials map[blockPos]*trialSpawner
 	// Trial-chamber vaults: their pose and who has already claimed each one.
@@ -1035,6 +1040,9 @@ func (h *hub) run() {
 			h.updateFurnaces(players)   // smelting progress + lit state + viewer sync
 			h.phases.lap(phaseMachines)
 			h.runRandomTicks(players) // growth: crops, cane, cactus, saplings, grass, leaves
+			if len(players) > 0 {
+				h.potentSulfurTick(players) // gas vents and geysers (block entities in loaded chunks)
+			}
 			h.phases.lap(phaseRandomTicks)
 			// Vanilla ticks entities only in loaded chunks, and chunks load around
 			// players — so an empty server ticks no mobs at all. Gated here at the
@@ -1363,6 +1371,7 @@ func (h *hub) run() {
 				h.noteConduitBlock(e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				h.turtleEggPlayerBroken(players, e)
 				h.fireBesideHives(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
+				h.potentSulfurChanged(players, e.dim, blockPos{e.x, e.y, e.z}, e.broken, e.state)
 				if e.broken == 0 && isWoodShelf(e.state) {
 					h.shelfPlaced(players, e.dim, blockPos{e.x, e.y, e.z}, e.state)
 				}
@@ -2739,6 +2748,7 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
 	}
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
+	h.potentSulfurChanged(players, dim, blockPos{x, y, z}, old, state)
 	h.bus.publish("block_change", map[string]any{"x": x, "y": y, "z": z, "state": state, "by": "world"})
 }
 

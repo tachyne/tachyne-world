@@ -18,12 +18,13 @@ import (
 type shapeKind uint8
 
 const (
-	shapeNone        shapeKind = iota
-	shapeSnowy                 // SnowyBlock: grass, podzol, mycelium
-	shapeGate                  // FenceGateBlock: in_wall
-	shapeAttached              // AttachedStemBlock: back to a grown stem without its fruit
-	shapeMushroom              // HugeMushroomBlock: faces against more of itself
-	shapeCopperChest           // CopperChestBlock: one half follows the other's weathering and wax
+	shapeNone         shapeKind = iota
+	shapeSnowy                  // SnowyBlock: grass, podzol, mycelium
+	shapeGate                   // FenceGateBlock: in_wall
+	shapeAttached               // AttachedStemBlock: back to a grown stem without its fruit
+	shapeMushroom               // HugeMushroomBlock: faces against more of itself
+	shapeCopperChest            // CopperChestBlock: one half follows the other's weathering and wax
+	shapePotentSulfur           // PotentSulfurBlock: dry, wet or a geyser by the water above and the block below
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -48,6 +49,7 @@ var shapeKinds = func() map[uint32]shapeKind {
 	for _, n := range []string{"brown_mushroom_block", "red_mushroom_block", "mushroom_stem"} {
 		add(n, shapeMushroom)
 	}
+	add("potent_sulfur", shapePotentSulfur)
 	for _, n := range worldgen.AllBlockNames() {
 		if strings.HasSuffix(n, "_fence_gate") {
 			add(n, shapeGate)
@@ -136,6 +138,10 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 			i += 4
 		}
 		return copperChestBases[i] + so, true
+	case shapePotentSulfur:
+		// PotentSulfurBlock.updateShape re-derives the whole state from any
+		// side; only the cells above and below can change it.
+		return potentSulfurValid(w, n, st), true
 	}
 	return st, true
 }

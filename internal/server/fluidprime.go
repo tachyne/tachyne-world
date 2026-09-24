@@ -55,7 +55,9 @@ func (h *hub) primeFluids(players map[int32]*tracked) {
 				for _, p := range w.UnstableFluids(x, z) {
 					h.scheduleIn(t.dim, blockPos{p[0], p[1], p[2]}, 1)
 				}
-				for _, e := range w.EditedBlocks(x, z) {
+				edits := w.EditedBlocks(x, z)
+				h.discoverVents(t.dim, w, x, z, edits) // potent sulfur: generated or placed
+				for _, e := range edits {
 					if worldgen.IsFluid(e.State) || worldgen.IsWaterlogged(e.State) || isFire(e.State) || worldgen.IsFalling(e.State) {
 						h.scheduleIn(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ}, 1)
 					}

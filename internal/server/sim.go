@@ -167,6 +167,12 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A full composter finishes composting a second after its last item.
 	case h.tickDripleaf(players, dim, pos, state):
 		// A big dripleaf tipping under a load, or pinned flat by a signal.
+	case isPotentSulfur(state):
+		// A neighbour changed without a shape update of its own (a bucket's
+		// water, a live edit): the vent re-derives its state.
+		if ns := potentSulfurValid(h.worldFor(dim), pos, state); ns != state {
+			h.setBlockAt(players, dim, pos, ns)
+		}
 	default:
 		h.inDim(dim, func() { h.updateRedstone(players, pos, state) })
 	}
@@ -190,6 +196,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	h.broadcastBlockIn(players, dim, pos.x, pos.y, pos.z, state)
 	h.spillContainer(players, dim, pos.x, pos.y, pos.z, state)
 	h.afterRemoval(players, dim, pos, old, state)
+	h.potentSulfurChanged(players, dim, pos, old, state) // the block entity: registry, reset, onPlace
 	// Vanilla's setBlock notifies the neighbours, and a block that just lost
 	// its floor, wall or ceiling comes down (updateShape → canSurvive). This
 	// is every engine-driven change — fluid washing a cell out, a piston, a

@@ -891,3 +891,24 @@ func floorDiv(a, b int) int {
 func (w *World) UnstableFluids(cx, cz int32) [][3]int {
 	return worldgen.UnstableFluids(w.generated(cx, cz), cx, cz)
 }
+
+// GeneratedStatesIn lists the cells of a chunk's GENERATED base whose state
+// lies in [lo, hi], in world coordinates: how the server finds the block
+// entities generation placed (potent sulfur in the sulfur caves) the first
+// time it loads the chunk. Edits are not consulted; the caller re-reads the
+// live cell. A section is skipped with one comparison pass when it holds none.
+func (w *World) GeneratedStatesIn(cx, cz int32, lo, hi uint32) [][3]int {
+	ch := w.generated(cx, cz)
+	var out [][3]int
+	for s := range ch.Sections {
+		sec := &ch.Sections[s]
+		for i, v := range sec {
+			if v < lo || v > hi {
+				continue
+			}
+			lx, lz, y := i%16, (i/16)%16, worldgen.MinY+s*16+i/256
+			out = append(out, [3]int{int(cx)*16 + lx, y, int(cz)*16 + lz})
+		}
+	}
+	return out
+}

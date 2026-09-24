@@ -75,7 +75,11 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	// The engine floats an item ON a water surface (the cell above is air)
 	// instead of vanilla's bob just under it; a surfaced item still counts as
 	// in the water below for the current.
-	afloat := !worldgen.IsWater(cell) && it.y == float64(fy) && worldgen.IsWater(below) && !worldgen.IsBubbleColumn(below)
+	// A geyser's lift carries it out through the surface the engine would
+	// otherwise float it on (potentsulfur.go).
+	lifted := it.geyser
+	it.geyser = false
+	afloat := !lifted && !worldgen.IsWater(cell) && it.y == float64(fy) && worldgen.IsWater(below) && !worldgen.IsBubbleColumn(below)
 	grounded := it.y == float64(fy) && worldgen.Collides(below)
 	switch {
 	case cell == worldgen.BubbleColumnUp:
@@ -124,7 +128,7 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 			switch {
 			case worldgen.Collides(w.At(fx, nfy, fz)):
 				ny, it.vy = float64(nfy)-1e-3, 0 // a ceiling
-			case inWater && !worldgen.IsWater(w.At(fx, nfy, fz)):
+			case inWater && !lifted && !worldgen.IsWater(w.At(fx, nfy, fz)):
 				ny, it.vy = float64(nfy), 0 // surfaced: rest on the water (the engine's bob-free float)
 			}
 		}

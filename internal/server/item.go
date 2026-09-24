@@ -58,6 +58,7 @@ type itemEntity struct {
 	stew          int8        // suspicious stew's hidden flower (0 = none) — was lost on the floor until 2026-09-11
 	sherds        potSherds   // a decorated pot's four faces, carried by the dropped stack
 	flight        int8        // a firework rocket's flight duration
+	geyser        bool        // a geyser lifted it this tick: it may leave the water's surface
 	starID        int32       // a firework's bursts
 	shieldBase    int8        // a decorated shield's banner base (dye + 1)
 	cube          cubeContent // a sulfur cube bucket's cube

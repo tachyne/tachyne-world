@@ -490,6 +490,9 @@ type mob struct {
 	lookDZ      float64
 	vx, vz      float64
 	vy          float64  // vertical velocity (swimmers/fliers only)
+	geyserFly   bool     // lifted by a geyser's column (potentsulfur.go) until it comes down
+	geyserVY    float64  // …its vertical motion per tick
+	geyserFall  float64  // …and the fall distance it has built up
 	pushX       float64  // crowding shove (push.go), held apart from the steering
 	pushZ       float64  // velocity so a shoved mob does not turn to face the shove
 	cramCD      int      // mob-updates until this mob can take cramming damage again
@@ -915,6 +918,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		switch {
 		case m.statik:
 			m.vx, m.vz = 0, 0 // anchored (shulker)
+		case m.geyserFly:
+			m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
 		case m.leaping:
 			h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
 		case m.etype == entityGoat && m.goatJumping:

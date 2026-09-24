@@ -463,6 +463,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			state = crafterPlacedState(defState, p.yaw, p.pitch)
 		case isBamboo(defState): // bamboo: a sapling on soil, a stalk on a stalk
 			state, lookPlaced = bambooPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, target)
+		case isPotentSulfur(defState): // potent sulfur: dry, wet or a geyser by what is above and below
+			state = potentSulfurValid(s.worldFor(p), blockPos{tx, ty, tz}, defState)
 		case defState == dirtPathState: // a covered path goes down as dirt
 			state = dirtPathPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState)
 		case isGrowingPlantHead(defState): // kelp and the vines: head or body by the plant ahead
