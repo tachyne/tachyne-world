@@ -58,6 +58,11 @@ the public history since the project was open-sourced on 2026-07-10.
   or the target is immune.
 
 ### Fixed
+- **Dropped items work their way out of blocks.** An item lying where a
+  block was then placed stayed buried inside it. As in vanilla, it now
+  slides out of the nearest open side, or rises out of the top if it is
+  walled in. Items floating up under a ceiling also stop at the ceiling
+  instead of sinking into it.
 - **Mobs no longer walk into tall walls.** A wall more than eight blocks high
   looked like flat ground to a walking mob, so a sheep could wander into a
   player's wall and turn black inside it. Mobs now step only where their

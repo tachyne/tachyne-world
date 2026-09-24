@@ -111,9 +111,20 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		}
 	}
 
+	// ItemEntity.tick: an item inside a block (one was placed over it, or
+	// it was pushed in) moves through it toward the nearest open side, with
+	// collisions off until it is out (noPhysics + moveTowardsClosestSpace).
+	noPhysics := false
+	if mid := int(math.Floor(it.y + itemHalfHeight)); worldgen.Collides(w.At(fx, mid, fz)) {
+		noPhysics = true
+		h.itemTowardsClosestSpace(w, it, it.x, it.y+itemHalfHeight, it.z)
+	}
+
 	// Vertical move, landing on the first solid cell passed on the way down
 	// or stopping under a ceiling on the way up.
-	if it.vy < 0 {
+	if noPhysics {
+		it.y += it.vy
+	} else if it.vy < 0 {
 		ny := it.y + it.vy
 		for cy := fy - 1; cy >= int(math.Floor(ny)); cy-- {
 			if worldgen.Collides(w.At(fx, cy, fz)) {
@@ -124,10 +135,15 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		it.y = ny
 	} else if it.vy > 0 {
 		ny := it.y + it.vy
-		if nfy := int(math.Floor(ny)); nfy != fy {
+		// A box whose top sits exactly on a face is still below it (1e-7,
+		// vanilla's own collision epsilon), so the item resting under a
+		// ceiling does not creep into it.
+		if top := int(math.Floor(ny + 2*itemHalfHeight - 1e-7)); top != int(math.Floor(it.y+2*itemHalfHeight-1e-7)) && worldgen.Collides(w.At(fx, top, fz)) {
+			ny, it.vy = float64(top)-2*itemHalfHeight, 0 // a ceiling meets the top of the box
+		} else if nfy := int(math.Floor(ny)); nfy != fy {
 			switch {
 			case worldgen.Collides(w.At(fx, nfy, fz)):
-				ny, it.vy = float64(nfy)-1e-3, 0 // a ceiling
+				ny, it.vy = float64(nfy)-2*itemHalfHeight, 0 // a ceiling
 			case inWater && !lifted && !worldgen.IsWater(w.At(fx, nfy, fz)):
 				ny, it.vy = float64(nfy), 0 // surfaced: rest on the water (the engine's bob-free float)
 			}
@@ -136,14 +152,17 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	}
 	// Horizontal moves stop at a wall (the axis's speed dies there).
 	cy := int(math.Floor(it.y))
-	if it.vx != 0 {
+	if noPhysics {
+		it.x += it.vx
+		it.z += it.vz
+	} else if it.vx != 0 {
 		if nx := it.x + it.vx; worldgen.Collides(w.At(int(math.Floor(nx)), cy, fz)) {
 			it.vx = 0
 		} else {
 			it.x = nx
 		}
 	}
-	if it.vz != 0 {
+	if it.vz != 0 && !noPhysics {
 		if nz := it.z + it.vz; worldgen.Collides(w.At(fx, cy, int(math.Floor(nz)))) {
 			it.vz = 0
 		} else {
@@ -235,4 +254,43 @@ func (h *hub) fluidFlow(dim int, pos blockPos) (x, y, z float64, ok bool) {
 		return 0, 0, 0, false
 	}
 	return fx / n, fy / n, fz / n, true
+}
+
+// itemHalfHeight is half the item's 0.25 box: the bounding box's middle,
+// where vanilla measures which block the item is stuck in.
+const itemHalfHeight = 0.125
+
+// itemTowardsClosestSpace is Entity.moveTowardsClosestSpace: of the four
+// sides and the top of the block at (x, y, z) that are not a full cube,
+// the one nearest the item sets its speed on that axis to 0.1–0.3 outward;
+// the other axes keep three quarters of theirs. Up wins when nothing is
+// open, as in vanilla.
+func (h *hub) itemTowardsClosestSpace(w *world.World, it *itemEntity, x, y, z float64) {
+	px, py, pz := int(math.Floor(x)), int(math.Floor(y)), int(math.Floor(z))
+	dx, dy, dz := x-float64(px), y-float64(py), z-float64(pz)
+	type side struct {
+		off  [3]int
+		dist float64
+	}
+	best := side{[3]int{0, 1, 0}, math.MaxFloat64}
+	for _, s := range []side{ // NORTH, SOUTH, WEST, EAST, UP
+		{[3]int{0, 0, -1}, dz}, {[3]int{0, 0, 1}, 1 - dz},
+		{[3]int{-1, 0, 0}, dx}, {[3]int{1, 0, 0}, 1 - dx},
+		{[3]int{0, 1, 0}, 1 - dy},
+	} {
+		if !worldgen.IsFullCube(w.At(px+s.off[0], py+s.off[1], pz+s.off[2])) && s.dist < best.dist {
+			best = s
+		}
+	}
+	speed := h.rng.Float64()*0.2 + 0.1
+	vx, vy, vz := it.vx*0.75, it.vy*0.75, it.vz*0.75
+	switch {
+	case best.off[0] != 0:
+		vx = float64(best.off[0]) * speed
+	case best.off[1] != 0:
+		vy = speed
+	default:
+		vz = float64(best.off[2]) * speed
+	}
+	it.vx, it.vy, it.vz = vx, vy, vz
 }
