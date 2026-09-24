@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-24
 
 ### Fixed
+- **More blocks behave as in vanilla.**
+  - A comparator reads a candle cake as a whole cake.
+  - Ravagers trample pitcher crops.
+  - Breaking a clutch of turtle eggs takes one egg at a time.
+  - TNT, creepers and withers let a hive's bees out, and a fire lit beside
+    a hive empties it.
+  - A shot chorus flower breaks and drops.
+  - Boats break the lily pads they run into.
+  - Copper chests pair whatever their oxidation.
+  - A head can be placed on top of a note block.
+  - A powered dragon head moves its jaw and a piglin head flaps its ears.
 - **Decorated pots shatter.** A pot broken with a tool, or by an arrow or
   a trident, cracks and drops its sherds, with a brick for each plain side,
   as in vanilla. Break it by hand or with Silk Touch to keep the pot whole.
