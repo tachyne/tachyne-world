@@ -141,7 +141,11 @@ func (h *hub) setSleeping(players map[int32]*tracked, t *tracked, pos blockPos) 
 		o.p.trySendEv(metaEv(body))
 	}
 	h.advance(players, t, "slept_in_bed", advMatch{})
-	h.incCustom(t, "sleep_in_bed", 1)
+	stat := "sleep_in_bed"
+	if h.isStrawBedAt(t.dim, pos) { // AbstractBedBlock.getSleptInBedStatType
+		stat = "sleep_in_straw_bed"
+	}
+	h.incCustom(t, stat, 1)
 	// Vanilla resets the insomnia clock on GETTING IN, not on waking — lying
 	// down is what buys off the phantoms, even if something wakes you early.
 	h.resetCustom(t, "time_since_rest")
@@ -156,6 +160,7 @@ func (h *hub) wakePlayer(players map[int32]*tracked, t *tracked) {
 	t.sleeping = false
 	bed := t.sleepPos
 	h.setBedOccupied(players, t.dim, bed, false)
+	straw := h.isStrawBedAt(t.dim, bed)
 	// LivingEntity.stopSleeping: you get OUT of the bed, beside it, turned to
 	// face it. Leaving the player standing in the bed's own cell is what made
 	// waking look like nothing had happened.
@@ -163,6 +168,13 @@ func (h *hub) wakePlayer(players map[int32]*tracked, t *tracked) {
 		t.x, t.y, t.z = x, y, z
 		t.yaw = bedFacingAwayFrom(bed, x, z)
 		t.pitch = 0
+	}
+	// AbstractBedBlock.onStopSleeping: a straw bed's rule in the overworld is
+	// DESTROY_ON_LEAVE — one night uses it up, however the night ended.
+	// Vanilla read the facing first, so the stand-up spot is found from the
+	// bed as it was; here that means finding it before the bed goes.
+	if straw {
+		h.destroyStrawBed(players, t.dim, bed)
 	}
 	body := wakeMetadata(t.p.eid)
 	t.p.trySendEv(metaEv(body))
@@ -282,6 +294,14 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 	if t.dead {
 		return
 	}
+	if !bedWorks(t.dim) && h.isStrawBedAt(t.dim, pos) {
+		// StrawBedBlock.destroyOnUse: outside the overworld a straw bed is not
+		// a bomb, it just falls apart — from the head, whichever end was used.
+		if head, ok := h.bedHead(t.dim, pos); ok {
+			h.destroyStrawBed(players, t.dim, head)
+		}
+		return
+	}
 	if !bedWorks(t.dim) {
 		// BedBlock.useWithoutItem: outside the overworld a bed is a bomb. Both
 		// halves go first, then the blast — so the bed cannot be relit by the
@@ -317,7 +337,7 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 		t.p.trySendEv(actionBarEv("This bed is obstructed")) // bedBlocked: a suffocating block above either half
 		return
 	}
-	if h.spawns != nil { // setRespawnPosition(…, true): the message only when it changes
+	if h.spawns != nil && !h.isStrawBedAt(t.dim, head) { // a straw bed's rule is canSetSpawn NEVER; setRespawnPosition(…, true): the message only when it changes
 		if cur, dim, had := h.spawns.get(t.p.key()); !had || cur != head || dim != t.dim {
 			h.spawns.set(t.p.key(), head, t.dim)
 			t.p.trySendEv(chatEv("Respawn point set"))
@@ -505,7 +525,7 @@ func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend
 				// ServerPlayer.findRespawnAndUseSpawnBlock: stand up beside the
 				// bed or anchor (findStandUpPosition); with nowhere free around
 				// it the spawn point is obstructed and the world spawn is used.
-				if info, ok2 := worldgen.InfoForState(state); ok2 && isBed(info) && bedWorks(dim) {
+				if info, ok2 := worldgen.InfoForState(state); ok2 && isBed(info) && bedWorks(dim) && !isStrawBed(state) {
 					if x, y, z, ok := h.bedStandUpIn(dim, t.yaw, pos); ok {
 						return x, y, z, dim
 					}
@@ -595,4 +615,29 @@ func (h *hub) sendDefaultSpawn(t *tracked) {
 	// renderer fills in for 1.21.9+, where the packet carries a GlobalPos.
 	t.p.trySendEv(attachproto.DefaultSpawn{X: floorInt(x), Y: floorInt(y), Z: floorInt(z),
 		Angle: h.worldSpawnYaw, Pitch: h.worldSpawnPitch})
+}
+
+// Straw beds (26.3) share the bed's shape and sleeping but not its rules: they
+// never set a spawn point, are used up when the sleeper gets out, and outside
+// the overworld break on use instead of exploding.
+var strawBedLo, strawBedHi, strawBedOK = worldgen.BlockRangeOK("straw_bed")
+
+func isStrawBed(state uint32) bool {
+	return strawBedOK && state >= strawBedLo && state <= strawBedHi
+}
+
+func (h *hub) isStrawBedAt(dim int, pos blockPos) bool {
+	w := h.worldFor(dim)
+	return w != nil && isStrawBed(w.Block(pos.x, pos.y, pos.z))
+}
+
+// destroyStrawBed is StrawBedBlock.destroyBed: the break_leave sound and the
+// head set to air with no drop. The foot goes with it (its updateShape loses
+// the head it hangs off, and the loot table only drops from the head).
+func (h *hub) destroyStrawBed(players map[int32]*tracked, dim int, head blockPos) {
+	h.playSoundDim(players, dim, "minecraft:block.straw_bed.break_leave", sndBlock,
+		float64(head.x)+0.5, float64(head.y)+0.5, float64(head.z)+0.5, 1, 1)
+	for _, p := range h.bedHalves(dim, head) {
+		h.setBlockAt(players, dim, p, worldgen.Air)
+	}
 }

@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Straw beds follow their own rules.** A straw bed lets you sleep through
+  the night in the overworld but never sets your spawn point, and it falls
+  apart when you get up. In the Nether and the End it breaks when used
+  instead of exploding. Sleeping in one counts towards its own statistic.
 - **/tp … facing.** `/tp <targets> <x y z> facing <x y z>` and
   `facing entity <target> [eyes|feet]` turn whoever is moved to look at the
   point, and `/tp` now takes a player into another dimension, as in vanilla.
