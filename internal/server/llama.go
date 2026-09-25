@@ -88,10 +88,13 @@ func (h *hub) spitAt(players map[int32]*tracked, m *mob, tx, ty, tz float64) {
 // llama's forty.
 const llamaWolfRange = 10.0
 
-// llamaWolfTick is LlamaAttackWolfGoal driving the llama's RangedAttackGoal:
-// now and then (one in sixteen ticks) a llama picks the nearest wild wolf
-// within ten blocks and spits at it on the ranged cadence while it stays in
-// reach and in sight.
+// llamaWolfTick is the llama's mob targets driving its RangedAttackGoal:
+// LlamaAttackWolfGoal now and then (one in sixteen ticks) picks the nearest
+// wild wolf within ten blocks; a trader llama adds TraderLlama's
+// NearestAttackableTargetGoals for zombies (not zombified piglins) and
+// illagers, in sight within its follow range, and whatever hurt the trader
+// it is leashed to (traderLlamasDefendMob). It spits on the ranged cadence
+// while the target stays in reach and in sight.
 func (h *hub) llamaWolfTick(players map[int32]*tracked, m *mob) {
 	if m.hostile || m.dying > 0 || m.rider != 0 {
 		return
@@ -101,29 +104,66 @@ func (h *hub) llamaWolfTick(players map[int32]*tracked, m *mob) {
 		return
 	}
 	w := h.mobs[m.llamaWolf]
-	if w == nil || w.dying > 0 || w.tamed || w.dim != m.dim || dist3(w.x, w.y, w.z, m.x, m.y, m.z) > llamaWolfRange {
+	keep := llamaWolfRange
+	if w != nil && w.etype != entityWolf {
+		keep = m.followRange() // a TargetGoal holds on out to the follow range
+	}
+	if w == nil || w.dying > 0 || (w.etype == entityWolf && w.tamed) || w.dim != m.dim || dist3(w.x, w.y, w.z, m.x, m.y, m.z) > keep {
 		m.llamaWolf, w = 0, nil
-		if h.rng.Intn(16/mobMoveInterval) != 0 {
-			return
+		if m.etype == entityTraderLlama && h.rng.Intn(10/mobMoveInterval) == 0 {
+			w = h.traderLlamaFoe(m)
 		}
-		best := llamaWolfRange
-		h.grid().nearby(m.dim, m.x, m.z, llamaWolfRange, func(o *mob) {
-			if o.etype == entityWolf && !o.tamed && o.dying == 0 {
-				if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < best {
-					w, best = o, d
+		if w == nil && h.rng.Intn(16/mobMoveInterval) == 0 {
+			best := llamaWolfRange
+			h.grid().nearby(m.dim, m.x, m.z, llamaWolfRange, func(o *mob) {
+				if o.etype == entityWolf && !o.tamed && o.dying == 0 {
+					if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < best {
+						w, best = o, d
+					}
 				}
-			}
-		})
+			})
+		}
 		if w == nil {
 			return
 		}
 		m.llamaWolf = w.eid
 	}
-	if !h.mobSeesMob(m, w) {
+	if !h.mobSeesMob(m, w) || dist3(w.x, w.y, w.z, m.x, m.y, m.z) > llamaSpitRange {
 		return
 	}
 	m.attackCD = llamaSpitCooldown
 	h.spitAt(players, m, w.x, w.y+0.3, w.z)
+}
+
+// traderLlamaFoe is TraderLlama's two NearestAttackableTargetGoals (mustSee):
+// the nearest Zombie that is not a zombified piglin, or AbstractIllager,
+// within the llama's follow range.
+func (h *hub) traderLlamaFoe(m *mob) *mob {
+	var foe *mob
+	best := m.followRange()
+	h.grid().nearby(m.dim, m.x, m.z, best, func(o *mob) {
+		if o.dying > 0 || !(zombieKind(o.etype) || isIllager(o.etype)) { // zombieKind already leaves out the zombified piglin
+			return
+		}
+		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < best && h.mobSeesMob(m, o) {
+			foe, best = o, d
+		}
+	})
+	return foe
+}
+
+// traderLlamasDefendMob is TraderLlamaDefendWanderingTraderGoal for a mob
+// attacker: the trader's getLastHurtByMob is whatever hurt it, not only a
+// player, and every trader llama on its leads turns on it.
+func (h *hub) traderLlamasDefendMob(trader, a *mob) {
+	if trader.etype != entityWanderingTrader || a == nil || a.dying > 0 {
+		return
+	}
+	for _, l := range h.mobs {
+		if l.etype == entityTraderLlama && l.leash == trader.eid && l.dying == 0 && l.eid != a.eid {
+			l.llamaWolf = a.eid
+		}
+	}
 }
 
 // spitTouchesNonAir is LlamaSpit.tick's touchesNoAir test: does the gob's

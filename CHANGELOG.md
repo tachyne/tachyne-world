@@ -151,6 +151,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Goats ram what they can see.** A goat no longer rams through walls; as
   in vanilla it picks the nearest creature or player in view within
   sixteen blocks, and never one outside the world border.
+- **Trader llamas guard their trader.** A wandering trader's llamas now
+  spit at zombies and illagers they can see, and at any mob that hurts the
+  trader, not only at players, as in vanilla.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

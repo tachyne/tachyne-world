@@ -398,6 +398,8 @@ func (h *hub) mobHurtByMob(players map[int32]*tracked, v, a *mob) {
 		h.piglinHurtByMob(players, v, a)
 	case entityHoglin:
 		h.hoglinHurtByMob(v, a)
+	case entityWanderingTrader:
+		h.traderLlamasDefendMob(v, a)
 	}
 }
 
