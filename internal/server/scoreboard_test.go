@@ -113,3 +113,46 @@ func TestScoreboardTeamSidebarSlots(t *testing.T) {
 		t.Fatalf("stored display: %v", h.sb.Display)
 	}
 }
+
+// /trigger through the dispatcher: any player may use it, but only on a
+// trigger objective an operator enabled for them, and only once per enable.
+func TestTriggerCommand(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice, carol := ps["alice"], ps["carol"]
+
+	s.handleCommand(alice, "scoreboard objectives add bonus trigger Bonus")
+	s.handleCommand(alice, "scoreboard objectives add kills dummy")
+	s.handleCommand(carol, "trigger bonus")
+	s.handleCommand(carol, "trigger kills")
+	s.handleCommand(alice, "scoreboard players enable carol bonus")
+	s.handleCommand(carol, "trigger bonus set 5")
+	s.handleCommand(carol, "trigger bonus")
+	s.handleCommand(alice, "scoreboard players enable carol bonus")
+	s.handleCommand(carol, "trigger bonus add 2")
+	settle(t, h, logs, "T1")
+	c := linesBetween(logs["carol"], "", "T1")
+	for _, want := range []string{
+		"You cannot trigger this objective yet",
+		"You can only trigger objectives that are 'trigger' type",
+		"Triggered [Bonus] (set value to 5)",
+		"Triggered [Bonus] (added 2 to value)",
+	} {
+		if !hasLine(c, want) {
+			t.Errorf("missing %q in %q", want, c)
+		}
+	}
+	n := 0
+	for _, l := range c {
+		if l == "You cannot trigger this objective yet" {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("the trigger should refuse twice (before enable, and after use), refused %d times", n)
+	}
+	var score int32
+	onHub(t, h, func() { score = h.sb.Scores["carol"]["bonus"] })
+	if score != 7 {
+		t.Errorf("carol's bonus is %d, want 7", score)
+	}
+}

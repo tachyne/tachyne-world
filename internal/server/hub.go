@@ -1857,6 +1857,8 @@ func (h *hub) run() {
 				}
 			case evScoreboardCmd:
 				h.cmdScoreboard(players, e)
+			case evTriggerCmd:
+				h.cmdTrigger(players, e)
 			case evTeamCmd:
 				h.cmdTeam(players, e)
 			case evSignPlaced:

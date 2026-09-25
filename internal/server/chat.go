@@ -134,6 +134,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 			return
 		}
 		s.hub.post(evBorderCmd{p: p, args: fields[1:]})
+	case "trigger": // every player: the objective's enable is the permission
+		s.hub.post(evTriggerCmd{p: p, args: fields[1:]})
 	case "scoreboard":
 		if !s.isOp(p.name) {
 			p.tell("You don't have permission to use the scoreboard.")

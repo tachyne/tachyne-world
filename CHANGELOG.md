@@ -13,6 +13,13 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ## 2026-09-25
 
+### Added
+- **/trigger.** Scoreboard objectives can use the `trigger` criteria, and
+  an operator can `/scoreboard players enable <player> <objective>`; that
+  player (no operator rights needed) can then `/trigger <objective>`, or
+  `add`/`set` a value, once per enable — the vanilla way to let players
+  press a button in a map or minigame.
+
 ### Fixed
 - **Wither roses wither the undead.** Zombies, skeletons and other undead
   standing in a wither rose now get Wither, as in vanilla; only wither

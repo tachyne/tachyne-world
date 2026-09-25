@@ -42,6 +42,9 @@ type scoreboardState struct {
 	Display    [sbSlotCount]string         `json:"display"` // list, sidebar, below_name, sidebar.team.<colour>…
 	Scores     map[string]map[string]int32 `json:"scores"`  // owner → objective → value
 	Teams      map[string]*sbTeam          `json:"teams"`
+	// Unlocked is the trigger objectives each owner may /trigger once
+	// (Score.locked, false after /scoreboard players enable).
+	Unlocked map[string]map[string]bool `json:"unlocked,omitempty"`
 }
 
 // sbStore persists the board (world-level, one file).
@@ -207,7 +210,7 @@ var sbSlotNames = func() map[string]int32 {
 // sbValidCriteria is the accepted objective criteria set: dummy (command-set
 // only) plus the automatic ones the engine feeds.
 var sbValidCriteria = map[string]bool{
-	"dummy": true, "deaths": true, "totalKillCount": true,
+	"dummy": true, "trigger": true, "deaths": true, "totalKillCount": true,
 	"playerKillCount": true, "health": true,
 }
 
@@ -218,7 +221,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 	case len(a) >= 4 && a[0] == "objectives" && a[1] == "add":
 		name, criteria := a[2], a[3]
 		if !sbValidCriteria[criteria] {
-			tell("Unknown criteria (dummy, deaths, totalKillCount, playerKillCount, health)")
+			tell("Unknown criteria (dummy, trigger, deaths, totalKillCount, playerKillCount, health)")
 			return
 		}
 		if _, ok := h.sb.Objectives[name]; ok {
@@ -247,6 +250,9 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 		}
 		for _, scores := range h.sb.Scores {
 			delete(scores, name)
+		}
+		for _, un := range h.sb.Unlocked {
+			delete(un, name)
 		}
 		h.sbBroadcast(players, attachproto.Objective{Name: name, Method: attachproto.ObjRemove})
 		tell("Removed objective " + name)
@@ -294,13 +300,43 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 		}
 		h.sbSetScore(players, owner, obj, v)
 		tell(fmt.Sprintf("Set %s's %s to %d", owner, obj, v))
+	case len(a) == 4 && a[0] == "players" && a[1] == "enable":
+		// ScoreboardCommand.enableTrigger: a trigger objective only; the
+		// score is made (at 0) if the owner had none, and unlocked.
+		owner, obj := a[2], a[3]
+		o, ok := h.sb.Objectives[obj]
+		if !ok {
+			tell("No such objective")
+			return
+		}
+		if o.Criteria != "trigger" {
+			tell("Invalid objective: only 'trigger' objectives can be enabled")
+			return
+		}
+		if h.sbUnlocked(owner, obj) {
+			tell("Trigger already enabled")
+			return
+		}
+		if _, has := h.sb.Scores[owner][obj]; !has {
+			h.sbSetScore(players, owner, obj, 0)
+		}
+		if h.sb.Unlocked == nil {
+			h.sb.Unlocked = map[string]map[string]bool{}
+		}
+		if h.sb.Unlocked[owner] == nil {
+			h.sb.Unlocked[owner] = map[string]bool{}
+		}
+		h.sb.Unlocked[owner][obj] = true
+		tell(fmt.Sprintf("Enabled trigger %s for %s", obj, owner))
 	case len(a) >= 3 && a[0] == "players" && a[1] == "reset":
 		owner := a[2]
 		if len(a) > 3 {
 			delete(h.sb.Scores[owner], a[3])
+			delete(h.sb.Unlocked[owner], a[3])
 			h.sbBroadcast(players, attachproto.Score{Owner: owner, Objective: a[3], Reset: true})
 		} else {
 			delete(h.sb.Scores, owner)
+			delete(h.sb.Unlocked, owner)
 			h.sbBroadcast(players, attachproto.Score{Owner: owner, Reset: true})
 		}
 		tell("Reset " + owner)
@@ -312,7 +348,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 		sort.Strings(names)
 		tell(fmt.Sprintf("Tracked entities (%d): %s", len(names), strings.Join(names, ", ")))
 	default:
-		tell("Usage: /scoreboard objectives <add|remove|list|setdisplay> … | players <set|add|remove|reset|list> …")
+		tell("Usage: /scoreboard objectives <add|remove|list|setdisplay> … | players <set|add|remove|reset|list|enable> …")
 		return
 	}
 	h.sbDirty = true
@@ -446,4 +482,61 @@ func (h *hub) cmdTeam(players map[int32]*tracked, e evTeamCmd) {
 		return
 	}
 	h.sbDirty = true
+}
+
+type evTriggerCmd struct {
+	p    *player
+	args []string
+}
+
+func (evTriggerCmd) isHubEvent() {}
+
+func (h *hub) sbUnlocked(owner, obj string) bool { return h.sb.Unlocked[owner][obj] }
+
+// cmdTrigger is TriggerCommand, open to every player: /trigger <objective>
+// [add|set <value>] changes the player's own score on a trigger objective
+// an operator has enabled for them, once — the trigger locks again after.
+func (h *hub) cmdTrigger(players map[int32]*tracked, e evTriggerCmd) {
+	tell := func(msg string) { e.p.trySendEv(chatEv(msg)) }
+	a := e.args
+	if len(a) != 1 && len(a) != 3 {
+		tell("Usage: /trigger <objective> [add|set <value>]")
+		return
+	}
+	obj, owner := a[0], e.p.name
+	o, ok := h.sb.Objectives[obj]
+	if !ok {
+		tell("Unknown scoreboard objective '" + obj + "'")
+		return
+	}
+	if o.Criteria != "trigger" {
+		tell("You can only trigger objectives that are 'trigger' type")
+		return
+	}
+	if !h.sbUnlocked(owner, obj) {
+		tell("You cannot trigger this objective yet")
+		return
+	}
+	cur := h.sb.Scores[owner][obj]
+	v, msg := cur+1, fmt.Sprintf("Triggered [%s]", o.Title)
+	if len(a) == 3 {
+		n, err := strconv.Atoi(a[2])
+		if err != nil {
+			tell("Not a number: " + a[2])
+			return
+		}
+		switch a[1] {
+		case "add":
+			v, msg = cur+int32(n), fmt.Sprintf("Triggered [%s] (added %d to value)", o.Title, n)
+		case "set":
+			v, msg = int32(n), fmt.Sprintf("Triggered [%s] (set value to %d)", o.Title, n)
+		default:
+			tell("Usage: /trigger <objective> [add|set <value>]")
+			return
+		}
+	}
+	delete(h.sb.Unlocked[owner], obj) // Score.lock
+	h.sbSetScore(players, owner, obj, v)
+	h.sbDirty = true
+	tell(msg)
 }
