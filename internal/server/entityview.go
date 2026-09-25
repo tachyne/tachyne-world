@@ -179,6 +179,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
 		t.p.trySendEv(metaEv(sm))
 	}
+	if nv, ok := nautilusVariantEv(m); ok { // the coral zombie nautilus
+		t.p.trySendEv(nv)
+	}
 	if m.health > 0 && m.health != m.maxHP() { // hurt: its health (cracks, hearts)
 		t.p.trySendEv(metaEv(mobHealthMeta(m.eid, m.health)))
 	}

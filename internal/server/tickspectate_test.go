@@ -117,3 +117,20 @@ func TestPostEffectCommand(t *testing.T) {
 		t.Fatal("clear should empty the list")
 	}
 }
+
+// ZombieNautilus.finalizeSpawn: a warm-ocean zombie nautilus is the coral one,
+// and its viewers are told.
+func TestZombieNautilusWarmVariant(t *testing.T) {
+	h, _, players, pl := tickCmdHub(t)
+	m := &mob{etype: entityZombieNautilus, eid: 9}
+	m.variant = zombieNautilusWarm
+	drainOut(pl.p)
+	h.showMobTo(pl, m)
+	for _, ev := range drainEvs(pl.p) {
+		if nv, ok := ev.(attachproto.NautilusVariant); ok && nv.EID == 9 && nv.Variant == 1 {
+			return
+		}
+	}
+	_ = players
+	t.Fatal("no variant frame for a warm zombie nautilus")
+}

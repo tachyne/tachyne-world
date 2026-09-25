@@ -140,6 +140,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Coral zombie nautiluses.** Zombie nautiluses in warm oceans now come as
+  the coral variant, as in vanilla.
 - **Shriekers show their shriek.** A sculk shrieker's shriek now sends out
   its rings of particles along with the sound.
 - **Bedrock: falling blocks and their sounds.** Falling sand, gravel and

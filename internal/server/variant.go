@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"strings"
 
 	"github.com/tachyne/tachyne-common/protocol"
@@ -459,6 +460,13 @@ func (h *hub) rollVariant(m *mob) {
 		m.variant = h.groupVariant(m, func() int32 { return int32(h.rng.Intn(llamaCoats)) })
 	case entityParrot:
 		m.variant = int32(h.rng.Intn(parrotColours))
+	case entityZombieNautilus:
+		// ZombieNautilus.finalizeSpawn: the warm (coral) variant in
+		// #spawns_coral_variant_zombie_nautilus — the warm ocean — else
+		// temperate. Synced through its own frame (nautilusVariantEv).
+		if h.spawnBiome(m) == "minecraft:warm_ocean" {
+			m.variant = zombieNautilusWarm
+		}
 	case entityRabbit:
 		m.variant = h.groupVariant(m, func() int32 { return rabbitVariantFor(h.spawnBiome(m), h.rng.Intn(100)) })
 	case entityFox:
@@ -708,4 +716,15 @@ func registryNameOf(ids map[string]int32, id int32) string {
 		}
 	}
 	return ""
+}
+
+// zombieNautilusWarm is the warm variant's registry id (temperate is 0).
+const zombieNautilusWarm = 1
+
+// nautilusVariantEv is a zombie nautilus's variant, for its viewers.
+func nautilusVariantEv(m *mob) (attachproto.NautilusVariant, bool) {
+	if m.etype != entityZombieNautilus || m.variant == 0 {
+		return attachproto.NautilusVariant{}, false
+	}
+	return attachproto.NautilusVariant{EID: m.eid, Variant: m.variant}, true
 }
