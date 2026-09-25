@@ -51,6 +51,9 @@ type Generator struct {
 	// generated tree that would grow into a player's build is not grown
 	// (treeguard.go). nil = no edits (tests, tools).
 	editAt func(x, y, z int) (uint32, bool)
+	// editsIn walks one chunk's edits (world coordinates): the region form of
+	// editAt, for the build guard's area checks (buildguard.go).
+	editsIn func(cx, cz int32, fn func(x, y, z int, state uint32))
 }
 
 // SetCeiling raises the world ceiling to maxY (exclusive top build limit,
@@ -69,6 +72,11 @@ func (g *Generator) SetCeiling(maxY int) {
 
 // SetEditLookup gives generation the world's edit overlay (see editAt).
 func (g *Generator) SetEditLookup(f func(x, y, z int) (uint32, bool)) { g.editAt = f }
+
+// SetEditRegion gives generation the per-chunk edit walk (see editsIn).
+func (g *Generator) SetEditRegion(f func(cx, cz int32, fn func(x, y, z int, state uint32))) {
+	g.editsIn = f
+}
 
 // SectionCount is the world's column height in 16-block sections.
 func (g *Generator) SectionCount() int { return g.sections }

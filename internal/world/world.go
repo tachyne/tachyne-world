@@ -109,6 +109,7 @@ func New(seed int64) *World {
 	}
 	// Generated trees are not grown into player builds (worldgen/treeguard.go).
 	w.gen.SetEditLookup(w.EditAt)
+	w.gen.SetEditRegion(w.ForEachEditIn)
 	return w
 }
 
@@ -151,6 +152,7 @@ func NewEnd(seed int64, store Store) (*World, error) {
 	w := New(seed)
 	w.gen = worldgen.NewEndGenerator(seed)
 	w.gen.SetEditLookup(w.EditAt)
+	w.gen.SetEditRegion(w.ForEachEditIn)
 	w.noSky = true
 	w.dimTag = "e."
 	w.store = store
@@ -171,6 +173,7 @@ func NewNether(seed int64, store Store) (*World, error) {
 	w := New(seed)
 	w.gen = worldgen.NewNetherGenerator(seed)
 	w.gen.SetEditLookup(w.EditAt)
+	w.gen.SetEditRegion(w.ForEachEditIn)
 	w.noSky = true
 	w.store = store
 	if store != nil {
@@ -498,6 +501,18 @@ func (w *World) EditedBlocks(cx, cz int32) []EditedBlock {
 		out = append(out, EditedBlock{lx, y, lz, state})
 	}
 	return out
+}
+
+// ForEachEditIn calls fn for every edit in one chunk, at world coordinates —
+// generation's build guard (worldgen/buildguard.go) reads builds through it.
+// fn runs under the read lock and must not call back into the world.
+func (w *World) ForEachEditIn(cx, cz int32, fn func(x, y, z int, state uint32)) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	for idx, state := range w.edits[chunkPos{cx, cz}] {
+		lx, y, lz := splitIndex(idx)
+		fn(int(cx)*16+lx, y, int(cz)*16+lz, state)
+	}
 }
 
 // EditedChunks lists every chunk that holds player edits — the scan surface for
