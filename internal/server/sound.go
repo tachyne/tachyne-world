@@ -184,9 +184,6 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 		// a suffix on the entity.wolf sound names.
 		v := "minecraft:entity.wolf" + wolfSoundSuffix(m)
 		hurt, death, ambient = v+".hurt", v+".death", v+".ambient"
-	case entityCopperGolem: // CopperGolemOxidationLevels: weathered and oxidized golems have their own voice
-		v := copperGolemVoice(m)
-		hurt, death = v+".hurt", v+".death"
 	case entityNautilus: // Nautilus: its own voice under water, the land one out of it, the baby's own
 		p := "minecraft:entity.nautilus."
 		if m.baby {

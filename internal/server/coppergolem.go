@@ -95,7 +95,7 @@ func (h *hub) copperGolemToStatue(players map[int32]*tracked, m *mob, x, y, z in
 	}
 	h.setBlockAt(players, m.dim, blockPos{x, y, z}, state)
 	h.despawnMob(players, m)
-	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem_become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundDim(players, m.dim, "minecraft:entity.copper_golem.become_statue", sndNeutral, m.x, m.y, m.z, 1, 1)
 }
 
 // tryCopperGolem: honeycomb waxes the golem (stops oxidation); an axe un-waxes or
@@ -358,17 +358,4 @@ func depositIntoChest(c *chest, s invStack) invStack {
 		}
 	}
 	return s // no room — keep carrying
-}
-
-// copperGolemVoice is CopperGolemOxidationLevels' sound set for the golem's
-// weather state: unaffected and exposed share the plain voice, weathered and
-// oxidized each have their own.
-func copperGolemVoice(m *mob) string {
-	switch m.oxidation {
-	case 2:
-		return "minecraft:entity.copper_golem_weathered"
-	case 3:
-		return "minecraft:entity.copper_golem_oxidized"
-	}
-	return "minecraft:entity.copper_golem"
 }
