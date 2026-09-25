@@ -260,3 +260,25 @@ func TestDifficultyQuery(t *testing.T) {
 		}
 	}
 }
+
+// /spawnpoint: operators only, for a named target, at a given position.
+func TestSpawnpointCommand(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	onHub(t, h, func() { h.spawns = newSpawnStore(t.TempDir() + "/spawns.json") })
+	alice, carol := ps["alice"], ps["carol"]
+	s.handleCommand(carol, "spawnpoint")
+	s.handleCommand(alice, "spawnpoint bob 10 70 -5")
+	settle(t, h, logs, "S1")
+	if !hasLine(linesBetween(logs["carol"], "", "S1"), "You don't have permission.") {
+		t.Error("a non-operator set a spawn point")
+	}
+	if !hasLine(linesBetween(logs["alice"], "", "S1"), "Set spawn point to 10, 70, -5 [0.0, 0.0] in minecraft:overworld for bob") {
+		t.Errorf("alice's reply: %q", linesBetween(logs["alice"], "", "S1"))
+	}
+	var pos blockPos
+	var ok bool
+	onHub(t, h, func() { pos, _, ok = h.spawns.get(h.playersRef[ps["bob"].eid].p.key()) })
+	if !ok || pos != (blockPos{10, 70, -5}) {
+		t.Fatalf("bob's spawn is %v (ok %v)", pos, ok)
+	}
+}

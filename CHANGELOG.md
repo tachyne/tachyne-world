@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/spawnpoint takes targets and a position.** Operators can set any
+  player's spawn point, at a given position and in whichever dimension they
+  are in, as in vanilla; it was open to everyone and only ever set your own,
+  where you stood, in the overworld.
 - **/xp does everything vanilla's does.** `/xp` (and `/experience`) can
   add, set or query a player's experience in points or levels; a bare
   number means points, as in vanilla, and taking points away drops levels.

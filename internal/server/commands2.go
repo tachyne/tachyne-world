@@ -4,6 +4,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -146,26 +147,79 @@ func (h *hub) onClearInv(players map[int32]*tracked, e evClearInv) {
 	}
 }
 
-// cmdSpawnpoint sets the caller's respawn point to where they stand.
+// cmdSpawnpoint is SetSpawnCommand: /spawnpoint [targets] [pos] [yaw pitch]
+// sets the targets' (by default the caller's) respawn point in the caller's
+// dimension, at the caller's position unless one is given.
 func (s *Server) cmdSpawnpoint(p *player, args []string) {
-	s.hub.post(evSetSpawnpoint{eid: p.eid})
+	if !s.isOp(p.name) { // LEVEL_GAMEMASTERS
+		p.tell("You don't have permission.")
+		return
+	}
+	const usage = "Usage: /spawnpoint [<targets> [<x> <y> <z> [<yaw> <pitch>]]]"
+	e := evSetSpawnpoint{eid: p.eid, target: p.name,
+		pos: blockPos{floorInt(p.x), floorInt(p.y), floorInt(p.z)}}
+	switch len(args) {
+	case 0:
+	case 1, 4, 6:
+		e.target = args[0]
+		if len(args) >= 4 {
+			x, y, z, ok := parsePosition(args[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
+			if !ok {
+				p.tell(usage)
+				return
+			}
+			e.pos = blockPos{floorInt(x), floorInt(y), floorInt(z)}
+		}
+		if len(args) == 6 {
+			yaw, ok1 := parseCoord(args[4], float64(p.yaw))
+			pitch, ok2 := parseCoord(args[5], float64(p.pitch))
+			if !ok1 || !ok2 {
+				p.tell(usage)
+				return
+			}
+			e.yaw, e.pitch = float32(math.Remainder(yaw, 360)), float32(math.Max(-90, math.Min(90, pitch)))
+		}
+	default:
+		p.tell(usage)
+		return
+	}
+	s.hub.post(e)
 }
 
-type evSetSpawnpoint struct{ eid int32 }
+type evSetSpawnpoint struct {
+	eid        int32
+	target     string
+	pos        blockPos
+	yaw, pitch float32
+}
 
 func (evSetSpawnpoint) isHubEvent() {}
 
+var dimensionNames = [...]string{"minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"}
+
 func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
-	t := players[e.eid]
-	if t == nil || t.dim != 0 {
-		if t != nil {
-			t.p.trySendEv(chatEv("Spawn points only take in the overworld."))
-		}
+	caller := players[e.eid]
+	if caller == nil {
 		return
 	}
-	pos := blockPos{int(t.x), int(t.y), int(t.z)}
-	h.spawns.set(t.p.key(), pos, t.dim)
-	h.cmdSuccess(players, t.p, fmt.Sprintf("Spawn point set to %d, %d, %d.", pos.x, pos.y, pos.z), true)
+	targets := h.commandTargets(players, e.eid, e.target)
+	if len(targets) == 0 {
+		caller.p.tell("No player was found")
+		return
+	}
+	for _, t := range targets {
+		h.spawns.set(t.p.key(), e.pos, caller.dim)
+	}
+	who := targets[0].p.name
+	if len(targets) > 1 {
+		who = fmt.Sprintf("%d players", len(targets))
+	}
+	dim := dimensionNames[0]
+	if caller.dim >= 0 && caller.dim < len(dimensionNames) {
+		dim = dimensionNames[caller.dim]
+	}
+	h.cmdSuccess(players, caller.p, fmt.Sprintf("Set spawn point to %d, %d, %d [%.1f, %.1f] in %s for %s",
+		e.pos.x, e.pos.y, e.pos.z, e.yaw, e.pitch, dim, who), true)
 }
 
 // cmdPlaysound plays a named sound at the caller (or a target player).
