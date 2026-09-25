@@ -154,7 +154,7 @@ func (h *hub) shearMob(players map[int32]*tracked, m *mob) bool {
 	h.vibAt(m.dim, freqShear, m.x, m.y, m.z, m.eid)
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(sheepMeta(m, true)))
 	h.spawnItemIn(players, m.dim, sheepWool(m), 1+h.rng.Intn(3), m.x, m.y, m.z) // its own fleece
-	h.playSoundDim(players, m.dim, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.sheep.shear", sndNeutral, m.x, m.y, m.z, 1, 1)
 	return true
 }
 

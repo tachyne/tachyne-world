@@ -217,7 +217,7 @@ func (h *hub) goatStep(players map[int32]*tracked, m *mob) bool {
 		if snapsGoatHorn(w.At(ax, ay, az)) || snapsGoatHorn(w.At(ax, ay+1, az)) {
 			h.playSoundDim(players, m.dim, goatSound(m, "ram_impact"), sndNeutral, m.x, m.y, m.z, 1, 1)
 			if h.goatDropHorn(players, m) {
-				h.playSoundDim(players, m.dim, "minecraft:entity.goat.horn_break", sndNeutral, m.x, m.y, m.z, 1, 1)
+				h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.goat.horn_break", sndNeutral, m.x, m.y, m.z, 1, 1)
 			}
 			h.goatRamFinish(m)
 			return true

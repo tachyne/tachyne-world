@@ -121,7 +121,7 @@ func (h *hub) tryCopperGolem(players map[int32]*tracked, t *tracked, m *mob) boo
 		m.oxidation--
 		m.oxidizeAt = h.tick.Load() + h.copperWeatherDelay()
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(copperWeatherMeta(m.eid, int32(m.oxidation))))
-		h.playSoundDim(players, m.dim, "minecraft:item.axe.scrape", sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, "minecraft:item.axe.scrape", sndNeutral, m.x, m.y, m.z, 1, 1)
 		return true
 	}
 	return false

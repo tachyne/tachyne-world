@@ -66,13 +66,13 @@ func (h *hub) frogStep(players map[int32]*tracked, m *mob) bool {
 
 // frogEat is the tongue landing: the meal dies as a frog's kill.
 func (h *hub) frogEat(players map[int32]*tracked, m, meal *mob) {
-	h.playSoundDim(players, m.dim, "minecraft:entity.frog.tongue", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.frog.tongue", sndNeutral, m.x, m.y, m.z, 2, 1)
 	meal.frogEaten = int8(m.variant) + 1
 	meal.lastAttacker = m.eid
 	meal.hitByPlayer, meal.hurtByPlayerTil = false, 0
 	meal.health = 0
 	h.killMob(players, meal)
-	h.playSoundDim(players, m.dim, "minecraft:entity.frog.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.frog.eat", sndNeutral, m.x, m.y, m.z, 2, 1)
 }
 
 const (

@@ -337,3 +337,11 @@ func copperGolemVoice(m *mob) string {
 	}
 	return "minecraft:entity.copper_golem."
 }
+
+// playSoundOn is Level.playSound(null, entity, …): the sound is attached to
+// the entity and follows it as it moves (sound_entity).
+func (h *hub) playSoundOn(players map[int32]*tracked, eid int32, dim int, name string, category int32, x, y, z float64, volume, pitch float32) {
+	ev := soundEv(name, category, x, y, z, volume, pitch)
+	ev.EID = eid
+	h.toNearbyEv(players, dim, x, z, ev)
+}

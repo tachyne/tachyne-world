@@ -132,6 +132,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sounds follow the animal.** Shearing, a frog's tongue and eating, a
+  breeze's charge, a goat's long jump and similar sounds now move with the
+  creature making them, as in vanilla.
 - **Explosions push you the vanilla way.** A blast now adds its shove to
   your movement instead of replacing it, so a TNT launch keeps your
   momentum. Blasts also throw their block debris, as in vanilla.

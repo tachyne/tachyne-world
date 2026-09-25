@@ -98,7 +98,7 @@ func (h *hub) goatJumpStep(players map[int32]*tracked, m *mob) bool {
 		if m.screaming {
 			sound = "minecraft:entity.goat.screaming.long_jump"
 		}
-		h.playSoundDim(players, m.dim, sound, sndNeutral, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, sound, sndNeutral, m.x, m.y, m.z, 1, 1)
 		m.goatJumping, m.goatVX, m.goatVY, m.goatVZ = true, vx, vy, vz
 		m.yaw = float32(math.Atan2(-vx, vz) * 180 / math.Pi)
 		h.breezePose(players, m, poseLongJumping)

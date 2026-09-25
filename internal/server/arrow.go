@@ -721,7 +721,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 			if a.turnedBy != m.eid {
 				a.vx, a.vy, a.vz = -a.vx*0.5, -a.vy*0.5, -a.vz*0.5
 				a.turnedBy, a.turnedNow = m.eid, true
-				h.playSoundDim(players, m.dim, "minecraft:entity.breeze.deflect", sndHostile, m.x, m.y, m.z, 1, 1)
+				h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.breeze.deflect", sndHostile, m.x, m.y, m.z, 1, 1)
 				return false
 			}
 			continue

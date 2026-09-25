@@ -131,7 +131,7 @@ func (h *hub) breezeStep(players map[int32]*tracked, m *mob) bool {
 			m.brzJumpX, m.brzJumpY, m.brzJumpZ = jx, jy, jz
 			m.yaw = float32(math.Atan2(-(jx-m.x), jz-m.z) * 180 / math.Pi)
 			h.breezePose(players, m, poseInhaling)
-			h.playSoundDim(players, m.dim, "minecraft:entity.breeze.charge", sndHostile, m.x, m.y, m.z, 1, 1)
+			h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.breeze.charge", sndHostile, m.x, m.y, m.z, 1, 1)
 			m.vx, m.vz = 0, 0
 			return true
 		}

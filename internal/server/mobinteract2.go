@@ -41,7 +41,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 		if m.variant == mooshroomBrown {
 			mush = itemBrownMushroom
 		}
-		h.playSoundDim(players, m.dim, "minecraft:entity.mooshroom.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.mooshroom.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		for i := 0; i < 5; i++ {
 			h.spawnItemIn(players, m.dim, mush, 1, m.x, m.y+1, m.z)
 		}
@@ -51,7 +51,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 			return false
 		}
 		m.sheared = true
-		h.playSoundDim(players, m.dim, "minecraft:entity.snow_golem.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.snow_golem.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(snowGolemMeta(m)))
 		h.spawnItemIn(players, m.dim, itemCarvedPumpkin, 1, m.x, m.y+1.7, m.z)
 	case entityBogged:
@@ -59,7 +59,7 @@ func (h *hub) tryShearOther(players map[int32]*tracked, t *tracked, m *mob) bool
 			return false
 		}
 		m.sheared = true
-		h.playSoundDim(players, m.dim, "minecraft:entity.bogged.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.bogged.shear", sndPlayer, m.x, m.y, m.z, 1, 1)
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(boolMeta(m.eid, boggedShearedMeta, true)))
 		for i := 0; i < 2; i++ { // shearing/bogged: two rolls, red or brown each
 			mush := itemRedMushroom

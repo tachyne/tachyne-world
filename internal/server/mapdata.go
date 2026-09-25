@@ -450,7 +450,7 @@ func (h *hub) mapCreateFilled(players map[int32]*tracked, t *tracked, slot int) 
 		}
 	}
 	h.incStat(t, attachproto.StatUsed, itemEmptyMap, 1)
-	h.playSoundDim(players, t.dim, "minecraft:ui.cartography_table.take_result", sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundOn(players, t.p.eid, t.dim, "minecraft:ui.cartography_table.take_result", sndPlayer, t.x, t.y, t.z, 1, 1)
 	md := h.maps.create(int(math.Floor(t.x)), int(math.Floor(t.z)), 0, t.dim)
 	filled := invStack{item: itemFilledMap, count: 1, mapID: md.ID}
 	if hs.item == 0 { // heldItemTransformedTo: the last empty map becomes the new one

@@ -89,7 +89,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: dx * power, VY: dy * power, VZ: dz * power})
 	now := h.tick.Load()
 	t.spinUntil, t.spinSpent = now+tridentSpinTicks, false
-	h.playSoundDim(players, t.dim, riptideSound(riptide), sndPlayer, t.x, t.y, t.z, 1, 1)
+	h.playSoundOn(players, t.p.eid, t.dim, riptideSound(riptide), sndPlayer, t.x, t.y, t.z, 1, 1)
 }
 
 // throwTrident looses the trident as a projectile carrying the whole stack (so

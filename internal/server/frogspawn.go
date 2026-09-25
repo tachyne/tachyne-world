@@ -150,7 +150,7 @@ func (h *hub) frogLaySpawn(players map[int32]*tracked, m *mob) {
 		}
 		h.setBlockAt(players, m.dim, blockPos{x, by + 1, z}, frogspawnBlock)
 		h.scheduleFrogspawn(m.dim, blockPos{x, by + 1, z})
-		h.playSoundDim(players, m.dim, "minecraft:entity.frog.lay_spawn", sndBlock, m.x, m.y, m.z, 1, 1)
+		h.playSoundOn(players, m.eid, m.dim, "minecraft:entity.frog.lay_spawn", sndBlock, m.x, m.y, m.z, 1, 1)
 		m.pregnant = false
 		return
 	}
