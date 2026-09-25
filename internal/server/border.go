@@ -185,20 +185,32 @@ func (h *hub) cmdWorldBorder(players map[int32]*tracked, t *tracked, args []stri
 		if target < 1 || target > borderMaxSize {
 			return fmt.Sprintf("Border size must be between 1 and %.0f", borderMaxSize)
 		}
-		secs, hasSecs := num(2)
-		b.OldSize = b.sizeAt(now)
+		// The duration is a TimeArgument: ticks, or with an s or d suffix.
+		var ticks int64
+		if len(args) > 2 {
+			t, ok := parseTimeTicks(args[2:3])
+			if !ok || t < 0 {
+				return "Usage: /worldborder set|add <blocks> [time: ticks, or 10s, 1d]"
+			}
+			ticks = t
+		}
+		old := b.sizeAt(now)
+		b.OldSize = old
 		b.Size = target
-		if hasSecs && secs > 0 {
-			b.StartTick, b.LerpTicks = now, uint64(secs*20)
+		if ticks > 0 {
+			b.StartTick, b.LerpTicks = now, uint64(ticks)
 		} else {
 			b.StartTick, b.LerpTicks = 0, 0
 		}
 		h.saveBorder()
 		h.broadcastBorder(players)
-		if hasSecs && secs > 0 {
-			return fmt.Sprintf("Set world border to %.0f blocks wide over %.0f seconds", target, secs)
+		switch secs := strconv.FormatFloat(float64(ticks)/20, 'f', -1, 64); {
+		case ticks > 0 && target < old:
+			return fmt.Sprintf("Shrinking the world border to %.1f block(s) wide over %s second(s)", target, secs)
+		case ticks > 0:
+			return fmt.Sprintf("Growing the world border to %.1f block(s) wide over %s second(s)", target, secs)
 		}
-		return fmt.Sprintf("Set world border to %.0f blocks wide", target)
+		return fmt.Sprintf("Set the world border to %.1f block(s) wide", target)
 
 	case "center", "centre":
 		x, okX := num(1)

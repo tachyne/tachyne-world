@@ -52,6 +52,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/worldborder times in ticks.** As in vanilla, the time for a border
+  move is in ticks, or seconds and days with `s` and `d` (`10s`, `1d`); a
+  bare number used to be read as seconds. The reply now says whether the
+  border is growing or shrinking.
 - **Phantoms circle higher.** A phantom now circles 20 to 40 blocks above
   its target, picking a fresh height before each swoop, and never below sea
   level, as in vanilla.

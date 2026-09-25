@@ -93,7 +93,10 @@ func TestWorldBorderCommand(t *testing.T) {
 		t.Errorf("centre = %v,%v", h.border.CenterX, h.border.CenterZ)
 	}
 	// A timed set starts a move rather than jumping.
-	h.cmdWorldBorder(players, pl, []string{"set", "50", "10"})
+	// TimeArgument: a bare number is ticks, 10s is two hundred.
+	if msg := h.cmdWorldBorder(players, pl, []string{"set", "50", "10s"}); msg != "Shrinking the world border to 50.0 block(s) wide over 10 second(s)" {
+		t.Errorf("timed set said %q", msg)
+	}
 	if h.border.LerpTicks != 200 || h.border.OldSize != 200 {
 		t.Errorf("timed set: lerp=%v old=%v", h.border.LerpTicks, h.border.OldSize)
 	}
@@ -108,6 +111,11 @@ func TestWorldBorderCommand(t *testing.T) {
 	}
 	// add is relative to the current size.
 	h.tick.Store(2000)
+	h.cmdWorldBorder(players, pl, []string{"set", "50", "40"})
+	if h.border.LerpTicks != 40 {
+		t.Errorf("a bare time is ticks: lerp=%v, want 40", h.border.LerpTicks)
+	}
+	h.tick.Store(3000)
 	h.cmdWorldBorder(players, pl, []string{"add", "25"})
 	if h.border.Size != 75 {
 		t.Errorf("add: size=%v, want 75", h.border.Size)
