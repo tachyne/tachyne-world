@@ -288,7 +288,7 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 				return
 			}
 		}
-		d.dragonMeleePart = dragonPartNames[i]
+		d.dragonMeleePart = dragonPartNames[i] // consumed by the dragon's hurt filter
 		h.attackMob(players, e.attacker, d.eid)
 		d.dragonMeleePart = ""
 		return
@@ -441,16 +441,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		h.armadilloHurtByLiving(players, m) // Armadillo.actuallyHurt: danger, and it rolls up
 	}
 	melee := float64(dmg)
-	if m == h.dragon {
-		// EnderDragon.hurt(part, …): the part the client struck (its id is
-		// the dragon's plus one to eight); a blow naming the dragon itself
-		// goes to the BODY, as EnderDragon.hurtServer routes it.
-		part := m.dragonMeleePart
-		if part == "" {
-			part = "body"
-		}
-		melee = dragonPartDamage(part, melee)
-	}
+	// EnderDragon.hurt(part, …) is the dragon's own filter (dragonHurtFilter):
+	// the part the client struck (its id is the dragon's plus one to eight),
+	// the body for a blow naming the dragon itself.
+	m.dragonHitByPlayer = t != nil
 	// A mace smash is its OWN damage type (MaceItem.getItemDamageSource →
 	// damageSources().mace), which is what makes the death message read
 	// "was smashed by" instead of the plain player attack.
@@ -545,6 +539,10 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	if m.dying > 0 {
 		return // already dying
+	}
+	if m == h.dragon {
+		h.dragonKillingBlow(players, m) // EnderDragon.handleKillingBlow: it flies home to die
+		return
 	}
 	m.dying = deathAnimTicks
 	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies

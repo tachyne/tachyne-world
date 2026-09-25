@@ -1175,6 +1175,7 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
+			h.updateDragon(players)     // EnderDragon.aiStep: the fight's phases and flight, every tick
 			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
 			h.publishBodies(players)    // the boxes a block placement must not overlap
 			h.tickShulkerLids(players)  // shulker box lids: neighbour updates and the push
@@ -1236,7 +1237,6 @@ func (h *hub) run() {
 				h.updateStructureSpawners(players)
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
-				h.updateDragon(players)
 				h.tickDragonRespawn(players)
 				if age%20 == 0 {
 					h.updateDragonBar(players)

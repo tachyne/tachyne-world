@@ -480,9 +480,7 @@ func (h *hub) stabMobByPlayer(players map[int32]*tracked, t *tracked, m *mob, to
 			h.armadilloHurtByLiving(players, m)
 		}
 		dmg := total
-		if m == h.dragon {
-			dmg = dragonPartDamage("body", dmg)
-		}
+		m.dragonHitByPlayer = true // the dragon's own filter takes it on the body
 		hpBefore := m.health
 		m.hurtOf(dmg, 0, dtSpear)
 		if landed = m.health < hpBefore; landed {

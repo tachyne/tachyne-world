@@ -43,10 +43,10 @@ func TestCrystalsHealAndDie(t *testing.T) {
 	h, pl, players := endHub(t)
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	h.dragon.health = 100
-	h.tick.Store(20) // it finds its nearest crystal…
-	h.updateDragon(players)
-	h.tick.Store(40) // …and heals from it on the next beat
-	h.updateDragon(players)
+	for i := 0; i < 200; i++ { // it finds its nearest crystal, and heals a point every ten ticks
+		h.tick.Add(1)
+		h.updateDragon(players)
+	}
 	if h.dragon.health <= 100 {
 		t.Fatal("living crystals should heal the dragon")
 	}
@@ -60,8 +60,10 @@ func TestCrystalsHealAndDie(t *testing.T) {
 		t.Fatal("all crystals should be gone")
 	}
 	hp := h.dragon.health
-	h.tick.Store(40)
-	h.updateDragon(players)
+	for i := 0; i < 40; i++ {
+		h.tick.Add(1)
+		h.updateDragon(players)
+	}
 	if h.dragon.health != hp {
 		t.Fatal("no crystals — no healing")
 	}
@@ -75,9 +77,13 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	m := h.dragon
 	h.hurtByEID(m, 0) // a player hurt it just now
+	h.setDragonPhase(players, m, phaseSittingScanning) // a sitting dragon dies where it sits
+	m.health = 0
 	h.killMob(players, m)
-	m.dying = 1
-	h.despawnMob(players, m)
+	for i := 0; i < 200 && h.dragon != nil; i++ {
+		h.tick.Add(1)
+		h.updateDragon(players)
+	}
 	if h.dragon != nil || !h.rules.DragonDefeated {
 		t.Fatal("defeat not recorded")
 	}
@@ -116,7 +122,20 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 			h.end.SetBlock(0, y, 0, worldgen.Air) // someone took it
 		}
 	}
-	h.dragonDefeated(players)
+	h.enterEnd(players, nil)
+	if h.dragon != nil {
+		t.Fatal("a defeated dragon stays dead")
+	}
+	h.rules.DragonDefeated = false
+	h.enterEnd(players, nil) // a second fight (the respawn ritual stages one)
+	m2 := h.dragon
+	h.setDragonPhase(players, m2, phaseSittingScanning)
+	m2.health = 0
+	h.killMob(players, m2)
+	for i := 0; i < 200 && h.dragon != nil; i++ {
+		h.tick.Add(1)
+		h.updateDragon(players)
+	}
 	if got := orbXP(); got != 500 {
 		t.Fatalf("a second kill gave %d XP, want 500", got)
 	}
@@ -124,11 +143,6 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 		if h.end.At(0, y, 0) == worldgen.DragonEgg {
 			t.Fatal("a second kill set another egg")
 		}
-	}
-	// A rejoin must not respawn the dragon.
-	h.enterEnd(players, nil)
-	if h.dragon != nil {
-		t.Fatal("a defeated dragon stays dead")
 	}
 }
 
@@ -154,15 +168,24 @@ func TestDragonBossbarLifecycle(t *testing.T) {
 	}
 }
 
-// The dragon's body deals ten and its wings five with a shove, as vanilla's
-// hurt() and knockBack() do — and a perched one deals nothing.
+// The dragon's head and neck deal ten and its wings five with a shove, as
+// vanilla's hurt() and knockBack() do; a sitting dragon's wings shove but
+// do not hurt.
 func TestDragonContactDamage(t *testing.T) {
-	if dragonContact != 10 || dragonWingDamage != 5 {
-		t.Fatalf("vanilla deals 10 from the body and 5 from a wing, got %v and %v",
-			dragonContact, dragonWingDamage)
+	h, m, pl, players := dragonFight(t)
+	m.x, m.y, m.z, m.yaw = 0.5, 120, 0.5, 0
+	head := dragonPartOf(m, 0)
+	pl.x, pl.y, pl.z, pl.health, pl.graceUntil = head.x, head.y, head.z, 20, 0
+	h.dragonContact(players, m, false, h.tick.Load())
+	if 20-pl.health < 10*0.4 { // difficulty-scaled, armour aside
+		t.Fatalf("the head bites for ten: took %v", 20-pl.health)
 	}
-	if dragonWingReach <= dragonBodyReach {
-		t.Error("the wings reach further than the body")
+	wing := dragonPartOf(m, 6)
+	pl.x, pl.y, pl.z, pl.health = wing.x+3, wing.y-3, wing.z, 20
+	h.tick.Add(20)
+	h.dragonContact(players, m, true, h.tick.Load())
+	if pl.health != 20 {
+		t.Fatalf("a sitting dragon's wing only shoves: took %v", 20-pl.health)
 	}
 }
 
@@ -171,6 +194,9 @@ func TestDragonContactDamage(t *testing.T) {
 func TestDragonPartsQuarterEverythingButTheHead(t *testing.T) {
 	if got := dragonPartDamage("head", 8); got != 8 {
 		t.Fatalf("the head takes a blow whole: %v", got)
+	}
+	if got := dragonPartDamage("neck", 8); got != 8 {
+		t.Fatalf("the neck takes a blow whole: %v", got)
 	}
 	// 8 → 8/4 + min(8,1) = 3
 	if got := dragonPartDamage("tail", 8); got != 3 {
@@ -184,12 +210,14 @@ func TestDragonPartsQuarterEverythingButTheHead(t *testing.T) {
 // The parts sit where the dragon is looking: the head well ahead of it, the
 // tail behind, the wings out to the sides.
 func TestDragonPartsLieAlongItsFacing(t *testing.T) {
-	m := &mob{etype: entityEnderDragon, x: 100, y: 80, z: 100, yaw: 0} // yaw 0 is south: +z
-	head, ok := dragonPartAt(m, 100, 80, 106.5)
+	// The dragon's yRot 0 flies north, −z: its parts sit along (sin, −cos).
+	m := &mob{etype: entityEnderDragon, x: 100, y: 80, z: 100, yaw: 0}
+	m.dragon().phase = phaseHoldingPattern
+	head, ok := dragonPartAt(m, 100, 80.5, 93.5)
 	if !ok || head != "head" {
 		t.Fatalf("six and a half blocks ahead should be the head, got %q ok=%v", head, ok)
 	}
-	tail, ok := dragonPartAt(m, 100, 80, 94.5)
+	tail, ok := dragonPartAt(m, 100, 82, 103.5)
 	if !ok || tail != "tail" {
 		t.Fatalf("behind it should be tail, got %q ok=%v", tail, ok)
 	}
@@ -217,9 +245,11 @@ func TestDragonHurtWhenItsHealingCrystalBreaks(t *testing.T) {
 			far = c
 		}
 	}
-	m.x, m.y, m.z = near.x, near.y+20, near.z // in reach of it, out of its blast
-	h.tick.Store(20)
-	h.updateDragon(players)
+	for i := 0; i < 300 && h.dragonCrystal != near.eid; i++ {
+		m.x, m.y, m.z = near.x, near.y+20, near.z // in reach of it, out of its blast
+		h.tick.Add(1)
+		h.updateDragon(players)
+	}
 	if h.dragonCrystal != near.eid {
 		t.Fatalf("the dragon beside a crystal heals from %d, want %d", h.dragonCrystal, near.eid)
 	}
@@ -248,7 +278,10 @@ func TestDragonDeathSoundIsGlobal(t *testing.T) {
 	}
 	pl.x, pl.z = 900, 900 // far across the End
 	drainOut(pl.p)
-	h.dragonDefeated(players)
+	h.setDragonPhase(players, h.dragon, phaseSittingScanning)
+	h.dragon.health = 0
+	h.killMob(players, h.dragon)
+	h.updateDragon(players)
 	for len(pl.p.out) > 0 {
 		if ev, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && ev.Name == "minecraft:entity.ender_dragon.death" {
 			return
@@ -292,24 +325,32 @@ func TestDragonMeleeLandsOnThePartStruck(t *testing.T) {
 	}
 }
 
-// DragonFlightHistory: the tail follows where the dragon was heading; after
-// a turn it still trails along the old line.
+// DragonFlightHistory: the tail follows where the dragon was heading; a
+// few ticks after a turn it still trails along the old line.
 func TestDragonTailLagsThroughTheTurn(t *testing.T) {
 	m := &mob{etype: entityEnderDragon, x: 0, y: 80, z: 0, yaw: 0}
-	for i := 0; i < dragonHistLen; i++ {
+	m.dragon().phase = phaseHoldingPattern
+	for i := 0; i < 20; i++ {
 		m.recordDragonFlight()
 	}
-	straight := dragonPartOf(m, 5) // the last tail segment
 	m.yaw = 90
-	m.recordDragonFlight()
-	bent := dragonPartOf(m, 5)
-	body := dragonPartOf(m, 2)
-	// Turned to yaw 90 the body lies along −x; the lagging tail has not yet
-	// swung all the way round.
-	if bent.x == straight.x && bent.z == straight.z {
-		t.Fatal("the tail should move when the dragon turns")
+	for i := 0; i < 6; i++ {
+		m.recordDragonFlight()
 	}
-	if dz := bent.z - body.z; dz >= 0 {
-		t.Fatalf("the tail should still trail along the old heading (−z), got dz %.2f", dz)
+	body, tail := dragonPartOf(m, 2), dragonPartOf(m, 5)
+	// Turned to yRot 90 the dragon flies +x and its body lies ahead there;
+	// the last tail segment, reading the heading of twelve ticks back, still
+	// trails behind along the old line (+z).
+	if body.x <= m.x {
+		t.Fatalf("the body lies ahead along the new heading: %.2f", body.x)
+	}
+	if tail.z-m.z < 3 {
+		t.Fatalf("the tail should still trail along the old heading (+z), got dz %.2f", tail.z-m.z)
+	}
+	for i := 0; i < 20; i++ {
+		m.recordDragonFlight()
+	}
+	if tail := dragonPartOf(m, 5); tail.x-m.x > -3 {
+		t.Fatalf("once the turn is history the tail trails behind along −x: dx %.2f", tail.x-m.x)
 	}
 }

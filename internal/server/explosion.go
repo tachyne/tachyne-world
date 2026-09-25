@@ -122,6 +122,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		if om.etype == entityGhast && h.blastSrc.direct == entityLargeFireball && byPlayer != nil {
 			dmg = reflectedFireballDamage // the returned fireball's blast is as deadly to it as the hit
 		}
+		om.dragonHitByPlayer = byPlayer != nil // (a blast always hurts the dragon: #always_hurts_ender_dragons)
 		om.hurtKind(dmg, dt)
 		om.lastDirect = h.blastSrc.direct
 		if byPlayer != nil { // resolvePlayerResponsibleForDamage: the kill is theirs

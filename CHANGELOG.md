@@ -133,6 +133,16 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The ender dragon fights like the real one.** It now flies every tick
+  instead of once a second, along vanilla's ring of flight points, turning
+  and swooping as it should, and faces the way it flies. It strafes the
+  player nearest the portal with fireballs, charges players from its
+  perch, lands on the portal to look around, roar and breathe four times
+  before it takes off, and takes off early if hit hard while perched —
+  arrows just bounce off it there. Its head and neck bite and its wings
+  shove whoever they touch, and the neck now takes full damage like the
+  head. Struck down in the air it flies back to the portal to die, rising
+  as it dissolves and dropping its experience over the last few seconds.
 - **Camels carry two players.** A second player can climb onto a camel
   behind the first. The one in front steers, the one behind rides along,
   and if the front rider gets off the other moves forward. A player who
