@@ -450,9 +450,6 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if d.retaliate {
 		m.retaliates = true
 	}
-	if burnsInDaylight[m.etype] {
-		m.burnDelay = h.rng.Intn(burnStaggerMax) // its slice of the dawn ramp
-	}
 	if d.held != "" {
 		m.held = itemByName[d.held]
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))

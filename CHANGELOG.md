@@ -102,6 +102,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The undead burn in the sun as in vanilla.** Zombies, skeletons and
+  their kin now catch fire only when the light at their eyes is bright,
+  they can see the sky and they are neither wet nor in powder snow, so a
+  drowned standing in open water no longer ignites. The dawn catches them
+  one by one, as in vanilla. A mob set alight at night by lava or Fire
+  Aspect now keeps burning steadily until its fire runs out, instead of
+  flickering.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

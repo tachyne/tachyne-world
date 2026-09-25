@@ -60,7 +60,6 @@ type mob struct {
 	panicLeg        int     // updates spent on the current panic leg
 	hostile         bool    // hunts + attacks players (zombies) rather than grazing
 	burning         bool    // on fire — rendered via entity flags (any ignite source)
-	burnDelay       int     // seconds of dawn-ramp grace before this mob ignites
 	fireSecs        int     // seconds of afterburn left (lava/fire/daylight); 1 HP/s, water clears
 	submerged       int     // consecutive seconds fully underwater (land mobs drown past maxAir)
 	dryTicks        int     // water animal: ticks out of water (air gone past its cap; a dolphin's moisture)

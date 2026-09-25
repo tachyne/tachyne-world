@@ -146,7 +146,6 @@ func TestRainShieldsTheUndead(t *testing.T) {
 	players := map[int32]*tracked{1: pl}
 	h.dayTime.Store(6000) // noon — burn time
 	z := h.spawnHostile(players, entityZombie, 5, 5)
-	z.burnDelay = 0
 	// Seat it on a dry, open-sky pillar (the generated column at 5,5 is ocean;
 	// a submerged zombie is correctly doused and wouldn't burn).
 	z.x, z.y, z.z = 6.5, 100, 6.5
@@ -161,8 +160,10 @@ func TestRainShieldsTheUndead(t *testing.T) {
 		t.Fatalf("zombies must not burn in the rain: health=%d burning=%v", z.health, z.burning)
 	}
 	h.raining = false
-	h.updateHostiles(players)
-	h.mobEnvironment(players)
+	for i := 0; i < 30 && !z.burning; i++ { // the sun rolls each tick
+		h.updateHostiles(players)
+		h.mobEnvironment(players)
+	}
 	if z.health == hp && !z.burning {
 		t.Fatal("clear noon sky must burn the zombie")
 	}

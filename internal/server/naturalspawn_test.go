@@ -253,16 +253,14 @@ func TestCaveZombieDoesNotBurn(t *testing.T) {
 		}
 	}
 	cave := h.spawnHostileY(players, entityZombie, 10.5, 10, 10.5)
-	cave.burnDelay = 0
 	// Control: a zombie on a dry, open-sky pillar (the generated column near
 	// spawn is ocean — a submerged zombie is correctly doused, not a control).
 	h.world.SetBlock(30, 99, 30, worldgen.Stone)
 	h.world.SetBlock(30, 100, 30, worldgen.Air)
 	h.world.SetBlock(30, 101, 30, worldgen.Air)
 	open := h.spawnHostileY(players, entityZombie, 30.5, 100, 30.5)
-	open.burnDelay = 0
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 30; i++ { // the sun rolls each tick
 		h.updateHostiles(players)
 		h.mobEnvironment(players)
 	}
