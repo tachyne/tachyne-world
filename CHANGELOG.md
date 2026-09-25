@@ -156,6 +156,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Force-loaded chunks keep their mobs going.** Mobs in chunks kept
+  loaded with `/forceload` now stay loaded and keep moving, even with
+  nobody online, and mobs are no longer despawned just because no player
+  is in their dimension, as in vanilla.
 - **Damage types follow their tags.** The fall, fire, drowning and freeze
   damage gamerules now cover every damage of that kind (an ender pearl's
   landing counts as a fall), Frost Walker boots protect from campfires and

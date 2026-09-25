@@ -495,7 +495,9 @@ type hub struct {
 	// player's range, so its mobs unload only after a grace window (no border
 	// thrash). Mobs load/unload with their chunk, bounding the live set.
 	activeChunks map[[2]int32]bool
-	chunkOutAt   map[[2]int32]uint64
+	// scratchEntityChunks is reconcileEntityChunks' reusable chunk set.
+	scratchEntityChunks map[[2]int32]bool
+	chunkOutAt          map[[2]int32]uint64
 
 	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
 	// it suppresses MobSpawnEvent (these entities already existed — they are being
@@ -1149,7 +1151,7 @@ func (h *hub) run() {
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
 			// are unaffected. Before this gate the boot herds walked the world for
 			// nobody, generating terrain into the chunk cache around the clock.
-			if age%mobMoveInterval == 0 && len(players) > 0 {
+			if age%mobMoveInterval == 0 && (len(players) > 0 || h.world.ForcedCount() > 0) {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
@@ -1256,7 +1258,11 @@ func (h *hub) run() {
 				h.updateCopperGolems(players) // oxidation → statue
 			}
 			h.phases.lap(phaseSecondly)
-			h.mobAmbience(players)  // Mob.baseTick: the idle-voice roll runs every tick
+			h.mobAmbience(players) // Mob.baseTick: the idle-voice roll runs every tick
+			// Load/unload mobs with their chunks before counting or spawning, so
+			// caps see the reloaded packs and freed-up room from unloaded ones —
+			// with or without players: forced chunks keep theirs.
+			h.reconcileEntityChunks(players)
 			h.naturalSpawn(players) // vanilla NaturalSpawner port: all categories, all heights
 			h.phases.lap(phaseSpawning)
 			h.primeFluids(players) // generated springs start running (fluidprime.go)

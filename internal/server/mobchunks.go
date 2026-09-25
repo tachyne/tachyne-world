@@ -119,3 +119,34 @@ func (h *hub) reconcileMobChunks(players map[int32]*tracked, chunkSet map[[2]int
 		h.removeMob(players, m)
 	}
 }
+
+// reconcileEntityChunks computes the overworld's entity-ticking chunks and
+// loads or unloads the mobs with them: every player's view window, and every
+// forced chunk (ForceLoadCommand's FORCED ticket is entity ticking), so mobs
+// in a /forceload'ed area stay loaded and keep moving with nobody online.
+func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
+	if h.mobstore == nil {
+		return
+	}
+	if h.scratchEntityChunks == nil {
+		h.scratchEntityChunks = map[[2]int32]bool{}
+	}
+	set := h.scratchEntityChunks
+	clear(set)
+	for _, t := range players {
+		if t.dim != dimOverworld {
+			continue
+		}
+		r := t.p.radius()
+		cx, cz := int32(chunkFloor(t.x)), int32(chunkFloor(t.z))
+		for x := cx - r; x <= cx+r; x++ {
+			for z := cz - r; z <= cz+r; z++ {
+				set[[2]int32{x, z}] = true
+			}
+		}
+	}
+	for _, c := range h.world.ForcedChunks() {
+		set[c] = true
+	}
+	h.reconcileMobChunks(players, set)
+}

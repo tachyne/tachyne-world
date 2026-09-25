@@ -216,12 +216,6 @@ func (h *hub) naturalSpawnDim(players map[int32]*tracked, dim int) {
 		chunks = append(chunks, c)
 	}
 
-	if dim == 0 {
-		// Load/unload mobs with their chunks before counting or spawning, so caps
-		// see the reloaded packs and freed-up room from unloaded ones.
-		h.reconcileMobChunks(players, chunkSet)
-	}
-
 	var counts [catCount]int
 	for _, m := range h.mobs {
 		if m.dim != dim || m.dying > 0 || !h.countsTowardCaps(m) {
@@ -690,6 +684,9 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 				best = d
 			}
 		}
+		if math.IsInf(best, 1) {
+			continue // Mob.checkDespawn: no player in the level, nothing despawns (a forced chunk's mobs stay)
+		}
 		// noActionTime runs whether or not the mob is persistent (serverAiStep
 		// counts it every tick) and only a player within 32 blocks resets it.
 		// Resetting it while persistent kept an enderman that set its block
@@ -704,7 +701,7 @@ func (h *hub) despawnSweep(players map[int32]*tracked) {
 			continue
 		}
 		switch {
-		case best > float64(dist*dist) && h.removeWhenFarAway(m, best, now): // includes "no player in this dimension"
+		case best > float64(dist*dist) && h.removeWhenFarAway(m, best, now):
 			h.removeMob(players, m)
 		case best > 32*32 && m.idleSecs > 30 && h.rng.Intn(40) == 0 && h.removeWhenFarAway(m, best, now):
 			h.removeMob(players, m)
