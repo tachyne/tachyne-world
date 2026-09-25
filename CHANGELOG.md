@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Falling stalactites shatter.** A stalactite that fell stayed where it
+  landed as a block, hanging from nothing. As in vanilla it now breaks into
+  pointed dripstone with its crash. Its damage to whatever it lands on is
+  also one block's worth lower, to match vanilla.
 - **Comparators read a shelf only from behind.** A comparator beside or in
   front of a wooden shelf read its contents; as in vanilla, only one behind
   it does.

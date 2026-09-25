@@ -275,7 +275,22 @@ func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, s
 			h.stalactiteLanded(players, dim, pos, n, fallen)
 		}
 	}
+	// FallingBlockEntity: a block that cannot stand where it lands breaks
+	// into its item instead (callOnBrokenAfterFall + spawnAtLocation). A
+	// stalactite never can — nothing holds it up from above — so a fallen
+	// column comes down as pointed dripstone, each piece with its crash.
+	if isStalactite(state) && !supported(h.worldFor(dim), pos, state) {
+		h.setBlockAt(players, dim, pos, worldgen.Air)
+		h.levelEvent(players, dim, levelEventDripstoneBreak, pos.x, pos.y, pos.z, 0)
+		if h.rules.EntityDrops { // the entity_drops gamerule governs a falling block's drop
+			h.spawnBlockDrop(players, dim, itemByName["pointed_dripstone"], 1, pos.x, pos.y, pos.z)
+		}
+	}
 }
+
+// levelEventDripstoneBreak is LevelEvent 1045 (PointedDripstoneBlock.
+// onBrokenAfterFall): the landing crash.
+const levelEventDripstoneBreak = 1045
 
 // powderTouchesWater reports whether water sits on any non-down side of a
 // concrete-powder cell (vanilla ConcretePowderBlock.touchesLiquid).

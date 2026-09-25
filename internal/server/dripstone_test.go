@@ -137,11 +137,16 @@ func TestStalagmiteImpales(t *testing.T) {
 // under it. The tip carries the column's length, with a floor of six, and
 // deals that per block of the drop up to forty.
 func TestFallingStalactiteSkewers(t *testing.T) {
-	if got := stalactiteFallDamage(1, 3); got != 18 { // max(1,6)=6 per block × 3
-		t.Fatalf("a short spike falling three should deal 18, got %v", got)
+	// FallingBlockEntity.causeFallDamage: ceil(fallDistance - 1) blocks, so
+	// a fall of three cells counts two.
+	if got := stalactiteFallDamage(1, 3); got != 12 { // max(1,6)=6 per block × 2
+		t.Fatalf("a short spike falling three should deal 12, got %v", got)
 	}
-	if got := stalactiteFallDamage(10, 3); got != 30 { // a ten-long column hits harder
-		t.Fatalf("a long column falling three should deal 30, got %v", got)
+	if got := stalactiteFallDamage(10, 3); got != 20 { // a ten-long column hits harder
+		t.Fatalf("a long column falling three should deal 20, got %v", got)
+	}
+	if got := stalactiteFallDamage(6, 1); got != 0 {
+		t.Fatalf("a one-cell drop deals nothing, got %v", got)
 	}
 	if got := stalactiteFallDamage(10, 30); got != stalactiteHurtMax {
 		t.Fatalf("the damage is capped at 40, got %v", got)
@@ -151,8 +156,10 @@ func TestFallingStalactiteSkewers(t *testing.T) {
 	}
 }
 
-// It falls rather than breaking: the block is still there, one cell lower.
-func TestUnsupportedStalactiteFallsInsteadOfBreaking(t *testing.T) {
+// It falls, and where it lands it cannot stand — nothing holds a stalactite
+// up from below — so it breaks into a pointed dripstone item
+// (FallingBlockEntity: canSurvive false → callOnBrokenAfterFall + drop).
+func TestUnsupportedStalactiteFallsAndBreaks(t *testing.T) {
 	h, w, players, x, y, z := redSetup(t)
 	tip := dripstoneState(dripTip, false, false) // pointing down
 	w.SetBlock(x, y+6, z, worldgen.BlockBase("dripstone_block"))
@@ -168,14 +175,19 @@ func TestUnsupportedStalactiteFallsInsteadOfBreaking(t *testing.T) {
 	if w.At(x, y+5, z) == tip {
 		t.Fatal("the stalactite should have let go")
 	}
-	landed := false
 	for dy := 0; dy <= 5; dy++ {
 		if w.At(x, y+dy, z) == tip {
-			landed = true
+			t.Fatalf("the fallen stalactite stayed a block at y+%d", dy)
 		}
 	}
-	if !landed {
-		t.Fatal("it should have come to rest lower down, not vanished")
+	dropped := false
+	for _, it := range h.items {
+		if it.item == int32(itemByName["pointed_dripstone"]) {
+			dropped = true
+		}
+	}
+	if !dropped {
+		t.Fatal("it should have broken into a pointed dripstone item")
 	}
 }
 

@@ -82,12 +82,15 @@ const (
 
 // stalactiteFallDamage is what a tip deals after falling `fallen` blocks from
 // a column `length` long.
+// FallingBlockEntity.causeFallDamage counts ceil(fallDistance - 1): the
+// cells fallen less the one the block starts from.
 func stalactiteFallDamage(length, fallen int) float64 {
-	if fallen <= 0 {
+	distance := fallen - 1
+	if distance <= 0 {
 		return 0
 	}
 	per := float64(max(length, stalactiteHurtFloor))
-	return math.Min(math.Ceil(float64(fallen)*per), stalactiteHurtMax)
+	return math.Min(math.Floor(float64(distance)*per), stalactiteHurtMax)
 }
 
 // dropStalactite is PointedDripstoneBlock.spawnFallingStalactite: every cell
