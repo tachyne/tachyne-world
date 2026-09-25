@@ -150,3 +150,13 @@ func (h *hub) reconcileEntityChunks(players map[int32]*tracked) {
 	}
 	h.reconcileMobChunks(players, set)
 }
+
+// anyForced reports whether any dimension has a forced chunk.
+func (h *hub) anyForced() bool {
+	for dim := 0; dim <= 2; dim++ {
+		if w := h.worldFor(dim); w != nil && (dim == 0 || w != h.world) && w.ForcedCount() > 0 {
+			return true
+		}
+	}
+	return false
+}

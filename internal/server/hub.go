@@ -1151,7 +1151,7 @@ func (h *hub) run() {
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
 			// are unaffected. Before this gate the boot herds walked the world for
 			// nobody, generating terrain into the chunk cache around the clock.
-			if age%mobMoveInterval == 0 && (len(players) > 0 || h.world.ForcedCount() > 0) {
+			if age%mobMoveInterval == 0 && (len(players) > 0 || h.anyForced()) {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
