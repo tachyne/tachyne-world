@@ -53,6 +53,7 @@ func (h *hub) openEnderChest(players map[int32]*tracked, t *tracked, x, y, z int
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3),
 		Title: "Ender Chest"})
 	h.sendChestWindow(t, t.viewChest)
+	h.incCustom(t, "open_enderchest", 1)   // only for a chest that opened
 	h.angerNearbyPiglins(players, t, true) // PiglinAi.angerNearbyPiglins: an opened ender chest is a guarded container too
 }
 

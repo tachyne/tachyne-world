@@ -355,3 +355,24 @@ func TestPathRevertIsHeardAndLifts(t *testing.T) {
 		t.Error("the cow on the path should stand on the dirt")
 	}
 }
+
+// EnderChestBlock.useWithoutItem awards open_enderchest only when the chest
+// opens: a conductor on its lid refuses the open and the statistic.
+func TestEnderChestStatOnlyWhenItOpens(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	h.world.SetBlock(0, 180, 0, worldgen.BlockBase("ender_chest"))
+	h.world.SetBlock(0, 181, 0, worldgen.Stone)
+	h.openEnderChest(players, pl, 0, 180, 0)
+	if got := customStat(pl, "open_enderchest"); got != 0 {
+		t.Errorf("a blocked ender chest awarded open_enderchest %d", got)
+	}
+	h.world.SetBlock(0, 181, 0, worldgen.Air)
+	h.openEnderChest(players, pl, 0, 180, 0)
+	if got := customStat(pl, "open_enderchest"); got != 1 {
+		t.Errorf("open_enderchest = %d after an open, want 1", got)
+	}
+}

@@ -2114,8 +2114,7 @@ func (h *hub) run() {
 				}
 			case evOpenEnder:
 				if t := players[e.eid]; t != nil {
-					h.openEnderChest(players, t, e.x, e.y, e.z)
-					h.incCustom(t, "open_enderchest", 1)
+					h.openEnderChest(players, t, e.x, e.y, e.z) // (its statistic too, once it opens)
 				}
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
