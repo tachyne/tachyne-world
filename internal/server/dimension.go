@@ -1,8 +1,11 @@
 package server
 
 import (
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"log"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // Dimension switching. The connection owns the client-facing sequence (the
@@ -91,22 +94,29 @@ func (s *Server) switchDimensionTo(p *player, dim int, dest blockPos) {
 }
 
 // buildEndPlatform lays the vanilla 5x5 obsidian arrival pad at (100,48,0).
-func (s *Server) buildEndPlatform(p *player) {
-	w := s.end
+func (s *Server) buildEndPlatform(p *player) { endPlatform(s.end) }
+
+// endPlatform is EndPlatformFeature.createEndPlatform under END_SPAWN_POINT
+// (100,50,0): obsidian at y 48, three cells of air above it.
+func endPlatform(w *world.World) {
 	if w == nil {
 		return
 	}
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
-			w.SetBlock(100+dx, 48, dz, 2400) // obsidian
+			w.SetBlock(100+dx, 48, dz, obsidianBlock)
 			for dy := 1; dy <= 3; dy++ {
-				if w.At(100+dx, 48+dy, dz) != 0 {
-					w.SetBlock(100+dx, 48+dy, dz, 0)
+				if w.At(100+dx, 48+dy, dz) != worldgen.Air {
+					w.SetBlock(100+dx, 48+dy, dz, worldgen.Air)
 				}
 			}
 		}
 	}
 }
+
+// obsidianBlock is obsidian's state (the pad was once written as a raw id,
+// which the 26.3 renumbering turned into piston heads).
+var obsidianBlock = worldgen.BlockBase("obsidian")
 
 // onDimSwitch is the hub side: move the tracked record and swap entity
 // visibility — the switcher disappears from the old dimension's players and

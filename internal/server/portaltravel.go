@@ -1,5 +1,7 @@
 package server
 
+import "github.com/tachyne/tachyne-world/internal/worldgen"
+
 // Portal travel for everything that is not a player.
 //
 // Entity.handlePortal runs for every entity, and NetherPortalBlock's
@@ -93,4 +95,51 @@ func (h *hub) portalPartner(dim int, x, y, z float64) (dimPos, bool) {
 	delete(h.portalLinks, from)
 	delete(h.portalLinks, to)
 	return dimPos{}, false
+}
+
+// updateEndPortalEntities is EndPortalBlock.entityInside for mobs and dropped
+// items (players go by updateEndPortalContact): into the End onto the
+// obsidian pad at (100,50,0), built if it is missing; out of the End to the
+// world spawn. Bosses never take a portal (canUsePortal).
+func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
+	inPortal := func(dim int, x, y, z float64) bool {
+		w := h.worldFor(dim)
+		return w != nil && w.At(floorInt(x), floorInt(y+0.05), floorInt(z)) == worldgen.EndPortalBlock
+	}
+	dest := func(from int) (int, float64, float64, float64, bool) {
+		if from == dimEnd {
+			w := h.worldFor(dimOverworld)
+			x, z := h.worldSpawnX, h.worldSpawnZ
+			return dimOverworld, x, float64(w.MobFeet(floorInt(x), floorInt(z))), z, true
+		}
+		if h.end == nil {
+			return 0, 0, 0, 0, false
+		}
+		endPlatform(h.end)
+		return dimEnd, 100.5, 50, 0.5, true
+	}
+	for _, m := range h.mobs {
+		if m.portalCool > 0 || m.dying > 0 || m == h.dragon || m.etype == entityWither || m.mount != 0 {
+			continue
+		}
+		if !inPortal(m.dim, m.x, m.y, m.z) {
+			continue
+		}
+		if d, x, y, z, ok := dest(m.dim); ok {
+			h.entityGone(players, m.dim, m.eid)
+			m.dim, m.x, m.y, m.z = d, x, y, z
+			m.portalCool = entityPortalCooldown
+			m.targetEID, m.hasTarget = 0, false
+		}
+	}
+	for _, it := range h.items {
+		if it.portalCool > 0 || !inPortal(it.dim, it.x, it.y, it.z) {
+			continue
+		}
+		if d, x, y, z, ok := dest(it.dim); ok {
+			h.entityGone(players, it.dim, it.eid)
+			it.dim, it.x, it.y, it.z = d, x, y, z
+			it.portalCool = entityPortalCooldown
+		}
+	}
 }

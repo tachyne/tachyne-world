@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The End's arrival platform is obsidian again, and End portals take
+  mobs and items.** Since the move to 26.3 the platform you land on in the
+  End was built out of piston heads; it is obsidian again. Mobs and dropped
+  items that fall into an End portal now travel too, as in vanilla: into
+  the End they land on the platform, out of it they arrive at the world
+  spawn. The dragon and the wither stay put.
 - **Kelp and vines hold on as in vanilla.** Kelp no longer grows on magma
   blocks, and one kind of vine no longer holds up another: kelp, weeping,
   twisting and cave vines each stand only on their own kind or on solid

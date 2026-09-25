@@ -1112,10 +1112,11 @@ func (h *hub) run() {
 			h.phases.lap(phaseMobs)
 			h.playerInsideTick(players)   // block contact for players: every tick, or a sprint misses it
 			h.updatePortalTravel(players) // mobs and drops standing in a portal go through
-			h.updateArrows(players)       // every tick: arrows are fast enough to tunnel otherwise
-			h.updateClouds(players)       // lingering-potion clouds: dose, shrink, expire
-			h.updateBobbers(players)      // fishing bobbers: flight, bobbing, the catch timers
-			h.mapsTick(players)           // held filled maps: color scan + holder updates
+			h.updateEndPortalEntities(players)
+			h.updateArrows(players)  // every tick: arrows are fast enough to tunnel otherwise
+			h.updateClouds(players)  // lingering-potion clouds: dose, shrink, expire
+			h.updateBobbers(players) // fishing bobbers: flight, bobbing, the catch timers
+			h.mapsTick(players)      // held filled maps: color scan + holder updates
 			if age%10 == 0 {
 				h.mapFramesTick(players) // framed maps: viewers get patches + markers
 			}
