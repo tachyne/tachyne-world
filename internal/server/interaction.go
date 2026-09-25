@@ -853,7 +853,7 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// (SweetBerryBushBlock.useItemOn / CaveVines.use); otherwise it passes
 	// to the item, which is how bone meal grows a bush.
 	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, held)
-	if plant || isGolemStatue(state) || isWire(state) { // the block's own use (blockclick.go)
+	if plant || (isGolemStatue(state) && statueClaimsClick(state, held)) || isWire(state) { // the block's own use (blockclick.go)
 		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

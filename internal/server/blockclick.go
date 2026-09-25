@@ -32,6 +32,21 @@ var freshStatueLo, freshStatueHi = worldgen.BlockRange("copper_golem_statue")
 
 func isFreshGolemStatue(s uint32) bool { return s >= freshStatueLo && s <= freshStatueHi }
 
+// statueClaimsClick is the statue's useItemOn choosing between its own use
+// (turning its pose, waking the golem) and PASS to the item's: an axe goes
+// on to AxeItem (scrape, wax off) unless it can wake an unweathered statue,
+// and honeycomb on to HoneycombItem unless the statue is already waxed.
+func statueClaimsClick(state uint32, held int32) bool {
+	switch {
+	case axeItems[held]:
+		return isFreshGolemStatue(state)
+	case held == itemHoneycomb:
+		_, canWax := waxedCopper(state)
+		return !canWax
+	}
+	return true
+}
+
 // reviveGolemStatue is CopperGolemStatueBlockEntity.removeStatue: the block
 // goes, a golem stands up in its place facing the way the statue faced, and
 // the axe pays a point of durability for it.

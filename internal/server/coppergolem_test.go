@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -221,5 +222,40 @@ func TestAxeLeavesAWeatheredStatueToTheCopperRules(t *testing.T) {
 		if m.etype == entityCopperGolem {
 			t.Fatal("no golem should have woken up")
 		}
+	}
+}
+
+// Honeycomb waxes an unwaxed statue and an axe scrapes a weathered one: the
+// statue PASSes those clicks to the item instead of turning its pose
+// (WeatheringCopperGolemStatueBlock.useItemOn), through the use_item_on path.
+func TestStatuePassesAxeAndHoneycombToTheItem(t *testing.T) {
+	s, h, p := offhandOnRig(t)
+	w := s.world
+	x, y, z := 70, 180, 70
+	clearAirBox(w, x, y, z, 2)
+	stoneFloor(w, x, y, z)
+	use := func(item string, statue string) string {
+		w.SetBlock(x, y, z, worldgen.BlockBase(statue))
+		onHub(t, h, func() {
+			tr := h.playersRef[p.eid]
+			tr.inv.slots[0] = invStack{item: itemByName[item], count: 1}
+			h.sendSlot(tr, 0)
+		})
+		s.handlePlace(p, handPlaceBody(0, x, y, z, 1))
+		for i := 0; i < 40; i++ {
+			onHub(t, h, func() {})
+		}
+		name, _ := worldgen.StateName(w.Block(x, y, z))
+		name, _, _ = strings.Cut(name, "[")
+		return name
+	}
+	if got := use("honeycomb", "copper_golem_statue"); got != "waxed_copper_golem_statue" {
+		t.Errorf("honeycomb on a statue: %q, want waxed_copper_golem_statue", got)
+	}
+	if got := use("iron_axe", "weathered_copper_golem_statue"); got != "exposed_copper_golem_statue" {
+		t.Errorf("axe on a weathered statue: %q, want exposed_copper_golem_statue", got)
+	}
+	if got := use("iron_axe", "waxed_copper_golem_statue"); got != "copper_golem_statue" {
+		t.Errorf("axe on a waxed statue: %q, want the wax off", got)
 	}
 }
