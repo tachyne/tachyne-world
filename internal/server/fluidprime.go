@@ -61,6 +61,12 @@ func (h *hub) primeFluids(players map[int32]*tracked) {
 					if worldgen.IsFluid(e.State) || worldgen.IsWaterlogged(e.State) || isFire(e.State) || worldgen.IsFalling(e.State) {
 						h.scheduleIn(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ}, 1)
 					}
+					// Frogspawn's hatch is a scheduled tick, which vanilla saves
+					// with the chunk and this engine keeps in memory: a clutch
+					// from before a restart is armed afresh, or it never hatches.
+					if e.State == frogspawnBlock {
+						h.scheduleFrogspawn(t.dim, blockPos{int(x)*16 + e.LX, e.Y, int(z)*16 + e.LZ})
+					}
 				}
 			}
 		}

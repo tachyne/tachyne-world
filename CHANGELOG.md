@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Frogspawn hatches after a server restart.** Frogspawn laid before a
+  restart never hatched. It now hatches within the usual three to ten
+  minutes after its area loads again.
 - **Flower pots hand the plant back.** Taking a plant out of a pot dropped
   it on the ground; now it goes into your inventory, and is only dropped if
   there is no room, as in vanilla. Clicking a filled pot with another plant

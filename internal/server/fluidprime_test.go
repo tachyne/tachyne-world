@@ -82,3 +82,31 @@ func TestPrimingWakesFrozenLavaAndFire(t *testing.T) {
 		t.Error("the fire is still burning with nothing to burn")
 	}
 }
+
+// TestPrimingRearmsFrogspawn: frogspawn hatches on a scheduled tick, which
+// vanilla saves with the chunk; the engine keeps it in memory, so a clutch
+// from before a restart must be armed again when its chunk is primed — at
+// a hatch time inside vanilla's three-to-ten-minute window.
+func TestPrimingRearmsFrogspawn(t *testing.T) {
+	w := world.New(1)
+	x, y, z := 3000, 170, 3000
+	w.ForceLoad(x, z, 1)
+	w.SetBlock(x, y-1, z, worldgen.WaterBase)
+	w.SetBlock(x, y, z, frogspawnBlock)
+	h := newHub(w)
+	tr := testTracked()
+	tr.x, tr.y, tr.z = float64(x), float64(y), float64(z)
+	players := map[int32]*tracked{1: tr}
+	for i := 0; i < 20; i++ {
+		h.primeFluids(players)
+	}
+	now := h.tick.Load()
+	for due, list := range h.pending {
+		for _, sp := range list {
+			if sp.blockPos == (blockPos{x, y, z}) && due >= now+frogspawnMinHatch && due < now+frogspawnMaxHatch {
+				return
+			}
+		}
+	}
+	t.Fatal("the frogspawn left from before a restart was never armed to hatch")
+}
