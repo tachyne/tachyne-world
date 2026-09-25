@@ -142,6 +142,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Weaker potion effects wait their turn.** A mob given a strong, short
+  effect over a weaker, longer one of the same kind now keeps the weaker
+  one and returns to it when the strong one ends, as players already did.
+  A player's waiting effects are also saved, so a relog no longer loses
+  them.
 - **Death messages name the killer's named item.** Deaths caused by a
   player holding an item renamed on an anvil now read "… using
   [name]" however the blow came, including arrows, tridents, Thorns,

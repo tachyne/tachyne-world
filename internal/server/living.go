@@ -52,13 +52,17 @@ func (l *living) startEffectTicks(id int32, amp, ticks int) bool {
 }
 
 // startEffectInstance is startEffectTicks for a whole instance, carrying its
-// particle flag; an infinite duration outlasts every other.
+// particle flag; an infinite duration outlasts every other. A running
+// instance takes it the way MobEffectInstance.update does: a stronger one
+// shows (the old one kept hidden beneath it if it would outlast it), and a
+// weaker, longer one waits in the hidden stack for its turn. Reports whether
+// what is showing changed.
 func (l *living) startEffectInstance(id int32, in activeEffect) bool {
 	if l.effects == nil {
 		l.effects = map[int32]*activeEffect{}
 	}
-	if cur, ok := l.effects[id]; ok && (cur.amp > in.amp || (cur.amp == in.amp && in.shorterThan(cur))) {
-		return false
+	if cur, ok := l.effects[id]; ok {
+		return cur.update(in)
 	}
 	in.hidden = nil
 	l.effects[id] = &in
