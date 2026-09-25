@@ -371,9 +371,14 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 		if w.At(pos.x, pos.y, pos.z) != worldgen.Air || !fullCube(w.At(pos.x, pos.y-1, pos.z)) {
 			continue
 		}
-		h.setBlockAt(players, dim, pos, fireDefault)
-		h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
-		h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
+		// Explosion.createFire: BaseFireBlock.getState — soul fire over soul
+		// sand or soul soil, which neither ages nor spreads.
+		fire := fireStateOver(w.At(pos.x, pos.y-1, pos.z))
+		h.setBlockAt(players, dim, pos, fire)
+		if fire == fireDefault {
+			h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
+			h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
+		}
 	}
 }
 

@@ -61,3 +61,30 @@ func TestSoulFireOverSoulBlocks(t *testing.T) {
 		t.Fatalf("fire caught over soul sand is %d, want soul fire", got)
 	}
 }
+
+// A fiery blast lights soul fire on soul soil (Explosion.createFire uses
+// BaseFireBlock.getState).
+func TestBlastFireOverSoulSoil(t *testing.T) {
+	w := world.New(1)
+	w.ForceLoad(0, 0, 1)
+	h := newHub(w)
+	var cleared []blockPos
+	for x := 0; x < 30; x++ {
+		w.SetBlock(x, 180, 0, worldgen.BlockBase("soul_soil"))
+		w.SetBlock(x, 181, 0, worldgen.Air)
+		cleared = append(cleared, blockPos{x, 181, 0})
+	}
+	h.lightBlastFires(map[int32]*tracked{}, 0, cleared)
+	soul, plain := 0, 0
+	for x := 0; x < 30; x++ {
+		switch st := w.At(x, 181, 0); {
+		case st == soulFire:
+			soul++
+		case isFire(st):
+			plain++
+		}
+	}
+	if soul == 0 || plain != 0 {
+		t.Fatalf("over soul soil a blast lit %d soul fires and %d plain ones", soul, plain)
+	}
+}

@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fiery blasts light soul fire on soul blocks.** A fiery explosion — a
+  bed going off in the Nether, a ghast fireball — now lights blue soul fire
+  on soul sand and soul soil, as in vanilla.
 - **Wardens emerge where vanilla's do.** A summoned Warden now looks for
   ground up to five blocks around the shrieker and six up or down, so it
   can climb out on a ledge or floor nearby instead of failing to appear
