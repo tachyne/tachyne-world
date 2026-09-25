@@ -123,7 +123,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	// …and the other way (DoorBlock/DoublePlantBlock.updateShape): a lower
 	// half whose upper half has gone goes too.
 	if prop("half") == "lower" {
-		if info, ok := worldgen.InfoForState(state); ok && isTwoTall(info) {
+		// (Not a pitcher crop: young ones are a lower half alone, and
+		// PitcherCropBlock.updateShape only asks canSurvive.)
+		if info, ok := worldgen.InfoForState(state); ok && isTwoTall(info) && !isPitcherCrop(state) {
 			up := above()
 			if ui, ok := worldgen.InfoForState(up); !ok || !sameBlockFamily(up, state) || worldgen.GetProperty(ui, up, "half") != "upper" {
 				return false

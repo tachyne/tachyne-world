@@ -253,8 +253,19 @@ func (h *hub) bonemealSapling(players map[int32]*tracked, dim, x, y, z int, stat
 // the upper above it.
 func (h *hub) placeDoublePlant(players map[int32]*tracked, dim int, pos blockPos, lower uint32) {
 	info, _ := worldgen.InfoForState(lower)
+	// Both halves are written before the support sweep looks at either: a
+	// lower half with no upper yet (or an upper with no lower) would drop.
+	was := h.supportSweep
+	h.supportSweep = true
 	h.setBlockAt(players, dim, pos, worldgen.SetProperty(info, lower, "half", "lower"))
 	h.setBlockAt(players, dim, blockPos{pos.x, pos.y + 1, pos.z}, worldgen.SetProperty(info, lower, "half", "upper"))
+	h.supportSweep = was
+	if !was {
+		h.supportSweep = true
+		h.dropUnsupported(players, dim, pos)
+		h.dropUnsupported(players, dim, blockPos{pos.x, pos.y + 1, pos.z})
+		h.supportSweep = false
+	}
 }
 
 // bonemealPlantHead is GrowingPlantHeadBlock.performBonemeal: the head
