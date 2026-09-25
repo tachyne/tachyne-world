@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Wandering traders keep away from zombies and illagers.** As in vanilla,
+  a wandering trader now walks away from zombies (husks, drowned and zombie
+  villagers too), pillagers, vindicators, evokers, illusioners, vexes and
+  zoglins that come near. A worried panda backs away from a monster that
+  gets within four blocks.
 - **Fed animals walk to their mate.** Two animals you fed used to wander
   around at a trot until they happened to meet. As in vanilla, each one
   now walks over to the nearest fed animal of its kind; cats, ocelots and
