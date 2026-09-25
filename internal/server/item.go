@@ -252,6 +252,7 @@ const (
 	componentFireworks      = 60 // fireworks (a rocket's flight duration + bursts); remapped per version
 	componentFireworkStar   = 59 // firework_explosion (one star's burst); remapped per version
 	componentPotDecorations = 65 // pot_decorations (a pot's four faces, as ITEM ids); remapped per version
+	componentInstrument     = 52 // instrument (a goat horn's call, EitherHolder); remapped + reshaped per version
 )
 
 // appendStack encodes a Slot, attaching the damage component when the stack
@@ -345,6 +346,9 @@ func stackComponents(st invStack) []byte {
 	if !st.sherds.empty() {
 		comps++
 	}
+	if st.item == itemGoatHorn {
+		comps++
+	}
 	var bookBytes []byte
 	if st.bookID != 0 {
 		if bs := globalBooks.Load(); bs != nil {
@@ -370,6 +374,15 @@ func stackComponents(st invStack) []byte {
 	}
 	b = protocol.AppendVarInt(b, comps) // components to add
 	b = protocol.AppendVarInt(b, 0)     // components to remove
+	if st.item == itemGoatHorn {
+		// instrument: the horn's call, as an EitherHolder holder — the
+		// tooltip names it. First, like the dye below, because the
+		// Bedrock gateway reads a stack's leading component (its aux
+		// value is the call), and a horn carries no dye, map or book.
+		b = protocol.AppendVarInt(b, componentInstrument)
+		b = append(b, 1)
+		b = protocol.AppendVarInt(b, instrumentRegistryIndex(st.instrument)+1)
+	}
 	if st.color != 0 {
 		// First on purpose: the Bedrock gateway reads a stack's leading
 		// component for its NBT (maps, books, and now the dye), and a dyed

@@ -25,6 +25,18 @@ var instrumentSounds = []string{
 	"minecraft:item.goat_horn.sound.7", // dream
 }
 
+// instrumentRegistryIndex is an instrument's place in the instrument
+// registry we declare to clients (alphabetical: admire, call, dream, feel,
+// ponder, seek, sing, yearn), from the sound order above.
+func instrumentRegistryIndex(i int8) int32 {
+	if i < 0 || int(i) >= len(instrumentRegistryOrder) {
+		i = 0
+	}
+	return instrumentRegistryOrder[i]
+}
+
+var instrumentRegistryOrder = []int32{4, 6, 5, 3, 0, 1, 7, 2}
+
 const (
 	hornRange    = 256.0 // vanilla Instrument.range for every goat horn
 	hornUseSecs  = 7.0   // Instrument.useDuration; the cooldown is the same
