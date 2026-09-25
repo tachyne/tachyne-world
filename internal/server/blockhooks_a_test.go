@@ -20,3 +20,22 @@ func TestClickClearsOrphanMovingPiston(t *testing.T) {
 		t.Fatal("the orphaned moving piston should be removed by the click")
 	}
 }
+
+// to the held block, which is placed against it.
+func TestIronTrapdoorClickPlacesAgainstIt(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+	x, y, z := 5, 70, 5
+	trap := worldgen.BlockBase("iron_trapdoor")
+	w.SetBlock(x, y, z, trap)
+	w.SetBlock(x, y+1, z, worldgen.Air)
+	p.setHotbarSlot(0, itemByName["stone"])
+	selectSlot(p, 0)
+	s.handlePlace(p, placeBody(x, y, z, 1))
+	if w.Block(x, y, z) != trap {
+		t.Error("a hand opened the iron trapdoor")
+	}
+	if w.Block(x, y+1, z) != worldgen.BlockBase("stone") {
+		t.Error("the stone was not placed against the iron trapdoor")
+	}
+}

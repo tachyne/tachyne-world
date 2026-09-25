@@ -928,9 +928,10 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return false
 	}
 	blockName, _ := worldgen.StateName(state)
-	if !opensByHand(blockName) { // BlockSetType.canOpenByHand: iron answers only to redstone
-		s.sendBlockChange(p, x, y, z, state, seq)
-		return true
+	if !opensByHand(blockName) {
+		// DoorBlock/TrapDoorBlock.useWithoutItem: iron answers only to
+		// redstone, and the click PASSes, so a held block places against it.
+		return false
 	}
 	nv := "true"
 	freq := freqBlockOpen
