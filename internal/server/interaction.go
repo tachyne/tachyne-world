@@ -764,6 +764,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// be added to the storage side and forgotten on the interaction side —
 	// which is exactly how placed shulker boxes shipped unopenable.
 	if isWoodShelf(state) { // a slot on its face: swap the held stack in or out (or the hotbar, powered)
+		if woodShelfHitSlot(state, face, cx, cz) < 0 {
+			return false // ShelfBlock.useItemOn: no slot hit (a side or the top) → PASS
+		}
 		s.hub.post(evUseWoodShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

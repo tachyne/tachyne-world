@@ -662,3 +662,24 @@ func TestWireDotClickUnpowersTheLamp(t *testing.T) {
 		t.Error("a dot no longer powers the lamp beside it; the lamp should go out")
 	}
 }
+
+// ShelfBlock.neighborChanged: the shelf follows its power in the same tick
+// as the change (not a tick later) and it is a BLOCK_ACTIVATE.
+func TestShelfPowersAtOnceAndIsHeard(t *testing.T) {
+	var poweredAtOnce bool
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		h.world.SetBlock(7, 180, 4, shelfState("oak_shelf", "north", false, "unconnected"))
+		h.world.SetBlock(7, 180, 5, worldgen.BlockBase("redstone_block"))
+		h.inDim(0, func() {
+			h.nbAdd(blockPos{7, 180, 4})
+			h.nbRun(players)
+		})
+		poweredAtOnce = boolProp(h.world.At(7, 180, 4), "powered")
+	})
+	if !poweredAtOnce {
+		t.Error("the shelf should power in the update's own tick")
+	}
+	if f != freqBlockActivate {
+		t.Errorf("the sensor heard %d, want BLOCK_ACTIVATE %d", f, freqBlockActivate)
+	}
+}
