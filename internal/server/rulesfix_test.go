@@ -59,3 +59,26 @@ func TestArmourUnbreakingRate(t *testing.T) {
 		t.Fatal("no enchantment, no sparing")
 	}
 }
+
+// TestUnbreakingRollsPerPoint: remove_binomial removes each point of wear on
+// its own (tools lvl/(lvl+1)), so over many two-point events the kept total
+// averages 2/(lvl+1) a hit and single points are kept too — not all or none.
+func TestUnbreakingRollsPerPoint(t *testing.T) {
+	h := newHub(world.New(1))
+	h.rng.Seed(7)
+	ones := 0
+	total := 0
+	for i := 0; i < 20000; i++ {
+		k := h.unbreakingKept(2, 3.0/4.0) // Unbreaking III on a tool
+		if k == 1 {
+			ones++
+		}
+		total += k
+	}
+	if ones == 0 {
+		t.Fatal("a two-point hit is never half spared: the roll is per event, not per point")
+	}
+	if avg := float64(total) / 20000; avg < 0.45 || avg > 0.55 {
+		t.Fatalf("kept %.3f points a hit, want about 0.5 (2 × 1/4)", avg)
+	}
+}

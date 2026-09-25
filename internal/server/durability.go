@@ -87,8 +87,10 @@ func (h *hub) applyToolWear(t *tracked, slot, n int) {
 	if !ok || s.count == 0 {
 		return
 	}
-	if lvl := s.enchLvl(enchUnbreaking); lvl > 0 && h.rng.Intn(lvl+1) > 0 {
-		return // unbreaking ate the wear (lvl/(lvl+1) chance, vanilla)
+	if lvl := s.enchLvl(enchUnbreaking); lvl > 0 {
+		if n = h.unbreakingKept(n, float64(lvl)/float64(lvl+1)); n == 0 {
+			return // unbreaking ate every point of the wear
+		}
 	}
 	if s.dmg += n; s.dmg >= max {
 		// Stats.ITEM_BROKEN, and the snap everyone nearby hears.
@@ -171,10 +173,11 @@ func (h *hub) wearArmor(players map[int32]*tracked, t *tracked, dmg float32, dt 
 		if resistsWear(a.item, dt) {
 			continue // netherite in a fire: the set comes out unmarked
 		}
-		if h.armourUnbreakingSpares(a.enchLvl(enchUnbreaking)) {
+		kept := h.unbreakingKept(n, armourUnbreakingChance(a.enchLvl(enchUnbreaking)))
+		if kept == 0 {
 			continue // unbreaking spared this piece
 		}
-		if a.dmg += n; a.dmg >= max {
+		if a.dmg += kept; a.dmg >= max {
 			*a = invStack{} // the piece shatters
 		}
 		if t.winID == 0 {
@@ -199,7 +202,7 @@ func (h *hub) wearArmorSlot(players map[int32]*tracked, t *tracked, slot, n int,
 	if resistsWear(a.item, dt) {
 		return
 	}
-	if h.armourUnbreakingSpares(a.enchLvl(enchUnbreaking)) {
+	if n = h.unbreakingKept(n, armourUnbreakingChance(a.enchLvl(enchUnbreaking))); n == 0 {
 		return
 	}
 	if a.dmg += n; a.dmg >= max {
@@ -293,5 +296,29 @@ func (h *hub) armourUnbreakingSpares(lvl int) bool {
 	if lvl <= 0 {
 		return false
 	}
-	return h.rng.Float64() < float64(2*lvl)/float64(5*lvl+5)
+	return h.rng.Float64() < armourUnbreakingChance(lvl)
+}
+
+// armourUnbreakingChance is the armour branch's remove_binomial chance.
+func armourUnbreakingChance(lvl int) float64 {
+	if lvl <= 0 {
+		return 0
+	}
+	return float64(2*lvl) / float64(5*lvl+5)
+}
+
+// unbreakingKept is Unbreaking's remove_binomial item_damage effect: each
+// of the n points of wear is removed with chance p on its own, so a
+// two-point hit can be half spared — not one roll for the whole event.
+func (h *hub) unbreakingKept(n int, p float64) int {
+	if p <= 0 {
+		return n
+	}
+	kept := 0
+	for i := 0; i < n; i++ {
+		if h.rng.Float64() >= p {
+			kept++
+		}
+	}
+	return kept
 }

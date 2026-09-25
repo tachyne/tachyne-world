@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Unbreaking saves each point of wear separately.** Unbreaking decided
+  whether to spare a whole hit at once. As in vanilla it now rolls for every
+  point of wear, so a hit costing two can cost one.
 - **Levitation lifts mobs.** A mob hit by a shulker bullet was given
   Levitation but stayed on the ground; it now floats upward as in vanilla,
   and falls when the effect wears off.
