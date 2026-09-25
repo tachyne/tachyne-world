@@ -282,3 +282,35 @@ func TestSpawnpointCommand(t *testing.T) {
 		t.Fatalf("bob's spawn is %v (ok %v)", pos, ok)
 	}
 }
+
+// /clear with an item and a maximum: count only at 0, take up to the
+// maximum, then everything of that item; other items stay.
+func TestClearItemAndMax(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	stone, dirt := int32(itemByName["stone"]), int32(itemByName["dirt"])
+	pl.inv.slots[0] = invStack{item: stone, count: 10}
+	pl.inv.slots[1] = invStack{item: stone, count: 5}
+	pl.inv.slots[2] = invStack{item: dirt, count: 7}
+	count := func(id int32) (n int) {
+		for _, s := range pl.inv.slots {
+			if s.item == id {
+				n += s.count
+			}
+		}
+		return n
+	}
+	h.onClearInv(players, evClearInv{by: pl.p, name: pl.p.name, item: stone, max: 0})
+	if count(stone) != 15 {
+		t.Fatal("a count-only clear removed stone")
+	}
+	h.onClearInv(players, evClearInv{by: pl.p, name: pl.p.name, item: stone, max: 12})
+	if count(stone) != 3 || count(dirt) != 7 {
+		t.Fatalf("after clearing 12 stone: stone %d dirt %d, want 3 and 7", count(stone), count(dirt))
+	}
+	h.onClearInv(players, evClearInv{by: pl.p, name: pl.p.name, item: stone, max: -1})
+	if count(stone) != 0 || count(dirt) != 7 {
+		t.Fatalf("clearing all stone left stone %d dirt %d", count(stone), count(dirt))
+	}
+}

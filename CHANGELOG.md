@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/clear an item.** `/clear [targets] [item] [maxCount]` takes only that
+  item, up to the count given, or with a count of 0 just says how many there
+  are, as in vanilla; it used to empty the whole inventory.
 - **/tp moves other players and mobs.** Operators can send players or mobs
   to another entity (`/tp bob alice`) or to a position, optionally with a
   rotation (`/tp @e[type=cow] 0 80 0 90 0`), as in vanilla. `/tp` is now for

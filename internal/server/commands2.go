@@ -85,22 +85,46 @@ func (h *hub) onKick(players map[int32]*tracked, e evKick) {
 	e.by.trySendEv(chatEv("No player named " + e.name + " is online."))
 }
 
-// cmdClear empties an inventory (op; defaults to self).
+// cmdClear is ClearInventoryCommands: /clear [targets] [item] [maxCount]
+// takes (up to maxCount of) an item, or everything, from the targets; a
+// maxCount of 0 only counts.
 func (s *Server) cmdClear(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
-	target := p.name
+	e := evClearInv{by: p, name: p.name, max: -1}
 	if len(args) > 0 {
-		target = args[0]
+		e.name = args[0]
 	}
-	s.hub.post(evClearInv{by: p, name: target})
+	if len(args) > 1 {
+		id, ok := itemByName[strings.TrimPrefix(args[1], "minecraft:")]
+		if !ok {
+			p.tell("Unknown item: " + args[1])
+			return
+		}
+		e.item = int32(id)
+	}
+	if len(args) > 2 {
+		n, err := strconv.Atoi(args[2])
+		if err != nil || n < 0 {
+			p.tell("Usage: /clear [targets] [item] [maxCount]")
+			return
+		}
+		e.max = n
+	}
+	if len(args) > 3 {
+		p.tell("Usage: /clear [targets] [item] [maxCount]")
+		return
+	}
+	s.hub.post(e)
 }
 
 type evClearInv struct {
 	by   *player
 	name string
+	item int32 // 0 = any item
+	max  int   // -1 = no limit; 0 = count only
 }
 
 func (evClearInv) isHubEvent() {}
@@ -118,32 +142,63 @@ func (h *hub) onClearInv(players map[int32]*tracked, e evClearInv) {
 		e.by.trySendEv(chatEv("No player matched " + e.name + "."))
 		return
 	}
+	total, who := 0, ""
 	for _, t := range targets {
 		if t.inv == nil {
 			continue
 		}
+		left := e.max
 		n := 0
-		for i := range t.inv.slots {
-			if t.inv.slots[i].item != 0 {
-				n += t.inv.slots[i].count
-				t.inv.slots[i] = invStack{}
+		// Inventory.clearOrCountMatchingItems: the slots, the armour, the
+		// offhand, and what the cursor carries.
+		take := func(st *invStack) {
+			if st.item == 0 || st.count <= 0 || (e.item != 0 && st.item != e.item) {
+				return
 			}
+			k := st.count
+			if left >= 0 && k > left {
+				k = left
+			}
+			n += k
+			if e.max == 0 {
+				return // counting only
+			}
+			if left >= 0 {
+				left -= k
+			}
+			if st.count -= k; st.count <= 0 {
+				*st = invStack{}
+			}
+		}
+		for i := range t.inv.slots {
+			take(&t.inv.slots[i])
 		}
 		for i := range t.armor {
-			if t.armor[i].item != 0 {
-				n += t.armor[i].count
-				t.armor[i] = invStack{}
-			}
+			take(&t.armor[i])
 		}
-		if t.offhand.item != 0 {
-			n += t.offhand.count
-			t.offhand = invStack{}
+		take(&t.offhand)
+		take(&t.cursor)
+		if e.max != 0 {
+			h.sendInventory(t)
+			h.sendCursor(t)
+			h.broadcastEquipment(players, t)
 		}
-		t.cursor = invStack{}
-		h.sendInventory(t)
-		h.sendCursor(t)
-		h.broadcastEquipment(players, t)
-		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from %s.", n, t.p.name), true)
+		total += n
+		who = t.p.name
+	}
+	switch {
+	case total == 0 && len(targets) == 1:
+		e.by.trySendEv(chatEv("No items were found on player " + targets[0].p.name))
+	case total == 0:
+		e.by.trySendEv(chatEv(fmt.Sprintf("No items were found on %d players", len(targets))))
+	case e.max == 0 && len(targets) == 1:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Found %d matching item(s) on player %s", total, who), true)
+	case e.max == 0:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Found %d matching item(s) on %d players", total, len(targets)), true)
+	case len(targets) == 1:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from player %s", total, who), true)
+	default:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Removed %d item(s) from %d players", total, len(targets)), true)
 	}
 }
 
