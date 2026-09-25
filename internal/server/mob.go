@@ -751,7 +751,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// above its panic).
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
-		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
+		case m.etype == entityPiglin && h.piglinAvoidStep(players, m):
 			// A piglin backing away from a soul light or a zombified piglin.
 		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
 			// A zombie, zombified piglin or piglin with a spear: closing,

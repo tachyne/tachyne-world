@@ -92,8 +92,24 @@ func TestPiglinAvoidsRepellentsAndZombified(t *testing.T) {
 	if m.piglinFlee < piglinAvoidMin {
 		t.Errorf("the retreat lasts five to seven seconds, got %d", m.piglinFlee)
 	}
-	// A brute avoids them too; an ordinary zombie does not move either of them.
 	if !isPiglinRepellent(worldgen.BlockBase("soul_lantern")) || isPiglinRepellent(worldgen.Stone) {
 		t.Error("the repellent set is wrong")
+	}
+}
+
+// PiglinBruteAi has no avoid behaviour at all: a brute beside a soul torch
+// and a zombified piglin holds its ground. It used to back off like a
+// piglin (this test's predecessor claimed it should).
+func TestPiglinBruteDoesNotAvoid(t *testing.T) {
+	h, players := preyFixture(t)
+	b := h.spawnHostileY(players, entityPiglinBrute, 0.5, 180, 0.5)
+	h.world.SetBlock(3, 180, 0, worldgen.BlockBase("soul_torch"))
+	h.spawnMob(players, entityZombifiedPiglin, 0.5, 180, -1.5)
+	for i := 0; i < 5; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+		if b.piglinFlee > 0 {
+			t.Fatalf("update %d: the brute started a retreat", i)
+		}
 	}
 }

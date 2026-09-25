@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Piglin brutes stand their ground.** Brutes backed away from soul fire
+  and zombified piglins like ordinary piglins. As in vanilla, they no
+  longer do.
 - **Breeze wind charges fly at vanilla speed.** A breeze's wind charges
   flew twice as fast as they should. They now fly at vanilla speed from the
   breeze's middle, aimed a little lower on you, with vanilla's spread.
