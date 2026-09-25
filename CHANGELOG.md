@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Zoglins wander slowly and giants stand still.** An idle zoglin now
+  ambles at vanilla's slower pace instead of charging about, and a giant no
+  longer turns its head to watch players, since it has no behaviour at all.
 - **Piglin brutes stand their ground.** Brutes backed away from soul fire
   and zombified piglins like ordinary piglins. As in vanilla, they no
   longer do.

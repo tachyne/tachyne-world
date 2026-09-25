@@ -34,6 +34,7 @@ var lookRanges = map[string]float64{
 	"evoker":   3, "illusioner": 3, "vindicator": 3, "vex": 3, // LookAtPlayerGoal(this, Player, 3, 1.0)
 	"squid": 0, "glow_squid": 0, "cod": 0, "salmon": 0, "tropical_fish": 0, "pufferfish": 0,
 	"tadpole": 0, "shulker": 0, "ender_dragon": 0, "nautilus": 0, "zombie_nautilus": 0,
+	"giant": 0, // Giant registers no goals at all
 }
 
 // lookRange is how far a species watches a player from, zero for one that

@@ -48,6 +48,7 @@ func TestLookRanges(t *testing.T) {
 	cases := map[int]float64{
 		entityCow: 6, entityZombie: 8, entityCat: 10, entityPillager: 15,
 		entitySquid: 0, entityCod: 0, entityCreeper: 8,
+		entityID("giant"): 0, // no goals at all
 	}
 	for et, want := range cases {
 		if got := lookRange(&mob{etype: et}); got != want {
