@@ -91,3 +91,24 @@ func TestGroundItemsMergeOnlyWithTheSameData(t *testing.T) {
 		t.Fatalf("identical rockets did not merge on the ground: %d left", len(h.items))
 	}
 }
+
+// A creative player picks items up too (ItemEntity.playerTouch); a
+// spectator touches nothing.
+func TestCreativePicksUpSpectatorDoesNot(t *testing.T) {
+	for _, tc := range []struct {
+		mode int
+		want bool
+	}{{gmCreative, true}, {gmSpectator, false}} {
+		h := newHub(world.New(1))
+		pl := testTracked()
+		pl.gamemode = tc.mode
+		players := map[int32]*tracked{1: pl}
+		pl.x, pl.y, pl.z = 0.5, h.world.SurfaceY(0, 0), 0.5
+		h.spawnItemAt(players, 0, itemByName["stone"], 3, pl.x, pl.y, pl.z, 0, 0, 0)
+		h.tick.Add(pickupDelay + 1)
+		h.pickupItems(players)
+		if got := pl.inv.slots[0].count == 3; got != tc.want {
+			t.Fatalf("mode %d picked up %v, want %v", tc.mode, got, tc.want)
+		}
+	}
+}

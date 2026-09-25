@@ -121,7 +121,7 @@ func TestNetherDropsStayInNether(t *testing.T) {
 	if it == nil || it.dim != 1 {
 		t.Fatalf("nether drop should carry dim 1: %+v", it)
 	}
-	pl.gamemode = gmCreative // sidelined for phase one
+	pl.gamemode = gmSpectator // sidelined for phase one (a spectator picks nothing up)
 	// An overworld player at the same coords must NOT pick it up.
 	ow := testTracked()
 	ow.p.eid = 2

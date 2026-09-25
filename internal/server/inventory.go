@@ -268,11 +268,13 @@ func windowSlot(logical int) int16 {
 	return int16(logical)
 }
 
-// pickupItems collects nearby dropped items into survival players' inventories.
+// pickupItems collects nearby dropped items into players' inventories —
+// creative ones too (ItemEntity.playerTouch → Inventory.add); only a
+// spectator touches nothing (Player.aiStep).
 func (h *hub) pickupItems(players map[int32]*tracked) {
 	now := h.tick.Load()
 	for _, t := range players {
-		if !isSurvival(t.gamemode) || t.dead || t.inv == nil {
+		if t.gamemode == gmSpectator || t.dead || t.inv == nil {
 			continue
 		}
 		for eid, it := range h.items {

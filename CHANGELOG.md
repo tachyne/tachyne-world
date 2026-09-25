@@ -102,6 +102,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Creative players pick things up.** Walking over dropped items in
+  creative now picks them up, as in vanilla; only spectators leave them.
 - **The dragon's rewards are vanilla's.** Killing the Ender Dragon no
   longer drops an elytra (those come from End ships). The first kill gives
   12000 XP and the dragon egg; later kills give 500 XP and no new egg. Each
