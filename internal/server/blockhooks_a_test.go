@@ -155,3 +155,23 @@ func TestDetectorRailReadsContainerCart(t *testing.T) {
 		t.Errorf("detector rail under a chest cart with one full slot reads %d, want %d", got, want)
 	}
 }
+
+// CreakingHeartBlockEntity.serverTick: when the heart's reading changes as
+// its creaking moves, the comparator beside it hears of it that tick.
+func TestHeartOutputTellsComparator(t *testing.T) {
+	h, pos, link := paleTrunk(t)
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	nightHub(h)
+	h.world.SetBlock(pos.x, pos.y, pos.z, worldgen.CreakingHeartAwake)
+	comp := withProps(t, comparatorMin, map[string]string{"facing": "north", "mode": "compare"})
+	cpos := blockPos{pos.x, pos.y, pos.z + 1}
+	h.world.SetBlock(cpos.x, cpos.y, cpos.z, comp)
+	m := h.spawnMob(players, entityCreaking, float64(pos.x)+10.5, float64(pos.y), float64(pos.z)+0.5)
+	link.creaking = m.eid
+	link.nextAt = h.tick.Load() + 1000 // the heart's own self-check stays out of it
+	h.updateHearts(players)
+	if link.outSig == 0 || !h.hasScheduledTick(cpos) {
+		t.Errorf("the reading (%d) should reach the comparator, scheduled %v", link.outSig, h.hasScheduledTick(cpos))
+	}
+}
