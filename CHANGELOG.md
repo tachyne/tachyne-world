@@ -183,6 +183,8 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Pandas sulk.** A panda in love with no bamboo nearby now shakes its
   head and grumbles at you, as in vanilla, and does not sit down to eat
   while it sulks.
+- **Parrots keep company.** A parrot now flies over to a nearby animal or
+  monster and hangs about a few blocks from it, as in vanilla.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

@@ -172,3 +172,68 @@ func (h *hub) parrotImitateNearby(players map[int32]*tracked, dim int, x, y, z f
 
 // parrotPitch is Parrot.getPitch.
 func parrotPitch(h *hub) float32 { return (h.rng.Float32()-h.rng.Float32())*0.2 + 1 }
+
+// parrotFollowMobStep is FollowMobGoal(1.0, 3, 7): a parrot with nothing
+// better to do keeps company with the nearest mob that is not a parrot
+// within seven blocks (its box grown by seven), flying in to three blocks
+// and backing off when closer than √3, re-deciding every ten ticks. Its
+// wander (priority 2) outranks it; that is left to the ordinary stroll.
+// It reports whether it holds the parrot.
+func (h *hub) parrotFollowMobStep(m *mob) bool {
+	if m.sitting || m.leash != 0 || (m.tamed && m.hasTarget) {
+		m.parrotFollow = 0
+		return false
+	}
+	o := h.mobs[m.parrotFollow]
+	if o == nil || o.dying > 0 || o.dim != m.dim || !h.parrotFollowable(m, o) {
+		m.parrotFollow, o = 0, nil
+		best := math.Inf(1)
+		h.grid().nearby(m.dim, m.x, m.z, parrotFollowArea+2, func(c *mob) {
+			if !h.parrotFollowable(m, c) {
+				return
+			}
+			if d := dist3(c.x, c.y, c.z, m.x, m.y, m.z); d < best {
+				o, best = c, d
+			}
+		})
+		if o == nil {
+			return false
+		}
+		m.parrotFollow, m.followRecalc = o.eid, 0
+	}
+	if m.followRecalc--; m.followRecalc > 0 {
+		return true // keep the heading chosen last time
+	}
+	m.followRecalc = 10 / mobMoveInterval
+	d2 := sq(m.x-o.x) + sq(m.y-o.y) + sq(m.z-o.z)
+	switch {
+	case d2 > parrotFollowStop*parrotFollowStop:
+		m.vx, m.vz = straightSteer(m, o.x, o.z, 0)
+		m.flyAim(h.tick.Load(), o.y)
+	case d2 <= parrotFollowStop:
+		m.vx, m.vz = straightSteer(m, 2*m.x-o.x, 2*m.z-o.z, 0) // too close: away from it
+	default:
+		m.vx, m.vz = 0, 0
+	}
+	m.yaw = yawToward(m.x, m.z, o.x, o.z)
+	m.headYaw = m.yaw
+	m.rest = 0
+	return true
+}
+
+const (
+	parrotFollowArea = 7.0 // FollowMobGoal areaSize
+	parrotFollowStop = 3.0 // …stopDistance
+)
+
+// parrotFollowable is FollowMobGoal's followPredicate and box: another
+// kind of mob, visible, whose box meets the parrot's grown by seven.
+func (h *hub) parrotFollowable(m, o *mob) bool {
+	if o == m || o.etype == entityParrot || o.dying > 0 || o.dim != m.dim || o.hasEffect(effInvisibility) > 0 {
+		return false
+	}
+	mb, ob := m.box(), o.box()
+	reach := parrotFollowArea + (mb.w+ob.w)/2
+	return math.Abs(o.x-m.x) <= reach && math.Abs(o.z-m.z) <= reach &&
+		o.y+ob.h >= m.y-parrotFollowArea && o.y <= m.y+mb.h+parrotFollowArea
+}

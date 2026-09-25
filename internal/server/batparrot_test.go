@@ -80,3 +80,39 @@ func TestBatFliesToItsTarget(t *testing.T) {
 		t.Fatal("the bat never moved")
 	}
 }
+
+// FollowMobGoal(1.0, 3, 7): a parrot flies to a mob within seven, holds off
+// at three and backs away when closer; another parrot is no company.
+func TestParrotFollowsAMob(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -12; x <= 12; x++ {
+		for z := -4; z <= 4; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	players := map[int32]*tracked{}
+	p := h.spawnMob(players, entityParrot, 0.5, 180, 0.5)
+	other := h.spawnMob(players, entityParrot, 3.5, 180, 0.5)
+	h.gridDirty()
+	if h.parrotFollowMobStep(p) {
+		t.Fatalf("another parrot is no company (following %d)", p.parrotFollow)
+	}
+	h.removeMob(players, other)
+	cow := h.spawnMob(players, entityCow, 6.5, 180, 0.5)
+	h.gridDirty()
+	if !h.parrotFollowMobStep(p) || p.parrotFollow != cow.eid || p.vx <= 0 {
+		t.Fatalf("the parrot should fly to the cow: follow %d vx %v", p.parrotFollow, p.vx)
+	}
+	p.x, p.followRecalc = 5.5, 0 // within √3
+	h.parrotFollowMobStep(p)
+	if p.vx >= 0 {
+		t.Fatalf("too close, it backs away: vx %v", p.vx)
+	}
+	cow.x = 30.5
+	h.gridDirty()
+	p.followRecalc = 0
+	if h.parrotFollowMobStep(p) {
+		t.Fatal("a mob beyond seven is let go")
+	}
+}

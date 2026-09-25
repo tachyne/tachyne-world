@@ -445,6 +445,7 @@ type mob struct {
 	batT                            blockPos   // bat: the cell it is flying at
 	batHasT                         bool       // …set
 	batVX, batVY, batVZ             float64    // bat: its own per-tick velocity
+	parrotFollow                    int32      // parrot: the mob FollowMobGoal keeps it with
 	snowUnseen, snowSeeTime         int        // snow golem: ticks that target has been out of / in sight
 	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
@@ -1025,6 +1026,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityFox && h.foxIdleStep(players, m):
 			// A fox walking in toward a village at night, after berries,
 			// after a dropped item, or sat looking about.
+		case m.etype == entityParrot && h.parrotFollowMobStep(m):
+			// A parrot keeping company with a nearby mob (FollowMobGoal).
 		case (nautilusKind(m.etype) || m.etype == entityHappyGhast) && h.restrictionHomeStep(m):
 			// A tamed nautilus or a happy ghast with nothing else to do keeps
 			// to its home: its wandering stays inside (checkRestriction).
