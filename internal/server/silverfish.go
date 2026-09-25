@@ -67,8 +67,10 @@ func (h *hub) silverfishStep(players map[int32]*tracked, m *mob) bool {
 		}
 		return false
 	}
-	// MergeWithStone: idle, mob griefing, one tick in ten.
-	if m.hasTarget || !h.rules.MobGriefing || h.rng.Intn(silverMergeOdds/mobMoveInterval) != 0 {
+	// MergeWithStone: no target, navigation done (the goal is the
+	// silverfish's stroll, so not partway through a walk), mob griefing,
+	// one tick in ten.
+	if m.hasTarget || m.stroll > 0 || !h.rules.MobGriefing || h.rng.Intn(silverMergeOdds/mobMoveInterval) != 0 {
 		return false
 	}
 	dirs := [6][3]int{{0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}}

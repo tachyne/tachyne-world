@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Silverfish finish their walk before burrowing.** A silverfish could
+  vanish into a stone block partway through a stroll; as in vanilla, it now
+  only burrows in when it has stopped.
 - **Spear zombies charge villagers and golems too.** A zombie, husk,
   zombie villager or zombified piglin carrying a spear used to charge only
   players and just bite anything else. As in vanilla, it now lowers its
