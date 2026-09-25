@@ -75,7 +75,7 @@ func TestBrewingStandTick(t *testing.T) {
 	}
 
 	h.updateBrewing(players)
-	if h.brewProg[pos] != brewTicks-survivalTickN {
+	if h.brewProg[pos] != brewTicks-1 { // one tick of the 400
 		t.Fatalf("the clock counts down, got %d", h.brewProg[pos])
 	}
 	// Swap the ingredient: the brew is lost.

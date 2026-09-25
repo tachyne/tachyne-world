@@ -1216,7 +1216,6 @@ func (h *hub) run() {
 				if age%4 == 0 {
 					h.updateWithers(players) // spawn charge + boss bars
 				}
-				h.updateBrewing(players)
 				h.updateBreeding(players)     // courting, babies, eggs, wool regrowth
 				h.updateCopperGolems(players) // oxidation → statue
 			}
@@ -1258,6 +1257,7 @@ func (h *hub) run() {
 			h.updateVehicles(players)
 			h.updateItemSpawners(players)
 			h.updatePortalDwell(players) // nether portal wait, counted every tick
+			h.updateBrewing(players)     // BrewingStandBlockEntity.serverTick: the brew counts down every tick
 			if age%survivalTickN == 0 {
 				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
 				h.advTick(players) // polled advancement criteria (inventory, biome)

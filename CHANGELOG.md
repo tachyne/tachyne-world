@@ -23,6 +23,9 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Brewing stands bubble smoothly.** The brew now counts down every tick,
+  as in vanilla, so the progress bar and bubbles move steadily instead of
+  jumping once a second.
 - **Players can be crammed.** A survival player squeezed in with as many
   mobs or players as the `max_entity_cramming` rule allows now takes
   cramming damage, as in vanilla — before, only mobs did.

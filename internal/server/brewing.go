@@ -284,7 +284,7 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 		outs, brewable := brewResult(b)
 		switch {
 		case h.brewProg[pos] > 0:
-			h.brewProg[pos] -= survivalTickN
+			h.brewProg[pos]--
 			switch {
 			case h.brewProg[pos] <= 0 && brewable:
 				delete(h.brewProg, pos)
@@ -300,7 +300,11 @@ func (h *hub) updateBrewing(players map[int32]*tracked) {
 			h.brewIng[pos] = b.slots[3].item
 		}
 		h.brewBottleState(players, pos, state, b)
-		h.sendBrewBars(players, pos)
+		// The bubbles move every tick while it brews; idle, once a second
+		// keeps a fresh viewer's bars right.
+		if h.brewProg[pos] > 0 || h.tick.Load()%survivalTickN == 0 {
+			h.sendBrewBars(players, pos)
+		}
 	}
 }
 

@@ -25,7 +25,7 @@ func TestBrewWaterToAwkwardToStrength(t *testing.T) {
 	b.slots[1] = potionStack(potWater)
 	b.slots[3] = invStack{item: itemNetherWart, count: 2}
 	b.slots[4] = invStack{item: itemBlazePowder, count: 2}
-	for i := 0; i < brewTicks/survivalTickN+1; i++ {
+	for i := 0; i < brewTicks+1; i++ {
 		h.updateBrewing(players)
 	}
 	if b.slots[0].potion != potAwkward || b.slots[1].potion != potAwkward {
@@ -36,7 +36,7 @@ func TestBrewWaterToAwkwardToStrength(t *testing.T) {
 	}
 	// Second stage: awkward + blaze powder ingredient → strength.
 	b.slots[3] = invStack{item: itemBlazePowder, count: 1}
-	for i := 0; i < brewTicks/survivalTickN+1; i++ {
+	for i := 0; i < brewTicks+1; i++ {
 		h.updateBrewing(players)
 	}
 	if b.slots[0].potion != potStrength || b.slots[0].name != "Potion of Strength" {
