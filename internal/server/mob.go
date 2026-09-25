@@ -67,6 +67,9 @@ type mob struct {
 	convertIn       int     // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
 	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
+	ticksFrozen     int     // Entity TICKS_FROZEN: the powder-snow frost clock (mobfreeze.go)
+	airborne        bool    // mid-air on the vertical integrator: a bounce, a bubble column, a web (mobairborne.go)
+	airFall         float64 // …and the fall distance it has built up since the last reset
 	wetHurt         int     // water-sensitive mob: ticks until the wet hurts it again
 	creakActive     bool    // creaking: IS_ACTIVE — awake and hunting since a player looked at it
 	swell           int     // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
@@ -669,6 +672,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 			continue
 		}
+		h.mobFreezeStep(players, m) // LivingEntity.aiStep "freezing": powder snow's frost clock
+		if m.health <= 0 || h.mobs[m.eid] == nil {
+			continue
+		}
 		// LivingEntity.aiStep's water check runs whatever the mob is doing.
 		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
 			continue // hurt to death, or an enderman teleported out of the wet
@@ -1156,7 +1163,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// seating against the surface teleported every cave mob into daylight.
 			oldY := m.y
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
-			floor := float64(h.worldFor(m.dim).MobFeetFrom(fx, fz, int(math.Floor(m.y))))
+			floor := float64(h.mobFeetAt(m, fx, fz, int(math.Floor(m.y)))) // a snow walker stops on powder snow
 			if lvl := m.hasEffect(effLevitation); lvl > 0 {
 				// LivingEntity.travel under Levitation: each tick dy eases
 				// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
@@ -1172,6 +1179,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 					}
 					m.y += m.vy
 				}
+			} else if h.mobAirborneStep(players, m, fx, fz, floor) {
+				// A bubble column, a bounce off slime, a web or a honey wall:
+				// the vertical integrator moved it (mobairborne.go).
 			} else if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
 				// FloatGoal / Swim: in deep water it bobs up until its eyes clear the surface.
 				if m.y < fl {
@@ -1185,15 +1195,23 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				// on /attribute gravity 0 hangs in the air.
 			} else {
 				m.y = floor
-				fell := oldY - m.y
-				if fell > 0.5 {
-					h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
-				}
-				if fell > 0 {
-					h.mobFallOnEgg(players, m) // TurtleEggBlock.fallOn
-				}
-				if fell > m.safeFallDistance() { // the ground dropped out under it
-					h.mobFall(players, m, fell)
+				// Water, a web, powder snow or a honey side on the way down
+				// reset the fall: only what lies below the last of them counts.
+				fell := h.fallAfterResets(m, fx, fz, oldY, m.y)
+				if v := slimeLaunch(fell, m.gravity()); oldY > m.y && v > 0 && isSlimeBlock(h.worldFor(m.dim).At(fx, floorInt(m.y)-1, fz)) {
+					// SlimeBlock: no damage, and the landing turns into a
+					// bounce the integrator carries from here.
+					m.airborne, m.vy, m.airFall = true, v, 0
+				} else {
+					if fell > 0.5 {
+						h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
+					}
+					if oldY > m.y {
+						h.mobFallOnEgg(players, m) // TurtleEggBlock.fallOn
+					}
+					if fell > m.safeFallDistance() { // the ground dropped out under it
+						h.mobFall(players, m, fell)
+					}
 				}
 			}
 		}
@@ -1367,7 +1385,7 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	w := h.worldFor(m.dim)
 	fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 	cx, cz := int(math.Floor(m.x)), int(math.Floor(m.z))
-	step := w.MobFeetFrom(fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
+	step := h.mobFeetAt(m, fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
 	// A fence/wall/fence-gate is only one block of "step" but 1.5 blocks of
 	// collision, so a land mob can't climb over it — treat it as a wall.
 	// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)
@@ -1562,7 +1580,7 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 // or ghast as on-ground freezes its wings mid-flight (and misinforms the
 // client's own motion interpolation). Free-flying mobs are never on the
 // ground in this engine — m.flies means exactly "no ground collision".
-func (m *mob) grounded() bool { return !m.flies }
+func (m *mob) grounded() bool { return !m.flies && !m.airborne }
 
 // removeMob silently despawns a mob (no death animation, no loot) — used for
 // out-of-range cleanup, where a loot shower would be wrong.
@@ -2089,6 +2107,8 @@ func (m *mob) heldStack() invStack {
 	return invStack{item: m.held, count: max(b2i(m.held != 0), m.heldCount*b2i(m.held != 0)), ench: m.heldEnch, dmg: m.heldDmg}
 }
 
+const slimeStepFactor = 0.4
+
 // mobSpeedFactor is Entity.getBlockSpeedFactor for a mob: the feet cell's
 // factor, or when that is 1 the cell below's; soul sand and honey are 0.4.
 func (h *hub) mobSpeedFactor(m *mob) float64 {
@@ -2103,6 +2123,11 @@ func (h *hub) mobSpeedFactor(m *mob) float64 {
 	feet := w.At(fx, fy, fz)
 	if worldgen.IsWater(feet) {
 		return factor(feet)
+	}
+	// SlimeBlock.stepOn: a mob walking on slime (not bouncing on it) has its
+	// motion cut to 0.4 + |dy| × 0.2 — 0.4, on the level.
+	if !m.airborne && !m.flies && isSlimeBlock(w.At(fx, floorInt(m.y-0.2), fz)) {
+		return slimeStepFactor
 	}
 	if f := factor(feet); f != 1 {
 		return f

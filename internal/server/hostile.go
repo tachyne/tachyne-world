@@ -844,7 +844,8 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 	// few seconds after they reach cover. Spiders/creepers don't burn.
 	if day < nightStart && !h.raining { // rain shields the undead (vanilla)
 		for _, m := range h.mobs {
-			if !burnsInDaylight[m.etype] || fireImmune[m.etype] || m.dim != 0 {
+			// Mob.isSunBurnTick: not in powder snow (isInNonBurnableBlock).
+			if !burnsInDaylight[m.etype] || fireImmune[m.etype] || m.dim != 0 || h.mobInPowderSnow(m) {
 				continue
 			}
 			if h.skyExposed(m) {

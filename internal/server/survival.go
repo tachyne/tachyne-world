@@ -366,7 +366,9 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 					t.exhaust(0.05)
 				}
 			}
-		} else if e.y > t.peakY {
+		} else if e.y > t.peakY || h.stuckResetsFall(t.dim, e.x, e.y, e.z, 1.8*t.scale()) {
+			// makeStuckInBlock resets the fall: a cobweb, or powder snow
+			// the player is sinking through, catches the drop so far.
 			t.peakY = e.y
 		}
 		return

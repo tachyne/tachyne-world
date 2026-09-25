@@ -121,6 +121,28 @@ the public history since the project was open-sourced on 2026-07-10.
   chipped, or shatter if it was already damaged, and powder snow cushions
   it. A block caught mid-air by a restart lands afterwards instead of
   vanishing.
+- **Mobs ride bubble columns, bounce on slime and stick in cobwebs.** A
+  mob caught in a soul-sand updraft is carried to the surface and tossed
+  clear of it, and a magma whirlpool drags down even a mob swimming for
+  air; before, the columns only moved fish. A mob dropped onto a slime
+  block bounces instead of taking damage, and walking on slime slows it. A
+  mob caught in a cobweb over a drop sinks slowly through it, and one
+  falling against a honey block's side slides down it. A mob's fall now
+  counts only from the last thing that broke it — water, a cobweb, powder
+  snow or a honey slide — and lands softer on hay, honey and beds, as a
+  player's does. A player falling through a cobweb has the fall broken
+  there too.
+- **Dropped items bounce on slime and catch in cobwebs.** An item dropped
+  on a slime block bounces, one in a cobweb creeps down through it, powder
+  snow slows it, and the top of a soul-sand bubble column throws items
+  clear of the water as in vanilla.
+- **Mobs freeze in powder snow.** A mob left in powder snow now frosts
+  over, slows down and, once frozen through, takes freeze damage — five
+  times as much for blazes, striders and magma cubes — while strays, polar
+  bears, snow golems and anything wearing leather are spared. Rabbits,
+  foxes, endermites, silverfish and mobs in leather boots walk on top of
+  the snow instead of sinking into it, a burning mob that blunders into it
+  is put out and melts it, and so does a burning player.
 - **Potion swirls.** Players and mobs under an effect now give off its
   coloured swirls, as in vanilla — faint for a beacon's or a conduit's,
   none for an effect given with hidden particles, and Oozing, Weaving,

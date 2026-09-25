@@ -144,7 +144,11 @@ func (h *hub) mobFall(players map[int32]*tracked, m *mob, fell float64) {
 	// calculateFallDamage: (fall − SAFE_FALL_DISTANCE) × FALL_DAMAGE_MULTIPLIER.
 	// Both were fixed constants here, so a horse took a fox's fall and a fox a
 	// zombie's.
-	if dmg := math.Floor((fell - m.safeFallDistance()) * m.fallDamageMultiplier()); dmg >= 1 {
+	// The block it lands on has its say too (Block.fallOn): hay and honey
+	// take the damage down to a fifth, a bed halves the drop, slime and
+	// powder snow catch it whole.
+	landed := h.worldFor(m.dim).At(floorInt(m.x), floorInt(m.y-0.2), floorInt(m.z))
+	if dmg := fallDamageOn(landed, fell, m.safeFallDistance(), m.fallDamageMultiplier(), false); dmg >= 1 {
 		h.hurtMobOf(players, m, dmg, dtFall)
 		h.playFallDamageSound(players, m.dim, m.x, m.y, m.z, dmg)
 	}

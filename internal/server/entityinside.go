@@ -81,6 +81,17 @@ func (h *hub) tickFreezing(players map[int32]*tracked, t *tracked) {
 	w := h.worldFor(t.dim)
 	fx, fz, feet := int(math.Floor(t.x)), int(math.Floor(t.z)), int(math.Floor(t.y))
 	inSnow := w.At(fx, feet, fz) == powderSnowBlock || w.At(fx, feet+1, fz) == powderSnowBlock
+	if inSnow && t.fireSecs > 0 {
+		// PowderSnowBlock.entityInside: EXTINGUISH, and a burning player
+		// melts the snow it is in (no mob-griefing check for a player).
+		for _, y := range []int{feet, feet + 1} {
+			if s := w.At(fx, y, fz); s == powderSnowBlock {
+				h.meltPowderSnow(players, t.dim, blockPos{fx, y, fz}, s)
+				break
+			}
+		}
+		t.fireSecs = 0
+	}
 	was := t.frozen
 	if inSnow && t.canFreeze() {
 		t.frozen = min(freezeTicks, t.frozen+1)
@@ -352,17 +363,27 @@ func (h *hub) cobwebSlow(dim int, x, y, z float64) bool {
 	return w.At(fx, feet, fz) == cobwebState || w.At(fx, feet+1, fz) == cobwebState
 }
 
-// webFactor is WebBlock.entityInside → makeStuckInBlock(0.25, 0.05, 0.25)
-// on a mob's horizontal step: a quarter in a web, for anything but a spider
-// (Spider.makeStuckInBlock skips cobweb).
+// webFactor is makeStuckInBlock's horizontal factor on a mob's step:
+// WebBlock.entityInside's 0.25 in a web (0.5 under Weaving) for anything
+// but a spider (Spider.makeStuckInBlock skips cobweb), SweetBerryBushBlock's
+// 0.8 for any living thing but a fox or a bee, and PowderSnowBlock's 0.9
+// once the mob's own position is inside the snow. The wither is never
+// stuck (WitherBoss.makeStuckInBlock does nothing).
 func (h *hub) webFactor(m *mob) float64 {
+	if m.etype == entityWither {
+		return 1
+	}
 	if !(m.etype == entitySpider || m.etype == entityCaveSpider) && h.cobwebSlow(m.dim, m.x, m.y, m.z) {
+		if m.hasEffect(effWeaving) > 0 {
+			return 0.5
+		}
 		return 0.25
 	}
-	// SweetBerryBushBlock.entityInside: makeStuckInBlock(0.8, 0.75, 0.8) for
-	// any living thing but a fox or a bee.
 	if m.etype != entityFox && m.etype != entityBee && h.inBerryBush(m.dim, m.x, m.y, m.z) {
 		return 0.8
+	}
+	if isPowderSnow(h.worldFor(m.dim).At(floorInt(m.x), floorInt(m.y), floorInt(m.z))) {
+		return powderSnowStuckXZ
 	}
 	return 1
 }
