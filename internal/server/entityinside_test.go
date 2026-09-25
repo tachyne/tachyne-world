@@ -122,6 +122,7 @@ func TestBerryBushHurtsMobsButNotFoxesOrBees(t *testing.T) {
 	}
 	cow.x, cow.y, cow.z = 0.5, 180, 0.5
 	fox.x, fox.y, fox.z = 0.5, 180, 0.5
+	cow.vx, fox.vx = 0.1, 0.1 // walking through it: a mob standing still is not scratched
 	cowHP, foxHP := cow.health, fox.health
 
 	h.insideBoth(players)

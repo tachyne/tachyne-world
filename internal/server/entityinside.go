@@ -273,8 +273,9 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 				// but it carries the same rule.
 				h.tramplePitcher(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
 			case berryBushRipe(s):
-				// Foxes and bees push through a bush unharmed (vanilla).
-				if m.etype == entityFox || m.etype == entityBee {
+				// Foxes and bees push through a bush unharmed (vanilla), and
+				// only a mob moving through it is scratched (the 0.003 test).
+				if m.etype == entityFox || m.etype == entityBee || (math.Abs(m.vx) < berryMoveEpsilon && math.Abs(m.vz) < berryMoveEpsilon) {
 					return
 				}
 				h.hurtMobOf(nil, m, berryBushDamage, dtSweetBerryBush)
@@ -324,10 +325,27 @@ func (h *hub) cobwebSlow(dim int, x, y, z float64) bool {
 // on a mob's horizontal step: a quarter in a web, for anything but a spider
 // (Spider.makeStuckInBlock skips cobweb).
 func (h *hub) webFactor(m *mob) float64 {
-	if m.etype == entitySpider || m.etype == entityCaveSpider || !h.cobwebSlow(m.dim, m.x, m.y, m.z) {
-		return 1
+	if !(m.etype == entitySpider || m.etype == entityCaveSpider) && h.cobwebSlow(m.dim, m.x, m.y, m.z) {
+		return 0.25
 	}
-	return 0.25
+	// SweetBerryBushBlock.entityInside: makeStuckInBlock(0.8, 0.75, 0.8) for
+	// any living thing but a fox or a bee.
+	if m.etype != entityFox && m.etype != entityBee && h.inBerryBush(m.dim, m.x, m.y, m.z) {
+		return 0.8
+	}
+	return 1
+}
+
+// inBerryBush reports a sweet berry bush at an entity's feet or body cell.
+func (h *hub) inBerryBush(dim int, x, y, z float64) bool {
+	w := h.worldFor(dim)
+	fx, fz, feet := int(math.Floor(x)), int(math.Floor(z)), int(math.Floor(y))
+	for dy := 0; dy <= 1; dy++ {
+		if s := w.At(fx, feet+dy, fz); s >= berryBase && s <= berryBase+3 {
+			return true
+		}
+	}
+	return false
 }
 
 // Honey block sliding (vanilla HoneyBlock.entityInside / isSlidingDown): a

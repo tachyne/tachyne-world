@@ -1056,6 +1056,7 @@ func (h *hub) tickBerry(players map[int32]*tracked, dim, x, y, z int, state uint
 	}
 	if state < berryBase+3 && h.rng.Intn(5) == 0 && h.plantBrightness(dim, x, y+1, z, 0) >= 9 {
 		h.setBlockAt(players, dim, blockPos{x, y, z}, state+1)
+		h.vib(dim, freqBlockChange, x, y, z, 0) // SweetBerryBushBlock.randomTick: BLOCK_CHANGE
 	}
 	return true
 }

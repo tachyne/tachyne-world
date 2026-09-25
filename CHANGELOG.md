@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Berry bushes slow mobs down.** Mobs walking through a sweet berry bush
+  are now slowed, as in vanilla (foxes and bees excepted), and are only
+  scratched while moving, not while standing still. Sculk now hears berries
+  ripening.
 - **Melons and pumpkins grow on vanilla's grounds.** A stem put out its
   fruit only onto dirt, plain grass or farmland. It now grows onto any
   ground vanilla allows: podzol, mycelium, mud, moss, rooted and coarse

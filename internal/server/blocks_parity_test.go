@@ -84,3 +84,34 @@ func TestPlacedLeavesArePersistent(t *testing.T) {
 		t.Fatalf("placed leaf: ok=%v persistent=%v distance=%d, want a persistent leaf at distance 1", ok, persistent, d)
 	}
 }
+
+// TestBerryBushSlowsAndScratchesMovers: SweetBerryBushBlock.entityInside
+// slows any living thing but a fox or a bee to 0.8, and scratches only one
+// that is moving (a standing cow is left alone).
+func TestBerryBushSlowsAndScratchesMovers(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	x, y, z := 5, 180, 5
+	h.world.SetBlock(x, y-1, z, worldgen.GrassBlock)
+	h.world.SetBlock(x, y, z, berryBase+3)
+	cow := h.spawnMob(players, entityCow, float64(x)+0.5, float64(y), float64(z)+0.5)
+	cow.spawnInvuln = 0
+	if f := h.webFactor(cow); f != 0.8 {
+		t.Fatalf("a cow in a berry bush moves at %v, want 0.8", f)
+	}
+	cow.vx, cow.vz = 0, 0
+	hp := cow.health
+	h.mobsInsideTick(players)
+	if cow.health != hp {
+		t.Fatalf("a cow standing still in a bush was scratched: %v → %v", hp, cow.health)
+	}
+	cow.vx = 0.1
+	h.mobsInsideTick(players)
+	if cow.health >= hp {
+		t.Fatal("a cow moving through a ripe bush should be scratched")
+	}
+	fox := h.spawnMob(players, entityFox, float64(x)+0.5, float64(y), float64(z)+0.5)
+	if f := h.webFactor(fox); f != 1 {
+		t.Fatalf("a fox pushes through a bush unslowed, got %v", f)
+	}
+}
