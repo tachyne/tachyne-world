@@ -629,7 +629,7 @@ type hub struct {
 	obsSeen   map[simPos]uint32 // observer last-seen watched state
 	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
 	platesOn  map[simPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
-	wiresOn   map[simPos]bool   // currently pressed tripwire strings, by dimension
+	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
 	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
@@ -857,7 +857,7 @@ func newHub(w *world.World) *hub {
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
 		platesOn:      map[simPos]uint64{},
-		wiresOn:       map[simPos]bool{},
+		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},

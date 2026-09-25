@@ -683,3 +683,42 @@ func TestShelfPowersAtOnceAndIsHeard(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_ACTIVATE %d", f, freqBlockActivate)
 	}
 }
+
+// TripWireBlock: a dropped item presses a string too, and the string stays
+// pressed until its 10-tick re-check finds it clear.
+func TestItemTripsWireForTenTicks(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.world
+	a, b := blockPos{0, 180, 0}, blockPos{4, 180, 0}
+	w.SetBlock(a.x-1, a.y, a.z, worldgen.Stone)
+	w.SetBlock(b.x+1, b.y, b.z, worldgen.Stone)
+	w.SetBlock(a.x, a.y, a.z, withProps(t, tripwireHookMin, map[string]string{"facing": "east", "attached": "false", "powered": "false"}))
+	w.SetBlock(b.x, b.y, b.z, withProps(t, tripwireHookMin, map[string]string{"facing": "west", "attached": "false", "powered": "false"}))
+	for x := 1; x <= 3; x++ {
+		w.SetBlock(x, 180, 0, tripwireDefaultState())
+	}
+	h.inDim(0, func() {
+		h.calcHook(players, a, w.At(a.x, a.y, a.z))
+		h.calcHook(players, b, w.At(b.x, b.y, b.z))
+	})
+	it := h.spawnItemAt(players, 0, itemByName["stick"], 1, 2.5, 180.05, 0.5, 0, 0, 0)
+	step := func() { h.tick.Add(1); h.updateTripwires(players) }
+	step()
+	if !boolProp(w.At(a.x, a.y, a.z), "powered") {
+		t.Fatal("an item on the string should trip the hooks")
+	}
+	delete(h.items, it.eid)
+	for i := 0; i < 8; i++ {
+		step()
+	}
+	if !boolProp(w.At(a.x, a.y, a.z), "powered") {
+		t.Fatal("the string holds its press until the 10-tick re-check")
+	}
+	step()
+	step()
+	if boolProp(w.At(a.x, a.y, a.z), "powered") {
+		t.Error("the re-check should release the string")
+	}
+}
