@@ -218,6 +218,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 		if worldgen.IsWater(old) && !worldgen.IsWater(state) {
 			h.scheduleCoralDeath(dim, pos)
 		}
+		h.fireOnPlace(players, dim, pos, old, state) // a fire inside an obsidian frame lights it
 		// LightningRodBlock.onPlace: a rod set down powered with no tick of
 		// its own pending gets one, which switches it off.
 		if isLightningRod(state) && boolProp(state, "powered") {

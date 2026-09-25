@@ -2818,6 +2818,9 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	pos := blockPos{e.x, e.y, e.z}
 	h.observersSee(players, e.dim, pos, e.state)
 	h.composterOnPlace(e.dim, pos, e.state) // a full composter set by a command or a paste
+	if e.broken == 0 {
+		h.fireOnPlace(players, e.dim, pos, worldgen.Air, e.state) // a placed fire in a frame lights it
+	}
 	h.notifyAround(players, e.dim, pos)
 	// A signal source that appears or disappears changes the STRONG power of
 	// the block it hangs on, and what that block drives can sit two cells away

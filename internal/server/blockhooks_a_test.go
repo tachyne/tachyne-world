@@ -244,3 +244,30 @@ func TestFireBurnsBlocksWithoutMobGriefing(t *testing.T) {
 		t.Error("the fire should burn the planks under it with mob griefing off")
 	}
 }
+
+// BaseFireBlock.onPlace: any fire that appears inside an empty obsidian
+// frame in the overworld lights the portal — not only flint and steel.
+func TestFireInFrameLightsPortal(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.world
+	for x := 0; x <= 3; x++ {
+		for y := 180; y <= 184; y++ {
+			edge := x == 0 || x == 3 || y == 180 || y == 184
+			if edge {
+				w.SetBlock(x, y, 0, worldgen.Obsidian)
+			} else {
+				w.SetBlock(x, y, 0, worldgen.Air)
+			}
+		}
+	}
+	h.setBlockAt(players, dimOverworld, blockPos{1, 181, 0}, fireDefault) // a fire charge's fire, say
+	for x := 1; x <= 2; x++ {
+		for y := 181; y <= 183; y++ {
+			if !isPortalBlock(w.At(x, y, 0)) {
+				t.Fatalf("the frame should be lit: (%d,%d) holds %d", x, y, w.At(x, y, 0))
+			}
+		}
+	}
+}
