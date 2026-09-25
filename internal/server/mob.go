@@ -515,6 +515,8 @@ type mob struct {
 	armScuteAt                      uint64     // armadillo: the tick the next scute drops (0 = unset)
 	armPeekAt                       uint64     // armadillo: ArmadilloBallUp's next peek
 	armDangerWas                    bool       // …whether the danger was still around last update
+	pandaUnhappy                    int        // panda: UNHAPPY_COUNTER, the sulk's ticks left
+	pandaSulkCD                     uint64     // panda: PandaBreedGoal's unhappyCooldown (tick)
 	sniffState                      int8       // sniffer: 0 idle, 1 walking to a dig site, 2 digging
 	sniffStart                      uint64     // sniffer: the tick the dig began
 	sniffUntil                      uint64     // sniffer: the tick the dig ends
@@ -667,6 +669,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entityPanda && m.baby && m.dying == 0 {
 			h.pandaSneezeTick(players, m)
+		}
+		if m.etype == entityPanda && m.pandaUnhappy > 0 {
+			h.pandaSulkTick(players, m)
 		}
 		if m.etype == entityPiglin && m.admireUntil != 0 && m.dying == 0 {
 			h.piglinAdmireTick(players, m)

@@ -56,8 +56,11 @@ func (h *hub) breedApproachStep(m *mob) bool {
 	if mate == nil {
 		return false // no partner: BreedGoal cannot start, the animal strolls
 	}
-	if m.etype == entityPanda && !h.pandaFindsBamboo(m) {
-		return false // PandaBreedGoal.canUse: no bamboo about, it sulks instead
+	if m.etype == entityPanda && (m.pandaUnhappy > 0 || !h.pandaFindsBamboo(m)) {
+		if m.pandaUnhappy == 0 {
+			h.pandaSulk(h.playersRef, m) // PandaBreedGoal.canUse: no bamboo about, it sulks instead
+		}
+		return false
 	}
 	m.rest = 0
 	m.yaw = yawToward(m.x, m.z, mate.x, mate.z)

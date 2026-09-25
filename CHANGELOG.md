@@ -180,6 +180,9 @@ the public history since the project was open-sourced on 2026-07-10.
   a fixed height, and a hanging bat turns its head now and then.
 - **Armadillos peek.** A rolled-up armadillo with danger still about now
   peeks out of its shell every so often, as in vanilla.
+- **Pandas sulk.** A panda in love with no bamboo nearby now shakes its
+  head and grumbles at you, as in vanilla, and does not sit down to eat
+  while it sulks.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

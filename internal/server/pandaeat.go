@@ -88,7 +88,7 @@ func (h *hub) pandaSitEat(players map[int32]*tracked, m *mob, trait int32, now u
 		h.setPandaEat(players, m, 0) // eat(false): nothing in hand
 	}
 	// canUse: past the cooldown, an adult, dry, free to act, food about.
-	if now < m.pandaSitCD || m.baby || m.held != 0 || h.inWater(m.dim, m.x, m.y, m.z) || !h.pandaCanAct(m) {
+	if now < m.pandaSitCD || m.baby || m.held != 0 || h.inWater(m.dim, m.x, m.y, m.z) || !h.pandaCanAct(m) || m.pandaUnhappy > 0 {
 		return false
 	}
 	var it *itemEntity
@@ -136,4 +136,53 @@ func (h *hub) pandaEatStop(players map[int32]*tracked, m *mob, trait int32, now 
 	}
 	h.setPandaEat(players, m, 0)
 	h.setPandaFlag(players, m, pandaFlagSit, false)
+}
+
+// The sulk (Panda UNHAPPY_COUNTER, PandaBreedGoal): a panda in love with a
+// mate about but no bamboo within reach sulks for 32 ticks — shaking its
+// head (the client reads the counter), turning to the nearest player within
+// eight, and grumbling (PANDA_CANT_BREED) at 29 and 14 — at most once in 600
+// ticks. While it sulks it neither breeds nor sits down to eat.
+
+const (
+	metaIndexPandaUnhappy = 17 // UNHAPPY_COUNTER (int); the ageable shift applies on 26.2
+	pandaUnhappyTicks     = 32 // TOTAL_UNHAPPY_TIME
+	pandaSulkCooldown     = 600
+)
+
+func pandaUnhappyMeta(m *mob) []byte {
+	b := protocol.AppendVarInt(nil, m.eid)
+	b = protocol.AppendU8(b, metaIndexPandaUnhappy)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(m.pandaUnhappy))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// pandaSulk starts the sulk, if its cooldown has run.
+func (h *hub) pandaSulk(players map[int32]*tracked, m *mob) {
+	now := h.tick.Load()
+	if now < m.pandaSulkCD {
+		return
+	}
+	m.pandaUnhappy, m.pandaSulkCD = pandaUnhappyTicks, now+pandaSulkCooldown
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(pandaUnhappyMeta(m)))
+	if t := h.nearestPlayer(players, m.x, m.z, 8); t != nil && t.dim == m.dim && dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= 8 {
+		m.headYaw = yawToward(m.x, m.z, t.x, t.z) // lookAtPlayerGoal.setTarget(player)
+	}
+}
+
+// pandaSulkTick counts the sulk down two ticks at a time.
+func (h *hub) pandaSulkTick(players map[int32]*tracked, m *mob) {
+	if m.pandaUnhappy <= 0 {
+		return
+	}
+	for i := 0; i < mobMoveInterval && m.pandaUnhappy > 0; i++ {
+		if m.pandaUnhappy == 29 || m.pandaUnhappy == 14 {
+			h.playSoundDim(players, m.dim, "minecraft:entity.panda.cant_breed", sndNeutral, m.x, m.y, m.z, 1, 1)
+		}
+		m.pandaUnhappy--
+	}
+	if m.pandaUnhappy == 0 {
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(pandaUnhappyMeta(m)))
+	}
 }
