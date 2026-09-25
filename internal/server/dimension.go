@@ -151,6 +151,12 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 			if t.shoulderOccupied() {
 				o.p.trySendEv(metaEv(shoulderMeta(t)))
 			}
+			if len(t.effects) > 0 {
+				o.p.trySendEv(metaEv(effectSwirlMeta(t.p.eid, t.effects)))
+			}
+			if len(o.effects) > 0 {
+				t.p.sendEv(metaEv(effectSwirlMeta(o.p.eid, o.effects)))
+			}
 			if o.shoulderOccupied() {
 				t.p.sendEv(metaEv(shoulderMeta(o)))
 			}

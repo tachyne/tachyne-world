@@ -95,6 +95,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Potion swirls.** Players and mobs under an effect now give off its
+  coloured swirls, as in vanilla — faint for a beacon's or a conduit's,
+  none for an effect given with hidden particles, and Oozing, Weaving,
+  Infested, Wind Charged and the omens show their own particles. Nobody
+  could see that anyone was under a potion before.
 - **Ruined portals sit in the ground.** A ruined portal now settles, as in
   vanilla, until at least three of its four corners stand in solid ground,
   so one on a cliff edge sinks into the rock instead of hanging off the

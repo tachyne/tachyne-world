@@ -316,6 +316,7 @@ func (h *hub) addEffect(players map[int32]*tracked, t *tracked, id int32, in act
 		h.broadcastPlayerFlags(players, t) // other players have to see it too
 	}
 	t.p.trySendEv(effectEv(t.p.eid, id, cur))
+	h.syncPlayerSwirls(players, t)
 	if id == effHeroOfVillage {
 		h.advance(players, t, "hero_of_the_village", advMatch{})
 	}
@@ -363,6 +364,7 @@ func (h *hub) removeEffect(t *tracked, id int32) {
 		h.broadcastPlayerFlags(h.playersRef, t)
 	}
 	t.p.trySendEv(attachproto.Effect{EID: t.p.eid, ID: id, Remove: true})
+	h.syncPlayerSwirls(h.playersRef, t)
 }
 
 // feedSaturation is SaturationMobEffect.applyEffectTick: +1 food and +2
@@ -463,6 +465,7 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 					*e = *hid
 					t.applyEffectModifiers(id, e.amp)
 					t.p.trySendEv(effectEv(t.p.eid, id, e))
+					h.syncPlayerSwirls(players, t)
 					continue
 				}
 				h.removeEffect(t, id)
@@ -731,5 +734,8 @@ const hungerExhaustionPerTick = 0.005 // HungerMobEffect.applyEffectTick
 func (h *hub) resendEffects(t *tracked) {
 	for id, e := range t.effects {
 		t.p.trySendEv(effectEv(t.p.eid, id, e))
+	}
+	if len(t.effects) > 0 {
+		t.p.trySendEv(metaEv(effectSwirlMeta(t.p.eid, t.effects))) // its own swirls
 	}
 }

@@ -173,6 +173,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if sm := speciesStateMeta(m); sm != nil { // a goat's horns, a turtle's egg
 		t.p.trySendEv(metaEv(sm))
 	}
+	if len(m.effects) > 0 { // its effect swirls
+		t.p.trySendEv(metaEv(effectSwirlMeta(m.eid, m.effects)))
+	}
 	if m.aggressive { // arms already up when it comes into view
 		t.p.trySendEv(metaEv(mobFlagsMeta(m.eid, true)))
 	}

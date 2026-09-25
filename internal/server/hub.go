@@ -2566,8 +2566,14 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 		if t.shoulderOccupied() { // …and their parrots
 			e.p.trySendEv(metaEv(shoulderMeta(t)))
 		}
+		if len(t.effects) > 0 { // …and their effect swirls
+			e.p.trySendEv(metaEv(effectSwirlMeta(t.p.eid, t.effects)))
+		}
 		if nt.shoulderOccupied() {
 			t.p.trySendEv(metaEv(shoulderMeta(nt)))
+		}
+		if len(nt.effects) > 0 {
+			t.p.trySendEv(metaEv(effectSwirlMeta(nt.p.eid, nt.effects)))
 		}
 	}
 	players[e.p.eid] = nt

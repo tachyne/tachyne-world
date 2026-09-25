@@ -93,6 +93,7 @@ func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in acti
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, effectEv(m.eid, id, m.effects[id]))
+	h.syncMobSwirls(players, m)
 	return true
 }
 
@@ -107,6 +108,7 @@ func (h *hub) removeMobEffect(players map[int32]*tracked, m *mob, id int32) {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Effect{EID: m.eid, ID: id, Remove: true})
+	h.syncMobSwirls(players, m)
 }
 
 // updateMobEffects ticks every affected mob's effects at 20 Hz, on the same
