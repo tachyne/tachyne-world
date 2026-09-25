@@ -159,7 +159,8 @@ type swing struct {
 	dmg        int
 	base       float64
 	charge     float64
-	full       bool // attackStrengthScale > 0.9: a crit, the strong sound and a sweep need it
+	scale      float64 // getAttackStrengthScale: what the enchantments' bonus is scaled by
+	full       bool    // attackStrengthScale > 0.9: a crit, the strong sound and a sweep need it
 	crit       bool
 	smash      bool
 	fall       float64
@@ -242,7 +243,7 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 	}
 	dmgF += sharpBonus * scale // magicBoost: the enchantments' bonus times the raw scale, added after crit
 	dmg := int(math.Max(1, math.Round(dmgF)))
-	return swing{dmg: dmg, base: base, charge: charge, full: scale > 0.9, crit: crit,
+	return swing{dmg: dmg, base: base, charge: charge, scale: scale, full: scale > 0.9, crit: crit,
 		smash: smash, fall: fall, breachFrac: breachFrac, raw: raw}
 }
 
@@ -385,15 +386,23 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			m.kb, m.reroute = 3, 0
 			h.mobKnockVelocity(players, m)
 		}
-		// Sweep: a full-charge, grounded, non-sprinting sword swing clips
-		// everything beside the target. Vanilla damage = 1 + sweepingEdgeRatio·
-		// base (ratio = lvl/(lvl+1)); without Sweeping Edge it is a flat 1.
+		// Sweep (Player.doSweepAttack): a full-charge, grounded, non-sprinting
+		// sword swing clips every living thing beside the target. Each takes
+		// 1 + SWEEPING_DAMAGE_RATIO × the swing's charged base damage, then
+		// the weapon's enchantment bonus for that target (Sharpness, Smite,
+		// Bane), all scaled by the swing's strength, as a player_attack blow
+		// through its armour and effects. A struck one is shoved 0.4 along
+		// the swing and gets the weapon's post-attack effects (Fire Aspect,
+		// Bane's Slowness).
 		if _, sword := swordPeriod[t.p.heldItem()]; sword && full && !crit && t.onGround && !t.sprinting {
-			sweepDmg := 1.0
-			if se := heldStack(t).enchLvl(enchSweepingEdge); se > 0 {
-				sweepDmg += float64(se) / float64(se+1) * base
+			held := heldStack(t)
+			sweepBase := 1 + t.playerAttrs().Value(attr.SweepingDamageRatio)*base*sw.charge
+			sharp := 0.0
+			if lvl := held.enchLvl(enchSharpness); lvl > 0 {
+				sharp = 0.5*float64(lvl) + 0.5
 			}
-			sweep := int(math.Max(1, math.Round(sweepDmg)))
+			yaw := float64(t.yaw) * math.Pi / 180
+			fx, fz := -math.Sin(yaw), math.Cos(yaw) // the way the swing goes
 			for _, om := range h.mobs {
 				if om == m || om.dying > 0 || om.dim != m.dim {
 					continue
@@ -402,12 +411,26 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 				if !sweepCatches(m, om.x, om.y, om.z, ob.w, ob.h) || dist3sq(om.x, om.y, om.z, t.x, t.y, t.z) >= 9 {
 					continue
 				}
+				dmgOM := (sweepBase + sharp + familyMeleeBonus(held, om.etype)) * sw.scale
+				before := om.health
 				h.hurtByPlayerOn(om, t)
-				om.hurt(float64(sweep))
-				h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
-				if om.health <= 0 {
-					h.killMob(players, om) // credits t
+				om.lastAttacker = attacker
+				om.hurtOf(dmgOM, breachFrac, dtPlayerAttack)
+				h.incCustom(t, "damage_dealt", tenths(float32(dmgOM)))
+				if om.health >= before && om.health > 0 {
+					continue // shrugged off: no shove, no follow-on effects
 				}
+				if om.health > 0 && om.kbScale() > 0 {
+					step := 0.4 * om.kbScale() * mobMoveInterval
+					om.vx, om.vz = om.vx/2+fx*step, om.vz/2+fz*step
+					om.kb, om.reroute = 3, 0
+					h.mobKnockVelocity(players, om)
+				}
+				if om.health > 0 {
+					h.applyFireAspect(players, t, om)
+					h.applyBaneSlowness(players, held, om)
+				}
+				h.mobStruck(players, om, t, dtPlayerAttack) // the flash, the grudge, the death
 			}
 			// The sweep reaches every LIVING thing beside the target, which
 			// includes other players — it had only ever touched mobs.
@@ -419,11 +442,15 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					if !sweepCatches(m, o.x, o.y, o.z, 0.6, 1.8) || dist3sq(o.x, o.y, o.z, t.x, t.y, t.z) >= 9 {
 						continue
 					}
-					h.hurtFrom(players, o, float32(sweep), dtPlayerAttack,
-						deathCause{by: t.p.name, byEID: t.p.eid}, from(t.x, t.z))
-					h.incCustom(t, "damage_dealt", tenths(float32(sweep)))
+					dmgO := float32((sweepBase + sharp) * sw.scale)
+					if h.hurtFrom(players, o, dmgO, dtPlayerAttack,
+						deathCause{by: t.p.name, byEID: t.p.eid}, from(t.x, t.z)) && !o.dead {
+						h.knockback(o, o.x-fx, o.z-fz)
+					}
+					h.incCustom(t, "damage_dealt", tenths(dmgO))
 				}
 			}
+			h.spawnParticles(players, t.dim, particleByName["sweep_attack"], t.x+fx, t.y+0.9, t.z+fz, 0, 0, 1)
 			h.playSoundDim(players, t.dim, "minecraft:entity.player.attack.sweep", sndPlayer, t.x, t.y, t.z, 1, 1)
 		}
 	}

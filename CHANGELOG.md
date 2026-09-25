@@ -142,6 +142,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sweeping sword blows work as in vanilla.** Mobs caught by a sweep now
+  take the sword's Sharpness, Smite or Bane bonus through their armour,
+  are knocked back along the swing, and get Fire Aspect and Bane's
+  slowness. The sweep's damage follows the sweeping damage ratio
+  attribute, and a sweep particle shows.
 - **Fast digging is no longer undone.** Breaking blocks under Haste III
   or stronger (from `/effect`), or with a raised block break speed, used
   to have the broken block put back. Digging speed now also follows the
