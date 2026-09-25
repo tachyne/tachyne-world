@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Wardens go to see what they heard, and mind being bumped.** A warden
+  that hears something it is not yet angry about now walks over to where
+  the sound came from, as in vanilla, instead of only standing and
+  sniffing. Walking into a warden now angers it, a little more each second
+  you stay in contact, and draws its attention to where you stand.
 - **Ravagers speed up for a charge.** A ravager now eases up to a faster
   pace while it is after something and back down when it gives up, and
   pulls away slowly again after each bite, as in vanilla.

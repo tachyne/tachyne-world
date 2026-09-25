@@ -416,6 +416,9 @@ type mob struct {
 	wardenPoseLeft                  int        // …and the updates left in it
 	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
+	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
+	wardenDisturbTil                uint64     // …remembered until this tick
+	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
 	playMate                        int32      // baby villager: the child it is chasing (0 = none)
 	playFlee                        bool       // …or running away from one, toward
 	playX, playZ                    float64    // …this spot
