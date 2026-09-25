@@ -109,31 +109,62 @@ func (h *hub) dolphinJumpStart(players map[int32]*tracked, m *mob) bool {
 	return true
 }
 
-// dolphinFollowBoat is FollowPlayerRiddenEntityGoal(AbstractBoat): a boat
-// within five blocks that a player is rowing draws the dolphin in — to the
-// cell behind the rower until within four blocks, then ten blocks ahead in
-// the boat's line of travel until it falls twelve behind — while the boat
-// keeps moving. It re-aims every ten ticks.
+// dolphinFollowBoat is Dolphin's two FollowPlayerRiddenEntityGoals
+// (AbstractBoat and AbstractNautilus): a boat or a nautilus within five
+// blocks that a player is steering draws the dolphin in — to the cell
+// behind the rider until within four blocks, then ten blocks ahead in the
+// line of travel until it falls twelve behind — while it keeps moving. It
+// re-aims every ten ticks.
 func (h *hub) dolphinFollowBoat(players map[int32]*tracked, m *mob) bool {
 	now := h.tick.Load()
-	moving := func(v *vehicle) bool {
-		return v != nil && v.isBoat() && v.rider != 0 && players[v.rider] != nil && v.dim == m.dim && now-v.movedAt <= 2
+	// ridden is the followed entity as the goal sees it: where it is, the
+	// way it last moved, and the player steering it, if it moved within
+	// the last two ticks (hasMovedHorizontallyRecently).
+	type ridden struct {
+		x, y, z, dx, dz float64
+		rider           *tracked
 	}
-	v := h.vehicles[m.followBoat]
-	if !moving(v) {
-		m.followBoat, v = 0, nil
+	moving := func(eid int32) (ridden, bool) {
+		if v := h.vehicles[eid]; v != nil {
+			if v.isBoat() && v.rider != 0 && players[v.rider] != nil && v.dim == m.dim && now-v.movedAt <= 2 {
+				return ridden{v.x, v.y, v.z, v.moveDX, v.moveDZ, players[v.rider]}, true
+			}
+			return ridden{}, false
+		}
+		if n := h.mobs[eid]; n != nil && nautilusKind(n.etype) && n.rider != 0 && players[n.rider] != nil &&
+			n.dim == m.dim && n.dying == 0 && now-n.rideMovedAt <= 2 {
+			return ridden{n.x, n.y, n.z, n.rideDX, n.rideDZ, players[n.rider]}, true
+		}
+		return ridden{}, false
+	}
+	near := func(x, y, z, hw, hh float64) bool {
+		return math.Abs(x-m.x) <= 5+hw && math.Abs(z-m.z) <= 5+hw && math.Abs(y-m.y) <= 5+hh
+	}
+	r, ok := moving(m.followBoat)
+	if !ok {
+		m.followBoat = 0
 		for _, c := range h.vehicles {
-			if moving(c) && math.Abs(c.x-m.x) <= 5+1.4 && math.Abs(c.z-m.z) <= 5+1.4 && math.Abs(c.y-m.y) <= 5+1 {
-				v = c
+			if cr, ok := moving(c.eid); ok && near(c.x, c.y, c.z, 1.4, 1) {
+				m.followBoat, r = c.eid, cr
 				break
 			}
 		}
-		if v == nil {
+		if m.followBoat == 0 {
+			h.grid().nearby(m.dim, m.x, m.z, 8, func(o *mob) {
+				if m.followBoat != 0 || !nautilusKind(o.etype) {
+					return
+				}
+				if cr, ok := moving(o.eid); ok && near(o.x, o.y, o.z, o.box().w/2+0.5, 1) {
+					m.followBoat, r = o.eid, cr
+				}
+			})
+		}
+		if m.followBoat == 0 {
 			return false
 		}
-		m.followBoat, m.followAhead, m.followRecalc = v.eid, false, 0
+		m.followAhead, m.followRecalc = false, 0
 	}
-	t := players[v.rider]
+	t := r.rider
 	if m.followRecalc--; m.followRecalc <= 0 {
 		m.followRecalc = 5 // adjustedTickDelay(10), in mob updates
 		d := dist3(m.x, m.y, m.z, t.x, t.y, t.z)
@@ -144,12 +175,11 @@ func (h *hub) dolphinFollowBoat(players map[int32]*tracked, m *mob) bool {
 		}
 	}
 	var tx, tz float64
-	if m.followAhead {
-		n := math.Hypot(v.moveDX, v.moveDZ)
-		tx, tz = t.x+v.moveDX/n*10, t.z+v.moveDZ/n*10 // ten ahead in its motion direction
+	if n := math.Hypot(r.dx, r.dz); m.followAhead && n > 1e-9 {
+		tx, tz = t.x+r.dx/n*10, t.z+r.dz/n*10 // ten ahead in its motion direction
 	} else {
 		fx, _, fz := lookVector(t.yaw, 0)
-		tx, tz = t.x-fx, t.z-fz // the cell behind the rower
+		tx, tz = t.x-fx, t.z-fz // the cell behind the rider
 	}
 	h.steerTo(m, tx, tz, 1.0)
 	return true

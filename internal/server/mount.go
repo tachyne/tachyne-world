@@ -159,6 +159,9 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 		return true
 	}
 	moved := e.x != m.sx || e.y != m.sy || e.z != m.sz
+	if dx, dz := e.x-m.x, e.z-m.z; dx*dx+dz*dz > 1e-10 { // the rider's hasMovedHorizontallyRecently
+		m.rideMovedAt, m.rideDX, m.rideDZ = h.tick.Load(), dx, dz
+	}
 	h.rideStats(t, m, e.x-m.x, e.y-m.y, e.z-m.z)
 	if m.etype == entityStrider && moved {
 		if w := h.worldFor(m.dim); w != nil && worldgen.IsLava(w.At(floorInt(e.x), floorInt(e.y), floorInt(e.z))) {
