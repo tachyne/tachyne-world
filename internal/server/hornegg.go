@@ -102,6 +102,15 @@ func speciesStateMeta(m *mob) []byte {
 		if m.cbState == cbCharging {
 			return pillagerChargingMeta(m)
 		}
+	case entityPiglin: // a crossbow drawn, a dance, or a spear lowered
+		if m.cbState == cbCharging || m.dancing {
+			return boolsMeta(m.eid,
+				boolEntry{metaIndexPiglinCharging, m.cbState == cbCharging},
+				boolEntry{metaIndexPiglinDancing, m.dancing})
+		}
+		if m.handActive {
+			return livingFlagsMeta(m.eid, true)
+		}
 	case entitySkeleton, entityStray, entityBogged, entityParched, entityIllusioner,
 		entityZombie, entityHusk, entityZombieVillager, entityZombifiedPiglin: // …or a spear lowered
 		if m.handActive {

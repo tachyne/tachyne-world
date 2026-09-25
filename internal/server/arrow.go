@@ -778,6 +778,13 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				m.panic, m.fleeX, m.fleeZ = h.panicFor(m), a.x, a.z
 			} else if m.etype == entityAxolotl {
 				// no panic, no grudge: it may play dead (axolotlStep)
+			} else if m.etype == entityPiglin {
+				// PiglinAi.wasHurtBy: a player's shot is answered as a blow is,
+				// a mob's below (mobHurtByMob).
+				if shooter := players[a.shooter]; shooter != nil && a.playerShot {
+					h.piglinHurtByPlayer(players, m)
+					h.piglinRetaliate(players, m, shooter)
+				}
 			} else if shooter := players[a.shooter]; m.etype == entityZombifiedPiglin && shooter != nil && a.playerShot {
 				h.zombifiedPiglinAngerAt(m, shooter) // shot: the archer is the grudge,
 				h.alertZombifiedPiglins(m, shooter)  // and the pack is told (setAlertOthers)
@@ -824,6 +831,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			}
 			h.arrowEffectsOnMob(players, a, m) // poison/wither/slowness/tipped brew
+			if a.mobShot {
+				h.mobHurtByMob(players, m, h.mobs[a.shooter]) // a hoglin shot by a piglin turns on it
+			}
 			if m.etype == entityShulker && a.etype == entityShulkerBullet && m.health > 0 {
 				h.shulkerBulletHit(players, m) // hitByShulkerBullet: a teleport, maybe a new shulker
 			}

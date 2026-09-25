@@ -154,6 +154,12 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.poseTick = sm.PoseTick
 	m.ravStunTick, m.ravRoarTick = sm.RavStun, sm.RavRoar
 	m.overworldTicks, m.immuneZombify = sm.Overworld, sm.ImmuneZombify
+	m.noHunt = sm.NoHunt
+	if m.etype == entityPiglin {
+		// HUNTED_RECENTLY is not carried across a reload: a reloaded piglin
+		// waits a fresh 30–120 seconds, as a new one does, before it hunts.
+		m.huntedUntil = h.tick.Load() + uint64(piglinHuntMin+h.rng.Intn(piglinHuntSpan))
+	}
 	m.traderDespawn = sm.TraderDespawn
 	m.endermiteLife = sm.Lifetime
 	m.tadpoleAge = sm.TadpoleAge

@@ -466,6 +466,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	if m.etype == entityPiglinBrute && !h.reloading {
 		m.home = blockPos{floorInt(m.x), floorInt(m.y), floorInt(m.z)} // PiglinBruteAi.initMemories: HOME
 	}
+	if m.etype == entityHoglin && h.structureSpawn.on && !h.reloading {
+		m.noHunt = true // the bastion "mobs" hoglin template carries CannotBeHunted
+	}
 }
 
 // spawnSpecies spawns + configures a table species at a position in a

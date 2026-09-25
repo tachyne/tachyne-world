@@ -48,11 +48,14 @@ func (h *hub) finalizePiglin(players map[int32]*tracked, m *mob, structure bool,
 	}
 	if structure {
 		m.held = structureHand
+		m.noHunt = true // every bastion "mobs" template carries CannotHunt
 	} else if h.rng.Float32() < piglinBabyChance {
 		h.setPiglinBaby(players, m, true)
 	} else {
 		m.held = h.piglinSpawnWeapon()
 	}
+	// initMemories: HUNTED_RECENTLY for its first thirty seconds to two minutes.
+	m.huntedUntil = h.tick.Load() + uint64(piglinHuntMin+h.rng.Intn(piglinHuntSpan))
 	if !m.baby { // populateDefaultEquipmentSlots: adults only
 		for slot, it := range piglinGoldArmour {
 			if h.rng.Float32() < piglinArmourChance {
@@ -109,26 +112,33 @@ func babySpeedBonus(etype int) float64 {
 // activity): BackUpIfTooClose steps it away inside five blocks, it stands
 // once the target is in reach, and CrossbowAttack — only while the target
 // is seen and within the crossbow's eight blocks — charges, holds 20-39
-// ticks and fires (performCrossbowAttack at 1.6). It never melees.
+// ticks and fires (performCrossbowAttack at 1.6). It never melees. Its
+// target may be a player, a hoglin it hunts or a wither skeleton.
 func (h *hub) piglinCrossbowTick(players map[int32]*tracked, m *mob) {
-	var t *tracked
+	var q quarry
+	ok := false
 	if !m.baby && m.admireUntil == 0 {
-		t = h.piglinTarget(players, m, m.followRange())
+		q, ok = h.piglinFoe(players, m, m.followRange())
 	}
-	if t == nil {
+	if !ok {
 		if m.cbState == cbCharging {
 			h.setCrossbowState(players, m, cbUncharged)
 		}
 		return
 	}
-	d := dist3(t.x, t.y, t.z, m.x, m.y, m.z)
-	sees := h.mobSees(m, t)
-	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
+	d := dist3(q.x, q.y, q.z, m.x, m.y, m.z)
+	var sees bool
+	if q.t != nil {
+		sees = h.mobSees(m, q.t)
+	} else {
+		sees = h.mobSeesMob(m, q.o)
+	}
+	m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi)
 	if sees && d < piglinCrossbowRange-1 { // SetWalkTargetFromAttackTargetIfTargetOutOfReach: in reach, it stops
 		m.vx, m.vz = 0, 0
 		if d < piglinBackUpDist && d > 1e-6 { // BackUpIfTooClose: a step back
 			s := m.moveSpeed() * piglinBackUpSpeed
-			m.vx, m.vz = -(t.x-m.x)/d*s, -(t.z-m.z)/d*s
+			m.vx, m.vz = -(q.x-m.x)/d*s, -(q.z-m.z)/d*s
 		}
 	}
 	if !sees || d >= piglinCrossbowRange { // CrossbowAttack stops: the draw is let go
@@ -154,7 +164,7 @@ func (h *hub) piglinCrossbowTick(players map[int32]*tracked, m *mob) {
 			h.setCrossbowState(players, m, cbReady)
 		}
 	case cbReady:
-		h.spawnArrowAt(players, m, t.x, t.y+0.6, t.z)
+		h.spawnArrowAt(players, m, q.x, q.aimY, q.z)
 		h.playSoundDim(players, m.dim, "minecraft:item.crossbow.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 		h.setCrossbowState(players, m, cbUncharged)
 	}
