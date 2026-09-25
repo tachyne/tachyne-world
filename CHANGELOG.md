@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **The Warden's Darkness pulses.** As in vanilla, a Warden sends out
+  Darkness every six seconds, lasting thirteen, to survival and adventure
+  players within 20 blocks — the screen fades in and out rather than
+  staying dark — and creative players are left alone.
 - **Weaving and Oozing follow the rules.** A player who dies with Weaving
   leaves cobwebs even with `mob_griefing` off (only mobs need it), and the
   slimes Oozing lets out are capped by the `max_entity_cramming` rule, as in

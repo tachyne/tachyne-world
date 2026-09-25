@@ -182,3 +182,31 @@ func TestAWardenDiggingAwayLeavesNothingBehind(t *testing.T) {
 		t.Errorf("%d experience orbs dropped, want none", len(h.orbs)-orbsBefore)
 	}
 }
+
+// The Warden's Darkness comes in pulses 120 ticks apart, 260 ticks long, to
+// survival players within 20 blocks; a creative player is left alone.
+func TestWardenDarknessPulses(t *testing.T) {
+	h, players := preyFixture(t)
+	pl, cr := survPlayer(h), survPlayer(h)
+	cr.p.eid = pl.p.eid + 1
+	cr.gamemode = gmCreative
+	pl.x, pl.y, pl.z = 8.5, 180, 0.5
+	cr.x, cr.y, cr.z = 6.5, 180, 0.5
+	players[pl.p.eid], players[cr.p.eid] = pl, cr
+	m := h.spawnHostileY(players, entityWarden, 0.5, 180, 0.5)
+	m.rest = 1 << 20
+	for i := 0; i < 130/mobMoveInterval; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+	}
+	e := pl.effects[effDarkness]
+	if e == nil {
+		t.Fatal("no Darkness within 120 ticks of a Warden")
+	}
+	if e.left > 260 || e.left < 130 {
+		t.Errorf("Darkness has %d ticks left, want a 260-tick pulse", e.left)
+	}
+	if cr.effects[effDarkness] != nil {
+		t.Error("a creative player got Darkness")
+	}
+}

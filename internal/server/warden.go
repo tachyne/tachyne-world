@@ -42,12 +42,19 @@ const (
 // wardenTick runs once per mob update (every mobMoveInterval ticks) for a Warden.
 func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 	// Darkness dread for everyone nearby (refreshed so it never lapses in range).
-	for _, t := range players {
-		if t.dim != m.dim {
-			continue
-		}
-		if dx, dz := t.x-m.x, t.z-m.z; dx*dx+dz*dz < wardenDarknessR*wardenDarknessR {
-			h.applyEffect(players, t, effDarkness, 0, 12)
+	// Warden.applyDarknessAround, every 120 ticks (offset by its id): 260
+	// ticks of Darkness to each survival player within 20 blocks, unless the
+	// one they have still runs past 200 (addEffectToPlayersAround).
+	if (h.tick.Load()+uint64(m.eid))%120 < mobMoveInterval {
+		for _, t := range players {
+			if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) ||
+				dist3(t.x, t.y, t.z, m.x, m.y, m.z) >= wardenDarknessR {
+				continue
+			}
+			if e := t.effects[effDarkness]; e != nil && e.left >= 200 {
+				continue
+			}
+			h.applyEffectTicks(players, t, effDarkness, 0, 260)
 		}
 	}
 
