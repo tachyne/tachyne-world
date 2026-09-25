@@ -722,3 +722,30 @@ func TestItemTripsWireForTenTicks(t *testing.T) {
 		t.Error("the re-check should release the string")
 	}
 }
+
+// TripWireBlock.onPlace → updateSource: laying the missing string in a line
+// attaches the hooks at both ends, however far off they are.
+func TestLayingStringAttachesDistantHooks(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	w := h.world
+	a, b := blockPos{0, 180, 0}, blockPos{6, 180, 0}
+	w.SetBlock(a.x-1, a.y, a.z, worldgen.Stone)
+	w.SetBlock(b.x+1, b.y, b.z, worldgen.Stone)
+	w.SetBlock(a.x, a.y, a.z, withProps(t, tripwireHookMin, map[string]string{"facing": "east", "attached": "false", "powered": "false"}))
+	w.SetBlock(b.x, b.y, b.z, withProps(t, tripwireHookMin, map[string]string{"facing": "west", "attached": "false", "powered": "false"}))
+	for x := 1; x <= 5; x++ {
+		if x != 3 {
+			w.SetBlock(x, 180, 0, tripwireDefaultState())
+		}
+	}
+	h.setBlockAt(players, 0, blockPos{3, 180, 0}, tripwireDefaultState())
+	if !boolProp(w.At(a.x, a.y, a.z), "attached") || !boolProp(w.At(b.x, b.y, b.z), "attached") {
+		t.Error("both hooks should attach once the line is whole")
+	}
+	h.setBlockAt(players, 0, blockPos{3, 180, 0}, worldgen.Air)
+	if boolProp(w.At(a.x, a.y, a.z), "attached") || boolProp(w.At(b.x, b.y, b.z), "attached") {
+		t.Error("both hooks should detach when the line breaks")
+	}
+}

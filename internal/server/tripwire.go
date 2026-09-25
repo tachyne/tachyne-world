@@ -116,6 +116,15 @@ func (h *hub) setWirePressed(players map[int32]*tracked, pos blockPos, pressed b
 	if boolProp(s, "powered") != pressed {
 		h.rsSet(players, pos, setBoolProp(s, "powered", pressed))
 	}
+	h.tripwireUpdateSource(players, pos)
+}
+
+// tripwireUpdateSource is TripWireBlock.updateSource: along both axes, the
+// first hook within reach of an unbroken string re-evaluates its line. It
+// runs when a string's state changes, and when a string is laid or taken
+// away (onPlace, affectNeighborsAfterRemoval), so distant hooks attach and
+// detach.
+func (h *hub) tripwireUpdateSource(players map[int32]*tracked, pos blockPos) {
 	for _, d := range [4][2]int{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
 		for i := 1; i < tripwireReach; i++ {
 			np := blockPos{pos.x + d[0]*i, pos.y, pos.z + d[1]*i}
