@@ -61,16 +61,69 @@ func (h *hub) tickItems(players map[int32]*tracked) {
 		// CactusBlock.entityInside hurts the item 1 a tick; an ItemEntity
 		// has 5 health, so five ticks on (or against) a cactus and it is gone.
 		if h.boxTouchesCactus(it.dim, it.x, it.y, it.z, itemHalfHeight, 2*itemHalfHeight) {
-			if it.cactusHurt++; it.cactusHurt >= itemHealth {
-				delete(h.items, eid)
-				h.entityGone(players, it.dim, eid)
+			if h.hurtItem(players, eid, it, 1, itemHurtOther) {
+				continue
 			}
+		}
+		// Entity.lavaHurt: 4 a tick in lava, with the burn's hiss;
+		// BaseFireBlock.entityInside: fire's 1 (soul fire's 2) a tick.
+		cell := w.At(floorInt(it.x), floorInt(it.y), floorInt(it.z))
+		switch {
+		case worldgen.IsLava(cell):
+			if !fireResistantItem[it.item] {
+				h.playSoundDim(players, it.dim, "minecraft:entity.generic.burn", sndNeutral, it.x, it.y, it.z, 0.4, 2+h.rng.Float32()*0.4)
+			}
+			h.hurtItem(players, eid, it, 4, itemHurtFire)
+		case cell == soulFire:
+			h.hurtItem(players, eid, it, 2, itemHurtFire)
+		case isFire(cell):
+			h.hurtItem(players, eid, it, 1, itemHurtFire)
 		}
 	}
 }
 
 // itemHealth is ItemEntity's health: 5.
 const itemHealth = 5
+
+// How an item is being hurt, for ItemStack.canBeHurtBy.
+const (
+	itemHurtOther = iota
+	itemHurtFire
+	itemHurtExplosion
+)
+
+// fireResistantItem: the items built with Item.Properties.fireResistant
+// (damage_resistant #is_fire) — the netherite family, ancient debris and
+// the nether star — which float through lava and fire untouched.
+var fireResistantItem = func() map[int32]bool {
+	m := map[int32]bool{}
+	for _, n := range []string{"ancient_debris", "netherite_block", "netherite_ingot", "netherite_scrap",
+		"netherite_sword", "netherite_shovel", "netherite_pickaxe", "netherite_axe", "netherite_hoe",
+		"netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots",
+		"nether_star", "netherite_horse_armor", "netherite_spear", "netherite_nautilus_armor"} {
+		if id, ok := itemByName[n]; ok {
+			m[int32(id)] = true
+		}
+	}
+	return m
+}()
+
+// hurtItem is ItemEntity.hurtServer: a fire-resistant item ignores fire and
+// lava, a nether star ignores blasts, and anything else loses health and is
+// gone at 5. Reports whether the item was destroyed.
+func (h *hub) hurtItem(players map[int32]*tracked, eid int32, it *itemEntity, amount float64, how int) bool {
+	switch {
+	case how == itemHurtFire && fireResistantItem[it.item],
+		how == itemHurtExplosion && it.item == int32(itemByName["nether_star"]):
+		return false
+	}
+	if it.hurt += amount; it.hurt < itemHealth {
+		return false
+	}
+	delete(h.items, eid)
+	h.entityGone(players, it.dim, eid)
+	return true
+}
 
 // itemGrounded reports an item resting exactly on the block under it.
 func itemGrounded(w *world.World, it *itemEntity) bool {

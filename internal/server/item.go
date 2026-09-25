@@ -28,8 +28,8 @@ var (
 )
 
 type itemEntity struct {
-	cactusHurt int // ticks spent against a cactus (tickItems: five and it is gone)
-	dim        int // dimension the drop lives in
+	hurt       float64 // health lost (ItemEntity's health is 5: hurtItem)
+	dim        int     // dimension the drop lives in
 	eid        int32
 	uuid       [16]byte
 	x, y, z    float64

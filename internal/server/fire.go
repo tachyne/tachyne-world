@@ -369,6 +369,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	}
 	w := h.worldFor(dim)
 	var cleared, hives []blockPos
+	h.explosionHurtsItems(players, dim, cx, cy, cz, power)
 	if w != nil && radius > 0 {
 		hit := h.blastPositionsCapped(w, cx, cy, cz, float64(radius), cfg.resistCap)
 		for pos := range hit {

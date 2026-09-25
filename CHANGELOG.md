@@ -105,6 +105,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Dropped items burn and blow up.** Items thrown into lava or fire now
+  burn away, and explosions destroy the items they reach, as in vanilla.
+  Netherite, ancient debris and nether stars survive fire and lava, nether
+  stars survive blasts, and a blast never destroys the drops it makes.
 - **Adventure mode means hands off.** In adventure mode, hoes, shovels,
   axes, honeycomb, compasses, spawn eggs, end crystals, rockets and the like
   no longer change the blocks they are used on, as in vanilla. Respawning at

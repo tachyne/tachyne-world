@@ -164,3 +164,22 @@ func (h *hub) blastPlayer(players map[int32]*tracked) *tracked {
 	}
 	return players[h.blastSrc.causer]
 }
+
+// explosionHurtsItems is ServerExplosion.hurtEntities for dropped items. It
+// runs before the blast breaks anything, as vanilla's does: the blocks still
+// shield, and the drops the blast is about to make are not caught in it.
+func (h *hub) explosionHurtsItems(players map[int32]*tracked, dim int, cx, cy, cz, power float64) {
+	dr := power * 2
+	if power < 1e-5 {
+		return
+	}
+	for eid, it := range h.items {
+		if it.dim != dim || dist3(it.x, it.y, it.z, cx, cy, cz) > dr {
+			continue
+		}
+		exposure := h.seenPercent(dim, cx, cy, cz, it.x-itemHalfHeight, it.y, it.z-itemHalfHeight, it.x+itemHalfHeight, it.y+2*itemHalfHeight, it.z+itemHalfHeight)
+		if impact := explosionImpact(power, cx, cy, cz, it.x, it.y, it.z, exposure); impact > 0 {
+			h.hurtItem(players, eid, it, (impact*impact+impact)/2*explosionDamageScale*dr+1, itemHurtExplosion)
+		}
+	}
+}
