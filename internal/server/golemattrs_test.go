@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -37,8 +38,8 @@ func TestGolemAttributesAndCrackSound(t *testing.T) {
 	if e := h.spawnMob(players, entityEvoker, 2.5, 180, 0.5); e.attackDamage() != 2 {
 		t.Fatalf("evoker ATTACK_DAMAGE = %v, want 2", e.attackDamage())
 	}
-	if d := speciesOf(entityGiant); d.speed != 0.5 {
-		t.Fatalf("giant MOVEMENT_SPEED = %v, want 0.5", d.speed)
+	if gi := h.spawnSpecies(players, entityGiant, 0, 2.5, 180, 2.5); math.Abs(gi.moveSpeed()/attrToStep-0.5) > 1e-9 {
+		t.Fatalf("giant MOVEMENT_SPEED = %v, want 0.5", gi.moveSpeed()/attrToStep)
 	}
 
 	pl.tracked = map[int32]bool{g.eid: true}

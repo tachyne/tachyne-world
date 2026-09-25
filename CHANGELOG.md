@@ -128,6 +128,9 @@ the public history since the project was open-sourced on 2026-07-10.
   sound when a blow cracks it further, and its punch follows its attack
   strength, so Strength and Weakness change it as in vanilla. The evoker's
   and the giant's attributes now match vanilla's too.
+- **Donkeys, mules and llamas vary.** Each donkey, mule, llama and trader
+  llama is now born with its own health, between 15 and 30, as in vanilla,
+  and a zombie horse rolls its own jump and speed instead of a horse's.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

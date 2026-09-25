@@ -322,7 +322,7 @@ var speciesTable = map[int]*speciesDef{
 	// goals at all, so it stands where it is summoned and does nothing. The
 	// engine used to give it the full hostile archetype, which made it the
 	// deadliest thing in the game by a distance.
-	entityGiant: {name: "giant", health: 100, speed: 0.5, step: 0.2, damage: 50, // Giant.createAttributes
+	entityGiant: {name: "giant", health: 100, speed: 0.5, step: 0.5 * attrToStep, damage: 50, // Giant.createAttributes MOVEMENT_SPEED 0.5
 		arch: archPassive, soundAs: "zombie"},
 	entityZombieVillager: {name: "zombie_villager", health: 20, speed: 0.23, damage: 3,
 		armor: 2, follow: 35, arch: archHostile,
