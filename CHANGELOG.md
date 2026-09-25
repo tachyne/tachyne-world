@@ -87,6 +87,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Piglin brutes keep to their bastion.** A brute remembers where it
+  spawned and, with nothing to fight, walks back there, strolls about it,
+  and wanders over to the piglins and brutes near it, all at an unhurried
+  pace, as in vanilla. It used to drift off across the Nether like any
+  other monster. Piglins and brutes also open wooden doors in their way now.
 - **Placing pointed dripstone.** Pointed dripstone now hangs from a ceiling
   or stands on a floor depending on where you look, as in vanilla, and a
   column keeps its proper taper — tip, frustum, middle, base — as pieces are

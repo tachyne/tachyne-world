@@ -138,9 +138,12 @@ type mob struct {
 	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin
 	piglinFleeX     float64       // …and what it is backing away from
 	piglinFleeZ     float64
-	golemGrudgeEID  int32 // iron golem: the player who hit it (HurtByTargetGoal)
-	golemGrudgeLeft int   // …and the ticks it keeps after them
-	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	idleWalk        *idleWalk // piglin brute: the walk its idle RunOne picked (nil = none)
+	homeToNext      uint64    // piglin brute: StrollToPoi's nextOkStartTime
+	homeAroundNext  uint64    // …and StrollAroundPoi's
+	golemGrudgeEID  int32     // iron golem: the player who hit it (HurtByTargetGoal)
+	golemGrudgeLeft int       // …and the ticks it keeps after them
+	variant         int32     // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
@@ -787,6 +790,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
 			// A zombie, zombified piglin or piglin with a spear: closing,
 			// charging with the spear lowered, and wheeling off for the next pass.
+		case m.etype == entityPiglinBrute && h.bruteIdleStep(m):
+			// An idle brute keeping to its bastion: home, its fellows, a stroll.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
 			// A stranded water animal heading back to the water, or a strider
 			// off the lava heading back to it.
