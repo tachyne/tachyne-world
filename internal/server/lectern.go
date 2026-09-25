@@ -87,11 +87,20 @@ func (h *hub) onUseLectern(players map[int32]*tracked, e evUseLectern) {
 			}
 			h.sendHandSlot(t, t.useSlot())
 		}
+		// LecternBlock.placeBook → resetBookState: HAS_BOOK on and POWERED
+		// off, a BLOCK_CHANGE, and the block below told (updateBelow). No
+		// statistic: interact_with_lectern is for opening the book.
 		info, _ := worldgen.InfoForState(state)
-		h.setBlockLive(players, t.dim, e.x, e.y, e.z, worldgen.SetProperty(info, state, "has_book", "true"))
+		ns := worldgen.SetProperty(info, state, "has_book", "true")
+		ns = worldgen.SetProperty(info, ns, "powered", "false")
+		h.inDim(t.dim, func() {
+			h.rsSet(players, pos.blockPos, ns)
+			h.nbAround(blockPos{e.x, e.y - 1, e.z}, 0, false)
+			h.nbRun(players)
+		})
+		h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid)
 		h.playSoundDim(players, t.dim, "minecraft:item.book.put", sndBlock,
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
-		h.incCustom(t, "interact_with_lectern", 1)
 		return
 	}
 	h.openLectern(t, pos, lec)

@@ -429,3 +429,24 @@ func TestBurningPlayerMeltsSnowCauldron(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
 	}
 }
+
+// LecternBlock.placeBook → resetBookState: a book set on a lectern is a
+// BLOCK_CHANGE, and placing it is not an interact_with_lectern.
+func TestLecternBookPlacedIsHeard(t *testing.T) {
+	var stat int32
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		h.world.SetBlock(7, 180, 4, worldgen.BlockBase("lectern"))
+		pl.inv.slots[pl.p.heldSlot()] = invStack{item: itemByName["writable_book"], count: 1}
+		h.onUseLectern(players, evUseLectern{eid: pl.p.eid, x: 7, y: 180, z: 4})
+		if !boolProp(h.world.At(7, 180, 4), "has_book") {
+			t.Fatal("the book should be on the lectern")
+		}
+		stat = customStat(pl, "interact_with_lectern")
+	})
+	if f != freqBlockChange {
+		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
+	}
+	if stat != 0 {
+		t.Errorf("placing a book awarded interact_with_lectern %d", stat)
+	}
+}
