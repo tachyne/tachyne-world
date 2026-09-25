@@ -767,3 +767,27 @@ func TestSculkHearsASnifferEggCrack(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_PLACE %d", f, freqBlockPlace)
 	}
 }
+
+// BasePressurePlateBlock: a pressed plate re-checks on a fixed 20-tick
+// cadence from its press, so something that stays 15 ticks and leaves lets
+// it go at the 20-tick check, not 20 ticks after it left.
+func TestPlateReleasesOnItsOwnCadence(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	w.SetBlock(x, y, z, worldgen.BlockID("oak_pressure_plate"))
+	it := h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y), float64(z)+0.5, 0, 0, 0)
+	step := func() { h.tick.Add(1); h.inDim(0, func() { h.updatePlatesIn(players, 0) }) }
+	h.inDim(0, func() { h.updatePlatesIn(players, 0) })
+	if platePower(w.At(x, y, z)) == 0 {
+		t.Fatal("the item presses the plate")
+	}
+	for i := 0; i < 15; i++ {
+		step()
+	}
+	delete(h.items, it.eid)
+	for i := 0; i < 5; i++ {
+		step()
+	}
+	if platePower(w.At(x, y, z)) != 0 {
+		t.Error("the plate should release at its 20-tick re-check")
+	}
+}

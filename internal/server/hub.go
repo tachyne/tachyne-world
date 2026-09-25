@@ -629,7 +629,7 @@ type hub struct {
 	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
 	obsSeen   map[simPos]uint32 // observer last-seen watched state
 	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
-	platesOn  map[simPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
+	platesOn  map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
 	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
 	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
 
