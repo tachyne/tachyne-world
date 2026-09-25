@@ -90,6 +90,104 @@ func (g *Generator) stampShipwreck(ch *Chunk, cx, cz int32) {
 	}
 }
 
+// shipwreck_beached: half the wrecks of vanilla's shipwrecks set lie on a
+// beach instead of the sea floor — upright or on their side, never upside
+// down, sunk to half their height (and up to two more) under the lowest
+// ground of their footprint, the sand left standing inside the hull. They
+// have their own grid, so no submerged wreck moved when they arrived.
+const (
+	beachedCell = 384
+	beachedOdds = 0.5
+	// beachedTries is how many points of a cell are tried for a beach: the
+	// beaches are thin, and one point would almost never land on one.
+	beachedTries = 24
+)
+
+// beachedTemplates are ShipwreckPieces' beached variants.
+var beachedTemplates = []string{
+	"shipwreck/with_mast", "shipwreck/sideways_full", "shipwreck/sideways_fronthalf",
+	"shipwreck/sideways_backhalf", "shipwreck/rightsideup_full", "shipwreck/rightsideup_fronthalf",
+	"shipwreck/rightsideup_backhalf", "shipwreck/with_mast_degraded", "shipwreck/rightsideup_full_degraded",
+	"shipwreck/rightsideup_fronthalf_degraded", "shipwreck/rightsideup_backhalf_degraded",
+}
+
+func isBeach(name string) bool { return name == "minecraft:beach" || name == "minecraft:snowy_beach" }
+
+// BeachedShipwreckIn returns the beached wreck owning the cell containing
+// (wx, wz), if the cell's site is a beach.
+func (g *Generator) BeachedShipwreckIn(wx, wz int) Shipwreck {
+	ox, oz := cellOrigin(wx, beachedCell), cellOrigin(wz, beachedCell)
+	if hash01(g.seed, ox, oz, 0x5B00) >= beachedOdds {
+		return Shipwreck{}
+	}
+	name := beachedTemplates[int(hash01(g.seed, ox, oz, 0x5B03)*float64(len(beachedTemplates)))]
+	t := TemplateByName(name)
+	if t == nil {
+		return Shipwreck{}
+	}
+	rot := int(hash01(g.seed, ox, oz, 0x5B04)*4) & 3
+	fx, fz := t.Size[0], t.Size[2]
+	if rot&1 == 1 {
+		fx, fz = fz, fx
+	}
+	for i := 0; i < beachedTries; i++ {
+		x := ox + 32 + int(hash01(g.seed, ox+i, oz, 0x5B01)*float64(beachedCell-64))
+		z := oz + 32 + int(hash01(g.seed, ox, oz+i, 0x5B02)*float64(beachedCell-64))
+		if !isBeach(g.resolveBiome(x, z).Name) {
+			continue
+		}
+		// WORLD_SURFACE_WG over the footprint: the first cell above the
+		// ground or the water, whichever is higher; the wreck sinks from the
+		// lowest.
+		low := 1 << 30
+		for dx := 0; dx < fx; dx++ {
+			for dz := 0; dz < fz; dz++ {
+				if h := maxInt(g.Height(x+dx, z+dz), SeaLevel); h < low {
+					low = h
+				}
+			}
+		}
+		y := low - t.Size[1]/2 - int(hash01(g.seed, ox, oz, 0x5B05)*3)
+		s := Shipwreck{X: x, Y: y, Z: z, Tmpl: name, Rot: rot, Exists: true}
+		for j, c := range t.Chests {
+			rx, ry, rz := t.rotatePos(c[0], c[1], c[2], rot)
+			tbl := "chests/shipwreck_supply"
+			if j < len(t.ChestLoot) && t.ChestLoot[j] != "" {
+				tbl = t.ChestLoot[j]
+			}
+			s.Chests = append(s.Chests, ShipChest{x + rx, y + ry, z + rz, tbl})
+		}
+		return s
+	}
+	return Shipwreck{}
+}
+
+// stampBeachedShipwreck stamps the beached wreck overlapping this chunk,
+// leaving the template's air out (the hull stays full of sand), unless a
+// player has built in its box.
+func (g *Generator) stampBeachedShipwreck(ch *Chunk, cx, cz int32) {
+	baseX, baseZ := int(cx)*16, int(cz)*16
+	s := g.BeachedShipwreckIn(baseX+8, baseZ+8)
+	if !s.Exists {
+		return
+	}
+	t := TemplateByName(s.Tmpl)
+	if t == nil {
+		return
+	}
+	fx, fz := t.Size[0], t.Size[2]
+	if s.Rot&1 == 1 {
+		fx, fz = fz, fx
+	}
+	if s.X > baseX+15 || s.X+fx-1 < baseX || s.Z > baseZ+15 || s.Z+fz-1 < baseZ {
+		return
+	}
+	if g.builtIn(s.X, s.Y, s.Z, s.X+fx-1, s.Y+t.Size[1], s.Z+fz-1) {
+		return
+	}
+	t.StampTemplateProcSus(ch, cx, cz, s.X, s.Y, s.Z, s.Rot, nil, true, nil)
+}
+
 // BuriedTreasure is a single beach-buried chest.
 type BuriedTreasure struct {
 	X, Y, Z int
@@ -131,6 +229,21 @@ func (g *Generator) NearestShipwreck(wx, wz, radius int) (x, z int, ok bool) {
 	for cx := -cells; cx <= cells; cx++ {
 		for cz := -cells; cz <= cells; cz++ {
 			s := g.ShipwreckIn(ox+cx*shipwreckCell, oz+cz*shipwreckCell)
+			if !s.Exists {
+				continue
+			}
+			dx, dz := s.X-wx, s.Z-wz
+			if d := dx*dx + dz*dz; d < bestD {
+				x, z, ok, bestD = s.X, s.Z, true, d
+			}
+		}
+	}
+	// #shipwreck holds the beached wrecks too.
+	cells = radius/beachedCell + 1
+	ox, oz = cellOrigin(wx, beachedCell), cellOrigin(wz, beachedCell)
+	for cx := -cells; cx <= cells; cx++ {
+		for cz := -cells; cz <= cells; cz++ {
+			s := g.BeachedShipwreckIn(ox+cx*beachedCell, oz+cz*beachedCell)
 			if !s.Exists {
 				continue
 			}

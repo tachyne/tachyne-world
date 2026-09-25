@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Beached shipwrecks.** Wrecks now also lie run aground on beaches, half
+  buried in the sand with their chests, as in vanilla (upright or on their
+  side, never upside down). `/locate structure shipwreck_beached` finds
+  them, and dolphins lead you to them too. They skip any spot you have
+  built in.
 - **Ice spikes, boulders and blue ice.** The ice spikes biome finally has
   its spikes: packed-ice spires, the odd one raised high on a pillar, and
   packed ice patches in the snow. Old-growth taigas are strewn with mossy

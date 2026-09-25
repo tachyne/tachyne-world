@@ -76,6 +76,10 @@ var structureLocators = map[string]structureLocator{
 		s := g.ShipwreckIn(wx, wz)
 		return s.X, s.Z, s.Exists
 	}},
+	"shipwreck_beached": {0, beachedCell, func(g *Generator, wx, wz int) (int, int, bool) {
+		s := g.BeachedShipwreckIn(wx, wz)
+		return s.X, s.Z, s.Exists
+	}},
 	"buried_treasure": {0, buriedCell, func(g *Generator, wx, wz int) (int, int, bool) {
 		b := g.BuriedTreasureIn(wx, wz)
 		return b.X, b.Z, b.Exists
