@@ -30,6 +30,8 @@ func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint3
 		h.fallingBlockTick(players, h.rsDim, pos, state) // FallingBlock.tick
 	case isStalactite(state):
 		h.spawnFallingStalactite(players, h.rsDim, pos, state) // SpeleothemBlock.tick
+	case isScaffolding(state):
+		h.scaffoldTick(players, h.rsDim, pos, state)
 	case isRSTorch(state):
 		h.torchTick(players, pos, state)
 	case isLamp(state):

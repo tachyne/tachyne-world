@@ -82,6 +82,9 @@ func (h *hub) fallShapeUpdates(dim int, pos blockPos, state uint32) {
 	if fallBlockState(state) {
 		h.fallScheduleTick(dim, pos)
 	}
+	if isScaffolding(state) { // ScaffoldingBlock.onPlace: a look at itself next tick
+		h.inDim(dim, func() { h.scheduleTick(pos, 1, tickNormal) })
+	}
 	w := h.worldFor(dim)
 	for _, d := range allNeighbors {
 		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
@@ -112,6 +115,32 @@ func (h *hub) fallingBlockTick(players map[int32]*tracked, dim int, pos blockPos
 	case isSuspicious(state):
 		fb.cancelDrop = true // BrushableBlock.tick: disableDrop
 	}
+}
+
+// scaffoldTick is ScaffoldingBlock.tick: the distance and bottom flag are
+// worked out again; at distance 7 a scaffold that was already at 7 comes
+// loose as a falling block (FallingBlockEntity.fall), one that just lost
+// its support breaks and drops (destroyBlock).
+func (h *hub) scaffoldTick(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
+	ns, ok := scaffoldUpdated(h.worldFor(dim), pos, state)
+	switch {
+	case !ok && scaffoldDist(state) == 7:
+		h.fallBlock(players, dim, pos, ns)
+	case !ok:
+		h.setBlockAt(players, dim, pos, worldgen.Air)
+		h.dropLoose(players, dim, pos, state)
+	case ns != state:
+		h.setBlockAt(players, dim, pos, ns)
+	}
+}
+
+// scaffoldDist is a scaffold state's DISTANCE.
+func scaffoldDist(state uint32) int {
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return 0
+	}
+	return atoi(worldgen.GetProperty(info, state, "distance"))
 }
 
 // isSuspicious reports suspicious sand and gravel (BrushableBlock).

@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Loose scaffolding falls.** Scaffolding set down with nothing holding
+  it (by a command or a structure) now drops like sand and settles on the
+  ground as scaffolding, as in vanilla.
 - **Grass and mycelium spread and die as in vanilla.** Grass now dies
   under water, a bottom slab, a lower stair or deep snow (a single snow
   layer is fine), no longer spreads onto dirt that is under water, and
