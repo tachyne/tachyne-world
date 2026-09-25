@@ -114,8 +114,21 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	// that lower half needs. Without this, every tall grass, sunflower and open
 	// door in the world reads as unsupported — the top half sits on a plant or
 	// on a non-collidable open door, neither of which holds anything.
-	if prop("half") == "upper" || prop("part") == "head" {
+	if info, ok := worldgen.InfoForState(state); ok && isBed(info) {
+		return bedPartnerStands(w, pos, state, info) // BedBlock.updateShape
+	}
+	if prop("half") == "upper" {
 		return sameBlockFamily(below(), state) || holdsBlock(below())
+	}
+	// …and the other way (DoorBlock/DoublePlantBlock.updateShape): a lower
+	// half whose upper half has gone goes too.
+	if prop("half") == "lower" {
+		if info, ok := worldgen.InfoForState(state); ok && isTwoTall(info) {
+			up := above()
+			if ui, ok := worldgen.InfoForState(up); !ok || !sameBlockFamily(up, state) || worldgen.GetProperty(ui, up, "half") != "upper" {
+				return false
+			}
+		}
 	}
 
 	if isWire(state) { // RedStoneWireBlock.canSurviveOn: a sturdy top face or a hopper
@@ -203,7 +216,10 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		}
 		return plantSoils[below()] || stacksOnItself(state, below())
 	case worldgen.SupportFarmland:
-		return isFarmland(below())
+		// CropBlock.canSurvive: farmland under it, and a raw brightness of
+		// eight or more (sky light at full day, or block light) where it grows.
+		sky, blk := w.LightAt(pos.x, pos.y, pos.z)
+		return isFarmland(below()) && max(sky, blk) >= 8
 	case worldgen.SupportWall:
 		return holdsBlock(behind())
 	case worldgen.SupportCeiling:
@@ -476,7 +492,7 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				queue = append(queue, n)
 				continue
 			}
-			if worldgen.SupportFor(st) == worldgen.SupportNone || supported(h.worldFor(dim), n, st) {
+			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st)) || supported(h.worldFor(dim), n, st) {
 				continue
 			}
 			// A stalactite does not break when its grip goes — it FALLS, whole,
@@ -574,4 +590,19 @@ func chorusSurvives(w *world.World, pos blockPos, state uint32) bool {
 		}
 	}
 	return isChorusPlant(below) || below == endStoneBlock
+}
+
+// bedPartnerStands is BedBlock.updateShape's test: the other half — the head
+// one block along the bed's facing from the foot — is still this bed's.
+func bedPartnerStands(w *world.World, pos blockPos, state uint32, info worldgen.BlockInfo) bool {
+	facing := worldgen.GetProperty(info, state, "facing")
+	dx, dz := facingDelta(facing)
+	part := worldgen.GetProperty(info, state, "part")
+	if part == "head" {
+		dx, dz = -dx, -dz
+	}
+	o := w.At(pos.x+dx, pos.y, pos.z+dz)
+	oi, ok := worldgen.InfoForState(o)
+	return ok && isBed(oi) && sameBlockFamily(o, state) &&
+		worldgen.GetProperty(oi, o, "part") != part && worldgen.GetProperty(oi, o, "facing") == facing
 }

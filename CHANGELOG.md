@@ -87,6 +87,17 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **No half beds or doors.** When one half of a bed or a door (or a tall
+  plant) is destroyed by something other than a player — an explosion, a
+  piston — the other half now goes with it, as in vanilla, instead of
+  being left behind.
+- **Signal fires.** A campfire on a hay bale becomes a signal fire with its
+  tall column of smoke, as in vanilla, and goes back to an ordinary campfire
+  when the hay is taken away.
+- **Crops need light.** Wheat, carrots, potatoes, beetroots, torchflowers
+  and pitcher plants now pop off when their spot is too dark (a light
+  level under 8), as they do in vanilla — a farm shut in without torches
+  loses its crops.
 - **Fireworks on the right volume slider, and thunder once.** Firework
   sounds were sent on the Music channel, so turning music down silenced
   them; they now play as ambient sounds, as in vanilla. Each lightning

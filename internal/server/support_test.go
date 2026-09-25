@@ -141,6 +141,7 @@ func TestSupportDoesNotEatExistingBuilds(t *testing.T) {
 	upper := worldgen.SetProperty(info, tall, "half", "upper")
 	w.SetBlock(0, 179, 0, dirt)
 	w.SetBlock(0, 180, 0, lower)
+	w.SetBlock(0, 181, 0, upper) // a lower half stands only under its upper half
 	if !supported(w, blockPos{0, 180, 0}, lower) {
 		t.Error("tall grass on dirt should stand")
 	}
@@ -302,5 +303,75 @@ func TestSnowLayerFloors(t *testing.T) {
 	h.setBlockAt(map[int32]*tracked{}, 0, blockPos{pos.x, pos.y - 1, pos.z}, worldgen.BlockBase("ice"))
 	if h.world.At(pos.x, pos.y, pos.z) == snow {
 		t.Fatal("snow stayed on ice")
+	}
+}
+
+// A bed half whose partner is destroyed by something other than a player
+// (an explosion, a piston) goes too, and so does a door's lower half left
+// without its upper; a bed with nothing under it stays (BedBlock and
+// DoorBlock.updateShape).
+func TestPairedHalvesGoTogether(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	base := worldgen.BlockBase("red_bed")
+	info, _ := worldgen.InfoForState(base)
+	foot := worldgen.SetProperty(info, worldgen.SetProperty(info, base, "facing", "east"), "part", "foot")
+	head := worldgen.SetProperty(info, foot, "part", "head")
+	w.SetBlock(4, 180, 4, foot)
+	w.SetBlock(5, 180, 4, head)
+	h.setBlockAt(players, 0, blockPos{4, 179, 4}, worldgen.Stone)
+	h.setBlockAt(players, 0, blockPos{4, 179, 4}, worldgen.Air) // the floor comes and goes
+	if w.At(4, 180, 4) != foot || w.At(5, 180, 4) != head {
+		t.Fatal("a bed fell for want of a floor")
+	}
+	h.setBlockAt(players, 0, blockPos{5, 180, 4}, worldgen.Air) // the head blown away
+	if w.At(4, 180, 4) == foot {
+		t.Fatal("the foot of a bed stayed without its head")
+	}
+
+	door := worldgen.BlockBase("oak_door")
+	di, _ := worldgen.InfoForState(door)
+	lower := worldgen.SetProperty(di, door, "half", "lower")
+	upper := worldgen.SetProperty(di, door, "half", "upper")
+	w.SetBlock(8, 179, 8, worldgen.Stone)
+	w.SetBlock(8, 180, 8, lower)
+	w.SetBlock(8, 181, 8, upper)
+	h.setBlockAt(players, 0, blockPos{8, 181, 8}, worldgen.Air)
+	if w.At(8, 180, 8) == lower {
+		t.Fatal("a door's lower half stayed without its upper half")
+	}
+}
+
+// A crop needs light to stay (CropBlock.canSurvive: raw brightness >= 8): in
+// the open it stands; roofed over in the dark it drops on the next update.
+func TestCropNeedsLight(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	farmland := worldgen.BlockBase("farmland")
+	wheat := worldgen.BlockBase("wheat")
+	x, y, z := 6, 200, 6
+	w.SetBlock(x, y-1, z, farmland)
+	w.SetBlock(x, y, z, wheat)
+	if !supported(w, blockPos{x, y, z}, wheat) {
+		t.Fatal("wheat in the open sky was unsupported")
+	}
+	// Box it in: stone all round, over it and under the farmland, no torch.
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			for dy := -2; dy <= 1; dy++ {
+				if dx == 0 && dz == 0 && (dy == 0 || dy == -1) {
+					continue // the wheat and its farmland
+				}
+				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Stone)
+			}
+		}
+	}
+	h.setBlockAt(players, 0, blockPos{x + 1, y, z}, worldgen.BlockBase("cobblestone"))
+	if w.At(x, y, z) == wheat {
+		t.Fatal("wheat shut in the dark stayed")
 	}
 }
