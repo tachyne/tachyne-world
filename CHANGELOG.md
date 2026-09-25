@@ -87,6 +87,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sneak across magma.** Crouching on a magma block no longer burns you, as
+  in vanilla.
 - **Mobs trample farmland.** A big enough mob — a cow, a horse, a zombie —
   that drops onto farmland can turn it back to dirt, as in vanilla, when
   mob griefing is on. Chickens and other small mobs never do.

@@ -210,11 +210,9 @@ func (h *hub) playerInsideTick(players map[int32]*tracked) {
 					h.hurtBy(players, t, lavaHurtDamage, dtLava, deathCause{})
 				}
 			case onFloor && s == magmaBlockState:
-				// Fire Resistance and Frost Walker boots spare you. Vanilla
-				// ALSO spares a crouching player (isSteppingCarefully), which
-				// this cannot honour: the movement packet carries sprinting but
-				// not sneaking, so the server never learns you are crouched.
-				if t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
+				// Fire Resistance and Frost Walker boots spare you, and so does
+				// crouching (MagmaBlock.stepOn: !isSteppingCarefully).
+				if t.p.sneaking || t.hasEffect(effFireRes) > 0 || t.armor[3].enchLvl(enchFrostWalker) > 0 {
 					return
 				}
 				h.hurtBy(players, t, magmaDamage, dtHotFloor, deathCause{})
