@@ -131,6 +131,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Donkeys, mules and llamas vary.** Each donkey, mule, llama and trader
   llama is now born with its own health, between 15 and 30, as in vanilla,
   and a zombie horse rolls its own jump and speed instead of a horse's.
+- **Bats spawn over stone.** As in vanilla, bats now spawn only where the
+  block below is natural stone, deepslate or tuff, so a dark room floored
+  with planks stays free of them.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

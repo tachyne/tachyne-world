@@ -528,7 +528,8 @@ func (h *hub) spawnRulesOK(dim, cat, etype, x, y, z int, sky, block uint8) bool 
 		return h.rawBrightness(sky, block, 0) > 8
 	case catAmbient: // vanilla Bat.checkBatSpawnRules
 		return y < w.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
-			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4)
+			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4) &&
+			inRanges2(w.At(x, y-1, z), batFloor) // #bats_spawnable_on below
 	case catWaterCreature: // squid/dolphin/nautilus near the surface band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catWaterAmbient: // vanilla surface-water band

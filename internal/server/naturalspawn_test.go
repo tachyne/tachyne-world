@@ -341,3 +341,34 @@ func TestResolvedItemConstants(t *testing.T) {
 		t.Fatalf("itemCarvedPumpkin = %d, want %d", itemCarvedPumpkin, itemByName["carved_pumpkin"])
 	}
 }
+
+// Bat.checkBatSpawnRules: the block under the spawn cell must be in
+// #bats_spawnable_on (#base_stone_overworld) — a dark cave floored with
+// planks or dirt never spawns bats.
+func TestBatSpawnFloor(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	for x := -1; x <= 1; x++ {
+		for z := -1; z <= 1; z++ {
+			for y := 30; y <= 34; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Stone)
+			}
+		}
+	}
+	h.world.SetBlock(0, 32, 0, worldgen.Air)
+	ok := func() bool {
+		for i := 0; i < 200; i++ {
+			if h.spawnRulesOK(dimOverworld, catAmbient, entityBat, 0, 32, 0, 0, 0) {
+				return true
+			}
+		}
+		return false
+	}
+	if !ok() {
+		t.Fatal("a dark cave cell over stone should pass the bat rules")
+	}
+	h.world.SetBlock(0, 31, 0, worldgen.BlockBase("oak_planks"))
+	if ok() {
+		t.Fatal("a bat must not spawn over planks (#bats_spawnable_on)")
+	}
+}
