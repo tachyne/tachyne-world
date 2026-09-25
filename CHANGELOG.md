@@ -95,6 +95,16 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Placing blocks as in vanilla.** A second pink petal, wildflower or
+  leaf litter clicked onto the first adds to it; a plant is never swapped
+  for itself by clicking it with the same plant. Campfires face the way
+  you look and go in unlit under water. Trapdoors hinge on the side you
+  click, or face you when set on a floor or ceiling (they were turned the
+  wrong way). Ladders go on the wall you look toward and never onto the
+  front of another ladder. Concrete powder placed beside water is concrete
+  at once, grass placed under snow is snowy, and a big dripleaf set on
+  another keeps its facing. A door, trapdoor or gate placed next to power
+  goes down open, without swinging open with a sound a moment later.
 - **Signs, banners, heads and bells go where vanilla puts them.** Clicking
   a ceiling with a sign or banner now puts it on the wall you are looking
   toward, or on the floor below, instead of doing nothing; mob heads face

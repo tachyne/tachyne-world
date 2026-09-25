@@ -80,6 +80,7 @@ type evBlock struct {
 	by      int32  // editor entity ID (already saw its own prediction; skip echo)
 	broken  uint32 // when a dig destroyed a block: its old state (0 = not a break) —
 	//                drives world_event 2001 (break particles + sound) for OTHERS
+	placed bool // a block item was placed here (not a use, a toggle or a break)
 }
 
 // evChat broadcasts chat. from != nil marks real player chat (raw text, no
@@ -2767,6 +2768,9 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 		if e.broken != 0 { // break particles + sound, rendered from the old state
 			t.p.trySendEv(blockBreakEvent(e.x, e.y, e.z, e.broken))
 		}
+	}
+	if e.placed {
+		h.inDim(e.dim, func() { h.placedOpenable(players, blockPos{e.x, e.y, e.z}) })
 	}
 	h.cascadeOrphanPortals(players, e.dim, blockPos{e.x, e.y, e.z}) // works in every dim
 	if _, isSign := signKind(e.state); !isSign {                    // a sign was broken or overwritten

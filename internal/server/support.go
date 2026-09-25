@@ -507,6 +507,12 @@ func sameBlockFamily(a, b uint32) bool {
 	return oka && okb && ia.Min == ib.Min
 }
 
+// sameBlock is sameBlockFamily that also knows a block with no properties
+// (short grass, a fern), whose one state has no layout to compare.
+func sameBlock(a, b uint32) bool {
+	return a == b || sameBlockFamily(a, b)
+}
+
 // oppositeOf flips a facing name. A wall block's support is behind it.
 func oppositeOf(facing string) string {
 	switch facing {
