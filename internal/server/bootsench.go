@@ -122,14 +122,21 @@ func (h *hub) frostedBrightness(dim int, pos blockPos) int {
 
 // iceMeltsOnBreak is IceBlock.playerDestroy: breaking ordinary ice without
 // Silk Touch fills the cell with water, which is why an ice roof over a lake
-// turns back into the lake. Packed and blue ice do not melt, and neither does
-// ice broken in the Nether, where the water would evaporate anyway.
+// turns back into the lake — but only over something: a block that stops
+// movement (#ice_melts_when_destroyed_above, which is #blocks_motion) or a
+// liquid. Ice broken over air, a flower or a torch just goes. Packed and
+// blue ice do not melt, and neither does ice broken in the Nether, where
+// the water would evaporate anyway.
 func (h *hub) iceMeltsOnBreak(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
 	if state != iceBlock || dim == dimNether {
 		return
 	}
-	if w := h.worldFor(dim); w != nil && !worldgen.IsReplaceable(w.At(pos.x, pos.y, pos.z)) {
+	w := h.worldFor(dim)
+	if w == nil || !worldgen.IsReplaceable(w.At(pos.x, pos.y, pos.z)) {
 		return // something already took the cell
+	}
+	if b := w.At(pos.x, pos.y-1, pos.z); !inRanges2(b, iceMeltFloor) && !(worldgen.IsFluid(b) && !worldgen.IsBubbleColumn(b)) {
+		return
 	}
 	h.setBlockAt(players, dim, pos, worldgen.WaterBase)
 	h.scheduleAroundIn(dim, pos, 1)
@@ -210,3 +217,8 @@ func (h *hub) onSoulBlock(t *tracked) bool {
 	under := h.worldFor(t.dim).At(int(math.Floor(t.x)), int(math.Floor(t.y))-1, int(math.Floor(t.z)))
 	return under == soulSandBase || under == soulSoilBase
 }
+
+// iceMeltFloor is #ice_melts_when_destroyed_above. Vanilla defines it, like
+// #entities_can_teleport_to, as exactly #blocks_motion, so the generated
+// copy of that tag serves.
+var iceMeltFloor = worldgen.BlockTag("entities_can_teleport_to")

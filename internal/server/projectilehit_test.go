@@ -112,7 +112,16 @@ func TestProjectileShattersADecoratedPot(t *testing.T) {
 	}
 	pos := blockPos{5, 70, 0}
 	h.world.SetBlock(pos.x, pos.y, pos.z, lo)
-	a := &arrowEntity{dim: 0, x: 5.5, y: 70.5, z: 0.5}
+	// DecoratedPotBlock.onProjectileHit: mayInteract && mayBreak — a mob's
+	// arrow with mob griefing off leaves it be; an unowned arrow breaks it.
+	h.allocEID() // the test player holds eid 1 without having drawn it
+	skel := h.spawnMob(players, entitySkeleton, 8.5, 70, 0.5)
+	h.rules.MobGriefing = false
+	h.projectileHitBlock(players, &arrowEntity{etype: entityArrow, shooter: skel.eid, x: 5.5, y: 70.5, z: 0.5}, pos, lo)
+	if h.world.At(pos.x, pos.y, pos.z) != lo {
+		t.Fatal("a mob's arrow broke a pot with mob griefing off")
+	}
+	a := &arrowEntity{etype: entityArrow, dim: 0, x: 5.5, y: 70.5, z: 0.5}
 	h.projectileHitBlock(players, a, pos, lo)
 	if h.world.At(pos.x, pos.y, pos.z) != worldgen.Air {
 		t.Error("the pot survived a direct hit")

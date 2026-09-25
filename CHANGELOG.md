@@ -181,6 +181,57 @@ the public history since the project was open-sourced on 2026-07-10.
   straight back through, and appear only with a player nearby; an
   eyeblossom poisons a bee for 25 ticks, not 40; and stepping into fire
   thaws a player freezing from powder snow.
+- **Explosions and falls, as in vanilla.** An explosion or a wind charge
+  that reaches a beehive sets the bees near it on a player nearby, whoever
+  set it off. Ore blown up by TNT a player lit drops its experience, as if
+  mined. Mobs landing on turtle eggs can crack them — zombies never do.
+- **Ice and coral read the water as vanilla does.** Ice broken over air, a
+  flower or a torch no longer leaves water behind — only over a solid block
+  or a liquid. Coral beside a waterlogged block, seagrass or kelp stays
+  alive instead of bleaching.
+- **Redstone from jukeboxes and trapped chests.** A jukebox whose song
+  ends now turns off the redstone it was powering, and a trapped chest in
+  the Nether or the End gives a signal when opened, as in vanilla.
+- **Fences join their gates.** A fence now connects to a fence gate set in
+  line with it, as in vanilla, and no longer reaches out to glass panes,
+  leaves, pumpkins or melons; wooden fences and the nether brick fence keep
+  apart. Glass panes and iron bars join copper bars.
+- **Placing blocks as in vanilla.** A second pink petal, wildflower or
+  leaf litter clicked onto the first adds to it; a plant is never swapped
+  for itself by clicking it with the same plant. Campfires face the way
+  you look and go in unlit under water. Trapdoors hinge on the side you
+  click, or face you when set on a floor or ceiling (they were turned the
+  wrong way). Ladders go on the wall you look toward and never onto the
+  front of another ladder. Concrete powder placed beside water is concrete
+  at once, grass placed under snow is snowy, and a big dripleaf set on
+  another keeps its facing. A door, trapdoor or gate placed next to power
+  goes down open, without swinging open with a sound a moment later.
+- **Signs, banners, heads and bells go where vanilla puts them.** Clicking
+  a ceiling with a sign or banner now puts it on the wall you are looking
+  toward, or on the floor below, instead of doing nothing; mob heads face
+  the way you look rather than away from you. A hanging sign set on a floor
+  under a low ceiling hangs from the ceiling, and one goes on a wall only
+  where something holds it at the side. A bell clicked onto a wall that
+  cannot hold it goes on the floor or ceiling instead, and only a hit on
+  its ringing side rings it — counted in your statistics when you shot it.
+  Adventure-mode players' arrows, and mobs' arrows with mob griefing off,
+  no longer smash decorated pots.
+- **What holds a block, as in vanilla.** Carpet stays on anything that is
+  not air — a torch, a flower, even water — where it used to fall off.
+  Amethyst buds and clusters point out of the face you set them on (up,
+  down or sideways) and drop when that block goes. A fire whose floor goes,
+  with nothing beside it to burn, goes out at once. Frogspawn needs still
+  water under it (running water no longer holds it) and no longer minds
+  water above it.
+- **Cut plants grow on, and hanging moss holds together.** Cutting the top
+  off a kelp stalk or snapping a vine now leaves a fresh tip that keeps
+  growing, as in vanilla; before, the cut end never grew again. Bamboo
+  growing out of a shoot turns the shoot into a stalk, and a stalk picks up
+  the thicker look of older bamboo above it. A big dripleaf set on another
+  turns the lower one into stem. Pale hanging moss hangs from more moss and
+  marks its new end when cut — strands used to fall apart whenever anything
+  nearby changed. Pale moss carpet lets go of a wall that is taken away, and
+  an upper layer with nothing left to climb goes with it.
 - **Ruined portals sit in the ground.** A ruined portal now settles, as in
   vanilla, until at least three of its four corners stand in solid ground,
   so one on a cliff edge sinks into the rock instead of hanging off the

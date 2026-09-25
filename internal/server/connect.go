@@ -2,6 +2,7 @@ package server
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -63,7 +64,7 @@ func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 	}
 	for _, d := range hConnectDirs {
 		v := "false"
-		if connectsTo(state, w.Block(x+d.dx, y, z+d.dz)) {
+		if connectsTo(state, w.Block(x+d.dx, y, z+d.dz), d.dx != 0) {
 			v = "true"
 		}
 		state = worldgen.SetProperty(info, state, d.name, v)
@@ -71,20 +72,71 @@ func connectStateAt(w *world.World, x, y, z int, state uint32) uint32 {
 	return state
 }
 
-// connectsTo reports whether a fence/pane/bars attaches to neighbour block nb:
-// another boolean connector, or a full solid block. Panes and iron bars also
-// attach to walls (vanilla IronBarsBlock); fences do not.
-func connectsTo(self, nb uint32) bool {
-	if info, ok := worldgen.InfoForState(nb); ok && worldgen.IsHorizontalConnector(info) {
-		return true
-	}
+// connectsTo reports whether a fence, pane or bars block attaches to the
+// neighbour nb on a side along the X axis (sideAxisX) or the Z axis.
+//
+// FenceBlock.connectsTo: another fence of its kind (wooden to wooden, the
+// nether-brick fence to its own), a fence gate hung across that side, or a
+// sturdy face that is not one of the blocks nothing connects to.
+// IronBarsBlock.attachsTo (panes, iron and copper bars): any other pane or
+// bars, a wall, or such a sturdy face. A pane never joins a fence, nor a
+// fence a pane.
+func connectsTo(self, nb uint32, sideAxisX bool) bool {
 	if isPaneOrBars(self) {
+		if isPaneOrBars(nb) {
+			return true
+		}
 		if _, ok := wallInfo(nb); ok {
 			return true
 		}
+		return !connectException(nb) && worldgen.IsSolidFull(nb)
 	}
-	return worldgen.IsSolidFull(nb)
+	if isFenceBlock(nb) {
+		return isFenceBlock(self) && isWoodenFence(self) == isWoodenFence(nb)
+	}
+	if info, ok := gateInfo(nb); ok {
+		// FenceGateBlock.connectsToDirection: the gate's facing runs across
+		// the side, so its posts line up with the fence.
+		return facingAxisX(worldgen.GetProperty(info, nb, "facing")) != sideAxisX
+	}
+	if info, ok := worldgen.InfoForState(nb); ok && worldgen.IsHorizontalConnector(info) {
+		return false // a pane, bars or tripwire beside a fence
+	}
+	return !connectException(nb) && worldgen.IsSolidFull(nb)
 }
+
+var netherBrickFence = worldgen.BlockBase("nether_brick_fence")
+
+// isFenceBlock is the FenceBlock family, by name.
+func isFenceBlock(s uint32) bool {
+	n, ok := worldgen.StateName(s)
+	return ok && strings.HasSuffix(n, "_fence")
+}
+
+// isWoodenFence is #wooden_fences: every fence but the nether-brick one.
+func isWoodenFence(s uint32) bool { return !sameBlockFamily(s, netherBrickFence) }
+
+// connectException is Block.isExceptionForConnection: full blocks that
+// fences, panes and walls still do not join — leaves, the barrier, pumpkins,
+// jack o'lanterns, melons and shulker boxes.
+func connectException(s uint32) bool {
+	if _, _, _, leaf := leafInfo(s); leaf || isShulkerBox(s) {
+		return true
+	}
+	return connectExceptionStates[s]
+}
+
+var connectExceptionStates = func() map[uint32]bool {
+	out := map[uint32]bool{}
+	for _, n := range []string{"barrier", "carved_pumpkin", "jack_o_lantern", "melon", "pumpkin"} {
+		if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
+			for s := lo; s <= hi; s++ {
+				out[s] = true
+			}
+		}
+	}
+	return out
+}()
 
 // updateConnectNeighbors re-evaluates the four horizontal neighbours of (x,y,z):
 // any that is a connector recomputes its connections and, if it changed, the new

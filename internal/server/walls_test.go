@@ -128,10 +128,10 @@ func TestWallFencePaneAttachment(t *testing.T) {
 	def, _ := wallDefault(t)
 	pane, _ := protocol.BlockForItem(itemByName["glass_pane"])
 	fence, _ := protocol.BlockForItem(itemByName["oak_fence"])
-	if !connectsTo(pane, def) {
+	if !connectsTo(pane, def, true) {
 		t.Fatal("glass pane should attach to a wall")
 	}
-	if connectsTo(fence, def) {
+	if connectsTo(fence, def, true) {
 		t.Fatal("fence should NOT attach to a wall")
 	}
 	if !wallConnectsTo(pane, true) {

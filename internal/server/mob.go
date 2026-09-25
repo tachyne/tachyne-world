@@ -1189,6 +1189,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				if fell > 0.5 {
 					h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
 				}
+				if fell > 0 {
+					h.mobFallOnEgg(players, m) // TurtleEggBlock.fallOn
+				}
 				if fell > m.safeFallDistance() { // the ground dropped out under it
 					h.mobFall(players, m, fell)
 				}

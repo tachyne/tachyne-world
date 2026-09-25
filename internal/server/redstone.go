@@ -442,6 +442,37 @@ func (h *hub) updatePoweredOpenable(players map[int32]*tracked, pos blockPos, st
 	h.vib(h.rsDim, freq, pos.x, pos.y, pos.z, 0)
 }
 
+// placedOpenable is the power half of DoorBlock / TrapDoorBlock /
+// FenceGateBlock.getStateForPlacement: a door, trapdoor or gate set down
+// where a signal already reaches it is placed open and powered — as its
+// placed state, silently, not swung open with a sound by the update that
+// follows. Runs in the current simulation dimension.
+func (h *hub) placedOpenable(players map[int32]*tracked, pos blockPos) {
+	state := h.rsWorld().At(pos.x, pos.y, pos.z)
+	if !isPowerOpenable(state) || boolProp(state, "powered") {
+		return
+	}
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return
+	}
+	other, otherPos, isDoor := h.doorOtherHalf(pos, state, info)
+	if isDoor && !sameBlockFamily(other, state) {
+		return // the other half is not down yet; its own placement asks again
+	}
+	powered := h.inputPower(pos.x, pos.y, pos.z, false) > 0
+	if isDoor {
+		powered = powered || h.inputPower(otherPos.x, otherPos.y, otherPos.z, false) > 0
+	}
+	if !powered {
+		return
+	}
+	h.rsSet(players, pos, setBoolProp(setBoolProp(state, "powered", true), "open", true))
+	if isDoor {
+		h.rsSet(players, otherPos, setBoolProp(setBoolProp(other, "powered", true), "open", true))
+	}
+}
+
 // doorOtherHalf is the cell holding a door's other half, if this is a door.
 func (h *hub) doorOtherHalf(pos blockPos, state uint32, info worldgen.BlockInfo) (uint32, blockPos, bool) {
 	if !info.HasProperty("half") || !info.HasProperty("hinge") {

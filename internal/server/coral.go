@@ -50,7 +50,9 @@ func coralTouchesWater(w interface {
 		return true
 	}
 	for _, d := range supportNeighbours {
-		if worldgen.IsWater(w.At(pos.x+d[0], pos.y+d[1], pos.z+d[2])) {
+		// getFluidState().is(FluidTags.WATER): a waterlogged block, a bed of
+		// seagrass or a kelp stalk beside it keeps it wet too.
+		if worldgen.HoldsWater(w.At(pos.x+d[0], pos.y+d[1], pos.z+d[2])) {
 			return true
 		}
 	}

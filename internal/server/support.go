@@ -198,6 +198,26 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		sky, blk := w.LightAt(pos.x, pos.y, pos.z)
 		return max(sky, blk) < 13 && worldgen.IsSolidFull(b)
 	}
+	if isCarpetBlock(state) {
+		// CarpetBlock.canSurvive: !isEmptyBlock(below) — anything but air
+		// holds a carpet: a torch, a flower, a fence, water.
+		b := below()
+		return b != worldgen.Air && b != caveAirState && b != voidAirState
+	}
+	if isFire(state) && state != soulFire {
+		// FireBlock.canSurvive, which its updateShape asks on every
+		// neighbour change: a sturdy floor, or something beside it that can
+		// burn — a fire left with neither goes out at once.
+		if holdsBlock(below()) {
+			return true
+		}
+		for _, d := range sixDirs {
+			if isFlammable(w.At(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
+				return true
+			}
+		}
+		return false
+	}
 	if state == soulFire { // SoulFireBlock.canSurvive: its soul block below
 		return soulFireBase(below())
 	}
@@ -263,6 +283,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 				return true
 			}
 		}
+		if inRange(state, hangingMossRng) && inRange(a, hangingMossRng) {
+			return true // HangingMossBlock.canStayAtPosition: or more moss above
+		}
 		return holdsBlock(a)
 	case worldgen.SupportFace:
 		switch prop("face") {
@@ -274,10 +297,19 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			return holdsBlock(behind())
 		}
 	case worldgen.SupportAttached:
-		// Amethyst points away from the face it grew on. Lichen and sculk vein
-		// carry a boolean per face instead of a facing, so any neighbour that
-		// can hold them counts — this must not be read as "needs a floor", or
-		// every lichen on a cave wall comes down.
+		// AmethystClusterBlock.canSurvive: the block it points away from —
+		// below a bud facing up, above one facing down, behind one on a wall.
+		// (Lichen and sculk vein share this class but are multiface blocks,
+		// answered above; this is left for anything else it may hold.)
+		if st, f := amethystStage(state); st >= 0 && f != "" {
+			switch f {
+			case "up":
+				return holdsBlock(below())
+			case "down":
+				return holdsBlock(above())
+			}
+			return holdsBlock(behind())
+		}
 		if holdsBlock(behind()) {
 			return true
 		}
@@ -311,21 +343,20 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		if prop("bottom") == "true" {
 			return b != worldgen.Air
 		}
-		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b)
+		// (MossyCarpetBlock.updateShape also clears an upper layer left with
+		// no side at all — hasFaces.)
+		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b) && mossCarpetHasSide(state)
 	case worldgen.SupportBell:
-		// BellBlock.canSurvive: the attachment says which way it hangs. A bell
-		// between two walls needs both of them — taking either one down drops
-		// it, which is the case a plain "face" rule cannot express.
+		// BellBlock.canSurvive: the attachment says which way it hangs. On a
+		// wall — one or two — it asks only for the wall it faces
+		// (canAttach(pos, facing)); a double-wall bell that loses its other
+		// wall becomes single-wall first (shapeupdate.go shapeBell).
 		switch prop("attachment") {
 		case "ceiling":
 			return holdsBlock(above())
 		case "floor":
 			return holdsBlock(below())
-		case "double_wall":
-			dx, dz := facingDelta(prop("facing"))
-			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz)) &&
-				holdsBlock(w.At(pos.x-dx, pos.y, pos.z-dz))
-		default: // single_wall: the wall is the one it faces (canAttach(pos, facing))
+		default: // single_wall and double_wall: the wall it faces
 			dx, dz := facingDelta(prop("facing"))
 			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz))
 		}
@@ -341,9 +372,12 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		rooted := (worldgen.SupportFor(b) == worldgen.SupportStem && !isBigDripleaf(b)) || supportsBigDripleaf[b]
 		return rooted && worldgen.SupportFor(above()) == worldgen.SupportStem // a stem or the leaf above
 	case worldgen.SupportSpawn:
-		// FrogspawnBlock.mayPlaceOn: water under it, and not under water
-		// itself — a clutch floats ON the surface.
-		return worldgen.IsWater(below()) && !worldgen.IsWater(state) && !worldgen.IsWater(above())
+		// FrogspawnBlock.mayPlaceOn: the fluid under it is #supports_frogspawn
+		// — a water SOURCE, which a waterlogged block or a bed of seagrass
+		// holds too, and running water does not — and the clutch's own cell
+		// holds no fluid. What lies above it does not matter.
+		b := below()
+		return worldgen.IsFluidSource(b, worldgen.WaterBase) || (worldgen.HoldsWater(b) && !worldgen.IsWater(b))
 	case worldgen.SupportHangable:
 		if prop("hanging") == "true" {
 			return holdsBlock(above())
@@ -359,6 +393,39 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 }
 
 var dirtPathState = worldgen.BlockBase("dirt_path")
+
+// carpetBlocks are the CarpetBlock family: the sixteen wool carpets and the
+// moss carpet (the pale moss carpet is a MossyCarpetBlock, with its own rule).
+var carpetBlocks = func() map[uint32]bool {
+	out := map[uint32]bool{}
+	for _, n := range worldgen.AllBlockNames() {
+		if strings.HasSuffix(n, "_carpet") && n != "pale_moss_carpet" {
+			if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
+				for s := lo; s <= hi; s++ {
+					out[s] = true
+				}
+			}
+		}
+	}
+	return out
+}()
+
+func isCarpetBlock(s uint32) bool { return carpetBlocks[s] }
+
+// mossCarpetHasSide is MossyCarpetBlock.hasFaces for a layer without a
+// base: some side still climbs a wall.
+func mossCarpetHasSide(s uint32) bool {
+	info, ok := worldgen.InfoForState(s)
+	if !ok {
+		return false
+	}
+	for _, f := range paleCarpetSides {
+		if worldgen.GetProperty(info, s, f.prop) != "none" {
+			return true
+		}
+	}
+	return false
+}
 
 // bottomProp reads a state's "bottom" flag — the pale moss carpet's BASE,
 // which vanilla spells "bottom" on the wire.
@@ -438,6 +505,12 @@ func sameBlockFamily(a, b uint32) bool {
 	ia, oka := worldgen.InfoForState(a)
 	ib, okb := worldgen.InfoForState(b)
 	return oka && okb && ia.Min == ib.Min
+}
+
+// sameBlock is sameBlockFamily that also knows a block with no properties
+// (short grass, a fern), whose one state has no layout to compare.
+func sameBlock(a, b uint32) bool {
+	return a == b || sameBlockFamily(a, b)
 }
 
 // oppositeOf flips a facing name. A wall block's support is behind it.
@@ -524,7 +597,7 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				queue = append(queue, n)
 				continue
 			}
-			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st)) || supported(h.worldFor(dim), n, st) {
+			if (worldgen.SupportFor(st) == worldgen.SupportNone && !isBedBlock(st) && !isFire(st)) || supported(h.worldFor(dim), n, st) {
 				continue
 			}
 			// A stalactite does not break when its grip goes — it FALLS, whole,

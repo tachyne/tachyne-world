@@ -242,3 +242,82 @@ func mossCarpetTopper(w *world.World, pos blockPos) (uint32, bool) {
 	}
 	return top, true
 }
+
+// isTrapdoorBlock names every trapdoor by its suffix, so a new wood or
+// copper stage needs nothing here.
+func isTrapdoorBlock(s uint32) bool {
+	n, ok := worldgen.StateName(s)
+	return ok && len(n) > 9 && n[len(n)-9:] == "_trapdoor"
+}
+
+// trapdoorPlacedState is TrapDoorBlock.getStateForPlacement: a side face
+// clicked (not a replaced cell) hinges the trapdoor on that face, top or
+// bottom half by where on the face the click landed; otherwise it faces the
+// player — the side nearest them is the hinge — and lies at the bottom when
+// set on a floor, the top when hung under something. OPEN/POWERED come from
+// the placement's power (hub.go placedOpenable) and WATERLOGGED from the
+// shared waterlog step.
+func trapdoorPlacedState(def uint32, dir int32, cursorY, yaw float32, replacingClicked bool) uint32 {
+	info, ok := worldgen.InfoForState(def)
+	if !ok {
+		return def
+	}
+	if !replacingClicked && dir >= 2 && dir <= 5 {
+		half := "bottom"
+		if cursorY > 0.5 {
+			half = "top"
+		}
+		st := worldgen.SetProperty(info, def, "facing", faceDirName(dir))
+		return worldgen.SetProperty(info, st, "half", half)
+	}
+	half := "top"
+	if dir == 1 {
+		half = "bottom"
+	}
+	st := worldgen.SetProperty(info, def, "facing", oppositeFacing(playerFacing(yaw)))
+	return worldgen.SetProperty(info, st, "half", half)
+}
+
+var ladderState = worldgen.BlockID("ladder")
+
+// ladderPlacedState is LadderBlock.getStateForPlacement: a click on the
+// front of a ladder facing that way is refused (a ladder never stacks onto
+// the face of another), and otherwise the ladder hangs on the first wall in
+// the look order that holds it, facing away from that wall.
+func ladderPlacedState(w *world.World, pos blockPos, def uint32, order [6]int32, dir int32, replacingClicked bool, clicked uint32) (uint32, bool) {
+	info, ok := worldgen.InfoForState(def)
+	if !ok {
+		return def, true
+	}
+	if !replacingClicked && dir >= 0 && dir <= 5 && sameBlockFamily(clicked, def) &&
+		worldgen.GetProperty(info, clicked, "facing") == faceDirName(dir) {
+		return 0, false
+	}
+	for _, d := range order {
+		if d < 2 {
+			continue
+		}
+		st := worldgen.SetProperty(info, def, "facing", faceName(oppositeDir(d)))
+		if canPlaceAt(w, pos, st) {
+			return st, true
+		}
+	}
+	return 0, false
+}
+
+// powderSolidifies is ConcretePowderBlock.shouldSolidify: the cell the
+// powder goes into holds water, or water touches it from above or a side
+// through a face that does not seal it off (touchesLiquid) — any water,
+// running or still, a waterlogged block or a seagrass bed included.
+func powderSolidifies(w interface{ At(x, y, z int) uint32 }, pos blockPos, replaced uint32) bool {
+	if worldgen.HoldsWater(replaced) {
+		return true
+	}
+	for _, d := range lavaContactDirs { // up + the four sides
+		n := w.At(pos.x+d.x, pos.y+d.y, pos.z+d.z)
+		if worldgen.IsWater(n) || (worldgen.HoldsWater(n) && !worldgen.IsSolidFull(n)) {
+			return true
+		}
+	}
+	return false
+}

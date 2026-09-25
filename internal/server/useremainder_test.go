@@ -83,6 +83,7 @@ func TestMinedIceLeavesWater(t *testing.T) {
 	players := map[int32]*tracked{}
 	pos := blockPos{4, 70, 4}
 	w.SetBlock(pos.x, pos.y, pos.z, worldgen.Air)
+	w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.Stone) // #ice_melts_when_destroyed_above
 	h.iceMeltsOnBreak(players, 0, pos, iceBlock)
 	if got := w.At(pos.x, pos.y, pos.z); got != worldgen.WaterBase {
 		t.Errorf("mined ice left %d, want water", got)

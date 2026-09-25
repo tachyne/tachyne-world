@@ -343,7 +343,11 @@ func stackProperty(info worldgen.BlockInfo) (string, int) {
 	for _, p := range []struct {
 		name string
 		max  int
-	}{{"candles", 4}, {"pickles", 4}, {"eggs", 4}, {"layers", 8}} {
+	}{{"candles", 4}, {"pickles", 4}, {"eggs", 4}, {"layers", 8},
+		// SegmentableBlock: pink petals and wildflowers (flower_amount), leaf
+		// litter (segment_amount) take one more segment up to four, and a
+		// stacked segment keeps the facing the first one was laid with.
+		{"flower_amount", 4}, {"segment_amount", 4}} {
 		if info.HasProperty(p.name) {
 			return p.name, p.max
 		}
@@ -359,7 +363,9 @@ func isSlab(info worldgen.BlockInfo) bool {
 // blockReplaceableBy is the per-block canBeReplaced override that lets the
 // held item's own block stack into a standing one: a slab doubles when the
 // click lands on its open half, candles, sea pickles and turtle eggs count
-// up (not while sneaking), snow piles a layer (from the top when clicked).
+// up (not while sneaking), and so do flower beds and leaf litter
+// (SegmentableBlock.canBeReplaced); snow piles a layer (from the top when
+// clicked).
 // `clicked` says the target IS the clicked block (replacingClickedOnBlock).
 func blockReplaceableBy(target, def uint32, dir int32, cursorY float32, clicked, sneaking bool) bool {
 	if !sameBlockFamily(target, def) {

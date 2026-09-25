@@ -161,3 +161,31 @@ func (h *hub) mobTrample(players map[int32]*tracked, m *mob, fell float64) {
 		h.turnFarmlandToDirt(players, m.dim, x, y, z)
 	}
 }
+
+// mobFallOnEgg is TurtleEggBlock.fallOn for a mob: landing on a clutch
+// breaks an egg one time in three — never for the zombie kind (Zombie and
+// what extends it: husks, drowned, zombie villagers, zombified piglins),
+// and like every egg-breaking mob (canDestroyEgg) never a turtle or a bat,
+// and only with mob griefing.
+func (h *hub) mobFallOnEgg(players map[int32]*tracked, m *mob) {
+	switch m.etype {
+	case entityZombie, entityHusk, entityDrowned, entityZombieVillager, entityZombifiedPiglin,
+		entityTurtle, entityBat:
+		return
+	}
+	if !h.rules.MobGriefing {
+		return
+	}
+	x, y, z := int(math.Floor(m.x)), int(math.Floor(m.y))-1, int(math.Floor(m.z))
+	st := h.worldFor(m.dim).At(x, y, z)
+	if !isTurtleEgg(st) {
+		// A clutch is a thin block: the mob stands in its cell, not above it.
+		y++
+		if st = h.worldFor(m.dim).At(x, y, z); !isTurtleEgg(st) {
+			return
+		}
+	}
+	if h.rng.Intn(3) == 0 {
+		h.crushTurtleEgg(players, m.dim, x, y, z, st)
+	}
+}

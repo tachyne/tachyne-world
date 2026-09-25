@@ -118,35 +118,21 @@ func waterlogPlaced(w *world.World, x, y, z int, state uint32) uint32 {
 	return state
 }
 
-// placeStandingOrWall places a sign-family item (signs, banners, mob heads)
-// as its standing block (top face clicked; 16-way rotation faces the player,
-// vanilla StandingAndWallBlockItem) or its wall variant (side face).
-// needSupport gates the solid-block-below rule: signs and banners require
-// it, heads float (vanilla SkullBlock has no survival rule).
-func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32, needSupport bool) bool {
+// placeStandingOrWall places a sign-family item — a sign, a banner or a mob
+// head — as StandingAndWallBlockItem.getPlacementState does: it walks the
+// player's look order (the clicked face first) and takes the first
+// direction that works, skipping UP. DOWN is the standing block on the floor
+// (16-way rotation from the yaw), a side is the wall block: the first side
+// in the look order that holds one, facing away from it. So a click on a
+// ceiling still puts a sign on the nearest wall, or on the floor below.
+// head marks a mob head: it stands anywhere, hangs on any wall that is not
+// replaceable, and faces the player's own yaw where signs and banners
+// face it reversed (SkullBlock vs StandingSignBlock/BannerBlock).
+func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, replacingClicked bool, seq int32, head bool) bool {
 	w := s.worldFor(p)
-	var state uint32
-	switch {
-	case dir == 1: // standing on the ground
-		if needSupport && !worldgen.IsSolidFull(w.Block(tx, ty-1, tz)) {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		info, ok := worldgen.InfoForState(standingDef)
-		if !ok {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		rot := yawToRotation16(p.yaw + 180)
-		state = worldgen.SetProperty(info, standingDef, "rotation", strconv.Itoa(rot))
-	case dir >= 2 && dir <= 5: // on a wall, facing away from it
-		info, ok := worldgen.InfoForState(wallDef)
-		if !ok {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		state = worldgen.SetProperty(info, wallDef, "facing", faceName(dir))
-	default: // clicked a bottom face — these blocks can't hang
+	order := placeOrder(dir, replacingClicked, p.yaw, p.pitch)
+	state, ok := standingWallPlacement(w, blockPos{tx, ty, tz}, standingDef, wallDef, order, p.yaw, head)
+	if !ok {
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
@@ -155,52 +141,80 @@ func (s *Server) placeStandingOrWall(p *player, standingDef, wallDef uint32, tx,
 	return true
 }
 
+// standingWallPlacement is the state placeStandingOrWall chooses; ok=false
+// where vanilla returns null.
+func standingWallPlacement(w *world.World, pos blockPos, standingDef, wallDef uint32, order [6]int32, yaw float32, head bool) (uint32, bool) {
+	sInfo, ok := worldgen.InfoForState(standingDef)
+	if !ok {
+		return 0, false
+	}
+	wInfo, ok := worldgen.InfoForState(wallDef)
+	if !ok {
+		return 0, false
+	}
+	rot := yaw + 180 // StandingSignBlock / BannerBlock: the front toward the player
+	if head {
+		rot = yaw // SkullBlock: convertToSegment(getRotation())
+	}
+	standing := worldgen.SetProperty(sInfo, standingDef, "rotation", strconv.Itoa(yawToRotation16(rot)))
+	// StandingSignBlock / BannerBlock.canSurvive: isSolid below. A head
+	// has no survival rule at all.
+	standingOK := head || worldgen.IsSolid(w.At(pos.x, pos.y-1, pos.z))
+
+	// WallSignBlock / WallBannerBlock / WallSkullBlock.getStateForPlacement:
+	// the first horizontal look direction whose block can hold it — isSolid
+	// behind a sign or banner, anything not replaceable behind a head.
+	var wall uint32
+	haveWall := false
+	for _, d := range order {
+		if d < 2 {
+			continue
+		}
+		dx, dy, dz := blockFaceOffset(d)
+		behind := w.At(pos.x+dx, pos.y+dy, pos.z+dz)
+		holds := worldgen.IsSolid(behind)
+		if head {
+			holds = !worldgen.IsReplaceable(behind) && !worldgen.IsFluid(behind)
+		}
+		if holds {
+			wall, haveWall = worldgen.SetProperty(wInfo, wallDef, "facing", faceName(oppositeDir(d))), true
+			break
+		}
+	}
+	for _, d := range order {
+		switch {
+		case d == 1: // attachmentDirection.getOpposite(): never
+		case d == 0:
+			if standingOK {
+				return standing, true
+			}
+		case haveWall:
+			return wall, true
+		}
+	}
+	return 0, false
+}
+
 // placeSign places a sign item and opens the edit GUI on success.
-func (s *Server) placeSign(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32) bool {
-	if !s.placeStandingOrWall(p, standingDef, wallDef, tx, ty, tz, dir, seq, true) {
+func (s *Server) placeSign(p *player, standingDef, wallDef uint32, tx, ty, tz int, dir int32, replacingClicked bool, seq int32) bool {
+	if !s.placeStandingOrWall(p, standingDef, wallDef, tx, ty, tz, dir, replacingClicked, seq, false) {
 		return false
 	}
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim})
 	return true
 }
 
-// placeHangingSign places a hanging-sign item as a ceiling-hanging sign
-// (bottom face clicked; ATTACHED under non-full support or when sneaking,
-// vanilla's attach-to-middle rule) or a wall-hanging sign (side face; the
-// bracket axis runs along the wall, so FACING is perpendicular to the
-// clicked face).
-func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty, tz int, dir int32, seq int32) bool {
+// placeHangingSign places a hanging-sign item (HangingSignItem: a
+// StandingAndWallBlockItem attached UP). The look order is walked the same
+// way, skipping DOWN: UP hangs a ceiling sign under the block above, a side
+// takes the wall-hanging sign — the first horizontal look direction not on
+// the clicked face's axis whose sign WallHangingSignBlock.canPlace allows
+// (a sturdy block or a same-axis wall-hanging sign to one side).
+func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty, tz int, dir int32, replacingClicked bool, seq int32) bool {
 	w := s.worldFor(p)
-	var state uint32
-	switch {
-	case dir == 0: // hanging under the clicked block
-		above := w.Block(tx, ty+1, tz)
-		attached := p.sneaking || !worldgen.IsSolidFull(above)
-		info, ok := worldgen.InfoForState(ceilingDef)
-		if !ok {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		rot := yawToRotation16(p.yaw + 180)
-		if !attached {
-			rot = cardinalSegment(oppositeFacing(playerFacing(p.yaw)))
-		}
-		state = worldgen.SetProperty(info, ceilingDef, "rotation", strconv.Itoa(rot))
-		if attached {
-			state = worldgen.SetProperty(info, state, "attached", "true")
-		}
-	case dir >= 2 && dir <= 5: // bracket on the side of the clicked block
-		f := playerFacing(p.yaw)
-		if facingAxisX(f) == facingAxisX(faceName(dir)) {
-			f = leftOf(f) // vanilla skips looking directions along the wall normal
-		}
-		info, ok := worldgen.InfoForState(wallDef)
-		if !ok {
-			s.abortPlace(p, tx, ty, tz, seq)
-			return false
-		}
-		state = worldgen.SetProperty(info, wallDef, "facing", oppositeFacing(f))
-	default: // top face — hanging signs only hang
+	order := placeOrder(dir, replacingClicked, p.yaw, p.pitch)
+	state, ok := hangingSignPlacement(w, blockPos{tx, ty, tz}, ceilingDef, wallDef, order, dir, p.yaw, p.sneaking)
+	if !ok {
 		s.abortPlace(p, tx, ty, tz, seq)
 		return false
 	}
@@ -208,6 +222,71 @@ func (s *Server) placeHangingSign(p *player, ceilingDef, wallDef uint32, tx, ty,
 	s.putBlock(p, tx, ty, tz, state, true, seq)
 	s.hub.post(evSignPlaced{eid: p.eid, x: tx, y: ty, z: tz, dim: p.dim, hanging: true})
 	return true
+}
+
+// hangingSignPlacement is the state placeHangingSign chooses.
+func hangingSignPlacement(w *world.World, pos blockPos, ceilingDef, wallDef uint32, order [6]int32, dir int32, yaw float32, sneaking bool) (uint32, bool) {
+	cInfo, ok := worldgen.InfoForState(ceilingDef)
+	if !ok {
+		return 0, false
+	}
+	wInfo, ok := worldgen.InfoForState(wallDef)
+	if !ok {
+		return 0, false
+	}
+	// CeilingHangingSignBlock.getStateForPlacement: ATTACHED (hung from its
+	// middle, on a chain) under anything that is not a full face, or when
+	// sneaking — unless it continues a hanging sign above that runs the
+	// same way, which it hangs from by its chains.
+	facing := playerFacing(yaw)
+	above := w.At(pos.x, pos.y+1, pos.z)
+	attached := sneaking || !worldgen.IsSolidFull(above)
+	if ak, isSign := signKind(above); isSign && (ak == signHangingCeiling || ak == signHangingWall) && !sneaking {
+		if ai, ok := worldgen.InfoForState(above); ok {
+			if f := worldgen.GetProperty(ai, above, "facing"); f != "" {
+				if facingAxisX(f) == facingAxisX(facing) {
+					attached = false
+				}
+			} else if r := atoi(worldgen.GetProperty(ai, above, "rotation")); r%4 == 0 {
+				// RotationSegment.convertToDirection: a cardinal segment only.
+				if (r == 4 || r == 12) == facingAxisX(facing) {
+					attached = false
+				}
+			}
+		}
+	}
+	rot := yawToRotation16(yaw + 180)
+	if !attached {
+		rot = cardinalSegment(oppositeFacing(facing))
+	}
+	ceiling := worldgen.SetProperty(cInfo, ceilingDef, "rotation", strconv.Itoa(rot))
+	ceiling = worldgen.SetProperty(cInfo, ceiling, "attached", strconv.FormatBool(attached))
+
+	var wall uint32
+	haveWall := false
+	clickedAxisX, clickedHorizontal := dir == 4 || dir == 5, dir >= 2 && dir <= 5
+	for _, d := range order {
+		if d < 2 || (clickedHorizontal && (d == 4 || d == 5) == clickedAxisX) {
+			continue
+		}
+		st := worldgen.SetProperty(wInfo, wallDef, "facing", faceName(oppositeDir(d)))
+		if canPlaceAt(w, pos, st) {
+			wall, haveWall = st, true
+			break
+		}
+	}
+	for _, d := range order {
+		switch {
+		case d == 0: // attachmentDirection.getOpposite(): never
+		case d == 1:
+			if supported(w, pos, ceiling) {
+				return ceiling, true
+			}
+		case haveWall:
+			return wall, true
+		}
+	}
+	return 0, false
 }
 
 // --- hub handlers -----------------------------------------------------------

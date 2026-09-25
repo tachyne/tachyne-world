@@ -65,8 +65,10 @@ func TestGrowingPlantsNeedTheirAnchor(t *testing.T) {
 	}
 }
 
-// FrogspawnBlock.mayPlaceOn: water under it, and it floats ON the surface
-// rather than under it.
+// FrogspawnBlock.mayPlaceOn: a water source under it (#supports_frogspawn is
+// minecraft:water, not flowing_water; a waterlogged block holds a source) —
+// and the fluid it tests "above" is the clutch's own cell, which never holds
+// any, so water over it does not matter.
 func TestFrogspawnNeedsWaterUnderIt(t *testing.T) {
 	w := world.New(1)
 	const x, y, z = 34, 180, 34
@@ -80,7 +82,11 @@ func TestFrogspawnNeedsWaterUnderIt(t *testing.T) {
 		{"on water", worldgen.WaterBase, worldgen.Air, true},
 		{"on stone", worldgen.Stone, worldgen.Air, false},
 		{"on nothing", worldgen.Air, worldgen.Air, false},
-		{"under water", worldgen.WaterBase, worldgen.WaterBase, false},
+		{"water above too", worldgen.WaterBase, worldgen.WaterBase, true},
+		{"on running water", worldgen.WaterBase + 3, worldgen.Air, false},
+		{"on falling water", worldgen.WaterBase + 8, worldgen.Air, false},
+		{"on a waterlogged slab", worldgen.SetProperty(slabInfo(t), worldgen.BlockID("stone_slab"), "waterlogged", "true"), worldgen.Air, true},
+		{"on seagrass", worldgen.Seagrass, worldgen.Air, true},
 	} {
 		w.SetBlock(x, y-1, z, tc.below)
 		w.SetBlock(x, y, z, spawn)
@@ -88,6 +94,35 @@ func TestFrogspawnNeedsWaterUnderIt(t *testing.T) {
 		if got := supported(w, blockPos{x, y, z}, spawn); got != tc.want {
 			t.Errorf("%s: survives=%v, want %v", tc.name, got, tc.want)
 		}
+	}
+}
+
+func slabInfo(t *testing.T) worldgen.BlockInfo {
+	info, ok := worldgen.InfoForState(worldgen.BlockID("stone_slab"))
+	if !ok {
+		t.Fatal("no stone_slab layout")
+	}
+	return info
+}
+
+// A clutch on a still pond survives the pond starting to flow away under it
+// no longer: the sweep that follows the change takes it.
+func TestFrogspawnGoesWhenItsWaterRuns(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.world
+	players := map[int32]*tracked{}
+	const x, y, z = 36, 180, 36
+	spawn := worldgen.BlockBase("frogspawn")
+	w.SetBlock(x, y-1, z, worldgen.WaterBase)
+	w.SetBlock(x, y, z, spawn)
+	w.SetBlock(x, y+1, z, worldgen.WaterBase) // rain-filled cell above: harmless
+	h.dropUnsupported(players, 0, blockPos{x, y + 1, z})
+	if got := w.At(x, y, z); got != spawn {
+		t.Fatalf("water above popped the clutch: %d", got)
+	}
+	h.setBlockAt(players, 0, blockPos{x, y - 1, z}, worldgen.WaterBase+2)
+	if got := w.At(x, y, z); got == spawn {
+		t.Error("the clutch stayed on running water")
 	}
 }
 
@@ -160,15 +195,16 @@ func TestBellNeedsWhateverItHangsFrom(t *testing.T) {
 		t.Error("a ceiling bell under stone should hang")
 	}
 
-	// Double wall: BOTH sides, so taking either one away drops it.
+	// Double wall: canSurvive asks only for the wall it faces (losing the
+	// other one turns it single-wall — the shape update, not this rule).
 	clear()
 	d := bell("double_wall", "east")
 	w.SetBlock(x, y, z, d)
-	w.SetBlock(x+1, y, z, worldgen.Stone)
-	if supported(w, blockPos{x, y, z}, d) {
-		t.Error("a double-wall bell stood on one wall")
-	}
 	w.SetBlock(x-1, y, z, worldgen.Stone)
+	if supported(w, blockPos{x, y, z}, d) {
+		t.Error("a double-wall bell stood without the wall it faces")
+	}
+	w.SetBlock(x+1, y, z, worldgen.Stone)
 	if !supported(w, blockPos{x, y, z}, d) {
 		t.Error("a double-wall bell with both walls should stand")
 	}
@@ -217,6 +253,7 @@ func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
 	base := worldgen.BlockBase("pale_moss_carpet") // bottom=true
 	info, _ := worldgen.InfoForState(base)
 	upper := worldgen.SetProperty(info, base, "bottom", "false")
+	upper = worldgen.SetProperty(info, upper, "north", "low") // an upper layer climbs something
 	if bottomProp(upper) {
 		t.Fatal("the upper layer still reads as the base")
 	}
@@ -242,6 +279,11 @@ func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
 	w.SetBlock(x, y-1, z, upper)
 	if supported(w, blockPos{x, y, z}, upper) {
 		t.Error("an upper layer stood on another upper layer")
+	}
+	// hasFaces: an upper layer with no side left is gone whatever is under it.
+	w.SetBlock(x, y-1, z, base)
+	if bare := worldgen.SetProperty(info, upper, "north", "none"); supported(w, blockPos{x, y, z}, bare) {
+		t.Error("an upper layer with no side stayed")
 	}
 }
 

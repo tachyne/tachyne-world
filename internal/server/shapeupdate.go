@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,11 @@ const (
 	shapeBell                   // BellBlock: between two walls, or on one when the other goes
 	shapeConnect                // fences, panes, bars, walls, stairs, tripwire: their connections
 	shapeSpeleothem             // pointed dripstone, sulfur spikes: thickness along the column
+	shapeGrowingBody            // GrowingPlantBodyBlock: the top of a cut kelp or vine becomes its head
+	shapeMossCarpet             // MossyCarpetBlock: its sides follow the walls beside it
+	shapeBamboo                 // BambooSaplingBlock / BambooStalkBlock: bamboo growing above
+	shapeBigDripleaf            // BigDripleafBlock: a leaf with another leaf on it becomes stem
+	shapeHangingMoss            // HangingMossBlock: the tip is the strand's last cell
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -55,6 +61,14 @@ var shapeKinds = func() map[uint32]shapeKind {
 		add(n, shapeMushroom)
 	}
 	add("potent_sulfur", shapePotentSulfur)
+	for _, n := range []string{"kelp_plant", "twisting_vines_plant", "weeping_vines_plant", "cave_vines_plant"} {
+		add(n, shapeGrowingBody)
+	}
+	add("pale_moss_carpet", shapeMossCarpet)
+	add("bamboo_sapling", shapeBamboo)
+	add("bamboo", shapeBamboo)
+	add("big_dripleaf", shapeBigDripleaf)
+	add("pale_hanging_moss", shapeHangingMoss)
 	add("bell", shapeBell)
 	add("campfire", shapeCampfire)
 	add("soul_campfire", shapeCampfire)
@@ -91,11 +105,36 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 	if k == shapeNone {
 		return st, false
 	}
+	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
+	if k == shapeGrowingBody {
+		// GrowingPlantBodyBlock.updateShape: the cell ahead in the growth
+		// direction is no longer this plant (the top of a kelp stalk was
+		// cut, a vine's lower end broken off) — the body there turns into
+		// the plant's head at a fresh random age, so the plant grows on from
+		// it (updateHeadAfterConvertedFromBody: cave vines keep their berries).
+		g, ok := growingPlantOfBody(st)
+		if !ok || d != [3]int{0, g.dy, 0} || sameGrowingPlant(st, nb) {
+			return st, true
+		}
+		berries := false
+		if bi, ok := worldgen.InfoForState(st); ok && bi.HasProperty("berries") {
+			berries = worldgen.GetProperty(bi, st, "berries") == "true"
+		}
+		return g.headAt(rand.Intn(growingPlantMaxAge), berries), true
+	}
+	if k == shapeBamboo && inStates(st, bambooSapStates) {
+		// BambooSaplingBlock.updateShape (the shoot has no properties, so it
+		// is answered before the layout lookup): bamboo growing or set on a
+		// shoot turns the shoot into a stalk.
+		if d == [3]int{0, 1, 0} && inStates(nb, bambooStates) {
+			return worldgen.BlockID("bamboo"), true
+		}
+		return st, true
+	}
 	info, ok := worldgen.InfoForState(st)
 	if !ok {
 		return st, false
 	}
-	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
 	switch k {
 	case shapeSpeleothem:
 		// SpeleothemBlock.updateShape: a change above or below re-reads the
@@ -201,6 +240,43 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 			i += 4
 		}
 		return copperChestBases[i] + so, true
+	case shapeMossCarpet:
+		// MossyCarpetBlock.updateShape → getUpdatedState(createSides=false):
+		// a side keeps what it had while a wall is there to hold it, drops
+		// to none when the wall goes, and turns tall or low with the layer
+		// above. An upper layer left with no side at all is the sweep's to
+		// remove (supported: hasFaces).
+		return mossCarpetUpdated(w, n, st, false), true
+	case shapeBamboo:
+		// BambooStalkBlock.updateShape: a stalk takes the next AGE when the
+		// one above is older than it.
+		if d != [3]int{0, 1, 0} || !inStates(nb, bambooStates) {
+			return st, true
+		}
+		ni, ok := worldgen.InfoForState(nb)
+		if ok && atoi(worldgen.GetProperty(ni, nb, "age")) > atoi(worldgen.GetProperty(info, st, "age")) {
+			return worldgen.SetProperty(info, st, "age", "1"), true // cycle(AGE) from 0: AGE runs 0..1
+		}
+		return st, true
+	case shapeBigDripleaf:
+		// BigDripleafBlock.updateShape: a leaf with another leaf set on top
+		// becomes stem, keeping its facing and its water (withPropertiesOf).
+		if d != [3]int{0, 1, 0} || !isBigDripleaf(nb) {
+			return st, true
+		}
+		stem := worldgen.BlockID("big_dripleaf_stem")
+		si, ok := worldgen.InfoForState(stem)
+		if !ok {
+			return st, true
+		}
+		stem = worldgen.SetProperty(si, stem, "facing", worldgen.GetProperty(info, st, "facing"))
+		return worldgen.SetProperty(si, stem, "waterlogged", worldgen.GetProperty(info, st, "waterlogged")), true
+	case shapeHangingMoss:
+		// HangingMossBlock.updateShape: TIP is "no more moss below".
+		if d != [3]int{0, -1, 0} {
+			return st, true
+		}
+		return worldgen.SetProperty(info, st, "tip", strconv.FormatBool(!inRange(nb, hangingMossRng))), true
 	case shapePotentSulfur:
 		// PotentSulfurBlock.updateShape re-derives the whole state from any
 		// side; only the cells above and below can change it.

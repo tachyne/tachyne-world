@@ -340,7 +340,13 @@ func (h *hub) jukeboxTick(players map[int32]*tracked) {
 			jb.started = 0
 			h.toNearbyEv(players, pos.dim, float64(pos.x), float64(pos.z), attachproto.WorldFX{
 				Event: worldEventJukeboxStop, X: pos.x, Y: pos.y, Z: pos.z})
-			h.inDim(pos.dim, func() { h.scheduleSignalAround(players, pos.blockPos) })
+			// JukeboxBlockEntity.onSongChanged → updateNeighborsAt: the
+			// jukebox's signal drops to 0 with the song, and its neighbours
+			// (a lamp, dust) hear about it now.
+			h.inDim(pos.dim, func() {
+				h.nbAround(pos.blockPos, 0, false)
+				h.nbRun(players)
+			})
 		}
 	}
 }

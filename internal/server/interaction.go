@@ -274,7 +274,10 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		heldBlock, heldIsBlock = alias, true
 	}
 	replacingClicked := false
-	if cs := s.worldFor(p).Block(x, y, z); worldgen.IsReplaceable(cs) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
+	// BlockBehaviour.canBeReplaced: a replaceable block gives way to anything
+	// but its own item — leaf litter clicked with leaf litter stacks a
+	// segment or, sneaking, stays as it is; it is never swapped for itself.
+	if cs := s.worldFor(p).Block(x, y, z); (worldgen.IsReplaceable(cs) && !(heldIsBlock && sameBlock(cs, heldBlock))) || worldgen.IsWater(cs) || worldgen.IsLava(cs) {
 		tx, ty, tz = x, y, z // vanilla replacingClickedOnBlock: fill the clicked cell (grass, snow, fluids)
 		replacingClicked = true
 	} else if heldIsBlock && isMultiface(heldBlock) && sameBlockFamily(cs, heldBlock) && !multifaceFull(cs) {
@@ -388,7 +391,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		s.sendBlockChange(p, tx, ty, tz, s.worldFor(p).Block(tx, ty, tz), seq)
 		return
 	}
-	if ts := s.worldFor(p).Block(tx, ty, tz); !worldgen.IsReplaceable(ts) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) &&
+	if ts := s.worldFor(p).Block(tx, ty, tz); !(worldgen.IsReplaceable(ts) && !sameBlock(ts, defState)) && !worldgen.IsWater(ts) && !worldgen.IsLava(ts) &&
 		!(isMultiface(defState) && sameBlockFamily(ts, defState) && !multifaceFull(ts)) && // the same multiface item joins a block with a free face
 		!blockReplaceableBy(ts, defState, dir, cursorY, replacingClicked, p.sneaking) { // or stacks into it
 		// vanilla BlockItem.canPlace: never overwrite an occupied cell (a
@@ -416,25 +419,25 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
-		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
-		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, true) && isSurvival(s.modes.get(p.key())) {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, false) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, seq, false) && isSurvival(s.modes.get(p.key())) {
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, true) && isSurvival(s.modes.get(p.key())) {
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}
 		return
@@ -487,6 +490,12 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			state, lookPlaced = speleothemPlaced(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.pitch, p.sneaking, target == worldgen.WaterBase)
 		case isPaleMossCarpet(defState): // pale moss carpet: sides up the walls beside it
 			state = mossCarpetUpdated(s.worldFor(p), blockPos{tx, ty, tz}, defState, true)
+		case isTrapdoorBlock(defState): // trapdoors: hinged on a clicked side, else facing the player
+			state = trapdoorPlacedState(defState, dir, cursorY, p.yaw, replacingClicked)
+		case defState == ladderState: // ladders: the first wall in the look order
+			state, lookPlaced = ladderPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState, order, dir, replacingClicked, s.worldFor(p).Block(x, y, z))
+		case worldgen.IsConcretePowder(defState) && powderSolidifies(s.worldFor(p), blockPos{tx, ty, tz}, target):
+			state = worldgen.ConcreteFor(defState) // ConcretePowderBlock.getStateForPlacement: set into water it is concrete at once
 		default:
 			state = orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		}
@@ -507,6 +516,30 @@ func (s *Server) handlePlace(p *player, data []byte) {
 				if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{dx, 0, dz}); ok {
 					state = ns
 				}
+			}
+		}
+		if isCampfireBlock(state) {
+			// CampfireBlock.getStateForPlacement: it faces the way the player
+			// looks, and one set into a water source goes in unlit.
+			if ci, ok := worldgen.InfoForState(state); ok {
+				state = worldgen.SetProperty(ci, state, "facing", playerFacing(p.yaw))
+				state = worldgen.SetProperty(ci, state, "lit", strconv.FormatBool(!intoWater))
+			}
+		}
+		if isBigDripleaf(state) {
+			// BigDripleafBlock.getStateForPlacement: set on more of the plant,
+			// the leaf keeps the facing of the leaf or stem below it.
+			if b := s.worldFor(p).Block(tx, ty-1, tz); isBigDripleaf(b) || inRange(b, dripleafStemRng) {
+				if bi, ok := worldgen.InfoForState(b); ok {
+					if li, ok := worldgen.InfoForState(state); ok {
+						state = worldgen.SetProperty(li, state, "facing", worldgen.GetProperty(bi, b, "facing"))
+					}
+				}
+			}
+		}
+		if shapeKinds[state] == shapeSnowy { // SnowyBlock.getStateForPlacement: grass set under snow is snowy
+			if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{0, 1, 0}); ok {
+				state = ns
 			}
 		}
 		if isPropagule(state) { // MangrovePropaguleBlock.getStateForPlacement: planted grown, AGE 4, standing
@@ -552,7 +585,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			s.abortPlace(p, tx, ty, tz, seq)
 			return
 		}
-		s.putBlock(p, tx, ty, tz, state, true, seq)
+		s.putPlaced(p, tx, ty, tz, state, true, seq)
 		s.updateConnectNeighbors(s.worldFor(p), p.dim, tx, ty, tz) // neighbours connect back to the new block
 		if at, body, ok := growingPlantAnchorBody(s.worldFor(p), blockPos{tx, ty, tz}, state); ok {
 			s.putBlock(p, at.x, at.y, at.z, body, false, seq) // the head it was set on is now body
@@ -586,13 +619,23 @@ func (s *Server) handlePlace(p *player, data []byte) {
 // putBlock applies an edit, shows it to the editor (with the placement ack on the
 // first block of an action) and broadcasts it to everyone else.
 func (s *Server) putBlock(p *player, x, y, z int, state uint32, ack bool, seq int32) {
+	s.putBlockEv(p, x, y, z, state, ack, seq, false)
+}
+
+// putPlaced is putBlock for a block item's placement, which the hub's
+// placement-time rules (placedOpenable) answer to.
+func (s *Server) putPlaced(p *player, x, y, z int, state uint32, ack bool, seq int32) {
+	s.putBlockEv(p, x, y, z, state, ack, seq, true)
+}
+
+func (s *Server) putBlockEv(p *player, x, y, z int, state uint32, ack bool, seq int32, placed bool) {
 	s.worldFor(p).SetBlock(x, y, z, state)
 	if ack {
 		s.sendBlockChange(p, x, y, z, state, seq)
 	} else {
 		p.sendEv(blockSetEv(x, y, z, state))
 	}
-	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: state, by: p.eid})
+	s.hub.post(evBlock{x: x, y: y, z: z, dim: p.dim, state: state, by: p.eid, placed: placed})
 }
 
 // placeTwoTall places a door (or a tall plant) as its lower + upper halves. Doors
@@ -624,8 +667,8 @@ func (s *Server) placeTwoTall(p *player, info worldgen.BlockInfo, defState uint3
 		s.abortPlace(p, x, y, z, seq) // isUnobstructed, for both halves
 		return false
 	}
-	s.putBlock(p, x, y, z, lower, true, seq)
-	s.putBlock(p, x, y+1, z, upper, false, seq)
+	s.putPlaced(p, x, y, z, lower, true, seq)
+	s.putPlaced(p, x, y+1, z, upper, false, seq)
 	return true
 }
 
@@ -1136,7 +1179,9 @@ func blockFaceOffset(dir int32) (dx, dy, dz int) {
 // a top/bottom half from the cursor, and facing blocks point sensibly. Blocks
 // with no orientation property (most blocks) are returned unchanged.
 func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, clicked uint32) uint32 {
-	if isShulkerBox(defaultState) { // ShulkerBoxBlock: facing = the clicked face, any of six
+	if st, _ := amethystStage(defaultState); st >= 0 || isShulkerBox(defaultState) {
+		// ShulkerBoxBlock and AmethystClusterBlock: facing = the clicked face,
+		// any of six (a bud points out of the face it was set on).
 		if si, ok := worldgen.InfoForState(defaultState); ok {
 			return worldgen.SetProperty(si, defaultState, "facing", faceDirName(dir))
 		}

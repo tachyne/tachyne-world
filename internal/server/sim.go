@@ -323,12 +323,7 @@ const levelEventDripstoneBreak = 1045
 // powderTouchesWater reports whether water sits on any non-down side of a
 // concrete-powder cell (vanilla ConcretePowderBlock.touchesLiquid).
 func (h *hub) powderTouchesWater(dim int, pos blockPos) bool {
-	for _, d := range lavaContactDirs { // up + 4 horizontals
-		if worldgen.IsWater(h.worldFor(dim).Block(pos.x+d.x, pos.y+d.y, pos.z+d.z)) {
-			return true
-		}
-	}
-	return false
+	return powderSolidifies(h.worldFor(dim), pos, worldgen.Air)
 }
 
 // updateFluid is vanilla FlowingFluid.tick(pos): first a non-source cell
