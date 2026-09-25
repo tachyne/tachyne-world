@@ -337,7 +337,9 @@ func (h *hub) onUseSign(players map[int32]*tracked, e evUseSign) {
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 		return
 	}
-	if !h.signEditorFree(players, key, e.eid, e.x, e.y, e.z) {
+	// Dyeing, waxing and editing all want Player.mayBuild: a sign is read,
+	// not written, in adventure or spectator mode.
+	if !mayBuild(t.gamemode) || !h.signEditorFree(players, key, e.eid, e.x, e.y, e.z) {
 		return
 	}
 	front := signFrontFacing(t, e.x, e.y, e.z, state)

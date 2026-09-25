@@ -155,3 +155,26 @@ func TestSignChunkNBT(t *testing.T) {
 		t.Fatalf("blank sign tag malformed: %x", b2)
 	}
 }
+
+// In adventure mode a sign is read, not written: no editor opens and a dye
+// is not spent on it (SignBlock: player.mayBuild()).
+func TestSignAdventureCannotEdit(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.z = 0.5, 3.5
+	pl.gamemode = gmAdventure
+	players := map[int32]*tracked{1: pl}
+	h.world.SetBlock(0, 70, 0, oakSignRot0)
+	sd := signData{}
+	sd.Front.Lines[0] = "KEEP OUT"
+	h.signs.set(0, 0, 70, 0, sd)
+
+	h.onUseSign(players, evUseSign{eid: 1, x: 0, y: 70, z: 0})
+	h.onUseSign(players, evUseSign{eid: 1, x: 0, y: 70, z: 0, item: itemByName["red_dye"]})
+	if texts, editors := drainSign(pl); len(texts) != 0 || len(editors) != 0 {
+		t.Fatalf("adventure click: %d texts, %d editors, want none", len(texts), len(editors))
+	}
+	if got, _ := h.signs.get(0, 0, 70, 0); got.Front.Color != "" {
+		t.Fatalf("adventure dye applied: %+v", got)
+	}
+}
