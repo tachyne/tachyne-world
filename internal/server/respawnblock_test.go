@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -100,6 +101,15 @@ func TestRespawnAnchorChargesAndClaims(t *testing.T) {
 	gotPos, gotDim, ok := h.spawns.get(pl.p.name)
 	if !ok || gotPos != pos || gotDim != dimNether {
 		t.Fatalf("respawn point %v dim %d ok %v, want the anchor in the Nether", gotPos, gotDim, ok)
+	}
+	// Clicking it again: already the respawn point, so nothing is said
+	// (RespawnAnchorBlock: isSamePosition → CONSUME).
+	drainOut(pl.p)
+	h.handleUseAnchor(players, pl, pos)
+	for len(pl.p.out) > 0 {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.Chat); ok {
+			t.Fatalf("a second click on the same anchor said %q", ev.Text)
+		}
 	}
 
 	// Respawning there spends a charge and keeps the player in the Nether.

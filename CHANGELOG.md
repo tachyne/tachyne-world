@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Clicking your own respawn anchor again is quiet.** It repeated
+  "Respawn point set" and its sound every time; as in vanilla, an anchor
+  that is already your respawn point now does nothing.
 - **Sculk catalysts stop blooming, and other small block fixes.**
   - A sculk catalyst stayed in full bloom forever after its first mob death;
     it now blooms briefly and settles, as in vanilla.
