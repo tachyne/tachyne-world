@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -227,5 +228,44 @@ func TestNautilusBreeds(t *testing.T) {
 	}
 	if !h.inWater(calf.dim, calf.x, calf.y, calf.z) || !calf.swims || !calf.tamed || calf.owner != pl.p.eid {
 		t.Fatalf("the calf should be born tamed, in the water: y=%.1f swims=%v tamed=%v", calf.y, calf.swims, calf.tamed)
+	}
+}
+
+// ChargeAttack.dealKnockBack: a zombie nautilus under Speed II shoves
+// harder — the attribute's +40 % and speedBoostPower's flat +0.5 on top of
+// the clamp — and Slowness takes it back off.
+func TestNautilusChargeKnockbackSpeedBoost(t *testing.T) {
+	shove := func(effect int32, amp int) float64 {
+		h := newHub(world.New(1))
+		nautilusSea(h)
+		pl := survPlayer(h)
+		pl.p.eid = 500
+		pl.x, pl.y, pl.z = 0.5, 184, 0.5
+		players := map[int32]*tracked{pl.p.eid: pl}
+		h.playersRef = players
+		m := h.spawnSpecies(players, entityZombieNautilus, 0, 0.5, 184, 0.5)
+		if effect >= 0 {
+			h.applyMobEffect(players, m, effect, amp, 200)
+		}
+		drainEvs(pl.p)
+		if !h.nautilusChargeHit(players, m, m.x, m.y, m.z) {
+			t.Fatal("the charge should hit the player it overlaps")
+		}
+		for _, ev := range drainEvs(pl.p) {
+			if v, ok := ev.(attachproto.Velocity); ok && v.EID == pl.p.eid {
+				return math.Hypot(v.VX, v.VZ)
+			}
+		}
+		t.Fatal("no shove sent")
+		return 0
+	}
+	if got := shove(-1, 0); math.Abs(got-1.1) > 1e-9 { // clamp(0.5 × 1.1) × 2
+		t.Fatalf("plain charge shove %.4f, want 1.1", got)
+	}
+	if got := shove(effSpeed, 1); math.Abs(got-2.54) > 1e-9 { // (0.5 × 1.54 + 0.5) × 2
+		t.Fatalf("Speed II charge shove %.4f, want 2.54", got)
+	}
+	if got := shove(effSlowness, 0); math.Abs(got-(0.5*1.1*0.85-0.25)*2) > 1e-9 {
+		t.Fatalf("Slowness I charge shove %.4f", got)
 	}
 }
