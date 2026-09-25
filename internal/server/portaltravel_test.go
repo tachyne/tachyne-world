@@ -138,3 +138,44 @@ func TestBrokenPairIsForgotten(t *testing.T) {
 		t.Fatalf("the dead pair should have been forgotten, %d links left", len(h.portalLinks))
 	}
 }
+
+// Primed TNT and projectiles go through a portal like any other entity,
+// fuse and flight intact; and
+// a lit charge in a water current is carried along by it.
+func TestPrimedTNTTakesThePortalAndTheCurrent(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	over := buildPortal(h, dimOverworld, 40, 70, 40)
+	nether := buildPortal(h, 1, 5, 40, 5)
+	linkPortals(h, dimPos{dimOverworld, over}, dimPos{1, nether})
+	pt := h.spawnPrimedTNT(players, dimOverworld, over.x, over.y, over.z, 80)
+	h.updatePortalTravel(players)
+	if pt.dim != 1 || floorInt(pt.x) != nether.x || pt.fuse != 80 {
+		t.Fatalf("the charge should cross with its fuse: dim %d x %.1f fuse %d", pt.dim, pt.x, pt.fuse)
+	}
+
+	a := h.launchProjectileIn(players, entityArrow, dimOverworld, float64(over.x)+0.5, float64(over.y)+1.5, float64(over.z)+0.5, 0.3, 0, 0)
+	h.updatePortalTravel(players)
+	if a.dim != 1 || a.vx != 0.3 {
+		t.Fatalf("an arrow in flight crosses and keeps flying: dim %d vx %v", a.dim, a.vx)
+	}
+
+	h.world.ForceLoad(0, 0, 1)
+	for x := -3; x <= 6; x++ {
+		h.world.SetBlock(x, 179, 0, worldgen.Stone)
+		h.world.SetBlock(x, 181, 0, worldgen.Air)
+	}
+	// A stream running east: a source at x=-3, then levels 1..7.
+	h.world.SetBlock(-3, 180, 0, worldgen.WaterBase)
+	for i := 1; i <= 7; i++ {
+		h.world.SetBlock(-3+i, 180, 0, worldgen.WaterBase+uint32(i))
+	}
+	c := h.spawnPrimedTNT(players, dimOverworld, 0, 180, 0, 80)
+	c.vx, c.vz, c.vy = 0, 0, 0
+	for i := 0; i < 5; i++ {
+		h.tntStep(players, c)
+	}
+	if c.x <= 0.5 {
+		t.Fatalf("the current should carry the charge east, x=%.3f", c.x)
+	}
+}

@@ -198,6 +198,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Wandering traders come to the village bell.** A wandering trader now
   turns up near the nearest village bell, walks over to it and keeps within
   sixteen blocks of it, as in vanilla, and looks at you when you are close.
+- **Lit TNT and projectiles go through portals, and TNT floats downstream.**
+  Primed TNT, arrows, fireballs and other projectiles in flight now pass
+  through a Nether portal, as in vanilla, and a lit charge in flowing water
+  is carried along by the current.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
