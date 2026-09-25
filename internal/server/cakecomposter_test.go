@@ -104,9 +104,26 @@ func TestComposterFillsAndPaysOut(t *testing.T) {
 		t.Fatalf("a full composter accepted more, level %d", lvl)
 	}
 
+	// A neighbour update before its second is up does not finish it early.
+	h.tickComposter(players, 0, pos, h.worldFor(0).At(pos.x, pos.y, pos.z))
+	if lvl, _ := composterLevel(h.worldFor(0).At(pos.x, pos.y, pos.z)); lvl != composterFull {
+		t.Fatalf("an early update finished the compost, level %d", lvl)
+	}
+	h.tick.Add(composterDelay)
 	h.tickComposter(players, 0, pos, h.worldFor(0).At(pos.x, pos.y, pos.z))
 	if lvl, _ := composterLevel(h.worldFor(0).At(pos.x, pos.y, pos.z)); lvl != composterReady {
 		t.Fatalf("the composter never became ready, level %d", lvl)
+	}
+	// ComposterBlock.onPlace: a full composter that arrives by other means
+	// (a command, a piston, a load) arms its own ready tick.
+	other := blockPos{pos.x + 2, pos.y, pos.z}
+	full := composterBase + composterFull
+	h.worldFor(0).SetBlock(other.x, other.y, other.z, full)
+	h.onBlock(players, evBlock{x: other.x, y: other.y, z: other.z, state: full})
+	h.tick.Add(composterDelay)
+	h.tickComposter(players, 0, other, full)
+	if lvl, _ := composterLevel(h.worldFor(0).At(other.x, other.y, other.z)); lvl != composterReady {
+		t.Fatalf("a placed full composter never became ready, level %d", lvl)
 	}
 
 	before := len(h.items)

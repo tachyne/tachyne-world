@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Composters finish on time, however they got full.** A full composter
+  could turn to bone meal at once when a block beside it changed, and one
+  that arrived full some other way (moved by a piston, set by a command, or
+  left full across a restart) never finished. It now always takes its
+  second, then becomes ready, as in vanilla.
 - **Frogspawn hatches after a server restart.** Frogspawn laid before a
   restart never hatched. It now hatches within the usual three to ten
   minutes after its area loads again.

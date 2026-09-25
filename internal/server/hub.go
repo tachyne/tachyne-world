@@ -443,6 +443,7 @@ type hub struct {
 	spawnPub                       atomic.Pointer[[3]float64]
 	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
 	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
+	composterDue                   map[simPos]uint64         // full composters' ready ticks (composter.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -2762,6 +2763,7 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	// same coordinates.
 	pos := blockPos{e.x, e.y, e.z}
 	h.observersSee(players, e.dim, pos, e.state)
+	h.composterOnPlace(e.dim, pos, e.state) // a full composter set by a command or a paste
 	h.notifyAround(players, e.dim, pos)
 	// A signal source that appears or disappears changes the STRONG power of
 	// the block it hangs on, and what that block drives can sit two cells away

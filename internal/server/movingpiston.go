@@ -141,6 +141,7 @@ func (h *hub) finishMoving(players map[int32]*tracked, pos blockPos) {
 	}
 	h.rsSet(players, pos, final)
 	h.rodOnPlace(pos, final)
+	h.composterOnPlace(h.rsDim, pos, final)
 	h.notifyAround(players, h.rsDim, pos)
 	if ok && isPistonBase(final) {
 		h.scheduleSignalAround(players, pos)

@@ -78,17 +78,45 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 	h.vib(t.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // ComposterBlock.addItem, on a level that actually rose
 	h.playSoundDim(players, t.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
 	if level+1 == composterFull {
-		h.scheduleIn(t.dim, pos, composterDelay) // it finishes composting a second later
+		h.armComposter(t.dim, pos) // it finishes composting a second later
+	}
+}
+
+// armComposter schedules the tick that turns a full pile into bone meal
+// (ComposterBlock.addItem at level 7, and onPlace for a level-7 composter
+// that arrives any other way — moved by a piston, set by a command, or
+// loaded from before a restart).
+func (h *hub) armComposter(dim int, pos blockPos) {
+	if h.composterDue == nil {
+		h.composterDue = map[simPos]uint64{}
+	}
+	h.composterDue[simPos{dim: dim, blockPos: pos}] = h.tick.Load() + composterDelay
+	h.scheduleIn(dim, pos, composterDelay)
+}
+
+// composterOnPlace is ComposterBlock.onPlace: a composter that lands full
+// arms its ready tick.
+func (h *hub) composterOnPlace(dim int, pos blockPos, state uint32) {
+	if level, ok := composterLevel(state); ok && level == composterFull {
+		h.armComposter(dim, pos)
 	}
 }
 
 // tickComposter is the scheduled tick that turns a full pile into a ready one.
 // Reports whether it handled the update, so it can sit in processUpdate's chain.
+// Only its own due tick does it: a neighbour change reaching the composter
+// in between must not finish the compost early.
 func (h *hub) tickComposter(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
 	level, ok := composterLevel(state)
 	if !ok {
 		return false
 	}
+	key := simPos{dim: dim, blockPos: pos}
+	due, armed := h.composterDue[key]
+	if !armed || h.tick.Load() < due {
+		return true
+	}
+	delete(h.composterDue, key)
 	if level == composterFull {
 		h.setBlockAt(players, dim, pos, composterBase+composterReady)
 		h.playSoundDim(players, dim, "minecraft:block.composter.ready", sndBlock,
@@ -118,7 +146,7 @@ func (h *hub) composterInsert(target simPos, level int, one invStack) bool {
 	h.vib(target.dim, freqBlockChange, target.x, target.y, target.z, 0)
 	h.playSoundDim(h.playersRef, target.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
 	if level+1 == composterFull {
-		h.scheduleIn(target.dim, target.blockPos, composterDelay)
+		h.armComposter(target.dim, target.blockPos)
 	}
 	return true
 }
