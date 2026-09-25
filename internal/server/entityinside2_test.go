@@ -83,20 +83,20 @@ func TestRavagerTramplesCrops(t *testing.T) {
 // which it destroys) to the floor, as the falling-block entity does.
 func TestFallingBlockSinksThroughWater(t *testing.T) {
 	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
 	players := map[int32]*tracked{}
 	w := h.worldFor(0)
 	w.SetBlock(0, 181, 0, worldgen.Stone)
 	w.SetBlock(0, 182, 0, worldgen.WaterBase)
 	w.SetBlock(0, 183, 0, worldgen.WaterBase)
 	w.SetBlock(0, 184, 0, frogspawnBlock)
-	w.SetBlock(0, 185, 0, worldgen.Sand)
-	for y := 185; y > 182; y-- {
-		h.updateFalling(players, 0, blockPos{0, y, 0}, w.At(0, y, 0))
-		if w.At(0, y-1, 0) != worldgen.Sand {
-			t.Fatalf("sand should have dropped from %d: %d", y, w.At(0, y-1, 0))
-		}
+	w.SetBlock(0, 185, 0, worldgen.Air) // sand resting ON frogspawn stays: it is not free space
+	w.SetBlock(0, 186, 0, worldgen.Sand)
+	h.inDim(0, func() { h.scheduleTick(blockPos{0, 186, 0}, 1, tickNormal) })
+	runTicks(h, players, h.tick.Load()+1, h.tick.Load()+60)
+	if len(h.fallingBlocks) != 0 {
+		t.Fatal("the sand is still in the air")
 	}
-	h.updateFalling(players, 0, blockPos{0, 182, 0}, worldgen.Sand)
 	if w.At(0, 182, 0) != worldgen.Sand || w.At(0, 181, 0) != worldgen.Stone {
 		t.Fatal("sand should rest on the stone floor")
 	}

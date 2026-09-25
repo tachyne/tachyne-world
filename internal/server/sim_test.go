@@ -11,6 +11,7 @@ func runTicks(h *hub, players map[int32]*tracked, from, to uint64) {
 	for tick := from; tick <= to; tick++ {
 		h.tick.Store(tick)
 		h.runUpdates(players, tick)
+		h.tickFallingBlocks(players) // the entity phase: falling blocks in the air
 	}
 }
 

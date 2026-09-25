@@ -6,69 +6,224 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// Suspicious sand, the dragon egg and anvils fall like sand; an anvil
-// dropping three cells onto a mob hurts it by vanilla's rule.
-func TestNewFallingBlocksFall(t *testing.T) {
-	h, w, players, x, y, z := redSetup(t)
-	for i, st := range []uint32{worldgen.SuspiciousSand, worldgen.DragonEgg, worldgen.BlockBase("anvil")} {
-		px := x + i*2
-		w.SetBlock(px, y-1, z, worldgen.Air) // a hole under the pad
-		w.SetBlock(px, y-2, z, worldgen.Stone)
-		w.SetBlock(px, y, z, st)
-		h.schedule(blockPos{px, y, z}, 1)
-		stepTicks(h, players, 4)
-		if w.At(px, y, z) != worldgen.Air || w.At(px, y-1, z) != st {
-			t.Errorf("state %d did not fall: %d / %d", st, w.At(px, y, z), w.At(px, y-1, z))
+// dropFrom places a falling block `up` cells above the pad through the
+// engine's own write path (the onPlace that schedules FallingBlock.tick),
+// over open air down to the pad's stone floor.
+func dropFrom(h *hub, players map[int32]*tracked, x, y, z, up int, state uint32) {
+	for dy := 0; dy <= up+1; dy++ {
+		h.world.SetBlock(x, y+dy, z, worldgen.Air)
+	}
+	h.setBlockAt(players, 0, blockPos{x, y + up, z}, state)
+}
+
+// fallTicks is vanilla's fall, worked through by hand: gravity 0.04 a
+// tick, then drag 0.98, until the block has come down `cells`. It returns
+// the number of entity ticks the fall takes.
+func fallTicks(cells float64) int {
+	y, vy := 0.0, 0.0
+	for n := 1; n < 1000; n++ {
+		vy -= 0.04
+		y += vy
+		if y <= -cells {
+			return n
 		}
+		vy *= 0.98
 	}
-	if len(h.fallDist) != 0 {
-		t.Errorf("fall records left: %v", h.fallDist)
+	return -1
+}
+
+// A block with air under it waits two ticks (getDelayAfterPlace), then
+// leaves the world as a falling_block entity that speeds up as it falls,
+// and sets itself back down where it lands.
+func TestSandFallsAsAnAcceleratingEntity(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	dropFrom(h, players, x, y, z, 10, worldgen.Sand)
+	stepTicks(h, players, 1)
+	if w.At(x, y+10, z) != worldgen.Sand || len(h.fallingBlocks) != 0 {
+		t.Fatal("the sand let go before its two-tick delay")
 	}
-	// An anvil from three up lands on a cow.
-	ax := x + 7
-	w.SetBlock(ax, y-1, z, worldgen.Stone)
-	for dy := 0; dy < 4; dy++ {
-		w.SetBlock(ax, y+dy, z, worldgen.Air)
+	stepTicks(h, players, 1)
+	if w.At(x, y+10, z) != worldgen.Air || len(h.fallingBlocks) != 1 {
+		t.Fatalf("after two ticks the sand should be an entity: cell %d, %d entities", w.At(x, y+10, z), len(h.fallingBlocks))
 	}
-	cow := h.spawnMob(players, entityCow, float64(ax)+0.5, float64(y), float64(z)+0.5)
-	hp := cow.health
-	w.SetBlock(ax, y+3, z, worldgen.BlockBase("anvil"))
-	h.schedule(blockPos{ax, y + 3, z}, 1)
-	stepTicks(h, players, 8)
-	if !worldgen.IsAnvil(w.At(ax, y, z)) && w.At(ax, y, z) != worldgen.Air {
-		t.Fatalf("anvil should land on the cow's cell, holds %d", w.At(ax, y, z))
+	fb := h.fallingBlocks[0]
+	if fb.state != worldgen.Sand || fb.x != float64(x)+0.5 || fb.z != float64(z)+0.5 {
+		t.Fatalf("the entity carries %d at %v,%v", fb.state, fb.x, fb.z)
 	}
-	if want := anvilFallDamage(3); float64(hp)-float64(cow.health) < want-0.01 {
-		t.Errorf("cow lost %v, want at least %v", float64(hp)-float64(cow.health), want)
+	stepTicks(h, players, 4)
+	if dropped := float64(y+10) - fb.y; dropped >= 1 || dropped < 0.5 {
+		t.Fatalf("five ticks in it should have come down about 0.59, came %v", dropped)
+	}
+	// The whole ten-block fall, to the tick.
+	want := fallTicks(10)
+	stepTicks(h, players, want-6)
+	if len(h.fallingBlocks) != 1 {
+		t.Fatalf("landed %d ticks early", want-5)
+	}
+	stepTicks(h, players, 1)
+	if len(h.fallingBlocks) != 0 || w.At(x, y, z) != worldgen.Sand {
+		t.Fatalf("after %d ticks the sand should rest on the floor: %d entities, cell %d", want, len(h.fallingBlocks), w.At(x, y, z))
 	}
 }
 
-func TestAnvilFallRules(t *testing.T) {
-	if d := anvilFallDamage(1); d != 0 {
-		t.Errorf("one cell hurts %v", d)
+// A falling block that comes to rest in a cell it may not take — a torch's,
+// a flower's, a bottom slab's (it sits half a block up, inside the slab's
+// cell), three layers of snow — breaks into its item and leaves the cell as
+// it was. One layer of snow is replaceable, and the block takes its place.
+func TestFallingBlockBreaksWhereItCannotLand(t *testing.T) {
+	cases := []struct {
+		name     string
+		obstacle uint32
+		placed   bool
+	}{
+		{"torch", worldgen.BlockBase("torch"), false},
+		{"poppy", worldgen.BlockBase("poppy"), false},
+		{"bottom slab", worldgen.BlockBase("oak_slab") + 3, false},
+		{"three layers of snow", worldgen.BlockBase("snow") + 2, false},
+		{"one layer of snow", worldgen.BlockBase("snow"), true},
+		{"short grass", worldgen.BlockBase("short_grass"), true},
 	}
-	if d := anvilFallDamage(3); d != 4 {
-		t.Errorf("three cells hurt %v, want 4", d)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			h, w, players, x, y, z := redSetup(t)
+			dropFrom(h, players, x, y, z, 4, worldgen.Sand)
+			w.SetBlock(x, y, z, c.obstacle)
+			stepTicks(h, players, 40)
+			if len(h.fallingBlocks) != 0 {
+				t.Fatal("still falling")
+			}
+			items := 0
+			for _, it := range h.items {
+				if it.item == int32(itemByName["sand"]) {
+					items++
+				}
+			}
+			if c.placed {
+				if w.At(x, y, z) != worldgen.Sand || items != 0 {
+					t.Fatalf("the sand should take the cell: %d, %d items", w.At(x, y, z), items)
+				}
+				return
+			}
+			if w.At(x, y, z) != c.obstacle || w.At(x, y+1, z) == worldgen.Sand {
+				t.Fatalf("the %s should be left alone: %d, above %d", c.name, w.At(x, y, z), w.At(x, y+1, z))
+			}
+			if items != 1 {
+				t.Fatalf("the sand should drop as one item, got %d", items)
+			}
+		})
 	}
-	if d := anvilFallDamage(60); d != 40 {
-		t.Errorf("a long fall hurts %v, want the cap 40", d)
+}
+
+// An anvil hurts what it lands on: two per block of the fall past the
+// first (FallingBlockEntity.causeFallDamage, ceil(fallDistance - 1)).
+func TestFallingAnvilHurtsWhatItLandsOn(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	cow := h.spawnMob(players, entityCow, float64(x)+0.5, float64(y), float64(z)+0.5)
+	hp := cow.health
+	dropFrom(h, players, x, y, z, 4, worldgen.BlockBase("anvil"))
+	stepTicks(h, players, 40)
+	if lost := hp - cow.health; lost != 6 {
+		t.Fatalf("a four-block fall should cost the cow 6, it lost %d", lost)
 	}
-	anvil := worldgen.BlockBase("anvil") + 2 // facing south
-	if s := anvilAfterFall(anvil, 3, 0.5); s != anvil {
-		t.Errorf("a roll above 15%% chipped it: %d", s)
+	if !worldgen.IsAnvil(w.At(x, y, z)) {
+		t.Fatalf("the anvil should rest on the floor, holds %d", w.At(x, y, z))
 	}
-	chipped := anvilAfterFall(anvil, 3, 0.1)
-	if chipped != worldgen.BlockBase("chipped_anvil")+2 {
-		t.Errorf("chipped state %d (facing kept?)", chipped)
+}
+
+// A long fall is sure to wear an anvil (5% + 5% per block): an intact one
+// lands chipped, and a damaged one breaks to nothing — no block, no item.
+func TestLongFallWearsAndBreaksAnvils(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	anvil := worldgen.BlockBase("anvil") + 2
+	dropFrom(h, players, x, y, z, 25, anvil)
+	dropFrom(h, players, x+2, y, z, 25, worldgen.BlockBase("damaged_anvil"))
+	stepTicks(h, players, 80)
+	if len(h.fallingBlocks) != 0 {
+		t.Fatal("still falling")
 	}
-	damaged := anvilAfterFall(chipped, 3, 0.1)
-	if damaged != worldgen.BlockBase("damaged_anvil")+2 {
-		t.Errorf("damaged state %d", damaged)
+	if got := w.At(x, y, z); got != worldgen.BlockBase("chipped_anvil")+2 {
+		t.Fatalf("the anvil should land chipped, facing kept: %d", got)
 	}
-	if s := anvilAfterFall(damaged, 3, 0.1); s != 0 {
-		t.Errorf("a worn-out anvil should break, got %d", s)
+	if got := w.At(x+2, y, z); got != worldgen.Air {
+		t.Fatalf("the damaged anvil should break, the cell holds %d", got)
 	}
-	if s := anvilAfterFall(anvil, 1, 0.0); s != anvil {
-		t.Error("a one-cell fall never wears the anvil")
+	for _, it := range h.items {
+		t.Fatalf("a broken anvil drops nothing, found item %d", it.item)
+	}
+}
+
+// Suspicious sand never survives a fall (BrushableBlock disables its drop,
+// so it cannot be placed again): it breaks where it lands, leaving nothing.
+func TestSuspiciousSandBreaksWhenItFalls(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	dropFrom(h, players, x, y, z, 3, worldgen.SuspiciousSand)
+	stepTicks(h, players, 40)
+	for dy := 0; dy <= 4; dy++ {
+		if w.At(x, y+dy, z) == worldgen.SuspiciousSand {
+			t.Fatalf("the suspicious sand came to rest at y+%d", dy)
+		}
+	}
+	if len(h.items) != 0 || len(h.fallingBlocks) != 0 {
+		t.Fatalf("it should leave nothing: %d items, %d entities", len(h.items), len(h.fallingBlocks))
+	}
+}
+
+// Concrete powder stops in the first water it enters and sets there
+// (FallingBlockEntity: isStuckInWater; ConcretePowderBlock.onLand).
+func TestConcretePowderSetsInTheWaterItFallsInto(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	powder := worldgen.BlockBase("white_concrete_powder")
+	dropFrom(h, players, x, y, z, 6, powder)
+	w.SetBlock(x, y, z, worldgen.WaterBase)
+	w.SetBlock(x, y+1, z, worldgen.WaterBase)
+	stepTicks(h, players, 40)
+	if got := w.At(x, y+1, z); got != worldgen.ConcreteFor(powder) {
+		t.Fatalf("the powder should set in the top water cell, holds %d", got)
+	}
+	if got := w.At(x, y, z); got != worldgen.WaterBase {
+		t.Fatalf("the water under it stays, holds %d", got)
+	}
+}
+
+// Falling works in the Nether as it does at home, and never writes into the
+// overworld at the same coordinates.
+func TestSandFallsInTheNether(t *testing.T) {
+	h := dimHub()
+	players := map[int32]*tracked{}
+	x, y, z := 400, 100, 400
+	h.nether.ForceLoad(x, z, 1)
+	h.world.ForceLoad(x, z, 1)
+	h.nether.SetBlock(x, y-1, z, worldgen.BlockBase("netherrack"))
+	for dy := 0; dy <= 6; dy++ {
+		h.nether.SetBlock(x, y+dy, z, worldgen.Air)
+	}
+	before := h.world.At(x, y, z)
+	h.setBlockAt(players, dimNether, blockPos{x, y + 5, z}, worldgen.Gravel)
+	stepTicks(h, players, 40)
+	if h.nether.At(x, y, z) != worldgen.Gravel || h.nether.At(x, y+5, z) != worldgen.Air {
+		t.Fatalf("the Nether gravel should have fallen: floor %d, start %d", h.nether.At(x, y, z), h.nether.At(x, y+5, z))
+	}
+	if h.world.At(x, y, z) != before {
+		t.Fatal("a Nether fall wrote into the overworld")
+	}
+}
+
+// A falling block saved mid-air is back in the air after a restart, and
+// lands.
+func TestFallingBlockSurvivesARestart(t *testing.T) {
+	h, _, players, x, y, z := redSetup(t)
+	dropFrom(h, players, x, y, z, 10, worldgen.Sand)
+	stepTicks(h, players, 8)
+	if len(h.fallingBlocks) != 1 {
+		t.Fatal("the sand should be in the air")
+	}
+	saved := h.snapshotFalling()
+
+	h2 := newHub(h.world)
+	h2.tick.Store(h.tick.Load())
+	h2.restoreFalling(saved)
+	stepTicks(h2, players, 60)
+	if len(h2.fallingBlocks) != 0 || h2.world.At(x, y, z) != worldgen.Sand {
+		t.Fatalf("the restored sand should have landed: %d entities, floor %d", len(h2.fallingBlocks), h2.world.At(x, y, z))
 	}
 }

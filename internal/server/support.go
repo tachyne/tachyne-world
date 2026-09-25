@@ -601,14 +601,14 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 				continue
 			}
 			// A stalactite does not break when its grip goes — it FALLS, whole,
-			// and the tip is the end that hurts (PointedDripstoneBlock.tick →
-			// spawnFallingStalactite).
-			// Nothing changes here this tick — the fall is a scheduled update,
+			// and the tip is the end that hurts (SpeleothemBlock.updateShape
+			// schedules the tick that calls spawnFallingStalactite).
+			// Nothing changes here this tick — the fall is a scheduled tick,
 			// and its own write sweeps around it — so the cell is not queued:
 			// a stalactite still hanging beside it would find it unsupported
 			// again, and the two would re-queue each other for ever.
 			if isStalactite(st) {
-				h.dropStalactite(players, dim, n)
+				h.stalactiteShapeUpdate(dim, n)
 				continue
 			}
 			h.setBlockAt(players, dim, n, worldgen.Air)

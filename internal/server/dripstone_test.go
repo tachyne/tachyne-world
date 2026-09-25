@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -137,22 +138,20 @@ func TestStalagmiteImpales(t *testing.T) {
 // under it. The tip carries the column's length, with a floor of six, and
 // deals that per block of the drop up to forty.
 func TestFallingStalactiteSkewers(t *testing.T) {
-	// FallingBlockEntity.causeFallDamage: ceil(fallDistance - 1) blocks, so
-	// a fall of three cells counts two.
-	if got := stalactiteFallDamage(1, 3); got != 12 { // max(1,6)=6 per block × 2
-		t.Fatalf("a short spike falling three should deal 12, got %v", got)
+	h, w, players, x, y, z := redSetup(t)
+	golem := h.spawnMob(players, entityIronGolem, float64(x)+0.5, float64(y), float64(z)+0.5)
+	golem.health = 100
+	tip := dripstoneState(dripTip, false, false)
+	w.SetBlock(x, y+6, z, worldgen.BlockBase("dripstone_block"))
+	w.SetBlock(x, y+5, z, tip) // a one-long spike: it hurts as if six long
+	for dy := 0; dy <= 4; dy++ {
+		w.SetBlock(x, y+dy, z, worldgen.Air)
 	}
-	if got := stalactiteFallDamage(10, 3); got != 20 { // a ten-long column hits harder
-		t.Fatalf("a long column falling three should deal 20, got %v", got)
-	}
-	if got := stalactiteFallDamage(6, 1); got != 0 {
-		t.Fatalf("a one-cell drop deals nothing, got %v", got)
-	}
-	if got := stalactiteFallDamage(10, 30); got != stalactiteHurtMax {
-		t.Fatalf("the damage is capped at 40, got %v", got)
-	}
-	if got := stalactiteFallDamage(6, 0); got != 0 {
-		t.Fatalf("a stalactite that has not fallen hurts nobody, got %v", got)
+	h.setBlockAt(players, 0, blockPos{x, y + 6, z}, worldgen.Air)
+	runTicks(h, players, h.tick.Load()+1, h.tick.Load()+60)
+	// It comes down five blocks: ceil(5 - 1) = 4 blocks count, 6 each.
+	if lost := 100 - float64(golem.health); math.Abs(lost-24) > 0.01 {
+		t.Fatalf("the golem lost %v, want 24", lost)
 	}
 }
 

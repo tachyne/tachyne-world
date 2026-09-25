@@ -26,6 +26,10 @@ const (
 // the simulation queue — never get here.
 func (h *hub) redstoneTick(players map[int32]*tracked, pos blockPos, state uint32) {
 	switch {
+	case fallBlockState(state):
+		h.fallingBlockTick(players, h.rsDim, pos, state) // FallingBlock.tick
+	case isStalactite(state):
+		h.spawnFallingStalactite(players, h.rsDim, pos, state) // SpeleothemBlock.tick
 	case isRSTorch(state):
 		h.torchTick(players, pos, state)
 	case isLamp(state):

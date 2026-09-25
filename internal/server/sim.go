@@ -10,7 +10,7 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 type blockPos struct{ x, y, z int }
 
 const (
-	fallDelay         = 1    // ticks between a falling block's steps (≈ gravity)
+	fallDelay         = 1    // the simulation queue's neighbour re-check delay
 	waterDelay        = 5    // ticks between water spread steps (vanilla)
 	lavaDelay         = 30   // ticks between lava spread steps (vanilla overworld)
 	lavaDelayNether   = 10   // …and in the Nether
@@ -141,8 +141,10 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A leaf whose neighbourhood changed recomputes its trunk distance;
 		// the write schedules ITS neighbours, so a felled trunk sends the
 		// recompute through the canopy as a wave and the rim rots first.
-	case worldgen.IsFalling(state) || isStalactite(state):
-		h.updateFalling(players, dim, pos, state)
+	case fallBlockState(state):
+		// FallingBlock.updateShape: a neighbour changed, so the block looks
+		// again two ticks from now at what is under it (fallingblock.go).
+		h.fallScheduleTick(dim, pos)
 	case h.tickBubbleSource(players, dim, pos, state):
 		// Soul sand or magma with water above raises (or drops) its column.
 	case worldgen.IsBubbleColumn(state):
@@ -222,6 +224,7 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	}
 	if old != state {
 		h.observersSee(players, dim, pos, state) // the shape update an observer watches for
+		h.fallShapeUpdates(dim, pos, state)      // FallingBlock.onPlace / updateShape: sand looks at what is under it
 		h.fireBesideHives(players, dim, pos, state)
 		// CoralBlock.updateShape: water gone from beside a coral (a sponge, a
 		// piston, a flow receding) sets its die tick, not only a player's edit.
@@ -262,63 +265,6 @@ func (h *hub) broadcastBlockIn(players map[int32]*tracked, dim, x, y, z int, sta
 		}
 	}
 }
-
-// updateFalling drops a gravity-affected block one cell if the space below is
-// replaceable, then reschedules so it keeps falling and the block above re-checks.
-func (h *hub) updateFalling(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	below := blockPos{pos.x, pos.y - 1, pos.z}
-	if !h.inWorldY(below.y) {
-		return
-	}
-	key := simPos{dim: dim, blockPos: pos}
-	// A falling block passes through fluids (the entity has no collision
-	// with them) and through frogspawn, which it destroys on the way
-	// (FrogspawnBlock.entityInside).
-	if b := h.worldFor(dim).Block(below.x, below.y, below.z); worldgen.IsReplaceable(b) || worldgen.IsFluid(b) || b == frogspawnBlock {
-		fallen := h.fallDist[key] + 1
-		delete(h.fallDist, key)
-		h.setBlockAt(players, dim, pos, worldgen.Air)
-		h.setBlockAt(players, dim, below, state)
-		h.fallDist[simPos{dim: dim, blockPos: below}] = fallen
-		if n, ok := h.stalactiteLen[key]; ok { // the column's length travels with its tip
-			delete(h.stalactiteLen, key)
-			h.stalactiteLen[simPos{dim: dim, blockPos: below}] = n
-		}
-		h.scheduleIn(dim, below, fallDelay)     // keep falling
-		h.scheduleAroundIn(dim, pos, fallDelay) // a block resting on it loses support
-		return
-	}
-	fallen := h.fallDist[key]
-	delete(h.fallDist, key)
-	// Landed: concrete powder touching water turns to concrete (ConcretePowderBlock).
-	if worldgen.IsConcretePowder(state) && h.powderTouchesWater(dim, pos) {
-		h.setBlockAt(players, dim, pos, worldgen.ConcreteFor(state))
-	}
-	if worldgen.IsAnvil(state) && fallen > 0 {
-		h.anvilLanded(players, dim, pos, state, fallen)
-	}
-	if n, ok := h.stalactiteLen[key]; ok {
-		delete(h.stalactiteLen, key)
-		if isStalactite(state) && fallen > 0 {
-			h.stalactiteLanded(players, dim, pos, n, fallen)
-		}
-	}
-	// FallingBlockEntity: a block that cannot stand where it lands breaks
-	// into its item instead (callOnBrokenAfterFall + spawnAtLocation). A
-	// stalactite never can — nothing holds it up from above — so a fallen
-	// column comes down as pointed dripstone, each piece with its crash.
-	if isStalactite(state) && !supported(h.worldFor(dim), pos, state) {
-		h.setBlockAt(players, dim, pos, worldgen.Air)
-		h.levelEvent(players, dim, levelEventDripstoneBreak, pos.x, pos.y, pos.z, 0)
-		if h.rules.EntityDrops { // the entity_drops gamerule governs a falling block's drop
-			h.spawnBlockDrop(players, dim, itemByName["pointed_dripstone"], 1, pos.x, pos.y, pos.z)
-		}
-	}
-}
-
-// levelEventDripstoneBreak is LevelEvent 1045 (PointedDripstoneBlock.
-// onBrokenAfterFall): the landing crash.
-const levelEventDripstoneBreak = 1045
 
 // powderTouchesWater reports whether water sits on any non-down side of a
 // concrete-powder cell (vanilla ConcretePowderBlock.touchesLiquid).

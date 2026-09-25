@@ -98,6 +98,17 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Falling blocks fall like vanilla's.** Sand, gravel, concrete powder,
+  anvils, the dragon egg, suspicious blocks and loose stalactites now come
+  down as falling blocks that pick up speed as they drop, a moment after
+  losing their support, instead of stepping down one block a tick. One that
+  lands where it cannot stay — on a torch, a flower, a slab, a bed or a few
+  layers of snow — breaks into its item. Suspicious sand and gravel break
+  whenever they fall. Concrete powder sets in the first water it drops into.
+  An anvil hurts what it lands on by how far it fell and can come down
+  chipped, or shatter if it was already damaged, and powder snow cushions
+  it. A block caught mid-air by a restart lands afterwards instead of
+  vanishing.
 - **Potion swirls.** Players and mobs under an effect now give off its
   coloured swirls, as in vanilla — faint for a beacon's or a conduit's,
   none for an effect given with hidden particles, and Oozing, Weaving,
