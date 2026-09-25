@@ -171,7 +171,8 @@ the public history since the project was open-sourced on 2026-07-10.
   for a second player whatever is in front of it; a sign stays yours while
   you are within reach; portal-spawned zombified piglins do not walk
   straight back through, and appear only with a player nearby; an
-  eyeblossom poisons a bee for 25 ticks, not 40.
+  eyeblossom poisons a bee for 25 ticks, not 40; and stepping into fire
+  thaws a player freezing from powder snow.
 - **Ruined portals sit in the ground.** A ruined portal now settles, as in
   vanilla, until at least three of its four corners stand in solid ground,
   so one on a cliff edge sinks into the rock instead of hanging off the
