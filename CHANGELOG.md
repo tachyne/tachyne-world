@@ -102,6 +102,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Dungeon spawners behave like vanilla spawners.** A player in the Nether
+  standing at a dungeon's overworld coordinates no longer wakes it; the
+  spawner counts only its own kind of mob in the space around the cage,
+  and it spawns within four blocks of the cage, a block up or down, only
+  where the mob fits. Fortress, stronghold and mineshaft spawners share
+  the same, now box-shaped, count.
 - **Shift-clicking a trade trades in bulk.** Shift-clicking the result of a
   villager or wandering trader trade now keeps trading while you can pay
   and have room, as in vanilla, instead of trading once.

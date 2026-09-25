@@ -69,26 +69,7 @@ func (h *hub) updateStructureSpawners(players map[int32]*tracked) {
 				continue
 			}
 			h.spawnerNext[key] = now + spawnerMinDelay + uint64(h.rng.Intn(spawnerDelaySpan))
-			near := 0
-			for _, m := range h.mobs {
-				if m.dim == dimOverworld && m.etype == etype && dist3(m.x, m.y, m.z, float64(pos.x), float64(pos.y), float64(pos.z)) < 9 {
-					near++
-				}
-			}
-			if near >= spawnerMobCap {
-				continue
-			}
-			for i := 0; i < spawnerCount; i++ {
-				sx := float64(pos.x) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
-				sz := float64(pos.z) + (h.rng.Float64()-h.rng.Float64())*spawnerSpawnRange + 0.5
-				sy := float64(pos.y + h.rng.Intn(3) - 1)
-				if h.world.At(floorInt(sx), floorInt(sy), floorInt(sz)) != worldgen.Air {
-					continue
-				}
-				h.spawnHostileYIn(players, etype, dimOverworld, sx, sy, sz)
-			}
-			h.levelEvent(players, 0, worldEventSpawnerSpawn, pos.x, pos.y, pos.z, 0)
-			h.spawnerReset(players, 0, pos)
+			h.spawnerCycle(players, pos, etype)
 		}
 	}
 }
