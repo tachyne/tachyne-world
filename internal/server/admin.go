@@ -305,40 +305,6 @@ func (s *Server) cmdXP(p *player, args []string) {
 	s.hub.post(evXP{op: args[0], target: args[1], by: p.eid, amount: n, levels: unit == "levels"})
 }
 
-func (s *Server) cmdSummon(p *player, args []string) {
-	if !s.isOp(p.name) {
-		p.tell("You don't have permission.")
-		return
-	}
-	if len(args) < 1 {
-		p.tell("Usage: /summon <mob> [<x> <y> <z>]")
-		return
-	}
-	et, ok := summonableType(args[0])
-	if !ok {
-		p.tell("Unknown entity: " + args[0])
-		return
-	}
-	x, y, z := p.x, p.y, p.z+2
-	if len(args) >= 4 { // /summon <mob> <x> <y> <z>, with ~ and ^ like vanilla
-		nx, ny, nz, ok := parsePosition(args[1:], p.x, p.y, p.z, p.yaw, p.pitch)
-		if !ok {
-			p.tell("Usage: /summon <mob> [<x> <y> <z>]")
-			return
-		}
-		x, y, z = nx, ny, nz
-	} else if len(args) >= 3 { // the old two-argument form: x and z
-		if nx, ok := parseCoord(args[1], p.x); ok {
-			x = nx
-		}
-		if nz, ok := parseCoord(args[2], p.z); ok {
-			z = nz
-		}
-	}
-	s.hub.post(evSummon{etype: et, x: x, z: z, dim: p.dim, y: y})
-	s.ok(p, "Summoned "+args[0])
-}
-
 func (s *Server) cmdDifficulty(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
@@ -445,6 +411,9 @@ type evSummon struct {
 	etype   int
 	x, y, z float64
 	dim     int
+	by      int32          // the caller (feedback); 0 = none
+	nbt     map[string]any // the summon's NBT, nil when none was given
+	yaw     float32
 }
 type evSetRule struct {
 	rule string

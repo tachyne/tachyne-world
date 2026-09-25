@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/summon does more.** Besides mobs, `/summon` now makes lightning
+  bolts, primed TNT, experience orbs, armor stands, boats, minecarts,
+  firework rockets and dropped items, takes an NBT argument (`CustomName`,
+  `Tags`, `Health`, `Rotation`, `PersistenceRequired`, TNT's `fuse`, an
+  orb's `Value`, an item's `Item`), and summons at your feet by default,
+  as in vanilla.
 - **More of the target selector.** Selectors now take `x`, `y`, `z`,
   `dx`, `dy`, `dz`, `scores`, `team`, `level`, `gamemode`, `x_rotation`,
   `y_rotation`, `name=!…` and `sort=furthest|random|arbitrary`, a limit

@@ -96,7 +96,7 @@ func TestSummonAtExactPosition(t *testing.T) {
 	if !blazeOK {
 		t.Error("a summoned blaze did not get its blaze behaviour")
 	}
-	if !hasLine(linesBetween(logs["alice"], "", "U1"), "Unknown entity: not_a_mob") {
+	if !hasLine(linesBetween(logs["alice"], "", "U1"), "Can't find element 'minecraft:not_a_mob' of type 'minecraft:entity_type'") {
 		t.Errorf("alice's replies: %q", linesBetween(logs["alice"], "", "U1"))
 	}
 }
