@@ -40,15 +40,14 @@ until the unchecked rows are swept too.
 
 ## Largest remaining gaps (2026-09-24)
 
-1. **Item data through menus.** A click in an inventory window rebuilds the stack from
-   the item and count and restores only a few components. So potions, shulker and bundle
-   contents, dye colours, lodestone targets and prior-work cost can be lost when an item is
-   moved. Dropped items and death drops keep only damage and enchantments.
+1. ~~**Item data through menus.**~~ Fixed on 2026-09-24, after the re-grade: window clicks,
+   dropped items and death drops now carry every item field.
 2. **Creature and monster AI.** Almost every goal list is PARTIAL: villager work and
    social behaviours, the wandering trader's avoid goals, fox behaviours, the raider base
    goals, the warden's melee, the piglin brain's crossbow and hunting. Hostile mobs ignore
    adventure-mode players, and only the zombie family shows its attack pose.
-3. **Protocol coverage.** Other players do not see a player crouch or swim. There are no
+3. **Protocol coverage.** (Crouching, sprinting and swimming now show to other players,
+   fixed 2026-09-24.) There are no
    explosion or bulk block-update packets. Creative inventory items arrive without their
    components, chat is not signed, and keep-alive replies are not read, so latency shows 0.
 4. **World generation.** No aquifers or ravines, and many ground-cover features. The Nether
