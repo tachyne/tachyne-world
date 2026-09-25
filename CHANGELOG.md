@@ -133,6 +133,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Eyes of ender fly like vanilla's.** A thrown eye now leaves from your
+  middle, drifts up and toward the stronghold (at most twelve blocks at a
+  time), passes through whatever is in the way instead of sticking in it
+  or hitting players, and after four seconds either drops back as an item
+  (four times in five) or shatters. It can no longer be thrown in the
+  Nether or the End, where there is no stronghold to find.
 - **Mobs report their real speed.** Turtles, frogs, fish, squid,
   axolotls, dolphins, guardians, nautiluses, bats, parrots, allays, bees,
   happy ghasts, phantoms, vexes, ghasts, the wither, villagers and

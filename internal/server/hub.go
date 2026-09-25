@@ -577,6 +577,7 @@ type hub struct {
 	clouds        map[int32]*effectCloud  // lingering-potion area-effect clouds
 	orbs          map[int32]*xpOrb        // experience orbs awaiting pickup
 	rockets       map[int32]*rocketEntity // firework rockets in the air
+	eyes          map[int32]*eyeEntity    // eyes of ender in flight (eyeofender.go)
 
 	bobbers map[int32]*bobberEntity // live fishing bobbers, keyed by OWNER eid (one per player)
 	rng     *rand.Rand              // hub-goroutine-only randomness (mob behaviour, drops)
@@ -1183,6 +1184,7 @@ func (h *hub) run() {
 			h.tickDigCracks(players)    // the cracks other players see on a dig
 			h.updateOrbs(players)       // collect experience orbs / expire old ones
 			h.updateRockets(players)    // firework rockets climb, boost gliders, pop
+			h.updateEyes(players)       // eyes of ender drift toward their stronghold
 			h.tickGliding(players)      // elytra wear: a point a second, and the glide ends with the wing
 			h.tickBoosts(players)       // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players)   // a scope held to its full duration drops
