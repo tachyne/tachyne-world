@@ -517,6 +517,8 @@ type mob struct {
 	chargeSX, chargeSY, chargeSZ    float64    // nautilus: where the charge began
 	chargeVX, chargeVY, chargeVZ    float64    // nautilus: the charge's fixed velocity, per tick
 	ty                              float64    // hunted target's feet height (fliers dive to it)
+	blazeLift                       float64    // Blaze.allowedHeightOffset: how far above its eyes a target must be before it rises
+	blazeLiftIn                     int        // ticks until the offset is re-rolled (nextHeightOffsetChangeTick)
 	living                                     // attributes + status effects, shared with players
 	dmgFrac                         float64    // fractional damage carry (vanilla HP is float, ours int)
 	attackCD                        int        // mob-updates left before this mob can melee again

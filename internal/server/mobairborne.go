@@ -172,6 +172,7 @@ func (h *hub) mobAirborneStep(players map[int32]*tracked, m *mob, fx, fz int, fl
 		case h.inBubbleColumn(m, fx, fz):
 		case floor < m.y-1e-9 && mobStuckInWeb(m) && h.inWebCell(m, fx, fz):
 		case floor < m.y-1e-9 && h.mobOnHoneyWall(m):
+		case m.etype == entityBlaze && (floor < m.y-1e-9 || blazeWantsLift(m)):
 		default:
 			return false
 		}
@@ -204,6 +205,10 @@ func (h *hub) mobAirTick(players map[int32]*tracked, m *mob, fx, fz int) {
 		if float64(top+1)-m.y > thr && h.rng.Float64() < floatJumpChance {
 			m.vy += liquidJumpStep
 		}
+	}
+
+	if m.etype == entityBlaze {
+		h.blazeAirTick(m)
 	}
 
 	// The move, cut by a web's stuck multiplier.
@@ -324,4 +329,32 @@ func slimeLaunch(fall, g float64) float64 {
 		d -= v
 	}
 	return math.Max(0, (-v-g)*0.98)
+}
+
+// playerEyeHeight is a standing player's eye height.
+const playerEyeHeight = 1.62
+
+// Blaze flight. A blaze is not a flier: it has gravity and walks, but it
+// falls slowly (aiStep: a falling blaze's vertical motion ×0.6 each tick)
+// and lifts itself toward a target whose eyes are more than
+// allowedHeightOffset above its own — that offset re-rolled every 100 ticks
+// as triangle(0.5, 6.891), so a blaze bobs rather than locking to a height
+// (Blaze.customServerAiStep).
+func blazeWantsLift(m *mob) bool {
+	return m.hasTarget && m.ty+playerEyeHeight > m.y+mobEyeHeight(m)+m.blazeLift
+}
+
+// blazeAirTick is one tick of the blaze's own vertical rules, applied before
+// the move as vanilla's aiStep and customServerAiStep do.
+func (h *hub) blazeAirTick(m *mob) {
+	if m.vy < 0 {
+		m.vy *= 0.6
+	}
+	if m.blazeLiftIn--; m.blazeLiftIn <= 0 {
+		m.blazeLiftIn = 100
+		m.blazeLift = h.triangle(0.5, 6.891)
+	}
+	if blazeWantsLift(m) {
+		m.vy += (0.3 - m.vy) * 0.3
+	}
 }

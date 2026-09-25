@@ -117,6 +117,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Blazes float.** A blaze rises toward a target above it, bobbing at a
+  height it re-picks every few seconds, and sinks slowly instead of
+  dropping when it has nothing to climb to.
 - **Pillager patrols string out behind their captain.** A patrol has as many
   members as the local difficulty calls for. Each one spawns a few steps on
   from the one before, and there is no patrol at all if the captain has

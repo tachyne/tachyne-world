@@ -459,8 +459,8 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	}
 	if t := h.huntTarget(players, m, reach); t != nil { // mustSee: a player it can see, or one remembered
 		m.hasTarget, m.tx, m.tz = true, t.x, t.z
-		if m.flies {
-			m.ty = t.y // a flier aims at the target's height, not the ground
+		if m.flies || m.etype == entityBlaze {
+			m.ty = t.y // a flier aims at the target's height, not the ground; a blaze rises to it
 		}
 		m.preyTarget = 0
 	} else if tx, tz, ok := h.nearestQuarry(noPlayers, m.dim, m.x, m.z, reach); ok { // a shadow over the seam: no blocks are known across it to see through
