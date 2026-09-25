@@ -836,3 +836,17 @@ func TestSignLockHoldsWithinEightAndAHalf(t *testing.T) {
 		t.Error("an editor out of reach loses the lock to the next player")
 	}
 }
+
+// SpongeBlock.neighborChanged: water that arrives beside a dry sponge by
+// itself — not by a player's hand — is drunk on the neighbour's update.
+func TestSpongeDrinksFlowingWater(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	w.SetBlock(0, 180, 0, spongeState)
+	w.SetBlock(1, 180, 0, worldgen.WaterBase)
+	h.processUpdate(players, 0, blockPos{0, 180, 0}) // the queue's re-check after the water's write
+	if w.At(0, 180, 0) != wetSpongeState || w.At(1, 180, 0) == worldgen.WaterBase {
+		t.Errorf("the sponge should drink the water: sponge %d, water cell %d", w.At(0, 180, 0), w.At(1, 180, 0))
+	}
+}
