@@ -446,8 +446,8 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 			break
 		}
 	}
-	for _, t := range players {
-		if t.dim == 0 && dist3(t.x, t.y, t.z, x, y, z) <= 30 {
+	for _, t := range players { // LightningBolt.tick: every player within 256 of the bolt
+		if t.dim == 0 && dist3(t.x, t.y, t.z, x, y, z) < 256 {
 			h.advance(players, t, "lightning_strike", advMatch{bystander: villagerBy, noFire: !lit})
 		}
 	}

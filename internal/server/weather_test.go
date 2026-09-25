@@ -257,3 +257,21 @@ func TestRainGameEventIDs(t *testing.T) {
 			gameEventBeginRain, gameEventEndRain)
 	}
 }
+
+// LightningBolt.tick: the lightning_strike trigger reaches every player
+// within 256 blocks — a villager spared by a bolt 100 blocks away still
+// earns the rod advancement.
+func TestLightningStrikeTriggerReach(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	h.rules.Difficulty = diffPeaceful // no fire
+	pl := riderAt(1, 100.5, 180, 0.5)
+	pl.adv = advState{}
+	players := map[int32]*tracked{1: pl}
+	h.playersRef = players
+	h.spawnMob(players, entityVillager, 5.5, 180, 0.5)
+	h.strikeLightning(players, 0.5, 180, 0.5, false)
+	if !pl.adv.done(advByID["minecraft:adventure/lightning_rod_with_villager_no_fire"]) {
+		t.Fatal("a player 100 blocks from the bolt was not credited")
+	}
+}
