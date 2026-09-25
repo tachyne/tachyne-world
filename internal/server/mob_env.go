@@ -85,6 +85,11 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 		h.killMob(players, m)
 		return
 	}
+	// EnderMan.hurtServer: hurt by anything that is not a living thing — fire,
+	// a cactus, a fall — it blinks away nine times in ten.
+	if m.etype == entityEnderman && dt != dtDrown && !livingSourced(dt) && h.rng.Intn(10) != 0 { // the wet rolls its own (watersensitive.go)
+		h.endermanTeleport(players, m)
+	}
 	// PanicGoal: the environment sets an animal running too — out of the
 	// fire, off the cactus, away from the lava — not only a blow from
 	// something. On fire it makes for water if there is any within five.
@@ -326,4 +331,14 @@ func (h *hub) mobContactTick(players map[int32]*tracked) {
 			}
 		}
 	}
+}
+
+// livingSourced reports damage whose source entity is a living thing: a
+// blow, thorns, a rocket its shooter set off.
+func livingSourced(dt dmgType) bool {
+	switch dt {
+	case dtMobAttack, dtMobAttackNoAggro, dtPlayerAttack, dtMaceSmash, dtThorns, dtFireworks, dtSting:
+		return true
+	}
+	return false
 }

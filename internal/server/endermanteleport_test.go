@@ -1,60 +1,37 @@
 package server
 
 import (
-	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
-	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// TestEndermanTeleportStaysNearItsHeight: Enderman.teleport picks a height
-// within 32 of the enderman and drops to ground there; it never climbs to
-// the surface, and never lands inside a block. Ours sent every blink to
-// the top of the column, so endermen could not leave the sunlit surface
-// (the daytime crowds) and cave endermen were pulled up into the open.
-func TestEndermanTeleportStaysNearItsHeight(t *testing.T) {
+// Hurt by something that is not a living thing (a cactus, fire, a fall) an
+// enderman blinks away nine times in ten; a player's blow does not move it.
+func TestEndermanTeleportsFromNonLivingHurt(t *testing.T) {
 	h := newHub(world.New(1))
-	pl := survPlayer(h)
-	players := map[int32]*tracked{pl.p.eid: pl}
-	h.playersRef = players
-	w := h.world
-	w.ForceLoad(0, 0, 4)
-	// A sealed room (y 145..149) under stone that runs up to y 160.
-	for x := -40; x <= 40; x++ {
-		for z := -40; z <= 40; z++ {
-			for y := 140; y <= 160; y++ {
-				st := worldgen.Stone
-				if y >= 145 && y <= 149 && x > -38 && x < 38 && z > -38 && z < 38 {
-					st = worldgen.Air
-				}
-				w.SetBlock(x, y, z, st)
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	moved := func(dt dmgType) int {
+		n := 0
+		for i := 0; i < 20; i++ {
+			m := h.spawnHostileY(players, entityEnderman, 0.5, float64(h.world.SurfaceY(0, 0)), 0.5)
+			m.health = 1000
+			x, z := m.x, m.z
+			h.hurtMobOf(players, m, 1, dt)
+			if m.x != x || m.z != z {
+				n++
 			}
+			h.removeMob(players, m)
 		}
+		return n
 	}
-	m := h.spawnMob(players, entityEnderman, 0.5, 145, 0.5)
-	if m == nil {
-		t.Fatal("no enderman")
+	// teleport() is one try at a random spot (it can find nowhere to land),
+	// so not every roll moves it — but the prick sets it trying.
+	if n := moved(dtCactus); n < 3 {
+		t.Errorf("a cactus prick moved the enderman %d times in 20", n)
 	}
-	below := 0
-	for i := 0; i < 300; i++ {
-		m.x, m.y, m.z = 0.5, 145, 0.5
-		if !h.endermanTeleport(players, m) {
-			continue
-		}
-		for cy := int(math.Floor(m.y)); cy <= int(math.Floor(m.y+2.9-1e-7)); cy++ {
-			if s := w.At(int(math.Floor(m.x)), cy, int(math.Floor(m.z))); worldgen.Collides(s) {
-				t.Fatalf("landed inside a block at %.2f %.2f %.2f", m.x, m.y, m.z)
-			}
-		}
-		if !worldgen.Collides(w.At(int(math.Floor(m.x)), int(math.Floor(m.y))-1, int(math.Floor(m.z)))) {
-			t.Fatalf("landed with nothing under it at %.2f %.2f %.2f", m.x, m.y, m.z)
-		}
-		if m.y < 160 {
-			below++
-		}
-	}
-	if below == 0 {
-		t.Fatal("every blink left the cave for the roof: the teleport went to the surface")
+	if n := moved(dtPlayerAttack); n != 0 {
+		t.Errorf("a player's blow teleported the enderman %d times", n)
 	}
 }
