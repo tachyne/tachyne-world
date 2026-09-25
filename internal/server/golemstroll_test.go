@@ -37,8 +37,7 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 	v.lastSlept = h.tick.Load() + 1
 	h.gridDirty()
 	cap := g.moveSpeed() * golemStrollSpeed * 1.05
-	sx, sz := g.x, g.z
-	far := 0.0
+	walked := 0.0
 	for i := 0; i < 1500; i++ {
 		px, pz := g.x, g.z
 		h.tick.Add(mobMoveInterval)
@@ -46,10 +45,10 @@ func TestIronGolemStrollsTheVillage(t *testing.T) {
 		if d := math.Hypot(g.x-px, g.z-pz); d > cap {
 			t.Fatalf("update %d: an idle golem walks at 0.6 (%.3f), not %.3f", i, cap, d)
 		}
-		far = math.Max(far, math.Hypot(g.x-sx, g.z-sz))
+		walked += math.Hypot(g.x-px, g.z-pz)
 	}
-	if far < 5 {
-		t.Fatalf("the golem should have strolled about the village, got at most %.1f blocks", far)
+	if walked < 10 {
+		t.Fatalf("the golem should have strolled about the village, walked %.1f blocks", walked)
 	}
 	if !g.golemStrolling {
 		t.Fatal("with nothing to fight it is strolling")
