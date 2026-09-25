@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Grass and mycelium spread and die as in vanilla.** Grass now dies
+  under water, a bottom slab, a lower stair or deep snow (a single snow
+  layer is fine), no longer spreads onto dirt that is under water, and
+  grass that spreads under snow comes up snowy.
 - **Sponges dry out waterlogged blocks.** A sponge now drains waterlogged
   slabs, stairs, fences and the like (they stay, dry) and soaks up the
   water beyond them, as in vanilla.
