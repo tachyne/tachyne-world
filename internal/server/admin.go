@@ -132,6 +132,9 @@ type worldRules struct {
 	// outranks the -spawn flag: a flag is where a fresh world starts, the
 	// command is where the running one was moved to.
 	WorldSpawn *worldSpawnSave `json:"worldSpawn,omitempty"`
+	// RandomSequences is /random's named sequences (RandomSequences, which
+	// vanilla keeps as saved data).
+	RandomSequences *randomSequencesSave `json:"randomSequences,omitempty"`
 	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
 	// the -gamemode flag's.
 	DefaultGamemode *int `json:"defaultGamemode,omitempty"`

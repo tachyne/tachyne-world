@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/random sequences.** `/random value|roll <range> <sequence>` draws
+  from a named random sequence that gives the same numbers as vanilla for
+  the same world seed, and `/random reset` starts one or all of them over,
+  optionally with a new seed. Sequences are saved with the world.
 - **/damage names who did it.** `/damage <target> <amount> <type> at <x y z>`
   hits from a point (a raised shield faces it), and `by <entity> [from
   <cause>]` blames an attacker: the death message names them, a mob they
