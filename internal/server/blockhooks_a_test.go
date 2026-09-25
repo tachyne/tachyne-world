@@ -127,3 +127,23 @@ func TestComparatorReadsItemFrameThroughBlock(t *testing.T) {
 		t.Errorf("an empty frame reads %d, want 0", got)
 	}
 }
+
+// and gives a comparator nothing.
+func TestDetectorRailReadsContainerCart(t *testing.T) {
+	h, players := cartHub()
+	cartTrack(h, 0, 20, railMin, false)
+	v := specialCart(t, h, players, entityChestMinecart, 5)
+	v.chest.slots[0] = invStack{item: itemByName["stone"], count: 64}
+	pos := simPos{blockPos: blockPos{5, cartY, 10}}
+	if got := h.analogSignal(pos); got >= 0 {
+		t.Errorf("a cart on a plain rail reads %d, want no analog output", got)
+	}
+	h.world.SetBlock(5, cartY, 10, railWith(detectorRailMin, shapeEW, false))
+	h.updateVehicles(players)
+	if !railPowered(h.world.At(5, cartY, 10)) {
+		t.Fatal("the detector rail should press under the cart")
+	}
+	if got, want := h.analogSignal(pos), 1+14/27; got != want {
+		t.Errorf("detector rail under a chest cart with one full slot reads %d, want %d", got, want)
+	}
+}

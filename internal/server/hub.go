@@ -686,7 +686,7 @@ type hub struct {
 	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
-	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
+	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
 	patrolNextAt uint64             // world tick the next pillager-patrol attempt is due

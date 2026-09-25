@@ -153,7 +153,7 @@ func TestComparatorReadsNonContainers(t *testing.T) {
 		{"respawn anchor, full", worldgen.BlockBase("respawn_anchor") + 4, 15},
 		{"end portal frame with its eye", worldgen.BlockBase("end_portal_frame"), 15},
 		{"end portal frame, empty", worldgen.BlockBase("end_portal_frame") + 4, 0},
-		{"detector rail, occupied", worldgen.BlockBase("detector_rail"), 15},
+		{"detector rail, powered, no container cart", worldgen.BlockBase("detector_rail"), 0},
 		{"detector rail, clear", worldgen.BlockBase("detector_rail") + 12, 0},
 	}
 	for _, c := range cases {

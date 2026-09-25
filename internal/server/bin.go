@@ -949,8 +949,18 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 }
 
 // containerSlots exposes any container's raw slots at a position (nil if the
-// position holds no known container).
+// position holds no known container): a block's, or else a container cart
+// parked in the cell, as a hopper or dropper finds one.
 func (h *hub) containerSlots(pos simPos) []invStack {
+	if s := h.blockContainerSlots(pos); s != nil {
+		return s
+	}
+	return h.vehicleContainerAt(pos) // a chest or hopper cart parked in the cell
+}
+
+// blockContainerSlots is containerSlots without the carts: the block
+// entity's own storage.
+func (h *hub) blockContainerSlots(pos simPos) []invStack {
 	if c := h.chests[pos]; c != nil {
 		return c.slots[:]
 	}
@@ -969,7 +979,7 @@ func (h *hub) containerSlots(pos simPos) []invStack {
 	if b := h.bins[pos]; b != nil {
 		return b.slots
 	}
-	return h.vehicleContainerAt(pos) // a chest or hopper cart parked in the cell
+	return nil
 }
 
 // containerSignal is the comparator's read of a container: 0 when empty, else
@@ -978,7 +988,9 @@ func (h *hub) containerSignal(pos simPos) int {
 	if cb := h.crafterBinAt(pos); cb != nil {
 		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
 	}
-	slots := h.containerSlots(pos)
+	// A cart is no block: only a detector rail under it reads it
+	// (analogSignalFrom), so a comparator never sees one on a plain rail.
+	slots := h.blockContainerSlots(pos)
 	// ChestBlock.getAnalogOutputSignal reads getContainer(…, ignoreBlocked
 	// false): a blocked chest (a solid block or a sitting cat on its lid)
 	// has no container and reads 0, and a pair reads as one 54-slot chest —
@@ -994,7 +1006,7 @@ func (h *hub) containerSignal(pos simPos) int {
 				if h.chestBlockedAt(pos.dim, left) || h.chestBlockedAt(pos.dim, right) {
 					return 0
 				}
-				a, b := h.containerSlots(pos.at(left)), h.containerSlots(pos.at(right))
+				a, b := h.blockContainerSlots(pos.at(left)), h.blockContainerSlots(pos.at(right))
 				slots = append(append(make([]invStack, 0, len(a)+len(b)), a...), b...)
 			}
 		}
@@ -1012,6 +1024,12 @@ func (h *hub) containerSignal(pos simPos) int {
 	if slots == nil {
 		return -1
 	}
+	return fullnessSignal(slots)
+}
+
+// fullnessSignal is AbstractContainerMenu.getRedstoneSignalFromContainer:
+// 0 when empty, else 1 + floor(14 × average slot fullness).
+func fullnessSignal(slots []invStack) int {
 	full, any := 0.0, false
 	for _, s := range slots {
 		if s.item != 0 && s.count > 0 {
