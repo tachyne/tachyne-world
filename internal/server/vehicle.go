@@ -191,24 +191,9 @@ func (h *hub) spawnVehicleAt(players map[int32]*tracked, dim, etype, bx, by, bz 
 // BoatItem.use turns it to the placer's yaw, a dispenser to the facing it
 // shoots along (Direction.toYRot). A cart takes its heading from the rails.
 func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by, bz int, yaw float32) bool {
-	w := h.worldFor(dim)
-	if w == nil {
+	x, y, z, ok := h.vehicleSpawnPos(dim, etype, bx, by, bz)
+	if !ok {
 		return false
-	}
-	x, y, z := float64(bx)+0.5, float64(by), float64(bz)+0.5
-	ground := w.At(bx, by, bz)
-	if cartTypes[etype] {
-		if !isAnyRail(ground) {
-			return false // carts only go on rails
-		}
-		y += 0.1
-	} else {
-		if !worldgen.IsWater(ground) { // shore block: try the cell above
-			if !worldgen.IsWater(w.At(bx, by+1, bz)) && w.At(bx, by+1, bz) != worldgen.Air {
-				return false
-			}
-			y += 1
-		}
 	}
 	v := &vehicle{eid: h.allocEID(), dim: dim, etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	if !cartTypes[etype] {
@@ -221,6 +206,67 @@ func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by,
 	initCartKind(v)
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, v.yaw, 0))
+	return true
+}
+
+// vehicleSpawnPos is where a cart or boat aimed at a cell goes: a cart on
+// its rail, a boat in the water cell or on the shore cell's top.
+func (h *hub) vehicleSpawnPos(dim, etype, bx, by, bz int) (x, y, z float64, ok bool) {
+	w := h.worldFor(dim)
+	if w == nil {
+		return 0, 0, 0, false
+	}
+	x, y, z = float64(bx)+0.5, float64(by), float64(bz)+0.5
+	ground := w.At(bx, by, bz)
+	if cartTypes[etype] {
+		if !isAnyRail(ground) {
+			return 0, 0, 0, false // carts only go on rails
+		}
+		return x, y + 0.1, z, true
+	}
+	if !worldgen.IsWater(ground) { // shore block: try the cell above
+		if !worldgen.IsWater(w.At(bx, by+1, bz)) && w.At(bx, by+1, bz) != worldgen.Air {
+			return 0, 0, 0, false
+		}
+		y += 1
+	}
+	return x, y, z, true
+}
+
+// boatPlaceClear is BoatItem.use's level.noCollision(boat, box): the new
+// boat's 1.375 × 0.5625 box may overlap no colliding block and no entity a
+// boat collides with (AbstractBoat.canVehicleCollide: other vehicles and
+// anything pushable — players and mobs; spectators never count).
+func (h *hub) boatPlaceClear(players map[int32]*tracked, dim int, x, y, z float64) bool {
+	const hw, ht = 1.375 / 2, 0.5625
+	w := h.worldFor(dim)
+	for bx := floorInt(x - hw); bx <= floorInt(x+hw); bx++ {
+		for by := floorInt(y); by <= floorInt(y+ht); by++ {
+			for bz := floorInt(z - hw); bz <= floorInt(z+hw); bz++ {
+				if worldgen.Collides(w.At(bx, by, bz)) {
+					return false
+				}
+			}
+		}
+	}
+	hits := func(ex, ey, ez, ehw, eht float64) bool {
+		return ex+ehw > x-hw && ex-ehw < x+hw && ez+ehw > z-hw && ez-ehw < z+hw && ey+eht > y && ey < y+ht
+	}
+	for _, t := range players {
+		if t.dim == dim && !t.dead && t.gamemode != gmSpectator && hits(t.x, t.y, t.z, t.halfWidth(), 1.8*t.scale()) {
+			return false
+		}
+	}
+	for _, m := range h.mobs {
+		if b := m.box(); m.dim == dim && m.dying == 0 && hits(m.x, m.y, m.z, b.w/2, b.h) {
+			return false
+		}
+	}
+	for _, v := range h.vehicles {
+		if vw, vh := v.box(); v.dim == dim && hits(v.x, v.y, v.z, vw/2, vh) {
+			return false
+		}
+	}
 	return true
 }
 
@@ -261,7 +307,15 @@ func (h *hub) placeVehicleFromLook(players map[int32]*tracked, t *tracked, item 
 // placeVehicle spawns a cart on a clicked rail or a boat on/next to water.
 func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehicle) {
 	etype, ok := vehicleItems[e.item]
-	if !ok || !h.spawnVehicleFacing(players, t.dim, etype, e.x, e.y, e.z, t.yaw) {
+	if !ok {
+		return
+	}
+	if !cartTypes[etype] { // BoatItem.use: FAIL unless level.noCollision(boat, its box)
+		if x, y, z, ok := h.vehicleSpawnPos(t.dim, etype, e.x, e.y, e.z); !ok || !h.boatPlaceClear(players, t.dim, x, y, z) {
+			return
+		}
+	}
+	if !h.spawnVehicleFacing(players, t.dim, etype, e.x, e.y, e.z, t.yaw) {
 		return
 	}
 	h.vib(t.dim, freqEntityPlace, e.x, e.y, e.z, t.p.eid) // ENTITY_PLACE
