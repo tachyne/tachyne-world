@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Lightning cleans copper.** A bolt that strikes copper turns it back to
+  fresh copper and scrapes the oxidation off copper blocks around it, with
+  a spark on each, as in vanilla. Lightning advancements now count every
+  player within 256 blocks of the bolt, not just those within 30.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
