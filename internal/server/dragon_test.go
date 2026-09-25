@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -235,4 +236,23 @@ func TestDragonHurtWhenItsHealingCrystalBreaks(t *testing.T) {
 	if h.dragonCrystal != 0 {
 		t.Fatal("the dragon still heals from a destroyed crystal")
 	}
+}
+
+// EnderDragon.tickDeath: the death is a global level event (1028) — a
+// player across the End hears it.
+func TestDragonDeathSoundIsGlobal(t *testing.T) {
+	h, pl, players := endHub(t)
+	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
+	if h.dragon == nil {
+		t.Skip("no dragon in this End")
+	}
+	pl.x, pl.z = 900, 900 // far across the End
+	drainOut(pl.p)
+	h.dragonDefeated(players)
+	for len(pl.p.out) > 0 {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && ev.Name == "minecraft:entity.ender_dragon.death" {
+			return
+		}
+	}
+	t.Fatal("a player across the End did not hear the dragon die")
 }

@@ -258,6 +258,11 @@ const endCrystalBlastPower = 6
 
 // dragonDefeated: XP shower, exit portal, the first kill's egg, a gateway.
 func (h *hub) dragonDefeated(players map[int32]*tracked) {
+	if m := h.dragon; m != nil {
+		// EnderDragon.tickDeath: level event 1028, heard across the End (and
+		// everywhere with global_sound_events on).
+		h.playSoundGlobal(players, dimEnd, "minecraft:entity.ender_dragon.death", sndHostile, m.x, m.y, m.z, 5, 1)
+	}
 	h.dragon = nil
 	h.rules.DragonDefeated = true
 	h.rules.DragonHealth = 0 // the fight is over; nothing left to resume

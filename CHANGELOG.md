@@ -105,6 +105,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The dragon's death is heard.** When the Ender Dragon dies its death
+  roar now carries across the End (and, with `global_sound_events`, beyond),
+  as in vanilla; players out of sight heard nothing. The lightning-rod
+  advancement also counts players within 256 blocks of the strike, not 30.
 - **Mob health shows.** Damaged iron golems now crack, a tamed wolf's tail
   droops as it is hurt, and a horse's hearts show its real health while
   you ride it — the client was never told a mob's health.
