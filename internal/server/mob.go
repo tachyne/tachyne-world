@@ -1168,7 +1168,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.mobFootsteps(players, m, m.x-m.sx, m.y-m.sy, m.z-m.sz)
 			// A walking or swimming mob's STEP/SWIM vibration (Entity.move →
 			// gameEvent), throttled like a player's; fliers make none.
-			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && m.dim == dimOverworld && h.tick.Load() >= h.sculkStep[m.eid] {
+			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && h.tick.Load() >= h.sculkStep[m.eid] {
 				h.sculkStep[m.eid] = h.tick.Load() + 3
 				h.vibStep(m.dim, m.x, m.y, m.z, m.eid)
 			}

@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sculk hears mobs everywhere.** A sculk sensor or shrieker built in the
+  Nether or the End now picks up mobs walking past, as it does in the
+  overworld.
 - **Nether lava runs fast.** Lava in the Nether now flows three times as
   fast as the overworld's and spreads as far as water (seven blocks), as in
   vanilla; it used to behave like overworld lava.

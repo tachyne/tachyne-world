@@ -396,3 +396,38 @@ func TestCatalystSpareBuiltBlocks(t *testing.T) {
 		}
 	}
 }
+
+// A sensor built in the Nether hears a mob walking there, as one in the
+// overworld does.
+func TestNetherSensorHearsFootsteps(t *testing.T) {
+	h := newHub(world.New(1))
+	nw, _ := world.NewNether(1, nil)
+	h.nether = nw
+	nw.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	const x, y, z = 4, 100, 4
+	for dx := -6; dx <= 6; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			nw.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
+			nw.SetBlock(x+dx, y, z+dz, worldgen.Air)
+			nw.SetBlock(x+dx, y+1, z+dz, worldgen.Air)
+		}
+	}
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	nw.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(dimNether, x, y, z, sensor)
+	m := h.spawnMobIn(players, entityPiglin, dimNether, float64(x)+3.5, y, float64(z)+0.5)
+	pos := simPos{dim: dimNether, blockPos: blockPos{x, y, z}}
+	heard := false
+	for i := 0; i < 8 && !heard; i++ {
+		m.vx, m.kb = 0.25, 3
+		h.tick.Add(1)
+		h.updateMobs(players)
+		if v, ok := h.sculkVib[pos]; ok && v.src == m.eid {
+			heard = true
+		}
+	}
+	if !heard {
+		t.Fatal("a Nether sensor did not hear a piglin walking beside it")
+	}
+}
