@@ -51,7 +51,7 @@ until the unchecked rows are swept too.
    explosion or bulk block-update packets. Creative inventory items arrive without their
    components, chat is not signed, and keep-alive replies are not read, so latency shows 0.
 4. **World generation.** No aquifers or ravines, and many ground-cover features. The Nether
-   lava sea sits too low and has no bedrock roof. Changing the generator rewrites unedited
+   lava sea sits too low (its bedrock roof arrived 2026-09-25). Changing the generator rewrites unedited
    terrain under existing builds, so these need a decision first.
 5. **Shape updates and placement.** Connections re-wire only on player edits. Some
    blocks never recompute their shape (cut kelp and vines, dripleaf, bamboo, dripstone

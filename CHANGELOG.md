@@ -33,6 +33,11 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **The Nether has its bedrock roof.** Above the caverns the Nether is now
+  solid netherrack up to vanilla's bedrock roof at y=127, ragged on its
+  underside, with open air over it; before, the top of the caverns gave
+  onto an endless dark void. Anywhere you built at y=115 or higher, the
+  void stays open over your build and two blocks around it.
 - **Sandstone under the sand, and no sand over caves.** Deserts now have
   sandstone under their sand, reaching up to thirty blocks down, and
   beaches and warm oceans a few blocks of it, as in vanilla. Sand, red
