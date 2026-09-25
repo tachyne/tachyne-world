@@ -39,18 +39,26 @@ func TestShulkerClingsToAnyFace(t *testing.T) {
 	if sh.shAttach != 5 || sh.x != 0.5 || sh.y != 180 {
 		t.Fatalf("with its floor gone it clings to the east wall: face %d at (%.1f,%.1f)", sh.shAttach, sh.x, sh.y)
 	}
-	h.setBlockAt(players, 0, blockPos{1, 180, 0}, worldgen.Air)
-	h.shulkerTick(players, sh)
-	if sh.x == 0.5 && sh.y == 180 && sh.z == 0.5 {
-		t.Skip("no face within reach of the teleport in this fixture")
-	}
-	p := blockPos{floorInt(sh.x), floorInt(sh.y), floorInt(sh.z)}
-	if !h.shulkerCanStayAt(0, p, sh.shAttach) {
-		t.Fatalf("it teleported somewhere it can cling (face %d at %v)", sh.shAttach, p)
-	}
 	// The box rises with the peek on a floor.
 	sh.shAttach, sh.shPeekCur = 0, 1
 	if b := sh.box(); b.h < 1.99 {
 		t.Fatalf("fully open on a floor the box is two tall: %.2f", b.h)
+	}
+	sh.shAttach, sh.shPeekCur = 5, 0
+	// Nothing left to cling to: it teleports to a cell it can cling to.
+	for x := -9; x <= 9; x++ {
+		for z := -9; z <= 9; z++ {
+			w.SetBlock(x, 186, z, worldgen.Stone) // a ceiling in reach
+		}
+	}
+	h.setBlockAt(players, 0, blockPos{1, 180, 0}, worldgen.Air)
+	moved := false
+	for i := 0; i < 50 && !moved; i++ {
+		h.shulkerTick(players, sh)
+		moved = sh.x != 0.5 || sh.y != 180 || sh.z != 0.5
+	}
+	p := blockPos{floorInt(sh.x), floorInt(sh.y), floorInt(sh.z)}
+	if !moved || !h.shulkerCanStayAt(0, p, sh.shAttach) {
+		t.Fatalf("with nothing to cling to it teleports to a face it can hold (face %d at %v)", sh.shAttach, p)
 	}
 }
