@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Strays, bogged and parched drop real tipped arrows.** The tipped
+  arrows these skeletons can drop when a player kills them came out with
+  no effect. They are now arrows of Slowness (stray), Poison (bogged) and
+  Weakness (parched), as in vanilla, and `/loot` gives the same.
 - **Charged creepers give one head, babies included.** A charged
   creeper's blast gave a head for every mob it killed; as in vanilla it
   now gives one head per creeper. A baby zombie caught in the blast drops

@@ -154,8 +154,10 @@ def func(f):
                 "np": num(f["count"]), "limit": int(f.get("limit", 0))}
     if t == "furnace_smelt":
         return {"f": "smelt"}
+    if t == "set_potion":  # a stray's, bogged's or parched's tipped arrow
+        return {"f": "set_potion", "potion": f["id"].removeprefix("minecraft:")}
     if t in ("copy_components", "copy_state", "copy_name", "copy_custom_data",
-             "set_contents", "set_potion", "set_ominous_bottle_amplifier"):
+             "set_contents", "set_ominous_bottle_amplifier"):
         return None
     raise Unsupported("func " + t)
 

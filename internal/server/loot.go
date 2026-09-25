@@ -25,6 +25,9 @@ var (
 type drop struct {
 	item  int32
 	count int
+	// potion is what a set_potion function gave the stack (0 = none): a
+	// stray's, bogged's or parched's tipped arrow.
+	potion int8
 	// fixed marks a roll Looting must not touch: an entry whose vanilla table
 	// carries no enchanted_count_increase (a sheep's fleece, an elder
 	// guardian's sponge and tide template, the guardians' rare fish).
