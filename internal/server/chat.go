@@ -210,6 +210,12 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdTag(p, fields[1:])
 	case "ride":
 		s.cmdRide(p, fields[1:])
+	case "rotate":
+		if !s.isOp(p.name) { // RotateCommand: LEVEL_GAMEMASTERS
+			p.tell("You don't have permission.")
+			return
+		}
+		s.hub.post(evRotate{eid: p.eid, args: fields[1:]})
 	case "damage":
 		s.cmdDamage(p, fields[1:])
 	case "spreadplayers":

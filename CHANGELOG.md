@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/rotate.** Operators can turn a player or mob to a rotation (`~` for
+  relative), or make it face a position or another entity's feet or eyes.
 - **/trigger.** Scoreboard objectives can use the `trigger` criteria, and
   an operator can `/scoreboard players enable <player> <objective>`; that
   player (no operator rights needed) can then `/trigger <objective>`, or

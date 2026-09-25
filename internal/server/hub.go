@@ -1859,6 +1859,8 @@ func (h *hub) run() {
 				h.cmdScoreboard(players, e)
 			case evTriggerCmd:
 				h.cmdTrigger(players, e)
+			case evRotate:
+				h.cmdRotate(players, e)
 			case evTeamCmd:
 				h.cmdTeam(players, e)
 			case evSignPlaced:
