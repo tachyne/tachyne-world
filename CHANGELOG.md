@@ -289,6 +289,146 @@ the public history since the project was open-sourced on 2026-07-10.
   can remove one named effect. The feedback now matches vanilla, including
   "Unable to apply this effect" when a stronger effect is already running
   or the target is immune.
+- **Happy ghasts follow you.** A happy ghast drifts after anyone holding a
+  snowball or a harness, rising or sinking to their height and stopping
+  three blocks off. A ghastling keeps near the nearest player. Both panic
+  when hurt, as vanilla's do.
+- **Thirteen more commands.**
+  - `/advancement` grants and revokes.
+  - `/attribute` reads and sets attribute values, bases and modifiers.
+  - `/recipe` gives and takes recipe-book entries.
+  - `/tag` adds entity tags, and selectors now take `tag=`.
+  - `/ride` mounts and dismounts.
+  - `/damage` deals damage by type.
+  - `/spreadplayers` scatters players.
+  - `/forceload` keeps chunks loaded and ticking.
+  - `/setworldspawn` and `/defaultgamemode` persist across restarts.
+  - `/random`, `/swing` and `/teammsg` (`/tm`) complete the batch.
+  - A player's game mode is now recorded on their first join, so changing
+    the default only affects new players, as in vanilla.
+- **Potent sulfur and geysers (26.3).** Potent sulfur under water bubbles
+  and makes swimmers and mobs near it nauseous. Over a magma block it
+  becomes a geyser that sleeps and erupts on vanilla's timing; over lava it
+  erupts without stopping. Each eruption launches mobs, dropped items and
+  primed TNT up the column, taller for deeper water, with the eruption
+  sounds and animation. The sulfur caves' pools are gas vents; a geyser is
+  something you build.
+- **`/setblock`, `/fill`, `/enchant`, `/seed` and `/me`.** Operators can set a single
+  block or fill a box (up to 32,768 blocks), naming the block as vanilla
+  does, e.g. `oak_stairs[facing=north]`. Both take vanilla's modes: destroy
+  (drops what was there), keep (only fills air), hollow, outline, and
+  replace with an optional filter. `/seed` shows the world seed and `/me`
+  sends an emote. `/enchant` adds an enchantment to the item a player is
+  holding, if the item supports it and nothing on it conflicts.
+- **Llama caravans.** Put a lead on a llama and the free llamas within nine
+  blocks fall in behind it, each two blocks behind the one ahead, as in
+  vanilla. A llama that falls more than 26 blocks behind speeds up, and
+  leaves the line if it still can't catch up. The caravan breaks up when
+  nobody at the front is on a lead any more. A wandering trader's llamas
+  now spit at whoever hurts the trader, and any llama spits at a wild wolf
+  within ten blocks. Camels stroll at their vanilla
+  pace.
+- **The camel husk (26.3).** One naturally spawned husk in ten, given room
+  for a camel, rides out on a camel husk:
+  - the husk sits in front and drives, with an iron spear, and its spear
+    charges run at four times the pace;
+  - a parched rides in the back seat and shoots; if the husk dies, it moves
+    up and takes the reins.
+
+  The camel husk otherwise behaves like a camel: it sits, dashes, carries a
+  saddled player and makes its own camel-husk sounds. It heals on rabbit's
+  feet but never breeds. It cannot be led on a lead and never panics while
+  a mob is riding it. Like a monster, it despawns unless a player has
+  interacted with it. Other changes that came with it:
+  - a mob riding another mob moves at its mount's pace, as in vanilla, so a
+    chicken jockey is as quick as its chicken;
+  - zombie horses and zombie nautiluses count as monsters for spawning, as
+    in 26.3;
+  - pigs, striders and camels play their own saddle sounds.
+- **The sulfur cube.** 26.3's block-swallowing cube is in the game. Empty,
+  it hops about like a slime and never attacks: size 2 grown, size 1 as a
+  baby (a slime ball helps it grow), 4 health per size, and it dies into
+  two babies. Hand it a block — or throw one near it — and it swallows it
+  and turns into a ball. The block's archetype decides how it bounces,
+  slides, drags and floats and how far a hit or a push sends it, and blows
+  knock it about instead of hurting it. A swallowed TNT lights from flint
+  and steel, a fire charge, fire, a burning arrow or a redstone signal
+  (short from a blast) and goes off 6 seconds later with a power-3
+  explosion. A swallowed magma block burns whatever touches it. Shears pop
+  the block back out, and an empty bucket scoops the cube, block and all.
+  Giving one TNT, or letting it take TNT you threw, earns Uh Oh. It spawns
+  in the sulfur caves' pool, but that biome is not generated yet, so for
+  now it comes from spawn eggs, `/summon` and buckets. 26.2 clients see it
+  too (26.2 already knew the mob), and Bedrock shows its block.
+- **Boats seat two, and pick up mobs.** An empty boat takes aboard a
+  villager, goat or other mob that bumps into it, the vanilla way to move
+  villagers about. You can climb in beside it. Mobs as wide as a boat
+  (horses, iron golems, spiders…) and fish, squid and the like stay out,
+  and a boat you are steering picks up nothing. Whoever boarded first sits
+  in front and steers. Riding a boat with a goat earns Whatever Floats Your
+  Goat!
+- **Others see you swing and mine.** Other players now see your arm swing,
+  with either hand: at air, at a block you're mining or placing against,
+  at a mob. Before this, it moved only on a hit against a player. The
+  cracks spreading across a block now show to everyone watching, stage by
+  stage at vanilla's pace, and clear when you stop. The pace takes in the
+  tool and which blocks it is made for, Efficiency, Haste, Mining Fatigue,
+  being underwater without Aqua Affinity and being off the ground.
+- **Spears work.** Before this, a spear hit like a bare fist.
+  - **The jab.** A left-click hits everything on a short line in front of
+    you, from 2 to 4.5 blocks out (6.5 in creative). It does the spear's
+    attack damage: 1 for wood and gold, 2 for stone and copper, 3 for iron,
+    4 for diamond and 5 for netherite, plus Sharpness and similar. It needs
+    a full charge, and it knocks back what it hits.
+  - **The charge.** Hold use to lower the spear. After a short delay
+    (0.4 to 0.75 s, depending on the material), whatever you run into is hit
+    for 1 plus your closing speed in blocks per second times the spear's
+    multiplier (0.7 to 1.2). Moving fast enough also knocks the target back,
+    and faster still pulls a rider off its mount. The time you can hold each
+    of these effects for runs out one after another. A charge on horseback
+    is what the spear is built for, and striking five mobs in one charge
+    earns the advancement for it.
+  - **Mobs use them too.** Zombies, husks and zombie villagers can spawn
+    with an iron spear (one armed zombie in six). Zombified piglins carry a
+    golden sword, or one time in twenty a golden spear. A mob with a spear
+    closes in, lowers it and charges, then wheels off and comes round again.
+  - **Lunge** can be enchanted onto spears, from the table, books, trades
+    and loot. Each level jolts you forward 0.46 blocks on a jab, for four
+    points of exhaustion and a point of durability, when you have the
+    hunger to spare and aren't riding, gliding or swimming.
+  - **Still to come.** Other clients don't see the stab animation yet.
+- **Strongholds are whole strongholds.** The portal room no longer sits
+  alone underground. It is at the far end of vanilla's maze: a spiral
+  staircase down, then corridors behind wooden doors, iron doors and
+  grates, prison cells, turns, fountain and pillar rooms, galleries,
+  staircases, five-way crossings and libraries. The walls are weathered
+  stone bricks, some cracked, mossy or infested with silverfish. Chest
+  corridors, galleries and libraries hold chests with the vanilla
+  stronghold loot. The portal room has its lava pools, its barred windows
+  and a silverfish spawner on the stairs up to the frames.
+- **Mineshafts are vanilla's mineshafts.** Each one starts from a domed
+  room and spreads out as corridors, one- and two-storey crossings and
+  staircases, the way vanilla lays them out. Corridors have timber supports,
+  torches, cobwebs and rail lines. Plank bridges cross ravines, with log
+  pillars or chains holding them up. Cave spider nests have a spawner
+  buried in webs, and chest minecarts carry the abandoned-mineshaft loot. A
+  mineshaft can now start in any chunk, as often as in vanilla. In the
+  badlands they are built from dark oak and sit higher up, often breaking
+  out into the canyons. `/locate structure mineshaft_mesa` finds them.
+- **Sulfur caves generate.** 26.3's new cave biome now appears where
+  vanilla puts it: 26 to 115 blocks under flat land (the highest erosion)
+  between the coast and inland, where the weirdness runs furthest
+  negative. It is rare, about one column in 170. Its rock is banded with
+  sulfur and cinnabar, and on it grow sulfur spike clusters and single
+  spikes, pools of water rimmed in sulfur with wet potent sulfur on their
+  beds, and now and then a rooted sulfur spring: one of vanilla's ten
+  spring templates, stamped on the first flat, open ground above the
+  cave, with tuff scattered around it and sulfur roots running back down.
+  The world reports the biome underground, so the natural spawner uses
+  its pool (sulfur cubes will spawn there once the mob exists), and its
+  Adventuring Time criterion can now be met. Chunks over the new biome
+  regenerate with it underground; what players have built or dug there
+  stays.
 
 ### Fixed
 - **Redstone-driven doors, trapdoors and gates sound and vibrate as in
@@ -1061,148 +1201,6 @@ the public history since the project was open-sourced on 2026-07-10.
   ends in defeat ("Raid - Defeat" on the bar for thirty seconds). No raid
   outlasts 48,000 ticks, and the bar reads "Raiders Remaining" when two or
   fewer are left.
-
-### Added
-- **Happy ghasts follow you.** A happy ghast drifts after anyone holding a
-  snowball or a harness, rising or sinking to their height and stopping
-  three blocks off. A ghastling keeps near the nearest player. Both panic
-  when hurt, as vanilla's do.
-- **Thirteen more commands.**
-  - `/advancement` grants and revokes.
-  - `/attribute` reads and sets attribute values, bases and modifiers.
-  - `/recipe` gives and takes recipe-book entries.
-  - `/tag` adds entity tags, and selectors now take `tag=`.
-  - `/ride` mounts and dismounts.
-  - `/damage` deals damage by type.
-  - `/spreadplayers` scatters players.
-  - `/forceload` keeps chunks loaded and ticking.
-  - `/setworldspawn` and `/defaultgamemode` persist across restarts.
-  - `/random`, `/swing` and `/teammsg` (`/tm`) complete the batch.
-  - A player's game mode is now recorded on their first join, so changing
-    the default only affects new players, as in vanilla.
-- **Potent sulfur and geysers (26.3).** Potent sulfur under water bubbles
-  and makes swimmers and mobs near it nauseous. Over a magma block it
-  becomes a geyser that sleeps and erupts on vanilla's timing; over lava it
-  erupts without stopping. Each eruption launches mobs, dropped items and
-  primed TNT up the column, taller for deeper water, with the eruption
-  sounds and animation. The sulfur caves' pools are gas vents; a geyser is
-  something you build.
-- **`/setblock`, `/fill`, `/enchant`, `/seed` and `/me`.** Operators can set a single
-  block or fill a box (up to 32,768 blocks), naming the block as vanilla
-  does, e.g. `oak_stairs[facing=north]`. Both take vanilla's modes: destroy
-  (drops what was there), keep (only fills air), hollow, outline, and
-  replace with an optional filter. `/seed` shows the world seed and `/me`
-  sends an emote. `/enchant` adds an enchantment to the item a player is
-  holding, if the item supports it and nothing on it conflicts.
-- **Llama caravans.** Put a lead on a llama and the free llamas within nine
-  blocks fall in behind it, each two blocks behind the one ahead, as in
-  vanilla. A llama that falls more than 26 blocks behind speeds up, and
-  leaves the line if it still can't catch up. The caravan breaks up when
-  nobody at the front is on a lead any more. A wandering trader's llamas
-  now spit at whoever hurts the trader, and any llama spits at a wild wolf
-  within ten blocks. Camels stroll at their vanilla
-  pace.
-- **The camel husk (26.3).** One naturally spawned husk in ten, given room
-  for a camel, rides out on a camel husk:
-  - the husk sits in front and drives, with an iron spear, and its spear
-    charges run at four times the pace;
-  - a parched rides in the back seat and shoots; if the husk dies, it moves
-    up and takes the reins.
-
-  The camel husk otherwise behaves like a camel: it sits, dashes, carries a
-  saddled player and makes its own camel-husk sounds. It heals on rabbit's
-  feet but never breeds. It cannot be led on a lead and never panics while
-  a mob is riding it. Like a monster, it despawns unless a player has
-  interacted with it. Other changes that came with it:
-  - a mob riding another mob moves at its mount's pace, as in vanilla, so a
-    chicken jockey is as quick as its chicken;
-  - zombie horses and zombie nautiluses count as monsters for spawning, as
-    in 26.3;
-  - pigs, striders and camels play their own saddle sounds.
-- **The sulfur cube.** 26.3's block-swallowing cube is in the game. Empty,
-  it hops about like a slime and never attacks: size 2 grown, size 1 as a
-  baby (a slime ball helps it grow), 4 health per size, and it dies into
-  two babies. Hand it a block — or throw one near it — and it swallows it
-  and turns into a ball. The block's archetype decides how it bounces,
-  slides, drags and floats and how far a hit or a push sends it, and blows
-  knock it about instead of hurting it. A swallowed TNT lights from flint
-  and steel, a fire charge, fire, a burning arrow or a redstone signal
-  (short from a blast) and goes off 6 seconds later with a power-3
-  explosion. A swallowed magma block burns whatever touches it. Shears pop
-  the block back out, and an empty bucket scoops the cube, block and all.
-  Giving one TNT, or letting it take TNT you threw, earns Uh Oh. It spawns
-  in the sulfur caves' pool, but that biome is not generated yet, so for
-  now it comes from spawn eggs, `/summon` and buckets. 26.2 clients see it
-  too (26.2 already knew the mob), and Bedrock shows its block.
-- **Boats seat two, and pick up mobs.** An empty boat takes aboard a
-  villager, goat or other mob that bumps into it, the vanilla way to move
-  villagers about. You can climb in beside it. Mobs as wide as a boat
-  (horses, iron golems, spiders…) and fish, squid and the like stay out,
-  and a boat you are steering picks up nothing. Whoever boarded first sits
-  in front and steers. Riding a boat with a goat earns Whatever Floats Your
-  Goat!
-- **Others see you swing and mine.** Other players now see your arm swing,
-  with either hand: at air, at a block you're mining or placing against,
-  at a mob. Before this, it moved only on a hit against a player. The
-  cracks spreading across a block now show to everyone watching, stage by
-  stage at vanilla's pace, and clear when you stop. The pace takes in the
-  tool and which blocks it is made for, Efficiency, Haste, Mining Fatigue,
-  being underwater without Aqua Affinity and being off the ground.
-- **Spears work.** Before this, a spear hit like a bare fist.
-  - **The jab.** A left-click hits everything on a short line in front of
-    you, from 2 to 4.5 blocks out (6.5 in creative). It does the spear's
-    attack damage: 1 for wood and gold, 2 for stone and copper, 3 for iron,
-    4 for diamond and 5 for netherite, plus Sharpness and similar. It needs
-    a full charge, and it knocks back what it hits.
-  - **The charge.** Hold use to lower the spear. After a short delay
-    (0.4 to 0.75 s, depending on the material), whatever you run into is hit
-    for 1 plus your closing speed in blocks per second times the spear's
-    multiplier (0.7 to 1.2). Moving fast enough also knocks the target back,
-    and faster still pulls a rider off its mount. The time you can hold each
-    of these effects for runs out one after another. A charge on horseback
-    is what the spear is built for, and striking five mobs in one charge
-    earns the advancement for it.
-  - **Mobs use them too.** Zombies, husks and zombie villagers can spawn
-    with an iron spear (one armed zombie in six). Zombified piglins carry a
-    golden sword, or one time in twenty a golden spear. A mob with a spear
-    closes in, lowers it and charges, then wheels off and comes round again.
-  - **Lunge** can be enchanted onto spears, from the table, books, trades
-    and loot. Each level jolts you forward 0.46 blocks on a jab, for four
-    points of exhaustion and a point of durability, when you have the
-    hunger to spare and aren't riding, gliding or swimming.
-  - **Still to come.** Other clients don't see the stab animation yet.
-- **Strongholds are whole strongholds.** The portal room no longer sits
-  alone underground. It is at the far end of vanilla's maze: a spiral
-  staircase down, then corridors behind wooden doors, iron doors and
-  grates, prison cells, turns, fountain and pillar rooms, galleries,
-  staircases, five-way crossings and libraries. The walls are weathered
-  stone bricks, some cracked, mossy or infested with silverfish. Chest
-  corridors, galleries and libraries hold chests with the vanilla
-  stronghold loot. The portal room has its lava pools, its barred windows
-  and a silverfish spawner on the stairs up to the frames.
-- **Mineshafts are vanilla's mineshafts.** Each one starts from a domed
-  room and spreads out as corridors, one- and two-storey crossings and
-  staircases, the way vanilla lays them out. Corridors have timber supports,
-  torches, cobwebs and rail lines. Plank bridges cross ravines, with log
-  pillars or chains holding them up. Cave spider nests have a spawner
-  buried in webs, and chest minecarts carry the abandoned-mineshaft loot. A
-  mineshaft can now start in any chunk, as often as in vanilla. In the
-  badlands they are built from dark oak and sit higher up, often breaking
-  out into the canyons. `/locate structure mineshaft_mesa` finds them.
-- **Sulfur caves generate.** 26.3's new cave biome now appears where
-  vanilla puts it: 26 to 115 blocks under flat land (the highest erosion)
-  between the coast and inland, where the weirdness runs furthest
-  negative. It is rare, about one column in 170. Its rock is banded with
-  sulfur and cinnabar, and on it grow sulfur spike clusters and single
-  spikes, pools of water rimmed in sulfur with wet potent sulfur on their
-  beds, and now and then a rooted sulfur spring: one of vanilla's ten
-  spring templates, stamped on the first flat, open ground above the
-  cave, with tuff scattered around it and sulfur roots running back down.
-  The world reports the biome underground, so the natural spawner uses
-  its pool (sulfur cubes will spawn there once the mob exists), and its
-  Adventuring Time criterion can now be met. Chunks over the new biome
-  regenerate with it underground; what players have built or dug there
-  stays.
 
 ### Changed
 - **Villager and wandering-trader trades come from 26.3's trade data.**
