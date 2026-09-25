@@ -32,6 +32,8 @@ the public history since the project was open-sourced on 2026-07-10.
   them grows on your floors or under your roofs.
 
 ### Fixed
+- **Spectators don't start raids.** A spectator with Bad Omen can pass
+  through a village without setting off a raid, as in vanilla.
 - **Brewing stands bubble smoothly.** The brew now counts down every tick,
   as in vanilla, so the progress bar and bubbles move steadily instead of
   jumping once a second.

@@ -52,6 +52,14 @@ func TestBadOmenTriggersRaidNearVillage(t *testing.T) {
 	}
 	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
 	h.applyEffect(players, pl, effBadOmen, 0, 6000)
+	// A spectator carries the omen through a village untouched
+	// (BadOmenMobEffect.applyEffectTick: !isSpectator).
+	pl.gamemode = gmSpectator
+	h.checkRaidTrigger(players, pl)
+	if pl.hasEffect(effBadOmen) == 0 || len(h.raids) != 0 {
+		t.Fatal("a spectator's Bad Omen started a raid")
+	}
+	pl.gamemode = gmSurvival
 	h.checkRaidTrigger(players, pl)
 	if pl.hasEffect(effBadOmen) != 0 {
 		t.Fatal("reaching a village should consume Bad Omen")

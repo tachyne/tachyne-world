@@ -394,7 +394,7 @@ func (h *hub) villageNear(x, z, r int) (blockPos, bool) {
 // get ready or get out.
 func (h *hub) checkRaidTrigger(players map[int32]*tracked, t *tracked) {
 	lvl := t.hasEffect(effBadOmen)
-	if lvl == 0 || h.rules.Difficulty == diffPeaceful || !h.rules.Raids {
+	if lvl == 0 || h.rules.Difficulty == diffPeaceful || !h.rules.Raids || t.gamemode == gmSpectator {
 		return
 	}
 	center, ok := h.villageNear(int(t.x), int(t.z), 64)
