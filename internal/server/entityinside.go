@@ -273,13 +273,6 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 				// EyeblossomBlock.entityInside: an open eyeblossom poisons the
 				// bee that visits it (25 ticks), unless it is poisoned already.
 				h.applyMobEffect(h.playersRef, m, effPoison, 0, 2)
-			case !onFloor && m.etype == entityRavager && isCropState(s) && h.rules.MobGriefing:
-				// CropBlock.entityInside: a ravager tramples crops flat.
-				h.breakBlockDrop(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
-			case !onFloor && m.etype == entityRavager && isPitcherCrop(s) && h.rules.MobGriefing:
-				// PitcherCropBlock.entityInside: the pitcher is not a CropBlock,
-				// but it carries the same rule.
-				h.tramplePitcher(players, m.dim, cellWith(h, m.dim, int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z)), s), s)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla), and
 				// only a mob moving through it is scratched (the 0.003 test).
@@ -295,6 +288,35 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 				}
 			}
 		})
+	}
+}
+
+// ravagerFlattenCrops is CropBlock.entityInside and PitcherCropBlock.
+// entityInside for a ravager: every crop cell its body touches is destroyed
+// (Level.destroyBlock, with drops), with mob griefing on. It runs on every
+// mob update, over the ravager's whole box, not a once-a-second centre
+// sample, so a charging ravager cuts a swath two blocks wide.
+func (h *hub) ravagerFlattenCrops(players map[int32]*tracked, m *mob) {
+	if !h.rules.MobGriefing {
+		return
+	}
+	w := h.worldFor(m.dim)
+	b := m.box()
+	half := b.w / 2
+	minX, maxX := int(math.Floor(m.x-half)), int(math.Floor(m.x+half-1e-7))
+	minZ, maxZ := int(math.Floor(m.z-half)), int(math.Floor(m.z+half-1e-7))
+	minY, maxY := int(math.Floor(m.y)), int(math.Floor(m.y+b.h-1e-7))
+	for x := minX; x <= maxX; x++ {
+		for y := minY; y <= maxY; y++ {
+			for z := minZ; z <= maxZ; z++ {
+				switch s := w.At(x, y, z); {
+				case isCropState(s):
+					h.breakBlockDrop(players, m.dim, blockPos{x, y, z}, s)
+				case isPitcherCrop(s):
+					h.tramplePitcher(players, m.dim, blockPos{x, y, z}, s)
+				}
+			}
+		}
 	}
 }
 
