@@ -277,8 +277,8 @@ func (h *hub) runClone(players map[int32]*tracked, caller *player, r cloneReq) s
 		return "The source and destination areas cannot overlap"
 	}
 	area := int64(span.x+1) * int64(span.y+1) * int64(span.z+1)
-	if area > fillLimit {
-		return fmt.Sprintf("Too many blocks in the specified area (maximum %d, but specified %d)", fillLimit, area)
+	if limit := int64(h.blockLimit()); area > limit {
+		return fmt.Sprintf("Too many blocks in the specified area (maximum %d, but specified %d)", limit, area)
 	}
 	if !h.cloneLoaded(r.srcDim, from0, from1) || !h.cloneLoaded(r.dstDim, r.dest, dest1) {
 		return "That position is not loaded"

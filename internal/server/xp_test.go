@@ -409,3 +409,20 @@ func TestTeleportFacingAndAcrossDimensions(t *testing.T) {
 		t.Fatalf("a Nether target was not sent to the overworld: pending %d", you.p.pendingDim.Load())
 	}
 }
+
+// max_block_modifications is a live rule: /fill over it is refused.
+func TestMaxBlockModificationsRule(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "gamerule max_block_modifications 10")
+	settle(t, h, logs, "M1")
+	s.handleCommand(alice, "fill 0 100 0 2 102 2 stone")
+	settle(t, h, logs, "M2")
+	a := linesBetween(logs["alice"], "M1", "M2")
+	if !hasLine(a, "Too many blocks in the specified area (maximum 10, specified 27)") {
+		t.Errorf("replies %q", a)
+	}
+	if v, _ := h.ruleValueText("max_block_modifications"); v != "10" {
+		t.Errorf("the rule reads %q", v)
+	}
+}

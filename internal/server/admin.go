@@ -92,8 +92,11 @@ type worldRules struct {
 	MobDropDecay   bool `json:"mobExplosionDropDecay"`
 	TNTDropDecay   bool `json:"tntExplosionDropDecay"`
 	MaxCramming    int  `json:"maxEntityCramming"`
-	RespawnRadius  int  `json:"respawnRadius"`
-	MaxSnowHeight  int  `json:"maxSnowAccumulationHeight"`
+	// MaxBlockMods is max_block_modifications: the most blocks one /fill or
+	// /clone may touch (vanilla 32768).
+	MaxBlockMods  int `json:"maxBlockModifications"`
+	RespawnRadius int `json:"respawnRadius"`
+	MaxSnowHeight int `json:"maxSnowAccumulationHeight"`
 	// FireSpreadRadius is vanilla's fire_spread_radius_around_player, which
 	// replaced doFireTick in 1.21.9: fire only spreads and burns out within
 	// this many blocks of a player. -1 is everywhere, 0 is nowhere (which is
@@ -149,7 +152,7 @@ func defaultRules() worldRules {
 		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
-		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1,
+		MaxCramming: maxEntityCramming, RespawnRadius: 10, MaxSnowHeight: 1, MaxBlockMods: fillLimit,
 		FireSpreadRadius: defaultFireSpreadRadius,
 		AllowNether:      true, PortalDelay: portalDwellTicks, PortalDelayCreate: 0,
 		ProjectilesBreak: true, GlobalSounds: true,
@@ -461,6 +464,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		for _, t := range players { // EntityEvent 22 reduced / 23 full
 			t.p.trySendEv(entityStatus(t.p.eid, map[bool]byte{true: 22, false: 23}[e.on]))
 		}
+	case "max_block_modifications":
+		h.rules.MaxBlockMods = max(1, e.num)
 	case "max_entity_cramming":
 		h.rules.MaxCramming = max(0, e.num)
 	case "respawn_radius":
@@ -605,6 +610,7 @@ const (
 )
 
 func (h *hub) syncLoginFlags() {
+	h.blockModLimit.Store(int32(max(1, h.rules.MaxBlockMods)))
 	var f uint32
 	if h.rules.ImmediateResp {
 		f |= loginNoRespawnScreen

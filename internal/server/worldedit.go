@@ -15,6 +15,14 @@ import (
 
 const fillLimit = 32768
 
+// blockLimit is the live max_block_modifications (any goroutine).
+func (h *hub) blockLimit() int {
+	if v := h.blockModLimit.Load(); v > 0 {
+		return int(v)
+	}
+	return fillLimit
+}
+
 // evSetBlocks is one /setblock or /fill, run on the hub.
 type evSetBlocks struct {
 	eid        int32
@@ -130,8 +138,8 @@ func (s *Server) cmdFill(p *player, args []string) {
 		}
 	}
 	n := (e.to.x - e.from.x + 1) * (e.to.y - e.from.y + 1) * (e.to.z - e.from.z + 1)
-	if n > fillLimit {
-		p.tell(fmt.Sprintf("Too many blocks in the specified area (maximum %d, specified %d)", fillLimit, n))
+	if limit := s.hub.blockLimit(); n > limit {
+		p.tell(fmt.Sprintf("Too many blocks in the specified area (maximum %d, specified %d)", limit, n))
 		return
 	}
 	e.fillWanted = n

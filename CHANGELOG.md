@@ -105,6 +105,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **`max_block_modifications` works.** The gamerule now sets how many
+  blocks one `/fill` or `/clone` may change (32768 by default), as in
+  vanilla; before, the limit was fixed.
 - **The dragon's death is heard.** When the Ender Dragon dies its death
   roar now carries across the End (and, with `global_sound_events`, beyond),
   as in vanilla; players out of sight heard nothing. The lightning-rod
