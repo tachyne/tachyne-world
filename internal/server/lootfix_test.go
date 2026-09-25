@@ -29,8 +29,10 @@ func TestSpecialBlockDrops(t *testing.T) {
 				plants++
 			}
 		}
-		if ds := h.rollDrops(tallGrassLo); len(ds) != 0 {
-			t.Fatalf("the upper half drops nothing: %+v", ds)
+		for _, d := range h.rollDrops(tallGrassLo) { // the upper half rolls the same 1/8 (location_check)
+			if d.item != itemWheatSeeds {
+				t.Fatalf("the upper half dropped %+v", d)
+			}
 		}
 	}
 	if plants != 0 || seeds < 350 || seeds > 650 {
