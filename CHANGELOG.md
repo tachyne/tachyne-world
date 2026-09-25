@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/damage names who did it.** `/damage <target> <amount> <type> at <x y z>`
+  hits from a point (a raised shield faces it), and `by <entity> [from
+  <cause>]` blames an attacker: the death message names them, a mob they
+  hurt counts as their kill and turns on them, and the blow knocks the
+  target back as a hit does.
 - **Renamed containers keep their names.** A chest, barrel, shulker box,
   furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
   beacon, copper chest, banner, head or copper golem statue placed from an
