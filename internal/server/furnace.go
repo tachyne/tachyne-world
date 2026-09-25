@@ -164,7 +164,7 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 	case cookSmoker:
 		menu, title = menuSmoker, "Smoker"
 	}
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: menu, Title: title})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: menu, Title: h.containerTitle(pos, title)})
 	h.sendFurnaceWindow(t, f)
 }
 

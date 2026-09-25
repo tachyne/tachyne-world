@@ -89,6 +89,7 @@ type containerFile struct {
 	// one; a rocket has up to seven.
 	// A decorated pot's four faces, keyed like the other block entities.
 	PotSherds  map[string]potSherds       `json:"pot_sherds,omitempty"`
+	BlockNames map[string]string          `json:"block_names,omitempty"` // custom names of placed containers, banners, heads
 	Stars      map[string][]fireworkBurst `json:"stars,omitempty"`
 	NextStarID int32                      `json:"next_star_id,omitempty"`
 	// Custom item names by id (names.go). Loaded before any other store
@@ -1035,6 +1036,23 @@ func (s *containerStore) recordStars(ss *starStore) {
 	s.mu.Lock()
 	s.m.Stars, s.m.NextStarID = snap, last
 	s.mu.Unlock()
+}
+
+// recordBlockNames / loadBlockNames persist placed blocks' custom names.
+func (s *containerStore) recordBlockNames(bn *blockNameStore) {
+	if bn == nil {
+		return
+	}
+	snap := bn.snapshot()
+	s.mu.Lock()
+	s.m.BlockNames = snap
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadBlockNames() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.BlockNames
 }
 
 // recordPotSherds / loadPotSherds persist the decorated pots' faces.

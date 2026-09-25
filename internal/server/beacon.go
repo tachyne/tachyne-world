@@ -135,7 +135,7 @@ func (h *hub) openBeacon(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winKind, t.winPos = h.nextWin, winBeacon, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuBeacon), Title: "Beacon"})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuBeacon), Title: h.containerTitle(t.winPos, "Beacon")})
 	h.sendBeaconWindow(t)
 }
 

@@ -684,6 +684,8 @@ type hub struct {
 	lastBannerPos    simPos
 	lastPotPos       simPos          // a decorated pot just removed…
 	lastPotSherds    potSherds       // …and its faces, for the drop that follows
+	lastNamedPos     simPos          // a named block just removed…
+	lastNamedName    string          // …and its name, for the drop that follows
 	hopperTicking    map[simPos]bool // hoppers among the block-entity tickers (tickHoppers)…
 	hopperOrder      []simPos        // …in the order they joined
 	lastBoxPos       simPos          // a shulker box just removed…
@@ -696,6 +698,7 @@ type hub struct {
 	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
+	blockNames       *blockNameStore         // custom names of placed containers, banners, heads
 	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
@@ -891,6 +894,7 @@ func newHub(w *world.World) *hub {
 		woodShelves:   map[simPos]*[3]invStack{},
 		shelfView:     newShelfStore(),
 		potSherds:     newPotSherdStore(),
+		blockNames:    newBlockNameStore(),
 		jukeboxes:     map[simPos]*jukebox{},
 		beacons:       map[simPos]*beacon{},
 		campfires:     map[simPos]*campfire{},
@@ -1007,6 +1011,7 @@ func (h *hub) run() {
 		h.boxes.restore(h.containers.loadBoxes())
 		h.initStars(h.containers.loadStars())
 		h.potSherds.restore(h.containers.loadPotSherds())
+		h.blockNames.restore(h.containers.loadBlockNames())
 		h.initBundles(h.containers.loadBundles())
 		h.hiveItems, h.nextHiveID = h.containers.loadHiveItems()
 		h.conduits = h.containers.loadConduits()
@@ -1350,6 +1355,7 @@ func (h *hub) run() {
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
+					h.containers.recordBlockNames(h.blockNames)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
@@ -2328,6 +2334,7 @@ func (h *hub) run() {
 					h.containers.recordBoxes(h.boxes.snapshot(), h.boxes.lastMinted())
 					h.containers.recordStars(h.stars)
 					h.containers.recordPotSherds(h.potSherds)
+					h.containers.recordBlockNames(h.blockNames)
 					h.containers.recordBundles(h.bundles)
 					h.containers.recordHiveItems(h.hiveItems, h.nextHiveID)
 					h.containers.recordConduits(h.conduits)
@@ -2787,6 +2794,11 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 // onBlock relays an applied edit to every other player tracking that chunk, so
 // builds appear for everyone (the editor already saw its own prediction).
 func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
+	if t := players[e.by]; t != nil && e.broken == 0 && e.placed {
+		// A renamed stack names the block it places. The session posts this
+		// before the evConsume that empties the slot (the channel is FIFO).
+		h.nameBlockFromStack(simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}, e.state, heldStack(t))
+	}
 	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
 		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed
 	}

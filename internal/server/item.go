@@ -152,6 +152,11 @@ func (h *hub) spawnBlockDrop(players map[int32]*tracked, dim int, item int32, co
 	// entity's layers, which the store holds until then.
 	// A decorated pot's faces ride any drop of it the same way (copy_components
 	// from the block entity), held by spillPot for the drop that follows.
+	if it != nil {
+		if n := h.takeHeldBlockName(simPos{dim: dim, blockPos: blockPos{x, y, z}}, item); n != "" {
+			it.name = n // copy_components custom_name
+		}
+	}
 	if it != nil && item == itemDecoratedPot && h.lastPotPos == (simPos{dim: dim, blockPos: blockPos{x, y, z}}) {
 		it.sherds = h.lastPotSherds
 		h.lastPotPos, h.lastPotSherds = simPos{}, potSherds{}

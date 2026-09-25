@@ -164,7 +164,7 @@ func (h *hub) openBin(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winPos, t.winKind = h.nextWin, pos, winBin // no opener counter: no CONTAINER_OPEN
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menu), Title: title})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menu), Title: h.containerTitle(pos, title)})
 	h.sendBinWindow(t, c)
 }
 

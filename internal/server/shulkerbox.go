@@ -92,6 +92,7 @@ func (h *hub) dropShulkerBox(players map[int32]*tracked, dim int, state uint32, 
 	it := h.spawnItemIn(players, dim, item, 1, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 	if it != nil {
 		it.boxID = boxID
+		it.name = h.takeHeldBlockName(simPos{dim: dim, blockPos: pos}, item)
 	}
 }
 

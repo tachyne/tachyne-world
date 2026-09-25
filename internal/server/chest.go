@@ -171,7 +171,7 @@ func (h *hub) openChest(t *tracked, x, y, z int) {
 	if isShulkerBox(state) {
 		menu = menuShulkerBox
 	}
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menu), Title: title})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menu), Title: h.containerTitle(pos, title)})
 	h.sendChestWindow(t, c)
 }
 
@@ -198,6 +198,7 @@ func (h *hub) sendChestWindow(t *tracked, c *chest) {
 // scatter as item drops and the state is forgotten. Anyone still viewing it
 // gets a resync on their next click (stale window id path).
 func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, old, newState uint32) {
+	h.holdBlockName(simPos{dim: dim, blockPos: blockPos{x, y, z}}, old, newState)
 	h.spillJukebox(players, dim, x, y, z, newState)
 	h.spillPot(players, dim, blockPos{x, y, z}, newState)
 	h.spillCampfire(players, dim, x, y, z, newState)

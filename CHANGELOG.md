@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Renamed containers keep their names.** A chest, barrel, shulker box,
+  furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
+  beacon, copper chest, banner, head or copper golem statue placed from an
+  item renamed on an anvil keeps the name. Containers show it as the title
+  of their screen (a large chest takes either half's name), and the block
+  drops with its name however it is broken.
 - **End gateways take more than players.** Mobs, dropped items and thrown
   ender pearls go through too. A pearl thrown into a gateway comes out at
   rest on the far side and lands its thrower there. Idle gateways also flash

@@ -181,7 +181,7 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 		h.incCustom(t, "open_chest", 1)
 	}
 	h.angerNearbyPiglins(h.playersRef, t, true)
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: h.doubleChestTitle(t.dim, left, right)})
 	h.sendDoubleChestWindow(t)
 	if firstL || firstR {
 		h.pairSoundAt(h.playersRef, t.winPos, t.winPos2, true)

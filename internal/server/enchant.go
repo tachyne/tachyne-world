@@ -91,7 +91,7 @@ func (h *hub) openEnchantTable(t *tracked, x, y, z int) {
 	}
 	t.winID, t.winKind, t.winPos = h.nextWin, winEnchant, simPos{dim: t.dim, blockPos: blockPos{x, y, z}}
 
-	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuEnchantment), Title: "Enchant"})
+	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuEnchantment), Title: h.containerTitle(t.winPos, "Enchant")})
 	h.sendEnchantWindow(t)
 	h.rollEnchOptions(t)
 }
