@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -75,8 +76,8 @@ func TestMossSpeedsTheSnifferEgg(t *testing.T) {
 		t.Error("moss did not count as a hatch boost")
 	}
 
-	h.scheduleSnifferEgg(0, plain.x, plain.y, plain.z)
-	h.scheduleSnifferEgg(0, mossy.x, mossy.y, mossy.z)
+	h.scheduleSnifferEgg(nil, 0, plain.x, plain.y, plain.z)
+	h.scheduleSnifferEgg(nil, 0, mossy.x, mossy.y, mossy.z)
 	slow := h.snifferEggs[simPos{dim: 0, blockPos: plain}]
 	fast := h.snifferEggs[simPos{dim: 0, blockPos: mossy}]
 	if fast >= slow {
@@ -112,4 +113,25 @@ func TestChorusPlantFallsWithoutSupport(t *testing.T) {
 			t.Errorf("chorus plant at y=%d survived losing its support", y)
 		}
 	}
+}
+
+// SnifferEggBlock.onPlace: an egg on moss shows level event 3009.
+func TestBoostedSnifferEggSparkles(t *testing.T) {
+	if !snifferEggOK {
+		t.Skip("no sniffer egg block")
+	}
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 8.5, 70, 8.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.world.SetBlock(8, 69, 8, mossBlockState)
+	h.world.SetBlock(8, 70, 8, snifferEggLo)
+	drainOut(pl.p)
+	h.tickSnifferEgg(players, 0, 8, 70, 8, snifferEggLo)
+	for len(pl.p.out) > 0 {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.WorldFX); ok && ev.Event == worldEventSnifferEggBoost {
+			return
+		}
+	}
+	t.Fatal("no 3009 for an egg on moss")
 }
