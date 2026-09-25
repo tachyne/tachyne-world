@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sponges dry out waterlogged blocks.** A sponge now drains waterlogged
+  slabs, stairs, fences and the like (they stay, dry) and soaks up the
+  water beyond them, as in vanilla.
 - **Boats need room.** A boat can no longer be placed inside another boat,
   a player, a mob or a wall, as in vanilla.
 - **Buckets scoop what you are looking at.** An empty bucket no longer
