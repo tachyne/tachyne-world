@@ -339,6 +339,15 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
 			h.dropExploded(players, dim, pos, st, radius, kind)
+			// BlockBehaviour.onExplosionHit: spawnAfterBreak drops the block's
+			// experience when a PLAYER set the blast off (TNT they lit or
+			// shot), as if they had mined it — ore blown up by a creeper
+			// gives none.
+			if t := players[cfg.causer]; t != nil && !cfg.causerMob && h.rules.DoTileDrops {
+				if xp := xpForBlock(st, h.rng.Intn); xp > 0 {
+					h.spawnXPOrbIn(players, dim, xp, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5)
+				}
+			}
 			cleared = append(cleared, pos)
 			if isBeeHome(st) {
 				hives = append(hives, pos)
@@ -356,6 +365,7 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	// out are not caught in the blast that freed them.
 	for _, pos := range hives {
 		h.explodedHive(players, dim, pos, cfg.hiveRelease)
+		h.angerNearbyBees(players, dim, pos) // BeehiveBlock.onExplosionHit
 	}
 }
 

@@ -143,9 +143,9 @@ func (h *hub) triggerBlock(players map[int32]*tracked, dim int, pos blockPos, st
 			h.extinguishCandle(players, dim, pos, st)
 		}
 	case isBeeHome(st):
-		if t := players[shooter]; t != nil {
-			h.angerBees(players, t, dim, pos)
-		}
+		// BeehiveBlock.onExplosionHit: the burst sets the bees near the hive
+		// on a player near it, whoever fired the charge.
+		h.angerNearbyBees(players, dim, pos)
 	case isLever(st):
 		// Redstone runs in every dimension since the simulation learned which
 		// one it is in, so a gust flips a lever in the Nether too — the

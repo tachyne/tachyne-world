@@ -150,6 +150,43 @@ func (h *hub) angerBees(players map[int32]*tracked, t *tracked, dim int, pos blo
 	}
 }
 
+// angerNearbyBees is BeehiveBlock.angerNearbyBees, which a blast reaching a
+// hive or nest runs (onExplosionHit — a wind charge's too): the bees in the
+// box 8 blocks out and 6 up and down around it that have no target yet each
+// go after one of the players in that box, picked at random. No player
+// there, no anger.
+func (h *hub) angerNearbyBees(players map[int32]*tracked, dim int, pos blockPos) {
+	in := func(x, y, z float64) bool {
+		return x >= float64(pos.x)-8 && x <= float64(pos.x)+9 &&
+			y >= float64(pos.y)-6 && y <= float64(pos.y)+7 &&
+			z >= float64(pos.z)-8 && z <= float64(pos.z)+9
+	}
+	var bees []*mob
+	for _, m := range h.mobs {
+		if m.etype == entityBee && m.dim == dim && m.dying == 0 && in(m.x, m.y, m.z) {
+			bees = append(bees, m)
+		}
+	}
+	if len(bees) == 0 {
+		return
+	}
+	var near []*tracked
+	for _, t := range players {
+		if t.dim == dim && !t.dead && t.gamemode != gmSpectator && in(t.x, t.y, t.z) {
+			near = append(near, t)
+		}
+	}
+	if len(near) == 0 {
+		return
+	}
+	for _, m := range bees {
+		if m.targetEID != 0 {
+			continue // bee.getTarget() == null only
+		}
+		h.provoke(m, near[h.rng.Intn(len(near))])
+	}
+}
+
 // evHarvestHive asks the hub to run a right-click on a hive.
 type evHarvestHive struct {
 	eid     int32

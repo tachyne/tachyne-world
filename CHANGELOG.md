@@ -95,6 +95,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Explosions and falls, as in vanilla.** An explosion or a wind charge
+  that reaches a beehive sets the bees near it on a player nearby, whoever
+  set it off. Ore blown up by TNT a player lit drops its experience, as if
+  mined. Mobs landing on turtle eggs can crack them — zombies never do.
 - **Ice and coral read the water as vanilla does.** Ice broken over air, a
   flower or a torch no longer leaves water behind — only over a solid block
   or a liquid. Coral beside a waterlogged block, seagrass or kelp stays
