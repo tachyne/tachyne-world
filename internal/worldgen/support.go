@@ -66,6 +66,7 @@ var supportNames = map[SupportKind][]string{
 		"wheat",
 	},
 	SupportFloor: {
+		"soul_fire", // the game layer asks for its soul block (SoulFireBlock.canSurvive)
 		"acacia_door", "acacia_pressure_plate", "acacia_sign", "activator_rail",
 		"bamboo_door", "bamboo_pressure_plate", "bamboo_sign",
 		"birch_door", "birch_pressure_plate", "birch_sign", "black_banner",

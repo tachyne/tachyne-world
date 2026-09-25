@@ -61,6 +61,19 @@ func fireContactDamage(a, b uint32) float64 {
 	return 0
 }
 
+// soulFireBase is #soul_fire_base_blocks: fire lit over it is soul fire,
+// and soul fire lasts only while it stays (BaseFireBlock.getState,
+// SoulFireBlock.canSurvive).
+func soulFireBase(s uint32) bool { return s == worldgen.SoulSand || s == soulSoilBase }
+
+// fireStateOver is BaseFireBlock.getState for a fire lit above `below`.
+func fireStateOver(below uint32) uint32 {
+	if soulFireBase(below) {
+		return soulFire
+	}
+	return fireDefault
+}
+
 func isFire(state uint32) bool {
 	return (state >= fireStateMin && state <= fireStateMax) || state == soulFire
 }
@@ -104,7 +117,7 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, fx, fy, fz, s.worldFor(p).Block(fx, fy, fz), seq)
 		return true
 	}
-	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
+	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
 	s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
 	return true
 }
@@ -130,7 +143,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, fx, fy, fz, s.worldFor(p).Block(fx, fy, fz), seq)
 		return
 	}
-	s.putBlock(p, fx, fy, fz, fireDefault, true, seq)
+	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
 	s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 }
 
@@ -590,6 +603,10 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 
 // igniteFire places a fire block of the given age and schedules its first tick.
 func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
+	if soulFireBase(h.rsWorld().At(pos.x, pos.y-1, pos.z)) {
+		h.rsSet(players, pos, soulFire) // soul fire neither ages nor spreads
+		return
+	}
 	h.rsSet(players, pos, fireDefault)
 	h.fireAge[h.rsKey(pos)] = age
 	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))

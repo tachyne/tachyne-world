@@ -135,6 +135,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if isChorusPlant(state) || isChorusFlower(state) {
 		return chorusSurvives(w, pos, state)
 	}
+	if state == soulFire { // SoulFireBlock.canSurvive: its soul block below
+		return soulFireBase(below())
+	}
 	if k, ok := signKind(state); ok && k == signHangingWall {
 		// WallHangingSignBlock.canPlace: held from either side along its
 		// facing's clockwise axis — a full sturdy face there, or another

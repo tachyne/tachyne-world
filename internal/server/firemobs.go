@@ -172,7 +172,7 @@ func (h *hub) smallFireballLights(players map[int32]*tracked, a *arrowEntity, hi
 		return
 	}
 	// BaseFireBlock.getState: soul fire over #soul_fire_base_blocks.
-	if below := h.worldFor(a.dim).At(cell.x, cell.y-1, cell.z); below == worldgen.SoulSand || below == soulSoilBase {
+	if below := h.worldFor(a.dim).At(cell.x, cell.y-1, cell.z); soulFireBase(below) {
 		h.setBlockAt(players, a.dim, cell, soulFire)
 		return
 	}
