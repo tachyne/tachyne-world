@@ -137,6 +137,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Raiders search the village.** Once a raid reaches the village, raiders
+  with nobody to fight go from house to house — heading for beds within
+  48 blocks they haven't just visited — instead of milling about the
+  middle.
 - **Closed doors stop mobs, and raiding vindicators get through them.**
   Mobs no longer walk straight through closed doors. During a raid a
   vindicator that reaches a closed wooden door opens it and leaves it

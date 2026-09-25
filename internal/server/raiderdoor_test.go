@@ -64,3 +64,34 @@ func TestRaidingVindicatorGetsThroughDoors(t *testing.T) {
 		t.Fatal("a vindicator outside a raid leaves the door shut")
 	}
 }
+
+// RaiderMoveThroughVillageGoal: in the village with nobody to fight, a
+// raider heads for a house — a bed within forty-eight blocks — and, once
+// there, marks it visited.
+func TestRaiderRoamsTheVillageHomes(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 3)
+	poiFloor(h, 0, 0, 24)
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z, pl.gamemode = 0.5, 180, -20.5, gmCreative
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	bed := blockPos{14, 180, 6}
+	h.world.SetBlock(bed.x, bed.y, bed.z, freeBed())
+	center := blockPos{0, 180, 0}
+	h.raids[center] = &raid{center: center, uuid: raidUUID(center),
+		alive: map[int32]bool{}, shown: map[int32]bool{}, numGroups: 3}
+	v := h.spawnHostileYIn(players, entityPillager, 0, 0.5, 180, 0.5)
+	v.raidCenter = center
+	visited := false
+	for i := 0; i < 600 && !visited; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+		for _, p := range v.raidVisited {
+			visited = visited || p == bed
+		}
+	}
+	if !visited {
+		t.Fatalf("the raider never reached the house: at (%.1f, %.1f), poi %v set %v", v.x, v.z, v.raidPoi, v.raidPoiSet)
+	}
+}
