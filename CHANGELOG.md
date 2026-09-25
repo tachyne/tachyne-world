@@ -163,6 +163,9 @@ the public history since the project was open-sourced on 2026-07-10.
   keeping its distance.
 - **Dolphins swim with nautilus riders.** A dolphin now follows a player
   riding a nautilus, as it follows a rowed boat, as in vanilla.
+- **Tamed nautiluses and happy ghasts stay put.** Left alone, a tamed
+  nautilus or a happy ghast now keeps to the area where you left it, as in
+  vanilla, instead of wandering off.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

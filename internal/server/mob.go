@@ -1012,6 +1012,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityFox && h.foxIdleStep(players, m):
 			// A fox walking in toward a village at night, after berries,
 			// after a dropped item, or sat looking about.
+		case (nautilusKind(m.etype) || m.etype == entityHappyGhast) && h.restrictionHomeStep(m):
+			// A tamed nautilus or a happy ghast with nothing else to do keeps
+			// to its home: its wandering stays inside (checkRestriction).
 		case m.reroute > 0:
 			// Committed to an escape heading (just after a block): keep it instead
 			// of re-steering, so the mob walks away from an obstacle rather than
