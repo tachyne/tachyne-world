@@ -123,6 +123,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Wandering traders remember where they were going.** A trader still
+  walking to its meeting bell keeps heading there after a server restart
+  instead of forgetting the point.
 - **Blazes float.** A blaze rises toward a target above it, bobbing at a
   height it re-picks every few seconds, and sinks slowly instead of
   dropping when it has nothing to climb to.

@@ -144,6 +144,7 @@ type savedMob struct {
 	ImmuneZombify bool        `json:"immune_zombify,omitempty"` // IsImmuneToZombification
 	NoHunt        bool        `json:"no_hunt,omitempty"`        // piglin: CannotHunt; hoglin: CannotBeHunted
 	TraderDespawn int         `json:"trader_despawn,omitempty"` // wandering trader / llama: DespawnDelay
+	WanderTarget  *[3]int     `json:"wander_target,omitempty"`  // wandering trader: wander_target
 	Lifetime      int         `json:"lifetime,omitempty"`       // endermite: Lifetime
 	TadpoleAge    int         `json:"tadpole_age,omitempty"`    // tadpole: Age
 	Trusted       []string    `json:"trusted,omitempty"`        // fox: trusted player names
@@ -803,6 +804,10 @@ func toSavedMob(m *mob) savedMob {
 		for k, v := range m.gossip {
 			sm.Gossip[k] = v
 		}
+	}
+	if m.traderWandering {
+		w := packPos(m.traderWander)
+		sm.WanderTarget = &w
 	}
 	sm.Raid = packPos(m.raidCenter)
 	sm.RaidWave = m.raidWave

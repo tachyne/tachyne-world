@@ -161,6 +161,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.huntedUntil = h.tick.Load() + uint64(piglinHuntMin+h.rng.Intn(piglinHuntSpan))
 	}
 	m.traderDespawn = sm.TraderDespawn
+	if sm.WanderTarget != nil {
+		m.traderWander, m.traderWandering = unpackPos(*sm.WanderTarget), true
+	}
 	m.endermiteLife = sm.Lifetime
 	m.tadpoleAge = sm.TadpoleAge
 	for i, n := range sm.Trusted {

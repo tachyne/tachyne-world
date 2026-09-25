@@ -200,6 +200,7 @@ var notIDs = map[string]string{
 	"server.mobFile.Chunks{}[].TradeXP":               whyCount,
 	"server.mobFile.Chunks{}[].TraderDespawn":         whyCount,
 	"server.mobFile.Chunks{}[].Variant":               whyDecl,
+	"server.mobFile.Chunks{}[].WanderTarget[][]":      whyPos,
 	"server.mobFile.Chunks{}[].Work[]":                whyPos,
 	"server.mobFile.EndCities[][]":                    whyPos,
 	"server.mobFile.Huts[][]":                         whyPos,
