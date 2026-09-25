@@ -366,3 +366,24 @@ func TestEndermanTakesOnlyWhatItCanSee(t *testing.T) {
 		t.Error("the goal never lifted a block it could plainly see")
 	}
 }
+
+// EnderMan.dropCustomDeathLoot: a killed enderman drops what it carried.
+func TestEndermanDropsItsCarriedBlock(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.rules.DoMobLoot = true
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	m := h.spawnMob(players, entityEnderman, 0.5, 180, 0.5)
+	m.carriedBlock = worldgen.BlockID("grass_block")
+	h.hurtByPlayerOn(m, pl)
+	h.killMob(players, m)
+	h.despawnMob(players, m)
+	for _, it := range h.items {
+		if it.item == itemByName["grass_block"] {
+			return
+		}
+	}
+	t.Fatal("the enderman's grass block was lost with it")
+}

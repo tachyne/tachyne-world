@@ -614,6 +614,13 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		if m.hasBody() { // setItemSlotAndDropWhenKilled: the swallowed block always comes back
 			dropGear(m.cube.body)
 		}
+		if loot, _ := deathDropsAllowed(m); loot && m.etype == entityEnderman && m.carriedBlock != 0 {
+			// EnderMan.dropCustomDeathLoot: the carried block, as a silk-touch
+			// axe would take it — the block's own item.
+			if it := cloneItem(m.carriedBlock); it > 0 {
+				drops = append(drops, plugin.ItemStack{Item: it, Count: 1})
+			}
+		}
 		if m.frogEaten > 0 {
 			// Eaten by a frog (the magma_cube loot table's frog branch): a
 			// magma cube becomes the froglight of the frog's variant, and

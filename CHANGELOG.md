@@ -102,6 +102,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Endermen drop what they carry.** Killing an enderman that is holding a
+  block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
   creative now picks them up, as in vanilla; only spectators leave them.
 - **The dragon's rewards are vanilla's.** Killing the Ender Dragon no
