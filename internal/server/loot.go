@@ -56,8 +56,11 @@ func (h *hub) rollDrops(state uint32) []drop {
 	case isDecoratedPot(state):
 		return []drop{{item: itemDecoratedPot, count: 1}} // blocks/decorated_pot, unbroken: itself
 	}
-	if _, lower, ok := doublePlantOf(state); ok { // blocks/tall_grass, large_fern: seeds 1/8 from the half that breaks
-		if lower && h.rng.Intn(8) == 0 {
+	if _, _, ok := doublePlantOf(state); ok {
+		// blocks/tall_grass, large_fern: seeds 1/8 from whichever half
+		// breaks while the other still stands (the location_check; the
+		// positional sites ask doublePlantDropBlocked first).
+		if h.rng.Intn(8) == 0 {
 			return []drop{{item: itemWheatSeeds, count: 1}}
 		}
 		return nil

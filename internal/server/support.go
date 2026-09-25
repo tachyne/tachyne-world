@@ -631,7 +631,7 @@ var supportNeighbours = [6][3]int{
 // dropLoose spawns what a block that fell down on its own leaves behind: the
 // no-tool loot, since nobody mined it.
 func (h *hub) dropLoose(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	if !h.rules.DoTileDrops {
+	if !h.rules.DoTileDrops || h.doublePlantDropBlocked(dim, pos, state) {
 		return
 	}
 	drops := h.evalBlockLoot(lootCtx{state: state, rng: h.rng.Intn, randf: h.rng.Float64})

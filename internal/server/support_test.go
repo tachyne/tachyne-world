@@ -272,3 +272,46 @@ func TestWallHangingSignHeldFromTheSides(t *testing.T) {
 		t.Fatal("the sign fell when its side went; vanilla keeps it")
 	}
 }
+
+// blocks/tall_grass: the half that breaks rolls the 1/8 seed chance while
+// the other still stands — breaking the upper half drops seeds too — and a
+// plant whose halves fall one after the other rolls only once.
+func TestTallGrassSeedsFromEitherHalf(t *testing.T) {
+	h := newHub(world.New(1))
+	upper := tallGrassLo
+	seeds := 0
+	for i := 0; i < 800; i++ {
+		for _, d := range h.rollDrops(upper) {
+			if d.item == itemWheatSeeds {
+				seeds++
+			}
+		}
+	}
+	if seeds < 40 || seeds > 170 {
+		t.Fatalf("the upper half gave seeds %d times in 800, want about 100", seeds)
+	}
+	players := map[int32]*tracked{}
+	h.world.ForceLoad(0, 0, 1)
+	for trial := 0; trial < 200; trial++ {
+		for id := range h.items {
+			delete(h.items, id)
+		}
+		h.world.SetBlock(0, 199, 0, worldgen.Dirt)
+		h.world.SetBlock(0, 200, 0, tallGrassHi)
+		h.world.SetBlock(0, 201, 0, tallGrassLo)
+		h.world.SetBlock(0, 202, 0, worldgen.Air)
+		h.setBlockAt(players, 0, blockPos{0, 199, 0}, worldgen.Air)
+		if h.world.At(0, 200, 0) != worldgen.Air || h.world.At(0, 201, 0) != worldgen.Air {
+			t.Fatal("the grass should come down with its soil")
+		}
+		n := 0
+		for _, it := range h.items {
+			if it.item == itemWheatSeeds {
+				n += it.count
+			}
+		}
+		if n > 1 {
+			t.Fatalf("one plant dropped %d seeds", n)
+		}
+	}
+}

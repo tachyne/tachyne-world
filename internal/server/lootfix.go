@@ -26,6 +26,22 @@ func doublePlantOf(state uint32) (single int32, lower, ok bool) {
 	return 0, false, false
 }
 
+// doublePlantDropBlocked is the tall grass / large fern tables'
+// location_check read at a position: a half drops only while the other half
+// still stands next to it, so a plant whose two halves come down one after
+// the other (the support sweep, a blast) rolls its loot once.
+func (h *hub) doublePlantDropBlocked(dim int, pos blockPos, state uint32) bool {
+	_, lower, ok := doublePlantOf(state)
+	if !ok {
+		return false
+	}
+	dy, want := 1, state-1 // tall_grass/large_fern: upper is the first state, lower the second
+	if !lower {
+		dy, want = -1, state+1
+	}
+	return h.worldFor(dim).At(pos.x, pos.y+dy, pos.z) != want
+}
+
 // specialBlockDrops is the tool-aware loot for those blocks when a player
 // breaks them: shears cut a two-tall plant into two of its small kind
 // (blocks/tall_grass, blocks/large_fern), shears or Silk Touch lift snow

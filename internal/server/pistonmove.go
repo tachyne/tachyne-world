@@ -245,6 +245,9 @@ func (h *hub) movePistonBlocks(players map[int32]*tracked, pos blockPos, dir [3]
 		p := r.toDestroy[i]
 		s := h.rsWorld().At(p.x, p.y, p.z)
 		h.rsSet(players, p, worldgen.Air)
+		if h.doublePlantDropBlocked(h.rsDim, p, s) {
+			continue
+		}
 		for _, d := range h.rollDrops(s) {
 			h.spawnBlockDrop(players, h.rsDim, d.item, d.count, p.x, p.y, p.z)
 		}

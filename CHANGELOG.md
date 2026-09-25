@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Tall grass drops seeds from either half.** Breaking the top half of
+  tall grass or a large fern can now drop wheat seeds too, as in vanilla;
+  a plant whose two halves come down together still rolls only once.
 - **Loose scaffolding falls.** Scaffolding set down with nothing holding
   it (by a command or a structure) now drops like sand and settles on the
   ground as scaffolding, as in vanilla.

@@ -845,6 +845,9 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 // survival per item. Blocks without a table keep the old roller with the
 // decay applied to the block as a whole.
 func (h *hub) dropExploded(players map[int32]*tracked, dim int, pos blockPos, st uint32, radius int, kind blastKind) {
+	if h.doublePlantDropBlocked(dim, pos, st) {
+		return
+	}
 	ctx := lootCtx{state: st, rng: h.rng.Intn, randf: h.rng.Float64}
 	if h.dropDecay(kind) {
 		ctx.explosion = float64(max(1, radius))
