@@ -195,6 +195,12 @@ func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by,
 	if !ok {
 		return false
 	}
+	h.addVehicle(players, dim, etype, x, y, z, yaw)
+	return true
+}
+
+// addVehicle makes a cart or boat exactly at (x, y, z).
+func (h *hub) addVehicle(players map[int32]*tracked, dim, etype int, x, y, z float64, yaw float32) *vehicle {
 	v := &vehicle{eid: h.allocEID(), dim: dim, etype: etype, x: x, y: y, z: z, sx: x, sy: y, sz: z}
 	if !cartTypes[etype] {
 		v.yaw, v.syaw, v.yawO = yaw, yaw, yaw
@@ -206,7 +212,7 @@ func (h *hub) spawnVehicleFacing(players map[int32]*tracked, dim, etype, bx, by,
 	initCartKind(v)
 	h.vehicles[v.eid] = v
 	h.toNearbyEv(players, dim, x, z, entAdd(v.eid, etype, v.uuid, x, y, z, v.yaw, 0))
-	return true
+	return v
 }
 
 // vehicleSpawnPos is where a cart or boat aimed at a cell goes: a cart on

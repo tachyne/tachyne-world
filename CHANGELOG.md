@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/summon makes things that aren't mobs.** Boats, chest boats, rafts,
+  every minecart, primed TNT, end crystals, lightning bolts, firework
+  rockets and the thrown and shot projectiles (arrows, tridents, snowballs,
+  eggs, fireballs, wither skulls, wind charges) can now be summoned, placed
+  exactly where asked.
 - **Baby piglins ride baby hoglins.** Now and then a baby piglin that can
   see a baby hoglin walks over and climbs on, and other baby piglins climb
   on top of it, up to three high. They get down after ten to thirty
