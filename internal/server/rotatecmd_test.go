@@ -37,3 +37,32 @@ func TestRotateCommand(t *testing.T) {
 }
 
 func ftoa(f float64) string { return strconv.FormatFloat(f, 'f', 3, 64) }
+
+// /tp with targets: an operator sends another player to a place or to an
+// entity; a non-operator may not teleport at all.
+func TestTeleportTargets(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice, carol := ps["alice"], ps["carol"]
+	s.handleCommand(alice, "tp bob 10 90 -4")
+	settle(t, h, logs, "T1")
+	var bx, by, bz float64
+	onHub(t, h, func() { b := h.playersRef[ps["bob"].eid]; bx, by, bz = b.x, b.y, b.z })
+	if bx != 10 || by != 90 || bz != -4 {
+		t.Fatalf("bob is at %v,%v,%v, want 10,90,-4", bx, by, bz)
+	}
+	if !hasLine(linesBetween(logs["alice"], "", "T1"), "Teleported bob to 10.000000, 90.000000, -4.000000") {
+		t.Errorf("alice's reply: %q", linesBetween(logs["alice"], "", "T1"))
+	}
+	var ax, az float64
+	onHub(t, h, func() { a := h.playersRef[alice.eid]; ax, az = a.x, a.z })
+	s.handleCommand(alice, "tp bob alice")
+	s.handleCommand(carol, "tp 100 100 100")
+	settle(t, h, logs, "T2")
+	onHub(t, h, func() { b := h.playersRef[ps["bob"].eid]; bx, bz = b.x, b.z })
+	if bx != ax || bz != az {
+		t.Errorf("bob sent to alice is at %v,%v, want %v,%v", bx, bz, ax, az)
+	}
+	if !hasLine(linesBetween(logs["carol"], "", "T2"), "You don't have permission.") {
+		t.Error("a non-operator teleported")
+	}
+}

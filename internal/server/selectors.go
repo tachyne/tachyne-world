@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -401,4 +402,74 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 	me.p.setHubPos(x, z)
 	me.p.sendEv(teleportEv(x, y, z, me.yaw, me.pitch))
 	h.cmdSuccess(players, me.p, "Teleported.", true)
+}
+
+// evTeleportTargets is /tp with targets: send them to an entity or a place.
+type evTeleportTargets struct {
+	by         int32
+	targets    string
+	dest       string // an entity selector, or "" for the position below
+	x, y, z    float64
+	rot        bool
+	yaw, pitch float32
+}
+
+func (evTeleportTargets) isHubEvent() {}
+
+func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets) {
+	me := players[e.by]
+	if me == nil {
+		return
+	}
+	ts := h.commandTargets(players, e.by, e.targets)
+	ms := h.commandMobs(players, e.by, e.targets)
+	if len(ts)+len(ms) == 0 {
+		me.p.tell("No entity was found")
+		return
+	}
+	x, y, z, dim, where := e.x, e.y, e.z, me.dim, ""
+	if e.dest != "" {
+		if d := h.commandTargets(players, e.by, e.dest); len(d) > 0 {
+			x, y, z, dim, where = d[0].x, d[0].y, d[0].z, d[0].dim, d[0].p.name
+		} else if d := h.commandMobs(players, e.by, e.dest); len(d) > 0 {
+			x, y, z, dim, where = d[0].x, d[0].y, d[0].z, d[0].dim, mobDisplayName(d[0].etype)
+		} else {
+			me.p.tell("No entity was found")
+			return
+		}
+	}
+	moved, name := 0, ""
+	for _, t := range ts {
+		if t.dim != dim {
+			continue // across dimensions is a portal's job here
+		}
+		if e.rot {
+			t.yaw, t.pitch = e.yaw, e.pitch
+		}
+		h.teleportPlayer(players, t, x, y, z)
+		moved, name = moved+1, t.p.name
+	}
+	for _, m := range ms {
+		if m.dim != dim {
+			continue
+		}
+		m.x, m.y, m.z = x, y, z
+		if e.rot {
+			m.yaw = e.yaw
+		}
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, false))
+		moved, name = moved+1, mobDisplayName(m.etype)
+	}
+	if moved == 0 {
+		me.p.tell("That destination is in another dimension")
+		return
+	}
+	if moved > 1 {
+		name = fmt.Sprintf("%d entities", moved)
+	}
+	if where != "" {
+		h.cmdSuccess(players, me.p, fmt.Sprintf("Teleported %s to %s", name, where), true)
+	} else {
+		h.cmdSuccess(players, me.p, fmt.Sprintf("Teleported %s to %f, %f, %f", name, x, y, z), true)
+	}
 }

@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/tp moves other players and mobs.** Operators can send players or mobs
+  to another entity (`/tp bob alice`) or to a position, optionally with a
+  rotation (`/tp @e[type=cow] 0 80 0 90 0`), as in vanilla. `/tp` is now for
+  operators only, as it is in vanilla; before, any player could use it.
 - **Two more team options.** `/team modify` takes `seeFriendlyInvisibles`
   and `deathMessageVisibility` — a team's deaths can be announced to
   everyone, only the team, everyone but the team, or nobody, as in vanilla.

@@ -1863,6 +1863,8 @@ func (h *hub) run() {
 				h.cmdTrigger(players, e)
 			case evRotate:
 				h.cmdRotate(players, e)
+			case evTeleportTargets:
+				h.onTeleportTargets(players, e)
 			case evTeamCmd:
 				h.cmdTeam(players, e)
 			case evSignPlaced:

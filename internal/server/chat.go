@@ -353,6 +353,10 @@ func parseTimeTicks(args []string) (int64, bool) {
 
 // cmdTeleport moves the player to absolute coordinates and re-streams chunks.
 func (s *Server) cmdTeleport(p *player, args []string) {
+	if !s.isOp(p.name) { // TeleportCommand: LEVEL_GAMEMASTERS
+		p.tell("You don't have permission.")
+		return
+	}
 	// /tp <player|selector> puts you where they are; /tp <x> <y> <z> takes
 	// vanilla's coordinate forms — plain numbers, `~` relative to you, or
 	// `^` along the way you are looking.
@@ -360,8 +364,35 @@ func (s *Server) cmdTeleport(p *player, args []string) {
 		s.hub.post(evTeleportTo{eid: p.eid, target: args[0]})
 		return
 	}
+	// /tp <targets> <destination> and /tp <targets> <x> <y> <z> [<yaw> <pitch>]:
+	// someone else goes (TeleportCommand's targets forms). Positions and
+	// rotations are relative to the one running the command.
+	if len(args) == 2 || len(args) == 4 || len(args) == 6 {
+		e := evTeleportTargets{by: p.eid, targets: args[0]}
+		if len(args) == 2 {
+			e.dest = args[1]
+		} else {
+			x, y, z, ok := parsePosition(args[1:4], p.x, p.y, p.z, p.yaw, p.pitch)
+			if !ok {
+				p.tell("Usage: /tp <targets> <x> <y> <z> [<yaw> <pitch>]")
+				return
+			}
+			e.x, e.y, e.z = x, y, z
+			if len(args) == 6 {
+				yaw, ok1 := parseCoord(args[4], float64(p.yaw))
+				pitch, ok2 := parseCoord(args[5], float64(p.pitch))
+				if !ok1 || !ok2 {
+					p.tell("Usage: /tp <targets> <x> <y> <z> [<yaw> <pitch>]")
+					return
+				}
+				e.rot, e.yaw, e.pitch = true, float32(yaw), float32(math.Max(-90, math.Min(90, pitch)))
+			}
+		}
+		s.hub.post(e)
+		return
+	}
 	if len(args) != 3 {
-		p.tell("Usage: /tp <x> <y> <z> | /tp <player|@selector>")
+		p.tell("Usage: /tp <x> <y> <z> | /tp <player|@selector> | /tp <targets> <destination|x y z>")
 		return
 	}
 	x, y, z, ok := parsePosition(args, p.x, p.y, p.z, p.yaw, p.pitch)
