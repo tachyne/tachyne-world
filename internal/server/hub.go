@@ -1183,6 +1183,7 @@ func (h *hub) run() {
 			h.shoulderTick(players)       // shoulder parrots: chatter, and what knocks them off
 			h.tickHoppers(players)        // HopperBlockEntity.pushItemsTick, every hopper, every tick
 			h.updateMobEffects(players)   // …and the mobs', on the same cadence
+			h.syncMobHealth(players)      // changed mob health to viewers (golem cracks, mount hearts)
 			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
 			if age%10 == 0 {
 				h.fastRegen(players)         // saturation regen at vanilla's 10-tick cadence

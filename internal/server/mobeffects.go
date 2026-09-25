@@ -4,6 +4,7 @@ import (
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
 )
 
 // Status effects on MOBS. Vanilla applies effects to any LivingEntity, so a
@@ -217,5 +218,33 @@ func (h *hub) arrowEffectsOnMob(players map[int32]*tracked, a *arrowEntity, m *m
 			}
 			h.applyMobEffectTicks(players, m, e.id, e.amp, ticks)
 		}
+	}
+}
+
+// metaHealth is LivingEntity.DATA_HEALTH_ID (index 9, FLOAT): what an iron
+// golem's cracks, a wolf's tail and a ridden mount's hearts are drawn from.
+const metaHealth = 9
+
+func mobHealthMeta(eid int32, hp int) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaHealth)
+	b = protocol.AppendVarInt(b, metaTypeFloat)
+	b = protocol.AppendF32(b, float32(hp))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// syncMobHealth sends each changed mob health to its viewers, once a tick,
+// the way SynchedEntityData ships a dirty field.
+func (h *hub) syncMobHealth(players map[int32]*tracked) {
+	for _, m := range h.mobs {
+		if m.health == m.sentHealth || m.health <= 0 {
+			continue
+		}
+		if m.sentHealth == 0 && m.health == m.maxHP() {
+			m.sentHealth = m.health // born at full: the default, nothing to send
+			continue
+		}
+		m.sentHealth = m.health
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(mobHealthMeta(m.eid, m.health)))
 	}
 }

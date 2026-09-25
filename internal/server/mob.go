@@ -49,6 +49,7 @@ type mob struct {
 	herd            int      // index into hub.herds — the goal a herd mob steers toward
 	reroute         int      // ticks left committed to an escape heading after a block
 	health          int      // hit points; mob dies and drops loot at 0
+	sentHealth      int      // the health last synced to viewers (syncMobHealth; 0 = never)
 	dying           int      // ticks left in the death animation (0 = alive); despawns at 0
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)

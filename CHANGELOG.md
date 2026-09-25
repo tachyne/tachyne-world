@@ -105,6 +105,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mob health shows.** Damaged iron golems now crack, a tamed wolf's tail
+  droops as it is hurt, and a horse's hearts show its real health while
+  you ride it — the client was never told a mob's health.
 - **Dropped items burn and blow up.** Items thrown into lava or fire now
   burn away, and explosions destroy the items they reach, as in vanilla.
   Netherite, ancient debris and nether stars survive fire and lava, nether

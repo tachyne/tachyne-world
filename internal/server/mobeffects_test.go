@@ -1,8 +1,11 @@
 package server
 
 import (
+	"encoding/binary"
+	"math"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
@@ -240,5 +243,41 @@ func TestWitchResistsMagicAndWitherIgnoresItsOwn(t *testing.T) {
 	wr.hurtKind(10, dtDrown)
 	if wr.health != 300 {
 		t.Fatalf("the wither cannot drown, health %v", wr.health)
+	}
+}
+
+// DATA_HEALTH_ID reaches viewers when a mob's health changes (iron golem
+// cracks, mount hearts); a mob at full health sends nothing.
+func TestMobHealthSyncs(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	golem := h.spawnMob(players, entityIronGolem, 3.5, 180, 0.5)
+	if pl.tracked == nil {
+		pl.tracked = map[int32]bool{}
+	}
+	pl.tracked[golem.eid] = true // the viewer's client holds the golem
+	healthSent := func() (float32, bool) {
+		var hp float32
+		sent := false
+		for len(pl.p.out) > 0 {
+			if m, ok := (<-pl.p.out).ev.(attachproto.EntityMeta); ok && m.EID == golem.eid && len(m.Meta) >= 6 && m.Meta[0] == metaHealth {
+				hp, sent = math.Float32frombits(binary.BigEndian.Uint32(m.Meta[2:6])), true
+			}
+		}
+		return hp, sent
+	}
+	drainOut(pl.p)
+	h.syncMobHealth(players)
+	if _, sent := healthSent(); sent {
+		t.Fatal("a golem at full health sent its health")
+	}
+	h.hurtMobOf(players, golem, 30, dtGeneric)
+	h.syncMobHealth(players)
+	if hp, sent := healthSent(); !sent || int(hp) != golem.health {
+		t.Fatalf("after a hit: sent %v, health %v (mob has %d)", sent, hp, golem.health)
 	}
 }
