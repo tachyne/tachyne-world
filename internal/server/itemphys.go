@@ -16,18 +16,19 @@ import (
 // merge, and a tossed item arcs from the player's eyes.
 
 const (
-	itemGravity      = 0.04   // Entity.applyGravity (default gravity)
-	itemAirDrag      = 0.98   // Entity.getAirDrag
-	itemFluidDrag    = 0.99   // ItemEntity.setUnderwaterMovement: horizontal ×0.99
-	itemFluidLift    = 5.0e-4 // setFluidMovement: +0.0005 while vy < 0.06
-	itemFluidLiftCap = 0.06
-	waterFlowScale   = 0.014 // Entity: applyCurrentTo(WATER, 0.014)
-	columnUpStep     = 0.06  // onInsideBubbleColumn: min(0.7, vy + 0.06)
-	columnUpCap      = 0.7
-	columnDownStep   = 0.03 // max(-0.3, vy - 0.03)
-	columnDownCap    = -0.3
-	defaultFriction  = 0.6 // Block.getFriction default
-	itemSleepSpeed   = 1e-4
+	itemGravity          = 0.04   // Entity.applyGravity (default gravity)
+	itemAirDrag          = 0.98   // Entity.getAirDrag
+	itemFluidDrag        = 0.99   // ItemEntity.setUnderwaterMovement: horizontal ×0.99
+	itemFluidLift        = 5.0e-4 // setFluidMovement: +0.0005 while vy < 0.06
+	itemFluidLiftCap     = 0.06
+	waterFlowScale       = 0.014 // Entity: applyCurrentTo(WATER, 0.014)
+	columnUpStep         = 0.06  // onInsideBubbleColumn: min(0.7, vy + 0.06)
+	columnUpCap          = 0.7
+	columnDownStep       = 0.03 // max(-0.3, vy - 0.03)
+	columnDownCap        = -0.3
+	slimeBounceNonLiving = 0.8 // SlimeBlock.bounceUp: 1.0 for a living thing, 0.8 otherwise
+	defaultFriction      = 0.6 // Block.getFriction default
+	itemSleepSpeed       = 1e-4
 )
 
 // blockFriction is BlockBehaviour.getFriction: ice is slick, slime grips.
@@ -92,9 +93,18 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	it.geyser = false
 	afloat := !lifted && !worldgen.IsWater(cell) && it.y == float64(fy) && worldgen.IsWater(below) && !worldgen.IsBubbleColumn(below)
 	grounded := it.y == float64(fy) && worldgen.Collides(below)
+	// The top cell of a column, with nothing over it, is onAboveBubbleColumn:
+	// the harder push that throws an item clear of the surface (or the
+	// stronger pull of a whirlpool).
+	colTop := worldgen.IsBubbleColumn(cell) && !worldgen.Collides(w.At(fx, fy+1, fz)) &&
+		!worldgen.HoldsWater(w.At(fx, fy+1, fz)) && !worldgen.IsLava(w.At(fx, fy+1, fz))
 	switch {
+	case cell == worldgen.BubbleColumnUp && colTop:
+		it.vy = math.Min(columnTopUpCap, it.vy+columnTopUpStep)
 	case cell == worldgen.BubbleColumnUp:
 		it.vy = math.Min(columnUpCap, it.vy+columnUpStep)
+	case cell == worldgen.BubbleColumnDrag && colTop:
+		it.vy = math.Max(columnTopDownCap, it.vy-columnDownStep)
 	case cell == worldgen.BubbleColumnDrag:
 		it.vy = math.Max(columnDownCap, it.vy-columnDownStep)
 	case inWater:
@@ -122,6 +132,21 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		}
 	}
 
+	// makeStuckInBlock: a cobweb (0.25, 0.05, 0.25) or, for anything not
+	// alive, powder snow (0.9, 1.5, 0.9) scales this tick's move, and the
+	// motion is spent by it.
+	stuckX, stuckY := 1.0, 1.0
+	switch top := w.At(fx, int(math.Floor(it.y+2*itemHalfHeight-1e-7)), fz); {
+	case cell == cobwebState || top == cobwebState:
+		stuckX, stuckY = 0.25, webStuckY
+	case isPowderSnow(cell) || isPowderSnow(top):
+		stuckX, stuckY = powderSnowStuckXZ, 1.5
+	}
+	stuck := stuckX != 1 || stuckY != 1
+	if stuck {
+		it.vx, it.vy, it.vz = it.vx*stuckX, it.vy*stuckY, it.vz*stuckX
+	}
+
 	// ItemEntity.tick: an item inside a block (one was placed over it, or
 	// it was pushed in) moves through it toward the nearest open side, with
 	// collisions off until it is out (noPhysics + moveTowardsClosestSpace).
@@ -138,8 +163,14 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	} else if it.vy < 0 {
 		ny := it.y + it.vy
 		for cy := fy - 1; cy >= int(math.Floor(ny)); cy-- {
-			if worldgen.Collides(w.At(fx, cy, fz)) {
+			if floorBlock := w.At(fx, cy, fz); worldgen.Collides(floorBlock) {
+				v := it.vy
 				ny, it.vy = float64(cy+1), 0
+				if isSlimeBlock(floorBlock) {
+					// SlimeBlock.updateEntityMovementAfterFallOn: anything
+					// not alive bounces back at 0.8 of its speed.
+					it.vy = -v * slimeBounceNonLiving
+				}
 				break
 			}
 		}
@@ -179,6 +210,10 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		} else {
 			it.z = nz
 		}
+	}
+
+	if stuck {
+		it.vx, it.vy, it.vz = 0, 0, 0
 	}
 
 	// Drag, and ground friction for a resting item.

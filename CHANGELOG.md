@@ -109,6 +109,10 @@ the public history since the project was open-sourced on 2026-07-10.
   snow or a honey slide — and lands softer on hay, honey and beds, as a
   player's does. A player falling through a cobweb has the fall broken
   there too.
+- **Dropped items bounce on slime and catch in cobwebs.** An item dropped
+  on a slime block bounces, one in a cobweb creeps down through it, powder
+  snow slows it, and the top of a soul-sand bubble column throws items
+  clear of the water as in vanilla.
 - **Mobs freeze in powder snow.** A mob left in powder snow now frosts
   over, slows down and, once frozen through, takes freeze damage — five
   times as much for blazes, striders and magma cubes — while strays, polar
