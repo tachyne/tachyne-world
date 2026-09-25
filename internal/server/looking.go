@@ -30,6 +30,7 @@ var lookRanges = map[string]float64{
 	"mule": 6, "skeleton_horse": 6, "zombie_horse": 6, "camel": 6, "camel_husk": 6, "llama": 6, "trader_llama": 6,
 	"polar_bear": 6, "iron_golem": 6, "snow_golem": 6, "copper_golem": 6, "dolphin": 6, "ravager": 6,
 	"cat": 10, "ocelot": 10, "rabbit": 10,
+	"fox":      24, // FoxLookAtPlayerGoal(this, Player, 24)
 	"pillager": 15,
 	"evoker":   3, "illusioner": 3, "vindicator": 3, "vex": 3, // LookAtPlayerGoal(this, Player, 3, 1.0)
 	"squid": 0, "glow_squid": 0, "cod": 0, "salmon": 0, "tropical_fish": 0, "pufferfish": 0,
@@ -55,6 +56,15 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 		m.headYaw = m.yaw
 		return
 	}
+	if m.etype == entityFox && m.foxFlags&(foxFlagSleeping|foxFlagSitting) != 0 {
+		return // asleep (FoxLookControl does not tick), or perched with its own look
+	}
+	// A fox's look goal neither starts nor carries on while it is face down
+	// in snow or intent on prey.
+	foxBusy := m.etype == entityFox && m.foxFlags&(foxFlagFaceplanted|foxFlagInterested) != 0
+	if foxBusy {
+		m.lookTicks = 0
+	}
 	if m.lookTicks > 0 {
 		m.lookTicks -= mobMoveInterval
 		switch {
@@ -74,10 +84,13 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 		return // hunting: the chase already points it where it is going
 	}
 	// LookAtPlayerGoal first, as vanilla adds it first at the same priority.
-	if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, d); t != nil && h.rng.Float64() < lookChance {
+	if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, d); t != nil && !foxBusy && h.rng.Float64() < lookChance {
 		m.lookEID = t.p.eid
 		m.lookTicks = int32(lookPlayerTicksMin + h.rng.Intn(lookPlayerTicksMax-lookPlayerTicksMin))
 		return
+	}
+	if m.etype == entityFox {
+		return // the fox has no RandomLookAroundGoal
 	}
 	if h.rng.Float64() < lookChance { // RandomLookAroundGoal
 		a := h.rng.Float64() * 2 * math.Pi

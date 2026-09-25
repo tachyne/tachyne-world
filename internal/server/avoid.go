@@ -45,11 +45,14 @@ type avoidPlayerRule struct {
 
 var avoidPlayerRules = map[int]avoidPlayerRule{
 	entityRabbit: {8, 2.2, 2.2, func(m *mob) bool { return true }},       // RabbitAvoidEntityGoal<Player>
-	entityFox:    {16, 1.6, 1.4, func(m *mob) bool { return true }},      // (trust and defending: open)
+	entityFox:    {16, 1.6, 1.4, foxNotDefending},                        // trust: avoidPlayerExempt
 	entityOcelot: {16, 0.8, 1.33, func(m *mob) bool { return !m.tamed }}, // OcelotAvoidEntityGoal: !isTrusting
 	entityCat:    {16, 0.8, 1.33, func(m *mob) bool { return !m.tamed }}, // CatAvoidEntityGoal: !isTame
 	entityEvoker: {8, 0.6, 1.0, func(m *mob) bool { return true }},       // Evoker: keeps its distance
 }
+
+// foxNotDefending gates the fox's three AvoidEntityGoals (!isDefending).
+func foxNotDefending(m *mob) bool { return m.foxFlags&foxFlagDefending == 0 }
 
 func init() {
 	// AbstractFish's AvoidEntityGoal<Player>(8, 1.6, 1.4) — every fish darts
@@ -85,7 +88,10 @@ func init() {
 	avoidRules[entityCaveSpider] = []avoidRule{{6, 1.0, 1.2, armadillo}}
 	avoidRules[entityWolf] = []avoidRule{{24, 1.5, 1.5, llama}}
 	avoidRules[entityDolphin] = []avoidRule{{8, 1.0, 1.0, guardian}}
-	avoidRules[entityFox] = []avoidRule{{8, 1.6, 1.4, wildWolf}, {8, 1.6, 1.4, polarBear}}
+	// A defending fox holds its ground against all three.
+	foxWolf := func(h *hub, m, o *mob) bool { return foxNotDefending(m) && wildWolf(h, m, o) }
+	foxBear := func(h *hub, m, o *mob) bool { return foxNotDefending(m) && polarBear(h, m, o) }
+	avoidRules[entityFox] = []avoidRule{{8, 1.6, 1.4, foxWolf}, {8, 1.6, 1.4, foxBear}}
 	avoidRules[entityRabbit] = []avoidRule{{10, 2.2, 2.2, wolf}, {4, 2.2, 2.2, monster}}
 	avoidRules[entityIllusioner] = []avoidRule{{8, 1.0, 1.2, creaking}}
 	avoidRules[entityPillager] = []avoidRule{{8, 1.0, 1.2, creaking}}

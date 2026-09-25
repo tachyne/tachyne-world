@@ -461,9 +461,25 @@ type mob struct {
 	gotFish                         bool       // dolphin: fed a fish, leading to treasure
 	treasureX                       int        // dolphin: the shipwreck it leads to (valid while gotFish)
 	treasureZ                       int
-	foxFlags                        int8       // fox: DATA_FLAGS (crouching 4, interested 8, pouncing 16, sleeping 32)
+	foxFlags                        uint8      // fox: DATA_FLAGS (sitting 1, crouching 4, interested 8, pouncing 16, sleeping 32, faceplanted 64, defending 128)
 	foxEatTicks                     int        // fox: ticks since it last ate (eats a held food past 600)
 	foxSleepIn                      int        // fox: ticks of quiet before it lies down
+	foxHeld                         bool       // fox: one of its own goals held it this update (sleep, perch, crouch)
+	foxPrey                         int32      // fox: the mob it has as its target (0 = none)
+	foxStalking                     bool       // fox: StalkPreyGoal is walking it in
+	foxCrouch                       int        // fox: ticks spent crouched (crouchAmount climbs 0.2 a tick to 5)
+	foxFaceplant                    int        // fox: FaceplantGoal's countdown, ticks
+	foxPerchLooks                   int        // fox: PerchAndSearchGoal's looks remaining
+	foxPerchLook                    int        // fox: …ticks left on this look
+	foxPerchDX, foxPerchDZ          float64    // fox: …the way it is looking
+	foxShelterIn                    int        // fox: SeekShelterGoal's interval, in updates
+	foxBerry                        blockPos   // fox: the bush or vine it is after (zero = none)
+	foxBerryNext                    int        // fox: updates to the next berry search
+	foxBerryTry                     int        // fox: MoveToBlockGoal tryTicks
+	foxBerryStay                    int        // fox: …maxStayTicks
+	foxBerryWait                    int        // fox: ticks waited beside it
+	foxVillage                      bool       // fox: walking a leg toward the village
+	foxVillageX, foxVillageZ        float64    // fox: …to here
 	armState                        int8       // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
 	armStateAt                      uint64     // armadillo: the tick the state began
 	armDangerUntil                  uint64     // armadillo: DANGER_DETECTED_RECENTLY expiry
@@ -700,6 +716,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityPufferfish {
 			h.pufferStep(players, m)
 		}
+		if m.etype == entityFox {
+			h.foxTick(players, m) // Fox.tick and aiStep: waking, eating, the bark, the snow
+		}
 		if m.etype == entitySnowGolem {
 			h.snowGolemStep(players, m)
 		}
@@ -773,6 +792,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.kb--
 			m.vx *= 0.6
 			m.vz *= 0.6
+		case m.etype == entityFox && (h.foxPounceStep(players, m) || h.foxFaceplantStep(players, m)):
+			// A fox in the air on its pounce (FoxPounceGoal cannot be
+			// interrupted), or face down in the snow it came down in
+			// (FaceplantGoal, priority 1).
 		case m.etype == entitySlime || m.etype == entityMagmaCube:
 			h.slimeHop(players, m) // hop-pause locomotion (vanilla SlimeMoveControl)
 		case m.etype == entitySulfurCube:
@@ -932,7 +955,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case m.etype == entityDolphin && h.dolphinFollowBoat(players, m):
 			// A dolphin racing a boat a player is rowing.
 		case m.etype == entityFox && h.foxStep(players, m):
-			// A fox asleep, stalking prey, or after a dropped item.
+			// A fox stalking, crouched for, or biting its prey; running for
+			// shelter; or asleep.
 		case m.etype == entityArmadillo && m.armState != 0:
 			m.vx, m.vz = 0, 0 // rolled up: it stays where it is
 		case m.etype == entitySniffer && h.snifferStep(players, m):
@@ -951,6 +975,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A baby trailing the nearest adult of its kind (FollowParentGoal /
 			// BabyFollowAdult): steered straight at it, ahead of idling and
 			// strolling, behind panic and knockback.
+		case m.etype == entityFox && h.foxIdleStep(players, m):
+			// A fox walking in toward a village at night, after berries,
+			// after a dropped item, or sat looking about.
 		case m.reroute > 0:
 			// Committed to an escape heading (just after a block): keep it instead
 			// of re-steering, so the mob walks away from an obstacle rather than
