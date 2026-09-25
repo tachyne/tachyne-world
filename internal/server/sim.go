@@ -164,6 +164,8 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A plant segment that lost its footing pops, taking the rest with it.
 	case h.tickCoral(players, dim, pos, state):
 		// Coral left out of water bleaches to its dead twin.
+	case h.driedGhastStep(players, dim, pos, state):
+		// A dried ghast takes a step of water (or loses one) on its own tick.
 	case h.tickComposter(players, dim, pos, state):
 		// A full composter finishes composting a second after its last item.
 	case h.tickDripleaf(players, dim, pos, state):

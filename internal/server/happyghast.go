@@ -3,8 +3,8 @@ package server
 import "github.com/tachyne/tachyne-world/internal/worldgen"
 
 // The happy ghast growth chain (1.21.6 "Chase the Skies"). A placed dried_ghast
-// block hydrates while it sits in water or is rained on; once fully hydrated it
-// hatches a ghastling — a baby happy ghast that matures (via updateBreeding)
+// block hydrates a step every 5000 ticks while waterlogged and dries out
+// otherwise; once fully hydrated it hatches a ghastling — a baby happy ghast that matures (via updateBreeding)
 // into a rideable adult. Riding + the harness live in harness.go.
 
 var (
@@ -14,56 +14,72 @@ var (
 
 func isDriedGhast(state uint32) bool { return state >= driedGhastBase && state <= driedGhastMax }
 
-// waterAdjacent reports whether any of the six neighbours of a cell is water —
-// our stand-in for vanilla's "waterlogged" hydration source, since placement
-// doesn't waterlog blocks here.
-func (h *hub) waterAdjacent(dim, x, y, z int) bool {
-	w := h.worldFor(dim)
-	for _, d := range [6][3]int{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}} {
-		if worldgen.IsWater(w.At(x+d[0], y+d[1], z+d[2])) {
-			return true
-		}
-	}
-	return false
-}
+// driedGhastDelay is DriedGhastBlock.HYDRATION_TICK_DELAY: a random tick
+// on a wet (waterlogged) or partly hydrated dried ghast schedules one step
+// this far ahead, unless one is already scheduled.
+const driedGhastDelay = 5000
 
-// driedGhastStepChance rate-matches vanilla's HYDRATION_TICK_DELAY of 5000 ticks
-// per hydration step: our random tick hits a given block roughly every ~1366
-// ticks, so advancing on 1-in-4 of them averages ~5460 ticks per step. (Vanilla
-// schedules a delayed tick; the engine has no per-block scheduled-state tracking,
-// so a probabilistic gate on the random tick reproduces the same average rate.)
-const driedGhastStepChance = 4
-
-// tickDriedGhast advances a dried_ghast one hydration step: it fills while wet
-// (submerged in water — the engine has no waterlogging, so "water adjacent"
-// stands in for vanilla's WATERLOGGED, and vanilla never hydrates from rain) and
-// dries out otherwise. At full hydration a wet step hatches a ghastling and
-// consumes the block. Returns true if the state was a dried ghast (so
+// tickDriedGhast is DriedGhastBlock.randomTick: it only schedules the next
+// hydration step. Returns true if the state was a dried ghast (so
 // randomTickBlock stops).
 func (h *hub) tickDriedGhast(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
 	if !isDriedGhast(state) {
 		return false
 	}
-	if h.rng.Intn(driedGhastStepChance) != 0 {
-		return true // rate-match vanilla's 5000-tick step delay
-	}
-	info, ok := worldgen.InfoForState(state)
-	if !ok {
+	if !boolProp(state, "waterlogged") && driedGhastHydration(state) == 0 {
 		return true
 	}
-	hyd := 0
-	if v := worldgen.GetProperty(info, state, "hydration"); v != "" {
-		hyd = int(v[0] - '0')
+	key := simPos{dim: dim, blockPos: blockPos{x, y, z}}
+	if _, armed := h.driedGhastDue[key]; armed {
+		return true // hasScheduledTick
 	}
-	wet := h.waterAdjacent(dim, x, y, z)
+	if h.driedGhastDue == nil {
+		h.driedGhastDue = map[simPos]uint64{}
+	}
+	h.driedGhastDue[key] = h.tick.Load() + driedGhastDelay
+	h.scheduleIn(dim, key.blockPos, driedGhastDelay)
+	return true
+}
+
+// driedGhastHydration is the HYDRATION_LEVEL property, 0-3.
+func driedGhastHydration(state uint32) int {
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return 0
+	}
+	if v := worldgen.GetProperty(info, state, "hydration"); v != "" {
+		return int(v[0] - '0')
+	}
+	return 0
+}
+
+// driedGhastStep is DriedGhastBlock.tick, on its own scheduled tick only (a
+// neighbour's update reaching the cell does nothing): waterlogged, it takes
+// a step of water with the transition sound — or, full, hatches; dry, it
+// loses one. Each step is a BLOCK_CHANGE.
+func (h *hub) driedGhastStep(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
+	if !isDriedGhast(state) {
+		return false
+	}
+	key := simPos{dim: dim, blockPos: pos}
+	due, armed := h.driedGhastDue[key]
+	if !armed || h.tick.Load() < due {
+		return true
+	}
+	delete(h.driedGhastDue, key)
+	info, _ := worldgen.InfoForState(state)
+	hyd := driedGhastHydration(state)
+	x, y, z := pos.x, pos.y, pos.z
 	switch {
-	case wet && hyd >= 3:
+	case boolProp(state, "waterlogged") && hyd >= 3:
 		h.hatchGhastling(players, dim, x, y, z, state)
-	case wet && hyd < 3:
-		h.playSoundDim(players, dim, "minecraft:block.dried_ghast.transition", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
-		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd+1))))
-	case !wet && hyd > 0:
-		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
+	case boolProp(state, "waterlogged"):
+		h.playSoundDim(players, dim, "minecraft:block.dried_ghast.transition", sndBlock, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 1, 1)
+		h.setBlockAt(players, dim, pos, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd+1))))
+		h.vib(dim, freqBlockChange, x, y, z, 0)
+	case hyd > 0:
+		h.setBlockAt(players, dim, pos, worldgen.SetProperty(info, state, "hydration", string(rune('0'+hyd-1))))
+		h.vib(dim, freqBlockChange, x, y, z, 0)
 	}
 	return true
 }
@@ -85,7 +101,7 @@ func (h *hub) hatchGhastling(players map[int32]*tracked, dim, x, y, z int, state
 		m.syaw = m.yaw
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
-	h.playSoundDim(players, dim, "minecraft:entity.ghastling.spawn", sndNeutral, float64(x), float64(y), float64(z), 1, 1)
+	h.playSoundDim(players, dim, "minecraft:entity.ghastling.spawn", sndBlock, m.x, m.y, m.z, 1, 1)
 }
 
 // facingYaw maps a horizontal facing property to a Minecraft yaw (Direction.getYRot).

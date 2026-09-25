@@ -7,27 +7,33 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
-// TestDriedGhastHatchesGhastling: a dried_ghast beside water hydrates over
-// random ticks and, once full, is consumed and hatches a baby happy ghast.
+// driedGhastCycle is one random tick (which schedules the step) and the
+// step's own scheduled tick 5000 ticks later.
+func driedGhastCycle(h *hub, players map[int32]*tracked, pos blockPos) {
+	h.tickDriedGhast(players, 0, pos.x, pos.y, pos.z, h.world.At(pos.x, pos.y, pos.z))
+	h.processUpdate(players, 0, pos) // a neighbour's update before the step is due does nothing
+	h.tick.Add(driedGhastDelay)
+	h.processUpdate(players, 0, pos)
+}
+
+// TestDriedGhastHatchesGhastling: a waterlogged dried_ghast takes a step of
+// water every 5000 ticks and, once full, is consumed and hatches a baby
+// happy ghast.
 func TestDriedGhastHatchesGhastling(t *testing.T) {
 	h := newHub(world.New(7))
 	players := map[int32]*tracked{}
 	x, y, z := 100, 80, 100
-	h.world.SetBlock(x, y, z, driedGhastBase)       // hydration 0
-	h.world.SetBlock(x+1, y, z, worldgen.WaterBase) // wet: water source beside it
-
-	hatched := false
-	for i := 0; i < 400; i++ { // probabilistic step gate (~1-in-4), so loop generously
-		st := h.world.At(x, y, z)
-		if !isDriedGhast(st) {
-			hatched = true
-			break
+	info, _ := worldgen.InfoForState(driedGhastBase)
+	wet := worldgen.SetProperty(info, driedGhastBase, "waterlogged", "true")
+	h.world.SetBlock(x, y, z, worldgen.SetProperty(info, wet, "hydration", "0"))
+	pos := blockPos{x, y, z}
+	for i := 0; i < 3; i++ {
+		driedGhastCycle(h, players, pos)
+		if got := driedGhastHydration(h.world.At(x, y, z)); got != i+1 {
+			t.Fatalf("after %d steps hydration is %d", i+1, got)
 		}
-		h.tickDriedGhast(players, 0, x, y, z, st)
 	}
-	if !hatched {
-		t.Fatal("dried ghast never hatched despite adjacent water")
-	}
+	driedGhastCycle(h, players, pos)
 	if got := h.world.At(x, y, z); got != worldgen.Air {
 		t.Fatalf("dried ghast should be consumed on hatch, got state %d", got)
 	}
@@ -45,19 +51,17 @@ func TestDriedGhastHatchesGhastling(t *testing.T) {
 	}
 }
 
-// TestDriedGhastDriesWithoutWater: with no water and no rain, a partly-hydrated
-// dried ghast loses hydration instead of hatching.
+// TestDriedGhastDriesWithoutWater: not waterlogged — water beside it does
+// not count — a partly-hydrated dried ghast loses a step instead of hatching.
 func TestDriedGhastDriesWithoutWater(t *testing.T) {
 	h := newHub(world.New(7))
 	players := map[int32]*tracked{}
 	x, y, z := 40, 80, 40
 	info, _ := worldgen.InfoForState(driedGhastBase)
-	wet := worldgen.SetProperty(info, driedGhastBase, "hydration", "2")
-	h.world.SetBlock(x, y, z, wet) // hydration 2, dry surroundings
-
-	for i := 0; i < 100 && worldgen.GetProperty(info, h.world.At(x, y, z), "hydration") == "2"; i++ {
-		h.tickDriedGhast(players, 0, x, y, z, h.world.At(x, y, z))
-	}
+	dry := worldgen.SetProperty(info, driedGhastBase, "waterlogged", "false")
+	h.world.SetBlock(x, y, z, worldgen.SetProperty(info, dry, "hydration", "2"))
+	h.world.SetBlock(x+1, y, z, worldgen.WaterBase)
+	driedGhastCycle(h, players, blockPos{x, y, z})
 	got := h.world.At(x, y, z)
 	if !isDriedGhast(got) {
 		t.Fatal("a dry dried ghast must not hatch")

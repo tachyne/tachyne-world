@@ -458,6 +458,7 @@ type hub struct {
 	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
 	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
 	composterDue                   map[simPos]uint64         // full composters' ready ticks (composter.go)
+	driedGhastDue                  map[simPos]uint64         // dried ghasts' scheduled hydration steps (happyghast.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)

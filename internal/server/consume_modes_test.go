@@ -286,8 +286,7 @@ func TestAllayLikedPlayerRules(t *testing.T) {
 }
 
 // Weather is the overworld's alone: overworld rain neither waters a Nether
-// farm nor douses a Nether fire, and overworld water does not wet a Nether
-// dried ghast.
+// farm nor douses a Nether fire.
 func TestNoOverworldWeatherInTheNether(t *testing.T) {
 	h := newHub(world.New(1))
 	h.raining = true
@@ -299,21 +298,7 @@ func TestNoOverworldWeatherInTheNether(t *testing.T) {
 			t.Error("overworld rain douses a Nether fire")
 		}
 	})
-	nw, err := world.NewNether(1, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	h.nether = nw
-	h.world.ForceLoad(0, 0, 1)
-	nw.ForceLoad(0, 0, 1)
-	h.world.SetBlock(1, 100, 0, worldgen.WaterBase)
-	nw.SetBlock(1, 100, 0, worldgen.Air)
-	if h.waterAdjacent(dimNether, 0, 100, 0) {
-		t.Error("overworld water hydrates a Nether dried ghast")
-	}
-	if !h.waterAdjacent(dimOverworld, 0, 100, 0) {
-		t.Error("the overworld's own water no longer counts")
-	}
+	// (A dried ghast hydrates from its own WATERLOGGED, in any dimension.)
 }
 
 // HappyGhastAi: tempted by a snowball or a harness (and it rises to the
