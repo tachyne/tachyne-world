@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Turtles roam the sea.** A turtle in the water now keeps swimming,
+  stretch after stretch, toward far-off points as in vanilla, instead of
+  standing about; ashore it sets off on a stroll a little more often.
 - **Foxes act like vanilla foxes.** A fox now walks in upright on a
   chicken or rabbit until it is close, crouches, and pounces from the
   crouch — and a pounce that comes down in snow leaves it head-first in the

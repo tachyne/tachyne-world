@@ -480,6 +480,9 @@ type mob struct {
 	foxBerryWait                    int        // fox: ticks waited beside it
 	foxVillage                      bool       // fox: walking a leg toward the village
 	foxVillageX, foxVillageZ        float64    // fox: …to here
+	turtleLeg                       bool       // turtle: TurtleTravelGoal has a leg under way
+	turtleLegX, turtleLegZ          float64    // turtle: …ending here
+	turtleLegTry                    int        // turtle: updates spent on it
 	armState                        int8       // armadillo: 0 idle, 1 rolling, 2 scared, 3 unrolling (DATA_STATE)
 	armStateAt                      uint64     // armadillo: the tick the state began
 	armDangerUntil                  uint64     // armadillo: DANGER_DETECTED_RECENTLY expiry
@@ -1007,6 +1010,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			busy := (m.hostile && m.hasTarget) || (m.tamed && m.hasTarget)
 			if m.stroll <= 0 && !busy {
 				m.rest = restMin + h.rng.Intn(restMax-restMin)
+				if m.etype == entityTurtle {
+					m.rest = turtleRest(m.rest)
+				}
 				if m.etype == entityFrog {
 					h.frogIdleCroak(players, m) // the idle RunOne's pick: croak or just pause
 				}

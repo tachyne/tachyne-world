@@ -84,7 +84,7 @@ func (h *hub) turtleStep(players map[int32]*tracked, m *mob) bool {
 	}
 	if !m.hasEgg || m.baby {
 		m.layCounter = 0
-		return h.turtleWaterStep(m)
+		return h.turtleWaterStep(m) || h.turtleTravelStep(m)
 	}
 	hx, hz := float64(m.home.x)+0.5, float64(m.home.z)+0.5
 	dx, dz := hx-m.x, hz-m.z
@@ -212,3 +212,98 @@ func (h *hub) turtleWaterStep(m *mob) bool {
 	m.rest = 0
 	return true
 }
+
+const (
+	turtleTravelXZ    = 512 // TurtleTravelGoal.start: a spot up to 512 blocks off
+	turtleLegXZ       = 16  // tick: DefaultRandomPos.getPosTowards(16, 3, …, π/10)
+	turtleLegWide     = 8   // …else (8, 7, …, π/2)
+	turtleLegLoaded   = 34  // hasChunksAt(±34) around the leg's end
+	turtleLegTries    = 10  // RandomPos's attempts
+	turtleLegArrive   = 1.0 // navigation done
+	turtleLegGiveUp   = 200 // updates on one leg before the path counts as done
+	turtleStrollEvery = 100 // TurtleRandomStrollGoal(1.0, 100) against the default 120
+)
+
+// turtleTravelStep is TurtleTravelGoal: a turtle in the water, not going
+// home, not carrying an egg and not courting swims on and on — each leg of
+// up to sixteen blocks heads toward a fresh spot as much as 512 blocks off,
+// so at sea it is always going somewhere. A leg that would end in ground
+// not loaded, or out of the water, is no leg: the goal stops and picks
+// again next time.
+func (h *hub) turtleTravelStep(m *mob) bool {
+	if m.dying != 0 || m.panic > 0 || m.tempted || m.hasEgg || m.turtleHoming || m.loveTicks > 0 ||
+		!h.inWater(m.dim, m.x, m.y+0.2, m.z) {
+		m.turtleLeg = false
+		return false
+	}
+	if m.turtleLeg {
+		if m.turtleLegTry++; m.turtleLegTry <= turtleLegGiveUp && math.Hypot(m.turtleLegX-m.x, m.turtleLegZ-m.z) > turtleLegArrive {
+			h.steerTo(m, m.turtleLegX, m.turtleLegZ, 1.0)
+			return true
+		}
+		m.turtleLeg = false // the path is done: the goal stops, and starts over with a new spot
+	}
+	// start: the far spot. Only its direction matters to the leg (the
+	// engine's swimmers keep their level, so its height is not drawn).
+	tx := m.x + float64(h.rng.Intn(2*turtleTravelXZ+1)-turtleTravelXZ)
+	tz := m.z + float64(h.rng.Intn(2*turtleTravelXZ+1)-turtleTravelXZ)
+	x, z, ok := h.turtleLegToward(m, tx, tz, turtleLegXZ, math.Pi/10)
+	if !ok {
+		x, z, ok = h.turtleLegToward(m, tx, tz, turtleLegWide, math.Pi/2)
+	}
+	if !ok || !h.turtleLegLoaded(m.dim, x, z) {
+		// Stuck: the goal stops and picks again next time round. Nothing
+		// else moves a turtle at sea (its stroll is for land), so it drifts.
+		m.vx, m.vz = m.vx*0.6, m.vz*0.6
+		return true
+	}
+	m.turtleLeg, m.turtleLegX, m.turtleLegZ, m.turtleLegTry = true, x, z, 0
+	h.steerTo(m, x, z, 1.0)
+	return true
+}
+
+// turtleLegToward is DefaultRandomPos.getPosTowards for a travelling turtle:
+// a spot within reach, inside the arc about the heading to (tx, tz), that is
+// water (TurtlePathNavigation.isStableDestination while travelling).
+func (h *hub) turtleLegToward(m *mob, tx, tz float64, reach int, arc float64) (float64, float64, bool) {
+	w := h.worldFor(m.dim)
+	if w == nil {
+		return 0, 0, false
+	}
+	head := math.Atan2(tz-m.z, tx-m.x)
+	y := floorInt(m.y)
+	for i := 0; i < turtleLegTries; i++ {
+		a := head + (2*h.rng.Float64()-1)*arc
+		r := math.Sqrt(h.rng.Float64()) * float64(reach) * math.Sqrt2
+		r = math.Min(r, float64(reach))
+		x, z := m.x+math.Cos(a)*r, m.z+math.Sin(a)*r
+		if worldgen.IsWater(w.At(floorInt(x), y, floorInt(z))) {
+			return math.Floor(x) + 0.5, math.Floor(z) + 0.5, true
+		}
+	}
+	return 0, 0, false
+}
+
+// turtleLegLoaded is the leg's hasChunksAt: every chunk within thirty-four
+// blocks of its end is loaded.
+func (h *hub) turtleLegLoaded(dim int, x, z float64) bool {
+	w := h.worldFor(dim)
+	if w == nil {
+		return false
+	}
+	x0, z0 := (floorInt(x)-turtleLegLoaded)>>4, (floorInt(z)-turtleLegLoaded)>>4
+	x1, z1 := (floorInt(x)+turtleLegLoaded)>>4, (floorInt(z)+turtleLegLoaded)>>4
+	for cx := x0; cx <= x1; cx++ {
+		for cz := z0; cz <= z1; cz++ {
+			if !w.Loaded(int32(cx), int32(cz)) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// turtleRest is the idle spell before a turtle's next stroll on land:
+// TurtleRandomStrollGoal runs on an interval of 100 where the other
+// animals' strolls run on 120, so its rests are that much shorter.
+func turtleRest(rest int) int { return rest * turtleStrollEvery / 120 }
