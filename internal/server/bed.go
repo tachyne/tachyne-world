@@ -261,24 +261,52 @@ func (h *hub) handleUseBed(players map[int32]*tracked, t *tracked, pos blockPos)
 	if !ok {
 		return // half a bed: nothing to lie in
 	}
-	if h.spawns != nil { // clicking a bed claims it as home (vanilla)
-		h.spawns.set(t.p.key(), head, t.dim)
-		t.p.trySendEv(chatEv("Respawn point set"))
+	w := h.worldFor(t.dim)
+	hs := w.Block(head.x, head.y, head.z)
+	info, _ := worldgen.InfoForState(hs)
+	// BedBlock.useWithoutItem: someone is in it already.
+	if boolProp(hs, "occupied") && !t.sleeping {
+		t.p.trySendEv(actionBarEv("This bed is occupied"))
+		return
+	}
+	// ServerPlayer.startSleepInBed, in vanilla's order; the refusals are
+	// overlay messages (sendOverlayMessage), not chat.
+	fx, fz := facingStep(worldgen.GetProperty(info, hs, "facing")) // foot → head
+	foot := blockPos{head.x - fx, head.y, head.z - fz}
+	reach := func(b blockPos) bool { // isReachableBedBlock: the block's bottom centre
+		return math.Abs(t.x-float64(b.x)-0.5) <= 3 && math.Abs(t.y-float64(b.y)) <= 2 && math.Abs(t.z-float64(b.z)-0.5) <= 3
+	}
+	if !reach(head) && !reach(foot) {
+		t.p.trySendEv(actionBarEv("You may not rest now; the bed is too far away"))
+		return
+	}
+	if worldgen.IsFullCube(w.Block(head.x, head.y+1, head.z)) || worldgen.IsFullCube(w.Block(foot.x, foot.y+1, foot.z)) {
+		t.p.trySendEv(actionBarEv("This bed is obstructed")) // bedBlocked: a suffocating block above either half
+		return
+	}
+	if h.spawns != nil { // setRespawnPosition(…, true): the message only when it changes
+		if cur, dim, had := h.spawns.get(t.p.key()); !had || cur != head || dim != t.dim {
+			h.spawns.set(t.p.key(), head, t.dim)
+			t.p.trySendEv(chatEv("Respawn point set"))
+		}
 	}
 	// Player.startSleepInBed refuses only while it is DAY, and Level.isDay is
 	// not a clock reading — it is skyDarken < 4, which a thunderstorm pushes
 	// over the line. That is why you can sleep through one at noon, and why
 	// ordinary rain (which darkens the sky but not enough) will not do.
 	if h.isDaylight() {
-		t.p.trySendEv(chatEv("You can only sleep at night or during a thunderstorm"))
+		t.p.trySendEv(actionBarEv("You can sleep only at night or during thunderstorms"))
 		return
 	}
 	bx, by, bz := float64(head.x)+0.5, float64(head.y), float64(head.z)+0.5
 	for _, m := range h.mobs {
+		if t.gamemode == gmCreative {
+			break // the monster check is skipped for a creative player
+		}
 		if m.hostile && m.dying == 0 && m.dim == t.dim &&
 			math.Abs(m.x-bx) <= monsterRangeH && math.Abs(m.z-bz) <= monsterRangeH &&
 			math.Abs(m.y-by) <= monsterRangeV {
-			t.p.trySendEv(chatEv("You may not rest now; there are monsters nearby"))
+			t.p.trySendEv(actionBarEv("You may not rest now; there are monsters nearby"))
 			return
 		}
 	}

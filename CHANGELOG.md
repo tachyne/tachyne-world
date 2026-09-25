@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Beds refuse you the way vanilla does.** A bed someone is already in,
+  one more than three blocks away, or one with a solid block over it now
+  turns you down with vanilla's message above the hotbar. "Respawn point
+  set" appears only when your spawn actually moves, and creative players
+  can sleep with monsters about.
 - **Falling stalactites shatter.** A stalactite that fell stayed where it
   landed as a block, hanging from nothing. As in vanilla it now breaks into
   pointed dripstone with its crash. Its damage to whatever it lands on is

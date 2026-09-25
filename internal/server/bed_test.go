@@ -74,7 +74,13 @@ func TestSleepSkipsNightWhenAllInBed(t *testing.T) {
 	if got := h.dayTime.Load(); got != 13000 {
 		t.Fatalf("night must not skip while someone is awake, dayTime=%d", got)
 	}
-	h.handleUseBed(players, p2, blockPos{4, 70, 4})
+	// The first bed is occupied now (BedBlock refuses a second sleeper), so
+	// the second player takes the bed beside it.
+	info, _ := worldgen.InfoForState(tWhiteBed)
+	h.world.SetBlock(6, 70, 4, tWhiteBed)
+	h.world.SetBlock(6, 70, 3, worldgen.SetProperty(info, tWhiteBed, "part", "head"))
+	p2.x = 6.5
+	h.handleUseBed(players, p2, blockPos{6, 70, 4})
 	h.updateSleep(players)
 	if got := h.dayTime.Load(); got != 13000 {
 		t.Fatalf("skip must wait out the ~5s fade, dayTime=%d", got)
@@ -243,5 +249,33 @@ func TestSleepWindowFollowsTheSky(t *testing.T) {
 			t.Errorf("noon %s: isDaylight=%v, want %v (skyDarken %d)",
 				tc.name, got, tc.day, canonicalSkyDarken(h.dayTime.Load(), tc.rain, tc.thunder))
 		}
+	}
+}
+
+// TestBedRefusalsFollowVanilla: BedBlock refuses an occupied bed, and
+// startSleepInBed a bed more than 3 blocks away or with a solid block over
+// it — each an overlay message, not chat — and a creative player may sleep
+// with monsters about.
+func TestBedRefusalsFollowVanilla(t *testing.T) {
+	h, players, pl := bedSetup(t)
+	h.dayTime.Store(13000)
+	pl.x, pl.z = 12.5, 12.5 // far from the bed
+	h.handleUseBed(players, pl, blockPos{4, 70, 4})
+	if pl.sleeping {
+		t.Fatal("a bed out of reach should not be slept in")
+	}
+	pl.x, pl.z = 4.5, 4.5
+	h.world.SetBlock(4, 71, 3, worldgen.Stone) // a block over the head
+	h.handleUseBed(players, pl, blockPos{4, 70, 4})
+	if pl.sleeping {
+		t.Fatal("an obstructed bed should not be slept in")
+	}
+	h.world.SetBlock(4, 71, 3, worldgen.Air)
+	zombie := h.spawnMob(players, entityZombie, 6.5, 70, 4.5)
+	zombie.hostile = true
+	pl.gamemode = gmCreative
+	h.handleUseBed(players, pl, blockPos{4, 70, 4})
+	if !pl.sleeping {
+		t.Fatal("a creative player sleeps with a monster nearby")
 	}
 }
