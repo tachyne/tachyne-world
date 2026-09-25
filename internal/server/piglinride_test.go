@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // PiglinAi RIDE: a baby piglin with a baby hoglin in sight takes it for a
 // ride within the forty seconds its ticker can run, a second baby piglin
@@ -15,6 +19,16 @@ func TestBabyPiglinsRideABabyHoglin(t *testing.T) {
 		h.setPiglinBaby(players, m, true)
 		m.immuneZombify = true
 		return m
+	}
+	// A pen, two high: a baby's random stroll can otherwise take it out of
+	// sight of the hoglin for the whole run, which says nothing about riding.
+	for px := x - 3; px <= x+8; px++ {
+		for pz := z - 4; pz <= z+4; pz++ {
+			if px == x-3 || px == x+8 || pz == z-4 || pz == z+4 {
+				h.world.SetBlock(px, y, pz, worldgen.Stone)
+				h.world.SetBlock(px, y+1, pz, worldgen.Stone)
+			}
+		}
 	}
 	a, b := baby(float64(x)+0.5), baby(float64(x)+1.5)
 	hog := walkHoglin(t, h, players, float64(x)+4.5, float64(y), float64(z)+0.5)

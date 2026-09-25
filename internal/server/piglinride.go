@@ -1,5 +1,7 @@
 package server
 
+import "math"
+
 // PiglinAi's RIDE activity: a baby piglin that has seen a baby hoglin for
 // a while (babySometimesRideBabyHoglin — a ticker of ten to forty seconds
 // that only counts while one is in sight) takes it as its RIDE_TARGET for
@@ -122,6 +124,15 @@ func (h *hub) piglinRideStep(players map[int32]*tracked, m *mob) bool {
 		return true
 	}
 	vx, vz := h.pathSteer(m, v.x, v.z)
+	if vx == 0 && vz == 0 {
+		// The path ran out a step short (its stand-off): MoveToTargetSink
+		// keeps walking until it is within reach, so close the last of it
+		// straight on.
+		if dx, dz := v.x-m.x, v.z-m.z; dx != 0 || dz != 0 {
+			d := math.Hypot(dx, dz)
+			vx, vz = dx/d*m.moveSpeed(), dz/d*m.moveSpeed()
+		}
+	}
 	m.vx, m.vz = vx*piglinRideSpeed, vz*piglinRideSpeed
 	m.yaw = yawToward(m.x, m.z, v.x, v.z)
 	m.headYaw = m.yaw
