@@ -42,6 +42,9 @@ func (v *vehicle) aboard() int {
 	if v.rider != 0 {
 		n++
 	}
+	if v.rider2 != 0 {
+		n++
+	}
 	if v.mobRider != 0 {
 		n++
 	}
@@ -51,6 +54,9 @@ func (v *vehicle) aboard() int {
 // passengers is the passenger list in seat order: front first.
 func (v *vehicle) passengers() []int32 {
 	var out []int32
+	if v.rider2 != 0 {
+		return []int32{v.rider, v.rider2}
+	}
 	if v.mobFirst && v.mobRider != 0 {
 		out = append(out, v.mobRider)
 	}
@@ -103,13 +109,13 @@ func (h *hub) boatPickup(players map[int32]*tracked, v *vehicle) {
 // startedRiding is StartRidingTrigger for every player aboard: fired when
 // anything boards, and matched against the player's own vehicle.
 func (h *hub) startedRiding(players map[int32]*tracked, v *vehicle) {
-	t := players[v.rider]
-	if t == nil {
-		return
-	}
 	var passenger string
 	if m := h.mobs[v.mobRider]; m != nil {
 		passenger = advEntityName[m.etype]
 	}
-	h.advance(players, t, "started_riding", advMatch{vehicle: entityNameByID[v.etype], passenger: passenger})
+	for _, id := range []int32{v.rider, v.rider2} {
+		if t := players[id]; t != nil {
+			h.advance(players, t, "started_riding", advMatch{vehicle: entityNameByID[v.etype], passenger: passenger})
+		}
+	}
 }

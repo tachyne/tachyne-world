@@ -139,7 +139,7 @@ func (h *hub) arrowHitsVehicle(players map[int32]*tracked, a *arrowEntity, px, p
 		return false
 	}
 	for _, v := range h.vehicles {
-		if v.dim != a.dim || (a.shooter != 0 && (v.rider == a.shooter || v.mobRider == a.shooter)) {
+		if v.dim != a.dim || (a.shooter != 0 && (v.rider == a.shooter || v.rider2 == a.shooter || v.mobRider == a.shooter)) {
 			continue
 		}
 		w, ht := v.box()

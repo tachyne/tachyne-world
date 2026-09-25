@@ -2773,9 +2773,8 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 		h.rbstore.save(p.key(), t)
 	}
 	for _, v := range h.vehicles { // a leaver stands up first
-		if v.rider == p.eid {
-			v.rider = 0
-			v.mobFirst = v.mobRider != 0 // a mob left aboard keeps its seat
+		if v.rider == p.eid || v.rider2 == p.eid {
+			v.leaveSeat(p.eid) // a mob left aboard keeps its seat; the back seat moves up
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		}
 	}

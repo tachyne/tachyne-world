@@ -133,6 +133,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Boats seat two players and drift when nobody rows.** A second player
+  can climb into a boat behind the first; the one in front steers, and if
+  they get out the other moves up to the paddles. An empty boat, chest
+  boat or raft — or one with only a mob in front — now floats on the
+  water, is carried along by currents, settles to the surface when dropped
+  in, falls when there is nothing under it, and throws its passengers out
+  after three seconds under water.
 - **Dropped items keep their age, float on lava and stay yours.** A
   dropped item's five minutes now count its own ticks and carry over a
   server restart instead of starting again. Netherite and other
