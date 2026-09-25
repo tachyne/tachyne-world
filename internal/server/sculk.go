@@ -441,6 +441,10 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		case isAnySensor(s) && sensorPhase(s) == sculkPhaseCooldown:
 			h.setBlockAt(players, pos.dim, pos.blockPos, sensorWith(s, 0, sculkPhaseInactive))
 			delete(h.sculkDue, pos)
+			if !sensorWaterlogged(s) { // SculkSensorBlock.tick: the clicking stops
+				h.playSoundDim(players, pos.dim, "minecraft:block.sculk_sensor.clicking_stop", sndBlock,
+					float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 0.8+h.rng.Float32()*0.2)
+			}
 		case isShrieker(s) && shriekerShrieking(s):
 			h.shriekerRespond(players, pos, s)
 			h.setBlockAt(players, pos.dim, pos.blockPos, shriekerWith(s, false))

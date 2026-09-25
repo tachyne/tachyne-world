@@ -450,3 +450,25 @@ func TestLecternBookPlacedIsHeard(t *testing.T) {
 		t.Errorf("placing a book awarded interact_with_lectern %d", stat)
 	}
 }
+
+// SculkSensorBlock.tick: a sensor going from cooldown to inactive plays the
+// clicking-stop sound (not when waterlogged).
+func TestSensorClickingStops(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 7.5, 180, 7.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pos := simPos{blockPos: blockPos{4, 180, 4}}
+	sensor := sensorWith(worldgen.BlockBase("sculk_sensor")+1, 0, sculkPhaseCooldown)
+	h.world.SetBlock(pos.x, pos.y, pos.z, sensor)
+	h.sculkDue[pos] = h.tick.Load() + 1
+	drainOut(pl.p)
+	stepSculk(h, players, 2)
+	if sensorPhase(h.world.At(pos.x, pos.y, pos.z)) != sculkPhaseInactive {
+		t.Fatal("the sensor should be inactive after its cooldown")
+	}
+	if !heardSound(pl.p, "minecraft:block.sculk_sensor.clicking_stop") {
+		t.Error("the sensor's clicking should stop audibly")
+	}
+}
