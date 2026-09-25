@@ -76,7 +76,7 @@ func TestDragonDeathOpensExitEggAndXP(t *testing.T) {
 	h, pl, players := endHub(t)
 	h.onDimSwitch(players, pl, evDim{eid: 1, dim: 2, x: 100.5, y: 49, z: 0.5})
 	m := h.dragon
-	h.hurtByEID(m, 0) // a player hurt it just now
+	h.hurtByEID(m, 0)                                  // a player hurt it just now
 	h.setDragonPhase(players, m, phaseSittingScanning) // a sitting dragon dies where it sits
 	m.health = 0
 	h.killMob(players, m)
