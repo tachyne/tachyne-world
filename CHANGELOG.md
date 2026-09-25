@@ -134,6 +134,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Bats spawn over stone.** As in vanilla, bats now spawn only where the
   block below is natural stone, deepslate or tuff, so a dark room floored
   with planks stays free of them.
+- **The camera pulls back on a happy ghast.** Riding a happy ghast now sets
+  the third-person camera well back, as in vanilla, instead of at a
+  player's usual distance.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

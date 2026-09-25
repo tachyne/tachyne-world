@@ -1840,6 +1840,14 @@ func newMobAttributes(etype int) *attribute.Map {
 	if sh := stepHeightFor(etype); sh > 0 {
 		a.SetBase(attr.StepHeight, sh)
 	}
+	// CAMERA_DISTANCE: how far back a rider's third-person camera sits
+	// (HappyGhast 8, Giant 16; everything else the default 4).
+	switch etype {
+	case entityHappyGhast:
+		a.SetBase(attr.CameraDistance, 8)
+	case entityGiant:
+		a.SetBase(attr.CameraDistance, 16)
+	}
 	// The two species families that fall better than everything else: a fox
 	// lands from five blocks unhurt, and the equines from six and then take
 	// half of what is left.

@@ -73,3 +73,27 @@ func TestAttributeFrames(t *testing.T) {
 		t.Fatal("nothing changed: the print stays")
 	}
 }
+
+// CAMERA_DISTANCE is syncable: a ridden happy ghast pulls the camera back
+// to 8 and a giant's is 16; a mob that never set it sends nothing.
+func TestCameraDistanceSyncs(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	cam := func(m *mob) (float64, bool) {
+		for _, a := range mobAttrFrame(m).Attrs {
+			if a.Name == "minecraft:camera_distance" {
+				return a.Base, true
+			}
+		}
+		return 0, false
+	}
+	if v, ok := cam(h.spawnSpecies(players, entityHappyGhast, 0, 0.5, 180, 0.5)); !ok || v != 8 {
+		t.Fatalf("happy ghast camera_distance = %v (%v), want 8", v, ok)
+	}
+	if v, ok := cam(h.spawnSpecies(players, entityGiant, 0, 4.5, 180, 0.5)); !ok || v != 16 {
+		t.Fatalf("giant camera_distance = %v (%v), want 16", v, ok)
+	}
+	if _, ok := cam(h.spawnSpecies(players, entityCow, 0, 8.5, 180, 0.5)); ok {
+		t.Fatal("a cow never sets camera_distance")
+	}
+}

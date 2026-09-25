@@ -79,6 +79,7 @@ const (
 	SpawnReinforcements          ID = "minecraft:spawn_reinforcements"
 	FlyingSpeed                  ID = "minecraft:flying_speed"
 	TemptRange                   ID = "minecraft:tempt_range"
+	CameraDistance               ID = "minecraft:camera_distance"
 	// The 26.3 movement-physics trio a sulfur cube's swallowed block tunes.
 	Bounciness       ID = "minecraft:bounciness"
 	FrictionModifier ID = "minecraft:friction_modifier"
