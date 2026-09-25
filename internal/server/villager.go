@@ -509,12 +509,34 @@ func (h *hub) tradeResult(t *tracked) (invStack, *mobOffer) {
 
 // takeTradeResult consumes the cost and hands over the goods (AUTHORITY: the
 // server recomputes the offer; the click is a wish).
+//
+// A shift-click keeps trading (AbstractContainerMenu.doClick QUICK_MOVE
+// loops quickMoveStack) while the offer can still be paid, the result is
+// still the same item and the inventory still has room for it.
 func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32) {
 	res, o := h.tradeResult(t)
 	if res.item == 0 || !h.canTakeResult(t, res, mode) {
 		h.sendTradeWindow(t)
 		return
 	}
+	for {
+		h.tradeOnce(players, t, res, o, mode)
+		if mode != 1 {
+			break
+		}
+		next, no := h.tradeResult(t)
+		if next.item == 0 || next.item != res.item || !h.canTakeResult(t, next, mode) {
+			break
+		}
+		res, o = next, no
+	}
+	h.sendCursor(t)
+	h.sendTradeWindow(t)
+}
+
+// tradeOnce is one take of the merchant result: the cost paid, the goods
+// handed over, and the trade's experience, gossip and sounds.
+func (h *hub) tradeOnce(players map[int32]*tracked, t *tracked, res invStack, o *mobOffer, mode int32) {
 	consume := func(item int32, need int) {
 		for i := range t.trade {
 			if need == 0 {
@@ -562,8 +584,6 @@ func (h *hub) takeTradeResult(players map[int32]*tracked, t *tracked, mode int32
 	}
 	h.advance(players, t, "villager_trade", advMatch{})
 	h.incCustom(t, "traded_with_villager", 1)
-	h.sendCursor(t)
-	h.sendTradeWindow(t)
 }
 
 // reclaimTrade folds trade inputs back on close.

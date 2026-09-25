@@ -1228,3 +1228,31 @@ func TestTradeSelectMovesPayment(t *testing.T) {
 		t.Error("the dirt that was in the payment slot did not go back to the inventory")
 	}
 }
+
+// A shift-click on the merchant result keeps trading while the inputs can
+// pay (doClick's QUICK_MOVE loop): 64 wheat at 20 a time buys 3 emeralds.
+func TestTradeShiftClickRepeats(t *testing.T) {
+	h := newHub(world.New(7))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
+	h.initVillagerTrades(m, 0)
+	m.offers = []mobOffer{
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
+	}
+	h.openTrades(pl, m)
+	for i := range pl.inv.slots {
+		pl.inv.slots[i] = invStack{}
+	}
+	pl.trade[0] = invStack{item: itemByName["wheat"], count: 64}
+	h.takeTradeResult(players, pl, 1)
+	got := 0
+	for _, s := range pl.inv.slots {
+		if s.item == itemByName["emerald"] {
+			got += s.count
+		}
+	}
+	if got != 3 || pl.trade[0].count != 4 || m.offers[0].uses != 3 {
+		t.Fatalf("shift-click: %d emeralds, %d wheat left, %d uses; want 3, 4, 3", got, pl.trade[0].count, m.offers[0].uses)
+	}
+}

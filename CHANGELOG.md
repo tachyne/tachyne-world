@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Shift-clicking a trade trades in bulk.** Shift-clicking the result of a
+  villager or wandering trader trade now keeps trading while you can pay
+  and have room, as in vanilla, instead of trading once.
 - **Daylight detectors in the Nether and the End stay put.** With no sky
   there, a detector no longer reads darkness, so an inverted one no
   longer gives full power, as in vanilla.
