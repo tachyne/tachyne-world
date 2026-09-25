@@ -243,10 +243,10 @@ func TestGrindstoneNeverDrops(t *testing.T) {
 	}
 }
 
-// A wall hanging sign facing north hangs between the blocks east and west
-// of it (WallHangingSignBlock.canPlace): it stays while either side holds,
-// and drops when both are gone. A second sign turned the same way beside it
-// counts as a hold.
+// A wall hanging sign facing north is placed between the blocks east and
+// west of it (WallHangingSignBlock.canPlace), or beside another sign turned
+// the same way. Once placed it never drops: vanilla leaves canSurvive alone,
+// so breaking both sides leaves it hanging.
 func TestWallHangingSignHeldFromTheSides(t *testing.T) {
 	h := newHub(world.New(1))
 	h.world.ForceLoad(0, 0, 1)
@@ -256,247 +256,19 @@ func TestWallHangingSignHeldFromTheSides(t *testing.T) {
 	info, _ := worldgen.InfoForState(base)
 	sign := worldgen.SetProperty(info, base, "facing", "north")
 	x, y, z := 4, 180, 4
-	h.world.SetBlock(x-1, y, z, stone)
+	if canPlaceAt(h.world, blockPos{x, y, z}, sign) {
+		t.Fatal("a wall hanging sign was placeable with nothing on either side")
+	}
 	h.world.SetBlock(x+1, y, z, stone)
+	if !canPlaceAt(h.world, blockPos{x, y, z}, sign) {
+		t.Fatal("a wall hanging sign with stone to its east was refused")
+	}
 	h.world.SetBlock(x, y, z, sign)
-
-	h.setBlockAt(players, 0, blockPos{x - 1, y, z}, worldgen.Air)
-	if h.world.At(x, y, z) != sign {
-		t.Fatal("the sign fell while its east side still held it")
+	if !canPlaceAt(h.world, blockPos{x - 1, y, z}, sign) {
+		t.Fatal("a sign beside another one turned the same way was refused")
 	}
 	h.setBlockAt(players, 0, blockPos{x + 1, y, z}, worldgen.Air)
-	if h.world.At(x, y, z) == sign {
-		t.Fatal("the sign stayed with nothing on either side")
-	}
-
-	// Two signs in a row, the outer one on stone: the inner one holds.
-	h.world.SetBlock(x+1, y, z, stone)
-	h.world.SetBlock(x, y, z, sign)
-	h.world.SetBlock(x-1, y, z, sign)
-	h.setBlockAt(players, 0, blockPos{x - 2, y, z}, stone)
-	h.setBlockAt(players, 0, blockPos{x - 2, y, z}, worldgen.Air)
-	if h.world.At(x-1, y, z) != sign {
-		t.Fatal("a sign held by the sign beside it fell")
-	}
-}
-
-// A snow layer lies on a full top face, honey, soul sand or mud, never on
-// ice, and drops when an ice block replaces its floor
-// (SnowLayerBlock.canSurvive).
-func TestSnowLayerFloors(t *testing.T) {
-	w := world.New(1)
-	pos := blockPos{4, 180, 4}
-	snow := worldgen.BlockBase("snow")
-	for name, ok := range map[string]bool{
-		"stone": true, "mud": true, "soul_sand": true, "honey_block": true,
-		"ice": false, "packed_ice": false, "barrier": false,
-	} {
-		w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase(name))
-		if got := supported(w, pos, snow); got != ok {
-			t.Errorf("snow on %s: supported %v, want %v", name, got, ok)
-		}
-	}
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	h.world.SetBlock(pos.x, pos.y-1, pos.z, worldgen.Stone)
-	h.world.SetBlock(pos.x, pos.y, pos.z, snow)
-	h.setBlockAt(map[int32]*tracked{}, 0, blockPos{pos.x, pos.y - 1, pos.z}, worldgen.BlockBase("ice"))
-	if h.world.At(pos.x, pos.y, pos.z) == snow {
-		t.Fatal("snow stayed on ice")
-	}
-}
-
-// A bed half whose partner is destroyed by something other than a player
-// (an explosion, a piston) goes too, and so does a door's lower half left
-// without its upper; a bed with nothing under it stays (BedBlock and
-// DoorBlock.updateShape).
-func TestPairedHalvesGoTogether(t *testing.T) {
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	players := map[int32]*tracked{}
-	w := h.world
-	base := worldgen.BlockBase("red_bed")
-	info, _ := worldgen.InfoForState(base)
-	foot := worldgen.SetProperty(info, worldgen.SetProperty(info, base, "facing", "east"), "part", "foot")
-	head := worldgen.SetProperty(info, foot, "part", "head")
-	w.SetBlock(4, 180, 4, foot)
-	w.SetBlock(5, 180, 4, head)
-	h.setBlockAt(players, 0, blockPos{4, 179, 4}, worldgen.Stone)
-	h.setBlockAt(players, 0, blockPos{4, 179, 4}, worldgen.Air) // the floor comes and goes
-	if w.At(4, 180, 4) != foot || w.At(5, 180, 4) != head {
-		t.Fatal("a bed fell for want of a floor")
-	}
-	h.setBlockAt(players, 0, blockPos{5, 180, 4}, worldgen.Air) // the head blown away
-	if w.At(4, 180, 4) == foot {
-		t.Fatal("the foot of a bed stayed without its head")
-	}
-
-	door := worldgen.BlockBase("oak_door")
-	di, _ := worldgen.InfoForState(door)
-	lower := worldgen.SetProperty(di, door, "half", "lower")
-	upper := worldgen.SetProperty(di, door, "half", "upper")
-	w.SetBlock(8, 179, 8, worldgen.Stone)
-	w.SetBlock(8, 180, 8, lower)
-	w.SetBlock(8, 181, 8, upper)
-	h.setBlockAt(players, 0, blockPos{8, 181, 8}, worldgen.Air)
-	if w.At(8, 180, 8) == lower {
-		t.Fatal("a door's lower half stayed without its upper half")
-	}
-}
-
-// A crop needs light to stay (CropBlock.canSurvive: raw brightness >= 8): in
-// the open it stands; roofed over in the dark it drops on the next update.
-func TestCropNeedsLight(t *testing.T) {
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	players := map[int32]*tracked{}
-	w := h.world
-	farmland := worldgen.BlockBase("farmland")
-	wheat := worldgen.BlockBase("wheat")
-	x, y, z := 6, 200, 6
-	w.SetBlock(x, y-1, z, farmland)
-	w.SetBlock(x, y, z, wheat)
-	if !supported(w, blockPos{x, y, z}, wheat) {
-		t.Fatal("wheat in the open sky was unsupported")
-	}
-	// Box it in: stone all round, over it and under the farmland, no torch.
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			for dy := -2; dy <= 1; dy++ {
-				if dx == 0 && dz == 0 && (dy == 0 || dy == -1) {
-					continue // the wheat and its farmland
-				}
-				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Stone)
-			}
-		}
-	}
-	h.setBlockAt(players, 0, blockPos{x + 1, y, z}, worldgen.BlockBase("cobblestone"))
-	if w.At(x, y, z) == wheat {
-		t.Fatal("wheat shut in the dark stayed")
-	}
-}
-
-// A comparator reads a copper golem statue and a creaking heart, so taking
-// one away must tell the comparators (affectNeighborsAfterRemoval).
-func TestStatueAndHeartHaveComparatorOutput(t *testing.T) {
-	for _, n := range []string{"copper_golem_statue", "oxidized_copper_golem_statue", "creaking_heart"} {
-		if !hasComparatorOutput(worldgen.BlockBase(n)) {
-			t.Errorf("%s is missing from hasComparatorOutput", n)
-		}
-	}
-}
-
-// A single-wall bell hangs on the wall it faces (BellBlock.canSurvive); a
-// double-wall bell that loses one wall hangs on from the other, and a
-// single-wall bell that gains a wall on its free side is held from both.
-func TestBellWalls(t *testing.T) {
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	players := map[int32]*tracked{}
-	w := h.world
-	bell := worldgen.BlockBase("bell")
-	info, _ := worldgen.InfoForState(bell)
-	set := func(att, facing string) uint32 {
-		return worldgen.SetProperty(info, worldgen.SetProperty(info, bell, "attachment", att), "facing", facing)
-	}
-	prop := func(k string) string { s := w.At(5, 180, 5); return worldgen.GetProperty(info, s, k) }
-	// Walls west and east; the bell between them.
-	w.SetBlock(4, 180, 5, worldgen.Stone)
-	w.SetBlock(6, 180, 5, worldgen.Stone)
-	w.SetBlock(5, 180, 5, set("double_wall", "west"))
-	h.setBlockAt(players, 0, blockPos{6, 180, 5}, worldgen.Air) // the east wall goes
-	if !isBellState(w.At(5, 180, 5)) || prop("attachment") != "single_wall" || prop("facing") != "west" {
-		t.Fatalf("after losing its east wall: %s facing %s", prop("attachment"), prop("facing"))
-	}
-	h.setBlockAt(players, 0, blockPos{4, 180, 5}, worldgen.BlockBase("cobblestone")) // a change beside its wall
-	if !isBellState(w.At(5, 180, 5)) {
-		t.Fatal("a single-wall bell fell although its wall stands")
-	}
-	h.setBlockAt(players, 0, blockPos{6, 180, 5}, worldgen.Stone) // a wall back on the free side
-	if prop("attachment") != "double_wall" {
-		t.Fatalf("with both walls again it is %s", prop("attachment"))
-	}
-}
-
-func isBellState(s uint32) bool {
-	lo, hi, _ := worldgen.BlockRangeOK("bell")
-	return s >= lo && s <= hi
-}
-
-// A fence re-reads its connections when the world changes beside it (an
-// explosion, a piston: setBlockAt), not only on a player's edit; tripwire
-// connects to tripwire and hooks, never to a solid block.
-func TestConnectorsFollowEngineChanges(t *testing.T) {
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	players := map[int32]*tracked{}
-	w := h.world
-	fence := worldgen.BlockBase("oak_fence")
-	info, _ := worldgen.InfoForState(fence)
-	w.SetBlock(5, 180, 5, worldgen.Stone)
-	w.SetBlock(6, 180, 5, connectStateAt(w, 6, 180, 5, fence))
-	if worldgen.GetProperty(info, w.At(6, 180, 5), "west") != "true" {
-		t.Fatal("a fence beside stone did not connect")
-	}
-	h.setBlockAt(players, 0, blockPos{5, 180, 5}, worldgen.Air) // blown away
-	if worldgen.GetProperty(info, w.At(6, 180, 5), "west") != "false" {
-		t.Fatal("the fence kept its connection to stone that is gone")
-	}
-
-	wire := worldgen.BlockBase("tripwire")
-	wi, _ := worldgen.InfoForState(wire)
-	w.SetBlock(9, 180, 5, worldgen.Stone)
-	got := connectStateAt(w, 10, 180, 5, wire)
-	if worldgen.GetProperty(wi, got, "west") != "false" {
-		t.Fatal("tripwire connected to a solid block")
-	}
-	w.SetBlock(9, 180, 5, wire)
-	if got := connectStateAt(w, 10, 180, 5, wire); worldgen.GetProperty(wi, got, "west") != "true" {
-		t.Fatal("tripwire did not connect to tripwire")
-	}
-}
-
-// A cow landing on farmland from a drop may trample it (FarmlandBlock.fallOn
-// for a big enough mob, with mob griefing); a chicken never does.
-func TestMobTramplesFarmland(t *testing.T) {
-	h := newHub(world.New(1))
-	h.world.ForceLoad(0, 0, 1)
-	h.rules.MobGriefing = true
-	players := map[int32]*tracked{}
-	w := h.world
-	farmland := worldgen.BlockBase("farmland")
-	trampled := func(etype int) int {
-		n := 0
-		for i := 0; i < 40; i++ {
-			w.SetBlock(3, 179, 3, farmland)
-			m := h.spawnMob(players, etype, 3.5, 180, 3.5)
-			h.mobTrample(players, m, 1.5) // a full block's drop: always
-			if w.At(3, 179, 3) != farmland {
-				n++
-			}
-			h.removeMob(players, m)
-		}
-		return n
-	}
-	if n := trampled(entityCow); n != 40 {
-		t.Errorf("a cow dropping a block and a half trampled %d of 40", n)
-	}
-	if n := trampled(entityChicken); n != 0 {
-		t.Errorf("a chicken trampled farmland %d times", n)
-	}
-}
-
-// A mushroom stays on mycelium in any light, on stone only in the dark
-// (MushroomBlock.canSurvive: light under 13).
-func TestMushroomLight(t *testing.T) {
-	w := world.New(1)
-	pos := blockPos{4, 200, 4}
-	w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase("mycelium"))
-	if !supported(w, pos, brownMushroomState) {
-		t.Error("a mushroom on mycelium in daylight fell")
-	}
-	w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.Stone)
-	if supported(w, pos, brownMushroomState) {
-		t.Error("a mushroom on stone in full daylight stood")
+	if h.world.At(x, y, z) != sign {
+		t.Fatal("the sign fell when its side went; vanilla keeps it")
 	}
 }

@@ -540,7 +540,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		if isScaffolding(state) { // ScaffoldingBlock.getStateForPlacement: distance + bottom
 			state, _ = scaffoldUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state)
 		}
-		if !supported(s.worldFor(p), blockPos{tx, ty, tz}, state) {
+		if !canPlaceAt(s.worldFor(p), blockPos{tx, ty, tz}, state) {
 			// vanilla canSurvive at placement: a rail, torch or flower with
 			// nothing to hold it is refused rather than left floating.
 			s.abortPlace(p, tx, ty, tz, seq)

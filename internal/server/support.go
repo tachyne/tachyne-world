@@ -84,6 +84,40 @@ func stacksOnItself(state, below uint32) bool {
 	return false
 }
 
+// canPlaceAt is supported plus the rules vanilla checks only when a block is
+// placed, never afterwards: a wall hanging sign must be held from either
+// side along its facing's clockwise axis — a full sturdy face there, or
+// another wall hanging sign turned the same way (WallHangingSignBlock.canPlace).
+func canPlaceAt(w *world.World, pos blockPos, state uint32) bool {
+	if !supported(w, pos, state) {
+		return false
+	}
+	k, ok := signKind(state)
+	if w == nil || !ok || k != signHangingWall {
+		return true
+	}
+	info, ok := worldgen.InfoForState(state)
+	if !ok {
+		return true
+	}
+	f := worldgen.GetProperty(info, state, "facing")
+	cw := clockwiseFacing(f)
+	for _, side := range []string{cw, oppositeOf(cw)} {
+		dx, dz := facingDelta(side)
+		n := w.At(pos.x+dx, pos.y, pos.z+dz)
+		if nk, ok := signKind(n); ok && nk == signHangingWall {
+			if ni, ok := worldgen.InfoForState(n); ok && facingAxisX(worldgen.GetProperty(ni, n, "facing")) == facingAxisX(f) {
+				return true
+			}
+			continue
+		}
+		if holdsBlock(n) {
+			return true
+		}
+	}
+	return false
+}
+
 // supported reports whether the block at pos can stay there. Taken over a
 // world rather than the hub so the placement path — which runs on a session
 // goroutine — can ask the same question the tick loop asks.
@@ -168,25 +202,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		return soulFireBase(below())
 	}
 	if k, ok := signKind(state); ok && k == signHangingWall {
-		// WallHangingSignBlock.canPlace: held from either side along its
-		// facing's clockwise axis — a full sturdy face there, or another
-		// wall hanging sign turned the same way.
-		f := prop("facing")
-		cw := clockwiseFacing(f)
-		for _, side := range []string{cw, oppositeOf(cw)} {
-			dx, dz := facingDelta(side)
-			n := w.At(pos.x+dx, pos.y, pos.z+dz)
-			if nk, ok := signKind(n); ok && nk == signHangingWall {
-				if ni, ok := worldgen.InfoForState(n); ok && facingAxisX(worldgen.GetProperty(ni, n, "facing")) == facingAxisX(f) {
-					return true
-				}
-				continue
-			}
-			if holdsBlock(n) {
-				return true
-			}
-		}
-		return false
+		// WallHangingSignBlock never overrides canSurvive: once placed it
+		// stays, whatever happens to its sides (canPlaceAt checks them).
+		return true
 	}
 	switch worldgen.SupportFor(state) {
 	case worldgen.SupportFloor:

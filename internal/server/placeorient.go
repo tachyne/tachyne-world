@@ -142,7 +142,7 @@ func standingOrWallState(w *world.World, pos blockPos, standing, wall uint32, or
 			continue
 		}
 		st := worldgen.SetProperty(winfo, wall, "facing", faceName(oppositeDir(d)))
-		if supported(w, pos, st) {
+		if canPlaceAt(w, pos, st) {
 			wallState, haveWall = st, true
 			break
 		}
@@ -152,7 +152,7 @@ func standingOrWallState(w *world.World, pos blockPos, standing, wall uint32, or
 		case d == 1:
 			continue
 		case d == 0:
-			if supported(w, pos, standing) {
+			if canPlaceAt(w, pos, standing) {
 				return standing, true
 			}
 		case haveWall:
@@ -185,7 +185,7 @@ func hangableState(w *world.World, pos blockPos, def uint32, order [6]int32) (ui
 			hanging = "true"
 		}
 		st := worldgen.SetProperty(info, def, "hanging", hanging)
-		if supported(w, pos, st) {
+		if canPlaceAt(w, pos, st) {
 			return st, true
 		}
 	}
@@ -214,7 +214,7 @@ func cocoaState(w *world.World, pos blockPos, def uint32, order [6]int32) (uint3
 			continue
 		}
 		st := worldgen.SetProperty(info, def, "facing", faceName(d))
-		if supported(w, pos, st) {
+		if canPlaceAt(w, pos, st) {
 			return st, true
 		}
 	}
@@ -314,7 +314,7 @@ func faceAttachedState(w *world.World, pos blockPos, def uint32, order [6]int32,
 		default:
 			st = worldgen.SetProperty(info, worldgen.SetProperty(info, def, "face", "wall"), "facing", faceName(oppositeDir(d)))
 		}
-		if supported(w, pos, st) {
+		if canPlaceAt(w, pos, st) {
 			return st, true
 		}
 	}
