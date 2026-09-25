@@ -146,6 +146,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Invisibility hides you from mobs.** Hostile mobs now only notice an
+  invisible player from close by (a few blocks without armour, further the
+  more armour is worn), crouching makes you a little harder to spot, and
+  wearing a zombie head, skeleton skull, creeper head or piglin head halves
+  the distance that kind of mob spots you from, as in vanilla.
 - **/setworldspawn works in the Nether and the End.** As in 26.3, the
   world spawn can be set in any dimension: players without a bed or
   anchor respawn there, new players are taken there when they first join,
