@@ -6,6 +6,7 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 	"io"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/tachyne/tachyne-common/protocol"
@@ -602,6 +603,9 @@ func (s *Server) placeTwoTall(p *player, info worldgen.BlockInfo, defState uint3
 	lower := defState
 	if info.HasProperty("facing") {
 		facing := playerFacing(yaw)
+		if inRange(defState, smallDripleafRng) {
+			facing = oppositeFacing(facing) // SmallDripleafBlock: getHorizontalDirection().getOpposite()
+		}
 		lower = worldgen.SetProperty(info, lower, "facing", facing)
 		if info.HasProperty("hinge") {
 			lower = worldgen.SetProperty(info, lower, "hinge", s.doorHinge(s.worldFor(p), x, y, z, facing))
@@ -609,6 +613,11 @@ func (s *Server) placeTwoTall(p *player, info worldgen.BlockInfo, defState uint3
 	}
 	lower = worldgen.SetProperty(info, lower, "half", "lower")
 	upper := worldgen.SetProperty(info, lower, "half", "upper")
+	if info.HasProperty("waterlogged") { // copyWaterloggedFrom, each half its own cell
+		w := s.worldFor(p)
+		lower = worldgen.SetProperty(info, lower, "waterlogged", strconv.FormatBool(w.At(x, y, z) == worldgen.WaterBase))
+		upper = worldgen.SetProperty(info, upper, "waterlogged", strconv.FormatBool(w.At(x, y+1, z) == worldgen.WaterBase))
+	}
 	if s.hub.placeObstructed(p.dim, x, y, z, lower) || s.hub.placeObstructed(p.dim, x, y+1, z, upper) {
 		s.abortPlace(p, x, y, z, seq) // isUnobstructed, for both halves
 		return false

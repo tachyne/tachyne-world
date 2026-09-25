@@ -292,3 +292,33 @@ func TestSeagrassNeedsWater(t *testing.T) {
 		t.Fatalf("seagrass into water: %d", got)
 	}
 }
+
+// A small dripleaf faces back toward the player (getHorizontalDirection()
+// .getOpposite()) and each half takes the water of its own cell.
+func TestSmallDripleafPlacement(t *testing.T) {
+	s, h, p := offhandOnRig(t)
+	w := s.world
+	x, y, z := 120, 180, 120
+	clearAirBox(w, x, y, z, 3)
+	w.SetBlock(x, y, z, worldgen.BlockBase("clay"))
+	w.SetBlock(x, y+1, z, worldgen.WaterBase) // the lower half's cell is under water
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.inv.slots[0] = invStack{item: itemByName["small_dripleaf"], count: 1}
+		h.sendSlot(tr, 0)
+	})
+	p.yaw = 0 // looking south
+	s.handlePlace(p, handPlaceBody(0, x, y, z, 1))
+	lower, upper := w.Block(x, y+1, z), w.Block(x, y+2, z)
+	info, ok := worldgen.InfoForState(lower)
+	if !ok || !inRange(lower, smallDripleafRng) {
+		t.Fatalf("no small dripleaf placed: %d", lower)
+	}
+	if f := worldgen.GetProperty(info, lower, "facing"); f != "north" {
+		t.Errorf("facing %s, want north (toward a player looking south)", f)
+	}
+	if worldgen.GetProperty(info, lower, "waterlogged") != "true" || worldgen.GetProperty(info, upper, "waterlogged") != "false" {
+		t.Errorf("waterlogged lower=%s upper=%s, want true/false",
+			worldgen.GetProperty(info, lower, "waterlogged"), worldgen.GetProperty(info, upper, "waterlogged"))
+	}
+}

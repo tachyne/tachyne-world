@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Small dripleaf placement.** A small dripleaf now faces you when you
+  plant it and keeps the water it's planted in, as in vanilla — it used to
+  face away and dry out its cell.
 - **Seagrass only in water.** Seagrass can be planted only into water, as
   in vanilla; it used to go down on dry land too.
 - **Planted propagules are full size.** A mangrove propagule planted by
