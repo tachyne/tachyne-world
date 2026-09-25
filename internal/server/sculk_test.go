@@ -467,3 +467,22 @@ func TestWardenSpawnSpot(t *testing.T) {
 		t.Fatalf("found %v with no ground in range", *p)
 	}
 }
+
+// #shrieker_can_listen: a shrieker ignores an ordinary vibration beside it
+// and answers only a sculk sensor's clicking.
+func TestShriekerHearsOnlyTendrils(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	pos := simPos{blockPos: blockPos{4, 180, 4}}
+	shrieker := shriekerWith(worldgen.BlockBase("sculk_shrieker"), false)
+	h.world.SetBlock(pos.x, pos.y, pos.z, shrieker)
+	h.sculkList[pos] = true
+	h.gameEvent(0, freqBlockChange, 6, 180, 4, 0)
+	if _, heard := h.sculkVib[pos]; heard {
+		t.Fatal("the shrieker picked up an ordinary vibration")
+	}
+	h.gameEvent(0, freqTendrilsClicking, 5, 180, 4, 0)
+	if _, heard := h.sculkVib[pos]; !heard {
+		t.Fatal("the shrieker did not hear a sensor clicking")
+	}
+}

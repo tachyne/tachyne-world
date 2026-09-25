@@ -117,9 +117,14 @@ func TestNetherShriekerSummonsWardenInNether(t *testing.T) {
 	shrieker := shriekerWith(worldgen.BlockBase("sculk_shrieker"), false)
 	nw.SetBlock(x, y, z, shrieker)
 	h.onBlock(players, evBlock{dim: dimNether, x: x, y: y, z: z, state: shrieker})
+	// A shrieker hears only a sensor's tendrils clicking
+	// (#shrieker_can_listen): the placement sets off the sensor beside it.
+	sensor := sensorWith(worldgen.BlockBase("sculk_sensor"), 0, sculkPhaseInactive)
+	nw.SetBlock(x+1, y, z+1, sensor)
+	h.onBlock(players, evBlock{dim: dimNether, x: x + 1, y: y, z: z + 1, state: sensor})
 	nw.SetBlock(x+3, y, z, worldgen.Stone)
 	h.onBlock(players, evBlock{dim: dimNether, x: x + 3, y: y, z: z, state: worldgen.Stone, by: pl.p.eid})
-	stepSculk(h, players, 5+shriekingTicks+1)
+	stepSculk(h, players, 10+shriekingTicks+1)
 	var warden *mob
 	for _, m := range h.mobs {
 		if m.etype == entityWarden {

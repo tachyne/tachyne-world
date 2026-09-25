@@ -105,6 +105,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Shriekers listen through sensors.** A sculk shrieker now reacts only
+  when a sculk sensor next to it clicks, as in vanilla — sneaking past the
+  sensors keeps it quiet. Before, any sound near a shrieker set it off.
 - **Fire Resistance on mobs.** A mob under Fire Resistance now catches fire
   in lava or flames — it just takes no damage from them — and keeps burning
   if the effect runs out, as in vanilla. Before, it never caught fire yet

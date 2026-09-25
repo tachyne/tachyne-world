@@ -386,8 +386,20 @@ func (h *hub) gameEvent(dim, freq, x, y, z int, src int32) {
 	}
 }
 
+// freqTendrilsClicking stands for GameEvent.SCULK_SENSOR_TENDRILS_CLICKING,
+// which a sensor sends as it activates. It is in no frequency table: it is
+// the one event a shrieker listens for (#shrieker_can_listen), and no sensor
+// or warden hears it (#vibrations, #warden_can_listen).
+const freqTendrilsClicking = -1
+
 // sculkCanReceive is the listener's filter at dispatch time.
 func (h *hub) sculkCanReceive(pos simPos, s uint32, freq int) bool {
+	if isShrieker(s) {
+		return freq == freqTendrilsClicking && !shriekerShrieking(s)
+	}
+	if freq <= 0 {
+		return false
+	}
 	switch {
 	case isCalibSensor(s):
 		if sensorPhase(s) != sculkPhaseInactive {
@@ -401,8 +413,6 @@ func (h *hub) sculkCanReceive(pos simPos, s uint32, freq int) bool {
 		return back == 0 || back == freq
 	case isSculkSensor(s):
 		return sensorPhase(s) == sculkPhaseInactive
-	case isShrieker(s):
-		return !shriekerShrieking(s)
 	}
 	return false
 }
@@ -535,6 +545,9 @@ func (h *hub) activateSensor(players map[int32]*tracked, pos simPos, s uint32, v
 		h.playSoundDim(players, pos.dim, snd, sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, h.hurtPitch())
 	}
+	// SculkSensorBlock.activate: the tendrils' click is what a shrieker
+	// hears, carrying whoever set the sensor off.
+	h.gameEvent(pos.dim, freqTendrilsClicking, pos.x, pos.y, pos.z, v.src)
 }
 
 func sensorWaterlogged(s uint32) bool { return sensorInner(s)%2 == 0 }
