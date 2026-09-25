@@ -150,3 +150,23 @@ func TestRealTargetOutranksTheErrand(t *testing.T) {
 		t.Error("and its arms go up")
 	}
 }
+
+// PiglinAi / PiglinBruteAi.updateActivity: a piglin or brute with an attack
+// target is aggressive, which the client draws as a raised melee weapon.
+func TestPiglinsRaiseTheirWeapons(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	for _, et := range []int{entityPiglin, entityPiglinBrute} {
+		m := h.spawnMob(players, et, 0.5, 70, 0.5)
+		m.hasTarget = true
+		h.updateAggression(players, m)
+		if !m.aggressive {
+			t.Errorf("%s with a target is aggressive", entityNameByID[et])
+		}
+		m.hasTarget = false
+		h.updateAggression(players, m)
+		if m.aggressive {
+			t.Errorf("%s without one is not", entityNameByID[et])
+		}
+	}
+}

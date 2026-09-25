@@ -54,6 +54,11 @@ func (h *hub) updateAggression(players map[int32]*tracked, m *mob) {
 	case m.etype == entityVindicator:
 		// MeleeAttackGoal: the axe raised.
 		h.setAggressive(players, m, m.hasTarget && !m.holdingGround && m.dying == 0)
+	case m.etype == entityPiglin || m.etype == entityPiglinBrute:
+		// PiglinAi / PiglinBruteAi.updateActivity: setAggressive while there
+		// is an ATTACK_TARGET — the client raises a held sword or axe
+		// (ATTACKING_WITH_MELEE_WEAPON) from it.
+		h.setAggressive(players, m, m.hasTarget && m.dying == 0)
 	case skeletonKind(m.etype) || m.etype == entityWitherSkeleton || m.etype == entityIllusioner:
 		// The bow goal or the melee goal runs for as long as there is a
 		// target, whichever weapon the skeleton holds.
