@@ -50,6 +50,7 @@ type mob struct {
 	reroute         int      // ticks left committed to an escape heading after a block
 	health          int      // hit points; mob dies and drops loot at 0
 	sentHealth      int      // the health last synced to viewers (syncMobHealth; 0 = never)
+	absorption      float64  // Absorption's golden hearts (LivingEntity.absorptionAmount), spent before health
 	dying           int      // ticks left in the death animation (0 = alive); despawns at 0
 	panic           int      // ticks left fleeing after being hit
 	kb              int      // knockback updates left (velocity decays, no steering/clamp)
@@ -1568,6 +1569,12 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	// player's (vanilla runs this as a second, separate absorption step).
 	if !dt.has(tagBypassesEffects) && !dt.has(tagBypassesEnchantments) {
 		dmg = float64(applyProtection(float32(dmg), protectionPoints(m.gear[:], dt)))
+	}
+	// LivingEntity.actuallyHurt: absorption soaks what is left first.
+	if m.absorption > 0 {
+		soak := math.Min(dmg, m.absorption)
+		m.absorption -= soak
+		dmg -= soak
 	}
 	dmg += m.dmgFrac
 	whole := math.Floor(dmg)

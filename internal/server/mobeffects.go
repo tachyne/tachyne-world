@@ -90,6 +90,9 @@ func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in acti
 		return false // a stronger or longer instance is already running
 	}
 	m.installEffectModifiers(id, amp)
+	if id == effAbsorption { // AbsorptionMobEffect.onEffectStarted
+		m.absorption = math.Max(m.absorption, float64(4*(amp+1)))
+	}
 	if id == effInvisibility || id == effGlowing {
 		h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(mobEntityFlagsMeta(m)))
 	}
@@ -102,6 +105,9 @@ func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in acti
 func (h *hub) removeMobEffect(players map[int32]*tracked, m *mob, id int32) {
 	delete(m.effects, id)
 	m.dropEffectModifiers(id)
+	if id == effAbsorption {
+		m.absorption = 0 // the MAX_ABSORPTION ceiling goes with it
+	}
 	if id == effHealthBoost && m.health > m.maxHP() {
 		m.health = m.maxHP() // the extra hearts go with the effect
 	}

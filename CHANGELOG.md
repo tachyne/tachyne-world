@@ -105,6 +105,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Absorption protects mobs, and pillagers roll enchantments.** A mob
+  given Absorption now gets its extra hearts, spent before its health, as a
+  player does. Pillagers can spawn with an enchanted crossbow like other
+  armed mobs, and about one in 300 carries Piercing, as in vanilla.
 - **Shriekers listen through sensors.** A sculk shrieker now reacts only
   when a sculk sensor next to it clicks, as in vanilla — sneaking past the
   sensors keeps it quiet. Before, any sound near a shrieker set it off.

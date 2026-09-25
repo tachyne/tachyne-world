@@ -306,3 +306,21 @@ func TestFireResistantMobBurnsUnhurt(t *testing.T) {
 		t.Fatal("the zombie did not catch fire")
 	}
 }
+
+// Absorption on a mob: four extra hearts a level, spent before health.
+func TestMobAbsorptionSoaksDamage(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	m := h.spawnMob(players, entityPig, 0.5, 180, 0.5)
+	h.applyMobEffect(players, m, effAbsorption, 1, 60) // II: 8 points
+	hp := m.health
+	m.hurtKind(6, dtGeneric)
+	if m.health != hp {
+		t.Fatalf("6 damage into 8 absorption took health %d → %d", hp, m.health)
+	}
+	m.invulnTicks = 0
+	m.hurtKind(5, dtGeneric) // 2 absorbed, 3 through
+	if m.health != hp-3 {
+		t.Fatalf("health %d, want %d once the absorption ran out", m.health, hp-3)
+	}
+}
