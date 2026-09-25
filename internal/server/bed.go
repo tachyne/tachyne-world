@@ -514,6 +514,8 @@ func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend
 					if x, y, z, ok := h.anchorStandUp(dim, pos); ok {
 						if spend { // a death costs the anchor a charge; a walk out of the End does not
 							h.setBlockAt(players, dim, pos, anchorWithCharge(state, charge-1))
+							at := pos
+							t.anchorDeplete = &at // PlayerList.respawn plays the deplete sound
 						}
 						return x, y, z, dim
 					}

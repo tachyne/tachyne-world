@@ -157,3 +157,29 @@ func TestSpawnStoreReadsPreDimensionFiles(t *testing.T) {
 		t.Fatalf("got %v dim %d ok %v, want the old point in the overworld", pos, dim, ok)
 	}
 }
+
+// PlayerList.respawn: dying with a charged anchor as the respawn point
+// plays block.respawn_anchor.deplete to the respawner, at the anchor.
+func TestAnchorRespawnPlaysDeplete(t *testing.T) {
+	h, _, pl := respawnHub(t)
+	pos := blockPos{2, 70, 2}
+	h.nether.SetBlock(pos.x, pos.y, pos.z, anchorWithCharge(anchorMin, 2))
+	for _, c := range [][3]int{{3, 70, 2}, {3, 69, 2}, {3, 71, 2}} {
+		h.nether.SetBlock(c[0], c[1], c[2], worldgen.Air)
+	}
+	h.nether.SetBlock(3, 69, 2, worldgen.Stone)
+	h.spawns.set(pl.p.name, pos, dimNether)
+	pl.gamemode = gmSurvival
+	pl.dead = true
+	drainOut(pl.p)
+	h.respawn(pl)
+	for len(pl.p.out) > 0 {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.Sound); ok && ev.Name == "minecraft:block.respawn_anchor.deplete" {
+			if ev.X != 2 || ev.Y != 70 || ev.Z != 2 {
+				t.Fatalf("deplete at %v,%v,%v, want the anchor", ev.X, ev.Y, ev.Z)
+			}
+			return
+		}
+	}
+	t.Fatal("respawning at the anchor played no deplete sound")
+}

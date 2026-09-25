@@ -245,8 +245,9 @@ type tracked struct {
 	migrating      string // non-empty (migID) while a handover to a neighbour is in flight
 	x, y, z        float64
 	yaw, pitch     float32
-	ridingEID      int32   // the vehicle or mob carrying this player (0 afoot)
-	inLeft         float64 // last movement-key intent, -1/0/1 (vanilla lastClientInput)
+	ridingEID      int32     // the vehicle or mob carrying this player (0 afoot)
+	anchorDeplete  *blockPos // a respawn anchor this death spent: its sound follows the respawn
+	inLeft         float64   // last movement-key intent, -1/0/1 (vanilla lastClientInput)
 	inForward      float64
 	dim            int              // 0 overworld, 1 nether
 	portalTicks    int              // consecutive dwell passes standing in a portal block

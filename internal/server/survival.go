@@ -729,6 +729,12 @@ func (h *hub) respawn(t *tracked) {
 	h.sendHealth(t)
 	h.sendInventory(t)  // clear the client's inventory view after the death drop
 	h.sendExperience(t) // …and the (zeroed) XP bar
+	if a := t.anchorDeplete; a != nil {
+		// PlayerList.respawn: the respawner alone hears the anchor spend a
+		// charge, at the anchor.
+		t.anchorDeplete = nil
+		t.p.trySendEv(soundEv("minecraft:block.respawn_anchor.deplete", sndBlock, float64(a.x), float64(a.y), float64(a.z), 1, 1))
+	}
 	if t.dim != sdim {
 		// The respawn point decides the dimension — usually the overworld, but a
 		// charged respawn anchor keeps you in the Nether. Without this, the
