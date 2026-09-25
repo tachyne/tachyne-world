@@ -1014,6 +1014,11 @@ var stemFacing = map[blockPos]uint32{
 }
 
 var (
+	melonFruitGround   = worldgen.BlockTag("supports_melon_stem_fruit")
+	pumpkinFruitGround = worldgen.BlockTag("supports_pumpkin_stem_fruit")
+)
+
+var (
 	cocoaBase = worldgen.BlockBase("cocoa")            // facing×age, age 0..2
 	berryBase = worldgen.BlockBase("sweet_berry_bush") // age 0..3
 )
@@ -1088,9 +1093,12 @@ func (h *hub) tickStem(players map[int32]*tracked, dim, x, y, z int, state uint3
 		return true // occupied — no room this tick
 	}
 	below := h.worldFor(dim).At(fx, y-1, fz)
-	if below != worldgen.Dirt && below != worldgen.GrassBlock &&
-		!(below >= farmlandMin && below <= farmlandMin+7) {
-		return true // fruit needs tillable/dirt/grass ground
+	ground := melonFruitGround
+	if fruit == pumpkinBlock {
+		ground = pumpkinFruitGround
+	}
+	if !inRanges2(below, ground) {
+		return true // #supports_melon/pumpkin_stem_fruit: any state (snowy grass too)
 	}
 	h.setBlockAt(players, dim, blockPos{fx, y, fz}, fruit)
 	h.setBlockAt(players, dim, blockPos{x, y, z}, attachedBase+stemFacing[d]) // attach toward the fruit

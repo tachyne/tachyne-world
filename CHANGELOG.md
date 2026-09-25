@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Melons and pumpkins grow on vanilla's grounds.** A stem put out its
+  fruit only onto dirt, plain grass or farmland. It now grows onto any
+  ground vanilla allows: podzol, mycelium, mud, moss, rooted and coarse
+  dirt, and snowy grass too.
 - **Clicking your own respawn anchor again is quiet.** It repeated
   "Respawn point set" and its sound every time; as in vanilla, an anchor
   that is already your respawn point now does nothing.

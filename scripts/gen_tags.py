@@ -31,7 +31,9 @@ TAGS = {
               # fluidwash.go: FlowingFluid.canHoldAnyFluid
               "washed_away_by_fluids",
               # hostile2.go: LivingEntity.randomTeleport + Enderman.teleport
-              "entities_can_teleport_to", "enderman_does_not_teleport_to"],
+              "entities_can_teleport_to", "enderman_does_not_teleport_to",
+              # grow.go: StemBlock.randomTick's fruit ground
+              "supports_melon_stem_fruit", "supports_pumpkin_stem_fruit"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
              # sulfurcube.go: what a sulfur cube swallows, what a baby eats,

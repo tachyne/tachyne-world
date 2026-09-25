@@ -127,3 +127,31 @@ func TestStemGrowth(t *testing.T) {
 		}
 	})
 }
+
+// TestStemFruitsOnTaggedGround: StemBlock.randomTick grows its fruit on
+// #supports_*_stem_fruit — moss, podzol, mud and the rest of the overworld
+// substrate as well as dirt, grass and farmland (the engine took only three).
+func TestStemFruitsOnTaggedGround(t *testing.T) {
+	_, h, _ := breakPlaceServer(t)
+	w := h.world
+	onHub(t, h, func() {
+		x, y, z := 44, 71, 0
+		w.SetBlock(x, y-1, z, worldgen.Dirt)
+		for _, d := range horizNeighbors {
+			w.SetBlock(x+d.x, y-1, z+d.z, worldgen.BlockBase("moss_block"))
+			w.SetBlock(x+d.x, y, z+d.z, worldgen.Air)
+			w.SetBlock(x+d.x, y+5, z+d.z, worldgen.Air)
+		}
+		w.SetBlock(x, y+5, z, worldgen.Air)
+		w.SetBlock(x, y, z, pumpkinStemBase+7)
+		for i := 0; i < 3000; i++ {
+			h.tickStem(h.playersRef, 0, x, y, z, pumpkinStemBase+7)
+			for _, d := range horizNeighbors {
+				if w.At(x+d.x, y, z+d.z) == pumpkinBlock {
+					return
+				}
+			}
+		}
+		t.Error("a pumpkin stem never fruited onto moss")
+	})
+}
