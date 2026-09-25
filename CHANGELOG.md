@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Buckets scoop what you are looking at.** An empty bucket no longer
+  reaches through grass, flowers or a torch to the water behind them, it
+  aims from your real eye height (lower when you crouch), and it can
+  scoop a bubble column, as in vanilla.
 - **Spawn eggs make babies of more mobs.** Using a spawn egg on a
   villager, squid, glow squid, dolphin, zombie, husk, drowned, zombie
   villager, zombified piglin, piglin or zoglin now spawns a baby of it, as
