@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Ice spikes, boulders and blue ice.** The ice spikes biome finally has
+  its spikes: packed-ice spires, the odd one raised high on a pillar, and
+  packed ice patches in the snow. Old-growth taigas are strewn with mossy
+  cobblestone boulders, and blue ice grows on the undersides of the frozen
+  oceans' icebergs. None of them appears where you have built.
 - **/rotate.** Operators can turn a player or mob to a rotation (`~` for
   relative), or make it face a position or another entity's feet or eyes.
 - **/trigger.** Scoreboard objectives can use the `trigger` criteria, and

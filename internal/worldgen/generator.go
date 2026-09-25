@@ -584,6 +584,8 @@ func (g *Generator) GenerateChunk(cx, cz int32) *Chunk {
 	g.supportSurface(ch, cx, cz) // fill undercut surface crusts (no floating dirt/grass)
 	g.placeOres(ch, cx, cz)      // after carving: veins only in surviving stone
 	g.placeGeodes(ch, cx, cz)    // amethyst geodes (may straddle chunk borders)
+	// Forest rocks, ice spikes and ice patches, before the plants.
+	g.decorateSurface(ch, cx, cz)
 	g.decorate(ch, cx, cz)
 	removeFloatingFragments(ch) // delete terrain a cave severed from the ground —
 	//                               BEFORE structures, so it never culls a structure's
