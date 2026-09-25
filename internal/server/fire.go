@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -101,9 +102,8 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
-	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point, as it does lighting anything
-		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
+	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point once the TNT is lit (the hub decides)
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid, item: itemFlintSteel, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
@@ -126,9 +126,8 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 // in place or starts a fire in the empty cell in front, spending the charge.
 func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq int32) {
 	target := s.worldFor(p).Block(x, y, z)
-	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent
-		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
+	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent once it has
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid, item: itemFireCharge, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
 	}
@@ -150,9 +149,39 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 type evPrimeTNT struct {
 	dim, x, y, z int
 	by           int32 // the player who lit it
+	item         int32 // the lighter: flint and steel or a fire charge (0: none)
+	slot         int32 // the hand slot it is in
 }
 
 func (evPrimeTNT) isHubEvent() {}
+
+// onPrimeTNT is TntBlock.useItemOn with a lighter: once the TNT is primed the
+// flint and steel wears a point (a fire charge is spent) and ITEM_USED
+// counts; with tnt_explodes off nothing is lit or spent, and the player is
+// told why.
+func (h *hub) onPrimeTNT(players map[int32]*tracked, e evPrimeTNT) {
+	t := players[e.by]
+	if h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by) == nil {
+		if t != nil && e.item != 0 && !h.rules.TNTExplodes {
+			t.p.trySendEv(actionBarEv("TNT explosions are disabled")) // block.minecraft.tnt.disabled
+		}
+		return
+	}
+	if t == nil || e.item == 0 {
+		return
+	}
+	h.incStat(t, attachproto.StatUsed, e.item, 1)
+	if e.item == itemFlintSteel {
+		h.applyToolWear(t, int(e.slot), 1)
+		return
+	}
+	if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 && t.gamemode != gmCreative {
+		if sl.count--; sl.count == 0 {
+			sl.item = 0
+		}
+		h.sendHandSlot(t, int(e.slot))
+	}
+}
 
 // primeTNT swaps a TNT block for the ticking entity, in the dimension the
 // block simulation is running in (redstone, fire, dispensers). It lit the
@@ -167,10 +196,25 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	return h.primeTNTBy(players, dim, x, y, z, fuse, 0)
 }
 
-// primeTNTBy is TntBlock.prime with an igniter: the player or mob it names
-// is the owner the blast is blamed on (and credited with what it kills).
+// primeTNTBy is TntBlock.prime with an igniter and the block's removal: the
+// player or mob it names is the owner the blast is blamed on (and credited
+// with what it kills). With tnt_explodes off prime fails and the block stays
+// (nil).
 func (h *hub) primeTNTBy(players map[int32]*tracked, dim, x, y, z int, fuse int, owner int32) *primedTNT {
-	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	pt := h.tntPrime(players, dim, x, y, z, fuse, owner)
+	if pt != nil {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	}
+	return pt
+}
+
+// tntPrime is TntBlock.prime alone: the lit charge, its sound and the
+// PRIME_FUSE game event, leaving the block to the caller (a fire that eats
+// TNT has already replaced it). Nothing when tnt_explodes is off.
+func (h *hub) tntPrime(players map[int32]*tracked, dim, x, y, z int, fuse int, owner int32) *primedTNT {
+	if !h.rules.TNTExplodes {
+		return nil
+	}
 	pt := h.spawnPrimedTNT(players, dim, x, y, z, fuse)
 	pt.owner = owner
 	h.vib(dim, freqPrimeFuse, x, y, z, owner)
@@ -332,9 +376,8 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
 				continue // a primed TNT cart's blast leaves the track and its bed alone
 			}
-			if isTNT(st) { // chain reaction: light it, don't vaporize it (owned by the blast's cause)
-				h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer)
-				continue
+			if isTNT(st) && h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer) != nil {
+				continue // chain reaction: lit, not vaporized (owned by the blast's cause); with tnt_explodes off it just goes
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
@@ -612,7 +655,8 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
 		// is the only consumer of h.events — a self-post with a full queue
 		// blocks forever and takes the whole server with it (see postFromHub).
-		h.primeTNT(players, pos.x, pos.y, pos.z, tntFuseTicks)
+		// The cell is already fire or air: prime alone, no removal.
+		h.tntPrime(players, h.rsDim, pos.x, pos.y, pos.z, tntFuseTicks, 0)
 	}
 }
 

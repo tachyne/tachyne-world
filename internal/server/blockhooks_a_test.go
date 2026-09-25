@@ -472,3 +472,16 @@ func TestSensorClickingStops(t *testing.T) {
 		t.Error("the sensor's clicking should stop audibly")
 	}
 }
+
+// TntBlock.neighborChanged → prime: with tnt_explodes off prime fails and
+// the powered TNT block stays where it is.
+func TestPoweredTNTStaysWhenTNTCannotExplode(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.rules.TNTExplodes = false
+	h.world.SetBlock(0, 180, 0, worldgen.BlockBase("tnt"))
+	h.inDim(0, func() { h.primeTNT(players, 0, 180, 0, tntFuseTicks) })
+	if h.world.At(0, 180, 0) != worldgen.BlockBase("tnt") || len(h.tnt) != 0 {
+		t.Error("with tnt_explodes off the TNT block should stay, unlit")
+	}
+}

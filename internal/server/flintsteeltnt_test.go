@@ -8,29 +8,38 @@ import (
 )
 
 // TntBlock.useItemOn: lighting TNT with flint and steel wears it a point
-// (hurtAndBreak(1)), as lighting a fire does.
+// (hurtAndBreak(1)) and counts ITEM_USED; with tnt_explodes off the TNT
+// stays, the lighter is untouched, and the player is told.
 func TestFlintAndSteelWearsLightingTNT(t *testing.T) {
 	w := world.New(1)
 	h := newHub(w)
 	s := &Server{world: w, hub: h}
-	w.SetBlock(0, 180, 0, worldgen.BlockBase("tnt"))
-	p := newPlayer(1, "tester", [16]byte{1})
-	p.setHotbarSlot(0, itemFlintSteel)
-	s.useFlintSteel(p, false, 0, 180, 0, 0, 1, 0, 0)
-	primed, worn := false, false
-	for len(h.events) > 0 {
-		switch e := (<-h.events).(type) {
-		case evPrimeTNT:
-			primed = true
-		case evToolWear:
-			worn = e.eid == p.eid && e.slot == p.held
+	pl := testTracked()
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	pl.inv.slots[0] = invStack{item: itemFlintSteel, count: 1}
+	pl.p.setHotbarSlot(0, itemFlintSteel)
+	light := func() {
+		w.SetBlock(0, 180, 0, worldgen.BlockBase("tnt"))
+		s.useFlintSteel(pl.p, false, 0, 180, 0, 0, 1, 0, 0)
+		for len(h.events) > 0 {
+			if e, ok := (<-h.events).(evPrimeTNT); ok {
+				h.onPrimeTNT(players, e)
+			}
 		}
 	}
-	if !primed {
+	h.rules.TNTExplodes = false
+	light()
+	if len(h.tnt) != 0 || w.At(0, 180, 0) != worldgen.BlockBase("tnt") || pl.inv.slots[0].dmg != 0 {
+		t.Fatalf("tnt_explodes off: nothing lit, block kept, lighter unworn (%d charges, dmg %d)", len(h.tnt), pl.inv.slots[0].dmg)
+	}
+	h.rules.TNTExplodes = true
+	light()
+	if len(h.tnt) != 1 || w.At(0, 180, 0) != worldgen.Air {
 		t.Fatal("the TNT was not primed")
 	}
-	if !worn {
-		t.Error("lighting TNT did not wear the flint and steel")
+	if pl.inv.slots[0].dmg != 1 {
+		t.Errorf("lighting TNT wore the flint and steel %d, want 1", pl.inv.slots[0].dmg)
 	}
 }
 

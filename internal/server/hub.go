@@ -1601,7 +1601,7 @@ func (h *hub) run() {
 					}
 				}
 			case evPrimeTNT:
-				h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by)
+				h.onPrimeTNT(players, e)
 			case evEffect:
 				h.effectCommand(players, e)
 			case evPopItem:
