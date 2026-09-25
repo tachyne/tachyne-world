@@ -242,3 +242,29 @@ func TestPlacedPropaguleIsGrown(t *testing.T) {
 			worldgen.GetProperty(info, got, "age"), worldgen.GetProperty(info, got, "hanging"))
 	}
 }
+
+// A fence gate placed between two walls goes down sunk into them (in_wall),
+// as FenceGateBlock.getStateForPlacement sets it.
+func TestPlacedGateInWall(t *testing.T) {
+	s, h, p := offhandOnRig(t)
+	w := s.world
+	x, y, z := 100, 180, 100
+	clearAirBox(w, x, y, z, 2)
+	w.SetBlock(x, y-1, z, worldgen.Stone)
+	wall := worldgen.BlockBase("cobblestone_wall")
+	w.SetBlock(x-1, y, z, wall)
+	w.SetBlock(x+1, y, z, wall)
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.yaw = 0 // facing south: the gate spans west–east, between the walls
+		tr.inv.slots[0] = invStack{item: itemByName["oak_fence_gate"], count: 1}
+		h.sendSlot(tr, 0)
+	})
+	p.yaw = 0
+	s.handlePlace(p, handPlaceBody(0, x, y-1, z, 1))
+	got := w.Block(x, y, z)
+	info, ok := worldgen.InfoForState(got)
+	if !ok || worldgen.GetProperty(info, got, "in_wall") != "true" {
+		t.Fatalf("a gate placed between walls: in_wall=%s (state %d)", worldgen.GetProperty(info, got, "in_wall"), got)
+	}
+}

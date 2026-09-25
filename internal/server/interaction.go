@@ -495,6 +495,14 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{0, -1, 0}); ok && shapeKinds[state] == shapeCampfire {
 			state = ns // CampfireBlock.getStateForPlacement: a signal fire over a hay bale
 		}
+		if shapeKinds[state] == shapeGate { // FenceGateBlock.getStateForPlacement: in_wall beside a wall
+			if gi, ok := worldgen.InfoForState(state); ok {
+				dx, dz := facingDelta(clockwiseFacing(worldgen.GetProperty(gi, state, "facing")))
+				if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{dx, 0, dz}); ok {
+					state = ns
+				}
+			}
+		}
 		if isPropagule(state) { // MangrovePropaguleBlock.getStateForPlacement: planted grown, AGE 4, standing
 			if pi, ok := worldgen.InfoForState(state); ok {
 				state = worldgen.SetProperty(pi, worldgen.SetProperty(pi, state, "age", "4"), "hanging", "false")
