@@ -580,15 +580,16 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	if h.rules.DoMobLoot { // gamerule doMobLoot=false silences the roll
 		// Picked-up gear drops in full (vanilla drops equipped loot at 100%);
 		// gear issued at spawn (ominous trial mobs) never does.
-		// An enchanted piece drops as itself (the plugin drop list carries
-		// bare ids); a plain one goes through the list like any other drop.
+		// A piece with any component (enchanted, worn, named, dyed…) drops
+		// as itself (the plugin drop list carries bare ids); a bare one goes
+		// through the list like any other drop.
 		dropGear := func(st invStack) {
-			if st.ench[0].id == 0 && st.ench[0].lvl == 0 && st.dmg == 0 {
+			if st == (invStack{item: st.item, count: st.count}) {
 				drops = append(drops, plugin.ItemStack{Item: st.item, Count: max(st.count, 1)})
 				return
 			}
 			if it := h.spawnItemIn(players, m.dim, st.item, max(st.count, 1), m.x, m.y, m.z); it != nil {
-				it.ench, it.dmg = st.ench, st.dmg
+				it.setFrom(st)
 				h.refreshItemMeta(players, it)
 			}
 		}

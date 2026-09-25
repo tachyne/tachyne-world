@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Drops keep everything on them.** Gear a mob picked up, vault and
+  trial-spawner rewards, archaeology finds and trade items that no longer
+  fit your inventory now drop whole: names, dye, potions on tipped arrows
+  and ominous bottles, and the desert well's suspicious stew effect are
+  no longer stripped.
 - **Named armour stands.** A name tag now names an armour stand, a renamed
   armour-stand item places a stand with that name (by hand or from a
   dispenser), the name is kept across restarts, and breaking the stand

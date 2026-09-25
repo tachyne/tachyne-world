@@ -579,7 +579,10 @@ func (h *hub) reclaimTrade(players map[int32]*tracked, t *tracked) {
 			h.sendSlot(t, slot)
 		}
 		if leftover > 0 && players != nil {
-			h.spawnItemIn(players, t.dim, st.item, leftover, t.x, t.y, t.z)
+			if it := h.spawnItemIn(players, t.dim, st.item, leftover, t.x, t.y, t.z); it != nil {
+				it.setFrom(st)
+				h.refreshItemMeta(players, it)
+			}
 		}
 	}
 	if m := h.mobs[t.tradeWith]; m != nil {
