@@ -492,6 +492,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			return
 		}
 		state = s.connectState(s.worldFor(p), tx, ty, tz, state) // fences/panes/walls connect to neighbours
+		if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{0, -1, 0}); ok && shapeKinds[state] == shapeCampfire {
+			state = ns // CampfireBlock.getStateForPlacement: a signal fire over a hay bale
+		}
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(s.worldFor(p), tx, ty, tz, state, p.yaw)
 		}

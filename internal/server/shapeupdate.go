@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -25,6 +26,7 @@ const (
 	shapeMushroom               // HugeMushroomBlock: faces against more of itself
 	shapeCopperChest            // CopperChestBlock: one half follows the other's weathering and wax
 	shapePotentSulfur           // PotentSulfurBlock: dry, wet or a geyser by the water above and the block below
+	shapeCampfire               // CampfireBlock: a signal fire over a hay bale (isSmokeSource)
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -50,6 +52,8 @@ var shapeKinds = func() map[uint32]shapeKind {
 		add(n, shapeMushroom)
 	}
 	add("potent_sulfur", shapePotentSulfur)
+	add("campfire", shapeCampfire)
+	add("soul_campfire", shapeCampfire)
 	for _, n := range worldgen.AllBlockNames() {
 		if strings.HasSuffix(n, "_fence_gate") {
 			add(n, shapeGate)
@@ -78,6 +82,12 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 	}
 	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
 	switch k {
+	case shapeCampfire:
+		// CampfireBlock.updateShape: the block below decides signal_fire.
+		if d != [3]int{0, -1, 0} {
+			return st, true
+		}
+		return worldgen.SetProperty(info, st, "signal_fire", strconv.FormatBool(isHay(nb))), true
 	case shapeSnowy:
 		// SnowyBlock.updateShape: only the block above counts.
 		if d != [3]int{0, 1, 0} {

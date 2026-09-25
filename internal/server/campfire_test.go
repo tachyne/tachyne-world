@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -159,4 +160,26 @@ func TestUnlitCampfireTakesFood(t *testing.T) {
 			t.Error("an unlit campfire must not cook it")
 		}
 	})
+}
+
+// A campfire over a hay bale is a signal fire, and stops being one when the
+// hay goes (CampfireBlock.updateShape / getStateForPlacement).
+func TestCampfireSignalFire(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	fire := worldgen.BlockBase("campfire")
+	info, _ := worldgen.InfoForState(fire)
+	signal := func() string { s := w.At(3, 181, 3); return worldgen.GetProperty(info, s, "signal_fire") }
+	w.SetBlock(3, 180, 3, worldgen.Stone)
+	w.SetBlock(3, 181, 3, worldgen.SetProperty(info, fire, "signal_fire", "false"))
+	h.setBlockAt(players, 0, blockPos{3, 180, 3}, worldgen.BlockBase("hay_block"))
+	if signal() != "true" {
+		t.Fatal("hay put under a campfire did not make a signal fire")
+	}
+	h.setBlockAt(players, 0, blockPos{3, 180, 3}, worldgen.Stone)
+	if signal() != "false" {
+		t.Fatal("a campfire off its hay stayed a signal fire")
+	}
 }
