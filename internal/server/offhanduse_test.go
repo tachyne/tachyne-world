@@ -142,3 +142,21 @@ func TestOffhandBottleFillsInTheOffhand(t *testing.T) {
 		t.Fatalf("the offhand bottle should fill in place: %+v", pl.offhand)
 	}
 }
+
+// The client sends a use_entity interact for the main hand and then, when
+// that one passed, again for the offhand; only the main hand's may reach the
+// hub, or every mob interaction (a shear, a dye, a feed) ran twice.
+func TestOffhandEntityInteractIgnored(t *testing.T) {
+	h, _, _, r := offhandUseRig(t)
+	r.Action(attachproto.UseEntity{Target: 77, Hand: 1})
+	if n := len(h.events); n != 0 {
+		t.Fatalf("offhand interact posted %d events, want 0", n)
+	}
+	r.Action(attachproto.UseEntity{Target: 77, Hand: 0})
+	if n := len(h.events); n != 1 {
+		t.Fatalf("main-hand interact posted %d events, want 1", n)
+	}
+	if _, ok := (<-h.events).(evInteractMob); !ok {
+		t.Fatal("main-hand interact did not post evInteractMob")
+	}
+}

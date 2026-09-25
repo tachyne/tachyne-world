@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Right-clicking a mob does it once.** The Java client sends a mob
+  interaction for the main hand and, when that one works, again for the
+  offhand; the server could not tell the two apart and ran the main-hand
+  action twice — two dyes spent on one sheep, a second feed, a second trade
+  click. The offhand's copy is now recognised and skipped.
 - **/gamerule takes vanilla's ranges.** Every number rule was capped at
   1000. Each now accepts vanilla's range: random tick speed, sleeping
   percentage and the rest go as high as vanilla allows, snow accumulation

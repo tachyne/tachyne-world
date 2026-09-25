@@ -179,9 +179,17 @@ func (r *remotePlayer) Action(v any) {
 			h.post(evEat{eid: p.eid, slot: int(slot)})
 		}
 	case attachproto.UseEntity:
-		if e.Attack {
+		switch {
+		case e.Attack:
 			h.post(evAttack{attacker: p.eid, target: e.Target})
-		} else {
+		case e.Hand == 1:
+			// The client sends an OFF_HAND interact only after the main
+			// hand's passed. Mob interaction here reads the main hand, so
+			// running it again would repeat the main-hand action (a
+			// sitting pet toggled twice, a second feed); until offhand
+			// items on mobs are threaded through, the offhand click is
+			// the pass it was on the client.
+		default:
 			h.post(evInteractMob{eid: p.eid, target: e.Target, sneak: p.sneaking})
 		}
 	case attachproto.VehicleMove:
