@@ -166,6 +166,11 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Tamed nautiluses and happy ghasts stay put.** Left alone, a tamed
   nautilus or a happy ghast now keeps to the area where you left it, as in
   vanilla, instead of wandering off.
+- **Raid witches walk over to heal.** A witch in a raid now picks a fellow
+  raider she can see, walks within range of it and throws on her usual
+  rhythm, as in vanilla, instead of lobbing a potion at once from anywhere.
+  Witches and trident-throwing drowned also keep closing in until they have
+  had their target in sight for a moment.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

@@ -424,6 +424,7 @@ type mob struct {
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
 	witchHealCD                     int        // raid witch: NearestHealableRaiderTargetGoal cooldown (no player attacks meanwhile)
+	witchHealTarget                 int32      // raid witch: the raider that goal made her target
 	raidRecruitAt                   uint64     // PathfindToRaidGoal: the tick its next recruitment sweep is due
 	patrolTarget                    blockPos   // LongDistancePatrolGoal: where the patrol is headed (zero = none)
 	patrolLeg                       blockPos   // …and the ten-block waypoint it is walking to right now

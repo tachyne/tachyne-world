@@ -208,8 +208,8 @@ func (b holdRangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	}
 	dx, dz := m.tx-m.x, m.tz-m.z
 	d := math.Hypot(dx, dz)
-	if d < 1e-6 || d <= b.radius {
-		return 0, 0 // in range: stand and throw
+	if d < 1e-6 || (d <= b.radius && m.seeTime >= 5) {
+		return 0, 0 // in range and in sight for five ticks: stand and throw
 	}
 	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
 }
@@ -411,6 +411,12 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.etype == entityZombifiedPiglin {
 		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at
 		return
+	}
+	if m.etype == entityWitch {
+		if t := h.witchHealTargetOf(m); t != nil { // a raider she means to heal is her target
+			m.hasTarget, m.tx, m.tz, m.preyTarget = true, t.x, t.z, 0
+			return
+		}
 	}
 	// Neutral species (endermen) never START a fight — anger from a hit (or
 	// the stare above) does.

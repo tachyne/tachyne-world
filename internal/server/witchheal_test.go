@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // TestRaidWitchHealsRaiders: a raid witch beside a hurt pillager throws it a
@@ -26,12 +27,23 @@ func TestRaidWitchHealsRaiders(t *testing.T) {
 		}
 	}
 	w.raidCenter, p.raidCenter = blockPos{0, 180, 0}, blockPos{0, 180, 0}
-	threw := false
-	for i := 0; i < 20000 && !threw; i++ {
-		threw = h.witchHealTick(players, w)
+	for i := 0; i < 20000 && w.witchHealTarget == 0; i++ {
+		h.witchHealTick(players, w)
 	}
-	if !threw || len(h.arrows) != 1 || w.witchHealCD != witchHealCooldown {
-		t.Fatalf("a raid witch heals a hurt raider: threw %v potions %d cd %d", threw, len(h.arrows), w.witchHealCD)
+	if w.witchHealTarget != p.eid || w.witchHealCD != witchHealCooldown || len(h.arrows) != 0 {
+		t.Fatalf("the goal makes the raider her target first: target %d cd %d potions %d", w.witchHealTarget, w.witchHealCD, len(h.arrows))
+	}
+	h.acquireTarget(players, w)
+	if !w.hasTarget || w.tx != p.x {
+		t.Fatal("the raider she means to heal is what she walks toward")
+	}
+	for i := 0; i < 100 && len(h.arrows) == 0; i++ {
+		if !h.witchHealTick(players, w) {
+			t.Fatal("the heal holds her attack until she throws")
+		}
+	}
+	if len(h.arrows) != 1 || w.witchHealTarget != 0 || w.witchHealCD <= 0 {
+		t.Fatalf("a raid witch heals her raider on her throw clock: potions %d target %d cd %d", len(h.arrows), w.witchHealTarget, w.witchHealCD)
 	}
 	for _, a := range h.arrows {
 		if !a.splash || a.potion != potHealing || !a.mobShot {
@@ -77,5 +89,35 @@ func TestWitchPotionFliesAtVanillaSpeedAndLands(t *testing.T) {
 	}
 	if pl.hasEffect(effSlowness) == 0 {
 		t.Errorf("the slowness potion (thrown at eight blocks) missed; it broke at %.1f,%.1f,%.1f", pot.x, pot.y, pot.z)
+	}
+}
+
+// NearestHealableRaiderTargetGoal is mustSee and asks nothing of the
+// raider's health: an unhurt raider in view gets regeneration, one behind a
+// wall is not picked.
+func TestRaidWitchNeedsSightNotAWound(t *testing.T) {
+	h, players := preyFixture(t)
+	for z := -4; z <= 4; z++ {
+		for y := 180; y < 184; y++ {
+			h.world.SetBlock(3, y, z, worldgen.Stone)
+		}
+	}
+	w := h.spawnMob(players, entityWitch, 0.5, 180, 0.5)
+	p := h.spawnMob(players, entityPillager, 6.5, 180, 0.5)
+	w.raidCenter, p.raidCenter = blockPos{0, 180, 0}, blockPos{0, 180, 0}
+	h.gridDirty()
+	for i := 0; i < 20000 && w.witchHealTarget == 0; i++ {
+		h.witchHealTick(players, w)
+	}
+	if w.witchHealTarget != 0 {
+		t.Fatal("a raider behind a wall must not be picked")
+	}
+	p.x = -4.5 // same side, unhurt
+	h.gridDirty()
+	for i := 0; i < 20000 && w.witchHealTarget == 0; i++ {
+		h.witchHealTick(players, w)
+	}
+	if w.witchHealTarget != p.eid {
+		t.Fatal("an unhurt raider in view is still picked (regeneration)")
 	}
 }
