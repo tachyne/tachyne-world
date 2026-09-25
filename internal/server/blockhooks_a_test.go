@@ -8,6 +8,7 @@ import (
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
+// MovingPistonBlock.useWithoutItem: a moving_piston cell with no block
 // entity behind it (left over from before a restart) goes when clicked.
 func TestClickClearsOrphanMovingPiston(t *testing.T) {
 	s, _, p := breakPlaceServer(t)
@@ -22,6 +23,7 @@ func TestClickClearsOrphanMovingPiston(t *testing.T) {
 	}
 }
 
+// DoorBlock/TrapDoorBlock.useWithoutItem PASS for iron: the click goes on
 // to the held block, which is placed against it.
 func TestIronTrapdoorClickPlacesAgainstIt(t *testing.T) {
 	s, _, p := breakPlaceServer(t)
@@ -41,6 +43,7 @@ func TestIronTrapdoorClickPlacesAgainstIt(t *testing.T) {
 	}
 }
 
+// ChestBlock.useWithoutItem for a pair: the open_chest statistic, as a single
 // chest gives.
 func TestDoubleChestOpenAwardsStat(t *testing.T) {
 	h := newHub(world.New(1))
@@ -59,6 +62,7 @@ func TestDoubleChestOpenAwardsStat(t *testing.T) {
 	}
 }
 
+// ChiseledBookShelfBlock: whatever is in hand, a click on an occupied slot
 // takes the book (TRY_WITH_EMPTY_HAND → useWithoutItem).
 func TestShelfGivesBookWhateverIsHeld(t *testing.T) {
 	h := newHub(world.New(1))
@@ -90,6 +94,7 @@ func TestShelfGivesBookWhateverIsHeld(t *testing.T) {
 	}
 }
 
+// A click on a chiseled bookshelf's side (no slot there) PASSes: the held
 // block is placed against it.
 func TestShelfSideClickPlaces(t *testing.T) {
 	s, _, p := breakPlaceServer(t)
@@ -106,6 +111,7 @@ func TestShelfSideClickPlaces(t *testing.T) {
 	}
 }
 
+// ComparatorBlock.getInputSignal: through a conductor, an item frame hung on
 // its far face is read (rotation % 8 + 1).
 func TestComparatorReadsItemFrameThroughBlock(t *testing.T) {
 	h := newHub(world.New(1))
@@ -128,6 +134,8 @@ func TestComparatorReadsItemFrameThroughBlock(t *testing.T) {
 	}
 }
 
+// DetectorRailBlock.getAnalogOutputSignal: a powered detector rail gives the
+// fullness of a container cart on it; a cart on a plain rail is not a block
 // and gives a comparator nothing.
 func TestDetectorRailReadsContainerCart(t *testing.T) {
 	h, players := cartHub()
