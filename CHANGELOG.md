@@ -95,6 +95,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Rowing makes a sound again.** Rowing a boat now plays the paddle
+  splash (or the scrape on land) with each stroke, for you and everyone
+  near, and other players see the boat's paddles move, as in vanilla. The
+  server never heard which paddles were rowing, so boats moved in silence
+  with still oars.
 - **Raids re-centre instead of failing.** A raid whose centre stops being
   a village now moves to the nearest village section within two sections
   before it is declared lost, as in vanilla, so a raid at the edge of a

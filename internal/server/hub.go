@@ -1619,6 +1619,10 @@ func (h *hub) run() {
 				}
 			case evXP:
 				h.onXPCommand(players, e)
+			case evPaddleBoat:
+				if t := players[e.eid]; t != nil {
+					h.paddleBoat(players, t, e.left, e.right)
+				}
 			case evPickItem:
 				if t := players[e.eid]; t != nil {
 					h.pickItem(players, t, e.e)

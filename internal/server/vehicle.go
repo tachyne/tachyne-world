@@ -95,11 +95,13 @@ type vehicle struct {
 	// following the boat reads (FollowPlayerRiddenEntityGoal).
 	movedAt        uint64
 	moveDX, moveDZ float64
-	mobRider       int32   // a mob aboard: scooped up by a rolling cart (minecart.go) or a boat (boatseats.go), 0 when none
-	mobFirst       bool    // the mob boarded before the player: it has the front seat
-	sx, sy, sz     float64 // last broadcast position (relative-move baseline)
-	syaw           float32 // last broadcast facing
-	chest          *chest  // a chest boat's 27 slots (nil for the rest)
+	mobRider       int32      // a mob aboard: scooped up by a rolling cart (minecart.go) or a boat (boatseats.go), 0 when none
+	mobFirst       bool       // the mob boarded before the player: it has the front seat
+	sx, sy, sz     float64    // last broadcast position (relative-move baseline)
+	syaw           float32    // last broadcast facing
+	chest          *chest     // a chest boat's 27 slots (nil for the rest)
+	paddle         [2]bool    // a boat's rowing paddles, left and right (boatpaddle.go)
+	paddlePos      [2]float32 // each paddle's turn so far
 	// Minecart motion state (the server rolls carts; see minecart.go).
 	vx, vy, vz  float64
 	yawO        float32 // facing at the previous tick
@@ -474,6 +476,7 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 		if !v.isBoat() {
 			h.tickMinecart(players, v)
 		} else {
+			h.tickBoatPaddles(players, v)
 			h.boatPickup(players, v)
 			h.boatCrushesLilyPads(players, v)
 		}
@@ -530,6 +533,9 @@ func (h *hub) sendVehiclesTo(t *tracked) {
 		}
 		if v.lit {
 			t.p.trySendEv(metaEv(cartFuelMeta(v.eid, true)))
+		}
+		if v.paddle != [2]bool{} {
+			t.p.trySendEv(metaEv(boatPaddleMeta(v)))
 		}
 		if v.aboard() > 0 {
 			t.p.trySendEv(passengersBody(v.eid, v.passengers()...))
