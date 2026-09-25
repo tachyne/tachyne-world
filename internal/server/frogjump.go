@@ -26,7 +26,6 @@ const (
 	frogJumpMaxSpeed = 3.5714288
 )
 
-
 // frogPrefersJumpTo is #frog_prefer_jump_to.
 func frogPrefersJumpTo(s uint32) bool {
 	return isLilyPad(s) || (s >= bigDripleafMin && s <= bigDripleafMax)
