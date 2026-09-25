@@ -95,6 +95,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Ice and coral read the water as vanilla does.** Ice broken over air, a
+  flower or a torch no longer leaves water behind — only over a solid block
+  or a liquid. Coral beside a waterlogged block, seagrass or kelp stays
+  alive instead of bleaching.
 - **Redstone from jukeboxes and trapped chests.** A jukebox whose song
   ends now turns off the redstone it was powering, and a trapped chest in
   the Nether or the End gives a signal when opened, as in vanilla.
