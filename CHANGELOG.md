@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Fence gates swing away from you.** A gate opened from its back swung
+  towards you; as in vanilla it now turns first, so it always opens away
+  from the player.
 - **Leaving the game closes what you had open.** Disconnecting with a chest,
   barrel, ender chest or shulker box open left its lid up for good. Leaving
   now closes it, with its close sound, as in vanilla.

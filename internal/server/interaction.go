@@ -6,6 +6,7 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 	"io"
 	"math"
+	"strings"
 
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -876,7 +877,15 @@ func (s *Server) tryUseBlock(p *player, x, y, z int, seq int32, face int32, cx, 
 	}
 	s.hub.post(evVibration{eid: p.eid, x: x, y: y, z: z, freq: freq, quiet: true}) // BLOCK_OPEN / BLOCK_CLOSE
 	s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: x, y: y, z: z, name: openCloseSound(blockName, nv == "true")})
-	s.putBlock(p, x, y, z, worldgen.SetProperty(info, state, "open", nv), true, seq)
+	ns := worldgen.SetProperty(info, state, "open", nv)
+	if nv == "true" && strings.HasSuffix(blockName, "fence_gate") {
+		// FenceGateBlock.useWithoutItem: opened from its back, a gate turns
+		// to face the player, so it always swings away from them.
+		if dir := playerFacing(p.yaw); worldgen.GetProperty(info, state, "facing") == oppositeFacing(dir) {
+			ns = worldgen.SetProperty(info, ns, "facing", dir)
+		}
+	}
+	s.putBlock(p, x, y, z, ns, true, seq)
 	if isTwoTall(info) { // a door — toggle its other half to match
 		oy := y + 1
 		if worldgen.GetProperty(info, state, "half") == "upper" {
