@@ -19,6 +19,7 @@ const (
 	itemGravity          = 0.04   // Entity.applyGravity (default gravity)
 	itemAirDrag          = 0.98   // Entity.getAirDrag
 	itemFluidDrag        = 0.99   // ItemEntity.setUnderwaterMovement: horizontal ×0.99
+	itemLavaDrag         = 0.95   // ItemEntity.setUnderLavaMovement: horizontal ×0.95
 	itemFluidLift        = 5.0e-4 // setFluidMovement: +0.0005 while vy < 0.06
 	itemFluidLiftCap     = 0.06
 	waterFlowScale       = 0.014 // Entity: applyCurrentTo(WATER, 0.014)
@@ -58,6 +59,7 @@ func (h *hub) tickItems(players map[int32]*tracked) {
 			continue
 		}
 		h.tickItem(players, w, it)
+		it.age++ // ItemEntity.tick: age, as long as the item is ticked
 		// CactusBlock.entityInside hurts the item 1 a tick; an ItemEntity
 		// has 5 health, so five ticks on (or against) a cactus and it is gone.
 		if h.boxTouchesCactus(it.dim, it.x, it.y, it.z, itemHalfHeight, 2*itemHalfHeight) {
@@ -137,6 +139,7 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	below := w.At(fx, fy-1, fz)
 	ox, oy, oz := it.x, it.y, it.z
 	inWater := worldgen.IsWater(cell) && !worldgen.IsBubbleColumn(cell)
+	inLava := worldgen.IsLava(cell)
 	// The engine floats an item ON a water surface (the cell above is air)
 	// instead of vanilla's bob just under it; a surfaced item still counts as
 	// in the water below for the current.
@@ -145,6 +148,10 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	lifted := it.geyser
 	it.geyser = false
 	afloat := !lifted && !worldgen.IsWater(cell) && it.y == float64(fy) && worldgen.IsWater(below) && !worldgen.IsBubbleColumn(below)
+	// …and on lava the same way (setUnderLavaMovement lifts it just as
+	// water does, only dragging harder): a netherite drop rides the surface.
+	onLava := !lifted && !inLava && !worldgen.IsWater(cell) && it.y == float64(fy) && worldgen.IsLava(below)
+	afloat = afloat || onLava
 	grounded := it.y == float64(fy) && worldgen.Collides(below)
 	// The top cell of a column, with nothing over it, is onAboveBubbleColumn:
 	// the harder push that throws an item clear of the surface (or the
@@ -166,6 +173,12 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 		}
 		it.vx *= itemFluidDrag
 		it.vz *= itemFluidDrag
+	case inLava:
+		if it.vy < itemFluidLiftCap {
+			it.vy += itemFluidLift
+		}
+		it.vx *= itemLavaDrag
+		it.vz *= itemLavaDrag
 	case afloat:
 		it.vy = 0
 	case grounded:
@@ -173,7 +186,7 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 	default:
 		it.vy -= itemGravity
 	}
-	if inWater || afloat {
+	if inWater || (afloat && !onLava) {
 		wp := blockPos{fx, fy, fz}
 		if afloat {
 			wp.y--
@@ -241,6 +254,8 @@ func (h *hub) tickItem(players map[int32]*tracked, w *world.World, it *itemEntit
 				ny, it.vy = float64(nfy)-2*itemHalfHeight, 0 // a ceiling
 			case inWater && !lifted && !worldgen.IsWater(w.At(fx, nfy, fz)):
 				ny, it.vy = float64(nfy), 0 // surfaced: rest on the water (the engine's bob-free float)
+			case inLava && !lifted && !worldgen.IsLava(w.At(fx, nfy, fz)):
+				ny, it.vy = float64(nfy), 0 // …and on lava
 			}
 		}
 		it.y = ny

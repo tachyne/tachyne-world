@@ -133,6 +133,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Dropped items keep their age, float on lava and stay yours.** A
+  dropped item's five minutes now count its own ticks and carry over a
+  server restart instead of starting again. Netherite and other
+  fire-proof drops rise through lava and ride its surface, as in water.
+  What `/give` cannot fit in a full inventory is dropped for that player
+  alone, to be picked up at once.
 - **Skeletons keep to the shade by day.** A skeleton, stray or bogged
   standing in shade in daylight with nothing on its head no longer walks
   out into the sun, even after a player; it stops at the edge of the

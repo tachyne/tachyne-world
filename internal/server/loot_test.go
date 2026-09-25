@@ -55,7 +55,7 @@ func TestItemSpawnAndDespawn(t *testing.T) {
 	if h.items[it.eid] == nil {
 		t.Fatal("item despawned too early")
 	}
-	h.tick.Store(uint64(itemDespawnTicks) + 1)
+	it.age = itemDespawnTicks // ItemEntity.age, not the world clock
 	h.updateItems(players)
 	if h.items[it.eid] != nil {
 		t.Error("item should have despawned after its lifetime")

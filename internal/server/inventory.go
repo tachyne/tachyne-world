@@ -282,6 +282,9 @@ func (h *hub) pickupItems(players map[int32]*tracked) {
 			if now < it.noPickupUntil || it.dim != t.dim {
 				continue
 			}
+			if it.owner != ([16]byte{}) && it.owner != t.p.uuid {
+				continue // ItemEntity.playerTouch: another player's item (a /give overflow)
+			}
 			if math.Abs(it.x-t.x) > 1 || math.Abs(it.z-t.z) > 1 || math.Abs(it.y-t.y) > 1.5 {
 				continue
 			}

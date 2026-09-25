@@ -783,7 +783,11 @@ func newHerd(x, z float64) *herd { return &herd{x: x, z: z, hx: x, hz: z} }
 func (h *hub) snapshotItems() []savedItem {
 	out := make([]savedItem, 0, len(h.items))
 	for _, it := range h.items {
-		out = append(out, savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z, St: packStack(it.stack())})
+		si := savedItem{Dim: it.dim, X: it.x, Y: it.y, Z: it.z, St: packStack(it.stack()), Age: it.age}
+		if it.owner != ([16]byte{}) {
+			si.Owner = uuidString(it.owner)
+		}
+		out = append(out, si)
 	}
 	return out
 }
@@ -797,6 +801,10 @@ func (h *hub) restoreItems(saved []savedItem) {
 			st := unpackStack(si.St)
 			if it := h.spawnItemIn(none, si.Dim, st.item, st.count, si.X, si.Y, si.Z); it != nil {
 				it.setFrom(st)
+				it.age = si.Age
+				if u, ok := parseUUIDString(si.Owner); ok {
+					it.owner = u
+				}
 			}
 			continue
 		}
@@ -2935,7 +2943,11 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
-		h.spawnItemIn(players, t.dim, item, left, t.x, t.y, t.z)
+		// GiveCommand: what does not fit is dropped for that player alone,
+		// with no pickup delay (setNoPickUpDelay, setTarget).
+		if it := h.spawnItemIn(players, t.dim, item, left, t.x, t.y, t.z); it != nil {
+			it.owner, it.noPickupUntil = t.p.uuid, h.tick.Load()
+		}
 	}
 }
 
