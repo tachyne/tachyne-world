@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Farmland reads water and rain as in vanilla.** Waterlogged blocks near
+  farmland now keep it wet, as open water does. Rain no longer soaks
+  farmland through a glass or leaf roof, and a greenhouse keeps its soil
+  dry unless there is water nearby.
 - **Fence gates swing away from you.** A gate opened from its back swung
   towards you; as in vanilla it now turns first, so it always opens away
   from the player.

@@ -54,7 +54,7 @@ func (h *hub) farmlandNearWater(dim, x, y, z int) bool {
 	for dy := 0; dy <= 1; dy++ {
 		for dx := -4; dx <= 4; dx++ {
 			for dz := -4; dz <= 4; dz++ {
-				if worldgen.IsWater(w.At(x+dx, y+dy, z+dz)) {
+				if worldgen.HoldsWater(w.At(x+dx, y+dy, z+dz)) { // getFluidState().is(WATER): waterlogged blocks too
 					return true
 				}
 			}
@@ -63,12 +63,13 @@ func (h *hub) farmlandNearWater(dim, x, y, z int) bool {
 	return false
 }
 
-// rainingAbove reports whether rain is falling on the block above the soil —
-// raining, the column is open to the sky, and this biome/height gets rain (not
-// snow). Mirrors ServerLevel.isRainingAt(pos.above()).
+// rainingAbove reports whether rain is falling on the block above the soil:
+// ServerLevel.isRainingAt(pos.above()) — raining, nothing that blocks motion
+// or holds a fluid above that cell (the MOTION_BLOCKING heightmap, so glass
+// and leaves shelter it; a crop does not), and the biome rains there.
 func (h *hub) rainingAbove(dim, x, y, z int) bool {
 	// Only the overworld has weather: a Nether or End farm is never rained on.
-	return dim == dimOverworld && h.raining && h.skyExposedColumn(x, z) &&
+	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y+1 &&
 		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y+1) == worldgen.PrecipRain
 }
 

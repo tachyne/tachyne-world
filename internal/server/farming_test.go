@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -158,5 +159,40 @@ func TestIsFarmlandCoversAllMoisture(t *testing.T) {
 	}
 	if isFarmland(dirtBlock) || isFarmland(grassBlock) {
 		t.Error("dirt/grass must not count as farmland")
+	}
+}
+
+// TestFarmlandWaterAndRainRules: FarmBlock.isNearWater reads the fluid, so
+// a waterlogged block hydrates it; isRainingAt(pos.above()) is the
+// MOTION_BLOCKING heightmap, so a glass roof keeps the rain off.
+func TestFarmlandWaterAndRainRules(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	x, y, z := 20, 180, 20
+	for dx := -5; dx <= 5; dx++ {
+		for dz := -5; dz <= 5; dz++ {
+			w.SetBlock(x+dx, y, z+dz, worldgen.Stone)
+			for dy := 1; dy <= 4; dy++ {
+				w.SetBlock(x+dx, y+dy, z+dz, worldgen.Air)
+			}
+		}
+	}
+	w.SetBlock(x, y, z, farmlandMin) // dry
+	slab := worldgen.BlockBase("oak_slab")
+	info, _ := worldgen.InfoForState(slab)
+	logged := worldgen.SetProperty(info, slab, "waterlogged", "true")
+	w.SetBlock(x+3, y, z, logged)
+	h.farmlandRandomTick(players, 0, x, y, z, farmlandMin)
+	if got := w.At(x, y, z); got != farmlandMin+7 {
+		t.Fatalf("a waterlogged slab nearby should hydrate the farmland: moisture %d", got-farmlandMin)
+	}
+	// No water, raining, but under glass: it dries a step instead of wetting.
+	w.SetBlock(x+3, y, z, worldgen.Stone)
+	w.SetBlock(x, y+3, z, worldgen.BlockBase("glass"))
+	h.raining = true
+	h.farmlandRandomTick(players, 0, x, y, z, farmlandMin+7)
+	if got := w.At(x, y, z); got != farmlandMin+6 {
+		t.Fatalf("rain should not reach farmland under glass: moisture %d", got-farmlandMin)
 	}
 }
