@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **End crystals go down anywhere.** An end crystal can be placed on
+  obsidian or bedrock in any dimension, as in vanilla, not only in the End;
+  only the cell above has to be clear, and any mob, item or crystal in the
+  way stops it. Struck, it blows up where it stands.
 - **Lightning cleans copper.** A bolt that strikes copper turns it back to
   fresh copper and scrapes the oxidation off copper blocks around it, with
   a spark on each, as in vanilla. Lightning advancements now count every

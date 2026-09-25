@@ -130,7 +130,12 @@ func (h *hub) updateDragonPhase(players map[int32]*tracked, m *mob) (tx, ty, tz 
 // the likelier it commits to landing — which is precisely why a player breaks
 // the crystals first.
 func (h *hub) dragonDecide(players map[int32]*tracked, m *mob) {
-	crystals := len(h.crystals)
+	crystals := 0 // EndDragonFight.getCrystalsAlive: the End's only
+	for _, c := range h.crystals {
+		if c.dim == dimEnd {
+			crystals++
+		}
+	}
 	if h.rng.Intn(crystals+3) == 0 {
 		h.setDragonPhase(m, dragonLandingApproach)
 		return

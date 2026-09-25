@@ -184,9 +184,9 @@ func (h *hub) onDimSwitch(players map[int32]*tracked, t *tracked, e evDim) {
 	h.dropTracked(t)
 	for eid, c := range h.crystals {
 		switch {
-		case old == 2:
+		case c.dim == old:
 			t.p.sendEv(entGone(eid))
-		case e.dim == 2:
+		case c.dim == e.dim:
 			t.p.sendEv(entAdd(eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
 		}
 	}

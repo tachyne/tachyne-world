@@ -101,3 +101,48 @@ func TestEndCrystalRespawnsDragon(t *testing.T) {
 		t.Fatalf("the ceremony should restage the fight: dragon %v defeated %v crystals %d", h.dragon != nil, h.rules.DragonDefeated, len(h.crystals))
 	}
 }
+
+// An end crystal goes down on obsidian in the overworld too, not only in
+// the End; an entity in the box above blocks it, and a struck overworld
+// crystal blows up where it stands.
+func TestEndCrystalPlacesOutsideTheEnd(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 1)
+	for dx := -3; dx <= 3; dx++ {
+		for dz := -3; dz <= 3; dz++ {
+			h.world.SetBlock(dx, 199, dz, worldgen.Stone)
+			for y := 200; y < 204; y++ {
+				h.world.SetBlock(dx, y, dz, worldgen.Air)
+			}
+		}
+	}
+	h.world.SetBlock(0, 200, 0, obsidianBase)
+	h.world.SetBlock(2, 200, 0, obsidianBase)
+	h.world.SetBlock(0, 203, 0, worldgen.Stone) // over the crystal's head: in the blast
+	pl.x, pl.y, pl.z = 2.5, 201, 0.5            // standing where the second one would go
+	pl.inv.slots[0] = invStack{item: itemEndCrystal, count: 2}
+	h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: 2, y: 200, z: 0})
+	if len(h.crystals) != 0 {
+		t.Fatal("a crystal was placed into the player standing there")
+	}
+	pl.x = -2.5
+	h.placeCrystal(players, evPlaceCrystal{eid: pl.p.eid, x: 0, y: 200, z: 0})
+	if len(h.crystals) != 1 || pl.inv.slots[0].count != 1 {
+		t.Fatalf("an overworld crystal should be placed and spent: %d crystals, %d left", len(h.crystals), pl.inv.slots[0].count)
+	}
+	var c *crystal
+	for _, c = range h.crystals {
+	}
+	if c.dim != dimOverworld || c.x != 0.5 || c.y != 201 {
+		t.Fatalf("crystal at dim %d (%.1f,%.1f)", c.dim, c.x, c.y)
+	}
+	if !h.hitCrystal(players, c.eid, pl) {
+		t.Fatal("the crystal did not take the hit")
+	}
+	if h.world.At(0, 203, 0) == worldgen.Stone || len(h.crystals) != 0 {
+		t.Fatal("hitting the crystal should blow up the overworld block over it")
+	}
+}

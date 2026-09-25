@@ -2604,6 +2604,7 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	h.sendPaintingsTo(nt)
 	h.sendFramesTo(nt)
 	h.sendStandsTo(nt)
+	h.sendCrystalsTo(nt)
 	h.sendLeashesTo(nt)
 	h.waypointOnJoin(players, nt)
 	h.bossbarsOnJoin(nt) // the custom bars this player is on (bossbar.go)

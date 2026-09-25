@@ -231,40 +231,68 @@ func (h *hub) spawnerMobFor(dim, x, y, z int, dflt int) int {
 	return dflt
 }
 
-// placeCrystal is EndCrystalItem.useOn: on obsidian or bedrock with two
-// clear cells above and nothing standing there, a crystal appears; in the
-// End, four of them round the exit portal bring the dragon back.
+// placeCrystal is EndCrystalItem.useOn: on obsidian or bedrock, in any
+// dimension, with the cell above empty and no entity inside the 1×2×1 box
+// over it, a crystal appears; in the End, four of them round the exit portal
+// bring the dragon back.
 func (h *hub) placeCrystal(players map[int32]*tracked, e evPlaceCrystal) {
 	t := players[e.eid]
-	if t == nil || t.dim != 2 || usedStack(t).item != itemEndCrystal {
-		return // crystals live in the End's fight table; elsewhere they have no home yet
+	if t == nil || usedStack(t).item != itemEndCrystal {
+		return
 	}
 	w := h.worldFor(t.dim)
 	if s := w.At(e.x, e.y, e.z); s != obsidianBase && s != worldgen.Bedrock {
 		return
 	}
-	if w.At(e.x, e.y+1, e.z) != worldgen.Air || w.At(e.x, e.y+2, e.z) != worldgen.Air {
+	if w.At(e.x, e.y+1, e.z) != worldgen.Air { // level.isEmptyBlock(above)
 		return
 	}
-	cx, cy, cz := float64(e.x)+0.5, float64(e.y+1), float64(e.z)+0.5
+	// level.getEntities(null, AABB(above, above + (1, 2, 1))): any entity at all.
+	bx, by, bz := float64(e.x), float64(e.y+1), float64(e.z)
+	hits := func(dim int, x, y, z, hw, ht float64) bool {
+		return dim == t.dim && x+hw > bx && x-hw < bx+1 && z+hw > bz && z-hw < bz+1 && y+ht > by && y < by+2
+	}
 	for _, o := range players {
-		if o.dim == t.dim && math.Abs(o.x-cx) < 1 && math.Abs(o.z-cz) < 1 && o.y > cy-2 && o.y < cy+2 {
+		if !o.dead && hits(o.dim, o.x, o.y, o.z, 0.3, 1.8) {
+			return
+		}
+	}
+	for _, m := range h.mobs {
+		if b := m.box(); m.dying == 0 && hits(m.dim, m.x, m.y, m.z, b.w/2, b.h) {
+			return
+		}
+	}
+	for _, it := range h.items {
+		if hits(it.dim, it.x, it.y, it.z, 0.125, 0.25) {
 			return
 		}
 	}
 	for _, c := range h.crystals {
-		if math.Abs(c.x-cx) < 1 && math.Abs(c.z-cz) < 1 && math.Abs(c.y-cy) < 2 {
+		if hits(c.dim, c.x, c.y, c.z, 1, 2) {
 			return
 		}
 	}
-	c := &crystal{eid: h.allocEID(), x: cx, y: cy, z: cz}
+	cx, cy, cz := bx+0.5, by, bz+0.5
+	c := &crystal{eid: h.allocEID(), dim: t.dim, x: cx, y: cy, z: cz}
 	binary.BigEndian.PutUint32(c.uuid[12:], uint32(c.eid))
 	h.crystals[c.eid] = c
-	h.toDimEv(players, 2, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
+	h.toDimEv(players, t.dim, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
+	h.vib(t.dim, freqEntityPlace, e.x, e.y+1, e.z, t.p.eid) // ENTITY_PLACE
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
-	h.tryRespawnDragon(players)
+	if t.dim == dimEnd { // serverLevel.getDragonFight(): the End's alone
+		h.tryRespawnDragon(players)
+	}
+}
+
+// sendCrystalsTo spawns the end crystals of the joiner's dimension.
+func (h *hub) sendCrystalsTo(t *tracked) {
+	for _, c := range h.crystals {
+		if c.dim == t.dim {
+			t.p.trySendEv(entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
+		}
+	}
 }
 
 // tryRespawnDragon is EndDragonFight.tryRespawn: with the dragon beaten and
@@ -282,7 +310,7 @@ func (h *hub) tryRespawnDragon(players map[int32]*tracked) {
 	for _, d := range [4][2]int{{2, 0}, {-2, 0}, {0, 2}, {0, -2}} {
 		var hit *crystal
 		for _, c := range h.crystals {
-			if int(math.Floor(c.x)) == d[0] && int(math.Floor(c.z)) == d[1] && c.y >= float64(cy-1) && c.y <= float64(cy+2) {
+			if c.dim == dimEnd && int(math.Floor(c.x)) == d[0] && int(math.Floor(c.z)) == d[1] && c.y >= float64(cy-1) && c.y <= float64(cy+2) {
 				hit = c
 			}
 		}
