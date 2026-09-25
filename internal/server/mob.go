@@ -22,12 +22,13 @@ const (
 	// unprovoked mobs IDLE most of the time and stroll briefly — passives drift
 	// ~0.16 b/s perceived (≈15-20% moving), unaggroed hostiles ~0.05 b/s. Idle
 	// is the default state; the stroll is the exception. Updates run at 10/s.
-	restMin    = 80  // idle spell: 8-20 s…
-	restMax    = 200 //
-	strollMin  = 25  // …then a 2.5-4.5 s stroll, back to idle
-	strollMax  = 45
-	mobSpeed   = 0.09 // blocks per step (×10 = 0.9 blocks/sec grazing)
-	panicTicks = 40   // flee steps after a hit (decremented per mob update ≈ 4s)
+	restMin     = 80  // idle spell: 8-20 s…
+	restMax     = 200 //
+	strollMin   = 25  // …then a 2.5-4.5 s stroll, back to idle
+	strollMax   = 45
+	mobSpeed    = 0.09 // blocks per step (×10 = 0.9 blocks/sec grazing)
+	panicTicks  = 20   // mob updates a panic-causing hurt is remembered (getLastDamageSource: 40 ticks)
+	panicLegMax = 60   // updates before an unreached panic spot is dropped (the path is done)
 )
 
 var (
@@ -56,6 +57,7 @@ type mob struct {
 	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
 	panicTZ         float64
 	panicHasT       bool
+	panicLeg        int     // updates spent on the current panic leg
 	hostile         bool    // hunts + attacks players (zombies) rather than grazing
 	burning         bool    // on fire — rendered via entity flags (any ignite source)
 	burnDelay       int     // seconds of dawn-ramp grace before this mob ignites
@@ -806,15 +808,23 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case nautilusKind(m.etype) && h.nautilusFightStep(players, m):
 			// A nautilus charging whoever hurt it, or a pufferfish: the FIGHT
 			// activity outranks its panic, which only walks it away.
-		case m.panic > 0:
+		case m.panic > 0 || m.panicHasT:
 			// Spooked: PanicGoal runs to one random spot after another
-			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed,
-			// ignoring herd steering until the panic wears off.
-			if m.panic--; m.panic == 0 {
-				m.panicHasT = false
+			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed
+			// while the hurt is under forty ticks old (shouldPanic), and
+			// finishes the leg it is on when it runs out
+			// (canContinueToUse: the path is not done).
+			if m.panic > 0 {
+				m.panic--
 			}
-			if !m.panicHasT || math.Hypot(m.panicTX-m.x, m.panicTZ-m.z) < 1 {
+			if m.panicHasT {
+				if m.panicLeg++; m.panicLeg > panicLegMax || math.Hypot(m.panicTX-m.x, m.panicTZ-m.z) < 1 {
+					m.panicHasT = false
+				}
+			}
+			if !m.panicHasT && m.panic > 0 {
 				m.panicTX, m.panicTZ, m.panicHasT = h.panicTarget(m)
+				m.panicLeg = 0
 			}
 			if m.panicHasT {
 				var vx, vz float64

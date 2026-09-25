@@ -768,7 +768,7 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 					h.provoke(m, shooter)
 				}
 			} else if !m.hostile && panicsAt(m, projectileDamageOf(a)) {
-				m.panic, m.fleeX, m.fleeZ = panicTicks, a.x, a.z
+				m.panic, m.fleeX, m.fleeZ = h.panicFor(m), a.x, a.z
 			} else {
 				m.anger = spiderAnger
 				if shooter := players[a.shooter]; shooter != nil && a.playerShot {

@@ -226,6 +226,13 @@ func (h *hub) avoidStep(players map[int32]*tracked, m *mob) bool {
 	if m.avoidLeft <= 0 {
 		return false
 	}
+	if m.panic > 0 {
+		// PanicGoal sits above every AvoidEntityGoal (a fish's 0 over 2, a
+		// rabbit's 1 over 4, a cat's 1 over 4…): a blow mid-retreat turns the
+		// retreat into a panic.
+		m.avoidLeft = 0
+		return false
+	}
 	m.avoidLeft--
 	dx, dz := m.avoidX-m.x, m.avoidZ-m.z
 	d := math.Hypot(dx, dz)

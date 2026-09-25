@@ -490,7 +490,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 		} else if m.retaliates { // wolf/goat/bee/llama: a hit turns the herd hostile
 			h.provoke(m, t)
 		} else if !m.hostile && panicsAt(m, dt) { // the species' own PanicGoal, if it has one
-			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, t.x, t.z, 0
+			m.panic, m.fleeX, m.fleeZ, m.reroute = h.panicFor(m), t.x, t.z, 0
 		} else {
 			if m.etype == entityWarden {
 				h.wardenAngerAt(m, t.p.eid, wardenAngerHurt) // ANGRY + 20 at whoever struck

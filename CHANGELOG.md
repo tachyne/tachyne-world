@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Panicked animals calm down on time.** A cow, pig or chicken you hit
+  used to run around for four seconds whatever happened. As in vanilla, it
+  now panics for two seconds after the last hit and then finishes the dash
+  it is on. Goats, camels, frogs, sniffers and the other animals that
+  panic "by brain" run for five to six seconds, and hitting them again
+  does not make it longer. An animal backing away from a wolf or a monster
+  panics at once when hit, and animals that never panic in vanilla no
+  longer panic when bitten.
 - **Villagers panic like vanilla villagers.** A frightened villager used to
   run in a straight line from any zombie or illager it could sense, even
   through walls, and a villager you hit ran around like a startled

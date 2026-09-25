@@ -58,6 +58,33 @@ func panicsAt(m *mob, dt dmgType) bool {
 	return dt.has(tagPanicCauses)
 }
 
+// brainPanics are the species whose panic is the brain's AnimalPanic rather
+// than PanicGoal: it runs a fixed 100-120 ticks from its start, and a
+// fresh hurt while it runs does not stretch it.
+var brainPanics = func() map[int]bool {
+	out := map[int]bool{}
+	for _, n := range []string{"allay", "goat", "sniffer", "armadillo", "happy_ghast", "tadpole",
+		"copper_golem", "nautilus", "frog", "camel", "camel_husk"} {
+		if id, ok := entityByName[n]; ok {
+			out[id] = true
+		}
+	}
+	return out
+}()
+
+// panicFor is how long (in mob updates) a panic-causing hurt sets m
+// panicking: PanicGoal re-picks spots while the hurt is under forty ticks
+// old, so every hurt restarts that clock; AnimalPanic runs 100-120 ticks.
+func (h *hub) panicFor(m *mob) int {
+	if brainPanics[m.etype] {
+		if m.panic > 0 {
+			return m.panic
+		}
+		return (100 + h.rng.Intn(21)) / mobMoveInterval
+	}
+	return panicTicks
+}
+
 // panicNever is the roster with no PanicGoal at all. A blow or an arrow
 // consults it too: until 2026-09-24 any struck non-hostile bolted, so a hit
 // ocelot, snow golem or zombie horse ran. (The armadillo has a panic goal,
