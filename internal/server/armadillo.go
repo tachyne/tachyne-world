@@ -24,10 +24,14 @@ const (
 	armUnrollingTicks = 30 // …UNROLLING
 	armScareInterval  = 80 // SCARE_CHECK_INTERVAL
 	armDangerTicks    = 80 // DANGER_DETECTED_RECENTLY
-	armScareXZ        = 7.0
-	armScareY         = 2.0
-	metaIndexArmState = 17 // DATA_STATE on 1.21.5 (the gateway shifts it for 26.2)
-	armScuteMinTicks  = 20 * 60 * 5
+	armPeekThreshold  = 75 // DANGER_DETECTED_RECENTLY_DANGER_THRESHOLD
+	armScaredAnim     = 50 // ArmadilloState.SCARED.animationDuration
+
+	entityStatusArmadilloPeek = 64
+	armScareXZ                = 7.0
+	armScareY                 = 2.0
+	metaIndexArmState         = 17 // DATA_STATE on 1.21.5 (the gateway shifts it for 26.2)
+	armScuteMinTicks          = 20 * 60 * 5
 )
 
 // armadilloStateMeta is one DATA_STATE entry (ARMADILLO_STATE serializer).
@@ -130,6 +134,28 @@ func (h *hub) armadilloTick(players map[int32]*tracked, m *mob) {
 		} else if now-m.armStateAt >= armUnrollingTicks {
 			h.armadilloSetState(players, m, armIdle)
 		}
+	}
+	h.armadilloPeek(players, m, now)
+}
+
+// armadilloPeek is ArmadilloBallUp's peek: while the danger memory has more
+// than 75 ticks left, a scared armadillo on the ground peeks out (entity
+// event 64) whenever its timer runs out, the timer re-rolled to the scared
+// animation's 50 plus 100..400 ticks after each peek and whenever the danger
+// crosses that threshold either way.
+func (h *hub) armadilloPeek(players map[int32]*tracked, m *mob, now uint64) {
+	if m.armState == armIdle {
+		m.armDangerWas = false
+		return
+	}
+	around := m.armDangerUntil > now+armPeekThreshold
+	if around != m.armDangerWas {
+		m.armPeekAt = now + armScaredAnim + uint64(100+h.rng.Intn(301))
+	}
+	m.armDangerWas = around
+	if m.armState == armScared && around && now >= m.armPeekAt && m.grounded() {
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusArmadilloPeek))
+		m.armPeekAt = now + armScaredAnim + uint64(100+h.rng.Intn(301))
 	}
 }
 

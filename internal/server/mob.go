@@ -513,6 +513,8 @@ type mob struct {
 	armStateAt                      uint64     // armadillo: the tick the state began
 	armDangerUntil                  uint64     // armadillo: DANGER_DETECTED_RECENTLY expiry
 	armScuteAt                      uint64     // armadillo: the tick the next scute drops (0 = unset)
+	armPeekAt                       uint64     // armadillo: ArmadilloBallUp's next peek
+	armDangerWas                    bool       // …whether the danger was still around last update
 	sniffState                      int8       // sniffer: 0 idle, 1 walking to a dig site, 2 digging
 	sniffStart                      uint64     // sniffer: the tick the dig began
 	sniffUntil                      uint64     // sniffer: the tick the dig ends
