@@ -207,6 +207,7 @@ func TestFlowingWaterSolidifiesPowder(t *testing.T) {
 		trough(w, 0, 6, z, y)
 		for x := 1; x <= 6; x++ {
 			w.SetBlock(x, y-1, z, powder)
+			w.SetBlock(x, y-2, z, worldgen.Stone) // powder over air falls (FallingBlock.tick)
 		}
 		w.SetBlock(0, y, z, worldgen.WaterBase)
 		settleFluid(h, blockPos{0, y, z})

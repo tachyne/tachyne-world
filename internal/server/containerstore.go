@@ -64,6 +64,7 @@ type containerFile struct {
 	Bins        map[string]savedBin       `json:"bins,omitempty"`     // dispenser/dropper/hopper
 	Items       []savedItem               `json:"items,omitempty"`    // dropped item entities
 	Vehicles    []savedVehicle            `json:"vehicles,omitempty"` // boats and minecarts (2026-09-06)
+	Falling     []savedFalling            `json:"falling,omitempty"`  // falling blocks in the air (2026-09-25)
 	Paintings   []savedPainting           `json:"paintings,omitempty"`
 	Frames      []savedFrame              `json:"frames,omitempty"`
 	Jukeboxes   map[string]stackRow       `json:"jukeboxes,omitempty"`
@@ -432,6 +433,37 @@ func (s *containerStore) loadVehicles() []savedVehicle {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m.Vehicles
+}
+
+// savedFalling is one falling block in mid-air, as FallingBlockEntity saves
+// itself (BlockState, Time, DropItem, HurtEntities, FallHurtAmount,
+// FallHurtMax, CancelDrop) with where it is and how fast it is falling.
+type savedFalling struct {
+	Dim        int     `json:"dim,omitempty"`
+	X          float64 `json:"x"`
+	Y          float64 `json:"y"`
+	Z          float64 `json:"z"`
+	VY         float64 `json:"vy,omitempty"`
+	FallDist   float64 `json:"fall,omitempty"`
+	State      uint32  `json:"state" mig:"state"`
+	Time       int     `json:"time,omitempty"`
+	NoDrop     bool    `json:"no_drop,omitempty"` // !DropItem
+	Hurts      bool    `json:"hurts,omitempty"`
+	HurtPer    float64 `json:"hurt_per,omitempty"`
+	HurtMax    int     `json:"hurt_max,omitempty"`
+	CancelDrop bool    `json:"cancel_drop,omitempty"`
+}
+
+func (s *containerStore) recordFalling(f []savedFalling) {
+	s.mu.Lock()
+	s.m.Falling = f
+	s.mu.Unlock()
+}
+
+func (s *containerStore) loadFalling() []savedFalling {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.m.Falling
 }
 
 func (s *containerStore) loadItems() []savedItem {

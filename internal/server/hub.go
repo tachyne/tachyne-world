@@ -521,8 +521,8 @@ type hub struct {
 	bticks      blockTickQueue
 	nb          neighborUpdater
 	blockEvents []blockEvent
-	// fallDist counts the cells a falling block has dropped so far (falling.go).
-	fallDist map[simPos]int
+	// fallingBlocks are the falling_block entities in the air (fallingblock.go).
+	fallingBlocks []*fallingBlock
 
 	hud []HudWidget // action-bar HUD widgets (nil = HUD off)
 	bus bus         // out-of-process plugin bus (nopBus = disabled)
@@ -708,9 +708,6 @@ type hub struct {
 	brewFuel    map[simPos]int    // brewing stand fuel charges (1 blaze powder = 20)
 	brewIng     map[simPos]int32  // …and the ingredient it started on (swapped out → the brew is lost)
 	portalLinks map[dimPos]dimPos // sticky portal pairs (both directions)
-	// stalactiteLen remembers how long a falling dripstone column was, so its
-	// tip knows how hard it lands (PointedDripstoneBlock's hurtsEntities).
-	stalactiteLen map[simPos]int
 	// gatewayCool is TheEndGatewayBlockEntity.teleportCooldown, per GATEWAY:
 	// one that has just taken somebody is shut to everyone for forty ticks.
 	gatewayCool map[simPos]uint64
@@ -834,7 +831,6 @@ func newHub(w *world.World) *hub {
 		stop:          make(chan struct{}),
 		pending:       map[uint64][]simPos{},
 		movingBlocks:  map[simPos]movingBlock{},
-		fallDist:      map[simPos]int{},
 		waveWet:       map[blockPos]uint32{},
 		handoffs:      map[string]*handoff{},
 		pendingResume: map[string]handover.PlayerState{},
@@ -902,7 +898,6 @@ func newHub(w *world.World) *hub {
 		brewFuel:       map[simPos]int{},
 		brewIng:        map[simPos]int32{},
 		portalLinks:    map[dimPos]dimPos{},
-		stalactiteLen:  map[simPos]int{},
 		gatewayCool:    map[simPos]uint64{},
 		bossSeen:       map[[2]int32]bool{},
 		openDoors:      map[simPos]uint64{},
@@ -1013,6 +1008,7 @@ func (h *hub) run() {
 		h.bins = h.containers.loadBins()
 		h.restoreItems(h.containers.loadItems())
 		h.restoreVehicles(h.containers.loadVehicles())
+		h.restoreFalling(h.containers.loadFalling())
 		h.paintings = h.containers.loadPaintings(h.allocEID)
 		h.itemFrames = h.containers.loadFrames(h.allocEID)
 		h.armorStands = h.containers.loadStands(h.allocEID)
@@ -1239,7 +1235,8 @@ func (h *hub) run() {
 			if h.waves && age%waveCadence == 0 {
 				h.updateWaves(players, age) // NON-VANILLA cosmetic beach waves (-waves)
 			}
-			h.updateBolts(players) // despawn finished lightning flashes
+			h.updateBolts(players)       // despawn finished lightning flashes
+			h.tickFallingBlocks(players) // falling sand, gravel, anvils, stalactites (fallingblock.go)
 			h.updateTNT(players)
 			if len(players) > 0 { // entities tick only in loaded chunks (see updateMobs)
 				h.updateSulfurCubes(players) // fuses, pickups, and the cubes carrying a block rolling about
@@ -1353,6 +1350,7 @@ func (h *hub) run() {
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordVehicles(h.snapshotVehicles())
+					h.containers.recordFalling(h.snapshotFalling())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)
@@ -2323,6 +2321,7 @@ func (h *hub) run() {
 					h.containers.recordBins(h.bins)
 					h.containers.recordItems(h.snapshotItems())
 					h.containers.recordVehicles(h.snapshotVehicles())
+					h.containers.recordFalling(h.snapshotFalling())
 					h.containers.recordPaintings(h.paintings)
 					h.containers.recordFrames(h.itemFrames)
 					h.containers.recordJukeboxes(h.jukeboxes)

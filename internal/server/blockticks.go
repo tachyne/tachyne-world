@@ -293,6 +293,11 @@ func (h *hub) neighborChanged(players map[int32]*tracked, sp simPos) {
 		return
 	}
 	st := w.At(sp.x, sp.y, sp.z)
+	if fallBlockState(st) {
+		// FallingBlock.onPlace / updateShape: the look at what is under it
+		// is scheduled now, two ticks out, not a tick late.
+		h.fallScheduleTick(sp.dim, sp.blockPos)
+	}
 	if reactsToNeighbors(st) {
 		h.inDim(sp.dim, func() { h.updateRedstone(players, sp.blockPos, st) })
 		if worldgen.IsWaterlogged(st) {
