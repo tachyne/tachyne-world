@@ -102,6 +102,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Furnaces keep the experience they owe.** The experience from smelting
+  is now saved with the furnace across restarts, pops out of the furnace
+  when it is broken, and is no longer lost when the furnace is emptied by
+  a hopper; fractions round up by chance as in vanilla instead of being
+  carried. Items left in a furnace keep their names and enchantments
+  across restarts, and furnaces in the Nether and the End no longer come
+  back from a restart glowing.
 - **Conduits sound and hunt as in vanilla.** A conduit now plays its
   activation, deactivation and ambient hums; it keeps attacking the same
   monster until that one dies or leaves, with the attack sound at the

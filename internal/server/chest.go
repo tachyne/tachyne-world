@@ -235,6 +235,9 @@ func (h *hub) spillContainer(players map[int32]*tracked, dim, x, y, z int, old, 
 	if f := h.furnaces[pos]; f != nil {
 		if _, still := furnaceKindOf(newState); !still {
 			spill(f.slots[:])
+			// preRemoveSideEffects: the experience still owed pops at the
+			// furnace's centre.
+			h.popFurnaceXP(players, f, dim, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5)
 			delete(h.furnaces, pos)
 		}
 	}

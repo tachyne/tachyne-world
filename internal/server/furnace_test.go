@@ -311,3 +311,40 @@ func TestFurnaceOutputTakenCountsAsCrafted(t *testing.T) {
 		t.Fatalf("five ingots taken count as crafted, got %d", got)
 	}
 }
+
+// AbstractFurnaceBlockEntity.recipesUsed: what a furnace smelted is owed as
+// experience until a player takes the output or the furnace breaks — then
+// it pops at the furnace's centre; the tally, and every slot in full,
+// survive a save.
+func TestFurnaceExperienceOwedAndSaved(t *testing.T) {
+	h, players, _, f := furnaceSetup()
+	f.slots[furnaceInput] = invStack{item: tRawIron, count: 3}
+	f.slots[furnaceFuel] = invStack{item: tCoal, count: 1}
+	for i := 0; i < 600; i++ {
+		h.updateFurnaces(players)
+	}
+	if f.used[tIronIngot] != 3 {
+		t.Fatalf("three smelts should be owed, used=%v", f.used)
+	}
+	f.slots[furnaceInput] = invStack{item: itemByName["iron_sword"], count: 1, name: "Old", ench: enchList{{id: enchSharpness, lvl: 2}}}
+	pos := simPos{blockPos: blockPos{10, 70, 10}}
+	cs := newContainerStore("")
+	cs.recordFurnaces(map[simPos]*furnace{pos: f})
+	g := cs.loadFurnaces()[pos]
+	if g == nil || g.used[tIronIngot] != 3 || g.slots[furnaceInput].name != "Old" || g.slots[furnaceInput].enchLvl(enchSharpness) != 2 {
+		t.Fatalf("the save lost the tally or the input's components: %+v", g)
+	}
+	// Broken: the three smelts' 3 × 0.7 = 2.1 pops at the centre, as 2 or 3.
+	h.world.SetBlock(10, 70, 10, furnaceStateMin)
+	h.setBlockAt(players, 0, blockPos{10, 70, 10}, 0)
+	total := 0
+	for _, o := range h.orbs {
+		if o.x != 10.5 || o.z != 10.5 {
+			t.Fatalf("an orb at (%.1f, %.1f), want the furnace's centre", o.x, o.z)
+		}
+		total += o.value
+	}
+	if total != 2 && total != 3 {
+		t.Fatalf("a broken furnace owed 2.1 experience popped %d", total)
+	}
+}
