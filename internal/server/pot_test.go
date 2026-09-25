@@ -19,13 +19,13 @@ func TestFlowerPotGivesThePlantBack(t *testing.T) {
 
 	p.setHotbarSlot(0, itemByName["dandelion"]) // pottable: the pot keeps its poppy
 	p.held = 0
-	s.usePot(p, x, y, z, w.Block(x, y, z), 1)
+	s.usePot(p, false, x, y, z, w.Block(x, y, z), 1)
 	if w.Block(x, y, z) != poppy {
 		t.Fatalf("a filled pot clicked with a pottable plant changed: %d", w.Block(x, y, z))
 	}
 
 	p.setHotbarSlot(0, 0) // empty hand: the poppy comes back
-	s.usePot(p, x, y, z, w.Block(x, y, z), 2)
+	s.usePot(p, false, x, y, z, w.Block(x, y, z), 2)
 	if w.Block(x, y, z) != flowerPotState {
 		t.Fatalf("the pot should be empty: %d", w.Block(x, y, z))
 	}

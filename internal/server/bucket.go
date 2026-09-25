@@ -38,11 +38,12 @@ func (evBucketFill) isHubEvent()  {}
 
 // bucketEmpty pours a full bucket's fluid into a world cell.
 func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x, y, z int, cx, cy, cz int) {
-	if int(slot) != t.p.heldSlot() || t.inv == nil {
-		return
+	if (int(slot) != t.p.heldSlot() && slot != offhandSlot) || t.inv == nil {
+		return // BucketItem.useOn pours the bucket in the hand used
 	}
 	h.vib(t.dim, freqFluidPlace, x, y, z, t.p.eid)
-	held := t.inv.slots[slot].item
+	hs := t.handStack(int(slot))
+	held := hs.item
 	mobBucket := isMobBucket(held) // MobBucketItem: water content + a mob to release
 	if held != itemBucketH2O && held != itemBucketLav && held != itemBucketSnow && !mobBucket {
 		return
@@ -55,12 +56,12 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 			!worldgen.IsWater(ts) && !worldgen.IsLava(ts) {
 			return
 		}
-		st := t.inv.slots[slot]
+		st := *hs
 		h.swapBucket(t, slot, itemBucket)
 		h.releaseSulfurBucket(players, t.dim, st, x, y, z)
 		return
 	}
-	mobData := t.inv.slots[slot].cube // the bucketed mob's variant and age, read before the swap
+	mobData := hs.cube // the bucketed mob's variant and age, read before the swap
 	// LiquidBlockContainer: a water bucket emptied onto a slab, stair, fence,
 	// sign or any other waterloggable block fills THAT block instead of the
 	// cell beside it. Without this the water went next door and the slab
@@ -174,8 +175,8 @@ func (h *hub) swapBucket(t *tracked, slot int32, to int32) {
 	if t.gamemode == gmCreative {
 		return
 	}
-	t.inv.slots[slot] = invStack{item: to, count: 1}
-	h.sendSlot(t, int(slot))
+	*t.handStack(int(slot)) = invStack{item: to, count: 1} // a hotbar slot or the offhand
+	h.sendHandSlot(t, int(slot))
 }
 
 // giveFilled turns one empty bucket (which stack) into a filled one: the last

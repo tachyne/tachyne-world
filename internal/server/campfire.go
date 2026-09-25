@@ -160,6 +160,7 @@ func (h *hub) loadCampfires() {
 type evCampfireAdd struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evCampfireAdd) isHubEvent() {}
@@ -174,7 +175,7 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 	if !isCampfireBlock(state) { // CampfireBlockEntity.placeFood: lit or not — it cooks once lit
 		return
 	}
-	held := t.inv.slots[t.p.heldSlot()]
+	held := usedStack(t)
 	rec, ok := campfireResult[held.item]
 	if !ok || held.count <= 0 {
 		return
@@ -197,11 +198,11 @@ func (h *hub) onCampfireAdd(players map[int32]*tracked, e evCampfireAdd) {
 	}
 	cf.items[slot], cf.prog[slot], cf.total[slot] = held.item, 0, rec.Cook
 	if t.gamemode != gmCreative {
-		s := &t.inv.slots[t.p.heldSlot()]
+		s := t.handStack(t.useSlot()) // the hand the food came from
 		if s.count--; s.count <= 0 {
 			*s = invStack{}
 		}
-		h.sendSlot(t, t.p.heldSlot())
+		h.sendHandSlot(t, t.useSlot())
 	}
 	h.campfireSync(players, pos, cf)
 	h.vib(pos.dim, freqBlockChange, pos.x, pos.y, pos.z, t.p.eid) // placeFood: BLOCK_CHANGE

@@ -41,6 +41,7 @@ type evUseAnchor struct {
 	eid     int32
 	slot    int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseAnchor) isHubEvent() {}
@@ -57,11 +58,11 @@ func (h *hub) handleUseAnchor(players map[int32]*tracked, t *tracked, pos blockP
 	if charge < 0 {
 		return
 	}
-	if heldStack(t).item == itemGlowstoneBlock && charge < anchorMaxCharge {
+	if usedStack(t).item == itemGlowstoneBlock && charge < anchorMaxCharge {
 		h.setBlockAt(players, t.dim, pos, anchorWithCharge(state, charge+1))
-		h.advance(players, t, "item_used_on_block", advMatch{blockState: anchorWithCharge(state, charge+1), item: heldStack(t).item})
+		h.advance(players, t, "item_used_on_block", advMatch{blockState: anchorWithCharge(state, charge+1), item: usedStack(t).item})
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		h.playSoundDim(players, t.dim, "minecraft:block.respawn_anchor.charge", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)

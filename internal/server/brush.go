@@ -44,7 +44,8 @@ type brushing struct {
 type evBrush struct {
 	eid        int32
 	x, y, z    int
-	dx, dy, dz int // the clicked face normal
+	dx, dy, dz int  // the clicked face normal
+	off        bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evBrush) isHubEvent() {}
@@ -162,7 +163,7 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 		h.finishBrush(players, t, pos, state, turnsInto, b)
 		// BrushItem: the brush wears once, when the block is finished
 		// (BrushableBlockEntity.brush returns true), not on every stroke.
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 		return
 	}
 	if stage := dustedStage(b.count); stage != was {

@@ -46,14 +46,17 @@ func faceDelta(face int32) (int, int, int) {
 type evTrimPlant struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 type evMudBottle struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 type evEggSpawner struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 // evSpawnEgg is SpawnEggItem.useOn on an ordinary block: the mob appears on
@@ -62,16 +65,19 @@ type evSpawnEgg struct {
 	eid     int32
 	x, y, z int
 	face    int32
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 type evPlaceCrystal struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 type evPlaceRocket struct {
 	eid        int32
 	x, y, z    int
 	face       int32
 	cx, cy, cz float32
+	off        bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evTrimPlant) isHubEvent()    {}
@@ -114,7 +120,7 @@ func (h *hub) trimPlant(players map[int32]*tracked, e evTrimPlant) {
 	h.setBlockLive(players, t.dim, e.x, e.y, e.z, g.headAt(growingPlantMaxAge, berries))
 	h.playSoundDim(players, t.dim, "minecraft:block.growing_plant.crop", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 }
 
@@ -125,7 +131,7 @@ func (h *hub) mudBottle(players map[int32]*tracked, e evMudBottle) {
 	if t == nil || t.inv == nil {
 		return
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	if held.item != itemPotion || held.potion != potWater || !convertableToMud(h.worldFor(t.dim).At(e.x, e.y, e.z)) {
 		return
 	}
@@ -134,7 +140,7 @@ func (h *hub) mudBottle(players map[int32]*tracked, e evMudBottle) {
 	h.playSoundDim(players, t.dim, "minecraft:item.bottle.empty", sndBlock, x, y, z, 1, 1)
 	h.spawnParticles(players, t.dim, particleSplash, x, y, z, 0.5, 0, 5)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 		if changed, left := t.inv.addStack(invStack{item: itemGlassBottle, count: 1}); left == 0 {
 			for _, sl := range changed {
 				h.sendSlot(t, sl)
@@ -156,7 +162,7 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	if t == nil {
 		return
 	}
-	et, ok := spawnEggEntity[heldStack(t).item]
+	et, ok := spawnEggEntity[usedStack(t).item]
 	if !ok || h.worldFor(t.dim).At(e.x, e.y, e.z) != spawnerBlock {
 		return
 	}
@@ -169,7 +175,7 @@ func (h *hub) eggSpawner(players map[int32]*tracked, e evEggSpawner) {
 	// spawner's own cadence to come round.
 	h.showSpawner(players, t.dim, blockPos{e.x, e.y, e.z}, et)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.playSoundDim(players, t.dim, "minecraft:block.metal.place", sndBlock, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 }
@@ -183,7 +189,7 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 	if t == nil {
 		return
 	}
-	et, ok := spawnEggEntity[heldStack(t).item]
+	et, ok := spawnEggEntity[usedStack(t).item]
 	if !ok {
 		return
 	}
@@ -210,7 +216,7 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 	// own (the egg-throw sound is a thrown egg's).
 	h.vib(t.dim, freqEntityPlace, x, y, z, t.p.eid)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 }
 
@@ -230,7 +236,7 @@ func (h *hub) spawnerMobFor(dim, x, y, z int, dflt int) int {
 // End, four of them round the exit portal bring the dragon back.
 func (h *hub) placeCrystal(players map[int32]*tracked, e evPlaceCrystal) {
 	t := players[e.eid]
-	if t == nil || t.dim != 2 || heldStack(t).item != itemEndCrystal {
+	if t == nil || t.dim != 2 || usedStack(t).item != itemEndCrystal {
 		return // crystals live in the End's fight table; elsewhere they have no home yet
 	}
 	w := h.worldFor(t.dim)
@@ -256,7 +262,7 @@ func (h *hub) placeCrystal(players map[int32]*tracked, e evPlaceCrystal) {
 	h.crystals[c.eid] = c
 	h.toDimEv(players, 2, entAdd(c.eid, entityEndCrystal, c.uuid, c.x, c.y, c.z, 0, 0))
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.tryRespawnDragon(players)
 }
@@ -295,16 +301,16 @@ func (h *hub) tryRespawnDragon(players map[int32]*tracked) {
 // launches from the click point, a little way off the face.
 func (h *hub) placeRocket(players map[int32]*tracked, e evPlaceRocket) {
 	t := players[e.eid]
-	if t == nil || heldStack(t).item != itemFireworkRocket {
+	if t == nil || usedStack(t).item != itemFireworkRocket {
 		return
 	}
 	dx, dy, dz := faceDelta(e.face)
 	x := float64(e.x) + float64(e.cx) + float64(dx)*0.15
 	y := float64(e.y) + float64(e.cy) + float64(dy)*0.15
 	z := float64(e.z) + float64(e.cz) + float64(dz)*0.15
-	st := heldStack(t)
+	st := usedStack(t)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.spawnRocket(players, t.dim, x, y, z, 0, st)
 }

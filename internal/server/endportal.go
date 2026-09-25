@@ -120,6 +120,7 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 type evInsertEye struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evInsertEye) isHubEvent() {}

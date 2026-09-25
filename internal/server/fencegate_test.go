@@ -21,7 +21,7 @@ func TestFenceGateSwingsAwayFromThePlayer(t *testing.T) {
 	p.setHotbarSlot(0, 0)
 	p.held = 0
 	p.yaw = 0 // looking south, at the gate's back
-	s.tryUseBlock(p, x, y, z, 1, 2, 0.5, 0.5, 0.5)
+	s.tryUseBlock(p, false, x, y, z, 1, 2, 0.5, 0.5, 0.5)
 	got := w.Block(x, y, z)
 	if !boolProp(got, "open") {
 		t.Fatal("the gate did not open")

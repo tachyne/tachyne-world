@@ -50,6 +50,7 @@ func cakeSignal(bites int) int { return (7 - bites) * 2 }
 type evUseCake struct {
 	eid     int32
 	x, y, z int
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseCake) isHubEvent() {}
@@ -63,11 +64,11 @@ func (h *hub) eatCake(players map[int32]*tracked, t *tracked, pos blockPos) {
 		return
 	}
 	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
-	if base, isCandle := candleCakeBases[heldStack(t).item]; isCandle && bites == 0 {
+	if base, isCandle := candleCakeBases[usedStack(t).item]; isCandle && bites == 0 {
 		h.setBlockAt(players, t.dim, pos, base+1) // +1 = unlit, as a placed candle starts
 		h.playSoundDim(players, t.dim, "minecraft:block.cake.add_candle", sndBlock, cx, cy, cz, 1, 1)
 		if isSurvival(t.gamemode) {
-			h.consumeHeld(t)
+			h.consumeUsed(t)
 		}
 		return
 	}

@@ -41,6 +41,7 @@ func composterLevel(st uint32) (int, bool) {
 type evUseComposter struct {
 	eid, slot int32
 	x, y, z   int
+	off       bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseComposter) isHubEvent() {}
@@ -60,13 +61,13 @@ func (h *hub) useComposter(players map[int32]*tracked, t *tracked, pos blockPos)
 		h.playSoundDim(players, t.dim, "minecraft:block.composter.empty", sndBlock, cx, cy, cz, 1, 1)
 		return
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	chance, compostable := compostChance[held.item]
 	if !compostable || level >= composterFull {
 		return
 	}
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	// Vanilla's roll: an empty composter always takes the first item, and
 	// after that the item's own chance decides.

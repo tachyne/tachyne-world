@@ -57,6 +57,7 @@ type evPlaceStand struct {
 	eid     int32
 	x, y, z int
 	yaw     float32
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evPlaceStand) isHubEvent() {}
@@ -76,7 +77,7 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw}
 	h.armorStands[st.eid] = st
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
 	h.vibAt(st.dim, freqEntityPlace, st.x, st.y, st.z, t.p.eid)

@@ -87,8 +87,8 @@ func (s *Server) placeBell(p *player, defState uint32, tx, ty, tz int, dir int32
 // clicked with a pottable plant does nothing (CONSUME); clicked with anything
 // else it gives its plant back — into the inventory, dropped only if there is
 // no room. Both changes are a BLOCK_CHANGE for sculk.
-func (s *Server) usePot(p *player, x, y, z int, state uint32, seq int32) bool {
-	potted, pottable := pottedByItem[p.heldItem()]
+func (s *Server) usePot(p *player, off bool, x, y, z int, state uint32, seq int32) bool {
+	potted, pottable := pottedByItem[p.handItem(off)]
 	if state == flowerPotState {
 		if !pottable {
 			return false // empty pot, nothing pottable in hand — not our click
@@ -97,7 +97,7 @@ func (s *Server) usePot(p *player, x, y, z int, state uint32, seq int32) bool {
 		s.hub.post(evStat{eid: p.eid, name: "pot_flower"})
 		s.hub.post(evPotChange{eid: p.eid, dim: p.dim, x: x, y: y, z: z})
 		if isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: int32(p.held)})
+			s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 		}
 		return true
 	}

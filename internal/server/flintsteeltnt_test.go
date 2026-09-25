@@ -16,7 +16,7 @@ func TestFlintAndSteelWearsLightingTNT(t *testing.T) {
 	w.SetBlock(0, 180, 0, worldgen.BlockBase("tnt"))
 	p := newPlayer(1, "tester", [16]byte{1})
 	p.setHotbarSlot(0, itemFlintSteel)
-	s.useFlintSteel(p, 0, 180, 0, 0, 1, 0, 0)
+	s.useFlintSteel(p, false, 0, 180, 0, 0, 1, 0, 0)
 	primed, worn := false, false
 	for len(h.events) > 0 {
 		switch e := (<-h.events).(type) {

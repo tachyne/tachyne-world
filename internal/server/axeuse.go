@@ -29,6 +29,7 @@ type evUseAxe struct {
 	eid     int32
 	x, y, z int
 	slot    int32
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseAxe) isHubEvent() {}
@@ -37,6 +38,7 @@ type evUseHoneycomb struct {
 	eid     int32
 	x, y, z int
 	slot    int32
+	off     bool // used from the offhand (the packet's InteractionHand)
 }
 
 func (evUseHoneycomb) isHubEvent() {}
@@ -96,29 +98,29 @@ func axeResult(state uint32) (uint32, axeKind) {
 // tryAxeUse (connection side): an axe on a strippable, scrapable or waxed
 // block hands the click to the hub. The block is acknowledged unchanged here;
 // the hub's setBlockLive delivers the new state.
-func (s *Server) tryAxeUse(p *player, x, y, z int, seq int32) bool {
-	if !axeItems[p.heldItem()] {
+func (s *Server) tryAxeUse(p *player, off bool, x, y, z int, seq int32) bool {
+	if !axeItems[p.handItem(off)] {
 		return false
 	}
 	state := s.worldFor(p).Block(x, y, z)
 	if _, kind := axeResult(state); kind == axeNone {
 		return false
 	}
-	s.hub.post(evUseAxe{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+	s.hub.post(evUseAxe{eid: p.eid, x: x, y: y, z: z, slot: p.handSlot(off), off: off})
 	s.sendBlockChange(p, x, y, z, state, seq)
 	return true
 }
 
 // tryHoneycombUse (connection side): honeycomb on unwaxed copper.
-func (s *Server) tryHoneycombUse(p *player, x, y, z int, seq int32) bool {
-	if p.heldItem() != itemHoneycomb {
+func (s *Server) tryHoneycombUse(p *player, off bool, x, y, z int, seq int32) bool {
+	if p.handItem(off) != itemHoneycomb {
 		return false
 	}
 	state := s.worldFor(p).Block(x, y, z)
 	if _, ok := waxedCopper(state); !ok {
 		return false
 	}
-	s.hub.post(evUseHoneycomb{eid: p.eid, x: x, y: y, z: z, slot: int32(p.held)})
+	s.hub.post(evUseHoneycomb{eid: p.eid, x: x, y: y, z: z, slot: p.handSlot(off), off: off})
 	s.sendBlockChange(p, x, y, z, state, seq)
 	return true
 }
@@ -131,13 +133,13 @@ func (h *hub) onUseAxe(players map[int32]*tracked, e evUseAxe) {
 	if t == nil || t.dead {
 		return
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	if !axeItems[held.item] {
 		return
 	}
 	// playerHasBlockingItemUseIntent: main hand with a shield in the offhand
 	// and not sneaking means the player wants to block, not strip.
-	if t.offhand.item == itemShield && !t.p.sneaking {
+	if !t.useOffhand && t.offhand.item == itemShield && !t.p.sneaking {
 		return
 	}
 	state := h.worldFor(t.dim).At(e.x, e.y, e.z)
@@ -165,7 +167,7 @@ func (h *hub) onUseHoneycomb(players map[int32]*tracked, e evUseHoneycomb) {
 	if t == nil || t.dead {
 		return
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	if held.item != itemHoneycomb {
 		return
 	}

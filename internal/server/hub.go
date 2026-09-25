@@ -159,7 +159,7 @@ type evNPCDecision struct { // an LLM NPC's decided action (nil = none)
 	eid    int32
 	action *npcAction
 }
-type evConsume struct{ eid, slot int32 } // survival: consume one of a hotbar slot after placing
+type evConsume struct{ eid, slot int32 } // survival: consume one of a hand slot (hotbar or offhandSlot) after placing
 type evStopEat struct {                  // release_use_item / hotbar switch: end an eat-hold or bow draw
 	eid  int32
 	fire bool // true on an explicit release: a drawn bow LOOSES instead of lowering
@@ -1416,7 +1416,7 @@ func (h *hub) run() {
 			return // test teardown closes h.stop so run() goroutines don't leak (production never does)
 
 		case ev := <-h.events:
-			if h.useItemEvent(players, ev) {
+			if h.useItemEvent(players, ev) || h.useOnEvent(players, ev) {
 				continue
 			}
 			switch e := ev.(type) {
@@ -1869,10 +1869,6 @@ func (h *hub) run() {
 				h.onRingBell(players, e)
 			case evUseSign:
 				h.onUseSign(players, e)
-			case evUseAxe:
-				h.onUseAxe(players, e)
-			case evUseHoneycomb:
-				h.onUseHoneycomb(players, e)
 			case evUseLodestone:
 				h.onUseLodestone(players, e)
 			case evSignUpdate:
@@ -1897,26 +1893,6 @@ func (h *hub) run() {
 						h.leaveEndHome(players, t)
 					} else {
 						h.respawn(t)
-					}
-				}
-			case evInsertEye:
-				if t := players[e.eid]; t != nil {
-					pos := blockPos{e.x, e.y, e.z}
-					if st := h.world.At(e.x, e.y, e.z); isEndFrame(st) &&
-						dist3(t.x, t.y, t.z, float64(e.x), float64(e.y), float64(e.z)) < maxMeleeReach+1 {
-						if t.inv != nil {
-							sl := &t.inv.slots[t.p.heldSlot()]
-							if sl.item == itemEnderEye && sl.count > 0 {
-								if t.gamemode != gmCreative {
-									sl.count--
-									if sl.count == 0 {
-										*sl = invStack{}
-									}
-									h.sendSlot(t, t.p.heldSlot())
-								}
-								h.insertEye(players, t, pos, st)
-							}
-						}
 					}
 				}
 			case evFillBottle:
@@ -2114,32 +2090,12 @@ func (h *hub) run() {
 						h.incCustom(t, "interact_with_furnace", 1)
 					}
 				}
-			case evHarvestHive:
-				if t := players[e.eid]; t != nil {
-					h.harvestBeeHome(players, t, blockPos{e.x, e.y, e.z})
-				}
 			case evLightBlock:
 				h.onLightBlock(players, e)
-			case evCarvePumpkin:
-				h.carvePumpkin(players, e)
-			case evTrimPlant:
-				h.trimPlant(players, e)
-			case evMudBottle:
-				h.mudBottle(players, e)
-			case evEggSpawner:
-				h.eggSpawner(players, e)
-			case evSpawnEgg:
-				h.useSpawnEgg(players, e)
 			case evSpawnEggLook:
 				if t := players[e.eid]; t != nil {
 					h.useSpawnEggOnFluid(players, t, e.slot)
 				}
-			case evPlaceCrystal:
-				h.placeCrystal(players, e)
-			case evPlaceRocket:
-				h.placeRocket(players, e)
-			case evMapBanner:
-				h.toggleMapBanner(players, e)
 			case evLightOre:
 				h.lightOre(players, e)
 			case evDragonEgg:
@@ -2150,21 +2106,9 @@ func (h *hub) run() {
 				h.useWoodShelf(players, e)
 			case evUseCandle:
 				h.useCandle(players, e)
-			case evUseCake:
-				if t := players[e.eid]; t != nil {
-					h.eatCake(players, t, blockPos{e.x, e.y, e.z})
-				}
-			case evUseComposter:
-				if t := players[e.eid]; t != nil {
-					h.useComposter(players, t, blockPos{e.x, e.y, e.z})
-				}
 			case evUseVault:
 				if t := players[e.eid]; t != nil {
 					h.useVault(players, t, blockPos{e.x, e.y, e.z})
-				}
-			case evUsePot:
-				if t := players[e.eid]; t != nil {
-					h.usePot(players, t, blockPos{e.x, e.y, e.z})
 				}
 			case evOpenEnder:
 				if t := players[e.eid]; t != nil {
@@ -2233,16 +2177,8 @@ func (h *hub) run() {
 					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
-			case evBrush:
-				if t := players[e.eid]; t != nil {
-					h.brush(players, t, e)
-				}
-			case evUseLectern:
-				h.onUseLectern(players, e)
 			case evUseShelf:
 				h.onUseShelf(players, e)
-			case evPlaceStand:
-				h.onPlaceStand(players, e)
 			case evOpenSmith:
 				if t := players[e.eid]; t != nil {
 					h.openSmithing(t, e.x, e.y, e.z)
@@ -2259,8 +2195,6 @@ func (h *hub) run() {
 				}
 			case evSlotState:
 				h.onSlotState(players, e)
-			case evCampfireAdd:
-				h.onCampfireAdd(players, e)
 			case evRename:
 				if t := players[e.eid]; t != nil && t.winKind == winAnvil {
 					t.renameTo = e.name
@@ -2292,10 +2226,6 @@ func (h *hub) run() {
 			case evUseBed:
 				if t := players[e.eid]; t != nil {
 					h.handleUseBed(players, t, blockPos{e.x, e.y, e.z})
-				}
-			case evUseAnchor:
-				if t := players[e.eid]; t != nil {
-					h.handleUseAnchor(players, t, blockPos{e.x, e.y, e.z})
 				}
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
@@ -2353,13 +2283,14 @@ func (h *hub) run() {
 					}
 				}
 			case evConsume:
-				if t := players[e.eid]; t != nil && isSurvival(t.gamemode) && t.inv != nil && e.slot >= 0 && e.slot < 9 {
-					if sl := &t.inv.slots[e.slot]; sl.count > 0 {
+				if t := players[e.eid]; t != nil && isSurvival(t.gamemode) {
+					// A hotbar slot, or the offhand a block was placed from.
+					if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 {
 						sl.count--
 						if sl.count == 0 {
 							sl.item = 0
 						}
-						h.sendSlot(t, int(e.slot)) // updates client + mirrors hotbar
+						h.sendHandSlot(t, int(e.slot)) // updates client + mirrors hotbar
 					}
 				}
 			case evSaveState:
@@ -2469,6 +2400,97 @@ func (h *hub) useItemEvent(players map[int32]*tracked, ev hubEvent) bool {
 		t.useOffhand = off
 		run(t)
 	}
+	return true
+}
+
+// useOnEvent runs the use_item_on events whose stack can come from either
+// hand. ServerPlayerGameMode.useItemOn works on the stack in the hand the
+// packet named (UseOnContext.getHand), so the handler draws on that hand:
+// for the call, the player's use hand is the one the click used, and the
+// hand of a use in progress (a drawn bow) is restored after. Main-hand
+// clicks leave it on the selected hotbar slot, as before. It reports
+// whether ev was one.
+func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
+	var eid int32
+	var off bool
+	var run func()
+	switch e := ev.(type) {
+	case evTrimPlant:
+		eid, off, run = e.eid, e.off, func() { h.trimPlant(players, e) }
+	case evMudBottle:
+		eid, off, run = e.eid, e.off, func() { h.mudBottle(players, e) }
+	case evEggSpawner:
+		eid, off, run = e.eid, e.off, func() { h.eggSpawner(players, e) }
+	case evSpawnEgg:
+		eid, off, run = e.eid, e.off, func() { h.useSpawnEgg(players, e) }
+	case evPlaceCrystal:
+		eid, off, run = e.eid, e.off, func() { h.placeCrystal(players, e) }
+	case evPlaceRocket:
+		eid, off, run = e.eid, e.off, func() { h.placeRocket(players, e) }
+	case evMapBanner:
+		eid, off, run = e.eid, e.off, func() { h.toggleMapBanner(players, e) }
+	case evCarvePumpkin:
+		eid, off, run = e.eid, e.off, func() { h.carvePumpkin(players, e) }
+	case evUseCake:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.eatCake(players, t, blockPos{e.x, e.y, e.z})
+			}
+		}
+	case evUseAnchor:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.handleUseAnchor(players, t, blockPos{e.x, e.y, e.z})
+			}
+		}
+	case evUseComposter:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.useComposter(players, t, blockPos{e.x, e.y, e.z})
+			}
+		}
+	case evCampfireAdd:
+		eid, off, run = e.eid, e.off, func() { h.onCampfireAdd(players, e) }
+	case evUseLectern:
+		eid, off, run = e.eid, e.off, func() { h.onUseLectern(players, e) }
+	case evInsertEye:
+		eid, off, run = e.eid, e.off, func() { h.onInsertEye(players, e) }
+	case evHarvestHive:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.harvestBeeHome(players, t, blockPos{e.x, e.y, e.z})
+			}
+		}
+	case evUsePot:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.usePot(players, t, blockPos{e.x, e.y, e.z})
+			}
+		}
+	case evUseAxe:
+		eid, off, run = e.eid, e.off, func() { h.onUseAxe(players, e) }
+	case evUseHoneycomb:
+		eid, off, run = e.eid, e.off, func() { h.onUseHoneycomb(players, e) }
+	case evPlaceStand:
+		eid, off, run = e.eid, e.off, func() { h.onPlaceStand(players, e) }
+	case evBrush:
+		eid, off, run = e.eid, e.off, func() {
+			if t := players[e.eid]; t != nil {
+				h.brush(players, t, e)
+			}
+		}
+	default:
+		return false
+	}
+	t := players[eid]
+	if t == nil {
+		run() // each handler finds no player and returns
+		return true
+	}
+	prev := t.useOffhand
+	t.useOffhand = off
+	run()
+	t.useOffhand = prev
 	return true
 }
 

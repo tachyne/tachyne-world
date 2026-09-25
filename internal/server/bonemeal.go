@@ -53,12 +53,11 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 	}
 	h.vib(t.dim, freqBlockChange, fx, fy, fz, t.p.eid) // BoneMealItem: BLOCK_CHANGE
 	if isSurvival(t.gamemode) {
-		s := &t.inv.slots[e.slot]
-		if s.item == itemBoneMeal {
+		if s := t.handStack(int(e.slot)); s != nil && s.item == itemBoneMeal { // the hand it was used from
 			if s.count--; s.count <= 0 {
 				*s = invStack{}
 			}
-			h.sendSlot(t, int(e.slot))
+			h.sendHandSlot(t, int(e.slot))
 		}
 	}
 	h.levelEvent(players, t.dim, worldEventBoneMeal, fx, fy, fz, 15) // BoneMealItem: the burst + its sound

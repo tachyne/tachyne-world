@@ -267,6 +267,33 @@ func (p *player) offhandItem() int32    { return p.offhandMirror.Load() }
 func (p *player) setDigBonus(v int32) { p.digBonusMirror.Store(v) }
 func (p *player) digBonus() int32     { return p.digBonusMirror.Load() }
 
+// handItem is the item in the hand a packet named (InteractionHand): the
+// selected hotbar slot's, or the offhand's.
+func (p *player) handItem(off bool) int32 {
+	if off {
+		return p.offhandItem()
+	}
+	return p.heldItem()
+}
+
+// handSlot is where that hand's stack lives, as the hub's hand events take
+// it: the selected hotbar index, or offhandSlot.
+func (p *player) handSlot(off bool) int32 {
+	if off {
+		return offhandSlot
+	}
+	return int32(p.held)
+}
+
+// handPaintVariant is the painting preset the hand carries. Only hotbar
+// presets are mirrored, so an offhand painting hangs a random variant.
+func (p *player) handPaintVariant(off bool) string {
+	if off {
+		return ""
+	}
+	return p.heldPaintVariant()
+}
+
 // heldSlot returns the selected hotbar index (0-8).
 func (p *player) heldSlot() int {
 	p.hmu.Lock()
