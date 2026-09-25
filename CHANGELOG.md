@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Flower pots hand the plant back.** Taking a plant out of a pot dropped
+  it on the ground; now it goes into your inventory, and is only dropped if
+  there is no room, as in vanilla. Clicking a filled pot with another plant
+  no longer swaps it out. Sculk hears plants going in and out of pots, but
+  not a potted eyeblossom opening or closing, as in vanilla.
 - **Lava, fire, campfires and cactus hurt as fast as in vanilla.** These
   hazards hit once a second, half vanilla's rate. They now hit twice a
   second at vanilla's damage per hit, for players and mobs alike. Lava

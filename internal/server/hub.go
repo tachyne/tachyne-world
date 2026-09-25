@@ -2160,6 +2160,8 @@ func (h *hub) run() {
 				h.lightOre(players, e)
 			case evDragonEgg:
 				h.onDragonEgg(players, e)
+			case evPotChange:
+				h.onPotChange(players, e)
 			case evUseWoodShelf:
 				h.useWoodShelf(players, e)
 			case evUseCandle:

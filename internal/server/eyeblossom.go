@@ -95,7 +95,9 @@ func (h *hub) switchEyeblossom(players map[int32]*tracked, dim, x, y, z int, sta
 		return true
 	}
 	h.setBlockAt(players, dim, blockPos{x, y, z}, want)
-	h.vib(dim, freqBlockChange, x, y, z, 0)
+	if !potted { // EyeblossomBlock sends BLOCK_CHANGE; FlowerPotBlock.randomTick does not
+		h.vib(dim, freqBlockChange, x, y, z, 0)
+	}
 	kind := "close"
 	if want == openEyeblossom || want == pottedOpenEyeblossom {
 		kind = "open"
