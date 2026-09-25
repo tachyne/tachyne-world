@@ -385,6 +385,74 @@ func (h *hub) onPlaysound(players map[int32]*tracked, e evPlaysound) {
 	}
 }
 
+// cmdStopsound is StopSoundCommand: /stopsound <targets> [<source>|*]
+// [<sound>] — every sound, every sound of a source, or one sound.
+func (s *Server) cmdStopsound(p *player, args []string) {
+	if !s.isOp(p.name) {
+		p.tell("You don't have permission.")
+		return
+	}
+	const usage = "Usage: /stopsound <targets> [<source>|*] [<sound>]"
+	if len(args) < 1 || len(args) > 3 {
+		p.tell(usage)
+		return
+	}
+	e := evStopsound{by: p, target: args[0], source: -1}
+	if len(args) > 1 && args[1] != "*" {
+		src, ok := soundSources[args[1]]
+		if !ok {
+			p.tell(usage)
+			return
+		}
+		e.source = src
+	}
+	if len(args) > 2 {
+		e.name = args[2]
+		if !strings.Contains(e.name, ":") {
+			e.name = "minecraft:" + e.name
+		}
+	}
+	s.hub.post(e)
+}
+
+type evStopsound struct {
+	by     *player
+	target string
+	source int32 // -1 = any
+	name   string
+}
+
+func (evStopsound) isHubEvent() {}
+
+func (h *hub) onStopsound(players map[int32]*tracked, e evStopsound) {
+	targets := h.commandTargets(players, e.by.eid, e.target)
+	if len(targets) == 0 {
+		e.by.tell("No player was found")
+		return
+	}
+	for _, t := range targets {
+		t.p.trySendEv(attachproto.StopSound{Category: e.source, Name: e.name})
+	}
+	var srcName string
+	for n, v := range soundSources {
+		if v == e.source {
+			srcName = n
+		}
+	}
+	var msg string
+	switch {
+	case e.source >= 0 && e.name != "":
+		msg = fmt.Sprintf("Stopped sound '%s' on source '%s'", e.name, srcName)
+	case e.source >= 0:
+		msg = fmt.Sprintf("Stopped all '%s' sounds", srcName)
+	case e.name != "":
+		msg = fmt.Sprintf("Stopped sound '%s'", e.name)
+	default:
+		msg = "Stopped all sounds"
+	}
+	h.cmdSuccess(players, e.by, msg, true)
+}
+
 // cmdParticle is ParticleCommand for the option-free particles:
 // /particle <name> [<x> <y> <z> [<dx> <dy> <dz> <speed> [<count>]]].
 // The particle frame carries one spread, so the largest delta stands for

@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -344,5 +345,45 @@ func TestParticleCommandByName(t *testing.T) {
 	}
 	if particleByName["flame"] != 31 || particleByName["crit"] != 5 {
 		t.Errorf("canonical ids: flame %d crit %d", particleByName["flame"], particleByName["crit"])
+	}
+}
+
+// /stopsound <targets> [<source>|*] [<sound>] (StopSoundCommand): vanilla's
+// four replies, and the target is sent the stop.
+func TestStopsoundCommand(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "stopsound bob")
+	s.handleCommand(alice, "stopsound bob record")
+	s.handleCommand(alice, "stopsound bob * music_disc.cat")
+	s.handleCommand(alice, "stopsound bob record minecraft:music_disc.cat")
+	settle(t, h, logs, "S1")
+	a := linesBetween(logs["alice"], "", "S1")
+	for _, want := range []string{"Stopped all sounds", "Stopped all 'record' sounds",
+		"Stopped sound 'minecraft:music_disc.cat'", "Stopped sound 'minecraft:music_disc.cat' on source 'record'"} {
+		if !hasLine(a, want) {
+			t.Errorf("missing %q in %q", want, a)
+		}
+	}
+}
+
+func TestStopsoundReachesTheTarget(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.onStopsound(players, evStopsound{by: pl.p, target: "@s", source: 2, name: "minecraft:music_disc.cat"})
+	for {
+		select {
+		case pkt := <-pl.p.out:
+			if e, ok := pkt.ev.(attachproto.StopSound); ok {
+				if e.Category != 2 || e.Name != "minecraft:music_disc.cat" {
+					t.Fatalf("stop sent %+v", e)
+				}
+				return
+			}
+		default:
+			t.Fatal("no stop reached the player")
+		}
 	}
 }

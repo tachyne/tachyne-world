@@ -2170,6 +2170,8 @@ func (h *hub) run() {
 				h.onSetSpawnpoint(players, e)
 			case evPlaysound:
 				h.onPlaysound(players, e)
+			case evStopsound:
+				h.onStopsound(players, e)
 			case evParticleCmd:
 				h.spawnParticles(players, e.dim, e.pid, e.x, e.y, e.z, e.spread, e.speed, e.count)
 			case evBoneMeal:

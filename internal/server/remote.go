@@ -441,6 +441,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgWindowSlot, ev)
 	case attachproto.WindowData:
 		send(attachproto.MsgWindowData, ev)
+	case attachproto.StopSound:
+		send(attachproto.MsgStopSound, ev)
 	case attachproto.HeldSync:
 		send(attachproto.MsgHeldSync, ev)
 	case attachproto.Collect:

@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/stopsound.** `/stopsound <targets> [<source>|*] [<sound>]` stops
+  every sound, a whole category or one sound for the chosen players, as in
+  vanilla. Bedrock players can have every sound stopped.
 - **Middle-click pick block.** Middle-clicking a block or an entity now
   works as in vanilla, in survival too: it selects the matching stack in
   your hotbar, or swaps it in from the rest of your inventory. In creative
