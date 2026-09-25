@@ -41,7 +41,8 @@ func runUpdates(h *hub, players map[int32]*tracked, m *mob, n int) float64 {
 
 // AbstractSkeleton.reassessWeaponGoal: holding anything but a bow, a
 // skeleton (and always a wither skeleton, with its sword) chases with
-// MeleeAttackGoal(1.2) — faster than its walk.
+// MeleeAttackGoal(1.2) — faster than its walk — and raises the aggressive
+// flag while it does.
 func TestSwordSkeletonsChaseAtOnePointTwo(t *testing.T) {
 	for _, etype := range []int{entityWitherSkeleton, entitySkeleton} {
 		h, players, _ := skeletonRig(t)
@@ -59,6 +60,9 @@ func TestSwordSkeletonsChaseAtOnePointTwo(t *testing.T) {
 		if want := m.moveSpeed() * 1.2; sp < want*0.9 || sp > want*1.01 {
 			t.Errorf("type %d chases at %.3f a step, want about %.3f (1.2 × %.3f)", etype, sp, want, m.moveSpeed())
 		}
+		if !m.aggressive {
+			t.Errorf("type %d chasing with a sword is aggressive", etype)
+		}
 	}
 }
 
@@ -71,6 +75,9 @@ func TestBowmenStrafeSlowAndIllusionerClosesAtHalf(t *testing.T) {
 	m.held = itemBow
 	h.reassessWeapon(m)
 	sp := runUpdates(h, players, m, 16)
+	if !m.aggressive {
+		t.Error("a skeleton with a target has its bow up (aggressive)")
+	}
 	if max := m.moveSpeed() * 0.25; sp > max {
 		t.Errorf("a strafing skeleton moves %.3f a step, no more than %.3f", sp, max)
 	}

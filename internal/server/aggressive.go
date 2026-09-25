@@ -2,10 +2,11 @@ package server
 
 import "github.com/tachyne/tachyne-common/protocol"
 
-// Mob.setAggressive — the raised arms. Vanilla's ZombieAttackGoal turns the
-// flag on when the zombie starts chasing and off when it stops, and every
-// client renders the zombie family with its arms up while it is set. Nothing
-// else in vanilla uses it, so nothing else sets it here.
+// Mob.setAggressive — the raised arms. Vanilla's attack goals turn the flag
+// on when they start and off when they stop: ZombieAttackGoal (the zombie
+// family's arms up), RangedBowAttackGoal and the skeleton's MeleeAttackGoal
+// (a skeleton's bow held up to aim, a wither skeleton's raised sword, an
+// illusioner's drawn bow).
 
 // metaIndexMobFlags is Mob's flags byte: Entity's eight fields, LivingEntity's
 // seven, then this. It predates the 26.x AgeableMob insertion, so the index is
@@ -40,10 +41,14 @@ func (h *hub) setAggressive(players map[int32]*tracked, m *mob, on bool) {
 // updateAggression runs with the mob step: the zombie family raises its arms
 // while it is chasing something and drops them when it gives up.
 func (h *hub) updateAggression(players map[int32]*tracked, m *mob) {
-	if !zombieKind(m.etype) {
-		return
+	switch {
+	case zombieKind(m.etype):
+		// Only a real chase raises the arms — walking through a village at
+		// night is not ZombieAttackGoal.
+		h.setAggressive(players, m, m.hasTarget && !m.drifting && !m.drownedGoal && m.dying == 0)
+	case skeletonKind(m.etype) || m.etype == entityWitherSkeleton || m.etype == entityIllusioner:
+		// The bow goal or the melee goal runs for as long as there is a
+		// target, whichever weapon the skeleton holds.
+		h.setAggressive(players, m, m.hasTarget && m.dying == 0)
 	}
-	// Only a real chase raises the arms — walking through a village at night
-	// is not ZombieAttackGoal.
-	h.setAggressive(players, m, m.hasTarget && !m.drifting && !m.drownedGoal && m.dying == 0)
 }
