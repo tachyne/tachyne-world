@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Frogs long-jump.** Every five to seven seconds a frog on dry land may
+  crouch and leap up to four blocks across and two up or down to a spot it
+  couldn't walk to, often picking a lily pad or big dripleaf to land on.
+  Goats and frogs that land a jump on the edge of a ledge now stay on it.
 - **/summon makes things that aren't mobs.** Boats, chest boats, rafts,
   every minecart, primed TNT, end crystals, lightning bolts, firework
   rockets and the thrown and shot projectiles (arrows, tridents, snowballs,

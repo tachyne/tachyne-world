@@ -1041,6 +1041,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A frog in the water making for the nearest bank (TryFindLand).
 		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):
 			// A frog croaking, still, for its sixty ticks (FrogAi's Croak).
+		case m.etype == entityFrog && h.frogJumpStep(players, m):
+			// A frog crouched for, or mid-way through, a long jump (LONG_JUMP).
 		case m.etype == entityAllay && h.allayStep(players, m):
 			// An allay with a job: collecting matching drops, delivering them,
 			// or keeping near the player who handed it its item.
@@ -1158,7 +1160,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			m.vx, m.vz = 0, 0 // lifted by a geyser: geyserFlights moves it, tick by tick
 		case m.leaping:
 			h.leapFlight(players, m) // LeapAtTargetGoal's spring, gravity and all
-		case m.etype == entityGoat && m.goatJumping:
+		case (m.etype == entityGoat || m.etype == entityFrog) && m.goatJumping:
 			h.goatFlight(players, m) // the long jump's arc
 		case m.etype == entityBreeze && m.brzState == brzJumping:
 			h.breezeFlight(players, m) // the long jump's arc, gravity and all
