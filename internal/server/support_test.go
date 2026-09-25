@@ -278,3 +278,29 @@ func TestWallHangingSignHeldFromTheSides(t *testing.T) {
 		t.Fatal("a sign held by the sign beside it fell")
 	}
 }
+
+// A snow layer lies on a full top face, honey, soul sand or mud, never on
+// ice, and drops when an ice block replaces its floor
+// (SnowLayerBlock.canSurvive).
+func TestSnowLayerFloors(t *testing.T) {
+	w := world.New(1)
+	pos := blockPos{4, 180, 4}
+	snow := worldgen.BlockBase("snow")
+	for name, ok := range map[string]bool{
+		"stone": true, "mud": true, "soul_sand": true, "honey_block": true,
+		"ice": false, "packed_ice": false, "barrier": false,
+	} {
+		w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase(name))
+		if got := supported(w, pos, snow); got != ok {
+			t.Errorf("snow on %s: supported %v, want %v", name, got, ok)
+		}
+	}
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.world.SetBlock(pos.x, pos.y-1, pos.z, worldgen.Stone)
+	h.world.SetBlock(pos.x, pos.y, pos.z, snow)
+	h.setBlockAt(map[int32]*tracked{}, 0, blockPos{pos.x, pos.y - 1, pos.z}, worldgen.BlockBase("ice"))
+	if h.world.At(pos.x, pos.y, pos.z) == snow {
+		t.Fatal("snow stayed on ice")
+	}
+}

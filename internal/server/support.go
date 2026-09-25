@@ -135,6 +135,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if isChorusPlant(state) || isChorusFlower(state) {
 		return chorusSurvives(w, pos, state)
 	}
+	if state >= snowLayer1 && state <= snowLayer1+7 { // SnowLayerBlock.canSurvive
+		return snowCanStandOn(below())
+	}
 	if state == soulFire { // SoulFireBlock.canSurvive: its soul block below
 		return soulFireBase(below())
 	}

@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Snow layers need a proper floor.** A placed snow layer now follows
+  vanilla's rule: it can't sit on ice, packed ice or a barrier, always sits
+  on honey, soul sand or mud, and otherwise needs a full top face. Snow
+  also settles on mud when it snows.
 - **Soul fire.** Flint and steel, a fire charge, or fire spreading onto
   soul sand or soul soil now lights blue soul fire, as in vanilla; before,
   only a flaming arrow did. Soul fire goes out when the block under it is

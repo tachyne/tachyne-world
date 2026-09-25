@@ -977,13 +977,13 @@ func (h *hub) motionBlockingTop(dim, x, z int) int {
 }
 
 // snowCanStandOn is SnowLayerBlock.canSurvive's floor test: never ice, packed
-// ice or a barrier; always honey or soul sand; otherwise a full top face, or
+// ice or a barrier; always honey, soul sand or mud; otherwise a full top face, or
 // a full stack of snow.
 func snowCanStandOn(below uint32) bool {
 	switch below {
 	case iceBlock, packedIceBlock, barrierBlock:
 		return false
-	case honeyBlockState, soulSandState:
+	case honeyBlockState, soulSandState, worldgen.Mud: // #support_override_snow_layer
 		return true
 	case snowLayer1 + 7:
 		return true
