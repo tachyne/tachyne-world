@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Bogged and the wither shoot at vanilla speed.** A bogged now draws its
+  bow as slowly as in vanilla (every three and a half seconds, two and a
+  half on Hard) instead of at a skeleton's pace. The wither's middle head
+  fires a skull every two seconds at targets within 20 blocks; it used to
+  fire twice as often and from twice as far.
 - **Water hurts endermen, blazes, striders and snow golems.** These mobs
   used to be unharmed by water and rain, and an enderman only fled from
   rain now and then. As in vanilla, water and rain now hurt them, and an

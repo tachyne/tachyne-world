@@ -66,15 +66,53 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 	h.playersRef = players
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5
 	h.world.ForceLoad(0, 0, 2)
-	m := h.spawnMob(players, entityParched, 8.5, 180, 0.5)
-	for i := 0; i < 200 && len(h.arrows) == 0; i++ {
-		h.skeletonShoot(players, m)
+	for _, et := range []int{entityParched, entityBogged} {
+		before := len(h.arrows)
+		m := h.spawnMob(players, et, 8.5, 180, 0.5)
+		for i := 0; i < 200 && len(h.arrows) == before; i++ {
+			h.skeletonShoot(players, m)
+		}
+		if len(h.arrows) == before {
+			t.Fatalf("a %s in range never shot", advEntityName[et])
+		}
+		if m.attackCD != 34 {
+			t.Errorf("%s cooldown %d mob-updates, want 34 (70 ticks)", advEntityName[et], m.attackCD)
+		}
+		h.removeMob(players, m)
 	}
-	if len(h.arrows) == 0 {
-		t.Fatal("a parched in range never shot")
+}
+
+// The wither's centre head is RangedAttackGoal(this, 1.0, 40, 20): a skull
+// every 40 ticks, at anything within 20 blocks. It used to reach 40 blocks
+// and fire every 18 ticks.
+func TestWitherCentreHeadCadenceAndRange(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 2)
+	m := h.spawnMob(players, entityWither, 0.5, 180, 0.5)
+	pl.x, pl.y, pl.z = 25.5, 180, 0.5 // 25 away: beyond the goal's radius
+	for i := 0; i < 50; i++ {
+		h.witherShoot(players, m)
 	}
-	if m.attackCD != 34 {
-		t.Errorf("parched cooldown %d mob-updates, want 34 (70 ticks)", m.attackCD)
+	if len(h.arrows) != 0 {
+		t.Fatalf("it shot %d skulls at a player 25 blocks off", len(h.arrows))
+	}
+	pl.x = 10.5
+	var shots []int
+	for i := 0; i < 100; i++ {
+		before := len(h.arrows)
+		h.witherShoot(players, m)
+		if len(h.arrows) > before {
+			shots = append(shots, i)
+		}
+	}
+	if len(shots) < 2 {
+		t.Fatalf("shots at updates %v", shots)
+	}
+	if gap := (shots[1] - shots[0]) * mobMoveInterval; gap != 40 {
+		t.Errorf("skulls %d ticks apart, want 40", gap)
 	}
 }
 

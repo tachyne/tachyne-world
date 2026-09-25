@@ -205,7 +205,8 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	h.spawnArrowAt(players, m, q.x, q.aimY, q.z)
 	h.playSoundDim(players, m.dim, "minecraft:entity.skeleton.shoot", sndHostile, m.x, m.y, m.z, 1, 1)
 	// RangedBowAttackGoal cadence (AbstractSkeleton.getAttackInterval): 40
-	// ticks on easy/normal, 20 on hard; a parched draws slower, 70 and 50.
+	// ticks on easy/normal, 20 on hard; a parched or a bogged draws slower,
+	// 70 and 50 (Bogged/Parched.getAttackInterval, getHardAttackInterval).
 	// attackCD counts mob-updates (2 ticks) incl. this one.
 	m.attackCD = 19
 	if h.rules.Difficulty == diffHard {
@@ -214,7 +215,7 @@ func (h *hub) skeletonShoot(players map[int32]*tracked, m *mob) {
 	if m.etype == entityIllusioner {
 		m.attackCD = 9 // Illusioner's RangedBowAttackGoal(this, 0.5, 20, 15): twenty ticks, any difficulty
 	}
-	if m.etype == entityParched {
+	if m.etype == entityParched || m.etype == entityBogged {
 		m.attackCD = 34
 		if h.rules.Difficulty == diffHard {
 			m.attackCD = 24
