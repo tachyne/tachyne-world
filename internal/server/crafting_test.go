@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"math"
 	"testing"
 
@@ -215,12 +216,20 @@ func TestPlaceRecipeMissingIngredients(t *testing.T) {
 	pl := testTracked()
 	players[1] = pl // empty inventory
 
+	drainOut(pl.p)
 	h.placeRecipe(players, pl, evCraftRequest{eid: 1, windowID: 0, recipeID: int32(len(shapedRecipes))})
 	for i, c := range pl.craft {
 		if c.item != 0 {
 			t.Fatalf("missing ingredients must not fill the grid: cell %d = %+v", i, c)
 		}
 	}
+	// …and the grid shows the recipe as ghosts (PLACE_GHOST_RECIPE).
+	for _, ev := range drainEvs(pl.p) {
+		if g, ok := ev.(attachproto.GhostRecipe); ok && g.Shapeless != nil && len(g.Shapeless.Ingredients) > 0 {
+			return
+		}
+	}
+	t.Fatal("no ghost recipe sent")
 }
 
 func TestPlaceRecipeTooBigForPlayerGrid(t *testing.T) {

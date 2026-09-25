@@ -1,6 +1,6 @@
 package server
 
-import ()
+import attachproto "github.com/tachyne/tachyne-common/attach"
 
 // Recipe book: clicking a book entry sends craft_recipe_request; display ids
 // are canonical recipe indices (shaped first, then shapeless). Which entries
@@ -105,7 +105,10 @@ func (h *hub) placeRecipe(players map[int32]*tracked, t *tracked, e evCraftReque
 	}
 	pick := assignIngredients(sets, order, supply)
 	if pick == nil {
-		return // missing ingredients — leave the ghost preview to the client
+		// handlePlaceRecipe's PLACE_GHOST_RECIPE: the grid (already
+		// emptied) shows the recipe's ingredients as ghosts.
+		t.p.trySendEv(ghostRecipeFor(e.windowID, e.recipeID))
+		return
 	}
 
 	// Pull one of each needed item out of the inventory into its grid cell.
@@ -216,4 +219,18 @@ func assignIngredients(need []uint16, order []int32, supply map[int32]int) []int
 		}
 	}
 	return pick
+}
+
+// ghostRecipeFor is the display of a book recipe, for place_ghost_recipe.
+func ghostRecipeFor(window, id int32) attachproto.GhostRecipe {
+	g := attachproto.GhostRecipe{Window: window}
+	switch {
+	case int(id) < len(shapedRecipes):
+		r := &shapedRecipes[id]
+		g.Shaped = &attachproto.ShapedRecipe{ID: id, W: int32(r.W), H: int32(r.H), Cells: representatives(r.Cells), Result: r.Result, Count: int32(r.Count)}
+	case int(id) < len(shapedRecipes)+len(shapelessRecipes):
+		r := &shapelessRecipes[int(id)-len(shapedRecipes)]
+		g.Shapeless = &attachproto.ShapelessRecipe{ID: id, Ingredients: representatives(r.Ingredients), Result: r.Result, Count: int32(r.Count)}
+	}
+	return g
 }

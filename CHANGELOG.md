@@ -132,6 +132,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Recipe ghosts.** Clicking a recipe in the book that you don't have the
+  ingredients for shows it as greyed-out ghosts in the crafting grid.
 - **Sounds follow the animal.** Shearing, a frog's tongue and eating, a
   breeze's charge, a goat's long jump and similar sounds now move with the
   creature making them, as in vanilla.
