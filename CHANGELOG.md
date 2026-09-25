@@ -21,6 +21,10 @@ the public history since the project was open-sourced on 2026-07-10.
   player (no operator rights needed) can then `/trigger <objective>`, or
   `add`/`set` a value, once per enable — the vanilla way to let players
   press a button in a map or minigame.
+- **Ravines.** Long, deep cuts through the ground now wander across the
+  overworld as in vanilla, sometimes opening to the sky and flooding where
+  they pass under the sea. Nothing is cut where you have built: a ravine
+  that would reach a build is left out whole.
 
 ### Fixed
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns

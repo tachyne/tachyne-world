@@ -15,6 +15,7 @@ const treeMargin = 12
 // the tree species and ground flora from each column's biome.
 func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
 	baseX, baseZ := int(cx)*16, int(cz)*16
+	ravine := g.ravineCut(baseX-treeMargin, baseZ-treeMargin, baseX+15+treeMargin, baseZ+15+treeMargin)
 	// Scan origins in the chunk plus a margin so trees rooted in neighbouring
 	// columns still stamp the canopy blocks that fall inside this chunk.
 	for ox := -treeMargin; ox < 16+treeMargin; ox++ {
@@ -25,8 +26,8 @@ func (g *Generator) decorate(ch *Chunk, cx, cz int32) {
 			if !plantable(col.topBlock()) || col.h < SeaLevel {
 				continue // trees/flora only on solid, dry-ish ground
 			}
-			if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air {
-				continue // a cave opening removed the surface here — nothing to root
+			if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air || ravine(wx, col.h-1, wz) {
+				continue // a cave opening or a ravine removed the surface here — nothing to root
 			}
 			if b.Tree != treeNone && g.treeAt(wx, wz, b.TreeDensity) {
 				g.stampTree(ch, baseX, baseZ, wx, wz, col.h, b.Tree)
@@ -59,8 +60,8 @@ func (g *Generator) TreeAt(wx, wz int) bool {
 	if col.biome.Tree == treeNone || !plantable(col.topBlock()) || col.h < SeaLevel {
 		return false
 	}
-	if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air {
-		return false // a cave opening removed the surface — nothing rooted
+	if g.carve(col.topBlock(), wx, col.h-1, wz, col.h) == Air || g.ravineCut(wx, wz, wx, wz)(wx, col.h-1, wz) {
+		return false // a cave opening or a ravine removed the surface — nothing rooted
 	}
 	return g.treeAt(wx, wz, col.biome.TreeDensity)
 }
