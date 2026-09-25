@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Witches throw their potions properly.** A witch's potions flew twice
+  as fast as they should, so they sailed over players and were hard to
+  dodge. They now fly at vanilla speed in a proper arc, a little slower up
+  close, and are aimed at where you are going.
 - **Slimes and magma cubes look for you at their own level.** As in
   vanilla, a slime or magma cube now only notices a player within four
   blocks above or below it, so one at the bottom of a cliff no longer

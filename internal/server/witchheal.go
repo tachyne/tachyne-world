@@ -1,8 +1,6 @@
 package server
 
 import (
-	"math"
-
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
@@ -50,17 +48,7 @@ func (h *hub) witchHealTick(players map[int32]*tracked, m *mob) bool {
 	if target.health <= 4 {
 		kind = potHealing
 	}
-	dx, dy, dz := target.x-m.x, (target.y+1.62-1.1)-m.y, target.z-m.z
-	d4 := math.Hypot(dx, dz)
-	dy += d4 * 0.2
-	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-	if d < 1e-6 {
-		return false
-	}
-	v := witchThrowSpeed * 2
-	a := h.launchProjectileIn(players, entitySplashProj, m.dim, m.x, m.y+1.2, m.z, dx/d*v, dy/d*v, dz/d*v)
-	a.shooter, a.breaks, a.splash, a.potion, a.mobShot = m.eid, true, true, kind, true
-	h.playSoundDim(players, m.dim, "minecraft:entity.witch.throw", sndHostile, m.x, m.y, m.z, 1, 0.8+h.rng.Float32()*0.4)
+	h.witchLob(players, m, target.x+target.vx/mobMoveInterval, target.y+mobEyeHeight(target), target.z+target.vz/mobMoveInterval, kind, true) // vx is per mob update
 	m.witchHealCD = witchHealCooldown
 	m.attackCD = witchCooldown
 	return true
