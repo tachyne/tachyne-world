@@ -537,3 +537,82 @@ func TestBeehiveStateMath(t *testing.T) {
 		t.Error("stone was taken for a hive")
 	}
 }
+
+// ConduitBlockEntity: a full frame keeps hunting the enemy it picked
+// (updateDestroyTarget) rather than whichever it meets first; the power
+// needs the player in water or in rain at their own position, not merely
+// a storm somewhere.
+func TestConduitTargetMemoryAndRain(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.worldFor(0)
+	w.ForceLoad(0, 0, 2)
+	pos := blockPos{0, 180, 0}
+	for ox := -9; ox <= 9; ox++ {
+		for oy := -9; oy <= 9; oy++ {
+			for oz := -9; oz <= 9; oz++ {
+				w.SetBlock(pos.x+ox, pos.y+oy, pos.z+oz, worldgen.WaterBase)
+			}
+		}
+	}
+	w.SetBlock(pos.x, pos.y, pos.z, conduitState)
+	prismarine := worldgen.BlockBase("prismarine")
+	for ox := -2; ox <= 2; ox++ {
+		for oy := -2; oy <= 2; oy++ {
+			for oz := -2; oz <= 2; oz++ {
+				ax, ay, az := abs(ox), abs(oy), abs(oz)
+				if ax <= 1 && ay <= 1 && az <= 1 {
+					continue
+				}
+				if (ox == 0 && (ay == 2 || az == 2)) || (oy == 0 && (ax == 2 || az == 2)) || (oz == 0 && (ax == 2 || ay == 2)) {
+					w.SetBlock(pos.x+ox, pos.y+oy, pos.z+oz, prismarine)
+				}
+			}
+		}
+	}
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	a := h.spawnMob(players, entityDrowned, 4.5, 180, 0.5)
+	b := h.spawnMob(players, entityDrowned, -3.5, 180, 0.5)
+	a.health, b.health = 1000, 1000
+	var first int32
+	for cycle := 0; cycle < 6; cycle++ {
+		h.tick.Store(uint64(cycle) * 40)
+		h.runConduit(players, 0, pos)
+		cr := h.conduitRuns[simPos{dim: 0, blockPos: pos}]
+		if cr == nil || cr.target == 0 {
+			t.Fatal("a full conduit should be hunting")
+		}
+		if cycle == 0 {
+			first = cr.target
+		} else if cr.target != first {
+			t.Fatalf("the conduit switched targets from %d to %d while the first still lived in range", first, cr.target)
+		}
+	}
+	hurt := a
+	if first == b.eid {
+		hurt = b
+	}
+	if hurt.health >= 1000 {
+		t.Fatal("the target took no damage")
+	}
+
+	// A dry player under a roof during a storm gets nothing.
+	pl := survPlayer(h)
+	players[pl.p.eid] = pl
+	for x := 12; x <= 14; x++ {
+		for z := -1; z <= 1; z++ {
+			for y := 179; y <= 185; y++ {
+				w.SetBlock(x, y, z, worldgen.Air)
+			}
+			w.SetBlock(x, 179, z, worldgen.Stone)
+			w.SetBlock(x, 186, z, worldgen.Stone)
+		}
+	}
+	pl.x, pl.y, pl.z = 13.5, 180, 0.5
+	h.raining = true
+	h.tick.Store(400)
+	h.runConduit(players, 0, pos)
+	if pl.effects[effConduitPower] != nil {
+		t.Fatal("a dry, roofed player got Conduit Power from a storm elsewhere")
+	}
+}

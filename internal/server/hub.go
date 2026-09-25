@@ -582,7 +582,8 @@ type hub struct {
 	furnaces map[simPos]*furnace // active furnace states (hub-goroutine-only)
 	chests   map[simPos]*chest   // chest storage (hub-goroutine-only)
 	// Every placed conduit, so none has to be found by scanning blocks.
-	conduits map[simPos]bool
+	conduits    map[simPos]bool
+	conduitRuns map[simPos]*conduitRun // live conduit block-entity state (conduit.go)
 	// Potent sulfur block entities (potentsulfur.go): registered when a chunk
 	// first loads or a cell changes, ticked in loaded chunks. geyserFliers are
 	// the mobs a geyser has lifted, moved each tick until they come down.

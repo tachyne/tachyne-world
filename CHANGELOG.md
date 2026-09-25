@@ -102,6 +102,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Conduits sound and hunt as in vanilla.** A conduit now plays its
+  activation, deactivation and ambient hums; it keeps attacking the same
+  monster until that one dies or leaves, with the attack sound at the
+  monster; it only counts real monsters; and its power reaches a player
+  on land only where rain actually falls on them, not anywhere during a
+  storm. It works at vanilla's pace, so its attacks come half as often as
+  before.
 - **Dungeon spawners behave like vanilla spawners.** A player in the Nether
   standing at a dungeon's overworld coordinates no longer wakes it; the
   spawner counts only its own kind of mob in the space around the cage,
