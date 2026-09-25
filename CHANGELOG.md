@@ -140,6 +140,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Sniffers show what they're doing.** Clients now see a sniffer scent,
+  sniff, dig, rise and look pleased, and it walks a path to the spot it
+  smelled instead of a straight line.
+- **No more disconnects near armadillos or copper golems.** A scared or
+  rolled-up armadillo, and on 26.3 a weathered copper golem, sent the
+  client data it couldn't read, which could drop the connection.
 - **Coral zombie nautiluses.** Zombie nautiluses in warm oceans now come as
   the coral variant, as in vanilla.
 - **Shriekers show their shriek.** A sculk shrieker's shriek now sends out

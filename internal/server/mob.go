@@ -530,6 +530,7 @@ type mob struct {
 	pandaUnhappy                    int        // panda: UNHAPPY_COUNTER, the sulk's ticks left
 	pandaSulkCD                     uint64     // panda: PandaBreedGoal's unhappyCooldown (tick)
 	sniffState                      int8       // sniffer: 0 idle, 1 walking to a dig site, 2 digging
+	sniffSent                       uint8      // sniffer: the DATA_STATE last synced (vanilla's enum, +1; 0 = never)
 	sniffStart                      uint64     // sniffer: the tick the dig began
 	sniffUntil                      uint64     // sniffer: the tick the dig ends
 	sniffCD                         int        // sniffer: ticks before it sniffs again (9600 after a dig)
@@ -695,6 +696,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		}
 		if m.etype == entitySniffer && m.dying == 0 {
 			h.snifferInterrupt(players, m) // a panic, a temptation or courting ends a sniff or a dig
+			h.syncSnifferState(players, m)
 		}
 		if m == h.dragon {
 			continue // the dragon flies on updateDragon's physics alone —
@@ -1020,7 +1022,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// shelter; or asleep.
 		case m.etype == entityArmadillo && m.armState != 0:
 			m.vx, m.vz = 0, 0 // rolled up: it stays where it is
-		case m.etype == entitySniffer && h.snifferStep(players, m):
+		case m.etype == entitySniffer && h.snifferStepSynced(players, m):
 			// A sniffer scenting, sniffing, walking to a scent, digging at it
 			// or getting up again.
 		case m.etype == entityFrog && h.frogStep(players, m):

@@ -135,3 +135,28 @@ func TestBoostedSnifferEggSparkles(t *testing.T) {
 	}
 	t.Fatal("no 3009 for an egg on moss")
 }
+
+// Sniffer.transitionTo: every state change reaches the viewers as DATA_STATE
+// (SNIFFER_STATE), in vanilla's numbering.
+func TestSnifferStateSynced(t *testing.T) {
+	h, _, players, pl := tickCmdHub(t)
+	m := h.spawnMobIn(players, entitySniffer, 0, pl.x+2, pl.y, pl.z)
+	pl.tracked = map[int32]bool{m.eid: true}
+	drainOut(pl.p)
+	m.sniffState = sniffDigging
+	h.syncSnifferState(players, m)
+	h.syncSnifferState(players, m) // unchanged: nothing more
+	n := 0
+	for _, ev := range drainEvs(pl.p) {
+		if me, ok := ev.(attachproto.EntityMeta); ok && me.EID == m.eid {
+			n++
+			b := me.Meta
+			if len(b) < 4 || b[len(b)-2] != 5 { // DIGGING is 5
+				t.Fatalf("state entry %x, want DIGGING (5)", b)
+			}
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d state frames, want 1", n)
+	}
+}

@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -121,10 +122,8 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 // at (resetSniffing); courting or water break off a sniff, a search or a
 // dig (canSniff); and only a sniffer idling, scenting or happy will mate.
 //
-// The client animates these from the sniffer's DATA_STATE, which the
-// gateways cannot render yet (it needs the SNIFFER_STATE serializer); the
-// states run here with their timing and sounds, and the pose flags the
-// search and the dig always sent are unchanged.
+// The client animates these from the sniffer's DATA_STATE (SNIFFER_STATE),
+// synced whenever the state changes and to every new viewer.
 
 const (
 	snifferDigMin      = 160
@@ -285,8 +284,14 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		tx, tz := float64(m.sniffTarget.x)+0.5, float64(m.sniffTarget.z)+0.5
 		dx, dz := tx-m.x, tz-m.z
 		if hd := math.Hypot(dx, dz); hd > snifferReach {
-			sp := m.moveSpeed() * snifferScentSpeed // SPEED_MULTIPLIER_WHEN_SNIFFING
-			m.vx, m.vz = dx/hd*sp, dz/hd*sp
+			// SnifferAi's search walks the path to the scent (WalkTarget),
+			// at SPEED_MULTIPLIER_WHEN_SNIFFING; a straight line only when
+			// no path is left to follow.
+			vx, vz := h.pathSteer(m, tx, tz)
+			if vx == 0 && vz == 0 {
+				vx, vz = dx/hd*m.moveSpeed(), dz/hd*m.moveSpeed()
+			}
+			m.vx, m.vz = vx*snifferScentSpeed, vz*snifferScentSpeed
 			m.rest = 0
 			return true
 		}
@@ -340,4 +345,52 @@ func (h *hub) snifferStep(players map[int32]*tracked, m *mob) bool {
 		}
 		return false
 	}
+}
+
+// snifferDataState is Sniffer.State's ordinal for an engine state: IDLING 0,
+// FEELING_HAPPY 1, SCENTING 2, SNIFFING 3, SEARCHING 4, DIGGING 5, RISING 6.
+func snifferDataState(st int8) int32 {
+	switch st {
+	case sniffHappy:
+		return 1
+	case sniffScenting:
+		return 2
+	case sniffSniffing:
+		return 3
+	case sniffSearching:
+		return 4
+	case sniffDigging:
+		return 5
+	case sniffRising:
+		return 6
+	}
+	return 0
+}
+
+// snifferStateMeta is the DATA_STATE entry (index 17 canonically; the
+// gateway shifts it for 26.x's AGE_LOCKED).
+func snifferStateMeta(m *mob) []byte {
+	b := protocol.AppendVarInt(nil, m.eid)
+	b = protocol.AppendU8(b, 17)
+	b = protocol.AppendVarInt(b, protocol.SnifferStateSerializer770)
+	b = protocol.AppendVarInt(b, snifferDataState(m.sniffState))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// syncSnifferState sends DATA_STATE when it changed (Sniffer.transitionTo).
+func (h *hub) syncSnifferState(players map[int32]*tracked, m *mob) {
+	if m.etype != entitySniffer {
+		return
+	}
+	if cur := uint8(snifferDataState(m.sniffState)) + 1; cur != m.sniffSent {
+		m.sniffSent = cur
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(snifferStateMeta(m)))
+	}
+}
+
+// snifferStepSynced is snifferStep with the state synced after it.
+func (h *hub) snifferStepSynced(players map[int32]*tracked, m *mob) bool {
+	held := h.snifferStep(players, m)
+	h.syncSnifferState(players, m)
+	return held
 }

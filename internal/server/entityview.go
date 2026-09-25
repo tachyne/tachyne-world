@@ -182,6 +182,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if nv, ok := nautilusVariantEv(m); ok { // the coral zombie nautilus
 		t.p.trySendEv(nv)
 	}
+	if m.etype == entitySniffer && m.sniffState != sniffIdling { // mid-sniff or mid-dig
+		t.p.trySendEv(metaEv(snifferStateMeta(m)))
+	}
 	if m.health > 0 && m.health != m.maxHP() { // hurt: its health (cracks, hearts)
 		t.p.trySendEv(metaEv(mobHealthMeta(m.eid, m.health)))
 	}
