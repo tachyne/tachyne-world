@@ -13,6 +13,7 @@ const (
 	fallDelay         = 1    // ticks between a falling block's steps (≈ gravity)
 	waterDelay        = 5    // ticks between water spread steps (vanilla)
 	lavaDelay         = 30   // ticks between lava spread steps (vanilla overworld)
+	lavaDelayNether   = 10   // …and in the Nether
 	maxUpdatesPerTick = 8192 // cap per tick so a big flood can't stall the loop
 )
 
@@ -325,6 +326,12 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 	base, delay, dropOff, slopeFind := worldgen.WaterBase, uint64(waterDelay), 1, 4
 	if !water {
 		base, delay, dropOff, slopeFind = worldgen.LavaBase, uint64(lavaDelay), 2, 2
+		if dim == dimNether {
+			// LavaFluid in an ultra-warm dimension (the Nether's fast lava):
+			// a step every 10 ticks, one level lost a block, slopes sought
+			// four away — it runs as far and nearly as fast as water.
+			delay, dropOff, slopeFind = lavaDelayNether, 1, 4
+		}
 	}
 	same := func(s uint32) bool {
 		if water {

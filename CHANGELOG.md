@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Nether lava runs fast.** Lava in the Nether now flows three times as
+  fast as the overworld's and spreads as far as water (seven blocks), as in
+  vanilla; it used to behave like overworld lava.
 - **Placing pointed dripstone.** Pointed dripstone now hangs from a ceiling
   or stands on a floor depending on where you look, as in vanilla, and a
   column keeps its proper taper — tip, frustum, middle, base — as pieces are
