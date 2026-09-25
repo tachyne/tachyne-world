@@ -2647,6 +2647,12 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 	if !ok {
 		return
 	}
+	// A disconnect closes the open container (ServerPlayer.disconnect →
+	// closeContainer): the lid drops, the close sound plays and sculk hears
+	// it, instead of the lid standing open for good.
+	if t.winKind != winPlayer {
+		h.closeWindow(players, t)
+	}
 	if t.inv != nil { // fold the crafting grid + cursor back so nothing is lost
 		h.reclaimCraft(players, t) // (armor + offhand stay worn — they persist)
 		h.reclaimEnchant(players, t)

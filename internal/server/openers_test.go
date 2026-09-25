@@ -51,3 +51,33 @@ func TestChestSoundsOnlyOnFirstAndLastViewer(t *testing.T) {
 		t.Errorf("the last viewer leaving: %d close sounds, want 1", n)
 	}
 }
+
+// TestDisconnectClosesTheOpenChest: a player who leaves with a chest open
+// closes it (ServerPlayer.disconnect → closeContainer): the close sound
+// plays for the others and the lid event drops the count to zero.
+func TestDisconnectClosesTheOpenChest(t *testing.T) {
+	h := newHub(world.New(1))
+	a, b := survPlayer(h), survPlayer(h)
+	b.p = newPlayer(2, "second", [16]byte{9})
+	players := map[int32]*tracked{a.p.eid: a, b.p.eid: b}
+	h.playersRef = players
+	x, y, z := 3, 180, 3
+	h.world.SetBlock(x, y-1, z, worldgen.Stone)
+	h.world.SetBlock(x, y, z, worldgen.BlockBase("ender_chest"))
+	h.world.SetBlock(x, y+1, z, worldgen.Air)
+	a.x, a.y, a.z = float64(x)+1.5, float64(y), float64(z)
+	b.x, b.y, b.z = a.x, a.y, a.z
+	h.openEnderChest(players, b, x, y, z)
+	drainOut(a.p)
+	h.onLeave(players, b.p)
+	closed := false
+	for len(a.p.out) > 0 {
+		pkt := <-a.p.out
+		if ev, ok := pkt.ev.(attachproto.Sound); ok && ev.Name == "minecraft:block.ender_chest.close" {
+			closed = true
+		}
+	}
+	if !closed {
+		t.Fatal("leaving with the ender chest open should close it for everyone else")
+	}
+}

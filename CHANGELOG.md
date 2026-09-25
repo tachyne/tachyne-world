@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Leaving the game closes what you had open.** Disconnecting with a chest,
+  barrel, ender chest or shulker box open left its lid up for good. Leaving
+  now closes it, with its close sound, as in vanilla.
 - **Composters finish on time, however they got full.** A full composter
   could turn to bone meal at once when a block beside it changed, and one
   that arrived full some other way (moved by a piston, set by a command, or
