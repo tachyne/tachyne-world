@@ -359,3 +359,16 @@ func TestAdjacentLichenStayFlat(t *testing.T) {
 		}
 	}
 }
+
+// A shulker box faces the face it was placed against, up and down included
+// (ShulkerBoxBlock.getStateForPlacement), whatever the look.
+func TestShulkerBoxFacesTheClickedFace(t *testing.T) {
+	box := worldgen.BlockBase("shulker_box")
+	info, _ := worldgen.InfoForState(box)
+	for dir, want := range map[int32]string{0: "down", 1: "up", 2: "north", 5: "east"} {
+		got := worldgen.GetProperty(info, orientState(box, dir, 0.5, 0, 0, worldgen.Stone), "facing")
+		if got != want {
+			t.Errorf("clicked face %d: facing %s, want %s", dir, got, want)
+		}
+	}
+}

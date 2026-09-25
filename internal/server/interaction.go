@@ -1080,6 +1080,11 @@ func blockFaceOffset(dir int32) (dx, dy, dz int) {
 // a top/bottom half from the cursor, and facing blocks point sensibly. Blocks
 // with no orientation property (most blocks) are returned unchanged.
 func orientState(defaultState uint32, dir int32, cursorY, yaw, pitch float32, clicked uint32) uint32 {
+	if isShulkerBox(defaultState) { // ShulkerBoxBlock: facing = the clicked face, any of six
+		if si, ok := worldgen.InfoForState(defaultState); ok {
+			return worldgen.SetProperty(si, defaultState, "facing", faceDirName(dir))
+		}
+	}
 	info, ok := worldgen.OrientInfo(defaultState)
 	if !ok {
 		return defaultState

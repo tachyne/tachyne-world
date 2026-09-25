@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Shulker boxes face the way you place them.** A shulker box opens
+  toward the face you place it against — up, down or sideways — as in
+  vanilla.
 - **Mushrooms need shade.** As in vanilla, a mushroom stays in bright light
   only on mycelium, podzol or nylium; anywhere else it needs a light level
   under 13 and a solid block beneath, or it pops off at its next update.
