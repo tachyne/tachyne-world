@@ -364,6 +364,9 @@ type mob struct {
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
 	croakLeft                       int      // frog: ticks of the CROAKING pose still to run
+	frogLand                        blockPos // frog: TryFindLand's walk target
+	frogLandSet                     bool
+	frogLandNext, frogLandUntil     uint64   // frog: TryFindLand's next search; when it gives up the walk
 	flyAimY                         float64  // a flier being led somewhere: the height it rises or sinks to
 	flyAimAt                        uint64   // …the tick that was last set (stale after a few ticks)
 	followBoat                      int32    // dolphin: the boat whose rider it keeps pace with (0 = none)
@@ -914,6 +917,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// or getting up again.
 		case m.etype == entityFrog && h.frogStep(players, m):
 			// A frog after a small slime or magma cube (FrogAi's tongue).
+		case m.etype == entityFrog && h.frogFindLandStep(m):
+			// A frog in the water making for the nearest bank (TryFindLand).
 		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):
 			// A frog croaking, still, for its sixty ticks (FrogAi's Croak).
 		case m.etype == entityAllay && h.allayStep(players, m):
