@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Pillagers' crossbows can come enchanted.** A pillager's crossbow now
+  gets the usual chance of spawn enchantments on harder difficulties, and
+  one pillager in 300 carries Piercing, as in vanilla.
 - **Small redstone and TNT rules.** Bats no longer press pressure plates or
   trip tripwire, while armour stands now do; a player in adventure mode
   can no longer light TNT with flint and steel or a flaming arrow, and a

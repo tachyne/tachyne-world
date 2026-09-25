@@ -117,3 +117,21 @@ func TestLightningMooshroomAndTurtle(t *testing.T) {
 		t.Error("a struck turtle dies")
 	}
 }
+
+// Pillager.enchantSpawnedWeapon: one pillager in 300 spawns with Piercing I
+// on its crossbow (pillager_spawn_crossbow), over Mob's usual roll.
+func TestPillagerSpawnCrossbowPiercing(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pierced := 0
+	for i := 0; i < 3000; i++ {
+		m := h.spawnSpecies(players, entityPillager, dimOverworld, 0.5, 200, 0.5)
+		if m.heldStack().enchLvl(enchPiercing) > 0 {
+			pierced++
+		}
+		h.removeMob(players, m)
+	}
+	if pierced < 2 || pierced > 30 {
+		t.Fatalf("%d of 3000 pillagers spawned with Piercing, want about 10", pierced)
+	}
+}

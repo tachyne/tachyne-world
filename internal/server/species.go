@@ -455,6 +455,9 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	}
 	if d.held != "" {
 		m.held = itemByName[d.held]
+		if m.etype == entityPillager && !h.reloading {
+			h.enchantPillagerCrossbow(m)
+		}
 		h.toTracking(players, m.eid, m.dim, m.x, m.z, mobEquip(m.eid, m.held))
 	}
 	if m.etype == entityPiglin {
