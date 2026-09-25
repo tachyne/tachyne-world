@@ -435,6 +435,8 @@ type mob struct {
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
 	wardenClientAnger               int        // CLIENT_ANGER_LEVEL last sent to viewers
 	golemCrack                      int        // iron golem: crack stage last seen, +1 (0 = not yet seen)
+	sulfurTempted                   bool       // sulfur cube: its tempt goal is running
+	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
 	wardenDisturbTil                uint64     // …remembered until this tick
 	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN

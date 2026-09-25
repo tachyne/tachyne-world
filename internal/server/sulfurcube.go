@@ -849,34 +849,56 @@ func (h *hub) cubePickupScan(players map[int32]*tracked, m *mob) {
 
 // ---- hopping (no block) --------------------------------------------------
 
+const (
+	sulfurTemptStop = 1.0 // SulfurCubeTemptGoal's stopDistance
+	temptCalmDown   = 100 // TemptGoal.stop: calmDown = reducedTickDelay(100)
+)
+
 // sulfurGoal is the empty cube's LOOK goals in priority order: a player
 // tempting it (an adult by any swallowable block, a baby by a slime ball,
 // within eight), then a swallowable block lying within eight, both steering
 // it "aggressively" (a third of the jump delay). ok=false: wander.
+//
+// The tempt is SulfurCubeTemptGoal (a TemptGoal with stopDistance 1.0):
+// within a block of the player it stops travelling and hops in place
+// (the goal is its own position), and once the tempting ends it will not
+// be tempted again for TemptGoal's 100-tick calmDown.
 func (h *hub) sulfurGoal(players map[int32]*tracked, m *mob) (gx, gz float64, ok bool) {
 	want := sulfurSwallowable
 	if m.baby {
 		want = sulfurFood
 	}
-	r := m.mobAttrs().Value(attr.TemptRange)
-	best := r * r
-	for _, t := range players {
-		if t.dim != m.dim || t.dead || t.gamemode == gmSpectator {
-			continue
+	now := h.tick.Load()
+	if now >= m.sulfurCalmUntil {
+		r := m.mobAttrs().Value(attr.TemptRange)
+		best := r * r
+		for _, t := range players {
+			if t.dim != m.dim || t.dead || t.gamemode == gmSpectator {
+				continue
+			}
+			if !want[heldStack(t).item] && !want[t.offhand.item] {
+				continue
+			}
+			if d2 := dist3sq(t.x, t.y, t.z, m.x, m.y, m.z); d2 < best {
+				best, gx, gz, ok = d2, t.x, t.z, true
+			}
 		}
-		if !want[heldStack(t).item] && !want[t.offhand.item] {
-			continue
-		}
-		if d2 := dist3sq(t.x, t.y, t.z, m.x, m.y, m.z); d2 < best {
-			best, gx, gz, ok = d2, t.x, t.z, true
+		switch {
+		case ok:
+			m.sulfurTempted = true
+			if best < sulfurTemptStop*sulfurTemptStop {
+				gx, gz = m.x, m.z // stopNavigation: setWantedMovement(0)
+			}
+		case m.sulfurTempted:
+			m.sulfurTempted = false
+			m.sulfurCalmUntil = now + temptCalmDown // TemptGoal.stop
 		}
 	}
 	if ok || m.baby || m.cube.pickup > 0 {
 		return gx, gz, ok
 	}
-	now := h.tick.Load()
 	b := m.box()
-	best = math.Inf(1)
+	best := math.Inf(1)
 	for _, it := range h.items {
 		if it.dim != m.dim || it.count <= 0 || now < it.noPickupUntil || !sulfurSwallowable[it.item] {
 			continue

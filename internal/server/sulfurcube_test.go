@@ -591,3 +591,27 @@ func TestSulfurCubePersists(t *testing.T) {
 		t.Error("the archetype's modifiers did not come back")
 	}
 }
+
+// SulfurCubeTemptGoal: within its stopDistance of 1.0 the tempted cube stops
+// travelling (its goal is its own spot), and when the tempting ends it
+// cannot be tempted again for TemptGoal's 100-tick calmDown.
+func TestSulfurCubeTemptStopAndCalm(t *testing.T) {
+	h, players, pl, m := cubeFixture(t)
+	holding(pl, itemByName["dirt"], 1)
+	px := pl.x
+	pl.x = m.x + 0.6
+	if gx, _, ok := h.sulfurGoal(players, m); !ok || gx != m.x {
+		t.Fatalf("within a block the tempted cube holds its place: goal %v ok %v", gx, ok)
+	}
+	pl.x = px
+	holding(pl, 0, 0)
+	h.sulfurGoal(players, m) // the tempting ends: calmDown starts
+	holding(pl, itemByName["dirt"], 1)
+	if gx, _, ok := h.sulfurGoal(players, m); ok && gx == pl.x {
+		t.Fatal("a cube just let go of must not be tempted again at once")
+	}
+	h.tick.Add(temptCalmDown)
+	if gx, _, ok := h.sulfurGoal(players, m); !ok || gx != pl.x {
+		t.Fatal("after the calmDown the cube is tempted again")
+	}
+}
