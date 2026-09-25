@@ -1070,7 +1070,22 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			oldY := m.y
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
 			floor := float64(h.worldFor(m.dim).MobFeetFrom(fx, fz, int(math.Floor(m.y))))
-			if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
+			if lvl := m.hasEffect(effLevitation); lvl > 0 {
+				// LivingEntity.travel under Levitation: each tick dy eases
+				// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
+				// pulls it down; a ceiling stops the rise. When the effect
+				// ends the floor below takes it back — and the fall hurts.
+				ht := m.box().h
+				for i := 0; i < mobMoveInterval; i++ {
+					m.vy += (0.05*float64(lvl) - m.vy) * 0.2
+					top := int(math.Floor(m.y + m.vy + ht))
+					if worldgen.Collides(h.worldFor(m.dim).At(fx, top, fz)) {
+						m.vy = 0
+						break
+					}
+					m.y += m.vy
+				}
+			} else if fl, ok := h.floatLevel(m, fx, fz, floor); ok && mobFloats(m) {
 				// FloatGoal / Swim: in deep water it bobs up until its eyes clear the surface.
 				if m.y < fl {
 					m.y = math.Min(fl, m.y+floatRisePerUpd)

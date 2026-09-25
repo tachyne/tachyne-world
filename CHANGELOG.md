@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Levitation lifts mobs.** A mob hit by a shulker bullet was given
+  Levitation but stayed on the ground; it now floats upward as in vanilla,
+  and falls when the effect wears off.
 - **Splash potions of Harming weaken with distance.** A Harming splash hit
   players at full strength however far from the splash they stood; as in
   vanilla it now falls off with distance, like Healing, and a glancing
