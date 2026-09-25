@@ -5,6 +5,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // The ravager (Ravager.aiStep / blockedByItem / roar / doHurtTarget): a bite
@@ -25,6 +26,29 @@ const (
 	entityStatusAttack = 4   // the bite animation
 )
 
+// Ravager.aiStep's speed: MOVEMENT_SPEED's base eases a tenth of the way
+// each tick toward 0.35 while it has a target and 0.3 without, and drops to
+// nothing while it is biting, stunned or roaring — so a ravager winds up
+// into a charge, and pulls away slowly after every bite.
+const (
+	ravagerBaseSpeed   = 0.3  // BASE_MOVEMENT_SPEED
+	ravagerAttackSpeed = 0.35 // ATTACK_MOVEMENT_SPEED
+)
+
+// ravagerSpeedTick is one tick of that easing, in the engine's per-step units.
+func ravagerSpeedTick(m *mob) {
+	in := m.mobAttrs().Get(attr.MovementSpeed)
+	if m.ravagerImmobile() {
+		in.SetBase(0)
+		return
+	}
+	want := ravagerBaseSpeed
+	if m.hasTarget {
+		want = ravagerAttackSpeed
+	}
+	in.SetBase(in.Base() + 0.1*(want*attrToStep-in.Base()))
+}
+
 // ravagerImmobile is isImmobile.
 func (m *mob) ravagerImmobile() bool {
 	return m.ravAttackTick > 0 || m.ravStunTick > 0 || m.ravRoarTick > 0
@@ -33,6 +57,7 @@ func (m *mob) ravagerImmobile() bool {
 // ravagerStep runs each mob update. Returns whether it holds the ravager.
 func (h *hub) ravagerStep(players map[int32]*tracked, m *mob) bool {
 	for i := 0; i < mobMoveInterval; i++ {
+		ravagerSpeedTick(m)
 		if m.ravRoarTick > 0 {
 			m.ravRoarTick--
 			if m.ravRoarTick == 10 {

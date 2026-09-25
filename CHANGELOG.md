@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Ravagers speed up for a charge.** A ravager now eases up to a faster
+  pace while it is after something and back down when it gives up, and
+  pulls away slowly again after each bite, as in vanilla.
 - **Pillager patrols stand their ground.** A patrol that spots you from
   afar now stops and watches you, as in vanilla, instead of opening fire at
   once; it attacks when you come within ten blocks or hit one of them, and
