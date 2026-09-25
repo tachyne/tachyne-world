@@ -2772,6 +2772,9 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 // onBlock relays an applied edit to every other player tracking that chunk, so
 // builds appear for everyone (the editor already saw its own prediction).
 func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
+	if t := players[e.by]; t != nil && e.broken != 0 && guardedByPiglins[e.broken] {
+		h.angerNearbyPiglins(players, t, false) // Block.playerWillDestroy: #guarded_by_piglins, sight not needed
+	}
 	bcx, bcz := chunkFloor(float64(e.x)), chunkFloor(float64(e.z))
 	body := blockSetEv(e.x, e.y, e.z, e.state)
 	for eid, t := range players {

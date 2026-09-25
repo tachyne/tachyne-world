@@ -716,4 +716,5 @@ func (h *hub) openVehicleChest(players map[int32]*tracked, t *tracked, v *vehicl
 	}
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: title})
 	h.sendChestWindow(t, v.chest)
+	h.angerNearbyPiglins(players, t, true) // MinecartChest / AbstractChestBoat.interact: a watched container
 }

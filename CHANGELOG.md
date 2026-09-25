@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Piglins guard their gold.** Breaking gold blocks, gold ore, chests,
+  barrels and the other blocks piglins guard now angers the piglins
+  around you, and so does opening a chest minecart or chest boat or
+  breaking one by hand, as in vanilla.
 - **Frogs leave a slime ball.** A small slime eaten by a frog now drops a
   slime ball, as in vanilla; it used to vanish without a trace.
 - **Tall grass drops seeds from either half.** Breaking the top half of
