@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fire burns whatever it touches.** Players and mobs now catch fire when
+  any part of their body is in a fire's block, as in vanilla, not only
+  when the fire is right at their feet or head.
 - **Hoppers pick up items in order.** A hopper, or a hopper minecart, now
   takes the items lying on it oldest first, as in vanilla, instead of in a
   random order.

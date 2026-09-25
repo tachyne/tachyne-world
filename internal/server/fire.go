@@ -62,6 +62,26 @@ func fireContactDamage(a, b uint32) float64 {
 	return 0
 }
 
+// fireInBox is BaseFireBlock.entityInside reached through checkInsideBlocks:
+// a fire's inside shape is its whole cell, so any fire in a cell the box
+// (half-width hw, height ht, deflated by 1e-5) overlaps touches it; the
+// damage is the hottest one's (soul fire 2, fire 1), 0 when none.
+func (h *hub) fireInBox(dim int, x, y, z, hw, ht float64) float64 {
+	const eps = 1e-5
+	w := h.worldFor(dim)
+	dmg := 0.0
+	for bx := floorInt(x - hw + eps); bx <= floorInt(x+hw-eps); bx++ {
+		for by := floorInt(y + eps); by <= floorInt(y+ht-eps); by++ {
+			for bz := floorInt(z - hw + eps); bz <= floorInt(z+hw-eps); bz++ {
+				if d := fireContactDamage(w.At(bx, by, bz), worldgen.Air); d > dmg {
+					dmg = d
+				}
+			}
+		}
+	}
+	return dmg
+}
+
 // soulFireBase is #soul_fire_base_blocks: fire lit over it is soul fire,
 // and soul fire lasts only while it stays (BaseFireBlock.getState,
 // SoulFireBlock.canSurvive).
