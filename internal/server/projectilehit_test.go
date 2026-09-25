@@ -135,6 +135,10 @@ func TestOnlyAFastTridentShearsDripstone(t *testing.T) {
 	if !ok {
 		t.Skip("no pointed dripstone")
 	}
+	// The first state is waterlogged, and a destroyed waterlogged block
+	// leaves its water (Level.destroyBlock): build a dry one.
+	info, _ := worldgen.InfoForState(lo)
+	lo = worldgen.SetProperty(info, lo, "waterlogged", "false")
 	pos := blockPos{7, 70, 0}
 
 	h.world.SetBlock(pos.x, pos.y, pos.z, lo)
