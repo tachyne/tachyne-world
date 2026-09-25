@@ -188,6 +188,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **/summon villager and /summon iron_golem.** Both can now be summoned: the
   villager unemployed and free to find its own bed and workplace, the golem
   a village guardian at full health.
+- **Ominous trial spawner drops, as in vanilla.** The item an ominous trial
+  conjures above you now comes down as a single charge, arrow or potion at
+  vanilla's speed, with the dispenser sound for charges, and players who
+  arrive while it hangs there see what it holds.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
