@@ -95,3 +95,21 @@ func TestScoreboardCommandsAndCriteria(t *testing.T) {
 		t.Fatalf("join scores: %+v", scores)
 	}
 }
+
+// The sixteen team-colour sidebars are display slots 3-18 (DisplaySlot
+// order), and a joining player is sent them with the rest.
+func TestScoreboardTeamSidebarSlots(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: []string{"objectives", "add", "reds", "dummy"}})
+	h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: []string{"objectives", "setdisplay", "sidebar.team.red", "reds"}})
+	h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: []string{"objectives", "setdisplay", "sidebar.team.white", "reds"}})
+	_, _, _, slots := drainSB(pl)
+	if len(slots) != 2 || slots[0].Slot != 15 || slots[1].Slot != 18 {
+		t.Fatalf("team sidebar frames: %+v, want slots 15 and 18", slots)
+	}
+	if h.sb.Display[15] != "reds" || h.sb.Display[18] != "reds" {
+		t.Fatalf("stored display: %v", h.sb.Display)
+	}
+}

@@ -39,7 +39,7 @@ type sbTeam struct {
 
 type scoreboardState struct {
 	Objectives map[string]*sbObjective     `json:"objectives"`
-	Display    [3]string                   `json:"display"` // list, sidebar, below_name
+	Display    [sbSlotCount]string         `json:"display"` // list, sidebar, below_name, sidebar.team.<colour>…
 	Scores     map[string]map[string]int32 `json:"scores"`  // owner → objective → value
 	Teams      map[string]*sbTeam          `json:"teams"`
 }
@@ -186,10 +186,23 @@ type evTeamCmd struct {
 
 func (evTeamCmd) isHubEvent() {}
 
-var sbSlotNames = map[string]int32{
-	"list": attachproto.SlotList, "sidebar": attachproto.SlotSidebar,
-	"belowname": attachproto.SlotBelowName, "below_name": attachproto.SlotBelowName,
-}
+// sbSlotCount is DisplaySlot's nineteen: list, sidebar, below_name and a
+// sidebar per team colour, which a player on a team of that colour sees in
+// place of the plain sidebar (the client makes that choice).
+const sbSlotCount = 19
+
+var sbSlotNames = func() map[string]int32 {
+	m := map[string]int32{
+		"list": attachproto.SlotList, "sidebar": attachproto.SlotSidebar,
+		"belowname": attachproto.SlotBelowName, "below_name": attachproto.SlotBelowName,
+	}
+	// sidebar.team.<ChatFormatting colour>, ids 3-18 in the colour order.
+	for i, c := range []string{"black", "dark_blue", "dark_green", "dark_aqua", "dark_red", "dark_purple",
+		"gold", "gray", "dark_gray", "blue", "green", "aqua", "red", "light_purple", "yellow", "white"} {
+		m["sidebar.team."+c] = int32(3 + i)
+	}
+	return m
+}()
 
 // sbValidCriteria is the accepted objective criteria set: dummy (command-set
 // only) plus the automatic ones the engine feeds.
@@ -247,7 +260,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 	case len(a) >= 3 && a[0] == "objectives" && a[1] == "setdisplay":
 		slot, ok := sbSlotNames[a[2]]
 		if !ok {
-			tell("Usage: /scoreboard objectives setdisplay <list|sidebar|belowname> [objective]")
+			tell("Usage: /scoreboard objectives setdisplay <list|sidebar|below_name|sidebar.team.<colour>> [objective]")
 			return
 		}
 		obj := ""
