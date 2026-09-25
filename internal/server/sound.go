@@ -184,6 +184,9 @@ func (h *hub) mobSoundsFor(m *mob) (hurt, death, ambient string) {
 		// a suffix on the entity.wolf sound names.
 		v := "minecraft:entity.wolf" + wolfSoundSuffix(m)
 		hurt, death, ambient = v+".hurt", v+".death", v+".ambient"
+	case entityCopperGolem: // CopperGolem.getHurtSound/getDeathSound: CopperGolemOxidationLevels
+		v := copperGolemVoice(m)
+		hurt, death = v+"hurt", v+"death"
 	case entityNautilus: // Nautilus: its own voice under water, the land one out of it, the baby's own
 		p := "minecraft:entity.nautilus."
 		if m.baby {
@@ -320,4 +323,17 @@ func (h *hub) wolfAmbient(m *mob) string {
 		return v + ".pant"
 	}
 	return v + ".ambient"
+}
+
+// copperGolemVoice is the sound-event prefix of a copper golem's
+// CopperGolemOxidationLevel: unaffected and exposed share the plain voice,
+// weathered and oxidized each have their own.
+func copperGolemVoice(m *mob) string {
+	switch m.oxidation {
+	case 2:
+		return "minecraft:entity.copper_golem_weathered."
+	case 3:
+		return "minecraft:entity.copper_golem_oxidized."
+	}
+	return "minecraft:entity.copper_golem."
 }

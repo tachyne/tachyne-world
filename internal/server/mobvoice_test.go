@@ -48,3 +48,21 @@ func TestMobVoicesMatchVanilla(t *testing.T) {
 		t.Fatalf("an allay with an item: %s", ambient)
 	}
 }
+
+// A copper golem's hurt, death and step sounds follow its oxidation
+// (CopperGolemOxidationLevels): exposed keeps the plain voice, weathered and
+// oxidized have their own.
+func TestCopperGolemVoiceByOxidation(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	g := h.spawnMob(players, entityCopperGolem, 0.5, 200, 0.5)
+	for ox, want := range []string{"copper_golem", "copper_golem", "copper_golem_weathered", "copper_golem_oxidized"} {
+		g.oxidation = ox
+		hurt, death, _ := h.mobSoundsFor(g)
+		steps := footstepsFor(h.world, g, 0, 199, 0)
+		if hurt != "minecraft:entity."+want+".hurt" || death != "minecraft:entity."+want+".death" ||
+			len(steps) != 1 || steps[0].name != "minecraft:entity."+want+".step" {
+			t.Fatalf("oxidation %d: %s %s %v", ox, hurt, death, steps)
+		}
+	}
+}

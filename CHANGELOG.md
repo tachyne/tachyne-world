@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Copper golems sound their age.** A weathered or oxidized copper golem
+  now hurts, dies and steps with its own creakier voice, as in vanilla, and
+  a golem turning into a statue plays its sound again (it had been silent).
 - **End crystals go down anywhere.** An end crystal can be placed on
   obsidian or bedrock in any dimension, as in vanilla, not only in the End;
   only the cell above has to be clear, and any mob, item or crystal in the
