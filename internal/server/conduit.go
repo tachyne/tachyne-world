@@ -104,6 +104,7 @@ func (h *hub) updateConduits(players map[int32]*tracked) {
 		}
 		if h.worldFor(key.dim).At(key.x, key.y, key.z) != conduitState {
 			delete(h.conduits, key) // mined out, or the position was never one
+			delete(h.conduitRuns, key)
 			continue
 		}
 		near := false
