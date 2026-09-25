@@ -609,6 +609,7 @@ type hub struct {
 	snifferEggs  map[simPos]uint64      // egg position -> tick its next crack is due
 	brushes      map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
 	hearts       map[simPos]*heartLink  // creaking hearts (by dimension) and the creaking each owns
+	bells        map[simPos]*bellEntity // rung bells' block entities: the swing and the resonation
 	heartScanned map[[2]int32]bool      // chunks already searched for worldgen hearts
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
@@ -1243,6 +1244,7 @@ func (h *hub) run() {
 			h.updateFangs(players)        // evoker fangs: bite once, then sink
 			h.updateVexLife(players)      // summoned vexes expire   // primed charges burn their fuses
 			h.tickBrushes(players)        // half-brushed suspicious blocks settle back
+			h.tickBells(players)          // rung bells swing, resonate, light up raiders
 			h.updateHearts(players)       // creaking hearts: wake at dusk, send out a creaking
 			h.updateCreakings(players)    // …and the creaking freezes while it is watched
 			h.updatePlates(players)

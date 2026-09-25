@@ -31,8 +31,10 @@ func TestBellProperHit(t *testing.T) {
 	}
 }
 
-// A rung bell makes every raider within 48 blocks glow; a villager or a
-// stray zombie is left alone.
+// A rung bell resonates five ticks into its swing when a raider is within
+// 32 blocks, and forty ticks later every raider within 48 glows; a villager
+// or a stray zombie is left alone. A patrolling pillager (no raid) is still
+// in #raiders.
 func TestBellRevealsRaiders(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
@@ -42,15 +44,40 @@ func TestBellRevealsRaiders(t *testing.T) {
 	raider.raidCenter = blockPos{200, 70, 200}
 	far := h.spawnSpecies(players, entityPillager, 0, 300.5, 70, 200.5)
 	far.raidCenter = blockPos{200, 70, 200}
+	patrol := h.spawnSpecies(players, entityPillager, 0, 200.5, 70, 240.5) // 40 out: glows, cannot start the resonance
 	zombie := h.spawnSpecies(players, entityZombie, 0, 205.5, 70, 200.5)
 	if !h.ringBell(players, 0, blockPos{200, 70, 200}, -1) {
 		t.Fatal("the bell should ring")
 	}
-	if raider.hasEffect(effGlowing) == 0 {
-		t.Error("a raider within 48 blocks should glow")
+	for i := 0; i < 44; i++ {
+		h.tickBells(players)
+	}
+	if raider.hasEffect(effGlowing) != 0 {
+		t.Fatal("raiders light up only when the resonation ends, 45 ticks after the strike")
+	}
+	h.tickBells(players)
+	if raider.hasEffect(effGlowing) == 0 || patrol.hasEffect(effGlowing) == 0 {
+		t.Error("raiders within 48 blocks should glow, in a raid or not")
 	}
 	if far.hasEffect(effGlowing) != 0 || zombie.hasEffect(effGlowing) != 0 {
 		t.Error("a raider 100 blocks off and a plain zombie must not glow")
+	}
+}
+
+// With no raider within 32 blocks the bell never resonates, so a raider 40
+// blocks off stays dark.
+func TestBellNeedsARaiderWithin32(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	h.world.SetBlock(200, 70, 200, withProps(t, worldgen.BlockBase("bell"), map[string]string{"attachment": "floor", "facing": "north"}))
+	patrol := h.spawnSpecies(players, entityPillager, 0, 200.5, 70, 240.5)
+	h.ringBell(players, 0, blockPos{200, 70, 200}, -1)
+	for i := 0; i < 60; i++ {
+		h.tickBells(players)
+	}
+	if patrol.hasEffect(effGlowing) != 0 {
+		t.Error("no raider within 32 blocks: the bell does not resonate and nobody glows")
 	}
 }
 
