@@ -72,9 +72,11 @@ func (g *Generator) CaveBiomeAt(x, y, z int) string {
 // decorateCaves stamps the 3×3 chunks' cave features into this chunk.
 func (g *Generator) decorateCaves(ch *Chunk, cx, cz int32) {
 	reg := &owRegion{g: g, ch: ch, baseX: int(cx) * 16, baseZ: int(cz) * 16, cols: map[[2]int]column{}}
+	bg := g.newBuildGuard(cx, cz)
 	for dcx := int32(-1); dcx <= 1; dcx++ {
 		for dcz := int32(-1); dcz <= 1; dcz++ {
 			g.caveChunkFeatures(reg, cx+dcx, cz+dcz)
+			g.overworldVegetation(reg, bg, cx+dcx, cz+dcz) // the surface patches (vegetation.go)
 		}
 	}
 }
