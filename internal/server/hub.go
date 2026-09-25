@@ -1628,6 +1628,10 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.paddleBoat(players, t, e.left, e.right)
 				}
+			case evOpenMountInv:
+				if t := players[e.eid]; t != nil {
+					h.openMountInventory(players, t)
+				}
 			case evPickItem:
 				if t := players[e.eid]; t != nil {
 					h.pickItem(players, t, e.e)

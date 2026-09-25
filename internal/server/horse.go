@@ -257,3 +257,33 @@ func bodyArmorFor(etype int, item int32) bool {
 	}
 	return horseArmorItems[item] || carpetItems[item]
 }
+
+// evOpenMountInv is the player command OPEN_INVENTORY: pressed while
+// riding, it opens the vehicle's own screen (handlePlayerCommand →
+// HasCustomInventoryScreen.openCustomInventoryScreen).
+type evOpenMountInv struct{ eid int32 }
+
+func (evOpenMountInv) isHubEvent() {}
+
+// openMountInventory: a tamed horse-family mount or nautilus opens its
+// mount window (AbstractHorse.openCustomInventoryScreen: tamed, and the
+// opener is aboard); a chest boat or chest minecart opens its cargo.
+func (h *hub) openMountInventory(players map[int32]*tracked, t *tracked) {
+	if t.ridingEID == 0 || t.inv == nil {
+		return
+	}
+	if v := h.vehicles[t.ridingEID]; v != nil {
+		if v.chest != nil {
+			h.openVehicleChest(players, t, v)
+		}
+		return
+	}
+	m := h.mobs[t.ridingEID]
+	if m == nil || m.dying > 0 || m.baby {
+		return
+	}
+	switch {
+	case horseFamily(m.etype) && (m.tamed || isCamelKind(m.etype)), m.etype == entityNautilus && m.tamed:
+		h.openHorseScreen(players, t, m)
+	}
+}

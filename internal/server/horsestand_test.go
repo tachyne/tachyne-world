@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 )
 
@@ -40,5 +41,30 @@ func TestHorseRears(t *testing.T) {
 	h.horseMakeMad(players, horse)
 	if horse.standLeft != horseStandTicks {
 		t.Fatal("an angered horse did not rear")
+	}
+}
+
+// OPEN_INVENTORY (E while riding) opens a tamed mount's screen; an
+// untamed one keeps it shut (AbstractHorse.openCustomInventoryScreen).
+func TestOpenInventoryWhileRiding(t *testing.T) {
+	for _, tamed := range []bool{true, false} {
+		h := newHub(world.New(1))
+		pl := survPlayer(h)
+		players := map[int32]*tracked{pl.p.eid: pl}
+		h.playersRef = players
+		pl.x, pl.y, pl.z = 0.5, 80, 0.5
+		horse := h.spawnMob(players, entityHorse, 0.5, 80, 0.5)
+		horse.tamed = tamed
+		pl.ridingEID, horse.rider = horse.eid, pl.p.eid
+		r := &remotePlayer{s: &Server{hub: h}, p: pl.p, gm: -1}
+		r.Action(attachproto.PlayerAction{Action: 7})
+		for len(h.events) > 0 {
+			if e, ok := (<-h.events).(evOpenMountInv); ok {
+				h.openMountInventory(players, players[e.eid])
+			}
+		}
+		if got := pl.winKind == winHorse; got != tamed {
+			t.Fatalf("tamed=%v: mount window open %v", tamed, got)
+		}
 	}
 }

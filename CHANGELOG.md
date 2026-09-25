@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **E opens your mount's inventory.** Pressing the inventory key while
+  riding a tamed horse, donkey, mule, llama, camel or nautilus opens its
+  saddle and armour screen, and on a chest boat its chest, as in vanilla.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
