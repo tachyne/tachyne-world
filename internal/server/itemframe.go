@@ -193,6 +193,14 @@ func (h *hub) interactFrame(players map[int32]*tracked, t *tracked, f *itemFrame
 	}
 	h.toNearbyEv(players, f.dim, float64(f.x), float64(f.z), metaEv(frameMetaBody(f)))
 	h.markFrameMapsDirty(f)
+	h.frameOutputChanged(players, f)
+}
+
+// frameOutputChanged is ItemFrame.setItem/setRotation's
+// updateNeighbourForOutputSignal: a comparator reading the frame through
+// the block it hangs on hears of a new item or a turn.
+func (h *hub) frameOutputChanged(players map[int32]*tracked, f *itemFrame) {
+	h.inDim(f.dim, func() { h.updateNeighbourForOutputSignal(players, blockPos{f.x, f.y, f.z}) })
 }
 
 // hitFrame is the punch: pop the framed item first, then the frame itself
@@ -213,6 +221,7 @@ func (h *hub) hitFrame(players map[int32]*tracked, attacker *tracked, f *itemFra
 		h.toNearbyEv(players, f.dim, float64(f.x), float64(f.z), metaEv(frameMetaBody(f)))
 		h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.remove_item", sndPlayer,
 			float64(f.x), float64(f.y), float64(f.z), 1, 1)
+		h.frameOutputChanged(players, f)
 		return
 	}
 	h.breakFrame(players, f, creative)
@@ -238,6 +247,7 @@ func (h *hub) breakFrame(players map[int32]*tracked, f *itemFrame, creative bool
 	h.markFrameMapsDirty(f)
 	h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.break", sndPlayer,
 		float64(f.x), float64(f.y), float64(f.z), 1, 1)
+	h.frameOutputChanged(players, f)
 }
 
 // framesOnBlockChange pops frames whose support vanished (checked on every

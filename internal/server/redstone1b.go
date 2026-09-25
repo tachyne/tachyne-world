@@ -214,25 +214,21 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.rsWorld().At(back.x, back.y, back.z)
-	if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: back}, -dx, -dz); sig >= 0 {
-		if sig > rear {
-			rear = sig // container fullness, cake left, composter level, …
+	// ComparatorBlock.getInputSignal: a block with an analog output behind
+	// the comparator REPLACES the input (an empty chest reads 0 even when
+	// powered); otherwise, through one conductor while the input is under
+	// 15, the block beyond it — or an item frame hung on that conductor's far
+	// face — does.
+	if sig := h.comparatorAnalogAt(back, dx, dz); sig >= 0 {
+		rear = sig
+	} else if rear < 15 && conducts(bs) {
+		beyond := blockPos{back.x + dx, back.y, back.z + dz}
+		best := h.comparatorAnalogAt(beyond, dx, dz)
+		if f := h.frameAnalogAt(beyond, dx, dz); f > best {
+			best = f
 		}
-	} else if worldgen.IsCopperBulb(bs) {
-		if worldgen.CopperBulbLit(bs) && rear < 15 {
-			rear = 15 // lit copper bulb: full analog signal (unlit = 0)
-		}
-	} else if isAnySensor(bs) {
-		if sensorPhase(bs) == sculkPhaseActive { // active sensor: comparator reads the frequency
-			if f := h.sculkFreq[simPos{dim: h.rsDim, blockPos: back}]; f > rear {
-				rear = f
-			}
-		}
-	} else if worldgen.IsSolidFull(bs) {
-		// A solid block behind is transparent to the read: measure the container
-		// one cell further (vanilla comparator-through-block).
-		if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: blockPos{back.x + dx, back.y, back.z + dz}}, -dx, -dz); sig > rear {
-			rear = sig
+		if best >= 0 {
+			rear = best
 		}
 	}
 	if rear == 0 {
@@ -247,6 +243,53 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 		return rear - side
 	}
 	return rear
+}
+
+// comparatorAnalogAt is BlockState.getAnalogOutputSignal read by a
+// comparator whose back points (dx, dz) at pos: -1 when the block has no
+// analog output (hasAnalogOutputSignal false).
+func (h *hub) comparatorAnalogAt(pos blockPos, dx, dz int) int {
+	if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: pos}, -dx, -dz); sig >= 0 {
+		return sig // container fullness, cake left, composter level, …
+	}
+	bs := h.rsWorld().At(pos.x, pos.y, pos.z)
+	switch {
+	case worldgen.IsCopperBulb(bs): // CopperBulbBlock: lit 15, else 0
+		if worldgen.CopperBulbLit(bs) {
+			return 15
+		}
+		return 0
+	case isAnySensor(bs): // SculkSensorBlock: the last frequency while active
+		if sensorPhase(bs) == sculkPhaseActive {
+			return h.sculkFreq[simPos{dim: h.rsDim, blockPos: pos}]
+		}
+		return 0
+	}
+	return -1
+}
+
+// frameAnalogAt is ComparatorBlock.getItemFrame + ItemFrame.getAnalogOutput:
+// the one item frame in the cell facing along the comparator's read
+// direction (hung on the conductor's far face) gives rotation % 8 + 1 when
+// it holds an item, 0 when empty; -1 when there is not exactly one.
+func (h *hub) frameAnalogAt(pos blockPos, dx, dz int) int {
+	want, _ := dirFromDelta(dx, 0, dz)
+	var found *itemFrame
+	n := 0
+	for _, f := range h.itemFrames {
+		if f.dim != h.rsDim || f.x != pos.x || f.y != pos.y || f.z != pos.z || int(f.dir) != int(want) {
+			continue
+		}
+		found = f
+		n++
+	}
+	if n != 1 {
+		return -1
+	}
+	if found.held.item == 0 || found.held.count <= 0 {
+		return 0
+	}
+	return found.rot%8 + 1
 }
 
 // updateComparator is ComparatorBlock.checkTickOnNeighbor: when its output

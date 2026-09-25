@@ -105,3 +105,25 @@ func TestShelfSideClickPlaces(t *testing.T) {
 		t.Error("a top-face click on a bookshelf should place the held block")
 	}
 }
+
+// its far face is read (rotation % 8 + 1).
+func TestComparatorReadsItemFrameThroughBlock(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	comp := withProps(t, comparatorMin, map[string]string{"facing": "north", "mode": "compare"})
+	pos := blockPos{0, 180, 0}
+	h.world.SetBlock(pos.x, pos.y, pos.z, comp)
+	h.world.SetBlock(0, 180, -1, worldgen.Stone)
+	h.itemFrames[9001] = &itemFrame{eid: 9001, x: 0, y: 180, z: -2, dir: 2, held: invStack{item: itemByName["stone"], count: 1}, rot: 3}
+	var got int
+	h.inDim(0, func() { got = h.comparatorOutput(pos, comp) })
+	if got != 4 {
+		t.Errorf("comparator reads %d from a framed item turned 3 times, want 4", got)
+	}
+	h.itemFrames[9001].held = invStack{}
+	h.inDim(0, func() { got = h.comparatorOutput(pos, comp) })
+	if got != 0 {
+		t.Errorf("an empty frame reads %d, want 0", got)
+	}
+}
