@@ -487,6 +487,9 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		default:
 			state = orientState(defState, dir, cursorY, p.yaw, p.pitch, s.worldFor(p).Block(x, y, z))
 		}
+		if defState == seagrassState && target != worldgen.WaterBase {
+			lookPlaced = false // SeagrassBlock.getStateForPlacement: only into a water source
+		}
 		if !lookPlaced {
 			s.abortPlace(p, tx, ty, tz, seq)
 			return

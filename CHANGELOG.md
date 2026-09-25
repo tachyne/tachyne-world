@@ -87,6 +87,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Seagrass only in water.** Seagrass can be planted only into water, as
+  in vanilla; it used to go down on dry land too.
 - **Planted propagules are full size.** A mangrove propagule planted by
   hand goes down fully grown and standing, as in vanilla, ready to grow
   into a tree.

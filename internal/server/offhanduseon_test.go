@@ -268,3 +268,27 @@ func TestPlacedGateInWall(t *testing.T) {
 		t.Fatalf("a gate placed between walls: in_wall=%s (state %d)", worldgen.GetProperty(info, got, "in_wall"), got)
 	}
 }
+
+// Seagrass goes only into a water source (SeagrassBlock.getStateForPlacement);
+// on dry sand the placement is refused.
+func TestSeagrassNeedsWater(t *testing.T) {
+	s, h, p := offhandOnRig(t)
+	w := s.world
+	x, y, z := 110, 180, 110
+	clearAirBox(w, x, y, z, 2)
+	w.SetBlock(x, y, z, worldgen.BlockBase("sand"))
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.inv.slots[0] = invStack{item: itemByName["seagrass"], count: 4}
+		h.sendSlot(tr, 0)
+	})
+	s.handlePlace(p, handPlaceBody(0, x, y, z, 1))
+	if got := w.Block(x, y+1, z); got == seagrassState {
+		t.Fatal("seagrass was placed on dry sand")
+	}
+	w.SetBlock(x, y+1, z, worldgen.WaterBase)
+	s.handlePlace(p, handPlaceBody(0, x, y, z, 1))
+	if got := w.Block(x, y+1, z); got != seagrassState {
+		t.Fatalf("seagrass into water: %d", got)
+	}
+}
