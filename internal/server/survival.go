@@ -609,7 +609,7 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		h.incCustom(t, "deaths", 1)
 		h.resetCustom(t, "time_since_rest") // dying counts as a rest, in vanilla's book
 		h.resetCustom(t, "time_since_death")
-		h.sbCriteria(players, "deaths", t.p.name, 1, false)
+		h.sbCriteria(players, "deathCount", t.p.name, 1, false)
 		h.creditPlayerDeath(players, t)
 		log.Printf("%q died at (%.0f,%.0f,%.0f): %s", t.p.name, t.x, t.y, t.z,
 			h.combatDeathMessage(t))

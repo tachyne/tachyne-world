@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **More scoreboard criteria.** Objectives can track `food`, `air`,
+  `armor`, `xp` and `level` as well as `health`, kept up to date by the
+  game and read-only to `/scoreboard players set`, as in vanilla. The death
+  counter uses vanilla's name, `deathCount` (objectives made with the old
+  `deaths` carry over).
 - **/spawnpoint takes targets and a position.** Operators can set any
   player's spawn point, at a given position and in whichever dimension they
   are in, as in vanilla; it was open to everyone and only ever set your own,

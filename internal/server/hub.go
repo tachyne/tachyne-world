@@ -1263,8 +1263,9 @@ func (h *hub) run() {
 			h.updatePortalDwell(players) // nether portal wait, counted every tick
 			h.updateBrewing(players)     // BrewingStandBlockEntity.serverTick: the brew counts down every tick
 			if age%survivalTickN == 0 {
-				h.runNPCs(players) // LLM NPCs: throttled perceive → decide → act
-				h.advTick(players) // polled advancement criteria (inventory, biome)
+				h.runNPCs(players)  // LLM NPCs: throttled perceive → decide → act
+				h.advTick(players)  // polled advancement criteria (inventory, biome)
+				h.sbGauges(players) // scoreboard health/food/air/armor/xp/level
 				for _, t := range players {
 					h.incCustom(t, "play_time", survivalTickN)
 					h.incCustom(t, "total_world_time", survivalTickN)

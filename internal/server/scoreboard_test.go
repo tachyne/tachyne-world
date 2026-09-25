@@ -156,3 +156,32 @@ func TestTriggerCommand(t *testing.T) {
 		t.Errorf("carol's bonus is %d, want 7", score)
 	}
 }
+
+// The gauge criteria follow the player (food, air, armor, xp, level), are
+// read-only to /scoreboard players set, and the death criterion is vanilla's
+// deathCount.
+func TestScoreboardGaugeCriteria(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.food, pl.xpLevel = 13, 4
+	players := map[int32]*tracked{1: pl}
+	cmd := func(args ...string) { h.cmdScoreboard(players, evScoreboardCmd{p: pl.p, args: args}) }
+	cmd("objectives", "add", "hunger", "food")
+	cmd("objectives", "add", "lvl", "level")
+	cmd("objectives", "add", "d", "deaths")
+	cmd("objectives", "add", "d", "deathCount")
+	h.sbGauges(players)
+	if got := h.sb.Scores[pl.p.name]["hunger"]; got != 13 {
+		t.Errorf("food score %d, want 13", got)
+	}
+	if got := h.sb.Scores[pl.p.name]["lvl"]; got != 4 {
+		t.Errorf("level score %d, want 4", got)
+	}
+	if o := h.sb.Objectives["d"]; o == nil || o.Criteria != "deathCount" {
+		t.Errorf("the death objective is %+v, want deathCount (\"deaths\" is not vanilla)", o)
+	}
+	cmd("players", "set", pl.p.name, "hunger", "20")
+	if got := h.sb.Scores[pl.p.name]["hunger"]; got != 13 {
+		t.Errorf("a read-only gauge was set to %d", got)
+	}
+}

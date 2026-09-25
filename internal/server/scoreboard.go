@@ -63,6 +63,11 @@ func newScoreboard(path string) (*scoreboardState, *sbStore) {
 		if err := loadStore(path, sb); err != nil {
 			log.Fatal(err)
 		}
+		for _, o := range sb.Objectives {
+			if o.Criteria == "deaths" { // saved before the vanilla name
+				o.Criteria = "deathCount"
+			}
+		}
 	}
 	return sb, &sbStore{path: path}
 }
@@ -210,9 +215,14 @@ var sbSlotNames = func() map[string]int32 {
 // sbValidCriteria is the accepted objective criteria set: dummy (command-set
 // only) plus the automatic ones the engine feeds.
 var sbValidCriteria = map[string]bool{
-	"dummy": true, "trigger": true, "deaths": true, "totalKillCount": true,
-	"playerKillCount": true, "health": true,
+	"dummy": true, "trigger": true, "deathCount": true, "totalKillCount": true,
+	"playerKillCount": true, "health": true, "food": true, "air": true,
+	"armor": true, "xp": true, "level": true,
 }
+
+// sbReadOnly are ObjectiveCriteria's read-only gauges: the game keeps them,
+// and /scoreboard players set|add|remove refuses them.
+var sbReadOnly = map[string]bool{"health": true, "food": true, "air": true, "armor": true, "xp": true, "level": true}
 
 func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 	tell := func(msg string) { e.p.trySendEv(chatEv(msg)) }
@@ -221,7 +231,7 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 	case len(a) >= 4 && a[0] == "objectives" && a[1] == "add":
 		name, criteria := a[2], a[3]
 		if !sbValidCriteria[criteria] {
-			tell("Unknown criteria (dummy, trigger, deaths, totalKillCount, playerKillCount, health)")
+			tell("Unknown criteria (dummy, trigger, deathCount, totalKillCount, playerKillCount, health, food, air, armor, xp, level)")
 			return
 		}
 		if _, ok := h.sb.Objectives[name]; ok {
@@ -282,8 +292,13 @@ func (h *hub) cmdScoreboard(players map[int32]*tracked, e evScoreboardCmd) {
 		tell("Display slot updated")
 	case len(a) == 5 && a[0] == "players" && (a[1] == "set" || a[1] == "add" || a[1] == "remove"):
 		owner, obj := a[2], a[3]
-		if _, ok := h.sb.Objectives[obj]; !ok {
+		o, ok := h.sb.Objectives[obj]
+		if !ok {
 			tell("No such objective")
+			return
+		}
+		if sbReadOnly[o.Criteria] {
+			tell("Objective " + obj + " is read-only")
 			return
 		}
 		n, err := strconv.Atoi(a[4])
@@ -539,4 +554,23 @@ func (h *hub) cmdTrigger(players map[int32]*tracked, e evTriggerCmd) {
 	h.sbSetScore(players, owner, obj, v)
 	h.sbDirty = true
 	tell(msg)
+}
+
+// sbGauges feeds the read-only criteria — health, food, air, armor, xp,
+// level — once a second; sbSetScore sends only the values that moved.
+func (h *hub) sbGauges(players map[int32]*tracked) {
+	if len(h.sb.Objectives) == 0 {
+		return
+	}
+	for _, t := range players {
+		if t.dead {
+			continue
+		}
+		h.sbCriteria(players, "health", t.p.name, int32(t.health+t.absorption+0.5), true)
+		h.sbCriteria(players, "food", t.p.name, int32(t.food), true)
+		h.sbCriteria(players, "air", t.p.name, int32(t.air), true)
+		h.sbCriteria(players, "armor", t.p.name, int32(t.armorPoints()), true)
+		h.sbCriteria(players, "xp", t.p.name, int32(totalXP(t.xpLevel, t.xpPoints)), true)
+		h.sbCriteria(players, "level", t.p.name, int32(t.xpLevel), true)
+	}
 }

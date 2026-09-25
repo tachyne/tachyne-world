@@ -155,9 +155,6 @@ func (h *hub) advTick(players map[int32]*tracked) {
 			h.advance(players, t, "inventory_changed", advMatch{inv: ids})
 			h.recipeUnlocks(t, ids)
 		}
-		// health objectives are a gauge (vanilla read-only criteria): poll at
-		// 1 Hz; sbSetScore suppresses unchanged values.
-		h.sbCriteria(players, "health", t.p.name, int32(t.health+t.absorption+0.5), true)
 		// LocationTrigger (polled): biome, the structure the player stands in,
 		// the block underfoot and the boots worn — one payload, every criterion
 		// checks only the fields it names.
