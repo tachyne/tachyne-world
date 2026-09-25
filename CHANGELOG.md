@@ -14,6 +14,8 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/posteffect (26.3).** Operators can add, remove, clear and list screen
+  post effects on players. They're kept with the player across relogs.
 - **/tick.** Operators can query the tick rate, change it, freeze the game,
   step a frozen game tick by tick, and sprint. Clients are told the state,
   so they slow down, freeze and speed up with the server.

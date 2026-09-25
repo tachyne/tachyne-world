@@ -426,14 +426,15 @@ type hub struct {
 	nether       *world.World // second dimension (nil in bare tests → worldFor falls back)
 	end          *world.World // third dimension
 	events       chan hubEvent
-	stop         chan struct{} // closed to end run(); production never closes it, tests do (t.Cleanup)
-	eidCounter   int64         // per-pod eid mint counter, fed through shard.MintEID when sharded
-	tick         atomic.Uint64 // world age (ticks); atomic so connections can read it
-	lastTick     atomic.Int64  // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
-	tickStats    tickHist      // recent tick durations for /debug/vars + the slow-tick log
-	ticks        tickState     // /tick: target rate, freeze, step, sprint (TickRateManager)
-	ticker       *time.Ticker  // the loop's tick clock, reset by /tick
-	dayTime      atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
+	stop         chan struct{}    // closed to end run(); production never closes it, tests do (t.Cleanup)
+	eidCounter   int64            // per-pod eid mint counter, fed through shard.MintEID when sharded
+	tick         atomic.Uint64    // world age (ticks); atomic so connections can read it
+	lastTick     atomic.Int64     // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
+	tickStats    tickHist         // recent tick durations for /debug/vars + the slow-tick log
+	ticks        tickState        // /tick: target rate, freeze, step, sprint (TickRateManager)
+	ticker       *time.Ticker     // the loop's tick clock, reset by /tick
+	postFX       *postEffectStore // /posteffect: each player's screen shaders
+	dayTime      atomic.Uint64    // time of day (ticks); advances with tick, settable by /time
 
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
 	// unsharded — own the whole world (the default for a single-pod or test hub).
@@ -2583,7 +2584,10 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	}
 	h.sendDefaultSpawn(nt)             // the compass's north, before anything else uses it
 	nt.p.trySendEv(h.tickingStateEv()) // the tick rate and freeze the client predicts with
-	if isSurvival(nt.gamemode) {       // sync the survival HUD (hearts/hunger)
+	if len(h.postFX.get(nt.p.key())) > 0 {
+		h.sendPostEffects(nt) // ServerPlayer.postEffectsDirty starts true
+	}
+	if isSurvival(nt.gamemode) { // sync the survival HUD (hearts/hunger)
 		h.sendHealth(nt)
 	}
 	// The saved inventory goes to every player, in every game mode, as

@@ -62,6 +62,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdBug(p, fields[1:])
 	case "title":
 		s.cmdTitle(p, fields[1:])
+	case "posteffect":
+		s.cmdPostEffect(p, fields[1:])
 	case "tick":
 		s.cmdTick(p, fields[1:])
 	case "transfer":

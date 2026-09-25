@@ -25,7 +25,7 @@ var commandNames = []string{
 	"advancement", "attribute", "ban", "bossbar", "bug", "clear", "clone", "damage", "defaultgamemode",
 	"difficulty", "effect", "end", "experience", "forceload", "gamemode", "gamerule",
 	"give", "gm", "help", "hud", "item", "kick", "kill", "list", "locate", "loot", "msg", "nether",
-	"pardon", "particle", "playsound", "plugin", "random", "recipe", "refresh",
+	"pardon", "particle", "playsound", "plugin", "posteffect", "random", "recipe", "refresh",
 	"rescue", "ride", "rotate", "save-all", "save-off", "save-on", "say", "scoreboard", "setworldspawn", "spawnpoint",
 	"spectate", "spreadplayers", "stop", "stopsound", "summon", "swing", "tag", "team", "teammsg", "teleport", "tellraw",
 	"tell", "tick", "time", "tm", "tp", "transfer", "trigger", "version", "w", "weather", "where", "whitelist", "worldborder", "xp",

@@ -94,3 +94,26 @@ func TestTransferCommand(t *testing.T) {
 	}
 	t.Fatal("no transfer sent")
 }
+
+// /posteffect add, then list, then clear — each change sent to the player.
+func TestPostEffectCommand(t *testing.T) {
+	h, s, players, pl := tickCmdHub(t)
+	h.postFX = newPostEffectStore("")
+	drainOut(pl.p)
+	s.handleCommand(pl.p, "posteffect add @s creeper")
+	runHubCmds(h, players)
+	var got []string
+	for _, ev := range drainEvs(pl.p) {
+		if pe, ok := ev.(attachproto.PostEffects); ok {
+			got = pe.Effects
+		}
+	}
+	if len(got) != 1 || got[0] != "minecraft:creeper" {
+		t.Fatalf("post effects %v, want [minecraft:creeper]", got)
+	}
+	s.handleCommand(pl.p, "posteffect clear @s")
+	runHubCmds(h, players)
+	if len(h.postFX.get(pl.p.key())) != 0 {
+		t.Fatal("clear should empty the list")
+	}
+}
