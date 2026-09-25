@@ -245,6 +245,11 @@ func TestShriekerWarnsThenSummons(t *testing.T) {
 	if wardens := countMobs(h, entityWarden); wardens != 1 {
 		t.Fatalf("the fourth shriek should summon exactly one Warden, got %d", wardens)
 	}
+	for _, m := range h.mobs {
+		if m.etype == entityWarden && !m.hostile {
+			t.Error("a summoned Warden must be hostile: a wanderer never runs its fight")
+		}
+	}
 }
 
 func countMobs(h *hub, etype int) int {

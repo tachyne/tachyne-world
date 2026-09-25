@@ -58,6 +58,11 @@ func TestSquidInkAndEndermite(t *testing.T) {
 		h.pearlEndermite(players, a)
 		if len(h.mobs) > before {
 			spawned++
+			for _, m := range h.mobs {
+				if m.etype == entityEndermite && m.eid != em.eid && !m.hostile {
+					t.Fatal("a pearl's endermite must be hostile, not a wanderer")
+				}
+			}
 		}
 	}
 	if spawned < 5 || spawned > 50 {

@@ -127,5 +127,5 @@ func (h *hub) pearlEndermite(players map[int32]*tracked, a *arrowEntity) {
 	if !h.rules.DoMobSpawning || h.rng.Float64() >= endermitePearlOdds {
 		return
 	}
-	h.spawnMobIn(players, entityEndermite, a.dim, a.x, float64(h.worldFor(a.dim).DropY(int(math.Floor(a.x)), int(math.Ceil(a.y)), int(math.Floor(a.z)))), a.z)
+	h.spawnHostileYIn(players, entityEndermite, a.dim, a.x, float64(h.worldFor(a.dim).DropY(int(math.Floor(a.x)), int(math.Ceil(a.y)), int(math.Floor(a.z)))), a.z)
 }

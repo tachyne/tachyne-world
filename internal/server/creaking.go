@@ -244,7 +244,7 @@ func (h *hub) trySpawnCreaking(players map[int32]*tracked, link *heartLink) {
 		if !h.standableAt(link.dim, x, y, z) {
 			continue
 		}
-		m := h.spawnMobIn(players, entityCreaking, link.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
+		m := h.spawnHostileYIn(players, entityCreaking, link.dim, float64(x)+0.5, float64(y), float64(z)+0.5)
 		if m == nil {
 			return // a plugin cancelled the spawn
 		}

@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Monsters placed by the world now fight.** A warden called by a
+  shrieker, the guardians of an ocean monument, the drowned in an ocean
+  ruin, a creaking from its heart, silverfish bursting from infested stone
+  and endermites from ender pearls all used to wander about harmlessly
+  until the server restarted. They now attack from the moment they appear.
 - **The warden fights like the real one.** A warden now attacks only
   someone it has grown angry at, so you can sneak past one that has only
   smelled you. Up close it hits hard every second or so; its sonic boom is

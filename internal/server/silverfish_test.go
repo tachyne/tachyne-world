@@ -33,6 +33,11 @@ func TestSilverfishFriendsAndStone(t *testing.T) {
 	if w.At(3, 180, 0) != worldgen.Air || len(h.mobs) != before+1 {
 		t.Fatalf("the infested block should break open with a silverfish: block %d mobs %d→%d", w.At(3, 180, 0), before, len(h.mobs))
 	}
+	for _, m := range h.mobs {
+		if m.etype == entitySilverfish && m.eid != s.eid && !m.hostile {
+			t.Fatal("a silverfish out of an infested block must be hostile, not a wanderer")
+		}
+	}
 	// Merge: stone to the east, no target; the roll is one in five updates.
 	w.SetBlock(1, 180, 0, worldgen.Stone)
 	s.hasTarget = false
