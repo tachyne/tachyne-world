@@ -178,3 +178,19 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 		}
 	}
 }
+
+// mobChangeDimension moves a mob into another dimension at a spot, the way a
+// portal's traveller goes: it leaves its seat and its rider behind, forgets
+// what it was chasing, and the old dimension's viewers see it go (the new
+// one's pick it up through tracking).
+func (h *hub) mobChangeDimension(players map[int32]*tracked, m *mob, dim int, x, y, z float64) {
+	h.unseatMob(players, m)
+	if t := players[m.rider]; t != nil {
+		h.dismountMob(players, t)
+	}
+	h.entityGone(players, m.dim, m.eid)
+	m.dim = dim
+	m.x, m.y, m.z = x, y, z
+	m.sx, m.sy, m.sz = x, y, z
+	m.targetEID, m.hasTarget = 0, false
+}

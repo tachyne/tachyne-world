@@ -394,7 +394,12 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 		return
 	}
 	if dim != me.dim {
-		me.p.tell("That entity is in another dimension.")
+		// TeleportCommand moves the caller into the entity's level.
+		me.p.pendingFrom = dimPos{}
+		me.p.pendingDest = blockPos{floorInt(x), floorInt(y), floorInt(z) - 1}
+		me.p.pendingDestOK = true
+		me.p.pendingDim.Store(int32(dim))
+		h.cmdSuccess(players, me.p, "Teleported.", true)
 		return
 	}
 	me.x, me.y, me.z = x, y, z
@@ -487,6 +492,14 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 	}
 	for _, m := range ms {
 		if m.dim != dim {
+			// TeleportCommand: the mob changes level, as a portal's
+			// traveller does — gone from the old dimension's viewers, its
+			// seat and its quarry left behind.
+			if m.dying > 0 || m == h.dragon {
+				continue
+			}
+			h.mobChangeDimension(players, m, dim, x, y, z)
+			moved, name = moved+1, mobDisplayName(m.etype)
 			continue
 		}
 		m.x, m.y, m.z = x, y, z

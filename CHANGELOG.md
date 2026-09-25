@@ -146,6 +146,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/tp works across dimensions for mobs too.** Teleporting a mob to a
+  place or entity in another dimension now takes it there, and `/tp
+  <entity>` takes you to a mob in another dimension, as in vanilla.
 - **Rain and snow fall where vanilla's do.** The snow line on mountains
   now wobbles as in vanilla instead of being a flat height, frozen oceans
   have patches of rain and open water between the ice, rain follows the
