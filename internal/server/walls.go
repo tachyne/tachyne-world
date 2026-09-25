@@ -19,6 +19,8 @@ package server
 // occupant above as covering).
 
 import (
+	"strings"
+
 	"github.com/tachyne/tachyne-common/protocol"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -33,6 +35,11 @@ var paneBases = func() map[uint32]bool {
 	names := []string{"iron_bars", "glass_pane"}
 	for _, c := range dyeColors {
 		names = append(names, c+"_stained_glass_pane")
+	}
+	for _, n := range worldgen.AllBlockNames() { // IronBarsBlock: the copper bars, every stage and wax
+		if strings.HasSuffix(n, "copper_bars") {
+			names = append(names, n)
+		}
 	}
 	for _, n := range names {
 		id, ok := itemByName[n]
@@ -87,7 +94,7 @@ func wallConnectsTo(nb uint32, sideAxisX bool) bool {
 		// a gate connects when its facing runs across the wall line
 		return facingAxisX(worldgen.GetProperty(info, nb, "facing")) != sideAxisX
 	}
-	return worldgen.IsSolidFull(nb)
+	return !connectException(nb) && worldgen.IsSolidFull(nb)
 }
 
 // wallState recomputes a wall's four sides and post from its neighbours —

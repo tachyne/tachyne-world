@@ -95,6 +95,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fences join their gates.** A fence now connects to a fence gate set in
+  line with it, as in vanilla, and no longer reaches out to glass panes,
+  leaves, pumpkins or melons; wooden fences and the nether brick fence keep
+  apart. Glass panes and iron bars join copper bars.
 - **Placing blocks as in vanilla.** A second pink petal, wildflower or
   leaf litter clicked onto the first adds to it; a plant is never swapped
   for itself by clicking it with the same plant. Campfires face the way
