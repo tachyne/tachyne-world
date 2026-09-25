@@ -82,9 +82,15 @@ func (h *hub) menuBlockPresent(t *tracked) bool {
 // withinMenuReach is Player.isWithinBlockInteractionRange(pos, 4.0): the
 // eye position to the block's box, against block_interaction_range + 4.
 func (h *hub) withinMenuReach(t *tracked) bool {
-	reach := t.playerAttrs().Value(attr.BlockInteractionRange) + menuReachSlack
+	return withinBlockReach(t, t.winPos.blockPos, menuReachSlack)
+}
+
+// withinBlockReach is Player.isWithinBlockInteractionRange(pos, slack): the
+// eye position to the block's box, against block_interaction_range + slack.
+func withinBlockReach(t *tracked, pos blockPos, slack float64) bool {
+	reach := t.playerAttrs().Value(attr.BlockInteractionRange) + slack
 	ex, ey, ez := t.x, t.y+t.eyeHeight(), t.z
-	bx, by, bz := float64(t.winPos.x), float64(t.winPos.y), float64(t.winPos.z)
+	bx, by, bz := float64(pos.x), float64(pos.y), float64(pos.z)
 	dx := math.Max(0, math.Max(bx-ex, ex-(bx+1)))
 	dy := math.Max(0, math.Max(by-ey, ey-(by+1)))
 	dz := math.Max(0, math.Max(bz-ez, ez-(bz+1)))

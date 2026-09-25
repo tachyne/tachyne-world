@@ -72,7 +72,7 @@ func TestSignEditFlow(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
 	pl := testTracked()
-	pl.x, pl.z = 0.5, 3.5 // south of the sign → front side
+	pl.x, pl.y, pl.z = 0.5, 70, 3.5 // south of the sign → front side, within reach
 	players[1] = pl
 	h.world.SetBlock(0, 70, 0, oakSignRot0)
 

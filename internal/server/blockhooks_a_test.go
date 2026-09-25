@@ -811,3 +811,28 @@ func TestOpenShulkerOpensForASecondPlayer(t *testing.T) {
 		t.Error("an open box opens for the next player")
 	}
 }
+
+// SignBlockEntity.tick keeps a player's edit lock while they are within
+// block reach plus four (eye to the sign's box, 8.5 blocks), so a second
+// player cannot take over a sign being edited from seven blocks off.
+func TestSignLockHoldsWithinEightAndAHalf(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	a := cmdSecondPlayer(players, 1, "alice")
+	b := cmdSecondPlayer(players, 2, "bob")
+	h.world.SetBlock(0, 180, 0, worldgen.BlockBase("oak_sign"))
+	a.x, a.y, a.z = 7.5, 180, 0.5
+	b.x, b.y, b.z = 2.5, 180, 0.5
+	key := signKey(0, 0, 180, 0)
+	h.signMayEdit[key] = a.p.eid
+	h.onUseSign(players, evUseSign{eid: b.p.eid, x: 0, y: 180, z: 0})
+	if h.signMayEdit[key] != a.p.eid {
+		t.Error("the editor seven blocks off keeps the sign")
+	}
+	a.x = 20.5
+	h.onUseSign(players, evUseSign{eid: b.p.eid, x: 0, y: 180, z: 0})
+	if h.signMayEdit[key] != b.p.eid {
+		t.Error("an editor out of reach loses the lock to the next player")
+	}
+}
