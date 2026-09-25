@@ -48,12 +48,10 @@ var fireImmune = map[int]bool{
 }
 
 // ignite (re)lights a mob's afterburn clock to at least secs seconds. Fire
-// Resistance stops it catching at all, the way it does for a player.
+// Resistance does not stop it catching — the mob burns, flames and all, and
+// only the fire's damage is turned away (hurtMobOf), so it can still be
+// alight when the effect runs out.
 func (m *mob) ignite(secs int) {
-	if m.resistsFire() {
-		m.fireSecs = 0
-		return
-	}
 	if secs > m.fireSecs {
 		m.fireSecs = secs
 	}
@@ -70,6 +68,9 @@ func (m *mob) ignite(secs int) {
 // bush does not, so a zombie in full diamond used to burn exactly as fast as a
 // naked one — the same bug the player side had, found by fixing that one.
 func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgType) {
+	if dt.has(tagIsFire) && m.resistsFire() {
+		return // LivingEntity.hurtServer: Fire Resistance refuses #is_fire outright
+	}
 	h.vibAt(m.dim, freqEntityDamage, m.x, m.y, m.z, m.eid)
 	if m.spawnInvuln > 0 {
 		return

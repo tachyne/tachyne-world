@@ -105,6 +105,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fire Resistance on mobs.** A mob under Fire Resistance now catches fire
+  in lava or flames — it just takes no damage from them — and keeps burning
+  if the effect runs out, as in vanilla. Before, it never caught fire yet
+  still took lava's damage.
 - **`max_block_modifications` works.** The gamerule now sets how many
   blocks one `/fill` or `/clone` may change (32768 by default), as in
   vanilla; before, the limit was fixed.

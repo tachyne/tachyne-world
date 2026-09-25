@@ -7,6 +7,7 @@ import (
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
@@ -141,11 +142,13 @@ func TestMobResistanceAndFireResistance(t *testing.T) {
 	if m.fireSecs == 0 {
 		t.Fatal("the cow would not catch alight at all")
 	}
+	// Fire Resistance lets it burn — only the damage is refused
+	// (LivingEntity.hurtServer), which TestFireResistantMobBurnsUnhurt covers.
 	m.fireSecs = 0
 	h.applyMobEffect(players, m, effFireRes, 0, 30)
 	m.ignite(10)
-	if m.fireSecs != 0 {
-		t.Errorf("a fire-resistant mob caught alight for %d s", m.fireSecs)
+	if m.fireSecs != 10 {
+		t.Errorf("a fire-resistant mob caught alight for %d s, want 10", m.fireSecs)
 	}
 }
 
@@ -279,5 +282,27 @@ func TestMobHealthSyncs(t *testing.T) {
 	h.syncMobHealth(players)
 	if hp, sent := healthSent(); !sent || int(hp) != golem.health {
 		t.Fatalf("after a hit: sent %v, health %v (mob has %d)", sent, hp, golem.health)
+	}
+}
+
+// Fire Resistance on a mob (LivingEntity.hurtServer): standing in lava it
+// still catches fire, but takes none of the fire's damage.
+func TestFireResistantMobBurnsUnhurt(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	h.world.SetBlock(0, 179, 0, worldgen.Stone)
+	h.world.SetBlock(0, 180, 0, worldgen.LavaBase)
+	h.world.SetBlock(0, 181, 0, worldgen.Air)
+	z := h.spawnMob(players, entityZombie, 0.5, 180, 0.5)
+	h.applyMobEffect(players, z, effFireRes, 0, 60)
+	hp := z.health
+	h.mobContactTick(players)
+	h.mobEnvironment(players)
+	if z.health != hp {
+		t.Fatalf("a fire-resistant zombie in lava went from %d to %d", hp, z.health)
+	}
+	if z.fireSecs == 0 {
+		t.Fatal("the zombie did not catch fire")
 	}
 }
