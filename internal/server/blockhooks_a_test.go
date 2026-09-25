@@ -58,3 +58,50 @@ func TestDoubleChestOpenAwardsStat(t *testing.T) {
 		t.Errorf("open_chest = %d after opening a large chest, want 1", got)
 	}
 }
+
+// takes the book (TRY_WITH_EMPTY_HAND → useWithoutItem).
+func TestShelfGivesBookWhateverIsHeld(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := testTracked()
+	players[1] = pl
+	x, y, z := 10, 70, 10
+	h.world.SetBlock(x, y, z, withProps(t, bookshelfMin, map[string]string{"facing": "north", "slot_0_occupied": "true"}))
+	pos := simPos{blockPos: blockPos{x, y, z}}
+	shelf := &[6]invStack{}
+	shelf[0] = invStack{item: itemByName["book"], count: 1}
+	h.bookshelves[pos] = shelf
+	stone := itemByName["stone"]
+	pl.inv.slots[0] = invStack{item: stone, count: 5}
+	// North face, left third from the front (cx 0.9 → face x 0.1), top row.
+	h.onUseShelf(players, evUseShelf{eid: 1, x: x, y: y, z: z, face: 2, cx: 0.9, cy: 0.8, cz: 0})
+	if shelf[0].item != 0 {
+		t.Fatal("the book should come out with stone in hand")
+	}
+	found := false
+	for _, s := range pl.inv.slots {
+		if s.item == itemByName["book"] && s.count == 1 {
+			found = true
+		}
+	}
+	if !found || pl.inv.slots[0].item != stone || pl.inv.slots[0].count != 5 {
+		t.Errorf("the book should be in the inventory and the stone untouched: %+v", pl.inv.slots[:3])
+	}
+}
+
+// block is placed against it.
+func TestShelfSideClickPlaces(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+	x, y, z := 5, 70, 5
+	shelfState := withProps(t, bookshelfMin, map[string]string{"facing": "north"})
+	w.SetBlock(x, y, z, shelfState)
+	w.SetBlock(x, y+1, z, worldgen.Air)
+	p.setHotbarSlot(0, itemByName["stone"])
+	selectSlot(p, 0)
+	s.handlePlace(p, placeBody(x, y, z, 1)) // the top face
+	if w.Block(x, y+1, z) != worldgen.BlockBase("stone") {
+		t.Error("a top-face click on a bookshelf should place the held block")
+	}
+}

@@ -840,6 +840,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return false
 	}
 	if isBookshelf(state) {
+		if shelfHitSlot(state, face, cx, cy, cz) < 0 {
+			return false // ChiseledBookShelfBlock: not a slot face (getHitSlot empty) → PASS
+		}
 		s.hub.post(evUseShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true

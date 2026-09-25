@@ -307,11 +307,16 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 		shelf = &[6]invStack{}
 		h.bookshelves[pos] = shelf
 	}
+	// ChiseledBookShelfBlock.useItemOn: a #bookshelf_books item goes into an
+	// empty slot; anything else — or a book on an occupied slot — falls to
+	// useWithoutItem, which takes the book out whatever is in hand, and does
+	// nothing (CONSUME) on an empty slot.
 	held := t.inv.slots[t.p.heldSlot()]
 	if bookshelfBooks[held.item] && held.count > 0 && shelf[slot].item == 0 {
 		book := held
 		book.count = 1
 		shelf[slot] = book
+		h.incStat(t, attachproto.StatUsed, held.item, 1) // addBook: ITEM_USED
 		if t.gamemode != gmCreative {
 			s := &t.inv.slots[t.p.heldSlot()]
 			if s.count--; s.count <= 0 {
@@ -319,11 +324,21 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 			}
 			h.sendSlot(t, t.p.heldSlot())
 		}
-		h.playSoundDim(players, t.dim, "minecraft:block.chiseled_bookshelf.insert", sndBlock,
+		snd := "minecraft:block.chiseled_bookshelf.insert"
+		if book.item == itemEnchantedBook {
+			snd = "minecraft:block.chiseled_bookshelf.insert.enchanted"
+		}
+		h.playSoundDim(players, t.dim, snd, sndBlock,
 			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
-	} else if held.item == 0 && shelf[slot].item != 0 {
+	} else if shelf[slot].item != 0 {
 		book := shelf[slot]
 		shelf[slot] = invStack{}
+		snd := "minecraft:block.chiseled_bookshelf.pickup"
+		if book.item == itemEnchantedBook {
+			snd = "minecraft:block.chiseled_bookshelf.pickup.enchanted"
+		}
+		h.playSoundDim(players, t.dim, snd, sndBlock,
+			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 		changed, leftover := t.inv.addStack(book)
 		for _, s := range changed {
 			h.sendSlot(t, s)
@@ -331,8 +346,6 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 		if leftover > 0 {
 			h.tossItem(players, t, book)
 		}
-		h.playSoundDim(players, t.dim, "minecraft:block.chiseled_bookshelf.pickup", sndBlock,
-			float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5, 1, 1)
 	} else {
 		return
 	}
@@ -341,7 +354,8 @@ func (h *hub) onUseShelf(players map[int32]*tracked, e evUseShelf) {
 	h.shelfLast[pos] = slot
 	h.shelfSyncState(players, t.dim, pos.blockPos, state, shelf)
 	h.vib(t.dim, freqBlockChange, e.x, e.y, e.z, t.p.eid) // ChiseledBookShelfBlockEntity.updateState: BLOCK_CHANGE
-	h.scheduleSignalAround(players, pos.blockPos)
+	// The comparator beside it, in the shelf's own world.
+	h.inDim(t.dim, func() { h.scheduleSignalAround(players, pos.blockPos) })
 }
 
 // shelfSyncState mirrors slot occupancy into the block-state bools.
