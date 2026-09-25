@@ -199,22 +199,63 @@ func (s *Server) cmdGive(p *player, args []string) {
 		return
 	}
 	if len(args) < 2 {
-		p.tell("Usage: /give <player|@selector> <item> [count]")
+		p.tell("Usage: /give <player|@selector> <item>[<components>] [count]")
 		return
 	}
-	item, ok := itemByName[strings.TrimPrefix(args[1], "minecraft:")]
-	if !ok {
-		p.tell("Unknown item: " + args[1])
+	// The item argument may carry components with spaces in them: it runs to
+	// its closing bracket, and a count may follow.
+	rest := strings.Join(args[1:], " ")
+	itemArg, countArg := rest, ""
+	if open := strings.IndexByte(rest, '['); open >= 0 && open < strings.IndexByte(rest+" ", ' ') {
+		if end := matchBracket(rest, open); end > 0 {
+			itemArg, countArg = rest[:end+1], strings.TrimSpace(rest[end+1:])
+		}
+	} else if sp := strings.IndexByte(rest, ' '); sp >= 0 {
+		itemArg, countArg = rest[:sp], strings.TrimSpace(rest[sp+1:])
+	}
+	st, msg := parseItemArg(itemArg)
+	if msg != "" {
+		p.tell(msg)
 		return
 	}
 	count := 1
-	if len(args) >= 3 {
-		if n, err := strconv.Atoi(args[2]); err == nil && n > 0 && n <= 6400 {
-			count = n
+	if countArg != "" {
+		n, err := strconv.Atoi(countArg)
+		if err != nil || n < 1 {
+			p.tell(fmt.Sprintf("Invalid integer '%s'", countArg))
+			return
+		}
+		count = min(n, 6400)
+	}
+	st.count = count
+	s.hub.post(evGive{target: args[0], by: p.eid, item: st.item, count: count, stack: st})
+	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, itemArg, args[0]))
+}
+
+// matchBracket finds the ']' closing the '[' at open, skipping quoted text
+// and nested brackets; -1 when there is none.
+func matchBracket(s string, open int) int {
+	depth, quote := 0, byte(0)
+	for i := open; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case quote != 0:
+			if c == '\\' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+		case c == '"' || c == '\'':
+			quote = c
+		case c == '[' || c == '{':
+			depth++
+		case c == ']' || c == '}':
+			if depth--; depth == 0 {
+				return i
+			}
 		}
 	}
-	s.hub.post(evGive{target: args[0], by: p.eid, item: item, count: count})
-	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, args[1], args[0]))
+	return -1
 }
 
 func (s *Server) cmdKill(p *player, args []string) {
@@ -385,6 +426,9 @@ type evGive struct {
 	by     int32 // the caller, for @s/@p and distance predicates
 	item   int32
 	count  int
+	// stack, when its item is set, is the item argument with its
+	// components (the count is the command's); zero gives a plain item.
+	stack invStack
 }
 type evKill struct {
 	target string

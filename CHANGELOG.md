@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/give with item components.** `/give <player> <item>[…]` now takes
+  the item's components, such as `enchantments`, `stored_enchantments`,
+  `custom_name`, `item_name`, `damage`, `repair_cost`, `potion_contents`
+  and `dyed_color`, so `/give @s diamond_sword[enchantments={sharpness:5}]`
+  works. Components the server does not model yet are refused by name.
 - **The `spectators_generate_chunks` gamerule.** With it off, a spectator
   is only sent chunks that other players' views or forced chunks already
   hold loaded, and flying around as a spectator no longer generates new

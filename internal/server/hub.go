@@ -1642,6 +1642,10 @@ func (h *hub) run() {
 				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:
 				for _, t := range h.commandTargets(players, e.by, e.target) {
+					if e.stack.item != 0 {
+						h.giveStack(players, t, e.stack)
+						continue
+					}
 					h.giveTo(players, t, e.item, e.count)
 				}
 			case evKill:
@@ -2951,6 +2955,25 @@ func (h *hub) roomChatFrom(players map[int32]*tracked, sender, msg string) {
 
 // giveTo adds items to a player's inventory, spilling the remainder at their
 // feet (the /give behavior).
+// giveStack is giveTo for a stack with components: whatever does not fit
+// is dropped at the player's feet with its components.
+func (h *hub) giveStack(players map[int32]*tracked, t *tracked, st invStack) {
+	if t.inv == nil {
+		return
+	}
+	changed, left := t.inv.addStack(st)
+	for _, sl := range changed {
+		h.sendSlot(t, sl)
+	}
+	if left > 0 {
+		st.count = left
+		if it := h.spawnItemIn(players, t.dim, st.item, st.count, t.x, t.y, t.z); it != nil {
+			it.setFrom(st)
+			h.refreshItemMeta(players, it)
+		}
+	}
+}
+
 func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count int) {
 	if t.inv == nil {
 		return
