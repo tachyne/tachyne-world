@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Birthday Song counts in every dimension.** An allay dropping a cake on
+  a note block earned the advancement only in the Overworld; it now counts
+  in the Nether and the End as well.
 - **More things count as crafted in the statistics.** Taking smelted
   items from a furnace, a result from a smithing table, and what a
   villager trades you now add to that item's "Times Crafted", as in
