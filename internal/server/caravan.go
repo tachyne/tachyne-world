@@ -148,6 +148,7 @@ func (h *hub) traderLlamasDefend(trader *mob, t *tracked) {
 	for _, l := range h.mobs {
 		if l.etype == entityTraderLlama && l.leash == trader.eid && l.dying == 0 {
 			h.provoke(l, t)
+			l.llamaDefending = true // a TargetGoal of its own: no LlamaHurtByTargetGoal spit-and-drop
 		}
 	}
 }

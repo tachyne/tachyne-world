@@ -131,8 +131,8 @@ func (h *hub) mobBitesPrey(players map[int32]*tracked, m *mob) bool {
 		m.preyTarget = 0
 		return true
 	}
-	if !v.hostile { // whatever was bitten bolts, as a hurt passive mob does
-		v.panic, v.fleeX, v.fleeZ, v.reroute = panicTicks, m.x, m.z, 0
+	if !v.hostile && panicsAt(v, dtMobAttack) { // whatever was bitten bolts, if its kind panics
+		v.panic, v.fleeX, v.fleeZ, v.reroute = h.panicFor(v), m.x, m.z, 0
 	}
 	return true
 }

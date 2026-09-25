@@ -73,12 +73,21 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 	if !horseFamily(m.etype) && !(m.etype == entityNautilus && m.tamed) || m.dying > 0 || m.baby {
 		return false
 	}
-	if sneak {
+	tamed := m.tamed || isCamelKind(m.etype) // Camel.isTamed is always true
+	if sneak && tamed {
 		h.openHorseScreen(players, t, m) // HasCustomInventoryScreen: the nautilus shares the mount screen
 		return true
 	}
+	held := heldStack(t).item
+	// Horse/AbstractChestedHorse/ZombieHorse.mobInteract: anything in hand
+	// that is not its food makes a wild one rear up and refuse — a saddle,
+	// a chest, armour or a sword alike. Only an empty hand climbs on.
+	if !tamed && m.rider == 0 && held != 0 && !isMobFood(m.etype, held) && m.etype != entitySkeletonHorse {
+		h.horseMakeMad(players, m)
+		return true
+	}
 	// Chest-equip: a held chest on an unchested donkey/mule/llama.
-	if heldStack(t).item == int32(itemByName["chest"]) && chestedFamily(m.etype) && !m.chested {
+	if tamed && held == int32(itemByName["chest"]) && chestedFamily(m.etype) && !m.chested {
 		h.equipChest(players, m)
 		if isSurvival(t.gamemode) {
 			h.consumeHeld(t)
@@ -86,6 +95,28 @@ func (h *hub) tryHorseScreen(players map[int32]*tracked, t *tracked, m *mob, sne
 		return true
 	}
 	return false
+}
+
+// horseAngrySound is getAngrySound, species by species.
+func horseAngrySound(m *mob) string {
+	switch m.etype {
+	case entityHorse:
+		if m.baby {
+			return "minecraft:entity.baby_horse.angry"
+		}
+		return "minecraft:entity.horse.angry"
+	case entityDonkey, entityMule, entityZombieHorse, entityLlama, entityTraderLlama:
+		return "minecraft:entity." + entityNameByID[m.etype] + ".angry"
+	}
+	return ""
+}
+
+// horseMakeMad is AbstractHorse.makeMad: the angry call (the rear itself is
+// a client flag the engine does not drive).
+func (h *hub) horseMakeMad(players map[int32]*tracked, m *mob) {
+	if snd := horseAngrySound(m); snd != "" {
+		h.playSoundDim(players, m.dim, snd, sndNeutral, m.x, m.y, m.z, 1, 1)
+	}
 }
 
 // equipChest straps a chest onto a donkey, mule or llama.

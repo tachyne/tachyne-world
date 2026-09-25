@@ -52,9 +52,6 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.sleeping {
 		return 0, 0 // in bed — held still by villagerSleep, but be defensive
 	}
-	if vx, vz, fleeing := h.villagerFlee(m); fleeing {
-		return vx, vz // a zombie within eight blocks: run
-	}
 	if vx, vz, gifting := h.villagerGiftSteer(h.playersRef, m); gifting {
 		return vx, vz // a Hero of the Village nearby: bring it a gift
 	}

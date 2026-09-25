@@ -195,6 +195,60 @@ the public history since the project was open-sourced on 2026-07-10.
   that hand rather than the first matching stack in the inventory, an
   arrow held in the main hand is shot before the ones in the inventory,
   and an empty bucket or glass bottle held in the offhand fills in place.
+- **Copper golems sort chests nearby, not across the whole area.** A copper
+  golem now looks for chests within 32 blocks sideways and 8 up or down,
+  as in vanilla. It used to look twice as far.
+- **Bigger shoals of cod and tropical fish.** A shoal of cod or tropical
+  fish now holds up to eight fish, as in vanilla. A salmon shoal still holds
+  five, and a shoal leader now counts as one of them.
+- **Fox kits follow their parents.** As in vanilla, a baby fox now trots
+  after the nearest grown fox. A baby happy ghast now drifts right up to
+  three blocks from an adult before it stops.
+- **Angry animals calm down.** A wolf, polar bear, panda, dolphin or llama
+  you hit used to stay hostile for good, going after any player it saw.
+  As in vanilla, it now goes only after the player who hit it. A wolf or
+  polar bear stays angry at that player for 20 to 39 seconds after losing
+  sight of them, and a pack of wolves all go after the same attacker. A
+  llama spits at its attacker once and then goes back to its business.
+- **Polar bears hunt foxes.** As in vanilla, an adult polar bear now goes
+  after a fox it can see, rears up and bites it. Cubs leave foxes alone.
+- **Panicked animals calm down on time.** A cow, pig or chicken you hit
+  used to run around for four seconds whatever happened. As in vanilla, it
+  now panics for two seconds after the last hit and then finishes the dash
+  it is on. Goats, camels, frogs, sniffers and the other animals that
+  panic "by brain" run for five to six seconds, and hitting them again
+  does not make it longer. An animal backing away from a wolf or a monster
+  panics at once when hit, and animals that never panic in vanilla no
+  longer panic when bitten.
+- **Villagers panic like vanilla villagers.** A frightened villager used to
+  run in a straight line from any zombie or illager it could sense, even
+  through walls, and a villager you hit ran around like a startled
+  chicken. Now a villager only takes fright at threats it can see. It runs
+  to a spot away from a threat once it comes within six blocks, and
+  otherwise scurries about nearby. A villager you hit runs from you, and
+  calms down soon after you back off.
+- **Wandering traders keep away from zombies and illagers.** As in vanilla,
+  a wandering trader now walks away from zombies (husks, drowned and zombie
+  villagers too), pillagers, vindicators, evokers, illusioners, vexes and
+  zoglins that come near. A worried panda backs away from a monster that
+  gets within four blocks.
+- **Fed animals walk to their mate.** Two animals you fed used to wander
+  around at a trot until they happened to meet. As in vanilla, each one
+  now walks over to the nearest fed animal of its kind; cats, ocelots and
+  rabbits walk there a little slower, and axolotls slowly. A fed animal with
+  no partner nearby just idles and wanders as usual. Cats and ocelots also
+  wander at their own slower pace, as do tadpoles and axolotls.
+- **Horses eat, follow and rear as in vanilla.** Horses, donkeys and mules
+  now eat carrots. Only a tamed horse falls in love on golden food; a wild
+  one takes it to calm down. A wild horse holding out for its rider rears
+  at a saddle, a chest or anything else that is not food, instead of
+  letting you on. Zombie horses eat and follow red mushrooms, not golden
+  carrots, and can be tamed by riding them like other horses. A skeleton
+  horse that did not come from a trap ignores you, follows no food and
+  sinks in water.
+- **Squid and bats no longer panic.** A squid you hit jets away from you
+  and then calms down, and a bat you hit keeps flying as it was; as in
+  vanilla, neither runs around in a panic afterwards.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

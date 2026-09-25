@@ -40,15 +40,26 @@ func (h *hub) llamaSpit(players map[int32]*tracked, m *mob) {
 		m.attackCD--
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, llamaSpitRange)
-	if t == nil {
-		return
+	// Its target: the attacker it holds (universal anger: the nearest).
+	t := players[m.targetEID]
+	if t == nil || t.dim != m.dim || dist3sq(t.x, t.y, t.z, m.x, m.y, m.z) > llamaSpitRange*llamaSpitRange {
+		if m.targetEID != 0 {
+			return
+		}
+		if t = h.nearestHuntable(players, m.dim, m.x, m.z, llamaSpitRange); t == nil {
+			return
+		}
 	}
 	if !h.seeTimeTick(m, t, false) {
 		return // RangedAttackGoal: no spit without line of sight
 	}
 	m.attackCD = llamaSpitCooldown
 	h.spitAt(players, m, t.x, t.y+0.6, t.z)
+	if !m.llamaDefending {
+		// LlamaHurtByTargetGoal: didSpit ends the goal — one gob per
+		// provocation, then the llama goes back to its business.
+		h.calmDown(m)
+	}
 }
 
 // spitAt is Llama.spit: the gob leaves from in front of the llama's mouth

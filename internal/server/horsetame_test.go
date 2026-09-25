@@ -56,9 +56,10 @@ func TestFeedingBringsAHorseRound(t *testing.T) {
 	}
 }
 
-// A camel needs no taming and a llama is never ridden, so neither buck.
-func TestOnlyTheThreeEquinesBuck(t *testing.T) {
-	for _, etype := range []int{entityHorse, entityDonkey, entityMule} {
+// A camel needs no taming, a llama is never ridden and a skeleton horse comes
+// tamed from its trap, so none of them buck; a zombie horse does.
+func TestOnlyTheRiddenEquinesBuck(t *testing.T) {
+	for _, etype := range []int{entityHorse, entityDonkey, entityMule, entityZombieHorse} {
 		if !horseNeedsTaming(etype) {
 			t.Errorf("etype %d should need taming", etype)
 		}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // On Hard a zombie's killing bite turns a villager into a zombie villager
@@ -90,12 +91,17 @@ func TestZombieBiteOnEasyAndVillagerFlee(t *testing.T) {
 	players := map[int32]*tracked{}
 	h.playersRef = players
 	h.rules.Difficulty = diffEasy
+	h.world.ForceLoad(0, 0, 2)
+	for x := -8; x <= 16; x++ {
+		for z := 8; z <= 13; z++ {
+			h.world.SetBlock(x, 199, z, worldgen.BlockBase("stone"))
+		}
+	}
 	v := h.spawnMob(players, entityVillager, 10.5, 200, 10.5)
 	z := h.spawnMob(players, entityZombie, 14.5, 200, 10.5)
 	h.gridDirty()
-	vx, _, fleeing := h.villagerFlee(v)
-	if !fleeing || vx >= 0 {
-		t.Errorf("the villager should run west, away from the zombie: fleeing=%v vx=%.2f", fleeing, vx)
+	if fleeing := h.villagerPanicStep(players, v); !fleeing || v.vx >= 0 {
+		t.Errorf("the villager should run west, away from the zombie: fleeing=%v vx=%.2f", fleeing, v.vx)
 	}
 	z.x = 11.5
 	z.preyTarget = v.eid

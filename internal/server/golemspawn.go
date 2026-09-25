@@ -52,7 +52,8 @@ func (h *hub) villagerNearestHostile(m *mob) *mob {
 		if !ok || o.dying > 0 {
 			return
 		}
-		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d <= r && d < bestD {
+		// NEAREST_VISIBLE_LIVING_ENTITIES: only what it can see.
+		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d <= r && d < bestD && h.mobSeesMob(m, o) {
 			best, bestD = o, d
 		}
 	})
@@ -61,7 +62,7 @@ func (h *hub) villagerNearestHostile(m *mob) *mob {
 
 // villagerPanicking is VillagerPanicTrigger's condition: hurt, or a hostile near.
 func (h *hub) villagerPanicking(m *mob) bool {
-	return m.panic > 0 || h.villagerNearestHostile(m) != nil
+	return m.villagerHurt || m.villagerHurtLeft > 0 || h.villagerNearestHostile(m) != nil
 }
 
 // spawnGolemIfNeeded is Villager.spawnGolemIfNeeded for the villager m.

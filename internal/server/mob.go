@@ -22,12 +22,13 @@ const (
 	// unprovoked mobs IDLE most of the time and stroll briefly — passives drift
 	// ~0.16 b/s perceived (≈15-20% moving), unaggroed hostiles ~0.05 b/s. Idle
 	// is the default state; the stroll is the exception. Updates run at 10/s.
-	restMin    = 80  // idle spell: 8-20 s…
-	restMax    = 200 //
-	strollMin  = 25  // …then a 2.5-4.5 s stroll, back to idle
-	strollMax  = 45
-	mobSpeed   = 0.09 // blocks per step (×10 = 0.9 blocks/sec grazing)
-	panicTicks = 40   // flee steps after a hit (decremented per mob update ≈ 4s)
+	restMin     = 80  // idle spell: 8-20 s…
+	restMax     = 200 //
+	strollMin   = 25  // …then a 2.5-4.5 s stroll, back to idle
+	strollMax   = 45
+	mobSpeed    = 0.09 // blocks per step (×10 = 0.9 blocks/sec grazing)
+	panicTicks  = 20   // mob updates a panic-causing hurt is remembered (getLastDamageSource: 40 ticks)
+	panicLegMax = 60   // updates before an unreached panic spot is dropped (the path is done)
 )
 
 var (
@@ -56,6 +57,7 @@ type mob struct {
 	panicTX         float64  // the random spot it is running to (PanicGoal), when panicHasT
 	panicTZ         float64
 	panicHasT       bool
+	panicLeg        int     // updates spent on the current panic leg
 	hostile         bool    // hunts + attacks players (zombies) rather than grazing
 	burning         bool    // on fire — rendered via entity flags (any ignite source)
 	burnDelay       int     // seconds of dawn-ramp grace before this mob ignites
@@ -394,6 +396,10 @@ type mob struct {
 	blazeCharged                    bool       // blaze: DATA_FLAGS charged
 	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
 	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
+	vHurtBy                         int32      // villager: HURT_BY_ENTITY, until it calms down
+	angryAt                         int32      // provoked animal: the player it holds a grudge against (NeutralMob)
+	llamaDefending                  bool       // trader llama: its target is its trader's attacker, not its own
+	vPanicLeft                      int        // villager: updates before its panic walk target is dropped
 	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
@@ -701,14 +707,13 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.rest = 0
 			}
 		} else if m.hostile {
-			h.acquireTarget(players, m) // pick a player to hunt this update
+			if !h.provokedTarget(players, m) { // a provoked animal keeps to its attacker, then calms
+				h.acquireTarget(players, m) // pick a player to hunt this update
+			}
 			if m.hasTarget {
 				m.rest = 0                               // a resting hostile wakes the instant prey appears
 				m.drifting, m.drownedGoal = false, false // a real quarry outranks any errand
 			}
-		}
-		if m.loveTicks > 0 {
-			m.rest = 0 // courtship overrides idling (vanilla goal priority)
 		}
 		// AvoidEntityGoal — the mob-class registrations (a skeleton and a
 		// wolf, a creeper and a cat, …) and the player ones (a rabbit, fox,
@@ -787,6 +792,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// Two fed villagers courting, and a child if a bed is free.
 		case m.etype == entityWolf && h.wolfHuntStep(players, m):
 			// A wolf after a sheep, a skeleton, or whatever hurt its owner.
+		case m.etype == entityPolarBear && h.bearFoxStep(players, m):
+			// An adult polar bear after a fox it has seen.
 		case m.etype == entityBat && h.batStep(players, m):
 			// A bat hanging under a block.
 		case m.etype == entityIronGolem && h.golemOfferTick(players, m):
@@ -818,15 +825,23 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case nautilusKind(m.etype) && h.nautilusFightStep(players, m):
 			// A nautilus charging whoever hurt it, or a pufferfish: the FIGHT
 			// activity outranks its panic, which only walks it away.
-		case m.panic > 0:
+		case m.panic > 0 || m.panicHasT:
 			// Spooked: PanicGoal runs to one random spot after another
-			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed,
-			// ignoring herd steering until the panic wears off.
-			if m.panic--; m.panic == 0 {
-				m.panicHasT = false
+			// (DefaultRandomPos.getPos 5, 4) at the species' panic speed
+			// while the hurt is under forty ticks old (shouldPanic), and
+			// finishes the leg it is on when it runs out
+			// (canContinueToUse: the path is not done).
+			if m.panic > 0 {
+				m.panic--
 			}
-			if !m.panicHasT || math.Hypot(m.panicTX-m.x, m.panicTZ-m.z) < 1 {
+			if m.panicHasT {
+				if m.panicLeg++; m.panicLeg > panicLegMax || math.Hypot(m.panicTX-m.x, m.panicTZ-m.z) < 1 {
+					m.panicHasT = false
+				}
+			}
+			if !m.panicHasT && m.panic > 0 {
 				m.panicTX, m.panicTZ, m.panicHasT = h.panicTarget(m)
+				m.panicLeg = 0
 			}
 			if m.panicHasT {
 				var vx, vz float64
@@ -839,6 +854,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			} else {
 				m.vx, m.vz = 0, 0 // nowhere to run: it stands (the goal has no target)
 			}
+		case h.breedApproachStep(m):
+			// A courting animal walking to its mate (BreedGoal /
+			// AnimalMakeLove): behind panic, ahead of temptation.
 		case m.etype == entityPanda && h.pandaStep(players, m):
 			// A panda held by its personality: sitting out a storm, lying
 			// on its back, or tumbling.
@@ -923,7 +941,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A pet after its owner is on FollowOwnerGoal, which outranks
 			// strolling just as a hunt does; left out, a pet parked in the
 			// idle cycle and only caught up through the teleport.
-			busy := (m.hostile && m.hasTarget) || m.loveTicks > 0 || (m.tamed && m.hasTarget)
+			// Courting is not here: with a mate about, breedApproachStep
+			// walks it over; with none, BreedGoal never starts and the
+			// animal strolls and idles like any other.
+			busy := (m.hostile && m.hasTarget) || (m.tamed && m.hasTarget)
 			if m.stroll <= 0 && !busy {
 				m.rest = restMin + h.rng.Intn(restMax-restMin)
 				if m.etype == entityFrog {
@@ -945,7 +966,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// somewhere to be (a hunt, a mate) moves at its full speed.
 			cap := m.moveSpeed()
 			if !busy {
-				cap *= strollSpeed(m)
+				cap *= h.strollSpeedFor(m)
 			}
 			if math.Hypot(m.vx, m.vz) > cap {
 				sp := math.Hypot(m.vx, m.vz)

@@ -32,6 +32,9 @@ func TestRosterSpeciesBreed(t *testing.T) {
 			// PandaBreedGoal wants bamboo in reach as well as the food.
 			h.world.SetBlock(floorInt(a.x), floorInt(a.y), floorInt(a.z)+1, worldgen.BlockBase("bamboo"))
 		}
+		if horseFamily(c.etype) {
+			a.tamed, b.tamed = true, true // only a tamed horse courts (AbstractHorse.handleEating)
+		}
 		pl.x, pl.y, pl.z = a.x, a.y, a.z
 		if !h.feedAnimal(players, pl, a) || !h.feedAnimal(players, pl, b) {
 			t.Fatalf("etype %d should court on its love-food %d", c.etype, c.food)
@@ -212,10 +215,7 @@ func TestBreedingPairMustMeetFirst(t *testing.T) {
 	if len(h.mobs) != before {
 		t.Fatalf("a pair seven blocks apart bred without meeting: %d mobs, was %d", len(h.mobs), before)
 	}
-	// …but they are walking toward each other.
-	if !a.hasTarget || a.tx != b.x || a.tz != b.z {
-		t.Fatalf("a courting cow should be heading for its partner, target=(%v,%v) hasTarget=%v", a.tx, a.tz, a.hasTarget)
-	}
+	// (The walk toward each other is TestCourtingAnimalsWalkToEachOther.)
 
 	// Close the gap and they get on with it.
 	b.x, b.z = 2, 0

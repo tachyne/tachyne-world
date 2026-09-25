@@ -11,9 +11,11 @@ package server
 // thrown. Feeding raises the temper too, which is why an apple or two makes
 // the whole business shorter.
 //
-// Llamas are not ridden and camels need no taming, so this is the three that
-// carry the ritual: the horse, the donkey and the mule. A skeleton or zombie
-// horse is tamed by the trap that spawns it.
+// Camels need no taming, and the engine does not seat a player on a llama,
+// so this is the four that carry the ritual: the horse, the donkey, the mule
+// and the zombie horse (ZombieHorse.mobInteract hands an empty-handed click to
+// AbstractHorse's doPlayerRide like the rest). A skeleton horse is tamed by
+// the trap that spawns it and ignores a player until then.
 
 const (
 	horseMaxTemper   = 100 // AbstractHorse.getMaxTemper
@@ -24,7 +26,7 @@ const (
 // horseNeedsTaming reports the mounts that buck until they are tamed.
 func horseNeedsTaming(etype int) bool {
 	switch etype {
-	case entityHorse, entityDonkey, entityMule:
+	case entityHorse, entityDonkey, entityMule, entityZombieHorse:
 		return true
 	}
 	return false
@@ -52,7 +54,7 @@ func (h *hub) horseRideTick(players map[int32]*tracked, m *mob) bool {
 		m.temper = horseMaxTemper
 	}
 	h.dismountMob(players, t)
-	h.playSoundDim(players, m.dim, "minecraft:entity.horse.angry", sndNeutral, m.x, m.y, m.z, 1, 1)
+	h.horseMakeMad(players, m)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameFail))
 	return true
 }
@@ -64,21 +66,4 @@ func (h *hub) tameHorse(players map[int32]*tracked, m *mob, t *tracked) {
 	m.temper = horseMaxTemper
 	h.playSoundDim(players, m.dim, "minecraft:entity.horse.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
-}
-
-// horseFeedTemper is the temper an item adds (AbstractHorse.handleEating).
-func horseFeedTemper(item int32) int {
-	switch item {
-	case int32(itemByName["wheat"]), int32(itemByName["sugar"]),
-		int32(itemByName["apple"]), int32(itemByName["carrot"]),
-		int32(itemByName["red_mushroom"]):
-		return 3
-	case int32(itemByName["golden_carrot"]):
-		return 5
-	case int32(itemByName["golden_apple"]), int32(itemByName["enchanted_golden_apple"]):
-		return 10
-	case int32(itemByName["hay_block"]):
-		return 0 // hay feeds but does not settle it
-	}
-	return 0
 }

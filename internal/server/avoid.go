@@ -91,6 +91,29 @@ func init() {
 	avoidRules[entityPillager] = []avoidRule{{8, 1.0, 1.2, creaking}}
 	avoidRules[entityVindicator] = []avoidRule{{8, 1.0, 1.2, creaking}}
 	avoidRules[entityEvoker] = []avoidRule{{8, 0.6, 1.0, creaking}}
+	// WanderingTrader: seven AvoidEntityGoals, all at 0.5 both ways. The
+	// Zombie class takes in the husk, drowned, zombie villager and
+	// zombified piglin.
+	is := func(ids ...int) func(h *hub, m, o *mob) bool {
+		return func(h *hub, m, o *mob) bool {
+			for _, id := range ids {
+				if o.etype == id {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	avoidRules[entityWanderingTrader] = []avoidRule{
+		{8, 0.5, 0.5, is(entityZombie, entityHusk, entityDrowned, entityZombieVillager, entityZombifiedPiglin)},
+		{12, 0.5, 0.5, is(entityEvoker)}, {8, 0.5, 0.5, is(entityVindicator)}, {8, 0.5, 0.5, is(entityVex)},
+		{15, 0.5, 0.5, is(entityPillager)}, {12, 0.5, 0.5, is(entityIllusioner)}, {10, 0.5, 0.5, is(entityZoglin)},
+	}
+	// PandaAvoidGoal<Monster>(4, 2.0, 2.0): only a worried panda that is
+	// free to act (not sitting, lying, rolling or scared by thunder).
+	avoidRules[entityPanda] = []avoidRule{{4, 2.0, 2.0, func(h *hub, m, o *mob) bool {
+		return isMonster(o) && pandaTrait(m.variant) == pandaWorried && h.pandaCanAct(m)
+	}}}
 }
 
 // avoidScan is canUse: the nearest avoided mob (or player) within the
@@ -201,6 +224,13 @@ func (h *hub) posAwayFrom(m *mob, tx, tz float64) (float64, float64, bool) {
 // out. Returns whether it holds the mob.
 func (h *hub) avoidStep(players map[int32]*tracked, m *mob) bool {
 	if m.avoidLeft <= 0 {
+		return false
+	}
+	if m.panic > 0 {
+		// PanicGoal sits above every AvoidEntityGoal (a fish's 0 over 2, a
+		// rabbit's 1 over 4, a cat's 1 over 4…): a blow mid-retreat turns the
+		// retreat into a panic.
+		m.avoidLeft = 0
 		return false
 	}
 	m.avoidLeft--

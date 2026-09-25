@@ -13,7 +13,9 @@ func TestHorseInventory(t *testing.T) {
 			t.Error("no donkey")
 			return
 		}
-		// A held chest equips (5 columns for donkeys).
+		// A held chest equips (5 columns for donkeys) — on a tamed one only:
+		// a wild donkey rears at anything but its food.
+		m.tamed, m.owner = true, tr.p.eid
 		tr.inv.slots[tr.p.heldSlot()] = invStack{item: int32(itemByName["chest"]), count: 1}
 		if !h.tryHorseScreen(h.playersRef, tr, m, false) {
 			t.Error("chest equip not consumed")

@@ -195,10 +195,11 @@ func (h *hub) checkCopperGolemBuild(players map[int32]*tracked, dim, x, y, z int
 
 // Item sorting (vanilla TransportItemsBetweenContainers). The golem carries
 // items OUT of copper chests and into wooden/trapped chests within a 65×17×65
-// box, up to 16 at a time, on a 60–100 tick cooldown between transports.
+// box (its block inflated 32 sideways and 8 up and down), up to 16 at a
+// time, on a 60–100 tick cooldown between transports.
 const (
-	copperSortRangeH = 65   // horizontal search distance
-	copperSortRangeV = 17   // vertical search distance
+	copperSortRangeH = 32   // TRANSPORT_ITEM_HORIZONTAL_SEARCH_RADIUS
+	copperSortRangeV = 8    // TRANSPORT_ITEM_VERTICAL_SEARCH_RADIUS
 	copperSortMax    = 16   // items moved per transport
 	copperSortCDMin  = 60   // transport cooldown (nextInt(60,100))
 	copperSortCDMax  = 100  //

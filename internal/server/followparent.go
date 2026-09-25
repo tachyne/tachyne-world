@@ -23,13 +23,13 @@ const (
 )
 
 // followParentSpeed is the goal's speed modifier per species; a species not
-// listed has no such goal (rabbits, wolves, cats, foxes, turtles, frogs and
+// listed has no such goal (rabbits, wolves, cats, turtles, frogs and
 // sniffers use other behaviours in vanilla).
 var followParentSpeed = map[int]float64{
 	entityCow: 1.25, entityMooshroom: 1.25, entityBee: 1.25, entityChicken: 1.1,
 	entityHorse: 1.0, entityDonkey: 1.0, entityMule: 1.0, entityZombieHorse: 1.0, entitySkeletonHorse: 1.0,
 	entityLlama: 1.0, entityTraderLlama: 1.0, entityPanda: 1.25, entityPig: 1.1, entityPolarBear: 1.25,
-	entitySheep: 1.1, entityStrider: 1.0,
+	entitySheep: 1.1, entityStrider: 1.0, entityFox: 1.25, // FoxFollowParentGoal(this, 1.25)
 	// Brain-driven: BabyFollowAdult with ADULT_FOLLOW_RANGE 5..16. The
 	// axolotl's speed depends on where it is (0.6 in water, 0.15 ashore).
 	entityGoat: 1.25, entityAxolotl: 0.15, entityArmadillo: 1.25, entityCamel: 2.5, entityHoglin: 0.6,
@@ -51,6 +51,9 @@ func (h *hub) followParentStep(m *mob) bool {
 	stop := followParentStop
 	if followAdultBrain[m.etype] {
 		stop = followAdultStop
+		if m.etype == entityHappyGhast {
+			stop = 3 // HappyGhastAi: ADULT_FOLLOW_RANGE 3..16
+		}
 	}
 	if m.parentRecalc > 0 {
 		m.parentRecalc--

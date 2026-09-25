@@ -32,6 +32,7 @@ var mobSinks = map[int]bool{
 	entityHoglin: true, entityZoglin: true, entityIronGolem: true,
 	entityShulker: true, entityWither: true,
 	entityEnderDragon: true, entityStrider: true,
+	entitySkeletonHorse: true, // SkeletonHorse.addBehaviourGoals is empty: no FloatGoal
 }
 
 // mobFloats reports whether a walker bobs up in deep water.

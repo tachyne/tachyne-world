@@ -50,3 +50,27 @@ func TestFishSchool(t *testing.T) {
 		t.Errorf("the school should shrink when a fish goes, got %d", a.schoolFollowers)
 	}
 }
+
+// getMaxSchoolSize counts the leader: a cod school holds eight fish, a
+// salmon school five.
+func TestSchoolSizes(t *testing.T) {
+	for _, tc := range []struct {
+		etype, size int
+	}{{entityCod, 8}, {entitySalmon, 5}} {
+		h := newHub(world.New(1))
+		players := map[int32]*tracked{}
+		lead := h.spawnMob(players, tc.etype, 0.5, 62, 0.5)
+		lead.schoolFollowers = tc.size - 2 // one place left
+		f := h.spawnMob(players, tc.etype, 2.5, 62, 0.5)
+		f.schoolNext = 0
+		if !h.schoolStep(players, f) || f.schoolLeader != lead.eid {
+			t.Fatalf("%s: a school of %d has room for one more", advEntityName[tc.etype], tc.size-1)
+		}
+		g := h.spawnMob(players, tc.etype, 1.5, 62, 1.5)
+		g.schoolNext = 0
+		h.schoolStep(players, g)
+		if g.schoolLeader == lead.eid {
+			t.Fatalf("%s: joined a full school of %d", advEntityName[tc.etype], tc.size)
+		}
+	}
+}

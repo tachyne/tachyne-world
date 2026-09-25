@@ -88,14 +88,16 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	// PanicGoal: the environment sets an animal running too — out of the
 	// fire, off the cactus, away from the lava — not only a blow from
 	// something. On fire it makes for water if there is any within five.
-	if !m.hostile && m.panic == 0 && panicsAt(m, dt) {
+	if !m.hostile && m.panic > 0 && panicsAt(m, dt) {
+		m.panic = h.panicFor(m) // a fresh hurt: a PanicGoal runs on from the newest one
+	} else if !m.hostile && panicsAt(m, dt) {
 		if m.etype == entityArmadillo && m.armState != armIdle {
 			h.armadilloSetState(players, m, armIdle) // ArmadilloPanic.start: Armadillo.rollOut
 		}
 		if x, z, ok := h.panicWaterNear(m); ok {
-			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, 2*m.x-x, 2*m.z-z, 0
+			m.panic, m.fleeX, m.fleeZ, m.reroute = h.panicFor(m), 2*m.x-x, 2*m.z-z, 0
 		} else {
-			m.panic, m.fleeX, m.fleeZ, m.reroute = panicTicks, m.x+h.rng.Float64()*2-1, m.z+h.rng.Float64()*2-1, 0
+			m.panic, m.fleeX, m.fleeZ, m.reroute = h.panicFor(m), m.x+h.rng.Float64()*2-1, m.z+h.rng.Float64()*2-1, 0
 		}
 	}
 }

@@ -66,34 +66,40 @@ func isLoveFood(etype int, item int32) bool {
 }
 
 // horseMeal is one row of AbstractHorse/Llama/Camel.handleEating: hearts
-// healed, seconds a foal ages, and whether an adult falls in love.
+// healed, seconds a foal ages, the temper it adds, and whether a tamed adult
+// falls in love.
 type horseMeal struct {
-	heal int
-	age  int
-	love bool
+	heal   int
+	age    int
+	temper int
+	love   bool
 }
 
-// horseMeals is the handleEating table per family branch (the temper column
-// is dropped: the engine's mounts have no taming). Keyed by item name.
+// horseMeals is the handleEating table per family branch. Keyed by item name.
 var horseMeals = map[string]map[string]horseMeal{
-	"horse": {
-		"wheat": {2, 20, false}, "sugar": {1, 30, false}, "hay_block": {20, 180, false},
-		"apple": {3, 60, false}, "golden_carrot": {4, 60, true},
-		"golden_apple": {10, 240, true}, "enchanted_golden_apple": {10, 240, true},
+	"horse": { // #horse_food
+		"wheat": {2, 20, 3, false}, "sugar": {1, 30, 3, false}, "hay_block": {20, 180, 0, false},
+		"apple": {3, 60, 3, false}, "carrot": {3, 60, 3, false}, "golden_carrot": {4, 60, 5, true},
+		"golden_apple": {10, 240, 10, true}, "enchanted_golden_apple": {10, 240, 10, true},
 	},
-	"llama": {"wheat": {2, 10, false}, "hay_block": {10, 90, true}},
-	"camel": {"cactus": {2, 10, true}},
+	// #zombie_horse_food: a red mushroom heals and settles it, and never
+	// ages a foal.
+	"zombie_horse": {"red_mushroom": {3, 0, 3, false}},
+	"llama":        {"wheat": {2, 10, 3, false}, "hay_block": {10, 90, 6, true}},
+	"camel":        {"cactus": {2, 10, 0, true}},
 	// #camel_husk_food. A husk never courts and is never a calf, so a
 	// rabbit's foot only heals.
-	"camel_husk": {"rabbit_foot": {2, 10, false}},
+	"camel_husk": {"rabbit_foot": {2, 10, 0, false}},
 }
 
 // horseMealFor resolves the family branch and the held item to a meal row.
 func horseMealFor(etype int, item int32) (horseMeal, bool) {
 	var branch string
 	switch etype {
-	case entityHorse, entityDonkey, entityMule, entitySkeletonHorse, entityZombieHorse:
+	case entityHorse, entityDonkey, entityMule, entitySkeletonHorse:
 		branch = "horse"
+	case entityZombieHorse:
+		branch = "zombie_horse"
 	case entityLlama, entityTraderLlama:
 		branch = "llama"
 	case entityCamel:
@@ -114,6 +120,14 @@ func horseMealFor(etype int, item int32) (horseMeal, bool) {
 	return horseMeal{}, false
 }
 
+// horseMaxTemperOf is getMaxTemper: a llama comes round at 30, the rest at 100.
+func horseMaxTemperOf(etype int) int {
+	if isLlama(etype) {
+		return 30
+	}
+	return horseMaxTemper
+}
+
 // isMobFood is "this species would eat what the player holds" — the gate
 // that keeps a meal from being read as a mount/saddle click (Pig and
 // AbstractHorse both test isFood before riding).
@@ -127,8 +141,10 @@ func isMobFood(etype int, item int32) bool {
 // eatSound is the species' eating sound (getEatingSound / playEatingSound).
 func eatSound(etype int) string {
 	switch etype {
-	case entityHorse, entitySkeletonHorse, entityZombieHorse:
+	case entityHorse:
 		return "minecraft:entity.horse.eat"
+	case entityZombieHorse:
+		return "minecraft:entity.zombie_horse.eat"
 	case entityDonkey:
 		return "minecraft:entity.donkey.eat"
 	case entityMule:
@@ -149,31 +165,35 @@ func eatSound(etype int) string {
 // court an adult on the love rows — the item is spent only if something
 // happened. Returns whether the click was consumed.
 func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int32) bool {
+	if m.etype == entitySkeletonHorse && !m.tamed {
+		return false // SkeletonHorse.mobInteract: an untamed one ignores the player (PASS)
+	}
 	meal, ok := horseMealFor(m.etype, item)
 	if !ok {
 		return false
 	}
 	did := false
-	// handleEating's temper column: feeding an untamed horse brings it round
-	// sooner, which is why an apple or two shortens the whole business.
-	if horseNeedsTaming(m.etype) && !m.tamed && m.temper < horseMaxTemper {
-		if n := horseFeedTemper(item); n > 0 {
-			if m.temper += n; m.temper > horseMaxTemper {
-				m.temper = horseMaxTemper
-			}
-			did = true
-		}
+	// Only a tamed adult courts (a camel counts as tamed from birth).
+	tamed := m.tamed || m.etype == entityCamel
+	if meal.love && tamed && !m.baby && m.loveTicks == 0 && m.breedCD == 0 {
+		h.setInLove(players, t, m)
+		did = true
 	}
 	if meal.heal > 0 && m.health < m.maxHP() {
 		h.healMob(m, meal.heal)
 		did = true
 	}
-	if m.baby && meal.age > 0 {
+	// A skeleton horse never grows up (canAgeUp is false).
+	if m.baby && meal.age > 0 && m.etype != entitySkeletonHorse {
 		h.ageUp(m, meal.age*20)
 		did = true
 	}
-	if meal.love && !m.baby && m.loveTicks == 0 && m.breedCD == 0 {
-		h.setInLove(players, t, m)
+	// handleEating's temper column: a wild mount takes the meal for its
+	// temper alone, which is why an apple or two shortens the taming.
+	if max := horseMaxTemperOf(m.etype); meal.temper > 0 && (did || !m.tamed) && m.temper < max {
+		if m.temper += meal.temper; m.temper > max {
+			m.temper = max
+		}
 		did = true
 	}
 	if !did {
@@ -182,7 +202,9 @@ func (h *hub) feedHorse(players map[int32]*tracked, t *tracked, m *mob, item int
 	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}
-	h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
+	if m.etype != entitySkeletonHorse { // a skeleton horse eats in silence (no getEatingSound)
+		h.playSoundDim(players, m.dim, eatSound(m.etype), sndNeutral, m.x, m.y, m.z, 1, 1+(h.rng.Float32()-h.rng.Float32())*0.2)
+	}
 	return true
 }
 
