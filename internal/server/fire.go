@@ -506,7 +506,12 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	}
 
 	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
-	infiniburn := below == worldgen.Netherrack // eternal fire on netherrack
+	// FireBlock.canSurvive: a sturdy floor or something burnable beside it.
+	if !worldgen.IsSolidFull(below) && !h.validFireLocation(pos) {
+		h.removeFire(players, pos, false)
+		return
+	}
+	infiniburn := h.fireInfiniburn(below) // eternal fire on the dimension's #infiniburn_*
 	n := h.fireAge[h.rsKey(pos)]
 
 	// Rain douse (scales with age); doesn't happen on infiniburn.
@@ -536,18 +541,20 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 		}
 	}
 
-	// The wildfire half — eats blocks — is mobGriefing-gated.
-	if !h.rules.MobGriefing {
-		return
+	// Consume flammable neighbours (the six faces have different
+	// resilience); a biome with INCREASED_FIRE_BURNOUT burns them faster
+	// and spreads less.
+	burnout := h.increasedFireBurnout(pos)
+	extra := 0
+	if burnout {
+		extra = -50
 	}
-
-	// Consume flammable neighbours (the six faces have different resilience).
-	h.checkBurnOut(players, blockPos{pos.x + 1, pos.y, pos.z}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x - 1, pos.y, pos.z}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y - 1, pos.z}, 250, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y + 1, pos.z}, 250, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z - 1}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z + 1}, 300, n)
+	h.checkBurnOut(players, blockPos{pos.x + 1, pos.y, pos.z}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x - 1, pos.y, pos.z}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y - 1, pos.z}, 250+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y + 1, pos.z}, 250+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z - 1}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z + 1}, 300+extra, n)
 
 	// Spread to air in a 3×3 column from one below to four above.
 	diff := int(h.rules.Difficulty)
@@ -567,6 +574,9 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 					continue
 				}
 				chance := (ig + 40 + diff*7) / (n + 30)
+				if burnout {
+					chance /= 2
+				}
 				if chance <= 0 || h.rng.Intn(bound) > chance ||
 					(h.raining && h.fireNearRain(np)) {
 					continue
@@ -590,20 +600,49 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 	if h.rng.Intn(resilience) >= int(burn) {
 		return
 	}
-	if isTNT(state) {
-		h.rsSet(players, pos, worldgen.Air)
-		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
-		// is the only consumer of h.events — a self-post with a full queue
-		// blocks forever and takes the whole server with it (see postFromHub).
-		h.primeTNT(players, pos.x, pos.y, pos.z, tntFuseTicks)
-		return
-	}
-	if h.rng.Intn(srcAge+10) < 5 && !(h.raining && h.fireNearRain(pos)) {
+	// The block turns to fire or goes (isRainingAt: rain on the cell itself
+	// puts it out), and TNT that burns is primed either way.
+	if h.rng.Intn(srcAge+10) < 5 && !h.rainingOn(h.rsDim, pos.x, pos.y, pos.z) {
 		h.igniteFire(players, pos, min(srcAge+h.rng.Intn(5)/4, 15))
 	} else {
 		h.rsSet(players, pos, worldgen.Air)
 		h.scheduleAroundIn(h.rsDim, pos, 1) // sand above falls, fluid flows into the gap
 	}
+	if isTNT(state) {
+		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
+		// is the only consumer of h.events — a self-post with a full queue
+		// blocks forever and takes the whole server with it (see postFromHub).
+		h.primeTNT(players, pos.x, pos.y, pos.z, tntFuseTicks)
+	}
+}
+
+// fireInfiniburn is the dimension type's infiniburn tag: netherrack and
+// magma blocks everywhere (#infiniburn_overworld), and bedrock too in the
+// End (#infiniburn_end).
+func (h *hub) fireInfiniburn(below uint32) bool {
+	return below == worldgen.Netherrack || below == magmaBlockState ||
+		(h.rsDim == dimEnd && below == worldgen.Bedrock)
+}
+
+// fireBurnoutBiomes carry EnvironmentAttributes.INCREASED_FIRE_BURNOUT.
+var fireBurnoutBiomes = map[string]bool{
+	"minecraft:jungle": true, "minecraft:bamboo_jungle": true, "minecraft:mushroom_fields": true,
+	"minecraft:swamp": true, "minecraft:mangrove_swamp": true, "minecraft:dappled_forest": true,
+	"minecraft:snowy_slopes": true,
+}
+
+// increasedFireBurnout reads the fire's biome for INCREASED_FIRE_BURNOUT.
+func (h *hub) increasedFireBurnout(pos blockPos) bool {
+	w := h.rsWorld()
+	return w != nil && fireBurnoutBiomes[w.BiomeAt3D(pos.x, pos.y, pos.z)]
+}
+
+// rainingOn is Level.isRainingAt: raining, nothing that blocks motion (or
+// holds a fluid) above the cell, and the biome rains at that height. Only
+// the overworld has weather.
+func (h *hub) rainingOn(dim, x, y, z int) bool {
+	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y &&
+		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
 }
 
 // igniteFire places a fire block of the given age and schedules its first tick.
@@ -652,15 +691,13 @@ func (h *hub) igniteOddsAt(pos blockPos) int {
 	return best
 }
 
-// fireNearRain reports whether rain is falling on the fire's column or any of
+// fireNearRain is FireBlock.isNearRain: isRainingAt on the fire's cell or any of
 // its four horizontal neighbours (a nearby downpour still snuffs it).
 func (h *hub) fireNearRain(pos blockPos) bool {
-	if h.rsDim != dimOverworld {
-		return false // no weather outside the overworld: its rain is not falling here
-	}
-	return h.skyExposedColumn(pos.x, pos.z) ||
-		h.skyExposedColumn(pos.x-1, pos.z) || h.skyExposedColumn(pos.x+1, pos.z) ||
-		h.skyExposedColumn(pos.x, pos.z-1) || h.skyExposedColumn(pos.x, pos.z+1)
+	d := h.rsDim
+	return h.rainingOn(d, pos.x, pos.y, pos.z) ||
+		h.rainingOn(d, pos.x-1, pos.y, pos.z) || h.rainingOn(d, pos.x+1, pos.y, pos.z) ||
+		h.rainingOn(d, pos.x, pos.y, pos.z-1) || h.rainingOn(d, pos.x, pos.y, pos.z+1)
 }
 
 // isFlammable reports whether a block can catch fire at all (ignite odds > 0).

@@ -201,3 +201,46 @@ func TestBreakBlockDropShowsTheBreak(t *testing.T) {
 		t.Error("the trampled wheat should show its break (levelEvent 2001)")
 	}
 }
+
+// FireBlock.tick: #infiniburn_overworld is netherrack AND magma blocks —
+// a fire on magma with nothing to burn never goes out.
+func TestFireOnMagmaBurnsForever(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 3.5, 180, 3.5
+	players := map[int32]*tracked{1: pl}
+	h.world.SetBlock(3, 179, 3, magmaBlockState)
+	h.world.SetBlock(3, 180, 3, fireDefault)
+	h.fireAge[simPos{blockPos: blockPos{3, 180, 3}}] = 15
+	for i := 0; i < 64; i++ {
+		h.updateFire(players, blockPos{3, 180, 3})
+	}
+	if !isFire(h.world.At(3, 180, 3)) {
+		t.Error("a fire on a magma block is eternal")
+	}
+}
+
+// FireBlock.tick eats the blocks around it whatever mob_griefing says (the
+// rule is about mobs); only fire_spread_radius_around_player governs fire.
+func TestFireBurnsBlocksWithoutMobGriefing(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 100.5, 180, 100.5
+	players := map[int32]*tracked{1: pl}
+	h.rules.MobGriefing = false
+	for dx := -1; dx <= 1; dx++ {
+		for dz := -1; dz <= 1; dz++ {
+			h.world.SetBlock(100+dx, 179, 100+dz, worldgen.OakPlanks)
+		}
+	}
+	fire := blockPos{100, 180, 100}
+	burnt := false
+	for i := 0; i < 400 && !burnt; i++ {
+		h.world.SetBlock(fire.x, fire.y, fire.z, fireDefault) // keep one lit above the planks
+		h.updateFire(players, fire)
+		burnt = h.world.At(100, 179, 100) != worldgen.OakPlanks
+	}
+	if !burnt {
+		t.Error("the fire should burn the planks under it with mob griefing off")
+	}
+}
