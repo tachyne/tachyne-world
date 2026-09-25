@@ -105,12 +105,23 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 		h.craftFail(players, pos)
 		return false
 	}
-	res := h.crafterResult(c) // the same match the preview shows: a suspicious stew keeps its flower
+	res, kind := h.crafterMatch(c) // the same match the preview shows: a suspicious stew keeps its flower
 	if res.item == 0 || res.count == 0 {
 		h.craftFail(players, pos)
 		return false
 	}
+	switch kind { // assemble: the zoomed map and the book copy are new
+	case mapCraftZoom:
+		src := h.maps.get(res.mapID)
+		res.mapID = h.maps.derive(src, src.Scale+1, false).ID
+	case craftBookClone:
+		if b, ok := h.books.get(res.bookID); ok {
+			b.Gen++
+			res.bookID = h.books.create(b)
+		}
+	}
 	item := res.item
+	remains := crafterRemainders(c.slots[:9], kind)
 	for i := 0; i < 9; i++ {
 		if c.slots[i].item != 0 && c.slots[i].count > 0 {
 			if c.slots[i].count--; c.slots[i].count <= 0 {
@@ -126,6 +137,9 @@ func (h *hub) crafterCraft(players map[int32]*tracked, pos simPos, state uint32)
 		}
 	}
 	h.ejectCrafted(players, pos, state, res)
+	for _, st := range remains { // dispenseFrom ejects the remainders after the result
+		h.ejectCrafted(players, pos, state, st)
+	}
 	h.refreshBinViewers(players, pos)
 	h.playSoundDim(players, pos.dim, "minecraft:block.crafter.craft", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
@@ -170,19 +184,44 @@ func (h *hub) openCrafter(t *tracked, x, y, z int) {
 // It runs the SAME resolver a crafting table does — vanilla's crafter goes
 // through the recipe manager, and the "special" recipes are ordinary
 // recipes there — so an auto-crafter makes tipped arrows, dyed armour,
-// suspicious stew, firework rockets and the box/bundle transmutes. The map
-// recipes are the exception: they mint a new map at take time, which a
-// crafter has no player to mint for.
+// suspicious stew, firework rockets, the box/bundle transmutes, map
+// cloning and extending and book cloning. A zoomed map and a copied book
+// are minted when the crafter fires (crafterCraft), as a table mints them
+// at take time; the preview shows the recipe's match.
 func (h *hub) crafterResult(c *bin) invStack {
-	res, kind := h.craftResult(c.slots[:9], 3)
-	switch kind {
-	case mapCraftZoom, mapCraftClone, craftBookClone:
-		return invStack{} // these mint a new map or book at take time
-	}
-	if res.item == 0 || res.count == 0 {
-		return invStack{}
-	}
+	res, _ := h.crafterMatch(c)
 	return res
+}
+
+// crafterMatch is crafterResult with the recipe kind the craft needs.
+func (h *hub) crafterMatch(c *bin) (invStack, int) {
+	res, kind := h.craftResult(c.slots[:9], 3)
+	if res.item == 0 || res.count == 0 {
+		return invStack{}, mapCraftNone
+	}
+	return res, kind
+}
+
+// crafterRemainders is Recipe.getRemainingItems for the grid: the
+// patterned banner a banner copy keeps, the written book a book copy
+// keeps, and each ingredient's craft remainder (a milk bucket's empty
+// bucket, a honey bottle's glass bottle).
+func crafterRemainders(grid []invStack, kind int) []invStack {
+	var out []invStack
+	for _, st := range grid {
+		if st.item == 0 || st.count <= 0 {
+			continue
+		}
+		switch {
+		case kind == craftKeepPattern && st.pats[0].patPlus1 != 0, kind == craftBookClone && st.bookID != 0:
+			keep := st
+			keep.count = 1
+			out = append(out, keep)
+		case craftRemainder[st.item] != 0:
+			out = append(out, invStack{item: craftRemainder[st.item], count: 1})
+		}
+	}
+	return out
 }
 
 // crafterResultSlot is the menu index of the result preview: vanilla's
@@ -361,8 +400,8 @@ func (h *hub) ejectCrafted(players map[int32]*tracked, pos simPos, state uint32,
 	fx := float64(pos.x) + 0.5 + float64(dx)*0.7
 	fy := float64(pos.y) + 0.5 + float64(dy)*0.7
 	fz := float64(pos.z) + 0.5 + float64(dz)*0.7
-	if it := h.spawnItemIn(players, pos.dim, st.item, st.count, fx, fy, fz); it != nil && st.stew != 0 {
-		it.stew = st.stew // the ejected stew keeps its flower
+	if it := h.spawnItemIn(players, pos.dim, st.item, st.count, fx, fy, fz); it != nil {
+		it.setFrom(st) // the whole stack: a stew's flower, a map's id, a rocket's stars
 		h.refreshItemMeta(players, it)
 	}
 }

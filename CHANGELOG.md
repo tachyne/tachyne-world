@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The crafter makes maps and book copies, and hands back buckets.** A
+  crafter now extends and clones maps and copies written books, as in
+  vanilla. It also gives back what a recipe leaves over: a cake returns its
+  three empty buckets, a honey recipe its glass bottles, a book copy the
+  original book and a banner copy the patterned banner. What a crafter
+  drops on the ground keeps everything it carries, so a firework rocket
+  with stars or a copied map comes out whole.
 - **Spawn eggs make babies and work on water.** Using a spawn egg on an
   animal of the same kind now gives a baby of it, as in vanilla (a lamb
   takes its parent's colour). Using a spawn egg while looking at water or
