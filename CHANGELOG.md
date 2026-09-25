@@ -23,6 +23,9 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Lightning rods don't stick on.** A lightning rod set down already
+  powered (by a command, or copied with /clone) now switches off, as in
+  vanilla, instead of powering its redstone for ever.
 - **Hiding from the locator bar.** As in vanilla, a player who is
   invisible, wears a carved pumpkin or a mob head, or is in spectator mode
   no longer shows on other players' locator bars, and reappears when that

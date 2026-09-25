@@ -207,3 +207,17 @@ func TestPushedRodStillTurnsOff(t *testing.T) {
 		t.Fatal("the pushed rod is still powered long after its eight ticks")
 	}
 }
+
+// A rod set down already powered with no tick pending (/setblock, /clone)
+// switches off (LightningRodBlock.onPlace).
+func TestPlacedPoweredRodSwitchesOff(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	rod := worldgen.BlockBase("lightning_rod")
+	info, _ := worldgen.InfoForState(rod)
+	rod = setBoolProp(worldgen.SetProperty(info, rod, "facing", "up"), "powered", true)
+	h.setBlockAt(players, 0, blockPos{x + 4, y, z}, rod)
+	stepTicks(h, players, 5)
+	if boolProp(w.At(x+4, y, z), "powered") {
+		t.Fatal("a rod placed powered stayed powered")
+	}
+}

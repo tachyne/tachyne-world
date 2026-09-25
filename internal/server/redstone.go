@@ -323,7 +323,9 @@ func (h *hub) updateRedstone(players map[int32]*tracked, pos blockPos, state uin
 			h.rsSet(players, pos, setBoolProp(state, "powered", want))
 		}
 	case isLightningRod(state) && boolProp(state, "powered"): // LightningRodBlock.tick: 8 ticks after the strike
-		if due, ok := h.rsDue[h.rsKey(pos)]; ok && h.tick.Load() >= due {
+		// …and LightningRodBlock.onPlace: a rod that arrives powered with no
+		// tick pending (pushed by a piston mid-pulse) switches off.
+		if due, ok := h.rsDue[h.rsKey(pos)]; !ok || h.tick.Load() >= due {
 			delete(h.rsDue, h.rsKey(pos))
 			h.rsSet(players, pos, setBoolProp(state, "powered", false))
 			h.scheduleSignalAround(players, pos)
