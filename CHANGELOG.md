@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **The `spectators_generate_chunks` gamerule.** With it off, a spectator
+  is only sent chunks that other players' views or forced chunks already
+  hold loaded, and flying around as a spectator no longer generates new
+  terrain, as in vanilla. It is on by default.
 - **/stopwatch.** `/stopwatch create|query|restart|remove <id>` keeps
   named real-time stopwatches, as in vanilla 26.2. They are saved with the
   world and pick up where they left off after a restart.

@@ -57,6 +57,11 @@ type player struct {
 	// idle timeout (/setidletimeout) measures from it.
 	lastAction atomic.Int64
 
+	// loadedOnly is set by the hub while this player is a spectator and
+	// spectators_generate_chunks is off: the chunk stream then sends only
+	// chunks that are already loaded (ChunkMap.skipPlayer).
+	loadedOnly atomic.Bool
+
 	digBonusMirror atomic.Uint64 // MINING_EFFICIENCY, as float64 bits (hub -> session)
 	digMultMirror  atomic.Uint64 // the dig-speed multipliers (Haste, BLOCK_BREAK_SPEED), float64 bits
 	offhandMirror  atomic.Int32  // the offhand's item id (setOffhand), for the use-item dispatch

@@ -458,7 +458,8 @@ type hub struct {
 	// surface. Set only when this shard OWNS it; otherwise respawn falls back to a
 	// point inside this shard's own region so a death never lands you off-shard.
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
-	stopwatches                           map[string]stopwatchRun // /stopwatch (stopwatch.go); nil until first used
+	stopwatches                           map[string]stopwatchRun       // /stopwatch (stopwatch.go); nil until first used
+	chunkHolders                          atomic.Pointer[[]chunkHolder] // who holds chunks loaded (chunkholders.go)
 	hasWorldSpawn                         bool
 	// The facing /setworldspawn gave the spawn, and the spawn as a joining
 	// session reads it (nil until the command, or its saved value, sets one).
@@ -1121,6 +1122,9 @@ func (h *hub) run() {
 				h.lodestoneTick(players) // compasses forget a removed lodestone
 				h.idleKick(players)      // /setidletimeout
 			}
+			if age%5 == 0 {
+				h.publishChunkHolders(players) // the chunk-stream gate for skipped spectators
+			}
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
 			}
@@ -1190,6 +1194,7 @@ func (h *hub) run() {
 			for _, t := range players {
 				t.refreshGearIfChanged()   // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
 				t.updatePlayerAttributes() // the creative reach modifiers
+				t.p.loadedOnly.Store(t.gamemode == gmSpectator && !h.rules.SpectatorsGenChunks)
 				t.p.setDigModel(t.playerAttrs().Value(attr.MiningEfficiency), t.digSpeedMult())
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0

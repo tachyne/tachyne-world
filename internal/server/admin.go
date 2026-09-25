@@ -65,7 +65,10 @@ type worldRules struct {
 	MovementCheck  bool `json:"playerMovementCheck"`
 	ElytraCheck    bool `json:"elytraMovementCheck"`
 	PvP            bool `json:"pvp"`
-	DragonDefeated bool `json:"dragonDefeated,omitempty"` // the End's fight is won
+	// SpectatorsGenChunks is spectators_generate_chunks: whether a spectator's
+	// view loads (and generates) chunks. On by default, as in vanilla.
+	SpectatorsGenChunks bool `json:"spectatorsGenerateChunks"`
+	DragonDefeated      bool `json:"dragonDefeated,omitempty"` // the End's fight is won
 	// The dragon is not in mobs.json (bosses are not persisted), so without
 	// this a restart mid-fight handed it back its full health. Zero means "no
 	// fight in progress"; a live fight writes what it has left.
@@ -155,7 +158,7 @@ func defaultRules() worldRules {
 		RandomTicks: 3, SleepPercent: 100, LocatorBar: true, MaxCartSpeed: 8,
 		SpawnPhantoms: true, SpawnPatrols: true, SpawnWardens: true, Raids: true,
 		TNTExplodes: true, WaterSourceCnv: true, LavaSourceCnv: false,
-		MovementCheck: true, ElytraCheck: true, PvP: true,
+		MovementCheck: true, ElytraCheck: true, PvP: true, SpectatorsGenChunks: true,
 		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
@@ -532,6 +535,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.SpawnWardens = e.on
 	case "raids":
 		h.rules.Raids = e.on
+	case "spectators_generate_chunks":
+		h.rules.SpectatorsGenChunks = e.on
 	case "tnt_explodes":
 		h.rules.TNTExplodes = e.on
 	case "water_source_conversion":

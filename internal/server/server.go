@@ -637,6 +637,12 @@ func (s *Server) Serve() error {
 			Resume: s.ResumeRemote,
 			Status: s.statusRoster,
 			Owned:  func(dim, cx, cz int32) bool { return s.hub.serveChunk(cx, cz) }, // stream neighbour border chunks too (seamless overlap)
+			ChunkGate: func(r attach.Remote) func(dim, cx, cz int32) bool {
+				if rp, ok := r.(*remotePlayer); ok && rp.p.loadedOnly.Load() {
+					return s.hub.heldLoaded
+				}
+				return nil
+			},
 			BlockEntities: func(w *world.World, cx, cz int32) []byte {
 				dim := 0
 				switch w {
