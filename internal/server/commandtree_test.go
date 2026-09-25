@@ -184,3 +184,56 @@ func TestCommandTreeUsesVersionStableParsers(t *testing.T) {
 		}
 	}
 }
+
+// The tree reaches the forms the dispatcher now takes (a tree that lags the
+// handlers reddens valid input), and no node has two children of one name.
+func TestCommandTreeCoversTheNewForms(t *testing.T) {
+	nodes, root := decodeCommandTree(t, buildCommandTree())
+	for i, n := range nodes {
+		seen := map[string]bool{}
+		for _, k := range n.kids {
+			if nm := nodes[k].name; seen[nm] {
+				t.Errorf("node %d has two children named %q", i, nm)
+			} else {
+				seen[nm] = true
+			}
+		}
+	}
+	// walk follows a path of node names (literals and argument names) and
+	// reports whether the last one may end the command.
+	walk := func(path ...string) bool {
+		cur := root
+		for _, want := range path {
+			next := int32(-1)
+			for _, k := range nodes[cur].kids {
+				if nodes[k].name == want {
+					next = k
+				}
+			}
+			if next < 0 {
+				t.Errorf("%v: no %q under %q", path, want, nodes[cur].name)
+				return false
+			}
+			cur = next
+		}
+		return nodes[cur].flags&0x04 != 0
+	}
+	for _, p := range [][]string{
+		{"xp", "set", "targets", "amount", "levels"},
+		{"experience", "query", "target", "points"},
+		{"tp", "targets", "location", "rotation"},
+		{"tp", "targets", "location", "facing", "entity", "facingEntity", "eyes"},
+		{"teleport", "targets", "destination"},
+		{"time", "set", "noon"},
+		{"time", "add", "time"},
+		{"time", "query", "gametime"},
+		{"clear", "targets", "item", "maxCount"},
+		{"tellraw", "targets", "message"},
+		{"stopsound", "targets", "record", "sound"},
+		{"stopsound", "targets", "*"},
+	} {
+		if !walk(p...) {
+			t.Errorf("%v does not end the command", p)
+		}
+	}
+}

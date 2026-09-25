@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Command completion catches up.** The client now completes and accepts
+  the full forms of `/xp`, `/tp`, `/time`, `/clear`, `/tellraw` and
+  `/stopsound` instead of showing valid commands in red.
 - **E opens your mount's inventory.** Pressing the inventory key while
   riding a tamed horse, donkey, mule, llama, camel or nautilus opens its
   saddle and armour screen, and on a chest boat its chest, as in vanilla.

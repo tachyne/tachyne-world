@@ -157,16 +157,24 @@ func modelledCommands() []cmdNode {
 		lit("give", false, argEntity("targets", 0, false,
 			argItem("item", true, argInt("count", 1, 6400, true)))),
 		lit("kill", true, target),
-		lit("clear", true, target),
-		lit("xp", false, lit("add", false, argEntity("targets", 0, false,
-			argInt("levels", -100000, 100000, true)))),
-		lit("tp", true, argEntity("destination", entitySingle, true), argVec3("location", true)),
-		lit("teleport", true, argEntity("destination", entitySingle, true), argVec3("location", true)),
+		// ClearInventoryCommands: [targets [item [maxCount]]].
+		lit("clear", true, argEntity("targets", entityPlayers, true,
+			argItem("item", true, argInt("maxCount", 0, 2147483647, true)))),
+		xpTree("xp"), xpTree("experience"),
+		tpTree("tp"), tpTree("teleport"),
+		lit("tellraw", false, argEntity("targets", entityPlayers, false, argGreedy("message", true))),
+		lit("stopsound", false, argEntity("targets", entityPlayers, true, stopsoundSources()...)),
 		lit("effect", false,
 			lit("give", false, argEntity("targets", 0, false, effectName)),
 			lit("clear", true, argEntity("targets", 0, true, argWord("effect", true)))),
+		// TimeCommand: set <day|noon|night|midnight|time>, add <time>,
+		// query <daytime|gametime|day>; the bare shorthand the dispatcher
+		// also takes stays.
 		lit("time", true, append(lits("day", "noon", "night", "midnight"),
-			argInt("value", 0, 24000000, true))...),
+			argInt("value", 0, 24000000, true),
+			lit("set", false, append(lits("day", "noon", "night", "midnight"), argInt("time", 0, 2147483647, true))...),
+			lit("add", false, argInt("time", -2147483648, 2147483647, true)),
+			lit("query", false, lits("daytime", "gametime", "day")...))...),
 		lit("weather", false,
 			lit("clear", true, argInt("duration", 0, 1000000, true)),
 			lit("rain", true, argInt("duration", 0, 1000000, true)),
@@ -287,6 +295,50 @@ func gameruleNodes() []cmdNode {
 	for _, r := range numericRules {
 		lo, hi := gameruleBounds(r) // the client's argument check matches the server's
 		out = append(out, lit(r, true, argInt("value", int32(lo), int32(hi), true)))
+	}
+	return out
+}
+
+// xpTree is ExperienceCommand: add|set <targets> <amount> [points|levels],
+// query <target> points|levels.
+func xpTree(name string) cmdNode {
+	unit := lits("points", "levels")
+	return lit(name, false,
+		lit("add", false, argEntity("targets", entityPlayers, false, argInt("amount", -2147483648, 2147483647, true, unit...))),
+		lit("set", false, argEntity("targets", entityPlayers, false, argInt("amount", 0, 2147483647, true, unit...))),
+		lit("query", false, argEntity("target", entitySingle|entityPlayers, false, unit...)))
+}
+
+// tpTree is TeleportCommand: <location>, <destination>, and
+// <targets> <location> [<rotation> | facing <facingLocation> |
+// facing entity <facingEntity> [eyes|feet]], <targets> <destination>.
+func tpTree(name string) cmdNode {
+	facing := lit("facing", false,
+		argVec3("facingLocation", true),
+		lit("entity", false, argEntity("facingEntity", entitySingle, true, lits("eyes", "feet")...)))
+	return lit(name, false,
+		argVec3("location", true),
+		argEntity("destination", entitySingle, true),
+		argEntity("targets", 0, false,
+			argVec3("location", true, argVec2("rotation", true), facing),
+			argEntity("destination", entitySingle, true)))
+}
+
+// stopsoundSources: StopSoundCommand's [<source>|*] [<sound>] — each source
+// ends the command or takes a sound.
+func stopsoundSources() []cmdNode {
+	var out []cmdNode
+	for _, n := range append([]string{"*"}, soundSourceNames()...) {
+		out = append(out, lit(n, true, argGreedy("sound", true)))
+	}
+	return out
+}
+
+// soundSourceNames are SoundSource's names in ordinal order.
+func soundSourceNames() []string {
+	out := make([]string, len(soundSources))
+	for n, i := range soundSources {
+		out[i] = n
 	}
 	return out
 }
