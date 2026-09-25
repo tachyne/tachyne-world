@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Piglins barter dried ghasts.** 26.3 added the dried ghast to what a
+  piglin can give for a gold ingot (about one barter in 47); the table
+  had not caught up, so bartering never paid one out.
 - **The offhand works for more items.** Ender pearls, snowballs, eggs,
   bottles o' enchanting, splash and lingering potions, eyes of ender, wind
   charges, firework rockets, goat horns and spyglasses can now be used

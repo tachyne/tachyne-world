@@ -56,6 +56,7 @@ var barterTable = []barterEntry{
 	{item: "potion", weight: 10, min: 1, max: 1, potion: potWater},
 	{item: "iron_nugget", weight: 10, min: 10, max: 36},
 	{item: "ender_pearl", weight: 10, min: 2, max: 4},
+	{item: "dried_ghast", weight: 10, min: 1, max: 1},
 	{item: "string", weight: 20, min: 3, max: 9},
 	{item: "quartz", weight: 20, min: 5, max: 12},
 	{item: "obsidian", weight: 40, min: 1, max: 1},
