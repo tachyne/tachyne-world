@@ -12,9 +12,17 @@ const (
 	schoolSearch   = 8.0   // getEntitiesOfClass(inflate(8, 8, 8))
 	schoolBreakSq  = 121.0 // inRangeOfLeader: 11 blocks
 	schoolRecheck  = 200   // nextStartTick: 200 + rand(200) % 20
-	schoolMaxSize  = 5     // getMaxSchoolSize (the spawn cluster size)
+	schoolMaxSize  = 8     // getMaxSchoolSize: AbstractFish's spawn cluster size (a salmon's is 5)
 	schoolFollowSp = 1.0   // pathToLeader moves at 1.0
 )
+
+// maxSchoolSize is getMaxSchoolSize: eight, but five for a salmon.
+func maxSchoolSize(etype int) int {
+	if etype == entitySalmon {
+		return 5
+	}
+	return schoolMaxSize
+}
 
 // schoolingFish is the AbstractSchoolingFish set.
 var schoolingFish = func() map[int]bool {
@@ -65,7 +73,7 @@ func (h *hub) schoolStep(players map[int32]*tracked, m *mob) bool {
 		if math.Abs(o.y-m.y) > schoolSearch {
 			return
 		}
-		if o.schoolFollowers > 0 && o.schoolFollowers < schoolMaxSize {
+		if o.schoolFollowers > 0 && o.schoolFollowers+1 < maxSchoolSize(o.etype) { // canBeFollowed: the leader counts
 			leader = o // join an existing school
 			return
 		}

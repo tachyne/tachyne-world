@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Bigger shoals of cod and tropical fish.** A shoal of cod or tropical
+  fish now holds up to eight fish, as in vanilla. A salmon shoal still holds
+  five, and a shoal leader now counts as one of them.
 - **Fox kits follow their parents.** As in vanilla, a baby fox now trots
   after the nearest grown fox. A baby happy ghast now drifts right up to
   three blocks from an adult before it stops.
