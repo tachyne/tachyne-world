@@ -87,6 +87,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Wall bells stay up.** A bell hung on one wall was checked against the
+  wrong side and fell the first time anything next to it changed. It now
+  hangs on the wall it faces. A bell between two walls that loses one keeps
+  hanging from the other, and a wall bell that gains a second wall is held
+  by both, as in vanilla.
 - **Coral dies when it dries out, however that happens.** Coral left
   without water by a sponge, a piston or receding water now bleaches, as in
   vanilla — before, only a player removing the water set it dying.

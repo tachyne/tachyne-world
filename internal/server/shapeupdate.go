@@ -27,6 +27,7 @@ const (
 	shapeCopperChest            // CopperChestBlock: one half follows the other's weathering and wax
 	shapePotentSulfur           // PotentSulfurBlock: dry, wet or a geyser by the water above and the block below
 	shapeCampfire               // CampfireBlock: a signal fire over a hay bale (isSmokeSource)
+	shapeBell                   // BellBlock: between two walls, or on one when the other goes
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -52,6 +53,7 @@ var shapeKinds = func() map[uint32]shapeKind {
 		add(n, shapeMushroom)
 	}
 	add("potent_sulfur", shapePotentSulfur)
+	add("bell", shapeBell)
 	add("campfire", shapeCampfire)
 	add("soul_campfire", shapeCampfire)
 	for _, n := range worldgen.AllBlockNames() {
@@ -82,6 +84,30 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 	}
 	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
 	switch k {
+	case shapeBell:
+		// BellBlock.updateShape, along the facing's axis: a double-wall bell
+		// that loses one wall hangs on from the other; a single-wall bell that
+		// gains a wall on its free side is held from both.
+		if d[1] != 0 {
+			return st, true
+		}
+		facing := worldgen.GetProperty(info, st, "facing")
+		fx, fz := facingDelta(facing)
+		if (fx != 0) != (d[0] != 0) {
+			return st, true // across the axis
+		}
+		switch worldgen.GetProperty(info, st, "attachment") {
+		case "double_wall":
+			if !holdsBlock(nb) { // the wall the other way stays: face it
+				ns := worldgen.SetProperty(info, st, "attachment", "single_wall")
+				return worldgen.SetProperty(info, ns, "facing", facingFromDelta(-d[0], -d[2])), true
+			}
+		case "single_wall":
+			if d[0] == -fx && d[2] == -fz && holdsBlock(nb) {
+				return worldgen.SetProperty(info, st, "attachment", "double_wall"), true
+			}
+		}
+		return st, true
 	case shapeCampfire:
 		// CampfireBlock.updateShape: the block below decides signal_fire.
 		if d != [3]int{0, -1, 0} {

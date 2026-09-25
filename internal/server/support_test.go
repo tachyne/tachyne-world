@@ -385,3 +385,40 @@ func TestStatueAndHeartHaveComparatorOutput(t *testing.T) {
 		}
 	}
 }
+
+// A single-wall bell hangs on the wall it faces (BellBlock.canSurvive); a
+// double-wall bell that loses one wall hangs on from the other, and a
+// single-wall bell that gains a wall on its free side is held from both.
+func TestBellWalls(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	bell := worldgen.BlockBase("bell")
+	info, _ := worldgen.InfoForState(bell)
+	set := func(att, facing string) uint32 {
+		return worldgen.SetProperty(info, worldgen.SetProperty(info, bell, "attachment", att), "facing", facing)
+	}
+	prop := func(k string) string { s := w.At(5, 180, 5); return worldgen.GetProperty(info, s, k) }
+	// Walls west and east; the bell between them.
+	w.SetBlock(4, 180, 5, worldgen.Stone)
+	w.SetBlock(6, 180, 5, worldgen.Stone)
+	w.SetBlock(5, 180, 5, set("double_wall", "west"))
+	h.setBlockAt(players, 0, blockPos{6, 180, 5}, worldgen.Air) // the east wall goes
+	if !isBellState(w.At(5, 180, 5)) || prop("attachment") != "single_wall" || prop("facing") != "west" {
+		t.Fatalf("after losing its east wall: %s facing %s", prop("attachment"), prop("facing"))
+	}
+	h.setBlockAt(players, 0, blockPos{4, 180, 5}, worldgen.BlockBase("cobblestone")) // a change beside its wall
+	if !isBellState(w.At(5, 180, 5)) {
+		t.Fatal("a single-wall bell fell although its wall stands")
+	}
+	h.setBlockAt(players, 0, blockPos{6, 180, 5}, worldgen.Stone) // a wall back on the free side
+	if prop("attachment") != "double_wall" {
+		t.Fatalf("with both walls again it is %s", prop("attachment"))
+	}
+}
+
+func isBellState(s uint32) bool {
+	lo, hi, _ := worldgen.BlockRangeOK("bell")
+	return s >= lo && s <= hi
+}

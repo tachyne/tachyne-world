@@ -974,6 +974,20 @@ func facingDelta(facing string) (int, int) {
 	return 0, 0
 }
 
+// facingFromDelta is facingDelta backwards: the horizontal facing a unit
+// step points along.
+func facingFromDelta(dx, dz int) string {
+	switch {
+	case dz < 0:
+		return "north"
+	case dz > 0:
+		return "south"
+	case dx < 0:
+		return "west"
+	}
+	return "east"
+}
+
 // leftOf / rightOf rotate a facing 90° (counter-)clockwise.
 func leftOf(facing string) string {
 	switch facing {

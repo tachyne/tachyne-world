@@ -294,8 +294,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 			dx, dz := facingDelta(prop("facing"))
 			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz)) &&
 				holdsBlock(w.At(pos.x-dx, pos.y, pos.z-dz))
-		default: // single_wall
-			return holdsBlock(behind())
+		default: // single_wall: the wall is the one it faces (canAttach(pos, facing))
+			dx, dz := facingDelta(prop("facing"))
+			return holdsBlock(w.At(pos.x+dx, pos.y, pos.z+dz))
 		}
 	case worldgen.SupportStem:
 		// BigDripleafBlock / BigDripleafStemBlock.canSurvive: the plant roots
