@@ -598,14 +598,19 @@ func (h *hub) shriekerRespond(players map[int32]*tracked, pos simPos, s uint32) 
 // the shrieker, in the shrieker's own dimension, for the Warden to emerge, or
 // nil if none fits.
 func (h *hub) wardenSpawnSpot(at simPos) *blockPos {
+	// SculkShriekerBlockEntity.trySummonWarden → SpawnUtil.trySpawnMob(20
+	// tries, 5 sideways, 6 up and down, ON_TOP_OF_COLLIDER, no body check):
+	// a random column, searched down from six above for a full-topped block
+	// with an open cell over it.
 	w, pos := h.worldFor(at.dim), at.blockPos
-	for _, d := range [][2]int{{0, 0}, {2, 0}, {-2, 0}, {0, 2}, {0, -2}, {2, 2}, {-2, -2}} {
-		x, z := pos.x+d[0], pos.z+d[1]
-		for dy := -2; dy <= 2; dy++ {
-			y := pos.y + dy
-			if worldgen.IsSolidFull(w.At(x, y-1, z)) &&
-				w.At(x, y, z) == worldgen.Air && w.At(x, y+1, z) == worldgen.Air {
-				return &blockPos{x, y, z}
+	for i := 0; i < 20; i++ {
+		x, z := pos.x+h.rng.Intn(11)-5, pos.z+h.rng.Intn(11)-5
+		if !h.withinBorder(at.dim, float64(x)+0.5, float64(z)+0.5) {
+			continue
+		}
+		for y := pos.y + 5; y >= pos.y-7; y-- {
+			if worldgen.IsSturdyTop(w.At(x, y, z)) && !worldgen.Collides(w.At(x, y+1, z)) {
+				return &blockPos{x, y + 1, z}
 			}
 		}
 	}

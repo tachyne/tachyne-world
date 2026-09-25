@@ -87,6 +87,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Wardens emerge where vanilla's do.** A summoned Warden now looks for
+  ground up to five blocks around the shrieker and six up or down, so it
+  can climb out on a ledge or floor nearby instead of failing to appear
+  when the few spots right beside the shrieker are blocked.
 - **Sculk hears mobs everywhere.** A sculk sensor or shrieker built in the
   Nether or the End now picks up mobs walking past, as it does in the
   overworld.

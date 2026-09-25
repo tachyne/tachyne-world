@@ -431,3 +431,39 @@ func TestNetherSensorHearsFootsteps(t *testing.T) {
 		t.Fatal("a Nether sensor did not hear a piglin walking beside it")
 	}
 }
+
+// A summoned Warden finds its spot as SpawnUtil.trySpawnMob does: within five
+// blocks sideways, on a full-topped block with an open cell over it; with no
+// ground in range, nowhere.
+func TestWardenSpawnSpot(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	w := h.world
+	const y = 200
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			for dy := -8; dy <= 8; dy++ {
+				w.SetBlock(x, y+dy, z, worldgen.Air)
+			}
+			w.SetBlock(x, y-3, z, worldgen.Stone)
+		}
+	}
+	at := simPos{blockPos: blockPos{0, y, 0}}
+	for i := 0; i < 50; i++ {
+		p := h.wardenSpawnSpot(at)
+		if p == nil {
+			t.Fatal("no spot on a flat floor")
+		}
+		if abs(p.x) > 5 || abs(p.z) > 5 || p.y != y-2 {
+			t.Fatalf("spot %v: want within 5 sideways, standing at y=%d", *p, y-2)
+		}
+	}
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			w.SetBlock(x, y-3, z, worldgen.Air)
+		}
+	}
+	if p := h.wardenSpawnSpot(at); p != nil {
+		t.Fatalf("found %v with no ground in range", *p)
+	}
+}
