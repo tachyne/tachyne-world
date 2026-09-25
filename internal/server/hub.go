@@ -1908,6 +1908,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.incCustom(t, e.name, 1)
 				}
+			case evItemUsed:
+				h.incStat(players[e.eid], attachproto.StatUsed, e.item, 1)
 			case evRingBell:
 				h.onRingBell(players, e)
 			case evUseSign:
@@ -2277,6 +2279,11 @@ func (h *hub) run() {
 				}
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
+					// Every session-side wear is a counted use: Item.mineBlock
+					// for a tool, or a hoe, shovel or flint and steel's useOn.
+					if st := t.handStack(e.slot); st != nil && st.count > 0 {
+						h.incStat(t, attachproto.StatUsed, st.item, 1)
+					}
 					h.applyToolWear(t, e.slot, max(1, e.n))
 				}
 			case evSteerBoost:

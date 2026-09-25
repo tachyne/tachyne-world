@@ -146,6 +146,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The "used" statistic counts much more.** Placing blocks, mining with
+  a tool, landing a blow with a weapon, using bone meal, fire charges,
+  flint and steel, hoes and shovels on blocks now each count as a use of
+  the item in the statistics screen, as in vanilla.
 - **Invisibility hides you from mobs.** Hostile mobs now only notice an
   invisible player from close by (a few blocks without armour, further the
   more armour is worn), crouching makes you a little harder to spot, and

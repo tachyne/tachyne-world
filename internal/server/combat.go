@@ -486,6 +486,9 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		dt = dtMaceSmash
 	}
 	m.hurtOf(melee, breachFrac, dt) // through base armor (zombie family has 2), less breach
+	if t != nil && m.health < hpBefore && attackWear(t.p.heldItem()) > 0 {
+		h.incStat(t, attachproto.StatUsed, t.p.heldItem(), 1) // ItemStack.hurtEnemy: a WEAPON counts a landed blow
+	}
 	if t != nil {
 		h.incCustom(t, "damage_dealt", tenths(float32(dmg)))
 		if taken := float64(hpBefore - m.health); taken >= 0 && float64(dmg) > taken {

@@ -154,6 +154,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 	}
 	if canLightBlock(target) {
 		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFireChargeUse})
+		s.itemUsed(p, itemFireCharge)
 		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
@@ -164,6 +165,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		return
 	}
 	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
+	s.itemUsed(p, itemFireCharge)
 	s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 }
 
