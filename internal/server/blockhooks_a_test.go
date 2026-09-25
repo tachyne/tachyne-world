@@ -881,3 +881,40 @@ func TestLavaIgniteStoppedBySlab(t *testing.T) {
 		}
 	}
 }
+
+// FireBlock.updateShape: a neighbour's change only checks that a fire can
+// stay; the fire's own tick (spread, ageing, burning out) runs on its
+// schedule, so a busy neighbourhood does not make it burn faster.
+func TestFireNeighbourUpdatesDoNotTickIt(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	players := map[int32]*tracked{1: pl}
+	w := h.world
+	w.SetBlock(0, 179, 0, worldgen.Stone)
+	w.SetBlock(0, 180, 0, fireDefault) // nothing to burn: its tick would put it out soon
+	for i := 0; i < 200; i++ {
+		h.processUpdate(players, 0, blockPos{0, 180, 0}) // neighbour updates, all inside one tick
+	}
+	if !isFire(w.At(0, 180, 0)) {
+		t.Error("neighbour updates alone aged the fire out")
+	}
+}
+
+// SoulFireBlock has no tick: on its soul block it burns for good.
+func TestSoulFireBurnsForever(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	players := map[int32]*tracked{1: pl}
+	w := h.world
+	w.SetBlock(0, 179, 0, worldgen.SoulSand)
+	w.SetBlock(0, 180, 0, soulFire)
+	for i := 0; i < 200; i++ {
+		h.tick.Add(40)
+		h.processUpdate(players, 0, blockPos{0, 180, 0})
+	}
+	if w.At(0, 180, 0) != soulFire {
+		t.Error("soul fire on soul sand went out")
+	}
+}

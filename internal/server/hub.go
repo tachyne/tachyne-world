@@ -632,6 +632,7 @@ type hub struct {
 	platesOn  map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
 	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
 	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	fireDue   map[simPos]uint64 // fire blocks' booked ticks (fire.go armFire)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -860,6 +861,7 @@ func newHub(w *world.World) *hub {
 		platesOn:      map[simPos]uint64{},
 		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
+		fireDue:       map[simPos]uint64{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
 		sculkSpread:   map[simPos]*sculkSpreader{},

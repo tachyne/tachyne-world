@@ -420,7 +420,7 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 		h.setBlockAt(players, dim, pos, fire)
 		if fire == fireDefault {
 			h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
-			h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
+			h.inDim(dim, func() { h.armFire(pos) })
 		}
 	}
 }
@@ -541,7 +541,7 @@ func (h *hub) blastPositionsCapped(w *world.World, cx, cy, cz, radius, resistCap
 // fire as a pure hazard that never eats a build.
 func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Reschedule next tick (vanilla getFireTickDelay: 30 + rand(10)).
-	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
+	h.armFire(pos)
 	if !h.canSpreadFireAround(players, pos) {
 		// ServerLevel.canSpreadFireAround: out of every player's reach, fire
 		// neither spreads nor burns out — it just sits there.
@@ -697,13 +697,47 @@ func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
 	}
 	h.rsSet(players, pos, fireDefault)
 	h.fireAge[h.rsKey(pos)] = age
-	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
+	h.armFire(pos)
+}
+
+// armFire books a fire's next tick (FireBlock.onPlace and tick:
+// getFireTickDelay, 30 + rand(10)) and remembers when it is due: the
+// simulation queue also reaches a fire for every neighbour change, and
+// those only check that it can stay (updateShape).
+func (h *hub) armFire(pos blockPos) {
+	delay := uint64(30 + h.rng.Intn(10))
+	h.fireDue[h.rsKey(pos)] = h.tick.Load() + delay
+	h.rsSchedule(pos, delay)
+}
+
+// fireUpdate is the simulation queue reaching a fire: its own due tick runs
+// FireBlock.tick; a fire with no tick booked (a player's, a command's) books
+// one as onPlace does; any other update is updateShape — a fire that can no
+// longer survive goes out.
+func (h *hub) fireUpdate(players map[int32]*tracked, pos blockPos) {
+	key := h.rsKey(pos)
+	due, armed := h.fireDue[key]
+	if armed && h.tick.Load() >= due {
+		delete(h.fireDue, key)
+		h.updateFire(players, pos)
+		return
+	}
+	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
+	if !worldgen.IsSolidFull(below) && !h.validFireLocation(pos) {
+		h.removeFire(players, pos, false) // FireBlock.canSurvive fails: updateShape gives air
+		delete(h.fireDue, key)
+		return
+	}
+	if !armed {
+		h.armFire(pos)
+	}
 }
 
 // removeFire clears a fire block (and its side-mapped age).
 func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) {
 	h.rsSet(players, pos, worldgen.Air)
 	delete(h.fireAge, h.rsKey(pos))
+	delete(h.fireDue, h.rsKey(pos))
 	if doused {
 		h.rsSound(players, "minecraft:block.fire.extinguish", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 0.5, 1.2)

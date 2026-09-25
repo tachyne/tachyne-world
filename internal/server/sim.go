@@ -154,8 +154,11 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		}
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
+	case state == soulFire:
+		// SoulFireBlock has no tick: it burns while its soul block stays
+		// (canSurvive, which the support sweep answers), never ageing out.
 	case isFire(state):
-		h.inDim(dim, func() { h.updateFire(players, pos) })
+		h.inDim(dim, func() { h.fireUpdate(players, pos) })
 	case h.tickFrogspawn(players, dim, pos, state):
 		// A clutch bursts into tadpoles once its timer runs out.
 	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
