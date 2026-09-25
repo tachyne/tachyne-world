@@ -190,10 +190,26 @@ func (h *hub) breakPotByProjectile(players map[int32]*tracked, dim int, pos bloc
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 }
 
-// breakBlockDrop knocks a block out and drops it.
+// breakBlockDrop knocks a block out and drops it: Level.destroyBlock with
+// drops. Everyone near sees and hears it break (levelEvent 2001, not for
+// fire), a waterlogged block leaves its water behind, and sculk hears a
+// BLOCK_DESTROY — unless the block dampens vibrations.
 func (h *hub) breakBlockDrop(players map[int32]*tracked, dim int, pos blockPos, state uint32) {
-	h.setBlockAt(players, dim, pos, worldgen.Air)
+	if state == worldgen.Air {
+		return
+	}
+	if !isFire(state) {
+		h.toNearbyEv(players, dim, float64(pos.x), float64(pos.z), blockBreakEvent(pos.x, pos.y, pos.z, state))
+	}
+	left := uint32(worldgen.Air)
+	if worldgen.IsWaterlogged(state) {
+		left = worldgen.WaterBase
+	}
+	h.setBlockAt(players, dim, pos, left)
 	h.dropLoose(players, dim, pos, state)
+	if !inRanges2(state, vibDampers) {
+		h.vib(dim, freqBlockDestroy, pos.x, pos.y, pos.z, 0)
+	}
 }
 
 // lightCandle sets a candle (or candle cake) alight.

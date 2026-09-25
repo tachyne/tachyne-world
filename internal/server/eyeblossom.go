@@ -162,7 +162,7 @@ func (h *hub) tickNetherPortal(players map[int32]*tracked, dim, x, y, z int, sta
 	if dim != dimOverworld || h.rules.Difficulty == diffPeaceful || !h.rules.DoMobSpawning {
 		return true
 	}
-	if h.rng.Intn(portalPiglinOdds) >= h.rules.Difficulty {
+	if h.rng.Intn(portalPiglinOdds) >= h.rules.Difficulty || !h.playerCloseForSpawning(players, dim, x, z) {
 		return true
 	}
 	// Walk to the foot of the portal and stand the piglin on the block below.
@@ -177,6 +177,26 @@ func (h *hub) tickNetherPortal(players map[int32]*tracked, dim, x, y, z int, sta
 	if !worldgen.IsSolidFull(h.worldFor(dim).At(x, fy-1, z)) {
 		return true
 	}
-	h.spawnHostileYIn(players, entityZombifiedPiglin, dim, float64(x)+0.5, float64(fy), float64(z)+0.5)
+	// setPortalCooldown: fresh out of the portal, it does not step straight
+	// back through it.
+	if m := h.spawnHostileYIn(players, entityZombifiedPiglin, dim, float64(x)+0.5, float64(fy), float64(z)+0.5); m != nil {
+		m.portalCool = entityPortalCooldown
+	}
 	return true
+}
+
+// playerCloseForSpawning is ChunkMap.anyPlayerCloseEnoughForSpawning: a
+// player who is not a spectator within 128 blocks (horizontally) of the
+// centre of the block's chunk.
+func (h *hub) playerCloseForSpawning(players map[int32]*tracked, dim, x, z int) bool {
+	cx, cz := float64(chunkFloor(float64(x))*16+8), float64(chunkFloor(float64(z))*16+8)
+	for _, t := range players {
+		if t.dim != dim || t.gamemode == gmSpectator {
+			continue
+		}
+		if dx, dz := t.x-cx, t.z-cz; dx*dx+dz*dz < 128*128 {
+			return true
+		}
+	}
+	return false
 }

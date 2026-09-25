@@ -481,7 +481,7 @@ func (h *hub) dropUnsupported(players map[int32]*tracked, dim int, pos blockPos)
 			// the block converts where it stands instead of dropping.
 			above := h.worldFor(dim).At(n.x, n.y+1, n.z)
 			if st == dirtPathState && coversSoil(above) {
-				h.setBlockAt(players, dim, n, worldgen.Dirt)
+				h.turnToBaseBlock(players, dim, n, worldgen.Dirt)
 				queue = append(queue, n)
 				continue
 			}

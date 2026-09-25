@@ -885,7 +885,7 @@ func (h *hub) lavaIgnite(players map[int32]*tracked, dim, x, y, z int) {
 				h.inDim(dim, func() { h.igniteFire(players, blockPos{cx, cy, cz}, 0) })
 				return
 			}
-			if worldgen.IsSolidFull(s) {
+			if worldgen.IsSolid(s) || worldgen.IsLeaves(s) { // #blocks_lava_fire_spread = #blocks_motion
 				return
 			}
 		}

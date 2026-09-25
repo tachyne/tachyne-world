@@ -458,6 +458,8 @@ type hub struct {
 	bodies                         atomic.Pointer[[]bodyBox] // publishBodies: what a placement must not overlap
 	shulkerLids                    map[simPos]*shulkerLid    // animating shulker box lids (shulkerlid.go)
 	composterDue                   map[simPos]uint64         // full composters' ready ticks (composter.go)
+	driedGhastDue                  map[simPos]uint64         // dried ghasts' scheduled hydration steps (happyghast.go)
+	frogspawnDue                   map[simPos]uint64         // frogspawn clutches' hatch ticks (frogspawn.go)
 
 	localCaps    *localCapState    // per-player category counts for this tick's spawning (localcap.go)
 	spawnCharges []pointCharge     // this tick\'s spawn-cost charges in the dimension being spawned (localcap.go)
@@ -609,6 +611,7 @@ type hub struct {
 	snifferEggs  map[simPos]uint64      // egg position -> tick its next crack is due
 	brushes      map[blockPos]*brushing // suspicious blocks part-way brushed (not persisted)
 	hearts       map[simPos]*heartLink  // creaking hearts (by dimension) and the creaking each owns
+	bells        map[simPos]*bellEntity // rung bells' block entities: the swing and the resonation
 	heartScanned map[[2]int32]bool      // chunks already searched for worldgen hearts
 
 	rules     worldRules // difficulty + gamerules (persisted to rulesPath)
@@ -626,9 +629,10 @@ type hub struct {
 	targetDue map[simPos]uint64 // target-block signal reset ticks, per dimension
 	obsSeen   map[simPos]uint32 // observer last-seen watched state
 	compOut   map[simPos]int    // comparator output levels (vanilla block entity)
-	platesOn  map[simPos]uint64 // pressed pressure plates → the tick something last stood on them (20-tick release)
-	wiresOn   map[simPos]bool   // currently pressed tripwire strings, by dimension
+	platesOn  map[simPos]uint64 // pressed pressure plates → the tick of their next checkPressed (20, weighted 10)
+	wiresOn   map[simPos]uint64 // tripwire strings' scheduled ticks (10-tick re-check, 1-tick release hold), by dimension
 	fireAge   map[simPos]int    // fire-block age 0-15 (vanilla AGE property; side-mapped)
+	fireDue   map[simPos]uint64 // fire blocks' booked ticks (fire.go armFire)
 
 	// Sculk vibration system (overworld). sculkList/catalysts are POI sets kept
 	// current on block change; the rest is per-block runtime state.
@@ -686,7 +690,7 @@ type hub struct {
 	woodShelves      map[simPos]*[3]invStack // 1.21.9 wooden shelves: three display slots (persisted with containers)
 	shelfView        *shelfStore             // the chunk builders' mutex'd read view of the shelves
 	potSherds        *potSherdStore          // …and of the decorated pots' faces
-	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick a cart last sat on them (20-tick release)
+	detectorsOn      map[simPos]uint64       // pressed detector rails, by dimension → the tick of their next 20-tick checkPressed
 	spawnerNext      map[simPos]uint64       // spawner cooldowns, per dimension:
 	// an overworld dungeon and a Nether fortress spawner can share coordinates
 	patrolNextAt uint64             // world tick the next pillager-patrol attempt is due
@@ -855,8 +859,9 @@ func newHub(w *world.World) *hub {
 		obsSeen:       map[simPos]uint32{},
 		compOut:       map[simPos]int{},
 		platesOn:      map[simPos]uint64{},
-		wiresOn:       map[simPos]bool{},
+		wiresOn:       map[simPos]uint64{},
 		fireAge:       map[simPos]int{},
+		fireDue:       map[simPos]uint64{},
 		sculkList:     map[simPos]bool{},
 		catalysts:     map[simPos]bool{},
 		sculkSpread:   map[simPos]*sculkSpreader{},
@@ -1096,8 +1101,8 @@ func (h *hub) run() {
 					t.p.trySendEv(body)
 				}
 			}
+			h.jukeboxTick(players) // end songs whose length elapsed (JukeboxBlockEntity ticks every tick)
 			if age%20 == 0 {
-				h.jukeboxTick(players)   // end songs whose length elapsed
 				h.lodestoneTick(players) // compasses forget a removed lodestone
 			}
 			if age%80 == 0 {
@@ -1243,6 +1248,7 @@ func (h *hub) run() {
 			h.updateFangs(players)        // evoker fangs: bite once, then sink
 			h.updateVexLife(players)      // summoned vexes expire   // primed charges burn their fuses
 			h.tickBrushes(players)        // half-brushed suspicious blocks settle back
+			h.tickBells(players)          // rung bells swing, resonate, light up raiders
 			h.updateHearts(players)       // creaking hearts: wake at dusk, send out a creaking
 			h.updateCreakings(players)    // …and the creaking freezes while it is watched
 			h.updatePlates(players)
@@ -1599,7 +1605,7 @@ func (h *hub) run() {
 					}
 				}
 			case evPrimeTNT:
-				h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by)
+				h.onPrimeTNT(players, e)
 			case evEffect:
 				h.effectCommand(players, e)
 			case evPopItem:
@@ -2098,6 +2104,8 @@ func (h *hub) run() {
 				h.lightOre(players, e)
 			case evDragonEgg:
 				h.onDragonEgg(players, e)
+			case evUseMovingPiston:
+				h.onUseMovingPiston(players, e)
 			case evPotChange:
 				h.onPotChange(players, e)
 			case evUseWoodShelf:
@@ -2110,8 +2118,7 @@ func (h *hub) run() {
 				}
 			case evOpenEnder:
 				if t := players[e.eid]; t != nil {
-					h.openEnderChest(players, t, e.x, e.y, e.z)
-					h.incCustom(t, "open_enderchest", 1)
+					h.openEnderChest(players, t, e.x, e.y, e.z) // (its statistic too, once it opens)
 				}
 			case evOpenChest:
 				if t := players[e.eid]; t != nil {
@@ -2822,6 +2829,12 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	pos := blockPos{e.x, e.y, e.z}
 	h.observersSee(players, e.dim, pos, e.state)
 	h.composterOnPlace(e.dim, pos, e.state) // a full composter set by a command or a paste
+	if e.broken == 0 {
+		h.fireOnPlace(players, e.dim, pos, worldgen.Air, e.state) // a placed fire in a frame lights it
+	}
+	if isTripwire(e.state) || isTripwire(e.broken) { // TripWireBlock.onPlace / affectNeighborsAfterRemoval
+		h.inDim(e.dim, func() { h.tripwireUpdateSource(players, pos) })
+	}
 	h.notifyAround(players, e.dim, pos)
 	// A signal source that appears or disappears changes the STRONG power of
 	// the block it hangs on, and what that block drives can sit two cells away
@@ -2890,8 +2903,8 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 }
 
 // setBlockLive applies a world-driven block change (bus/plugin): set,
-// broadcast to the dimension's viewers, and schedule simulation (overworld
-// only — block sim is v1 overworld-only, like onBlock).
+// broadcast to the dimension's viewers, and schedule simulation — in every
+// dimension, as onBlock does — with the shape update an observer watches.
 func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state uint32) {
 	old := h.worldFor(dim).At(x, y, z)
 	h.worldFor(dim).SetBlock(x, y, z, state)
@@ -2907,8 +2920,11 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	}
 	h.beaconsOnBlockChange(players, dim, x, y, z, state)
 	if dim == dimOverworld {
-		h.rodIndexOnBlockChange(x, y, z, state)
-		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
+		h.rodIndexOnBlockChange(x, y, z, state) // storms strike only the overworld
+	}
+	h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
+	if old != state {
+		h.observersSee(players, dim, blockPos{x, y, z}, state)
 	}
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.potentSulfurChanged(players, dim, blockPos{x, y, z}, old, state)

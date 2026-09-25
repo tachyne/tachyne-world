@@ -70,31 +70,60 @@ const (
 	frogspawnMaxHatch = 12000
 )
 
-// scheduleFrogspawn arms a newly placed clutch (FrogspawnBlock.onPlace).
+// scheduleFrogspawn arms a newly placed clutch (FrogspawnBlock.onPlace). The
+// clutch keeps its own due tick: the simulation queue also reaches the cell
+// for every neighbour change, and those must not hatch it early.
 func (h *hub) scheduleFrogspawn(dim int, pos blockPos) {
-	h.scheduleIn(dim, pos, uint64(frogspawnMinHatch+h.rng.Intn(frogspawnMaxHatch-frogspawnMinHatch)))
+	delay := uint64(frogspawnMinHatch + h.rng.Intn(frogspawnMaxHatch-frogspawnMinHatch))
+	if h.frogspawnDue == nil {
+		h.frogspawnDue = map[simPos]uint64{}
+	}
+	h.frogspawnDue[simPos{dim: dim, blockPos: pos}] = h.tick.Load() + delay
+	h.scheduleIn(dim, pos, delay)
 }
 
-// tickFrogspawn hatches (or removes) a clutch whose timer came due. Reports
-// whether the position was a clutch at all.
+// frogspawnSurvives is FrogspawnBlock.canSurvive (mayPlaceOn): water below —
+// a waterlogged block counts, #supports_frogspawn is empty — and no fluid
+// above.
+func frogspawnSurvives(below, above uint32) bool {
+	return worldgen.HoldsWater(below) && !worldgen.IsFluid(above) && !worldgen.IsWaterlogged(above)
+}
+
+// tickFrogspawn is FrogspawnBlock: on a neighbour's change (updateShape) a
+// clutch that can no longer survive is gone; on its own due tick (tick) it
+// hatches, or — no longer supported — is destroyed. Reports whether the
+// position was a clutch at all.
 func (h *hub) tickFrogspawn(players map[int32]*tracked, dim int, pos blockPos, state uint32) bool {
 	if state != frogspawnBlock {
 		return false
 	}
 	w := h.worldFor(dim)
-	below := w.Block(pos.x, pos.y-1, pos.z)
-	if below != worldgen.WaterBase {
-		h.setBlockAt(players, dim, pos, worldgen.Air) // the water went: so does the spawn
+	survives := frogspawnSurvives(w.Block(pos.x, pos.y-1, pos.z), w.Block(pos.x, pos.y+1, pos.z))
+	key := simPos{dim: dim, blockPos: pos}
+	due, armed := h.frogspawnDue[key]
+	if !armed || h.tick.Load() < due {
+		if !survives { // updateShape: the water went, and so does the spawn
+			delete(h.frogspawnDue, key)
+			h.setBlockAt(players, dim, pos, worldgen.Air)
+		}
 		return true
 	}
+	delete(h.frogspawnDue, key)
+	// Level.destroyBlock without drops: the break effect and BLOCK_DESTROY.
+	h.toNearbyEv(players, dim, float64(pos.x)+0.5, float64(pos.z)+0.5, blockBreakEvent(pos.x, pos.y, pos.z, state))
 	h.setBlockAt(players, dim, pos, worldgen.Air)
+	h.vib(dim, freqBlockDestroy, pos.x, pos.y, pos.z, 0)
+	if !survives {
+		return true
+	}
 	h.playSoundDim(players, dim, "minecraft:block.frogspawn.hatch", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 	for i, n := 0, 2+h.rng.Intn(4); i < n; i++ {
-		x := float64(pos.x) + 0.1 + h.rng.Float64()*0.8
-		z := float64(pos.z) + 0.1 + h.rng.Float64()*0.8
+		x := float64(pos.x) + math.Min(math.Max(h.rng.Float64(), 0.2), 0.8) // getRandomTadpolePositionOffset: a clamped roll
+		z := float64(pos.z) + math.Min(math.Max(h.rng.Float64(), 0.2), 0.8)
 		if tp := h.spawnMobIn(players, entityTadpole, dim, x, float64(pos.y)-0.5, z); tp != nil {
 			tp.persistent = true // setPersistenceRequired: a hatched tadpole stays
+			tp.yaw = float32(1 + h.rng.Intn(360))
 		}
 	}
 	return true

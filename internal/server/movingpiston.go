@@ -182,3 +182,29 @@ func (h *hub) rodOnPlace(pos blockPos, state uint32) {
 	h.rsDue[h.rsKey(pos)] = h.tick.Load() + 8
 	h.rsSchedule(pos, 8)
 }
+
+// evUseMovingPiston is a right-click on a moving_piston cell.
+type evUseMovingPiston struct {
+	eid     int32
+	x, y, z int
+}
+
+func (evUseMovingPiston) isHubEvent() {}
+
+// onUseMovingPiston is MovingPistonBlock.useWithoutItem: a moving cell with
+// no block entity behind it (one left over from before a restart) is
+// removed by the click. A live one carries on to its landing.
+func (h *hub) onUseMovingPiston(players map[int32]*tracked, e evUseMovingPiston) {
+	t := players[e.eid]
+	if t == nil || t.dead {
+		return
+	}
+	pos := blockPos{e.x, e.y, e.z}
+	if !isMovingPiston(h.worldFor(t.dim).At(pos.x, pos.y, pos.z)) {
+		return
+	}
+	if _, live := h.movingBlocks[simPos{dim: t.dim, blockPos: pos}]; live {
+		return
+	}
+	h.inDim(t.dim, func() { h.finishMoving(players, pos) })
+}

@@ -19,7 +19,6 @@ import "github.com/tachyne/tachyne-world/internal/worldgen"
 var (
 	respawnAnchorBase = worldgen.BlockBase("respawn_anchor")   // charges 0..4
 	endPortalFrameBse = worldgen.BlockBase("end_portal_frame") // eye(2) x facing(4)
-	detectorRailBase  = worldgen.BlockBase("detector_rail")    // powered(2) x shape(6) x waterlogged(2)
 )
 
 // analogSignal is everything a comparator can read at a position: the generic
@@ -31,14 +30,26 @@ func (h *hub) analogSignal(pos simPos) int { return h.analogSignalFrom(pos, 0, 0
 // the block toward the comparator reading it (getAnalogOutputSignal's
 // direction), or zero when the side does not matter to the caller.
 func (h *hub) analogSignalFrom(pos simPos, tx, tz int) int {
-	if sig := h.containerSignal(pos); sig >= 0 {
-		return sig
-	}
 	w := h.worldFor(pos.dim)
 	if w == nil {
 		return -1
 	}
 	st := w.At(pos.x, pos.y, pos.z)
+	if isDetectorRail(st) {
+		// DetectorRailBlock.getAnalogOutputSignal: only while POWERED, the
+		// fullness of a container cart on it; any other cart reads 0.
+		if !railPowered(st) {
+			return 0
+		}
+		if v := h.detectorCart(pos, true); v != nil {
+			h.unpackCartLoot(v)
+			return fullnessSignal(v.cartSlots())
+		}
+		return 0
+	}
+	if sig := h.containerSignal(pos); sig >= 0 {
+		return sig
+	}
 	if bites, ok := cakeBites(st); ok {
 		return cakeSignal(bites)
 	}
@@ -115,12 +126,6 @@ func (h *hub) analogSignalFrom(pos simPos, tx, tz int) int {
 	}
 	if st >= endPortalFrameBse && st < endPortalFrameBse+8 {
 		if (st-endPortalFrameBse)/4 == 0 { // eye is the first property, true first
-			return 15
-		}
-		return 0
-	}
-	if st >= detectorRailBase && st < detectorRailBase+24 {
-		if (st-detectorRailBase)/12 == 0 { // powered, true first
 			return 15
 		}
 		return 0

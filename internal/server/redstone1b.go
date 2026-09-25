@@ -214,25 +214,21 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.rsWorld().At(back.x, back.y, back.z)
-	if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: back}, -dx, -dz); sig >= 0 {
-		if sig > rear {
-			rear = sig // container fullness, cake left, composter level, …
+	// ComparatorBlock.getInputSignal: a block with an analog output behind
+	// the comparator REPLACES the input (an empty chest reads 0 even when
+	// powered); otherwise, through one conductor while the input is under
+	// 15, the block beyond it — or an item frame hung on that conductor's far
+	// face — does.
+	if sig := h.comparatorAnalogAt(back, dx, dz); sig >= 0 {
+		rear = sig
+	} else if rear < 15 && conducts(bs) {
+		beyond := blockPos{back.x + dx, back.y, back.z + dz}
+		best := h.comparatorAnalogAt(beyond, dx, dz)
+		if f := h.frameAnalogAt(beyond, dx, dz); f > best {
+			best = f
 		}
-	} else if worldgen.IsCopperBulb(bs) {
-		if worldgen.CopperBulbLit(bs) && rear < 15 {
-			rear = 15 // lit copper bulb: full analog signal (unlit = 0)
-		}
-	} else if isAnySensor(bs) {
-		if sensorPhase(bs) == sculkPhaseActive { // active sensor: comparator reads the frequency
-			if f := h.sculkFreq[simPos{dim: h.rsDim, blockPos: back}]; f > rear {
-				rear = f
-			}
-		}
-	} else if worldgen.IsSolidFull(bs) {
-		// A solid block behind is transparent to the read: measure the container
-		// one cell further (vanilla comparator-through-block).
-		if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: blockPos{back.x + dx, back.y, back.z + dz}}, -dx, -dz); sig > rear {
-			rear = sig
+		if best >= 0 {
+			rear = best
 		}
 	}
 	if rear == 0 {
@@ -247,6 +243,53 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 		return rear - side
 	}
 	return rear
+}
+
+// comparatorAnalogAt is BlockState.getAnalogOutputSignal read by a
+// comparator whose back points (dx, dz) at pos: -1 when the block has no
+// analog output (hasAnalogOutputSignal false).
+func (h *hub) comparatorAnalogAt(pos blockPos, dx, dz int) int {
+	if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: pos}, -dx, -dz); sig >= 0 {
+		return sig // container fullness, cake left, composter level, …
+	}
+	bs := h.rsWorld().At(pos.x, pos.y, pos.z)
+	switch {
+	case worldgen.IsCopperBulb(bs): // CopperBulbBlock: lit 15, else 0
+		if worldgen.CopperBulbLit(bs) {
+			return 15
+		}
+		return 0
+	case isAnySensor(bs): // SculkSensorBlock: the last frequency while active
+		if sensorPhase(bs) == sculkPhaseActive {
+			return h.sculkFreq[simPos{dim: h.rsDim, blockPos: pos}]
+		}
+		return 0
+	}
+	return -1
+}
+
+// frameAnalogAt is ComparatorBlock.getItemFrame + ItemFrame.getAnalogOutput:
+// the one item frame in the cell facing along the comparator's read
+// direction (hung on the conductor's far face) gives rotation % 8 + 1 when
+// it holds an item, 0 when empty; -1 when there is not exactly one.
+func (h *hub) frameAnalogAt(pos blockPos, dx, dz int) int {
+	want, _ := dirFromDelta(dx, 0, dz)
+	var found *itemFrame
+	n := 0
+	for _, f := range h.itemFrames {
+		if f.dim != h.rsDim || f.x != pos.x || f.y != pos.y || f.z != pos.z || int(f.dir) != int(want) {
+			continue
+		}
+		found = f
+		n++
+	}
+	if n != 1 {
+		return -1
+	}
+	if found.held.item == 0 || found.held.count <= 0 {
+		return 0
+	}
+	return found.rot%8 + 1
 }
 
 // updateComparator is ComparatorBlock.checkTickOnNeighbor: when its output
@@ -369,76 +412,105 @@ func (h *hub) updatePlates(players map[int32]*tracked) {
 	}
 }
 
-// updatePlatesIn is one dimension's plate pass (the simulation is pointed at it).
+// plateToucher is one entity's box for the plate checks.
+type plateToucher struct {
+	x, y, z, half, height float64
+	living                bool
+}
+
+// updatePlatesIn is one dimension's plate pass (the simulation is pointed at
+// it): BasePressurePlateBlock.entityInside and tick. An entity in the cell of
+// an UNPRESSED plate makes it check at once; a pressed plate checks only on
+// its own scheduled tick, getPressedTime (20, weighted 10) after the last
+// check. A check counts the entities whose box meets TOUCH_AABB — the plate's
+// 14x14 middle, 4/16 tall — leaving spectators out; stone plates feel only
+// living things. A weighted plate's power changes only on those checks.
 func (h *hub) updatePlatesIn(players map[int32]*tracked, dim int) {
-	occupied := map[blockPos]int{}
-	feet := func(x, y, z float64, living bool) {
-		pos := blockPos{floorInt(x), floorInt(y + 0.01), floorInt(z)}
-		s := h.rsWorld().At(pos.x, pos.y, pos.z)
-		if !isPlate(s) {
-			return
-		}
-		// Sensitivity: stone-like plates feel living things; wooden and
-		// weighted plates feel everything — dropped items and arrows too.
-		if _, _, everything, _, _ := plateKind(s); living || everything {
-			occupied[pos]++
-		}
-	}
+	var ents []plateToucher
 	for _, t := range players {
-		if t.dim == dim {
-			feet(t.x, t.y, t.z, true)
+		if t.dim == dim && !t.dead && t.gamemode != gmSpectator {
+			ents = append(ents, plateToucher{t.x, t.y, t.z, t.halfWidth(), 1.8, true})
 		}
 	}
 	for _, m := range h.mobs {
-		if m.dim == dim {
-			feet(m.x, m.y, m.z, true)
+		if m.dim == dim && m.dying == 0 {
+			b := m.box()
+			ents = append(ents, plateToucher{m.x, m.y, m.z, b.w / 2, b.h, true})
 		}
 	}
 	for _, it := range h.items {
 		if it.dim == dim {
-			feet(it.x, it.y, it.z, false)
+			ents = append(ents, plateToucher{it.x, it.y, it.z, 0.125, 0.25, false})
 		}
 	}
 	for _, a := range h.arrows {
 		if a.dim == dim {
-			feet(a.x, a.y, a.z, false)
+			ents = append(ents, plateToucher{a.x, a.y, a.z, 0.25, 0.5, false})
 		}
 	}
-	for pos, n := range occupied {
-		s := h.rsWorld().At(pos.x, pos.y, pos.z)
-		if ns := plateWith(s, n); ns != s {
-			if platePower(s) == 0 {
-				_, _, _, on, _ := plateKind(s)
-				h.rsSound(players, on, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
-				h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
-			}
-			h.rsSet(players, pos, ns)
-			h.scheduleSignalAround(players, pos)
-			h.platesOn[h.rsKey(pos)] = h.tick.Load()
-		} else if platePower(s) > 0 {
-			h.platesOn[h.rsKey(pos)] = h.tick.Load()
+	for _, v := range h.vehicles {
+		if v.dim == dim {
+			w, ht := v.box()
+			ents = append(ents, plateToucher{v.x, v.y, v.z, w / 2, ht, false})
 		}
 	}
-	for key, last := range h.platesOn {
-		if key.dim != h.rsDim {
+	now := h.tick.Load()
+	// entityInside: an entity in an unpressed plate's cell.
+	inside := map[blockPos]bool{}
+	for _, e := range ents {
+		pos := blockPos{floorInt(e.x), floorInt(e.y + 0.01), floorInt(e.z)}
+		if s := h.rsWorld().At(pos.x, pos.y, pos.z); isPlate(s) && platePower(s) == 0 {
+			inside[pos] = true
+		}
+	}
+	for pos := range inside {
+		h.plateCheckPressed(players, pos, ents)
+	}
+	// tick: each pressed plate's scheduled re-check.
+	for key, due := range h.platesOn {
+		if key.dim != h.rsDim || due > now {
 			continue // another dimension's plates are that dimension's business
 		}
-		pos := key.blockPos
-		// BasePressurePlateBlock.checkPressed schedules the release check
-		// getPressedTime ticks after the last thing stood here: 20, or 10
-		// for the weighted plates.
-		if occupied[pos] > 0 || h.tick.Load() < last+platePressedTime(h.rsWorld().At(pos.x, pos.y, pos.z)) {
-			continue
-		}
 		delete(h.platesOn, key)
-		s := h.rsWorld().At(pos.x, pos.y, pos.z)
-		if isPlate(s) && platePower(s) > 0 {
-			h.rsSet(players, pos, plateWith(s, 0))
-			_, _, _, _, off := plateKind(s)
-			h.rsSound(players, off, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
-			h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
-			h.scheduleSignalAround(players, pos)
+		if s := h.rsWorld().At(key.x, key.y, key.z); isPlate(s) && platePower(s) > 0 {
+			h.plateCheckPressed(players, key.blockPos, ents)
 		}
+	}
+}
+
+// plateCheckPressed is BasePressurePlateBlock.checkPressed: recount, write the
+// new signal, click and emit on the edges, and book the next check while
+// pressed.
+func (h *hub) plateCheckPressed(players map[int32]*tracked, pos blockPos, ents []plateToucher) {
+	s := h.rsWorld().At(pos.x, pos.y, pos.z)
+	_, _, everything, on, off := plateKind(s)
+	x0, x1 := float64(pos.x)+1.0/16, float64(pos.x)+15.0/16
+	y0, y1 := float64(pos.y), float64(pos.y)+4.0/16
+	z0, z1 := float64(pos.z)+1.0/16, float64(pos.z)+15.0/16
+	n := 0
+	for _, e := range ents {
+		if (e.living || everything) && e.x-e.half < x1 && e.x+e.half > x0 && e.z-e.half < z1 && e.z+e.half > z0 &&
+			e.y < y1 && e.y+e.height > y0 {
+			n++
+		}
+	}
+	was := platePower(s)
+	ns := plateWith(s, n)
+	if ns != s {
+		h.rsSet(players, pos, ns)
+		h.scheduleSignalAround(players, pos)
+	}
+	cx, cy, cz := float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5
+	switch now := platePower(ns); {
+	case now == 0 && was > 0:
+		h.rsSound(players, off, sndBlock, cx, cy, cz, 1, 1)
+		h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
+	case now > 0 && was == 0:
+		h.rsSound(players, on, sndBlock, cx, cy, cz, 1, 1)
+		h.vib(h.rsDim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
+	}
+	if platePower(ns) > 0 {
+		h.platesOn[h.rsKey(pos)] = h.tick.Load() + platePressedTime(ns)
 	}
 }
 

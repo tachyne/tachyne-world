@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -218,10 +219,17 @@ func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uin
 	if cr.stage >= 3 || h.rng.Float64() >= 0.05688889 { // fully oxidized, or gate closed
 		return true
 	}
-	if isCopperChest(state) { // WeatheringCopperChestBlock.randomTick: only the left half ages
+	if isCopperChest(state) { // WeatheringCopperChestBlock.randomTick: only the left half ages, and not while open
 		if _, ct := chestFacingType(state); ct == "right" {
 			return true
 		}
+		if h.chestViewers(simPos{dim: dim, blockPos: blockPos{x, y, z}}, nil) > 0 {
+			return true // getEntitiesWithContainerOpen is not empty
+		}
+	}
+	isDoor := strings.HasSuffix(copperName(state), "_door")
+	if isDoor && worldgen.GetProperty(copperInfo(state), state, "half") == "upper" {
+		return true // WeatheringCopperDoorBlock.randomTick: the LOWER half ages, the upper follows it
 	}
 	// Neighbourhood scan (Manhattan ≤ 4): a less-oxidized copper block halts
 	// oxidation; tally more-oxidized vs same-stage.
@@ -254,7 +262,25 @@ func (h *hub) tickCopper(players map[int32]*tracked, dim, x, y, z int, state uin
 		chance *= 0.75 // getChanceModifier: slower from unaffected
 	}
 	if h.rng.Float64() < chance {
-		h.setCopperState(players, dim, x, y, z, state, cr.nextBase+(state-cr.lo))
+		next := cr.nextBase + (state - cr.lo)
+		h.setCopperState(players, dim, x, y, z, state, next)
+		if isDoor { // DoorBlock.updateShape: the upper half becomes the lower's new block
+			if up := h.worldFor(dim).At(x, y+1, z); strings.HasSuffix(copperName(up), "_door") {
+				h.setBlockLive(players, dim, x, y+1, z, worldgen.SetProperty(copperInfo(next), next, "half", "upper"))
+			}
+		}
 	}
 	return true
+}
+
+// copperName is a state's block name ("" when it has none).
+func copperName(state uint32) string {
+	name, _ := worldgen.StateName(state)
+	return name
+}
+
+// copperInfo is the state's block info (the zero info for an unknown state).
+func copperInfo(state uint32) worldgen.BlockInfo {
+	info, _ := worldgen.InfoForState(state)
+	return info
 }

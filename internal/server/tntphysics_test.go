@@ -23,8 +23,8 @@ func TestPrimedTNTFalls(t *testing.T) {
 	w := h.world
 	tntFloor(w, 179)
 	players := map[int32]*tracked{}
-	h.rules.TNTExplodes = false
 	h.primeTNT(players, 0, 186, 0, 80)
+	h.rules.TNTExplodes = false // the fuse may burn out harmlessly
 	if len(h.tnt) != 1 || h.tnt[0].vy != tntHopV {
 		t.Fatalf("lit TNT should hop: %+v", h.tnt)
 	}

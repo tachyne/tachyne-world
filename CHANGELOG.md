@@ -103,6 +103,84 @@ the public history since the project was open-sourced on 2026-07-10.
   none for an effect given with hidden particles, and Oozing, Weaving,
   Infested, Wind Charged and the omens show their own particles. Nobody
   could see that anyone was under a potion before.
+- **Redstone dust dots stay dots.** A dot made by clicking a lone cross of
+  dust now powers only the block under it, as in vanilla — it used to light
+  the lamp beside it like a cross — and turning a cross into a dot or back
+  updates what is around it at once. Adventure players can no longer flip
+  it.
+- **Comparators read item frames, and read what is behind them outright.**
+  A comparator reading through a block now picks up an item frame hung on
+  the far side (one step per turn of the item), and a container or other
+  readable block behind it sets the reading on its own, so an empty chest
+  reads 0 even with power running into it. A comparator no longer reads a
+  cart parked on an ordinary rail; on a pressed detector rail it reads a
+  chest or hopper cart's contents, and 0 for any other cart.
+- **Pressure plates, detector rails and tripwires keep vanilla's rhythm.**
+  A pressed plate or detector rail re-checks once a second (half a second
+  for weighted plates) and lets go on that beat, instead of exactly a second
+  after the last thing left. Plates count what actually touches them —
+  carts and boats too, never spectators. Dropped items, arrows, carts and
+  boats now trip tripwire, a trip lasts at least half a second, hooks click
+  as they power, attach and detach, and laying or cutting a string updates
+  the hooks at both ends however far apart they are.
+- **Fire behaves as in vanilla.** Fire now burns on its own clock, so
+  activity nearby no longer makes it spread faster, and a fire on magma
+  burns forever as it does on netherrack (and on bedrock in the End). Fire
+  burns faster in jungles, swamps, mushroom fields, snowy slopes and dappled
+  forests, it eats blocks even with mob griefing off, and rain only puts out
+  fires it actually falls on — not ones in caves or under glass. Soul fire no
+  longer burns out. Any fire that appears inside an obsidian frame lights
+  the portal — a fire charge, a dispenser, lightning, a spreading blaze —
+  but a frame in the End never lights. Lava no longer lights fires through
+  a slab or glass lid.
+- **TNT with tnt_explodes off stays put.** Powering, shooting or trying to
+  light TNT no longer removes the block when TNT explosions are off; the
+  flint and steel or fire charge is not used up, and you are told TNT
+  explosions are disabled.
+- **Clicks that should fall through to your block.** Clicking an iron door
+  or trapdoor, an empty jukebox, or the side or top of a bookshelf or shelf
+  with a block in hand now places the block, as in vanilla, instead of doing
+  nothing. A chiseled bookshelf gives its book back whatever you are holding,
+  and enchanted books have their own sounds going in and out.
+- **Large chests count as chests.** Opening a double chest now counts
+  toward your chest statistics and angers nearby piglins, as a single chest
+  does, and its sound comes from the middle of the pair. An ender chest held
+  shut by a block no longer counts as opened.
+- **Bells light up raiders after the ring.** A rung bell now resonates a
+  moment into its swing if a raider is within 32 blocks, and the raiders
+  around it glow when the ringing ends, as in vanilla — pillager patrols
+  too, not only raid members.
+- **Ravagers flatten a proper swath.** A ravager now tramples every crop
+  its body passes over, not one row at walking pace, and broken crops, lily
+  pads and doors show their break.
+- **Sculk hears more of the world.** Sensors now pick up a candle being
+  snuffed, a bite of candle cake, a disc going into a jukebox, a book set on
+  a lectern, a cauldron level dropping, an empty dispenser clicking,
+  farmland or a path turning to dirt, a shelf powering, a dried ghast
+  drinking, a sniffer egg cracking, and blocks broken by mobs and boats. A
+  sensor's clicking now audibly stops.
+- **Frogspawn, dried ghasts and frosted ice keep their own time.**
+  Frogspawn no longer hatches early whenever something changes beside it,
+  and it lasts on any water with nothing on top. A dried ghast drinks a
+  step every 5000 ticks while waterlogged (its own water, not water beside
+  it). Frost Walker ice melts at the right light, ages its neighbours as it
+  goes, and a lone leftover block melts straight away.
+- **Hoppers pick up items as vanilla's do.** A hopper takes items silently,
+  from the whole area over its bowl, and a stack it can only partly take no
+  longer counts as a pull; a solid block on top stops it collecting items.
+- **Smaller fixes.** Copper doors weather as one piece, and a copper chest
+  someone has open does not weather. Dry farmland under a fence gate stays
+  tilled, and anything standing on farmland or a path that turns to dirt is
+  lifted onto it. Sponges soak up water that flows next to them, and a wet
+  sponge pushed into the Nether dries. A creaking heart's comparator
+  follows its creaking live, and a jukebox's redstone signal stops when the
+  song ends. Placing a book on a lectern resets it; a leftover moving-piston
+  block from before a restart goes when clicked; an open shulker box opens
+  for a second player whatever is in front of it; a sign stays yours while
+  you are within reach; portal-spawned zombified piglins do not walk
+  straight back through, and appear only with a player nearby; an
+  eyeblossom poisons a bee for 25 ticks, not 40; and stepping into fire
+  thaws a player freezing from powder snow.
 - **Ruined portals sit in the ground.** A ruined portal now settles, as in
   vanilla, until at least three of its four corners stand in solid ground,
   so one on a cliff edge sinks into the rock instead of hanging off the

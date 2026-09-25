@@ -871,7 +871,11 @@ func (h *hub) closeWindow(players map[int32]*tracked, t *tracked) {
 				h.vib(p.dim, freqContainerClose, p.x, p.y, p.z, t.p.eid)
 			}
 		}
-		if last && !isBarrel(h.worldFor(t.winPos.dim).At(t.winPos.x, t.winPos.y, t.winPos.z)) {
+		switch {
+		case !last || isBarrel(h.worldFor(t.winPos.dim).At(t.winPos.x, t.winPos.y, t.winPos.z)):
+		case t.winKind == winDoubleChest:
+			h.pairSoundAt(players, t.winPos, t.winPos2, false)
+		default:
 			h.containerSoundAt(players, t.winPos, false)
 		}
 	}

@@ -268,7 +268,7 @@ func (h *hub) signBroadcast(players map[int32]*tracked, dim, x, y, z int, sd sig
 // signEditorFree reports whether nobody else holds the edit lock — vanilla
 // otherPlayerIsEditingSign, with the lock treated stale once its holder is
 // gone or out of interaction range (vanilla clears it by ticking).
-func (h *hub) signEditorFree(players map[int32]*tracked, key string, eid int32, x, y, z int) bool {
+func (h *hub) signEditorFree(players map[int32]*tracked, key string, eid int32, dim, x, y, z int) bool {
 	other, held := h.signMayEdit[key]
 	if !held || other == eid {
 		return true
@@ -278,13 +278,17 @@ func (h *hub) signEditorFree(players map[int32]*tracked, key string, eid int32, 
 		delete(h.signMayEdit, key)
 		return true
 	}
-	dx, dy, dz := t.x-(float64(x)+0.5), t.y-(float64(y)+0.5), t.z-(float64(z)+0.5)
-	if dx*dx+dy*dy+dz*dz > 5*5 {
+	if t.dim != dim || !withinBlockReach(t, blockPos{x, y, z}, signEditSlack) {
 		delete(h.signMayEdit, key)
 		return true
 	}
 	return false
 }
+
+// signEditSlack is SignBlockEntity.playerIsTooFarAwayToEdit's
+// isWithinBlockInteractionRange(pos, 4.0): block reach plus four blocks,
+// eye to the sign's box.
+const signEditSlack = 4.0
 
 // onSignPlaced registers the fresh (blank) sign and opens the editor on its
 // front side for the placer — vanilla SignItem.updateCustomBlockEntityTag.
@@ -339,7 +343,7 @@ func (h *hub) onUseSign(players map[int32]*tracked, e evUseSign) {
 	}
 	// Dyeing, waxing and editing all want Player.mayBuild: a sign is read,
 	// not written, in adventure or spectator mode.
-	if !mayBuild(t.gamemode) || !h.signEditorFree(players, key, e.eid, e.x, e.y, e.z) {
+	if !mayBuild(t.gamemode) || !h.signEditorFree(players, key, e.eid, t.dim, e.x, e.y, e.z) {
 		return
 	}
 	front := signFrontFacing(t, e.x, e.y, e.z, state)
@@ -420,6 +424,10 @@ func (h *hub) onSignUpdate(players map[int32]*tracked, e evSignUpdate) {
 	}
 	key := signKey(t.dim, e.x, e.y, e.z)
 	if h.signMayEdit[key] != e.eid {
+		return
+	}
+	if !withinBlockReach(t, blockPos{e.x, e.y, e.z}, signEditSlack) {
+		delete(h.signMayEdit, key) // SignBlockEntity.tick would have dropped the lock
 		return
 	}
 	sd, ok := h.signs.get(t.dim, e.x, e.y, e.z)

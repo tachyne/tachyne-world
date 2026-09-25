@@ -88,6 +88,7 @@ func (h *hub) extinguishCandle(players map[int32]*tracked, dim int, pos blockPos
 	h.setBlockAt(players, dim, pos, unlit)
 	h.playSoundDim(players, dim, sndCandleExtinguish, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	h.vib(dim, freqBlockChange, pos.x, pos.y, pos.z, 0) // AbstractCandleBlock.extinguish: BLOCK_CHANGE
 }
 
 // evLightBlock: a player set fire to a candle/candle cake/campfire with flint
@@ -155,6 +156,7 @@ func (h *hub) useCandle(players map[int32]*tracked, e evUseCandle) {
 		t.saturation = float32(math.Min(float64(t.food), float64(t.saturation)+cakeSat))
 		h.sendHealth(t)
 	}
+	h.vib(t.dim, freqEat, e.x, e.y, e.z, t.p.eid) // CakeBlock.eat: EAT
 	h.setBlockAt(players, t.dim, pos, cakeBase+1)
 	h.spawnItemIn(players, t.dim, candle, 1, float64(e.x)+0.5, float64(e.y)+0.5, float64(e.z)+0.5)
 	h.incCustom(t, "eat_cake_slice", 1)

@@ -51,7 +51,7 @@ func (h *hub) raidBonusSpawns(etype, wave int, bonusWave bool) int {
 
 // raidBell is the villagers' RingBell behaviour while a raid is on: once a
 // second, a villager within three blocks of the village bell rings it with
-// a 5% chance — which lights every raider up (bellRevealRaiders).
+// a 5% chance — whose resonance lights every raider up (tickBells).
 func (h *hub) raidBell(players map[int32]*tracked, r *raid) {
 	if h.tick.Load()%20 != 0 {
 		return

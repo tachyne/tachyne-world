@@ -154,8 +154,11 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		}
 	case worldgen.IsFluid(state):
 		h.updateFluid(players, dim, pos, state)
+	case state == soulFire:
+		// SoulFireBlock has no tick: it burns while its soul block stays
+		// (canSurvive, which the support sweep answers), never ageing out.
 	case isFire(state):
-		h.inDim(dim, func() { h.updateFire(players, pos) })
+		h.inDim(dim, func() { h.fireUpdate(players, pos) })
 	case h.tickFrogspawn(players, dim, pos, state):
 		// A clutch bursts into tadpoles once its timer runs out.
 	case h.tickSnifferEgg(players, dim, pos.x, pos.y, pos.z, state):
@@ -164,6 +167,13 @@ func (h *hub) processUpdate(players map[int32]*tracked, dim int, pos blockPos) {
 		// A plant segment that lost its footing pops, taking the rest with it.
 	case h.tickCoral(players, dim, pos, state):
 		// Coral left out of water bleaches to its dead twin.
+	case state == spongeState || state == wetSpongeState:
+		// SpongeBlock.neighborChanged: water that flowed up to it (or a
+		// piston-moved sponge) is drunk; WetSpongeBlock.onPlace: a wet one
+		// arriving in the Nether dries.
+		h.soakSponge(players, dim, pos)
+	case h.driedGhastStep(players, dim, pos, state):
+		// A dried ghast takes a step of water (or loses one) on its own tick.
 	case h.tickComposter(players, dim, pos, state):
 		// A full composter finishes composting a second after its last item.
 	case h.tickDripleaf(players, dim, pos, state):
@@ -217,6 +227,11 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 		// piston, a flow receding) sets its die tick, not only a player's edit.
 		if worldgen.IsWater(old) && !worldgen.IsWater(state) {
 			h.scheduleCoralDeath(dim, pos)
+		}
+		h.fireOnPlace(players, dim, pos, old, state) // a fire inside an obsidian frame lights it
+		// A string laid or taken away: the hooks along its line re-check.
+		if isTripwire(old) != isTripwire(state) {
+			h.inDim(dim, func() { h.tripwireUpdateSource(players, pos) })
 		}
 		// LightningRodBlock.onPlace: a rod set down powered with no tick of
 		// its own pending gets one, which switches it off.

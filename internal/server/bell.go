@@ -10,8 +10,8 @@ import (
 // wall bell across it, a ceiling bell from any side; never from above or
 // below, nor high on the block), when its redstone input rises, or when a
 // projectile hits it: the bell sound at volume 2 and a block event (action
-// 1, the strike direction) that swings it on every client. Raiders glowing
-// and villagers running for their beds are not modelled.
+// 1, the strike direction) that swings it on every client. The block
+// entity's swing clock sends villagers to hide and makes raiders glow.
 
 var (
 	bellRange       = blockRange("bell")
@@ -100,42 +100,121 @@ func (h *hub) ringBell(players map[int32]*tracked, dim int, pos blockPos, dir in
 	h.playSoundDim(players, dim, "minecraft:block.bell.use", sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, bellSoundVolume, 1)
 	h.vib(dim, freqBlockChange, pos.x, pos.y, pos.z, 0) // BellBlock.attemptToRing: sculk hears the bell
-	h.bellRevealRaiders(players, dim, pos)
+	h.bellStruck(players, simPos{dim: dim, blockPos: pos})
 	return true
 }
 
-// bellRevealRaiders is BellBlockEntity.updateEntities + makeRaidersGlow:
-// every raider within 48 blocks of a rung bell glows for three seconds,
-// and the bell resonates if it found any.
+// BellBlockEntity: the swing clock and the resonation. A strike (the block
+// event, triggerEvent 1) takes stock of the living things within 48 blocks —
+// at most once every 60 ticks — and sends villagers within 32 to hide. Five
+// ticks into the swing, a #raiders mob within 32 blocks makes the bell
+// resonate; forty ticks after that every raider within 48 glows for three
+// seconds (serverTick → makeRaidersGlow).
 const (
-	bellRaiderRange   = 48
-	bellVillagerRange = 32  // BellBlockEntity: villagers within 32 blocks hear it
+	bellRaiderRange   = 48  // SEARCH_RADIUS / HIGHLIGHT_RAIDERS_RADIUS
+	bellVillagerRange = 32  // HEAR_BELL_RADIUS: villagers within 32 blocks hear it
+	bellResonateRange = 32  // areRaidersNearby
+	bellSwingTicks    = 50  // shaking ends
+	bellResonateAt    = 5   // ticks into the swing before it can resonate
+	bellResonateTicks = 40  // resonation length before the raiders light up
+	bellRescanTicks   = 60  // updateEntities re-reads the neighbourhood this often
+	bellGlowTicks     = 60  // MobEffects.GLOWING, 60
 	villagerHideTicks = 300 // SetHiddenState.create(15 s, …)
 )
 
-func (h *hub) bellRevealRaiders(players map[int32]*tracked, dim int, pos blockPos) {
-	found := false
-	h.grid().nearby(dim, float64(pos.x)+0.5, float64(pos.z)+0.5, bellRaiderRange, func(m *mob) {
-		if m.dying > 0 {
-			return
-		}
-		if m.etype == entityVillager { // HEARD_BELL_TIME → the hide package: 15 s at a hiding place
-			if dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5) <= bellVillagerRange {
-				m.hideUntil = h.tick.Load() + villagerHideTicks
-			}
-			return
-		}
-		if m.raidCenter == (blockPos{}) {
-			return
-		}
-		if dist3(m.x, m.y, m.z, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5) > bellRaiderRange {
-			return
-		}
-		h.applyMobEffect(players, m, effGlowing, 0, 3)
-		found = true
-	})
-	if found {
-		h.playSoundDim(players, dim, "minecraft:block.bell.resonate", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+type bellEntity struct {
+	shaking    bool
+	ticks      int
+	resonating bool
+	resTicks   int
+	scanned    bool
+	lastScan   uint64
+	nearby     []int32 // mob eids in the 48-block box at the last scan
+}
+
+// isRaiderType is #raiders: the illagers, the ravager and the witch, in a
+// raid or not.
+func isRaiderType(etype int) bool {
+	return isIllager(etype) || etype == entityRavager || etype == entityWitch
+}
+
+// bellStruck is BellBlockEntity.triggerEvent(1): updateEntities, then the
+// swing and the resonation restart.
+func (h *hub) bellStruck(players map[int32]*tracked, sp simPos) {
+	if h.bells == nil {
+		h.bells = map[simPos]*bellEntity{}
 	}
+	be := h.bells[sp]
+	if be == nil {
+		be = &bellEntity{}
+		h.bells[sp] = be
+	}
+	now := h.tick.Load()
+	cx, cy, cz := float64(sp.x)+0.5, float64(sp.y)+0.5, float64(sp.z)+0.5
+	if !be.scanned || now > be.lastScan+bellRescanTicks {
+		be.scanned, be.lastScan, be.nearby = true, now, be.nearby[:0]
+		// AABB(pos).inflate(48): a box, not a sphere.
+		h.grid().nearby(sp.dim, cx, cz, bellRaiderRange*1.5, func(m *mob) {
+			if m.x >= float64(sp.x)-bellRaiderRange && m.x <= float64(sp.x)+1+bellRaiderRange &&
+				m.y >= float64(sp.y)-bellRaiderRange && m.y <= float64(sp.y)+1+bellRaiderRange &&
+				m.z >= float64(sp.z)-bellRaiderRange && m.z <= float64(sp.z)+1+bellRaiderRange {
+				be.nearby = append(be.nearby, m.eid)
+			}
+		})
+	}
+	for _, eid := range be.nearby {
+		if m := h.mobs[eid]; m != nil && m.dying == 0 && m.etype == entityVillager &&
+			dist3(m.x, m.y, m.z, cx, cy, cz) < bellVillagerRange { // HEARD_BELL_TIME → hide for 15 s
+			m.hideUntil = now + villagerHideTicks
+		}
+	}
+	be.resTicks, be.ticks, be.shaking = 0, 0, true
+}
+
+// tickBells is BellBlockEntity.serverTick for every bell that has been rung.
+func (h *hub) tickBells(players map[int32]*tracked) {
+	for sp, be := range h.bells {
+		w := h.worldFor(sp.dim)
+		if w == nil || !isBell(w.At(sp.x, sp.y, sp.z)) {
+			delete(h.bells, sp)
+			continue
+		}
+		if be.shaking {
+			be.ticks++
+		}
+		if be.ticks >= bellSwingTicks {
+			be.shaking, be.ticks = false, 0
+		}
+		cx, cy, cz := float64(sp.x)+0.5, float64(sp.y)+0.5, float64(sp.z)+0.5
+		if be.ticks >= bellResonateAt && be.resTicks == 0 && h.bellRaidersWithin(be, cx, cy, cz, bellResonateRange) {
+			be.resonating = true
+			h.playSoundDim(players, sp.dim, "minecraft:block.bell.resonate", sndBlock, cx, cy, cz, 1, 1)
+		}
+		if be.resonating {
+			if be.resTicks < bellResonateTicks {
+				be.resTicks++
+			} else {
+				for _, eid := range be.nearby { // makeRaidersGlow
+					if m := h.mobs[eid]; m != nil && m.dying == 0 && m.dim == sp.dim && isRaiderType(m.etype) &&
+						dist3(m.x, m.y, m.z, cx, cy, cz) < bellRaiderRange {
+						h.applyMobEffectTicks(players, m, effGlowing, 0, bellGlowTicks)
+					}
+				}
+				be.resonating = false
+			}
+		}
+		if !be.shaking && !be.resonating && h.tick.Load() > be.lastScan+bellRescanTicks {
+			delete(h.bells, sp) // idle, and its neighbourhood list is stale anyway
+		}
+	}
+}
+
+// bellRaidersWithin is areRaidersNearby over the strike's entity list.
+func (h *hub) bellRaidersWithin(be *bellEntity, cx, cy, cz, r float64) bool {
+	for _, eid := range be.nearby {
+		if m := h.mobs[eid]; m != nil && m.dying == 0 && isRaiderType(m.etype) && dist3(m.x, m.y, m.z, cx, cy, cz) < r {
+			return true
+		}
+	}
+	return false
 }

@@ -31,6 +31,13 @@ func maintainsFarmland(state uint32) bool {
 	return false
 }
 
+// keepsFarmland is the whole 26.3 #maintains_farmland tag, which also holds
+// the fence gates and moving_piston: dry soil under any of them stays tilled.
+// (maintainsFarmland is the plant half, the part that pops on a revert.)
+func keepsFarmland(state uint32) bool {
+	return maintainsFarmland(state) || isFenceGate(state) || isMovingPiston(state)
+}
+
 // farmlandRandomTick runs one FarmBlock.randomTick: hydrate, dehydrate, or dry
 // out to dirt. Returns whether it handled the block.
 func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, state uint32) bool {
@@ -45,7 +52,7 @@ func (h *hub) farmlandRandomTick(players map[int32]*tracked, dim, x, y, z int, s
 		}
 	case n > 0:
 		h.setBlockAt(players, dim, blockPos{x, y, z}, farmlandMin+uint32(n-1))
-	case !maintainsFarmland(h.worldFor(dim).At(x, y+1, z)):
+	case !keepsFarmland(h.worldFor(dim).At(x, y+1, z)):
 		h.turnFarmlandToDirt(players, dim, x, y, z)
 	}
 	return true
@@ -89,7 +96,37 @@ func (h *hub) turnFarmlandToDirt(players map[int32]*tracked, dim, x, y, z int) {
 		}
 		h.setBlockAt(players, dim, blockPos{x, y + 1, z}, worldgen.Air)
 	}
-	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Dirt)
+	h.turnToBaseBlock(players, dim, blockPos{x, y, z}, worldgen.Dirt)
+}
+
+// turnToBaseBlock is FarmlandBlock/PathBlock.turnToBaseBlock: the 15/16-tall
+// block becomes dirt, whoever stands on it is lifted onto the full block
+// (Block.pushEntitiesUp), and it is a BLOCK_CHANGE.
+func (h *hub) turnToBaseBlock(players map[int32]*tracked, dim int, pos blockPos, base uint32) {
+	h.pushEntitiesUp(players, dim, pos)
+	h.setBlockAt(players, dim, pos, base)
+	h.vib(dim, freqBlockChange, pos.x, pos.y, pos.z, 0)
+}
+
+// pushEntitiesUp lifts anything whose box meets the top sixteenth of the
+// cell (the part the new full block adds) to stand on the full block.
+func (h *hub) pushEntitiesUp(players map[int32]*tracked, dim int, pos blockPos) {
+	lo, top := float64(pos.y)+15.0/16, float64(pos.y)+1
+	x0, x1 := float64(pos.x), float64(pos.x)+1
+	z0, z1 := float64(pos.z), float64(pos.z)+1
+	meets := func(x, y, z, half float64) bool {
+		return x-half < x1 && x+half > x0 && z-half < z1 && z+half > z0 && y < top && y >= lo-1e-7
+	}
+	for _, m := range h.mobs {
+		if m.dim == dim && m.dying == 0 && meets(m.x, m.y, m.z, m.box().w/2) {
+			m.y = top
+		}
+	}
+	for _, t := range players {
+		if t.dim == dim && !t.dead && meets(t.x, t.y, t.z, 0.3) {
+			h.teleportPlayer(players, t, t.x, top, t.z)
+		}
+	}
 }
 
 // tramplePlayer tramples farmland the player just landed on from `dist` blocks

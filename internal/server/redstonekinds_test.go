@@ -118,7 +118,7 @@ func TestHopperUnderChestTakesItemInItsCell(t *testing.T) {
 	if c == nil {
 		t.Fatal("no hopper bin")
 	}
-	h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y)+0.2, float64(z)+0.5, 0, 0, 0)
+	h.spawnItemAt(players, 0, itemByName["stick"], 1, float64(x)+0.5, float64(y)+0.7, float64(z)+0.5, 0, 0, 0) // resting in the bowl (11/16)
 	if !h.hopperPull(players, simPos{dim: 0, blockPos: blockPos{x, y, z}}, c) {
 		t.Fatal("the hopper should take the item lying in its cell despite the chest above")
 	}

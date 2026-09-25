@@ -244,8 +244,11 @@ func (h *hub) updateBinTrigger(players map[int32]*tracked, pos simPos, state uin
 	h.setBlockAt(players, pos.dim, pos.blockPos, setBoolProp(state, "triggered", powered))
 	if powered {
 		// Vanilla scheduleTick(pos, 4): the dispense fires later, unconditionally
-		// (a pulse shorter than the delay still ejects).
-		h.binFire[pos] = h.tick.Load() + binFireDelay
+		// (a pulse shorter than the delay still ejects). A tick already
+		// pending stays as it is (LevelTicks keeps one per position).
+		if _, pending := h.binFire[pos]; !pending {
+			h.binFire[pos] = h.tick.Load() + binFireDelay
+		}
 	}
 }
 
@@ -261,14 +264,14 @@ func (h *hub) runBinFires(players map[int32]*tracked, age uint64) {
 		if !h.inWorldYIn(pos.dim, pos.y) {
 			continue
 		}
-		h.rsDim = pos.dim // the cell's own dimension for the whole ejection
 		w := h.worldFor(pos.dim)
 		if w == nil {
 			continue
 		}
 		state := w.Block(pos.x, pos.y, pos.z)
 		if isDispenser(state) || isDropper(state) { // still a bin (not broken meanwhile)
-			h.ejectFromBin(players, pos, state)
+			// The cell's own dimension for the whole ejection, and back after.
+			h.inDim(pos.dim, func() { h.ejectFromBin(players, pos, state) })
 		}
 	}
 }
@@ -310,9 +313,10 @@ func (h *hub) ejectFromBin(players map[int32]*tracked, pos simPos, state uint32)
 			}
 		}
 	}
-	if st == nil {
-		h.rsSound(players, "minecraft:block.dispenser.fail", sndBlock,
-			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 1.2)
+	if st == nil { // DispenserBlock.dispenseFrom: levelEvent 1001 and BLOCK_ACTIVATE
+		h.playSoundDim(players, pos.dim, "minecraft:block.dispenser.fail", sndBlock,
+			float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1.2)
+		h.vib(pos.dim, freqBlockActivate, pos.x, pos.y, pos.z, 0)
 		return
 	}
 	dx, dy, dz := pistonDelta(state) // same 6-way facing math
@@ -881,26 +885,41 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 	return h.hopperTakeItems(players, pos, c, true)
 }
 
-// hopperTakeItems takes one dropped item lying in the hopper's cell (or,
-// with the cell above too, from the pickup area over an open hopper).
+// hopperTakeItems is HopperBlockEntity.addItem over the items whose box
+// meets the hopper's SUCK_AABB (the full cell from 11/16 up to the top of
+// the block above): the first item taken WHOLE ends the pull; one only
+// partly taken leaves the rest lying and the hopper tries the next. Alone
+// (HopperBlock.entityInside) only items in the hopper's own cell count; with
+// aboveToo (suckInItems) a full block above that is not #does_not_block_hoppers
+// shuts the hopper off. Nothing is heard: a hopper takes items silently.
 func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, aboveToo bool) bool {
+	if aboveToo {
+		if w := h.worldFor(pos.dim); w != nil {
+			if above := w.At(pos.x, pos.y+1, pos.z); worldgen.IsFullCube(above) && !isBeeHome(above) {
+				return false // isBlocked
+			}
+		}
+	}
+	const half = 0.125 // an item entity is 0.25 wide and tall
+	x0, x1 := float64(pos.x), float64(pos.x)+1
+	y0, y1 := float64(pos.y)+11.0/16, float64(pos.y)+2
+	z0, z1 := float64(pos.z), float64(pos.z)+1
 	for eid, it := range h.items {
-		ix, iy, iz := floorInt(it.x), floorInt(it.y), floorInt(it.z)
-		if it.dim != pos.dim || ix != pos.x || iz != pos.z || (iy != pos.y && !(aboveToo && iy == pos.y+1)) {
+		if it.dim != pos.dim || it.x+half <= x0 || it.x-half >= x1 || it.z+half <= z0 || it.z-half >= z1 ||
+			it.y+2*half <= y0 || it.y >= y1 {
 			continue
 		}
+		if !aboveToo && floorInt(it.y) != pos.y {
+			continue // entityInside: the item is in the hopper's own cell
+		}
 		st := it.stack()
-		if left := binInsert(c.slots, st); left < st.count {
-			if left == 0 {
-				delete(h.items, eid)
-				h.entityGone(players, it.dim, eid)
-			} else {
-				it.count = left
-			}
-			h.playSoundDim(players, it.dim, "minecraft:entity.item.pickup", sndBlock,
-				it.x, it.y, it.z, 0.2, 1.4)
+		left := binInsert(c.slots, st)
+		if left == 0 {
+			delete(h.items, eid)
+			h.entityGone(players, it.dim, eid)
 			return true
 		}
+		it.count = left
 	}
 	return false
 }
@@ -949,8 +968,18 @@ func (h *hub) hopperPush(players map[int32]*tracked, pos simPos, state uint32, c
 }
 
 // containerSlots exposes any container's raw slots at a position (nil if the
-// position holds no known container).
+// position holds no known container): a block's, or else a container cart
+// parked in the cell, as a hopper or dropper finds one.
 func (h *hub) containerSlots(pos simPos) []invStack {
+	if s := h.blockContainerSlots(pos); s != nil {
+		return s
+	}
+	return h.vehicleContainerAt(pos) // a chest or hopper cart parked in the cell
+}
+
+// blockContainerSlots is containerSlots without the carts: the block
+// entity's own storage.
+func (h *hub) blockContainerSlots(pos simPos) []invStack {
 	if c := h.chests[pos]; c != nil {
 		return c.slots[:]
 	}
@@ -969,7 +998,7 @@ func (h *hub) containerSlots(pos simPos) []invStack {
 	if b := h.bins[pos]; b != nil {
 		return b.slots
 	}
-	return h.vehicleContainerAt(pos) // a chest or hopper cart parked in the cell
+	return nil
 }
 
 // containerSignal is the comparator's read of a container: 0 when empty, else
@@ -978,7 +1007,9 @@ func (h *hub) containerSignal(pos simPos) int {
 	if cb := h.crafterBinAt(pos); cb != nil {
 		return crafterComparator(cb) // filled OR disabled slot count (vanilla), 0-9
 	}
-	slots := h.containerSlots(pos)
+	// A cart is no block: only a detector rail under it reads it
+	// (analogSignalFrom), so a comparator never sees one on a plain rail.
+	slots := h.blockContainerSlots(pos)
 	// ChestBlock.getAnalogOutputSignal reads getContainer(…, ignoreBlocked
 	// false): a blocked chest (a solid block or a sitting cat on its lid)
 	// has no container and reads 0, and a pair reads as one 54-slot chest —
@@ -994,7 +1025,7 @@ func (h *hub) containerSignal(pos simPos) int {
 				if h.chestBlockedAt(pos.dim, left) || h.chestBlockedAt(pos.dim, right) {
 					return 0
 				}
-				a, b := h.containerSlots(pos.at(left)), h.containerSlots(pos.at(right))
+				a, b := h.blockContainerSlots(pos.at(left)), h.blockContainerSlots(pos.at(right))
 				slots = append(append(make([]invStack, 0, len(a)+len(b)), a...), b...)
 			}
 		}
@@ -1012,6 +1043,12 @@ func (h *hub) containerSignal(pos simPos) int {
 	if slots == nil {
 		return -1
 	}
+	return fullnessSignal(slots)
+}
+
+// fullnessSignal is AbstractContainerMenu.getRedstoneSignalFromContainer:
+// 0 when empty, else 1 + floor(14 × average slot fullness).
+func fullnessSignal(slots []invStack) int {
 	full, any := 0.0, false
 	for _, s := range slots {
 		if s.item != 0 && s.count > 0 {

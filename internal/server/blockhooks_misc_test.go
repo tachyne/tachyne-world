@@ -43,14 +43,14 @@ func TestRavagerTramplesPitcherCrop(t *testing.T) {
 	w.SetBlock(0, 181, 0, pitcherUpper(4))
 
 	h.rules.MobGriefing = false
-	h.spawnMob(players, entityRavager, 0.5, 180, 0.5)
-	h.insideBoth(players)
+	rav := h.spawnMob(players, entityRavager, 0.5, 180, 0.5)
+	h.ravagerStep(players, rav)
 	if w.At(0, 180, 0) != pitcherLower(4) {
 		t.Fatal("no mob griefing: the pitcher should stand")
 	}
 
 	h.rules.MobGriefing = true
-	h.insideBoth(players)
+	h.ravagerStep(players, rav)
 	if w.At(0, 180, 0) != worldgen.Air || w.At(0, 181, 0) != worldgen.Air {
 		t.Fatalf("the ravager should flatten both halves: %d / %d", w.At(0, 180, 0), w.At(0, 181, 0))
 	}

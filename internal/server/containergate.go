@@ -41,6 +41,11 @@ func (h *hub) catSittingOn(dim int, pos blockPos) bool {
 // the neighbouring cell for a full cube, which agrees except for the odd
 // partial block sitting in the far half of that cell.
 func (h *hub) shulkerBlockedAt(dim int, pos blockPos, state uint32) bool {
+	// canOpen asks only while the lid is CLOSED: a box someone already has
+	// open (or that is still moving) opens for the next player too.
+	if lid := h.shulkerLids[simPos{dim: dim, blockPos: pos}]; lid != nil && lid.status != lidClosed {
+		return false
+	}
 	d, ok := propDir(state, "facing")
 	if !ok {
 		return false

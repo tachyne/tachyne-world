@@ -64,10 +64,18 @@ func TestRavagerTramplesCrops(t *testing.T) {
 		t.Fatal("a cow does not trample wheat")
 	}
 	cow.dying = 1
-	h.spawnMob(players, entityRavager, 0.5, 180, 0.5)
-	h.insideBoth(players)
-	if w.At(0, 180, 0) != worldgen.Air {
-		t.Fatalf("the ravager should have flattened the wheat: %d", w.At(0, 180, 0))
+	// CropBlock.entityInside runs for every cell the ravager's 1.95-wide body
+	// touches, not only the one under its centre.
+	w.SetBlock(1, 179, 0, worldgen.BlockBase("farmland"))
+	w.SetBlock(1, 180, 0, cropRanges[0][0]+3)
+	w.SetBlock(-1, 179, 0, worldgen.BlockBase("farmland"))
+	w.SetBlock(-1, 180, 0, cropRanges[0][0]+3)
+	rav := h.spawnMob(players, entityRavager, 0.5, 180, 0.5)
+	h.ravagerStep(players, rav)
+	for x := -1; x <= 1; x++ {
+		if w.At(x, 180, 0) != worldgen.Air {
+			t.Errorf("the ravager should have flattened the wheat at x=%d: %d", x, w.At(x, 180, 0))
+		}
 	}
 }
 
@@ -109,6 +117,9 @@ func TestOpenEyeblossomPoisonsBees(t *testing.T) {
 	h.insideBoth(players)
 	if bee.hasEffect(effPoison) == 0 {
 		t.Fatal("the bee should be poisoned")
+	}
+	if e := bee.effects[effPoison]; e == nil || e.left != 25 {
+		t.Errorf("EyeblossomBlock.getBeeInteractionEffect is Poison for 25 ticks: %+v", e)
 	}
 	w.SetBlock(0, 180, 0, closedEyeblossom)
 	bee2 := h.spawnMob(players, entityBee, 0.5, 180, 0.5)

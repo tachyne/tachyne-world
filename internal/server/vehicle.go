@@ -481,39 +481,72 @@ func (h *hub) updateVehicles(players map[int32]*tracked) {
 			h.boatCrushesLilyPads(players, v)
 		}
 	}
-	occupied := map[simPos]bool{}
+	// DetectorRailBlock.entityInside: a cart on an unpowered detector rail
+	// checks it at once; a pressed one re-checks on its own 20-tick tick.
 	for _, v := range h.vehicles {
-		h.inDim(v.dim, func() {
-			pos := blockPos{floorInt(v.x), floorInt(v.y + 0.01), floorInt(v.z)}
-			if isDetectorRail(h.rsWorld().At(pos.x, pos.y, pos.z)) {
-				occupied[simPos{v.dim, pos}] = true
-				if !railPowered(h.rsWorld().At(pos.x, pos.y, pos.z)) {
-					s := h.rsWorld().At(pos.x, pos.y, pos.z)
-					h.rsSet(players, pos, railWith(s, railShape(s), true))
-					h.scheduleSignalAround(players, pos)
-					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
-				} else {
-					h.detectorsOn[simPos{v.dim, pos}] = h.tick.Load()
-				}
-			}
-		})
-	}
-	for sp, last := range h.detectorsOn {
-		// DetectorRailBlock.checkPressed: the release check runs 20 ticks
-		// after a cart last sat on the rail.
-		if occupied[sp] || h.tick.Load() < last+platePressedTicks {
+		if v.isBoat() {
 			continue
 		}
-		delete(h.detectorsOn, sp)
-		h.inDim(sp.dim, func() {
-			pos := sp.blockPos
-			if s := h.rsWorld().At(pos.x, pos.y, pos.z); isDetectorRail(s) && railPowered(s) {
-				h.rsSet(players, pos, railWith(s, railShape(s), false))
-				h.scheduleSignalAround(players, pos)
-			}
-		})
+		sp := simPos{v.dim, blockPos{floorInt(v.x), floorInt(v.y + 0.01), floorInt(v.z)}}
+		if s := h.worldFor(v.dim).At(sp.x, sp.y, sp.z); isDetectorRail(s) && !railPowered(s) {
+			h.checkDetector(players, sp)
+		}
+	}
+	now := h.tick.Load()
+	for sp, due := range h.detectorsOn {
+		if now >= due {
+			h.checkDetector(players, sp)
+		}
 	}
 }
+
+// detectorCart is DetectorRailBlock.getInteractingMinecartOfType: a cart
+// whose box meets the rail's search box (the cell inset 0.2 on the four
+// sides and the top) — a container cart only, when asked.
+func (h *hub) detectorCart(pos simPos, container bool) *vehicle {
+	x0, y0, z0 := float64(pos.x)+0.2, float64(pos.y), float64(pos.z)+0.2
+	x1, y1, z1 := float64(pos.x)+0.8, float64(pos.y)+0.8, float64(pos.z)+0.8
+	for _, v := range h.vehicles {
+		if v.dim != pos.dim || v.isBoat() || (container && v.cartSlots() == nil) {
+			continue
+		}
+		w, ht := v.box()
+		if v.x-w/2 < x1 && v.x+w/2 > x0 && v.y < y1 && v.y+ht > y0 && v.z-w/2 < z1 && v.z+w/2 > z0 {
+			return v
+		}
+	}
+	return nil
+}
+
+// checkDetector is DetectorRailBlock.checkPressed: pressed while a cart is
+// on it, the 20-tick re-check scheduled while it stays, and the comparator
+// beside it told on every check (updateNeighbourForOutputSignal) so it
+// reads the cart's contents as they change.
+func (h *hub) checkDetector(players map[int32]*tracked, sp simPos) {
+	h.inDim(sp.dim, func() {
+		pos := sp.blockPos
+		s := h.rsWorld().At(pos.x, pos.y, pos.z)
+		if !isDetectorRail(s) {
+			delete(h.detectorsOn, sp)
+			return
+		}
+		was := railPowered(s)
+		should := h.detectorCart(sp, false) != nil
+		if should != was {
+			h.rsSet(players, pos, railWith(s, railShape(s), should))
+			h.scheduleSignalAround(players, pos)
+		}
+		if should {
+			h.detectorsOn[sp] = h.tick.Load() + detectorCheckTicks
+		} else {
+			delete(h.detectorsOn, sp)
+		}
+		h.updateNeighbourForOutputSignal(players, pos)
+	})
+}
+
+// detectorCheckTicks is DetectorRailBlock's scheduleTick(pos, this, 20).
+const detectorCheckTicks = 20
 
 // sendVehiclesTo shows existing vehicles to a joining player.
 func (h *hub) sendVehiclesTo(t *tracked) {

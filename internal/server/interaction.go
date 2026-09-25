@@ -764,6 +764,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// be added to the storage side and forgotten on the interaction side —
 	// which is exactly how placed shulker boxes shipped unopenable.
 	if isWoodShelf(state) { // a slot on its face: swap the held stack in or out (or the hotbar, powered)
+		if woodShelfHitSlot(state, face, cx, cz) < 0 {
+			return false // ShelfBlock.useItemOn: no slot hit (a side or the top) → PASS
+		}
 		s.hub.post(evUseWoodShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
@@ -840,6 +843,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return false
 	}
 	if isBookshelf(state) {
+		if shelfHitSlot(state, face, cx, cy, cz) < 0 {
+			return false // ChiseledBookShelfBlock: not a slot face (getHitSlot empty) → PASS
+		}
 		s.hub.post(evUseShelf{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
@@ -877,12 +883,23 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isMovingPiston(state) { // MovingPistonBlock.useWithoutItem: an orphaned cell is cleared
+		s.hub.post(evUseMovingPiston{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if isDragonEgg(state) { // DragonEggBlock.useWithoutItem: it blinks away
 		s.hub.post(evDragonEgg{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
 	if isJukebox(state) {
+		// JukeboxBlock.useItemOn: an empty jukebox takes a disc; anything
+		// else falls to useWithoutItem, which PASSes on an empty jukebox,
+		// so the held block is placed against it.
+		if _, _, disc := jukeboxSongFor(int32(held)); state == jukeboxState(false) && !disc {
+			return false
+		}
 		s.hub.post(evUseJukebox{eid: p.eid, x: x, y: y, z: z, slot: slot})
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
@@ -890,6 +907,9 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 	// A berry plant uses the click only when there is something to pick
 	// (SweetBerryBushBlock.useItemOn / CaveVines.use); otherwise it passes
 	// to the item, which is how bone meal grows a bush.
+	if isWire(state) && !mayBuild(s.modes.get(p.key())) {
+		return false // RedStoneWireBlock.useWithoutItem: PASS for a player who may not build
+	}
 	plant := (isBerryBush(state) || isCaveVine(state)) && berriesClaimClick(state, held)
 	if plant || (isGolemStatue(state) && statueClaimsClick(state, held)) || isWire(state) { // the block's own use (blockclick.go)
 		s.hub.post(evClickBlock{eid: p.eid, x: x, y: y, z: z})
@@ -923,9 +943,10 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		return false
 	}
 	blockName, _ := worldgen.StateName(state)
-	if !opensByHand(blockName) { // BlockSetType.canOpenByHand: iron answers only to redstone
-		s.sendBlockChange(p, x, y, z, state, seq)
-		return true
+	if !opensByHand(blockName) {
+		// DoorBlock/TrapDoorBlock.useWithoutItem: iron answers only to
+		// redstone, and the click PASSes, so a held block places against it.
+		return false
 	}
 	nv := "true"
 	freq := freqBlockOpen

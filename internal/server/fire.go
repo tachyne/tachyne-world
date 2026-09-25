@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
@@ -101,9 +102,8 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
-	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point, as it does lighting anything
-		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evToolWear{eid: p.eid, slot: int(p.handSlot(off))})
+	if isTNT(target) { // TntBlock.useItemOn: the lighter wears a point once the TNT is lit (the hub decides)
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid, item: itemFlintSteel, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return true
 	}
@@ -126,9 +126,8 @@ func (s *Server) useFlintSteel(p *player, off bool, x, y, z, dx, dy, dz int, seq
 // in place or starts a fire in the empty cell in front, spending the charge.
 func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq int32) {
 	target := s.worldFor(p).Block(x, y, z)
-	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent
-		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid})
-		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
+	if isTNT(target) { // TntBlock.useItemOn: a fire charge lights it too, and is spent once it has
+		s.hub.post(evPrimeTNT{dim: p.dim, x: x, y: y, z: z, by: p.eid, item: itemFireCharge, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
 	}
@@ -150,9 +149,39 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 type evPrimeTNT struct {
 	dim, x, y, z int
 	by           int32 // the player who lit it
+	item         int32 // the lighter: flint and steel or a fire charge (0: none)
+	slot         int32 // the hand slot it is in
 }
 
 func (evPrimeTNT) isHubEvent() {}
+
+// onPrimeTNT is TntBlock.useItemOn with a lighter: once the TNT is primed the
+// flint and steel wears a point (a fire charge is spent) and ITEM_USED
+// counts; with tnt_explodes off nothing is lit or spent, and the player is
+// told why.
+func (h *hub) onPrimeTNT(players map[int32]*tracked, e evPrimeTNT) {
+	t := players[e.by]
+	if h.primeTNTBy(players, e.dim, e.x, e.y, e.z, tntFuseTicks, e.by) == nil {
+		if t != nil && e.item != 0 && !h.rules.TNTExplodes {
+			t.p.trySendEv(actionBarEv("TNT explosions are disabled")) // block.minecraft.tnt.disabled
+		}
+		return
+	}
+	if t == nil || e.item == 0 {
+		return
+	}
+	h.incStat(t, attachproto.StatUsed, e.item, 1)
+	if e.item == itemFlintSteel {
+		h.applyToolWear(t, int(e.slot), 1)
+		return
+	}
+	if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 && t.gamemode != gmCreative {
+		if sl.count--; sl.count == 0 {
+			sl.item = 0
+		}
+		h.sendHandSlot(t, int(e.slot))
+	}
+}
 
 // primeTNT swaps a TNT block for the ticking entity, in the dimension the
 // block simulation is running in (redstone, fire, dispensers). It lit the
@@ -167,10 +196,25 @@ func (h *hub) primeTNTIn(players map[int32]*tracked, dim, x, y, z int, fuse int)
 	return h.primeTNTBy(players, dim, x, y, z, fuse, 0)
 }
 
-// primeTNTBy is TntBlock.prime with an igniter: the player or mob it names
-// is the owner the blast is blamed on (and credited with what it kills).
+// primeTNTBy is TntBlock.prime with an igniter and the block's removal: the
+// player or mob it names is the owner the blast is blamed on (and credited
+// with what it kills). With tnt_explodes off prime fails and the block stays
+// (nil).
 func (h *hub) primeTNTBy(players map[int32]*tracked, dim, x, y, z int, fuse int, owner int32) *primedTNT {
-	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	pt := h.tntPrime(players, dim, x, y, z, fuse, owner)
+	if pt != nil {
+		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
+	}
+	return pt
+}
+
+// tntPrime is TntBlock.prime alone: the lit charge, its sound and the
+// PRIME_FUSE game event, leaving the block to the caller (a fire that eats
+// TNT has already replaced it). Nothing when tnt_explodes is off.
+func (h *hub) tntPrime(players map[int32]*tracked, dim, x, y, z int, fuse int, owner int32) *primedTNT {
+	if !h.rules.TNTExplodes {
+		return nil
+	}
 	pt := h.spawnPrimedTNT(players, dim, x, y, z, fuse)
 	pt.owner = owner
 	h.vib(dim, freqPrimeFuse, x, y, z, owner)
@@ -332,9 +376,8 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 			if h.blastSpareRails && (isAnyRail(st) || isAnyRail(w.At(pos.x, pos.y+1, pos.z))) {
 				continue // a primed TNT cart's blast leaves the track and its bed alone
 			}
-			if isTNT(st) { // chain reaction: light it, don't vaporize it (owned by the blast's cause)
-				h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer)
-				continue
+			if isTNT(st) && h.primeTNTBy(players, dim, pos.x, pos.y, pos.z, 10+h.rng.Intn(20), cfg.causer) != nil {
+				continue // chain reaction: lit, not vaporized (owned by the blast's cause); with tnt_explodes off it just goes
 			}
 			h.setBlockAt(players, dim, pos, worldgen.Air)
 			h.scheduleIn(dim, pos, 1)
@@ -377,7 +420,7 @@ func (h *hub) lightBlastFires(players map[int32]*tracked, dim int, cleared []blo
 		h.setBlockAt(players, dim, pos, fire)
 		if fire == fireDefault {
 			h.fireAge[simPos{dim: dim, blockPos: pos}] = 0
-			h.scheduleIn(dim, pos, uint64(30+h.rng.Intn(10)))
+			h.inDim(dim, func() { h.armFire(pos) })
 		}
 	}
 }
@@ -498,7 +541,7 @@ func (h *hub) blastPositionsCapped(w *world.World, cx, cy, cz, radius, resistCap
 // fire as a pure hazard that never eats a build.
 func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	// Reschedule next tick (vanilla getFireTickDelay: 30 + rand(10)).
-	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
+	h.armFire(pos)
 	if !h.canSpreadFireAround(players, pos) {
 		// ServerLevel.canSpreadFireAround: out of every player's reach, fire
 		// neither spreads nor burns out — it just sits there.
@@ -506,7 +549,12 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 	}
 
 	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
-	infiniburn := below == worldgen.Netherrack // eternal fire on netherrack
+	// FireBlock.canSurvive: a sturdy floor or something burnable beside it.
+	if !worldgen.IsSolidFull(below) && !h.validFireLocation(pos) {
+		h.removeFire(players, pos, false)
+		return
+	}
+	infiniburn := h.fireInfiniburn(below) // eternal fire on the dimension's #infiniburn_*
 	n := h.fireAge[h.rsKey(pos)]
 
 	// Rain douse (scales with age); doesn't happen on infiniburn.
@@ -536,18 +584,20 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 		}
 	}
 
-	// The wildfire half — eats blocks — is mobGriefing-gated.
-	if !h.rules.MobGriefing {
-		return
+	// Consume flammable neighbours (the six faces have different
+	// resilience); a biome with INCREASED_FIRE_BURNOUT burns them faster
+	// and spreads less.
+	burnout := h.increasedFireBurnout(pos)
+	extra := 0
+	if burnout {
+		extra = -50
 	}
-
-	// Consume flammable neighbours (the six faces have different resilience).
-	h.checkBurnOut(players, blockPos{pos.x + 1, pos.y, pos.z}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x - 1, pos.y, pos.z}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y - 1, pos.z}, 250, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y + 1, pos.z}, 250, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z - 1}, 300, n)
-	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z + 1}, 300, n)
+	h.checkBurnOut(players, blockPos{pos.x + 1, pos.y, pos.z}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x - 1, pos.y, pos.z}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y - 1, pos.z}, 250+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y + 1, pos.z}, 250+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z - 1}, 300+extra, n)
+	h.checkBurnOut(players, blockPos{pos.x, pos.y, pos.z + 1}, 300+extra, n)
 
 	// Spread to air in a 3×3 column from one below to four above.
 	diff := int(h.rules.Difficulty)
@@ -567,6 +617,9 @@ func (h *hub) updateFire(players map[int32]*tracked, pos blockPos) {
 					continue
 				}
 				chance := (ig + 40 + diff*7) / (n + 30)
+				if burnout {
+					chance /= 2
+				}
 				if chance <= 0 || h.rng.Intn(bound) > chance ||
 					(h.raining && h.fireNearRain(np)) {
 					continue
@@ -590,20 +643,50 @@ func (h *hub) checkBurnOut(players map[int32]*tracked, pos blockPos, resilience,
 	if h.rng.Intn(resilience) >= int(burn) {
 		return
 	}
-	if isTNT(state) {
-		h.rsSet(players, pos, worldgen.Air)
-		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
-		// is the only consumer of h.events — a self-post with a full queue
-		// blocks forever and takes the whole server with it (see postFromHub).
-		h.primeTNT(players, pos.x, pos.y, pos.z, tntFuseTicks)
-		return
-	}
-	if h.rng.Intn(srcAge+10) < 5 && !(h.raining && h.fireNearRain(pos)) {
+	// The block turns to fire or goes (isRainingAt: rain on the cell itself
+	// puts it out), and TNT that burns is primed either way.
+	if h.rng.Intn(srcAge+10) < 5 && !h.rainingOn(h.rsDim, pos.x, pos.y, pos.z) {
 		h.igniteFire(players, pos, min(srcAge+h.rng.Intn(5)/4, 15))
 	} else {
 		h.rsSet(players, pos, worldgen.Air)
 		h.scheduleAroundIn(h.rsDim, pos, 1) // sand above falls, fluid flows into the gap
 	}
+	if isTNT(state) {
+		// Direct call, NOT h.post: this runs on the hub goroutine, and the hub
+		// is the only consumer of h.events — a self-post with a full queue
+		// blocks forever and takes the whole server with it (see postFromHub).
+		// The cell is already fire or air: prime alone, no removal.
+		h.tntPrime(players, h.rsDim, pos.x, pos.y, pos.z, tntFuseTicks, 0)
+	}
+}
+
+// fireInfiniburn is the dimension type's infiniburn tag: netherrack and
+// magma blocks everywhere (#infiniburn_overworld), and bedrock too in the
+// End (#infiniburn_end).
+func (h *hub) fireInfiniburn(below uint32) bool {
+	return below == worldgen.Netherrack || below == magmaBlockState ||
+		(h.rsDim == dimEnd && below == worldgen.Bedrock)
+}
+
+// fireBurnoutBiomes carry EnvironmentAttributes.INCREASED_FIRE_BURNOUT.
+var fireBurnoutBiomes = map[string]bool{
+	"minecraft:jungle": true, "minecraft:bamboo_jungle": true, "minecraft:mushroom_fields": true,
+	"minecraft:swamp": true, "minecraft:mangrove_swamp": true, "minecraft:dappled_forest": true,
+	"minecraft:snowy_slopes": true,
+}
+
+// increasedFireBurnout reads the fire's biome for INCREASED_FIRE_BURNOUT.
+func (h *hub) increasedFireBurnout(pos blockPos) bool {
+	w := h.rsWorld()
+	return w != nil && fireBurnoutBiomes[w.BiomeAt3D(pos.x, pos.y, pos.z)]
+}
+
+// rainingOn is Level.isRainingAt: raining, nothing that blocks motion (or
+// holds a fluid) above the cell, and the biome rains at that height. Only
+// the overworld has weather.
+func (h *hub) rainingOn(dim, x, y, z int) bool {
+	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y &&
+		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
 }
 
 // igniteFire places a fire block of the given age and schedules its first tick.
@@ -614,13 +697,47 @@ func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
 	}
 	h.rsSet(players, pos, fireDefault)
 	h.fireAge[h.rsKey(pos)] = age
-	h.rsSchedule(pos, uint64(30+h.rng.Intn(10)))
+	h.armFire(pos)
+}
+
+// armFire books a fire's next tick (FireBlock.onPlace and tick:
+// getFireTickDelay, 30 + rand(10)) and remembers when it is due: the
+// simulation queue also reaches a fire for every neighbour change, and
+// those only check that it can stay (updateShape).
+func (h *hub) armFire(pos blockPos) {
+	delay := uint64(30 + h.rng.Intn(10))
+	h.fireDue[h.rsKey(pos)] = h.tick.Load() + delay
+	h.rsSchedule(pos, delay)
+}
+
+// fireUpdate is the simulation queue reaching a fire: its own due tick runs
+// FireBlock.tick; a fire with no tick booked (a player's, a command's) books
+// one as onPlace does; any other update is updateShape — a fire that can no
+// longer survive goes out.
+func (h *hub) fireUpdate(players map[int32]*tracked, pos blockPos) {
+	key := h.rsKey(pos)
+	due, armed := h.fireDue[key]
+	if armed && h.tick.Load() >= due {
+		delete(h.fireDue, key)
+		h.updateFire(players, pos)
+		return
+	}
+	below := h.rsWorld().Block(pos.x, pos.y-1, pos.z)
+	if !worldgen.IsSolidFull(below) && !h.validFireLocation(pos) {
+		h.removeFire(players, pos, false) // FireBlock.canSurvive fails: updateShape gives air
+		delete(h.fireDue, key)
+		return
+	}
+	if !armed {
+		h.armFire(pos)
+	}
 }
 
 // removeFire clears a fire block (and its side-mapped age).
 func (h *hub) removeFire(players map[int32]*tracked, pos blockPos, doused bool) {
 	h.rsSet(players, pos, worldgen.Air)
 	delete(h.fireAge, h.rsKey(pos))
+	delete(h.fireDue, h.rsKey(pos))
 	if doused {
 		h.rsSound(players, "minecraft:block.fire.extinguish", sndBlock,
 			float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5, 0.5, 1.2)
@@ -652,15 +769,13 @@ func (h *hub) igniteOddsAt(pos blockPos) int {
 	return best
 }
 
-// fireNearRain reports whether rain is falling on the fire's column or any of
+// fireNearRain is FireBlock.isNearRain: isRainingAt on the fire's cell or any of
 // its four horizontal neighbours (a nearby downpour still snuffs it).
 func (h *hub) fireNearRain(pos blockPos) bool {
-	if h.rsDim != dimOverworld {
-		return false // no weather outside the overworld: its rain is not falling here
-	}
-	return h.skyExposedColumn(pos.x, pos.z) ||
-		h.skyExposedColumn(pos.x-1, pos.z) || h.skyExposedColumn(pos.x+1, pos.z) ||
-		h.skyExposedColumn(pos.x, pos.z-1) || h.skyExposedColumn(pos.x, pos.z+1)
+	d := h.rsDim
+	return h.rainingOn(d, pos.x, pos.y, pos.z) ||
+		h.rainingOn(d, pos.x-1, pos.y, pos.z) || h.rainingOn(d, pos.x+1, pos.y, pos.z) ||
+		h.rainingOn(d, pos.x, pos.y, pos.z-1) || h.rainingOn(d, pos.x, pos.y, pos.z+1)
 }
 
 // isFlammable reports whether a block can catch fire at all (ignite odds > 0).

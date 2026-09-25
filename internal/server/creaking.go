@@ -44,6 +44,7 @@ type heartLink struct {
 	creaking int32  // eid of its protector (0 = none out)
 	nextAt   uint64 // tick of the heart's next self-check
 	hurtLeft int    // remaining resin-spread calls in this bout
+	outSig   int    // the analog output last announced (CreakingHeartBlockEntity.outputSignal)
 }
 
 // isCreakingHeart reports whether a state is a creaking heart, and whether it
@@ -177,6 +178,12 @@ func (h *hub) updateHearts(players map[int32]*tracked) {
 	now := h.tick.Load()
 	overworldNight := h.nightNow()
 	for key, link := range h.hearts {
+		// CreakingHeartBlockEntity.serverTick, every tick: the comparator
+		// reading follows the creaking, and a change tells the neighbours.
+		if sig := h.analogSignal(key); sig >= 0 && sig != link.outSig {
+			link.outSig = sig
+			h.inDim(key.dim, func() { h.updateNeighbourForOutputSignal(players, key.blockPos) })
+		}
 		if now < link.nextAt {
 			continue
 		}

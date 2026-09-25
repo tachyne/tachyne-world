@@ -56,6 +56,7 @@ func (m *mob) ravagerImmobile() bool {
 
 // ravagerStep runs each mob update. Returns whether it holds the ravager.
 func (h *hub) ravagerStep(players map[int32]*tracked, m *mob) bool {
+	h.ravagerFlattenCrops(players, m)
 	for i := 0; i < mobMoveInterval; i++ {
 		ravagerSpeedTick(m)
 		if m.ravRoarTick > 0 {

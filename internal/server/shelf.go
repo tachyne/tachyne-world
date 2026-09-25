@@ -284,6 +284,11 @@ func (h *hub) updateShelfPower(players map[int32]*tracked, dim int, pos blockPos
 		snd = "minecraft:block.shelf.activate"
 	}
 	h.playSoundDim(players, dim, snd, sndBlock, float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
+	freq := freqBlockDeactivate // ShelfBlock.neighborChanged: BLOCK_ACTIVATE / BLOCK_DEACTIVATE
+	if powered {
+		freq = freqBlockActivate
+	}
+	h.vib(dim, freq, pos.x, pos.y, pos.z, 0)
 	if powered {
 		h.shelfPowerUp(players, dim, pos, next, old)
 	} else {

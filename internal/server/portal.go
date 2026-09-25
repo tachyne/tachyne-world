@@ -35,9 +35,9 @@ func isPortalBlock(s uint32) bool { return s == portalX || s == portalZ }
 // state, or ok=false.
 func detectPortalFrame(w *world.World, x, y, z int) (x0, y0, z0, wid, hgt int, state uint32, ok bool) {
 	obs := func(bx, by, bz int) bool { return w.At(bx, by, bz) == worldgen.Obsidian }
-	hollow := func(bx, by, bz int) bool {
+	hollow := func(bx, by, bz int) bool { // PortalShape.isEmpty: air, #fire or portal
 		s := w.At(bx, by, bz)
-		return s == worldgen.Air || isPortalBlock(s)
+		return s == worldgen.Air || isFire(s) || isPortalBlock(s)
 	}
 	for _, axis := range [2]uint32{portalX, portalZ} {
 		dx, dz := 1, 0
@@ -89,8 +89,12 @@ func detectPortalFrame(w *world.World, x, y, z int) (x0, y0, z0, wid, hgt int, s
 	return 0, 0, 0, 0, 0, 0, false
 }
 
-// lightPortal fills a validated frame's interior with portal blocks.
+// lightPortal fills a validated frame's interior with portal blocks. The End
+// is no portal dimension: there the lighter just starts a fire.
 func (s *Server) lightPortal(p *player, x, y, z int) bool {
+	if p.dim != dimOverworld && p.dim != dimNether {
+		return false
+	}
 	w := s.worldFor(p)
 	x0, y0, z0, wid, hgt, state, ok := detectPortalFrame(w, x, y, z)
 	if !ok {
@@ -109,6 +113,30 @@ func (s *Server) lightPortal(p *player, x, y, z int) bool {
 		}
 	}
 	return true
+}
+
+// fireOnPlace is BaseFireBlock.onPlace: a fire that appears inside an empty
+// obsidian frame — from a fire charge, a dispenser, lightning, a spreading
+// blaze — lights the portal, in the overworld and the Nether only
+// (inPortalDimension).
+func (h *hub) fireOnPlace(players map[int32]*tracked, dim int, pos blockPos, old, state uint32) {
+	if !isFire(state) || isFire(old) || (dim != dimOverworld && dim != dimNether) {
+		return
+	}
+	w := h.worldFor(dim)
+	x0, y0, z0, wid, hgt, axis, ok := detectPortalFrame(w, pos.x, pos.y, pos.z)
+	if !ok {
+		return
+	}
+	dx, dz := 1, 0
+	if axis == portalZ {
+		dx, dz = 0, 1
+	}
+	for i := 0; i < wid; i++ {
+		for j := 0; j < hgt; j++ {
+			h.setBlockAt(players, dim, blockPos{x0 + dx*i, y0 + j, z0 + dz*i}, axis)
+		}
+	}
 }
 
 // portalBaseKey normalizes any portal block to its sheet's minimum base cell
