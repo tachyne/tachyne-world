@@ -168,6 +168,7 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 	}
 	if stage := dustedStage(b.count); stage != was {
 		h.setBlockAt(players, t.dim, pos, suspiciousBase(state)+uint32(stage))
+		h.brushDisplay(players, t.dim, pos, b) // the item it is uncovering
 	}
 }
 

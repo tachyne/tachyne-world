@@ -140,6 +140,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Vaults, trial spawners and suspicious blocks show their contents.** An
+  active vault turns through the rewards it can give, a trial spawner shows
+  the mob it spawns spinning inside, and brushing sand or gravel reveals the
+  item as it's uncovered.
 - **Sniffers show what they're doing.** Clients now see a sniffer scent,
   sniff, dig, rise and look pleased, and it walks a path to the spot it
   smelled instead of a straight line.

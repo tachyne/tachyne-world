@@ -127,6 +127,7 @@ func (h *hub) showTrialState(players map[int32]*tracked, ts *trialSpawner) {
 	next := trialSpawnerBlock(ts.ominous, ts.state)
 	if cur := h.world.At(ts.pos.x, ts.pos.y, ts.pos.z); next != cur {
 		h.setBlockAt(players, 0, ts.pos, next)
+		h.trialDisplay(players, ts) // its block entity's update rides the state change
 	}
 }
 

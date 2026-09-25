@@ -166,6 +166,8 @@ func (h *hub) updateVaults(players map[int32]*tracked) {
 
 // tickVault runs one vault's state.
 func (h *hub) tickVault(players map[int32]*tracked, v *vaultRecord, cur uint32, now uint64) {
+	before := v.state
+	defer func() { h.vaultDisplay(players, v, now, v.state != before) }()
 	switch v.state {
 	case vaultUnlocking:
 		if now >= v.until {

@@ -407,6 +407,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
 	case bundleClose:
 		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
+	case attachproto.BlockDisplay:
+		send(attachproto.MsgBlockDisplay, ev)
 	case attachproto.NautilusVariant:
 		send(attachproto.MsgNautilusVariant, ev)
 	case attachproto.Suggestions:
