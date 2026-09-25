@@ -440,11 +440,8 @@ func (h *hub) drinkPotion(players map[int32]*tracked, t *tracked, slot int) {
 // whole lingering-potion half of brewing: everything downstream of it was
 // already built and simply had no way to start.
 func (h *hub) fillBottle(players map[int32]*tracked, t *tracked, slot int32) {
-	if t.inv == nil || slot < 0 || slot >= 9 {
-		return
-	}
-	if s := &t.inv.slots[slot]; s.item != itemGlassBottle || s.count == 0 {
-		return
+	if s := t.handStack(int(slot)); s == nil || s.item != itemGlassBottle || s.count == 0 {
+		return // a hotbar slot or the offhand
 	}
 	if c := h.dragonBreathNear(t); c != nil {
 		c.radius -= 0.5
@@ -502,19 +499,8 @@ func (h *hub) waterSourceInSight(t *tracked) bool {
 // turnBottleInto is Item.turnBottleIntoItem: one bottle out of the stack, the
 // filled thing in, and on the floor if there is nowhere for it.
 func (h *hub) turnBottleInto(t *tracked, slot int32, filled invStack) {
-	s := &t.inv.slots[slot]
-	s.count--
-	if s.count == 0 {
-		*s = invStack{}
-	}
-	if changed, left := t.inv.addStack(filled); left == 0 {
-		for _, sl := range changed {
-			h.sendSlot(t, sl)
-		}
-	} else {
-		h.spawnItemIn(h.playersRef, t.dim, filled.item, left, t.x, t.y, t.z)
-	}
-	h.sendSlot(t, int(slot))
+	h.incStat(t, attachproto.StatUsed, itemGlassBottle, 1)
+	h.giveFilledStack(h.playersRef, t, slot, filled) // the last bottle turns in the hand
 }
 
 type evFillBottle struct {

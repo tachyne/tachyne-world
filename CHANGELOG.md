@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The offhand works for more items.** Ender pearls, snowballs, eggs,
+  bottles o' enchanting, splash and lingering potions, eyes of ender, wind
+  charges, firework rockets, goat horns and spyglasses can now be used
+  from the offhand, and a bow, crossbow or trident held there draws,
+  shoots and wears in that hand. Throwing from one hand now takes from
+  that hand rather than the first matching stack in the inventory, an
+  arrow held in the main hand is shot before the ones in the inventory,
+  and an empty bucket or glass bottle held in the offhand fills in place.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

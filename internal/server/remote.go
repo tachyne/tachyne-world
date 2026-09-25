@@ -112,7 +112,8 @@ func (r *remotePlayer) Action(v any) {
 		// The client says which hand it used; the offhand is where a shield
 		// lives, and food, rockets and throwables work from it too.
 		item, slot := p.heldItem(), int32(p.held)
-		if e.Hand == handOffhand {
+		off := e.Hand == handOffhand // Player.getUsedItemHand: what the use draws on
+		if off {
 			item, slot = p.offhandItem(), offhandSlot
 		}
 		if equipSlotOnUse(item) >= 0 { // armour in hand goes on
@@ -125,11 +126,11 @@ func (r *remotePlayer) Action(v any) {
 		}
 		switch item {
 		case itemBow:
-			h.post(evBowStart{eid: p.eid})
+			h.post(evBowStart{eid: p.eid, off: off})
 		case itemCrossbow:
-			h.post(evXbowUse{eid: p.eid})
+			h.post(evXbowUse{eid: p.eid, off: off})
 		case itemTrident:
-			h.post(evTridentUse{eid: p.eid})
+			h.post(evTridentUse{eid: p.eid, off: off})
 		case itemFishingRod:
 			h.post(evFishUse{eid: p.eid})
 		case itemCarrotOnStick, itemWarpedFungusStick:
@@ -141,25 +142,25 @@ func (r *remotePlayer) Action(v any) {
 		case itemShield:
 			h.post(evBlockStart{eid: p.eid, hand: e.Hand})
 		case itemSnowball, itemEgg, itemBlueEgg, itemBrownEgg:
-			h.post(evThrow{eid: p.eid, item: item})
+			h.post(evThrow{eid: p.eid, item: item, off: off})
 		case itemSplashPotion, itemLingerPotion:
 			h.post(evThrowPotion{eid: p.eid, slot: int(slot)})
 		case itemXPBottle:
-			h.post(evThrowXPBottle{eid: p.eid})
+			h.post(evThrowXPBottle{eid: p.eid, off: off})
 		case itemSpyglass:
-			h.post(evSpyglass{eid: p.eid})
+			h.post(evSpyglass{eid: p.eid, off: off})
 		case itemFireworkRocket:
-			h.post(evUseFirework{eid: p.eid})
+			h.post(evUseFirework{eid: p.eid, off: off})
 		case itemGoatHorn:
-			h.post(evUseHorn{eid: p.eid})
+			h.post(evUseHorn{eid: p.eid, off: off})
 		case itemFrogspawn: // placed on the water surface, not against a face
 			h.post(evPlaceOnWater{eid: p.eid})
 		case itemEnderPearl:
-			h.post(evThrowPearl{eid: p.eid})
+			h.post(evThrowPearl{eid: p.eid, off: off})
 		case itemWindCharge:
-			h.post(evThrowWindCharge{eid: p.eid})
+			h.post(evThrowWindCharge{eid: p.eid, off: off})
 		case itemEnderEye:
-			h.post(evThrowEye{eid: p.eid})
+			h.post(evThrowEye{eid: p.eid, off: off})
 		case itemEmptyMap:
 			h.post(evUseMap{eid: p.eid})
 		case itemWrittenBook, itemWritableBook:

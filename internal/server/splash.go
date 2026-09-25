@@ -250,10 +250,10 @@ func thrownPotionType(lingering bool) int {
 // throwSplashPotion launches a thrown-potion projectile from a player (use_item
 // on a splash/lingering potion), consuming one from the slot.
 func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int) {
-	if t.inv == nil || slot < 0 || slot >= 9 {
+	s := t.handStack(slot) // a hotbar slot or the offhand
+	if s == nil {
 		return
 	}
-	s := &t.inv.slots[slot]
 	if s.item != itemSplashPotion && s.item != itemLingerPotion {
 		return
 	}
@@ -270,6 +270,6 @@ func (h *hub) throwSplashPotion(players map[int32]*tracked, t *tracked, slot int
 		if s.count--; s.count <= 0 {
 			*s = invStack{}
 		}
-		h.sendSlot(t, slot)
+		h.sendHandSlot(t, slot)
 	}
 }

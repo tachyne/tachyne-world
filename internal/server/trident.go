@@ -33,14 +33,17 @@ const (
 )
 
 // evTridentUse begins a trident charge-hold; the hub owns the draw state.
-type evTridentUse struct{ eid int32 }
+type evTridentUse struct {
+	eid int32
+	off bool
+}
 
 func (evTridentUse) isHubEvent() {}
 
 // startTridentCharge begins winding up a trident (no ammo — the trident itself
 // is the projectile). Resolves on release_use_item via finishTridentThrow.
 func (h *hub) startTridentCharge(t *tracked) {
-	if t.dead || heldStack(t).item != itemTrident {
+	if t.dead || usedStack(t).item != itemTrident {
 		return
 	}
 	t.tridentAt = h.tick.Load()
@@ -55,10 +58,10 @@ func (h *hub) finishTridentThrow(players map[int32]*tracked, t *tracked) {
 	}
 	held := h.tick.Load() - t.tridentAt
 	t.tridentAt = 0
-	if t.dead || heldStack(t).item != itemTrident || held < tridentMinCharge {
+	if t.dead || usedStack(t).item != itemTrident || held < tridentMinCharge {
 		return
 	}
-	st := heldStack(t)
+	st := usedStack(t)
 	if riptide := st.enchLvl(enchRiptide); riptide > 0 {
 		h.riptideLaunch(players, t, riptide)
 		return
@@ -79,7 +82,7 @@ func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int)
 	}
 	h.dropShoulderParrots(players, t) // startAutoSpinAttack
 	if isSurvival(t.gamemode) {
-		h.applyToolWear(t, t.p.heldSlot(), 1)
+		h.applyToolWear(t, t.useSlot(), 1)
 	}
 	power := 3.0 * float64(1+riptide) / 4.0 // vanilla riptide impulse magnitude
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
@@ -100,11 +103,13 @@ func (h *hub) throwTrident(players map[int32]*tracked, t *tracked, st invStack) 
 	a.impaling = st.enchLvl(enchImpaling)
 	a.channeling = st.enchLvl(enchChanneling) > 0
 	if isSurvival(t.gamemode) {
-		slot := t.p.heldSlot()
+		slot := t.useSlot()
 		st.dmg++           // one durability point of wear rides with the thrown stack
 		a.pickupStack = st // retrieved / returned trident restores this exact stack
-		t.inv.slots[slot] = invStack{}
-		h.sendSlot(t, slot) // the trident leaves the hand
+		if s := t.handStack(slot); s != nil {
+			*s = invStack{}
+		}
+		h.sendHandSlot(t, slot) // the trident leaves the hand
 	} else {
 		a.noPickup = true // creative tridents are throw-only (vanilla CREATIVE_ONLY)
 	}

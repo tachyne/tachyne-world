@@ -13,13 +13,16 @@ const spyglassUseTicks = 1200 // vanilla USE_DURATION: it holds until released
 // "started at tick 0" is indistinguishable from "not scoping" when the sentinel
 // is zero, and a fresh world starts at tick 0.
 
-type evSpyglass struct{ eid int32 }
+type evSpyglass struct {
+	eid int32
+	off bool
+}
 
 func (evSpyglass) isHubEvent() {}
 
 // raiseSpyglass starts a scope.
 func (h *hub) raiseSpyglass(players map[int32]*tracked, t *tracked) {
-	if t.dead || t.p.heldItem() != itemSpyglass {
+	if t.dead || usedStack(t).item != itemSpyglass {
 		return
 	}
 	t.scopeUntil = h.tick.Load() + spyglassUseTicks

@@ -13,7 +13,10 @@ const (
 	xpBottleRoll = 5
 )
 
-type evThrowXPBottle struct{ eid int32 }
+type evThrowXPBottle struct {
+	eid int32
+	off bool
+}
 
 func (evThrowXPBottle) isHubEvent() {}
 
@@ -30,22 +33,11 @@ func (h *hub) throwXPBottle(players map[int32]*tracked, t *tracked) {
 	if t.dead || t.inv == nil {
 		return
 	}
-	slot := -1
-	for i := range t.inv.slots {
-		if s := &t.inv.slots[i]; s.item == itemXPBottle && s.count > 0 {
-			slot = i
-			break
-		}
+	if s := usedStack(t); s.item != itemXPBottle || s.count <= 0 {
+		return // ExperienceBottleItem.use throws the stack in the hand used
 	}
 	if isSurvival(t.gamemode) {
-		if slot < 0 {
-			return
-		}
-		s := &t.inv.slots[slot]
-		if s.count--; s.count == 0 {
-			*s = invStack{}
-		}
-		h.sendSlot(t, slot)
+		h.consumeUsed(t)
 	}
 	// ExperienceBottleItem.use: shootFromRotation with a −20° lift at 0.7.
 	vx, vy, vz := h.throwFromRotation(t, xpBottleThrowLift, xpBottleThrowPower, throwUncertainty)

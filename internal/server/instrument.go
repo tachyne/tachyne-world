@@ -31,7 +31,10 @@ const (
 	hornCooldown = int(hornUseSecs * 20)
 )
 
-type evUseHorn struct{ eid int32 }
+type evUseHorn struct {
+	eid int32
+	off bool
+}
 
 func (evUseHorn) isHubEvent() {}
 
@@ -42,7 +45,7 @@ func (h *hub) tootHorn(players map[int32]*tracked, t *tracked) {
 	if t.dead || t.inv == nil {
 		return
 	}
-	held := heldStack(t)
+	held := usedStack(t)
 	if held.item != itemGoatHorn {
 		return
 	}

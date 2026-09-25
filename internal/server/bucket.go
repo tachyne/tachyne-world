@@ -115,8 +115,8 @@ func (h *hub) bucketEmpty(players map[int32]*tracked, t *tracked, slot int32, x,
 // bucketFill scoops with an empty bucket: walk the look ray to the first
 // fluid SOURCE (flowing fluid is passed through, a solid stops the ray).
 func (h *hub) bucketFill(players map[int32]*tracked, t *tracked, slot int32) {
-	if int(slot) != t.p.heldSlot() || t.inv == nil || t.inv.slots[slot].item != itemBucket {
-		return
+	if s := t.handStack(int(slot)); s == nil || s.item != itemBucket {
+		return // BucketItem.use scoops with the bucket in the hand used
 	}
 	h.vibAt(t.dim, freqFluidPickup, t.x, t.y, t.z, t.p.eid)
 	dx, dy, dz := lookVector(t.yaw, t.pitch)
@@ -185,26 +185,37 @@ func (h *hub) giveFilled(players map[int32]*tracked, t *tracked, slot int32, ite
 	h.giveFilledStack(players, t, slot, invStack{item: item, count: 1})
 }
 
+// giveFilledStack is ItemUtils.createFilledResult: creative keeps what it
+// used and gains the filled item only if it has none like it yet.
 func (h *hub) giveFilledStack(players map[int32]*tracked, t *tracked, slot int32, st invStack) {
 	if t.gamemode == gmCreative {
-		return // creative scoops without inventory changes
+		if !t.holdsLike(st) {
+			changed, _ := t.inv.addStack(st)
+			for _, sl := range changed {
+				h.sendSlot(t, sl)
+			}
+		}
+		return
 	}
-	cur := t.inv.slots[slot]
+	cur := t.handStack(int(slot)) // a hotbar slot or the offhand
+	if cur == nil {
+		return
+	}
 	if cur.count <= 1 {
-		t.inv.slots[slot] = st
-		h.sendSlot(t, int(slot))
+		*cur = st
+		h.sendHandSlot(t, int(slot))
 		return
 	}
 	cur.count--
-	t.inv.slots[slot] = cur
-	h.sendSlot(t, int(slot))
+	h.sendHandSlot(t, int(slot))
 	changed, left := t.inv.addStack(st)
 	for _, sl := range changed {
 		h.sendSlot(t, sl)
 	}
 	if left > 0 {
 		if it := h.spawnItemIn(players, t.dim, st.item, left, t.x, t.y, t.z); it != nil {
-			it.dmg, it.ench = st.dmg, st.ench
+			it.setFrom(st)
+			h.refreshItemMeta(players, it)
 		}
 	}
 }

@@ -82,8 +82,8 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 	if t.inv == nil {
 		return
 	}
-	slot := &t.inv.slots[t.p.heldSlot()]
-	if slot.item != itemEnderEye || slot.count == 0 {
+	slot := t.handStack(t.useSlot())
+	if slot == nil || slot.item != itemEnderEye || slot.count == 0 {
 		return
 	}
 	// Nearest stronghold across this cell + neighbours.
@@ -104,11 +104,7 @@ func (h *hub) throwEye(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	if t.gamemode != gmCreative {
-		slot.count--
-		if slot.count == 0 {
-			*slot = invStack{}
-		}
-		h.sendSlot(t, t.p.heldSlot())
+		h.consumeUsed(t)
 	}
 	// EnderEyeItem: the eye flies at the structure's locate position (the
 	// start chunk's corner), as /locate reports it — not the portal room.
@@ -127,7 +123,10 @@ type evInsertEye struct {
 
 func (evInsertEye) isHubEvent() {}
 
-type evThrowEye struct{ eid int32 }
+type evThrowEye struct {
+	eid int32
+	off bool
+}
 
 func (evThrowEye) isHubEvent() {}
 

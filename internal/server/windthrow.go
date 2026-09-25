@@ -21,10 +21,10 @@ func (h *hub) throwWindCharge(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	if isSurvival(t.gamemode) {
-		if s := heldStack(t); s.item != itemWindCharge || s.count <= 0 {
+		if s := usedStack(t); s.item != itemWindCharge || s.count <= 0 {
 			return
 		}
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	vx, vy, vz := h.throwFromRotation(t, 0, 1.5, throwUncertainty) // WindChargeItem.use
 	a := h.launchProjectileIn(players, entityWindCharge, t.dim, t.x, t.y+t.eyeHeight(), t.z, vx, vy, vz)
