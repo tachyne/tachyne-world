@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Zombie horses follow red mushrooms.** A zombie horse followed players
+  holding golden carrots and apples like a living horse. As in vanilla, it
+  now follows a player holding a red mushroom instead.
 - **Vexes attack what their evoker is fighting.** Vexes only ever went
   after players, so the vexes an evoker summoned against villagers or an
   iron golem ignored them. As in vanilla, they now go for their evoker's
