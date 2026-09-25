@@ -146,6 +146,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs honour movement efficiency.** A mob whose movement efficiency is
+  raised (for example with `/attribute`) is slowed less by soul sand and
+  honey blocks, as in vanilla.
 - **The Wind Charged death burst is a real wind burst.** Something that
   dies while Wind Charged now bursts like a wind charge: it swings doors,
   trapdoors and fence gates, presses buttons, flips levers and rings bells

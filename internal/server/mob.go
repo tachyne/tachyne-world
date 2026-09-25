@@ -2174,11 +2174,15 @@ const slimeStepFactor = 0.4
 func (h *hub) mobSpeedFactor(m *mob) float64 {
 	w := h.worldFor(m.dim)
 	fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
+	// LivingEntity.getBlockSpeedFactor: MOVEMENT_EFFICIENCY lerps the
+	// block's factor toward 1 (0 by default; Soul Speed or /attribute).
+	eff := m.mobAttrs().Value(attr.MovementEfficiency)
 	factor := func(s uint32) float64 {
+		f := 1.0
 		if s == worldgen.SoulSand || isHoneyBlock(s) {
-			return 0.4
+			f = 0.4
 		}
-		return 1
+		return f + eff*(1-f)
 	}
 	feet := w.At(fx, fy, fz)
 	if worldgen.IsWater(feet) {
