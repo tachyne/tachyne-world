@@ -171,6 +171,10 @@ the public history since the project was open-sourced on 2026-07-10.
   rhythm, as in vanilla, instead of lobbing a potion at once from anywhere.
   Witches and trident-throwing drowned also keep closing in until they have
   had their target in sight for a moment.
+- **Phantoms pick their prey as in vanilla.** A phantom now looks for
+  players every few seconds in a tall column around it and goes for the
+  highest one it can see, and its circling drifts up and down and widens
+  over time instead of holding one fixed ring.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

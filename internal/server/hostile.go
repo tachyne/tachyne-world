@@ -412,6 +412,14 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at
 		return
 	}
+	if m.etype == entityPhantom {
+		if t := h.phantomTarget(players, m); t != nil {
+			m.hasTarget, m.tx, m.tz, m.ty, m.preyTarget = true, t.x, t.z, t.y, 0
+		} else {
+			m.hasTarget = false
+		}
+		return
+	}
 	if m.etype == entityWitch {
 		if t := h.witchHealTargetOf(m); t != nil { // a raider she means to heal is her target
 			m.hasTarget, m.tx, m.tz, m.preyTarget = true, t.x, t.z, 0

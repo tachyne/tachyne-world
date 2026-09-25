@@ -133,6 +133,8 @@ type mob struct {
 	phantomRadius   float64       // phantom: the circle it flies around its anchor
 	phantomHigh     float64       // …how far above the target that anchor sits
 	phantomCW       bool          // …which way round it goes
+	phantomHeight   float64       // …and the circle's height offset, -4..5
+	phantomScan     int           // phantom: ticks to its next player scan (PhantomAttackPlayerTargetGoal)
 	phantomNext     int           // …ticks to the next swoop
 	phantomSwoop    int           // …and the ticks left in the one it is flying
 	wardenAnger     map[int32]int // warden: AngerManagement's grudge per suspect

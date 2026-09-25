@@ -2,6 +2,7 @@ package server
 
 import (
 	"math"
+	"sort"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -38,6 +39,7 @@ func (phantomFlightBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.phantomRadius == 0 { // a fresh anchor: its own radius, height and spin
 		m.phantomRadius = phantomCircleMin + h.rng.Float64()*phantomCircleSpan
 		m.phantomHigh = phantomAnchorLow + float64(h.rng.Intn(int(phantomAnchorSpan)))
+		m.phantomHeight = -4 + h.rng.Float64()*9
 		m.phantomCW = h.rng.Intn(2) == 0
 		m.phantomNext = phantomFirstSweep
 	}
@@ -59,7 +61,18 @@ func (phantomFlightBehavior) steer(h *hub, m *mob) (float64, float64) {
 			m.x, m.y, m.z, 10, 0.95+h.rng.Float32()*0.1)
 		return 0, 0
 	}
-	// CIRCLE: hold the radius around the anchor and go round it.
+	// CIRCLE: hold the radius around the anchor and go round it. Now and
+	// then PhantomCircleAroundAnchorGoal re-rolls its height (one tick in
+	// 350) and widens the circle a block (one in 250), snapping back to
+	// five and turning the other way past fifteen.
+	if h.rng.Intn(350/mobMoveInterval) == 0 {
+		m.phantomHeight = -4 + h.rng.Float64()*9
+	}
+	if h.rng.Intn(250/mobMoveInterval) == 0 {
+		if m.phantomRadius++; m.phantomRadius > phantomCircleMin+phantomCircleSpan {
+			m.phantomRadius, m.phantomCW = phantomCircleMin, !m.phantomCW
+		}
+	}
 	dx, dz := m.x-m.tx, m.z-m.tz
 	d := math.Hypot(dx, dz)
 	if d < 1e-6 {
@@ -91,6 +104,44 @@ func (m *mob) phantomAltitude() (float64, bool) {
 	if high == 0 {
 		high = phantomAnchorLow
 	}
-	// …and never below the sea: the anchor floors at sea level + 1.
-	return math.Max(m.ty+high, float64(worldgen.SeaLevel+1)), true
+	// …and never below the sea: the anchor floors at sea level + 1; the
+	// circle rides its height offset above that.
+	return math.Max(m.ty+high, float64(worldgen.SeaLevel+1)) + m.phantomHeight, true
+}
+
+// phantomTarget is PhantomAttackPlayerTargetGoal: every sixty ticks the
+// phantom looks for players in its box grown 16 sideways and 64 up and
+// down (within 64 blocks), highest first, and takes the first it can
+// attack — in sight, as TargetingConditions.DEFAULT asks; it keeps that one
+// only while it still can.
+func (h *hub) phantomTarget(players map[int32]*tracked, m *mob) *tracked {
+	if t := players[m.targetEID]; t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim &&
+		dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= 64 && h.mobSees(m, t) {
+		return t
+	}
+	m.targetEID = 0
+	if m.phantomScan -= mobMoveInterval; m.phantomScan > 0 {
+		return nil
+	}
+	m.phantomScan = 60
+	b := m.box()
+	var cands []*tracked
+	for _, t := range players {
+		if !isSurvival(t.gamemode) || t.dead || t.dim != m.dim {
+			continue
+		}
+		if math.Abs(t.x-m.x) > 16+b.w/2+0.3 || math.Abs(t.z-m.z) > 16+b.w/2+0.3 ||
+			t.y+1.8 < m.y-64 || t.y > m.y+b.h+64 || dist3(t.x, t.y, t.z, m.x, m.y, m.z) > 64 {
+			continue
+		}
+		cands = append(cands, t)
+	}
+	sort.Slice(cands, func(i, j int) bool { return cands[i].y > cands[j].y })
+	for _, t := range cands {
+		if h.mobSees(m, t) {
+			m.targetEID = t.p.eid
+			return t
+		}
+	}
+	return nil
 }
