@@ -212,3 +212,51 @@ func TestEquippedMobsPayMoreXP(t *testing.T) {
 		t.Fatalf("an iron golem pays nothing whatever it holds, got %d", got)
 	}
 }
+
+// /xp through the dispatcher: points by default, levels on request, set with
+// the per-level cap, query, the /experience alias, and a lost point that
+// drops a level.
+func TestXPCommand(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "xp add bob 3 levels")
+	s.handleCommand(alice, "xp add bob 5")
+	s.handleCommand(alice, "experience query bob levels")
+	s.handleCommand(alice, "xp query bob points")
+	s.handleCommand(alice, "xp set bob 100 points")
+	s.handleCommand(alice, "xp add bob -6")
+	s.handleCommand(alice, "xp query bob levels")
+	settle(t, h, logs, "X1")
+	a := linesBetween(logs["alice"], "", "X1")
+	for _, want := range []string{
+		"Gave 3 experience levels to bob",
+		"Gave 5 experience points to bob",
+		"bob has 3 experience levels",
+		"bob has 5 experience points",
+		"Cannot set experience points above the maximum points for the player's current level",
+		"Gave -6 experience points to bob",
+		"bob has 2 experience levels",
+	} {
+		if !hasLine(a, want) {
+			t.Errorf("missing %q in %q", want, a)
+		}
+	}
+}
+
+// /difficulty with no argument reports it; setting the same one says so.
+func TestDifficultyQuery(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "difficulty hard")
+	settle(t, h, logs, "D0")
+	s.handleCommand(alice, "difficulty")
+	s.handleCommand(alice, "difficulty hard")
+	settle(t, h, logs, "D1")
+	a := linesBetween(logs["alice"], "", "D1")
+	for _, want := range []string{"The difficulty has been set to Hard", "The difficulty is Hard",
+		"The difficulty did not change; it is already set to Hard"} {
+		if !hasLine(a, want) {
+			t.Errorf("missing %q in %q", want, a)
+		}
+	}
+}

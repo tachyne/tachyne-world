@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/xp does everything vanilla's does.** `/xp` (and `/experience`) can
+  add, set or query a player's experience in points or levels; a bare
+  number means points, as in vanilla, and taking points away drops levels.
+- **/difficulty on its own tells you the difficulty**, and setting the one
+  already in force says so.
 - **Beached shipwrecks.** Wrecks now also lie run aground on beaches, half
   buried in the sand with their chests, as in vanilla (upright or on their
   side, never upside down). `/locate structure shipwreck_beached` finds

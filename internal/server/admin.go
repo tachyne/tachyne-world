@@ -198,22 +198,39 @@ func (s *Server) cmdKill(p *player, args []string) {
 	s.hub.post(evKill{target: target, by: p.eid})
 }
 
+// cmdXP is ExperienceCommand (/xp and /experience): add, set or query a
+// player's experience in points (the default) or levels.
 func (s *Server) cmdXP(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
-	if len(args) < 3 || args[0] != "add" {
-		p.tell("Usage: /xp add <player|@selector> <levels>")
+	const usage = "Usage: /xp add|set <targets> <amount> [points|levels] | /xp query <target> points|levels"
+	unit := "points"
+	switch {
+	case len(args) == 3 && args[0] == "query":
+		unit = args[2]
+	case len(args) == 4 && (args[0] == "add" || args[0] == "set"):
+		unit = args[3]
+	case len(args) == 3 && (args[0] == "add" || args[0] == "set"):
+	default:
+		p.tell(usage)
 		return
 	}
-	n, err := strconv.Atoi(args[2])
-	if err != nil {
-		p.tell("Usage: /xp add <player|@selector> <levels>")
+	if unit != "points" && unit != "levels" {
+		p.tell(usage)
 		return
 	}
-	s.hub.post(evXPLevels{target: args[1], by: p.eid, levels: n})
-	s.ok(p, fmt.Sprintf("Gave %d levels to %s", n, args[1]))
+	n := 0
+	if args[0] != "query" {
+		v, err := strconv.Atoi(args[2])
+		if err != nil || (args[0] == "set" && v < 0) {
+			p.tell(usage)
+			return
+		}
+		n = v
+	}
+	s.hub.post(evXP{op: args[0], target: args[1], by: p.eid, amount: n, levels: unit == "levels"})
 }
 
 func (s *Server) cmdSummon(p *player, args []string) {
@@ -255,8 +272,16 @@ func (s *Server) cmdDifficulty(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
+	names := [...]string{"Peaceful", "Easy", "Normal", "Hard"}
+	cur := int(s.hub.difficultyPub.Load())
+	if len(args) == 0 { // DifficultyCommand's query form
+		if cur >= 0 && cur < len(names) {
+			p.tell("The difficulty is " + names[cur])
+		}
+		return
+	}
 	if len(args) != 1 {
-		p.tell("Usage: /difficulty <peaceful|easy|normal|hard>")
+		p.tell("Usage: /difficulty [peaceful|easy|normal|hard]")
 		return
 	}
 	d := map[string]int{"peaceful": diffPeaceful, "easy": diffEasy, "normal": diffNormal, "hard": diffHard}
@@ -265,8 +290,12 @@ func (s *Server) cmdDifficulty(p *player, args []string) {
 		p.tell("Usage: /difficulty <peaceful|easy|normal|hard>")
 		return
 	}
+	if v == cur {
+		p.tell("The difficulty did not change; it is already set to " + names[v])
+		return
+	}
 	s.hub.post(evSetRule{rule: "difficulty", num: v})
-	s.ok(p, "Difficulty set to "+args[0])
+	s.ok(p, "The difficulty has been set to "+names[v])
 }
 
 func (s *Server) cmdGamerule(p *player, args []string) {
@@ -330,10 +359,12 @@ type evKill struct {
 	target string
 	by     int32
 }
-type evXPLevels struct {
+type evXP struct {
+	op     string // add, set, query
 	target string
 	by     int32
-	levels int
+	amount int
+	levels bool // levels, else points
 }
 type evSummon struct {
 	etype int
@@ -347,11 +378,11 @@ type evSetRule struct {
 	num  int
 }
 
-func (evGive) isHubEvent()     {}
-func (evKill) isHubEvent()     {}
-func (evXPLevels) isHubEvent() {}
-func (evSummon) isHubEvent()   {}
-func (evSetRule) isHubEvent()  {}
+func (evGive) isHubEvent()    {}
+func (evKill) isHubEvent()    {}
+func (evXP) isHubEvent()      {}
+func (evSummon) isHubEvent()  {}
+func (evSetRule) isHubEvent() {}
 
 // applyRule mutates the hub's world rules (and persists them).
 func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {

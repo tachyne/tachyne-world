@@ -1616,13 +1616,8 @@ func (h *hub) run() {
 				for _, m := range h.commandMobs(players, e.by, e.target) {
 					h.killMob(players, m)
 				}
-			case evXPLevels:
-				for _, t := range h.commandTargets(players, e.by, e.target) {
-					if t.xpLevel += e.levels; t.xpLevel < 0 {
-						t.xpLevel = 0
-					}
-					h.sendExperience(t)
-				}
+			case evXP:
+				h.onXPCommand(players, e)
 			case evArmSwing:
 				h.onArmSwing(players, e)
 			case evDigStart:

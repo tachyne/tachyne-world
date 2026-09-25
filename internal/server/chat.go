@@ -154,7 +154,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdGive(p, fields[1:])
 	case "kill":
 		s.cmdKill(p, fields[1:])
-	case "xp":
+	case "xp", "experience":
 		s.cmdXP(p, fields[1:])
 	case "summon":
 		s.cmdSummon(p, fields[1:])

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -373,4 +374,93 @@ func (h *hub) dropDeathXP(players map[int32]*tracked, t *tracked) {
 	}
 	t.xpLevel, t.xpPoints = 0, 0
 	h.sendExperience(t)
+}
+
+// giveXPPoints is Player.giveExperiencePoints for either sign: a loss drains
+// the bar and drops levels down the same curve a gain climbs.
+func (h *hub) giveXPPoints(t *tracked, points int) {
+	if points >= 0 {
+		h.addXP(t, points)
+		return
+	}
+	t.xpPoints += points
+	for t.xpPoints < 0 {
+		if t.xpLevel == 0 {
+			t.xpPoints = 0
+			break
+		}
+		t.xpLevel--
+		t.xpPoints += xpToNext(t.xpLevel)
+	}
+	h.sendExperience(t)
+}
+
+// onXPCommand runs /xp: points or levels, added, set or queried, with
+// ExperienceCommand's replies.
+func (h *hub) onXPCommand(players map[int32]*tracked, e evXP) {
+	caller := players[e.by]
+	var by *player
+	if caller != nil {
+		by = caller.p
+	}
+	targets := h.commandTargets(players, e.by, e.target)
+	if len(targets) == 0 {
+		if by != nil {
+			by.tell("No player was found")
+		}
+		return
+	}
+	unit := "points"
+	if e.levels {
+		unit = "levels"
+	}
+	name := targets[0].p.name // the one named when only one was affected
+	on := func(n int) string {
+		if n == 1 {
+			return name
+		}
+		return fmt.Sprintf("%d players", n)
+	}
+	switch e.op {
+	case "query":
+		t := targets[0]
+		v := t.xpPoints
+		if e.levels {
+			v = t.xpLevel
+		}
+		h.cmdSuccess(players, by, fmt.Sprintf("%s has %d experience %s", t.p.name, v, unit), false)
+	case "add":
+		for _, t := range targets {
+			if e.levels { // giveExperienceLevels
+				if t.xpLevel += e.amount; t.xpLevel < 0 {
+					t.xpLevel, t.xpPoints = 0, 0
+				}
+				h.sendExperience(t)
+			} else {
+				h.giveXPPoints(t, e.amount)
+			}
+		}
+		h.cmdSuccess(players, by, fmt.Sprintf("Gave %d experience %s to %s", e.amount, unit, on(len(targets))), true)
+	case "set":
+		done := 0
+		for _, t := range targets {
+			if e.levels {
+				t.xpLevel = e.amount
+			} else if e.amount >= xpToNext(t.xpLevel) {
+				continue // above the bar for this level
+			} else {
+				t.xpPoints = e.amount
+			}
+			done++
+			name = t.p.name
+			h.sendExperience(t)
+		}
+		if done == 0 {
+			if by != nil {
+				by.tell("Cannot set experience points above the maximum points for the player's current level")
+			}
+			return
+		}
+		h.cmdSuccess(players, by, fmt.Sprintf("Set %d experience %s on %s", e.amount, unit, on(done)), true)
+	}
 }
