@@ -132,11 +132,11 @@ func (h *hub) spawnOneGroupAt(players map[int32]*tracked, dim, cat, ax, ay, az i
 			}
 			// isRightDistanceToPlayerAndSpawnPoint: a member scattered into
 			// another chunk needs that chunk loaded (canSpawnEntitiesInChunk).
-			if !h.worldFor(dim).Ticking(int32(x>>4), int32(z>>4)) {
+			if !h.worldFor(dim).Ticking(int32(x>>4), int32(z>>4)) || !h.chunkWithinBorder(dim, x>>4, z>>4) {
 				continue
 			}
 			d := h.nearestPlayerSq(players, dim, float64(x)+0.5, float64(ay), float64(z)+0.5)
-			if d <= float64(spawnMinDist*spawnMinDist) || (dim == 0 && h.nearWorldSpawn(x, ay, z)) {
+			if d <= float64(spawnMinDist*spawnMinDist) || (dim == h.spawnDim() && h.nearWorldSpawn(x, ay, z)) {
 				continue // never within 24 of a player, nor 24 of world spawn
 			}
 			if r := categorySpawnRange[cat]; cat != catCreature && r > 0 && d > float64(r*r) {

@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-common/protocol"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-common/protocol"
+)
 
 // The brigadier command tree the client is sent at join. It used to be one
 // literal per command, each with a single greedy-string argument, so the
@@ -282,9 +286,16 @@ func modelledCommands() []cmdNode {
 		lit("setworldspawn", true, argBlockPos("pos", true, argGreedy("rotation", true))),
 		lit("defaultgamemode", false, lits(gamemodes...)...),
 		lit("random", false,
-			lit("value", false, argWord("range", true)),
-			lit("roll", false, argWord("range", true))),
+			lit("value", false, argWord("range", true, argGreedy("sequence", true))),
+			lit("roll", false, argWord("range", true, argGreedy("sequence", true))),
+			lit("reset", false, argGreedy("sequence", true))),
 		lit("swing", true, argEntity("targets", 0, true, lits("mainhand", "offhand")...)),
+		lit("setidletimeout", false, argInt("minutes", 0, math.MaxInt32, true)),
+		lit("stopwatch", false,
+			lit("create", false, argGreedy("id", true)),
+			lit("query", false, argGreedy("id", true)),
+			lit("restart", false, argGreedy("id", true)),
+			lit("remove", false, argGreedy("id", true))),
 		lit("teammsg", false, argGreedy("message", true)),
 		lit("tm", false, argGreedy("message", true)),
 	}

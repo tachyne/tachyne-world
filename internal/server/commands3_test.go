@@ -439,10 +439,6 @@ func TestWorldSpawnAndDefaultGamemodePersist(t *testing.T) {
 	if gm := s.hub.rules.DefaultGamemode; gm == nil || *gm != gmCreative {
 		t.Error("the default game mode was not saved")
 	}
-	h.applySetWorldSpawn(map[int32]*tracked{}, evSetWorldSpawn{dim: dimNether})
-	if h.worldSpawnX != 100.5 {
-		t.Error("a Nether /setworldspawn moved the overworld spawn")
-	}
 }
 
 func TestRandomSwingTeamMsg(t *testing.T) {

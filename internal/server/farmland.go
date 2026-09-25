@@ -80,8 +80,7 @@ func (h *hub) farmlandNearWater(dim, x, y, z int) bool {
 // and leaves shelter it; a crop does not), and the biome rains there.
 func (h *hub) rainingAbove(dim, x, y, z int) bool {
 	// Only the overworld has weather: a Nether or End farm is never rained on.
-	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y+1 &&
-		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y+1) == worldgen.PrecipRain
+	return h.rainAt(dim, x, y+1, z)
 }
 
 // turnFarmlandToDirt reverts tilled soil to dirt, popping any crop resting on

@@ -10,8 +10,9 @@ import (
 // (toast + highlight badge). Taken ones leave the client's book by a full
 // re-send of what is still known — the book frame's replace form — and stay
 // taken: the ingredient poll will not hand them back, as vanilla's recipe
-// advancement stays done. Recipe names are the book's saved names (the
-// vanilla crafting recipe names; cook/<station>/<input> for cooking entries).
+// advancement stays done. Recipe names are vanilla's recipe names; a cooking
+// recipe covers one book entry per input item (its tag's members), and the
+// book's own cook/<station>/<input> names are taken too.
 
 type evRecipeCmd struct {
 	by     int32
@@ -38,14 +39,30 @@ func (s *Server) cmdRecipe(p *player, args []string) {
 			e.ids[i] = int32(i)
 		}
 	} else {
-		id, ok := recipeIDByName[strings.TrimPrefix(args[2], "minecraft:")]
-		if !ok {
+		ids := recipeIDsByName(strings.TrimPrefix(args[2], "minecraft:"))
+		if len(ids) == 0 {
 			p.tell("Unknown recipe: " + nsID(args[2]))
 			return
 		}
-		e.ids = []int32{id}
+		e.ids = ids
 	}
 	s.hub.post(e)
+}
+
+// recipeIDsByName resolves a recipe name to its book entries: a crafting
+// recipe or a saved cook/ key is one entry, a vanilla cooking recipe one per
+// input item.
+func recipeIDsByName(name string) []int32 {
+	if id, ok := recipeIDByName[name]; ok {
+		return []int32{id}
+	}
+	var ids []int32
+	for _, k := range cookRecipeKeys[name] {
+		if id, ok := recipeIDByName[k]; ok {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // applyRecipeCommand runs /recipe on the hub.

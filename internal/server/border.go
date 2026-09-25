@@ -289,6 +289,12 @@ func (h *hub) cellWithinBorder(dim, x, z int) bool {
 	return fx >= b.CenterX-half && fx+1 <= b.CenterX+half && fz >= b.CenterZ-half && fz+1 <= b.CenterZ+half
 }
 
+// chunkWithinBorder is WorldBorder.isWithinBounds(ChunkPos): the chunk's
+// first and last blocks both inside (ServerLevel.canSpawnEntitiesInChunk).
+func (h *hub) chunkWithinBorder(dim, cx, cz int) bool {
+	return h.cellWithinBorder(dim, cx*16, cz*16) && h.cellWithinBorder(dim, cx*16+15, cz*16+15)
+}
+
 // targetOutsideBorder: an entity interaction or attack whose target stands
 // past the wall is dropped (handleInteract: isWithinBounds(target)).
 func (h *hub) targetOutsideBorder(players map[int32]*tracked, eid int32) bool {

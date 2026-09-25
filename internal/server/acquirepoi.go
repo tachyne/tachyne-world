@@ -26,12 +26,85 @@ import (
 // go of an unreachable claim, and a meeting bell fixed at the village's
 // first bell for life.
 
-// Point-of-interest kinds, the world index's kind byte.
+// Point-of-interest kinds, the world index's kind byte. The village kinds
+// (home, meeting, the workstations) are what villagers claim; the rest are
+// the other PoiTypes, which /locate poi and portals look up.
 const (
 	poiKindHome    uint8 = 1
 	poiKindMeeting uint8 = 2
 	poiKindJob     uint8 = 10 // + the profession index
+
+	poiKindBeehive      uint8 = 64
+	poiKindBeeNest      uint8 = 65
+	poiKindNetherPortal uint8 = 66
+	poiKindLodestone    uint8 = 67
+	poiKindLightningRod uint8 = 68
 )
+
+// poiKindIsJob reports whether a kind is a workstation's.
+func poiKindIsJob(k uint8) bool {
+	return k >= poiKindJob && int(k-poiKindJob) < len(professionNames)
+}
+
+// poiKindIsVillage is the #village tag: a bed, a bell or a workstation.
+func poiKindIsVillage(k uint8) bool {
+	return k == poiKindHome || k == poiKindMeeting || poiKindIsJob(k)
+}
+
+// poiKindName is the kind's point_of_interest_type id (without namespace).
+func poiKindName(k uint8) string {
+	switch k {
+	case poiKindHome:
+		return "home"
+	case poiKindMeeting:
+		return "meeting"
+	case poiKindBeehive:
+		return "beehive"
+	case poiKindBeeNest:
+		return "bee_nest"
+	case poiKindNetherPortal:
+		return "nether_portal"
+	case poiKindLodestone:
+		return "lodestone"
+	case poiKindLightningRod:
+		return "lightning_rod"
+	}
+	if poiKindIsJob(k) {
+		return professionNames[k-poiKindJob]
+	}
+	return ""
+}
+
+// poiOtherKinds are the blocks of the kinds past the village ones
+// (PoiTypes: every state of each).
+var poiOtherKinds = func() map[string]uint8 {
+	m := map[string]uint8{"beehive": poiKindBeehive, "bee_nest": poiKindBeeNest,
+		"nether_portal": poiKindNetherPortal, "lodestone": poiKindLodestone}
+	for _, c := range []string{"", "exposed_", "weathered_", "oxidized_"} {
+		m[c+"lightning_rod"] = poiKindLightningRod
+		m["waxed_"+c+"lightning_rod"] = poiKindLightningRod
+	}
+	return m
+}()
+
+var poiOtherRanges = func() []struct {
+	lo, hi uint32
+	kind   uint8
+} {
+	var out []struct {
+		lo, hi uint32
+		kind   uint8
+	}
+	for name, k := range poiOtherKinds {
+		if lo, hi, ok := worldgen.BlockRangeOK(name); ok {
+			out = append(out, struct {
+				lo, hi uint32
+				kind   uint8
+			}{lo, hi, k})
+		}
+	}
+	return out
+}()
 
 // The three claims a villager makes.
 const (
@@ -59,7 +132,7 @@ var poiValidRange = [poiGroups]int{poiHome: 1, poiJob: 1, poiMeet: 6}
 var poiUnreachableFor = [poiGroups]uint64{poiHome: 1200, poiJob: 1200, poiMeet: 200}
 
 // poiKindOf classifies a block state for the index: a bed's head half, a
-// bell, or a workstation (of its profession).
+// bell, a workstation (of its profession), or one of the other kinds.
 func poiKindOf(s uint32) uint8 {
 	if info, ok := worldgen.InfoForState(s); ok && isBed(info) {
 		if worldgen.GetProperty(info, s, "part") == "head" {
@@ -72,6 +145,11 @@ func poiKindOf(s uint32) uint8 {
 	}
 	if p := jobBlockProfession(s); p >= 0 {
 		return poiKindJob + uint8(p)
+	}
+	for _, r := range poiOtherRanges {
+		if s >= r.lo && s <= r.hi {
+			return r.kind
+		}
 	}
 	return 0
 }
@@ -194,7 +272,7 @@ func (h *hub) poiKindWanted(m *mob, g int, kind uint8) bool {
 	case poiMeet:
 		return kind == poiKindMeeting
 	}
-	if kind < poiKindJob {
+	if !poiKindIsJob(kind) {
 		return false
 	}
 	prof := int(kind - poiKindJob)

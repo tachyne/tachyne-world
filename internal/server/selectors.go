@@ -30,6 +30,30 @@ type targetSpec struct {
 	hasDist  bool
 	tags     []string // tag=… each one required ("" = no tags at all)
 	notTags  []string // tag=!… each one forbidden ("" = at least one tag)
+
+	// sort= (nearest, furthest, random, arbitrary; "" = the kind's default).
+	sortBy string
+	// notNames are name=! predicates, each one excluded.
+	notNames []string
+	// x=, y=, z= move the origin the distance and volume are measured
+	// from; dx=, dy=, dz= make a volume from it.
+	origin    [3]float64
+	hasOrigin [3]bool
+	delta     [3]float64
+	hasDelta  bool
+	// scores={objective=range,…}: every score in its range.
+	scores map[string][2]int64
+	// team=name, team=!name, team= (on no team), team=! (on some team).
+	teams    []string
+	notTeams []string
+	// level=range (players only), gamemode=/gamemode=! (players only).
+	level      [2]int64
+	hasLevel   bool
+	gamemodes  []int
+	notGmodes  []int
+	xRot, yRot [2]float64
+	hasXRot    bool
+	hasYRot    bool
 }
 
 // parseTargetSpec reads one selector argument. A bare word is a player name,
@@ -74,7 +98,11 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 				spec.etype = strings.TrimPrefix(v, "minecraft:")
 			}
 		case "name":
-			spec.name = strings.Trim(v, `"`)
+			if strings.HasPrefix(v, "!") {
+				spec.notNames = append(spec.notNames, strings.Trim(v[1:], `"`))
+			} else {
+				spec.name = strings.Trim(v, `"`)
+			}
 		case "tag":
 			if strings.HasPrefix(v, "!") {
 				spec.notTags = append(spec.notTags, v[1:])
@@ -88,7 +116,12 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 			}
 			spec.limit, spec.nearest = n, true
 		case "sort":
-			spec.nearest = v == "nearest"
+			switch v {
+			case "nearest", "furthest", "random", "arbitrary":
+			default:
+				return targetSpec{}, false
+			}
+			spec.sortBy, spec.nearest = v, v == "nearest"
 		case "distance", "r":
 			lo, hi, ranged := strings.Cut(v, "..")
 			spec.hasDist = true
@@ -113,6 +146,70 @@ func parseTargetSpec(arg string) (targetSpec, bool) {
 					return targetSpec{}, false
 				}
 				spec.maxDist = d
+			}
+		case "x", "y", "z":
+			d, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return targetSpec{}, false
+			}
+			i := int(k[0] - 'x')
+			spec.origin[i], spec.hasOrigin[i] = d, true
+		case "dx", "dy", "dz":
+			d, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return targetSpec{}, false
+			}
+			spec.delta[int(k[1]-'x')], spec.hasDelta = d, true
+		case "scores":
+			if !strings.HasPrefix(v, "{") || !strings.HasSuffix(v, "}") {
+				return targetSpec{}, false
+			}
+			if spec.scores == nil {
+				spec.scores = map[string][2]int64{}
+			}
+			for _, sc := range splitPredicates(v[1 : len(v)-1]) {
+				obj, rng, ok := strings.Cut(sc, "=")
+				if !ok {
+					return targetSpec{}, false
+				}
+				lo, hi, ok := parseSelectorIntRange(strings.TrimSpace(rng))
+				if !ok {
+					return targetSpec{}, false
+				}
+				spec.scores[strings.TrimSpace(obj)] = [2]int64{lo, hi}
+			}
+		case "team":
+			if strings.HasPrefix(v, "!") {
+				spec.notTeams = append(spec.notTeams, v[1:])
+			} else {
+				spec.teams = append(spec.teams, v)
+			}
+		case "level":
+			lo, hi, ok := parseSelectorIntRange(v)
+			if !ok {
+				return targetSpec{}, false
+			}
+			spec.level, spec.hasLevel = [2]int64{lo, hi}, true
+		case "gamemode", "m":
+			neg := strings.HasPrefix(v, "!")
+			mode, ok := ParseGamemode(strings.TrimPrefix(v, "!"))
+			if !ok {
+				return targetSpec{}, false
+			}
+			if neg {
+				spec.notGmodes = append(spec.notGmodes, mode)
+			} else {
+				spec.gamemodes = append(spec.gamemodes, mode)
+			}
+		case "x_rotation", "y_rotation":
+			lo, hi, ok := parseSelectorFloatRange(v)
+			if !ok {
+				return targetSpec{}, false
+			}
+			if k == "x_rotation" {
+				spec.xRot, spec.hasXRot = [2]float64{lo, hi}, true
+			} else {
+				spec.yRot, spec.hasYRot = [2]float64{lo, hi}, true
 			}
 		default:
 			// An unknown predicate is ignored rather than failing the whole
@@ -157,38 +254,103 @@ func (spec targetSpec) selectsEntities() bool {
 // view of `from` (which may be nil for a console-ish caller).
 func (h *hub) selectPlayers(players map[int32]*tracked, from *tracked, spec targetSpec) []*tracked {
 	var out []*tracked
+	for _, en := range h.selectEntities(players, from, spec, true, false) {
+		out = append(out, en.t)
+	}
+	return out
+}
+
+// selectMobs resolves a spec against the loaded mobs (only @e does).
+func (h *hub) selectMobs(from *tracked, spec targetSpec) []*mob {
+	var out []*mob
+	for _, en := range h.selectEntities(h.playersRef, from, spec, false, true) {
+		out = append(out, en.m)
+	}
+	return out
+}
+
+// selectEntities is EntitySelector.findEntities over the players (withPlayers)
+// and the mobs (withMobs): every entity the predicates keep, sorted by the
+// selector's sort — nearest for @p, random for @r, arbitrary (a stable
+// order) for @a and @e unless sort= says otherwise — and cut to its limit.
+func (h *hub) selectEntities(players map[int32]*tracked, from *tracked, spec targetSpec, withPlayers, withMobs bool) []cmdEntity {
+	var out []cmdEntity
 	switch spec.kind {
-	case 0:
-		for _, t := range players {
-			if t.p.name == spec.name {
-				out = append(out, t)
+	case 0: // a plain name: that online player
+		if withPlayers {
+			for _, t := range players {
+				if t.p.name == spec.name {
+					out = append(out, cmdEntity{t: t})
+				}
 			}
 		}
 		return out
 	case 's':
-		if from != nil && spec.matchesPlayer(from, from) {
-			out = append(out, from)
+		if withPlayers && from != nil && h.specMatches(spec, cmdEntity{t: from}, from) {
+			out = append(out, cmdEntity{t: from})
 		}
 		return out
 	}
-	if spec.kind == 'e' && spec.etype != "" && spec.etype != "player" {
-		return nil // @e[type=zombie] selects no players
-	}
-	for _, t := range players {
-		if spec.matchesPlayer(t, from) {
-			out = append(out, t)
+	if withPlayers && !(spec.kind == 'e' && spec.etype != "" && spec.etype != "player") {
+		for _, t := range players {
+			if h.specMatches(spec, cmdEntity{t: t}, from) {
+				out = append(out, cmdEntity{t: t})
+			}
 		}
 	}
-	if from != nil && (spec.nearest || spec.kind == 'p') {
-		sort.Slice(out, func(i, j int) bool {
-			return playerDist(out[i], from) < playerDist(out[j], from)
-		})
-	} else {
-		sort.Slice(out, func(i, j int) bool { return out[i].p.name < out[j].p.name })
+	if withMobs && spec.kind == 'e' && spec.etype != "player" {
+		for _, m := range h.mobs {
+			if m.dying == 0 && h.specMatches(spec, cmdEntity{m: m}, from) {
+				out = append(out, cmdEntity{m: m})
+			}
+		}
 	}
-	if spec.kind == 'r' && len(out) > 1 {
-		i := h.rng.Intn(len(out))
-		out[0], out[i] = out[i], out[0]
+	sortBy := spec.sortBy
+	if sortBy == "" {
+		switch {
+		case spec.kind == 'p' || spec.nearest:
+			sortBy = "nearest"
+		case spec.kind == 'r':
+			sortBy = "random"
+		default:
+			sortBy = "arbitrary"
+		}
+	}
+	ox, oy, oz, _, hasFrom := spec.originFrom(from)
+	dist := func(en cmdEntity) float64 {
+		x, y, z := en.pos()
+		return (x-ox)*(x-ox) + (y-oy)*(y-oy) + (z-oz)*(z-oz)
+	}
+	arbitrary := func(i, j int) bool {
+		a, b := out[i], out[j]
+		if (a.t != nil) != (b.t != nil) {
+			return a.t != nil // players first, as the player list comes first
+		}
+		if a.t != nil {
+			return a.t.p.name < b.t.p.name
+		}
+		return a.m.eid < b.m.eid
+	}
+	switch {
+	case sortBy == "nearest" && hasFrom:
+		sort.SliceStable(out, func(i, j int) bool {
+			if di, dj := dist(out[i]), dist(out[j]); di != dj {
+				return di < dj
+			}
+			return arbitrary(i, j)
+		})
+	case sortBy == "furthest" && hasFrom:
+		sort.SliceStable(out, func(i, j int) bool {
+			if di, dj := dist(out[i]), dist(out[j]); di != dj {
+				return di > dj
+			}
+			return arbitrary(i, j)
+		})
+	case sortBy == "random":
+		sort.SliceStable(out, arbitrary)
+		h.rng.Shuffle(len(out), func(i, j int) { out[i], out[j] = out[j], out[i] })
+	default:
+		sort.SliceStable(out, arbitrary)
 	}
 	if spec.limit > 0 && len(out) > spec.limit {
 		out = out[:spec.limit]
@@ -196,72 +358,209 @@ func (h *hub) selectPlayers(players map[int32]*tracked, from *tracked, spec targ
 	return out
 }
 
-// matchesPlayer applies the predicates that apply to a player.
-func (spec targetSpec) matchesPlayer(t, from *tracked) bool {
-	if t.dead {
-		return false
+// originFrom is where the selector measures from: the caller's position,
+// with any of x=, y=, z= put in its place. ok is false when there is no
+// caller and no complete origin.
+func (spec targetSpec) originFrom(from *tracked) (x, y, z float64, dim int, ok bool) {
+	if from != nil {
+		x, y, z, dim, ok = from.x, from.y, from.z, from.dim, true
 	}
-	if spec.name != "" && t.p.name != spec.name {
-		return false
+	c := [3]*float64{&x, &y, &z}
+	all := true
+	for i := range c {
+		if spec.hasOrigin[i] {
+			*c[i] = spec.origin[i]
+		} else {
+			all = false
+		}
 	}
-	if spec.notEtype == "player" {
-		return false
-	}
-	if !spec.tagsMatch(t.tags) {
-		return false
-	}
-	if spec.hasDist {
-		if from == nil || t.dim != from.dim {
+	return x, y, z, dim, ok || all
+}
+
+// specMatches applies the predicates to one entity.
+func (h *hub) specMatches(spec targetSpec, en cmdEntity, from *tracked) bool {
+	x, y, z := en.pos()
+	var tags map[string]bool
+	var name, owner, etype string
+	var yaw, pitch float32
+	var w, ht float64
+	if t := en.t; t != nil {
+		if t.dead {
 			return false
 		}
-		d := playerDist(t, from)
+		tags, name, owner, etype = t.tags, t.p.name, t.p.name, "player"
+		yaw, pitch, w, ht = t.yaw, t.pitch, 2*t.halfWidth(), 1.8*t.scale()
+		if spec.hasLevel && (int64(t.xpLevel) < spec.level[0] || int64(t.xpLevel) > spec.level[1]) {
+			return false
+		}
+		if len(spec.gamemodes) > 0 && !containsInt(spec.gamemodes, t.gamemode) {
+			return false
+		}
+		if containsInt(spec.notGmodes, t.gamemode) {
+			return false
+		}
+	} else {
+		m := en.m
+		tags, name, owner, etype = m.tags, en.name(), uuidString(m.uuid), entityTypeName(m.etype)
+		b := m.box()
+		yaw, w, ht = m.yaw, b.w, b.h
+		if spec.hasLevel || len(spec.gamemodes) > 0 {
+			return false // level= and gamemode= select players only
+		}
+	}
+	if spec.etype != "" && etype != spec.etype {
+		return false
+	}
+	if spec.notEtype != "" && etype == spec.notEtype {
+		return false
+	}
+	if spec.name != "" && name != spec.name {
+		return false
+	}
+	for _, n := range spec.notNames {
+		if name == n {
+			return false
+		}
+	}
+	if !spec.tagsMatch(tags) {
+		return false
+	}
+	ox, oy, oz, odim, hasOrigin := spec.originFrom(from)
+	if spec.hasDist || spec.hasDelta {
+		if !hasOrigin || en.dim() != odim {
+			return false
+		}
+	}
+	if spec.hasDist {
+		d := math.Sqrt((x-ox)*(x-ox) + (y-oy)*(y-oy) + (z-oz)*(z-oz))
 		if d < spec.minDist || (spec.maxDist > 0 && d > spec.maxDist) {
 			return false
+		}
+	}
+	if spec.hasDelta { // the entity's box meets the volume [origin, origin+delta+1)
+		lo := [3]float64{ox, oy, oz}
+		hi := [3]float64{ox, oy, oz}
+		for i, d := range spec.delta {
+			if d < 0 {
+				lo[i] += d
+			} else {
+				hi[i] += d
+			}
+			hi[i]++
+		}
+		if x+w/2 <= lo[0] || x-w/2 >= hi[0] || y+ht <= lo[1] || y >= hi[1] || z+w/2 <= lo[2] || z-w/2 >= hi[2] {
+			return false
+		}
+	}
+	if spec.hasXRot && !inWrappedRange(float64(pitch), spec.xRot) {
+		return false
+	}
+	if spec.hasYRot && !inWrappedRange(float64(yaw), spec.yRot) {
+		return false
+	}
+	for obj, rng := range spec.scores {
+		if h.sb == nil {
+			return false
+		}
+		v, ok := h.sb.Scores[owner][obj]
+		if !ok || int64(v) < rng[0] || int64(v) > rng[1] {
+			return false
+		}
+	}
+	if len(spec.teams) > 0 || len(spec.notTeams) > 0 {
+		team := h.teamOf(owner)
+		for _, want := range spec.teams {
+			if team != want {
+				return false
+			}
+		}
+		for _, not := range spec.notTeams {
+			if team == not {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-// selectMobs resolves a spec against the loaded mobs (only @e does).
-func (h *hub) selectMobs(from *tracked, spec targetSpec) []*mob {
-	if spec.kind != 'e' {
-		return nil
+func containsInt(xs []int, v int) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
 	}
-	var out []*mob
-	for _, m := range h.mobs {
-		if m.dying != 0 {
-			continue
+	return false
+}
+
+// inWrappedRange is the rotation predicates' test: angles wrapped to
+// [-180, 180), and a range whose low end is above its high end wraps round.
+func inWrappedRange(a float64, r [2]float64) bool {
+	wrap := func(v float64) float64 {
+		v = math.Mod(v+180, 360)
+		if v < 0 {
+			v += 360
 		}
-		name := entityTypeName(m.etype)
-		if spec.etype != "" && name != spec.etype {
-			continue
-		}
-		if spec.notEtype != "" && name == spec.notEtype {
-			continue
-		}
-		if !spec.tagsMatch(m.tags) {
-			continue
-		}
-		if spec.hasDist {
-			if from == nil || m.dim != from.dim {
-				continue
-			}
-			d := math.Sqrt((m.x-from.x)*(m.x-from.x) + (m.y-from.y)*(m.y-from.y) + (m.z-from.z)*(m.z-from.z))
-			if d < spec.minDist || (spec.maxDist > 0 && d > spec.maxDist) {
-				continue
-			}
-		}
-		out = append(out, m)
+		return v - 180
 	}
-	if from != nil && spec.nearest {
-		sort.Slice(out, func(i, j int) bool { return mobDist(out[i], from) < mobDist(out[j], from) })
-	} else {
-		sort.Slice(out, func(i, j int) bool { return out[i].eid < out[j].eid })
+	a, lo, hi := wrap(a), r[0], r[1]
+	if lo > hi {
+		return a >= lo || a <= hi
 	}
-	if spec.limit > 0 && len(out) > spec.limit {
-		out = out[:spec.limit]
+	return a >= lo && a <= hi
+}
+
+// parseSelectorIntRange is MinMaxBounds.Ints: "a..b", "a..", "..b" or "a".
+func parseSelectorIntRange(s string) (int64, int64, bool) {
+	lo, hi := int64(math.MinInt64), int64(math.MaxInt64)
+	a, b, ranged := strings.Cut(s, "..")
+	if !ranged {
+		b = a
 	}
-	return out
+	if a == "" && b == "" {
+		return 0, 0, false
+	}
+	if a != "" {
+		v, err := strconv.ParseInt(a, 10, 64)
+		if err != nil {
+			return 0, 0, false
+		}
+		lo = v
+	}
+	if b != "" {
+		v, err := strconv.ParseInt(b, 10, 64)
+		if err != nil {
+			return 0, 0, false
+		}
+		hi = v
+	}
+	return lo, hi, lo <= hi
+}
+
+// parseSelectorFloatRange is MinMaxBounds.Doubles for the rotation predicates.
+func parseSelectorFloatRange(s string) (float64, float64, bool) {
+	lo, hi := math.Inf(-1), math.Inf(1)
+	a, b, ranged := strings.Cut(s, "..")
+	if !ranged {
+		b = a
+	}
+	if a == "" && b == "" {
+		return 0, 0, false
+	}
+	if a != "" {
+		v, err := strconv.ParseFloat(a, 64)
+		if err != nil {
+			return 0, 0, false
+		}
+		lo = v
+	}
+	if b != "" {
+		v, err := strconv.ParseFloat(b, 64)
+		if err != nil {
+			return 0, 0, false
+		}
+		hi = v
+	}
+	return lo, hi, true
 }
 
 // entityTypeName reverses the generated entity-id table (the selector's
@@ -394,7 +693,12 @@ func (h *hub) onTeleportTo(players map[int32]*tracked, e evTeleportTo) {
 		return
 	}
 	if dim != me.dim {
-		me.p.tell("That entity is in another dimension.")
+		// TeleportCommand moves the caller into the entity's level.
+		me.p.pendingFrom = dimPos{}
+		me.p.pendingDest = blockPos{floorInt(x), floorInt(y), floorInt(z) - 1}
+		me.p.pendingDestOK = true
+		me.p.pendingDim.Store(int32(dim))
+		h.cmdSuccess(players, me.p, "Teleported.", true)
 		return
 	}
 	me.x, me.y, me.z = x, y, z
@@ -487,6 +791,14 @@ func (h *hub) onTeleportTargets(players map[int32]*tracked, e evTeleportTargets)
 	}
 	for _, m := range ms {
 		if m.dim != dim {
+			// TeleportCommand: the mob changes level, as a portal's
+			// traveller does — gone from the old dimension's viewers, its
+			// seat and its quarry left behind.
+			if m.dying > 0 || m == h.dragon {
+				continue
+			}
+			h.mobChangeDimension(players, m, dim, x, y, z)
+			moved, name = moved+1, mobDisplayName(m.etype)
 			continue
 		}
 		m.x, m.y, m.z = x, y, z

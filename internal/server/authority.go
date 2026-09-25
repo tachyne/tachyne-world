@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // The last of the client-trust gaps (AUTHORITY, the standing rule):
@@ -72,7 +73,12 @@ var toolSpeed = itemFloatMap(map[string]float64{
 // minDigTicks is the fastest legitimate break time for a block with a held
 // item, scaled by digTolerance. Vanilla: ticks ≈ 30×hardness/speed with the
 // right tool (100× without harvest rights — we use the lenient 30 always).
-func minDigTicks(state uint32, held int32, digBonus int32) int {
+// digBonus is MINING_EFFICIENCY and digMult the effect and BLOCK_BREAK_SPEED
+// multipliers (player.setDigModel). What only slows a dig — Mining Fatigue,
+// the underwater and airborne penalties — is left out: this check only has
+// to catch the impossibly fast, and a penalty that ended mid-dig would
+// otherwise revert an honest break.
+func minDigTicks(state uint32, held int32, digBonus, digMult float64) int {
 	h := float64(worldgen.Hardness(state))
 	if h <= 0 {
 		return 0
@@ -87,15 +93,29 @@ func minDigTicks(state uint32, held int32, digBonus int32) int {
 	// speed-up. A legitimate enchanted player broke blocks faster than the
 	// check allowed and had every break reverted.
 	if speed > 1 {
-		speed += float64(digBonus)
+		speed += digBonus
 	}
-	speed *= hasteHeadroom // Haste II from a beacon is the most anyone can add
+	// A beacon's Haste II is always allowed for, so a gift that lands between
+	// two mirror updates never reverts a break; anything stronger — /effect,
+	// a raised BLOCK_BREAK_SPEED — comes through the mirror.
+	speed *= math.Max(hasteHeadroom, digMult)
 	return int(30 * h / speed * digTolerance)
 }
 
 // hasteHeadroom is vanilla's dig-speed multiplier at Haste II (the strongest a
 // beacon or conduit grants): 1 + (amplifier+1) x 0.2.
 const hasteHeadroom = 1.4
+
+// digSpeedMult is the part of Player.getDestroySpeed after the tool and
+// MINING_EFFICIENCY that can only speed a dig up: Haste or Conduit Power
+// (the stronger) and BLOCK_BREAK_SPEED.
+func (t *tracked) digSpeedMult() float64 {
+	mult := t.playerAttrs().Value(attr.BlockBreakSpeed)
+	if dig := max(t.hasEffect(effHaste), t.hasEffect(effConduitPower)); dig > 0 {
+		mult *= 1 + float64(dig)*0.2
+	}
+	return mult
+}
 
 // efficiencyBonus is Efficiency's addition to mining speed: level^2 + 1.
 func efficiencyBonus(st invStack) int {

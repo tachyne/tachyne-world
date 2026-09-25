@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -16,7 +17,9 @@ import (
 // (AttributeCommand). It works on the same attribute map every mechanic
 // reads, so a changed MAX_HEALTH or MOVEMENT_SPEED takes effect at once, and
 // the once-a-second attribute sync carries it to the clients. A player's
-// attribute changes last the session: player attributes are not saved.
+// base values and the modifiers added here are saved with them
+// (AttributeMap.save); a death keeps the bases and drops the modifiers
+// (ServerPlayer.restoreFrom).
 
 type evAttributeCmd struct {
 	by     int32
@@ -205,6 +208,15 @@ func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd
 			amount *= unit
 		}
 		in.AddModifier(attr.Modifier{Source: e.mod, Amount: amount, Op: e.modOp})
+		if t := en.t; t != nil { // addPermanentModifier: saved with the player
+			if t.cmdMods == nil {
+				t.cmdMods = map[attr.ID]map[string]bool{}
+			}
+			if t.cmdMods[e.id] == nil {
+				t.cmdMods[e.id] = map[string]bool{}
+			}
+			t.cmdMods[e.id][e.mod] = true
+		}
 		h.attrChanged(players, en, e.id)
 		okTell(fmt.Sprintf("Added modifier %s to attribute %s for entity %s", e.mod, name, who))
 	case "modifier remove":
@@ -213,6 +225,9 @@ func (h *hub) applyAttributeCommand(players map[int32]*tracked, e evAttributeCmd
 			return
 		}
 		in.RemoveModifier(e.mod)
+		if t := en.t; t != nil {
+			delete(t.cmdMods[e.id], e.mod)
+		}
 		h.attrChanged(players, en, e.id)
 		okTell(fmt.Sprintf("Removed modifier %s from attribute %s for entity %s", e.mod, name, who))
 	case "modifier get":
@@ -252,4 +267,95 @@ func (h *hub) attrChanged(players map[int32]*tracked, en cmdEntity, id attr.ID) 
 	if len(fr.Attrs) > 0 {
 		h.toNearbyEv(players, m.dim, m.x, m.z, fr)
 	}
+}
+
+// savedAttribute is one attribute a player's data keeps: a base value that
+// differs from the player's default, and the modifiers /attribute added.
+type savedAttribute struct {
+	ID        string          `json:"id"`
+	Base      *float64        `json:"base,omitempty"`
+	Modifiers []savedModifier `json:"modifiers,omitempty"`
+}
+
+type savedModifier struct {
+	ID        string  `json:"id"`
+	Amount    float64 `json:"amount"`
+	Operation string  `json:"operation"`
+}
+
+// modifierOpName is modifierOps's other direction.
+func modifierOpName(op attr.Op) string {
+	for name, o := range modifierOps {
+		if o == op {
+			return name
+		}
+	}
+	return "add_value"
+}
+
+// savedAttributesOf snapshots what of a player's attribute map is theirs to
+// keep, in a stable order.
+func savedAttributesOf(t *tracked) []savedAttribute {
+	if t.attrs == nil {
+		return nil
+	}
+	defaults := newPlayerAttributes()
+	var out []savedAttribute
+	t.attrs.Each(func(id attr.ID, in *attribute.Instance) {
+		sa := savedAttribute{ID: string(id)}
+		if b := in.Base(); b != defaults.Get(id).Base() {
+			sa.Base = &b
+		}
+		for _, m := range in.Modifiers() {
+			if t.cmdMods[id][m.Source] {
+				sa.Modifiers = append(sa.Modifiers, savedModifier{ID: m.Source, Amount: m.Amount, Operation: modifierOpName(m.Op)})
+			}
+		}
+		sort.Slice(sa.Modifiers, func(i, j int) bool { return sa.Modifiers[i].ID < sa.Modifiers[j].ID })
+		if sa.Base != nil || len(sa.Modifiers) > 0 {
+			out = append(out, sa)
+		}
+	})
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// restoreSavedAttributes is savedAttributesOf's other half (AttributeMap.load).
+// An attribute the registry no longer has is skipped.
+func restoreSavedAttributes(t *tracked, saved []savedAttribute) {
+	for _, sa := range saved {
+		id := attr.ID(sa.ID)
+		if _, ok := attr.Defs[id]; !ok {
+			continue
+		}
+		in := t.playerAttrs().Get(id)
+		if sa.Base != nil {
+			in.SetBase(*sa.Base)
+		}
+		for _, m := range sa.Modifiers {
+			op, ok := modifierOps[m.Operation]
+			if !ok {
+				continue
+			}
+			in.AddModifier(attr.Modifier{Source: m.ID, Amount: m.Amount, Op: op})
+			if t.cmdMods == nil {
+				t.cmdMods = map[attr.ID]map[string]bool{}
+			}
+			if t.cmdMods[id] == nil {
+				t.cmdMods[id] = map[string]bool{}
+			}
+			t.cmdMods[id][m.ID] = true
+		}
+	}
+}
+
+// dropCommandModifiers is a death's ServerPlayer.restoreFrom without
+// restoreAll: the base values carry over, the permanent modifiers do not.
+func dropCommandModifiers(t *tracked) {
+	for id, srcs := range t.cmdMods {
+		for src := range srcs {
+			t.playerAttrs().Get(id).RemoveModifier(src)
+		}
+	}
+	t.cmdMods = nil
 }

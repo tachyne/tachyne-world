@@ -55,6 +55,13 @@ type Config struct {
 	// boundary. nil = own everything (unsharded/solo/test).
 	Owned func(dim, cx, cz int32) bool
 
+	// ChunkGate limits which chunks a session's player may be sent, for a
+	// player who brings no chunk in of their own — a spectator while
+	// spectators_generate_chunks is off (ChunkMap.skipPlayer): it returns a
+	// predicate for the chunks someone else holds loaded, or nil when the
+	// player may have any chunk. nil = no gate.
+	ChunkGate func(r Remote) func(dim, cx, cz int32) bool
+
 	// Status answers a Hello{Purpose:"status"} with the server-list roster.
 	// nil = report an empty server (solo/test).
 	Status func() proto.Status
@@ -363,10 +370,17 @@ func session(c net.Conn, cfg Config) {
 			// chunk ~half a 65×65 window deep: tens of seconds of loading
 			// screen at earth-mode radii.)
 			var queue [][3]int32
+			var gate func(dim, cx, cz int32) bool
+			if remote != nil && cfg.ChunkGate != nil {
+				gate = cfg.ChunkGate(remote)
+			}
 			for cx := w.CX - w.Radius; cx <= w.CX+w.Radius; cx++ {
 				for cz := w.CZ - w.Radius; cz <= w.CZ+w.Radius; cz++ {
 					if cfg.Owned != nil && !cfg.Owned(w.Dim, cx, cz) {
 						continue // finite world: this pod doesn't own the chunk, don't serve it
+					}
+					if gate != nil && !gate(w.Dim, cx, cz) {
+						continue // nobody holds it loaded, and this player may not: a later Want retries
 					}
 					cc := [3]int32{w.Dim, cx, cz}
 					if w.Force || !sent[cc] { // Force re-queues even if already sent (/refresh)

@@ -142,9 +142,13 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 		return w != nil && w.At(floorInt(x), floorInt(y+0.05), floorInt(z)) == worldgen.EndPortalBlock
 	}
 	dest := func(from int) (int, float64, float64, float64, bool) {
-		if from == dimEnd {
-			w := h.worldFor(dimOverworld)
+		if from == dimEnd { // EndPortalBlock: out to the level the world spawn is in
+			to := h.spawnDim()
+			w := h.worldFor(to)
 			x, z := h.worldSpawnX, h.worldSpawnZ
+			if to != dimOverworld {
+				return to, x, h.worldSpawnY, z, true
+			}
 			return dimOverworld, x, float64(w.MobFeet(floorInt(x), floorInt(z))), z, true
 		}
 		if h.end == nil {
@@ -177,4 +181,20 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 			it.portalCool = entityPortalCooldown
 		}
 	}
+}
+
+// mobChangeDimension moves a mob into another dimension at a spot, the way a
+// portal's traveller goes: it leaves its seat and its rider behind, forgets
+// what it was chasing, and the old dimension's viewers see it go (the new
+// one's pick it up through tracking).
+func (h *hub) mobChangeDimension(players map[int32]*tracked, m *mob, dim int, x, y, z float64) {
+	h.unseatMob(players, m)
+	if t := players[m.rider]; t != nil {
+		h.dismountMob(players, t)
+	}
+	h.entityGone(players, m.dim, m.eid)
+	m.dim = dim
+	m.x, m.y, m.z = x, y, z
+	m.sx, m.sy, m.sz = x, y, z
+	m.targetEID, m.hasTarget = 0, false
 }

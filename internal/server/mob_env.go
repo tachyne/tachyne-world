@@ -70,6 +70,9 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	if dt.has(tagIsFire) && m.resistsFire() {
 		return // LivingEntity.hurtServer: Fire Resistance refuses #is_fire outright
 	}
+	if m == h.dragon && !dt.has(tagAlwaysHurtsEnderDragons) {
+		return // EnderDragon.hurt: only a player or #always_hurts_ender_dragons (explosions) harms it
+	}
 	h.vibAt(m.dim, freqEntityDamage, m.x, m.y, m.z, m.eid)
 	if m.spawnInvuln > 0 {
 		return
@@ -180,7 +183,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 
 		// Afterburn clock (lava/fire/daylight all feed it). Water or rain douses.
 		doused := worldgen.HoldsWater(feet) || worldgen.HoldsWater(head) ||
-			(m.dim == 0 && h.raining && h.skyExposed(m))
+			h.inRain(m.dim, m.x, m.y, m.z, m.box().h)
 		if doused {
 			m.fireSecs = 0
 		}

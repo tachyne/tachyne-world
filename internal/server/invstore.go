@@ -32,6 +32,9 @@ type savedEffect struct {
 	Left        int   `json:"left"`
 	Ambient     bool  `json:"ambient,omitempty"`
 	NoParticles bool  `json:"noParticles,omitempty"` // /effect … hideParticles
+	// Hidden is MobEffectInstance's hiddenEffect: the weaker, longer
+	// instance waiting beneath this one (same effect, so no id of its own).
+	Hidden *savedEffect `json:"hidden,omitempty"`
 }
 
 type savedInv struct {
@@ -80,6 +83,8 @@ type savedInv struct {
 
 	// Scoreboard tags (/tag): vanilla keeps them in the player's data.
 	Tags []string `json:"tags,omitempty"`
+	// Attributes: the base values and permanent modifiers (AttributeMap.save).
+	Attributes []savedAttribute `json:"attributes,omitempty"`
 }
 
 func (s *savedInv) UnmarshalJSON(b []byte) error {
@@ -205,6 +210,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.tags = tagSet(saved.Tags)
 	restoreSavedEffects(t, saved.Effects)
 	t.shoulders = saved.Shoulders
+	restoreSavedAttributes(t, saved.Attributes)
 }
 
 // restoreSavedEffects is savedEffectsOf's other half.
@@ -217,7 +223,7 @@ func restoreSavedEffects(t *tracked, saved []savedEffect) {
 		if e.Left <= 0 && e.Left != effInfinite {
 			continue
 		}
-		t.effects[e.ID] = &activeEffect{amp: e.Amp, left: e.Left, ambient: e.Ambient, noParticles: e.NoParticles}
+		t.effects[e.ID] = restoredEffect(e)
 		t.applyEffectModifiers(e.ID, e.Amp) // the attribute side comes back too
 	}
 }
@@ -267,7 +273,7 @@ func (s *invStore) record(name string, t *tracked) {
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
 		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince, SeenCredits: t.seenCredits,
-		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders,
+		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders, Attributes: savedAttributesOf(t),
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout
 		snap.DeathDim, snap.DeathPos, snap.HasDeath = old.DeathDim, old.DeathPos, true
@@ -320,9 +326,31 @@ func savedEffectsOf(t *tracked) []savedEffect {
 	out := make([]savedEffect, 0, len(ids))
 	for _, id := range ids {
 		e := t.effects[id]
-		out = append(out, savedEffect{ID: id, Amp: e.amp, Left: e.left, Ambient: e.ambient, NoParticles: e.noParticles})
+		se := savedEffectOf(e)
+		se.ID = id
+		out = append(out, se)
 	}
 	return out
+}
+
+// savedEffectOf is one instance and its hidden stack, saved.
+func savedEffectOf(e *activeEffect) savedEffect {
+	se := savedEffect{Amp: e.amp, Left: e.left, Ambient: e.ambient, NoParticles: e.noParticles}
+	if e.hidden != nil {
+		h := savedEffectOf(e.hidden)
+		se.Hidden = &h
+	}
+	return se
+}
+
+// restoredEffect is savedEffectOf's other half; an expired hidden
+// instance is dropped.
+func restoredEffect(se savedEffect) *activeEffect {
+	e := &activeEffect{amp: se.Amp, left: se.Left, ambient: se.Ambient, noParticles: se.NoParticles}
+	if se.Hidden != nil && (se.Hidden.Left > 0 || se.Hidden.Left == effInfinite) {
+		e.hidden = restoredEffect(*se.Hidden)
+	}
+	return e
 }
 
 // claim moves an entry saved under name to the joining player's UUID key.

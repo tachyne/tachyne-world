@@ -330,13 +330,13 @@ func (h *hub) findLightningTarget(players map[int32]*tracked, x, z int) (int, in
 	var cands []cand
 	for _, t := range players {
 		if t.dim == 0 && math.Abs(t.x-float64(x)) <= 3 && math.Abs(t.z-float64(z)) <= 3 &&
-			h.skyExposedColumn(int(math.Floor(t.x)), int(math.Floor(t.z))) {
+			h.canSeeSky(dimOverworld, floorInt(t.x), floorInt(t.y), floorInt(t.z)) {
 			cands = append(cands, cand{t.x, t.y, t.z})
 		}
 	}
 	for _, m := range h.mobs {
 		if m.dim == 0 && m.dying == 0 && math.Abs(m.x-float64(x)) <= 3 && math.Abs(m.z-float64(z)) <= 3 &&
-			h.skyExposedColumn(int(math.Floor(m.x)), int(math.Floor(m.z))) {
+			h.canSeeSky(dimOverworld, floorInt(m.x), floorInt(m.y), floorInt(m.z)) {
 			cands = append(cands, cand{m.x, m.y, m.z})
 		}
 	}
@@ -347,13 +347,24 @@ func (h *hub) findLightningTarget(players map[int32]*tracked, x, z int) (int, in
 	return x, surf, z, false
 }
 
-// isRainingAt ports Level.precipitationAt == RAIN: open sky above, and a
-// biome that rains (not dry, not cold enough to snow) at that height.
-func (h *hub) isRainingAt(x, y, z int) bool {
-	if !h.skyExposedColumn(x, z) {
-		return false
-	}
-	return worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
+// isRainingAt is Level.isRainingAt for the overworld: raining, the sky
+// visible from the cell, nothing that blocks motion (or holds a fluid)
+// above it — MOTION_BLOCKING, so leaves and glass keep the rain off — and a
+// biome where it rains rather than snows at that height.
+func (h *hub) isRainingAt(x, y, z int) bool { return h.rainAt(dimOverworld, x, y, z) }
+
+// rainAt is isRainingAt in any dimension (only the overworld has weather).
+func (h *hub) rainAt(dim, x, y, z int) bool {
+	return dim == dimOverworld && h.raining && h.canSeeSky(dim, x, y, z) &&
+		h.motionBlockingTop(dim, x, z) <= y &&
+		h.precipAt(dim, x, y, z) == worldgen.PrecipRain
+}
+
+// inRain is Entity.isInRain: rain at the block the entity stands in or at
+// the top of its box.
+func (h *hub) inRain(dim int, x, y, z, height float64) bool {
+	bx, bz := floorInt(x), floorInt(z)
+	return h.rainAt(dim, bx, floorInt(y), bz) || h.rainAt(dim, bx, floorInt(y+height), bz)
 }
 
 // effectiveDifficulty ports DifficultyInstance.calculateDifficulty with the

@@ -102,9 +102,11 @@ func TestCommandLoot(t *testing.T) {
 	s.handleCommand(ps["carol"], "loot give @s mine 3 100 3")
 	settle(t, h, logs, "L4")
 	a = linesBetween(logs["alice"], "L3", "L4")
+	if !hasPrefixLine(a, "Dropped 1 [") {
+		t.Errorf("the fish source gave nothing: %q", a)
+	}
 	for _, want := range []string{"Target position 5, 100, 5 is not a container",
 		"The loot table minecraft:chests/nope is not available on this server",
-		"/loot fish is not supported yet",
 		"Only single slots allowed: got 'container.*'"} {
 		if !hasLine(a, want) {
 			t.Errorf("missing %q in %q", want, a)

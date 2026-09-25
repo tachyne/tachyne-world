@@ -66,3 +66,32 @@ func TestStillWaterPushesNothing(t *testing.T) {
 		t.Errorf("dry land pushed a mob by (%v,%v)", dry.pushX, dry.pushZ)
 	}
 }
+
+// Lava has a current too (0.0023 a tick outside the Nether), and a fish is
+// never pushed (isPushedByFluid).
+func TestLavaCurrentAndUnpushedSpecies(t *testing.T) {
+	h := newHub(world.New(1))
+	w := h.world
+	y := 180
+	for x := 0; x < 6; x++ {
+		w.SetBlock(x, y-1, 0, worldgen.Stone)
+	}
+	w.SetBlock(0, y, 0, worldgen.LavaBase)
+	for x := 1; x < 4; x++ { // lava loses two levels a cell in the overworld
+		w.SetBlock(x, y, 0, worldgen.LavaBase+uint32(2*x))
+	}
+	m := &mob{etype: entityZombie, x: 1.5, y: float64(y), z: 0.5, dim: dimOverworld}
+	h.applyFluidPush(m)
+	want := lavaSlowPushPerTick * mobMoveInterval
+	if m.pushX <= 0 || math.Abs(math.Hypot(m.pushX, m.pushZ)-want) > 1e-9 {
+		t.Errorf("lava push (%v,%v), want %v downstream", m.pushX, m.pushZ, want)
+	}
+	for x := 0; x < 6; x++ {
+		w.SetBlock(x, y, 0, worldgen.WaterBase+uint32(min(x, 7)))
+	}
+	fish := &mob{etype: entityByName["cod"], x: 2.5, y: float64(y), z: 0.5, dim: dimOverworld}
+	h.applyFluidPush(fish)
+	if fish.pushX != 0 || fish.pushZ != 0 {
+		t.Error("a cod was pushed by the current")
+	}
+}

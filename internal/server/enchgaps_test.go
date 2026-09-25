@@ -14,9 +14,9 @@ func TestEfficiencyIsAllowedByTheFastBreakCheck(t *testing.T) {
 	stone := worldgen.BlockBase("stone")
 	pick := int32(itemByName["wooden_pickaxe"])
 
-	plain := minDigTicks(stone, pick, 0)
-	effV := minDigTicks(stone, pick, int32(efficiencyBonus(invStack{
-		item: pick, count: 1, ench: enchList{{id: enchEfficiency, lvl: 5}}})))
+	plain := minDigTicks(stone, pick, 0, 1)
+	effV := minDigTicks(stone, pick, float64(efficiencyBonus(invStack{
+		item: pick, count: 1, ench: enchList{{id: enchEfficiency, lvl: 5}}})), 1)
 
 	if effV >= plain {
 		t.Errorf("Efficiency V allowed %d ticks, plain %d — it must allow a faster break", effV, plain)

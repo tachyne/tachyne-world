@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/plugin"
 )
 
@@ -40,8 +41,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	if v.gamemode == gmCreative || v.gamemode == gmSpectator {
 		return true // an invulnerable victim
 	}
-	dx, dy, dz := t.x-v.x, t.y-v.y, t.z-v.z
-	if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+	if !withinEntityRange(t, v.x, v.y, v.z, 2*v.halfWidth(), 1.8*v.scale(), interactSlack) {
 		return true // claimed from further than an arm's reach
 	}
 
@@ -88,6 +88,9 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	from := fromWeapon(t.x, t.z, t.p.heldItem())
 	from.breach = sw.breachFrac
 	landed := h.hurtFrom(players, v, dmg, dt, cause, from)
+	if landed && attackWear(t.p.heldItem()) > 0 { // ItemStack.hurtEnemy: a WEAPON counts a landed blow
+		h.incStat(t, attachproto.StatUsed, t.p.heldItem(), 1)
+	}
 	// The attacker's view of where the damage went (Player.attack's
 	// DAMAGE_DEALT_ABSORBED / DAMAGE_DEALT_RESISTED).
 	if absorbed := absBefore - v.absorption; absorbed > 0 {

@@ -3,7 +3,6 @@ package server
 import (
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -49,48 +48,21 @@ func (h *hub) ominousOnDeath(players map[int32]*tracked, t *tracked) {
 	}
 }
 
-// windChargedBurst is the gust a wind-charged victim leaves behind: vanilla
-// explodes with the wind-charge damage calculator, which deals no damage and
-// breaks nothing — it only shoves. Radius 3-5, as vanilla rolls it.
+// windChargedBurst is the gust a wind-charged victim leaves behind
+// (WindChargedMobEffect.onMobRemoved): an explosion of 3-5 at the middle of
+// its body with the wind charge's damage calculator — no damage, no broken
+// blocks, but the explosion's exposure-weighted shove, and TRIGGER block
+// interaction: doors, trapdoors, buttons and bells answer it as they answer
+// a wind charge.
 func (h *hub) windChargedBurst(players map[int32]*tracked, t *tracked) {
-	h.windChargedBurstAt(players, t.dim, t.x, t.y, t.z, t.p.eid, 0)
+	h.windChargedBurstAt(players, t.dim, t.x, t.y+0.9*t.scale(), t.z, t.p.eid)
 }
 
-// windChargedBurstAt is the burst itself, for a player or a mob. skipPlayer
-// and skipMob keep the victim out of its own gust.
-func (h *hub) windChargedBurstAt(players map[int32]*tracked, dim int, cx, cy, cz float64, skipPlayer, skipMob int32) {
+// windChargedBurstAt is the burst itself at the centre of the body, for a
+// player or a mob; by is the one who died, which the triggered blocks credit.
+func (h *hub) windChargedBurstAt(players map[int32]*tracked, dim int, cx, cy, cz float64, by int32) {
 	radius := 3.0 + h.rng.Float64()*2
-	y := cy + 0.9 // mid-body, as vanilla uses half the bounding-box height
-	h.spawnParticles(players, dim, particlePoof, cx, y, cz, float32(radius/2), 0.1, 40)
-	h.playSoundDim(players, dim, "minecraft:entity.breeze_wind_charge.burst", sndNeutral, cx, y, cz, 1, 1)
-
-	now := h.tick.Load()
-	for _, o := range players {
-		if o.p.eid == skipPlayer || o.dim != dim || o.dead {
-			continue
-		}
-		dx, dy, dz := o.x-cx, o.y-y, o.z-cz
-		d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-		if d > radius || d < 1e-6 {
-			continue
-		}
-		power := (radius - d) / radius * maceKnockPower
-		o.p.trySendEv(attachproto.Velocity{EID: o.p.eid, VX: dx / d * power, VY: 0.4, VZ: dz / d * power})
-		o.spinUntil = now + windBurstGrace // let the launch past the speed check
-	}
-	for _, m := range h.mobs {
-		if m.eid == skipMob || m.dying > 0 || m.dim != dim || m.kbScale() <= 0 {
-			continue
-		}
-		dx, dz := m.x-cx, m.z-cz
-		d := math.Hypot(dx, dz)
-		if d > radius || d < 1e-6 {
-			continue
-		}
-		power := (radius - d) / radius * maceKnockPower * m.kbScale()
-		m.vx, m.vz, m.kb, m.reroute = dx/d*power, dz/d*power, 3, 0
-		h.mobKnockVelocity(players, m)
-	}
+	h.windBurstSnd(players, dim, cx, cy, cz, by, radius, "minecraft:entity.breeze_wind_charge.burst")
 }
 
 // weaveCobwebs strings 2-3 cobwebs around where a weaving victim fell. Vanilla
@@ -208,7 +180,7 @@ func (h *hub) ominousOnMobDeath(players map[int32]*tracked, m *mob) {
 		return
 	}
 	if _, on := m.effects[effWindCharged]; on {
-		h.windChargedBurstAt(players, m.dim, m.x, m.y, m.z, 0, m.eid)
+		h.windChargedBurstAt(players, m.dim, m.x, m.y+m.box().h/2, m.z, m.eid)
 	}
 	if _, on := m.effects[effWeaving]; on {
 		h.weaveCobwebsAt(players, m.dim, m.x, m.y, m.z, false)

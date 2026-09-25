@@ -334,7 +334,7 @@ func (h *hub) placeVehicle(players map[int32]*tracked, t *tracked, e evPlaceVehi
 
 // mountVehicle seats a player (interact with an empty vehicle).
 func (h *hub) mountVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
-	if !v.rideable() || v.rider != 0 || v.aboard() >= v.seats() || dist3(t.x, t.y, t.z, v.x, v.y, v.z) > maxMeleeReach+1 {
+	if !v.rideable() || v.rider != 0 || v.aboard() >= v.seats() || !vehicleInReach(t, v) {
 		return
 	}
 	v.rider = t.p.eid
@@ -403,8 +403,7 @@ func (h *hub) hurtVehicle(players map[int32]*tracked, t *tracked, v *vehicle) {
 	if t == nil || t.dim != v.dim {
 		return
 	}
-	dx, dy, dz := t.x-v.x, t.y-v.y, t.z-v.z
-	if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+	if w, ht := v.box(); !withinEntityRange(t, v.x, v.y, v.z, w, ht, interactSlack) {
 		return
 	}
 	sw := h.meleeSwing(t, 0) // Player.attack: no crit on a non-living target
@@ -717,4 +716,11 @@ func (h *hub) openVehicleChest(players map[int32]*tracked, t *tracked, v *vehicl
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x3), Title: title})
 	h.sendChestWindow(t, v.chest)
 	h.angerNearbyPiglins(players, t, true) // MinecartChest / AbstractChestBoat.interact: a watched container
+}
+
+// vehicleInReach is handleInteract's isWithinEntityInteractionRange(box, 3.0)
+// for a vehicle.
+func vehicleInReach(t *tracked, v *vehicle) bool {
+	w, ht := v.box()
+	return t.dim == v.dim && withinEntityRange(t, v.x, v.y, v.z, w, ht, interactSlack)
 }

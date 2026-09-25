@@ -11,13 +11,54 @@ import (
 // readLeadingString reads a VarInt-length-prefixed string from the start of a
 // packet body. Both Chat Message and Chat Command lead with their text, and the
 
+// commandFields splits a command line into its arguments on whitespace, the
+// way brigadier reads a selector or an SNBT value as one argument: spaces
+// inside [...] or {...} (and inside quotes there) do not split, so
+// `@e[type=cow, limit=1]` and `{a: 1, b: "x y"}` stay whole.
+func commandFields(cmd string) []string {
+	var out []string
+	var cur strings.Builder
+	depth, quote := 0, byte(0)
+	flush := func() {
+		if cur.Len() > 0 {
+			out = append(out, cur.String())
+			cur.Reset()
+		}
+	}
+	for i := 0; i < len(cmd); i++ {
+		c := cmd[i]
+		switch {
+		case quote != 0:
+			if c == '\\' && i+1 < len(cmd) {
+				cur.WriteByte(c)
+				i++
+				c = cmd[i]
+			} else if c == quote {
+				quote = 0
+			}
+		case depth > 0 && (c == '"' || c == '\''):
+			quote = c
+		case c == '[' || c == '{':
+			depth++
+		case (c == ']' || c == '}') && depth > 0:
+			depth--
+		case depth == 0 && (c == ' ' || c == '\t' || c == '\n' || c == '\r'):
+			flush()
+			continue
+		}
+		cur.WriteByte(c)
+	}
+	flush()
+	return out
+}
+
 // tell sends a private system message to one player.
 func (p *player) tell(text string) { p.sendEv(chatEv(text)) }
 
 // handleCommand parses and runs a "/command" (the leading slash is already
 // stripped by the client). Unknown or malformed commands just get a hint.
 func (s *Server) handleCommand(p *player, cmd string) {
-	fields := strings.Fields(cmd)
+	fields := commandFields(cmd)
 	if len(fields) == 0 {
 		return
 	}
@@ -28,7 +69,7 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		return
 	} else if v.line != cmd {
 		cmd = v.line
-		fields = strings.Fields(v.line)
+		fields = commandFields(v.line)
 		if len(fields) == 0 {
 			return
 		}
@@ -263,6 +304,10 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdDefaultGamemode(p, fields[1:])
 	case "random":
 		s.cmdRandom(p, fields[1:])
+	case "setidletimeout":
+		s.cmdSetIdleTimeout(p, fields[1:])
+	case "stopwatch":
+		s.cmdStopwatch(p, fields[1:])
 	case "swing":
 		s.cmdSwing(p, fields[1:])
 	case "teammsg", "tm":

@@ -1,6 +1,7 @@
 package server
 
 import (
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -52,6 +53,7 @@ func (h *hub) onBoneMeal(players map[int32]*tracked, e evBoneMeal) {
 		fx, fy, fz = e.x+e.dx, e.y+e.dy, e.z+e.dz
 	}
 	h.vib(t.dim, freqBlockChange, fx, fy, fz, t.p.eid) // BoneMealItem: BLOCK_CHANGE
+	h.incStat(t, attachproto.StatUsed, itemBoneMeal, 1)
 	if isSurvival(t.gamemode) {
 		if s := t.handStack(int(e.slot)); s != nil && s.item == itemBoneMeal { // the hand it was used from
 			if s.count--; s.count <= 0 {

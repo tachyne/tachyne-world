@@ -65,7 +65,10 @@ type worldRules struct {
 	MovementCheck  bool `json:"playerMovementCheck"`
 	ElytraCheck    bool `json:"elytraMovementCheck"`
 	PvP            bool `json:"pvp"`
-	DragonDefeated bool `json:"dragonDefeated,omitempty"` // the End's fight is won
+	// SpectatorsGenChunks is spectators_generate_chunks: whether a spectator's
+	// view loads (and generates) chunks. On by default, as in vanilla.
+	SpectatorsGenChunks bool `json:"spectatorsGenerateChunks"`
+	DragonDefeated      bool `json:"dragonDefeated,omitempty"` // the End's fight is won
 	// The dragon is not in mobs.json (bosses are not persisted), so without
 	// this a restart mid-fight handed it back its full health. Zero means "no
 	// fight in progress"; a live fight writes what it has left.
@@ -132,6 +135,13 @@ type worldRules struct {
 	// outranks the -spawn flag: a flag is where a fresh world starts, the
 	// command is where the running one was moved to.
 	WorldSpawn *worldSpawnSave `json:"worldSpawn,omitempty"`
+	// RandomSequences is /random's named sequences (RandomSequences, which
+	// vanilla keeps as saved data).
+	RandomSequences *randomSequencesSave `json:"randomSequences,omitempty"`
+	// IdleTimeout is /setidletimeout's minutes (0 = never kick).
+	IdleTimeout int `json:"idleTimeout,omitempty"`
+	// Stopwatches is /stopwatch's milliseconds counted per id (Stopwatches).
+	Stopwatches map[string]int64 `json:"stopwatches,omitempty"`
 	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
 	// the -gamemode flag's.
 	DefaultGamemode *int `json:"defaultGamemode,omitempty"`
@@ -148,7 +158,7 @@ func defaultRules() worldRules {
 		RandomTicks: 3, SleepPercent: 100, LocatorBar: true, MaxCartSpeed: 8,
 		SpawnPhantoms: true, SpawnPatrols: true, SpawnWardens: true, Raids: true,
 		TNTExplodes: true, WaterSourceCnv: true, LavaSourceCnv: false,
-		MovementCheck: true, ElytraCheck: true, PvP: true,
+		MovementCheck: true, ElytraCheck: true, PvP: true, SpectatorsGenChunks: true,
 		FreezeDamage: true, SpreadVines: true, SpawnMonsters: true, SpawnerBlocks: true,
 		ForgiveDead: true, PearlsVanish: true, EntityDrops: true,
 		BlockDropDecay: true, MobDropDecay: true, TNTDropDecay: false,
@@ -189,22 +199,63 @@ func (s *Server) cmdGive(p *player, args []string) {
 		return
 	}
 	if len(args) < 2 {
-		p.tell("Usage: /give <player|@selector> <item> [count]")
+		p.tell("Usage: /give <player|@selector> <item>[<components>] [count]")
 		return
 	}
-	item, ok := itemByName[strings.TrimPrefix(args[1], "minecraft:")]
-	if !ok {
-		p.tell("Unknown item: " + args[1])
+	// The item argument may carry components with spaces in them: it runs to
+	// its closing bracket, and a count may follow.
+	rest := strings.Join(args[1:], " ")
+	itemArg, countArg := rest, ""
+	if open := strings.IndexByte(rest, '['); open >= 0 && open < strings.IndexByte(rest+" ", ' ') {
+		if end := matchBracket(rest, open); end > 0 {
+			itemArg, countArg = rest[:end+1], strings.TrimSpace(rest[end+1:])
+		}
+	} else if sp := strings.IndexByte(rest, ' '); sp >= 0 {
+		itemArg, countArg = rest[:sp], strings.TrimSpace(rest[sp+1:])
+	}
+	st, msg := parseItemArg(itemArg)
+	if msg != "" {
+		p.tell(msg)
 		return
 	}
 	count := 1
-	if len(args) >= 3 {
-		if n, err := strconv.Atoi(args[2]); err == nil && n > 0 && n <= 6400 {
-			count = n
+	if countArg != "" {
+		n, err := strconv.Atoi(countArg)
+		if err != nil || n < 1 {
+			p.tell(fmt.Sprintf("Invalid integer '%s'", countArg))
+			return
+		}
+		count = min(n, 6400)
+	}
+	st.count = count
+	s.hub.post(evGive{target: args[0], by: p.eid, item: st.item, count: count, stack: st})
+	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, itemArg, args[0]))
+}
+
+// matchBracket finds the ']' closing the '[' at open, skipping quoted text
+// and nested brackets; -1 when there is none.
+func matchBracket(s string, open int) int {
+	depth, quote := 0, byte(0)
+	for i := open; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case quote != 0:
+			if c == '\\' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+		case c == '"' || c == '\'':
+			quote = c
+		case c == '[' || c == '{':
+			depth++
+		case c == ']' || c == '}':
+			if depth--; depth == 0 {
+				return i
+			}
 		}
 	}
-	s.hub.post(evGive{target: args[0], by: p.eid, item: item, count: count})
-	s.ok(p, fmt.Sprintf("Gave %d × %s to %s", count, args[1], args[0]))
+	return -1
 }
 
 func (s *Server) cmdKill(p *player, args []string) {
@@ -252,40 +303,6 @@ func (s *Server) cmdXP(p *player, args []string) {
 		n = v
 	}
 	s.hub.post(evXP{op: args[0], target: args[1], by: p.eid, amount: n, levels: unit == "levels"})
-}
-
-func (s *Server) cmdSummon(p *player, args []string) {
-	if !s.isOp(p.name) {
-		p.tell("You don't have permission.")
-		return
-	}
-	if len(args) < 1 {
-		p.tell("Usage: /summon <mob> [<x> <y> <z>]")
-		return
-	}
-	et, ok := summonableType(args[0])
-	if !ok {
-		p.tell("Unknown entity: " + args[0])
-		return
-	}
-	x, y, z := p.x, p.y, p.z+2
-	if len(args) >= 4 { // /summon <mob> <x> <y> <z>, with ~ and ^ like vanilla
-		nx, ny, nz, ok := parsePosition(args[1:], p.x, p.y, p.z, p.yaw, p.pitch)
-		if !ok {
-			p.tell("Usage: /summon <mob> [<x> <y> <z>]")
-			return
-		}
-		x, y, z = nx, ny, nz
-	} else if len(args) >= 3 { // the old two-argument form: x and z
-		if nx, ok := parseCoord(args[1], p.x); ok {
-			x = nx
-		}
-		if nz, ok := parseCoord(args[2], p.z); ok {
-			z = nz
-		}
-	}
-	s.hub.post(evSummon{etype: et, x: x, z: z, dim: p.dim, y: y})
-	s.ok(p, "Summoned "+args[0])
 }
 
 func (s *Server) cmdDifficulty(p *player, args []string) {
@@ -375,6 +392,9 @@ type evGive struct {
 	by     int32 // the caller, for @s/@p and distance predicates
 	item   int32
 	count  int
+	// stack, when its item is set, is the item argument with its
+	// components (the count is the command's); zero gives a plain item.
+	stack invStack
 }
 type evKill struct {
 	target string
@@ -391,6 +411,9 @@ type evSummon struct {
 	etype   int
 	x, y, z float64
 	dim     int
+	by      int32          // the caller (feedback); 0 = none
+	nbt     map[string]any // the summon's NBT, nil when none was given
+	yaw     float32
 }
 type evSetRule struct {
 	rule string
@@ -525,6 +548,8 @@ func (h *hub) applyRule(players map[int32]*tracked, e evSetRule) {
 		h.rules.SpawnWardens = e.on
 	case "raids":
 		h.rules.Raids = e.on
+	case "spectators_generate_chunks":
+		h.rules.SpectatorsGenChunks = e.on
 	case "tnt_explodes":
 		h.rules.TNTExplodes = e.on
 	case "water_source_conversion":
@@ -591,6 +616,7 @@ func (h *hub) saveRules() {
 		ClearTime: h.clearTime, RainTime: h.rainTime, ThunderTime: h.thunderTime,
 		Raining: h.rainFlag, Thundering: h.thunderFlag,
 	}
+	h.packStopwatches()
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)
 }

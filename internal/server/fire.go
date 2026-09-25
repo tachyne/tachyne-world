@@ -154,6 +154,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 	}
 	if canLightBlock(target) {
 		s.hub.post(evLightBlock{eid: p.eid, x: x, y: y, z: z, sound: sndFireChargeUse})
+		s.itemUsed(p, itemFireCharge)
 		s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 		s.sendBlockChange(p, x, y, z, target, seq)
 		return
@@ -164,6 +165,7 @@ func (s *Server) useFireCharge(p *player, off bool, x, y, z, dx, dy, dz int, seq
 		return
 	}
 	s.putBlock(p, fx, fy, fz, fireStateOver(s.worldFor(p).At(fx, fy-1, fz)), true, seq)
+	s.itemUsed(p, itemFireCharge)
 	s.hub.post(evConsume{eid: p.eid, slot: p.handSlot(off)})
 }
 
@@ -386,6 +388,9 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	cfg := blastCfg{resistCap: math.Inf(1)}
 	for _, o := range opts {
 		o(&cfg)
+	}
+	if t := players[cfg.causer]; t != nil && !cfg.causerMob && cause.by == t.p.name {
+		cause.weapon = namedMainhand(t) // the one who lit it: a named item they hold
 	}
 	// Java clients get the whole blast as one explode packet at the end
 	// (ServerLevel.explode), sound, particles, debris and shove together;
@@ -742,10 +747,7 @@ func (h *hub) increasedFireBurnout(pos blockPos) bool {
 // rainingOn is Level.isRainingAt: raining, nothing that blocks motion (or
 // holds a fluid) above the cell, and the biome rains at that height. Only
 // the overworld has weather.
-func (h *hub) rainingOn(dim, x, y, z int) bool {
-	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y &&
-		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
-}
+func (h *hub) rainingOn(dim, x, y, z int) bool { return h.rainAt(dim, x, y, z) }
 
 // igniteFire places a fire block of the given age and schedules its first tick.
 func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
@@ -870,7 +872,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	inWater := worldgen.IsWater(w.At(fx, feet, fz)) || worldgen.IsWater(w.At(fx, feet+1, fz))
-	rainedOn := t.dim == 0 && h.raining && h.skyExposedAt(fx, feet, fz) // from the player's height — caves and roofs block rain
+	rainedOn := h.inRain(t.dim, t.x, t.y, t.z, 1.8*t.scale()) // isInWaterOrRain: caves and roofs keep it off
 	if inWater || rainedOn {
 		t.fireSecs = 0
 	} else {

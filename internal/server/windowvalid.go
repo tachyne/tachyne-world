@@ -60,14 +60,64 @@ func (h *hub) validateWindows(players map[int32]*tracked) {
 // withinEntityReach is Player.isWithinEntityInteractionRange(entity, 4.0):
 // the eye position to the mob's box, against entity_interaction_range + 4.
 func (h *hub) withinEntityReach(t *tracked, m *mob) bool {
-	reach := t.playerAttrs().Value(attr.EntityInteractionRange) + menuReachSlack
 	b := m.box()
+	return withinEntityRange(t, m.x, m.y, m.z, b.w, b.h, menuReachSlack)
+}
+
+// interactSlack is the buffer the server allows an attack or an entity
+// interaction beyond the player's reach (handleAttack's isWithinAttackRange
+// and handleInteract's isWithinEntityInteractionRange, both 3.0).
+const interactSlack = 3.0
+
+// withinEntityRange is Player.isWithinEntityInteractionRange(box, buffer):
+// the eye position to an entity's box (centre x/z, feet y, width, height),
+// against entity_interaction_range + buffer. For a melee blow with no
+// attack_range component it is also isWithinAttackRange: AttackRange's
+// default is that same attribute, with no hitbox margin.
+func withinEntityRange(t *tracked, x, y, z, w, ht, buffer float64) bool {
+	reach := t.playerAttrs().Value(attr.EntityInteractionRange) + buffer
 	ex, ey, ez := t.x, t.y+t.eyeHeight(), t.z
-	dx := math.Max(0, math.Max(m.x-b.w/2-ex, ex-(m.x+b.w/2)))
-	dy := math.Max(0, math.Max(m.y-ey, ey-(m.y+b.h)))
-	dz := math.Max(0, math.Max(m.z-b.w/2-ez, ez-(m.z+b.w/2)))
+	dx := math.Max(0, math.Max(x-w/2-ex, ex-(x+w/2)))
+	dy := math.Max(0, math.Max(y-ey, ey-(y+ht)))
+	dz := math.Max(0, math.Max(z-w/2-ez, ez-(z+w/2)))
 	return dx*dx+dy*dy+dz*dz <= reach*reach
 }
+
+// mobInReach is withinEntityRange for a mob with the attack/interact slack.
+func mobInReach(t *tracked, m *mob) bool {
+	b := m.box()
+	return t.dim == m.dim && withinEntityRange(t, m.x, m.y, m.z, b.w, b.h, interactSlack)
+}
+
+// creative range modifiers (ServerPlayer.updatePlayerAttributes): a creative
+// player reaches half a block further for blocks and two for entities.
+const (
+	creativeBlockRangeSource  = "minecraft:creative_mode_block_range"
+	creativeEntityRangeSource = "minecraft:creative_mode_entity_range"
+)
+
+// updatePlayerAttributes is ServerPlayer.updatePlayerAttributes' game-mode
+// half, run every tick.
+func (t *tracked) updatePlayerAttributes() {
+	a := t.playerAttrs()
+	br, er := a.Get(attr.BlockInteractionRange), a.Get(attr.EntityInteractionRange)
+	if t.gamemode == gmCreative {
+		br.AddModifier(attr.Modifier{Source: creativeBlockRangeSource, Amount: 0.5, Op: attr.AddValue})
+		er.AddModifier(attr.Modifier{Source: creativeEntityRangeSource, Amount: 2, Op: attr.AddValue})
+	} else {
+		br.RemoveModifier(creativeBlockRangeSource)
+		er.RemoveModifier(creativeEntityRangeSource)
+	}
+	// A crouching player drops off the locator bar: WAYPOINT_TRANSMIT_RANGE
+	// × 0 while crouching.
+	if wt := a.Get(attr.WaypointTransmitRange); t.sneaking {
+		wt.AddModifier(attr.Modifier{Source: waypointCrouchSource, Amount: -1, Op: attr.AddMultipliedTotal})
+	} else {
+		wt.RemoveModifier(waypointCrouchSource)
+	}
+}
+
+const waypointCrouchSource = "minecraft:waypoint_transmit_range_crouch"
 
 // menuBlockPresent reports whether the block the menu views is still a
 // block at all (a broken container is air).

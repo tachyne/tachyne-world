@@ -34,6 +34,53 @@ the public history since the project was open-sourced on 2026-07-10.
 - **/transfer.** Operators can send players to another server.
 - **Styled titles and boss bars.** `/title` and `/bossbar` take JSON text,
   so colours, bold and selectors show as they do in vanilla.
+- **/loot … fish.** `/loot` can now roll the fishing tables
+  (`gameplay/fishing` and its fish, junk and treasure pools) at a position,
+  as in vanilla.
+- **/setblock and /fill take more.** Both now accept block entity data
+  after the block (a container's `CustomName` and `Items`) and a `strict`
+  mode that changes blocks without updating their neighbours, and
+  `/fill … replace` takes a full block filter: a `#tag`, or a block with
+  only some of its properties (`oak_log[axis=y]`).
+- **/summon does more.** Besides mobs, `/summon` now makes lightning
+  bolts, primed TNT, experience orbs, armor stands, boats, minecarts,
+  firework rockets and dropped items, takes an NBT argument (`CustomName`,
+  `Tags`, `Health`, `Rotation`, `PersistenceRequired`, TNT's `fuse`, an
+  orb's `Value`, an item's `Item`), and summons at your feet by default,
+  as in vanilla.
+- **More of the target selector.** Selectors now take `x`, `y`, `z`,
+  `dx`, `dy`, `dz`, `scores`, `team`, `level`, `gamemode`, `x_rotation`,
+  `y_rotation`, `name=!…` and `sort=furthest|random|arbitrary`, a limit
+  and sort apply across players and mobs together, and spaces inside a
+  selector's brackets no longer break the command.
+- **/give with item components.** `/give <player> <item>[…]` now takes
+  the item's components, such as `enchantments`, `stored_enchantments`,
+  `custom_name`, `item_name`, `damage`, `repair_cost`, `potion_contents`
+  and `dyed_color`, so `/give @s diamond_sword[enchantments={sharpness:5}]`
+  works. Components the server does not model yet are refused by name.
+- **The `spectators_generate_chunks` gamerule.** With it off, a spectator
+  is only sent chunks that other players' views or forced chunks already
+  hold loaded, and flying around as a spectator no longer generates new
+  terrain, as in vanilla. It is on by default.
+- **/stopwatch.** `/stopwatch create|query|restart|remove <id>` keeps
+  named real-time stopwatches, as in vanilla 26.2. They are saved with the
+  world and pick up where they left off after a restart.
+- **/setidletimeout.** `/setidletimeout <minutes>` disconnects players
+  who have done nothing for that long ("You have been idle for too
+  long!"); 0 turns it off. Walking, clicking, typing and key presses count
+  as activity, looking around does not. The setting is kept with the world.
+- **/locate poi.** `/locate poi <type>` and `/locate poi #<tag>` find the
+  nearest point of interest within 256 blocks: a workstation, bed, bell,
+  beehive, bee nest, nether portal, lodestone or lightning rod.
+- **/random sequences.** `/random value|roll <range> <sequence>` draws
+  from a named random sequence that gives the same numbers as vanilla for
+  the same world seed, and `/random reset` starts one or all of them over,
+  optionally with a new seed. Sequences are saved with the world.
+- **/damage names who did it.** `/damage <target> <amount> <type> at <x y z>`
+  hits from a point (a raised shield faces it), and `by <entity> [from
+  <cause>]` blames an attacker: the death message names them, a mob they
+  hurt counts as their kill and turns on them, and the blow knocks the
+  target back as a hit does.
 - **Renamed containers keep their names.** A chest, barrel, shulker box,
   furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
   beacon, copper chest, banner, head or copper golem statue placed from an
@@ -189,6 +236,95 @@ the public history since the project was open-sourced on 2026-07-10.
   instead of snapping on. Renaming or recolouring a boss bar updates it in
   place. A player standing still reports landing and leaving the ground.
   The server description shows in the pause menu's server info.
+- **Currents push mobs as in vanilla.** A mob is now carried by the flow
+  of every water cell its body touches, not just the one at its feet, lava
+  has a current too (stronger in the Nether), and fish, squid, dolphins,
+  axolotls, turtles, frogs and nautiluses are no longer pushed around.
+- **Force-loaded chunks keep their mobs going.** Mobs in chunks kept
+  loaded with `/forceload` now stay loaded and keep moving, even with
+  nobody online, and mobs are no longer despawned just because no player
+  is in their dimension, as in vanilla.
+- **Damage types follow their tags.** The fall, fire, drowning and freeze
+  damage gamerules now cover every damage of that kind (an ender pearl's
+  landing counts as a fall), Frost Walker boots protect from campfires and
+  hot sulfur cubes as well as magma blocks, and the ender dragon can only
+  be hurt by players and explosions, as in vanilla.
+- **The "used" statistic counts much more.** Placing blocks, mining with
+  a tool, landing a blow with a weapon, using bone meal, fire charges,
+  flint and steel, hoes and shovels on blocks now each count as a use of
+  the item in the statistics screen, as in vanilla.
+- **Invisibility hides you from mobs.** Hostile mobs now only notice an
+  invisible player from close by (a few blocks without armour, further the
+  more armour is worn), crouching makes you a little harder to spot, and
+  wearing a zombie head, skeleton skull, creeper head or piglin head halves
+  the distance that kind of mob spots you from, as in vanilla.
+- **/setworldspawn works in the Nether and the End.** As in 26.3, the
+  world spawn can be set in any dimension: players without a bed or
+  anchor respawn there, new players are taken there when they first join,
+  and compasses point to it.
+- **/tp works across dimensions for mobs too.** Teleporting a mob to a
+  place or entity in another dimension now takes it there, and `/tp
+  <entity>` takes you to a mob in another dimension, as in vanilla.
+- **Rain and snow fall where vanilla's do.** The snow line on mountains
+  now wobbles as in vanilla instead of being a flat height, frozen oceans
+  have patches of rain and open water between the ice, rain follows the
+  biome at your height (cave biomes included), and cauldrons in deserts,
+  savannas and badlands no longer fill during a storm.
+- **Rain only counts where it actually falls.** Being rained on now
+  depends on where you are, not just on the column: a roof of glass or
+  leaves keeps the rain off, and so does standing under an overhang with
+  open sky above it. This affects Riptide tridents, putting out burning
+  players and mobs, water-sensitive mobs, fishing, farmland, fire and
+  where lightning picks its target.
+- **Nothing works past the world border.** Furnaces, brewing stands,
+  campfires, beacons, hoppers and dungeon spawners outside the world
+  border now stand still, and mobs no longer spawn naturally in chunks
+  that are not wholly inside it, as in vanilla.
+- **Riders are thrown off underwater.** A player or mob riding a horse,
+  donkey, mule, camel, llama, pig, strider, spider, chicken, ravager,
+  zombie horse or happy ghast now gets off once their head goes under
+  water, as in vanilla. A bubble column does not count.
+- **Locator bar ranges.** Crouching now takes a player off everyone
+  else's locator bar, as in vanilla, and the waypoint transmit and receive
+  range attributes decide how far away a player shows up.
+- **Mobs honour movement efficiency.** A mob whose movement efficiency is
+  raised (for example with `/attribute`) is slowed less by soul sand and
+  honey blocks, as in vanilla.
+- **The Wind Charged death burst is a real wind burst.** Something that
+  dies while Wind Charged now bursts like a wind charge: it swings doors,
+  trapdoors and fence gates, presses buttons, flips levers and rings bells
+  around it, and shoves nearby players and mobs the way a wind charge does.
+- **Weaker potion effects wait their turn.** A mob given a strong, short
+  effect over a weaker, longer one of the same kind now keeps the weaker
+  one and returns to it when the strong one ends, as players already did.
+  A player's waiting effects are also saved, so a relog no longer loses
+  them.
+- **Death messages name the killer's named item.** Deaths caused by a
+  player holding an item renamed on an anvil now read "… using
+  [name]" however the blow came, including arrows, tridents, Thorns,
+  sweeps, fireworks and TNT they lit, as in vanilla.
+- **Reach follows the interaction range attributes.** Hitting, trading
+  with, riding and otherwise using mobs, players and vehicles now measures
+  from your eyes against your entity interaction range, as in vanilla, so
+  `/attribute` changes to reach take effect. Creative players get
+  vanilla's longer block and entity reach.
+- **Sweeping sword blows work as in vanilla.** Mobs caught by a sweep now
+  take the sword's Sharpness, Smite or Bane bonus through their armour,
+  are knocked back along the swing, and get Fire Aspect and Bane's
+  slowness. The sweep's damage follows the sweeping damage ratio
+  attribute, and a sweep particle shows.
+- **Fast digging is no longer undone.** Breaking blocks under Haste III
+  or stronger (from `/effect`), or with a raised block break speed, used
+  to have the broken block put back. Digging speed now also follows the
+  mining efficiency and underwater mining speed attributes, so
+  `/attribute` changes to them take effect.
+- **/recipe knows the cooking recipes by name.** `/recipe give` and `take`
+  accept vanilla's cooking recipe names, such as
+  `iron_ingot_from_smelting_raw_iron` or `cooked_beef_from_smoking`, where
+  they used to answer "Unknown recipe".
+- **/attribute changes survive a relog.** A player's changed base values
+  and the modifiers `/attribute` added are saved with them, as in vanilla.
+  Dying keeps the base values and drops the added modifiers.
 - **Blazes float.** A blaze rises toward a target above it, bobbing at a
   height it re-picks every few seconds, and sinks slowly instead of
   dropping when it has nothing to climb to.

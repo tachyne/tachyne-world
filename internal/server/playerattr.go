@@ -19,6 +19,10 @@ func newPlayerAttributes() *attribute.Map {
 	a.SetBase(attr.MovementSpeed, 0.1) // vanilla's walking base
 	a.SetBase(attr.AttackDamage, 1)    // a bare fist; the held weapon replaces it
 	a.SetBase(attr.Luck, 0)
+	// Player.createAttributes: a player transmits and receives waypoints
+	// across the world (6E7), where anything else defaults to 0.
+	a.SetBase(attr.WaypointTransmitRange, 6e7)
+	a.SetBase(attr.WaypointReceiveRange, 6e7)
 	return a
 }
 

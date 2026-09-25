@@ -29,11 +29,12 @@ type evSetBlocks struct {
 	dim        int
 	from, to   blockPos
 	state      uint32
-	mode       string // replace (default), destroy, keep; /fill also hollow, outline
-	filter     uint32 // /fill … replace <filter>: only cells holding this block
-	hasFilter  bool
-	single     bool // /setblock: its own feedback
+	mode       string            // replace (default), destroy, keep; /fill also hollow, outline
+	filter     func(uint32) bool // /fill … replace <filter>: the BlockPredicate a cell must meet
+	single     bool              // /setblock: its own feedback
 	fillWanted int
+	strict     bool           // strict: no neighbour or shape updates (UPDATE_SKIP_ALL_SIDEEFFECTS)
+	nbt        map[string]any // the block entity data from {…} after the state
 }
 
 func (evSetBlocks) isHubEvent() {}
@@ -78,26 +79,53 @@ func (s *Server) cmdSetblock(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
+	usage := "Usage: /setblock <x> <y> <z> <block>[{<nbt>}] [destroy|keep|replace|strict]"
 	if len(args) < 4 || len(args) > 5 {
-		p.tell("Usage: /setblock <x> <y> <z> <block> [destroy|keep|replace]")
+		p.tell(usage)
 		return
 	}
 	x, y, z, ok := parsePosition(args[:3], p.x, p.y, p.z, p.yaw, p.pitch)
-	st, sok := parseBlockState(args[3])
-	if !ok || !sok {
-		p.tell("Usage: /setblock <x> <y> <z> <block> [destroy|keep|replace]")
+	st, nbt, msg := parseBlockArg(args[3])
+	if !ok || msg != "" {
+		if msg == "" {
+			msg = usage
+		}
+		p.tell(msg)
 		return
 	}
 	mode := "replace"
 	if len(args) == 5 {
 		mode = args[4]
-		if mode != "destroy" && mode != "keep" && mode != "replace" {
-			p.tell("Usage: /setblock <x> <y> <z> <block> [destroy|keep|replace]")
+		if mode != "destroy" && mode != "keep" && mode != "replace" && mode != "strict" {
+			p.tell(usage)
 			return
 		}
 	}
 	pos := blockPos{floorInt(x), floorInt(y), floorInt(z)}
-	s.hub.post(evSetBlocks{eid: p.eid, dim: p.dim, from: pos, to: pos, state: st, mode: mode, single: true})
+	e := evSetBlocks{eid: p.eid, dim: p.dim, from: pos, to: pos, state: st, mode: mode, single: true, nbt: nbt}
+	if mode == "strict" {
+		e.mode, e.strict = "replace", true
+	}
+	s.hub.post(e)
+}
+
+// parseBlockArg is BlockStateArgument: a state and an optional {…} of block
+// entity data.
+func parseBlockArg(arg string) (uint32, map[string]any, string) {
+	var nbt map[string]any
+	if i := strings.IndexByte(arg, '{'); i >= 0 {
+		v, err := parseSNBT(arg[i:])
+		m, ok := v.(map[string]any)
+		if err != nil || !ok {
+			return 0, nil, "Invalid block entity data: " + arg[i:]
+		}
+		arg, nbt = arg[:i], m
+	}
+	st, ok := parseBlockState(arg)
+	if !ok {
+		return 0, nil, fmt.Sprintf("Unknown block type '%s'", nsID(arg))
+	}
+	return st, nbt, ""
 }
 
 func (s *Server) cmdFill(p *player, args []string) {
@@ -105,32 +133,48 @@ func (s *Server) cmdFill(p *player, args []string) {
 		p.tell("You don't have permission.")
 		return
 	}
-	usage := "Usage: /fill <from> <to> <block> [destroy|hollow|keep|outline|replace [<filter>]]"
+	usage := "Usage: /fill <from> <to> <block>[{<nbt>}] [destroy|hollow|keep|outline|strict|replace [<filter>] [strict]]"
 	if len(args) < 7 {
 		p.tell(usage)
 		return
 	}
 	x0, y0, z0, ok0 := parsePosition(args[0:3], p.x, p.y, p.z, p.yaw, p.pitch)
 	x1, y1, z1, ok1 := parsePosition(args[3:6], p.x, p.y, p.z, p.yaw, p.pitch)
-	st, sok := parseBlockState(args[6])
-	if !ok0 || !ok1 || !sok {
-		p.tell(usage)
+	st, nbt, msg := parseBlockArg(args[6])
+	if !ok0 || !ok1 || msg != "" {
+		if msg == "" {
+			msg = usage
+		}
+		p.tell(msg)
 		return
 	}
-	e := evSetBlocks{eid: p.eid, dim: p.dim, state: st, mode: "replace",
+	e := evSetBlocks{eid: p.eid, dim: p.dim, state: st, mode: "replace", nbt: nbt,
 		from: blockPos{min(floorInt(x0), floorInt(x1)), min(floorInt(y0), floorInt(y1)), min(floorInt(z0), floorInt(z1))},
 		to:   blockPos{max(floorInt(x0), floorInt(x1)), max(floorInt(y0), floorInt(y1)), max(floorInt(z0), floorInt(z1))}}
 	if len(args) >= 8 {
 		switch e.mode = args[7]; e.mode {
 		case "destroy", "hollow", "keep", "outline":
+		case "strict":
+			e.mode, e.strict = "replace", true
 		case "replace":
-			if len(args) >= 9 {
-				f, ok := parseBlockState(args[8])
+			rest := args[8:]
+			if len(rest) > 0 && rest[len(rest)-1] == "strict" {
+				e.strict, rest = true, rest[:len(rest)-1]
+			}
+			if len(rest) == 1 {
+				arg := rest[0]
+				if i := strings.IndexByte(arg, '{'); i >= 0 {
+					arg = arg[:i] // block entity data in a predicate is not modelled; the block still has to match
+				}
+				f, ok := parseBlockPredicate(arg)
 				if !ok {
-					p.tell(usage)
+					p.tell(fmt.Sprintf("Unknown block type '%s'", nsID(rest[0])))
 					return
 				}
-				e.filter, e.hasFilter = f, true
+				e.filter = f
+			} else if len(rest) > 1 {
+				p.tell(usage)
+				return
 			}
 		default:
 			p.tell(usage)
@@ -181,10 +225,10 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 				if e.mode == "keep" && old != worldgen.Air {
 					continue
 				}
-				if e.hasFilter && old != e.filter && !sameBlockFamily(old, e.filter) { // any state of the filter's block
+				if e.filter != nil && !e.filter(old) {
 					continue
 				}
-				if old == want {
+				if old == want && e.nbt == nil {
 					continue
 				}
 				pos := blockPos{x, y, z}
@@ -196,7 +240,17 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 						}
 					}
 				}
-				h.setBlockAt(players, e.dim, pos, want)
+				if e.strict {
+					// UPDATE_SKIP_ALL_SIDEEFFECTS: the block goes in with no
+					// neighbour or shape updates and nothing scheduled.
+					w.SetBlock(x, y, z, want)
+					h.broadcastBlockIn(players, e.dim, x, y, z, want)
+				} else {
+					h.setBlockAt(players, e.dim, pos, want)
+				}
+				if e.nbt != nil {
+					h.loadBlockEntityNBT(simPos{dim: e.dim, blockPos: pos}, want, e.nbt)
+				}
 				changed++
 			}
 		}
@@ -212,3 +266,39 @@ func (h *hub) applySetBlocks(players map[int32]*tracked, e evSetBlocks) {
 		h.cmdOK(players, e.eid)(fmt.Sprintf("Successfully filled %d block(s)", changed))
 	}
 }
+
+// loadBlockEntityNBT applies the block entity data a /setblock or /fill gave:
+// CustomName on a nameable block, and Items on a chest-like container
+// (each {Slot, id, count}).
+func (h *hub) loadBlockEntityNBT(pos simPos, state uint32, nbt map[string]any) {
+	if name := nbtName(nbt); name != "" && nameableBlock(state) {
+		h.blockNames.set(pos, name)
+	}
+	items, ok := nbt["Items"].([]any)
+	if !ok || !isChestLikeContainer(state) {
+		return
+	}
+	c := &chest{}
+	for _, raw := range items {
+		it, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		slot, ok := snbtInt(it["Slot"])
+		id, _ := it["id"].(string)
+		item, known := itemByName[strings.TrimPrefix(id, "minecraft:")]
+		if !ok || !known || slot < 0 || int(slot) >= len(c.slots) {
+			continue
+		}
+		count := int64(1)
+		if n, ok := snbtInt(it["count"]); ok && n > 0 {
+			count = n
+		}
+		c.slots[slot] = invStack{item: item, count: int(count)}
+	}
+	h.chests[pos] = c
+}
+
+// isChestLikeContainer is a 27-slot container kept in h.chests: a chest of
+// any kind, a barrel or a shulker box.
+func isChestLikeContainer(s uint32) bool { return isChestBlock(s) || isBarrel(s) || isShulkerBox(s) }

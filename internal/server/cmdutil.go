@@ -104,14 +104,13 @@ func (e cmdEntity) living() *living {
 // commandEntities resolves an EntityArgument: the players the selector picks,
 // then (for @e) the mobs.
 func (h *hub) commandEntities(players map[int32]*tracked, by int32, arg string) []cmdEntity {
-	var out []cmdEntity
-	for _, t := range h.commandTargets(players, by, arg) {
-		out = append(out, cmdEntity{t: t})
+	spec, ok := parseTargetSpec(arg)
+	if !ok {
+		return nil
 	}
-	for _, m := range h.commandMobs(players, by, arg) {
-		out = append(out, cmdEntity{m: m})
-	}
-	return out
+	// One selection over players and mobs together, so a sort and a limit
+	// apply across both (@e[limit=1,sort=nearest] is one entity).
+	return h.selectEntities(players, players[by], spec, true, spec.selectsEntities())
 }
 
 // jDouble formats a double the way Java's Double.toString does, which is how

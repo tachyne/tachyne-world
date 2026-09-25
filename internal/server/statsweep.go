@@ -128,3 +128,20 @@ type evStat struct {
 }
 
 func (evStat) isHubEvent() {}
+
+// evItemUsed is a use of an item that vanilla counts in minecraft:used
+// (ItemStack.useOn's successful item interaction: a block item placed, a
+// fire charge spent), posted from the session side in any game mode.
+type evItemUsed struct {
+	eid  int32
+	item int32
+}
+
+func (evItemUsed) isHubEvent() {}
+
+// itemUsed posts evItemUsed for an item from a player's hand.
+func (s *Server) itemUsed(p *player, item int32) {
+	if item != 0 {
+		s.hub.post(evItemUsed{eid: p.eid, item: item})
+	}
+}

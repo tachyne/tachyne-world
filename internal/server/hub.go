@@ -17,6 +17,7 @@ import (
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	"github.com/tachyne/tachyne-world/plugin"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // The hub is the central authority: one goroutine owns the player registry and
@@ -228,6 +229,10 @@ type tracked struct {
 	// ServerPlayer.seenCredits (saved) and wonGame (the credits are showing:
 	// the player waits in the End until their client asks to respawn).
 	seenCredits, wonGame bool
+	// cmdMods is the modifiers /attribute added (AttributeInstance's
+	// permanent modifiers, by attribute): the ones the player's data keeps,
+	// as against the transient ones gear and effects re-assert.
+	cmdMods map[attr.ID]map[string]bool
 	// WardenSpawnTracker: warning level toward a Warden, the cooldown between
 	// warnings and the quiet time since the last one (all in ticks).
 	wardenWarn     int
@@ -459,7 +464,11 @@ type hub struct {
 	// surface. Set only when this shard OWNS it; otherwise respawn falls back to a
 	// point inside this shard's own region so a death never lands you off-shard.
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
+	stopwatches                           map[string]stopwatchRun       // /stopwatch (stopwatch.go); nil until first used
+	chunkHolders                          atomic.Pointer[[]chunkHolder] // who holds chunks loaded (chunkholders.go)
 	hasWorldSpawn                         bool
+	worldSpawnDim                         int          // the level the world spawn is in (RespawnData.dimension)
+	spawnDimPub                           atomic.Int32 // worldSpawnDim for the join path (session goroutine)
 	// The facing /setworldspawn gave the spawn, and the spawn as a joining
 	// session reads it (nil until the command, or its saved value, sets one).
 	worldSpawnYaw, worldSpawnPitch float32
@@ -492,7 +501,9 @@ type hub struct {
 	// player's range, so its mobs unload only after a grace window (no border
 	// thrash). Mobs load/unload with their chunk, bounding the live set.
 	activeChunks map[[2]int32]bool
-	chunkOutAt   map[[2]int32]uint64
+	// scratchEntityChunks is reconcileEntityChunks' reusable chunk set.
+	scratchEntityChunks map[[2]int32]bool
+	chunkOutAt          map[[2]int32]uint64
 
 	// reloading is true only while loadMobs reconstructs persisted mobs at boot:
 	// it suppresses MobSpawnEvent (these entities already existed — they are being
@@ -1125,6 +1136,10 @@ func (h *hub) run() {
 			h.jukeboxTick(players) // end songs whose length elapsed (JukeboxBlockEntity ticks every tick)
 			if age%20 == 0 {
 				h.lodestoneTick(players) // compasses forget a removed lodestone
+				h.idleKick(players)      // /setidletimeout
+			}
+			if age%5 == 0 {
+				h.publishChunkHolders(players) // the chunk-stream gate for skipped spectators
 			}
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
@@ -1148,7 +1163,7 @@ func (h *hub) run() {
 			// loop (not inside updateMobs) so tests that drive updateMobs directly
 			// are unaffected. Before this gate the boot herds walked the world for
 			// nobody, generating terrain into the chunk cache around the clock.
-			if age%mobMoveInterval == 0 && len(players) > 0 {
+			if age%mobMoveInterval == 0 && (len(players) > 0 || h.anyForced()) {
 				h.updateMobs(players)      // living world: mob behaviour + movement
 				h.updateOpenDoors(players) // shut wooden doors villagers left open
 				h.updateShadows(players)   // cross-seam: push near-border entities to neighbours
@@ -1178,22 +1193,26 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
-			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
-			h.publishBodies(players)    // the boxes a block placement must not overlap
-			h.tickShulkerLids(players)  // shulker box lids: neighbour updates and the push
-			h.pickupItems(players)      // collect dropped items into survival inventories
-			h.tickDigCracks(players)    // the cracks other players see on a dig
-			h.updateOrbs(players)       // collect experience orbs / expire old ones
-			h.updateRockets(players)    // firework rockets climb, boost gliders, pop
-			h.tickGliding(players)      // elytra wear: a point a second, and the glide ends with the wing
-			h.tickBoosts(players)       // a food-on-a-stick sprint runs down while its mount is ridden
-			h.expireSpyglass(players)   // a scope held to its full duration drops
-			h.updateEating(players)     // apply finished eat-holds (32-tick chew)
-			h.tickSpearCharges(players) // lowered spears strike what they run into
-			h.borderDamage(players)     // outside the world border hurts (players only)
-			h.updateSleep(players)      // turn the night once everyone's slept ~5s
+			h.tickItems(players)          // item physics: gravity, sliding, floating, currents
+			h.publishBodies(players)      // the boxes a block placement must not overlap
+			h.tickShulkerLids(players)    // shulker box lids: neighbour updates and the push
+			h.pickupItems(players)        // collect dropped items into survival inventories
+			h.tickDigCracks(players)      // the cracks other players see on a dig
+			h.updateOrbs(players)         // collect experience orbs / expire old ones
+			h.updateRockets(players)      // firework rockets climb, boost gliders, pop
+			h.tickGliding(players)        // elytra wear: a point a second, and the glide ends with the wing
+			h.tickBoosts(players)         // a food-on-a-stick sprint runs down while its mount is ridden
+			h.expireSpyglass(players)     // a scope held to its full duration drops
+			h.updateEating(players)       // apply finished eat-holds (32-tick chew)
+			h.tickSpearCharges(players)   // lowered spears strike what they run into
+			h.borderDamage(players)       // outside the world border hurts (players only)
+			h.updateSleep(players)        // turn the night once everyone's slept ~5s
+			h.dismountUnderwater(players) // dismounts_underwater: riders with their eyes in water get off
 			for _, t := range players {
-				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
+				t.refreshGearIfChanged()   // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
+				t.updatePlayerAttributes() // the creative reach modifiers
+				t.p.loadedOnly.Store(t.gamemode == gmSpectator && !h.rules.SpectatorsGenChunks)
+				t.p.setDigModel(t.playerAttrs().Value(attr.MiningEfficiency), t.digSpeedMult())
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
@@ -1252,7 +1271,11 @@ func (h *hub) run() {
 				h.updateCopperGolems(players) // oxidation → statue
 			}
 			h.phases.lap(phaseSecondly)
-			h.mobAmbience(players)  // Mob.baseTick: the idle-voice roll runs every tick
+			h.mobAmbience(players) // Mob.baseTick: the idle-voice roll runs every tick
+			// Load/unload mobs with their chunks before counting or spawning, so
+			// caps see the reloaded packs and freed-up room from unloaded ones —
+			// with or without players: forced chunks keep theirs.
+			h.reconcileEntityChunks(players)
 			h.naturalSpawn(players) // vanilla NaturalSpawner port: all categories, all heights
 			h.phases.lap(phaseSpawning)
 			h.primeFluids(players) // generated springs start running (fluidprime.go)
@@ -1664,6 +1687,10 @@ func (h *hub) run() {
 				h.spawnItemIn(players, e.dim, e.item, e.count, e.x, e.y, e.z)
 			case evGive:
 				for _, t := range h.commandTargets(players, e.by, e.target) {
+					if e.stack.item != 0 {
+						h.giveStack(players, t, e.stack)
+						continue
+					}
 					h.giveTo(players, t, e.item, e.count)
 				}
 			case evKill:
@@ -1783,6 +1810,10 @@ func (h *hub) run() {
 				h.applyDefaultGamemode(players, e)
 			case evRandomCmd:
 				h.applyRandomCommand(players, e)
+			case evSetIdleTimeout:
+				h.applySetIdleTimeout(players, e)
+			case evStopwatch:
+				h.applyStopwatch(players, e)
 			case evSwingCmd:
 				h.applySwingCommand(players, e)
 			case evTeamMsg:
@@ -1926,6 +1957,8 @@ func (h *hub) run() {
 				if t := players[e.eid]; t != nil {
 					h.incCustom(t, e.name, 1)
 				}
+			case evItemUsed:
+				h.incStat(players[e.eid], attachproto.StatUsed, e.item, 1)
 			case evRingBell:
 				h.onRingBell(players, e)
 			case evUseSign:
@@ -2100,12 +2133,11 @@ func (h *hub) run() {
 						break
 					}
 					if m := h.mobs[e.target]; m != nil && (m.etype == entityVillager || m.etype == entityWanderingTrader) && m.dying == 0 &&
-						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
+						mobInReach(t, m) {
 						h.openTrades(t, m)
 						break
 					}
-					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
-						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
+					if m := h.mobs[e.target]; m != nil && m.dying == 0 && mobInReach(t, m) {
 						h.interactMob(players, t, m, e.sneak)
 					}
 				}
@@ -2296,6 +2328,11 @@ func (h *hub) run() {
 				}
 			case evToolWear:
 				if t := players[e.eid]; t != nil {
+					// Every session-side wear is a counted use: Item.mineBlock
+					// for a tool, or a hoe, shovel or flint and steel's useOn.
+					if st := t.handStack(e.slot); st != nil && st.count > 0 {
+						h.incStat(t, attachproto.StatUsed, st.item, 1)
+					}
 					h.applyToolWear(t, e.slot, max(1, e.n))
 				}
 			case evSteerBoost:
@@ -2971,6 +3008,25 @@ func (h *hub) roomChatFrom(players map[int32]*tracked, sender, msg string) {
 
 // giveTo adds items to a player's inventory, spilling the remainder at their
 // feet (the /give behavior).
+// giveStack is giveTo for a stack with components: whatever does not fit
+// is dropped at the player's feet with its components.
+func (h *hub) giveStack(players map[int32]*tracked, t *tracked, st invStack) {
+	if t.inv == nil {
+		return
+	}
+	changed, left := t.inv.addStack(st)
+	for _, sl := range changed {
+		h.sendSlot(t, sl)
+	}
+	if left > 0 {
+		st.count = left
+		if it := h.spawnItemIn(players, t.dim, st.item, st.count, t.x, t.y, t.z); it != nil {
+			it.setFrom(st)
+			h.refreshItemMeta(players, it)
+		}
+	}
+}
+
 func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count int) {
 	if t.inv == nil {
 		return

@@ -125,7 +125,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 			// AUTHORITY: a Finish faster than the hardness allows (with generous
 			// tool + latency slack) is a fast-break cheat — revert, don't apply.
 			elapsed := int(s.hub.tick.Load() - p.digStartAt)
-			if p.digPos != (blockPos{x, y, z}) || elapsed < minDigTicks(broken, p.heldItem(), p.digBonus()) {
+			if p.digPos != (blockPos{x, y, z}) || elapsed < minDigTicks(broken, p.heldItem(), p.digBonus(), p.digMult()) {
 				s.sendBlockChange(p, x, y, z, broken, seq)
 				return
 			}
@@ -343,6 +343,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	if held == itemNetherWart {
 		if s.worldFor(p).At(tx, ty-1, tz) == worldgen.SoulSand {
 			s.putBlock(p, tx, ty, tz, netherWartMin, true, seq)
+			s.itemUsed(p, held)
 			if isSurvival(s.modes.get(p.key())) {
 				s.hub.post(evConsume{eid: p.eid, slot: slot})
 			}
@@ -421,32 +422,47 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	defState = pev.State
 
 	if defState == bellDefault { // bell: floor/ceiling/wall attachment from the clicked face
-		if s.placeBell(p, defState, tx, ty, tz, dir, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: slot})
+		if s.placeBell(p, defState, tx, ty, tz, dir, seq) {
+			s.itemUsed(p, held) // BlockItem.useOn: ITEM_USED
+			if isSurvival(s.modes.get(p.key())) {
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
+			}
 		}
 		return
 	}
 	if wallDef, isSign := signWallVariant[defState]; isSign { // sign item: standing or wall
-		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: slot})
+		if s.placeSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) {
+			s.itemUsed(p, held) // BlockItem.useOn: ITEM_USED
+			if isSurvival(s.modes.get(p.key())) {
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
+			}
 		}
 		return
 	}
 	if wallDef, isHanging := hangingWallVariant[defState]; isHanging { // hanging-sign item: ceiling or wall bracket
-		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: slot})
+		if s.placeHangingSign(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq) {
+			s.itemUsed(p, held) // BlockItem.useOn: ITEM_USED
+			if isSurvival(s.modes.get(p.key())) {
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
+			}
 		}
 		return
 	}
 	if wallDef, isBanner := bannerWallVariant[defState]; isBanner { // banner: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, false) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: slot})
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, false) {
+			s.itemUsed(p, held) // BlockItem.useOn: ITEM_USED
+			if isSurvival(s.modes.get(p.key())) {
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
+			}
 		}
 		return
 	}
 	if wallDef, isHead := headWallVariant[defState]; isHead { // mob head/skull: standing or wall
-		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, true) && isSurvival(s.modes.get(p.key())) {
-			s.hub.post(evConsume{eid: p.eid, slot: slot})
+		if s.placeStandingOrWall(p, defState, wallDef, tx, ty, tz, dir, replacingClicked, seq, true) {
+			s.itemUsed(p, held) // BlockItem.useOn: ITEM_USED
+			if isSurvival(s.modes.get(p.key())) {
+				s.hub.post(evConsume{eid: p.eid, slot: slot})
+			}
 		}
 		return
 	}
@@ -618,6 +634,7 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			s.hub.post(evBlockSound{eid: p.eid, dim: p.dim, x: tx, y: ty, z: tz,
 				name: name, volume: vol, pitch: pitch})
 		}
+		s.itemUsed(p, held)                   // BlockItem.useOn succeeded: ITEM_USED, in any game mode
 		if isSurvival(s.modes.get(p.key())) { // survival uses up one of the stack
 			s.hub.post(evConsume{eid: p.eid, slot: slot})
 		}

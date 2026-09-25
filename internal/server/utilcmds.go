@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/md5"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"strconv"
@@ -10,8 +12,8 @@ import (
 )
 
 // Three small commands: /random (RandomCommand's value and roll — anyone may
-// use them; the named random sequences are not kept), /swing (SwingCommand)
-// and /teammsg, alias /tm (TeamMsgCommand).
+// use them — and a gamemaster's named sequences and reset), /swing
+// (SwingCommand) and /teammsg, alias /tm (TeamMsgCommand).
 
 // ---- /random ------------------------------------------------------------------
 
@@ -20,6 +22,15 @@ type evRandomCmd struct {
 	name     string
 	min, max int
 	announce bool // roll: everyone hears it
+	// seq draws from a named sequence (RandomSequences.get) instead of the
+	// level's random.
+	seq string
+	// reset is `/random reset`: seq names the sequence ("*" = all of them),
+	// and withSeed carries the salt and the two include flags.
+	reset                bool
+	withSeed             bool
+	salt                 int32
+	worldSeed, includeID bool
 }
 
 func (evRandomCmd) isHubEvent() {}
@@ -62,13 +73,26 @@ func parseIntRange(s string) (lo, hi int, msg string) {
 }
 
 func (s *Server) cmdRandom(p *player, args []string) {
-	if len(args) < 2 || (args[0] != "value" && args[0] != "roll") {
-		p.tell("Usage: /random value|roll <range>")
+	if len(args) >= 1 && args[0] == "reset" {
+		s.cmdRandomReset(p, args[1:])
 		return
 	}
-	if len(args) > 2 { // <sequence>: a gamemaster's, and not kept here
-		p.tell("Named random sequences are not supported: /random value|roll <range>")
+	if len(args) < 2 || len(args) > 3 || (args[0] != "value" && args[0] != "roll") {
+		p.tell("Usage: /random value|roll <range> [<sequence>]")
 		return
+	}
+	e := evRandomCmd{by: p.eid, name: p.name, announce: args[0] == "roll"}
+	if len(args) == 3 { // <sequence>: a gamemaster's
+		if !s.isOp(p.name) {
+			p.tell("You don't have permission.")
+			return
+		}
+		id, ok := parseResourceID(args[2])
+		if !ok {
+			p.tell(fmt.Sprintf("Invalid identifier '%s'", args[2]))
+			return
+		}
+		e.seq = id
 	}
 	lo, hi, msg := parseIntRange(args[1])
 	if msg != "" {
@@ -83,18 +107,181 @@ func (s *Server) cmdRandom(p *player, args []string) {
 		p.tell("The range of the random value must be at most 2147483647")
 		return
 	}
-	s.hub.post(evRandomCmd{by: p.eid, name: p.name, min: lo, max: hi, announce: args[0] == "roll"})
+	e.min, e.max = lo, hi
+	s.hub.post(e)
 }
 
-// applyRandomCommand draws on the hub's random source (randomBetweenInclusive).
+// cmdRandomReset is `/random reset (*|<sequence>) [<seed> [<includeWorldSeed>
+// [<includeSequenceId>]]]`.
+func (s *Server) cmdRandomReset(p *player, args []string) {
+	if !s.isOp(p.name) { // reset: LEVEL_GAMEMASTERS
+		p.tell("You don't have permission.")
+		return
+	}
+	usage := "Usage: /random reset (*|<sequence>) [<seed> [<includeWorldSeed> [<includeSequenceId>]]]"
+	if len(args) < 1 || len(args) > 4 {
+		p.tell(usage)
+		return
+	}
+	e := evRandomCmd{by: p.eid, name: p.name, reset: true, seq: "*", worldSeed: true, includeID: true}
+	if args[0] != "*" {
+		id, ok := parseResourceID(args[0])
+		if !ok {
+			p.tell(fmt.Sprintf("Invalid identifier '%s'", args[0]))
+			return
+		}
+		e.seq = id
+	}
+	if len(args) >= 2 {
+		n, err := strconv.ParseInt(args[1], 10, 32)
+		if err != nil {
+			p.tell(fmt.Sprintf("Invalid integer '%s'", args[1]))
+			return
+		}
+		e.withSeed, e.salt = true, int32(n)
+	}
+	for i, into := range []*bool{&e.worldSeed, &e.includeID} {
+		if len(args) < 3+i {
+			break
+		}
+		switch args[2+i] {
+		case "true":
+			*into = true
+		case "false":
+			*into = false
+		default:
+			p.tell(fmt.Sprintf("Invalid boolean, expected 'true' or 'false' but found '%s'", args[2+i]))
+			return
+		}
+	}
+	s.hub.post(e)
+}
+
+// parseResourceID is IdentifierArgument: a namespaced id, the namespace
+// defaulting to minecraft, in the characters an Identifier allows.
+func parseResourceID(s string) (string, bool) {
+	ns, path, ok := strings.Cut(s, ":")
+	if !ok {
+		ns, path = "minecraft", s
+	}
+	if ns == "" {
+		ns = "minecraft"
+	}
+	if path == "" {
+		return "", false
+	}
+	for _, c := range ns {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-' || c == '.') {
+			return "", false
+		}
+	}
+	for _, c := range path {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == '-' || c == '.' || c == '/') {
+			return "", false
+		}
+	}
+	return ns + ":" + path, true
+}
+
+// applyRandomCommand draws on the hub's random source (randomBetweenInclusive),
+// or on a named sequence, which it creates on first use.
 func (h *hub) applyRandomCommand(players map[int32]*tracked, e evRandomCmd) int {
-	v := e.min + h.rng.Intn(e.max-e.min+1)
+	if e.reset {
+		h.applyRandomReset(players, e)
+		return 0
+	}
+	var v int
+	if e.seq != "" {
+		r := h.randomSequence(e.seq)
+		v = e.min + int(r.nextIntN(int32(e.max-e.min+1)))
+		h.saveRandomSequence(e.seq, r)
+	} else {
+		v = e.min + h.rng.Intn(e.max-e.min+1)
+	}
 	if e.announce {
 		h.broadcastChat(players, fmt.Sprintf("%s rolled %d (from %d to %d)", e.name, v, e.min, e.max))
 	} else {
 		h.cmdInfo(players, e.by)(fmt.Sprintf("Randomized value: %d", v))
 	}
 	return v
+}
+
+// applyRandomReset is RandomCommand's resetSequence and resetAllSequences.
+func (h *hub) applyRandomReset(players map[int32]*tracked, e evRandomCmd) {
+	rs := h.randomSeqs()
+	if e.seq == "*" {
+		if e.withSeed { // resetAllSequencesAndSetNewDefaults
+			rs.Salt, rs.NoWorldSeed, rs.NoSequenceID = e.salt, !e.worldSeed, !e.includeID
+		}
+		n := len(rs.Sequences)
+		rs.Sequences = nil
+		h.saveRules()
+		h.cmdInfo(players, e.by)(fmt.Sprintf("Reset %d random sequence(s)", n))
+		return
+	}
+	salt, ws, id := rs.Salt, !rs.NoWorldSeed, !rs.NoSequenceID
+	if e.withSeed {
+		salt, ws, id = e.salt, e.worldSeed, e.includeID
+	}
+	h.saveRandomSequence(e.seq, newRandomSequence(e.seq, h.world.Seed(), salt, ws, id))
+	h.cmdInfo(players, e.by)("Reset random sequence " + e.seq)
+}
+
+// randomSequencesSave is RandomSequences: the defaults new sequences are
+// seeded with and every sequence's Xoroshiro state. The include flags are
+// stored inverted so that an absent field is vanilla's default (true).
+type randomSequencesSave struct {
+	Salt         int32                `json:"salt,omitempty"`
+	NoWorldSeed  bool                 `json:"noWorldSeed,omitempty"`
+	NoSequenceID bool                 `json:"noSequenceId,omitempty"`
+	Sequences    map[string][2]uint64 `json:"sequences,omitempty"`
+}
+
+func (h *hub) randomSeqs() *randomSequencesSave {
+	if h.rules.RandomSequences == nil {
+		h.rules.RandomSequences = &randomSequencesSave{}
+	}
+	return h.rules.RandomSequences
+}
+
+// randomSequence is RandomSequences.get: the named sequence, created from
+// the defaults on first use.
+func (h *hub) randomSequence(id string) *xoroshiro {
+	rs := h.randomSeqs()
+	if st, ok := rs.Sequences[id]; ok {
+		return &xoroshiro{st[0], st[1]}
+	}
+	return newRandomSequence(id, h.world.Seed(), rs.Salt, !rs.NoWorldSeed, !rs.NoSequenceID)
+}
+
+// saveRandomSequence records a sequence's state (the saved data is dirtied by
+// every draw) and writes it out.
+func (h *hub) saveRandomSequence(id string, r *xoroshiro) {
+	rs := h.randomSeqs()
+	if rs.Sequences == nil {
+		rs.Sequences = map[string][2]uint64{}
+	}
+	rs.Sequences[id] = [2]uint64{r.lo, r.hi}
+	h.saveRules()
+}
+
+// newRandomSequence is RandomSequences.createSequence and RandomSequence's
+// constructor: the world seed (or not) xor the salt, upgraded to 128 bits
+// unmixed, xored with the MD5 of the id (or not), then mixed.
+func newRandomSequence(id string, worldSeed int64, salt int32, includeWorldSeed, includeID bool) *xoroshiro {
+	var seed int64
+	if includeWorldSeed {
+		seed = worldSeed
+	}
+	seed ^= int64(salt)
+	lo := uint64(seed) ^ xoroSilver
+	hi := lo + xoroGolden
+	if includeID {
+		sum := md5.Sum([]byte(id))
+		lo ^= binary.BigEndian.Uint64(sum[:8])
+		hi ^= binary.BigEndian.Uint64(sum[8:])
+	}
+	return newXoroshiroPair(mixStafford13(lo), mixStafford13(hi))
 }
 
 // ---- /swing -------------------------------------------------------------------

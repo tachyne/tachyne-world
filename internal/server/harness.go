@@ -72,7 +72,7 @@ func (h *hub) tryHappyGhast(players map[int32]*tracked, t *tracked, m *mob) bool
 // boardGhast seats a player on a harnessed happy ghast (first aboard pilots it),
 // pausing its AI and relaying the full passenger list.
 func (h *hub) boardGhast(players map[int32]*tracked, t *tracked, m *mob) {
-	if len(m.riders) >= ghastMaxRiders || dist3(t.x, t.y, t.z, m.x, m.y, m.z) > maxMeleeReach+2 {
+	if len(m.riders) >= ghastMaxRiders || !mobInReach(t, m) {
 		return
 	}
 	for _, r := range m.riders {

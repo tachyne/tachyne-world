@@ -42,8 +42,8 @@ func (h *hub) updateSpawners(players map[int32]*tracked) {
 					continue
 				}
 				done[pos] = true
-				if !h.ownedBlock(d.X, d.Z) {
-					continue // dungeon spawner outside this pod's region
+				if !h.ownedBlock(d.X, d.Z) || !h.cellWithinBorder(dimOverworld, d.X, d.Z) {
+					continue // outside this pod's region, or past the world border (LevelChunk.isTicking)
 				}
 				if dist3(t.x, t.y, t.z, float64(d.X), float64(d.Y), float64(d.Z)) > spawnerRange {
 					continue

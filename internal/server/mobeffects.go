@@ -87,8 +87,9 @@ func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in acti
 		return false
 	}
 	if !m.startEffectInstance(id, in) {
-		return false // a stronger or longer instance is already running
+		return false // nothing showing changed: a weaker one went into the hidden stack, if anywhere
 	}
+	amp = m.effects[id].amp
 	m.installEffectModifiers(id, amp)
 	if id == effAbsorption { // AbsorptionMobEffect.onEffectStarted
 		m.absorption = math.Max(m.absorption, float64(4*(amp+1)))
@@ -146,6 +147,12 @@ func (h *hub) updateMobEffects(players map[int32]*tracked) {
 				break
 			}
 			if e.tickDown(); e.expired() {
+				if hid := e.hidden; hid != nil && !hid.expired() { // downgradeToHiddenEffect
+					*e = *hid
+					m.installEffectModifiers(id, e.amp)
+					h.toTracking(players, m.eid, m.dim, m.x, m.z, effectEv(m.eid, id, e))
+					continue
+				}
 				h.removeMobEffect(players, m, id)
 			}
 		}

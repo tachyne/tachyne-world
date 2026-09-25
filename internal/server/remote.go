@@ -28,6 +28,14 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	}
 	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
+	// A world spawn outside the overworld (26.3's /setworldspawn anywhere):
+	// the newcomer joins at the overworld's own spawn and the dimension
+	// switch then carries them to it.
+	spawnDim, sx, sy, sz := int32(0), x, y, z
+	if d := s.hub.spawnDimPub.Load(); d != 0 && s.hub.spawnPub.Load() != nil {
+		spawnDim = d
+		x, y, z = s.overworldJoinSpawn()
+	}
 	var yaw, pitch float32
 	// Vanilla logs a returning player back in where they logged out. Restore
 	// their last OVERWORLD position; a new player, or one who logged out in the
@@ -36,6 +44,7 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	if s.hub.invs != nil {
 		if px, py, pz, pyaw, ppitch, pdim, ok := s.hub.invs.savedPos(p.key()); ok && pdim == 0 {
 			x, y, z, yaw, pitch = px, py, pz, pyaw, ppitch
+			spawnDim = 0 // back where they logged out
 		}
 	}
 	p.x, p.y, p.z, p.yaw, p.pitch = x, y, z, yaw, pitch
@@ -48,6 +57,12 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	r.emitEvNow(abilitiesFor(mode))
 	r.emitEvNow(opLevelEvent(p.eid, s.isOp(p.name)))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
+	if spawnDim != 0 {
+		p.pendingFrom = dimPos{}
+		p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1} // switchDimensionTo lands at z+1.5
+		p.pendingDestOK = true
+		p.pendingDim.Store(spawnDim)
+	}
 	return r, nil
 }
 
@@ -97,15 +112,19 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 func (r *remotePlayer) Chat(text string) {
 	// Raw text + sender: the hub formats "<name> …" after the plugin chat
 	// event, so handlers can rewrite or cancel the message.
+	r.p.touch() // tryHandleChat: typing counts as activity
 	r.s.hub.post(evChat{from: r.p, text: text})
 }
-func (r *remotePlayer) Command(cmd string) { r.s.handleCommand(r.p, cmd) }
+func (r *remotePlayer) Command(cmd string) { r.p.touch(); r.s.handleCommand(r.p, cmd) }
 
 // Action receives a typed serverbound action and posts the same hub events
 // dispatchPlay raises for a TCP connection (which still parses its own wire
 // until stage 6c deletes it).
 func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
+	if countsAsActivity(v) {
+		p.touch()
+	}
 	switch e := v.(type) {
 	case attachproto.PaddleBoat:
 		h.post(evPaddleBoat{eid: p.eid, left: e.Left, right: e.Right})
@@ -296,6 +315,9 @@ func (r *remotePlayer) Action(v any) {
 
 func (r *remotePlayer) Leave() { r.s.hub.post(evLeave{p: r.p}); r.p.disconnect() }
 func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) {
+	if dx, dy, dz := x-r.p.x, y-r.p.y, z-r.p.z; dx*dx+dy*dy+dz*dz > 1e-5 {
+		r.p.touch() // handlePlayerKnownMovement: moving counts, turning does not
+	}
 	r.p.x, r.p.y, r.p.z = x, y, z
 	// The session player's look direction feeds placement orientation
 	// (vanilla UseOnContext.getRotation() = the player's live yaw): sign
@@ -314,6 +336,7 @@ func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) 
 // existing handlers parse — scaffolding with the same deletion story as the
 // decoder below.
 func (r *remotePlayer) Dig(d attachproto.Dig) {
+	r.p.touch()
 	b := protocol.AppendVarInt(nil, d.Status)
 	b = protocol.AppendPosition(b, d.X, d.Y, d.Z)
 	b = append(b, byte(d.Face))
@@ -322,6 +345,7 @@ func (r *remotePlayer) Dig(d attachproto.Dig) {
 }
 
 func (r *remotePlayer) Place(pl attachproto.Place) {
+	r.p.touch()
 	b := protocol.AppendVarInt(nil, pl.Hand)
 	b = protocol.AppendPosition(b, pl.X, pl.Y, pl.Z)
 	b = protocol.AppendVarInt(b, pl.Face)
@@ -335,6 +359,7 @@ func (r *remotePlayer) Place(pl attachproto.Place) {
 }
 
 func (r *remotePlayer) HeldSlot(slot int16) {
+	r.p.touch()
 	r.p.handleHeldItem(protocol.AppendI16(nil, slot))
 	// Same side effects as the TCP dispatch: switching slots lowers a bow /
 	// stops eating, and everyone else should see the new held item.

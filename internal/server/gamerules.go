@@ -61,6 +61,7 @@ var gameruleAlias = map[string]string{
 	"doLimitedCrafting":             "limited_crafting",
 	"reducedDebugInfo":              "reduced_debug_info",
 	"commandModificationBlockLimit": "max_block_modifications",
+	"spectatorsGenerateChunks":      "spectators_generate_chunks",
 }
 
 // booleanRules is every boolean rule tachyne enforces, canonical names.
@@ -85,6 +86,8 @@ var booleanRules = []string{
 	"global_sound_events", "limited_crafting", "reduced_debug_info",
 	// Added 2026-09-24 — command feedback (cmdfeedback.go).
 	"send_command_feedback", "log_admin_commands",
+	// Added 2026-09-25 — ChunkMap.skipPlayer.
+	"spectators_generate_chunks",
 }
 
 // numericRules is the same for the rules that take a number.

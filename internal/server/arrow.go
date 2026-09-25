@@ -595,7 +595,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 		if a.knock > 0 { // wind charge: one point of damage, a shove and the burst (AbstractWindCharge.onHitEntity)
 			cause, src := deathCause{}, from(a.x, a.z)
 			if s := players[a.shooter]; s != nil {
-				cause.by, cause.byEID = s.p.name, s.p.eid
+				cause = playerCause(s)
 			} else if m := h.mobs[a.shooter]; m != nil {
 				cause.by, src.byMob = mobDisplayName(m.etype), true // a breeze's scales with difficulty
 			}
@@ -610,7 +610,7 @@ func (h *hub) arrowHitsPlayer(players map[int32]*tracked, a *arrowEntity, px, py
 			shot := deathCause{}
 			byMob := false
 			if s := players[a.shooter]; s != nil {
-				shot.by, shot.byEID = s.p.name, s.p.eid
+				shot = playerCause(s)
 			} else if m := h.mobs[a.shooter]; m != nil {
 				shot.by = mobDisplayName(m.etype)
 				byMob = true // a skeleton's arrow scales with difficulty; a player's does not

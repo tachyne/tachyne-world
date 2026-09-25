@@ -1,6 +1,11 @@
 package server
 
-import attachproto "github.com/tachyne/tachyne-common/attach"
+import (
+	"math"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
+)
 
 // Locator bar: players broadcast their block position to every other player
 // in the same dimension so the 26.2 HUD shows a direction marker per player.
@@ -35,11 +40,27 @@ var waypointHideHeads = func() map[int32]bool {
 }()
 
 // waypointTransmits is isTransmittingWaypoint: WAYPOINT_TRANSMIT_RANGE above
-// zero. Invisibility and a hiding head each multiply it by zero, and a
-// spectator never transmits (doesSourceIgnoreReceiver).
+// zero. Invisibility, a hiding head and crouching each multiply it by zero,
+// and a spectator never transmits (doesSourceIgnoreReceiver).
 func waypointTransmits(t *tracked) bool {
 	return !t.dead && t.gamemode != gmSpectator && t.hasEffect(effInvisibility) == 0 &&
-		!waypointHideHeads[t.armor[0].item]
+		!waypointHideHeads[t.armor[0].item] && t.playerAttrs().Value(attr.WaypointTransmitRange) > 0
+}
+
+// waypointReaches is doesSourceIgnoreReceiver's range half: a receiver sees
+// a transmitter nearer than the lesser of its transmit range and the
+// receiver's receive range; a spectator sees every one, and a receiver whose
+// receive range is zero is not receiving at all (isReceivingWaypoints).
+func waypointReaches(t, o *tracked) bool {
+	if o.gamemode == gmSpectator {
+		return true
+	}
+	recv := o.playerAttrs().Value(attr.WaypointReceiveRange)
+	if recv <= 0 {
+		return false
+	}
+	r := math.Min(t.playerAttrs().Value(attr.WaypointTransmitRange), recv)
+	return dist3(t.x, t.y, t.z, o.x, o.y, o.z) < r
 }
 
 // waypointSync brings every receiver's view of transmitter t up to date:
@@ -52,7 +73,7 @@ func (h *hub) waypointSync(players map[int32]*tracked, t *tracked, moved bool) {
 			continue
 		}
 		had := o.wpTracked[t.p.eid]
-		switch want := shows && o.dim == t.dim; {
+		switch want := shows && o.dim == t.dim && waypointReaches(t, o); {
 		case want && (moved || !had):
 			if o.wpTracked == nil {
 				o.wpTracked = map[int32]bool{}

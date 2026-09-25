@@ -172,6 +172,9 @@ func (h *hub) openFurnace(t *tracked, x, y, z int) {
 // lit-state flips, and live progress-bar/slot sync to the viewing player.
 func (h *hub) updateFurnaces(players map[int32]*tracked) {
 	for pos, f := range h.furnaces {
+		if !h.cellWithinBorder(pos.dim, pos.x, pos.z) {
+			continue // LevelChunk.isTicking: nothing ticks past the world border
+		}
 		wasLit := f.burnLeft > 0
 		changedSlots := false
 

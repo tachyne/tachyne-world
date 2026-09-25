@@ -67,6 +67,7 @@ func feedbackServer(t *testing.T) (*Server, *hub, map[string]*player, map[string
 		logs[name] = recordChat(t, p)
 		h.post(evJoin{p: p, x: 0.5, y: sy, z: 0.5, gamemode: gmCreative})
 		waitJoined(t, h, name)
+		h.post(evClientLoaded{eid: p.eid}) // the client reports its world loaded, as a real one does
 		ps[name] = p
 	}
 	return s, h, ps, logs
