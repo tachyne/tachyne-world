@@ -14,6 +14,13 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Sculk catalysts stop blooming, and other small block fixes.**
+  - A sculk catalyst stayed in full bloom forever after its first mob death;
+    it now blooms briefly and settles, as in vanilla.
+  - A calibrated sculk sensor now stays active for half a second, not a
+    second and a half.
+  - Levers click with vanilla's quieter, lower sound.
+  - Turtle eggs hatch in 26.3's pre-dawn window.
 - **The End poem and credits.** The first time a Java player leaves the
   End through its exit portal, the End poem and credits now roll, as in
   vanilla, and then they return home. After that the portal takes them

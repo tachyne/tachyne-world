@@ -59,8 +59,9 @@ func TestTurtleEggLifeCycle(t *testing.T) {
 	if eggs < 1 || eggs > 4 || hatch != 0 {
 		t.Fatalf("clutch %d eggs hatch %d", eggs, hatch)
 	}
-	// Random ticks in the pre-dawn window crack it twice, then hatch it.
-	h.dayTime.Store(22000)
+	// Random ticks in 26.3's pre-dawn window (day ticks 21062-21905, the
+	// day timeline's TURTLE_EGG_HATCH_CHANCE) crack it twice, then hatch it.
+	h.dayTime.Store(21500)
 	h.turtleEggRandomTick(players, 0, 0, 180, 0, w.At(0, 180, 0))
 	if _, hatch, _ = turtleEggOf(w.At(0, 180, 0)); hatch != 1 {
 		t.Fatalf("first crack: hatch %d", hatch)
@@ -76,9 +77,10 @@ func TestTurtleEggLifeCycle(t *testing.T) {
 			t.Fatalf("a hatchling's home is the nest: %+v", m.home)
 		}
 	}
-	// By day, off the window, a tick almost never cracks an egg.
+	// By day — and at 22000, inside the old 1.21 window but past 26.3's —
+	// a tick almost never cracks an egg.
 	w.SetBlock(0, 180, 0, turtleEggState(2, 0))
-	h.dayTime.Store(6000)
+	h.dayTime.Store(22000)
 	h.rng.Seed(1)
 	cracked := 0
 	for i := 0; i < 50; i++ {

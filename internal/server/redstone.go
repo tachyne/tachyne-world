@@ -519,12 +519,12 @@ func (h *hub) toggleLever(players map[int32]*tracked, pos blockPos, state uint32
 	} else {
 		h.vib(h.rsDim, freqBlockDeactivate, pos.x, pos.y, pos.z, 0)
 	}
-	pitch := float32(0.9)
+	pitch := float32(0.5) // LeverBlock.playSound: 0.3 volume, 0.6 on and 0.5 off
 	if on {
-		pitch = 1.1
+		pitch = 0.6
 	}
 	h.rsSound(players, "minecraft:block.lever.click", sndBlock,
-		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, pitch)
+		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.3, pitch)
 	h.scheduleSignalAround(players, pos)
 }
 

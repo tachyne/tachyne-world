@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -294,5 +295,23 @@ func TestMuffledNoteBlockIsSilentToSculk(t *testing.T) {
 
 	if s := w.At(x, y, z); sensorPhase(s) == sculkPhaseActive {
 		t.Fatal("a muffled note block should not be heard")
+	}
+}
+
+// TestCatalystBloomClearsAndCalibratedIsShort: SculkCatalystBlock.tick sets
+// BLOOM back eight ticks after a bloom (it used to stay on for good), and a
+// calibrated sensor stays ACTIVE 10 ticks, not a plain sensor's 30.
+func TestCatalystBloomClearsAndCalibratedIsShort(t *testing.T) {
+	if calibActiveTicks != 10 || sensorActiveTicks != 30 {
+		t.Fatalf("active ticks: calibrated %d plain %d", calibActiveTicks, sensorActiveTicks)
+	}
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	pos := simPos{blockPos: blockPos{4, 180, 4}}
+	h.world.SetBlock(pos.x, pos.y, pos.z, catalystWith(true))
+	h.sculkDue[pos] = h.tick.Load()
+	stepSculk(h, players, 2)
+	if got := h.world.At(pos.x, pos.y, pos.z); got != catalystWith(false) {
+		t.Fatalf("the catalyst should stop blooming when its tick comes: state %d", got)
 	}
 }

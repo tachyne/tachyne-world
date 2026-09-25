@@ -16,7 +16,6 @@ import (
 const (
 	turtleHomeReach = 9.0 // closerToCenterThan(homePos, 9)
 	turtleLayTicks  = 200 // layEggCounter > adjustedTickDelay(200)
-	turtleEggHatchP = 500 // shouldUpdateHatchLevel: 1 in 500 outside the dusk window
 	turtleLoveAfter = 600 // setInLoveTime(600) after laying — a fresh courtship cooldown
 	turtleHomeSpeed = 1.0 // MoveToBlockGoal speed for the egg goal
 	turtleEggSpread = 0.2
@@ -131,10 +130,14 @@ func (h *hub) turtleEggRandomTick(players map[int32]*tracked, dim, x, y, z int, 
 	if !isSandFloor(w.At(x, y-1, z)) {
 		return true
 	}
-	// getTimeOfDay: the day fraction with dawn at 0; the window 0.65–0.69 is
-	// dayTime 21600–22560.
-	f := math.Mod(float64(h.dayTime.Load()%24000)/24000-0.25+1, 1)
-	if !(f < 0.69 && f > 0.65) && h.rng.Intn(turtleEggHatchP) != 0 {
+	// shouldUpdateHatchLevel reads TURTLE_EGG_HATCH_CHANCE from the day
+	// timeline: 1.0 from day tick 21062 to 21905 (just before dawn), 0.002
+	// the rest of the day.
+	chance := float32(0.002)
+	if t := h.dayTime.Load() % 24000; t >= 21062 && t < 21905 {
+		chance = 1
+	}
+	if h.rng.Float32() >= chance {
 		return true
 	}
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5

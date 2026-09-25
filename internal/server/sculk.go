@@ -89,6 +89,7 @@ const (
 	sculkPhaseCooldown = 2
 
 	sensorActiveTicks   = 30 // ACTIVE_TICKS
+	calibActiveTicks    = 10 // a calibrated sensor's active phase
 	sensorCooldownTicks = 10 // COOLDOWN_TICKS
 	shriekingTicks      = 90 // SHRIEKING_TICKS
 	// (the warning level that summons a Warden now lives on the player —
@@ -364,6 +365,11 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			h.shriekerRespond(players, pos, s)
 			h.setBlockAt(players, pos.dim, pos.blockPos, shriekerWith(s, false))
 			delete(h.sculkDue, pos)
+		case isCatalyst(s):
+			// SculkCatalystBlock.tick: eight ticks after a bloom, BLOOM
+			// (vanilla's PULSE) is set back — it used to stay on for good.
+			h.setBlockAt(players, pos.dim, pos.blockPos, catalystWith(false))
+			delete(h.sculkDue, pos)
 		default:
 			delete(h.sculkDue, pos)
 		}
@@ -418,7 +424,11 @@ func (h *hub) activateSensor(players map[int32]*tracked, pos simPos, s uint32, v
 	power := redstoneForDistance(v.dist, sensorRadius(s))
 	h.sculkFreq[pos] = v.freq
 	h.setBlockAt(players, pos.dim, pos.blockPos, sensorWith(s, power, sculkPhaseActive))
-	h.sculkDue[pos] = h.tick.Load() + sensorActiveTicks
+	active := uint64(sensorActiveTicks)
+	if isCalibSensor(s) {
+		active = calibActiveTicks // CalibratedSculkSensorBlock.getActiveTicks
+	}
+	h.sculkDue[pos] = h.tick.Load() + active
 	h.inDim(pos.dim, func() { h.scheduleSignalAround(players, pos.blockPos) }) // neighbours read the new redstone
 	if snd := "minecraft:block.sculk_sensor.clicking"; !sensorWaterlogged(s) {
 		h.playSoundDim(players, pos.dim, snd, sndBlock,
