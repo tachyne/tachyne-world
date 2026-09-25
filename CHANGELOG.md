@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Named armour stands.** A name tag now names an armour stand, a renamed
+  armour-stand item places a stand with that name (by hand or from a
+  dispenser), the name is kept across restarts, and breaking the stand
+  drops a named item. The armour it wore drops whole — dyed leather,
+  custom names and banner patterns on a head are no longer lost.
 - **Bucketed mobs keep their health and name.** A hurt fish, axolotl or
   tadpole scooped into a bucket comes back out just as hurt, and a named
   one's bucket carries the name and names the mob again when poured, as in

@@ -30,6 +30,7 @@ type armorStand struct {
 	yaw     float32
 	equip   [6]invStack
 	lastHit uint64
+	name    string // custom_name: from a named armour-stand item or a name tag
 }
 
 // standSlotFor classifies an item into the stand's equip index (-1 = not
@@ -74,12 +75,16 @@ func (h *hub) onPlaceStand(players map[int32]*tracked, e evPlaceStand) {
 	}
 	yaw := float32(math.Floor(float64(e.yaw-180+22.5)/45)) * 45
 	st := &armorStand{eid: h.allocEID(), dim: t.dim,
-		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw}
+		x: float64(e.x) + 0.5, y: float64(e.y), z: float64(e.z) + 0.5, yaw: yaw,
+		name: usedStack(t).name} // createDefaultStackConfig: the item's custom_name
 	h.armorStands[st.eid] = st
 	if isSurvival(t.gamemode) {
 		h.consumeUsed(t)
 	}
 	h.toNearbyEv(players, st.dim, st.x, st.z, h.standAddEv(st))
+	if st.name != "" {
+		h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(nameMeta(st.eid, st.name)))
+	}
 	h.vibAt(st.dim, freqEntityPlace, st.x, st.y, st.z, t.p.eid)
 	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.place", sndBlock, st.x, st.y, st.z, 0.75, 0.8)
 }
@@ -106,6 +111,9 @@ func (h *hub) sendStandsTo(t *tracked) {
 		}
 		t.p.trySendEv(h.standAddEv(st))
 		t.p.trySendEv(h.standEquipEv(st))
+		if st.name != "" {
+			t.p.trySendEv(metaEv(nameMeta(st.eid, st.name)))
+		}
 	}
 }
 
@@ -117,6 +125,23 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 	}
 	heldSlot := t.p.heldSlot()
 	held := t.inv.slots[heldSlot]
+	if held.item == int32(itemByName["name_tag"]) {
+		// ArmorStand.interactAt passes a name tag, and NameTagItem names any
+		// living entity but a player: a named tag names the stand.
+		if held.name == "" {
+			return
+		}
+		st.name = held.name
+		h.toNearbyEv(players, st.dim, st.x, st.z, metaEv(nameMeta(st.eid, st.name)))
+		if isSurvival(t.gamemode) {
+			if held.count--; held.count <= 0 {
+				held = invStack{}
+			}
+			t.inv.slots[heldSlot] = held
+			h.sendSlot(t, heldSlot)
+		}
+		return
+	}
 	if held.item != 0 {
 		slot := standSlotFor(held.item)
 		if slot < 0 {
@@ -184,17 +209,19 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 		return // gamerule entity_drops
 	}
 	if t == nil || t.gamemode != gmCreative {
-		if it := h.spawnItemIn(players, t.dim, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil {
-			_ = it
+		// ArmorStand.brokenByPlayer: the item carries the stand's name.
+		if it := h.spawnItemIn(players, st.dim, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil && st.name != "" {
+			it.name = st.name
+			h.refreshItemMeta(players, it)
 		}
 	}
-	for _, s := range st.equip {
+	for _, s := range st.equip { // brokenByAnything: each piece whole, components and all
 		if s.item != 0 {
-			if it := h.spawnItemIn(players, t.dim, s.item, s.count, st.x, st.y+1, st.z); it != nil {
-				it.dmg, it.ench = s.dmg, s.ench
-				it.trimMat, it.trimPat = s.trimMat, s.trimPat
+			if it := h.spawnItemIn(players, st.dim, s.item, s.count, st.x, st.y+1, st.z); it != nil {
+				it.setFrom(s)
+				h.refreshItemMeta(players, it)
 			}
 		}
 	}
-	h.playSoundDim(players, t.dim, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
+	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
 }
