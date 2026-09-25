@@ -137,6 +137,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Villagers take cover in raids and celebrate a win.** Before a raid's
+  first wave and between waves villagers hurry to the village bell; while
+  a wave is on they run to a bed indoors and stay there; after the village
+  wins they come out under the open sky, cheer and set off fireworks for
+  half a minute.
 - **Raiders search the village.** Once a raid reaches the village, raiders
   with nobody to fight go from house to house — heading for beds within
   48 blocks they haven't just visited — instead of milling about the

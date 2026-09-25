@@ -155,6 +155,9 @@ type mob struct {
 	raidPoi         blockPos   // raider: the home RaiderMoveThroughVillageGoal is walking to
 	raidPoiSet      bool       // …set
 	raidVisited     []blockPos // …the last homes it reached
+	vRaidHide       blockPos   // villager: the HIDING_PLACE of a raid
+	vRaidHideSet    bool       // …set
+	vCelebrate      uint64     // villager: the tick its raid celebration ends
 	rideUntil       uint64     // …the tick that memory lapses
 	rideTicker      int        // …babySometimesRideBabyHoglin's ticker (ticks left)
 	celebratePos    blockPos
@@ -903,6 +906,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A snow golem closing on a monster out of its throwing range.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
+		case m.etype == entityVillager && h.villagerRaidStep(players, m):
+			// A villager in a raid: to the bell before a wave, hiding in a
+			// house during one, out celebrating after a victory.
 		case m.etype == entityVillager && m.baby && h.villagerPlayStep(players, m):
 			// Baby villagers playing tag with the other children. Below panic:
 			// a frightened child runs from the zombie, not after its friend.
