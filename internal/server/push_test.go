@@ -345,3 +345,29 @@ func TestAShovedMobDoesNotTurnToFaceTheShove(t *testing.T) {
 			"not in the steering velocity the facing is read from", a.yaw)
 	}
 }
+
+// A survival player packed in with max_entity_cramming mobs takes the crush
+// too (LivingEntity.pushEntities runs for players); a creative one does not.
+func TestCrammingCrushesAPlayer(t *testing.T) {
+	h, players := pushWorld(t)
+	pl, cr := survPlayer(h), survPlayer(h)
+	cr.p.eid = pl.p.eid + 1
+	cr.gamemode = gmCreative
+	pl.x, pl.y, pl.z = 0.5, 70, 0.5
+	cr.x, cr.y, cr.z = 0.5, 70, 0.5
+	players[pl.p.eid], players[cr.p.eid] = pl, cr
+	for i := 0; i < maxEntityCramming; i++ {
+		m := putMob(t, h, players, entityCow, 0.5+float64(i)*1e-3, 70, 0.5)
+		m.health = 1 << 20
+	}
+	for i := 0; i < 200 && pl.health == 20; i++ {
+		h.tick.Add(20)
+		h.pushMobs(players)
+	}
+	if pl.health == 20 || pl.lastCause.dt != dtCramming {
+		t.Fatalf("a player packed with %d cows took no cramming damage (health %v)", maxEntityCramming, pl.health)
+	}
+	if cr.health != 20 {
+		t.Error("a creative player was crammed")
+	}
+}

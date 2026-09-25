@@ -23,6 +23,9 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Players can be crammed.** A survival player squeezed in with as many
+  mobs or players as the `max_entity_cramming` rule allows now takes
+  cramming damage, as in vanilla — before, only mobs did.
 - **The Warden's Darkness pulses.** As in vanilla, a Warden sends out
   Darkness every six seconds, lasting thirteen, to survival and adventure
   players within 20 blocks — the screen fades in and out rather than

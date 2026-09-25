@@ -293,4 +293,44 @@ func (h *hub) pushMobs(players map[int32]*tracked) {
 			h.hurtMobOf(players, m, crammingDamage, dtCramming)
 		}
 	}
+	h.crampPlayers(players, cells)
+}
+
+// crampPlayers is pushEntities' cramming check run by a player: packed in
+// with max_entity_cramming or more others — the mobs and players sharing its
+// box, not counting passengers — it takes the same six points a mob would.
+func (h *hub) crampPlayers(players map[int32]*tracked, cells map[[3]int][]*mob) {
+	limit := h.rules.MaxCramming
+	if limit <= 0 {
+		return
+	}
+	for _, t := range players {
+		if t.dead || !isSurvival(t.gamemode) {
+			continue // a creative or spectating player cannot be hurt by it
+		}
+		hw, ht := t.halfWidth(), psPlayerHeight*t.scale()
+		touches := func(x, y, z, ohw, oht float64) bool {
+			return math.Abs(t.x-x) < hw+ohw && math.Abs(t.z-z) < hw+ohw && t.y < y+oht && y < t.y+ht
+		}
+		crowd := 0
+		cx, cz := pushCellOf(t.x), pushCellOf(t.z)
+		for dx := -1; dx <= 1; dx++ {
+			for dz := -1; dz <= 1; dz++ {
+				for _, o := range cells[[3]int{t.dim, cx + dx, cz + dz}] {
+					if b := o.box(); o.mount == 0 && touches(o.x, o.y, o.z, b.w/2, b.h) {
+						crowd++
+					}
+				}
+			}
+		}
+		for _, o := range players {
+			if o != t && o.dim == t.dim && !o.dead && o.gamemode != gmSpectator &&
+				touches(o.x, o.y, o.z, o.halfWidth(), psPlayerHeight*o.scale()) {
+				crowd++
+			}
+		}
+		if crowd > limit-1 && h.rng.Intn(4) == 0 {
+			h.hurtBy(players, t, crammingDamage, dtCramming, deathCause{})
+		}
+	}
 }
