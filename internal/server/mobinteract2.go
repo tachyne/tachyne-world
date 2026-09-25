@@ -158,7 +158,7 @@ func (h *hub) interactMob(players map[int32]*tracked, t *tracked, m *mob, sneak 
 	if m.etype == entityCamelHusk {
 		m.persistent = true // CamelHusk.interact: any click keeps it
 	}
-	if h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.trySulfurCube(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
+	if h.tryEggOffspring(players, t, m) || h.cureZombieVillager(players, t, m) || h.feedTadpole(players, t, m) || h.trySulfurCube(players, t, m) || h.tryBucketMob(players, t, m) || h.tryLeash(players, t, m) || h.tryShearEquipment(players, t, m, sneak) || h.tryNameTag(players, t, m) || h.tryDyeSheep(players, t, m) ||
 		h.tryHorseScreen(players, t, m, sneak) || h.tryHappyGhast(players, t, m) ||
 		h.tryCopperGolem(players, t, m) || h.tryMilk(players, t, m) ||
 		h.tryFlowerMooshroom(players, t, m) || h.tryMilkStew(players, t, m) || h.tryMount(players, t, m) ||

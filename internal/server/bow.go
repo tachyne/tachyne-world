@@ -25,10 +25,14 @@ var (
 	entityEggProj  = entityID("egg")
 )
 
-type evBowStart struct{ eid int32 }
+type evBowStart struct {
+	eid int32
+	off bool // drawn from the offhand
+}
 type evThrow struct {
 	eid  int32
 	item int32
+	off  bool // thrown from the offhand
 }
 
 type evThrowPotion struct {
@@ -50,7 +54,7 @@ func lookVector(yaw, pitch float32) (float64, float64, float64) {
 
 // startDraw begins a bow hold (validated: a bow in hand, and ammo to fire).
 func (h *hub) startDraw(t *tracked) {
-	if t.dead || heldStack(t).item != itemBow {
+	if t.dead || usedStack(t).item != itemBow {
 		return
 	}
 	if isSurvival(t.gamemode) && !h.hasArrow(t) {
@@ -68,13 +72,17 @@ func isArrowAmmo(item int32) bool {
 }
 
 // ammoSlot is Player.getProjectile for a bow or crossbow: an arrow held in
-// the off hand first, then the inventory in slot order. -1 when there is none.
+// the off hand first, then the main hand (ProjectileWeaponItem.getHeldProjectile),
+// then the inventory in slot order. -1 when there is none.
 func ammoSlot(t *tracked) int {
 	if t.inv == nil {
 		return -1
 	}
 	if isArrowAmmo(t.offhand.item) && t.offhand.count > 0 {
 		return offhandSlot
+	}
+	if s := t.inv.slots[t.p.heldSlot()]; isArrowAmmo(s.item) && s.count > 0 {
+		return t.p.heldSlot()
 	}
 	for i, s := range t.inv.slots {
 		if isArrowAmmo(s.item) && s.count > 0 {
@@ -93,6 +101,9 @@ func xbowAmmoSlot(t *tracked) int {
 	}
 	if o := t.offhand; o.count > 0 && (isArrowAmmo(o.item) || o.item == itemFireworkRocket) {
 		return offhandSlot
+	}
+	if s := t.inv.slots[t.p.heldSlot()]; s.count > 0 && (isArrowAmmo(s.item) || s.item == itemFireworkRocket) {
+		return t.p.heldSlot()
 	}
 	for i, s := range t.inv.slots {
 		if isArrowAmmo(s.item) && s.count > 0 {
@@ -168,7 +179,8 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	}
 	charge := h.tick.Load() - t.drawingAt
 	t.drawingAt = 0
-	if t.dead || heldStack(t).item != itemBow {
+	bow := usedStack(t)
+	if t.dead || bow.item != itemBow {
 		return
 	}
 	// BowItem.getPowerForTime (vanilla behavior): QUADRATIC ramp f=(x²+2x)/3 with
@@ -184,19 +196,19 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	// Infinity: a plain arrow costs nothing, though the bow still needs one
 	// to draw; tipped and spectral arrows are spent all the same.
 	ammo := peekAmmo(t)
-	infinite := heldStack(t).enchLvl(enchInfinity) > 0 && ammo.item == itemArrowAmmo
+	infinite := bow.enchLvl(enchInfinity) > 0 && ammo.item == itemArrowAmmo
 	if isSurvival(t.gamemode) && !infinite {
 		if !h.consumeArrow(t) {
 			return
 		}
-		h.applyToolWear(t, t.p.heldSlot(), 1) // bows wear one per shot
+		h.applyToolWear(t, t.useSlot(), 1) // bows wear one per shot
 	}
 	v := bowMaxSpeed * power
 	// AbstractArrow: damage = ceil(speed × baseDamage); Power adds 0.5·lvl+0.5 to
 	// the base (before ×speed). A full-power draw is critical and adds
 	// random.nextInt(damage/2 + 2) — a RANGE, not a flat +1.
 	arrowBase := 2.0
-	if pl := heldStack(t).enchLvl(enchPower); pl > 0 {
+	if pl := bow.enchLvl(enchPower); pl > 0 {
 		arrowBase += 0.5*float64(pl) + 0.5
 	}
 	dmg := int(math.Ceil(arrowBase * v))
@@ -208,10 +220,10 @@ func (h *hub) releaseDraw(players map[int32]*tracked, t *tracked) {
 	loadArrow(a, ammo)
 	a.weapon = itemBow
 	a.shooter, a.dmg, a.noHitUntil = t.p.eid, dmg, h.tick.Load()+arrowNoSelfHT
-	a.punch = heldStack(t).enchLvl(enchPunch) // Punch: extra hit knockback
+	a.punch = bow.enchLvl(enchPunch) // Punch: extra hit knockback
 	// Flame: the arrow burns, which sets what it hits alight AND counts as a
 	// burning projectile for the blocks that care (candles).
-	if heldStack(t).enchLvl(enchFlame) > 0 {
+	if bow.enchLvl(enchFlame) > 0 {
 		a.fire = true
 	}
 	if infinite {
@@ -242,7 +254,7 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 	if t.dead {
 		return
 	}
-	etype, slot := 0, -1
+	etype := 0
 	switch item {
 	case itemSnowball:
 		etype = entitySnowball
@@ -251,22 +263,11 @@ func (h *hub) throwProjectile(players map[int32]*tracked, t *tracked, item int32
 	default:
 		return
 	}
-	for i := range t.inv.slots { // find + consume one (survival)
-		if s := &t.inv.slots[i]; s.item == item && s.count > 0 {
-			slot = i
-			break
-		}
+	if t.inv == nil || usedStack(t).item != item || usedStack(t).count <= 0 {
+		return // Snowball/EggItem.use throws the stack in the hand used
 	}
 	if isSurvival(t.gamemode) {
-		if slot < 0 {
-			return
-		}
-		if s := &t.inv.slots[slot]; true {
-			if s.count--; s.count == 0 {
-				*s = invStack{}
-			}
-			h.sendSlot(t, slot)
-		}
+		h.consumeUsed(t)
 	}
 	vx, vy, vz := h.throwFromRotation(t, 0, throwSpeed, throwUncertainty) // Snowball/EggItem.use
 	a := h.launchProjectileIn(players, etype, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)

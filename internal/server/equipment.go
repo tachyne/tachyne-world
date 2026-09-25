@@ -46,6 +46,55 @@ func heldStack(t *tracked) invStack {
 	return t.inv.slots[t.p.heldSlot()]
 }
 
+// useSlot is the slot of the hand the latest item use came from: the
+// offhand when the client used OFF_HAND, else the selected hotbar slot.
+func (t *tracked) useSlot() int {
+	if t.useOffhand {
+		return offhandSlot
+	}
+	return t.p.heldSlot()
+}
+
+// usedStack is LivingEntity.getItemInHand(usedHand): the stack in the hand
+// the latest use came from.
+func usedStack(t *tracked) invStack {
+	if s := t.handStack(t.useSlot()); s != nil {
+		return *s
+	}
+	return invStack{}
+}
+
+// holdsLike is Inventory.contains(stack): any slot, armour and offhand
+// included, holding the same item with the same data.
+func (t *tracked) holdsLike(st invStack) bool {
+	if t.inv == nil {
+		return false
+	}
+	for _, s := range t.inv.slots {
+		if s.count > 0 && sameItemComponents(s, st) {
+			return true
+		}
+	}
+	for _, s := range t.armor {
+		if s.count > 0 && sameItemComponents(s, st) {
+			return true
+		}
+	}
+	return t.offhand.count > 0 && sameItemComponents(t.offhand, st)
+}
+
+// consumeUsed takes one from the hand the latest use came from
+// (ItemStack.consume on the used hand's stack).
+func (h *hub) consumeUsed(t *tracked) {
+	slot := t.useSlot()
+	if s := t.handStack(slot); s != nil && s.count > 0 {
+		if s.count--; s.count == 0 {
+			*s = invStack{}
+		}
+		h.sendHandSlot(t, slot)
+	}
+}
+
 // broadcastEquipment shows t's current loadout to every other player.
 func (h *hub) broadcastEquipment(players map[int32]*tracked, t *tracked) {
 	// Keep the session-side dig mirror in step with what is actually held —

@@ -78,19 +78,29 @@ var climbableRanges = blockRange("ladder", "vine", "scaffolding", "weeping_vines
 
 func isClimbable(s uint32) bool { return inRanges2(s, climbableRanges) }
 
-// rideStats credits the distance a ridden animal carried its rider.
-func (h *hub) rideStats(t *tracked, m *mob, d float64) {
+// rideStats is ServerPlayer.checkRidingStatistics for a ridden mob: the
+// move's 3D length in cm, credited by what is ridden — a pig, anything of
+// the horse family (camels and llamas too), a strider, a happy ghast or a
+// nautilus of either kind. A ridden nautilus used to count as a horse.
+func (h *hub) rideStats(t *tracked, m *mob, dx, dy, dz float64) {
+	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d <= 0 || d >= 8 {
 		return
 	}
-	name := "horse_one_cm"
-	switch m.etype {
-	case entityPig:
+	var name string
+	switch {
+	case m.etype == entityPig:
 		name = "pig_one_cm"
-	case entityStrider:
+	case horseFamily(m.etype):
+		name = "horse_one_cm"
+	case m.etype == entityStrider:
 		name = "strider_one_cm"
-	case entityHappyGhast:
+	case m.etype == entityHappyGhast:
 		name = "happy_ghast_one_cm"
+	case nautilusKind(m.etype):
+		name = "nautilus_one_cm"
+	default:
+		return
 	}
 	h.incCustom(t, name, int32(math.Round(d*100)))
 }

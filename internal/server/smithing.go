@@ -118,6 +118,7 @@ func (h *hub) takeSmithResult(players map[int32]*tracked, t *tracked, mode int32
 			}
 		}
 		h.resultTake(t, res, mode)
+		h.incStat(t, attachproto.StatCrafted, res.item, int32(res.count)) // SmithingMenu.onTake: onCraftedBy
 		if _, isTrim := protocol.SmithingTrimTemplate[tmpl]; isTrim {
 			h.advance(players, t, "recipe_crafted", advMatch{recipe: itemNameOf[tmpl] + "_smithing_trim", ingredients: []int32{tmpl, base, add}})
 		}

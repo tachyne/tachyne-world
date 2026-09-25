@@ -24,13 +24,16 @@ var xbowDamage = int(math.Ceil(2 * xbowSpeed))
 
 // evXbowUse is one crossbow right-click. The hub decides charge-vs-fire from the
 // player's latched loaded state (session-side code can't read hub-owned fields).
-type evXbowUse struct{ eid int32 }
+type evXbowUse struct {
+	eid int32
+	off bool
+}
 
 func (evXbowUse) isHubEvent() {}
 
 // xbowChargeTicks is the held crossbow's charge time, shortened by quick_charge.
 func xbowChargeTicks(t *tracked) uint64 {
-	d := xbowBaseCharge - 5*heldStack(t).enchLvl(enchQuickCharge)
+	d := xbowBaseCharge - 5*usedStack(t).enchLvl(enchQuickCharge)
 	if d < 0 {
 		d = 0
 	}
@@ -49,7 +52,7 @@ func (h *hub) useXbow(players map[int32]*tracked, t *tracked) {
 // startXbowCharge begins loading the crossbow (needs ammo in survival). The
 // client keeps the item "in use" until it releases, which finishes the charge.
 func (h *hub) startXbowCharge(t *tracked) {
-	if t.dead || heldStack(t).item != itemCrossbow || t.xbowLoaded {
+	if t.dead || usedStack(t).item != itemCrossbow || t.xbowLoaded {
 		return
 	}
 	if isSurvival(t.gamemode) && xbowAmmoSlot(t) < 0 {
@@ -66,7 +69,7 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	}
 	held := h.tick.Load() - t.xbowAt
 	t.xbowAt = 0
-	if t.dead || heldStack(t).item != itemCrossbow || t.xbowLoaded {
+	if t.dead || usedStack(t).item != itemCrossbow || t.xbowLoaded {
 		return
 	}
 	if held < xbowChargeTicks(t) {
@@ -83,7 +86,7 @@ func (h *hub) finishXbowCharge(players map[int32]*tracked, t *tracked) {
 	} else if isSurvival(t.gamemode) {
 		return
 	}
-	st := heldStack(t)
+	st := usedStack(t)
 	t.xbowLoaded, t.xbowAmmo = true, ammo
 	t.xbowMulti = st.enchLvl(enchMultishot) > 0
 	t.xbowPierce = st.enchLvl(enchPiercing)
@@ -97,7 +100,7 @@ const xbowRocketSpeed = 1.6
 // three-bolt spread with multishot. Piercing rides along on each bolt. Each
 // projectile costs its own durability wear and plays its own shot sound.
 func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
-	if t.dead || !t.xbowLoaded || heldStack(t).item != itemCrossbow {
+	if t.dead || !t.xbowLoaded || usedStack(t).item != itemCrossbow {
 		return
 	}
 	multi, pierce := t.xbowMulti, t.xbowPierce
@@ -116,7 +119,7 @@ func (h *hub) fireXbow(players map[int32]*tracked, t *tracked) {
 			if rocket {
 				wear = 3
 			}
-			h.applyToolWear(t, t.p.heldSlot(), wear)
+			h.applyToolWear(t, t.useSlot(), wear)
 		}
 		// shootProjectile: the look turned about the player's own up axis,
 		// then Projectile.shoot at the crossbow's power with uncertainty 1.

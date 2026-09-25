@@ -143,6 +143,53 @@ the public history since the project was open-sourced on 2026-07-10.
   for targets it cannot reach, comes ten seconds after its roar, and
   charges up with a warning sound before the blast. Hitting a warden makes
   it come for you straight away, without the roar.
+- **Birthday Song counts in every dimension.** An allay dropping a cake on
+  a note block earned the advancement only in the Overworld; it now counts
+  in the Nether and the End as well.
+- **More things count as crafted in the statistics.** Taking smelted
+  items from a furnace, a result from a smithing table, and what a
+  villager trades you now add to that item's "Times Crafted", as in
+  vanilla.
+- **Brushing suspicious gravel sounds like gravel.** It made the sand
+  sound. The player brushing no longer hears the sound twice.
+- **Riding statistics count the right mount.** Riding a nautilus counted
+  as horse riding, and flying a happy ghast counted nothing; each now has
+  its own statistic, as in vanilla, for everyone aboard. Riding distances
+  include climbing and falling, not only ground covered.
+- **The crafter makes maps and book copies, and hands back buckets.** A
+  crafter now extends and clones maps and copies written books, as in
+  vanilla. It also gives back what a recipe leaves over: a cake returns its
+  three empty buckets, a honey recipe its glass bottles, a book copy the
+  original book and a banner copy the patterned banner. What a crafter
+  drops on the ground keeps everything it carries, so a firework rocket
+  with stars or a copied map comes out whole.
+- **Spawn eggs make babies and work on water.** Using a spawn egg on an
+  animal of the same kind now gives a baby of it, as in vanilla (a lamb
+  takes its parent's colour). Using a spawn egg while looking at water or
+  lava puts the mob straight into it, so a squid or fish egg works on the
+  sea. A spawn egg no longer makes the sound of a thrown egg.
+- **Boats face the way you place them.** A boat put down on water always
+  pointed south; as in vanilla it now faces the way you are looking, and a
+  boat from a dispenser faces the way the dispenser shoots.
+- **Strays, bogged and parched drop real tipped arrows.** The tipped
+  arrows these skeletons can drop when a player kills them came out with
+  no effect. They are now arrows of Slowness (stray), Poison (bogged) and
+  Weakness (parched), as in vanilla, and `/loot` gives the same.
+- **Charged creepers give one head, babies included.** A charged
+  creeper's blast gave a head for every mob it killed; as in vanilla it
+  now gives one head per creeper. A baby zombie caught in the blast drops
+  its head like an adult.
+- **Piglins barter dried ghasts.** 26.3 added the dried ghast to what a
+  piglin can give for a gold ingot (about one barter in 47); the table
+  had not caught up, so bartering never paid one out.
+- **The offhand works for more items.** Ender pearls, snowballs, eggs,
+  bottles o' enchanting, splash and lingering potions, eyes of ender, wind
+  charges, firework rockets, goat horns and spyglasses can now be used
+  from the offhand, and a bow, crossbow or trident held there draws,
+  shoots and wears in that hand. Throwing from one hand now takes from
+  that hand rather than the first matching stack in the inventory, an
+  arrow held in the main hand is shot before the ones in the inventory,
+  and an empty bucket or glass bottle held in the offhand fills in place.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

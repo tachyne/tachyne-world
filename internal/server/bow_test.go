@@ -89,6 +89,8 @@ func TestPlayerArrowKillsMobAndPaysXP(t *testing.T) {
 func TestSnowballThrowsAndShatters(t *testing.T) {
 	h, pl, players := bowSetup()
 	pl.inv.slots[2] = invStack{item: itemSnowball, count: 3}
+	pl.p.held = 2 // thrown from the hand that holds it
+	pl.p.setHotbarSlot(2, itemSnowball)
 	h.throwProjectile(players, pl, itemSnowball)
 	if pl.inv.slots[2].count != 2 || len(h.arrows) != 1 {
 		t.Fatalf("throw should consume one snowball and fly: count=%d arrows=%d", pl.inv.slots[2].count, len(h.arrows))

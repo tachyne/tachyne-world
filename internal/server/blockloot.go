@@ -237,11 +237,27 @@ func (h *hub) evalTable(tbl *lootTable, ctx lootCtx) []drop {
 			}
 			it, count, ok := ctx.emit(e, p.Functions)
 			if ok && it != 0 && count > 0 {
-				out = append(out, drop{item: it, count: count})
+				out = append(out, drop{item: it, count: count, potion: setPotionOf(e.Functions, p.Functions)})
 			}
 		}
 	}
 	return out
+}
+
+// setPotionOf is the potion a set_potion among the entry's or pool's
+// functions puts on the stack (SetPotionFunction), 0 when there is none.
+func setPotionOf(fnLists ...[]lootFn) int8 {
+	var kind int8
+	for _, fns := range fnLists {
+		for i := range fns {
+			if fns[i].F == "set_potion" {
+				if id, ok := potionByVanillaName[fns[i].Potion]; ok {
+					kind = id
+				}
+			}
+		}
+	}
+	return kind
 }
 
 // pick chooses one entry from a pool as vanilla LootPool.addRandomItem does:

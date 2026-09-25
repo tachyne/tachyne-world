@@ -59,7 +59,10 @@ type rocketEntity struct {
 	shooter    int32 // who shot it, whom it will not strike
 }
 
-type evUseFirework struct{ eid int32 }
+type evUseFirework struct {
+	eid int32
+	off bool
+}
 
 func (evUseFirework) isHubEvent() {}
 
@@ -102,7 +105,7 @@ func canGlideOn(s invStack) bool {
 // useFirework fires the held rocket. Used while gliding it attaches to the
 // player; otherwise it goes off where they stand.
 func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
-	if t.dead || t.inv == nil || heldStack(t).item != itemFireworkRocket {
+	if t.dead || t.inv == nil || usedStack(t).item != itemFireworkRocket {
 		return
 	}
 	// On the ground a rocket is placed against a block, not used in the air;
@@ -110,9 +113,9 @@ func (h *hub) useFirework(players map[int32]*tracked, t *tracked) {
 	if !t.gliding() {
 		return
 	}
-	st := heldStack(t)
+	st := usedStack(t)
 	if isSurvival(t.gamemode) {
-		h.consumeHeld(t)
+		h.consumeUsed(t)
 	}
 	h.spawnRocket(players, t.dim, t.x, t.y+1.5, t.z, t.p.eid, st)
 }

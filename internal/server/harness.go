@@ -134,11 +134,13 @@ func (h *hub) applyGhastMove(players map[int32]*tracked, t *tracked, e evVehicle
 		return true
 	}
 	moved := e.x != m.sx || e.y != m.sy || e.z != m.sz
+	dx, dy, dz := e.x-m.x, e.y-m.y, e.z-m.z
 	m.x, m.y, m.z, m.yaw = e.x, e.y, e.z, e.yaw
 	riding := make(map[int32]bool, len(m.riders))
 	for _, rid := range m.riders {
 		riding[rid] = true
 		if o := players[rid]; o != nil {
+			h.rideStats(o, m, dx, dy, dz) // every player aboard (checkRidingStatistics)
 			o.x, o.y, o.z = e.x, e.y+ghastRideHeight, e.z
 			o.p.setHubPos(e.x, e.z)
 		}

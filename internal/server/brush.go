@@ -147,7 +147,13 @@ func (h *hub) brush(players map[int32]*tracked, t *tracked, e evBrush) {
 		return
 	}
 	b.coolUntil = now + brushCooldown
-	h.playSoundDim(players, t.dim, "minecraft:item.brush.brushing.sand", sndBlock,
+	// BrushableBlock.getBrushSound: sand or gravel by the block. The
+	// brusher's own client plays it from onUseTick (Level.playSound(player, …)).
+	snd := "minecraft:item.brush.brushing.sand"
+	if turnsInto == worldgen.Gravel {
+		snd = "minecraft:item.brush.brushing.gravel"
+	}
+	h.playSoundExcept(players, t.dim, t.p.eid, snd, sndBlock,
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 1, 1)
 
 	was := dustedStage(b.count)

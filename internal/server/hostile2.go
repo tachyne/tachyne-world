@@ -246,23 +246,11 @@ func (h *hub) throwPearl(players map[int32]*tracked, t *tracked) {
 	if h.onCooldown(t, itemEnderPearl) {
 		return
 	}
-	slot := -1
-	for i := range t.inv.slots {
-		if s := &t.inv.slots[i]; s.item == itemEnderPearl && s.count > 0 {
-			slot = i
-			break
-		}
+	if s := usedStack(t); s.item != itemEnderPearl || s.count <= 0 {
+		return // EnderpearlItem.use throws the stack in the hand used
 	}
 	if isSurvival(t.gamemode) {
-		if slot < 0 {
-			return
-		}
-		if s := &t.inv.slots[slot]; true {
-			if s.count--; s.count == 0 {
-				*s = invStack{}
-			}
-			h.sendSlot(t, slot)
-		}
+		h.consumeUsed(t)
 	}
 	vx, vy, vz := h.throwFromRotation(t, 0, 1.5, throwUncertainty) // EnderpearlItem.use
 	a := h.launchProjectileIn(players, entityPearlProj, t.dim, t.x, t.y+1.5, t.z, vx, vy, vz)

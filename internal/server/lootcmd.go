@@ -136,7 +136,7 @@ func splitStacks(in []invStack) []invStack {
 func dropsToStacks(ds []drop) []invStack {
 	out := make([]invStack, 0, len(ds))
 	for _, d := range ds {
-		out = append(out, invStack{item: d.item, count: d.count})
+		out = append(out, invStack{item: d.item, count: d.count, potion: d.potion})
 	}
 	return splitStacks(out)
 }

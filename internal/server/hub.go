@@ -143,8 +143,14 @@ type evInteractMob struct {                    // right-clicked a mob (feed/shea
 
 func (evInteractMob) isHubEvent() {}
 
-type evThrowPearl struct{ eid int32 }      // right-clicked with an ender pearl
-type evThrowWindCharge struct{ eid int32 } // right-clicked with a wind charge
+type evThrowPearl struct { // right-clicked with an ender pearl
+	eid int32
+	off bool
+}
+type evThrowWindCharge struct { // right-clicked with a wind charge
+	eid int32
+	off bool
+}
 
 func (evThrowPearl) isHubEvent()      {}
 func (evThrowWindCharge) isHubEvent() {}
@@ -288,6 +294,10 @@ type tracked struct {
 	drawingAt     uint64 // tick a bow draw began (0 = not drawing)
 	blockingSince uint64 // tick a shield was raised (0 = not blocking)
 	blockingSlot  int    // which slot the raised shield is in (a hotbar index, or offhandSlot)
+	// useOffhand is the hand of the latest item use (Player.getUsedItemHand):
+	// a bow, crossbow or trident held in the offhand draws, loads and wears
+	// there, and a throw takes from the hand that threw.
+	useOffhand bool
 
 	// Crossbow (two-phase: charge → loaded → fire). xbowAt is the tick a charge
 	// began (0 = not charging); once the charge completes the shot is latched in
@@ -644,6 +654,7 @@ type hub struct {
 	// A charged creeper's blast: whatever it kills drops its own head, which
 	// is the only way to a mob head in survival.
 	blastChargedCreeper bool
+	blastSkullDropped   bool                      // Creeper.droppedSkulls: this blast's one head is out
 	itemSpawners        map[int32]*itemSpawnerEnt // ominous item spawners in the air (ominousitem.go)                    // set around a TNT cart's blast: rails survive it
 	paintings           map[int32]*painting       // placed hanging paintings (persisted with containers)
 	itemFrames          map[int32]*itemFrame      // placed item frames (persisted with containers)
@@ -1405,6 +1416,9 @@ func (h *hub) run() {
 			return // test teardown closes h.stop so run() goroutines don't leak (production never does)
 
 		case ev := <-h.events:
+			if h.useItemEvent(players, ev) {
+				continue
+			}
 			switch e := ev.(type) {
 			case evJoin:
 				h.onJoin(players, e)
@@ -1905,10 +1919,6 @@ func (h *hub) run() {
 						}
 					}
 				}
-			case evThrowEye:
-				if t := players[e.eid]; t != nil {
-					h.throwEye(players, t)
-				}
 			case evFillBottle:
 				if t := players[e.eid]; t != nil {
 					h.fillBottle(players, t, e.slot)
@@ -1951,17 +1961,9 @@ func (h *hub) run() {
 						t.tridentAt = 0
 					}
 				}
-			case evXbowUse:
-				if t := players[e.eid]; t != nil {
-					h.useXbow(players, t)
-				}
 			case evFishUse:
 				if t := players[e.eid]; t != nil {
 					h.useRod(players, t)
-				}
-			case evTridentUse:
-				if t := players[e.eid]; t != nil {
-					h.startTridentCharge(t)
 				}
 			case evSpearUse:
 				if t := players[e.eid]; t != nil {
@@ -1969,45 +1971,13 @@ func (h *hub) run() {
 				}
 			case evSpearStab:
 				h.spearStab(players, players[e.eid])
-			case evBowStart:
-				if t := players[e.eid]; t != nil {
-					h.startDraw(t)
-				}
 			case evBlockStart:
 				if t := players[e.eid]; t != nil {
 					h.raiseShield(t, e.hand)
 				}
-			case evThrow:
-				if t := players[e.eid]; t != nil {
-					h.throwProjectile(players, t, e.item)
-				}
 			case evThrowPotion:
 				if t := players[e.eid]; t != nil {
 					h.throwSplashPotion(players, t, e.slot)
-				}
-			case evThrowXPBottle:
-				if t := players[e.eid]; t != nil {
-					h.throwXPBottle(players, t)
-				}
-			case evThrowPearl:
-				if t := players[e.eid]; t != nil {
-					h.throwPearl(players, t)
-				}
-			case evThrowWindCharge:
-				if t := players[e.eid]; t != nil {
-					h.throwWindCharge(players, t)
-				}
-			case evSpyglass:
-				if t := players[e.eid]; t != nil {
-					h.raiseSpyglass(players, t)
-				}
-			case evUseFirework:
-				if t := players[e.eid]; t != nil {
-					h.useFirework(players, t)
-				}
-			case evUseHorn:
-				if t := players[e.eid]; t != nil {
-					h.tootHorn(players, t)
 				}
 			case evPlaceOnWater:
 				if t := players[e.eid]; t != nil {
@@ -2160,6 +2130,10 @@ func (h *hub) run() {
 				h.eggSpawner(players, e)
 			case evSpawnEgg:
 				h.useSpawnEgg(players, e)
+			case evSpawnEggLook:
+				if t := players[e.eid]; t != nil {
+					h.useSpawnEggOnFluid(players, t, e.slot)
+				}
 			case evPlaceCrystal:
 				h.placeCrystal(players, e)
 			case evPlaceRocket:
@@ -2456,6 +2430,46 @@ func (h *hub) run() {
 			}
 		}
 	}
+}
+
+// useItemEvent runs the use_item events whose item works from either hand:
+// the event says which hand the client used, and the handler draws on that
+// hand's stack (Player.getUsedItemHand). It reports whether ev was one.
+func (h *hub) useItemEvent(players map[int32]*tracked, ev hubEvent) bool {
+	var eid int32
+	var off bool
+	var run func(t *tracked)
+	switch e := ev.(type) {
+	case evThrowEye:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.throwEye(players, t) }
+	case evXbowUse:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.useXbow(players, t) }
+	case evTridentUse:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.startTridentCharge(t) }
+	case evBowStart:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.startDraw(t) }
+	case evThrow:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.throwProjectile(players, t, e.item) }
+	case evThrowXPBottle:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.throwXPBottle(players, t) }
+	case evThrowPearl:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.throwPearl(players, t) }
+	case evThrowWindCharge:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.throwWindCharge(players, t) }
+	case evSpyglass:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.raiseSpyglass(players, t) }
+	case evUseFirework:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.useFirework(players, t) }
+	case evUseHorn:
+		eid, off, run = e.eid, e.off, func(t *tracked) { h.tootHorn(players, t) }
+	default:
+		return false
+	}
+	if t := players[eid]; t != nil {
+		t.useOffhand = off
+		run(t)
+	}
+	return true
 }
 
 // onJoin registers the newcomer and exchanges spawn packets with everyone else:

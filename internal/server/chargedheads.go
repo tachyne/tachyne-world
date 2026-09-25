@@ -4,7 +4,8 @@ package server
 // charged creeper's blast makes whatever it kills drop its own head: a
 // creeper, a skeleton, a wither skeleton, a zombie or a piglin. Vanilla
 // hangs this off the blast rather than the victim's own loot table, which
-// is why one charged creeper gives one head at most.
+// is why one charged creeper gives one head at most (Creeper.killedEntity
+// sets droppedSkulls once a head comes out).
 
 // chargedHeadFor is the head a species drops to a charged creeper's blast
 // (0 = it has none).
@@ -28,13 +29,15 @@ func chargedHeadFor(etype int) int32 {
 	return itemByName[name]
 }
 
-// chargedHeadDrop gives the victim of a charged creeper's blast its head.
-// Called from the blast itself: vanilla marks the killed mob and the loot
-// table reads the mark, which comes to the same thing.
+// chargedHeadDrop is Creeper.killedEntity for a victim of a charged
+// creeper's blast: while the creeper has dropped no head yet and mob loot
+// is on, the victim rolls charged_creeper/root, which gives the five
+// species their head (babies included: the tables ask only the type).
 func (h *hub) chargedHeadDrop(players map[int32]*tracked, m *mob) {
 	item := chargedHeadFor(m.etype)
-	if item == 0 || m.baby {
+	if item == 0 || h.blastSkullDropped || !h.rules.DoMobLoot {
 		return
 	}
-	h.spawnItemIn(players, m.dim, item, 1, m.x, m.y+0.5, m.z)
+	h.spawnItemIn(players, m.dim, item, 1, m.x, m.y, m.z) // spawnAtLocation, no offset
+	h.blastSkullDropped = true
 }

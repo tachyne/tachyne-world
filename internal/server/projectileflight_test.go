@@ -21,6 +21,13 @@ func flightHub(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	return h, map[int32]*tracked{pl.p.eid: pl}, pl
 }
 
+// hold puts a stack of item in the selected hotbar slot: a use throws
+// what is in the hand used.
+func hold(pl *tracked, item int32) {
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: item, count: 16}
+	pl.p.setHotbarSlot(pl.p.heldSlot(), item)
+}
+
 func onlyProjectile(t *testing.T, h *hub) *arrowEntity {
 	t.Helper()
 	if len(h.arrows) != 1 {
@@ -42,10 +49,16 @@ func TestThrownProjectilesFallOnTheirOwnGravity(t *testing.T) {
 		throw func(h *hub, players map[int32]*tracked, pl *tracked)
 		grav  float64
 	}{
-		{"snowball", func(h *hub, ps map[int32]*tracked, pl *tracked) { h.throwProjectile(ps, pl, itemSnowball) }, 0.03},
-		{"egg", func(h *hub, ps map[int32]*tracked, pl *tracked) { h.throwProjectile(ps, pl, itemEgg) }, 0.03},
-		{"ender pearl", func(h *hub, ps map[int32]*tracked, pl *tracked) { h.throwPearl(ps, pl) }, 0.03},
-		{"bottle o' enchanting", func(h *hub, ps map[int32]*tracked, pl *tracked) { h.throwXPBottle(ps, pl) }, 0.07},
+		{"snowball", func(h *hub, ps map[int32]*tracked, pl *tracked) {
+			hold(pl, itemSnowball)
+			h.throwProjectile(ps, pl, itemSnowball)
+		}, 0.03},
+		{"egg", func(h *hub, ps map[int32]*tracked, pl *tracked) {
+			hold(pl, itemEgg)
+			h.throwProjectile(ps, pl, itemEgg)
+		}, 0.03},
+		{"ender pearl", func(h *hub, ps map[int32]*tracked, pl *tracked) { hold(pl, itemEnderPearl); h.throwPearl(ps, pl) }, 0.03},
+		{"bottle o' enchanting", func(h *hub, ps map[int32]*tracked, pl *tracked) { hold(pl, itemXPBottle); h.throwXPBottle(ps, pl) }, 0.07},
 		{"splash potion", func(h *hub, ps map[int32]*tracked, pl *tracked) {
 			pl.inv.slots[0] = invStack{item: itemSplashPotion, count: 1, potion: potPoison}
 			h.throwSplashPotion(ps, pl, 0)
@@ -81,7 +94,7 @@ func TestBottleAndPotionThrowsLiftTwentyDegrees(t *testing.T) {
 		pow   float64
 		throw func(h *hub, ps map[int32]*tracked, pl *tracked)
 	}{
-		{"bottle o' enchanting", 0.7, func(h *hub, ps map[int32]*tracked, pl *tracked) { h.throwXPBottle(ps, pl) }},
+		{"bottle o' enchanting", 0.7, func(h *hub, ps map[int32]*tracked, pl *tracked) { hold(pl, itemXPBottle); h.throwXPBottle(ps, pl) }},
 		{"lingering potion", 0.5, func(h *hub, ps map[int32]*tracked, pl *tracked) {
 			pl.inv.slots[0] = invStack{item: itemLingerPotion, count: 1, potion: potPoison}
 			h.throwSplashPotion(ps, pl, 0)
@@ -143,6 +156,7 @@ func TestThrowsCarryTheThrowersMotionAndScatter(t *testing.T) {
 			h.tick.Store(100)
 			pl.onGround = c.onGround
 			h.noteKnownMove(pl, 0.3, 0.4, 0) // strafing east while moving up
+			hold(pl, itemSnowball)
 			h.throwProjectile(players, pl, itemSnowball)
 			a := onlyProjectile(t, h)
 			tol := 0.0172275*throwSpeed + 1e-9
@@ -156,6 +170,7 @@ func TestThrowsCarryTheThrowersMotionAndScatter(t *testing.T) {
 	seen := map[[3]float64]bool{}
 	for i := 0; i < 20; i++ {
 		h.arrows = map[int32]*arrowEntity{}
+		hold(pl, itemSnowball)
 		h.throwProjectile(players, pl, itemSnowball)
 		a := onlyProjectile(t, h)
 		seen[[3]float64{a.vx, a.vy, a.vz}] = true

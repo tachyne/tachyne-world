@@ -630,6 +630,13 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 					ds = nil // no wool off a sheared sheep (handled outside the table)
 				}
 				for _, d := range ds {
+					if d.potion != 0 { // a tipped arrow keeps its potion (the drop list carries bare ids)
+						if it := h.spawnItemIn(players, m.dim, d.item, d.count, m.x, m.y, m.z); it != nil {
+							it.potion = d.potion
+							h.refreshItemMeta(players, it)
+						}
+						continue
+					}
 					drops = append(drops, plugin.ItemStack{Item: d.item, Count: d.count})
 				}
 			} else {

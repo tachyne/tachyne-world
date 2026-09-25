@@ -69,3 +69,44 @@ func TestGrownTurtleDropsScute(t *testing.T) {
 		t.Error("growing up leaves a scute behind")
 	}
 }
+
+// Creeper.killedEntity: one charged creeper gives one head, whoever else
+// its blast kills, and a baby zombie's head counts like any other (the
+// charged_creeper tables ask only the type).
+func TestChargedCreeperGivesOneHeadBabiesIncluded(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	h.rules.DoMobLoot = true
+	heads := func() int {
+		n := 0
+		for _, it := range h.items {
+			if chargedHeadFor(entityZombie) == it.item || chargedHeadFor(entitySkeleton) == it.item {
+				n += it.count
+			}
+		}
+		return n
+	}
+	baby := h.spawnMob(players, entityZombie, 1.5, 70, 0.5)
+	baby.baby, baby.health = true, 1
+	c := h.spawnMob(players, entityCreeper, 0.5, 70, 0.5)
+	c.charged = true
+	h.explodeCreeper(players, c)
+	if heads() != 1 {
+		t.Fatalf("a baby zombie killed by a charged creeper drops its head: %d heads", heads())
+	}
+
+	for eid := range h.items {
+		delete(h.items, eid)
+	}
+	for i := 0; i < 3; i++ {
+		v := h.spawnMob(players, entitySkeleton, 1.5+float64(i)*0.3, 70, 0.5)
+		v.health = 1
+	}
+	c2 := h.spawnMob(players, entityCreeper, 0.5, 70, 0.5)
+	c2.charged = true
+	h.explodeCreeper(players, c2)
+	if heads() != 1 {
+		t.Fatalf("one charged creeper gives one head, got %d from three skeletons", heads())
+	}
+}

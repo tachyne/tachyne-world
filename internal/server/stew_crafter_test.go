@@ -52,8 +52,9 @@ func TestCrafterKeepsSuspiciousStew(t *testing.T) {
 }
 
 // The crafter runs the same resolver a crafting table does, so the special
-// recipes work in it — a tipped arrow here — while the map recipes, which
-// mint a new map when a player takes them, do not.
+// recipes work in it — a tipped arrow here, and the map recipes too
+// (CrafterBlock.dispenseFrom assembles every crafting recipe; a crafter
+// used to refuse map cloning and extending and book cloning).
 func TestCrafterMakesSpecialRecipes(t *testing.T) {
 	h := newHub(world.New(1))
 	c := &bin{slots: make([]invStack, 9)}
@@ -66,12 +67,119 @@ func TestCrafterMakesSpecialRecipes(t *testing.T) {
 	if res.item != itemByName["tipped_arrow"] || res.potion != potSwiftness {
 		t.Fatalf("a crafter should tip arrows: %+v", res)
 	}
-	// A filled map ringed by paper zooms out in a table, but not in a crafter.
-	for i := 0; i < 9; i++ {
-		c.slots[i] = invStack{item: itemByName["paper"], count: 1}
+}
+
+// crafterRig is a powered-off crafter facing east at (5,180,5) with its
+// grid, on loaded chunks.
+func crafterRig(t *testing.T) (*hub, simPos, uint32, *bin) {
+	t.Helper()
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.maps, h.books = newMapStore(""), newBookStore("")
+	h.playersRef = map[int32]*tracked{}
+	pos := simPos{blockPos: blockPos{5, 180, 5}}
+	state := crafterMin + 24 + uint32(9*2) + 1 // facing east, untriggered
+	h.world.SetBlock(pos.x, pos.y, pos.z, state)
+	c := &bin{slots: make([]invStack, 9)}
+	h.bins[pos] = c
+	return h, pos, state, c
+}
+
+func ejected(h *hub) []invStack {
+	var out []invStack
+	for _, it := range h.items {
+		out = append(out, it.stack())
 	}
-	c.slots[4] = invStack{item: itemFilledMap, count: 1, mapID: 1}
-	if got := h.crafterResult(c); got.item != 0 {
-		t.Errorf("the map recipes stay out of the crafter: %+v", got)
+	return out
+}
+
+// A crafter extends a map (a new map one scale out) and clones one (the
+// same map id, one copy per empty map).
+func TestCrafterExtendsAndClonesMaps(t *testing.T) {
+	h, pos, state, c := crafterRig(t)
+	src := h.maps.create(0, 0, 0, 0)
+	for i := 0; i < 9; i++ {
+		c.slots[i] = invStack{item: itemPaper, count: 1}
+	}
+	c.slots[4] = invStack{item: itemFilledMap, count: 1, mapID: src.ID}
+	if !h.crafterCraft(h.playersRef, pos, state) {
+		t.Fatal("a crafter should extend a map")
+	}
+	out := ejected(h)
+	if len(out) != 1 || out[0].item != itemFilledMap || out[0].mapID == src.ID {
+		t.Fatalf("one new map should come out: %+v", out)
+	}
+	if md := h.maps.get(out[0].mapID); md == nil || md.Scale != src.Scale+1 {
+		t.Fatalf("the new map is one scale out: %+v", md)
+	}
+	for i := range c.slots {
+		if c.slots[i].count != 0 {
+			t.Fatalf("every ingredient is used: slot %d %+v", i, c.slots[i])
+		}
+	}
+
+	for eid := range h.items {
+		delete(h.items, eid)
+	}
+	c.slots[0] = invStack{item: itemFilledMap, count: 1, mapID: src.ID}
+	c.slots[1] = invStack{item: itemEmptyMap, count: 1}
+	if !h.crafterCraft(h.playersRef, pos, state) {
+		t.Fatal("a crafter should clone a map")
+	}
+	out = ejected(h)
+	if len(out) != 1 || out[0].count != 2 || out[0].mapID != src.ID {
+		t.Fatalf("two copies of the map should come out: %+v", out)
+	}
+}
+
+// A crafter copies a written book: the copies (a generation up) come out,
+// and so does the original, which getRemainingItems hands back; a cake
+// gives back its three milk buckets' empties.
+func TestCrafterClonesBooksAndEjectsRemainders(t *testing.T) {
+	h, pos, state, c := crafterRig(t)
+	id := h.books.create(savedBook{Title: "T", Author: "A", Pages: []string{"p"}})
+	c.slots[0] = invStack{item: itemWrittenBook, count: 1, bookID: id}
+	c.slots[1] = invStack{item: itemWritableBook, count: 1}
+	if !h.crafterCraft(h.playersRef, pos, state) {
+		t.Fatal("a crafter should copy a book")
+	}
+	var original, copies int
+	for _, st := range ejected(h) {
+		switch {
+		case st.item == itemWrittenBook && st.bookID == id:
+			original += st.count
+		case st.item == itemWrittenBook:
+			if b, _ := h.books.get(st.bookID); b.Gen != 1 || b.Title != "T" {
+				t.Fatalf("the copy is generation 1 with the content: %+v", b)
+			}
+			copies += st.count
+		}
+	}
+	if original != 1 || copies != 1 || c.slots[0].count != 0 || c.slots[1].count != 0 {
+		t.Fatalf("want the original and one copy out and an empty grid: original %d copies %d grid %+v", original, copies, c.slots[:2])
+	}
+
+	for eid := range h.items {
+		delete(h.items, eid)
+	}
+	milk, wheat := int32(itemByName["milk_bucket"]), int32(itemByName["wheat"])
+	for i := 0; i < 3; i++ {
+		c.slots[i] = invStack{item: milk, count: 1}
+		c.slots[6+i] = invStack{item: wheat, count: 1}
+	}
+	c.slots[3] = invStack{item: itemByName["sugar"], count: 1}
+	c.slots[4] = invStack{item: itemByName["egg"], count: 1}
+	c.slots[5] = invStack{item: itemByName["sugar"], count: 1}
+	if !h.crafterCraft(h.playersRef, pos, state) {
+		t.Fatal("a crafter should bake a cake")
+	}
+	buckets := 0
+	for _, st := range ejected(h) {
+		if st.item == itemBucket {
+			buckets += st.count
+		}
+	}
+	if buckets != 3 {
+		t.Fatalf("the cake's three milk buckets come back empty, got %d", buckets)
 	}
 }
