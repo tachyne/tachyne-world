@@ -21,6 +21,15 @@ the public history since the project was open-sourced on 2026-07-10.
   player (no operator rights needed) can then `/trigger <objective>`, or
   `add`/`set` a value, once per enable — the vanilla way to let players
   press a button in a map or minigame.
+- **More plants in the wild.** Newly generated land grows the rest of
+  vanilla's surface plants: tall grass in the plains, savannas and cherry
+  groves, large ferns in the taigas, sunflowers in the sunflower plains,
+  lily pads on swamp water, leaf litter on the dark forest floor, bushes
+  in the forests, plains, rivers and windswept hills, firefly bushes in the
+  swamps and along shores, short and tall dry grass in the deserts and
+  badlands, wildflowers in the birch forests and meadows, pale moss patches
+  in the pale garden, and vines on the jungles' trees and cliffs. None of
+  them grows on your floors or under your roofs.
 
 ### Fixed
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
