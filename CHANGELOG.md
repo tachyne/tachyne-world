@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Coral dies when it dries out, however that happens.** Coral left
+  without water by a sponge, a piston or receding water now bleaches, as in
+  vanilla — before, only a player removing the water set it dying.
 - **Comparators notice a statue or heart going.** Breaking a copper golem
   statue or a creaking heart that a comparator was reading now drops the
   comparator's signal straight away.

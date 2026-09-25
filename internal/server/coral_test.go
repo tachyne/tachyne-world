@@ -78,3 +78,22 @@ func TestRemovingWaterSchedulesCoralDeath(t *testing.T) {
 		t.Error("coral left dry should have been scheduled to die")
 	}
 }
+
+// Water taken away by the world, not a player (a sponge, a piston, a flow
+// receding: every setBlockAt), arms the die tick too, and the coral bleaches.
+func TestCoralDiesWhenTheWorldDrainsIt(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	live, _, _ := worldgen.BlockRangeOK("tube_coral_block")
+	dead, _, _ := worldgen.BlockRangeOK("dead_tube_coral_block")
+	pos := blockPos{4, 180, 4}
+	w.SetBlock(pos.x, pos.y, pos.z, live)
+	w.SetBlock(pos.x+1, pos.y, pos.z, worldgen.WaterBase)
+	h.setBlockAt(players, 0, blockPos{pos.x + 1, pos.y, pos.z}, worldgen.Air)
+	stepTicks(h, players, coralDieMin+coralDieVar+5)
+	if w.At(pos.x, pos.y, pos.z) != dead {
+		t.Fatal("coral drained by the world did not bleach")
+	}
+}

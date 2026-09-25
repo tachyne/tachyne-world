@@ -212,6 +212,11 @@ func (h *hub) setBlockAt(players map[int32]*tracked, dim int, pos blockPos, stat
 	if old != state {
 		h.observersSee(players, dim, pos, state) // the shape update an observer watches for
 		h.fireBesideHives(players, dim, pos, state)
+		// CoralBlock.updateShape: water gone from beside a coral (a sponge, a
+		// piston, a flow receding) sets its die tick, not only a player's edit.
+		if worldgen.IsWater(old) && !worldgen.IsWater(state) {
+			h.scheduleCoralDeath(dim, pos)
+		}
 		// LightningRodBlock.onPlace: a rod set down powered with no tick of
 		// its own pending gets one, which switches it off.
 		if isLightningRod(state) && boolProp(state, "powered") {
