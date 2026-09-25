@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Squid and bats no longer panic.** A squid you hit jets away from you
+  and then calms down, and a bat you hit keeps flying as it was; as in
+  vanilla, neither runs around in a panic afterwards.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

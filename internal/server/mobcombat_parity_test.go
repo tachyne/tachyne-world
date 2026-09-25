@@ -79,12 +79,14 @@ func TestParchedIsASlowerSkeleton(t *testing.T) {
 }
 
 // A blow sets a mob running only if its species has a PanicGoal: a cow
-// bolts, an ocelot or a snow golem does not.
+// bolts, an ocelot or a snow golem does not, and neither does a squid (its
+// own flee goal only) or a bat (no goals at all).
 func TestStruckMobPanicsOnlyIfItsSpeciesDoes(t *testing.T) {
 	for _, tc := range []struct {
 		etype int
 		panic bool
-	}{{entityCow, true}, {entityOcelot, false}, {entitySnowGolem, false}, {entityZombieHorse, false}} {
+	}{{entityCow, true}, {entityOcelot, false}, {entitySnowGolem, false}, {entityZombieHorse, false},
+		{entitySquid, false}, {entityGlowSquid, false}, {entityBat, false}} {
 		h := newHub(world.New(1))
 		pl := survPlayer(h)
 		players := map[int32]*tracked{pl.p.eid: pl}
