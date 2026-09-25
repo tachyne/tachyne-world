@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Farmers farm again.** The villagers who harvested and replanted
+  fields, asked for seeds and handed out spare wheat were the
+  cartographers, not the farmers. Farmers with a composter now do their own
+  job.
 - **Axolotls play dead instead of fleeing.** A struck axolotl ran off in a
   panic, which vanilla axolotls never do. Now its only answer to a hit is
   the chance to play dead under water, and only a hit from something sets

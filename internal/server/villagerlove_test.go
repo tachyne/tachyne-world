@@ -115,6 +115,7 @@ func TestVillagersNeedABed(t *testing.T) {
 func TestVillagersShareFood(t *testing.T) {
 	h, a, b, players := villagerPair(t)
 	a.profession = profFarmer
+	b.profession = professionIndex("librarian") // not a farmer (a zero profession is one)
 	a.hoard = []invStack{{item: int32(itemByName["bread"]), count: 40}}
 	b.hoard = nil
 	b.x, b.z = a.x+1, a.z

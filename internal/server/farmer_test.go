@@ -128,3 +128,22 @@ func TestVillagerPicksUpWantedItems(t *testing.T) {
 		t.Error("full pockets still want more")
 	}
 }
+
+// The villager who takes a composter is the one who farms: the composter's
+// profession and the farmer the harvesting and seed-sharing code looks for
+// must be the same index.
+func TestComposterMakesTheFarmer(t *testing.T) {
+	composter := worldgen.BlockBase("composter")
+	found := false
+	for _, jb := range jobBlocks {
+		if composter >= jb.lo && composter <= jb.hi {
+			found = true
+			if jb.prof != profFarmer || professionNames[jb.prof] != "farmer" {
+				t.Fatalf("a composter makes profession %d (%s), the farm code wants %d", jb.prof, professionNames[jb.prof], profFarmer)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("the composter is not a job block")
+	}
+}
