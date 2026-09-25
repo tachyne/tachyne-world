@@ -433,6 +433,7 @@ type mob struct {
 	wardenPoseLeft                  int        // …and the updates left in it
 	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
+	wardenClientAnger               int        // CLIENT_ANGER_LEVEL last sent to viewers
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
 	wardenDisturbTil                uint64     // …remembered until this tick
 	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN

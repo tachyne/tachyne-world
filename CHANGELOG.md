@@ -115,6 +115,9 @@ the public history since the project was open-sourced on 2026-07-10.
   interest a few seconds after losing sight of it. As in vanilla, a zombie
   or pillager still seeks out villagers it cannot see, and a zoglin goes
   only for what is in view.
+- **You can hear a Warden's anger.** The Warden's heartbeat now quickens
+  and its tendrils twitch as it grows angrier, as in vanilla; players
+  arriving later see it at its current mood.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

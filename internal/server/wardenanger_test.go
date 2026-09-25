@@ -1,9 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // A Warden keeps a grudge per suspect: what it hears raises it, a blow
@@ -63,5 +67,50 @@ func TestWardenAngerManagement(t *testing.T) {
 	h.wardenHeard(m.dim, m.x, m.y, m.z, m.eid)
 	if len(m.wardenAnger) != 0 {
 		t.Error("it does not get angry at itself")
+	}
+}
+
+// CLIENT_ANGER_LEVEL is synced: the client paces the heartbeat and twitches
+// the tendrils from it. Viewers get it when it changes, and a late viewer
+// gets the current value with the rest of the Warden's state.
+func TestWardenSyncsClientAnger(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	for x := -6; x <= 12; x++ {
+		for z := -6; z <= 6; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y < 185; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	pl := survPlayer(h)
+	pl.p.eid = 500 // well clear of the mob eids
+	pl.x, pl.y, pl.z = 10.5, 180, 0.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	m := h.spawnHostileY(players, entityWarden, 0.5, 180, 0.5)
+	pl.tracked = map[int32]bool{m.eid: true}
+	drainEvs(pl.p)
+	for i := 0; i < 3; i++ {
+		h.wardenHeard(m.dim, pl.x, pl.y, pl.z, pl.p.eid)
+	}
+	var evs []any
+	for i := 0; i < 5; i++ {
+		h.updateMobs(players)
+		evs = append(evs, drainEvs(pl.p)...)
+	}
+	var sent []int32
+	for _, ev := range evs {
+		if me, ok := ev.(attachproto.EntityMeta); ok && me.EID == m.eid && len(me.Meta) >= 3 && me.Meta[0] == metaIndexWardenAnger {
+			v, _ := protocol.ReadVarInt(bytes.NewReader(me.Meta[2:]))
+			sent = append(sent, v)
+		}
+	}
+	if len(sent) == 0 || sent[len(sent)-1] < wardenAngerAngry {
+		t.Fatalf("an angry Warden syncs CLIENT_ANGER_LEVEL at index 16, sent %v", sent)
+	}
+	if sm := speciesStateMeta(m); sm == nil || string(sm) != string(wardenAngerMeta(m.eid, m.wardenClientAnger)) {
+		t.Fatal("a late viewer is sent the Warden's current anger")
 	}
 }
