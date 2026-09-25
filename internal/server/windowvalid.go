@@ -108,7 +108,16 @@ func (t *tracked) updatePlayerAttributes() {
 		br.RemoveModifier(creativeBlockRangeSource)
 		er.RemoveModifier(creativeEntityRangeSource)
 	}
+	// A crouching player drops off the locator bar: WAYPOINT_TRANSMIT_RANGE
+	// × 0 while crouching.
+	if wt := a.Get(attr.WaypointTransmitRange); t.sneaking {
+		wt.AddModifier(attr.Modifier{Source: waypointCrouchSource, Amount: -1, Op: attr.AddMultipliedTotal})
+	} else {
+		wt.RemoveModifier(waypointCrouchSource)
+	}
 }
+
+const waypointCrouchSource = "minecraft:waypoint_transmit_range_crouch"
 
 // menuBlockPresent reports whether the block the menu views is still a
 // block at all (a broken container is air).

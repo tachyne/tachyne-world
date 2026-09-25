@@ -80,6 +80,8 @@ const (
 	FlyingSpeed                  ID = "minecraft:flying_speed"
 	TemptRange                   ID = "minecraft:tempt_range"
 	CameraDistance               ID = "minecraft:camera_distance"
+	WaypointTransmitRange        ID = "minecraft:waypoint_transmit_range"
+	WaypointReceiveRange         ID = "minecraft:waypoint_receive_range"
 	// The 26.3 movement-physics trio a sulfur cube's swallowed block tunes.
 	Bounciness       ID = "minecraft:bounciness"
 	FrictionModifier ID = "minecraft:friction_modifier"

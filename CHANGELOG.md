@@ -146,6 +146,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Locator bar ranges.** Crouching now takes a player off everyone
+  else's locator bar, as in vanilla, and the waypoint transmit and receive
+  range attributes decide how far away a player shows up.
 - **Mobs honour movement efficiency.** A mob whose movement efficiency is
   raised (for example with `/attribute`) is slowed less by soul sand and
   honey blocks, as in vanilla.
