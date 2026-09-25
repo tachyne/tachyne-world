@@ -13,12 +13,12 @@ import (
 const (
 
 	// Sound categories (soundSource enum, stable across versions).
-	sndAmbient = 1 // ambient source (fireworks)
 	sndRecord  = 2 // records/jukebox source (note blocks + discs)
 	sndBlock   = 4
 	sndHostile = 5
 	sndNeutral = 6
 	sndPlayer  = 7
+	sndAmbient = 8 // ambient source (fireworks); 1 is MUSIC, which it once was by mistake
 
 	// Canonical (770) ids of the payload-free particles we emit.
 	particleCrit             = 5

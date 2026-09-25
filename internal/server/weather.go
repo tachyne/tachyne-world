@@ -390,10 +390,9 @@ func (h *hub) strikeLightning(players map[int32]*tracked, x, y, z float64, visua
 	if !visualOnly {
 		h.vibAt(0, freqLightning, x, y, z, eid)
 	}
-	// Thunder is heard far beyond the chunk-tracking radius in vanilla; the
-	// crack at volume 10 carries like the real thing.
-	h.playSoundDim(players, dimOverworld, "minecraft:entity.lightning_bolt.thunder", sndBlock, x, y, z, 10, 0.8+h.rng.Float32()*0.4)
-	h.playSoundDim(players, dimOverworld, "minecraft:entity.lightning_bolt.impact", sndBlock, x, y, z, 2, 1)
+	// No thunder is sent: LightningBolt plays its thunder and impact on the
+	// CLIENT (playLocalSound in its client-side tick), for everyone the bolt
+	// entity reached — sending them as well played every strike twice.
 	h.bus.publish("lightning", map[string]any{"x": x, "y": y, "z": z})
 	if visualOnly {
 		return
