@@ -132,6 +132,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/recipe knows the cooking recipes by name.** `/recipe give` and `take`
+  accept vanilla's cooking recipe names, such as
+  `iron_ingot_from_smelting_raw_iron` or `cooked_beef_from_smoking`, where
+  they used to answer "Unknown recipe".
 - **/attribute changes survive a relog.** A player's changed base values
   and the modifiers `/attribute` added are saved with them, as in vanilla.
   Dying keeps the base values and drops the added modifiers.

@@ -81,7 +81,14 @@ BOOK_CATEGORY = {
     "minecraft:smoking": {"blocks": 9, "food": 9, "misc": 9},
     "minecraft:campfire_cooking": {"blocks": 12, "food": 12, "misc": 12},
 }
+STATION = {
+    "minecraft:smelting": "furnace",
+    "minecraft:blasting": "blast_furnace",
+    "minecraft:smoking": "smoker",
+    "minecraft:campfire_cooking": "campfire",
+}
 tables = {t: [] for t, _, _, _ in COOKERS}
+recipe_keys = {}  # vanilla recipe name -> the engine's cook/<station>/<input> keys
 for path, r in sorted(recipes.items()):
     for rtype, _, default, _ in COOKERS:
         if r.get("type") != rtype:
@@ -103,9 +110,11 @@ for path, r in sorted(recipes.items()):
                 names += resolve_tag(i)
             else:
                 names.append(i.removeprefix("minecraft:"))
+        rname = path.removeprefix("data/minecraft/recipe/").removesuffix(".json")
         for n in names:
             if n in item_id:
                 tables[rtype].append((item_id[n], item_id[result], cook, xp, cat))
+                recipe_keys.setdefault(rname, []).append(f"cook/{STATION[rtype]}/{n}")
 for rows in tables.values():
     rows.sort()
 
@@ -186,6 +195,16 @@ for rtype, goname, _, doc in COOKERS:
     for inp, out, cook, xp, cat in tables[rtype]:
         L.append(f"\t{inp}: {{{out}, {cook}, {xp:g}, {cat}}},")
     L.append("}")
+L += [
+    "",
+    "// cookRecipeKeys maps a vanilla cooking recipe's name to the book entries",
+    "// it became: one cook/<station>/<input> key per ingredient item.",
+    "var cookRecipeKeys = map[string][]string{",
+]
+for rname in sorted(recipe_keys):
+    keys = ", ".join(f'"{k}"' for k in recipe_keys[rname])
+    L.append(f'\t"{rname}": {{{keys}}},')
+L.append("}")
 L += [
     "",
     "// cookingFuel is a fuel item's cooking_fuel component, resolved for each",
