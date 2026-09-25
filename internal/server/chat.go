@@ -235,6 +235,8 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdRandom(p, fields[1:])
 	case "setidletimeout":
 		s.cmdSetIdleTimeout(p, fields[1:])
+	case "stopwatch":
+		s.cmdStopwatch(p, fields[1:])
 	case "swing":
 		s.cmdSwing(p, fields[1:])
 	case "teammsg", "tm":

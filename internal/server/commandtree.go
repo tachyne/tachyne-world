@@ -286,6 +286,11 @@ func modelledCommands() []cmdNode {
 			lit("reset", false, argGreedy("sequence", true))),
 		lit("swing", true, argEntity("targets", 0, true, lits("mainhand", "offhand")...)),
 		lit("setidletimeout", false, argInt("minutes", 0, math.MaxInt32, true)),
+		lit("stopwatch", false,
+			lit("create", false, argGreedy("id", true)),
+			lit("query", false, argGreedy("id", true)),
+			lit("restart", false, argGreedy("id", true)),
+			lit("remove", false, argGreedy("id", true))),
 		lit("teammsg", false, argGreedy("message", true)),
 		lit("tm", false, argGreedy("message", true)),
 	}

@@ -137,6 +137,8 @@ type worldRules struct {
 	RandomSequences *randomSequencesSave `json:"randomSequences,omitempty"`
 	// IdleTimeout is /setidletimeout's minutes (0 = never kick).
 	IdleTimeout int `json:"idleTimeout,omitempty"`
+	// Stopwatches is /stopwatch's milliseconds counted per id (Stopwatches).
+	Stopwatches map[string]int64 `json:"stopwatches,omitempty"`
 	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
 	// the -gamemode flag's.
 	DefaultGamemode *int `json:"defaultGamemode,omitempty"`
@@ -596,6 +598,7 @@ func (h *hub) saveRules() {
 		ClearTime: h.clearTime, RainTime: h.rainTime, ThunderTime: h.thunderTime,
 		Raining: h.rainFlag, Thundering: h.thunderFlag,
 	}
+	h.packStopwatches()
 	data, _ := json.MarshalIndent(h.rules, "", "  ")
 	writeStore(h.rulesPath, data)
 }

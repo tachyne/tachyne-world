@@ -458,6 +458,7 @@ type hub struct {
 	// surface. Set only when this shard OWNS it; otherwise respawn falls back to a
 	// point inside this shard's own region so a death never lands you off-shard.
 	worldSpawnX, worldSpawnY, worldSpawnZ float64
+	stopwatches                           map[string]stopwatchRun // /stopwatch (stopwatch.go); nil until first used
 	hasWorldSpawn                         bool
 	// The facing /setworldspawn gave the spawn, and the spawn as a joining
 	// session reads it (nil until the command, or its saved value, sets one).
@@ -1752,6 +1753,8 @@ func (h *hub) run() {
 				h.applyRandomCommand(players, e)
 			case evSetIdleTimeout:
 				h.applySetIdleTimeout(players, e)
+			case evStopwatch:
+				h.applyStopwatch(players, e)
 			case evSwingCmd:
 				h.applySwingCommand(players, e)
 			case evTeamMsg:

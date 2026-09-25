@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/stopwatch.** `/stopwatch create|query|restart|remove <id>` keeps
+  named real-time stopwatches, as in vanilla 26.2. They are saved with the
+  world and pick up where they left off after a restart.
 - **/setidletimeout.** `/setidletimeout <minutes>` disconnects players
   who have done nothing for that long ("You have been idle for too
   long!"); 0 turns it off. Walking, clicking, typing and key presses count
