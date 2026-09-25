@@ -37,6 +37,9 @@ func TestSkeletonShootsAndArrowHits(t *testing.T) {
 		if pl.health < hp {
 			break
 		}
+		for eid := range h.arrows { // a miss lies where it landed; clear it for the next shot
+			delete(h.arrows, eid)
+		}
 		m.attackCD = 0
 		h.skeletonShoot(players, m)
 	}
