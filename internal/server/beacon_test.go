@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -120,4 +121,28 @@ func TestBeaconFlow(t *testing.T) {
 			t.Error("beacon not removed on break")
 		}
 	})
+}
+
+// The beam passes bedrock (a beacon under the Nether roof shines) and stained
+// glass, and stops at tinted glass and solid blocks (light dampening 15).
+func TestBeaconBeamBlocks(t *testing.T) {
+	w := world.New(1)
+	w.ForceLoad(0, 0, 1)
+	const bx, by, bz = 3, 180, 3
+	for _, c := range []struct {
+		block string
+		open  bool
+	}{
+		{"bedrock", true},
+		{"red_stained_glass", true},
+		{"glass", true},
+		{"oak_leaves", true},
+		{"tinted_glass", false},
+		{"stone", false},
+	} {
+		w.SetBlock(bx, by+5, bz, worldgen.BlockBase(c.block))
+		if got := beaconSkyOpen(w, bx, by, bz); got != c.open {
+			t.Errorf("%s over the beacon: open %v, want %v", c.block, got, c.open)
+		}
+	}
 }

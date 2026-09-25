@@ -82,31 +82,21 @@ func beaconLevels(w *world.World, x, y, z int) int {
 	return levels
 }
 
-// beaconSkyOpen reports whether the beam reaches the sky: no full solid
-// block in the column above (vanilla lets the beam pass anything with
-// light dampening < 15; a full cube approximates the cut).
+// beaconSkyOpen reports whether the beam reaches the top of the column
+// (BeaconBlockEntity.tick): it passes everything but a block that damps
+// light fully — a solid cube, tinted glass — and bedrock passes too, which
+// is what lets a beacon under the Nether's roof shine.
+var bedrockState = worldgen.BlockBase("bedrock")
+
 func beaconSkyOpen(w *world.World, x, y, z int) bool {
 	top := worldgen.MinY + w.Ceiling()
 	for cy := y + 1; cy < top; cy++ {
-		if s := w.At(x, cy, z); s != 0 && worldgen.IsSolidFull(s) && !isBeamPassable(s) {
+		if s := w.At(x, cy, z); worldgen.LightFilter(s) >= worldgen.Opaque && s != bedrockState {
 			return false
 		}
 	}
 	return true
 }
-
-// isBeamPassable covers the full-cube blocks the vanilla beam still passes:
-// the glass family (dampening 0) — stained glass tints, we just pass.
-var glassStates = func() map[uint32]bool {
-	m := map[uint32]bool{worldgen.BlockBase("glass"): true, worldgen.BlockBase("tinted_glass"): true}
-	for _, c := range []string{"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink",
-		"gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"} {
-		m[worldgen.BlockBase(c+"_stained_glass")] = true
-	}
-	return m
-}()
-
-func isBeamPassable(s uint32) bool { return glassStates[s] }
 
 // beaconsOnBlockChange keeps the beacon set current: placing a beacon
 // registers it, breaking one drops it with the deactivate sound. Mirrors

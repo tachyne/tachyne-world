@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Beacons work in the Nether.** A beacon's beam now goes through bedrock
+  as it does in vanilla, so a beacon under the Nether's bedrock roof lights
+  up and gives its effects; before, the roof switched every Nether beacon
+  off. Tinted glass now stops the beam, as in vanilla.
 - **The anvil can take a name off.** Clearing the name box on a renamed
   item now removes the custom name for one level, as in vanilla; a box of
   only spaces counts as empty. Names lose the characters chat refuses
