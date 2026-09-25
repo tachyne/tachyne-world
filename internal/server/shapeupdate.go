@@ -29,6 +29,7 @@ const (
 	shapeCampfire               // CampfireBlock: a signal fire over a hay bale (isSmokeSource)
 	shapeBell                   // BellBlock: between two walls, or on one when the other goes
 	shapeConnect                // fences, panes, bars, walls, stairs, tripwire: their connections
+	shapeSpeleothem             // pointed dripstone, sulfur spikes: thickness along the column
 )
 
 // shapeKinds maps every state of the families above to its kind — one map
@@ -64,6 +65,9 @@ var shapeKinds = func() map[uint32]shapeKind {
 				if worldgen.IsHorizontalConnector(info) || worldgen.IsWallConnector(info) || stair {
 					add(n, shapeConnect)
 				}
+				if worldgen.SupportFor(lo) == worldgen.SupportSpeleothem {
+					add(n, shapeSpeleothem)
+				}
 			}
 		}
 		if strings.HasSuffix(n, "_fence_gate") {
@@ -93,6 +97,15 @@ func shapeUpdated(w *world.World, n blockPos, st uint32, d [3]int) (uint32, bool
 	}
 	nb := w.At(n.x+d[0], n.y+d[1], n.z+d[2])
 	switch k {
+	case shapeSpeleothem:
+		// SpeleothemBlock.updateShape: a change above or below re-reads the
+		// thickness (a support lost is the sweep's to drop).
+		if d[1] == 0 {
+			return st, true
+		}
+		tip := worldgen.GetProperty(info, st, "vertical_direction")
+		merge := worldgen.GetProperty(info, st, "thickness") == "tip_merge"
+		return worldgen.SetProperty(info, st, "thickness", speleothemThickness(w, n, st, tip, merge)), true
 	case shapeConnect:
 		// FenceBlock / IronBarsBlock / WallBlock / StairBlock / TripWireBlock
 		// .updateShape: any neighbour change, whoever made it, re-reads the

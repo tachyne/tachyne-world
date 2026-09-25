@@ -87,6 +87,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Placing pointed dripstone.** Pointed dripstone now hangs from a ceiling
+  or stands on a floor depending on where you look, as in vanilla, and a
+  column keeps its proper taper — tip, frustum, middle, base — as pieces are
+  added or taken away. Sneaking keeps a stalactite and a stalagmite from
+  merging their tips.
 - **Small dripleaf placement.** A small dripleaf now faces you when you
   plant it and keeps the water it's planted in, as in vanilla — it used to
   face away and dry out its cell.

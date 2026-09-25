@@ -223,3 +223,34 @@ func TestSideBySideStalactitesLetGoWithoutStallingTheSweep(t *testing.T) {
 		}
 	}
 }
+
+// Pointed dripstone placed under a ceiling while looking up hangs tip-down;
+// a second piece under it becomes the tip and the first re-shapes to a
+// frustum (SpeleothemBlock.getStateForPlacement / updateShape).
+func TestPlacedDripstoneShapesItsColumn(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	players := map[int32]*tracked{}
+	w := h.world
+	def := worldgen.BlockBase("pointed_dripstone")
+	info, _ := worldgen.InfoForState(def)
+	x, z := 5, 5
+	w.SetBlock(x, 190, z, worldgen.Stone) // the ceiling
+	first, ok := speleothemPlaced(w, blockPos{x, 189, z}, def, -30, false, false)
+	if !ok || worldgen.GetProperty(info, first, "vertical_direction") != "down" || worldgen.GetProperty(info, first, "thickness") != "tip" {
+		t.Fatalf("first piece: ok=%v dir=%s thickness=%s", ok, worldgen.GetProperty(info, first, "vertical_direction"), worldgen.GetProperty(info, first, "thickness"))
+	}
+	h.setBlockAt(players, 0, blockPos{x, 189, z}, first)
+	second, ok := speleothemPlaced(w, blockPos{x, 188, z}, def, -30, false, false)
+	if !ok || worldgen.GetProperty(info, second, "thickness") != "tip" {
+		t.Fatalf("second piece: ok=%v thickness=%s", ok, worldgen.GetProperty(info, second, "thickness"))
+	}
+	h.setBlockAt(players, 0, blockPos{x, 188, z}, second)
+	if th := worldgen.GetProperty(info, w.At(x, 189, z), "thickness"); th != "frustum" {
+		t.Fatalf("the first piece above the new tip is %s, want frustum", th)
+	}
+	// Nothing to hang from or stand on: refused.
+	if _, ok := speleothemPlaced(w, blockPos{20, 220, 20}, def, 30, false, false); ok {
+		t.Error("dripstone placed in mid-air")
+	}
+}

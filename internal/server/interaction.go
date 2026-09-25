@@ -483,6 +483,8 @@ func (s *Server) handlePlace(p *player, data []byte) {
 			state, lookPlaced = growingPlantPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, g, target)
 		case isHugeMushroom(defState): // mushroom blocks: skin on faces that meet no twin
 			state = hugeMushroomPlacedState(s.worldFor(p), blockPos{tx, ty, tz}, defState)
+		case isSpeleothem(defState): // pointed dripstone, sulfur spikes: tip and thickness from the column
+			state, lookPlaced = speleothemPlaced(s.worldFor(p), blockPos{tx, ty, tz}, defState, p.pitch, p.sneaking, target == worldgen.WaterBase)
 		case isPaleMossCarpet(defState): // pale moss carpet: sides up the walls beside it
 			state = mossCarpetUpdated(s.worldFor(p), blockPos{tx, ty, tz}, defState, true)
 		default:

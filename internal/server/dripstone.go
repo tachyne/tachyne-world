@@ -2,6 +2,9 @@ package server
 
 import (
 	"math"
+	"strconv"
+
+	"github.com/tachyne/tachyne-world/internal/world"
 
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -197,4 +200,82 @@ func stalagmiteFallExtra(landedOn uint32, dist float64) (float64, bool) {
 		return 0, false
 	}
 	return math.Max(0, (dist+dripFallBonus-3)*dripFallScale), true
+}
+
+// SpeleothemBlock (pointed dripstone, sulfur spikes): placement and the
+// thickness a column keeps as it grows or loses a piece.
+
+func isSpeleothem(s uint32) bool { return worldgen.SupportFor(s) == worldgen.SupportSpeleothem }
+
+// speleothemWith is isSpeleothemWithDirection for this block family.
+func speleothemWith(s, family uint32, dir string) bool {
+	if !isSpeleothem(s) || !sameBlockFamily(s, family) {
+		return false
+	}
+	info, _ := worldgen.InfoForState(s)
+	return worldgen.GetProperty(info, s, "vertical_direction") == dir
+}
+
+func vertDelta(dir string) int {
+	if dir == "up" {
+		return 1
+	}
+	return -1
+}
+
+func oppositeVert(dir string) string {
+	if dir == "up" {
+		return "down"
+	}
+	return "up"
+}
+
+// speleothemValid is isValidSpeleothemPlacement: behind the tip, a sturdy
+// face or more of the same, pointing the same way.
+func speleothemValid(w *world.World, pos blockPos, family uint32, tip string) bool {
+	b := w.At(pos.x, pos.y-vertDelta(tip), pos.z)
+	return holdsBlock(b) && !isSpeleothem(b) || speleothemWith(b, family, tip)
+}
+
+// speleothemThickness is calculateSpeleothemThickness.
+func speleothemThickness(w *world.World, pos blockPos, family uint32, tip string, merge bool) string {
+	front := w.At(pos.x, pos.y+vertDelta(tip), pos.z)
+	if speleothemWith(front, family, oppositeVert(tip)) {
+		fi, _ := worldgen.InfoForState(front)
+		if !merge && worldgen.GetProperty(fi, front, "thickness") != "tip_merge" {
+			return "tip"
+		}
+		return "tip_merge"
+	}
+	if !speleothemWith(front, family, tip) {
+		return "tip"
+	}
+	fi, _ := worldgen.InfoForState(front)
+	if t := worldgen.GetProperty(fi, front, "thickness"); t == "tip" || t == "tip_merge" {
+		return "frustum"
+	}
+	if !speleothemWith(w.At(pos.x, pos.y-vertDelta(tip), pos.z), family, tip) {
+		return "base"
+	}
+	return "middle"
+}
+
+// speleothemPlaced is SpeleothemBlock.getStateForPlacement: the tip points
+// away from the way the player looks (up when looking down), or the other
+// way if that is the only one that holds; sneaking keeps two tips apart.
+func speleothemPlaced(w *world.World, pos blockPos, def uint32, pitch float32, sneaking, water bool) (uint32, bool) {
+	tip := "up" // looking down: nearest vertical is DOWN, the tip is its opposite
+	if pitch < 0 {
+		tip = "down"
+	}
+	if !speleothemValid(w, pos, def, tip) {
+		tip = oppositeVert(tip)
+		if !speleothemValid(w, pos, def, tip) {
+			return def, false
+		}
+	}
+	info, _ := worldgen.InfoForState(def)
+	st := worldgen.SetProperty(info, def, "vertical_direction", tip)
+	st = worldgen.SetProperty(info, st, "thickness", speleothemThickness(w, pos, def, tip, !sneaking))
+	return worldgen.SetProperty(info, st, "waterlogged", strconv.FormatBool(water)), true
 }
