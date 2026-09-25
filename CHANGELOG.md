@@ -121,6 +121,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Drowned ride zombie nautiluses.** Half the grown drowned that spawn in
   the sea or at an ocean ruin carrying a trident now come riding a zombie
   nautilus, as in vanilla; in rivers they never do.
+- **Allays dance everywhere.** An allay near a playing jukebox now dances
+  in the Nether and the End too, and a jukebox in another dimension no
+  longer sets it dancing.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

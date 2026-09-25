@@ -35,3 +35,28 @@ func TestAllayNoteBlockDeliveryCountsInAnyDimension(t *testing.T) {
 		t.Fatal("a cake dropped on a Nether note block earns Birthday Song")
 	}
 }
+
+// An allay dances to a jukebox in its own dimension, whichever that is;
+// one playing in another dimension at the same coordinates does not count.
+func TestAllayDancesInAnyDimension(t *testing.T) {
+	h := newHub(world.New(1))
+	nether := h.worldFor(dimNether)
+	nether.ForceLoad(0, 0, 1)
+	h.world.ForceLoad(0, 0, 1)
+	pl := survPlayer(h)
+	pl.dim, pl.x, pl.y, pl.z = dimNether, 4.5, 150, 4.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	m := h.spawnSpecies(players, entityAllay, dimNether, 0.5, 150, 0.5)
+	disc := invStack{item: int32(itemByName["music_disc_cat"]), count: 1}
+	h.jukeboxes[simPos{dim: dimOverworld, blockPos: blockPos{2, 150, 0}}] = &jukebox{disc: disc, started: 1, length: 1 << 40}
+	h.allayStep(players, m)
+	if m.dancing {
+		t.Fatal("an overworld jukebox must not set a Nether allay dancing")
+	}
+	h.jukeboxes[simPos{dim: dimNether, blockPos: blockPos{2, 150, 0}}] = &jukebox{disc: disc, started: 1, length: 1 << 40}
+	h.allayStep(players, m)
+	if !m.dancing {
+		t.Fatal("a Nether allay beside a playing jukebox dances")
+	}
+}
