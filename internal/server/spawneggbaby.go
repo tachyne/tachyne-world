@@ -64,7 +64,7 @@ func (h *hub) tryEggOffspring(players map[int32]*tracked, t *tracked, m *mob) bo
 			baby.variantSet = false
 			h.villagerType(baby)
 		}
-		baby.setMoveSpeed(0.135)
+		baby.setMoveSpeed(vanillaMoveSpeed[entityVillager] * attrToStep)
 		h.initVillagerTrades(baby, profUnemployed)
 		h.sendVillagerData(players, baby)
 		baby.behavior = villagerBehavior{}

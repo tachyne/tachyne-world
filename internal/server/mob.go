@@ -1504,6 +1504,9 @@ func speedFor(etype int) float64 {
 	case entitySpider, entityEnderman: // attr 0.30
 		return 0.135
 	}
+	if v, ok := vanillaMoveSpeed[etype]; ok && stepScaleFor(etype) != 1 {
+		return v * attrToStep // vanilla's attribute; moveSpeed scales it to the tuned step
+	}
 	if d := speciesOf(etype); d != nil { // roster species: from the table
 		return d.stepSpeed()
 	}
@@ -2138,9 +2141,9 @@ const babySpeedSource = "baby"
 // scale.
 func (m *mob) moveSpeed() float64 {
 	if v := m.navMount; v != nil {
-		return v.mobAttrs().Value(attr.MovementSpeed) // a driving rider moves at its vehicle's pace
+		return v.mobAttrs().Value(attr.MovementSpeed) * stepScaleFor(v.etype) // a driving rider moves at its vehicle's pace
 	}
-	return m.mobAttrs().Value(attr.MovementSpeed)
+	return m.mobAttrs().Value(attr.MovementSpeed) * stepScaleFor(m.etype)
 }
 
 // setMoveSpeed sets the base MOVEMENT_SPEED, in per-update blocks.

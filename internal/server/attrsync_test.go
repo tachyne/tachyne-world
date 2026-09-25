@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -120,6 +121,41 @@ func TestNewSyncableAttributesSync(t *testing.T) {
 	for _, id := range ids {
 		if !got[string(id)] {
 			t.Errorf("%s is syncable but was left out of the frame", id)
+		}
+	}
+}
+
+// X8: the species whose step is tuned by hand still sync vanilla's
+// MOVEMENT_SPEED — a ridden nautilus steers by 1.0, a happy ghast by 0.05,
+// a villager reads 0.5 — while they move at the tuned step.
+func TestTunedSpeciesSyncVanillaSpeed(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	speedOf := func(m *mob) float64 {
+		for _, a := range mobAttrFrame(m).Attrs {
+			if a.Name == string(api.MovementSpeed) {
+				return a.Base
+			}
+		}
+		return -1
+	}
+	for _, c := range []struct {
+		etype int
+		want  float64
+		step  float64
+	}{
+		{entityNautilus, 1.0, speciesOf(entityNautilus).step},
+		{entityHappyGhast, 0.05, speciesOf(entityHappyGhast).step},
+		{entityTurtle, 0.25, speciesOf(entityTurtle).step},
+		{entityWither, 0.6, speciesOf(entityWither).step},
+		{entityVillager, 0.5, villagerStep},
+	} {
+		m := h.spawnMob(players, c.etype, 0.5, 180, 0.5)
+		if got := speedOf(m); math.Abs(got-c.want) > 1e-9 {
+			t.Errorf("%s syncs MOVEMENT_SPEED %v, want vanilla's %v", entityNameByID[c.etype], got, c.want)
+		}
+		if got := m.moveSpeed(); math.Abs(got-c.step) > 1e-9 {
+			t.Errorf("%s moves at %v, want its tuned step %v", entityNameByID[c.etype], got, c.step)
 		}
 	}
 }

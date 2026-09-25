@@ -133,6 +133,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs report their real speed.** Turtles, frogs, fish, squid,
+  axolotls, dolphins, guardians, nautiluses, bats, parrots, allays, bees,
+  happy ghasts, phantoms, vexes, ghasts, the wither, villagers and
+  wandering traders now tell the client vanilla's movement speed instead
+  of a made-up one, so a ridden nautilus or happy ghast moves at the right
+  pace and `/attribute` shows the right value. How fast they move on the
+  server is unchanged.
 - **The ender dragon fights like the real one.** It now flies every tick
   instead of once a second, along vanilla's ring of flight points, turning
   and swooping as it should, and faces the way it flies. It strafes the
