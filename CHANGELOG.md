@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **More of the target selector.** Selectors now take `x`, `y`, `z`,
+  `dx`, `dy`, `dz`, `scores`, `team`, `level`, `gamemode`, `x_rotation`,
+  `y_rotation`, `name=!…` and `sort=furthest|random|arbitrary`, a limit
+  and sort apply across players and mobs together, and spaces inside a
+  selector's brackets no longer break the command.
 - **/give with item components.** `/give <player> <item>[…]` now takes
   the item's components, such as `enchantments`, `stored_enchantments`,
   `custom_name`, `item_name`, `damage`, `repair_cost`, `potion_contents`
