@@ -56,3 +56,38 @@ func TestFrogLandNearest(t *testing.T) {
 		t.Fatalf("want the dry cell at 5,180,0, got %v %v", p, ok)
 	}
 }
+
+// Out in open water, with no bank in reach, a frog swims about at 0.75 of
+// its pace (RandomStroll.swim(0.75F)), not its full walking stroll.
+func TestFrogSwimStrollSpeed(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 3)
+	for x := -24; x <= 24; x++ {
+		for z := -24; z <= 24; z++ {
+			h.world.SetBlock(x, 178, z, worldgen.Stone)
+			h.world.SetBlock(x, 179, z, worldgen.Water)
+			h.world.SetBlock(x, 180, z, worldgen.Water)
+		}
+	}
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z = 0.5, 181, 60.5
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	f := h.spawnMob(players, entityFrog, 0.5, 179, 0.5)
+	h.gridDirty()
+	limit := f.moveSpeed() * 0.75 * 1.05
+	moved := false
+	for i := 0; i < 400; i++ {
+		px, pz := f.x, f.z
+		h.tick.Add(mobMoveInterval)
+		h.updateMobs(players)
+		d := dist3(f.x, 0, f.z, px, 0, pz)
+		if d > limit && f.kb == 0 {
+			t.Fatalf("update %d: a swimming frog strolls at 0.75 (%.3f), moved %.3f", i, limit, d)
+		}
+		moved = moved || d > 0
+	}
+	if !moved {
+		t.Fatal("the frog never swam anywhere")
+	}
+}

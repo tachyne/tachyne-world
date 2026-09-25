@@ -47,6 +47,9 @@ func (h *hub) strollSpeedFor(m *mob) float64 {
 	if m.etype == entityIronGolem && m.golemStrolling {
 		return golemStrollSpeed // GolemRandomStrollInVillageGoal / MoveBackToVillageGoal
 	}
+	if m.etype == entityFrog && h.inWater(m.dim, m.x, m.y, m.z) {
+		return 0.75 // FrogAi SWIM: RandomStroll.swim(0.75F); ashore it strolls at 1.0
+	}
 	if m.etype == entityAxolotl {
 		if h.inWater(m.dim, m.x, m.y, m.z) {
 			return 0.5

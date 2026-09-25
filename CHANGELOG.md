@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Frogs swim at a frog's pace.** A frog swimming about with nowhere to
+  be moved at its full walking pace; as in vanilla it now swims a little
+  slower than it walks.
 - **Frogs climb out of the water.** A frog in a pond now makes for the
   nearest bank every few seconds, as vanilla frogs do, instead of drifting
   about in the water.
