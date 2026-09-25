@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Breeze wind charges fly at vanilla speed.** A breeze's wind charges
+  flew twice as fast as they should. They now fly at vanilla speed from the
+  breeze's middle, aimed a little lower on you, with vanilla's spread.
 - **Witches throw their potions properly.** A witch's potions flew twice
   as fast as they should, so they sailed over players and were hard to
   dodge. They now fly at vanilla speed in a proper arc, a little slower up
