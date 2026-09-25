@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -12,7 +13,8 @@ import (
 // nearest site of the named structure within 100 chunks of the player,
 // reported the way vanilla words it. Operators only (permission level 2).
 // /locate biome <id> searches the way BiomeSource.findClosestBiome3d does.
-// The point-of-interest form is not offered.
+// /locate poi <type>|#<tag> is PoiManager.findClosestWithType over 256
+// blocks.
 
 const locateRadius = 100 * 16
 
@@ -23,6 +25,10 @@ func (s *Server) cmdLocate(p *player, args []string) {
 	}
 	if len(args) == 2 && args[0] == "biome" {
 		s.locateBiome(p, args[1])
+		return
+	}
+	if len(args) == 2 && args[0] == "poi" {
+		s.locatePoi(p, args[1])
 		return
 	}
 	if len(args) > 0 && args[0] == "structure" {
@@ -112,4 +118,73 @@ func (s *Server) locateBiome(p *player, id string) {
 	dx, dz := float64(x-ox), float64(z-oz)
 	dist := int(math.Floor(math.Sqrt(dx*dx + dz*dz)))
 	s.info(p, fmt.Sprintf("The nearest %s is at [%d, %d, %d] (%d blocks away)", id, x, y, z, dist))
+}
+
+// poiTagKinds are the point_of_interest_type tags.
+var poiTagKinds = map[string]func(uint8) bool{
+	"minecraft:acquirable_job_site": poiKindIsJob,
+	"minecraft:village":             poiKindIsVillage,
+	"minecraft:bee_home":            func(k uint8) bool { return k == poiKindBeehive || k == poiKindBeeNest },
+}
+
+// poiKindByName is a point_of_interest_type id's kind.
+func poiKindByName(id string) (uint8, bool) {
+	for k := 1; k < 256; k++ {
+		if n := poiKindName(uint8(k)); n != "" && "minecraft:"+n == id {
+			return uint8(k), true
+		}
+	}
+	return 0, false
+}
+
+// locatePoiRadius is LocateCommand.POI_SEARCH_RADIUS.
+const locatePoiRadius = 256
+
+// locatePoi is LocateCommand.locatePoi: the closest point of the type (or of
+// any type in the tag) within 256 blocks, by straight-line distance; the
+// answer gives the horizontal distance and no height.
+func (s *Server) locatePoi(p *player, arg string) {
+	tag := strings.HasPrefix(arg, "#")
+	id := nsID(strings.TrimPrefix(arg, "#"))
+	var want func(uint8) bool
+	printable := id
+	if tag {
+		printable = "#" + id
+		if want = poiTagKinds[id]; want == nil {
+			p.tell(fmt.Sprintf("Unknown tag '%s'", id))
+			return
+		}
+	} else {
+		k, ok := poiKindByName(id)
+		if !ok {
+			p.tell(fmt.Sprintf("Can't find element '%s' of type 'minecraft:point_of_interest_type'", id))
+			return
+		}
+		want = func(o uint8) bool { return o == k }
+	}
+	eid := p.eid
+	s.onHub(func(players map[int32]*tracked) {
+		t := players[eid]
+		if t == nil {
+			return
+		}
+		w := s.hub.poiWorld(t.dim)
+		if w == nil {
+			return
+		}
+		px, py, pz := floorInt(t.x), floorInt(t.y), floorInt(t.z)
+		found := w.POIsNear(px, py, pz, locatePoiRadius, func(o world.POI) bool { return want(o.Kind) })
+		if len(found) == 0 {
+			t.p.trySendEv(chatEv(fmt.Sprintf("Could not find a point of interest of type \"%s\" within a reasonable distance", printable)))
+			return
+		}
+		f := found[0] // closest first
+		name := printable
+		if tag {
+			name += " (minecraft:" + poiKindName(f.Kind) + ")"
+		}
+		dx, dz := float64(f.X-px), float64(f.Z-pz)
+		dist := int(math.Floor(float64(float32(math.Sqrt(dx*dx + dz*dz)))))
+		s.hub.cmdInfo(players, eid)(fmt.Sprintf("The nearest %s is at [%d, ~, %d] (%d blocks away)", name, f.X, f.Z, dist))
+	})
 }

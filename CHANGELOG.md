@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/locate poi.** `/locate poi <type>` and `/locate poi #<tag>` find the
+  nearest point of interest within 256 blocks: a workstation, bed, bell,
+  beehive, bee nest, nether portal, lodestone or lightning rod.
 - **/random sequences.** `/random value|roll <range> <sequence>` draws
   from a named random sequence that gives the same numbers as vanilla for
   the same world seed, and `/random reset` starts one or all of them over,
