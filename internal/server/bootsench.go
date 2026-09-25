@@ -92,14 +92,16 @@ func (h *hub) tickFrostedIce(players map[int32]*tracked, dim int, pos blockPos, 
 	// frosted ice uses getMaxLocalRawBrightness outside the End — so daylight
 	// DOES thaw it. That difference is the whole reason a Frost Walker path
 	// across a sunlit lake closes behind you.
+	// The threshold also takes the ice's own light dampening (1).
 	if (h.rng.Intn(frostedMeltDivisor) == 0 || lonely) &&
-		h.frostedBrightness(dim, pos) > 11-age &&
+		h.frostedBrightness(dim, pos) > 11-age-frostedDampening &&
 		h.slightlyMelt(players, dim, pos, age) {
-		// Melting nudges the neighbours along with it.
+		// Melting ages every frosted neighbour a step too (slightlyMelt), and
+		// one that survives it tries again in 20-40 ticks.
 		for _, d := range sixDirs {
 			n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
 			ns := h.worldFor(dim).Block(n.x, n.y, n.z)
-			if ns >= frostedIceMin && ns <= frostedIceMax {
+			if ns >= frostedIceMin && ns <= frostedIceMax && !h.slightlyMelt(players, dim, n, int(ns-frostedIceMin)) {
 				h.scheduleIn(dim, n, uint64(frostedRetryMin+h.rng.Intn(frostedRetrySpan)))
 			}
 		}
@@ -140,9 +142,29 @@ func (h *hub) slightlyMelt(players map[int32]*tracked, dim int, pos blockPos, ag
 		h.setBlockAt(players, dim, pos, frostedIceMin+uint32(age)+1)
 		return false
 	}
+	h.frostedMelt(players, dim, pos)
+	return true
+}
+
+// frostedDampening is frosted ice's light dampening, which FrostedIceBlock.
+// tick subtracts from its melt threshold.
+const frostedDampening = 1
+
+// frostedMelt is IceBlock.melt for frosted ice, with FrostedIceBlock.
+// neighborChanged answering it: the cell goes back to water, and since the
+// neighbours' update names the block that WAS there (frosted ice), each
+// frosted neighbour left with fewer than two frosted neighbours melts at
+// once in turn.
+func (h *hub) frostedMelt(players map[int32]*tracked, dim int, pos blockPos) {
 	h.setBlockAt(players, dim, pos, worldgen.WaterBase)
 	h.scheduleAroundIn(dim, pos, waterDelay)
-	return true
+	for _, d := range sixDirs {
+		n := blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}
+		if s := h.worldFor(dim).Block(n.x, n.y, n.z); s >= frostedIceMin && s <= frostedIceMax &&
+			h.frostedNeighboursFewerThan(dim, n, 2) {
+			h.frostedMelt(players, dim, n)
+		}
+	}
 }
 
 // frostedNeighboursFewerThan is FrostedIceBlock.fewerNeigboursThan: ice with

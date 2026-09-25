@@ -594,3 +594,18 @@ func TestNetherObserverSeesLiveWrites(t *testing.T) {
 		t.Error("the Nether observer should start its pulse when the block it watches changes")
 	}
 }
+
+// FrostedIceBlock.neighborChanged: ice that melts leaves a frosted
+// neighbour with fewer than two frosted neighbours to melt at once.
+func TestFrostedIceMeltTakesLoneNeighbour(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.worldFor(0)
+	a, b := blockPos{0, 180, 0}, blockPos{1, 180, 0}
+	w.SetBlock(a.x, a.y, a.z, frostedIceMax) // last age: the next melt is water
+	w.SetBlock(b.x, b.y, b.z, frostedIceMin)
+	h.slightlyMelt(players, 0, a, frostedMaxAge)
+	if w.At(a.x, a.y, a.z) != worldgen.WaterBase || w.At(b.x, b.y, b.z) != worldgen.WaterBase {
+		t.Errorf("both should be water: %d / %d", w.At(a.x, a.y, a.z), w.At(b.x, b.y, b.z))
+	}
+}
