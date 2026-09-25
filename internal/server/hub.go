@@ -2162,8 +2162,7 @@ func (h *hub) run() {
 			case evPlaysound:
 				h.onPlaysound(players, e)
 			case evParticleCmd:
-				h.toNearbyEv(players, e.dim, e.x, e.z, attachproto.Particles{
-					PID: e.pid, X: e.x, Y: e.y, Z: e.z, Spread: 0.5, Count: e.count})
+				h.spawnParticles(players, e.dim, e.pid, e.x, e.y, e.z, e.spread, e.speed, e.count)
 			case evBoneMeal:
 				h.onBoneMeal(players, e)
 			case evUseShelf:

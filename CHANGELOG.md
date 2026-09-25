@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/particle by name.** `/particle minecraft:flame ~ ~1 ~ 0.5 0.5 0.5 0.1
+  20` works as in vanilla for every particle that takes no extra options
+  (colours, blocks and items are not supported yet); it used to want a
+  numeric id.
 - **/playsound in vanilla's form.** `/playsound <sound> [source] [targets]
   [x y z] [volume] [pitch] [minVolume]` — the source picks which volume
   slider it plays on, and a far-off player hears it only if a minimum volume

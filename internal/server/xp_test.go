@@ -330,3 +330,19 @@ func TestPlaysoundCommand(t *testing.T) {
 		}
 	}
 }
+
+// /particle by name, with vanilla's delta/speed/count arguments.
+func TestParticleCommandByName(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "particle minecraft:flame ~ ~1 ~ 0.5 0.2 0.1 0.05 20")
+	s.handleCommand(alice, "particle minecraft:dust")
+	settle(t, h, logs, "Q1")
+	a := linesBetween(logs["alice"], "", "Q1")
+	if !hasLine(a, "Displaying minecraft:flame") || !hasLine(a, "Unknown particle: minecraft:dust") {
+		t.Errorf("replies: %q", a)
+	}
+	if particleByName["flame"] != 31 || particleByName["crit"] != 5 {
+		t.Errorf("canonical ids: flame %d crit %d", particleByName["flame"], particleByName["crit"])
+	}
+}

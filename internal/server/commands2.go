@@ -385,41 +385,71 @@ func (h *hub) onPlaysound(players map[int32]*tracked, e evPlaysound) {
 	}
 }
 
-// cmdParticle spawns particles at coordinates (op debug tool).
-// /particle <id> <x> <y> <z> [count]
+// cmdParticle is ParticleCommand for the option-free particles:
+// /particle <name> [<x> <y> <z> [<dx> <dy> <dz> <speed> [<count>]]].
+// The particle frame carries one spread, so the largest delta stands for
+// all three.
 func (s *Server) cmdParticle(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
-	if len(args) < 4 {
-		p.tell("Usage: /particle <id> <x> <y> <z> [count]")
+	const usage = "Usage: /particle <name> [<x> <y> <z> [<dx> <dy> <dz> <speed> [<count>]]]"
+	if len(args) < 1 {
+		p.tell(usage)
 		return
 	}
-	pid, err := strconv.Atoi(args[0])
-	if err != nil {
-		p.tell("Particle ids are numeric (canonical registry).")
+	e := evParticleCmd{dim: p.dim, x: p.x, y: p.y, z: p.z, count: 1}
+	if pid, ok := particleByName[strings.TrimPrefix(args[0], "minecraft:")]; ok {
+		e.pid = pid
+	} else if n, err := strconv.Atoi(args[0]); err == nil {
+		e.pid = int32(n) // a canonical id, as this command once took
+	} else {
+		p.tell("Unknown particle: " + args[0])
 		return
 	}
-	x, y, z, okPos := parsePosition(args[1:], p.x, p.y, p.z, p.yaw, p.pitch)
-	if !okPos {
-		p.tell("Bad coordinates.")
-		return
-	}
-	count := 10
-	if len(args) > 4 {
-		if c, err := strconv.Atoi(args[4]); err == nil {
-			count = c
+	rest := args[1:]
+	if len(rest) >= 3 {
+		x, y, z, ok := parsePosition(rest[:3], p.x, p.y, p.z, p.yaw, p.pitch)
+		if !ok {
+			p.tell(usage)
+			return
 		}
+		e.x, e.y, e.z, rest = x, y, z, rest[3:]
 	}
-	s.hub.post(evParticleCmd{dim: p.dim, pid: int32(pid), x: x, y: y, z: z, count: int32(count)})
+	if len(rest) >= 4 {
+		var v [4]float64
+		for i := range v {
+			f, err := strconv.ParseFloat(rest[i], 64)
+			if err != nil || (i == 3 && f < 0) {
+				p.tell(usage)
+				return
+			}
+			v[i] = f
+		}
+		e.spread = float32(math.Max(math.Abs(v[0]), math.Max(math.Abs(v[1]), math.Abs(v[2]))))
+		e.speed = float32(v[3])
+		e.count = 0 // with a speed and no count, vanilla sends one directed particle
+		rest = rest[4:]
+	}
+	if len(rest) >= 1 {
+		c, err := strconv.Atoi(rest[0])
+		if err != nil || c < 0 {
+			p.tell(usage)
+			return
+		}
+		e.count = int32(c)
+	}
+	s.hub.post(e)
+	s.ok(p, "Displaying "+args[0])
 }
 
 type evParticleCmd struct {
-	dim     int // the operator's dimension
-	pid     int32
-	x, y, z float64
-	count   int32
+	dim           int // the operator's dimension
+	pid           int32
+	x, y, z       float64
+	spread, speed float32
+	count         int32
 }
 
 func (evParticleCmd) isHubEvent() {}
