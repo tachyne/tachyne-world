@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Vexes attack what their evoker is fighting.** Vexes only ever went
+  after players, so the vexes an evoker summoned against villagers or an
+  iron golem ignored them. As in vanilla, they now go for their evoker's
+  target, and only pick a player on their own if they can see them.
 - **Shulkers need to see you.** A shulker used to open fire on a player
   behind a wall. As in vanilla, it now only picks a target it can see, and
   loses interest in one that stays out of sight for a few seconds.

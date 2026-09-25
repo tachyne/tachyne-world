@@ -211,6 +211,7 @@ func (h *hub) summonVexes(players map[int32]*tracked, m *mob) {
 			continue
 		}
 		v.hostile = true
+		v.vexOwner = m.eid                                                                        // Vex.setOwner: VexCopyOwnerTargetGoal follows its target
 		v.vexOrigin, v.vexHasOrigin = blockPos{floorInt(x), floorInt(m.y) + 1, floorInt(z)}, true // setBoundOrigin
 		// Vanilla's setLimitedLife: 30-119 seconds, so a vex outlives the
 		// fight it was summoned for but not the day.

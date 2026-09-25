@@ -374,6 +374,7 @@ type mob struct {
 	vexVX, vexVY, vexVZ             float64  // …its per-tick velocity
 	vexOrigin                       blockPos // …the bound origin its drift circles (the summoning evoker)
 	vexHasOrigin                    bool
+	vexOwner                        int32      // vex: the evoker that summoned it (0 = none)
 	vexExpired                      bool       // vex: limited life run out (now taking damage)
 	phantomCatAt                    uint64     // phantom: the tick of the next cat search
 	phantomScared                   bool       // phantom: a cat was within sixteen at the last search
