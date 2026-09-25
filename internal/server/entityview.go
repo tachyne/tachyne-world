@@ -143,6 +143,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if m.burning {
 		t.p.trySendEv(metaEv(fireMetadata(m.eid, true)))
 	}
+	if m.ticksFrozen > 0 {
+		t.p.trySendEv(metaEv(frozenMetadata(m.eid, m.ticksFrozen)))
+	}
 	if m.wearsAnything() || m.showTrades.showing {
 		t.p.trySendEv(equipEv(m.eid, m.handShown(), invStack{}, m.gear))
 	} else if m.etype == entitySkeleton {

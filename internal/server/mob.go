@@ -67,6 +67,7 @@ type mob struct {
 	convertIn       int     // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
 	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
+	ticksFrozen     int     // Entity TICKS_FROZEN: the powder-snow frost clock (mobfreeze.go)
 	wetHurt         int     // water-sensitive mob: ticks until the wet hurts it again
 	creakActive     bool    // creaking: IS_ACTIVE — awake and hunting since a player looked at it
 	swell           int     // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
@@ -669,6 +670,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 			continue
 		}
+		h.mobFreezeStep(players, m) // LivingEntity.aiStep "freezing": powder snow's frost clock
+		if m.health <= 0 || h.mobs[m.eid] == nil {
+			continue
+		}
 		// LivingEntity.aiStep's water check runs whatever the mob is doing.
 		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
 			continue // hurt to death, or an enderman teleported out of the wet
@@ -1156,7 +1161,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// seating against the surface teleported every cave mob into daylight.
 			oldY := m.y
 			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
-			floor := float64(h.worldFor(m.dim).MobFeetFrom(fx, fz, int(math.Floor(m.y))))
+			floor := float64(h.mobFeetAt(m, fx, fz, int(math.Floor(m.y)))) // a snow walker stops on powder snow
 			if lvl := m.hasEffect(effLevitation); lvl > 0 {
 				// LivingEntity.travel under Levitation: each tick dy eases
 				// toward 0.05 × level (dy += (target − dy) × 0.2) and nothing
@@ -1367,7 +1372,7 @@ func (h *hub) mobStepOK(m *mob, nx, nz float64) bool {
 	w := h.worldFor(m.dim)
 	fnx, fnz := int(math.Floor(nx)), int(math.Floor(nz))
 	cx, cz := int(math.Floor(m.x)), int(math.Floor(m.z))
-	step := w.MobFeetFrom(fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
+	step := h.mobFeetAt(m, fnx, fnz, int(math.Floor(m.y))) - int(math.Floor(m.y))
 	// A fence/wall/fence-gate is only one block of "step" but 1.5 blocks of
 	// collision, so a land mob can't climb over it — treat it as a wall.
 	// A mob whose CURRENT cell is unwalkable (knocked/summoned into water)

@@ -98,6 +98,13 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs freeze in powder snow.** A mob left in powder snow now frosts
+  over, slows down and, once frozen through, takes freeze damage — five
+  times as much for blazes, striders and magma cubes — while strays, polar
+  bears, snow golems and anything wearing leather are spared. Rabbits,
+  foxes, endermites, silverfish and mobs in leather boots walk on top of
+  the snow instead of sinking into it, a burning mob that blunders into it
+  is put out and melts it, and so does a burning player.
 - **Potion swirls.** Players and mobs under an effect now give off its
   coloured swirls, as in vanilla — faint for a beacon's or a conduit's,
   none for an effect given with hidden particles, and Oozing, Weaving,
