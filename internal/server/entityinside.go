@@ -272,7 +272,7 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 			case !onFloor && m.etype == entityBee && s == openEyeblossom && h.rules.Difficulty != diffPeaceful && m.hasEffect(effPoison) == 0:
 				// EyeblossomBlock.entityInside: an open eyeblossom poisons the
 				// bee that visits it (25 ticks), unless it is poisoned already.
-				h.applyMobEffect(h.playersRef, m, effPoison, 0, 2)
+				h.applyMobEffectTicks(h.playersRef, m, effPoison, 0, 25)
 			case berryBushRipe(s):
 				// Foxes and bees push through a bush unharmed (vanilla), and
 				// only a mob moving through it is scratched (the 0.003 test).

@@ -118,6 +118,9 @@ func TestOpenEyeblossomPoisonsBees(t *testing.T) {
 	if bee.hasEffect(effPoison) == 0 {
 		t.Fatal("the bee should be poisoned")
 	}
+	if e := bee.effects[effPoison]; e == nil || e.left != 25 {
+		t.Errorf("EyeblossomBlock.getBeeInteractionEffect is Poison for 25 ticks: %+v", e)
+	}
 	w.SetBlock(0, 180, 0, closedEyeblossom)
 	bee2 := h.spawnMob(players, entityBee, 0.5, 180, 0.5)
 	h.insideBoth(players)
