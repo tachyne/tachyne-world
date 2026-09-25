@@ -1186,6 +1186,7 @@ func (h *hub) run() {
 			h.updateRockets(players)       // firework rockets climb, boost gliders, pop
 			h.updateEyes(players)          // eyes of ender drift toward their stronghold
 			h.hangingSurvivalTick(players) // frames, paintings, knots: survives() every hundred ticks
+			h.tickStands(players)          // armor stands: lava, fire and burning
 			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
 			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
 			h.expireSpyglass(players)      // a scope held to its full duration drops

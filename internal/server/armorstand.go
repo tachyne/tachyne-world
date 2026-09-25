@@ -30,7 +30,9 @@ type armorStand struct {
 	yaw     float32
 	equip   [6]invStack
 	lastHit uint64
-	name    string // custom_name: from a named armour-stand item or a name tag
+	name    string  // custom_name: from a named armour-stand item or a name tag
+	hurt    float64 // health lost (a stand has 20; causeDamage breaks it at 0.5)
+	fire    int     // remainingFireTicks
 }
 
 // standSlotFor classifies an item into the stand's equip index (-1 = not
@@ -194,21 +196,27 @@ func (h *hub) interactStand(players map[int32]*tracked, t *tracked, st *armorSta
 	h.playSoundDim(players, t.dim, "minecraft:entity.armor_stand.hit", sndBlock, st.x, st.y, st.z, 0.3, 1)
 }
 
-// hitStand: the vanilla double-punch — a lone hit wobbles, a second within
-// the window breaks (creative breaks instantly). Drops the stand + gear.
+// hitStand is a player's blow (Player.attack → hurtServer with player
+// damage): the vanilla double punch — a lone hit wobbles, a second within
+// the window breaks, a creative player's breaks at once.
 func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
-	now := h.tick.Load()
-	if t != nil && t.gamemode != gmCreative && (st.lastHit == 0 || now-st.lastHit > standBreakWindow) {
-		st.lastHit = now
-		h.toTracking(players, st.eid, st.dim, st.x, st.z, attachproto.EntityStatus{EID: st.eid, Status: entityStatusStandWobble})
-		return
-	}
+	h.standHurt(players, st, dtPlayerAttack, t, false)
+}
+
+// breakStand removes a stand: brokenByPlayer drops the stand item (with its
+// name) and brokenByAnything the gear and the break sound; a creative or
+// bypassing kill drops nothing.
+func (h *hub) breakStand(players map[int32]*tracked, st *armorStand, standItem, gear bool) {
 	delete(h.armorStands, st.eid)
 	h.entityGone(players, st.dim, st.eid)
+	if !gear {
+		return
+	}
+	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
 	if !h.rules.EntityDrops {
 		return // gamerule entity_drops
 	}
-	if t == nil || t.gamemode != gmCreative {
+	if standItem {
 		// ArmorStand.brokenByPlayer: the item carries the stand's name.
 		if it := h.spawnItemIn(players, st.dim, itemArmorStand, 1, st.x, st.y+0.5, st.z); it != nil && st.name != "" {
 			it.name = st.name
@@ -223,5 +231,4 @@ func (h *hub) hitStand(players map[int32]*tracked, t *tracked, st *armorStand) {
 			}
 		}
 	}
-	h.playSoundDim(players, st.dim, "minecraft:entity.armor_stand.break", sndBlock, st.x, st.y, st.z, 1, 1)
 }

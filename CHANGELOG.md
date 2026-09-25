@@ -133,6 +133,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Armor stands can be destroyed like vanilla's.** Explosions break them
+  and drop what they wear; arrows, tridents, fireballs and wind charges
+  knock them down in one hit; fire and burning eat them away (lava sets
+  them alight, and they burn once out of it). Players in adventure mode
+  can no longer break them, and a mob's damage does nothing to them with
+  `mobGriefing` off.
 - **Item frames, paintings and lead knots behave like vanilla's.** They
   now fall when their wall goes whatever removed it — a piston, a blast,
   flowing water — not only a player. Explosions and any projectile break
