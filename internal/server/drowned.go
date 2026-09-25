@@ -86,32 +86,39 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 	}
 }
 
-// drownedThrow hurls a trident at the nearest huntable player on a cooldown
-// (mirrors skeletonShoot's cadence but a heavier, straighter shot).
+// drownedThrow is DrownedTridentAttackGoal (RangedAttackGoal(this, 1.0, 40,
+// 10)) with Drowned.performRangedAttack: a trident at the drowned's target
+// within 10 blocks — the player it hunts, or the villager, golem, axolotl
+// or baby turtle its other target goals picked — every 40 ticks it has
+// sight of it. The throw leaves 0.1 below the eyes, aims at a third of the
+// target's height with the 0.2 lob, and flies at 1.6 with the difficulty's
+// spread; it strikes for the thrown trident's 8.
 func (h *hub) drownedThrow(players map[int32]*tracked, m *mob) {
 	if m.attackCD > 0 {
 		m.attackCD--
 		return
 	}
-	t := h.nearestHuntable(players, m.dim, m.x, m.z, tridentRange)
-	if t == nil {
+	q, ok := h.rangedQuarry(players, m, tridentRange)
+	if !ok {
 		return
 	}
-	m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi) // face the throw
-	if !h.seeTimeTick(m, t, false) {
+	m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi) // face the throw
+	if !h.seesQuarry(m, q, false) {
 		return // RangedAttackGoal: no throw without line of sight
 	}
-	ox, oy, oz := m.x, m.y+1.4, m.z
-	dx, dy, dz := t.x-ox, (t.y+0.6)-oy, t.z-oz
+	ox, oy, oz := m.x, m.y+mobEyeHeight(m)-0.1, m.z
+	dx, dy, dz := q.x-ox, q.aimY-oy, q.z-oz
 	dy += math.Hypot(dx, dz) * 0.2 // gravity lob, like an arrow
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d < 1e-6 {
 		return
 	}
+	dev := 0.0172275 * float64(14-4*h.rules.Difficulty) // rangedAttackUncertainty
+	tri := func() float64 { return dev * (h.rng.Float64() - h.rng.Float64()) }
 	a := h.launchProjectileIn(players, entityTrident, m.dim, ox, oy, oz,
-		dx/d*arrowSpeed, dy/d*arrowSpeed, dz/d*arrowSpeed)
-	a.shooter, a.dmg = m.eid, 9 // vanilla thrown-trident damage
+		(dx/d+tri())*arrowSpeed, (dy/d+tri())*arrowSpeed, (dz/d+tri())*arrowSpeed)
+	a.shooter, a.dmg, a.mobShot = m.eid, tridentDamage, true // it can strike the mob it was thrown at
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	h.playSoundDim(players, m.dim, "minecraft:item.trident.throw", sndHostile, m.x, m.y, m.z, 1, 1)
-	m.attackCD = 19 // ≈40-tick cadence (mob-update counts 2 ticks each)
+	h.playSoundDim(players, m.dim, "minecraft:entity.drowned.shoot", sndHostile, m.x, m.y, m.z, 1, 1/(h.rng.Float32()*0.4+0.8))
+	m.attackCD = 19 // 40 ticks: 19 mob-updates of cooldown plus the throwing one
 }

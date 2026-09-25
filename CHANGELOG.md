@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Drowned throw tridents at villagers too.** A drowned holding a trident
+  only ever threw it at players, so one chasing a villager, an iron golem
+  or an axolotl never attacked it. It now throws at whatever it is
+  hunting, with vanilla's aim spread, sound and damage (8, not 9).
 - **Bogged and the wither shoot at vanilla speed.** A bogged now draws its
   bow as slowly as in vanilla (every three and a half seconds, two and a
   half on Hard) instead of at a skeleton's pace. The wither's middle head
