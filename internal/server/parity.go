@@ -27,8 +27,8 @@ var commandNames = []string{
 	"give", "gm", "help", "hud", "item", "kick", "kill", "list", "locate", "loot", "msg", "nether",
 	"pardon", "particle", "playsound", "plugin", "random", "recipe", "refresh",
 	"rescue", "ride", "rotate", "save-all", "save-off", "save-on", "say", "scoreboard", "setworldspawn", "spawnpoint",
-	"spreadplayers", "stop", "stopsound", "summon", "swing", "tag", "team", "teammsg", "teleport", "tellraw",
-	"tell", "time", "tm", "tp", "trigger", "version", "w", "weather", "where", "whitelist", "worldborder", "xp",
+	"spectate", "spreadplayers", "stop", "stopsound", "summon", "swing", "tag", "team", "teammsg", "teleport", "tellraw",
+	"tell", "tick", "time", "tm", "tp", "transfer", "trigger", "version", "w", "weather", "where", "whitelist", "worldborder", "xp",
 }
 
 // commandTreeBody is the Commands packet body sent at join.

@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -22,14 +23,15 @@ import (
 
 // customBossbar is one bar, in its saved form.
 type customBossbar struct {
-	Name    string   `json:"name"`
-	Visible bool     `json:"visible"`
-	Value   int      `json:"value"`
-	Max     int      `json:"max"`
-	Color   int32    `json:"color"`
-	Overlay int32    `json:"overlay"`
-	Flags   uint8    `json:"flags,omitempty"`
-	Players []string `json:"players,omitempty"` // UUIDs, online or not
+	Name     string          `json:"name"`
+	NameJSON json.RawMessage `json:"name_json,omitempty"` // the name as the component it was given
+	Visible  bool            `json:"visible"`
+	Value    int             `json:"value"`
+	Max      int             `json:"max"`
+	Color    int32           `json:"color"`
+	Overlay  int32           `json:"overlay"`
+	Flags    uint8           `json:"flags,omitempty"`
+	Players  []string        `json:"players,omitempty"` // UUIDs, online or not
 }
 
 var bossColours = []string{"pink", "blue", "red", "green", "yellow", "purple", "white"}
@@ -92,7 +94,9 @@ func normBossbarID(id string) (string, bool) {
 }
 
 func (b *customBossbar) addFrame(id string) attachproto.BossBar {
-	return bossBarAdd(bossbarUUID(id), b.Name, b.progress(), bossLook{b.Color, b.Overlay, b.Flags})
+	ev := bossBarAdd(bossbarUUID(id), b.Name, b.progress(), bossLook{b.Color, b.Overlay, b.Flags})
+	ev.TitleJSON = b.NameJSON
+	return ev
 }
 
 // viewers are the online players on the bar.
@@ -123,7 +127,7 @@ func (h *hub) bossbarUpdate(players map[int32]*tracked, id string, b *customBoss
 	if !b.Visible {
 		return
 	}
-	ev := attachproto.BossBar{UUID: bossbarUUID(id), Op: op, Title: b.Name, Color: b.Color, Overlay: b.Overlay, Flags: b.Flags}
+	ev := attachproto.BossBar{UUID: bossbarUUID(id), Op: op, Title: b.Name, TitleJSON: b.NameJSON, Color: b.Color, Overlay: b.Overlay, Flags: b.Flags}
 	for _, t := range h.bossbarViewers(players, b) {
 		t.p.trySendEv(ev)
 	}
@@ -193,6 +197,7 @@ func (h *hub) bossbarCommand(players map[int32]*tracked, t *tracked, args []stri
 			return why
 		}
 		b := &customBossbar{Name: name, Visible: true, Max: 100, Color: attachproto.BossWhite, Overlay: attachproto.BossProgress}
+		b.NameJSON, _ = componentJSON(strings.Join(args[2:], " "))
 		if h.rules.Bossbars == nil {
 			h.rules.Bossbars = map[string]*customBossbar{}
 		}
@@ -291,6 +296,7 @@ func (h *hub) bossbarSet(players map[int32]*tracked, t *tracked, id string, b *c
 			return "Nothing changed. That's already the name of this bossbar"
 		}
 		b.Name = name
+		b.NameJSON, _ = componentJSON(strings.Join(rest, " "))
 		h.bossbarUpdate(players, id, b, attachproto.BossBarTitle)
 		ok(fmt.Sprintf("Custom bossbar %s has been renamed", b.displayName()))
 	case "color":

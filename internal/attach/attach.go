@@ -453,6 +453,8 @@ func session(c net.Conn, cfg Config) {
 			}
 		case proto.MsgLatency:
 			actTo(remote, payload, proto.Latency{})
+		case proto.MsgTeleportToEntity:
+			actTo(remote, payload, proto.TeleportToEntity{})
 		case proto.MsgPlayerAbilities:
 			actTo(remote, payload, proto.PlayerAbilities{})
 		case proto.MsgPlayerLoaded:

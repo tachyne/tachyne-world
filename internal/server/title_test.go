@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -16,13 +17,14 @@ func TestTitleCommandBuildsTheFrame(t *testing.T) {
 		want attachproto.Title
 		bar  string
 	}{
-		{[]string{"@a", "title", "The", "End"}, attachproto.Title{Title: "The End"}, ""},
-		{[]string{"@a", "subtitle", "well", "done"}, attachproto.Title{Subtitle: "well done"}, ""},
+		{[]string{"@a", "title", `"The`, `End"`}, attachproto.Title{Title: "The End"}, ""},
+		{[]string{"@a", "subtitle", `{"text":"well`, `done"}`}, attachproto.Title{Subtitle: "well done"}, ""},
 		{[]string{"@a", "times", "10", "70", "20"}, attachproto.Title{FadeIn: 10, Stay: 70, FadeOut: 20}, ""},
-		{[]string{"@a", "title", "a  b"}, attachproto.Title{Title: "a  b"}, ""},
+		{[]string{"@a", "title", `"a  b"`}, attachproto.Title{Title: "a  b"}, ""},
+		{[]string{"@a", "title", "Hello"}, attachproto.Title{Title: "Hello"}, ""}, // a bare word is a string
 		{[]string{"@a", "clear"}, attachproto.Title{Clear: true}, ""},
 		{[]string{"@a", "reset"}, attachproto.Title{Clear: true, Reset: true}, ""},
-		{[]string{"@a", "actionbar", "watch", "out"}, attachproto.Title{}, "watch out"},
+		{[]string{"@a", "actionbar", `"watch`, `out"`}, attachproto.Title{}, "watch out"},
 	} {
 		h := newHub(world.New(1))
 		by := newPlayer(1, "op", [16]byte{})
@@ -50,7 +52,11 @@ func TestTitleCommandBuildsTheFrame(t *testing.T) {
 		if !ok {
 			t.Fatalf("%v: sent %T, want Title", tc.args, got[0])
 		}
-		if title != tc.want {
+		if (tc.want.Title != "") != (len(title.TitleJSON) > 0) || (tc.want.Subtitle != "") != (len(title.SubtitleJSON) > 0) {
+			t.Errorf("%v: the component should ride with the text: %+v", tc.args, title)
+		}
+		title.TitleJSON, title.SubtitleJSON = nil, nil
+		if !reflect.DeepEqual(title, tc.want) {
 			t.Errorf("%v: got %+v, want %+v", tc.args, title, tc.want)
 		}
 	}

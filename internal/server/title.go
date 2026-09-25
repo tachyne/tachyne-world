@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -42,13 +44,25 @@ func parseTitle(p *player, args []string) (evTitle, string) {
 		if rest == "" {
 			return evTitle{}, "Say what to show: /title " + target + " " + verb + " <text>"
 		}
+		// TitleCommand takes a ComponentArgument: JSON (or its SNBT-ish
+		// form), resolved for each viewer. Plain text stays for the
+		// renderers that draw strings.
+		raw, isComp := componentJSON(rest)
+		text := rest
+		if isComp {
+			if t, _, ok := parseTextComponent(rest); ok {
+				text = t
+			}
+		} else {
+			return evTitle{}, "Invalid chat component: " + rest
+		}
 		switch verb {
 		case "title":
-			ev.t.Title = rest
+			ev.t.Title, ev.t.TitleJSON = text, raw
 		case "subtitle":
-			ev.t.Subtitle = rest
+			ev.t.Subtitle, ev.t.SubtitleJSON = text, raw
 		default:
-			ev.actionBar = rest
+			ev.actionBar, ev.actionJSON = text, raw
 		}
 	case "clear":
 		ev.t.Clear = true
@@ -81,7 +95,8 @@ type evTitle struct {
 	// actionBar is the line above the hotbar, which is a chat message with a
 	// flag rather than a title packet — vanilla puts it under /title all the
 	// same, so this does too.
-	actionBar string
+	actionBar  string
+	actionJSON json.RawMessage
 }
 
 func (evTitle) isHubEvent() {}
@@ -89,10 +104,27 @@ func (evTitle) isHubEvent() {}
 func (h *hub) onTitle(players map[int32]*tracked, e evTitle) {
 	hit := 0
 	for _, t := range h.commandTargets(players, e.by.eid, e.target) {
+		// ComponentUtils.updateForEntity: selectors and scores resolve for
+		// each viewer.
+		resolve := func(raw json.RawMessage) json.RawMessage {
+			var tree any
+			d := json.NewDecoder(bytes.NewReader(raw))
+			d.UseNumber()
+			if len(raw) == 0 || d.Decode(&tree) != nil {
+				return raw
+			}
+			out, err := json.Marshal(h.resolveComponent(players, e.by.eid, t, tree, 0))
+			if err != nil {
+				return raw
+			}
+			return out
+		}
 		if e.actionBar != "" {
-			t.p.trySendEv(attachproto.Chat{Text: e.actionBar, ActionBar: true})
+			t.p.trySendEv(attachproto.Chat{Text: e.actionBar, Component: resolve(e.actionJSON), ActionBar: true})
 		} else {
-			t.p.trySendEv(e.t)
+			tt := e.t
+			tt.TitleJSON, tt.SubtitleJSON = resolve(e.t.TitleJSON), resolve(e.t.SubtitleJSON)
+			t.p.trySendEv(tt)
 		}
 		hit++
 	}

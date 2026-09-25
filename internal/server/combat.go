@@ -249,6 +249,9 @@ func (h *hub) meleeSwing(t *tracked, familyBonus float64) swing {
 // onAttack routes a player's melee hit (the evAttack event) to whatever
 // the target is.
 func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
+	if h.spectatorAttack(players, players[e.attacker], e.target) {
+		return // a spectator's click takes the camera, and nothing else
+	}
 	// A spear does not swing: the server ignores an attack with a
 	// piercing weapon in hand, and the jab is the STAB action. A
 	// gateway whose client only says "attack" still gets the jab.

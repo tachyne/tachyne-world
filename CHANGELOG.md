@@ -14,6 +14,15 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/tick.** Operators can query the tick rate, change it, freeze the game,
+  step a frozen game tick by tick, and sprint. Clients are told the state,
+  so they slow down, freeze and speed up with the server.
+- **/spectate and the spectator camera.** In spectator mode, clicking a mob
+  or player (or using `/spectate`) looks through its eyes, and shift brings
+  you back. Teleporting from the spectator hotbar menu works too.
+- **/transfer.** Operators can send players to another server.
+- **Styled titles and boss bars.** `/title` and `/bossbar` take JSON text,
+  so colours, bold and selectors show as they do in vanilla.
 - **Renamed containers keep their names.** A chest, barrel, shulker box,
   furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
   beacon, copper chest, banner, head or copper golem statue placed from an

@@ -264,6 +264,8 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evStatsReq{eid: p.eid})
 	case attachproto.PlayerAbilities:
 		h.post(evAbilities{eid: p.eid, flying: e.Flying})
+	case attachproto.TeleportToEntity:
+		h.post(evTeleportToEntity{eid: p.eid, uuid: e.UUID})
 	case attachproto.PlayerLoaded:
 		h.post(evClientLoaded{eid: p.eid})
 	case attachproto.Latency:
@@ -403,6 +405,14 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
 	case bundleClose:
 		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
+	case attachproto.Transfer:
+		send(attachproto.MsgTransfer, ev)
+	case attachproto.Camera:
+		send(attachproto.MsgCamera, ev)
+	case attachproto.TickingState:
+		send(attachproto.MsgTickingState, ev)
+	case attachproto.TickingStep:
+		send(attachproto.MsgTickingStep, ev)
 	case attachproto.Explode:
 		send(attachproto.MsgExplode, ev)
 	case attachproto.DamageEvent:

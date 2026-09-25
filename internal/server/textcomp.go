@@ -63,34 +63,9 @@ func parseTextComponent(arg string) (text string, why string, ok bool) {
 	if arg == "" {
 		return "", "", false
 	}
-	var v any
-	if err := json.Unmarshal([]byte(arg), &v); err != nil {
-		// SNBT: quote bare keys and bare-word values, 1b/0b booleans.
-		norm := snbtBareKey.ReplaceAllString(arg, `$1"$2":`)
-		for i := 0; i < 2; i++ { // overlapping matches need a second pass
-			norm = snbtByteBool.ReplaceAllStringFunc(norm, func(m string) string {
-				sub := snbtByteBool.FindStringSubmatch(m)
-				b := "false"
-				if sub[2] == "1" {
-					b = "true"
-				}
-				return sub[1] + b + sub[3]
-			})
-			norm = snbtBareValue.ReplaceAllStringFunc(norm, func(m string) string {
-				sub := snbtBareValue.FindStringSubmatch(m)
-				if snbtBareBool.MatchString(sub[2]) {
-					return m
-				}
-				return sub[1] + `"` + sub[2] + `"` + sub[3]
-			})
-		}
-		norm = strings.ReplaceAll(norm, `'`, `"`)
-		if err := json.Unmarshal([]byte(norm), &v); err != nil {
-			if strings.ContainsAny(arg, " {}[]\"',:") {
-				return "", "", false
-			}
-			v = arg // a bare word is a string
-		}
+	v, ok := componentValue(arg)
+	if !ok {
+		return "", "", false
 	}
 	var b strings.Builder
 	styled := false
@@ -186,4 +161,53 @@ func mergeStyle(st compStyle, c map[string]any) compStyle {
 		}
 	}
 	return out
+}
+
+// componentValue reads a ComponentArgument — JSON, or the SNBT-ish form
+// commands also accept, or a bare word — into its JSON value.
+func componentValue(arg string) (any, bool) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return nil, false
+	}
+	var v any
+	if err := json.Unmarshal([]byte(arg), &v); err != nil {
+		// SNBT: quote bare keys and bare-word values, 1b/0b booleans.
+		norm := snbtBareKey.ReplaceAllString(arg, `$1"$2":`)
+		for i := 0; i < 2; i++ { // overlapping matches need a second pass
+			norm = snbtByteBool.ReplaceAllStringFunc(norm, func(m string) string {
+				sub := snbtByteBool.FindStringSubmatch(m)
+				b := "false"
+				if sub[2] == "1" {
+					b = "true"
+				}
+				return sub[1] + b + sub[3]
+			})
+			norm = snbtBareValue.ReplaceAllStringFunc(norm, func(m string) string {
+				sub := snbtBareValue.FindStringSubmatch(m)
+				if snbtBareBool.MatchString(sub[2]) {
+					return m
+				}
+				return sub[1] + `"` + sub[2] + `"` + sub[3]
+			})
+		}
+		norm = strings.ReplaceAll(norm, `'`, `"`)
+		if err := json.Unmarshal([]byte(norm), &v); err != nil {
+			if strings.ContainsAny(arg, " {}[]\"',:") {
+				return nil, false
+			}
+			v = arg // a bare word is a string
+		}
+	}
+	return v, true
+}
+
+// componentJSON is componentValue as JSON text.
+func componentJSON(arg string) (json.RawMessage, bool) {
+	v, ok := componentValue(arg)
+	if !ok {
+		return nil, false
+	}
+	raw, err := json.Marshal(v)
+	return raw, err == nil
 }

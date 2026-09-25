@@ -62,6 +62,12 @@ func (s *Server) handleCommand(p *player, cmd string) {
 		s.cmdBug(p, fields[1:])
 	case "title":
 		s.cmdTitle(p, fields[1:])
+	case "tick":
+		s.cmdTick(p, fields[1:])
+	case "transfer":
+		s.cmdTransfer(p, fields[1:])
+	case "spectate":
+		s.cmdSpectate(p, fields[1:])
 	case "say":
 		if !s.isOp(p.name) { // SayCommand requires LEVEL_GAMEMASTERS
 			p.tell("You don't have permission to use /say.")

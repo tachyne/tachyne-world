@@ -289,6 +289,7 @@ type tracked struct {
 	sprinting  bool   // last reported sprint state (crit/knockback modifiers)
 	sneaking   bool   // shift held (shared flag 1: others see the crouch)
 	flying     bool   // Abilities.flying, from the client, kept only while it may fly
+	camera     int32  // ServerPlayer.camera: the entity a spectator looks through (0 = themselves)
 	loadUntil  uint64 // hasClientLoaded: until player_loaded or this tick, nothing hurts them
 	swimming   bool   // Player.updateSwimming (shared flag 4: others see the swim)
 	gamemode   int
@@ -430,6 +431,8 @@ type hub struct {
 	tick         atomic.Uint64 // world age (ticks); atomic so connections can read it
 	lastTick     atomic.Int64  // unix nanos of the last COMPLETED tick — the liveness heartbeat (health.go)
 	tickStats    tickHist      // recent tick durations for /debug/vars + the slow-tick log
+	ticks        tickState     // /tick: target rate, freeze, step, sprint (TickRateManager)
+	ticker       *time.Ticker  // the loop's tick clock, reset by /tick
 	dayTime      atomic.Uint64 // time of day (ticks); advances with tick, settable by /time
 
 	// owned reports whether this pod owns a chunk in a sharded world. nil means
@@ -1063,8 +1066,8 @@ func (h *hub) run() {
 	h.reconcileFurnaceBlocks()
 	h.repairMultiface()    // lichen/vines placed from the wrong default state
 	h.rescheduleRedstone() // dust left powered by a source that is no longer there
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
+	h.ticker = time.NewTicker(h.ticks.interval())
+	defer h.ticker.Stop()
 
 	players := map[int32]*tracked{}
 	h.playersRef = players // created once, never reassigned — facades read it on this goroutine
@@ -1090,7 +1093,10 @@ func (h *hub) run() {
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-h.ticker.C:
+			if !h.tickGate(players) {
+				continue // frozen: no simulation this tick
+			}
 			tickStart := time.Now()
 			h.phases.start(tickStart)
 			age := h.tick.Add(1) // world age; drives day/night
@@ -1233,6 +1239,7 @@ func (h *hub) run() {
 				h.updateEndPortalContact(players)
 				h.updateEndGateways(players) // step into a gateway → the outer islands
 				h.updateDragon(players)
+				h.updateCameras(players) // spectators ride along with their camera entity
 				h.tickDragonRespawn(players)
 				if age%20 == 0 {
 					h.updateDragonBar(players)
@@ -1610,6 +1617,8 @@ func (h *hub) run() {
 						}
 					}
 				}
+			case evTeleportToEntity:
+				h.teleportToEntity(players, players[e.eid], e.uuid)
 			case evClientLoaded:
 				if t := players[e.eid]; t != nil {
 					t.loadUntil = 0 // markClientLoaded
@@ -2311,6 +2320,9 @@ func (h *hub) run() {
 					if e.sneaking && !t.flying { // updatePlayerPose: a flier does not crouch
 						pose = poseSneaking
 					}
+					if e.sneaking && t.camera != 0 {
+						h.setCamera(t, 0) // ServerPlayer.tick: shift leaves the camera entity
+					}
 					h.toNearbyEv(players, t.dim, t.x, t.z, metaEv(poseMeta(t.p.eid, pose)))
 				}
 			case evStopSleep:
@@ -2569,8 +2581,9 @@ func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 			h.resendEffects(nt)  // …and the potion effects it was carrying
 		}
 	}
-	h.sendDefaultSpawn(nt)       // the compass's north, before anything else uses it
-	if isSurvival(nt.gamemode) { // sync the survival HUD (hearts/hunger)
+	h.sendDefaultSpawn(nt)             // the compass's north, before anything else uses it
+	nt.p.trySendEv(h.tickingStateEv()) // the tick rate and freeze the client predicts with
+	if isSurvival(nt.gamemode) {       // sync the survival HUD (hearts/hunger)
 		h.sendHealth(nt)
 	}
 	// The saved inventory goes to every player, in every game mode, as
