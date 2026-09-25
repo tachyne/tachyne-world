@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Forgiving the dead no longer tames zombified piglins and endermen.**
+  With the forgive-dead-players rule on, a zombified piglin or enderman
+  that had been after a player who died became a harmless wanderer for
+  good. It now just calms down, as in vanilla, and will fight again if
+  provoked.
 - **Zombified piglins hold a grudge the vanilla way.** Hit one and it stays
   angry for as long as it can see you and 20 to 39 seconds after, instead
   of a fixed time; it no longer turns on other players it was never angry

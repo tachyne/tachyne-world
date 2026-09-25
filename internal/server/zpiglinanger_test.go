@@ -62,3 +62,28 @@ func TestZombifiedPiglinGrudge(t *testing.T) {
 		t.Error("the attacking speed goes with the anger")
 	}
 }
+
+// forgive_dead_players: a zombified piglin whose quarry died calms down —
+// and is still a zombified piglin, ready to be provoked again, not a
+// peaceful wanderer.
+func TestZombifiedPiglinForgivesTheDeadAndStaysHostile(t *testing.T) {
+	h, players := preyFixture(t)
+	h.rules.ForgiveDead = true
+	a := survPlayer(h)
+	a.p.eid = 900
+	a.x, a.y, a.z = 2.5, 180, 0.5
+	players[a.p.eid] = a
+	zp := h.spawnHostileY(players, entityZombifiedPiglin, 0.5, 180, 0.5)
+	h.attackMob(players, a.p.eid, zp.eid)
+	h.deathForgiveness(players, a)
+	if zp.anger != 0 || zp.angryAt != 0 || zp.targetEID != 0 {
+		t.Fatalf("the grudge goes with the player: anger=%d angryAt=%d target=%d", zp.anger, zp.angryAt, zp.targetEID)
+	}
+	if !zp.hostile {
+		t.Fatal("a forgiving zombified piglin is still a monster")
+	}
+	h.attackMob(players, a.p.eid, zp.eid)
+	if zp.targetEID != a.p.eid {
+		t.Error("hit again, it takes the attacker for its target again")
+	}
+}

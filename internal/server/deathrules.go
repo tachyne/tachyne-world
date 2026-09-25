@@ -9,9 +9,13 @@ package server
 func (h *hub) deathForgiveness(players map[int32]*tracked, t *tracked) {
 	if h.rules.ForgiveDead && !h.rules.UniversalAnger { // universal anger holds the grudge past a death
 		for _, m := range h.mobs {
-			if m.hostile && m.targetEID == t.p.eid && m.dim == t.dim && neutralMob(m) {
-				m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
-				m.anger, m.targetEID = 0, 0
+			if m.hostile && (m.targetEID == t.p.eid || m.angryAt == t.p.eid) && m.dim == t.dim && neutralMob(m) {
+				if m.etype == entityZombifiedPiglin || m.etype == entityEnderman {
+					m.hasTarget = false // a monster calms down but stays one
+				} else {
+					m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
+				}
+				m.anger, m.targetEID, m.angryAt, m.zpHeld = 0, 0, 0, false
 			}
 		}
 	}
