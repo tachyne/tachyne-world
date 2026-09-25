@@ -24,18 +24,45 @@ func TestRaidWavesAndVictory(t *testing.T) {
 	if r == nil || r.numGroups != 5 {
 		t.Fatalf("normal raid should have 5 waves, got %+v", r)
 	}
+	// Raid(): the first wave waits out the 300-tick cooldown, the bar
+	// filling meanwhile.
+	if len(r.alive) != 0 {
+		t.Fatal("wave 1 came before the cooldown")
+	}
+	for i := 0; i < raidCooldownSecs-1; i++ {
+		h.updateRaids(players)
+	}
+	if p := h.raidProgress(r, 0); len(r.alive) != 0 || p < 0.9 {
+		t.Fatalf("near the end of the cooldown: %d raiders, bar %.2f", len(r.alive), p)
+	}
+	h.updateRaids(players)
 	if len(r.alive) == 0 {
 		t.Fatal("wave 1 should have spawned raiders")
 	}
-	// Clear every wave by killing all its raiders; the raid should end in victory.
-	for i := 0; i < 20 && h.raids[center] != nil; i++ {
+	// The bar is the raiders' health over the wave's.
+	if p := h.raidProgress(r, len(r.alive)); p != 1 {
+		t.Fatalf("a fresh wave's bar reads %.2f, want 1", p)
+	}
+	for eid := range r.alive {
+		h.mobs[eid].health /= 2
+	}
+	if p := h.raidProgress(r, len(r.alive)); p < 0.4 || p > 0.6 {
+		t.Fatalf("half-health raiders read %.2f", p)
+	}
+	// Clear every wave by killing all its raiders; the raid ends in victory:
+	// the bar says so for the celebration, then the raid is gone.
+	sawVictory := false
+	for i := 0; i < 400 && h.raids[center] != nil; i++ {
 		for eid := range h.raids[center].alive {
 			delete(h.mobs, eid) // simulate the raiders dying
 		}
 		h.updateRaids(players)
+		if rr := h.raids[center]; rr != nil && rr.title == "Raid - Victory" {
+			sawVictory = true
+		}
 	}
-	if h.raids[center] != nil {
-		t.Fatalf("raid should have ended after clearing all %d waves", r.numGroups)
+	if h.raids[center] != nil || !sawVictory {
+		t.Fatalf("raid over %v, victory shown %v", h.raids[center] == nil, sawVictory)
 	}
 }
 

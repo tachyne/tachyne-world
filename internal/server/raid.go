@@ -75,14 +75,22 @@ type raid struct {
 	idleTicks   int            // ticks with no player near
 	secsActive  int            // Raid.ticksActive, in the 1 Hz updates (48000 ticks = 2400)
 	lostLeft    int            // seconds the defeat bar still shows (0 = not lost)
+	wonLeft     int            // seconds the victory bar still shows (0 = not won)
+	cooldown    int            // seconds until the next wave (Raid.raidCooldownTicks / 20)
+	totalHealth float64        // the wave's raiders' health when they joined (Raid.totalHealth)
 	title       string         // the bar's current name
 }
 
 // raidTimeoutSecs is Raid.tick's 48000-tick limit, in 1 Hz updates.
 const raidTimeoutSecs = 48000 / 20
 
-// raidDefeatSecs is how long the defeat bar stays up (postRaidTicks ≥ 600).
+// raidDefeatSecs is how long the defeat bar stays up (postRaidTicks ≥ 600);
+// a victory celebrates as long (celebrationTicks).
 const raidDefeatSecs = 600 / 20
+
+// raidCooldownSecs is the pause before each wave (raidCooldownTicks 300), the
+// bar filling as it runs down.
+const raidCooldownSecs = 300 / 20
 
 // isVillage is ServerLevel.isVillage: a village point of interest (a bed,
 // a bell, a workstation) in the centre's section or one next to it.
@@ -162,7 +170,7 @@ func (h *hub) startRaidLevel(players map[int32]*tracked, center blockPos, omenLe
 		alive: map[int32]bool{}, shown: map[int32]bool{}}
 	r.uuid = raidUUID(center)
 	h.raids[center] = r
-	h.spawnWave(players, r)
+	r.cooldown = raidCooldownSecs // Raid(): the first wave waits too
 	h.broadcastChat(players, "A raid has begun!")
 	log.Printf("raid at (%d,%d): %d waves", center.x, center.z, r.numGroups)
 }
@@ -229,6 +237,13 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			}
 		}
 	}
+	// Raid.joinRaid: the bar measures the wave by its raiders' health.
+	r.totalHealth = 0
+	for eid := range r.alive {
+		if m := h.mobs[eid]; m != nil {
+			r.totalHealth += float64(m.health)
+		}
+	}
 }
 
 // raidRiderType picks the raider that mounts a ravager on a given wave, matching
@@ -267,6 +282,14 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 			}
 			continue
 		}
+		if r.wonLeft > 0 { // Raid.tick after a VICTORY: the celebration, then gone
+			h.showRaidBar(players, r, 0)
+			if r.wonLeft--; r.wonLeft == 0 {
+				h.endRaid(players, r)
+				delete(h.raids, center)
+			}
+			continue
+		}
 		// Raid.tick: a raid whose centre is no longer a village first moves to
 		// the nearest village section around it (the villagers' beds broken,
 		// the village still standing beside them)…
@@ -299,7 +322,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 			title = fmt.Sprintf("Raid - Raiders Remaining: %d", aliveN)
 		}
 		h.retitleRaid(players, r, title, aliveN)
-		h.showRaidBar(players, r, aliveN)
+		h.showRaidBar(players, r, h.raidProgress(r, aliveN))
 		if !h.anyPlayerNear(players, center, raidBarRange) {
 			if r.idleTicks++; r.idleTicks > raidNoPlayerTimeout {
 				h.endRaid(players, r)
@@ -314,7 +337,6 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 		}
 		if aliveN == 0 { // wave cleared
 			if r.wave >= r.numGroups && (r.omenLevel <= 1 || r.bonusDone) {
-				h.broadcastChat(players, "Victory! The raid has been defeated.")
 				// vanilla: everyone who helped (in the raid area) earns Hero of
 				// the Village — 48000 ticks (40 min) at the omen level's
 				// amplifier, which discounts villager trades via
@@ -325,9 +347,18 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 						h.incCustom(t, "raid_win", 1)
 					}
 				}
-				h.endRaid(players, r)
-				delete(h.raids, center)
-			} else {
+				// Raid - Victory, emptied, for the celebration.
+				r.wonLeft = raidDefeatSecs
+				h.retitleRaid(players, r, "Raid - Victory", 0)
+				h.showRaidBar(players, r, 0)
+			} else if r.cooldown == 0 && r.wave > 0 {
+				r.cooldown = raidCooldownSecs // the pause before the next wave
+			}
+		}
+		if aliveN == 0 && r.cooldown > 0 && r.wonLeft == 0 {
+			// raidCooldownTicks: the bar fills while it runs down, then the
+			// wave comes.
+			if r.cooldown--; r.cooldown == 0 {
 				h.spawnWave(players, r)
 			}
 		}
@@ -335,11 +366,7 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 }
 
 // showRaidBar sends/updates/removes the purple raid bar for nearby players.
-func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, aliveN int) {
-	frac := float32(0)
-	if r.waveSpawned > 0 {
-		frac = float32(aliveN) / float32(r.waveSpawned)
-	}
+func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, frac float32) {
 	title := r.title
 	if title == "" {
 		title = "Raid"
@@ -511,4 +538,23 @@ func (h *hub) applyRaidBuffs(m *mob, r *raid) {
 		}
 		set(enchSharpness, lvl)
 	}
+}
+
+// raidProgress is the bar: during the cooldown, how far it has run
+// ((300 - raidCooldownTicks) / 300); with raiders out, their health over the
+// wave's (Raid.updateBossbar).
+func (h *hub) raidProgress(r *raid, aliveN int) float32 {
+	if aliveN == 0 && r.cooldown > 0 {
+		return float32(raidCooldownSecs-r.cooldown) / raidCooldownSecs
+	}
+	if r.totalHealth <= 0 {
+		return 0
+	}
+	hp := 0.0
+	for eid := range r.alive {
+		if m := h.mobs[eid]; m != nil {
+			hp += float64(m.health)
+		}
+	}
+	return float32(math.Min(1, math.Max(0, hp/r.totalHealth)))
 }

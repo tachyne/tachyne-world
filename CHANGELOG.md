@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The raid bar behaves like vanilla's.** It now shows the raiders'
+  remaining health rather than a head count, fills up during the fifteen
+  seconds before each wave (the first included), and after a win reads
+  "Raid - Victory" for thirty seconds instead of a chat message.
 - **Lava creeps back slowly.** A lava flow that is filling back up now
   usually waits four times as long between steps, as in vanilla.
 - **The world border holds.** Past the world border you can no longer
