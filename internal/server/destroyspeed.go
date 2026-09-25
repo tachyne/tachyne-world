@@ -98,8 +98,11 @@ func (h *hub) destroyProgress(t *tracked, state uint32) float64 {
 	}
 	held := heldStack(t)
 	speed := itemMiningSpeed(held.item, state)
+	a := t.playerAttrs()
 	if speed > 1 {
-		speed += float64(efficiencyBonus(held)) // MINING_EFFICIENCY
+		// MINING_EFFICIENCY: Efficiency's level²+1 arrives as a modifier
+		// (refreshEnchantAttrs), and /attribute or a plugin can move it too.
+		speed += a.Value(attr.MiningEfficiency)
 	}
 	// MobEffectUtil.hasDigSpeed: Haste or Conduit Power, the stronger.
 	if dig := max(t.hasEffect(effHaste), t.hasEffect(effConduitPower)); dig > 0 {
@@ -110,10 +113,10 @@ func (h *hub) destroyProgress(t *tracked, state uint32) float64 {
 	}
 	// BLOCK_BREAK_SPEED multiplies whatever the tool and effects made of it
 	// (1 unless a command, an item or a plugin has changed it).
-	speed *= t.playerAttrs().Value(attr.BlockBreakSpeed)
-	// SUBMERGED_MINING_SPEED is 0.2 unless the helmet has Aqua Affinity.
-	if h.inWater(t.dim, t.x, t.y+1.62, t.z) && t.armor[0].enchLvl(enchAquaAffinity) == 0 {
-		speed *= 0.2
+	speed *= a.Value(attr.BlockBreakSpeed)
+	// SUBMERGED_MINING_SPEED: 0.2, which Aqua Affinity's modifier lifts to 1.
+	if h.inWater(t.dim, t.x, t.y+1.62, t.z) {
+		speed *= a.Value(attr.SubmergedMiningSpeed)
 	}
 	if !t.onGround {
 		speed /= 5

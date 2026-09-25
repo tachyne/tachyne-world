@@ -125,7 +125,7 @@ func (s *Server) handleDig(p *player, data []byte) {
 			// AUTHORITY: a Finish faster than the hardness allows (with generous
 			// tool + latency slack) is a fast-break cheat — revert, don't apply.
 			elapsed := int(s.hub.tick.Load() - p.digStartAt)
-			if p.digPos != (blockPos{x, y, z}) || elapsed < minDigTicks(broken, p.heldItem(), p.digBonus()) {
+			if p.digPos != (blockPos{x, y, z}) || elapsed < minDigTicks(broken, p.heldItem(), p.digBonus(), p.digMult()) {
 				s.sendBlockChange(p, x, y, z, broken, seq)
 				return
 			}

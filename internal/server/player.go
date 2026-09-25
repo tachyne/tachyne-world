@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"sync"
 	"sync/atomic"
 
@@ -56,11 +57,12 @@ type player struct {
 	// idle timeout (/setidletimeout) measures from it.
 	lastAction atomic.Int64
 
-	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
-	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch
-	leading        atomic.Int32 // mobs on this player's leads (hub → session): a fence click ties them
-	hmu            sync.Mutex   // guards hotbar (the hub mirrors the survival inventory in)
-	hotbar         [9]int32     // item id per hotbar slot (0 = empty)
+	digBonusMirror atomic.Uint64 // MINING_EFFICIENCY, as float64 bits (hub -> session)
+	digMultMirror  atomic.Uint64 // the dig-speed multipliers (Haste, BLOCK_BREAK_SPEED), float64 bits
+	offhandMirror  atomic.Int32  // the offhand's item id (setOffhand), for the use-item dispatch
+	leading        atomic.Int32  // mobs on this player's leads (hub → session): a fence click ties them
+	hmu            sync.Mutex    // guards hotbar (the hub mirrors the survival inventory in)
+	hotbar         [9]int32      // item id per hotbar slot (0 = empty)
 	// hotbarPaint carries the painting/variant component of a creative-menu
 	// painting preset per hotbar slot ("" = plain painting → random fit).
 	hotbarPaint [9]string
@@ -266,13 +268,24 @@ func (p *player) heldItem() int32 {
 func (p *player) setOffhand(item int32) { p.offhandMirror.Store(item) }
 func (p *player) offhandItem() int32    { return p.offhandMirror.Load() }
 
-// digBonus mirrors the Efficiency speed addend of the held tool onto the
-// SESSION side. The hub owns enchantments, but the fast-break check runs on
-// the session goroutine and would otherwise have to guess — and guessing with
-// a blanket multiplier cannot work, because Efficiency V on a wooden pickaxe
-// is a fourteen-fold speed-up while on netherite it is under four.
-func (p *player) setDigBonus(v int32) { p.digBonusMirror.Store(v) }
-func (p *player) digBonus() int32     { return p.digBonusMirror.Load() }
+// digBonus and digMult mirror the player's dig model onto the SESSION side:
+// the MINING_EFFICIENCY addend (Efficiency, or whatever else raised it) and
+// the multipliers Player.getDestroySpeed applies after it (Haste or Conduit
+// Power, and BLOCK_BREAK_SPEED). The hub owns effects and attributes, but the
+// fast-break check runs on the session goroutine and would otherwise have to
+// guess — and guessing cannot work: Efficiency V on a wooden pickaxe is a
+// fourteen-fold speed-up, and /effect can give Haste 255.
+func (p *player) setDigModel(bonus, mult float64) {
+	p.digBonusMirror.Store(math.Float64bits(bonus))
+	p.digMultMirror.Store(math.Float64bits(mult))
+}
+func (p *player) digBonus() float64 { return math.Float64frombits(p.digBonusMirror.Load()) }
+func (p *player) digMult() float64 {
+	if b := p.digMultMirror.Load(); b != 0 {
+		return math.Float64frombits(b)
+	}
+	return 1 // not yet mirrored
+}
 
 // handItem is the item in the hand a packet named (InteractionHand): the
 // selected hotbar slot's, or the offhand's.

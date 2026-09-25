@@ -142,6 +142,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fast digging is no longer undone.** Breaking blocks under Haste III
+  or stronger (from `/effect`), or with a raised block break speed, used
+  to have the broken block put back. Digging speed now also follows the
+  mining efficiency and underwater mining speed attributes, so
+  `/attribute` changes to them take effect.
 - **/recipe knows the cooking recipes by name.** `/recipe give` and `take`
   accept vanilla's cooking recipe names, such as
   `iron_ingot_from_smelting_raw_iron` or `cooked_beef_from_smoking`, where

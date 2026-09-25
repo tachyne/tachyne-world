@@ -1189,6 +1189,7 @@ func (h *hub) run() {
 			h.updateSleep(players)      // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
+				t.p.setDigModel(t.playerAttrs().Value(attr.MiningEfficiency), t.digSpeedMult())
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
 					h.sendInventory(t) // self-heal a dropped mode-switch inventory push
