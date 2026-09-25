@@ -67,7 +67,7 @@ func (h *hub) raidRecruitNearby(r *raid, m *mob) {
 			math.Abs(o.y-m.y) > raidRecruitRange || math.Abs(o.z-m.z) > raidRecruitRange {
 			continue
 		}
-		o.raidCenter = r.center
+		o.raidCenter, o.raidWave = r.center, r.wave
 		r.alive[o.eid] = true
 	}
 }

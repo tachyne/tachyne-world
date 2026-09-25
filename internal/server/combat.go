@@ -525,8 +525,8 @@ func (h *hub) killMob(players map[int32]*tracked, m *mob) {
 	m.dying = deathAnimTicks
 	m.vx, m.vz, m.panic = 0, 0, 0 // stop moving while it dies
 	h.settleKillCredit(players, m)
-	h.ominousOnMobDeath(players, m) // wind-charged, weaving and oozing are LivingEntity-wide
-	if m.patrolCaptain {            // entities/pillager: a raid captain's death drops its ominous bottle, however it died
+	h.ominousOnMobDeath(players, m)                // wind-charged, weaving and oozing are LivingEntity-wide
+	if m.etype == entityPillager && isCaptain(m) { // entities/pillager: a captain's death drops its ominous bottle, however it died
 		h.dropOminousBottle(players, m)
 	}
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusDeath))
@@ -573,9 +573,6 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	// Gamerule doMobLoot=false silences the roll entirely.
 	var drops []plugin.ItemStack
 	if h.rules.DoMobLoot { // gamerule doMobLoot=false silences the roll
-		if m.patrolCaptain { // the captain drops its ominous banner (raid trigger later)
-			drops = append(drops, plugin.ItemStack{Item: itemByName["white_banner"], Count: 1})
-		}
 		// Picked-up gear drops in full (vanilla drops equipped loot at 100%);
 		// gear issued at spawn (ominous trial mobs) never does.
 		// An enchanted piece drops as itself (the plugin drop list carries

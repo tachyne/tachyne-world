@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Every raid wave has a banner-carrying captain.** As in vanilla, the
+  first raider of each wave that can lead wears the ominous banner, and
+  everyone who comes into view later sees it too. A pillager captain still
+  drops an ominous bottle; a vindicator captain drops only its banner.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point

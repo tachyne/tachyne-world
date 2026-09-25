@@ -187,6 +187,7 @@ type savedMob struct {
 	LastStock  uint64       `json:"lrst,omitempty"` // villager: tick of the last one
 	Offers     []savedOffer `json:"offers,omitempty"`
 	Raid       [3]int       `json:"raid,omitempty"`    // raider: the raid centre it belongs to
+	RaidWave   int          `json:"rwave,omitempty"`   // raider: the wave it came with
 	Gossip     gossipBook   `json:"gossip,omitempty"`  // villager: what it holds about each player
 	Converting int          `json:"conv,omitempty"`    // zombie villager: cure ticks left
 	Charged    bool         `json:"charged,omitempty"` // creeper: struck by lightning
@@ -801,6 +802,7 @@ func toSavedMob(m *mob) savedMob {
 		}
 	}
 	sm.Raid = packPos(m.raidCenter)
+	sm.RaidWave = m.raidWave
 	for _, o := range m.offers {
 		sm.Offers = append(sm.Offers, packOffer(o))
 	}

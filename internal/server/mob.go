@@ -179,6 +179,7 @@ type mob struct {
 	digClock                        int         // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain                   bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
+	raidWave                        int         // raider: the wave it came with (Raider.wave)
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
 	hopTicks                        int         // slime: updates left mid-bound (traveling)
 	hopDelay                        int         // slime: updates until the next bound (grounded, still)
