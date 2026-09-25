@@ -12,10 +12,30 @@ import (
 func buildWitherFrame(w *world.World, cx, topY, cz int) {
 	skull := worldgen.BlockBase("wither_skeleton_skull") + 16 // default
 	for j := -1; j <= 1; j++ {
-		w.SetBlock(cx+j, topY-1, cz, blockSoulSand) // arms
-		w.SetBlock(cx+j, topY, cz, skull)           // skulls
+		w.SetBlock(cx+j, topY-1, cz, worldgen.SoulSand) // arms
+		w.SetBlock(cx+j, topY, cz, skull)               // skulls
 	}
-	w.SetBlock(cx, topY-2, cz, blockSoulSand) // stem
+	w.SetBlock(cx, topY-2, cz, worldgen.SoulSand) // stem
+	w.SetBlock(cx-1, topY-2, cz, worldgen.Air)    // the pattern's empty corners
+	w.SetBlock(cx+1, topY-2, cz, worldgen.Air)
+}
+
+// The base may be soul soil as well as soul sand (#wither_summon_base_blocks),
+// and a block in either bottom corner spoils the pattern.
+func TestWitherPatternBaseAndCorners(t *testing.T) {
+	w := world.New(1)
+	cx, cy, cz := 5, 70, 5
+	buildWitherFrame(w, cx, cy, cz)
+	soil := worldgen.BlockBase("soul_soil")
+	w.SetBlock(cx, cy-1, cz, soil)
+	w.SetBlock(cx, cy-2, cz, soil)
+	if !witherPatternAt(w, cx, cy, cz, [2]int{1, 0}) {
+		t.Fatal("a soul soil frame was not accepted")
+	}
+	w.SetBlock(cx+1, cy-2, cz, worldgen.Stone)
+	if witherPatternAt(w, cx, cy, cz, [2]int{1, 0}) {
+		t.Fatal("a frame with a filled corner was accepted")
+	}
 }
 
 func TestWitherBuildSpawns(t *testing.T) {
@@ -82,7 +102,7 @@ func TestNonSkullDoesNotSpawnWither(t *testing.T) {
 	players := map[int32]*tracked{}
 	buildWitherFrame(w, 5, 70, 5)
 	// A non-skull placement (e.g. soul sand) must not trigger the build.
-	h.checkWitherBuild(players, 0, 0, 6, 70, 5, blockSoulSand)
+	h.checkWitherBuild(players, 0, 0, 6, 70, 5, worldgen.SoulSand)
 	for _, m := range h.mobs {
 		if m.etype == entityWither {
 			t.Fatal("only a wither skull completes the build")

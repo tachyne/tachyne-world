@@ -23,6 +23,13 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Soul fire.** Flint and steel, a fire charge, or fire spreading onto
+  soul sand or soul soil now lights blue soul fire, as in vanilla; before,
+  only a flaming arrow did. Soul fire goes out when the block under it is
+  removed.
+- **Summon the Wither on soul soil.** The Wither's T can be built from
+  soul soil as well as soul sand, and, as in vanilla, the two spaces
+  beside the bottom block must be empty.
 - **Wool hides you from sculk.** As in vanilla, a wool block between a
   sound and a sculk sensor, shrieker or Warden now stops the vibration;
   placing or breaking wool (and wool carpets, slabs and stairs) makes none,

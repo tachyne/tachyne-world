@@ -20,7 +20,6 @@ const (
 )
 
 var (
-	blockSoulSand  = worldgen.BlockBase("soul_sand")                  // minecraft:soul_sand
 	witherSkullMin = worldgen.BlockBase("wither_skeleton_skull")      // wither_skeleton_skull (floor) rotations…
 	witherSkullMax = worldgen.BlockBase("wither_skeleton_skull") + 31 // …end of the floor-skull range
 )
@@ -48,17 +47,21 @@ func (h *hub) checkWitherBuild(players map[int32]*tracked, by int32, dim, px, py
 	}
 }
 
-// witherPatternAt checks the full structure centred on (cx, topY, cz): three
-// skulls in the top row, three soul sand beneath them (the arms), and one more
-// soul sand under the centre (the stem).
+// witherPatternAt checks the full structure centred on (cx, topY, cz)
+// (WitherSkullBlock's "^^^", "###", "~#~"): three skulls in the top row,
+// three #wither_summon_base_blocks (soul sand or soul soil) beneath them,
+// one more under the centre, and air in the two bottom corners.
 func witherPatternAt(w *world.World, cx, topY, cz int, ax [2]int) bool {
 	for j := -1; j <= 1; j++ {
 		x, z := cx+j*ax[0], cz+j*ax[1]
-		if !isWitherSkull(w.At(x, topY, z)) || w.At(x, topY-1, z) != blockSoulSand {
+		if !isWitherSkull(w.At(x, topY, z)) || !soulFireBase(w.At(x, topY-1, z)) {
+			return false
+		}
+		if c := w.At(x, topY-2, z); j != 0 && c != worldgen.Air && c != caveAirState && c != voidAirState {
 			return false
 		}
 	}
-	return w.At(cx, topY-2, cz) == blockSoulSand
+	return soulFireBase(w.At(cx, topY-2, cz))
 }
 
 // spawnWitherFrom clears the structure and spawns a charging wither at its base.
