@@ -104,3 +104,28 @@ func TestFrogLaysSpawnThatHatches(t *testing.T) {
 		t.Fatalf("a clutch hatches two to five tadpoles, got %d", tadpoles)
 	}
 }
+
+// entities/slime's frog branch: a small slime a frog eats leaves exactly
+// one slime ball.
+func TestFrogEatenSlimeDropsOneBall(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.rules.DoMobLoot = true
+	frog := h.spawnSpecies(players, entityFrog, 0, 0.5, 70, 0.5)
+	slime := h.spawnSpecies(players, entitySlime, 0, 1.5, 70, 0.5)
+	slime.size, slime.y, frog.y = 1, 70, 70
+	h.frogEat(players, frog, slime)
+	slime.dying = 1
+	before := len(h.items)
+	h.despawnMob(players, slime)
+	balls := 0
+	for _, it := range h.items {
+		if it.item == itemByName["slime_ball"] {
+			balls += it.count
+		}
+	}
+	if balls != 1 || len(h.items) != before+1 {
+		t.Fatalf("a frog-eaten slime should drop one slime ball, got %d (%d items)", balls, len(h.items)-before)
+	}
+}

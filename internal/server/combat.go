@@ -625,9 +625,14 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 		if m.frogEaten > 0 {
 			// Eaten by a frog (the magma_cube loot table's frog branch): a
 			// magma cube becomes the froglight of the frog's variant, and
-			// nothing else — no slime, no magma cream.
-			if m.etype == entityMagmaCube {
+			// nothing else — no slime, no magma cream. The slime table's
+			// frog branch (size 1 only, the size frogs eat) is exactly one
+			// slime ball.
+			switch {
+			case m.etype == entityMagmaCube:
 				drops = append(drops, plugin.ItemStack{Item: froglightFor(int32(m.frogEaten - 1)), Count: 1})
+			case m.etype == entitySlime && m.size == 1:
+				drops = append(drops, plugin.ItemStack{Item: itemByName["slime_ball"], Count: 1})
 			}
 		} else if loot, _ := deathDropsAllowed(m); loot { // LivingEntity.shouldDropLoot
 			// Data-driven entity table (looting, killed-by-player, cooked-on-fire)

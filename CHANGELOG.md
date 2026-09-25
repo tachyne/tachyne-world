@@ -102,6 +102,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Frogs leave a slime ball.** A small slime eaten by a frog now drops a
+  slime ball, as in vanilla; it used to vanish without a trace.
 - **Tall grass drops seeds from either half.** Breaking the top half of
   tall grass or a large fern can now drop wheat seeds too, as in vanilla;
   a plant whose two halves come down together still rolls only once.
