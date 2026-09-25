@@ -88,6 +88,17 @@ func (h *hub) paintingFits(dim, x, y, z int, dir int32, w, hgt int) bool {
 			return false
 		}
 	}
+	// canCoexist(false): an item frame hung the same way on the canvas.
+	for _, f := range h.itemFrames {
+		if f.dim != dim || f.dir != dir {
+			continue
+		}
+		for _, c := range paintingCells(x, y, z, w, hgt, facing) {
+			if c == [3]int{f.x, f.y, f.z} {
+				return false
+			}
+		}
+	}
 	for _, other := range h.paintings {
 		if other.dim != dim {
 			continue
@@ -200,11 +211,14 @@ func paintingMetaBody(pt *painting) []byte {
 func (h *hub) breakPainting(players map[int32]*tracked, pt *painting, by *tracked) {
 	delete(h.paintings, pt.eid)
 	h.toDimEv(players, pt.dim, entGone(pt.eid))
-	if by == nil || by.gamemode != gmCreative {
-		h.spawnItemIn(players, pt.dim, itemPainting, 1, float64(pt.x)+0.5, float64(pt.y)+0.5, float64(pt.z)+0.5)
+	if !h.rules.EntityDrops {
+		return // Painting.dropItem: with entity_drops off, neither the item nor the sound
 	}
 	h.playSoundDim(players, pt.dim, "minecraft:entity.painting.break", sndBlock,
 		float64(pt.x)+0.5, float64(pt.y)+0.5, float64(pt.z)+0.5, 1, 1)
+	if by == nil || by.gamemode != gmCreative {
+		h.spawnItemIn(players, pt.dim, itemPainting, 1, float64(pt.x)+0.5, float64(pt.y)+0.5, float64(pt.z)+0.5)
+	}
 }
 
 // paintingsOnBlockChange pops any painting the edit invalidated — vanilla

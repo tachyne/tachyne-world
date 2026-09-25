@@ -77,6 +77,17 @@ func (h *hub) frameFits(dim, x, y, z int, dir int32, ignore int32) bool {
 			return false
 		}
 	}
+	// canCoexist(true): a painting hung the same way over the same cell.
+	for _, pt := range h.paintings {
+		if pt.dim != dim || pt.dir != dir {
+			continue
+		}
+		for _, c := range paintingCells(pt.x, pt.y, pt.z, pt.w, pt.h, faceName(pt.dir)) {
+			if c == [3]int{x, y, z} {
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -150,7 +161,7 @@ func (h *hub) onPlaceFrame(players map[int32]*tracked, e evPlaceFrame) {
 		dir: e.dir, glow: e.glow}
 	h.itemFrames[f.eid] = f
 	h.showFrame(players, f)
-	h.playSoundDim(players, t.dim, "minecraft:entity.item_frame.place", sndPlayer,
+	h.playSoundDim(players, t.dim, frameSound(f, "place"), sndPlayer,
 		float64(e.x), float64(e.y), float64(e.z), 1, 1)
 	if t.gamemode != gmCreative {
 		if sl := t.handStack(int(e.slot)); sl != nil && sl.count > 0 { // the hand it was hung from
@@ -184,11 +195,11 @@ func (h *hub) interactFrame(players map[int32]*tracked, t *tracked, f *itemFrame
 			t.inv.slots[slot] = st
 			h.sendSlot(t, slot)
 		}
-		h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.add_item", sndPlayer,
+		h.playSoundDim(players, f.dim, frameSound(f, "add_item"), sndPlayer,
 			float64(f.x), float64(f.y), float64(f.z), 1, 1)
 	} else {
 		f.rot = (f.rot + 1) % 8
-		h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.rotate_item", sndPlayer,
+		h.playSoundDim(players, f.dim, frameSound(f, "rotate_item"), sndPlayer,
 			float64(f.x), float64(f.y), float64(f.z), 1, 1)
 	}
 	h.toNearbyEv(players, f.dim, float64(f.x), float64(f.z), metaEv(frameMetaBody(f)))
@@ -212,14 +223,11 @@ func (h *hub) hitFrame(players map[int32]*tracked, attacker *tracked, f *itemFra
 		f.held = invStack{}
 		f.rot = 0
 		h.markFrameMapsDirty(f)
-		if !creative {
-			if it := h.spawnItemIn(players, f.dim, dropped.item, dropped.count,
-				float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5); it != nil {
-				it.dmg, it.ench, it.mapID = dropped.dmg, dropped.ench, dropped.mapID
-			}
+		if !creative && h.rules.EntityDrops {
+			h.dropFramed(players, f, dropped)
 		}
 		h.toNearbyEv(players, f.dim, float64(f.x), float64(f.z), metaEv(frameMetaBody(f)))
-		h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.remove_item", sndPlayer,
+		h.playSoundDim(players, f.dim, frameSound(f, "remove_item"), sndPlayer,
 			float64(f.x), float64(f.y), float64(f.z), 1, 1)
 		h.frameOutputChanged(players, f)
 		return
@@ -238,16 +246,23 @@ func (h *hub) breakFrame(players map[int32]*tracked, f *itemFrame, creative bool
 		}
 		h.spawnItemIn(players, f.dim, frameItem, 1, float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5)
 		if f.held.count > 0 {
-			if it := h.spawnItemIn(players, f.dim, f.held.item, f.held.count,
-				float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5); it != nil {
-				it.dmg, it.ench, it.mapID = f.held.dmg, f.held.ench, f.held.mapID
-			}
+			h.dropFramed(players, f, f.held)
 		}
 	}
 	h.markFrameMapsDirty(f)
-	h.playSoundDim(players, f.dim, "minecraft:entity.item_frame.break", sndPlayer,
+	h.playSoundDim(players, f.dim, frameSound(f, "break"), sndPlayer,
 		float64(f.x), float64(f.y), float64(f.z), 1, 1)
 	h.frameOutputChanged(players, f)
+}
+
+// dropFramed drops the framed stack whole — its name, potion, trim, map,
+// bundle, everything a stack carries.
+func (h *hub) dropFramed(players map[int32]*tracked, f *itemFrame, st invStack) {
+	if it := h.spawnItemIn(players, f.dim, st.item, st.count,
+		float64(f.x)+0.5, float64(f.y)+0.5, float64(f.z)+0.5); it != nil {
+		it.setFrom(st)
+		h.refreshItemMeta(players, it)
+	}
 }
 
 // framesOnBlockChange pops frames whose support vanished (checked on every

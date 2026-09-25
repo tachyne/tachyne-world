@@ -133,6 +133,15 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Item frames, paintings and lead knots behave like vanilla's.** They
+  now fall when their wall goes whatever removed it — a piston, a blast,
+  flowing water — not only a player. Explosions and any projectile break
+  them (an arrow knocks a framed item out first), unless a mob did it
+  with `mobGriefing` off. Punching a lead knot unties every animal on it.
+  A painting can't be hung over an item frame facing the same way. Framed
+  items drop back whole with their name and everything else, glow item
+  frames make their own sounds, and paintings and dropped leads respect
+  `entityDrops`. A happy ghast can be led from sixteen blocks away.
 - **Eyes of ender fly like vanilla's.** A thrown eye now leaves from your
   middle, drifts up and toward the stronghold (at most twelve blocks at a
   time), passes through whatever is in the way instead of sticking in it

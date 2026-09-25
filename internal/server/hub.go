@@ -1176,22 +1176,23 @@ func (h *hub) run() {
 			if age%traderTickDelay == 0 {
 				h.traderSpawnerTick(players) // WanderingTraderSpawner: the twenty-minute roll
 			}
-			h.updateDragon(players)     // EnderDragon.aiStep: the fight's phases and flight, every tick
-			h.tickItems(players)        // item physics: gravity, sliding, floating, currents
-			h.publishBodies(players)    // the boxes a block placement must not overlap
-			h.tickShulkerLids(players)  // shulker box lids: neighbour updates and the push
-			h.pickupItems(players)      // collect dropped items into survival inventories
-			h.tickDigCracks(players)    // the cracks other players see on a dig
-			h.updateOrbs(players)       // collect experience orbs / expire old ones
-			h.updateRockets(players)    // firework rockets climb, boost gliders, pop
-			h.updateEyes(players)       // eyes of ender drift toward their stronghold
-			h.tickGliding(players)      // elytra wear: a point a second, and the glide ends with the wing
-			h.tickBoosts(players)       // a food-on-a-stick sprint runs down while its mount is ridden
-			h.expireSpyglass(players)   // a scope held to its full duration drops
-			h.updateEating(players)     // apply finished eat-holds (32-tick chew)
-			h.tickSpearCharges(players) // lowered spears strike what they run into
-			h.borderDamage(players)     // outside the world border hurts (players only)
-			h.updateSleep(players)      // turn the night once everyone's slept ~5s
+			h.updateDragon(players)        // EnderDragon.aiStep: the fight's phases and flight, every tick
+			h.tickItems(players)           // item physics: gravity, sliding, floating, currents
+			h.publishBodies(players)       // the boxes a block placement must not overlap
+			h.tickShulkerLids(players)     // shulker box lids: neighbour updates and the push
+			h.pickupItems(players)         // collect dropped items into survival inventories
+			h.tickDigCracks(players)       // the cracks other players see on a dig
+			h.updateOrbs(players)          // collect experience orbs / expire old ones
+			h.updateRockets(players)       // firework rockets climb, boost gliders, pop
+			h.updateEyes(players)          // eyes of ender drift toward their stronghold
+			h.hangingSurvivalTick(players) // frames, paintings, knots: survives() every hundred ticks
+			h.tickGliding(players)         // elytra wear: a point a second, and the glide ends with the wing
+			h.tickBoosts(players)          // a food-on-a-stick sprint runs down while its mount is ridden
+			h.expireSpyglass(players)      // a scope held to its full duration drops
+			h.updateEating(players)        // apply finished eat-holds (32-tick chew)
+			h.tickSpearCharges(players)    // lowered spears strike what they run into
+			h.borderDamage(players)        // outside the world border hurts (players only)
+			h.updateSleep(players)         // turn the night once everyone's slept ~5s
 			for _, t := range players {
 				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
