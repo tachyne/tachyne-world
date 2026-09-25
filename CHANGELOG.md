@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Raiders celebrate a raid they win.** When a raid is lost because the
+  village is gone, its surviving raiders no longer march on; with nobody
+  left to fight they cheer, raise their arms and jump about, as in vanilla,
+  until the raid is over.
 - **Every raid wave has a banner-carrying captain.** As in vanilla, the
   first raider of each wave that can lead wears the ominous banner, and
   everyone who comes into view later sees it too. A pillager captain still
