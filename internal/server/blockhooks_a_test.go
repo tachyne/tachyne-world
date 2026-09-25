@@ -791,3 +791,23 @@ func TestPlateReleasesOnItsOwnCadence(t *testing.T) {
 		t.Error("the plate should release at its 20-tick re-check")
 	}
 }
+
+// ShulkerBoxBlock.canOpen tests the lid's room only while the lid is
+// closed: a box already open opens for a second player whatever is in
+// front of it.
+func TestOpenShulkerOpensForASecondPlayer(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	box := withProps(t, worldgen.BlockBase("shulker_box"), map[string]string{"facing": "up"})
+	h.world.SetBlock(0, 180, 0, box)
+	h.world.SetBlock(0, 181, 0, worldgen.Stone)
+	pos := blockPos{0, 180, 0}
+	if !h.shulkerBlockedAt(0, pos, box) {
+		t.Fatal("a closed box under stone cannot open")
+	}
+	h.shulkerLids = map[simPos]*shulkerLid{{blockPos: pos}: {status: lidOpened, progress: 1}}
+	if h.shulkerBlockedAt(0, pos, box) {
+		t.Error("an open box opens for the next player")
+	}
+}
