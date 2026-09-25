@@ -68,3 +68,61 @@ func TestNoWorkAwayFromTheSite(t *testing.T) {
 		t.Fatal("no work outside working hours")
 	}
 }
+
+// A villager shows a nearby player what it would give for the thing in
+// their hand, holding the result up; a hand with nothing it wants gets
+// nothing shown, and walking off ends it.
+func TestVillagerShowsTrades(t *testing.T) {
+	h, v, players := farmerSetup(t)
+	h.world.ForceLoad(0, 0, 2)
+	h.dayTime.Store(1000) // idle: no job site to walk to
+	h.unlockTier(v, 1)
+	if len(v.offers) == 0 {
+		t.Fatal("a farmer should have tier-one offers")
+	}
+	want := v.offers[0]
+	var pl *tracked
+	for _, p := range players {
+		pl = p
+	}
+	pl.x, pl.y, pl.z = v.x+2, v.y, v.z
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: want.trade.inItem, count: 1}
+	step := func(n int) {
+		for i := 0; i < n; i++ {
+			h.tick.Add(mobMoveInterval)
+			h.updateMobs(players)
+			pl.x, pl.y, pl.z = v.x+2, v.y, v.z // keep beside it
+		}
+	}
+	step(3)
+	if !v.showTrades.showing || v.showTrades.player != pl.p.eid {
+		t.Fatalf("the villager should hold up a trade for %d: showing %v", want.trade.inItem, v.showTrades.showing)
+	}
+	found := false
+	for _, st := range v.showTrades.items {
+		if st.item == want.trade.outItem {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the offer's result %d should be among those shown", want.trade.outItem)
+	}
+	// Something it does not trade for: the hand goes empty.
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: int32(itemByName["dirt"]), count: 1}
+	step(2)
+	if v.showTrades.showing {
+		t.Fatal("dirt buys nothing: nothing should be shown")
+	}
+	// Back to the trade item, then walk away: the display ends.
+	pl.inv.slots[pl.p.heldSlot()] = invStack{item: want.trade.inItem, count: 1}
+	step(2)
+	if !v.showTrades.showing {
+		t.Fatal("the trade should be shown again")
+	}
+	pl.x = v.x + 10
+	h.tick.Add(mobMoveInterval)
+	h.updateMobs(players)
+	if v.showTrades.showing || v.showTrades.player != 0 {
+		t.Fatal("a player ten blocks off is no longer being shown anything")
+	}
+}

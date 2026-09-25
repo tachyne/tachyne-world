@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Villagers show you their trades.** Stand near a villager holding
+  something it trades for, and it turns to you and holds up what it would
+  give in return, cycling through when there are several offers, as in
+  vanilla.
 - **Villagers work at their job sites.** A villager at its workstation in
   working hours now gets on with its job every so often, with its trade's
   work sound. A farmer at its composter bakes bread from its wheat, takes
