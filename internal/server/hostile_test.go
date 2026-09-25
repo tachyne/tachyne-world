@@ -83,11 +83,12 @@ func TestDaylightBurnsHostiles(t *testing.T) {
 	lx, lz := h.findLand(0, 0) // open-sky surface column
 	m := h.spawnZombie(players, lx, lz)
 	m.health = burnDamagePerSec // one second of burn is lethal
-	m.burnDelay = 0             // skip the dawn-ramp stagger for the test
 	h.dayTime.Store(1000)       // daytime
 
-	h.updateHostiles(players) // relights the afterburn clock
-	h.mobEnvironment(players) // renders the flame + deals the burn damage
+	for i := 0; i < 30 && !m.burning; i++ { // the sun rolls each tick
+		h.updateHostiles(players) // relights the afterburn clock
+		h.mobEnvironment(players) // renders the flame + deals the burn damage
+	}
 	if !m.burning {
 		t.Fatal("daylight burn must set the visible fire flag")
 	}
@@ -106,11 +107,12 @@ func TestBurnFlagClearsUnderCoverAndAtNight(t *testing.T) {
 	players[1] = pl
 	lx, lz := h.findLand(0, 0)
 	m := h.spawnZombie(players, lx, lz)
-	m.burnDelay = 0
 	m.health = 100        // survive long enough to observe the afterburn
 	h.dayTime.Store(1000) // daytime
-	h.updateHostiles(players)
-	h.mobEnvironment(players)
+	for i := 0; i < 30 && !m.burning; i++ {
+		h.updateHostiles(players)
+		h.mobEnvironment(players)
+	}
 	if !m.burning {
 		t.Fatal("should be burning in the open at day")
 	}
@@ -136,12 +138,70 @@ func TestBurnFlagClearsUnderCoverAndAtNight(t *testing.T) {
 	if m.health != before {
 		t.Fatal("a cool mob under cover should take no burn damage")
 	}
-	// Night puts out any straggler still flagged as burning.
+	// A burnt-out straggler still flagged as burning is put out.
 	m.burning, m.fireSecs = true, 0
 	h.dayTime.Store(nightStart + 100)
 	h.mobEnvironment(players)
 	if m.burning {
-		t.Fatal("nightfall should clear the fire flag")
+		t.Fatal("a spent afterburn should clear the fire flag")
+	}
+}
+
+// TestNightKeepsAMobAlight: nightfall does not douse a mob set alight by
+// lava or Fire Aspect; the old once-a-second night branch cleared the flag
+// and mobEnvironment set it again, so the flame flickered.
+func TestNightKeepsAMobAlight(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{1: testTracked()}
+	h.world.ForceLoad(0, 0, 2)
+	for x := -1; x <= 1; x++ {
+		for z := -1; z <= 1; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	m := h.spawnHostileY(players, entityZombie, 0.5, 180, 0.5)
+	m.health = 100
+	h.dayTime.Store(18000) // midnight
+	m.ignite(8)
+	h.mobEnvironment(players)
+	for i := 0; i < 5; i++ {
+		h.updateHostiles(players)
+		if !m.burning {
+			t.Fatalf("second %d: night cleared a burning mob's flame (fireSecs=%d)", i, m.fireSecs)
+		}
+		h.mobEnvironment(players)
+	}
+}
+
+// TestSunBurnSkipsWetMobs: isSunBurnTick reads the light at the eyes,
+// and a wet mob never rolls: a drowned standing in open water never
+// ignites at noon, and MONSTERS_BURN follows the overworld timeline.
+func TestSunBurnSkipsWetMobs(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{1: testTracked()}
+	h.world.ForceLoad(0, 0, 2)
+	for x := -2; x <= 2; x++ {
+		for z := -2; z <= 2; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y < 200; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	h.world.SetBlock(0, 180, 0, worldgen.Water)
+	h.world.SetBlock(0, 181, 0, worldgen.Water)
+	d := h.spawnHostileY(players, entityDrowned, 0.5, 180, 0.5)
+	d.health = 100
+	h.dayTime.Store(6000)
+	for i := 0; i < 40; i++ {
+		h.updateHostiles(players)
+		if d.fireSecs > 0 {
+			t.Fatal("a drowned standing in open water must not catch fire (isInWaterOrRain)")
+		}
+		h.mobEnvironment(players)
+	}
+	if !monstersBurn(6000) || monstersBurn(12600) || !monstersBurn(23500) || monstersBurn(23400) {
+		t.Fatal("MONSTERS_BURN keyframes are 12542 off, 23460 on")
 	}
 }
 

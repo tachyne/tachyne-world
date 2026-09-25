@@ -188,13 +188,12 @@ func (h *hub) allayThrow(players map[int32]*tracked, m *mob, x, y, z float64) {
 	m.allayPickupCD = allayPickupCD
 }
 
-// jukeboxPlayingNear: a jukebox with a disc running within 16 blocks.
+// jukeboxPlayingNear: a jukebox with a disc running within 16 blocks, in
+// the allay's own dimension — any dimension, as vanilla's JUKEBOX_PLAY
+// game event reaches listeners wherever it plays.
 func (h *hub) jukeboxPlayingNear(m *mob) bool {
-	if m.dim != 0 {
-		return false
-	}
 	for pos, jb := range h.jukeboxes {
-		if jb.started == 0 {
+		if jb.started == 0 || pos.dim != m.dim {
 			continue
 		}
 		if dist3(float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, m.x, m.y, m.z) <= allayHearRange {

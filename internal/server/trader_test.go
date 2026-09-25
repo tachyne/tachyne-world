@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // TestWanderingTrader: every listing names a real item; a spawn puts a
@@ -173,5 +174,88 @@ func TestTraderPoolsMatchVanilla(t *testing.T) {
 	}
 	if !sawPotion {
 		t.Error("the Invisibility bottle never came up in 80 rolls")
+	}
+}
+
+// TraderLlama: a trader llama goes for zombies and illagers it can see,
+// and for whatever mob hurt its trader — not only a player.
+func TestTraderLlamaTargets(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	pl.x, pl.y, pl.z = 40, 180, 40
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 2)
+	for x := -12; x <= 12; x++ {
+		for z := -12; z <= 12; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y < 184; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+		}
+	}
+	tr := h.spawnSpecies(players, entityWanderingTrader, 0, 0.5, 180, 0.5)
+	l := h.spawnSpecies(players, entityTraderLlama, 0, 2.5, 180, 0.5)
+	l.leash = tr.eid
+	z := h.spawnHostileY(players, entityZombie, 10.5, 180, 0.5)
+	for i := 0; i < 100 && l.llamaWolf == 0; i++ {
+		h.llamaWolfTick(players, l)
+	}
+	if l.llamaWolf != z.eid {
+		t.Fatalf("a trader llama should target a zombie in view, got %d", l.llamaWolf)
+	}
+	h.removeMob(players, z)
+	l.llamaWolf = 0
+	p := h.spawnHostileY(players, entityPillager, -10.5, 180, 0.5)
+	p.x = -10.5
+	h.gridDirty()
+	h.mobHurtByMob(players, tr, p)
+	if l.llamaWolf != p.eid {
+		t.Fatalf("a mob that hurts the trader becomes its llamas' target, got %d", l.llamaWolf)
+	}
+}
+
+// WanderingTraderSpawner sends the trader to the nearest bell (setWanderTarget)
+// and homes it there (setHomeTo 16); WanderToPositionGoal walks it over at
+// 0.35 until within two, and MoveTowardsRestrictionGoal brings it back
+// inside its home.
+func TestTraderWandersToTheBell(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.world.ForceLoad(0, 0, 3)
+	bell := blockPos{20, int(h.world.SurfaceY(20, 0)), 0}
+	h.world.SetBlock(bell.x, bell.y, bell.z, bellDefault)
+	pl.x, pl.y, pl.z = 0.5, float64(h.world.SurfaceY(0, 0)), 0.5
+	var tr *mob
+	for i := 0; i < 500 && tr == nil; i++ {
+		if h.traderSpawn(players) {
+			for _, m := range h.mobs {
+				if m.etype == entityWanderingTrader {
+					tr = m
+				}
+			}
+		}
+	}
+	if tr == nil {
+		t.Skip("no spawnable ground about the fixture")
+	}
+	if !tr.traderWandering || tr.traderWander != bell || tr.homePos != bell || tr.homeR != traderHomeRadius {
+		t.Fatalf("the trader is sent to and homed at the bell: wander %v (%v) home %v r%d", tr.traderWander, tr.traderWandering, tr.homePos, tr.homeR)
+	}
+	tr.x, tr.z = float64(bell.x)-10.5, float64(bell.z)+0.5
+	if !h.traderWanderStep(tr) || tr.vx <= 0 {
+		t.Fatalf("it walks toward the bell: vx %v", tr.vx)
+	}
+	tr.x, tr.y, tr.z = float64(bell.x)+0.5, float64(bell.y), float64(bell.z)+1.5
+	if h.traderWanderStep(tr) || tr.traderWandering {
+		t.Fatal("within two of the bell it lets the point go")
+	}
+	tr.x = float64(bell.x) + 30.5
+	if !h.traderWanderStep(tr) || tr.vx >= 0 {
+		t.Fatal("outside its home it walks back in")
 	}
 }

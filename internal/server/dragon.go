@@ -57,6 +57,7 @@ func (h *hub) enterEnd(players map[int32]*tracked, arriving *tracked) {
 	// Built by hand (not spawnMobIn): its radius broadcast could reach the
 	// arriving player, whose copy must come from the view swap alone.
 	eid := h.allocEID()
+	h.reserveDragonPartEIDs()
 	m := &mob{eid: eid, etype: entityEnderDragon, dim: 2, health: dragonHealth,
 		behavior: idleBehavior{},
 		x:        0.5, y: float64(worldgen.EndSurfaceY + 25), z: 0.5,
@@ -125,6 +126,7 @@ func (h *hub) updateDragon(players map[int32]*tracked) {
 		m.yaw = float32(math.Atan2(dz, dx)*180/math.Pi) - 90
 	}
 	h.dragonInWall = h.dragonCheckWalls(players, m, sitting)
+	m.recordDragonFlight() // DragonFlightHistory: where the tail follows
 	// Contact damage to End players in reach — only while it is flying. A
 	// perched dragon is the fight's one safe window to hit its head, so it
 	// must not still be grinding anyone who stands next to it. Vanilla has

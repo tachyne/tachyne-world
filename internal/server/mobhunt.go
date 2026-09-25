@@ -104,7 +104,10 @@ func (h *hub) nearestHuntPrey(m *mob) (*mob, float64) {
 		if o == m || o.dying > 0 || !mobHuntPrey(m, o) {
 			return
 		}
-		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < bestD {
+		// Every one of these reads by sight: the zoglin's
+		// NEAREST_VISIBLE_LIVING_ENTITIES, the enderman's and Johnny's
+		// mustSee target goals.
+		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < bestD && h.mobSeesMob(m, o) {
 			target, bestD = o, d
 		}
 	})

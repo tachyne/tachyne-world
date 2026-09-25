@@ -110,6 +110,7 @@ type primedTNT struct {
 	onGround   bool
 	fuse       int
 	owner      int32 // who lit it (PrimedTnt.owner): a player or a mob, 0 for none
+	portalCool int   // ticks before it may take a portal again
 }
 
 // useFlintSteel handles a flint-&-steel click on (x,y,z): prime TNT, or set
@@ -248,21 +249,27 @@ func (h *hub) tntPrime(players map[int32]*tracked, dim, x, y, z int, fuse int, o
 // block (a dispenser's TNT: the cell ahead may hold anything).
 func (h *hub) spawnPrimedTNT(players map[int32]*tracked, dim, x, y, z int, fuse int) *primedTNT {
 	eid := h.allocEID()
-	var uuid [16]byte
-	binary.BigEndian.PutUint32(uuid[12:], uint32(eid))
 	cx, cy, cz := float64(x)+0.5, float64(y), float64(z)+0.5
 	rot := h.rng.Float64() * 2 * math.Pi // PrimedTnt(): a small hop in a random direction
 	pt := &primedTNT{eid: eid, dim: dim, x: cx, y: cy, z: cz,
 		vx: -math.Sin(rot) * tntHopH, vy: tntHopV, vz: -math.Cos(rot) * tntHopH, fuse: fuse}
 	h.tnt = append(h.tnt, pt)
-	h.toNearbyEv(players, dim, cx, cz, entAdd(eid, entityTNT, uuid, cx, cy, cz, 0, 0))
-	b := protocol.AppendVarInt(nil, eid) // fuse metadata: the client renders the flash timing
-	b = protocol.AppendU8(b, metaIndexTNTFuse)
-	b = protocol.AppendVarInt(b, metaTypeInt)
-	b = protocol.AppendVarInt(b, int32(fuse))
-	h.toNearbyEv(players, dim, cx, cz, metaEv(protocol.AppendU8(b, itemMetaEnd)))
+	h.showPrimedTNT(players, pt)
 	h.playSoundDim(players, dim, "minecraft:entity.tnt.primed", sndBlock, cx, cy, cz, 1, 1)
 	return pt
+}
+
+// showPrimedTNT adds the charge for the players about it, with its fuse
+// (the client times the flashing from it).
+func (h *hub) showPrimedTNT(players map[int32]*tracked, pt *primedTNT) {
+	var uuid [16]byte
+	binary.BigEndian.PutUint32(uuid[12:], uint32(pt.eid))
+	h.toNearbyEv(players, pt.dim, pt.x, pt.z, entAdd(pt.eid, entityTNT, uuid, pt.x, pt.y, pt.z, 0, 0))
+	b := protocol.AppendVarInt(nil, pt.eid)
+	b = protocol.AppendU8(b, metaIndexTNTFuse)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(pt.fuse))
+	h.toNearbyEv(players, pt.dim, pt.x, pt.z, metaEv(protocol.AppendU8(b, itemMetaEnd)))
 }
 
 // updateTNT ticks the fuses (every tick).

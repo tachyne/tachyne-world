@@ -41,6 +41,7 @@ type arrowEntity struct {
 	x, y, z    float64
 	vx, vy, vz float64
 	dim        int    // dimension the projectile flies in
+	portalCool int    // ticks before it may take a portal again
 	stuck      bool   // hit a block — hold position until despawn
 	stuckAt    uint64 // the tick it stuck: AbstractArrow.tickDespawn counts life only in the ground
 	born       uint64

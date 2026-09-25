@@ -7,8 +7,9 @@ import (
 )
 
 // Snow golems (SnowGolem.aiStep + RangedAttackGoal): a trail of snow layers
-// where they walk, a snowball every twenty ticks at the nearest hostile
-// within ten blocks (harmless to all but a blaze), and melting — one damage
+// where they walk, a snowball every twenty ticks at the monster its target
+// goal holds once it is within ten blocks, walking in at 1.25 while it is
+// further (harmless to all but a blaze), and melting — one damage
 // a tick — in the biomes and dimension whose SNOW_GOLEM_MELTS is set:
 // deserts, savannas, badlands and the Nether.
 
@@ -72,25 +73,76 @@ func (h *hub) snowGolemStep(players map[int32]*tracked, m *mob) {
 			h.setBlockLive(players, m.dim, x, y, z, snowLayerState)
 		}
 	}
+	target := h.snowGolemTarget(m)
 	if m.attackCD > 0 {
 		m.attackCD -= mobMoveInterval
 		return
 	}
-	var target *mob
-	best := snowGolemShootRange * snowGolemShootRange
-	for _, o := range h.mobs {
-		if !o.hostile || o.dying > 0 || o.dim != m.dim || o.etype == entitySnowGolem {
-			continue
-		}
-		if d2 := dist3sq(o.x, o.y, o.z, m.x, m.y, m.z); d2 < best {
-			best, target = d2, o
-		}
-	}
-	if target == nil || !h.mobSeesMob(m, target) {
-		return // its target goal must see the monster
+	if target == nil || dist3(target.x, target.y, target.z, m.x, m.y, m.z) > snowGolemShootRange || !h.mobSeesMob(m, target) {
+		return // RangedAttackGoal: in its radius and in sight
 	}
 	h.snowGolemShoot(players, m, target)
 	m.attackCD = snowGolemShootEvery
+}
+
+// snowGolemTarget is SnowGolem's NearestAttackableTargetGoal<Mob>(10, mustSee,
+// Enemy): now and then (one in ten ticks) the nearest monster in sight
+// within its FOLLOW_RANGE of 16, held as TargetGoal.canContinueToUse holds
+// it — in range, and seen within the last sixty ticks.
+func (h *hub) snowGolemTarget(m *mob) *mob {
+	r := m.followRange()
+	if t := h.mobs[m.snowTarget]; t != nil && t.hostile && t.dying == 0 && t.dim == m.dim &&
+		dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= r {
+		if h.mobSeesMob(m, t) {
+			m.snowUnseen = 0
+			return t
+		}
+		if m.snowUnseen += mobMoveInterval; m.snowUnseen <= targetUnseenMemory {
+			return t
+		}
+	}
+	m.snowTarget, m.snowUnseen = 0, 0
+	if h.rng.Intn(10/mobMoveInterval) != 0 {
+		return nil
+	}
+	var target *mob
+	best := r
+	h.grid().nearby(m.dim, m.x, m.z, r, func(o *mob) {
+		if !o.hostile || o.dying > 0 || o.etype == entitySnowGolem {
+			return
+		}
+		if d := dist3(o.x, o.y, o.z, m.x, m.y, m.z); d < best && h.mobSeesMob(m, o) {
+			best, target = d, o
+		}
+	})
+	if target != nil {
+		m.snowTarget = target.eid
+	}
+	return target
+}
+
+// snowGolemChaseStep is RangedAttackGoal(1.25, 20, 10) moving the golem: a
+// target out of its ten-block radius, or not yet seen for five ticks, is
+// walked toward at 1.25; one in reach and in view is shot from where it
+// stands. It reports whether it holds the golem.
+func (h *hub) snowGolemChaseStep(m *mob) bool {
+	t := h.mobs[m.snowTarget]
+	if t == nil || t.dying > 0 || t.dim != m.dim {
+		m.snowSeeTime = 0
+		return false
+	}
+	if h.mobSeesMob(m, t) {
+		m.snowSeeTime += mobMoveInterval
+	} else {
+		m.snowSeeTime = 0
+	}
+	if dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= snowGolemShootRange && m.snowSeeTime >= 5 {
+		m.vx, m.vz = 0, 0 // stop navigation
+		m.rest = 0
+		return true
+	}
+	h.steerTo(m, t.x, t.z, 1.25)
+	return true
 }
 
 // snowGolemShoot is SnowGolem.performRangedAttack.

@@ -43,3 +43,17 @@ func TestSkeletonDrawsBow(t *testing.T) {
 		t.Fatal("loaded, the hand is free")
 	}
 }
+
+// A skeleton shooting the iron golem its target goal picked draws its bow
+// for it too; the pose used to follow players only.
+func TestSkeletonDrawsAtItsGolem(t *testing.T) {
+	h, players := preyFixture(t)
+	s := h.spawnMob(players, entitySkeleton, 0.5, 180, 0.5)
+	g := h.spawnMob(players, entityIronGolem, 8.5, 180, 0.5)
+	s.preyTarget = g.eid
+	s.attackCD = 10
+	h.bowDrawTick(players, s)
+	if !s.handActive {
+		t.Fatal("a skeleton about to shoot its golem draws the bow")
+	}
+}

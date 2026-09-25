@@ -258,11 +258,12 @@ func (h *hub) nautilusChargeTick(players map[int32]*tracked, m *mob) bool {
 // nautilusChargeHit is the contact test at one tick's position: the first
 // fightable body overlapping the nautilus's (never its own rider) takes its
 // ATTACK_DAMAGE as a mob attack and a shove along its heading of
-// clamp(speed × MOVEMENT_SPEED, 0.2, 2) × 2 (causeExtraKnockback).
+// (clamp(speed × MOVEMENT_SPEED, 0.2, 2) + speedBoostPower) × 2
+// (ChargeAttack.dealKnockBack → causeExtraKnockback).
 func (h *hub) nautilusChargeHit(players map[int32]*tracked, m *mob, x, y, z float64) bool {
 	b := m.box()
 	dmg := hostileMelee(m)
-	power := math.Min(math.Max(nautilusChargeSpeed(m.etype)*nautilusSpeedAttr(m.etype), 0.2), 2.0) * nautilusChargeKB
+	power := nautilusChargePower(m)
 	yr := float64(m.yaw) * math.Pi / 180
 	fx, fz := -math.Sin(yr), math.Cos(yr) // the body's facing
 	overlaps := func(ox, oy, oz, w, hgt float64) bool {
@@ -356,4 +357,15 @@ func (h *hub) swimToward(m *mob, x, y, z, speed float64) {
 	sp := m.moveSpeed() * speed
 	m.vx, m.vy, m.vz = dx/d*sp, dy/d*sp, dz/d*sp
 	m.rest = 0
+}
+
+// nautilusChargePower is ChargeAttack.dealKnockBack's speedFactor × the
+// knockback force. MOVEMENT_SPEED carries the Speed (+20 % a level) and
+// Slowness (−15 % a level) modifiers, and speedBoostPower adds a flat
+// 0.25 per level of Speed over Slowness on top of the clamp.
+func nautilusChargePower(m *mob) float64 {
+	spd, slw := float64(m.hasEffect(effSpeed)), float64(m.hasEffect(effSlowness))
+	attr := nautilusSpeedAttr(m.etype) * (1 + 0.2*spd) * (1 - 0.15*slw)
+	boost := 0.25 * (spd - slw)
+	return (math.Min(math.Max(nautilusChargeSpeed(m.etype)*attr, 0.2), 2.0) + boost) * nautilusChargeKB
 }

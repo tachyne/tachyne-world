@@ -126,3 +126,29 @@ func TestLocateBiome(t *testing.T) {
 		t.Errorf("no miss message: %q", a)
 	}
 }
+
+// /summon villager and /summon iron_golem: both are summonable, the villager
+// as an unemployed villager with its stance, the golem a full-health guardian.
+func TestSummonVillagerAndGolem(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "summon minecraft:villager 5.5 150 5.5")
+	s.handleCommand(alice, "summon iron_golem 8.5 150 8.5")
+	settle(t, h, logs, "U1")
+	var villagerOK, golemOK bool
+	onHub(t, h, func() {
+		for _, m := range h.mobs {
+			switch m.etype {
+			case entityVillager:
+				_, isV := m.behavior.(villagerBehavior)
+				villagerOK = isV && m.profession == profUnemployed && m.usesDoors
+			case entityIronGolem:
+				_, isG := m.behavior.(golemBehavior)
+				golemOK = isG && m.health == ironGolemHealth && !m.hostile
+			}
+		}
+	})
+	if !villagerOK || !golemOK {
+		t.Errorf("summoned villager ok=%v, golem ok=%v; replies %q", villagerOK, golemOK, linesBetween(logs["alice"], "", "U1"))
+	}
+}

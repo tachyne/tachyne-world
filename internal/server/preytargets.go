@@ -96,9 +96,51 @@ func huntsPrey(etype int) bool {
 		etype == entityPiglinBrute || etype == entityHoglin
 }
 
-// nearestPrey is the closest mob this one hunts, within r. Villagers that
-// are NPCs are left out — they are the server's own, not the world's.
+// preyMustSee is the mustSee flag of the NearestAttackableTargetGoal that
+// makes o this hunter's prey. Most are registered mustSee; the villager
+// goals of the zombie family, the pillager, evoker and illusioner, and the
+// evoker's and illusioner's golem goals are not, nor are the wither's, the
+// fox's or the ocelot's. The piglin brute reads NEAREST_VISIBLE_NEMESIS.
+// The piglin's and hoglin's brains pick their own target and are left be.
+func preyMustSee(hunter, o *mob) bool {
+	villagerKind := o.etype == entityVillager || o.etype == entityWanderingTrader
+	switch {
+	case zombieKind(hunter.etype):
+		return !villagerKind
+	case illagerKind(hunter.etype):
+		switch hunter.etype {
+		case entityEvoker, entityIllusioner:
+			return false
+		case entityPillager:
+			return !villagerKind
+		}
+		return true
+	case hunter.etype == entityWither || hunter.etype == entityFox || hunter.etype == entityOcelot ||
+		hunter.etype == entityPiglin || hunter.etype == entityHoglin:
+		return false
+	}
+	return true
+}
+
+// nearestPrey is the mob this one hunts, within r: the one it holds, kept as
+// TargetGoal.canContinueToUse keeps it (in range, and for a mustSee goal
+// seen within the last targetUnseenMemory ticks), else the closest one it
+// may acquire — which for a mustSee goal is one it has line of sight to.
+// Villagers that are NPCs are left out — they are the server's own, not the
+// world's.
 func (h *hub) nearestPrey(m *mob, r float64) *mob {
+	if cur := h.mobs[m.preyTarget]; cur != nil && h.preyOf(m, cur) && (h.npcs == nil || h.npcs[cur.eid] == nil) &&
+		dist3(cur.x, cur.y, cur.z, m.x, m.y, m.z) <= r {
+		if !preyMustSee(m, cur) || h.mobSeesMob(m, cur) {
+			m.preyUnseen = 0
+			return cur
+		}
+		m.preyUnseen += mobMoveInterval
+		if m.preyUnseen <= targetUnseenMemory {
+			return cur
+		}
+	}
+	m.preyUnseen = 0
 	var best *mob
 	bestD := r
 	h.grid().nearby(m.dim, m.x, m.z, r, func(c *mob) {
@@ -108,7 +150,7 @@ func (h *hub) nearestPrey(m *mob, r float64) *mob {
 		if h.npcs != nil && h.npcs[c.eid] != nil {
 			return
 		}
-		if d := dist3(c.x, c.y, c.z, m.x, m.y, m.z); d < bestD {
+		if d := dist3(c.x, c.y, c.z, m.x, m.y, m.z); d < bestD && (!preyMustSee(m, c) || h.mobSeesMob(m, c)) {
 			best, bestD = c, d
 		}
 	})

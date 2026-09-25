@@ -43,6 +43,41 @@ func (h *hub) updatePortalTravel(players map[int32]*tracked) {
 			m.targetEID, m.hasTarget = 0, false // whatever it was chasing is a world away
 		}
 	}
+	for _, a := range h.arrows { // a projectile in flight goes through, still flying
+		if a.portalCool > 0 {
+			a.portalCool--
+			continue
+		}
+		if a.stuck || a.etype == entityPearlProj || !h.portalTravelCandidate(a.dim, a.x, a.y, a.z) {
+			continue // an ender pearl's trip is its thrower's business
+		}
+		if to, ok := h.portalPartner(a.dim, a.x, a.y, a.z); ok {
+			h.entityGone(players, a.dim, a.eid)
+			a.dim = to.dim
+			a.x, a.y, a.z = float64(to.pos.x)+0.5, float64(to.pos.y)+0.5, float64(to.pos.z)+0.5
+			a.sx, a.sy, a.sz, a.ox, a.oz = a.x, a.y, a.z, a.x, a.z
+			a.portalCool = entityPortalCooldown
+			add := entAdd(a.eid, a.etype, a.uuid, a.x, a.y, a.z, arrowYaw(a), arrowPitch(a))
+			add.VX, add.VY, add.VZ = a.vx, a.vy, a.vz
+			h.toNearbyEv(players, a.dim, a.x, a.z, add)
+		}
+	}
+	for _, t := range h.tnt { // a lit charge goes through too, fuse and all
+		if t.portalCool > 0 {
+			t.portalCool--
+			continue
+		}
+		if !h.portalTravelCandidate(t.dim, t.x, t.y, t.z) {
+			continue
+		}
+		if to, ok := h.portalPartner(t.dim, t.x, t.y, t.z); ok {
+			h.entityGone(players, t.dim, t.eid)
+			t.dim = to.dim
+			t.x, t.y, t.z = float64(to.pos.x)+0.5, float64(to.pos.y), float64(to.pos.z)+0.5
+			t.portalCool = entityPortalCooldown
+			h.showPrimedTNT(players, t)
+		}
+	}
 	for _, it := range h.items {
 		if it.portalCool > 0 {
 			it.portalCool--

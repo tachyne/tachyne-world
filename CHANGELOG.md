@@ -304,6 +304,103 @@ the public history since the project was open-sourced on 2026-07-10.
   fresh copper and scrapes the oxidation off copper blocks around it, with
   a spark on each, as in vanilla. Lightning advancements now count every
   player within 256 blocks of the bolt, not just those within 30.
+- **The undead burn in the sun as in vanilla.** Zombies, skeletons and
+  their kin now catch fire only when the light at their eyes is bright,
+  they can see the sky and they are neither wet nor in powder snow, so a
+  drowned standing in open water no longer ignites. The dawn catches them
+  one by one, as in vanilla. A mob set alight at night by lava or Fire
+  Aspect now keeps burning steadily until its fire runs out, instead of
+  flickering.
+- **Monsters hunt what they can see.** A zombie, skeleton, vindicator,
+  slime or other monster no longer locks onto an iron golem, a baby turtle
+  or its other prey through a wall; it has to see it first, and it loses
+  interest a few seconds after losing sight of it. As in vanilla, a zombie
+  or pillager still seeks out villagers it cannot see, and a zoglin goes
+  only for what is in view.
+- **You can hear a Warden's anger.** The Warden's heartbeat now quickens
+  and its tendrils twitch as it grows angrier, as in vanilla; players
+  arriving later see it at its current mood.
+- **Drowned ride zombie nautiluses.** Half the grown drowned that spawn in
+  the sea or at an ocean ruin carrying a trident now come riding a zombie
+  nautilus, as in vanilla; in rivers they never do.
+- **Allays dance everywhere.** An allay near a playing jukebox now dances
+  in the Nether and the End too, and a jukebox in another dimension no
+  longer sets it dancing.
+- **Iron golems clank as they crack.** An iron golem now makes its damage
+  sound when a blow cracks it further, and its punch follows its attack
+  strength, so Strength and Weakness change it as in vanilla. The evoker's
+  and the giant's attributes now match vanilla's too.
+- **Donkeys, mules and llamas vary.** Each donkey, mule, llama and trader
+  llama is now born with its own health, between 15 and 30, as in vanilla,
+  and a zombie horse rolls its own jump and speed instead of a horse's.
+- **Bats spawn over stone.** As in vanilla, bats now spawn only where the
+  block below is natural stone, deepslate or tuff, so a dark room floored
+  with planks stays free of them.
+- **The camera pulls back on a happy ghast.** Riding a happy ghast now sets
+  the third-person camera well back, as in vanilla, instead of at a
+  player's usual distance.
+- **Calls for help carry as in vanilla.** When a zombie, wolf, bee or other
+  pack mob is hit, its call now reaches the same box of neighbours as in
+  vanilla — a little further on the diagonals and up and down — and a
+  husk's cry rouses only husks.
+- **Goats ram what they can see.** A goat no longer rams through walls; as
+  in vanilla it picks the nearest creature or player in view within
+  sixteen blocks, and never one outside the world border.
+- **Trader llamas guard their trader.** A wandering trader's llamas now
+  spit at zombies and illagers they can see, and at any mob that hurts the
+  trader, not only at players, as in vanilla.
+- **Snow golems go after monsters.** A snow golem now spots monsters up to
+  sixteen blocks away, as in vanilla, and walks toward one that is out of
+  throwing range instead of waiting for it to come within ten blocks.
+- **Frightened animals run for the light.** A panicking animal off grass
+  now prefers open, well-lit ground to the dark, as in vanilla, and a
+  frightened fish or rabbit finishes its dash before it goes back to
+  keeping its distance.
+- **Dolphins swim with nautilus riders.** A dolphin now follows a player
+  riding a nautilus, as it follows a rowed boat, as in vanilla.
+- **Tamed nautiluses and happy ghasts stay put.** Left alone, a tamed
+  nautilus or a happy ghast now keeps to the area where you left it, as in
+  vanilla, instead of wandering off.
+- **Raid witches walk over to heal.** A witch in a raid now picks a fellow
+  raider she can see, walks within range of it and throws on her usual
+  rhythm, as in vanilla, instead of lobbing a potion at once from anywhere.
+  Witches and trident-throwing drowned also keep closing in until they have
+  had their target in sight for a moment.
+- **Phantoms pick their prey as in vanilla.** A phantom now looks for
+  players every few seconds in a tall column around it and goes for the
+  highest one it can see, and its circling drifts up and down and widens
+  over time instead of holding one fixed ring.
+- **Bats flit like bats.** A flying bat now darts from point to point near
+  it, up and down as well as around, as in vanilla, instead of drifting at
+  a fixed height, and a hanging bat turns its head now and then.
+- **Armadillos peek.** A rolled-up armadillo with danger still about now
+  peeks out of its shell every so often, as in vanilla.
+- **Pandas sulk.** A panda in love with no bamboo nearby now shakes its
+  head and grumbles at you, as in vanilla, and does not sit down to eat
+  while it sulks.
+- **Parrots keep company.** A parrot now flies over to a nearby animal or
+  monster and hangs about a few blocks from it, as in vanilla.
+- **/summon villager and /summon iron_golem.** Both can now be summoned: the
+  villager unemployed and free to find its own bed and workplace, the golem
+  a village guardian at full health.
+- **Ominous trial spawner drops, as in vanilla.** The item an ominous trial
+  conjures above you now comes down as a single charge, arrow or potion at
+  vanilla's speed, with the dispenser sound for charges, and players who
+  arrive while it hangs there see what it holds.
+- **Zombies prowl real villages.** At night a zombie now walks from one
+  villager's bed, workplace or bell to the next, as in vanilla, so villages
+  players build draw them too, and a generated village left empty does not.
+- **Wandering traders come to the village bell.** A wandering trader now
+  turns up near the nearest village bell, walks over to it and keeps within
+  sixteen blocks of it, as in vanilla, and looks at you when you are close.
+- **Lit TNT and projectiles go through portals, and TNT floats downstream.**
+  Primed TNT, arrows, fireballs and other projectiles in flight now pass
+  through a Nether portal, as in vanilla, and a lit charge in flowing water
+  is carried along by the current.
+- **Hit the dragon where it counts.** A sword blow on the Ender Dragon now
+  lands on the part you hit — the head takes it in full, the body, wings and
+  tail a quarter — and the dragon's tail swings round behind it through a
+  turn, as in vanilla.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

@@ -362,3 +362,27 @@ func TestBucketFillRayOutlineAndEye(t *testing.T) {
 		t.Fatal("a crouched player's lower eye should scoop it")
 	}
 }
+
+// Dolphin's second FollowPlayerRiddenEntityGoal is for AbstractNautilus: a
+// player steering a nautilus through the water draws the dolphin along.
+func TestDolphinFollowsARiddenNautilus(t *testing.T) {
+	h := newHub(world.New(1))
+	nautilusSea(h)
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	d := h.spawnMob(players, entityDolphin, 0.5, 184, 0.5)
+	n := h.spawnSpecies(players, entityNautilus, 0, 3.5, 184, 0.5)
+	n.rider = pl.p.eid
+	pl.x, pl.y, pl.z = n.x, n.y+0.6, n.z
+	h.gridDirty()
+	h.applyMountMove(players, pl, evVehicleMove{eid: pl.p.eid, x: 3.8, y: 184, z: 0.5})
+	if !h.dolphinFollowBoat(players, d) || d.followBoat != n.eid || d.vx <= 0 {
+		t.Fatalf("the dolphin did not take after the ridden nautilus (follow %d, vx %v)", d.followBoat, d.vx)
+	}
+	h.tick.Add(10)
+	if h.dolphinFollowBoat(players, d) {
+		t.Error("the dolphin kept following a nautilus that stopped")
+	}
+}

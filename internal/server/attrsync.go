@@ -26,7 +26,7 @@ var syncableAttrs = map[api.ID]bool{
 	api.MaxHealth: true, api.MiningEfficiency: true, api.MovementEfficiency: true,
 	api.MovementSpeed: true, api.OxygenBonus: true, api.SafeFallDistance: true, api.Scale: true,
 	api.SneakingSpeed: true, api.StepHeight: true, api.SubmergedMiningSpeed: true,
-	api.SweepingDamageRatio: true, api.WaterMovementEfficiency: true,
+	api.SweepingDamageRatio: true, api.WaterMovementEfficiency: true, api.CameraDistance: true,
 }
 
 // attributeFrame is the snapshot of every syncable attribute the map holds,

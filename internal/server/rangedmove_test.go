@@ -24,6 +24,7 @@ func TestWitchAndBlazeStandTheirGround(t *testing.T) {
 			h.configureHostile2(players, m)
 		}
 		m.hasTarget, m.tx, m.tz = true, 0.5+tc.dist, 0.5
+		m.seeTime = 5 // RangedAttackGoal stands once the target has been seen for five ticks
 		if vx, vz := m.behavior.steer(h, m); vx != 0 || vz != 0 {
 			t.Errorf("%s with its target %v blocks off moves (%v, %v)", advEntityName[tc.etype], tc.dist, vx, vz)
 		}
@@ -33,6 +34,10 @@ func TestWitchAndBlazeStandTheirGround(t *testing.T) {
 	w.hasTarget, w.tx, w.tz = true, 20.5, 0.5
 	if vx, _ := w.behavior.steer(h, w); vx <= 0 {
 		t.Error("a witch out of range does not close in")
+	}
+	w.tx, w.seeTime = 5.5, 0 // in range but not yet seen for five ticks: keep closing
+	if vx, _ := w.behavior.steer(h, w); vx <= 0 {
+		t.Error("a witch in range stands only once she has seen her target for five ticks")
 	}
 }
 

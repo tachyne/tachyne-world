@@ -4,6 +4,7 @@ import (
 	"math"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-common/protocol"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
@@ -112,4 +113,40 @@ func (h *hub) wardenSonicKnock(m *mob, t *tracked) {
 	ver := wardenSonicKBVert * (1 - resist)
 	t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: dx / n * hor, VY: dy / n * ver, VZ: dz / n * hor})
 	t.spinUntil = h.tick.Load() + windBurstGrace // let the launch past the speed check
+}
+
+// metaIndexWardenAnger is Warden.CLIENT_ANGER_LEVEL (INT): after Mob's flags
+// (15), with nothing from Monster or PathfinderMob between — the same index
+// on 26.2 and 26.3, since a Warden is no AgeableMob.
+const metaIndexWardenAnger = 16
+
+func wardenAngerMeta(eid int32, anger int) []byte {
+	b := protocol.AppendVarInt(nil, eid)
+	b = protocol.AppendU8(b, metaIndexWardenAnger)
+	b = protocol.AppendVarInt(b, metaTypeInt)
+	b = protocol.AppendVarInt(b, int32(anger))
+	return protocol.AppendU8(b, itemMetaEnd)
+}
+
+// wardenActiveAnger is AngerManagement.getActiveAnger(getTarget()): the
+// grudge against the one it has roared at, else its strongest grudge.
+func (h *hub) wardenActiveAnger(players map[int32]*tracked, m *mob) int {
+	if m.wardenTarget != 0 {
+		return m.wardenAnger[m.wardenTarget]
+	}
+	_, n := h.wardenMaxAnger(players, m)
+	return n
+}
+
+// wardenSyncAnger is Warden.syncClientAngerLevel: the client drives the
+// heartbeat's pace and the tendrils' twitch from CLIENT_ANGER_LEVEL, so it
+// is sent whenever it changes.
+func (h *hub) wardenSyncAnger(players map[int32]*tracked, m *mob) {
+	if h.mobs[m.eid] != m || m.dying != 0 {
+		return
+	}
+	if n := h.wardenActiveAnger(players, m); n != m.wardenClientAnger {
+		m.wardenClientAnger = n
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(wardenAngerMeta(m.eid, n)))
+	}
 }

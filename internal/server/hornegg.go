@@ -94,6 +94,10 @@ func speciesStateMeta(m *mob) []byte {
 		if m.striderCold {
 			return striderColdMeta(m)
 		}
+	case entityWarden:
+		if m.wardenClientAnger != 0 {
+			return wardenAngerMeta(m.eid, m.wardenClientAnger)
+		}
 	case entityBat:
 		if m.batResting {
 			return batFlagsMeta(m)

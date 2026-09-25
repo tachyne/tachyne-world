@@ -41,6 +41,7 @@ const (
 
 // wardenTick runs once per mob update (every mobMoveInterval ticks) for a Warden.
 func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
+	defer h.wardenSyncAnger(players, m)
 	// Darkness dread for everyone nearby (refreshed so it never lapses in range).
 	// Warden.applyDarknessAround, every 120 ticks (offset by its id): 260
 	// ticks of Darkness to each survival player within 20 blocks, unless the

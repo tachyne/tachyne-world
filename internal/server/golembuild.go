@@ -94,3 +94,25 @@ func (h *hub) golemSummoned(players map[int32]*tracked, m *mob, name string, wid
 		h.advance(players, t, "summoned_entity", advMatch{entity: name})
 	}
 }
+
+// configureVillageMob sets up a villager or an iron golem that did not come
+// from a village (a /summon): the villager unemployed, walking at its 0.135
+// and using doors, free to claim its own bed and workstation; the golem at
+// full health, unshoveable, keeping to where it stands.
+func (h *hub) configureVillageMob(players map[int32]*tracked, m *mob) {
+	if m == nil {
+		return // plugin-cancelled spawn
+	}
+	switch m.etype {
+	case entityVillager:
+		m.setMoveSpeed(0.135) // villager MOVEMENT_SPEED
+		h.initVillagerTrades(m, profUnemployed)
+		h.sendVillagerData(players, m)
+		m.behavior, m.usesDoors = villagerBehavior{}, true
+	case entityIronGolem:
+		m.health = ironGolemHealth
+		m.setKBResist(1) // IronGolem KNOCKBACK_RESISTANCE
+		m.behavior = golemBehavior{}
+		m.home = blockPos{floorInt(m.x), floorInt(m.y), floorInt(m.z)}
+	}
+}

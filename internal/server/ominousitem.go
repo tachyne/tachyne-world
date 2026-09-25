@@ -107,22 +107,28 @@ func (h *hub) showItemSpawner(players map[int32]*tracked, e *itemSpawnerEnt) {
 	var uuid [16]byte
 	binary.BigEndian.PutUint32(uuid[12:], uint32(e.eid))
 	h.toTracking(players, e.eid, e.dim, e.x, e.z, entAdd(e.eid, entityOminousItemSpawner, uuid, e.x, e.y, e.z, 0, 0))
+	h.toNearbyEv(players, e.dim, e.x, e.z, metaEv(itemSpawnerMeta(e)))
+}
+
+// itemSpawnerMeta is the spawner's DATA_ITEM: the stack it holds.
+func itemSpawnerMeta(e *itemSpawnerEnt) []byte {
 	st := invStack{item: itemByName[e.drop.item], count: 1, potion: e.drop.potion}
 	b := protocol.AppendVarInt(nil, e.eid)
 	b = protocol.AppendU8(b, metaIndexSpawnerItem)
 	b = protocol.AppendVarInt(b, itemMetaTypeSlot)
 	b = appendStack(b, st)
-	b = protocol.AppendU8(b, itemMetaEnd)
-	h.toNearbyEv(players, e.dim, e.x, e.z, metaEv(b))
+	return protocol.AppendU8(b, itemMetaEnd)
 }
 
-// sendItemSpawnersTo replays the conjured spawners to a joining player.
+// sendItemSpawnersTo replays the conjured spawners to a joining player, each
+// with the item it holds (it used to arrive empty).
 func (h *hub) sendItemSpawnersTo(t *tracked) {
 	for _, e := range h.itemSpawners {
 		if e.dim == t.dim {
 			var uuid [16]byte
 			binary.BigEndian.PutUint32(uuid[12:], uint32(e.eid))
 			t.p.trySendEv(entAdd(e.eid, entityOminousItemSpawner, uuid, e.x, e.y, e.z, 0, 0))
+			t.p.trySendEv(metaEv(itemSpawnerMeta(e)))
 		}
 	}
 }
@@ -148,29 +154,36 @@ func (h *hub) updateItemSpawners(players map[int32]*tracked) {
 	}
 }
 
-// dropOminousItem shoots the held item downward as its projectile.
+// dropOminousItem is OminousItemSpawner.spawnProjectile: the held item goes
+// down as ONE projectile, whatever the stack's count, shot along DOWN with
+// its item's DispenseConfig — a lingering potion at 1.375 and uncertainty
+// 3, an arrow at 1.1 and 6, a fire or wind charge at 1.0 and 6.67 with its
+// own dispense event (1018, 1051).
 func (h *hub) dropOminousItem(players map[int32]*tracked, e *itemSpawnerEnt) {
-	n := e.drop.count[0]
-	if e.drop.count[1] > n {
-		n += h.rng.Intn(e.drop.count[1] - n + 1)
+	shot := func(etype int, pow, unc float64) *arrowEntity {
+		vx, vy, vz := h.shootVector(0, -1, 0, pow, unc)
+		return h.launchProjectileIn(players, etype, e.dim, e.x, e.y, e.z, vx, vy, vz)
 	}
-	for i := 0; i < n; i++ {
-		switch e.drop.item {
-		case "lingering_potion":
-			a := h.launchProjectileIn(players, entityLingerProj, e.dim, e.x, e.y, e.z, 0, -0.5, 0)
-			a.splash, a.breaks, a.potion, a.lingering = true, true, e.drop.potion, true
-		case "arrow":
-			a := h.launchProjectileIn(players, entityArrow, e.dim, e.x, e.y, e.z, 0, -1.2, 0)
-			a.dmg = arrowDamage
-			if e.drop.potion != potNone {
-				a.tipped, a.potion = true, e.drop.potion
-			}
-		case "fire_charge":
-			a := h.launchProjectileIn(players, entitySmallFireball, e.dim, e.x, e.y, e.z, 0, -0.8, 0)
-			a.dmg, a.fire = 5, true
-		case "wind_charge":
-			a := h.launchProjectileIn(players, entityWindCharge, e.dim, e.x, e.y, e.z, 0, -1.0, 0)
-			a.breaks = true
+	event := func(id int32) {
+		h.toNearbyEv(players, e.dim, e.x, e.z, attachproto.WorldFX{Event: id, X: floorInt(e.x), Y: floorInt(e.y), Z: floorInt(e.z)})
+	}
+	switch e.drop.item {
+	case "lingering_potion":
+		a := shot(entityLingerProj, 1.1*1.25, 6*0.5)
+		a.splash, a.breaks, a.potion, a.lingering = true, true, e.drop.potion, true
+	case "arrow":
+		a := shot(entityArrow, 1.1, 6)
+		a.dmg = arrowDamage
+		if e.drop.potion != potNone {
+			a.tipped, a.potion = true, e.drop.potion
 		}
+	case "fire_charge":
+		event(1018)
+		a := shot(entitySmallFireball, 1.0, 6.6666665)
+		a.dmg, a.fire = 5, true
+	case "wind_charge":
+		event(1051)
+		a := shot(entityWindCharge, 1.0, 6.6666665)
+		a.breaks = true
 	}
 }

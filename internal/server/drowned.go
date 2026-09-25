@@ -94,16 +94,19 @@ func (h *hub) convertMob(players map[int32]*tracked, m *mob, target int) {
 // target's height with the 0.2 lob, and flies at 1.6 with the difficulty's
 // spread; it strikes for the thrown trident's 8.
 func (h *hub) drownedThrow(players map[int32]*tracked, m *mob) {
+	q, ok := h.rangedQuarry(players, m, tridentRange)
+	// RangedAttackGoal counts its seeTime every tick, throw due or not: the
+	// walk-in stops once the target has been in sight for five.
+	sees := ok && h.seesQuarry(m, q, false)
 	if m.attackCD > 0 {
 		m.attackCD--
 		return
 	}
-	q, ok := h.rangedQuarry(players, m, tridentRange)
 	if !ok {
 		return
 	}
 	m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi) // face the throw
-	if !h.seesQuarry(m, q, false) {
+	if !sees {
 		return // RangedAttackGoal: no throw without line of sight
 	}
 	ox, oy, oz := m.x, m.y+mobEyeHeight(m)-0.1, m.z

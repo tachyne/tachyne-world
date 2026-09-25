@@ -163,7 +163,7 @@ func TestEverySpeciesSummonsAndConfigures(t *testing.T) {
 		// 15-30 per animal (horseattr.go), which is the whole point of
 		// breeding them. Check the range instead of the table value.
 		switch etype {
-		case entityHorse:
+		case entityHorse, entityDonkey, entityMule, entityLlama, entityTraderLlama:
 			if m.health < 15 || m.health > 30 {
 				t.Errorf("%s: rolled health %d, want 15-30", d.name, m.health)
 			}
@@ -313,8 +313,8 @@ func TestSpeciesAttackDamageAndOddities(t *testing.T) {
 		}
 	}
 	// A giant has no goals in vanilla: it stands where it is summoned.
-	if g := speciesOf(entityGiant); g == nil || g.arch == archHostile || g.speed != 0 {
-		t.Errorf("a giant should be inert, got arch %v speed %v", g.arch, g.speed)
+	if g := speciesOf(entityGiant); g == nil || g.arch == archHostile {
+		t.Errorf("a giant should be inert, got arch %v", g.arch)
 	}
 	// And an illusioner has its own voice.
 	if i := speciesOf(entityIllusioner); i == nil || i.soundAs != "" {

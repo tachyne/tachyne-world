@@ -30,6 +30,7 @@ func (h *hub) populateOceanRuins(players map[int32]*tracked) {
 			for _, d := range p.Drowned {
 				if m := h.spawnHostileYIn(players, entityDrowned, dimOverworld, float64(d[0])+0.5, float64(d[1]), float64(d[2])+0.5); m != nil {
 					m.persistent = true // Mob.setPersistenceRequired
+					h.rollDrownedNautilus(players, m, true)
 				}
 			}
 		}

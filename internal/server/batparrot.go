@@ -73,6 +73,9 @@ func (h *hub) batStep(players map[int32]*tracked, m *mob) bool {
 			return false
 		}
 		m.vx, m.vy, m.vz = 0, 0, 0
+		if h.rng.Intn(200/mobMoveInterval) == 0 { // hanging, it looks about now and then
+			m.headYaw = float32(h.rng.Intn(360))
+		}
 		return true
 	}
 	if solidAbove && h.rng.Intn(batRestOdds/mobMoveInterval) == 0 {
@@ -80,7 +83,57 @@ func (h *hub) batStep(players map[int32]*tracked, m *mob) bool {
 		m.vx, m.vy, m.vz = 0, 0, 0
 		return true
 	}
-	return false
+	h.batFly(m)
+	return true
+}
+
+// batFly is the flying half of Bat.customServerAiStep: a target cell up to
+// six blocks off sideways and two below to three above, re-picked when it
+// stops being air, one tick in thirty, or once the bat is within two of it;
+// each tick the velocity closes a tenth of the way on 0.5 a tick along each
+// axis toward it (0.7 up or down), under the air's 0.91 drag and the bat's
+// 0.6 vertical damping. Two ticks make one mob update.
+func (h *hub) batFly(m *mob) {
+	w := h.worldFor(m.dim)
+	if m.batHasT && (!isAirState(w.At(m.batT.x, m.batT.y, m.batT.z)) || m.batT.y <= worldgen.MinY) {
+		m.batHasT = false
+	}
+	cx, cy, cz := float64(m.batT.x)+0.5, float64(m.batT.y)+0.5, float64(m.batT.z)+0.5
+	if !m.batHasT || h.rng.Intn(30/mobMoveInterval) == 0 || dist3(cx, cy, cz, m.x, m.y, m.z) < 2 {
+		m.batT = blockPos{
+			floorInt(m.x + float64(h.rng.Intn(7)-h.rng.Intn(7))),
+			floorInt(m.y + float64(h.rng.Intn(6)) - 2),
+			floorInt(m.z + float64(h.rng.Intn(7)-h.rng.Intn(7))),
+		}
+		m.batHasT = true
+	}
+	sign := func(v float64) float64 {
+		switch {
+		case v > 0:
+			return 1
+		case v < 0:
+			return -1
+		}
+		return 0
+	}
+	x, y, z := m.x, m.y, m.z
+	for i := 0; i < mobMoveInterval; i++ {
+		dx := float64(m.batT.x) + 0.5 - x
+		dy := float64(m.batT.y) + 0.1 - y
+		dz := float64(m.batT.z) + 0.5 - z
+		m.batVX += (sign(dx)*0.5 - m.batVX) * 0.1
+		m.batVY += (sign(dy)*0.7 - m.batVY) * 0.1
+		m.batVZ += (sign(dz)*0.5 - m.batVZ) * 0.1
+		x, y, z = x+m.batVX, y+m.batVY, z+m.batVZ
+		m.batVX, m.batVZ = m.batVX*0.91, m.batVZ*0.91
+		m.batVY *= 0.98 * 0.6
+	}
+	m.vx, m.vz = x-m.x, z-m.z
+	m.flyAim(h.tick.Load(), y)
+	if m.vx != 0 || m.vz != 0 {
+		m.yaw = float32(math.Atan2(-m.vx, m.vz) * 180 / math.Pi)
+	}
+	m.rest = 0
 }
 
 // parrotImitateTick is the ambient mimicry.
@@ -119,3 +172,68 @@ func (h *hub) parrotImitateNearby(players map[int32]*tracked, dim int, x, y, z f
 
 // parrotPitch is Parrot.getPitch.
 func parrotPitch(h *hub) float32 { return (h.rng.Float32()-h.rng.Float32())*0.2 + 1 }
+
+// parrotFollowMobStep is FollowMobGoal(1.0, 3, 7): a parrot with nothing
+// better to do keeps company with the nearest mob that is not a parrot
+// within seven blocks (its box grown by seven), flying in to three blocks
+// and backing off when closer than √3, re-deciding every ten ticks. Its
+// wander (priority 2) outranks it; that is left to the ordinary stroll.
+// It reports whether it holds the parrot.
+func (h *hub) parrotFollowMobStep(m *mob) bool {
+	if m.sitting || m.leash != 0 || (m.tamed && m.hasTarget) {
+		m.parrotFollow = 0
+		return false
+	}
+	o := h.mobs[m.parrotFollow]
+	if o == nil || o.dying > 0 || o.dim != m.dim || !h.parrotFollowable(m, o) {
+		m.parrotFollow, o = 0, nil
+		best := math.Inf(1)
+		h.grid().nearby(m.dim, m.x, m.z, parrotFollowArea+2, func(c *mob) {
+			if !h.parrotFollowable(m, c) {
+				return
+			}
+			if d := dist3(c.x, c.y, c.z, m.x, m.y, m.z); d < best {
+				o, best = c, d
+			}
+		})
+		if o == nil {
+			return false
+		}
+		m.parrotFollow, m.followRecalc = o.eid, 0
+	}
+	if m.followRecalc--; m.followRecalc > 0 {
+		return true // keep the heading chosen last time
+	}
+	m.followRecalc = 10 / mobMoveInterval
+	d2 := sq(m.x-o.x) + sq(m.y-o.y) + sq(m.z-o.z)
+	switch {
+	case d2 > parrotFollowStop*parrotFollowStop:
+		m.vx, m.vz = straightSteer(m, o.x, o.z, 0)
+		m.flyAim(h.tick.Load(), o.y)
+	case d2 <= parrotFollowStop:
+		m.vx, m.vz = straightSteer(m, 2*m.x-o.x, 2*m.z-o.z, 0) // too close: away from it
+	default:
+		m.vx, m.vz = 0, 0
+	}
+	m.yaw = yawToward(m.x, m.z, o.x, o.z)
+	m.headYaw = m.yaw
+	m.rest = 0
+	return true
+}
+
+const (
+	parrotFollowArea = 7.0 // FollowMobGoal areaSize
+	parrotFollowStop = 3.0 // …stopDistance
+)
+
+// parrotFollowable is FollowMobGoal's followPredicate and box: another
+// kind of mob, visible, whose box meets the parrot's grown by seven.
+func (h *hub) parrotFollowable(m, o *mob) bool {
+	if o == m || o.etype == entityParrot || o.dying > 0 || o.dim != m.dim || o.hasEffect(effInvisibility) > 0 {
+		return false
+	}
+	mb, ob := m.box(), o.box()
+	reach := parrotFollowArea + (mb.w+ob.w)/2
+	return math.Abs(o.x-m.x) <= reach && math.Abs(o.z-m.z) <= reach &&
+		o.y+ob.h >= m.y-parrotFollowArea && o.y <= m.y+mb.h+parrotFollowArea
+}

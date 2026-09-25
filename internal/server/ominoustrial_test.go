@@ -1,8 +1,10 @@
 package server
 
 import (
+	"math"
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -154,5 +156,50 @@ func TestOminousItemSpawner(t *testing.T) {
 		if a.vy >= 0 {
 			t.Errorf("the projectile falls: vy=%.2f", a.vy)
 		}
+	}
+}
+
+// OminousItemSpawner.spawnProjectile: a stack of wind charges comes down as
+// one charge, with the wind-charge dispense event, at DispenseConfig's power
+// 1.0; a player joining late sees the item the spawner holds.
+func TestOminousItemSpawnerResidue(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.itemSpawners = map[int32]*itemSpawnerEnt{}
+	e := &itemSpawnerEnt{eid: h.allocEID(), x: 0.5, y: 190, z: 0.5,
+		drop: ominousDrop{"wind_charge", potNone, false, [2]int{1, 3}}, dueAt: h.tick.Load()}
+	h.itemSpawners[e.eid] = e
+	drainEvs(pl.p)
+	h.sendItemSpawnersTo(pl)
+	sawItem := false
+	for _, ev := range drainEvs(pl.p) {
+		if me, ok := ev.(attachproto.EntityMeta); ok && me.EID == e.eid && len(me.Meta) > 0 && me.Meta[0] == metaIndexSpawnerItem {
+			sawItem = true
+		}
+	}
+	if !sawItem {
+		t.Fatal("a late joiner should see what the spawner holds")
+	}
+	before := len(h.arrows)
+	h.updateItemSpawners(players)
+	if got := len(h.arrows) - before; got != 1 {
+		t.Fatalf("one projectile comes down, got %d", got)
+	}
+	for _, a := range h.arrows {
+		if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); a.vy >= 0 || sp < 0.8 || sp > 1.2 {
+			t.Fatalf("the charge goes down at about 1.0: v=(%v,%v,%v)", a.vx, a.vy, a.vz)
+		}
+	}
+	sawEvent := false
+	for _, ev := range drainEvs(pl.p) {
+		if fx, ok := ev.(attachproto.WorldFX); ok && fx.Event == 1051 {
+			sawEvent = true
+		}
+	}
+	if !sawEvent {
+		t.Fatal("the wind charge's dispense event 1051 plays")
 	}
 }

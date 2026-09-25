@@ -27,10 +27,22 @@ func (h *hub) horseJumpRoll() float64 {
 	return 0.4 + h.rng.Float64()*0.2 + h.rng.Float64()*0.2 + h.rng.Float64()*0.2
 }
 
-// rollHorseAttributes is AbstractHorse.randomizeAttributes, which only some of
-// the family override: a HORSE rolls all three, a SKELETON horse rolls its
-// jump alone, and donkeys and mules roll nothing — they are the dependable,
-// unexciting members of the family, and that is deliberate in vanilla.
+// zombieHorseJumpRoll is ZombieHorse.generateZombieHorseJumpStrength: 0.5 +
+// 3 rolls of rand/15, 0.5 to 0.7.
+func (h *hub) zombieHorseJumpRoll() float64 {
+	return 0.5 + h.rng.Float64()/15 + h.rng.Float64()/15 + h.rng.Float64()/15
+}
+
+// zombieHorseSpeedRoll is ZombieHorse.generateZombieHorseSpeed: (9 + 3 rolls
+// of rand) / 42.16, about 0.2135 to 0.2846.
+func (h *hub) zombieHorseSpeedRoll() float64 {
+	return (9 + h.rng.Float64() + h.rng.Float64() + h.rng.Float64()) / 42.16
+}
+
+// rollHorseAttributes is randomizeAttributes as each of the family overrides
+// it: a HORSE rolls all three; donkeys, mules, llamas and trader llamas
+// (AbstractChestedHorse) roll their MAX_HEALTH alone; a SKELETON horse rolls
+// its jump; a ZOMBIE horse rolls its own narrower jump and speed.
 func (h *hub) rollHorseAttributes(m *mob) {
 	if m == nil {
 		return
@@ -41,8 +53,14 @@ func (h *hub) rollHorseAttributes(m *mob) {
 		m.health = m.maxHP()
 		m.setMoveSpeed(h.horseSpeedRoll() * attrToStep) // the roll is a vanilla figure; the map holds per-step units
 		m.setJumpStrength(h.horseJumpRoll())
-	case entitySkeletonHorse, entityZombieHorse:
+	case entityDonkey, entityMule, entityLlama, entityTraderLlama:
+		m.setMaxHP(h.horseHealthRoll())
+		m.health = m.maxHP()
+	case entitySkeletonHorse:
 		m.setJumpStrength(h.horseJumpRoll())
+	case entityZombieHorse:
+		m.setJumpStrength(h.zombieHorseJumpRoll())
+		m.setMoveSpeed(h.zombieHorseSpeedRoll() * attrToStep)
 	}
 }
 

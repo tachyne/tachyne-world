@@ -29,12 +29,15 @@ var lookRanges = map[string]float64{
 	"cow": 6, "mooshroom": 6, "pig": 6, "sheep": 6, "chicken": 6, "horse": 6, "donkey": 6,
 	"mule": 6, "skeleton_horse": 6, "zombie_horse": 6, "camel": 6, "camel_husk": 6, "llama": 6, "trader_llama": 6,
 	"polar_bear": 6, "iron_golem": 6, "snow_golem": 6, "copper_golem": 6, "dolphin": 6, "ravager": 6,
-	"cat": 10, "ocelot": 10, "rabbit": 10,
+	"panda":   6, // PandaLookAtPlayerGoal(this, Player, 6)
+	"sniffer": 6, // SnifferAi: SetEntityLookTarget(PLAYER, 6)
+	"tadpole": 6, // TadpoleAi: SetEntityLookTargetSometimes(PLAYER, 6, 30-60)
+	"cat":     10, "ocelot": 10, "rabbit": 10,
 	"fox":      24, // FoxLookAtPlayerGoal(this, Player, 24)
 	"pillager": 15,
 	"evoker":   3, "illusioner": 3, "vindicator": 3, "vex": 3, // LookAtPlayerGoal(this, Player, 3, 1.0)
 	"squid": 0, "glow_squid": 0, "cod": 0, "salmon": 0, "tropical_fish": 0, "pufferfish": 0,
-	"tadpole": 0, "shulker": 0, "ender_dragon": 0, "nautilus": 0, "zombie_nautilus": 0,
+	"shulker": 0, "ender_dragon": 0, "nautilus": 0, "zombie_nautilus": 0,
 	"giant": 0, // Giant registers no goals at all
 }
 
@@ -82,6 +85,15 @@ func (h *hub) idleLook(players map[int32]*tracked, m *mob) {
 	m.headYaw = m.yaw // nothing to watch: the head sits with the body
 	if m.hasTarget {
 		return // hunting: the chase already points it where it is going
+	}
+	// InteractGoal(Player, 3, 1.0): a wandering trader always looks at a
+	// player within three blocks.
+	if m.etype == entityWanderingTrader {
+		if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, 3); t != nil {
+			m.lookEID = t.p.eid
+			m.lookTicks = int32(lookPlayerTicksMin + h.rng.Intn(lookPlayerTicksMax-lookPlayerTicksMin))
+			return
+		}
 	}
 	// LookAtPlayerGoal first, as vanilla adds it first at the same priority.
 	if t := h.nearestPlayerIn(players, m.dim, m.x, m.z, d); t != nil && !foxBusy && h.rng.Float64() < lookChance {
@@ -142,12 +154,18 @@ func (h *hub) alertKin(m *mob, t *tracked) {
 	if t == nil || !alertsKin[m.etype] {
 		return
 	}
+	// The search box is AABB.unitCubeFromLowerCorner(position).inflate(r,
+	// 10, r): a square r out on each side (plus the unit cube), 10 below and
+	// 11 above, met by the other mob's own box — not a sphere.
 	r := m.followRange()
-	h.grid().nearby(m.dim, m.x, m.z, r, func(o *mob) {
+	h.grid().nearby(m.dim, m.x, m.z, r*math.Sqrt2+2, func(o *mob) {
 		if o.eid == m.eid || o.dying > 0 || o.targetEID != 0 || !sameKin(m.etype, o.etype) {
 			return
 		}
-		if math.Abs(o.y-m.y) > 10 || dist3(o.x, o.y, o.z, m.x, m.y, m.z) > r {
+		b := o.box()
+		hw := b.w / 2
+		if o.x+hw < m.x-r || o.x-hw > m.x+1+r || o.z+hw < m.z-r || o.z-hw > m.z+1+r ||
+			o.y+b.h < m.y-10 || o.y > m.y+11 {
 			return
 		}
 		if o.retaliates || !o.hostile {
@@ -163,13 +181,13 @@ func (h *hub) alertKin(m *mob, t *tracked) {
 	})
 }
 
-// sameKin reports whether two species answer one another's call: the same
-// species, or the zombie family (vanilla alerts by class, and husks,
-// drowned and zombie villagers are all Zombies — zombified piglins are the
-// one the goal excludes by name).
+// sameKin reports whether a b answers a's call: getEntitiesOfClass of the
+// struck mob's own class, so the same species, and for a plain zombie every
+// Zombie subclass — husks, drowned and zombie villagers (zombified piglins
+// are the one the goal excludes by name). A husk's cry reaches only husks.
 func sameKin(a, b int) bool {
 	if a == b {
 		return true
 	}
-	return zombieKind(a) && zombieKind(b)
+	return a == entityZombie && zombieKind(b)
 }

@@ -59,14 +59,11 @@ const (
 	velUnit    = 8000  // Set Entity Velocity unit: 1/8000 block per tick
 
 	// Daylight burn (natural spawning lives in spawn.go now).
-	spawnMinDist     = 24 // vanilla: mobs never spawn within 24 blocks of a player
-	burnDamagePerSec = 1  // vanilla fire: 1 HP/s — 20s of visible burning
-	burnStaggerMax   = 8  // seconds of per-mob random ignition delay at dawn:
-	//                          real dawn light ramps up, so the horde catches
-	//                          fire (and dies) spread out, not on one tick
-	dayStart   = 23000 // dawn: hostiles start burning (ticks into the MC day)
-	nightStart = 13000 // dusk: hostiles may spawn
-	dayLength  = 24000
+	spawnMinDist     = 24    // vanilla: mobs never spawn within 24 blocks of a player
+	burnDamagePerSec = 1     // vanilla fire: 1 HP/s — 20s of visible burning
+	dayStart         = 23000 // dawn: hostiles start burning (ticks into the MC day)
+	nightStart       = 13000 // dusk: hostiles may spawn
+	dayLength        = 24000
 )
 
 var (
@@ -211,8 +208,8 @@ func (b holdRangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	}
 	dx, dz := m.tx-m.x, m.tz-m.z
 	d := math.Hypot(dx, dz)
-	if d < 1e-6 || d <= b.radius {
-		return 0, 0 // in range: stand and throw
+	if d < 1e-6 || (d <= b.radius && m.seeTime >= 5) {
+		return 0, 0 // in range and in sight for five ticks: stand and throw
 	}
 	return dx / d * m.moveSpeed(), dz / d * m.moveSpeed()
 }
@@ -414,6 +411,20 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.etype == entityZombifiedPiglin {
 		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at
 		return
+	}
+	if m.etype == entityPhantom {
+		if t := h.phantomTarget(players, m); t != nil {
+			m.hasTarget, m.tx, m.tz, m.ty, m.preyTarget = true, t.x, t.z, t.y, 0
+		} else {
+			m.hasTarget = false
+		}
+		return
+	}
+	if m.etype == entityWitch {
+		if t := h.witchHealTargetOf(m); t != nil { // a raider she means to heal is her target
+			m.hasTarget, m.tx, m.tz, m.preyTarget = true, t.x, t.z, 0
+			return
+		}
 	}
 	// Neutral species (endermen) never START a fight — anger from a hit (or
 	// the stare above) does.
@@ -783,7 +794,6 @@ func (h *hub) spawnHostileYIn(players map[int32]*tracked, etype, dim int, x, y, 
 	m.hostile, m.behavior = true, Behavior(hostileBehavior{}) // speed from speedFor
 	switch etype {
 	case entityZombie, entitySkeleton:
-		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if etype == entityZombie {
 			m.setFollowRange(35) // Zombie FOLLOW_RANGE override (vanilla 1.21.5)
 			m.setBaseArmor(2)    // Zombie base ARMOR attribute (vanilla 1.21.5)
@@ -837,39 +847,50 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 			}
 		}
 	}
-	// Daylight burn: sky-exposed UNDEAD hostiles catch fire in the open. This
-	// just relights the 8-second afterburn clock each second they're exposed
-	// (like vanilla setSecondsOnFire(8)); the unified burn ticker in
-	// mobEnvironment renders the flame, deals the damage, and puts them out a
-	// few seconds after they reach cover. Spiders/creepers don't burn.
-	if day < nightStart && !h.raining { // rain shields the undead (vanilla)
+	// Daylight burn is Mob.burnUndead / isSunBurnTick: while the overworld
+	// timeline's MONSTERS_BURN is on, a #burn_in_daylight mob whose eyes see
+	// the sky, lit brighter than 0.5, and neither wet nor in powder snow,
+	// rolls rand·30 < (br−0.4)·2 each tick; a hit relights its 8-second
+	// afterburn (or wears its helmet instead). The unified burn ticker in
+	// mobEnvironment renders the flame, deals the damage and lets it burn out
+	// — nightfall does not put a burning mob out, only water, rain or time.
+	if monstersBurn(day) {
 		for _, m := range h.mobs {
-			// Mob.isSunBurnTick: not in powder snow (isInNonBurnableBlock).
-			if !burnsInDaylight[m.etype] || fireImmune[m.etype] || m.dim != 0 || h.mobInPowderSnow(m) {
+			if !burnsInDaylight[m.etype] || fireImmune[m.etype] || m.dim != dimOverworld || m.dying > 0 || m.health <= 0 {
 				continue
 			}
-			if h.skyExposed(m) {
-				if m.burnDelay > 0 { // still in this mob's slice of the dawn ramp
-					m.burnDelay--
-					continue
-				}
+			if h.sunBurnSecond(m) {
 				if h.sunHelmetTakesIt(players, m) {
 					continue // a helmet takes the sun (and wears away under it)
 				}
 				m.ignite(8)
 			}
 		}
-	} else {
-		for _, m := range h.mobs { // night fell mid-burn: put survivors out
-			if m.burning {
-				m.burning = false
-				h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(fireMetadata(m.eid, false)))
-			}
-		}
 	}
 	if day >= nightStart && day < dayStart {
 		h.phantomSpawner(players)
 	}
+}
+
+// monstersBurn is the overworld timeline's MONSTERS_BURN track: off from
+// tick 12542, on again from 23460.
+func monstersBurn(day uint64) bool {
+	return day < 12542 || day >= 23460
+}
+
+// sunBurnSecond reports whether any of this second's twenty isSunBurnTick
+// rolls lands. The conditions hold for the whole second; only the roll
+// repeats, so the chance is 1−(1−p)^20 with p = (br−0.4)·2/30.
+func (h *hub) sunBurnSecond(m *mob) bool {
+	br := h.lightMagic(m)
+	if br <= 0.5 || h.mobWet(m) || h.mobInPowderSnow(m) {
+		return false
+	}
+	if !h.skyExposedAt(floorInt(m.x), floorInt(m.y+mobEyeHeight(m)), floorInt(m.z)) {
+		return false
+	}
+	p := (br - 0.4) * 2 / 30
+	return h.rng.Float64() < 1-math.Pow(1-p, 20)
 }
 
 // skyExposed reports whether open sky sits above the mob — the daylight-burn

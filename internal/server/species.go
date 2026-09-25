@@ -309,7 +309,7 @@ var speciesTable = map[int]*speciesDef{
 	entityVindicator: {name: "vindicator", health: 24, speed: 0.35, damage: 5, follow: 12,
 		arch: archHostile, held: "iron_axe", // ATTACK_DAMAGE base 5 (source)
 		drops: []specDrop{{item: "emerald", rnd: 1}}},
-	entityEvoker: {name: "evoker", health: 24, speed: 0.5, step: 0.15, damage: 6, follow: 12,
+	entityEvoker: {name: "evoker", health: 24, speed: 0.5, step: 0.15, damage: 2, follow: 12, // ATTACK_DAMAGE: the attribute's default 2 (the fangs' 6 is their own)
 		arch: archHostile, xp: 10,
 		drops: []specDrop{{item: "totem_of_undying", min: 1}, {item: "emerald", rnd: 1}}},
 	entityIllusioner: {name: "illusioner", health: 32, speed: 0.5, step: 0.15, follow: 18,
@@ -320,7 +320,7 @@ var speciesTable = map[int]*speciesDef{
 	// goals at all, so it stands where it is summoned and does nothing. The
 	// engine used to give it the full hostile archetype, which made it the
 	// deadliest thing in the game by a distance.
-	entityGiant: {name: "giant", health: 100, speed: 0, step: 0.2, damage: 50,
+	entityGiant: {name: "giant", health: 100, speed: 0.5, step: 0.5 * attrToStep, damage: 50, // Giant.createAttributes MOVEMENT_SPEED 0.5
 		arch: archPassive, soundAs: "zombie"},
 	entityZombieVillager: {name: "zombie_villager", health: 20, speed: 0.23, damage: 3,
 		armor: 2, follow: 35, arch: archHostile,
@@ -447,9 +447,6 @@ func (h *hub) applySpecies(players map[int32]*tracked, m *mob) {
 	}
 	if d.retaliate {
 		m.retaliates = true
-	}
-	if burnsInDaylight[m.etype] {
-		m.burnDelay = h.rng.Intn(burnStaggerMax) // its slice of the dawn ramp
 	}
 	if d.held != "" {
 		m.held = itemByName[d.held]

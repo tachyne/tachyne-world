@@ -528,7 +528,8 @@ func (h *hub) spawnRulesOK(dim, cat, etype, x, y, z int, sky, block uint8) bool 
 		return h.rawBrightness(sky, block, 0) > 8
 	case catAmbient: // vanilla Bat.checkBatSpawnRules
 		return y < w.SurfaceFeet(x, z) && h.rng.Intn(2) == 0 &&
-			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4)
+			h.rawBrightness(sky, block, -1) <= h.rng.Intn(4) &&
+			inRanges2(w.At(x, y-1, z), batFloor) // #bats_spawnable_on below
 	case catWaterCreature: // squid/dolphin/nautilus near the surface band
 		return y >= worldgen.SeaLevel-13 && y <= worldgen.SeaLevel
 	case catWaterAmbient: // vanilla surface-water band
@@ -593,6 +594,9 @@ func (h *hub) spawnNatural(players map[int32]*tracked, dim, cat, etype, x, y, z 
 		m := h.spawnHostileYIn(players, etype, dim, fx, fy, fz)
 		if etype == entityHusk {
 			h.rollCamelHusk(players, m) // Husk.finalizeSpawn: NATURAL spawns only
+		}
+		if etype == entityDrowned {
+			h.rollDrownedNautilus(players, m, false) // Drowned.finalizeSpawn: NATURAL or STRUCTURE
 		}
 	case cat == catWaterCreature || cat == catWaterAmbient || cat == catAxolotls || cat == catUndergroundWater:
 		h.spawnSpecies(players, etype, dim, fx, fy+0.5, fz)
@@ -772,6 +776,8 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 		h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
 	case e.etype == entitySulfurCube:
 		h.spawnSulfurCube(players, e.dim, e.x, e.y, e.z, false)
+	case e.etype == entityVillager || e.etype == entityIronGolem:
+		h.configureVillageMob(players, h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z))
 	case netherConfigured(e.etype):
 		h.configureNetherMob(players, h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z))
 	case isRosterPassive(e.etype):

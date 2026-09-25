@@ -56,26 +56,32 @@ func snapsGoatHorn(s uint32) bool {
 	return worldgen.IsLog(s)
 }
 
-// goatRamTarget is RAM_TARGET_CONDITIONS: the nearest player or mob (never
-// another goat) within reach.
+// goatRamTarget is PrepareRamNearestTarget's pick: the closest of the goat's
+// NEAREST_VISIBLE_LIVING_ENTITIES (within its 16-block follow range, in
+// line of sight) that passes RAM_TARGET_CONDITIONS — never another goat,
+// an armour stand only with mobGriefing (armour stands are not mobs here),
+// and only a target inside the world border.
 func (h *hub) goatRamTarget(players map[int32]*tracked, m *mob) (x, z float64, ok bool) {
-	best := float64(goatRamMax * goatRamMax)
+	r := m.followRange()
+	best := r * r
 	for _, t := range players {
 		if t.dim != m.dim || t.dead || t.gamemode == gmCreative || t.gamemode == gmSpectator {
 			continue
 		}
-		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < best && math.Abs(t.y-m.y) < 2 {
+		d2 := (t.x-m.x)*(t.x-m.x) + (t.y-m.y)*(t.y-m.y) + (t.z-m.z)*(t.z-m.z)
+		if d2 < best && h.withinBorder(t.dim, t.x, t.z) && h.mobSees(m, t) {
 			best, x, z, ok = d2, t.x, t.z, true
 		}
 	}
-	for _, o := range h.mobs {
-		if o == m || o.dim != m.dim || o.dying > 0 || o.etype == entityGoat {
-			continue
+	h.grid().nearby(m.dim, m.x, m.z, r, func(o *mob) {
+		if o == m || o.dying > 0 || o.etype == entityGoat {
+			return
 		}
-		if d2 := (o.x-m.x)*(o.x-m.x) + (o.z-m.z)*(o.z-m.z); d2 < best && math.Abs(o.y-m.y) < 2 {
+		d2 := (o.x-m.x)*(o.x-m.x) + (o.y-m.y)*(o.y-m.y) + (o.z-m.z)*(o.z-m.z)
+		if d2 < best && h.withinBorder(o.dim, o.x, o.z) && h.mobSeesMob(m, o) {
 			best, x, z, ok = d2, o.x, o.z, true
 		}
-	}
+	})
 	return
 }
 

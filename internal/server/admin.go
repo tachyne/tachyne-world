@@ -166,6 +166,7 @@ var summonable = map[string]int{
 	"creeper": entityCreeper, "husk": entityHusk, "stray": entityStray,
 	"drowned": entityDrowned, "slime": entitySlime, "enderman": entityEnderman,
 	"witch": entityWitch, "ender_dragon": entityEnderDragon,
+	"villager": entityVillager, "iron_golem": entityIronGolem,
 }
 
 // summonableType is SummonCommand's entity argument, for the mobs the engine

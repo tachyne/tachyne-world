@@ -223,3 +223,38 @@ func TestPanicSeeksWaterAndSwims(t *testing.T) {
 		t.Error("a cod in open water found nowhere to flee to")
 	}
 }
+
+// Animal.getWalkTargetValue off grass is the light's pathfinding cost, so a
+// panicking animal on bare stone runs for the open, lit ground rather than
+// under a roof (the spot value used to be a flat zero off grass).
+func TestPanicPrefersTheLight(t *testing.T) {
+	h := newHub(world.New(1))
+	h.dayTime.Store(6000)
+	h.world.ForceLoad(0, 0, 2)
+	for x := -8; x <= 8; x++ {
+		for z := -8; z <= 8; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 186; y++ {
+				h.world.SetBlock(x, y, z, worldgen.Air)
+			}
+			if x <= 0 {
+				h.world.SetBlock(x, 185, z, worldgen.Stone) // a roof over the west half, out of the search's reach
+			}
+		}
+	}
+	players := map[int32]*tracked{}
+	cow := h.spawnMob(players, entityCow, 0.5, 180, 0.5)
+	dark := 0
+	for i := 0; i < 200; i++ {
+		x, _, ok := h.panicTarget(cow)
+		if !ok {
+			t.Fatal("no spot found")
+		}
+		if x < -2 {
+			dark++
+		}
+	}
+	if dark > 10 {
+		t.Fatalf("a panicking cow picked the dark under the roof %d times in 200", dark)
+	}
+}

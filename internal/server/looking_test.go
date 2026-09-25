@@ -49,6 +49,7 @@ func TestLookRanges(t *testing.T) {
 		entityCow: 6, entityZombie: 8, entityCat: 10, entityPillager: 15,
 		entitySquid: 0, entityCod: 0, entityCreeper: 8,
 		entityID("giant"): 0, // no goals at all
+		entityPanda:       6, entitySniffer: 6, entityTadpole: 6,
 	}
 	for et, want := range cases {
 		if got := lookRange(&mob{etype: et}); got != want {
@@ -98,6 +99,23 @@ func TestAlertKinRousesNeighbours(t *testing.T) {
 	}
 	if busy.targetEID != 777 {
 		t.Errorf("a zombie already fighting keeps its target, got %d", busy.targetEID)
+	}
+	// A husk's class is Husk: its cry does not reach a plain zombie.
+	hz := h.spawnMob(players, entityZombie, 60, 70, 60)
+	hh := h.spawnMob(players, entityHusk, 61, 70, 60)
+	h.alertKin(hh, pl)
+	if hz.targetEID != 0 {
+		t.Errorf("a husk alerts husks only, zombie target=%d", hz.targetEID)
+	}
+	// The search is a box r out and 10 below / 11 above, not a sphere: a
+	// zombie off the corner at (r, r) and one 10.5 above both hear it.
+	box := h.spawnMob(players, entityZombie, 100, 70, 100)
+	r := box.followRange()
+	corner := h.spawnMob(players, entityZombie, 100+r-0.5, 70, 100+r-0.5)
+	above := h.spawnMob(players, entityZombie, 100, 80.5, 102)
+	h.alertKin(box, pl)
+	if corner.targetEID != pl.p.eid || above.targetEID != pl.p.eid {
+		t.Errorf("the alert box reaches its corners and 11 up: corner=%d above=%d", corner.targetEID, above.targetEID)
 	}
 	// A species without the goal rouses nobody.
 	sk := h.spawnMob(players, entitySkeleton, 40, 70, 40)

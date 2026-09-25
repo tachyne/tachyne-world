@@ -62,7 +62,6 @@ func (h *hub) configureHostile2(players map[int32]*tracked, m *mob) bool {
 		h.rollReinforcements(m)
 		h.rollZombieBaby(players, m)
 	case entityStray, entityDrowned: // cold skeleton / wet zombie: burn like their cousins
-		m.burnDelay = h.rng.Intn(burnStaggerMax)
 		if m.etype == entityStray {
 			m.behavior = rangedBehavior{}
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, skeletonEquip(m.eid))

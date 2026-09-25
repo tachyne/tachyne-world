@@ -49,6 +49,8 @@ var (
 		"terracotta", "white_terracotta", "yellow_terracotta", "orange_terracotta",
 		"red_terracotta", "brown_terracotta", "light_gray_terracotta") // + #badlands_terracotta
 	axolotlFloor = blockRange("clay") // #axolotls_spawnable_on
+	// #bats_spawnable_on = #base_stone_overworld
+	batFloor = blockRange("stone", "granite", "diorite", "andesite", "tuff", "deepslate")
 )
 
 func inRanges2(state uint32, rs [][2]uint32) bool {
