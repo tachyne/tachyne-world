@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Copper golems sort chests nearby, not across the whole area.** A copper
+  golem now looks for chests within 32 blocks sideways and 8 up or down,
+  as in vanilla. It used to look twice as far.
 - **Bigger shoals of cod and tropical fish.** A shoal of cod or tropical
   fish now holds up to eight fish, as in vanilla. A salmon shoal still holds
   five, and a shoal leader now counts as one of them.
