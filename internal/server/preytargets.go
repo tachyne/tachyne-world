@@ -60,6 +60,16 @@ func (h *hub) preyOf(hunter, o *mob) bool {
 		return o.etype == entityChicken || babyTurtleOnLand
 	case hunter.etype == entityPolarBear:
 		return o.etype == entityFox
+	case hunter.etype == entityPiglin:
+		// The piglin's brain picks its own (piglinFoe): the hoglin it hunts,
+		// its nemesis, or the mob it is angry at.
+		return o.eid == hunter.preyTarget
+	case hunter.etype == entityPiglinBrute:
+		// PiglinBruteAi: NEAREST_VISIBLE_NEMESIS, after the players.
+		return isPiglinNemesis(o)
+	case hunter.etype == entityHoglin:
+		// HoglinAi.wasHurtBy: whatever hit it, once it fights back.
+		return o.eid == hunter.fightBack
 	}
 	return false
 }
@@ -82,7 +92,8 @@ func huntsPrey(etype int) bool {
 		etype == entityWitherSkeleton || etype == entitySpider || etype == entityCaveSpider ||
 		etype == entitySlime || etype == entityMagmaCube || etype == entityEnderman ||
 		etype == entityGuardian || etype == entityElderGuardian ||
-		etype == entityFox || etype == entityOcelot || etype == entityPolarBear
+		etype == entityFox || etype == entityOcelot || etype == entityPolarBear ||
+		etype == entityPiglinBrute || etype == entityHoglin
 }
 
 // nearestPrey is the closest mob this one hunts, within r. Villagers that
@@ -124,13 +135,25 @@ func (h *hub) mobBitesPrey(players map[int32]*tracked, m *mob) bool {
 	}
 	m.attackCD = attackCooldown
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
-	v.hurtKind(float64(hostileMelee(m)+mobHeldBonus(m)), dtMobAttack)
+	dmg := float64(hostileMelee(m) + mobHeldBonus(m))
+	if m.etype == entityHoglin {
+		dmg = float64(h.hoglinBiteDamage(m)) // hurtAndThrowTarget: half plus a roll
+		h.hoglinBiteStart(players, m)
+		m.attackCD = hoglinAttackCD(m)
+	}
+	v.hurtKind(dmg, dtMobAttack)
+	v.lastAttacker = m.eid
 	h.mobKnockFrom(players, v, m.x, m.z)
 	if v.health <= 0 {
 		h.killMob(players, v)
 		m.preyTarget = 0
+		if m.fightBack == v.eid {
+			m.fightBack = 0
+		}
 		return true
 	}
+	// A piglin or a hoglin answers the blow.
+	h.mobHurtByMob(players, v, m)
 	if !v.hostile && panicsAt(v, dtMobAttack) { // whatever was bitten bolts, if its kind panics
 		v.panic, v.fleeX, v.fleeZ, v.reroute = h.panicFor(v), m.x, m.z, 0
 	}

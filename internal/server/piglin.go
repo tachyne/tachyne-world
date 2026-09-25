@@ -95,29 +95,6 @@ func (h *hub) nearestPiglinPrey(players map[int32]*tracked, m *mob, maxDist floa
 	return best
 }
 
-// piglinTarget is PiglinAi.findNearestValidAttackTarget over players: the
-// player it is angry at comes first, gold armour or not, for as long as the
-// anger lasts; under universal anger, whoever is nearest; otherwise the
-// nearest player not wearing gold. Every piglin attack — the sword, the
-// spear and the crossbow — goes for this one.
-func (h *hub) piglinTarget(players map[int32]*tracked, m *mob, maxDist float64) *tracked {
-	if m.anger > 0 {
-		if m.targetEID != 0 {
-			t := players[m.targetEID]
-			if t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim &&
-				(t.x-m.x)*(t.x-m.x)+(t.z-m.z)*(t.z-m.z) < maxDist*maxDist {
-				return t
-			}
-			if t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim {
-				return nil // angry at someone out of reach: nobody else is fought meanwhile
-			}
-		} else if h.rules.UniversalAnger {
-			return h.nearestHuntable(players, m.dim, m.x, m.z, maxDist)
-		}
-	}
-	return h.nearestPiglinPrey(players, m, maxDist)
-}
-
 // piglinCoolDown runs the anger clock down one mob-update; spent, the grudge
 // is forgotten.
 func (m *mob) piglinCoolDown() {
@@ -241,18 +218,12 @@ func (h *hub) rollBarter() invStack {
 	return invStack{item: int32(itemByName["gravel"]), count: 8}
 }
 
-// piglinHurtByPlayer is PiglinAi.wasHurtBy for a player's blow.
+// piglinHurtByPlayer is PiglinAi.wasHurtBy for a player's blow: the
+// admiring and any celebration end, and bartering is off for a while.
 func (h *hub) piglinHurtByPlayer(players map[int32]*tracked, m *mob) {
-	now := h.tick.Load()
-	if m.admireUntil != 0 {
-		m.admireUntil = 0
-		if m.offhand.item != 0 {
-			m.hoard = append(m.hoard, m.offhand)
-			m.offhand = invStack{}
-		}
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
-	}
-	m.admireOffUntil = now + piglinAdmireOffTck
+	h.piglinStopAdmiring(players, m)
+	h.piglinStopCelebrating(players, m)
+	m.admireOffUntil = h.tick.Load() + piglinAdmireOffTck
 }
 
 // Piglin anger (PiglinAi.setAngerTarget: ANGRY_AT for 600 ticks) and the
@@ -281,10 +252,8 @@ func (h *hub) piglinRetaliate(players map[int32]*tracked, m *mob, t *tracked) {
 		}
 		// setAngerTargetIfCloserThanCurrent: a piglin already angry at
 		// someone nearer keeps its own fight.
-		if o.anger > 0 && o.targetEID != 0 {
-			if cur := players[o.targetEID]; cur != nil && d(o, cur.x, cur.z) <= d(o, t.x, t.z) {
-				return
-			}
+		if x, z, ok := h.angerTargetPos(players, o); ok && d(o, x, z) <= d(o, t.x, t.z) {
+			return
 		}
 		o.anger, o.targetEID, o.unseenTicks = piglinAngerUpdates, t.p.eid, 0
 		o.hasTarget, o.tx, o.tz = true, t.x, t.z

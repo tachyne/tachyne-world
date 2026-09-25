@@ -62,10 +62,7 @@ func (h *hub) spearQuarry(players map[int32]*tracked, m *mob) (quarry, bool) {
 		if m.admireUntil != 0 {
 			return quarry{}, false
 		}
-		if t := h.piglinTarget(players, m, m.followRange()); t != nil {
-			return quarry{t: t, x: t.x, y: t.y, z: t.z}, true
-		}
-		return quarry{}, false
+		return h.piglinFoe(players, m, m.followRange()) // a player, or the hoglin or nemesis it fights
 	}
 	return h.rangedQuarry(players, m, m.followRange())
 }
@@ -306,6 +303,8 @@ func (h *hub) stabMobByMob(players map[int32]*tracked, m, v *mob, b spearBlow) b
 		}
 	} else if !v.hostile && panicsAt(v, dtMobAttack) {
 		v.panic, v.fleeX, v.fleeZ, v.reroute = h.panicFor(v), m.x, m.z, 0
+	} else if landed {
+		h.mobHurtByMob(players, v, m) // a hoglin run through turns on the spearman
 	}
 	return true
 }

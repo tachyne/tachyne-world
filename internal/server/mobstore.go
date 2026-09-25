@@ -142,6 +142,7 @@ type savedMob struct {
 	RavRoar       int         `json:"rav_roar,omitempty"`       // ravager: RoarTick
 	Overworld     int         `json:"overworld,omitempty"`      // piglin/hoglin: TimeInOverworld
 	ImmuneZombify bool        `json:"immune_zombify,omitempty"` // IsImmuneToZombification
+	NoHunt        bool        `json:"no_hunt,omitempty"`        // piglin: CannotHunt; hoglin: CannotBeHunted
 	TraderDespawn int         `json:"trader_despawn,omitempty"` // wandering trader / llama: DespawnDelay
 	Lifetime      int         `json:"lifetime,omitempty"`       // endermite: Lifetime
 	TadpoleAge    int         `json:"tadpole_age,omitempty"`    // tadpole: Age
@@ -764,7 +765,7 @@ func toSavedMob(m *mob) savedMob {
 		Chested: m.chested, Strength: m.strength, Held: m.held, Harness: m.harness,
 		Carry: packStack(m.carry), DupCD: m.dupCD, SniffCD: m.sniffCD, Hoard: packHoard(m),
 		LeashPos: leashSavePos(m),
-		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, SoundSet: m.soundSet, LastSlept: m.lastSlept, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, TraderDespawn: m.traderDespawn, Lifetime: m.endermiteLife, TadpoleAge: m.tadpoleAge, Trusted: trustedList(m),
+		Tamed:    m.tamed, Sitting: m.sitting, OvrSpeed: m.ovrSpeed, OvrDamage: m.ovrDamage, HasEgg: m.hasEgg, Screaming: m.screaming, SoundSet: m.soundSet, LastSlept: m.lastSlept, HornsGone: m.hornsGone, BreaksDoors: m.breaksDoors, PoseTick: m.poseTick, RavStun: m.ravStunTick, RavRoar: m.ravRoarTick, Overworld: m.overworldTicks, ImmuneZombify: m.immuneZombify, NoHunt: m.noHunt, TraderDespawn: m.traderDespawn, Lifetime: m.endermiteLife, TadpoleAge: m.tadpoleAge, Trusted: trustedList(m),
 	}
 	for i := range m.gear {
 		sm.Gear[i] = packStack(m.gear[i])

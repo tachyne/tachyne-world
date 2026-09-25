@@ -22,6 +22,7 @@ var strollSpeeds = func() map[int]float64 {
 		"creaking": 0.3, // CreakingAi idle: RandomStroll.stroll(SPEED_MULTIPLIER_WHEN_IDLING)
 		"zoglin":   0.4, // Zoglin idle: RandomStroll.stroll(0.4F)
 		"warden":   0.5, // WardenAi idle: RandomStroll.stroll(SPEED_MULTIPLIER_WHEN_IDLING)
+		"piglin":   0.6, // PiglinAi idle: RandomStroll.stroll(SPEED_MULTIPLIER_WHEN_IDLING)
 		// Cat and Ocelot: WaterAvoidingRandomStrollGoal(this, 0.8, …);
 		// TadpoleAi: RandomStroll.swim(0.5F).
 		"cat": 0.8, "ocelot": 0.8, "tadpole": 0.5,

@@ -54,6 +54,12 @@ func (h *hub) piglinAvoidStep(players map[int32]*tracked, m *mob) bool {
 	}
 	if m.piglinFlee > 0 { // already retreating: keep going
 		m.piglinFlee -= mobMoveInterval
+		if o := h.mobs[m.piglinFleeFrom]; o != nil && o.dying == 0 && o.dim == m.dim {
+			m.piglinFleeX, m.piglinFleeZ = o.x, o.z // AVOID_TARGET is an entity: away from where it is now
+		}
+		if m.piglinFlee <= 0 {
+			m.piglinFlee, m.piglinFleeFrom = 0, 0
+		}
 		return h.stepAwayFrom(m, m.piglinFleeX, m.piglinFleeZ)
 	}
 	// The zombified sensor first: it is the one that moves a piglin.
@@ -68,9 +74,7 @@ func (h *hub) piglinAvoidStep(players map[int32]*tracked, m *mob) bool {
 		}
 	})
 	if zomb != nil {
-		m.piglinFlee = piglinAvoidMin + h.rng.Intn(piglinAvoidSpan)
-		m.piglinFleeX, m.piglinFleeZ = zomb.x, zomb.z
-		m.hasTarget = false
+		h.piglinAvoid(m, zomb, piglinAvoidMin+h.rng.Intn(piglinAvoidSpan))
 		return h.stepAwayFrom(m, zomb.x, zomb.z)
 	}
 	if pos, ok := h.piglinNearestRepellent(m); ok {

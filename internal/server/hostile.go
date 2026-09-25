@@ -452,15 +452,9 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 		return
 	}
 	if m.etype == entityPiglin {
-		// PiglinAi: a player in a piece of gold armour is left alone, and an
-		// admiring piglin has eyes only for its gold.
-		// StartAttacking is gated on isAdult: a baby piglin hunts nobody.
-		m.piglinCoolDown()
-		if t := h.piglinTarget(players, m, reach); t != nil && m.admireUntil == 0 && !m.baby {
-			m.hasTarget, m.tx, m.tz = true, t.x, t.z
-		} else {
-			m.hasTarget = false
-		}
+		// PiglinAi: a player in a piece of gold armour is left alone, a
+		// nemesis is fought, a hoglin hunted (piglinbrain.go).
+		h.piglinAcquire(players, m, reach)
 		return
 	}
 	if t := h.huntTarget(players, m, reach); t != nil { // mustSee: a player it can see, or one remembered
@@ -542,8 +536,13 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	t := h.nearestHuntable(players, m.dim, m.x, m.z, attackReach)
 	if m.etype == entityPiglin {
 		// A piglin swings only at its own target (PiglinAi's attack target):
-		// never at a bystander in gold who happens to be standing close.
-		t = h.piglinTarget(players, m, attackReach)
+		// never at a bystander in gold who happens to be standing close, nor
+		// at a player while it is after a hoglin or a wither skeleton.
+		t = nil
+		if q, ok := h.piglinFoe(players, m, m.followRange()); ok && q.t != nil &&
+			(q.x-m.x)*(q.x-m.x)+(q.z-m.z)*(q.z-m.z) < attackReach*attackReach {
+			t = q.t
+		}
 	}
 	if m.etype == entityBee && m.targetEID != 0 && t != nil && t.p.eid != m.targetEID {
 		t = nil // BeeAttackGoal is a MeleeAttackGoal: it stings its target, not a bystander

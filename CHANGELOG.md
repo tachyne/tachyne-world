@@ -136,6 +136,21 @@ the public history since the project was open-sourced on 2026-07-10.
   player it trusts no longer runs from other players, wolves or bears, or
   panics when hit, and a sleeping, sitting or crouched fox now looks that
   way to players who arrive later.
+- **Piglins hunt hoglins, fight wither skeletons and celebrate.** A grown
+  piglin in the wild now goes after a hoglin it sees, now and then, with the
+  piglins around it joining in; the hoglin fights back, and when the piglins
+  are outnumbered they back off. A bastion's own piglins and hoglins leave
+  each other alone, as in vanilla. Piglins and brutes attack wither
+  skeletons and the wither on sight, and a baby piglin runs from them. When
+  a piglin's target dies it gathers where it fell for fifteen seconds, and
+  after a hoglin hunt the piglins sometimes dance. Shooting a piglin now
+  angers it, and the piglins near it, the way a blow does. Piglins also
+  stroll at vanilla's slower idle pace.
+- **Piglin brutes keep to their bastion.** A brute remembers where it
+  spawned and, with nothing to fight, walks back there, strolls about it,
+  and wanders over to the piglins and brutes near it, all at an unhurried
+  pace, as in vanilla. It used to drift off across the Nether like any
+  other monster. Piglins and brutes also open wooden doors in their way now.
 - **Placing pointed dripstone.** Pointed dripstone now hangs from a ceiling
   or stands on a floor depending on where you look, as in vanilla, and a
   column keeps its proper taper — tip, frustum, middle, base — as pieces are

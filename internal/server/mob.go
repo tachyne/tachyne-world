@@ -135,12 +135,22 @@ type mob struct {
 	phantomSwoop    int           // …and the ticks left in the one it is flying
 	wardenAnger     map[int32]int // warden: AngerManagement's grudge per suspect
 	angerClock      int           // …and the ticks until the next decay
-	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin
+	piglinFlee      int           // piglin: ticks left avoiding a zombified piglin, a nemesis or hoglins
 	piglinFleeX     float64       // …and what it is backing away from
 	piglinFleeZ     float64
-	golemGrudgeEID  int32 // iron golem: the player who hit it (HurtByTargetGoal)
-	golemGrudgeLeft int   // …and the ticks it keeps after them
-	variant         int32 // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
+	piglinFleeFrom  int32  // …the mob it is avoiding, followed as it moves (0 = a fixed spot)
+	noHunt          bool   // piglin: CannotHunt; hoglin: CannotBeHunted (a bastion's own; persisted)
+	huntedUntil     uint64 // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
+	piglinFoe       int32  // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
+	celebrateUntil  uint64 // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
+	celebratePos    blockPos
+	fightBack       int32     // hoglin: the piglin that hit it and it now fights (ATTACK_TARGET from wasHurtBy)
+	idleWalk        *idleWalk // piglin brute: the walk its idle RunOne picked; piglin: its celebration's (nil = none)
+	homeToNext      uint64    // piglin brute: StrollToPoi's nextOkStartTime
+	homeAroundNext  uint64    // …and StrollAroundPoi's
+	golemGrudgeEID  int32     // iron golem: the player who hit it (HurtByTargetGoal)
+	golemGrudgeLeft int       // …and the ticks it keeps after them
+	variant         int32     // species variant (variant.go: coat/colour, horse colour|markings<<8, villager type); meaningful when variantSet
 	variantSet      bool
 	eggIn           int        // chicken: ticks until the next egg
 	beeNectar       bool       // bee: carrying nectar home (fills the hive on delivery)
@@ -278,7 +288,7 @@ type mob struct {
 	allayNote                       blockPos                          // allay: that note block
 	allayNoteDim                    int                               // …in this dimension (vanilla keeps a GlobalPos)
 	dupCD                           int                               // allay: ticks until it may duplicate again (6000)
-	dancing                         bool                              // allay: a jukebox plays within earshot
+	dancing                         bool                              // allay: a jukebox plays within earshot; piglin: DANCING (DATA_IS_DANCING)
 	frogEaten                       int8                              // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt                        uint64                            // baby panda: the tick its sneeze lands (0 = not sneezing)
 	pandaFlags                      byte                              // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)
@@ -813,6 +823,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
 			// A zombie, zombified piglin or piglin with a spear: closing,
 			// charging with the spear lowered, and wheeling off for the next pass.
+		case m.etype == entityPiglin && h.piglinCelebrateStep(players, m):
+			// A piglin going to where its target fell, dancing after a hoglin.
+		case m.etype == entityPiglinBrute && h.bruteIdleStep(m):
+			// An idle brute keeping to its bastion: home, its fellows, a stroll.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):
 			// A stranded water animal heading back to the water, or a strider
 			// off the lava heading back to it.
