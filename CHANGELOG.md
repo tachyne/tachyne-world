@@ -142,6 +142,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Death messages name the killer's named item.** Deaths caused by a
+  player holding an item renamed on an anvil now read "… using
+  [name]" however the blow came, including arrows, tridents, Thorns,
+  sweeps, fireworks and TNT they lit, as in vanilla.
 - **Reach follows the interaction range attributes.** Hitting, trading
   with, riding and otherwise using mobs, players and vehicles now measures
   from your eyes against your entity interaction range, as in vanilla, so

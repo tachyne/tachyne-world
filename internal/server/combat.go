@@ -444,7 +444,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 					}
 					dmgO := float32((sweepBase + sharp) * sw.scale)
 					if h.hurtFrom(players, o, dmgO, dtPlayerAttack,
-						deathCause{by: t.p.name, byEID: t.p.eid}, from(t.x, t.z)) && !o.dead {
+						playerCause(t), from(t.x, t.z)) && !o.dead {
 						h.knockback(o, o.x-fx, o.z-fz)
 					}
 					h.incCustom(t, "damage_dealt", tenths(dmgO))

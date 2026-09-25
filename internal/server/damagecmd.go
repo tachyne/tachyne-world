@@ -152,7 +152,7 @@ func (h *hub) commandHurt(players map[int32]*tracked, en cmdEntity, amount float
 		if c := src.cause; c != nil {
 			cause.by = c.name()
 			if c.t != nil {
-				cause.byEID = c.t.p.eid
+				cause.byEID, cause.weapon = c.t.p.eid, namedMainhand(c.t)
 			} else {
 				from.byMob = true // a living non-player to blame: the difficulty scales it
 			}

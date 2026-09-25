@@ -387,6 +387,9 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	for _, o := range opts {
 		o(&cfg)
 	}
+	if t := players[cfg.causer]; t != nil && !cfg.causerMob && cause.by == t.p.name {
+		cause.weapon = namedMainhand(t) // the one who lit it: a named item they hold
+	}
 	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
 	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
 	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)

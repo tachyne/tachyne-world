@@ -270,7 +270,7 @@ func (h *hub) rocketBlast(players map[int32]*tracked, r *rocketEntity) {
 	full := float32(5 + r.explosions*2)
 	cause := deathCause{}
 	if rider := players[r.attached]; rider != nil {
-		cause.by = rider.p.name
+		cause.by, cause.weapon = rider.p.name, namedMainhand(rider)
 		h.hurtFrom(players, rider, full, dtFireworks, cause, from(r.x, r.z))
 	}
 	// Vanilla clips to the target's feet and its middle; either line reaching

@@ -35,6 +35,24 @@ type deathCause struct {
 	byEID int32
 }
 
+// namedMainhand is the name of what a player holds in the main hand when it
+// has one of its own (CUSTOM_NAME) — the only case a death message names
+// the weapon.
+func namedMainhand(t *tracked) string {
+	if held := t.mainHand(); held.count > 0 {
+		return held.name
+	}
+	return ""
+}
+
+// playerCause is a death caused by player t: their name, their kill, and —
+// as getLocalizedDeathMessage reads the causing entity's main hand when the
+// message is made — a named item they are holding, whatever the blow was
+// dealt with (an arrow, a thorn, a blast they lit).
+func playerCause(t *tracked) deathCause {
+	return deathCause{by: t.p.name, byEID: t.p.eid, weapon: namedMainhand(t)}
+}
+
 // killCreditTicks is how long vanilla remembers who a victim was last
 // fighting (LivingEntity's lastHurtByMob timeout). Inside that window a death
 // with nobody directly to blame still reads "while trying to escape X".
