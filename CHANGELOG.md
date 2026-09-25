@@ -148,6 +148,9 @@ the public history since the project was open-sourced on 2026-07-10.
   pack mob is hit, its call now reaches the same box of neighbours as in
   vanilla — a little further on the diagonals and up and down — and a
   husk's cry rouses only husks.
+- **Goats ram what they can see.** A goat no longer rams through walls; as
+  in vanilla it picks the nearest creature or player in view within
+  sixteen blocks, and never one outside the world border.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

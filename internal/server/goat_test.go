@@ -75,3 +75,37 @@ func TestGoatRams(t *testing.T) {
 		t.Fatal("no horns left to drop")
 	}
 }
+
+// PrepareRamNearestTarget takes from NEAREST_VISIBLE_LIVING_ENTITIES: a goat
+// does not pick a player it cannot see through a wall, and does pick one
+// in view further than the old seven blocks.
+func TestGoatRamNeedsSight(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	pl.p.eid = 500
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.worldFor(0)
+	w.ForceLoad(0, 0, 2)
+	for x := -14; x <= 14; x++ {
+		for z := -4; z <= 4; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y < 184; y++ {
+				w.SetBlock(x, y, z, worldgen.Air)
+				if x == 2 {
+					w.SetBlock(x, y, z, worldgen.Stone)
+				}
+			}
+		}
+	}
+	g := h.spawnAnimal(players, entityGoat, 0, 0)
+	g.x, g.y, g.z = 0.5, 180, 0.5
+	pl.x, pl.y, pl.z = 4.5, 180, 0.5
+	if _, _, ok := h.goatRamTarget(players, g); ok {
+		t.Fatal("a goat must not pick a player behind a wall")
+	}
+	pl.x = -11.5
+	if tx, _, ok := h.goatRamTarget(players, g); !ok || tx != pl.x {
+		t.Fatal("a goat picks a player in view within its follow range")
+	}
+}
