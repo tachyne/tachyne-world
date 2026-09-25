@@ -29,12 +29,15 @@ var lookRanges = map[string]float64{
 	"cow": 6, "mooshroom": 6, "pig": 6, "sheep": 6, "chicken": 6, "horse": 6, "donkey": 6,
 	"mule": 6, "skeleton_horse": 6, "zombie_horse": 6, "camel": 6, "camel_husk": 6, "llama": 6, "trader_llama": 6,
 	"polar_bear": 6, "iron_golem": 6, "snow_golem": 6, "copper_golem": 6, "dolphin": 6, "ravager": 6,
-	"cat": 10, "ocelot": 10, "rabbit": 10,
+	"panda":   6, // PandaLookAtPlayerGoal(this, Player, 6)
+	"sniffer": 6, // SnifferAi: SetEntityLookTarget(PLAYER, 6)
+	"tadpole": 6, // TadpoleAi: SetEntityLookTargetSometimes(PLAYER, 6, 30-60)
+	"cat":     10, "ocelot": 10, "rabbit": 10,
 	"fox":      24, // FoxLookAtPlayerGoal(this, Player, 24)
 	"pillager": 15,
 	"evoker":   3, "illusioner": 3, "vindicator": 3, "vex": 3, // LookAtPlayerGoal(this, Player, 3, 1.0)
 	"squid": 0, "glow_squid": 0, "cod": 0, "salmon": 0, "tropical_fish": 0, "pufferfish": 0,
-	"tadpole": 0, "shulker": 0, "ender_dragon": 0, "nautilus": 0, "zombie_nautilus": 0,
+	"shulker": 0, "ender_dragon": 0, "nautilus": 0, "zombie_nautilus": 0,
 	"giant": 0, // Giant registers no goals at all
 }
 
