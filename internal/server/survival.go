@@ -507,6 +507,18 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if dt.has(tagIsFire) && t.hasEffect(effFireRes) > 0 {
 		return false
 	}
+	// Player.isInvulnerableTo: the damage gamerules, by tag — every
+	// #is_drowning, #is_fall, #is_fire and #is_freezing type, whichever
+	// hazard deals it.
+	if dt.has(tagIsDrowning) && !h.rules.DrownDamage || dt.has(tagIsFall) && !h.rules.FallDamage ||
+		dt.has(tagIsFire) && !h.rules.FireDamage || dt.has(tagIsFreezing) && !h.rules.FreezeDamage {
+		return false
+	}
+	// Frost Walker's damage immunity: #burn_from_stepping (magma, campfires,
+	// a hot sulfur cube) does not reach the wearer's feet.
+	if dt.has(tagBurnFromStepping) && !dt.has(tagBypassesInvulnerability) && t.armor[3].enchLvl(enchFrostWalker) > 0 {
+		return false
+	}
 	h.dropShoulderParrots(players, t) // hurtServer: any blow that gets this far shakes them off
 	// Player.hurtServer scales the blow by the difficulty BEFORE anything
 	// mitigates it, and only for the damage types whose `scaling` field says

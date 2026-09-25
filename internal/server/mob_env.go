@@ -71,6 +71,9 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	if dt.has(tagIsFire) && m.resistsFire() {
 		return // LivingEntity.hurtServer: Fire Resistance refuses #is_fire outright
 	}
+	if m == h.dragon && !dt.has(tagAlwaysHurtsEnderDragons) {
+		return // EnderDragon.hurt: only a player or #always_hurts_ender_dragons (explosions) harms it
+	}
 	h.vibAt(m.dim, freqEntityDamage, m.x, m.y, m.z, m.eid)
 	if m.spawnInvuln > 0 {
 		return

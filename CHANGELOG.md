@@ -156,6 +156,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Damage types follow their tags.** The fall, fire, drowning and freeze
+  damage gamerules now cover every damage of that kind (an ender pearl's
+  landing counts as a fall), Frost Walker boots protect from campfires and
+  hot sulfur cubes as well as magma blocks, and the ender dragon can only
+  be hurt by players and explosions, as in vanilla.
 - **The "used" statistic counts much more.** Placing blocks, mining with
   a tool, landing a blow with a weapon, using bone meal, fire charges,
   flint and steel, hoes and shovels on blocks now each count as a use of
