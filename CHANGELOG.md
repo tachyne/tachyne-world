@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Iron golems walk their villages.** An iron golem with nothing to fight
+  stood where it was made. It now strolls about its village at its unhurried
+  pace, often toward the villagers and their beds, workstations and bell, and
+  one that has wandered out heads back toward the village.
 - **Villagers show you their trades.** Stand near a villager holding
   something it trades for, and it turns to you and holds up what it would
   give in return, cycling through when there are several offers, as in

@@ -273,25 +273,30 @@ func (golemBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if p := h.golemGrudge(h.playersRef, m); p != nil {
 		return (p.x - m.x) * 0.3, (p.z - m.z) * 0.3 // DefendVillageTargetGoal: a villager's enemy
 	}
+	if target := h.golemFoe(m); target != nil {
+		m.golemStrolling = false
+		return (target.x - m.x) * 0.3, (target.z - m.z) * 0.3
+	}
+	// Nothing to fight: back toward the village (MoveBackToVillageGoal) or a
+	// stroll about it (GolemRandomStrollInVillageGoal), both at 0.6.
+	m.golemStrolling = true
+	return h.golemStrollSteer(m)
+}
+
+// golemFoe is the hostile a golem goes for: the nearest Enemy within 16 that
+// is not a creeper (golems leave creepers be).
+func (h *hub) golemFoe(m *mob) *mob {
 	var target *mob
 	best := 16.0
 	h.grid().nearby(m.dim, m.x, m.z, best, func(o *mob) {
-		if !o.hostile || o.dying > 0 || o.etype == entityCreeper { // Enemy && !Creeper: golems leave creepers be
+		if !o.hostile || o.dying > 0 || o.etype == entityCreeper {
 			return
 		}
 		if d := math.Hypot(o.x-m.x, o.z-m.z); d < best {
 			best, target = d, o
 		}
 	})
-	if target != nil {
-		return (target.x - m.x) * 0.3, (target.z - m.z) * 0.3
-	}
-	// Drift home.
-	hx, hz := float64(m.home.x)-m.x, float64(m.home.z)-m.z
-	if math.Hypot(hx, hz) > 6 {
-		return hx * 0.05, hz * 0.05
-	}
-	return 0, 0
+	return target
 }
 
 // golemMelee punches the nearest hostile in reach (called from the mob

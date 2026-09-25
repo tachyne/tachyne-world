@@ -235,6 +235,7 @@ type mob struct {
 	usesDoors                       bool        // villager: may plan through + open wooden doors
 	roamX, roamZ                    float64     // villager: current roam target (goal-directed wander)
 	roamAt                          uint64      // tick to pick a fresh roam target
+	golemStrolling                  bool        // iron golem: idle (strolling or heading home) at 0.6, not fighting
 	bed                             blockPos    // villager: its bed (sleep anchor; zero = no schedule)
 	work                            blockPos    // villager: its profession workstation (day work site)
 	farmPos                         blockPos    // farmer: the plot it is tending (zero = none)
