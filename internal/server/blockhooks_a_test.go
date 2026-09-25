@@ -313,3 +313,45 @@ func TestSculkHearsACandleSnuffed(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
 	}
 }
+
+// 26.3 #maintains_farmland holds the fence gates too: dry farmland under a
+// gate stays tilled.
+func TestFenceGateKeepsFarmland(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	w := h.world
+	for dx := -5; dx <= 5; dx++ {
+		for dz := -5; dz <= 5; dz++ {
+			w.SetBlock(dx, 179, dz, worldgen.Stone)
+			w.SetBlock(dx, 180, dz, worldgen.Air)
+			w.SetBlock(dx, 181, dz, worldgen.Air)
+		}
+	}
+	w.SetBlock(0, 180, 0, farmlandMin) // moisture 0
+	gate := worldgen.BlockBase("oak_fence_gate")
+	w.SetBlock(0, 181, 0, gate)
+	h.farmlandRandomTick(players, 0, 0, 180, 0, farmlandMin)
+	if w.At(0, 180, 0) != farmlandMin || w.At(0, 181, 0) != gate {
+		t.Errorf("dry farmland under a fence gate should stay: soil %d gate %d", w.At(0, 180, 0), w.At(0, 181, 0))
+	}
+}
+
+// PathBlock.turnToBaseBlock: a path covered by a solid block becomes dirt
+// with a BLOCK_CHANGE, and a mob standing on it is lifted onto the dirt.
+func TestPathRevertIsHeardAndLifts(t *testing.T) {
+	var lifted bool
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		h.world.SetBlock(7, 179, 4, dirtPathState)
+		h.world.SetBlock(7, 179, 6, dirtPathState)
+		m := h.spawnMob(players, entityCow, 7.5, 179+15.0/16, 6.5)
+		h.setBlockAt(players, dimOverworld, blockPos{7, 180, 4}, worldgen.Stone)
+		h.setBlockAt(players, dimOverworld, blockPos{7, 180, 6}, worldgen.BlockBase("oak_slab")) // a slab is solid enough
+		lifted = h.world.At(7, 179, 6) == worldgen.Dirt && m.y == 180
+	})
+	if f != freqBlockChange {
+		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
+	}
+	if !lifted {
+		t.Error("the cow on the path should stand on the dirt")
+	}
+}
