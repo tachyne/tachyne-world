@@ -1,6 +1,10 @@
 package server
 
-import "github.com/tachyne/tachyne-world/internal/worldgen"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // Farmland moisture + trampling, reimplemented from the vanilla FarmBlock:
 // tilled soil hydrates to moisture 7 when water is within a 9×9×2 box (or it's
@@ -98,5 +102,25 @@ func (h *hub) tramplePlayer(players map[int32]*tracked, t *tracked, x, y, z int,
 	state := h.worldFor(t.dim).At(x, y, z)
 	if state >= farmlandMin && state <= farmlandMin+7 {
 		h.turnFarmlandToDirt(players, t.dim, x, y, z)
+	}
+}
+
+// mobTrample is FarmlandBlock.fallOn for a mob: a landing from past half a
+// block may turn the farmland under it to dirt (the chance is the fall less
+// half a block), if mob griefing allows and the mob is big enough —
+// width² × height over 0.512, so a cow tramples and a chicken never does.
+func (h *hub) mobTrample(players map[int32]*tracked, m *mob, fell float64) {
+	if !h.rules.MobGriefing {
+		return
+	}
+	if b := m.box(); b.w*b.w*b.h <= 0.512 {
+		return
+	}
+	if h.rng.Float64() >= fell-0.5 {
+		return
+	}
+	x, y, z := int(math.Floor(m.x)), int(math.Floor(m.y))-1, int(math.Floor(m.z))
+	if st := h.worldFor(m.dim).At(x, y, z); st >= farmlandMin && st <= farmlandMin+7 {
+		h.turnFarmlandToDirt(players, m.dim, x, y, z)
 	}
 }

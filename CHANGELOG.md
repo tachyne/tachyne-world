@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs trample farmland.** A big enough mob — a cow, a horse, a zombie —
+  that drops onto farmland can turn it back to dirt, as in vanilla, when
+  mob griefing is on. Chickens and other small mobs never do.
 - **Fences, walls and panes reconnect whatever changes beside them.**
   Fences, walls, glass panes, iron bars and stairs now re-join (or let go of)
   their neighbours when an explosion, a piston or anything else changes the

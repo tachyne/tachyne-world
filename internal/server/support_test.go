@@ -455,3 +455,33 @@ func TestConnectorsFollowEngineChanges(t *testing.T) {
 		t.Fatal("tripwire did not connect to tripwire")
 	}
 }
+
+// A cow landing on farmland from a drop may trample it (FarmlandBlock.fallOn
+// for a big enough mob, with mob griefing); a chicken never does.
+func TestMobTramplesFarmland(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.rules.MobGriefing = true
+	players := map[int32]*tracked{}
+	w := h.world
+	farmland := worldgen.BlockBase("farmland")
+	trampled := func(etype int) int {
+		n := 0
+		for i := 0; i < 40; i++ {
+			w.SetBlock(3, 179, 3, farmland)
+			m := h.spawnMob(players, etype, 3.5, 180, 3.5)
+			h.mobTrample(players, m, 1.5) // a full block's drop: always
+			if w.At(3, 179, 3) != farmland {
+				n++
+			}
+			h.removeMob(players, m)
+		}
+		return n
+	}
+	if n := trampled(entityCow); n != 40 {
+		t.Errorf("a cow dropping a block and a half trampled %d of 40", n)
+	}
+	if n := trampled(entityChicken); n != 0 {
+		t.Errorf("a chicken trampled farmland %d times", n)
+	}
+}

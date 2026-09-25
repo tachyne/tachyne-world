@@ -1138,7 +1138,11 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				// on /attribute gravity 0 hangs in the air.
 			} else {
 				m.y = floor
-				if fell := oldY - m.y; fell > m.safeFallDistance() { // the ground dropped out under it
+				fell := oldY - m.y
+				if fell > 0.5 {
+					h.mobTrample(players, m, fell) // FarmlandBlock.fallOn
+				}
+				if fell > m.safeFallDistance() { // the ground dropped out under it
 					h.mobFall(players, m, fell)
 				}
 			}
