@@ -94,14 +94,18 @@ const raidCooldownSecs = 300 / 20
 
 // isVillage is ServerLevel.isVillage: a village point of interest (a bed,
 // a bell, a workstation) in the centre's section or one next to it.
-func (h *hub) isVillage(center blockPos) bool {
+func (h *hub) isVillage(center blockPos) bool { return h.closeToVillage(center, 1) }
+
+// closeToVillage is ServerLevel.isCloseToVillage: a village point of
+// interest within n sections of the position's.
+func (h *hub) closeToVillage(pos blockPos, n int) bool {
 	w := h.poiWorld(dimOverworld)
 	if w == nil {
 		return false
 	}
-	cx, cy, cz := center.x>>4, center.y>>4, center.z>>4
-	return len(w.POIsNear(center.x, center.y, center.z, 32, func(p world.POI) bool {
-		return abs(p.X>>4-cx) <= 1 && abs(p.Y>>4-cy) <= 1 && abs(p.Z>>4-cz) <= 1
+	cx, cy, cz := pos.x>>4, pos.y>>4, pos.z>>4
+	return len(w.POIsNear(pos.x, pos.y, pos.z, 16*(n+1), func(p world.POI) bool {
+		return abs(p.X>>4-cx) <= n && abs(p.Y>>4-cy) <= n && abs(p.Z>>4-cz) <= n
 	})) > 0
 }
 

@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Pillager patrols keep vanilla's distance.** Patrols now stay away from
+  any village with beds, bells or workstations near the player — including
+  villages players have built themselves — never visit spectators, and never
+  spawn in mushroom fields.
 - **The raid bar behaves like vanilla's.** It now shows the raiders'
   remaining health rather than a head count, fills up during the fifteen
   seconds before each wave (the first included), and after a win reads

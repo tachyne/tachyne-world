@@ -16,7 +16,6 @@ const (
 	patrolJitter   = 1200  // + up to this many ticks
 	patrolMinDay   = 5     // no patrols before day 5 (vanilla)
 	patrolMinDist  = 24    // spawn patrolMinDist..2× blocks from the chosen player
-	patrolVillageR = 96    // …and not this close to a village
 )
 
 // updatePatrols runs on the 1 Hz survival step; it self-throttles via
@@ -57,12 +56,18 @@ func (h *hub) updatePatrols(players map[int32]*tracked) {
 	}
 	t := cand[h.rng.Intn(len(cand))]
 	px, pz := int(t.x), int(t.z)
-	if h.nearVillage(px, pz, patrolVillageR) {
+	// PatrolSpawner.tick: a spectator ends the attempt, and so does a player
+	// within two sections of a village's points of interest.
+	if t.gamemode == gmSpectator || h.closeToVillage(blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}, 2) {
 		return
 	}
 	sx := px + (patrolMinDist+h.rng.Intn(patrolMinDist))*h.randSign()
 	sz := pz + (patrolMinDist+h.rng.Intn(patrolMinDist))*h.randSign()
 	if !h.world.Spawnable(sx, sz) {
+		return
+	}
+	// can_pillager_patrol_spawn: false in the mushroom fields.
+	if h.world.Gen().BiomeName(sx, sz) == "minecraft:mushroom_fields" {
 		return
 	}
 	h.spawnPatrol(players, sx, sz)
@@ -155,20 +160,6 @@ func (h *hub) updateOutposts(players map[int32]*tracked) {
 			}
 		}
 	}
-}
-
-// nearVillage reports whether any village centre sits within r blocks of (x,z).
-func (h *hub) nearVillage(x, z, r int) bool {
-	gen := h.world.Gen()
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			v := gen.VillageIn(x+dx*384, z+dz*384)
-			if v.Exists && abs(v.X-x) < r && abs(v.Z-z) < r {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // randSign returns -1 or +1.
