@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -103,5 +104,22 @@ func TestSpiderNeutralByLight(t *testing.T) {
 	h.acquireTarget(players, m)
 	if !m.hasTarget {
 		t.Error("a spider in the dark hunts whatever the clock says")
+	}
+}
+
+// DaylightDetectorBlock.updateSignalStrength does nothing where the
+// dimension has no sky light: an inverted detector in the Nether keeps its
+// power rather than reading sky 0 as a full 15.
+func TestDaylightDetectorIdleWithoutSkyLight(t *testing.T) {
+	h, _, players, _, _, _ := redSetup(t)
+	nw, err := world.NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.nether = nw
+	nw.SetBlock(0, 60, 0, daylightWith(true, 0))
+	h.inDim(dimNether, func() { h.updateDaylight(players, blockPos{0, 60, 0}, nw.At(0, 60, 0)) })
+	if p := daylightPower(nw.At(0, 60, 0)); p != 0 {
+		t.Fatalf("an inverted Nether detector should stay at 0, got %d", p)
 	}
 }

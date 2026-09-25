@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Daylight detectors in the Nether and the End stay put.** With no sky
+  there, a detector no longer reads darkness, so an inverted one no
+  longer gives full power, as in vanilla.
 - **Grindstone experience comes out of the grindstone.** The experience
   from disenchanting now pops out of the grindstone itself, with its use
   sound there, as in vanilla, rather than at your feet.

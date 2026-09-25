@@ -375,6 +375,9 @@ func (h *hub) observerTick(players map[int32]*tracked, pos blockPos, state uint3
 // detector reads the raw sky value back to front, which is why it fires at
 // dusk rather than tracking the night's curve.
 func (h *hub) updateDaylight(players map[int32]*tracked, pos blockPos, state uint32) {
+	if h.rsDim != dimOverworld {
+		return // dimensionType().hasSkyLight(): the Nether and the End have none, so the power stays put
+	}
 	sky, _ := h.rsWorld().LightAt(pos.x, pos.y, pos.z)
 	n := int(sky) - h.skyDarken()
 	if daylightInverted(state) {
