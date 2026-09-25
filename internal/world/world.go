@@ -67,7 +67,10 @@ type World struct {
 	seed  int64
 	mu    sync.RWMutex
 	edits map[chunkPos]map[int]uint32 // chunk -> local block index -> state
-	poi   poiIndex                    // points of interest (poi.go)
+	// guardSnap is the edits as they stood when this GenVersion first ran
+	// (guardsnap.go): what generation's build guard reads. nil = live edits.
+	guardSnap map[chunkPos]map[int]uint32
+	poi       poiIndex // points of interest (poi.go)
 
 	genMu sync.Mutex
 	cache map[chunkPos]cacheEntry

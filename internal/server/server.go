@@ -407,6 +407,14 @@ func (s *Server) Serve() error {
 		if err := s.migrateContentIDSpace(); err != nil {
 			log.Fatalf("content id-space migration failed, nothing written: %v", err)
 		}
+		// Generation's build guard reads the builds as they stood when this
+		// GenVersion first booted, not as they are now (world/guardsnap.go).
+		dir := filepath.Dir(s.WorldFile)
+		for name, w := range map[string]*world.World{"world": s.world, "nether": s.nether, "end": s.end} {
+			if err := w.FreezeGuard(dir, name); err != nil {
+				log.Fatalf("build guard snapshot for %s: %v", name, err)
+			}
+		}
 	}
 	s.resolveSpawn() // fix an auto (x,z) spawn Y before anything reads it
 	if s.gate == nil {
