@@ -21,8 +21,8 @@ const (
 	witchDrinkTicks     = 32    // Items.POTION use duration
 	witchDrinkSlow      = -0.25 // SPEED_MODIFIER_DRINKING (ADD_VALUE, ×attrToStep here)
 	witchDrinkSource    = "drinking"
-	witchThrowSpeed     = 0.75
-	witchThrowSpread    = 8.0 // Projectile.shoot inaccuracy
+	witchThrowSpeed     = 0.75 // performRangedAttack's power, blocks per tick…
+	witchThrowSpeedNear = 0.45 // …and within two blocks
 )
 
 func witchUsingMeta(eid int32, on bool) []byte {
@@ -120,20 +120,32 @@ func (h *hub) witchThrow(players map[int32]*tracked, m *mob, t *tracked) {
 		return
 	}
 	kind := h.witchPotionFor(m, t)
-	dx, dy, dz := t.x-m.x, (t.y+1.62-1.1)-m.y, t.z-m.z
-	d4 := math.Hypot(dx, dz)
-	dy += d4 * 0.2
+	mx, _, mz := h.knownMove(t)
+	h.witchLob(players, m, t.x+mx, t.y+playerEyeStand, t.z+mz, kind, false)
+	m.attackCD = witchCooldown
+}
+
+// witchLob is the throw of Witch.performRangedAttack at a target whose eyes
+// are at ey and who will be at (x, z) next tick (its position plus its
+// movement): aimed 1.1 below the eyes with a lob of a fifth of the distance,
+// thrown from 0.1 below the witch's eyes at 0.75 blocks a tick (0.45 inside
+// two blocks) with the difficulty's rangedAttackUncertainty spread.
+func (h *hub) witchLob(players map[int32]*tracked, m *mob, x, ey, z float64, kind int8, atMob bool) {
+	dx, dy, dz := x-m.x, ey-1.1-m.y, z-m.z
+	dist := math.Hypot(dx, dz)
+	dy += dist * 0.2
 	d := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if d < 1e-6 {
 		return
 	}
-	v := witchThrowSpeed * 2 // per update
-	spread := witchThrowSpread * 0.0075
-	vx := (dx/d + h.rng.NormFloat64()*spread) * v
-	vy := (dy/d + h.rng.NormFloat64()*spread) * v
-	vz := (dz/d + h.rng.NormFloat64()*spread) * v
-	a := h.launchProjectileIn(players, entitySplashProj, m.dim, m.x, m.y+1.2, m.z, vx, vy, vz)
-	a.shooter, a.breaks, a.splash, a.potion = m.eid, true, true, kind
+	pow := witchThrowSpeed
+	if dist <= 2 {
+		pow = witchThrowSpeedNear
+	}
+	dev := 0.0172275 * float64(14-4*h.rules.Difficulty)
+	tri := func() float64 { return dev * (h.rng.Float64() - h.rng.Float64()) }
+	vx, vy, vz := (dx/d+tri())*pow, (dy/d+tri())*pow, (dz/d+tri())*pow
+	a := h.launchProjectileIn(players, entitySplashProj, m.dim, m.x, m.y+mobEyeHeight(m)-0.1, m.z, vx, vy, vz)
+	a.shooter, a.breaks, a.splash, a.potion, a.mobShot = m.eid, true, true, kind, atMob
 	h.playSoundDim(players, m.dim, "minecraft:entity.witch.throw", sndHostile, m.x, m.y, m.z, 1, 0.8+h.rng.Float32()*0.4)
-	m.attackCD = witchCooldown
 }

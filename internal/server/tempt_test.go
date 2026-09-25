@@ -118,3 +118,25 @@ func TestScareableTempt(t *testing.T) {
 		t.Fatal("a step taken beyond six blocks does not scare")
 	}
 }
+
+// ZombieHorse.addBehaviourGoals: its TemptGoal takes #zombie_horse_food, a
+// red mushroom, and not the horse family's golden foods it used to follow.
+func TestZombieHorseFollowsARedMushroom(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	pl.x, pl.y, pl.z = 6.5, 70, 0.5
+	m := h.spawnAnimal(players, entityZombieHorse, 0, 0)
+	for _, c := range []struct {
+		item string
+		want bool
+	}{{"golden_carrot", false}, {"golden_apple", false}, {"red_mushroom", true}} {
+		m.x, m.y, m.z, m.vx, m.vz = 0.5, 70, 0.5, 0, 0
+		m.temptCalm = 0
+		pl.inv.slots[0] = invStack{item: itemByName[c.item], count: 1}
+		pl.p.setHotbarSlot(0, itemByName[c.item])
+		if got := h.temptStep(players, m); got != c.want {
+			t.Errorf("a zombie horse tempted by %s: %v, want %v", c.item, got, c.want)
+		}
+	}
+}

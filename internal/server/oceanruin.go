@@ -28,7 +28,7 @@ func (h *hub) populateOceanRuins(players map[int32]*tracked) {
 		h.oceanRuinDone[key] = true
 		for _, p := range r.Pieces {
 			for _, d := range p.Drowned {
-				if m := h.spawnMobIn(players, entityDrowned, dimOverworld, float64(d[0])+0.5, float64(d[1]), float64(d[2])+0.5); m != nil {
+				if m := h.spawnHostileYIn(players, entityDrowned, dimOverworld, float64(d[0])+0.5, float64(d[1]), float64(d[2])+0.5); m != nil {
 					m.persistent = true // Mob.setPersistenceRequired
 				}
 			}

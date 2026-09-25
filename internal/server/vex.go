@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
+)
 
 // The vex's flight (Vex: VexMoveControl, VexChargeAttackGoal,
 // VexRandomMoveGoal). A vex has no pathfinding and no gravity, and it passes
@@ -32,38 +36,65 @@ func (h *hub) setVexCharging(players map[int32]*tracked, m *mob, on bool) {
 	h.toNearbyEv(players, m.dim, m.x, m.z, metaEv(vexFlagsMeta(m)))
 }
 
-// vexTarget is the player the vex is after (NearestAttackableTarget, or its
-// evoker's target, which is the same player here).
-func (h *hub) vexTarget(players map[int32]*tracked, m *mob) *tracked {
+// vexTarget is what the vex is after. VexCopyOwnerTargetGoal (priority 2)
+// takes its evoker's target, whatever it is and seen or not — the villager
+// or golem the evoker is fighting as much as a player; failing that, the
+// player goal (priority 3) takes the nearest player it can see.
+func (h *hub) vexTarget(players map[int32]*tracked, m *mob) (quarry, bool) {
 	if !m.hostile {
-		return nil
+		return quarry{}, false
 	}
-	return h.nearestHuntable(players, m.dim, m.x, m.z, m.followRange())
+	if o := h.mobs[m.vexOwner]; o != nil && o.dying == 0 && o.hasTarget {
+		if t := players[o.targetEID]; t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim && o.preyTarget == 0 {
+			return quarry{t: t, x: t.x, y: t.y, z: t.z}, true
+		}
+		if p := h.mobs[o.preyTarget]; p != nil && p.dying == 0 && p.dim == m.dim {
+			return quarry{o: p, x: p.x, y: p.y, z: p.z}, true
+		}
+	}
+	// NearestAttackableTargetGoal(Player, mustSee): acquireTarget ran it
+	// (huntTarget) earlier in this update.
+	if t := players[m.targetEID]; t != nil && m.hasTarget && t.dim == m.dim && !t.dead {
+		return quarry{t: t, x: t.x, y: t.y, z: t.z}, true
+	}
+	return quarry{}, false
+}
+
+// vexQuarryEyes is where a charge aims: the target's eyes.
+func vexQuarryEyes(q quarry) float64 {
+	if q.t != nil {
+		return q.y + playerEyeStand
+	}
+	return q.y + mobEyeHeight(q.o)
 }
 
 // vexFlight runs one mob update (two ticks) of the vex's goals and flight.
 func (h *hub) vexFlight(players map[int32]*tracked, m *mob) {
-	t := h.vexTarget(players, m)
-	if m.vexCharging && (t == nil || !m.vexWant) {
+	q, has := h.vexTarget(players, m)
+	if m.vexCharging && (!has || !m.vexWant) {
 		h.setVexCharging(players, m, false)
 	}
 	if !m.vexWant && h.rng.Intn(vexGoalOdds) == 0 {
-		if t != nil && dist3sq(m.x, m.y, m.z, t.x, t.y, t.z) > 4 {
-			m.vexWX, m.vexWY, m.vexWZ, m.vexSpeed, m.vexWant = t.x, t.y+1.62, t.z, vexChargeSp, true
+		if has && dist3sq(m.x, m.y, m.z, q.x, q.y, q.z) > 4 {
+			m.vexWX, m.vexWY, m.vexWZ, m.vexSpeed, m.vexWant = q.x, vexQuarryEyes(q), q.z, vexChargeSp, true
 			h.setVexCharging(players, m, true)
 			h.playSoundDim(players, m.dim, "minecraft:entity.vex.charge", sndHostile, m.x, m.y, m.z, 1, 1)
-		} else if t == nil || h.rng.Intn(vexGoalOdds) == 0 {
+		} else if !has || h.rng.Intn(vexGoalOdds) == 0 {
 			h.vexDrift(m)
 		}
 	}
 	for tick := 0; tick < mobMoveInterval; tick++ {
-		if m.vexCharging && t != nil {
-			if vexTouches(m, t) {
-				m.attackCD = 0
-				h.mobMelee(players, m) // doHurtTarget
+		if m.vexCharging && has {
+			if vexTouches(m, q) {
+				if q.t != nil {
+					m.attackCD = 0
+					h.mobMelee(players, m) // doHurtTarget
+				} else {
+					h.vexStrikeMob(players, m, q.o)
+				}
 				h.setVexCharging(players, m, false)
-			} else if dist3sq(m.x, m.y, m.z, t.x, t.y, t.z) < 9 {
-				m.vexWX, m.vexWY, m.vexWZ = t.x, t.y+1.62, t.z
+			} else if dist3sq(m.x, m.y, m.z, q.x, q.y, q.z) < 9 {
+				m.vexWX, m.vexWY, m.vexWZ = q.x, vexQuarryEyes(q), q.z
 			}
 		}
 		if m.vexWant {
@@ -79,13 +110,30 @@ func (h *hub) vexFlight(players map[int32]*tracked, m *mob) {
 		m.x, m.y, m.z = m.x+m.vexVX, m.y+m.vexVY, m.z+m.vexVZ // noPhysics: through blocks
 		m.vexVX, m.vexVY, m.vexVZ = m.vexVX*vexAirDrag, m.vexVY*vexVertDrag, m.vexVZ*vexAirDrag
 	}
-	if t != nil {
-		m.yaw = float32(math.Atan2(-(t.x-m.x), t.z-m.z) * 180 / math.Pi)
+	if has {
+		m.yaw = float32(math.Atan2(-(q.x-m.x), q.z-m.z) * 180 / math.Pi)
 	} else if m.vexVX != 0 || m.vexVZ != 0 {
 		m.yaw = float32(math.Atan2(-m.vexVX, m.vexVZ) * 180 / math.Pi)
 	}
 	m.headYaw = m.yaw
 	m.vx, m.vz = 0, 0
+}
+
+// vexStrikeMob is the charge's doHurtTarget on a mob: its ATTACK_DAMAGE as a
+// mob attack, the usual knockback, and the hurt creature's panic.
+func (h *hub) vexStrikeMob(players map[int32]*tracked, m, v *mob) {
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
+	v.hurtKind(float64(hostileMelee(m)+mobHeldBonus(m)), dtMobAttack)
+	v.lastAttacker = m.eid
+	h.toTracking(players, v.eid, v.dim, v.x, v.z, attachproto.Hurt{EID: v.eid, Yaw: v.yaw})
+	h.mobKnockFrom(players, v, m.x, m.z)
+	if v.health <= 0 {
+		h.killMob(players, v)
+		return
+	}
+	if !v.hostile {
+		v.panic, v.fleeX, v.fleeZ, v.reroute = panicTicks, m.x, m.z, 0
+	}
 }
 
 // vexDrift is VexRandomMoveGoal: three tries for an empty block around the
@@ -111,6 +159,11 @@ func (h *hub) vexDrift(m *mob) {
 
 // vexTouches is the charge's box test: the vex's 0.4 × 0.8 box against a
 // player's 0.6 × 1.8.
-func vexTouches(m *mob, t *tracked) bool {
-	return math.Abs(m.x-t.x) < 0.5 && math.Abs(m.z-t.z) < 0.5 && m.y < t.y+1.8 && m.y+0.8 > t.y
+func vexTouches(m *mob, q quarry) bool {
+	if q.t != nil {
+		return math.Abs(m.x-q.x) < 0.5 && math.Abs(m.z-q.z) < 0.5 && m.y < q.y+1.8 && m.y+0.8 > q.y
+	}
+	b := q.o.box()
+	half := 0.2 + b.w/2 // the vex's 0.4 box and the target's
+	return math.Abs(m.x-q.x) < half && math.Abs(m.z-q.z) < half && m.y < q.y+b.h && m.y+0.8 > q.y
 }

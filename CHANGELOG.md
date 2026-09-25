@@ -80,6 +80,69 @@ the public history since the project was open-sourced on 2026-07-10.
   hazards hit once a second, half vanilla's rate. They now hit twice a
   second at vanilla's damage per hit, for players and mobs alike. Lava
   cauldrons had been doing double damage to players; they now match lava.
+- **Zombie horses follow red mushrooms.** A zombie horse followed players
+  holding golden carrots and apples like a living horse. As in vanilla, it
+  now follows a player holding a red mushroom instead.
+- **Vexes attack what their evoker is fighting.** Vexes only ever went
+  after players, so the vexes an evoker summoned against villagers or an
+  iron golem ignored them. As in vanilla, they now go for their evoker's
+  target, and only pick a player on their own if they can see them.
+- **Shulkers need to see you.** A shulker used to open fire on a player
+  behind a wall. As in vanilla, it now only picks a target it can see, and
+  loses interest in one that stays out of sight for a few seconds.
+- **Zoglins wander slowly and giants stand still.** An idle zoglin now
+  ambles at vanilla's slower pace instead of charging about, and a giant no
+  longer turns its head to watch players, since it has no behaviour at all.
+- **Piglin brutes stand their ground.** Brutes backed away from soul fire
+  and zombified piglins like ordinary piglins. As in vanilla, they no
+  longer do.
+- **Breeze wind charges fly at vanilla speed.** A breeze's wind charges
+  flew twice as fast as they should. They now fly at vanilla speed from the
+  breeze's middle, aimed a little lower on you, with vanilla's spread.
+- **Witches throw their potions properly.** A witch's potions flew twice
+  as fast as they should, so they sailed over players and were hard to
+  dodge. They now fly at vanilla speed in a proper arc, a little slower up
+  close, and are aimed at where you are going.
+- **Slimes and magma cubes look for you at their own level.** As in
+  vanilla, a slime or magma cube now only notices a player within four
+  blocks above or below it, so one at the bottom of a cliff no longer
+  locks on to you at the top. Once it is after you, it keeps chasing.
+- **The creaking wakes when you look at it.** A creaking used to hunt
+  anyone nearby like any other monster. As in vanilla, it now stays idle and
+  ambles slowly until a player within 12 blocks looks at it; then it goes
+  after that player, freezing whenever someone watches it, and goes back to
+  sleep when nobody is left nearby. A creaking made with a spawn egg or a
+  command no longer vanishes at once for having no heart.
+- **Drowned throw tridents at villagers too.** A drowned holding a trident
+  only ever threw it at players, so one chasing a villager, an iron golem
+  or an axolotl never attacked it. It now throws at whatever it is
+  hunting, with vanilla's aim spread, sound and damage (8, not 9).
+- **Bogged and the wither shoot at vanilla speed.** A bogged now draws its
+  bow as slowly as in vanilla (every three and a half seconds, two and a
+  half on Hard) instead of at a skeleton's pace. The wither's middle head
+  fires a skull every two seconds at targets within 20 blocks; it used to
+  fire twice as often and from twice as far.
+- **Water hurts endermen, blazes, striders and snow golems.** These mobs
+  used to be unharmed by water and rain, and an enderman only fled from
+  rain now and then. As in vanilla, water and rain now hurt them, and an
+  enderman that gets wet teleports away almost at once.
+- **Creepers unwind slowly.** Stepping away from a hissing creeper used to
+  reset its fuse at once, so you could step back in for a fresh second and
+  a half every time. As in vanilla, the fuse now winds back down gradually,
+  and a creeper you return to picks up where it left off. The range counts
+  height too, so a creeper right under you hisses. A creeper lit with flint
+  and steel now always explodes, even with nobody nearby.
+- **Monsters placed by the world now fight.** A warden called by a
+  shrieker, the guardians of an ocean monument, the drowned in an ocean
+  ruin, a creaking from its heart, silverfish bursting from infested stone
+  and endermites from ender pearls all used to wander about harmlessly
+  until the server restarted. They now attack from the moment they appear.
+- **The warden fights like the real one.** A warden now attacks only
+  someone it has grown angry at, so you can sneak past one that has only
+  smelled you. Up close it hits hard every second or so; its sonic boom is
+  for targets it cannot reach, comes ten seconds after its roar, and
+  charges up with a warning sound before the blast. Hitting a warden makes
+  it come for you straight away, without the roar.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

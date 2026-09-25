@@ -45,11 +45,15 @@ func TestWardenEmergesBeforeItHunts(t *testing.T) {
 	}
 }
 
-// It sniffs the air before it commits to anyone, then roars at whoever it
-// settles on — the roar target only becomes the attack target when the roar
-// is over, so no sonic boom lands during it.
+// It sniffs the air before it commits to anyone: each sniff that turns up a
+// player within 6 blocks adds DEFAULT_ANGER (35), and only at ANGRY (80) does
+// it roar at them — the roar target only becomes the attack target when the
+// roar is over, so no sonic boom lands during it. (This test used to put the
+// player 10 blocks off, beyond the sniff, and relied on the warden going for
+// the nearest player anyway, which vanilla never does.)
 func TestWardenSniffsThenRoars(t *testing.T) {
 	h, players, m, pl := wardenSetup(t)
+	pl.x = 4
 	h.wardenTick(players, m)
 	if m.wardenPose != poseSniffing {
 		t.Fatalf("with nobody to be angry at it should sniff first, got pose %d", m.wardenPose)
@@ -57,22 +61,25 @@ func TestWardenSniffsThenRoars(t *testing.T) {
 	if m.wardenSniffCD < wardenSniffCDMin {
 		t.Errorf("sniffing should start its cooldown, got %d", m.wardenSniffCD)
 	}
-	for m.wardenPoseLeft > 0 {
+	sniffs := 0
+	for i := 0; i < 2000 && m.wardenPose != poseRoaring; i++ {
+		was := m.wardenPose
 		h.wardenTick(players, m)
+		if was == poseSniffing && m.wardenPose != poseSniffing {
+			sniffs++
+		}
 	}
-	if m.wardenPose != 0 {
-		t.Fatalf("the sniff should have ended, got pose %d", m.wardenPose)
-	}
-	// Now it fixes on the player, and roars before it comes for them.
-	h.wardenTick(players, m)
 	if m.wardenPose != poseRoaring || m.wardenPoseLeft != wardenRoarUpd {
 		t.Fatalf("it should roar on fixing a target, got pose %d left %d", m.wardenPose, m.wardenPoseLeft)
+	}
+	if sniffs != 3 {
+		t.Errorf("it roared after %d sniffs, want 3 (3 × 35 reaches ANGRY 80)", sniffs)
 	}
 	if m.wardenTarget != pl.p.eid {
 		t.Errorf("it should have fixed on the player, got %d", m.wardenTarget)
 	}
-	if m.sonicCD != 0 {
-		t.Error("no sonic boom lands during the roar")
+	if m.sonicRun != 0 {
+		t.Error("no sonic boom charges during the roar")
 	}
 	// It does not roar again at the same quarry.
 	for m.wardenPoseLeft > 0 {

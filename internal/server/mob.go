@@ -65,7 +65,12 @@ type mob struct {
 	convertIn       int     // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
 	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
-	fuse            int     // creeper: ticks left on a lit fuse (0 = not ignited)
+	wetHurt         int     // water-sensitive mob: ticks until the wet hurts it again
+	creakActive     bool    // creaking: IS_ACTIVE — awake and hunting since a player looked at it
+	swell           int     // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
+	swellDir        int8    // creeper: +1 swelling, else unwinding (DATA_SWELL_DIR; 0 reads as -1)
+	swellHold       bool    // creeper: SwellGoal is running, which holds it still (Flag.MOVE)
+	ignited         bool    // creeper: lit by flint and steel or a fire charge — it swells whatever happens
 	anger           int     // spider: mob-updates it stays hostile in daylight after a hit
 	stareTicks      int     // enderman: ticks a distant target has gone unwatched (teleportTowards)
 	settled         int     // enderman: ticks since its target last changed (the daylight flight waits 600)
@@ -164,7 +169,8 @@ type mob struct {
 	neutral                         bool        // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock                    uint32      // enderman: the block state it's holding (0 = none)
 	witherHealFrac                  float32     // wither: the part of a health point its regen has banked
-	sonicCD                         int         // warden: mob-updates until the next sonic boom
+	sonicCD                         int         // warden: mob-updates until the next sonic boom may start
+	sonicRun                        int         // warden: mob-updates into a running sonic boom (0 = none)
 	beamTarget                      int32       // guardian: the player the beam is locked on (0 = none)
 	hideUntil                       uint64      // villager: heard a bell — stay at the bed until this tick
 	beamTicks                       int         // guardian: GuardianAttackGoal.attackTime, in ticks
@@ -368,6 +374,7 @@ type mob struct {
 	vexVX, vexVY, vexVZ             float64  // …its per-tick velocity
 	vexOrigin                       blockPos // …the bound origin its drift circles (the summoning evoker)
 	vexHasOrigin                    bool
+	vexOwner                        int32      // vex: the evoker that summoned it (0 = none)
 	vexExpired                      bool       // vex: limited life run out (now taking damage)
 	phantomCatAt                    uint64     // phantom: the tick of the next cat search
 	phantomScared                   bool       // phantom: a cat was within sixteen at the last search
@@ -609,6 +616,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			}
 			continue
 		}
+		// LivingEntity.aiStep's water check runs whatever the mob is doing.
+		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
+			continue // hurt to death, or an enderman teleported out of the wet
+		}
 		if m.mount != 0 { // riding another mob (raid ravager rider, jockey)
 			v := h.mobs[m.mount]
 			if v == nil || v.dying > 0 {
@@ -741,7 +752,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// above its panic).
 		case (m.etype == entitySquid || m.etype == entityGlowSquid) && h.squidStep(players, m):
 			// A squid jetting away from whatever hurt it.
-		case (m.etype == entityPiglin || m.etype == entityPiglinBrute) && h.piglinAvoidStep(players, m):
+		case m.etype == entityPiglin && h.piglinAvoidStep(players, m):
 			// A piglin backing away from a soul light or a zombified piglin.
 		case (spearWielder(m) || m.spearGoal != nil) && h.spearGoalStep(players, m):
 			// A zombie, zombified piglin or piglin with a spear: closing,

@@ -21,6 +21,7 @@ func TestVexChargesAndStrikes(t *testing.T) {
 	before := pl.health
 	charged := false
 	for i := 0; i < 200 && pl.health == before; i++ {
+		h.acquireTarget(players, v) // the player goal, as updateMobs runs it first
 		h.vexFlight(players, v)
 		charged = charged || v.vexCharging
 	}
@@ -50,5 +51,29 @@ func TestVexDriftsAboutItsOrigin(t *testing.T) {
 	}
 	if !moved {
 		t.Error("the vex never drifted")
+	}
+}
+
+// VexCopyOwnerTargetGoal: a vex takes its evoker's target, so the vexes an
+// evoker summons against a villager go for the villager. They used to go
+// only for players, and a raid's vexes ignored the village.
+func TestVexCopiesItsEvokersTarget(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	ev := h.spawnHostileY(players, entityEvoker, 0.5, 200, -4.5)
+	vil := h.spawnMob(players, entityVillager, 6.5, 200, 0.5)
+	vil.health = 1000
+	v := h.spawnMob(players, entityVex, 0.5, 200, 0.5)
+	v.hostile, v.vexOwner = true, ev.eid
+	before := vil.health
+	for i := 0; i < 300 && vil.health == before; i++ {
+		ev.hasTarget, ev.preyTarget = true, vil.eid // the evoker is fighting the villager
+		vil.x, vil.y, vil.z = 6.5, 200, 0.5
+		h.vexFlight(players, v)
+	}
+	if vil.health >= before {
+		t.Fatalf("the vex never struck its evoker's villager (vex at %.1f,%.1f,%.1f)", v.x, v.y, v.z)
 	}
 }

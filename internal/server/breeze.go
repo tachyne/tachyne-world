@@ -244,19 +244,25 @@ func (h *hub) breezeLand(players map[int32]*tracked, m *mob) {
 	m.vx, m.vz = 0, 0
 }
 
-// breezeFire is Shoot.tick past the charge: a wind charge at 0.7 toward a
-// point a third of the way up the target, with vanilla's spread.
+// breezeFire is Shoot.tick past the charge: a wind charge from the breeze's
+// firing height (half its height plus 0.3) toward the target's getY(0.3)
+// (0.8 while it rides something), at 0.7 blocks a tick — projectiles step
+// every tick, so this is not doubled for the mob update — with the triangle
+// spread of an uncertainty of 5 − 4 × difficulty. That goes negative on
+// normal and hard, and a negative width spreads just as wide: a breeze on
+// hard is the least accurate.
 func (h *hub) breezeFire(players map[int32]*tracked, m *mob, t *tracked) {
-	ux, uy, uz := aimAt(m.x, m.y+1, m.z, t.x, t.y+0.3, t.z)
-	v := 1.4                                                // 0.7 per tick, two ticks an update
-	spread := float64(5-int(h.rules.Difficulty)*4) * 0.0075 // Projectile.shoot inaccuracy × 0.0075 per unit
-	if spread < 0 {
-		spread = 0
+	fy := m.y + m.box().h/2 + 0.3
+	ty := t.y + 0.3*playerHeight(t)
+	if t.ridingEID != 0 {
+		ty = t.y + 0.8*playerHeight(t)
 	}
-	ux += h.rng.NormFloat64() * spread
-	uy += h.rng.NormFloat64() * spread
-	uz += h.rng.NormFloat64() * spread
-	a := h.launchProjectileIn(players, entityBreezeWindCharge, m.dim, m.x, m.y+1, m.z, ux*v, uy*v, uz*v)
+	ux, uy, uz := aimAt(m.x, fy, m.z, t.x, ty, t.z)
+	const v = 0.7
+	dev := 0.0172275 * float64(5-4*int(h.rules.Difficulty))
+	tri := func() float64 { return dev * (h.rng.Float64() - h.rng.Float64()) }
+	ux, uy, uz = ux+tri(), uy+tri(), uz+tri()
+	a := h.launchProjectileIn(players, entityBreezeWindCharge, m.dim, m.x, fy, m.z, ux*v, uy*v, uz*v)
 	a.shooter, a.mobShot = m.eid, true // it strikes other mobs, not its breeze
 	h.playSoundDim(players, m.dim, "minecraft:entity.breeze.shoot", sndHostile, m.x, m.y, m.z, 1.5, 1)
 }

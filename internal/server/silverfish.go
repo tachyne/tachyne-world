@@ -101,7 +101,7 @@ func (h *hub) silverfishWakeFriends(players map[int32]*tracked, m *mob) {
 				if h.rules.MobGriefing {
 					h.setBlockAt(players, m.dim, pos, worldgen.Air)
 					h.toNearbyEv(players, m.dim, float64(pos.x), float64(pos.z), blockBreakEvent(pos.x, pos.y, pos.z, s))
-					h.spawnMobIn(players, entitySilverfish, m.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
+					h.spawnHostileYIn(players, entitySilverfish, m.dim, float64(pos.x)+0.5, float64(pos.y), float64(pos.z)+0.5)
 				} else if host, ok := hostStateByInfested(s); ok {
 					h.setBlockAt(players, m.dim, pos, host)
 				}

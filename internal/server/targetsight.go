@@ -1,5 +1,7 @@
 package server
 
+import "math"
+
 // Hostiles hunt by sight. Vanilla's NearestAttackableTargetGoal for players
 // is registered mustSee: a monster acquires a player only when it has line
 // of sight to them, and TargetGoal.canContinueToUse then keeps the target
@@ -49,6 +51,12 @@ func (h *hub) huntTarget(players map[int32]*tracked, m *mob, reach float64) *tra
 		// is in the water with it (anger from a blow overrides it, as
 		// HurtByTargetGoal sits above the player goal).
 		if m.etype == entityDrowned && m.anger == 0 && !h.drownedOKTarget(t) {
+			continue
+		}
+		// Slime/MagmaCube.addTargetingGoals: the player goal's selector takes
+		// only someone within 4 blocks up or down. It is an acquisition
+		// test: a target already held is kept whatever its height.
+		if (m.etype == entitySlime || m.etype == entityMagmaCube) && math.Abs(t.y-m.y) > 4 {
 			continue
 		}
 		if d2 := (t.x-m.x)*(t.x-m.x) + (t.z-m.z)*(t.z-m.z); d2 < bestD2 && h.mobSees(m, t) {

@@ -13,6 +13,7 @@ func TestStrollSpeeds(t *testing.T) {
 	cases := map[int]float64{
 		entityRavager: 0.4, entityHorse: 0.7, entityCreeper: 0.8, entitySpider: 0.8,
 		entityRabbit: 0.6, entityPillager: 0.6, entityCow: 1, entityZombie: 1,
+		entityZoglin: 0.4, entityCreaking: 0.3,
 	}
 	for et, want := range cases {
 		if got := strollSpeed(&mob{etype: et}); got != want {

@@ -1835,7 +1835,7 @@ func (h *hub) run() {
 				// InfestedBlock.spawnAfterBreak: the silverfish comes out unless
 				// Silk Touch kept the block whole (#prevents_infested_spawns).
 				if isInfested(e.state) && silk == 0 && h.rules.DoTileDrops {
-					h.spawnMobIn(players, entitySilverfish, e.dim, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
+					h.spawnHostileYIn(players, entitySilverfish, e.dim, float64(e.x)+0.5, float64(e.y), float64(e.z)+0.5)
 				}
 			case evBorderCmd:
 				if t := players[e.p.eid]; t != nil {

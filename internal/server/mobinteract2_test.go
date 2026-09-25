@@ -84,8 +84,8 @@ func TestOtherMobInteractions(t *testing.T) {
 
 	creeper := h.spawnMobIn(players, entityCreeper, 0, 0, 70, 0)
 	hold(itemFlintAndSteel, 1)
-	if !h.tryIgniteCreeper(players, pl, creeper) || creeper.fuse != creeperFuseTicks || pl.inv.slots[pl.p.heldSlot()].dmg != 1 {
-		t.Errorf("ignite: fuse %d held %+v", creeper.fuse, pl.inv.slots[pl.p.heldSlot()])
+	if !h.tryIgniteCreeper(players, pl, creeper) || !creeper.ignited || creeper.swellDir != 1 || pl.inv.slots[pl.p.heldSlot()].dmg != 1 {
+		t.Errorf("ignite: ignited %v dir %d held %+v", creeper.ignited, creeper.swellDir, pl.inv.slots[pl.p.heldSlot()])
 	}
 
 	parrot := h.spawnMobIn(players, entityParrot, 0, 0, 70, 0)

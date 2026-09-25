@@ -108,9 +108,12 @@ func aimAt(ox, oy, oz, tx, ty, tz float64) (float64, float64, float64) {
 	return dx / d, dy / d, dz / d
 }
 
-// witherShoot fires a wither skull (dark damage + the wither effect).
+// witherShoot fires a wither skull (dark damage + the wither effect). The
+// centre head's goal is RangedAttackGoal(this, 1.0, 40, 20): a skull every 40
+// ticks at a target within 20 blocks (19 updates of cooldown plus the
+// shooting one).
 func (h *hub) witherShoot(players map[int32]*tracked, m *mob) {
-	t, ok := h.mobRanged(players, m, 40, 8)
+	t, ok := h.mobRanged(players, m, 20, 19)
 	if !ok {
 		return
 	}

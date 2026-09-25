@@ -494,6 +494,7 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 		} else {
 			if m.etype == entityWarden {
 				h.wardenAngerAt(m, t.p.eid, wardenAngerHurt) // ANGRY + 20 at whoever struck
+				h.wardenStruckBy(players, m, t)              // a direct blow makes them its target, no roar
 			}
 			if m.etype == entityPiglin {
 				h.piglinRetaliate(players, m, t) // PiglinAi.wasHurtBy: 600 ticks, and the others join in

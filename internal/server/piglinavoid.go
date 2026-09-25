@@ -42,9 +42,11 @@ func isPiglinRepellent(s uint32) bool {
 }
 
 // piglinAvoidStep walks a piglin away from a repellent or a zombified piglin.
-// Reports whether it holds the piglin this update.
+// Reports whether it holds the piglin this update. A piglin brute has no
+// such behaviour (PiglinBruteAi's activities hold none): it stands its
+// ground by soul fire and beside the zombified.
 func (h *hub) piglinAvoidStep(players map[int32]*tracked, m *mob) bool {
-	if m.etype != entityPiglin && m.etype != entityPiglinBrute {
+	if m.etype != entityPiglin {
 		return false
 	}
 	if m.dying != 0 || m.admireUntil != 0 {

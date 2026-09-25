@@ -83,8 +83,31 @@ func TestDrownedTridentThrow(t *testing.T) {
 		t.Fatal("armed drowned threw no trident")
 	}
 	for _, a := range h.arrows {
-		if a.dmg != 9 {
-			t.Errorf("trident damage %d, want 9", a.dmg)
+		if a.dmg != tridentDamage { // ThrownTrident.onHitEntity: 8; this was 9
+			t.Errorf("trident damage %d, want %d", a.dmg, tridentDamage)
+		}
+	}
+}
+
+// DrownedTridentAttackGoal throws at the drowned's target, whatever it is:
+// a trident drowned after a villager throws at the villager. It used to
+// look for a player only, and so never attacked its prey at all.
+func TestDrownedThrowsAtItsVillager(t *testing.T) {
+	h, players := preyFixture(t)
+	d := h.spawnHostileY(players, entityDrowned, 0.5, 180, 0.5)
+	d.trident = true
+	v := h.spawnMob(players, entityVillager, 6.5, 180, 0.5)
+	d.preyTarget = v.eid
+	before := len(h.arrows)
+	for i := 0; i < 60 && len(h.arrows) == before; i++ {
+		h.drownedThrow(players, d)
+	}
+	if len(h.arrows) == before {
+		t.Fatal("a trident drowned never threw at its villager")
+	}
+	for _, a := range h.arrows {
+		if a.vx <= 0 || !a.mobShot {
+			t.Errorf("the trident flies vx=%v mobShot=%v, want toward the villager and able to hit it", a.vx, a.mobShot)
 		}
 	}
 }

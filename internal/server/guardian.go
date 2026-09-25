@@ -237,12 +237,12 @@ func (h *hub) populateMonuments(players map[int32]*tracked) {
 		cy := float64(mn.Y + 7) // inside the hall
 		for i, off := range [][2]float64{{0, 0}, {6, 6}, {-6, -6}} {
 			_ = i
-			h.spawnMobIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
+			h.spawnHostileYIn(players, entityElderGuardian, dimOverworld, float64(mn.X)+off[0], cy, float64(mn.Z)+off[1])
 		}
 		for i := 0; i < 8; i++ {
 			ox := float64((i%4)*3 - 4)
 			oz := float64((i/4)*6 - 3)
-			h.spawnMobIn(players, entityGuardian, dimOverworld, float64(mn.X)+ox, cy, float64(mn.Z)+oz)
+			h.spawnHostileYIn(players, entityGuardian, dimOverworld, float64(mn.X)+ox, cy, float64(mn.Z)+oz)
 		}
 	}
 }

@@ -73,8 +73,12 @@ func isTemptItem(etype int, item int32) bool {
 		if item == itemByName["warped_fungus_on_a_stick"] {
 			return true
 		}
-	case entityMule, entitySkeletonHorse, entityZombieHorse:
+	case entityMule, entitySkeletonHorse:
 		return breedFoods[entityHorse][item] // #horse_tempt_items for the whole family
+	case entityZombieHorse:
+		// ZombieHorse.addBehaviourGoals replaces the family's goals with its
+		// own TemptGoal on #zombie_horse_food: a red mushroom.
+		return item == itemRedMushroom
 	case entityNautilus, entityZombieNautilus: // NAUTILUS_TEMPTATIONS: #nautilus_food, tamed or not
 		return breedFoods[entityNautilus][item]
 	case entityCamelHusk:

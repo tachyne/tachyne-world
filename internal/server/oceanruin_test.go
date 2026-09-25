@@ -45,6 +45,9 @@ func TestOceanRuinSeedsAndLoots(t *testing.T) {
 			if !m.persistent {
 				t.Error("a seeded drowned must be persistent")
 			}
+			if !m.hostile {
+				t.Error("a seeded drowned must be hostile, not a wanderer")
+			}
 		}
 	}
 	if drowned != want {

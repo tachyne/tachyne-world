@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
@@ -120,5 +121,22 @@ func TestBreezeTurnsArrowsBack(t *testing.T) {
 	}
 	if a.turnedBy != breeze.eid {
 		t.Error("the breeze that turned it is not remembered")
+	}
+}
+
+// Shoot.tick: a wind charge leaves the breeze's firing height at 0.7 blocks
+// a tick. It was launched at 1.4, doubled as if projectiles stepped once per
+// mob update, from a fixed block above the breeze's feet.
+func TestBreezeChargeLeavesAtVanillaSpeed(t *testing.T) {
+	h, players, pl := breezeRig(t)
+	pl.z = 8.5
+	b := h.spawnMob(players, entityBreeze, 0.5, 180, 0.5)
+	h.breezeFire(players, b, pl)
+	a := onlyProjectile(t, h)
+	if sp := math.Sqrt(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); sp < 0.6 || sp > 0.8 {
+		t.Errorf("launched at %.3f blocks a tick, want 0.7", sp)
+	}
+	if want := b.y + b.box().h/2 + 0.3; math.Abs(a.y-want) > 1e-9 {
+		t.Errorf("launched from y=%.3f, want the firing height %.3f", a.y, want)
 	}
 }
