@@ -850,3 +850,34 @@ func TestSpongeDrinksFlowingWater(t *testing.T) {
 		t.Errorf("the sponge should drink the water: sponge %d, water cell %d", w.At(0, 180, 0), w.At(1, 180, 0))
 	}
 }
+
+// LavaFluid.randomTick: the upward search for a spot to light stops at
+// anything in #blocks_motion — a slab or glass pane, not only a full block.
+func TestLavaIgniteStoppedBySlab(t *testing.T) {
+	h := newHub(world.New(1))
+	pl := testTracked()
+	pl.x, pl.y, pl.z = 0.5, 180, 0.5
+	players := map[int32]*tracked{1: pl}
+	w := h.world
+	slab := withProps(t, worldgen.BlockBase("stone_slab"), map[string]string{"type": "bottom", "waterlogged": "false"})
+	for dx := -3; dx <= 3; dx++ {
+		for dz := -3; dz <= 3; dz++ {
+			for y := 180; y <= 184; y++ {
+				w.SetBlock(dx, y, dz, worldgen.Air)
+			}
+			w.SetBlock(dx, 181, dz, slab)               // a lid of bottom slabs
+			w.SetBlock(dx, 183, dz, worldgen.OakPlanks) // fuel beyond the lid
+		}
+	}
+	w.SetBlock(0, 180, 0, worldgen.LavaBase)
+	for i := 0; i < 400; i++ {
+		h.lavaIgnite(players, 0, 0, 180, 0)
+	}
+	for dx := -3; dx <= 3; dx++ {
+		for dz := -3; dz <= 3; dz++ {
+			if isFire(w.At(dx, 182, dz)) {
+				t.Fatalf("lava lit a fire through the slab lid at %d,182,%d", dx, dz)
+			}
+		}
+	}
+}
