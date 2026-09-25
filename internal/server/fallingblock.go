@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -275,6 +277,9 @@ func (h *hub) fallingBlockLands(players map[int32]*tracked, w *world.World, fb *
 		state = withWaterlogged(state, true)
 	}
 	h.setBlockAt(players, fb.dim, pos, state)
+	// FallingBlockEntity.tick: with the block update, the trackers get
+	// add_transient_block (26.3), so the landing shows no gap.
+	h.toTracking(players, fb.eid, fb.dim, fb.x, fb.z, attachproto.TransientBlock{X: int32(pos.x), Y: int32(pos.y), Z: int32(pos.z), State: int32(state)})
 	h.discardFalling(players, fb)
 	// Fallable.onLand.
 	switch {

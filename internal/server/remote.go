@@ -405,6 +405,8 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
 	case bundleClose:
 		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
+	case attachproto.TransientBlock:
+		send(attachproto.MsgTransientBlock, ev)
 	case attachproto.Transfer:
 		send(attachproto.MsgTransfer, ev)
 	case attachproto.Camera:
