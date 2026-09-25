@@ -877,6 +877,11 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 		s.sendBlockChange(p, x, y, z, state, seq)
 		return true
 	}
+	if isMovingPiston(state) { // MovingPistonBlock.useWithoutItem: an orphaned cell is cleared
+		s.hub.post(evUseMovingPiston{eid: p.eid, x: x, y: y, z: z})
+		s.sendBlockChange(p, x, y, z, state, seq)
+		return true
+	}
 	if isDragonEgg(state) { // DragonEggBlock.useWithoutItem: it blinks away
 		s.hub.post(evDragonEgg{eid: p.eid, x: x, y: y, z: z})
 		s.sendBlockChange(p, x, y, z, state, seq)
