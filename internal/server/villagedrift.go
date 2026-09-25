@@ -8,16 +8,17 @@ import "math"
 // one of its buildings to the next, which is how a horde ends up at the
 // doors by morning.
 //
-// Vanilla picks an unvisited village POI within ten blocks of a random land
-// position; the engine has no POI manager, so it walks to a point near the
-// village centre and picks a new one each time it arrives. The visible
-// behaviour — zombies converging on the village at night, and only at night
-// — is the same.
+// Vanilla looks for an occupied village point of interest (a bed, a
+// workstation or a bell some villager has claimed) near a random land spot
+// fifteen blocks about it, takes the one nearest the zombie that it has not
+// visited among its last sixteen, walks to within four blocks of it and
+// remembers it. A village is where villagers live — one players built
+// counts, a generated one standing empty does not.
 
 const (
-	villageDriftRadius = 48.0 // how far out a zombie still counts as "at" the village
-	villageDriftSpread = 12.0 // …and how far from its centre it aims
-	villageDriftArrive = 3.0  // close enough: pick another spot
+	villageDriftReach  = 25  // LandRandomPos(15, 7) plus the POI search's 10
+	villageDriftArrive = 4.0 // distanceToPoi
+	villageDriftMemory = 16  // the visited list keeps its last sixteen
 )
 
 // villageDriftStep steers an idle zombie-family mob through the village it is
@@ -33,20 +34,70 @@ func (h *hub) villageDriftStep(players map[int32]*tracked, m *mob) bool {
 		m.drifting = false
 		return false
 	}
-	v := h.world.Gen().VillageIn(int(m.x), int(m.z))
-	if !v.Exists || math.Hypot(m.x-float64(v.X), m.z-float64(v.Z)) > villageDriftRadius {
-		m.drifting = false
+	if m.drifting {
+		reach := villageDriftArrive + m.box().w
+		if math.Hypot(m.x-m.tx, m.z-m.tz) > reach {
+			return true // still on the way to the last point
+		}
+		m.driftVisited = append(m.driftVisited, m.driftPoi) // stop(): close enough, it has been there
+		if len(m.driftVisited) > villageDriftMemory {
+			m.driftVisited = m.driftVisited[1:]
+		}
+		m.drifting, m.hasTarget = false, false
+	}
+	now := h.tick.Load()
+	if now < m.driftNext {
 		return false
 	}
-	if m.drifting && math.Hypot(m.x-m.tx, m.z-m.tz) > villageDriftArrive {
-		return true // still on the way to the last spot
+	poi, ok := h.villageDriftPoi(m)
+	if !ok {
+		m.driftNext = now + 20 // nothing near: look again in a second, not every update
+		return false
 	}
-	m.drifting, m.hasTarget = false, false // arrived: pick another spot below
-	// A new spot somewhere in the village, roughly where its buildings are.
-	ang := h.rng.Float64() * 2 * math.Pi
-	r := h.rng.Float64() * villageDriftSpread
-	m.tx = float64(v.X) + math.Cos(ang)*r
-	m.tz = float64(v.Z) + math.Sin(ang)*r
+	m.driftPoi = poi
+	m.tx, m.tz = float64(poi.x)+0.5, float64(poi.z)+0.5
 	m.hasTarget, m.drifting, m.rest, m.stroll = true, true, 0, strollMax
 	return true
+}
+
+// villageDriftPoi is the goal's pick: the nearest occupied village point
+// within reach that the zombie has not visited lately.
+func (h *hub) villageDriftPoi(m *mob) (blockPos, bool) {
+	w := h.poiWorld(m.dim)
+	if w == nil {
+		return blockPos{}, false
+	}
+	occupied := map[blockPos]bool{}
+	for _, o := range h.mobs {
+		if o.etype != entityVillager || o.dying > 0 || o.dim != m.dim {
+			continue
+		}
+		if dist3(o.x, o.y, o.z, m.x, m.y, m.z) > villageDriftReach+48 {
+			continue // too far to hold a point within reach of this zombie
+		}
+		for _, p := range []blockPos{o.bed, o.work, o.jobPos, o.meet} {
+			if p != (blockPos{}) {
+				occupied[p] = true
+			}
+		}
+	}
+	if len(occupied) == 0 {
+		return blockPos{}, false
+	}
+	visited := func(p blockPos) bool {
+		for _, v := range m.driftVisited {
+			if v == p {
+				return true
+			}
+		}
+		return false
+	}
+	near := w.POIsNear(floorInt(m.x), floorInt(m.y), floorInt(m.z), villageDriftReach, nil)
+	for _, p := range near { // closest first
+		pos := blockPos{p.X, p.Y, p.Z}
+		if occupied[pos] && !visited(pos) {
+			return pos, true
+		}
+	}
+	return blockPos{}, false
 }

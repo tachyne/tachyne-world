@@ -55,30 +55,41 @@ func TestMobFlagsMetaShape(t *testing.T) {
 	}
 }
 
-// A zombie inside a village walks through it after dark, and not by day.
+// MoveThroughVillageGoal: after dark (and not by day) a zombie walks to the
+// nearest village point a villager has claimed, then on to the next one it
+// has not visited; points nobody holds are no village.
 func TestZombieDriftsThroughVillageAtNight(t *testing.T) {
 	h := newHub(world.New(1))
 	players := map[int32]*tracked{}
-	v := h.world.Gen().VillageIn(0, 0)
-	if !v.Exists {
-		t.Skip("no village in this seed's first cell")
+	h.world.ForceLoad(0, 0, 2)
+	poiFloor(h, 0, 0, 16)
+	bell := blockPos{10, 180, 0}
+	h.world.SetBlock(bell.x, bell.y, bell.z, bellDefault)
+	far := blockPos{-12, 180, 0}
+	h.world.SetBlock(far.x, far.y, far.z, bellDefault)
+	m := h.spawnHostileY(players, entityZombie, 0.5, 180, 0.5)
+
+	h.dayTime.Store(18000) // midnight
+	if h.villageDriftStep(players, m) {
+		t.Fatal("bells nobody has claimed are no village")
 	}
-	m := h.spawnMob(players, entityZombie, float64(v.X)+5, float64(v.Y), float64(v.Z)+5)
-	m.hostile = true
+	v := h.spawnMob(players, entityVillager, 12.5, 180, 3.5)
+	v.meet = bell
+	w := h.spawnMob(players, entityVillager, -12.5, 180, 3.5)
+	w.meet = far
+	h.tick.Add(20) // the failed look waits a second before the next
 
 	h.dayTime.Store(6000) // noon
 	if h.villageDriftStep(players, m) {
 		t.Error("a zombie does not walk the village by day")
 	}
-	h.dayTime.Store(18000) // midnight
-	if !h.villageDriftStep(players, m) {
-		t.Fatal("a zombie in a village walks it at night")
+	h.dayTime.Store(18000)
+	if !h.villageDriftStep(players, m) || !m.drifting || !m.hasTarget || m.driftPoi != bell {
+		t.Fatalf("at night it heads for the nearest claimed point: drifting=%v poi=%v", m.drifting, m.driftPoi)
 	}
-	if !m.drifting || !m.hasTarget {
-		t.Fatalf("the drift should set a walk target: drifting=%v target=%v", m.drifting, m.hasTarget)
-	}
-	if d := math.Hypot(m.tx-float64(v.X), m.tz-float64(v.Z)); d > villageDriftSpread {
-		t.Errorf("the spot should be inside the village, %v blocks out", d)
+	m.x, m.z = 9.5, 0.5 // arrived
+	if !h.villageDriftStep(players, m) || m.driftPoi != far {
+		t.Fatalf("once there it moves on to the next unvisited point, got %v", m.driftPoi)
 	}
 	// Something real to chase outranks it.
 	m.drifting, m.hasTarget = false, true

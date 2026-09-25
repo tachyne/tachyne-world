@@ -192,6 +192,9 @@ the public history since the project was open-sourced on 2026-07-10.
   conjures above you now comes down as a single charge, arrow or potion at
   vanilla's speed, with the dispenser sound for charges, and players who
   arrive while it hangs there see what it holds.
+- **Zombies prowl real villages.** At night a zombie now walks from one
+  villager's bed, workplace or bell to the next, as in vanilla, so villages
+  players build draw them too, and a generated village left empty does not.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
