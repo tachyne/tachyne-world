@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Angry bees calm down.** A bee you hit, or one from a hive you robbed,
+  stayed angry for good. As in vanilla it now chases you for 20 to 39
+  seconds and then goes back to its flowers, and a bee that has stung
+  someone stops chasing at once. An angry bee also stings only the player
+  it is after, not whoever happens to be closest.
 - **Llamas can be ridden and tamed.** Climb onto a wild llama with an
   empty hand and it throws you off until it settles, as a horse does, only
   sooner; wheat and hay bales bring it round faster. A tamed llama carries
