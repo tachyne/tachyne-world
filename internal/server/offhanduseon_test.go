@@ -217,3 +217,28 @@ func TestOffhandClickDoesNotOpenDoor(t *testing.T) {
 		t.Fatal("the main-hand click still opens it")
 	}
 }
+
+// A planted mangrove propagule goes down grown (AGE 4) and standing, as
+// MangrovePropaguleBlock.getStateForPlacement sets it.
+func TestPlacedPropaguleIsGrown(t *testing.T) {
+	s, h, p := offhandOnRig(t)
+	w := s.world
+	x, y, z := 90, 180, 90
+	clearAirBox(w, x, y, z, 2)
+	w.SetBlock(x, y, z, worldgen.BlockBase("mud"))
+	onHub(t, h, func() {
+		tr := h.playersRef[p.eid]
+		tr.inv.slots[0] = invStack{item: itemByName["mangrove_propagule"], count: 1}
+		h.sendSlot(tr, 0)
+	})
+	s.handlePlace(p, handPlaceBody(0, x, y, z, 1))
+	got := w.Block(x, y+1, z)
+	info, ok := worldgen.InfoForState(got)
+	if !ok || !isPropagule(got) {
+		t.Fatalf("no propagule was placed: %d", got)
+	}
+	if worldgen.GetProperty(info, got, "age") != "4" || worldgen.GetProperty(info, got, "hanging") != "false" {
+		t.Errorf("placed propagule age=%s hanging=%s, want 4 and false",
+			worldgen.GetProperty(info, got, "age"), worldgen.GetProperty(info, got, "hanging"))
+	}
+}

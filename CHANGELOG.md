@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Planted propagules are full size.** A mangrove propagule planted by
+  hand goes down fully grown and standing, as in vanilla, ready to grow
+  into a tree.
 - **Shulker boxes face the way you place them.** A shulker box opens
   toward the face you place it against — up, down or sideways — as in
   vanilla.

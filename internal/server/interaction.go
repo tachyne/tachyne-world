@@ -495,6 +495,11 @@ func (s *Server) handlePlace(p *player, data []byte) {
 		if ns, ok := shapeUpdated(s.worldFor(p), blockPos{tx, ty, tz}, state, [3]int{0, -1, 0}); ok && shapeKinds[state] == shapeCampfire {
 			state = ns // CampfireBlock.getStateForPlacement: a signal fire over a hay bale
 		}
+		if isPropagule(state) { // MangrovePropaguleBlock.getStateForPlacement: planted grown, AGE 4, standing
+			if pi, ok := worldgen.InfoForState(state); ok {
+				state = worldgen.SetProperty(pi, worldgen.SetProperty(pi, state, "age", "4"), "hanging", "false")
+			}
+		}
 		if isAnyRail(state) {
 			state = s.hub.placeRailShape(s.worldFor(p), tx, ty, tz, state, p.yaw)
 		}
