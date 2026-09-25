@@ -296,3 +296,18 @@ func TestLavaFuelLeavesTheBucket(t *testing.T) {
 		t.Errorf("fuel slot after the lava burned: %+v, want an empty bucket", f.slots[furnaceFuel])
 	}
 }
+
+// FurnaceResultSlot.checkTakeAchievements: taking smelted output counts it
+// as crafted (onCraftedBy with the number taken).
+func TestFurnaceOutputTakenCountsAsCrafted(t *testing.T) {
+	h, players, pl, f := furnaceSetup()
+	f.slots[furnaceOutput] = invStack{item: tIronIngot, count: 5}
+	h.handleClick(players, evClick{
+		eid: 1, windowID: pl.winID, slot: 2, mode: 0,
+		changed: []slotChange{{slot: 2, st: invStack{}}},
+		cursor:  invStack{item: tIronIngot, count: 5},
+	})
+	if got := pl.stats[statKey{attachproto.StatCrafted, tIronIngot}]; got != 5 {
+		t.Fatalf("five ingots taken count as crafted, got %d", got)
+	}
+}

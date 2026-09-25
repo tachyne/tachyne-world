@@ -3,7 +3,9 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
+	"github.com/tachyne/tachyne-world/internal/world"
 )
 
 func TestLoomFlow(t *testing.T) {
@@ -94,4 +96,21 @@ func TestSmithingFlow(t *testing.T) {
 			t.Errorf("re-trim with diamond: %+v", r2)
 		}
 	})
+}
+
+// ItemStack.onCraftedBy counts a smithing-table result as crafted
+// (SmithingMenu.onTake), as it does a crafting-table one.
+func TestSmithingCountsAsCrafted(t *testing.T) {
+	h := newHub(world.New(1))
+	tr := survPlayer(h)
+	h.playersRef = map[int32]*tracked{tr.p.eid: tr}
+	h.openSmithing(tr, 1, 64, 1)
+	tr.extraSlot = invStack{item: protocol.SmithingUpgradeTemplate, count: 1}
+	tr.anvil[0] = invStack{item: int32(itemByName["diamond_sword"]), count: 1}
+	tr.anvil[1] = invStack{item: int32(itemByName["netherite_ingot"]), count: 1}
+	h.takeSmithResult(h.playersRef, tr, 0)
+	sword := int32(itemByName["netherite_sword"])
+	if got := tr.stats[statKey{attachproto.StatCrafted, sword}]; got != 1 {
+		t.Fatalf("a smithed netherite sword counts as crafted once, got %d", got)
+	}
 }

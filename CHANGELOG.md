@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **More things count as crafted in the statistics.** Taking smelted
+  items from a furnace, a result from a smithing table, and what a
+  villager trades you now add to that item's "Times Crafted", as in
+  vanilla.
 - **Brushing suspicious gravel sounds like gravel.** It made the sand
   sound. The player brushing no longer hears the sound twice.
 - **Riding statistics count the right mount.** Riding a nautilus counted

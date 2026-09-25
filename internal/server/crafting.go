@@ -567,6 +567,9 @@ func (h *hub) handleClick(players map[int32]*tracked, e evClick) {
 		// Taking smelted output pays the furnace's banked XP (vanilla: orbs
 		// pop when you collect, not when the smelt finishes).
 		if t.winKind == winFurnace && ch.slot == 2 && ch.st.count < ptr.count {
+			// FurnaceResultSlot.checkTakeAchievements: onCraftedBy counts
+			// what was taken as crafted.
+			h.incStat(t, attachproto.StatCrafted, ptr.item, int32(ptr.count-ch.st.count))
 			if f := h.furnaces[t.winPos]; f != nil && f.xpBank >= 1 {
 				h.spawnXPOrbIn(players, t.dim, int(f.xpBank), t.x, t.y, t.z)
 				f.xpBank -= float64(int(f.xpBank))
