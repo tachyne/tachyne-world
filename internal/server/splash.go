@@ -115,15 +115,15 @@ func (h *hub) applyPotionAoEMob(players map[int32]*tracked, m *mob, effs []potEf
 			switch e.id {
 			case effInstantHealth:
 				if ignoresPoisonAndRegen(m.etype) {
-					h.hurtMobEffect(players, m, 6*mag)
+					h.hurtMobEffect(players, m, float64(int(6*mag)))
 				} else {
 					h.healMob(m, int(4*mag))
 				}
 			case effInstantDamage:
 				if ignoresPoisonAndRegen(m.etype) {
-					h.healMob(m, int(6*mag))
+					h.healMob(m, int(4*mag)) // an undead is healed by Harming: 4 << amp
 				} else {
-					h.hurtMobEffect(players, m, 6*mag)
+					h.hurtMobEffect(players, m, float64(int(6*mag)))
 				}
 			default:
 				h.applyMobEffect(players, m, e.id, e.amp, 0)
@@ -143,13 +143,16 @@ func (h *hub) applyPotionAoE(players map[int32]*tracked, t *tracked, effs []potE
 		prox = 0
 	}
 	for _, e := range effs {
-		if effectIsInstant(e.id) { // instant (Healing): magnitude scales with proximity
+		if effectIsInstant(e.id) {
+			// HealOrHarmMobEffect.applyInstantenousEffect: both scale with
+			// proximity and truncate to whole points — heal (int)(scale ×
+			// (4 << amp)), harm (int)(scale × (6 << amp)) as indirect magic.
 			if e.id == effInstantHealth {
-				heal := float32(prox) * 4 * float32(int(1)<<e.amp)
+				heal := float32(int(prox * float64(int(4)<<e.amp)))
 				t.health = float32(math.Min(float64(t.maxHP()), float64(t.health)+float64(heal)))
 				h.sendHealth(t)
-			} else {
-				h.applyEffect(players, t, e.id, e.amp, 0)
+			} else if dmg := int(prox * float64(int(6)<<e.amp)); dmg > 0 {
+				h.damageOf(players, t, float32(dmg), dtIndirectMagic)
 			}
 			continue
 		}

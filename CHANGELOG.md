@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Splash potions of Harming weaken with distance.** A Harming splash hit
+  players at full strength however far from the splash they stood; as in
+  vanilla it now falls off with distance, like Healing, and a glancing
+  splash can do nothing at all. Undead mobs healed by Harming get vanilla's
+  amount.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point
