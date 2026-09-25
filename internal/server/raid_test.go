@@ -183,3 +183,30 @@ func TestRaidKeepsItsVillageAndTimesOut(t *testing.T) {
 		t.Fatal("the raid outlasted 48000 ticks")
 	}
 }
+
+// A raid whose centre stops being a village moves to the nearest village
+// section around it instead of being lost (moveRaidCenterToNearbyVillageSection).
+func TestRaidRecentresOnNearbyVillage(t *testing.T) {
+	h := newHub(world.New(7))
+	players := map[int32]*tracked{}
+	center := blockPos{64, 100, 64}
+	near := blockPos{center.x + 32, center.y, center.z} // two sections east
+	h.world.ForceLoad(near.x, near.z, 3)
+	h.poiWorld(dimOverworld)
+	h.world.SetBlock(near.x, near.y, near.z, worldgen.BlockBase("bell"))
+	h.raids[center] = &raid{center: center, uuid: raidUUID(center), wave: 1, numGroups: 5,
+		alive: map[int32]bool{}, shown: map[int32]bool{}, pending: 1}
+	h.updateRaids(players)
+	if h.raids[center] != nil {
+		t.Fatal("the raid stayed on its old centre")
+	}
+	var r *raid
+	for c, rr := range h.raids {
+		if h.isVillage(c) && rr.center == c {
+			r = rr
+		}
+	}
+	if len(h.raids) != 1 || r == nil || r.lostLeft != 0 {
+		t.Fatalf("the raid did not move to the village section beside it (raids %v)", h.raids)
+	}
+}

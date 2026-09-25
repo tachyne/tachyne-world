@@ -88,6 +88,7 @@ the public history since the project was open-sourced on 2026-07-10.
 
 ### Fixed
 - **Respawn beside your bed, not on it.** Respawning at a bed or respawn
+- A raid whose centre is no longer a village now moves to the nearest village section within two sections before it is declared lost, as in vanilla — a raid at the edge of a village no longer ends in defeat just because its first wave broke the bell's spot.
   anchor now stands you up in a free spot next to it, as in vanilla,
   instead of on top of it. A bed or anchor walled in with nowhere to stand
   counts as obstructed, and you respawn at the world spawn.

@@ -97,6 +97,30 @@ func (h *hub) isVillage(center blockPos) bool {
 	})) > 0
 }
 
+// nearbyVillageSection is moveRaidCenterToNearbyVillageSection's search: of
+// the sections in the 5×5×5 cube around the centre's, the nearest village
+// one, by its centre.
+func (h *hub) nearbyVillageSection(center blockPos) (blockPos, bool) {
+	cx, cy, cz := center.x>>4, center.y>>4, center.z>>4
+	best, bestD, found := blockPos{}, 0, false
+	for sx := cx - 2; sx <= cx+2; sx++ {
+		for sy := cy - 2; sy <= cy+2; sy++ {
+			for sz := cz - 2; sz <= cz+2; sz++ {
+				c := blockPos{sx*16 + 8, sy*16 + 8, sz*16 + 8}
+				if !h.isVillage(c) {
+					continue
+				}
+				dx, dy, dz := c.x-center.x, c.y-center.y, c.z-center.z
+				d := dx*dx + dy*dy + dz*dz
+				if !found || d < bestD {
+					best, bestD, found = c, d, true
+				}
+			}
+		}
+	}
+	return best, found
+}
+
 // raidUUID is the raid's boss-bar identity, stable per village centre.
 func raidUUID(center blockPos) [16]byte {
 	var u [16]byte
@@ -243,8 +267,18 @@ func (h *hub) updateRaids(players map[int32]*tracked) {
 			}
 			continue
 		}
-		// Raid.tick: a raid whose village is gone is lost once a wave has
-		// come (stopped quietly before), and every raid ends at 48000 ticks.
+		// Raid.tick: a raid whose centre is no longer a village first moves to
+		// the nearest village section around it (the villagers' beds broken,
+		// the village still standing beside them)…
+		if !h.isVillage(center) {
+			if nc, ok := h.nearbyVillageSection(center); ok {
+				delete(h.raids, center)
+				r.center, center = nc, nc
+				h.raids[nc] = r
+			}
+		}
+		// …and is lost once a wave has come (stopped quietly before), and
+		// every raid ends at 48000 ticks.
 		if !h.isVillage(center) {
 			if r.wave > 0 {
 				r.lostLeft = raidDefeatSecs
