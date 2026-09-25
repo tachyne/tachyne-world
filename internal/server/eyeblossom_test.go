@@ -40,7 +40,11 @@ func TestNetherPortalBreedsPiglins(t *testing.T) {
 	h := newHub(world.New(1))
 	nw, _ := world.NewNether(1, nil)
 	h.nether = nw
-	players := map[int32]*tracked{}
+	near, nearN := testTracked(), testTracked()
+	near.x, near.y, near.z = 20.5, 180, 20.5
+	nearN.p = newPlayer(2, "nether", near.p.uuid)
+	nearN.dim, nearN.x, nearN.y, nearN.z = 1, 20.5, 180, 20.5
+	players := map[int32]*tracked{1: near, 2: nearN}
 	h.rules.DoMobSpawning = true
 	h.rules.Difficulty = diffHard
 	pos := blockPos{0, 180, 0}
@@ -62,6 +66,17 @@ func TestNetherPortalBreedsPiglins(t *testing.T) {
 	if !breeds(dimOverworld, 40000) {
 		t.Error("an overworld portal on hard never bred a piglin")
 	}
+	for _, m := range h.mobs {
+		if m.etype == entityZombifiedPiglin && m.portalCool != entityPortalCooldown {
+			t.Errorf("a piglin fresh from the portal carries the portal cooldown, got %d", m.portalCool)
+		}
+	}
+	// anyPlayerCloseEnoughForSpawning: with nobody within 128 blocks, none.
+	near.x = 500.5
+	if breeds(dimOverworld, 40000) {
+		t.Error("a portal bred a piglin with no player within 128 blocks")
+	}
+	near.x = 20.5
 	if breeds(1, 40000) {
 		t.Error("a portal inside the Nether bred a piglin")
 	}
