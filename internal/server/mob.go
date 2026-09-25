@@ -177,6 +177,8 @@ type mob struct {
 	beeSentAngry    bool       // bee: last synced anger state (red eyes)
 	beeTravel       int        // bee: mob-updates spent on the current trip (give-up timer)
 	beeNoNectar     int        // bee: seconds foraging empty-handed (ticksWithoutNectarSinceExitingHive)
+	beeFlower       blockPos   // bee: the flower it remembers (savedFlowerPos)
+	beeHasFlower    bool       // …set
 	beeStayOut      int        // bee: seconds barred from the hive after a sedated robbery
 	beeLocateCD     int        // bee: seconds until it may look for a hive again
 	beeBanned       []blockPos // bee: hives it could not reach (MAX_BLACKLISTED_TARGETS)

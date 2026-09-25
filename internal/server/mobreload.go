@@ -161,6 +161,13 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.huntedUntil = h.tick.Load() + uint64(piglinHuntMin+h.rng.Intn(piglinHuntSpan))
 	}
 	m.traderDespawn = sm.TraderDespawn
+	if sm.BeeHive != nil {
+		m.beeHome, m.beeHasHome = unpackPos(*sm.BeeHive), true
+	}
+	if sm.BeeFlower != nil {
+		m.beeFlower, m.beeHasFlower = unpackPos(*sm.BeeFlower), true
+	}
+	m.beeNectar, m.beeNoNectar = sm.BeeNectar, sm.BeeNoNectar
 	if sm.WanderTarget != nil {
 		m.traderWander, m.traderWandering = unpackPos(*sm.WanderTarget), true
 	}

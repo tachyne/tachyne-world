@@ -123,6 +123,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Bees remember their flower.** A bee keeps the flower it last worked,
+  and after thirty seconds out of the hive with no nectar it flies back to
+  it, even from beyond its own flower search. The flower goes into the hive
+  with the bee and comes back out with it, bees that knew none learn their
+  hive's, and a bee's hive, flower and nectar survive a restart. An angry
+  bee now chases at its own quicker attack pace.
 - **Parrots perch in trees.** A parrot now flies up to sit on the leaves or
   logs of a nearby tree, and otherwise flutters to a spot a little above
   the ground ahead of it. Between flights it settles where it is instead

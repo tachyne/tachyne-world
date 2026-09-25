@@ -145,6 +145,10 @@ type savedMob struct {
 	NoHunt        bool        `json:"no_hunt,omitempty"`        // piglin: CannotHunt; hoglin: CannotBeHunted
 	TraderDespawn int         `json:"trader_despawn,omitempty"` // wandering trader / llama: DespawnDelay
 	WanderTarget  *[3]int     `json:"wander_target,omitempty"`  // wandering trader: wander_target
+	BeeHive       *[3]int     `json:"hive_pos,omitempty"`       // bee: hive_pos
+	BeeFlower     *[3]int     `json:"flower_pos,omitempty"`     // bee: flower_pos
+	BeeNectar     bool        `json:"has_nectar,omitempty"`     // bee: HasNectar
+	BeeNoNectar   int         `json:"bee_no_nectar,omitempty"`  // bee: TicksSincePollination, in seconds
 	Lifetime      int         `json:"lifetime,omitempty"`       // endermite: Lifetime
 	TadpoleAge    int         `json:"tadpole_age,omitempty"`    // tadpole: Age
 	Trusted       []string    `json:"trusted,omitempty"`        // fox: trusted player names
@@ -804,6 +808,17 @@ func toSavedMob(m *mob) savedMob {
 		for k, v := range m.gossip {
 			sm.Gossip[k] = v
 		}
+	}
+	if m.etype == entityBee {
+		if m.beeHasHome {
+			p := packPos(m.beeHome)
+			sm.BeeHive = &p
+		}
+		if m.beeHasFlower {
+			p := packPos(m.beeFlower)
+			sm.BeeFlower = &p
+		}
+		sm.BeeNectar, sm.BeeNoNectar = m.beeNectar, m.beeNoNectar
 	}
 	if m.traderWandering {
 		w := packPos(m.traderWander)

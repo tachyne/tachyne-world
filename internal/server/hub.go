@@ -470,6 +470,7 @@ type hub struct {
 	seededChunks map[[2]int32]bool
 	fluidPrimed  map[int]map[[2]int32]bool // per dimension: chunks whose generated fluid has been ticked
 	hives        map[simPos][]hiveOccupant // known hives (by dimension) and their occupants
+	hiveFlower   map[simPos]blockPos       // a hive's savedFlowerPos, taught to bees that come out knowing none
 	hivestore    *hiveStore                // hives.json persistence
 
 	// waves enables the NON-VANILLA cosmetic ocean-wave overlay (-waves): a thin
