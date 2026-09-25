@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Llamas can be ridden and tamed.** Climb onto a wild llama with an
+  empty hand and it throws you off until it settles, as a horse does, only
+  sooner; wheat and hay bales bring it round faster. A tamed llama carries
+  you but can't be steered, and a tamed trader llama no longer leaves with
+  its trader. A tamed horse, donkey or camel can also be mounted without a
+  saddle now; as in vanilla, you just can't steer it.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point

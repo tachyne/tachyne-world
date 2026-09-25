@@ -111,12 +111,30 @@ func (h *hub) traderSpawnPosNear(x, z, n int) (int, int, bool) {
 	return 0, 0, false
 }
 
+// traderLlamaKept is TraderLlama.canDespawn turned round: a llama that has
+// been tamed, kept by name, or led off on someone else's lead is no longer
+// the trader's and stays.
+func (h *hub) traderLlamaKept(m *mob) bool {
+	if m.etype != entityTraderLlama {
+		return false
+	}
+	if m.tamed || m.persistent || m.rider != 0 {
+		return true
+	}
+	if m.leash != 0 {
+		if l := h.mobs[m.leash]; l == nil || l.etype != entityWanderingTrader {
+			return true
+		}
+	}
+	return false
+}
+
 // traderStep runs each mob update for a trader (and its llamas): the
 // despawn clock, and the potion or milk by the time of day.
 func (h *hub) traderStep(players map[int32]*tracked, m *mob) bool {
 	// WanderingTrader.maybeDespawn holds the clock while a player has the
 	// trade screen open, so a trader cannot vanish mid-transaction.
-	if m.traderDespawn > 0 && h.tradingPartner(players, m) == nil {
+	if m.traderDespawn > 0 && h.tradingPartner(players, m) == nil && !h.traderLlamaKept(m) {
 		m.traderDespawn -= mobMoveInterval
 		if m.traderDespawn <= 0 {
 			h.despawnMob(players, m)

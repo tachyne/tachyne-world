@@ -7,7 +7,7 @@ import (
 )
 
 // Rideable mounts. Horses, donkeys, mules, camels, pigs and striders can be
-// saddled and ridden. Riding reuses the vehicle machinery: the mount is a
+// saddled and ridden; llamas are ridden but never saddled or steered. Riding reuses the vehicle machinery: the mount is a
 // passenger carrier, its movement is client-simulated (the riding client sends
 // vehicle_move, which the hub validates and relays), and its server-side AI
 // pauses while a rider is aboard. Sneaking dismounts.
@@ -42,7 +42,7 @@ func rideable(etype int) (ok bool, steerItem int32) {
 // the interaction was consumed.
 func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	ok, _ := rideable(m.etype)
-	if !ok || m.dying > 0 || m.baby || m.mobRider != 0 {
+	if !ok && !isLlama(m.etype) || m.dying > 0 || m.baby || m.mobRider != 0 {
 		return false // a mob aboard has the seat (a camel husk's husk and parched fill both)
 	}
 	if m.etype == entitySkeletonHorse && !m.tamed {
@@ -63,8 +63,20 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 		return true
 	}
 	if !m.saddled {
-		if held != itemSaddle {
-			return false // an unsaddled mount ignores an empty hand
+		if held != itemSaddle || isLlama(m.etype) {
+			// AbstractHorse.mobInteract ends in doPlayerRide whatever the
+			// saddle: a tamed horse (or camel) is climbed on bareback, it
+			// just cannot be steered (getControllingPassenger wants the
+			// saddle), and a llama never takes one at all. A pig or a
+			// strider only seats a rider once saddled.
+			if horseFamily(m.etype) {
+				if bodyArmorFor(m.etype, held) && m.armorSt.count == 0 {
+					return false // equipBodyArmor comes before the ride
+				}
+				h.mountMob(players, t, m)
+				return true
+			}
+			return false // an unsaddled pig or strider ignores an empty hand
 		}
 		m.saddled = true
 		m.saddleSt = invStack{item: itemSaddle, count: 1}

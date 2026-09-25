@@ -11,11 +11,12 @@ package server
 // thrown. Feeding raises the temper too, which is why an apple or two makes
 // the whole business shorter.
 //
-// Camels need no taming, and the engine does not seat a player on a llama,
-// so this is the four that carry the ritual: the horse, the donkey, the mule
-// and the zombie horse (ZombieHorse.mobInteract hands an empty-handed click to
-// AbstractHorse's doPlayerRide like the rest). A skeleton horse is tamed by
-// the trap that spawns it and ignores a player until then.
+// Camels need no taming, so six carry the ritual: the horse, the donkey, the
+// mule, the zombie horse (ZombieHorse.mobInteract hands an empty-handed click
+// to AbstractHorse's doPlayerRide like the rest) and both llamas, which run
+// the same RunAroundLikeCrazyGoal but come round at a temper of 30, not 100.
+// A skeleton horse is tamed by the trap that spawns it and ignores a player
+// until then.
 
 const (
 	horseMaxTemper   = 100 // AbstractHorse.getMaxTemper
@@ -26,7 +27,7 @@ const (
 // horseNeedsTaming reports the mounts that buck until they are tamed.
 func horseNeedsTaming(etype int) bool {
 	switch etype {
-	case entityHorse, entityDonkey, entityMule, entityZombieHorse:
+	case entityHorse, entityDonkey, entityMule, entityZombieHorse, entityLlama, entityTraderLlama:
 		return true
 	}
 	return false
@@ -46,12 +47,13 @@ func (h *hub) horseRideTick(players map[int32]*tracked, m *mob) bool {
 	if t == nil {
 		return false
 	}
-	if h.rng.Intn(horseMaxTemper) < m.temper {
+	max := horseMaxTemperOf(m.etype)
+	if h.rng.Intn(max) < m.temper {
 		h.tameHorse(players, m, t)
 		return false
 	}
-	if m.temper += horseTemperPerGo; m.temper > horseMaxTemper {
-		m.temper = horseMaxTemper
+	if m.temper += horseTemperPerGo; m.temper > max {
+		m.temper = max
 	}
 	h.dismountMob(players, t)
 	h.horseMakeMad(players, m)
@@ -63,7 +65,7 @@ func (h *hub) horseRideTick(players map[int32]*tracked, m *mob) bool {
 // hearts.
 func (h *hub) tameHorse(players map[int32]*tracked, m *mob, t *tracked) {
 	m.tamed, m.owner, m.ownerUUID = true, t.p.eid, t.p.uuid
-	m.temper = horseMaxTemper
+	m.temper = horseMaxTemperOf(m.etype)
 	h.playSoundDim(players, m.dim, "minecraft:entity.horse.eat", sndNeutral, m.x, m.y, m.z, 1, 1)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusTameOK))
 }
