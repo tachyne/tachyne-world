@@ -885,26 +885,41 @@ func (h *hub) hopperPull(players map[int32]*tracked, pos simPos, c *bin) bool {
 	return h.hopperTakeItems(players, pos, c, true)
 }
 
-// hopperTakeItems takes one dropped item lying in the hopper's cell (or,
-// with the cell above too, from the pickup area over an open hopper).
+// hopperTakeItems is HopperBlockEntity.addItem over the items whose box
+// meets the hopper's SUCK_AABB (the full cell from 11/16 up to the top of
+// the block above): the first item taken WHOLE ends the pull; one only
+// partly taken leaves the rest lying and the hopper tries the next. Alone
+// (HopperBlock.entityInside) only items in the hopper's own cell count; with
+// aboveToo (suckInItems) a full block above that is not #does_not_block_hoppers
+// shuts the hopper off. Nothing is heard: a hopper takes items silently.
 func (h *hub) hopperTakeItems(players map[int32]*tracked, pos simPos, c *bin, aboveToo bool) bool {
+	if aboveToo {
+		if w := h.worldFor(pos.dim); w != nil {
+			if above := w.At(pos.x, pos.y+1, pos.z); worldgen.IsFullCube(above) && !isBeeHome(above) {
+				return false // isBlocked
+			}
+		}
+	}
+	const half = 0.125 // an item entity is 0.25 wide and tall
+	x0, x1 := float64(pos.x), float64(pos.x)+1
+	y0, y1 := float64(pos.y)+11.0/16, float64(pos.y)+2
+	z0, z1 := float64(pos.z), float64(pos.z)+1
 	for eid, it := range h.items {
-		ix, iy, iz := floorInt(it.x), floorInt(it.y), floorInt(it.z)
-		if it.dim != pos.dim || ix != pos.x || iz != pos.z || (iy != pos.y && !(aboveToo && iy == pos.y+1)) {
+		if it.dim != pos.dim || it.x+half <= x0 || it.x-half >= x1 || it.z+half <= z0 || it.z-half >= z1 ||
+			it.y+2*half <= y0 || it.y >= y1 {
 			continue
 		}
+		if !aboveToo && floorInt(it.y) != pos.y {
+			continue // entityInside: the item is in the hopper's own cell
+		}
 		st := it.stack()
-		if left := binInsert(c.slots, st); left < st.count {
-			if left == 0 {
-				delete(h.items, eid)
-				h.entityGone(players, it.dim, eid)
-			} else {
-				it.count = left
-			}
-			h.playSoundDim(players, it.dim, "minecraft:entity.item.pickup", sndBlock,
-				it.x, it.y, it.z, 0.2, 1.4)
+		left := binInsert(c.slots, st)
+		if left == 0 {
+			delete(h.items, eid)
+			h.entityGone(players, it.dim, eid)
 			return true
 		}
+		it.count = left
 	}
 	return false
 }

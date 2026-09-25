@@ -609,3 +609,30 @@ func TestFrostedIceMeltTakesLoneNeighbour(t *testing.T) {
 		t.Errorf("both should be water: %d / %d", w.At(a.x, a.y, a.z), w.At(b.x, b.y, b.z))
 	}
 }
+
+// HopperBlockEntity.addItem: an item the hopper can take only part of is
+// not a successful pull — the rest stays lying there and the hopper does
+// not start its cooldown on it.
+func TestHopperPartialTakeIsNoPull(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	x, y, z := 1520, 180, 1520
+	clearAirBox(h.world, x, y, z, 2)
+	h.world.SetBlock(x, y-1, z, worldgen.Stone)
+	hopper := worldgen.BlockID("hopper")
+	h.world.SetBlock(x, y, z, hopper)
+	pos := simPos{blockPos: blockPos{x, y, z}}
+	c := h.binAt(pos, hopper)
+	stone := itemByName["stone"]
+	for i := range c.slots {
+		c.slots[i] = invStack{item: stone, count: 64}
+	}
+	c.slots[4].count = 63
+	it := h.spawnItemAt(players, 0, stone, 5, float64(x)+0.5, float64(y)+1.1, float64(z)+0.5, 0, 0, 0)
+	if h.hopperPull(players, pos, c) {
+		t.Error("taking one of five is not a pull")
+	}
+	if it.count != 4 || c.slots[4].count != 64 {
+		t.Errorf("the hopper should take the one it has room for: item %d, slot %d", it.count, c.slots[4].count)
+	}
+}

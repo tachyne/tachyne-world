@@ -316,8 +316,7 @@ func (h *hub) cartSuckItems(players map[int32]*tracked, v *vehicle) bool {
 			} else {
 				it.count = left
 			}
-			h.playSoundDim(players, v.dim, "minecraft:entity.item.pickup", sndBlock, it.x, it.y, it.z, 0.2, 1.4)
-			h.refreshCartViewers(players, v)
+			h.refreshCartViewers(players, v) // silently, as HopperBlockEntity.addItem does
 			return true
 		}
 	}
