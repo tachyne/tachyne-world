@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **End gateways take more than players.** Mobs, dropped items and thrown
+  ender pearls go through too. A pearl thrown into a gateway comes out at
+  rest on the far side and lands its thrower there. Idle gateways also flash
+  their beam every two minutes, as they do in vanilla.
 - **The ender dragon tears through blocks.** Whatever its head, neck and body
   fly into is destroyed, except end stone, obsidian, bedrock, iron bars and
   the other blocks a dragon can't break. With `mobGriefing` off it breaks

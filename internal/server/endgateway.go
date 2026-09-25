@@ -341,6 +341,117 @@ func (h *hub) updateEndGateways(players map[int32]*tracked) {
 		h.advance(players, t, "enter_block", advMatch{blockState: endGatewayState})
 		h.teleportInEnd(players, t, h.gatewayDestination(players, gpos.blockPos))
 	}
+	h.gatewayCarryEntities(players, now)
+	if now > 0 && now%endGatewayAttention == 0 {
+		h.gatewayAttentionBeams(players, now)
+	}
+}
+
+// endGatewayAttention is TheEndGatewayBlockEntity.ATTENTION_INTERVAL: an idle
+// gateway flashes its beam this often, which is how one is spotted from afar.
+const endGatewayAttention = 2400
+
+// gatewayOpenAt is the gateway half of EndGatewayBlock.entityInside: a
+// gateway block at the cell and not cooling down. Taking the entity puts it
+// on its forty ticks (triggerCooldown), for everyone.
+func (h *hub) gatewayOpenAt(players map[int32]*tracked, x, y, z float64, now uint64) (blockPos, bool) {
+	for _, dy := range [2]float64{0, 1} { // the feet cell, or the body's
+		gx, gy, gz := int(math.Floor(x)), int(math.Floor(y+dy)), int(math.Floor(z))
+		if h.end.At(gx, gy, gz) != endGatewayState {
+			continue
+		}
+		gpos := simPos{dim: 2, blockPos: blockPos{gx, gy, gz}}
+		if now < h.gatewayCool[gpos] {
+			return blockPos{}, false
+		}
+		h.gatewayCool[gpos] = now + endGatewayCooldown
+		h.gatewayCooldownEvent(players, gpos.blockPos)
+		return gpos.blockPos, true
+	}
+	return blockPos{}, false
+}
+
+// gatewayCarryEntities is EndGatewayBlock.entityInside for everything that is
+// not a player: mobs, dropped items and projectiles go through as well. A
+// thrown ender pearl arrives at rest (getPortalDestination zeroes its motion)
+// and then drops, so a pearl thrown into a gateway lands its thrower on the
+// far side; anything else keeps its motion. The dragon never uses one
+// (EnderDragon.canUsePortal), and neither does a mob carrying a rider — the
+// engine does not move riders with their mount.
+func (h *hub) gatewayCarryEntities(players map[int32]*tracked, now uint64) {
+	for _, m := range h.mobs {
+		if m.dim != 2 || m.portalCool > 0 || m == h.dragon || m.dying > 0 ||
+			m.rider != 0 || len(m.riders) > 0 || m.mount != 0 {
+			continue
+		}
+		entry, ok := h.gatewayOpenAt(players, m.x, m.y, m.z, now)
+		if !ok {
+			continue
+		}
+		to := h.gatewayDestination(players, entry)
+		h.entityGone(players, 2, m.eid) // the tracker shows it again where it lands
+		m.x, m.y, m.z = float64(to.x)+0.5, float64(to.y), float64(to.z)+0.5
+		m.portalCool = entityPortalCooldown
+		m.targetEID, m.hasTarget = 0, false
+		h.playSoundDim(players, 2, "minecraft:block.end_gateway.teleport", sndBlock, m.x, m.y, m.z, 1, 1)
+	}
+	for _, it := range h.items {
+		if it.dim != 2 || it.portalCool > 0 {
+			continue
+		}
+		entry, ok := h.gatewayOpenAt(players, it.x, it.y, it.z, now)
+		if !ok {
+			continue
+		}
+		to := h.gatewayDestination(players, entry)
+		h.entityGone(players, 2, it.eid)
+		it.x, it.y, it.z = float64(to.x)+0.5, float64(to.y), float64(to.z)+0.5
+		it.portalCool = entityPortalCooldown
+	}
+	for eid, a := range h.arrows {
+		if a.dim != 2 || a.stuck || a.returning {
+			continue
+		}
+		entry, ok := h.gatewayOpenAt(players, a.x, a.y, a.z, now)
+		if !ok {
+			continue
+		}
+		to := h.gatewayDestination(players, entry)
+		h.entityGone(players, 2, eid)
+		a.x, a.y, a.z = float64(to.x)+0.5, float64(to.y), float64(to.z)+0.5
+		a.sx, a.sy, a.sz = a.x, a.y, a.z
+		if a.pearl {
+			a.vx, a.vy, a.vz = 0, 0, 0
+		}
+		add := entAdd(eid, a.etype, a.uuid, a.x, a.y, a.z, arrowYaw(a), arrowPitch(a))
+		add.VX, add.VY, add.VZ = a.vx, a.vy, a.vz
+		h.toNearbyEv(players, 2, a.x, a.z, add)
+	}
+}
+
+// gatewayAttentionBeams is portalTick's idle flash: every standing gateway
+// that is not already cooling down fires its beam.
+func (h *hub) gatewayAttentionBeams(players map[int32]*tracked, now uint64) {
+	seen := map[blockPos]bool{}
+	fire := func(p blockPos) {
+		if seen[p] || h.end.At(p.x, p.y, p.z) != endGatewayState {
+			return
+		}
+		seen[p] = true
+		gpos := simPos{dim: 2, blockPos: p}
+		if now < h.gatewayCool[gpos] {
+			return
+		}
+		h.gatewayCool[gpos] = now + endGatewayCooldown
+		h.gatewayCooldownEvent(players, p)
+	}
+	for i := 0; i < endGatewayCount; i++ {
+		fire(endGatewayRingPos(i))
+	}
+	for _, g := range h.rules.EndGateways {
+		fire(blockPos{g.From[0], g.From[1], g.From[2]})
+		fire(blockPos{g.To[0], g.To[1], g.To[2]})
+	}
 }
 
 // gatewayCooldownEvent is TheEndGatewayBlockEntity.triggerCooldown: the block

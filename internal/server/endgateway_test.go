@@ -88,3 +88,60 @@ func TestGatewayThrowsYouOutAndBringsYouBack(t *testing.T) {
 		t.Fatalf("second trip: %d links (was %d), landed %.0f,%.0f", len(h.rules.EndGateways), n, pl.x, pl.z)
 	}
 }
+
+// EndGatewayBlock.entityInside carries more than players: a mob, a dropped
+// item and a thrown ender pearl all go through, and the pearl arrives at rest.
+func TestGatewayCarriesMobsItemsAndPearls(t *testing.T) {
+	h, pl, players := endHub(t)
+	pl.dim = 2
+	pl.x, pl.y, pl.z = 0.5, 70, 0.5
+	h.dragonDefeated(players)
+	g := firstGateway(h)
+	gx, gy, gz := float64(g.x)+0.5, float64(g.y), float64(g.z)+0.5
+
+	m := h.spawnMobIn(players, entityEnderman, 2, gx, gy, gz)
+	if m == nil {
+		t.Fatal("no enderman")
+	}
+	h.tick.Store(1)
+	h.updateEndGateways(players)
+	if math.Hypot(m.x, m.z) < endGatewayCast-16*16 {
+		t.Fatalf("the enderman should have gone out to the islands, at r=%.0f", math.Hypot(m.x, m.z))
+	}
+	if m.portalCool == 0 {
+		t.Fatal("a mob through a gateway serves the portal cooldown")
+	}
+
+	h.gatewayCool = map[simPos]uint64{}
+	it := h.spawnItemIn(players, 2, itemEnderPearl, 1, gx, gy, gz)
+	it.x, it.y, it.z = gx, gy, gz
+	h.updateEndGateways(players)
+	if math.Hypot(it.x, it.z) < endGatewayCast-16*16 {
+		t.Fatalf("the item should have gone through, at r=%.0f", math.Hypot(it.x, it.z))
+	}
+
+	h.gatewayCool = map[simPos]uint64{}
+	a := h.launchProjectileIn(players, entityPearlProj, 2, gx, gy+0.2, gz, 0.4, 0.1, 0.4)
+	a.pearl, a.shooter = true, pl.p.eid
+	h.updateEndGateways(players)
+	if math.Hypot(a.x, a.z) < endGatewayCast-16*16 {
+		t.Fatalf("the pearl should have gone through, at r=%.0f", math.Hypot(a.x, a.z))
+	}
+	if a.vx != 0 || a.vy != 0 || a.vz != 0 {
+		t.Fatalf("a pearl comes out of a gateway at rest, got (%v,%v,%v)", a.vx, a.vy, a.vz)
+	}
+}
+
+// portalTick: an idle gateway flashes its beam every 2400 ticks.
+func TestGatewayAttentionBeam(t *testing.T) {
+	h, pl, players := endHub(t)
+	pl.dim = 2
+	h.dragonDefeated(players)
+	g := firstGateway(h)
+	pl.x, pl.y, pl.z = float64(g.x)+3, float64(g.y), float64(g.z)
+	h.tick.Store(endGatewayAttention)
+	h.updateEndGateways(players)
+	if h.gatewayCool[simPos{dim: 2, blockPos: g}] == 0 {
+		t.Fatal("the gateway should have fired its attention beam")
+	}
+}
