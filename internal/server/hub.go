@@ -1104,6 +1104,9 @@ func (h *hub) run() {
 			if h.rules.DoDaylight {
 				dt = h.dayTime.Add(1)
 			}
+			if age%600 == 0 { // PlayerList.tick: everyone's latency, every 600 ticks
+				h.broadcastLatency(players)
+			}
 			if age%20 == 0 { // broadcast the time once a second; client interpolates
 				body := timeEv(age, dt)
 				for _, t := range players {
@@ -3025,7 +3028,7 @@ func entGone(eids ...int32) attachproto.EntityRemove {
 // player's game mode (every client reads a spectator from this entry, its
 // own included).
 func infoAdd(p *player, mode int) attachproto.PlayerInfo {
-	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name, Gamemode: int32(mode)}
+	pi := attachproto.PlayerInfo{UUID: p.uuid, Name: p.name, Gamemode: int32(mode), Latency: p.latency.Load()}
 	for _, pr := range p.props {
 		pi.Props = append(pi.Props, attachproto.Property{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

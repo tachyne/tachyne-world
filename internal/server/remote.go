@@ -262,6 +262,16 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evRespawn{eid: p.eid})
 	case attachproto.StatsReq:
 		h.post(evStatsReq{eid: p.eid})
+	case attachproto.Latency:
+		p.latency.Store(max(e.MS, 0))
+	case attachproto.GameRuleReq:
+		// ServerGamePacketListenerImpl.handleClientCommand
+		// REQUEST_GAMERULE_VALUES: answered for a gamemaster only.
+		if r.s.isOp(p.name) {
+			r.s.onHub(func(players map[int32]*tracked) {
+				p.trySendEv(attachproto.GameRuleValues{Values: h.gameRuleValues()})
+			})
+		}
 	case attachproto.RecipeSettingChange:
 		h.post(evRecipeSettings{eid: p.eid, book: e.Book, open: e.Open, filter: e.Filter})
 	case attachproto.RecipeSeen:
@@ -385,6 +395,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgPlayerInfo, ev)
 	case attachproto.PlayerInfoMode:
 		send(attachproto.MsgPlayerInfoMode, ev)
+	case attachproto.PlayerInfoLatency:
+		send(attachproto.MsgPlayerInfoLatency, ev)
+	case attachproto.GameRuleValues:
+		send(attachproto.MsgGameRuleValues, ev)
 	case attachproto.PlayerGone:
 		send(attachproto.MsgPlayerGone, ev)
 	case attachproto.EntityAdd:

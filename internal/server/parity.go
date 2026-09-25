@@ -7,9 +7,8 @@ import (
 // Oracle-diff parity batch 1 (see docs/MECHANICS.md "Vanilla oracle"): the
 // join-sequence packets vanilla sends that we lacked. Every layout here is
 // pinned per-version — minecraft-data for 770, the wiki for 773, ViaVersion
-// rewriters (facts only) for the 26.x deltas. server_data is deliberately
-// omitted: 770 and 773 sources disagree on a trailing boolean with no
-// ViaVersion rewriter to arbitrate, and a wrong guess is a decode kick.
+// rewriters (facts only) for the 26.x deltas. server_data is the gateway's
+// (it holds the server description).
 const (
 
 	// brigadier:string is parser id 5 on EVERY version we serve: the argument

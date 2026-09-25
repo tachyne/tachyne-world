@@ -447,6 +447,12 @@ func session(c net.Conn, cfg Config) {
 			if remote != nil {
 				remote.Action(proto.StatsReq{})
 			}
+		case proto.MsgGameRuleReq:
+			if remote != nil {
+				remote.Action(proto.GameRuleReq{})
+			}
+		case proto.MsgLatency:
+			actTo(remote, payload, proto.Latency{})
 		case proto.MsgRecipeSettingChange:
 			actTo(remote, payload, proto.RecipeSettingChange{})
 		case proto.MsgRecipeSeen:

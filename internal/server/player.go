@@ -49,7 +49,8 @@ type player struct {
 	// once a tick and sends one BlockAck, which is vanilla's cadence —
 	// ServerGamePacketListenerImpl keeps the max and flushes it at the top of
 	// the next tick, after the changes the action produced.
-	ackSeq atomic.Int32
+	latency atomic.Int32 // ms, from the gateway's keep-alive round trips (the tab list shows it)
+	ackSeq  atomic.Int32
 
 	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
 	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch

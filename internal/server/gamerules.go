@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // Game-rule names.
@@ -182,4 +184,33 @@ func gameruleBounds(rule string) (lo, hi int) {
 		return 1, 1000
 	}
 	return 0, maxInt32
+}
+
+// gameRuleValues is every rule's current value by its canonical name — what
+// the 26.x gamerule editor is shown (ClientboundGameRuleValuesPacket).
+func (h *hub) gameRuleValues() map[string]string {
+	out := map[string]string{}
+	for _, list := range [][]string{booleanRules, numericRules} {
+		for _, r := range list {
+			if v, ok := h.ruleValueText(r); ok {
+				out[r] = v
+			}
+		}
+	}
+	return out
+}
+
+// broadcastLatency is PlayerList.tick's UPDATE_LATENCY: every listed
+// player's latency to everyone, every 600 ticks.
+func (h *hub) broadcastLatency(players map[int32]*tracked) {
+	if len(players) == 0 {
+		return
+	}
+	ev := attachproto.PlayerInfoLatency{}
+	for _, t := range players {
+		ev.Entries = append(ev.Entries, attachproto.PlayerLatency{UUID: t.p.uuid, Latency: t.p.latency.Load()})
+	}
+	for _, t := range players {
+		t.p.trySendEv(ev)
+	}
 }

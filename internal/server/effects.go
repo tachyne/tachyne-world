@@ -315,7 +315,9 @@ func (h *hub) addEffect(players map[int32]*tracked, t *tracked, id int32, in act
 	if id == effInvisibility || id == effGlowing {
 		h.broadcastPlayerFlags(players, t) // other players have to see it too
 	}
-	t.p.trySendEv(effectEv(t.p.eid, id, cur))
+	ev := effectEv(t.p.eid, id, cur)
+	ev.Blend = !ok // onEffectAdded blends a new effect in; onEffectUpdated does not
+	t.p.trySendEv(ev)
 	h.syncPlayerSwirls(players, t)
 	if id == effHeroOfVillage {
 		h.advance(players, t, "hero_of_the_village", advMatch{})
