@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Shulkers need to see you.** A shulker used to open fire on a player
+  behind a wall. As in vanilla, it now only picks a target it can see, and
+  loses interest in one that stays out of sight for a few seconds.
 - **Zoglins wander slowly and giants stand still.** An idle zoglin now
   ambles at vanilla's slower pace instead of charging about, and a giant no
   longer turns its head to watch players, since it has no behaviour at all.

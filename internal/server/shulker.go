@@ -165,15 +165,28 @@ const (
 
 // shulkerQuarry is ShulkerNearestAttackGoal: a new target is looked for in
 // the shulker's box inflated by the follow range sideways and only four
-// blocks along the axis of the face it clings to (the floor, here), and the
-// one it has is kept while it stays within the follow range.
+// blocks along the axis of the face it clings to (the floor, here), among
+// the players it can see (the goal is mustSee). The one it has is kept while
+// it stays within the follow range and has not gone unseen for longer than
+// the target memory (sixty ticks, three hundred for one that hurt it).
 func (h *hub) shulkerQuarry(players map[int32]*tracked, m *mob) *tracked {
 	ok := func(t *tracked) bool {
 		return t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim
 	}
 	if t := players[m.targetEID]; ok(t) && dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= shulkerFollow {
-		return t
+		memory := targetUnseenMemory
+		if m.anger > 0 {
+			memory = hurtByUnseenMemory
+		}
+		if h.mobSees(m, t) {
+			m.unseenTicks = 0
+			return t
+		}
+		if m.unseenTicks += mobMoveInterval; m.unseenTicks <= memory {
+			return t
+		}
 	}
+	m.targetEID, m.unseenTicks = 0, 0
 	var best *tracked
 	bestD := math.MaxFloat64
 	for _, t := range players {
@@ -181,7 +194,7 @@ func (h *hub) shulkerQuarry(players map[int32]*tracked, m *mob) *tracked {
 			t.y > m.y+1+shulkerSlab || t.y+1.8 < m.y-shulkerSlab {
 			continue
 		}
-		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD {
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && d <= shulkerFollow && h.mobSees(m, t) {
 			best, bestD = t, d
 		}
 	}
