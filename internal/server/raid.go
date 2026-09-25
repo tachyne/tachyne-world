@@ -34,6 +34,33 @@ var raiderWaves = map[int][8]int{
 	entityRavager:    {0, 0, 0, 1, 0, 1, 0, 2},
 }
 
+// raiderOrder is the order a wave's raiders spawn in (Raid.RaiderType's
+// declaration order), which decides the wave's leader: the first one that
+// can lead.
+var raiderOrder = []int{entityVindicator, entityEvoker, entityPillager, entityWitch, entityRavager}
+
+// canBeLeader is PatrollingMonster.canBeLeader: every raider but the witch
+// and the ravager can carry the banner.
+func canBeLeader(etype int) bool {
+	return etype != entityWitch && etype != entityRavager
+}
+
+// makeCaptain puts the ominous banner on a raider's head and makes it its
+// group's leader (Raid.setLeader, PatrollingMonster.finalizeSpawn): the
+// banner shows to everyone who sees it later and always drops with it
+// (a drop chance of 2.0).
+func (h *hub) makeCaptain(players map[int32]*tracked, m *mob) {
+	m.patrolCaptain = true
+	m.gear[0] = invStack{item: itemByName["white_banner"], count: 1}
+	m.gearSure[0] = true
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, equipEv(m.eid, m.heldStack(), invStack{}, m.gear))
+}
+
+// isCaptain is Raider.isCaptain: the group's leader, wearing the banner.
+func isCaptain(m *mob) bool {
+	return m.patrolCaptain && m.gear[0].item != 0 && m.gear[0].item == itemByName["white_banner"]
+}
+
 type raid struct {
 	center      blockPos
 	uuid        [16]byte
@@ -129,7 +156,9 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 	if bonus {
 		r.bonusDone = true
 	}
-	for etype, counts := range raiderWaves {
+	leaderSet := false
+	for _, etype := range raiderOrder {
+		counts := raiderWaves[etype]
 		ravagerN := 0 // successful ravagers this wave (first one gets the evoker rider)
 		n := counts[r.wave]
 		if bonus {
@@ -149,7 +178,13 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			if m == nil {
 				continue
 			}
-			m.raidCenter = r.center
+			m.raidCenter, m.raidWave = r.center, r.wave
+			if !leaderSet && canBeLeader(etype) {
+				// Raid.spawnGroup: the wave's first raider that can lead
+				// carries the ominous banner (Raid.setLeader).
+				h.makeCaptain(players, m)
+				leaderSet = true
+			}
 			h.applyRaidBuffs(m, r) // enchanted gear on the later waves
 			r.alive[m.eid] = true
 			r.waveSpawned++
@@ -159,7 +194,7 @@ func (h *hub) spawnWave(players map[int32]*tracked, r *raid) {
 			if etype == entityRavager {
 				if rt := raidRiderType(r.wave, ravagerN); rt != 0 {
 					if rd := h.spawnHostileYIn(players, rt, m.dim, m.x, m.y, m.z); rd != nil {
-						rd.raidCenter = r.center
+						rd.raidCenter, rd.raidWave = r.center, r.wave
 						rd.mount, m.mobRider = m.eid, rd.eid
 						r.alive[rd.eid] = true
 						r.waveSpawned++

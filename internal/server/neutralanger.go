@@ -99,10 +99,14 @@ func (h *hub) provokedTarget(players map[int32]*tracked, m *mob) bool {
 // calmDown is stopBeingAngry plus the lost target: the animal is peaceful
 // again.
 func (h *hub) calmDown(m *mob) {
+	m.anger, m.targetEID, m.angryAt, m.unseenTicks = 0, 0, 0, 0
+	m.llamaDefending, m.zpHeld = false, false
+	if m.etype == entityZombifiedPiglin || m.etype == entityEnderman {
+		m.hasTarget = false // a monster calms down but stays one
+		return
+	}
 	m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
 	if m.etype == entityBee {
 		m.behavior = beeBehavior{} // back to its flower-and-hive errands
 	}
-	m.anger, m.targetEID, m.angryAt, m.unseenTicks = 0, 0, 0, 0
-	m.llamaDefending = false
 }

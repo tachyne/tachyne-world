@@ -51,6 +51,11 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 		}
 	}
 
+	// Warden.doPush: a player it is touching riles it.
+	if m.wardenPoseLeft == 0 || (m.wardenPose != poseEmerging && m.wardenPose != poseDigging) {
+		h.wardenTouches(players, m)
+	}
+
 	// Emerging, roaring, sniffing or burrowing: the warden is rooted to the
 	// spot for the length of the animation and does nothing else.
 	if h.wardenPoseTick(players, m) {
@@ -65,7 +70,8 @@ func (h *hub) wardenTick(players map[int32]*tracked, m *mob) {
 	if t == nil {
 		m.wardenTarget, m.sonicRun = 0, 0
 		near := h.nearestHuntable(players, m.dim, m.x, m.z, 24)
-		if near != nil && h.wardenSniffTry(players, m) {
+		// Investigating sets SNIFF_COOLDOWN, and INVESTIGATE outranks SNIFF.
+		if near != nil && !h.wardenInvestigating(m) && h.wardenSniffTry(players, m) {
 			return
 		}
 	}

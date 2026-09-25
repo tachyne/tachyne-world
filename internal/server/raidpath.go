@@ -32,7 +32,7 @@ func (h *hub) raidPathStep(players map[int32]*tracked, m *mob) bool {
 		return false // a passenger is steered by its mount; a hunter hunts
 	}
 	r := h.raids[m.raidCenter]
-	if r == nil {
+	if r == nil || r.lostLeft > 0 {
 		return false // the raid is over: the goal stops (canContinueToUse)
 	}
 	c := m.raidCenter
@@ -67,7 +67,7 @@ func (h *hub) raidRecruitNearby(r *raid, m *mob) {
 			math.Abs(o.y-m.y) > raidRecruitRange || math.Abs(o.z-m.z) > raidRecruitRange {
 			continue
 		}
-		o.raidCenter = r.center
+		o.raidCenter, o.raidWave = r.center, r.wave
 		r.alive[o.eid] = true
 	}
 }

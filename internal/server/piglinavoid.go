@@ -139,10 +139,10 @@ func (h *hub) alertZombifiedPiglins(from *mob, t *tracked) {
 			math.Abs(o.y-from.y) > zPiglinAlertY {
 			return
 		}
-		if o.targetEID != 0 {
+		if o.targetEID != 0 || o.hasTarget {
 			return // already has someone of its own
 		}
-		h.provoke(o, t)
+		h.zombifiedPiglinAngerAt(o, t)
 	})
 }
 

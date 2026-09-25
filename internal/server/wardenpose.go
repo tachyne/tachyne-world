@@ -90,7 +90,7 @@ func (h *hub) wardenPoseTick(players map[int32]*tracked, m *mob) bool {
 // took the mob's movement this tick.
 func (h *hub) wardenStep(players map[int32]*tracked, m *mob) bool {
 	if m.wardenPoseLeft <= 0 {
-		return false
+		return h.wardenInvestigateStep(m) // INVESTIGATE: off to what it heard
 	}
 	m.vx, m.vz = 0, 0
 	return true

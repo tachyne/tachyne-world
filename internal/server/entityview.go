@@ -151,6 +151,9 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 	if m.baby {
 		t.p.trySendEv(metaEv(mobBabyMeta(m, true)))
 	}
+	if m.celebrating {
+		t.p.trySendEv(metaEv(boolMeta(m.eid, metaIndexRaiderCelebrating, true)))
+	}
 	if m.sheared {
 		t.p.trySendEv(metaEv(sheepMeta(m, true)))
 	}

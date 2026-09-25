@@ -9,7 +9,7 @@ package server
 func (h *hub) deathForgiveness(players map[int32]*tracked, t *tracked) {
 	if h.rules.ForgiveDead && !h.rules.UniversalAnger { // universal anger holds the grudge past a death
 		for _, m := range h.mobs {
-			if m.hostile && m.targetEID == t.p.eid && m.dim == t.dim && neutralMob(m) {
+			if m.hostile && (m.targetEID == t.p.eid || m.angryAt == t.p.eid) && m.dim == t.dim && neutralMob(m) {
 				h.calmDown(m) // stopBeingAngry
 			}
 		}

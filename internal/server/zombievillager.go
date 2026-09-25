@@ -63,6 +63,13 @@ func (h *hub) zombieBitesVillager(players map[int32]*tracked, m, v *mob) bool {
 		v.panic = 60 // the bitten villager runs
 		return true
 	}
+	h.zombieKilledVillager(players, m, v)
+	return true
+}
+
+// zombieKilledVillager is Zombie.killedEntity for a villager: on Hard it
+// always comes back as a zombie villager, on Normal half the time.
+func (h *hub) zombieKilledVillager(players map[int32]*tracked, m, v *mob) {
 	switch h.rules.Difficulty {
 	case diffHard:
 		h.infectVillager(players, m, v)
@@ -76,7 +83,6 @@ func (h *hub) zombieBitesVillager(players map[int32]*tracked, m, v *mob) bool {
 		h.killMob(players, v)
 	}
 	m.preyTarget = 0
-	return true
 }
 
 // mobKnockFrom shoves a mob away from a point (a bite's knockback).

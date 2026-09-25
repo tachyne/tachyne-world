@@ -15,16 +15,17 @@ import (
 // lose interest and burrow away.
 
 const (
-	wardenAngerMax     = 150 // AngerManagement.MAX_ANGER
-	wardenAngerAngry   = 80  // AngerLevel.ANGRY
-	wardenAngerHeard   = 35  // Warden.DEFAULT_ANGER: a disturbance it hears
-	wardenAngerShot    = 10  // PROJECTILE_ANGER
-	wardenAngerHurt    = 100 // ANGRY + ON_HURT_ANGER_BOOST (80 + 20)
-	wardenAngerDecay   = 1   // one point per anger tick…
-	wardenAngerTick    = 20  // …which runs every second
-	wardenHearRange    = 16  // how far a Warden hears a disturbance
-	wardenSonicKBHoriz = 2.5 // SonicBoom's knockback
-	wardenSonicKBVert  = 0.5
+	wardenAngerMax      = 150 // AngerManagement.MAX_ANGER
+	wardenAngerAngry    = 80  // AngerLevel.ANGRY
+	wardenAngerAgitated = 40  // AngerLevel.AGITATED
+	wardenAngerHeard    = 35  // Warden.DEFAULT_ANGER: a disturbance it hears
+	wardenAngerShot     = 10  // PROJECTILE_ANGER
+	wardenAngerHurt     = 100 // ANGRY + ON_HURT_ANGER_BOOST (80 + 20)
+	wardenAngerDecay    = 1   // one point per anger tick…
+	wardenAngerTick     = 20  // …which runs every second
+	wardenHearRange     = 16  // how far a Warden hears a disturbance
+	wardenSonicKBHoriz  = 2.5 // SonicBoom's knockback
+	wardenSonicKBVert   = 0.5
 )
 
 // wardenAngerAt raises this Warden's grudge against a suspect.
@@ -57,6 +58,11 @@ func (h *hub) wardenHeard(dim int, x, y, z float64, src int32) {
 			continue
 		}
 		h.wardenAngerAt(m, src, wardenAngerHeard)
+		// onReceiveVibration: not yet angry, it goes to see — unless the
+		// grudge it holds is against somebody else.
+		if best, n := h.wardenMaxAnger(h.playersRef, m); n < wardenAngerAngry && (best == 0 || best == src) {
+			h.wardenDisturbed(h.playersRef, m, x, y, z)
+		}
 	}
 }
 

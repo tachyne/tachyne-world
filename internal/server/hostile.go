@@ -117,7 +117,8 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 		return 0, 0
 	}
 	if d > bowRadius {
-		return dx / d * m.moveSpeed(), dz / d * m.moveSpeed() // outside bow range: close in
+		sp := m.moveSpeed() * bowApproachMod(m.etype) // outside bow range: close in
+		return dx / d * sp, dz / d * sp
 	}
 	// Inside it the goal strafes: a sideways half-speed circle plus a
 	// forward/back half-speed drift, both flipping about 30% of the time each
@@ -143,8 +144,36 @@ func (rangedBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.strafeBack {
 		fx, fz = -fx, -fz
 	}
-	sp := m.moveSpeed() * 0.5
+	// MoveControl.strafe runs at a quarter of the mob's speed, and the goal
+	// asks for half of that each way.
+	sp := m.moveSpeed() * bowStrafeSpeed * 0.5
 	return (sx + fx) * sp, (sz + fz) * sp
+}
+
+// bowStrafeSpeed is MoveControl.strafe's speed modifier.
+const bowStrafeSpeed = 0.25
+
+// bowApproachMod is RangedBowAttackGoal's speedModifier, the pace it closes
+// in at: the skeletons' 1.0, the illusioner's 0.5.
+func bowApproachMod(etype int) float64 {
+	if etype == entityIllusioner {
+		return 0.5
+	}
+	return 1
+}
+
+// chaseSpeedMod is the speed modifier of the goal a hostile chases with.
+// AbstractSkeleton swaps its bow goal for MeleeAttackGoal(1.2) whenever it
+// holds anything but a bow — a wither skeleton's stone sword, a sword a
+// skeleton spawned with or picked up.
+func chaseSpeedMod(m *mob) float64 {
+	if (skeletonKind(m.etype) || m.etype == entityWitherSkeleton) && m.held != itemBow {
+		return 1.2
+	}
+	if m.etype == entityWarden {
+		return wardenFightMod // FIGHT: SetWalkTargetFromAttackTargetIfTargetOutOfReach(1.2)
+	}
+	return 1
 }
 
 // blazeBehavior is BlazeAttackGoal's movement: a blaze that can see its
@@ -381,6 +410,10 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.etype == entityEnderman && m.anger == 0 && h.staredAt(players, m) {
 		m.anger = 200 // hunts ~20 s per provocation (refreshed while stared at)
 		m.settled = 0 // targetChangeTime: the daylight flight waits 600 ticks from here
+	}
+	if m.etype == entityZombifiedPiglin {
+		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at
+		return
 	}
 	// Neutral species (endermen) never START a fight — anger from a hit (or
 	// the stare above) does.

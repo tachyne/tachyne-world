@@ -179,6 +179,9 @@ type mob struct {
 	digClock                        int         // warden: mob-updates with no target (digs away at the cap)
 	patrolCaptain                   bool        // pillager patrol leader (carries the ominous banner)
 	raidCenter                      blockPos    // raider: the raid this mob belongs to (zero = not a raider)
+	raidWave                        int         // raider: the wave it came with (Raider.wave)
+	celebrating                     bool        // raider: cheering a lost raid (IS_CELEBRATING)
+	holdingGround                   bool        // pillager/vindicator: HoldGroundAttackGoal's stand-off
 	idleSecs                        int         // seconds spent >32 blocks from every player (despawn clock)
 	hopTicks                        int         // slime: updates left mid-bound (traveling)
 	hopDelay                        int         // slime: updates until the next bound (grounded, still)
@@ -417,6 +420,14 @@ type mob struct {
 	wardenPoseLeft                  int        // …and the updates left in it
 	wardenSniffCD                   int        // TryToSniff.SNIFF_COOLDOWN, in updates
 	wardenTarget                    int32      // who it last roared at (0 = nobody)
+	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
+	wardenDisturbTil                uint64     // …remembered until this tick
+	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
+	zpHeld                          bool       // zombified piglin: anger held while it has a target
+	homePos                         blockPos   // Mob.homePosition (an elder guardian's monument spot)
+	homeR                           int        // …homeRadius; 0 = no home
+	zpAlertIn                       int        // …updates to its next pack call (ALERT_INTERVAL)
+	zpSoundIn                       int        // …ticks to its first angry grunt (FIRST_ANGER_SOUND_DELAY)
 	playMate                        int32      // baby villager: the child it is chasing (0 = none)
 	playFlee                        bool       // …or running away from one, toward
 	playX, playZ                    float64    // …this spot
@@ -743,6 +754,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.villagerWorkTick(players, m)       // WorkAtPoi: at the job site in working hours
 			h.villagerShowTradesTick(players, m) // ShowTradesToPlayer: holding up a trade to a player nearby
 		}
+		h.updateCelebration(players, m) // a lost raid's raiders with nothing to fight cheer
+		h.updateHoldGround(players, m)  // a patrol's raider staring down a far target
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {
 				continue // asleep in bed — no movement this tick
@@ -775,6 +788,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// off the lava heading back to it.
 		case schoolingFish[m.etype] && h.schoolStep(players, m):
 			// A fish swimming after its shoal's leader.
+		case (m.etype == entityGuardian || m.etype == entityElderGuardian) && h.guardianHomeStep(m):
+			// A guardian outside its home swimming back (MoveTowardsRestriction).
 		case m.etype == entityDrowned && h.drownedWaterStep(players, m):
 			// A drowned going back to the water by day, or ashore after dark.
 		case zombieKind(m.etype) && h.villageDriftStep(players, m):
@@ -822,6 +837,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A ravager stunned, roaring or mid-bite stands still.
 		case m.etype == entityBreeze && h.breezeStep(players, m):
 			// A breeze sliding, drawing breath, mid-jump or shooting.
+		case m.holdingGround && h.holdGroundStep(m):
+			// A patrolling pillager standing its ground, watching its target.
+		case m.celebrating && h.celebrateStep(players, m):
+			// A raider cheering the raid it won: standing, jumping, calling out.
 		case h.raidPathStep(players, m):
 			// A raider walking back to the raid it belongs to, gathering any
 			// idle raider it passes on the way.
@@ -969,12 +988,19 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.stroll--
 			}
 			dvx, dvz := m.behavior.steer(h, m)
+			// The attack goal's own speed modifier: a skeleton swinging a
+			// sword closes at 1.2 of its pace (MeleeAttackGoal(1.2)).
+			chase := 1.0
+			if busy && m.hostile {
+				chase = chaseSpeedMod(m)
+			}
+			dvx, dvz = dvx*chase, dvz*chase
 			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
 			m.vz = m.vz*0.85 + dvz*0.15
 			// An amble runs at the stroll goal's own speed — a ravager
 			// lumbers at 0.4 of its pace, a horse at 0.7 — while a mob with
 			// somewhere to be (a hunt, a mate) moves at its full speed.
-			cap := m.moveSpeed()
+			cap := m.moveSpeed() * chase
 			if !busy {
 				cap *= h.strollSpeedFor(m)
 			}
@@ -1173,6 +1199,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
 		}
 		h.updateAggression(players, m) // the zombie family's arms go up while it chases
+		if m.etype == entityZombifiedPiglin {
+			h.zombifiedPiglinAngerTick(players, m) // the angry pace and the first grunt
+		}
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)
 		}
@@ -1212,7 +1241,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				h.bowDrawTick(players, m)   // the pull before the shot
 				h.skeletonShoot(players, m) // ranged: arrows from bow distance
 			case entityPillager:
-				h.pillagerTick(players, m) // the crossbow: draw, aim, fire
+				if !m.holdingGround { // the crossbow goal waits out the stand-off
+					h.pillagerTick(players, m) // the crossbow: draw, aim, fire
+				}
 			case entityIllusioner:
 				h.illusionerTick(players, m) // mirror and blindness spells, then the bow
 			case entityBlaze:

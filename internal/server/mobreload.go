@@ -61,6 +61,10 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.stew = sm.Stew
 	m.persistent = sm.Persistent
 	m.raidCenter = unpackPos(sm.Raid)
+	m.raidWave = sm.RaidWave
+	if sm.RestrictR > 0 {
+		m.homePos, m.homeR = blockPos{sm.Restrict[0], sm.Restrict[1], sm.Restrict[2]}, sm.RestrictR
+	}
 	if sm.Charged {
 		m.charged = true
 	}
@@ -120,6 +124,12 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		}
 	}
 	m.gearSure = sm.GearSure
+	if m.patrolCaptain && m.gear[0].item == 0 {
+		// A captain saved before the banner was worn as gear: it goes back
+		// on its head, and still always drops.
+		m.gear[0] = invStack{item: itemByName["white_banner"], count: 1}
+		m.gearSure[0] = true
+	}
 	m.harness = sm.Harness
 	m.tamed, m.sitting = sm.Tamed, sm.Sitting
 	if m.tamed && tameable(m.etype) && !nautilusKind(m.etype) {

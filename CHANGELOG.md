@@ -98,6 +98,63 @@ the public history since the project was open-sourced on 2026-07-10.
   you but can't be steered, and a tamed trader llama no longer leaves with
   its trader. A tamed horse, donkey or camel can also be mounted without a
   saddle now; as in vanilla, you just can't steer it.
+- **Elder guardians stay home.** An elder guardian now keeps to the part
+  of its monument where it first appeared, as in vanilla, and swims back
+  there if it is lured or carried more than sixteen blocks away.
+- **Drowned come up at night.** A drowned deep underwater now swims up
+  toward the surface after dark, as in vanilla, which is how it reaches the
+  shore to come after you; before, one on the seabed stayed there.
+- **Forgiving the dead no longer tames zombified piglins and endermen.**
+  With the forgive-dead-players rule on, a zombified piglin or enderman
+  that had been after a player who died became a harmless wanderer for
+  good. It now just calms down, as in vanilla, and will fight again if
+  provoked.
+- **Zombified piglins hold a grudge the vanilla way.** Hit one and it stays
+  angry for as long as it can see you and 20 to 39 seconds after, instead
+  of a fixed time; it no longer turns on other players it was never angry
+  at. While it fights it calls the rest of the pack in again every few
+  seconds, including latecomers, gives its angry grunt, and moves a little
+  faster. Shooting one now rouses the pack too.
+- **Silverfish finish their walk before burrowing.** A silverfish could
+  vanish into a stone block partway through a stroll; as in vanilla, it now
+  only burrows in when it has stopped.
+- **Spear zombies charge villagers and golems too.** A zombie, husk,
+  zombie villager or zombified piglin carrying a spear used to charge only
+  players and just bite anything else. As in vanilla, it now lowers its
+  spear and charges whatever it is hunting, and a villager it kills that
+  way can rise as a zombie villager.
+- **Wardens charge faster and wander slower.** A warden coming for you
+  now moves at vanilla's fighting pace, a fifth faster than its walk, and
+  when it has nobody to hunt it ambles about at half speed.
+- **Wardens go to see what they heard, and mind being bumped.** A warden
+  that hears something it is not yet angry about now walks over to where
+  the sound came from, as in vanilla, instead of only standing and
+  sniffing. Walking into a warden now angers it, a little more each second
+  you stay in contact, and draws its attention to where you stand.
+- **Ravagers speed up for a charge.** A ravager now eases up to a faster
+  pace while it is after something and back down when it gives up, and
+  pulls away slowly again after each bite, as in vanilla.
+- **Pillager patrols stand their ground.** A patrol that spots you from
+  afar now stops and watches you, as in vanilla, instead of opening fire at
+  once; it attacks when you come within ten blocks or hit one of them, and
+  the pillagers beside it join in. Pillagers now hold their crossbows at the
+  ready while fighting, and vindicators raise their axes.
+- **Skeletons raise their weapons when they fight.** A skeleton, stray,
+  bogged or parched with a target now holds its bow up, a wither skeleton
+  raises its sword, and an illusioner draws its bow, as vanilla shows them.
+- **Skeletons move at vanilla's pace in a fight.** A wither skeleton, or a
+  skeleton holding a sword, now rushes you a fifth faster than it walks. A
+  skeleton circling you with its bow drifts at a quarter of its pace, not
+  nearly its full speed, and an illusioner walks in at half speed until you
+  are in bow range.
+- **Raiders celebrate a raid they win.** When a raid is lost because the
+  village is gone, its surviving raiders no longer march on; with nobody
+  left to fight they cheer, raise their arms and jump about, as in vanilla,
+  until the raid is over.
+- **Every raid wave has a banner-carrying captain.** As in vanilla, the
+  first raider of each wave that can lead wears the ominous banner, and
+  everyone who comes into view later sees it too. A pillager captain still
+  drops an ominous bottle; a vindicator captain drops only its banner.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point
