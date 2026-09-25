@@ -65,7 +65,10 @@ type mob struct {
 	convertIn       int     // zombie/husk: seconds left of the shaking conversion phase (0 = not converting)
 	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
 	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
-	fuse            int     // creeper: ticks left on a lit fuse (0 = not ignited)
+	swell           int     // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
+	swellDir        int8    // creeper: +1 swelling, else unwinding (DATA_SWELL_DIR; 0 reads as -1)
+	swellHold       bool    // creeper: SwellGoal is running, which holds it still (Flag.MOVE)
+	ignited         bool    // creeper: lit by flint and steel or a fire charge — it swells whatever happens
 	anger           int     // spider: mob-updates it stays hostile in daylight after a hit
 	stareTicks      int     // enderman: ticks a distant target has gone unwatched (teleportTowards)
 	settled         int     // enderman: ticks since its target last changed (the daylight flight waits 600)

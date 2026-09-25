@@ -123,10 +123,8 @@ func (h *hub) tryIgniteCreeper(players map[int32]*tracked, t *tracked, m *mob) b
 		sound = "minecraft:item.firecharge.use"
 	}
 	h.playSoundDim(players, m.dim, sound, sndHostile, m.x, m.y, m.z, 1, h.rng.Float32()*0.4+0.8)
-	if m.fuse == 0 {
-		m.fuse = creeperFuseTicks
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, metaEv(creeperStateMeta(m.eid, 1)))
-	}
+	m.ignited = true // Creeper.ignite: from here the swell only goes up
+	h.creeperSetSwellDir(players, m, 1)
 	if isSurvival(t.gamemode) {
 		if held == itemFireCharge {
 			h.consumeHeld(t)

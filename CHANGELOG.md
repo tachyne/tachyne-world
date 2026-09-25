@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Creepers unwind slowly.** Stepping away from a hissing creeper used to
+  reset its fuse at once, so you could step back in for a fresh second and
+  a half every time. As in vanilla, the fuse now winds back down gradually,
+  and a creeper you return to picks up where it left off. The range counts
+  height too, so a creeper right under you hisses. A creeper lit with flint
+  and steel now always explodes, even with nobody nearby.
 - **Monsters placed by the world now fight.** A warden called by a
   shrieker, the guardians of an ocean monument, the drowned in an ocean
   ruin, a creaking from its heart, silverfish bursting from infested stone
