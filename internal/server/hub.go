@@ -1118,6 +1118,7 @@ func (h *hub) run() {
 			h.jukeboxTick(players) // end songs whose length elapsed (JukeboxBlockEntity ticks every tick)
 			if age%20 == 0 {
 				h.lodestoneTick(players) // compasses forget a removed lodestone
+				h.idleKick(players)      // /setidletimeout
 			}
 			if age%80 == 0 {
 				h.beaconTick(players) // pyramid re-scan + effect refresh (vanilla cadence)
@@ -1749,6 +1750,8 @@ func (h *hub) run() {
 				h.applyDefaultGamemode(players, e)
 			case evRandomCmd:
 				h.applyRandomCommand(players, e)
+			case evSetIdleTimeout:
+				h.applySetIdleTimeout(players, e)
 			case evSwingCmd:
 				h.applySwingCommand(players, e)
 			case evTeamMsg:

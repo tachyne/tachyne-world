@@ -97,15 +97,19 @@ func (s *Server) ResumeRemote(id attach.Identity, token string, emit func(typ by
 func (r *remotePlayer) Chat(text string) {
 	// Raw text + sender: the hub formats "<name> …" after the plugin chat
 	// event, so handlers can rewrite or cancel the message.
+	r.p.touch() // tryHandleChat: typing counts as activity
 	r.s.hub.post(evChat{from: r.p, text: text})
 }
-func (r *remotePlayer) Command(cmd string) { r.s.handleCommand(r.p, cmd) }
+func (r *remotePlayer) Command(cmd string) { r.p.touch(); r.s.handleCommand(r.p, cmd) }
 
 // Action receives a typed serverbound action and posts the same hub events
 // dispatchPlay raises for a TCP connection (which still parses its own wire
 // until stage 6c deletes it).
 func (r *remotePlayer) Action(v any) {
 	p, h := r.p, r.s.hub
+	if countsAsActivity(v) {
+		p.touch()
+	}
 	switch e := v.(type) {
 	case attachproto.PaddleBoat:
 		h.post(evPaddleBoat{eid: p.eid, left: e.Left, right: e.Right})
@@ -278,6 +282,9 @@ func (r *remotePlayer) Action(v any) {
 
 func (r *remotePlayer) Leave() { r.s.hub.post(evLeave{p: r.p}); r.p.disconnect() }
 func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) {
+	if dx, dy, dz := x-r.p.x, y-r.p.y, z-r.p.z; dx*dx+dy*dy+dz*dz > 1e-5 {
+		r.p.touch() // handlePlayerKnownMovement: moving counts, turning does not
+	}
 	r.p.x, r.p.y, r.p.z = x, y, z
 	// The session player's look direction feeds placement orientation
 	// (vanilla UseOnContext.getRotation() = the player's live yaw): sign
@@ -296,6 +303,7 @@ func (r *remotePlayer) Move(x, y, z float64, yaw, pitch float32, onGround bool) 
 // existing handlers parse — scaffolding with the same deletion story as the
 // decoder below.
 func (r *remotePlayer) Dig(d attachproto.Dig) {
+	r.p.touch()
 	b := protocol.AppendVarInt(nil, d.Status)
 	b = protocol.AppendPosition(b, d.X, d.Y, d.Z)
 	b = append(b, byte(d.Face))
@@ -304,6 +312,7 @@ func (r *remotePlayer) Dig(d attachproto.Dig) {
 }
 
 func (r *remotePlayer) Place(pl attachproto.Place) {
+	r.p.touch()
 	b := protocol.AppendVarInt(nil, pl.Hand)
 	b = protocol.AppendPosition(b, pl.X, pl.Y, pl.Z)
 	b = protocol.AppendVarInt(b, pl.Face)
@@ -317,6 +326,7 @@ func (r *remotePlayer) Place(pl attachproto.Place) {
 }
 
 func (r *remotePlayer) HeldSlot(slot int16) {
+	r.p.touch()
 	r.p.handleHeldItem(protocol.AppendI16(nil, slot))
 	// Same side effects as the TCP dispatch: switching slots lowers a bow /
 	// stops eating, and everyone else should see the new held item.

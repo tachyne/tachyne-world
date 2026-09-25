@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/setidletimeout.** `/setidletimeout <minutes>` disconnects players
+  who have done nothing for that long ("You have been idle for too
+  long!"); 0 turns it off. Walking, clicking, typing and key presses count
+  as activity, looking around does not. The setting is kept with the world.
 - **/locate poi.** `/locate poi <type>` and `/locate poi #<tag>` find the
   nearest point of interest within 256 blocks: a workstation, bed, bell,
   beehive, bee nest, nether portal, lodestone or lightning rod.

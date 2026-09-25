@@ -135,6 +135,8 @@ type worldRules struct {
 	// RandomSequences is /random's named sequences (RandomSequences, which
 	// vanilla keeps as saved data).
 	RandomSequences *randomSequencesSave `json:"randomSequences,omitempty"`
+	// IdleTimeout is /setidletimeout's minutes (0 = never kick).
+	IdleTimeout int `json:"idleTimeout,omitempty"`
 	// DefaultGamemode is /defaultgamemode's mode for new players; nil keeps
 	// the -gamemode flag's.
 	DefaultGamemode *int `json:"defaultGamemode,omitempty"`

@@ -51,6 +51,11 @@ type player struct {
 	// the next tick, after the changes the action produced.
 	ackSeq atomic.Int32
 
+	// lastAction is ServerPlayer.lastActionTime (unix millis): the last time
+	// the player did something — moved, pressed a key, clicked, typed. The
+	// idle timeout (/setidletimeout) measures from it.
+	lastAction atomic.Int64
+
 	digBonusMirror atomic.Int32 // Efficiency addend of the held tool (hub -> session)
 	offhandMirror  atomic.Int32 // the offhand's item id (setOffhand), for the use-item dispatch
 	leading        atomic.Int32 // mobs on this player's leads (hub → session): a fence click ties them
@@ -107,6 +112,7 @@ func newPlayer(eid int32, name string, uuid [16]byte) *player {
 	}
 	p.pendingDim.Store(-1)
 	p.viewDist.Store(viewRadius)
+	p.touch() // ServerPlayer: lastActionTime starts at creation
 	return p
 }
 
