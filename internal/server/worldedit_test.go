@@ -58,7 +58,7 @@ func TestFillModes(t *testing.T) {
 		t.Error("keep replaced a non-air block or skipped the air one")
 	}
 	e := box("replace", worldgen.Dirt)
-	e.filter, e.hasFilter = worldgen.Stone, true
+	e.filter = func(s uint32) bool { return sameBlock(s, worldgen.Stone) }
 	h.applySetBlocks(players, e)
 	if h.world.At(1, 201, 1) != worldgen.Dirt || count(glass) != 26 {
 		t.Errorf("the replace filter touched the wrong blocks: centre %d (dirt %d), glass %d", h.world.At(1, 201, 1), worldgen.Dirt, count(glass))
