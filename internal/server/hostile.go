@@ -397,6 +397,15 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.hasTarget {
 		reach += deaggroSlack
 	}
+	if m.etype == entityCreaking {
+		m.preyTarget = 0
+		if t := h.creakingTarget(players, m); t != nil {
+			m.hasTarget, m.tx, m.tz = true, t.x, t.z
+		} else {
+			m.hasTarget = false
+		}
+		return
+	}
 	if m.etype == entityWarden {
 		// The warden walks only after its ATTACK_TARGET (WardenAi's FIGHT
 		// SetWalkTargetFromAttackTargetIfTargetOutOfReach), which it has
@@ -502,6 +511,12 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		// A piglin swings only at its own target (PiglinAi's attack target):
 		// never at a bystander in gold who happens to be standing close.
 		t = h.piglinTarget(players, m, attackReach)
+	}
+	if m.etype == entityCreaking {
+		// MeleeAttack needs an ATTACK_TARGET, which only an active creaking has.
+		if t != nil && (!m.creakActive || t.p.eid != m.targetEID) {
+			t = nil
+		}
 	}
 	if m.etype == entityWarden {
 		// MeleeAttack hits the warden's ATTACK_TARGET and nobody else.

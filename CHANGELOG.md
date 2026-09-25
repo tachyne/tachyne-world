@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The creaking wakes when you look at it.** A creaking used to hunt
+  anyone nearby like any other monster. As in vanilla, it now stays idle and
+  ambles slowly until a player within 12 blocks looks at it; then it goes
+  after that player, freezing whenever someone watches it, and goes back to
+  sleep when nobody is left nearby. A creaking made with a spawn egg or a
+  command no longer vanishes at once for having no heart.
 - **Drowned throw tridents at villagers too.** A drowned holding a trident
   only ever threw it at players, so one chasing a villager, an iron golem
   or an axolotl never attacked it. It now throws at whatever it is

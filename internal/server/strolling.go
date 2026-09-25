@@ -19,6 +19,7 @@ var strollSpeeds = func() map[int]float64 {
 		"creeper": 0.8, "spider": 0.8, "cave_spider": 0.8,
 		"rabbit": 0.6, "ravager": 0.4, "wandering_trader": 0.35,
 		"evoker": 0.6, "illusioner": 0.6, "pillager": 0.6, "vindicator": 0.6,
+		"creaking": 0.3, // CreakingAi idle: RandomStroll.stroll(SPEED_MULTIPLIER_WHEN_IDLING)
 	} {
 		if id, ok := entityByName[name]; ok {
 			m[id] = mul

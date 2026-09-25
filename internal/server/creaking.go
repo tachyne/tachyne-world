@@ -353,32 +353,107 @@ func (h *hub) nextToLog(dim int, p blockPos) bool {
 	return false
 }
 
-// creakingFrozen reports whether any player is looking at this creaking, which
-// is the whole of its behaviour: watched, it is a statue; unwatched, it moves.
+// creakingFrozen is the answer to Creaking.checkCanMove, inverted, with its
+// side effects: it is what decides whether the creaking is ACTIVE.
 //
-// Vanilla tests three heights up the body against the player's view vector with
-// a 0.5 tolerance; one line of sight from the eyes is the same question asked
-// once, and the answer only differs at the very edge of the cone.
+// An idle creaking wakes when a player it could attack, within 12 blocks,
+// looks at it: that player becomes its attack target and it goes still. An
+// active one is held by any such player anywhere in its 32-block follow
+// range looking at it — except one wearing a carved pumpkin, which only an
+// idle creaking notices. With no attackable player in range at all it goes
+// idle again and forgets its target.
+//
+// Vanilla tests three heights up the body against the player's view vector
+// with a 0.5 tolerance; one line of sight from the eyes is the same question
+// asked once, and the answer only differs at the very edge of the cone.
 func (h *hub) creakingFrozen(players map[int32]*tracked, m *mob) bool {
+	follow := m.followRange()
+	potential := false
 	for _, t := range players {
 		if t.dim != m.dim || t.dead || !isSurvival(t.gamemode) {
-			continue
+			continue // canAttack: no creative, spectator or dead player counts
 		}
 		dx, dy, dz := m.x-t.x, (m.y+1)-(t.y+1.62), m.z-t.z
 		d := math.Sqrt(dx*dx + dy*dy + dz*dz)
-		if d < 1e-6 || d*d > creakingActivateR2 {
+		if d > follow {
+			continue // not among its NEAREST_PLAYERS
+		}
+		potential = true
+		if m.creakActive && t.armor[0].item == itemCarvedPumpkin {
+			continue // PLAYER_NOT_WEARING_DISGUISE_ITEM, asked only once it is awake
+		}
+		if d < 1e-6 || !creakingLookedAt(t, dx, dy, dz, d) {
 			continue
 		}
-		yaw := float64(t.yaw) * math.Pi / 180
-		pitch := float64(t.pitch) * math.Pi / 180
-		lookX := -math.Sin(yaw) * math.Cos(pitch)
-		lookY := -math.Sin(pitch)
-		lookZ := math.Cos(yaw) * math.Cos(pitch)
-		if (lookX*dx+lookY*dy+lookZ*dz)/d > creakingFreezeCone {
+		if m.creakActive {
+			return true
+		}
+		if d*d < creakingActivateR2 {
+			h.creakingActivate(players, m, t)
 			return true
 		}
 	}
+	if !potential && m.creakActive {
+		h.creakingDeactivate(players, m)
+	}
 	return false
+}
+
+// creakingLookedAt is isLookingAtMe with the 0.5 tolerance.
+func creakingLookedAt(t *tracked, dx, dy, dz, d float64) bool {
+	yaw := float64(t.yaw) * math.Pi / 180
+	pitch := float64(t.pitch) * math.Pi / 180
+	lookX := -math.Sin(yaw) * math.Cos(pitch)
+	lookY := -math.Sin(pitch)
+	lookZ := math.Cos(yaw) * math.Cos(pitch)
+	return (lookX*dx+lookY*dy+lookZ*dz)/d > creakingFreezeCone
+}
+
+// creakingActivate is Creaking.activate: the watcher becomes the target.
+func (h *hub) creakingActivate(players map[int32]*tracked, m *mob, t *tracked) {
+	m.creakActive = true
+	m.targetEID, m.unseenTicks = t.p.eid, 0
+	h.vibAt(m.dim, freqEntityAction, m.x, m.y, m.z, m.eid)
+	h.playSoundDim(players, m.dim, "minecraft:entity.creaking.activate", sndHostile, m.x, m.y, m.z, 1, h.voicePitch(m))
+}
+
+// creakingDeactivate is Creaking.deactivate: the target is forgotten.
+func (h *hub) creakingDeactivate(players map[int32]*tracked, m *mob) {
+	m.creakActive = false
+	m.targetEID, m.hasTarget = 0, false
+	h.vibAt(m.dim, freqEntityAction, m.x, m.y, m.z, m.eid)
+	h.playSoundDim(players, m.dim, "minecraft:entity.creaking.deactivate", sndHostile, m.x, m.y, m.z, 1, h.voicePitch(m))
+}
+
+// creakingTarget is the creaking's attack target. Only an ACTIVE creaking has
+// one (StartAttacking's isActive gate), and it is dropped the moment it is no
+// longer among the players the creaking can see within its follow range
+// (isAttackTargetStillReachable) — then the nearest one it can see is taken.
+func (h *hub) creakingTarget(players map[int32]*tracked, m *mob) *tracked {
+	if !m.creakActive {
+		m.targetEID = 0
+		return nil
+	}
+	follow := m.followRange()
+	valid := func(t *tracked) bool {
+		return t != nil && t.dim == m.dim && !t.dead && isSurvival(t.gamemode) &&
+			dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= follow && h.mobSees(m, t)
+	}
+	if t := players[m.targetEID]; valid(t) {
+		return t
+	}
+	var best *tracked
+	bestD := follow + 1
+	for _, t := range players {
+		if d := dist3(t.x, t.y, t.z, m.x, m.y, m.z); d < bestD && valid(t) {
+			best, bestD = t, d
+		}
+	}
+	m.targetEID = 0
+	if best != nil {
+		m.targetEID = best.p.eid
+	}
+	return best
 }
 
 // updateCreakings runs the two things that are true of a creaking and nothing
@@ -392,6 +467,12 @@ func (h *hub) updateCreakings(players map[int32]*tracked) {
 			continue
 		}
 		link := h.heartOf(m)
+		if link == nil && !m.heartBound && m.home == (blockPos{}) {
+			// No home at all (a summoned creaking): Creaking.tick only
+			// checks a heart when it has a home position.
+			m.frozen = h.creakingFrozen(players, m)
+			continue
+		}
 		if link == nil {
 			// Its heart is gone. Vanilla sets health to 0 on the spot; the
 			// creaking simply comes apart, which is what the player sees.

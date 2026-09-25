@@ -66,6 +66,7 @@ type mob struct {
 	snowSecs        int     // skeleton: consecutive seconds standing in powder snow (Skeleton.inPowderSnowTime)
 	strayIn         int     // skeleton: seconds left of the freeze conversion into a stray (0 = not converting)
 	wetHurt         int     // water-sensitive mob: ticks until the wet hurts it again
+	creakActive     bool    // creaking: IS_ACTIVE — awake and hunting since a player looked at it
 	swell           int     // creeper: Creeper.swell, ticks into the fuse (explodes at creeperFuseTicks)
 	swellDir        int8    // creeper: +1 swelling, else unwinding (DATA_SWELL_DIR; 0 reads as -1)
 	swellHold       bool    // creeper: SwellGoal is running, which holds it still (Flag.MOVE)

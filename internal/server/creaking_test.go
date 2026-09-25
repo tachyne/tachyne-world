@@ -211,3 +211,68 @@ func TestCreakingHeartStateDecoding(t *testing.T) {
 		}
 	}
 }
+
+// creakingField is a summoned creaking (no heart) on a stone floor at y=180
+// with one survival player eight blocks off on -z, facing away from it.
+func creakingField(t *testing.T) (*hub, map[int32]*tracked, *mob, *tracked) {
+	t.Helper()
+	h, players := preyFixture(t)
+	for x := -12; x <= 12; x++ {
+		for z := -12; z <= 12; z++ {
+			h.world.SetBlock(x, 179, z, worldgen.Stone)
+		}
+	}
+	pl := survPlayer(h)
+	pl.x, pl.y, pl.z, pl.yaw = 0.5, 180, -7.5, 180 // looking away, along -z
+	players[pl.p.eid] = pl
+	m := h.spawnHostileY(players, entityCreaking, 0.5, 180, 0.5)
+	return h, players, m, pl
+}
+
+func stepCreaking(h *hub, players map[int32]*tracked, n int) {
+	for i := 0; i < n; i++ {
+		h.tick.Add(mobMoveInterval)
+		h.updateCreakings(players)
+		h.updateMobs(players)
+	}
+}
+
+// Creaking.checkCanMove: a creaking nobody has looked at is not hunting —
+// StartAttacking waits for isActive. It used to hunt anyone within 32 like
+// any other monster.
+func TestIdleCreakingDoesNotHunt(t *testing.T) {
+	h, players, m, pl := creakingField(t)
+	stepCreaking(h, players, 40)
+	if h.mobs[m.eid] == nil {
+		t.Fatal("a summoned creaking with no heart should stay; only a heart-bound one dies without it")
+	}
+	if m.creakActive || m.hasTarget || m.targetEID != 0 {
+		t.Fatalf("unwatched, it should stay idle (active %v, hunting %v, target %d)", m.creakActive, m.hasTarget, m.targetEID)
+	}
+	if pl.health < 20 {
+		t.Errorf("an idle creaking hurt the player (%v)", pl.health)
+	}
+}
+
+// A look within 12 blocks wakes it: that player becomes its target and it
+// freezes; looking away lets it come for them; the player leaving its
+// follow range puts it back to sleep.
+func TestLookingAtACreakingWakesIt(t *testing.T) {
+	h, players, m, pl := creakingField(t)
+	pl.yaw = 0 // now facing it
+	stepCreaking(h, players, 1)
+	if !m.creakActive || m.targetEID != pl.p.eid || !m.frozen {
+		t.Fatalf("a look should wake it on that player and hold it (active %v target %d frozen %v)",
+			m.creakActive, m.targetEID, m.frozen)
+	}
+	pl.yaw = 180
+	stepCreaking(h, players, 2)
+	if m.frozen || !m.hasTarget {
+		t.Fatalf("unwatched and awake it should hunt (frozen %v hunting %v)", m.frozen, m.hasTarget)
+	}
+	pl.z = -60 // out of its 32-block follow range
+	stepCreaking(h, players, 1)
+	if m.creakActive || m.hasTarget {
+		t.Errorf("with nobody in range it should go idle (active %v hunting %v)", m.creakActive, m.hasTarget)
+	}
+}
