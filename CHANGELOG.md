@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Spawn eggs make babies of more mobs.** Using a spawn egg on a
+  villager, squid, glow squid, dolphin, zombie, husk, drowned, zombie
+  villager, zombified piglin, piglin or zoglin now spawns a baby of it, as
+  in vanilla. A baby villager takes its parent's or the biome's type and
+  starts unemployed.
 - **Empty maps work as in vanilla.** An empty map works from the offhand
   too, a last empty map turns into the new map right in your hand, a full
   inventory drops the new map instead of losing it, creative no longer
