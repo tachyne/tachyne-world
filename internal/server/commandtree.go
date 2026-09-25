@@ -285,7 +285,8 @@ func gameruleNodes() []cmdNode {
 		out = append(out, lit(r, true, lits("true", "false")...))
 	}
 	for _, r := range numericRules {
-		out = append(out, lit(r, true, argInt("value", 0, 1000, true)))
+		lo, hi := gameruleBounds(r) // the client's argument check matches the server's
+		out = append(out, lit(r, true, argInt("value", int32(lo), int32(hi), true)))
 	}
 	return out
 }

@@ -294,8 +294,17 @@ func (s *Server) cmdGamerule(p *player, args []string) {
 	}
 	if isNumericRule(rule) {
 		n, err := strconv.Atoi(args[1])
-		if err != nil || n < 0 || n > 1000 {
-			p.tell("/gamerule " + rule + " <0-1000>")
+		if err != nil {
+			p.tell("Invalid integer '" + args[1] + "'")
+			return
+		}
+		lo, hi := gameruleBounds(rule)
+		if n < lo {
+			p.tell(fmt.Sprintf("Integer must not be less than %d, found %d", lo, n))
+			return
+		}
+		if n > hi {
+			p.tell(fmt.Sprintf("Integer must not be more than %d, found %d", hi, n))
 			return
 		}
 		s.hub.post(evSetRule{rule: rule, num: n})

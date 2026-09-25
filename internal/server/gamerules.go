@@ -163,3 +163,21 @@ func (h *hub) ruleValueText(rule string) (string, bool) {
 	}
 	return "", false
 }
+
+// gameruleBounds is each integer rule's registerInteger range (GameRules):
+// most run from 0 (or 1) up to Integer.MAX_VALUE; snow accumulation stops at
+// 8, and the fire radius allows -1 (everywhere).
+func gameruleBounds(rule string) (lo, hi int) {
+	const maxInt32 = 1<<31 - 1
+	switch rule {
+	case "max_snow_accumulation_height":
+		return 0, 8
+	case "fire_spread_radius_around_player":
+		return -1, maxInt32
+	case "max_block_modifications":
+		return 1, maxInt32
+	case "max_minecart_speed":
+		return 1, 1000
+	}
+	return 0, maxInt32
+}

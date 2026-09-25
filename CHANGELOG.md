@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **/gamerule takes vanilla's ranges.** Every number rule was capped at
+  1000. Each now accepts vanilla's range: random tick speed, sleeping
+  percentage and the rest go as high as vanilla allows, snow accumulation
+  stops at 8, and the fire spread radius takes -1 for "everywhere". Values
+  out of range get vanilla's message.
 - **Unbreaking saves each point of wear separately.** Unbreaking decided
   whether to spare a whole hit at once. As in vanilla it now rolls for every
   point of wear, so a hit costing two can cost one.
