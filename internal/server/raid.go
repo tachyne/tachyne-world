@@ -438,20 +438,6 @@ func (h *hub) anyPlayerNear(players map[int32]*tracked, pos blockPos, r float64)
 	return false
 }
 
-// villageNear returns a village centre within r of (x,z), if any.
-func (h *hub) villageNear(x, z, r int) (blockPos, bool) {
-	gen := h.world.Gen()
-	for dx := -1; dx <= 1; dx++ {
-		for dz := -1; dz <= 1; dz++ {
-			v := gen.VillageIn(x+dx*384, z+dz*384)
-			if v.Exists && abs(v.X-x) < r && abs(v.Z-z) < r {
-				return blockPos{v.X, v.Y, v.Z}, true
-			}
-		}
-	}
-	return blockPos{}, false
-}
-
 // checkRaidTrigger converts a player's Bad Omen into a Raid Omen when they
 // reach a village — BadOmenMobEffect.applyEffectTick. The raid does NOT start
 // here: the Raid Omen is a 30-second fuse, and the horn goes off when it
@@ -462,8 +448,12 @@ func (h *hub) checkRaidTrigger(players map[int32]*tracked, t *tracked) {
 	if lvl == 0 || h.rules.Difficulty == diffPeaceful || !h.rules.Raids || t.gamemode == gmSpectator {
 		return
 	}
-	center, ok := h.villageNear(int(t.x), int(t.z), 64)
-	if !ok {
+	// BadOmenMobEffect.applyEffectTick: the player's own block must be a
+	// village (ServerLevel.isVillage: a village point of interest within a
+	// section — a built village counts, a ruin does not), and the Raid Omen
+	// remembers where they stood. Raids here are overworld-only.
+	center := blockPos{floorInt(t.x), floorInt(t.y), floorInt(t.z)}
+	if t.dim != dimOverworld || !h.isVillage(center) {
 		return
 	}
 	h.removeEffect(t, effBadOmen)

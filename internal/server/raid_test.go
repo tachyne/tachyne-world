@@ -71,28 +71,32 @@ func TestBadOmenTriggersRaidNearVillage(t *testing.T) {
 	players := map[int32]*tracked{}
 	pl := testTracked()
 	players[pl.p.eid] = pl
-	// Put the player ON a real generated village so villageNear resolves.
-	gen := h.world.Gen()
-	var v = gen.VillageIn(0, 0)
-	if !v.Exists {
-		t.Skip("no village near origin in this seed")
-	}
-	pl.x, pl.y, pl.z = float64(v.X), float64(v.Y), float64(v.Z)
+	h.rules.Raids = true
+	h.rules.Difficulty = diffNormal
+	// A village is its points of interest (ServerLevel.isVillage): a bell
+	// the player stands beside makes one, built or generated.
+	center := blockPos{64, 100, 64}
+	pl.x, pl.y, pl.z = 64.5, 100, 64.5
 	h.applyEffect(players, pl, effBadOmen, 0, 6000)
+	h.checkRaidTrigger(players, pl)
+	if pl.hasEffect(effBadOmen) == 0 {
+		t.Fatal("Bad Omen fired with no village around")
+	}
+	raidVillage(h, center)
 	// A spectator carries the omen through a village untouched
 	// (BadOmenMobEffect.applyEffectTick: !isSpectator).
 	pl.gamemode = gmSpectator
 	h.checkRaidTrigger(players, pl)
-	if pl.hasEffect(effBadOmen) == 0 || len(h.raids) != 0 {
-		t.Fatal("a spectator's Bad Omen started a raid")
+	if pl.hasEffect(effBadOmen) == 0 {
+		t.Fatal("a spectator's Bad Omen fired")
 	}
 	pl.gamemode = gmSurvival
 	h.checkRaidTrigger(players, pl)
-	if pl.hasEffect(effBadOmen) != 0 {
-		t.Fatal("reaching a village should consume Bad Omen")
+	if pl.hasEffect(effBadOmen) != 0 || pl.hasEffect(effRaidOmen) == 0 {
+		t.Fatal("reaching a village should turn Bad Omen into Raid Omen")
 	}
-	if len(h.raids) == 0 {
-		t.Fatal("Bad Omen at a village should start a raid")
+	if pl.raidOmenPos != (blockPos{64, 100, 64}) {
+		t.Fatalf("the Raid Omen remembers %v, want where the player stood", pl.raidOmenPos)
 	}
 }
 

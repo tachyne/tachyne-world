@@ -102,6 +102,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Bad Omen needs a real village.** Bad Omen now turns into a Raid Omen
+  only where there is a village — beds, a bell or workstations right
+  around you, whether the village was generated or built — as in vanilla,
+  instead of anywhere near where a village was generated.
 - **Pillager patrols keep vanilla's distance.** Patrols now stay away from
   any village with beds, bells or workstations near the player — including
   villages players have built themselves — never visit spectators, and never
