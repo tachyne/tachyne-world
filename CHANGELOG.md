@@ -25,6 +25,9 @@ the public history since the project was open-sourced on 2026-07-10.
   overworld as in vanilla, sometimes opening to the sky and flooding where
   they pass under the sea. Nothing is cut where you have built: a ravine
   that would reach a build is left out whole.
+- **Lava lakes.** Pools of lava ringed with stone now form on the surface
+  (rarely) and underground (often, from y=0 up), as in vanilla. They too
+  keep clear of your builds.
 
 ### Fixed
 - **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
