@@ -12,6 +12,7 @@ import (
 func flightHub(t *testing.T) (*hub, map[int32]*tracked, *tracked) {
 	t.Helper()
 	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2) // loaded ground: ageless projectiles end at the loaded edge
 	pl := survPlayer(h)
 	pl.gamemode = gmCreative
 	pl.x, pl.y, pl.z = 0.5, 180, 0.5

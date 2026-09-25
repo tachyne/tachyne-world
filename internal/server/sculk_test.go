@@ -140,9 +140,11 @@ func TestMechanicsRaiseVibrations(t *testing.T) {
 	players[pl.p.eid] = pl
 	h.playersRef = players
 	pl.x, pl.y, pl.z = float64(x)+2.5, float64(y), float64(z)+1.5
-	disp := worldgen.BlockID("dispenser")
-	w.SetBlock(x+2, y, z, disp)
-	h.openBin(pl, x+2, y, z)
+	// A chest has an opener counter (a dispenser does not, and sends
+	// nothing): its first opener is CONTAINER_OPEN, its last closer CLOSE.
+	w.SetBlock(x+2, y, z, worldgen.BlockBase("chest"))
+	w.SetBlock(x+2, y+1, z, worldgen.Air)
+	h.openChest(pl, x+2, y, z)
 	if f := heard(); f != freqContainerOpen {
 		t.Fatalf("a container opened should be heard at 10, got %d", f)
 	}
