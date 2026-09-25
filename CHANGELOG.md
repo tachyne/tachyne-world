@@ -14,6 +14,14 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Horses eat, follow and rear as in vanilla.** Horses, donkeys and mules
+  now eat carrots. Only a tamed horse falls in love on golden food; a wild
+  one takes it to calm down. A wild horse holding out for its rider rears
+  at a saddle, a chest or anything else that is not food, instead of
+  letting you on. Zombie horses eat and follow red mushrooms, not golden
+  carrots, and can be tamed by riding them like other horses. A skeleton
+  horse that did not come from a trap ignores you, follows no food and
+  sinks in water.
 - **Squid and bats no longer panic.** A squid you hit jets away from you
   and then calms down, and a bat you hit keeps flying as it was; as in
   vanilla, neither runs around in a panic afterwards.

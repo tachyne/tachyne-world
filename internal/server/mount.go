@@ -46,6 +46,9 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 	if !ok || m.dying > 0 || m.baby || m.mobRider != 0 {
 		return false // a mob aboard has the seat (a camel husk's husk and parched fill both)
 	}
+	if m.etype == entitySkeletonHorse && !m.tamed {
+		return false // SkeletonHorse.mobInteract: an untamed one passes on every click
+	}
 	if m.etype == entityNautilus && !m.tamed {
 		return false // isSaddleable: only a tamed nautilus takes a saddle or a rider
 	}

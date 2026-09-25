@@ -37,6 +37,9 @@ func TestFoodTagsCourt(t *testing.T) {
 	}
 	for _, c := range cases {
 		h, pl, players, m := feedRig(t, c.etype, c.item, 1)
+		if horseFamily(c.etype) {
+			m.tamed = true // AbstractHorse/Llama.handleEating: only a tamed adult courts
+		}
 		if !h.feedAnimal(players, pl, m) || m.loveTicks == 0 || pl.inv.slots[0].count != 0 {
 			t.Errorf("etype %d should court on %s (love %d, left %d)", c.etype, c.item, m.loveTicks, pl.inv.slots[0].count)
 		}

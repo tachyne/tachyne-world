@@ -26,7 +26,7 @@ var temptSpeed = map[int]float64{
 	entityCow: 1.25, entityMooshroom: 1.25, entitySheep: 1.1, entityPig: 1.2,
 	entityChicken: 1.0, entityRabbit: 1.0, entityPanda: 1.0, entityTurtle: 1.1,
 	entityBee: 1.25, entityHorse: 1.25, entityDonkey: 1.25, entityMule: 1.25,
-	entitySkeletonHorse: 1.25, entityZombieHorse: 1.25, entityLlama: 1.25,
+	entityZombieHorse: 1.25, entityLlama: 1.25, // a skeleton horse has no TemptGoal
 	entityTraderLlama: 1.25, entityStrider: 1.4, entityGoat: 1.25,
 	entityAxolotl: 0.5, entityArmadillo: 1.25, entityFrog: 1.25, entityCamel: 2.5, entityCamelHusk: 2.5, entityHappyGhast: 1.25,
 	entitySniffer: 1.25, entityTadpole: 1.25,
@@ -73,8 +73,10 @@ func isTemptItem(etype int, item int32) bool {
 		if item == itemByName["warped_fungus_on_a_stick"] {
 			return true
 		}
-	case entityMule, entitySkeletonHorse, entityZombieHorse:
-		return breedFoods[entityHorse][item] // #horse_tempt_items for the whole family
+	case entityMule:
+		return breedFoods[entityHorse][item] // #horse_tempt_items
+	case entityZombieHorse:
+		return item == itemByName["red_mushroom"] // #zombie_horse_food
 	case entityNautilus, entityZombieNautilus: // NAUTILUS_TEMPTATIONS: #nautilus_food, tamed or not
 		return breedFoods[entityNautilus][item]
 	case entityCamelHusk:
