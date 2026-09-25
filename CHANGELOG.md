@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Skeletons move at vanilla's pace in a fight.** A wither skeleton, or a
+  skeleton holding a sword, now rushes you a fifth faster than it walks. A
+  skeleton circling you with its bow drifts at a quarter of its pace, not
+  nearly its full speed, and an illusioner walks in at half speed until you
+  are in bow range.
 - **Raiders celebrate a raid they win.** When a raid is lost because the
   village is gone, its surviving raiders no longer march on; with nobody
   left to fight they cheer, raise their arms and jump about, as in vanilla,

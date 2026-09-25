@@ -964,12 +964,19 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.stroll--
 			}
 			dvx, dvz := m.behavior.steer(h, m)
+			// The attack goal's own speed modifier: a skeleton swinging a
+			// sword closes at 1.2 of its pace (MeleeAttackGoal(1.2)).
+			chase := 1.0
+			if busy && m.hostile {
+				chase = chaseSpeedMod(m)
+			}
+			dvx, dvz = dvx*chase, dvz*chase
 			m.vx = m.vx*0.85 + dvx*0.15 // momentum → smooth
 			m.vz = m.vz*0.85 + dvz*0.15
 			// An amble runs at the stroll goal's own speed — a ravager
 			// lumbers at 0.4 of its pace, a horse at 0.7 — while a mob with
 			// somewhere to be (a hunt, a mate) moves at its full speed.
-			cap := m.moveSpeed()
+			cap := m.moveSpeed() * chase
 			if !busy {
 				cap *= h.strollSpeedFor(m)
 			}
