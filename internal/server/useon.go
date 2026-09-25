@@ -206,8 +206,9 @@ func (h *hub) useSpawnEgg(players map[int32]*tracked, e evSpawnEgg) {
 	// Vanilla marks an egg-spawned mob persistent: it is a placed thing, not
 	// part of the natural population, and must not despawn.
 	m.persistent = true
-	h.playSoundDim(players, t.dim, "minecraft:entity.egg.throw", sndPlayer,
-		float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, 0.5, 1)
+	// SpawnEggItem.spawnMob: ENTITY_PLACE where it went, and no sound of its
+	// own (the egg-throw sound is a thrown egg's).
+	h.vib(t.dim, freqEntityPlace, x, y, z, t.p.eid)
 	if isSurvival(t.gamemode) {
 		h.consumeHeld(t)
 	}

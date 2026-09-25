@@ -2118,6 +2118,10 @@ func (h *hub) run() {
 				h.eggSpawner(players, e)
 			case evSpawnEgg:
 				h.useSpawnEgg(players, e)
+			case evSpawnEggLook:
+				if t := players[e.eid]; t != nil {
+					h.useSpawnEggOnFluid(players, t, e.slot)
+				}
 			case evPlaceCrystal:
 				h.placeCrystal(players, e)
 			case evPlaceRocket:

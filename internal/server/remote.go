@@ -172,6 +172,10 @@ func (r *remotePlayer) Action(v any) {
 				h.post(evPlaceVehicleLook{eid: p.eid, item: item, slot: slot})
 				return
 			}
+			if spawnEggEntity[item] != 0 { // SpawnEggItem.use: the look ray onto a fluid
+				h.post(evSpawnEggLook{eid: p.eid, slot: slot})
+				return
+			}
 			h.post(evEat{eid: p.eid, slot: int(slot)})
 		}
 	case attachproto.UseEntity:
