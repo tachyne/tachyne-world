@@ -64,11 +64,12 @@ func panicsAt(m *mob, dt dmgType) bool {
 // but for the environment only: a blow rolls it up. ZombieNautilusAi's core
 // has no AnimalPanic: a struck zombie nautilus turns on you instead. A squid
 // only has its own flee, which jets away from the attacker while it is near;
-// a bat has no goals at all.)
+// a bat has no goals at all. A villager's brain has its own panic package,
+// villagerpanic.go.)
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
 	for _, n := range []string{"zombie_horse", "skeleton_horse", "ocelot", "snow_golem", "zombie_nautilus",
-		"squid", "glow_squid", "bat"} {
+		"squid", "glow_squid", "bat", "villager"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}

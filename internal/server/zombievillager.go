@@ -245,19 +245,3 @@ func (h *hub) finishCure(players map[int32]*tracked, m *mob) {
 	h.sendVillagerData(players, v)
 	h.toNearbyEv(players, v.dim, v.x, v.z, attachproto.WorldFX{Event: worldEventCured, X: floorInt(v.x), Y: floorInt(v.y), Z: floorInt(v.z)})
 }
-
-// villagerFlee: a villager runs from the nearest hostile the villager
-// hostiles sensor sees (VillagerPanicTrigger / the avoidance walk target).
-func (h *hub) villagerFlee(m *mob) (float64, float64, bool) {
-	// VillagerHostilesSensor: zombies, illagers, vexes, ravagers and zoglins,
-	// each within its own distance (a pillager at 15, a zombie at 8).
-	threat := h.villagerNearestHostile(m)
-	if threat == nil {
-		return 0, 0, false
-	}
-	dx, dz := m.x-threat.x, m.z-threat.z
-	if d := math.Hypot(dx, dz); d > 1e-6 {
-		return dx / d * m.moveSpeed(), dz / d * m.moveSpeed(), true
-	}
-	return m.moveSpeed(), 0, true
-}

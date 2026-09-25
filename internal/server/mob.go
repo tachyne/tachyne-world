@@ -387,6 +387,8 @@ type mob struct {
 	blazeCharged                    bool       // blaze: DATA_FLAGS charged
 	villagerHurt                    bool       // villager: hurt since the last update (HurtBySensor)
 	villagerHurtLeft                int        // villager: HURT_BY memory ticks left
+	vHurtBy                         int32      // villager: HURT_BY_ENTITY, until it calms down
+	vPanicLeft                      int        // villager: updates before its panic walk target is dropped
 	cbState                         int8       // pillager: CrossbowState (uncharged / charging / charged / ready)
 	cbTicks                         int        // pillager: charge ticks so far, or the aim delay left
 	handActive                      bool       // LivingEntity hand-active flag (a bow drawn, a crossbow loading)
