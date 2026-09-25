@@ -76,25 +76,32 @@ func (h *hub) updatePatrols(players map[int32]*tracked) {
 // spawnPatrol drops a captain + squad of pillagers scattered around (sx,sz).
 // Size scales with difficulty (vanilla ceil(effectiveDifficulty)+1).
 func (h *hub) spawnPatrol(players map[int32]*tracked, sx, sz int) {
-	n := 2 + h.rules.Difficulty + h.rng.Intn(2)
+	// PatrolSpawner.tick: ceil(effective difficulty) + 1 members. The first
+	// stands at the chosen spot and is the leader — if it cannot, there is no
+	// patrol at all — and each next one steps on from where the last one
+	// was, so the squad strings out rather than scattering.
+	n := int(math.Ceil(float64(h.effectiveDifficulty()))) + 1
 	spawned := 0
 	var captain *mob
+	x, z := sx, sz
 	for i := 0; i < n; i++ {
-		x := sx + h.rng.Intn(5) - h.rng.Intn(5)
-		z := sz + h.rng.Intn(5) - h.rng.Intn(5)
-		if !h.world.Spawnable(x, z) {
-			continue
+		var m *mob
+		if h.world.Spawnable(x, z) {
+			m = h.spawnHostileYIn(players, entityPillager, dimOverworld,
+				float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
 		}
-		m := h.spawnHostileYIn(players, entityPillager, dimOverworld,
-			float64(x)+0.5, float64(h.world.SurfaceFeet(x, z)), float64(z)+0.5)
-		if m == nil {
-			continue
+		if m == nil && i == 0 {
+			break
 		}
-		if spawned == 0 { // the first is the captain
-			h.makeCaptain(players, m)
-			captain = m
+		if m != nil {
+			if i == 0 {
+				h.makeCaptain(players, m)
+				captain = m
+			}
+			spawned++
 		}
-		spawned++
+		x += h.rng.Intn(5) - h.rng.Intn(5)
+		z += h.rng.Intn(5) - h.rng.Intn(5)
 	}
 	if captain != nil {
 		// PatrolSpawner gives only the leader a target; the rest start

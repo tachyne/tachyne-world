@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 func TestSpawnPatrolHasCaptain(t *testing.T) {
@@ -11,6 +12,17 @@ func TestSpawnPatrolHasCaptain(t *testing.T) {
 	players := map[int32]*tracked{}
 	h.rules.Difficulty = diffNormal
 	lx, lz := h.findLand(40, 40)
+	// Members step on from one another, up to ±4 a step: give the squad dry
+	// ground to string out on, so the coast findLand favours cannot swallow it.
+	y := int(h.world.SurfaceFeet(lx, lz))
+	for x := lx - 16; x <= lx+16; x++ {
+		for z := lz - 16; z <= lz+16; z++ {
+			h.world.SetBlock(x, y-1, z, worldgen.Stone)
+			for dy := 0; dy < 6; dy++ {
+				h.world.SetBlock(x, y+dy, z, worldgen.Air)
+			}
+		}
+	}
 	before := len(h.mobs)
 	h.spawnPatrol(players, lx, lz)
 	if len(h.mobs) <= before {

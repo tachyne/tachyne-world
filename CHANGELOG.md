@@ -113,6 +113,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Pillager patrols string out behind their captain.** A patrol has as many
+  members as the local difficulty calls for. Each one spawns a few steps on
+  from the one before, and there is no patrol at all if the captain has
+  nowhere to stand.
 - **Absorption protects mobs, and pillagers roll enchantments.** A mob
   given Absorption now gets its extra hearts, spent before its health, as a
   player does. Pillagers can spawn with an enchanted crossbow like other
