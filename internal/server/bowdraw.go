@@ -35,8 +35,10 @@ func (h *hub) setHandActive(players map[int32]*tracked, m *mob, on bool) {
 }
 
 // bowDrawTick keeps a bow-user's pull in step with its shot clock: drawn
-// while a target is in range and the shot is twenty ticks or less away.
+// while its target — a player, or the golem or turtle its target goal
+// picked (rangedQuarry, what skeletonShoot aims at) — is in range and the
+// shot is twenty ticks or less away.
 func (h *hub) bowDrawTick(players map[int32]*tracked, m *mob) {
-	drawing := m.attackCD <= bowDrawUpdates && h.nearestHuntable(players, m.dim, m.x, m.z, shootRange) != nil
-	h.setHandActive(players, m, drawing)
+	_, ok := h.rangedQuarry(players, m, shootRange)
+	h.setHandActive(players, m, m.attackCD <= bowDrawUpdates && ok)
 }
