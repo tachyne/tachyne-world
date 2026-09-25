@@ -40,8 +40,7 @@ func (h *hub) attackPlayer(players map[int32]*tracked, attacker, target int32) b
 	if v.gamemode == gmCreative || v.gamemode == gmSpectator {
 		return true // an invulnerable victim
 	}
-	dx, dy, dz := t.x-v.x, t.y-v.y, t.z-v.z
-	if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+	if !withinEntityRange(t, v.x, v.y, v.z, 2*v.halfWidth(), 1.8*v.scale(), interactSlack) {
 		return true // claimed from further than an arm's reach
 	}
 

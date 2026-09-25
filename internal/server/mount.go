@@ -109,7 +109,7 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 
 // mountMob seats a player on a mob, pausing its AI and relaying the passenger.
 func (h *hub) mountMob(players map[int32]*tracked, t *tracked, m *mob) {
-	if m.rider != 0 || dist3(t.x, t.y, t.z, m.x, m.y, m.z) > maxMeleeReach+1 {
+	if m.rider != 0 || !mobInReach(t, m) {
 		return
 	}
 	m.rider = t.p.eid

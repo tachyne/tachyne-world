@@ -143,10 +143,9 @@ func hostileMelee(m *mob) float32 {
 	return float32(m.attackDamage())
 }
 
-// maxMeleeReach is the server-side sanity cap on a melee hit's distance:
-// vanilla survival reach is ~3 blocks, plus generous slack for latency and
-// entity movement between the client's swing and our processing. AUTHORITY:
-// beyond this, the claimed hit is a hacked client's kill-aura — ignored.
+// maxMeleeReach is a flat sanity cap on how far a player can be from an
+// end portal frame they fill. Blows and entity interactions measure against
+// the player's own reach instead (withinEntityRange).
 const maxMeleeReach = 6.0
 
 // attackMob applies a player's melee hit to a mob, killing it at 0 health.
@@ -285,7 +284,7 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		// lands on the part the client struck, within reach of that part.
 		if t := players[e.attacker]; t != nil {
 			p := dragonPartOf(d, i)
-			if t.dim != d.dim || dist3(t.x, t.y, t.z, p.x, p.y, p.z) > maxMeleeReach+p.w/2 {
+			if t.dim != d.dim || !withinEntityRange(t, p.x, p.y, p.z, p.w, p.h, interactSlack) {
 				return
 			}
 		}
@@ -311,9 +310,10 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 		if t.dim != m.dim {
 			return // cross-dimension hits are impossible
 		}
-		dx, dy, dz := t.x-m.x, t.y-m.y, t.z-m.z
-		if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach && m.dragonMeleePart == "" { // a part's reach is checked by onAttack
-			return // hit claimed from across the map — not physically possible
+		// handleAttack: isWithinAttackRange(…, 3.0) — entity_interaction_range
+		// from the eyes to the box, plus three blocks of slack.
+		if m.dragonMeleePart == "" && !mobInReach(t, m) { // a part's reach is checked by onAttack
+			return // hit claimed from beyond reach — not physically possible
 		}
 	}
 	t := players[attacker]

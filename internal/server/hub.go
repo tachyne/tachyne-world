@@ -1188,7 +1188,8 @@ func (h *hub) run() {
 			h.borderDamage(players)     // outside the world border hurts (players only)
 			h.updateSleep(players)      // turn the night once everyone's slept ~5s
 			for _, t := range players {
-				t.refreshGearIfChanged() // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
+				t.refreshGearIfChanged()   // vanilla updateEquipmentAttributes: on equipment CHANGE, not per tick
+				t.updatePlayerAttributes() // the creative reach modifiers
 				t.p.setDigModel(t.playerAttrs().Value(attr.MiningEfficiency), t.digSpeedMult())
 				if t.resyncInvAt != 0 && age >= t.resyncInvAt {
 					t.resyncInvAt = 0
@@ -2073,12 +2074,11 @@ func (h *hub) run() {
 						break
 					}
 					if m := h.mobs[e.target]; m != nil && (m.etype == entityVillager || m.etype == entityWanderingTrader) && m.dying == 0 &&
-						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
+						mobInReach(t, m) {
 						h.openTrades(t, m)
 						break
 					}
-					if m := h.mobs[e.target]; m != nil && m.dying == 0 &&
-						dist3(t.x, t.y, t.z, m.x, m.y, m.z) <= maxMeleeReach {
+					if m := h.mobs[e.target]; m != nil && m.dying == 0 && mobInReach(t, m) {
 						h.interactMob(players, t, m, e.sneak)
 					}
 				}

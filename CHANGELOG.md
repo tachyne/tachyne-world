@@ -142,6 +142,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Reach follows the interaction range attributes.** Hitting, trading
+  with, riding and otherwise using mobs, players and vehicles now measures
+  from your eyes against your entity interaction range, as in vanilla, so
+  `/attribute` changes to reach take effect. Creative players get
+  vanilla's longer block and entity reach.
 - **Sweeping sword blows work as in vanilla.** Mobs caught by a sweep now
   take the sword's Sharpness, Smite or Bane bonus through their armour,
   are knocked back along the swing, and get Fire Aspect and Bane's
