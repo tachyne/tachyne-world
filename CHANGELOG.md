@@ -102,6 +102,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Empty maps work as in vanilla.** An empty map works from the offhand
+  too, a last empty map turns into the new map right in your hand, a full
+  inventory drops the new map instead of losing it, creative no longer
+  uses up the empty map, and filling one plays the cartography sound and
+  counts as a use in your statistics.
 - **Fishing catches fly to you.** A catch now leaves the bobber as an item
   that arcs towards you, as in vanilla, instead of appearing straight in
   your inventory, and keeps every detail of what was caught.

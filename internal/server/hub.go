@@ -130,8 +130,8 @@ type evPopItem struct { // pop a SPECIFIC item into the world (not a loot roll)
 
 func (evPopItem) isHubEvent() {}
 
-type evRespawn struct{ eid int32 } // player clicked Respawn after dying
-type evUseMap struct{ eid int32 }  // player right-clicked an empty map
+type evRespawn struct{ eid int32 }      // player clicked Respawn after dying
+type evUseMap struct{ eid, slot int32 } // player right-clicked an empty map (slot: hotbar or offhandSlot)
 type evEat struct {
 	eid  int32
 	slot int
@@ -1922,7 +1922,7 @@ func (h *hub) run() {
 				h.onEquipHeld(players, e)
 			case evUseMap:
 				if t := players[e.eid]; t != nil {
-					h.mapCreateFilled(players, t)
+					h.mapCreateFilled(players, t, int(e.slot))
 				}
 			case evStopEat:
 				if t := players[e.eid]; t != nil {
