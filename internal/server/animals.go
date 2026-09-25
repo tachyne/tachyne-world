@@ -262,17 +262,15 @@ func (h *hub) updateBreeding(players map[int32]*tracked) {
 		// only breed once they have been together for sixty ticks and are
 		// within three blocks. Without this, two animals fed at opposite ends
 		// of a pen made a baby without ever meeting.
+		// (The walk itself is breedApproachStep, on the mob update.)
 		if best > breedMeetRange*breedMeetRange {
-			m.hasTarget, m.tx, m.tz = true, partner.x, partner.z
 			m.breedTime = 0
 			continue
 		}
 		if m.breedTime += survivalTickN; m.breedTime < breedCourtTicks {
-			m.hasTarget, m.tx, m.tz = true, partner.x, partner.z
 			continue
 		}
-		m.hasTarget = false
-		partner.hasTarget, partner.breedTime = false, 0
+		partner.breedTime = 0
 		if o := partner; o != nil {
 			m.loveTicks, o.loveTicks = 0, 0
 			m.breedCD, o.breedCD = breedCooldown, breedCooldown

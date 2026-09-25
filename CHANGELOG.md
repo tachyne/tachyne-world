@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Fed animals walk to their mate.** Two animals you fed used to wander
+  around at a trot until they happened to meet. As in vanilla, each one
+  now walks over to the nearest fed animal of its kind; cats, ocelots and
+  rabbits walk there a little slower, and axolotls slowly. A fed animal with
+  no partner nearby just idles and wanders as usual. Cats and ocelots also
+  wander at their own slower pace, as do tadpoles and axolotls.
 - **Horses eat, follow and rear as in vanilla.** Horses, donkeys and mules
   now eat carrots. Only a tamed horse falls in love on golden food; a wild
   one takes it to calm down. A wild horse holding out for its rider rears

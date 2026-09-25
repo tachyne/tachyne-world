@@ -19,6 +19,9 @@ var strollSpeeds = func() map[int]float64 {
 		"creeper": 0.8, "spider": 0.8, "cave_spider": 0.8,
 		"rabbit": 0.6, "ravager": 0.4, "wandering_trader": 0.35,
 		"evoker": 0.6, "illusioner": 0.6, "pillager": 0.6, "vindicator": 0.6,
+		// Cat and Ocelot: WaterAvoidingRandomStrollGoal(this, 0.8, …);
+		// TadpoleAi: RandomStroll.swim(0.5F).
+		"cat": 0.8, "ocelot": 0.8, "tadpole": 0.5,
 	} {
 		if id, ok := entityByName[name]; ok {
 			m[id] = mul
@@ -34,6 +37,18 @@ func strollSpeed(m *mob) float64 {
 		return mul
 	}
 	return 1
+}
+
+// strollSpeedFor is strollSpeed with the axolotl's two idle strolls:
+// AxolotlAi swims at 0.5 and, ashore, crawls at 0.15.
+func (h *hub) strollSpeedFor(m *mob) float64 {
+	if m.etype == entityAxolotl {
+		if h.inWater(m.dim, m.x, m.y, m.z) {
+			return 0.5
+		}
+		return 0.15
+	}
+	return strollSpeed(m)
 }
 
 // strollAngle picks the heading a fresh amble sets off on. Vanilla's

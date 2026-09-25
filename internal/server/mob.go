@@ -696,9 +696,6 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 				m.drifting, m.drownedGoal = false, false // a real quarry outranks any errand
 			}
 		}
-		if m.loveTicks > 0 {
-			m.rest = 0 // courtship overrides idling (vanilla goal priority)
-		}
 		// AvoidEntityGoal — the mob-class registrations (a skeleton and a
 		// wolf, a creeper and a cat, …) and the player ones (a rabbit, fox,
 		// wild cat or ocelot, an evoker): pick a spot on the far side.
@@ -828,6 +825,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			} else {
 				m.vx, m.vz = 0, 0 // nowhere to run: it stands (the goal has no target)
 			}
+		case h.breedApproachStep(m):
+			// A courting animal walking to its mate (BreedGoal /
+			// AnimalMakeLove): behind panic, ahead of temptation.
 		case m.etype == entityPanda && h.pandaStep(players, m):
 			// A panda held by its personality: sitting out a storm, lying
 			// on its back, or tumbling.
@@ -912,7 +912,10 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// A pet after its owner is on FollowOwnerGoal, which outranks
 			// strolling just as a hunt does; left out, a pet parked in the
 			// idle cycle and only caught up through the teleport.
-			busy := (m.hostile && m.hasTarget) || m.loveTicks > 0 || (m.tamed && m.hasTarget)
+			// Courting is not here: with a mate about, breedApproachStep
+			// walks it over; with none, BreedGoal never starts and the
+			// animal strolls and idles like any other.
+			busy := (m.hostile && m.hasTarget) || (m.tamed && m.hasTarget)
 			if m.stroll <= 0 && !busy {
 				m.rest = restMin + h.rng.Intn(restMax-restMin)
 				if m.etype == entityFrog {
@@ -934,7 +937,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// somewhere to be (a hunt, a mate) moves at its full speed.
 			cap := m.moveSpeed()
 			if !busy {
-				cap *= strollSpeed(m)
+				cap *= h.strollSpeedFor(m)
 			}
 			if math.Hypot(m.vx, m.vz) > cap {
 				sp := math.Hypot(m.vx, m.vz)
