@@ -491,6 +491,9 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 			h.provoke(m, t)
 		} else if !m.hostile && panicsAt(m, dt) { // the species' own PanicGoal, if it has one
 			m.panic, m.fleeX, m.fleeZ, m.reroute = h.panicFor(m), t.x, t.z, 0
+		} else if m.etype == entityAxolotl {
+			// No panic and no grudge: the brain's only answer to a blow is
+			// the PLAY_DEAD roll axolotlStep makes.
 		} else {
 			if m.etype == entityWarden {
 				h.wardenAngerAt(m, t.p.eid, wardenAngerHurt) // ANGRY + 20 at whoever struck

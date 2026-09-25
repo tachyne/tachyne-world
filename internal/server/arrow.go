@@ -769,6 +769,8 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			} else if !m.hostile && panicsAt(m, projectileDamageOf(a)) {
 				m.panic, m.fleeX, m.fleeZ = h.panicFor(m), a.x, a.z
+			} else if m.etype == entityAxolotl {
+				// no panic, no grudge: it may play dead (axolotlStep)
 			} else {
 				m.anger = spiderAnger
 				if shooter := players[a.shooter]; shooter != nil && a.playerShot {

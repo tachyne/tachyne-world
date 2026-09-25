@@ -1362,7 +1362,7 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	// LivingEntity.hurt's cooldown: for 10 ticks after a landed blow only a
 	// bigger blow lands, and only its excess over the last one.
-	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
+	if m.etype == entityAxolotl && attributedDamage(dt) { // Axolotl.hurtServer rolls play-dead; the hub does it next update
 		m.axHurt, m.axHurtDmg = true, dmg
 	}
 	if m.etype == entityWither && m.witherSmash <= 0 {

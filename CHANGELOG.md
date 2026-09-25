@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Axolotls play dead instead of fleeing.** A struck axolotl ran off in a
+  panic, which vanilla axolotls never do. Now its only answer to a hit is
+  the chance to play dead under water, and only a hit from something sets
+  that off, not fire or a fall.
 - **Angry bees calm down.** A bee you hit, or one from a hive you robbed,
   stayed angry for good. As in vanilla it now chases you for 20 to 39
   seconds and then goes back to its flowers, and a bee that has stung
