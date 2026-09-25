@@ -420,6 +420,8 @@ type mob struct {
 	wardenDisturbTil                uint64     // …remembered until this tick
 	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
 	zpHeld                          bool       // zombified piglin: anger held while it has a target
+	homePos                         blockPos   // Mob.homePosition (an elder guardian's monument spot)
+	homeR                           int        // …homeRadius; 0 = no home
 	zpAlertIn                       int        // …updates to its next pack call (ALERT_INTERVAL)
 	zpSoundIn                       int        // …ticks to its first angry grunt (FIRST_ANGER_SOUND_DELAY)
 	playMate                        int32      // baby villager: the child it is chasing (0 = none)
@@ -778,6 +780,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// off the lava heading back to it.
 		case schoolingFish[m.etype] && h.schoolStep(players, m):
 			// A fish swimming after its shoal's leader.
+		case (m.etype == entityGuardian || m.etype == entityElderGuardian) && h.guardianHomeStep(m):
+			// A guardian outside its home swimming back (MoveTowardsRestriction).
 		case m.etype == entityDrowned && h.drownedWaterStep(players, m):
 			// A drowned going back to the water by day, or ashore after dark.
 		case zombieKind(m.etype) && h.villageDriftStep(players, m):

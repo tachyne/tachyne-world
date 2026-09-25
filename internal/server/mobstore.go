@@ -188,6 +188,8 @@ type savedMob struct {
 	Offers     []savedOffer `json:"offers,omitempty"`
 	Raid       [3]int       `json:"raid,omitempty"`    // raider: the raid centre it belongs to
 	RaidWave   int          `json:"rwave,omitempty"`   // raider: the wave it came with
+	Restrict   [3]int       `json:"rhome,omitempty"`   // Mob home_pos (an elder guardian's)
+	RestrictR  int          `json:"rhomer,omitempty"`  // …home_radius; 0 = none
 	Gossip     gossipBook   `json:"gossip,omitempty"`  // villager: what it holds about each player
 	Converting int          `json:"conv,omitempty"`    // zombie villager: cure ticks left
 	Charged    bool         `json:"charged,omitempty"` // creeper: struck by lightning
@@ -803,6 +805,9 @@ func toSavedMob(m *mob) savedMob {
 	}
 	sm.Raid = packPos(m.raidCenter)
 	sm.RaidWave = m.raidWave
+	if m.homeR > 0 {
+		sm.Restrict, sm.RestrictR = [3]int{m.homePos.x, m.homePos.y, m.homePos.z}, m.homeR
+	}
 	for _, o := range m.offers {
 		sm.Offers = append(sm.Offers, packOffer(o))
 	}

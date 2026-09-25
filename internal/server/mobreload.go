@@ -62,6 +62,9 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 	m.persistent = sm.Persistent
 	m.raidCenter = unpackPos(sm.Raid)
 	m.raidWave = sm.RaidWave
+	if sm.RestrictR > 0 {
+		m.homePos, m.homeR = blockPos{sm.Restrict[0], sm.Restrict[1], sm.Restrict[2]}, sm.RestrictR
+	}
 	if sm.Charged {
 		m.charged = true
 	}

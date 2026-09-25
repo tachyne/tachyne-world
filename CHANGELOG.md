@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Elder guardians stay home.** An elder guardian now keeps to the part
+  of its monument where it first appeared, as in vanilla, and swims back
+  there if it is lured or carried more than sixteen blocks away.
 - **Drowned come up at night.** A drowned deep underwater now swims up
   toward the surface after dark, as in vanilla, which is how it reaches the
   shore to come after you; before, one on the seabed stayed there.
