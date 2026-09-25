@@ -154,6 +154,9 @@ type mob struct {
 	huntedUntil     uint64 // piglin: HUNTED_RECENTLY, the tick it lapses (a reload rolls it afresh)
 	piglinFoe       int32  // piglin: the ATTACK_TARGET it last had (0 = none), for the dead-target rules
 	celebrateUntil  uint64 // piglin: CELEBRATE_LOCATION, the tick it lapses (0 = not celebrating)
+	rideTarget      int32  // baby piglin: RIDE_TARGET, the baby hoglin it means to ride
+	rideUntil       uint64 // …the tick that memory lapses
+	rideTicker      int    // …babySometimesRideBabyHoglin's ticker (ticks left)
 	celebratePos    blockPos
 	fightBack       int32     // hoglin: the piglin that hit it and it now fights (ATTACK_TARGET from wasHurtBy)
 	idleWalk        *idleWalk // piglin brute: the walk its idle RunOne picked; piglin: its celebration's (nil = none)
@@ -722,7 +725,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if waterSensitive(m.etype) && h.waterSensitiveTick(players, m) {
 			continue // hurt to death, or an enderman teleported out of the wet
 		}
-		if m.mount != 0 { // riding another mob (raid ravager rider, jockey)
+		h.piglinRideTick(players, m) // a baby piglin's RIDE memory and its dismount checks
+		if m.mount != 0 {            // riding another mob (raid ravager rider, jockey)
 			v := h.mobs[m.mount]
 			if v == nil || v.dying > 0 {
 				m.mount, m.mountDrives, m.navMount = 0, false, nil // vehicle gone — dismount and resume as a normal mob
@@ -874,6 +878,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// charging with the spear lowered, and wheeling off for the next pass.
 		case m.etype == entityPiglin && h.piglinCelebrateStep(players, m):
 			// A piglin going to where its target fell, dancing after a hoglin.
+		case m.etype == entityPiglin && h.piglinRideStep(players, m):
+			// A baby piglin walking to a baby hoglin to ride it (RIDE).
 		case m.etype == entityPiglinBrute && h.bruteIdleStep(m):
 			// An idle brute keeping to its bastion: home, its fellows, a stroll.
 		case (findsWater[m.etype] || m.etype == entityStrider) && h.findWaterStep(m):

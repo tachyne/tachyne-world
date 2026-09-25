@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **Baby piglins ride baby hoglins.** Now and then a baby piglin that can
+  see a baby hoglin walks over and climbs on, and other baby piglins climb
+  on top of it, up to three high. They get down after ten to thirty
+  seconds, or sooner if the hoglin grows up, wanders off or anyone in the
+  stack is hurt.
 - **Renamed containers keep their names.** A chest, barrel, shulker box,
   furnace, hopper, dispenser, dropper, brewing stand, enchanting table,
   beacon, copper chest, banner, head or copper golem statue placed from an
