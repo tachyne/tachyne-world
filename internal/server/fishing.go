@@ -387,22 +387,22 @@ func (h *hub) reelBobber(players map[int32]*tracked, t *tracked, b *bobberEntity
 		wear = 5
 	case b.nibble > 0:
 		st, isFish := h.rollFishingLoot(t, b)
+		h.advance(players, t, "fishing_rod_hooked", advMatch{item: st.item}) // FISHING_ROD_HOOKED, with the items
 		if st.count > 0 {
-			changed, left := t.inv.addStack(st)
-			for _, sl := range changed {
-				h.sendSlot(t, sl)
+			// FishingHook.retrieve: the catch is an item entity at the hook,
+			// flung towards the angler (xa·0.1, ya·0.1 + √√d·0.08, za·0.1),
+			// with no pickup delay, and an orb at the angler per item.
+			xa, ya, za := t.x-b.x, t.y-b.y, t.z-b.z
+			d := math.Sqrt(xa*xa + ya*ya + za*za)
+			if it := h.spawnItemAt(players, b.dim, st.item, st.count, b.x, b.y, b.z,
+				xa*0.1, ya*0.1+math.Sqrt(d)*0.08, za*0.1); it != nil {
+				it.setFrom(st)
+				it.noPickupUntil = it.born
 			}
-			if left > 0 { // inventory full — the catch lands at the player's feet
-				if it := h.spawnItemIn(players, t.dim, st.item, left, t.x, t.y, t.z); it != nil {
-					it.dmg, it.ench = st.dmg, st.ench
-				}
+			h.spawnXPOrbIn(players, t.dim, h.rng.Intn(6)+1, t.x, t.y+0.5, t.z+0.5)
+			if isFish {
+				h.incCustom(t, "fish_caught", 1)
 			}
-			h.playSoundDim(players, t.dim, "minecraft:entity.item.pickup", sndPlayer, t.x, t.y, t.z, 0.4, 1.5)
-		}
-		h.spawnXPOrbIn(players, t.dim, h.rng.Intn(6)+1, t.x, t.y+0.5, t.z+0.5)
-		if isFish {
-			h.incCustom(t, "fish_caught", 1)
-			h.advance(players, t, "fishing_rod_hooked", advMatch{item: st.item})
 		}
 		wear = 1
 	}

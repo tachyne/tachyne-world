@@ -102,6 +102,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fishing catches fly to you.** A catch now leaves the bobber as an item
+  that arcs towards you, as in vanilla, instead of appearing straight in
+  your inventory, and keeps every detail of what was caught.
 - **Drops keep everything on them.** Gear a mob picked up, vault and
   trial-spawner rewards, archaeology finds and trade items that no longer
   fit your inventory now drop whole: names, dye, potions on tipped arrows
