@@ -117,7 +117,7 @@ func (h *hub) crushTurtleEgg(players map[int32]*tracked, dim, x, y, z int, s uin
 // honey soften it to a fifth, a bed halves the drop, a slime block
 // catches it whole unless the player is sneaking (which suppresses the
 // bounce), powder snow catches it entirely.
-func fallDamageOn(landed uint32, dist, grace float64, sneaking bool) float64 {
+func fallDamageOn(landed uint32, dist, grace, mult float64, sneaking bool) float64 {
 	switch {
 	case landed == powderSnowBlock:
 		return 0
@@ -133,7 +133,7 @@ func fallDamageOn(landed uint32, dist, grace float64, sneaking bool) float64 {
 	if isHay(landed) || isHoneyBlock(landed) {
 		hurt *= hayFallMultiplier
 	}
-	return math.Floor(hurt)
+	return math.Floor(hurt * mult)
 }
 
 var (

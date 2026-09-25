@@ -96,7 +96,7 @@ func TestJumpBoostRaisesSafeFallDistance(t *testing.T) {
 	if d := drop(4); d != 1 {
 		t.Fatalf("a four-block fall deals %v, want 1", d)
 	}
-	pl.effects[effJumpBoost] = &activeEffect{amp: 1, left: 100} // Jump Boost II: grace 3 + 2
+	h.applyEffect(nil, pl, effJumpBoost, 1, 100) // Jump Boost II: grace 3 + 2, through the attribute
 	if d := drop(4); d != 0 {
 		t.Errorf("with Jump Boost II a four-block fall should be free, dealt %v", d)
 	}

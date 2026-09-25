@@ -194,25 +194,25 @@ func TestFreezingAndHayFall(t *testing.T) {
 	if pl.frozen != freezeTicks-4 {
 		t.Errorf("open air did not thaw: %d", pl.frozen)
 	}
-	if d := fallDamageOn(hayMin, 13, 3, false); d != 2 {
+	if d := fallDamageOn(hayMin, 13, 3, 1, false); d != 2 {
 		t.Errorf("hay fall from 13 = %v, want 2", d)
 	}
-	if d := fallDamageOn(powderSnowBlock, 30, 3, false); d != 0 {
+	if d := fallDamageOn(powderSnowBlock, 30, 3, 1, false); d != 0 {
 		t.Errorf("powder snow fall = %v, want 0", d)
 	}
-	if d := fallDamageOn(1, 13, 3, false); d != 10 {
+	if d := fallDamageOn(1, 13, 3, 1, false); d != 10 {
 		t.Errorf("stone fall from 13 = %v, want 10", d)
 	}
-	if d := fallDamageOn(slimeMin, 30, 3, false); d != 0 {
+	if d := fallDamageOn(slimeMin, 30, 3, 1, false); d != 0 {
 		t.Errorf("slime fall = %v, want 0", d)
 	}
-	if d := fallDamageOn(slimeMin, 30, 3, true); d != 27 {
+	if d := fallDamageOn(slimeMin, 30, 3, 1, true); d != 27 {
 		t.Errorf("sneaking slime fall = %v, want 27", d)
 	}
-	if d := fallDamageOn(worldgen.BlockBase("red_bed"), 13, 3, false); d != 3 {
+	if d := fallDamageOn(worldgen.BlockBase("red_bed"), 13, 3, 1, false); d != 3 {
 		t.Errorf("bed fall from 13 = %v, want 3", d)
 	}
-	if d := fallDamageOn(honeyMin, 13, 3, false); d != 2 {
+	if d := fallDamageOn(honeyMin, 13, 3, 1, false); d != 2 {
 		t.Errorf("honey fall from 13 = %v, want 2", d)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-common/protocol"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
+	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
 
 // Survival mechanics: health, hunger, damage (fall/void/starve), regeneration,
@@ -398,10 +399,12 @@ func (h *hub) onFallAndExhaust(players map[int32]*tracked, t *tracked, e evMove)
 			}
 			hurt, impaled := stalagmiteFallExtra(landed, dist)
 			if !impaled {
-				// SAFE_FALL_DISTANCE: the three-block grace plus one per Jump
-				// Boost level (the effect's attribute modifier).
-				grace := 3 + float64(t.hasEffect(effJumpBoost))
-				hurt = fallDamageOn(landed, dist, grace, t.p.sneaking) // hay, honey, beds and slime soften; powder snow catches
+				// SAFE_FALL_DISTANCE (three blocks, plus one per Jump Boost
+				// level) and FALL_DAMAGE_MULTIPLIER, as calculateFallDamage
+				// reads them — /attribute moves either.
+				a := t.playerAttrs()
+				grace, mult := a.Value(attr.SafeFallDistance), a.Value(attr.FallDamageMultiplier)
+				hurt = fallDamageOn(landed, dist, grace, mult, t.p.sneaking) // hay, honey, beds and slime soften; powder snow catches
 				if hurt <= 0 {
 					return
 				}

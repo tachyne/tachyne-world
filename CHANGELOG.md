@@ -14,6 +14,11 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **/attribute moves a player's fall damage.** A player's falls now read
+  the safe-fall-distance and fall-damage-multiplier attributes, as vanilla
+  does, so changing either with /attribute or a plugin takes effect. Jump
+  Boost still adds a block of safe fall per level, now through the same
+  attribute.
 - **Beacons work in the Nether.** A beacon's beam now goes through bedrock
   as it does in vanilla, so a beacon under the Nether's bedrock roof lights
   up and gives its effects; before, the roof switched every Nether beacon
