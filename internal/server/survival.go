@@ -502,6 +502,11 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 	if !isSurvival(t.gamemode) || t.dead || t.health <= 0 {
 		return false
 	}
+	// ServerPlayer.isInvulnerableTo: until the client reports its world
+	// loaded (or 60 ticks pass), a joined or respawned player takes nothing.
+	if h.tick.Load() < t.loadUntil {
+		return false
+	}
 	// LivingEntity.hurtServer: Fire Resistance turns away every is_fire blow
 	// outright — a blaze's fireball included — before anything else runs.
 	if dt.has(tagIsFire) && t.hasEffect(effFireRes) > 0 {
@@ -721,6 +726,7 @@ func (h *hub) respawn(t *tracked) {
 		return
 	}
 	initSurvival(t)
+	t.loadUntil = h.tick.Load() + clientLoadTimeout // restartClientLoadTimerAfterRespawn
 	sx, sy, sz, sdim := h.respawnPoint(h.playersRef, t)
 	t.x, t.y, t.z = sx, sy, sz
 	t.p.trySendEv(attachproto.Dimension{Dim: int32(t.dim), Gamemode: int32(t.gamemode), Death: h.deathOf(t.p.key())})
@@ -987,3 +993,21 @@ func (t *tracked) handStack(slot int) *invStack {
 	}
 	return nil
 }
+
+// clientLoadTimeout is ServerGamePacketListenerImpl.CLIENT_LOADED_TIMEOUT_TIME.
+const clientLoadTimeout = 60
+
+// evAbilities is player_abilities: the client's flying bit.
+type evAbilities struct {
+	eid    int32
+	flying bool
+}
+
+// evClientLoaded is player_loaded.
+type evClientLoaded struct{ eid int32 }
+
+func (evAbilities) isHubEvent()    {}
+func (evClientLoaded) isHubEvent() {}
+
+// mayFly is Abilities.mayfly for a game mode.
+func mayFly(mode int) bool { return mode == gmCreative || mode == gmSpectator }

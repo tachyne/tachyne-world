@@ -453,6 +453,12 @@ func session(c net.Conn, cfg Config) {
 			}
 		case proto.MsgLatency:
 			actTo(remote, payload, proto.Latency{})
+		case proto.MsgPlayerAbilities:
+			actTo(remote, payload, proto.PlayerAbilities{})
+		case proto.MsgPlayerLoaded:
+			if remote != nil {
+				remote.Action(proto.PlayerLoaded{})
+			}
 		case proto.MsgRecipeSettingChange:
 			actTo(remote, payload, proto.RecipeSettingChange{})
 		case proto.MsgRecipeSeen:

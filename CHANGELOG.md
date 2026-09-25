@@ -123,6 +123,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs appear whole.** A mob coming into view arrives with its gear,
+  size, colour and pose in one go, instead of flashing plain for a frame.
+- **Safe while the world loads.** After joining or respawning, you can't be
+  hurt until your game has finished loading the world, or for three seconds.
+- **Flying creative players don't crouch.** Holding shift to fly down no
+  longer shows a crouch to other players.
 - **Ping shows in the tab list.** Each player's connection latency is
   measured and shown as signal bars, updated every thirty seconds as in
   vanilla. The F3 ping graph gets its replies, and a client that stops

@@ -117,7 +117,10 @@ func (h *hub) showEntityTo(t *tracked, eid int32) {
 	case !ok:
 		delete(t.tracked, eid) // it went in the same tick — nothing to show
 	case kind == trackMob:
+		// ServerEntity.sendPairingData: the spawn and its state in one bundle.
+		t.p.sendEvReliable(bundleOpen{})
 		h.showMobTo(t, h.mobs[eid])
+		t.p.sendEvReliable(bundleClose{})
 	case kind == trackItem:
 		it := h.items[eid]
 		t.p.trySendEv(entAdd(it.eid, entityItem, it.uuid, it.x, it.y, it.z, 0, 0))
@@ -263,3 +266,8 @@ func (h *hub) toTracking(players map[int32]*tracked, eid int32, dim int, x, z fl
 		}
 	}
 }
+
+// bundleOpen / bundleClose bracket a spawn's frames (ClientboundBundlePacket).
+// Both go on the reliable path, so an opened bundle is always closed.
+type bundleOpen struct{}
+type bundleClose struct{}

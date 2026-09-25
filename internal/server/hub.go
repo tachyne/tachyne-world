@@ -286,9 +286,11 @@ type tracked struct {
 	// glideTicks is LivingEntity.fallFlyTicks: how long the current glide has
 	// run, which is what the elytra is charged for.
 	glideTicks int
-	sprinting  bool // last reported sprint state (crit/knockback modifiers)
-	sneaking   bool // shift held (shared flag 1: others see the crouch)
-	swimming   bool // Player.updateSwimming (shared flag 4: others see the swim)
+	sprinting  bool   // last reported sprint state (crit/knockback modifiers)
+	sneaking   bool   // shift held (shared flag 1: others see the crouch)
+	flying     bool   // Abilities.flying, from the client, kept only while it may fly
+	loadUntil  uint64 // hasClientLoaded: until player_loaded or this tick, nothing hurts them
+	swimming   bool   // Player.updateSwimming (shared flag 4: others see the swim)
 	gamemode   int
 	hudOn      bool
 
@@ -1593,9 +1595,31 @@ func (h *hub) run() {
 				}
 				e.p.trySendEv(chatEv(
 					fmt.Sprintf("Players online (%d): %s", len(names), strings.Join(names, ", "))))
+			case evAbilities:
+				if t := players[e.eid]; t != nil {
+					// handlePlayerAbilities: flying = claimed && mayfly.
+					fly := e.flying && mayFly(t.gamemode)
+					if fly != t.flying {
+						t.flying = fly
+						if t.sneaking { // the crouch comes and goes with flight
+							pose := int32(poseSneaking)
+							if fly {
+								pose = poseStanding
+							}
+							h.toNearbyEv(players, t.dim, t.x, t.z, metaEv(poseMeta(t.p.eid, pose)))
+						}
+					}
+				}
+			case evClientLoaded:
+				if t := players[e.eid]; t != nil {
+					t.loadUntil = 0 // markClientLoaded
+				}
 			case evSetGamemode:
 				for _, t := range h.commandTargets(players, e.eid, e.name) {
 					t.gamemode = e.mode // the hub's authoritative copy (pickup/survival sim read this)
+					if !mayFly(t.gamemode) {
+						t.flying = false // GameType.updatePlayerAbilities: flight off
+					}
 					if e.mode == gmSpectator {
 						h.dropShoulderParrots(players, t) // ServerPlayer.setGameMode(SPECTATOR)
 					}
@@ -2284,7 +2308,7 @@ func (h *hub) run() {
 						h.broadcastPlayerFlags(players, t) // the crouch the other clients draw
 					}
 					pose := int32(poseStanding)
-					if e.sneaking {
+					if e.sneaking && !t.flying { // updatePlayerPose: a flier does not crouch
 						pose = poseSneaking
 					}
 					h.toNearbyEv(players, t.dim, t.x, t.z, metaEv(poseMeta(t.p.eid, pose)))
@@ -2531,6 +2555,7 @@ func (h *hub) useOnEvent(players map[int32]*tracked, ev hubEvent) bool {
 // the newcomer learns of every existing player and vice-versa.
 func (h *hub) onJoin(players map[int32]*tracked, e evJoin) {
 	nt := &tracked{living: living{attrs: newPlayerAttributes()}, p: e.p, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, gamemode: e.gamemode, hudOn: true}
+	nt.loadUntil = h.tick.Load() + clientLoadTimeout // CLIENT_LOADED_TIMEOUT_TIME
 	if e.resume != nil {
 		// A migrated player: the handover snapshot is the source of truth (health,
 		// food, effects, inventory, xp) — not a fresh spawn or the on-disk store.

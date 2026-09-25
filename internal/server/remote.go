@@ -262,6 +262,10 @@ func (r *remotePlayer) Action(v any) {
 		h.post(evRespawn{eid: p.eid})
 	case attachproto.StatsReq:
 		h.post(evStatsReq{eid: p.eid})
+	case attachproto.PlayerAbilities:
+		h.post(evAbilities{eid: p.eid, flying: e.Flying})
+	case attachproto.PlayerLoaded:
+		h.post(evClientLoaded{eid: p.eid})
 	case attachproto.Latency:
 		p.latency.Store(max(e.MS, 0))
 	case attachproto.GameRuleReq:
@@ -395,6 +399,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgPlayerInfo, ev)
 	case attachproto.PlayerInfoMode:
 		send(attachproto.MsgPlayerInfoMode, ev)
+	case bundleOpen:
+		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
+	case bundleClose:
+		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
 	case attachproto.PlayerInfoLatency:
 		send(attachproto.MsgPlayerInfoLatency, ev)
 	case attachproto.GameRuleValues:
