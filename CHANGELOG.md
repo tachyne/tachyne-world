@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Comparators read a shelf only from behind.** A comparator beside or in
+  front of a wooden shelf read its contents; as in vanilla, only one behind
+  it does.
 - **Berry bushes slow mobs down.** Mobs walking through a sweet berry bush
   are now slowed, as in vanilla (foxes and bees excepted), and are only
   scratched while moving, not while standing still. Sculk now hears berries

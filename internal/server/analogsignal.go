@@ -25,7 +25,12 @@ var (
 // analogSignal is everything a comparator can read at a position: the generic
 // container fullness first, then the per-block readings. -1 means the block
 // says nothing, which is what lets the caller fall through to its other cases.
-func (h *hub) analogSignal(pos simPos) int {
+func (h *hub) analogSignal(pos simPos) int { return h.analogSignalFrom(pos, 0, 0) }
+
+// analogSignalFrom is analogSignal read from a side: (tx, tz) is the way from
+// the block toward the comparator reading it (getAnalogOutputSignal's
+// direction), or zero when the side does not matter to the caller.
+func (h *hub) analogSignalFrom(pos simPos, tx, tz int) int {
 	if sig := h.containerSignal(pos); sig >= 0 {
 		return sig
 	}
@@ -43,7 +48,12 @@ func (h *hub) analogSignal(pos simPos) int {
 	if isLectern(st) {
 		return h.lecternSignal(pos)
 	}
-	if isWoodShelf(st) { // ShelfBlock: a bit per filled slot (read from behind in vanilla)
+	if isWoodShelf(st) { // ShelfBlock: a bit per filled slot, read only from behind
+		if tx != 0 || tz != 0 {
+			if fx, fz := facingDelta(stateFacing(st)); tx != -fx || tz != -fz {
+				return 0 // getAnalogOutputSignal: direction != FACING.getOpposite()
+			}
+		}
 		sig := 0
 		if sh := h.woodShelves[pos]; sh != nil {
 			for i, s := range sh {

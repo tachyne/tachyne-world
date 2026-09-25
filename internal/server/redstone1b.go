@@ -214,7 +214,7 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 	rear := h.diodeInputSignal(pos, state) // DiodeBlock.getInputSignal, then the analog override below
 	back := blockPos{pos.x + dx, pos.y, pos.z + dz}
 	bs := h.rsWorld().At(back.x, back.y, back.z)
-	if sig := h.analogSignal(simPos{dim: h.rsDim, blockPos: back}); sig >= 0 {
+	if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: back}, -dx, -dz); sig >= 0 {
 		if sig > rear {
 			rear = sig // container fullness, cake left, composter level, …
 		}
@@ -231,7 +231,7 @@ func (h *hub) comparatorOutput(pos blockPos, state uint32) int {
 	} else if worldgen.IsSolidFull(bs) {
 		// A solid block behind is transparent to the read: measure the container
 		// one cell further (vanilla comparator-through-block).
-		if sig := h.analogSignal(simPos{dim: h.rsDim, blockPos: blockPos{back.x + dx, back.y, back.z + dz}}); sig > rear {
+		if sig := h.analogSignalFrom(simPos{dim: h.rsDim, blockPos: blockPos{back.x + dx, back.y, back.z + dz}}, -dx, -dz); sig > rear {
 			rear = sig
 		}
 	}
