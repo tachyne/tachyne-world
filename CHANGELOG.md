@@ -154,6 +154,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Trader llamas guard their trader.** A wandering trader's llamas now
   spit at zombies and illagers they can see, and at any mob that hurts the
   trader, not only at players, as in vanilla.
+- **Snow golems go after monsters.** A snow golem now spots monsters up to
+  sixteen blocks away, as in vanilla, and walks toward one that is out of
+  throwing range instead of waiting for it to come within ten blocks.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

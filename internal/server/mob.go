@@ -436,6 +436,8 @@ type mob struct {
 	wardenClientAnger               int        // CLIENT_ANGER_LEVEL last sent to viewers
 	golemCrack                      int        // iron golem: crack stage last seen, +1 (0 = not yet seen)
 	sulfurTempted                   bool       // sulfur cube: its tempt goal is running
+	snowTarget                      int32      // snow golem: the monster its target goal holds
+	snowUnseen, snowSeeTime         int        // snow golem: ticks that target has been out of / in sight
 	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
 	wardenDisturbTil                uint64     // …remembered until this tick
@@ -853,6 +855,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			(m.etype == entityVindicator && m.customName == "Johnny")) && h.mobHuntStep(players, m):
 			// A zoglin after anything living, an enderman after an endermite,
 			// a vindicator named Johnny after everything.
+		case m.etype == entitySnowGolem && h.snowGolemChaseStep(m):
+			// A snow golem closing on a monster out of its throwing range.
 		case m.etype == entityVillager && h.villagerPanicStep(players, m):
 			// A villager running from a zombie, a pillager, or whatever hurt it.
 		case m.etype == entityVillager && m.baby && h.villagerPlayStep(players, m):
