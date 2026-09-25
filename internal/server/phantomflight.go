@@ -1,6 +1,10 @@
 package server
 
-import "math"
+import (
+	"math"
+
+	"github.com/tachyne/tachyne-world/internal/worldgen"
+)
 
 // The phantom's flight. Vanilla never flies one at you directly: it circles
 // an anchor above its target at a radius of five to fifteen blocks, and
@@ -12,7 +16,7 @@ import "math"
 const (
 	phantomCircleMin  = 5.0 // PhantomCircleAroundAnchorGoal: 5 + rand(10)
 	phantomCircleSpan = 10.0
-	phantomAnchorLow  = 10.0 // the anchor sits 10 + rand(20) above the target
+	phantomAnchorLow  = 20.0 // setAnchorAboveTarget: 20 + rand(20) above the target
 	phantomAnchorSpan = 20.0
 	phantomFirstSweep = 10 // the first swoop comes ten ticks in
 	phantomSweepMin   = 8  // …then every 8 + rand(4) seconds
@@ -33,7 +37,7 @@ func (phantomFlightBehavior) steer(h *hub, m *mob) (float64, float64) {
 	}
 	if m.phantomRadius == 0 { // a fresh anchor: its own radius, height and spin
 		m.phantomRadius = phantomCircleMin + h.rng.Float64()*phantomCircleSpan
-		m.phantomHigh = phantomAnchorLow + h.rng.Float64()*phantomAnchorSpan
+		m.phantomHigh = phantomAnchorLow + float64(h.rng.Intn(int(phantomAnchorSpan)))
 		m.phantomCW = h.rng.Intn(2) == 0
 		m.phantomNext = phantomFirstSweep
 	}
@@ -50,6 +54,7 @@ func (phantomFlightBehavior) steer(h *hub, m *mob) (float64, float64) {
 	if m.phantomNext -= mobMoveInterval; m.phantomNext <= 0 {
 		m.phantomNext = (phantomSweepMin + h.rng.Intn(phantomSweepSpan)) * 20
 		m.phantomSwoop = phantomSwoopTicks
+		m.phantomHigh = phantomAnchorLow + float64(h.rng.Intn(int(phantomAnchorSpan))) // a fresh anchor each swoop
 		h.playSoundDim(h.playersRef, m.dim, "minecraft:entity.phantom.swoop", sndHostile,
 			m.x, m.y, m.z, 10, 0.95+h.rng.Float32()*0.1)
 		return 0, 0
@@ -86,5 +91,6 @@ func (m *mob) phantomAltitude() (float64, bool) {
 	if high == 0 {
 		high = phantomAnchorLow
 	}
-	return m.ty + high, true
+	// …and never below the sea: the anchor floors at sea level + 1.
+	return math.Max(m.ty+high, float64(worldgen.SeaLevel+1)), true
 }

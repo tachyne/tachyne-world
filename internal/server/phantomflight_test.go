@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tachyne/tachyne-world/internal/world"
+	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
 // A phantom circles its target high up and swoops every eight to twelve
@@ -27,7 +28,13 @@ func TestPhantomCirclesThenSwoops(t *testing.T) {
 	// High above the target while it circles.
 	y, ok := m.phantomAltitude()
 	if !ok || y < m.ty+phantomAnchorLow {
-		t.Fatalf("it should circle at least ten above the target, got %v", y)
+		t.Fatalf("it should circle at least twenty above the target, got %v", y)
+	}
+	// A target deep below the sea still has the anchor at sea level + 1.
+	low := *m
+	low.ty = 10
+	if y, _ := low.phantomAltitude(); y < float64(worldgen.SeaLevel+1) {
+		t.Fatalf("the anchor fell below the sea: %v", y)
 	}
 	// The swoop comes, and then it dives straight in, at the target's level.
 	for i := 0; i < 400 && m.phantomSwoop == 0; i++ {
