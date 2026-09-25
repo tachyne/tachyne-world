@@ -95,6 +95,15 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Cut plants grow on, and hanging moss holds together.** Cutting the top
+  off a kelp stalk or snapping a vine now leaves a fresh tip that keeps
+  growing, as in vanilla; before, the cut end never grew again. Bamboo
+  growing out of a shoot turns the shoot into a stalk, and a stalk picks up
+  the thicker look of older bamboo above it. A big dripleaf set on another
+  turns the lower one into stem. Pale hanging moss hangs from more moss and
+  marks its new end when cut — strands used to fall apart whenever anything
+  nearby changed. Pale moss carpet lets go of a wall that is taken away, and
+  an upper layer with nothing left to climb goes with it.
 - **Ruined portals sit in the ground.** A ruined portal now settles, as in
   vanilla, until at least three of its four corners stand in solid ground,
   so one on a cliff edge sinks into the rock instead of hanging off the

@@ -217,6 +217,7 @@ func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
 	base := worldgen.BlockBase("pale_moss_carpet") // bottom=true
 	info, _ := worldgen.InfoForState(base)
 	upper := worldgen.SetProperty(info, base, "bottom", "false")
+	upper = worldgen.SetProperty(info, upper, "north", "low") // an upper layer climbs something
 	if bottomProp(upper) {
 		t.Fatal("the upper layer still reads as the base")
 	}
@@ -242,6 +243,11 @@ func TestPaleMossCarpetNeedsItsBase(t *testing.T) {
 	w.SetBlock(x, y-1, z, upper)
 	if supported(w, blockPos{x, y, z}, upper) {
 		t.Error("an upper layer stood on another upper layer")
+	}
+	// hasFaces: an upper layer with no side left is gone whatever is under it.
+	w.SetBlock(x, y-1, z, base)
+	if bare := worldgen.SetProperty(info, upper, "north", "none"); supported(w, blockPos{x, y, z}, bare) {
+		t.Error("an upper layer with no side stayed")
 	}
 }
 

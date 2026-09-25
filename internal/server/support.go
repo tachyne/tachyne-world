@@ -263,6 +263,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 				return true
 			}
 		}
+		if inRange(state, hangingMossRng) && inRange(a, hangingMossRng) {
+			return true // HangingMossBlock.canStayAtPosition: or more moss above
+		}
 		return holdsBlock(a)
 	case worldgen.SupportFace:
 		switch prop("face") {
@@ -311,7 +314,9 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 		if prop("bottom") == "true" {
 			return b != worldgen.Air
 		}
-		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b)
+		// (MossyCarpetBlock.updateShape also clears an upper layer left with
+		// no side at all — hasFaces.)
+		return worldgen.SupportFor(b) == worldgen.SupportMossCarpet && bottomProp(b) && mossCarpetHasSide(state)
 	case worldgen.SupportBell:
 		// BellBlock.canSurvive: the attachment says which way it hangs. A bell
 		// between two walls needs both of them — taking either one down drops
@@ -359,6 +364,39 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 }
 
 var dirtPathState = worldgen.BlockBase("dirt_path")
+
+// carpetBlocks are the CarpetBlock family: the sixteen wool carpets and the
+// moss carpet (the pale moss carpet is a MossyCarpetBlock, with its own rule).
+var carpetBlocks = func() map[uint32]bool {
+	out := map[uint32]bool{}
+	for _, n := range worldgen.AllBlockNames() {
+		if strings.HasSuffix(n, "_carpet") && n != "pale_moss_carpet" {
+			if lo, hi, ok := worldgen.BlockRangeOK(n); ok {
+				for s := lo; s <= hi; s++ {
+					out[s] = true
+				}
+			}
+		}
+	}
+	return out
+}()
+
+func isCarpetBlock(s uint32) bool { return carpetBlocks[s] }
+
+// mossCarpetHasSide is MossyCarpetBlock.hasFaces for a layer without a
+// base: some side still climbs a wall.
+func mossCarpetHasSide(s uint32) bool {
+	info, ok := worldgen.InfoForState(s)
+	if !ok {
+		return false
+	}
+	for _, f := range paleCarpetSides {
+		if worldgen.GetProperty(info, s, f.prop) != "none" {
+			return true
+		}
+	}
+	return false
+}
 
 // bottomProp reads a state's "bottom" flag — the pale moss carpet's BASE,
 // which vanilla spells "bottom" on the wire.
