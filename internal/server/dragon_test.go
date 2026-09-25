@@ -236,3 +236,60 @@ func TestDragonHurtWhenItsHealingCrystalBreaks(t *testing.T) {
 		t.Fatal("the dragon still heals from a destroyed crystal")
 	}
 }
+
+// A client strikes the dragon's parts, not the dragon (it is not pickable):
+// part ids follow the dragon's, head first. A blow on the head lands whole,
+// on a wing a quarter plus one; the ids are the dragon's alone.
+func TestDragonMeleeLandsOnThePartStruck(t *testing.T) {
+	h, pl, players := endHub(t)
+	h.enterEnd(players, nil)
+	d := h.dragon
+	if d == nil {
+		t.Fatal("no dragon")
+	}
+	if next := h.allocEID(); next <= d.eid+int32(len(dragonPartNames)) {
+		t.Fatalf("the part ids must be reserved: next eid %d, dragon %d", next, d.eid)
+	}
+	pl.dim = 2
+	d.yaw = 0
+	sword := itemByName["diamond_sword"]
+	pl.p.setHotbarSlot(0, sword)
+	pl.inv.slots[0] = invStack{item: sword, count: 1}
+	head := dragonPartOf(d, 0)
+	pl.x, pl.y, pl.z = head.x, head.y, head.z+1
+	d.health = 200
+	h.onAttack(players, evAttack{attacker: pl.p.eid, target: d.eid + 1})
+	full := 200 - d.health
+	if full <= 0 {
+		t.Fatal("a blow on the head part should land")
+	}
+	d.health, d.invulnTicks, pl.lastAttack = 200, 0, 0
+	wing := dragonPartOf(d, 6)
+	pl.x, pl.y, pl.z = wing.x, wing.y, wing.z+1
+	h.onAttack(players, evAttack{attacker: pl.p.eid, target: d.eid + 7})
+	if got := 200 - d.health; got >= full {
+		t.Fatalf("a wing takes a quarter plus one: head %d, wing %d", full, got)
+	}
+}
+
+// DragonFlightHistory: the tail follows where the dragon was heading; after
+// a turn it still trails along the old line.
+func TestDragonTailLagsThroughTheTurn(t *testing.T) {
+	m := &mob{etype: entityEnderDragon, x: 0, y: 80, z: 0, yaw: 0}
+	for i := 0; i < dragonHistLen; i++ {
+		m.recordDragonFlight()
+	}
+	straight := dragonPartOf(m, 5) // the last tail segment
+	m.yaw = 90
+	m.recordDragonFlight()
+	bent := dragonPartOf(m, 5)
+	body := dragonPartOf(m, 2)
+	// Turned to yaw 90 the body lies along −x; the lagging tail has not yet
+	// swung all the way round.
+	if bent.x == straight.x && bent.z == straight.z {
+		t.Fatal("the tail should move when the dragon turns")
+	}
+	if dz := bent.z - body.z; dz >= 0 {
+		t.Fatalf("the tail should still trail along the old heading (−z), got dz %.2f", dz)
+	}
+}

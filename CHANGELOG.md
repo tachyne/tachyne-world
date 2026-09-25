@@ -202,6 +202,10 @@ the public history since the project was open-sourced on 2026-07-10.
   Primed TNT, arrows, fireballs and other projectiles in flight now pass
   through a Nether portal, as in vanilla, and a lit charge in flowing water
   is carried along by the current.
+- **Hit the dragon where it counts.** A sword blow on the Ender Dragon now
+  lands on the part you hit — the head takes it in full, the body, wings and
+  tail a quarter — and the dragon's tail swings round behind it through a
+  turn, as in vanilla.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

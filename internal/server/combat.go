@@ -279,6 +279,20 @@ func (h *hub) onAttack(players map[int32]*tracked, e evAttack) {
 		h.deflectProjectile(players, players[e.attacker], a)
 		return
 	}
+	if d, i, ok := h.dragonPartTarget(e.target); ok {
+		// EnderDragonPart.hurtServer → EnderDragon.hurt(part, …): the blow
+		// lands on the part the client struck, within reach of that part.
+		if t := players[e.attacker]; t != nil {
+			p := dragonPartOf(d, i)
+			if t.dim != d.dim || dist3(t.x, t.y, t.z, p.x, p.y, p.z) > maxMeleeReach+p.w/2 {
+				return
+			}
+		}
+		d.dragonMeleePart = dragonPartNames[i]
+		h.attackMob(players, e.attacker, d.eid)
+		d.dragonMeleePart = ""
+		return
+	}
 	if v := h.vehicles[e.target]; v != nil {
 		h.hurtVehicle(players, players[e.attacker], v)
 	} else if !h.attackPlayer(players, e.attacker, e.target) {
@@ -297,7 +311,7 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 			return // cross-dimension hits are impossible
 		}
 		dx, dy, dz := t.x-m.x, t.y-m.y, t.z-m.z
-		if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach {
+		if dx*dx+dy*dy+dz*dz > maxMeleeReach*maxMeleeReach && m.dragonMeleePart == "" { // a part's reach is checked by onAttack
 			return // hit claimed from across the map — not physically possible
 		}
 	}
@@ -428,11 +442,14 @@ func (h *hub) attackMob(players map[int32]*tracked, attacker, target int32) {
 	}
 	melee := float64(dmg)
 	if m == h.dragon {
-		// EnderDragon.hurtServer routes a blow with no part attached to the
-		// BODY, which takes a quarter. A melee hit carries no part here — the
-		// engine keeps the dragon as one entity on the wire, so a client can
-		// only ever name the whole dragon — and the body is the honest answer.
-		melee = dragonPartDamage("body", melee)
+		// EnderDragon.hurt(part, …): the part the client struck (its id is
+		// the dragon's plus one to eight); a blow naming the dragon itself
+		// goes to the BODY, as EnderDragon.hurtServer routes it.
+		part := m.dragonMeleePart
+		if part == "" {
+			part = "body"
+		}
+		melee = dragonPartDamage(part, melee)
 	}
 	// A mace smash is its OWN damage type (MaceItem.getItemDamageSource →
 	// damageSources().mace), which is what makes the death message read

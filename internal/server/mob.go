@@ -451,6 +451,10 @@ type mob struct {
 	batHasT                         bool       // …set
 	batVX, batVY, batVZ             float64    // bat: its own per-tick velocity
 	parrotFollow                    int32      // parrot: the mob FollowMobGoal keeps it with
+	dragonHistY                     [4]float64 // ender dragon: DragonFlightHistory heights, newest first
+	dragonHistYaw                   [4]float32 // …and yaws
+	dragonHistN                     int        // …samples recorded
+	dragonMeleePart                 string     // ender dragon: the part the blow being dealt landed on
 	snowUnseen, snowSeeTime         int        // snow golem: ticks that target has been out of / in sight
 	sulfurCalmUntil                 uint64     // sulfur cube: TemptGoal calmDown — no tempting before this tick
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
