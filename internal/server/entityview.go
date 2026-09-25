@@ -212,7 +212,7 @@ func (h *hub) showMobTo(t *tracked, m *mob) {
 		t.p.trySendEv(metaEv(sleepMetadata(m.eid, m.bed)))
 	}
 	if m.rider != 0 {
-		t.p.trySendEv(passengersBody(m.eid, m.rider))
+		t.p.trySendEv(passengersBody(m.eid, m.playerPassengers()...))
 	}
 	if len(m.riders) > 0 {
 		t.p.trySendEv(passengersBody(m.eid, m.riders...))

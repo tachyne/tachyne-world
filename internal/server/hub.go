@@ -2778,7 +2778,11 @@ func (h *hub) onLeave(players map[int32]*tracked, p *player) {
 			h.toTracking(players, v.eid, v.dim, v.x, v.z, passengersBody(v.eid, v.passengers()...))
 		}
 	}
-	for _, m := range h.mobs { // a leaver aboard a happy ghast steps off
+	for _, m := range h.mobs { // a leaver aboard a happy ghast, a horse or a camel steps off
+		if m.rider == p.eid || m.rider2 == p.eid {
+			m.leavePlayerSeat(p.eid)
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
+		}
 		for i, r := range m.riders {
 			if r == p.eid {
 				m.riders = append(m.riders[:i], m.riders[i+1:]...)

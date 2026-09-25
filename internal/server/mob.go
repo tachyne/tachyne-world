@@ -214,6 +214,7 @@ type mob struct {
 	strafeCW                        bool        // skeleton: current circling direction while shooting
 	retaliates                      bool        // peaceful until hit, then hunts its attacker (wolf/goat)
 	rider                           int32       // player eid riding this mob (0 = none); AI pauses while ridden
+	rider2                          int32       // camel: a second player, on the back seat behind rider
 	standLeft, standNext            int         // horse: ticks left in a rear; RandomStandGoal's counter (horsestand.go)
 	riders                          []int32     // happy ghast: up to 4 rider eids (riders[0] pilots); AI pauses while any aboard
 	mount                           int32       // eid of the MOB this mob rides (raid ravager riders); 0 = none
@@ -1687,7 +1688,7 @@ func (h *hub) broadcastSync(players map[int32]*tracked) {
 		// One-shot mount/pet state re-asserted so a late-joining player sees the
 		// saddle, rider and collar rather than a bare animal.
 		if m.rider != 0 {
-			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
 		}
 		if len(m.riders) > 0 {
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.riders...))

@@ -109,29 +109,58 @@ func (h *hub) tryMount(players map[int32]*tracked, t *tracked, m *mob) bool {
 
 // mountMob seats a player on a mob, pausing its AI and relaying the passenger.
 func (h *hub) mountMob(players map[int32]*tracked, t *tracked, m *mob) {
-	if m.rider != 0 || dist3(t.x, t.y, t.z, m.x, m.y, m.z) > maxMeleeReach+1 {
+	if dist3(t.x, t.y, t.z, m.x, m.y, m.z) > maxMeleeReach+1 || m.rider == t.p.eid || m.rider2 == t.p.eid {
 		return
 	}
-	m.rider = t.p.eid
+	switch {
+	case m.rider == 0:
+		m.rider = t.p.eid
+	case isCamelKind(m.etype) && m.rider2 == 0 && m.mobRider == 0:
+		m.rider2 = t.p.eid // Camel: getPassengers().size() < 2 — a second player behind
+	default:
+		return
+	}
 	t.ridingEID = m.eid
 	m.vx, m.vz, m.hasTarget = 0, 0, false
 	h.vibAt(m.dim, freqMount, m.x, m.y, m.z, t.p.eid)
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.rider))
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
 	h.advance(players, t, "started_riding", advMatch{})
+}
+
+// playerPassengers is the players on a mob, front seat first.
+func (m *mob) playerPassengers() []int32 {
+	switch {
+	case m.rider == 0:
+		return nil
+	case m.rider2 == 0:
+		return []int32{m.rider}
+	}
+	return []int32{m.rider, m.rider2}
+}
+
+// leavePlayerSeat takes a player off a mob; the back-seat rider moves up
+// to the front (the controlling seat), as the passenger list closes up.
+func (m *mob) leavePlayerSeat(eid int32) {
+	switch eid {
+	case m.rider:
+		m.rider, m.rider2 = m.rider2, 0
+	case m.rider2:
+		m.rider2 = 0
+	}
 }
 
 // dismountMob stands a mob's rider up beside it. Returns true if the player was
 // riding a mob (so the vehicle dismount path can be skipped).
 func (h *hub) dismountMob(players map[int32]*tracked, t *tracked) bool {
 	for _, m := range h.mobs {
-		if m.rider != t.p.eid {
+		if m.rider != t.p.eid && m.rider2 != t.p.eid {
 			continue
 		}
-		m.rider = 0
+		m.leavePlayerSeat(t.p.eid)
 		t.ridingEID = 0
 		h.vibAt(m.dim, freqDismount, m.x, m.y, m.z, t.p.eid)
 		m.sx, m.sy, m.sz = m.x, m.y, m.z // realign the relative-move baseline
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid))
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, passengersBody(m.eid, m.playerPassengers()...))
 		t.x, t.y, t.z = m.x+0.9, m.y+0.6, m.z
 		t.p.trySendEv(teleportEv(t.x, t.y, t.z, t.yaw, t.pitch))
 		return true
@@ -172,6 +201,10 @@ func (h *hub) applyMountMove(players map[int32]*tracked, t *tracked, e evVehicle
 	m.x, m.y, m.z, m.yaw = e.x, e.y, e.z, e.yaw
 	t.x, t.y, t.z = e.x, e.y+0.6, e.z // the rider rides along (chunk streaming)
 	t.p.setHubPos(e.x, e.z)
+	if o := players[m.rider2]; o != nil { // …and a camel's back-seat rider too
+		o.x, o.y, o.z = e.x, e.y+0.6, e.z
+		o.p.setHubPos(e.x, e.z)
+	}
 	if moved {
 		m.sx, m.sy, m.sz = e.x, e.y, e.z
 		move := entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded())

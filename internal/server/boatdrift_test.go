@@ -102,3 +102,37 @@ func TestUnmannedBoatDrifts(t *testing.T) {
 		t.Fatalf("a boat in still water floats where it is: (%.3f, %.3f, %.3f)", still.x, still.y, still.z)
 	}
 }
+
+// Camel.getMaxPassengers is 2: a second player climbs on behind the first,
+// only the front one steers, and the back one moves up when it gets off.
+func TestCamelSeatsTwoPlayers(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	camel := h.spawnSpecies(players, entityCamel, 0, 0.5, 180, 0.5)
+	camel.tamed, camel.saddled = true, true
+	a, b, c := survPlayer(h), survPlayer(h), survPlayer(h)
+	for i, p := range []*tracked{a, b, c} {
+		p.p.eid = int32(301 + i)
+		p.x, p.y, p.z = 1.5, 180, 0.5
+		players[p.p.eid] = p
+	}
+	h.tryMount(players, a, camel)
+	h.tryMount(players, b, camel)
+	h.tryMount(players, c, camel)
+	if p := camel.playerPassengers(); len(p) != 2 || p[0] != a.p.eid || p[1] != b.p.eid || c.ridingEID != 0 {
+		t.Fatalf("two riders, the first in front, no third: %v (third on %d)", p, c.ridingEID)
+	}
+	if h.applyMountMove(players, b, evVehicleMove{eid: b.p.eid, x: camel.x + 1, y: camel.y, z: camel.z}) || camel.x != 0.5 {
+		t.Fatal("the back-seat rider cannot steer the camel")
+	}
+	h.applyMountMove(players, a, evVehicleMove{eid: a.p.eid, x: camel.x + 1, y: camel.y, z: camel.z})
+	if camel.x != 1.5 || b.x != 1.5 {
+		t.Fatalf("the front rider steers and the back one rides along: camel %v back %v", camel.x, b.x)
+	}
+	h.dismountMob(players, a)
+	if camel.rider != b.p.eid || camel.rider2 != 0 {
+		t.Fatalf("the back rider moves up: rider %d rider2 %d", camel.rider, camel.rider2)
+	}
+}

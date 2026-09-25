@@ -16,8 +16,8 @@ import (
 // Sixty ticks under water throws its passengers out.
 
 const (
-	boatBoxHalfW        = 0.6875 // EntityType sized(1.375, 0.5625)
-	boatBoxH       = 0.5625
+	boatBoxHalfW     = 0.6875 // EntityType sized(1.375, 0.5625)
+	boatBoxH         = 0.5625
 	boatGravity      = 0.04 // AbstractBoat.getDefaultGravity
 	boatOutOfControl = 60
 )

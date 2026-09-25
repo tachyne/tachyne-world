@@ -133,6 +133,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Camels carry two players.** A second player can climb onto a camel
+  behind the first. The one in front steers, the one behind rides along,
+  and if the front rider gets off the other moves forward. A player who
+  leaves the game while riding a horse, camel or other mount now leaves
+  it free to walk again.
 - **Boats seat two players and drift when nobody rows.** A second player
   can climb into a boat behind the first; the one in front steers, and if
   they get out the other moves up to the paddles. An empty boat, chest
