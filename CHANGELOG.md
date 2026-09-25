@@ -14,6 +14,9 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/op, /deop, /ban-ip, /pardon-ip and /banlist.** Operators manage ops and
+  bans in game. Bans take a reason, kick the player, and are enforced at
+  the front door for every edition. An IP ban can name an online player.
 - **Tab completion for command arguments.** While typing a command, the
   game rule names, effects, enchantments, mobs, blocks, particles,
   structures, biomes, boss bar ids, sub-commands and online players now

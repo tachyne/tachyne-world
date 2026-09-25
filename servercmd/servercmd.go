@@ -8,6 +8,7 @@ package servercmd
 import (
 	"flag"
 	"fmt"
+	"github.com/tachyne/tachyne-common/access"
 	"log"
 	"os"
 	"os/signal"
@@ -67,6 +68,11 @@ func Main() {
 	srv.Ceiling = *ceiling
 	srv.AttachAddr = *attachAddr
 	srv.AttachToken = os.Getenv("ATTACH_TOKEN")
+	// tachyne-access admin API: /op, /deop, /ban, /ban-ip, /pardon,
+	// /pardon-ip and /banlist write the central policy store when set.
+	if u := os.Getenv("TACHYNE_ACCESS_URL"); u != "" {
+		srv.Access = access.New(u, os.Getenv("TACHYNE_ACCESS_TOKEN"), 0)
+	}
 	srv.HealthAddr = *healthAddr
 	srv.WorldFile = *worldFile
 	srv.DisableHUD = !*hud

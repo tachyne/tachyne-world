@@ -74,6 +74,7 @@ type Identity struct {
 	Roles   []string
 	Props   []proto.Property
 	Edition string
+	IP      string // the client's address, as the gateway saw it
 }
 
 // Remote is a hub-attached player, as the attach layer sees it.
@@ -222,7 +223,7 @@ func session(c net.Conn, cfg Config) {
 	var pre [][]byte
 	welcomed := false
 	if cfg.Join != nil || cfg.Resume != nil {
-		id := Identity{Name: hello.Name, Roles: hello.Roles, Props: hello.Props, Edition: hello.Edition}
+		id := Identity{Name: hello.Name, Roles: hello.Roles, Props: hello.Props, Edition: hello.Edition, IP: hello.IP}
 		parseUUID(hello.UUID, &id.UUID)
 		emit := func(typ byte, payload []byte) {
 			b := frame(typ, payload)

@@ -4,6 +4,7 @@
 package server
 
 import (
+	"github.com/tachyne/tachyne-common/access"
 	"github.com/tachyne/tachyne-world/internal/attach"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
@@ -188,19 +189,20 @@ type Server struct {
 	// PlayerDataFile persists per-player modes; Ops may change game modes.
 	DefaultGamemode int
 	PlayerDataFile  string
-	InventoryFile   string // persists survival inventories (empty = in-memory only)
-	AdvancementFile string // persists advancement grants (empty = in-memory only)
-	StatsFile       string // persists statistics counters (empty = in-memory only)
-	RecipeBookFile  string // persists recipe-book unlocks/settings (empty = in-memory only)
-	ScoreboardFile  string // persists the scoreboard (empty = in-memory only)
-	SignFile        string // persists sign text (empty = in-memory only)
-	BugFile         string // persists in-game /bug reports (empty = in-memory only)
-	CampfireFile    string // persists campfire contents (empty = in-memory only)
-	BannerFile      string // persists placed-banner patterns (empty = in-memory only)
-	BookFile        string // persists book contents (empty = in-memory only)
-	MapFile         string // persists filled maps (empty = in-memory only)
-	ContainerFile   string // persists furnace/chest contents (empty = in-memory only)
-	SpawnPointFile  string // persists bed respawn points (empty = in-memory only)
+	InventoryFile   string         // persists survival inventories (empty = in-memory only)
+	AdvancementFile string         // persists advancement grants (empty = in-memory only)
+	StatsFile       string         // persists statistics counters (empty = in-memory only)
+	RecipeBookFile  string         // persists recipe-book unlocks/settings (empty = in-memory only)
+	ScoreboardFile  string         // persists the scoreboard (empty = in-memory only)
+	SignFile        string         // persists sign text (empty = in-memory only)
+	BugFile         string         // persists in-game /bug reports (empty = in-memory only)
+	CampfireFile    string         // persists campfire contents (empty = in-memory only)
+	BannerFile      string         // persists placed-banner patterns (empty = in-memory only)
+	BookFile        string         // persists book contents (empty = in-memory only)
+	MapFile         string         // persists filled maps (empty = in-memory only)
+	ContainerFile   string         // persists furnace/chest contents (empty = in-memory only)
+	SpawnPointFile  string         // persists bed respawn points (empty = in-memory only)
+	Access          *access.Client // tachyne-access admin API (nil = none): /op, /ban, /ban-ip, /banlist
 	Ops             map[string]bool
 	roleOps         sync.Map // names of players online now whose access roles include op
 

@@ -91,9 +91,31 @@ func (s *Server) handleCommand(p *player, cmd string) {
 	case "whitelist":
 		s.cmdWhitelist(p, fields[1:])
 	case "ban":
-		s.cmdBan(p, fields[1:])
+		if s.Access != nil && s.isOp(p.name) {
+			s.cmdBanAccess(p, fields[1:])
+		} else {
+			s.cmdBan(p, fields[1:])
+		}
 	case "pardon":
-		s.cmdPardon(p, fields[1:])
+		if s.Access != nil {
+			s.cmdPardonAccess(p, fields[1:], false)
+		} else {
+			s.cmdPardon(p, fields[1:])
+		}
+	case "pardon-ip":
+		if s.Access != nil {
+			s.cmdPardonAccess(p, fields[1:], true)
+		} else {
+			p.tell("IP bans live in the access service, which is not configured.")
+		}
+	case "ban-ip":
+		s.cmdBanIP(p, fields[1:])
+	case "banlist":
+		s.cmdBanlist(p, fields[1:])
+	case "op":
+		s.cmdOp(p, fields[1:], true)
+	case "deop":
+		s.cmdOp(p, fields[1:], false)
 	case "refresh": // force-resend every chunk in view (fixes client render loss)
 		p.sendEv(attachproto.Resync{})
 		if p.dim == 2 {
