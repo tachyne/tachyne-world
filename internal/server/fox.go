@@ -154,6 +154,16 @@ func (h *hub) foxWalkValue(dim, x, y, z int) float64 {
 	if below := w.At(x, y-1, z); below == worldgen.GrassBlock || below == worldgen.GrassBlock-1 {
 		return 10
 	}
+	return h.lightPathCost(dim, x, y, z)
+}
+
+// lightPathCost is LevelReader.getPathfindingCostFromLightLevels: the
+// brightness ramp at the cell, less a half.
+func (h *hub) lightPathCost(dim, x, y, z int) float64 {
+	w := h.worldFor(dim)
+	if w == nil {
+		return 0
+	}
 	sky, block := w.LightAt(x, y, z)
 	f := float64(h.rawBrightness(sky, block, -1)) / 15
 	return f/(4-3*f) - 0.5

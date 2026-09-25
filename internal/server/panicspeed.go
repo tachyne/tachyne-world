@@ -156,16 +156,27 @@ func (h *hub) panicTarget(m *mob) (float64, float64, bool) {
 			worldgen.IsLava(w.At(x, y, z)) {
 			continue
 		}
-		v := 0.0
-		if !m.hostile && below == worldgen.GrassBlock {
-			v = 10
-		}
+		v := h.walkTargetValue(m, x, y, z)
 		if v > best {
 			best, found = v, true
 			tx, tz = float64(x)+0.5, float64(z)+0.5
 		}
 	}
 	return tx, tz, found
+}
+
+// walkTargetValue is PathfinderMob.getWalkTargetValue by class: an Animal
+// takes 10 over a grass block and otherwise the light's pathfinding cost
+// (brightness − 0.5), a Monster the negative of that cost (the dark is
+// better), and anything else — a wandering trader, a villager — nothing.
+func (h *hub) walkTargetValue(m *mob, x, y, z int) float64 {
+	switch {
+	case m.etype == entityWanderingTrader || m.etype == entityVillager:
+		return 0
+	case m.hostile:
+		return -h.lightPathCost(m.dim, x, y, z)
+	}
+	return h.foxWalkValue(m.dim, x, y, z)
 }
 
 // panicTargetFree is the random panic spot for a mob whose navigation is not

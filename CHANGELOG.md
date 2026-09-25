@@ -157,6 +157,10 @@ the public history since the project was open-sourced on 2026-07-10.
 - **Snow golems go after monsters.** A snow golem now spots monsters up to
   sixteen blocks away, as in vanilla, and walks toward one that is out of
   throwing range instead of waiting for it to come within ten blocks.
+- **Frightened animals run for the light.** A panicking animal off grass
+  now prefers open, well-lit ground to the dark, as in vanilla, and a
+  frightened fish or rabbit finishes its dash before it goes back to
+  keeping its distance.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
