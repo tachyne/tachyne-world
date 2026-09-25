@@ -144,6 +144,10 @@ the public history since the project was open-sourced on 2026-07-10.
   or other weathering copper now scours it back to bare copper and cleans
   some of the copper around it a stage at a time, with sparks, as in
   vanilla. Waxed copper keeps its look.
+- **Calls for help carry as in vanilla.** When a zombie, wolf, bee or other
+  pack mob is hit, its call now reaches the same box of neighbours as in
+  vanilla — a little further on the diagonals and up and down — and a
+  husk's cry rouses only husks.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
