@@ -85,15 +85,23 @@ func (h *hub) tickSnifferEgg(players map[int32]*tracked, dim, x, y, z int, state
 		if hatch == "1" {
 			next = "2"
 		}
+		h.playSoundDim(players, dim, "minecraft:block.sniffer_egg.crack", sndBlock, cx, cy, cz, 0.7, 0.9+h.rng.Float32()*0.2)
 		h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.SetProperty(info, state, "hatch", next))
-		h.playSoundDim(players, dim, "minecraft:block.sniffer_egg.crack", sndBlock, cx, cy, cz, 0.7, 1)
+		// The new state's onPlace: a BLOCK_PLACE, and the next crack booked.
+		h.vib(dim, freqBlockPlace, x, y, z, 0)
 		h.scheduleSnifferEgg(dim, x, y, z)
 		return true
 	}
+	// SnifferEggBlock.tick: the hatch sound, then Level.destroyBlock without
+	// drops (the break effect and BLOCK_DESTROY), and the baby at the
+	// block's centre facing a random way.
+	h.playSoundDim(players, dim, "minecraft:block.sniffer_egg.hatch", sndBlock, cx, cy, cz, 0.7, 0.9+h.rng.Float32()*0.2)
+	h.toNearbyEv(players, dim, cx, cz, blockBreakEvent(x, y, z, state))
 	h.setBlockAt(players, dim, blockPos{x, y, z}, worldgen.Air)
-	h.playSoundDim(players, dim, "minecraft:block.sniffer_egg.hatch", sndBlock, cx, cy, cz, 0.7, 1)
-	if m := h.spawnSpecies(players, entitySniffer, dim, cx, float64(y), cz); m != nil {
+	h.vib(dim, freqBlockDestroy, x, y, z, 0)
+	if m := h.spawnSpecies(players, entitySniffer, dim, cx, cy, cz); m != nil {
 		m.baby, m.growLeft = true, growUpTicks
+		m.yaw = h.rng.Float32()*360 - 180
 		h.toTracking(players, m.eid, dim, m.x, m.z, metaEv(babyMeta(m.eid, true)))
 	}
 	return true

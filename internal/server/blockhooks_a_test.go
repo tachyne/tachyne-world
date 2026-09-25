@@ -749,3 +749,21 @@ func TestLayingStringAttachesDistantHooks(t *testing.T) {
 		t.Error("both hooks should detach when the line breaks")
 	}
 }
+
+// SnifferEggBlock.onPlace: each crack is a new state placed, so sculk hears
+// a BLOCK_PLACE.
+func TestSculkHearsASnifferEggCrack(t *testing.T) {
+	if !snifferEggOK {
+		t.Skip("no sniffer egg block")
+	}
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		pos := blockPos{7, 180, 4}
+		h.world.SetBlock(pos.x, pos.y, pos.z, snifferEggLo)
+		h.processUpdate(players, 0, pos) // first sight starts the clock
+		h.snifferEggs[simPos{blockPos: pos}] = h.tick.Load()
+		h.processUpdate(players, 0, pos) // the crack
+	})
+	if f != freqBlockPlace {
+		t.Errorf("the sensor heard %d, want BLOCK_PLACE %d", f, freqBlockPlace)
+	}
+}
