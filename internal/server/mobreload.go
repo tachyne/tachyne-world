@@ -168,6 +168,7 @@ func (h *hub) reloadMob(players map[int32]*tracked, sm *savedMob) *mob {
 		m.beeFlower, m.beeHasFlower = unpackPos(*sm.BeeFlower), true
 	}
 	m.beeNectar, m.beeNoNectar = sm.BeeNectar, sm.BeeNoNectar
+	m.shAttach = sm.AttachFace
 	if sm.WanderTarget != nil {
 		m.traderWander, m.traderWandering = unpackPos(*sm.WanderTarget), true
 	}

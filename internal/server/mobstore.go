@@ -149,6 +149,7 @@ type savedMob struct {
 	BeeFlower     *[3]int     `json:"flower_pos,omitempty"`     // bee: flower_pos
 	BeeNectar     bool        `json:"has_nectar,omitempty"`     // bee: HasNectar
 	BeeNoNectar   int         `json:"bee_no_nectar,omitempty"`  // bee: TicksSincePollination, in seconds
+	AttachFace    int8        `json:"attach_face,omitempty"`    // shulker: AttachFace (0 down … 5 east)
 	Lifetime      int         `json:"lifetime,omitempty"`       // endermite: Lifetime
 	TadpoleAge    int         `json:"tadpole_age,omitempty"`    // tadpole: Age
 	Trusted       []string    `json:"trusted,omitempty"`        // fox: trusted player names
@@ -820,6 +821,7 @@ func toSavedMob(m *mob) savedMob {
 		}
 		sm.BeeNectar, sm.BeeNoNectar = m.beeNectar, m.beeNoNectar
 	}
+	sm.AttachFace = m.shAttach
 	if m.traderWandering {
 		w := packPos(m.traderWander)
 		sm.WanderTarget = &w

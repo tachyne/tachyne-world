@@ -143,6 +143,7 @@ var notIDs = map[string]string{
 	"server.mobFile.Bastions[][]":                       whyPos,
 	"server.mobFile.Chunks{}[].Anger":                   whyCount,
 	"server.mobFile.Chunks{}[].Bed[]":                   whyPos,
+	"server.mobFile.Chunks{}[].AttachFace":              whyEnum,
 	"server.mobFile.Chunks{}[].BeeFlower[][]":           whyPos,
 	"server.mobFile.Chunks{}[].BeeHive[][]":             whyPos,
 	"server.mobFile.Chunks{}[].BeeNoNectar":             whyCount,

@@ -383,6 +383,8 @@ type mob struct {
 	glowDark                        int      // glow squid: DATA_DARK_TICKS_REMAINING
 	endermiteLife                   int      // endermite: Lifetime ticks (discarded at 2400 unless persistent)
 	shPeek                          int8     // shulker: DATA_PEEK_ID (0 closed, 30 a glimpse, 100 open)
+	shAttach                        int8     // shulker: DATA_ATTACH_FACE_ID, the face it clings to (0 down … 5 east)
+	shPeekCur                       float64  // shulker: currentPeekAmount, easing toward the peek
 	shPeekTicks                     int      // shulker: ShulkerPeekGoal ticks left
 	shAttack                        int      // shulker: ShulkerAttackGoal attackTime
 	shHurt                          bool     // shulker: hurt since the last update (the teleport roll)

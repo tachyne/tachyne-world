@@ -58,6 +58,10 @@ func (m *mob) shulkerClosed() bool { return m.shPeek == 0 }
 
 // shulkerTick runs each mob update from the hostile switch.
 func (h *hub) shulkerTick(players map[int32]*tracked, m *mob) {
+	if h.shulkerCheckAttach(players, m) {
+		return // it had nothing to cling to and teleported
+	}
+	m.shulkerEasePeek()
 	if m.shHurt { // hurtServer: below half health, one in four teleports
 		m.shHurt = false
 		if float64(m.health) < m.mobAttrs().Value(attr.MaxHealth)*0.5 && h.rng.Intn(4) == 0 {
@@ -103,17 +107,17 @@ func (h *hub) shulkerTick(players map[int32]*tracked, m *mob) {
 
 // shulkerFire is ShulkerAttackGoal's shot: a bullet from the middle of the
 // shulker's box, at rest, that picks its first leg away from the axis the
-// shell is attached along (a shulker here always sits on a floor: Y).
+// shell is attached along.
 func (h *hub) shulkerFire(players map[int32]*tracked, m *mob, t *tracked) {
 	a := h.launchProjectileIn(players, entityShulkerBullet, m.dim, m.x, m.y+0.5, m.z, 0, 0, 0)
 	a.shooter, a.dmg, a.breaks = m.eid, 4, true
 	a.homing, a.levitate = t.p.eid, 10
-	h.shulkerBulletSelect(a, axisY, t)
+	h.shulkerBulletSelect(a, shulkerAxis(m.shAttach), t)
 	h.playSoundDim(players, m.dim, "minecraft:entity.shulker.shoot", sndHostile, m.x, m.y, m.z, 2, (h.rng.Float32()-h.rng.Float32())*0.2+1)
 }
 
 // shulkerTeleport is teleportSomewhere: five tries within eight blocks at
-// an empty cell over a solid floor (it attaches downward).
+// an empty cell with a face to cling to — floor, ceiling or wall.
 func (h *hub) shulkerTeleport(players map[int32]*tracked, m *mob) bool {
 	w := h.worldFor(m.dim)
 	bx, by, bz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
@@ -121,9 +125,14 @@ func (h *hub) shulkerTeleport(players map[int32]*tracked, m *mob) bool {
 		x := bx + h.rng.Intn(2*shulkerTeleportReach+1) - shulkerTeleportReach
 		y := by + h.rng.Intn(2*shulkerTeleportReach+1) - shulkerTeleportReach
 		z := bz + h.rng.Intn(2*shulkerTeleportReach+1) - shulkerTeleportReach
-		if y <= worldgen.MinY || w.At(x, y, z) != worldgen.Air || !worldgen.Collides(w.At(x, y-1, z)) {
+		if y <= worldgen.MinY || !isAnyAir(w.At(x, y, z)) {
 			continue
 		}
+		face := h.shulkerAttachableFace(m.dim, blockPos{x, y, z})
+		if face < 0 {
+			continue
+		}
+		h.setShulkerAttach(players, m, face)
 		h.playSoundDim(players, m.dim, "minecraft:entity.shulker.teleport", sndHostile, m.x, m.y, m.z, 1, 1)
 		m.x, m.y, m.z = float64(x)+0.5, float64(y), float64(z)+0.5
 		m.sx, m.sy, m.sz = m.x, m.y, m.z

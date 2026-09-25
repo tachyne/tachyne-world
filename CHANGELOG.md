@@ -133,6 +133,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Shulkers cling to walls and ceilings.** A shulker whose block goes
+  now turns to hold on to a wall or ceiling beside it, and teleports onto
+  floors, walls or ceilings alike. It fires its bullets away from the face
+  it clings to, and on a floor its shell pushes up as it opens.
 - **Armor stands can be destroyed like vanilla's.** Explosions break them
   and drop what they wear; arrows, tridents, fireballs and wind charges
   knock them down in one hit; fire and burning eat them away (lava sets
