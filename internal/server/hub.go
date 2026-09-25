@@ -650,6 +650,7 @@ type hub struct {
 	// A charged creeper's blast: whatever it kills drops its own head, which
 	// is the only way to a mob head in survival.
 	blastChargedCreeper bool
+	blastSkullDropped   bool                      // Creeper.droppedSkulls: this blast's one head is out
 	itemSpawners        map[int32]*itemSpawnerEnt // ominous item spawners in the air (ominousitem.go)                    // set around a TNT cart's blast: rails survive it
 	paintings           map[int32]*painting       // placed hanging paintings (persisted with containers)
 	itemFrames          map[int32]*itemFrame      // placed item frames (persisted with containers)
