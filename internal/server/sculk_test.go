@@ -320,3 +320,53 @@ func TestCatalystBloomClearsAndCalibratedIsShort(t *testing.T) {
 		t.Fatalf("the catalyst should stop blooming when its tick comes: state %d", got)
 	}
 }
+
+// Wool between a vibration and a sensor hides it (isOccluded), and a block
+// event about wool — placing it, or stepping on a wool carpet — makes none
+// (#dampens_vibrations). A line that only grazes the wool still gets by.
+func TestWoolOccludesAndDampensVibrations(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	sensor := worldgen.BlockBase("sculk_sensor") + 1
+	w.SetBlock(x, y, z, sensor)
+	h.sculkIndexOnBlockChange(0, x, y, z, sensor)
+	pos := simPos{blockPos: blockPos{x, y, z}}
+	wool := worldgen.BlockBase("white_wool")
+	heard := func() bool {
+		_, ok := h.sculkVib[pos]
+		delete(h.sculkVib, pos)
+		return ok
+	}
+
+	h.vib(0, 10, x+4, y, z, 0)
+	if !heard() {
+		t.Fatal("an open line was not heard")
+	}
+	w.SetBlock(x+2, y, z, wool)
+	h.vib(0, 10, x+4, y, z, 0)
+	if heard() {
+		t.Fatal("a vibration through wool was heard")
+	}
+	h.vib(0, 10, x+4, y+2, z, 0) // the line from (x+4,y+2) passes over the wool
+	if !heard() {
+		t.Fatal("a line past the wool, not through it, was occluded")
+	}
+	w.SetBlock(x+2, y, z, worldgen.Air)
+
+	h.vibOn(0, freqBlockPlace, x+3, y, z, 1, wool)
+	if heard() {
+		t.Fatal("placing wool was heard")
+	}
+	carpet := worldgen.BlockBase("white_carpet")
+	w.SetBlock(x+3, y-1, z, worldgen.Stone)
+	w.SetBlock(x+3, y, z, carpet)
+	h.vibStep(0, float64(x)+3.5, float64(y)+0.0625, float64(z)+0.5, 1)
+	if heard() {
+		t.Fatal("a step on a wool carpet was heard")
+	}
+	w.SetBlock(x+3, y, z, worldgen.Air)
+	h.vibStep(0, float64(x)+3.5, float64(y), float64(z)+0.5, 1)
+	if !heard() {
+		t.Fatal("a step on stone was not heard")
+	}
+	_ = players
+}

@@ -2800,12 +2800,14 @@ func (h *hub) onBlock(players map[int32]*tracked, e evBlock) {
 	h.heartIndexOnBlockChange(e.dim, e.x, e.y, e.z, e.state) // a built creaking heart starts ticking
 	// A player edit is a vibration: a break (broken != 0) or a place.
 	if e.broken != 0 {
-		h.gameEvent(e.dim, freqBlockDestroy, e.x, e.y, e.z, e.by)
+		if !inRanges2(e.broken, vibDampers) {
+			h.gameEvent(e.dim, freqBlockDestroy, e.x, e.y, e.z, e.by)
+		}
 	} else if e.state != worldgen.Air {
 		qk := simPos{dim: e.dim, blockPos: blockPos{e.x, e.y, e.z}}
 		if at, ok := h.vibQuiet[qk]; ok && at == h.tick.Load() {
 			delete(h.vibQuiet, qk) // a toggle already made its own vibration
-		} else {
+		} else if !inRanges2(e.state, vibDampers) {
 			h.gameEvent(e.dim, freqBlockPlace, e.x, e.y, e.z, e.by)
 		}
 	}

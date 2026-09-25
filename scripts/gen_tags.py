@@ -33,8 +33,11 @@ TAGS = {
               # hostile2.go: LivingEntity.randomTeleport + Enderman.teleport
               "entities_can_teleport_to", "enderman_does_not_teleport_to",
               # grow.go: StemBlock.randomTick's fruit ground
-              "supports_melon_stem_fruit", "supports_pumpkin_stem_fruit"],
+              "supports_melon_stem_fruit", "supports_pumpkin_stem_fruit",
+              # sculk.go: VibrationSystem occlusion and damping
+              "occludes_vibration_signals", "dampens_vibrations"],
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
+             "dampens_vibrations",  # sculk.go: ItemEntity.dampensVibrations
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin
              # sulfurcube.go: what a sulfur cube swallows, what a baby eats,
              # and which archetype each swallowed block gives it.

@@ -57,6 +57,10 @@ func (h *hub) wardenHeard(dim int, x, y, z float64, src int32) {
 		if dist3(m.x, m.y, m.z, x, y, z) > wardenHearRange {
 			continue
 		}
+		// Wool between the sound and the Warden's head hides it.
+		if vibOccluded(h.worldFor(dim), floorInt(x), floorInt(y), floorInt(z), floorInt(m.x), floorInt(m.y+mobEyeHeight(m)), floorInt(m.z)) {
+			continue
+		}
 		h.wardenAngerAt(m, src, wardenAngerHeard)
 		// onReceiveVibration: not yet angry, it goes to see — unless the
 		// grudge it holds is against somebody else.

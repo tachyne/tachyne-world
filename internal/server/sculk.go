@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -60,10 +61,88 @@ const (
 // vib is a game event in a dimension: the listeners there hear it, and a
 // sensor built in the Nether or the End works as it does at home.
 func (h *hub) vib(dim int, freq int, x, y, z int, src int32) {
+	// A Warden moves without a sound anything hears (Warden.dampensVibrations).
+	if m := h.mobs[src]; m != nil && m.etype == entityWarden {
+		return
+	}
 	// A Warden is a listener in its own right: what it hears within sixteen
 	// blocks it takes personally (Warden's VibrationUser).
 	h.wardenHeard(dim, float64(x)+0.5, float64(y)+0.5, float64(z)+0.5, src)
 	h.gameEvent(dim, freq, x, y, z, src)
+}
+
+// vibOn is vib for an event about a block (placing, breaking, stepping on
+// it): one in #dampens_vibrations — wool, and wool carpets, slabs and
+// stairs — makes none (VibrationSystem.User.isValidVibration).
+func (h *hub) vibOn(dim, freq, x, y, z int, src int32, affected uint32) {
+	if inRanges2(affected, vibDampers) {
+		return
+	}
+	h.vib(dim, freq, x, y, z, src)
+}
+
+var (
+	vibOccluders = worldgen.BlockTag("occludes_vibration_signals")
+	vibDampers   = worldgen.BlockTag("dampens_vibrations")
+)
+
+// vibOccluded is VibrationSystem.Listener.isOccluded: from the centre of
+// the source's cell to the centre of the listener's, a wool block on the
+// line stops the vibration — unless one of the six paths nudged off the
+// source centre gets past (so a line grazing an edge still counts as open).
+func vibOccluded(w *world.World, sx, sy, sz, lx, ly, lz int) bool {
+	to := [3]float64{float64(lx) + 0.5, float64(ly) + 0.5, float64(lz) + 0.5}
+	const nudge = 1e-5
+	for _, d := range supportNeighbours {
+		from := [3]float64{float64(sx) + 0.5 + float64(d[0])*nudge, float64(sy) + 0.5 + float64(d[1])*nudge, float64(sz) + 0.5 + float64(d[2])*nudge}
+		if !lineHits(w, from, to, vibOccluders) {
+			return false
+		}
+	}
+	return true
+}
+
+// lineHits walks the cells a segment passes through (BlockGetter.traverseBlocks,
+// both ends included) and reports whether any is in the ranges.
+func lineHits(w *world.World, from, to [3]float64, rs [][2]uint32) bool {
+	cell := [3]int{floorInt(from[0]), floorInt(from[1]), floorInt(from[2])}
+	end := [3]int{floorInt(to[0]), floorInt(to[1]), floorInt(to[2])}
+	var step [3]int
+	var tMax, tDelta [3]float64
+	for i := 0; i < 3; i++ {
+		d := to[i] - from[i]
+		switch {
+		case d > 0:
+			step[i], tDelta[i] = 1, 1/d
+			tMax[i] = (float64(cell[i]+1) - from[i]) / d
+		case d < 0:
+			step[i], tDelta[i] = -1, -1/d
+			tMax[i] = (float64(cell[i]) - from[i]) / d
+		default:
+			tMax[i], tDelta[i] = math.Inf(1), math.Inf(1)
+		}
+	}
+	for n := 0; n < 256; n++ {
+		if inRanges2(w.At(cell[0], cell[1], cell[2]), rs) {
+			return true
+		}
+		if cell == end {
+			return false
+		}
+		i := 0
+		if tMax[1] < tMax[i] {
+			i = 1
+		}
+		if tMax[2] < tMax[i] {
+			i = 2
+		}
+		if tMax[i] > 1 {
+			return false
+		}
+		cell[i] += step[i]
+		tMax[i] += tDelta[i]
+	}
+	return false
 }
 
 // vibAt is vib at an entity's feet.
@@ -298,7 +377,7 @@ func (h *hub) gameEvent(dim, freq, x, y, z int, src int32) {
 		if _, pending := h.sculkVib[pos]; pending {
 			continue // a listener tracks one vibration at a time
 		}
-		if !h.sculkCanReceive(pos, s, freq) {
+		if !h.sculkCanReceive(pos, s, freq) || vibOccluded(w, x, y, z, pos.x, pos.y, pos.z) {
 			continue
 		}
 		dist := math.Sqrt(d2)
@@ -400,8 +479,20 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 			h.vibAt(t.dim, freqElytraGlide, t.x, t.y, t.z, t.p.eid)
 			continue
 		}
-		h.vibAt(t.dim, freqStep, t.x, t.y, t.z, t.p.eid)
+		h.vibStep(t.dim, t.x, t.y, t.z, t.p.eid)
 	}
+}
+
+// vibStep is the STEP event, which carries the block walked on: wool or a
+// wool carpet underfoot keeps it silent.
+func (h *hub) vibStep(dim int, x, y, z float64, src int32) {
+	fx, fy, fz := floorInt(x), floorInt(y), floorInt(z)
+	w := h.worldFor(dim)
+	on := w.At(fx, fy, fz) // a carpet sits in the feet cell
+	if !inRanges2(on, vibDampers) {
+		on = w.At(fx, floorInt(y-0.2), fz) // getOnPos: the block under the feet
+	}
+	h.vibOn(dim, freqStep, fx, fy, fz, src, on)
 }
 
 func sculkCooldownTicks() uint64 { return sensorCooldownTicks }

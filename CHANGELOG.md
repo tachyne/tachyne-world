@@ -23,6 +23,11 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Wool hides you from sculk.** As in vanilla, a wool block between a
+  sound and a sculk sensor, shrieker or Warden now stops the vibration;
+  placing or breaking wool (and wool carpets, slabs and stairs) makes none,
+  and walking on wool or a wool carpet is silent. Wardens themselves make
+  no vibrations for other listeners.
 - **Wall hanging signs fall when their support goes.** A hanging sign on a
   wall is held from its two sides; it now drops as an item once both are
   gone, as in vanilla, instead of floating. A sign beside another one

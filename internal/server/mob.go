@@ -1162,7 +1162,7 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// gameEvent), throttled like a player's; fliers make none.
 			if (m.x != m.sx || m.z != m.sz) && !m.flies && !flyerSpecies(m.etype) && m.dim == dimOverworld && h.tick.Load() >= h.sculkStep[m.eid] {
 				h.sculkStep[m.eid] = h.tick.Load() + 3
-				h.vibAt(m.dim, freqStep, m.x, m.y, m.z, m.eid)
+				h.vibStep(m.dim, m.x, m.y, m.z, m.eid)
 			}
 			m.sx, m.sy, m.sz = m.x, m.y, m.z
 			h.toTracking(players, m.eid, m.dim, m.x, m.z, entMove(m.eid, m.x, m.y, m.z, m.yaw, 0, m.grounded()))
