@@ -1632,26 +1632,7 @@ func (h *hub) run() {
 			case evEndRefresh:
 				h.onEndRefresh(players, e.eid)
 			case evSummon:
-				h.withSpawnCause(plugin.SpawnCommand, func() {
-					switch {
-					case e.dim != 0: // summon into the operator's own dimension
-						m := h.spawnMobIn(players, e.etype, e.dim, float64(e.x)+0.5, e.y, float64(e.z)+0.5)
-						if m == nil {
-							break // plugin-cancelled
-						}
-						if d := speciesOf(e.etype); d != nil {
-							h.applySpecies(players, m) // roster species: proper stance
-						} else {
-							m.hostile, m.behavior = true, idleBehavior{}
-						}
-					case e.etype == entityCow || e.etype == entityChicken || e.etype == entityPig || e.etype == entitySheep:
-						h.spawnAnimal(players, e.etype, e.x, e.z)
-					case isRosterPassive(e.etype):
-						h.spawnAnimal(players, e.etype, e.x, e.z) // wolves/horses/fish/… spawn peaceful
-					default:
-						h.spawnHostileIn(players, e.etype, dimOverworld, e.x, e.z)
-					}
-				})
+				h.withSpawnCause(plugin.SpawnCommand, func() { h.summonAt(players, e) })
 			case evBlockSound:
 				vol, pitch := e.volume, e.pitch
 				if vol == 0 {

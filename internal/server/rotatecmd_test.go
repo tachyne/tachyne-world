@@ -66,3 +66,35 @@ func TestTeleportTargets(t *testing.T) {
 		t.Error("a non-operator teleported")
 	}
 }
+
+// /summon puts the mob exactly where it was asked (not on the surface below),
+// with its natural setup — a blaze is a blaze in the overworld too.
+func TestSummonAtExactPosition(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "summon minecraft:zombie 5.5 150 5.5")
+	s.handleCommand(alice, "summon blaze 8.5 150 8.5")
+	s.handleCommand(alice, "summon not_a_mob")
+	settle(t, h, logs, "U1")
+	var zy float64
+	var blazeOK bool
+	onHub(t, h, func() {
+		for _, m := range h.mobs {
+			switch m.etype {
+			case entityZombie:
+				zy = m.y
+			case entityBlaze:
+				_, blazeOK = m.behavior.(blazeBehavior)
+			}
+		}
+	})
+	if zy != 150 {
+		t.Errorf("the zombie is at y=%v, want 150", zy)
+	}
+	if !blazeOK {
+		t.Error("a summoned blaze did not get its blaze behaviour")
+	}
+	if !hasLine(linesBetween(logs["alice"], "", "U1"), "Unknown entity: not_a_mob") {
+		t.Errorf("alice's replies: %q", linesBetween(logs["alice"], "", "U1"))
+	}
+}

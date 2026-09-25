@@ -763,3 +763,20 @@ func (h *hub) requiresCustomPersistence(m *mob) bool {
 	}
 	return (isIllager(m.etype) || m.etype == entityRavager || m.etype == entityWitch) && m.raidCenter != (blockPos{})
 }
+
+// summonAt is SummonCommand's spawn: the mob exactly where it was asked for,
+// in the operator's dimension, set up as its natural spawn would be.
+func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
+	switch {
+	case e.etype == entityEnderDragon:
+		h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
+	case e.etype == entitySulfurCube:
+		h.spawnSulfurCube(players, e.dim, e.x, e.y, e.z, false)
+	case netherConfigured(e.etype):
+		h.configureNetherMob(players, h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z))
+	case isRosterPassive(e.etype):
+		h.spawnSpecies(players, e.etype, e.dim, e.x, e.y, e.z)
+	default:
+		h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
+	}
+}

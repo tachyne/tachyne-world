@@ -162,6 +162,20 @@ var summonable = map[string]int{
 	"witch": entityWitch, "ender_dragon": entityEnderDragon,
 }
 
+// summonableType is SummonCommand's entity argument, for the mobs the engine
+// runs: the table above (every roster species joins it at init), and the
+// Nether's own kit.
+func summonableType(name string) (int, bool) {
+	name = strings.TrimPrefix(name, "minecraft:")
+	if et, ok := summonable[name]; ok {
+		return et, true
+	}
+	if et, ok := entityByName[name]; ok && (netherConfigured(et) || et == entitySulfurCube) {
+		return et, true
+	}
+	return 0, false
+}
+
 func (s *Server) cmdGive(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission to give items.")
@@ -242,9 +256,9 @@ func (s *Server) cmdSummon(p *player, args []string) {
 		p.tell("Usage: /summon <mob> [<x> <y> <z>]")
 		return
 	}
-	et, ok := summonable[strings.TrimPrefix(args[0], "minecraft:")]
+	et, ok := summonableType(args[0])
 	if !ok {
-		p.tell("Unknown mob: " + args[0])
+		p.tell("Unknown entity: " + args[0])
 		return
 	}
 	x, y, z := p.x, p.y, p.z+2
@@ -263,7 +277,7 @@ func (s *Server) cmdSummon(p *player, args []string) {
 			z = nz
 		}
 	}
-	s.hub.post(evSummon{etype: et, x: int(x), z: int(z), dim: p.dim, y: y})
+	s.hub.post(evSummon{etype: et, x: x, z: z, dim: p.dim, y: y})
 	s.ok(p, "Summoned "+args[0])
 }
 
@@ -367,10 +381,9 @@ type evXP struct {
 	levels bool // levels, else points
 }
 type evSummon struct {
-	etype int
-	x, z  int
-	dim   int
-	y     float64
+	etype   int
+	x, y, z float64
+	dim     int
 }
 type evSetRule struct {
 	rule string

@@ -73,6 +73,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/summon puts mobs where you ask.** A summoned mob now appears at the
+  exact coordinates given, rather than dropping to the ground below them,
+  in whatever dimension you are in, and Nether mobs (piglins, blazes,
+  ghasts, striders, hoglins, magma cubes) can be summoned with their proper
+  setup anywhere.
 - **/worldborder times in ticks.** As in vanilla, the time for a border
   move is in ticks, or seconds and days with `s` and `d` (`10s`, `1d`); a
   bare number used to be read as seconds. The reply now says whether the
