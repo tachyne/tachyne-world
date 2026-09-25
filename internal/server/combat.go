@@ -674,11 +674,12 @@ func (h *hub) despawnMob(players map[int32]*tracked, m *mob) {
 	for _, d := range drops {
 		h.spawnItemIn(players, m.dim, d.Item, d.Count, m.x, m.y, m.z) // no-ops on count 0
 	}
-	// A death is a frequency-15 vibration; a nearby sculk catalyst consumes the
-	// XP into a bloom instead of dropping orbs.
+	// A death is a frequency-15 vibration; a nearby sculk catalyst takes the
+	// death — blooming, and turning its XP into charge instead of orbs.
 	h.gameEvent(m.dim, freqEntityDie, floorInt(m.x), floorInt(m.y), floorInt(m.z), m.eid)
-	if xp > 0 && h.catalystConsume(players, m, xp) {
-		if k := players[m.lastAttacker]; k != nil {
+	if h.catalystHears(players, m.dim, m.x, m.y, m.z, xp) {
+		// tryAwardItSpreadsAdvancement: only a death that paid charge.
+		if k := players[m.lastAttacker]; k != nil && xp > 0 {
 			h.advance(players, k, "kill_mob_near_sculk_catalyst", advMatch{})
 		}
 		return

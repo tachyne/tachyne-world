@@ -291,6 +291,7 @@ func (h *hub) sculkIndexOnBlockChange(dim, x, y, z int, state uint32) {
 		h.catalysts[pos] = true
 	} else {
 		delete(h.catalysts, pos)
+		delete(h.sculkSpread, pos) // the block entity, and the charge it held, go with it
 	}
 }
 
@@ -454,7 +455,12 @@ func (h *hub) tickSculk(players map[int32]*tracked) {
 		}
 	}
 
-	// 3. STEP events: players moving on the ground, throttled per player.
+	// 3. Catalysts spread the charge they hold (SculkCatalystBlockEntity.serverTick).
+	if len(h.sculkSpread) > 0 {
+		h.tickSculkSpread(players)
+	}
+
+	// 4. STEP events: players moving on the ground, throttled per player.
 	for _, t := range players {
 		if !t.p.onGround {
 			continue
@@ -607,157 +613,10 @@ func (h *hub) wardenSpawnSpot(at simPos) *blockPos {
 }
 
 // ---- catalyst: mob death → sculk spread -------------------------------------
-
-// catalystConsume looks for a sculk catalyst within 8 blocks of a dying mob. If
-// one is found it consumes the mob's XP into a sculk bloom and returns true (the
-// caller then skips the normal XP-orb drop).
-func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
-	if xp <= 0 || len(h.catalysts) == 0 {
-		return false
-	}
-	mx, my, mz := floorInt(m.x), floorInt(m.y), floorInt(m.z)
-	var best *blockPos
-	bestD := 8*8 + 1
-	for pos := range h.catalysts {
-		if pos.dim != m.dim {
-			continue
-		}
-		dx, dy, dz := pos.x-mx, pos.y-my, pos.z-mz
-		if d := dx*dx + dy*dy + dz*dz; d <= 64 && d < bestD {
-			bestD, best = d, &blockPos{pos.x, pos.y, pos.z}
-		}
-	}
-	if best == nil {
-		return false
-	}
-	if s := h.worldFor(m.dim).At(best.x, best.y, best.z); isCatalyst(s) {
-		h.setBlockAt(players, m.dim, *best, catalystWith(true)) // bloom particle
-		h.sculkDue[simPos{dim: m.dim, blockPos: *best}] = h.tick.Load() + 8
-	}
-	h.spreadSculk(players, m.dim, blockPos{mx, my, mz}, xp)
-	return true
-}
+//
+// The catalyst's listener and its spreader live in sculkspread.go.
 
 var sculkReplaceable = worldgen.BlockTag("sculk_replaceable")
-
-// spreadSculk is a bounded stand-in for SculkSpreader: it converts the
-// natural ground (#sculk_replaceable: stone, dirt, sand, …) that air touches
-// near `origin` to sculk (up to the charge), then studs the
-// exposed faces of the new sculk with sculk_vein. Faithful in appearance, not in
-// the per-tick cursor charge model.
-func (h *hub) spreadSculk(players map[int32]*tracked, dim int, origin blockPos, charge int) {
-	w := h.worldFor(dim)
-	cap := charge
-	if cap > 12 {
-		cap = 12 // avoid runaway conversion from a high-XP death
-	}
-	placed := 0
-	// Grow outward in shells until the charge is spent.
-	for r := 0; r <= 3 && placed < cap; r++ {
-		for dx := -r; dx <= r && placed < cap; dx++ {
-			for dz := -r; dz <= r && placed < cap; dz++ {
-				for dy := -1; dy <= 1 && placed < cap; dy++ {
-					if abs(dx)+abs(dy)+abs(dz) != r {
-						continue // one Manhattan shell per radius
-					}
-					p := blockPos{origin.x + dx, origin.y + dy, origin.z + dz}
-					s := w.At(p.x, p.y, p.z)
-					if !inRanges2(s, sculkReplaceable) {
-						continue // SculkBlock.canChangeBlockStateOnSpread: #sculk_replaceable only
-					}
-					if !h.airExposed(dim, p) {
-						continue
-					}
-					h.setBlockAt(players, dim, p, sculkBlockState)
-					placed++
-					h.veinExposedFaces(players, dim, p)
-				}
-			}
-		}
-	}
-}
-
-// isSculkFamily reports whether a state is any sculk block (so spread never
-// re-converts what it already grew, or a sensor/shrieker/catalyst).
-func isSculkFamily(s uint32) bool {
-	return s == sculkBlockState || (s >= sculkVeinBase && s < sculkVeinBase+128) ||
-		isAnySensor(s) || isShrieker(s) || isCatalyst(s)
-}
-
-// airExposed reports whether any of a block's six faces touches air.
-func (h *hub) airExposed(dim int, p blockPos) bool {
-	w := h.worldFor(dim)
-	for _, d := range sixDirs {
-		if w.At(p.x+d.x, p.y+d.y, p.z+d.z) == worldgen.Air {
-			return true
-		}
-	}
-	return false
-}
-
-// veinExposedFaces places sculk_vein in the air cells directly touching a newly
-// grown sculk block, with the face toward the sculk set.
-func (h *hub) veinExposedFaces(players map[int32]*tracked, dim int, p blockPos) {
-	w := h.worldFor(dim)
-	for _, d := range sixDirs {
-		np := blockPos{p.x + d.x, p.y + d.y, p.z + d.z}
-		if w.At(np.x, np.y, np.z) != worldgen.Air {
-			continue
-		}
-		// The vein clings to the face pointing back at the sculk block.
-		if face := veinFaceBit(-d.x, -d.y, -d.z); face != 0 {
-			h.setBlockAt(players, dim, np, sculkVeinBase+veinStateForFaces(face))
-		}
-	}
-}
-
-// veinFaceBit maps a unit direction to sculk_vein's face bit. Face properties in
-// order down,east,north,south,up,west; the state offset packs them (see below).
-func veinFaceBit(dx, dy, dz int) int {
-	switch {
-	case dy < 0:
-		return 1 << 0 // down
-	case dx > 0:
-		return 1 << 1 // east
-	case dz < 0:
-		return 1 << 2 // north
-	case dz > 0:
-		return 1 << 3 // south
-	case dy > 0:
-		return 1 << 4 // up
-	case dx < 0:
-		return 1 << 5 // west
-	}
-	return 0
-}
-
-// veinStateForFaces builds a sculk_vein offset with exactly the given faces set
-// and waterlogged=false. Property order down,east,north,south,up,waterlogged,west
-// (7 bools, last fastest, true-first) → each false-bit adds its place value.
-func veinStateForFaces(faces int) uint32 {
-	// places (true=0,false=1): down=64,east=32,north=16,south=8,up=4,waterlogged=2,west=1
-	off := uint32(0)
-	if faces&(1<<0) == 0 {
-		off += 64 // down false
-	}
-	if faces&(1<<1) == 0 {
-		off += 32 // east false
-	}
-	if faces&(1<<2) == 0 {
-		off += 16 // north false
-	}
-	if faces&(1<<3) == 0 {
-		off += 8 // south false
-	}
-	if faces&(1<<4) == 0 {
-		off += 4 // up false
-	}
-	off += 2 // waterlogged false
-	if faces&(1<<5) == 0 {
-		off += 1 // west false
-	}
-	return off
-}
 
 // flyerSpecies reports a species that moves on the wing (no footsteps).
 func flyerSpecies(etype int) bool {

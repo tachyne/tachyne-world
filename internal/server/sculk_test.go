@@ -87,10 +87,12 @@ func TestSculkCatalystSpreadsOnDeath(t *testing.T) {
 			w.SetBlock(x+dx, y-1, z+dz, worldgen.Stone)
 		}
 	}
-	m := &mob{eid: 9001, dim: 0, x: float64(x) + 0.5, y: float64(y), z: float64(z) + 0.5}
-	if !h.catalystConsume(players, m, 5) {
+	// The mob dies a block from the catalyst: a cursor starting in the
+	// catalyst's own cell would find nothing to spread over.
+	if !h.catalystHears(players, 0, float64(x)+1.5, float64(y), float64(z)+0.5, 5) {
 		t.Fatal("catalyst within 8 blocks should consume the death XP")
 	}
+	stepSculk(h, players, 200) // the charge spreads from the catalyst's ticks
 	sculk := worldgen.BlockBase("sculk")
 	converted := 0
 	for dx := -2; dx <= 2; dx++ {
@@ -384,8 +386,8 @@ func TestCatalystSpareBuiltBlocks(t *testing.T) {
 			w.SetBlock(x+dx, y-1, z+dz, planks)
 		}
 	}
-	m := &mob{eid: 9002, dim: 0, x: float64(x) + 0.5, y: float64(y), z: float64(z) + 0.5}
-	h.catalystConsume(players, m, 5)
+	h.catalystHears(players, 0, float64(x)+1.5, float64(y), float64(z)+0.5, 5)
+	stepSculk(h, players, 400)
 	for dx := -2; dx <= 2; dx++ {
 		for dz := -2; dz <= 2; dz++ {
 			if w.At(x+dx, y-1, z+dz) != planks {

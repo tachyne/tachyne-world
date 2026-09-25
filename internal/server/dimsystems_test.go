@@ -87,6 +87,7 @@ func TestNetherCatalystBloomsOnDeath(t *testing.T) {
 	if h.mobs[m.eid] != nil {
 		t.Fatal("the blaze never finished dying")
 	}
+	stepSculk(h, players, 200) // the charge spreads from the catalyst's ticks
 	sculk := worldgen.BlockBase("sculk")
 	converted := 0
 	for dx := -4; dx <= 6; dx++ {
