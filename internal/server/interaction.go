@@ -249,16 +249,20 @@ func (s *Server) handlePlace(p *player, data []byte) {
 	// A hoe on tillable ground tills it instead of placing anything. Vanilla
 	// runs HoeItem.useOn before BlockItem placement, and a hoe has no block to
 	// place, so this has to come before the item->block lookup below.
-	if s.tryTill(p, off, x, y, z, dir, seq) {
+	// ItemStack.useOn refuses every item's use on a block to a player who
+	// may not build: an adventure player neither tills, flattens, strips,
+	// waxes nor binds a compass.
+	canUseOn := mayBuild(placeMode)
+	if canUseOn && s.tryTill(p, off, x, y, z, dir, seq) {
 		return
 	}
 	// Likewise a shovel flattening ground into a dirt path (ShovelItem.useOn).
-	if s.tryFlatten(p, off, x, y, z, dir, seq) {
+	if canUseOn && s.tryFlatten(p, off, x, y, z, dir, seq) {
 		return
 	}
 	// An axe stripping a log or scraping/un-waxing copper, and honeycomb waxing
 	// copper (AxeItem.useOn / HoneycombItem.useOn) — same slot in the chain.
-	if s.tryAxeUse(p, off, x, y, z, seq) || s.tryHoneycombUse(p, off, x, y, z, seq) || s.tryCompassUse(p, off, x, y, z, seq) {
+	if canUseOn && (s.tryAxeUse(p, off, x, y, z, seq) || s.tryHoneycombUse(p, off, x, y, z, seq) || s.tryCompassUse(p, off, x, y, z, seq)) {
 		return
 	}
 
@@ -750,6 +754,12 @@ func (s *Server) tryUseBlock(p *player, off bool, x, y, z int, seq int32, face i
 			ev = evPlaceRocket{eid: p.eid, x: x, y: y, z: z, face: face, cx: cx, cy: cy, cz: cz, off: off}
 		case isMapItem(held) && isBannerState(state):
 			ev = evMapBanner{eid: p.eid, x: x, y: y, z: z, off: off}
+		}
+		// ItemStack.useOn: a player who may not build (adventure) gets no
+		// item use on a block — only the shears' trim, which is the plant's
+		// own useItemOn, still goes through.
+		if _, trim := ev.(evTrimPlant); ev != nil && !trim && !mayBuild(s.modes.get(p.key())) {
+			ev = nil
 		}
 		if ev != nil {
 			s.hub.post(ev)

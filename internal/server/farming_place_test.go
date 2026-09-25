@@ -219,3 +219,19 @@ func TestShovelDowsesCampfire(t *testing.T) {
 		t.Errorf("unlit campfire changed: %d -> %d", unlit, got)
 	}
 }
+
+// ItemStack.useOn: an adventure player's hoe does nothing to the ground.
+func TestAdventureHoeDoesNotTill(t *testing.T) {
+	s, _, p := breakPlaceServer(t)
+	w := s.world
+	s.modes.set(p.key(), gmAdventure)
+	p.setHotbarSlot(0, itemByName["iron_hoe"])
+	selectSlot(p, 0)
+	x, y, z := 3, 70, 3
+	w.SetBlock(x, y, z, worldgen.BlockBase("dirt"))
+	w.SetBlock(x, y+1, z, worldgen.Air)
+	s.handlePlace(p, placeBody(x, y, z, 1))
+	if got := w.Block(x, y, z); got != worldgen.BlockBase("dirt") {
+		t.Fatalf("an adventure player tilled the dirt into state %d", got)
+	}
+}
