@@ -2889,8 +2889,8 @@ func (h *hub) giveTo(players map[int32]*tracked, t *tracked, item int32, count i
 }
 
 // setBlockLive applies a world-driven block change (bus/plugin): set,
-// broadcast to the dimension's viewers, and schedule simulation (overworld
-// only — block sim is v1 overworld-only, like onBlock).
+// broadcast to the dimension's viewers, and schedule simulation — in every
+// dimension, as onBlock does — with the shape update an observer watches.
 func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state uint32) {
 	old := h.worldFor(dim).At(x, y, z)
 	h.worldFor(dim).SetBlock(x, y, z, state)
@@ -2906,8 +2906,11 @@ func (h *hub) setBlockLive(players map[int32]*tracked, dim, x, y, z int, state u
 	}
 	h.beaconsOnBlockChange(players, dim, x, y, z, state)
 	if dim == dimOverworld {
-		h.rodIndexOnBlockChange(x, y, z, state)
-		h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
+		h.rodIndexOnBlockChange(x, y, z, state) // storms strike only the overworld
+	}
+	h.scheduleAroundIn(dim, blockPos{x, y, z}, 1)
+	if old != state {
+		h.observersSee(players, dim, blockPos{x, y, z}, state)
 	}
 	h.afterRemoval(players, dim, blockPos{x, y, z}, old, state)
 	h.potentSulfurChanged(players, dim, blockPos{x, y, z}, old, state)

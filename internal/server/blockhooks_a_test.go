@@ -570,3 +570,27 @@ func TestSculkHearsAnEmptyDispenser(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_ACTIVATE %d", f, freqBlockActivate)
 	}
 }
+
+// A live world write (a bucket, a lectern, a jukebox…) in the Nether is a
+// shape update a Nether observer sees, as any block change is.
+func TestNetherObserverSeesLiveWrites(t *testing.T) {
+	h := newHub(world.New(1))
+	nw, err := world.NewNether(1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.nether = nw
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	nw.ForceLoad(0, 0, 1)
+	obs := withProps(t, worldgen.BlockBase("observer"), map[string]string{"facing": "east", "powered": "false"})
+	op := blockPos{0, 100, 0}
+	nw.SetBlock(op.x, op.y, op.z, obs)
+	h.obsSeen[simPos{dim: dimNether, blockPos: op}] = worldgen.Air
+	h.setBlockLive(players, dimNether, 1, 100, 0, worldgen.Stone)
+	var ticking bool
+	h.inDim(dimNether, func() { ticking = h.hasScheduledTick(op) })
+	if !ticking {
+		t.Error("the Nether observer should start its pulse when the block it watches changes")
+	}
+}
