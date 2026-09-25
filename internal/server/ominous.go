@@ -97,13 +97,13 @@ func (h *hub) windChargedBurstAt(players map[int32]*tracked, dim int, cx, cy, cz
 // walks up to 15 random cells in a 1-block cube and takes the ones that are
 // replaceable AND sitting on a solid top face, so webs never hang in the air.
 func (h *hub) weaveCobwebs(players map[int32]*tracked, t *tracked) {
-	h.weaveCobwebsAt(players, t.dim, t.x, t.y, t.z)
+	h.weaveCobwebsAt(players, t.dim, t.x, t.y, t.z, true)
 }
 
 // weaveCobwebsAt is the placement itself, for a player or a mob.
-func (h *hub) weaveCobwebsAt(players map[int32]*tracked, dim int, cx, cy, cz float64) {
-	if !h.rules.MobGriefing {
-		return // vanilla gates the block placement on mobGriefing for non-players
+func (h *hub) weaveCobwebsAt(players map[int32]*tracked, dim int, cx, cy, cz float64, player bool) {
+	if !player && !h.rules.MobGriefing {
+		return // WeavingMobEffect.onMobRemoved: a player always webs; a mob only with mob_griefing
 	}
 	want := 2 + h.rng.Intn(2) // randomBetweenInclusive(2, 3)
 	web, _ := worldgen.BlockRange("cobweb")
@@ -149,12 +149,11 @@ func (h *hub) oozeSlimesAt(players map[int32]*tracked, dim int, cx, cy, cz float
 			near++
 		}
 	}
-	// Vanilla caps this against the maxEntityCramming game rule; we have no
-	// such rule, so its default of 24 stands in — the crowd check is what
-	// actually matters, and it is the same check.
+	// numberOfSlimesToSpawn: capped by the max_entity_cramming rule less the
+	// slimes already crowding the spot; a rule under 1 caps nothing.
 	want := oozingSlimeCount
-	if room := maxEntityCramming - near; room < want {
-		want = room
+	if cram := h.rules.MaxCramming; cram >= 1 {
+		want = max(0, min(want, cram-near))
 	}
 	for i := 0; i < want; i++ {
 		s := h.spawnMobIn(players, entitySlime, dim, cx, cy+0.5, cz)
@@ -212,7 +211,7 @@ func (h *hub) ominousOnMobDeath(players map[int32]*tracked, m *mob) {
 		h.windChargedBurstAt(players, m.dim, m.x, m.y, m.z, 0, m.eid)
 	}
 	if _, on := m.effects[effWeaving]; on {
-		h.weaveCobwebsAt(players, m.dim, m.x, m.y, m.z)
+		h.weaveCobwebsAt(players, m.dim, m.x, m.y, m.z, false)
 	}
 	if _, on := m.effects[effOozing]; on {
 		h.oozeSlimesAt(players, m.dim, m.x, m.y, m.z)

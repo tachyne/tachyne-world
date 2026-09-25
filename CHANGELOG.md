@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Weaving and Oozing follow the rules.** A player who dies with Weaving
+  leaves cobwebs even with `mob_griefing` off (only mobs need it), and the
+  slimes Oozing lets out are capped by the `max_entity_cramming` rule, as in
+  vanilla, instead of a fixed 24.
 - **Maces against players.** A falling mace blow on another player now
   counts as a smash ("was smashed by"), and Breach cuts through a player's
   armour as it does a mob's.

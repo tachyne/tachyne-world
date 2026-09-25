@@ -279,3 +279,60 @@ func TestInfestedSpawnsSilverfishOnHurt(t *testing.T) {
 		t.Error("400 hits while infested produced no silverfish at all")
 	}
 }
+
+// Weaving webs a dead player even with mob_griefing off (only a mob's death
+// needs it), and oozing's slime cap follows max_entity_cramming (a rule
+// under 1 caps nothing).
+func TestWeavingAndOozingRules(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.rules.MobGriefing = false
+	players := map[int32]*tracked{}
+	stone, _ := worldgen.BlockRange("stone")
+	w := h.worldFor(0)
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			w.SetBlock(dx, 180, dz, stone)
+		}
+	}
+	web, _ := worldgen.BlockRange("cobweb")
+	count := func() (n int) {
+		for dx := -2; dx <= 2; dx++ {
+			for dy := 0; dy <= 2; dy++ {
+				for dz := -2; dz <= 2; dz++ {
+					if w.At(dx, 181+dy-1, dz) == web {
+						n++
+					}
+				}
+			}
+		}
+		return n
+	}
+	h.weaveCobwebsAt(players, 0, 0.5, 181, 0.5, false)
+	if count() != 0 {
+		t.Fatal("a mob's weaving death webbed with mob_griefing off")
+	}
+	h.weaveCobwebsAt(players, 0, 0.5, 181, 0.5, true)
+	if count() == 0 {
+		t.Fatal("a player's weaving death made no webs with mob_griefing off")
+	}
+
+	slimes := func() (n int) {
+		for _, m := range h.mobs {
+			if m.etype == entitySlime {
+				n++
+			}
+		}
+		return n
+	}
+	h.rules.MaxCramming = 1
+	h.oozeSlimesAt(players, 0, 10.5, 181, 10.5)
+	if n := slimes(); n != 1 {
+		t.Fatalf("cramming 1 let %d slimes out, want 1", n)
+	}
+	h.rules.MaxCramming = 0
+	h.oozeSlimesAt(players, 0, 10.5, 181, 10.5)
+	if n := slimes(); n != 3 {
+		t.Fatalf("cramming 0 should cap nothing: %d slimes, want 3", n)
+	}
+}
