@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Slimes and magma cubes look for you at their own level.** As in
+  vanilla, a slime or magma cube now only notices a player within four
+  blocks above or below it, so one at the bottom of a cliff no longer
+  locks on to you at the top. Once it is after you, it keeps chasing.
 - **The creaking wakes when you look at it.** A creaking used to hunt
   anyone nearby like any other monster. As in vanilla, it now stays idle and
   ambles slowly until a player within 12 blocks looks at it; then it goes
