@@ -142,6 +142,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The Wind Charged death burst is a real wind burst.** Something that
+  dies while Wind Charged now bursts like a wind charge: it swings doors,
+  trapdoors and fence gates, presses buttons, flips levers and rings bells
+  around it, and shoves nearby players and mobs the way a wind charge does.
 - **Weaker potion effects wait their turn.** A mob given a strong, short
   effect over a weaker, longer one of the same kind now keeps the weaker
   one and returns to it when the strong one ends, as players already did.
