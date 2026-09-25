@@ -485,3 +485,18 @@ func TestMobTramplesFarmland(t *testing.T) {
 		t.Errorf("a chicken trampled farmland %d times", n)
 	}
 }
+
+// A mushroom stays on mycelium in any light, on stone only in the dark
+// (MushroomBlock.canSurvive: light under 13).
+func TestMushroomLight(t *testing.T) {
+	w := world.New(1)
+	pos := blockPos{4, 200, 4}
+	w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.BlockBase("mycelium"))
+	if !supported(w, pos, brownMushroomState) {
+		t.Error("a mushroom on mycelium in daylight fell")
+	}
+	w.SetBlock(pos.x, pos.y-1, pos.z, worldgen.Stone)
+	if supported(w, pos, brownMushroomState) {
+		t.Error("a mushroom on stone in full daylight stood")
+	}
+}

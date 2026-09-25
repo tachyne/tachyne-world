@@ -153,6 +153,17 @@ func supported(w *world.World, pos blockPos, state uint32) bool {
 	if state >= snowLayer1 && state <= snowLayer1+7 { // SnowLayerBlock.canSurvive
 		return snowCanStandOn(below())
 	}
+	if state == brownMushroomState || state == redMushroomState {
+		// MushroomBlock.canSurvive: always on mycelium, podzol or nylium;
+		// elsewhere only on an opaque cube and in light under 13 — a
+		// mushroom in open daylight goes at its next neighbour update.
+		b := below()
+		if mushroomOverride[b] {
+			return true
+		}
+		sky, blk := w.LightAt(pos.x, pos.y, pos.z)
+		return max(sky, blk) < 13 && worldgen.IsSolidFull(b)
+	}
 	if state == soulFire { // SoulFireBlock.canSurvive: its soul block below
 		return soulFireBase(below())
 	}
@@ -609,3 +620,17 @@ func bedPartnerStands(w *world.World, pos blockPos, state uint32, info worldgen.
 	return ok && isBed(oi) && sameBlockFamily(o, state) &&
 		worldgen.GetProperty(oi, o, "part") != part && worldgen.GetProperty(oi, o, "facing") == facing
 }
+
+var (
+	// mushroomOverride is #overrides_mushroom_light_requirement.
+	mushroomOverride = func() map[uint32]bool {
+		m := map[uint32]bool{}
+		for _, n := range []string{"mycelium", "podzol", "crimson_nylium", "warped_nylium"} {
+			lo, hi, ok := worldgen.BlockRangeOK(n)
+			for s := lo; ok && s <= hi; s++ {
+				m[s] = true
+			}
+		}
+		return m
+	}()
+)

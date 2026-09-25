@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mushrooms need shade.** As in vanilla, a mushroom stays in bright light
+  only on mycelium, podzol or nylium; anywhere else it needs a light level
+  under 13 and a solid block beneath, or it pops off at its next update.
 - **Mobs crack turtle eggs and light redstone ore.** A mob standing on
   turtle eggs can crack them, as in vanilla (turtles and bats never do,
   and it needs mob griefing), and any mob walking on redstone ore makes it
