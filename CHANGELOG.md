@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Piglins hold a grudge and call their friends.** A piglin you hit stayed
+  angry for ten seconds; as in vanilla it now stays angry for thirty, and
+  the adult piglins around it join the fight. A baby piglin you hit runs
+  away and sends the adults after you.
 - **Arrows stay stuck for a minute.** Arrows and tridents stuck in the
   ground vanished after ten seconds; as in vanilla they now stay for a
   minute, so you have time to pick them up. Arrows and thrown items in

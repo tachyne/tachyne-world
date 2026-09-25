@@ -495,9 +495,13 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 			if m.etype == entityWarden {
 				h.wardenAngerAt(m, t.p.eid, wardenAngerHurt) // ANGRY + 20 at whoever struck
 			}
-			m.anger = spiderAnger                   // a hit spider/enderman retaliates
-			m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
-			m.settled = 0                           // a new target restarts the enderman's daylight clock
+			if m.etype == entityPiglin {
+				h.piglinRetaliate(players, m, t) // PiglinAi.wasHurtBy: 600 ticks, and the others join in
+			} else {
+				m.anger = spiderAnger                   // a hit spider/enderman retaliates
+				m.targetEID, m.unseenTicks = t.p.eid, 0 // HurtByTargetGoal: the attacker, seen or not
+				m.settled = 0                           // a new target restarts the enderman's daylight clock
+			}
 		}
 		if dx, dz := m.x-t.x, m.z-t.z; dx != 0 || dz != 0 {
 			yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)

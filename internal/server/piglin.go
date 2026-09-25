@@ -253,3 +253,39 @@ func (h *hub) piglinHurtByPlayer(players map[int32]*tracked, m *mob) {
 	}
 	m.admireOffUntil = now + piglinAdmireOffTck
 }
+
+// Piglin anger (PiglinAi.setAngerTarget: ANGRY_AT for 600 ticks) and the
+// baby's flight (AVOID_TARGET for 100), in mob-updates.
+const (
+	piglinAngerUpdates   = 600 / mobMoveInterval
+	piglinBabyFleeUpdate = 100 / mobMoveInterval
+)
+
+// piglinRetaliate is the rest of PiglinAi.wasHurtBy for a player's blow: a
+// baby runs from the attacker and rouses the adults around it; an adult
+// holds the grudge for 600 ticks (not a spider's short temper) and rouses
+// them too — every adult piglin within its follow range that has nobody
+// closer turns on the attacker (broadcastAngerTarget).
+func (h *hub) piglinRetaliate(players map[int32]*tracked, m *mob, t *tracked) {
+	if m.baby {
+		m.panic, m.fleeX, m.fleeZ, m.reroute = piglinBabyFleeUpdate, t.x, t.z, 0
+	} else {
+		m.anger, m.targetEID, m.unseenTicks = piglinAngerUpdates, t.p.eid, 0
+		m.hasTarget, m.tx, m.tz = true, t.x, t.z
+	}
+	d := func(o *mob, x, z float64) float64 { return (o.x-x)*(o.x-x) + (o.z-z)*(o.z-z) }
+	h.grid().nearby(m.dim, m.x, m.z, piglinGuardRange, func(o *mob) {
+		if o == m || o.etype != entityPiglin || o.baby || o.dying > 0 {
+			return
+		}
+		// setAngerTargetIfCloserThanCurrent: a piglin already angry at
+		// someone nearer keeps its own fight.
+		if o.anger > 0 && o.targetEID != 0 {
+			if cur := players[o.targetEID]; cur != nil && d(o, cur.x, cur.z) <= d(o, t.x, t.z) {
+				return
+			}
+		}
+		o.anger, o.targetEID, o.unseenTicks = piglinAngerUpdates, t.p.eid, 0
+		o.hasTarget, o.tx, o.tz = true, t.x, t.z
+	})
+}

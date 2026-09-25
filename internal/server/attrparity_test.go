@@ -326,3 +326,30 @@ func TestPiglinRetaliatesAgainstGold(t *testing.T) {
 		t.Fatal("the piglin never hit back at the player in gold who struck it")
 	}
 }
+
+// TestPiglinGrudgeAndBroadcast: PiglinAi.wasHurtBy — the struck adult stays
+// angry at the player 600 ticks, other adult piglins within its follow range
+// join in (broadcastAngerTarget), and a struck baby runs from the attacker.
+func TestPiglinGrudgeAndBroadcast(t *testing.T) {
+	h, players, pg, gold, far := piglinFixture(t)
+	far.x = 400
+	other := h.spawnSpecies(players, entityPiglin, 0, 12.5, 180, 12.5)
+	baby := h.spawnSpecies(players, entityPiglin, 0, 9.5, 180, 6.5) // within the player's reach
+	if other == nil || baby == nil {
+		t.Fatal("no piglins")
+	}
+	other.baby, baby.baby = false, true
+	h.attackMob(players, gold.p.eid, pg.eid)
+	if pg.anger != piglinAngerUpdates || pg.targetEID != gold.p.eid {
+		t.Fatalf("the struck piglin: anger %d target %d, want %d at %d", pg.anger, pg.targetEID, piglinAngerUpdates, gold.p.eid)
+	}
+	if other.targetEID != gold.p.eid || other.anger == 0 {
+		t.Fatalf("a nearby adult should join in: anger %d target %d", other.anger, other.targetEID)
+	}
+	h.tick.Add(20) // past the player's attack cooldown
+	baby.spawnInvuln, baby.invulnTicks = 0, 0
+	h.attackMob(players, gold.p.eid, baby.eid)
+	if baby.panic == 0 {
+		t.Fatalf("a struck baby piglin should run from its attacker (health %v hostile %v retaliates %v anger %d)", baby.health, baby.hostile, baby.retaliates, baby.anger)
+	}
+}
