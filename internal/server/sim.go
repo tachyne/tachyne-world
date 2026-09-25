@@ -330,9 +330,20 @@ func (h *hub) updateFluid(players map[int32]*tracked, dim int, pos blockPos, sta
 			return
 		}
 		if ns != state {
+			newLevel := worldgen.FluidLevel(ns, base)
 			h.setBlockAt(players, dim, pos, ns)
-			h.scheduleAroundIn(dim, pos, delay)
-			state, level = ns, worldgen.FluidLevel(ns, base)
+			// LavaFluid.getSpreadDelay: lava that rises (neither state
+			// falling) waits four times as long for its own next tick, three
+			// times in four — why a lava flow creeps back up so slowly.
+			self := delay
+			if !water && level < 8 && newLevel < 8 && newLevel < level && h.rng.Intn(4) != 0 {
+				self = delay * 4
+			}
+			h.scheduleIn(dim, pos, self)
+			for _, d := range allNeighbors {
+				h.scheduleIn(dim, blockPos{pos.x + d.x, pos.y + d.y, pos.z + d.z}, delay)
+			}
+			state, level = ns, newLevel
 		}
 	}
 

@@ -102,6 +102,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Lava creeps back slowly.** A lava flow that is filling back up now
+  usually waits four times as long between steps, as in vanilla.
 - **The world border holds.** Past the world border you can no longer
   break or place blocks, and mobs and players standing beyond it cannot be
   hit or used, as in vanilla.

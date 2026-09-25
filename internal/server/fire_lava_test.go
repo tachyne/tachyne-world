@@ -96,3 +96,45 @@ func TestNetherLavaRunsFarther(t *testing.T) {
 		t.Errorf("nether lava was no faster: %d ticks to three blocks, overworld %d", ntAt, owAt)
 	}
 }
+
+// LavaFluid.getSpreadDelay: a flowing lava cell that rises waits four times
+// as long for its own next tick, three times in four.
+func TestRisingLavaWaitsLonger(t *testing.T) {
+	slow, n := 0, 80
+	for i := 0; i < n; i++ {
+		h := newHub(world.New(1))
+		h.world.ForceLoad(0, 0, 1)
+		h.rng.Seed(int64(i))
+		players := map[int32]*tracked{}
+		y := 180
+		for x := -2; x <= 3; x++ {
+			for z := -2; z <= 2; z++ {
+				h.world.SetBlock(x, y-1, z, worldgen.Stone)
+			}
+		}
+		h.world.SetBlock(0, y, 0, worldgen.LavaBase)   // a source
+		h.world.SetBlock(1, y, 0, worldgen.LavaBase+6) // a thin flow beside it: it should rise to 2
+		h.pending = map[uint64][]simPos{}
+		now := h.tick.Load()
+		h.updateFluid(players, 0, blockPos{1, y, 0}, worldgen.LavaBase+6)
+		if got := worldgen.FluidLevel(h.world.At(1, y, 0), worldgen.LavaBase); got != 2 {
+			t.Fatalf("the flow went to level %d, want 2", got)
+		}
+		first := uint64(1 << 62)
+		for due, list := range h.pending {
+			for _, sp := range list {
+				if sp.blockPos == (blockPos{1, y, 0}) && due < first {
+					first = due
+				}
+			}
+		}
+		if first-now == 4*uint64(lavaDelay) {
+			slow++
+		} else if first-now != uint64(lavaDelay) {
+			t.Fatalf("next tick in %d, want %d or %d", first-now, lavaDelay, 4*lavaDelay)
+		}
+	}
+	if slow < n/2 || slow == n {
+		t.Fatalf("%d of %d rises waited four times as long, want about three in four", slow, n)
+	}
+}
