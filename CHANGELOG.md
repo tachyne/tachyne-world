@@ -123,6 +123,17 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Ping shows in the tab list.** Each player's connection latency is
+  measured and shown as signal bars, updated every thirty seconds as in
+  vanilla. The F3 ping graph gets its replies, and a client that stops
+  answering is dropped with "Timed out".
+- **The 26.x gamerule editor works.** An operator opening the in-game
+  gamerule screen sees the current values, and the changes they make take
+  effect.
+- **Smaller protocol fixes.** Darkness and nausea fade in when they start
+  instead of snapping on. Renaming or recolouring a boss bar updates it in
+  place. A player standing still reports landing and leaving the ground.
+  The server description shows in the pause menu's server info.
 - **Blazes float.** A blaze rises toward a target above it, bobbing at a
   height it re-picks every few seconds, and sinks slowly instead of
   dropping when it has nothing to climb to.

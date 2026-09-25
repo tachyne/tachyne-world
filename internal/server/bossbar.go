@@ -17,9 +17,8 @@ import (
 // sees theirs again.
 //
 // A new bar is white, a solid progress bar, value 0 of 100, visible, with
-// nobody on it. Changing a bar's name, colour or style re-raises it for its
-// viewers (the boss-bar frame carries a whole bar, not a style patch), which
-// the client shows as the same bar in the same place.
+// nobody on it. Changing a bar's name, colour or style updates it in place
+// for its viewers, as vanilla's UPDATE_NAME / UPDATE_STYLE operations do.
 
 // customBossbar is one bar, in its saved form.
 type customBossbar struct {
@@ -118,14 +117,15 @@ func (h *hub) bossbarsOnJoin(t *tracked) {
 	}
 }
 
-// reraise re-sends a visible bar whole to its viewers.
-func (h *hub) bossbarReraise(players map[int32]*tracked, id string, b *customBossbar) {
+// bossbarUpdate sends a visible bar's in-place change to its viewers:
+// ServerBossEvent.setName → UPDATE_NAME, setColor/setOverlay → UPDATE_STYLE.
+func (h *hub) bossbarUpdate(players map[int32]*tracked, id string, b *customBossbar, op int32) {
 	if !b.Visible {
 		return
 	}
+	ev := attachproto.BossBar{UUID: bossbarUUID(id), Op: op, Title: b.Name, Color: b.Color, Overlay: b.Overlay, Flags: b.Flags}
 	for _, t := range h.bossbarViewers(players, b) {
-		t.p.trySendEv(bossBarRemove(bossbarUUID(id)))
-		t.p.trySendEv(b.addFrame(id))
+		t.p.trySendEv(ev)
 	}
 }
 
@@ -291,7 +291,7 @@ func (h *hub) bossbarSet(players map[int32]*tracked, t *tracked, id string, b *c
 			return "Nothing changed. That's already the name of this bossbar"
 		}
 		b.Name = name
-		h.bossbarReraise(players, id, b)
+		h.bossbarUpdate(players, id, b, attachproto.BossBarTitle)
 		ok(fmt.Sprintf("Custom bossbar %s has been renamed", b.displayName()))
 	case "color":
 		v, has := one()
@@ -303,7 +303,7 @@ func (h *hub) bossbarSet(players map[int32]*tracked, t *tracked, id string, b *c
 			return "Nothing changed. That's already the color of this bossbar"
 		}
 		b.Color = int32(i)
-		h.bossbarReraise(players, id, b)
+		h.bossbarUpdate(players, id, b, attachproto.BossBarStyle)
 		ok(fmt.Sprintf("Custom bossbar %s has changed color", b.displayName()))
 	case "style":
 		v, has := one()
@@ -315,7 +315,7 @@ func (h *hub) bossbarSet(players map[int32]*tracked, t *tracked, id string, b *c
 			return "Nothing changed. That's already the style of this bossbar"
 		}
 		b.Overlay = int32(i)
-		h.bossbarReraise(players, id, b)
+		h.bossbarUpdate(players, id, b, attachproto.BossBarStyle)
 		ok(fmt.Sprintf("Custom bossbar %s has changed style", b.displayName()))
 	case "value", "max":
 		v, has := one()

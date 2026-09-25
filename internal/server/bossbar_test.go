@@ -132,7 +132,8 @@ func TestCommandBossbar(t *testing.T) {
 		t.Errorf("non-op: %q", c)
 	}
 
-	// A styled name and a new colour re-raise the bar; hiding removes it.
+	// A styled name and a new colour update the bar in place (UPDATE_NAME,
+	// UPDATE_STYLE); hiding removes it.
 	s.handleCommand(alice, `bossbar set test name {text:"Boss",color:red,bold:1b}`)
 	s.handleCommand(alice, "bossbar set test color red")
 	s.handleCommand(alice, "bossbar set test visible false")
@@ -146,8 +147,10 @@ func TestCommandBossbar(t *testing.T) {
 	bars = recs["bob"].barFrames()
 	last := bars[len(bars)-1]
 	prev := bars[len(bars)-2]
-	if last.Op != attachproto.BossBarRemove || prev.Op != attachproto.BossBarAdd || prev.Color != attachproto.BossRed || prev.Title != "§r§c§lBoss" {
-		t.Errorf("bob's last frames: %+v %+v", prev, last)
+	name := bars[len(bars)-3]
+	if last.Op != attachproto.BossBarRemove || prev.Op != attachproto.BossBarStyle || prev.Color != attachproto.BossRed ||
+		name.Op != attachproto.BossBarTitle || name.Title != "§r§c§lBoss" {
+		t.Errorf("bob's last frames: %+v %+v %+v", name, prev, last)
 	}
 
 	// Saved with the settings.

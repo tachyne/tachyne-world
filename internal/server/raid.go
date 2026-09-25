@@ -391,8 +391,8 @@ func (h *hub) showRaidBar(players map[int32]*tracked, r *raid, frac float32) {
 	}
 }
 
-// retitleRaid renames the bar (re-raising it for those who see it: the
-// attach bar has no rename op). A no-op when the name is unchanged.
+// retitleRaid renames the bar in place (ServerBossEvent.setName, then the
+// progress). A no-op when the name is unchanged.
 func (h *hub) retitleRaid(players map[int32]*tracked, r *raid, title string, aliveN int) {
 	if r.title == title || (r.title == "" && title == "Raid") {
 		r.title = title
@@ -405,8 +405,8 @@ func (h *hub) retitleRaid(players map[int32]*tracked, r *raid, title string, ali
 	}
 	for eid := range r.shown {
 		if t := players[eid]; t != nil {
-			t.p.trySendEv(bossBarRemove(r.uuid))
-			t.p.trySendEv(bossBarAdd(r.uuid, title, frac, raidBarLook))
+			t.p.trySendEv(bossBarTitle(r.uuid, title))
+			t.p.trySendEv(bossBarHealth(r.uuid, frac))
 		}
 	}
 }

@@ -105,3 +105,8 @@ type evSneak struct {
 }
 
 func (evSneak) isHubEvent() {}
+
+// bossBarTitle renames a bar in place (UPDATE_NAME).
+func bossBarTitle(uuid [16]byte, title string) attachproto.BossBar {
+	return attachproto.BossBar{UUID: uuid, Op: attachproto.BossBarTitle, Title: title}
+}
