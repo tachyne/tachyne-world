@@ -66,14 +66,15 @@ func TestShulkerBulletHasNoAge(t *testing.T) {
 	}
 }
 
-// Thrown litter keeps its transient lifetime.
-func TestSnowballKeepsItsLifetime(t *testing.T) {
+// ThrowableProjectile has no lifetime either: an old snowball still in the
+// air over loaded ground flies on until it hits something.
+func TestSnowballHasNoLifetime(t *testing.T) {
 	h, players, pl := breezeRig(t)
 	a := agedProjectile(h, players, entitySnowball, pl.p.eid)
 	h.tick.Add(1)
 	h.updateArrows(players)
-	if h.arrows[a.eid] != nil {
-		t.Fatal("an aged snowball did not expire")
+	if h.arrows[a.eid] == nil && !a.stuck {
+		t.Fatal("an aged snowball expired in flight over loaded ground")
 	}
 }
 

@@ -17,7 +17,6 @@ const (
 	arrowSpeed     = 1.6  // launch speed, blocks/tick (vanilla skeleton bow)
 	arrowDrag      = 0.99 // per-tick air drag
 	arrowDamage    = 3    // hearts×2 before armor (vanilla skeleton ~1-4)
-	arrowLifeTicks = 200  // flying or stuck, gone after 10 s (transient litter)
 	arrowHitRadius = 0.5  // horizontal hit cylinder (player 0.3 + arrow slack)
 
 	parchedWeaknessSecs = 30 // Parched arrows: WEAKNESS 600 ticks (vanilla behavior)
@@ -41,8 +40,9 @@ type arrowEntity struct {
 	uuid       [16]byte
 	x, y, z    float64
 	vx, vy, vz float64
-	dim        int  // dimension the projectile flies in
-	stuck      bool // hit a block — hold position until despawn
+	dim        int    // dimension the projectile flies in
+	stuck      bool   // hit a block — hold position until despawn
+	stuckAt    uint64 // the tick it stuck: AbstractArrow.tickDespawn counts life only in the ground
 	born       uint64
 	sx, sy, sz float64 // last broadcast position (relative-move baseline)
 
@@ -294,11 +294,23 @@ func (h *hub) projectileEnds(players map[int32]*tracked, a *arrowEntity, now uin
 		return false
 	case a.etype == entityShulkerBullet:
 		return h.rules.Difficulty == diffPeaceful || !h.projectileChunkLoaded(a)
-	case a.etype == entityTrident && a.pickupStack.item != 0 && !a.noPickup:
-		return false // ThrownTrident.tickDespawn: a trident its thrower can pick up never despawns
+	case a.stuck && a.etype == entityTrident && a.pickupStack.item != 0 && !a.noPickup && a.loyalty > 0:
+		return false // ThrownTrident.tickDespawn: pickup ALLOWED and Loyalty — it never despawns
+	case a.stuck:
+		return now-a.stuckAt >= arrowGroundLifeTicks // AbstractArrow.tickDespawn: a minute in the ground
 	}
-	return now-a.born >= arrowLifeTicks
+	// In flight nothing ages: an arrow or a throwable ends by hitting
+	// something, 64 below the world (Entity.checkBelowWorld), or — after its
+	// first ten seconds, the allowance every flight had before — once it is
+	// out over chunks nobody has loaded, where vanilla would freeze it.
+	return a.y < float64(worldgen.MinY-64) || (now-a.born >= arrowFlightGrace && !h.projectileChunkLoaded(a))
 }
+
+// arrowFlightGrace is how long a flight may cross unloaded ground.
+const arrowFlightGrace = 200
+
+// arrowGroundLifeTicks is AbstractArrow.tickDespawn's 1200.
+const arrowGroundLifeTicks = 1200
 
 // projectileAges reports whether a projectile keeps the transient
 // lifetime; the ageless ones end at the edge of the loaded world instead.
@@ -439,7 +451,7 @@ func (h *hub) updateArrows(players map[int32]*tracked) {
 				if a.loyalty > 0 { // a loyal trident bounces off the wall and flies home
 					a.returning = true
 				} else {
-					a.stuck = true // freeze just short of the face it struck
+					a.stuck, a.stuckAt = true, now // freeze just short of the face it struck
 				}
 				h.playSoundDim(players, a.dim, "minecraft:entity.arrow.hit", sndNeutral, a.x, a.y, a.z, 1, 1.2)
 				break

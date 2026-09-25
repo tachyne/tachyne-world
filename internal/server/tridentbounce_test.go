@@ -62,17 +62,30 @@ func TestTridentDropsAfterStrikingAVehicle(t *testing.T) {
 	throwTridentAt(t, h, players, pl)
 }
 
-// A trident its thrower can pick up never despawns (ThrownTrident.tickDespawn).
-func TestStuckTridentDoesNotDespawn(t *testing.T) {
+// ThrownTrident.tickDespawn spares only a trident that can be picked up AND
+// has Loyalty (which flies home anyway); a plain trident in the ground is an
+// arrow: it lasts a minute there, not the old ten seconds.
+func TestStuckTridentLastsAMinute(t *testing.T) {
 	h, players, pl := breezeRig(t)
 	pl.pitch = 40
 	a := throwTridentAt(t, h, players, pl)
 	pl.x, pl.z = 30, 30 // walk away from it
-	for i := 0; i < arrowLifeTicks+20; i++ {
+	for i := 0; i < 400 && !a.stuck; i++ {
+		h.tick.Add(1)
+		h.updateArrows(players)
+	}
+	for i := 0; i < 400; i++ {
 		h.tick.Add(1)
 		h.updateArrows(players)
 	}
 	if h.arrows[a.eid] == nil {
-		t.Fatal("a thrown trident lying in the ground despawned")
+		t.Fatal("a thrown trident lying in the ground despawned well before a minute")
+	}
+	for i := 0; i < arrowGroundLifeTicks; i++ {
+		h.tick.Add(1)
+		h.updateArrows(players)
+	}
+	if h.arrows[a.eid] != nil {
+		t.Fatal("a trident without Loyalty despawns after a minute in the ground")
 	}
 }

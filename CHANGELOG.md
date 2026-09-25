@@ -11,6 +11,14 @@ and dependency-bump commits are collapsed into the feature they delivered. The
 format follows [Keep a Changelog](https://keepachangelog.com/). This log covers
 the public history since the project was open-sourced on 2026-07-10.
 
+## 2026-09-25
+
+### Fixed
+- **Arrows stay stuck for a minute.** Arrows and tridents stuck in the
+  ground vanished after ten seconds; as in vanilla they now stay for a
+  minute, so you have time to pick them up. Arrows and thrown items in
+  flight no longer run out of time before they land.
+
 ## 2026-09-24
 
 ### Added

@@ -67,12 +67,17 @@ func TestArrowSticksInTerrainAndExpires(t *testing.T) {
 	if !a.stuck {
 		t.Fatal("arrow fired into terrain must stick")
 	}
-	for i := 0; i < arrowLifeTicks; i++ {
+	for i := 0; i < arrowGroundLifeTicks-1; i++ {
 		h.tick.Add(1)
 		h.updateArrows(players)
 	}
+	if len(h.arrows) != 1 {
+		t.Fatal("a stuck arrow lasts a minute in the ground (AbstractArrow.tickDespawn)")
+	}
+	h.tick.Add(1)
+	h.updateArrows(players)
 	if len(h.arrows) != 0 {
-		t.Fatal("a stuck arrow must despawn after its lifetime")
+		t.Fatal("a stuck arrow must despawn after 1200 ticks in the ground")
 	}
 }
 
