@@ -769,6 +769,9 @@ func (h *hub) arrowHitsMob(players map[int32]*tracked, a *arrowEntity, px, py, p
 				}
 			} else if !m.hostile && panicsAt(m, projectileDamageOf(a)) {
 				m.panic, m.fleeX, m.fleeZ = h.panicFor(m), a.x, a.z
+			} else if shooter := players[a.shooter]; m.etype == entityZombifiedPiglin && shooter != nil && a.playerShot {
+				h.zombifiedPiglinAngerAt(m, shooter) // shot: the archer is the grudge,
+				h.alertZombifiedPiglins(m, shooter)  // and the pack is told (setAlertOthers)
 			} else {
 				m.anger = spiderAnger
 				if shooter := players[a.shooter]; shooter != nil && a.playerShot {

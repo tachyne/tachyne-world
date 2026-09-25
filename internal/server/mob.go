@@ -419,6 +419,9 @@ type mob struct {
 	wardenDisturb                   blockPos   // warden: DISTURBANCE_LOCATION (where it goes to look)
 	wardenDisturbTil                uint64     // …remembered until this tick
 	wardenTouchTil                  uint64     // warden: TOUCH_COOLDOWN
+	zpHeld                          bool       // zombified piglin: anger held while it has a target
+	zpAlertIn                       int        // …updates to its next pack call (ALERT_INTERVAL)
+	zpSoundIn                       int        // …ticks to its first angry grunt (FIRST_ANGER_SOUND_DELAY)
 	playMate                        int32      // baby villager: the child it is chasing (0 = none)
 	playFlee                        bool       // …or running away from one, toward
 	playX, playZ                    float64    // …this spot
@@ -1167,6 +1170,9 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			h.frogLaySpawn(players, m) // a pregnant frog drops its clutch on the water beside it
 		}
 		h.updateAggression(players, m) // the zombie family's arms go up while it chases
+		if m.etype == entityZombifiedPiglin {
+			h.zombifiedPiglinAngerTick(players, m) // the angry pace and the first grunt
+		}
 		if m.etype == entityWolf {
 			h.begStep(players, m) // head tilt at a held bone or meat (look only)
 		}

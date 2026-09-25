@@ -141,6 +141,10 @@ func (h *hub) alertKin(m *mob, t *tracked) {
 			h.provoke(o, t) // wolves, bees, pandas: the pack turns
 			return
 		}
+		if o.etype == entityZombifiedPiglin {
+			h.zombifiedPiglinAngerAt(o, t) // the call starts its grudge too
+			return
+		}
 		o.targetEID, o.unseenTicks, o.anger = t.p.eid, 0, spiderAnger
 		o.hasTarget, o.tx, o.tz = true, t.x, t.z
 	})

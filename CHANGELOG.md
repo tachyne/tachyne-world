@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Zombified piglins hold a grudge the vanilla way.** Hit one and it stays
+  angry for as long as it can see you and 20 to 39 seconds after, instead
+  of a fixed time; it no longer turns on other players it was never angry
+  at. While it fights it calls the rest of the pack in again every few
+  seconds, including latecomers, gives its angry grunt, and moves a little
+  faster. Shooting one now rouses the pack too.
 - **Silverfish finish their walk before burrowing.** A silverfish could
   vanish into a stone block partway through a stroll; as in vanilla, it now
   only burrows in when it has stopped.

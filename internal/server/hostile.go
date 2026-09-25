@@ -411,6 +411,10 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 		m.anger = 200 // hunts ~20 s per provocation (refreshed while stared at)
 		m.settled = 0 // targetChangeTime: the daylight flight waits 600 ticks from here
 	}
+	if m.etype == entityZombifiedPiglin {
+		h.zombifiedPiglinTarget(players, m) // its attacker, then whoever it is angry at
+		return
+	}
 	// Neutral species (endermen) never START a fight — anger from a hit (or
 	// the stare above) does.
 	if m.neutral {
