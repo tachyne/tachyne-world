@@ -41,7 +41,7 @@ const (
 	airDrainPerSec     = 20  // 1/tick submerged (vanilla)
 	airRefillPerSec    = 80  // 4/tick out of water (vanilla)
 	drownDamagePerSec  = 2   // 2 HP/s once the air supply is empty
-	lavaDamagePerSec   = 8   // vanilla lava ≈ 4 HP / 0.5 s (fire-after-exit not modelled)
+	lavaHurtDamage     = 4   // Entity.lavaHurt: 4 a hit, two hits a second
 	cactusDamagePerSec = 1   // approx (vanilla 1 HP / 0.5 s on contact)
 
 	metaIndexAir = 1 // entity-metadata index of the air supply
@@ -195,13 +195,11 @@ func (h *hub) survivalTick(players map[int32]*tracked) {
 	}
 }
 
-// environmentDamage applies contact hazards once per survival second: the air
-// supply drains while the head is submerged (drowning at 0), lava burns fast, and
-// touching an adjacent cactus stings. Reads blocks through the edit overlay so
-// player-built hazards count. Each h.damage may kill, so callers re-check t.dead.
+// environmentDamage is the once-a-second part of the environment: the air
+// supply drains while the head is submerged (drowning at 0). The contact
+// hazards (lava, fire, cactus) hit twice a second in playerContactTick.
 func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
-	feet := int(math.Floor(t.y))
 	eyeY := int(math.Floor(t.y + 1.5))
 
 	// Drowning: eyes in water deplete the breath supply; empty → 2 HP/s.
@@ -230,12 +228,31 @@ func (h *hub) environmentDamage(players map[int32]*tracked, t *tracked) {
 	if t.dead {
 		return
 	}
+	// Lava, fire, campfire and cactus hurt in playerContactTick.
+}
+
+// playerContactTick is the contact hazards' hits for players, at the 10-tick
+// cadence the damage cooldown allows — two hits a second, as in vanilla —
+// with each hazard's per-hit amount: lava 4 (Entity.lavaHurt), fire 1 or
+// soul fire 2, a lit campfire 1 or 2, cactus 1.
+func (h *hub) playerContactTick(players map[int32]*tracked) {
+	for _, t := range players {
+		if t.dead || !isSurvival(t.gamemode) {
+			continue
+		}
+		h.contactDamage(players, t)
+	}
+}
+
+func (h *hub) contactDamage(players map[int32]*tracked, t *tracked) {
+	fx, fz := int(math.Floor(t.x)), int(math.Floor(t.z))
+	feet := int(math.Floor(t.y))
 	// Lava: standing in it (feet or body) burns fast — and leaves you alight.
 	// Fire resistance makes lava a warm bath (vanilla).
 	if t.hasEffect(effFireRes) == 0 &&
 		(worldgen.IsLava(h.worldFor(t.dim).At(fx, feet, fz)) || worldgen.IsLava(h.worldFor(t.dim).At(fx, feet+1, fz))) {
 		h.setBurning(players, t, lavaFireSecs)
-		if h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{}); t.dead {
+		if h.hurtBy(players, t, lavaHurtDamage, dtLava, deathCause{}); t.dead {
 			return
 		}
 	}

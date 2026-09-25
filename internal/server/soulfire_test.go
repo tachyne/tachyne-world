@@ -25,7 +25,7 @@ func TestSoulFireBurnsTwice(t *testing.T) {
 		m := h.spawnMob(players, entityCow, 3.5, 180, 3.5)
 		m.spawnInvuln = 0
 		before := m.health
-		h.mobEnvironment(players)
+		h.mobContactTick(players)
 		if got := before - m.health; got != c.want {
 			t.Errorf("state %d: a cow standing in it lost %d health, want %d", c.fire, got, c.want)
 		}

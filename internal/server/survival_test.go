@@ -130,9 +130,9 @@ func TestLavaDamage(t *testing.T) {
 	pl.food = 10                            // below regen threshold, so damage isn't masked
 	w.SetBlock(0, 70, 0, worldgen.LavaBase) // feet in lava
 	before := pl.health
-	h.survivalTick(players)
-	if want := before - lavaDamagePerSec; pl.health != want {
-		t.Fatalf("lava should deal %d: health %v -> %v (want %v)", lavaDamagePerSec, before, pl.health, want)
+	h.playerContactTick(players)
+	if want := before - lavaHurtDamage; pl.health != want {
+		t.Fatalf("lava should deal %d: health %v -> %v (want %v)", lavaHurtDamage, before, pl.health, want)
 	}
 }
 
@@ -146,7 +146,7 @@ func TestCactusDamage(t *testing.T) {
 	pl.food = 10                    // below regen threshold, so damage isn't masked
 	w.SetBlock(1, 70, 0, cactusMin) // cactus in the neighbouring column at feet
 	before := pl.health
-	h.survivalTick(players)
+	h.playerContactTick(players)
 	if want := before - cactusDamagePerSec; pl.health != want {
 		t.Fatalf("adjacent cactus should deal %d: health %v -> %v", cactusDamagePerSec, before, pl.health)
 	}
@@ -323,5 +323,27 @@ func TestPeacefulRegenExhaustionCapAlwaysEdible(t *testing.T) {
 	}
 	if effectNames["hunger"] != effHunger {
 		t.Error("/effect hunger unknown")
+	}
+}
+
+// TestLavaHitsTwiceASecond: Entity.lavaHurt deals 4 a hit, and the damage
+// cooldown lets a hit land every 10 ticks — 8 a second, two hits. Our pass
+// runs every 10 ticks at 4 a hit (it ran once a second, which halved every
+// contact hazard).
+func TestLavaHitsTwiceASecond(t *testing.T) {
+	w := world.New(1)
+	h := newHub(w)
+	pl := testTracked()
+	players := map[int32]*tracked{1: pl}
+	pl.x, pl.y, pl.z = 0.5, 70, 0.5
+	pl.food = 10
+	w.SetBlock(0, 70, 0, worldgen.LavaBase)
+	before := pl.health
+	for i := 0; i < 2; i++ { // one second: two contact passes, 10 ticks apart
+		h.playerContactTick(players)
+		h.tick.Add(10)
+	}
+	if got := before - pl.health; got != 2*lavaHurtDamage {
+		t.Fatalf("a second in lava dealt %v, want %v (two hits of %v)", got, 2*lavaHurtDamage, lavaHurtDamage)
 	}
 }

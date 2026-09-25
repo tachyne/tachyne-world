@@ -164,41 +164,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 			inLava, inFire = false, false
 		}
 
-		if inLava {
-			m.ignite(lavaAfterburn)
-			h.hurtMobOf(players, m, lavaDmgPerSec, dtLava)
-			if m.health <= 0 {
-				continue
-			}
-		} else if inFire {
-			m.ignite(fireAfterburn)
-			h.hurtMobOf(players, m, fireContactDamage(feet, head), dtInFire) // soul fire burns 2
-			if m.health <= 0 {
-				continue
-			}
-		}
-		// CampfireBlock.entityInside: a lit campfire burns any living thing
-		// standing in it (1, soul 2) — fire, so the fire-immune walk over it.
-		if feet != 0 && isCampfireBlock(feet) && boolProp(feet, "lit") && h.rules.FireDamage &&
-			!fireImmune[m.etype] && !m.resistsFire() {
-			dmg := 1.0
-			if isSoulCampfire(feet) {
-				dmg = 2
-			}
-			h.hurtMobOf(players, m, dmg, dtCampfire)
-			if m.health <= 0 {
-				continue
-			}
-		}
-		// CactusBlock.entityInside: every entity whose box reaches a cactus
-		// takes 1 — the cactus's collision is inset a sixteenth, so a mob
-		// pressed against its side is inside its cell.
-		if b := m.box(); h.boxTouchesCactus(m.dim, m.x, m.y, m.z, b.w/2, b.h) {
-			h.hurtMobOf(players, m, cactusDamagePerSec, dtCactus)
-			if m.health <= 0 {
-				continue
-			}
-		}
+		// Lava, fire, campfire and cactus contact hurt in mobContactTick.
 
 		// Afterburn clock (lava/fire/daylight all feed it). Water or rain douses.
 		doused := worldgen.HoldsWater(feet) || worldgen.HoldsWater(head) ||
@@ -301,3 +267,61 @@ func (m *mob) effectiveGravity(vy float64) float64 {
 
 // slowFallingGravity is Slow Falling's ceiling on a falling entity's gravity.
 const slowFallingGravity = 0.01
+
+// mobContactTick is the contact hazards' entityInside hits for mobs, run at
+// the 10-tick cadence the damage cooldown allows — two hits a second, as in
+// vanilla — at each hazard's per-hit amount: lava 4 (Entity.lavaHurt), fire
+// 1 or soul fire 2, a lit campfire 1 or 2, cactus 1.
+func (h *hub) mobContactTick(players map[int32]*tracked) {
+	for _, m := range h.mobs {
+		if m.health <= 0 || m.dying > 0 {
+			continue
+		}
+		w := h.worldFor(m.dim)
+		if w == nil {
+			continue
+		}
+		fx, fy, fz := int(math.Floor(m.x)), int(math.Floor(m.y)), int(math.Floor(m.z))
+		feet, head := w.At(fx, fy, fz), w.At(fx, int(math.Floor(m.y+mobEyeHeight(m))), fz)
+		inLava := worldgen.IsLava(feet) || worldgen.IsLava(head)
+		inFire := isFire(feet) || isFire(head)
+		if fireImmune[m.etype] {
+			inLava, inFire = false, false
+		}
+		if inLava {
+			m.ignite(lavaAfterburn)
+			h.hurtMobOf(players, m, lavaDmgPerSec, dtLava)
+			if m.health <= 0 {
+				continue
+			}
+		} else if inFire {
+			m.ignite(fireAfterburn)
+			h.hurtMobOf(players, m, fireContactDamage(feet, head), dtInFire) // soul fire burns 2
+			if m.health <= 0 {
+				continue
+			}
+		}
+		// CampfireBlock.entityInside: a lit campfire burns any living thing
+		// standing in it (1, soul 2) — fire, so the fire-immune walk over it.
+		if feet != 0 && isCampfireBlock(feet) && boolProp(feet, "lit") && h.rules.FireDamage &&
+			!fireImmune[m.etype] && !m.resistsFire() {
+			dmg := 1.0
+			if isSoulCampfire(feet) {
+				dmg = 2
+			}
+			h.hurtMobOf(players, m, dmg, dtCampfire)
+			if m.health <= 0 {
+				continue
+			}
+		}
+		// CactusBlock.entityInside: every entity whose box reaches a cactus
+		// takes 1 — the cactus's collision is inset a sixteenth, so a mob
+		// pressed against its side is inside its cell.
+		if b := m.box(); h.boxTouchesCactus(m.dim, m.x, m.y, m.z, b.w/2, b.h) {
+			h.hurtMobOf(players, m, cactusDamagePerSec, dtCactus)
+			if m.health <= 0 {
+				continue
+			}
+		}
+	}
+}

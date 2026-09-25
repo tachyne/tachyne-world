@@ -30,7 +30,7 @@ func TestCactusHurtsMobsAndEatsItems(t *testing.T) {
 	cow := h.spawnMob(players, entityCow, float64(x)+1+0.45, float64(y), float64(z)+0.5)
 	cow.spawnInvuln = 0
 	before := cow.health
-	h.mobEnvironment(players)
+	h.mobContactTick(players)
 	if cow.health >= before {
 		t.Errorf("a cow against a cactus should be hurt: %v → %v", before, cow.health)
 	}
@@ -50,7 +50,7 @@ func TestCactusHurtsMobsAndEatsItems(t *testing.T) {
 	pig := h.spawnMob(players, entityPig, float64(x)+3.5, float64(y), float64(z)+3.5)
 	pig.spawnInvuln = 0
 	before = pig.health
-	h.mobEnvironment(players)
+	h.mobContactTick(players)
 	if pig.health >= before {
 		t.Errorf("a pig in a lit campfire should burn: %v → %v", before, pig.health)
 	}

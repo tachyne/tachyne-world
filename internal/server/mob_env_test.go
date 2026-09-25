@@ -14,7 +14,7 @@ func TestMobLavaDamageAndIgnite(t *testing.T) {
 	m.health = 50
 	h.world.SetBlock(200, 70, 200, worldgen.LavaBase) // stand it in lava
 	before := m.health
-	h.mobEnvironment(players)
+	h.mobContactTick(players) // lava's hit (and its ignite) is the contact pass
 	if m.health >= before {
 		t.Fatalf("mob in lava took no damage (%d -> %d)", before, m.health)
 	}

@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Lava, fire, campfires and cactus hurt as fast as in vanilla.** These
+  hazards hit once a second, half vanilla's rate. They now hit twice a
+  second at vanilla's damage per hit, for players and mobs alike. Lava
+  cauldrons had been doing double damage to players; they now match lava.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs

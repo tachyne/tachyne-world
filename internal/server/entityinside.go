@@ -207,7 +207,7 @@ func (h *hub) playerInsideTick(players map[int32]*tracked) {
 				// LavaCauldronBlock.entityInside: lavaIgnite + lavaHurt.
 				if t.hasEffect(effFireRes) == 0 {
 					h.setBurning(players, t, lavaFireSecs)
-					h.hurtBy(players, t, lavaDamagePerSec, dtLava, deathCause{})
+					h.hurtBy(players, t, lavaHurtDamage, dtLava, deathCause{})
 				}
 			case onFloor && s == magmaBlockState:
 				// Fire Resistance and Frost Walker boots spare you. Vanilla

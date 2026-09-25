@@ -15,7 +15,7 @@ func TestLavaSetsAfterburnAndWaterClears(t *testing.T) {
 	pl.food = 10
 	players := map[int32]*tracked{1: pl}
 	w.SetBlock(0, 70, 0, worldgen.LavaBase)
-	h.survivalTick(players)
+	h.playerContactTick(players) // lava's hit (and its ignite) is the contact pass
 	if pl.fireSecs != lavaFireSecs {
 		t.Fatalf("lava must set %ds of afterburn, got %d", lavaFireSecs, pl.fireSecs)
 	}

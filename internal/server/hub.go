@@ -1158,7 +1158,9 @@ func (h *hub) run() {
 			h.updateMobEffects(players)   // …and the mobs', on the same cadence
 			h.riptideSpinAttacks(players) // a riptiding player strikes what it passes through
 			if age%10 == 0 {
-				h.fastRegen(players) // saturation regen at vanilla's 10-tick cadence
+				h.fastRegen(players)         // saturation regen at vanilla's 10-tick cadence
+				h.playerContactTick(players) // lava, fire, campfire, cactus: two hits a second
+				h.mobContactTick(players)
 			}
 			h.phases.lap(phaseEntities)
 			if age%survivalTickN == 0 {
