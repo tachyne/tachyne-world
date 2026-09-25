@@ -259,3 +259,30 @@ func TestStatuePassesAxeAndHoneycombToTheItem(t *testing.T) {
 		t.Errorf("axe on a waxed statue: %q, want the wax off", got)
 	}
 }
+
+// CopperGolemOxidationLevels: a weathered or oxidized golem hurts, dies and
+// steps in its own voice; unaffected and exposed share the plain one.
+func TestCopperGolemVoiceFollowsOxidation(t *testing.T) {
+	h := newHub(world.New(1))
+	m := &mob{etype: entityCopperGolem}
+	cases := []struct {
+		ox   int
+		want string
+	}{
+		{0, "minecraft:entity.copper_golem.hurt"},
+		{1, "minecraft:entity.copper_golem.hurt"},
+		{2, "minecraft:entity.copper_golem_weathered.hurt"},
+		{3, "minecraft:entity.copper_golem_oxidized.hurt"},
+	}
+	for _, c := range cases {
+		m.oxidation = c.ox
+		hurt, death, _ := h.mobSoundsFor(m)
+		if hurt != c.want || death != strings.TrimSuffix(c.want, ".hurt")+".death" {
+			t.Errorf("oxidation %d: hurt %q death %q, want %q", c.ox, hurt, death, c.want)
+		}
+		steps := footstepsFor(h.world, m, 0, 60, 0)
+		if len(steps) != 1 || steps[0].name != strings.TrimSuffix(c.want, ".hurt")+".step" {
+			t.Errorf("oxidation %d: step %v", c.ox, steps)
+		}
+	}
+}

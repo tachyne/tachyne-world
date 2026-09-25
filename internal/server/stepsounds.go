@@ -170,6 +170,8 @@ func footstepsFor(w *world.World, m *mob, fx, onY, fz int) []stepSound {
 			if m.baby {
 				v.name = "minecraft:entity.turtle.shamble_baby"
 			}
+		case "copper_golem":
+			v.name = copperGolemVoice(m) + ".step"
 		}
 		return []stepSound{v}
 	}

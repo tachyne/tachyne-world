@@ -137,6 +137,9 @@ the public history since the project was open-sourced on 2026-07-10.
 - **The camera pulls back on a happy ghast.** Riding a happy ghast now sets
   the third-person camera well back, as in vanilla, instead of at a
   player's usual distance.
+- **Copper golems sound their age.** A weathered or oxidized copper golem
+  now hurts, dies and steps in its own creakier voice, as in vanilla, and a
+  golem turning into a statue plays its sound again.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
