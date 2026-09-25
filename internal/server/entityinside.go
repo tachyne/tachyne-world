@@ -239,7 +239,17 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 			continue
 		}
 		h.blocksTouching(m.dim, m.x, m.y, m.z, func(s uint32, onFloor bool) {
+			fx, fz := int(math.Floor(m.x)), int(math.Floor(m.z))
 			switch {
+			case onFloor && isTurtleEgg(s):
+				// TurtleEggBlock.stepOn → canDestroyEgg: any living thing but a
+				// turtle or a bat, a mob only with mob griefing; one in a hundred.
+				if m.etype != entityTurtle && m.etype != entityBat && h.rules.MobGriefing && h.rng.Intn(100) == 0 {
+					h.crushTurtleEgg(players, m.dim, fx, int(math.Floor(m.y))-1, fz, s)
+				}
+			case onFloor && isRedstoneOre(s) && !boolProp(s, "lit"):
+				// RedStoneOreBlock.stepOn: any entity's step lights it.
+				h.setBlockLive(players, m.dim, fx, int(math.Floor(m.y))-1, fz, setBoolProp(s, "lit", true))
 			case onFloor && s == magmaBlockState:
 				if m.resistsFire() || magmaImmune[m.etype] {
 					return

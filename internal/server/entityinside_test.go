@@ -316,3 +316,41 @@ func TestPlayerContactIsCheckedEveryTick(t *testing.T) {
 		t.Fatalf("standing on magma should hurt within a tick: %v → %v", before, pl.health)
 	}
 }
+
+// A zombie standing on turtle eggs cracks them in time (one in a hundred a
+// tick, with mob griefing); a turtle never does. Any mob lights redstone ore.
+func TestMobsStepOnEggsAndOre(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 1)
+	h.rules.MobGriefing = true
+	players := map[int32]*tracked{}
+	w := h.world
+	egg := turtleEggMin
+	w.SetBlock(2, 179, 2, egg)
+	z := h.spawnMob(players, entityZombie, 2.5, 180, 2.5)
+	for i := 0; i < 2000 && w.At(2, 179, 2) == egg; i++ {
+		z.x, z.y, z.z = 2.5, 180, 2.5
+		h.mobsInsideTick(players)
+	}
+	if w.At(2, 179, 2) == egg {
+		t.Error("a zombie stood on a turtle egg for 2000 ticks without cracking it")
+	}
+	w.SetBlock(6, 179, 6, egg)
+	tu := h.spawnMob(players, entityTurtle, 6.5, 180, 6.5)
+	for i := 0; i < 2000; i++ {
+		tu.x, tu.y, tu.z = 6.5, 180, 6.5
+		h.mobsInsideTick(players)
+	}
+	if w.At(6, 179, 6) != egg {
+		t.Error("a turtle cracked its own egg")
+	}
+	ore := worldgen.BlockBase("redstone_ore")
+	ore = setBoolProp(ore, "lit", false)
+	w.SetBlock(10, 179, 10, ore)
+	c := h.spawnMob(players, entityCow, 10.5, 180, 10.5)
+	c.x, c.y, c.z = 10.5, 180, 10.5
+	h.mobsInsideTick(players)
+	if !boolProp(w.At(10, 179, 10), "lit") {
+		t.Error("a cow's step did not light redstone ore")
+	}
+}

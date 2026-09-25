@@ -87,6 +87,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Mobs crack turtle eggs and light redstone ore.** A mob standing on
+  turtle eggs can crack them, as in vanilla (turtles and bats never do,
+  and it needs mob griefing), and any mob walking on redstone ore makes it
+  glow — before, only players did either.
 - **Sneak across magma.** Crouching on a magma block no longer burns you, as
   in vanilla.
 - **Mobs trample farmland.** A big enough mob — a cow, a horse, a zombie —
