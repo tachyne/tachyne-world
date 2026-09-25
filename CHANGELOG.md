@@ -123,6 +123,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **26.3's new attributes reach the client.** Bounciness, friction, air
+  drag and the name-tag distances set with `/attribute` now show on 26.3
+  clients as they do in vanilla; 26.2 clients, which lack them, are left
+  out.
 - **Wandering traders remember where they were going.** A trader still
   walking to its meeting bell keeps heading there after a server restart
   instead of forgetting the point.

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	attachproto "github.com/tachyne/tachyne-common/attach"
+	"github.com/tachyne/tachyne-world/internal/attribute"
 	"github.com/tachyne/tachyne-world/internal/world"
 	api "github.com/tachyne/tachyne-world/plugin/attribute"
 )
@@ -95,5 +96,30 @@ func TestCameraDistanceSyncs(t *testing.T) {
 	}
 	if _, ok := cam(h.spawnSpecies(players, entityCow, 0, 8.5, 180, 0.5)); ok {
 		t.Fatal("a cow never sets camera_distance")
+	}
+}
+
+// 26.3's syncable newcomers (Attributes: bounciness, friction_modifier,
+// air_drag_modifier, below_name_distance, name_tag_distance) reach the
+// client once an entity carries them.
+func TestNewSyncableAttributesSync(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	m := h.spawnSpecies(players, entityCow, 0, 0.5, 180, 0.5)
+	if m.attrs == nil {
+		m.attrs = attribute.NewMap()
+	}
+	ids := []api.ID{api.Bounciness, api.FrictionModifier, api.AirDragModifier, api.BelowNameDistance, api.NameTagDistance}
+	for _, id := range ids {
+		m.attrs.SetBase(id, 0.5)
+	}
+	got := map[string]bool{}
+	for _, a := range mobAttrFrame(m).Attrs {
+		got[a.Name] = true
+	}
+	for _, id := range ids {
+		if !got[string(id)] {
+			t.Errorf("%s is syncable but was left out of the frame", id)
+		}
 	}
 }
