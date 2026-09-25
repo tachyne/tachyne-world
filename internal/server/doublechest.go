@@ -173,10 +173,18 @@ func (h *hub) openDoubleChest(t *tracked, left, right blockPos) {
 	t.winPos2 = simPos{dim: t.dim, blockPos: right}
 	h.trappedChestChanged(t.dim, left) // a trapped pair: both halves signal their viewers
 	h.trappedChestChanged(t.dim, right)
+	// ChestBlock.useWithoutItem: the opener's statistic and the piglins'
+	// anger are the same for a pair as for a single chest.
+	if isTrappedChest(h.worldFor(t.dim).At(left.x, left.y, left.z)) {
+		h.incCustom(t, "trigger_trapped_chest", 1)
+	} else {
+		h.incCustom(t, "open_chest", 1)
+	}
+	h.angerNearbyPiglins(h.playersRef, t, true)
 	t.p.trySendEv(attachproto.WindowOpen{ID: int32(t.winID), Menu: int32(menuGeneric9x6), Title: "Large Chest"})
 	h.sendDoubleChestWindow(t)
 	if firstL || firstR {
-		h.containerSoundAt(h.playersRef, simPos{dim: t.dim, blockPos: left}, true)
+		h.pairSoundAt(h.playersRef, t.winPos, t.winPos2, true)
 	}
 	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: left}) // both halves' lids rise
 	h.lidEvent(h.playersRef, simPos{dim: t.dim, blockPos: right})

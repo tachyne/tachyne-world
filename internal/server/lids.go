@@ -60,6 +60,15 @@ func (h *hub) containerSoundAt(players map[int32]*tracked, pos simPos, open bool
 		float64(pos.x)+0.5, float64(pos.y)+0.5, float64(pos.z)+0.5, 0.5, 0.9+h.rng.Float32()*0.1)
 }
 
+// pairSoundAt is ChestBlockEntity.playSound for a large chest: one sound,
+// from the middle of the pair (the right half's position nudged half a block
+// toward its partner; the left half plays nothing).
+func (h *hub) pairSoundAt(players map[int32]*tracked, a, b simPos, open bool) {
+	st := h.worldFor(a.dim).At(a.x, a.y, a.z)
+	h.playSoundDim(players, a.dim, containerSound(st, open), sndBlock,
+		float64(a.x+b.x)/2+0.5, float64(a.y)+0.5, float64(a.z+b.z)/2+0.5, 0.5, 0.9+h.rng.Float32()*0.1)
+}
+
 // chestViewers counts the players other than except with the container at
 // pos open — ContainerOpenersCounter's count. Its 0→1 and 1→0 edges are
 // the only times the block plays its sound and sends CONTAINER_OPEN or

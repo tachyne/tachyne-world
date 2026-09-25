@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -37,5 +38,23 @@ func TestIronTrapdoorClickPlacesAgainstIt(t *testing.T) {
 	}
 	if w.Block(x, y+1, z) != worldgen.BlockBase("stone") {
 		t.Error("the stone was not placed against the iron trapdoor")
+	}
+}
+
+// chest gives.
+func TestDoubleChestOpenAwardsStat(t *testing.T) {
+	h := newHub(world.New(1))
+	players := map[int32]*tracked{}
+	h.playersRef = players
+	pl := testTracked()
+	players[1] = pl
+	h.world.SetBlock(10, 70, 10, withProps(t, worldgen.BlockBase("chest"), map[string]string{"facing": "north", "type": "left"}))
+	h.world.SetBlock(11, 70, 10, withProps(t, worldgen.BlockBase("chest"), map[string]string{"facing": "north", "type": "right"}))
+	h.openChest(pl, 10, 70, 10)
+	if pl.winKind != winDoubleChest {
+		t.Fatalf("the pair should open as a large chest, kind %d", pl.winKind)
+	}
+	if got := customStat(pl, "open_chest"); got != 1 {
+		t.Errorf("open_chest = %d after opening a large chest, want 1", got)
 	}
 }
