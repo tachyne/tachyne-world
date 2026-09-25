@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Added
+- **/playsound in vanilla's form.** `/playsound <sound> [source] [targets]
+  [x y z] [volume] [pitch] [minVolume]` — the source picks which volume
+  slider it plays on, and a far-off player hears it only if a minimum volume
+  is given.
 - **/locate biome.** `/locate biome <id>` finds the nearest biome of that
   kind — cave biomes included — within 6400 blocks, searching the way
   vanilla does.
@@ -79,6 +83,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Fireworks on the right volume slider, and thunder once.** Firework
+  sounds were sent on the Music channel, so turning music down silenced
+  them; they now play as ambient sounds, as in vanilla. Each lightning
+  strike's thunder was also heard twice, because the game client plays
+  it itself as well as the server sending it.
 - **/summon puts mobs where you ask.** A summoned mob now appears at the
   exact coordinates given, rather than dropping to the ground below them,
   in whatever dimension you are in, and Nether mobs (piglins, blazes,

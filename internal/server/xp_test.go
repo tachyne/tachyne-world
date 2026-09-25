@@ -314,3 +314,19 @@ func TestClearItemAndMax(t *testing.T) {
 		t.Fatalf("clearing all stone left stone %d dirt %d", count(stone), count(dirt))
 	}
 }
+
+// /playsound in vanilla's shape: the source picks the volume slider, a far
+// target hears nothing unless minVolume carries it, and the replies match.
+func TestPlaysoundCommand(t *testing.T) {
+	s, h, ps, logs, _ := eventServer(t, "")
+	alice := ps["alice"]
+	s.handleCommand(alice, "playsound minecraft:block.note_block.harp block bob")
+	s.handleCommand(alice, "playsound minecraft:block.note_block.harp master bob 5000 70 5000")
+	settle(t, h, logs, "P1")
+	a := linesBetween(logs["alice"], "", "P1")
+	for _, want := range []string{"Played sound minecraft:block.note_block.harp to bob", "The sound is too far away to be heard"} {
+		if !hasLine(a, want) {
+			t.Errorf("missing %q in %q", want, a)
+		}
+	}
+}

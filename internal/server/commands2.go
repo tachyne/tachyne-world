@@ -277,62 +277,111 @@ func (h *hub) onSetSpawnpoint(players map[int32]*tracked, e evSetSpawnpoint) {
 		e.pos.x, e.pos.y, e.pos.z, e.yaw, e.pitch, dim, who), true)
 }
 
-// cmdPlaysound plays a named sound at the caller (or a target player).
-// /playsound <name> [player] [volume] [pitch]
+// soundSources are SoundSource's names, in its ordinal order.
+var soundSources = map[string]int32{"master": 0, "music": 1, "record": 2, "weather": 3, "block": 4,
+	"hostile": 5, "neutral": 6, "player": 7, "ambient": 8, "voice": 9, "ui": 10}
+
+// cmdPlaysound is PlaySoundCommand:
+// /playsound <sound> [source] [targets] [x y z] [volume] [pitch] [minVolume]
+// — master and yourself by default, at your own position. (A second word
+// that is not a source is taken as the targets, as this command once read.)
 func (s *Server) cmdPlaysound(p *player, args []string) {
 	if !s.isOp(p.name) {
 		p.tell("You don't have permission.")
 		return
 	}
+	const usage = "Usage: /playsound <sound> [source] [targets] [<x> <y> <z>] [volume] [pitch] [minVolume]"
 	if len(args) < 1 {
-		p.tell("Usage: /playsound <sound> [player|@selector] [volume] [pitch]")
+		p.tell(usage)
 		return
 	}
-	name := args[0]
-	if !strings.Contains(name, ":") {
-		name = "minecraft:" + name
+	e := evPlaysound{by: p, name: args[0], target: p.name, source: 0,
+		x: p.x, y: p.y, z: p.z, vol: 1, pitch: 1}
+	if !strings.Contains(e.name, ":") {
+		e.name = "minecraft:" + e.name
 	}
-	target := p.name
-	vol, pitch := 1.0, 1.0
-	if len(args) > 1 {
-		target = args[1]
-	}
-	if len(args) > 2 {
-		if v, err := strconv.ParseFloat(args[2], 64); err == nil {
-			vol = v
+	rest := args[1:]
+	if len(rest) > 0 {
+		if src, ok := soundSources[rest[0]]; ok {
+			e.source, rest = src, rest[1:]
 		}
 	}
-	if len(args) > 3 {
-		if v, err := strconv.ParseFloat(args[3], 64); err == nil {
-			pitch = v
-		}
+	if len(rest) > 0 {
+		e.target, rest = rest[0], rest[1:]
 	}
-	s.hub.post(evPlaysound{by: p, name: name, target: target, vol: float32(vol), pitch: float32(pitch)})
+	if len(rest) >= 3 {
+		x, y, z, ok := parsePosition(rest[:3], p.x, p.y, p.z, p.yaw, p.pitch)
+		if !ok {
+			p.tell(usage)
+			return
+		}
+		e.x, e.y, e.z, rest = x, y, z, rest[3:]
+	}
+	for i, dst := range []*float32{&e.vol, &e.pitch, &e.minVol} {
+		if i >= len(rest) {
+			break
+		}
+		v, err := strconv.ParseFloat(rest[i], 32)
+		if err != nil || v < 0 {
+			p.tell(usage)
+			return
+		}
+		*dst = float32(v)
+	}
+	s.hub.post(e)
 }
 
 type evPlaysound struct {
-	by         *player
-	name       string
-	target     string
-	vol, pitch float32
+	by                 *player
+	name               string
+	target             string
+	source             int32
+	x, y, z            float64
+	vol, pitch, minVol float32
 }
 
 func (evPlaysound) isHubEvent() {}
 
+// onPlaysound sends the sound to each target in range of it (16 blocks, or
+// 16 × a volume above one); one further off hears it two blocks away in its
+// direction at minVolume, or not at all.
 func (h *hub) onPlaysound(players map[int32]*tracked, e evPlaysound) {
-	hit := false
-	for _, t := range h.commandTargets(players, e.by.eid, e.target) {
-		t.p.trySendEv(soundEv(e.name, sndPlayer, t.x, t.y, t.z, e.vol, e.pitch))
-		hit = true
-	}
-	if !hit { // fall back to a case-insensitive name, as this command always did
+	caller := players[e.by.eid]
+	targets := h.commandTargets(players, e.by.eid, e.target)
+	if len(targets) == 0 { // a case-insensitive name, as this command always took
 		for _, t := range players {
 			if strings.EqualFold(t.p.name, e.target) {
-				t.p.trySendEv(soundEv(e.name, sndPlayer, t.x, t.y, t.z, e.vol, e.pitch))
-				return
+				targets = append(targets, t)
 			}
 		}
-		e.by.trySendEv(chatEv("No player matched " + e.target + "."))
+	}
+	rng := 16.0
+	if e.vol > 1 {
+		rng *= float64(e.vol)
+	}
+	played, who := 0, ""
+	for _, t := range targets {
+		if caller != nil && t.dim != caller.dim {
+			continue
+		}
+		x, y, z, vol := e.x, e.y, e.z, e.vol
+		dx, dy, dz := e.x-t.x, e.y-t.y, e.z-t.z
+		if d := math.Sqrt(dx*dx + dy*dy + dz*dz); d > rng {
+			if e.minVol <= 0 {
+				continue
+			}
+			x, y, z, vol = t.x+dx/d*2, t.y+dy/d*2, t.z+dz/d*2, e.minVol
+		}
+		t.p.trySendEv(soundEv(e.name, e.source, x, y, z, vol, e.pitch))
+		played, who = played+1, t.p.name
+	}
+	switch {
+	case played == 0:
+		e.by.tell("The sound is too far away to be heard")
+	case played == 1:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Played sound %s to %s", e.name, who), true)
+	default:
+		h.cmdSuccess(players, e.by, fmt.Sprintf("Played sound %s to %d players", e.name, played), true)
 	}
 }
 
