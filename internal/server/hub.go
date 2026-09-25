@@ -218,6 +218,9 @@ const (
 // the hub's own copy, fed by move events, so it never races the connection's copy.
 type tracked struct {
 	hurtAt uint64 // LivingEntity.invulnerableTime: the tick of the last landed blow (10 ticks of cooldown follow)
+	// ServerPlayer.seenCredits (saved) and wonGame (the credits are showing:
+	// the player waits in the End until their client asks to respawn).
+	seenCredits, wonGame bool
 	// WardenSpawnTracker: warning level toward a Warden, the cooldown between
 	// warnings and the quiet time since the last one (all in ticks).
 	wardenWarn     int
@@ -1875,7 +1878,12 @@ func (h *hub) run() {
 				}
 			case evRespawn:
 				if t := players[e.eid]; t != nil {
-					h.respawn(t)
+					if t.wonGame { // PERFORM_RESPAWN after the credits: home, alive and whole
+						t.wonGame = false
+						h.leaveEndHome(players, t)
+					} else {
+						h.respawn(t)
+					}
 				}
 			case evInsertEye:
 				if t := players[e.eid]; t != nil {

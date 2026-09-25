@@ -26,6 +26,8 @@ type player struct {
 	name string
 	uuid [16]byte
 
+	bedrock bool // joined through the Bedrock gateway (Identity.Edition)
+
 	x, y, z    float64        // current position (this goroutine's copy, for streaming)
 	yaw, pitch float32        // current look angles
 	dim        int            // 0 overworld, 1 nether (connection-owned)

@@ -3,6 +3,7 @@ package server
 import (
 	"math"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -141,20 +142,41 @@ func (h *hub) updateEndPortalContact(players map[int32]*tracked) {
 		if feet != worldgen.EndPortalBlock {
 			continue
 		}
+		if t.wonGame {
+			continue // the credits are rolling; the respawn request takes them home
+		}
 		t.p.pendingFrom = dimPos{}
 		if t.dim == dimEnd {
-			// The End's exit portal goes HOME, and home is vanilla's
-			// findRespawnPositionAndUseSpawnBlock: the player's own bed or
-			// charged anchor if it still stands, else the world spawn. It
-			// used to drop everyone at the world origin. A walk out is not a
-			// death, so an anchor is read without being spent.
-			sx, sy, sz, sdim := h.respawnPointCharging(players, t, false)
-			t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
-			t.p.pendingDestOK = true
-			t.p.pendingDim.Store(int32(sdim))
+			// The Bedrock gateway has no credits to roll (its client would
+			// never ask to respawn afterwards), so Bedrock players go home.
+			if !t.seenCredits && !t.p.bedrock {
+				// EndPortalBlock.entityInside → showEndCredits: the first
+				// walk out plays the End poem and credits; the player waits
+				// here until their client finishes and asks to respawn.
+				t.seenCredits, t.wonGame = true, true
+				t.p.trySendEv(attachproto.GameEvent{Event: gameEventWinGame, Value: 1})
+				continue
+			}
+			h.leaveEndHome(players, t)
 			continue
 		}
 		t.p.pendingDestOK = false
 		t.p.pendingDim.Store(int32(dimEnd))
 	}
+}
+
+// gameEventWinGame is ClientboundGameEventPacket.WIN_GAME: value 1 rolls the
+// End poem and credits.
+const gameEventWinGame = 4
+
+// leaveEndHome sends a player out of the End by its exit portal. Home is
+// vanilla's findRespawnPositionAndUseSpawnBlock: their own bed or charged
+// anchor if it still stands, else the world spawn. A walk out is not a
+// death, so an anchor is read without being spent.
+func (h *hub) leaveEndHome(players map[int32]*tracked, t *tracked) {
+	sx, sy, sz, sdim := h.respawnPointCharging(players, t, false)
+	t.p.pendingFrom = dimPos{}
+	t.p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1}
+	t.p.pendingDestOK = true
+	t.p.pendingDim.Store(int32(sdim))
 }

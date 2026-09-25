@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The End poem and credits.** The first time a Java player leaves the
+  End through its exit portal, the End poem and credits now roll, as in
+  vanilla, and then they return home. After that the portal takes them
+  straight home. Bedrock players go straight home for now.
 - **The End's arrival platform is obsidian again, and End portals take
   mobs and items.** Since the move to 26.3 the platform you land on in the
   End was built out of piston heads; it is obsidian again. Mobs and dropped

@@ -84,6 +84,7 @@ func TestEndPortalContactFlagsTravel(t *testing.T) {
 	// The End's exit portal goes home.
 	pl.p.pendingDim.Store(-1)
 	pl.dim = 2
+	pl.seenCredits = true // the first exit rolls the credits instead (TestFirstEndExitRollsTheCredits)
 	ew.SetBlock(20, 30, 20, worldgen.EndPortalBlock)
 	h.updateEndPortalContact(players)
 	if pl.p.pendingDim.Load() != 0 {
@@ -131,6 +132,7 @@ func TestEndExitGoesToYourRespawnPoint(t *testing.T) {
 	h.end = ew
 	pl := testTracked()
 	pl.dim = dimEnd
+	pl.seenCredits = true // a returning visitor: no credits, straight home
 	pl.x, pl.y, pl.z = 20.5, 30, 20.5
 	players := map[int32]*tracked{1: pl}
 	ew.SetBlock(20, 30, 20, worldgen.EndPortalBlock)

@@ -58,6 +58,9 @@ type savedInv struct {
 	WardenCool  int `json:"warden_cool,omitempty"`
 	WardenSince int `json:"warden_since,omitempty"`
 
+	// ServerPlayer.seenCredits: the End poem and credits play once.
+	SeenCredits bool `json:"seen_credits,omitempty"`
+
 	// Last position (restored on login, vanilla-style: you log back in where
 	// you logged out). HasPos distinguishes a real saved position from a legacy
 	// entry or a brand-new player (both → world spawn).
@@ -197,6 +200,7 @@ func (s *invStore) loadInto(t *tracked, name string) {
 	t.xpLevel, t.xpPoints = int(saved.XPLevel), int(saved.XPPoints)
 	t.enchSeed = saved.EnchSeed
 	t.wardenWarn, t.wardenCool, t.wardenSince = saved.WardenWarn, saved.WardenCool, saved.WardenSince
+	t.seenCredits = saved.SeenCredits
 	t.tags = tagSet(saved.Tags)
 	restoreSavedEffects(t, saved.Effects)
 	t.shoulders = saved.Shoulders
@@ -261,7 +265,7 @@ func (s *invStore) record(name string, t *tracked) {
 	}
 	snap := &savedInv{Offhand: packStack(t.offhand),
 		XPLevel: int32(t.xpLevel), XPPoints: int32(t.xpPoints), EnchSeed: t.enchSeed,
-		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince,
+		WardenWarn: t.wardenWarn, WardenCool: t.wardenCool, WardenSince: t.wardenSince, SeenCredits: t.seenCredits,
 		Effects: savedEffectsOf(t), Tags: sortedTags(t.tags), Shoulders: t.shoulders,
 		X: t.x, Y: t.y, Z: t.z, Yaw: t.yaw, Pitch: t.pitch, Dim: int32(t.dim), HasPos: true}
 	if old := s.m[name]; old != nil && old.HasDeath { // the death location outlives the loadout

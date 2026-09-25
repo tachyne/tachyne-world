@@ -522,6 +522,7 @@ func emitUnhandled(ev any) {
 // profile properties other clients draw its skin from, and its tachyne-access
 // roles — "op" makes it an operator, alongside the -ops list.
 func (s *Server) adoptIdentity(p *player, id attach.Identity) {
+	p.bedrock = id.Edition == "bedrock"
 	for _, pr := range id.Props {
 		p.props = append(p.props, skinProperty{Name: pr.Name, Value: pr.Value, Signature: pr.Signature})
 	}

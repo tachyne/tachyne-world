@@ -3,6 +3,8 @@ package server
 import (
 	"testing"
 
+	attachproto "github.com/tachyne/tachyne-common/attach"
+
 	"github.com/tachyne/tachyne-world/internal/world"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
@@ -39,5 +41,48 @@ func TestEndPortalTakesMobsAndItems(t *testing.T) {
 	h.updateEndPortalEntities(players)
 	if cow.dim != dimOverworld {
 		t.Fatalf("a cow in the End's portal goes to the overworld spawn: dim %d", cow.dim)
+	}
+}
+
+// TestFirstEndExitRollsTheCredits: EndPortalBlock.entityInside shows the
+// credits the first time a player takes the End's exit portal
+// (showEndCredits: WIN_GAME, value 1), and holds them there until the
+// client asks to respawn; a Bedrock player, whose gateway has no credits,
+// goes straight home.
+func TestFirstEndExitRollsTheCredits(t *testing.T) {
+	h := newHub(world.New(1))
+	h.end = world.New(3)
+	pl := survPlayer(h)
+	pl.dim = dimEnd
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	h.end.SetBlock(0, 60, 0, worldgen.EndPortalBlock)
+	pl.x, pl.y, pl.z = 0.5, 60, 0.5
+	pl.p.pendingDim.Store(-1)
+	drainOut(pl.p)
+	h.updateEndPortalContact(players)
+	won := false
+	for len(pl.p.out) > 0 {
+		if ev, ok := (<-pl.p.out).ev.(attachproto.GameEvent); ok && ev.Event == gameEventWinGame && ev.Value == 1 {
+			won = true
+		}
+	}
+	if !won || !pl.wonGame || !pl.seenCredits {
+		t.Fatalf("the first exit should roll the credits: event %v wonGame %v seen %v", won, pl.wonGame, pl.seenCredits)
+	}
+	if pl.p.pendingDim.Load() >= 0 {
+		t.Fatal("the player waits for the credits before going home")
+	}
+	// Bedrock: straight home.
+	b := survPlayer(h)
+	b.p = newPlayer(2, "bedrocker", [16]byte{7})
+	b.p.bedrock = true
+	b.dim = dimEnd
+	b.x, b.y, b.z = 0.5, 60, 0.5
+	b.p.pendingDim.Store(-1)
+	players[b.p.eid] = b
+	h.updateEndPortalContact(players)
+	if b.wonGame || b.p.pendingDim.Load() != dimOverworld {
+		t.Fatalf("a Bedrock player goes home at once: wonGame %v pendingDim %d", b.wonGame, b.p.pendingDim.Load())
 	}
 }
