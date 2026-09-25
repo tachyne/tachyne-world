@@ -776,6 +776,8 @@ func (h *hub) summonAt(players map[int32]*tracked, e evSummon) {
 		h.spawnHostileYIn(players, e.etype, e.dim, e.x, e.y, e.z)
 	case e.etype == entitySulfurCube:
 		h.spawnSulfurCube(players, e.dim, e.x, e.y, e.z, false)
+	case e.etype == entityVillager || e.etype == entityIronGolem:
+		h.configureVillageMob(players, h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z))
 	case netherConfigured(e.etype):
 		h.configureNetherMob(players, h.spawnMobIn(players, e.etype, e.dim, e.x, e.y, e.z))
 	case isRosterPassive(e.etype):

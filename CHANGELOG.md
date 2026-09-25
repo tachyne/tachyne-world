@@ -185,6 +185,9 @@ the public history since the project was open-sourced on 2026-07-10.
   while it sulks.
 - **Parrots keep company.** A parrot now flies over to a nearby animal or
   monster and hangs about a few blocks from it, as in vanilla.
+- **/summon villager and /summon iron_golem.** Both can now be summoned: the
+  villager unemployed and free to find its own bed and workplace, the golem
+  a village guardian at full health.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in
