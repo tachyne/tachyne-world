@@ -300,6 +300,8 @@ type mob struct {
 	allayNoteDim                    int                               // …in this dimension (vanilla keeps a GlobalPos)
 	dupCD                           int                               // allay: ticks until it may duplicate again (6000)
 	dancing                         bool                              // allay: a jukebox plays within earshot; piglin: DANCING (DATA_IS_DANCING)
+	allayJukebox                    blockPos                          // allay: the jukebox it dances to (jukeboxPos)
+	allayHasJukebox                 bool                              // …set
 	frogEaten                       int8                              // slime/magma cube: eaten by a frog of variant-1 (froglight, no slime)
 	sneezeAt                        uint64                            // baby panda: the tick its sneeze lands (0 = not sneezing)
 	pandaFlags                      byte                              // panda: sneeze/roll/sit/on-back flags (DATA_ID_FLAGS)

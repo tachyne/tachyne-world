@@ -123,6 +123,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Allays dance only to a jukebox they can hear.** An allay starts
+  dancing within ten blocks of a playing jukebox, not sixteen, and stops
+  when the song ends, when it wanders ten blocks away, or when the jukebox
+  is broken.
 - **26.3's new attributes reach the client.** Bounciness, friction, air
   drag and the name-tag distances set with `/attribute` now show on 26.3
   clients as they do in vanilla; 26.2 clients, which lack them, are left
