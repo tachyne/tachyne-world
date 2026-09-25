@@ -14,6 +14,9 @@ jobs:
       - run: go test ./...
   race:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: { shard: [0, 1, 2, 3] }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -21,6 +24,15 @@ jobs:
       # The race gate the project treats as mandatory before every push.
       # -short skips the heavy deterministic tests (skipHeavy): the detector
       # has nothing to find in a chunk-generation census and makes it ten
-      # times slower. -p 1 keeps the hub tests' real server loops from
-      # starving behind another package's generation. ~15 min.
-      - run: go test -race -short -p 1 -timeout 2400s ./...
+      # times slower. internal/server is most of the run, so its tests are
+      # dealt round-robin across four shards; shard 0 also runs every other
+      # package. One package per shard keeps the hub tests' real server
+      # loops from starving behind another package's generation.
+      - name: race (shard ${{ matrix.shard }})
+        run: |
+          set -e
+          if [ "${{ matrix.shard }}" = 0 ]; then
+            go test -race -short -p 1 -timeout 2400s $(go list ./... | grep -v '/internal/server$')
+          fi
+          tests=$(go test -list . ./internal/server | grep '^Test' | awk 'NR % 4 == ${{ matrix.shard }}' | paste -sd'|')
+          go test -race -short -timeout 2400s -run "^(${tests})\$" ./internal/server

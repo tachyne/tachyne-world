@@ -34,7 +34,9 @@ func recordChat(t *testing.T, p *player) *chatLog {
 		for {
 			select {
 			case pkt := <-p.out:
-				if ch, ok := pkt.ev.(attachproto.Chat); ok {
+				// The HUD's once-a-second action bar is not a reply; on a slow
+				// runner it lands between a command and its marker.
+				if ch, ok := pkt.ev.(attachproto.Chat); ok && !ch.ActionBar {
 					c.mu.Lock()
 					c.lines = append(c.lines, ch.Text)
 					c.mu.Unlock()

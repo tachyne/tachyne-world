@@ -13,7 +13,7 @@ import (
 // carries all the want bits and none of the not bits.
 func waitFlags(t *testing.T, watcher *player, eid int32, want, not byte, what string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(20 * time.Second) // a -race run on a shared CI runner is slow
 	for time.Now().Before(deadline) {
 		select {
 		case o := <-watcher.out:
@@ -33,6 +33,7 @@ func waitFlags(t *testing.T, watcher *player, eid int32, want, not byte, what st
 // → getDesiredPose): crouching, sprinting and swimming must be in the byte.
 func TestOthersSeeCrouchSprintAndSwim(t *testing.T) {
 	h := newHub(world.New(1))
+	h.rules.DoMobSpawning = false // natural spawning ran ticks past a second on CI
 	h.world.ForceLoad(0, 0, 2)
 	for x := -6; x <= 6; x++ {
 		for z := -6; z <= 6; z++ {
