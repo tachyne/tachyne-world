@@ -19,6 +19,9 @@ type worldSpawnSave struct {
 	Z     int     `json:"z"`
 	Yaw   float32 `json:"yaw,omitempty"`
 	Pitch float32 `json:"pitch,omitempty"`
+	// Dim is the level the spawn is in (RespawnData.dimension): 0, the
+	// overworld, unless /setworldspawn was run elsewhere.
+	Dim int `json:"dim,omitempty"`
 }
 
 type evSetWorldSpawn struct {
@@ -71,13 +74,10 @@ func (s *Server) cmdSetWorldSpawn(p *player, args []string) {
 // applySetWorldSpawn runs /setworldspawn on the hub: the respawn fallback, the
 // join position and every client's compass move to the new point.
 func (h *hub) applySetWorldSpawn(players map[int32]*tracked, e evSetWorldSpawn) {
-	tell := cmdTeller(players, e.by)
 	okTell := h.cmdOK(players, e.by) // sendSuccess(…, true)
-	if e.dim != dimOverworld {
-		tell("Can only set the world spawn for the Overworld")
-		return
-	}
-	sp := worldSpawnSave{X: e.x, Y: e.y, Z: e.z, Yaw: e.yaw, Pitch: e.pitch}
+	// 26.3 stores RespawnData.of(level.dimension(), …): the spawn may be in
+	// any dimension, and the fallback respawn and new players go there.
+	sp := worldSpawnSave{X: e.x, Y: e.y, Z: e.z, Yaw: e.yaw, Pitch: e.pitch, Dim: e.dim}
 	h.setWorldSpawn(sp)
 	h.rules.WorldSpawn = &sp
 	h.saveRules()
@@ -93,6 +93,8 @@ func (h *hub) applySetWorldSpawn(players map[int32]*tracked, e evSetWorldSpawn) 
 func (h *hub) setWorldSpawn(sp worldSpawnSave) {
 	h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ = float64(sp.X)+0.5, float64(sp.Y), float64(sp.Z)+0.5
 	h.worldSpawnYaw, h.worldSpawnPitch = sp.Yaw, sp.Pitch
+	h.worldSpawnDim = sp.Dim
+	h.spawnDimPub.Store(int32(sp.Dim))
 	h.hasWorldSpawn = true
 	h.spawnPub.Store(&[3]float64{h.worldSpawnX, h.worldSpawnY, h.worldSpawnZ})
 }
@@ -108,9 +110,21 @@ func (s *Server) restoreWorldSpawn() bool {
 	if s.hub.ownedAt(x, z) { // as with -spawn: a shard respawns only onto its own turf
 		s.hub.setWorldSpawn(*sp)
 	}
+	if sp.Dim != dimOverworld {
+		return true // the overworld's own start stays the flag's; joins switch over
+	}
 	s.SpawnX, s.SpawnY, s.SpawnZ = x, y, z
 	s.SpawnSet, s.SpawnAuto = true, false
 	return true
+}
+
+// overworldJoinSpawn is joinSpawn without the command's spawn: where the
+// overworld itself starts a player.
+func (s *Server) overworldJoinSpawn() (x, y, z float64) {
+	if s.SpawnSet {
+		return s.SpawnX, s.SpawnY, s.SpawnZ
+	}
+	return 0.5, s.world.SurfaceY(0, 0), 0.5
 }
 
 // joinSpawn is where a player with no saved position arrives: the command's

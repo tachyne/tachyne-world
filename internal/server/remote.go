@@ -28,6 +28,14 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	}
 	s.adoptIdentity(p, id)
 	x, y, z := s.joinSpawn()
+	// A world spawn outside the overworld (26.3's /setworldspawn anywhere):
+	// the newcomer joins at the overworld's own spawn and the dimension
+	// switch then carries them to it.
+	spawnDim, sx, sy, sz := int32(0), x, y, z
+	if d := s.hub.spawnDimPub.Load(); d != 0 && s.hub.spawnPub.Load() != nil {
+		spawnDim = d
+		x, y, z = s.overworldJoinSpawn()
+	}
 	var yaw, pitch float32
 	// Vanilla logs a returning player back in where they logged out. Restore
 	// their last OVERWORLD position; a new player, or one who logged out in the
@@ -36,6 +44,7 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	if s.hub.invs != nil {
 		if px, py, pz, pyaw, ppitch, pdim, ok := s.hub.invs.savedPos(p.key()); ok && pdim == 0 {
 			x, y, z, yaw, pitch = px, py, pz, pyaw, ppitch
+			spawnDim = 0 // back where they logged out
 		}
 	}
 	p.x, p.y, p.z, p.yaw, p.pitch = x, y, z, yaw, pitch
@@ -48,6 +57,12 @@ func (s *Server) JoinRemote(id attach.Identity, emit func(typ byte, payload []by
 	r.emitEvNow(abilitiesFor(mode))
 	r.emitEvNow(opLevelEvent(p.eid, s.isOp(p.name)))
 	s.hub.post(evJoin{p: p, x: x, y: y, z: z, yaw: yaw, pitch: pitch, gamemode: mode})
+	if spawnDim != 0 {
+		p.pendingFrom = dimPos{}
+		p.pendingDest = blockPos{floorInt(sx), floorInt(sy), floorInt(sz) - 1} // switchDimensionTo lands at z+1.5
+		p.pendingDestOK = true
+		p.pendingDim.Store(spawnDim)
+	}
 	return r, nil
 }
 

@@ -545,14 +545,24 @@ func (h *hub) respawnPointCharging(players map[int32]*tracked, t *tracked, spend
 		}
 	}
 	x, y, z := h.worldSpawn()
-	if r := h.rules.RespawnRadius; r > 0 && h.shardOf == nil {
+	dim := h.spawnDim() // findRespawnDimension: the level the world spawn is in
+	if r := h.rules.RespawnRadius; r > 0 && h.shardOf == nil && dim == dimOverworld {
 		// respawn_radius: a random spot within the radius of the spawn, on
 		// the surface there (ServerPlayer.fudgeSpawnLocation).
 		x += float64(h.rng.Intn(2*r+1) - r)
 		z += float64(h.rng.Intn(2*r+1) - r)
 		y = h.world.SurfaceY(int(math.Floor(x)), int(math.Floor(z)))
 	}
-	return x, y, z, dimOverworld
+	return x, y, z, dim
+}
+
+// spawnDim is the world spawn's dimension, the overworld unless
+// /setworldspawn put it elsewhere (and that dimension exists).
+func (h *hub) spawnDim() int {
+	if h.hasWorldSpawn && h.worldFor(h.worldSpawnDim) != nil {
+		return h.worldSpawnDim
+	}
+	return dimOverworld
 }
 
 // worldSpawn is the death-respawn fallback (no bed): the configured spawn when
@@ -611,10 +621,14 @@ func canonicalTimeOfDay(dayTime uint64) float64 {
 // pointed at 0,0 no matter where spawn actually was.
 func (h *hub) sendDefaultSpawn(t *tracked) {
 	x, y, z := h.worldSpawn()
-	// Dim is left empty: the world spawn is the overworld's, which is what the
-	// renderer fills in for 1.21.9+, where the packet carries a GlobalPos.
-	t.p.trySendEv(attachproto.DefaultSpawn{X: floorInt(x), Y: floorInt(y), Z: floorInt(z),
-		Angle: h.worldSpawnYaw, Pitch: h.worldSpawnPitch})
+	// Dim is left empty for the overworld, which is what the renderer fills
+	// in for 1.21.9+, where the packet carries a GlobalPos.
+	ds := attachproto.DefaultSpawn{X: floorInt(x), Y: floorInt(y), Z: floorInt(z),
+		Angle: h.worldSpawnYaw, Pitch: h.worldSpawnPitch}
+	if d := h.spawnDim(); d != dimOverworld {
+		ds.Dim = dimRegistryName(d)
+	}
+	t.p.trySendEv(ds)
 }
 
 // Straw beds (26.3) share the bed's shape and sleeping but not its rules: they

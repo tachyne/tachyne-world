@@ -461,6 +461,8 @@ type hub struct {
 	stopwatches                           map[string]stopwatchRun       // /stopwatch (stopwatch.go); nil until first used
 	chunkHolders                          atomic.Pointer[[]chunkHolder] // who holds chunks loaded (chunkholders.go)
 	hasWorldSpawn                         bool
+	worldSpawnDim                         int          // the level the world spawn is in (RespawnData.dimension)
+	spawnDimPub                           atomic.Int32 // worldSpawnDim for the join path (session goroutine)
 	// The facing /setworldspawn gave the spawn, and the spawn as a joining
 	// session reads it (nil until the command, or its saved value, sets one).
 	worldSpawnYaw, worldSpawnPitch float32

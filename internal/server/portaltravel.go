@@ -142,9 +142,13 @@ func (h *hub) updateEndPortalEntities(players map[int32]*tracked) {
 		return w != nil && w.At(floorInt(x), floorInt(y+0.05), floorInt(z)) == worldgen.EndPortalBlock
 	}
 	dest := func(from int) (int, float64, float64, float64, bool) {
-		if from == dimEnd {
-			w := h.worldFor(dimOverworld)
+		if from == dimEnd { // EndPortalBlock: out to the level the world spawn is in
+			to := h.spawnDim()
+			w := h.worldFor(to)
 			x, z := h.worldSpawnX, h.worldSpawnZ
+			if to != dimOverworld {
+				return to, x, h.worldSpawnY, z, true
+			}
 			return dimOverworld, x, float64(w.MobFeet(floorInt(x), floorInt(z))), z, true
 		}
 		if h.end == nil {

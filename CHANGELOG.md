@@ -146,6 +146,10 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **/setworldspawn works in the Nether and the End.** As in 26.3, the
+  world spawn can be set in any dimension: players without a bed or
+  anchor respawn there, new players are taken there when they first join,
+  and compasses point to it.
 - **/tp works across dimensions for mobs too.** Teleporting a mob to a
   place or entity in another dimension now takes it there, and `/tp
   <entity>` takes you to a mob in another dimension, as in vanilla.
