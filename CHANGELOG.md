@@ -14,6 +14,10 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Water hurts endermen, blazes, striders and snow golems.** These mobs
+  used to be unharmed by water and rain, and an enderman only fled from
+  rain now and then. As in vanilla, water and rain now hurt them, and an
+  enderman that gets wet teleports away almost at once.
 - **Creepers unwind slowly.** Stepping away from a hissing creeper used to
   reset its fuse at once, so you could step back in for a fresh second and
   a half every time. As in vanilla, the fuse now winds back down gradually,

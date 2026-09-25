@@ -786,14 +786,6 @@ func (h *hub) updateHostiles(players map[int32]*tracked) {
 			}
 		}
 	}
-	// Rained-on endermen warp away (vanilla water phobia).
-	if h.raining {
-		for _, m := range h.mobs {
-			if m.etype == entityEnderman && m.dim == 0 && m.dying == 0 && h.rng.Intn(4) == 0 && h.skyExposed(m) {
-				h.endermanTeleport(players, m)
-			}
-		}
-	}
 	// Daylight burn: sky-exposed UNDEAD hostiles catch fire in the open. This
 	// just relights the 8-second afterburn clock each second they're exposed
 	// (like vanilla setSecondsOnFire(8)); the unified burn ticker in
