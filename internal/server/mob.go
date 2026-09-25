@@ -164,7 +164,8 @@ type mob struct {
 	neutral                         bool        // enderman: peaceful until hit (anger flips it hostile)
 	carriedBlock                    uint32      // enderman: the block state it's holding (0 = none)
 	witherHealFrac                  float32     // wither: the part of a health point its regen has banked
-	sonicCD                         int         // warden: mob-updates until the next sonic boom
+	sonicCD                         int         // warden: mob-updates until the next sonic boom may start
+	sonicRun                        int         // warden: mob-updates into a running sonic boom (0 = none)
 	beamTarget                      int32       // guardian: the player the beam is locked on (0 = none)
 	hideUntil                       uint64      // villager: heard a bell — stay at the bed until this tick
 	beamTicks                       int         // guardian: GuardianAttackGoal.attackTime, in ticks

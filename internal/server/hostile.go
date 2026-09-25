@@ -396,6 +396,18 @@ func (h *hub) acquireTarget(players map[int32]*tracked, m *mob) {
 	if m.hasTarget {
 		reach += deaggroSlack
 	}
+	if m.etype == entityWarden {
+		// The warden walks only after its ATTACK_TARGET (WardenAi's FIGHT
+		// SetWalkTargetFromAttackTargetIfTargetOutOfReach), which it has
+		// once it has roared at somebody it is angry at.
+		m.preyTarget = 0
+		if t := players[m.wardenTarget]; t != nil && isSurvival(t.gamemode) && !t.dead && t.dim == m.dim {
+			m.hasTarget, m.tx, m.tz = true, t.x, t.z
+		} else {
+			m.hasTarget = false
+		}
+		return
+	}
 	if m.etype == entityPiglin {
 		// PiglinAi: a player in a piece of gold armour is left alone, and an
 		// admiring piglin has eyes only for its gold.
@@ -490,6 +502,14 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		// never at a bystander in gold who happens to be standing close.
 		t = h.piglinTarget(players, m, attackReach)
 	}
+	if m.etype == entityWarden {
+		// MeleeAttack hits the warden's ATTACK_TARGET and nobody else.
+		t = nil
+		if w := players[m.wardenTarget]; w != nil && isSurvival(w.gamemode) && !w.dead && w.dim == m.dim &&
+			(w.x-m.x)*(w.x-m.x)+(w.z-m.z)*(w.z-m.z) < attackReach*attackReach {
+			t = w
+		}
+	}
 	if t == nil || math.Abs(t.y-m.y) > attackReachY {
 		if t == nil && m.preyTarget != 0 {
 			h.mobBitesPrey(players, m) // no player in reach: the creature it hunts
@@ -521,6 +541,14 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 	}
 	if m.etype == entityHoglin || m.etype == entityZoglin {
 		h.hoglinBiteStart(players, m) // doHurtTarget: the animation and the grunt
+	}
+	if m.etype == entityWarden {
+		// Warden.doHurtTarget: the attack animation, the impact, and the
+		// sonic boom put back 40 ticks.
+		h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusAttack))
+		h.playSoundDim(players, m.dim, "minecraft:entity.warden.attack_impact", sndHostile, m.x, m.y, m.z, 10, h.voicePitch(m))
+		m.sonicCD = wardenSonicCoolUpd
+		defer func() { m.attackCD = wardenMeleeCD }()
 	}
 	landed := h.hurtFrom(players, t, dmg, mobMeleeDamage(m.etype),
 		deathCause{by: mobDisplayName(m.etype)}, fromMobWeapon(m.x, m.z, m.held))

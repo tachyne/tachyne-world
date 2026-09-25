@@ -14,6 +14,12 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **The warden fights like the real one.** A warden now attacks only
+  someone it has grown angry at, so you can sneak past one that has only
+  smelled you. Up close it hits hard every second or so; its sonic boom is
+  for targets it cannot reach, comes ten seconds after its roar, and
+  charges up with a warning sound before the blast. Hitting a warden makes
+  it come for you straight away, without the roar.
 - **Piglins hold a grudge and call their friends.** A piglin you hit stayed
   angry for ten seconds; as in vanilla it now stays angry for thirty, and
   the adult piglins around it join the fight. A baby piglin you hit runs
