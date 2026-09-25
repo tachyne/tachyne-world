@@ -261,10 +261,10 @@ func (h *hub) bobberHitsMob(b *bobberEntity, px, py, pz float64) *mob {
 func (h *hub) catchingFish(players map[int32]*tracked, b *bobberEntity) {
 	bx, by, bz := int(math.Floor(b.x)), int(math.Floor(b.y)), int(math.Floor(b.z))
 	speed := 1
-	if h.rng.Float32() < 0.25 && h.isRainingAt(bx, by+1, bz) {
+	if h.rng.Float32() < 0.25 && h.rainAt(b.dim, bx, by+1, bz) {
 		speed++
 	}
-	if h.rng.Float32() < 0.5 && !h.skyExposedColumn(bx, bz) {
+	if h.rng.Float32() < 0.5 && !h.canSeeSky(b.dim, bx, by+1, bz) {
 		speed--
 	}
 

@@ -146,6 +146,12 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Rain only counts where it actually falls.** Being rained on now
+  depends on where you are, not just on the column: a roof of glass or
+  leaves keeps the rain off, and so does standing under an overhang with
+  open sky above it. This affects Riptide tridents, putting out burning
+  players and mobs, water-sensitive mobs, fishing, farmland, fire and
+  where lightning picks its target.
 - **Nothing works past the world border.** Furnaces, brewing stands,
   campfires, beacons, hoppers and dungeon spawners outside the world
   border now stand still, and mobs no longer spawn naturally in chunks

@@ -181,7 +181,7 @@ func (h *hub) mobEnvironment(players map[int32]*tracked) {
 
 		// Afterburn clock (lava/fire/daylight all feed it). Water or rain douses.
 		doused := worldgen.HoldsWater(feet) || worldgen.HoldsWater(head) ||
-			(m.dim == 0 && h.raining && h.skyExposed(m))
+			h.inRain(m.dim, m.x, m.y, m.z, m.box().h)
 		if doused {
 			m.fireSecs = 0
 		}

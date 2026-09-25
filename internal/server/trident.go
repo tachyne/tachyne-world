@@ -74,7 +74,7 @@ func (h *hub) finishTridentThrow(players map[int32]*tracked, t *tracked) {
 // movement-authority spin window (spinUntil) keeps the fast travel from being
 // rubber-banded.
 func (h *hub) riptideLaunch(players map[int32]*tracked, t *tracked, riptide int) {
-	if !h.inWater(t.dim, t.x, t.y, t.z) && !h.raining {
+	if !h.inWater(t.dim, t.x, t.y, t.z) && !h.inRain(t.dim, t.x, t.y, t.z, 1.8*t.scale()) {
 		return // riptide needs water or rain to charge
 	}
 	if riptide > 3 {

@@ -728,10 +728,7 @@ func (h *hub) increasedFireBurnout(pos blockPos) bool {
 // rainingOn is Level.isRainingAt: raining, nothing that blocks motion (or
 // holds a fluid) above the cell, and the biome rains at that height. Only
 // the overworld has weather.
-func (h *hub) rainingOn(dim, x, y, z int) bool {
-	return dim == dimOverworld && h.raining && h.motionBlockingTop(dim, x, z) <= y &&
-		worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
-}
+func (h *hub) rainingOn(dim, x, y, z int) bool { return h.rainAt(dim, x, y, z) }
 
 // igniteFire places a fire block of the given age and schedules its first tick.
 func (h *hub) igniteFire(players map[int32]*tracked, pos blockPos, age int) {
@@ -856,7 +853,7 @@ func (h *hub) tickBurning(players map[int32]*tracked, t *tracked) {
 		return
 	}
 	inWater := worldgen.IsWater(w.At(fx, feet, fz)) || worldgen.IsWater(w.At(fx, feet+1, fz))
-	rainedOn := t.dim == 0 && h.raining && h.skyExposedAt(fx, feet, fz) // from the player's height — caves and roofs block rain
+	rainedOn := h.inRain(t.dim, t.x, t.y, t.z, 1.8*t.scale()) // isInWaterOrRain: caves and roofs keep it off
 	if inWater || rainedOn {
 		t.fireSecs = 0
 	} else {

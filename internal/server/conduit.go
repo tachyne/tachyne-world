@@ -259,14 +259,4 @@ func (h *hub) inWaterOrRain(dim int, x, y, z, ht float64) bool {
 // rainsOn is Level.isRainingAt for one cell: it sees the sky, nothing
 // motion-blocking (a solid, a fluid, glass, leaves) stands above it (the
 // heightmap is at or below it), and its biome rains there.
-func (h *hub) rainsOn(x, y, z int) bool {
-	if !h.canSeeSky(dimOverworld, x, y, z) {
-		return false
-	}
-	for yy := y + 1; h.inWorldYIn(dimOverworld, yy); yy++ {
-		if st := h.world.At(x, yy, z); worldgen.Collides(st) || worldgen.IsFluid(st) {
-			return false
-		}
-	}
-	return worldgen.PrecipitationAt(h.world.BiomeAt(x, z), y) == worldgen.PrecipRain
-}
+func (h *hub) rainsOn(x, y, z int) bool { return h.rainAt(dimOverworld, x, y, z) }
