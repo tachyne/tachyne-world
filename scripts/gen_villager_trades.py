@@ -164,11 +164,21 @@ class Gen:
         return n
 
     def cost(self, c, where):
+        return self.cost_with_potion(c, where)[:2]
+
+    def cost_with_potion(self, c, where):
+        """An ItemCost; its one supported component predicate is a
+        potion_contents naming a single potion (the water bottle)."""
         if c is None:
-            return None, 0
-        if c.get("components"):
-            raise Skip(f"{where}: an ItemCost with components {json.dumps(c['components'])}")
-        return self.item(c["id"], where), const_int(c.get("count", 1), where + ".count")
+            return None, 0, None
+        potion = None
+        comps = c.get("components") or {}
+        if comps:
+            pc = comps.get("minecraft:potion_contents")
+            if set(comps) != {"minecraft:potion_contents"} or not isinstance(pc, dict) or set(pc) != {"potion"}:
+                raise Skip(f"{where}: an ItemCost with components {json.dumps(comps)}")
+            potion = strip(pc["potion"])
+        return self.item(c["id"], where), const_int(c.get("count", 1), where + ".count"), potion
 
     def side(self, table, row):
         if row not in table:
@@ -182,7 +192,7 @@ class Gen:
                  "merchant_predicate", "given_item_modifier", "double_trade_price_enchantments"}
         if set(t) - known:
             raise Skip(f"{key}: unknown fields {sorted(set(t) - known)}")
-        wi, wn = self.cost(t["wants"], key + ".wants")
+        wi, wn, wpot = self.cost_with_potion(t["wants"], key + ".wants")
         ci, cn = self.cost(t.get("additional_wants"), key + ".additional_wants")
         g = t["gives"]
         if set(g) - {"id", "count"}:
@@ -195,7 +205,7 @@ class Gen:
         if mult100 <= 0:
             # mult100 0 means "the old default 0.05" in the engine's store.
             raise Skip(f"{key}: a zero reputation_discount has no engine encoding")
-        row = dict(key=key, wants=(wi, wn), extra=(ci, cn), gives=(gi, gn),
+        row = dict(key=key, wants=(wi, wn), wpot=wpot, extra=(ci, cn), gives=(gi, gn),
                    max_uses=max(const_int(t.get("max_uses", 4), key + ".max_uses"), 1),
                    xp=max(const_int(t.get("xp", 1), key + ".xp"), 0),
                    mult100=mult100, kind="vTradeFixed", aux=0,
@@ -301,8 +311,9 @@ def go_trade(r):
     ci, cn = r["extra"]
     gi, gn = r["gives"]
     c2 = f'itemByName["{ci}"]' if ci else "0"
+    wp = f'"{r["wpot"]}"' if r.get("wpot") else '""'
     return (f'{{itemByName["{wi}"], {wn}, itemByName["{gi}"], {gn}, {r["max_uses"]}, {r["xp"]}, '
-            f'{r["kind"]}, {r["aux"]}, {c2}, {cn}, {r["mult100"]}, {r["types"]}}},')
+            f'{r["kind"]}, {r["aux"]}, {c2}, {cn}, {r["mult100"]}, {r["types"]}, {wp}}},')
 
 
 def main():
@@ -361,6 +372,9 @@ def main():
     w.append("\t// forTypes is the merchant_predicate: a bitmask of the villager types")
     w.append("\t// (villagerType*) the listing is offered to, 0 = any.")
     w.append("\tforTypes int32")
+    w.append("\t// wantPotion is the first cost's potion_contents predicate — the")
+    w.append("\t// potion (vanilla name) the bottle must hold, \"\" = any stack.")
+    w.append("\twantPotion string")
     w.append("}")
     w.append("")
     w.append("const (")

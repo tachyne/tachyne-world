@@ -221,6 +221,7 @@ type savedOffer struct {
 	Demand  int32   `json:"d,omitempty"`
 	C2Item  int32   `json:"c2,omitempty" mig:"item"`
 	C2N     int32   `json:"c2n,omitempty"`
+	WantPot string  `json:"wp,omitempty"`  // the first cost's potion predicate (vanilla name)
 	Ench    []int32 `json:"e,omitempty"`   // one id<<8|lvl per enchantment
 	MapID   int32   `json:"m,omitempty"`   // a treasure map's map id
 	Name    string  `json:"n,omitempty"`   // and the name it carries
@@ -259,7 +260,7 @@ func packOffer(o mobOffer) savedOffer {
 	s := savedOffer{In: t.inItem, InN: t.inCount, Out: t.outItem, OutN: t.outCount,
 		MaxUses: t.maxUses, XP: t.xp, Uses: o.uses, Demand: o.demand,
 		C2Item: o.cost2Item, C2N: o.cost2Count, MapID: o.outMapID, Name: o.outName,
-		Color: o.outColor, Stew: o.outStew, Potion: o.outPotion, Mult: o.trade.mult100}
+		Color: o.outColor, Stew: o.outStew, Potion: o.outPotion, Mult: o.trade.mult100, WantPot: t.wantPotion}
 	for _, e := range o.outEnchs {
 		if e.lvl == 0 {
 			break
@@ -274,6 +275,7 @@ func unpackOffer(s savedOffer) mobOffer {
 		outCount: s.OutN, maxUses: s.MaxUses, xp: s.XP}, uses: s.Uses, demand: s.Demand,
 		cost2Item: s.C2Item, cost2Count: s.C2N, outMapID: s.MapID, outName: s.Name,
 		outColor: s.Color, outStew: s.Stew, outPotion: s.Potion}
+	o.trade.wantPotion = s.WantPot
 	if o.trade.mult100 = s.Mult; o.trade.mult100 == 0 {
 		o.trade.mult100 = defaultPriceMult100 // an offer stored before it was per-listing
 	}

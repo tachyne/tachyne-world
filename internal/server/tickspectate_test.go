@@ -134,3 +134,27 @@ func TestZombieNautilusWarmVariant(t *testing.T) {
 	_ = players
 	t.Fatal("no variant frame for a warm zombie nautilus")
 }
+
+// The wandering trader buys a water bottle — only a WATER bottle — for an
+// emerald (water_bottle_emerald's potion_contents predicate).
+func TestTraderWaterBottleListing(t *testing.T) {
+	var tr *vTrade
+	for i := range traderTradeSets[0].trades {
+		if traderTradeSets[0].trades[i].wantPotion == "water" {
+			tr = &traderTradeSets[0].trades[i]
+		}
+	}
+	if tr == nil {
+		t.Fatal("the water bottle listing is missing from the buying pool")
+	}
+	o := &mobOffer{trade: *tr}
+	if !o.pays(invStack{item: itemPotion, count: 1, potion: potWater}) {
+		t.Fatal("a water bottle should pay")
+	}
+	if o.pays(invStack{item: itemPotion, count: 1, potion: potAwkward}) {
+		t.Fatal("an awkward potion must not pay for a water bottle")
+	}
+	if got := unpackOffer(packOffer(*o)); got.trade.wantPotion != "water" {
+		t.Fatal("the predicate must survive a save")
+	}
+}

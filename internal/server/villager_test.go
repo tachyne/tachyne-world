@@ -91,8 +91,8 @@ func TestTradeAuthority(t *testing.T) {
 	// Pin two known offers so the exchange math is deterministic (the tier
 	// rotation is a separate concern).
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
-		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0, ""}},
+		{trade: vTrade{itemByName["emerald"], 1, itemByName["bread"], 6, 16, 1, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0, ""}},
 	}
 	h.openTrades(pl, m)
 	if pl.winKind != winTrade {
@@ -1238,7 +1238,7 @@ func TestTradeShiftClickRepeats(t *testing.T) {
 	m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
 	h.initVillagerTrades(m, 0)
 	m.offers = []mobOffer{
-		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
+		{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0, ""}},
 	}
 	h.openTrades(pl, m)
 	for i := range pl.inv.slots {

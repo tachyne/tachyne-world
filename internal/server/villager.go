@@ -429,9 +429,16 @@ func (h *hub) sendTradeList(t *tracked, m *mob) {
 		// The client derives the DISPLAYED cost from the base ItemCost plus the
 		// special-price/multiplier/demand fields (matching costCount), so send
 		// the BASE count here, not the adjusted one.
-		b = protocol.AppendVarInt(b, tr.inItem) // ItemCost: id + count + no components
+		b = protocol.AppendVarInt(b, tr.inItem) // ItemCost: id + count + its component predicate
 		b = protocol.AppendVarInt(b, tr.inCount)
-		b = protocol.AppendVarInt(b, 0)
+		if kind, ok := potionByVanillaName[tr.wantPotion]; ok && tr.wantPotion != "" {
+			// The water bottle: potion_contents must match exactly.
+			b = protocol.AppendVarInt(b, 1)
+			b = protocol.AppendVarInt(b, componentPotionContents)
+			b = append(b, potionComponentBytes(kind)...)
+		} else {
+			b = protocol.AppendVarInt(b, 0)
+		}
 		b = appendStack(b, o.output()) // output Slot (with its enchantment, for a book)
 		if o.cost2Item != 0 {          // optional second ItemCost
 			b = protocol.AppendBool(b, true)
@@ -490,7 +497,7 @@ func (h *hub) tradeResult(t *tracked) (invStack, *mobOffer) {
 	}
 	have, have2 := 0, 0
 	for _, in := range t.trade {
-		if in.item == o.trade.inItem {
+		if o.pays(in) {
 			have += in.count
 		}
 		if o.cost2Item != 0 && in.item == o.cost2Item {
@@ -541,7 +548,7 @@ func (h *hub) tradeOnce(players map[int32]*tracked, t *tracked, res invStack, o 
 			if need == 0 {
 				break
 			}
-			if t.trade[i].item != item {
+			if t.trade[i].item != item || (item == o.trade.inItem && !o.pays(t.trade[i])) {
 				continue
 			}
 			take := t.trade[i].count
@@ -654,7 +661,7 @@ func (h *hub) tradeMoveItems(t *tracked, m *mob, idx int) {
 				slot = k - 27 // …and 30..38 the hotbar
 			}
 			inv := &t.inv.slots[slot]
-			if inv.count == 0 || inv.item != item {
+			if inv.count == 0 || inv.item != item || (pay == 0 && !o.pays(*inv)) {
 				continue
 			}
 			cur := t.trade[pay]
@@ -717,4 +724,18 @@ func (h *hub) golemCrackSound(players map[int32]*tracked, m *mob) {
 		h.playSoundDim(players, m.dim, "minecraft:entity.iron_golem.damage", sndNeutral, m.x, m.y, m.z, 1, 1)
 	}
 	m.golemCrack = lvl
+}
+
+// pays reports whether a stack can pay the offer's first cost: the item, and
+// for the wandering trader's water bottle the potion it holds (the ItemCost's
+// potion_contents predicate).
+func (o *mobOffer) pays(s invStack) bool {
+	if s.item != o.trade.inItem || s.count <= 0 {
+		return false
+	}
+	if o.trade.wantPotion == "" {
+		return true
+	}
+	kind, ok := potionByVanillaName[o.trade.wantPotion]
+	return ok && s.potion == kind
 }

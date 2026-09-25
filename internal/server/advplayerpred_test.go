@@ -51,7 +51,7 @@ func TestTradeAtWorldHeightNeedsTheHeight(t *testing.T) {
 		m := h.spawnMob(players, entityVillager, pl.x+1, pl.y, pl.z)
 		h.initVillagerTrades(m, 0)
 		m.offers = []mobOffer{
-			{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0}},
+			{trade: vTrade{itemByName["wheat"], 20, itemByName["emerald"], 1, 16, 2, vTradeFixed, 0, 0, 0, defaultPriceMult100, 0, ""}},
 		}
 		h.openTrades(pl, m)
 		pl.trade[0] = invStack{item: itemByName["wheat"], count: 20}

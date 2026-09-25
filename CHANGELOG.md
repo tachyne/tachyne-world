@@ -140,6 +140,8 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **The wandering trader buys water bottles.** Its sixth buying offer, a
+  water bottle for an emerald, is back, and only a water bottle will do.
 - **Vaults, trial spawners and suspicious blocks show their contents.** An
   active vault turns through the rewards it can give, a trial spawner shows
   the mob it spawns spinning inside, and brushing sand or gravel reveals the
