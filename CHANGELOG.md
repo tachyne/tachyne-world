@@ -51,6 +51,44 @@ the public history since the project was open-sourced on 2026-07-10.
   pot, a cake or a respawn anchor, but never opens doors or chests on its
   own, and a respawn anchor waits for the offhand's glowstone instead of
   setting your spawn.
+- **Frogs swim at a frog's pace.** A frog swimming about with nowhere to
+  be moved at its full walking pace; as in vanilla it now swims a little
+  slower than it walks.
+- **Frogs climb out of the water.** A frog in a pond now makes for the
+  nearest bank every few seconds, as vanilla frogs do, instead of drifting
+  about in the water.
+- **Iron golems walk their villages.** An iron golem with nothing to fight
+  stood where it was made. It now strolls about its village at its unhurried
+  pace, often toward the villagers and their beds, workstations and bell, and
+  one that has wandered out heads back toward the village.
+- **Villagers show you their trades.** Stand near a villager holding
+  something it trades for, and it turns to you and holds up what it would
+  give in return, cycling through when there are several offers, as in
+  vanilla.
+- **Villagers work at their job sites.** A villager at its workstation in
+  working hours now gets on with its job every so often, with its trade's
+  work sound. A farmer at its composter bakes bread from its wheat, takes
+  out the bone meal when the composter is full, and tips its spare seeds
+  in, keeping ten for sowing.
+- **Farmers farm again.** The villagers who harvested and replanted
+  fields, asked for seeds and handed out spare wheat were the
+  cartographers, not the farmers. Farmers with a composter now do their own
+  job.
+- **Axolotls play dead instead of fleeing.** A struck axolotl ran off in a
+  panic, which vanilla axolotls never do. Now its only answer to a hit is
+  the chance to play dead under water, and only a hit from something sets
+  that off, not fire or a fall.
+- **Angry bees calm down.** A bee you hit, or one from a hive you robbed,
+  stayed angry for good. As in vanilla it now chases you for 20 to 39
+  seconds and then goes back to its flowers, and a bee that has stung
+  someone stops chasing at once. An angry bee also stings only the player
+  it is after, not whoever happens to be closest.
+- **Llamas can be ridden and tamed.** Climb onto a wild llama with an
+  empty hand and it throws you off until it settles, as a horse does, only
+  sooner; wheat and hay bales bring it round faster. A tamed llama carries
+  you but can't be steered, and a tamed trader llama no longer leaves with
+  its trader. A tamed horse, donkey or camel can also be mounted without a
+  saddle now; as in vanilla, you just can't steer it.
 - **Beds refuse you the way vanilla does.** A bed someone is already in,
   one more than three blocks away, or one with a solid block over it now
   turns you down with vanilla's message above the hotbar. "Respawn point

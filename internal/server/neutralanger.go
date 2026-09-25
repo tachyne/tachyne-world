@@ -18,10 +18,17 @@ const (
 	neutralAngerRange = 19 * 20 / mobMoveInterval
 )
 
-// persistentAnger are the NeutralMob retaliators (the bee keeps its own
-// anger in bee.go).
+// persistentAnger are the NeutralMob retaliators.
 func persistentAnger(etype int) bool {
-	return etype == entityWolf || etype == entityPolarBear
+	return etype == entityWolf || etype == entityPolarBear || etype == entityBee
+}
+
+// angerHeldWhileTargeting is updatePersistentAnger's stayAngryIfTargetPresent:
+// a wolf or a polar bear stays angry for as long as it holds its target, but a
+// bee passes false, so its 20-39 seconds run out even mid-chase and it gives
+// up (Bee.customServerAiStep).
+func angerHeldWhileTargeting(etype int) bool {
+	return etype != entityBee
 }
 
 // neutralAngerTime is a fresh PERSISTENT_ANGER_TIME roll.
@@ -34,12 +41,19 @@ func (h *hub) neutralAngerTime() int {
 // acquireTarget should run instead (universal anger, or a species it does
 // not cover).
 func (h *hub) provokedTarget(players map[int32]*tracked, m *mob) bool {
-	if !m.retaliates || m.tamed || m.etype == entityBee {
+	if !m.retaliates || m.tamed {
 		return false
 	}
 	persistent := persistentAnger(m.etype)
 	if persistent && m.anger > 0 {
 		m.anger--
+	}
+	if m.etype == entityBee && (m.anger == 0 || m.beeStingDie > 0) {
+		// A bee's anger ends with its clock or its sting (doHurtTarget calls
+		// stopBeingAngry), and BeeHurtByOtherGoal and BeeAttackGoal both
+		// want it angry: it lets the target go and goes back to its flowers.
+		h.calmDown(m)
+		return true
 	}
 	reach := m.followRange()
 	valid := func(eid int32) *tracked {
@@ -59,7 +73,7 @@ func (h *hub) provokedTarget(players map[int32]*tracked, m *mob) bool {
 		}
 		if m.unseenTicks <= hurtByUnseenMemory {
 			m.hasTarget, m.tx, m.tz = true, t.x, t.z
-			if persistent && m.anger < neutralAngerMin {
+			if persistent && angerHeldWhileTargeting(m.etype) && m.anger < neutralAngerMin {
 				m.anger = h.neutralAngerTime() // updatePersistentAnger(…, true): held target, fresh timer
 			}
 			return true
@@ -86,6 +100,9 @@ func (h *hub) provokedTarget(players map[int32]*tracked, m *mob) bool {
 // again.
 func (h *hub) calmDown(m *mob) {
 	m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
+	if m.etype == entityBee {
+		m.behavior = beeBehavior{} // back to its flower-and-hive errands
+	}
 	m.anger, m.targetEID, m.angryAt, m.unseenTicks = 0, 0, 0, 0
 	m.llamaDefending = false
 }

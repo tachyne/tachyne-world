@@ -44,6 +44,12 @@ func strollSpeed(m *mob) float64 {
 // strollSpeedFor is strollSpeed with the axolotl's two idle strolls:
 // AxolotlAi swims at 0.5 and, ashore, crawls at 0.15.
 func (h *hub) strollSpeedFor(m *mob) float64 {
+	if m.etype == entityIronGolem && m.golemStrolling {
+		return golemStrollSpeed // GolemRandomStrollInVillageGoal / MoveBackToVillageGoal
+	}
+	if m.etype == entityFrog && h.inWater(m.dim, m.x, m.y, m.z) {
+		return 0.75 // FrogAi SWIM: RandomStroll.swim(0.75F); ashore it strolls at 1.0
+	}
 	if m.etype == entityAxolotl {
 		if h.inWater(m.dim, m.x, m.y, m.z) {
 			return 0.5

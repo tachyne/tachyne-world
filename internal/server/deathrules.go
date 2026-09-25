@@ -10,8 +10,7 @@ func (h *hub) deathForgiveness(players map[int32]*tracked, t *tracked) {
 	if h.rules.ForgiveDead && !h.rules.UniversalAnger { // universal anger holds the grudge past a death
 		for _, m := range h.mobs {
 			if m.hostile && m.targetEID == t.p.eid && m.dim == t.dim && neutralMob(m) {
-				m.hostile, m.behavior, m.hasTarget = false, Behavior(wanderBehavior{}), false
-				m.anger, m.targetEID = 0, 0
+				h.calmDown(m) // stopBeingAngry
 			}
 		}
 	}

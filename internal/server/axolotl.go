@@ -42,6 +42,20 @@ func axolotlAlwaysHostile(etype int) bool { // #axolotl_always_hostiles
 
 func axolotlDeadMeta(m *mob) []byte { return boolMeta(m.eid, metaIndexAxolotlDead, m.axDead > 0) }
 
+// attributedDamage is the damage kinds that come from an entity — hurtServer
+// rolls play-dead only when the source has one (getEntity or
+// getDirectEntity): a blow, a bite, a shot or a blast, never fire, a
+// cactus, a fall or thin air.
+func attributedDamage(dt dmgType) bool {
+	switch dt {
+	case dtPlayerAttack, dtMobAttack, dtMobAttackNoAggro, dtSting, dtThorns, dtSpear, dtMaceSmash,
+		dtArrow, dtTrident, dtThrown, dtMobProjectile, dtFireball, dtUnattributedFireball, dtWitherSkull,
+		dtWindCharge, dtFireworks, dtSpit, dtSonicBoom, dtExplosion, dtPlayerExplosion, dtIndirectMagic:
+		return true
+	}
+	return false
+}
+
 // axolotlStep runs each mob update. Returns whether it holds the axolotl.
 func (h *hub) axolotlStep(players map[int32]*tracked, m *mob) bool {
 	now := h.tick.Load()

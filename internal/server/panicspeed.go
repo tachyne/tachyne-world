@@ -92,11 +92,12 @@ func (h *hub) panicFor(m *mob) int {
 // has no AnimalPanic: a struck zombie nautilus turns on you instead. A squid
 // only has its own flee, which jets away from the attacker while it is near;
 // a bat has no goals at all. A villager's brain has its own panic package,
-// villagerpanic.go.)
+// villagerpanic.go. AxolotlAi has no panic in any activity: a struck axolotl
+// may play dead instead, axolotl.go.)
 var panicNever = func() map[int]bool {
 	out := map[int]bool{}
 	for _, n := range []string{"zombie_horse", "skeleton_horse", "ocelot", "snow_golem", "zombie_nautilus",
-		"squid", "glow_squid", "bat", "villager"} {
+		"squid", "glow_squid", "bat", "villager", "axolotl"} {
 		if id, ok := entityByName[n]; ok {
 			out[id] = true
 		}

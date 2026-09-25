@@ -34,7 +34,11 @@ const (
 )
 
 var (
-	profFarmer = int(professionRegistryID["farmer"])
+	// profFarmer is the farmer's place in professionNames, which is what
+	// m.profession holds. (It was once the registry id, 5 — which is the
+	// cartographer's index, so the cartographers farmed and the farmers
+	// never did.)
+	profFarmer = professionIndex("farmer")
 
 	// villagerPicksUp is #villager_picks_up (its #villager_plantable_seeds
 	// folded in) and farmerRequested the farmer profession's requestedItems.
@@ -50,6 +54,16 @@ func villagerWants(m *mob, item int32) bool {
 		return false
 	}
 	return villagerInvRoom(m, item) > 0
+}
+
+// professionIndex is a profession's index in professionNames (-1 if none).
+func professionIndex(name string) int {
+	for i, n := range professionNames {
+		if n == name {
+			return i
+		}
+	}
+	return -1
 }
 
 // villagerInvRoom is how many of item the pockets can still take.

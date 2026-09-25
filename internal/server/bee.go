@@ -311,7 +311,7 @@ func (h *hub) beeOut(players map[int32]*tracked, dim int, pos blockPos, angry bo
 	m.beeHome, m.beeHasHome = pos, true
 	m.beeNoEnter = beeReenterSecs
 	if angry {
-		m.anger = beeAngerSecs
+		m.anger = h.neutralAngerTime() // PERSISTENT_ANGER_TIME, 20-39 s
 	}
 	return m
 }

@@ -512,6 +512,9 @@ func (h *hub) mobMelee(players map[int32]*tracked, m *mob) {
 		// never at a bystander in gold who happens to be standing close.
 		t = h.piglinTarget(players, m, attackReach)
 	}
+	if m.etype == entityBee && m.targetEID != 0 && t != nil && t.p.eid != m.targetEID {
+		t = nil // BeeAttackGoal is a MeleeAttackGoal: it stings its target, not a bystander
+	}
 	if m.etype == entityCreaking {
 		// MeleeAttack needs an ATTACK_TARGET, which only an active creaking has.
 		if t != nil && (!m.creakActive || t.p.eid != m.targetEID) {

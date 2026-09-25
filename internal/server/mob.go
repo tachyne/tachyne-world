@@ -235,6 +235,7 @@ type mob struct {
 	usesDoors                       bool        // villager: may plan through + open wooden doors
 	roamX, roamZ                    float64     // villager: current roam target (goal-directed wander)
 	roamAt                          uint64      // tick to pick a fresh roam target
+	golemStrolling                  bool        // iron golem: idle (strolling or heading home) at 0.6, not fighting
 	bed                             blockPos    // villager: its bed (sleep anchor; zero = no schedule)
 	work                            blockPos    // villager: its profession workstation (day work site)
 	farmPos                         blockPos    // farmer: the plot it is tending (zero = none)
@@ -363,6 +364,9 @@ type mob struct {
 	tadpoleAge                      int      // tadpole: Age (a frog at 24000)
 	vexCharging                     bool     // vex: DATA_FLAGS charging
 	croakLeft                       int      // frog: ticks of the CROAKING pose still to run
+	frogLand                        blockPos // frog: TryFindLand's walk target
+	frogLandSet                     bool
+	frogLandNext, frogLandUntil     uint64   // frog: TryFindLand's next search; when it gives up the walk
 	flyAimY                         float64  // a flier being led somewhere: the height it rises or sinks to
 	flyAimAt                        uint64   // …the tick that was last set (stale after a few ticks)
 	followBoat                      int32    // dolphin: the boat whose rider it keeps pace with (0 = none)
@@ -500,6 +504,8 @@ type mob struct {
 	merchantTimer                   int32      // villager: ticks left on Villager.updateMerchantTimer
 	levelUpPending                  bool       // villager: increaseProfessionLevelOnUpdate
 	lastRestockTick                 uint64     // villager: tick of the last restock (2400-tick spacing gate)
+	lastWorkCheck                   uint64     // villager: WorkAtPoi's lastCheck (every 300 ticks at most)
+	showTrades                      tradeShow  // villager: ShowTradesToPlayer's run (villagershowtrades.go)
 	lastRestockDay                  uint64     // villager: day count at the last shouldRestock check
 	gossip                          gossipBook // villager: what it holds about each player (persisted)
 	home                            blockPos   // villager house / golem well — the anchor to drift back to
@@ -734,6 +740,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 		if m.etype == entityVillager {
 			// Not reached while trading: the branch above continues out.
 			h.villagerMerchantTick(players, m)
+			h.villagerWorkTick(players, m)       // WorkAtPoi: at the job site in working hours
+			h.villagerShowTradesTick(players, m) // ShowTradesToPlayer: holding up a trade to a player nearby
 		}
 		if m.usesDoors {
 			if m.bed != (blockPos{}) && h.villagerSleep(players, m) {
@@ -909,6 +917,8 @@ func (h *hub) updateMobs(players map[int32]*tracked) {
 			// or getting up again.
 		case m.etype == entityFrog && h.frogStep(players, m):
 			// A frog after a small slime or magma cube (FrogAi's tongue).
+		case m.etype == entityFrog && h.frogFindLandStep(m):
+			// A frog in the water making for the nearest bank (TryFindLand).
 		case m.etype == entityFrog && m.croakLeft > 0 && h.frogCroakStep(players, m):
 			// A frog croaking, still, for its sixty ticks (FrogAi's Croak).
 		case m.etype == entityAllay && h.allayStep(players, m):
@@ -1377,7 +1387,7 @@ func (m *mob) hurtOf(dmg, breachFrac float64, dt dmgType) {
 	}
 	// LivingEntity.hurt's cooldown: for 10 ticks after a landed blow only a
 	// bigger blow lands, and only its excess over the last one.
-	if m.etype == entityAxolotl { // Axolotl.hurtServer rolls play-dead; the hub does it next update
+	if m.etype == entityAxolotl && attributedDamage(dt) { // Axolotl.hurtServer rolls play-dead; the hub does it next update
 		m.axHurt, m.axHurtDmg = true, dmg
 	}
 	if m.etype == entityWither && m.witherSmash <= 0 {

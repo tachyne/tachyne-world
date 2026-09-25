@@ -134,20 +134,14 @@ func (h *hub) composterInsert(target simPos, level int, one invStack) bool {
 	if level >= composterFull {
 		return false
 	}
-	chance, compostable := compostChance[one.item]
-	if !compostable {
+	if _, compostable := compostChance[one.item]; !compostable {
 		return false
 	}
 	cx, cy, cz := float64(target.x)+0.5, float64(target.y)+0.5, float64(target.z)+0.5
-	if level != 0 && h.rng.Float64() >= chance {
-		h.playSoundDim(h.playersRef, target.dim, "minecraft:block.composter.fill", sndBlock, cx, cy, cz, 1, 1)
-		return true // the item is spent either way, as it is from a hand
+	snd := "minecraft:block.composter.fill" // the item is spent either way, as it is from a hand
+	if h.composterLayer(target.dim, target.blockPos, level, one.item, 0) != level {
+		snd = "minecraft:block.composter.fill_success"
 	}
-	h.setBlockAt(h.playersRef, target.dim, target.blockPos, composterBase+uint32(level)+1)
-	h.vib(target.dim, freqBlockChange, target.x, target.y, target.z, 0)
-	h.playSoundDim(h.playersRef, target.dim, "minecraft:block.composter.fill_success", sndBlock, cx, cy, cz, 1, 1)
-	if level+1 == composterFull {
-		h.armComposter(target.dim, target.blockPos)
-	}
+	h.playSoundDim(h.playersRef, target.dim, snd, sndBlock, cx, cy, cz, 1, 1)
 	return true
 }

@@ -61,14 +61,8 @@ func (villagerBehavior) steer(h *hub, m *mob) (float64, float64) {
 	switch villagerSegment(h.dayTime.Load()) {
 	case vsWork:
 		if m.work != (blockPos{}) {
-			// Vanilla WorkAtPoi: standing at the job-site POI restocks used
-			// offers (gated by allowedToRestock to ≤2/day, ≥2400 ticks apart) —
-			// this is the day's second restock a heavily-traded villager gets.
-			if dist3(m.x, m.y, m.z,
-				float64(m.work.x)+0.5, float64(m.work.y), float64(m.work.z)+0.5) < 2 &&
-				h.shouldRestock(m) {
-				h.restockOffers(m)
-			}
+			// Standing there is WorkAtPoi's business (villagerwork.go): the
+			// work sound, the workstation, and the day's second restock.
 			vx, vz := h.pathSteerTo(m, m.work, poiValidRange[poiJob])
 			h.noteWalkToPoi(m, poiJob, m.work)
 			return vx, vz
@@ -164,16 +158,21 @@ func (h *hub) villageStroll(m *mob) (float64, float64) {
 	if best == here {
 		return random()
 	}
-	// DefaultRandomPos.getPosTowards (RandomPos.generateRandomDirectionWithin
-	// Radians): a heading within a quarter turn either side of the one to the
-	// section's centre, a distance of sqrt(u)·√2 times ten, kept only inside
-	// the ten-block box; ten tries.
 	tx, tz := float64(best[0]*16+8)+0.5, float64(best[2]*16+8)+0.5 // Vec3.atBottomCenterOf
+	return h.randomPosTowards(m, tx, tz, villagerRoam)
+}
+
+// randomPosTowards is DefaultRandomPos/LandRandomPos.getPosTowards
+// (RandomPos.generateRandomDirectionWithinRadians): a heading within a
+// quarter turn either side of the one to the target, a distance of sqrt(u)·√2
+// times the reach, kept only inside the reach's box; ten tries, then where it
+// stands.
+func (h *hub) randomPosTowards(m *mob, tx, tz float64, reach int) (float64, float64) {
 	for try := 0; try < 10; try++ {
 		head := math.Atan2(tz-m.z, tx-m.x) + (2*h.rng.Float64()-1)*math.Pi/2
-		r := math.Sqrt(h.rng.Float64()) * villagerRoam * math.Sqrt2
+		r := math.Sqrt(h.rng.Float64()) * float64(reach) * math.Sqrt2
 		dx, dz := math.Cos(head)*r, math.Sin(head)*r
-		if math.Abs(dx) <= villagerRoam && math.Abs(dz) <= villagerRoam {
+		if math.Abs(dx) <= float64(reach) && math.Abs(dz) <= float64(reach) {
 			return m.x + math.Floor(dx), m.z + math.Floor(dz)
 		}
 	}

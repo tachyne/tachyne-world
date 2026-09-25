@@ -67,3 +67,55 @@ func TestAxolotlHuntsAndPlaysDead(t *testing.T) {
 		t.Fatal("held still while playing dead")
 	}
 }
+
+// A struck axolotl does not bolt and bears no grudge: AxolotlAi has no panic
+// in any activity, and its one answer to a blow is the play-dead roll —
+// which only a blow from something can set off, never fire or a fall.
+func TestStruckAxolotlPlaysDeadNotPanics(t *testing.T) {
+	h := newHub(world.New(1))
+	h.world.ForceLoad(0, 0, 2)
+	pl := survPlayer(h)
+	players := map[int32]*tracked{pl.p.eid: pl}
+	h.playersRef = players
+	w := h.worldFor(0)
+	for x := -6; x <= 6; x++ {
+		for z := -6; z <= 6; z++ {
+			w.SetBlock(x, 179, z, worldgen.Stone)
+			for y := 180; y <= 183; y++ {
+				w.SetBlock(x, y, z, worldgen.Water)
+			}
+		}
+	}
+	pl.x, pl.y, pl.z = 2.5, 181, 0.5
+	ax := h.spawnMob(players, entityAxolotl, 0.5, 181, 0.5)
+	h.gridDirty()
+	played := false
+	for i := 0; i < 40 && !played; i++ {
+		ax.health, ax.invulnTicks = 1000, 0
+		ax.axDead = 0
+		h.attackMob(players, pl.p.eid, ax.eid)
+		if ax.panic != 0 || ax.anger != 0 || ax.targetEID != 0 || ax.hostile {
+			t.Fatalf("hit %d: an axolotl neither panics nor holds a grudge: panic %d anger %d target %d", i, ax.panic, ax.anger, ax.targetEID)
+		}
+		for j := 0; j < 6 && !played; j++ { // a sword's recharge: the knockback settles
+			h.tick.Add(mobMoveInterval)
+			h.updateMobs(players)
+			played = ax.axDead > 0
+			if ax.panic != 0 {
+				t.Fatalf("hit %d: the axolotl bolted", i)
+			}
+		}
+	}
+	if !played {
+		t.Fatal("forty blows under water and it never played dead")
+	}
+	// Fire, a cactus or a fall carries no attacker: no roll at all.
+	ax.axDead, ax.axHurt = 0, false
+	for i := 0; i < 30; i++ {
+		ax.health, ax.invulnTicks = 1000, 0
+		ax.hurtKind(1, dtInFire)
+		if ax.axHurt {
+			t.Fatal("unattributed damage should not roll play-dead")
+		}
+	}
+}

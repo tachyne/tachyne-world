@@ -94,3 +94,20 @@ func TestBabyCannotBeRidden(t *testing.T) {
 		t.Fatal("a foal must not be saddleable/rideable")
 	}
 }
+
+// A tamed horse with no saddle is still climbed on (AbstractHorse.mobInteract
+// ends in doPlayerRide); only steering needs the saddle.
+func TestTamedHorseRidesBareback(t *testing.T) {
+	h, pl, players, m := ridingSetup(t, entityHorse)
+	m.tamed, m.owner = true, pl.p.eid
+	pl.inv.slots[0] = invStack{}
+	if !h.interactMob(players, pl, m, false) || m.rider != pl.p.eid || m.saddled {
+		t.Fatalf("a tamed unsaddled horse should take a rider: rider=%d saddled=%v", m.rider, m.saddled)
+	}
+	// A pig is different: no saddle, no ride.
+	h2, pl2, players2, pig := ridingSetup(t, entityPig)
+	pl2.inv.slots[0] = invStack{}
+	if h2.interactMob(players2, pl2, pig, false) && pig.rider != 0 {
+		t.Fatal("an unsaddled pig takes no rider")
+	}
+}

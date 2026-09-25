@@ -23,8 +23,8 @@ func TestGolemIgnoresCreepers(t *testing.T) {
 	if c.health != hp {
 		t.Fatal("a golem never punches a creeper")
 	}
-	if vx, vz := (golemBehavior{}).steer(h, g); vx != 0 || vz != 0 {
-		t.Fatalf("nor walks at one: %.2f %.2f", vx, vz)
+	if foe := h.golemFoe(g); foe != nil { // an idle golem strolls now, so ask what it would go for
+		t.Fatalf("nor walks at one: foe %d", foe.etype)
 	}
 	z := h.spawnMob(players, entityZombie, 1.5, 180, 1.5)
 	z.hostile = true // spawnMob leaves the hunting flag to the hostile spawn path

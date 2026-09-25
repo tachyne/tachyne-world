@@ -19,7 +19,6 @@ const (
 	beeWorkRange      = 8.0 // how close a bee must be to count as working it
 	beeFillChance     = 60  // 1-in-N per second per working bee
 	beeCampfireDepth  = 5   // vanilla looks this far below for calming smoke
-	beeAngerSecs      = 30  // how long a robbed hive's bees stay cross
 )
 
 var (
@@ -144,7 +143,7 @@ func (h *hub) angerBees(players map[int32]*tracked, t *tracked, dim int, pos blo
 			continue
 		}
 		h.provoke(m, t)
-		m.anger = beeAngerSecs
+		m.anger = h.neutralAngerTime() // PERSISTENT_ANGER_TIME, 20-39 s
 	}
 }
 
