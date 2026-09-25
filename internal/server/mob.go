@@ -524,6 +524,7 @@ type mob struct {
 	seeTime                         int        // ranged goals: ticks the target has been in (positive) or out of (negative) sight
 	targetEID                       int32      // hostile: the player it hunts (TargetGoal's target; 0 = none)
 	unseenTicks                     int        // hostile: ticks that player has been out of sight
+	preyUnseen                      int        // ticks the held prey (preyTarget) has been out of sight
 	tempted                         bool       // following a player's held food (temptStep)
 	temptCalm                       int        // updates left before it can be tempted again
 	temptPX, temptPZ, temptPY       float64    // cat/ocelot: where the tempting player stood (canScare)

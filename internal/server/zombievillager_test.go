@@ -20,7 +20,7 @@ func TestZombieVillagerBurnsInDaylight(t *testing.T) {
 		t.Fatal("zombie villager must carry the daylight-burn flag (vanilla parity)")
 	}
 	m.health = burnDamagePerSec
-	h.dayTime.Store(3000) // 09:00 — the report
+	h.dayTime.Store(3000)                   // 09:00 — the report
 	for i := 0; i < 30 && !m.burning; i++ { // the sun rolls each tick
 		h.updateHostiles(players)
 		h.mobEnvironment(players)

@@ -109,6 +109,12 @@ the public history since the project was open-sourced on 2026-07-10.
   one by one, as in vanilla. A mob set alight at night by lava or Fire
   Aspect now keeps burning steadily until its fire runs out, instead of
   flickering.
+- **Monsters hunt what they can see.** A zombie, skeleton, vindicator,
+  slime or other monster no longer locks onto an iron golem, a baby turtle
+  or its other prey through a wall; it has to see it first, and it loses
+  interest a few seconds after losing sight of it. As in vanilla, a zombie
+  or pillager still seeks out villagers it cannot see, and a zoglin goes
+  only for what is in view.
 - **Endermen drop what they carry.** Killing an enderman that is holding a
   block now drops that block, as in vanilla.
 - **Creative players pick things up.** Walking over dropped items in

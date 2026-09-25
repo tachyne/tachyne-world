@@ -83,7 +83,7 @@ func TestDaylightBurnsHostiles(t *testing.T) {
 	lx, lz := h.findLand(0, 0) // open-sky surface column
 	m := h.spawnZombie(players, lx, lz)
 	m.health = burnDamagePerSec // one second of burn is lethal
-	h.dayTime.Store(1000) // daytime
+	h.dayTime.Store(1000)       // daytime
 
 	for i := 0; i < 30 && !m.burning; i++ { // the sun rolls each tick
 		h.updateHostiles(players) // relights the afterburn clock
