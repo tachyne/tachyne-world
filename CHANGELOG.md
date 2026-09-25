@@ -30,6 +30,16 @@ the public history since the project was open-sourced on 2026-07-10.
   badlands, wildflowers in the birch forests and meadows, pale moss patches
   in the pale garden, and vines on the jungles' trees and cliffs. None of
   them grows on your floors or under your roofs.
+- **Ravines.** Long, deep cuts through the ground now wander across the
+  overworld as in vanilla, sometimes opening to the sky and flooding where
+  they pass under the sea. Nothing is cut where you have built: a ravine
+  that would reach a build is left out whole.
+- **Lava lakes.** Pools of lava ringed with stone now form on the surface
+  (rarely) and underground (often, from y=0 up), as in vanilla. They too
+  keep clear of your builds.
+- **Dirt, gravel and clay pockets underground.** Stone now holds pockets of
+  dirt and gravel everywhere, and lush caves pockets of clay, as in
+  vanilla — never in the stone around a build.
 
 ### Fixed
 - **Spectators don't start raids.** A spectator with Bad Omen can pass

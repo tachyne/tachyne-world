@@ -73,6 +73,21 @@ func (g *Generator) decorateSeafloor(ch *Chunk, cx, cz int32) {
 	at := func(x, y, z int) uint32 { return sectionBlockAt(ch, x-baseX, y, z-baseZ) }
 	water := func(x, y, z int) bool { return at(x, y, z) == Water }
 	put := func(x, y, z int, s uint32) { setSectionBlock(ch, x-baseX, y, z-baseZ, s, true) }
+	// floorAt is seafloorCol on the chunk as carved: a ravine under the sea
+	// drops the floor to its bottom, which must hold a plant too.
+	floorAt := func(x, z int) (int, bool) {
+		y, ok := g.seafloorCol(x, z)
+		if !ok {
+			return 0, false
+		}
+		for y > MinY+1 && water(x, y-1, z) {
+			y--
+		}
+		if b := at(x, y-1, z); !IsSturdyTop(b) || b == MagmaBlock {
+			return 0, false
+		}
+		return y, true
+	}
 	for ncx := cx - 1; ncx <= cx+1; ncx++ {
 		for ncz := cz - 1; ncz <= cz+1; ncz++ {
 			ox, oz := int(ncx)*16, int(ncz)*16
@@ -98,7 +113,7 @@ func (g *Generator) decorateSeafloor(ch *Chunk, cx, cz int32) {
 				if !ok || pr.seagrass == 0 {
 					continue // the biome filter runs at the final position
 				}
-				y, ok := g.seafloorCol(x, z)
+				y, ok := floorAt(x, z)
 				if !ok || !water(x, y, z) {
 					continue
 				}
@@ -128,7 +143,7 @@ func (g *Generator) decorateSeafloor(ch *Chunk, cx, cz int32) {
 					if kr, ok := seafloorRules[g.resolveBiome(x, z).Name]; !ok || kr.kelp == 0 {
 						continue
 					}
-					y, ok := g.seafloorCol(x, z)
+					y, ok := floorAt(x, z)
 					if !ok {
 						continue
 					}
@@ -148,7 +163,7 @@ func (g *Generator) decorateSeafloor(ch *Chunk, cx, cz int32) {
 					if pr, ok := seafloorRules[g.resolveBiome(x, z).Name]; !ok || !pr.pickles {
 						continue
 					}
-					y, ok := g.seafloorCol(x, z)
+					y, ok := floorAt(x, z)
 					if !ok || !water(x, y, z) {
 						continue
 					}

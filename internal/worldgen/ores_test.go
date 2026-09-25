@@ -160,3 +160,45 @@ func TestOreDepthVariants(t *testing.T) {
 		}
 	}
 }
+
+// A soil blob with a build near it is not placed; the others still are.
+func TestSoilBlobBuildGuard(t *testing.T) {
+	stoneChunk := func() *Chunk {
+		ch := NewChunk(SectionCount)
+		for s := range ch.Sections {
+			for i := range ch.Sections[s] {
+				ch.Sections[s][i] = Stone
+			}
+		}
+		return ch
+	}
+	count := func(ch *Chunk, b uint32) (n int, at [3]int) {
+		for s := range ch.Sections {
+			for i, v := range ch.Sections[s] {
+				if v == b {
+					n++
+					at = [3]int{i & 15, MinY + s*16 + i>>8, (i >> 4) & 15}
+				}
+			}
+		}
+		return
+	}
+	g := NewGenerator(7)
+	ch := stoneChunk()
+	g.placeBlobs(ch, 3, 5, earthBlobs, &blobGuard{g: g, cx: 3, cz: 5})
+	dirt, at := count(ch, Dirt)
+	gravel, _ := count(ch, Gravel)
+	if dirt == 0 || gravel == 0 {
+		t.Fatalf("no blobs in solid stone: dirt %d gravel %d", dirt, gravel)
+	}
+	g2 := NewGenerator(7)
+	setTestEdits(g2, map[[3]int]uint32{{3*16 + at[0], at[1], 5*16 + at[2]}: BlockBase("stone_bricks")})
+	ch2 := stoneChunk()
+	g2.placeBlobs(ch2, 3, 5, earthBlobs, &blobGuard{g: g2, cx: 3, cz: 5})
+	if s := sectionBlockAt(ch2, at[0], at[1], at[2]); s != Stone {
+		t.Errorf("blob cell beside a build is %d, want stone", s)
+	}
+	if dirt2, _ := count(ch2, Dirt); dirt2 == 0 || dirt2 >= dirt {
+		t.Errorf("dirt %d → %d: want only the guarded blob gone", dirt, dirt2)
+	}
+}

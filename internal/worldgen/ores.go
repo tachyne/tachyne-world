@@ -101,6 +101,9 @@ var oreSpecs = []oreSpec{
 // the world seed + chunk coords, so the same chunk always generates the same
 // veins (required — Block() point reads and chunk packets must agree).
 func (g *Generator) placeOres(ch *Chunk, cx, cz int32) {
+	blobs := &blobGuard{g: g, cx: cx, cz: cz}
+	g.placeBlobs(ch, cx, cz, earthBlobs, blobs)      // ore_dirt, ore_gravel: first in the ore step
+	defer g.placeBlobs(ch, cx, cz, clayBlobs, blobs) // ore_clay: after the ores, as in the lush caves' list
 	rng := rand.New(rand.NewSource(oreSeed(g.seed, cx, cz)))
 	for _, spec := range oreSpecs {
 		// Biome-gated ores (emerald) generate only where the chunk sits in an
@@ -174,4 +177,128 @@ func oreSeed(seed int64, cx, cz int32) int64 {
 		h ^= h >> 27
 	}
 	return int64(h)
+}
+
+// Soil blobs: ore_dirt (7 a chunk, 0–160) and ore_gravel (14 a chunk, the
+// whole height) in every overworld biome, and ore_clay (46 a chunk from the
+// bottom to 256) where the cave biome is the lush caves. Size 33, into
+// the base stone. They walk as the ore veins do, but on their own seeds,
+// so the ores' layout is unchanged; dirt and gravel go in before the ores,
+// clay after, as in vanilla's ore step.
+//
+// Build guard: a blob with a player's build in the box around it (two
+// blocks out) is not placed — a dirt pocket would otherwise replace the
+// stone of a wall or floor a player dug into.
+
+// blobSpec is one soil blob feature.
+type blobSpec struct {
+	block       uint32
+	count, size int
+	minY, maxY  int    // maxY 0 = the top of the world
+	caveBiome   string // "" = any biome; else only where the cave biome is this
+	salt        int64
+}
+
+var (
+	earthBlobs = []blobSpec{
+		{block: Dirt, count: 7, size: 33, minY: 0, maxY: 160, salt: 0xB10B_D1},
+		{block: Gravel, count: 14, size: 33, minY: MinY, salt: 0xB10B_67},
+	}
+	clayBlobs = []blobSpec{
+		{block: Clay, count: 46, size: 33, minY: MinY, maxY: 256, caveBiome: "minecraft:lush_caves", salt: 0xB10B_C1},
+	}
+)
+
+const blobGuardMargin = 2
+
+// blobGuard holds the build blocks around a chunk, read once for all its
+// blobs.
+type blobGuard struct {
+	g      *Generator
+	cx, cz int32
+	read   bool
+	builds [][3]int
+}
+
+// builtIn reports whether a build block lies in the box (inclusive).
+func (bg *blobGuard) builtIn(x0, y0, z0, x1, y1, z1 int) bool {
+	if bg.g.editsIn == nil {
+		return false
+	}
+	if !bg.read {
+		bg.read = true
+		for dx := int32(-1); dx <= 1; dx++ {
+			for dz := int32(-1); dz <= 1; dz++ {
+				bg.g.editsIn(bg.cx+dx, bg.cz+dz, func(x, y, z int, s uint32) {
+					if isBuildBlock(s) {
+						bg.builds = append(bg.builds, [3]int{x, y, z})
+					}
+				})
+			}
+		}
+	}
+	for _, p := range bg.builds {
+		if p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1 && p[2] >= z0 && p[2] <= z1 {
+			return true
+		}
+	}
+	return false
+}
+
+// placeBlobs walks this chunk's blobs of each spec.
+func (g *Generator) placeBlobs(ch *Chunk, cx, cz int32, specs []blobSpec, guard *blobGuard) {
+	top := MinY + len(ch.Sections)*16 - 1
+	cells := make([][3]int, 0, 64)
+	for _, spec := range specs {
+		rng := rand.New(rand.NewSource(oreSeed(g.seed^spec.salt, cx, cz)))
+		maxY := spec.maxY
+		if maxY == 0 || maxY > top {
+			maxY = top
+		}
+		for a := 0; a < spec.count; a++ {
+			lx, lz := rng.Intn(16), rng.Intn(16)
+			y := spec.minY + rng.Intn(maxY-spec.minY+1)
+			if spec.caveBiome != "" && g.caveBiomeAt(int(cx)*16+lx, y, int(cz)*16+lz) != spec.caveBiome {
+				continue
+			}
+			y = clampInt(y, MinY+1, top)
+			cells = cells[:0]
+			x0, y0, z0, x1, y1, z1 := lx, y, lz, lx, y, lz
+			for i := 0; i < spec.size; i++ {
+				cells = append(cells, [3]int{lx, y, lz})
+				x0, y0, z0 = min(x0, lx), min(y0, y), min(z0, lz)
+				x1, y1, z1 = max(x1, lx), max(y1, y), max(z1, lz)
+				switch rng.Intn(3) {
+				case 0:
+					lx = clampInt(lx+rng.Intn(3)-1, 0, 15)
+				case 1:
+					lz = clampInt(lz+rng.Intn(3)-1, 0, 15)
+				default:
+					y = clampInt(y+rng.Intn(3)-1, MinY+1, top)
+				}
+			}
+			bx, bz := int(cx)*16, int(cz)*16
+			if guard.builtIn(bx+x0-blobGuardMargin, y0-blobGuardMargin, bz+z0-blobGuardMargin,
+				bx+x1+blobGuardMargin, y1+blobGuardMargin, bz+z1+blobGuardMargin) {
+				continue
+			}
+			for _, c := range cells {
+				yi := c[1] - MinY
+				sec, idx := yi/16, ((yi%16)*16+c[2])*16+c[0]
+				if baseStoneOverworld(ch.Sections[sec][idx]) {
+					ch.Sections[sec][idx] = spec.block
+				}
+			}
+		}
+	}
+}
+
+// baseStoneOverworld is the #base_stone_overworld tag: what a soil blob
+// replaces.
+func baseStoneOverworld(s uint32) bool {
+	switch s {
+	case Stone, Deepslate, stoneGranite, stoneDiorite, stoneAndesite, stoneTuff:
+		return true
+	}
+	return false
 }
