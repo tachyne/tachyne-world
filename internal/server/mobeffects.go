@@ -37,6 +37,26 @@ func (h *hub) applyMobEffectDur(players map[int32]*tracked, m *mob, id int32, am
 	h.addMobEffect(players, m, id, activeEffect{amp: amp, left: ticks})
 }
 
+// mobCanBeAffected is LivingEntity.canBeAffected with its overrides: the
+// silverfish shrug off Infested and the slime Oozing (their tags), the
+// undead poison and regeneration, spiders and nautiluses poison, the wither
+// skeleton and the Wither itself Wither, and the parched Weakness.
+func mobCanBeAffected(etype int, id int32) bool {
+	switch {
+	case etype == entitySilverfish:
+		return id != effInfested
+	case etype == entitySlime:
+		return id != effOozing
+	case (etype == entitySpider || etype == entityCaveSpider || etype == entityNautilus || etype == entityZombieNautilus) && id == effPoison:
+		return false
+	case (etype == entityWitherSkeleton || etype == entityWither) && id == effWither:
+		return false
+	case etype == entityParched && id == effWeakness:
+		return false
+	}
+	return !ignoresPoisonAndRegen(etype) || (id != effPoison && id != effRegen)
+}
+
 // addMobEffect is LivingEntity.addEffect for a mob. Reports whether it took:
 // the undead shrug off poison and regeneration, and a stronger or longer
 // instance already running keeps its place.
@@ -61,10 +81,9 @@ func (h *hub) addMobEffect(players map[int32]*tracked, m *mob, id int32, in acti
 			h.hurtMobEffect(players, m, float64(6*(int(1)<<amp)))
 		}
 		return true
-	case effPoison, effRegen:
-		if ignoresPoisonAndRegen(m.etype) {
-			return false // #ignores_poison_and_regen: the undead are unmoved
-		}
+	}
+	if !mobCanBeAffected(m.etype, id) {
+		return false
 	}
 	if !m.startEffectInstance(id, in) {
 		return false // a stronger or longer instance is already running

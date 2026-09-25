@@ -96,15 +96,40 @@ func TestWitherRoseWithers(t *testing.T) {
 		t.Error("a wither rose did not wither the player")
 	}
 
-	// A zombie standing in one is unmoved.
+	// Wither takes the undead too (canBeAffected only spares them poison
+	// and regeneration); a wither skeleton is the one it cannot touch.
 	z := h.spawnHostile(players, entityZombie, 0, 0)
-	if z == nil {
+	ws := h.spawnHostile(players, entityWitherSkeleton, 0, 0)
+	if z == nil || ws == nil {
 		t.Fatal("spawn returned nil")
 	}
 	z.x, z.y, z.z = 0.5, 180, 0.5
+	ws.x, ws.y, ws.z = 0.5, 180, 0.5
 	h.insideBoth(players)
-	if z.hasEffect(effWither) != 0 {
-		t.Error("a wither rose withered a zombie")
+	if z.hasEffect(effWither) == 0 {
+		t.Error("a wither rose did not wither a zombie")
+	}
+	if ws.hasEffect(effWither) != 0 {
+		t.Error("a wither rose withered a wither skeleton")
+	}
+}
+
+// LivingEntity.canBeAffected and its overrides.
+func TestMobEffectImmunities(t *testing.T) {
+	for _, c := range []struct {
+		etype int
+		eff   int32
+		takes bool
+	}{
+		{entitySpider, effPoison, false}, {entityCaveSpider, effPoison, false},
+		{entityZombie, effPoison, false}, {entityZombie, effRegen, false}, {entityZombie, effWither, true},
+		{entityWitherSkeleton, effWither, false}, {entityWither, effWither, false},
+		{entityParched, effWeakness, false}, {entitySilverfish, effInfested, false},
+		{entitySlime, effOozing, false}, {entityCow, effPoison, true},
+	} {
+		if got := mobCanBeAffected(c.etype, c.eff); got != c.takes {
+			t.Errorf("mob %d, effect %d: affected %v, want %v", c.etype, c.eff, got, c.takes)
+		}
 	}
 }
 

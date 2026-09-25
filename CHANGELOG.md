@@ -14,6 +14,17 @@ the public history since the project was open-sourced on 2026-07-10.
 ## 2026-09-25
 
 ### Fixed
+- **Wither roses wither the undead.** Zombies, skeletons and other undead
+  standing in a wither rose now get Wither, as in vanilla; only wither
+  skeletons and the Wither shrug it off. The other vanilla immunities are
+  in too: spiders and nautiluses can't be poisoned, the parched can't be
+  weakened, silverfish ignore Infested and slimes ignore Oozing.
+- **Copper golem statues take axes and wax.** Honeycomb on a statue now
+  waxes it and an axe scrapes a weathered one or takes the wax off, as in
+  vanilla, instead of just turning the statue's pose.
+- **Team-coloured sidebars.** `/scoreboard objectives setdisplay` now takes
+  the sixteen `sidebar.team.<colour>` slots, so players on a team of that
+  colour see their own sidebar in place of the shared one (Java edition).
 - **Shearing a hive drops the honeycomb.** Shears on a full beehive or nest
   now pop the three honeycomb out of the hive, as vanilla does, instead of
   putting them straight into your inventory. Filling your last glass bottle

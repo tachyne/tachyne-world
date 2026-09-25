@@ -280,8 +280,9 @@ func (h *hub) mobsInsideTick(players map[int32]*tracked) {
 				}
 				h.hurtMobOf(nil, m, berryBushDamage, dtSweetBerryBush)
 			case isWitherRose(s):
-				// The undead are immune to wither, so a rose does not touch them.
-				if h.rules.Difficulty != diffPeaceful && !ignoresPoisonAndRegen(m.etype) {
+				// WitherRoseBlock.entityInside: every living thing but the
+				// ones Wither cannot touch (addMobEffect's canBeAffected).
+				if h.rules.Difficulty != diffPeaceful {
 					h.applyMobEffect(h.playersRef, m, effWither, 0, witherRoseSecs)
 				}
 			}
