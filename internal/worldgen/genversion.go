@@ -82,4 +82,10 @@ package worldgen
 //     over any build at y>=115 and two columns round it.
 //
 // Nearly every chunk generates differently.
-const GenVersion = 23
+//
+// v24: ruined portals settle as vanilla's findSuitableY does — down from
+// their placement height until three of the four bottom corners stand in
+// solid ground — so one on a cliff edge sinks into the cliff instead of
+// hanging off it. A portal whose settled box holds a build stays put.
+// Only chunks with a portal change.
+const GenVersion = 24

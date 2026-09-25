@@ -95,6 +95,18 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Ruined portals sit in the ground.** A ruined portal now settles, as in
+  vanilla, until at least three of its four corners stand in solid ground,
+  so one on a cliff edge sinks into the rock instead of hanging off the
+  side. Only chunks with a portal change, and a portal never moves into a
+  player's build.
+- **Goat horns say which call they are.** A goat horn's tooltip now names
+  its call — Ponder, Sing, Seek and the rest — as in vanilla; horns used to
+  carry no instrument at all on the client.
+- **Tie leads to a fence with anything in hand.** Clicking a fence while
+  leading animals now ties them to it whatever you are holding, as in
+  vanilla, not only with a lead in hand; with nothing on a lead the click
+  does what the held item would.
 - **Rowing makes a sound again.** Rowing a boat now plays the paddle
   splash (or the scrape on land) with each stroke, for you and everyone
   near, and other players see the boat's paddles move, as in vanilla. The
