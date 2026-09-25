@@ -87,6 +87,9 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Comparators notice a statue or heart going.** Breaking a copper golem
+  statue or a creaking heart that a comparator was reading now drops the
+  comparator's signal straight away.
 - **No half beds or doors.** When one half of a bed or a door (or a tall
   plant) is destroyed by something other than a player — an explosion, a
   piston — the other half now goes with it, as in vanilla, instead of

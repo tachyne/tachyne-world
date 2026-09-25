@@ -375,3 +375,13 @@ func TestCropNeedsLight(t *testing.T) {
 		t.Fatal("wheat shut in the dark stayed")
 	}
 }
+
+// A comparator reads a copper golem statue and a creaking heart, so taking
+// one away must tell the comparators (affectNeighborsAfterRemoval).
+func TestStatueAndHeartHaveComparatorOutput(t *testing.T) {
+	for _, n := range []string{"copper_golem_statue", "oxidized_copper_golem_statue", "creaking_heart"} {
+		if !hasComparatorOutput(worldgen.BlockBase(n)) {
+			t.Errorf("%s is missing from hasComparatorOutput", n)
+		}
+	}
+}

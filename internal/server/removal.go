@@ -27,7 +27,8 @@ func sameBlockKind(a, b uint32) bool {
 func hasComparatorOutput(s uint32) bool {
 	return isChestBlock(s) || isBarrel(s) || isShulkerBox(s) || isCookerBlock(s) || isHopper(s) ||
 		isDispenser(s) || isDropper(s) || isBrewStand(s) || isCrafter(s) || isJukebox(s) ||
-		isLectern(s) || isDecoratedPot(s) || isBookshelf(s) || isWoodShelf(s)
+		isLectern(s) || isDecoratedPot(s) || isBookshelf(s) || isWoodShelf(s) ||
+		isGolemStatue(s) || isCreakingHeartBlock(s)
 }
 
 // signalSource: blocks whose removal changes what their neighbours are
