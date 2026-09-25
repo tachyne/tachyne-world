@@ -669,7 +669,7 @@ func (h *hub) cubeStruckByPlayer(players map[int32]*tracked, m *mob, t *tracked,
 		h.cubeKnockback(players, m, extra, math.Sin(yaw), -math.Cos(yaw), playerHitSource(t), dmg, true)
 	}
 	if m.health < before {
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+		h.mobDamageEv(players, m, dt, t.p.eid)
 	}
 	if m.health <= 0 {
 		h.killMob(players, m) // credits t
@@ -695,7 +695,7 @@ func (h *hub) cubeStruckByProjectile(players map[int32]*tracked, a *arrowEntity,
 		h.cubeKnockback(players, m, 0.4, -a.vx, -a.vz, src, dmg, false)
 	}
 	if m.health < before {
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+		h.mobDamageEv(players, m, dt, a.shooter)
 	}
 	if m.health <= 0 {
 		h.killMob(players, m)

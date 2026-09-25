@@ -123,6 +123,11 @@ the public history since the project was open-sourced on 2026-07-10.
   vanilla — never in the stone around a build.
 
 ### Fixed
+- **Explosions push you the vanilla way.** A blast now adds its shove to
+  your movement instead of replacing it, so a TNT launch keeps your
+  momentum. Blasts also throw their block debris, as in vanilla.
+- **Hits carry what caused them.** A hurt mob or player flashes with the
+  real damage type and the attacker behind it, as vanilla reports it.
 - **Mobs appear whole.** A mob coming into view arrives with its gear,
   size, colour and pose in one go, instead of flashing plain for a frame.
 - **Safe while the world loads.** After joining or respawning, you can't be

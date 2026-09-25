@@ -2,8 +2,6 @@ package server
 
 import (
 	"math"
-
-	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // The vex's flight (Vex: VexMoveControl, VexChargeAttackGoal,
@@ -125,7 +123,7 @@ func (h *hub) vexStrikeMob(players map[int32]*tracked, m, v *mob) {
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, swingArm(m.eid))
 	v.hurtKind(float64(hostileMelee(m)+mobHeldBonus(m)), dtMobAttack)
 	v.lastAttacker = m.eid
-	h.toTracking(players, v.eid, v.dim, v.x, v.z, attachproto.Hurt{EID: v.eid, Yaw: v.yaw})
+	h.mobDamageEv(players, v, dtMobAttack, m.eid)
 	h.mobKnockFrom(players, v, m.x, m.z)
 	if v.health <= 0 {
 		h.killMob(players, v)

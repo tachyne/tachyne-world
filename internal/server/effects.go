@@ -416,7 +416,7 @@ func (h *hub) updateEffects(players map[int32]*tracked) {
 				if survival && applyEffectTickNow(e.clock(h.tick.Load()), 25, e.amp) && t.health > 1 {
 					t.health--
 					h.sendHealth(t)
-					t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
+					h.toNearbyEv(players, t.dim, t.x, t.z, attachproto.DamageEvent{EID: t.p.eid, Type: "magic"})
 				}
 			case effWither:
 				// WitherMobEffect: 1 HP every 40>>amp ticks — like poison but CAN

@@ -254,7 +254,7 @@ func (h *hub) dragonCrystalDestroyed(players map[int32]*tracked, c *crystal, by 
 	}
 	m.hurtKind(dragonCrystalLoss, dt)
 	m.lastDirect = entityEndCrystal
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.mobDamageEv(players, m, dtExplosion, 0) // the crystal blast
 	if m.health <= 0 {
 		h.killMob(players, m)
 	}

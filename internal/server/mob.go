@@ -1856,6 +1856,16 @@ func (h *hub) toNearbyEv(players map[int32]*tracked, dim int, x, z float64, ev a
 	}
 }
 
+// toNearbyWhere is toNearbyEv for the players that pass keep.
+func (h *hub) toNearbyWhere(players map[int32]*tracked, dim int, x, z float64, keep func(*tracked) bool, ev any) {
+	cx, cz := chunkFloor(x), chunkFloor(z)
+	for _, t := range players {
+		if t.dim == dim && keep(t) && abs(chunkFloor(t.x)-cx) <= viewRadius && abs(chunkFloor(t.z)-cz) <= viewRadius {
+			t.p.trySendEv(ev)
+		}
+	}
+}
+
 // toOthersNear is toNearbyEv for something a player did that their own
 // client has already drawn (ChunkMap.broadcast, which leaves the entity
 // itself out): an arm swing, the cracks of their own dig.

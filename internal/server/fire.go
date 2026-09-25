@@ -387,9 +387,13 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	for _, o := range opts {
 		o(&cfg)
 	}
-	h.playSoundDim(players, dim, "minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9)
+	// Java clients get the whole blast as one explode packet at the end
+	// (ServerLevel.explode), sound, particles, debris and shove together;
+	// Bedrock has no such packet and gets the pieces.
+	bedrockOnly := func(t *tracked) bool { return t.p.bedrock }
+	h.toNearbyWhere(players, dim, cx, cz, bedrockOnly, soundEv("minecraft:entity.generic.explode", sndBlock, cx, cy, cz, 4, 0.9))
 	h.vibAt(dim, freqExplode, cx, cy, cz, 0)
-	h.spawnParticles(players, dim, particleExplosionEmitter, cx, cy, cz, 0, 0, 1)
+	h.toNearbyWhere(players, dim, cx, cz, bedrockOnly, attachproto.Particles{PID: particleExplosionEmitter, X: cx, Y: cy, Z: cz, Count: 1})
 
 	// ServerLevel.explode: a MOB interaction (a creeper, a ghast's fireball,
 	// the wither and its skulls) keeps every block when mobGriefing is off;
@@ -433,8 +437,21 @@ func (h *hub) explodeTyped(players map[int32]*tracked, dim int, cx, cy, cz float
 	}
 	prevSrc := h.blastSrc
 	h.blastSrc = cfg
-	h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
+	knock := h.explodeHurt(players, dim, cx, cy, cz, power, dt, cause)
 	h.blastSrc = prevSrc
+	// ServerLevel.explode: every Java player within 64 blocks gets the
+	// packet, carrying their own knockback when the blast reached them.
+	large := power >= 2 && radius > 0 // !ServerExplosion.isSmall
+	for _, t := range players {
+		if t.dim != dim || t.p.bedrock || sq(t.x-cx)+sq(t.y-cy)+sq(t.z-cz) >= 4096 {
+			continue
+		}
+		ev := attachproto.Explode{X: cx, Y: cy, Z: cz, Radius: float32(power), Blocks: int32(len(cleared)), Large: large}
+		if k, ok := knock[t.p.eid]; ok {
+			ev.Knockback = &k
+		}
+		t.p.trySendEv(ev)
+	}
 	// Vanilla hurts entities before it touches blocks, so bees a hive lets
 	// out are not caught in the blast that freed them.
 	for _, pos := range hives {

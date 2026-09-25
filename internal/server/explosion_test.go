@@ -46,19 +46,24 @@ func TestExplosionDamageModel(t *testing.T) {
 	if far.health != 20 {
 		t.Fatalf("out of reach took %v", 20-far.health)
 	}
-	var vel []attachproto.Velocity
+	// A Java client's shove rides the explode packet, which it ADDS to its
+	// motion (ClientboundExplodePacket.playerKnockback).
+	var ex []attachproto.Explode
 	for done := false; !done; {
 		select {
 		case pkt := <-open.p.out:
-			if v, ok := pkt.ev.(attachproto.Velocity); ok {
-				vel = append(vel, v)
+			if v, ok := pkt.ev.(attachproto.Explode); ok {
+				ex = append(ex, v)
+			}
+			if _, ok := pkt.ev.(attachproto.Velocity); ok {
+				t.Fatal("a Java player's shove must not replace their motion")
 			}
 		default:
 			done = true
 		}
 	}
-	if len(vel) != 1 || vel[0].VX <= 0.2 || vel[0].VY <= 0 {
-		t.Fatalf("the shove: %+v, want eastward and upward", vel)
+	if len(ex) != 1 || ex[0].Knockback == nil || ex[0].Knockback[0] <= 0.2 || ex[0].Knockback[1] <= 0 {
+		t.Fatalf("the shove: %+v, want one explode, eastward and upward", ex)
 	}
 	if got := explosionDamage(4, 1); math.Abs(got-57) > 1e-9 {
 		t.Fatalf("TNT at the feet does %v, want 57", got)

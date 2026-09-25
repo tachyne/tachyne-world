@@ -498,7 +498,6 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 	}
 	// Hurt flash. A passive mob bolts away in panic; a hostile one shrugs the hit
 	// off and keeps hunting (it doesn't flee its prey).
-	yaw := m.yaw
 	if t != nil {
 		h.traderLlamasDefend(m, t)
 		h.nautilusAngerAt(m, t) // AbstractNautilus.hurtServer: ANGRY_AT the attacker, beside any panic
@@ -528,11 +527,12 @@ func (h *hub) mobStruck(players map[int32]*tracked, m *mob, t *tracked, dt dmgTy
 				m.settled = 0                           // a new target restarts the enderman's daylight clock
 			}
 		}
-		if dx, dz := m.x-t.x, m.z-t.z; dx != 0 || dz != 0 {
-			yaw = float32(math.Atan2(-dx, dz) * 180 / math.Pi)
-		}
 	}
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: yaw})
+	var by int32
+	if t != nil {
+		by = t.p.eid
+	}
+	h.mobDamageEv(players, m, dt, by)
 	if hurt, _, _ := h.mobSoundsFor(m); hurt != "" {
 		h.playSoundDim(players, m.dim, hurt, sndNeutral, m.x, m.y, m.z, 1, h.hurtPitch())
 	}
@@ -910,4 +910,10 @@ func killerLuck(players map[int32]*tracked, m *mob) float64 {
 		return t.luck()
 	}
 	return 0
+}
+
+// mobDamageEv is ServerLevel.broadcastDamageEvent for a mob: everyone
+// tracking it sees the red flash, with the damage's type and who dealt it.
+func (h *hub) mobDamageEv(players map[int32]*tracked, m *mob, dt dmgType, cause int32) {
+	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.DamageEvent{EID: m.eid, Type: dt.name(), Cause: cause, Direct: cause})
 }

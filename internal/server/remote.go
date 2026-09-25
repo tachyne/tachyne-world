@@ -403,6 +403,10 @@ func (r *remotePlayer) emitEv(ev any, send func(byte, any)) {
 		send(attachproto.MsgBundleOpen, attachproto.BundleMark{})
 	case bundleClose:
 		send(attachproto.MsgBundleClose, attachproto.BundleMark{})
+	case attachproto.Explode:
+		send(attachproto.MsgExplode, ev)
+	case attachproto.DamageEvent:
+		send(attachproto.MsgDamageEvent, ev)
 	case attachproto.PlayerInfoLatency:
 		send(attachproto.MsgPlayerInfoLatency, ev)
 	case attachproto.GameRuleValues:

@@ -2,8 +2,6 @@ package server
 
 import (
 	"math/rand"
-
-	attachproto "github.com/tachyne/tachyne-common/attach"
 )
 
 // The melee enchantments that were missing: Smite and Bane of Arthropods (both
@@ -148,7 +146,7 @@ func (h *hub) thornsRetaliate(players map[int32]*tracked, t *tracked, m *mob) {
 		m.hurtKind(hit.dmg, dtThorns)
 		m.lastAttacker = t.p.eid
 		h.hurtByPlayerOn(m, t) // thorns(t): the wearer is the source, and the kill is theirs
-		h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+		h.mobDamageEv(players, m, dtThorns, t.p.eid)
 		h.wearArmorSlot(players, t, hit.slot, thornsWear, dtThorns)
 		if m.health <= 0 {
 			h.killMob(players, m)

@@ -69,11 +69,15 @@ func (h *hub) seenPercent(dim int, cx, cy, cz, minX, minY, minZ, maxX, maxY, max
 
 // explodeHurt is the blast's second half: the damage and shove on
 // everything within reach (a TNT cart it reaches is lit by the damage).
-func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power float64, dt dmgType, cause deathCause) {
+//
+// It returns each Java player's shove, which rides the explode packet
+// (the client adds it to its motion); a Bedrock player's is sent here.
+func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power float64, dt dmgType, cause deathCause) map[int32][3]float64 {
 	dr := power * 2
 	if power < 1e-5 {
-		return
+		return nil
 	}
+	knock := map[int32][3]float64{}
 	h.explosionHurtsVehicles(players, dim, cx, cy, cz, power, dt)
 	if bp := h.blastPlayer(players); bp != nil {
 		cause.byEID = bp.p.eid // the player behind the blast is who its victims remember
@@ -97,7 +101,11 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		if kb <= 0 || n < 1e-9 || t.gamemode == gmSpectator {
 			continue
 		}
-		t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: ex / n * kb, VY: ey / n * kb, VZ: ez / n * kb})
+		if t.p.bedrock {
+			t.p.trySendEv(attachproto.Velocity{EID: t.p.eid, VX: ex / n * kb, VY: ey / n * kb, VZ: ez / n * kb})
+		} else {
+			knock[t.p.eid] = [3]float64{ex / n * kb, ey / n * kb, ez / n * kb}
+		}
 		t.spinUntil = h.tick.Load() + windBurstGrace // let the launch through the speed check
 	}
 	for _, om := range h.mobs {
@@ -155,6 +163,7 @@ func (h *hub) explodeHurt(players map[int32]*tracked, dim int, cx, cy, cz, power
 		}
 	}
 	h.bus.publish("explosion", map[string]any{"x": cx, "y": cy, "z": cz})
+	return knock
 }
 
 // blastPlayer is the player behind the explosion being resolved, if any.

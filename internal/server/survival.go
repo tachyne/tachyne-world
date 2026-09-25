@@ -645,6 +645,9 @@ func (h *hub) hurtFrom(players map[int32]*tracked, t *tracked, amount float32, d
 		}
 		h.playSoundDim(players, t.dim, "minecraft:entity.player.death", sndPlayer, t.x, t.y, t.z, 1, 1)
 	} else {
+		// broadcastDamageEvent to everyone near (the player included), and
+		// the player's own camera tilt (indicateDamage's hurt_animation).
+		h.toNearbyEv(players, t.dim, t.x, t.z, attachproto.DamageEvent{EID: t.p.eid, Type: dt.name(), Cause: cause.byEID, Direct: cause.byEID})
 		t.p.trySendEv(attachproto.Hurt{EID: t.p.eid, Yaw: t.yaw})
 		h.playSoundDim(players, t.dim, hurtSoundFor(dt), sndPlayer, t.x, t.y, t.z, 1, h.hurtPitch())
 	}

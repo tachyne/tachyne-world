@@ -3,7 +3,6 @@ package server
 import (
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 )
 
@@ -316,7 +315,7 @@ func (h *hub) creakingHurt(players map[int32]*tracked, m *mob) {
 		return
 	}
 	m.spawnInvuln = creakingInvulnTicks
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.mobDamageEv(players, m, dtPlayerAttack, 0)
 	h.toTracking(players, m.eid, m.dim, m.x, m.z, entityStatus(m.eid, entityStatusShake)) // the invulnerability shudder
 	h.playSoundDim(players, m.dim, "minecraft:entity.creaking.sway", sndHostile, m.x, m.y, m.z, 1, 1)
 	if link.hurtLeft <= 0 {

@@ -8,7 +8,6 @@ package server
 import (
 	"math"
 
-	attachproto "github.com/tachyne/tachyne-common/attach"
 	"github.com/tachyne/tachyne-world/internal/worldgen"
 	attr "github.com/tachyne/tachyne-world/plugin/attribute"
 )
@@ -80,7 +79,7 @@ func (h *hub) hurtMobOf(players map[int32]*tracked, m *mob, dmg float64, dt dmgT
 	if m.health == before && m.dmgFrac > 0 {
 		return // soaked into the fractional carry — no flash for a scratch
 	}
-	h.toTracking(players, m.eid, m.dim, m.x, m.z, attachproto.Hurt{EID: m.eid, Yaw: m.yaw})
+	h.mobDamageEv(players, m, dt, 0)
 	h.infestOnMobHurt(players, m) // Infested: silverfish burst out of a mob too
 	if m.health <= 0 {
 		h.killMob(players, m)
