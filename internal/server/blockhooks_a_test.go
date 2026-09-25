@@ -404,3 +404,28 @@ func TestSculkHearsADiscGoIn(t *testing.T) {
 		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
 	}
 }
+
+// LayeredCauldronBlock.handleEntityOnFireInside: a burning player in a full
+// powder-snow cauldron is put out, the snow melts to a water cauldron one
+// level down, and it is a BLOCK_CHANGE.
+func TestBurningPlayerMeltsSnowCauldron(t *testing.T) {
+	var got uint32
+	var fire int
+	f := sculkHears(t, func(h *hub, players map[int32]*tracked, pl *tracked) {
+		snow := worldgen.BlockBase("powder_snow_cauldron") + 2 // level 3
+		h.world.SetBlock(7, 180, 4, snow)
+		pl.x, pl.y, pl.z = 7.5, 180.3, 4.5
+		pl.fireSecs = 5
+		h.playerInsideTick(players)
+		got, fire = h.world.At(7, 180, 4), pl.fireSecs
+	})
+	if got != waterCauldronBase+1 {
+		t.Errorf("the cauldron holds %d, want a level-2 water cauldron %d", got, waterCauldronBase+1)
+	}
+	if fire != 0 {
+		t.Error("the player should be put out")
+	}
+	if f != freqBlockChange {
+		t.Errorf("the sensor heard %d, want BLOCK_CHANGE %d", f, freqBlockChange)
+	}
+}

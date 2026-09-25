@@ -436,18 +436,24 @@ func isFilledCauldron(s uint32) bool {
 	return ok && level > 0 && (kind == cauldronWater || kind == cauldronSnow)
 }
 
-// lowerCauldron is LayeredCauldronBlock.lowerFillLevel: one level down,
-// empty at zero.
+// lowerCauldron is LayeredCauldronBlock.handleEntityOnFireInside: a burning
+// entity melts powder snow, so that cauldron is lowered as a WATER cauldron
+// of the same level; then lowerFillLevel — one level down, empty at zero,
+// and a BLOCK_CHANGE.
 func (h *hub) lowerCauldron(players map[int32]*tracked, dim int, pos blockPos, s uint32) {
-	_, level, ok := cauldronOf(s)
+	kind, level, ok := cauldronOf(s)
 	if !ok || level == 0 {
 		return
 	}
-	if level == 1 {
-		h.setBlockAt(players, dim, pos, cauldronState)
-		return
+	next := uint32(cauldronState)
+	if level > 1 {
+		next = s - 1
+		if kind == cauldronSnow {
+			next = waterCauldronBase + uint32(level-2) // water, one level down
+		}
 	}
-	h.setBlockAt(players, dim, pos, s-1)
+	h.setBlockAt(players, dim, pos, next)
+	h.vib(dim, freqBlockChange, pos.x, pos.y, pos.z, 0)
 }
 
 // isCropState reports a staged crop (wheat, carrots, potatoes, beetroots).
