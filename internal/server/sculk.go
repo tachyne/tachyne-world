@@ -638,8 +638,11 @@ func (h *hub) catalystConsume(players map[int32]*tracked, m *mob, xp int) bool {
 	return true
 }
 
-// spreadSculk is a bounded stand-in for SculkSpreader: it converts solid,
-// air-exposed blocks near `origin` to sculk (up to the charge), then studs the
+var sculkReplaceable = worldgen.BlockTag("sculk_replaceable")
+
+// spreadSculk is a bounded stand-in for SculkSpreader: it converts the
+// natural ground (#sculk_replaceable: stone, dirt, sand, …) that air touches
+// near `origin` to sculk (up to the charge), then studs the
 // exposed faces of the new sculk with sculk_vein. Faithful in appearance, not in
 // the per-tick cursor charge model.
 func (h *hub) spreadSculk(players map[int32]*tracked, dim int, origin blockPos, charge int) {
@@ -659,8 +662,8 @@ func (h *hub) spreadSculk(players map[int32]*tracked, dim int, origin blockPos, 
 					}
 					p := blockPos{origin.x + dx, origin.y + dy, origin.z + dz}
 					s := w.At(p.x, p.y, p.z)
-					if !worldgen.IsSolidFull(s) || isSculkFamily(s) {
-						continue
+					if !inRanges2(s, sculkReplaceable) {
+						continue // SculkBlock.canChangeBlockStateOnSpread: #sculk_replaceable only
 					}
 					if !h.airExposed(dim, p) {
 						continue

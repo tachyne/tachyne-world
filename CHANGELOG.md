@@ -23,6 +23,10 @@ the public history since the project was open-sourced on 2026-07-10.
   press a button in a map or minigame.
 
 ### Fixed
+- **Sculk catalysts leave your builds alone.** A catalyst's bloom now turns
+  only natural ground (stone, dirt, sand, gravel, and the rest vanilla
+  lists) into sculk. Before, it could turn any solid block near a death
+  into sculk, planks and bricks included.
 - **Snow layers need a proper floor.** A placed snow layer now follows
   vanilla's rule: it can't sit on ice, packed ice or a barrier, always sits
   on honey, soul sand or mud, and otherwise needs a full top face. Snow

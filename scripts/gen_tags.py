@@ -35,7 +35,8 @@ TAGS = {
               # grow.go: StemBlock.randomTick's fruit ground
               "supports_melon_stem_fruit", "supports_pumpkin_stem_fruit",
               # sculk.go: VibrationSystem occlusion and damping
-              "occludes_vibration_signals", "dampens_vibrations"],
+              "occludes_vibration_signals", "dampens_vibrations",
+              "sculk_replaceable"],  # sculk.go: what a catalyst's charge may turn
     "item": ["boats", "clonable_maps", "wooden_tool_materials",
              "dampens_vibrations",  # sculk.go: ItemEntity.dampensVibrations
              "piglin_loved", "piglin_safe_armor",  # piglin.go: admire, barter, distract_piglin

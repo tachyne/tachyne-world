@@ -370,3 +370,27 @@ func TestWoolOccludesAndDampensVibrations(t *testing.T) {
 	}
 	_ = players
 }
+
+// A catalyst's bloom turns only #sculk_replaceable ground to sculk: a floor
+// of planks beside it is left as built.
+func TestCatalystSpareBuiltBlocks(t *testing.T) {
+	h, w, players, x, y, z := redSetup(t)
+	cat := worldgen.BlockBase("sculk_catalyst") + 1
+	w.SetBlock(x, y, z, cat)
+	h.sculkIndexOnBlockChange(0, x, y, z, cat)
+	planks := worldgen.BlockBase("oak_planks")
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			w.SetBlock(x+dx, y-1, z+dz, planks)
+		}
+	}
+	m := &mob{eid: 9002, dim: 0, x: float64(x) + 0.5, y: float64(y), z: float64(z) + 0.5}
+	h.catalystConsume(players, m, 5)
+	for dx := -2; dx <= 2; dx++ {
+		for dz := -2; dz <= 2; dz++ {
+			if w.At(x+dx, y-1, z+dz) != planks {
+				t.Fatalf("the bloom changed the planks at %d,%d", x+dx, z+dz)
+			}
+		}
+	}
+}
